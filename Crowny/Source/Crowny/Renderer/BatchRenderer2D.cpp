@@ -5,6 +5,8 @@
 #include "Crowny/Renderer/RenderCommand.h"
 #include "Crowny/Renderer/BatchRenderer2D.h"
 
+#include <freetype-gl.h>
+
 namespace Crowny
 {
 	struct Renderer2DData
@@ -103,7 +105,6 @@ namespace Crowny
 			if (s_Data.TextureSlots.size() >= MAX_TEXTURE_SLOTS)
 			{
 				End();
-				Flush();
 				s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->GetPointer(RENDERER_MAX_SPRITES * 4);
 			}
 			s_Data.TextureSlots.push_back(texture);

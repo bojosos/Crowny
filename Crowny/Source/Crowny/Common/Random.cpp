@@ -1,4 +1,5 @@
 #include "cwpch.h"
+
 #include "Crowny/Common/Random.h"
 
 namespace Crowny

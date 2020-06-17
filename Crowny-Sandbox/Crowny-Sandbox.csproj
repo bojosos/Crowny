@@ -149,15 +149,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-<<<<<<< HEAD
   <ItemGroup>
-=======
-  <PropertyGroup>
-    <StartupObject>Sandbox.Test</StartupObject>
-  </PropertyGroup>
-  <ItemGroup>
-    <Compile Include="Test.cs" />
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>

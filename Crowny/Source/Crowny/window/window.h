@@ -1,19 +1,16 @@
 #pragma once
-#include "Crowny/Common/Common.h"
-#include "Crowny/Events/Event.h"
 
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
+#include "Crowny/Events/Event.h"
 
 namespace Crowny
 {
-	struct WindowProps
+	struct WindowProperties
 	{
 		std::string Title;
 		uint32_t Width;
 		uint32_t Height;
 
-		WindowProps(const std::string& title = "Minecraft", uint32_t width = 1280, uint32_t height = 720) : Title(title), Width(width), Height(height)
+		WindowProperties(const std::string& title = "Crowny", uint32_t width = 1280, uint32_t height = 720) : Title(title), Width(width), Height(height)
 		{
 
 		}
@@ -24,42 +21,20 @@ namespace Crowny
 	public:
 		using EventCallbackFn = std::function<void(Event&)>;
 
-		Window(const WindowProps& props);
-		~Window();
-		void OnUpdate();
+		virtual  ~Window() = default;
 
-		inline uint32_t GetWidth() const { return m_Data.Width; };
-		inline uint32_t GetHeight() const { return m_Data.Height; }
-		inline glm::vec2 GetSize() const { return glm::vec2(m_Data.Width, m_Data.Height); }
+		virtual void OnUpdate() = 0;
 
-		void SetEventCallback(const EventCallbackFn& callback) { m_Data.EventCallback = callback; };
-		inline GLFWwindow* GetGLFWwindow() const { return m_Window; }
+		virtual uint32_t GetWidth() const = 0;
+		virtual uint32_t GetHeight() const = 0;
 
-		void SetVSync(bool enabled);
-		bool IsVSync() const;
+		virtual void SetEventCallback(const EventCallbackFn& callback) = 0;
+		virtual void* GetNativeWindow() const = 0;
 
-		//GL
-		void InitContext();
-		void SwapBuffers();
+		virtual void SetVSync(bool enabled) = 0;
+		virtual bool IsVSync() const = 0;
 
 	public:
-		static Scope<Window> Create(const WindowProps& props = WindowProps());
-
-	private:
-		void Init(const WindowProps& props);
-		void Shutdown();
-
-	private:
-		GLFWwindow* m_Window;
-
-		struct WindowData
-		{
-			std::string Title;
-			uint32_t Width, Height;
-			bool VSync;
-			EventCallbackFn EventCallback;
-		};
-
-		WindowData m_Data;
+		static Scope<Window> Create(const WindowProperties& props = WindowProperties());
 	};
 }

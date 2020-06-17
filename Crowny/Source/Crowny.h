@@ -15,14 +15,11 @@
 #include "Crowny/Renderer/Camera.h"
 #include "Crowny/CmdArgs.h"
 
-<<<<<<< HEAD
 #include "Crowny/Renderer/Renderer.h"
-=======
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 #include "Crowny/Renderer/Shader.h"
-#include "Crowny/Renderer/VertexArray.h"
 #include "Crowny/Renderer/Texture.h"
-#include "Crowny/Renderer/Renderer.h"
-#include "Crowny/Renderer/Buffer.h"
+#include "Crowny/Renderer/VertexArray.h"
+#include "Crowny/Renderer/Framebuffer.h"
+#include "Crowny/Renderer/Font.h"
 
 #include "Crowny/Input/Input.h"

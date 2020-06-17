@@ -13,29 +13,18 @@ namespace Crowny
 		OpenGLTexture2D(const std::string& filepath, const TextureParameters& parameters);
 		~OpenGLTexture2D();
 
-<<<<<<< HEAD
 		virtual uint32_t GetWidth() const override { return m_Width; }
 		virtual uint32_t GetHeight() const override { return m_Height; }
 
 		virtual uint32_t GetRendererID() const override { return m_RendererID; };
-=======
-		virtual uint32_t GetWidth() const { return m_Width; }
-		virtual uint32_t GetHeight() const { return m_Height; }
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 
 		virtual void Bind(uint32_t slot) const override;
 		virtual void SetData(void* data, uint32_t size) override;
 		virtual void SetData(void* data, TextureChannel channel = TextureChannel::CHANNEL_RGBA) override;
 
-<<<<<<< HEAD
 		virtual bool operator==(const Texture& other) const override
 		{
 			return (other.GetRendererID() == m_RendererID);
-=======
-		bool operator==(const Ref<Texture>& other)
-		{
-			return (other->GetRendererID() == m_RendererID);
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 		}
 
 	private:

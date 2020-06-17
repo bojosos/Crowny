@@ -23,14 +23,19 @@ namespace Crowny
 		CW_ENGINE_INFO("  Vendor: {0}", glGetString(GL_VENDOR));
 		CW_ENGINE_INFO("  Renderer: {0}", glGetString(GL_RENDERER));
 		CW_ENGINE_INFO("  Version: {0}", glGetString(GL_VERSION));
+
 		int maxTextureSize;
 		glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
 
 		int maxTextureSlots;
-		glGetIntegerv(GL_MAX_TEXTURE_BUFFER_SIZE, &maxTextureSlots);
+		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxTextureSlots);
 
-		CW_ENGINE_INFO("    Max Slots: ", maxTextureSlots);
-		CW_ENGINE_INFO("    Max Size: ", maxTextureSlots, "x", maxTextureSlots);
+		int maxCombinedTextures;
+		glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &maxCombinedTextures);
+
+		CW_ENGINE_INFO("    Max Slots: {0}", maxTextureSlots);
+		CW_ENGINE_INFO("    Max Total Textures: {0}", maxCombinedTextures);
+		CW_ENGINE_INFO("    Max Size: {0}x{0}", maxTextureSize);
 	}
 
 	void OpenGLContext::SwapBuffers()

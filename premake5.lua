@@ -37,11 +37,7 @@ group "Dependencies"
 	include "Crowny/Dependencies/glad"
 	include "Crowny/Dependencies/freetype-gl"
 	include "Crowny/Dependencies/imgui"
-<<<<<<< HEAD
 	include "Crowny/Dependencies/freetype2"
-	---include "Crowny/Dependencies/FreeType"
-=======
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 
 group ""
 
@@ -89,21 +85,13 @@ project "Crowny"
 	}
 
 	links 
-<<<<<<< HEAD
 	{
-=======
-	{ 
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 		"imgui",
 		"freetype-gl"
 	}
 
 	filter { "platforms:Win64" }
-<<<<<<< HEAD
 		links { "freetype2", "glfw", "glad", "opengl32.lib" }
-=======
-		links { "freetyp2", "glfw", "glad", "opengl32.lib" }
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 
 		defines
 		{
@@ -112,11 +100,7 @@ project "Crowny"
 		system("windows")
 
 	filter { "platforms:Linux64"}
-<<<<<<< HEAD
 		links { "freetype2", "glfw", "glad" }
-=======
-		links { "freetyp2", "glfw", "glad" }
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 
 		defines
 		{
@@ -126,11 +110,7 @@ project "Crowny"
 		system("linux")
 
 	filter { "platforms:MacOS64"}
-<<<<<<< HEAD
 		links { "freetype2", "glfw", "glad" }
-=======
-		links { "freetyp2", "glfw", "glad" }
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 
 		defines
 		{
@@ -194,21 +174,15 @@ project "Crowny-Editor"
 
 	includedirs
 	{
-<<<<<<< HEAD
+		"Crowny/Dependencies/spdlog/include",
 		"Crowny/Source",
 		"%{IncludeDir.imgui}",
 		"%{IncludeDir.glm}"
-=======
-		"Crowny/Source"
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 	}
 
 	links
 	{
-<<<<<<< HEAD
 		"imgui",
-=======
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 		"Crowny"
 	}
 
@@ -254,11 +228,7 @@ project "Crowny-CLI"
 
 	links
 	{
-<<<<<<< HEAD
 		"Crowny"
-=======
-		---"Crowny"
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 	}
 
 	filter "system:windows"

@@ -1,10 +1,6 @@
 #include "cwpch.h"
 
-<<<<<<< HEAD
 #include "Platform/OpenGL/OpenGLVertexArray.h"
-=======
-#include "OpenGLVertexArray.h"
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 
 #ifdef MC_WEB
 #include <GLES3/gl32.h>
@@ -43,40 +39,24 @@ namespace Crowny
 
 	OpenGLVertexArray::OpenGLVertexArray()
 	{
-<<<<<<< HEAD
 		glGenVertexArrays(1, &m_RendererID);
-=======
-		glGenOpenGLVertexArrays(1, &m_RendererID);
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 	}
 
 	OpenGLVertexArray::~OpenGLVertexArray()
 	{
-<<<<<<< HEAD
 		glDeleteVertexArrays(1, &m_RendererID);
-=======
-		glDeleteOpenGLVertexArrays(1, &m_RendererID);
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 	}
 
 	void OpenGLVertexArray::Bind() const
 	{
-<<<<<<< HEAD
 		glBindVertexArray(m_RendererID);
-=======
-		glBindOpenGLVertexArray(m_RendererID);
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 		if(m_IndexBuffer)
 			m_IndexBuffer->Bind();
 	}
 
 	void OpenGLVertexArray::Unbind() const
 	{
-<<<<<<< HEAD
 		glBindVertexArray(0);
-=======
-		glBindOpenGLVertexArray(0);
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 		if(m_IndexBuffer)
 			m_IndexBuffer->Unbind();
 	}
@@ -85,11 +65,7 @@ namespace Crowny
 	{
 		CW_ENGINE_ASSERT(vertexBuffer->GetLayout().GetElements().size(), "Vertex Buffer has no layout!");
 
-<<<<<<< HEAD
 		glBindVertexArray(m_RendererID);
-=======
-		glBindOpenGLVertexArray(m_RendererID);
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 		vertexBuffer->Bind();
 
 		const auto& layout = vertexBuffer->GetLayout();
@@ -110,11 +86,7 @@ namespace Crowny
 
 	void OpenGLVertexArray::SetIndexBuffer(const Ref<IndexBuffer>& indexBuffer)
 	{
-<<<<<<< HEAD
 		glBindVertexArray(m_RendererID);
-=======
-		glBindOpenGLVertexArray(m_RendererID);
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 		indexBuffer->Bind();
 
 		m_IndexBuffer = indexBuffer;

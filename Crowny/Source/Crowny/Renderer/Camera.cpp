@@ -4,7 +4,6 @@
 #include "Crowny/Input/Input.h"
 #include "Crowny/Application.h"
 
-<<<<<<< HEAD
 namespace Crowny
 {
 
@@ -21,12 +20,6 @@ namespace Crowny
 		return *s_Cameras[s_ActiveCameraIndex];
 	}
 
-=======
-#include <glm/gtx/quaternion.hpp>
-
-namespace Crowny
-{
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 	Camera::Camera(const glm::mat4& projectionMatrix) : m_ProjectionMatrix(projectionMatrix), m_MouseSensitivity(0.002f), m_RotationSpeed(60.0f), m_Speed(0.04f), m_SprintSpeed(m_Speed * 6.0f), m_MouseWasGrabbed(false)
 	{
 		m_ViewMatrix = glm::mat4(1.0f);
@@ -35,11 +28,8 @@ namespace Crowny
 		m_Yaw = 0.0f;
 		m_Pitch = 0.0f;
 		m_Frustum = CreateRef<ViewFrustum>();
-<<<<<<< HEAD
 
 		s_Cameras.push_back(this);
-=======
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 	}
 
 	Camera::~Camera()
@@ -56,11 +46,7 @@ namespace Crowny
 	void Camera::Update(Timestep ts)
 	{
 #ifndef MC_WEB
-<<<<<<< HEAD
 		glm::vec2 windowSize = { Application::Get().GetWindow().GetWidth(),  Application::Get().GetWindow().GetHeight() };
-=======
-		glm::vec2 windowSize = Application::Get().GetWindowSize();
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 		glm::vec2 windowCenter = glm::vec2((float)(int32_t)(windowSize.x / 2.0f), (float)(int32_t)(windowSize.y / 2.0f));
 #endif
 		if (Input::IsMouseButtonPressed(MouseCode::ButtonRight))
@@ -74,10 +60,7 @@ namespace Crowny
 
 		if (Input::IsMouseGrabbed())
 		{
-<<<<<<< HEAD
 			// FPS Controller
-=======
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 			glm::vec2 mousePos = Input::GetMousePosition();
 #ifdef MC_WEB
 			mousePos.x -= lastPos.x;
@@ -131,10 +114,7 @@ namespace Crowny
 
 			m_ViewMatrix = glm::translate(m_ViewMatrix, -m_Position);
 		}
-<<<<<<< HEAD
 
-=======
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 		if (Input::IsKeyPressed(KeyCode::Escape))
 		{
 			Input::SetMouseGrabbed(false);

@@ -1,45 +1,36 @@
 #pragma once
-#include <freetype-gl.h>
+
 #include "Crowny/Renderer/Texture.h"
+
+namespace ftgl {
+	struct texture_font_t;
+	struct texture_atlas_t;
+}
 
 namespace Crowny
 {
+	
 	class Font
 	{
 	public:
 		Font(const std::string& filepath, const std::string& name, float size);
 
-		inline const std::string& GetName() const
-		{
-			return m_Name;
-		}
+		inline const std::string& GetName() const { return m_Name; }
 
-		inline const float GetSize() const
-		{
-			return m_Size;
-		}
+		inline float GetSize() const { return m_Size; }
 
-		inline const uint32_t GetId() const
-		{
-			return m_Atlas->id;
-		}
+		inline const std::string& GetFilepath() const { return m_Filepath; }
 
-		inline const std::string& GetFilepath() const
-		{
-			return m_Filepath;
-		}
+		inline ftgl::texture_font_t* GetFTGLFont() const { return m_Font; }
 
-		inline ftgl::texture_font_t* GetFTGLFont() const
-		{
-			return m_Font;
-		}
-
-		inline ftgl::texture_atlas_t* GetFTGLAtlas() const
-		{
-			return m_Atlas;
-		}
+		inline ftgl::texture_atlas_t* GetFTGLAtlas() const { return m_Atlas; }
 
 		Ref<Texture2D> GetTexture();
+
+		static float GetWidth(const std::string& font, const std::string& text);
+		static float GetHeight(const std::string& font, const std::string& text);
+		static float GetWidth(const Ref<Font>& font, const std::string& text);
+		static float GetHeight(const Ref<Font>& font, const std::string& text);
 
 	private:
 		ftgl::texture_atlas_t* m_Atlas;
@@ -56,13 +47,7 @@ namespace Crowny
 		static Ref<Font> Get(const std::string& name);
 		static Ref<Font> Get(const std::string& name, float size);
 
-		static float GetWidth(const std::string& font, const std::string& text);
-		static float GetHeight(const std::string& font, const std::string& text);
-		static float GetWidth(const Ref<Font>& font, const std::string& text);
-		static float GetHeight(const Ref<Font>& font, const std::string& text);
-
 	private:
 		static std::vector<Ref<Font>> s_Fonts;
-		FontManager();
 	};
 }

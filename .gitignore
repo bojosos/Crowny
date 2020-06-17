@@ -10,4 +10,4 @@ bin-int/
 **.csproj
 **.csproj.filters
 **.csproj.user
-Crowny/Dependencies/*
+Crowny/Dependencies/

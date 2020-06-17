@@ -1,5 +1,7 @@
 #include "cwpch.h"
 
+#include <freetype-gl.h>
+
 #include "Crowny/Renderer/Font.h"
 
 namespace Crowny
@@ -89,12 +91,12 @@ namespace Crowny
 		return s_Fonts[0];
 	}
 
-	float FontManager::GetWidth(const std::string& fontName, const std::string& text)
+	float Font::GetWidth(const std::string& fontName, const std::string& text)
 	{
-		return GetWidth(Get(fontName), text);
+		return GetWidth(FontManager::Get(fontName), text);
 	}
 
-	float FontManager::GetWidth(const Ref<Font>& font, const std::string& text)
+	float Font::GetWidth(const Ref<Font>& font, const std::string& text)
 	{
 		float width = 0.0f;
 
@@ -112,12 +114,12 @@ namespace Crowny
 		return width;
 	}
 
-	float FontManager::GetHeight(const std::string& fontName, const std::string& text)
+	float Font::GetHeight(const std::string& fontName, const std::string& text)
 	{
-		return GetHeight(Get(fontName), text);
+		return GetHeight(FontManager::Get(fontName), text);
 	}
 
-	float FontManager::GetHeight(const Ref<Font>& font, const std::string& text)
+	float Font::GetHeight(const Ref<Font>& font, const std::string& text)
 	{
 		float min = 0.0f;
 		float max = 0.0f;

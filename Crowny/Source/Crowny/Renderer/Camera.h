@@ -46,10 +46,6 @@ namespace Crowny
 		Ref<ViewFrustum> GetFrustum() const { return m_Frustum; }
 
 	private:
-<<<<<<< HEAD
-=======
-		static std::vector<Camera> s_Cameras;
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 #ifdef MC_WEB
 		glm::vec2 lastPos = { 0.0f, 0.0f };
 #endif
@@ -68,7 +64,6 @@ namespace Crowny
 		float m_Speed, m_SprintSpeed;
 		float m_Pitch, m_Yaw;
 		bool m_MouseWasGrabbed;
-<<<<<<< HEAD
 	
 	public:
 		static Camera& GetCurrentCamera();
@@ -76,9 +71,6 @@ namespace Crowny
 		static uint32_t s_ActiveCameraIndex;
 		static std::vector<Camera*> s_Cameras;
 
-=======
-		
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 	};
 
 }

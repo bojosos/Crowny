@@ -3,10 +3,7 @@
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/BatchRenderer2D.h"
 #include "Crowny/Renderer/RenderCommand.h"
-<<<<<<< HEAD
 #include "Crowny/Renderer/Camera.h"
-=======
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 
 #ifdef MC_WEB
 //#include <GLFW/glfw3.h>
@@ -34,15 +31,9 @@ namespace Crowny
 		RenderCommand::SetViewport(0, 0, width, height);
 	}
 
-<<<<<<< HEAD
 	void Renderer::BeginScene()
 	{
 		
-=======
-	void Renderer::BeginScene(const Camera& camera)
-	{
-		s_SceneData->ViewProjectionMatrix = camera.GetViewProjectionMatrix();
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 	}
 
 	void Renderer::EndScene()
@@ -53,14 +44,10 @@ namespace Crowny
 	void Renderer::Submit(const Ref<Shader>& shader, const Ref<VertexArray>& vertexArray, const glm::mat4& transform)
 	{
 		shader->Bind();
-<<<<<<< HEAD
 
 		shader->SetMat4("u_ViewMatrix", Camera::GetCurrentCamera().GetViewMatrix());
 		shader->SetMat4("u_ProjectionMatrix", Camera::GetCurrentCamera().GetProjectionMatrix());
 
-=======
-		shader->SetMat4("u_ViewProjection", s_SceneData->ViewProjectionMatrix);
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 		shader->SetMat4("u_Transform", transform);
 
 		vertexArray->Bind();

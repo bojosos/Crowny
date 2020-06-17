@@ -7,10 +7,10 @@ namespace Crowny
 #ifdef CW_WEB
 	#define DIRECTORY_PREFIX "Minecraft/res/"
 #else
-	#define DIRECTORY_PREFIX "res/"
+	#define DIRECTORY_PREFIX "Resources/"
 #endif
 
-#define DEFAULT_FONT_PATH "fonts/roboto-thin.ttf"
+#define DEFAULT_FONT_PATH "Fonts/roboto-thin.ttf"
 
 	// ------------- BATCH RENDERER -------------
 #define RENDERER_MAX_SPRITES	60000
