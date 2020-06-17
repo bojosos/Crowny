@@ -11,9 +11,12 @@ bin-int/
 **.vcxproj
 **.vcxproj.filters
 **.vcxproj.user
+**.csproj
+**.csproj.filters
+**.csproj.user
 
 <<<<<<< HEAD
-Crowny/Dependencies/
+Crowny/Dependencies/*
 
 =======
 >>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
