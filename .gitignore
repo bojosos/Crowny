@@ -1,9 +1,5 @@
 **/bin/
-<<<<<<< HEAD
 !3rdparty
-=======
-!3rdparty/premake/
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 bin-int/
 
 .vs/
@@ -14,9 +10,4 @@ bin-int/
 **.csproj
 **.csproj.filters
 **.csproj.user
-
-<<<<<<< HEAD
 Crowny/Dependencies/*
-
-=======
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
