@@ -23,7 +23,7 @@ namespace Crowny
 
 	OpenGLVertexBuffer::OpenGLVertexBuffer(const void* data, uint32_t size, const VertexBufferProperties& properties) : m_Size(size), m_Properties(properties)
 	{
-#ifdef MC_WEB
+#ifndef MC_WEB
 		glGenBuffers(1, &m_RendererID);
 		glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);
 		glBufferData(GL_ARRAY_BUFFER, size, data, BufferUsageToOpenGLBufferUsage(m_Properties.Usage));
@@ -60,17 +60,18 @@ namespace Crowny
 
 	void* OpenGLVertexBuffer::GetPointer(uint32_t size) const
 	{
-		glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);
 #ifdef MC_WEB
+		glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);
 		return glMapBufferRange(GL_ARRAY_BUFFER, 0, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);                                                                            
 #else
-		return glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+		return glMapNamedBuffer(m_RendererID, GL_WRITE_ONLY);
 #endif
 	}
 
 	void OpenGLVertexBuffer::FreePointer() const
 	{
-		glUnmapBuffer(GL_ARRAY_BUFFER);
+		//TODO: Breaks web?
+		glUnmapNamedBuffer(m_RendererID);
 	}
 
 }

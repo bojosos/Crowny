@@ -11,9 +11,9 @@ namespace Crowny
 	struct VertexData
 	{
 		glm::vec3 Position;
-		uint32_t Color;
 		glm::vec2 Uv;
 		float Tid;
+		uint32_t Color;
 	};
 
 	class BatchRenderer2D

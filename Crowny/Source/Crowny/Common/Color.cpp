@@ -42,6 +42,7 @@ namespace Crowny
 
 	}
 
+	//TODO: Cyan is Yellow? maybe
 	Color Color::Blue = Color(0xff0000ff);
 	Color Color::Brown = Color(0xffa52a2a);
 	Color Color::Cyan = Color(0xff00ffff);

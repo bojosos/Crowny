@@ -36,6 +36,8 @@ namespace Crowny
 
 		FontManager::Add(CreateRef<Font>("default", DEFAULT_FONT_PATH, 16));
 
+		Renderer::Init();
+
 		m_ImGuiLayer = new ImGuiLayer();
 		PushOverlay(m_ImGuiLayer);
 	}

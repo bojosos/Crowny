@@ -1,5 +1,7 @@
 #include <Crowny.h>
 
+#include <Crowny/EntryPoint.h>
+
 #include "EditorLayer.h"
 
 namespace Crowny
@@ -7,7 +9,7 @@ namespace Crowny
 	class CrownyEditor : public Application
 	{
 	public:
-		CrownyEditor() : Application("Crowny Editr")
+		CrownyEditor() : Application("Crowny Editor")
 		{
 			PushLayer(new EditorLayer());
 		}

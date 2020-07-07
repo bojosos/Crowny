@@ -45,4 +45,6 @@ namespace Crowny
 	private:
 		static Application* s_Instance;
 	};
+
+	Application* CreateApplication();
 }

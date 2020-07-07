@@ -33,9 +33,12 @@ namespace Crowny
 	{
 		m_Camera.Update(ts);
 
+		m_Framebuffer->Bind();
 		BatchRenderer2D::Begin(m_Camera);
-		BatchRenderer2D::DrawString("Test", 100, 100, FontManager::Get("Fonts/roboto-thin.ttf", 32), Color::White);
+		//BatchRenderer2D::DrawString("Test", 0, 0, FontManager::Get("Fonts/roboto-thin.ttf", 32), Color::Cyan);
+		BatchRenderer2D::FillRect({ 0, 0, 512, 512 }, FontManager::Get("default", 16)->GetTexture(), Color::White);
 		BatchRenderer2D::End();
+		m_Framebuffer->Unbind();
 
 		/*
 		{
@@ -127,7 +130,6 @@ namespace Crowny
 		ImGui::Image((void*)textureID, ImVec2{ m_ViewportSize.x, m_ViewportSize.y }, ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
 		ImGui::End();
 		ImGui::PopStyleVar();
-
 		ImGui::End();
 	}
 

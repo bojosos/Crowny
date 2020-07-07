@@ -205,6 +205,10 @@ namespace Crowny
 
 	uint32_t OpenGLShader::GetUniformLocation(const std::string& name)
 	{
+		if (m_UniformLocations.find(name) == m_UniformLocations.end())
+		{
+			m_UniformLocations[name] = glGetUniformLocation(m_RendererID, name.c_str());
+		}
 		return m_UniformLocations[name];
 	}
 

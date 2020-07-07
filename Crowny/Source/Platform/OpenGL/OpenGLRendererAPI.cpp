@@ -22,11 +22,12 @@ namespace Crowny
 	void OpenGLRendererAPI::Init()
 	{
 		glEnable(GL_MULTISAMPLE); // TODO: Sample 
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LESS);
+		//glEnable(GL_DEPTH_TEST);
+		//glDepthFunc(GL_LESS);
 
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glViewport(0, 0, 1280, 720);
 
 #ifdef CW_DEBUG
 #ifndef MC_WEB

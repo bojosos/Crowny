@@ -4,6 +4,7 @@
 #include "Crowny/Renderer/Texture.h"
 #include "Crowny/Renderer/RenderCommand.h"
 #include "Crowny/Renderer/BatchRenderer2D.h"
+#include "Crowny/Renderer/Renderer.h"
 
 #include <freetype-gl.h>
 
@@ -20,9 +21,8 @@ namespace Crowny
 		uint32_t IndexCount = 0;
 		VertexData* Buffer = nullptr;
 
-		std::vector<Ref<Texture2D>> TextureSlots;
-
-		glm::vec4 QuadVertexPositions[4];
+		std::array<Ref<Texture2D>, 32> TextureSlots;
+		uint32_t TextureIndex = 0;
 	};
 
 	static Renderer2DData s_Data;
@@ -31,9 +31,9 @@ namespace Crowny
 	{
 		s_Data.VertexArray = VertexArray::Create();
 		s_Data.VertexBuffer = VertexBuffer::Create(nullptr, RENDERER_BUFFER_SIZE, { BufferUsage::DYNAMIC_DRAW });
-		BufferLayout layout = { { ShaderDataType::Float3, "a_Coordinates" }, 
+		BufferLayout layout = { { ShaderDataType::Float3, "a_Coordinates" },
 								{ ShaderDataType::Float2, "a_Uvs" },
-								{ ShaderDataType::Float, "a_Tid"  }, 
+								{ ShaderDataType::Float, "a_Tid"  },
 								{ ShaderDataType::UByte4, "a_Color" , true } };
 		s_Data.VertexBuffer->SetLayout(layout);
 		s_Data.VertexArray->AddVertexBuffer(s_Data.VertexBuffer);
@@ -65,21 +65,21 @@ namespace Crowny
 		for (uint32_t i = 0; i < MAX_TEXTURE_SLOTS; i++)
 			samplers[i] = i;
 
-		s_Data.Shader = Shader::Create("Resources/Shaders/BatchRenderer.glsl");
+		s_Data.Shader = Shader::Create("Shaders/BatchRenderer.glsl");
 		s_Data.Shader->Bind();
 		s_Data.Shader->SetIntV("u_Textures", MAX_TEXTURE_SLOTS, samplers);
 
-		// Set all texture slots to 0
-		s_Data.TextureSlots[0] = s_Data.WhiteTexture;
+		s_Data.TextureSlots[s_Data.TextureIndex] = s_Data.WhiteTexture;
 
 		s_Data.VertexArray->Unbind();
-		delete indices;
+		delete[] indices;
 	}
 
 	void BatchRenderer2D::Begin(const Camera& camera)
 	{
 		s_Data.Shader->SetMat4("u_ProjectionMatrix", camera.GetProjectionMatrix());
 		s_Data.Shader->SetMat4("u_ViewMatrix", camera.GetViewMatrix());
+		s_Data.Shader->Bind();
 		s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->GetPointer(RENDERER_MAX_SPRITES * 4);
 	}
 
@@ -89,26 +89,25 @@ namespace Crowny
 			return 0;
 
 		float ts = 0.0f;
-		bool found = false;
-		for (int i = 0; i < s_Data.TextureSlots.size(); i++)
+
+		for (int i = 1; i <= s_Data.TextureIndex; i++)
 		{
 			if (s_Data.TextureSlots[i] == texture)
 			{
 				ts = (float)(i + 1);
-				found = true;
 				break;
 			}
 		}
 
-		if (!found)
+		if (ts == 0)
 		{
-			if (s_Data.TextureSlots.size() >= MAX_TEXTURE_SLOTS)
+			if (s_Data.TextureIndex == 32) // TODO: not 32 please
 			{
 				End();
-				s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->GetPointer(RENDERER_MAX_SPRITES * 4);
+				s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->GetPointer(RENDERER_MAX_SPRITES * 4); // TODO: Begin or semething instead of this, typename GetPointer?
 			}
-			s_Data.TextureSlots.push_back(texture);
-			ts = (float)(s_Data.TextureSlots.size());
+			s_Data.TextureSlots[++s_Data.TextureIndex] = texture;
+			ts = s_Data.TextureIndex;
 		}
 		return ts;
 	}
@@ -166,7 +165,7 @@ namespace Crowny
 		s_Data.Buffer->Color = color;
 		s_Data.Buffer++;
 
-		s_Data.Buffer->Position= glm::vec3(bounds.X + bounds.Width, bounds.Y, 1.0f);
+		s_Data.Buffer->Position = glm::vec3(bounds.X + bounds.Width, bounds.Y, 1.0f);
 		s_Data.Buffer->Uv = glm::vec2(1.0f, 0.0f);
 		s_Data.Buffer->Tid = ts;
 		s_Data.Buffer->Color = color;
@@ -195,9 +194,9 @@ namespace Crowny
 				}
 
 				float x0 = x + glyph->offset_x;
-				float y0 = y + glyph->offset_y;
+				float y0 = y - glyph->offset_y;
 				float x1 = x0 + glyph->width;
-				float y1 = y0 - glyph->height;
+				float y1 = y0 + glyph->height;
 
 				float u0 = glyph->s0;
 				float v0 = glyph->t0;
@@ -239,18 +238,20 @@ namespace Crowny
 	{
 		s_Data.VertexBuffer->FreePointer();
 		Flush();
+		s_Data.IndexCount = 0;
+		s_Data.TextureIndex = 0;
 	}
 
 	void BatchRenderer2D::Flush()
 	{
-		for (int i = 0; i < s_Data.TextureSlots.size(); i++)
+		for (int i = 0; i < s_Data.TextureIndex; i++)
 		{
 			s_Data.TextureSlots[i]->Bind(i);
 		}
 
+		s_Data.VertexArray->Bind();
 		RenderCommand::DrawIndexed(s_Data.VertexArray, s_Data.IndexCount);
 
 		s_Data.VertexArray->Unbind();
-		s_Data.IndexCount = 0;
 	}
 }

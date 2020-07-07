@@ -1,6 +1,6 @@
 workspace "Crowny"
 	architecture "x86_64"
-	startproject "Sandbox"
+	startproject "Crowny-Editor"
 
 	configurations
 	{
@@ -183,7 +183,7 @@ project "Crowny-Editor"
 	links
 	{
 		"imgui",
-		"Crowny"
+		"Crowny",
 	}
 
 	filter "system:windows"

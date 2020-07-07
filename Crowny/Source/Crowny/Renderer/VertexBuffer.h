@@ -27,6 +27,7 @@ namespace Crowny
 
 		virtual const BufferLayout& GetLayout() const = 0;
 		virtual void SetLayout(const BufferLayout& layout) = 0;
+
 		virtual void* GetPointer(uint32_t size) const = 0;
 		virtual void FreePointer() const = 0;
 
