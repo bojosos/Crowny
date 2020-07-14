@@ -36,11 +36,6 @@ namespace Crowny
 		delete[] data;
 	}
 
-	Ref<Texture2D> Font::GetTexture()
-	{
-		return m_Texture;
-	}
-
 	std::vector<Ref<Font>> FontManager::s_Fonts;
 
 	void FontManager::Add(const Ref<Font>& font)
@@ -78,6 +73,7 @@ namespace Crowny
 				}
 			}
 		}
+
 		CW_ENGINE_ERROR("Unrecognized font, using fallback font {0}!", s_Fonts[0]->GetName());
 		if (s_Fonts[0]->GetSize() == size)
 		{

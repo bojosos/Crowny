@@ -23,15 +23,6 @@ namespace Crowny
 		return Color(a << 24 | b << 16 | g << 8 | r);
 	}
 
-	glm::vec4 Color::GetRGBA() {
-		uint8_t a = (m_Color & 0xff000000) >> 24;
-		uint8_t r = (m_Color & 0x00ff0000) >> 16;
-		uint8_t g = (m_Color & 0x0000ff00) >> 8;
-		uint8_t b = (m_Color & 0x000000ff);
-
-		return glm::vec4(r, g, b, a);
-	}
-
 	Color Color::FromHex(uint32_t value)
 	{
 		return Color(value);

@@ -30,6 +30,7 @@ IncludeDir["glad"] = "Crowny/Dependencies/glad/include"
 IncludeDir["freetypegl"] = "Crowny/Dependencies/freetype-gl"
 IncludeDir["imgui"] = "Crowny/Dependencies/imgui"
 IncludeDir["glm"] = "Crowny/Dependencies/glm"
+IncludeDir["entt"] = "Crowny/Dependencies/entt/single_include"
 IncludeDir["stb_image"] = "Crowny/Dependencies/stb_image"
 
 group "Dependencies"
@@ -63,6 +64,7 @@ project "Crowny"
 		"%{prj.name}/Dependencies/stb_image/**.cpp",
 		"%{prj.name}/Dependencies/glm/glm/**.hpp",
 		"%{prj.name}/Dependencies/glm/glm/**.inl",
+		"%{prj.name}/Dependencies/entt/single_include/entt/entt.hpp",
 		"%{prj.name}/res/**"
 	}
 
@@ -79,6 +81,7 @@ project "Crowny"
 		"%{IncludeDir.glfw}",
 		"%{IncludeDir.freetypegl}",
 		"%{IncludeDir.glad}",
+		"%{IncludeDir.entt}",
 		"%{IncludeDir.imgui}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.stb_image}"
@@ -177,7 +180,8 @@ project "Crowny-Editor"
 		"Crowny/Dependencies/spdlog/include",
 		"Crowny/Source",
 		"%{IncludeDir.imgui}",
-		"%{IncludeDir.glm}"
+		"%{IncludeDir.glm}",
+		"%{IncludeDir.entt}"
 	}
 
 	links

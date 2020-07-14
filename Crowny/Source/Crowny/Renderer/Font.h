@@ -15,17 +15,14 @@ namespace Crowny
 	public:
 		Font(const std::string& filepath, const std::string& name, float size);
 
-		inline const std::string& GetName() const { return m_Name; }
+		const std::string& GetName() const { return m_Name; }
+		float GetSize() const { return m_Size; }
+		const std::string& GetFilepath() const { return m_Filepath; }
 
-		inline float GetSize() const { return m_Size; }
+		ftgl::texture_font_t* GetFTGLFont() const { return m_Font; }
+		ftgl::texture_atlas_t* GetFTGLAtlas() const { return m_Atlas; }
 
-		inline const std::string& GetFilepath() const { return m_Filepath; }
-
-		inline ftgl::texture_font_t* GetFTGLFont() const { return m_Font; }
-
-		inline ftgl::texture_atlas_t* GetFTGLAtlas() const { return m_Atlas; }
-
-		Ref<Texture2D> GetTexture();
+		const Ref<Texture2D> GetTexture() const { return m_Texture; };
 
 		static float GetWidth(const std::string& font, const std::string& text);
 		static float GetHeight(const std::string& font, const std::string& text);

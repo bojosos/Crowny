@@ -1,6 +1,6 @@
 #include "cwpch.h"
 
-#include "Crowny/Application.h"
+#include "Crowny/Application/Application.h"
 
 #include "Crowny/Common/Log.h"
 #include "Crowny/Common/Common.h"
@@ -34,12 +34,17 @@ namespace Crowny
 
 		m_Window->SetEventCallback(CW_BIND_EVENT_FN(Application::OnEvent));
 
-		FontManager::Add(CreateRef<Font>("default", DEFAULT_FONT_PATH, 16));
+		FontManager::Add(CreateRef<Font>("default", DEFAULT_FONT_PATH, 64));
 
 		Renderer::Init();
 
 		m_ImGuiLayer = new ImGuiLayer();
 		PushOverlay(m_ImGuiLayer);
+	}
+
+	Application::~Application()
+	{
+		Renderer::Shutdown();
 	}
 
 	void Application::PushLayer(Layer* layer)
@@ -52,6 +57,11 @@ namespace Crowny
 	{
 		m_LayerStack.PushOverlay(layer);
 		layer->OnAttach();
+	}
+
+	void Application::Exit()
+	{
+		m_Running = false;
 	}
 
 	void Application::OnEvent(Event& e)

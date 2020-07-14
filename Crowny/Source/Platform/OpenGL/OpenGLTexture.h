@@ -19,6 +19,7 @@ namespace Crowny
 		virtual uint32_t GetRendererID() const override { return m_RendererID; };
 
 		virtual void Bind(uint32_t slot) const override;
+		virtual void Unbind(uint32_t slot) const override;
 		virtual void SetData(void* data, uint32_t size) override;
 		virtual void SetData(void* data, TextureChannel channel = TextureChannel::CHANNEL_RGBA) override;
 

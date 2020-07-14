@@ -5,7 +5,7 @@
 #include <examples/imgui_impl_opengl3.h>
 
 #include "Crowny/ImGui/ImGuiLayer.h"
-#include "Crowny/Application.h"
+#include "Crowny/Application/Application.h"
 
 #include <glfw/glfw3.h>
 

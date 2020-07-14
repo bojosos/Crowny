@@ -122,6 +122,7 @@ namespace Crowny
 		virtual void SetData(void* data, TextureChannel channel) = 0;
 
 		virtual void Bind(uint32_t slot) const = 0;
+		virtual void Unbind(uint32_t slot) const = 0;
 		virtual bool operator==(const Texture& other) const = 0;
 	};
 

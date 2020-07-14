@@ -31,6 +31,8 @@ namespace Crowny
 
 		void SetProjectionMatrix(const glm::mat4& matrix) { m_ProjectionMatrix = matrix; }
 
+		void OnResize(float width, float height);
+
 		float GetSpeed() const { return m_Speed; }
 		void SetSpeed(float speed) { m_Speed = speed; }
 

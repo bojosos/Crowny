@@ -7,21 +7,34 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "Platform/OpenGL/OpenGLInfo.h"
+#include "Crowny/Ecs/Components.h"
 
 namespace Crowny
 {
 	EditorLayer::EditorLayer()
-		: Layer("EditorLayer"), m_Camera(glm::ortho(0.0f, 1280.0f, 0.0f, 720.0f))
+		: Layer("EditorLayer"), m_Camera(glm::ortho(0.0f, 1280.0f, 720.0f, 0.0f)) // camera not for here
 	{
-		
+		m_ImGuiWindows["viewport"] = true;
+		m_ImGuiWindows["hierarchy"] = true;
+		m_ImGuiWindows["glinfo"] = false;
+		m_ImGuiWindows["properties"] = true;
+		Ref<Shader> s = Shader::Create("Shaders/PBRShader.glsl");
 	}
 
 	void EditorLayer::OnAttach()
 	{
 		FramebufferProperties fbProps;
-		fbProps.Width = 1280;
+		fbProps.Width = 1280; // human code please
 		fbProps.Height = 720;
 		m_Framebuffer = Framebuffer::Create(fbProps);
+		OpenGLInfo::RetrieveInformation();
+		m_ComponentEditor.RegisterComponent<Components::Transform>("Transform");
+
+		m_ComponentEditor.RegisterComponent<Components::Camera>("Camera");
+		m_Entity = m_Registry.create();
+		m_Registry.emplace<Components::Transform>(m_Entity, 500.f, 500.f);
+		m_Registry.emplace<Components::Camera>(m_Entity, 500.f);
 	}
 
 	void EditorLayer::OnDetach()
@@ -33,38 +46,17 @@ namespace Crowny
 	{
 		m_Camera.Update(ts);
 
+		if (FramebufferProperties spec = m_Framebuffer->GetProperties(); m_ViewportSize.x > 0.0f && m_ViewportSize.y > 0.0f &&  (spec.Width != m_ViewportSize.x || spec.Height != m_ViewportSize.y))
+		{
+			m_Framebuffer->Resize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
+			m_Camera.OnResize(m_ViewportSize.x, m_ViewportSize.y);
+		}
+
 		m_Framebuffer->Bind();
 		BatchRenderer2D::Begin(m_Camera);
-		//BatchRenderer2D::DrawString("Test", 0, 0, FontManager::Get("Fonts/roboto-thin.ttf", 32), Color::Cyan);
-		BatchRenderer2D::FillRect({ 0, 0, 512, 512 }, FontManager::Get("default", 16)->GetTexture(), Color::White);
+		BatchRenderer2D::DrawString("This is a test", 150, 550, FontManager::Get("default"), Color::White);
 		BatchRenderer2D::End();
 		m_Framebuffer->Unbind();
-
-		/*
-		{
-			static float rotation = 0.0f;
-			rotation += ts * 50.0f;
-
-			Renderer2D::BeginScene(m_CameraController.GetCamera());
-			Renderer2D::DrawRotatedQuad({ 1.0f, 0.0f }, { 0.8f, 0.8f }, -45.0f, { 0.8f, 0.2f, 0.3f, 1.0f });
-			Renderer2D::DrawQuad({ -1.0f, 0.0f }, { 0.8f, 0.8f }, { 0.8f, 0.2f, 0.3f, 1.0f });
-			Renderer2D::DrawQuad({ 0.5f, -0.5f }, { 0.5f, 0.75f }, m_SquareColor);
-			Renderer2D::DrawQuad({ 0.0f, 0.0f, -0.1f }, { 20.0f, 20.0f }, m_CheckerboardTexture, 10.0f);
-			Renderer2D::DrawRotatedQuad({ -2.0f, 0.0f, 0.0f }, { 1.0f, 1.0f }, rotation, m_CheckerboardTexture, 20.0f);
-			Renderer2D::EndScene();
-
-			Hazel::Renderer2D::BeginScene(m_CameraController.GetCamera());
-			for (float y = -5.0f; y < 5.0f; y += 0.5f)
-			{
-				for (float x = -5.0f; x < 5.0f; x += 0.5f)
-				{
-					glm::vec4 color = { (x + 5.0f) / 10.0f, 0.4f, (y + 5.0f) / 10.0f, 0.7f };
-					Hazel::Renderer2D::DrawQuad({ x, y }, { 0.45f, 0.45f }, color);
-				}
-			}
-			Hazel::Renderer2D::EndScene();
-			m_Framebuffer->Unbind();
-		}*/
 	}
 
 	void EditorLayer::OnImGuiRender()
@@ -73,7 +65,7 @@ namespace Crowny
 		static bool opt_fullscreen_persistant = true;
 		bool opt_fullscreen = opt_fullscreen_persistant;
 		static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
-
+		
 		ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
 		if (opt_fullscreen)
 		{
@@ -109,33 +101,96 @@ namespace Crowny
 		{
 			if (ImGui::BeginMenu("File"))
 			{
-				//if (ImGui::MenuItem("Exit")) Application::Get().Close();
+				if (ImGui::MenuItem("Exit")) Application::Get().Exit();
 				ImGui::EndMenu();
 			}
 
+			if (ImGui::BeginMenu("Window"))
+			{
+				if(ImGui::BeginMenu("Renderer Capabilites"))
+				{
+					if (ImGui::MenuItem("OpenGL")) {
+						m_ImGuiWindows["glinfo"] = true;
+					}
+					ImGui::EndMenu();
+				}
+				ImGui::EndMenu();
+			}
+			
 			ImGui::EndMenuBar();
 		}
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
-		ImGui::Begin("Viewport");
-		ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
-		if (m_ViewportSize != *((glm::vec2*) & viewportPanelSize))
-		{
-			m_Framebuffer->Resize((uint32_t)viewportPanelSize.x, (uint32_t)viewportPanelSize.y);
-			m_ViewportSize = { viewportPanelSize.x, viewportPanelSize.y };
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2{ 0, 0 });
 
-			//m_CameraController.OnResize(viewportPanelSize.x, viewportPanelSize.y);
+		if (m_ImGuiWindows["viewport"]) {
+			ImGui::Begin("Viewport");
+			ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
+			m_ViewportSize = { viewportPanelSize.x, viewportPanelSize.y };
+			uint32_t textureID = m_Framebuffer->GetColorAttachmentRendererID();
+			ImGui::Image((void*)textureID, ImVec2{ m_ViewportSize.x, m_ViewportSize.y }, ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
+			ImGui::End();
 		}
-		uint32_t textureID = m_Framebuffer->GetColorAttachmentRendererID();
-		ImGui::Image((void*)textureID, ImVec2{ m_ViewportSize.x, m_ViewportSize.y }, ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
-		ImGui::End();
+
+		if (m_ImGuiWindows["glinfo"])
+		{
+			ImGui::Begin("OpenGL Information");
+			ImGui::Columns(3, "OpenGL Information");
+			ImGui::Separator();
+			for (OpenGLDetail& det : OpenGLInfo::GetInformation()) 
+			{
+				ImGui::Text(det.Name.c_str()); ImGui::NextColumn();
+				ImGui::Text(det.GLName.c_str()); ImGui::NextColumn();
+				ImGui::Text(det.Value.c_str()); ImGui::NextColumn();
+			}
+			ImGui::Separator();
+			ImGui::Columns(1);
+			ImGui::End();
+		}
+
+		if (m_ImGuiWindows["hierarchy"])
+		{
+			ImGui::Begin("Hierarchy");
+			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+			if (ImGui::TreeNode("Scene"))
+			{
+				if (ImGui::TreeNode("Entity"))
+				{
+					for (int i = 0; i < 5; i++)
+					{
+						if (ImGui::TreeNode((void*)(intptr_t)i, "Child %d", i))
+						{
+							ImGui::Text("");
+							ImGui::SameLine();
+							ImGui::Selectable("test", false);
+							if (ImGui::IsItemClicked()) CW_INFO("Clicked");
+							ImGui::TreePop();
+						}
+					}
+					ImGui::TreePop();
+				}
+				ImGui::TreePop();
+			}
+			ImGui::End();
+		}
+
+		if (m_ImGuiWindows["properties"])
+		{
+			ImGui::Begin("Properties");
+			
+			m_ComponentEditor.Render(m_Registry, m_Entity);
+
+			ImGui::End();
+		}
+
+		ImGui::PopStyleVar();
 		ImGui::PopStyleVar();
 		ImGui::End();
 	}
 
 	void EditorLayer::OnEvent(Event& e)
 	{
-		//m_CameraController.OnEvent(e);
+		
 	}
 
 }

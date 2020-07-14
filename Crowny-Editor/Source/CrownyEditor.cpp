@@ -1,6 +1,6 @@
 #include <Crowny.h>
 
-#include <Crowny/EntryPoint.h>
+#include <Crowny/Application/EntryPoint.h>
 
 #include "EditorLayer.h"
 

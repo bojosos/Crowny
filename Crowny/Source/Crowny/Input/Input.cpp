@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Input/Input.h"
-#include "Crowny/Application.h"
+#include "Crowny/Application/Application.h"
 
 #include <GLFW/glfw3.h>
 

@@ -44,12 +44,12 @@ namespace Crowny
 
 			shaderSources[ShaderTypeFromString(type)] = (pos == std::string::npos) ? source.substr(nextLinePos) : source.substr(nextLinePos, pos - nextLinePos);
 		}
-
 		return shaderSources;
 	}
 
 	static std::string ReadFile(const std::string& filepath)
 	{
+		CW_INFO(filepath);
 		std::string result;
 		std::ifstream in(filepath, std::ios::in | std::ios::binary);
 		if (in)

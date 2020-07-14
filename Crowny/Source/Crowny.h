@@ -11,9 +11,9 @@
 
 #include "Crowny/Layers/Layer.h"
 
-#include "Crowny/Application.h"
+#include "Crowny/Application/Application.h"
 #include "Crowny/Renderer/Camera.h"
-#include "Crowny/CmdArgs.h"
+#include "Crowny/Application/CmdArgs.h"
 
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Shader.h"

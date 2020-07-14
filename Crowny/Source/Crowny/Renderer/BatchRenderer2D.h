@@ -13,7 +13,7 @@ namespace Crowny
 		glm::vec3 Position;
 		glm::vec2 Uv;
 		float Tid;
-		uint32_t Color;
+		glm::vec4 Color;
 	};
 
 	class BatchRenderer2D

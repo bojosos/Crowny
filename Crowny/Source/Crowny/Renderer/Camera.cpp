@@ -2,7 +2,7 @@
 
 #include "Camera.h"
 #include "Crowny/Input/Input.h"
-#include "Crowny/Application.h"
+#include "Crowny/Application/Application.h"
 
 namespace Crowny
 {
@@ -35,6 +35,11 @@ namespace Crowny
 	Camera::~Camera()
 	{
 
+	}
+
+	void Camera::OnResize(float width, float height)
+	{
+		m_ProjectionMatrix = glm::ortho(0.0f, width, height, 0.0f);
 	}
 
 	void Camera::Focus()

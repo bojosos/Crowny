@@ -1,23 +1,26 @@
 #pragma once
 
-#include "Crowny/Common/Common.h"
-#include "Crowny/Renderer/VertexArray.h"
-#include "Crowny/Renderer/Shader.h"
-
 namespace Crowny
 {
+	struct MeshData
+	{
+		uint32_t vertexCount;
+		float* vertices;
+
+		float* uvs;
+		float* normals;
+		uint32_t* indices;
+	};
+
 	class Mesh
 	{
 	public:
-		Mesh(const Ref<VertexArray>& vao, const Ref<Shader>& shader);
-		~Mesh();
+		virtual ~Mesh() = default;
 
-		void UploadUniformMat4(const std::string& name, const glm::mat4& matrix);
+		virtual MeshData& GetData() = 0;
 
-		static Ref<Mesh> Create(const Ref<VertexArray>& vao, const Ref<Shader>& shader);
-
+		static Ref<Mesh> Create();
 	private:
-		Ref<VertexArray> m_VertexArray;
-		Ref<Shader> m_Shader;
+		MeshData m_MeshData;
 	};
 }

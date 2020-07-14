@@ -6,6 +6,9 @@ namespace Crowny
 {
 	class Scene
 	{
+		Scene(const std::string& name);
+		~Scene() = default;
+
 	private:
 		std::vector<Ref<Entity>> m_Entities;
 		uint32_t m_BuildIndex;
@@ -13,7 +16,6 @@ namespace Crowny
 		std::string m_Filepath;
 		bool m_IsLoaded;
 
-		Scene(const std::string& name);
 	public:
 		void AddEntity(const Ref<Entity>& entity);
 	};

@@ -8,30 +8,33 @@
 
 #include <glm/glm.hpp>
 
+int main(int argc, char** argv);
+
 namespace Crowny
 {
 	class Application
 	{
 	public:
 		Application(const std::string& name);
-		~Application() = default;
+		~Application();
 
 		void OnEvent(Event& event);
 
 		void PushLayer(Layer* layer);
 		void PushOverlay(Layer* layer);
 
-		void Run();
 
-		inline Window& GetWindow() const { return *m_Window; }
+		Window& GetWindow() const { return *m_Window; }
+		ImGuiLayer* GetImGuiLayer() { return m_ImGuiLayer; }
+		void Exit();
 
-		inline static Application& Get() { return *s_Instance; }
-		inline static uint32_t GetWidth() { return Get().GetWindow().GetWidth(); }
-		inline static uint32_t GetHeight() { return Get().GetWindow().GetHeight(); }
+		static Application& Get() { return *s_Instance; }
 
 	private:
 		bool OnWindowClose(WindowCloseEvent& e);
 		bool OnWindowResize(WindowResizeEvent& e);
+
+		void Run();
 
 	private:
 		std::unique_ptr<Window> m_Window;
@@ -44,6 +47,7 @@ namespace Crowny
 
 	private:
 		static Application* s_Instance;
+		friend int ::main(int argc, char** argv);
 	};
 
 	Application* CreateApplication();

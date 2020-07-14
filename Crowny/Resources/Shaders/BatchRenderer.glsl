@@ -1,7 +1,7 @@
 #type vertex
 
 #version 330 core
-layout(location = 0) in vec4 a_Position;
+layout(location = 0) in vec3 a_Position;
 layout(location = 1) in vec2 a_UV;
 layout(location = 2) in float a_Tid;
 layout(location = 3) in vec4 a_Color;
@@ -20,9 +20,9 @@ out DATA
 
 void main()
 {
-	gl_Position = u_ProjectionMatrix * u_ViewMatrix * u_ModelMatrix * a_Position;
+	gl_Position = u_ProjectionMatrix * u_ViewMatrix * u_ModelMatrix * vec4(a_Position, 1.0);
 
-	vs_out.position = u_ModelMatrix * a_Position;
+	vs_out.position = u_ModelMatrix * vec4(a_Position, 1.0);
 	vs_out.uv = a_UV;
 	vs_out.tid = a_Tid;
 	vs_out.color = a_Color;
@@ -42,19 +42,8 @@ in DATA
 } fs_in;
 
 uniform sampler2D u_Textures[32];
-//uniform sampler2D u_Texture;
 
 void main(void) {
-
-	vec4 texColor = fs_in.color;
-	if (fs_in.tid > 0.0)
-	{
-		int tid = int(fs_in.tid - 0.5);
-		texColor = fs_in.color * texture(u_Textures[tid], fs_in.uv);
-		//texColor = fs_in.color * texture(u_Texture, fs_in.uv);
-		//texColor = vec4(1.0, 1.0, 1.0, texture(u_Texture, fs_in.uv).r);
-	}
-
-	color = texColor;
+	color = vec4(1.0, 1.0, 1.0, 0.5);
 }
 

@@ -50,9 +50,9 @@ void main(void) {
 	{
 		int tid = int(fs_in.tid - 0.5);
 		//texColor = fs_in.color * texture(u_Textures[1], fs_in.uv);
-		texColor = vec4(texture(u_Textures[tid], fs_in.uv).a, 0.0, texture(u_Textures[tid], fs_in.uv).a, texture(u_Textures[tid], fs_in.uv).a);
+		//texColor = vec4(texture(u_Textures[tid], fs_in.uv).a, 0.0, texture(u_Textures[tid], fs_in.uv).a, texture(u_Textures[tid], fs_in.uv).a);
 	}
 
-	color = texColor;
+	color = texture(u_Textures[int(fs_in.tid)], fs_in.uv);
 }
 
