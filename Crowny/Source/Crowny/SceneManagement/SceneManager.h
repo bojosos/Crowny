@@ -9,7 +9,7 @@ namespace Crowny
 		friend class Scene;
 	public:
 		static Ref<Scene> GetActiveScene() { return s_Scenes[s_ActiveIndex]; }
-		static Ref<Scene> CreateScene(const std::string& name);
+		//static void AddScene() {}
 		/*
 		static Scene& LoadScene(uint32_t buildIndex);
 		static Scene& LoadScene(const std::string& name);

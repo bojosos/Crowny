@@ -5,13 +5,13 @@
 #else
 #include <glad/glad.h>
 #endif
+#include <stb_image.h>
 
 #include "Platform/OpenGL/OpenGLTexture.h"
-#include "stb_image.h"
 
 namespace Crowny
 {
-	static GLenum TextureChannelToOpenGLChannel(TextureChannel channel)
+	GLenum TextureChannelToOpenGLChannel(TextureChannel channel)
 	{
 		switch (channel)
 		{
@@ -30,7 +30,7 @@ namespace Crowny
 		return GL_NONE;
 	}
 
-	static GLenum TextureFormatToOpenGLFormat(TextureFormat format)
+	GLenum TextureFormatToOpenGLFormat(TextureFormat format)
 	{
 		switch (format)
 		{
@@ -41,7 +41,7 @@ namespace Crowny
 		return GL_NONE;
 	}
 
-	static GLenum TextureFormatToOpenGLInternalFormat(TextureFormat format)
+	GLenum TextureFormatToOpenGLInternalFormat(TextureFormat format)
 	{
 		switch (format)
 		{
@@ -52,7 +52,7 @@ namespace Crowny
 		return GL_NONE;
 	}
 
-	static GLenum TextureFilterToOpenGLFilter(TextureFilter filter)
+	GLenum TextureFilterToOpenGLFilter(TextureFilter filter)
 	{
 		switch (filter)
 		{
@@ -63,7 +63,7 @@ namespace Crowny
 		return GL_NONE;
 	}
 
-	static GLenum TextureWrapToOpenGLWrap(TextureWrap wrap)
+	GLenum TextureWrapToOpenGLWrap(TextureWrap wrap)
 	{
 		switch (wrap)
 		{
@@ -79,7 +79,7 @@ namespace Crowny
 	}
 
 #ifndef CW_WEB
-	static GLenum TextureSwizzleToOpenGLSwizzle(SwizzleType swizzle)
+	GLenum TextureSwizzleToOpenGLSwizzle(SwizzleType swizzle)
 	{
 		switch (swizzle)
 		{
@@ -94,7 +94,7 @@ namespace Crowny
 	}
 #endif
 
-	static GLint TextureSwizzleColorToOpenGLSwizzleColor(SwizzleChannel color)
+	GLint TextureSwizzleColorToOpenGLSwizzleColor(SwizzleChannel color)
 	{
 		switch (color)
 		{

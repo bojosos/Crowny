@@ -7,18 +7,24 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "Platform/OpenGL/OpenGLInfo.h"
+#include "Crowny/ImGui/OpenGLInformationWindow.h"
+#include "Crowny/ImGui/ImGuiViewportWindow.h"
+#include "Crowny/ImGui/ImGuiHierarchyWindow.h"
 #include "Crowny/Ecs/Components.h"
+
+#include "Crowny/ImGui/ImGuiTextureEditor.h"
 
 namespace Crowny
 {
 	EditorLayer::EditorLayer()
 		: Layer("EditorLayer"), m_Camera(glm::ortho(0.0f, 1280.0f, 720.0f, 0.0f)) // camera not for here
 	{
-		m_ImGuiWindows["viewport"] = true;
-		m_ImGuiWindows["hierarchy"] = true;
-		m_ImGuiWindows["glinfo"] = false;
-		m_ImGuiWindows["properties"] = true;
+		m_ImGuiWindows.push_back(new OpenGLInformationWindow("OpenGL"));
+		m_ImGuiWindows.push_back(new ImGuiHierarchyWindow("Hierarchy"));
+		m_ImGuiWindows.push_back(new ImGuiViewportWindow("Viewport"));
+		m_ImGuiWindows.push_back(new ImGuiTextureEditor("Texture Properties"));
+
+		//test prb shader for errors
 		Ref<Shader> s = Shader::Create("Shaders/PBRShader.glsl");
 	}
 
@@ -28,7 +34,6 @@ namespace Crowny
 		fbProps.Width = 1280; // human code please
 		fbProps.Height = 720;
 		m_Framebuffer = Framebuffer::Create(fbProps);
-		OpenGLInfo::RetrieveInformation();
 		m_ComponentEditor.RegisterComponent<Components::Transform>("Transform");
 
 		m_ComponentEditor.RegisterComponent<Components::Camera>("Camera");
@@ -39,7 +44,10 @@ namespace Crowny
 
 	void EditorLayer::OnDetach()
 	{
-		
+		for (ImGuiWindow* win : m_ImGuiWindows) 
+		{
+			delete win;
+		}
 	}
 
 	void EditorLayer::OnUpdate(Timestep ts)
@@ -107,84 +115,26 @@ namespace Crowny
 
 			if (ImGui::BeginMenu("Window"))
 			{
-				if(ImGui::BeginMenu("Renderer Capabilites"))
-				{
-					if (ImGui::MenuItem("OpenGL")) {
-						m_ImGuiWindows["glinfo"] = true;
-					}
-					ImGui::EndMenu();
-				}
+				for(ImGuiWindow* win : m_ImGuiWindows)
+					if (ImGui::MenuItem(win->GetName().c_str()))
+						win->Show();
 				ImGui::EndMenu();
 			}
 			
 			ImGui::EndMenuBar();
 		}
 
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2{ 0, 0 });
-
-		if (m_ImGuiWindows["viewport"]) {
-			ImGui::Begin("Viewport");
-			ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
-			m_ViewportSize = { viewportPanelSize.x, viewportPanelSize.y };
-			uint32_t textureID = m_Framebuffer->GetColorAttachmentRendererID();
-			ImGui::Image((void*)textureID, ImVec2{ m_ViewportSize.x, m_ViewportSize.y }, ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
-			ImGui::End();
+		for (ImGuiWindow* win : m_ImGuiWindows)
+		{
+			win->Render();
 		}
 
-		if (m_ImGuiWindows["glinfo"])
-		{
-			ImGui::Begin("OpenGL Information");
-			ImGui::Columns(3, "OpenGL Information");
-			ImGui::Separator();
-			for (OpenGLDetail& det : OpenGLInfo::GetInformation()) 
-			{
-				ImGui::Text(det.Name.c_str()); ImGui::NextColumn();
-				ImGui::Text(det.GLName.c_str()); ImGui::NextColumn();
-				ImGui::Text(det.Value.c_str()); ImGui::NextColumn();
-			}
-			ImGui::Separator();
-			ImGui::Columns(1);
-			ImGui::End();
-		}
-
-		if (m_ImGuiWindows["hierarchy"])
-		{
-			ImGui::Begin("Hierarchy");
-			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-			if (ImGui::TreeNode("Scene"))
-			{
-				if (ImGui::TreeNode("Entity"))
-				{
-					for (int i = 0; i < 5; i++)
-					{
-						if (ImGui::TreeNode((void*)(intptr_t)i, "Child %d", i))
-						{
-							ImGui::Text("");
-							ImGui::SameLine();
-							ImGui::Selectable("test", false);
-							if (ImGui::IsItemClicked()) CW_INFO("Clicked");
-							ImGui::TreePop();
-						}
-					}
-					ImGui::TreePop();
-				}
-				ImGui::TreePop();
-			}
-			ImGui::End();
-		}
-
-		if (m_ImGuiWindows["properties"])
-		{
-			ImGui::Begin("Properties");
+		ImGui::Begin("Properties");
 			
-			m_ComponentEditor.Render(m_Registry, m_Entity);
+		m_ComponentEditor.Render(m_Registry, m_Entity);
 
-			ImGui::End();
-		}
+		ImGui::End();
 
-		ImGui::PopStyleVar();
-		ImGui::PopStyleVar();
 		ImGui::End();
 	}
 
