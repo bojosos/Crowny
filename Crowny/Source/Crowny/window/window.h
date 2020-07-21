@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Events/Event.h"
+#include "Crowny/Input/Input.h"
 
 namespace Crowny
 {
@@ -27,6 +28,8 @@ namespace Crowny
 
 		virtual uint32_t GetWidth() const = 0;
 		virtual uint32_t GetHeight() const = 0;
+
+		virtual void SetCursor(Cursor cursor) = 0;
 
 		virtual void SetEventCallback(const EventCallbackFn& callback) = 0;
 		virtual void* GetNativeWindow() const = 0;

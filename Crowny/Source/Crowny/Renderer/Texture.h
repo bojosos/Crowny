@@ -124,8 +124,6 @@ namespace Crowny
 		virtual void Bind(uint32_t slot) const = 0;
 		virtual void Unbind(uint32_t slot) const = 0;
 		virtual bool operator==(const Texture& other) const = 0;
-
-		static Ref<Texture> Create();
 	};
 
 	class Texture2D : public Texture
@@ -148,9 +146,9 @@ namespace Crowny
 		//Creates a texture from a file
 		static Ref<TextureCube> Create(const std::string& filepath, const TextureParameters& parameters = {});
 		//Creates a texture from files
-		static Ref<TextureCube> Create(const std::vector<std::string>& files, const TextureParameters& parameters = {});
+		static Ref<TextureCube> Create(const std::array<std::string, 6>& files, const TextureParameters& parameters = {});
 		//Creates a texture from V Cross
-		static Ref<TextureCube> Create(const std::vector<std::string>& files, uint32_t mips, const TextureParameters& parameters = {});
+		static Ref<TextureCube> Create(const std::array<std::string, 6>& files, uint32_t mips, const TextureParameters& parameters = {});
 		
 	};
 }

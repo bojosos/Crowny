@@ -12,20 +12,25 @@ namespace Crowny
 	OpenGLTextureCube::OpenGLTextureCube(const std::string& filepath, const TextureParameters& parameters) : m_Parameters(parameters)
 	{
 		m_Files[0] = filepath;
-		m_RendererID = LoadFromFile();
+		LoadFromFile();
 	}
 
 	OpenGLTextureCube::OpenGLTextureCube(const std::array<std::string, 6>& files, const TextureParameters& parameters) : m_Parameters(parameters)
 	{
-
+		CW_ENGINE_ASSERT(false, "Not implemented");
 	}
 
 	OpenGLTextureCube::OpenGLTextureCube(const std::array<std::string, 6>& files, uint32_t mips, InputFormat format, const TextureParameters& parameters) : m_Parameters(parameters)
 	{
-
+		CW_ENGINE_ASSERT(false, "Not implemented");
 	}
 
-	uint32_t OpenGLTextureCube::LoadFromFile()
+	OpenGLTextureCube::~OpenGLTextureCube() 
+	{
+		glDeleteTextures(1, &m_RendererID);
+	}
+
+	void OpenGLTextureCube::LoadFromFile()
 	{
 		stbi_uc* data = nullptr;
 		int32_t width, height, channels;
@@ -42,12 +47,12 @@ namespace Crowny
 		{
 			for (uint32_t cx = 0; cx < 4; cx++)
 			{
-				if (cx == 0 || cx == 2 || cx == 3)
-					if (cy != 1)
+				if (cy == 0 || cy == 2 || cy == 3) // horizontal, vertical
+					if (cx != 1)
 						continue;
 				for (uint32_t y = 0; y < faceHeight; y++)
 				{
-					memcpy(faces[cx * 4 + cy], data + , faceWidth)
+					memcpy(faces[cy * 3 + cx] + y * faceWidth, data + cy * 3 * faceHeight + cx * faceWidth + y * faceWidth, faceWidth);
 				}
 			}
 		}
@@ -61,12 +66,13 @@ namespace Crowny
 
 		glBindTexture(GL_TEXTURE_CUBE_MAP, m_RendererID);
 		
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, xp));
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, xn));
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, yp));
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, yn));
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, zp));
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, zn));
+		uint32_t format = GL_RGBA;
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, format, faceWidth, faceHeight, 0, format, GL_UNSIGNED_BYTE, faces[3]);
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, format, faceWidth, faceHeight, 0, format, GL_UNSIGNED_BYTE, faces[1]);
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, format, faceWidth, faceHeight, 0, format, GL_UNSIGNED_BYTE, faces[0]);
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, format, faceWidth, faceHeight, 0, format, GL_UNSIGNED_BYTE, faces[5]);
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, format, faceWidth, faceHeight, 0, format, GL_UNSIGNED_BYTE, faces[2]);
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, format, faceWidth, faceHeight, 0, format, GL_UNSIGNED_BYTE, faces[4]);
 
 		glGenerateTextureMipmap(m_RendererID);
 
@@ -75,11 +81,11 @@ namespace Crowny
 
 	void OpenGLTextureCube::Bind(uint32_t slot) const
 	{
-
+		glBindTextureUnit(slot, m_RendererID);
 	}
 
 	void OpenGLTextureCube::Unbind(uint32_t slot) const
 	{
-
+		glBindTextureUnit(slot, 0);
 	}
 }

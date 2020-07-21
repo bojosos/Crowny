@@ -3,6 +3,7 @@
 #include "Crowny/Common/Math.h"
 #include "Crowny/Common/Timestep.h"
 #include "Crowny/Math/Frustum.h"
+#include "Crowny/Common/Color.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -10,11 +11,29 @@
 
 namespace Crowny
 {
+
+	enum class CameraProjection
+	{
+		Orthographic, Perspective
+	};
+
+	struct CameraProperties
+	{
+		glm::vec3 BackgroundColor{ 0.0f, 0.3f, 0.3f };
+		glm::vec2 ClippingPlanes{ 0.3f, 1000.0f };
+		CameraProjection Projection = CameraProjection::Orthographic;
+		int32_t Fov = 60;
+		glm::vec4 ViewportRectangle{ 0.0f, 0.0f, 1.0f, 1.0f };
+		bool HDR = false;
+		bool MSAA = false;
+		bool OcclusionCulling = false;
+	};
+
 	class Camera
 	{
 	public:
-		Camera(const glm::mat4& projectionMatrix);
-		~Camera();
+		Camera(const CameraProperties& properties = {});
+		~Camera() = default;
 
 		void Focus();
 		void Update(Timestep ts);
@@ -28,6 +47,10 @@ namespace Crowny
 		const glm::mat4& GetProjectionMatrix() const { return m_ProjectionMatrix; }
 		const glm::mat4& GetViewMatrix() const { return m_ViewMatrix; }
 		const glm::mat4& GetViewProjectionMatrix() const { return m_ViewProjectionMatrix; }
+
+		void SetProperties(const CameraProperties& properties) { m_Properties = properties; }
+		// COPY
+		CameraProperties GetProperties() { return m_Properties; }
 
 		void SetProjectionMatrix(const glm::mat4& matrix) { m_ProjectionMatrix = matrix; }
 
@@ -59,14 +82,15 @@ namespace Crowny
 		glm::mat4 m_ViewProjectionMatrix;
 
 		glm::vec3 m_Position;
-		glm::vec3 m_Rotation; 
+		glm::vec3 m_Rotation;
 
 		float m_RotationSpeed;
 		float m_MouseSensitivity;
 		float m_Speed, m_SprintSpeed;
 		float m_Pitch, m_Yaw;
 		bool m_MouseWasGrabbed;
-	
+		CameraProperties m_Properties;
+
 	public:
 		static Camera& GetCurrentCamera();
 	private:

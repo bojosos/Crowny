@@ -21,6 +21,8 @@ namespace Crowny
 		virtual uint32_t GetWidth() const override { return m_Data.Width; };
 		virtual uint32_t GetHeight() const override { return m_Data.Height; }
 
+		virtual void SetCursor(Cursor cursor) override;
+
 		virtual void SetEventCallback(const EventCallbackFn& callback) override { m_Data.EventCallback = callback; };
 		virtual void* GetNativeWindow() const override { return m_Window; }
 
@@ -33,6 +35,7 @@ namespace Crowny
 
 	private:
 		GLFWwindow* m_Window;
+		GLFWcursor* m_Cursor = nullptr;
 		Scope<GraphicsContext> m_Context;
 
 		struct WindowData

@@ -11,7 +11,6 @@ namespace Crowny
 	
 	Scope<Window> Window::Create(const WindowProperties& props)
 	{
-		//TODO: Here is for other platforms
 		return CreateScope<WindowsWindow>(props);
 	}
 

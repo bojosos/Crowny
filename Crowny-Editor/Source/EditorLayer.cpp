@@ -17,7 +17,7 @@
 namespace Crowny
 {
 	EditorLayer::EditorLayer()
-		: Layer("EditorLayer"), m_Camera(glm::ortho(0.0f, 1280.0f, 720.0f, 0.0f)) // camera not for here
+		: Layer("EditorLayer")
 	{
 		m_ImGuiWindows.push_back(new OpenGLInformationWindow("OpenGL"));
 		m_ImGuiWindows.push_back(new ImGuiHierarchyWindow("Hierarchy"));
@@ -34,12 +34,12 @@ namespace Crowny
 		fbProps.Width = 1280; // human code please
 		fbProps.Height = 720;
 		m_Framebuffer = Framebuffer::Create(fbProps);
-		m_ComponentEditor.RegisterComponent<Components::Transform>("Transform");
+		m_ComponentEditor.RegisterComponent<TransformComponent>("Transform");
 
-		m_ComponentEditor.RegisterComponent<Components::Camera>("Camera");
+		m_ComponentEditor.RegisterComponent<CameraComponent>("Camera");
 		m_Entity = m_Registry.create();
-		m_Registry.emplace<Components::Transform>(m_Entity, 500.f, 500.f);
-		m_Registry.emplace<Components::Camera>(m_Entity, 500.f);
+		m_Registry.emplace<TransformComponent>(m_Entity);
+		m_Registry.emplace<CameraComponent>(m_Entity);
 	}
 
 	void EditorLayer::OnDetach()
@@ -69,6 +69,8 @@ namespace Crowny
 
 	void EditorLayer::OnImGuiRender()
 	{
+		bool show = true;
+		ImGui::ShowDemoWindow(&show);
 		static bool dockspaceOpen = true;
 		static bool opt_fullscreen_persistant = true;
 		bool opt_fullscreen = opt_fullscreen_persistant;

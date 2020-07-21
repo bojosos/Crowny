@@ -1,49 +1,35 @@
 #pragma once
 
-#include "cwpch.h"
-#include "keycodes.h"
-#include "mousecodes.h"
-
-#include <glm/glm.hpp>
+#include "Crowny/Common/Common.h"
+#include "Crowny/Input/KeyCodes.h"
+#include "Crowny/Input/MouseCodes.h"
 
 namespace Crowny
 {
-	enum class CursorType
+
+	enum class Cursor
 	{
 		NO_CURSOR,
-		POINTER
+		POINTER,
+		IBEAM,
+		CROSSHAIR,
+		HAND,
+		HRESIZE,
+		VRESIZE
 	};
+
 	class Input
 	{
 	public:
-		inline static bool IsKeyPressed(KeyCode key) { return s_Instance->IsKeyPressedImpl(key); }
-
-		inline static bool IsMouseButtonPressed(MouseCode button) { return s_Instance->IsMouseButtonPressedImpl(button); }
-
-		inline static glm::vec2 GetMousePosition() { return s_Instance->GetMousePositionImpl(); };
-
-		inline static float GetMouseX() { return s_Instance->GetMouseXImpl(); }
-		inline static float GetMouseY() { return s_Instance->GetMouseYImpl(); }
-		
-		inline static bool IsMouseGrabbed() { return s_Instance->IsMouseGrabbedImpl(); }
-		inline static void SetMousePosition(const glm::vec2& position) { s_Instance->SetMousePositionImpl(position); }
-		inline static void SetMouseGrabbed(bool grabbed) { s_Instance->SetMouseGrabbedImpl(grabbed); }
-		inline static void SetMouseCursor(CursorType cursor) { s_Instance->SetMouseCursorImpl(cursor); }
-
+		static bool IsKeyPressed(KeyCode key);
+		static bool IsMouseButtonPressed(MouseCode button);
+		static std::pair<float, float> GetMousePosition();
+		static float GetMouseX();
+		static float GetMouseY();
+		static void SetMouseGrabbed(bool grabbed);
+		static bool IsMouseGrabbed();
+		static void SetMousePosition(const glm::vec2& position);
 	private:
-		inline bool IsMouseGrabbedImpl() { return m_Grabbed; }
-		inline void SetMouseGrabbedImpl(bool grabbed) { m_Grabbed = grabbed; }
-		void SetMousePositionImpl(const glm::vec2& position);
-		void SetMouseCursorImpl(CursorType cursor);
-
-		bool IsKeyPressedImpl(KeyCode key);
-		bool IsMouseButtonPressedImpl(MouseCode button);
-		glm::vec2 GetMousePositionImpl();
-		float GetMouseXImpl();
-		float GetMouseYImpl();
-	private:
-		bool m_Grabbed = false;
-	private:
-		static Scope<Input> s_Instance;
+		static bool s_Grabbed;
 	};
 }

@@ -20,7 +20,7 @@ namespace Crowny
 		return *s_Cameras[s_ActiveCameraIndex];
 	}
 
-	Camera::Camera(const glm::mat4& projectionMatrix) : m_ProjectionMatrix(projectionMatrix), m_MouseSensitivity(0.002f), m_RotationSpeed(60.0f), m_Speed(0.04f), m_SprintSpeed(m_Speed * 6.0f), m_MouseWasGrabbed(false)
+	Camera::Camera(const CameraProperties& properties) : m_Properties(properties), m_MouseSensitivity(0.002f), m_RotationSpeed(60.0f), m_Speed(0.04f), m_SprintSpeed(m_Speed * 6.0f), m_MouseWasGrabbed(false)
 	{
 		m_ViewMatrix = glm::mat4(1.0f);
 		m_Rotation = { 0.0f, 0.0f, 0.0f };
@@ -29,12 +29,13 @@ namespace Crowny
 		m_Pitch = 0.0f;
 		m_Frustum = CreateRef<ViewFrustum>();
 
+		switch (m_Properties.Projection)
+		{
+		case(CameraProjection::Orthographic): m_ProjectionMatrix = glm::ortho(0.0f, 1280.0f, 720.0f, 0.0f); break;
+		case(CameraProjection::Perspective): m_ProjectionMatrix = glm::perspective((float)m_Properties.Fov, (float)Application::Get().GetWindow().GetWidth() / (float)Application::Get().GetWindow().GetHeight(), m_Properties.ClippingPlanes.x, m_Properties.ClippingPlanes.y); break;
+		}
+
 		s_Cameras.push_back(this);
-	}
-
-	Camera::~Camera()
-	{
-
 	}
 
 	void Camera::OnResize(float width, float height)
@@ -45,7 +46,7 @@ namespace Crowny
 	void Camera::Focus()
 	{
 		Input::SetMouseGrabbed(true);
-		Input::SetMouseCursor(CursorType::NO_CURSOR);
+		Application::Get().GetWindow().SetCursor(Cursor::NO_CURSOR);
 	}
 
 	void Camera::Update(Timestep ts)
@@ -59,14 +60,14 @@ namespace Crowny
 			if (!Input::IsMouseGrabbed())
 			{
 				Input::SetMouseGrabbed(true);
-				Input::SetMouseCursor(CursorType::NO_CURSOR);
+				Application::Get().GetWindow().SetCursor(Cursor::NO_CURSOR);
 			}
 		}
 
 		if (Input::IsMouseGrabbed())
 		{
 			// FPS Controller
-			glm::vec2 mousePos = Input::GetMousePosition();
+			glm::vec2 mousePos { Input::GetMousePosition().first, Input::GetMousePosition().second };
 #ifdef MC_WEB
 			mousePos.x -= lastPos.x;
 			mousePos.y -= lastPos.y;
@@ -123,7 +124,7 @@ namespace Crowny
 		if (Input::IsKeyPressed(KeyCode::Escape))
 		{
 			Input::SetMouseGrabbed(false);
-			Input::SetMouseCursor(CursorType::POINTER);
+			Application::Get().GetWindow().SetCursor(Cursor::POINTER);
 			m_MouseWasGrabbed = false;
 		}
 

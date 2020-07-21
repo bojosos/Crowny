@@ -9,16 +9,6 @@
 namespace Crowny
 {
 
-	Ref<Texture> Texture::Create()
-	{
-
-		if (m_Data.SelectedTextureShape == 0)
-		{
-			return Texture2D::Create(m_Data.Filepath, m_Data);
-		}
-
-	}
-
 	Ref<Texture2D> Texture2D::Create(uint32_t width, uint32_t height, const TextureParameters& parameters)
 	{
 		switch (Renderer::GetAPI())
@@ -43,7 +33,7 @@ namespace Crowny
 		}
 	}
 
-	Ref<TextureCube> TextureCube::Create(const std::vector<std::string>& files, const TextureParameters& parameters)
+	Ref<TextureCube> TextureCube::Create(const std::array<std::string, 6>& files, const TextureParameters& parameters)
 	{
 		switch (Renderer::GetAPI())
 		{
@@ -51,7 +41,7 @@ namespace Crowny
 		}
 	}
 
-	Ref<TextureCube> TextureCube::Create(const std::vector<std::string>& files, uint32_t mips, const TextureParameters& parameters)
+	Ref<TextureCube> TextureCube::Create(const std::array<std::string, 6>& files, uint32_t mips, const TextureParameters& parameters)
 	{
 		switch (Renderer::GetAPI())
 		{

@@ -4,6 +4,11 @@
 
 namespace Crowny
 {
+	Entity::Entity(entt::entity entity) : m_Entity(entity)
+	{
+
+	}
+
 	template <typename Component>
 	void Entity::AddComponent()
 	{

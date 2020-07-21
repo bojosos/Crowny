@@ -8,12 +8,17 @@ namespace Crowny
 
 	Scene::Scene(const std::string& name) : m_Name(name)
 	{
-		//SceneManager::AddScene(this);
+		
 	}
 
-	void Scene::AddEntity(const Ref<Entity>& entity)
+	void Scene::OnUpdate(Timestep ts)
 	{
-		m_Entities.push_back(entity);
+
+	}
+
+	Entity& Scene::CreateEntity()
+	{
+		return Entity(m_Registry.create());
 	}
 
 }

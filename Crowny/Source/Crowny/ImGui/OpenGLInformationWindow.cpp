@@ -16,6 +16,8 @@ namespace Crowny
 	void OpenGLInformationWindow::Render()
 	{
 		if (m_Shown) {
+			if (OpenGLInfo::GetInformation().empty())
+				OpenGLInfo::RetrieveInformation();
 			ImGui::Begin("OpenGL Information");
 			ImGui::Columns(3, "OpenGL Information");
 			ImGui::Separator();
@@ -34,8 +36,6 @@ namespace Crowny
 	void OpenGLInformationWindow::Show()
 	{
 		m_Shown = true;
-		if(OpenGLInfo::GetInformation().empty())
-			OpenGLInfo::RetrieveInformation();
 	}
 
 	void OpenGLInformationWindow::Hide()

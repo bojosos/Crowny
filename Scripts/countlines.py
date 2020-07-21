@@ -35,6 +35,7 @@ for dir in dirs:
             fcc = 0
             path = join(dirpath, fff)
             f = open(path, "r")
+            print(fff)
             flines = f.readlines()
             if "-a" in sys.argv:
                 print("%s : %d" % (path, flines))
@@ -85,9 +86,9 @@ long_info();
 from datetime import datetime
 now = datetime.now()
 
-out = open("count.log", "a")
-out.write("\n")
-out.write(now.strftime("%d/%m/%Y %H:%M:%S") + "\n")
-out.write("%d lines, %d files, %f avgl, %d characters\n" % (linecount, filecount, linecount / filecount, charcount))
-out.write("%s, %d lines, %d characters" % (largestfn, largestfln, largestfcc))
-out.close()
+if not '--nowrite' in sys.argv:
+    out = open("count.log", "a")
+    out.write(now.strftime("%d/%m/%Y %H:%M:%S") + "\n")
+    out.write("%d lines, %d files, %f avgl, %d characters\n" % (linecount, filecount, linecount / filecount, charcount))
+    out.write("%s, %d lines, %d characters\n" % (largestfn, largestfln, largestfcc))
+    out.close()

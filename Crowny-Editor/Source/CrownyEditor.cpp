@@ -6,6 +6,7 @@
 
 namespace Crowny
 {
+
 	class CrownyEditor : public Application
 	{
 	public:
@@ -13,7 +14,6 @@ namespace Crowny
 		{
 			PushLayer(new EditorLayer());
 		}
-
 	};
 
 	Application* CreateApplication()

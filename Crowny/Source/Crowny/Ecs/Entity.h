@@ -8,6 +8,7 @@ namespace Crowny
 	class Entity
 	{
 	public:
+		Entity(entt::entity entity);
 		template <typename Component>
 		void AddComponent();
 
@@ -16,6 +17,5 @@ namespace Crowny
 
 	private:
 		entt::entity m_Entity;
-
 	};
 }
