@@ -1,35 +1,36 @@
 #pragma once
 
-#include <map>
-#include <set>
+#include "Crowny/Ecs/Entity.h"
+#include "Crowny/Ecs/Components.h"
 
+#include <map>
 #include <entt/entt.hpp>
 #include <imgui.h>
 
 namespace Crowny {
 
-	template <class Component, class EntityType>
-	void ComponentEditorWidget(entt::basic_registry<EntityType>& registry, EntityType entity) {}
-
-	template <class Component, class EntityType>
-	void ComponentAddAction(entt::basic_registry<EntityType>& registry, EntityType entity)
-	{
-		registry.template emplace<Component>(entity);
+	template <class Component>
+	void ComponentEditorWidget(Entity& entity) 
+	{ 
+	
 	}
 
-	template <class Component, class EntityType>
-	void ComponentRemoveAction(entt::basic_registry<EntityType>& registry, EntityType entity)
+	template <class Component>
+	void ComponentAddAction(Entity& entity)
 	{
-		registry.template remove<Component>(entity);
+		entity.AddComponent<Component>();
 	}
 
-	template <class EntityType>
+	template <class Component>
+	void ComponentRemoveAction(Entity& entity)
+	{
+		entity.RemoveComponent<Component>();
+	}
+
 	class ComponentEditor {
 	public:
-		using Registry = entt::basic_registry<EntityType>;
-
 		struct ComponentInfo {
-			using Callback = std::function<void(Registry&, EntityType)>;
+			using Callback = std::function<void(Entity&)>;
 			std::string name;
 			Callback widget, create, destroy;
 		};
@@ -41,7 +42,7 @@ namespace Crowny {
 
 		std::map<ComponentTypeID, ComponentInfo> component_infos;
 
-		bool EntityHasComponent(Registry& registry, EntityType& entity, ComponentTypeID type_id)
+		bool EntityHasComponent(const entt::registry& registry, entt::entity& entity, ComponentTypeID type_id)
 		{
 			ComponentTypeID type[] = { type_id };
 			return registry.runtime_view(std::cbegin(type), std::cend(type)).contains(entity);
@@ -63,32 +64,27 @@ namespace Crowny {
 			return RegisterComponent<Component>(ComponentInfo{
 				name,
 				widget,
-				ComponentAddAction<Component, EntityType>,
-				ComponentRemoveAction<Component, EntityType>,
-				});
+				ComponentAddAction<Component>,
+				ComponentRemoveAction<Component>,
+			});
 		}
 
 		template <class Component>
 		ComponentInfo& RegisterComponent(const std::string& name)
 		{
-			return RegisterComponent<Component>(name, ComponentEditorWidget<Component, EntityType>);
+			return RegisterComponent<Component>(name, ComponentEditorWidget<Component>);
 		}
 
-		void Render(Registry& registry, EntityType& e)
+		void Render(entt::registry& registry, Entity& entity)
 		{
+			entt::entity e = entity.m_EntityHandle;
 			ImGui::Separator();
-			ImGui::TextUnformatted("Editing:");
-			ImGui::SameLine();
 
-			if (registry.valid(e)) {
-				ImGui::Text("ID: %d", entt::to_integral(e));
+			if (e != entt::null) {
+				ImGui::Text(entity.GetComponent<TagComponent>().Tag.c_str());
 			}
 			else {
 				ImGui::Text("Invalid Entity");
-			}
-
-			if (ImGui::Button("New Entity")) {
-				e = registry.create();
 			}
 
 			ImGui::Separator();
@@ -100,18 +96,18 @@ namespace Crowny {
 					if (EntityHasComponent(registry, e, component_type_id)) {
 						ImGui::PushID(component_type_id);
 						if (ImGui::Button("-")) {
-							ci.destroy(registry, e);
+							ci.destroy(entity);
 							ImGui::PopID();
 							continue; // early out to prevent access to deleted data
 						}
 						else {
 							ImGui::SameLine();
 						}
-
+						ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 						if (ImGui::CollapsingHeader(ci.name.c_str())) {
 							ImGui::Indent(30.f);
 							ImGui::PushID("Widget");
-							ci.widget(registry, e);
+							ci.widget(entity);
 							ImGui::PopID();
 							ImGui::Unindent(30.f);
 						}
@@ -127,14 +123,15 @@ namespace Crowny {
 						ImGui::OpenPopup("Add Component");
 					}
 
+					ImGui::SetNextItemWidth(200);
 					if (ImGui::BeginPopup("Add Component")) {
-						ImGui::Text("Available:  ");
+						ImGui::Text("Components:  ");
 						ImGui::Separator();
 
 						for (auto& [component_type_id, ci] : has_not) {
 							ImGui::PushID(component_type_id);
 							if (ImGui::Selectable(ci.name.c_str())) {
-								ci.create(registry, e);
+								ci.create(entity);
 							}
 							ImGui::PopID();
 						}

@@ -1,23 +1,33 @@
 #include "cwpch.h"
 
 #include "Crowny/Ecs/Entity.h"
+#include "Crowny/Ecs/Components.h"
 
 namespace Crowny
 {
-	Entity::Entity(entt::entity entity) : m_Entity(entity)
+	Entity::Entity(entt::entity entity, Scene* scene) : m_EntityHandle(entity), m_Scene(scene)
 	{
 
 	}
 
-	template <typename Component>
-	void Entity::AddComponent()
+	void Entity::AddChild(const std::string& name)
 	{
-		m_Registry.emplace<Component>(m_Entity);
+		auto& rc = GetComponent<RelationshipComponent>();
+		rc.Children.emplace_back(m_Scene->m_Registry.create(), m_Scene);
+
+		rc.Children.back().AddComponent<TagComponent>(name);
+		rc.Children.back().AddComponent<TransformComponent>();
+		rc.Children.back().AddComponent<RelationshipComponent>(*this);
 	}
 
-	template <typename Component>
-	void Entity::RemoveComponent()
+	Entity& Entity::GetChild(uint32_t index)
 	{
-		m_Registry.remove<Component>(m_Entity);
+		return GetComponent<RelationshipComponent>().Children[index];
 	}
+
+	uint32_t Entity::GetChildCount()
+	{
+		return GetComponent<RelationshipComponent>().Children.size();
+	}
+
 }

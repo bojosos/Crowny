@@ -9,6 +9,16 @@
 namespace Crowny
 {
 
+	Ref<Texture> Texture::Create(const TextureParameters& parameters)
+	{
+		switch (parameters.Shape)
+		{
+		//case(TextureShape::TEXTURE_2D): return CreateRef<OpenGLTexture2D>(parameters);
+		//case(TextureShape::TEXTURE_CUBE): return CreateRef<OpenGLTextureCube>(parameters);
+		}
+		return nullptr;
+	}
+
 	Ref<Texture2D> Texture2D::Create(uint32_t width, uint32_t height, const TextureParameters& parameters)
 	{
 		switch (Renderer::GetAPI())

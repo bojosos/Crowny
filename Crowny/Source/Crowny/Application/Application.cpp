@@ -7,6 +7,8 @@
 #include "Crowny/Common/Timestep.h"
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Font.h"
+#include "Crowny/Common/Random.h"
+#include "Crowny/Application/Initializer.h"
 
 #ifdef MC_WEB
 #include <emscripten/emscripten.h>
@@ -34,12 +36,10 @@ namespace Crowny
 
 		m_Window->SetEventCallback(CW_BIND_EVENT_FN(Application::OnEvent));
 
-		FontManager::Add(CreateRef<Font>("default", DEFAULT_FONT_PATH, 64));
-
-		Renderer::Init();
-
 		m_ImGuiLayer = new ImGuiLayer();
 		PushOverlay(m_ImGuiLayer);
+
+		Initializer::Init();
 	}
 
 	Application::~Application()

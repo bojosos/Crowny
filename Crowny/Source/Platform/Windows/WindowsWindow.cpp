@@ -9,7 +9,7 @@
 
 namespace Crowny
 {
-	static uint8_t s_GLFWWindowCount = 0;
+	static byte s_GLFWWindowCount = 0;
 
 
 	static void GLFWErrorCallback(int error, const char* desc)

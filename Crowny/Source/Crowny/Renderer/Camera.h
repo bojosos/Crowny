@@ -17,22 +17,10 @@ namespace Crowny
 		Orthographic, Perspective
 	};
 
-	struct CameraProperties
-	{
-		glm::vec3 BackgroundColor{ 0.0f, 0.3f, 0.3f };
-		glm::vec2 ClippingPlanes{ 0.3f, 1000.0f };
-		CameraProjection Projection = CameraProjection::Orthographic;
-		int32_t Fov = 60;
-		glm::vec4 ViewportRectangle{ 0.0f, 0.0f, 1.0f, 1.0f };
-		bool HDR = false;
-		bool MSAA = false;
-		bool OcclusionCulling = false;
-	};
-
 	class Camera
 	{
 	public:
-		Camera(const CameraProperties& properties = {});
+		Camera();
 		~Camera() = default;
 
 		void Focus();
@@ -47,10 +35,6 @@ namespace Crowny
 		const glm::mat4& GetProjectionMatrix() const { return m_ProjectionMatrix; }
 		const glm::mat4& GetViewMatrix() const { return m_ViewMatrix; }
 		const glm::mat4& GetViewProjectionMatrix() const { return m_ViewProjectionMatrix; }
-
-		void SetProperties(const CameraProperties& properties) { m_Properties = properties; }
-		// COPY
-		CameraProperties GetProperties() { return m_Properties; }
 
 		void SetProjectionMatrix(const glm::mat4& matrix) { m_ProjectionMatrix = matrix; }
 
@@ -89,7 +73,6 @@ namespace Crowny
 		float m_Speed, m_SprintSpeed;
 		float m_Pitch, m_Yaw;
 		bool m_MouseWasGrabbed;
-		CameraProperties m_Properties;
 
 	public:
 		static Camera& GetCurrentCamera();

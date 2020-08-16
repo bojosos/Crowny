@@ -7,19 +7,16 @@ namespace Crowny
 
 	class Random
 	{
-	public:
-		static void Init()
-		{
-			s_RandomEngine.seed(std::random_device()());
-		}
+		using RandomValueType = std::default_random_engine::result_type;
 
-		static float Float()
-		{
-			return (float)s_Distribution(s_RandomEngine) / (float)std::numeric_limits<uint32_t>::max();
-		}
+	public:
+		static void Init(uint32_t seed = 0);
+		static float Float();
+		static float Float(float min, float max);
+		static int32_t Int(int32_t min, int32_t max);
 
 	private:
-		static std::mt19937 s_RandomEngine;
-		static std::uniform_int_distribution<std::mt19937::result_type> s_Distribution;
+		static std::default_random_engine s_RandomEngine;
+		static std::uniform_int_distribution<RandomValueType> s_Distribution;
 	};
 }

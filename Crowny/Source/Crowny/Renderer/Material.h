@@ -11,10 +11,10 @@ namespace Crowny
 		std::vector<Ref<Texture2D>> m_Textures;
 
 		Ref<Shader> m_Shader;
-		uint8_t* m_VSUserUniformBuffer;
+		byte* m_VSUserUniformBuffer;
 		uint32_t m_VSUserUniformBufferSize;
 
-		uint8_t* m_PSUserUniformBuffer;
+		byte* m_PSUserUniformBuffer;
 		uint32_t m_PSUserUniformBufferSize;
 
 		const ShaderUniformList* m_VSUserUniforms;
@@ -30,7 +30,7 @@ namespace Crowny
 		template<typename T>
 		void SetUniform(const std::string& name, const T& data)
 		{
-			uint8_t* buffer;
+			byte* buffer;
 			ShaderUniformDeclaration* declaration = FindUniformDeclaration(name, &buffer);
 			if (!declaration)
 			{
@@ -43,7 +43,7 @@ namespace Crowny
 		void SetTexture(const std::string& name, const Ref<Texture2D>& texture);
 	protected:
 		void AllocateStorage();
-		ShaderUniformDeclaration* FindUniformDeclaration(const std::string& name, uint8_t** outBuffer = nullptr);
+		ShaderUniformDeclaration* FindUniformDeclaration(const std::string& name, byte** outBuffer = nullptr);
 		ShaderResourceDeclaration* FindResourceDeclaration(const std::string& name);
 	};
 

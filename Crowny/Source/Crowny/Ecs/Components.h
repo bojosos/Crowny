@@ -1,45 +1,93 @@
-#pragma once
+﻿#pragma once
 
-#include <entt/entt.hpp>
-#include "Crowny/ImGui/ImGuiComponentEditor.h"
 #include "Crowny/Renderer/Camera.h"
 #include "Crowny/Renderer/Texture.h"
+#include "Crowny/Renderer/Material.h"
+#include "Crowny/Common/Color.h"
+#include "Crowny/Ecs/Entity.h"
+
+#include <entt/entt.hpp>
 
 namespace Crowny
 {
+
+	template <class Component>
+	void ComponentEditorWidget(Entity& e);
+
+	struct TagComponent
+	{
+		std::string Tag = "";
+
+		TagComponent() = default;
+		TagComponent(const TagComponent&) = default;
+		TagComponent(const std::string& tag) : Tag(tag) {}
+
+		operator std::string& () { return Tag; }
+		operator const std::string& () const { return Tag; }
+	};
+
 	struct TransformComponent
 	{
-		glm::mat4 Transform;
+		glm::mat4 Transform{ 1.0f };
 
 		TransformComponent() = default;
 		TransformComponent(const TransformComponent&) = default;
-		TransformComponent(const glm::mat4 & transform)
-			: Transform(transform) {}
+		TransformComponent(const glm::mat4& transform) : Transform(transform) {}
 
 		operator glm::mat4& () { return Transform; }
 		operator const glm::mat4& () const { return Transform; }
 	};
 
+	template <>
+	void ComponentEditorWidget<TransformComponent>(Entity& e);
+
 	struct CameraComponent
 	{
-		CameraProperties Camera;
+		glm::vec3 BackgroundColor{ 0.0f, 0.3f, 0.3f };
+		glm::vec2 ClippingPlanes{ 0.3f, 1000.0f };
+		CameraProjection Projection = CameraProjection::Orthographic;
+		int32_t Fov = 60;
+		glm::vec4 ViewportRectangle{ 0.0f, 0.0f, 1.0f, 1.0f };
+		bool HDR = false;
+		bool MSAA = false;
+		bool OcclusionCulling = false;
+		bool FixedAspectRatio = false;
+
+		Crowny::Camera Camera;
 
 		CameraComponent() = default;
 		CameraComponent(const CameraComponent&) = default;
-		CameraComponent(const CameraProperties& camera)
-			: Camera(camera) {}
 	};
+
+	template <>
+	void ComponentEditorWidget<CameraComponent>(Entity& e);
+
+	struct TextComponent
+	{
+		std::string Text = "";
+		glm::vec3 Color{ 0.0f, 0.3f, 0.3f };
+		//Crowny::Material Material;
+
+		TextComponent() = default;
+		TextComponent(const TextComponent&) = default;
+		TextComponent(const std::string& text) : Text(text) {}
+	};
+
+	//template <>
+	//void ComponentEditorWidget<TextComponent>(entt::registry& reg, Entity& e);
 
 	struct SpriteRendererComponent
 	{
 		Ref<Texture2D> Texture;
-		Color Color;
+		Crowny::Color Color;
 
 		SpriteRendererComponent() = default;
 		SpriteRendererComponent(const SpriteRendererComponent&) = default;
-		SpriteRendererComponent(const Ref<Texture2D>& texture, Crowny::Color color)
-			: Texture(texture), Color(color) {}
+		SpriteRendererComponent(const Ref<Texture2D>& texture, Crowny::Color color) : Texture(texture), Color(color) {}
 	};
+
+	template <>
+	void ComponentEditorWidget<SpriteRendererComponent>(Entity& e);
 
 	struct MeshRendererComponent
 	{
@@ -47,8 +95,16 @@ namespace Crowny
 	};
 
 	template <>
-	void ComponentEditorWidget<TransformComponent>(entt::registry& reg, entt::entity e);
+	void ComponentEditorWidget<MeshRendererComponent>(Entity& e);
 
-	template <>
-	void ComponentEditorWidget<CameraComponent>(entt::registry& reg, entt::entity e);
+	struct RelationshipComponent
+	{
+		std::vector<Entity> Children;
+		Entity Parent;
+
+		RelationshipComponent() = default;
+		RelationshipComponent(const RelationshipComponent&) = default;
+		RelationshipComponent(const Entity& parent) : Parent(parent) { }
+	};
+
 }

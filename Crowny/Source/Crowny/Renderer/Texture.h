@@ -88,24 +88,41 @@ namespace Crowny
 
 	};
 
+	enum class TextureShape
+	{
+		TEXTURE_2D, 
+		TEXTURE_CUBE
+	};
+
+	enum class TextureType
+	{
+		TEXTURE_SPRITE, 
+		TEXTURE_DEFAULT, 
+		TEXTURE_CURSOR, 
+		TEXTURE_NORMAL, 
+		TEXTURE_LIGHTMAP, 
+		TEXTURE_SINGLECHANNEL
+	};
 
 	struct TextureParameters
 	{
-		TextureParameters()
-		{
-			Format = TextureFormat::RGBA;
-			Filter = TextureFilter::NEAREST;
-			Wrap = TextureWrap::REPEAT;
-		}
+		TextureParameters() = default;
 
 		TextureParameters(TextureFormat format, TextureFilter filter, TextureWrap wrap, TextureSwizzle swizzle = {}) : Format(format), Filter(filter), Wrap(wrap), Swizzle(swizzle)
 		{
 
 		}
 
-		TextureFormat Format;
-		TextureFilter Filter;
-		TextureWrap Wrap;
+		TextureType Type = TextureType::TEXTURE_DEFAULT;
+		TextureShape Shape = TextureShape::TEXTURE_2D;
+
+		bool sRGB = true;
+		bool ReadWrite = false;
+		bool GenerateMipmaps = false;
+
+		TextureFormat Format = TextureFormat::RGBA;
+		TextureFilter Filter = TextureFilter::NEAREST;
+		TextureWrap Wrap = TextureWrap::REPEAT;
 		TextureSwizzle Swizzle;
 	};
 
@@ -124,6 +141,8 @@ namespace Crowny
 		virtual void Bind(uint32_t slot) const = 0;
 		virtual void Unbind(uint32_t slot) const = 0;
 		virtual bool operator==(const Texture& other) const = 0;
+
+		static Ref<Texture> Create(const TextureParameters& parameters);
 	};
 
 	class Texture2D : public Texture

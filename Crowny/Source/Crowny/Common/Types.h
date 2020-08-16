@@ -5,6 +5,8 @@
 namespace Crowny
 {
 
+	using byte = uint8_t;
+
 	struct Rectangle
 	{
 		float X, Y, Width, Height;

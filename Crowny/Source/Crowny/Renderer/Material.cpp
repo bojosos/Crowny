@@ -29,7 +29,7 @@ namespace Crowny
 		if (vsBuffer)
 		{
 			m_VSUserUniformBufferSize = vsBuffer->GetSize();
-			m_VSUserUniformBuffer = new uint8_t[m_VSUserUniformBufferSize];
+			m_VSUserUniformBuffer = new byte[m_VSUserUniformBufferSize];
 			memset(m_VSUserUniformBuffer, 0, m_VSUserUniformBufferSize);
 			m_VSUserUniforms = &vsBuffer->GetUniformDeclarations();
 		}
@@ -38,7 +38,7 @@ namespace Crowny
 		if (psBuffer)
 		{
 			m_PSUserUniformBufferSize = psBuffer->GetSize();
-			m_PSUserUniformBuffer = new uint8_t[m_PSUserUniformBufferSize];
+			m_PSUserUniformBuffer = new byte[m_PSUserUniformBufferSize];
 			memset(m_PSUserUniformBuffer, 0, m_PSUserUniformBufferSize);
 			m_PSUserUniforms = &psBuffer->GetUniformDeclarations();
 		}
@@ -85,7 +85,7 @@ namespace Crowny
 		m_Textures[slot] = texture;
 	}
 
-	ShaderUniformDeclaration* Material::FindUniformDeclaration(const std::string& name, uint8_t** outBuffer)
+	ShaderUniformDeclaration* Material::FindUniformDeclaration(const std::string& name, byte** outBuffer)
 	{
 		if (m_VSUserUniforms)
 		{

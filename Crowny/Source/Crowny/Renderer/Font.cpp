@@ -23,7 +23,7 @@ namespace Crowny
 
 		m_Texture = Texture2D::Create(512, 512, params);
 
-		uint8_t* data = new uint8_t[512 * 512 * 4];
+		byte* data = new byte[512 * 512 * 4];
 		memset(data, 0xff, 512 * 512 * 4);
 
 		for (uint32_t i = 0; i < 512 * 512; i++)

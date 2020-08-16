@@ -27,20 +27,22 @@ namespace Crowny
 		{
 			return (other.GetRendererID() == m_RendererID);
 		}
-		
+
 	private:
 		TextureParameters m_Parameters;
 		uint32_t m_RendererID;
 		std::string m_FilePath;
 		uint32_t m_Width, m_Height;
+
+	public:
+		static uint32_t TextureChannelToOpenGLChannel(TextureChannel channel);
+		static uint32_t TextureFormatToOpenGLFormat(TextureFormat format);
+		static uint32_t TextureFormatToOpenGLInternalFormat(TextureFormat format);
+		static uint32_t TextureFilterToOpenGLFilter(TextureFilter filter);
+		static uint32_t TextureWrapToOpenGLWrap(TextureWrap wrap);
+		static uint32_t TextureSwizzleToOpenGLSwizzle(SwizzleType swizzle);
+		static int32_t  TextureSwizzleColorToOpenGLSwizzleColor(SwizzleChannel color);
 	};
 
-	uint32_t TextureChannelToOpenGLChannel(TextureChannel channel);
-	uint32_t TextureFormatToOpenGLFormat(TextureFormat format);
-	uint32_t TextureFormatToOpenGLInternalFormat(TextureFormat format);
-	uint32_t TextureFilterToOpenGLFilter(TextureFilter filter);
-	uint32_t TextureWrapToOpenGLWrap(TextureWrap wrap);
-	uint32_t TextureSwizzleToOpenGLSwizzle(SwizzleType swizzle);
-	int32_t  TextureSwizzleColorToOpenGLSwizzleColor(SwizzleChannel color);
 
 }

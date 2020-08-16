@@ -11,8 +11,6 @@ namespace Crowny
 	class WindowsWindow : public Window
 	{
 	public:
-		using EventCallbackFn = std::function<void(Event&)>;
-
 		WindowsWindow(const WindowProperties& props);
 		~WindowsWindow();
 

@@ -20,7 +20,7 @@ namespace Crowny
 		return *s_Cameras[s_ActiveCameraIndex];
 	}
 
-	Camera::Camera(const CameraProperties& properties) : m_Properties(properties), m_MouseSensitivity(0.002f), m_RotationSpeed(60.0f), m_Speed(0.04f), m_SprintSpeed(m_Speed * 6.0f), m_MouseWasGrabbed(false)
+	Camera::Camera() : m_MouseSensitivity(0.002f), m_RotationSpeed(60.0f), m_Speed(0.04f), m_SprintSpeed(m_Speed * 6.0f), m_MouseWasGrabbed(false)
 	{
 		m_ViewMatrix = glm::mat4(1.0f);
 		m_Rotation = { 0.0f, 0.0f, 0.0f };
@@ -29,11 +29,7 @@ namespace Crowny
 		m_Pitch = 0.0f;
 		m_Frustum = CreateRef<ViewFrustum>();
 
-		switch (m_Properties.Projection)
-		{
-		case(CameraProjection::Orthographic): m_ProjectionMatrix = glm::ortho(0.0f, 1280.0f, 720.0f, 0.0f); break;
-		case(CameraProjection::Perspective): m_ProjectionMatrix = glm::perspective((float)m_Properties.Fov, (float)Application::Get().GetWindow().GetWidth() / (float)Application::Get().GetWindow().GetHeight(), m_Properties.ClippingPlanes.x, m_Properties.ClippingPlanes.y); break;
-		}
+		m_ProjectionMatrix = glm::ortho(0.0f, 1280.0f, 720.0f, 0.0f);
 
 		s_Cameras.push_back(this);
 	}
@@ -55,7 +51,7 @@ namespace Crowny
 		glm::vec2 windowSize = { Application::Get().GetWindow().GetWidth(),  Application::Get().GetWindow().GetHeight() };
 		glm::vec2 windowCenter = glm::vec2((float)(int32_t)(windowSize.x / 2.0f), (float)(int32_t)(windowSize.y / 2.0f));
 #endif
-		if (Input::IsMouseButtonPressed(MouseCode::ButtonRight))
+		if (Input::IsMouseButtonPressed(MouseCode::ButtonMiddle))
 		{
 			if (!Input::IsMouseGrabbed())
 			{

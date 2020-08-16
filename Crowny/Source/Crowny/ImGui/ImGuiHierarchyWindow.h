@@ -4,7 +4,8 @@
 
 namespace Crowny
 {
-	// Takes the objects from the active scene and dispalys them
+	class Entity;
+		
 	class ImGuiHierarchyWindow : public ImGuiWindow
 	{
 	public:
@@ -15,5 +16,9 @@ namespace Crowny
 
 		virtual void Show() override;
 		virtual void Hide() override;
+		static Entity SelectedEntity;
+
+	private:
+		void DisplayTree(Entity& e, uint32_t i = 0);
 	};
 }

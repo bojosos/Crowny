@@ -12,6 +12,8 @@ namespace Crowny
 	public:
 		CrownyEditor() : Application("Crowny Editor")
 		{
+			char c = 'a';
+			CW_ENGINE_INFO(sizeof(c));
 			PushLayer(new EditorLayer());
 		}
 	};

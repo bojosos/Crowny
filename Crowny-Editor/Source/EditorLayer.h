@@ -3,12 +3,18 @@
 #include "Crowny.h"
 #include "Crowny/ImGui/ImGuiComponentEditor.h"
 #include "Crowny/ImGui/ImGuiWindow.h"
+#include "Crowny/ImGui/ImGuiMenu.h"
+
+#include "Crowny/ImGui/OpenGLInformationWindow.h"
+#include "Crowny/ImGui/ImGuiViewportWindow.h"
+#include "Crowny/ImGui/ImGuiHierarchyWindow.h"
 
 #include <entt/entt.hpp>
 
 namespace Crowny
 {
 	class ImGuiTextureEditor;
+	class ImGuiViewportWindow;
 
 	class EditorLayer : public Layer
 	{
@@ -19,16 +25,21 @@ namespace Crowny
 		virtual void OnAttach() override;
 		virtual void OnDetach() override;
 
-		void OnUpdate(Timestep ts) override;
+		virtual void OnUpdate(Timestep ts) override;
 		virtual void OnImGuiRender() override;
-		void OnEvent(Event& e) override;
+		virtual void OnEvent(Event& e) override;
 
 	private:
-		entt::entity m_Entity;
-		entt::registry m_Registry;
-		ComponentEditor<entt::entity> m_ComponentEditor;
+
+		ImGuiMenuBar* m_MenuBar;
+		ComponentEditor m_ComponentEditor;
+		ImGuiWindow* m_GLInfoWindow;
+		ImGuiHierarchyWindow* m_HierarchyWindow;
+		ImGuiViewportWindow* m_ViewportWindow;
+
 		Camera m_Camera;
 
+		ImGuiViewportWindow* m_Viewport;
 		std::vector<ImGuiWindow*> m_ImGuiWindows;
 		
 		Ref<Framebuffer> m_Framebuffer;

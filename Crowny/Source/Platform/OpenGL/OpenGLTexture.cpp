@@ -11,7 +11,7 @@
 
 namespace Crowny
 {
-	GLenum TextureChannelToOpenGLChannel(TextureChannel channel)
+	GLenum OpenGLTexture2D::TextureChannelToOpenGLChannel(TextureChannel channel)
 	{
 		switch (channel)
 		{
@@ -30,7 +30,7 @@ namespace Crowny
 		return GL_NONE;
 	}
 
-	GLenum TextureFormatToOpenGLFormat(TextureFormat format)
+	GLenum OpenGLTexture2D::TextureFormatToOpenGLFormat(TextureFormat format)
 	{
 		switch (format)
 		{
@@ -41,7 +41,7 @@ namespace Crowny
 		return GL_NONE;
 	}
 
-	GLenum TextureFormatToOpenGLInternalFormat(TextureFormat format)
+	GLenum OpenGLTexture2D::TextureFormatToOpenGLInternalFormat(TextureFormat format)
 	{
 		switch (format)
 		{
@@ -52,7 +52,7 @@ namespace Crowny
 		return GL_NONE;
 	}
 
-	GLenum TextureFilterToOpenGLFilter(TextureFilter filter)
+	GLenum OpenGLTexture2D::TextureFilterToOpenGLFilter(TextureFilter filter)
 	{
 		switch (filter)
 		{
@@ -63,7 +63,7 @@ namespace Crowny
 		return GL_NONE;
 	}
 
-	GLenum TextureWrapToOpenGLWrap(TextureWrap wrap)
+	GLenum OpenGLTexture2D::TextureWrapToOpenGLWrap(TextureWrap wrap)
 	{
 		switch (wrap)
 		{
@@ -79,7 +79,7 @@ namespace Crowny
 	}
 
 #ifndef CW_WEB
-	GLenum TextureSwizzleToOpenGLSwizzle(SwizzleType swizzle)
+	GLenum OpenGLTexture2D::TextureSwizzleToOpenGLSwizzle(SwizzleType swizzle)
 	{
 		switch (swizzle)
 		{
@@ -94,7 +94,7 @@ namespace Crowny
 	}
 #endif
 
-	GLint TextureSwizzleColorToOpenGLSwizzleColor(SwizzleChannel color)
+	GLint OpenGLTexture2D::TextureSwizzleColorToOpenGLSwizzleColor(SwizzleChannel color)
 	{
 		switch (color)
 		{
@@ -113,27 +113,27 @@ namespace Crowny
 	{
 #ifdef MC_WEB
 		glGenTextures(1, &m_RendererID);
-#else
-		glCreateTextures(GL_TEXTURE_2D, 1, &m_RendererID);
-#endif
-
-#ifdef MC_WEB
 		glBindTexture(GL_TEXTURE_2D, m_RendererID);
 		glTexStorage2D(GL_TEXTURE_2D, 1, TextureFormatToOpenGLInternalFormat(m_Parameters.Format), m_Width, m_Height);
-#else
-		glTextureStorage2D(m_RendererID, 1, TextureFormatToOpenGLInternalFormat(m_Parameters.Format), m_Width, m_Height);
-#endif
 
-#ifdef MC_WEB
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter));
+
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, TextureWrapToOpenGLWrap(m_Parameters.Wrap));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, TextureWrapToOpenGLWrap(m_Parameters.Wrap));
+
+		if (m_Parameters.GenerateMipmaps)
+			glGenerateMipmap(GL_TEXTURE_2D);
 #else
+		glCreateTextures(GL_TEXTURE_2D, 1, &m_RendererID);
+		glTextureStorage2D(m_RendererID, 1, TextureFormatToOpenGLInternalFormat(m_Parameters.Format), m_Width, m_Height);
+
 		glTextureParameteri(m_RendererID, GL_TEXTURE_MIN_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter));
 		glTextureParameteri(m_RendererID, GL_TEXTURE_MAG_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter));
+
 		glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_S, TextureWrapToOpenGLWrap(m_Parameters.Wrap));
 		glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_T, TextureWrapToOpenGLWrap(m_Parameters.Wrap));
+
 		if (m_Parameters.Swizzle.Type != SwizzleType::NONE)
 		{
 			if (m_Parameters.Swizzle.Type == SwizzleType::SWIZZLE_RGBA)
@@ -152,8 +152,10 @@ namespace Crowny
 				glTextureParameteri(m_RendererID, TextureSwizzleToOpenGLSwizzle(m_Parameters.Swizzle.Type), TextureSwizzleColorToOpenGLSwizzleColor(m_Parameters.Swizzle.Swizzle[0]));
 			}
 		}
-#endif
 
+		if (m_Parameters.GenerateMipmaps)
+			glGenerateTextureMipmap(m_RendererID);
+#endif
 	}
 
 	OpenGLTexture2D::OpenGLTexture2D(const std::string& path, const TextureParameters& parameters) : m_FilePath(path), m_Parameters(parameters)
@@ -175,33 +177,32 @@ namespace Crowny
 		{
 			m_Parameters.Format = TextureFormat::RGB;
 		}
-#ifdef MC_WEB
-		glGenTextures(1, &m_RendererID);
-#else
-		glCreateTextures(GL_TEXTURE_2D, 1, &m_RendererID);
-#endif
 
 #ifdef MC_WEB
+		glGenTextures(1, &m_RendererID);
 		glBindTexture(GL_TEXTURE_2D, m_RendererID);
-		glTexImage2D(GL_TEXTURE_2D, 0, TextureFormatToOpenGLFormat(m_Parameters.Format), width, height, 0, TextureFormatToOpenGLFormat(m_Parameters.Format), GL_UNSIGNED_BYTE, data);
-#else
-		glTextureStorage2D(m_RendererID, 1, TextureFormatToOpenGLInternalFormat(m_Parameters.Format), m_Width, m_Height);
-#endif
-#ifdef MC_WEB
+		glTexStorage2D(GL_TEXTURE_2D, 1, TextureFormatToOpenGLInternalFormat(m_Parameters.Format), m_Width, m_Height);
+
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter));
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, TextureWrapToOpenGLWrap(m_Parameters.Wrap));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, TextureWrapToOpenGLWrap(m_Parameters.Wrap));
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_Width, m_Height, TextureFormatToOpenGLFormat(m_Parameters.Format), GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
 #else
+		glCreateTextures(GL_TEXTURE_2D, 1, &m_RendererID);
+		glTextureStorage2D(m_RendererID, 1, TextureFormatToOpenGLInternalFormat(m_Parameters.Format), m_Width, m_Height);
+
 		glTextureParameteri(m_RendererID, GL_TEXTURE_MIN_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter));
 		glTextureParameteri(m_RendererID, GL_TEXTURE_MAG_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter));
 
 		glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_S, TextureWrapToOpenGLWrap(m_Parameters.Wrap));
 		glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_T, TextureWrapToOpenGLWrap(m_Parameters.Wrap));
-#endif
-#ifndef MC_WEB
 		glTextureSubImage2D(m_RendererID, 0, 0, 0, m_Width, m_Height, TextureFormatToOpenGLFormat(m_Parameters.Format), GL_UNSIGNED_BYTE, data);
+
+		if (m_Parameters.GenerateMipmaps)
+			glGenerateTextureMipmap(m_RendererID);
 #endif
 
 		CW_ENGINE_INFO("Loaded texture {0}, {1}x{2}x{3}.", m_FilePath, m_Width, m_Height, channels);
@@ -245,7 +246,7 @@ namespace Crowny
 #endif
 	}
 
-	void OpenGLTexture2D::Unbind(uint32_t slot) const 
+	void OpenGLTexture2D::Unbind(uint32_t slot) const
 	{
 		glBindTextureUnit(slot, 0);
 	}

@@ -7,39 +7,65 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "Crowny/ImGui/OpenGLInformationWindow.h"
-#include "Crowny/ImGui/ImGuiViewportWindow.h"
-#include "Crowny/ImGui/ImGuiHierarchyWindow.h"
+
+#include "Crowny/SceneManagement/SceneManager.h"
+
 #include "Crowny/Ecs/Components.h"
 
 #include "Crowny/ImGui/ImGuiTextureEditor.h"
 
 namespace Crowny
 {
+	
 	EditorLayer::EditorLayer()
 		: Layer("EditorLayer")
 	{
-		m_ImGuiWindows.push_back(new OpenGLInformationWindow("OpenGL"));
-		m_ImGuiWindows.push_back(new ImGuiHierarchyWindow("Hierarchy"));
-		m_ImGuiWindows.push_back(new ImGuiViewportWindow("Viewport"));
-		m_ImGuiWindows.push_back(new ImGuiTextureEditor("Texture Properties"));
 
-		//test prb shader for errors
-		Ref<Shader> s = Shader::Create("Shaders/PBRShader.glsl");
 	}
 
 	void EditorLayer::OnAttach()
 	{
+		Ref<Shader> s = Shader::Create("Shaders/PBRShader.glsl");
 		FramebufferProperties fbProps;
 		fbProps.Width = 1280; // human code please
 		fbProps.Height = 720;
 		m_Framebuffer = Framebuffer::Create(fbProps);
-		m_ComponentEditor.RegisterComponent<TransformComponent>("Transform");
 
+		m_MenuBar = new ImGuiMenuBar();
+
+		ImGuiMenu* fileMenu = new ImGuiMenu("File");
+		fileMenu->AddItem(new ImGuiMenuItem(
+			"Exit",
+			[](auto& event) { Application::Get().Exit(); }
+		));
+
+		m_MenuBar->AddMenu(fileMenu);
+
+		ImGuiMenu* viewMenu = new ImGuiMenu("View");
+
+		ImGuiMenu* renderInfo = new ImGuiMenu("Rendering Info");
+
+		m_GLInfoWindow = new OpenGLInformationWindow("OpenGL");
+		renderInfo->AddItem(new ImGuiMenuItem("OpenGL", [&](auto& event) { m_GLInfoWindow->Show(); }));
+		viewMenu->AddMenu(renderInfo);
+
+		m_HierarchyWindow = new ImGuiHierarchyWindow("Hierarchy");
+		viewMenu->AddItem(new ImGuiMenuItem("Hierarchy", [&](auto& event) { m_HierarchyWindow->Show(); }));
+
+		m_ViewportWindow = new ImGuiViewportWindow("Viewport", m_Framebuffer, m_ViewportSize);
+		viewMenu->AddItem(new ImGuiMenuItem("Viewport", [&](auto& event) { m_ViewportWindow->Show(); }));
+
+		//m_ImGuiWindows.push_back(new ImGuiTextureEditor("Texture Properties"));
+		//viewMenu->AddItem(new ImGuiMenuItem("Texture Properties", [&](auto& event) { m_ImGuiWindows.back()->Show(); }));
+
+		m_MenuBar->AddMenu(viewMenu);
+
+		m_ComponentEditor.RegisterComponent<TransformComponent>("Transform");
 		m_ComponentEditor.RegisterComponent<CameraComponent>("Camera");
-		m_Entity = m_Registry.create();
-		m_Registry.emplace<TransformComponent>(m_Entity);
-		m_Registry.emplace<CameraComponent>(m_Entity);
+		m_ComponentEditor.RegisterComponent<TextComponent>("Text");
+		m_ComponentEditor.RegisterComponent<TagComponent>("Tag");
+
+		SceneManager::AddScene(new Scene("Editor scene"));
 	}
 
 	void EditorLayer::OnDetach()
@@ -64,6 +90,7 @@ namespace Crowny
 		BatchRenderer2D::Begin(m_Camera);
 		BatchRenderer2D::DrawString("This is a test", 150, 550, FontManager::Get("default"), Color::White);
 		BatchRenderer2D::End();
+		SceneManager::GetActiveScene()->OnUpdate(ts);
 		m_Framebuffer->Unbind();
 	}
 
@@ -93,7 +120,7 @@ namespace Crowny
 			window_flags |= ImGuiWindowFlags_NoBackground;
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-		ImGui::Begin("DockSpace Demo", &dockspaceOpen, window_flags);
+		ImGui::Begin("Crowny Editor", &dockspaceOpen, window_flags);
 		ImGui::PopStyleVar();
 
 		if (opt_fullscreen)
@@ -103,37 +130,19 @@ namespace Crowny
 		ImGuiIO& io = ImGui::GetIO();
 		if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
 		{
-			ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+			ImGuiID dockspace_id = ImGui::GetID("Crowny Editor");
 			ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 		}
 
-		if (ImGui::BeginMenuBar())
-		{
-			if (ImGui::BeginMenu("File"))
-			{
-				if (ImGui::MenuItem("Exit")) Application::Get().Exit();
-				ImGui::EndMenu();
-			}
+		m_MenuBar->Render();
 
-			if (ImGui::BeginMenu("Window"))
-			{
-				for(ImGuiWindow* win : m_ImGuiWindows)
-					if (ImGui::MenuItem(win->GetName().c_str()))
-						win->Show();
-				ImGui::EndMenu();
-			}
-			
-			ImGui::EndMenuBar();
-		}
+		m_HierarchyWindow->Render();
+		m_GLInfoWindow->Render();
+		m_ViewportWindow->Render();
 
-		for (ImGuiWindow* win : m_ImGuiWindows)
-		{
-			win->Render();
-		}
+		ImGui::Begin("Inspector");
 
-		ImGui::Begin("Properties");
-			
-		m_ComponentEditor.Render(m_Registry, m_Entity);
+		m_ComponentEditor.Render(SceneManager::GetActiveScene()->m_Registry, ImGuiHierarchyWindow::SelectedEntity);
 
 		ImGui::End();
 
