@@ -4,6 +4,9 @@
 #include "Crowny/SceneManagement/SceneManager.h"
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/Ecs/Components.h"
+#include "Crowny/Renderer/Renderer2D.h"
+
+#include <entt/entt.hpp>
 
 namespace Crowny
 {
@@ -16,18 +19,31 @@ namespace Crowny
 		m_SceneEntity->AddComponent<RelationshipComponent>();
 	}
 
+	Scene::~Scene()
+	{
+		delete m_SceneEntity;
+	}
+
 	void Scene::OnUpdate(Timestep ts)
 	{
-		//m_Registry.view<TransformComponent, CameraComponent>().each([](const auto& entity, auto& tc, auto& cc) { Renderer2D::BeginScene(cc. });
+		m_Registry.group<TransformComponent>(entt::get<CameraComponent>).each([&](const auto& entity, auto& tc, auto& cc)
+			{ 
+				Renderer2D::Begin(cc.CameraObject.GetProjectionMatrix(), tc.Transform);
+				auto group = m_Registry.group<TransformComponent>(entt::get<SpriteRendererComponent>);
+				for (auto ee : group)
+				{
+					auto& [transform, sprite] = m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
+					Renderer2D::FillRect(transform, sprite.Texture, Color::FromRGBA(sprite.Color));
+				}
+
+				Renderer2D::End();
+			});
 	}
 
 	Entity Scene::CreateEntity(const std::string& name)
 	{
-		Entity e(m_Registry.create(), this);
-		e.AddComponent<TransformComponent>();
-		e.AddComponent<RelationshipComponent>(*m_SceneEntity);
-		e.AddComponent<TagComponent>(name);
-		return e;
+		m_SceneEntity->AddChild(name);
+		return m_SceneEntity->GetComponent<RelationshipComponent>().Children.back();
 	}
 
 	void Scene::OnViewportResize(uint32_t width, uint32_t height)
@@ -36,8 +52,8 @@ namespace Crowny
 		m_ViewportHeight = height;
 
 		m_Registry.view<CameraComponent>().each([&](auto& e, auto& cc) {
-		if(!cc.FixedAspectRatio)
-			cc.Camera.OnResize((float)width, (float)height);
+		//if(!cc.FixedAspectRatio)
+			//cc.Camera.OnResize((float)width, (float)height);
 		});
 	}
 

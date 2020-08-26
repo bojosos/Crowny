@@ -14,5 +14,11 @@ namespace Crowny
 
 		static bool WriteFile(const std::string& path, byte* buffer);
 		static bool WriteTextFile(const std::string& path, const std::string& text);
+
+		// Returns a tuple<success, path of the selected file>
+		static std::tuple<bool, std::string> OpenFileDialog(const std::string& filter = "All\0*.*\0", const std::string& initialDir = "");
+
+		// Returns a tuple<success, path to be saved>
+		static std::tuple<bool, std::string> SaveFileDialog(const std::string& filter = "All\0*.*\0", const std::string& initialDir = "");
 	};
 }

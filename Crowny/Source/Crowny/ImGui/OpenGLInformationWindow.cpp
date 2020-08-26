@@ -15,31 +15,22 @@ namespace Crowny
 
 	void OpenGLInformationWindow::Render()
 	{
-		if (m_Shown) {
-			if (OpenGLInfo::GetInformation().empty())
-				OpenGLInfo::RetrieveInformation();
-			ImGui::Begin("OpenGL Information");
-			ImGui::Columns(3, "OpenGL Information");
-			ImGui::Separator();
-			for (OpenGLDetail& det : OpenGLInfo::GetInformation())
-			{
-				ImGui::Text(det.Name.c_str()); ImGui::NextColumn();
-				ImGui::Text(det.GLName.c_str()); ImGui::NextColumn();
-				ImGui::Text(det.Value.c_str()); ImGui::NextColumn();
-			}
-			ImGui::Separator();
-			ImGui::Columns(1);
-			ImGui::End();
+		if (OpenGLInfo::GetInformation().empty())
+			OpenGLInfo::RetrieveInformation();
+		CW_ENGINE_ASSERT(!OpenGLInfo::GetInformation().empty(), "OpenGL info error");
+
+		ImGui::Begin("OpenGL Information", &m_Shown);
+		ImGui::Columns(3, "OpenGL Information");
+		ImGui::Separator();
+		for (OpenGLDetail& det : OpenGLInfo::GetInformation())
+		{
+			ImGui::Text(det.Name.c_str()); ImGui::NextColumn();
+			ImGui::Text(det.GLName.c_str()); ImGui::NextColumn();
+			ImGui::Text(det.Value.c_str()); ImGui::NextColumn();
 		}
+		ImGui::Separator();
+		ImGui::Columns(1);
+		ImGui::End();
 	}
 
-	void OpenGLInformationWindow::Show()
-	{
-		m_Shown = true;
-	}
-
-	void OpenGLInformationWindow::Hide()
-	{
-		m_Shown = false;
-	}
 }

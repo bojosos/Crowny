@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Crowny/Common/Common.h"
-
 namespace Crowny
 {
 	enum class ShaderDataType

@@ -45,9 +45,6 @@ namespace Crowny
 		const std::vector<const char*> CompressionQualities = { "None", "Low Quality", "Normal Quality", "High Quality" };
 		uint32_t SelectedCompressionQuality = 0;
 
-		void Show() override { m_Shown = true; };
-		void Hide() override { m_Shown = false; };
-
 		void Render() override
 		{
 			ImGui::Begin("Texture Properties");

@@ -7,11 +7,12 @@
 namespace Crowny
 {
 
-	Ref<VertexBuffer> VertexBuffer::Create(float* vertices, uint32_t size, const VertexBufferProperties& props)
+	Ref<VertexBuffer> VertexBuffer::Create(void* vertices, uint32_t size, const VertexBufferProperties& props)
 	{
 		switch (Renderer::GetAPI())
 		{
 			case RendererAPI::API::OpenGL: return CreateRef<OpenGLVertexBuffer>(vertices, size, props);
 		}
 	}
+
 }

@@ -18,6 +18,9 @@ namespace Crowny
 		uint32_t m_Register;
 		uint32_t m_Count;
 		Type m_Type;
+
+		friend class OpenGLShader;
+
 	public:
 		OpenGLResourceDeclaration(Type type, const std::string& name, uint32_t count);
 		virtual const std::string& GetName() const override { return m_Name; }
@@ -110,26 +113,17 @@ namespace Crowny
 		virtual void Bind() const override;
 		virtual void Unbind() const override;
 
-		virtual void SetInt(const std::string& name, int value) override;
-		virtual void SetIntV(const std::string& name, uint32_t count, int* ptr) override;
-		virtual void SetFloat3(const std::string& name, const glm::vec3& value) override;
-		virtual void SetFloat4(const std::string& name, const glm::vec4& value) override;
-		virtual void SetMat4(const std::string& name, const glm::mat4& value) override;
+		virtual void SetVSSystemUniformBuffer(byte* data, uint32_t size, uint32_t slot) override;
+		virtual void SetFSSystemUniformBuffer(byte* data, uint32_t size, uint32_t slot) override;
 
-		virtual void UploadUniformInt(const std::string& name, int value) override;
-		virtual void UploadUniformIntV(const std::string& name, int count, int* ptr) override;
-		virtual void UploadUniformFloat(const std::string& name, float value) override;
-		virtual void UploadUniformFloat2(const std::string& name, const glm::vec2& value) override;
-		virtual void UploadUniformFloat3(const std::string& name, const glm::vec3& value) override;
-		virtual void UploadUniformFloat4(const std::string& name, const glm::vec4& value) override;
+		virtual void SetVSUserUniformBuffer(byte* data, uint32_t size) override;
+		virtual void SetFSUserUniformBuffer(byte* data, uint32_t size) override;
 
-		virtual void UploadUniformMat3(const std::string& name, const glm::mat3& matrix) override;
-		virtual void UploadUniformMat4(const std::string& name, const glm::mat4& matrix) override;
-
-		virtual uint32_t GetUniformLocation(const std::string& name) override;
-		virtual void RetrieveLocations(const std::vector<std::string>& uniforms) override;
+		void SetUniform(const std::string& name, byte* data);
+		void ResolveAndSetUniformField(const OpenGLUniformDeclaration& field, byte* data, uint32_t offset);
 
 		virtual const std::string& GetName() const override { return m_Name; };
+		virtual const std::string& GetFilepath() const override { return m_Filepath; }
 
 		virtual const ShaderResourceList& GetResources() const override { return m_Resources; }
 		virtual const ShaderUniformBufferList& GetVSUniformBuffers() const override { return m_VSUniformBuffers; }
@@ -137,8 +131,36 @@ namespace Crowny
 		virtual const ShaderUniformBufferDeclaration* GetVSUserUniformBuffer() const override { return m_VSUserUniformBuffer; }
 		virtual const ShaderUniformBufferDeclaration* GetFSUserUniformBuffer() const override { return m_FSUserUniformBuffer; }
 
-		bool IsTypeStringResource(const std::string& type);
 	private:
+		bool IsTypeStringResource(const std::string& type);
+		ShaderStruct* FindStruct(const std::string& name);
+		ShaderUniformDeclaration* FindUniformDeclaration(const std::string& name, const ShaderUniformBufferDeclaration* buff);
+		ShaderUniformDeclaration* FindUniformDeclaration(const std::string& name);
+
+		void ResolveAndSetUniforms(ShaderUniformBufferDeclaration* buff, byte* data, uint32_t size);
+		void ResolveAndSetUniform(OpenGLUniformDeclaration* uniform, byte* data, uint32_t size);
+
+		void SetUniformFloat(const std::string& name, float value);
+		void SetUniformFloat2(const std::string& name, const glm::vec2& value);
+		void SetUniformFloat3(const std::string& name, const glm::vec3& value);
+		void SetUniformFloat4(const std::string& name, const glm::vec4& value);
+		void SetUniformInt(const std::string& name, int value);
+		void SetUniformIntV(const std::string& name, int* ptr, uint32_t count);
+		void SetUniformMat3(const std::string& name, const glm::mat3& value);
+		void SetUniformMat4(const std::string& name, const glm::mat4& value);
+
+		void SetUniformFloat(uint32_t location, float value);
+		void SetUniformFloat2(uint32_t location, const glm::vec2& value);
+		void SetUniformFloat3(uint32_t location, const glm::vec3& value);
+		void SetUniformFloat4(uint32_t location, const glm::vec4& value);
+		void SetUniformInt(uint32_t location, int value);
+		void SetUniformIntV(uint32_t location, int* ptr, uint32_t count);
+		void SetUniformMat3(uint32_t location, const glm::mat3& value);
+		void SetUniformMat4(uint32_t location, const glm::mat4& value);
+		void SetUniformStruct(OpenGLUniformDeclaration* uniform, byte* data, int32_t offset);
+
+		uint32_t GetUniformLocation(const std::string& name);
+
 		void Load(const std::string& path);
 		void Compile(const std::unordered_map<uint32_t, std::string>& shaderSources);
 		void Parse(const std::string& vertSrc, const std::string& fragSrc);
@@ -146,7 +168,6 @@ namespace Crowny
 		void ParseUniformStruct(const std::string& block, uint32_t shaderType);
 		void ResolveUniforms();
 
-		ShaderStruct* FindStruct(const std::string& name);
 
 	private:
 		ShaderUniformBufferList m_VSUniformBuffers;

@@ -42,6 +42,8 @@ namespace Crowny
 		ImGui_ImplGlfw_InitForOpenGL(window, true);
 		ImGui_ImplOpenGL3_Init("#version 410");
 
+		io.FontDefault = io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
+		
 		style.WindowRounding = 0;
 		style.GrabRounding = style.FrameRounding = 0;
 		style.ScrollbarSize = 15;

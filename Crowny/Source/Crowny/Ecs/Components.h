@@ -3,7 +3,10 @@
 #include "Crowny/Renderer/Camera.h"
 #include "Crowny/Renderer/Texture.h"
 #include "Crowny/Renderer/Material.h"
+#include "Crowny/Renderer/Mesh.h"
+
 #include "Crowny/Common/Color.h"
+#include "Crowny/Renderer/Camera.h"
 #include "Crowny/Ecs/Entity.h"
 
 #include <entt/entt.hpp>
@@ -43,17 +46,7 @@ namespace Crowny
 
 	struct CameraComponent
 	{
-		glm::vec3 BackgroundColor{ 0.0f, 0.3f, 0.3f };
-		glm::vec2 ClippingPlanes{ 0.3f, 1000.0f };
-		CameraProjection Projection = CameraProjection::Orthographic;
-		int32_t Fov = 60;
-		glm::vec4 ViewportRectangle{ 0.0f, 0.0f, 1.0f, 1.0f };
-		bool HDR = false;
-		bool MSAA = false;
-		bool OcclusionCulling = false;
-		bool FixedAspectRatio = false;
-
-		Crowny::Camera Camera;
+		Camera CameraObject;
 
 		CameraComponent() = default;
 		CameraComponent(const CameraComponent&) = default;
@@ -73,13 +66,13 @@ namespace Crowny
 		TextComponent(const std::string& text) : Text(text) {}
 	};
 
-	//template <>
-	//void ComponentEditorWidget<TextComponent>(entt::registry& reg, Entity& e);
+	template <>
+	void ComponentEditorWidget<TextComponent>(Entity& e);
 
 	struct SpriteRendererComponent
 	{
 		Ref<Texture2D> Texture;
-		Crowny::Color Color;
+		glm::vec4 Color;
 
 		SpriteRendererComponent() = default;
 		SpriteRendererComponent(const SpriteRendererComponent&) = default;
@@ -91,7 +84,10 @@ namespace Crowny
 
 	struct MeshRendererComponent
 	{
+		Ref<::Crowny::Mesh> Mesh;
 
+		MeshRendererComponent() = default;
+		MeshRendererComponent(const MeshRendererComponent&) = default;
 	};
 
 	template <>

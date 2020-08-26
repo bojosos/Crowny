@@ -11,8 +11,5 @@ namespace Crowny
 		~OpenGLInformationWindow() = default;
 
 		virtual void Render() override;
-
-		virtual void Show() override;
-		virtual void Hide() override;
 	};
 }

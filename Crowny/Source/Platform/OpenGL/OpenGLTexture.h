@@ -16,6 +16,8 @@ namespace Crowny
 		virtual uint32_t GetWidth() const override { return m_Width; }
 		virtual uint32_t GetHeight() const override { return m_Height; }
 
+		virtual const std::string& GetName() const override { return m_Name; }
+
 		virtual uint32_t GetRendererID() const override { return m_RendererID; };
 
 		virtual void Bind(uint32_t slot) const override;
@@ -33,6 +35,7 @@ namespace Crowny
 		uint32_t m_RendererID;
 		std::string m_FilePath;
 		uint32_t m_Width, m_Height;
+		std::string m_Name;
 
 	public:
 		static uint32_t TextureChannelToOpenGLChannel(TextureChannel channel);

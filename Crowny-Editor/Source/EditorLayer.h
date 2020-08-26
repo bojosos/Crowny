@@ -30,21 +30,16 @@ namespace Crowny
 		virtual void OnEvent(Event& e) override;
 
 	private:
-
 		ImGuiMenuBar* m_MenuBar;
-		ComponentEditor m_ComponentEditor;
 		ImGuiWindow* m_GLInfoWindow;
 		ImGuiHierarchyWindow* m_HierarchyWindow;
 		ImGuiViewportWindow* m_ViewportWindow;
-
-		Camera m_Camera;
+		ImGuiTextureEditor* m_TextureEditor;
 
 		ImGuiViewportWindow* m_Viewport;
 		std::vector<ImGuiWindow*> m_ImGuiWindows;
 		
-		Ref<Framebuffer> m_Framebuffer;
-		ImGuiTextureEditor* m_TextureEditor;
-		glm::vec2 m_ViewportSize = { 0.0f, 0.0f };
-		glm::vec4 m_SquareColor = { 0.2f, 0.3f, 0.8f, 1.0f };
+		Ref<Framebuffer> m_Framebuffer; // Maybe Viewport window should take care of this?
+		glm::vec2 m_ViewportSize = { 0.0f, 0.0f }; // and dis
 	};
 }

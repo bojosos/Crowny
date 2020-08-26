@@ -14,6 +14,8 @@ namespace Crowny
 		uint32_t m_Bits;
 		TextureParameters m_Parameters;
 		std::array<std::string, 6> m_Files;
+		std::string m_Name;
+
 	public:
 		OpenGLTextureCube(const std::string& filepath, const TextureParameters& parameters);
 		OpenGLTextureCube(const std::array<std::string, 6>& files, const TextureParameters& parameters);
@@ -27,6 +29,10 @@ namespace Crowny
 		virtual uint32_t GetRendererID() const override { return m_RendererID; }
 		virtual uint32_t GetWidth() const override { return m_Width; }
 		virtual uint32_t GetHeight() const override { return m_Height; }
+
+		//virtual const std::string& GetFilepath() override { return m_Files[0]; }
+		virtual const std::string& GetName() const override { return m_Name; }
+
 		virtual void Bind(uint32_t slot = 0) const override;
 		virtual void Unbind(uint32_t slot = 0) const override;
 

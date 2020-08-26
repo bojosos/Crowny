@@ -3,13 +3,17 @@
 #include "Crowny/Renderer/Shader.h"
 #include "Crowny/Renderer/Texture.h"
 #include "Crowny/Renderer/RenderCommand.h"
-#include "Crowny/Renderer/BatchRenderer2D.h"
+#include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Renderer/Renderer.h"
 
 #include <freetype-gl.h>
 
 namespace Crowny
 {
+
+	constexpr glm::vec2 QuadUv[] = { { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 1.0f } };
+	constexpr glm::vec4 QuadVertices[] = { { -0.5f, -0.5f, 0.0f, 1.0f }, { 0.5f, -0.5f, 0.0f, 1.0f }, { 0.5f,  0.5f, 0.0f, 1.0f }, { -0.5f,  0.5f, 0.0f, 1.0f } };
+
 	//TODO: Fix textures
 	struct Renderer2DData
 	{ // TODO: RenderCaps
@@ -28,11 +32,11 @@ namespace Crowny
 
 	static Renderer2DData s_Data;
 
-	void BatchRenderer2D::Init()
+	void Renderer2D::Init()
 	{
 		s_Data.VertexArray = VertexArray::Create();
 		s_Data.VertexBuffer = VertexBuffer::Create(nullptr, RENDERER_BUFFER_SIZE, { BufferUsage::DYNAMIC_DRAW });
-		BufferLayout layout = { { ShaderDataType::Float3, "a_Coordinates" },
+		BufferLayout layout = { { ShaderDataType::Float4, "a_Coordinates" },
 								{ ShaderDataType::Float2, "a_Uvs" },
 								{ ShaderDataType::Float, "a_Tid"  },
 								{ ShaderDataType::Float4, "a_Color" , true } };
@@ -68,7 +72,7 @@ namespace Crowny
 		
 		s_Data.Shader = Shader::Create("Shaders/BatchRenderer.glsl");
 		s_Data.Shader->Bind();
-		s_Data.Shader->SetIntV("u_Textures", MAX_TEXTURE_SLOTS, samplers);
+		//s_Data.Shader->SetIntV("u_Textures", MAX_TEXTURE_SLOTS, samplers);
 
 		s_Data.TextureSlots[s_Data.TextureIndex] = s_Data.WhiteTexture;
 
@@ -76,22 +80,22 @@ namespace Crowny
 		delete[] indices;
 	}
 
-	void BatchRenderer2D::Begin(const Camera& camera)
+	void Renderer2D::Begin(const glm::mat4& projection, const glm::mat4& transform)
 	{
-		s_Data.Shader->SetMat4("u_ProjectionMatrix", camera.GetProjectionMatrix());
-		s_Data.Shader->SetMat4("u_ViewMatrix", camera.GetViewMatrix());
+		//s_Data.Shader->SetUniformMat4("u_ProjectionMatrix", projection);
+		//s_Data.Shader->SetUniformMat4("u_ViewMatrix", glm::inverse(transform));
 		s_Data.Shader->Bind();
 		s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->GetPointer(RENDERER_MAX_SPRITES * 4);
 	}
 
-	float BatchRenderer2D::FindTexture(const Ref<Texture2D>& texture)
+	float Renderer2D::FindTexture(const Ref<Texture2D>& texture)
 	{
 		if (!texture)
 			return 0;
 
 		float ts = 0.0f;
 
-		for (int i = 1; i <= s_Data.TextureIndex; i++)
+		for (uint8_t i = 1; i <= s_Data.TextureIndex; i++)
 		{
 			if (s_Data.TextureSlots[i] == texture)
 			{
@@ -105,7 +109,7 @@ namespace Crowny
 			if (s_Data.TextureIndex == 32) // TODO: not 32 please
 			{
 				End();
-				s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->GetPointer(RENDERER_MAX_SPRITES * 4); // TODO: Begin or semething instead of this, template GetPointer?
+				s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->GetPointer(RENDERER_MAX_SPRITES * 4); // TODO: Begin or semething instead of this
 			}
 			s_Data.TextureSlots[++s_Data.TextureIndex] = texture;
 			ts = s_Data.TextureIndex;
@@ -113,69 +117,35 @@ namespace Crowny
 		return ts;
 	}
 
-	void BatchRenderer2D::FillRect(const Rectangle& bounds, Color color)
+	void Renderer2D::FillRect(const Rectangle& bounds, Color color)
 	{
-		float ts = 0;
+		glm::mat4 transform = glm::translate(glm::mat4(1.0f), { bounds.X, bounds.Y, 1.0f }) * glm::scale(glm::mat4(1.0f), { bounds.Width, bounds.Height, 1.0f });
 
-		s_Data.Buffer->Position = glm::vec3(bounds.X, bounds.Y, 1.0f);
-		s_Data.Buffer->Uv = glm::vec2(0.0f, 0.0f);
-		s_Data.Buffer->Tid = ts;
-		s_Data.Buffer->Color = (glm::vec4)color;
-		s_Data.Buffer++;
-
-		s_Data.Buffer->Position = glm::vec3(bounds.X, bounds.Y + bounds.Height, 1.0f);
-		s_Data.Buffer->Uv = glm::vec2(0.0f, 1.0f);
-		s_Data.Buffer->Tid = ts;
-		s_Data.Buffer->Color = (glm::vec4)color;
-		s_Data.Buffer++;
-
-		s_Data.Buffer->Position = glm::vec3(bounds.X + bounds.Width, bounds.Y + bounds.Height, 1.0f);
-		s_Data.Buffer->Uv = glm::vec2(1.0f, 1.0f);
-		s_Data.Buffer->Tid = ts;
-		s_Data.Buffer->Color = (glm::vec4)color;
-		s_Data.Buffer++;
-
-		s_Data.Buffer->Position = glm::vec3(bounds.X + bounds.Width, bounds.Y, 1.0f);
-		s_Data.Buffer->Uv = glm::vec2(1.0f, 0.0f);
-		s_Data.Buffer->Tid = ts;
-		s_Data.Buffer->Color = (glm::vec4)color;
-		s_Data.Buffer++;
-
-		s_Data.IndexCount += 6;
+		FillRect(transform, nullptr, color);
 	}
 
-	void BatchRenderer2D::FillRect(const Rectangle& bounds, const Ref<Texture2D>& texture, Color color)
+	void Renderer2D::FillRect(const glm::mat4& transform, const Ref<Texture2D>& texture, Color color)
 	{
 		float ts = FindTexture(texture);
-
-		s_Data.Buffer->Position = glm::vec3(bounds.X, bounds.Y, 1.0f);
-		s_Data.Buffer->Uv = glm::vec2(0.0f, 0.0f);
-		s_Data.Buffer->Tid = ts;
-		s_Data.Buffer->Color = (glm::vec4)color;
-		s_Data.Buffer++;
-
-		s_Data.Buffer->Position = glm::vec3(bounds.X, bounds.Y + bounds.Height, 1.0f);
-		s_Data.Buffer->Uv = glm::vec2(0.0f, 1.0f);
-		s_Data.Buffer->Tid = ts;
-		s_Data.Buffer->Color = (glm::vec4)color;
-		s_Data.Buffer++;
-
-		s_Data.Buffer->Position = glm::vec3(bounds.X + bounds.Width, bounds.Y + bounds.Height, 1.0f);
-		s_Data.Buffer->Uv = glm::vec2(1.0f, 1.0f);
-		s_Data.Buffer->Tid = ts;
-		s_Data.Buffer->Color = (glm::vec4)color;
-		s_Data.Buffer++;
-
-		s_Data.Buffer->Position = glm::vec3(bounds.X + bounds.Width, bounds.Y, 1.0f);
-		s_Data.Buffer->Uv = glm::vec2(1.0f, 0.0f);
-		s_Data.Buffer->Tid = ts;
-		s_Data.Buffer->Color = (glm::vec4)color;
-		s_Data.Buffer++;
+		for (uint8_t i = 0; i < 4; i++) {
+			s_Data.Buffer->Position = QuadVertices[i] * transform;
+			s_Data.Buffer->Uv = QuadUv[i];
+			s_Data.Buffer->Tid = ts;
+			s_Data.Buffer->Color = (glm::vec4)color;
+			s_Data.Buffer++;
+		}
 
 		s_Data.IndexCount += 6;
 	}
 
-	void BatchRenderer2D::DrawString(const std::string& text, float x, float y, const Ref<Font>& font, Color color)
+	void Renderer2D::FillRect(const Rectangle& bounds, const Ref<Texture2D>& texture, Color color)
+	{
+		glm::mat4 transform = glm::translate(glm::mat4(1.0f), { bounds.X, bounds.Y, 1.0f }) * glm::scale(glm::mat4(1.0f), { bounds.Width, bounds.Height, 1.0f });
+
+		FillRect(transform, texture, color);
+	}
+
+	void Renderer2D::DrawString(const std::string& text, float x, float y, const Ref<Font>& font, Color color)
 	{
 		float ts = FindTexture(font->GetTexture());
 
@@ -204,25 +174,25 @@ namespace Crowny
 				float u1 = glyph->s1;
 				float v1 = glyph->t1;
 
-				s_Data.Buffer->Position = glm::vec3(x0, y0, 0);
+				s_Data.Buffer->Position = glm::vec4(x0, y0, 0, 1.0f);
 				s_Data.Buffer->Uv = glm::vec2(u0, v0);
 				s_Data.Buffer->Tid = ts;
 				s_Data.Buffer->Color = (glm::vec4)color;
 				s_Data.Buffer++;
 
-				s_Data.Buffer->Position = glm::vec3(x0, y1, 0);
+				s_Data.Buffer->Position = glm::vec4(x0, y1, 0, 1.0f);
 				s_Data.Buffer->Uv = glm::vec2(u0, v1);
 				s_Data.Buffer->Tid = ts;
 				s_Data.Buffer->Color = (glm::vec4)color;
 				s_Data.Buffer++;
-
-				s_Data.Buffer->Position = glm::vec3(x1, y1, 0);
+				
+				s_Data.Buffer->Position = glm::vec4(x1, y1, 0, 1.0f);
 				s_Data.Buffer->Uv = glm::vec2(u1, v1);
 				s_Data.Buffer->Tid = ts;
 				s_Data.Buffer->Color = (glm::vec4)color;
 				s_Data.Buffer++;
 
-				s_Data.Buffer->Position = glm::vec3(x1, y0, 0);
+				s_Data.Buffer->Position = glm::vec4(x1, y0, 0, 1.0f);
 				s_Data.Buffer->Uv = glm::vec2(u1, v0);
 				s_Data.Buffer->Tid = ts;
 				s_Data.Buffer->Color = (glm::vec4)color;
@@ -235,7 +205,7 @@ namespace Crowny
 		}
 	}
 
-	void BatchRenderer2D::End()
+	void Renderer2D::End()
 	{
 		s_Data.VertexBuffer->FreePointer();
 		Flush();
@@ -243,9 +213,9 @@ namespace Crowny
 		s_Data.TextureIndex = 0;
 	}
 
-	void BatchRenderer2D::Flush()
+	void Renderer2D::Flush()
 	{
-		for (int i = 0; i <= s_Data.TextureIndex; i++)
+		for (uint8_t i = 0; i <= s_Data.TextureIndex; i++)
 		{
 			s_Data.TextureSlots[i]->Bind(i);
 		}

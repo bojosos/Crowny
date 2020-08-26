@@ -1,8 +1,16 @@
 #include "cwpch.h"
 
 #include "Crowny/Common/FileSystem.h"
+#include "Crowny/Application/Application.h"
+
+#include <GLFW/glfw3.h>
+
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>
+#undef GLFW_EXPOSE_NATIVE_WIN32
 
 #include <Windows.h>
+#include <commdlg.h>
 
 namespace Crowny
 {
@@ -77,7 +85,7 @@ namespace Crowny
 		return success;
 	}
 
-	static std::string ReadTextFile(const std::string& path)
+	std::string FileSystem::ReadTextFile(const std::string& path)
 	{
 		HANDLE file = OpenFileForReadingWin32(path);
 		int64_t size = GetFileSizeWin32(file);
@@ -88,7 +96,7 @@ namespace Crowny
 		return success ? res : std::string();
 	}
 
-	static bool WriteFile(const std::string& path, byte* buffer)
+	bool FileSystem::WriteFile(const std::string& path, byte* buffer)
 	{
 		HANDLE file = CreateFile(path.c_str(), GENERIC_WRITE, NULL, NULL, CREATE_NEW | OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 		if (file == INVALID_HANDLE_VALUE)
@@ -102,9 +110,57 @@ namespace Crowny
 		return success;
 	}
 
-	static bool WriteTextFile(const std::string& path, const std::string& text)
+	bool FileSystem::WriteTextFile(const std::string& path, const std::string& text)
 	{
 		return WriteFile(path, (byte*)text[0]);
+	}
+
+	std::tuple<bool, std::string> FileSystem::OpenFileDialog(const std::string& filter, const std::string& initialDir)
+	{
+		OPENFILENAME ofn = { 0 };
+		TCHAR szFile[260] = { 0 };
+		
+		ofn.lStructSize = sizeof(ofn);
+		ofn.hwndOwner = glfwGetWin32Window((GLFWwindow*)Application::Get().GetWindow().GetNativeWindow());
+		ofn.lpstrFile = szFile;
+		ofn.nMaxFile = sizeof(szFile);
+		ofn.lpstrFilter = filter.c_str();
+		ofn.nFilterIndex = 1;
+		ofn.lpstrFileTitle = NULL;
+		ofn.nMaxFileTitle = 0;
+		ofn.lpstrInitialDir = initialDir.empty() ? NULL : initialDir.c_str();
+		ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+		if (GetOpenFileName(&ofn) == TRUE)
+		{
+			return std::make_tuple(true, ofn.lpstrFile);
+		}
+
+		return std::make_tuple(false, "");
+	}
+
+	std::tuple<bool, std::string> FileSystem::SaveFileDialog(const std::string& filter, const std::string& initialDir)
+	{
+		OPENFILENAME ofn = { 0 };
+		TCHAR szFile[260] = { 0 };
+
+		ofn.lStructSize = sizeof(ofn);
+		ofn.hwndOwner = glfwGetWin32Window((GLFWwindow*)Application::Get().GetWindow().GetNativeWindow());
+		ofn.lpstrFile = szFile;
+		ofn.nMaxFile = sizeof(szFile);
+		ofn.lpstrFilter = filter.c_str();
+		ofn.nFilterIndex = 1;
+		ofn.lpstrFileTitle = NULL;
+		ofn.nMaxFileTitle = 0;
+		ofn.lpstrInitialDir = initialDir.empty() ? NULL : initialDir.c_str();
+		ofn.Flags = OFN_PATHMUSTEXIST;
+
+		if (GetSaveFileName(&ofn) == TRUE)
+		{
+			return std::make_tuple(true, ofn.lpstrFile);
+		}
+
+		return std::make_tuple(false, "");
 	}
 
 }

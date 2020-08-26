@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Renderer/Renderer.h"
-#include "Crowny/Renderer/BatchRenderer2D.h"
+#include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Renderer/RenderCommand.h"
 #include "Crowny/Renderer/Camera.h"
 
@@ -17,7 +17,7 @@ namespace Crowny
 	void Renderer::Init()
 	{
 		RenderCommand::Init();
-		BatchRenderer2D::Init();
+		Renderer2D::Init();
 	}
 
 	void Renderer::Shutdown()
@@ -44,10 +44,10 @@ namespace Crowny
 	{
 		shader->Bind();
 
-		shader->SetMat4("u_ViewMatrix", Camera::GetCurrentCamera().GetViewMatrix());
-		shader->SetMat4("u_ProjectionMatrix", Camera::GetCurrentCamera().GetProjectionMatrix());
+		//shader->SetMat4("u_ViewMatrix", Camera::GetCurrentCamera().GetViewMatrix());
+		//shader->SetMat4("u_ProjectionMatrix", Camera::GetCurrentCamera().GetProjectionMatrix());
 
-		shader->SetMat4("u_Transform", transform);
+		//shader->SetMat4("u_Transform", transform); // use model matrix?
 
 		vertexArray->Bind();
 		RenderCommand::DrawIndexed(vertexArray);

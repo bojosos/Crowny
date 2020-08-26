@@ -142,6 +142,8 @@ namespace Crowny
 		virtual void Unbind(uint32_t slot) const = 0;
 		virtual bool operator==(const Texture& other) const = 0;
 
+		virtual const std::string& GetName() const = 0;
+
 		static Ref<Texture> Create(const TextureParameters& parameters);
 	};
 

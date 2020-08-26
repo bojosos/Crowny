@@ -10,21 +10,23 @@ namespace Crowny
 {
 	struct VertexData
 	{
-		glm::vec3 Position;
+		glm::vec4 Position;
 		glm::vec2 Uv;
 		float Tid;
 		glm::vec4 Color;
 	};
 
-	class BatchRenderer2D
+	class Renderer2D
 	{
 	public:
-		static void Begin(const Camera& camera);
+		static void Begin(const glm::mat4& projection, const glm::mat4& transform);
 
 		static float FindTexture(const Ref<Texture2D>& texture);
 		
 		static void FillRect(const Rectangle& bounds, Color color);
 		static void FillRect(const Rectangle& bounds, const Ref<Texture2D>& texture, Color color);
+
+		static void FillRect(const glm::mat4& transform, const Ref<Texture2D>& texture, Color color);
 
 		static void DrawString(const std::string& text, float x, float y, const Ref<Font>& font, Color color);
 		static void End();

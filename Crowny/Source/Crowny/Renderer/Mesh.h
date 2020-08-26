@@ -1,26 +1,32 @@
 #pragma once
 
+#include "Crowny/Renderer/Material.h"
+#include "Crowny/Renderer/VertexArray.h"
+
 namespace Crowny
 {
-	struct MeshData
-	{
-		uint32_t vertexCount;
-		float* vertices;
 
-		float* uvs;
-		float* normals;
-		uint32_t* indices;
+	struct Vertex
+	{
+		glm::vec3 Position;
+		glm::vec3 Normal;
+		glm::vec2 Uv;
+		glm::vec3 Binormal;
+		glm::vec3 Tangent;
 	};
 
 	class Mesh
 	{
-	public:
-		virtual ~Mesh() = default;
-
-		virtual MeshData& GetData() = 0;
-
-		static Ref<Mesh> Create();
 	private:
-		MeshData m_MeshData;
+		Ref<VertexArray> m_VertexArray;
+		Ref<IndexBuffer> m_IndexBuffer;
+		Ref<MaterialInstance> m_MaterialInstance;
+
+	public:
+		Mesh(const Ref<VertexArray>& vao, const Ref<IndexBuffer>& ibo, const Ref<MaterialInstance>& material);
+		~Mesh() = default;
+
+		void SetMaterial(const Ref<MaterialInstance>& materialInstance) { m_MaterialInstance = materialInstance; }
+
 	};
 }

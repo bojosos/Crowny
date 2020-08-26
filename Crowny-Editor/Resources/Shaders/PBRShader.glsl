@@ -1,29 +1,47 @@
 #type vertex
 #version 330 core
 
-layout(location = 0) in vec3 a_Position;
+layout(location = 0) in vec4 a_Position;
 layout(location = 1) in vec2 a_Uv;
 layout(location = 2) in vec3 a_Normal;
+layout(location = 3) in vec3 a_Binormal;
+layout(location = 4) in vec3 a_Tangent;
 
-uniform mat4 u_ProjectionMatrix;
-uniform mat4 u_ViewMatrix;
-uniform mat4 u_ModelMatrix;
+uniform mat4 sys_ProjectionMatrix;
+uniform mat4 sys_ViewMatrix;
+uniform mat4 sys_ModelMatrix;
+uniform mat4 sys_CameraPosition;
+
+uniform mat4 u_DepthBiasMVP;
 
 out DATA
 {
 	vec3 Position;
 	vec3 Normal;
 	vec2 Uv;
+	vec3 Binormal;
+	vec3 Tangent;
+	vec3 Color;
+	vec4 ShadowCoord;
+	vec3 CameraPos;
 } vs_out;
 
 void main()
 {
+	vec4 pos = sys_ModelMatrix * a_Position;
+	vs_out.Position = vec3(u_ModelMatrix);
+	gl_Position = sys_ProjectionMatrix * sys_ViewMatrix * pos;
 
-	vs_out.Position = vec3(u_ModelMatrix * vec4(a_Position, 1.0));
+	mat3 model = mat3(sys_ModelMatrix);
+	vs_out.Normal = model * a_Normal;
+	vs_out.Binormal = model * a_Binormal;
+	vs_out.Tangent = model * a_Tangent;
 	vs_out.Uv = a_Uv;
-	vs_out.Normal = a_Normal;
+	vs_out.Color = vec3(1.0);
+	vs_out.CameraPos = sys_CameraPosition;
 
-	gl_Position = u_ProjectionMatrix * u_ViewMatrix * vec4(vs_out.Position, 1.0);
+	vs_out.ShadowCoord = u_DepthBiasMVP * pos;
+
 }
 
 #type fragment
@@ -36,20 +54,62 @@ in DATA
 	vec3 Position;
 	vec3 Normal;
 	vec2 Uv;
+	vec3 Binormal;
+	vec3 Tangent;
+	vec3 Color;
+	vec4 ShadowCoord;
+	vec3 CameraPos;
 } fs_in;
 
+struct Material
+{
+	vec4 Albedo;
+	vec3 Specular;
+	float Roughness;
+	vec3 Normal;
+}
+
+struct Light
+{
+	vec4 Color;
+	vec3 Position;
+	float P0;
+	vec3 Direction;
+	float P1;
+	vec3 LightVector;
+	float Intensity;
+}
+
+struct Attributes
+{
+	vec3 Position;
+	vec3 Normal;
+	vec3 Binormal;
+	vec3 Tangent;
+}
+
+// Metallic workflow
 uniform sampler2D u_AlbedoMap;
 uniform sampler2D u_NormalMap;
 uniform sampler2D u_MetallicMap;
 uniform sampler2D u_RoughnessMap;
-uniform sampler2D u_aoMap;
+uniform sampler2D u_AoMap;
 
-uniform vec3 lightPositions[4];
-uniform vec3 lightColors[4];
+uniform flaot u_UsingAlbedoMap;
+uniform float u_UsingNormalMap;
+uniform float u_UsingMetallicMap;
+uniform float u_UsingRoughnessMap;
+uniform float u_UsingAoMap;
+
+uniform sampler2D u_PreintegratedFG;
+uniform samplerCube u_EnvironmentMap;
+
+uniform Light sys_lights[4];
 
 uniform vec3 camPos;
 
 const float PI = 3.14159265359;
+const float GAMMA = 2.2;
 
 vec3 GetNormalFromMap()
 {
@@ -113,7 +173,7 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 
 void main(void) 
 {
-	vec3 albedo = pow(texture(u_AlbedoMap, fs_in.Uv).rgb, vec3(2.2));
+	vec3 albedo = pow(texture(u_AlbedoMap, fs_in.Uv).rgb, vec3(GAMMA)); // alpha?
 	float metallic = texture(u_MetallicMap, fs_in.Uv).r;
 	float roughness = texture(u_MetallicMap, fs_in.Uv).r;
 	float ao = texture(u_MetallicMap, fs_in.Uv).r;

@@ -12,9 +12,6 @@ namespace Crowny
 		~ImGuiViewportWindow() = default;
 
 		virtual void Render() override;
-
-		virtual void Show() override;
-		virtual void Hide() override;
 	private:
 		Ref<Framebuffer> m_Framebuffer;
 		glm::vec2& m_ViewportSize;

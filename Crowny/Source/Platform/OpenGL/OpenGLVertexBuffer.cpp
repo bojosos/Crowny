@@ -21,7 +21,7 @@ namespace Crowny
 		return GL_NONE;
 	}
 
-	OpenGLVertexBuffer::OpenGLVertexBuffer(const void* data, uint32_t size, const VertexBufferProperties& properties) : m_Size(size), m_Properties(properties)
+	OpenGLVertexBuffer::OpenGLVertexBuffer(void* data, uint32_t size, const VertexBufferProperties& properties) : m_Size(size), m_Properties(properties)
 	{
 #ifndef MC_WEB
 		glGenBuffers(1, &m_RendererID);
@@ -38,7 +38,7 @@ namespace Crowny
 		glDeleteBuffers(1, &m_RendererID);
 	}
 
-	void OpenGLVertexBuffer::SetData(const void* verts, uint32_t size)
+	void OpenGLVertexBuffer::SetData(void* verts, uint32_t size)
 	{
 #ifdef MC_WEB
 		glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);

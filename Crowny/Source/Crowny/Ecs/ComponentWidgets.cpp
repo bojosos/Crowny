@@ -41,11 +41,11 @@ namespace Crowny
 		}
 	}
 
-	template <>
+	template <class CameraComponent>
 	void ComponentEditorWidget<CameraComponent>(Entity& e)
 	{
-		auto& cam = e.GetComponent<CameraComponent>();
-		ImGui::ColorEdit3("Background", glm::value_ptr(cam.BackgroundColor));
+		auto& cam = e.GetComponent<CameraComponent>().CameraObject;
+		ImGui::ColorEdit3("Background", glm::value_ptr(cam.m_BackgroundColor));
 
 		const char* projections[2] = { "Orthographic", "Perspective" };
 		if (ImGui::BeginCombo("Projection", projections[(uint32_t)cam.Projection]))
@@ -64,7 +64,7 @@ namespace Crowny
 
 		if (cam.Projection == CameraProjection::Perspective)
 		{
-			ImGui::SliderInt("Field of View", &cam.Fov, 0, 180, "%d°");
+			ImGui::SliderInt("Field of View", &cam.Fov, 0, 180, "%d");
 
 			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 
@@ -100,10 +100,27 @@ namespace Crowny
 				ImGui::Unindent(30.f);
 			}
 
-			ImGui::Checkbox("Occlusion Culling", &cam.OcclusionCulling);
-			ImGui::Checkbox("HDR", &cam.HDR);
-			ImGui::Checkbox("MSAA", &cam.MSAA);
 		}
+		else if(cam.Projection == CameraProjection::Orthographic) 
+		{
+			 
+		}
+		ImGui::Checkbox("Occlusion Culling", &cam.OcclusionCulling);
+		ImGui::Checkbox("HDR", &cam.HDR);
+		ImGui::Checkbox("MSAA", &cam.MSAA);
+	}
+
+	int OnTextEdited(ImGuiInputTextCallbackData* data)
+	{
+		CW_ENGINE_INFO(data->Buf);
+		return 0;
+	}
+
+	template<>
+	void ComponentEditorWidget<TextComponent>(Entity& e)
+	{
+		auto& t = e.GetComponent<TextComponent>();
+		ImGui::InputTextMultiline("text", nullptr, 0, ImVec2(100, 100), 0, OnTextEdited);
 	}
 
 	template<>
@@ -114,9 +131,15 @@ namespace Crowny
 		if (t.Texture) {
 			ImGui::Image((ImTextureID)t.Texture->GetRendererID(), { 150.0f, 150.0f });
 		}
+		ImGui::ColorEdit4("Color", glm::value_ptr(t.Color));
 	}
 
 	template <>
-	void ComponentEditorWidget<MeshRendererComponent>(Entity& e) {}
+	void ComponentEditorWidget<MeshRendererComponent>(Entity& e) 
+	{
+		auto& mesh = e.GetComponent<MeshRendererComponent>().Mesh;
+
+		ImGui::Text("Path");
+	}
 
 }

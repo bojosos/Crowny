@@ -27,7 +27,7 @@ namespace Crowny {
 		entity.RemoveComponent<Component>();
 	}
 
-	class ComponentEditor {
+	class ImGuiComponentEditor {
 	public:
 		struct ComponentInfo {
 			using Callback = std::function<void(Entity&)>;

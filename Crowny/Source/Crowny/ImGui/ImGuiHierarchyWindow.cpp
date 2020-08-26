@@ -4,8 +4,9 @@
 
 #include "Crowny/SceneManagement/SceneManager.h"
 #include "Crowny/Ecs/Entity.h"
-
 #include "Crowny/Ecs/Components.h"
+#include "Crowny/Input/Input.h"
+
 #include <imgui.h>
 
 namespace Crowny
@@ -48,8 +49,17 @@ namespace Crowny
 					e.AddChild("New Entity");
 					ImGuiHierarchyWindow::SelectedEntity = rc.Children.back();
 				}
-				if (ImGui::Selectable("Delete"))
+				if (ImGui::Selectable("Delete") || Input::IsKeyPressed(KeyCode::Delete))
 				{
+					for (int i = 0; i < rc.Children.size(); i++)
+					{
+						if (rc.Children[i] == ImGuiHierarchyWindow::SelectedEntity)
+						{
+							rc.Children.erase(rc.Children.begin() + i);
+							break;
+						}
+					}
+
 					ImGuiHierarchyWindow::SelectedEntity = *SceneManager::GetActiveScene()->m_SceneEntity;
 				}
 
@@ -91,24 +101,22 @@ namespace Crowny
 
 	void ImGuiHierarchyWindow::Render()
 	{
-		if (m_Shown) {
-			ImGui::Begin("Hierarchy");
-			Scene* activeScene = SceneManager::GetActiveScene();
-			if (ImGui::BeginPopupContextWindow())
+		ImGui::Begin("Hierarchy", &m_Shown);
+		Scene* activeScene = SceneManager::GetActiveScene();
+		if (ImGui::BeginPopupContextWindow())
+		{
+			if (ImGui::Selectable("New Entity"))
 			{
-				if (ImGui::Selectable("New Entity"))
-				{
-					activeScene->CreateEntity("New Entity");
-				}
-				ImGui::EndPopup();
+				activeScene->CreateEntity("New Entity");
 			}
-
-			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-
-			DisplayTree(*activeScene->m_SceneEntity);
-
-			ImGui::End();
+			ImGui::EndPopup();
 		}
+
+		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+
+		DisplayTree(*activeScene->m_SceneEntity);
+
+		ImGui::End();
 	}
 
 	void ImGuiHierarchyWindow::Show()

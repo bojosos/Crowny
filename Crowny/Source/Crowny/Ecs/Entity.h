@@ -1,11 +1,12 @@
 #pragma once
 
 #include "Crowny/SceneManagement/Scene.h"
+
 #include <entt/entt.hpp>
 
 namespace Crowny
 {
-	class ComponentEditor;
+	class ImGuiComponentEditor;
 	class ImGuiHierarchyWindow;
 
 	class Entity
@@ -45,10 +46,10 @@ namespace Crowny
 
 		bool operator==(const Entity& other) const 
 		{
-			return m_EntityHandle == other.m_EntityHandle && m_Scene == other.m_Scene;
+			return m_EntityHandle == other.m_EntityHandle;//&& m_Scene == other.m_Scene;
 		}
 
-		friend class ComponentEditor;
+		friend class ImGuiComponentEditor;
 		friend class ImGuiHierarchyWindow;
 	private:
 		entt::entity m_EntityHandle{ entt::null };

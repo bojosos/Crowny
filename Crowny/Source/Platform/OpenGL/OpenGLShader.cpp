@@ -85,7 +85,7 @@ namespace Crowny
 	void OpenGLUniformBufferDeclaration::PushUniform(OpenGLUniformDeclaration* uniform)
 	{
 		uint32_t offset = 0;
-		if (m_Uniforms.size())
+		if (!m_Uniforms.empty())
 		{
 			OpenGLUniformDeclaration* prev = (OpenGLUniformDeclaration*)m_Uniforms.back();
 			offset = prev->GetOffset() + prev->GetSize();
@@ -349,23 +349,64 @@ namespace Crowny
 		return nullptr;
 	}
 
+	ShaderUniformDeclaration* OpenGLShader::FindUniformDeclaration(const std::string& name)
+	{
+		ShaderUniformDeclaration* res = nullptr;
+		for (auto* ubuff : m_VSUniformBuffers)
+		{
+			res = FindUniformDeclaration(name, ubuff);
+			if (res) 
+				return res;
+		}
+
+		for (auto* ubuff : m_FSUniformBuffers)
+		{
+			res = FindUniformDeclaration(name, ubuff);
+			if (res)
+				return res;
+		}
+
+		res = FindUniformDeclaration(name, m_VSUserUniformBuffer);
+		if (res)
+			return res;
+
+		res = FindUniformDeclaration(name, m_FSUserUniformBuffer);
+		if (res)
+			return res;
+
+		return res;
+	}
+
+	ShaderUniformDeclaration* OpenGLShader::FindUniformDeclaration(const std::string& name, const ShaderUniformBufferDeclaration* buff)
+	{
+		const ShaderUniformList& uniforms = buff->GetUniformDeclarations();
+		for (auto* uniform : uniforms)
+		{
+			if (uniform->GetName() == name)
+				return uniform;
+		}
+
+		return nullptr;
+	}
+
 	void OpenGLShader::ResolveUniforms()
 	{
 		Bind();
-		for (uint32_t i = 0; i < m_VSUniformBuffers.size(); i++)
+
+		for (auto* VSUniformBuffer : m_VSUniformBuffers)
 		{
-			OpenGLUniformBufferDeclaration* decl = (OpenGLUniformBufferDeclaration*)m_VSUniformBuffers[i];
+			OpenGLUniformBufferDeclaration* decl = (OpenGLUniformBufferDeclaration*)VSUniformBuffer;
 			const ShaderUniformList& uniforms = decl->GetUniformDeclarations();
-			for (uint32_t j = 0; j < uniforms.size(); j++)
+			for (auto* j : uniforms)
 			{
-				OpenGLUniformDeclaration* uniform = (OpenGLUniformDeclaration*)uniforms[j];
+				OpenGLUniformDeclaration* uniform = (OpenGLUniformDeclaration*)j;
 				if (uniform->GetType() == OpenGLUniformDeclaration::Type::STRUCT)
 				{
 					const ShaderStruct& s = uniform->GetShaderUniformStruct();
 					const auto& fields = s.GetFields();
-					for (uint32_t k = 0; k < fields.size(); k++)
+					for (auto* k : fields)
 					{
-						OpenGLUniformDeclaration* field = (OpenGLUniformDeclaration*)fields[k];
+						OpenGLUniformDeclaration* field = (OpenGLUniformDeclaration*)k;
 						field->m_Location = GetUniformLocation(uniform->m_Name + "." + field->m_Name);
 					}
 				}
@@ -375,20 +416,20 @@ namespace Crowny
 				}
 			}
 
-			for (uint32_t i = 0; i < m_FSUniformBuffers.size(); i++)
+			for (auto* FSUniformBuffer : m_FSUniformBuffers)
 			{
-				OpenGLUniformBufferDeclaration* decl = (OpenGLUniformBufferDeclaration*)m_FSUniformBuffers[i];
+				OpenGLUniformBufferDeclaration* decl = (OpenGLUniformBufferDeclaration*)FSUniformBuffer;
 				const ShaderUniformList& uniforms = decl->GetUniformDeclarations();
-				for (uint32_t j = 0; j < uniforms.size(); j++)
+				for (auto* j : uniforms)
 				{
-					OpenGLUniformDeclaration* uniform = (OpenGLUniformDeclaration*)uniforms[j];
+					OpenGLUniformDeclaration* uniform = (OpenGLUniformDeclaration*)j;
 					if (uniform->GetType() == OpenGLUniformDeclaration::Type::STRUCT)
 					{
 						const ShaderStruct& s = uniform->GetShaderUniformStruct();
 						const auto& fields = s.GetFields();
-						for (uint32_t k = 0; k < fields.size(); k++)
+						for (auto* k : fields)
 						{
-							OpenGLUniformDeclaration* field = (OpenGLUniformDeclaration*)fields[k];
+							OpenGLUniformDeclaration* field = (OpenGLUniformDeclaration*)k;
 							field->m_Location = GetUniformLocation(uniform->m_Name + "." + field->m_Name);
 						}
 					}
@@ -403,16 +444,16 @@ namespace Crowny
 				if (decl)
 				{
 					const ShaderUniformList& uniforms = decl->GetUniformDeclarations();
-					for (uint32_t j = 0; j < uniforms.size(); j++)
+					for (auto* j : uniforms)
 					{
-						OpenGLUniformDeclaration* uniform = (OpenGLUniformDeclaration*)uniforms[j];
+						OpenGLUniformDeclaration* uniform = (OpenGLUniformDeclaration*)j;
 						if (uniform->GetType() == OpenGLUniformDeclaration::Type::STRUCT)
 						{
 							const ShaderStruct& s = uniform->GetShaderUniformStruct();
 							const auto& fields = s.GetFields();
-							for (uint32_t k = 0; k < fields.size(); k++)
+							for (auto* k : fields)
 							{
-								OpenGLUniformDeclaration* field = (OpenGLUniformDeclaration*)fields[k];
+								OpenGLUniformDeclaration* field = (OpenGLUniformDeclaration*)k;
 								field->m_Location = GetUniformLocation(uniform->m_Name + "." + field->m_Name);
 							}
 						}
@@ -429,16 +470,16 @@ namespace Crowny
 				if (decl)
 				{
 					const ShaderUniformList& uniforms = decl->GetUniformDeclarations();
-					for (uint32_t j = 0; j < uniforms.size(); j++)
+					for (auto* j : uniforms)
 					{
-						OpenGLUniformDeclaration* uniform = (OpenGLUniformDeclaration*)uniforms[j];
+						OpenGLUniformDeclaration* uniform = (OpenGLUniformDeclaration*)j;
 						if (uniform->GetType() == OpenGLUniformDeclaration::Type::STRUCT)
 						{
 							const ShaderStruct& s = uniform->GetShaderUniformStruct();
 							const auto& fields = s.GetFields();
-							for (uint32_t k = 0; k < fields.size(); k++)
+							for (auto* k : fields)
 							{
-								OpenGLUniformDeclaration* field = (OpenGLUniformDeclaration*)fields[k];
+								OpenGLUniformDeclaration* field = (OpenGLUniformDeclaration*)k;
 								field->m_Location = GetUniformLocation(uniform->m_Name + "." + field->m_Name);
 							}
 						}
@@ -447,6 +488,28 @@ namespace Crowny
 							uniform->m_Location = GetUniformLocation(uniform->m_Name);
 						}
 					}
+				}
+			}
+
+			uint32_t sampler = 0;
+			for (auto* rs : m_Resources)
+			{
+				OpenGLResourceDeclaration* decl = (OpenGLResourceDeclaration*)rs;
+				uint32_t location = GetUniformLocation(decl->m_Name);
+				if (decl->GetCount() == 1)
+				{
+					decl->m_Register = sampler;
+					SetUniformInt(location, sampler++);
+				}
+				else if (decl->GetCount() > 1)
+				{
+					decl->m_Register = 0;
+					uint32_t count = decl->GetCount();
+					int32_t* samplers = new int32_t[count];
+					for (uint8_t i = 0; i < count; i++)
+						samplers[i] = i;
+					SetUniformIntV(decl->GetName(), samplers, count);
+					delete[] samplers;
 				}
 			}
 		}
@@ -470,85 +533,208 @@ namespace Crowny
 		glUseProgram(0);
 	}
 
-	void OpenGLShader::RetrieveLocations(const std::vector<std::string>& uniforms)
+	void OpenGLShader::SetVSSystemUniformBuffer(byte* data, uint32_t size, uint32_t slot)
 	{
-		for (auto& uniform : uniforms)
+		Bind();
+		ShaderUniformBufferDeclaration* decl = m_VSUniformBuffers[slot];
+		ResolveAndSetUniforms(decl, data, size);
+	}
+
+	void OpenGLShader::SetFSSystemUniformBuffer(byte* data, uint32_t size, uint32_t slot)
+	{
+		Bind();
+		ShaderUniformBufferDeclaration* decl = m_FSUniformBuffers[slot];
+		ResolveAndSetUniforms(decl, data, size);
+	}
+
+	void OpenGLShader::SetVSUserUniformBuffer(byte* data, uint32_t size)
+	{
+		ResolveAndSetUniforms(m_VSUserUniformBuffer, data, size);
+	}
+
+	void OpenGLShader::SetFSUserUniformBuffer(byte* data, uint32_t size)
+	{
+		ResolveAndSetUniforms(m_VSUserUniformBuffer, data, size);
+	}
+
+	void OpenGLShader::ResolveAndSetUniforms(ShaderUniformBufferDeclaration* buff, byte* data, uint32_t size)
+	{
+		const ShaderUniformList& uniforms = buff->GetUniformDeclarations();
+		for (auto* uniform : uniforms)
 		{
-			m_UniformLocations[uniform] = glGetUniformLocation(m_RendererID, uniform.c_str());
+			ResolveAndSetUniform((OpenGLUniformDeclaration*)uniform, data, size);
 		}
 	}
 
-	void OpenGLShader::SetInt(const std::string& name, int value)
+	void OpenGLShader::ResolveAndSetUniform(OpenGLUniformDeclaration* uniform, byte* data, uint32_t size)
 	{
-		UploadUniformInt(name, value);
+		if (uniform->GetLocation() == -1) 
+			return;
+
+		uint32_t offset = uniform->GetOffset();
+		switch (uniform->GetType())
+		{
+		case OpenGLUniformDeclaration::Type::FLOAT32:
+			SetUniformFloat(uniform->GetLocation(), *(float*)&data[offset]);
+		case OpenGLUniformDeclaration::Type::INT32:
+			SetUniformInt(uniform->GetLocation(), *(int*)&data[offset]);
+		case OpenGLUniformDeclaration::Type::VEC2:
+			SetUniformFloat2(uniform->GetLocation(), *(glm::vec2*)&data[offset]);
+		case OpenGLUniformDeclaration::Type::VEC3:
+			SetUniformFloat3(uniform->GetLocation(), *(glm::vec3*)&data[offset]);
+		case OpenGLUniformDeclaration::Type::VEC4:
+			SetUniformFloat4(uniform->GetLocation(), *(glm::vec4*)&data[offset]);
+		case OpenGLUniformDeclaration::Type::MAT3:
+			SetUniformMat3(uniform->GetLocation(), *(glm::mat3*)&data[offset]);
+		case OpenGLUniformDeclaration::Type::MAT4:
+			SetUniformMat4(uniform->GetLocation(), *(glm::mat4*)&data[offset]);
+		case OpenGLUniformDeclaration::Type::STRUCT:
+			SetUniformStruct(uniform, data, offset);
+		}
 	}
 
-	void OpenGLShader::SetIntV(const std::string& name, uint32_t count, int* ptr)
+	void OpenGLShader::SetUniform(const std::string& name, byte* data)
 	{
-		UploadUniformIntV(name, count, ptr);
+		ShaderUniformDeclaration* uniform = FindUniformDeclaration(name);
+		if (!uniform)
+		{
+			return;
+		}
+		ResolveAndSetUniform((OpenGLUniformDeclaration*)uniform, data, 0);
 	}
 
-	void OpenGLShader::SetFloat3(const std::string& name, const glm::vec3& value)
+	void OpenGLShader::ResolveAndSetUniformField(const OpenGLUniformDeclaration& field, byte* data, uint32_t offset)
 	{
-		UploadUniformFloat3(name, value);
+		switch (field.GetType())
+		{
+		case OpenGLUniformDeclaration::Type::FLOAT32:
+			SetUniformFloat(field.GetLocation(), *(float*)&data[offset]);
+			break;
+		case OpenGLUniformDeclaration::Type::INT32:
+			SetUniformInt(field.GetLocation(), *(int32_t*)&data[offset]);
+			break;
+		case OpenGLUniformDeclaration::Type::VEC2:
+			SetUniformFloat2(field.GetLocation(), *(glm::vec2*) & data[offset]);
+			break;
+		case OpenGLUniformDeclaration::Type::VEC3:
+			SetUniformFloat3(field.GetLocation(), *(glm::vec3*) & data[offset]);
+			break;
+		case OpenGLUniformDeclaration::Type::VEC4:
+			SetUniformFloat4(field.GetLocation(), *(glm::vec4*) & data[offset]);
+			break;
+		case OpenGLUniformDeclaration::Type::MAT3:
+			SetUniformMat3(field.GetLocation(), *(glm::mat3*)&data[offset]);
+			break;
+		case OpenGLUniformDeclaration::Type::MAT4:
+			SetUniformMat4(field.GetLocation(), *(glm::mat4*) & data[offset]);
+			break;
+		default:
+			CW_ENGINE_ASSERT(false, "Unknown type!");
+		}
 	}
 
-	void OpenGLShader::SetFloat4(const std::string& name, const glm::vec4& value)
+	void OpenGLShader::SetUniformInt(const std::string& name, int value)
 	{
-		UploadUniformFloat4(name, value);
+		SetUniformInt(GetUniformLocation(name), value);
 	}
 
-	void OpenGLShader::SetMat4(const std::string& name, const glm::mat4& value)
+	void OpenGLShader::SetUniformIntV(const std::string& name, int* ptr, uint32_t count)
 	{
-		UploadUniformMat4(name, value);
+		SetUniformIntV(GetUniformLocation(name), ptr, count);
 	}
 
-	void OpenGLShader::UploadUniformIntV(const std::string& name, int count, int* ptr)
+	void OpenGLShader::SetUniformFloat(const std::string& name, float value)
 	{
-		glUniform1iv(GetUniformLocation(name), count, ptr);
+		SetUniformFloat(GetUniformLocation(name), value);
 	}
 
-	void OpenGLShader::UploadUniformInt(const std::string& name, int value)
+	void OpenGLShader::SetUniformFloat2(const std::string& name, const glm::vec2& value)
 	{
-		glUniform1i(GetUniformLocation(name), value);
+		SetUniformFloat2(GetUniformLocation(name), value);
 	}
 
-	void OpenGLShader::UploadUniformFloat(const std::string& name, float value)
+	void OpenGLShader::SetUniformFloat3(const std::string& name, const glm::vec3& value)
 	{
-		glUniform1f(GetUniformLocation(name), value);
+		SetUniformFloat3(GetUniformLocation(name), value);
 	}
 
-	void OpenGLShader::UploadUniformFloat2(const std::string& name, const glm::vec2& value)
+	void OpenGLShader::SetUniformFloat4(const std::string& name, const glm::vec4& value)
 	{
-		glUniform2f(GetUniformLocation(name), value.x, value.y);
+		SetUniformFloat4(GetUniformLocation(name), value);
 	}
 
-	void OpenGLShader::UploadUniformFloat3(const std::string& name, const glm::vec3& value)
+	void OpenGLShader::SetUniformMat3(const std::string& name, const glm::mat3& value)
 	{
-		glUniform3f(GetUniformLocation(name), value.x, value.y, value.z);
+		SetUniformMat3(GetUniformLocation(name), value);
 	}
 
-	void OpenGLShader::UploadUniformFloat4(const std::string& name, const glm::vec4& value)
+	void OpenGLShader::SetUniformMat4(const std::string& name, const glm::mat4& value)
 	{
-		glUniform4f(GetUniformLocation(name), value.x, value.y, value.z, value.w);
+		SetUniformMat4(GetUniformLocation(name), value);
 	}
 
-	void OpenGLShader::UploadUniformMat3(const std::string& name, const glm::mat3& matrix)
+	void OpenGLShader::SetUniformInt(uint32_t location, int value)
 	{
-		glUniformMatrix3fv(GetUniformLocation(name), 1, GL_FALSE, glm::value_ptr(matrix));
+		glUniform1i(location, value);
 	}
 
-	void OpenGLShader::UploadUniformMat4(const std::string& name, const glm::mat4& matrix)
+	void OpenGLShader::SetUniformIntV(uint32_t location, int* ptr, uint32_t count)
 	{
-		glUniformMatrix4fv(GetUniformLocation(name), 1, GL_FALSE, glm::value_ptr(matrix));
+		glUniform1iv(location, count, ptr);
+	}
+
+	void OpenGLShader::SetUniformFloat(uint32_t location, float value)
+	{
+		glUniform1f(location, value);
+	}
+
+	void OpenGLShader::SetUniformFloat2(uint32_t location, const glm::vec2& value)
+	{
+		glUniform2f(location, value.x, value.y);
+	}
+
+	void OpenGLShader::SetUniformFloat3(uint32_t location, const glm::vec3& value)
+	{
+		glUniform3f(location, value.x, value.y, value.z);
+	}
+
+	void OpenGLShader::SetUniformFloat4(uint32_t location, const glm::vec4& value)
+	{
+		glUniform4f(location, value.x, value.y, value.z, value.w);
+	}
+
+	void OpenGLShader::SetUniformMat3(uint32_t location, const glm::mat3& matrix)
+	{
+		glUniformMatrix3fv(location, 1, GL_FALSE, glm::value_ptr(matrix));
+	}
+
+	void OpenGLShader::SetUniformMat4(uint32_t location, const glm::mat4& matrix)
+	{
+		glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(matrix));
+	}
+
+	void OpenGLShader::SetUniformStruct(OpenGLUniformDeclaration* uniform, byte* data, int32_t offset)
+	{
+		const ShaderStruct& ss = uniform->GetShaderUniformStruct();
+		const auto& fields = ss.GetFields();
+
+		for (auto& f : fields)
+		{
+			OpenGLUniformDeclaration* field = (OpenGLUniformDeclaration*)f;
+			ResolveAndSetUniformField(*field, data, offset);
+			offset += field->m_Size;
+		}
 	}
 
 	uint32_t OpenGLShader::GetUniformLocation(const std::string& name)
 	{
 		if (m_UniformLocations.find(name) == m_UniformLocations.end())
 		{
-			m_UniformLocations[name] = glGetUniformLocation(m_RendererID, name.c_str());
+			uint32_t result = glGetUniformLocation(m_RendererID, name.c_str());
+			CW_ENGINE_ASSERT(result != -1, "Could not find uniform declaration" + name);
+			m_UniformLocations[name] = result;
 		}
+
 		return m_UniformLocations[name];
 	}
 
