@@ -9,4 +9,14 @@ namespace Crowny
 		
 	}
 
+	void Camera::SetViewport(uint32_t width, uint32_t height)
+	{
+		if (m_Projection == CameraProjection::Orthographic)
+			m_ProjectionMatrix = glm::ortho(0.0f, (float)width, (float)height, 0.0f);
+	}
+
+	Camera::Camera()
+	{
+	}
+
 };

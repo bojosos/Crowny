@@ -126,8 +126,8 @@ namespace Crowny
 		virtual const std::string& GetFilepath() const override { return m_Filepath; }
 
 		virtual const ShaderResourceList& GetResources() const override { return m_Resources; }
-		virtual const ShaderUniformBufferList& GetVSUniformBuffers() const override { return m_VSUniformBuffers; }
-		virtual const ShaderUniformBufferList& GetFSUniformBuffers() const override { return m_FSUniformBuffers; }
+		virtual const ShaderUniformBufferList& GetVSSystemUniforms() const override { return m_VSUniformBuffers; }
+		virtual const ShaderUniformBufferList& GetFSSystemUniforms() const override { return m_FSUniformBuffers; }
 		virtual const ShaderUniformBufferDeclaration* GetVSUserUniformBuffer() const override { return m_VSUserUniformBuffer; }
 		virtual const ShaderUniformBufferDeclaration* GetFSUserUniformBuffer() const override { return m_FSUserUniformBuffer; }
 
@@ -162,25 +162,24 @@ namespace Crowny
 		uint32_t GetUniformLocation(const std::string& name);
 
 		void Load(const std::string& path);
+		std::unordered_map<uint32_t, std::string> ShaderPreProcess(const std::string& source);
 		void Compile(const std::unordered_map<uint32_t, std::string>& shaderSources);
 		void Parse(const std::string& vertSrc, const std::string& fragSrc);
 		void ParseUniform(const std::string& statement, uint32_t shaderType);
 		void ParseUniformStruct(const std::string& block, uint32_t shaderType);
 		void ResolveUniforms();
 
-
 	private:
 		ShaderUniformBufferList m_VSUniformBuffers;
 		ShaderUniformBufferList m_FSUniformBuffers;
-		OpenGLUniformBufferDeclaration* m_VSUserUniformBuffer;
-		OpenGLUniformBufferDeclaration* m_FSUserUniformBuffer;
+		OpenGLUniformBufferDeclaration* m_VSUserUniformBuffer = nullptr;
+		OpenGLUniformBufferDeclaration* m_FSUserUniformBuffer = nullptr;
 		ShaderResourceList m_Resources;
 		ShaderStructList m_Structs;
 
 		std::string m_Filepath;
 		std::string m_Name;
 		uint32_t m_RendererID;
-		std::unordered_map<std::string, int32_t> m_UniformLocations;
 	};
 
 }

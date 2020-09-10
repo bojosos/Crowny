@@ -1,17 +1,18 @@
 #pragma once
 
+#include "ImGuiPanel.h"
+
 #include <imgui.h>
 #include <vector>
 #include <string>
-#include "Crowny/ImGui/ImGuiWindow.h"
 
 namespace Crowny
 {
 
-	class ImGuiTextureEditor : public ImGuiWindow
+	class ImGuiTextureEditor : public ImGuiPanel
 	{
 	public:
-		ImGuiTextureEditor(const std::string& name) : ImGuiWindow(name) { }
+		ImGuiTextureEditor(const std::string& name) : ImGuiPanel(name) { }
 		virtual ~ImGuiTextureEditor() = default;
 
 		const std::vector<const char*> TextureTypes = { "Default", "Normal", "Sprite", "Cursor", "Lightmap", "Single channel" };

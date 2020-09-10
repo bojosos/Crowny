@@ -17,10 +17,4 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "Crowny/Common/Log.h"
-#include "Crowny/Common/Types.h"
-#include "Crowny/Common/Constants.h"
-
-#ifdef CW_WINDOWS
-	#include <Windows.h>
-#endif
+#include <Crowny.h>

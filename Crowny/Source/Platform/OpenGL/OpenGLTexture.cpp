@@ -8,6 +8,7 @@
 #include <stb_image.h>
 
 #include "Platform/OpenGL/OpenGLTexture.h"
+#include "Crowny/Common/VirtualFileSystem.h"
 
 namespace Crowny
 {
@@ -158,13 +159,16 @@ namespace Crowny
 #endif
 	}
 
-	OpenGLTexture2D::OpenGLTexture2D(const std::string& path, const TextureParameters& parameters) : m_FilePath(path), m_Parameters(parameters)
+	OpenGLTexture2D::OpenGLTexture2D(const std::string& filepath, const TextureParameters& parameters) : m_FilePath(filepath), m_Parameters(parameters)
 	{
-		std::string filepath = DIRECTORY_PREFIX + path;
 		int width, height, channels;
 		stbi_set_flip_vertically_on_load(1);
-		stbi_uc* data = nullptr;
-		data = stbi_load(filepath.c_str(), &width, &height, &channels, 0);
+		
+		CW_ENGINE_INFO("Loaded texture {0}", filepath);
+
+		auto [data, size] = VirtualFileSystem::Get()->ReadFile(filepath);
+		data = stbi_load_from_memory(data, size, &width, &height, &channels, 0);
+
 		CW_ENGINE_ASSERT(data, "Failed to load texture!");
 		m_Width = width;
 		m_Height = height;

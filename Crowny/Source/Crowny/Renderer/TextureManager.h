@@ -17,4 +17,13 @@ namespace Crowny
 		static Ref<Texture> Get(const std::string& name);
 		static void Clear();
 	};
+
+	class Textures
+	{
+	public:
+		static void LoadDefault();
+
+	public:
+		static Ref<Texture2D> Unassigned;
+	};
 }

@@ -14,6 +14,33 @@ namespace Crowny
 	constexpr glm::vec2 QuadUv[] = { { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 1.0f } };
 	constexpr glm::vec4 QuadVertices[] = { { -0.5f, -0.5f, 0.0f, 1.0f }, { 0.5f, -0.5f, 0.0f, 1.0f }, { 0.5f,  0.5f, 0.0f, 1.0f }, { -0.5f,  0.5f, 0.0f, 1.0f } };
 
+	constexpr const char* RequiredSystemUniforms[2] = { "cw_ProjectionMatrix", "cw_ViewMatrix" };
+
+	enum SystemUniformIndices : int32_t
+	{
+		UniformIndex_ProjectionMatrix = 0,
+		UniformIndex_ViewMatrix = 1
+	};
+
+	struct UniformBuffer
+	{
+		byte* Buffer;
+		uint32_t Size;
+
+		UniformBuffer() { }
+		UniformBuffer(byte* buffer, uint32_t size) : Buffer(buffer), Size(size) { memset(Buffer, 0, Size); }
+
+	};
+
+	struct Renderer2DSystemUniform
+	{
+		UniformBuffer Buffer;
+		uint32_t Offset;
+
+		Renderer2DSystemUniform() { }
+		Renderer2DSystemUniform(const UniformBuffer& buffer, uint32_t offset) : Buffer(buffer), Offset(offset) { }
+	};
+
 	//TODO: Fix textures
 	struct Renderer2DData
 	{ // TODO: RenderCaps
@@ -28,6 +55,9 @@ namespace Crowny
 
 		std::array<Ref<Texture2D>, 32> TextureSlots;
 		uint32_t TextureIndex = 0;
+		
+		std::vector<Renderer2DSystemUniform> SystemUniforms;
+		std::vector<UniformBuffer> SystemUniformBuffers;
 	};
 
 	static Renderer2DData s_Data;
@@ -38,8 +68,9 @@ namespace Crowny
 		s_Data.VertexBuffer = VertexBuffer::Create(nullptr, RENDERER_BUFFER_SIZE, { BufferUsage::DYNAMIC_DRAW });
 		BufferLayout layout = { { ShaderDataType::Float4, "a_Coordinates" },
 								{ ShaderDataType::Float2, "a_Uvs" },
-								{ ShaderDataType::Float, "a_Tid"  },
-								{ ShaderDataType::Float4, "a_Color" , true } };
+								{ ShaderDataType::Float, "a_Tid" },
+								{ ShaderDataType::Float4, "a_Color" } };
+
 		s_Data.VertexBuffer->SetLayout(layout);
 		s_Data.VertexArray->AddVertexBuffer(s_Data.VertexBuffer);
 
@@ -66,14 +97,27 @@ namespace Crowny
 		uint32_t whiteTextureData = 0xffffffff;
 		s_Data.WhiteTexture->SetData(&whiteTextureData, sizeof(uint32_t));
 
-		int32_t samplers[MAX_TEXTURE_SLOTS];
-		for (uint32_t i = 0; i < MAX_TEXTURE_SLOTS; i++)
-			samplers[i] = i;
-		
-		s_Data.Shader = Shader::Create("Shaders/BatchRenderer.glsl");
+		s_Data.Shader = Shader::Create("/Shaders/BatchRenderer.glsl");
 		s_Data.Shader->Bind();
-		//s_Data.Shader->SetIntV("u_Textures", MAX_TEXTURE_SLOTS, samplers);
+		s_Data.SystemUniforms.resize(2);
 
+		const ShaderUniformBufferList& vsuniforms = s_Data.Shader->GetVSSystemUniforms();
+
+		for (auto* buffdecl : vsuniforms)
+		{
+			UniformBuffer buffer(new byte[buffdecl->GetSize()], buffdecl->GetSize());
+			s_Data.SystemUniformBuffers.push_back(buffer);
+
+			for (auto* decl : buffdecl->GetUniformDeclarations())
+			{
+				for (uint32_t j = 0; j < 2; j++)
+				{
+					if (decl->GetName() == RequiredSystemUniforms[j])
+						s_Data.SystemUniforms[j] = Renderer2DSystemUniform(buffer, decl->GetOffset());
+				}
+			}
+		}
+		
 		s_Data.TextureSlots[s_Data.TextureIndex] = s_Data.WhiteTexture;
 
 		s_Data.VertexArray->Unbind();
@@ -82,8 +126,9 @@ namespace Crowny
 
 	void Renderer2D::Begin(const glm::mat4& projection, const glm::mat4& transform)
 	{
-		//s_Data.Shader->SetUniformMat4("u_ProjectionMatrix", projection);
-		//s_Data.Shader->SetUniformMat4("u_ViewMatrix", glm::inverse(transform));
+		memcpy(s_Data.SystemUniforms[UniformIndex_ProjectionMatrix].Buffer.Buffer + s_Data.SystemUniforms[UniformIndex_ProjectionMatrix].Offset, &projection, sizeof(glm::mat4));
+		memcpy(s_Data.SystemUniforms[UniformIndex_ViewMatrix].Buffer.Buffer + s_Data.SystemUniforms[UniformIndex_ViewMatrix].Offset, &glm::inverse(transform), sizeof(glm::mat4));
+
 		s_Data.Shader->Bind();
 		s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->GetPointer(RENDERER_MAX_SPRITES * 4);
 	}
@@ -97,7 +142,7 @@ namespace Crowny
 
 		for (uint8_t i = 1; i <= s_Data.TextureIndex; i++)
 		{
-			if (s_Data.TextureSlots[i] == texture)
+			if (*s_Data.TextureSlots[i] == *texture)
 			{
 				ts = (float)(i + 1);
 				break;
@@ -112,40 +157,40 @@ namespace Crowny
 				s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->GetPointer(RENDERER_MAX_SPRITES * 4); // TODO: Begin or semething instead of this
 			}
 			s_Data.TextureSlots[++s_Data.TextureIndex] = texture;
-			ts = s_Data.TextureIndex;
+			ts = (float)s_Data.TextureIndex;
 		}
 		return ts;
 	}
 
-	void Renderer2D::FillRect(const Rectangle& bounds, Color color)
+	void Renderer2D::FillRect(const Rectangle& bounds, const glm::vec4& color)
 	{
 		glm::mat4 transform = glm::translate(glm::mat4(1.0f), { bounds.X, bounds.Y, 1.0f }) * glm::scale(glm::mat4(1.0f), { bounds.Width, bounds.Height, 1.0f });
 
 		FillRect(transform, nullptr, color);
 	}
 
-	void Renderer2D::FillRect(const glm::mat4& transform, const Ref<Texture2D>& texture, Color color)
+	void Renderer2D::FillRect(const glm::mat4& transform, const Ref<Texture2D>& texture, const glm::vec4& color)
 	{
 		float ts = FindTexture(texture);
 		for (uint8_t i = 0; i < 4; i++) {
 			s_Data.Buffer->Position = QuadVertices[i] * transform;
 			s_Data.Buffer->Uv = QuadUv[i];
 			s_Data.Buffer->Tid = ts;
-			s_Data.Buffer->Color = (glm::vec4)color;
+			s_Data.Buffer->Color = color;
 			s_Data.Buffer++;
 		}
 
 		s_Data.IndexCount += 6;
 	}
 
-	void Renderer2D::FillRect(const Rectangle& bounds, const Ref<Texture2D>& texture, Color color)
+	void Renderer2D::FillRect(const Rectangle& bounds, const Ref<Texture2D>& texture, const glm::vec4& color)
 	{
 		glm::mat4 transform = glm::translate(glm::mat4(1.0f), { bounds.X, bounds.Y, 1.0f }) * glm::scale(glm::mat4(1.0f), { bounds.Width, bounds.Height, 1.0f });
 
 		FillRect(transform, texture, color);
 	}
 
-	void Renderer2D::DrawString(const std::string& text, float x, float y, const Ref<Font>& font, Color color)
+	void Renderer2D::DrawString(const std::string& text, float x, float y, const Ref<Font>& font, const glm::vec4& color)
 	{
 		float ts = FindTexture(font->GetTexture());
 
@@ -177,25 +222,25 @@ namespace Crowny
 				s_Data.Buffer->Position = glm::vec4(x0, y0, 0, 1.0f);
 				s_Data.Buffer->Uv = glm::vec2(u0, v0);
 				s_Data.Buffer->Tid = ts;
-				s_Data.Buffer->Color = (glm::vec4)color;
+				s_Data.Buffer->Color = color;
 				s_Data.Buffer++;
 
 				s_Data.Buffer->Position = glm::vec4(x0, y1, 0, 1.0f);
 				s_Data.Buffer->Uv = glm::vec2(u0, v1);
 				s_Data.Buffer->Tid = ts;
-				s_Data.Buffer->Color = (glm::vec4)color;
+				s_Data.Buffer->Color = color;
 				s_Data.Buffer++;
 				
 				s_Data.Buffer->Position = glm::vec4(x1, y1, 0, 1.0f);
 				s_Data.Buffer->Uv = glm::vec2(u1, v1);
 				s_Data.Buffer->Tid = ts;
-				s_Data.Buffer->Color = (glm::vec4)color;
+				s_Data.Buffer->Color = color;
 				s_Data.Buffer++;
 
 				s_Data.Buffer->Position = glm::vec4(x1, y0, 0, 1.0f);
 				s_Data.Buffer->Uv = glm::vec2(u1, v0);
 				s_Data.Buffer->Tid = ts;
-				s_Data.Buffer->Color = (glm::vec4)color;
+				s_Data.Buffer->Color = color;
 				s_Data.Buffer++;
 
 				s_Data.IndexCount += 6;
@@ -203,6 +248,14 @@ namespace Crowny
 				x += glyph->advance_x;
 			}
 		}
+	}
+
+	void Renderer2D::DrawString(const std::string& text, const glm::mat4& transform, const Ref<Font>& font, const glm::vec4& color)
+	{
+		float x = transform[3][0];
+		float y = transform[3][1];
+
+		DrawString(text, x, y, font, color);
 	}
 
 	void Renderer2D::End()
@@ -215,6 +268,12 @@ namespace Crowny
 
 	void Renderer2D::Flush()
 	{
+		s_Data.Shader->Bind();
+		for (uint32_t i = 0; i < s_Data.SystemUniformBuffers.size(); i++)
+		{
+			s_Data.Shader->SetVSSystemUniformBuffer(s_Data.SystemUniformBuffers[i].Buffer, s_Data.SystemUniformBuffers[i].Size, i);
+		}
+
 		for (uint8_t i = 0; i <= s_Data.TextureIndex; i++)
 		{
 			s_Data.TextureSlots[i]->Bind(i);
@@ -222,7 +281,11 @@ namespace Crowny
 
 		s_Data.VertexArray->Bind();
 		RenderCommand::DrawIndexed(s_Data.VertexArray, s_Data.IndexCount);
-
+		
+		for (uint8_t i = 0; i <= s_Data.TextureIndex; i++)
+		{
+			s_Data.TextureSlots[i]->Unbind(i);
+		}
 		s_Data.VertexArray->Unbind();
 	}
 }

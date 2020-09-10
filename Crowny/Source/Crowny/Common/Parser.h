@@ -7,6 +7,6 @@ namespace Crowny
 
 	std::vector<std::string> Tokenize(const std::string& string);
 
-	std::string& GetStatement(const char* str, const char** outPosition);
-	std::string& GetBlock(const char* str, const char** outPosition);
+	std::string GetStatement(const char* str, const char** outPosition);
+	std::string GetBlock(const char* str, const char** outPosition);
 }

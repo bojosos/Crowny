@@ -48,6 +48,7 @@ project "Crowny"
 	language "C++"
 	cppdialect "C++17"
 	staticruntime "on"
+	characterset ("MBCS")
 
 	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
 	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
@@ -60,7 +61,6 @@ project "Crowny"
 		"%{prj.name}/Source/**.h",
 		"%{prj.name}/Source/**.cpp",
 		"%{prj.name}/Dependencies/stb_image/**.h",
-		"%{prj.name}/Dependencies/freetype-gl/freetype-gl.h",
 		"%{prj.name}/Dependencies/stb_image/**.cpp",
 		"%{prj.name}/Dependencies/glm/glm/**.hpp",
 		"%{prj.name}/Dependencies/glm/glm/**.inl",
@@ -154,7 +154,7 @@ project "Crowny"
 		symbols "on"
 
 	filter "configurations:Release"
-		defines "MC_RELEASE"
+		defines "CW_RELEASE"
 		runtime "Release"
 		optimize "on"
 
@@ -169,6 +169,9 @@ project "Crowny-Editor"
 	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
 	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
 
+	pchheader "cwepch.h"
+	pchsource "Crowny-Editor/Source/cwepch.cpp"
+
 	files
 	{
 		"%{prj.name}/Source/**.h",
@@ -179,6 +182,7 @@ project "Crowny-Editor"
 	{
 		"Crowny/Dependencies/spdlog/include",
 		"Crowny/Source",
+		"Crowny-Editor/Source",
 		"%{IncludeDir.imgui}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.entt}"

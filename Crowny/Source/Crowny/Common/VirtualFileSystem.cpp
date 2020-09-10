@@ -6,16 +6,17 @@
 
 namespace Crowny
 {
-	Scope<VirtualFileSystem> VirtualFileSystem::s_Instance = nullptr;
+
+	VirtualFileSystem* VirtualFileSystem::s_Instance = nullptr;
 
 	void VirtualFileSystem::Init()
 	{
-		s_Instance = CreateScope<VirtualFileSystem>();
+		s_Instance = new VirtualFileSystem();
 	}
 
 	void VirtualFileSystem::Shutdown()
 	{
-		CW_ENGINE_ASSERT(s_Instance, "");
+		delete s_Instance;
 	}
 
 	void VirtualFileSystem::Mount(const std::string& virtualPath, const std::string& physicalPath)
@@ -58,11 +59,11 @@ namespace Crowny
 		return false;
 	}
 
-	byte* VirtualFileSystem::ReadFile(const std::string& path)
+	std::tuple<byte*, uint64_t> VirtualFileSystem::ReadFile(const std::string& path)
 	{
 		CW_ENGINE_ASSERT(s_Instance, "");
 		std::string phPath;
-		return ResolvePhyiscalPath(path, phPath) ? FileSystem::ReadFile(phPath) : nullptr;
+		return ResolvePhyiscalPath(path, phPath) ? FileSystem::ReadFile(phPath) : std::make_tuple(nullptr, -1);
 	}
 
 	std::string VirtualFileSystem::ReadTextFile(const std::string& path)

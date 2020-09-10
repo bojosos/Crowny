@@ -92,13 +92,11 @@ namespace Crowny
 		
 		virtual void SetVSSystemUniformBuffer(byte* data, uint32_t size, uint32_t slot) = 0;
 		virtual void SetFSSystemUniformBuffer(byte* data, uint32_t size, uint32_t slot) = 0;
-
 		virtual void SetVSUserUniformBuffer(byte* data, uint32_t size) = 0;
 		virtual void SetFSUserUniformBuffer(byte* data, uint32_t size) = 0;
 
-		virtual const ShaderUniformBufferList& GetVSUniformBuffers() const = 0;
-		virtual const ShaderUniformBufferList& GetFSUniformBuffers() const = 0;
-		
+		virtual const ShaderUniformBufferList& GetVSSystemUniforms() const = 0;
+		virtual const ShaderUniformBufferList& GetFSSystemUniforms() const = 0;
 		virtual const ShaderUniformBufferDeclaration* GetVSUserUniformBuffer() const = 0;
 		virtual const ShaderUniformBufferDeclaration* GetFSUserUniformBuffer() const = 0;
 

@@ -1,8 +1,8 @@
-#include "cwpch.h"
+#include "cwepch.h"
 
-#include "Crowny/ImGui/ImGuiInspectorWindow.h"
-#include "Crowny/ImGui/ImGuiHierarchyWindow.h"
-#include "Crowny/ImGui/ImGuiComponentEditor.h"
+#include "ImGuiInspectorPanel.h"
+#include "ImGuiHierarchyPanel.h"
+#include "ImGuiComponentEditor.h"
 #include "Crowny/SceneManagement/SceneManager.h"
 #include "Crowny/Ecs/Components.h"
 
@@ -10,7 +10,8 @@
 
 namespace Crowny
 {
-	ImGuiInspectorWindow::ImGuiInspectorWindow(const std::string& name) : ImGuiWindow(name)
+
+	ImGuiInspectorPanel::ImGuiInspectorPanel(const std::string& name) : ImGuiPanel(name)
 	{
 		m_ComponentEditor.RegisterComponent<TransformComponent>("Transform");
 		m_ComponentEditor.RegisterComponent<CameraComponent>("Camera");
@@ -19,19 +20,19 @@ namespace Crowny
 		m_ComponentEditor.RegisterComponent<SpriteRendererComponent>("Sprite Renderer");
 	}
 
-	void ImGuiInspectorWindow::Render()
+	void ImGuiInspectorPanel::Render()
 	{
 		ImGui::Begin("Inspector", &m_Shown);
-		m_ComponentEditor.Render(SceneManager::GetActiveScene()->m_Registry, ImGuiHierarchyWindow::SelectedEntity);
+		m_ComponentEditor.Render(ImGuiHierarchyPanel::GetSelectedEntity());
 		ImGui::End();
 	}
 
-	void ImGuiInspectorWindow::Show()
+	void ImGuiInspectorPanel::Show()
 	{
 		m_Shown = true;
 	}
 
-	void ImGuiInspectorWindow::Hide()
+	void ImGuiInspectorPanel::Hide()
 	{
 		m_Shown = false;
 	}

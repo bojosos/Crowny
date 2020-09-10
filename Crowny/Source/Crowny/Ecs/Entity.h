@@ -40,9 +40,12 @@ namespace Crowny
 			return m_Scene->m_Registry.has<T>(m_EntityHandle);
 		}
 
-		void AddChild(const std::string& name);
-		Entity& GetChild(uint32_t index);
+		bool IsValid() { return m_Scene && m_Scene->m_Registry.valid(m_EntityHandle); }
+
+		Entity AddChild(const std::string& name);
+		Entity GetChild(uint32_t index);
 		uint32_t GetChildCount();
+		void Destroy();
 
 		bool operator==(const Entity& other) const 
 		{

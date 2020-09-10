@@ -2,29 +2,32 @@
 
 #version 330 core
 
-layout(location = 0) in vec3 a_Position;
+layout(location = 0) in vec4 a_Position;
 layout(location = 1) in vec2 a_UV;
 layout(location = 2) in float a_Tid;
 layout(location = 3) in vec4 a_Color;
 
-uniform mat4 u_ProjectionMatrix;
-uniform mat4 u_ViewMatrix;
-uniform mat4 u_ModelMatrix;
+uniform mat4 cw_ProjectionMatrix;
+uniform mat4 cw_ViewMatrix;
+//uniform mat4 cw_ModelMatrix;
 
 out DATA
 {
 	vec4 position;
 	vec2 uv;
 	float tid;
+	float mid;
 	vec4 color;
 } vs_out;
 
 void main()
 {
-	gl_Position = u_ProjectionMatrix * u_ViewMatrix * vec4(a_Position, 1.0);
-	vs_out.position = u_ModelMatrix * vec4(a_Position, 1.0);
+	gl_Position = cw_ProjectionMatrix * cw_ViewMatrix * a_Position;
+	//gl_Position = a_Position;
+	vs_out.position = a_Position;
 	vs_out.uv = a_UV;
 	vs_out.tid = a_Tid;
+	vs_out.mid = 0;
 	vs_out.color = a_Color;
 }
 
@@ -38,21 +41,15 @@ in DATA
 	vec4 position;
 	vec2 uv;
 	float tid;
+	float mid;
 	vec4 color;
 } fs_in;
 
 uniform sampler2D u_Textures[32];
 
-void main(void) {
-
-	vec4 texColor = fs_in.color;
-	if (fs_in.tid > 0.0)
-	{
-		int tid = int(fs_in.tid - 0.5);
-		//texColor = fs_in.color * texture(u_Textures[1], fs_in.uv);
-		//texColor = vec4(texture(u_Textures[tid], fs_in.uv).a, 0.0, texture(u_Textures[tid], fs_in.uv).a, texture(u_Textures[tid], fs_in.uv).a);
-	}
-
-	color = texture(u_Textures[int(fs_in.tid)], fs_in.uv);
+void main(void) 
+{
+	vec4 texColor = fs_in.color * texture(u_Textures[int(fs_in.tid)], fs_in.uv);
+	color = texColor;
 }
 

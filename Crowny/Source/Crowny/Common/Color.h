@@ -20,7 +20,7 @@ namespace Crowny
 			byte r = (m_Color & 0x00ff0000) >> 16;
 			byte g = (m_Color & 0x0000ff00) >> 8;
 			byte b = (m_Color & 0x000000ff);
-			return glm::vec4(r, g, b, a);
+			return glm::vec4(r, g, b, a) / 255.0f;
 		}
 
 		static Color Black;

@@ -25,4 +25,11 @@ namespace Crowny
 	{
 		m_Textures.clear();
 	}
+
+	Ref<Texture2D> Textures::Unassigned = nullptr;
+
+	void Textures::LoadDefault()
+	{
+		Unassigned = Texture2D::Create("/Textures/Unassigned.png");
+	}
 }

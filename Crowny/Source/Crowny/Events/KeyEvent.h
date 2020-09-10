@@ -12,7 +12,7 @@ namespace Crowny
 
 		EVENT_CLASS_CATEGORY(EventCategoryKeyboard | EventCategoryInput)
 	protected:
-		KeyEvent(KeyCode keycode) : m_KeyCode(keycode) { }
+		KeyEvent(const KeyCode keycode) : m_KeyCode(keycode) { }
 
 		KeyCode m_KeyCode;
 	};
@@ -20,7 +20,7 @@ namespace Crowny
 	class KeyPressedEvent : public KeyEvent
 	{
 	public:
-		KeyPressedEvent(KeyCode keycode, int repeatCount) : KeyEvent(keycode), m_RepeatCount(repeatCount) { }
+		KeyPressedEvent(const KeyCode keycode, int repeatCount) : KeyEvent(keycode), m_RepeatCount(repeatCount) { }
 
 		inline int GetRepeatCount() const { return m_RepeatCount; }
 
@@ -40,7 +40,7 @@ namespace Crowny
 	class KeyReleasedEvent : public KeyEvent
 	{
 	public:
-		KeyReleasedEvent(KeyCode keycode) : KeyEvent(keycode) { }
+		KeyReleasedEvent(const KeyCode keycode) : KeyEvent(keycode) { }
 
 		std::string ToString() const override
 		{
@@ -55,7 +55,7 @@ namespace Crowny
 	class KeyTypedEvent : public KeyEvent
 	{
 	public:
-		KeyTypedEvent(KeyCode keycode) : KeyEvent(keycode) { }
+		KeyTypedEvent(const KeyCode keycode) : KeyEvent(keycode) { }
 
 		std::string ToString() const override
 		{

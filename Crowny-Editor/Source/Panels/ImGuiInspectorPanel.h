@@ -1,17 +1,17 @@
 #pragma once
 
-#include "Crowny/ImGui/ImGuiWindow.h"
-#include "Crowny/ImGui/ImGuiComponentEditor.h"
+#include "ImGuiPanel.h"
+#include "ImGuiComponentEditor.h"
 
 namespace Crowny
 {
 	class Entity;
 
-	class ImGuiInspectorWindow : public ImGuiWindow
+	class ImGuiInspectorPanel : public ImGuiPanel
 	{
 	public:
-		ImGuiInspectorWindow(const std::string& name);
-		~ImGuiInspectorWindow() = default;
+		ImGuiInspectorPanel(const std::string& name);
+		~ImGuiInspectorPanel() = default;
 
 		virtual void Render() override;
 

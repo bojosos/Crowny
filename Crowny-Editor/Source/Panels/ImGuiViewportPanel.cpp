@@ -1,18 +1,19 @@
-#include "cwpch.h"
+#include "cwepch.h"
 
-#include "Crowny/ImGui/ImGuiViewportWindow.h"
+#include "ImGuiViewportPanel.h"
 #include "Crowny/Application/Application.h"
+
 #include <imgui.h>
 
 namespace Crowny
 {
 
-	ImGuiViewportWindow::ImGuiViewportWindow(const std::string& name, const Ref<Framebuffer>& framebuffer, glm::vec2& viewportSize) : ImGuiWindow(name), m_Framebuffer(framebuffer), m_ViewportSize(viewportSize)
+	ImGuiViewportPanel::ImGuiViewportPanel(const std::string& name, const Ref<Framebuffer>& framebuffer, glm::vec2& viewportSize) : ImGuiPanel(name), m_Framebuffer(framebuffer), m_ViewportSize(viewportSize)
 	{
 
 	}
 
-	void ImGuiViewportWindow::Render()
+	void ImGuiViewportPanel::Render()
 	{
 		m_ViewportFocused = ImGui::IsWindowFocused();
 		m_ViewportHovered = ImGui::IsWindowHovered();

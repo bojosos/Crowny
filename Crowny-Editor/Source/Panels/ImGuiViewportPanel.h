@@ -1,15 +1,15 @@
 #pragma once
 
-#include "Crowny/ImGui/ImGuiWindow.h"
+#include "ImGuiPanel.h"
 #include "Crowny/Renderer/Framebuffer.h"
 
 namespace Crowny
 {
-	class ImGuiViewportWindow : public ImGuiWindow
+	class ImGuiViewportPanel : public ImGuiPanel
 	{
 	public:
-		ImGuiViewportWindow(const std::string& name, const Ref<Framebuffer>& framebuffer, glm::vec2& viewportsize);
-		~ImGuiViewportWindow() = default;
+		ImGuiViewportPanel(const std::string& name, const Ref<Framebuffer>& framebuffer, glm::vec2& viewportsize);
+		~ImGuiViewportPanel() = default;
 
 		virtual void Render() override;
 	private:

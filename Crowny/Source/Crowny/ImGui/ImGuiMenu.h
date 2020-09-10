@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Crowny/ImGui/ImGuiWindow.h"
 #include "Crowny/Events/ImGuiEvent.h"
 
 namespace Crowny

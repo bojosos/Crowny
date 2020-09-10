@@ -1,6 +1,6 @@
-#include "cwpch.h"
+#include "cwepch.h"
 
-#include "Crowny/ImGui/OpenGLInformationWindow.h"
+#include "OpenGLInformationPanel.h"
 #include "Platform/OpenGL/OpenGlInfo.h"
 
 #include <imgui.h>
@@ -8,12 +8,12 @@
 namespace Crowny
 {
 
-	OpenGLInformationWindow::OpenGLInformationWindow(const std::string& name) : ImGuiWindow(name)
+	OpenGLInformationPanel::OpenGLInformationPanel(const std::string& name) : ImGuiPanel(name)
 	{
 
 	}
 
-	void OpenGLInformationWindow::Render()
+	void OpenGLInformationPanel::Render()
 	{
 		if (OpenGLInfo::GetInformation().empty())
 			OpenGLInfo::RetrieveInformation();

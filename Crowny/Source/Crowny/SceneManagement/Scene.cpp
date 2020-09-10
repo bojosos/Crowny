@@ -5,6 +5,7 @@
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Renderer/Renderer2D.h"
+#include "Crowny/Renderer/RenderCommand.h"
 
 #include <entt/entt.hpp>
 
@@ -13,27 +14,43 @@ namespace Crowny
 
 	Scene::Scene(const std::string& name) : m_Name(name)
 	{
-		SceneManager::s_Scenes.push_back(this);
-		m_SceneEntity = new Entity(m_Registry.create(), this);
-		m_SceneEntity->AddComponent<TagComponent>(m_Name);
-		m_SceneEntity->AddComponent<RelationshipComponent>();
+		m_RootEntity = new Entity(m_Registry.create(), this);
+		m_RootEntity->AddComponent<TagComponent>(m_Name);
+		m_RootEntity->AddComponent<RelationshipComponent>();
 	}
 
 	Scene::~Scene()
 	{
-		delete m_SceneEntity;
+		delete m_RootEntity;
 	}
 
 	void Scene::OnUpdate(Timestep ts)
 	{
+		auto cam = m_Registry.view<CameraComponent>();
+		if (!cam.empty()) 
+		{
+			RenderCommand::SetClearColor(glm::vec4(cam.get<CameraComponent>(cam.front()).Camera.GetBackgroundColor(), 1.0f));
+		}
+
+		RenderCommand::Clear();
+
 		m_Registry.group<TransformComponent>(entt::get<CameraComponent>).each([&](const auto& entity, auto& tc, auto& cc)
 			{ 
-				Renderer2D::Begin(cc.CameraObject.GetProjectionMatrix(), tc.Transform);
-				auto group = m_Registry.group<TransformComponent>(entt::get<SpriteRendererComponent>);
+				Renderer2D::Begin(cc.Camera.GetProjectionMatrix(), tc.Transform);
+
+				auto group = m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
 				for (auto ee : group)
 				{
 					auto& [transform, sprite] = m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
-					Renderer2D::FillRect(transform, sprite.Texture, Color::FromRGBA(sprite.Color));
+					Renderer2D::FillRect(transform, sprite.Texture, sprite.Color);
+				}
+
+				// TODO: Use rect transform, Use Canvas Renderer so I don't have to iterate over each type of ui component
+				auto ttt = m_Registry.group<TextComponent>(entt::get<TransformComponent>);
+				for (auto ee : ttt)
+				{
+					auto& [transform, tc] = m_Registry.get<TransformComponent, TextComponent>(ee);
+					Renderer2D::DrawString(tc.Text, transform, tc.Font, tc.Color);
 				}
 
 				Renderer2D::End();
@@ -42,8 +59,12 @@ namespace Crowny
 
 	Entity Scene::CreateEntity(const std::string& name)
 	{
-		m_SceneEntity->AddChild(name);
-		return m_SceneEntity->GetComponent<RelationshipComponent>().Children.back();
+		return m_RootEntity->AddChild(name);
+	}
+
+	Entity& Scene::GetRootEntity()
+	{
+		return *m_RootEntity;
 	}
 
 	void Scene::OnViewportResize(uint32_t width, uint32_t height)
@@ -53,7 +74,7 @@ namespace Crowny
 
 		m_Registry.view<CameraComponent>().each([&](auto& e, auto& cc) {
 		//if(!cc.FixedAspectRatio)
-			//cc.Camera.OnResize((float)width, (float)height);
+			cc.Camera.SetViewport(width, height);
 		});
 	}
 

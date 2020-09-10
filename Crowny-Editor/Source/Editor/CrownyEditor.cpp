@@ -1,8 +1,8 @@
-#include <Crowny.h>
-
-#include <Crowny/Application/EntryPoint.h>
+#include "cwepch.h"
 
 #include "EditorLayer.h"
+
+#include <Crowny/Application/EntryPoint.h>
 
 namespace Crowny
 {
@@ -12,8 +12,6 @@ namespace Crowny
 	public:
 		CrownyEditor() : Application("Crowny Editor")
 		{
-			char c = 'a';
-			CW_ENGINE_INFO(sizeof(c));
 			PushLayer(new EditorLayer());
 		}
 	};

@@ -18,8 +18,6 @@ namespace Crowny
 		int status = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
 		CW_ENGINE_ASSERT(status, "Failed to initialize GLAD!");
-
-		
 	}
 
 	void OpenGLContext::SwapBuffers()

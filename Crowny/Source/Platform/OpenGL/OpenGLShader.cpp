@@ -1,6 +1,6 @@
 #include "cwpch.h"
 #include "OpenGLShader.h"
-#include "Crowny/Common/FileUtils.h"
+#include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Common/Parser.h"
 
 #ifdef MC_WEB
@@ -117,7 +117,9 @@ namespace Crowny
 		std::unordered_map<GLenum, std::string> sources;
 		sources[GL_VERTEX_SHADER] = vertSrc;
 		sources[GL_FRAGMENT_SHADER] = fragSrc;
+		Parse(sources[GL_VERTEX_SHADER], sources[GL_FRAGMENT_SHADER]);
 		Compile(sources);
+		ResolveUniforms();
 	}
 
 	OpenGLShader::~OpenGLShader()
@@ -127,9 +129,11 @@ namespace Crowny
 
 	void OpenGLShader::Load(const std::string& filepath)
 	{
-		std::string source = ReadFile(DIRECTORY_PREFIX + filepath);
+		std::string source = VirtualFileSystem::Get()->ReadTextFile(filepath);
 		auto shaderSources = ShaderPreProcess(source);
+		Parse(shaderSources[GL_VERTEX_SHADER], shaderSources[GL_FRAGMENT_SHADER]);
 		Compile(shaderSources);
+		ResolveUniforms();
 
 		auto lastSlash = filepath.find_last_of("/\\");
 		lastSlash = lastSlash == std::string::npos ? 0 : lastSlash + 1;
@@ -141,9 +145,44 @@ namespace Crowny
 	void OpenGLShader::Reload() // fix this
 	{
 		if (m_Filepath == "")
-
 			return;
+
 		Load(m_Filepath);
+	}
+
+	static GLenum ShaderTypeFromString(const std::string& type)
+	{
+		if (type == "vertex")
+			return GL_VERTEX_SHADER;
+		if (type == "fragment" || type == "pixel")
+			return GL_FRAGMENT_SHADER;
+
+		CW_ENGINE_ASSERT(false, "Unknown shader type!");
+		return 0;
+	}
+
+	std::unordered_map<GLenum, std::string> OpenGLShader::ShaderPreProcess(const std::string& source)
+	{
+		std::unordered_map<GLenum, std::string> shaderSources;
+
+		const char* typeToken = "#type";
+		size_t typeTokenLength = strlen(typeToken);
+		size_t pos = source.find(typeToken, 0);
+		while (pos != std::string::npos)
+		{
+			size_t eol = source.find_first_of("\r\n", pos);
+			CW_ENGINE_ASSERT(eol != std::string::npos, "Syntax error");
+			size_t begin = pos + typeTokenLength + 1;
+			std::string type = source.substr(begin, eol - begin);
+			CW_ENGINE_ASSERT(ShaderTypeFromString(type), "Invalid shader type specified");
+
+			size_t nextLinePos = source.find_first_not_of("\r\n", eol);
+			CW_ENGINE_ASSERT(nextLinePos != std::string::npos, "Syntax error");
+			pos = source.find(typeToken, nextLinePos);
+
+			shaderSources[ShaderTypeFromString(type)] = (pos == std::string::npos) ? source.substr(nextLinePos) : source.substr(nextLinePos, pos - nextLinePos);
+		}
+		return shaderSources;
 	}
 
 	void OpenGLShader::Compile(const std::unordered_map<GLenum, std::string>& shaderSources)
@@ -161,7 +200,7 @@ namespace Crowny
 
 			const GLchar* sourceCStr = source.c_str();
 			glShaderSource(shader, 1, &sourceCStr, 0);
-
+			
 			glCompileShader(shader);
 
 			GLint isCompiled = 0;
@@ -216,21 +255,24 @@ namespace Crowny
 
 	void OpenGLShader::Parse(const std::string& vertSrc, const std::string& fragSrc)
 	{
+		m_VSUniformBuffers.push_back(new OpenGLUniformBufferDeclaration("Global", 0));
+		m_FSUniformBuffers.push_back(new OpenGLUniformBufferDeclaration("Global", 1));
+
 		const char* token;
 		const char* vstr = vertSrc.c_str();;
 		const char* fstr = fragSrc.c_str();
 
 		while (token = FindToken(vstr, "struct"))
-			ParseUniformStruct(GetBlock(token, &vstr), 0);
+			ParseUniformStruct(GetBlock(token, &vstr), GL_VERTEX_SHADER);
 
 		while (token = FindToken(vstr, "uniform"))
-			ParseUniform(GetStatement(token, &vstr), 0);
+			ParseUniform(GetStatement(token, &vstr), GL_VERTEX_SHADER);
 
 		while (token = FindToken(fstr, "struct"))
-			ParseUniform(GetBlock(token, &fstr), 1);
+			ParseUniform(GetBlock(token, &fstr), GL_FRAGMENT_SHADER);
 
 		while (token = FindToken(fstr, "uniform"))
-			ParseUniform(GetStatement(token, &fstr), 1);
+			ParseUniform(GetStatement(token, &fstr), GL_FRAGMENT_SHADER);
 	}
 
 	void OpenGLShader::ParseUniform(const std::string& statement, uint32_t shaderType)
@@ -285,14 +327,14 @@ namespace Crowny
 			}
 			else
 			{
-				if (shaderType == 0)
+				if (shaderType == GL_VERTEX_SHADER)
 				{
 					if (m_VSUserUniformBuffer == nullptr)
 						m_VSUserUniformBuffer = new OpenGLUniformBufferDeclaration("", 0);
 
 					m_VSUserUniformBuffer->PushUniform(decl);
 				}
-				else if (shaderType == 1)
+				else if (shaderType == GL_FRAGMENT_SHADER)
 				{
 					if (m_FSUserUniformBuffer == nullptr)
 						m_FSUserUniformBuffer = new OpenGLUniformBufferDeclaration("", 1);
@@ -575,21 +617,21 @@ namespace Crowny
 		switch (uniform->GetType())
 		{
 		case OpenGLUniformDeclaration::Type::FLOAT32:
-			SetUniformFloat(uniform->GetLocation(), *(float*)&data[offset]);
+			SetUniformFloat(uniform->GetLocation(), *(float*)&data[offset]); break;
 		case OpenGLUniformDeclaration::Type::INT32:
-			SetUniformInt(uniform->GetLocation(), *(int*)&data[offset]);
+			SetUniformInt(uniform->GetLocation(), *(int*)&data[offset]); break;
 		case OpenGLUniformDeclaration::Type::VEC2:
-			SetUniformFloat2(uniform->GetLocation(), *(glm::vec2*)&data[offset]);
+			SetUniformFloat2(uniform->GetLocation(), *(glm::vec2*)&data[offset]); break;
 		case OpenGLUniformDeclaration::Type::VEC3:
-			SetUniformFloat3(uniform->GetLocation(), *(glm::vec3*)&data[offset]);
+			SetUniformFloat3(uniform->GetLocation(), *(glm::vec3*)&data[offset]); break;
 		case OpenGLUniformDeclaration::Type::VEC4:
-			SetUniformFloat4(uniform->GetLocation(), *(glm::vec4*)&data[offset]);
+			SetUniformFloat4(uniform->GetLocation(), *(glm::vec4*)&data[offset]); break;
 		case OpenGLUniformDeclaration::Type::MAT3:
-			SetUniformMat3(uniform->GetLocation(), *(glm::mat3*)&data[offset]);
+			SetUniformMat3(uniform->GetLocation(), *(glm::mat3*)&data[offset]); break;
 		case OpenGLUniformDeclaration::Type::MAT4:
-			SetUniformMat4(uniform->GetLocation(), *(glm::mat4*)&data[offset]);
+			SetUniformMat4(uniform->GetLocation(), *(glm::mat4*)&data[offset]); break;
 		case OpenGLUniformDeclaration::Type::STRUCT:
-			SetUniformStruct(uniform, data, offset);
+			SetUniformStruct(uniform, data, offset); break;
 		}
 	}
 
@@ -728,14 +770,9 @@ namespace Crowny
 
 	uint32_t OpenGLShader::GetUniformLocation(const std::string& name)
 	{
-		if (m_UniformLocations.find(name) == m_UniformLocations.end())
-		{
-			uint32_t result = glGetUniformLocation(m_RendererID, name.c_str());
-			CW_ENGINE_ASSERT(result != -1, "Could not find uniform declaration" + name);
-			m_UniformLocations[name] = result;
-		}
-
-		return m_UniformLocations[name];
+		uint32_t result = glGetUniformLocation(m_RendererID, name.c_str());
+		CW_ENGINE_ASSERT(result != -1, "Could not find uniform declaration: " + name);
+		return result;
 	}
 
 }

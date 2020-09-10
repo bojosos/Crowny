@@ -1,12 +1,9 @@
+#include "cwepch.h"
+
 #include "EditorLayer.h"
-
-
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/SceneManagement/SceneManager.h"
 #include "Crowny/Ecs/Components.h"
-#include "Crowny/ImGui/ImGuiTextureEditor.h"
-
-#include "Crowny/Common/FileSystem.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -39,32 +36,30 @@ namespace Crowny
 		ImGuiMenu* viewMenu = new ImGuiMenu("View");
 
 		ImGuiMenu* renderInfo = new ImGuiMenu("Rendering Info");
-		m_GLInfoWindow = new OpenGLInformationWindow("OpenGL");
+		m_GLInfoWindow = new OpenGLInformationPanel("OpenGL");
 		renderInfo->AddItem(new ImGuiMenuItem("OpenGL", [&](auto& event) { m_GLInfoWindow->Show(); }));
 		viewMenu->AddMenu(renderInfo);
 
-		m_HierarchyWindow = new ImGuiHierarchyWindow("Hierarchy");
-		viewMenu->AddItem(new ImGuiMenuItem("Hierarchy", [&](auto& event) { m_HierarchyWindow->Show(); }));
+		m_HierarchyPanel = new ImGuiHierarchyPanel("Hierarchy");
+		viewMenu->AddItem(new ImGuiMenuItem("Hierarchy", [&](auto& event) { m_HierarchyPanel->Show(); }));
 
-		m_ViewportWindow = new ImGuiViewportWindow("Viewport", m_Framebuffer, m_ViewportSize);
-		viewMenu->AddItem(new ImGuiMenuItem("Viewport", [&](auto& event) { m_ViewportWindow->Show(); }));
+		m_ViewportPanel = new ImGuiViewportPanel("Viewport", m_Framebuffer, m_ViewportSize);
+		viewMenu->AddItem(new ImGuiMenuItem("Viewport", [&](auto& event) { m_ViewportPanel->Show(); }));
 
-		m_ImGuiWindows.push_back(new ImGuiTextureEditor("Texture Properties"));
-		viewMenu->AddItem(new ImGuiMenuItem("Texture Properties", [&](auto& event) { m_ImGuiWindows.back()->Show(); }));
+		//m_ImGuiWindows.push_back(new ImGuiTextureEditor("Texture Properties"));
+		//viewMenu->AddItem(new ImGuiMenuItem("Texture Properties", [&](auto& event) { m_ImGuiWindows.back()->Show(); }));
+
+		m_InspectorPanel= new ImGuiInspectorPanel("Inspector");
+		viewMenu->AddItem(new ImGuiMenuItem("Inspector", [&](auto& event) { m_InspectorPanel->Show(); }));
 
 		m_MenuBar->AddMenu(viewMenu);
 
 		SceneManager::AddScene(new Scene("Editor scene")); // To be loaded
-
-		
-		auto [res, value] = FileSystem::SaveFileDialog();
-		if (res)
-			CW_ENGINE_WARN(value);
 	}
 
 	void EditorLayer::OnDetach()
 	{
-		for (ImGuiWindow* win : m_ImGuiWindows) 
+		for (ImGuiPanel* win : m_ImGuiWindows) 
 		{
 			delete win;
 		}
@@ -81,6 +76,7 @@ namespace Crowny
 		m_Framebuffer->Bind();
 		SceneManager::GetActiveScene()->OnUpdate(ts);
 		m_Framebuffer->Unbind();
+		m_HierarchyPanel->Update();
 	}
 
 	void EditorLayer::OnImGuiRender()
@@ -91,7 +87,7 @@ namespace Crowny
 		static bool opt_fullscreen_persistant = true;
 		bool opt_fullscreen = opt_fullscreen_persistant;
 		static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
-		
+
 		ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
 		if (opt_fullscreen)
 		{
@@ -125,9 +121,10 @@ namespace Crowny
 
 		m_MenuBar->Render();
 
-		m_HierarchyWindow->Render();
+		m_HierarchyPanel->Render();
+		m_InspectorPanel->Render();
 		m_GLInfoWindow->Render();
-		m_ViewportWindow->Render();
+		m_ViewportPanel->Render();
 
 		ImGui::End();
 	}

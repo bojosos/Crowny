@@ -9,18 +9,20 @@ namespace Crowny
 	{
 		std::vector<std::string> output;
 
-		std::string::size_type prev_pos = 0, pos = 0;
+		std::string::size_type start = 0, end = s.find_first_of(separator);
 
-		while ((pos = s.find(separator, pos)) != std::string::npos)
+		while (end <= std::string::npos)
 		{
-			std::string substring(s.substr(prev_pos, pos - prev_pos));
+			std::string tok = s.substr(start, end - start);
+			if (!tok.empty())
+				output.push_back(tok);
 
-			output.push_back(substring);
+			if (end == std::string::npos)
+				break;
 
-			prev_pos = ++pos;
+			start = end + 1;
+			end = s.find_first_of(separator, start);
 		}
-
-		output.push_back(s.substr(prev_pos, pos - prev_pos)); // Last word
 
 		return output;
 	}
@@ -40,7 +42,7 @@ namespace Crowny
 		return nullptr;
 	}
 
-	std::string&  GetBlock(const char* str, const char** outPosition)
+	std::string GetBlock(const char* str, const char** outPosition)
 	{
 		const char* end = strstr(str, "}");
 		if (!end)
@@ -52,7 +54,7 @@ namespace Crowny
 		return std::string(str, length);
 	}
 
-	std::string& GetStatement(const char* str, const char** outPosition)
+	std::string GetStatement(const char* str, const char** outPosition)
 	{
 		const char* end = strstr(str, ";");
 		if (!end)
@@ -61,7 +63,8 @@ namespace Crowny
 		if (outPosition)
 			*outPosition = end;
 		uint32_t length = end - str + 1;
-		return std::string(str, length);
+		std::string res = std::string(str, length);
+		return res;
 	}
 
 	std::vector<std::string> Tokenize(const std::string& string)

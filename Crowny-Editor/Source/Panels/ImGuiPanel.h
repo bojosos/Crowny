@@ -2,11 +2,11 @@
 
 namespace Crowny
 {
-	class ImGuiWindow
+	class ImGuiPanel
 	{
 	public:
-		ImGuiWindow(const std::string& name);
-		virtual ~ImGuiWindow() = default;
+		ImGuiPanel(const std::string& name);
+		virtual ~ImGuiPanel() = default;
 
 		virtual void Show() { m_Shown = true; };
 		virtual void Hide() { m_Shown = false; };

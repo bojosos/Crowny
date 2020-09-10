@@ -2,6 +2,7 @@
 
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/Ecs/Components.h"
+#include "Crowny/SceneManagement/SceneManager.h"
 
 #include <map>
 #include <entt/entt.hpp>
@@ -75,9 +76,11 @@ namespace Crowny {
 			return RegisterComponent<Component>(name, ComponentEditorWidget<Component>);
 		}
 
-		void Render(entt::registry& registry, Entity& entity)
+		void Render(Entity& entity)
 		{
+			entt::registry& registry = SceneManager::GetActiveScene()->m_Registry;
 			entt::entity e = entity.m_EntityHandle;
+
 			ImGui::Separator();
 
 			if (e != entt::null) {

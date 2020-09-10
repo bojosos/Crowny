@@ -2,7 +2,9 @@
 
 #include "Crowny/Renderer/Camera.h"
 #include "Crowny/Renderer/Texture.h"
+#include "Crowny/Renderer/TextureManager.h"
 #include "Crowny/Renderer/Material.h"
+#include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/Mesh.h"
 
 #include "Crowny/Common/Color.h"
@@ -46,7 +48,7 @@ namespace Crowny
 
 	struct CameraComponent
 	{
-		Camera CameraObject;
+		::Crowny::Camera Camera;
 
 		CameraComponent() = default;
 		CameraComponent(const CameraComponent&) = default;
@@ -58,10 +60,11 @@ namespace Crowny
 	struct TextComponent
 	{
 		std::string Text = "";
-		glm::vec3 Color{ 0.0f, 0.3f, 0.3f };
+		Ref<::Crowny::Font> Font;
+		glm::vec4 Color{ 0.0f, 0.3f, 0.3f, 1.0f };
 		//Crowny::Material Material;
 
-		TextComponent() = default;
+		TextComponent() { Font = FontManager::Get("default"); };
 		TextComponent(const TextComponent&) = default;
 		TextComponent(const std::string& text) : Text(text) {}
 	};

@@ -5,21 +5,28 @@
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/SceneManagement/SceneManager.h"
+#include "Crowny/Common/VirtualFileSystem.h"
+#include "Crowny/Renderer/TextureManager.h"
 
 namespace Crowny
 {
 
 	void Initializer::Init()
 	{
+		VirtualFileSystem::Init();
+		VirtualFileSystem::Get()->Mount("Shaders", "Resources/Shaders");
+		VirtualFileSystem::Get()->Mount("Textures", "Resources/Textures");
 		Renderer::Init();
 		Random::Init();
 		FontManager::Add(CreateRef<Font>("default", DEFAULT_FONT_PATH, 64));
+		Textures::LoadDefault();
 	}
 
 	void Initializer::Shutdown()
 	{
 		Renderer::Shutdown();
 		SceneManager::Shutdown();
+		VirtualFileSystem::Shutdown();
 	}
 
 }

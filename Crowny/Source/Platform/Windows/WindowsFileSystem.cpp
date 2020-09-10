@@ -7,10 +7,8 @@
 
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
-#undef GLFW_EXPOSE_NATIVE_WIN32
-
-#include <Windows.h>
 #include <commdlg.h>
+#undef GLFW_EXPOSE_NATIVE_WIN32
 
 namespace Crowny
 {
@@ -54,7 +52,7 @@ namespace Crowny
 		return size;
 	}
 
-	byte* FileSystem::ReadFile(const std::string& path)
+	std::tuple<byte*, uint64_t> FileSystem::ReadFile(const std::string& path)
 	{
 		HANDLE file = OpenFileForReadingWin32(path);
 
@@ -67,7 +65,8 @@ namespace Crowny
 
 		if (!success)
 			delete[] buff;
-		return success ? buff : nullptr;
+
+		return success ? std::make_tuple(buff, size) : std::make_tuple(nullptr, -1);
 	}
 
 	bool FileSystem::ReadFile(const std::string& path, void* buffer, int64_t size)
@@ -115,7 +114,7 @@ namespace Crowny
 		return WriteFile(path, (byte*)text[0]);
 	}
 
-	std::tuple<bool, std::string> FileSystem::OpenFileDialog(const std::string& filter, const std::string& initialDir)
+	std::tuple<bool, std::string> FileSystem::OpenFileDialog(const char* filter, const std::string& initialDir, const std::string& title)
 	{
 		OPENFILENAME ofn = { 0 };
 		TCHAR szFile[260] = { 0 };
@@ -124,7 +123,8 @@ namespace Crowny
 		ofn.hwndOwner = glfwGetWin32Window((GLFWwindow*)Application::Get().GetWindow().GetNativeWindow());
 		ofn.lpstrFile = szFile;
 		ofn.nMaxFile = sizeof(szFile);
-		ofn.lpstrFilter = filter.c_str();
+		ofn.lpstrTitle = title.c_str();
+		ofn.lpstrFilter = filter;
 		ofn.nFilterIndex = 1;
 		ofn.lpstrFileTitle = NULL;
 		ofn.nMaxFileTitle = 0;
@@ -139,7 +139,7 @@ namespace Crowny
 		return std::make_tuple(false, "");
 	}
 
-	std::tuple<bool, std::string> FileSystem::SaveFileDialog(const std::string& filter, const std::string& initialDir)
+	std::tuple<bool, std::string> FileSystem::SaveFileDialog(const char* filter, const std::string& initialDir, const std::string& title)
 	{
 		OPENFILENAME ofn = { 0 };
 		TCHAR szFile[260] = { 0 };
@@ -148,7 +148,8 @@ namespace Crowny
 		ofn.hwndOwner = glfwGetWin32Window((GLFWwindow*)Application::Get().GetWindow().GetNativeWindow());
 		ofn.lpstrFile = szFile;
 		ofn.nMaxFile = sizeof(szFile);
-		ofn.lpstrFilter = filter.c_str();
+		ofn.lpstrTitle = title.c_str();
+		ofn.lpstrFilter = filter;
 		ofn.nFilterIndex = 1;
 		ofn.lpstrFileTitle = NULL;
 		ofn.nMaxFileTitle = 0;

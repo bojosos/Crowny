@@ -1,15 +1,16 @@
 #pragma once
 
-#include "Crowny.h"
-#include "Crowny/ImGui/ImGuiComponentEditor.h"
-#include "Crowny/ImGui/ImGuiWindow.h"
+#include "Panels/ImGuiComponentEditor.h"
+#include "Panels/ImGuiPanel.h"
 #include "Crowny/ImGui/ImGuiMenu.h"
 
-#include "Crowny/ImGui/OpenGLInformationWindow.h"
-#include "Crowny/ImGui/ImGuiViewportWindow.h"
-#include "Crowny/ImGui/ImGuiHierarchyWindow.h"
+#include "Panels/OpenGLInformationPanel.h"
+#include "Panels/ImGuiViewportPanel.h"
+#include "Panels/ImGuiHierarchyPanel.h"
+#include "Panels/ImGuiInspectorPanel.h"
 
 #include <entt/entt.hpp>
+#include <Crowny.h>
 
 namespace Crowny
 {
@@ -31,13 +32,14 @@ namespace Crowny
 
 	private:
 		ImGuiMenuBar* m_MenuBar;
-		ImGuiWindow* m_GLInfoWindow;
-		ImGuiHierarchyWindow* m_HierarchyWindow;
-		ImGuiViewportWindow* m_ViewportWindow;
+		ImGuiPanel* m_GLInfoWindow;
+
+		ImGuiInspectorPanel* m_InspectorPanel;
+		ImGuiHierarchyPanel* m_HierarchyPanel;
+		ImGuiViewportPanel* m_ViewportPanel;
 		ImGuiTextureEditor* m_TextureEditor;
 
-		ImGuiViewportWindow* m_Viewport;
-		std::vector<ImGuiWindow*> m_ImGuiWindows;
+		std::vector<ImGuiPanel*> m_ImGuiWindows;
 		
 		Ref<Framebuffer> m_Framebuffer; // Maybe Viewport window should take care of this?
 		glm::vec2 m_ViewportSize = { 0.0f, 0.0f }; // and dis
