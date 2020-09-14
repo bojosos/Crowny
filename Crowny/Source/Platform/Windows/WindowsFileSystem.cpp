@@ -12,7 +12,7 @@
 
 namespace Crowny
 {
-
+	//TODO: Make all of these work work with Unicode
 	void CALLBACK FileIOCompleted(DWORD dwErrorCode, DWORD dwBytesTransfered, LPOVERLAPPED ol)
 	{
 

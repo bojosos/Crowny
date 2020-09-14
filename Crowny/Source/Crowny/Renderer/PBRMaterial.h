@@ -16,19 +16,21 @@ namespace Crowny
 		void SetEnvironmentMap(); // cube here
 
 		void SetAlbedo(const glm::vec4& color);
-		void SetSpecular(const glm::vec3& color);
-		void SetGloss(float value);
+		void SetMetalness(float value);
+		void SetRougness(float value);
 		void UsingNormalMap(bool value);
 
 		void SetAlbedoMap(const Ref<Texture2D>& texture);
-		void SetSpecularMap(const Ref<Texture2D>& texture);
-		void SetGlossMap(const Ref<Texture2D>& texture);
+		void SetMetalnessMap(const Ref<Texture2D>& texture);
+		void SetRougnessMap(const Ref<Texture2D>& texture);
 		void SetNormalMap(const Ref<Texture2D>& texture);
+		void SetAoMap(const Ref<Texture2D>& texture);
 
 		Ref<Texture2D> GetAlbedoMap();
-		Ref<Texture2D> GetSpecularMap();
+		Ref<Texture2D> GetMetalnessMap();
 		Ref<Texture2D> GetNormalMap();
-		Ref<Texture2D> GetGlossMap();
+		Ref<Texture2D> GetRoughnessMap();
+		Ref<Texture2D> GetAoMap();
 
 	};
 }

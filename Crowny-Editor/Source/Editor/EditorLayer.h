@@ -8,6 +8,7 @@
 #include "Panels/ImGuiViewportPanel.h"
 #include "Panels/ImGuiHierarchyPanel.h"
 #include "Panels/ImGuiInspectorPanel.h"
+#include "Panels/ImGuiMaterialPanel.h"
 
 #include <entt/entt.hpp>
 #include <Crowny.h>
@@ -38,8 +39,10 @@ namespace Crowny
 		ImGuiHierarchyPanel* m_HierarchyPanel;
 		ImGuiViewportPanel* m_ViewportPanel;
 		ImGuiTextureEditor* m_TextureEditor;
+		ImGuiMaterialPanel* m_MaterialEditor;
 
 		std::vector<ImGuiPanel*> m_ImGuiWindows;
+		Ref<Mesh> m_Test;
 		
 		Ref<Framebuffer> m_Framebuffer; // Maybe Viewport window should take care of this?
 		glm::vec2 m_ViewportSize = { 0.0f, 0.0f }; // and dis

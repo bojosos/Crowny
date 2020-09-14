@@ -2,6 +2,8 @@
 
 #include "EditorLayer.h"
 #include "Crowny/Renderer/Renderer2D.h"
+#include "Crowny/Renderer/MeshFactory.h"
+#include "Crowny/Renderer/Model.h"
 #include "Crowny/SceneManagement/SceneManager.h"
 #include "Crowny/Ecs/Components.h"
 
@@ -52,9 +54,19 @@ namespace Crowny
 		m_InspectorPanel= new ImGuiInspectorPanel("Inspector");
 		viewMenu->AddItem(new ImGuiMenuItem("Inspector", [&](auto& event) { m_InspectorPanel->Show(); }));
 
+		m_MaterialEditor = new ImGuiMaterialPanel("Material Editor");
+		viewMenu->AddItem(new ImGuiMenuItem("Material Editor", [&](auto& event) { m_MaterialEditor->Show(); }));
+
 		m_MenuBar->AddMenu(viewMenu);
 
 		SceneManager::AddScene(new Scene("Editor scene")); // To be loaded
+
+		Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(Shader::Create("/Shaders/PBRShader.glsl"));
+		ImGuiMaterialPanel::SetSelectedMaterial(mat);
+		//Ref<Model> model = CreateRef<Model>("Models/");
+		m_Test = MeshFactory::CreateSphere();
+		Ref<MaterialInstance> matInstance = CreateRef<MaterialInstance>(mat);
+		m_Test->SetMaterialInstnace(matInstance);
 	}
 
 	void EditorLayer::OnDetach()
@@ -81,7 +93,6 @@ namespace Crowny
 
 	void EditorLayer::OnImGuiRender()
 	{
-		//static bool show = true;
 		ImGui::ShowDemoWindow();
 		static bool dockspaceOpen = true;
 		static bool opt_fullscreen_persistant = true;

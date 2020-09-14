@@ -22,11 +22,14 @@ namespace Crowny
 		Ref<IndexBuffer> m_IndexBuffer;
 		Ref<MaterialInstance> m_MaterialInstance;
 
+
 	public:
 		Mesh(const Ref<VertexArray>& vao, const Ref<IndexBuffer>& ibo, const Ref<MaterialInstance>& material);
 		~Mesh() = default;
 
-		void SetMaterial(const Ref<MaterialInstance>& materialInstance) { m_MaterialInstance = materialInstance; }
+		Ref<VertexArray> GetVertexArray() { return m_VertexArray; }
+		Ref<MaterialInstance> GetMaterialInstance() { return m_MaterialInstance; }
+		void SetMaterialInstnace(const Ref<MaterialInstance>& materialInstance) { m_MaterialInstance = materialInstance; }
 
 	};
 }

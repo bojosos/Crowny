@@ -8,6 +8,7 @@
 #include "Crowny/Input/Input.h"
 
 #include <imgui.h>
+#include "Crowny/Input/KeyCodes.h"
 
 namespace Crowny
 {
@@ -27,7 +28,7 @@ namespace Crowny
 		auto& tc = e.GetComponent<TagComponent>();
 
 		std::string name = tc.Tag.empty() ? "Entity" : tc.Tag.c_str();
-		ImGuiTreeNodeFlags selected = (ImGuiHierarchyPanel::s_SelectedEntity == e) ? ImGuiTreeNodeFlags_Selected : 0;
+		ImGuiTreeNodeFlags selected = (m_SelectedItems.find(e) != m_SelectedItems.end()) ? ImGuiTreeNodeFlags_Selected : 0;
 		ImGui::AlignTextToFramePadding();
 
 		ImGui::PushID(i);
@@ -49,21 +50,6 @@ namespace Crowny
 					m_NewEntityParent = &e;
 				}
 				
-				if (Input::IsKeyPressed(Key::Delete))
-				{
-					for (int i = 0; i < rc.Children.size(); i++)
-					{
-						if (rc.Children[i] == ImGuiHierarchyPanel::s_SelectedEntity)
-						{
-							rc.Children[i].Destroy();
-							rc.Children.erase(rc.Children.begin() + i);
-							break;
-						}
-					}
-
-					ImGuiHierarchyPanel::s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
-				}
-
 				if (ImGui::Selectable("Delete"))
 				{
 					e.Destroy();
@@ -73,10 +59,39 @@ namespace Crowny
 				ImGui::EndPopup();
 			}
 
+			if (Input::IsKeyPressed(Key::Delete))
+			{
+				for (int i = 0; i < rc.Children.size(); i++)
+				{
+					if (rc.Children[i] == ImGuiHierarchyPanel::s_SelectedEntity)
+					{
+						rc.Children[i].Destroy();
+						rc.Children.erase(rc.Children.begin() + i);
+						break;
+					}
+				}
+
+				ImGuiHierarchyPanel::s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
+			}
+
 			if (open)
 			{
 				if (ImGui::IsItemClicked())
-					ImGuiHierarchyPanel::s_SelectedEntity = e;
+				{
+					if (!m_SelectedItems.empty() && Input::IsKeyPressed(Key::LeftControl))
+					{
+						if (m_SelectedItems.find(e) == m_SelectedItems.end())
+							m_SelectedItems.insert(e);
+						else
+							m_SelectedItems.erase(e);
+					}
+					else
+					{
+						m_SelectedItems.clear();
+						m_SelectedItems.insert(e);
+						ImGuiHierarchyPanel::s_SelectedEntity = e;
+					}
+				}
 
 				for (auto& c : rc.Children) 
 				{
@@ -92,29 +107,41 @@ namespace Crowny
 
 			if(ImGui::IsItemClicked())
 			{
-				ImGuiHierarchyPanel::s_SelectedEntity = e;
+				if (!m_SelectedItems.empty() && Input::IsKeyPressed(Key::LeftControl))
+				{
+					if (m_SelectedItems.find(e) == m_SelectedItems.end())
+						m_SelectedItems.insert(e);
+					else
+						m_SelectedItems.erase(e);
+				}
+				else
+				{
+					m_SelectedItems.clear();
+					m_SelectedItems.insert(e);
+					ImGuiHierarchyPanel::s_SelectedEntity = e;
+				}
 			}
 			
+			if (Input::IsKeyPressed(Key::Delete))
+			{
+				for (int i = 0; i < rc.Children.size(); i++)
+				{
+					if (rc.Children[i] == ImGuiHierarchyPanel::s_SelectedEntity)
+					{
+						rc.Children[i].Destroy();
+						rc.Children.erase(rc.Children.begin() + i);
+						break;
+					}
+				}
+
+				ImGuiHierarchyPanel::s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
+			}
+
 			if (ImGui::BeginPopupContextItem())
 			{
 				if (ImGui::Selectable("New Entity"))
 				{
 					m_NewEntityParent = &e;
-				}
-
-				if (Input::IsKeyPressed(Key::Delete))
-				{
-					for (int i = 0; i < rc.Children.size(); i++)
-					{
-						if (rc.Children[i] == ImGuiHierarchyPanel::s_SelectedEntity)
-						{
-							rc.Children[i].Destroy();
-							rc.Children.erase(rc.Children.begin() + i);
-							break;
-						}
-					}
-
-					ImGuiHierarchyPanel::s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
 				}
 
 				if (ImGui::Selectable("Delete"))

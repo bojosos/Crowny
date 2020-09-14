@@ -1,17 +1,19 @@
 #include "cwpch.h"
 
-#include <freetype-gl.h>
-
 #include "Crowny/Renderer/Font.h"
+#include "Crowny/Common/VirtualFileSystem.h"
+
+#include <freetype-gl.h>
 
 namespace Crowny
 {
 
 	Font::Font(const std::string& name, const std::string& path, float size) : m_Name(name), m_Filepath(path), m_Size(size)
 	{
-		std::string filepath = DIRECTORY_PREFIX + path;
 		m_Atlas = ftgl::texture_atlas_new(512, 512, 1);
-		m_Font = ftgl::texture_font_new_from_file(m_Atlas, m_Size, filepath.c_str());
+		//m_Font = ftgl::texture_font_new_from_file(m_Atlas, m_Size, filepath.c_str());
+		auto [mem, memSize] = VirtualFileSystem::Get()->ReadFile(path);
+		m_Font = ftgl::texture_font_new_from_memory(m_Atlas, m_Size, mem, memSize);
 
 		for (uint8_t c = 0; c < 128; c++)
 		{
@@ -81,7 +83,8 @@ namespace Crowny
 		}
 		else
 		{
-			s_Fonts.push_back(CreateRef<Font>(name, DEFAULT_FONT_PATH, size));
+			s_Fonts.push_back(CreateRef<Font>(name, DEFAULT_FONT_FILENAME, size));
+			return s_Fonts.back();
 		}
 
 		return s_Fonts[0];

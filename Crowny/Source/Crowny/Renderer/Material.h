@@ -32,11 +32,7 @@ namespace Crowny
 		{
 			byte* buffer;
 			ShaderUniformDeclaration* declaration = FindUniformDeclaration(name, &buffer);
-			if (!declaration)
-			{
-				CW_ENGINE_ERROR("Could not find uniform with name '", name, "'!");
-				return;
-			}
+			CW_ENGINE_ASSERT(declaration, "Could not find uniform with name '", name, "'!");
 			memcpy(buffer + declaration->GetOffset(), &data, declaration->GetSize());
 		}
 

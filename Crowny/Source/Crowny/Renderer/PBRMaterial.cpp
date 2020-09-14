@@ -6,17 +6,17 @@ namespace Crowny
 {
 	PBRMaterial::PBRMaterial(const Ref<Shader>& shader) : Material(shader)
 	{
-		SetUniform("u_UsingNormalMap", 0.0f);
-		SetUniform("u_UsingAlbedoMap", 0.0f);
+		//SetUniform("u_UsingNormalMap", 0.0f);
+		//SetUniform("u_UsingAlbedoMap", 0.0f);
 		SetUniform("u_AlbedoColor", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
 
-		SetUniform("u_SpecularColor", glm::vec3(1.0f, 1.0f, 1.0f));
-		SetUniform("u_UsingSpecularMap", 0.0f);
+		SetUniform("u_Metalness", 0.8f);
+		//SetUniform("u_UsingMetalness", 0.0f);
 
-		SetUniform("u_GlossColor", 0.8f);
-		SetUniform("u_UsingGlossMap", 0.0f);
+		SetUniform("u_Roughness", 0.2f);
+		//SetUniform("u_UsingRoughnessMap", 0.0f);
 
-		SetUniform("u_UsingNormalMap", 0.0f);
+		//SetUniform("u_UsingNormalMap", 0.0f);
 	}
 
 	void PBRMaterial::SetEnvironmentMap()
@@ -27,19 +27,19 @@ namespace Crowny
 	void PBRMaterial::SetAlbedo(const glm::vec4& color)
 	{
 		SetUniform("u_AlbedoColor", color);
-		SetUniform("u_UsingAlbedoMap", 0.0f);
+		//SetUniform("u_UsingAlbedoMap", 0.0f);
 	}
 
-	void PBRMaterial::SetSpecular(const glm::vec3& color)
+	void PBRMaterial::SetMetalness(float value)
 	{
-		SetUniform("u_SpecularColor", color);
-		SetUniform("u_UsingSpecularMap", 0.0f);
+		SetUniform("u_Metalness", value);
+		//SetUniform("u_UsingMetalnessMap", 0.0f);
 	}
 
-	void PBRMaterial::SetGloss(float value)
+	void PBRMaterial::SetRougness(float value)
 	{
-		SetUniform("u_GlossColor", value);
-		SetUniform("u_UsingGlossMap", 0.0f);
+		SetUniform("u_Rougness", value);
+		//SetUniform("u_UsingRougnessMap", 0.0f);
 	}
 
 	void PBRMaterial::UsingNormalMap(bool value)
@@ -53,22 +53,28 @@ namespace Crowny
 		SetUniform("u_UsingAlbedoMap", 1.0f);
 	}
 
-	void PBRMaterial::SetSpecularMap(const Ref<Texture2D>& texture)
+	void PBRMaterial::SetMetalnessMap(const Ref<Texture2D>& texture)
 	{
-		SetTexture("u_SpecularMap", texture);
-		SetUniform("u_UsingSpecularMap", 1.0f);
+		SetTexture("u_MetalnessMap", texture);
+		//SetUniform("u_UsingSpecularMap", 1.0f);
 	}
 
 	void PBRMaterial::SetNormalMap(const Ref<Texture2D>& texture)
 	{
 		SetTexture("u_NormalMap", texture);
-		SetUniform("u_UsingNormalMap", 1.0f);
+		//SetUniform("u_UsingNormalMap", 1.0f);
 	}
 
-	void PBRMaterial::SetGlossMap(const Ref<Texture2D>& texture)
+	void PBRMaterial::SetRougnessMap(const Ref<Texture2D>& texture)
 	{
-		SetTexture("u_GlossMap", texture);
-		SetUniform("u_UsingGlossMap", 1.0f);
+		SetTexture("u_RougnessMap", texture);
+		//SetUniform("u_UsingRougnessMap", 1.0f);
+	}
+
+	void PBRMaterial::SetAoMap(const Ref<Texture2D>& texture)
+	{
+		SetTexture("u_AoMap", texture);
+		//SetUniform("u_UsingAoMap", 1.0f);
 	}
 
 	Ref<Texture2D> PBRMaterial::GetAlbedoMap()
@@ -79,9 +85,9 @@ namespace Crowny
 		return m_Textures.size() > slot ? m_Textures[slot] : nullptr;
 	}
 
-	Ref<Texture2D> PBRMaterial::GetSpecularMap()
+	Ref<Texture2D> PBRMaterial::GetMetalnessMap()
 	{
-		ShaderResourceDeclaration* declaration = FindResourceDeclaration("u_SpecularMap");
+		ShaderResourceDeclaration* declaration = FindResourceDeclaration("u_MetalnessMap");
 		CW_ENGINE_ASSERT(declaration, "");
 		uint32_t slot = declaration->GetRegister();
 		return m_Textures.size() > slot ? m_Textures[slot] : nullptr;
@@ -95,13 +101,19 @@ namespace Crowny
 		return m_Textures.size() > slot ? m_Textures[slot] : nullptr;
 	}
 
-	Ref<Texture2D> PBRMaterial::GetGlossMap()
+	Ref<Texture2D> PBRMaterial::GetRoughnessMap()
 	{
-		ShaderResourceDeclaration* declaration = FindResourceDeclaration("u_GlossMap");
+		ShaderResourceDeclaration* declaration = FindResourceDeclaration("u_RoughnessMap");
 		CW_ENGINE_ASSERT(declaration, "");
 		uint32_t slot = declaration->GetRegister();
 		return m_Textures.size() > slot ? m_Textures[slot] : nullptr;
 	}
 
-
+	Ref<Texture2D> PBRMaterial::GetAoMap()
+	{
+		ShaderResourceDeclaration* declaration = FindResourceDeclaration("u_AoMap");
+		CW_ENGINE_ASSERT(declaration, "");
+		uint32_t slot = declaration->GetRegister();
+		return m_Textures.size() > slot ? m_Textures[slot] : nullptr;
+	}
 }

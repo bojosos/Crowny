@@ -32,6 +32,7 @@ IncludeDir["imgui"] = "Crowny/Dependencies/imgui"
 IncludeDir["glm"] = "Crowny/Dependencies/glm"
 IncludeDir["entt"] = "Crowny/Dependencies/entt/single_include"
 IncludeDir["stb_image"] = "Crowny/Dependencies/stb_image"
+IncludeDir["assimp"] = "Crowny/Dependencies/assimp/include"
 
 group "Dependencies"
 	include "Crowny/Dependencies/glfw"
@@ -39,6 +40,7 @@ group "Dependencies"
 	include "Crowny/Dependencies/freetype-gl"
 	include "Crowny/Dependencies/imgui"
 	include "Crowny/Dependencies/freetype2"
+	include "Crowny/Dependencies/assimp"
 
 group ""
 
@@ -84,13 +86,15 @@ project "Crowny"
 		"%{IncludeDir.entt}",
 		"%{IncludeDir.imgui}",
 		"%{IncludeDir.glm}",
-		"%{IncludeDir.stb_image}"
+		"%{IncludeDir.stb_image}",
+		"%{IncludeDir.assimp}"
 	}
 
 	links 
 	{
 		"imgui",
-		"freetype-gl"
+		"freetype-gl",
+		"assimp"
 	}
 
 	filter { "platforms:Win64" }

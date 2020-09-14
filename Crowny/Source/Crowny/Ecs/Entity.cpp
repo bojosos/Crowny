@@ -35,6 +35,7 @@ namespace Crowny
 	void Entity::Destroy()
 	{
 		m_Scene->m_Registry.destroy(m_EntityHandle);
+		m_EntityHandle = entt::null;
 	}
 
 }

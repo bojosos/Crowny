@@ -54,6 +54,15 @@ namespace Crowny
 
 		friend class ImGuiComponentEditor;
 		friend class ImGuiHierarchyWindow;
+
+		struct EntityHasher
+		{
+			size_t operator()(const Entity& e) const
+			{
+				return (size_t)e.m_EntityHandle;
+			}
+		};
+
 	private:
 		entt::entity m_EntityHandle{ entt::null };
 		Scene* m_Scene = nullptr;

@@ -1,8 +1,12 @@
 #!/usr/bin/python3
 
-from os import walk
+from os import walk, path, chdir
 from os.path import isfile, join
 import sys
+
+# Set cwd to the script directory
+ap = path.abspath(__file__)
+chdir(path.dirname(ap))
 
 dirs = ["../Crowny/Source", "../Crowny/Resources/Shaders", "../Crowny-Editor/Source", "../Crowny-CLI/Source", "../Crowny-Editor/Resources/Shaders"]
 files = ["countlines.py", "../README.md", "../premake5.lua", "generate.sh", "generate.bat", "../Crowny/Dependencies/freetype-gl/premake5.lua", "../Crowny/Dependencies/freetype2/premake5.lua", "../Crowny/Dependencies/glfw/premake5.lua", "../Crowny/Dependencies/glad/premake5.lua", "../.gitignore"]

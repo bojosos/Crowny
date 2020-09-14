@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Renderer/ForwardRenderer.h"
+#include "Crowny/Renderer/RenderCommand.h"
 
 namespace Crowny
 {
@@ -60,6 +61,24 @@ namespace Crowny
 	{
 		shader->SetVSSystemUniformBuffer(s_Data.VSSystemUniformBuffer, s_Data.VSSystemUniformBufferSize, 0);
 		shader->SetFSSystemUniformBuffer(s_Data.FSSystemUniformBuffer, s_Data.FSSystemUniformBufferSize, 0);
+	}
+
+	void ForwardRenderer::Submit(const Ref<Model>& model)
+	{
+		auto& texs = model->GetTextures();
+		for (uint32_t i = 0; i < texs.size(); i++)
+		{
+			texs[i]->Bind(i);
+		}
+
+		for (auto& mesh : model->GetMeshes())
+		{
+			mesh->GetMaterialInstance()->Bind();
+			mesh->GetVertexArray()->Bind();
+			RenderCommand::DrawIndexed(mesh->GetVertexArray());
+			mesh->GetMaterialInstance()->Unbind();
+			mesh->GetVertexArray()->Unbind();
+		}
 	}
 
 	void ForwardRenderer::SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform)

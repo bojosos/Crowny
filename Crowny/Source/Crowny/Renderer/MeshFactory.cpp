@@ -8,7 +8,7 @@
 
 namespace Crowny
 {
-	Ref<Mesh> CreatePlane(float width, float height, const glm::vec3& normal, const Ref<MaterialInstance>& material)
+	Ref<Mesh> MeshFactory::CreatePlane(float width, float height, const glm::vec3& normal, const Ref<MaterialInstance>& material)
 	{
 		glm::vec3 v = normal * 90.f;
 
@@ -64,8 +64,84 @@ namespace Crowny
 
 	}
 
-	Ref<Mesh> CreateCube(float size, const Ref<MaterialInstance>& material)
+	Ref<Mesh> MeshFactory::CreateCube(float size, const Ref<MaterialInstance>& material)
 	{
 		return nullptr;
+	}
+
+	Ref<Mesh> MeshFactory::CreateSphere(float xSegments, float ySegments)
+	{
+		Ref<VertexArray> vao = VertexArray::Create();
+		
+		std::vector<glm::vec3> positions;
+		std::vector<glm::vec2> uv;
+		std::vector<glm::vec3> normals;
+		std::vector<uint32_t> indices;
+
+		const float PI = 3.14159265359;
+		for (uint32_t y = 0; y <= ySegments; ++y)
+		{
+			for (uint32_t x = 0; x <= xSegments; ++x)
+			{
+				float xSegment = (float)x / (float)xSegments;
+				float ySegment = (float)y / (float)ySegments;
+				float xPos = std::cos(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
+				float yPos = std::cos(ySegment * PI);
+				float zPos = std::sin(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
+
+				positions.push_back(glm::vec3(xPos, yPos, zPos));
+				uv.push_back(glm::vec2(xSegment, ySegment));
+				normals.push_back(glm::vec3(xPos, yPos, zPos));
+			}
+		}
+
+		bool oddRow = false;
+		for (uint32_t y = 0; y < ySegments; ++y)
+		{
+			if (!oddRow) // even rows: y == 0, y == 2; and so on
+			{
+				for (unsigned int x = 0; x <= xSegments; ++x)
+				{
+					indices.push_back(y * (xSegments + 1) + x);
+					indices.push_back((y + 1) * (xSegments + 1) + x);
+				}
+			}
+			else
+			{
+				for (int x = xSegments; x >= 0; --x)
+				{
+					indices.push_back((y + 1) * (xSegments + 1) + x);
+					indices.push_back(y * (xSegments + 1) + x);
+				}
+			}
+			oddRow = !oddRow;
+		}
+
+		std::vector<float> data;
+		for (std::size_t i = 0; i < positions.size(); ++i)
+		{
+			data.push_back(positions[i].x);
+			data.push_back(positions[i].y);
+			data.push_back(positions[i].z);
+			if (!uv.empty())
+			{
+				data.push_back(uv[i].x);
+				data.push_back(uv[i].y);
+			}
+			if (!normals.empty())
+			{
+				data.push_back(normals[i].x);
+				data.push_back(normals[i].y);
+				data.push_back(normals[i].z);
+			}
+		}
+		
+		Ref<VertexBuffer> vbo = VertexBuffer::Create(data.data(), data.size() * sizeof(float));
+		Ref<IndexBuffer> ibo = IndexBuffer::Create(indices.data(), indices.size());
+		vbo->SetLayout({
+					   { ShaderDataType::Float3, "Position" },
+			           { ShaderDataType::Float2, "Uv" },
+					   { ShaderDataType::Float3, "Normals" }
+					  });
 	}
 }

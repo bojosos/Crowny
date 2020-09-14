@@ -1,220 +1,177 @@
 #type vertex
 #version 330 core
+//Just copied from learnopengl.com
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec2 aTexCoords;
+layout (location = 2) in vec3 aNormal;
 
-layout(location = 0) in vec4 a_Position;
-layout(location = 1) in vec2 a_Uv;
-layout(location = 2) in vec3 a_Normal;
-layout(location = 3) in vec3 a_Binormal;
-layout(location = 4) in vec3 a_Tangent;
+out vec2 TexCoords;
+out vec3 WorldPos;
+out vec3 Normal;
 
-uniform mat4 sys_ProjectionMatrix;
-uniform mat4 sys_ViewMatrix;
-uniform mat4 sys_ModelMatrix;
-uniform mat4 sys_CameraPosition;
-
-uniform mat4 u_DepthBiasMVP;
-
-out DATA
-{
-	vec3 Position;
-	vec3 Normal;
-	vec2 Uv;
-	vec3 Binormal;
-	vec3 Tangent;
-	vec3 Color;
-	vec4 ShadowCoord;
-	vec3 CameraPos;
-} vs_out;
+uniform mat4 projection;
+uniform mat4 view;
+uniform mat4 model;
 
 void main()
 {
-	vec4 pos = sys_ModelMatrix * a_Position;
-	vs_out.Position = vec3(u_ModelMatrix);
-	gl_Position = sys_ProjectionMatrix * sys_ViewMatrix * pos;
+    TexCoords = aTexCoords;
+    WorldPos = vec3(model * vec4(aPos, 1.0));
+    Normal = mat3(model) * aNormal;   
 
-	mat3 model = mat3(sys_ModelMatrix);
-	vs_out.Normal = model * a_Normal;
-	vs_out.Binormal = model * a_Binormal;
-	vs_out.Tangent = model * a_Tangent;
-	vs_out.Uv = a_Uv;
-	vs_out.Color = vec3(1.0);
-	vs_out.CameraPos = sys_CameraPosition;
-
-	vs_out.ShadowCoord = u_DepthBiasMVP * pos;
-
+    gl_Position =  projection * view * vec4(WorldPos, 1.0);
 }
 
 #type fragment
 #version 330 core
+out vec4 FragColor;
+in vec2 TexCoords;
+in vec3 WorldPos;
+in vec3 Normal;
 
-layout (location = 0) out vec4 outColor;
-
-in DATA
-{
-	vec3 Position;
-	vec3 Normal;
-	vec2 Uv;
-	vec3 Binormal;
-	vec3 Tangent;
-	vec3 Color;
-	vec4 ShadowCoord;
-	vec3 CameraPos;
-} fs_in;
-
-struct Material
-{
-	vec4 Albedo;
-	vec3 Specular;
-	float Roughness;
-	vec3 Normal;
-}
-
-struct Light
-{
-	vec4 Color;
-	vec3 Position;
-	float P0;
-	vec3 Direction;
-	float P1;
-	vec3 LightVector;
-	float Intensity;
-}
-
-struct Attributes
-{
-	vec3 Position;
-	vec3 Normal;
-	vec3 Binormal;
-	vec3 Tangent;
-}
-
-// Metallic workflow
+// material parameters
 uniform sampler2D u_AlbedoMap;
 uniform sampler2D u_NormalMap;
-uniform sampler2D u_MetallicMap;
+uniform sampler2D u_MetalnessMap;
 uniform sampler2D u_RoughnessMap;
 uniform sampler2D u_AoMap;
 
-uniform flaot u_UsingAlbedoMap;
-uniform float u_UsingNormalMap;
-uniform float u_UsingMetallicMap;
-uniform float u_UsingRoughnessMap;
-uniform float u_UsingAoMap;
+uniform vec4 u_AlbedoColor;
+uniform float u_Metalness;
+uniform float u_Roughness;
 
-uniform sampler2D u_PreintegratedFG;
-uniform samplerCube u_EnvironmentMap;
-
-uniform Light sys_lights[4];
+// lights
+uniform vec3 lightPositions[4];
+uniform vec3 lightColors[4];
 
 uniform vec3 camPos;
 
 const float PI = 3.14159265359;
-const float GAMMA = 2.2;
-
-vec3 GetNormalFromMap()
+// ----------------------------------------------------------------------------
+// Easy trick to get tangent-normals to world-space to keep PBR code simplified.
+// Don't worry if you don't get what's going on; you generally want to do normal 
+// mapping the usual way for performance anways; I do plan make a note of this 
+// technique somewhere later in the normal mapping tutorial.
+vec3 getNormalFromMap()
 {
-	vec3 tangentNormal = texture(u_NormalMap, fs_in.Uv).xyz * 2.0 - 1.0;
+    vec3 tangentNormal = texture(u_NormalMap, TexCoords).xyz * 2.0 - 1.0;
 
-	vec3 Q1 = dFdx(fs_in.Position);
-	vec3 Q2 = dFdy(fs_in.Position);
-	vec2 st1 = dFdx(fs_in.Uv);
-	vec2 st2 = dFdy(fs_in.Uv);
+    vec3 Q1  = dFdx(WorldPos);
+    vec3 Q2  = dFdy(WorldPos);
+    vec2 st1 = dFdx(TexCoords);
+    vec2 st2 = dFdy(TexCoords);
 
-	vec3 N = normalize(fs_in.Normal);
-	vec3 T = normalize(Q1 * st2.t - Q2 * st1.t);
-	vec3 B = -normalize(cross(N, T));
-	mat3 TBN = mat3(T, B, N);
+    vec3 N   = normalize(Normal);
+    vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
+    vec3 B  = -normalize(cross(N, T));
+    mat3 TBN = mat3(T, B, N);
 
-	return normalize(TBN * tangentNormal);
+    return normalize(TBN * tangentNormal);
 }
-
-// NDF - makes the dots on balls (Trowbridge-Reitz GGX)
+// ----------------------------------------------------------------------------
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
-	float a = roughness * roughness;
-	float a2 = a * a;
-	float NdotH = max(dot(N, H), 0.0);
-	float NdotH2 = NdotH * NdotH;
+    float a = roughness*roughness;
+    float a2 = a*a;
+    float NdotH = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH*NdotH;
 
-	float nom = a2;
-	float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-	denom = PI * denom * denom;
+    float nom   = a2;
+    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom = PI * denom * denom;
 
-	return nom / denom;
+    return nom / denom;
 }
-
-//Geometry function (Schlick-GGX)
+// ----------------------------------------------------------------------------
 float GeometrySchlickGGX(float NdotV, float roughness)
 {
-	float r = (roughness + 1.0);
-	float k = (r * r) / 8.0;
+    float r = (roughness + 1.0);
+    float k = (r*r) / 8.0;
 
-	float nom = NdotV;
-	float denom = NdotV * (1.0 - k) + k;
+    float nom   = NdotV;
+    float denom = NdotV * (1.0 - k) + k;
 
-	return nom / denom;
+    return nom / denom;
 }
-
+// ----------------------------------------------------------------------------
 float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 {
-	float NdotV = max(dot(N, V), 0.0);
-	float NdotL = max(dot(N, L), 0.0);
-	float ggx2 = GeometrySchlickGGX(NdotV, roughness);
-	float ggx1 = GeometrySchlickGGX(NdotL, roughness);
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    float ggx2 = GeometrySchlickGGX(NdotV, roughness);
+    float ggx1 = GeometrySchlickGGX(NdotL, roughness);
 
-	return ggx1 * ggx2;
+    return ggx1 * ggx2;
 }
-
-// Fresnel equation
+// ----------------------------------------------------------------------------
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
-	return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
+// ----------------------------------------------------------------------------
+void main()
+{		
+    vec3 albedo     = pow(texture(u_AlbedoMap, TexCoords).rgb * u_AlbedoColor, vec3(2.2));
+    float metallic  = texture(u_MetalnessMap, TexCoords).r * u_Metalness;
+    float roughness = texture(u_RoughnessMap, TexCoords).r * u_Roughness;
+    float ao        = texture(u_AoMap, TexCoords).r;
 
-void main(void) 
-{
-	vec3 albedo = pow(texture(u_AlbedoMap, fs_in.Uv).rgb, vec3(GAMMA)); // alpha?
-	float metallic = texture(u_MetallicMap, fs_in.Uv).r;
-	float roughness = texture(u_MetallicMap, fs_in.Uv).r;
-	float ao = texture(u_MetallicMap, fs_in.Uv).r;
+    vec3 N = getNormalFromMap();
+    vec3 V = normalize(camPos - WorldPos);
 
-	vec3 N = GetNormalFromMap();
-	vec3 V = normalize(camPos - fs_in.Position);
+    // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0 
+    // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)    
+    vec3 F0 = vec3(0.04); 
+    F0 = mix(F0, albedo, metallic);
 
-	vec3 F0 = vec3(0.04);
-	F0 = mix(F0, albedo, metallic);
+    // reflectance equation
+    vec3 Lo = vec3(0.0);
+    for(int i = 0; i < 4; ++i) 
+    {
+        // calculate per-light radiance
+        vec3 L = normalize(lightPositions[i] - WorldPos);
+        vec3 H = normalize(V + L);
+        float distance = length(lightPositions[i] - WorldPos);
+        float attenuation = 1.0 / (distance * distance);
+        vec3 radiance = lightColors[i] * attenuation;
 
-	vec3 Lo = vec3(0.0);
+        // Cook-Torrance BRDF
+        float NDF = DistributionGGX(N, H, roughness);   
+        float G   = GeometrySmith(N, V, L, roughness);      
+        vec3 F    = fresnelSchlick(max(dot(H, V), 0.0), F0);
+           
+        vec3 nominator    = NDF * G * F; 
+        float denominator = 4 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001; // 0.001 to prevent divide by zero.
+        vec3 specular = nominator / denominator;
+        
+        // kS is equal to Fresnel
+        vec3 kS = F;
+        // for energy conservation, the diffuse and specular light can't
+        // be above 1.0 (unless the surface emits light); to preserve this
+        // relationship the diffuse component (kD) should equal 1.0 - kS.
+        vec3 kD = vec3(1.0) - kS;
+        // multiply kD by the inverse metalness such that only non-metals 
+        // have diffuse lighting, or a linear blend if partly metal (pure metals
+        // have no diffuse light).
+        kD *= 1.0 - metallic;	  
 
-	for(int i=0;i < 4; i++)
-	{
-		vec3 L = normalize(lightPositions[i] - fs_in.Position);
-		vec3 H = normalize(V + L);
-		float distance = length(lightPositions[i] - fs_in.Position);
-		float attenuation = 1.0 / (distance * distance);
-		vec3 radiance = lightColors[i] * attenuation;
+        // scale light by NdotL
+        float NdotL = max(dot(N, L), 0.0);        
 
-		float NDF = DistributionGGX(N, H, roughness);
-		float G = GeometrySmith(N, V, L, roughness);
-		vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+        // add to outgoing radiance Lo
+        Lo += (kD * albedo / PI + specular) * radiance * NdotL;  // note that we already multiplied the BRDF by the Fresnel (kS) so we won't multiply by kS again
+    }   
+    
+    // ambient lighting (note that the next IBL tutorial will replace 
+    // this ambient lighting with environment lighting).
+    vec3 ambient = vec3(0.03) * albedo * ao;
+    
+    vec3 color = ambient + Lo;
 
-		vec3 nominator = NDF * G * F;
-		float denominator = 4 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001;
-		vec3 specular = nominator / denominator;
+    // HDR tonemapping
+    color = color / (color + vec3(1.0));
+    // gamma correct
+    color = pow(color, vec3(1.0/2.2)); 
 
-		vec3 kS = F;
-		vec3 kD = vec3(1.0) - kS;
-
-		kD *= 1.0 - metallic;
-		float NdotL = max(dot(N, L), 0.0);
-		Lo += (kD * albedo / PI + specular) * radiance * NdotL;
-	}
-
-	vec3 ambient = vec3(0.03) * albedo * ao;
-	vec3 color = ambient + Lo;
-
-	color = color  / (color + vec3(1.0));
-	color = pow(color, vec3(1.0 / 2.2));
-	outColor = vec4(color, 1.0);
+    FragColor = vec4(color, 1.0);
 }
-

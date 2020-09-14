@@ -13,12 +13,14 @@ namespace Crowny
 
 	void Initializer::Init()
 	{
+		// Most of these should be in the editor
 		VirtualFileSystem::Init();
 		VirtualFileSystem::Get()->Mount("Shaders", "Resources/Shaders");
 		VirtualFileSystem::Get()->Mount("Textures", "Resources/Textures");
+		VirtualFileSystem::Get()->Mount("Fonts", "Resources/Fonts");
 		Renderer::Init();
 		Random::Init();
-		FontManager::Add(CreateRef<Font>("default", DEFAULT_FONT_PATH, 64));
+		FontManager::Add(CreateRef<Font>("Roboto Thin", "/Fonts/" + DEFAULT_FONT_FILENAME, 64));
 		Textures::LoadDefault();
 	}
 

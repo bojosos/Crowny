@@ -7,19 +7,19 @@
 
 namespace Crowny
 {
-	Ref<IndexBuffer> IndexBuffer::Create(uint32_t size)
+	Ref<IndexBuffer> IndexBuffer::Create(uint32_t count)
 	{
 		switch (Renderer::GetAPI())
 		{
-			case RendererAPI::API::OpenGL: return CreateRef<OpenGLIndexBuffer>(size);
+			case RendererAPI::API::OpenGL: return CreateRef<OpenGLIndexBuffer>(count);
 		}
 	}
 
-	Ref<IndexBuffer> IndexBuffer::Create(uint32_t* indices, uint32_t size)
+	Ref<IndexBuffer> IndexBuffer::Create(uint32_t* indices, uint32_t count)
 	{
 		switch (Renderer::GetAPI())
 		{
-			case RendererAPI::API::OpenGL: return CreateRef<OpenGLIndexBuffer>(indices, size);
+			case RendererAPI::API::OpenGL: return CreateRef<OpenGLIndexBuffer>(indices, count);
 		}
 	}
 }
