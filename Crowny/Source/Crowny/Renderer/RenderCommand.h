@@ -4,6 +4,7 @@
 
 namespace Crowny
 {
+
 	class RenderCommand
 	{
 	public:
@@ -27,9 +28,9 @@ namespace Crowny
 			s_RendererAPI->Clear();
 		}
 
-		static void DrawIndexed(const Ref<VertexArray>& vertexArray, uint32_t count = 0)
+		static void DrawIndexed(const Ref<VertexArray>& vertexArray, DrawMode drawMode = DrawMode::TRIANGLES, uint32_t count = 0)
 		{
-			s_RendererAPI->DrawIndexed(vertexArray, count);
+			s_RendererAPI->DrawIndexed(vertexArray, drawMode, count);
 		}
 
 	private:

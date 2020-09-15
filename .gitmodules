@@ -1,0 +1,3 @@
+[submodule "Crowny/Dependencies/assimp"]
+	path = Crowny/Dependencies/assimp
+	url = http://github.com/AminAliari/assimp

@@ -26,7 +26,7 @@ namespace Crowny
 
 	private:
 		void DisplayTree(Entity& e, uint32_t i = 0);
-		Entity* m_NewEntityParent = nullptr;
+		Entity m_NewEntityParent = {};
 
 		std::unordered_set<Entity, Entity::EntityHasher> m_SelectedItems;
 	};

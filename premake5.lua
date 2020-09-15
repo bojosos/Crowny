@@ -189,7 +189,8 @@ project "Crowny-Editor"
 		"Crowny-Editor/Source",
 		"%{IncludeDir.imgui}",
 		"%{IncludeDir.glm}",
-		"%{IncludeDir.entt}"
+		"%{IncludeDir.entt}",
+		"%{IncludeDir.assimp}"
 	}
 
 	links

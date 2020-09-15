@@ -24,7 +24,7 @@ namespace Crowny
 
 
 	public:
-		Mesh(const Ref<VertexArray>& vao, const Ref<IndexBuffer>& ibo, const Ref<MaterialInstance>& material);
+		Mesh(const Ref<VertexArray>& vao, const Ref<IndexBuffer>& ibo, const Ref<MaterialInstance>& material = nullptr);
 		~Mesh() = default;
 
 		Ref<VertexArray> GetVertexArray() { return m_VertexArray; }

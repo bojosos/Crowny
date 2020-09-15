@@ -4,6 +4,7 @@
 
 namespace Crowny
 {
+
 	class OpenGLVertexArray : public VertexArray
 	{
 	public:

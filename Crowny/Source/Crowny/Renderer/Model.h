@@ -19,8 +19,15 @@ namespace Crowny
 
 		const std::vector<Ref<Texture2D>>& GetTextures() const { return m_Textures; }
 		const std::vector<Ref<Mesh>>& GetMeshes() const { return m_Meshes; }
-
 	private:
+
+		struct Vertex
+		{
+			glm::vec3 Position;
+			glm::vec2 Uv;
+			glm::vec3 Normal;
+		};
+
 		std::vector<Ref<Mesh>> m_Meshes;
 		std::vector<Ref<Texture2D>> m_Textures;
 		std::string m_Directory;

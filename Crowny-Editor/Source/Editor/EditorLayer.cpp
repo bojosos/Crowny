@@ -4,6 +4,7 @@
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Renderer/MeshFactory.h"
 #include "Crowny/Renderer/Model.h"
+#include "Crowny/Renderer/ForwardRenderer.h"
 #include "Crowny/SceneManagement/SceneManager.h"
 #include "Crowny/Ecs/Components.h"
 
@@ -62,11 +63,21 @@ namespace Crowny
 		SceneManager::AddScene(new Scene("Editor scene")); // To be loaded
 
 		Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(Shader::Create("/Shaders/PBRShader.glsl"));
+		
+		mat->SetAlbedoMap(Texture2D::Create("/Textures/rustediron2_basecolor.png"));
+		mat->SetMetalnessMap(Texture2D::Create("/Textures/rustediron2_metallic.png"));
+		mat->SetNormalMap(Texture2D::Create("/Textures/rustediron2_normal.png"));
+		mat->SetNormalMap(Texture2D::Create("/Textures/rustediron2_roughness.png"));
+
 		ImGuiMaterialPanel::SetSelectedMaterial(mat);
 		//Ref<Model> model = CreateRef<Model>("Models/");
-		m_Test = MeshFactory::CreateSphere();
-		Ref<MaterialInstance> matInstance = CreateRef<MaterialInstance>(mat);
-		m_Test->SetMaterialInstnace(matInstance);
+		ForwardRenderer::Init();
+
+		Scene* scene = SceneManager::GetActiveScene();
+		auto& sphere = scene->CreateEntity("Sphere");
+		sphere.AddComponent<MeshRendererComponent>();
+		auto& cam = scene->CreateEntity("Camera");
+		cam.AddComponent<CameraComponent>();
 	}
 
 	void EditorLayer::OnDetach()
@@ -87,6 +98,13 @@ namespace Crowny
 
 		m_Framebuffer->Bind();
 		SceneManager::GetActiveScene()->OnUpdate(ts);
+		
+		if (Input::IsKeyPressed(Key::R))
+		{
+			Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(Shader::Create("/Shaders/PBRShader.glsl"));
+			ImGuiMaterialPanel::SetSelectedMaterial(mat);
+		}
+
 		m_Framebuffer->Unbind();
 		m_HierarchyPanel->Update();
 	}
@@ -136,6 +154,7 @@ namespace Crowny
 		m_InspectorPanel->Render();
 		m_GLInfoWindow->Render();
 		m_ViewportPanel->Render();
+		m_MaterialEditor->Render();
 
 		ImGui::End();
 	}

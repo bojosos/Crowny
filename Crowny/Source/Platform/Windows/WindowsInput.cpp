@@ -14,7 +14,6 @@ namespace Crowny
 	{
 		auto* window = static_cast<GLFWwindow*>(Application::Get().GetWindow().GetNativeWindow());
    		auto state = glfwGetKey(window, static_cast<int32_t>(key));
-		CW_ENGINE_INFO(state);
 		return state == GLFW_PRESS || state == GLFW_REPEAT;
 	}
 

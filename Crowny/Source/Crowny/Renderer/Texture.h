@@ -36,7 +36,8 @@ namespace Crowny
 	{
 		NONE = 0,
 		RGB,
-		RGBA
+		RGBA,
+		RED
 	};
 
 	enum class SwizzleType

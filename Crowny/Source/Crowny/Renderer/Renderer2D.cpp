@@ -280,7 +280,7 @@ namespace Crowny
 		}
 
 		s_Data.VertexArray->Bind();
-		RenderCommand::DrawIndexed(s_Data.VertexArray, s_Data.IndexCount);
+		RenderCommand::DrawIndexed(s_Data.VertexArray, DrawMode::TRIANGLES, s_Data.IndexCount);
 		
 		for (uint8_t i = 0; i <= s_Data.TextureIndex; i++)
 		{

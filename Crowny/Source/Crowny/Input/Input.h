@@ -29,7 +29,7 @@ namespace Crowny
 		static void SetMouseGrabbed(bool grabbed);
 		static bool IsMouseGrabbed();
 		static void SetMousePosition(const glm::vec2& position);
-
+		//static uint32_t GetMouseScroll();
 	private:
 		static bool s_Grabbed;
 	};

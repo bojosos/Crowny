@@ -6,6 +6,8 @@
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/Mesh.h"
+#include "Crowny/Renderer/MeshFactory.h"
+#include "../../Crowny-Editor/Source/Panels/ImGuiMaterialPanel.h"
 
 #include "Crowny/Common/Color.h"
 #include "Crowny/Renderer/Camera.h"
@@ -89,7 +91,7 @@ namespace Crowny
 	{
 		Ref<::Crowny::Mesh> Mesh;
 
-		MeshRendererComponent() = default;
+		MeshRendererComponent() { Mesh = MeshFactory::CreateSphere(); Mesh->SetMaterialInstnace(CreateRef<MaterialInstance>(ImGuiMaterialPanel::GetSlectedMaterial())); };
 		MeshRendererComponent(const MeshRendererComponent&) = default;
 	};
 

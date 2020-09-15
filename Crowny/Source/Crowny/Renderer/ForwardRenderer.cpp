@@ -2,6 +2,7 @@
 
 #include "Crowny/Renderer/ForwardRenderer.h"
 #include "Crowny/Renderer/RenderCommand.h"
+#include "../../Crowny-Editor/Source/Panels/ImGuiMaterialPanel.h"
 
 namespace Crowny
 {
@@ -43,24 +44,54 @@ namespace Crowny
 		s_Data.VSSystemUniformBuffer[VSSystemUniformIndex_ProjectionMatrix] = 0;
 		s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ViewMatrix] = s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ProjectionMatrix] + sizeof(glm::mat4);
 		s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ModelMatrix] = s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ViewMatrix] + sizeof(glm::mat4);
+
+		s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_CameraPosition] = s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ModelMatrix] + sizeof(glm::mat4);
+		/*
+		s_Data.FSSystemUniformBufferSize = sizeof(Light);
+		s_Data.FSSystemUniformBuffer = new byte[s_Data.FSSystemUniformBufferSize];
+		memset(s_Data.FSSystemUniformBuffer, 0, s_Data.FSSystemUniformBufferSize);
+		s_Data.FSSystemUniformBufferOffsets.resize(FSSystemUniformIndex_Size);
+
+		// Per Scene System Uniforms
+		s_Data.FSSystemUniformBufferOffsets[FSSystemUniformIndex_Lights] = 0;*/
 	}
 
 	void ForwardRenderer::Begin()
 	{
-
+		
 	}
 
 	void ForwardRenderer::BeginScene(Camera* camera, const glm::mat4& transform)
 	{
 		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ProjectionMatrix], &camera->GetProjectionMatrix(), sizeof(glm::mat4));
-		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ViewMatrix], &glm::inverse(transform), sizeof(glm::mat4));
-		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_CameraPosition], &transform, sizeof(glm::vec3));
+		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ViewMatrix], &transform, sizeof(glm::mat4));
+		glm::vec3 pos = glm::vec3(transform[3]);
+		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_CameraPosition], &pos, sizeof(glm::vec3));
 	}
 
 	void ForwardRenderer::SetSystemUniforms(const Ref<Shader>& shader)
 	{
 		shader->SetVSSystemUniformBuffer(s_Data.VSSystemUniformBuffer, s_Data.VSSystemUniformBufferSize, 0);
 		shader->SetFSSystemUniformBuffer(s_Data.FSSystemUniformBuffer, s_Data.FSSystemUniformBufferSize, 0);
+	}
+
+	void ForwardRenderer::SubmitLightSetup()
+	{
+		glm::vec3 lightPositions[] = {
+			glm::vec3(-10.0f,  10.0f, 10.0f),
+			glm::vec3(10.0f,  10.0f, 10.0f),
+			glm::vec3(-10.0f, -10.0f, 10.0f),
+			glm::vec3(10.0f, -10.0f, 10.0f),
+		};
+		glm::vec3 lightColors[] = {
+			glm::vec3(300.0f, 300.0f, 300.0f),
+			glm::vec3(300.0f, 300.0f, 300.0f),
+			glm::vec3(300.0f, 300.0f, 300.0f),
+			glm::vec3(300.0f, 300.0f, 300.0f)
+		};
+
+		ImGuiMaterialPanel::GetSlectedMaterial()->SetUniform("lightPositions", lightPositions);
+		ImGuiMaterialPanel::GetSlectedMaterial()->SetUniform("lightColors", lightColors);
 	}
 
 	void ForwardRenderer::Submit(const Ref<Model>& model)
@@ -83,7 +114,11 @@ namespace Crowny
 
 	void ForwardRenderer::SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform)
 	{
-
+		mesh->GetMaterialInstance()->Bind();
+		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ModelMatrix], &transform, sizeof(glm::mat4));
+		SetSystemUniforms(mesh->GetMaterialInstance()->GetMaterial()->GetShader());
+		mesh->GetVertexArray()->Bind();
+		RenderCommand::DrawIndexed(mesh->GetVertexArray(), DrawMode::TRIANGLE_STRIP, 0);
 	}
 
 	void ForwardRenderer::EndScene()

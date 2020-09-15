@@ -72,8 +72,8 @@ namespace Crowny
 	bool FileSystem::ReadFile(const std::string& path, void* buffer, int64_t size)
 	{
 		HANDLE file = OpenFileForReadingWin32(path);
-		if (file == INVALID_HANDLE_VALUE)
-			return false;
+		CW_ENGINE_ASSERT(file != INVALID_HANDLE_VALUE, path);
+
 		if (size < 0)
 		{
 			size = GetFileSizeWin32(file);
@@ -87,6 +87,8 @@ namespace Crowny
 	std::string FileSystem::ReadTextFile(const std::string& path)
 	{
 		HANDLE file = OpenFileForReadingWin32(path);
+		CW_ENGINE_ASSERT(file != INVALID_HANDLE_VALUE, path);
+
 		int64_t size = GetFileSizeWin32(file);
 		std::string res(size, 0);
 		bool success = ReadFileWin32(file, &res[0], size);
@@ -98,8 +100,7 @@ namespace Crowny
 	bool FileSystem::WriteFile(const std::string& path, byte* buffer)
 	{
 		HANDLE file = CreateFile(path.c_str(), GENERIC_WRITE, NULL, NULL, CREATE_NEW | OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		if (file == INVALID_HANDLE_VALUE)
-			return false;
+		CW_ENGINE_ASSERT(file != INVALID_HANDLE_VALUE, path);
 
 		int64_t size = GetFileSizeWin32(file);
 		DWORD written;

@@ -13,6 +13,11 @@ namespace Crowny
 	{
 		if (m_Projection == CameraProjection::Orthographic)
 			m_ProjectionMatrix = glm::ortho(0.0f, (float)width, (float)height, 0.0f);
+
+		if (m_Projection == CameraProjection::Perspective)
+		{
+			m_ProjectionMatrix = glm::perspective(glm::radians((float)m_Fov), (float)width / (float)height, m_ClippingPlanes.x, m_ClippingPlanes.y);
+		}
 	}
 
 	Camera::Camera()

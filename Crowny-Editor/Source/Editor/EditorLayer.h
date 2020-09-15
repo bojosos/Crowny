@@ -42,9 +42,8 @@ namespace Crowny
 		ImGuiMaterialPanel* m_MaterialEditor;
 
 		std::vector<ImGuiPanel*> m_ImGuiWindows;
-		Ref<Mesh> m_Test;
 		
 		Ref<Framebuffer> m_Framebuffer; // Maybe Viewport window should take care of this?
-		glm::vec2 m_ViewportSize = { 0.0f, 0.0f }; // and dis
+		glm::vec2 m_ViewportSize = { 1280.0f, 720.0f }; // and dis
 	};
 }

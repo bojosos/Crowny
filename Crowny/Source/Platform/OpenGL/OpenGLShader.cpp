@@ -255,8 +255,8 @@ namespace Crowny
 
 	void OpenGLShader::Parse(const std::string& vertSrc, const std::string& fragSrc)
 	{
-		m_VSUniformBuffers.push_back(new OpenGLUniformBufferDeclaration("Global", 0));
-		m_FSUniformBuffers.push_back(new OpenGLUniformBufferDeclaration("Global", 1));
+		m_VSUniformBuffers.push_back(new OpenGLUniformBufferDeclaration("Global", GL_VERTEX_SHADER));
+		m_FSUniformBuffers.push_back(new OpenGLUniformBufferDeclaration("Global", GL_FRAGMENT_SHADER));
 
 		const char* token;
 		const char* vstr = vertSrc.c_str();;
@@ -596,7 +596,7 @@ namespace Crowny
 
 	void OpenGLShader::SetFSUserUniformBuffer(byte* data, uint32_t size)
 	{
-		ResolveAndSetUniforms(m_VSUserUniformBuffer, data, size);
+		ResolveAndSetUniforms(m_FSUserUniformBuffer, data, size);
 	}
 
 	void OpenGLShader::ResolveAndSetUniforms(ShaderUniformBufferDeclaration* buff, byte* data, uint32_t size)

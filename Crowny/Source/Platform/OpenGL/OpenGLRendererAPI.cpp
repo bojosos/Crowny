@@ -1,4 +1,5 @@
 #include "cwpch.h"
+
 #include "OpenGLRendererAPI.h"
 
 #include <glad/glad.h>
@@ -22,8 +23,8 @@ namespace Crowny
 	void OpenGLRendererAPI::Init()
 	{
 		glEnable(GL_MULTISAMPLE); // TODO: Sample 
-		//glEnable(GL_DEPTH_TEST);
-		//glDepthFunc(GL_LESS);
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LESS);
 
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -54,10 +55,19 @@ namespace Crowny
 		glClearColor(color.r, color.g, color.b, color.a);
 	}
 
-	void OpenGLRendererAPI::DrawIndexed(const Ref<VertexArray>& vertexArray, uint32_t indexCount)
+	static uint32_t DrawModeToOpenGLMode(DrawMode mode)
+	{
+		switch (mode)
+		{
+		case DrawMode::TRIANGLES:           return GL_TRIANGLES;
+		case DrawMode::TRIANGLE_STRIP:     return GL_TRIANGLE_STRIP;
+		}
+	}
+
+	void OpenGLRendererAPI::DrawIndexed(const Ref<VertexArray>& vertexArray, DrawMode drawMode, uint32_t indexCount)
 	{
 		uint32_t count = indexCount ? indexCount : vertexArray->GetIndexBuffer()->GetCount();
-		glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, nullptr);
+		glDrawElements(DrawModeToOpenGLMode(drawMode), count, GL_UNSIGNED_INT, nullptr);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 }

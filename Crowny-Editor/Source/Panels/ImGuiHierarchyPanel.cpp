@@ -47,31 +47,26 @@ namespace Crowny
 			{
 				if (ImGui::Selectable("New Entity"))
 				{
-					m_NewEntityParent = &e;
+					m_NewEntityParent = e;
 				}
 				
 				if (ImGui::Selectable("Delete"))
 				{
+					auto& rr = e.GetParent().GetComponent<RelationshipComponent>().Children;
+					for (int i = 0; i < rr.size(); i++)
+					{
+						if (rr[i] == ImGuiHierarchyPanel::s_SelectedEntity)
+						{
+							rr[i].Destroy();
+							rr.erase(rr.begin() + i);
+							break;
+						}
+					}
 					e.Destroy();
 					ImGuiHierarchyPanel::s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
 				}
 
 				ImGui::EndPopup();
-			}
-
-			if (Input::IsKeyPressed(Key::Delete))
-			{
-				for (int i = 0; i < rc.Children.size(); i++)
-				{
-					if (rc.Children[i] == ImGuiHierarchyPanel::s_SelectedEntity)
-					{
-						rc.Children[i].Destroy();
-						rc.Children.erase(rc.Children.begin() + i);
-						break;
-					}
-				}
-
-				ImGuiHierarchyPanel::s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
 			}
 
 			if (open)
@@ -83,7 +78,11 @@ namespace Crowny
 						if (m_SelectedItems.find(e) == m_SelectedItems.end())
 							m_SelectedItems.insert(e);
 						else
+						{
 							m_SelectedItems.erase(e);
+							if (m_SelectedItems.empty())
+								s_SelectedEntity = {};
+						}
 					}
 					else
 					{
@@ -112,7 +111,11 @@ namespace Crowny
 					if (m_SelectedItems.find(e) == m_SelectedItems.end())
 						m_SelectedItems.insert(e);
 					else
+					{
 						m_SelectedItems.erase(e);
+						if (m_SelectedItems.empty())
+							s_SelectedEntity = {};
+					}
 				}
 				else
 				{
@@ -121,37 +124,49 @@ namespace Crowny
 					ImGuiHierarchyPanel::s_SelectedEntity = e;
 				}
 			}
-			
-			if (Input::IsKeyPressed(Key::Delete))
-			{
-				for (int i = 0; i < rc.Children.size(); i++)
-				{
-					if (rc.Children[i] == ImGuiHierarchyPanel::s_SelectedEntity)
-					{
-						rc.Children[i].Destroy();
-						rc.Children.erase(rc.Children.begin() + i);
-						break;
-					}
-				}
-
-				ImGuiHierarchyPanel::s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
-			}
 
 			if (ImGui::BeginPopupContextItem())
 			{
 				if (ImGui::Selectable("New Entity"))
 				{
-					m_NewEntityParent = &e;
+					m_NewEntityParent = e;
 				}
 
 				if (ImGui::Selectable("Delete"))
 				{
+					auto& rr = e.GetParent().GetComponent<RelationshipComponent>().Children;
+					for (int i = 0; i < rr.size(); i++)
+					{
+						if (rr[i] == ImGuiHierarchyPanel::s_SelectedEntity)
+						{
+							rr[i].Destroy();
+							rr.erase(rr.begin() + i);
+							break;
+						}
+					}
+
 					e.Destroy();
 					ImGuiHierarchyPanel::s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
 				}
 
 				ImGui::EndPopup();
 			}
+		}
+
+		if (Input::IsKeyPressed(Key::Delete))
+		{
+			auto& rr = s_SelectedEntity.GetParent().GetComponent<RelationshipComponent>().Children;
+			for (int i = 0; i < rr.size(); i++)
+			{
+				if (rr[i] == ImGuiHierarchyPanel::s_SelectedEntity)
+				{
+					rr[i].Destroy();
+					rr.erase(rr.begin() + i);
+					break;
+				}
+			}
+
+			ImGuiHierarchyPanel::s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
 		}
 
 		ImGui::PopID();
@@ -161,8 +176,10 @@ namespace Crowny
 	{
 		if (m_NewEntityParent)
 		{
-			ImGuiHierarchyPanel::s_SelectedEntity = m_NewEntityParent->AddChild("New Entity");
-			m_NewEntityParent = nullptr;
+			ImGuiHierarchyPanel::s_SelectedEntity = m_NewEntityParent.AddChild("New Entity");
+			m_SelectedItems.clear();
+			m_SelectedItems.insert(ImGuiHierarchyPanel::s_SelectedEntity);
+			m_NewEntityParent = {};
 		}
 	}
 
@@ -174,7 +191,7 @@ namespace Crowny
 		{
 			if (ImGui::Selectable("New Entity"))
 			{
-				m_NewEntityParent = &activeScene->GetRootEntity();
+				m_NewEntityParent = activeScene->GetRootEntity();
 			}
 			ImGui::EndPopup();
 		}

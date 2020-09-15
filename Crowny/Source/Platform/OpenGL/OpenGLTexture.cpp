@@ -37,6 +37,7 @@ namespace Crowny
 		{
 		case Crowny::TextureFormat::RGB:     return GL_RGB;
 		case Crowny::TextureFormat::RGBA:    return GL_RGBA;
+		case Crowny::TextureFormat::RED:     return GL_RED;
 		}
 		CW_ENGINE_ASSERT(false, "Unknown TextureFormat!");
 		return GL_NONE;
@@ -48,6 +49,7 @@ namespace Crowny
 		{
 		case Crowny::TextureFormat::RGB:     return GL_RGB8;
 		case Crowny::TextureFormat::RGBA:    return GL_RGBA8;
+		case Crowny::TextureFormat::RED:     return GL_R8;
 		}
 		CW_ENGINE_ASSERT(false, "Unknown TextureFormat!");
 		return GL_NONE;
@@ -181,6 +183,10 @@ namespace Crowny
 		{
 			m_Parameters.Format = TextureFormat::RGB;
 		}
+		else if (channels == 1)
+		{
+			m_Parameters.Format = TextureFormat::RED;
+		}
 
 #ifdef MC_WEB
 		glGenTextures(1, &m_RendererID);
@@ -197,7 +203,7 @@ namespace Crowny
 #else
 		glCreateTextures(GL_TEXTURE_2D, 1, &m_RendererID);
 		glTextureStorage2D(m_RendererID, 1, TextureFormatToOpenGLInternalFormat(m_Parameters.Format), m_Width, m_Height);
-
+		
 		glTextureParameteri(m_RendererID, GL_TEXTURE_MIN_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter));
 		glTextureParameteri(m_RendererID, GL_TEXTURE_MAG_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter));
 

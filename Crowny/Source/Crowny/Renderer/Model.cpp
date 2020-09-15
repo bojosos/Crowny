@@ -33,13 +33,6 @@ namespace Crowny
 		}
 	}
 
-	struct Vertex
-	{
-		glm::vec3 Position;
-		glm::vec2 Uv;
-		glm::vec3 Normal;
-	};
-
 	Ref<Mesh> Model::ProcessMesh(aiMesh* mesh, const aiScene* scene)
 	{
 		Ref<VertexArray> vao = VertexArray::Create();
@@ -82,7 +75,7 @@ namespace Crowny
 		vao->AddVertexBuffer(vbo);
 		vao->SetIndexBuffer(ibo);
 
-		return CreateRef<Mesh>(vao, ibo, ImGuiMaterialPanel::GetSlectedMaterial());
+		return CreateRef<Mesh>(vao, ibo);
 	}
 
 	std::vector<Ref<Texture2D>> Model::LoadMaterialTextures(aiMaterial* material, aiTextureType type, const std::string& typeName)

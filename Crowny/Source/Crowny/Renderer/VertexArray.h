@@ -6,6 +6,14 @@
 
 namespace Crowny
 {
+
+	enum class DrawMode
+	{
+		TRIANGLES,
+		TRIANGLE_STRIP
+	};
+
+
 	class VertexArray
 	{
 	public:

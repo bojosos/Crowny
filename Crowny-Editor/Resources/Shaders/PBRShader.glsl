@@ -8,18 +8,22 @@ layout (location = 2) in vec3 aNormal;
 out vec2 TexCoords;
 out vec3 WorldPos;
 out vec3 Normal;
+out vec3 camPos;
 
-uniform mat4 projection;
-uniform mat4 view;
-uniform mat4 model;
+uniform mat4 cw_projection;
+uniform mat4 cw_view;
+uniform mat4 cw_model;
+uniform vec3 cw_CamPos;
 
 void main()
 {
     TexCoords = aTexCoords;
-    WorldPos = vec3(model * vec4(aPos, 1.0));
-    Normal = mat3(model) * aNormal;   
+    WorldPos = vec3(cw_model * vec4(aPos, 1.0));
+    Normal = mat3(cw_model) * aNormal;   
 
-    gl_Position =  projection * view * vec4(WorldPos, 1.0);
+	camPos = cw_CamPos;
+
+    gl_Position =  cw_projection * cw_view * vec4(WorldPos, 1.0);
 }
 
 #type fragment
@@ -28,6 +32,7 @@ out vec4 FragColor;
 in vec2 TexCoords;
 in vec3 WorldPos;
 in vec3 Normal;
+in vec3 camPos;
 
 // material parameters
 uniform sampler2D u_AlbedoMap;
@@ -36,15 +41,9 @@ uniform sampler2D u_MetalnessMap;
 uniform sampler2D u_RoughnessMap;
 uniform sampler2D u_AoMap;
 
-uniform vec4 u_AlbedoColor;
-uniform float u_Metalness;
-uniform float u_Roughness;
-
 // lights
 uniform vec3 lightPositions[4];
 uniform vec3 lightColors[4];
-
-uniform vec3 camPos;
 
 const float PI = 3.14159265359;
 // ----------------------------------------------------------------------------
@@ -111,9 +110,9 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 // ----------------------------------------------------------------------------
 void main()
 {		
-    vec3 albedo     = pow(texture(u_AlbedoMap, TexCoords).rgb * u_AlbedoColor, vec3(2.2));
-    float metallic  = texture(u_MetalnessMap, TexCoords).r * u_Metalness;
-    float roughness = texture(u_RoughnessMap, TexCoords).r * u_Roughness;
+    vec3 albedo     = pow(texture(u_AlbedoMap, TexCoords).rgb, vec3(2.2));
+    float metallic  = texture(u_MetalnessMap, TexCoords).r;
+    float roughness = texture(u_RoughnessMap, TexCoords).r;
     float ao        = texture(u_AoMap, TexCoords).r;
 
     vec3 N = getNormalFromMap();

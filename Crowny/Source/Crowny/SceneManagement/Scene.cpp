@@ -6,6 +6,7 @@
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Renderer/RenderCommand.h"
+#include "Crowny/Renderer/ForwardRenderer.h"
 
 #include <entt/entt.hpp>
 
@@ -54,6 +55,21 @@ namespace Crowny
 				}
 
 				Renderer2D::End();
+
+				ForwardRenderer::Begin();
+				Camera cam(glm::perspective(glm::radians(45.0f), (float)1280 / (float)720, 0.1f, 1000.0f));
+				ForwardRenderer::BeginScene(&cc.Camera, tc.Transform);
+				ForwardRenderer::SubmitLightSetup();
+				auto objs = m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
+				for (auto obj : objs)
+				{
+					auto& [transform, mesh] = m_Registry.get<TransformComponent, MeshRendererComponent>(obj);
+					mesh.Mesh->SetMaterialInstnace(CreateRef<MaterialInstance>(ImGuiMaterialPanel::GetSlectedMaterial()));
+					ForwardRenderer::SubmitMesh(mesh.Mesh, transform);
+				}
+				ForwardRenderer::Flush();
+				ForwardRenderer::EndScene();
+				ForwardRenderer::End();
 			});
 	}
 

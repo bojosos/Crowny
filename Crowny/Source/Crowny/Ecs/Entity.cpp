@@ -32,6 +32,11 @@ namespace Crowny
 		return (uint32_t)GetComponent<RelationshipComponent>().Children.size();
 	}
 
+	Entity Entity::GetParent()
+	{
+		return GetComponent<RelationshipComponent>().Parent;
+	}
+
 	void Entity::Destroy()
 	{
 		m_Scene->m_Registry.destroy(m_EntityHandle);

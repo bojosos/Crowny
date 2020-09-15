@@ -12,6 +12,7 @@ namespace Crowny
 		virtual void SetClearColor(const glm::vec4& color) override; // TODO: Replace with color
 		virtual void Clear() override;
 
-		virtual void DrawIndexed(const Ref<VertexArray>& vertexArray, uint32_t undexCount = 0) override;
+		virtual void DrawIndexed(const Ref<VertexArray>& vertexArray, DrawMode drawMode, uint32_t indexCount) override;
+
 	};
 }

@@ -8,12 +8,12 @@ namespace Crowny
 	{
 		//SetUniform("u_UsingNormalMap", 0.0f);
 		//SetUniform("u_UsingAlbedoMap", 0.0f);
-		SetUniform("u_AlbedoColor", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+		//SetUniform("u_AlbedoColor", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
 
-		SetUniform("u_Metalness", 0.8f);
+		//SetUniform("u_Metalness", 0.8f);
 		//SetUniform("u_UsingMetalness", 0.0f);
 
-		SetUniform("u_Roughness", 0.2f);
+		//SetUniform("u_Roughness", 0.2f);
 		//SetUniform("u_UsingRoughnessMap", 0.0f);
 
 		//SetUniform("u_UsingNormalMap", 0.0f);
@@ -38,7 +38,7 @@ namespace Crowny
 
 	void PBRMaterial::SetRougness(float value)
 	{
-		SetUniform("u_Rougness", value);
+		SetUniform("u_Roughness", value);
 		//SetUniform("u_UsingRougnessMap", 0.0f);
 	}
 
@@ -50,7 +50,7 @@ namespace Crowny
 	void PBRMaterial::SetAlbedoMap(const Ref<Texture2D>& texture)
 	{
 		SetTexture("u_AlbedoMap", texture);
-		SetUniform("u_UsingAlbedoMap", 1.0f);
+		//SetUniform("u_UsingAlbedoMap", 1.0f);
 	}
 
 	void PBRMaterial::SetMetalnessMap(const Ref<Texture2D>& texture)
@@ -67,7 +67,7 @@ namespace Crowny
 
 	void PBRMaterial::SetRougnessMap(const Ref<Texture2D>& texture)
 	{
-		SetTexture("u_RougnessMap", texture);
+		SetTexture("u_RoughnessMap", texture);
 		//SetUniform("u_UsingRougnessMap", 1.0f);
 	}
 

@@ -6,12 +6,8 @@ namespace Crowny
 {
 	Material::Material(const Ref<Shader>& shader) : m_Shader(shader)
 	{
-
-	}
-
-	MaterialInstance::MaterialInstance(const Ref<Material>& material) : m_Material(material)
-	{
-
+		AllocateStorage();
+		m_Resources = &shader->GetResources();
 	}
 
 	void Material::AllocateStorage()
@@ -48,6 +44,11 @@ namespace Crowny
 	{
 		m_Shader->Bind();
 
+		if (m_VSUserUniformBuffer)
+			m_Shader->SetVSUserUniformBuffer(m_VSUserUniformBuffer, m_VSUserUniformBufferSize);
+		if (m_PSUserUniformBuffer)
+			m_Shader->SetFSUserUniformBuffer(m_PSUserUniformBuffer, m_PSUserUniformBufferSize);
+
 		for (uint32_t i = 0; i < m_Textures.size(); i++)
 		{
 			if (m_Textures[i])
@@ -64,15 +65,11 @@ namespace Crowny
 		}
 	}
 
-	void MaterialInstance::Bind()
+	void Material::SetUniformData(const std::string& name, byte* data)
 	{
-		m_Material->Bind();
-
-		for (uint32_t i = 0; i < m_Textures.size(); i++)
-		{
-			if (m_Textures[i])
-				m_Textures[i]->Bind(i);
-		}
+		byte* buf;
+		ShaderUniformDeclaration* decl = FindUniformDeclaration(name, &buf);
+		memcpy(buf + decl->GetOffset(), data, decl->GetSize());
 	}
 
 	void Material::SetTexture(const std::string& name, const Ref<Texture2D>& texture)
@@ -122,13 +119,120 @@ namespace Crowny
 		return nullptr;
 	}
 
+	MaterialInstance::MaterialInstance(const Ref<Material>& material) : m_Material(material)
+	{
+		m_VSUserUniformBuffer = nullptr;
+		m_PSUserUniformBuffer = nullptr;
+		AllocateStorage();
+		if (m_VSUserUniformBuffer)
+			memcpy(m_VSUserUniformBuffer, m_Material->m_VSUserUniformBuffer, m_VSUserUniformBufferSize);
+		if (m_PSUserUniformBuffer)
+			memcpy(m_PSUserUniformBuffer, m_Material->m_PSUserUniformBuffer, m_PSUserUniformBufferSize);
+		
+		m_Resources = &m_Material->GetShader()->GetResources();
+	}
+
+	void MaterialInstance::AllocateStorage()
+	{
+		const ShaderUniformBufferDeclaration* vsbuff = m_Material->m_Shader->GetVSUserUniformBuffer();
+		if (vsbuff)
+		{
+			m_VSUserUniformBufferSize = vsbuff->GetSize();
+			m_VSUserUniformBuffer = new byte[m_VSUserUniformBufferSize];
+			m_VSUseUniforms = &vsbuff->GetUniformDeclarations();
+		}
+
+		const ShaderUniformBufferDeclaration* fsbuff = m_Material->m_Shader->GetFSUserUniformBuffer();
+		if (fsbuff)
+		{
+			m_PSUserUniformBufferSize = fsbuff->GetSize();
+			m_PSUserUniformBuffer = new byte[m_PSUserUniformBufferSize];
+			m_PSUseUniforms = &fsbuff->GetUniformDeclarations();
+		}
+	}
+
+	void MaterialInstance::Bind()
+	{
+		m_Material->Bind();
+
+		if (m_VSUserUniformBuffer)
+			m_Material->m_Shader->SetVSUserUniformBuffer(m_VSUserUniformBuffer, m_VSUserUniformBufferSize);
+		if (m_PSUserUniformBuffer)
+			m_Material->m_Shader->SetFSUserUniformBuffer(m_PSUserUniformBuffer, m_PSUserUniformBufferSize);
+
+		for (uint32_t i = 0; i < m_Textures.size(); i++)
+		{
+			if (m_Textures[i])
+				m_Textures[i]->Bind(i);
+		}
+	}
+
+
 	void MaterialInstance::Unbind()
 	{
 		m_Material->Unbind();
+
 		for (uint32_t i = 0; i < m_Textures.size(); i++)
 		{
 			if (m_Textures[i])
 				m_Textures[i]->Unbind(i);
 		}
+	}
+	
+	void MaterialInstance::SetUniformData(const std::string& name, byte* data)
+	{
+		byte* buff;
+		ShaderUniformDeclaration* decl = FindUniformDeclaration(name, &buff);
+		CW_ENGINE_ASSERT(buff, "");
+		memcpy(buff + decl->GetOffset(), data, decl->GetSize());
+	}
+
+	void MaterialInstance::SetTexture(const std::string& name, const Ref<Texture2D>& texture)
+	{
+		ShaderResourceDeclaration* decl = FindResourceDeclaration(name);
+		uint32_t slot = decl->GetRegister();
+		if (m_Textures.size() <= slot)
+			m_Textures.resize(slot + 1);
+		m_Textures[slot] = texture;
+	}
+
+	ShaderUniformDeclaration* MaterialInstance::FindUniformDeclaration(const std::string& name, byte** outBuffer)
+	{
+		if (m_VSUseUniforms)
+		{
+			for (ShaderUniformDeclaration* uniform : *m_VSUseUniforms)
+			{
+				if (uniform->GetName() == name)
+				{
+					*outBuffer = m_VSUserUniformBuffer;
+					return uniform;
+				}
+			}
+		}
+
+		if (m_PSUseUniforms)
+		{
+			for (ShaderUniformDeclaration* uniform : *m_PSUseUniforms)
+			{
+				if (uniform->GetName() == name)
+				{
+					*outBuffer = m_PSUserUniformBuffer;
+					return uniform;
+				}
+			}
+		}
+
+		return nullptr;
+	}
+
+	ShaderResourceDeclaration* MaterialInstance::FindResourceDeclaration(const std::string& name)
+	{
+		for (ShaderResourceDeclaration* resource : *m_Resources)
+		{
+			if (resource->GetName() == name)
+				return resource;
+		}
+
+		return nullptr;
 	}
 }

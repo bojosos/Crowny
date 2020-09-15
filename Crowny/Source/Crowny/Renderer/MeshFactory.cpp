@@ -79,9 +79,9 @@ namespace Crowny
 		std::vector<uint32_t> indices;
 
 		const float PI = 3.14159265359;
-		for (uint32_t y = 0; y <= ySegments; ++y)
+		for (uint32_t y = 0; y <= ySegments; y++)
 		{
-			for (uint32_t x = 0; x <= xSegments; ++x)
+			for (uint32_t x = 0; x <= xSegments; x++)
 			{
 				float xSegment = (float)x / (float)xSegments;
 				float ySegment = (float)y / (float)ySegments;
@@ -96,11 +96,11 @@ namespace Crowny
 		}
 
 		bool oddRow = false;
-		for (uint32_t y = 0; y < ySegments; ++y)
+		for (uint32_t y = 0; y < ySegments; y++)
 		{
 			if (!oddRow) // even rows: y == 0, y == 2; and so on
 			{
-				for (unsigned int x = 0; x <= xSegments; ++x)
+				for (uint32_t x = 0; x <= xSegments; x++)
 				{
 					indices.push_back(y * (xSegments + 1) + x);
 					indices.push_back((y + 1) * (xSegments + 1) + x);
@@ -108,7 +108,7 @@ namespace Crowny
 			}
 			else
 			{
-				for (int x = xSegments; x >= 0; --x)
+				for (int32_t x = xSegments; x >= 0; x--)
 				{
 					indices.push_back((y + 1) * (xSegments + 1) + x);
 					indices.push_back(y * (xSegments + 1) + x);
@@ -118,7 +118,7 @@ namespace Crowny
 		}
 
 		std::vector<float> data;
-		for (std::size_t i = 0; i < positions.size(); ++i)
+		for (std::size_t i = 0; i < positions.size(); i++)
 		{
 			data.push_back(positions[i].x);
 			data.push_back(positions[i].y);
@@ -143,5 +143,8 @@ namespace Crowny
 			           { ShaderDataType::Float2, "Uv" },
 					   { ShaderDataType::Float3, "Normals" }
 					  });
+		vao->AddVertexBuffer(vbo);
+		vao->SetIndexBuffer(ibo);
+		return CreateRef<Mesh>(vao, ibo);
 	}
 }
