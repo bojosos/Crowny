@@ -1,18 +1,11 @@
-[00:01:31] [warning] CROWNY: Creating Window: Crowny Editor
-[00:02:30] [info] CROWNY: Loaded texture /Textures/Unassigned.png
-[00:02:30] [info] CROWNY: Loaded texture /Textures/Unassigned.png, 608x608x3.
-[00:02:31] [info] CROWNY: Loaded texture /Textures/rustediron2_basecolor.png
-[00:02:32] [info] CROWNY: Loaded texture /Textures/rustediron2_basecolor.png, 2048x2048x4.
-[00:02:32] [info] CROWNY: Loaded texture /Textures/rustediron2_metallic.png
-[00:02:33] [info] CROWNY: Loaded texture /Textures/rustediron2_metallic.png, 2048x2048x1.
-[00:02:33] [info] CROWNY: Loaded texture /Textures/rustediron2_normal.png
-[00:02:34] [info] CROWNY: Loaded texture /Textures/rustediron2_normal.png, 2048x2048x3.
-[00:02:34] [info] CROWNY: Loaded texture /Textures/rustediron2_roughness.png
-[00:02:34] [info] CROWNY: Loaded texture /Textures/rustediron2_roughness.png, 2048x2048x1.
-[00:04:43] [info] CROWNY: Loaded texture C:\dev\C++\Crowny\Crowny-Editor\Resources\Textures\rustediron2_normal.png
-[00:04:44] [info] CROWNY: Loaded texture C:\dev\C++\Crowny\Crowny-Editor\Resources\Textures\rustediron2_normal.png, 2048x2048x3.
-[00:04:48] [info] CROWNY: Loaded texture C:\dev\C++\Crowny\Crowny-Editor\Resources\Textures\rustediron2_metallic.png
-[00:04:49] [info] CROWNY: Loaded texture C:\dev\C++\Crowny\Crowny-Editor\Resources\Textures\rustediron2_metallic.png, 2048x2048x1.
-[00:04:51] [info] CROWNY: Loaded texture C:\dev\C++\Crowny\Crowny-Editor\Resources\Textures\rustediron2_roughness.png
-[00:04:51] [info] CROWNY: Loaded texture C:\dev\C++\Crowny\Crowny-Editor\Resources\Textures\rustediron2_roughness.png, 2048x2048x1.
-[00:06:33] [error] CROWNY: Assertion Failed: Could not find uniform with name u_Roughness!
+[14:38:16] [warning] CROWNY: Creating Window: Crowny Editor
+[14:38:30] [info] CROWNY: Loaded texture /Textures/Unassigned.png
+[14:38:30] [info] CROWNY: Loaded texture /Textures/Unassigned.png, 608x608x3.
+[14:38:31] [info] CROWNY: Loaded texture /Textures/rustediron2_basecolor.png
+[14:38:31] [info] CROWNY: Loaded texture /Textures/rustediron2_basecolor.png, 2048x2048x4.
+[14:38:31] [info] CROWNY: Loaded texture /Textures/rustediron2_metallic.png
+[14:38:32] [info] CROWNY: Loaded texture /Textures/rustediron2_metallic.png, 2048x2048x1.
+[14:38:32] [info] CROWNY: Loaded texture /Textures/rustediron2_normal.png
+[14:38:32] [info] CROWNY: Loaded texture /Textures/rustediron2_normal.png, 2048x2048x3.
+[14:38:32] [info] CROWNY: Loaded texture /Textures/rustediron2_roughness.png
+[14:38:32] [info] CROWNY: Loaded texture /Textures/rustediron2_roughness.png, 2048x2048x1.

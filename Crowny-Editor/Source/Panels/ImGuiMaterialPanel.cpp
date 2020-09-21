@@ -41,10 +41,16 @@ namespace Crowny
 					}
 				}
 
-				//ImGui::Checkbox(s_SelectedMaterial->UseAlbedo);
-				static glm::vec4 color = { 0.0f, 0.0f, 0.0f, 1.0f };
+				static glm::vec4 color = glm::vec4(1.0f);
 				if (ImGui::ColorEdit4("Color", glm::value_ptr(color), ImGuiColorEditFlags_NoInputs))
 					s_SelectedMaterial->SetAlbedo(color);
+
+				if (ImGui::Button("Reset##resetAlbedo"))
+				{
+					s_SelectedMaterial->SetAlbedoMap(nullptr);
+					s_SelectedMaterial->SetAlbedo(glm::vec4(1.0f));
+					color = glm::vec4(1.0f);
+				}
 			}
 
 			if (ImGui::CollapsingHeader("Metalness", ImGuiTreeNodeFlags_DefaultOpen))
@@ -64,11 +70,17 @@ namespace Crowny
 					}
 				}
 
-				//ImGui::Checkbox(s_SelectedMaterial->UseSpecular);
 				static float metalnessVal = 0.8f;
-				if (ImGui::SliderFloat("metalnessValue##Metalness", &metalnessVal, 0.0f, 1.0f))
+				if (ImGui::SliderFloat("Metalness##metalnessValue", &metalnessVal, 0.0f, 1.0f))
 				{
 					s_SelectedMaterial->SetMetalness(metalnessVal);
+				}
+
+				if (ImGui::Button("Reset##resetMetalness"))
+				{
+					metalnessVal = 0.8f;
+					s_SelectedMaterial->SetMetalnessMap(nullptr);
+					s_SelectedMaterial->SetMetalness(0.8);
 				}
 			}
 
@@ -88,7 +100,10 @@ namespace Crowny
 						s_SelectedMaterial->SetNormalMap(Texture2D::Create(path));
 					}
 				}
-				//ImGui::Checkbox(s_SelectedMaterial->UseSpecular);
+				if (ImGui::Button("Reset##resetNormal"))
+				{
+					s_SelectedMaterial->SetNormalMap(nullptr);
+				}
 			}
 
 			if (ImGui::CollapsingHeader("Roughness", ImGuiTreeNodeFlags_DefaultOpen))
@@ -104,14 +119,20 @@ namespace Crowny
 					auto [res, path] = FileSystem::OpenFileDialog("Image files\0*.jpg;*.png\0", "", "Open Image");
 					if (res)
 					{
-						s_SelectedMaterial->SetRougnessMap(Texture2D::Create(path));
+						s_SelectedMaterial->SetRoughnessMap(Texture2D::Create(path));
 					}
 				}
 
 				static float roughnessValue = 0.2f;
 				if (ImGui::SliderFloat("rougnessValue##Roughness", &roughnessValue, 0.0f, 1.0f))
-					s_SelectedMaterial->SetRougness(roughnessValue);
+					s_SelectedMaterial->SetRoughness(roughnessValue);
 
+				if (ImGui::Button("Reset##resetRoughness"))
+				{
+					roughnessValue = 0.2f;
+					s_SelectedMaterial->SetRoughnessMap(nullptr);
+					s_SelectedMaterial->SetRoughness(0.2f);
+				}
 			}
 
 			if (ImGui::CollapsingHeader("Ao Map", ImGuiTreeNodeFlags_DefaultOpen))

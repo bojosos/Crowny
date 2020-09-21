@@ -8,7 +8,7 @@ namespace Crowny
 	class Material
 	{
 	protected:
-		std::vector<Ref<Texture2D>> m_Textures;
+		std::vector<Ref<Texture>> m_Textures;
 
 		Ref<Shader> m_Shader;
 		byte* m_VSUserUniformBuffer;
@@ -41,7 +41,7 @@ namespace Crowny
 		}
 
 		void SetUniformData(const std::string& name, byte* data);
-		void SetTexture(const std::string& name, const Ref<Texture2D>& texture);
+		void SetTexture(const std::string& name, const Ref<Texture>& texture);
 
 		Ref<Shader> GetShader() { return m_Shader; }
 
@@ -67,7 +67,7 @@ namespace Crowny
 	{
 	private:
 		Ref<Material> m_Material;
-		std::vector<Ref<Texture2D>> m_Textures;
+		std::vector<Ref<Texture>> m_Textures;
 
 		byte* m_VSUserUniformBuffer;
 		uint32_t m_VSUserUniformBufferSize;
@@ -86,7 +86,7 @@ namespace Crowny
 		void Bind();
 		void Unbind();
 		void SetUniformData(const std::string& name, byte* data);
-		void SetTexture(const std::string& name, const Ref<Texture2D>& texture);
+		void SetTexture(const std::string& name, const Ref<Texture>& texture);
 
 		template<typename T>
 		void SetUniform(const std::string& name, const T& data)

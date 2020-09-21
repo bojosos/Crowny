@@ -33,6 +33,7 @@ IncludeDir["glm"] = "Crowny/Dependencies/glm"
 IncludeDir["entt"] = "Crowny/Dependencies/entt/single_include"
 IncludeDir["stb_image"] = "Crowny/Dependencies/stb_image"
 IncludeDir["assimp"] = "Crowny/Dependencies/assimp/include"
+IncludeDir["mono"] = "Crowny/Dependencies/mono/include/mono-2.0"
 
 group "Dependencies"
 	include "Crowny/Dependencies/glfw"
@@ -67,7 +68,7 @@ project "Crowny"
 		"%{prj.name}/Dependencies/glm/glm/**.hpp",
 		"%{prj.name}/Dependencies/glm/glm/**.inl",
 		"%{prj.name}/Dependencies/entt/single_include/entt/entt.hpp",
-		"%{prj.name}/res/**"
+		"%{prj.name}/Resources/**"
 	}
 
 	defines
@@ -87,14 +88,17 @@ project "Crowny"
 		"%{IncludeDir.imgui}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.stb_image}",
-		"%{IncludeDir.assimp}"
+		"%{IncludeDir.assimp}",
+		"%{IncludeDir.mono}"
 	}
 
 	links 
 	{
 		"imgui",
 		"freetype-gl",
-		"assimp"
+		"assimp",
+		"Crowny/Dependencies/mono/lib/libmono-static-sgen.lib",
+		"Crowny/Dependencies/mono/lib/mono-2.0-sgen.lib"
 	}
 
 	filter { "platforms:Win64" }
@@ -190,7 +194,8 @@ project "Crowny-Editor"
 		"%{IncludeDir.imgui}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.entt}",
-		"%{IncludeDir.assimp}"
+		"%{IncludeDir.assimp}",
+		"%{IncludeDir.mono}"
 	}
 
 	links

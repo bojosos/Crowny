@@ -10,6 +10,8 @@
 #include "Panels/ImGuiInspectorPanel.h"
 #include "Panels/ImGuiMaterialPanel.h"
 
+#include "Crowny/Scripting/CWMonoClass.h"
+
 #include <entt/entt.hpp>
 #include <Crowny.h>
 
@@ -40,6 +42,8 @@ namespace Crowny
 		ImGuiViewportPanel* m_ViewportPanel;
 		ImGuiTextureEditor* m_TextureEditor;
 		ImGuiMaterialPanel* m_MaterialEditor;
+
+		CWMonoClass* m_Class;
 
 		std::vector<ImGuiPanel*> m_ImGuiWindows;
 		

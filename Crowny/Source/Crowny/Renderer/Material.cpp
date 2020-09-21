@@ -72,7 +72,7 @@ namespace Crowny
 		memcpy(buf + decl->GetOffset(), data, decl->GetSize());
 	}
 
-	void Material::SetTexture(const std::string& name, const Ref<Texture2D>& texture)
+	void Material::SetTexture(const std::string& name, const Ref<Texture>& texture)
 	{
 		ShaderResourceDeclaration* declaration = FindResourceDeclaration(name);
 		CW_ENGINE_ASSERT(declaration, "");
@@ -187,7 +187,7 @@ namespace Crowny
 		memcpy(buff + decl->GetOffset(), data, decl->GetSize());
 	}
 
-	void MaterialInstance::SetTexture(const std::string& name, const Ref<Texture2D>& texture)
+	void MaterialInstance::SetTexture(const std::string& name, const Ref<Texture>& texture)
 	{
 		ShaderResourceDeclaration* decl = FindResourceDeclaration(name);
 		uint32_t slot = decl->GetRegister();

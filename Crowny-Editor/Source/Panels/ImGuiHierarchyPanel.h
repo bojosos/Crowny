@@ -28,6 +28,8 @@ namespace Crowny
 		void DisplayTree(Entity& e, uint32_t i = 0);
 		Entity m_NewEntityParent = {};
 
+		Entity m_Renaming = { };
+
 		std::unordered_set<Entity, Entity::EntityHasher> m_SelectedItems;
 	};
 }

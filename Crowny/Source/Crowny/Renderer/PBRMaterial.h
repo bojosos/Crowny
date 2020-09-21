@@ -17,12 +17,11 @@ namespace Crowny
 
 		void SetAlbedo(const glm::vec4& color);
 		void SetMetalness(float value);
-		void SetRougness(float value);
-		void UsingNormalMap(bool value);
+		void SetRoughness(float value);
 
 		void SetAlbedoMap(const Ref<Texture2D>& texture);
 		void SetMetalnessMap(const Ref<Texture2D>& texture);
-		void SetRougnessMap(const Ref<Texture2D>& texture);
+		void SetRoughnessMap(const Ref<Texture2D>& texture);
 		void SetNormalMap(const Ref<Texture2D>& texture);
 		void SetAoMap(const Ref<Texture2D>& texture);
 

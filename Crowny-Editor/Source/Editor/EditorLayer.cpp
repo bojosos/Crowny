@@ -8,6 +8,8 @@
 #include "Crowny/SceneManagement/SceneManager.h"
 #include "Crowny/Ecs/Components.h"
 
+#include "Crowny/Scripting/CWMonoRuntime.h"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -67,7 +69,7 @@ namespace Crowny
 		mat->SetAlbedoMap(Texture2D::Create("/Textures/rustediron2_basecolor.png"));
 		mat->SetMetalnessMap(Texture2D::Create("/Textures/rustediron2_metallic.png"));
 		mat->SetNormalMap(Texture2D::Create("/Textures/rustediron2_normal.png"));
-		mat->SetNormalMap(Texture2D::Create("/Textures/rustediron2_roughness.png"));
+		mat->SetRoughnessMap(Texture2D::Create("/Textures/rustediron2_roughness.png"));
 
 		ImGuiMaterialPanel::SetSelectedMaterial(mat);
 		//Ref<Model> model = CreateRef<Model>("Models/");
@@ -78,6 +80,10 @@ namespace Crowny
 		sphere.AddComponent<MeshRendererComponent>();
 		auto& cam = scene->CreateEntity("Camera");
 		cam.AddComponent<CameraComponent>();
+
+		CWMonoRuntime::Init("Crowny C# Runtime");
+		auto* assembly = CWMonoRuntime::LoadAssembly("Resources/Test.dll");
+		m_Class = assembly->GetClass("Test", "Test");
 	}
 
 	void EditorLayer::OnDetach()
@@ -155,6 +161,31 @@ namespace Crowny
 		m_GLInfoWindow->Render();
 		m_ViewportPanel->Render();
 		m_MaterialEditor->Render();
+
+		ImGui::Begin("Scripting test");
+
+		if (ImGui::TreeNode(m_Class->GetName().c_str()))
+		{
+			auto& fields = m_Class->GetFields();
+			for (auto* field : fields)
+			{
+				if (field)
+					if (ImGui::TreeNodeEx(field->GetFullDeclName().c_str()))
+						ImGui::TreePop();
+			}
+
+			auto& methods = m_Class->GetMethods();
+
+			for (auto* method : methods)
+			{
+				if (method)
+					if (ImGui::TreeNodeEx(method->GetFullDeclName().c_str()))
+						ImGui::TreePop();
+			}
+			ImGui::TreePop();
+		}
+
+		ImGui::End();
 
 		ImGui::End();
 	}

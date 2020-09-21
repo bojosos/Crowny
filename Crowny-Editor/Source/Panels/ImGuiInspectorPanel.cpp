@@ -18,6 +18,7 @@ namespace Crowny
 		m_ComponentEditor.RegisterComponent<MeshRendererComponent>("Mesh Filter");
 		m_ComponentEditor.RegisterComponent<TextComponent>("Text");
 		m_ComponentEditor.RegisterComponent<SpriteRendererComponent>("Sprite Renderer");
+		m_ComponentEditor.RegisterComponent<MonoScriptComponent>("C# Script");
 	}
 
 	void ImGuiInspectorPanel::Render()

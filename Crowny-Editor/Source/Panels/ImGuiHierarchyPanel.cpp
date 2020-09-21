@@ -8,6 +8,7 @@
 #include "Crowny/Input/Input.h"
 
 #include <imgui.h>
+#include <misc/cpp/imgui_stdlib.h>
 #include "Crowny/Input/KeyCodes.h"
 
 namespace Crowny
@@ -35,6 +36,26 @@ namespace Crowny
 
 		if (!rc.Children.empty())
 		{
+			if (m_Renaming == e)
+			{
+				if (ImGui::InputText("##renaming", &tc.Tag, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
+				{
+					m_Renaming = {};
+				}
+
+				if (ImGui::IsMouseClicked(0) && !ImGui::IsItemClicked())
+				{
+					m_Renaming = {};
+				}
+
+				for (auto& c : rc.Children)
+				{
+					DisplayTree(c, ++i);
+				}
+				ImGui::PopID();
+				return;
+			}
+			
 			bool open = ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | selected);
 
 			//if (ImGui::BeginDragDropSource()) {
@@ -102,6 +123,26 @@ namespace Crowny
 		}
 		else
 		{
+			if (m_Renaming == e)
+			{
+				if (ImGui::InputText("##renaming", &tc.Tag, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
+				{
+					m_Renaming = {};
+				}
+
+				if (ImGui::IsMouseClicked(0) && !ImGui::IsItemClicked())
+				{
+					m_Renaming = {};
+				}
+
+				for (auto& c : rc.Children)
+				{
+					DisplayTree(c, ++i);
+				}
+				ImGui::PopID();
+				return;
+			}
+
 			ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_NoTreePushOnOpen | selected | ImGuiTreeNodeFlags_Leaf);
 
 			if(ImGui::IsItemClicked())
@@ -181,6 +222,12 @@ namespace Crowny
 			m_SelectedItems.insert(ImGuiHierarchyPanel::s_SelectedEntity);
 			m_NewEntityParent = {};
 		}
+
+		if (Input::IsKeyPressed(Key::F2))
+		{
+			m_Renaming = s_SelectedEntity;
+		}
+
 	}
 
 	void ImGuiHierarchyPanel::Render()

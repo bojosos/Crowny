@@ -224,4 +224,37 @@ namespace Crowny
 		ImGui::Text("Path");
 	}
 
+	template <>
+	void ComponentEditorWidget<MonoScriptComponent>(Entity& e)
+	{
+		auto& script = e.GetComponent<MonoScriptComponent>();
+		ImGui::Columns(2);
+		ImGui::Text("Script"); ImGui::NextColumn();
+
+		if (ImGui::InputText("##scriptName", &script.Name))
+		{
+			script.Class = CWMonoRuntime::GetAssembly("")->GetClass(script.Name);
+		}
+
+		if (!script.Class)
+		{
+			ImGui::Columns(1);
+			return;
+		}
+		ImGui::NextColumn();
+
+		auto& fields = script.Class->GetFields();
+		for (auto* field : fields)
+		{
+			if (field)
+			{
+				ImGui::Text(field->GetName().c_str()); ImGui::NextColumn();
+				std::string temp = "test value";
+				field->GetValue();
+				ImGui::InputText(("##" + field->GetName()).c_str(), &temp);
+			}
+		}
+		ImGui::Columns(1);
+	}
+
 }

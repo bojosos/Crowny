@@ -9,6 +9,8 @@
 #include "Crowny/Renderer/MeshFactory.h"
 #include "../../Crowny-Editor/Source/Panels/ImGuiMaterialPanel.h"
 
+#include "Crowny/Scripting/CWMonoRuntime.h"
+
 #include "Crowny/Common/Color.h"
 #include "Crowny/Renderer/Camera.h"
 #include "Crowny/Ecs/Entity.h"
@@ -108,4 +110,21 @@ namespace Crowny
 		RelationshipComponent(const Entity& parent) : Parent(parent) { }
 	};
 
+	struct MonoScriptComponent
+	{
+		std::string Name;
+		CWMonoClass* Class = nullptr;
+		
+		MonoScriptComponent() = default;
+		MonoScriptComponent(const MonoScriptComponent&) = default;
+
+		MonoScriptComponent(const std::string& name)
+		{
+			Class = CWMonoRuntime::GetAssembly("")->GetClass(name);
+		}
+
+	};
+
+	template <>
+	void ComponentEditorWidget<MonoScriptComponent>(Entity& e);
 }
