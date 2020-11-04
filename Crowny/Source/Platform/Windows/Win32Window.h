@@ -1,3 +1,4 @@
+#if 0
 #pragma once
 
 #include "Crowny/Window/Window.h"
@@ -44,3 +45,4 @@ namespace Crowny
 		WindowData m_Data;
 	};
 }
+#endif

@@ -56,7 +56,7 @@ namespace Crowny
 				return;
 			}
 			
-			bool open = ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | selected);
+			bool open = ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_OpenOnDoubleClick | selected);
 
 			//if (ImGui::BeginDragDropSource()) {
 			//	ImGui::SetDragDropPayload("_TREENODE", nullptr, 0);
@@ -143,7 +143,7 @@ namespace Crowny
 				return;
 			}
 
-			ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_NoTreePushOnOpen | selected | ImGuiTreeNodeFlags_Leaf);
+			ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowItemOverlap | selected | ImGuiTreeNodeFlags_Leaf);
 
 			if(ImGui::IsItemClicked())
 			{

@@ -33,7 +33,10 @@ IncludeDir["glm"] = "Crowny/Dependencies/glm"
 IncludeDir["entt"] = "Crowny/Dependencies/entt/single_include"
 IncludeDir["stb_image"] = "Crowny/Dependencies/stb_image"
 IncludeDir["assimp"] = "Crowny/Dependencies/assimp/include"
-IncludeDir["mono"] = "Crowny/Dependencies/mono/include/mono-2.0"
+--TODO: fix this for different platforms
+--IncludeDir["mono"] = "Crowny/Dependencies/mono/include/mono-2.0"
+IncludeDir["mono"] = "/usr/lib/pkgconfig/../../include/mono-2.0"
+IncludeDir['vulkan'] = "Crowny/Dependencies/vulkan/include"
 
 group "Dependencies"
 	include "Crowny/Dependencies/glfw"
@@ -42,7 +45,6 @@ group "Dependencies"
 	include "Crowny/Dependencies/imgui"
 	include "Crowny/Dependencies/freetype2"
 	include "Crowny/Dependencies/assimp"
-
 group ""
 
 project "Crowny"
@@ -89,20 +91,26 @@ project "Crowny"
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.stb_image}",
 		"%{IncludeDir.assimp}",
-		"%{IncludeDir.mono}"
+		"%{IncludeDir.mono}",
+		"%{IncludeDir.vulkan}"
 	}
+
+	libdirs { "/usr/lib/mono-2.0", "Crowny/Dependencies/vulkan/lib" }
 
 	links 
 	{
+		"GL", "Xxf86vm", "Xrandr", "pthread", "Xi", "dl",
 		"imgui",
 		"freetype-gl",
 		"assimp",
-		"Crowny/Dependencies/mono/lib/libmono-static-sgen.lib",
-		"Crowny/Dependencies/mono/lib/mono-2.0-sgen.lib"
+		"freetype2", "glfw", "glad",
+		--y"libvulkan",
+		"mono-2.0"
 	}
 
+
 	filter { "platforms:Win64" }
-		links { "freetype2", "glfw", "glad", "opengl32.lib" }
+		--links { "freetype2", "glfw", "glad", "opengl32.lib" }
 
 		defines
 		{
@@ -111,17 +119,18 @@ project "Crowny"
 		system("windows")
 
 	filter { "platforms:Linux64"}
-		links { "freetype2", "glfw", "glad" }
+		--links { "freetype2", "glfw", "glad" }
 
 		defines
 		{
+			"CW_PLATFORM_LINUX",
 			"CW_LINUX"
 		}
 
 		system("linux")
 
 	filter { "platforms:MacOS64"}
-		links { "freetype2", "glfw", "glad" }
+		--links { "freetype2", "glfw", "glad" }
 
 		defines
 		{
@@ -153,6 +162,7 @@ project "Crowny"
 		defines
 		{
 			"CW_LINUX",
+			"CW_PLATFORM_LINUX",
 			"GLFW_INCLUDE_NONE"
 		}
 
@@ -198,10 +208,33 @@ project "Crowny-Editor"
 		"%{IncludeDir.mono}"
 	}
 
-	links
+--	links
+--	{
+--		"imgui",
+--		"Crowny",
+--	}
+
+	libdirs { "/usr/lib/mono-2.0", "Crowny/Dependencies/vulkan/lib" }
+
+	links 
 	{
-		"imgui",
+		"GL", "Xxf86vm", "Xrandr", "pthread", "Xi", "dl",
+		"Xrandr",
+		"Xi",
+		"GL",
+		"X11",
 		"Crowny",
+		"imgui",
+		"freetype-gl",
+		"assimp",
+		"mono-2.0",
+		"freetype2",
+		"glfw",
+		"glad",
+		--"libvulkan"
+
+--		"Crowny/Dependencies/mono/lib/libmono-static-sgen.lib",
+--		"Crowny/Dependencies/mono/lib/mono-2.0-sgen.lib"
 	}
 
 	filter "system:windows"
@@ -222,12 +255,11 @@ project "Crowny-Editor"
 		runtime "Release"
 		optimize "on"
 
-project "Crowny-CLI"
-	location "Crowny-CLI"
+project "Crowny-Wrapper"
+	location "Crowny-Wrapper"
 	kind "SharedLib"
 	language "C++"
 	cppdialect "C++17"
-	clr "On"
 
 	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
 	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
@@ -240,6 +272,7 @@ project "Crowny-CLI"
 
 	includedirs
 	{
+		"Crowny/Source",
 		"%{prj.name}/Source/",
 		"%{prj.name}/../Crowny/Dependencies/glm"
 	}
@@ -247,6 +280,37 @@ project "Crowny-CLI"
 	links
 	{
 		"Crowny"
+	}
+
+	filter "system:windows"
+		systemversion "latest"
+
+	filter "configurations:Debug"
+		defines "CW_DEBUG"
+		runtime "Debug"
+		symbols "on"
+
+	filter "configurations:Release"
+		defines "CW_RELEASE"
+		runtime "Release"
+		optimize "on"
+
+	filter "configurations:Dist"
+		defines "CW_DIST"
+		runtime "Release"
+		optimize "on"
+
+project "Crowny-Sharp"
+	location "Crowny-Sharp"
+	kind "SharedLib"
+	language "C#"
+
+	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
+	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
+
+	links
+	{
+		"Crowny-Wrapper"
 	}
 
 	filter "system:windows"

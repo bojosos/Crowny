@@ -166,10 +166,11 @@ namespace Crowny
 		int width, height, channels;
 		stbi_set_flip_vertically_on_load(1);
 		
-		CW_ENGINE_INFO("Loaded texture {0}", filepath);
+		//CW_ENGINE_INFO("Loaded texture {0}", filepath);
 
-		auto [data, size] = VirtualFileSystem::Get()->ReadFile(filepath);
-		data = stbi_load_from_memory(data, size, &width, &height, &channels, 0);
+		//auto [data, size] = VirtualFileSystem::Get()->ReadFile(filepath);
+		//data = stbi_load_from_memory(data, size, &width, &height, &channels, 0);
+		byte* data = stbi_load(("Resources/" + filepath).c_str(), &width, &height, &channels, 0);
 
 		CW_ENGINE_ASSERT(data, "Failed to load texture!");
 		m_Width = width;

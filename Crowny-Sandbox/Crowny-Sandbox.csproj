@@ -150,14 +150,11 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Crowny-CLI" />
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Crowny-CLI\Crowny-CLI.vcxproj">
-      <Project>{EC96F865-D84E-3AB3-4156-130F2D2DD5A3}</Project>
-      <Name>Crowny-CLI</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it.

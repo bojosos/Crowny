@@ -1,3 +1,4 @@
+#if 0
 #include "cwpch.h"
 
 #include "Crowny/Common/FileSystem.h"
@@ -12,7 +13,7 @@
 
 namespace Crowny
 {
-	//TODO: Make all of these work work with Unicode
+	//TODO: Make all of these work with Unicode
 	void CALLBACK FileIOCompleted(DWORD dwErrorCode, DWORD dwBytesTransfered, LPOVERLAPPED ol)
 	{
 
@@ -166,3 +167,4 @@ namespace Crowny
 	}
 
 }
+#endif

@@ -25,6 +25,9 @@ namespace Crowny
 		template<typename T>
 		T& GetComponent() const
 		{
+			
+			//return m_Scene->m_Registry.visit(m_EntityHandle, entt::type_info<T>()::id());
+			//m_Registry.get(entt::get(TransformComponent), m_EntityHandle); // entt::get(TransformComponent)
 			return m_Scene->m_Registry.get<T>(m_EntityHandle);
 		}
 

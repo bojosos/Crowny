@@ -45,17 +45,17 @@ namespace Crowny
 
 		Ref<Shader> GetShader() { return m_Shader; }
 
-		template<typename T>
-		const T* GetUniform(const std::string& name) const 
-		{
-			return GetUniform<T>(GetUniformDeclaration(name));
-		}
+//		template<typename T>
+//		const T* GetUniform(const std::string& name) const 
+//		{
+//			return GetUniform<T>(GetUniformDeclaration(name));
+//		}
 
-		template<typename T>
-		const T* GetUniform(const ShaderUniformDeclaration* uniform) const
-		{
-			return (T*)&m_UniformData[uniform->GetOffset()];
-		}
+//		template<typename T>
+//		const T* GetUniform(const ShaderUniformDeclaration* uniform) const
+//		{
+//			return (T*)&m_UniformData[uniform->GetOffset()];
+//		}
 		
 	protected:
 		void AllocateStorage();
@@ -93,15 +93,15 @@ namespace Crowny
 		{
 			byte* buf;
 			auto* decl = FindUniformDeclaration(name, &buf);
-			CW_ENGINE_ASSERT(decl);
-			memcpy(Buffer + decl->GetOffset(), &data, declaration->GetSize());
+			CW_ENGINE_ASSERT(decl, "");
+			memcpy(buf + decl->GetOffset(), &data, decl->GetSize());
 		}
 
-		template<typename T>
-		const T* GetUniform(const std::string& name) const
-		{
-			return GetUniform<T>(GetUniformDeclaration(name));
-		}
+//		template<typename T>
+//		const T* GetUniform(const std::string& name) const
+//		{
+//			return GetUniform<T>(GetUniformDeclaration(name));
+//		}
 
 	private:
 		void AllocateStorage();

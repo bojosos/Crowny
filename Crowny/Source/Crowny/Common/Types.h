@@ -28,7 +28,7 @@ namespace Crowny
 		Padding() : Left(0), Right(0), Top(0), Bottom(0) { }
 		Padding(float padding) : Left(padding), Right(padding), Top(padding), Bottom(padding) { }
 		Padding(float vertical, float horizontal) : Left(horizontal), Right(horizontal), Top(vertical), Bottom(vertical) { }
-		Padding(float top, float right, float bottom, float left) : Top(top), Left(left), Right(right), Bottom(Bottom) { }
+		Padding(float top, float right, float bottom, float left) : Top(top), Left(left), Right(right), Bottom(bottom) { }
 	};
 
 }

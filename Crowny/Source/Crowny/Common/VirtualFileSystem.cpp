@@ -48,7 +48,7 @@ namespace Crowny
 		std::string remaining = virtualPath.substr(virtualDir.size() + 1, virtualPath.size() - virtualDir.size());
 		for (const std::string& phPath : m_MountedDirectories[virtualDir])
 		{
-			std::string& path = phPath + remaining;
+			std::string path = phPath + remaining;
 			if (FileSystem::FileExists(path))
 			{
 				outPath = path;
@@ -70,21 +70,21 @@ namespace Crowny
 	{
 		CW_ENGINE_ASSERT(s_Instance, "");
 		std::string phPath;
-		return ResolvePhyiscalPath(path, phPath) ? FileSystem::ReadTextFile(phPath) : nullptr;
+		return ResolvePhyiscalPath(path, phPath) ? FileSystem::ReadTextFile(phPath) : std::string();
 	}
 
 	bool VirtualFileSystem::WriteFile(const std::string& path, byte* buff)
 	{
 		CW_ENGINE_ASSERT(s_Instance, "");
 		std::string phPath;
-		return ResolvePhyiscalPath(path, phPath) ? FileSystem::WriteFile(phPath, buff) : nullptr;
+		return ResolvePhyiscalPath(path, phPath) ? FileSystem::WriteFile(phPath, buff) : false;
 	}
 
 	bool VirtualFileSystem::WriteTextFile(const std::string& path, const std::string& text)
 	{
 		CW_ENGINE_ASSERT(s_Instance, "");
 		std::string phPath;
-		return ResolvePhyiscalPath(path, phPath) ? FileSystem::WriteTextFile(phPath, text) : nullptr;
+		return ResolvePhyiscalPath(path, phPath) ? FileSystem::WriteTextFile(phPath, text) : false;
 	}
 
 }

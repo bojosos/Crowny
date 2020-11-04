@@ -1,3 +1,4 @@
+#if 0
 #include "cwpch.h"
 
 #include "Crowny/Memory/MemoryManager.h"
@@ -15,3 +16,4 @@ namespace Crowny
 		return res;
 	}
 }
+#endif

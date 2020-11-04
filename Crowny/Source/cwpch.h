@@ -14,6 +14,8 @@
 #include <stack>
 #include <queue>
 #include <deque>
+#include <set>
+#include <map>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -22,5 +24,5 @@
 #include "Crowny/Common/Constants.h"
 
 #ifdef CW_WINDOWS
-	#include <Windows.h>
+//	#include <Windows.h>
 #endif

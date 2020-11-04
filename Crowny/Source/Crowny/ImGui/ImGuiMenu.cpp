@@ -79,7 +79,8 @@ namespace Crowny
 	{
 		if (ImGui::MenuItem(m_Title.c_str()))
 		{
-			OnClicked(ImGuiMenuItemClickedEvent(m_Title));
+			auto e = ImGuiMenuItemClickedEvent(m_Title);
+			OnClicked(e);
 		}
 	}
 

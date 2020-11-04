@@ -1,12 +1,6 @@
 #include "cwepch.h"
 
 #include "EditorLayer.h"
-#include "Crowny/Renderer/Renderer2D.h"
-#include "Crowny/Renderer/MeshFactory.h"
-#include "Crowny/Renderer/Model.h"
-#include "Crowny/Renderer/ForwardRenderer.h"
-#include "Crowny/SceneManagement/SceneManager.h"
-#include "Crowny/Ecs/Components.h"
 
 #include "Crowny/Scripting/CWMonoRuntime.h"
 
@@ -27,7 +21,6 @@ namespace Crowny
 
 	void EditorLayer::OnAttach()
 	{
-		//Ref<Shader> s = Shader::Create("Shaders/PBRShader.glsl"); // To test syntax
 		FramebufferProperties fbProps;
 		fbProps.Width = 1280; // human code please
 		fbProps.Height = 720;
@@ -76,9 +69,9 @@ namespace Crowny
 		ForwardRenderer::Init();
 
 		Scene* scene = SceneManager::GetActiveScene();
-		auto& sphere = scene->CreateEntity("Sphere");
+		auto sphere = scene->CreateEntity("Sphere");
 		sphere.AddComponent<MeshRendererComponent>();
-		auto& cam = scene->CreateEntity("Camera");
+		auto cam = scene->CreateEntity("Camera");
 		cam.AddComponent<CameraComponent>();
 
 		CWMonoRuntime::Init("Crowny C# Runtime");
@@ -162,31 +155,26 @@ namespace Crowny
 		m_ViewportPanel->Render();
 		m_MaterialEditor->Render();
 
-		ImGui::Begin("Scripting test");
-
-		if (ImGui::TreeNode(m_Class->GetName().c_str()))
+#if 0
+		ImGui::Begin("Test");
+		
+		auto fields = m_Class->GetFields();
+		for(auto field : fields)
 		{
-			auto& fields = m_Class->GetFields();
-			for (auto* field : fields)
-			{
-				if (field)
-					if (ImGui::TreeNodeEx(field->GetFullDeclName().c_str()))
-						ImGui::TreePop();
-			}
-
-			auto& methods = m_Class->GetMethods();
-
-			for (auto* method : methods)
-			{
-				if (method)
-					if (ImGui::TreeNodeEx(method->GetFullDeclName().c_str()))
-						ImGui::TreePop();
-			}
-			ImGui::TreePop();
+			if (field)
+				ImGui::Text(field->GetName().c_str());
+		}
+		
+		auto methods = m_Class->GetMethods();
+		for(auto method : methods)
+		{
+			if (method)
+				ImGui::Text(method->GetName().c_str());
 		}
 
-		ImGui::End();
 
+		ImGui::End();
+#endif
 		ImGui::End();
 	}
 

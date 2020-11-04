@@ -1,3 +1,4 @@
+#if 0
 #include "cwpch.h"
 
 #include "Platform/Windows/Win32Window.h"
@@ -51,3 +52,4 @@ namespace Crowny
 	}
 
 }
+#endif

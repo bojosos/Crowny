@@ -1,11 +1,8 @@
-[14:38:16] [warning] CROWNY: Creating Window: Crowny Editor
-[14:38:30] [info] CROWNY: Loaded texture /Textures/Unassigned.png
-[14:38:30] [info] CROWNY: Loaded texture /Textures/Unassigned.png, 608x608x3.
-[14:38:31] [info] CROWNY: Loaded texture /Textures/rustediron2_basecolor.png
-[14:38:31] [info] CROWNY: Loaded texture /Textures/rustediron2_basecolor.png, 2048x2048x4.
-[14:38:31] [info] CROWNY: Loaded texture /Textures/rustediron2_metallic.png
-[14:38:32] [info] CROWNY: Loaded texture /Textures/rustediron2_metallic.png, 2048x2048x1.
-[14:38:32] [info] CROWNY: Loaded texture /Textures/rustediron2_normal.png
-[14:38:32] [info] CROWNY: Loaded texture /Textures/rustediron2_normal.png, 2048x2048x3.
-[14:38:32] [info] CROWNY: Loaded texture /Textures/rustediron2_roughness.png
-[14:38:32] [info] CROWNY: Loaded texture /Textures/rustediron2_roughness.png, 2048x2048x1.
+[11:45:12] [info] CROWNY: Ending read
+[11:45:12] [info] CROWNY: Loaded texture /Textures/Unassigned.png, 608x608x3.
+[11:45:12] [info] CROWNY: Loaded texture /Textures/rustediron2_basecolor.png, 2048x2048x4.
+[11:45:13] [info] CROWNY: Loaded texture /Textures/rustediron2_metallic.png, 2048x2048x1.
+[11:45:13] [info] CROWNY: Loaded texture /Textures/rustediron2_normal.png, 2048x2048x3.
+[11:45:13] [info] CROWNY: Loaded texture /Textures/rustediron2_roughness.png, 2048x2048x1.
+[11:45:20] [info] CROWNY: Loaded texture /home/life/Desktop/dev/Crowny/Crowny-Editor/Resources/Textures/rustediron2_basecolor.png
+, 0x4531110x0.

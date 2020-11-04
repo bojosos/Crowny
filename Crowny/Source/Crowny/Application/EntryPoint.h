@@ -1,5 +1,3 @@
-#pragma once
-
 #include "Crowny/Common/Common.h"
 #include "Crowny/Common/Log.h"
 

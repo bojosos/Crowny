@@ -1,5 +1,6 @@
 #include "cwpch.h"
-#include "noise.h"
+
+#include "Noise.h"
 
 namespace Crowny
 {

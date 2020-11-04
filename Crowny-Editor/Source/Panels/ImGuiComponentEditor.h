@@ -1,10 +1,7 @@
 #pragma once
 
-#include "Crowny/Ecs/Entity.h"
-#include "Crowny/Ecs/Components.h"
-#include "Crowny/SceneManagement/SceneManager.h"
+#include "Crowny.h"
 
-#include <map>
 #include <entt/entt.hpp>
 #include <imgui.h>
 
@@ -76,7 +73,7 @@ namespace Crowny {
 			return RegisterComponent<Component>(name, ComponentEditorWidget<Component>);
 		}
 
-		void Render(Entity& entity)
+		void Render(Entity entity)
 		{
 			entt::registry& registry = SceneManager::GetActiveScene()->m_Registry;
 			entt::entity e = entity.m_EntityHandle;

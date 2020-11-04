@@ -1,7 +1,7 @@
 #include "cwepch.h"
 
 #include "OpenGLInformationPanel.h"
-#include "Platform/OpenGL/OpenGlInfo.h"
+#include "Platform/OpenGL/OpenGLInfo.h"
 
 #include <imgui.h>
 

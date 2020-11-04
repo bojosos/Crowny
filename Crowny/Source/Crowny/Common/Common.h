@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <signal.h>
 
 #ifdef CW_DEBUG
 #define CW_ENABLE_ASSERTS
@@ -9,12 +10,13 @@
 #if defined(_MSC_VER)
 	#define CW_DEBUGBREAK() __debugbreak()
 #elif defined(CW_PLATFORM_LINUX)
-	#define CW_DEBUGBREAK() raise(SIGTRAP)
+	#define CW_DEBUGBREAK() __builtin_trap()
+	#define CW_DEBUGBREAK()
 #endif
 
 #ifdef CW_ENABLE_ASSERTS
-	#define CW_CLIENT_ASSERT(x, ...) { if(!(x)) { CW_CLIENT_ERROR("Assertion Failed: {0}", __VA_ARGS__); CW_DEBUGBREAK(); } }
-	#define CW_ENGINE_ASSERT(x, ...) { if(!(x)) { CW_ENGINE_ERROR("Assertion Failed: {0}", __VA_ARGS__); CW_DEBUGBREAK(); } }
+	#define CW_CLIENT_ASSERT(x, ...) { if(!(x)) { CW_CLIENT_ERROR("Assertion Failed: {0}", __VA_ARGS__);/* CW_DEBUGBREAK();*/ } }
+	#define CW_ENGINE_ASSERT(x, ...) { if(!(x)) { CW_ENGINE_ERROR("Assertion Failed: {0}", __VA_ARGS__);/* CW_DEBUGBREAK();*/ } }
 	//#define CW_CLIENT_ASSERT(x) { if(!(x)) { CW_CLIENT_ERROR("Assertion Failed: {0}"); CW_DEBUGBREAK(); } }
 	//#define CW_ENGINE_ASSERT(x) { if(!(x)) { CW_ENGINE_ERROR("Assertion Failed: {0}"); CW_DEBUGBREAK(); } }
 #else

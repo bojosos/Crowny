@@ -13,13 +13,14 @@ namespace Crowny
 
 		byte* Get() { return m_Uuid; }
 
-		std::string& ToString();
+		std::string ToString() const;
 
-		operator std::string& () { return ToString(); }
+		operator std::string () const { return ToString(); }
+
 		template<typename OStream>
 		friend OStream& operator<<(OStream& os, const Uuid& ms)
 		{
-			return os << ToString();
+			return os << ms.ToString();
 		}
 	private:
 		byte* m_Uuid;

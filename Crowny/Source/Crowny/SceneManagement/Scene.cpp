@@ -42,7 +42,7 @@ namespace Crowny
 				auto group = m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
 				for (auto ee : group)
 				{
-					auto& [transform, sprite] = m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
+					auto [transform, sprite] = m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
 					Renderer2D::FillRect(transform, sprite.Texture, sprite.Color);
 				}
 
@@ -50,7 +50,7 @@ namespace Crowny
 				auto ttt = m_Registry.group<TextComponent>(entt::get<TransformComponent>);
 				for (auto ee : ttt)
 				{
-					auto& [transform, tc] = m_Registry.get<TransformComponent, TextComponent>(ee);
+					auto [transform, tc] = m_Registry.get<TransformComponent, TextComponent>(ee);
 					Renderer2D::DrawString(tc.Text, transform, tc.Font, tc.Color);
 				}
 
@@ -63,7 +63,7 @@ namespace Crowny
 				auto objs = m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
 				for (auto obj : objs)
 				{
-					auto& [transform, mesh] = m_Registry.get<TransformComponent, MeshRendererComponent>(obj);
+					auto [transform, mesh] = m_Registry.get<TransformComponent, MeshRendererComponent>(obj);
 					mesh.Mesh->SetMaterialInstnace(CreateRef<MaterialInstance>(ImGuiMaterialPanel::GetSlectedMaterial()));
 					ForwardRenderer::SubmitMesh(mesh.Mesh, transform);
 				}

@@ -12,16 +12,12 @@
 #include "Crowny/Scripting/CWMonoRuntime.h"
 
 #include "Crowny/Common/Color.h"
-#include "Crowny/Renderer/Camera.h"
 #include "Crowny/Ecs/Entity.h"
 
 #include <entt/entt.hpp>
 
 namespace Crowny
 {
-
-	template <class Component>
-	void ComponentEditorWidget(Entity& e);
 
 	struct TagComponent
 	{
@@ -114,6 +110,7 @@ namespace Crowny
 	{
 		std::string Name;
 		CWMonoClass* Class = nullptr;
+		CWMonoObject* Object = nullptr;
 		
 		MonoScriptComponent() = default;
 		MonoScriptComponent(const MonoScriptComponent&) = default;

@@ -20,7 +20,7 @@ namespace Crowny
 
 	CWMonoClass* CWMonoAssembly::GetClass(const std::string& fullName)
 	{
-		auto& res = SplitString(fullName, ".");
+		auto res = SplitString(fullName, ".");
 		CW_ENGINE_ASSERT(res.size() == 2, "Name has to be in the format (Namespace.ClassName)");
 		return GetClass(res[0], res[1]);
 	}

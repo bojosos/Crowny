@@ -1,1 +1,1 @@
-./3rdparty/premake/premake5.exe vs2019
+./3rdparty/premake/premake5 gmake2

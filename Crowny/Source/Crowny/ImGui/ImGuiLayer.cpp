@@ -8,7 +8,7 @@
 #include "Crowny/Application/Application.h"
 #include "Crowny/Input/Input.h"
 
-#include <glfw/glfw3.h>
+#include <GLFW/glfw3.h>
 
 namespace Crowny
 {
@@ -42,7 +42,7 @@ namespace Crowny
 		ImGui_ImplGlfw_InitForOpenGL(window, true);
 		ImGui_ImplOpenGL3_Init("#version 410");
 
-		io.FontDefault = io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
+		io.FontDefault = io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto-Regular.ttf", 18.0f);
 		
 		style.WindowRounding = 0;
 		style.GrabRounding = style.FrameRounding = 0;

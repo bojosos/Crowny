@@ -127,7 +127,8 @@ namespace Crowny
 	void Renderer2D::Begin(const glm::mat4& projection, const glm::mat4& transform)
 	{
 		memcpy(s_Data.SystemUniforms[UniformIndex_ProjectionMatrix].Buffer.Buffer + s_Data.SystemUniforms[UniformIndex_ProjectionMatrix].Offset, &projection, sizeof(glm::mat4));
-		memcpy(s_Data.SystemUniforms[UniformIndex_ViewMatrix].Buffer.Buffer + s_Data.SystemUniforms[UniformIndex_ViewMatrix].Offset, &glm::inverse(transform), sizeof(glm::mat4));
+		glm::mat4 invtr = glm::inverse(transform);
+		memcpy(s_Data.SystemUniforms[UniformIndex_ViewMatrix].Buffer.Buffer + s_Data.SystemUniforms[UniformIndex_ViewMatrix].Offset, &invtr, sizeof(glm::mat4));
 
 		s_Data.Shader->Bind();
 		s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->GetPointer(RENDERER_MAX_SPRITES * 4);
