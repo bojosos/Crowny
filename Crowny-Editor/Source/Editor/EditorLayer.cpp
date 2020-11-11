@@ -1,12 +1,6 @@
 #include "cwepch.h"
 
 #include "EditorLayer.h"
-#include "Crowny/Renderer/Renderer2D.h"
-#include "Crowny/Renderer/MeshFactory.h"
-#include "Crowny/Renderer/Model.h"
-#include "Crowny/Renderer/ForwardRenderer.h"
-#include "Crowny/SceneManagement/SceneManager.h"
-#include "Crowny/Ecs/Components.h"
 
 #include "Crowny/Scripting/CWMonoRuntime.h"
 
@@ -161,31 +155,6 @@ namespace Crowny
 		m_GLInfoWindow->Render();
 		m_ViewportPanel->Render();
 		m_MaterialEditor->Render();
-
-		ImGui::Begin("Scripting test");
-
-		if (ImGui::TreeNode(m_Class->GetName().c_str()))
-		{
-			auto& fields = m_Class->GetFields();
-			for (auto* field : fields)
-			{
-				if (field)
-					if (ImGui::TreeNodeEx(field->GetFullDeclName().c_str()))
-						ImGui::TreePop();
-			}
-
-			auto& methods = m_Class->GetMethods();
-
-			for (auto* method : methods)
-			{
-				if (method)
-					if (ImGui::TreeNodeEx(method->GetFullDeclName().c_str()))
-						ImGui::TreePop();
-			}
-			ImGui::TreePop();
-		}
-
-		ImGui::End();
 
 		ImGui::End();
 	}

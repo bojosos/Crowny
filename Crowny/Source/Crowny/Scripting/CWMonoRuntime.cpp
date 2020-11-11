@@ -32,13 +32,16 @@ namespace Crowny
 	{
 		s_Instance = new CWMonoRuntime();
 		
-		mono_set_dirs("C:\\Program Files\\Mono\\lib", "C:\\Program Files\\Mono\\etc");
+		mono_set_dirs(R"(C:\Program Files\Mono\lib)", R"(C:\Program Files\Mono\etc)");
 
 		mono_trace_set_level_string("warning");
 		mono_trace_set_log_handler(OnLogCallback, nullptr);
 
 		s_Instance->m_Domain = mono_jit_init(domainName.c_str());
 		mono_thread_set_main(mono_thread_current());
+	
+		CW_ENGINE_ASSERT(s_Instance->m_Domain , "Error creating Mono domain");
+
 		return s_Instance->m_Domain != nullptr;
 	}
 

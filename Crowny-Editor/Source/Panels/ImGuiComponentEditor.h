@@ -1,10 +1,7 @@
 #pragma once
 
-#include "Crowny/Ecs/Entity.h"
-#include "Crowny/Ecs/Components.h"
-#include "Crowny/SceneManagement/SceneManager.h"
+#include "Crowny.h"
 
-#include <map>
 #include <entt/entt.hpp>
 #include <imgui.h>
 

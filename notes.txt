@@ -1,0 +1,39 @@
+
+
+For scripting
+
+Have a C++ class with all static methods
+Those static methods call the corresponding funcs/ctors in the Object Oriented classes
+Those statis methods are added with mono_add_internal_call to runtime
+
+Then in C# have [MethodImplOptions.InternalCall]
+static extern primitive doSomething(primitive);
+
+To get MonoString:
+	if (sizeof(wchar_t) == 2)
+       		return mono_string_from_utf16((mono_unichar2*)str.c_str());
+	else
+		return mono_string_from_utf32((mono_unichar4*)str.c_str());
+
+then in C#
+class Example
+{
+	Example(int i, float a)
+	{
+		Internal_CreateExample(x, y, z);
+	}
+}
+
+Impl math in C# with Aggressive Inlining
+  - Vectors
+  - Transform 
+  - Sphere
+  - Rect
+
+Then with internal call
+  - Components
+  - GetComponent - using RTTI
+  - A main C# class that all script components inherit
+  - Material
+  - Need to store some runtime type information
+

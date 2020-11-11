@@ -7,6 +7,17 @@
 namespace Crowny
 {
 	class CameraComponent;
+
+	class Entity;
+	template <class Component>
+	void ComponentEditorWidget(Entity& entity)
+	{
+
+	}
+
+	template <>
+	void ComponentEditorWidget<CameraComponent>(Entity& e);
+
 	class Entity;
 
 	enum class CameraProjection
@@ -17,7 +28,6 @@ namespace Crowny
 	class Camera
 	{
 	public:
-		template <class Component>
 		friend void ComponentEditorWidget(Entity& entity);
 		friend void ComponentEditorWidget<CameraComponent>(Entity& e);
 

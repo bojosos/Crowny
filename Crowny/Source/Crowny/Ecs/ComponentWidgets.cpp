@@ -224,6 +224,8 @@ namespace Crowny
 		ImGui::Text("Path");
 	}
 
+#include <mono/metadata/attrdefs.h>
+
 	template <>
 	void ComponentEditorWidget<MonoScriptComponent>(Entity& e)
 	{
@@ -234,6 +236,7 @@ namespace Crowny
 		if (ImGui::InputText("##scriptName", &script.Name))
 		{
 			script.Class = CWMonoRuntime::GetAssembly("")->GetClass(script.Name);
+			script.Object = CWMonoRuntime::CreateInstance(script.Class);
 		}
 
 		if (!script.Class)
@@ -242,6 +245,7 @@ namespace Crowny
 			return;
 		}
 		ImGui::NextColumn();
+		
 
 		auto& fields = script.Class->GetFields();
 		for (auto* field : fields)
@@ -249,9 +253,9 @@ namespace Crowny
 			if (field)
 			{
 				ImGui::Text(field->GetName().c_str()); ImGui::NextColumn();
-				std::string temp = "test value";
-				field->GetValue();
-				ImGui::InputText(("##" + field->GetName()).c_str(), &temp);
+				//int64_t value;
+				//value = field->GetIntValue(script.Object);//mono_field_get_value(script.Object, field, &val);
+				//ImGui::InputText(("##" + field->GetName()).c_str(), &temp);
 			}
 		}
 		ImGui::Columns(1);
