@@ -4,7 +4,7 @@
 
 namespace Crowny
 {
-	// UUID as struct in rfc-4122?
+	// UUID as struct in rfc-4122 or better?
 	class Uuid
 	{
 	public:
@@ -23,6 +23,6 @@ namespace Crowny
 			return os << ms.ToString();
 		}
 	private:
-		byte* m_Uuid;
+		byte* m_Uuid; // no need for this
 	};
 }

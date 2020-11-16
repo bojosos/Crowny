@@ -155,26 +155,6 @@ namespace Crowny
 		m_ViewportPanel->Render();
 		m_MaterialEditor->Render();
 
-#if 0
-		ImGui::Begin("Test");
-		
-		auto fields = m_Class->GetFields();
-		for(auto field : fields)
-		{
-			if (field)
-				ImGui::Text(field->GetName().c_str());
-		}
-		
-		auto methods = m_Class->GetMethods();
-		for(auto method : methods)
-		{
-			if (method)
-				ImGui::Text(method->GetName().c_str());
-		}
-
-
-		ImGui::End();
-#endif
 		ImGui::End();
 	}
 
