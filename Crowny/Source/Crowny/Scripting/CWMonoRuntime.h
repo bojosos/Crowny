@@ -17,7 +17,10 @@ namespace Crowny
 		static void Shutdown();
 
 		static CWMonoAssembly* LoadAssembly(const std::string& filepath);
+
+		// Currently only one assembly is supported and the name does absolutely nothing
 		static CWMonoAssembly* GetAssembly(const std::string& name) { return s_Instance->m_Assembly; }
+
 		static MonoDomain* GetDomain() { return s_Instance->m_Domain; }
 		static CWMonoObject* CreateInstance(CWMonoClass* monoClass);
 

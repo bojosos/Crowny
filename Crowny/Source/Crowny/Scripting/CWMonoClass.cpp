@@ -21,6 +21,11 @@ namespace Crowny
 		return new CWMonoObject(mono_object_new(CWMonoRuntime::GetDomain(), m_Class));
 	}
 
+	void CWMonoClass::AddInternalCall(const std::string& managed, const void* func)
+	{
+		mono_add_internal_call((m_NamespaceName + "." + m_Name + "::" + managed).c_str(), func);
+	}
+
 	std::vector<CWMonoMethod*> CWMonoClass::GetMethods()
 	{
 		void* iter = nullptr;
