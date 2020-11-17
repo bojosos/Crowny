@@ -17,6 +17,8 @@ namespace Crowny
 		bool IsVirtual();
 		CWMonoVisibility GetVisibility();
 
+		void Call(MonoObject* instance);
+
 	private:
 		MonoMethod* m_Method = nullptr;
 		MonoMethodSignature* m_Signature = nullptr;

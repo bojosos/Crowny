@@ -17,7 +17,6 @@ ifeq ($(config),debug_win64)
   assimp_config = debug_win64
   Crowny_config = debug_win64
   Crowny_Editor_config = debug_win64
-  Crowny_Wrapper_config = debug_win64
   Crowny_Sharp_config = debug_win64
   Crowny_Sandbox_config = debug_win64
 
@@ -30,7 +29,6 @@ else ifeq ($(config),debug_linux64)
   assimp_config = debug_linux64
   Crowny_config = debug_linux64
   Crowny_Editor_config = debug_linux64
-  Crowny_Wrapper_config = debug_linux64
   Crowny_Sharp_config = debug_linux64
   Crowny_Sandbox_config = debug_linux64
 
@@ -43,7 +41,6 @@ else ifeq ($(config),debug_macos64)
   assimp_config = debug_macos64
   Crowny_config = debug_macos64
   Crowny_Editor_config = debug_macos64
-  Crowny_Wrapper_config = debug_macos64
   Crowny_Sharp_config = debug_macos64
   Crowny_Sandbox_config = debug_macos64
 
@@ -56,7 +53,6 @@ else ifeq ($(config),debug_web)
   assimp_config = debug_web
   Crowny_config = debug_web
   Crowny_Editor_config = debug_web
-  Crowny_Wrapper_config = debug_web
   Crowny_Sharp_config = debug_web
   Crowny_Sandbox_config = debug_web
 
@@ -69,7 +65,6 @@ else ifeq ($(config),release_win64)
   assimp_config = release_win64
   Crowny_config = release_win64
   Crowny_Editor_config = release_win64
-  Crowny_Wrapper_config = release_win64
   Crowny_Sharp_config = release_win64
   Crowny_Sandbox_config = release_win64
 
@@ -82,7 +77,6 @@ else ifeq ($(config),release_linux64)
   assimp_config = release_linux64
   Crowny_config = release_linux64
   Crowny_Editor_config = release_linux64
-  Crowny_Wrapper_config = release_linux64
   Crowny_Sharp_config = release_linux64
   Crowny_Sandbox_config = release_linux64
 
@@ -95,7 +89,6 @@ else ifeq ($(config),release_macos64)
   assimp_config = release_macos64
   Crowny_config = release_macos64
   Crowny_Editor_config = release_macos64
-  Crowny_Wrapper_config = release_macos64
   Crowny_Sharp_config = release_macos64
   Crowny_Sandbox_config = release_macos64
 
@@ -108,7 +101,6 @@ else ifeq ($(config),release_web)
   assimp_config = release_web
   Crowny_config = release_web
   Crowny_Editor_config = release_web
-  Crowny_Wrapper_config = release_web
   Crowny_Sharp_config = release_web
   Crowny_Sandbox_config = release_web
 
@@ -121,7 +113,6 @@ else ifeq ($(config),dist_win64)
   assimp_config = dist_win64
   Crowny_config = dist_win64
   Crowny_Editor_config = dist_win64
-  Crowny_Wrapper_config = dist_win64
   Crowny_Sharp_config = dist_win64
   Crowny_Sandbox_config = dist_win64
 
@@ -134,7 +125,6 @@ else ifeq ($(config),dist_linux64)
   assimp_config = dist_linux64
   Crowny_config = dist_linux64
   Crowny_Editor_config = dist_linux64
-  Crowny_Wrapper_config = dist_linux64
   Crowny_Sharp_config = dist_linux64
   Crowny_Sandbox_config = dist_linux64
 
@@ -147,7 +137,6 @@ else ifeq ($(config),dist_macos64)
   assimp_config = dist_macos64
   Crowny_config = dist_macos64
   Crowny_Editor_config = dist_macos64
-  Crowny_Wrapper_config = dist_macos64
   Crowny_Sharp_config = dist_macos64
   Crowny_Sandbox_config = dist_macos64
 
@@ -160,7 +149,6 @@ else ifeq ($(config),dist_web)
   assimp_config = dist_web
   Crowny_config = dist_web
   Crowny_Editor_config = dist_web
-  Crowny_Wrapper_config = dist_web
   Crowny_Sharp_config = dist_web
   Crowny_Sandbox_config = dist_web
 
@@ -168,7 +156,7 @@ else
   $(error "invalid configuration $(config)")
 endif
 
-PROJECTS := glfw glad freetype-gl imgui freetype2 assimp Crowny Crowny-Editor Crowny-Wrapper Crowny-Sharp Crowny-Sandbox
+PROJECTS := glfw glad freetype-gl imgui freetype2 assimp Crowny Crowny-Editor Crowny-Sharp Crowny-Sandbox
 
 .PHONY: all clean help $(PROJECTS) Dependencies
 
@@ -224,19 +212,13 @@ ifneq (,$(Crowny_Editor_config))
 	@${MAKE} --no-print-directory -C Crowny-Editor -f Makefile config=$(Crowny_Editor_config)
 endif
 
-Crowny-Wrapper: Crowny
-ifneq (,$(Crowny_Wrapper_config))
-	@echo "==== Building Crowny-Wrapper ($(Crowny_Wrapper_config)) ===="
-	@${MAKE} --no-print-directory -C Crowny-Wrapper -f Makefile config=$(Crowny_Wrapper_config)
-endif
-
-Crowny-Sharp: Crowny-Wrapper
+Crowny-Sharp:
 ifneq (,$(Crowny_Sharp_config))
 	@echo "==== Building Crowny-Sharp ($(Crowny_Sharp_config)) ===="
 	@${MAKE} --no-print-directory -C Crowny-Sharp -f Makefile config=$(Crowny_Sharp_config)
 endif
 
-Crowny-Sandbox:
+Crowny-Sandbox: Crowny-Sharp
 ifneq (,$(Crowny_Sandbox_config))
 	@echo "==== Building Crowny-Sandbox ($(Crowny_Sandbox_config)) ===="
 	@${MAKE} --no-print-directory -C Crowny-Sandbox -f Makefile config=$(Crowny_Sandbox_config)
@@ -251,7 +233,6 @@ clean:
 	@${MAKE} --no-print-directory -C Crowny/Dependencies/assimp -f Makefile clean
 	@${MAKE} --no-print-directory -C Crowny -f Makefile clean
 	@${MAKE} --no-print-directory -C Crowny-Editor -f Makefile clean
-	@${MAKE} --no-print-directory -C Crowny-Wrapper -f Makefile clean
 	@${MAKE} --no-print-directory -C Crowny-Sharp -f Makefile clean
 	@${MAKE} --no-print-directory -C Crowny-Sandbox -f Makefile clean
 
@@ -283,7 +264,6 @@ help:
 	@echo "   assimp"
 	@echo "   Crowny"
 	@echo "   Crowny-Editor"
-	@echo "   Crowny-Wrapper"
 	@echo "   Crowny-Sharp"
 	@echo "   Crowny-Sandbox"
 	@echo ""

@@ -6,6 +6,7 @@ BEGIN_MONO_INCLUDE
 #include <mono/metadata/loader.h>
 #include <mono/metadata/attrdefs.h>
 #include <mono/metadata/debug-helpers.h>
+#include <mono/metadata/object.h>
 END_MONO_INCLUDE
 
 namespace Crowny
@@ -30,6 +31,11 @@ namespace Crowny
 		}
 
 		return res;
+	}
+
+	void CWMonoMethod::Call(MonoObject* instance)
+	{
+		mono_runtime_invoke(m_Method, instance, nullptr, nullptr);
 	}
 
 	bool CWMonoMethod::IsStatic()

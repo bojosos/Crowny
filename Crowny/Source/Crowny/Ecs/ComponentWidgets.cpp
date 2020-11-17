@@ -17,35 +17,20 @@ namespace Crowny
 	void ComponentEditorWidget<TransformComponent>(Entity& e)
 	{
 		auto& t = e.GetComponent<TransformComponent>();
-		glm::vec3 scale;
-		glm::vec3 translation;
-		glm::vec3 rotationEuler;
-		glm::quat rotation;
-		glm::vec3 skew;
-		glm::vec4 perspective;
-		glm::decompose(t.Transform, scale, rotation, translation, skew, perspective);
-		
-		rotationEuler = glm::degrees(glm::eulerAngles(rotation));
 		bool changed = false;
 
 		ImGui::Columns(2);
 		ImGui::Text("Transform"); ImGui::NextColumn();
-		changed |= ImGui::DragFloat3("Transform##", glm::value_ptr(translation)); ImGui::NextColumn();
+		ImGui::DragFloat3("Transform##", glm::value_ptr(t.Position)); ImGui::NextColumn();
+		
 		ImGui::Text("Rotation"); ImGui::NextColumn();
-		changed |= ImGui::DragFloat3("Rotation##", glm::value_ptr(rotationEuler)); ImGui::NextColumn();
+		glm::vec3 deg = glm::degrees(t.Rotation);
+		ImGui::DragFloat3("Rotation##", glm::value_ptr(deg)); ImGui::NextColumn();
+		t.Rotation = glm::radians(deg);
+
 		ImGui::Text("Scale"); ImGui::NextColumn();
-		changed |= ImGui::DragFloat3("Scale##", glm::value_ptr(scale)); ImGui::NextColumn();
+		ImGui::DragFloat3("Scale##", glm::value_ptr(t.Scale)); ImGui::NextColumn();
 		ImGui::Columns(1);
-
-		if (changed) {
-			glm::mat4 tr = glm::translate(glm::mat4(1.0f), translation);
-
-			rotationEuler = glm::radians(rotationEuler);
-			glm::mat4 rot = glm::eulerAngleXYZ(rotationEuler.x, rotationEuler.y, rotationEuler.z);
-
-			glm::mat4 sc = glm::scale(glm::mat4(1.0f), scale);
-			t.Transform = tr * rot * sc;
-		}
 	}
 
 	template <>
@@ -224,8 +209,6 @@ namespace Crowny
 		ImGui::Text("Path");
 	}
 
-#include <mono/metadata/attrdefs.h>
-
 	template <>
 	void ComponentEditorWidget<MonoScriptComponent>(Entity& e)
 	{
@@ -235,8 +218,13 @@ namespace Crowny
 
 		if (ImGui::InputText("##scriptName", &script.Name))
 		{
-			script.Class = CWMonoRuntime::GetAssembly("")->GetClass(script.Name);
-			script.Object = CWMonoRuntime::CreateInstance(script.Class);
+			CW_ENGINE_INFO("Attempting to load {0}", script.Name);
+			script.Class = CWMonoRuntime::GetAssembly("")->GetClass("Sandbox", script.Name);
+			CW_ENGINE_INFO("Script class is: {0}", script.Class == nullptr);
+			// Check if class is nullptr
+			//script.Object = CWMonoRuntime::CreateInstance(script.Class); // TODO: Do this on play
+			//auto* field = script.Class->GetField("m_InternalPtr");
+			//field->Set(script.Object, &script);
 		}
 
 		if (!script.Class)

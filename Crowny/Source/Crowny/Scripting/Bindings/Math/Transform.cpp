@@ -7,68 +7,73 @@
 namespace Crowny
 {
 
-	void Transform::InitRuntimeFunctions()
+	void ScriptTransform::InitRuntimeFunctions()
 	{
-		CWMonoClass* transformClass = CWMonoRuntime::GetAssembly("")->GetClass("Transform");
+		CWMonoClass* transformClass = CWMonoRuntime::GetAssembly("")->GetClass("Crowny", "Transform");
 
-		transformClass->AddInternalCall("get_position", (void*)Internal_PositionGet);
-		transformClass->AddInternalCall("set_position", (void*)Internal_PositionSet);
-		transformClass->AddInternalCall("get_localPosition", (void*)Internal_LocalPositionGet);
-		transformClass->AddInternalCall("set_localPosition", (void*)Internal_LocalPositionSet);
-		transformClass->AddInternalCall("get_eulerAngles", (void*)Internal_EulerRotationGet);
-		transformClass->AddInternalCall("set_eulerAngles", (void*)Internal_EulerRotationSet);
-		transformClass->AddInternalCall("get_localEulerAngles", (void*)Internal_LocalEulerRotationGet);
-		transformClass->AddInternalCall("set_localEulerAngles", (void*)Internal_LocalEulerRotationSet);
-		transformClass->AddInternalCall("get_localScale", (void*)Internal_LocalScaleGet);
-		transformClass->AddInternalCall("set_localScale", (void*)Internal_LocalScaleSet);
+		transformClass->AddInternalCall("Internal_GetPosition", (void*)&Internal_PositionGet);
+		transformClass->AddInternalCall("Internal_SetPosition", (void*)&Internal_PositionSet);
+		transformClass->AddInternalCall("Internal_GetLocalPosition", (void*)&Internal_LocalPositionGet);
+		transformClass->AddInternalCall("Internal_SetLocalPosition", (void*)&Internal_LocalPositionSet);
+		transformClass->AddInternalCall("Internal_GetEulerAngles", (void*)&Internal_EulerRotationGet);
+		transformClass->AddInternalCall("Internal_SetEulerAngles", (void*)&Internal_EulerRotationSet);
+		transformClass->AddInternalCall("Internal_GetLocalEulerAngles", (void*)&Internal_LocalEulerRotationGet);
+		transformClass->AddInternalCall("Internal_SetLocalEulerAngles", (void*)&Internal_LocalEulerRotationSet);
+		transformClass->AddInternalCall("Internal_GetLocalScale", (void*)&Internal_LocalScaleGet);
+		transformClass->AddInternalCall("Internal_SetLocalScale", (void*)&Internal_LocalScaleSet);
 	}
 
-	MonoObject* Transform::Internal_PositionGet(MonoObject* thisptr)
+
+	void ScriptTransform::Internal_PositionGet(TransformComponent* thisptr, glm::vec3* value)
 	{
-		return 
+		std::cout << *(size_t*)thisptr << std::endl;
+		std::cout << "Here" << std::endl;
+		std::cout << thisptr << std::endl;
+		*value = thisptr->Position;
+		std::cout << "after" << std::endl;
 	}
 
-	void Transform::Internal_PositionSet(MonoObject* thisptr)
+	void ScriptTransform::Internal_PositionSet(TransformComponent* thisptr, glm::vec3* value)
 	{
-
+		thisptr->Position = *value;
 	}
 
-	MonoObject* Transform::Internal_LocalPositionGet(MonoObject* thisptr)
+	void ScriptTransform::Internal_LocalPositionGet(TransformComponent* thisptr, glm::vec3* value)
 	{
-
+		*value = thisptr->Position;
 	}
 
-	void Transform::Internal_LocalPositionSet(MonoObject* thisptr)
-	{
-
-	}
-
-	MonoObject* Transform::Internal_EulerRotationGet(MonoObject* thisptr)
-	{
-
-	}
-
-	void Transform::Internal_EulerRotationSet(MonoObject* thisptr)
+	void ScriptTransform::Internal_LocalPositionSet(TransformComponent* thisptr, glm::vec3* value)
 	{
 
 	}
 
-	MonoObject* Transform::Internal_LocalEulerRotationGet(MonoObject* thisptr)
+	void ScriptTransform::Internal_EulerRotationGet(TransformComponent* thisptr, glm::vec3* value)
 	{
 
 	}
 
-	void Transform::Internal_LocalEulerRotationSet(MonoObject* thisptr)
+	void ScriptTransform::Internal_EulerRotationSet(TransformComponent* thisptr, glm::vec3* value)
 	{
 
 	}
 
-	MonoObject Transform::Internal_LocalScaleGet(MonoObject* thisptr)
+	void ScriptTransform::Internal_LocalEulerRotationGet(TransformComponent* thisptr, glm::vec3* value)
 	{
 
 	}
 
-	void Transform::Internal_LocalScaleSet(MonoObject* thisptr)
+	void ScriptTransform::Internal_LocalEulerRotationSet(TransformComponent* thisptr, glm::vec3* value)
+	{
+
+	}
+
+	void ScriptTransform::Internal_LocalScaleGet(TransformComponent* thisptr, glm::vec3* value)
+	{
+
+	}
+
+	void ScriptTransform::Internal_LocalScaleSet(TransformComponent* thisptr, glm::vec3* value)
 	{
 
 	}

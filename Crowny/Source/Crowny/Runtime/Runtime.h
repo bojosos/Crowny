@@ -7,8 +7,14 @@ namespace Crowny
 	class Runtime
 	{
 	public:
-		Runtime(Scene* scene);
+		Runtime();
+
 	private:
-		void Init();
+		void OnSceneChanged(Scene* scene);
+		void OnStartup();
+		void OnShutdown();
+
+		Scene* m_Scene = nullptr;
+		Scene* m_OpenScene = nullptr;
 	};
 }

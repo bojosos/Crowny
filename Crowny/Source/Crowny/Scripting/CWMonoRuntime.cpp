@@ -16,6 +16,7 @@ namespace Crowny
 
 	static void OnLogCallback(const char* domain, const char* level, const char* message, mono_bool, void*)
 	{
+		CW_ENGINE_INFO(message);
 		if (level == std::string("critical"))
 			CW_ENGINE_CRITICAL("{0} -> {1}", domain, message);
 		if (level == std::string("error"))
@@ -38,13 +39,14 @@ namespace Crowny
 		s_Instance->m_Domain = mono_jit_init(domainName.c_str());
 		mono_thread_set_main(mono_thread_current());
 		mono_config_parse (NULL);
-
+		CW_ENGINE_INFO("Domaind {0} created!", domainName);
 		return s_Instance->m_Domain != nullptr;
 	}
 
 	CWMonoAssembly* CWMonoRuntime::LoadAssembly(const std::string& filepath)
 	{
 		s_Instance->m_Assembly = new CWMonoAssembly(s_Instance->m_Domain, filepath);
+		CW_ENGINE_INFO("Assembly {0} loaded", filepath);
 		return s_Instance->m_Assembly;
 	}
 

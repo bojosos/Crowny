@@ -48,6 +48,11 @@ namespace Crowny.Math
             }
         }
 
+        public override string ToString()
+        {
+            return x.ToString() + ", " + y.ToString() + ", " + z.ToString();
+        }
+
         /// <summary>
         /// Returns a normalized copy of the Vector3
         /// </summary>
@@ -174,7 +179,7 @@ namespace Crowny.Math
             float sl = v.SqrdLength;
             if (sl > 1e-04f)
                 return v * 1.0f / (float)System.Math.Sqrt(sl);
-            return value;
+            return v;
         }
     }
 }

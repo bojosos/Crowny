@@ -5,14 +5,25 @@
 namespace Crowny
 {
 
-	Runtime::Runtime(Scene* scene)
+	Runtime::Runtime()
 	{
 
 	}
 
-	void Init()
+	void Runtime::OnSceneChanged(Scene* scene)
 	{
+		m_OpenScene = scene;
+	}
 
+	void Runtime::OnStartup()
+	{
+		m_Scene = new Scene(*m_OpenScene);
+		m_Scene->Run();
+	}
+
+	void Runtime::OnShutdown()
+	{
+		m_Scene = nullptr;
 	}
 
 }

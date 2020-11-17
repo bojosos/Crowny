@@ -1,24 +1,28 @@
 #pragma once
 
+#include "Crowny/Ecs/Components.h"
+
+#include <glm/glm.hpp>
 #include <mono/metadata/object.h>
 
 namespace Crowny
 {
-	class Transform
+	
+	class ScriptTransform
 	{
 	public:
 		static void InitRuntimeFunctions();
 
 	private:
-		static MonoObject* Internal_PositionGet(MonoObject* thisptr);
-		static void Internal_PositionSet(MonoObject* thisptr);
-		static MonoObject* Internal_LocalPositionGet(MonoObject* thisptr);
-		static void Internal_LocalPositionSet(MonoObject* thisptr);
-		static MonoObject* Internal_EulerRotationGet(MonoObject* thisptr);
-		static void Internal_EulerRotationSet(MonoObject* thisptr);
-		static MonoObject* Internal_LocalEulerRotationGet(MonoObject* thisptr);
-		static void Internal_LocalEulerRotationSet(MonoObject* thisptr);
-		static MonoObject Internal_LocalScaleGet(MonoObject* thisptr);
-		static void Internal_LocalScaleSet(MonoObject* thisptr);
+		static void Internal_PositionGet(TransformComponent* thisptr, glm::vec3* value);
+		static void Internal_PositionSet(TransformComponent* thisptr, glm::vec3* value);
+		static void Internal_LocalPositionGet(TransformComponent* thisptr, glm::vec3* value);
+		static void Internal_LocalPositionSet(TransformComponent* thisptr, glm::vec3* value);
+		static void Internal_EulerRotationGet(TransformComponent* thisptr, glm::vec3* value);
+		static void Internal_EulerRotationSet(TransformComponent* thisptr, glm::vec3* value);
+		static void Internal_LocalEulerRotationGet(TransformComponent* thisptr, glm::vec3* value);
+		static void Internal_LocalEulerRotationSet(TransformComponent* thisptr, glm::vec3* value);
+		static void Internal_LocalScaleGet(TransformComponent* thisptr, glm::vec3* value);
+		static void Internal_LocalScaleSet(TransformComponent* thisptr, glm::vec3* value);
 	};
 }

@@ -226,6 +226,7 @@ GENERATED += $(OBJDIR)/Camera.o
 GENERATED += $(OBJDIR)/CmdArgs.o
 GENERATED += $(OBJDIR)/Color.o
 GENERATED += $(OBJDIR)/ComponentWidgets.o
+GENERATED += $(OBJDIR)/Debug.o
 GENERATED += $(OBJDIR)/Entity.o
 GENERATED += $(OBJDIR)/Font.o
 GENERATED += $(OBJDIR)/ForwardRenderer.o
@@ -271,9 +272,12 @@ GENERATED += $(OBJDIR)/RendererAPI.o
 GENERATED += $(OBJDIR)/Runtime.o
 GENERATED += $(OBJDIR)/Scene.o
 GENERATED += $(OBJDIR)/SceneManager.o
+GENERATED += $(OBJDIR)/ScriptComponent.o
+GENERATED += $(OBJDIR)/ScriptEntity.o
 GENERATED += $(OBJDIR)/Shader.o
 GENERATED += $(OBJDIR)/Texture.o
 GENERATED += $(OBJDIR)/TextureManager.o
+GENERATED += $(OBJDIR)/Transform.o
 GENERATED += $(OBJDIR)/Uuid.o
 GENERATED += $(OBJDIR)/VertexArray.o
 GENERATED += $(OBJDIR)/VertexBuffer.o
@@ -299,6 +303,7 @@ OBJECTS += $(OBJDIR)/Camera.o
 OBJECTS += $(OBJDIR)/CmdArgs.o
 OBJECTS += $(OBJDIR)/Color.o
 OBJECTS += $(OBJDIR)/ComponentWidgets.o
+OBJECTS += $(OBJDIR)/Debug.o
 OBJECTS += $(OBJDIR)/Entity.o
 OBJECTS += $(OBJDIR)/Font.o
 OBJECTS += $(OBJDIR)/ForwardRenderer.o
@@ -344,9 +349,12 @@ OBJECTS += $(OBJDIR)/RendererAPI.o
 OBJECTS += $(OBJDIR)/Runtime.o
 OBJECTS += $(OBJDIR)/Scene.o
 OBJECTS += $(OBJDIR)/SceneManager.o
+OBJECTS += $(OBJDIR)/ScriptComponent.o
+OBJECTS += $(OBJDIR)/ScriptEntity.o
 OBJECTS += $(OBJDIR)/Shader.o
 OBJECTS += $(OBJDIR)/Texture.o
 OBJECTS += $(OBJDIR)/TextureManager.o
+OBJECTS += $(OBJDIR)/Transform.o
 OBJECTS += $(OBJDIR)/Uuid.o
 OBJECTS += $(OBJDIR)/VertexArray.o
 OBJECTS += $(OBJDIR)/VertexBuffer.o
@@ -564,6 +572,18 @@ $(OBJDIR)/Scene.o: Source/Crowny/SceneManagement/Scene.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/SceneManager.o: Source/Crowny/SceneManagement/SceneManager.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/Debug.o: Source/Crowny/Scripting/Bindings/Logging/Debug.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/Transform.o: Source/Crowny/Scripting/Bindings/Math/Transform.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ScriptComponent.o: Source/Crowny/Scripting/Bindings/Scene/ScriptComponent.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ScriptEntity.o: Source/Crowny/Scripting/Bindings/Scene/ScriptEntity.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/CWMonoAssembly.o: Source/Crowny/Scripting/CWMonoAssembly.cpp

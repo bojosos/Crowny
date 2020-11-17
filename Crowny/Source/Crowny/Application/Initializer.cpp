@@ -8,6 +8,7 @@
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Renderer/TextureManager.h"
 
+
 namespace Crowny
 {
 
@@ -22,6 +23,7 @@ namespace Crowny
 		Random::Init();
 		FontManager::Add(CreateRef<Font>("Roboto Thin", "/Fonts/" + DEFAULT_FONT_FILENAME, 64));
 		Textures::LoadDefault();
+
 	}
 
 	void Initializer::Shutdown()

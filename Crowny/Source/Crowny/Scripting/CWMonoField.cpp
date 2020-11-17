@@ -40,6 +40,18 @@ namespace Crowny
 		return CWMonoVisibility::PRIVATE;
 	}
 	
+	void CWMonoField::Set(MonoObject* obj, void* value)
+	{
+		mono_field_set_value (obj, m_Field, value);
+	}
+
+	void* CWMonoField::Get(MonoObject* obj)
+	{
+		int value;
+		mono_field_get_value(obj, m_Field, &value);
+		return (void*)value;
+	}
+
 	bool CWMonoField::IsValueType()
 	{
 		return m_Type->IsValueType();

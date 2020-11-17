@@ -21,6 +21,9 @@ namespace Crowny
 		bool IsStatic() const;
 
 		bool IsValueType();
+		void Set(MonoObject* obj, void* value);
+		void *Get(MonoObject *obj);
+
 	private:
 		MonoClassField* m_Field = nullptr;
 		MonoVTable* m_OwningTypeVTable = nullptr;

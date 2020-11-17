@@ -21,7 +21,7 @@ namespace Crowny
 		const std::string& GetName() const { return m_Name; }
 		const std::string& GetNamespace() const { return m_NamespaceName; }
 
-		CWMonoObject* CreateInstance();
+		MonoObject* CreateInstance();
 		void AddInternalCall(const std::string& managed, const void* func);
 
 		std::vector<CWMonoMethod*> GetMethods();

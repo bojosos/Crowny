@@ -14,15 +14,17 @@ namespace Crowny
 	CWMonoClass::CWMonoClass(MonoClass* monoClass) : m_Class(monoClass)
 	{
 		m_Name = mono_class_get_name(m_Class);
+		m_NamespaceName = mono_class_get_namespace(monoClass);
 	}
 
-	CWMonoObject* CWMonoClass::CreateInstance()
+	MonoObject* CWMonoClass::CreateInstance()
 	{
-		return new CWMonoObject(mono_object_new(CWMonoRuntime::GetDomain(), m_Class));
+		return mono_object_new(CWMonoRuntime::GetDomain(), m_Class);
 	}
 
 	void CWMonoClass::AddInternalCall(const std::string& managed, const void* func)
 	{
+		CW_ENGINE_INFO(m_NamespaceName + "." + m_Name + ":" + managed);
 		mono_add_internal_call((m_NamespaceName + "." + m_Name + "::" + managed).c_str(), func);
 	}
 
