@@ -8,6 +8,8 @@
 #include "Crowny/Renderer/RenderCommand.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
 
+#include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
+
 #include <entt/entt.hpp>
 
 namespace Crowny
@@ -20,13 +22,91 @@ namespace Crowny
 		m_RootEntity->AddComponent<RelationshipComponent>();
 	}
 
+	Scene::Scene(const Scene& other)
+	{
+		m_Name = other.m_Name;
+		m_RootEntity = other.m_RootEntity;
+		//m_Registry = other.m_Registry;
+	}
+
 	Scene::~Scene()
 	{
 		delete m_RootEntity;
 	}
 
+	void Scene::Run()
+	{
+		CW_ENGINE_INFO("Starting Run");
+
+		auto* encl = CWMonoRuntime::GetAssembly("")->GetClass("Crowny", "Entity");
+		CW_ENGINE_ASSERT(encl, "Entity class does not exist");
+		auto* field1 = encl->GetField("m_InternalPtr");
+		CW_ENGINE_INFO(field1 == nullptr);
+
+		m_Registry.each([&](auto entity) {
+			MonoObject* enin = encl->CreateInstance();
+			uint32_t handle = mono_gchandle_new(enin, false); // TODO: delete this
+			ScriptComponent::s_EntityComponents[entity] = enin;
+			size_t ent = (size_t)entity;
+			field1->Set(enin, &ent);
+		});
+
+		CW_ENGINE_INFO("Entities are done!");
+
+		auto* trcl = CWMonoRuntime::GetAssembly("")->GetClass("Crowny", "Transform");
+		CW_ENGINE_ASSERT(trcl, "Transform class does not exist");
+		auto* field2 = trcl->GetField("m_InternalPtr");
+		CW_ENGINE_INFO(field2 == nullptr);
+
+		m_Registry.view<TransformComponent>().each([&](const auto& entity, auto& tc)
+		{
+			MonoObject* trin = trcl->CreateInstance();
+			uint32_t handle = mono_gchandle_new(trin, false); // TODO: delete this!
+			tc.ManagedInstance = trin;
+			size_t val = (size_t)&tc;
+			field2->Set(trin, &val);
+			std::cout << &tc << std::endl;
+		});
+
+		CW_ENGINE_INFO("Transforms are done");
+		
+		m_Registry.view<MonoScriptComponent>().each([&](const entt::entity &entity, MonoScriptComponent &sc) 
+		{
+			CW_ENGINE_INFO(sc.Name);
+			//auto* mccl = CWMonoRuntime::GetAssembly("")->GetClass("Sandbox", sc.Name);
+			//CW_ENGINE_ASSERT(mccl, "EntityBegaviour class does not exist");
+			auto fields = sc.Class->GetFields();
+			for (CWMonoField* field : fields)
+			{
+				CW_ENGINE_INFO(field->GetFullDeclName());
+			}
+			auto* field3 = sc.Class->GetField("m_InternalPtr");
+			MonoObject* msin = sc.Class->CreateInstance();
+			uint32_t handle = mono_gchandle_new(msin, false); // TODO: delete this
+			size_t val = (size_t)&sc;
+			field3->Set(msin, &val);
+			auto methods = sc.Class->GetMethods();
+			std::cout << &sc << std::endl;
+			for (CWMonoMethod* method : methods)
+			{
+				CW_ENGINE_INFO(method->GetFullDeclName());
+			}
+
+			CWMonoMethod* method = sc.Class->GetMethod("Start", 0);
+			if (method)
+				method->Call(msin);
+		});
+
+		CW_ENGINE_INFO("Start is done");
+
+		m_Running = true;
+	}
+
 	void Scene::OnUpdate(Timestep ts)
 	{
+		if (!m_Running)
+			return;
+
 		auto cam = m_Registry.view<CameraComponent>();
 		if (!cam.empty()) 
 		{
@@ -37,13 +117,13 @@ namespace Crowny
 
 		m_Registry.group<TransformComponent>(entt::get<CameraComponent>).each([&](const auto& entity, auto& tc, auto& cc)
 			{ 
-				Renderer2D::Begin(cc.Camera.GetProjectionMatrix(), tc.Transform);
+				Renderer2D::Begin(cc.Camera.GetProjectionMatrix(), tc.GetTransform());
 
 				auto group = m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
 				for (auto ee : group)
 				{
 					auto [transform, sprite] = m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
-					Renderer2D::FillRect(transform, sprite.Texture, sprite.Color);
+					Renderer2D::FillRect(transform.GetTransform(), sprite.Texture, sprite.Color);
 				}
 
 				// TODO: Use rect transform, Use Canvas Renderer so I don't have to iterate over each type of ui component
@@ -51,21 +131,21 @@ namespace Crowny
 				for (auto ee : ttt)
 				{
 					auto [transform, tc] = m_Registry.get<TransformComponent, TextComponent>(ee);
-					Renderer2D::DrawString(tc.Text, transform, tc.Font, tc.Color);
+					Renderer2D::DrawString(tc.Text, transform.GetTransform(), tc.Font, tc.Color);
 				}
 
 				Renderer2D::End();
 
 				ForwardRenderer::Begin();
 				Camera cam(glm::perspective(glm::radians(45.0f), (float)1280 / (float)720, 0.1f, 1000.0f));
-				ForwardRenderer::BeginScene(&cc.Camera, tc.Transform);
+				ForwardRenderer::BeginScene(&cc.Camera, tc.GetTransform());
 				ForwardRenderer::SubmitLightSetup();
 				auto objs = m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
 				for (auto obj : objs)
 				{
 					auto [transform, mesh] = m_Registry.get<TransformComponent, MeshRendererComponent>(obj);
 					mesh.Mesh->SetMaterialInstnace(CreateRef<MaterialInstance>(ImGuiMaterialPanel::GetSlectedMaterial()));
-					ForwardRenderer::SubmitMesh(mesh.Mesh, transform);
+					ForwardRenderer::SubmitMesh(mesh.Mesh, transform.GetTransform());
 				}
 				ForwardRenderer::Flush();
 				ForwardRenderer::EndScene();

@@ -22,6 +22,8 @@ namespace Crowny
 			m_Scene->m_Registry.emplace<T>(m_EntityHandle, std::forward<Args>(args)...);
 		}
 
+		entt::entity GetHandle() { return m_EntityHandle; }
+
 		template<typename T>
 		T& GetComponent() const
 		{

@@ -13,10 +13,11 @@ namespace Crowny {
 	
 	}
 
-	template <class Component>
+	template <class Componentt>
 	void ComponentAddAction(Entity& entity)
 	{
-		entity.AddComponent<Component>();
+		entity.AddComponent<Componentt>();
+		entity.GetComponent<Componentt>().Parent = entity;
 	}
 
 	template <class Component>

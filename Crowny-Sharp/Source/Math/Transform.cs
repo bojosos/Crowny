@@ -1,28 +1,95 @@
-﻿using Crowny.Math;
+﻿using System;
+using System.Runtime.CompilerServices;
+using Crowny.Math;
 
 namespace Crowny
 {
-    class Transform
+    public class Transform : Component
     {
         // Position of the transform in world space
-        public extern Vector3 position { get; set; }
+        public Vector3 position
+        {
+            get
+            {
+                Console.WriteLine("Getting position");
+                Vector3 tmp;
+                Internal_GetPosition(m_InternalPtr, out tmp);
+                return tmp;
+            }
+            set { Console.WriteLine("Setting position"); Internal_SetPosition(m_InternalPtr, value); }
+        }
 
         // Position of the transform relative to its parent
-        public extern Vector3 localPosition { get; set; }
+        public Vector3 localPosition 
+        { 
+            get 
+            { 
+                Vector3 temp;
+                Internal_GetLocalPosition(m_InternalPtr, out temp);
+                return temp;
+            } 
+            set { Internal_SetLocalPosition(m_InternalPtr, value); }
+        }
 
         // Rotation of the transform
         //public extern Quaternion rotation { get; set; }
 
         // Scale of the transform relative to its parent
-        public extern Vector3 localScale { get; set; }
+        public Vector3 localScale 
+        {
+            get
+            {
+                Vector3 temp;
+                Internal_GetLocalScale(m_InternalPtr, out temp);
+                return temp;
+            } 
+            set { Internal_SetLocalScale(m_InternalPtr, value); } 
+        }
 
         // Rotation of the transform in degrees
-        public extern Vector3 eulerAngles { get; set; }
+        public Vector3 eulerAngles
+        {
+            get
+            { 
+                Vector3 temp;
+                Internal_GetEulerAngles(m_InternalPtr, out temp);
+                return temp;
+            } 
+            set { Internal_SetEulerAngles(m_InternalPtr, value); } 
+        }
 
         // Rotation of the transform in degrees relative to its parent
-        public extern Vector3 localEulerAngles { get; set; }
+        public Vector3 localEulerAngles
+        {
+            get
+            {
+                Vector3 temp;
+                Internal_GetLocalEulerAngles(m_InternalPtr, out temp);
+                return temp;
+            } 
+            set { Internal_SetEulerAngles(m_InternalPtr, value); } 
+        }
 
-
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        public extern void Internal_GetPosition(IntPtr thisptr, out Vector3 output);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        public extern void Internal_SetPosition(IntPtr thisptr, Vector3 value);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        public extern void Internal_GetLocalPosition(IntPtr thisptr, out Vector3 output);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        public extern void Internal_SetLocalPosition(IntPtr thisptr, Vector3 value);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        public extern void Internal_GetLocalScale(IntPtr thisptr, out Vector3 output);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        public extern void Internal_SetLocalScale(IntPtr thisptr, Vector3 value);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        public extern void Internal_GetEulerAngles(IntPtr thisptr, out Vector3 output);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        public extern void Internal_SetEulerAngles(IntPtr thisptr, Vector3 value);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        public extern void Internal_GetLocalEulerAngles(IntPtr thisptr, out Vector3 output);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        public extern void Internal_SetLocalEulerAngles(IntPtr thisptr, Vector3 value);
 
     }
 }

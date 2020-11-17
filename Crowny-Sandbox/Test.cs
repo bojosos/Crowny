@@ -1,18 +1,27 @@
 ﻿using System;
+
 using Crowny;
+using Crowny.Math;
 
 namespace Sandbox
 {
-    class Test
+    public class Test : EntityBehaviour
     {
-
-        public static void Main(string[] args)
+        public void Start()
         {
-            Vector3 position = new Vector3(1f, 2f, 3f);
-            Console.WriteLine(Vector3.Distance(new Vector3(1f, 1f, 1f), new Vector3(2f, 2f, 2f)));
-            Console.WriteLine(position);
-            Console.Read();
+            Console.WriteLine("Calling start");
+            //Debug.Log("Start called");
+            //transform.position += new Vector3(0.1f, 0f, 0f);// * Time.deltaTime;
         }
 
+        public void After()
+        {
+
+        }
+
+        public void Update()
+        {
+        	transform.position += new Vector3(0.1f, 0f, 0f);// * Time.deltaTime;
+        }
     }
 }

@@ -19,7 +19,12 @@
 namespace Crowny
 {
 
-	struct TagComponent
+	struct Component
+	{
+		Entity Parent;
+	};
+
+	struct TagComponent : public Component
 	{
 		std::string Tag = "";
 
@@ -31,22 +36,33 @@ namespace Crowny
 		operator const std::string& () const { return Tag; }
 	};
 
-	struct TransformComponent
+	struct TransformComponent : public Component
 	{
-		glm::mat4 Transform{ 1.0f };
+		glm::vec3 Position = { 0.0f, 0.0f, 0.0f };
+		glm::vec3 Rotation = { 0.0f, 0.0f, 0.0f };
+		glm::vec3 Scale = { 1.0f, 1.0f, 1.0f };
+
+		MonoObject* ManagedInstance;
 
 		TransformComponent() = default;
 		TransformComponent(const TransformComponent&) = default;
-		TransformComponent(const glm::mat4& transform) : Transform(transform) {}
+		TransformComponent(const glm::vec3& position) : Position(position) {}
 
-		operator glm::mat4& () { return Transform; }
-		operator const glm::mat4& () const { return Transform; }
+		glm::mat4 GetTransform() const
+		{
+				glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), Rotation.x, { 1, 0, 0})
+				 					* glm::rotate(glm::mat4(1.0f), Rotation.y, { 0, 1, 0}) * 
+									glm::rotate(glm::mat4(1.0f), Rotation.z, { 0, 0, 1});
+
+				return glm::translate(glm::mat4(1.0f), Position) * rotation * glm::scale(glm::mat4(1.0f), Scale);
+		}
+
 	};
 
 	template <>
 	void ComponentEditorWidget<TransformComponent>(Entity& e);
 
-	struct CameraComponent
+	struct CameraComponent : public Component
 	{
 		::Crowny::Camera Camera;
 
@@ -57,7 +73,7 @@ namespace Crowny
 	template <>
 	void ComponentEditorWidget<CameraComponent>(Entity& e);
 
-	struct TextComponent
+	struct TextComponent : public Component
 	{
 		std::string Text = "";
 		Ref<::Crowny::Font> Font;
@@ -72,7 +88,7 @@ namespace Crowny
 	template <>
 	void ComponentEditorWidget<TextComponent>(Entity& e);
 
-	struct SpriteRendererComponent
+	struct SpriteRendererComponent : public Component
 	{
 		Ref<Texture2D> Texture;
 		glm::vec4 Color;
@@ -85,7 +101,7 @@ namespace Crowny
 	template <>
 	void ComponentEditorWidget<SpriteRendererComponent>(Entity& e);
 
-	struct MeshRendererComponent
+	struct MeshRendererComponent : public Component
 	{
 		Ref<::Crowny::Mesh> Mesh;
 
@@ -96,7 +112,7 @@ namespace Crowny
 	template <>
 	void ComponentEditorWidget<MeshRendererComponent>(Entity& e);
 
-	struct RelationshipComponent
+	struct RelationshipComponent : public Component
 	{
 		std::vector<Entity> Children;
 		Entity Parent;
@@ -106,12 +122,13 @@ namespace Crowny
 		RelationshipComponent(const Entity& parent) : Parent(parent) { }
 	};
 
-	struct MonoScriptComponent
+	struct MonoScriptComponent : public Component
 	{
 		std::string Name;
 		CWMonoClass* Class = nullptr;
 		CWMonoObject* Object = nullptr;
-		
+		Entity EntityParent;
+
 		MonoScriptComponent() = default;
 		MonoScriptComponent(const MonoScriptComponent&) = default;
 

@@ -1,8 +1,441 @@
-[11:45:12] [info] CROWNY: Ending read
-[11:45:12] [info] CROWNY: Loaded texture /Textures/Unassigned.png, 608x608x3.
-[11:45:12] [info] CROWNY: Loaded texture /Textures/rustediron2_basecolor.png, 2048x2048x4.
-[11:45:13] [info] CROWNY: Loaded texture /Textures/rustediron2_metallic.png, 2048x2048x1.
-[11:45:13] [info] CROWNY: Loaded texture /Textures/rustediron2_normal.png, 2048x2048x3.
-[11:45:13] [info] CROWNY: Loaded texture /Textures/rustediron2_roughness.png, 2048x2048x1.
-[11:45:20] [info] CROWNY: Loaded texture /home/life/Desktop/dev/Crowny/Crowny-Editor/Resources/Textures/rustediron2_basecolor.png
-, 0x4531110x0.
+[06:54:51] [info] CROWNY: Ending read
+[06:54:51] [info] CROWNY: Loaded texture /Textures/Unassigned.png, 608x608x3.
+[06:54:52] [info] CROWNY: Loaded texture /Textures/rustediron2_basecolor.png, 2048x2048x4.
+[06:54:52] [info] CROWNY: Loaded texture /Textures/rustediron2_metallic.png, 2048x2048x1.
+[06:54:52] [info] CROWNY: Loaded texture /Textures/rustediron2_normal.png, 2048x2048x3.
+[06:54:52] [info] CROWNY: Loaded texture /Textures/rustediron2_roughness.png, 2048x2048x1.
+[06:54:52] [info] CROWNY: Domaind Crowny C# Runtime created!
+[06:54:52] [info] CROWNY: Assembly Resources/Crowny.dll loaded
+[06:54:52] [info] CROWNY: Debug init
+[06:54:52] [info] CROWNY: Crowny.Debug:Internal_Log
+[06:54:52] [info] CROWNY: Crowny.Debug:Internal_LogWarning
+[06:54:52] [info] CROWNY: Crowny.Debug:Internal_LogError
+[06:54:52] [info] CROWNY: Crowny.Debug:Internal_LogException
+[06:54:52] [info] CROWNY: Crowny.Transform:Internal_GetPosition
+[06:54:52] [info] CROWNY: Crowny.Transform:Internal_SetPosition
+[06:54:52] [info] CROWNY: Crowny.Transform:Internal_GetLocalPosition
+[06:54:52] [info] CROWNY: Crowny.Transform:Internal_SetLocalPosition
+[06:54:52] [info] CROWNY: Crowny.Transform:Internal_GetEulerAngles
+[06:54:52] [info] CROWNY: Crowny.Transform:Internal_SetEulerAngles
+[06:54:52] [info] CROWNY: Crowny.Transform:Internal_GetLocalEulerAngles
+[06:54:52] [info] CROWNY: Crowny.Transform:Internal_SetLocalEulerAngles
+[06:54:52] [info] CROWNY: Crowny.Transform:Internal_GetLocalScale
+[06:54:52] [info] CROWNY: Crowny.Transform:Internal_SetLocalScale
+[06:54:52] [info] CROWNY: Crowny.Component:Internal_GetEntity
+[06:54:52] [info] CROWNY: Crowny.Entity:Internal_GetName
+[06:54:52] [info] CROWNY: Crowny.Entity:Internal_SetName
+[06:54:52] [info] CROWNY: Crowny.Entity:Internal_GetParent
+[06:54:52] [info] CROWNY: Crowny.Entity:Internal_GetTransform
+[06:54:56] [info] CROWNY: Attempting to load T
+[06:54:56] [info] CROWNY: Script class is: true
+[06:54:56] [info] CROWNY: Attempting to load Te
+[06:54:56] [info] CROWNY: Script class is: true
+[06:54:56] [info] CROWNY: Attempting to load Tes
+[06:54:56] [info] CROWNY: Script class is: true
+[06:54:56] [info] CROWNY: Attempting to load Test
+[06:54:56] [info] CROWNY: Script class is: false
+[06:54:57] [info] CROWNY: Starting Run
+[06:54:57] [info] CROWNY: false
+[06:54:57] [info] CROWNY: Entities are done!
+[06:54:57] [info] CROWNY: false
+[06:54:57] [info] CROWNY: Transforms are done
+[06:54:57] [info] CROWNY: Test
+[06:54:57] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:54:57] [info] CROWNY: public Sandbox.Test:Start ()
+[06:54:57] [info] CROWNY: public Sandbox.Test:After ()
+[06:54:57] [info] CROWNY: public Sandbox.Test:Update ()
+[06:54:57] [info] CROWNY: Here and false
+[06:54:57] [info] CLIENT: Test debug
+[06:54:57] [info] CROWNY: Here and false
+[06:54:57] [info] CLIENT: 0, 0, 0
+[06:54:57] [info] CROWNY: Start is done
+[06:55:21] [info] CROWNY: Starting Run
+[06:55:21] [info] CROWNY: false
+[06:55:21] [info] CROWNY: Entities are done!
+[06:55:21] [info] CROWNY: false
+[06:55:21] [info] CROWNY: Transforms are done
+[06:55:21] [info] CROWNY: Test
+[06:55:21] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:21] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:21] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:21] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:21] [info] CROWNY: Here and false
+[06:55:21] [info] CLIENT: Test debug
+[06:55:21] [info] CROWNY: Here and false
+[06:55:21] [info] CLIENT: 0, 0, 0
+[06:55:21] [info] CROWNY: Start is done
+[06:55:22] [info] CROWNY: Starting Run
+[06:55:22] [info] CROWNY: false
+[06:55:22] [info] CROWNY: Entities are done!
+[06:55:22] [info] CROWNY: false
+[06:55:22] [info] CROWNY: Transforms are done
+[06:55:22] [info] CROWNY: Test
+[06:55:22] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:22] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:22] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:22] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:22] [info] CROWNY: Here and false
+[06:55:22] [info] CLIENT: Test debug
+[06:55:22] [info] CROWNY: Here and false
+[06:55:22] [info] CLIENT: 0, 0, 0
+[06:55:22] [info] CROWNY: Start is done
+[06:55:22] [info] CROWNY: Starting Run
+[06:55:22] [info] CROWNY: false
+[06:55:22] [info] CROWNY: Entities are done!
+[06:55:22] [info] CROWNY: false
+[06:55:22] [info] CROWNY: Transforms are done
+[06:55:22] [info] CROWNY: Test
+[06:55:22] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:22] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:22] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:22] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:22] [info] CROWNY: Here and false
+[06:55:22] [info] CLIENT: Test debug
+[06:55:22] [info] CROWNY: Here and false
+[06:55:22] [info] CLIENT: 0, 0, 0
+[06:55:22] [info] CROWNY: Start is done
+[06:55:22] [info] CROWNY: Starting Run
+[06:55:22] [info] CROWNY: false
+[06:55:22] [info] CROWNY: Entities are done!
+[06:55:22] [info] CROWNY: false
+[06:55:22] [info] CROWNY: Transforms are done
+[06:55:22] [info] CROWNY: Test
+[06:55:22] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:22] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:22] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:22] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:22] [info] CROWNY: Here and false
+[06:55:22] [info] CLIENT: Test debug
+[06:55:22] [info] CROWNY: Here and false
+[06:55:22] [info] CLIENT: 0, 0, 0
+[06:55:22] [info] CROWNY: Start is done
+[06:55:23] [info] CROWNY: Starting Run
+[06:55:23] [info] CROWNY: false
+[06:55:23] [info] CROWNY: Entities are done!
+[06:55:23] [info] CROWNY: false
+[06:55:23] [info] CROWNY: Transforms are done
+[06:55:23] [info] CROWNY: Test
+[06:55:23] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:23] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:23] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:23] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:23] [info] CROWNY: Here and false
+[06:55:23] [info] CLIENT: Test debug
+[06:55:23] [info] CROWNY: Here and false
+[06:55:23] [info] CLIENT: 0, 0, 0
+[06:55:23] [info] CROWNY: Start is done
+[06:55:23] [info] CROWNY: Starting Run
+[06:55:23] [info] CROWNY: false
+[06:55:23] [info] CROWNY: Entities are done!
+[06:55:23] [info] CROWNY: false
+[06:55:23] [info] CROWNY: Transforms are done
+[06:55:23] [info] CROWNY: Test
+[06:55:23] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:23] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:23] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:23] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:23] [info] CROWNY: Here and false
+[06:55:23] [info] CLIENT: Test debug
+[06:55:23] [info] CROWNY: Here and false
+[06:55:23] [info] CLIENT: 0, 0, 0
+[06:55:23] [info] CROWNY: Start is done
+[06:55:32] [info] CROWNY: Starting Run
+[06:55:32] [info] CROWNY: false
+[06:55:32] [info] CROWNY: Entities are done!
+[06:55:32] [info] CROWNY: false
+[06:55:32] [info] CROWNY: Transforms are done
+[06:55:32] [info] CROWNY: Test
+[06:55:32] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:32] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:32] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:32] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:32] [info] CROWNY: Here and false
+[06:55:32] [info] CLIENT: Test debug
+[06:55:32] [info] CROWNY: Here and false
+[06:55:32] [info] CLIENT: 0, 0, 0
+[06:55:32] [info] CROWNY: Start is done
+[06:55:32] [info] CROWNY: Starting Run
+[06:55:32] [info] CROWNY: false
+[06:55:32] [info] CROWNY: Entities are done!
+[06:55:32] [info] CROWNY: false
+[06:55:32] [info] CROWNY: Transforms are done
+[06:55:32] [info] CROWNY: Test
+[06:55:32] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:32] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:32] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:32] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:32] [info] CROWNY: Here and false
+[06:55:32] [info] CLIENT: Test debug
+[06:55:32] [info] CROWNY: Here and false
+[06:55:32] [info] CLIENT: 0, 0, 0
+[06:55:32] [info] CROWNY: Start is done
+[06:55:32] [info] CROWNY: Starting Run
+[06:55:32] [info] CROWNY: false
+[06:55:32] [info] CROWNY: Entities are done!
+[06:55:32] [info] CROWNY: false
+[06:55:32] [info] CROWNY: Transforms are done
+[06:55:32] [info] CROWNY: Test
+[06:55:32] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:32] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:32] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:32] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:32] [info] CROWNY: Here and false
+[06:55:32] [info] CLIENT: Test debug
+[06:55:32] [info] CROWNY: Here and false
+[06:55:32] [info] CLIENT: 0, 0, 0
+[06:55:32] [info] CROWNY: Start is done
+[06:55:33] [info] CROWNY: Starting Run
+[06:55:33] [info] CROWNY: false
+[06:55:33] [info] CROWNY: Entities are done!
+[06:55:33] [info] CROWNY: false
+[06:55:33] [info] CROWNY: Transforms are done
+[06:55:33] [info] CROWNY: Test
+[06:55:33] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:33] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:33] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:33] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:33] [info] CROWNY: Here and false
+[06:55:33] [info] CLIENT: Test debug
+[06:55:33] [info] CROWNY: Here and false
+[06:55:33] [info] CLIENT: 0, 0, 0
+[06:55:33] [info] CROWNY: Start is done
+[06:55:33] [info] CROWNY: Starting Run
+[06:55:33] [info] CROWNY: false
+[06:55:33] [info] CROWNY: Entities are done!
+[06:55:33] [info] CROWNY: false
+[06:55:33] [info] CROWNY: Transforms are done
+[06:55:33] [info] CROWNY: Test
+[06:55:33] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:33] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:33] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:33] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:33] [info] CROWNY: Here and false
+[06:55:33] [info] CLIENT: Test debug
+[06:55:33] [info] CROWNY: Here and false
+[06:55:33] [info] CLIENT: 0, 0, 0
+[06:55:33] [info] CROWNY: Start is done
+[06:55:33] [info] CROWNY: Starting Run
+[06:55:33] [info] CROWNY: false
+[06:55:33] [info] CROWNY: Entities are done!
+[06:55:33] [info] CROWNY: false
+[06:55:33] [info] CROWNY: Transforms are done
+[06:55:33] [info] CROWNY: Test
+[06:55:33] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:33] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:33] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:33] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:33] [info] CROWNY: Here and false
+[06:55:33] [info] CLIENT: Test debug
+[06:55:33] [info] CROWNY: Here and false
+[06:55:33] [info] CLIENT: 0, 0, 0
+[06:55:33] [info] CROWNY: Start is done
+[06:55:33] [info] CROWNY: Starting Run
+[06:55:33] [info] CROWNY: false
+[06:55:33] [info] CROWNY: Entities are done!
+[06:55:33] [info] CROWNY: false
+[06:55:33] [info] CROWNY: Transforms are done
+[06:55:33] [info] CROWNY: Test
+[06:55:33] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:33] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:33] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:33] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:33] [info] CROWNY: Here and false
+[06:55:33] [info] CLIENT: Test debug
+[06:55:33] [info] CROWNY: Here and false
+[06:55:33] [info] CLIENT: 0, 0, 0
+[06:55:33] [info] CROWNY: Start is done
+[06:55:33] [info] CROWNY: Starting Run
+[06:55:33] [info] CROWNY: false
+[06:55:33] [info] CROWNY: Entities are done!
+[06:55:33] [info] CROWNY: false
+[06:55:33] [info] CROWNY: Transforms are done
+[06:55:33] [info] CROWNY: Test
+[06:55:33] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:33] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:33] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:33] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:33] [info] CROWNY: Here and false
+[06:55:33] [info] CLIENT: Test debug
+[06:55:33] [info] CROWNY: Here and false
+[06:55:33] [info] CLIENT: 0, 0, 0
+[06:55:33] [info] CROWNY: Start is done
+[06:55:34] [info] CROWNY: Starting Run
+[06:55:34] [info] CROWNY: false
+[06:55:34] [info] CROWNY: Entities are done!
+[06:55:34] [info] CROWNY: false
+[06:55:34] [info] CROWNY: Transforms are done
+[06:55:34] [info] CROWNY: Test
+[06:55:34] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:34] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:34] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:34] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:34] [info] CROWNY: Here and false
+[06:55:34] [info] CLIENT: Test debug
+[06:55:34] [info] CROWNY: Here and false
+[06:55:34] [info] CLIENT: 0, 0, 0
+[06:55:34] [info] CROWNY: Start is done
+[06:55:35] [info] CROWNY: Starting Run
+[06:55:35] [info] CROWNY: false
+[06:55:35] [info] CROWNY: Entities are done!
+[06:55:35] [info] CROWNY: false
+[06:55:35] [info] CROWNY: Transforms are done
+[06:55:35] [info] CROWNY: Test
+[06:55:35] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:35] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:35] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:35] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:35] [info] CROWNY: Here and false
+[06:55:35] [info] CLIENT: Test debug
+[06:55:35] [info] CROWNY: Here and false
+[06:55:35] [info] CLIENT: 0, 0, 0
+[06:55:35] [info] CROWNY: Start is done
+[06:55:35] [info] CROWNY: Starting Run
+[06:55:35] [info] CROWNY: false
+[06:55:35] [info] CROWNY: Entities are done!
+[06:55:35] [info] CROWNY: false
+[06:55:35] [info] CROWNY: Transforms are done
+[06:55:35] [info] CROWNY: Test
+[06:55:35] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:35] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:35] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:35] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:35] [info] CROWNY: Here and false
+[06:55:35] [info] CLIENT: Test debug
+[06:55:35] [info] CROWNY: Here and false
+[06:55:35] [info] CLIENT: 0, 0, 0
+[06:55:35] [info] CROWNY: Start is done
+[06:55:35] [info] CROWNY: Starting Run
+[06:55:35] [info] CROWNY: false
+[06:55:35] [info] CROWNY: Entities are done!
+[06:55:35] [info] CROWNY: false
+[06:55:35] [info] CROWNY: Transforms are done
+[06:55:35] [info] CROWNY: Test
+[06:55:35] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:35] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:35] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:35] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:35] [info] CROWNY: Here and false
+[06:55:35] [info] CLIENT: Test debug
+[06:55:35] [info] CROWNY: Here and false
+[06:55:35] [info] CLIENT: 0, 0, 0
+[06:55:35] [info] CROWNY: Start is done
+[06:55:35] [info] CROWNY: Starting Run
+[06:55:35] [info] CROWNY: false
+[06:55:35] [info] CROWNY: Entities are done!
+[06:55:35] [info] CROWNY: false
+[06:55:35] [info] CROWNY: Transforms are done
+[06:55:35] [info] CROWNY: Test
+[06:55:35] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:35] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:35] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:35] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:35] [info] CROWNY: Here and false
+[06:55:35] [info] CLIENT: Test debug
+[06:55:35] [info] CROWNY: Here and false
+[06:55:35] [info] CLIENT: 0, 0, 0
+[06:55:35] [info] CROWNY: Start is done
+[06:55:35] [info] CROWNY: Starting Run
+[06:55:35] [info] CROWNY: false
+[06:55:35] [info] CROWNY: Entities are done!
+[06:55:35] [info] CROWNY: false
+[06:55:35] [info] CROWNY: Transforms are done
+[06:55:35] [info] CROWNY: Test
+[06:55:35] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:35] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:35] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:35] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:35] [info] CROWNY: Here and false
+[06:55:35] [info] CLIENT: Test debug
+[06:55:35] [info] CROWNY: Here and false
+[06:55:35] [info] CLIENT: 0, 0, 0
+[06:55:35] [info] CROWNY: Start is done
+[06:55:36] [info] CROWNY: Starting Run
+[06:55:36] [info] CROWNY: false
+[06:55:36] [info] CROWNY: Entities are done!
+[06:55:36] [info] CROWNY: false
+[06:55:36] [info] CROWNY: Transforms are done
+[06:55:36] [info] CROWNY: Test
+[06:55:36] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:36] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:36] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:36] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:36] [info] CROWNY: Here and false
+[06:55:36] [info] CLIENT: Test debug
+[06:55:36] [info] CROWNY: Here and false
+[06:55:36] [info] CLIENT: 0, 0, 0
+[06:55:36] [info] CROWNY: Start is done
+[06:55:36] [info] CROWNY: Starting Run
+[06:55:36] [info] CROWNY: false
+[06:55:36] [info] CROWNY: Entities are done!
+[06:55:36] [info] CROWNY: false
+[06:55:36] [info] CROWNY: Transforms are done
+[06:55:36] [info] CROWNY: Test
+[06:55:36] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:36] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:36] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:36] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:36] [info] CROWNY: Here and false
+[06:55:36] [info] CLIENT: Test debug
+[06:55:36] [info] CROWNY: Here and false
+[06:55:36] [info] CLIENT: 0, 0, 0
+[06:55:36] [info] CROWNY: Start is done
+[06:55:36] [info] CROWNY: Starting Run
+[06:55:36] [info] CROWNY: false
+[06:55:36] [info] CROWNY: Entities are done!
+[06:55:36] [info] CROWNY: false
+[06:55:36] [info] CROWNY: Transforms are done
+[06:55:36] [info] CROWNY: Test
+[06:55:36] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:36] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:36] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:36] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:36] [info] CROWNY: Here and false
+[06:55:36] [info] CLIENT: Test debug
+[06:55:36] [info] CROWNY: Here and false
+[06:55:36] [info] CLIENT: 0, 0, 0
+[06:55:36] [info] CROWNY: Start is done
+[06:55:37] [info] CROWNY: Starting Run
+[06:55:37] [info] CROWNY: false
+[06:55:37] [info] CROWNY: Entities are done!
+[06:55:37] [info] CROWNY: false
+[06:55:37] [info] CROWNY: Transforms are done
+[06:55:37] [info] CROWNY: Test
+[06:55:37] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:37] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:37] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:37] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:37] [info] CROWNY: Here and false
+[06:55:37] [info] CLIENT: Test debug
+[06:55:37] [info] CROWNY: Here and false
+[06:55:37] [info] CLIENT: 0, 0, 0
+[06:55:37] [info] CROWNY: Start is done
+[06:55:38] [info] CROWNY: Starting Run
+[06:55:38] [info] CROWNY: false
+[06:55:38] [info] CROWNY: Entities are done!
+[06:55:38] [info] CROWNY: false
+[06:55:38] [info] CROWNY: Transforms are done
+[06:55:38] [info] CROWNY: Test
+[06:55:38] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:38] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:38] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:38] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:38] [info] CROWNY: Here and false
+[06:55:38] [info] CLIENT: Test debug
+[06:55:38] [info] CROWNY: Here and false
+[06:55:38] [info] CLIENT: 0, 0, 0
+[06:55:38] [info] CROWNY: Start is done
+[06:55:39] [info] CROWNY: Starting Run
+[06:55:39] [info] CROWNY: false
+[06:55:39] [info] CROWNY: Entities are done!
+[06:55:39] [info] CROWNY: false
+[06:55:39] [info] CROWNY: Transforms are done
+[06:55:39] [info] CROWNY: Test
+[06:55:39] [info] CROWNY: public Sandbox.Test:.ctor ()
+[06:55:39] [info] CROWNY: public Sandbox.Test:Start ()
+[06:55:39] [info] CROWNY: public Sandbox.Test:After ()
+[06:55:39] [info] CROWNY: public Sandbox.Test:Update ()
+[06:55:39] [info] CROWNY: Here and false
+[06:55:39] [info] CLIENT: Test debug
+[06:55:39] [info] CROWNY: Here and false
+[06:55:39] [info] CLIENT: 0, 0, 0
+[06:55:39] [info] CROWNY: Start is done

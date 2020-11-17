@@ -17,8 +17,8 @@ TARGETDIR = ../bin/Debug-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
 OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny-Sharp/Win64
   FLAGS = /debug /noconfig /d:CW_DEBUG
-  DEPENDS = ../bin/Debug-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
-  REFERENCES = /r:../bin/Debug-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
+  DEPENDS =
+  REFERENCES = 
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -34,8 +34,8 @@ TARGETDIR = ../bin/Debug-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
 OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny-Sharp/Linux64
   FLAGS = /debug /noconfig /d:CW_DEBUG
-  DEPENDS = ../bin/Debug-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
-  REFERENCES = /r:../bin/Debug-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
+  DEPENDS =
+  REFERENCES = 
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -51,8 +51,8 @@ TARGETDIR = ../bin/Debug-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
 OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny-Sharp/MacOS64
   FLAGS = /debug /noconfig /d:CW_DEBUG
-  DEPENDS = ../bin/Debug-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
-  REFERENCES = /r:../bin/Debug-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
+  DEPENDS =
+  REFERENCES = 
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -68,8 +68,8 @@ TARGETDIR = ../bin/Debug-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
 OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny-Sharp/Web
   FLAGS = /debug /noconfig /d:CW_DEBUG
-  DEPENDS = ../bin/Debug-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
-  REFERENCES = /r:../bin/Debug-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
+  DEPENDS =
+  REFERENCES = 
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -85,8 +85,8 @@ TARGETDIR = ../bin/Release-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
 OBJDIR = ../bin-int/Release-linux-x86_64/Crowny-Sharp/Win64
   FLAGS = /optimize /noconfig /d:CW_RELEASE
-  DEPENDS = ../bin/Release-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
-  REFERENCES = /r:../bin/Release-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
+  DEPENDS =
+  REFERENCES = 
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -102,8 +102,8 @@ TARGETDIR = ../bin/Release-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
 OBJDIR = ../bin-int/Release-linux-x86_64/Crowny-Sharp/Linux64
   FLAGS = /optimize /noconfig /d:CW_RELEASE
-  DEPENDS = ../bin/Release-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
-  REFERENCES = /r:../bin/Release-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
+  DEPENDS =
+  REFERENCES = 
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -119,8 +119,8 @@ TARGETDIR = ../bin/Release-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
 OBJDIR = ../bin-int/Release-linux-x86_64/Crowny-Sharp/MacOS64
   FLAGS = /optimize /noconfig /d:CW_RELEASE
-  DEPENDS = ../bin/Release-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
-  REFERENCES = /r:../bin/Release-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
+  DEPENDS =
+  REFERENCES = 
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -136,8 +136,8 @@ TARGETDIR = ../bin/Release-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
 OBJDIR = ../bin-int/Release-linux-x86_64/Crowny-Sharp/Web
   FLAGS = /optimize /noconfig /d:CW_RELEASE
-  DEPENDS = ../bin/Release-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
-  REFERENCES = /r:../bin/Release-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
+  DEPENDS =
+  REFERENCES = 
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -153,8 +153,8 @@ TARGETDIR = ../bin/Dist-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
 OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny-Sharp/Win64
   FLAGS = /optimize /noconfig /d:CW_DIST
-  DEPENDS = ../bin/Dist-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
-  REFERENCES = /r:../bin/Dist-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
+  DEPENDS =
+  REFERENCES = 
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -170,8 +170,8 @@ TARGETDIR = ../bin/Dist-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
 OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny-Sharp/Linux64
   FLAGS = /optimize /noconfig /d:CW_DIST
-  DEPENDS = ../bin/Dist-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
-  REFERENCES = /r:../bin/Dist-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
+  DEPENDS =
+  REFERENCES = 
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -187,8 +187,8 @@ TARGETDIR = ../bin/Dist-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
 OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny-Sharp/MacOS64
   FLAGS = /optimize /noconfig /d:CW_DIST
-  DEPENDS = ../bin/Dist-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
-  REFERENCES = /r:../bin/Dist-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
+  DEPENDS =
+  REFERENCES = 
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -204,8 +204,8 @@ TARGETDIR = ../bin/Dist-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
 OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny-Sharp/Web
   FLAGS = /optimize /noconfig /d:CW_DIST
-  DEPENDS = ../bin/Dist-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
-  REFERENCES = /r:../bin/Dist-linux-x86_64/Crowny-Wrapper/libCrowny-Wrapper.so
+  DEPENDS =
+  REFERENCES = 
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -215,7 +215,7 @@ endef
 endif
 
 FLAGS += /t:library 
-REFERENCES += 
+REFERENCES += /r:Crowny-Wrapper
 
 SOURCES += \
 

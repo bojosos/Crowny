@@ -4,6 +4,12 @@
 
 #include "Crowny/Scripting/CWMonoRuntime.h"
 
+#include "Crowny/Runtime/Runtime.h"
+#include "Crowny/Scripting/Bindings/Logging/Debug.h"
+#include "Crowny/Scripting/Bindings/Math/Transform.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptEntity.h"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -75,8 +81,17 @@ namespace Crowny
 		cam.AddComponent<CameraComponent>();
 
 		CWMonoRuntime::Init("Crowny C# Runtime");
-		auto* assembly = CWMonoRuntime::LoadAssembly("Resources/Test.dll");
-		m_Class = assembly->GetClass("Test", "Test");
+		auto* assembly = CWMonoRuntime::LoadAssembly("Resources/Crowny.dll");
+		
+		// TODO: Out of here
+		Debug::InitRuntimeFunctions();
+		ScriptTransform::InitRuntimeFunctions();
+		ScriptComponent::InitRuntimeFunctions();
+		ScriptEntity::InitRuntimeFunctions();
+
+		//m_Class = assembly->GetClass("Test", "Test");
+
+		//SceneManager::GetActiveScene()->Run();
 	}
 
 	void EditorLayer::OnDetach()
@@ -146,6 +161,13 @@ namespace Crowny
 			ImGuiID dockspace_id = ImGui::GetID("Crowny Editor");
 			ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 		}
+
+		ImGui::Begin("Scripting");
+		if (ImGui::Button("Run"))
+		{
+			SceneManager::GetActiveScene()->Run();
+		}
+		ImGui::End();
 
 		m_MenuBar->Render();
 

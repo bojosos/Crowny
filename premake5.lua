@@ -255,51 +255,6 @@ project "Crowny-Editor"
 		runtime "Release"
 		optimize "on"
 
-project "Crowny-Wrapper"
-	location "Crowny-Wrapper"
-	kind "SharedLib"
-	language "C++"
-	cppdialect "C++17"
-
-	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
-	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
-
-	files
-	{
-		"%{prj.name}/Source/**.h",
-		"%{prj.name}/Source/**.cpp"
-	}
-
-	includedirs
-	{
-		"Crowny/Source",
-		"%{prj.name}/Source/",
-		"%{prj.name}/../Crowny/Dependencies/glm"
-	}
-
-	links
-	{
-		"Crowny"
-	}
-
-	filter "system:windows"
-		systemversion "latest"
-
-	filter "configurations:Debug"
-		defines "CW_DEBUG"
-		runtime "Debug"
-		symbols "on"
-
-	filter "configurations:Release"
-		defines "CW_RELEASE"
-		runtime "Release"
-		optimize "on"
-
-	filter "configurations:Dist"
-		defines "CW_DIST"
-		runtime "Release"
-		optimize "on"
-
 project "Crowny-Sharp"
 	location "Crowny-Sharp"
 	kind "SharedLib"
@@ -342,7 +297,7 @@ project "Crowny-Sandbox"
 
 	links
 	{
-		"Crowny-CLI"
+		"Crowny-Sharp"
 	}
 
 	filter "system:windows"

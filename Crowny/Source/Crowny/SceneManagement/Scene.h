@@ -15,10 +15,13 @@ namespace Crowny
 	{
 	public:
 		Scene(const std::string& name = std::string());
+		Scene(const Scene& other);
 		~Scene();
 
 		void OnUpdate(Timestep ts);
 		void OnViewportResize(uint32_t width, uint32_t height);
+
+		void Run();
 
 		Entity CreateEntity(const std::string& name = "");
 		Entity& GetRootEntity();
@@ -26,6 +29,7 @@ namespace Crowny
 		friend class ImGuiComponentEditor;
 		friend class Entity;
 	private:
+		bool m_Running = true;
 		uint32_t m_BuildIndex;
 		std::string m_Name;
 		std::string m_Filepath;
