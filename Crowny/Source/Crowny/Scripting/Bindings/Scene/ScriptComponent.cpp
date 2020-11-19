@@ -16,6 +16,6 @@ namespace Crowny
 
 	MonoObject* ScriptComponent::Internal_GetEntity(MonoScriptComponent* component)
 	{
-		return s_EntityComponents[component->Parent.GetHandle()];
+		return s_EntityComponents[component->ComponentParent.GetHandle()];
 	}
 }

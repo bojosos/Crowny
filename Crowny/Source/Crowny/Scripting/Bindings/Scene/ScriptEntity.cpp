@@ -7,7 +7,6 @@
 
 namespace Crowny
 {
-	//std::unordered_map<Component, MonoObject *> ScriptEntity::s_ScriptComponents = {};
 
 	void ScriptEntity::InitRuntimeFunctions()
 	{

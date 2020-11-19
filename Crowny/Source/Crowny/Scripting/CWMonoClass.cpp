@@ -24,7 +24,6 @@ namespace Crowny
 
 	void CWMonoClass::AddInternalCall(const std::string& managed, const void* func)
 	{
-		CW_ENGINE_INFO(m_NamespaceName + "." + m_Name + ":" + managed);
 		mono_add_internal_call((m_NamespaceName + "." + m_Name + "::" + managed).c_str(), func);
 	}
 

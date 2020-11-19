@@ -216,24 +216,27 @@ namespace Crowny
 		ImGui::Columns(2);
 		ImGui::Text("Script"); ImGui::NextColumn();
 
+		if (!script.Class)
+		{
+			ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(255, 0, 0));
+		}
+		else
+			ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(0, 255, 0));
+
 		if (ImGui::InputText("##scriptName", &script.Name))
 		{
-			CW_ENGINE_INFO("Attempting to load {0}", script.Name);
 			script.Class = CWMonoRuntime::GetAssembly("")->GetClass("Sandbox", script.Name);
-			CW_ENGINE_INFO("Script class is: {0}", script.Class == nullptr);
-			// Check if class is nullptr
-			//script.Object = CWMonoRuntime::CreateInstance(script.Class); // TODO: Do this on play
-			//auto* field = script.Class->GetField("m_InternalPtr");
-			//field->Set(script.Object, &script);
 		}
+		
+		ImGui::PopStyleColor(1);
 
 		if (!script.Class)
 		{
 			ImGui::Columns(1);
 			return;
 		}
+
 		ImGui::NextColumn();
-		
 
 		auto fields = script.Class->GetFields();
 		for (auto* field : fields)
@@ -241,9 +244,6 @@ namespace Crowny
 			if (field)
 			{
 				ImGui::Text(field->GetName().c_str()); ImGui::NextColumn();
-				//int64_t value;
-				//value = field->GetIntValue(script.Object);//mono_field_get_value(script.Object, field, &val);
-				//ImGui::InputText(("##" + field->GetName()).c_str(), &temp);
 			}
 		}
 		ImGui::Columns(1);

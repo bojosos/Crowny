@@ -8,7 +8,6 @@ namespace Crowny
 	void Debug::InitRuntimeFunctions()
 	{
 		CWMonoClass* debugClass = CWMonoRuntime::GetAssembly("")->GetClass("Crowny", "Debug");
-		CW_ENGINE_INFO("Debug init");
 		debugClass->AddInternalCall("Internal_Log", (void*)&Internal_Log);
 		debugClass->AddInternalCall("Internal_LogWarning", (void*)&Internal_LogWarning);
 		debugClass->AddInternalCall("Internal_LogError", (void*)&Internal_LogError);
@@ -17,7 +16,6 @@ namespace Crowny
 
 	void Debug::Internal_Log(MonoString* message)
 	{
-		CW_ENGINE_INFO("Here and {0}", message == nullptr);
 		const char* cstr = mono_string_to_utf8(message);
 		CW_INFO(cstr);
 	}

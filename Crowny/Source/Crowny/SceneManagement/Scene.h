@@ -26,9 +26,18 @@ namespace Crowny
 		Entity CreateEntity(const std::string& name = "");
 		Entity& GetRootEntity();
 
+		float GetTime() { return time; }
+		float GetDeltaTime() { return deltaTime; }
+		float GetFrameCount() { return frameCount; }
+		float GetFixedDeltaTime() { return fixedDeltaTime; }
+		float GetRealtimeSinceStartup() { return realtimeSinceStarup; /* Not correct! This returns time until last frame*/ };
+		float GetSmoothDeltaTime() { return deltaTime + time / (frameCount + 1); }
+
 		friend class ImGuiComponentEditor;
 		friend class Entity;
 	private:
+		float deltaTime = 0.0f, frameCount = 0.0f, fixedDeltaTime = 0.0f, time = 0.0f, realtimeSinceStarup = 0.0f;
+
 		bool m_Running = true;
 		uint32_t m_BuildIndex;
 		std::string m_Name;

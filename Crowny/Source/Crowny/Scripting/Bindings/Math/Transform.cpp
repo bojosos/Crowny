@@ -23,14 +23,9 @@ namespace Crowny
 		transformClass->AddInternalCall("Internal_SetLocalScale", (void*)&Internal_LocalScaleSet);
 	}
 
-
 	void ScriptTransform::Internal_PositionGet(TransformComponent* thisptr, glm::vec3* value)
 	{
-		std::cout << *(size_t*)thisptr << std::endl;
-		std::cout << "Here" << std::endl;
-		std::cout << thisptr << std::endl;
 		*value = thisptr->Position;
-		std::cout << "after" << std::endl;
 	}
 
 	void ScriptTransform::Internal_PositionSet(TransformComponent* thisptr, glm::vec3* value)

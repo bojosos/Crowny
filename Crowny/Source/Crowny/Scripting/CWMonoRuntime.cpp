@@ -39,7 +39,8 @@ namespace Crowny
 		s_Instance->m_Domain = mono_jit_init(domainName.c_str());
 		mono_thread_set_main(mono_thread_current());
 		mono_config_parse (NULL);
-		CW_ENGINE_INFO("Domaind {0} created!", domainName);
+		CW_ENGINE_INFO("Domain {0} created!", domainName);
+		
 		return s_Instance->m_Domain != nullptr;
 	}
 

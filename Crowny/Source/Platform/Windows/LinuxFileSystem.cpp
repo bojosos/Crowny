@@ -46,7 +46,6 @@ namespace Crowny
          (std::istreambuf_iterator<char>()));
 
     	input.close();
-		CW_ENGINE_INFO("Ending read");
 		return std::make_tuple(bytes.data(), bytes.size());
 	}
 
