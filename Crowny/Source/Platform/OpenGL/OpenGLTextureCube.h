@@ -22,9 +22,9 @@ namespace Crowny
 		OpenGLTextureCube(const std::array<std::string, 6>& filepath, uint32_t mips, InputFormat format, const TextureParameters& parameters);
 		~OpenGLTextureCube();
 
-		virtual void SetData(void* data, uint32_t size) { };
-		virtual void SetData(void* data, TextureChannel channel) { } ;
-		virtual bool operator==(const Texture& other) const { return m_RendererID == other.GetRendererID(); };
+		virtual void SetData(void* data, uint32_t size) override { CW_ENGINE_ASSERT(false); };
+		virtual void SetData(void* data, TextureChannel channel) override { CW_ENGINE_ASSERT(false); };
+		virtual bool operator==(const Texture& other) const override { return m_RendererID == other.GetRendererID(); };
 
 		virtual uint32_t GetRendererID() const override { return m_RendererID; }
 		virtual uint32_t GetWidth() const override { return m_Width; }

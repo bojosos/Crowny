@@ -34,7 +34,7 @@ namespace Crowny
 
 		while ((stepX > 0.0f ? x < 160.0f : x >= 0.0f) && (stepY > 0.0f ? y < 160.0f : y >= 0.0f) && (stepZ > 0.0f ? z < 160.0f : z >= 0.0f)) {
 			
-			if (!(x < 0.0f || y < 0.0f || z < 0.0f || x >= 160.0f || y >= 160.0f || z >= 160.0f))
+			//if (!(x < 0.0f || y < 0.0f || z < 0.0f || x >= 160.0f || y >= 160.0f || z >= 160.0f))
 				//TODO  Here I have hit something
 
 			if (tMaxX < tMaxY)

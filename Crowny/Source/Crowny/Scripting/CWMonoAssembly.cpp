@@ -1,6 +1,8 @@
 #include "cwpch.h"
 
 #include "CWMonoAssembly.h"
+
+#include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Common/Parser.h"
 
 BEGIN_MONO_INCLUDE
@@ -11,10 +13,36 @@ END_MONO_INCLUDE
 namespace Crowny
 {
 
+	static bool CheckImageOpenStatus(MonoImageOpenStatus status)
+	{
+		if (status == MONO_IMAGE_OK)
+			return true;
+
+		if (status == MONO_IMAGE_ERROR_ERRNO)
+		{
+			CW_ENGINE_CRITICAL("MONO_IMAGE_ERROR_ERRNO while loading assembly");
+			return false;
+		}
+  		if (status == MONO_IMAGE_MISSING_ASSEMBLYREF)
+		{
+			CW_ENGINE_CRITICAL("MONO_IMAGE_MISSING_ASSEMBLYREF while loading assembly");
+			return false;
+		}
+   		if (status == MONO_IMAGE_IMAGE_INVALID)
+		{
+			CW_ENGINE_CRITICAL("MONO_IMAGE_IMAGE_INVALID while loading assembly");
+			return false;
+		}
+	}
+
 	CWMonoAssembly::CWMonoAssembly(MonoDomain* domain, const std::string& filepath)
 	{
-		m_Assembly = mono_domain_assembly_open(domain, filepath.c_str());
-		m_Image = mono_assembly_get_image(m_Assembly);
+		MonoImageOpenStatus status;
+		auto [data, size] = VirtualFileSystem::Get()->ReadFile(filepath);
+		m_Image = mono_image_open_from_data(reinterpret_cast<char*>(data), size, true, &status);
+		CW_ENGINE_ASSERT(CheckImageOpenStatus(status));
+		m_Assembly = mono_assembly_load_from(m_Image, "Crowny assembly", &status);
+		CW_ENGINE_ASSERT(CheckImageOpenStatus(status));
 	}
 
 	CWMonoClass* CWMonoAssembly::GetClass(const std::string& fullName)

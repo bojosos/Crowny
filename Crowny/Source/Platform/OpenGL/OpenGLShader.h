@@ -62,7 +62,7 @@ namespace Crowny
 
 		uint32_t GetLocation() const { return m_Location; }
 		Type GetType() const { return m_Type; }
-		const ShaderStruct& GetShaderUniformStruct() const { CW_ENGINE_ASSERT(m_Struct, ""); return *m_Struct; }
+		const ShaderStruct& GetShaderUniformStruct() const { CW_ENGINE_ASSERT(m_Struct); return *m_Struct; }
 
 		void SetOffset(uint32_t offset) override;
 	public:

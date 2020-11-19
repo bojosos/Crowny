@@ -9,6 +9,7 @@
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Common/Random.h"
 #include "Crowny/Application/Initializer.h"
+#include "Crowny/Input/Input.h"
 
 #ifdef MC_WEB
 #include <emscripten/emscripten.h>
@@ -95,13 +96,17 @@ namespace Crowny
 			{
 				for (Layer* layer : m_LayerStack)
 					layer->OnUpdate(timestep);
+			
+				m_ImGuiLayer->Begin();
+				{
+					for (Layer* layer : m_LayerStack)
+						layer->OnImGuiRender();
+				}
+				m_ImGuiLayer->End();
+
 			}
-			m_ImGuiLayer->Begin();
-			{
-				for (Layer* layer : m_LayerStack)
-					layer->OnImGuiRender();
-			}
-			m_ImGuiLayer->End();
+
+			Input::OnUpdate();
 			m_Window->OnUpdate();
 #ifdef MC_WEB
 		};

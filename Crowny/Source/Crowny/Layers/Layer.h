@@ -20,7 +20,7 @@ namespace Crowny
 
 		virtual void OnEvent(Event& event) {}
 
-		inline const std::string& GetName() const { return m_Name; }
+		const std::string& GetName() const { return m_Name; }
 	private:
 		std::string m_Name;
 	};

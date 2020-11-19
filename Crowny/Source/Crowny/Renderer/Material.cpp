@@ -75,7 +75,7 @@ namespace Crowny
 	void Material::SetTexture(const std::string& name, const Ref<Texture>& texture)
 	{
 		ShaderResourceDeclaration* declaration = FindResourceDeclaration(name);
-		CW_ENGINE_ASSERT(declaration, "");
+		CW_ENGINE_ASSERT(declaration);
 		uint32_t slot = declaration->GetRegister();
 		if (m_Textures.size() <= slot)
 			m_Textures.resize(slot + 1);
@@ -183,7 +183,7 @@ namespace Crowny
 	{
 		byte* buff;
 		ShaderUniformDeclaration* decl = FindUniformDeclaration(name, &buff);
-		CW_ENGINE_ASSERT(buff, "");
+		CW_ENGINE_ASSERT(buff);
 		memcpy(buff + decl->GetOffset(), data, decl->GetSize());
 	}
 

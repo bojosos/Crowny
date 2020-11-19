@@ -134,7 +134,7 @@ namespace Crowny
 
 		MonoScriptComponent(const std::string& name)
 		{
-			Class = CWMonoRuntime::GetAssembly("")->GetClass(name);
+			Class = CWMonoRuntime::GetClientAssembly()->GetClass(name);
 		}
 
 	};

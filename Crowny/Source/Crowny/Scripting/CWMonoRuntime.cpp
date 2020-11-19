@@ -16,7 +16,9 @@ namespace Crowny
 
 	static void OnLogCallback(const char* domain, const char* level, const char* message, mono_bool, void*)
 	{
-		CW_ENGINE_INFO(message);
+		if (!domain)
+			domain = "Mono";
+
 		if (level == std::string("critical"))
 			CW_ENGINE_CRITICAL("{0} -> {1}", domain, message);
 		if (level == std::string("error"))
@@ -40,15 +42,17 @@ namespace Crowny
 		mono_thread_set_main(mono_thread_current());
 		mono_config_parse (NULL);
 		CW_ENGINE_INFO("Domain {0} created!", domainName);
-		
+
 		return s_Instance->m_Domain != nullptr;
 	}
 
-	CWMonoAssembly* CWMonoRuntime::LoadAssembly(const std::string& filepath)
+	void CWMonoRuntime::LoadAssemblies(const std::string& directory)
 	{
-		s_Instance->m_Assembly = new CWMonoAssembly(s_Instance->m_Domain, filepath);
-		CW_ENGINE_INFO("Assembly {0} loaded", filepath);
-		return s_Instance->m_Assembly;
+		s_Instance->m_Assemblies.resize(ASSEMBLY_COUNT);
+		s_Instance->m_Assemblies[CROWNY_ASSEMBLY_INDEX] = new CWMonoAssembly(s_Instance->m_Domain, directory + "/" + CROWNY_ASSEMBLY);
+		s_Instance->m_Assemblies[CLIENT_ASSEMBLY_INDEX] = new CWMonoAssembly(s_Instance->m_Domain, directory + "/" + CLIENT_ASSEMBLY);
+		CW_ENGINE_INFO("Assembly {0} loaded", CROWNY_ASSEMBLY);
+		CW_ENGINE_INFO("Assembly {0} loaded", CLIENT_ASSEMBLY);
 	}
 
 	CWMonoObject* CWMonoRuntime::CreateInstance(CWMonoClass* monoClass)

@@ -1,8 +1,12 @@
 #pragma once
 
+#include "Crowny/Common/Common.h"
+
+#pragma warning(push, 0)
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/ostr.h>
-#include "Common.h"
+#pragma warning(pop)
+
 
 namespace Crowny
 {
@@ -11,14 +15,32 @@ namespace Crowny
 	public:
 		static void Init();
 
-		inline static Ref<spdlog::logger>& GetClientLogger() { return s_ClientLogger; }
-		inline static Ref<spdlog::logger>& GetEngineLogger() { return s_EngineLogger; }
+		static Ref<spdlog::logger>& GetClientLogger() { return s_ClientLogger; }
+		static Ref<spdlog::logger>& GetEngineLogger() { return s_EngineLogger; }
 	private:
 		static Ref<spdlog::logger> s_ClientLogger;
 		static Ref<spdlog::logger> s_EngineLogger;
 	};
 }
+/*
+template<typename OStream, glm::length_t L, typename T, glm::qualifier Q>
+inline OStream& operator<<(OStream& os, const glm::vec<L, T, Q>& vec)
+{
+	return os << glm::to_string(vec);
+}
 
+template<typename OStream, glm::length_t L, glm::length_t R, typename T, glm::qualifier Q>
+inline OStream& operator<<(OStream& os, const glm::mat<L, R, T, Q>& mat)
+{
+	return os << glm::to_string(mat);
+}
+
+template<typename OStream, typename T, glm::qualifier Q>
+inline OStream& operator<<(OStream& os, const glm::qua<T, Q>& quat)
+{
+	return os << glm::to_string(quat);
+}
+*/
 #define CW_ENGINE_TRACE(...)     ::Crowny::Log::GetEngineLogger()->trace(__VA_ARGS__)
 #define CW_ENGINE_INFO(...)      ::Crowny::Log::GetEngineLogger()->info(__VA_ARGS__)
 #define CW_ENGINE_WARN(...)      ::Crowny::Log::GetEngineLogger()->warn(__VA_ARGS__)

@@ -9,160 +9,190 @@ ifndef verbose
 endif
 
 ifeq ($(config),debug_win64)
+  Premake_config = debug_win64
   glfw_config = debug_win64
   glad_config = debug_win64
   freetype_gl_config = debug_win64
-  imgui_config = debug_win64
   freetype2_config = debug_win64
+  imgui_config = debug_win64
   assimp_config = debug_win64
+  yaml_cpp_config = debug_win64
   Crowny_config = debug_win64
   Crowny_Editor_config = debug_win64
-  Crowny_Sharp_config = debug_win64
   Crowny_Sandbox_config = debug_win64
+  Crowny_Sharp_config = debug_win64
 
 else ifeq ($(config),debug_linux64)
+  Premake_config = debug_linux64
   glfw_config = debug_linux64
   glad_config = debug_linux64
   freetype_gl_config = debug_linux64
-  imgui_config = debug_linux64
   freetype2_config = debug_linux64
+  imgui_config = debug_linux64
   assimp_config = debug_linux64
+  yaml_cpp_config = debug_linux64
   Crowny_config = debug_linux64
   Crowny_Editor_config = debug_linux64
-  Crowny_Sharp_config = debug_linux64
   Crowny_Sandbox_config = debug_linux64
+  Crowny_Sharp_config = debug_linux64
 
 else ifeq ($(config),debug_macos64)
+  Premake_config = debug_macos64
   glfw_config = debug_macos64
   glad_config = debug_macos64
   freetype_gl_config = debug_macos64
-  imgui_config = debug_macos64
   freetype2_config = debug_macos64
+  imgui_config = debug_macos64
   assimp_config = debug_macos64
+  yaml_cpp_config = debug_macos64
   Crowny_config = debug_macos64
   Crowny_Editor_config = debug_macos64
-  Crowny_Sharp_config = debug_macos64
   Crowny_Sandbox_config = debug_macos64
+  Crowny_Sharp_config = debug_macos64
 
 else ifeq ($(config),debug_web)
+  Premake_config = debug_web
   glfw_config = debug_web
   glad_config = debug_web
   freetype_gl_config = debug_web
-  imgui_config = debug_web
   freetype2_config = debug_web
+  imgui_config = debug_web
   assimp_config = debug_web
+  yaml_cpp_config = debug_web
   Crowny_config = debug_web
   Crowny_Editor_config = debug_web
-  Crowny_Sharp_config = debug_web
   Crowny_Sandbox_config = debug_web
+  Crowny_Sharp_config = debug_web
 
 else ifeq ($(config),release_win64)
+  Premake_config = release_win64
   glfw_config = release_win64
   glad_config = release_win64
   freetype_gl_config = release_win64
-  imgui_config = release_win64
   freetype2_config = release_win64
+  imgui_config = release_win64
   assimp_config = release_win64
+  yaml_cpp_config = release_win64
   Crowny_config = release_win64
   Crowny_Editor_config = release_win64
-  Crowny_Sharp_config = release_win64
   Crowny_Sandbox_config = release_win64
+  Crowny_Sharp_config = release_win64
 
 else ifeq ($(config),release_linux64)
+  Premake_config = release_linux64
   glfw_config = release_linux64
   glad_config = release_linux64
   freetype_gl_config = release_linux64
-  imgui_config = release_linux64
   freetype2_config = release_linux64
+  imgui_config = release_linux64
   assimp_config = release_linux64
+  yaml_cpp_config = release_linux64
   Crowny_config = release_linux64
   Crowny_Editor_config = release_linux64
-  Crowny_Sharp_config = release_linux64
   Crowny_Sandbox_config = release_linux64
+  Crowny_Sharp_config = release_linux64
 
 else ifeq ($(config),release_macos64)
+  Premake_config = release_macos64
   glfw_config = release_macos64
   glad_config = release_macos64
   freetype_gl_config = release_macos64
-  imgui_config = release_macos64
   freetype2_config = release_macos64
+  imgui_config = release_macos64
   assimp_config = release_macos64
+  yaml_cpp_config = release_macos64
   Crowny_config = release_macos64
   Crowny_Editor_config = release_macos64
-  Crowny_Sharp_config = release_macos64
   Crowny_Sandbox_config = release_macos64
+  Crowny_Sharp_config = release_macos64
 
 else ifeq ($(config),release_web)
+  Premake_config = release_web
   glfw_config = release_web
   glad_config = release_web
   freetype_gl_config = release_web
-  imgui_config = release_web
   freetype2_config = release_web
+  imgui_config = release_web
   assimp_config = release_web
+  yaml_cpp_config = release_web
   Crowny_config = release_web
   Crowny_Editor_config = release_web
-  Crowny_Sharp_config = release_web
   Crowny_Sandbox_config = release_web
+  Crowny_Sharp_config = release_web
 
 else ifeq ($(config),dist_win64)
+  Premake_config = dist_win64
   glfw_config = dist_win64
   glad_config = dist_win64
   freetype_gl_config = dist_win64
-  imgui_config = dist_win64
   freetype2_config = dist_win64
+  imgui_config = dist_win64
   assimp_config = dist_win64
+  yaml_cpp_config = dist_win64
   Crowny_config = dist_win64
   Crowny_Editor_config = dist_win64
-  Crowny_Sharp_config = dist_win64
   Crowny_Sandbox_config = dist_win64
+  Crowny_Sharp_config = dist_win64
 
 else ifeq ($(config),dist_linux64)
+  Premake_config = dist_linux64
   glfw_config = dist_linux64
   glad_config = dist_linux64
   freetype_gl_config = dist_linux64
-  imgui_config = dist_linux64
   freetype2_config = dist_linux64
+  imgui_config = dist_linux64
   assimp_config = dist_linux64
+  yaml_cpp_config = dist_linux64
   Crowny_config = dist_linux64
   Crowny_Editor_config = dist_linux64
-  Crowny_Sharp_config = dist_linux64
   Crowny_Sandbox_config = dist_linux64
+  Crowny_Sharp_config = dist_linux64
 
 else ifeq ($(config),dist_macos64)
+  Premake_config = dist_macos64
   glfw_config = dist_macos64
   glad_config = dist_macos64
   freetype_gl_config = dist_macos64
-  imgui_config = dist_macos64
   freetype2_config = dist_macos64
+  imgui_config = dist_macos64
   assimp_config = dist_macos64
+  yaml_cpp_config = dist_macos64
   Crowny_config = dist_macos64
   Crowny_Editor_config = dist_macos64
-  Crowny_Sharp_config = dist_macos64
   Crowny_Sandbox_config = dist_macos64
+  Crowny_Sharp_config = dist_macos64
 
 else ifeq ($(config),dist_web)
+  Premake_config = dist_web
   glfw_config = dist_web
   glad_config = dist_web
   freetype_gl_config = dist_web
-  imgui_config = dist_web
   freetype2_config = dist_web
+  imgui_config = dist_web
   assimp_config = dist_web
+  yaml_cpp_config = dist_web
   Crowny_config = dist_web
   Crowny_Editor_config = dist_web
-  Crowny_Sharp_config = dist_web
   Crowny_Sandbox_config = dist_web
+  Crowny_Sharp_config = dist_web
 
 else
   $(error "invalid configuration $(config)")
 endif
 
-PROJECTS := glfw glad freetype-gl imgui freetype2 assimp Crowny Crowny-Editor Crowny-Sharp Crowny-Sandbox
+PROJECTS := Premake glfw glad freetype-gl freetype2 imgui assimp yaml-cpp Crowny Crowny-Editor Crowny-Sandbox Crowny-Sharp
 
 .PHONY: all clean help $(PROJECTS) Dependencies
 
 all: $(PROJECTS)
 
-Dependencies: assimp freetype-gl freetype2 glad glfw imgui
+Dependencies: Premake assimp freetype-gl freetype2 glad glfw imgui yaml-cpp
+
+Premake:
+ifneq (,$(Premake_config))
+	@echo "==== Building Premake ($(Premake_config)) ===="
+	@${MAKE} --no-print-directory -C 3rdparty/premake -f Makefile config=$(Premake_config)
+endif
 
 glfw:
 ifneq (,$(glfw_config))
@@ -182,22 +212,28 @@ ifneq (,$(freetype_gl_config))
 	@${MAKE} --no-print-directory -C Crowny/Dependencies/freetype-gl -f Makefile config=$(freetype_gl_config)
 endif
 
-imgui:
-ifneq (,$(imgui_config))
-	@echo "==== Building imgui ($(imgui_config)) ===="
-	@${MAKE} --no-print-directory -C Crowny/Dependencies/imgui -f Makefile config=$(imgui_config)
-endif
-
 freetype2:
 ifneq (,$(freetype2_config))
 	@echo "==== Building freetype2 ($(freetype2_config)) ===="
 	@${MAKE} --no-print-directory -C Crowny/Dependencies/freetype2 -f Makefile config=$(freetype2_config)
 endif
 
+imgui:
+ifneq (,$(imgui_config))
+	@echo "==== Building imgui ($(imgui_config)) ===="
+	@${MAKE} --no-print-directory -C Crowny/Dependencies/imgui -f Makefile config=$(imgui_config)
+endif
+
 assimp:
 ifneq (,$(assimp_config))
 	@echo "==== Building assimp ($(assimp_config)) ===="
 	@${MAKE} --no-print-directory -C Crowny/Dependencies/assimp -f Makefile config=$(assimp_config)
+endif
+
+yaml-cpp:
+ifneq (,$(yaml_cpp_config))
+	@echo "==== Building yaml-cpp ($(yaml_cpp_config)) ===="
+	@${MAKE} --no-print-directory -C Crowny/Dependencies/yaml-cpp -f Makefile config=$(yaml_cpp_config)
 endif
 
 Crowny: imgui freetype-gl assimp freetype2 glfw glad
@@ -212,29 +248,31 @@ ifneq (,$(Crowny_Editor_config))
 	@${MAKE} --no-print-directory -C Crowny-Editor -f Makefile config=$(Crowny_Editor_config)
 endif
 
-Crowny-Sharp:
-ifneq (,$(Crowny_Sharp_config))
-	@echo "==== Building Crowny-Sharp ($(Crowny_Sharp_config)) ===="
-	@${MAKE} --no-print-directory -C Crowny-Sharp -f Makefile config=$(Crowny_Sharp_config)
-endif
-
 Crowny-Sandbox: Crowny-Sharp
 ifneq (,$(Crowny_Sandbox_config))
 	@echo "==== Building Crowny-Sandbox ($(Crowny_Sandbox_config)) ===="
 	@${MAKE} --no-print-directory -C Crowny-Sandbox -f Makefile config=$(Crowny_Sandbox_config)
 endif
 
+Crowny-Sharp:
+ifneq (,$(Crowny_Sharp_config))
+	@echo "==== Building Crowny-Sharp ($(Crowny_Sharp_config)) ===="
+	@${MAKE} --no-print-directory -C Crowny-Sharp -f Makefile config=$(Crowny_Sharp_config)
+endif
+
 clean:
+	@${MAKE} --no-print-directory -C 3rdparty/premake -f Makefile clean
 	@${MAKE} --no-print-directory -C Crowny/Dependencies/glfw -f Makefile clean
 	@${MAKE} --no-print-directory -C Crowny/Dependencies/glad -f Makefile clean
 	@${MAKE} --no-print-directory -C Crowny/Dependencies/freetype-gl -f Makefile clean
-	@${MAKE} --no-print-directory -C Crowny/Dependencies/imgui -f Makefile clean
 	@${MAKE} --no-print-directory -C Crowny/Dependencies/freetype2 -f Makefile clean
+	@${MAKE} --no-print-directory -C Crowny/Dependencies/imgui -f Makefile clean
 	@${MAKE} --no-print-directory -C Crowny/Dependencies/assimp -f Makefile clean
+	@${MAKE} --no-print-directory -C Crowny/Dependencies/yaml-cpp -f Makefile clean
 	@${MAKE} --no-print-directory -C Crowny -f Makefile clean
 	@${MAKE} --no-print-directory -C Crowny-Editor -f Makefile clean
-	@${MAKE} --no-print-directory -C Crowny-Sharp -f Makefile clean
 	@${MAKE} --no-print-directory -C Crowny-Sandbox -f Makefile clean
+	@${MAKE} --no-print-directory -C Crowny-Sharp -f Makefile clean
 
 help:
 	@echo "Usage: make [config=name] [target]"
@@ -256,15 +294,17 @@ help:
 	@echo "TARGETS:"
 	@echo "   all (default)"
 	@echo "   clean"
+	@echo "   Premake"
 	@echo "   glfw"
 	@echo "   glad"
 	@echo "   freetype-gl"
-	@echo "   imgui"
 	@echo "   freetype2"
+	@echo "   imgui"
 	@echo "   assimp"
+	@echo "   yaml-cpp"
 	@echo "   Crowny"
 	@echo "   Crowny-Editor"
-	@echo "   Crowny-Sharp"
 	@echo "   Crowny-Sandbox"
+	@echo "   Crowny-Sharp"
 	@echo ""
 	@echo "For more information, see https://github.com/premake/premake-core/wiki"

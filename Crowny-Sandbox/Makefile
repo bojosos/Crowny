@@ -13,12 +13,12 @@ endif
 ifeq ($(config),debug_win64)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Debug-linux-x86_64/Crowny-Sandbox
+TARGETDIR = bin/Debug-linux-x86_64/Crowny-Sandbox
 TARGET = $(TARGETDIR)/Crowny-Sandbox.exe
-OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny-Sandbox/Win64
+OBJDIR = bin-int/Debug-linux-x86_64/Crowny-Sandbox/Win64
   FLAGS = /debug /noconfig /d:CW_DEBUG
-  DEPENDS = ../bin/Debug-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
-  REFERENCES = /r:../bin/Debug-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  DEPENDS = ../Crowny-Sharp/bin/Debug-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  REFERENCES = /r:../Crowny-Sharp/bin/Debug-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -30,12 +30,12 @@ endif
 ifeq ($(config),debug_linux64)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Debug-linux-x86_64/Crowny-Sandbox
+TARGETDIR = bin/Debug-linux-x86_64/Crowny-Sandbox
 TARGET = $(TARGETDIR)/Crowny-Sandbox.exe
-OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny-Sandbox/Linux64
+OBJDIR = bin-int/Debug-linux-x86_64/Crowny-Sandbox/Linux64
   FLAGS = /debug /noconfig /d:CW_DEBUG
-  DEPENDS = ../bin/Debug-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
-  REFERENCES = /r:../bin/Debug-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  DEPENDS = ../Crowny-Sharp/bin/Debug-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  REFERENCES = /r:../Crowny-Sharp/bin/Debug-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -47,12 +47,12 @@ endif
 ifeq ($(config),debug_macos64)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Debug-linux-x86_64/Crowny-Sandbox
+TARGETDIR = bin/Debug-linux-x86_64/Crowny-Sandbox
 TARGET = $(TARGETDIR)/Crowny-Sandbox.exe
-OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny-Sandbox/MacOS64
+OBJDIR = bin-int/Debug-linux-x86_64/Crowny-Sandbox/MacOS64
   FLAGS = /debug /noconfig /d:CW_DEBUG
-  DEPENDS = ../bin/Debug-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
-  REFERENCES = /r:../bin/Debug-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  DEPENDS = ../Crowny-Sharp/bin/Debug-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  REFERENCES = /r:../Crowny-Sharp/bin/Debug-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -64,12 +64,12 @@ endif
 ifeq ($(config),debug_web)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Debug-linux-x86_64/Crowny-Sandbox
+TARGETDIR = bin/Debug-linux-x86_64/Crowny-Sandbox
 TARGET = $(TARGETDIR)/Crowny-Sandbox.exe
-OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny-Sandbox/Web
+OBJDIR = bin-int/Debug-linux-x86_64/Crowny-Sandbox/Web
   FLAGS = /debug /noconfig /d:CW_DEBUG
-  DEPENDS = ../bin/Debug-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
-  REFERENCES = /r:../bin/Debug-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  DEPENDS = ../Crowny-Sharp/bin/Debug-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  REFERENCES = /r:../Crowny-Sharp/bin/Debug-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -81,12 +81,12 @@ endif
 ifeq ($(config),release_win64)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Release-linux-x86_64/Crowny-Sandbox
+TARGETDIR = bin/Release-linux-x86_64/Crowny-Sandbox
 TARGET = $(TARGETDIR)/Crowny-Sandbox.exe
-OBJDIR = ../bin-int/Release-linux-x86_64/Crowny-Sandbox/Win64
+OBJDIR = bin-int/Release-linux-x86_64/Crowny-Sandbox/Win64
   FLAGS = /optimize /noconfig /d:CW_RELEASE
-  DEPENDS = ../bin/Release-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
-  REFERENCES = /r:../bin/Release-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  DEPENDS = ../Crowny-Sharp/bin/Release-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  REFERENCES = /r:../Crowny-Sharp/bin/Release-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -98,12 +98,12 @@ endif
 ifeq ($(config),release_linux64)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Release-linux-x86_64/Crowny-Sandbox
+TARGETDIR = bin/Release-linux-x86_64/Crowny-Sandbox
 TARGET = $(TARGETDIR)/Crowny-Sandbox.exe
-OBJDIR = ../bin-int/Release-linux-x86_64/Crowny-Sandbox/Linux64
+OBJDIR = bin-int/Release-linux-x86_64/Crowny-Sandbox/Linux64
   FLAGS = /optimize /noconfig /d:CW_RELEASE
-  DEPENDS = ../bin/Release-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
-  REFERENCES = /r:../bin/Release-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  DEPENDS = ../Crowny-Sharp/bin/Release-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  REFERENCES = /r:../Crowny-Sharp/bin/Release-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -115,12 +115,12 @@ endif
 ifeq ($(config),release_macos64)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Release-linux-x86_64/Crowny-Sandbox
+TARGETDIR = bin/Release-linux-x86_64/Crowny-Sandbox
 TARGET = $(TARGETDIR)/Crowny-Sandbox.exe
-OBJDIR = ../bin-int/Release-linux-x86_64/Crowny-Sandbox/MacOS64
+OBJDIR = bin-int/Release-linux-x86_64/Crowny-Sandbox/MacOS64
   FLAGS = /optimize /noconfig /d:CW_RELEASE
-  DEPENDS = ../bin/Release-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
-  REFERENCES = /r:../bin/Release-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  DEPENDS = ../Crowny-Sharp/bin/Release-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  REFERENCES = /r:../Crowny-Sharp/bin/Release-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -132,12 +132,12 @@ endif
 ifeq ($(config),release_web)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Release-linux-x86_64/Crowny-Sandbox
+TARGETDIR = bin/Release-linux-x86_64/Crowny-Sandbox
 TARGET = $(TARGETDIR)/Crowny-Sandbox.exe
-OBJDIR = ../bin-int/Release-linux-x86_64/Crowny-Sandbox/Web
+OBJDIR = bin-int/Release-linux-x86_64/Crowny-Sandbox/Web
   FLAGS = /optimize /noconfig /d:CW_RELEASE
-  DEPENDS = ../bin/Release-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
-  REFERENCES = /r:../bin/Release-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  DEPENDS = ../Crowny-Sharp/bin/Release-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  REFERENCES = /r:../Crowny-Sharp/bin/Release-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -149,12 +149,12 @@ endif
 ifeq ($(config),dist_win64)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Dist-linux-x86_64/Crowny-Sandbox
+TARGETDIR = bin/Dist-linux-x86_64/Crowny-Sandbox
 TARGET = $(TARGETDIR)/Crowny-Sandbox.exe
-OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny-Sandbox/Win64
+OBJDIR = bin-int/Dist-linux-x86_64/Crowny-Sandbox/Win64
   FLAGS = /optimize /noconfig /d:CW_DIST
-  DEPENDS = ../bin/Dist-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
-  REFERENCES = /r:../bin/Dist-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  DEPENDS = ../Crowny-Sharp/bin/Dist-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  REFERENCES = /r:../Crowny-Sharp/bin/Dist-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -166,12 +166,12 @@ endif
 ifeq ($(config),dist_linux64)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Dist-linux-x86_64/Crowny-Sandbox
+TARGETDIR = bin/Dist-linux-x86_64/Crowny-Sandbox
 TARGET = $(TARGETDIR)/Crowny-Sandbox.exe
-OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny-Sandbox/Linux64
+OBJDIR = bin-int/Dist-linux-x86_64/Crowny-Sandbox/Linux64
   FLAGS = /optimize /noconfig /d:CW_DIST
-  DEPENDS = ../bin/Dist-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
-  REFERENCES = /r:../bin/Dist-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  DEPENDS = ../Crowny-Sharp/bin/Dist-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  REFERENCES = /r:../Crowny-Sharp/bin/Dist-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -183,12 +183,12 @@ endif
 ifeq ($(config),dist_macos64)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Dist-linux-x86_64/Crowny-Sandbox
+TARGETDIR = bin/Dist-linux-x86_64/Crowny-Sandbox
 TARGET = $(TARGETDIR)/Crowny-Sandbox.exe
-OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny-Sandbox/MacOS64
+OBJDIR = bin-int/Dist-linux-x86_64/Crowny-Sandbox/MacOS64
   FLAGS = /optimize /noconfig /d:CW_DIST
-  DEPENDS = ../bin/Dist-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
-  REFERENCES = /r:../bin/Dist-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  DEPENDS = ../Crowny-Sharp/bin/Dist-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  REFERENCES = /r:../Crowny-Sharp/bin/Dist-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -200,12 +200,12 @@ endif
 ifeq ($(config),dist_web)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Dist-linux-x86_64/Crowny-Sandbox
+TARGETDIR = bin/Dist-linux-x86_64/Crowny-Sandbox
 TARGET = $(TARGETDIR)/Crowny-Sandbox.exe
-OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny-Sandbox/Web
+OBJDIR = bin-int/Dist-linux-x86_64/Crowny-Sandbox/Web
   FLAGS = /optimize /noconfig /d:CW_DIST
-  DEPENDS = ../bin/Dist-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
-  REFERENCES = /r:../bin/Dist-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  DEPENDS = ../Crowny-Sharp/bin/Dist-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
+  REFERENCES = /r:../Crowny-Sharp/bin/Dist-linux-x86_64/Crowny-Sharp/Crowny-Sharp.dll
 define PREBUILDCMDS
 endef
 define PRELINKCMDS

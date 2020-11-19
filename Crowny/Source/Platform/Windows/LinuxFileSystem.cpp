@@ -52,6 +52,7 @@ namespace Crowny
 	bool FileSystem::ReadFile(const std::string& path, void* buffer, int64_t size)
 	{
 		CW_ENGINE_CRITICAL("Read file void* not implemented");
+		return false;
 	}
 
 	std::string FileSystem::ReadTextFile(const std::string& path)
@@ -68,6 +69,7 @@ namespace Crowny
 		fout.open(path, std::ios::binary | std::ios::out);
 		fout.write((char*)buffer, sizeof(buffer));
 		fout.close();
+		return buffer != nullptr;
 	}
 
 	bool FileSystem::WriteTextFile(const std::string& path, const std::string& text)
@@ -76,6 +78,7 @@ namespace Crowny
 		fout.open(path, std::ios::out);
 		fout.write(text.c_str(), text.size());
 		fout.close();
+		return !text.empty();
 	}
 
 	std::tuple<bool, std::string> FileSystem::OpenFileDialog(const char* filter, const std::string& initialDir, const std::string& title)

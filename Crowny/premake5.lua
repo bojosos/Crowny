@@ -3,26 +3,24 @@ project "Crowny"
 	language "C++"
 	cppdialect "C++17"
 	staticruntime "on"
-	characterset("MBCS")
+	characterset ("MBCS")
 
-	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
-	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
+	targetdir ("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
+	objdir ("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
 
 	pchheader "cwpch.h"
-	pchsource "Crowny/Source/cwpch.cpp"
+	pchsource "Source/cwpch.cpp"
 
 	files
 	{
-		"%{prj.name}/Source/**.h",
-		"%{prj.name}/Source/**.cpp",
-		"%{prj.name}/Dependencies/stb_image/**.h",
-		"%{prj.name}/Dependencies/freetype-gl/freetype-gl.h",
-		"%{prj.name}/Dependencies/stb_image/**.cpp",
-		"%{prj.name}/Dependencies/glm/glm/**.hpp",
-		"%{prj.name}/Dependencies/glm/glm/**.inl",
-		"%{prj.name}/Dependencies/sol/sol.hpp",
-		"%{prj.name}/res/**",
-		"%{prj.name}/lua/**"
+		"Source/**.h",
+		"Source/**.cpp",
+		"Dependencies/stb_image/**.h",
+		"Dependencies/stb_image/**.cpp",
+		"Dependencies/glm/glm/**.hpp",
+		"Dependencies/glm/glm/**.inl",
+		"Dependencies/entt/single_include/entt/entt.hpp",
+		"Resources/**"
 	}
 
 	defines
@@ -33,27 +31,35 @@ project "Crowny"
 
 	includedirs
 	{
-		"%{prj.name}/Source",
-		"%{prj.name}/Dependencies/spdlog/include",
+		"Source",
+		"Dependencies/spdlog/include",
 		"%{IncludeDir.glfw}",
 		"%{IncludeDir.freetypegl}",
 		"%{IncludeDir.glad}",
+		"%{IncludeDir.entt}",
 		"%{IncludeDir.imgui}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.stb_image}",
-		"%{IncludeDir.lua}",
-		"%{IncludeDir.sol}"
+		"%{IncludeDir.assimp}",
+		"%{IncludeDir.mono}",
+		"%{IncludeDir.vulkan}"
 	}
+
+	libdirs { "/usr/lib/mono-2.0", "Crowny/Dependencies/vulkan/lib" }
 
 	links 
-	{ 
-		"lua",
+	{
+		"GL", "Xxf86vm", "Xrandr", "pthread", "Xi", "dl",
 		"imgui",
-		"freetype-gl"
+		"freetype-gl",
+		"assimp",
+		"freetype2", "glfw", "glad",
+		"mono-2.0"
 	}
 
+
 	filter { "platforms:Win64" }
-		links { "freetyp2", "glfw", "glad", "opengl32.lib" }
+		--links { "freetype2", "glfw", "glad", "opengl32.lib" }
 
 		defines
 		{
@@ -62,17 +68,18 @@ project "Crowny"
 		system("windows")
 
 	filter { "platforms:Linux64"}
-		links { "freetyp2", "glfw", "glad" }
+		--links { "freetype2", "glfw", "glad" }
 
 		defines
 		{
+			"CW_PLATFORM_LINUX",
 			"CW_LINUX"
 		}
 
 		system("linux")
 
 	filter { "platforms:MacOS64"}
-		links { "freetyp2", "glfw", "glad" }
+		--links { "freetype2", "glfw", "glad" }
 
 		defines
 		{
@@ -104,15 +111,16 @@ project "Crowny"
 		defines
 		{
 			"CW_LINUX",
+			"CW_PLATFORM_LINUX",
 			"GLFW_INCLUDE_NONE"
 		}
 
 	filter "configurations:Debug"
-		defines { "CW_DEBUG", "SOL_ALL_SAFETIES_ON" }
+		defines { "CW_DEBUG" }
 		runtime "Debug"
 		symbols "on"
 
 	filter "configurations:Release"
-		defines "MC_RELEASE"
+		defines "CW_RELEASE"
 		runtime "Release"
 		optimize "on"

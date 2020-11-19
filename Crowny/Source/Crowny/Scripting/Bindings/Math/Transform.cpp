@@ -9,7 +9,7 @@ namespace Crowny
 
 	void ScriptTransform::InitRuntimeFunctions()
 	{
-		CWMonoClass* transformClass = CWMonoRuntime::GetAssembly("")->GetClass("Crowny", "Transform");
+		CWMonoClass* transformClass = CWMonoRuntime::GetCrownyAssembly()->GetClass("Crowny", "Transform");
 
 		transformClass->AddInternalCall("Internal_GetPosition", (void*)&Internal_PositionGet);
 		transformClass->AddInternalCall("Internal_SetPosition", (void*)&Internal_PositionSet);

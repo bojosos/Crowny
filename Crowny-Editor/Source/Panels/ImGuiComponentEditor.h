@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny.h"
+#include "Panels/ImGuiPanel.h"
 
 #include <entt/entt.hpp>
 #include <imgui.h>
@@ -26,7 +27,8 @@ namespace Crowny {
 		entity.RemoveComponent<Component>();
 	}
 
-	class ImGuiComponentEditor {
+	class ImGuiComponentEditor
+	{
 	public:
 		struct ComponentInfo {
 			using Callback = std::function<void(Entity&)>;
@@ -34,26 +36,24 @@ namespace Crowny {
 			Callback widget, create, destroy;
 		};
 
-		bool show_window = true;
-
 	private:
 		using ComponentTypeID = ENTT_ID_TYPE;
 
-		std::map<ComponentTypeID, ComponentInfo> component_infos;
+		std::map<ComponentTypeID, ComponentInfo> m_ComponentInfos;
 
-		bool EntityHasComponent(const entt::registry& registry, entt::entity& entity, ComponentTypeID type_id)
+		bool EntityHasComponent(const entt::registry& registry, entt::entity& entity, ComponentTypeID tid)
 		{
-			ComponentTypeID type[] = { type_id };
+			ComponentTypeID type[] = { tid };
 			return registry.runtime_view(std::cbegin(type), std::cend(type)).contains(entity);
 		}
 
 	public:
 		template <class Component>
-		ComponentInfo& RegisterComponent(const ComponentInfo& component_info)
+		ComponentInfo& RegisterComponent(const ComponentInfo& componentInfo)
 		{
 			auto index = entt::type_info<Component>::id();
-			auto [it, insert_result] = component_infos.insert_or_assign(index, component_info);
-			assert(insert_result);
+			auto [it, res] = m_ComponentInfos.insert_or_assign(index, componentInfo);
+			CW_ENGINE_ASSERT(res);
 			return std::get<ComponentInfo>(*it);
 		}
 
@@ -74,74 +74,8 @@ namespace Crowny {
 			return RegisterComponent<Component>(name, ComponentEditorWidget<Component>);
 		}
 
-		void Render(Entity entity)
-		{
-			entt::registry& registry = SceneManager::GetActiveScene()->m_Registry;
-			entt::entity e = entity.m_EntityHandle;
+		void Render();
 
-			ImGui::Separator();
-
-			if (e != entt::null) {
-				ImGui::Text(entity.GetComponent<TagComponent>().Tag.c_str());
-			}
-			else {
-				ImGui::Text("Invalid Entity");
-			}
-
-			ImGui::Separator();
-
-			if (registry.valid(e)) {
-				ImGui::PushID(entt::to_integral(e));
-				std::map<ComponentTypeID, ComponentInfo> has_not;
-				for (auto& [component_type_id, ci] : component_infos) {
-					if (EntityHasComponent(registry, e, component_type_id)) {
-						ImGui::PushID(component_type_id);
-						if (ImGui::Button("-")) {
-							ci.destroy(entity);
-							ImGui::PopID();
-							continue; // early out to prevent access to deleted data
-						}
-						else {
-							ImGui::SameLine();
-						}
-						ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-						if (ImGui::CollapsingHeader(ci.name.c_str())) {
-							ImGui::Indent(30.f);
-							ImGui::PushID("Widget");
-							ci.widget(entity);
-							ImGui::PopID();
-							ImGui::Unindent(30.f);
-						}
-						ImGui::PopID();
-					}
-					else {
-						has_not[component_type_id] = ci;
-					}
-				}
-
-				if (!has_not.empty()) {
-					if (ImGui::Button("+ Add Component")) {
-						ImGui::OpenPopup("Add Component");
-					}
-
-					ImGui::SetNextItemWidth(200);
-					if (ImGui::BeginPopup("Add Component")) {
-						ImGui::Text("Components:  ");
-						ImGui::Separator();
-
-						for (auto& [component_type_id, ci] : has_not) {
-							ImGui::PushID(component_type_id);
-							if (ImGui::Selectable(ci.name.c_str())) {
-								ci.create(entity);
-							}
-							ImGui::PopID();
-						}
-						ImGui::EndPopup();
-					}
-				}
-				ImGui::PopID();
-			}
-		}
 	};
 
 }

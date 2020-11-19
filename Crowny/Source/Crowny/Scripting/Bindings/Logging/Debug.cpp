@@ -7,7 +7,7 @@ namespace Crowny
 {
 	void Debug::InitRuntimeFunctions()
 	{
-		CWMonoClass* debugClass = CWMonoRuntime::GetAssembly("")->GetClass("Crowny", "Debug");
+		CWMonoClass* debugClass = CWMonoRuntime::GetCrownyAssembly()->GetClass("Crowny", "Debug");
 		debugClass->AddInternalCall("Internal_Log", (void*)&Internal_Log);
 		debugClass->AddInternalCall("Internal_LogWarning", (void*)&Internal_LogWarning);
 		debugClass->AddInternalCall("Internal_LogError", (void*)&Internal_LogError);

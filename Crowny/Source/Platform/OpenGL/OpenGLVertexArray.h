@@ -18,8 +18,8 @@ namespace Crowny
 
 		virtual void SetIndexBuffer(const Ref<IndexBuffer>& ibo) override;
 
-		virtual const std::vector<Ref<VertexBuffer>>& GetVertexBuffers() const { return m_VertexBuffers; };
-		virtual const Ref<IndexBuffer>& GetIndexBuffer() const { return m_IndexBuffer; };
+		virtual const std::vector<Ref<VertexBuffer>>& GetVertexBuffers() const override { return m_VertexBuffers; };
+		virtual const Ref<IndexBuffer>& GetIndexBuffer() const override { return m_IndexBuffer; };
 
 	private:
 		uint32_t m_RendererID;

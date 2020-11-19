@@ -21,13 +21,13 @@ namespace Crowny
 
 	void VirtualFileSystem::Mount(const std::string& virtualPath, const std::string& physicalPath)
 	{
-		CW_ENGINE_ASSERT(s_Instance, "");
+		CW_ENGINE_ASSERT(s_Instance);
 		m_MountedDirectories[virtualPath].push_back(physicalPath);
 	}
 
 	void VirtualFileSystem::Unmount(const std::string& path)
 	{
-		CW_ENGINE_ASSERT(s_Instance, "");
+		CW_ENGINE_ASSERT(s_Instance);
 		m_MountedDirectories[path].clear();
 	}
 
@@ -61,28 +61,28 @@ namespace Crowny
 
 	std::tuple<byte*, uint64_t> VirtualFileSystem::ReadFile(const std::string& path)
 	{
-		CW_ENGINE_ASSERT(s_Instance, "");
+		CW_ENGINE_ASSERT(s_Instance);
 		std::string phPath;
 		return ResolvePhyiscalPath(path, phPath) ? FileSystem::ReadFile(phPath) : std::make_tuple(nullptr, -1);
 	}
 
 	std::string VirtualFileSystem::ReadTextFile(const std::string& path)
 	{
-		CW_ENGINE_ASSERT(s_Instance, "");
+		CW_ENGINE_ASSERT(s_Instance);
 		std::string phPath;
 		return ResolvePhyiscalPath(path, phPath) ? FileSystem::ReadTextFile(phPath) : std::string();
 	}
 
 	bool VirtualFileSystem::WriteFile(const std::string& path, byte* buff)
 	{
-		CW_ENGINE_ASSERT(s_Instance, "");
+		CW_ENGINE_ASSERT(s_Instance);
 		std::string phPath;
 		return ResolvePhyiscalPath(path, phPath) ? FileSystem::WriteFile(phPath, buff) : false;
 	}
 
 	bool VirtualFileSystem::WriteTextFile(const std::string& path, const std::string& text)
 	{
-		CW_ENGINE_ASSERT(s_Instance, "");
+		CW_ENGINE_ASSERT(s_Instance);
 		std::string phPath;
 		return ResolvePhyiscalPath(path, phPath) ? FileSystem::WriteTextFile(phPath, text) : false;
 	}
