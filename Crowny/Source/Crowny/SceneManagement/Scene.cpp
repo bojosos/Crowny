@@ -36,12 +36,12 @@ namespace Crowny
 
 	void Scene::Run()
 	{
-		CW_ENGINE_INFO("Starting Run");
+		deltaTime = 0.0f; frameCount = 0.0f; fixedDeltaTime = 0.0f; time = 0.0f; realtimeSinceStarup = 0.0f;
 
+		// Create managed entities
 		auto* encl = CWMonoRuntime::GetAssembly("")->GetClass("Crowny", "Entity");
 		CW_ENGINE_ASSERT(encl, "Entity class does not exist");
 		auto* field1 = encl->GetField("m_InternalPtr");
-		CW_ENGINE_INFO(field1 == nullptr);
 
 		m_Registry.each([&](auto entity) {
 			MonoObject* enin = encl->CreateInstance();
@@ -51,12 +51,10 @@ namespace Crowny
 			field1->Set(enin, &ent);
 		});
 
-		CW_ENGINE_INFO("Entities are done!");
-
+		// Create managed transforms
 		auto* trcl = CWMonoRuntime::GetAssembly("")->GetClass("Crowny", "Transform");
 		CW_ENGINE_ASSERT(trcl, "Transform class does not exist");
 		auto* field2 = trcl->GetField("m_InternalPtr");
-		CW_ENGINE_INFO(field2 == nullptr);
 
 		m_Registry.view<TransformComponent>().each([&](const auto& entity, auto& tc)
 		{
@@ -65,39 +63,26 @@ namespace Crowny
 			tc.ManagedInstance = trin;
 			size_t val = (size_t)&tc;
 			field2->Set(trin, &val);
-			std::cout << &tc << std::endl;
 		});
 
-		CW_ENGINE_INFO("Transforms are done");
-		
-		m_Registry.view<MonoScriptComponent>().each([&](const entt::entity &entity, MonoScriptComponent &sc) 
+		// Create managed scritp components
+		m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent &sc) 
 		{
-			CW_ENGINE_INFO(sc.Name);
-			//auto* mccl = CWMonoRuntime::GetAssembly("")->GetClass("Sandbox", sc.Name);
-			//CW_ENGINE_ASSERT(mccl, "EntityBegaviour class does not exist");
-			auto fields = sc.Class->GetFields();
-			for (CWMonoField* field : fields)
-			{
-				CW_ENGINE_INFO(field->GetFullDeclName());
-			}
+			if (!sc.class)
+				return;
+				
 			auto* field3 = sc.Class->GetField("m_InternalPtr");
+			sc.UpdateMethod = sc.Class->GetMethod("Update");
 			MonoObject* msin = sc.Class->CreateInstance();
+			sc.Instance = msin;
 			uint32_t handle = mono_gchandle_new(msin, false); // TODO: delete this
 			size_t val = (size_t)&sc;
 			field3->Set(msin, &val);
-			auto methods = sc.Class->GetMethods();
-			std::cout << &sc << std::endl;
-			for (CWMonoMethod* method : methods)
-			{
-				CW_ENGINE_INFO(method->GetFullDeclName());
-			}
 
 			CWMonoMethod* method = sc.Class->GetMethod("Start", 0);
 			if (method)
 				method->Call(msin);
 		});
-
-		CW_ENGINE_INFO("Start is done");
 
 		m_Running = true;
 	}
@@ -106,6 +91,16 @@ namespace Crowny
 	{
 		if (!m_Running)
 			return;
+
+		deltaTime = ts;
+		frameCount += 1;
+		time += ts;
+		realtimeSinceStarup += ts;
+
+		m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent &sc) {
+			if (sc.UpdateMethod)
+				sc.UpdateMethod->Call(sc.Instance);
+		});
 
 		auto cam = m_Registry.view<CameraComponent>();
 		if (!cam.empty()) 

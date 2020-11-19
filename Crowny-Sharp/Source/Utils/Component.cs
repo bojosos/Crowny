@@ -7,9 +7,9 @@ namespace Crowny
 	public class Component : ScriptObject
 	{
 
-		public Entity entity { get { Console.WriteLine(m_InternalPtr); Console.WriteLine("Getting entity"); Entity e = Internal_GetEntity(m_InternalPtr); Console.WriteLine("Entity"); return e;} }
+		public Entity entity { get { return Internal_GetEntity(m_InternalPtr); } }
 
-		public Transform transform { get { Console.WriteLine("Getting transform"); return entity.transform; } }
+		public Transform transform { get { return entity.transform; } }
 
 		[MethodImpl(MethodImplOptions.InternalCall)]
 		public static extern Component Internal_GetComponent(Entity parent, Type type);

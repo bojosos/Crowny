@@ -274,6 +274,7 @@ GENERATED += $(OBJDIR)/Scene.o
 GENERATED += $(OBJDIR)/SceneManager.o
 GENERATED += $(OBJDIR)/ScriptComponent.o
 GENERATED += $(OBJDIR)/ScriptEntity.o
+GENERATED += $(OBJDIR)/ScriptTime.o
 GENERATED += $(OBJDIR)/Shader.o
 GENERATED += $(OBJDIR)/Texture.o
 GENERATED += $(OBJDIR)/TextureManager.o
@@ -351,6 +352,7 @@ OBJECTS += $(OBJDIR)/Scene.o
 OBJECTS += $(OBJDIR)/SceneManager.o
 OBJECTS += $(OBJDIR)/ScriptComponent.o
 OBJECTS += $(OBJDIR)/ScriptEntity.o
+OBJECTS += $(OBJDIR)/ScriptTime.o
 OBJECTS += $(OBJDIR)/Shader.o
 OBJECTS += $(OBJDIR)/Texture.o
 OBJECTS += $(OBJDIR)/TextureManager.o
@@ -584,6 +586,9 @@ $(OBJDIR)/ScriptComponent.o: Source/Crowny/Scripting/Bindings/Scene/ScriptCompon
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ScriptEntity.o: Source/Crowny/Scripting/Bindings/Scene/ScriptEntity.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ScriptTime.o: Source/Crowny/Scripting/Bindings/Scene/ScriptTime.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/CWMonoAssembly.o: Source/Crowny/Scripting/CWMonoAssembly.cpp

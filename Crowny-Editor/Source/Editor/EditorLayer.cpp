@@ -9,6 +9,7 @@
 #include "Crowny/Scripting/Bindings/Math/Transform.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntity.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptTime.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -88,10 +89,7 @@ namespace Crowny
 		ScriptTransform::InitRuntimeFunctions();
 		ScriptComponent::InitRuntimeFunctions();
 		ScriptEntity::InitRuntimeFunctions();
-
-		//m_Class = assembly->GetClass("Test", "Test");
-
-		//SceneManager::GetActiveScene()->Run();
+		ScriptTime::InitRuntimeFunctions();
 	}
 
 	void EditorLayer::OnDetach()

@@ -8,7 +8,7 @@ namespace Crowny
 
 		~ScriptObject()
 		{
-			// TODO: Notift native that I have been destroyed
+			// TODO: Notify native that I have been destroyed
 		}
 	}
 }

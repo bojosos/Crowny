@@ -14,6 +14,7 @@ namespace Crowny
         // LogType used for Exceptions.
         Exception = 3
     }
+
     public class Debug
     {
 
@@ -27,6 +28,7 @@ namespace Crowny
                 case LogType.Exception:  LogException(string.Format(format, args)); break;
             }
         }
+
         public static void Log(string message)
         {
             Internal_Log(message);
@@ -48,15 +50,15 @@ namespace Crowny
         }
 
         [MethodImpl(MethodImplOptions.InternalCall)]
-        static extern void Internal_Log(string message);
+        private static extern void Internal_Log(string message);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
-        static extern void Internal_LogWarning(string message);
+        private static extern void Internal_LogWarning(string message);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
-        static extern void Internal_LogError(string message);
+        private static extern void Internal_LogError(string message);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
-        static extern void Internal_LogException(string message);
+        private static extern void Internal_LogException(string message);
     }
 }

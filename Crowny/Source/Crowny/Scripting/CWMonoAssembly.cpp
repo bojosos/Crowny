@@ -6,7 +6,6 @@
 BEGIN_MONO_INCLUDE
 #include <mono/metadata/appdomain.h>
 #include <mono/metadata/metadata.h>
-#include <mono/metadata/appdomain.h>
 END_MONO_INCLUDE
 
 namespace Crowny

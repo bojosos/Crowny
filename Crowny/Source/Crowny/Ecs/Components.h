@@ -21,7 +21,7 @@ namespace Crowny
 
 	struct Component
 	{
-		Entity Parent;
+		Entity ComponentParent;
 	};
 
 	struct TagComponent : public Component
@@ -126,8 +126,8 @@ namespace Crowny
 	{
 		std::string Name;
 		CWMonoClass* Class = nullptr;
-		CWMonoObject* Object = nullptr;
-		Entity EntityParent;
+		MonoObject* Instance = nullptr;
+		CWMonoMethod* UpdateMethod = nullptr;
 
 		MonoScriptComponent() = default;
 		MonoScriptComponent(const MonoScriptComponent&) = default;
