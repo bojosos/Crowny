@@ -10,7 +10,7 @@ namespace Crowny
 
     void ScriptTime::InitRuntimeFunctions()
 	{
-		CWMonoClass* timeClass = CWMonoRuntime::GetAssembly("")->GetClass("Crowny", "Time");
+		CWMonoClass* timeClass = CWMonoRuntime::GetCrownyAssembly()->GetClass("Crowny", "Time");
 
         timeClass->AddInternalCall("Internal_GetTime", (void*)&Internal_GetTime);
 		timeClass->AddInternalCall("Internal_GetDeltaTime", (void*)&Internal_GetDeltaTime);

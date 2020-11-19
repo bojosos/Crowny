@@ -111,7 +111,7 @@ namespace Crowny
 			{
 				WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
 
-				KeyTypedEvent event(static_cast<KeyCode>(keycode));
+				KeyTypedEvent event(keycode);
 				data.EventCallback(event);
 			});
 

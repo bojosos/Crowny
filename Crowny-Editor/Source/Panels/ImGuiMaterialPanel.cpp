@@ -3,6 +3,7 @@
 #include "ImGuiMaterialPanel.h"
 #include "Crowny/Renderer/TextureManager.h"
 #include "Crowny/Common/FileSystem.h"
+#include "Editor/EditorAssets.h"
 
 #include <imgui.h>
 #include "glm/gtc/type_ptr.inl"
@@ -28,9 +29,9 @@ namespace Crowny
 			{
 				Ref<Texture2D> albedo = s_SelectedMaterial->GetAlbedoMap();
 				if (albedo)
-					ImGui::Image((ImTextureID)albedo->GetRendererID(), ImVec2(100, 100));
+					ImGui::Image(reinterpret_cast<void*>(albedo->GetRendererID()), ImVec2(100, 100));
 				else
-					ImGui::Image((ImTextureID)Textures::Unassigned->GetRendererID(), ImVec2(100, 100));
+					ImGui::Image(reinterpret_cast<void*>(EditorAssets::UnassignedTexture->GetRendererID()), ImVec2(100, 100));
 
 				if (ImGui::IsItemClicked())
 				{
@@ -57,9 +58,9 @@ namespace Crowny
 			{
 				Ref<Texture2D> metalness = s_SelectedMaterial->GetMetalnessMap();
 				if (metalness)
-					ImGui::Image((ImTextureID)metalness->GetRendererID(), ImVec2(100, 100));
+					ImGui::Image(reinterpret_cast<void*>(metalness->GetRendererID()), ImVec2(100, 100));
 				else
-					ImGui::Image((ImTextureID)Textures::Unassigned->GetRendererID(), ImVec2(100, 100));
+					ImGui::Image(reinterpret_cast<void*>(EditorAssets::UnassignedTexture->GetRendererID()), ImVec2(100, 100));
 
 				if (ImGui::IsItemClicked())
 				{
@@ -88,9 +89,9 @@ namespace Crowny
 			{
 				Ref<Texture2D> normal = s_SelectedMaterial->GetNormalMap();
 				if (normal)
-					ImGui::Image((ImTextureID)normal->GetRendererID(), ImVec2(100, 100));
+					ImGui::Image(reinterpret_cast<void*>(normal->GetRendererID()), ImVec2(100, 100));
 				else
-					ImGui::Image((ImTextureID)Textures::Unassigned->GetRendererID(), ImVec2(100, 100));
+					ImGui::Image(reinterpret_cast<void*>(EditorAssets::UnassignedTexture->GetRendererID()), ImVec2(100, 100));
 				
 				if (ImGui::IsItemClicked())
 				{
@@ -110,9 +111,9 @@ namespace Crowny
 			{
 				Ref<Texture2D> rougness = s_SelectedMaterial->GetRoughnessMap();
 				if (rougness)
-					ImGui::Image((ImTextureID)rougness->GetRendererID(), ImVec2(100, 100));
+					ImGui::Image(reinterpret_cast<void*>(rougness->GetRendererID()), ImVec2(100, 100));
 				else
-					ImGui::Image((ImTextureID)Textures::Unassigned->GetRendererID(), ImVec2(100, 100));
+					ImGui::Image(reinterpret_cast<void*>(EditorAssets::UnassignedTexture->GetRendererID()), ImVec2(100, 100));
 
 				if (ImGui::IsItemClicked())
 				{
@@ -139,9 +140,9 @@ namespace Crowny
 			{
 				Ref<Texture2D> ao = s_SelectedMaterial->GetAoMap();
 				if (ao)
-					ImGui::Image((ImTextureID)ao->GetRendererID(), ImVec2(100, 100));
+					ImGui::Image(reinterpret_cast<void*>(ao->GetRendererID()), ImVec2(100, 100));
 				else
-					ImGui::Image((ImTextureID)Textures::Unassigned->GetRendererID(), ImVec2(100, 100));
+					ImGui::Image(reinterpret_cast<void*>(EditorAssets::UnassignedTexture->GetRendererID()), ImVec2(100, 100));
 				
 				if (ImGui::IsItemClicked())
 				{

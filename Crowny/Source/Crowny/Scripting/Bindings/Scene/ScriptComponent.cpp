@@ -9,7 +9,7 @@ namespace Crowny
 
 	void ScriptComponent::InitRuntimeFunctions()
 	{
-		CWMonoClass* componentClass = CWMonoRuntime::GetAssembly("")->GetClass("Crowny", "Component");
+		CWMonoClass* componentClass = CWMonoRuntime::GetCrownyAssembly()->GetClass("Crowny", "Component");
 
 		componentClass->AddInternalCall("Internal_GetEntity", (void*)&Internal_GetEntity);
 	}

@@ -5,11 +5,8 @@
 #include "Crowny/Scripting/CWMonoRuntime.h"
 
 #include "Crowny/Runtime/Runtime.h"
-#include "Crowny/Scripting/Bindings/Logging/Debug.h"
-#include "Crowny/Scripting/Bindings/Math/Transform.h"
-#include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
-#include "Crowny/Scripting/Bindings/Scene/ScriptEntity.h"
-#include "Crowny/Scripting/Bindings/Scene/ScriptTime.h"
+
+#include "Editor/EditorAssets.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -73,23 +70,15 @@ namespace Crowny
 
 		ImGuiMaterialPanel::SetSelectedMaterial(mat);
 		//Ref<Model> model = CreateRef<Model>("Models/");
-		ForwardRenderer::Init();
+		ForwardRenderer::Init(); // Why here?
+		EditorAssets::LoadAssets();
 
+		// Test
 		Scene* scene = SceneManager::GetActiveScene();
 		auto sphere = scene->CreateEntity("Sphere");
 		sphere.AddComponent<MeshRendererComponent>();
 		auto cam = scene->CreateEntity("Camera");
 		cam.AddComponent<CameraComponent>();
-
-		CWMonoRuntime::Init("Crowny C# Runtime");
-		auto* assembly = CWMonoRuntime::LoadAssembly("Resources/Crowny.dll");
-		
-		// TODO: Out of here
-		Debug::InitRuntimeFunctions();
-		ScriptTransform::InitRuntimeFunctions();
-		ScriptComponent::InitRuntimeFunctions();
-		ScriptEntity::InitRuntimeFunctions();
-		ScriptTime::InitRuntimeFunctions();
 	}
 
 	void EditorLayer::OnDetach()

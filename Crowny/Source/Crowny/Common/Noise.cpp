@@ -48,7 +48,7 @@ namespace Crowny
 
 	float Noise::Noise3D(const NoiseOptions& ops, const glm::vec3& position)
 	{
-		CW_ENGINE_ASSERT(false, "Not implemented");
+		CW_ENGINE_ASSERT(false);
 		return 0.0f;
 	}
 }

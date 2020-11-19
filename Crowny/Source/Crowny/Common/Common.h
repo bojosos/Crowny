@@ -14,21 +14,9 @@
 	#define CW_DEBUGBREAK()
 #endif
 
-#ifdef CW_ENABLE_ASSERTS
-	#define CW_CLIENT_ASSERT(x, ...) { if(!(x)) { CW_CLIENT_ERROR("Assertion Failed: {0}", __VA_ARGS__);/* CW_DEBUGBREAK();*/ } }
-	#define CW_ENGINE_ASSERT(x, ...) { if(!(x)) { CW_ENGINE_ERROR("Assertion Failed: {0}", __VA_ARGS__);/* CW_DEBUGBREAK();*/ } }
-	//#define CW_CLIENT_ASSERT(x) { if(!(x)) { CW_CLIENT_ERROR("Assertion Failed: {0}"); CW_DEBUGBREAK(); } }
-	//#define CW_ENGINE_ASSERT(x) { if(!(x)) { CW_ENGINE_ERROR("Assertion Failed: {0}"); CW_DEBUGBREAK(); } }
-#else
-	#define CW_CLIENT_ASSERT(x, ...)
-	#define CW_ENGINE_ASSERT(x, ...)
-	//#define CW_CLIENT_ASSERT(x)
-	//#define CW_ENGINE_ASSERT(x)
-#endif
-
 #define BIT(x) (1 << x)
 
-#define CW_BIND_EVENT_FN(fn) std::bind(&fn, this, std::placeholders::_1)
+#define CW_BIND_EVENT_FN(fn) [this](auto&&... args) -> decltype(auto) { return this->fn(std::forward<decltype(args)>(args)...); }
 
 namespace Crowny {
 
@@ -49,3 +37,5 @@ namespace Crowny {
 	}
 
 }
+
+#include "Crowny/Common/Assert.h"

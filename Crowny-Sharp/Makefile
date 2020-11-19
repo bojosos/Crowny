@@ -13,9 +13,9 @@ endif
 ifeq ($(config),debug_win64)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Debug-linux-x86_64/Crowny-Sharp
+TARGETDIR = bin/Debug-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
-OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny-Sharp/Win64
+OBJDIR = bin-int/Debug-linux-x86_64/Crowny-Sharp/Win64
   FLAGS = /debug /noconfig /d:CW_DEBUG
   DEPENDS =
   REFERENCES = 
@@ -30,9 +30,9 @@ endif
 ifeq ($(config),debug_linux64)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Debug-linux-x86_64/Crowny-Sharp
+TARGETDIR = bin/Debug-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
-OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny-Sharp/Linux64
+OBJDIR = bin-int/Debug-linux-x86_64/Crowny-Sharp/Linux64
   FLAGS = /debug /noconfig /d:CW_DEBUG
   DEPENDS =
   REFERENCES = 
@@ -47,9 +47,9 @@ endif
 ifeq ($(config),debug_macos64)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Debug-linux-x86_64/Crowny-Sharp
+TARGETDIR = bin/Debug-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
-OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny-Sharp/MacOS64
+OBJDIR = bin-int/Debug-linux-x86_64/Crowny-Sharp/MacOS64
   FLAGS = /debug /noconfig /d:CW_DEBUG
   DEPENDS =
   REFERENCES = 
@@ -64,9 +64,9 @@ endif
 ifeq ($(config),debug_web)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Debug-linux-x86_64/Crowny-Sharp
+TARGETDIR = bin/Debug-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
-OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny-Sharp/Web
+OBJDIR = bin-int/Debug-linux-x86_64/Crowny-Sharp/Web
   FLAGS = /debug /noconfig /d:CW_DEBUG
   DEPENDS =
   REFERENCES = 
@@ -81,9 +81,9 @@ endif
 ifeq ($(config),release_win64)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Release-linux-x86_64/Crowny-Sharp
+TARGETDIR = bin/Release-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
-OBJDIR = ../bin-int/Release-linux-x86_64/Crowny-Sharp/Win64
+OBJDIR = bin-int/Release-linux-x86_64/Crowny-Sharp/Win64
   FLAGS = /optimize /noconfig /d:CW_RELEASE
   DEPENDS =
   REFERENCES = 
@@ -98,9 +98,9 @@ endif
 ifeq ($(config),release_linux64)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Release-linux-x86_64/Crowny-Sharp
+TARGETDIR = bin/Release-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
-OBJDIR = ../bin-int/Release-linux-x86_64/Crowny-Sharp/Linux64
+OBJDIR = bin-int/Release-linux-x86_64/Crowny-Sharp/Linux64
   FLAGS = /optimize /noconfig /d:CW_RELEASE
   DEPENDS =
   REFERENCES = 
@@ -115,9 +115,9 @@ endif
 ifeq ($(config),release_macos64)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Release-linux-x86_64/Crowny-Sharp
+TARGETDIR = bin/Release-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
-OBJDIR = ../bin-int/Release-linux-x86_64/Crowny-Sharp/MacOS64
+OBJDIR = bin-int/Release-linux-x86_64/Crowny-Sharp/MacOS64
   FLAGS = /optimize /noconfig /d:CW_RELEASE
   DEPENDS =
   REFERENCES = 
@@ -132,9 +132,9 @@ endif
 ifeq ($(config),release_web)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Release-linux-x86_64/Crowny-Sharp
+TARGETDIR = bin/Release-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
-OBJDIR = ../bin-int/Release-linux-x86_64/Crowny-Sharp/Web
+OBJDIR = bin-int/Release-linux-x86_64/Crowny-Sharp/Web
   FLAGS = /optimize /noconfig /d:CW_RELEASE
   DEPENDS =
   REFERENCES = 
@@ -149,9 +149,9 @@ endif
 ifeq ($(config),dist_win64)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Dist-linux-x86_64/Crowny-Sharp
+TARGETDIR = bin/Dist-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
-OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny-Sharp/Win64
+OBJDIR = bin-int/Dist-linux-x86_64/Crowny-Sharp/Win64
   FLAGS = /optimize /noconfig /d:CW_DIST
   DEPENDS =
   REFERENCES = 
@@ -166,9 +166,9 @@ endif
 ifeq ($(config),dist_linux64)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Dist-linux-x86_64/Crowny-Sharp
+TARGETDIR = bin/Dist-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
-OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny-Sharp/Linux64
+OBJDIR = bin-int/Dist-linux-x86_64/Crowny-Sharp/Linux64
   FLAGS = /optimize /noconfig /d:CW_DIST
   DEPENDS =
   REFERENCES = 
@@ -183,9 +183,9 @@ endif
 ifeq ($(config),dist_macos64)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Dist-linux-x86_64/Crowny-Sharp
+TARGETDIR = bin/Dist-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
-OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny-Sharp/MacOS64
+OBJDIR = bin-int/Dist-linux-x86_64/Crowny-Sharp/MacOS64
   FLAGS = /optimize /noconfig /d:CW_DIST
   DEPENDS =
   REFERENCES = 
@@ -200,9 +200,9 @@ endif
 ifeq ($(config),dist_web)
   CSC = csc
   RESGEN = resgen
-TARGETDIR = ../bin/Dist-linux-x86_64/Crowny-Sharp
+TARGETDIR = bin/Dist-linux-x86_64/Crowny-Sharp
 TARGET = $(TARGETDIR)/Crowny-Sharp.dll
-OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny-Sharp/Web
+OBJDIR = bin-int/Dist-linux-x86_64/Crowny-Sharp/Web
   FLAGS = /optimize /noconfig /d:CW_DIST
   DEPENDS =
   REFERENCES = 

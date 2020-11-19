@@ -93,7 +93,7 @@ namespace Crowny
 		{
 			byte* buf;
 			auto* decl = FindUniformDeclaration(name, &buf);
-			CW_ENGINE_ASSERT(decl, "");
+			CW_ENGINE_ASSERT(decl);
 			memcpy(buf + decl->GetOffset(), &data, decl->GetSize());
 		}
 

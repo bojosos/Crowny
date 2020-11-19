@@ -4,7 +4,7 @@
 #include "Panels/ImGuiPanel.h"
 #include "Crowny/ImGui/ImGuiMenu.h"
 
-#include "Panels/OpenGLInformationPanel.h"
+#include "Panels/ImGuiGLInfoPanel.h"
 #include "Panels/ImGuiViewportPanel.h"
 #include "Panels/ImGuiHierarchyPanel.h"
 #include "Panels/ImGuiInspectorPanel.h"

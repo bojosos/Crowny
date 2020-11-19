@@ -123,7 +123,7 @@ namespace Crowny
 		}
 		else
 		{
-			if (m_Renaming == e)
+			if (e == m_Renaming)
 			{
 				if (ImGui::InputText("##renaming", &tc.Tag, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
 				{
@@ -194,7 +194,7 @@ namespace Crowny
 			}
 		}
 
-		if (Input::IsKeyPressed(Key::Delete))
+		if (Input::IsKeyUp(Key::Delete))
 		{
 			auto& rr = s_SelectedEntity.GetParent().GetComponent<RelationshipComponent>().Children;
 			for (int i = 0; i < rr.size(); i++)

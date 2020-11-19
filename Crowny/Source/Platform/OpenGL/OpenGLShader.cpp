@@ -309,7 +309,7 @@ namespace Crowny
 			if (t == OpenGLUniformDeclaration::Type::NONE)
 			{
 				ShaderStruct* s = FindStruct(typeString);
-				CW_ENGINE_ASSERT(s, "");
+				CW_ENGINE_ASSERT(s);
 				decl = new OpenGLUniformDeclaration(s, name, count);
 			}
 			else

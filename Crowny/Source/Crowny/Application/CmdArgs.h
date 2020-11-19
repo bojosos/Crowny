@@ -6,7 +6,7 @@ namespace Crowny
 	{
 	public:
 		static void Create(int argc, char** argv);
-		inline static std::vector<std::string>& Get() { return Instance().m_Args; }
+		static std::vector<std::string>& Get() { return Instance().m_Args; }
 	private:
 		static CommandLineArgs& Instance()
 		{

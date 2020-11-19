@@ -25,7 +25,6 @@ namespace Crowny
 	CWMonoVisibility CWMonoField::GetVisibility()
 	{
 		uint32_t flags = mono_field_get_flags(m_Field) & MONO_FIELD_ATTR_FIELD_ACCESS_MASK;
-
 		switch (flags)
 		{
 		case MONO_FIELD_ATTR_PRIVATE:       return CWMonoVisibility::PRIVATE;

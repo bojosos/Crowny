@@ -3,6 +3,8 @@
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Common/FileSystem.h"
 
+#include "Editor/EditorAssets.h"
+
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 
@@ -163,7 +165,7 @@ namespace Crowny
 		{
 			ImGui::Text(t.Font->GetName().c_str());
 			ImGui::Separator();
-			ImGui::Image((ImTextureID)t.Font->GetTexture()->GetRendererID(), ImVec2(t.Font->GetTexture()->GetWidth(), t.Font->GetTexture()->GetHeight()));
+			ImGui::Image(reinterpret_cast<void*>(t.Font->GetTexture()->GetRendererID()), ImVec2(t.Font->GetTexture()->GetWidth(), t.Font->GetTexture()->GetHeight()));
 			ImGui::EndPopup();
 		}
 #endif
@@ -185,9 +187,9 @@ namespace Crowny
 		auto& t = e.GetComponent<SpriteRendererComponent>();
 
 		if(t.Texture)
-			ImGui::Image((ImTextureID)t.Texture->GetRendererID(), { 150.0f, 150.0f });
+			ImGui::Image(reinterpret_cast<void*>(t.Texture->GetRendererID()), { 150.0f, 150.0f });
 		else
-			ImGui::Image((ImTextureID)Textures::Unassigned->GetRendererID(), { 150.0f, 150.0f });
+			ImGui::Image(reinterpret_cast<void*>(EditorAssets::UnassignedTexture->GetRendererID()), { 150.0f, 150.0f });
 
 		if (ImGui::IsItemClicked())
 		{
@@ -225,7 +227,7 @@ namespace Crowny
 
 		if (ImGui::InputText("##scriptName", &script.Name))
 		{
-			script.Class = CWMonoRuntime::GetAssembly("")->GetClass("Sandbox", script.Name);
+			script.Class = CWMonoRuntime::GetClientAssembly()->GetClass("Sandbox", script.Name);
 		}
 		
 		ImGui::PopStyleColor(1);

@@ -14,7 +14,7 @@ namespace Sandbox
 
         public void Update()
         {
-        	transform.position += new Vector3(0.1f, 0f, 0f) * Time.deltaTime;
+        	transform.position += new Vector3(0.1f, 0f, 0f) * Time.smoothDeltaTime;
         }
     }
 }

@@ -19,7 +19,8 @@ namespace Crowny
 	class Renderer2D
 	{
 	public:
-		static void Begin(const glm::mat4& projection, const glm::mat4& transform);
+		static void Init();
+		static void Shutdown();
 
 		static float FindTexture(const Ref<Texture2D>& texture);
 		
@@ -30,8 +31,8 @@ namespace Crowny
 		static void DrawString(const std::string& text, float x, float y, const Ref<Font>& font, const glm::vec4& color);
 		static void DrawString(const std::string& text, const glm::mat4& transform, const Ref<Font>& font, const glm::vec4& color);
 
+		static void Begin(const glm::mat4& projection, const glm::mat4& transform);
 		static void End();
 		static void Flush();
-		static void Init();
 	};
 }
