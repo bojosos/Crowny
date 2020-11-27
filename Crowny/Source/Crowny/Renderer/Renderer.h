@@ -15,6 +15,7 @@ namespace Crowny
 		static void Shutdown();
 
 		static void OnWindowResize(uint32_t width, uint32_t height);
+		static void SetViewport(float x, float y, float width, float height);
 
 		static void BeginScene();
 

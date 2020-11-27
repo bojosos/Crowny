@@ -9,6 +9,7 @@
 #include "Panels/ImGuiHierarchyPanel.h"
 #include "Panels/ImGuiInspectorPanel.h"
 #include "Panels/ImGuiMaterialPanel.h"
+#include "Crowny/Scene/Scene.h"
 
 #include "Crowny/Scripting/CWMonoClass.h"
 
@@ -33,17 +34,23 @@ namespace Crowny
 		virtual void OnImGuiRender() override;
 		virtual void OnEvent(Event& e) override;
 
+		bool OnKeyPressed(KeyPressedEvent& e);
+
+		void CreateNewScene();
+		void OpenScene();
+		void SaveActiveScene();
+		void SaveActiveSceneAs();
+
 	private:
 		ImGuiMenuBar* m_MenuBar;
-		ImGuiPanel* m_GLInfoWindow;
+		Ref<Scene> m_Temp;
 
+		ImGuiPanel* m_GLInfoPanel;
 		ImGuiInspectorPanel* m_InspectorPanel;
 		ImGuiHierarchyPanel* m_HierarchyPanel;
 		ImGuiViewportPanel* m_ViewportPanel;
 		ImGuiTextureEditor* m_TextureEditor;
 		ImGuiMaterialPanel* m_MaterialEditor;
-
-		CWMonoClass* m_Class;
 
 		std::vector<ImGuiPanel*> m_ImGuiWindows;
 		

@@ -43,7 +43,21 @@ namespace Crowny
 		const std::string& virtualDir = dirs.front();
 
 		if (m_MountedDirectories.find(virtualDir) == m_MountedDirectories.end() || m_MountedDirectories[virtualDir].empty())
+		//return false;
+		{
+#ifdef CW_PLATFORM_LINUX
+			if (FileSystem::FileExists(virtualPath))
+			{
+				outPath = virtualPath;
+				return true;
+			}
+			CW_ENGINE_WARN("File {0} does not exist");
 			return false;
+#else
+			CW_ENGINE_WARN("File {0} does not exist");
+			return false;
+#endif
+}
 
 		std::string remaining = virtualPath.substr(virtualDir.size() + 1, virtualPath.size() - virtualDir.size());
 		for (const std::string& phPath : m_MountedDirectories[virtualDir])
@@ -56,6 +70,7 @@ namespace Crowny
 			}
 		}
 
+		CW_ENGINE_WARN("File {0} does not exist");
 		return false;
 	}
 
@@ -69,7 +84,7 @@ namespace Crowny
 	std::string VirtualFileSystem::ReadTextFile(const std::string& path)
 	{
 		CW_ENGINE_ASSERT(s_Instance);
-		std::string phPath;
+		std::string phPath;		
 		return ResolvePhyiscalPath(path, phPath) ? FileSystem::ReadTextFile(phPath) : std::string();
 	}
 

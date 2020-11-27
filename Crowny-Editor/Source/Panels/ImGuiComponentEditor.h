@@ -6,23 +6,24 @@
 #include <entt/entt.hpp>
 #include <imgui.h>
 
-namespace Crowny {
+namespace Crowny
+{
 
 	template <class Component>
-	void ComponentEditorWidget(Entity& entity) 
+	void ComponentEditorWidget(Entity entity) 
 	{ 
 	
 	}
 
 	template <class Component>
-	void ComponentAddAction(Entity& entity)
+	void ComponentAddAction(Entity entity)
 	{
 		entity.AddComponent<Component>();
 		entity.GetComponent<Component>().ComponentParent = entity;
 	}
 
 	template <class Component>
-	void ComponentRemoveAction(Entity& entity)
+	void ComponentRemoveAction(Entity entity)
 	{
 		entity.RemoveComponent<Component>();
 	}
@@ -31,7 +32,7 @@ namespace Crowny {
 	{
 	public:
 		struct ComponentInfo {
-			using Callback = std::function<void(Entity&)>;
+			using Callback = std::function<void(Entity)>;
 			std::string name;
 			Callback widget, create, destroy;
 		};
@@ -41,7 +42,7 @@ namespace Crowny {
 
 		std::map<ComponentTypeID, ComponentInfo> m_ComponentInfos;
 
-		bool EntityHasComponent(const entt::registry& registry, entt::entity& entity, ComponentTypeID tid)
+		bool EntityHasComponent(const entt::registry& registry, entt::entity entity, ComponentTypeID tid)
 		{
 			ComponentTypeID type[] = { tid };
 			return registry.runtime_view(std::cbegin(type), std::cend(type)).contains(entity);

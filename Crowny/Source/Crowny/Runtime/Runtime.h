@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Crowny/SceneManagement/Scene.h"
+#include "Crowny/Scene/Scene.h"
 
 namespace Crowny
 {
@@ -10,11 +10,11 @@ namespace Crowny
 		Runtime();
 
 	private:
-		void OnSceneChanged(Scene* scene);
+		void OnSceneChanged(const Ref<Scene>& scene);
 		void OnStartup();
 		void OnShutdown();
 
-		Scene* m_Scene = nullptr;
-		Scene* m_OpenScene = nullptr;
+		Ref<Scene> m_Scene = nullptr;
+		Ref<Scene> m_OpenScene = nullptr;
 	};
 }

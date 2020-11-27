@@ -19,9 +19,14 @@ project "Crowny"
 		"Dependencies/stb_image/**.cpp",
 		"Dependencies/glm/glm/**.hpp",
 		"Dependencies/glm/glm/**.inl",
-		"Dependencies/entt/single_include/entt/entt.hpp",
 		"Resources/**"
 	}
+
+--	filter { "system:windows", "files: Linux*" }
+  --		flags { "ExcludeFromBuild" }
+
+	--filter { "system:linux", "files: Windows*" }
+  --		flags { "ExcludeFromBuild" }
 
 	defines
 	{
@@ -42,19 +47,21 @@ project "Crowny"
 		"%{IncludeDir.stb_image}",
 		"%{IncludeDir.assimp}",
 		"%{IncludeDir.mono}",
-		"%{IncludeDir.vulkan}"
+		"%{IncludeDir.vulkan}",
+		"%{IncludeDir.yamlcpp}"
 	}
 
 	libdirs { "/usr/lib/mono-2.0", "Crowny/Dependencies/vulkan/lib" }
 
 	links 
 	{
-		"GL", "Xxf86vm", "Xrandr", "pthread", "Xi", "dl",
+		"GL", "Xxf86vm", "Xrandr", "pthread", "Xi", "dl", "uuid",
 		"imgui",
 		"freetype-gl",
 		"assimp",
 		"freetype2", "glfw", "glad",
-		"mono-2.0"
+		"mono-2.0",
+		"yaml-cpp"
 	}
 
 
@@ -73,7 +80,6 @@ project "Crowny"
 		defines
 		{
 			"CW_PLATFORM_LINUX",
-			"CW_LINUX"
 		}
 
 		system("linux")
@@ -110,7 +116,6 @@ project "Crowny"
 		systemversion "latest"
 		defines
 		{
-			"CW_LINUX",
 			"CW_PLATFORM_LINUX",
 			"GLFW_INCLUDE_NONE"
 		}

@@ -5,7 +5,7 @@
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Renderer/Font.h"
-#include "Crowny/SceneManagement/SceneManager.h"
+#include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Common/VirtualFileSystem.h"
 
 #include "Crowny/Scripting/CWMonoRuntime.h"

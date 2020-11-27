@@ -72,8 +72,9 @@ namespace Crowny
 		case OpenGLUniformDeclaration::Type::VEC4:	           return 4 * 4;
 		case OpenGLUniformDeclaration::Type::MAT3:             return 4 * 3 * 3;
 		case OpenGLUniformDeclaration::Type::MAT4:             return 4 * 4 * 4;
+		default:             { CW_ENGINE_ASSERT(false, "Invalid uniform type"); return 0; }
 		}
-		CW_ENGINE_ASSERT(false, "Invalid uniform type");
+		
 		return 0;
 	}
 
@@ -101,9 +102,9 @@ namespace Crowny
 		{
 			if (uniform->GetName() == name)
 				return uniform;
-
-			return nullptr;
 		}
+
+		return nullptr;
 	}
 
 	OpenGLShader::OpenGLShader(const std::string& filepath) : m_Filepath(filepath)
@@ -262,16 +263,16 @@ namespace Crowny
 		const char* vstr = vertSrc.c_str();;
 		const char* fstr = fragSrc.c_str();
 
-		while (token = FindToken(vstr, "struct"))
+		while ((token = FindToken(vstr, "struct")))
 			ParseUniformStruct(GetBlock(token, &vstr), GL_VERTEX_SHADER);
 
-		while (token = FindToken(vstr, "uniform"))
+		while ((token = FindToken(vstr, "uniform")))
 			ParseUniform(GetStatement(token, &vstr), GL_VERTEX_SHADER);
 
-		while (token = FindToken(fstr, "struct"))
+		while ((token = FindToken(fstr, "struct")))
 			ParseUniform(GetBlock(token, &fstr), GL_FRAGMENT_SHADER);
 
-		while (token = FindToken(fstr, "uniform"))
+		while ((token = FindToken(fstr, "uniform")))
 			ParseUniform(GetStatement(token, &fstr), GL_FRAGMENT_SHADER);
 	}
 
@@ -632,6 +633,8 @@ namespace Crowny
 			SetUniformMat4(uniform->GetLocation(), *(glm::mat4*)&data[offset]); break;
 		case OpenGLUniformDeclaration::Type::STRUCT:
 			SetUniformStruct(uniform, data, offset); break;
+		case OpenGLUniformDeclaration::Type::NONE:
+			CW_ENGINE_ASSERT(false, "OpenGLUniformDeclaration is None");
 		}
 	}
 

@@ -8,6 +8,9 @@
 
 #include "Editor/EditorAssets.h"
 
+#include "Crowny/Scene/SceneSerializer.h"
+#include "Crowny/Common/FileSystem.h"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -33,33 +36,38 @@ namespace Crowny
 		m_MenuBar = new ImGuiMenuBar();
 
 		ImGuiMenu* fileMenu = new ImGuiMenu("File");
-		fileMenu->AddItem(new ImGuiMenuItem("Exit", [](auto& event) { Application::Get().Exit(); })); m_MenuBar->AddMenu(fileMenu);
+		fileMenu->AddItem(new ImGuiMenuItem("New", "Ctrl+N", [&](auto& event) { CreateNewScene(); }));
+		fileMenu->AddItem(new ImGuiMenuItem("Open", "Ctrl+O", [&](auto& event) { OpenScene(); }));
+		fileMenu->AddItem(new ImGuiMenuItem("Save", "Ctrl+S", [&](auto& event) { SaveActiveScene(); }));
+		fileMenu->AddItem(new ImGuiMenuItem("Save as", "Ctrl+Shift+S", [&](auto& event) { SaveActiveSceneAs(); }));
+		fileMenu->AddItem(new ImGuiMenuItem("Exit", "Alt+F4", [&](auto& event) { Application::Get().Exit(); })); 
+		m_MenuBar->AddMenu(fileMenu);
 
 		ImGuiMenu* viewMenu = new ImGuiMenu("View");
 
 		ImGuiMenu* renderInfo = new ImGuiMenu("Rendering Info");
-		m_GLInfoWindow = new OpenGLInformationPanel("OpenGL");
-		renderInfo->AddItem(new ImGuiMenuItem("OpenGL", [&](auto& event) { m_GLInfoWindow->Show(); }));
+		m_GLInfoPanel = new OpenGLInformationPanel("OpenGL");
+		renderInfo->AddItem(new ImGuiMenuItem("OpenGL", "", [&](auto& event) { m_GLInfoPanel->Show(); }));
 		viewMenu->AddMenu(renderInfo);
 
 		m_HierarchyPanel = new ImGuiHierarchyPanel("Hierarchy");
-		viewMenu->AddItem(new ImGuiMenuItem("Hierarchy", [&](auto& event) { m_HierarchyPanel->Show(); }));
+		viewMenu->AddItem(new ImGuiMenuItem("Hierarchy", "", [&](auto& event) { m_HierarchyPanel->Show(); }));
 
 		m_ViewportPanel = new ImGuiViewportPanel("Viewport", m_Framebuffer, m_ViewportSize);
-		viewMenu->AddItem(new ImGuiMenuItem("Viewport", [&](auto& event) { m_ViewportPanel->Show(); }));
+		viewMenu->AddItem(new ImGuiMenuItem("Viewport", "", [&](auto& event) { m_ViewportPanel->Show(); }));
 
 		//m_ImGuiWindows.push_back(new ImGuiTextureEditor("Texture Properties"));
 		//viewMenu->AddItem(new ImGuiMenuItem("Texture Properties", [&](auto& event) { m_ImGuiWindows.back()->Show(); }));
 
 		m_InspectorPanel= new ImGuiInspectorPanel("Inspector");
-		viewMenu->AddItem(new ImGuiMenuItem("Inspector", [&](auto& event) { m_InspectorPanel->Show(); }));
+		viewMenu->AddItem(new ImGuiMenuItem("Inspector", "", [&](auto& event) { m_InspectorPanel->Show(); }));
 
 		m_MaterialEditor = new ImGuiMaterialPanel("Material Editor");
-		viewMenu->AddItem(new ImGuiMenuItem("Material Editor", [&](auto& event) { m_MaterialEditor->Show(); }));
+		viewMenu->AddItem(new ImGuiMenuItem("Material Editor", "", [&](auto& event) { m_MaterialEditor->Show(); }));
 
 		m_MenuBar->AddMenu(viewMenu);
 
-		SceneManager::AddScene(new Scene("Editor scene")); // To be loaded
+		SceneManager::AddScene(CreateRef<Scene>("Editor scene")); // To be loaded
 
 		Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(Shader::Create("/Shaders/PBRShader.glsl"));
 		
@@ -71,14 +79,58 @@ namespace Crowny
 		ImGuiMaterialPanel::SetSelectedMaterial(mat);
 		//Ref<Model> model = CreateRef<Model>("Models/");
 		ForwardRenderer::Init(); // Why here?
-		EditorAssets::LoadAssets();
+		EditorAssets::Load();
 
 		// Test
-		Scene* scene = SceneManager::GetActiveScene();
-		auto sphere = scene->CreateEntity("Sphere");
+		
+		/*Ref<Scene> scene = SceneManager::GetActiveScene();
+		Entity root = SceneManager::GetActiveScene()->GetRootEntity();
+		Entity sphere = scene->CreateEntity("Sphere");
 		sphere.AddComponent<MeshRendererComponent>();
+		root.AddChild(sphere);
 		auto cam = scene->CreateEntity("Camera");
 		cam.AddComponent<CameraComponent>();
+		root.AddChild(cam);*/
+
+		SceneSerializer serializer(SceneManager::GetActiveScene());
+		//serializer.Serialize("Test.yaml");
+		serializer.Deserialize("Test.yaml");
+		//serializer.Serialize("Test.yaml");
+	}
+
+	void EditorLayer::CreateNewScene()
+	{
+		Ref<Scene> tmp = CreateRef<Scene>();
+		tmp->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
+		SceneManager::SetActiveScene(tmp);
+	}
+
+	void EditorLayer::OpenScene()
+	{
+		std::vector<std::string> outPaths;
+		if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
+		{
+			m_Temp = CreateRef<Scene>();
+			SceneSerializer serializer(m_Temp);
+			serializer.Deserialize(outPaths[0]);
+		}
+	}
+
+	void EditorLayer::SaveActiveSceneAs()
+	{
+		std::vector<std::string> outPaths;
+		if (FileSystem::OpenFileDialog(FileDialogType::SaveFile, "", "", outPaths))
+		{
+			SceneSerializer serializer(SceneManager::GetActiveScene());
+			serializer.Serialize(outPaths[0]);
+		}
+	}
+
+	void EditorLayer::SaveActiveScene()
+	{
+		const auto& scene = SceneManager::GetActiveScene();
+		SceneSerializer serializer(scene);
+		serializer.Serialize(scene->GetFilepath());
 	}
 
 	void EditorLayer::OnDetach()
@@ -91,6 +143,12 @@ namespace Crowny
 
 	void EditorLayer::OnUpdate(Timestep ts)
 	{
+		if (m_Temp)
+		{
+			SceneManager::SetActiveScene(m_Temp);
+			m_Temp = nullptr;
+		}
+
 		if (FramebufferProperties spec = m_Framebuffer->GetProperties(); m_ViewportSize.x > 0.0f && m_ViewportSize.y > 0.0f && (spec.Width != m_ViewportSize.x || spec.Height != m_ViewportSize.y))
 		{
 			m_Framebuffer->Resize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
@@ -100,19 +158,13 @@ namespace Crowny
 		m_Framebuffer->Bind();
 		SceneManager::GetActiveScene()->OnUpdate(ts);
 		
-		if (Input::IsKeyPressed(Key::R))
-		{
-			Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(Shader::Create("/Shaders/PBRShader.glsl"));
-			ImGuiMaterialPanel::SetSelectedMaterial(mat);
-		}
-
 		m_Framebuffer->Unbind();
 		m_HierarchyPanel->Update();
 	}
 
 	void EditorLayer::OnImGuiRender()
 	{
-		ImGui::ShowDemoWindow();
+		//ImGui::ShowDemoWindow(&showDemo);
 		static bool dockspaceOpen = true;
 		static bool opt_fullscreen_persistant = true;
 		bool opt_fullscreen = opt_fullscreen_persistant;
@@ -160,16 +212,64 @@ namespace Crowny
 
 		m_HierarchyPanel->Render();
 		m_InspectorPanel->Render();
-		m_GLInfoWindow->Render();
+		m_GLInfoPanel->Render();
 		m_ViewportPanel->Render();
 		m_MaterialEditor->Render();
 
 		ImGui::End();
 	}
 
+	bool EditorLayer::OnKeyPressed(KeyPressedEvent& e)
+	{
+		if (e.GetRepeatCount() > 0)
+			return false;
+
+		bool ctrl = Input::IsKeyPressed(Key::LeftControl);
+		bool shift = Input::IsKeyPressed(Key::LeftShift);
+
+		switch(e.GetKeyCode())
+		{
+			case Key::N:
+			{
+				if (ctrl) 
+					CreateNewScene();
+				break;
+			}
+			
+			case Key::O:
+			{
+				if (ctrl)
+					OpenScene();
+				break;
+			}
+
+			case Key::R:
+			{
+				if (ctrl)
+				{
+					Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(Shader::Create("/Shaders/PBRShader.glsl"));
+					ImGuiMaterialPanel::SetSelectedMaterial(mat);
+				}
+				break;
+			}
+
+			case Key::S:
+			{
+				if (ctrl && !shift)
+					SaveActiveScene();
+
+				if (ctrl && shift)
+					SaveActiveSceneAs();
+				break;
+			}
+		}
+		return true;
+	}
+
 	void EditorLayer::OnEvent(Event& e)
 	{
-		
+		EventDispatcher dispatcher(e);
+		dispatcher.Dispatch<KeyPressedEvent>(CW_BIND_EVENT_FN(EditorLayer::OnKeyPressed));
 	}
 
 }

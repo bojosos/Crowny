@@ -31,14 +31,14 @@ namespace Crowny
 				if (albedo)
 					ImGui::Image(reinterpret_cast<void*>(albedo->GetRendererID()), ImVec2(100, 100));
 				else
-					ImGui::Image(reinterpret_cast<void*>(EditorAssets::UnassignedTexture->GetRendererID()), ImVec2(100, 100));
+					ImGui::Image(reinterpret_cast<void*>(EditorAssets::Get().UnassignedTexture->GetRendererID()), ImVec2(100, 100));
 
 				if (ImGui::IsItemClicked())
 				{
-					auto [res, path] = FileSystem::OpenFileDialog("Image files\0*.jpg;*.png\0", "", "Open Image");
-					if (res)
+					std::vector<std::string> outPaths;
+					if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
 					{
-						s_SelectedMaterial->SetAlbedoMap(Texture2D::Create(path));
+						s_SelectedMaterial->SetAlbedoMap(Texture2D::Create(outPaths[0]));
 					}
 				}
 
@@ -60,14 +60,14 @@ namespace Crowny
 				if (metalness)
 					ImGui::Image(reinterpret_cast<void*>(metalness->GetRendererID()), ImVec2(100, 100));
 				else
-					ImGui::Image(reinterpret_cast<void*>(EditorAssets::UnassignedTexture->GetRendererID()), ImVec2(100, 100));
+					ImGui::Image(reinterpret_cast<void*>(EditorAssets::Get().UnassignedTexture->GetRendererID()), ImVec2(100, 100));
 
 				if (ImGui::IsItemClicked())
 				{
-					auto [res, path] = FileSystem::OpenFileDialog("Image files\0*.jpg;*.png\0", "", "Open Image");
-					if (res)
+					std::vector<std::string> outPaths;
+					if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
 					{
-						s_SelectedMaterial->SetMetalnessMap(Texture2D::Create(path));
+						s_SelectedMaterial->SetMetalnessMap(Texture2D::Create(outPaths[0]));
 					}
 				}
 
@@ -91,14 +91,14 @@ namespace Crowny
 				if (normal)
 					ImGui::Image(reinterpret_cast<void*>(normal->GetRendererID()), ImVec2(100, 100));
 				else
-					ImGui::Image(reinterpret_cast<void*>(EditorAssets::UnassignedTexture->GetRendererID()), ImVec2(100, 100));
+					ImGui::Image(reinterpret_cast<void*>(EditorAssets::Get().UnassignedTexture->GetRendererID()), ImVec2(100, 100));
 				
 				if (ImGui::IsItemClicked())
 				{
-					auto [res, path] = FileSystem::OpenFileDialog("Image files\0*.jpg;*.png\0", "", "Open Image");
-					if (res)
+					std::vector<std::string> outPaths;
+					if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
 					{
-						s_SelectedMaterial->SetNormalMap(Texture2D::Create(path));
+						s_SelectedMaterial->SetNormalMap(Texture2D::Create(outPaths[0]));
 					}
 				}
 				if (ImGui::Button("Reset##resetNormal"))
@@ -113,14 +113,14 @@ namespace Crowny
 				if (rougness)
 					ImGui::Image(reinterpret_cast<void*>(rougness->GetRendererID()), ImVec2(100, 100));
 				else
-					ImGui::Image(reinterpret_cast<void*>(EditorAssets::UnassignedTexture->GetRendererID()), ImVec2(100, 100));
+					ImGui::Image(reinterpret_cast<void*>(EditorAssets::Get().UnassignedTexture->GetRendererID()), ImVec2(100, 100));
 
 				if (ImGui::IsItemClicked())
 				{
-					auto [res, path] = FileSystem::OpenFileDialog("Image files\0*.jpg;*.png\0", "", "Open Image");
-					if (res)
+					std::vector<std::string> outPaths;
+					if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
 					{
-						s_SelectedMaterial->SetRoughnessMap(Texture2D::Create(path));
+						s_SelectedMaterial->SetRoughnessMap(Texture2D::Create(outPaths[0]));
 					}
 				}
 
@@ -142,14 +142,14 @@ namespace Crowny
 				if (ao)
 					ImGui::Image(reinterpret_cast<void*>(ao->GetRendererID()), ImVec2(100, 100));
 				else
-					ImGui::Image(reinterpret_cast<void*>(EditorAssets::UnassignedTexture->GetRendererID()), ImVec2(100, 100));
+					ImGui::Image(reinterpret_cast<void*>(EditorAssets::Get().UnassignedTexture->GetRendererID()), ImVec2(100, 100));
 				
 				if (ImGui::IsItemClicked())
 				{
-					auto [res, path] = FileSystem::OpenFileDialog("Image files\0*.jpg;*.png\0", "", "Open Image");
-					if (res)
+					std::vector<std::string> outPaths;
+					if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
 					{
-						s_SelectedMaterial->SetAoMap(Texture2D::Create(path));
+						s_SelectedMaterial->SetAoMap(Texture2D::Create(outPaths[0]));
 					}
 				}
 			}

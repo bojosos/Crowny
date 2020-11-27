@@ -2,6 +2,15 @@
 
 namespace Crowny
 {
+
+	enum class FileDialogType
+	{
+		OpenFile = 0,
+		OpenFolder = 1,
+		SaveFile = 2,
+		Multiselect = 3
+	};
+
 	class FileSystem
 	{
 	public:
@@ -15,10 +24,6 @@ namespace Crowny
 		static bool WriteFile(const std::string& path, byte* buffer);
 		static bool WriteTextFile(const std::string& path, const std::string& text);
 
-		// Returns a tuple<success, path of the selected file>
-		static std::tuple<bool, std::string> OpenFileDialog(const char* = "All\0*.*\0\0", const std::string& initialDir = "", const std::string& title = "Open File");
-
-		// Returns a tuple<success, path to be saved>
-		static std::tuple<bool, std::string> SaveFileDialog(const char* = "All\0*.*\0\0", const std::string& initialDir = "", const std::string& title = "Save File");
+		static bool OpenFileDialog(FileDialogType type, const std::string& initialDir, const std::string& filter, std::vector<std::string>& outpaths);
 	};
 }

@@ -63,7 +63,7 @@ namespace Crowny
 
 	void ForwardRenderer::BeginScene(Camera* camera, const glm::mat4& transform)
 	{
-		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ProjectionMatrix], &camera->GetProjectionMatrix(), sizeof(glm::mat4));
+		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ProjectionMatrix], &camera->GetProjection(), sizeof(glm::mat4));
 		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ViewMatrix], &transform, sizeof(glm::mat4));
 		glm::vec3 pos = glm::vec3(transform[3]);
 		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_CameraPosition], &pos, sizeof(glm::vec3));

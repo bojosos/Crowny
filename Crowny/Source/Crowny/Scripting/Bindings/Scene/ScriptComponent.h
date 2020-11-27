@@ -14,7 +14,7 @@ namespace Crowny
 
 	public:
 		static void InitRuntimeFunctions();
-		static std::unordered_map<entt::entity, MonoObject*> s_EntityComponents;
+		static std::unordered_map<uint32_t, MonoObject*> s_EntityComponents;
 	private:
 		static MonoObject* Internal_GetEntity(MonoScriptComponent* component);
 

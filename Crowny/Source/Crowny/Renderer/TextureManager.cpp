@@ -19,6 +19,8 @@ namespace Crowny
 			if (texture->GetName() == name)
 				return texture;
 		}
+		
+		return nullptr;
 	}
 
 	void TextureManager::Clear()

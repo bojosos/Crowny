@@ -11,7 +11,7 @@ namespace Crowny
 
 		std::string::size_type start = 0, end = s.find_first_of(separator);
 
-		while (end <= std::string::npos)
+		while ((end <= std::string::npos))
 		{
 			std::string tok = s.substr(start, end - start);
 			if (!tok.empty())
@@ -30,7 +30,7 @@ namespace Crowny
 	const char* FindToken(const char* str, const std::string& token)
 	{
 		const char* t = str;
-		while (t = strstr(t, token.c_str()))
+		while ((t = strstr(t, token.c_str())))
 		{
 			bool left = str == t || isspace(t[-1]);
 			bool right = !t[token.size()] || isspace(t[token.size()]);

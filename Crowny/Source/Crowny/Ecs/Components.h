@@ -1,13 +1,14 @@
 ﻿#pragma once
 
-#include "Crowny/Renderer/Camera.h"
 #include "Crowny/Renderer/Texture.h"
 #include "Crowny/Renderer/TextureManager.h"
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/Mesh.h"
 #include "Crowny/Renderer/MeshFactory.h"
-#include "../../Crowny-Editor/Source/Panels/ImGuiMaterialPanel.h"
+
+#include "Crowny/Scene/SceneCamera.h"
+#include "../../Crowny-Editor/Source/Panels/ImGuiMaterialPanel.h" // ?
 
 #include "Crowny/Scripting/CWMonoRuntime.h"
 
@@ -18,6 +19,8 @@
 
 namespace Crowny
 {
+	template <class Component>
+	void ComponentEditorWidget(Entity entity);
 
 	struct Component
 	{
@@ -60,18 +63,18 @@ namespace Crowny
 	};
 
 	template <>
-	void ComponentEditorWidget<TransformComponent>(Entity& e);
+	void ComponentEditorWidget<TransformComponent>(Entity e);
 
 	struct CameraComponent : public Component
 	{
-		::Crowny::Camera Camera;
+		SceneCamera Camera;
 
 		CameraComponent() = default;
 		CameraComponent(const CameraComponent&) = default;
 	};
 
 	template <>
-	void ComponentEditorWidget<CameraComponent>(Entity& e);
+	void ComponentEditorWidget<CameraComponent>(Entity e);
 
 	struct TextComponent : public Component
 	{
@@ -86,7 +89,7 @@ namespace Crowny
 	};
 
 	template <>
-	void ComponentEditorWidget<TextComponent>(Entity& e);
+	void ComponentEditorWidget<TextComponent>(Entity e);
 
 	struct SpriteRendererComponent : public Component
 	{
@@ -99,7 +102,7 @@ namespace Crowny
 	};
 
 	template <>
-	void ComponentEditorWidget<SpriteRendererComponent>(Entity& e);
+	void ComponentEditorWidget<SpriteRendererComponent>(Entity e);
 
 	struct MeshRendererComponent : public Component
 	{
@@ -110,7 +113,7 @@ namespace Crowny
 	};
 
 	template <>
-	void ComponentEditorWidget<MeshRendererComponent>(Entity& e);
+	void ComponentEditorWidget<MeshRendererComponent>(Entity e);
 
 	struct RelationshipComponent : public Component
 	{
@@ -140,5 +143,5 @@ namespace Crowny
 	};
 
 	template <>
-	void ComponentEditorWidget<MonoScriptComponent>(Entity& e);
+	void ComponentEditorWidget<MonoScriptComponent>(Entity e);
 }

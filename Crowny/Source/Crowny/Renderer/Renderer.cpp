@@ -5,7 +5,7 @@
 #include "Crowny/Renderer/RenderCommand.h"
 #include "Crowny/Renderer/Camera.h"
 
-#ifdef MC_WEB
+#ifdef CW_WEB
 #include <GLES3/gl32.h>
 #else
 #include <glad/glad.h>
@@ -30,6 +30,11 @@ namespace Crowny
 		RenderCommand::SetViewport(0, 0, width, height);
 	}
 
+	void Renderer::SetViewport(float x, float y, float width, float height)
+	{
+		RenderCommand::SetViewport(x, y, width, height);
+	}
+
 	void Renderer::BeginScene()
 	{
 		
@@ -43,12 +48,6 @@ namespace Crowny
 	void Renderer::Submit(const Ref<Shader>& shader, const Ref<VertexArray>& vertexArray, const glm::mat4& transform)
 	{
 		shader->Bind();
-
-		//shader->SetMat4("u_ViewMatrix", Camera::GetCurrentCamera().GetViewMatrix());
-		//shader->SetMat4("u_ProjectionMatrix", Camera::GetCurrentCamera().GetProjectionMatrix());
-
-		//shader->SetMat4("u_Transform", transform); // use model matrix?
-
 		vertexArray->Bind();
 		RenderCommand::DrawIndexed(vertexArray);
 	}

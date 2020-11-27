@@ -26,8 +26,7 @@ project "Crowny-Editor"
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.entt}",
 		"%{IncludeDir.assimp}",
-		"%{IncludeDir.mono}"
-
+		"%{IncludeDir.mono}",
 	}
 
 	libdirs { "/usr/lib/mono-2.0", "Crowny/Dependencies/vulkan/lib" }
@@ -35,17 +34,32 @@ project "Crowny-Editor"
 	links 
 	{
 		"Crowny",
-		"GL", "Xxf86vm", "Xrandr", "pthread", "Xi", "dl",
+		"GL", "Xxf86vm", "Xrandr", "pthread", "Xi", "dl", "uuid",
 		"imgui",
 		"freetype-gl",
 		"assimp",
 		"freetype2", "glfw", "glad",
-		"mono-2.0"
+		"mono-2.0",
+		"yaml-cpp"
 		--"libvulkan"
 	}
 
 	filter "system:windows"
 		systemversion "latest"
+
+		defines
+		{
+			"CW_WINDOWS",
+			"GLFW_INCLUDE_NONE"
+		}
+
+	filter "system:linux"
+		systemversion "latest"
+		defines
+		{
+			"CW_PLATFORM_LINUX",
+			"GLFW_INCLUDE_NONE"
+		}
 
 	filter "configurations:Debug"
 		defines "CW_DEBUG"

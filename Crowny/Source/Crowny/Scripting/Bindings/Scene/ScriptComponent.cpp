@@ -5,7 +5,7 @@
 
 namespace Crowny
 {
-	std::unordered_map<entt::entity, MonoObject*> ScriptComponent::s_EntityComponents = {};
+	std::unordered_map<uint32_t, MonoObject*> ScriptComponent::s_EntityComponents = {};
 
 	void ScriptComponent::InitRuntimeFunctions()
 	{
@@ -16,6 +16,6 @@ namespace Crowny
 
 	MonoObject* ScriptComponent::Internal_GetEntity(MonoScriptComponent* component)
 	{
-		return s_EntityComponents[component->ComponentParent.GetHandle()];
+		return s_EntityComponents[(uint32_t)component->ComponentParent.GetHandle()];
 	}
 }
