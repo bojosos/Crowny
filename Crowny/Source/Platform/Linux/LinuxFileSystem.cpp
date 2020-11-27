@@ -2,28 +2,13 @@
 
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Application/Application.h"
+#include "Crowny/Common/Parser.h"
 
 #include <fstream>
 #include <GLFW/glfw3.h>
 
 namespace Crowny
 {
-
-	static char* ReadCFile(FILE* f)
-	{
-		fseek(f, 0, SEEK_END);
-		long fsize = ftell(f);
-		if (fsize == 0)
-			return nullptr;
-
-		fseek(f, 0, SEEK_SET);
-		char* buf = new char[fsize + 1];
-		fread(buf, 1, fsize, f);
-		fclose(f);
-		buf[fsize] = '\0';
-	
-		return buf;
-	}
 
 	bool FileSystem::FileExists(const std::string& path)
 	{
@@ -40,13 +25,13 @@ namespace Crowny
 	std::tuple<byte*, uint64_t> FileSystem::ReadFile(const std::string& path)
 	{
 		std::ifstream input(path, std::ios::binary);
-
-    	std::vector<byte> bytes(
+		
+    	std::vector<byte>* bytes = new std::vector<byte>(
          (std::istreambuf_iterator<char>(input)),
          (std::istreambuf_iterator<char>()));
 
     	input.close();
-		return std::make_tuple(bytes.data(), bytes.size());
+		return std::make_tuple(bytes->data(), bytes->size());
 	}
 
 	bool FileSystem::ReadFile(const std::string& path, void* buffer, int64_t size)
@@ -58,6 +43,7 @@ namespace Crowny
 	std::string FileSystem::ReadTextFile(const std::string& path)
 	{
 		std::ifstream input(path);
+		
 		std::string res((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
 		input.close();
 		return res;
@@ -81,26 +67,48 @@ namespace Crowny
 		return !text.empty();
 	}
 
-	std::tuple<bool, std::string> FileSystem::OpenFileDialog(const char* filter, const std::string& initialDir, const std::string& title)
-	{
-		std::string cmd = "zenity --file-selection --filename=" + initialDir + " --title=" + title;
-		FILE* f = popen(cmd.c_str(), "r");
-		char* res = ReadCFile(f);
-		if (!res)
-			return std::make_tuple(false, std::string());
+	bool FileSystem::OpenFileDialog(FileDialogType type, const std::string& initialDir, const std::string& filter, std::vector<std::string>& outPaths)
+	{	
+		const char* save;
+		const char* multiple;
+		const char* title = "Open file";
 
-		return std::make_tuple(true, std::string(res));
-	}
+		if (type == FileDialogType::OpenFile)
+		{
+			title = "Open file";
+		}
 
-	std::tuple<bool, std::string> FileSystem::SaveFileDialog(const char* filter, const std::string& initialDir, const std::string& title)
-	{
-		std::string cmd = "zenity --file-selection --save --filename=" + initialDir + " --title=" + title;
+		if (type == FileDialogType::SaveFile)
+		{
+			save = " --save";
+			title = "Save file";
+		}
+
+		if (type == FileDialogType::Multiselect)
+		{
+			multiple = " --multiple";
+			title = "Open files";
+		}
+
+		std::string cmd = "zenity --file-selection --filename=\"" + initialDir + "\" --title=\"" + title + "\"" + save + multiple;
 		FILE* f = popen(cmd.c_str(), "r");
-		char* res = ReadCFile(f);
-		if (!res)
-			return std::make_tuple(false, std::string());
+		if (!f)
+			return false;
+
+		std::array<char, 128> buffer;
+		std::string res = "";
+		while(fgets(buffer.data(), 128, f))
+		{
+			res += buffer.data();
+		}
+
+		if (res.empty()) 
+			return false;
+
+		res = res.erase(res.find_last_not_of(" \n\r\t") + 1);
+		outPaths = SplitString(res, "|");
 		
-		return std::make_tuple(true, std::string(res));
+		return true;
 	}
 
 }

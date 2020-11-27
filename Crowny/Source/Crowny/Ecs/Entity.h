@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Crowny/SceneManagement/Scene.h"
+#include "Crowny/Scene/Scene.h"
 
 #include <entt/entt.hpp>
 
@@ -17,20 +17,21 @@ namespace Crowny
 		Entity(const Entity& other) = default;
 
 		template <typename T, typename... Args>
-		void AddComponent(Args... args)
+		T& AddComponent(Args&&... args) const
 		{
-			m_Scene->m_Registry.emplace<T>(m_EntityHandle, std::forward<Args>(args)...);
+			return m_Scene->m_Registry.emplace<T>(m_EntityHandle, std::forward<Args>(args)...);
 		}
 
-		entt::entity GetHandle() { return m_EntityHandle; }
-
-		template<typename T>
+		template <typename T>
 		T& GetComponent() const
 		{
-			
-			//return m_Scene->m_Registry.visit(m_EntityHandle, entt::type_info<T>()::id());
-			//m_Registry.get(entt::get(TransformComponent), m_EntityHandle); // entt::get(TransformComponent)
 			return m_Scene->m_Registry.get<T>(m_EntityHandle);
+		}
+
+		template <typename T>
+		bool HasComponent() const
+		{
+			return m_Scene->m_Registry.has<T>(m_EntityHandle);
 		}
 
 		template <typename T>
@@ -39,18 +40,16 @@ namespace Crowny
 			m_Scene->m_Registry.remove<T>(m_EntityHandle);
 		}
 
-		template<typename T>
-		void HasComponent() const
-		{
-			return m_Scene->m_Registry.has<T>(m_EntityHandle);
-		}
+		entt::entity GetHandle() { return m_EntityHandle; }
 
-		bool IsValid() const { return m_Scene && m_Scene->m_Registry.valid(m_EntityHandle); }
+		bool IsValid() const;
 
-		Entity AddChild(const std::string& name);
-		Entity GetChild(uint32_t index);
-		uint32_t GetChildCount();
-		Entity GetParent();
+		void AddChild(Entity entity);
+		Entity GetChild(uint32_t index) const;
+		const std::vector<Entity>& GetChildren() const;
+		uint32_t GetChildCount() const;
+		Entity GetParent() const;
+		void SetParent(Entity entity);
 
 		void Destroy();
 
@@ -66,17 +65,22 @@ namespace Crowny
 
 		friend class ImGuiComponentEditor;
 		friend class ImGuiHierarchyWindow;
-
-		struct EntityHasher
-		{
-			size_t operator()(const Entity& e) const
-			{
-				return (size_t)e.m_EntityHandle;
-			}
-		};
+		friend struct std::hash<Entity>;
 
 	private:
 		entt::entity m_EntityHandle{ entt::null };
-		Scene* m_Scene = nullptr;
+		Scene* m_Scene;
 	};  
+}
+
+namespace std
+{
+	template<>
+	struct hash<Crowny::Entity>
+	{
+		size_t operator()(const Crowny::Entity& e) const
+		{
+			return (size_t)e.m_EntityHandle;
+		}
+	};
 }

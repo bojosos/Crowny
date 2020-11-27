@@ -36,6 +36,7 @@ namespace Crowny
 		m_Texture->SetData(data, TextureChannel::CHANNEL_RGBA);
 
 		delete[] data;
+		delete mem;
 	}
 
 	std::vector<Ref<Font>> FontManager::s_Fonts;

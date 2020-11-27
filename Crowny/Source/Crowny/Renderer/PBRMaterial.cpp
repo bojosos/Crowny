@@ -59,7 +59,7 @@ namespace Crowny
 	Ref<Texture2D> PBRMaterial::GetAlbedoMap()
 	{
 		ShaderResourceDeclaration* declaration = FindResourceDeclaration("u_AlbedoMap");
-		CW_ENGINE_ASSERT(declaration, "");
+		CW_ENGINE_ASSERT(declaration);
 		uint32_t slot = declaration->GetRegister();
 		return m_Textures.size() > slot ? std::dynamic_pointer_cast<Texture2D>(m_Textures[slot]) : nullptr;
 	}
@@ -67,7 +67,7 @@ namespace Crowny
 	Ref<Texture2D> PBRMaterial::GetMetalnessMap()
 	{
 		ShaderResourceDeclaration* declaration = FindResourceDeclaration("u_MetalnessMap");
-		CW_ENGINE_ASSERT(declaration, "");
+		CW_ENGINE_ASSERT(declaration);
 		uint32_t slot = declaration->GetRegister();
 		return m_Textures.size() > slot ? std::dynamic_pointer_cast<Texture2D>(m_Textures[slot]) : nullptr;
 	}
@@ -75,7 +75,7 @@ namespace Crowny
 	Ref<Texture2D> PBRMaterial::GetNormalMap()
 	{
 		ShaderResourceDeclaration* declaration = FindResourceDeclaration("u_NormalMap");
-		CW_ENGINE_ASSERT(declaration, "");
+		CW_ENGINE_ASSERT(declaration);
 		uint32_t slot = declaration->GetRegister();
 		return m_Textures.size() > slot ? std::dynamic_pointer_cast<Texture2D>(m_Textures[slot]) : nullptr;
 	}
@@ -83,7 +83,7 @@ namespace Crowny
 	Ref<Texture2D> PBRMaterial::GetRoughnessMap()
 	{
 		ShaderResourceDeclaration* declaration = FindResourceDeclaration("u_RoughnessMap");
-		CW_ENGINE_ASSERT(declaration, "");
+		CW_ENGINE_ASSERT(declaration);
 		uint32_t slot = declaration->GetRegister();
 		return m_Textures.size() > slot ? std::dynamic_pointer_cast<Texture2D>(m_Textures[slot]) : nullptr;
 	}
@@ -91,7 +91,7 @@ namespace Crowny
 	Ref<Texture2D> PBRMaterial::GetAoMap()
 	{
 		ShaderResourceDeclaration* declaration = FindResourceDeclaration("u_AoMap");
-		CW_ENGINE_ASSERT(declaration, "");
+		CW_ENGINE_ASSERT(declaration);
 		uint32_t slot = declaration->GetRegister();
 		return m_Textures.size() > slot ? std::dynamic_pointer_cast<Texture2D>(m_Textures[slot]) : nullptr;
 	}

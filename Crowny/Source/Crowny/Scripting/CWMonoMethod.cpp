@@ -25,7 +25,7 @@ namespace Crowny
 		void* iter = nullptr;
 		MonoType* type;
 		std::vector<CWMonoType> res;
-		while (type = mono_signature_get_params(m_Signature, &iter))
+		while ((type = mono_signature_get_params(m_Signature, &iter)))
 		{
 			res.emplace_back(type);
 		}

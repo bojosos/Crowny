@@ -144,8 +144,6 @@ namespace Crowny
 		virtual bool operator==(const Texture& other) const = 0;
 
 		virtual const std::string& GetName() const = 0;
-
-		static Ref<Texture> Create(const TextureParameters& parameters);
 	};
 
 	class Texture2D : public Texture

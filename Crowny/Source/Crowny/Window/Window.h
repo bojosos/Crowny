@@ -20,7 +20,7 @@ namespace Crowny
 	class Window
 	{
 	public:
-		virtual  ~Window() = default;
+		virtual ~Window() = default;
 
 		virtual void OnUpdate() = 0;
 

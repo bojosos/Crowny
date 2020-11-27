@@ -98,7 +98,7 @@ namespace Crowny
 		virtual uint32_t GetSize() const override { return m_Size; }
 		virtual const ShaderUniformList& GetUniformDeclarations() const override { return m_Uniforms; }
 
-		ShaderUniformDeclaration* FindUniform(const std::string& name);
+		ShaderUniformDeclaration* FindUniform(const std::string& name) override;
 	};
 
 	class OpenGLShader : public Shader

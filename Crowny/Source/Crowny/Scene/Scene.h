@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Common/Timestep.h"
+#include "Crowny/Common/Uuid.h"
 
 #include "Crowny/Renderer/Texture.h"
 
@@ -10,6 +11,7 @@ namespace Crowny
 {
 	class Entity;
 	class ImGuiComponentEditor;
+	class SceneSerializer;
 
 	class Scene
 	{
@@ -24,8 +26,14 @@ namespace Crowny
 		void Run();
 
 		Entity CreateEntity(const std::string& name = "");
-		Entity& GetRootEntity();
+		Entity CreateEntity(const Uuid& uuid, const std::string& name);
+		Entity GetEntity(const Uuid& uuid);
+		Entity GetRootEntity();
 
+		const std::string& GetName() const { return m_Name; }
+		const std::string& GetFilepath() const { return m_Filepath; }
+
+		// These should not be here. A scene is just a bunch of data. Nothing to do with time
 		float GetTime() { return time; }
 		float GetDeltaTime() { return deltaTime; }
 		float GetFrameCount() { return frameCount; }
@@ -34,11 +42,13 @@ namespace Crowny
 		float GetSmoothDeltaTime() { return deltaTime + time / (frameCount + 1); }
 
 		friend class ImGuiComponentEditor;
+		friend class SceneSerializer;
 		friend class Entity;
 	private:
 		float deltaTime = 0.0f, frameCount = 0.0f, fixedDeltaTime = 0.0f, time = 0.0f, realtimeSinceStarup = 0.0f;
 
 		bool m_Running = true;
+		bool m_HasChanged = true;
 		uint32_t m_BuildIndex;
 		std::string m_Name;
 		std::string m_Filepath;
@@ -46,6 +56,7 @@ namespace Crowny
 		entt::registry m_Registry;
 		uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
 
+		std::unordered_map<Uuid, Entity>* m_Entities;
 		Entity* m_RootEntity;
 	};
 }

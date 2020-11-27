@@ -10,14 +10,14 @@ namespace Crowny
 
 	}
 
-	void Runtime::OnSceneChanged(Scene* scene)
+	void Runtime::OnSceneChanged(const Ref<Scene>& scene)
 	{
 		m_OpenScene = scene;
 	}
 
 	void Runtime::OnStartup()
 	{
-		m_Scene = new Scene(*m_OpenScene);
+		//m_Scene = new Scene(*m_OpenScene);
 		m_Scene->Run();
 	}
 

@@ -33,7 +33,7 @@ namespace Crowny
 		MonoMethod* method;
 		std::vector<CWMonoMethod*> res(mono_class_num_fields(m_Class));
 
-		while (method = mono_class_get_methods(m_Class, &iter))
+		while ((method = mono_class_get_methods(m_Class, &iter)))
 		{
 			res.emplace_back(new CWMonoMethod(method));
 		}
@@ -47,7 +47,7 @@ namespace Crowny
 		MonoClassField* field;
 		std::vector<CWMonoField*> res;
 
-		while (field = mono_class_get_fields(m_Class, &iter))
+		while ((field = mono_class_get_fields(m_Class, &iter)))
 		{
 			res.emplace_back(new CWMonoField(field));
 		}

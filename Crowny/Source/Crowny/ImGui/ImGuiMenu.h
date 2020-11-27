@@ -8,13 +8,14 @@ namespace Crowny
 	class ImGuiMenuItem
 	{
 	public:
-		ImGuiMenuItem(const std::string& title, const EventCallbackFn& onclicked);
+		ImGuiMenuItem(const std::string& title, const std::string& combination, const EventCallbackFn& onclicked);
 		~ImGuiMenuItem() = default;
 
-		EventCallbackFn OnClicked;
-		void Render();
-
+		void Render(uint32_t maxWidth);
+		uint32_t GetTotalWidth();
 	private:
+		EventCallbackFn OnClicked;
+		std::string m_Combination;
 		std::string m_Title;
 	};
 

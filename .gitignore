@@ -11,3 +11,4 @@ bin-int/
 **.csproj.filters
 **.csproj.user
 Crowny/Dependencies/
+**/Makefile

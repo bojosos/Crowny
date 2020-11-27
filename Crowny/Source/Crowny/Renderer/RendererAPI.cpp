@@ -11,10 +11,10 @@ namespace Crowny
 	{
 		switch (s_API)
 		{
-		case RendererAPI::API::OpenGL: return CreateScope<OpenGLRendererAPI>();
+			case RendererAPI::API::OpenGL: return CreateScope<OpenGLRendererAPI>();
+			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supported!"); return nullptr;
 		}
 
-		CW_ENGINE_ASSERT(false, "Unsupported Rendeerer API!");
 		return nullptr;
 	}
 }

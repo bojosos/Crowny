@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Ecs/Components.h"
-#include "Crowny/SceneManagement/SceneManager.h"
+#include "Crowny/Scene/SceneManager.h"
 #include "ScriptComponent.h"
 #include "ScriptEntity.h"
 
@@ -20,7 +20,7 @@ namespace Crowny
 
 	MonoString* ScriptEntity::Internal_GetName(Entity* thisptr)
 	{
-
+		return nullptr;
 	}
 		
 	void ScriptEntity::Internal_SetName(Entity* thisptr, MonoString* string)
@@ -30,12 +30,12 @@ namespace Crowny
 
 	MonoObject* ScriptEntity::Internal_GetParent(Entity* thisptr)
 	{
-
+		return nullptr;
 	}
 
 	MonoObject* ScriptEntity::Internal_GetTransform(entt::entity e)
 	{
-		Entity entity = Entity(e, SceneManager::GetActiveScene());
+		Entity entity = Entity(e, SceneManager::GetActiveScene().get());
 		return entity.GetComponent<TransformComponent>().ManagedInstance;
 	}
 

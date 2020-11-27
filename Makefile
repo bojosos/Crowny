@@ -236,13 +236,13 @@ ifneq (,$(yaml_cpp_config))
 	@${MAKE} --no-print-directory -C Crowny/Dependencies/yaml-cpp -f Makefile config=$(yaml_cpp_config)
 endif
 
-Crowny: imgui freetype-gl assimp freetype2 glfw glad
+Crowny: imgui freetype-gl assimp freetype2 glfw glad yaml-cpp
 ifneq (,$(Crowny_config))
 	@echo "==== Building Crowny ($(Crowny_config)) ===="
 	@${MAKE} --no-print-directory -C Crowny -f Makefile config=$(Crowny_config)
 endif
 
-Crowny-Editor: Crowny imgui freetype-gl assimp freetype2 glfw glad
+Crowny-Editor: Crowny imgui freetype-gl assimp freetype2 glfw glad yaml-cpp
 ifneq (,$(Crowny_Editor_config))
 	@echo "==== Building Crowny-Editor ($(Crowny_Editor_config)) ===="
 	@${MAKE} --no-print-directory -C Crowny-Editor -f Makefile config=$(Crowny_Editor_config)

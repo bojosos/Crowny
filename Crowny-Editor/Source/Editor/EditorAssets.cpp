@@ -1,13 +1,17 @@
 #include "cwepch.h"
 
 #include "Editor/EditorAssets.h"
+#include "Crowny/Renderer/Texture.h"
 
 namespace Crowny
 {
-    Ref<Texture2D> EditorAssets::UnassignedTexture = nullptr;
+	const std::string EditorAssets::UnassignedTexture = "Textures/Unassigned.png";
 
-	void EditorAssets::LoadAssets()
+    EditorAssetsLibrary EditorAssets::s_Library;
+
+	void EditorAssets::Load()
 	{
-		UnassignedTexture = Texture2D::Create("/Textures/Unassigned.png");
+		//AssetManifest editorAssets = AssetManager::ImportManifest("Editor");
+		s_Library.UnassignedTexture = Texture2D::Create(UnassignedTexture);// editorAssets.LoadTexture(UnassignedTexture);
 	}
 }

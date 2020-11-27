@@ -3,7 +3,7 @@
 #include "ImGuiInspectorPanel.h"
 #include "ImGuiHierarchyPanel.h"
 #include "ImGuiComponentEditor.h"
-#include "Crowny/SceneManagement/SceneManager.h"
+#include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Ecs/Components.h"
 
 #include <imgui.h>

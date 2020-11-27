@@ -1,9 +1,10 @@
 #include "cwpch.h"
 
-#include "Crowny/SceneManagement/Scene.h"
-#include "Crowny/SceneManagement/SceneManager.h"
 #include "Crowny/Ecs/Entity.h"
+#include "Crowny/Scene/Scene.h"
+#include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Ecs/Components.h"
+#include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Renderer/RenderCommand.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
@@ -15,18 +16,21 @@
 namespace Crowny
 {
 
-	Scene::Scene(const std::string& name) : m_Name(name)
+	Scene::Scene(const std::string& name) : m_Name(name), m_HasChanged(true)
 	{
 		m_RootEntity = new Entity(m_Registry.create(), this);
+		
 		m_RootEntity->AddComponent<TagComponent>(m_Name);
 		m_RootEntity->AddComponent<RelationshipComponent>();
+		m_Entities = new std::unordered_map<Uuid, Entity>();
 	}
 
 	Scene::Scene(const Scene& other)
 	{
 		m_Name = other.m_Name;
 		m_RootEntity = other.m_RootEntity;
-		//m_Registry = other.m_Registry;
+		//m_Registry = other.m_Registry.clone();
+		m_Entities = new std::unordered_map<Uuid, Entity>();
 	}
 
 	Scene::~Scene()
@@ -47,7 +51,7 @@ namespace Crowny
 		m_Registry.each([&](auto entity) {
 			MonoObject* entityInstance = entityClass->CreateInstance();
 			uint32_t handle = mono_gchandle_new(entityInstance, false); // TODO: delete this
-			ScriptComponent::s_EntityComponents[entity] = entityInstance;
+			ScriptComponent::s_EntityComponents[(uint32_t)entity] = entityInstance;
 			size_t ent = (size_t)entity;
 			entityPtr->Set(entityInstance, &ent);
 		});
@@ -113,7 +117,9 @@ namespace Crowny
 
 		m_Registry.group<TransformComponent>(entt::get<CameraComponent>).each([&](const auto& entity, auto& tc, auto& cc)
 			{ 
-				Renderer2D::Begin(cc.Camera.GetProjectionMatrix(), tc.GetTransform());
+				const glm::vec4& rect = cc.Camera.GetViewportRect();
+				Renderer::SetViewport(rect.x * m_ViewportWidth, rect.y * m_ViewportHeight, rect.z * m_ViewportWidth, rect.w * m_ViewportHeight);
+				Renderer2D::Begin(cc.Camera.GetProjection(), tc.GetTransform());
 
 				auto group = m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
 				for (auto ee : group)
@@ -151,10 +157,35 @@ namespace Crowny
 
 	Entity Scene::CreateEntity(const std::string& name)
 	{
-		return m_RootEntity->AddChild(name);
+		Entity entity = { m_Registry.create(), this };
+		(*m_Entities)[UuidGenerator::Generate()] = entity;
+		
+		entity.AddComponent<TagComponent>(name);
+		entity.AddComponent<TransformComponent>();
+		entity.AddComponent<RelationshipComponent>(*m_RootEntity);
+		m_HasChanged = true;
+
+		return entity;
 	}
 
-	Entity& Scene::GetRootEntity()
+	Entity Scene::CreateEntity(const Uuid& uuid, const std::string& name)
+	{
+		Entity entity(m_Registry.create(), this);
+		(*m_Entities)[uuid] = entity;
+
+		entity.AddComponent<TagComponent>(name);
+		entity.AddComponent<TransformComponent>();
+		m_HasChanged = true;
+
+		return entity;
+	}
+
+	Entity Scene::GetEntity(const Uuid& uuid)
+	{
+		return (*m_Entities)[uuid];
+	}
+
+	Entity Scene::GetRootEntity()
 	{
 		return *m_RootEntity;
 	}
@@ -166,7 +197,7 @@ namespace Crowny
 
 		m_Registry.view<CameraComponent>().each([&](auto& e, auto& cc) {
 		//if(!cc.FixedAspectRatio)
-			cc.Camera.SetViewport(width, height);
+			cc.Camera.SetViewportSize(width, height);
 		});
 	}
 

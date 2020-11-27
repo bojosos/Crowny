@@ -40,8 +40,8 @@
 #include "Crowny/Renderer/TextureManager.h"
 #include "Crowny/Renderer/VertexArray.h"
 
-#include "Crowny/SceneManagement/Scene.h"
-#include "Crowny/SceneManagement/SceneManager.h"
+#include "Crowny/Scene/Scene.h"
+#include "Crowny/Scene/SceneManager.h"
 
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"

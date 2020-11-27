@@ -14,7 +14,7 @@ namespace Crowny
         ImGui::Separator();
 
         if (e != entt::null) {
-            ImGui::Text(entity.GetComponent<TagComponent>().Tag.c_str());
+            ImGui::Text("%s", entity.GetComponent<TagComponent>().Tag.c_str());
         }
         else {
             ImGui::Text("Invalid Entity");

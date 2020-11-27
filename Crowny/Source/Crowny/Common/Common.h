@@ -4,14 +4,14 @@
 #include <signal.h>
 
 #ifdef CW_DEBUG
-#define CW_ENABLE_ASSERTS
+	#define CW_ENABLE_ASSERTS
 #endif
 
 #if defined(_MSC_VER)
 	#define CW_DEBUGBREAK() __debugbreak()
 #elif defined(CW_PLATFORM_LINUX)
-	#define CW_DEBUGBREAK() __builtin_trap()
-	#define CW_DEBUGBREAK()
+	//#define CW_DEBUGBREAK() __builtin_trap()
+	#define CW_DEBUGBREAK() asm("int $3")
 #endif
 
 #define BIT(x) (1 << x)

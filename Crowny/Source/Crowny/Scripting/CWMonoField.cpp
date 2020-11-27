@@ -48,7 +48,8 @@ namespace Crowny
 	{
 		int value;
 		mono_field_get_value(obj, m_Field, &value);
-		return (void*)value;
+		//return (void*)value;
+		return nullptr;
 	}
 
 	bool CWMonoField::IsValueType()

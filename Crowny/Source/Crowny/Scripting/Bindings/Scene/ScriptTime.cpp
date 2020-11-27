@@ -3,7 +3,7 @@
 #include "ScriptTime.h"
 
 #include "Crowny/Scripting/CWMonoRuntime.h"
-#include "Crowny/SceneManagement/SceneManager.h"
+#include "Crowny/Scene/SceneManager.h"
 
 namespace Crowny
 {

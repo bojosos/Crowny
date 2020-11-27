@@ -16,18 +16,19 @@ namespace Crowny
 	{
 		switch (channel)
 		{
-		case Crowny::TextureChannel::CHANNEL_RED:                return GL_RED;
-		case Crowny::TextureChannel::CHANNEL_RG:                 return GL_RG;
-		case Crowny::TextureChannel::CHANNEL_RGB:                return GL_RGB;
-		case Crowny::TextureChannel::CHANNEL_RGBA:               return GL_RGBA;
-		case Crowny::TextureChannel::CHANNEL_DEPTH_COMPONENT:    return GL_DEPTH_COMPONENT;
+			case Crowny::TextureChannel::CHANNEL_RED:                return GL_RED;
+			case Crowny::TextureChannel::CHANNEL_RG:                 return GL_RG;
+			case Crowny::TextureChannel::CHANNEL_RGB:                return GL_RGB;
+			case Crowny::TextureChannel::CHANNEL_RGBA:               return GL_RGBA;
+			case Crowny::TextureChannel::CHANNEL_DEPTH_COMPONENT:    return GL_DEPTH_COMPONENT;
 #ifndef CW_WEB
-		case Crowny::TextureChannel::CHANNEL_BGR:                return GL_BGR;
-		case Crowny::TextureChannel::CHANNEL_BGRA:               return GL_BGRA;
-		case Crowny::TextureChannel::CHANNEL_STENCIL_INDEX:      return GL_STENCIL_INDEX;
+			case Crowny::TextureChannel::CHANNEL_BGR:                return GL_BGR;
+			case Crowny::TextureChannel::CHANNEL_BGRA:               return GL_BGRA;
+			case Crowny::TextureChannel::CHANNEL_STENCIL_INDEX:      return GL_STENCIL_INDEX;
+			default: 												 CW_ENGINE_ASSERT(false, "Unknown TextureChannel!"); return GL_NONE;
 #endif
 		}
-		CW_ENGINE_ASSERT(false, "Unknown TextureChannel!");
+
 		return GL_NONE;
 	}
 
@@ -35,11 +36,12 @@ namespace Crowny
 	{
 		switch (format)
 		{
-		case Crowny::TextureFormat::RGB:     return GL_RGB;
-		case Crowny::TextureFormat::RGBA:    return GL_RGBA;
-		case Crowny::TextureFormat::RED:     return GL_RED;
+			case Crowny::TextureFormat::RGB:     return GL_RGB;
+			case Crowny::TextureFormat::RGBA:    return GL_RGBA;
+			case Crowny::TextureFormat::RED:     return GL_RED;
+			default:							 CW_ENGINE_ASSERT(false, "Unknown TextureFormat!"); return GL_NONE;
 		}
-		CW_ENGINE_ASSERT(false, "Unknown TextureFormat!");
+
 		return GL_NONE;
 	}
 
@@ -47,11 +49,12 @@ namespace Crowny
 	{
 		switch (format)
 		{
-		case Crowny::TextureFormat::RGB:     return GL_RGB8;
-		case Crowny::TextureFormat::RGBA:    return GL_RGBA8;
-		case Crowny::TextureFormat::RED:     return GL_R8;
+			case Crowny::TextureFormat::RGB:     return GL_RGB8;
+			case Crowny::TextureFormat::RGBA:    return GL_RGBA8;
+			case Crowny::TextureFormat::RED:     return GL_R8;
+			default: 							 CW_ENGINE_ASSERT(false, "Unknown TextureFormat!"); return GL_NONE;
 		}
-		CW_ENGINE_ASSERT(false, "Unknown TextureFormat!");
+
 		return GL_NONE;
 	}
 
@@ -59,10 +62,11 @@ namespace Crowny
 	{
 		switch (filter)
 		{
-		case Crowny::TextureFilter::LINEAR:  return GL_LINEAR;
-		case Crowny::TextureFilter::NEAREST: return GL_NEAREST;
+			case Crowny::TextureFilter::LINEAR:  return GL_LINEAR;
+			case Crowny::TextureFilter::NEAREST: return GL_NEAREST;
+			default: 							 CW_ENGINE_ASSERT(false, "Unknown TextureFilter!"); return GL_NONE;
 		}
-		CW_ENGINE_ASSERT(false, "Unknown TextureFilter!");
+		
 		return GL_NONE;
 	}
 
@@ -70,14 +74,15 @@ namespace Crowny
 	{
 		switch (wrap)
 		{
-		case Crowny::TextureWrap::REPEAT:             return GL_REPEAT;
-		case Crowny::TextureWrap::MIRRORED_REPEAT:    return GL_MIRRORED_REPEAT;
-		case Crowny::TextureWrap::CLAMP_TO_EDGE:      return GL_CLAMP_TO_EDGE;
+			case Crowny::TextureWrap::REPEAT:             return GL_REPEAT;
+			case Crowny::TextureWrap::MIRRORED_REPEAT:    return GL_MIRRORED_REPEAT;
+			case Crowny::TextureWrap::CLAMP_TO_EDGE:      return GL_CLAMP_TO_EDGE;
 #ifndef CW_WEB
-		case Crowny::TextureWrap::CLAMP_TO_BORDER:    return GL_CLAMP_TO_BORDER;
+			case Crowny::TextureWrap::CLAMP_TO_BORDER:    return GL_CLAMP_TO_BORDER;
 #endif
+			default: 									  CW_ENGINE_ASSERT(false, "Unknown TextureWrap!"); return GL_NONE;
 		}
-		CW_ENGINE_ASSERT(false, "Unknown TextureWrap!");
+
 		return GL_NONE;
 	}
 
@@ -86,13 +91,14 @@ namespace Crowny
 	{
 		switch (swizzle)
 		{
-		case Crowny::SwizzleType::SWIZZLE_RGBA:  return GL_TEXTURE_SWIZZLE_RGBA;
-		case Crowny::SwizzleType::SWIZZLE_R:     return GL_TEXTURE_SWIZZLE_R;
-		case Crowny::SwizzleType::SWIZZLE_G:     return GL_TEXTURE_SWIZZLE_G;
-		case Crowny::SwizzleType::SWIZZLE_B:     return GL_TEXTURE_SWIZZLE_B;
-		case Crowny::SwizzleType::SWIZZLE_A:     return GL_TEXTURE_SWIZZLE_A;
+			case Crowny::SwizzleType::SWIZZLE_RGBA:  return GL_TEXTURE_SWIZZLE_RGBA;
+			case Crowny::SwizzleType::SWIZZLE_R:     return GL_TEXTURE_SWIZZLE_R;
+			case Crowny::SwizzleType::SWIZZLE_G:     return GL_TEXTURE_SWIZZLE_G;
+			case Crowny::SwizzleType::SWIZZLE_B:     return GL_TEXTURE_SWIZZLE_B;
+			case Crowny::SwizzleType::SWIZZLE_A:     return GL_TEXTURE_SWIZZLE_A;
+			default: 									  CW_ENGINE_ASSERT(false, "Unknown TextureSwizzle!"); return GL_NONE;
 		}
-		CW_ENGINE_ASSERT(false, "Unknown TextureSwizzle!");
+
 		return GL_NONE;
 	}
 #endif
@@ -101,14 +107,15 @@ namespace Crowny
 	{
 		switch (color)
 		{
-		case Crowny::SwizzleChannel::RED:     return GL_RED;
-		case Crowny::SwizzleChannel::GREEN:   return GL_GREEN;
-		case Crowny::SwizzleChannel::BLUE:    return GL_BLUE;
-		case Crowny::SwizzleChannel::ALPHA:   return GL_ALPHA;
-		case Crowny::SwizzleChannel::ONE:     return GL_ONE;
-		case Crowny::SwizzleChannel::ZERO:    return GL_ZERO;
+			case Crowny::SwizzleChannel::RED:     return GL_RED;
+			case Crowny::SwizzleChannel::GREEN:   return GL_GREEN;
+			case Crowny::SwizzleChannel::BLUE:    return GL_BLUE;
+			case Crowny::SwizzleChannel::ALPHA:   return GL_ALPHA;
+			case Crowny::SwizzleChannel::ONE:     return GL_ONE;
+			case Crowny::SwizzleChannel::ZERO:    return GL_ZERO;
+			default: 									  CW_ENGINE_ASSERT(false, "Unknown TextureSwizzleColor!"); return GL_NONE;
 		}
-		CW_ENGINE_ASSERT(false, "Unknown TextureSwizzleColor!");
+
 		return GL_NONE;
 	}
 

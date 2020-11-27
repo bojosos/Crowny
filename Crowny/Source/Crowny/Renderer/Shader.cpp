@@ -48,7 +48,10 @@ namespace Crowny
 		switch (Renderer::GetAPI())
 		{
 			case RendererAPI::API::OpenGL: return CreateRef<OpenGLShader>(name, vertSrc, fragSrc);
+			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); return nullptr;
 		}
+
+		return nullptr;
 	}
 
 	Ref<Shader> Shader::Create(const std::string& m_Filepath)
@@ -56,6 +59,9 @@ namespace Crowny
 		switch (Renderer::GetAPI())
 		{
 			case RendererAPI::API::OpenGL: return CreateRef<OpenGLShader>(m_Filepath);
+			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); return nullptr;
 		}
+
+		return nullptr;
 	}
 }

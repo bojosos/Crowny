@@ -116,7 +116,7 @@ namespace Crowny
 		return WriteFile(path, (byte*)text[0]);
 	}
 
-	std::tuple<bool, std::string> FileSystem::OpenFileDialog(const char* filter, const std::string& initialDir, const std::string& title)
+	bool FileSystem::OpenFileDialog(FileDialogType type, const std::string& initialDir = "", const std::string& filter, std::vector<std::string>& outpaths)
 	{
 		OPENFILENAME ofn = { 0 };
 		TCHAR szFile[260] = { 0 };
@@ -133,34 +133,29 @@ namespace Crowny
 		ofn.lpstrInitialDir = initialDir.empty() ? NULL : initialDir.c_str();
 		ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
-		if (GetOpenFileName(&ofn) == TRUE)
+		if (type == FileDialogType::OpenFile)
 		{
-			return std::make_tuple(true, ofn.lpstrFile);
+			if (GetOpenFileName(&ofn) == TRUE)
+			{
+				return std::make_tuple(true, ofn.lpstrFile);
+			}
 		}
 
-		return std::make_tuple(false, "");
-	}
-
-	std::tuple<bool, std::string> FileSystem::SaveFileDialog(const char* filter, const std::string& initialDir, const std::string& title)
-	{
-		OPENFILENAME ofn = { 0 };
-		TCHAR szFile[260] = { 0 };
-
-		ofn.lStructSize = sizeof(ofn);
-		ofn.hwndOwner = glfwGetWin32Window((GLFWwindow*)Application::Get().GetWindow().GetNativeWindow());
-		ofn.lpstrFile = szFile;
-		ofn.nMaxFile = sizeof(szFile);
-		ofn.lpstrTitle = title.c_str();
-		ofn.lpstrFilter = filter;
-		ofn.nFilterIndex = 1;
-		ofn.lpstrFileTitle = NULL;
-		ofn.nMaxFileTitle = 0;
-		ofn.lpstrInitialDir = initialDir.empty() ? NULL : initialDir.c_str();
-		ofn.Flags = OFN_PATHMUSTEXIST;
-
-		if (GetSaveFileName(&ofn) == TRUE)
+		if (type == FileDialogType::SaveFile)
 		{
-			return std::make_tuple(true, ofn.lpstrFile);
+			if (GetSaveFileName(&ofn) == TRUE)
+			{
+				return std::make_tuple(true, ofn.lpstrFile);
+			}
+		}
+
+		if (type == FileDialogType::Multiselect)
+		{
+			ofn.Flags |= OFN_ALLOWMULTISELECT;
+			if (GetOpenFileName(&ofn) == TRUE)
+			{
+				return std::make_tuple(true, ofn.lpstrFile);
+			}
 		}
 
 		return std::make_tuple(false, "");

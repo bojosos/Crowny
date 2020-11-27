@@ -1,9 +1,9 @@
-[00:32:21] [info] CROWNY: Domain Crowny C# Runtime created!
-[00:32:21] [info] CROWNY: Assembly Crowny.dll loaded
-[00:32:21] [info] CROWNY: Assembly Client.dll loaded
-[00:32:22] [info] CROWNY: Loaded texture /Textures/rustediron2_basecolor.png, 2048x2048x4.
-[00:32:22] [info] CROWNY: Loaded texture /Textures/rustediron2_metallic.png, 2048x2048x1.
-[00:32:22] [info] CROWNY: Loaded texture /Textures/rustediron2_normal.png, 2048x2048x3.
-[00:32:22] [info] CROWNY: Loaded texture /Textures/rustediron2_roughness.png, 2048x2048x1.
-[00:32:22] [info] CROWNY: Loaded texture /Textures/Unassigned.png, 608x608x3.
-[00:32:29] [info] CLIENT: Initialized
+[22:33:06] [warning] CROWNY: Creating Window: Crowny Editor
+[22:33:12] [info] CROWNY: Domain Crowny C# Runtime created!
+[22:33:12] [info] CROWNY: Assembly Crowny.dll loaded
+[22:33:12] [info] CROWNY: Assembly Client.dll loaded
+[22:33:13] [info] CROWNY: Loaded texture /Textures/rustediron2_basecolor.png, 2048x2048x4.
+[22:33:13] [info] CROWNY: Loaded texture /Textures/rustediron2_metallic.png, 2048x2048x1.
+[22:33:13] [info] CROWNY: Loaded texture /Textures/rustediron2_normal.png, 2048x2048x3.
+[22:33:14] [info] CROWNY: Loaded texture /Textures/rustediron2_roughness.png, 2048x2048x1.
+[22:33:14] [info] CROWNY: Loaded texture Textures/Unassigned.png, 608x608x3.

@@ -1,0 +1,38 @@
+# Crowny Scene
+Scene: Editor scene
+Entities:
+  - Entity: b3abf689-7749-5dba-6a50-6282e4be6a45
+    TagComponent:
+      Tag: Sphere
+    TransformComponent:
+      Position: [0, 0, 0.529999971]
+      Rotation: [0, 0, 0]
+      Scale: [1, 1, 1]
+    MeshRendererComponent:
+      Uuid: 0b51a353-934c-4343-320f-acb500bb7d93
+    RelationshipComponent:
+      Children:
+        []
+  - Entity: d8a9c56f-6e43-3f38-ce9d-f5a07240972c
+    TagComponent:
+      Tag: Camera
+    TransformComponent:
+      Position: [0, 0, -4.53999996]
+      Rotation: [0, 0, 0]
+      Scale: [1, 1, 1]
+    CameraComponent:
+      ProjectionType: 1
+      PerspectiveFOV: 1.02367055
+      PerspectiveNear: 0.00999999978
+      PerspectiveFar: 1000
+      OrthographicSize: 10
+      OrthographicNear: -1
+      OrthographicFar: 1
+      HDR: false
+      MSAA: false
+      OcclusionCulling: false
+      BackgroundColor: [0.149013892, 0.196911216, 0.196911216]
+      ViewportRect: [0, 0, 1, 1]
+    RelationshipComponent:
+      Children:
+        []

@@ -24,9 +24,9 @@ namespace Crowny
 		ImGui::Separator();
 		for (OpenGLDetail& det : OpenGLInfo::GetInformation())
 		{
-			ImGui::Text(det.Name.c_str()); ImGui::NextColumn();
-			ImGui::Text(det.GLName.c_str()); ImGui::NextColumn();
-			ImGui::Text(det.Value.c_str()); ImGui::NextColumn();
+			ImGui::Text("%s", det.Name.c_str()); ImGui::NextColumn();
+			ImGui::Text("%s", det.GLName.c_str()); ImGui::NextColumn();
+			ImGui::Text("%s", det.Value.c_str()); ImGui::NextColumn();
 		}
 		ImGui::Separator();
 		ImGui::Columns(1);

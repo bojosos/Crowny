@@ -25,11 +25,16 @@ namespace Crowny
 		static Entity s_SelectedEntity;
 
 	private:
-		void DisplayTree(Entity& e, uint32_t i = 0);
+		void DisplayTree(Entity e);
+		void Select(Entity e);
+		void DisplayLeafNode(Entity e);
+		void DisplayTreeNode(Entity e);
+		void DisplayPopup(Entity e);
+		void Rename(Entity e);
+
+	private:
 		Entity m_NewEntityParent = {};
-
 		Entity m_Renaming = { };
-
-		std::unordered_set<Entity, Entity::EntityHasher> m_SelectedItems;
+		std::unordered_set<Entity> m_SelectedItems;
 	};
 }

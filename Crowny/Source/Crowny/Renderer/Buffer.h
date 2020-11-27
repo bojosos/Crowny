@@ -27,9 +27,9 @@ namespace Crowny
 		case ShaderDataType::Int3:     return 4 * 3;
 		case ShaderDataType::Int4:     return 4 * 4;
 		case ShaderDataType::Bool:     return 1;
+		case ShaderDataType::None:     { CW_ENGINE_ASSERT(false, "Unknown ShaderDataType!") return 0; };
 		}
 
-		CW_ENGINE_ASSERT(false, "Unknown ShaderDataType!");
 		return 0;
 	}
 
@@ -68,9 +68,9 @@ namespace Crowny
 			case ShaderDataType::Int3:    return 3;
 			case ShaderDataType::Int4:    return 4;
 			case ShaderDataType::Bool:    return 1;
+			case ShaderDataType::None:     { CW_ENGINE_ASSERT(false, "Unknown ShaderDataType!") return 0; };
 			}
 
-			CW_ENGINE_ASSERT(false, "Unknown ShaderDataType!");
 			return 0;
 		}
 	};

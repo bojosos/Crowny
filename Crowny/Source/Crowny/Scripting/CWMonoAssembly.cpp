@@ -33,6 +33,8 @@ namespace Crowny
 			CW_ENGINE_CRITICAL("MONO_IMAGE_IMAGE_INVALID while loading assembly");
 			return false;
 		}
+
+		return false;
 	}
 
 	CWMonoAssembly::CWMonoAssembly(MonoDomain* domain, const std::string& filepath)
