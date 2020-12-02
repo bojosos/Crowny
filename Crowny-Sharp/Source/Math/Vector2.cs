@@ -10,10 +10,12 @@ namespace Crowny
     [StructLayout(LayoutKind.Sequential)]
     public struct Vector2
     {
-        public static readonly Vector2 Zero = new Vector2(0.0f, 0.0f);
-        public static readonly Vector2 One = new Vector2(1.0f, 1.0f);
-        public static readonly Vector2 Up = new Vector2(0.0f, 1.0f);
-        public static readonly Vector2 Right = new Vector2(1.0f, 0.0f);
+        public static readonly Vector2 zero = new Vector2(0.0f, 0.0f);
+        public static readonly Vector2 one = new Vector2(1.0f, 1.0f);
+        public static readonly Vector2 right = new Vector2(1.0f, 0.0f);
+        public static readonly Vector2 left = new Vector2(-1.0f, 0.0f);
+        public static readonly Vector2 up = new Vector2(0.0f, 1.0f);
+        public static readonly Vector2 down = new Vector2(0.0f, -1.0f);
 
         public float x;
         public float y;
