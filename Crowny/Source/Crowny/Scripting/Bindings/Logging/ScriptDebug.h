@@ -4,7 +4,7 @@
 
 namespace Crowny
 {
-	class Debug
+	class ScriptDebug
 	{
 	public:
 		static void InitRuntimeFunctions();

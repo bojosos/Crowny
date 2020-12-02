@@ -9,11 +9,14 @@ namespace Crowny
     [StructLayout(LayoutKind.Sequential)]
     public struct Vector3
     {
-        public static readonly Vector3 Zero = new Vector3(0.0f, 0.0f, 0.0f);
-        public static readonly Vector3 One = new Vector3(1.0f, 1.0f, 1.0f);
-        public static readonly Vector3 Up = new Vector3(0.0f, 1.0f, 0.0f);
-        public static readonly Vector3 Right = new Vector3(1.0f, 0.0f, 0.0f);
-        public static readonly Vector3 Forward = new Vector3(0.0f, 0.0f, 1.0f);
+        public static readonly Vector3 zero = new Vector3(0.0f, 0.0f, 0.0f);
+        public static readonly Vector3 one = new Vector3(1.0f, 1.0f, 1.0f);
+        public static readonly Vector3 right = new Vector3(1.0f, 0.0f, 0.0f);
+        public static readonly Vector3 left = new Vector3(-1.0f, 0.0f, 0.0f);
+        public static readonly Vector3 up = new Vector3(0.0f, 1.0f, 0.0f);
+        public static readonly Vector3 down = new Vector3(0.0f, -1.0f, 0.0f);
+        public static readonly Vector3 forward = new Vector3(0.0f, 0.0f, 1.0f);
+        public static readonly Vector3 back = new Vector3(0.0f, 0.0f, -1.0f);
 
         public float x;
         public float y;

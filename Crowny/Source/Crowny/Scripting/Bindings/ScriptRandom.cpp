@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Scripting/Bindings/ScriptRandom.h"
+#include "Crowny/Scripting/CWMonoRuntime.h"
 
 #include "Crowny/Common/Random.h"
 
@@ -10,14 +11,14 @@ namespace Crowny
     {
         CWMonoClass* randomClass = CWMonoRuntime::GetCrownyAssembly()->GetClass("Crowny", "Random");
 
-		randomClass->AddInternalCall("InitState", (void*)&Internal_InitSate);
+		randomClass->AddInternalCall("InitState", (void*)&Internal_InitState);
         randomClass->AddInternalCall("Range", (void*)&Internal_Range);
         randomClass->AddInternalCall("get_value", (void*)&Internal_Value);
         randomClass->AddInternalCall("Internal_UnitCircle", (void*)&Internal_UnitCircle);
 		randomClass->AddInternalCall("Internal_UnitSphere", (void*)&Internal_UnitSphere);
     }
 
-    void ScriptRandom::Internal_InitSate(int32_t seed)
+    void ScriptRandom::Internal_InitState(int32_t seed)
     {
         Random::Init(seed);
     }

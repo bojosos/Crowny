@@ -9,12 +9,13 @@
 #include "Crowny/Common/VirtualFileSystem.h"
 
 #include "Crowny/Scripting/CWMonoRuntime.h"
-#include "Crowny/Scripting/Bindings/Logging/Debug.h"
-#include "Crowny/Scripting/Bindings/Math/Transform.h"
+#include "Crowny/Scripting/Bindings/Logging/ScriptDebug.h"
+#include "Crowny/Scripting/Bindings/Math/ScriptTransform.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntity.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptTime.h"
 #include "Crowny/Scripting/Bindings/ScriptRandom.h"
+#include "Crowny/Scripting/Bindings/ScriptInput.h"
 
 namespace Crowny
 {
@@ -35,12 +36,13 @@ namespace Crowny
 		CWMonoRuntime::LoadAssemblies("/Assemblies");
 		
 		// TODO: Out of here
-		Debug::InitRuntimeFunctions();
+		ScriptDebug::InitRuntimeFunctions();
 		ScriptTransform::InitRuntimeFunctions();
 		ScriptComponent::InitRuntimeFunctions();
 		ScriptEntity::InitRuntimeFunctions();
 		ScriptTime::InitRuntimeFunctions();
 		ScriptRandom::InitRuntimeFunctions();
+		ScriptInput::InitRuntimeFunctions();
 	}
 
 	void Initializer::Shutdown()

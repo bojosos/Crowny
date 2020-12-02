@@ -1,7 +1,6 @@
 ﻿using System;
 
 using Crowny;
-using Crowny.Math;
 
 namespace Sandbox
 {
@@ -14,7 +13,14 @@ namespace Sandbox
 
         public void Update()
         {
-        	transform.position += new Vector3(0.1f, 0f, 0f) * Time.smoothDeltaTime;
+            if (Input.GetKey(KeyCode.Left))
+        	    transform.position += Vector3.left * Time.smoothDeltaTime;
+            if (Input.GetKey(KeyCode.Right))
+        	    transform.position += Vector3.right * Time.smoothDeltaTime;
+            if (Input.GetKey(KeyCode.Up))
+               transform.position += Vector3.up * Time.smoothDeltaTime;
+            if (Input.GetKey(KeyCode.Down))
+        	    transform.position += Vector3.down * Time.smoothDeltaTime;
         }
     }
 }
