@@ -1,14 +1,10 @@
 #include "cwpch.h"
 
-#ifdef MC_WEB
-#include <GLFW/glfw3.h>
-#else
-#include <glad/glad.h>
-#endif
-#include <stb_image.h>
-
 #include "Platform/OpenGL/OpenGLTexture.h"
 #include "Crowny/Common/VirtualFileSystem.h"
+
+#include <glad/glad.h>
+#include <stb_image.h>
 
 namespace Crowny
 {
@@ -175,9 +171,9 @@ namespace Crowny
 		
 		//CW_ENGINE_INFO("Loaded texture {0}", filepath);
 
-		//auto [data, size] = VirtualFileSystem::Get()->ReadFile(filepath);
-		//data = stbi_load_from_memory(data, size, &width, &height, &channels, 0);
-		byte* data = stbi_load(("Resources/" + filepath).c_str(), &width, &height, &channels, 0);
+		auto [data, size] = VirtualFileSystem::Get()->ReadFile(filepath);
+		data = stbi_load_from_memory(data, size, &width, &height, &channels, 0);
+		//byte* data = stbi_load(("Resources/" + filepath).c_str(), &width, &height, &channels, 0);
 
 		CW_ENGINE_ASSERT(data, "Failed to load texture!");
 		m_Width = width;

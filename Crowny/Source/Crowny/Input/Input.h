@@ -6,7 +6,6 @@
 
 namespace Crowny
 {
-
 	enum class Cursor
 	{
 		NO_CURSOR,

@@ -1,14 +1,12 @@
 #include "cwpch.h"
-#include "OpenGLShader.h"
-#include "Crowny/Common/VirtualFileSystem.h"
+
+#include "Platform/OpenGL/OpenGLShader.h"
+
 #include "Crowny/Common/Parser.h"
+#include "Crowny/Common/VirtualFileSystem.h"
 
-#ifdef MC_WEB
-#include <GLES3/gl32.h>
-#else
+
 #include <glad/glad.h>
-#endif
-
 #include <glm/gtc/type_ptr.hpp>
 
 namespace Crowny

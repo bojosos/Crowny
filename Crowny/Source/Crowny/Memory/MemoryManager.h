@@ -1,6 +1,6 @@
 #pragma once
 
-#include "spdlog/fmt/ostr.h"
+#include <spdlog/fmt/ostr.h>
 
 namespace Crowny
 {

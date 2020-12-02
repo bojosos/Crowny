@@ -1,13 +1,8 @@
 #include "cwpch.h"
+
 #include "Platform/OpenGL/OpenGLIndexBuffer.h"
 
-
-#ifdef MC_WEB
-#include <GLES3/gl32.h>
-#else
 #include <glad/glad.h>
-#endif
-
 
 namespace Crowny
 {

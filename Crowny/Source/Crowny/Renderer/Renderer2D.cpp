@@ -6,6 +6,7 @@
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Renderer/Renderer.h"
 
+#include <glm/ext/matrix_transform.hpp>
 #include <freetype-gl.h>
 
 namespace Crowny

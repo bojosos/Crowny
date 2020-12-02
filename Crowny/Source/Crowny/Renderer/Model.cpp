@@ -4,6 +4,7 @@
 #include "../../Crowny-Editor/Source/Panels/ImGuiMaterialPanel.h"
 
 #include "Crowny/Common/VirtualFileSystem.h"
+
 #include <glm/glm.hpp>
 
 namespace Crowny

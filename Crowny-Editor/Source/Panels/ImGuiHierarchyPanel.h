@@ -33,7 +33,8 @@ namespace Crowny
 		void Rename(Entity e);
 
 	private:
-		Entity m_NewEntityParent = {};
+		bool m_Deleted = false;
+		Entity m_NewEntityParent = { };
 		Entity m_Renaming = { };
 		std::unordered_set<Entity> m_SelectedItems;
 	};

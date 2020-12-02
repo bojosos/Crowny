@@ -5,11 +5,8 @@
 #include "Crowny/Renderer/RenderCommand.h"
 #include "Crowny/Renderer/Camera.h"
 
-#ifdef CW_WEB
-#include <GLES3/gl32.h>
-#else
+#include <glm/ext/matrix_transform.hpp>
 #include <glad/glad.h>
-#endif
 
 namespace Crowny
 {

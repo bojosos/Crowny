@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
-#include "CWMonoType.h"
-#include "CWMonoRuntime.h"
+#include "Crowny/Scripting/CWMonoType.h"
+#include "Crowny/Scripting/CWMonoRuntime.h"
 
 namespace Crowny
 {

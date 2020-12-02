@@ -1,6 +1,6 @@
 #include "cwpch.h"
 
-#include "CWMonoObject.h"
+#include "Crowny/Scripting/CWMonoObject.h"
 
 namespace Crowny
 {

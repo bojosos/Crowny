@@ -1,5 +1,6 @@
 #include "cwpch.h"
-#include "Math.h"
+
+#include "Crowny/Common/Math.h"
 
 namespace Crowny
 {

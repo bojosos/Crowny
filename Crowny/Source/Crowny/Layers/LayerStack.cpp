@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
-#include "LayerStack.h"
-#include "Layer.h"
+#include "Crowny/Layers/LayerStack.h"
+#include "Crowny/Layers/Layer.h"
 
 namespace Crowny
 {

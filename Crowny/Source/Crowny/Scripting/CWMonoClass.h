@@ -1,8 +1,8 @@
 #pragma once
 
-#include "CWMonoMethod.h"
-#include "CWMonoField.h"
-#include "CWMonoObject.h"
+#include "Crowny/Scripting/CWMonoMethod.h"
+#include "Crowny/Scripting/CWMonoField.h"
+#include "Crowny/Scripting/CWMonoObject.h"
 
 BEGIN_MONO_INCLUDE
 #include <mono/metadata/class.h>

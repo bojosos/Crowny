@@ -1,0 +1,11 @@
+# Crowny Manifest
+Manifest: Sandbox
+Resources:
+  - Uuid: 51fd4b16-be58-4217-94d0-879216701fee
+    Path: Resources/Textures/rustediron2_normal.png
+  - Uuid: 2677a894-9907-4fd4-b094-d1e3d1ef1247
+    Path: Resources/Textures/rustediron2_metallic.png
+  - Uuid: eb3f5b59-886f-4c02-af54-21f2907e1eb1
+    Path: Resources/Textures/rustediron2_roughness.png
+  - Uuid: 39f53d0b-3628-46eb-8c4b-3d39140c76c6
+    Path: Resources/Textures/rustediron2_basecolor.png

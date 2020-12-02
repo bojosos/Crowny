@@ -20,6 +20,9 @@ namespace Crowny
 	private:
 		static Ref<spdlog::logger> s_ClientLogger;
 		static Ref<spdlog::logger> s_EngineLogger;
+
+	public:
+		static std::ostringstream s_Output;
 	};
 }
 /*

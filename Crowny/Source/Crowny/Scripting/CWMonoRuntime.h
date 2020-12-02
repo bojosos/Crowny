@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CWMonoAssembly.h"
+#include "Crowny/Scripting/CWMonoAssembly.h"
 
 BEGIN_MONO_INCLUDE
 #include <mono/jit/jit.h>

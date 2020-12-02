@@ -28,6 +28,7 @@ namespace Crowny
 		Entity CreateEntity(const std::string& name = "");
 		Entity CreateEntity(const Uuid& uuid, const std::string& name);
 		Entity GetEntity(const Uuid& uuid);
+		Uuid& GetUuid(Entity entity);
 		Entity GetRootEntity();
 
 		const std::string& GetName() const { return m_Name; }
@@ -57,6 +58,7 @@ namespace Crowny
 		uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
 
 		std::unordered_map<Uuid, Entity>* m_Entities;
+		std::unordered_map<Entity, Uuid>* m_Uuids;
 		Entity* m_RootEntity;
 	};
 }

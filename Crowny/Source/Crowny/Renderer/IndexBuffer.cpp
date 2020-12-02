@@ -1,8 +1,8 @@
 #include "cwpch.h"
 
 #include "Crowny/Renderer/IndexBuffer.h"
-
 #include "Crowny/Renderer/Renderer.h"
+
 #include "Platform/OpenGL/OpenGLIndexBuffer.h"
 
 namespace Crowny

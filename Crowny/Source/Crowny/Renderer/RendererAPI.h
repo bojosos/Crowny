@@ -1,8 +1,8 @@
 #pragma once
 
-#include <glm/glm.hpp>
-
 #include "Crowny/Renderer/VertexArray.h"
+
+#include <glm/glm.hpp>
 
 namespace Crowny {
 

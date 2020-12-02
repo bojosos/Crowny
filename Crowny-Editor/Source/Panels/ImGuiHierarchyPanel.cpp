@@ -43,7 +43,7 @@ namespace Crowny
 					break;
 				}
 			}
-			e.Destroy();
+			
 			ImGuiHierarchyPanel::s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
 		}
 	}
@@ -87,65 +87,72 @@ namespace Crowny
 		
 	}
 
-	void ImGuiHierarchyPanel::DisplayLeafNode(Entity e)
+	void ImGuiHierarchyPanel::DisplayTreeNode(Entity e)
 	{
 		auto& tc = e.GetComponent<TagComponent>();
 		auto& rc = e.GetComponent<RelationshipComponent>();
 		std::string name = tc.Tag.empty() ? "Entity" : tc.Tag.c_str();
+		
 		ImGuiTreeNodeFlags selected = (m_SelectedItems.find(e) != m_SelectedItems.end()) ? ImGuiTreeNodeFlags_Selected : 0;
-
+		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+		
+		bool open = true;
 		if (e == m_Renaming)
 		{
 			Rename(e);
+			ImGui::SetCursorPosX(ImGui::GetCursorPos().x + 2 * ImGui::GetStyle().FramePadding.x);
+			for (auto& c : rc.Children) 
+			{
+				DisplayTree(c);
+			}
 		}
-		
-		bool open = ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_OpenOnDoubleClick | selected);
+		else
+		{
+			open = ImGui::TreeNodeEx(name.c_str(), selected | flags);
+			if (ImGui::BeginPopupContextItem())
+			{
+				DisplayPopup(e);
+				ImGui::EndPopup();
+			}
 
+			if (ImGui::IsItemClicked())
+			{
+				Select(e);
+			}
+			
+			if (open)
+			{
+				for (auto& c : rc.Children) 
+				{
+					DisplayTree(c);
+				}
+
+				ImGui::TreePop();
+			}
+		}
 		//if (ImGui::BeginDragDropSource()) {
 		//	ImGui::SetDragDropPayload("_TREENODE", nullptr, 0);
 		//		ImGui::Text("wat");
 		//		ImGui::EndDragDropSource();
 		//}
-		
-		if (ImGui::BeginPopupContextItem())
-		{
-			DisplayPopup(e);
-			ImGui::EndPopup();
-		}
-
-		if (open)
-		{
-			if (ImGui::IsItemClicked())
-			{
-				Select(e);
-			}
-
-			for (auto& c : rc.Children) 
-			{
-				DisplayTree(c);
-			}
-
-			ImGui::TreePop();
-		}
 	}
 
-	void ImGuiHierarchyPanel::DisplayTreeNode(Entity e)
+	void ImGuiHierarchyPanel::DisplayLeafNode(Entity e)
 	{
 		auto& tc = e.GetComponent<TagComponent>();
 
 		std::string name = tc.Tag.empty() ? "Entity" : tc.Tag.c_str();
-		for (auto item : m_SelectedItems)
-			CW_ENGINE_INFO(item);
-			
+		
 		ImGuiTreeNodeFlags selected = (m_SelectedItems.find(e) != m_SelectedItems.end()) ? ImGuiTreeNodeFlags_Selected : 0;
-
+		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_Leaf;
+		
 		if (e == m_Renaming)
 		{
 			Rename(e);
 		} 
 		else
 		{
-			ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowItemOverlap | selected | ImGuiTreeNodeFlags_Leaf);
+			ImGui::TreeNodeEx(name.c_str(), flags | selected);
 
 			if(ImGui::IsItemClicked())
 			{
@@ -160,6 +167,8 @@ namespace Crowny
 		}
 	}
 
+	static int var = 100;
+
 	void ImGuiHierarchyPanel::DisplayTree(Entity e)
 	{
 		if (!e.IsValid())
@@ -169,19 +178,20 @@ namespace Crowny
 		
 		ImGui::AlignTextToFramePadding();
 
-		ImGui::PushID((uint32_t)e.GetHandle());
+		ImGui::PushID((int32_t)e.GetHandle());
 
 		if (!rc.Children.empty())
 		{
-			DisplayLeafNode(e);
+			DisplayTreeNode(e);
 		}
 		else
 		{
-			DisplayTreeNode(e);
+			DisplayLeafNode(e);
 		}
 
-		if (Input::IsKeyDown(Key::Delete))
+		if (Input::IsKeyUp(Key::Delete) && !m_Deleted)
 		{
+			m_Deleted = true;
 			auto& rr = s_SelectedEntity.GetParent().GetComponent<RelationshipComponent>().Children;
 			for (int i = 0; i < rr.size(); i++)
 			{
@@ -220,6 +230,7 @@ namespace Crowny
 
 	void ImGuiHierarchyPanel::Render()
 	{
+		m_Deleted = false;
 		ImGui::Begin("Hierarchy", &m_Shown);
 		Ref<Scene> activeScene = SceneManager::GetActiveScene();
 		if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_NoOpenOverExistingPopup | ImGuiPopupFlags_MouseButtonRight))

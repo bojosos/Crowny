@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
-#include "CWMonoClass.h"
-#include "CWMonoRuntime.h"
+#include "Crowny/Scripting/CWMonoClass.h"
+#include "Crowny/Scripting/CWMonoRuntime.h"
 
 BEGIN_MONO_INCLUDE
 #include <mono/jit/jit.h>

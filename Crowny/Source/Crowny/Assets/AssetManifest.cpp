@@ -2,12 +2,18 @@
 
 #include "Crowny/Assets/AssetManifest.h"
 
-#include <yaml-cpp/yaml.h>
+#include "Crowny/Common/VirtualFileSystem.h"
+#include "Crowny/Common/Yaml.h"
 
 namespace Crowny
 {
+
+    AssetManifest::AssetManifest(const std::string& name) : m_Name(name)
+    {
+        
+    }
     
-    void AssetManifest::Serialize()
+    void AssetManifest::Serialize(const std::string& filepath)
     {
         YAML::Emitter out;
         out << YAML::Comment("Crowny Manifest");
@@ -26,17 +32,14 @@ namespace Crowny
         }
         out << YAML::EndSeq << YAML::EndMap;
 
-        std::ofstream fout(filepath);
-        fout << out.c_str();
+        VirtualFileSystem::Get()->WriteTextFile(filepath, out.c_str());
     }
 
-    void AssetManifest::Deseralize()
+    void AssetManifest::Deserialize(const std::string& filepath)
     {
-        std::ifstream fin(filepath);
-        std::stringstream sstream;
-        sstream << fin.rdbuf();
-        
-        YAML::Node data = YAML::Load(sstream.str());
+        std::string text = VirtualFileSystem::Get()->ReadTextFile(filepath);
+        YAML::Node data = YAML::Load(text);
+
         if (!data["Manifest"])
             return;
 
@@ -46,13 +49,9 @@ namespace Crowny
         {
             Uuid id = resource["Uuid"].as<Uuid>();
             std::string path = resource["Path"].as<std::string>();
-            AssetManager::CreateResource(id, path);
+            m_Uuids[path] = id;
+            m_Paths[id] = path;
         }
-    }
-
-    Ref<Texture2D> AssetManifest::LoadTexture(const std::string& texture)
-    {
-        return Texture2D::Create(texture); // Some path in front of this
     }
 
 }

@@ -215,6 +215,8 @@ OBJECTS :=
 
 GENERATED += $(OBJDIR)/Allocator.o
 GENERATED += $(OBJDIR)/Application.o
+GENERATED += $(OBJDIR)/AssetManager.o
+GENERATED += $(OBJDIR)/AssetManifest.o
 GENERATED += $(OBJDIR)/CWMonoAssembly.o
 GENERATED += $(OBJDIR)/CWMonoClass.o
 GENERATED += $(OBJDIR)/CWMonoField.o
@@ -297,6 +299,8 @@ GENERATED += $(OBJDIR)/cwpch.o
 GENERATED += $(OBJDIR)/stb_image.o
 OBJECTS += $(OBJDIR)/Allocator.o
 OBJECTS += $(OBJDIR)/Application.o
+OBJECTS += $(OBJDIR)/AssetManager.o
+OBJECTS += $(OBJDIR)/AssetManifest.o
 OBJECTS += $(OBJDIR)/CWMonoAssembly.o
 OBJECTS += $(OBJDIR)/CWMonoClass.o
 OBJECTS += $(OBJDIR)/CWMonoField.o
@@ -450,6 +454,12 @@ $(OBJDIR)/CmdArgs.o: Source/Crowny/Application/CmdArgs.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Initializer.o: Source/Crowny/Application/Initializer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/AssetManager.o: Source/Crowny/Assets/AssetManager.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/AssetManifest.o: Source/Crowny/Assets/AssetManifest.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Color.o: Source/Crowny/Common/Color.cpp

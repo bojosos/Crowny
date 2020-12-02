@@ -1,11 +1,8 @@
 #include "cwpch.h"
-#include "OpenGLVertexBuffer.h"
 
-#ifdef MC_WEB
-#include <GLES3/gl32.h>
-#else
+#include "Platform/OpenGL/OpenGLVertexBuffer.h"
+
 #include <glad/glad.h>
-#endif
 
 namespace Crowny
 {

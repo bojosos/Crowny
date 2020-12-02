@@ -1,6 +1,6 @@
 #include "cwpch.h"
 
-#include "CWMonoAssembly.h"
+#include "Crowny/Scripting/CWMonoAssembly.h"
 
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Common/Parser.h"
