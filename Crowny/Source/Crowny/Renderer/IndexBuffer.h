@@ -1,5 +1,6 @@
 #pragma once
-#include "Buffer.h"
+
+#include "Crowny/Renderer/Buffer.h"
 
 namespace Crowny
 {

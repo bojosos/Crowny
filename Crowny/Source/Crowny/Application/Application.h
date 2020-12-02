@@ -37,7 +37,7 @@ namespace Crowny
 		void Run();
 
 	private:
-		std::unique_ptr<Window> m_Window;
+		Scope<Window> m_Window;
 		bool m_Running = true;
 		bool m_Minimized = false;
 		float m_LastFrameTime = 0.0f;

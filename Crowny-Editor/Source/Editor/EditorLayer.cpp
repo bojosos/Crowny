@@ -5,11 +5,12 @@
 #include "Crowny/Scripting/CWMonoRuntime.h"
 
 #include "Crowny/Runtime/Runtime.h"
-
-#include "Editor/EditorAssets.h"
-
+#include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
 #include "Crowny/Scene/SceneSerializer.h"
 #include "Crowny/Common/FileSystem.h"
+#include "Crowny/Assets/AssetManager.h"
+
+#include "Editor/EditorAssets.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -65,12 +66,18 @@ namespace Crowny
 		m_MaterialEditor = new ImGuiMaterialPanel("Material Editor");
 		viewMenu->AddItem(new ImGuiMenuItem("Material Editor", "", [&](auto& event) { m_MaterialEditor->Show(); }));
 
+		m_ConsolePanel = new ImGuiConsolePanel("Console");
+		viewMenu->AddItem(new ImGuiMenuItem("Console", "", [&](auto& entity) { m_ConsolePanel->Show(); }));
+
 		m_MenuBar->AddMenu(viewMenu);
 
 		SceneManager::AddScene(CreateRef<Scene>("Editor scene")); // To be loaded
 
 		Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(Shader::Create("/Shaders/PBRShader.glsl"));
 		
+		//auto& manifest = AssetManager::Get().ImportManifest("Sandbox.yaml", "Sandbox");
+		AssetManifest("Sandbox").Serialize("Sandbox.yaml");
+
 		mat->SetAlbedoMap(Texture2D::Create("/Textures/rustediron2_basecolor.png"));
 		mat->SetMetalnessMap(Texture2D::Create("/Textures/rustediron2_metallic.png"));
 		mat->SetNormalMap(Texture2D::Create("/Textures/rustediron2_normal.png"));
@@ -81,21 +88,8 @@ namespace Crowny
 		ForwardRenderer::Init(); // Why here?
 		EditorAssets::Load();
 
-		// Test
-		
-		/*Ref<Scene> scene = SceneManager::GetActiveScene();
-		Entity root = SceneManager::GetActiveScene()->GetRootEntity();
-		Entity sphere = scene->CreateEntity("Sphere");
-		sphere.AddComponent<MeshRendererComponent>();
-		root.AddChild(sphere);
-		auto cam = scene->CreateEntity("Camera");
-		cam.AddComponent<CameraComponent>();
-		root.AddChild(cam);*/
-
 		SceneSerializer serializer(SceneManager::GetActiveScene());
-		//serializer.Serialize("Test.yaml");
 		serializer.Deserialize("Test.yaml");
-		//serializer.Serialize("Test.yaml");
 	}
 
 	void EditorLayer::CreateNewScene()
@@ -103,6 +97,7 @@ namespace Crowny
 		Ref<Scene> tmp = CreateRef<Scene>();
 		tmp->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
 		SceneManager::SetActiveScene(tmp);
+		ScriptComponent::s_EntityComponents.clear();
 	}
 
 	void EditorLayer::OpenScene()
@@ -113,6 +108,7 @@ namespace Crowny
 			m_Temp = CreateRef<Scene>();
 			SceneSerializer serializer(m_Temp);
 			serializer.Deserialize(outPaths[0]);
+			ScriptComponent::s_EntityComponents.clear();
 		}
 	}
 
@@ -161,10 +157,10 @@ namespace Crowny
 		m_Framebuffer->Unbind();
 		m_HierarchyPanel->Update();
 	}
-
+	
 	void EditorLayer::OnImGuiRender()
 	{
-		//ImGui::ShowDemoWindow(&showDemo);
+		ImGui::ShowDemoWindow();
 		static bool dockspaceOpen = true;
 		static bool opt_fullscreen_persistant = true;
 		bool opt_fullscreen = opt_fullscreen_persistant;
@@ -214,6 +210,7 @@ namespace Crowny
 		m_InspectorPanel->Render();
 		m_GLInfoPanel->Render();
 		m_ViewportPanel->Render();
+		m_ConsolePanel->Render();
 		m_MaterialEditor->Render();
 
 		ImGui::End();
@@ -263,6 +260,7 @@ namespace Crowny
 				break;
 			}
 		}
+
 		return true;
 	}
 

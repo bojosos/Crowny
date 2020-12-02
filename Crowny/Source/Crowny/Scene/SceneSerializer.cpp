@@ -1,87 +1,12 @@
 #include "cwpch.h"
 
 #include "Crowny/Common/VirtualFileSystem.h"
-#include "Crowny/Common/Uuid.h"
+#include "Crowny/Scripting/CWMonoRuntime.h"
 
-#include "Crowny/Ecs/Entity.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Scene/SceneSerializer.h"
 
-#include <yaml-cpp/yaml.h>
-
-namespace YAML
-{
-    template<>
-    struct convert<Crowny::Uuid>
-    {
-        static Node encode(const Crowny::Uuid& uuid)
-        {
-            Node node;
-            node = uuid.ToString();
-            return node;
-        }
-
-        static bool decode(const Node& node, Crowny::Uuid& rhs)
-        {
-            if (!node.IsScalar())
-                return false;
-            rhs = Crowny::Uuid(node.as<std::string>());
-
-            return true;
-        }
-    };
-
-    template<>
-    struct convert<glm::vec3>
-    {
-        static Node encode(const glm::vec3& rhs)
-        {
-            Node node;
-            node.push_back(rhs.x);
-            node.push_back(rhs.y);
-            node.push_back(rhs.z);
-            return node;
-        }
-
-        static bool decode(const Node& node, glm::vec3& rhs)
-        {
-            if (!node.IsSequence() || node.size() != 3)
-                return false;
-             rhs.x = node[0].as<float>();
-             rhs.y = node[1].as<float>();
-             rhs.z = node[2].as<float>();
-
-            return true;
-        }
-    };
-
-    template<>
-    struct convert<glm::vec4>
-    {
-        static Node encode(const glm::vec4& rhs)
-        {
-            Node node;
-            node.push_back(rhs.x);
-            node.push_back(rhs.y);
-            node.push_back(rhs.z);
-            node.push_back(rhs.w);
-
-            return node;
-        }
-
-        static bool decode(const Node& node, glm::vec4& rhs)
-        {
-            if (!node.IsSequence() || node.size() != 4)
-                return false;
-             rhs.x = node[0].as<float>();
-             rhs.y = node[1].as<float>();
-             rhs.z = node[2].as<float>();
-             rhs.w = node[3].as<float>();
-             
-            return true;
-        }
-    };
-}
+#include "Crowny/Common/Yaml.h"
 
 namespace Crowny
 {
@@ -111,7 +36,7 @@ namespace Crowny
 
     }
 
-    static void SerializeEntity(YAML::Emitter& out, const Uuid& uuid, Entity entity)
+    void SceneSerializer::SerializeEntity(YAML::Emitter& out, const Uuid& uuid, Entity entity)
     {
         if  (!entity)
             return;
@@ -208,7 +133,7 @@ namespace Crowny
             
             for (Entity e : rc.Children)
             {
-                out << (uint32_t)e.GetHandle();
+                out << m_Scene->GetUuid(e);
             }
 
             out << YAML::EndSeq << YAML::EndMap;
@@ -272,6 +197,7 @@ namespace Crowny
                 if (transform)
                 {
                     auto& tc = deserialized.GetComponent<TransformComponent>();
+                    tc.ComponentParent = deserialized;
                     tc.Position = transform["Position"].as<glm::vec3>();
                     tc.Rotation = transform["Rotation"].as<glm::vec3>();
                     tc.Scale = transform["Scale"].as<glm::vec3>();
@@ -309,7 +235,9 @@ namespace Crowny
                 if (script)
                 {
                     auto& sc = deserialized.AddComponent<MonoScriptComponent>();
+                    sc.ComponentParent = deserialized;
                     sc.Name = script["Name"].as<std::string>();
+                    sc.Class = CWMonoRuntime::GetClientAssembly()->GetClass("Sandbox", sc.Name);
                 }
 
                 YAML::Node text = entity["TextComponent"];
@@ -336,7 +264,7 @@ namespace Crowny
 
             for (auto rc : serializedComponents)
             {
-                auto& rl = rc.first.AddComponent<RelationshipComponent>();
+                auto& rl = rc.first.GetComponent<RelationshipComponent>();
                 YAML::Node children = rc.second["Children"];
                 for (auto child : children)
                 {

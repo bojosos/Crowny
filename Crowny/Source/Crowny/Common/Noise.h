@@ -1,6 +1,6 @@
 #pragma once
 
-#include <glm/gtc/noise.hpp>
+#include <glm/glm.hpp>
 
 namespace Crowny
 {

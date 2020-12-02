@@ -1,8 +1,9 @@
 #pragma once
 
-#include "Crowny/Common/Timestep.h"
-#include "Crowny/Events/Event.h"
 #include "Crowny/Common/Common.h"
+#include "Crowny/Common/Timestep.h"
+
+#include "Crowny/Events/Event.h"
 
 namespace Crowny
 {

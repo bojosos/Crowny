@@ -23,6 +23,7 @@ namespace Crowny
 		m_RootEntity->AddComponent<TagComponent>(m_Name);
 		m_RootEntity->AddComponent<RelationshipComponent>();
 		m_Entities = new std::unordered_map<Uuid, Entity>();
+		m_Uuids = new std::unordered_map<Entity, Uuid>();
 	}
 
 	Scene::Scene(const Scene& other)
@@ -31,6 +32,7 @@ namespace Crowny
 		m_RootEntity = other.m_RootEntity;
 		//m_Registry = other.m_Registry.clone();
 		m_Entities = new std::unordered_map<Uuid, Entity>();
+		m_Uuids = new std::unordered_map<Entity, Uuid>();
 	}
 
 	Scene::~Scene()
@@ -139,7 +141,6 @@ namespace Crowny
 				Renderer2D::End();
 
 				ForwardRenderer::Begin();
-				Camera cam(glm::perspective(glm::radians(45.0f), (float)1280 / (float)720, 0.1f, 1000.0f));
 				ForwardRenderer::BeginScene(&cc.Camera, tc.GetTransform());
 				ForwardRenderer::SubmitLightSetup();
 				auto objs = m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
@@ -158,7 +159,9 @@ namespace Crowny
 	Entity Scene::CreateEntity(const std::string& name)
 	{
 		Entity entity = { m_Registry.create(), this };
-		(*m_Entities)[UuidGenerator::Generate()] = entity;
+		Uuid tmp = UuidGenerator::Generate();
+		(*m_Entities)[tmp] = entity;
+		(*m_Uuids)[entity] = tmp;
 		
 		entity.AddComponent<TagComponent>(name);
 		entity.AddComponent<TransformComponent>();
@@ -171,9 +174,12 @@ namespace Crowny
 	Entity Scene::CreateEntity(const Uuid& uuid, const std::string& name)
 	{
 		Entity entity(m_Registry.create(), this);
+		
 		(*m_Entities)[uuid] = entity;
+		(*m_Uuids)[entity] = uuid;
 
 		entity.AddComponent<TagComponent>(name);
+		entity.AddComponent<RelationshipComponent>();
 		entity.AddComponent<TransformComponent>();
 		m_HasChanged = true;
 
@@ -183,6 +189,11 @@ namespace Crowny
 	Entity Scene::GetEntity(const Uuid& uuid)
 	{
 		return (*m_Entities)[uuid];
+	}
+
+	Uuid& Scene::GetUuid(Entity entity)
+	{
+		return (*m_Uuids)[entity];
 	}
 
 	Entity Scene::GetRootEntity()

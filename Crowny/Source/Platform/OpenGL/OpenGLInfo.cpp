@@ -1,4 +1,5 @@
 #include "cwpch.h"
+
 #include "Platform/OpenGL/OpenGLInfo.h"
 
 #include <glad/glad.h>

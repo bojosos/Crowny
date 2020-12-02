@@ -15,6 +15,7 @@
 #include "Crowny/Common/Color.h"
 #include "Crowny/Ecs/Entity.h"
 
+#include <glm/ext/matrix_transform.hpp>
 #include <entt/entt.hpp>
 
 namespace Crowny

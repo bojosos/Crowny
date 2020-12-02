@@ -1,5 +1,6 @@
 #include "cwpch.h"
-#include "Frustum.h"
+
+#include "Crowny/Math/Frustum.h"
 
 namespace Crowny
 {

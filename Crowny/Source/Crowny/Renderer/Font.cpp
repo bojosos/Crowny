@@ -11,7 +11,6 @@ namespace Crowny
 	Font::Font(const std::string& name, const std::string& path, float size) : m_Name(name), m_Filepath(path), m_Size(size)
 	{
 		m_Atlas = ftgl::texture_atlas_new(512, 512, 1);
-		//m_Font = ftgl::texture_font_new_from_file(m_Atlas, m_Size, filepath.c_str());
 		auto [mem, memSize] = VirtualFileSystem::Get()->ReadFile(path);
 		m_Font = ftgl::texture_font_new_from_memory(m_Atlas, m_Size, mem, memSize);
 

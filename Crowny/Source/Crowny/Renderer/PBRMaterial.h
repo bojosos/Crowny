@@ -2,6 +2,7 @@
 
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/Texture.h"
+
 #include <glm/glm.hpp>
 
 namespace Crowny

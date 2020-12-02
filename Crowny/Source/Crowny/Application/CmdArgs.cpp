@@ -1,5 +1,6 @@
 #include "cwpch.h"
-#include "CmdArgs.h"
+
+#include "Crowny/Application/CmdArgs.h"
 
 namespace Crowny
 {

@@ -1,6 +1,6 @@
 #include "cwpch.h"
 
-#include "CWMonoRuntime.h"
+#include "Crowny/Scripting/CWMonoRuntime.h"
 
 BEGIN_MONO_INCLUDE
 #include <mono/metadata/threads.h>

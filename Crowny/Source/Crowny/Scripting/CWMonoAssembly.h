@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CWMonoClass.h"
+#include "Crowny/Scripting/CWMonoClass.h"
 
 BEGIN_MONO_INCLUDE
 #include <mono/metadata/assembly.h>

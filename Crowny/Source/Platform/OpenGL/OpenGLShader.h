@@ -1,7 +1,8 @@
 #pragma once
 
-#include <glm/glm.hpp>
 #include "Crowny/Renderer/Shader.h"
+
+#include <glm/glm.hpp>
 
 namespace Crowny
 {

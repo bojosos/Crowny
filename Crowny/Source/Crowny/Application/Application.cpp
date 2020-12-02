@@ -11,9 +11,9 @@
 #include "Crowny/Application/Initializer.h"
 #include "Crowny/Input/Input.h"
 
-#ifdef MC_WEB
+/*#ifdef MC_WEB
 #include <emscripten/emscripten.h>
-#endif
+#endif*/
 
 // NONONONONONO
 #include <GLFW/glfw3.h>

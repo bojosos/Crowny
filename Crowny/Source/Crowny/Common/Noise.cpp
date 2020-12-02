@@ -1,6 +1,8 @@
 #include "cwpch.h"
 
-#include "Noise.h"
+#include "Crowny/Common/Noise.h"
+
+#include <glm/gtc/noise.hpp>
 
 namespace Crowny
 {

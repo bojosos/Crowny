@@ -17,10 +17,21 @@ namespace Crowny
 	{
 		auto& rc = GetComponent<RelationshipComponent>();
 		rc.Children.push_back(entity);
+		entity.GetComponent<RelationshipComponent>().Parent = *this;
 	}
 
 	void Entity::SetParent(Entity entity)
 	{
+		auto& children = GetParent().GetComponent<RelationshipComponent>().Children;
+		for (int i = 0; i < children.size(); i++)
+		{
+			if (children[i] == *this)
+			{
+				children.erase(children.begin() + i);
+				break;
+			}
+		}
+
 		GetComponent<RelationshipComponent>().Parent = entity;
 	}
 

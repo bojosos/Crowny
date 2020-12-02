@@ -1,5 +1,6 @@
 #include "cwpch.h"
-#include "Color.h"
+
+#include "Crowny/Common/Color.h"
 
 namespace Crowny
 {

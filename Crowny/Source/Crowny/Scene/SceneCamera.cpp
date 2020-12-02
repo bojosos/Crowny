@@ -2,6 +2,8 @@
 
 #include "Crowny/Scene/SceneCamera.h"
 
+#include <glm/ext/matrix_clip_space.hpp>
+
 namespace Crowny
 {
 

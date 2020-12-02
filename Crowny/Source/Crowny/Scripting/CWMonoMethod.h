@@ -1,7 +1,7 @@
 #pragma once
 
-#include "CWMonoVisibility.h"
-#include "CWMonoType.h"
+#include "Crowny/Scripting/CWMonoVisibility.h"
+#include "Crowny/Scripting/CWMonoType.h"
 
 namespace Crowny
 {

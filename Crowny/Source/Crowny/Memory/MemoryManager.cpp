@@ -1,6 +1,6 @@
 #include "cwpch.h"
+
 #include "Crowny/Memory/MemoryManager.h"
-#include <memory>
 
 namespace Crowny
 {

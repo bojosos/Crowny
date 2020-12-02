@@ -6,9 +6,9 @@ namespace Crowny
 {
 	PBRMaterial::PBRMaterial(const Ref<Shader>& shader) : Material(shader)
 	{
-		SetUniform("u_Albedo", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
-		SetUniform("u_Metalness", 0.8f);
-		SetUniform("u_Roughness", 0.2f);
+		SetAlbedo(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+		SetMetalness(0.8f);
+		SetRoughness(0.2f);
 	}
 
 	void PBRMaterial::SetEnvironmentMap()

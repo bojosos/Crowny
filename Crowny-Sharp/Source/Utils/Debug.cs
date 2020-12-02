@@ -29,36 +29,13 @@ namespace Crowny
             }
         }
 
-        public static void Log(string message)
-        {
-            Internal_Log(message);
-        }
-
-        public static void LogWarning(string message)
-        {
-            Internal_LogWarning(message);
-        }
-
-        public static void LogError(string message)
-        {
-            Internal_LogError(message);
-        }
-
-        public static void LogException(string message)
-        {
-            Internal_LogException(message);
-        }
-
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_Log(string message);
-
+        public extern static void Log(string message);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_LogWarning(string message);
-
+        public extern static void LogWarning(string message);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_LogError(string message);
-
+        public extern static void LogError(string message);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_LogException(string message);
+        public extern static void LogException(string message);
     }
 }

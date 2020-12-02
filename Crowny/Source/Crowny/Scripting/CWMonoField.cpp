@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
-#include "CWMonoField.h"
-#include "CWMonoRuntime.h"
+#include "Crowny/Scripting/CWMonoField.h"
+#include "Crowny/Scripting/CWMonoRuntime.h"
 
 #include <mono/metadata/debug-helpers.h>
 #include <mono/metadata/attrdefs.h>

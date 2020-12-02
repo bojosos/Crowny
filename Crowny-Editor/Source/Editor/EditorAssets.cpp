@@ -5,7 +5,7 @@
 
 namespace Crowny
 {
-	const std::string EditorAssets::UnassignedTexture = "Textures/Unassigned.png";
+	const std::string EditorAssets::UnassignedTexture = "/Textures/Unassigned.png";
 
     EditorAssetsLibrary EditorAssets::s_Library;
 

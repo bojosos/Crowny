@@ -18,13 +18,12 @@ namespace Crowny
         AssetManager(AssetManager const&);
         void operator=(AssetManager const&);
 
-    public:
-        AssetManager(AssetManager const&) = delete;
-        void operator=(AssetManager const&) = delete;
+    private:
+        std::unordered_map<std::string, Ref<AssetManifest>> m_Manifests;
 
-        Ref<AssetManifest> ImportManifest(const std::string& path);
-        Ref<Texture> ImportTexture(const std::string& path);
-        Ref<Shader> ImportShader(const std::string& path);
-        Ref<AssetManifest> CreateManifest(const std::string& path);
-    }
+    public:
+
+        Ref<AssetManifest>& ImportManifest(const std::string& path, const std::string& name);
+        Ref<AssetManifest>& CreateManifest(const std::string& path, const std::string& name);
+    };
 }

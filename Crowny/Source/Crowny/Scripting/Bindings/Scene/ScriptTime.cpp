@@ -12,12 +12,12 @@ namespace Crowny
 	{
 		CWMonoClass* timeClass = CWMonoRuntime::GetCrownyAssembly()->GetClass("Crowny", "Time");
 
-        timeClass->AddInternalCall("Internal_GetTime", (void*)&Internal_GetTime);
-		timeClass->AddInternalCall("Internal_GetDeltaTime", (void*)&Internal_GetDeltaTime);
-        timeClass->AddInternalCall("Internal_GetFixedDeltaTime", (void*)&Internal_GetFixedDeltaTime);
-        timeClass->AddInternalCall("Internal_GetSmoothDeltaTime", (void*)&Internal_GetSmoothDeltaTime);
-        timeClass->AddInternalCall("Internal_RealtimeSinceStartup", (void*)&Internal_RealtimeSinceStartup);
-        timeClass->AddInternalCall("Internal_GetFrameCount", (void*)&Internal_GetFrameCount);
+        timeClass->AddInternalCall("get_time", (void*)&Internal_GetTime);
+		timeClass->AddInternalCall("get_deltaTime", (void*)&Internal_GetDeltaTime);
+        timeClass->AddInternalCall("get_fixedDeltaTime", (void*)&Internal_GetFixedDeltaTime);
+        timeClass->AddInternalCall("get_smoothDeltaTime", (void*)&Internal_GetSmoothDeltaTime);
+        timeClass->AddInternalCall("get_realtimeSinceStartup", (void*)&Internal_RealtimeSinceStartup);
+        timeClass->AddInternalCall("get_frameCount", (void*)&Internal_GetFrameCount);
 	}
 
     float ScriptTime::Internal_GetTime()

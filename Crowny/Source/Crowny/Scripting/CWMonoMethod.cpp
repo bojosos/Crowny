@@ -1,6 +1,6 @@
 #include "cwpch.h"
 
-#include "CWMonoMethod.h"
+#include "Crowny/Scripting/CWMonoMethod.h"
 
 BEGIN_MONO_INCLUDE
 #include <mono/metadata/loader.h>
