@@ -36,8 +36,8 @@ namespace Crowny
 		CWMonoRuntime::LoadAssemblies("/Assemblies");
 		
 		// TODO: Out of here
-		ScriptDebug::InitRuntimeFunctions();
 		ScriptTransform::InitRuntimeFunctions();
+		ScriptDebug::InitRuntimeFunctions();
 		ScriptComponent::InitRuntimeFunctions();
 		ScriptEntity::InitRuntimeFunctions();
 		ScriptTime::InitRuntimeFunctions();

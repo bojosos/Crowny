@@ -69,28 +69,17 @@ namespace Crowny
 
 	bool FileSystem::OpenFileDialog(FileDialogType type, const std::string& initialDir, const std::string& filter, std::vector<std::string>& outPaths)
 	{	
-		const char* save;
-		const char* multiple;
-		const char* title = "Open file";
+		std::string add;
 
-		if (type == FileDialogType::OpenFile)
+		switch (type)
 		{
-			title = "Open file";
+			case FileDialogType::OpenFile: 		add = "title=\"Open file\""; break;
+			case FileDialogType::SaveFile: 		add = "title=\"Save file\" --save"; break;
+			case FileDialogType::Multiselect:   add = " --multiple title=\"Open files\""; break;
+			case FileDialogType::OpenFolder:    add = " --directory title=\"Open folder\""; break;
 		}
 
-		if (type == FileDialogType::SaveFile)
-		{
-			save = " --save";
-			title = "Save file";
-		}
-
-		if (type == FileDialogType::Multiselect)
-		{
-			multiple = " --multiple";
-			title = "Open files";
-		}
-
-		std::string cmd = "zenity --file-selection --filename=\"" + initialDir + "\" --title=\"" + title + "\"" + save + multiple;
+		std::string cmd = "zenity --file-selection --filename=\"" + initialDir + "\"" + add;
 		FILE* f = popen(cmd.c_str(), "r");
 		if (!f)
 			return false;

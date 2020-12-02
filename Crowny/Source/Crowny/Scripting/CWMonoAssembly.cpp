@@ -59,10 +59,10 @@ namespace Crowny
 		auto it = m_Classes.find(namespaceName + "." + className);
 		if (it == m_Classes.end())
 		{
-			MonoClass* t = mono_class_from_name(m_Image, namespaceName.c_str(), className.c_str());
-			if (t)
+			MonoClass* monoClass = mono_class_from_name(m_Image, namespaceName.c_str(), className.c_str());
+			if (monoClass)
 			{
-				m_Classes[namespaceName + "." + className] = new CWMonoClass(t);
+				m_Classes[namespaceName + "." + className] = new CWMonoClass(monoClass);
 				return m_Classes[namespaceName + "." + className];
 			}
 			else

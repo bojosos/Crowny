@@ -16,6 +16,19 @@ END_MONO_INCLUDE
 
 namespace Crowny
 {
+	struct BuiltinScriptClasses
+    {
+        CWMonoClass* SystemArrayClass = nullptr;
+        CWMonoClass* SystemGenericListClass = nullptr;
+        CWMonoClass* SystemGenericDictionaryClass = nullptr;
+        CWMonoClass* SystemTypeClass = nullptr;
+
+        CWMonoClass* SerializeFieldAttribute = nullptr;
+        CWMonoClass* RangeAttribute = nullptr;
+        CWMonoClass* ShowInInspector = nullptr;
+        CWMonoClass* HideInInspector = nullptr;
+    };
+
 	class CWMonoRuntime
 	{
 	public:
@@ -30,9 +43,11 @@ namespace Crowny
 
 		static MonoDomain* GetDomain() { return s_Instance->m_Domain; }
 		static CWMonoObject* CreateInstance(CWMonoClass* monoClass);
+		static BuiltinScriptClasses GetBuiltinClasses() { return s_Instance->m_BuiltinScriptClasses; }
 
 	private:
 		static CWMonoRuntime* s_Instance;
+		BuiltinScriptClasses m_BuiltinScriptClasses;
 		std::vector<CWMonoAssembly*> m_Assemblies;
 		MonoDomain* m_Domain;
 	};

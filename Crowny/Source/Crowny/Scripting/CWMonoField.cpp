@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Scripting/CWMonoField.h"
+#include "Crowny/Scripting/CWMonoClass.h"
 #include "Crowny/Scripting/CWMonoRuntime.h"
 
 #include <mono/metadata/debug-helpers.h>
@@ -27,11 +28,11 @@ namespace Crowny
 		uint32_t flags = mono_field_get_flags(m_Field) & MONO_FIELD_ATTR_FIELD_ACCESS_MASK;
 		switch (flags)
 		{
-		case MONO_FIELD_ATTR_PRIVATE:       return CWMonoVisibility::PRIVATE;
-		case MONO_FIELD_ATTR_FAM_AND_ASSEM: return CWMonoVisibility::PROTECTED_INTERNAL;
-		case MONO_FIELD_ATTR_ASSEMBLY:      return CWMonoVisibility::INTERNAL;
-		case MONO_FIELD_ATTR_FAMILY:        return CWMonoVisibility::PROTECTED;
-		case MONO_FIELD_ATTR_PUBLIC:        return CWMonoVisibility::PUBLIC;
+			case MONO_FIELD_ATTR_PRIVATE:       return CWMonoVisibility::PRIVATE;
+			case MONO_FIELD_ATTR_FAM_AND_ASSEM: return CWMonoVisibility::PROTECTED_INTERNAL;
+			case MONO_FIELD_ATTR_ASSEMBLY:      return CWMonoVisibility::INTERNAL;
+			case MONO_FIELD_ATTR_FAMILY:        return CWMonoVisibility::PROTECTED;
+			case MONO_FIELD_ATTR_PUBLIC:        return CWMonoVisibility::PUBLIC;
 		}
 
 		CW_ENGINE_ERROR("Unkown mono type");
@@ -44,12 +45,37 @@ namespace Crowny
 		mono_field_set_value (obj, m_Field, value);
 	}
 
-	void* CWMonoField::Get(MonoObject* obj)
+	void CWMonoField::Get(MonoObject* obj, void* outval)
 	{
-		int value;
-		mono_field_get_value(obj, m_Field, &value);
-		//return (void*)value;
-		return nullptr;
+		mono_field_get_value(obj, m_Field, outval);
+	}
+
+	bool CWMonoField::HasAttribute(CWMonoClass* monoClass)
+	{
+		MonoClass* parent = mono_field_get_parent(m_Field);
+		MonoCustomAttrInfo* attrInfo = mono_custom_attrs_from_field(parent, m_Field);
+		if (attrInfo == nullptr)
+			return false;
+
+		bool hasAttr = mono_custom_attrs_has_attr(attrInfo, monoClass->GetInternalPtr()) != 0;
+		mono_custom_attrs_free(attrInfo);
+
+		return hasAttr;
+	}
+
+	MonoObject* CWMonoField::GetAttribute(CWMonoClass* monoClass)
+	{
+		MonoClass* parent = mono_field_get_parent(m_Field);
+		MonoCustomAttrInfo* attrInfo = mono_custom_attrs_from_field(parent, m_Field);
+		if (attrInfo == nullptr)
+			return nullptr;
+
+		MonoObject* foundAttr = nullptr;
+		if (mono_custom_attrs_has_attr(attrInfo, monoClass->GetInternalPtr()))
+			foundAttr = mono_custom_attrs_get_attr(attrInfo, monoClass->GetInternalPtr());
+
+		mono_custom_attrs_free(attrInfo);
+		return foundAttr;
 	}
 
 	bool CWMonoField::IsValueType()

@@ -9,6 +9,7 @@ END_MONO_INCLUDE
 
 namespace Crowny
 {
+	class CWMonoClass;
 	class CWMonoField
 	{
 	public:
@@ -21,8 +22,10 @@ namespace Crowny
 		bool IsStatic() const;
 
 		bool IsValueType();
+		bool HasAttribute(CWMonoClass* monoClass);
+		MonoObject* GetAttribute(CWMonoClass* monoClass);
 		void Set(MonoObject* obj, void* value);
-		void *Get(MonoObject *obj);
+		void Get(MonoObject *obj, void* outval);
 
 	private:
 		MonoClassField* m_Field = nullptr;

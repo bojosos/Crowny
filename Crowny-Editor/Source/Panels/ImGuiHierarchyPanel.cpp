@@ -109,6 +109,26 @@ namespace Crowny
 		else
 		{
 			open = ImGui::TreeNodeEx(name.c_str(), selected | flags);
+			
+			if (ImGui::BeginDragDropSource())
+			{
+				uint32_t tmp = (uint32_t)e.GetHandle();
+				ImGui::SetDragDropPayload("ID", &tmp, sizeof(uint32_t));
+				ImGui::Text("%s", name.c_str());
+				ImGui::EndDragDropSource();
+			}
+
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ID"))
+				{
+					CW_ENGINE_ASSERT(payload->DataSize == sizeof(uint32_t));
+					uint32_t id = *(const uint32_t*)payload->Data;
+					Entity((entt::entity)id, SceneManager::GetActiveScene().get()).SetParent(e);
+				}
+				ImGui::EndDragDropTarget();
+			}
+
 			if (ImGui::BeginPopupContextItem())
 			{
 				DisplayPopup(e);
@@ -130,11 +150,6 @@ namespace Crowny
 				ImGui::TreePop();
 			}
 		}
-		//if (ImGui::BeginDragDropSource()) {
-		//	ImGui::SetDragDropPayload("_TREENODE", nullptr, 0);
-		//		ImGui::Text("wat");
-		//		ImGui::EndDragDropSource();
-		//}
 	}
 
 	void ImGuiHierarchyPanel::DisplayLeafNode(Entity e)
@@ -145,7 +160,7 @@ namespace Crowny
 		
 		ImGuiTreeNodeFlags selected = (m_SelectedItems.find(e) != m_SelectedItems.end()) ? ImGuiTreeNodeFlags_Selected : 0;
 		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_Leaf;
-		
+
 		if (e == m_Renaming)
 		{
 			Rename(e);
@@ -153,6 +168,25 @@ namespace Crowny
 		else
 		{
 			ImGui::TreeNodeEx(name.c_str(), flags | selected);
+			
+			if (ImGui::BeginDragDropSource())
+			{
+				uint32_t tmp = (uint32_t)e.GetHandle();
+				ImGui::SetDragDropPayload("ID", &tmp, sizeof(uint32_t));
+				ImGui::Text("%s", name.c_str());
+				ImGui::EndDragDropSource();
+			}
+
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ID"))
+				{
+					CW_ENGINE_ASSERT(payload->DataSize == sizeof(uint32_t));
+					uint32_t id = *(const uint32_t*)payload->Data;
+					Entity((entt::entity)id, SceneManager::GetActiveScene().get()).SetParent(e);
+				}
+				ImGui::EndDragDropTarget();
+			}
 
 			if(ImGui::IsItemClicked())
 			{
