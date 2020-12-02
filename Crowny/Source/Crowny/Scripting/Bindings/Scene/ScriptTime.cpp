@@ -1,6 +1,6 @@
 #include "cwpch.h"
 
-#include "ScriptTime.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptTime.h"
 
 #include "Crowny/Scripting/CWMonoRuntime.h"
 #include "Crowny/Scene/SceneManager.h"

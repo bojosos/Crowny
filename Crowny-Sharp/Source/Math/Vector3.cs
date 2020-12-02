@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace Crowny.Math
+namespace Crowny
 {
+    /// <summary>
+    /// A three dimensional vector.
+    /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public struct Vector3
     {
@@ -48,15 +51,10 @@ namespace Crowny.Math
             }
         }
 
-        public override string ToString()
-        {
-            return x.ToString() + ", " + y.ToString() + ", " + z.ToString();
-        }
-
         /// <summary>
         /// Returns a normalized copy of the Vector3
         /// </summary>
-        public Vector3 Normalized
+        public Vector3 normalized
         {
             get
             {
@@ -65,11 +63,11 @@ namespace Crowny.Math
         }
 
         /// <summary>
-        /// Normalied the Vector3
+        /// Normalizes the vector
         /// </summary>
         public void Normalize()
         {
-            float sl = this.SqrdLength;
+            float sl = this.sqrdLength;
             if (sl > 1e-04f)
                 this *= 1.0f / (float)System.Math.Sqrt(sl);
         }
@@ -77,7 +75,7 @@ namespace Crowny.Math
         /// <summary>
         /// Returns the length of the Vector3
         /// </summary>
-        public float Length
+        public float length
         {
             get
             {
@@ -88,7 +86,7 @@ namespace Crowny.Math
         /// <summary>
         /// Returns the length of the Vector3 squared
         /// </summary>
-        public float SqrdLength
+        public float sqrdLength
         {
             get
             {
@@ -174,12 +172,72 @@ namespace Crowny.Math
             return (float)System.Math.Sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
         }
 
+        /// <summary>
+        /// Normalizes the vector
+        /// </summary>
+        /// <param name="v">Vector</param>
+        /// <returns>Normalized copy of the vector</returns>
         public static Vector3 Normalize(Vector3 v)
         {
-            float sl = v.SqrdLength;
+            float sl = v.sqrdLength;
             if (sl > 1e-04f)
-                return v * 1.0f / (float)System.Math.Sqrt(sl);
+                return v * (float)Mathf.InvSqrt(sl);
             return v;
+        }
+
+        /// <summary>
+        /// Calculates the dinstance between two points.
+        /// </summary>
+        /// <param name="a">First two dimensional point.</param>
+        /// <param name="b">First two dimensional point.</param>
+        /// <returns>Distance between the points</returns>
+        public static float Distance(Vector3 a, Vector3 b)
+        {
+            Vector3 vec = new Vector3(a.x - b.x, a.y - b.y, a.z - b.z);
+            return Mathf.Sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+        }
+
+        /// <summary>
+        /// Returns the maximum of all the vector components as a new vector.
+        /// </summary>
+        /// <param name="a">First vector.</param>
+        /// <param name="b">Second vector.</param>
+        /// <returns>Vector with the maximum components of the two vectors</returns>
+        public static Vector3 Max(Vector3 a, Vector3 b)
+        {
+            return new Vector3(Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y), Mathf.Max(a.z, b.z));
+        }
+
+        /// <summary>
+        /// Returns the minumum of all the vector components as a new vector.
+        /// </summary>
+        /// <param name="a">First vector.</param>
+        /// <param name="b">Second vector.</param>
+        /// <returns>Vector with the minumum components of the two vectors</returns>
+        public static Vector3 Min(Vector3 a, Vector3 b)
+        {
+            return new Vector3(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Min(a.z, b.z));
+        }
+
+        /// <inheritdoc/>
+        public override string ToString()
+        {
+            return "(" + x + ", " + y + ", " + z + ")";
+        }
+
+         /// <inheritdoc/>
+        public override int GetHashCode()
+        {
+            return x.GetHashCode() ^ y.GetHashCode() << 2 ^ z.GetHashCode() >> 2;
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object other)
+        {
+            if (!(other is Vector3))
+                return false;
+            Vector3 v = (Vector3)other;
+            return x.Equals(v.x) && y.Equals(v.y) && z.Equals(v.z);
         }
     }
 }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using Crowny.Math;
 
 namespace Crowny
 {

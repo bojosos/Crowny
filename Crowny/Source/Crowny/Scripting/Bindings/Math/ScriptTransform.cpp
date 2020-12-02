@@ -2,7 +2,7 @@
 
 #include "Crowny/Scripting/CWMonoRuntime.h"
 
-#include "Transform.h"
+#include "Crowny/Scripting/Bindings/Math/ScriptTransform.h"
 
 namespace Crowny
 {
