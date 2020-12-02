@@ -270,7 +270,6 @@ namespace Crowny
                 {
                     Entity e = m_Scene->GetEntity(child.as<Uuid>());
                     e.SetParent(rc.first);
-                    rl.Children.push_back(e);
                 }
             }
         }

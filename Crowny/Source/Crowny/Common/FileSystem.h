@@ -5,10 +5,10 @@ namespace Crowny
 
 	enum class FileDialogType
 	{
-		OpenFile = 0,
-		OpenFolder = 1,
-		SaveFile = 2,
-		Multiselect = 3
+		OpenFile,
+		OpenFolder,
+		SaveFile,
+		Multiselect
 	};
 
 	class FileSystem

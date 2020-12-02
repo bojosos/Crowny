@@ -1,2 +1,10 @@
-Implement PerlinNoise
-Input
+To implement my Minecraft game using Crowny:
+ - PerlinNoise
+ - Mathf.FloorToInt, Mathf.RoundToInt
+ - Search for game objects
+ - Raycasting
+ - Prefab instanciation
+ - Mesh filter
+   - filter.mesh -> a C# mesh
+     - mesh.Clear, mesh.vertices, mesh.triangles, mesh.uv, mesh.RecalcualteNormals()
+  - GetComponent<Script> 

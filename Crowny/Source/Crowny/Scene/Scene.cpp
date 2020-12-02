@@ -72,7 +72,7 @@ namespace Crowny
 			transformPtr->Set(transformInstance, &tmp);
 		});
 		
-		// Create managed scritp components
+		// Create managed script components
 		m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent &sc) 
 		{
 			if (!sc.Class)
@@ -86,6 +86,9 @@ namespace Crowny
 			size_t tmp = (size_t)&sc;
 			scriptPtr->Set(scriptInstance, &tmp);
 
+			CWMonoMethod* ctor = sc.Class->GetMethod(".ctor", 0);
+			if (ctor)
+				ctor->Call(scriptInstance);
 			CWMonoMethod* start = sc.Class->GetMethod("Start", 0);
 			if (start)
 				start->Call(scriptInstance);

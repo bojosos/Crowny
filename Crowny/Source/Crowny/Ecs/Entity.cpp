@@ -33,6 +33,7 @@ namespace Crowny
 		}
 
 		GetComponent<RelationshipComponent>().Parent = entity;
+		entity.AddChild(*this);
 	}
 
 	Entity Entity::GetChild(uint32_t index) const

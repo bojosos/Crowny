@@ -32,6 +32,8 @@ namespace Crowny
 
 		CWMonoField* GetField(const std::string& name);
 
+		MonoClass* GetInternalPtr() { return m_Class; }
+
 		friend class CWMonoRuntime;
 	private:
 		MonoClass* m_Class;

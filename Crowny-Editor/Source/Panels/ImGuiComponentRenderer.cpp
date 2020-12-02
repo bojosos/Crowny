@@ -293,9 +293,26 @@ namespace Crowny
 		auto fields = script.Class->GetFields();
 		for (auto* field : fields)
 		{
-			if (field)
+			if (field && !field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().HideInInspector) 
+					  && (field->GetVisibility() == CWMonoVisibility::PUBLIC 
+					  || field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().SerializeFieldAttribute) 
+					  || field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().ShowInInspector)))
 			{
 				ImGui::Text("%s", field->GetName().c_str()); ImGui::NextColumn();
+				if (script.Instance)
+				{
+					CWMonoClass* rng = CWMonoRuntime::GetBuiltinClasses().RangeAttribute;
+					MonoObject* obj = field->GetAttribute(rng);
+					if(obj)
+					{
+						float min, max, val;
+						rng->GetField("min")->Get(obj, &min);
+						rng->GetField("max")->Get(obj, &max);
+						field->Get(script.Instance, &val);
+						if (ImGui::SliderFloat("##field1", &val, min, max))
+							field->Set(script.Instance, &val);
+					}
+				}
 			}
 		}
 		ImGui::Columns(1);
