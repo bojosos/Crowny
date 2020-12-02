@@ -1,9 +1,10 @@
 #include "cwpch.h"
 
+#include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptEntity.h"
+
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Scene/SceneManager.h"
-#include "ScriptComponent.h"
-#include "ScriptEntity.h"
 
 namespace Crowny
 {

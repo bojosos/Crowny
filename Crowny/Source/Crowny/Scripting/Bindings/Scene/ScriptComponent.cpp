@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
-#include "ScriptComponent.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
+
 #include "Crowny/Scripting/CWMonoRuntime.h"
 
 namespace Crowny

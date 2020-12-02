@@ -14,6 +14,7 @@
 #include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntity.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptTime.h"
+#include "Crowny/Scripting/Bindings/ScriptRandom.h"
 
 namespace Crowny
 {
@@ -39,6 +40,7 @@ namespace Crowny
 		ScriptComponent::InitRuntimeFunctions();
 		ScriptEntity::InitRuntimeFunctions();
 		ScriptTime::InitRuntimeFunctions();
+		ScriptRandom::InitRuntimeFunctions();
 	}
 
 	void Initializer::Shutdown()

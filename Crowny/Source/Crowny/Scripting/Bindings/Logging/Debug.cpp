@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
-#include "Debug.h"
+#include "Crowny/Scripting/Bindings/Logging/Debug.h"
+
 #include "Crowny/Scripting/CWMonoRuntime.h"
 
 namespace Crowny
