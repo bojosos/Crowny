@@ -26,13 +26,15 @@ project "Crowny-Editor"
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.entt}",
 		"%{IncludeDir.assimp}",
-		"%{IncludeDir.mono}"
+		"%{IncludeDir.mono}",
+		"%{IncludeDir.ImGuizmo}"
 	}
 
 	libdirs { "/usr/lib/mono-2.0", "Crowny/Dependencies/vulkan/lib" }
 
 	links 
 	{
+		"ImGuizmo",
 		"Crowny",
 		"GL", "Xxf86vm", "Xrandr", "pthread", "Xi", "dl", "uuid",
 		"imgui",
@@ -40,7 +42,7 @@ project "Crowny-Editor"
 		"assimp",
 		"freetype2", "glfw", "glad",
 		"mono-2.0",
-		"yaml-cpp"
+		"yaml-cpp",
 		--"libvulkan"
 	}
 

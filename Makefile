@@ -17,6 +17,7 @@ ifeq ($(config),debug_win64)
   imgui_config = debug_win64
   assimp_config = debug_win64
   yaml_cpp_config = debug_win64
+  ImGuizmo_config = debug_win64
   Crowny_config = debug_win64
   Crowny_Editor_config = debug_win64
   Crowny_Sandbox_config = debug_win64
@@ -31,6 +32,7 @@ else ifeq ($(config),debug_linux64)
   imgui_config = debug_linux64
   assimp_config = debug_linux64
   yaml_cpp_config = debug_linux64
+  ImGuizmo_config = debug_linux64
   Crowny_config = debug_linux64
   Crowny_Editor_config = debug_linux64
   Crowny_Sandbox_config = debug_linux64
@@ -45,6 +47,7 @@ else ifeq ($(config),debug_macos64)
   imgui_config = debug_macos64
   assimp_config = debug_macos64
   yaml_cpp_config = debug_macos64
+  ImGuizmo_config = debug_macos64
   Crowny_config = debug_macos64
   Crowny_Editor_config = debug_macos64
   Crowny_Sandbox_config = debug_macos64
@@ -59,6 +62,7 @@ else ifeq ($(config),debug_web)
   imgui_config = debug_web
   assimp_config = debug_web
   yaml_cpp_config = debug_web
+  ImGuizmo_config = debug_web
   Crowny_config = debug_web
   Crowny_Editor_config = debug_web
   Crowny_Sandbox_config = debug_web
@@ -73,6 +77,7 @@ else ifeq ($(config),release_win64)
   imgui_config = release_win64
   assimp_config = release_win64
   yaml_cpp_config = release_win64
+  ImGuizmo_config = release_win64
   Crowny_config = release_win64
   Crowny_Editor_config = release_win64
   Crowny_Sandbox_config = release_win64
@@ -87,6 +92,7 @@ else ifeq ($(config),release_linux64)
   imgui_config = release_linux64
   assimp_config = release_linux64
   yaml_cpp_config = release_linux64
+  ImGuizmo_config = release_linux64
   Crowny_config = release_linux64
   Crowny_Editor_config = release_linux64
   Crowny_Sandbox_config = release_linux64
@@ -101,6 +107,7 @@ else ifeq ($(config),release_macos64)
   imgui_config = release_macos64
   assimp_config = release_macos64
   yaml_cpp_config = release_macos64
+  ImGuizmo_config = release_macos64
   Crowny_config = release_macos64
   Crowny_Editor_config = release_macos64
   Crowny_Sandbox_config = release_macos64
@@ -115,6 +122,7 @@ else ifeq ($(config),release_web)
   imgui_config = release_web
   assimp_config = release_web
   yaml_cpp_config = release_web
+  ImGuizmo_config = release_web
   Crowny_config = release_web
   Crowny_Editor_config = release_web
   Crowny_Sandbox_config = release_web
@@ -129,6 +137,7 @@ else ifeq ($(config),dist_win64)
   imgui_config = dist_win64
   assimp_config = dist_win64
   yaml_cpp_config = dist_win64
+  ImGuizmo_config = dist_win64
   Crowny_config = dist_win64
   Crowny_Editor_config = dist_win64
   Crowny_Sandbox_config = dist_win64
@@ -143,6 +152,7 @@ else ifeq ($(config),dist_linux64)
   imgui_config = dist_linux64
   assimp_config = dist_linux64
   yaml_cpp_config = dist_linux64
+  ImGuizmo_config = dist_linux64
   Crowny_config = dist_linux64
   Crowny_Editor_config = dist_linux64
   Crowny_Sandbox_config = dist_linux64
@@ -157,6 +167,7 @@ else ifeq ($(config),dist_macos64)
   imgui_config = dist_macos64
   assimp_config = dist_macos64
   yaml_cpp_config = dist_macos64
+  ImGuizmo_config = dist_macos64
   Crowny_config = dist_macos64
   Crowny_Editor_config = dist_macos64
   Crowny_Sandbox_config = dist_macos64
@@ -171,6 +182,7 @@ else ifeq ($(config),dist_web)
   imgui_config = dist_web
   assimp_config = dist_web
   yaml_cpp_config = dist_web
+  ImGuizmo_config = dist_web
   Crowny_config = dist_web
   Crowny_Editor_config = dist_web
   Crowny_Sandbox_config = dist_web
@@ -180,13 +192,13 @@ else
   $(error "invalid configuration $(config)")
 endif
 
-PROJECTS := Premake glfw glad freetype-gl freetype2 imgui assimp yaml-cpp Crowny Crowny-Editor Crowny-Sandbox Crowny-Sharp
+PROJECTS := Premake glfw glad freetype-gl freetype2 imgui assimp yaml-cpp ImGuizmo Crowny Crowny-Editor Crowny-Sandbox Crowny-Sharp
 
 .PHONY: all clean help $(PROJECTS) Dependencies
 
 all: $(PROJECTS)
 
-Dependencies: Premake assimp freetype-gl freetype2 glad glfw imgui yaml-cpp
+Dependencies: ImGuizmo Premake assimp freetype-gl freetype2 glad glfw imgui yaml-cpp
 
 Premake:
 ifneq (,$(Premake_config))
@@ -236,13 +248,19 @@ ifneq (,$(yaml_cpp_config))
 	@${MAKE} --no-print-directory -C Crowny/Dependencies/yaml-cpp -f Makefile config=$(yaml_cpp_config)
 endif
 
-Crowny: imgui freetype-gl assimp freetype2 glfw glad yaml-cpp
+ImGuizmo:
+ifneq (,$(ImGuizmo_config))
+	@echo "==== Building ImGuizmo ($(ImGuizmo_config)) ===="
+	@${MAKE} --no-print-directory -C Crowny/Dependencies/ImGuizmo -f Makefile config=$(ImGuizmo_config)
+endif
+
+Crowny: imgui freetype-gl assimp freetype2 glfw glad yaml-cpp ImGuizmo
 ifneq (,$(Crowny_config))
 	@echo "==== Building Crowny ($(Crowny_config)) ===="
 	@${MAKE} --no-print-directory -C Crowny -f Makefile config=$(Crowny_config)
 endif
 
-Crowny-Editor: Crowny imgui freetype-gl assimp freetype2 glfw glad yaml-cpp
+Crowny-Editor: ImGuizmo Crowny imgui freetype-gl assimp freetype2 glfw glad yaml-cpp
 ifneq (,$(Crowny_Editor_config))
 	@echo "==== Building Crowny-Editor ($(Crowny_Editor_config)) ===="
 	@${MAKE} --no-print-directory -C Crowny-Editor -f Makefile config=$(Crowny_Editor_config)
@@ -269,6 +287,7 @@ clean:
 	@${MAKE} --no-print-directory -C Crowny/Dependencies/imgui -f Makefile clean
 	@${MAKE} --no-print-directory -C Crowny/Dependencies/assimp -f Makefile clean
 	@${MAKE} --no-print-directory -C Crowny/Dependencies/yaml-cpp -f Makefile clean
+	@${MAKE} --no-print-directory -C Crowny/Dependencies/ImGuizmo -f Makefile clean
 	@${MAKE} --no-print-directory -C Crowny -f Makefile clean
 	@${MAKE} --no-print-directory -C Crowny-Editor -f Makefile clean
 	@${MAKE} --no-print-directory -C Crowny-Sandbox -f Makefile clean
@@ -302,6 +321,7 @@ help:
 	@echo "   imgui"
 	@echo "   assimp"
 	@echo "   yaml-cpp"
+	@echo "   ImGuizmo"
 	@echo "   Crowny"
 	@echo "   Crowny-Editor"
 	@echo "   Crowny-Sandbox"
