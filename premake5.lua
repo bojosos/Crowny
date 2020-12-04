@@ -43,6 +43,7 @@ IncludeDir["glib"] = "/usr/include//glib-2.0"
 
 IncludeDir['vulkan'] = "%{wks.location}/Crowny/Dependencies/vulkan/include"
 IncludeDir['yamlcpp'] = "%{wks.location}/Crowny/Dependencies/yaml-cpp/include"
+IncludeDir["ImGuizmo"] = "%{wks.location}/Crowny/Dependencies/ImGuizmo"
 
 group "Dependencies"
 	include "3rdparty/premake"
@@ -53,6 +54,7 @@ group "Dependencies"
 	include "Crowny/Dependencies/imgui"
 	include "Crowny/Dependencies/assimp"
 	include "Crowny/Dependencies/yaml-cpp"
+	include "Crowny/Dependencies/ImGuizmo"
 group ""
 
 include "Crowny"

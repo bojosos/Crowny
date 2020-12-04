@@ -12,9 +12,7 @@ namespace Crowny
 
     void ImGuiConsolePanel::Clear()
     {
-        m_LineOffsets.clear();
-        Log::s_Output.clear();
-        m_Buffer.clear();
+        Log::s_Output.flush();
     }
 
 	void ImGuiConsolePanel::Render()

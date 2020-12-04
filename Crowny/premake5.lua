@@ -19,7 +19,6 @@ project "Crowny"
 		"Dependencies/stb_image/**.cpp",
 		"Dependencies/glm/glm/**.hpp",
 		"Dependencies/glm/glm/**.inl",
-		"Resources/**"
 	}
 
 --	filter { "system:windows", "files: Linux*" }
@@ -48,7 +47,8 @@ project "Crowny"
 		"%{IncludeDir.assimp}",
 		"%{IncludeDir.mono}",
 		"%{IncludeDir.vulkan}",
-		"%{IncludeDir.yamlcpp}"
+		"%{IncludeDir.yamlcpp}",
+		"%{IncludeDir.ImGuizmo}"
 	}
 
 	libdirs { "/usr/lib/mono-2.0", "Crowny/Dependencies/vulkan/lib" }
@@ -61,7 +61,8 @@ project "Crowny"
 		"assimp",
 		"freetype2", "glfw", "glad",
 		"mono-2.0",
-		"yaml-cpp"
+		"yaml-cpp",
+		"ImGuizmo"
 	}
 
 

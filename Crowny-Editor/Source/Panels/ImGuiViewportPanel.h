@@ -13,6 +13,7 @@ namespace Crowny
 
 		virtual void Render() override;
 	private:
+		int32_t m_GizmoMode = 0;
 		Ref<Framebuffer> m_Framebuffer;
 		glm::vec2& m_ViewportSize;
 	};

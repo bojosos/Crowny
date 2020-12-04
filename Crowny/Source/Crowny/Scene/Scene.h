@@ -31,6 +31,8 @@ namespace Crowny
 		Uuid& GetUuid(Entity entity);
 		Entity GetRootEntity();
 
+		Entity GetCamera();
+
 		const std::string& GetName() const { return m_Name; }
 		const std::string& GetFilepath() const { return m_Filepath; }
 

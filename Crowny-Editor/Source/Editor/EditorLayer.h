@@ -54,6 +54,8 @@ namespace Crowny
 		ImGuiMaterialPanel* m_MaterialEditor;
 		ImGuiConsolePanel* m_ConsolePanel;
 
+		uint32_t m_GizmoMode = 0;
+
 		std::vector<ImGuiPanel*> m_ImGuiWindows;
 		
 		Ref<Framebuffer> m_Framebuffer; // Maybe Viewport window should take care of this?
