@@ -1,96 +1,7 @@
 # Crowny Scene
 Scene: Editor scene
 Entities:
-  - Entity: 42ab2eac-4f44-294c-321a-6cb8f4b0d6d7
-    TagComponent:
-      Tag: New Entity
-    TransformComponent:
-      Position: [0, 0, 0]
-      Rotation: [0, 0, 0]
-      Scale: [1, 1, 1]
-    RelationshipComponent:
-      Children:
-        []
-  - Entity: d8a9c56f-6e43-3f38-ce9d-f5a07240972c
-    TagComponent:
-      Tag: Camera
-    TransformComponent:
-      Position: [0, 0, -4.53999996]
-      Rotation: [0, 0, 0]
-      Scale: [1, 1, 1]
-    CameraComponent:
-      ProjectionType: 1
-      PerspectiveFOV: 1.02367055
-      PerspectiveNear: 0.00999999978
-      PerspectiveFar: 1000
-      OrthographicSize: 10
-      OrthographicNear: -1
-      OrthographicFar: 1
-      HDR: true
-      MSAA: true
-      OcclusionCulling: false
-      BackgroundColor: [0.149013892, 0.196911216, 0.196911216]
-      ViewportRect: [0, 0, 1, 1]
-    RelationshipComponent:
-      Children:
-        - 98d0b096-6c47-d61d-22c6-868d7280d220
-        - c207a6b8-d74d-99f0-e29d-42a5f0481181
-  - Entity: b3abf689-7749-5dba-6a50-6282e4be6a45
-    TagComponent:
-      Tag: Sphere
-    MonoScriptComponent:
-      Name: Test
-    TransformComponent:
-      Position: [3.83828235, 0, 0.529999971]
-      Rotation: [0, 0, 0]
-      Scale: [1, 1, 1]
-    MeshRendererComponent:
-      Uuid: 135a3abc-7047-592e-3b99-09be8ff6c895
-    RelationshipComponent:
-      Children:
-        - 42ab2eac-4f44-294c-321a-6cb8f4b0d6d7
-        - c42818f0-094f-c5ae-33f3-c1a2adfdea59
-  - Entity: 98d0b096-6c47-d61d-22c6-868d7280d220
-    TagComponent:
-      Tag: New Entity
-    TransformComponent:
-      Position: [0, 0, 0]
-      Rotation: [0, 0, 0]
-      Scale: [1, 1, 1]
-    RelationshipComponent:
-      Children:
-        []
-  - Entity: 090f9661-c049-fc6c-2a5e-c48e5e6bd41a
-    TagComponent:
-      Tag: New Entity
-    TransformComponent:
-      Position: [0, 0, 0]
-      Rotation: [0, 0, 0]
-      Scale: [1, 1, 1]
-    RelationshipComponent:
-      Children:
-        []
-  - Entity: d43489e1-5342-e997-efe2-408c3efae9b5
-    TagComponent:
-      Tag: New Entity
-    TransformComponent:
-      Position: [0, 0, 0]
-      Rotation: [0, 0, 0]
-      Scale: [1, 1, 1]
-    RelationshipComponent:
-      Children:
-        []
-  - Entity: ab91e8df-7a4c-a588-8c86-4391ebf30c7f
-    TagComponent:
-      Tag: New Entity
-    TransformComponent:
-      Position: [0, 0, 0]
-      Rotation: [0, 0, 0]
-      Scale: [1, 1, 1]
-    RelationshipComponent:
-      Children:
-        []
-  - Entity: d29760c3-9547-0134-106b-e8b9cf5b33b3
+  - Entity: c207a6b8-d74d-99f0-e29d-42a5f0481181
     TagComponent:
       Tag: New Entity
     TransformComponent:
@@ -110,7 +21,96 @@ Entities:
     RelationshipComponent:
       Children:
         []
-  - Entity: c207a6b8-d74d-99f0-e29d-42a5f0481181
+  - Entity: d29760c3-9547-0134-106b-e8b9cf5b33b3
+    TagComponent:
+      Tag: New Entity
+    TransformComponent:
+      Position: [0, 0, 0]
+      Rotation: [0, 0, 0]
+      Scale: [1, 1, 1]
+    RelationshipComponent:
+      Children:
+        []
+  - Entity: ab91e8df-7a4c-a588-8c86-4391ebf30c7f
+    TagComponent:
+      Tag: New Entity
+    TransformComponent:
+      Position: [0, 0, 0]
+      Rotation: [0, 0, 0]
+      Scale: [1, 1, 1]
+    RelationshipComponent:
+      Children:
+        []
+  - Entity: d43489e1-5342-e997-efe2-408c3efae9b5
+    TagComponent:
+      Tag: New Entity
+    TransformComponent:
+      Position: [0, 0, 0]
+      Rotation: [0, 0, 0]
+      Scale: [1, 1, 1]
+    RelationshipComponent:
+      Children:
+        []
+  - Entity: 090f9661-c049-fc6c-2a5e-c48e5e6bd41a
+    TagComponent:
+      Tag: New Entity
+    TransformComponent:
+      Position: [0, 0, 0]
+      Rotation: [0, 0, 0]
+      Scale: [1, 1, 1]
+    RelationshipComponent:
+      Children:
+        []
+  - Entity: 98d0b096-6c47-d61d-22c6-868d7280d220
+    TagComponent:
+      Tag: New Entity
+    TransformComponent:
+      Position: [0, 0, 0]
+      Rotation: [0, 0, 0]
+      Scale: [1, 1, 1]
+    RelationshipComponent:
+      Children:
+        []
+  - Entity: b3abf689-7749-5dba-6a50-6282e4be6a45
+    TagComponent:
+      Tag: Sphere
+    MonoScriptComponent:
+      Name: Test
+    TransformComponent:
+      Position: [0.151727498, -0.214545116, 3.1500001]
+      Rotation: [0, 0, 0]
+      Scale: [1, 1, 1]
+    MeshRendererComponent:
+      Uuid: 1f443d64-3640-304f-a7dc-0cb572a04a53
+    RelationshipComponent:
+      Children:
+        - 42ab2eac-4f44-294c-321a-6cb8f4b0d6d7
+        - c42818f0-094f-c5ae-33f3-c1a2adfdea59
+  - Entity: d8a9c56f-6e43-3f38-ce9d-f5a07240972c
+    TagComponent:
+      Tag: Camera
+    TransformComponent:
+      Position: [0, 0, 5]
+      Rotation: [0, 0, 0]
+      Scale: [1, 1, 1]
+    CameraComponent:
+      ProjectionType: 1
+      PerspectiveFOV: 1.02367055
+      PerspectiveNear: 0.00999999978
+      PerspectiveFar: 1000
+      OrthographicSize: 10
+      OrthographicNear: -1
+      OrthographicFar: 1
+      HDR: true
+      MSAA: true
+      OcclusionCulling: false
+      BackgroundColor: [0.149013892, 0.196911216, 0.196911216]
+      ViewportRect: [0, 0, 1, 1]
+    RelationshipComponent:
+      Children:
+        - 98d0b096-6c47-d61d-22c6-868d7280d220
+        - c207a6b8-d74d-99f0-e29d-42a5f0481181
+  - Entity: 42ab2eac-4f44-294c-321a-6cb8f4b0d6d7
     TagComponent:
       Tag: New Entity
     TransformComponent:

@@ -28,7 +28,7 @@ namespace Crowny
 		Material(const Ref<Shader>& shader);
 		~Material() = default;
 
-		void Bind();
+		void Bind(uint32_t startslot);
 		void Unbind();
 
 		template<typename T>
@@ -83,7 +83,7 @@ namespace Crowny
 		MaterialInstance(const Ref<Material>& material);
 		const Ref<Material>& GetMaterial() const { return m_Material; }
 
-		void Bind();
+		void Bind(uint32_t startslot);
 		void Unbind();
 		void SetUniformData(const std::string& name, byte* data);
 		void SetTexture(const std::string& name, const Ref<Texture>& texture);

@@ -5,6 +5,7 @@
 
 #include "Platform/OpenGL/OpenGLTextureCube.h"
 #include "Platform/OpenGL/OpenGLTexture.h"
+#include "Platform/OpenGL/OpenGLEnvironmentMap.h"
 
 namespace Crowny
 {
@@ -30,6 +31,7 @@ namespace Crowny
 
 		return nullptr;
 	}
+
 
 	Ref<TextureCube> TextureCube::Create(const std::string& filepath, const TextureParameters& parameters)
 	{
@@ -58,6 +60,17 @@ namespace Crowny
 		switch (Renderer::GetAPI())
 		{
 			case RendererAPI::API::OpenGL: return CreateRef<OpenGLTextureCube>(files, mips, InputFormat::VERTICAL_CROSS, parameters);
+			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); return nullptr;
+		}
+
+		return nullptr;
+	}
+
+	Ref<EnvironmentMap> EnvironmentMap::Create(const std::string& filepath)
+	{
+		switch (Renderer::GetAPI())
+		{
+			case RendererAPI::API::OpenGL: return CreateRef<OpenGLEnvironmentMap>(filepath);
 			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); return nullptr;
 		}
 

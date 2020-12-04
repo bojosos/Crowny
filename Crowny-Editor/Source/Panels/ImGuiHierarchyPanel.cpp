@@ -223,7 +223,7 @@ namespace Crowny
 			DisplayLeafNode(e);
 		}
 
-		if (Input::IsKeyUp(Key::Delete) && !m_Deleted)
+		if (Input::IsKeyUp(Key::Delete) && !m_Deleted && ImGui::IsWindowFocused())
 		{
 			m_Deleted = true;
 			auto& rr = s_SelectedEntity.GetParent().GetComponent<RelationshipComponent>().Children;
@@ -255,7 +255,7 @@ namespace Crowny
 			m_NewEntityParent = {};
 		}
 
-		if (Input::IsKeyDown(Key::F2))
+		if (Input::IsKeyDown(Key::F2) && ImGui::IsWindowFocused())
 		{
 			m_Renaming = s_SelectedEntity;
 		}

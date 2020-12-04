@@ -30,17 +30,17 @@ namespace Crowny
 			m_VSUserUniforms = &vsBuffer->GetUniformDeclarations();
 		}
 
-		const ShaderUniformBufferDeclaration* psBuffer = m_Shader->GetFSUserUniformBuffer();
-		if (psBuffer)
+		const ShaderUniformBufferDeclaration* fsBuffer = m_Shader->GetFSUserUniformBuffer();
+		if (fsBuffer)
 		{
-			m_PSUserUniformBufferSize = psBuffer->GetSize();
+			m_PSUserUniformBufferSize = fsBuffer->GetSize();
 			m_PSUserUniformBuffer = new byte[m_PSUserUniformBufferSize];
 			memset(m_PSUserUniformBuffer, 0, m_PSUserUniformBufferSize);
-			m_PSUserUniforms = &psBuffer->GetUniformDeclarations();
+			m_PSUserUniforms = &fsBuffer->GetUniformDeclarations();
 		}
 	}
 
-	void Material::Bind()
+	void Material::Bind(uint32_t startslot)
 	{
 		m_Shader->Bind();
 
@@ -49,7 +49,7 @@ namespace Crowny
 		if (m_PSUserUniformBuffer)
 			m_Shader->SetFSUserUniformBuffer(m_PSUserUniformBuffer, m_PSUserUniformBufferSize);
 
-		for (uint32_t i = 0; i < m_Textures.size(); i++)
+		for (uint32_t i = startslot; i < m_Textures.size(); i++)
 		{
 			if (m_Textures[i])
 				m_Textures[i]->Bind(i);
@@ -151,16 +151,16 @@ namespace Crowny
 		}
 	}
 
-	void MaterialInstance::Bind()
+	void MaterialInstance::Bind(uint32_t startslot)
 	{
-		m_Material->Bind();
+		m_Material->Bind(startslot);
 
 		if (m_VSUserUniformBuffer)
 			m_Material->m_Shader->SetVSUserUniformBuffer(m_VSUserUniformBuffer, m_VSUserUniformBufferSize);
 		if (m_PSUserUniformBuffer)
 			m_Material->m_Shader->SetFSUserUniformBuffer(m_PSUserUniformBuffer, m_PSUserUniformBufferSize);
 
-		for (uint32_t i = 0; i < m_Textures.size(); i++)
+		for (uint32_t i = startslot; i < m_Textures.size(); i++)
 		{
 			if (m_Textures[i])
 				m_Textures[i]->Bind(i);
