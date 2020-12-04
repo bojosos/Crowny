@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Crowny/Common/Common.h"
 #include "Crowny/Renderer/Texture.h"
 
 namespace Crowny

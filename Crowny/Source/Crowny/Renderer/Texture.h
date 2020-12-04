@@ -171,4 +171,12 @@ namespace Crowny
 		static Ref<TextureCube> Create(const std::array<std::string, 6>& files, uint32_t mips, const TextureParameters& parameters = {});
 		
 	};
+
+	class EnvironmentMap : public Texture2D
+	{
+	public:
+		static Ref<EnvironmentMap> Create(const std::string& filepath);
+		
+		virtual void BindSkybox(uint32_t slot) const = 0;
+	};
 }

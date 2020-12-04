@@ -254,6 +254,7 @@ GENERATED += $(OBJDIR)/MeshFactory.o
 GENERATED += $(OBJDIR)/Model.o
 GENERATED += $(OBJDIR)/Noise.o
 GENERATED += $(OBJDIR)/OpenGLContext.o
+GENERATED += $(OBJDIR)/OpenGLEnvironmentMap.o
 GENERATED += $(OBJDIR)/OpenGLFramebuffer.o
 GENERATED += $(OBJDIR)/OpenGLIndexBuffer.o
 GENERATED += $(OBJDIR)/OpenGLInfo.o
@@ -340,6 +341,7 @@ OBJECTS += $(OBJDIR)/MeshFactory.o
 OBJECTS += $(OBJDIR)/Model.o
 OBJECTS += $(OBJDIR)/Noise.o
 OBJECTS += $(OBJDIR)/OpenGLContext.o
+OBJECTS += $(OBJDIR)/OpenGLEnvironmentMap.o
 OBJECTS += $(OBJDIR)/OpenGLFramebuffer.o
 OBJECTS += $(OBJDIR)/OpenGLIndexBuffer.o
 OBJECTS += $(OBJDIR)/OpenGLInfo.o
@@ -659,6 +661,9 @@ $(OBJDIR)/LinuxWindow.o: Source/Platform/Linux/LinuxWindow.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/OpenGLContext.o: Source/Platform/OpenGL/OpenGLContext.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/OpenGLEnvironmentMap.o: Source/Platform/OpenGL/OpenGLEnvironmentMap.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/OpenGLFramebuffer.o: Source/Platform/OpenGL/OpenGLFramebuffer.cpp

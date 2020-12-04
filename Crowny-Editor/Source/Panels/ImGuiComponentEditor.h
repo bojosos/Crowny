@@ -20,6 +20,7 @@ namespace Crowny
 	{
 		entity.AddComponent<Component>();
 		entity.GetComponent<Component>().ComponentParent = entity;
+		//TODO: Focus component SetKeyboardFocusHere(-1); 
 	}
 
 	template <class Component>

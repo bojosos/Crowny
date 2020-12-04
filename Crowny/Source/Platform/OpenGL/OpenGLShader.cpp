@@ -548,7 +548,9 @@ namespace Crowny
 					uint32_t count = decl->GetCount();
 					int32_t* samplers = new int32_t[count];
 					for (uint8_t i = 0; i < count; i++)
+					{
 						samplers[i] = i;
+					}
 					SetUniformIntV(decl->GetName(), samplers, count);
 					delete[] samplers;
 				}

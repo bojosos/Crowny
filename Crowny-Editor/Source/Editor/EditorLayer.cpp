@@ -82,6 +82,13 @@ namespace Crowny
 		mat->SetMetalnessMap(Texture2D::Create("/Textures/rustediron2_metallic.png"));
 		mat->SetNormalMap(Texture2D::Create("/Textures/rustediron2_normal.png"));
 		mat->SetRoughnessMap(Texture2D::Create("/Textures/rustediron2_roughness.png"));
+		
+		Ref<Texture2D> white = Texture2D::Create(2048, 2048);
+		uint32_t* whiteTextureData = new uint32_t[2048 * 2048];
+		for (int i = 0; i < 2048 * 2048; i++)
+			whiteTextureData[i] = 0xffffffff;
+		white->SetData(whiteTextureData, sizeof(uint32_t) * 2048 * 2048);
+		mat->SetAoMap(white);
 
 		ImGuiMaterialPanel::SetSelectedMaterial(mat);
 		//Ref<Model> model = CreateRef<Model>("Models/");
@@ -245,6 +252,10 @@ namespace Crowny
 				if (ctrl)
 				{
 					Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(Shader::Create("/Shaders/PBRShader.glsl"));
+					mat->SetAlbedoMap(Texture2D::Create("/Textures/rustediron2_basecolor.png"));
+					mat->SetMetalnessMap(Texture2D::Create("/Textures/rustediron2_metallic.png"));
+					mat->SetNormalMap(Texture2D::Create("/Textures/rustediron2_normal.png"));
+					mat->SetRoughnessMap(Texture2D::Create("/Textures/rustediron2_roughness.png"));
 					ImGuiMaterialPanel::SetSelectedMaterial(mat);
 				}
 				break;

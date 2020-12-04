@@ -1,8 +1,10 @@
-[23:22:02] [info] CROWNY: Domain Crowny C# Runtime created!
-[23:22:02] [info] CROWNY: Assembly Crowny.dll loaded
-[23:22:02] [info] CROWNY: Assembly Client.dll loaded
-[23:22:03] [info] CROWNY: Loaded texture /Textures/rustediron2_basecolor.png, 2048x2048x4.
-[23:22:03] [info] CROWNY: Loaded texture /Textures/rustediron2_metallic.png, 2048x2048x1.
-[23:22:03] [info] CROWNY: Loaded texture /Textures/rustediron2_normal.png, 2048x2048x3.
-[23:22:03] [info] CROWNY: Loaded texture /Textures/rustediron2_roughness.png, 2048x2048x1.
-[23:22:03] [info] CROWNY: Loaded texture /Textures/Unassigned.png, 608x608x3.
+[16:22:42] [info] CROWNY: Domain Crowny C# Runtime created!
+[16:22:42] [info] CROWNY: Assembly Crowny.dll loaded
+[16:22:42] [info] CROWNY: Assembly Client.dll loaded
+[16:22:42] [error] CROWNY: 0(31) : error C1115: unable to find compatible overloaded function "textureSize(sampler2D)"
+
+[16:22:42] [info] CROWNY: Loaded texture /Textures/rustediron2_basecolor.png, 2048x2048x4.
+[16:22:42] [info] CROWNY: Loaded texture /Textures/rustediron2_metallic.png, 2048x2048x1.
+[16:22:42] [info] CROWNY: Loaded texture /Textures/rustediron2_normal.png, 2048x2048x3.
+[16:22:42] [info] CROWNY: Loaded texture /Textures/rustediron2_roughness.png, 2048x2048x1.
+[16:22:42] [info] CROWNY: Loaded texture /Textures/Unassigned.png, 608x608x3.

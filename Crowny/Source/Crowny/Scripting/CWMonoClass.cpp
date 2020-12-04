@@ -57,7 +57,7 @@ namespace Crowny
 
 	CWMonoMethod* CWMonoClass::GetMethod(const std::string& nameWithArgs)
 	{
-		MonoMethodDesc* desc = mono_method_desc_new((":" + nameWithArgs).c_str(), 0);
+		MonoMethodDesc* desc = mono_method_desc_new((m_NamespaceName + ":" + nameWithArgs).c_str(), 0);
 		auto* res = new CWMonoMethod(mono_method_desc_search_in_class(desc, m_Class));
 		mono_method_desc_free(desc);
 
