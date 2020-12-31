@@ -35,9 +35,16 @@ namespace Crowny
 	enum class TextureFormat
 	{
 		NONE = 0,
-		RGB,
-		RGBA,
-		RED
+		
+		R8 = 1,
+		RGB8 = 2,
+		RGBA8 = 3,
+		RGBA16F = 4,
+		RGBA32F = 5,
+		RG32F = 6,
+		R32I = 7,
+		DEPTH32F = 8,
+		DEPTH24STENCIL8 = 9
 	};
 
 	enum class SwizzleType
@@ -107,12 +114,10 @@ namespace Crowny
 
 	struct TextureParameters
 	{
-		TextureParameters() = default;
-
-		TextureParameters(TextureFormat format, TextureFilter filter, TextureWrap wrap, TextureSwizzle swizzle = {}) : Format(format), Filter(filter), Wrap(wrap), Swizzle(swizzle)
-		{
-
-		}
+		TextureParameters(TextureFormat format = TextureFormat::RGBA8, 
+						  TextureFilter filter = TextureFilter::NEAREST,
+						  TextureWrap wrap = TextureWrap::REPEAT, 
+						  TextureSwizzle swizzle = {}) : Format(format), Filter(filter), Wrap(wrap), Swizzle(swizzle) { }
 
 		TextureType Type = TextureType::TEXTURE_DEFAULT;
 		TextureShape Shape = TextureShape::TEXTURE_2D;
@@ -121,9 +126,9 @@ namespace Crowny
 		bool ReadWrite = false;
 		bool GenerateMipmaps = false;
 
-		TextureFormat Format = TextureFormat::RGBA;
-		TextureFilter Filter = TextureFilter::NEAREST;
-		TextureWrap Wrap = TextureWrap::REPEAT;
+		TextureFormat Format;
+		TextureFilter Filter;
+		TextureWrap Wrap;
 		TextureSwizzle Swizzle;
 	};
 
@@ -150,7 +155,9 @@ namespace Crowny
 	{
 	public:
 		static Ref<Texture2D> Create(uint32_t width, uint32_t height, const TextureParameters& parameters = {});
-		static Ref<Texture2D> Create(const std::string& filepath, const TextureParameters& parameters = {});
+		static Ref<Texture2D> Create(const std::string& filepath, const TextureParameters& parameters = {}, const std::string& name = "");
+		virtual void Clear() = 0;
+		virtual const std::string& GetFilepath() const = 0;
 	};
 
 	class TextureCube : public Texture

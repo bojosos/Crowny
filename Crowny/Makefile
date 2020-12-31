@@ -226,13 +226,17 @@ GENERATED += $(OBJDIR)/CWMonoRuntime.o
 GENERATED += $(OBJDIR)/CWMonoType.o
 GENERATED += $(OBJDIR)/CmdArgs.o
 GENERATED += $(OBJDIR)/Color.o
+GENERATED += $(OBJDIR)/EditorCamera.o
 GENERATED += $(OBJDIR)/Entity.o
 GENERATED += $(OBJDIR)/Font.o
+GENERATED += $(OBJDIR)/ForwardPlusRenderer.o
 GENERATED += $(OBJDIR)/ForwardRenderer.o
 GENERATED += $(OBJDIR)/Framebuffer.o
 GENERATED += $(OBJDIR)/Frustum.o
 GENERATED += $(OBJDIR)/GraphicsContext.o
+GENERATED += $(OBJDIR)/IDBufferRenderer.o
 GENERATED += $(OBJDIR)/ImGuiBuild.o
+GENERATED += $(OBJDIR)/ImGuiConsoleBuffer.o
 GENERATED += $(OBJDIR)/ImGuiLayer.o
 GENERATED += $(OBJDIR)/ImGuiMenu.o
 GENERATED += $(OBJDIR)/IndexBuffer.o
@@ -313,13 +317,17 @@ OBJECTS += $(OBJDIR)/CWMonoRuntime.o
 OBJECTS += $(OBJDIR)/CWMonoType.o
 OBJECTS += $(OBJDIR)/CmdArgs.o
 OBJECTS += $(OBJDIR)/Color.o
+OBJECTS += $(OBJDIR)/EditorCamera.o
 OBJECTS += $(OBJDIR)/Entity.o
 OBJECTS += $(OBJDIR)/Font.o
+OBJECTS += $(OBJDIR)/ForwardPlusRenderer.o
 OBJECTS += $(OBJDIR)/ForwardRenderer.o
 OBJECTS += $(OBJDIR)/Framebuffer.o
 OBJECTS += $(OBJDIR)/Frustum.o
 OBJECTS += $(OBJDIR)/GraphicsContext.o
+OBJECTS += $(OBJDIR)/IDBufferRenderer.o
 OBJECTS += $(OBJDIR)/ImGuiBuild.o
+OBJECTS += $(OBJDIR)/ImGuiConsoleBuffer.o
 OBJECTS += $(OBJDIR)/ImGuiLayer.o
 OBJECTS += $(OBJDIR)/ImGuiMenu.o
 OBJECTS += $(OBJDIR)/IndexBuffer.o
@@ -498,6 +506,9 @@ $(OBJDIR)/Entity.o: Source/Crowny/Ecs/Entity.cpp
 $(OBJDIR)/ImGuiBuild.o: Source/Crowny/ImGui/ImGuiBuild.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ImGuiConsoleBuffer.o: Source/Crowny/ImGui/ImGuiConsoleBuffer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ImGuiLayer.o: Source/Crowny/ImGui/ImGuiLayer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -525,7 +536,13 @@ $(OBJDIR)/MemoryManager.o: Source/Crowny/Memory/MemoryManager.cpp
 $(OBJDIR)/Physics.o: Source/Crowny/Physics.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/EditorCamera.o: Source/Crowny/Renderer/EditorCamera.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Font.o: Source/Crowny/Renderer/Font.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ForwardPlusRenderer.o: Source/Crowny/Renderer/ForwardPlusRenderer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ForwardRenderer.o: Source/Crowny/Renderer/ForwardRenderer.cpp
@@ -535,6 +552,9 @@ $(OBJDIR)/Framebuffer.o: Source/Crowny/Renderer/Framebuffer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/GraphicsContext.o: Source/Crowny/Renderer/GraphicsContext.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/IDBufferRenderer.o: Source/Crowny/Renderer/IDBufferRenderer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/IndexBuffer.o: Source/Crowny/Renderer/IndexBuffer.cpp

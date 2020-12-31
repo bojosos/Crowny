@@ -9,18 +9,20 @@ namespace Crowny
 	{
 	public:
 		OpenGLTexture2D(uint32_t width, uint32_t height, const TextureParameters& parameters);
-		OpenGLTexture2D(const std::string& filepath, const TextureParameters& parameters);
+		OpenGLTexture2D(const std::string& filepath, const TextureParameters& parameters, const std::string& name);
 		~OpenGLTexture2D();
 
 		virtual uint32_t GetWidth() const override { return m_Width; }
 		virtual uint32_t GetHeight() const override { return m_Height; }
 
 		virtual const std::string& GetName() const override { return m_Name; }
+		virtual const std::string& GetFilepath() const override { return m_FilePath; }
 
 		virtual uint32_t GetRendererID() const override { return m_RendererID; };
 
 		virtual void Bind(uint32_t slot) const override;
 		virtual void Unbind(uint32_t slot) const override;
+		virtual void Clear() override;
 		virtual void SetData(void* data, uint32_t size) override;
 		virtual void SetData(void* data, TextureChannel channel = TextureChannel::CHANNEL_RGBA) override;
 
@@ -41,6 +43,7 @@ namespace Crowny
 		static uint32_t TextureFormatToOpenGLFormat(TextureFormat format);
 		static uint32_t TextureFormatToOpenGLInternalFormat(TextureFormat format);
 		static uint32_t TextureFilterToOpenGLFilter(TextureFilter filter);
+		static uint32_t TextureFormatToOpenGLType(TextureFormat format);
 		static uint32_t TextureWrapToOpenGLWrap(TextureWrap wrap);
 		static uint32_t TextureSwizzleToOpenGLSwizzle(SwizzleType swizzle);
 		static int32_t  TextureSwizzleColorToOpenGLSwizzleColor(SwizzleChannel color);

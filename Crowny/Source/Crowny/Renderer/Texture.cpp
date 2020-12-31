@@ -21,11 +21,11 @@ namespace Crowny
 		return nullptr;
 	}
 
-	Ref<Texture2D> Texture2D::Create(const std::string& filepath, const TextureParameters& parameters)
+	Ref<Texture2D> Texture2D::Create(const std::string& filepath, const TextureParameters& parameters, const std::string& name)
 	{
 		switch (Renderer::GetAPI())
 		{
-			case RendererAPI::API::OpenGL: return CreateRef<OpenGLTexture2D>(filepath, parameters);
+			case RendererAPI::API::OpenGL: return CreateRef<OpenGLTexture2D>(filepath, parameters, name);
 			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); return nullptr;
 		}
 

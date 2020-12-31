@@ -20,7 +20,7 @@ namespace Crowny
 			texture_font_load_glyph(m_Font, &f);
 		}
 
-		TextureParameters params = { TextureFormat::RGBA, TextureFilter::LINEAR, TextureWrap::REPEAT };
+		TextureParameters params = { TextureFormat::RGBA8, TextureFilter::LINEAR, TextureWrap::REPEAT };
 
 		m_Texture = Texture2D::Create(512, 512, params);
 

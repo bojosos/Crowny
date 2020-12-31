@@ -9,21 +9,34 @@
 
 namespace Crowny
 {
+	static std::string FixPath(const std::string& badPath)
+	{
+		std::string res = badPath;
+		size_t startPos = 0;
+		while((startPos = res.find("\\", startPos)) != std::string::npos) {
+			res.replace(startPos, 1, "/");
+			startPos++;
+		}
+		return res;
+	}
 
 	bool FileSystem::FileExists(const std::string& path)
 	{
+		FixPath(path);
 		std::ifstream f(path);
     	return f.good();
 	}
 
 	int64_t FileSystem::GetFileSize(const std::string& path)
 	{
+		FixPath(path);
 		std::ifstream in(path, std::ifstream::ate | std::ifstream::binary);
 		return in.tellg(); 
 	}
 
 	std::tuple<byte*, uint64_t> FileSystem::ReadFile(const std::string& path)
 	{
+		FixPath(path);
 		std::ifstream input(path, std::ios::binary);
 		
     	std::vector<byte>* bytes = new std::vector<byte>(
@@ -36,12 +49,14 @@ namespace Crowny
 
 	bool FileSystem::ReadFile(const std::string& path, void* buffer, int64_t size)
 	{
+		FixPath(path);
 		CW_ENGINE_CRITICAL("Read file void* not implemented");
 		return false;
 	}
 
 	std::string FileSystem::ReadTextFile(const std::string& path)
 	{
+		FixPath(path);
 		std::ifstream input(path);
 		
 		std::string res((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
@@ -51,6 +66,7 @@ namespace Crowny
 
 	bool FileSystem::WriteFile(const std::string& path, byte* buffer)
 	{
+		FixPath(path);
 		std::ofstream fout;
 		fout.open(path, std::ios::binary | std::ios::out);
 		fout.write((char*)buffer, sizeof(buffer));
@@ -60,6 +76,7 @@ namespace Crowny
 
 	bool FileSystem::WriteTextFile(const std::string& path, const std::string& text)
 	{	
+		FixPath(path);
 		std::ofstream fout;
 		fout.open(path, std::ios::out);
 		fout.write(text.c_str(), text.size());
@@ -69,6 +86,7 @@ namespace Crowny
 
 	bool FileSystem::OpenFileDialog(FileDialogType type, const std::string& initialDir, const std::string& filter, std::vector<std::string>& outPaths)
 	{	
+		FixPath(initialDir);
 		std::string add;
 
 		switch (type)

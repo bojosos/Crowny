@@ -71,7 +71,7 @@ namespace Crowny
 
 	Ref<Mesh> MeshFactory::CreateSphere(float xSegments, float ySegments)
 	{
-		Ref<VertexArray> vao = VertexArray::Create();
+		Ref<VertexArray> vao = VertexArray::Create(DrawMode::TRIANGLE_STRIP);
 		
 		std::vector<glm::vec3> positions;
 		std::vector<glm::vec2> uv;

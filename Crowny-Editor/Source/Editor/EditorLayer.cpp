@@ -9,6 +9,7 @@
 #include "Crowny/Scene/SceneSerializer.h"
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Renderer/IDBufferRenderer.h"
 
 #include "Editor/EditorAssets.h"
 
@@ -20,7 +21,9 @@
 
 namespace Crowny
 {
-	
+	Ref<Framebuffer> EditorLayer::m_Framebuffer = nullptr; // Maybe Viewport window should take care of this? nah scene renderer class
+	EditorCamera EditorLayer::s_EditorCamera = EditorCamera(30.0f, 1280.0f / 720.0f, 0.1f, 1000.0f);
+
 	EditorLayer::EditorLayer()
 		: Layer("EditorLayer")
 	{
@@ -32,6 +35,7 @@ namespace Crowny
 		FramebufferProperties fbProps;
 		fbProps.Width = 1280; // human code please
 		fbProps.Height = 720;
+		fbProps.Attachments = { FramebufferTextureFormat::RGBA8, FramebufferTextureFormat::DEPTH24STENCIL8 };
 		m_Framebuffer = Framebuffer::Create(fbProps);
 
 		m_MenuBar = new ImGuiMenuBar();
@@ -91,7 +95,6 @@ namespace Crowny
 		mat->SetAoMap(white);
 
 		ImGuiMaterialPanel::SetSelectedMaterial(mat);
-		//Ref<Model> model = CreateRef<Model>("Models/");
 		ForwardRenderer::Init(); // Why here?
 		EditorAssets::Load();
 
@@ -146,22 +149,31 @@ namespace Crowny
 
 	void EditorLayer::OnUpdate(Timestep ts)
 	{
+		Ref<Scene> scene = SceneManager::GetActiveScene();
+		m_ViewportSize = m_ViewportPanel->GetViewportSize();
 		if (m_Temp)
 		{
 			SceneManager::SetActiveScene(m_Temp);
 			m_Temp = nullptr;
 		}
+		s_EditorCamera.OnUpdate(ts);
 
 		if (FramebufferProperties spec = m_Framebuffer->GetProperties(); m_ViewportSize.x > 0.0f && m_ViewportSize.y > 0.0f && (spec.Width != m_ViewportSize.x || spec.Height != m_ViewportSize.y))
 		{
 			m_Framebuffer->Resize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
-			SceneManager::GetActiveScene()->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
+			scene->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
+			s_EditorCamera.SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
 		}
 
 		m_Framebuffer->Bind();
-		SceneManager::GetActiveScene()->OnUpdate(ts);
-		
+		scene->OnUpdateEditor(ts, s_EditorCamera);
 		m_Framebuffer->Unbind();
+		scene->DrawIDBuffer(s_EditorCamera);
+		glm::vec4 bounds = m_ViewportPanel->GetViewportBounds();
+		ImVec2 mouseCoords = ImGui::GetMousePos();
+		glm::vec2 coords = { mouseCoords.x - bounds.x, mouseCoords.y - bounds.y };
+		coords.y = m_ViewportSize.y - coords.y;
+		m_HoveredEntity = Entity((entt::entity)IDBufferRenderer::ReadPixel(coords.x, coords.y), scene.get());
 		m_HierarchyPanel->Update();
 	}
 	
@@ -275,10 +287,19 @@ namespace Crowny
 		return true;
 	}
 
+	bool EditorLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e)
+	{
+		ImGuiHierarchyPanel::SetSelectedEntity(m_HoveredEntity);
+		CW_ENGINE_INFO("Selected {0}", (uint32_t)m_HoveredEntity.GetHandle());
+		return true;
+	}
+
 	void EditorLayer::OnEvent(Event& e)
 	{
+		s_EditorCamera.OnEvent(e);
 		EventDispatcher dispatcher(e);
 		dispatcher.Dispatch<KeyPressedEvent>(CW_BIND_EVENT_FN(EditorLayer::OnKeyPressed));
+		dispatcher.Dispatch<MouseButtonPressedEvent>(CW_BIND_EVENT_FN(EditorLayer::OnMouseButtonPressed));
 	}
 
 }

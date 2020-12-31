@@ -9,6 +9,17 @@ namespace Crowny
 
 	VirtualFileSystem* VirtualFileSystem::s_Instance = nullptr;
 
+	static std::string FixPath(const std::string& badPath)
+	{
+		std::string res = badPath;
+		size_t startPos = 0;
+		while((startPos = res.find("\\", startPos)) != std::string::npos) {
+			res.replace(startPos, 1, "/");
+			startPos++;
+		}
+		return res;
+	}
+
 	void VirtualFileSystem::Init()
 	{
 		s_Instance = new VirtualFileSystem();
@@ -31,8 +42,9 @@ namespace Crowny
 		m_MountedDirectories[path].clear();
 	}
 
-	bool VirtualFileSystem::ResolvePhyiscalPath(const std::string& virtualPath, std::string& outPath)
+	bool VirtualFileSystem::ResolvePhyiscalPath(const std::string& inPath, std::string& outPath)
 	{
+		std::string virtualPath = FixPath(inPath);
 		if (virtualPath[0] != '/')
 		{
 			outPath = virtualPath;
@@ -51,12 +63,9 @@ namespace Crowny
 				outPath = virtualPath;
 				return true;
 			}
-			CW_ENGINE_WARN("File {0} does not exist");
-			return false;
-#else
-			CW_ENGINE_WARN("File {0} does not exist");
-			return false;
 #endif
+			CW_ENGINE_WARN("File {0} does not exist", virtualPath);
+			return false;
 }
 
 		std::string remaining = virtualPath.substr(virtualDir.size() + 1, virtualPath.size() - virtualDir.size());
@@ -70,7 +79,7 @@ namespace Crowny
 			}
 		}
 
-		CW_ENGINE_WARN("File {0} does not exist");
+		CW_ENGINE_WARN("File {0} does not exist", virtualPath);
 		return false;
 	}
 

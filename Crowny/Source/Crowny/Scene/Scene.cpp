@@ -8,6 +8,8 @@
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Renderer/RenderCommand.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
+#include "Crowny/Renderer/ForwardPlusRenderer.h"
+#include "Crowny/Renderer/IDBufferRenderer.h"
 
 #include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
 
@@ -97,7 +99,7 @@ namespace Crowny
 		m_Running = true;
 	}
 
-	void Scene::OnUpdate(Timestep ts)
+	void Scene::OnUpdateRuntime(Timestep ts)
 	{
 		if (!m_Running)
 			return;
@@ -121,42 +123,120 @@ namespace Crowny
 		RenderCommand::Clear();
 
 		m_Registry.group<TransformComponent>(entt::get<CameraComponent>).each([&](const auto& entity, auto& tc, auto& cc)
-			{ 
-				const glm::vec4& rect = cc.Camera.GetViewportRect();
-				Renderer::SetViewport(rect.x * m_ViewportWidth, rect.y * m_ViewportHeight, rect.z * m_ViewportWidth, rect.w * m_ViewportHeight);
-				Renderer2D::Begin(cc.Camera.GetProjection(), tc.GetTransform());
+		{ 
+			const glm::vec4& rect = cc.Camera.GetViewportRect();
+			Renderer::SetViewport(rect.x * m_ViewportWidth, rect.y * m_ViewportHeight, rect.z * m_ViewportWidth, rect.w * m_ViewportHeight);
+			Renderer2D::Begin(cc.Camera.GetProjection(), tc.GetTransform());
 
-				auto group = m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
-				for (auto ee : group)
-				{
-					auto [transform, sprite] = m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
-					Renderer2D::FillRect(transform.GetTransform(), sprite.Texture, sprite.Color);
-				}
+			auto group = m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
+			for (auto ee : group)
+			{
+				auto [transform, sprite] = m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
+				Renderer2D::FillRect(transform.GetTransform(), sprite.Texture, sprite.Color);
+			}
 
-				// TODO: Use rect transform, Use Canvas Renderer so I don't have to iterate over each type of ui component
-				auto ttt = m_Registry.group<TextComponent>(entt::get<TransformComponent>);
-				for (auto ee : ttt)
-				{
-					auto [transform, tc] = m_Registry.get<TransformComponent, TextComponent>(ee);
-					Renderer2D::DrawString(tc.Text, transform.GetTransform(), tc.Font, tc.Color);
-				}
+			// TODO: Use rect transform, Use Canvas Renderer so I don't have to iterate over each type of ui component
+			auto ttt = m_Registry.group<TextComponent>(entt::get<TransformComponent>);
+			for (auto ee : ttt)
+			{
+				auto [transform, tc] = m_Registry.get<TransformComponent, TextComponent>(ee);
+				Renderer2D::DrawString(tc.Text, transform.GetTransform(), tc.Font, tc.Color);
+			}
 
-				Renderer2D::End();
+			Renderer2D::End();
 
-				ForwardRenderer::Begin();
-				ForwardRenderer::BeginScene(&cc.Camera, tc.GetTransform());
-				ForwardRenderer::SubmitLightSetup();
-				auto objs = m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
-				for (auto obj : objs)
-				{
-					auto [transform, mesh] = m_Registry.get<TransformComponent, MeshRendererComponent>(obj);
-					mesh.Mesh->SetMaterialInstnace(CreateRef<MaterialInstance>(ImGuiMaterialPanel::GetSlectedMaterial()));
-					ForwardRenderer::SubmitMesh(mesh.Mesh, transform.GetTransform());
-				}
-				ForwardRenderer::Flush();
-				ForwardRenderer::EndScene();
-				ForwardRenderer::End();
+			ForwardRenderer::Begin();
+			ForwardRenderer::BeginScene(cc.Camera, tc.GetTransform());
+			ForwardRenderer::SubmitLightSetup();
+			//auto objs = m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
+			//for (auto obj : objs)
+			//{
+				//auto [transform, mesh] = m_Registry.get<TransformComponent, MeshRendererComponent>(obj);
+				//mesh.Mesh->SetMaterialInstnace(CreateRef<MaterialInstance>(ImGuiMaterialPanel::GetSlectedMaterial()));
+				//ForwardRenderer::SubmitMesh(mesh.Mesh, transform.GetTransform());
+			//}
+			ForwardRenderer::Flush();
+			ForwardRenderer::EndScene();
+			ForwardRenderer::End();
+
+			//ForwardPlusRenderer::Submit(cc.Camera, tc.GetTransform());
+			//ForwardPlusRenderer::Submit(m_Model, glm::mat4(1.0));
+			
+		});
+	}
+	
+	void Scene::OnUpdateEditor(Timestep ts, EditorCamera& camera)
+	{
+		RenderCommand::Clear();
+		if (m_Running)
+			m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent &sc) {
+				if (sc.UpdateMethod)
+					sc.UpdateMethod->Call(sc.Instance);
 			});
+		
+		ForwardRenderer::Begin();
+		ForwardRenderer::BeginScene(camera, camera.GetViewMatrix());
+		ForwardRenderer::SubmitLightSetup();
+		auto objs = m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
+		for (auto obj : objs)
+		{
+			auto [transform, mesh] = m_Registry.get<TransformComponent, MeshRendererComponent>(obj);
+			if (mesh.Mesh)
+			{
+		    	mesh.Mesh->SetMaterialInstnace(CreateRef<MaterialInstance>(ImGuiMaterialPanel::GetSlectedMaterial()));
+			    ForwardRenderer::SubmitMesh(mesh.Mesh, transform.GetTransform());
+			}
+		}
+		ForwardRenderer::Flush();
+		ForwardRenderer::EndScene();
+		ForwardRenderer::End();
+
+		Renderer2D::Begin(camera, camera.GetViewMatrix());
+		auto group = m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
+		for (auto ee : group)
+		{
+			auto [transform, sprite] = m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
+			Renderer2D::FillRect(transform.GetTransform(), sprite.Texture, sprite.Color);
+		}
+		Renderer2D::End();
+		/*
+		ForwardPlusRenderer::BeginFrame(camera);
+		auto objs = m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
+		for (auto obj : objs)
+		{
+			auto [transform, mesh] = m_Registry.get<TransformComponent, MeshRendererComponent>(obj);
+			if (mesh.Mesh)
+			{
+		    	mesh.Mesh->SetMaterialInstnace(CreateRef<MaterialInstance>(ImGuiMaterialPanel::GetSlectedMaterial()));
+			    ForwardPlusRenderer::Submit(mesh.Mesh, transform.GetTransform());
+			}
+		}
+		ForwardPlusRenderer::EndFrame();*/
+	}
+
+	void Scene::DrawIDBuffer(EditorCamera& editorCamera)
+	{
+		IDBufferRenderer::Begin(editorCamera.GetProjection(), editorCamera.GetViewMatrix());
+		{
+			auto group = m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
+			for (auto entity : group)
+			{
+				auto [transform, sprite] = m_Registry.get<TransformComponent, SpriteRendererComponent>(entity);
+				IDBufferRenderer::DrawQuad(transform.GetTransform(), (uint32_t)entity);
+			}
+		}
+		{
+			auto group = m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
+			for (auto entity : group)
+			{
+				auto [transform, mesh] = m_Registry.get<TransformComponent, MeshRendererComponent>(entity);
+				if (mesh.Mesh)
+				{
+					IDBufferRenderer::DrawMesh(mesh.Mesh, transform.GetTransform(), (uint32_t)entity);
+				}
+			}
+		}
+		IDBufferRenderer::End();
 	}
 
 	Entity Scene::CreateEntity(const std::string& name)
@@ -218,7 +298,7 @@ namespace Crowny
 	{
 		m_ViewportWidth = width;
 		m_ViewportHeight = height;
-
+		IDBufferRenderer::OnResize(width, height);
 		m_Registry.view<CameraComponent>().each([&](auto& e, auto& cc) {
 		//if(!cc.FixedAspectRatio)
 			cc.Camera.SetViewportSize(width, height);

@@ -2,13 +2,30 @@
 
 #include "Crowny/Renderer/Mesh.h"
 #include "Crowny/Renderer/Renderer.h"
+#include "Crowny/Renderer/RenderCommand.h"
 
 namespace Crowny
 {
 
-	Mesh::Mesh(const Ref<VertexArray>& vao, const Ref<IndexBuffer>& ibo, const Ref<MaterialInstance>& material) : m_VertexArray(vao), m_IndexBuffer(ibo), m_MaterialInstance(material)
+	Mesh::Mesh(const Ref<VertexArray>& vao, const Ref<IndexBuffer>& ibo, const Ref<MaterialInstance>& material, const std::vector<Ref<Texture2D>>& textures) 
+								: m_VertexArray(vao), m_IndexBuffer(ibo), m_MaterialInstance(material), m_Textures(textures)
 	{
 
+	}
+
+	void Mesh::Draw()
+	{
+		/*
+		m_MaterialInstance->Bind(0);
+		for (uint32_t i = 0; i < m_Textures.size(); i++)
+		{
+			if (m_Textures[i])
+				m_Textures[i]->Bind(i);
+		}*/
+		m_VertexArray->Bind();
+		RenderCommand::DrawIndexed(m_VertexArray);
+		m_VertexArray->Unbind();
+		m_MaterialInstance->Unbind();
 	}
 
 }

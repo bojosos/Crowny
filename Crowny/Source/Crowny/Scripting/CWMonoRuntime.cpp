@@ -28,9 +28,9 @@ namespace Crowny
 		if (level == std::string("info"))
 			CW_ENGINE_INFO("{0} -> {1}", domain, message);
 		if (level == std::string("message"))
-			CW_ENGINE_TRACE("{0} -> {1}", domain, message);
+			CW_ENGINE_INFO("{0} -> {1}", domain, message);
 		if (level == std::string("debug"))
-			CW_ENGINE_TRACE("{0} -> {1}", domain, message);
+			CW_ENGINE_INFO("{0} -> {1}", domain, message);
 	}
 
 	bool CWMonoRuntime::Init(const std::string& domainName)

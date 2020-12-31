@@ -4,120 +4,94 @@
 
 namespace Crowny
 {
-
+    
     ImGuiConsolePanel::ImGuiConsolePanel(const std::string& name) : ImGuiPanel(name)
 	{
 
 	}
 
-    void ImGuiConsolePanel::Clear()
-    {
-        Log::s_Output.flush();
-    }
-
 	void ImGuiConsolePanel::Render()
 	{
-        ImGui::Begin("Console");
-        
-        m_Buffer.clear();
-        m_LineOffsets.clear();
-		m_Buffer.append(Log::s_Output.str().c_str());
-        for (int i = 0; i < m_Buffer.size(); i++)
-            if (m_Buffer[i] == '\n')
-                m_LineOffsets.push_back(i + 1);
-
-        if (ImGui::Button("Clear"))
-            Clear();
-        //if (ImGui::Button("Copy"))
-            //ImGui::LogToClipboard();
-
-        ImGui::Separator();
-        ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
-
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-        const char* buf = m_Buffer.begin();
-        const char* buf_end = m_Buffer.end();
-        //ImGui::TextUnformatted(buf, buf_end);
-        
-        if (m_SearchFilter.IsActive())
+		m_RequestScrollToBottom = ImGuiConsoleBuffer::HasNewMessages();
+        if (ImGui::Begin("Console"), m_Shown)
         {
-            for (int line_no = 0; line_no < m_LineOffsets.size(); line_no++)
-            {
-                const char* line_start = buf + m_LineOffsets[line_no];
-                const char* line_end = (line_no + 1 < m_LineOffsets.size()) ? (buf + m_LineOffsets[line_no + 1] - 1) : buf_end;
-                if (m_SearchFilter.PassFilter(line_start, line_end))
-                {
-                    if (m_Info.PassFilter(line_start, line_end))
-                    {
-                        ImGui::PushStyleColor(ImGuiCol_Text, { 0, 128, 0, 255 });
-                        ImGui::TextUnformatted(line_start, line_end);
-                        ImGui::PopStyleColor();
-                    } else if (m_Warning.PassFilter(line_start, line_end))
-                    {
-                        ImGui::PushStyleColor(ImGuiCol_Text, { 255, 255, 0, 255 });
-                        ImGui::TextUnformatted(line_start, line_end);
-                        ImGui::PopStyleColor();
-                    } else if (m_Error.PassFilter(line_start, line_end))
-                    {
-                        ImGui::PushStyleColor(ImGuiCol_Text, { 220, 0, 0, 255 });
-                        ImGui::TextUnformatted(line_start, line_end);
-                        ImGui::PopStyleColor();
-                    }
-                    else if (m_Critical.PassFilter(line_start, line_end))
-                    {
-                        ImGui::PushStyleColor(ImGuiCol_Text, { 139, 0, 0, 255 });
-                        ImGui::TextUnformatted(line_start, line_end);
-                        ImGui::PopStyleColor();
-                    } else ImGui::TextUnformatted(line_start, line_end);
-                }
-            }
+            RenderHeader();
+            ImGui::Separator();
+            RenderMessages();
+            ImGui::End();
         }
-        else
-        {
-            ImGuiListClipper clipper;
-            clipper.Begin(m_LineOffsets.size());
-            while (clipper.Step())
-            {
-                for (int line_no = clipper.DisplayStart; line_no < clipper.DisplayEnd; line_no++)
-                {
-                    const char* line_start = buf + m_LineOffsets[line_no];
-                    const char* line_end = (line_no + 1 < m_LineOffsets.size()) ? (buf + m_LineOffsets[line_no + 1] - 1) : buf_end;
-                    if (m_SearchFilter.PassFilter(line_start, line_end))
-                    {
-                        if (m_Info.PassFilter(line_start, line_end))
-                        {
-                            ImGui::PushStyleColor(ImGuiCol_Text, { 0, 128, 0, 255 });
-                            ImGui::TextUnformatted(line_start, line_end);
-                            ImGui::PopStyleColor();
-                        } else if (m_Warning.PassFilter(line_start, line_end))
-                        {
-                            ImGui::PushStyleColor(ImGuiCol_Text, { 255, 255, 0, 255 });
-                            ImGui::TextUnformatted(line_start, line_end);
-                            ImGui::PopStyleColor();
-                        } else if (m_Error.PassFilter(line_start, line_end))
-                        {
-                            ImGui::PushStyleColor(ImGuiCol_Text, { 220, 0, 0, 255 });
-                            ImGui::TextUnformatted(line_start, line_end);
-                            ImGui::PopStyleColor();
-                        }
-                        else if (m_Critical.PassFilter(line_start, line_end))
-                        {
-                            ImGui::PushStyleColor(ImGuiCol_Text, { 139, 0, 0, 255 });
-                            ImGui::TextUnformatted(line_start, line_end);
-                            ImGui::PopStyleColor();
-                        } else ImGui::TextUnformatted(line_start, line_end);
-                    }
-                }
-            }
-            clipper.End();
-        }
-        //ImGui::PopStyleColor();
-        ImGui::PopStyleVar();
+	}
 
-        if (m_AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
-            ImGui::SetScrollHereY(1.0f);
+    void ImGuiConsolePanel::RenderHeader()
+    {
+        ImGuiStyle& style = ImGui::GetStyle();
+        const float spacing = style.ItemInnerSpacing.x;
+        ImGui::AlignTextToFramePadding();
 
-        ImGui::EndChild();
-        ImGui::End();
+		for (int i = 0; i < ImGuiConsoleBuffer::Message::s_Levels.size(); i++)
+		{
+			ImGui::SameLine(0.0f, 2.0f * spacing);
+			glm::vec4 color = GetRenderColor(ImGuiConsoleBuffer::Message::s_Levels[i]);
+			//ImGui::PushStyleColor(ImGuiCol_Text, { color.r, color.g, color.b, color.a });
+			ImGui::Checkbox(ImGuiConsoleBuffer::Message::GetLevelName(ImGuiConsoleBuffer::Message::s_Levels[i]), &m_EnabledLevels[i]);
+			//ImGui::PopStyleColor();
+		}
+
+		RenderSettings();
+    }
+
+    void ImGuiConsolePanel::RenderSettings()
+    {
+        const float maxWidth = ImGui::CalcTextSize("Scroll to bottom").x * 1.1f;
+		const float spacing = ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(" ").x;
+		const float checkboxSize = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2;
+		
+		ImGui::SameLine(ImGui::GetContentRegionAvail().x - checkboxSize - ImGui::CalcTextSize("Clear console").x + 1.0f - maxWidth - 2 * spacing);
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Scroll to bottom");
+		ImGui::SameLine(0.0f, spacing);
+		ImGui::Checkbox("##ScrollToBottom", &m_AllowScrollingToBottom);
+		ImGui::SameLine(0.0f, spacing);
+		if (ImGui::Button("Clear console"))
+			ImGuiConsoleBuffer::Clear();
+    }
+
+	void ImGuiConsolePanel::RenderMessages()
+	{
+		ImGui::BeginChild("ScrollRegion", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+		{
+			ImGui::SetWindowFontScale(m_DisplayScale);
+			for (auto& message : ImGuiConsoleBuffer::GetBuffer())
+				RenderMessage(message);
+
+			if (m_RequestScrollToBottom && ImGui::GetScrollMaxY() > 0)
+			{
+				//ImGui::SetScrollY(ImGui::GetScrollMaxY());
+				ImGui::SetScrollHereY(1.0f);
+				m_RequestScrollToBottom = false;
+			}
+		}
+		ImGui::EndChild();
+	}
+    
+    void ImGuiConsolePanel::RenderMessage(const Ref<ImGuiConsoleBuffer::Message>& message)
+	{
+		ImGuiConsoleBuffer::Message::Level level = message->GetLevel();
+		if (level != ImGuiConsoleBuffer::Message::Level::Invalid && m_EnabledLevels[(int8_t)level])
+		{
+			glm::vec4 color = GetRenderColor(level);
+			ImGui::PushStyleColor(ImGuiCol_Text, { color.r, color.g, color.b, color.a });
+			ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.0f, 0.5f));
+			bool selected = m_SelectedMessage == message;
+			ImGui::Selectable(message->GetMessage().c_str(), &selected, 0, {ImGui::GetContentRegionAvailWidth(), 
+										ImGui::CalcTextSize(message->GetMessage().c_str()).y * 2.0f});
+			if (selected)
+				m_SelectedMessage = message;
+			ImGui::PopStyleVar();
+			
+			ImDrawList* draw_list = ImGui::GetWindowDrawList();
+			draw_list->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 255, 255));
+			ImGui::PopStyleColor(1);
+		}
 	}
 }

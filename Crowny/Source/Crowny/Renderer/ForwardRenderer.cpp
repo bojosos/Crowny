@@ -4,6 +4,7 @@
 #include "Crowny/Renderer/RenderCommand.h"
 #include "../../Crowny-Editor/Source/Panels/ImGuiMaterialPanel.h"
 
+#include <glm/gtc/type_ptr.hpp>
 #include <glad/glad.h>
 
 namespace Crowny
@@ -69,20 +70,19 @@ namespace Crowny
 		
 	}
 
-	void ForwardRenderer::BeginScene(Camera* camera, const glm::mat4& transform)
+	void ForwardRenderer::BeginScene(const Camera& camera, const glm::mat4& viewMatrix)
 	{
 		s_Data.Envmap->Bind(0);
 		byte* data = new byte[sizeof(glm::mat4) * 2];
-		memcpy(data, &camera->GetProjection(), sizeof(glm::mat4));
-		auto inv = glm::inverse(transform);
-		memcpy(data + sizeof(glm::mat4), &inv, sizeof(glm::mat4));
+		memcpy(data, glm::value_ptr(camera.GetProjection()), sizeof(glm::mat4));
+		memcpy(data + sizeof(glm::mat4), glm::value_ptr(viewMatrix), sizeof(glm::mat4));
 		s_Data.BackgroundShader->Bind();
 		s_Data.BackgroundShader->SetVSSystemUniformBuffer(data, sizeof(glm::mat4) * 2, 0);
 		delete[] data;
-		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ProjectionMatrix], &camera->GetProjection(), sizeof(glm::mat4));
-		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ViewMatrix], &inv, sizeof(glm::mat4)); // no inverse?
-		glm::vec3 pos = glm::vec3(transform[3]);
-		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_CameraPosition], &pos, sizeof(glm::vec3));
+		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ProjectionMatrix], glm::value_ptr(camera.GetProjection()), sizeof(glm::mat4));
+		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ViewMatrix], glm::value_ptr(viewMatrix), sizeof(glm::mat4)); // no inverse?
+		glm::vec3 pos = glm::vec3(glm::inverse(viewMatrix)[3]);
+		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_CameraPosition], glm::value_ptr(pos), sizeof(glm::vec3));
 	}
 
 	void ForwardRenderer::SetSystemUniforms(const Ref<Shader>& shader)
@@ -112,31 +112,21 @@ namespace Crowny
 
 	void ForwardRenderer::Submit(const Ref<Model>& model)
 	{
-		auto& texs = model->GetTextures();
-		for (uint32_t i = 0; i < texs.size(); i++)
-		{
-			texs[i]->Bind(i);
-		}
-
 		for (auto& mesh : model->GetMeshes())
 		{
-			mesh->GetMaterialInstance()->Bind(1);
-			mesh->GetVertexArray()->Bind();
-			RenderCommand::DrawIndexed(mesh->GetVertexArray());
-			mesh->GetMaterialInstance()->Unbind();
-			mesh->GetVertexArray()->Unbind();
+			model->Draw();
 		}
 	}
 
 	void ForwardRenderer::SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform)
 	{
 		mesh->GetMaterialInstance()->Bind(3);
-		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ModelMatrix], &transform, sizeof(glm::mat4));
+		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ModelMatrix], glm::value_ptr(transform), sizeof(glm::mat4));
 		SetSystemUniforms(mesh->GetMaterialInstance()->GetMaterial()->GetShader());
 		s_Data.Envmap->Bind(0);
 		mesh->GetVertexArray()->Bind();
 		SubmitLightSetup();
-		RenderCommand::DrawIndexed(mesh->GetVertexArray(), DrawMode::TRIANGLE_STRIP, 0); // for spheres had to use triangle_strip
+		RenderCommand::DrawIndexed(mesh->GetVertexArray());
 	}
 
 	void ForwardRenderer::EndScene()
@@ -207,7 +197,6 @@ namespace Crowny
 			glBindBuffer(GL_ARRAY_BUFFER, 0);
 			glBindVertexArray(0);
 		}
-		// render Cube
 		glBindVertexArray(cubeVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 		glBindVertexArray(0);

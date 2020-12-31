@@ -11,6 +11,7 @@
 #include "Panels/ImGuiMaterialPanel.h"
 #include "Panels/ImGuiConsolePanel.h"
 #include "Crowny/Scene/Scene.h"
+#include "Crowny/Renderer/EditorCamera.h"
 
 #include "Crowny/Scripting/CWMonoClass.h"
 
@@ -36,6 +37,7 @@ namespace Crowny
 		virtual void OnEvent(Event& e) override;
 
 		bool OnKeyPressed(KeyPressedEvent& e);
+		bool OnMouseButtonPressed(MouseButtonPressedEvent& e);
 
 		void CreateNewScene();
 		void OpenScene();
@@ -57,8 +59,12 @@ namespace Crowny
 		uint32_t m_GizmoMode = 0;
 
 		std::vector<ImGuiPanel*> m_ImGuiWindows;
+		static EditorCamera s_EditorCamera;
+		Entity m_HoveredEntity;
 		
-		Ref<Framebuffer> m_Framebuffer; // Maybe Viewport window should take care of this?
 		glm::vec2 m_ViewportSize = { 1280.0f, 720.0f }; // and dis
+	public:
+		static EditorCamera GetEditorCamera() { return s_EditorCamera; }
+		static Ref<Framebuffer> m_Framebuffer; // Maybe Viewport window should take care of this?
 	};
 }

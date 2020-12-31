@@ -10,12 +10,13 @@ namespace Crowny
 #ifndef MC_WEB
 	void OpenGLMessageCallback(unsigned source, unsigned type, unsigned id, unsigned severity, int length, const char* message, const void* userParam)
 	{
+		CW_ENGINE_ASSERT(false); 
 		switch (severity)
 		{
-		case GL_DEBUG_SEVERITY_HIGH:         CW_ENGINE_CRITICAL(message); return;
-		case GL_DEBUG_SEVERITY_MEDIUM:       CW_ENGINE_ERROR(message); return;
-		case GL_DEBUG_SEVERITY_LOW:          CW_ENGINE_WARN(message); return;
-		case GL_DEBUG_SEVERITY_NOTIFICATION: CW_ENGINE_TRACE(message); return;
+			case GL_DEBUG_SEVERITY_HIGH:         CW_ENGINE_CRITICAL(message); return;
+			case GL_DEBUG_SEVERITY_MEDIUM:       CW_ENGINE_ERROR(message); return;
+			case GL_DEBUG_SEVERITY_LOW:          CW_ENGINE_WARN(message); return;
+			case GL_DEBUG_SEVERITY_NOTIFICATION: CW_ENGINE_INFO(message); return;
 		}
 	}
 #endif
@@ -38,6 +39,15 @@ namespace Crowny
 		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, nullptr, GL_FALSE);
 #endif
 #endif
+	}
+
+	void OpenGLRendererAPI::SetDepthTest(bool value)
+	{
+		if (value)
+			glEnable(GL_DEPTH_TEST);
+		else
+			glDisable(GL_DEPTH_TEST);
+		
 	}
 
 	void OpenGLRendererAPI::Clear()
@@ -64,10 +74,10 @@ namespace Crowny
 		}
 	}
 
-	void OpenGLRendererAPI::DrawIndexed(const Ref<VertexArray>& vertexArray, DrawMode drawMode, uint32_t indexCount)
+	void OpenGLRendererAPI::DrawIndexed(const Ref<VertexArray>& vertexArray, uint32_t indexCount)
 	{
-		uint32_t count = indexCount ? indexCount : vertexArray->GetIndexBuffer()->GetCount();
-		glDrawElements(DrawModeToOpenGLMode(drawMode), count, GL_UNSIGNED_INT, nullptr);
+		uint32_t count = indexCount == -1 ? vertexArray->GetIndexBuffer()->GetCount() : indexCount;
+		glDrawElements(DrawModeToOpenGLMode(vertexArray->GetDrawMode()), count, GL_UNSIGNED_INT, nullptr);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 }

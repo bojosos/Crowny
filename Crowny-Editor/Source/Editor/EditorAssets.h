@@ -1,3 +1,4 @@
+#pragma once
 
 #include "Crowny/Renderer/Texture.h"
 

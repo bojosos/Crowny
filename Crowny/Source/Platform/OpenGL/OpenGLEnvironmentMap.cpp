@@ -145,6 +145,11 @@ namespace Crowny
         glBindVertexArray(0);
     }
 
+    void OpenGLEnvironmentMap::Clear()
+    {
+        CW_ENGINE_ASSERT(false);
+    }
+
     void OpenGLEnvironmentMap::Bind(uint32_t slot) const
     {
         glBindTextureUnit(slot, m_IrradianceMap);

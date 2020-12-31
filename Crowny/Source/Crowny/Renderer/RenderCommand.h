@@ -28,9 +28,14 @@ namespace Crowny
 			s_RendererAPI->Clear();
 		}
 
-		static void DrawIndexed(const Ref<VertexArray>& vertexArray, DrawMode drawMode = DrawMode::TRIANGLES, uint32_t count = 0)
+		static void SetDepthTest(bool value)
 		{
-			s_RendererAPI->DrawIndexed(vertexArray, drawMode, count);
+			s_RendererAPI->SetDepthTest(value);
+		}	
+
+		static void DrawIndexed(const Ref<VertexArray>& vertexArray, uint32_t count = -1)
+		{
+			s_RendererAPI->DrawIndexed(vertexArray, count);
 		}
 
 	private:

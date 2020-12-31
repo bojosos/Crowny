@@ -141,20 +141,22 @@ namespace Crowny
 		void ResolveAndSetUniforms(ShaderUniformBufferDeclaration* buff, byte* data, uint32_t size);
 		void ResolveAndSetUniform(OpenGLUniformDeclaration* uniform, byte* data, uint32_t size);
 
-		void SetUniformFloat(const std::string& name, float value);
-		void SetUniformFloat2(const std::string& name, const glm::vec2& value);
-		void SetUniformFloat3(const std::string& name, const glm::vec3& value);
-		void SetUniformFloat4(const std::string& name, const glm::vec4& value);
-		void SetUniformInt(const std::string& name, int value);
-		void SetUniformIntV(const std::string& name, int* ptr, uint32_t count);
-		void SetUniformMat3(const std::string& name, const glm::mat3& value);
-		void SetUniformMat4(const std::string& name, const glm::mat4& value);
+		virtual void SetUniformFloat(const std::string& name, float value) override;
+		virtual void SetUniformFloat2(const std::string& name, const glm::vec2& value) override;
+		virtual void SetUniformFloat3(const std::string& name, const glm::vec3& value) override;
+		virtual void SetUniformFloat4(const std::string& name, const glm::vec4& value) override;
+		virtual void SetUniformInt(const std::string& name, int value) override;
+		virtual void SetUniformInt2(const std::string& name, int a, int b) override;
+		virtual void SetUniformIntV(const std::string& name, int* ptr, uint32_t count) override;
+		virtual void SetUniformMat3(const std::string& name, const glm::mat3& value) override;
+		virtual void SetUniformMat4(const std::string& name, const glm::mat4& value) override;
 
 		void SetUniformFloat(uint32_t location, float value);
 		void SetUniformFloat2(uint32_t location, const glm::vec2& value);
 		void SetUniformFloat3(uint32_t location, const glm::vec3& value);
 		void SetUniformFloat4(uint32_t location, const glm::vec4& value);
 		void SetUniformInt(uint32_t location, int value);
+		void SetUniformInt2(uint32_t location, int a, int b);
 		void SetUniformIntV(uint32_t location, int* ptr, uint32_t count);
 		void SetUniformMat3(uint32_t location, const glm::mat3& value);
 		void SetUniformMat4(uint32_t location, const glm::mat4& value);
