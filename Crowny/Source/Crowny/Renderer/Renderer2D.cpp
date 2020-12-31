@@ -6,6 +6,7 @@
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Renderer/Renderer.h"
 
+#include <glm/gtc/type_ptr.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <freetype-gl.h>
 
@@ -42,10 +43,8 @@ namespace Crowny
 		Renderer2DSystemUniform(const UniformBuffer& buffer, uint32_t offset) : Buffer(buffer), Offset(offset) { }
 	};
 
-	//TODO: Fix textures
 	struct Renderer2DData
 	{ // TODO: RenderCaps
-
 		Ref<VertexArray> VertexArray;
 		Ref<VertexBuffer> VertexBuffer;
 		Ref<Shader> Shader;
@@ -126,13 +125,16 @@ namespace Crowny
 		delete[] indices;
 	}
 
-	void Renderer2D::Begin(const glm::mat4& projection, const glm::mat4& transform)
+	void Renderer2D::Begin(const Camera& camera, const glm::mat4& viewMatrix)
 	{
-		memcpy(s_Data->SystemUniforms[UniformIndex_ProjectionMatrix].Buffer.Buffer + s_Data->SystemUniforms[UniformIndex_ProjectionMatrix].Offset, &projection, sizeof(glm::mat4));
-		glm::mat4 invtr = glm::inverse(transform);
-		memcpy(s_Data->SystemUniforms[UniformIndex_ViewMatrix].Buffer.Buffer + s_Data->SystemUniforms[UniformIndex_ViewMatrix].Offset, &invtr, sizeof(glm::mat4));
+		RenderCommand::SetDepthTest(false);
+		memcpy(s_Data->SystemUniforms[UniformIndex_ProjectionMatrix].Buffer.Buffer + s_Data->SystemUniforms[UniformIndex_ProjectionMatrix].Offset, glm::value_ptr(camera.GetProjection()), sizeof(glm::mat4));
+		memcpy(s_Data->SystemUniforms[UniformIndex_ViewMatrix].Buffer.Buffer + s_Data->SystemUniforms[UniformIndex_ViewMatrix].Offset, glm::value_ptr(viewMatrix), sizeof(glm::mat4));
 
 		s_Data->Shader->Bind();
+		//s_Data->Shader->SetVSSystemUniformBuffer(s_Data->SystemUniforms);
+		s_Data->Shader->SetUniformMat4("cw_ProjectionMatrix", camera.GetProjection());
+		s_Data->Shader->SetUniformMat4("cw_ViewMatrix", viewMatrix);
 		s_Data->Buffer = (VertexData*)s_Data->VertexBuffer->GetPointer(RENDERER_MAX_SPRITES * 4);
 	}
 
@@ -164,10 +166,13 @@ namespace Crowny
 		}
 		return ts;
 	}
-
+	
 	void Renderer2D::FillRect(const Rectangle& bounds, const glm::vec4& color)
 	{
-		glm::mat4 transform = glm::translate(glm::mat4(1.0f), { bounds.X, bounds.Y, 1.0f }) * glm::scale(glm::mat4(1.0f), { bounds.Width, bounds.Height, 1.0f });
+		glm::mat4 transform = glm::translate(glm::mat4(1.0f), 
+											{ bounds.X, bounds.Y, 1.0f }) *
+											glm::scale(glm::mat4(1.0f), 
+											{ bounds.Width, bounds.Height, 1.0f });
 
 		FillRect(transform, nullptr, color);
 	}
@@ -267,6 +272,7 @@ namespace Crowny
 		Flush();
 		s_Data->IndexCount = 0;
 		s_Data->TextureIndex = 0;
+		RenderCommand::SetDepthTest(true);
 	}
 
 	void Renderer2D::Flush()
@@ -283,7 +289,7 @@ namespace Crowny
 		}
 
 		s_Data->VertexArray->Bind();
-		RenderCommand::DrawIndexed(s_Data->VertexArray, DrawMode::TRIANGLES, s_Data->IndexCount);
+		RenderCommand::DrawIndexed(s_Data->VertexArray, s_Data->IndexCount);
 		
 		for (uint8_t i = 0; i <= s_Data->TextureIndex; i++)
 		{

@@ -15,6 +15,7 @@ namespace Crowny
 		virtual uint32_t GetHeight() const override { return m_Height; }
 		virtual uint32_t GetRendererID() const override { return m_RendererID; }
 
+		virtual void Clear() override;
 		virtual void SetData(void* data, uint32_t size) override {};
 		virtual void SetData(void* data, TextureChannel channel) override {};
 
@@ -25,6 +26,7 @@ namespace Crowny
 		virtual void Unbind(uint32_t slot) const override;
 		virtual bool operator==(const Texture& other) const override { return m_RendererID == other.GetRendererID(); };
 
+		virtual const std::string& GetFilepath() const override { return ""; }
 		virtual const std::string& GetName() const override { return m_Name; }
 
 	private:

@@ -23,7 +23,7 @@ namespace Crowny
 
 	OpenGLUniformDeclaration::Type OpenGLUniformDeclaration::StringToType(const std::string& type)
 	{
-		if (type == "int32")		return OpenGLUniformDeclaration::Type::INT32;
+		if (type == "int")		return OpenGLUniformDeclaration::Type::INT32;
 		if (type == "float")		return OpenGLUniformDeclaration::Type::FLOAT32;
 		if (type == "vec2")			return OpenGLUniformDeclaration::Type::VEC2;
 		if (type == "vec3")			return OpenGLUniformDeclaration::Type::VEC3;
@@ -130,7 +130,7 @@ namespace Crowny
 	{
 		std::string source = VirtualFileSystem::Get()->ReadTextFile(filepath);
 		auto shaderSources = ShaderPreProcess(source);
-		Parse(shaderSources[GL_VERTEX_SHADER], shaderSources[GL_FRAGMENT_SHADER]);
+		if (shaderSources.size() != 1) Parse(shaderSources[GL_VERTEX_SHADER], shaderSources[GL_FRAGMENT_SHADER]);
 		Compile(shaderSources);
 		ResolveUniforms();
 
@@ -155,6 +155,8 @@ namespace Crowny
 			return GL_VERTEX_SHADER;
 		if (type == "fragment" || type == "pixel")
 			return GL_FRAGMENT_SHADER;
+		if (type == "compute")
+			return GL_COMPUTE_SHADER;
 
 		CW_ENGINE_ASSERT(false, "Unknown shader type!");
 		return 0;
@@ -173,6 +175,12 @@ namespace Crowny
 			CW_ENGINE_ASSERT(eol != std::string::npos, "Syntax error");
 			size_t begin = pos + typeTokenLength + 1;
 			std::string type = source.substr(begin, eol - begin);
+			
+			if (type == "compute")
+			{
+				shaderSources[ShaderTypeFromString(type)] = source.substr(begin + type.size());
+				return shaderSources;
+			}
 			CW_ENGINE_ASSERT(ShaderTypeFromString(type), "Invalid shader type specified");
 
 			size_t nextLinePos = source.find_first_not_of("\r\n", eol);
@@ -188,7 +196,9 @@ namespace Crowny
 	{
 		GLuint program = glCreateProgram();
 		CW_ENGINE_ASSERT(shaderSources.size() <= 2, "We only support 2 shaders for now");
-		std::array<GLenum, 2> glShaderIDs;
+		//std::array<GLenum, 2> glShaderIDs;
+		std::vector<GLenum> glShaderIDs;
+		glShaderIDs.resize(shaderSources.size());
 		int glShaderIDIndex = 0;
 		for (auto& kv : shaderSources)
 		{
@@ -258,7 +268,7 @@ namespace Crowny
 		m_FSUniformBuffers.push_back(new OpenGLUniformBufferDeclaration("Global", GL_FRAGMENT_SHADER));
 
 		const char* token;
-		const char* vstr = vertSrc.c_str();;
+		const char* vstr = vertSrc.c_str();
 		const char* fstr = fragSrc.c_str();
 
 		while ((token = FindToken(vstr, "struct")))
@@ -268,7 +278,7 @@ namespace Crowny
 			ParseUniform(GetStatement(token, &vstr), GL_VERTEX_SHADER);
 
 		while ((token = FindToken(fstr, "struct")))
-			ParseUniform(GetBlock(token, &fstr), GL_FRAGMENT_SHADER);
+			ParseUniformStruct(GetBlock(token, &fstr), GL_FRAGMENT_SHADER);
 
 		while ((token = FindToken(fstr, "uniform")))
 			ParseUniform(GetStatement(token, &fstr), GL_FRAGMENT_SHADER);
@@ -683,6 +693,11 @@ namespace Crowny
 		SetUniformInt(GetUniformLocation(name), value);
 	}
 
+	void OpenGLShader::SetUniformInt2(const std::string& name, int a, int b)
+	{
+		SetUniformInt2(GetUniformLocation(name), a, b);
+	}
+
 	void OpenGLShader::SetUniformIntV(const std::string& name, int* ptr, uint32_t count)
 	{
 		SetUniformIntV(GetUniformLocation(name), ptr, count);
@@ -721,6 +736,12 @@ namespace Crowny
 	void OpenGLShader::SetUniformInt(uint32_t location, int value)
 	{
 		glUniform1i(location, value);
+	}
+
+	void OpenGLShader::SetUniformInt2(uint32_t location, int a, int b)
+	{
+		int ar[2] = { a, b };
+		glUniform2iv(location, 1, ar);	
 	}
 
 	void OpenGLShader::SetUniformIntV(uint32_t location, int* ptr, uint32_t count)

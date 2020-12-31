@@ -5,6 +5,8 @@
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Renderer/Font.h"
+#include "Crowny/Renderer/ForwardPlusRenderer.h"
+#include "Crowny/Renderer/IDBufferRenderer.h"
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Common/VirtualFileSystem.h"
 
@@ -28,7 +30,10 @@ namespace Crowny
 		VirtualFileSystem::Get()->Mount("Textures", "Resources/Textures");
 		VirtualFileSystem::Get()->Mount("Fonts", "Resources/Fonts");
 		VirtualFileSystem::Get()->Mount("Assemblies", "Resources/Assemblies");
+		VirtualFileSystem::Get()->Mount("Models", "Resources/Models");
 		Renderer::Init();
+		ForwardPlusRenderer::Init();
+		IDBufferRenderer::Init();
 		Random::Init();
 		FontManager::Add(CreateRef<Font>("Roboto Thin", "/Fonts/" + DEFAULT_FONT_FILENAME, 64));
 
@@ -51,6 +56,7 @@ namespace Crowny
 		Renderer2D::Shutdown();
 		SceneManager::Shutdown();
 		VirtualFileSystem::Shutdown();
+		ForwardPlusRenderer::Shutdown();
 	}
 
 }

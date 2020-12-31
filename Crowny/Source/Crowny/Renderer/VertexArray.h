@@ -13,7 +13,6 @@ namespace Crowny
 		TRIANGLE_STRIP
 	};
 
-
 	class VertexArray
 	{
 	public:
@@ -28,7 +27,8 @@ namespace Crowny
 
 		virtual const std::vector<Ref<VertexBuffer>>& GetVertexBuffers() const = 0;
 		virtual const Ref<IndexBuffer>& GetIndexBuffer() const = 0;
+		virtual DrawMode GetDrawMode() const = 0;
 
-		static Ref<VertexArray> Create();
+		static Ref<VertexArray> Create(DrawMode = DrawMode::TRIANGLES);
 	};
 }

@@ -32,10 +32,16 @@ namespace Crowny
 	{
 		switch (format)
 		{
-			case Crowny::TextureFormat::RGB:     return GL_RGB;
-			case Crowny::TextureFormat::RGBA:    return GL_RGBA;
-			case Crowny::TextureFormat::RED:     return GL_RED;
-			default:							 CW_ENGINE_ASSERT(false, "Unknown TextureFormat!"); return GL_NONE;
+			case Crowny::TextureFormat::R8:					return GL_RED;
+			case Crowny::TextureFormat::R32I:     			return GL_RED_INTEGER;
+			case Crowny::TextureFormat::RG32F:				return GL_RG;
+			case Crowny::TextureFormat::RGB8:     			return GL_RGB;
+			case Crowny::TextureFormat::RGBA8:				return GL_RGBA;
+			case Crowny::TextureFormat::RGBA16F:  			return GL_RGBA;
+			case Crowny::TextureFormat::RGBA32F:  			return GL_RGBA;
+			case Crowny::TextureFormat::DEPTH32F:     		return GL_DEPTH_COMPONENT;
+			case Crowny::TextureFormat::DEPTH24STENCIL8:    return GL_DEPTH_STENCIL;
+			default:										CW_ENGINE_ASSERT(false, "Unknown TextureFormat!"); return GL_NONE;
 		}
 
 		return GL_NONE;
@@ -45,10 +51,35 @@ namespace Crowny
 	{
 		switch (format)
 		{
-			case Crowny::TextureFormat::RGB:     return GL_RGB8;
-			case Crowny::TextureFormat::RGBA:    return GL_RGBA8;
-			case Crowny::TextureFormat::RED:     return GL_R8;
-			default: 							 CW_ENGINE_ASSERT(false, "Unknown TextureFormat!"); return GL_NONE;
+			case Crowny::TextureFormat::R8:					return GL_R8;
+			case Crowny::TextureFormat::R32I:     			return GL_R32I;
+			case Crowny::TextureFormat::RG32F:				return GL_RG32F;
+			case Crowny::TextureFormat::RGB8:     			return GL_RGB8;
+			case Crowny::TextureFormat::RGBA8:				return GL_RGBA8;
+			case Crowny::TextureFormat::RGBA16F:  			return GL_RGBA16F;
+			case Crowny::TextureFormat::RGBA32F:  			return GL_RGBA32F;
+			case Crowny::TextureFormat::DEPTH32F:     		return GL_DEPTH_COMPONENT32F;
+			case Crowny::TextureFormat::DEPTH24STENCIL8:    return GL_DEPTH24_STENCIL8;
+			default:		    							CW_ENGINE_ASSERT(false, "Unknown TextureFormat!"); return GL_NONE;
+		}
+
+		return GL_NONE;
+	}
+
+	GLenum OpenGLTexture2D::TextureFormatToOpenGLType(TextureFormat format)
+	{
+		switch (format)
+		{
+			case Crowny::TextureFormat::R8:					return GL_FLOAT;
+			case Crowny::TextureFormat::R32I:     			return GL_RED_INTEGER;
+			case Crowny::TextureFormat::RG32F:				return GL_FLOAT;
+			case Crowny::TextureFormat::RGB8:     			return GL_FLOAT;
+			case Crowny::TextureFormat::RGBA8:				return GL_FLOAT;
+			case Crowny::TextureFormat::RGBA16F:  			return GL_FLOAT;
+			case Crowny::TextureFormat::RGBA32F:  			return GL_FLOAT;
+			case Crowny::TextureFormat::DEPTH32F:     		return GL_FLOAT;
+			case Crowny::TextureFormat::DEPTH24STENCIL8:    return GL_FLOAT;
+			default:		    							CW_ENGINE_ASSERT(false, "Unknown TextureFormat!"); return GL_NONE;
 		}
 
 		return GL_NONE;
@@ -109,7 +140,7 @@ namespace Crowny
 			case Crowny::SwizzleChannel::ALPHA:   return GL_ALPHA;
 			case Crowny::SwizzleChannel::ONE:     return GL_ONE;
 			case Crowny::SwizzleChannel::ZERO:    return GL_ZERO;
-			default: 									  CW_ENGINE_ASSERT(false, "Unknown TextureSwizzleColor!"); return GL_NONE;
+			default: 							  CW_ENGINE_ASSERT(false, "Unknown TextureSwizzleColor!"); return GL_NONE;
 		}
 
 		return GL_NONE;
@@ -133,7 +164,8 @@ namespace Crowny
 #else
 		glCreateTextures(GL_TEXTURE_2D, 1, &m_RendererID);
 		glTextureStorage2D(m_RendererID, 1, TextureFormatToOpenGLInternalFormat(m_Parameters.Format), m_Width, m_Height);
-
+		glBindTexture(GL_TEXTURE_2D, m_RendererID);
+		//glTexImage2D(GL_TEXTURE_2D, 0, TextureFormatToOpenGLInternalFormat(m_Parameters.Format), m_Width, m_Height, 0, TextureFormatToOpenGLFormat(m_Parameters.Format), GL_UNSIGNED_BYTE, nullptr);
 		glTextureParameteri(m_RendererID, GL_TEXTURE_MIN_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter));
 		glTextureParameteri(m_RendererID, GL_TEXTURE_MAG_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter));
 
@@ -164,16 +196,14 @@ namespace Crowny
 #endif
 	}
 
-	OpenGLTexture2D::OpenGLTexture2D(const std::string& filepath, const TextureParameters& parameters) : m_FilePath(filepath), m_Parameters(parameters)
+	OpenGLTexture2D::OpenGLTexture2D(const std::string& filepath, const TextureParameters& parameters, const std::string& name) 
+									: m_FilePath(filepath), m_Parameters(parameters), m_Name(name)
 	{
 		int width, height, channels;
 		stbi_set_flip_vertically_on_load(1);
-		
-		//CW_ENGINE_INFO("Loaded texture {0}", filepath);
 
-		auto [data, size] = VirtualFileSystem::Get()->ReadFile(filepath);
-		data = stbi_load_from_memory(data, size, &width, &height, &channels, 0);
-		//byte* data = stbi_load(("Resources/" + filepath).c_str(), &width, &height, &channels, 0);
+		auto [loaded, size] = VirtualFileSystem::Get()->ReadFile(filepath);
+		auto* data = stbi_load_from_memory(loaded, size, &width, &height, &channels, 0);
 
 		CW_ENGINE_ASSERT(data, "Failed to load texture!");
 		m_Width = width;
@@ -181,15 +211,15 @@ namespace Crowny
 
 		if (channels == 4)
 		{
-			m_Parameters.Format = TextureFormat::RGBA;
+			m_Parameters.Format = TextureFormat::RGBA8;
 		}
 		else if (channels == 3)
 		{
-			m_Parameters.Format = TextureFormat::RGB;
+			m_Parameters.Format = TextureFormat::RGB8;
 		}
 		else if (channels == 1)
 		{
-			m_Parameters.Format = TextureFormat::RED;
+			m_Parameters.Format = TextureFormat::R8;
 		}
 
 #ifdef MC_WEB
@@ -221,6 +251,7 @@ namespace Crowny
 
 		CW_ENGINE_INFO("Loaded texture {0}, {1}x{2}x{3}.", m_FilePath, m_Width, m_Height, channels);
 		stbi_image_free(data);
+		delete loaded;
 	}
 
 	OpenGLTexture2D::~OpenGLTexture2D()
@@ -228,10 +259,16 @@ namespace Crowny
 		glDeleteTextures(1, &m_RendererID);
 	}
 
+	void OpenGLTexture2D::Clear()
+	{
+		int clearValue = -1;
+		glClearTexImage(m_RendererID, 0, TextureFormatToOpenGLType(m_Parameters.Format), GL_INT, &clearValue);
+	}
+	
 	void OpenGLTexture2D::SetData(void* data, uint32_t size)
 	{
-		uint32_t bpp = m_Parameters.Format == TextureFormat::RGBA ? 4 : 3;
-		CW_ENGINE_ASSERT(size == m_Width * m_Height * bpp, "Data must be an entire texture!");
+		uint32_t bpp = m_Parameters.Format == TextureFormat::RGBA8 ? 4 : 3; // TODO: Fix this!
+		//CW_ENGINE_ASSERT(size == m_Width * m_Height * bpp, "Data must be an entire texture!");
 #ifdef MC_WEB
 		glBindTexture(GL_TEXTURE_2D, m_RendererID);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_Width, m_Height, TextureFormatToOpenGLFormat(m_Parameters.Format), GL_UNSIGNED_BYTE, data);

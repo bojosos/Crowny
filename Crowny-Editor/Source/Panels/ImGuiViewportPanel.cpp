@@ -1,5 +1,6 @@
 #include "cwepch.h"
 
+#include "Editor/EditorLayer.h"
 #include "Panels/ImGuiViewportPanel.h"
 #include "Panels/ImGuiHierarchyPanel.h"
 #include "Crowny/Application/Application.h"
@@ -20,17 +21,24 @@ namespace Crowny
 
 	void ImGuiViewportPanel::Render()
 	{
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
+		ImGui::Begin("Viewport", &m_Shown);
 		bool m_ViewportFocused = ImGui::IsWindowFocused();
 		bool m_ViewportHovered = ImGui::IsWindowHovered();
 		Application::Get().GetImGuiLayer()->BlockEvents(!m_ViewportFocused && !m_ViewportHovered);
-
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
-		ImGui::Begin("Viewport", &m_Shown);
 			
+		ImVec2 minBound = ImGui::GetWindowPos();
 		ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
+		ImVec2 viewportOffset = ImGui::GetCursorPos();
 		m_ViewportSize = { viewportPanelSize.x, viewportPanelSize.y };
-		uint64_t textureID = m_Framebuffer->GetColorAttachmentRendererID();
+		uint32_t textureID = m_Framebuffer->GetColorAttachmentRendererID();
 		ImGui::Image(reinterpret_cast<void*>(textureID), ImVec2(m_Framebuffer->GetProperties().Width, m_Framebuffer->GetProperties().Height), ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
+		
+		ImVec2 windowSize = ImGui::GetWindowSize();
+		minBound.x += viewportOffset.x;
+		minBound.y += viewportOffset.y;
+		ImVec2 maxBound = { minBound.x + windowSize.x, minBound.y + windowSize.y };
+		m_ViewportBounds = { minBound.x, minBound.y, maxBound.x, maxBound.y };
 		
 		Entity selected = ImGuiHierarchyPanel::GetSelectedEntity();
 		if (selected && m_GizmoMode != -1)
@@ -41,11 +49,9 @@ namespace Crowny
 			float width = (float)ImGui::GetWindowWidth();
 			float height = (float)ImGui::GetWindowHeight();
 			ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, width, height);
-
-			auto cameraEntity = SceneManager::GetActiveScene()->GetCamera();
-			const auto& camera = cameraEntity.GetComponent<CameraComponent>().Camera;
+			EditorCamera camera = EditorLayer::GetEditorCamera();
 			const glm::mat4& proj = camera.GetProjection();
-			glm::mat4 view = glm::inverse(cameraEntity.GetComponent<TransformComponent>().GetTransform());
+			glm::mat4 view = camera.GetViewMatrix();
 			auto& tc = selected.GetComponent<TransformComponent>();
 			glm::mat4 transform = tc.GetTransform();
 

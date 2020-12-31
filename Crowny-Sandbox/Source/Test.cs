@@ -12,7 +12,7 @@ namespace Sandbox
 
         public void Start()
         {
-            Debug.Log("Start called");
+            Debug.Log("Start called!");
         }
 
         public void Update()
@@ -25,6 +25,8 @@ namespace Sandbox
                transform.position += Vector3.up * speed * Time.smoothDeltaTime;
             if (Input.GetKey(KeyCode.Down))
         	    transform.position += Vector3.down * speed * Time.smoothDeltaTime;
+            if (Input.GetKey(KeyCode.T))
+                Debug.Log(transform.position);
         }
     }
 }

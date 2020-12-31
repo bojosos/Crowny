@@ -3,7 +3,8 @@
 #include "Crowny/Common/Timestep.h"
 #include "Crowny/Common/Uuid.h"
 
-#include "Crowny/Renderer/Texture.h"
+#include "Crowny/Renderer/EditorCamera.h"
+#include "Crowny/Renderer/Framebuffer.h"
 
 #include <entt/entt.hpp>
 
@@ -20,7 +21,10 @@ namespace Crowny
 		Scene(const Scene& other);
 		~Scene();
 
-		void OnUpdate(Timestep ts);
+		void OnUpdateRuntime(Timestep ts);
+		void OnUpdateEditor(Timestep ts, EditorCamera& camera);
+		
+		
 		void OnViewportResize(uint32_t width, uint32_t height);
 
 		void Run();
@@ -43,13 +47,14 @@ namespace Crowny
 		float GetFixedDeltaTime() { return fixedDeltaTime; }
 		float GetRealtimeSinceStartup() { return realtimeSinceStarup; /* Not correct! This returns time until last frame*/ };
 		float GetSmoothDeltaTime() { return deltaTime + time / (frameCount + 1); }
+		
+		void DrawIDBuffer(EditorCamera& camera);
 
 		friend class ImGuiComponentEditor;
 		friend class SceneSerializer;
 		friend class Entity;
 	private:
 		float deltaTime = 0.0f, frameCount = 0.0f, fixedDeltaTime = 0.0f, time = 0.0f, realtimeSinceStarup = 0.0f;
-
 		bool m_Running = true;
 		bool m_HasChanged = true;
 		uint32_t m_BuildIndex;

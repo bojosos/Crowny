@@ -31,7 +31,7 @@ namespace Crowny
 		static void DrawString(const std::string& text, float x, float y, const Ref<Font>& font, const glm::vec4& color);
 		static void DrawString(const std::string& text, const glm::mat4& transform, const Ref<Font>& font, const glm::vec4& color);
 
-		static void Begin(const glm::mat4& projection, const glm::mat4& transform);
+		static void Begin(const Camera& camera, const glm::mat4& viewMatrix);
 		static void End();
 		static void Flush();
 	};

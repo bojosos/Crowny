@@ -19,6 +19,7 @@ namespace Crowny
 		virtual void Hide() override;
 
 	public:
+		static void SetSelectedEntity(Entity entity) { s_SelectedEntity = entity; }
 		static Entity GetSelectedEntity() { return s_SelectedEntity; }
 
 	private:

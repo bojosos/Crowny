@@ -20,8 +20,8 @@
 #include <unordered_set>
 
 #include "Crowny/Common/Log.h"
-#include "Crowny/Common/Types.h"
 #include "Crowny/Common/Constants.h"
+#include "Crowny/Common/Types.h"
 
 #ifdef CW_WINDOWS
 //	#include <Windows.h>
