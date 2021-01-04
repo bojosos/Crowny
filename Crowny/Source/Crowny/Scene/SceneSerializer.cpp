@@ -56,7 +56,7 @@ namespace Crowny
         {
             out << YAML::Key << "MonoScriptComponent";
             out << YAML::BeginMap;
-            const std::string& name = entity.GetComponent<MonoScriptComponent>().Name;
+            const std::string& name = entity.GetComponent<MonoScriptComponent>().Class->GetName();
             out << YAML::Key << "Name" << YAML::Value << name;
             out << YAML::EndMap;
         }
@@ -234,10 +234,8 @@ namespace Crowny
                 YAML::Node script = entity["MonoScriptComponent"];
                 if (script)
                 {
-                    auto& sc = deserialized.AddComponent<MonoScriptComponent>();
+                    auto& sc = deserialized.AddComponent<MonoScriptComponent>(script["Name"].as<std::string>());
                     sc.ComponentParent = deserialized;
-                    sc.Name = script["Name"].as<std::string>();
-                    sc.Class = CWMonoRuntime::GetClientAssembly()->GetClass("Sandbox", sc.Name);
                 }
 
                 YAML::Node text = entity["TextComponent"];

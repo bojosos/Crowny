@@ -10,6 +10,8 @@
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Renderer/IDBufferRenderer.h"
+#include "Crowny/Scene/SceneRenderer.h"
+#include "Crowny/Scene/ScriptRuntime.h"
 
 #include "Editor/EditorAssets.h"
 
@@ -96,10 +98,13 @@ namespace Crowny
 
 		ImGuiMaterialPanel::SetSelectedMaterial(mat);
 		ForwardRenderer::Init(); // Why here?
-		EditorAssets::Load();
 
 		SceneSerializer serializer(SceneManager::GetActiveScene());
 		serializer.Deserialize("Test.yaml");
+
+		SceneRenderer::Init();
+		VirtualFileSystem::Get()->Mount("Icons", "Resources/Icons");
+		EditorAssets::Load();
 	}
 
 	void EditorLayer::CreateNewScene()
@@ -157,23 +162,21 @@ namespace Crowny
 			m_Temp = nullptr;
 		}
 		s_EditorCamera.OnUpdate(ts);
+		s_EditorCamera.SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
 
-		if (FramebufferProperties spec = m_Framebuffer->GetProperties(); m_ViewportSize.x > 0.0f && m_ViewportSize.y > 0.0f && (spec.Width != m_ViewportSize.x || spec.Height != m_ViewportSize.y))
-		{
-			m_Framebuffer->Resize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
-			scene->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
-			s_EditorCamera.SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
-		}
+		SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
+		if (m_GameMode)
+			ScriptRuntime::OnUpdate();
 
-		m_Framebuffer->Bind();
-		scene->OnUpdateEditor(ts, s_EditorCamera);
-		m_Framebuffer->Unbind();
-		scene->DrawIDBuffer(s_EditorCamera);
 		glm::vec4 bounds = m_ViewportPanel->GetViewportBounds();
 		ImVec2 mouseCoords = ImGui::GetMousePos();
 		glm::vec2 coords = { mouseCoords.x - bounds.x, mouseCoords.y - bounds.y };
 		coords.y = m_ViewportSize.y - coords.y;
-		m_HoveredEntity = Entity((entt::entity)IDBufferRenderer::ReadPixel(coords.x, coords.y), scene.get());
+		if (coords.x >= 0 && coords.x < m_ViewportSize.x && coords.y >= 0 && coords.y < m_ViewportSize.y)
+		{
+			CW_ENGINE_INFO("{0}, {1}", coords.x, coords.y);
+			m_HoveredEntity = Entity((entt::entity)IDBufferRenderer::ReadPixel(coords.x, coords.y), scene.get());
+		}
 		m_HierarchyPanel->Update();
 	}
 	
@@ -207,6 +210,28 @@ namespace Crowny
 
 		if (opt_fullscreen)
 			ImGui::PopStyleVar(2);
+		
+		m_MenuBar->Render();
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetStyle().FramePadding.y);
+		ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 - 32.5f);
+		if (ImGui::ImageButton(reinterpret_cast<void*>(EditorAssets::Get().PlayIcon->GetRendererID()), 
+							   ImVec2(25.0f, 25.0f), ImVec2(0, 0), ImVec2(1,1), -1, ImVec4(1.0f, 1.0f, 1.0f, 0.0f), ImVec4(0.1f, 0.105f, 0.11f, 1.0f)))
+		{
+			ScriptRuntime::OnStart();
+			m_GameMode = true;
+		}
+		ImGui::SameLine(0.0f, 8.0f);
+		if (ImGui::ImageButton(reinterpret_cast<void*>(EditorAssets::Get().PauseIcon->GetRendererID()), 
+							   ImVec2(25.0f, 25.0f), ImVec2(0, 0), ImVec2(1,1), -1, ImVec4(1.0f, 1.0f, 1.0f, 0.0f), ImVec4(0.1f, 0.105f, 0.11f, 1.0f)))
+			{}
+		ImGui::SameLine(0.0f, 8.0f);
+		if (ImGui::ImageButton(reinterpret_cast<void*>(EditorAssets::Get().StopIcon->GetRendererID()), 
+							   ImVec2(25.0f, 25.0f), ImVec2(0, 0), ImVec2(1,1), -1, ImVec4(1.0f, 1.0f, 1.0f, 0.0f), ImVec4(0.1f, 0.105f, 0.11f, 1.0f)))
+		{
+			ScriptRuntime::OnShutdown();
+			m_GameMode = false;
+		}
+		ImGui::Separator();
 
 		// DockSpace
 		ImGuiIO& io = ImGui::GetIO();
@@ -215,16 +240,7 @@ namespace Crowny
 			ImGuiID dockspace_id = ImGui::GetID("Crowny Editor");
 			ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 		}
-
-		ImGui::Begin("Scripting");
-		if (ImGui::Button("Run"))
-		{
-			SceneManager::GetActiveScene()->Run();
-		}
-		ImGui::End();
-
-		m_MenuBar->Render();
-
+		
 		m_HierarchyPanel->Render();
 		m_InspectorPanel->Render();
 		m_GLInfoPanel->Render();

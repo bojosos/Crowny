@@ -5,6 +5,7 @@
 #include "Crowny/Renderer/RenderCommand.h"
 
 #include <glad/glad.h>
+#include <entt/entt.hpp>
 
 namespace Crowny
 {
@@ -73,7 +74,7 @@ namespace Crowny
     void IDBufferRenderer::Begin(const glm::mat4& projection, const glm::mat4& view)
     {
         s_Data.Framebuffer->Bind();
-		s_Data.Framebuffer->GetColorAttachment(0)->Clear();
+		s_Data.Framebuffer->GetColorAttachment(0)->Clear((int32_t)entt::entity(entt::null));
   		s_Data.Buffer = (IDBufferData*)s_Data.VertexBuffer->GetPointer(RENDERER_MAX_SPRITES * 4);
 		s_Data.Shader3D->Bind();
 		s_Data.Shader3D->SetUniformMat4("u_ProjectionMatrix", projection);

@@ -61,6 +61,7 @@ namespace Crowny
 		std::vector<ImGuiPanel*> m_ImGuiWindows;
 		static EditorCamera s_EditorCamera;
 		Entity m_HoveredEntity;
+		bool m_GameMode = false;
 		
 		glm::vec2 m_ViewportSize = { 1280.0f, 720.0f }; // and dis
 	public:

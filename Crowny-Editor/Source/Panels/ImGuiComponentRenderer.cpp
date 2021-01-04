@@ -274,10 +274,10 @@ namespace Crowny
 		}
 		else
 			ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(0, 255, 0));
-
-		if (ImGui::InputText("##scriptName", &script.Name))
+		std::string name = std::string(script.Class->GetName());
+		if (ImGui::InputText("##scriptName", &name))
 		{
-			script.Class = CWMonoRuntime::GetClientAssembly()->GetClass("Sandbox", script.Name);
+			script.Class = CWMonoRuntime::GetClientAssembly()->GetClass("Sandbox", name);
 		}
 		
 		ImGui::PopStyleColor(1);

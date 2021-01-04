@@ -145,7 +145,7 @@ namespace Crowny
         glBindVertexArray(0);
     }
 
-    void OpenGLEnvironmentMap::Clear()
+    void OpenGLEnvironmentMap::Clear(int32_t clearColor)
     {
         CW_ENGINE_ASSERT(false);
     }

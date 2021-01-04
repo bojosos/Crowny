@@ -18,7 +18,6 @@ namespace Crowny
 	void Runtime::OnStartup()
 	{
 		//m_Scene = new Scene(*m_OpenScene);
-		m_Scene->Run();
 	}
 
 	void Runtime::OnShutdown()

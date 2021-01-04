@@ -156,7 +156,7 @@ namespace Crowny
 	public:
 		static Ref<Texture2D> Create(uint32_t width, uint32_t height, const TextureParameters& parameters = {});
 		static Ref<Texture2D> Create(const std::string& filepath, const TextureParameters& parameters = {}, const std::string& name = "");
-		virtual void Clear() = 0;
+		virtual void Clear(int32_t clearColor) = 0;
 		virtual const std::string& GetFilepath() const = 0;
 	};
 

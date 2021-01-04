@@ -281,12 +281,14 @@ GENERATED += $(OBJDIR)/Runtime.o
 GENERATED += $(OBJDIR)/Scene.o
 GENERATED += $(OBJDIR)/SceneCamera.o
 GENERATED += $(OBJDIR)/SceneManager.o
+GENERATED += $(OBJDIR)/SceneRenderer.o
 GENERATED += $(OBJDIR)/SceneSerializer.o
 GENERATED += $(OBJDIR)/ScriptComponent.o
 GENERATED += $(OBJDIR)/ScriptDebug.o
 GENERATED += $(OBJDIR)/ScriptEntity.o
 GENERATED += $(OBJDIR)/ScriptInput.o
 GENERATED += $(OBJDIR)/ScriptRandom.o
+GENERATED += $(OBJDIR)/ScriptRuntime.o
 GENERATED += $(OBJDIR)/ScriptTime.o
 GENERATED += $(OBJDIR)/ScriptTransform.o
 GENERATED += $(OBJDIR)/Shader.o
@@ -372,12 +374,14 @@ OBJECTS += $(OBJDIR)/Runtime.o
 OBJECTS += $(OBJDIR)/Scene.o
 OBJECTS += $(OBJDIR)/SceneCamera.o
 OBJECTS += $(OBJDIR)/SceneManager.o
+OBJECTS += $(OBJDIR)/SceneRenderer.o
 OBJECTS += $(OBJDIR)/SceneSerializer.o
 OBJECTS += $(OBJDIR)/ScriptComponent.o
 OBJECTS += $(OBJDIR)/ScriptDebug.o
 OBJECTS += $(OBJDIR)/ScriptEntity.o
 OBJECTS += $(OBJDIR)/ScriptInput.o
 OBJECTS += $(OBJDIR)/ScriptRandom.o
+OBJECTS += $(OBJDIR)/ScriptRuntime.o
 OBJECTS += $(OBJDIR)/ScriptTime.o
 OBJECTS += $(OBJDIR)/ScriptTransform.o
 OBJECTS += $(OBJDIR)/Shader.o
@@ -617,7 +621,13 @@ $(OBJDIR)/SceneCamera.o: Source/Crowny/Scene/SceneCamera.cpp
 $(OBJDIR)/SceneManager.o: Source/Crowny/Scene/SceneManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/SceneRenderer.o: Source/Crowny/Scene/SceneRenderer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/SceneSerializer.o: Source/Crowny/Scene/SceneSerializer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ScriptRuntime.o: Source/Crowny/Scene/ScriptRuntime.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ScriptDebug.o: Source/Crowny/Scripting/Bindings/Logging/ScriptDebug.cpp

@@ -12,3 +12,9 @@ bin-int/
 **.csproj.user
 Crowny/Dependencies/
 **/Makefile
+
+Crowny-Editor/Resources/Models/
+
+.vscode/c_cpp_properties.json
+
+.vscode/
