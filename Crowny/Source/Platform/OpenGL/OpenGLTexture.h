@@ -22,7 +22,7 @@ namespace Crowny
 
 		virtual void Bind(uint32_t slot) const override;
 		virtual void Unbind(uint32_t slot) const override;
-		virtual void Clear() override;
+		virtual void Clear(int32_t clearColor) override;
 		virtual void SetData(void* data, uint32_t size) override;
 		virtual void SetData(void* data, TextureChannel channel = TextureChannel::CHANNEL_RGBA) override;
 

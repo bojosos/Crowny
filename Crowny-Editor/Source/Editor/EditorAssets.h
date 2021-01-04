@@ -8,6 +8,9 @@ namespace Crowny
     struct EditorAssetsLibrary
     {
         Ref<Texture2D> UnassignedTexture;
+        Ref<Texture2D> PlayIcon;
+        Ref<Texture2D> PauseIcon;
+        Ref<Texture2D> StopIcon;
     };
 
     class EditorAssets
@@ -22,6 +25,9 @@ namespace Crowny
 
     private:
         static const std::string UnassignedTexture;
+        static const std::string PlayIcon;
+        static const std::string PauseIcon;
+        static const std::string StopIcon;
         static EditorAssetsLibrary s_Library;
     };
 

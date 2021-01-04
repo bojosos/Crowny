@@ -259,10 +259,9 @@ namespace Crowny
 		glDeleteTextures(1, &m_RendererID);
 	}
 
-	void OpenGLTexture2D::Clear()
+	void OpenGLTexture2D::Clear(int32_t clearColor)
 	{
-		int clearValue = -1;
-		glClearTexImage(m_RendererID, 0, TextureFormatToOpenGLType(m_Parameters.Format), GL_INT, &clearValue);
+		glClearTexImage(m_RendererID, 0, TextureFormatToOpenGLType(m_Parameters.Format), GL_INT, &clearColor);
 	}
 	
 	void OpenGLTexture2D::SetData(void* data, uint32_t size)

@@ -130,17 +130,18 @@ namespace Crowny
 
 	struct MonoScriptComponent : public Component
 	{
-		std::string Name;
 		CWMonoClass* Class = nullptr;
 		MonoObject* Instance = nullptr;
-		CWMonoMethod* UpdateMethod = nullptr;
+		CWMonoMethod* OnUpdate = nullptr;
+		CWMonoMethod* OnStart = nullptr;
+		CWMonoMethod* OnDestroy = nullptr;
 
 		MonoScriptComponent() = default;
 		MonoScriptComponent(const MonoScriptComponent&) = default;
 
 		MonoScriptComponent(const std::string& name)
 		{
-			Class = CWMonoRuntime::GetClientAssembly()->GetClass(name);
+			Class = CWMonoRuntime::GetClientAssembly()->GetClass("Sandbox", name);
 		}
 
 	};
