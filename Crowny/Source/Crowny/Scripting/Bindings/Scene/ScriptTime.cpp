@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Scripting/Bindings/Scene/ScriptTime.h"
+#include "Crowny/Common/Time.h"
 
 #include "Crowny/Scripting/CWMonoRuntime.h"
 #include "Crowny/Scene/SceneManager.h"
@@ -22,32 +23,32 @@ namespace Crowny
 
     float ScriptTime::Internal_GetTime()
     {
-        return SceneManager::GetActiveScene()->GetTime();
+        return Time::GetTime();
     }
 
     float ScriptTime::Internal_GetDeltaTime()
     {
-        return SceneManager::GetActiveScene()->GetDeltaTime();
+        return Time::GetDeltaTime();
     }
 
     float ScriptTime::Internal_GetFixedDeltaTime()
     {
-        return SceneManager::GetActiveScene()->GetFixedDeltaTime();
+        return Time::GetFixedDeltaTime();
     }
 
     float ScriptTime::Internal_GetSmoothDeltaTime()
     {
-        return SceneManager::GetActiveScene()->GetSmoothDeltaTime();
+        return Time::GetSmoothDeltaTime();
     }
 
     float ScriptTime::Internal_RealtimeSinceStartup()
     {
-        return SceneManager::GetActiveScene()->GetRealtimeSinceStartup();
+        return Time::GetRealtimeSinceStartup();
     }
 
     float ScriptTime::Internal_GetFrameCount()
     {
-        return SceneManager::GetActiveScene()->GetFrameCount();
+        return Time::GetFrameCount();
     }
 
 }

@@ -14,7 +14,7 @@ namespace Crowny
 {
 
 	static Ref<EnvironmentMap> envmap;
-	ImGuiViewportPanel::ImGuiViewportPanel(const std::string& name, const Ref<Framebuffer>& framebuffer, glm::vec2& viewportSize) : ImGuiPanel(name), m_Framebuffer(framebuffer), m_ViewportSize(viewportSize)
+	ImGuiViewportPanel::ImGuiViewportPanel(const std::string& name) : ImGuiPanel(name)
 	{
 		
 	}
@@ -31,8 +31,8 @@ namespace Crowny
 		ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
 		ImVec2 viewportOffset = ImGui::GetCursorPos();
 		m_ViewportSize = { viewportPanelSize.x, viewportPanelSize.y };
-		uint32_t textureID = m_Framebuffer->GetColorAttachmentRendererID();
-		ImGui::Image(reinterpret_cast<void*>(textureID), ImVec2(m_Framebuffer->GetProperties().Width, m_Framebuffer->GetProperties().Height), ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
+		//uint32_t textureID = m_Framebuffer->GetColorAttachmentRendererID();
+		//ImGui::Image(reinterpret_cast<void*>(textureID), ImVec2(m_Framebuffer->GetProperties().Width, m_Framebuffer->GetProperties().Height), ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
 		
 		ImVec2 windowSize = ImGui::GetWindowSize();
 		minBound.x += viewportOffset.x;

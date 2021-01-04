@@ -184,12 +184,6 @@ namespace Crowny
 		ImGui::Columns(1);
 	}
 
-	int OnTextEdited(ImGuiInputTextCallbackData* data)
-	{
-		CW_ENGINE_INFO(data->Buf);
-		return 0;
-	}
-
 	template<>
 	void ComponentEditorWidget<TextComponent>(Entity e)
 	{

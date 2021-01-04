@@ -10,8 +10,6 @@
 
 namespace Crowny
 {
-    class EditorLayer;
-    class EditorLayer {public: static Ref<Framebuffer> m_Framebuffer; };
 
     struct PointLight {
         glm::vec4 color;
@@ -279,7 +277,6 @@ namespace Crowny
         glBindTextureUnit(0, s_Data.ColorBuffer);
         float exposure = 1.0f;
         s_Data.HdrShader->SetUniformFloat("exposure", exposure);
-        EditorLayer::m_Framebuffer->Bind();
         DrawQuad();
         glBindTextureUnit(0, 0);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);

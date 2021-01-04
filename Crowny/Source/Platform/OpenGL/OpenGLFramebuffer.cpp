@@ -46,17 +46,14 @@ namespace Crowny
 		{
 			m_Attachments[i] = Texture2D::Create(m_Properties.Width, m_Properties.Height, 
 													 { FramebufferToTextureFormat(attachments[i].TextureFormat)} );
-			CW_ENGINE_INFO(m_Attachments[i]->GetRendererID());
 			if (attachments[i].TextureFormat == FramebufferTextureFormat::DEPTH24STENCIL8)
 			{
-				CW_ENGINE_INFO("Depth stencil attachment: {0}", m_Attachments[i]->GetRendererID());
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, m_Attachments[i]->GetRendererID(), 0);
 			}
 			else if (attachments[i].TextureFormat == FramebufferTextureFormat::DEPTH32F)
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_Attachments[i]->GetRendererID(), 0);
 			else
 			{
-				CW_ENGINE_INFO("Color attachment: {0}", m_Attachments[i]->GetRendererID());
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, m_Attachments[i]->GetRendererID(), 0);
 			}		
 		}

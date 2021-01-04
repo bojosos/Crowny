@@ -34,14 +34,6 @@ namespace Crowny
 		const std::string& GetName() const { return m_Name; }
 		const std::string& GetFilepath() const { return m_Filepath; }
 
-		// These should not be here. A scene is just a bunch of data. Nothing to do with time
-		float GetTime() { return 0.0f; }
-		float GetDeltaTime() { return 0.0f; }
-		float GetFrameCount() { return 0.0f; }
-		float GetFixedDeltaTime() { return 0.0f; }
-		float GetRealtimeSinceStartup() { return 0.0f; /* Not correct! This returns time until last frame*/ };
-		float GetSmoothDeltaTime() { return 0.0f; }
-
 		friend class ImGuiComponentEditor;
 		friend class SceneRenderer;
 		friend class SceneSerializer;
