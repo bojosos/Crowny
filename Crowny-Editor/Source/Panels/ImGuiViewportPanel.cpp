@@ -1,10 +1,13 @@
 #include "cwepch.h"
 
 #include "Editor/EditorLayer.h"
+
+#include "Crowny/Application/Application.h"
+#include "Crowny/Scene/SceneRenderer.h"
+#include "Crowny/Input/Input.h"
+
 #include "Panels/ImGuiViewportPanel.h"
 #include "Panels/ImGuiHierarchyPanel.h"
-#include "Crowny/Application/Application.h"
-#include "Crowny/Input/Input.h"
 
 #include <imgui.h>
 #include <ImGuizmo.h>
@@ -31,8 +34,8 @@ namespace Crowny
 		ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
 		ImVec2 viewportOffset = ImGui::GetCursorPos();
 		m_ViewportSize = { viewportPanelSize.x, viewportPanelSize.y };
-		//uint32_t textureID = m_Framebuffer->GetColorAttachmentRendererID();
-		//ImGui::Image(reinterpret_cast<void*>(textureID), ImVec2(m_Framebuffer->GetProperties().Width, m_Framebuffer->GetProperties().Height), ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
+		uint32_t textureID = SceneRenderer::GetMainFramebuffer()->GetColorAttachmentRendererID();
+		ImGui::Image(reinterpret_cast<void*>(textureID), ImVec2(m_ViewportSize.x, m_ViewportSize.y), ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
 		
 		ImVec2 windowSize = ImGui::GetWindowSize();
 		minBound.x += viewportOffset.x;

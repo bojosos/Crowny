@@ -7,7 +7,6 @@
 #include "Crowny/Renderer/RenderCommand.h"
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Renderer/IDBufferRenderer.h"
-#include "Crowny/Renderer/Framebuffer.h"
 #include "Crowny/Ecs/Components.h"
 
 namespace Crowny
@@ -41,6 +40,8 @@ namespace Crowny
         fbprops.ClearColor = { 0.1f, 0.1f, 0.1f, 1.0f };
         s_Data.MainFramebuffer = Framebuffer::Create(fbprops);
     }
+
+	Ref<Framebuffer> SceneRenderer::GetMainFramebuffer() { return s_Data.MainFramebuffer; }
 
     void SceneRenderer::OnEditorUpdate(Timestep ts, const EditorCamera& camera)
     {
@@ -116,10 +117,10 @@ namespace Crowny
 		
     }
 
-    void SceneRenderer::OnResize(uint32_t width, uint32_t height)
+    void SceneRenderer::SetViewportSize(float width, float height)
     {
-        s_Data.ViewportWidth = width;
-        s_Data.ViewportHeight = height;
+        s_Data.ViewportWidth = (uint32_t)width;
+        s_Data.ViewportHeight = (uint32_t)height;
         s_Data.MainFramebuffer->Resize(width, height);
     }
         

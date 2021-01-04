@@ -1,12 +1,12 @@
-[18:55:28] [info] CROWNY: Domain Crowny C# Runtime created!
-[18:55:29] [info] CROWNY: Assembly Crowny.dll loaded
-[18:55:29] [info] CROWNY: Assembly Client.dll loaded
-[18:55:29] [info] CROWNY: Loaded texture /Textures/rustediron2_basecolor.png, 2048x2048x4.
-[18:55:29] [info] CROWNY: Loaded texture /Textures/rustediron2_metallic.png, 2048x2048x1.
-[18:55:29] [info] CROWNY: Loaded texture /Textures/rustediron2_normal.png, 2048x2048x3.
-[18:55:29] [info] CROWNY: Loaded texture /Textures/rustediron2_roughness.png, 2048x2048x1.
-[18:55:30] [info] CROWNY: Loaded texture /Textures/Unassigned.png, 608x608x3.
-[18:55:30] [info] CROWNY: Loaded texture /Icons/Play.png, 448x448x4.
-[18:55:30] [info] CROWNY: Loaded texture /Icons/Pause.png, 448x448x4.
-[18:55:30] [info] CROWNY: Loaded texture /Icons/Stop.png, 448x448x4.
-[18:55:32] [info] CLIENT: Start called!
+[20:25:00] [info] CROWNY: Domain Crowny C# Runtime created!
+[20:25:00] [info] CROWNY: Assembly Crowny.dll loaded
+[20:25:00] [info] CROWNY: Assembly Client.dll loaded
+[20:25:00] [info] CROWNY: Loaded texture /Textures/rustediron2_basecolor.png, 2048x2048x4.
+[20:25:00] [info] CROWNY: Loaded texture /Textures/rustediron2_metallic.png, 2048x2048x1.
+[20:25:00] [info] CROWNY: Loaded texture /Textures/rustediron2_normal.png, 2048x2048x3.
+[20:25:01] [info] CROWNY: Loaded texture /Textures/rustediron2_roughness.png, 2048x2048x1.
+[20:25:01] [info] CROWNY: Loaded texture /Textures/Unassigned.png, 608x608x3.
+[20:25:01] [info] CROWNY: Loaded texture /Icons/Play.png, 448x448x4.
+[20:25:01] [info] CROWNY: Loaded texture /Icons/Pause.png, 448x448x4.
+[20:25:01] [info] CROWNY: Loaded texture /Icons/Stop.png, 448x448x4.
+[20:25:08] [error] CROWNY: Unrecognized font, using fallback font Roboto Thin!

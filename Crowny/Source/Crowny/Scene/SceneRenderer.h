@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Crowny/Scene/Scene.h"
+
+#include "Crowny/Renderer/Framebuffer.h"
 #include "Crowny/Renderer/EditorCamera.h"
 
 #include <glm/glm.hpp>
@@ -14,7 +16,8 @@ namespace Crowny
         static void Init();
         static void OnEditorUpdate(Timestep ts, const EditorCamera& camera);
         static void OnRuntimeUpdate(Timestep ts, const Camera& camera, const glm::mat4& cameraTransform);
-        static void OnResize(uint32_t width, uint32_t height);
+        static void SetViewportSize(float width, float height);
+        static Ref<Framebuffer> GetMainFramebuffer();
     };
     
 }
