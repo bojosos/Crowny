@@ -23,23 +23,23 @@
 
 namespace Crowny
 {
-	Ref<Framebuffer> EditorLayer::m_Framebuffer = nullptr; // Maybe Viewport window should take care of this? nah scene renderer class
+
+	float EditorLayer::s_DeltaTime = 0.0f;
+	float EditorLayer::s_SmoothDeltaTime = 0.0f;
+	float EditorLayer::s_RealtimeSinceStartup = 0.0f;
+	float EditorLayer::s_Time = 0.0f;
+	float EditorLayer::s_FixedDeltaTime = 0.0f;
+	float EditorLayer::s_FrameCount = 0.0f;
+
 	EditorCamera EditorLayer::s_EditorCamera = EditorCamera(30.0f, 1280.0f / 720.0f, 0.1f, 1000.0f);
 
-	EditorLayer::EditorLayer()
-		: Layer("EditorLayer")
+	EditorLayer::EditorLayer() : Layer("EditorLayer")
 	{
 
 	}
 
 	void EditorLayer::OnAttach()
 	{
-		FramebufferProperties fbProps;
-		fbProps.Width = 1280; // human code please
-		fbProps.Height = 720;
-		fbProps.Attachments = { FramebufferTextureFormat::RGBA8, FramebufferTextureFormat::DEPTH24STENCIL8 };
-		m_Framebuffer = Framebuffer::Create(fbProps);
-
 		m_MenuBar = new ImGuiMenuBar();
 
 		ImGuiMenu* fileMenu = new ImGuiMenu("File");
@@ -60,7 +60,7 @@ namespace Crowny
 		m_HierarchyPanel = new ImGuiHierarchyPanel("Hierarchy");
 		viewMenu->AddItem(new ImGuiMenuItem("Hierarchy", "", [&](auto& event) { m_HierarchyPanel->Show(); }));
 
-		m_ViewportPanel = new ImGuiViewportPanel("Viewport", m_Framebuffer, m_ViewportSize);
+		m_ViewportPanel = new ImGuiViewportPanel("Viewport");
 		viewMenu->AddItem(new ImGuiMenuItem("Viewport", "", [&](auto& event) { m_ViewportPanel->Show(); }));
 
 		//m_ImGuiWindows.push_back(new ImGuiTextureEditor("Texture Properties"));
@@ -105,6 +105,7 @@ namespace Crowny
 		SceneRenderer::Init();
 		VirtualFileSystem::Get()->Mount("Icons", "Resources/Icons");
 		EditorAssets::Load();
+		ScriptRuntime::Init();
 	}
 
 	void EditorLayer::CreateNewScene()
@@ -165,8 +166,15 @@ namespace Crowny
 		s_EditorCamera.SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
 
 		SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
-		if (m_GameMode)
+		if (m_GameMode && !m_Paused)
+		{
 			ScriptRuntime::OnUpdate();
+			s_FrameCount += 1;
+			s_DeltaTime = ts;
+			s_Time += ts;
+			s_RealtimeSinceStartup += ts;
+			s_SmoothDeltaTime = s_DeltaTime + s_Time / (s_FrameCount + 1);
+		}
 
 		glm::vec4 bounds = m_ViewportPanel->GetViewportBounds();
 		ImVec2 mouseCoords = ImGui::GetMousePos();
@@ -174,7 +182,6 @@ namespace Crowny
 		coords.y = m_ViewportSize.y - coords.y;
 		if (coords.x >= 0 && coords.x < m_ViewportSize.x && coords.y >= 0 && coords.y < m_ViewportSize.y)
 		{
-			CW_ENGINE_INFO("{0}, {1}", coords.x, coords.y);
 			m_HoveredEntity = Entity((entt::entity)IDBufferRenderer::ReadPixel(coords.x, coords.y), scene.get());
 		}
 		m_HierarchyPanel->Update();
@@ -213,23 +220,40 @@ namespace Crowny
 		
 		m_MenuBar->Render();
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetStyle().FramePadding.y);
-		ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 - 32.5f);
+		ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 - 43.5f);
 		if (ImGui::ImageButton(reinterpret_cast<void*>(EditorAssets::Get().PlayIcon->GetRendererID()), 
 							   ImVec2(25.0f, 25.0f), ImVec2(0, 0), ImVec2(1,1), -1, ImVec4(1.0f, 1.0f, 1.0f, 0.0f), ImVec4(0.1f, 0.105f, 0.11f, 1.0f)))
 		{
-			ScriptRuntime::OnStart();
-			m_GameMode = true;
+			if (!m_GameMode)
+			{
+				ScriptRuntime::OnStart();
+				m_GameMode = true;
+			}
 		}
 		ImGui::SameLine(0.0f, 8.0f);
 		if (ImGui::ImageButton(reinterpret_cast<void*>(EditorAssets::Get().PauseIcon->GetRendererID()), 
 							   ImVec2(25.0f, 25.0f), ImVec2(0, 0), ImVec2(1,1), -1, ImVec4(1.0f, 1.0f, 1.0f, 0.0f), ImVec4(0.1f, 0.105f, 0.11f, 1.0f)))
-			{}
+		{
+			if (m_GameMode)
+			{
+				m_Paused = !m_Paused;
+			}
+		}
 		ImGui::SameLine(0.0f, 8.0f);
 		if (ImGui::ImageButton(reinterpret_cast<void*>(EditorAssets::Get().StopIcon->GetRendererID()), 
 							   ImVec2(25.0f, 25.0f), ImVec2(0, 0), ImVec2(1,1), -1, ImVec4(1.0f, 1.0f, 1.0f, 0.0f), ImVec4(0.1f, 0.105f, 0.11f, 1.0f)))
 		{
-			ScriptRuntime::OnShutdown();
-			m_GameMode = false;
+			if (m_GameMode)
+			{
+				ScriptRuntime::OnShutdown();
+				m_GameMode = false;
+				s_DeltaTime = 0.0f;
+				s_SmoothDeltaTime = 0.0f;
+				s_RealtimeSinceStartup = 0.0f;
+				s_Time = 0.0f;
+				s_FixedDeltaTime = 0.0f;
+				s_FrameCount = 0.0f;
+			}
 		}
 		ImGui::Separator();
 
@@ -306,7 +330,6 @@ namespace Crowny
 	bool EditorLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e)
 	{
 		ImGuiHierarchyPanel::SetSelectedEntity(m_HoveredEntity);
-		CW_ENGINE_INFO("Selected {0}", (uint32_t)m_HoveredEntity.GetHandle());
 		return true;
 	}
 
@@ -317,5 +340,12 @@ namespace Crowny
 		dispatcher.Dispatch<KeyPressedEvent>(CW_BIND_EVENT_FN(EditorLayer::OnKeyPressed));
 		dispatcher.Dispatch<MouseButtonPressedEvent>(CW_BIND_EVENT_FN(EditorLayer::OnMouseButtonPressed));
 	}
+
+	float Time::GetTime() { return EditorLayer::s_Time; }
+	float Time::GetDeltaTime() { return EditorLayer::s_DeltaTime; }
+	float Time::GetFrameCount() { return EditorLayer::s_FrameCount; }
+	float Time::GetFixedDeltaTime() { return EditorLayer::s_FixedDeltaTime; }
+	float Time::GetRealtimeSinceStartup() { return EditorLayer::s_RealtimeSinceStartup; }
+	float Time::GetSmoothDeltaTime() { return EditorLayer::s_SmoothDeltaTime; }
 
 }

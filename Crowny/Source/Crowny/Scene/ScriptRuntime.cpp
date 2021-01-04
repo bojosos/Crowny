@@ -67,7 +67,7 @@ namespace Crowny
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
         activeScene->m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent &sc) {
 			if (sc.OnStart)
-		    	sc.OnStart->Call(sc.Instance);
+				sc.OnStart->Call(sc.Instance);
         });
     }
 

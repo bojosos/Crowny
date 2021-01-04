@@ -14,6 +14,7 @@
 #include "Crowny/Renderer/EditorCamera.h"
 
 #include "Crowny/Scripting/CWMonoClass.h"
+#include "Crowny/Common/Time.h"
 
 #include <entt/entt.hpp>
 #include <Crowny.h>
@@ -45,6 +46,7 @@ namespace Crowny
 		void SaveActiveSceneAs();
 
 	private:
+		friend class Time;
 		ImGuiMenuBar* m_MenuBar;
 		Ref<Scene> m_Temp;
 
@@ -62,10 +64,17 @@ namespace Crowny
 		static EditorCamera s_EditorCamera;
 		Entity m_HoveredEntity;
 		bool m_GameMode = false;
-		
+		bool m_Paused = false;
 		glm::vec2 m_ViewportSize = { 1280.0f, 720.0f }; // and dis
+		
+		static float s_DeltaTime;
+		static float s_SmoothDeltaTime;
+		static float s_RealtimeSinceStartup;
+		static float s_Time;
+		static float s_FixedDeltaTime;
+		static float s_FrameCount;
+		
 	public:
 		static EditorCamera GetEditorCamera() { return s_EditorCamera; }
-		static Ref<Framebuffer> m_Framebuffer; // Maybe Viewport window should take care of this?
 	};
 }
