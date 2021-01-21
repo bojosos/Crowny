@@ -13,8 +13,8 @@ jobs:
              sudo apt update
              sudo apt-get -y install xorg-dev libgl1-mesa-dev libx11-dev libxcursor-dev clang-10
       - name: Generate projects
+        uses: actions/checkout@v2.3.4
         run:   |
-             cwd 
              chmod +x 3rdparty/premake/premake5
              bash Scripts/generate.sh
       - name: Build
