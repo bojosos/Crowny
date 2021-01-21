@@ -4,5 +4,5 @@ compiler:
   - clang
 
 script:
-  - make Crowny-Editor -j2 config=linux_release64 CXX=clang
+  - make Crowny-Editor -j2 config=release_linux64 CXX=clang
 
