@@ -14,7 +14,7 @@ jobs:
       - name: Download deps
         run:   |
              sudo apt update
-             sudo apt-get -y install xorg-dev libgl1-mesa-dev libx11-dev libxcursor-dev clang-10
+             sudo apt-get -y install xorg-dev libgl1-mesa-dev libx11-dev libxcursor-dev uuid clang-10
       - name: Generate projects
         run:   |
              chmod +x 3rdparty/premake/premake5
