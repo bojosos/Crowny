@@ -1,7 +1,9 @@
-name: C/C++ CI
+name: Crowny-Editor
 
 on:
   push:
+    branches: [ scripting ]
+  pull_request:
     branches: [ scripting ]
 
 jobs:
