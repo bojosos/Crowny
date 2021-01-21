@@ -93,7 +93,7 @@ namespace Crowny
 		m_ViewportHeight = height;
 		IDBufferRenderer::OnResize(width, height);
 		m_Registry.view<CameraComponent>().each([&](auto& e, auto& cc) {
-		//if(!cc.FixedAspectRatio)
+//		if(!cc.FixedAspectRatio)
 			cc.Camera.SetViewportSize(width, height);
 		});
 	}
