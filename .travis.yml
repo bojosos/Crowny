@@ -6,8 +6,8 @@ compiler:
 before_script:
   - chmod +x 3rdparty/premake/premake5
   - bash Scripts/generate.sh
-  - sudo apt-get install xorg-dev libgl1-mesa-dev libx11-dev libxcursor-dev
+  - sudo apt-get install xorg-dev libgl1-mesa-dev libx11-dev libxcursor-dev, clang-11
 
 script:
-  - make Crowny-Editor -j2 config=release_linux64 CXX=clang
+  - make Crowny-Editor -j2 config=release_linux64 CXX=clang++-11
 
