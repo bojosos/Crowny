@@ -9,5 +9,5 @@ before_script:
   - sudo apt-get install xorg-dev libgl1-mesa-dev libx11-dev libxcursor-dev clang-10
 
 script:
-  - make Crowny-Editor -j2 config=release_linux64 CXX=clang++-11
+  - make Crowny-Editor -j2 config=release_linux64 CXX=clang++-10
 
