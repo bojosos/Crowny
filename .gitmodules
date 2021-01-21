@@ -1,3 +1,30 @@
+[submodule "Crowny/Dependencies/glfw"]
+	path = Crowny/Dependencies/glfw
+	url = https://github.com/bojosos/glfw
+[submodule "Crowny/Dependencies/spdlog"]
+	path = Crowny/Dependencies/spdlog
+	url = https://github.com/bojosos/spdlog
 [submodule "Crowny/Dependencies/assimp"]
 	path = Crowny/Dependencies/assimp
-	url = http://github.com/AminAliari/assimp
+	url = https://github.com/bojosos/assimp-1
+[submodule "Crowny/Dependencies/entt"]
+	path = Crowny/Dependencies/entt
+	url = https://github.com/bojosos/entt
+[submodule "Crowny/Dependencies/freetype2"]
+	path = Crowny/Dependencies/freetype2
+	url = https://github.com/aseprite/freetype2
+[submodule "Crowny/Dependencies/freetype-gl"]
+	path = Crowny/Dependencies/freetype-gl
+	url = https://github.com/bojosos/freetype-gl
+[submodule "Crowny/Dependencies/glm"]
+	path = Crowny/Dependencies/glm
+	url = https://github.com/bojosos/glm
+[submodule "Crowny/Dependencies/ImGuizmo"]
+	path = Crowny/Dependencies/ImGuizmo
+	url = https://github.com/bojosos/ImGuizmo
+[submodule "Crowny/Dependencies/yaml-cpp"]
+	path = Crowny/Dependencies/yaml-cpp
+	url = https://github.com/bojosos/yaml-cpp
+[submodule "Crowny/Dependencies/imgui"]
+	path = Crowny/Dependencies/imgui
+	url = https://github.com/bojosos/imgui

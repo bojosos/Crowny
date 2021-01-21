@@ -10,8 +10,9 @@ bin-int/
 **.csproj
 **.csproj.filters
 **.csproj.user
-Crowny/Dependencies/
 **/Makefile
+Crowny/Dependencies/mono/
+Crowny/Dependencies/vulkan/
 
 Crowny-Editor/Resources/Models/
 
