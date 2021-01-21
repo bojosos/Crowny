@@ -1,5 +1,5 @@
 # Nworc
-![C/C++ CI](https://github.com/bojosos/Crowny/workflows/C/C++%20CI/badge.svg)
+![C/C++ CI](https://github.com/bojosos/Crowny/workflows/Crowny-Editor/badge.svg) ![Crowy-Sharp](https://github.com/bojosos/Crowny/workflows/Crowy-Sharp/badge.svg)
 
 A C++ game engine
 
