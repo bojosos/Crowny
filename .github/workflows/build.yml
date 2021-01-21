@@ -5,19 +5,26 @@ on:
     branches: [ scripting ]
 
 jobs:
-  build:
+  project:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.3.4
         with:
           submodules: true
-      - name: Download deps
-        run:   |
-             sudo apt update
-             sudo apt-get -y install xorg-dev libgl1-mesa-dev libx11-dev libxcursor-dev uuid clang-10
       - name: Generate projects
         run:   |
              chmod +x 3rdparty/premake/premake5
              bash Scripts/generate.sh
+  download:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download deps
+        run:   |
+             sudo apt-get update
+             sudo apt-get -y install xorg-dev libgl1-mesa-dev libx11-dev libxcursor-dev uuid clang-10
+  build:
+    runs-on: ubuntu-latest
+    needs: [project, download]
+    steps:
       - name: Build
         run: make Crowny-Editor -j2 config=release_linux64 CXX=clang++-10
