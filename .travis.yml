@@ -3,9 +3,6 @@ language: cpp
 compiler:
   - clang
 
-before_script:
-  - ./Scripts/generate.sh
-
 script:
   - make Crowny-Editor -j2 config=release_linux64 CXX=clang
 
