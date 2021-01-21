@@ -13,6 +13,7 @@ namespace Sandbox
         public void Start()
         {
             Debug.Log("Start called!");
+            Debug.Log(transform.position);
         }
 
         public void Update()
