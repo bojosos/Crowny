@@ -21,6 +21,7 @@ namespace Crowny
 	void ImGuiMaterialPanel::Render()
 	{
 		ImGui::Begin("Material", &m_Shown);
+		UpdateState();
 		
 		if (s_SelectedMaterial)
 		{

@@ -20,6 +20,7 @@ namespace Crowny
 		CW_ENGINE_ASSERT(!OpenGLInfo::GetInformation().empty(), "OpenGL info error");
 
 		ImGui::Begin("OpenGL Information", &m_Shown);
+		UpdateState();
 		ImGui::Columns(3, "OpenGL Information");
 		ImGui::Separator();
 		for (OpenGLDetail& det : OpenGLInfo::GetInformation())

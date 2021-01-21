@@ -24,6 +24,7 @@ namespace Crowny
 	void ImGuiInspectorPanel::Render()
 	{
 		ImGui::Begin("Inspector", &m_Shown);
+		UpdateState();
 		m_ComponentEditor.Render();
 		ImGui::End();
 	}

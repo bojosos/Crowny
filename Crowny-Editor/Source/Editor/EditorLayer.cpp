@@ -330,8 +330,11 @@ namespace Crowny
 
 	bool EditorLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e)
 	{
-		ImGuiHierarchyPanel::SetSelectedEntity(m_HoveredEntity);
-		return true;
+		if (m_ViewportPanel->IsHovered() && m_ViewportPanel->IsFocused())
+		{
+			ImGuiHierarchyPanel::SetSelectedEntity(m_HoveredEntity);
+			return true;
+		}
 	}
 
 	void EditorLayer::OnEvent(Event& e)

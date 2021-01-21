@@ -48,6 +48,7 @@ namespace Crowny
 		
 		{
 			ImGui::Begin("Texture Properties");
+		UpdateState();
 			if (ImGui::BeginCombo("Texture type", TextureTypes[SelectedTextureType]))
 			{
 				for (uint32_t n = 0; n < TextureTypes.size(); n++)
