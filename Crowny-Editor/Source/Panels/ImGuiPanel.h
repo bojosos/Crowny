@@ -13,7 +13,12 @@ namespace Crowny
 
 		virtual void Render() = 0;
 		virtual const std::string& GetName() const { return m_Name; }
+		virtual bool IsFocused() { return m_Focused; }
+		virtual bool IsHovered() { return m_Hovered; }
 	protected:
+		void UpdateState();
+	protected:
+		bool m_Focused, m_Hovered;
 		std::string m_Name;
 		bool m_Shown;
 	};

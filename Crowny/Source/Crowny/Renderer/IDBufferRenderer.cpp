@@ -66,7 +66,7 @@ namespace Crowny
         delete[] indices;
     }
 	
-	void IDBufferRenderer::OnResize(float width, float height)
+	void IDBufferRenderer::OnResize(uint32_t width, uint32_t height)
 	{
 		s_Data.Framebuffer->Resize(width, height);
 	}

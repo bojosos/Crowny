@@ -26,15 +26,15 @@ namespace Crowny
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
 		ImGui::Begin("Viewport", &m_Shown);
-		bool m_ViewportFocused = ImGui::IsWindowFocused();
-		bool m_ViewportHovered = ImGui::IsWindowHovered();
-		Application::Get().GetImGuiLayer()->BlockEvents(!m_ViewportFocused && !m_ViewportHovered);
+    UpdateState();
+		Application::Get().GetImGuiLayer()->BlockEvents(!m_Focused && !m_Hovered);
 			
 		ImVec2 minBound = ImGui::GetWindowPos();
 		ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
 		ImVec2 viewportOffset = ImGui::GetCursorPos();
 		m_ViewportSize = { viewportPanelSize.x, viewportPanelSize.y };
-		uint32_t textureID = SceneRenderer::GetMainFramebuffer()->GetColorAttachmentRendererID();
+//		uint32_t textureID = SceneRenderer::GetMainFramebuffer()->GetColorAttachmentRendererID();
+    uint32_t textureID = 97;
 		ImGui::Image(reinterpret_cast<void*>(textureID), ImVec2(m_ViewportSize.x, m_ViewportSize.y), ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
 		
 		ImVec2 windowSize = ImGui::GetWindowSize();

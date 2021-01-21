@@ -13,13 +13,12 @@ namespace Crowny
 	void ImGuiConsolePanel::Render()
 	{
 		m_RequestScrollToBottom = ImGuiConsoleBuffer::HasNewMessages();
-        if (ImGui::Begin("Console"), m_Shown)
-        {
-            RenderHeader();
-            ImGui::Separator();
-            RenderMessages();
-            ImGui::End();
-        }
+		ImGui::Begin("Console", &m_Shown);
+		UpdateState();
+		RenderHeader();
+		ImGui::Separator();
+		RenderMessages();
+		ImGui::End();
 	}
 
     void ImGuiConsolePanel::RenderHeader()

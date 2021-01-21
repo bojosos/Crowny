@@ -49,6 +49,7 @@ namespace Crowny
         if (FramebufferProperties spec = s_Data.MainFramebuffer->GetProperties(); s_Data.ViewportWidth > 0.0f 
             && s_Data.ViewportHeight > 0.0f && (spec.Width != s_Data.ViewportWidth || spec.Height != s_Data.ViewportHeight))
 		{
+      IDBufferRenderer::OnResize(s_Data.ViewportWidth, s_Data.ViewportHeight);
 			s_Data.MainFramebuffer->Resize(s_Data.ViewportWidth, s_Data.ViewportHeight);
 			scene->OnViewportResize(s_Data.ViewportWidth, s_Data.ViewportHeight);
 		}
@@ -121,7 +122,6 @@ namespace Crowny
     {
         s_Data.ViewportWidth = (uint32_t)width;
         s_Data.ViewportHeight = (uint32_t)height;
-        s_Data.MainFramebuffer->Resize(width, height);
     }
         
 }

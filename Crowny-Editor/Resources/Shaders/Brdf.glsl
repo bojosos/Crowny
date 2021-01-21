@@ -124,5 +124,6 @@ vec2 IntegrateBRDF(float NdotV, float roughness)
 void main() 
 {
     vec2 integratedBRDF = IntegrateBRDF(TexCoords.x, TexCoords.y);
-    FragColor = integratedBRDF;
+//    FragColor = integratedBRDF;
+    FragColor = vec4(0.0, 0.0, 0.0, 0.0);
 }

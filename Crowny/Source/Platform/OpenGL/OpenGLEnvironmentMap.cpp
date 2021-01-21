@@ -171,7 +171,9 @@ namespace Crowny
 
     void OpenGLEnvironmentMap::ToCubemap()
     {
+        glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LEQUAL);
+        glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
         Ref<Shader> equirectangularToCubemapShader = Shader::Create("/Shaders/EquirectangularToCubemap.glsl");
         Ref<Shader> irradianceShader = Shader::Create("/Shaders/IrradianceConvolution.glsl");
         Ref<Shader> brdfShader = Shader::Create("/Shaders/Brdf.glsl");
@@ -332,6 +334,7 @@ namespace Crowny
 
         glViewport(0, 0, 512, 512);
         brdfShader->Bind();
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         RenderQuad();
         glBindFramebuffer(GL_FRAMEBUFFER, 0);

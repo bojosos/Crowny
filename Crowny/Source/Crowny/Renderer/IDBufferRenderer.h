@@ -13,7 +13,7 @@ namespace Crowny
         static void Begin(const glm::mat4& projection, const glm::mat4& view);
         static void DrawQuad(const glm::mat4& transform, uint32_t entityId);
         static void DrawMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, uint32_t entityId);
-        static void OnResize(float width, float height);
+        static void OnResize(uint32_t width, uint32_t height);
         static void End();
         static int32_t ReadPixel(int32_t x, int32_t y);
     public:

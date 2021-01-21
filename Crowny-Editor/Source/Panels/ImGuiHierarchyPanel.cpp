@@ -266,6 +266,7 @@ namespace Crowny
 	{
 		m_Deleted = false;
 		ImGui::Begin("Hierarchy", &m_Shown);
+		UpdateState();
 		Ref<Scene> activeScene = SceneManager::GetActiveScene();
 		if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_NoOpenOverExistingPopup | ImGuiPopupFlags_MouseButtonRight))
 		{
