@@ -47,7 +47,6 @@ namespace Crowny
 		style.WindowRounding = 0;
 		style.GrabRounding = style.FrameRounding = 0;
 		style.ScrollbarSize = 15;
-		style.ScrollbarRounding = 0;
 		style.TabRounding = 0;
 		style.ScrollbarRounding = 5.0f;
 		style.FrameBorderSize = 1.0f;

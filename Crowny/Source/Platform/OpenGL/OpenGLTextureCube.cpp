@@ -9,45 +9,45 @@
 namespace Crowny
 {
 
-	OpenGLTextureCube::OpenGLTextureCube(const std::string& filepath, const TextureParameters& parameters) : m_Parameters(parameters)
-	{
-		m_Files[0] = filepath;
-		LoadFromFile();
-	}
+  OpenGLTextureCube::OpenGLTextureCube(const std::string& filepath, const TextureParameters& parameters) : m_Parameters(parameters)
+  {
+    m_Files[0] = filepath;
+    LoadFromFile();
+  }
 
-	OpenGLTextureCube::OpenGLTextureCube(const std::array<std::string, 6>& files, const TextureParameters& parameters) : m_Parameters(parameters)
-	{
-		CW_ENGINE_ASSERT(false, "Not implemented");
-	}
+  OpenGLTextureCube::OpenGLTextureCube(const std::array<std::string, 6>& files, const TextureParameters& parameters) : m_Parameters(parameters)
+  {
+    CW_ENGINE_ASSERT(false, "Not implemented");
+  }
 
-	OpenGLTextureCube::OpenGLTextureCube(const std::array<std::string, 6>& files, uint32_t mips, InputFormat format, const TextureParameters& parameters) : m_Parameters(parameters)
-	{
-		CW_ENGINE_ASSERT(false, "Not implemented");
-	}
+  OpenGLTextureCube::OpenGLTextureCube(const std::array<std::string, 6>& files, uint32_t mips, InputFormat format, const TextureParameters& parameters) : m_Parameters(parameters)
+  {
+    CW_ENGINE_ASSERT(false, "Not implemented");
+  }
 
-	OpenGLTextureCube::~OpenGLTextureCube() 
-	{
-		glDeleteTextures(1, &m_RendererID);
-	}
+  OpenGLTextureCube::~OpenGLTextureCube() 
+  {
+    glDeleteTextures(1, &m_RendererID);
+  }
 
-	void OpenGLTextureCube::LoadFromFile()
-	{
-		stbi_uc* data = nullptr;
-		int32_t width, height, channels;
-		stbi_set_flip_vertically_on_load(1);
+  void OpenGLTextureCube::LoadFromFile()
+  {
+    stbi_uc* data = nullptr;
+    int32_t width, height, channels;
+    stbi_set_flip_vertically_on_load(1);
 
-		data = stbi_load(m_Files[0].c_str(), &width, &height, &channels, 0);
-																		 
-		//Divide the cross into 6 images, for now assumes it is a horizontal image
-		uint32_t faceWidth = width / 4;
-		uint32_t faceHeight = height / 3;
-		std::array<stbi_uc*, 6> faces;
+    data = stbi_load(m_Files[0].c_str(), &width, &height, &channels, 0);
 
-		for (uint32_t cy = 0; cy < 3; cy++)
-		{
-			for (uint32_t cx = 0; cx < 4; cx++)
-			{
-				if (cy == 0 || cy == 2 || cy == 3) // horizontal, vertical
+    //Divide the cross into 6 images, for now assumes it is a horizontal image
+    uint32_t faceWidth = width / 4;
+    uint32_t faceHeight = height / 3;
+    std::array<stbi_uc*, 6> faces;
+
+    for (uint32_t cy = 0; cy < 4; cy++)
+    {
+      for (uint32_t cx = 0; cx < 3; cx++)
+      {
+        if (cy == 0 || cy == 2 || cy == 3) // horizontal, vertical
 					if (cx != 1)
 						continue;
 				for (uint32_t y = 0; y < faceHeight; y++)

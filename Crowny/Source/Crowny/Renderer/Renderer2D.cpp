@@ -26,8 +26,8 @@ namespace Crowny
 
 	struct UniformBuffer
 	{
-		byte* Buffer;
-		uint32_t Size;
+		byte* Buffer = nullptr;
+		uint32_t Size = 0;
 
 		UniformBuffer() { }
 		UniformBuffer(byte* buffer, uint32_t size) : Buffer(buffer), Size(size) { memset(Buffer, 0, Size); }
@@ -37,7 +37,7 @@ namespace Crowny
 	struct Renderer2DSystemUniform
 	{
 		UniformBuffer Buffer;
-		uint32_t Offset;
+		uint32_t Offset = 0;
 
 		Renderer2DSystemUniform() { }
 		Renderer2DSystemUniform(const UniformBuffer& buffer, uint32_t offset) : Buffer(buffer), Offset(offset) { }
