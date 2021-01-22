@@ -16,7 +16,7 @@ namespace Crowny
 		};
 	private:
 		std::string m_Name;
-		uint32_t m_Register;
+		uint32_t m_Register = 0;
 		uint32_t m_Count;
 		Type m_Type;
 
@@ -43,13 +43,13 @@ namespace Crowny
 		friend class OpenGLShader;
 
 		std::string m_Name;
-		uint32_t m_Size;
-		uint32_t m_Count;
-		uint32_t m_Offset;
+		uint32_t m_Size = 0;
+		uint32_t m_Count = 0;
+		uint32_t m_Offset = 0;
 		Type m_Type;
 
 		ShaderStruct* m_Struct;
-		mutable int32_t m_Location;
+		mutable int32_t m_Location = 0;
 
 		OpenGLUniformDeclaration(Type type, const std::string& name, uint32_t count = 1);
 		OpenGLUniformDeclaration(ShaderStruct* uniformStruct, const std::string& name, uint32_t count = 1);

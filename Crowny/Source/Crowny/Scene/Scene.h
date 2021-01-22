@@ -21,6 +21,10 @@ namespace Crowny
 	public:
 		Scene(const std::string& name = std::string());
 		Scene(const Scene& other);
+    Scene& operator=(const Scene& other)
+    {
+      return *this;
+    }
 		~Scene();
 
 		void OnViewportResize(uint32_t width, uint32_t height);
@@ -41,10 +45,8 @@ namespace Crowny
 		friend class ScriptRuntime;
 	private:
 		bool m_HasChanged = true;
-		uint32_t m_BuildIndex;
 		std::string m_Name;
 		std::string m_Filepath;
-		bool m_IsLoaded;
 		entt::registry m_Registry;
 		uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
 
