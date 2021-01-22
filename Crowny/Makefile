@@ -268,7 +268,6 @@ GENERATED += $(OBJDIR)/OpenGLTexture.o
 GENERATED += $(OBJDIR)/OpenGLTextureCube.o
 GENERATED += $(OBJDIR)/OpenGLVertexArray.o
 GENERATED += $(OBJDIR)/OpenGLVertexBuffer.o
-GENERATED += $(OBJDIR)/OrthographicCamera.o
 GENERATED += $(OBJDIR)/PBRMaterial.o
 GENERATED += $(OBJDIR)/Parser.o
 GENERATED += $(OBJDIR)/Physics.o
@@ -361,7 +360,6 @@ OBJECTS += $(OBJDIR)/OpenGLTexture.o
 OBJECTS += $(OBJDIR)/OpenGLTextureCube.o
 OBJECTS += $(OBJDIR)/OpenGLVertexArray.o
 OBJECTS += $(OBJDIR)/OpenGLVertexBuffer.o
-OBJECTS += $(OBJDIR)/OrthographicCamera.o
 OBJECTS += $(OBJDIR)/PBRMaterial.o
 OBJECTS += $(OBJDIR)/Parser.o
 OBJECTS += $(OBJDIR)/Physics.o
@@ -574,9 +572,6 @@ $(OBJDIR)/MeshFactory.o: Source/Crowny/Renderer/MeshFactory.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Model.o: Source/Crowny/Renderer/Model.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/OrthographicCamera.o: Source/Crowny/Renderer/OrthographicCamera.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/PBRMaterial.o: Source/Crowny/Renderer/PBRMaterial.cpp

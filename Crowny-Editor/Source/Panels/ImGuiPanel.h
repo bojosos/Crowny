@@ -18,7 +18,7 @@ namespace Crowny
 	protected:
 		void UpdateState();
 	protected:
-		bool m_Focused, m_Hovered;
+		bool m_Focused = false, m_Hovered = false;
 		std::string m_Name;
 		bool m_Shown;
 	};

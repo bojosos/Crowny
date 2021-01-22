@@ -40,6 +40,8 @@ namespace Crowny
 	Scene::~Scene()
 	{
 		delete m_RootEntity;
+    delete m_Entities;
+    delete m_Uuids;
 	}
 	
 	Entity Scene::CreateEntity(const std::string& name)
