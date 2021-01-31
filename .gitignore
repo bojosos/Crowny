@@ -19,3 +19,11 @@ Crowny-Editor/Resources/Models/
 .vscode/c_cpp_properties.json
 
 .vscode/
+
+PVS-Studio.log
+
+report.html
+
+report.tasks
+
+strace_out

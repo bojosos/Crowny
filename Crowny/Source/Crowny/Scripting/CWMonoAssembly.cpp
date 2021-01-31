@@ -16,14 +16,14 @@ namespace Crowny
 	static bool CheckImageOpenStatus(MonoImageOpenStatus status)
 	{
 		switch (status)
-    {
-      case MONO_IMAGE_OK:                                                                                               return true;
-      case MONO_IMAGE_ERROR_ERRNO: CW_ENGINE_CRITICAL("MONO_IMAGE_ERROR_ERRNO while loading assembly");                 return false;
-      case MONO_IMAGE_MISSING_ASSEMBLYREF: CW_ENGINE_CRITICAL("MONO_IMAGE_MISSING_ASSEMBLYREF while loading assembly"); return false;
-      case MONO_IMAGE_IMAGE_INVALID: CW_ENGINE_CRITICAL("MONO_IMAGE_IMAGE_INVALID while loading assembly");             return false;
-    }
+    	{
+      		case MONO_IMAGE_OK:                                                                                               return true;
+      		case MONO_IMAGE_ERROR_ERRNO: CW_ENGINE_CRITICAL("MONO_IMAGE_ERROR_ERRNO while loading assembly");                 return false;
+      		case MONO_IMAGE_MISSING_ASSEMBLYREF: CW_ENGINE_CRITICAL("MONO_IMAGE_MISSING_ASSEMBLYREF while loading assembly"); return false;
+      		case MONO_IMAGE_IMAGE_INVALID: CW_ENGINE_CRITICAL("MONO_IMAGE_IMAGE_INVALID while loading assembly");             return false;
+		}
 
-  	return false;
+  		return false;
 	}
 
 	CWMonoAssembly::CWMonoAssembly(MonoDomain* domain, const std::string& filepath)

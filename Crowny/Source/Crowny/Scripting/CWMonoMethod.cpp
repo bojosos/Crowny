@@ -35,7 +35,21 @@ namespace Crowny
 
 	void CWMonoMethod::Call(MonoObject* instance)
 	{
-		mono_runtime_invoke(m_Method, instance, nullptr, nullptr);
+		MonoObject* exception = nullptr;
+		mono_runtime_invoke(m_Method, instance, nullptr, &exception);
+		if (exception != nullptr)
+		{
+			MonoClass* exceptionClass = mono_object_get_class(exception);
+			MonoProperty* exceptionProp = mono_class_get_property_from_name(exceptionClass, "Message");
+			MonoMethod* exceptionMsgGetter = mono_property_get_get_method(exceptionProp);
+			MonoString* exceptionMsg = (MonoString*)mono_runtime_invoke(exceptionMsgGetter, exception, nullptr, nullptr);
+			
+			MonoProperty* exceptionStackProp = mono_class_get_property_from_name(exceptionClass, "StackTrace");
+			MonoMethod* exceptionStackGetter = mono_property_get_get_method(exceptionStackProp);
+			MonoString* exceptionStackTrace = (MonoString*)mono_runtime_invoke(exceptionStackGetter, exception, nullptr, nullptr);
+			
+			CW_ENGINE_CRITICAL("Managed exception: {0}", mono_string_to_utf8(exceptionStackTrace));
+		}
 	}
 
 	bool CWMonoMethod::IsStatic()

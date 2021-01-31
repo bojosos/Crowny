@@ -69,25 +69,25 @@ namespace Crowny
         }
 
         [MethodImpl(MethodImplOptions.InternalCall)]
-        public static extern void Internal_GetPosition(IntPtr thisptr, out Vector3 output);
+        private static extern void Internal_GetPosition(IntPtr thisptr, out Vector3 output);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        public static extern void Internal_SetPosition(IntPtr thisptr, ref Vector3 value);
+        private  static extern void Internal_SetPosition(IntPtr thisptr, ref Vector3 value);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        public static extern void Internal_GetLocalPosition(IntPtr thisptr, out Vector3 output);
+        private  static extern void Internal_GetLocalPosition(IntPtr thisptr, out Vector3 output);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        public static extern void Internal_SetLocalPosition(IntPtr thisptr, ref Vector3 value);
+        private  static extern void Internal_SetLocalPosition(IntPtr thisptr, ref Vector3 value);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        public static extern void Internal_GetLocalScale(IntPtr thisptr, out Vector3 output);
+        private  static extern void Internal_GetLocalScale(IntPtr thisptr, out Vector3 output);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        public static extern void Internal_SetLocalScale(IntPtr thisptr, ref Vector3 value);
+        private  static extern void Internal_SetLocalScale(IntPtr thisptr, ref Vector3 value);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        public static extern void Internal_GetEulerAngles(IntPtr thisptr, out Vector3 output);
+        private  static extern void Internal_GetEulerAngles(IntPtr thisptr, out Vector3 output);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        public static extern void Internal_SetEulerAngles(IntPtr thisptr, ref Vector3 value);
+        private  static extern void Internal_SetEulerAngles(IntPtr thisptr, ref Vector3 value);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        public static extern void Internal_GetLocalEulerAngles(IntPtr thisptr, out Vector3 output);
+        private  static extern void Internal_GetLocalEulerAngles(IntPtr thisptr, out Vector3 output);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        public static extern void Internal_SetLocalEulerAngles(IntPtr thisptr, ref Vector3 value);
+        private  static extern void Internal_SetLocalEulerAngles(IntPtr thisptr, ref Vector3 value);
 
     }
 }

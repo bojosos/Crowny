@@ -34,7 +34,7 @@ namespace Crowny
         /// <summary>
         /// Creates a new Vector2.
         /// </summary>
-        /// <param name="value">The value for all three components.</param>
+        /// <param name="value">The value for all of the components.</param>
         public Vector2(float value)
         {
             this.x = value;
@@ -52,20 +52,20 @@ namespace Crowny
             {
                 switch(index)
                 {
-                    case (0): return x;
-                    case (1): return y;
+                    case 0: return x;
+                    case 1: return y;
                     default:
-                        throw new IndexOutOfRangeException("Invalid index for a three component Vector");
+                        throw new IndexOutOfRangeException("Invalid index for a twi component Vector");
                 }
             }
             set
             {
                 switch (index)
                 {
-                    case (0): x = value; break;
-                    case (1): y = value; break;
+                    case 0: x = value; break;
+                    case 1: y = value; break;
                     default:
-                        throw new IndexOutOfRangeException("Invalid index for a three component Vector");
+                        throw new IndexOutOfRangeException("Invalid index for a two component Vector");
 
                 }
             }
@@ -115,9 +115,9 @@ namespace Crowny
         }
 
         /// <summary>
-        /// Scales the components of the vector
+        /// Scales the components of the vector.
         /// </summary>
-        /// <param name="scale">Scale factors to multiply components by</param>
+        /// <param name="scale">Scale factors to multiply components by.</param>
         public void Scale(Vector2 scale)
         {
             x *= scale.x;
@@ -165,24 +165,24 @@ namespace Crowny
 
         public static bool operator!=(Vector2 l, Vector2 r)
         {
-            return l != r;
+            return !(l == r);
         }
 
         /// <summary>
-        /// Calculates the magniuted of a Vector2
+        /// Calculates the magniuted of a Vector2.
         /// </summary>
-        /// <param name="v">The Vector2 to calculate the magnited of</param>
-        /// <returns>The magnitude of the vector</returns>
+        /// <param name="v">The Vector2 to calculate the magnited of.</param>
+        /// <returns>The magnitude of the vector.</returns>
         public static float Magnitude(Vector2 v)
         {
             return (float)System.Math.Sqrt(v.x * v.x + v.y * v.y);
         }
 
         /// <summary>
-        /// Normalizes the vector
+        /// Normalizes the vector.
         /// </summary>
-        /// <param name="v">Vector</param>
-        /// <returns>Normalized copy of the vector</returns>
+        /// <param name="v">Vector.</param>
+        /// <returns>Normalized copy of the vector.</returns>
         public static Vector2 Normalize(Vector2 v)
         {
             float sl = v.sqrdLength;
@@ -208,7 +208,7 @@ namespace Crowny
         /// </summary>
         /// <param name="a">First vector.</param>
         /// <param name="b">Second vector.</param>
-        /// <returns>Vector with the maximum components of the two vectors</returns>
+        /// <returns>Vector with the maximum components of the two vectors.</returns>
         public static Vector2 Max(Vector2 a, Vector2 b)
         {
             return new Vector2(Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
@@ -219,7 +219,7 @@ namespace Crowny
         /// </summary>
         /// <param name="a">First vector.</param>
         /// <param name="b">Second vector.</param>
-        /// <returns>Vector with the minumum components of the two vectors</returns>
+        /// <returns>Vector with the minumum components of the two vectors.</returns>
         public static Vector2 Min(Vector2 a, Vector2 b)
         {
             return new Vector2(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y));

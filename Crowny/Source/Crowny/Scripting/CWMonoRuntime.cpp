@@ -73,6 +73,8 @@ namespace Crowny
 	void CWMonoRuntime::Shutdown()
 	{
 		mono_jit_cleanup(s_Instance->m_Domain);
+		mono_runtime_cleanup(s_Instance->m_Domain);
+		mono_domain_free(s_Instance->m_Domain, true);
 	}
 
 }

@@ -10,14 +10,16 @@ namespace Sandbox
         [Crowny.Range(0.0f, 10.0f), ShowInInspector]
         public float speed = 1.0f;
 
+        private Camera camera;
+
         public void Start()
         {
-            Debug.Log("Start called!");
-            Debug.Log(transform.position);
+            camera = GetComponent<CameraComponent>().camera;
         }
 
         public void Update()
         {
+            Debug.Log(camera.viewportRectangle);
             if (Input.GetKey(KeyCode.Left))
         	    transform.position += Vector3.left * speed * Time.smoothDeltaTime;
             if (Input.GetKey(KeyCode.Right))
@@ -27,7 +29,7 @@ namespace Sandbox
             if (Input.GetKey(KeyCode.Down))
         	    transform.position += Vector3.down * speed * Time.smoothDeltaTime;
             if (Input.GetKey(KeyCode.T))
-                Debug.Log(transform.position);
+                Crowny.Debug.Log(transform.position);
         }
     }
 }

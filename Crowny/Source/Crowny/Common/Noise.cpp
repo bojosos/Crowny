@@ -26,7 +26,7 @@ namespace Crowny
 			float y = yPos * freq / ops.Smoothness;
 
 			float noise = 0.0f;
-			if (ops.NoiseFunc == NoiseFunc::PERLIN)
+			if (ops.NoiseFunc == NoiseFunc::Perlin)
 			{
 				noise = glm::perlin(glm::vec3(ops.Seed + x, ops.Seed + y, ops.Seed));
 			}
