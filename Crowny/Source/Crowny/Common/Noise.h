@@ -7,18 +7,16 @@ namespace Crowny
 
 	enum class NoiseFunc
 	{
-		PERLIN,
-		SIMPLEX,
-		VORONOI
+		Perlin,
+		Simplex,
+		Voronoi
 	};
 
 	struct NoiseOptions
 	{
 		int Octaves;
-		float Amplitude;
 		float Smoothness;
 		float Roughness;
-		float Offset;
 		int Seed;
 		NoiseFunc NoiseFunc;
 	};

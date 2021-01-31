@@ -1,0 +1,30 @@
+[18:22:39] [info] CROWNY: /Shaders/BatchRenderer.glsl
+[18:22:39] [info] CROWNY: /Shaders/Depth.glsl
+[18:22:39] [info] CROWNY: /Shaders/LightCulling.glsl
+[18:22:39] [info] CROWNY: /Shaders/LightAccumulation.glsl
+[18:22:39] [info] CROWNY: /Shaders/Hdr.glsl
+[18:22:39] [info] CROWNY: /Shaders/DepthDebug.glsl
+[18:22:39] [info] CROWNY: /Shaders/IDBufferShader.glsl
+[18:22:39] [info] CROWNY: /Shaders/IDBuffer3DShader.glsl
+[18:22:39] [info] CROWNY: Domain Crowny C# Runtime created!
+[18:22:39] [info] CROWNY: Assembly Crowny.dll loaded
+[18:22:39] [info] CROWNY: Assembly Client.dll loaded
+[18:22:39] [info] CROWNY: /Shaders/PBRShader.glsl
+[18:22:40] [info] CROWNY: Loaded texture /Textures/rustediron2_basecolor.png, 2048x2048x4.
+[18:22:40] [info] CROWNY: Loaded texture /Textures/rustediron2_metallic.png, 2048x2048x1.
+[18:22:40] [info] CROWNY: Loaded texture /Textures/rustediron2_normal.png, 2048x2048x3.
+[18:22:40] [info] CROWNY: Loaded texture /Textures/rustediron2_roughness.png, 2048x2048x1.
+[18:22:40] [info] CROWNY: /Shaders/Background.glsl
+[18:22:40] [info] CROWNY: /Shaders/EquirectangularToCubemap.glsl
+[18:22:41] [info] CROWNY: /Shaders/IrradianceConvolution.glsl
+[18:22:41] [info] CROWNY: /Shaders/Brdf.glsl
+[18:22:41] [error] CROWNY: 0:114(2): error: value of type vec4 cannot be assigned to variable of type vec2
+
+[18:22:41] [info] CROWNY: /Shaders/Prefilter.glsl
+[18:22:41] [info] CROWNY: Loaded texture /Textures/Unassigned.png, 608x608x3.
+[18:22:41] [info] CROWNY: Loaded texture /Icons/Play.png, 448x448x4.
+[18:22:41] [info] CROWNY: Loaded texture /Icons/Pause.png, 448x448x4.
+[18:22:41] [info] CROWNY: Loaded texture /Icons/Stop.png, 448x448x4.
+[18:22:45] [info] CLIENT: 00:00:00.3741298
+[18:23:04] [info] CLIENT: 00:00:00.3730203
+[18:23:07] [info] CLIENT: 00:00:00.3636425

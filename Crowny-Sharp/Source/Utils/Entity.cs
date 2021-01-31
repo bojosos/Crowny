@@ -22,10 +22,10 @@ namespace Crowny
 			get { return Internal_GetTransform(m_InternalPtr); }
 		}
 
-		public T GetComponent<T>() where T : Component
-		{
-			return (T)Component.Internal_GetComponent(this, typeof(T));
-		}
+		//public T GetComponent<T>() where T : Component
+		//{
+			//return (T)Component.Internal_GetComponent(this, typeof(T));
+		//}
 
 		[MethodImpl(MethodImplOptions.InternalCall)]
 		private static extern string Internal_GetName(IntPtr internalPtr);

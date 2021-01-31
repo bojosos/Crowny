@@ -4,7 +4,6 @@
 
 #include "Crowny/Scripting/CWMonoRuntime.h"
 
-#include "Crowny/Runtime/Runtime.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
 #include "Crowny/Scene/SceneSerializer.h"
 #include "Crowny/Common/FileSystem.h"
@@ -335,6 +334,7 @@ namespace Crowny
 			ImGuiHierarchyPanel::SetSelectedEntity(m_HoveredEntity);
 			return true;
 		}
+    return false;
 	}
 
 	void EditorLayer::OnEvent(Event& e)

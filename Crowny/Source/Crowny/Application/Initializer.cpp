@@ -12,6 +12,7 @@
 
 #include "Crowny/Scripting/CWMonoRuntime.h"
 #include "Crowny/Scripting/Bindings/Logging/ScriptDebug.h"
+#include "Crowny/Scripting/Bindings/Math/ScriptNoise.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptTransform.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntity.h"
@@ -49,6 +50,7 @@ namespace Crowny
 		ScriptTime::InitRuntimeFunctions();
 		ScriptRandom::InitRuntimeFunctions();
 		ScriptInput::InitRuntimeFunctions();
+    ScriptNoise::InitRuntimeFunctions();
 	}
 
 	void Initializer::Shutdown()

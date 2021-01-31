@@ -23,19 +23,19 @@ namespace Crowny
         public float z;
 
         /// <summary>
-        /// Access a component of the vector
+        /// Access a component of the vector.
         /// </summary>
-        /// <param name="index">Index: 0-x, 1-y, 2-z</param>
-        /// <returns>The value of the component</returns>
+        /// <param name="index">Index: 0-x, 1-y, 2-z.</param>
+        /// <returns>The value of the component.</returns>
         public float this[int index]
         {
             get
             {
                 switch(index)
                 {
-                    case (0): return x;
-                    case (1): return y;
-                    case (2): return z;
+                    case 0: return x;
+                    case 1: return y;
+                    case 2: return z;
                     default:
                         throw new IndexOutOfRangeException("Invalid index for a three component Vector");
                 }
@@ -44,9 +44,9 @@ namespace Crowny
             {
                 switch (index)
                 {
-                    case (0): x = value; break;
-                    case (1): y = value; break;
-                    case (2): z = value; break;
+                    case 0: x = value; break;
+                    case 1: y = value; break;
+                    case 2: z = value; break;
                     default:
                         throw new IndexOutOfRangeException("Invalid index for a three component Vector");
 
@@ -55,7 +55,7 @@ namespace Crowny
         }
 
         /// <summary>
-        /// Returns a normalized copy of the Vector3
+        /// Returns a normalized copy of the Vector3.
         /// </summary>
         public Vector3 normalized
         {
@@ -66,7 +66,7 @@ namespace Crowny
         }
 
         /// <summary>
-        /// Normalizes the vector
+        /// Normalizes the vector.
         /// </summary>
         public void Normalize()
         {
@@ -76,7 +76,7 @@ namespace Crowny
         }
 
         /// <summary>
-        /// Returns the length of the Vector3
+        /// Returns the length of the Vector3.
         /// </summary>
         public float length
         {
@@ -87,7 +87,7 @@ namespace Crowny
         }
 
         /// <summary>
-        /// Returns the length of the Vector3 squared
+        /// Returns the length of the Vector3 squared.
         /// </summary>
         public float sqrdLength
         {
@@ -98,11 +98,11 @@ namespace Crowny
         }
 
         /// <summary>
-        /// Creates a Vector3
+        /// Creates a Vector3.
         /// </summary>
-        /// <param name="x">X Coordinate</param>
-        /// <param name="y">Y Coordinate</param>
-        /// <param name="z">Z Coordinate</param>
+        /// <param name="x">X Coordinate.</param>
+        /// <param name="y">Y Coordinate.</param>
+        /// <param name="z">Z Coordinate.</param>
         public Vector3(float x, float y, float z)
         {
             this.x = x;
@@ -111,9 +111,9 @@ namespace Crowny
         }
 
         /// <summary>
-        /// Creates a Vector3
+        /// Creates a Vector3.
         /// </summary>
-        /// <param name="value">The value for all three components</param>
+        /// <param name="value">The value for all three components.</param>
         public Vector3(float value)
         {
             this.x = value;
@@ -162,24 +162,24 @@ namespace Crowny
 
         public static bool operator!=(Vector3 l, Vector3 r)
         {
-            return l != r;
+            return !(l == r);
         }
 
         /// <summary>
-        /// Calculates the magniuted of a Vector3
+        /// Calculates the magniuted of a Vector3.
         /// </summary>
-        /// <param name="v">The Vector3 to calculate the magnited of</param>
-        /// <returns>The magnitude of the vector</returns>
+        /// <param name="v">The Vector3 to calculate the magnited of.</param>
+        /// <returns>The magnitude of the vector.</returns>
         public static float Magnitude(Vector3 v)
         {
             return (float)System.Math.Sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
         }
 
         /// <summary>
-        /// Normalizes the vector
+        /// Normalizes the vector.
         /// </summary>
-        /// <param name="v">Vector</param>
-        /// <returns>Normalized copy of the vector</returns>
+        /// <param name="v">Vector.</param>
+        /// <returns>Normalized copy of the vector.</returns>
         public static Vector3 Normalize(Vector3 v)
         {
             float sl = v.sqrdLength;
