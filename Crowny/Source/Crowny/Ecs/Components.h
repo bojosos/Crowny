@@ -28,6 +28,7 @@ namespace Crowny
 	struct Component
 	{
 		Entity ComponentParent;
+    MonoObject* ManagedInstance = nullptr;
 	};
 
 	struct TagComponent : public Component
@@ -47,8 +48,6 @@ namespace Crowny
 		glm::vec3 Position = { 0.0f, 0.0f, 0.0f };
 		glm::vec3 Rotation = { 0.0f, 0.0f, 0.0f };
 		glm::vec3 Scale = { 1.0f, 1.0f, 1.0f };
-
-		MonoObject* ManagedInstance = nullptr;
 
 		TransformComponent() = default;
 		TransformComponent(const TransformComponent&) = default;

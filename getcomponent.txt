@@ -1,0 +1,5 @@
+In C# have a function that takes the generic param and calls an internal function with typeof(generic param)
+Maybe a pointer to write to?
+Use mono_reflection_type_get_type to get a C type
+From that type take the mono class
+Have a map of [entt::typeid, monoclass*]?
