@@ -288,7 +288,7 @@ namespace Crowny
 		for (auto* field : fields)
 		{
 			if (field && !field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().HideInInspector) 
-					  && (field->GetVisibility() == CWMonoVisibility::PUBLIC 
+					  && (field->GetVisibility() == CWMonoVisibility::Public 
 					  || field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().SerializeFieldAttribute) 
 					  || field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().ShowInInspector)))
 			{
