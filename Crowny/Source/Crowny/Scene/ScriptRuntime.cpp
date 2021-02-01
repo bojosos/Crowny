@@ -57,7 +57,7 @@ namespace Crowny
 
 			CWMonoMethod* ctor = sc.Class->GetMethod(".ctor", 0);
 			if (ctor)
-				ctor->Call(scriptInstance);
+				ctor->Invoke(scriptInstance, nullptr);
 			sc.OnStart = sc.Class->GetMethod("Start", 0);
 		});
     }
@@ -67,7 +67,7 @@ namespace Crowny
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
         activeScene->m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent &sc) {
 			if (sc.OnStart)
-				sc.OnStart->Call(sc.Instance);
+				sc.OnStart->Invoke(sc.Instance, nullptr);
         });
     }
 
@@ -76,7 +76,7 @@ namespace Crowny
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
         activeScene->m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent &sc) {
 			if (sc.OnUpdate)
-		    	sc.OnUpdate->Call(sc.Instance);
+		    	sc.OnUpdate->Invoke(sc.Instance, nullptr);
         });
     }
 
@@ -85,7 +85,7 @@ namespace Crowny
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
         activeScene->m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent &sc) {
 			if (sc.OnDestroy)
-		    	sc.OnDestroy->Call(sc.Instance);
+		    	sc.OnDestroy->Invoke(sc.Instance, nullptr);
         });
     }
 

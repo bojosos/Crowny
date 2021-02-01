@@ -221,7 +221,7 @@ GENERATED += $(OBJDIR)/CWMonoAssembly.o
 GENERATED += $(OBJDIR)/CWMonoClass.o
 GENERATED += $(OBJDIR)/CWMonoField.o
 GENERATED += $(OBJDIR)/CWMonoMethod.o
-GENERATED += $(OBJDIR)/CWMonoObject.o
+GENERATED += $(OBJDIR)/CWMonoProperty.o
 GENERATED += $(OBJDIR)/CWMonoRuntime.o
 GENERATED += $(OBJDIR)/CWMonoType.o
 GENERATED += $(OBJDIR)/CmdArgs.o
@@ -256,6 +256,7 @@ GENERATED += $(OBJDIR)/MemoryManager.o
 GENERATED += $(OBJDIR)/Mesh.o
 GENERATED += $(OBJDIR)/MeshFactory.o
 GENERATED += $(OBJDIR)/Model.o
+GENERATED += $(OBJDIR)/MonoUtils.o
 GENERATED += $(OBJDIR)/Noise.o
 GENERATED += $(OBJDIR)/OpenGLContext.o
 GENERATED += $(OBJDIR)/OpenGLEnvironmentMap.o
@@ -281,6 +282,7 @@ GENERATED += $(OBJDIR)/SceneCamera.o
 GENERATED += $(OBJDIR)/SceneManager.o
 GENERATED += $(OBJDIR)/SceneRenderer.o
 GENERATED += $(OBJDIR)/SceneSerializer.o
+GENERATED += $(OBJDIR)/ScriptCameraComponent.o
 GENERATED += $(OBJDIR)/ScriptComponent.o
 GENERATED += $(OBJDIR)/ScriptDebug.o
 GENERATED += $(OBJDIR)/ScriptEntity.o
@@ -313,7 +315,7 @@ OBJECTS += $(OBJDIR)/CWMonoAssembly.o
 OBJECTS += $(OBJDIR)/CWMonoClass.o
 OBJECTS += $(OBJDIR)/CWMonoField.o
 OBJECTS += $(OBJDIR)/CWMonoMethod.o
-OBJECTS += $(OBJDIR)/CWMonoObject.o
+OBJECTS += $(OBJDIR)/CWMonoProperty.o
 OBJECTS += $(OBJDIR)/CWMonoRuntime.o
 OBJECTS += $(OBJDIR)/CWMonoType.o
 OBJECTS += $(OBJDIR)/CmdArgs.o
@@ -348,6 +350,7 @@ OBJECTS += $(OBJDIR)/MemoryManager.o
 OBJECTS += $(OBJDIR)/Mesh.o
 OBJECTS += $(OBJDIR)/MeshFactory.o
 OBJECTS += $(OBJDIR)/Model.o
+OBJECTS += $(OBJDIR)/MonoUtils.o
 OBJECTS += $(OBJDIR)/Noise.o
 OBJECTS += $(OBJDIR)/OpenGLContext.o
 OBJECTS += $(OBJDIR)/OpenGLEnvironmentMap.o
@@ -373,6 +376,7 @@ OBJECTS += $(OBJDIR)/SceneCamera.o
 OBJECTS += $(OBJDIR)/SceneManager.o
 OBJECTS += $(OBJDIR)/SceneRenderer.o
 OBJECTS += $(OBJDIR)/SceneSerializer.o
+OBJECTS += $(OBJDIR)/ScriptCameraComponent.o
 OBJECTS += $(OBJDIR)/ScriptComponent.o
 OBJECTS += $(OBJDIR)/ScriptDebug.o
 OBJECTS += $(OBJDIR)/ScriptEntity.o
@@ -631,6 +635,9 @@ $(OBJDIR)/ScriptNoise.o: Source/Crowny/Scripting/Bindings/Math/ScriptNoise.cpp
 $(OBJDIR)/ScriptTransform.o: Source/Crowny/Scripting/Bindings/Math/ScriptTransform.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ScriptCameraComponent.o: Source/Crowny/Scripting/Bindings/Scene/ScriptCameraComponent.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ScriptComponent.o: Source/Crowny/Scripting/Bindings/Scene/ScriptComponent.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -658,13 +665,16 @@ $(OBJDIR)/CWMonoField.o: Source/Crowny/Scripting/CWMonoField.cpp
 $(OBJDIR)/CWMonoMethod.o: Source/Crowny/Scripting/CWMonoMethod.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/CWMonoObject.o: Source/Crowny/Scripting/CWMonoObject.cpp
+$(OBJDIR)/CWMonoProperty.o: Source/Crowny/Scripting/CWMonoProperty.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/CWMonoRuntime.o: Source/Crowny/Scripting/CWMonoRuntime.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/CWMonoType.o: Source/Crowny/Scripting/CWMonoType.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/MonoUtils.o: Source/Crowny/Scripting/MonoUtils.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Window.o: Source/Crowny/Window/Window.cpp
