@@ -5,18 +5,18 @@ namespace Crowny
 
 	enum class CWMonoVisibility
 	{
-		PRIVATE, PROTECTED_INTERNAL, INTERNAL, PROTECTED, PUBLIC
+		Private, Protected, Internal, ProtectedInternal, Public
 	};
 
 	static std::string CWMonoVisibilityToString(CWMonoVisibility visibility)
 	{
 		switch (visibility)
 		{
-		case Crowny::CWMonoVisibility::PRIVATE:				return "private";
-		case Crowny::CWMonoVisibility::PROTECTED_INTERNAL:  return "protected internal";
-		case Crowny::CWMonoVisibility::INTERNAL:            return "internal";
-		case Crowny::CWMonoVisibility::PROTECTED:           return "protected";
-		case Crowny::CWMonoVisibility::PUBLIC:              return "public";
+		case Crowny::CWMonoVisibility::Private:				return "private";
+		case Crowny::CWMonoVisibility::ProtectedInternal:   return "protected internal";
+		case Crowny::CWMonoVisibility::Internal:            return "internal";
+		case Crowny::CWMonoVisibility::Protected:           return "protected";
+		case Crowny::CWMonoVisibility::Public:               return "public";
 		}
 
 		CW_ENGINE_ERROR("Unknown mono visibility!");

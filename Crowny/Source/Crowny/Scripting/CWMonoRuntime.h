@@ -9,10 +9,13 @@ END_MONO_INCLUDE
 
 #define CROWNY_ASSEMBLY "Crowny.dll"
 #define CLIENT_ASSEMBLY "Client.dll"
+#define CORLIB_ASSEMBLY "corlib"
 
-#define ASSEMBLY_COUNT        2
+#define ASSEMBLY_COUNT        3
+
 #define CROWNY_ASSEMBLY_INDEX 0
 #define CLIENT_ASSEMBLY_INDEX 1
+#define CORLIB_ASSEMBLY_INDEX 2
 
 namespace Crowny
 {
@@ -40,9 +43,9 @@ namespace Crowny
 
 		static CWMonoAssembly* GetCrownyAssembly() { return s_Instance->m_Assemblies[CROWNY_ASSEMBLY_INDEX]; }
 		static CWMonoAssembly* GetClientAssembly() { return s_Instance->m_Assemblies[CLIENT_ASSEMBLY_INDEX]; }
+		static CWMonoAssembly* GetCorlibAssembly() { return s_Instance->m_Assemblies[CORLIB_ASSEMBLY_INDEX]; }
 
 		static MonoDomain* GetDomain() { return s_Instance->m_Domain; }
-		static CWMonoObject* CreateInstance(CWMonoClass* monoClass);
 		static BuiltinScriptClasses GetBuiltinClasses() { return s_Instance->m_BuiltinScriptClasses; }
 
 	private:
