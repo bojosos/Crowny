@@ -10,6 +10,7 @@ BEGIN_MONO_INCLUDE
 #include <mono/metadata/appdomain.h>
 #include <mono/metadata/metadata.h>
 #include <mono/metadata/tokentype.h>
+#include <mono/metadata/mono-debug.h>
 END_MONO_INCLUDE
 
 namespace Crowny
@@ -46,14 +47,23 @@ namespace Crowny
 
   }
 
-	CWMonoAssembly::CWMonoAssembly(const std::string& filepath)
+	CWMonoAssembly::CWMonoAssembly(const std::string& filepath, const std::string& name)
 		: m_IsLoaded(false), m_AllClassesCached(false)
 	{
 		MonoImageOpenStatus status;
-		auto [data, size] = VirtualFileSystem::Get()->ReadFile(filepath);
+		auto [data, size] = VirtualFileSystem::Get()->ReadFile(filepath + "/" + name);
 		m_Image = mono_image_open_from_data(reinterpret_cast<char*>(data), size, true, &status);
 		CW_ENGINE_ASSERT(CheckImageOpenStatus(status) && m_Image);
-		m_Assembly = mono_assembly_load_from_full(m_Image, "Crowny assembly", &status, false);
+    
+    if (name == "Client.dll")
+    {
+      CW_ENGINE_INFO("Loading db");
+      auto [data, size] = VirtualFileSystem::Get()->ReadFile(filepath + "/" + name + ".mdb");
+      CW_ENGINE_INFO(size);
+      mono_debug_open_image_from_memory(m_Image, data, size);
+    }
+
+    m_Assembly = mono_assembly_load_from_full(m_Image, name.c_str(), &status, false);
 		CW_ENGINE_ASSERT(CheckImageOpenStatus(status) && m_Assembly);
 		m_IsLoaded = true;
 	}

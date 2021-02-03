@@ -8,6 +8,7 @@ BEGIN_MONO_INCLUDE
 #include <mono/metadata/mono-config.h>
 #include <mono/metadata/debug-helpers.h>
 #include <mono/metadata/appdomain.h>
+#include <mono/metadata/mono-debug.h>
 END_MONO_INCLUDE
 
 namespace Crowny
@@ -43,15 +44,17 @@ namespace Crowny
 
 	bool CWMonoRuntime::Init(const std::string& domainName)
 	{
+    mono_debug_init(MONO_DEBUG_FORMAT_MONO);
 		s_Instance = new CWMonoRuntime();
 		const char* options[] = {
 			"--soft-breakpoints",
-			"--debugger-agent=transport=dt_socket,address=127.0.0.1:17615,embedding=1,server=y,suspend=n",
+      "--debugger-agent=transport=dt_socket,address=127.0.0.1:17615,embedding=1,server=y,suspend=n",
 			"--debug-domain-unload",
+      //"--debug",
 			"--gc-debug=check-remset-consistency,xdomain-checks"
 		};
 
-		mono_jit_parse_options(4, (char**)options);
+		mono_jit_parse_options(3, (char**)options);
 		mono_trace_set_level_string("warning");
 		mono_trace_set_log_handler(OnLogCallback, nullptr);
 		mono_trace_set_print_handler(OnPrintCallback);
@@ -69,8 +72,8 @@ namespace Crowny
 	void CWMonoRuntime::LoadAssemblies(const std::string& directory)
 	{
 		s_Instance->m_Assemblies.resize(ASSEMBLY_COUNT);
-		s_Instance->m_Assemblies[CROWNY_ASSEMBLY_INDEX] = new CWMonoAssembly(directory + "/" + CROWNY_ASSEMBLY);
-		s_Instance->m_Assemblies[CLIENT_ASSEMBLY_INDEX] = new CWMonoAssembly(directory + "/" + CLIENT_ASSEMBLY);
+		s_Instance->m_Assemblies[CROWNY_ASSEMBLY_INDEX] = new CWMonoAssembly(directory, CROWNY_ASSEMBLY);
+		s_Instance->m_Assemblies[CLIENT_ASSEMBLY_INDEX] = new CWMonoAssembly(directory, CLIENT_ASSEMBLY);
 		s_Instance->m_Assemblies[CORLIB_ASSEMBLY_INDEX] = new CWMonoAssembly(mono_get_corlib(), "corlib");
 		CW_ENGINE_INFO("Assembly {0} loaded.", CROWNY_ASSEMBLY);
 		CW_ENGINE_INFO("Assembly {0} loaded.", CLIENT_ASSEMBLY);
