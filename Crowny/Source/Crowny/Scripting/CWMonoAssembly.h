@@ -28,7 +28,7 @@ namespace Crowny
 			std::string Name;
 		};
 	public:
-		CWMonoAssembly(const std::string& filepath);
+		CWMonoAssembly(const std::string& filepath, const std::string& name);
 		CWMonoAssembly(MonoImage* image, const std::string& name);
 		~CWMonoAssembly();
 		CWMonoClass* GetClass(const std::string& namespaceName, const std::string& className) const;

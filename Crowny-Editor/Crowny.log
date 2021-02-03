@@ -1,27 +1,29 @@
-[14:46:43] [info] CROWNY: /Shaders/BatchRenderer.glsl
-[14:46:43] [info] CROWNY: /Shaders/Depth.glsl
-[14:46:43] [info] CROWNY: /Shaders/LightCulling.glsl
-[14:46:43] [info] CROWNY: /Shaders/LightAccumulation.glsl
-[14:46:43] [info] CROWNY: /Shaders/Hdr.glsl
-[14:46:43] [info] CROWNY: /Shaders/DepthDebug.glsl
-[14:46:43] [info] CROWNY: /Shaders/IDBufferShader.glsl
-[14:46:43] [info] CROWNY: /Shaders/IDBuffer3DShader.glsl
-[14:46:43] [info] CROWNY: Domain Crowny C# Runtime created!
-[14:46:43] [info] CROWNY: Assembly Crowny.dll loaded.
-[14:46:43] [info] CROWNY: Assembly Client.dll loaded.
-[14:46:43] [info] CROWNY: Assembly corlib loaded.
-[14:46:43] [info] CROWNY: /Shaders/PBRShader.glsl
-[14:46:43] [info] CROWNY: Loaded texture /Textures/rustediron2_basecolor.png, 2048x2048x4.
-[14:46:43] [info] CROWNY: Loaded texture /Textures/rustediron2_metallic.png, 2048x2048x1.
-[14:46:43] [info] CROWNY: Loaded texture /Textures/rustediron2_normal.png, 2048x2048x3.
-[14:46:43] [info] CROWNY: Loaded texture /Textures/rustediron2_roughness.png, 2048x2048x1.
-[14:46:43] [info] CROWNY: /Shaders/Background.glsl
-[14:46:44] [info] CROWNY: /Shaders/EquirectangularToCubemap.glsl
-[14:46:44] [info] CROWNY: /Shaders/IrradianceConvolution.glsl
-[14:46:44] [info] CROWNY: /Shaders/Brdf.glsl
-[14:46:44] [info] CROWNY: /Shaders/Prefilter.glsl
-[14:46:44] [info] CROWNY: Loaded texture /Textures/Unassigned.png, 608x608x3.
-[14:46:44] [info] CROWNY: Loaded texture /Icons/Play.png, 448x448x4.
-[14:46:44] [info] CROWNY: Loaded texture /Icons/Pause.png, 448x448x4.
-[14:46:44] [info] CROWNY: Loaded texture /Icons/Stop.png, 448x448x4.
-[14:46:48] [info] CLIENT: Start called
+[15:48:12] [info] CROWNY: /Shaders/BatchRenderer.glsl
+[15:48:12] [info] CROWNY: /Shaders/Depth.glsl
+[15:48:12] [info] CROWNY: /Shaders/LightCulling.glsl
+[15:48:12] [info] CROWNY: /Shaders/LightAccumulation.glsl
+[15:48:12] [info] CROWNY: /Shaders/Hdr.glsl
+[15:48:12] [info] CROWNY: /Shaders/DepthDebug.glsl
+[15:48:12] [info] CROWNY: /Shaders/IDBufferShader.glsl
+[15:48:12] [info] CROWNY: /Shaders/IDBuffer3DShader.glsl
+[15:48:12] [info] CROWNY: Domain Crowny C# Runtime created!
+[15:48:12] [info] CROWNY: Loading db
+[15:48:12] [info] CROWNY: 428
+[15:48:12] [info] CROWNY: Assembly Crowny.dll loaded.
+[15:48:12] [info] CROWNY: Assembly Client.dll loaded.
+[15:48:12] [info] CROWNY: Assembly corlib loaded.
+[15:48:12] [info] CROWNY: /Shaders/PBRShader.glsl
+[15:48:12] [info] CROWNY: Loaded texture /Textures/rustediron2_basecolor.png, 2048x2048x4.
+[15:48:12] [info] CROWNY: Loaded texture /Textures/rustediron2_metallic.png, 2048x2048x1.
+[15:48:13] [info] CROWNY: Loaded texture /Textures/rustediron2_normal.png, 2048x2048x3.
+[15:48:13] [info] CROWNY: Loaded texture /Textures/rustediron2_roughness.png, 2048x2048x1.
+[15:48:13] [info] CROWNY: /Shaders/Background.glsl
+[15:48:13] [info] CROWNY: /Shaders/EquirectangularToCubemap.glsl
+[15:48:13] [info] CROWNY: /Shaders/IrradianceConvolution.glsl
+[15:48:13] [info] CROWNY: /Shaders/Brdf.glsl
+[15:48:13] [info] CROWNY: /Shaders/Prefilter.glsl
+[15:48:13] [info] CROWNY: Loaded texture /Textures/Unassigned.png, 608x608x3.
+[15:48:13] [info] CROWNY: Loaded texture /Icons/Play.png, 448x448x4.
+[15:48:13] [info] CROWNY: Loaded texture /Icons/Pause.png, 448x448x4.
+[15:48:13] [info] CROWNY: Loaded texture /Icons/Stop.png, 448x448x4.
+[15:48:14] [critical] CROWNY: Managed exception: DivideByZeroException:  Attempted to divide by zero. ----   at Sandbox.Test.Start () [0x00003] in /home/life/Desktop/dev/Crowny/Crowny-Sandbox/Source/Test.cs:18 
