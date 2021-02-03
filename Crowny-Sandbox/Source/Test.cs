@@ -14,12 +14,14 @@ namespace Sandbox
 
         public void Start()
         {
-            camera = GetComponent<CameraComponent>().camera;
+            int c = 0;
+            int a = 5 / c;
+//            camera = GetComponent<CameraComponent>().camera;
         }
 
         public void Update()
         {
-            Debug.Log(camera.viewportRectangle);
+//            Debug.Log(camera.viewportRectangle);
             if (Input.GetKey(KeyCode.Left))
         	    transform.position += Vector3.left * speed * Time.smoothDeltaTime;
             if (Input.GetKey(KeyCode.Right))
