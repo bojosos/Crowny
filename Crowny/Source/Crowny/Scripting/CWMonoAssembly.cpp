@@ -4,6 +4,7 @@
 #include "Crowny/Scripting/CWMonoRuntime.h"
 
 #include "Crowny/Common/VirtualFileSystem.h"
+#include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/Parser.h"
 
 BEGIN_MONO_INCLUDE
@@ -55,15 +56,15 @@ namespace Crowny
 		m_Image = mono_image_open_from_data(reinterpret_cast<char*>(data), size, true, &status);
 		CW_ENGINE_ASSERT(CheckImageOpenStatus(status) && m_Image);
     
-    if (name == "Client.dll")
-    {
-      CW_ENGINE_INFO("Loading db");
-      auto [data, size] = VirtualFileSystem::Get()->ReadFile(filepath + "/" + name + ".mdb");
-      CW_ENGINE_INFO(size);
-      mono_debug_open_image_from_memory(m_Image, data, size);
-    }
+		std::string dbgPath;
+		if (VirtualFileSystem::Get()->ResolvePhyiscalPath(filepath + "/" + name + ".mdb", dbgPath))
+		{
+			CW_ENGINE_INFO("Loading debug: {0}", dbgPath);
+			auto [data, size] = FileSystem::ReadFile(dbgPath);
+			mono_debug_open_image_from_memory(m_Image, data, size);
+		}
 
-    m_Assembly = mono_assembly_load_from_full(m_Image, name.c_str(), &status, false);
+		m_Assembly = mono_assembly_load_from_full(m_Image, name.c_str(), &status, false);
 		CW_ENGINE_ASSERT(CheckImageOpenStatus(status) && m_Assembly);
 		m_IsLoaded = true;
 	}

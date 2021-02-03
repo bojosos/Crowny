@@ -57,7 +57,7 @@ namespace Crowny
 		if (m_MountedDirectories.find(virtualDir) == m_MountedDirectories.end() || m_MountedDirectories[virtualDir].empty())
 		//return false;
 		{
-#ifdef CW_PLATFORM_LINUX
+#ifdef CW_PLATFORM_LINUX // on linux full paths start with /
 			if (FileSystem::FileExists(virtualPath))
 			{
 				outPath = virtualPath;
