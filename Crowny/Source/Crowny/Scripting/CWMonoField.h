@@ -2,6 +2,7 @@
 
 #include "Crowny/Scripting/CWMonoVisibility.h"
 #include "Crowny/Scripting/CWMonoType.h"
+#include "Crowny/Scripting/MonoUtils.h"
 
 BEGIN_MONO_INCLUDE
 #include <mono/metadata/object.h>
@@ -20,6 +21,7 @@ namespace Crowny
 		CWMonoClass* GetType() const { return m_Type; };
 		CWMonoVisibility GetVisibility() const;
 		bool IsStatic() const;
+		MonoPrimitiveType GetPrimitiveType() const;
 
 		bool IsValueType() const;
 		bool HasAttribute(CWMonoClass* monoClass) const;

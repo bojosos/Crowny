@@ -5,7 +5,10 @@ namespace Crowny
 {
     public class Transform : Component
     {
-        // Position of the transform in world space
+        /// <summary>
+        /// The position of the transform in world space.
+        /// </summary>
+        /// <value>A vector3 world position.</value>
         public Vector3 position
         {
             get
@@ -17,7 +20,10 @@ namespace Crowny
             set { Internal_SetPosition(m_InternalPtr, ref value); }
         }
 
-        // Position of the transform relative to its parent
+        /// <summary>
+        /// The position of the transform in local space.
+        /// </summary>
+        /// <value>A Vector3 local position.</value>
         public Vector3 localPosition 
         { 
             get 
@@ -32,7 +38,10 @@ namespace Crowny
         // Rotation of the transform
         //public extern Quaternion rotation { get; set; }
 
-        // Scale of the transform relative to its parent
+        /// <summary>
+        /// Local scale of the transform.
+        /// </summary>
+        /// <value>A Vector3 local scale.</value>
         public Vector3 localScale 
         {
             get
@@ -44,7 +53,10 @@ namespace Crowny
             set { Internal_SetLocalScale(m_InternalPtr, ref value); } 
         }
 
-        // Rotation of the transform in degrees
+        /// <summary>
+        /// Euler angle rotation of the transform.
+        /// </summary>
+        /// <value>A Vector3 world rotation.</value>
         public Vector3 eulerAngles
         {
             get
@@ -56,7 +68,10 @@ namespace Crowny
             set { Internal_SetEulerAngles(m_InternalPtr, ref value); } 
         }
 
-        // Rotation of the transform in degrees relative to its parent
+        /// <summary>
+        /// Euler angle local rotation of the transform,
+        /// </summary>
+        /// <value>A Vector3 local rotation.</value>
         public Vector3 localEulerAngles
         {
             get

@@ -150,10 +150,10 @@ namespace Crowny
 						MonoClass* cclass = mono_class_get_nested_types(nested->GetInternalPtr(), &iter);
 						if (cclass == nullptr)
 							break;
-						std::string nestedType = nested->GetName() + "+" + mono_class_get_name(cclass);
-						CWMonoClass* nestedClass = new CWMonoClass(cclass); // name might be wrong?
-						if (nestedClass)
+						if (cclass)
 						{
+						  std::string nestedType = nested->GetName() + "+" + mono_class_get_name(cclass);
+					  	CWMonoClass* nestedClass = new CWMonoClass(cclass); // name might be wrong? not the nested one
 							if (nestedClass->HasAttribute(compilerGeneratedAttrib))
 								continue;
 							m_ClassList.push_back(nestedClass);

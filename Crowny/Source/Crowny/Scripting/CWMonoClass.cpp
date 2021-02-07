@@ -115,7 +115,7 @@ namespace Crowny
 			return m_PropertyList;
 		
 		m_PropertyList.clear();
-		void* iter;
+		void* iter = nullptr;
 		MonoProperty* prop;
 		while ((prop = mono_class_get_properties(m_Class, &iter)))
 		{
@@ -147,10 +147,12 @@ namespace Crowny
 		for (uint32_t i = 0; i < info->num_attrs; i++)
 		{
 			MonoClass* monoClass = mono_method_get_class(info->attrs[i].ctor);
-			CWMonoClass* resultClass = new CWMonoClass(monoClass);
 
-			if (resultClass != nullptr)
+			if (monoClass != nullptr)
+      {
+			  CWMonoClass* resultClass = new CWMonoClass(monoClass);
 				res.push_back(resultClass);
+      }
 		}
 
 		mono_custom_attrs_free(info);

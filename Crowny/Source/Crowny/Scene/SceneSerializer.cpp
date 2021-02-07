@@ -53,10 +53,34 @@ namespace Crowny
         }
 
         if (entity.HasComponent<MonoScriptComponent>())
-        {
+            {
             out << YAML::Key << "MonoScriptComponent";
             out << YAML::BeginMap;
-            const std::string& name = entity.GetComponent<MonoScriptComponent>().Class->GetName();
+            auto msc = entity.GetComponent<MonoScriptComponent>();
+            const std::string& name = msc.Class->GetName();
+            if (msc.DisplayableFields.size() > 0)
+            {
+                out << YAML::Key << "Fields";
+                for (auto* field : msc.DisplayableFields)
+                {
+                    out << YAML::BeginMap;
+                    out << YAML::Key << field->GetName();
+                    out << YAML::Value << 5;
+                }
+                out << YAML::EndMap;
+            }
+            
+            if (msc.DisplayableFields.size() > 0)
+            {
+                out << YAML::Key << "Properties";
+                for (auto* prop : msc.DisplayableProperties)
+                {
+                    out << YAML::BeginMap;
+                    out << YAML::Key << prop->GetName();
+                    out << YAML::Value << 5;
+                }
+                out << YAML::EndMap;
+            }
             out << YAML::Key << "Name" << YAML::Value << name;
             out << YAML::EndMap;
         }

@@ -1,0 +1,14 @@
+In order to build a game
+I will need:
+  Package the resources - Asset manager
+  Save the scene as binary - Faster, smaller size 
+  Compile the scripts without debug option
+  Run the mono runtime without debug options. No point in debugging the garabage collector
+  Have a runtime project. Or just packaged with the engine. In order for the game to run I would need to somehow link the core engine and all the libraries
+  Currently Crowny-Editor links against Crowny
+  For C# scripting I am using Crowny-Sharp for the interop classes
+  And Crowny-Sandbox is just a project that compiles into a dll and moves the dll into the Resources folder
+  This is no good if I want to package a game
+
+Add search by tag to c#
+

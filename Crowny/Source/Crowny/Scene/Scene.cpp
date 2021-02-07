@@ -28,20 +28,11 @@ namespace Crowny
 		m_Uuids = new std::unordered_map<Entity, Uuid>();
 	}
 
-	Scene::Scene(const Scene& other)
-	{
-		m_Name = other.m_Name;
-		m_RootEntity = other.m_RootEntity;
-		//m_Registry = other.m_Registry.clone();
-		m_Entities = new std::unordered_map<Uuid, Entity>();
-		m_Uuids = new std::unordered_map<Entity, Uuid>();
-	}
-
 	Scene::~Scene()
 	{
 		delete m_RootEntity;
-    delete m_Entities;
-    delete m_Uuids;
+    	delete m_Entities;
+    	delete m_Uuids;
 	}
 	
 	Entity Scene::CreateEntity(const std::string& name)
