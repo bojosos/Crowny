@@ -6,9 +6,21 @@ namespace Sandbox
 {
     public class Test : EntityBehaviour
     {
+        public enum DrawMode
+        {
+            Traingles,
+            TriangleStrip,
+            Quads
+        }
 
         [Crowny.Range(0.0f, 10.0f), ShowInInspector]
-        public float speed = 1.0f;
+        private float speed = 1.0f;
+
+        [ShowInInspector]
+        private DrawMode drawMode = DrawMode.Quads;
+
+        [ShowInInspector]
+        private bool dummy = true;
 
         private Camera camera;
 
@@ -21,7 +33,6 @@ namespace Sandbox
 
         public void Update()
         {
-//            Debug.Log(camera.viewportRectangle);
             if (Input.GetKey(KeyCode.Left))
         	    transform.position += Vector3.left * speed * Time.smoothDeltaTime;
             if (Input.GetKey(KeyCode.Right))
