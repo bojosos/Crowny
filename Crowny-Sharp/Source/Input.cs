@@ -153,21 +153,51 @@ namespace Crowny
     /// </summary>
     public static class Input
     {
+        /// <summary>
+        /// Check if a key is pressed.
+        /// </summary>
+        /// <param name="code">The key code.</param>
+        /// <returns>True if they key is pressed, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.InternalCall)]
         public extern static bool GetKey(KeyCode code);
 
+        /// <summary>
+        /// Checks if a key wasn't pressed last frame and now is.
+        /// </summary>
+        /// <param name="code">The key code.</param>
+        /// <returns>True if the key wasn't pressed last frame and now is, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.InternalCall)]
         public extern static bool GetKeyDown(KeyCode code);
 
+        /// <summary>
+        /// Checks if a key was pressed last frame and now isn't.
+        /// </summary>
+        /// <param name="code">The key code.</param>
+        /// <returns>True if the key was pressed last frame and now isn't, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.InternalCall)]
         public extern static bool GetKeyUp(KeyCode code);
 
+        /// <summary>
+        /// Cheks if a mouse button is pressed.
+        /// </summary>
+        /// <param name="code">Mouse button code.</param>
+        /// <returns>True if the mouse button is pressed, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.InternalCall)]
         public extern static bool GetMouseButton(MouseCode code);
 
+        /// <summary>
+        /// Checks if a mouse button is pressed now and wasn't last frame.
+        /// </summary>
+        /// <param name="code">Mouse button code.</param>
+        /// <returns>True if the mouse button is pressed not and wasn't last frame, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.InternalCall)]
         public extern static bool GetMouseButtonDown(MouseCode code);
 
+        /// <summary>
+        /// Checks if a mouse button was pressed last frame and now isn't.
+        /// </summary>
+        /// <param name="code">Mouse button code.</param>
+        /// <returns>True if the mouse button was pressed last frame and now isn't, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.InternalCall)]
         public extern static bool GetMouseButtonUp(MouseCode code);
     }

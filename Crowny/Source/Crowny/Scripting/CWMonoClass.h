@@ -79,4 +79,4 @@ namespace Crowny
 		mutable std::vector<CWMonoProperty*> m_PropertyList;
 	};
 
-}		
+}

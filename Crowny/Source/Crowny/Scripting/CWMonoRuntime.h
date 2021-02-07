@@ -30,6 +30,7 @@ namespace Crowny
         CWMonoClass* RangeAttribute = nullptr;
         CWMonoClass* ShowInInspector = nullptr;
         CWMonoClass* HideInInspector = nullptr;
+		CWMonoClass* ScriptUtils = nullptr;
     };
 
 	class CWMonoRuntime

@@ -48,9 +48,9 @@ namespace Crowny
 		s_Instance = new CWMonoRuntime();
 		const char* options[] = {
 			"--soft-breakpoints",
-      "--debugger-agent=transport=dt_socket,address=127.0.0.1:17615,embedding=1,server=y,suspend=n",
+      		"--debugger-agent=transport=dt_socket,address=127.0.0.1:17615,embedding=1,server=y,suspend=n",
 			"--debug-domain-unload",
-      //"--debug",
+    		//"--debug",
 			"--gc-debug=check-remset-consistency,xdomain-checks"
 		};
 
@@ -88,6 +88,8 @@ namespace Crowny
 		CW_ENGINE_ASSERT(s_Instance->m_BuiltinScriptClasses.ShowInInspector != nullptr, "Assembly incomplete");
 		s_Instance->m_BuiltinScriptClasses.HideInInspector = engine->GetClass("Crowny", "HideInInspector");
 		CW_ENGINE_ASSERT(s_Instance->m_BuiltinScriptClasses.HideInInspector != nullptr, "Assembly incomplete");
+		s_Instance->m_BuiltinScriptClasses.ScriptUtils = engine->GetClass("Crowny", "ScriptUtils");
+		CW_ENGINE_ASSERT(s_Instance->m_BuiltinScriptClasses.ScriptUtils != nullptr, "Assembly incomplete");
 	}
 
 	void CWMonoRuntime::Shutdown()

@@ -50,7 +50,7 @@ namespace Crowny
 			CWMonoField* scriptPtr = sc.Class->GetField("m_InternalPtr");
 			sc.OnUpdate = sc.Class->GetMethod("Update");
 			MonoObject* scriptInstance = sc.Class->CreateInstance();
-			sc.Instance = scriptInstance;
+			sc.ManagedInstance = scriptInstance;
 			uint32_t handle = mono_gchandle_new(scriptInstance, false); // TODO: delete this store these
 			size_t tmp = (size_t)&sc;
 			scriptPtr->Set(scriptInstance, &tmp);
@@ -67,7 +67,7 @@ namespace Crowny
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
         activeScene->m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent &sc) {
 			if (sc.OnStart)
-				sc.OnStart->Invoke(sc.Instance, nullptr);
+				sc.OnStart->Invoke(sc.ManagedInstance, nullptr);
         });
     }
 
@@ -76,7 +76,7 @@ namespace Crowny
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
         activeScene->m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent &sc) {
 			if (sc.OnUpdate)
-		    	sc.OnUpdate->Invoke(sc.Instance, nullptr);
+		    	sc.OnUpdate->Invoke(sc.ManagedInstance, nullptr);
         });
     }
 
@@ -85,7 +85,7 @@ namespace Crowny
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
         activeScene->m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent &sc) {
 			if (sc.OnDestroy)
-		    	sc.OnDestroy->Invoke(sc.Instance, nullptr);
+		    	sc.OnDestroy->Invoke(sc.ManagedInstance, nullptr);
         });
     }
 

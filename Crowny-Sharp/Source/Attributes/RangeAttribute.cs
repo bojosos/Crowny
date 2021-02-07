@@ -4,7 +4,7 @@ namespace Crowny
 {
 
     /// <summary>
-    /// Makes a field displayed as a slider in the inspector.
+    /// Displays a field as a slider in the editor.
     /// </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public class Range : Attribute

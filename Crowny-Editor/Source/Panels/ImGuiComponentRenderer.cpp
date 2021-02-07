@@ -8,6 +8,7 @@
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 
+#include <mono/metadata/object.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/euler_angles.inl>
@@ -283,32 +284,109 @@ namespace Crowny
 		}
 
 		ImGui::NextColumn();
-
-		auto fields = script.Class->GetFields();
-		for (auto* field : fields)
+		for (uint32_t i = 0; i < script.DisplayableFields.size(); i++)
 		{
-			if (field && !field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().HideInInspector) 
-					  && (field->GetVisibility() == CWMonoVisibility::Public 
-					  || field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().SerializeFieldAttribute) 
-					  || field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().ShowInInspector)))
+			auto* field = script.DisplayableFields[i];
+			ImGui::PushID(i);
+			ImGui::Text("%s", field->GetName().c_str()); ImGui::NextColumn();
+			CW_ENGINE_INFO("Up here {0}", i);
+			if (script.ManagedInstance)
 			{
-				ImGui::Text("%s", field->GetName().c_str()); ImGui::NextColumn();
-				if (script.Instance)
+				CW_ENGINE_INFO("Down here {0}", i);
+				switch (field->GetPrimitiveType())
 				{
-					CWMonoClass* rng = CWMonoRuntime::GetBuiltinClasses().RangeAttribute;
-					MonoObject* obj = field->GetAttribute(rng);
-					if(obj)
+					case (MonoPrimitiveType::Bool):
 					{
-						float min, max, val;
-						rng->GetField("min")->Get(obj, &min);
-						rng->GetField("max")->Get(obj, &max);
-						field->Get(script.Instance, &val);
-						if (ImGui::SliderFloat("##field1", &val, min, max))
-							field->Set(script.Instance, &val);
+						bool value = false;
+						field->Get(script.ManagedInstance, &value);
+						if (ImGui::Checkbox("##bool", &value))
+							field->Set(script.ManagedInstance, &value);
+						break;
+					}
+					case (MonoPrimitiveType::String):
+					{
+						MonoString* value;
+						field->Get(script.ManagedInstance, value);
+						std::string nativeValue = MonoUtils::FromMonoString(value);
+						if (ImGui::InputText("##field2", &nativeValue))
+							field->Set(script.ManagedInstance, MonoUtils::ToMonoString(nativeValue));
+						break;
+					}
+					case (MonoPrimitiveType::ValueType):
+					{
+						if (MonoUtils::IsEnum(field->GetType()->GetInternalPtr()))
+						{
+							void* enumType = (void*)mono_type_get_object(CWMonoRuntime::GetDomain(), MonoUtils::GetType(field->GetType()->GetInternalPtr()));
+							MonoArray* ar = (MonoArray*)CWMonoRuntime::GetBuiltinClasses().ScriptUtils->GetMethod("GetEnumNames", 1)->Invoke(nullptr, &enumType);
+							uint32_t size = mono_array_length(ar);
+							std::vector<std::string> enumValues;
+							enumValues.resize(size);
+							for (uint32_t i = 0; i < size; i++) // Do this once!
+							{
+								enumValues[i] = MonoUtils::FromMonoString(mono_array_get(ar, MonoString*, i));
+							}
+							uint32_t value;
+							field->Get(script.ManagedInstance, &value);
+							if (ImGui::BeginCombo("##enum", enumValues[value].c_str()))
+							{
+								uint32_t newSelected = value;
+								for (uint32_t i = 0; i < size; i++)
+								{
+									if (ImGui::Selectable(enumValues[i].c_str(), i == value))
+									{
+										newSelected = i;
+									}
+								}
+								if (newSelected != value)
+								{
+									void* tmp = &newSelected;
+									field->Set(script.ManagedInstance, tmp);
+								}
+								ImGui::EndCombo();
+							}
+						}
+						break;
+					}
+					default:
+					{		
+						CWMonoClass* rng = CWMonoRuntime::GetBuiltinClasses().RangeAttribute;
+						MonoObject* obj = field->GetAttribute(rng);
+						if(obj)
+						{
+							float min, max, val;
+							rng->GetField("min")->Get(obj, &min); // TODO: cache these
+							rng->GetField("max")->Get(obj, &max);
+							field->Get(script.ManagedInstance, &val);
+							if (ImGui::SliderFloat("##slider", &val, min, max))
+								field->Set(script.ManagedInstance, &val); // These should prob be set at start up, not here
+						}
+						break;
 					}
 				}
 			}
+
+			ImGui::PopID();
 		}
+		
+		for (CWMonoProperty* prop : script.DisplayableProperties)
+		{
+			ImGui::Text("%s", prop->GetName().c_str()); ImGui::NextColumn();
+			if (script.ManagedInstance) // Might not need it.
+			{
+				CWMonoClass* rng = CWMonoRuntime::GetBuiltinClasses().RangeAttribute;
+				MonoObject* obj = prop->GetAttribute(rng);
+				if(obj)
+				{
+					float min, max, val;
+					rng->GetField("min")->Get(obj, &min);
+					rng->GetField("max")->Get(obj, &max);
+					//val = *prop->Get(script.Instance); // have to box
+					//if (ImGui::SliderFloat("##field1", &val, min, max))
+					//	prop->Set(script.Instance, &val);
+				}
+			}
+		}
+		
 		ImGui::Columns(1);
 	}
 

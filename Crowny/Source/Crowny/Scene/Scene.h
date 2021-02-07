@@ -20,7 +20,7 @@ namespace Crowny
 	{
 	public:
 		Scene(const std::string& name = std::string());
-		Scene(const Scene& other);
+		Scene(const Scene& other) = delete;
     Scene& operator=(const Scene& other)
     {
       return *this;

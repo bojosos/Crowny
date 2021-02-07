@@ -33,5 +33,25 @@ namespace Crowny
 			CW_ENGINE_CRITICAL("Managed exception: {0}:  {1} ---- {2}", exceptionClassName, mono_string_to_utf8(exceptionMsg), mono_string_to_utf8(exceptionStackTrace)); // does this work?
 		}
     }
+	
+	bool MonoUtils::IsEnum(MonoClass* monoClass)
+	{
+		return mono_class_is_enum(monoClass);
+	}
 
+	std::string MonoUtils::FromMonoString(MonoString* value)
+	{
+		return mono_string_to_utf8(value);
+	}
+
+	MonoString* MonoUtils::ToMonoString(const std::string& value)
+	{
+		return mono_string_from_utf16((mono_unichar2*)value.c_str());
+	}
+
+	MonoType* MonoUtils::GetType(MonoClass* monoClass)
+	{
+		return mono_class_get_type(monoClass);
+	}
+	
 }
