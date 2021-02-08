@@ -23,7 +23,7 @@ namespace Crowny
 
 	OpenGLUniformDeclaration::Type OpenGLUniformDeclaration::StringToType(const std::string& type)
 	{
-		if (type == "int")		return OpenGLUniformDeclaration::Type::INT32;
+		if (type == "int")			return OpenGLUniformDeclaration::Type::INT32;
 		if (type == "float")		return OpenGLUniformDeclaration::Type::FLOAT32;
 		if (type == "vec2")			return OpenGLUniformDeclaration::Type::VEC2;
 		if (type == "vec3")			return OpenGLUniformDeclaration::Type::VEC3;
@@ -63,14 +63,14 @@ namespace Crowny
 	{
 		switch (type)
 		{
-		case OpenGLUniformDeclaration::Type::INT32:            return 4;
-		case OpenGLUniformDeclaration::Type::FLOAT32:          return 4;
-		case OpenGLUniformDeclaration::Type::VEC2:             return 4 * 2;
-		case OpenGLUniformDeclaration::Type::VEC3:             return 4 * 3;
-		case OpenGLUniformDeclaration::Type::VEC4:	           return 4 * 4;
-		case OpenGLUniformDeclaration::Type::MAT3:             return 4 * 3 * 3;
-		case OpenGLUniformDeclaration::Type::MAT4:             return 4 * 4 * 4;
-		default:             { CW_ENGINE_ASSERT(false, "Invalid uniform type"); return 0; }
+			case OpenGLUniformDeclaration::Type::INT32:            return 4;
+			case OpenGLUniformDeclaration::Type::FLOAT32:          return 4;
+			case OpenGLUniformDeclaration::Type::VEC2:             return 4 * 2;
+			case OpenGLUniformDeclaration::Type::VEC3:             return 4 * 3;
+			case OpenGLUniformDeclaration::Type::VEC4:	           return 4 * 4;
+			case OpenGLUniformDeclaration::Type::MAT3:             return 4 * 3 * 3;
+			case OpenGLUniformDeclaration::Type::MAT4:             return 4 * 4 * 4;
+			default:             { CW_ENGINE_ASSERT(false, "Invalid uniform type"); return 0; }
 		}
 		
 		return 0;
@@ -142,7 +142,7 @@ namespace Crowny
 		m_Name = filepath.substr(lastSlash, count);
 	}
 
-	void OpenGLShader::Reload() // fix this
+	void OpenGLShader::Reload() // fix this, maybe works now?
 	{
 		if (m_Filepath == "")
 			return;
