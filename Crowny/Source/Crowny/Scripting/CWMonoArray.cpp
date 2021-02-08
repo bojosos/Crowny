@@ -6,17 +6,17 @@
 
 namespace Crowny
 {
-    CWMonoArray::CWMonoArray(MonoArray* array) : m_Array(array)
+    ScriptArray::ScriptArray(MonoArray* array) : m_Array(array)
     {
         
     }
     
-    CWMonoArray::CWMonoArray(CWMonoClass& array, uint32_t size)
+    ScriptArray::ScriptArray(CWMonoClass& array, uint32_t size)
     {
         m_Array = mono_array_new(CWMonoRuntime::GetDomain())    
     }
     
-    uint32_t CWMonoArray::Size()
+    uint32_t ScriptArray::Size()
     {
         return (uint32_t)mono_array_length(m_Array);
     }
