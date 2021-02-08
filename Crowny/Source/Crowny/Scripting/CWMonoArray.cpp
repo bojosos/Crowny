@@ -13,7 +13,7 @@ namespace Crowny
     
     ScriptArray::ScriptArray(CWMonoClass& array, uint32_t size)
     {
-        m_Array = mono_array_new(CWMonoRuntime::GetDomain())    
+        //m_Array = mono_array_new(CWMonoRuntime::GetDomain());
     }
     
     uint32_t ScriptArray::Size()

@@ -15,7 +15,6 @@ namespace Crowny
         {
             return Enum.GetNames(type);
         }
-
     }
 
     public static class ScriptCompiler
@@ -39,11 +38,20 @@ namespace Crowny
             Game, Editor
         }
 
+        private static Process process;
+        private static Thread readErrorsThread;
+
+        private static List<CompilerMessage> errors = new List<CompilerMessage>();
+        private static List<CompilerMessage> warnings = new List<CompilerMessage>();
+
         private static Regex compileErrorRegex = new Regex(@"\s*(?<file>.*)\(\s*(?<line>\d+)\s*,\s*(?<column>\d+)\s*\)\s*:\s*(?<type>warning|error)\s+(.*):\s*(?<message>.*)");
         private static Regex compilerErrorRegex = new Regex(@"\s*error[^:]*:\s*(?<message>.*)");
 
-        public static void Compile(ScriptAssemblyType type, bool debug, string outputDirectory)
+        public static void Compile(ScriptAssemblyType type, bool debug, string outputDirectory, string projectPath)
         {
+            errors.Clear();
+            warnings.Clear();
+            string[] files = Directory.GetFiles(projectPath, "*.cs", SearchOption.AllDirectories);
             ProcessStartInfo psi = new ProcessStartInfo();
             StringBuilder argBuilder = new StringBuilder();
 
@@ -55,14 +63,14 @@ namespace Crowny
 
             argBuilder.Append(" -target:library -out:" + outputDirectory);
             foreach (string file in files)
-                argBuild.Append("\"" + file + "\"");
+                argBuilder.Append("\"" + file + "\"");
 
-            if (File.Exists(outputFile))
-                File.Delete(outputFile);
+            if (File.Exists(outputDirectory))
+                File.Delete(outputDirectory);
             if (!Directory.Exists(outputDirectory))
                 Directory.CreateDirectory(outputDirectory);
 
-            psi.Arguments = argumentsBuilder.ToString();
+            psi.Arguments = argBuilder.ToString();
             psi.CreateNoWindow = true;
             psi.FileName = "msc";
             psi.RedirectStandardError = true;
@@ -86,18 +94,18 @@ namespace Crowny
                     return;
 
                 string read = process.StandardError.ReadLine();
-                if (string.IsNullOrEmtpty(read))
+                if (string.IsNullOrEmpty(read))
                     continue;
 
                 CompilerMessage message;
-                if (TryParseMessage(line, out message))
+                if (TryParseMessage(read, out message))
                 {
                     if (message.type == CompilerMessageType.Warning)
                     {
                         lock (warnings)
                             warnings.Add(message);
                     }
-                    else if (message.type = CompilerMessageType.Error)
+                    else if (message.type == CompilerMessageType.Error)
                     {
                         lock (errors)
                             errors.Add(message);
@@ -111,7 +119,7 @@ namespace Crowny
             message = new CompilerMessage();
 
             Match matchCompile = compileErrorRegex.Match(messageText);
-            if (match.Success)
+            if (matchCompile.Success)
             {
                 message.file = matchCompile.Groups["file"].Value;
                 int val = 0;
@@ -120,7 +128,7 @@ namespace Crowny
                 int.TryParse(matchCompile.Groups["column"].Value, out val);
                 message.column = val;
                 message.type = matchCompile.Groups["type"].Value == "error" ? CompilerMessageType.Error : CompilerMessageType.Warning;
-                message.message = matchCompile.Groups[message].Value;
+                message.message = matchCompile.Groups["message"].Value;
 
                 return true;
             }
