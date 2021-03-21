@@ -28,6 +28,3 @@
 [submodule "Crowny/Dependencies/imgui"]
 	path = Crowny/Dependencies/imgui
 	url = https://github.com/bojosos/imgui
-[submodule "Crowny/Dependencies/bitsery"]
-	path = Crowny/Dependencies/bitsery
-	url = https://github.com/fraillt/bitsery
