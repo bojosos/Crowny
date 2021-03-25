@@ -32,8 +32,9 @@ namespace Crowny
 		Entity CreateEntity(const std::string& name = "");
 		Entity CreateEntity(const Uuid& uuid, const std::string& name);
 		Entity GetEntity(const Uuid& uuid);
-		Uuid& GetUuid(Entity entity);
+		Entity FindEntityByName(const std::string& name);
 		Entity GetRootEntity();
+		Uuid& GetUuid(Entity entity);
 
 		const std::string& GetName() const { return m_Name; }
 		const std::string& GetFilepath() const { return m_Filepath; }

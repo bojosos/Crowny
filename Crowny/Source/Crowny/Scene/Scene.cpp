@@ -80,6 +80,17 @@ namespace Crowny
 		return *m_RootEntity;
 	}
 
+	Entity Scene::FindEntityByName(const std::string& name)
+	{
+		auto view = m_Registry.view<TagComponent>();
+		for (auto ee : view)
+		{
+			if (ee.Tag == name)
+				return e;
+		}
+		return { entt:null };
+	}
+
 	void Scene::OnViewportResize(uint32_t width, uint32_t height)
 	{
 		m_ViewportWidth = width;

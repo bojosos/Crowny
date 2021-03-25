@@ -21,7 +21,7 @@ endif
 PCH = Source/cwpch.h
 PCH_PLACEHOLDER = $(OBJDIR)/$(notdir $(PCH))
 GCH = $(PCH_PLACEHOLDER).gch
-INCLUDES += -ISource -IDependencies/spdlog/include -IDependencies/glfw/include -IDependencies/freetype-gl -IDependencies/glad/include -IDependencies/entt/single_include -IDependencies/imgui -IDependencies/glm -IDependencies/stb_image -IDependencies/assimp/include -I/usr/include/mono-2.0 -IDependencies/vulkan/include -IDependencies/yaml-cpp/include -IDependencies/ImGuizmo
+INCLUDES += -ISource -IDependencies/spdlog/include -IDependencies/glfw/include -IDependencies/freetype-gl -IDependencies/glad/include -IDependencies/entt/single_include -IDependencies/imgui -IDependencies/glm -IDependencies/stb_image -IDependencies/assimp/include -I/usr/include/mono-2.0 -IDependencies/vulkan/include -IDependencies/yaml-cpp/include -IDependencies/ImGuizmo -IDependencies/bitsery/include/bitsery
 FORCE_INCLUDE +=
 ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
 ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
@@ -217,6 +217,7 @@ GENERATED += $(OBJDIR)/Allocator.o
 GENERATED += $(OBJDIR)/Application.o
 GENERATED += $(OBJDIR)/AssetManager.o
 GENERATED += $(OBJDIR)/AssetManifest.o
+GENERATED += $(OBJDIR)/CWMonoArray.o
 GENERATED += $(OBJDIR)/CWMonoAssembly.o
 GENERATED += $(OBJDIR)/CWMonoClass.o
 GENERATED += $(OBJDIR)/CWMonoField.o
@@ -286,6 +287,7 @@ GENERATED += $(OBJDIR)/ScriptCameraComponent.o
 GENERATED += $(OBJDIR)/ScriptComponent.o
 GENERATED += $(OBJDIR)/ScriptDebug.o
 GENERATED += $(OBJDIR)/ScriptEntity.o
+GENERATED += $(OBJDIR)/ScriptGameObject.o
 GENERATED += $(OBJDIR)/ScriptInput.o
 GENERATED += $(OBJDIR)/ScriptNoise.o
 GENERATED += $(OBJDIR)/ScriptRandom.o
@@ -311,6 +313,7 @@ OBJECTS += $(OBJDIR)/Allocator.o
 OBJECTS += $(OBJDIR)/Application.o
 OBJECTS += $(OBJDIR)/AssetManager.o
 OBJECTS += $(OBJDIR)/AssetManifest.o
+OBJECTS += $(OBJDIR)/CWMonoArray.o
 OBJECTS += $(OBJDIR)/CWMonoAssembly.o
 OBJECTS += $(OBJDIR)/CWMonoClass.o
 OBJECTS += $(OBJDIR)/CWMonoField.o
@@ -380,6 +383,7 @@ OBJECTS += $(OBJDIR)/ScriptCameraComponent.o
 OBJECTS += $(OBJDIR)/ScriptComponent.o
 OBJECTS += $(OBJDIR)/ScriptDebug.o
 OBJECTS += $(OBJDIR)/ScriptEntity.o
+OBJECTS += $(OBJDIR)/ScriptGameObject.o
 OBJECTS += $(OBJDIR)/ScriptInput.o
 OBJECTS += $(OBJDIR)/ScriptNoise.o
 OBJECTS += $(OBJDIR)/ScriptRandom.o
@@ -644,6 +648,9 @@ $(OBJDIR)/ScriptComponent.o: Source/Crowny/Scripting/Bindings/Scene/ScriptCompon
 $(OBJDIR)/ScriptEntity.o: Source/Crowny/Scripting/Bindings/Scene/ScriptEntity.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ScriptGameObject.o: Source/Crowny/Scripting/Bindings/Scene/ScriptGameObject.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ScriptTime.o: Source/Crowny/Scripting/Bindings/Scene/ScriptTime.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -651,6 +658,9 @@ $(OBJDIR)/ScriptInput.o: Source/Crowny/Scripting/Bindings/ScriptInput.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ScriptRandom.o: Source/Crowny/Scripting/Bindings/ScriptRandom.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/CWMonoArray.o: Source/Crowny/Scripting/CWMonoArray.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/CWMonoAssembly.o: Source/Crowny/Scripting/CWMonoAssembly.cpp

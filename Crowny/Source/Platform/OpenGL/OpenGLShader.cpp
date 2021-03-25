@@ -2,9 +2,8 @@
 
 #include "Platform/OpenGL/OpenGLShader.h"
 
-#include "Crowny/Common/Parser.h"
+#include "Crowny/Common/StringUtils.h"
 #include "Crowny/Common/VirtualFileSystem.h"
-
 
 #include <glad/glad.h>
 #include <glm/gtc/type_ptr.hpp>
@@ -272,22 +271,22 @@ namespace Crowny
 		const char* vstr = vertSrc.c_str();
 		const char* fstr = fragSrc.c_str();
 
-		while ((token = FindToken(vstr, "struct")))
-			ParseUniformStruct(GetBlock(token, &vstr), GL_VERTEX_SHADER);
+		while ((token = StringUtils::FindToken(vstr, "struct")))
+			ParseUniformStruct(StringUtils::GetBlock(token, &vstr), GL_VERTEX_SHADER);
 
-		while ((token = FindToken(vstr, "uniform")))
-			ParseUniform(GetStatement(token, &vstr), GL_VERTEX_SHADER);
+		while ((token = StringUtils::FindToken(vstr, "uniform")))
+			ParseUniform(StringUtils::GetStatement(token, &vstr), GL_VERTEX_SHADER);
 
-		while ((token = FindToken(fstr, "struct")))
-			ParseUniformStruct(GetBlock(token, &fstr), GL_FRAGMENT_SHADER);
+		while ((token = StringUtils::FindToken(fstr, "struct")))
+			ParseUniformStruct(StringUtils::GetBlock(token, &fstr), GL_FRAGMENT_SHADER);
 
-		while ((token = FindToken(fstr, "uniform")))
-			ParseUniform(GetStatement(token, &fstr), GL_FRAGMENT_SHADER);
+		while ((token = StringUtils::FindToken(fstr, "uniform")))
+			ParseUniform(StringUtils::GetStatement(token, &fstr), GL_FRAGMENT_SHADER);
 	}
 
 	void OpenGLShader::ParseUniform(const std::string& statement, uint32_t shaderType)
 	{
-		std::vector<std::string> tokens = Tokenize(statement);
+		std::vector<std::string> tokens = StringUtils::Tokenize(statement);
 		uint32_t index = 0;
 
 		index++;
@@ -357,7 +356,7 @@ namespace Crowny
 
 	void OpenGLShader::ParseUniformStruct(const std::string& block, uint32_t shaderType)
 	{
-		std::vector<std::string> tokens = Tokenize(block);
+		std::vector<std::string> tokens = StringUtils::Tokenize(block);
 		uint32_t index = 0;
 		index++;
 		std::string name = tokens[index++];

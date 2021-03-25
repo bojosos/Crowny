@@ -7,46 +7,46 @@
 
 #include <glm/ext/matrix_transform.hpp>
 #include <glad/glad.h>
+#include <thread>
 
 namespace Crowny
 {
 
+	struct RendererData
+	{
+		std::thread RenderThread;
+		std::queue<std::function<void>(void)> CommandQueue;
+		bool Running = false;
+	};
+
+	static RendererData s_Data;
+
 	void Renderer::Init()
 	{
-		RenderCommand::Init();
-		Renderer2D::Init();
+		s_Data.Running = true;
+		s_Data.RenderThread = std::thread([]() {
+			while (s_Data.Running)
+			{
+				if (!s_Data.CommandQueue.empty())
+				{
+					s_Data.CommandQueue.front()();
+					s_Data.CommandQueue.pop();
+				}
+			}
+		});
+		
+		s_Data.RenderThread.detach();
+		SubmitCommand([](){ RenderCommand::Init(); });
+	}
+
+	void Renderer::SubmitCommand(std::function<void(void)> func)
+	{
+		s_Data.CommandQueue.push(func);
 	}
 
 	void Renderer::Shutdown()
 	{
-		//BatchRenderer2D::Shutdown();
-	}
-
-	void Renderer::OnWindowResize(uint32_t width, uint32_t height)
-	{
-		RenderCommand::SetViewport(0, 0, width, height);
-	}
-
-	void Renderer::SetViewport(float x, float y, float width, float height)
-	{
-		RenderCommand::SetViewport(x, y, width, height);
-	}
-
-	void Renderer::BeginScene()
-	{
-		
-	}
-
-	void Renderer::EndScene()
-	{
-
-	}
-
-	void Renderer::Submit(const Ref<Shader>& shader, const Ref<VertexArray>& vertexArray, const glm::mat4& transform)
-	{
-		shader->Bind();
-		vertexArray->Bind();
-		RenderCommand::DrawIndexed(vertexArray);
+		s_Data.Running = false;
 	}
 
 }

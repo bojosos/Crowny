@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mono/metadata/metadata.h>
+#include <mono/metadata/object.h>
 
 namespace Crowny
 {

@@ -112,12 +112,21 @@ namespace Crowny
 		TEXTURE_SINGLECHANNEL
 	};
 
+	enum class TextureUsage
+	{
+		TEXTURE_SHADERREAD,
+		TEXTURE_LOADSTORE,
+		TEXTURE_RENDERTARGET,
+		TEXTURE_DEPTHSTENCIL
+	};
+
 	struct TextureParameters
 	{
 		TextureParameters(TextureFormat format = TextureFormat::RGBA8, 
 						  TextureFilter filter = TextureFilter::NEAREST,
-						  TextureWrap wrap = TextureWrap::REPEAT, 
-						  TextureSwizzle swizzle = {}) : Format(format), Filter(filter), Wrap(wrap), Swizzle(swizzle) { }
+						  TextureWrap wrap = TextureWrap::REPEAT,
+						  TextureUsage usage = TextureUsage::TEXTURE_SHADERREAD,
+						  TextureSwizzle swizzle = {}) : Format(format), Filter(filter), Wrap(wrap), Usage(usage), Swizzle(swizzle) { }
 
 		TextureType Type = TextureType::TEXTURE_DEFAULT;
 		TextureShape Shape = TextureShape::TEXTURE_2D;
@@ -125,7 +134,9 @@ namespace Crowny
 		bool sRGB = true;
 		bool ReadWrite = false;
 		bool GenerateMipmaps = false;
+		uint32_t MipLevels = 1;
 
+		TextureUsage Usage;
 		TextureFormat Format;
 		TextureFilter Filter;
 		TextureWrap Wrap;

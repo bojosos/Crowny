@@ -14,14 +14,7 @@ namespace Crowny
 		static void Init();
 		static void Shutdown();
 
-		static void OnWindowResize(uint32_t width, uint32_t height);
-		static void SetViewport(float x, float y, float width, float height);
-
-		static void BeginScene();
-
-		static void Submit(const Ref<Shader>& shader, const Ref<VertexArray>& vertexArray, const glm::mat4& transform);
-
-		static void EndScene();
+		static void SubmitCommand(std::function<void(void)> func);
 
 		static RendererAPI::API GetAPI() { return RendererAPI::GetAPI(); }
 

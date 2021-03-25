@@ -1,12 +1,12 @@
 #include "cwpch.h"
 
-#include "Crowny/Common/Parser.h"
+#include "Crowny/Common/StringUtils.h"
 
 namespace Crowny
 {
 
-	std::vector<std::string> SplitString(const std::string& s, const std::string& separator)
-	{
+	std::vector<std::string> StringUtils::SplitString(const std::string& s, const std::string& separator)
+	{	
 		std::vector<std::string> output;
 
 		std::string::size_type start = 0, end = s.find_first_of(separator);
@@ -26,8 +26,28 @@ namespace Crowny
 
 		return output;
 	}
+	
+	int32_t StringUtils::ParseInt(const std::string& value)
+	{
+		return std::stoi(value);
+	}
+	
+	float StringUtils::ParseFloat(const std::string& value)
+	{
+		return std::stof(value);
+	}
 
-	const char* FindToken(const char* str, const std::string& token)
+	uint64_t StringUtils::ParseLong(const std::string& value)
+	{
+		return std::stoll(value);
+	}
+
+	double StringUtils::ParseDouble(const std::string& value)
+	{
+		return std::stod(value);
+	}
+
+	const char* StringUtils::FindToken(const char* str, const std::string& token)
 	{
 		const char* t = str;
 		while ((t = strstr(t, token.c_str())))
@@ -42,7 +62,7 @@ namespace Crowny
 		return nullptr;
 	}
 
-	std::string GetBlock(const char* str, const char** outPosition)
+	std::string StringUtils::GetBlock(const char* str, const char** outPosition)
 	{
 		const char* end = strstr(str, "}");
 		if (!end)
@@ -54,7 +74,7 @@ namespace Crowny
 		return std::string(str, length);
 	}
 
-	std::string GetStatement(const char* str, const char** outPosition)
+	std::string StringUtils::GetStatement(const char* str, const char** outPosition)
 	{
 		const char* end = strstr(str, ";");
 		if (!end)
@@ -67,7 +87,7 @@ namespace Crowny
 		return res;
 	}
 
-	std::vector<std::string> Tokenize(const std::string& string)
+	std::vector<std::string> StringUtils::Tokenize(const std::string& string)
 	{
 		return SplitString(string, " \t\n");
 	}
