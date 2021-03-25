@@ -8,6 +8,10 @@
 
 #include "Crowny/Common/Yaml.h"
 
+#include <bitsery/traits/vector.h>
+#include <bitsery/adapter/buffer.h>
+#include <bitsery/bitsery.h>
+
 namespace Crowny
 {
 
@@ -29,6 +33,24 @@ namespace Crowny
     {
         out << uuid.ToString();
         return out;
+    }
+    
+    template <typename S>
+    void serialize(S& s, const Ref<Scene>& scene)
+    {/*
+        s.text1b(scene->GetName());
+        s.container(*(m_Scene->m_Entities), std::limit<uint32_t>, [&kv])
+        {
+            Uuid id = kv.first;
+            Entity entity = kv.second;
+            if (!entity)
+                continue;
+            s.value4b()
+            if (entity.HasComponent<TagComponent>())
+            {
+                
+            }
+        }*/
     }
 
     SceneSerializer::SceneSerializer(const Ref<Scene>& scene) : m_Scene(scene)
@@ -53,7 +75,7 @@ namespace Crowny
         }
 
         if (entity.HasComponent<MonoScriptComponent>())
-            {
+        {
             out << YAML::Key << "MonoScriptComponent";
             out << YAML::BeginMap;
             auto msc = entity.GetComponent<MonoScriptComponent>();
@@ -187,7 +209,8 @@ namespace Crowny
 
     void SceneSerializer::SerializeBinary(const std::string& filepath)
     {
-        // Aaah hard
+        std::vector<uint8_t> buffer;
+        bitsery::quickSerialization(bitsery::OutputBufferAdapter<std::vector<uint8_t>{buffer}, m_Scene);
     }
 
     void SceneSerializer::Deserialize(const std::string& filepath)

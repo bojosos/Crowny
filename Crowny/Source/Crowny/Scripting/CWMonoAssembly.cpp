@@ -5,7 +5,7 @@
 
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Common/FileSystem.h"
-#include "Crowny/Common/Parser.h"
+#include "Crowny/Common/StringUtils.h"
 
 BEGIN_MONO_INCLUDE
 #include <mono/metadata/appdomain.h>
@@ -92,7 +92,7 @@ namespace Crowny
 
 	CWMonoClass* CWMonoAssembly::GetClass(const std::string& fullName) const
 	{
-		auto res = SplitString(fullName, ".");
+		auto res = StringUtils::SplitString(fullName, ".");
 		CW_ENGINE_ASSERT(res.size() == 2, "Name has to be in the format (Namespace.ClassName)");
 		return GetClass(res[0], res[1]);
 	}

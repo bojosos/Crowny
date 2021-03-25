@@ -1,9 +1,11 @@
 #pragma once
 
+#include "Crowny/Common/Module.h"
+
 namespace Crowny
 {
 
-	class Random
+	class Random : public Module<Random>
 	{
 		using RandomValueType = std::default_random_engine::result_type;
 
@@ -14,7 +16,7 @@ namespace Crowny
 		static int32_t Int(int32_t min, int32_t max);
 
 	private:
-		static std::default_random_engine s_RandomEngine;
-		static std::uniform_int_distribution<RandomValueType> s_Distribution;
+		std::default_random_engine m_RandomEngine;
+		std::uniform_int_distribution<RandomValueType> m_Distribution;
 	};
 }
