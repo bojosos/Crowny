@@ -2,23 +2,25 @@
 
 #include "Crowny/Application/Initializer.h"
 #include "Crowny/Common/Random.h"
+#include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/ForwardPlusRenderer.h"
 #include "Crowny/Renderer/IDBufferRenderer.h"
 #include "Crowny/Scene/SceneManager.h"
-#include "Crowny/Common/VirtualFileSystem.h"
 
 #include "Crowny/Scripting/CWMonoRuntime.h"
+#include "Crowny/Scripting/Bindings/ScriptRandom.h"
+#include "Crowny/Scripting/Bindings/ScriptInput.h"
 #include "Crowny/Scripting/Bindings/Logging/ScriptDebug.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptNoise.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptTransform.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntity.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptCameraComponent.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptGameObject.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptTime.h"
-#include "Crowny/Scripting/Bindings/ScriptRandom.h"
-#include "Crowny/Scripting/Bindings/ScriptInput.h"
 
 namespace Crowny
 {
@@ -33,16 +35,17 @@ namespace Crowny
 		VirtualFileSystem::Get()->Mount("Assemblies", "Resources/Assemblies");
 		VirtualFileSystem::Get()->Mount("Models", "Resources/Models");
 
+		Random::Init();
 		Renderer::Init();
 		ForwardPlusRenderer::Init();
+		Renderer2D::Init();
 		IDBufferRenderer::Init();
-		Random::Init();
-		FontManager::Add(CreateRef<Font>("Roboto Thin", "/Fonts/" + DEFAULT_FONT_FILENAME, 64));
+		FontManager::Add(CreateRef<Font>("Roboto Thin", "/Fonts/" + DEFAULT_FONT_FILENAME, 64)); // default font, move out of here
 
 		CWMonoRuntime::Init("Crowny C# Runtime");
 		CWMonoRuntime::LoadAssemblies("/Assemblies");
 		
-		// TODO: Out of here
+		// TODO: Out of here, maybe
 		ScriptTransform::InitRuntimeFunctions();
 		ScriptDebug::InitRuntimeFunctions();
 		ScriptComponent::InitRuntimeFunctions();
@@ -50,16 +53,18 @@ namespace Crowny
 		ScriptTime::InitRuntimeFunctions();
 		ScriptRandom::InitRuntimeFunctions();
 		ScriptInput::InitRuntimeFunctions();
-    ScriptNoise::InitRuntimeFunctions();
+    	ScriptNoise::InitRuntimeFunctions();
+		ScriptGameObject::InitRuntimeFunctions();
+		ScriptCameraComponent::InitRuntimeFunctions();
 	}
 
 	void Initializer::Shutdown()
 	{
 		Renderer::Shutdown();
 		Renderer2D::Shutdown();
+		ForwardPlusRenderer::Shutdown();
 		SceneManager::Shutdown();
 		VirtualFileSystem::Shutdown();
-		ForwardPlusRenderer::Shutdown();
 	}
 
 }

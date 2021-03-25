@@ -2,7 +2,7 @@
 
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Common/FileSystem.h"
-#include "Crowny/Common/Parser.h"
+#include "Crowny/Common/StringUtils.h"
 
 namespace Crowny
 {
@@ -11,6 +11,7 @@ namespace Crowny
 
 	static std::string FixPath(const std::string& badPath)
 	{
+		// TODO: Replace all?
 		std::string res = badPath;
 		size_t startPos = 0;
 		while((startPos = res.find("\\", startPos)) != std::string::npos) {
@@ -51,7 +52,7 @@ namespace Crowny
 			return FileSystem::FileExists(virtualPath);
 		}
 
-		std::vector<std::string> dirs = SplitString(virtualPath, "/");
+		std::vector<std::string> dirs = StringUtils::SplitString(virtualPath, "/");
 		const std::string& virtualDir = dirs.front();
 
 		if (m_MountedDirectories.find(virtualDir) == m_MountedDirectories.end() || m_MountedDirectories[virtualDir].empty())

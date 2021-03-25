@@ -7,12 +7,6 @@
 namespace Crowny
 {
 
-	enum class DrawMode
-	{
-		TRIANGLES,
-		TRIANGLE_STRIP
-	};
-
 	class VertexArray
 	{
 	public:
@@ -29,6 +23,6 @@ namespace Crowny
 		virtual const Ref<IndexBuffer>& GetIndexBuffer() const = 0;
 		virtual DrawMode GetDrawMode() const = 0;
 
-		static Ref<VertexArray> Create(DrawMode = DrawMode::TRIANGLES);
+		static Ref<VertexArray> Create(DrawMode = DrawMode::TRIANGLE_LIST);
 	};
 }

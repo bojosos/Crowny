@@ -13,8 +13,8 @@ namespace Crowny
 		switch (Renderer::GetAPI())
 		{
 			//TODO: Do not tie OpenGL and GLFW
-		case RendererAPI::API::OpenGL: return CreateScope<OpenGLContext>(window);	
-		default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); return nullptr;
+			case RendererAPI::API::OpenGL: return CreateScope<OpenGLContext>(window);
+			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); return nullptr;
 		}
 
 		return nullptr;

@@ -24,8 +24,15 @@ namespace Sandbox
 
         private Camera camera;
 
+        private void TestFunc()
+        {       
+            int c = 0;
+            int a = 5 / c;
+        }
+
         public void Start()
         {
+            TestFunc();   
             int c = 0;
             int a = 5 / c;
 //            camera = GetComponent<CameraComponent>().camera;

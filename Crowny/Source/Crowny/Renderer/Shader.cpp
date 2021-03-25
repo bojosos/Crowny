@@ -2,7 +2,9 @@
 
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Shader.h"
+
 #include "Platform/OpenGL/OpenGLShader.h"
+#include "Platform/Vulkan/VulkanShader.h"
 
 namespace Crowny
 {
@@ -59,6 +61,7 @@ namespace Crowny
 		switch (Renderer::GetAPI())
 		{
 			case RendererAPI::API::OpenGL: return CreateRef<OpenGLShader>(m_Filepath);
+			case RendererAPI::API::Vulkan: return CreateRef<VulkanShader>(m_Filepath);
 			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); return nullptr;
 		}
 

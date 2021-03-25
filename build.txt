@@ -11,4 +11,22 @@ I will need:
   This is no good if I want to package a game
 
 Add search by tag to c#
+Change from
+  tags -> names (rename the struct)
+  entities -> game objects (rename the interop classes and C# classes)
+  Still want to have entity class with entity id, but interop should use game objects, more unity like
 
+Scene binary serialization
+
+Format
+Scene:
+  Scene Name // Expects a string
+  Entity Count // Expects a number
+    Entity:
+      Component Count // Expects a number
+        Component:
+          Type        // Expects a number. enum
+          Data
+
+
+    

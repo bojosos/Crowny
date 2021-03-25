@@ -13,19 +13,12 @@ namespace Crowny
 
 	}
 
-	void Mesh::Draw()
+	void Mesh::Draw() // this should prob not be here
 	{
-		/*
-		m_MaterialInstance->Bind(0);
-		for (uint32_t i = 0; i < m_Textures.size(); i++)
-		{
-			if (m_Textures[i])
-				m_Textures[i]->Bind(i);
-		}*/
-		m_VertexArray->Bind();
-		RenderCommand::DrawIndexed(m_VertexArray);
-		m_VertexArray->Unbind();
-		m_MaterialInstance->Unbind();
+		Renderer::SubmitCommand([]() { m_VertexArray->Bind(); });
+		Renderer::SubmitCommand([]() { RenderCommand::DrawIndexed(m_VertexArray); });
+		Renderer::SubmitCommand([]() { m_VertexArray->Unbind(); });
+		Renderer::SubmitCommand([]() { m_MaterialInstance->Unbind(); });
 	}
 
 }

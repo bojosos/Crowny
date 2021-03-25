@@ -52,7 +52,7 @@ namespace Crowny
 
 #ifdef CW_DEBUG
 		if(Renderer::GetAPI() == RendererAPI::API::OpenGL)
-		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 #endif
 		m_Window = glfwCreateWindow((int)props.Width, (int)props.Height, m_Data.Title.c_str(), nullptr, nullptr);
 		s_GLFWWindowCount++;
@@ -64,14 +64,14 @@ namespace Crowny
 		SetVSync(true);
 
 		glfwSetWindowSizeCallback(m_Window, [](GLFWwindow* window, int width, int height)
-			{
-				WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
-				data.Width = width;
-				data.Height = height;
+		{
+			WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+			data.Width = width;
+			data.Height = height;
 
-				WindowResizeEvent event(width, height);
-				data.EventCallback(event);
-			});
+			WindowResizeEvent event(width, height);
+			data.EventCallback(event);
+		});
 
 		glfwSetWindowCloseCallback(m_Window, [](GLFWwindow* window)
 			{
@@ -156,46 +156,4 @@ namespace Crowny
 	void WindowsWindow::SetCursor(Cursor cursor)
 	{
 		if (!m_Cursor)
-			glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-
-		glfwDestroyCursor(m_Cursor);
-
-		switch (cursor)
-		{
-		case Cursor::NO_CURSOR: m_Cursor = nullptr; glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); break;
-		case Cursor::POINTER: m_Cursor = glfwCreateStandardCursor(GLFW_ARROW_CURSOR); break;
-		case Cursor::IBEAM: m_Cursor = glfwCreateStandardCursor(GLFW_IBEAM_CURSOR); break;
-		case Cursor::CROSSHAIR:  m_Cursor = glfwCreateStandardCursor(GLFW_CROSSHAIR_CURSOR); break;
-		case Cursor::HAND:  m_Cursor = glfwCreateStandardCursor(GLFW_HAND_CURSOR); break;
-		case Cursor::HRESIZE:  m_Cursor = glfwCreateStandardCursor(GLFW_HRESIZE_CURSOR); break;
-		case Cursor::VRESIZE:   m_Cursor = glfwCreateStandardCursor(GLFW_VRESIZE_CURSOR); break;
-		}
-
-		if (cursor != Cursor::NO_CURSOR)
-			glfwSetCursor(m_Window, m_Cursor);
-	}
-
-	void WindowsWindow::Shutdown()
-	{
-		glfwDestroyWindow(m_Window);
-		s_GLFWWindowCount--;
-
-		if (s_GLFWWindowCount == 0)
-			glfwTerminate();
-	}
-
-	void WindowsWindow::SetVSync(bool enabled)
-	{
-		if (enabled)
-			glfwSwapInterval(1);
-		else
-			glfwSwapInterval(0);
-
-		m_Data.VSync = enabled;
-	}
-
-	bool WindowsWindow::IsVSync() const
-	{
-		return m_Data.VSync;
-	}
-}
+			glfwSet

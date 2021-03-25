@@ -7,19 +7,17 @@
 namespace Crowny
 {
 
-#ifndef MC_WEB
 	void OpenGLMessageCallback(unsigned source, unsigned type, unsigned id, unsigned severity, int length, const char* message, const void* userParam)
 	{
-		CW_ENGINE_ASSERT(false); 
+		CW_ENGINE_ASSERT(false);  // temporary
 		switch (severity)
 		{
 			case GL_DEBUG_SEVERITY_HIGH:         CW_ENGINE_CRITICAL(message); return;
-			case GL_DEBUG_SEVERITY_MEDIUM:       CW_ENGINE_ERROR(message); return;
-			case GL_DEBUG_SEVERITY_LOW:          CW_ENGINE_WARN(message); return;
-			case GL_DEBUG_SEVERITY_NOTIFICATION: CW_ENGINE_INFO(message); return;
+			case GL_DEBUG_SEVERITY_MEDIUM:       CW_ENGINE_ERROR(message);    return;
+			case GL_DEBUG_SEVERITY_LOW:          CW_ENGINE_WARN(message);     return;
+			case GL_DEBUG_SEVERITY_NOTIFICATION: CW_ENGINE_INFO(message);     return;
 		}
 	}
-#endif
 
 	void OpenGLRendererAPI::Init()
 	{
@@ -32,12 +30,10 @@ namespace Crowny
 		glViewport(0, 0, 1280, 720);
 
 #ifdef CW_DEBUG
-#ifndef MC_WEB
 		glEnable(GL_DEBUG_OUTPUT);
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 		glDebugMessageCallback(OpenGLMessageCallback, nullptr);
 		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, nullptr, GL_FALSE);
-#endif
 #endif
 	}
 
@@ -69,8 +65,12 @@ namespace Crowny
 	{
 		switch (mode)
 		{
-			case DrawMode::TRIANGLES:          return GL_TRIANGLES;
+			case DrawMode::POINT_LIST:         return GL_POINTS;
+			case DrawMode::LINE_LIST:          return GL_LINES;
+			case DrawMode::LINE_STRIP:         return GL_LINE_STRIP;
+			case DrawMode::TRIANGLE_LIST:      return GL_TRIANGLES;
 			case DrawMode::TRIANGLE_STRIP:     return GL_TRIANGLE_STRIP;
+			case DrawMode::TRIANGLE_FAN:       return GL_TRIANGLE_FAN;
 		}
 	}
 

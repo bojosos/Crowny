@@ -126,7 +126,7 @@ namespace Crowny
 		s_Data.Envmap->Bind(0);
 		mesh->GetVertexArray()->Bind();
 		SubmitLightSetup();
-		RenderCommand::DrawIndexed(mesh->GetVertexArray());
+		Renderer::SubmitCommand([] () { RenderCommand::DrawIndexed(mesh->GetVertexArray()); } );
 	}
 
 	void ForwardRenderer::EndScene()

@@ -38,6 +38,11 @@ namespace Crowny
 			s_RendererAPI->DrawIndexed(vertexArray, count);
 		}
 
+		static void SwapBuffers()
+		{
+			s_RendererAPI->SwapBuffers();
+		}
+		
 	private:
 		static Scope<RendererAPI> s_RendererAPI;
 

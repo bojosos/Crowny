@@ -60,6 +60,7 @@ namespace Crowny
 
 #include <spdlog/details/null_mutex.h>
 #include <mutex>
+
 namespace Crowny
 {
     using ImGuiConsoleSink_mt = ImGuiConsoleSink<std::mutex>;

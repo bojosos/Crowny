@@ -56,7 +56,7 @@ namespace Crowny
 
 		s_Data.MainFramebuffer->Bind();
 	//CW_ENGINE_INFO("Here");	
-        RenderCommand::Clear();
+        Renderer::SubmitCommand([]() { RenderCommand::Clear(); });
 		
 		ForwardRenderer::Begin();
 		ForwardRenderer::BeginScene(camera, camera.GetViewMatrix());

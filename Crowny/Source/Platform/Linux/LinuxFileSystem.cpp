@@ -2,7 +2,7 @@
 
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Application/Application.h"
-#include "Crowny/Common/Parser.h"
+#include "Crowny/Common/StringUtils.h"
 
 #include <fstream>
 #include <GLFW/glfw3.h>
@@ -113,7 +113,7 @@ namespace Crowny
 			return false;
 
 		res = res.erase(res.find_last_not_of(" \n\r\t") + 1);
-		outPaths = SplitString(res, "|");
+		outPaths = StringUtilsSplitString(res, "|");
 		
 		return true;
 	}
