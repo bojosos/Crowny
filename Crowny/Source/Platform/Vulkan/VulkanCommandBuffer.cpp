@@ -1,12 +1,103 @@
 #include "cwpch.h"
 
 #include "Platform/Vulkan/VulkanCommandBuffer.h"
+#include "Platform/Vulkan/VulkanRendererAPI.h"
+#include "Platform/Vulkan/VulkanRenderPass.h"
 
 namespace Crowny
 {
 
-    VulkanCommandBuffer::VulkanCommandBuffer(VulkanDevice& device, VkCommandPool pool, uint32_t queueFamily, bool secondary)
+    VulkanSemaphore::VulkanSemaphore()
+    {
+        VkDevice device = gVulkanRendererAPI().GetPresentDevice()->GetLogicalDevice();
+        VkSemaphoreCreateInfo semaphoreCreateInfo;
+        semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        semaphoreCreateInfo.pNext = nullptr;
+        semaphoreCreateInfo.flags = 0;
+        VkResult result = vkCreateSemaphore(device, &semaphoreCreateInfo, gVulkanAllocator, &m_Semaphore);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+    }
+
+    VulkanSemaphore::~VulkanSemaphore()
+    {
+        VkDevice device = gVulkanRendererAPI().GetPresentDevice()->GetLogicalDevice();
+        vkDestroySemaphore(device, m_Semaphore, gVulkanAllocator);
+    }
+
+    VulkanCommandBufferPool::VulkanCommandBufferPool(VulkanDevice& device) : m_Device(device)
+    {
+        for (uint32_t i = 0; i < QUEUE_COUNT; i++)
+        {
+            uint32_t familyIdx = device.GetQueueFamily((GpuQueueType)i);
+            if (familyIdx == (uint32_t)-1)
+                continue;
+            VkCommandPoolCreateInfo poolCreateInfo;
+            poolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+            poolCreateInfo.pNext = nullptr;
+            poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+            poolCreateInfo.queueFamilyIndex = familyIdx;
+            
+            m_Pools[familyIdx].QueueFamily = familyIdx;
+            memset(m_Pools[familyIdx].Buffers, 0, sizeof(m_Pools[familyIdx].Buffers));
+            vkCreateCommandPool(device.GetLogicalDevice(), &poolCreateInfo, gVulkanAllocator, &m_Pools[familyIdx].Pool);
+        }
+    }
+
+    VulkanCommandBufferPool::~VulkanCommandBufferPool()
+    {
+        for (auto& entry : m_Pools)
+        {
+            PoolInfo& info = entry.second;
+            for (uint32_t i = 0; i < MAX_VULKAN_CB_PER_QUEUE_FAMILY; i++)
+            {
+                VulkanCommandBuffer* buffer = info.Buffers[i];
+                if (buffer == nullptr)
+                    break;
+                delete buffer;
+            }
+            vkDestroyCommandPool(m_Device.GetLogicalDevice(), info.Pool, gVulkanAllocator);
+        }
+    }
+    
+    VulkanCommandBuffer* VulkandCommandBufferPool::GetBuffer(uint32_t queueFamily, bool secondary)
+    {
+        auto iter = m_Pools.find(queueFamily);
+        if (iter == m_Pools.end())
+            return nullptr;
+        VulkanCommandBuffer** buffers = iter->second.Buffers;
+        
+        uint32_t i = 0
+        for (; i < MAX_VULKAN_CB_PER_QUEUE_FAMILY; i++)
+        {
+            if (buffers[i] == nullptr)
+                break;
+            if (buffers[i]->m_State == VulkanCommandBuffer::State::Ready)
+            {
+                buffers[i]->Begin();
+                return buffers[i];
+            }
+        }
+        
+        CW_ENGINE_ASSERT(i, MAX_VULKAN_CB_PER_QUEUE_FAMILY, "Too many command buffers allocated.");
+        
+        buffers[i] = CreateBuffer(queueFamily, secondary);
+        buffers[i]->Begin();
+        
+        return buffers[i];
+    }
+    
+    VulkanCommandBuffer* VulkanCommandBufferPool::CreateBuffer(uint32_t queueFamily, bool secondary)
+    {
+        auto iter = m_Pools.find(queueFamily);
+        if (iter == m_Pools.end())
+            return nullptr;
+        const PoolInfo& poolInfo = iter->second;
+        return new VulkandCommandBuffer(m_Device, m_NextId++, poolInfo.Pool, poolInfo.QueueFamily, secondary);
+    }
+    
+    VulkanCommandBuffer::VulkanCommandBuffer(VulkanDevice& device, uint32_t id, VkCommandPool pool, uint32_t queueFamily, bool secondary)
         : m_ScissorRequiresBind(true), m_ViewportRequiresBind(true), m_VertexInputsRequriesBind(true), m_GraphicsPipelineRequiresBind(true)
+          m_Id(id), m_QueueFamily(queueFamily), m_Device(device), m_Pool(pool), m_CommandPipelineRequiresBind(true)
     {
         uint32_t maxBoundDescriptorSets = device.GetDeviceProperties().limits.maxBoundDescriptorSets;
         m_DescriptorSetsTemp = new VkDescriptorSet[maxBoundDescriptorSets];
@@ -26,8 +117,36 @@ namespace Crowny
 		fenceCI.pNext = nullptr;
 		fenceCI.flags = 0;
 
-		result = vkCreateFence(m_Device.getLogical(), &fenceCI, gVulkanAllocator, &m_Fence);
+		result = vkCreateFence(m_Device.GetLogicalDevice(), &fenceCI, gVulkanAllocator, &m_Fence);
 		assert(result == VK_SUCCESS);
+    }
+
+    VulkanCommandBuffer::~VulkanCommandBuffer()
+    {
+        VkDevice device = m_Device.GetLogicalDevice();
+        
+        if (m_State == State::Submitted)
+        {
+            uint64_t wait = 1000 * 1000 * 1000;
+            VkResult result = vkWaitFences(device, 1, &m_Fence, true, waitTime);
+            CW_ENGINE_ASSERT(result == VK_SUCCESS || result == VK_TIMEOUT);
+
+            if (result == VK_TIMEOUT)
+                CW_ENGINE_WARN("Command buffer freed, fence wait expired!");
+            Reset();
+        }
+        if (m_IntraQueueSemaphore != nullptr)
+            delete m_IntraQueueSemaphore;
+
+        for (uint32_t i = 0; i < MAX_VULKAN_CB_DEPENDENCIES; i++)
+        {
+            if (m_InterQueueSemaphores[i] != nullptr)
+                delete m_InterQueueSemaphores[i];
+        }
+
+        vkDestroyFence(device, m_Fence, gVulkanAllocator);
+        vkFreeCommandBuffers(device, m_Pool, 1, &m_CmdBuffer);
+        delete m_DesciptorSetsTemp;
     }
 
     void VulkanCommandBuffer::BindDynamicStates(bool force)
@@ -45,7 +164,7 @@ namespace Crowny
             m_ViewportRequiresBind = false;
         }
         
-        if (m_ScissorRequiresBind ++ force)
+        if (m_ScissorRequiresBind || force)
         {
             VkRect2D scissors;
             scissors.offset.x = m_Viewport.X;
@@ -77,6 +196,8 @@ namespace Crowny
     
     void VulkanCommandBuffer::Begin()
     {
+        CW_ENGINE_ASSERT(m_State == State::Ready);
+        
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.pNext = nullptr;
@@ -101,17 +222,19 @@ namespace Crowny
     void VulkanCommandBuffer::BeginRenderPass()
     {
         CW_ENGINE_ASSERT(m_State == State::Recording);
-        CW_ENGINE_ASSERT(m_Framebuffer != nullptr, "Render target is nullptr");
+        CW_ENGINE_ASSERT(m_RenderTarget != nullptr, "Render target is nullptr");
         
+        // TODO: Execute layout transitions
+
         VkRenderPassBeginInfo renderPassBeginInfo;
         renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassBeginInfo.pNext = nullptr;
-        renderPassBeginInfo.framebuffer = m_Framebuffer->GetVkFramebuffer();
+        renderPassBeginInfo.framebuffer = m_RenderTarget->GetVkFramebuffer();
         renderPassBeginInfo.renderPass = renderPass->GetVkRenderPass();
         renderPassBeginInfo.renderArea.offset.x = 0;
         renderPassBeginInfo.renderArea.offset.y = 0;
-        renderPassBeginInfo.renderArea.extent.width = m_Framebuffer->GetWidth();
-        renderPassBeginInfo.renderArea.extent.height = m_Framebuffer->GetHeight();
+        renderPassBeginInfo.renderArea.extent.width = m_RenderTarget->GetWidth();
+        renderPassBeginInfo.renderArea.extent.height = m_RenderTarget->GetHeight();
         renderPassBeginInfo.clearValueCount = 1;
         
         vkCmdBeginRenderPass(m_CmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -128,11 +251,11 @@ namespace Crowny
     void VulkanCommandBuffer::ExecuteClearPass()
     {
         CW_ENGINE_ASSERT(m_State == State::Recording);
-        VulkanRenderPass* renderPass = m_Framebuffer->GetRenderPass();
+        VulkanRenderPass* renderPass = m_RenderTarget->GetRenderPass();
         VkRenderPassBeginInfo renderPassBeginInfo;
         renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassBeginInfo.pNext = nullptr;
-        renderPassBeginInfo.framebuffer = m_Framebuffer->GetVkFramebuffer();
+        renderPassBeginInfo.framebuffer = m_RenderTarget->GetVkFramebuffer();
         renderPassBeginInfo.renderPass = renderPass->GetVkRenderPass();
         renderPassBeginInfo.renderArea.offset.x = m_ClearArea.X;
         renderPassBeginInfo.renderArea.offset.y = m_ClearArea.Y;
@@ -145,24 +268,91 @@ namespace Crowny
         vkCmdEndRenderPass(m_CmdBuffer);   
     }
     
+    void VulkanCommandBuffer::Reset()
+    {
+        bool submitted = m_State == State::Submitted;
+
+        m_State = State::Ready;
+        vkResetCommandBuffer(m_CmdBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+    }
+    
+    void VulkanCommandBuffer::Submit(VulkanQueue* queue, uint32_t queueIdx)
+    {
+        CW_ENGINE_ASSERT(IsReadyForSubmit());
+        
+        VkResult result = vkResetFences(m_Device.GetLogicalDevice(), 1, &m_Fence);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        
+        VulkanDevice& device = queue->GetDevice();
+        for (auto& entry : m_Buffers)
+        {
+            VulkanBuffer* resource = static_cast<VulkanBuffer*>(entry.first);
+            uint32_t currentQueueFamily 
+        }
+
+        for (auto& entry : m_ActiveSwapChains)
+        {
+            const SwapChainSurface& surface = entry->GetBackBuffer();
+            if (surface.NeedWait)
+            {
+                VulkanSemaphore* semaphore = entry->GetBackBuffer().Sync;
+                if (numSemaphores >= (uint32_t)m_SemaphoresTemp.size())
+                    m_SemaphoresTemp.push_Back(semaphore);
+                else
+                    m_SemaphoresTemp[numSemaphores] = semaphore;
+                numSemaphores++;
+            }
+        }
+
+        queue->QueueSubmit(this, m_SemaphoresTemp.data(), numSemaphores);
+        queue->SubmitQueued();
+        
+        m_GraphicsPipeline = nullptr;
+        m_ComputePipeline = nullptr;
+        m_GraphicsPipelineRequiresBind = true;
+        m_ComputePipelineRequiresBind = true;
+        m_RenderTarget = nullptr;
+        m_DescriptorSetsBindState = DescriptorSetBindFlag::Graphics | DescriptorSetBindFlag::Compute;
+        m_IndexBuffer = nullptr;
+        m_VertexBuffers.clear();
+        m_VertexInputsRequiresBind = true;
+        m_ActiveSwapChains.clear();
+    }
+    
+    bool VulkanCommandBuffer::CheckFenceStatus(bool blocking) const
+    {
+        VkResult result = vkWaitForFences(m_Device.GetLogicalDevice(), 1, &m_Fence, true, block ? 1000000000 : 0);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS || result == VK_TIMEOUT);
+        
+        return result == VK_SUCCESS;
+    }
+    
+    bool VulkanCommandBuffer::IsReadyForRender() const
+    {
+        if (m_GraphicsPipeline == nullptr)
+            return false;
+
+        return m_RenderTarget != nullptr && mVertexDecl != nullptr;
+    }
+
     void VulkanCommandBuffer::Draw(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount)
     {
-        if (!IsRenderForRender())
+        if (!IsReadyForRender())
             return;
 
         BindUniforms();
         if (!IsInRenderPass())
             BeginRenderPass();
 
-        if (m_VertexInputsDirty)
+        if (m_VertexInputsRequriesBind)
         {
             BindVertexInputs();
-            m_VertexInputsDirty = false;
+            m_VertexInputsRequriesBind = false;
         }
         
         if (m_GraphicsPipelineRequiresBind)
         {
-            if (!BindGraphisPipeline())
+            if (!BindGraphicsPipeline())
                 return;
         }
         else
@@ -180,24 +370,24 @@ namespace Crowny
         vkCmdDraw(m_CmdBuffer, vertexCount, instanceCount, vertexOffset, 0);
     }
 
-    void VulkanCommandBuffer::Draw(uint32_t startIdx, uint32_t idxCount, uint32_t vertexOffset, uint32_t instanceCount)
+    void VulkanCommandBuffer::DrawIndexed(uint32_t startIdx, uint32_t idxCount, uint32_t vertexOffset, uint32_t instanceCount)
     {
-        if (!IsRenderForRender())
+        if (!IsReadyForRender())
             return;
 
         BindUniforms();
         if (!IsInRenderPass())
             BeginRenderPass();
 
-        if (m_VertexInputsDirty)
+        if (m_VertexInputsRequriesBind)
         {
             BindVertexInputs();
-            m_VertexInputsDirty = false;
+            m_VertexInputsRequriesBind = false;
         }
         
         if (m_GraphicsPipelineRequiresBind)
         {
-            if (!BindGraphisPipeline())
+            if (!BindGraphicsPipeline())
                 return;
         }
         else
@@ -213,6 +403,32 @@ namespace Crowny
         }
 
         vkCmdDrawIndexed(m_CmdBuffer, idxCount, instanceCount, startIdx, 0);
+    }
+
+    void VulkanCommandBuffer::AllocateSemaphores(VkSemaphore* semaphores)
+    {
+        if (m_IntraQueueSemaphore != nullptr)
+            delete m_IntraQueueSemaphore;
+
+        m_IntraQueueSemaphore = new VulkanSemaphore();
+        semaphores[0] = m_IntraQueueSemaphore->GetHandle();
+
+        for (uint32_t i = 0; i < MAX_VULKAN_CB_DEPENDENCIES; i++)
+        {
+            if (m_InterQueueSemaphores[i] != nullptr)
+                delete m_InterQueueSemaphores[i];
+            m_InterQueueSemaphores[i] = new VulkanSemaphore();
+            semaphores[i + 1] = m_InterQueueSemaphores[i]->GetHandle();
+        }
+
+        m_NumUsedInterQueueSemaphores = 0;
+    }
+    
+    VulkanSemaphore* VulkanCommandBuffer::RequiestInterQueueSemaphore() const
+    {
+        if (m_NumUsedInterQueueSemaphores >= MAX_VULKAN_CB_DEPENDENCIES)
+            return nullptr;
+        return m_InterQueueSemaphores[m_NumUsedInterQueueSemaphores++];
     }
 
     void VulkanCommandBuffer::SetLayout(VkImage image, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags,

@@ -19,7 +19,7 @@ namespace Crowny
 		/// The parent of the game object.
 		/// </summary>
 		/// <value>The parent game object.</value>
-		public Entity Parent
+		public Entity parent
 		{
 			get { return Internal_GetParent(m_InternalPtr); }
 			//set { Internal_SetParent(m_InternalPtr, value); }

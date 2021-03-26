@@ -49,7 +49,7 @@ namespace Crowny
         std::queue<VulkanCommandBuffer*> m_ActiveBuffers;
         std::queue<VulkanSemaphore*> m_ActiveSemaphores;
         VulkanCommandBuffer* m_LastCommandBuffer = nullptr;
-        bool m_LastCommandBufferUsed = false;
+        bool m_LastCBSemaphoreUsed = false;
         uint32_t m_NextSubmitIdx = 1;
         std::vector<VkSemaphore> m_SemaphoresTemp;
     };
