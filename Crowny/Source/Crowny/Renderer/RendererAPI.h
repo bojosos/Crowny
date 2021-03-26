@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Common/Module.h"
+
 #include "Crowny/Renderer/VertexArray.h"
 #include "Crowny/Renderer/GraphicsPipeline.h"
 #include "Crowny/Renderer/Framebuffer.h"
@@ -10,7 +12,7 @@
 
 namespace Crowny {
 
-	class RendererAPI
+	class RendererAPI : public Module<RendererAPI>
 	{
 	public:
 		enum class API

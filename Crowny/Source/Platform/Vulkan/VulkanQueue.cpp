@@ -187,11 +187,11 @@ namespace Crowny
             const SubmitInfo& entry = m_QueuedBuffers[i];
             commandBuffers[i] = entry.CmdBuffer->GetHandle();
             
-            entry.cmdBuffer->AllocateSemaphores(&signalSemaphores[signalSemaphoreIdx]);
+            entry.CmdBuffer->AllocateSemaphores(&signalSemaphores[signalSemaphoreIdx]);
             uint32_t semaphoresCount = entry.NumSemaphores;
             PrepareSemaphores(m_QueuedSemaphores.data() + readSemaphoreIdx, &waitSemaphores[writeSemaphoreIdx], semaphoresCount);
             GetSubmitInfo(&commandBuffers[i], &signalSemaphores[signalSemaphoreIdx], signalSemaphoresPerCB, &waitSemaphores[writeSemaphoreIdx], semaphoresCount, submitInfos[i]);
-            entry.cmdBuffer->SetIsSubmitted();
+            entry.CmdBuffer->SetIsSubmitted();
             m_LastCommandBuffer = entry.CmdBuffer;
             m_LastCBSemaphoreUsed = false;
             m_ActiveBuffers.push(entry.CmdBuffer);
@@ -200,7 +200,7 @@ namespace Crowny
             signalSemaphoreIdx += signalSemaphoresPerCB;
         }
 
-        VulkanCommandBuffer* lastCB = m_QueuedBuffers[numCBs - 1].CmdBuffer;
+        VulkanCommandBuffer* lastCB = m_QueuedBuffers[numCbs - 1].CmdBuffer;
         uint32_t totalNumSemaphores = writeSemaphoreIdx;
         m_ActiveSubmissions.push_back(SubmitInfo(lastCB, m_NextSubmitIdx++, totalNumSemaphores, numCbs));
 
