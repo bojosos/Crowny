@@ -289,10 +289,8 @@ namespace Crowny
 			auto* field = script.DisplayableFields[i];
 			ImGui::PushID(i);
 			ImGui::Text("%s", field->GetName().c_str()); ImGui::NextColumn();
-			CW_ENGINE_INFO("Up here {0}", i);
 			if (script.ManagedInstance)
 			{
-				CW_ENGINE_INFO("Down here {0}", i);
 				switch (field->GetPrimitiveType())
 				{
 					case (MonoPrimitiveType::Bool):
@@ -316,6 +314,8 @@ namespace Crowny
 					{
 						if (MonoUtils::IsEnum(field->GetType()->GetInternalPtr()))
 						{
+              // TODO: These commonly used methods (GetEnumNames, Compile) should be stored globally instead of having to get them every time
+              // Also no mono code in the editor please.
 							void* enumType = (void*)mono_type_get_object(CWMonoRuntime::GetDomain(), MonoUtils::GetType(field->GetType()->GetInternalPtr()));
 							MonoArray* ar = (MonoArray*)CWMonoRuntime::GetBuiltinClasses().ScriptUtils->GetMethod("GetEnumNames", 1)->Invoke(nullptr, &enumType);
 							uint32_t size = mono_array_length(ar);

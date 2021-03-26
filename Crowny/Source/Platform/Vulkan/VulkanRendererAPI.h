@@ -3,6 +3,7 @@
 #include "Platform/Vulkan/VulkanUtils.h"
 
 #include "Crowny/Renderer/RendererAPI.h"
+#include "Crowny/Renderer/RenderCapabilities.h"
 #include "Platform/Vulkan/VulkanDevice.h"
 #include "Platform/Vulkan/VulkanCommandBuffer.h"
 
@@ -30,11 +31,14 @@ namespace Crowny
         virtual void Shutdown() override;
 
         VkInstance GetInstance() const { return m_Instance; }
-        VulkanCommandBuffer* GetMainCommandBuffer() const { return m_CommandBuffer; }
+        VulkanCommandBuffer* GetMainCommandBuffer() const { return m_CommandBuffer.get(); }
         const std::vector<Ref<VulkanDevice>>& GetPrimaryDevices() const { return m_PrimaryDevices; }
+        const Ref<VulkanDevice>& GetPresentDevice() const { return m_PrimaryDevices[0]; }
         uint32_t GetDeviceCount() const { return (uint32_t)m_Devices.size(); }
         Ref<VulkanDevice> GetDevice(uint32_t idx) const { return m_Devices[idx]; }
+        bool IsReadyForRender() const;
     private:
+        void RebuildSwapChain();
         void InitCaps();
     
     private:
@@ -43,13 +47,15 @@ namespace Crowny
         std::vector<Ref<VulkanDevice>> m_Devices;
         std::vector<Ref<VulkanDevice>> m_PrimaryDevices;
         RenderCapabilities* m_CurrentCapabilities;
-        Ref<VukanCommandBuffer> m_CommandBuffer;
+        Ref<VulkanCommandBuffer> m_CommandBuffer;
 #ifdef CW_DEBUG
         VkDebugReportCallbackEXT m_DebugReportCallback;
 #endif
 
         uint32_t m_NumDevices;
     };
+
+    VulkanRendererAPI& gVulkanRendererAPI();
     
     extern PFN_vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceSupportKHR;
 	extern PFN_vkGetPhysicalDeviceSurfaceFormatsKHR vkGetPhysicalDeviceSurfaceFormatsKHR;

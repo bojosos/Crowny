@@ -144,17 +144,17 @@ namespace Crowny
         
         if (m_PrimaryDevices.size() == 0)
         {
-            m_Devices[i]->SetPrimary();
+            m_Devices[0]->SetPrimary();
             m_PrimaryDevices.push_back(m_Devices[0]);
         }
         
-        GPUInfo gpuInfo;
-        gpuInfo.numGPUs = std::min(4U, m_NumDevices);
+        //GPUInfo gpuInfo;
+        //gpuInfo.numGPUs = std::min(4U, m_NumDevices);
         
-        for (uint32_t i = 0; i < gpuInfo.numGPUs; i++)
-            gpuInfo.names[i] = m_Devices[i]->GetDeviceProperties().deviceName;
+        //for (uint32_t i = 0; i < gpuInfo.numGPUs; i++)
+            //gpuInfo.names[i] = m_Devices[i]->GetDeviceProperties().deviceName;
         
-        PlatformUtility::SetGPUInfo(gpuInfo);
+        //PlatformUtility::SetGPUInfo(gpuInfo);
         
         GET_INSTANCE_PROC_ADDR(m_Instance, GetPhysicalDeviceSurfaceSupportKHR);
         GET_INSTANCE_PROC_ADDR(m_Instance, GetPhysicalDeviceSurfaceFormatsKHR);
@@ -232,7 +232,7 @@ namespace Crowny
 
     void VulkanRendererAPI::SwapBuffers()
     {
-        VulkanQueue* queue = m_Device[0]->GetQueue(GRAPHICS_QUEUE, 0);
+        VulkanQueue* queue = GetPresentDevice()->GetQueue(GRAPHICS_QUEUE, 0);
         VkResult result = queue->Present(m_SwapChain, m_SemaphoresTemp, );
         if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
             RebuildSwapChain();
@@ -377,5 +377,10 @@ namespace Crowny
             caps.AddShaderProfile("glsl");
             deviceIdx++;
         }
+    }
+    
+    VulkanRendererAPI& gVulkanRendererAPI()
+    {
+        return static_cast<VulkanRendererAPI&>(RendererAPI::Get());
     }
 }

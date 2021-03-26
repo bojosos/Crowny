@@ -5,12 +5,15 @@
 #include "Platform/Vulkan/VulkanDevice.h"
 #include "Platform/Vulkan/VulkanPipeline.h"
 #include "Platform/Vulkan/VulkanFramebuffer.h"
+#include "Platform/Vulkan/VulkanVertexBuffer.h"
 #include "Crowny/Renderer/IndexBuffer.h"
 #include "Crowny/Renderer/VertexBuffer.h"
 
 namespace Crowny
 {
 
+    class VulkanCommandBuffer;
+    
     class VulkanSemaphore
     {
     public:
@@ -35,7 +38,7 @@ namespace Crowny
         struct PoolInfo
         {
             VkCommandPool Pool = VK_NULL_HANDLE;
-            VulkanCommmandBuffer* Buffers[64];
+            VulkanCommandBuffer* Buffers[64];
             uint32_t QueueFamily = -1;
         };
         
@@ -58,7 +61,7 @@ namespace Crowny
         };
 
     public:
-        VulkanCommandBuffer();
+        VulkanCommandBuffer(VulkanDevice& device, uint32_t id, VkCommandPool pool, uint32_t queueFamily, bool secondary);
         ~VulkanCommandBuffer();
         void Begin();
         void BeginRenderPass();
@@ -68,13 +71,19 @@ namespace Crowny
         void Submit(VkQueue* queue, uint32_t queueIdx);
         VkCommandBuffer GetHandle() const { return m_CmdBuffer; }
         VkFence GetFence() const { return m_Fence; }
+        void SetIsSubmitted() { m_State = State::Submitted; }
 
+        void AllocateSemaphores(VkSemaphore* semaphores);
         void SetRenderTarget(const Ref<Framebuffer>& target);
-        void ClearRenderTarget(uint32_t buffers, const Color& color, float depth);
-        void ClearViewport(uint32_t bufers, const Color& color, float depth);
+        void ClearRenderTarget(uint32_t buffers, const glm::vec4& color, float depth);
+        void ClearViewport(uint32_t bufers, const glm::vec4& color, float depth);
+        void ExecuteClearPass();
         void SetPipeline(const Ref<GraphicsPipeline>& pipeline);
         void SetPipeline(const Ref<ComputePipeline>& pipeline);
-        void SetUniforms(const Ref<Uniforms>& uniforms);
+        //void SetUniforms(const Ref<UniformBuffer>& uniforms);
+        bool BindGraphicsPipeline();
+        bool IsReadyForRender() const;
+        void BindUniforms();
         void SetViewport(const Rect2F& area);
         void SetScrissorRect(const Rect2I& area);
         void SetDrawMode(DrawMode drawMode);
@@ -84,18 +93,18 @@ namespace Crowny
         void MemoryBarrier(VkBuffer buffer, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage);
         
     private:
+        friend class VulkanCommandBufferPool;
         void Draw(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount);
-        void DrawIndexed(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount);
-        void BindDynamicStates();
+        void DrawIndexed(uint32_t startIdx, uint32_t idxCount, uint32_t vertexOffset, uint32_t instanceCount);
+        void BindDynamicStates(bool force);
         void BindVertexInputs();
-        void BindGraphicsPipeline();
         
         bool IsInRenderPass() const { return m_State == State::RecordingRenderPass; }
         bool IsReadyForSubmit() const { return m_State == State::RecordingDone; }
         bool IsRecording() const { return m_State == State::Recording; }
         bool IsSubmitted() const { return m_State == State::Submitted; }
 
-        void Rest();
+        void Reset();
         
         bool m_ViewportRequiresBind = true, m_ScissorRequiresBind = true;
         bool m_GraphicsPipelineRequiresBind = true;
@@ -115,7 +124,7 @@ namespace Crowny
         std::vector<VulkanSemaphore*> m_SemaphoresTemp { }; // TODO: max queues
         VkBuffer m_VertexBuffersTemp[] {}; // TODO: max vertex buffers
         VulkanIndexBuffer m_IndexBuffer;
-        std::vector<VulkanVertexBuffer> m_VertexBuffer;
+        std::vector<VulkanVertexBuffer> m_VertexBuffers;
         Ref<VulkanFramebuffer> m_RenderTarget;
         Ref<VulkanGraphicsPipeline> m_GraphicsPipeline;
         Ref<VulkanComputePipeline> m_ComputePipeline;
