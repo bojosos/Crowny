@@ -1,9 +1,12 @@
 #pragma once
 
 #include "Crowny/Renderer/Shader.h"
+#include "Crowny/Renderer/VertexBuffer.h"
 
 namespace Crowny
 {
+
+    class VulkanRenderPass;
     
     struct PipelineStateDesc
     {
@@ -15,13 +18,13 @@ namespace Crowny
         Ref<Shader> DomainShader;
     };
     
-    //TODO: Rename the name of the file
+    //TODO: Change the name of the file
     class GraphicsPipeline
     {
     public:
         virtual ~GraphicsPipeline() = default;
 
-        static Ref<GraphicsPipeline> Create(const PipelineStateDesc& desc);
+        static Ref<GraphicsPipeline> Create(const PipelineStateDesc& props, const Ref<VertexBuffer>& vbo);
         
     protected:
         PipelineStateDesc m_Data;

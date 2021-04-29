@@ -11,7 +11,7 @@
 
 namespace Crowny
 {
-
+/*
 	struct RendererData
 	{
 		std::thread RenderThread;
@@ -20,9 +20,9 @@ namespace Crowny
 	};
 
 	static RendererData s_Data;
-
+*/
 	void Renderer::Init()
-	{
+	{/*
 		s_Data.Running = true;
 		s_Data.RenderThread = std::thread([]() {
 			while (s_Data.Running)
@@ -36,17 +36,23 @@ namespace Crowny
 		});
 		
 		s_Data.RenderThread.detach();
-		SubmitCommand([](){ RenderCommand::Init(); });
+		SubmitCommand([](){ RenderCommand::Init(); });*/
+		RenderCommand::Init();
 	}
 
+	void Renderer::OnWindowResize(uint32_t width, uint32_t height)
+	{
+		RenderCommand::SetViewport(0, 0, width, height);
+	}
+/*
 	void Renderer::SubmitCommand(std::function<void(void)> func)
 	{
 		s_Data.CommandQueue.push(func);
-	}
+	}*/
 
 	void Renderer::Shutdown()
 	{
-		s_Data.Running = false;
+		//s_Data.Running = false;
 	}
 
 }

@@ -9,7 +9,7 @@
 #include <stb_image.h>
 
 namespace Crowny
-{
+{/*
 	GLenum VulkanTexture2D::TextureChannelToVulkanChannel(TextureChannel channel)
 	{
 		switch (channel)
@@ -112,7 +112,174 @@ namespace Crowny
 		
 		return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 	}
+/*
+	VulkanImageDesc CreateDesc(VkImage image, VkDeviceMemory memory, VkImageLayout layout, VkFormat format, const TextureParameters& props)
+	{
+		VulkanImageDesc desc;
+		desc.Image = image;
+		desc.Memory = memory;
+		desc.Layout = layout;
+		desc.Usage = props.Usage;
+		desc.Shape = props.Shape;
+		desc.NumMips = props.MipLevels;
+		desc.Format = format;
+		return desc;
+	}
 
+	VulkanImage::VulkanImage(VkImage image, VkDeviceMemory memory, VkImageLayout layout, VkFormat format, const VulkanImageDesc& props, bool ownsImage)
+	 						: VulkanImage(CreateDesc(image, memory, layout, format, props), ownsImage);
+	{
+
+	}
+
+	VulkanImage::VulkanImage(const VulkanImageDesc& props, bool ownsImage)
+	{
+		m_ImageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		m_ImageViewCI.pNext = nullptr;
+		m_ImageViewCI.flags = 0;
+		m_ImageViewCI.image = desc.Image;
+		m_ImageViewCI.format = props.Format;
+		m_ImageViewCI.components { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+		switch(desc.Type)
+		{
+		case TEXTURE_1D:
+			m_ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_1D;
+			break;
+		default:
+		case TEXTURE_2D;
+			m_ImageViewCI.viewType = VK_IAMGE_VIEW_TYPE_CUBE;
+			m_ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		case TEXTURE_3D:
+			m_ImageViewCI.viewType = VK_IAMGE_VIEW_TYPE_CUBE;
+			m_ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_3D;
+		case TEXTURE_CUBE_MAP:
+			m_ImageViewCI.viewType = VK_IAMGE_VIEW_TYPE_CUBE;
+			break;
+		}
+
+		if (TextureUsage == TextureUsage::TEXTURE_DEPTHSTENCIL)
+			{
+			m_FramebufferMainView = CreateView(desc.Format, GetAspectFlags());
+			m_MainView = CreateView(desc.Format, VK_IMAGE_ASPECT_DEPTH);
+		}
+		else
+			m_MainView = CreateView(desc.Format, VK_IMAGE_ASPECT_COLOR_BIT);
+
+		ImageViewInfo ivi;
+		ivi.Framebuffer = false;
+		ivi.view = m_MainView;
+		ivi.Format = desc.Format;
+		m_ImageInfos.push_back(ivi);
+
+		if (m_FramebufferMainView != VK_NULL_HANDLE)
+		{
+			ImageViewInfo fbMainViewInfo;
+			fbMainViewInfo.Framebuffer = true;
+			fbMainViewInfo.View = m_FramebufferMainView;
+			fbMainViewInfo.Format = desc.Format;
+			m_ImageInfos.push_back(fbMainViewInfo);
+		}
+
+		uint32_t subrss = m_NumMipLevels;
+		m_Subresources = new VulkanImageSubresource*[subrss];
+		for (uint32_t i = 0; i < subrss; i++)
+			m_Subresources[i] = new VulkanImageSubresource(desc.Layout);
+	}
+
+	VulkanImage::~VulkanImage()
+	{
+		for (auto& info : m_ImageInfos)
+			vkDestroyImageView(m_Device, info.View, nullptr);
+		if (m_OwnsImage)
+		{
+			vkDestroyImage(m_Device, m_Image, nullptr);
+			vkFreeMemory(device.GetLogicalDevice(), m_Allocation, nullptr)
+		}
+	}
+	
+	VkImageView VulkanImage::GetView(bool framebuffer) const
+	{
+		if (framebuffer && m_Usage == TextureUsage::TEXTURE_DEPTHSTENCIL)
+			return m_FramebufferMainView;
+		return m_MainView;
+	}
+
+	VkImageView VulkanImage::GetView(VkFormat format, bool framebuffer) const
+	{
+		for(auto& entry : m_ImageInfos)
+		{
+			if (entry.Format == format) {
+				if (m_Usage != TextureUsage::TEXTURE_DEPTHSTENCIL)
+					return entry.View;
+				else
+					if (framebuffer == entry.Framebuffer)
+						return entry.View;
+			}
+		}
+		
+		ImageViewInfo info;
+		info.Framebuffer = framebuffer;
+		info.format = format;
+		
+		if (m_Usage == TextureUsage::TEXTURE_DEPTHSTENCIL)
+			{
+			if (framebuffer)
+				info.View = CreateView(format, GetAspectFlags());
+			else
+				info.View = CreateView(format, VK_IMAGE_ASPECT_DEPTH_BIT);
+			}
+		else info.View = CreateView(format, VK_IMAGE_ASPECT_COLOR_BIT);
+		m_ImageInfos.push_back(info);
+		return info.View;
+	}
+	
+	VulkanImageSubresource::VulkanImageSubresource(VkImageLayout layout) : m_Layout(layout) {}
+
+	VkAccessFlags VulkanImage::GetAccessFlags(VkImageLayout layout, bool readOnly)
+	{
+		VkAccessFlags accessFlags = 0;
+		switch(layout)
+		{
+		case VK_IMAGE_LAYOUT_GENERAL:
+		{
+		accessFlags = VK_ACCESS_SHADER_READ_BIT;
+			if (m_Usage == TextureUsage::TEXTURE_LOADSTORE)
+				if (!readOnly) accessFlags |= VK_ACCESS_SHADER_WRITE_BIT;
+			if (m_Usage == TextureUsage::TEXTURE_RENDERTARGET)
+			{
+				accessFlags |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+				if (!readOnly)
+					accessFlags |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			}
+			else if (m_Usage == TextureUsage::TEXTURE_DEPTHSTENCIL)
+			{
+				accessFlags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+				if (!readOnly)
+					accessFlags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			}
+			break;
+		}
+		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL: accessFlags = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT; break;
+		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL: accessFlags = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; break;
+		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+		case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR:
+		case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR: accessFlags = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_SHADER_READ_BIT; break;
+		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL: accessFlags = VK_ACCESS_SHADER_READ_BIT; break;
+		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: accessFlags = VK_ACCESS_TRANSFER_READ_BIT; break;
+		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL break;
+		case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR: accessFlags = VK_ACCESS_MEMORY_READ_BIT; break;
+		}
+		return accessFlags;
+	}
+	
+	VkImageView VulkanImage::CreateView(VkFormat format, VkImageAspectFlags aspectMask) const
+	{
+		VkImageViewType oldViewType = m_ImageViewCI.viewType;
+		VkFormat oldFormat = m_ImageViewCI.format;
+		mImageViewCI.subresourceRange.aspectMask = aspectMask;
+
+	}*/
+/*
 	VulkanTexture2D::VulkanTexture2D(uint32_t width, uint32_t height, const TextureParameters& parameters) : m_Width(width), m_Height(height), m_Parameters(parameters)
 	{
 		
@@ -391,5 +558,5 @@ namespace Crowny
 	{
 		glBindTextureUnit(slot, 0);
 	}
-
+*/
 }

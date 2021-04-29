@@ -10,7 +10,8 @@
 namespace Crowny
 {
     constexpr glm::vec2 QuadUv[] = { { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 1.0f } };
-	constexpr glm::vec4 QuadVertices[] = { { -0.5f, -0.5f, 0.0f, 1.0f }, { 0.5f, -0.5f, 0.0f, 1.0f }, { 0.5f,  0.5f, 0.0f, 1.0f }, { -0.5f,  0.5f, 0.0f, 1.0f } };
+	constexpr glm::vec4 QuadVertices[] = { { -0.5f, -0.5f, 0.0f, 1.0f }, { 0.5f, -0.5f, 0.0f, 1.0f }, 
+										  { 0.5f,  0.5f, 0.0f, 1.0f }, { -0.5f,  0.5f, 0.0f, 1.0f } };
 
 	struct IDBufferRendererData
 	{
@@ -98,7 +99,7 @@ namespace Crowny
 		s_Data.Shader3D->SetUniformInt("ObjectID", (int32_t)entityId);
 		mesh->GetVertexArray()->Bind();
         //CW_ENGINE_INFO("Here: {0}", mesh->GetVertexArray()->GetIndexBuffer()->GetCount());
-        Renderer::SubmitCommand([]() { RenderCommand::DrawIndexed(mesh->GetVertexArray(), mesh->GetVertexArray()->GetIndexBuffer()->GetCount()); });
+        RenderCommand::DrawIndexed(mesh->GetVertexArray(), mesh->GetVertexArray()->GetIndexBuffer()->GetCount());
     }
     
     void IDBufferRenderer::End()
@@ -106,7 +107,7 @@ namespace Crowny
         s_Data.Shader2D->Bind();
 		s_Data.VertexArray->Bind();
         s_Data.VertexBuffer->FreePointer();
-		Renderer::SubmitCommand([]() { RenderCommand::DrawIndexed(s_Data.VertexArray, s_Data.IndexCount); });
+		RenderCommand::DrawIndexed(s_Data.VertexArray, s_Data.IndexCount);
 		s_Data.IndexCount = 0;
 		s_Data.VertexArray->Unbind();
         s_Data.Framebuffer->Unbind();

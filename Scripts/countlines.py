@@ -36,6 +36,8 @@ for dir in dirs:
     dirchars = 0
     for (dirpath, dirname, filename) in walk(dir):
         for fff in filename:
+            if fff.endswith(".spv"):
+              continue
             fcc = 0
             path = join(dirpath, fff)
             f = open(path, "r")

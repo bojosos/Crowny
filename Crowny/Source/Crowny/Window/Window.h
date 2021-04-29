@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Crowny/Events/Event.h"
-#include "Crowny/Input/Input.h"
 
 namespace Crowny
 {
@@ -17,6 +16,8 @@ namespace Crowny
 		}
 	};
 
+	enum class Cursor;
+
 	class Window
 	{
 	public:
@@ -26,6 +27,8 @@ namespace Crowny
 
 		virtual uint32_t GetWidth() const = 0;
 		virtual uint32_t GetHeight() const = 0;
+		virtual bool GetVSync() const = 0;
+		virtual const std::string& GetTitle() const = 0;
 
 		virtual void SetCursor(Cursor cursor) = 0;
 

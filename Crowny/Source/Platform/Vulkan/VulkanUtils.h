@@ -15,11 +15,24 @@
 
 #include <vulkan/vulkan.hpp>
 #undef None
-#undef Bool
 #include <vulkan/vk_mem_alloc.h>
 
 namespace Crowny
 {
+    class VulkanRenderAPI;
+    class VulkanTexture;
+    class VulkanDevice;
+    class VulkanSwapChain;
+    class VulkanFramebuffer;
+    class VulkanDescriptorSet;
+    class VulkanCommandBufferPool;
+    class VulkanCommandBuffer;
+    class VulkanVertexBuffer;
+    class VulkanIndexBuffer;
+    class VulkanUniformBuffer;
+    class VulkanSemaphore;
+    class VulkanQueue;
+
     extern VkAllocationCallbacks* gVulkanAllocator;
 
     struct TransitionInfo
@@ -32,6 +45,7 @@ namespace Crowny
     {
     public:
          static VkSampleCountFlagBits GetSampleFlags(uint32_t numSamples);
+         static VkPrimitiveTopology GetDrawFlags(DrawMode drawMode);
     };
 }
 

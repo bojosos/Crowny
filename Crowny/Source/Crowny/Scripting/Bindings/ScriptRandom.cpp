@@ -20,7 +20,7 @@ namespace Crowny
 
     void ScriptRandom::Internal_InitState(int32_t seed)
     {
-        Random::Init(seed);
+        Random::Seed(seed);
     }
 
     void ScriptRandom::Internal_UnitCircle(glm::vec2* out)
