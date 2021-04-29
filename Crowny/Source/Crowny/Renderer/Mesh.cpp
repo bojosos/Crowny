@@ -15,10 +15,10 @@ namespace Crowny
 
 	void Mesh::Draw() // this should prob not be here
 	{
-		Renderer::SubmitCommand([]() { m_VertexArray->Bind(); });
-		Renderer::SubmitCommand([]() { RenderCommand::DrawIndexed(m_VertexArray); });
-		Renderer::SubmitCommand([]() { m_VertexArray->Unbind(); });
-		Renderer::SubmitCommand([]() { m_MaterialInstance->Unbind(); });
+		m_VertexArray->Bind();
+		RenderCommand::DrawIndexed(m_VertexArray);
+		m_VertexArray->Unbind();
+		m_MaterialInstance->Unbind();
 	}
 
 }

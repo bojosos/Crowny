@@ -36,7 +36,7 @@ namespace Crowny
 		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, nullptr, GL_FALSE);
 #endif
 	}
-
+/*
 	void OpenGLRendererAPI::SetDepthTest(bool value)
 	{
 		if (value)
@@ -79,5 +79,5 @@ namespace Crowny
 		uint32_t count = indexCount == -1 ? vertexArray->GetIndexBuffer()->GetCount() : indexCount;
 		glDrawElements(DrawModeToOpenGLMode(vertexArray->GetDrawMode()), count, GL_UNSIGNED_INT, nullptr);
 		glBindTexture(GL_TEXTURE_2D, 0);
-	}
+	}*/
 }

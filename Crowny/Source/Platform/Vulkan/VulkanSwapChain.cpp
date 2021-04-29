@@ -108,6 +108,7 @@ namespace Crowny
         swapchainCreateInfo.imageColorSpace = colorSpace;
         swapchainCreateInfo.imageExtent = { swapChainExtent.width, swapChainExtent.height };
         swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        //swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         swapchainCreateInfo.preTransform = (VkSurfaceTransformFlagBitsKHR)preTransform;
         swapchainCreateInfo.imageArrayLayers = 1;
         swapchainCreateInfo.queueFamilyIndexCount = 0;
@@ -148,7 +149,7 @@ namespace Crowny
             viewCreateInfo.subresourceRange.baseArrayLayer = 0;
             viewCreateInfo.subresourceRange.layerCount = 1;
             viewCreateInfo.image = images[i];
-            result = vkCreateImageView(m_Device, &viewCreateInfo, nullptr, &m_Surfaces[i]);
+            result = vkCreateImageView(m_Device, &viewCreateInfo, nullptr, &m_Surfaces[i].ImageView);
             CW_ENGINE_ASSERT(result == VK_SUCCESS);
             
             m_Surfaces[i].Image = images[i];
@@ -157,53 +158,18 @@ namespace Crowny
             m_Surfaces[i].Sync = new VulkanSemaphore();
         }
         
-        if (createDepth)
-        {
-            VkImageCreateInfo depthStencilImageCreateInfo;
-            depthStencilImageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-            depthStencilImageCreateInfo.pNext = nullptr;
-            depthStencilImageCreateInfo.flags = 0;
-            depthStencilImageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-            depthStencilImageCreateInfo.format = depthFormat;
-            depthStencilImageCreateInfo.extent = { m_Width, m_Height, 1 };
-            depthStencilImageCreateInfo.mipLevels = 1;
-            depthStencilImageCreateInfo.arrayLayers = 1;
-            depthStencilImageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            depthStencilImageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-            depthStencilImageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-            depthStencilImageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-            depthStencilImageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-            depthStencilImageCreateInfo.pQueueFamilyIndices = nullptr;
-            depthStencilImageCreateInfo.queueFamilyIndexCount = 0;
-
-            VkImage depthStencilImage;
-            result = vkCreateImage(m_Device, &depthStencilImageCreateInfo, nullptr, &depthStencilImage);
-            CW_ENGINE_ASSERT(result == VK_SUCCESS);
-
-            VkMemoryRequirements memReqs;
-		    vkGetImageMemoryRequirements(device, image, &memReqs);
-		    VkMemoryAllocateInfo memAllocInfo{};
-		    memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		    memAllocInfo.allocationSize = memReqs.size;
-		    memAllocInfo.memoryTypeIndex = ;
-		    result = vkAllocateMemory(device, &memAllocInfo, nullptr, &memory);
-		    CW_ENGINE_ASSERT(result == VK_SUCCESS);
-		    result = vkBindImageMemory(device, image, memory, 0);
-
-            m_DepthStencilImage = new VulkanTexture2D(depthStencilImage);
-        }
-        else
-            m_DepthStencilImage = nullptr;
         delete[] images;
 
         VulkanRenderPassDesc passDesc;
         passDesc.Samples = 1;
         passDesc.Offscreen = false;
         passDesc.Color[0].Format = colorFormat;
+        passDesc.Color[0].Enabled = true;
 
-        if (m_DepthStencilImage)
-            passDesc.Depth.Format = depthFormat;
-        VulkanRenderPass* renderPass = VulkanRenderPasses::Get().Get(m_Device, passDesc);
+        // TODO: Depth stencil
+        //if (m_DepthStencilImage)
+            //passDesc.Depth.Format = depthFormat;
+        VulkanRenderPass* renderPass = VulkanRenderPasses::Get().GetRenderPass(passDesc);
 
         uint32_t numFramebuffers = (uint32_t)m_Surfaces.size();
         for (uint32_t i = 0; i < numFramebuffers; i++)
@@ -211,7 +177,7 @@ namespace Crowny
             VulkanFramebufferDesc desc;
             desc.Width = m_Width;
             desc.Height = m_Height;
-            desc.Layers = 1;
+            //desc.Layers = 1;
             desc.Color[0].Image = m_Surfaces[i].Image;
             desc.Depth.Image = m_DepthStencilImage;
             m_Surfaces[i].Framebuffer = new VulkanFramebuffer(renderPass, desc);
@@ -228,21 +194,21 @@ namespace Crowny
                 surface.Framebuffer = nullptr;
                 delete surface.Sync;
                 surface.Sync = nullptr;
-                delete surface.Image;
+                //delete surface.Image;
                 surface.Image = nullptr;
             }
             vkDestroySwapchainKHR(m_Device, m_SwapChain, nullptr);
-        }
+        }/*
         if (m_DepthStencilImage != nullptr)
         {
             delete m_DepthStencilImage;
             m_DepthStencilImage = nullptr;
-        }
+        }*/
     }
 
     void VulkanSwapChain::BackBufferWaitIssued()
     {
-        if (m_Surfaces[m_CurrentBackBufferIdx].Acquired)
+        if (!m_Surfaces[m_CurrentBackBufferIdx].Acquired)
             return;
         m_Surfaces[m_CurrentBackBufferIdx].NeedsWait = false;
     }
@@ -250,20 +216,20 @@ namespace Crowny
     VkResult VulkanSwapChain::AcquireBackBuffer()
     {
         uint32_t imageIndex;
-        VkResult result = vkAcquireNextImageKHR(m_Device, m_SwapChain, std::numeric_limits<uint64_t>::max(), m_Surfaces[m_CurrentSemaphoreIdx].Sync, VK_NULL_HANDLE, &imageIndex);
+        VkResult result = vkAcquireNextImageKHR(m_Device, m_SwapChain, std::numeric_limits<uint64_t>::max(), m_Surfaces[m_CurrentSemaphoreIdx].Sync->GetHandle(), VK_NULL_HANDLE, &imageIndex);
         if (result != VK_SUCCESS)
             return result;
 
-            if (imageIndex != m_CurrentSemaphoreIdx)
-                std::swap(m_Surfaces[m_CurrentSemaphoreIdx].Sync, m_Surfaces[imageIndex].Sync);
+        if (imageIndex != m_CurrentSemaphoreIdx)
+            std::swap(m_Surfaces[m_CurrentSemaphoreIdx].Sync, m_Surfaces[imageIndex].Sync);
 
-            m_CurrentSemaphoreIdx = (m_CurrentSemaphoreIdx + 1) % m_Surfaces.size();
-            
-            CW_ENGINE_ASSERT(!m_Surfaces[imageIndex].Acquired, "Swap chain image acquired twice!");
-            m_Surfaces[imageIndex].Acquired = true;
-            m_Surfaces[imageIndex].NeedsWait = true;
-            m_CurrentBackBufferIdx = imageIndex;
-            return VK_SUCCESS;
+        m_CurrentSemaphoreIdx = (m_CurrentSemaphoreIdx + 1) % m_Surfaces.size();
+        
+        CW_ENGINE_ASSERT(!m_Surfaces[imageIndex].Acquired, "Swap chain image acquired twice!");
+        m_Surfaces[imageIndex].Acquired = true;
+        m_Surfaces[imageIndex].NeedsWait = true;
+        m_CurrentBackBufferIdx = imageIndex;
+        return VK_SUCCESS;
     }
 
     bool VulkanSwapChain::PrepareForPresent(uint32_t& backBufferIdx)
@@ -272,7 +238,7 @@ namespace Crowny
         if (!m_Surfaces[m_CurrentBackBufferIdx].Acquired)
             return false;
         m_Surfaces[m_CurrentBackBufferIdx].Acquired = false;
-        backBufferidx = m_CurrentBackBufferIdx;
+        backBufferIdx = m_CurrentBackBufferIdx;
         return true;
     }
     

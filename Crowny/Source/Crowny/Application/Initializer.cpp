@@ -35,8 +35,8 @@ namespace Crowny
 		VirtualFileSystem::Get()->Mount("Assemblies", "Resources/Assemblies");
 		VirtualFileSystem::Get()->Mount("Models", "Resources/Models");
 
-		Random::Init();
-		Renderer::Init();
+		Random::Init(); // wat
+		Renderer::Init();/*
 		ForwardPlusRenderer::Init();
 		Renderer2D::Init();
 		IDBufferRenderer::Init();
@@ -55,16 +55,16 @@ namespace Crowny
 		ScriptInput::InitRuntimeFunctions();
     	ScriptNoise::InitRuntimeFunctions();
 		ScriptGameObject::InitRuntimeFunctions();
-		ScriptCameraComponent::InitRuntimeFunctions();
+		ScriptCameraComponent::InitRuntimeFunctions();*/
 	}
 
 	void Initializer::Shutdown()
-	{
+	{/*
 		Renderer::Shutdown();
 		Renderer2D::Shutdown();
 		ForwardPlusRenderer::Shutdown();
 		SceneManager::Shutdown();
-		VirtualFileSystem::Shutdown();
+		VirtualFileSystem::Shutdown();*/
 	}
 
 }

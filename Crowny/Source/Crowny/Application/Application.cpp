@@ -37,8 +37,8 @@ namespace Crowny
 
 		m_Window->SetEventCallback(CW_BIND_EVENT_FN(Application::OnEvent));
 
-		m_ImGuiLayer = new ImGuiLayer();
-		PushOverlay(m_ImGuiLayer);
+		//m_ImGuiLayer = new ImGuiLayer();
+		//PushOverlay(m_ImGuiLayer);
 
 		Initializer::Init();
 	}
@@ -96,14 +96,14 @@ namespace Crowny
 			{
 				for (Layer* layer : m_LayerStack)
 					layer->OnUpdate(timestep);
-			
+			/*
 				m_ImGuiLayer->Begin();
 				{
 					for (Layer* layer : m_LayerStack)
 						layer->OnImGuiRender();
 				}
 				m_ImGuiLayer->End();
-
+			*/
 			}
 
 			Input::OnUpdate();

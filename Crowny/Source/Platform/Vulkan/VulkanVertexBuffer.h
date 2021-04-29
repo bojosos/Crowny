@@ -22,6 +22,7 @@ namespace Crowny
 
 		virtual void* GetPointer(uint32_t size) const override;
 		virtual void FreePointer() const override;
+		VkBuffer GetHandle() const { return m_Buffer; }
 	private:
 		VkDeviceMemory m_Memory;
 		VkDevice m_Device;

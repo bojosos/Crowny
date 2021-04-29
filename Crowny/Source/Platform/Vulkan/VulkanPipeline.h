@@ -1,36 +1,42 @@
 #pragma once
 
 #include "Platform/Vulkan/VulkanUtils.h"
+#include "Crowny/Renderer/GraphicsPipeline.h"
 
 #include "Platform/Vulkan/VulkanDevice.h"
-
-#include "Crowny/Renderer/GraphicsPipeline.h"
+#include "Platform/Vulkan/VulkanRenderPass.h"
+#include "Platform/Vulkan/VulkanVertexBuffer.h"
+#include "Platform/Vulkan/VulkanPipeline.h"
+#include "Platform/Vulkan/VulkanShader.h"
 
 namespace Crowny
 {
-    
+    class VulkanRenderPass;
+
     class VulkanPipeline
     {
     public:
-        VulkanPipeline(VkDevice* device, VkPipeline pipeline);
+        VulkanPipeline(VkDevice device, VkPipeline pipeline);
         ~VulkanPipeline();
-        
+
         VkPipeline GetHandle() const { return m_Pipeline; }
-        
+
     private:
+        VkDevice m_Device;
         VkPipeline m_Pipeline;
     };
     
     class VulkanGraphicsPipeline : public GraphicsPipeline
     {
     public:
-        VulkanGraphicsPipeline(const PipelineStateDesc& desc);
+        VulkanGraphicsPipeline(const PipelineStateDesc& desc, VulkanVertexBuffer* vertexBuffer);
         ~VulkanGraphicsPipeline();
         
-        VulkanPipeline* CreatePipeline(VulkanRenderPass* renderPass, const BufferLayout& layout, DrawMode drawMode)
+        VulkanPipeline* GetPipeline(VulkanRenderPass* renderPass, DrawMode drawMode);
+        VulkanPipeline* CreatePipeline(VulkanRenderPass* renderPass, DrawMode drawMode);
         
     private:
-        VulkanPipeline* m_Pipeline;
+        VkPipelineLayout m_PipelineLayout;
         VkDevice m_Device;
 
         VkPipelineShaderStageCreateInfo m_ShaderStageInfos[5];
@@ -42,6 +48,27 @@ namespace Crowny
         VkPipelineMultisampleStateCreateInfo m_MultiSampleInfo;
         VkPipelineDepthStencilStateCreateInfo m_DepthStencilInfo;
         VkGraphicsPipelineCreateInfo m_PipelineInfo;
+
+    public:
+        struct GpuPipelineKey
+        {
+            GpuPipelineKey(uint32_t renderpass, DrawMode drawMode);
+
+            struct HashFunction
+            {
+                size_t operator()(const GpuPipelineKey& key) const;
+            };
+
+            struct EqualFunction
+            {
+                bool operator()(const GpuPipelineKey& lhs, const GpuPipelineKey& rhs) const;
+            };
+
+            uint32_t FramebufferId;
+            DrawMode DrawOp;
+        };
+        
+        std::unordered_map<GpuPipelineKey, VulkanPipeline*, GpuPipelineKey::HashFunction, GpuPipelineKey::EqualFunction> m_Pipelines;
     };
 
     class VulkanComputePipeline : public ComputePipeline
@@ -50,13 +77,13 @@ namespace Crowny
         VulkanComputePipeline(const Ref<Shader>& shader);
         ~VulkanComputePipeline();
         
-        VulkanPipeline* GetPipeline() const { return m_Pipeline; };
+        VkPipeline GetHandle() const { return m_Pipeline; };
         VkPipelineLayout GetLayout() const { return m_PipelineLayout; }
     private:
         Ref<VulkanShader> m_Shader;
-        VulkanDevice* m_Device;
-        VulkanPipeline* m_Pipeline;
+        VkDevice m_Device;
+        VkPipeline m_Pipeline;
         VkPipelineLayout m_PipelineLayout;
     };
-    
+
 }

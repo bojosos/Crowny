@@ -5,6 +5,7 @@
 
 #include "Platform/OpenGL/OpenGLTextureCube.h"
 #include "Platform/OpenGL/OpenGLTexture.h"
+#include "Platform/Vulkan/VulkanTexture.h"
 #include "Platform/OpenGL/OpenGLEnvironmentMap.h"
 
 namespace Crowny

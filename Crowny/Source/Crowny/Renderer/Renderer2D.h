@@ -25,8 +25,8 @@ namespace Crowny
 		static float FindTexture(const Ref<Texture2D>& texture);
 		
 		static void FillRect(const glm::mat4& transform, const Ref<Texture2D>& texture, const glm::vec4& color);
-		static void FillRect(const Rectangle& bounds, const glm::vec4& color);
-		static void FillRect(const Rectangle& bounds, const Ref<Texture2D>& texture, const glm::vec4& color);
+		static void FillRect(const Rect2F& bounds, const glm::vec4& color);
+		static void FillRect(const Rect2F& bounds, const Ref<Texture2D>& texture, const glm::vec4& color);
 
 		static void DrawString(const std::string& text, float x, float y, const Ref<Font>& font, const glm::vec4& color);
 		static void DrawString(const std::string& text, const glm::mat4& transform, const Ref<Font>& font, const glm::vec4& color);

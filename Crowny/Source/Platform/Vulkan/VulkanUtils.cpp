@@ -20,4 +20,19 @@ namespace Crowny
         
         return VK_SAMPLE_COUNT_1_BIT;
     }
+
+    VkPrimitiveTopology VulkanUtils::GetDrawFlags(DrawMode drawMode)
+    {
+        switch(drawMode)
+        {
+            case DrawMode::TRIANGLE_LIST:  return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            case DrawMode::TRIANGLE_STRIP: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+            case DrawMode::TRIANGLE_FAN:   return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
+            case DrawMode::POINT_LIST:     return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+            case DrawMode::LINE_LIST:      return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+            case DrawMode::LINE_STRIP:     return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+        }
+        
+        return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    }
 }

@@ -19,8 +19,7 @@ namespace Crowny
 		Int,
 		Int2,
 		Int3,
-		Int4,
-		Bool
+		Int4
 	};
 
 	static uint32_t ShaderDataTypeSize(ShaderDataType type)
@@ -42,7 +41,7 @@ namespace Crowny
 		case ShaderDataType::Int2:     return 4 * 2;
 		case ShaderDataType::Int3:     return 4 * 3;
 		case ShaderDataType::Int4:     return 4 * 4;
-		case ShaderDataType::Bool:     return 1;
+		//case ShaderDataType::Bool:     return 1;
 		case ShaderDataType::None:     { CW_ENGINE_ASSERT(false, "Unknown ShaderDataType!") return 0; };
 		}
 
@@ -83,7 +82,7 @@ namespace Crowny
 			case ShaderDataType::Int2:    return 2;
 			case ShaderDataType::Int3:    return 3;
 			case ShaderDataType::Int4:    return 4;
-			case ShaderDataType::Bool:    return 1;
+			//case ShaderDataType::Bool:    return 1;
 			case ShaderDataType::None:     { CW_ENGINE_ASSERT(false, "Unknown ShaderDataType!") return 0; };
 			}
 
