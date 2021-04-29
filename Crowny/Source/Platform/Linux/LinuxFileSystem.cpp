@@ -88,7 +88,7 @@ namespace Crowny
 	{	
 		FixPath(initialDir);
 		std::string add;
-
+		// TODO: Check if all of these work, make it more configurable
 		switch (type)
 		{
 			case FileDialogType::OpenFile: 		add = "title=\"Open file\""; break;
@@ -113,7 +113,7 @@ namespace Crowny
 			return false;
 
 		res = res.erase(res.find_last_not_of(" \n\r\t") + 1);
-		outPaths = StringUtilsSplitString(res, "|");
+		outPaths = StringUtils::SplitString(res, "|");
 		
 		return true;
 	}

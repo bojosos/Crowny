@@ -16,8 +16,10 @@ namespace Crowny
 
 		virtual void OnUpdate() override;
 
-		virtual uint32_t GetWidth() const override { return m_Data.Width; };
+		virtual uint32_t GetWidth() const override { return m_Data.Width; }
 		virtual uint32_t GetHeight() const override { return m_Data.Height; }
+		virtual bool GetVSync() const override { return m_Data.VSync; };
+		virtual const std::string& GetTitle() const override { return m_Data.Title; }
 
 		virtual void SetCursor(Cursor cursor) override;
 

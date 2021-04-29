@@ -30,7 +30,7 @@ project "Crowny-Editor"
 		"%{IncludeDir.ImGuizmo}"
 	}
 
-	libdirs { "/usr/lib/mono-2.0", "Crowny/Dependencies/vulkan/lib" }
+	libdirs { "/usr/lib/mono-2.0" }
 
 	links 
 	{
@@ -43,7 +43,7 @@ project "Crowny-Editor"
 		"freetype2", "glfw", "glad",
 		"mono-2.0",
 		"yaml-cpp",
-		--"libvulkan"
+    "/usr/lib/x86_64-linux-gnu/libvulkan.so"
 	}
 
 	filter "system:windows"

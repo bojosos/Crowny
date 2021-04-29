@@ -14,8 +14,11 @@ namespace Crowny
 
     class OpenGLComputePipeline : public ComputePipeline
     {
+    public:
         OpenGLComputePipeline(const Ref<Shader>& shader);
         ~OpenGLComputePipeline();
+    private:
+        Ref<Shader> m_Shader;
     };
     
 }

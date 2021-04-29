@@ -20,7 +20,8 @@ namespace Crowny
         CW_TEXTURE_VIEWS = 8,
         CW_BYTECODE_CACHING = 9,
         CW_RENDER_TARGET_LAYERS = 10,
-        CW_MULTITHREADED_CB = 11
+        CW_MULTITHREADED_CB = 11,
+        CAPS_CATEGORY_COUNT = 12
     };
 
     struct Conventions
@@ -90,13 +91,11 @@ namespace Crowny
         Crowny::DriverVersion DriverVersion;
         std::string DeviceName;
         GPUVendor DeviceVendor = GPU_UNKNOWN;
-        uint16_t NumTextureUnitsPerStage[3] = { 0 }; // TODO: variable here
+        uint16_t NumTextureUnitsPerStage[SHADER_COUNT] = { 0 };
         uint16_t NumCombinedTextureUnits = 0;
-        uint16_t NumGpuParamBlockBuffersPerStage[3]{ 0 };
+        uint16_t NumGpuParamBlockBuffersPerStage[SHADER_COUNT]{ 0 };
         uint16_t NumCombinedParamBlockBuffers = 0;
-
-        uint16_t NumCombinedParamBlockBuffers = 0;
-        uint16_t NumLoadStoreTextureUnitsPerStage[3]{ 0 };
+        uint16_t NumLoadStoreTextureUnitsPerStage[SHADER_COUNT]{ 0 };
         uint16_t NumCombinedLoadStoreTextureUnits = 0;
         uint16_t MaxBoundVertexBuffers = 0;
         uint16_t NumMultiRenderTargets = 0;
@@ -112,14 +111,15 @@ namespace Crowny
 
         void SetCapability(const Capabilities c)
         {
-            uint64_t idx = (CAPS_CATEGORY_MASK & c) >> BS_CAPS_BITSHIFT;
-            m_Capabilities[idx] |= (c & ~CAPS_CATEGORY_MASK);
+           // uint64_t idx = (CAPS_CATEGORY_MASK & c) >> BS_CAPS_BITSHIFT;
+           // m_Capabilities[idx] |= (c & ~CAPS_CATEGORY_MASK);
         }
 
         bool HasCapability(const Capabilities c) const
         {
-            uint64_t idx = (CAPS_CATEGORY_MASK & c) >> BS_CAPS_BITSHIFT;
-            return (m_Capabilities[idx] & (c & ~CAPS_CATEGORY_MASK)) != 0;
+            //uint64_t idx = (CAPS_CATEGORY_MASK & c) >> BS_CAPS_BITSHIFT;
+            //return (m_Capabilities[idx] & (c & ~CAPS_CATEGORY_MASK)) != 0;
+            return true;
         }
 
         void AddShaderProfile(const std::string& profile)

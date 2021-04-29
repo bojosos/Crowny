@@ -4,6 +4,69 @@
 
 namespace Crowny
 {
+/*
+	struct VulkanImageDesc
+	{
+		VkImage Image;
+		VkDeviceMemory Memory;
+		VkImageLayout Layout;
+		VkFormat Foramt;
+		uint32_t Faces;
+		uint32_t NumMips;
+		uint32_t Usage;
+		TextureShape Shape;
+	};
+
+	class VulkanImageSubresource
+	{
+	public:
+		VulkanImageSubresource(VkImageLayout layout);
+		VkImageLayout GetLayout() const { return m_Layout; }
+		void SetLayout(VkImageLayout layout)  { m_Layout = layout; }
+	private:
+		VkImageLayout m_Layout;
+	};
+
+	class VulkanImage
+	{
+	public:
+		VulkanImage(VkImage image, VkDeviceMemory memory, VkImageLayout layout, VkFormat format, const TextureParameters& props, bool ownsImage = true);
+		VulkanImage(VulkanImageDesc& desc, bool ownsImage = true);
+		~VulkanImage();
+
+		VkImage GetHandle() const { return m_Image; }
+		VkImageView GetView(bool framebuffer) const;
+		VkImageView GetView(VkFormat format, bool framebuffer) const;
+		VkImageAspectFlags GetAspectFlags() const;
+		VkImageSubresourceRange GetRange() const;
+		VulkanImageSubresource GetSubresource(uint32_t face, uint32_t mipLevel);
+	//	void Map(uint32_t face, uint32_t mipLevel, ImageData& output) const;
+//		void Unmap();
+		VkAccessFlags GetAccessFlags(VkImageLayout layout, bool readonly = false);
+		
+	private:
+		VkImageView CreateView(VkFormat format , VkImageAspectFlags mask) const;
+
+		struct ImageViewInfo
+		{
+			bool Framebuffer;
+			VkImageView View;
+			VkFormat Format;
+		};
+
+		VkImage m_Image;
+		VkDeviceMemory m_Allocation;
+		VkImageView m_MainView;
+		VkImageView m_FramebufferMainView;
+		int32_t m_Usage;
+		bool m_OwnsImage;
+		uint32_t m_NumFaces;
+		uint32_t m_NumMipLevels;
+		VulkanImageSubresource** m_Subresources;
+
+		mutable VkImageViewCreateInfo m_ImageViewCI;
+		mutable std::vector<ImageViewInfo> m_ImageInfos;
+	};
 
 	class VulkanTexture2D : public Texture2D
 	{
@@ -15,7 +78,7 @@ namespace Crowny
 		virtual uint32_t GetWidth() const override { return m_Width; }
 		virtual uint32_t GetHeight() const override { return m_Height; }
 
-		virtual const std::string& GetName() const override { return m_Name; }
+		virtual const std::string& GetName() const override { return ""; }
 		virtual const std::string& GetFilepath() const override { return m_FilePath; }
 
 		virtual uint32_t GetRendererID() const override { return m_RendererID; };
@@ -53,5 +116,5 @@ namespace Crowny
 		static std::array<VkComponentSwizzle, 4> TextureSwizzleToVulkanSwizzle(SwizzleType swizzle);
 	};
 
-
+*/
 }

@@ -13,12 +13,22 @@ namespace Crowny
     PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT = nullptr;
     PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT = nullptr;
 
+    PFN_vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceSupportKHR = nullptr;
+    PFN_vkGetPhysicalDeviceSurfaceFormatsKHR vkGetPhysicalDeviceSurfaceFormatsKHR = nullptr;
+    PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR vkGetPhysicalDeviceSurfaceCapabilitiesKHR = nullptr;
+    PFN_vkGetPhysicalDeviceSurfacePresentModesKHR vkGetPhysicalDeviceSurfacePresentModesKHR = nullptr;
+    PFN_vkCreateSwapchainKHR vkCreateSwapchainKHR = nullptr;
+    PFN_vkDestroySwapchainKHR vkDestroySwapchainKHR = nullptr;
+    PFN_vkGetSwapchainImagesKHR vkGetSwapchainImagesKHR = nullptr;
+    PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR = nullptr;
+    PFN_vkQueuePresentKHR vkQueuePresentKHR = nullptr;
+
     VkBool32 DebugMsgCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg, void* pUserData)
     {
         std::stringstream message;
-        
+
         message << "[" << pLayerPrefix << "] Code " << msgCode << pMsg;
-        
+
         if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
             CW_ENGINE_ERROR(message.str());
         if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
@@ -39,40 +49,40 @@ namespace Crowny
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         appInfo.pNext = nullptr;
         appInfo.pApplicationName = "Crowny app";
-        appInfo.applicationVersion = 1;
+        appInfo.applicationVersion = VK_MAKE_VERSION(1,0,0);
         appInfo.pEngineName = "Crowny";
-        appInfo.engineVersion = 1; // TODO: Engine version
+        appInfo.engineVersion = VK_MAKE_VERSION(1,0,0); // TODO: Engine version
 
         appInfo.apiVersion = VK_API_VERSION_1_1;
-
 
         //TODO: need glfw extensions here
 #ifdef CW_DEBUG
         const char* layers[] = { "VK_LAYER_KHRONOS_validation" };
         uint32_t numExtensions;
         const char** glfwExts = glfwGetRequiredInstanceExtensions(&numExtensions);
-        std::vector<const char*> extensions(glfwExts, glfwExts+ numExtensions);
+        std::vector<const char*> extensions(glfwExts, glfwExts + numExtensions);
         
-        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-
-        uint32_t numLayers = sizeof(layers) / sizeof(layers[0]);
+        //extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        for (auto ext : extensions)
+            CW_ENGINE_INFO(ext);
+        uint32_t numLayers = 1;
 #else
         const char** layers = nullptr;  
         std::vector<const char*> extensions = { nullptr, nullptr };
-        numLayers = 0;
+        uint32_t numLayers = 0;
 #endif
-        extensions[0] = VK_KHR_SURFACE_EXTENSION_NAME;
+        //extensions[0] = VK_KHR_SURFACE_EXTENSION_NAME;
 
-        extensions[1] = VK_KHR_XLIB_SURFACE_EXTENSION_NAME; //TODO: platforms
-        uint32_t numExtensions = sizeof(extensions) / sizeof(extensions[0]);
-        
+        //extensions[1] = VK_KHR_XLIB_SURFACE_EXTENSION_NAME; //TODO: platforms glfw might not work in release
+        numExtensions = extensions.size();
+        CW_ENGINE_INFO(numExtensions);
         uint32_t layerCount;
         vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-        std::vector<VkLayerProperties> availableLayers;
+        std::vector<VkLayerProperties> availableLayers(layerCount);
         vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-        
-        for (const char* layerName : layers)
+        for (uint32_t i = 0; i < numLayers; i++) // 1 validation layer
         {
+            const char* layerName = layers[i];
             bool layerFound = false;
             for (const auto& layerProps : availableLayers)
             {
@@ -96,10 +106,11 @@ namespace Crowny
         instanceInfo.enabledExtensionCount = numExtensions;
         instanceInfo.ppEnabledExtensionNames = extensions.data();
         
-        VkResult result = vkCreateInstance(&instanceInfo, gVulkanAllocator, &m_Instance);
+        //VkResult result = vkCreateInstance(&instanceInfo, gVulkanAllocator, &m_Instance);
+        VkResult result = vkCreateInstance(&instanceInfo, nullptr, &m_Instance);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         
-#ifdef CW_DEBUG
+#if 0
         VkDebugReportFlagsEXT debugFlags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
         GET_INSTANCE_PROC_ADDR(m_Instance, CreateDebugReportCallbackEXT);
         GET_INSTANCE_PROC_ADDR(m_Instance, DestroyDebugReportCallbackEXT);
@@ -116,7 +127,7 @@ namespace Crowny
         
         // need molten vk
         result = vkEnumeratePhysicalDevices(m_Instance, &m_NumDevices, nullptr);
-        CW_ENGINE_ASSERT(result = VK_SUCCESS);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
         std::vector<VkPhysicalDevice> physicalDevices(m_NumDevices);
         result = vkEnumeratePhysicalDevices(m_Instance, &m_NumDevices, physicalDevices.data());
         m_Devices.resize(m_NumDevices);
@@ -128,13 +139,13 @@ namespace Crowny
             bool isPrimary = m_Devices[i]->GetDeviceProperties().deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
             if (isPrimary)
             {
-                m_Devices[i]->SetPrimary();
+                //m_Devices[i]->SetPrimary();
                 m_PrimaryDevices.push_back(m_Devices[i]);
 
                 if (i != 0)
                 {
-                    m_Devices[0]->SetIndex(i);
-                    m_Devices[i]->SetIndex(0);
+                    //m_Devices[0]->SetIndex(i);
+                    //m_Devices[i]->SetIndex(0);
                     std::swap(m_Devices[0], m_Devices[i]);
                 }
                 
@@ -144,7 +155,7 @@ namespace Crowny
         
         if (m_PrimaryDevices.size() == 0)
         {
-            m_Devices[0]->SetPrimary();
+            //m_Devices[0]->SetPrimary();
             m_PrimaryDevices.push_back(m_Devices[0]);
         }
         
@@ -155,7 +166,7 @@ namespace Crowny
             //gpuInfo.names[i] = m_Devices[i]->GetDeviceProperties().deviceName;
         
         //PlatformUtility::SetGPUInfo(gpuInfo);
-        
+        // should these even be here?
         GET_INSTANCE_PROC_ADDR(m_Instance, GetPhysicalDeviceSurfaceSupportKHR);
         GET_INSTANCE_PROC_ADDR(m_Instance, GetPhysicalDeviceSurfaceFormatsKHR);
         GET_INSTANCE_PROC_ADDR(m_Instance, GetPhysicalDeviceSurfaceCapabilitiesKHR);
@@ -169,7 +180,7 @@ namespace Crowny
         GET_DEVICE_PROC_ADDR(presentDevice, QueuePresentKHR);
         
         InitCaps();
-        VkResult result = glfwCreateWindowSurface(m_Instance, (GLFWwindow*)Application::Get().GetWindow().GetNativeWindow(), nullptr, &m_Surface);
+        result = glfwCreateWindowSurface(m_Instance, (GLFWwindow*)Application::Get().GetWindow().GetNativeWindow(), nullptr, &m_Surface);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         /*
         VkXlibSurfaceCreateInfoKHR surfaceCreateInfo = {};
@@ -225,30 +236,102 @@ namespace Crowny
         }
         
         CW_ENGINE_ASSERT(graphicsQueueNodeIdx != std::numeric_limits<uint32_t>::max() && presentQueueNodeIdx != std::numeric_limits<uint32_t>::max());
-        
         CW_ENGINE_ASSERT(graphicsQueueNodeIdx == presentQueueNodeIdx);
         
+        uint32_t width = Application::Get().GetWindow().GetWidth();
+        uint32_t height = Application::Get().GetWindow().GetHeight();
+        bool vsync = Application::Get().GetWindow().GetVSync();
+        SurfaceFormat surface = GetPresentDevice()->GetSurfaceFormat(m_Surface);
+        m_SwapChain = new VulkanSwapChain(m_Surface, width, height, vsync, surface.ColorFormat, surface.ColorSpace, true, surface.DepthFormat);
+        m_CmdBuffer = std::static_pointer_cast<VulkanCmdBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
+        m_CommandBuffer = m_CmdBuffer.get()->GetBuffer();
+        VulkanRenderPasses::Init();
     }
 
     void VulkanRendererAPI::SwapBuffers()
     {
+        SubmitCommandBuffer(m_CmdBuffer);
+        
         VulkanQueue* queue = GetPresentDevice()->GetQueue(GRAPHICS_QUEUE, 0);
-        VkResult result = queue->Present(m_SwapChain, m_SemaphoresTemp, );
+        VulkanSemaphore* semaphore[1] = { m_CommandBuffer->GetRenderCompleteSemaphore() };
+        VkResult result = queue->Present(m_SwapChain, semaphore, 1);
         if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
             RebuildSwapChain();
+        GetPresentDevice()->Refresh();
+    }
+
+    void VulkanRendererAPI::SetRenderTarget(const Ref<Framebuffer>& framebuffer)
+    {
+        m_CommandBuffer->SetRenderTarget(framebuffer);
+    }
+    
+    void VulkanRendererAPI::SetVertexBuffers(uint32_t idx, Ref<VertexBuffer>* buffers, uint32_t numBuffers)
+    {
+        m_CommandBuffer->SetVertexBuffers(idx, buffers, numBuffers);
+    }
+
+    void VulkanRendererAPI::SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height)
+    {
+        m_CommandBuffer->SetViewport(Rect2F(x, y, width, height));
+    }
+
+    void VulkanRendererAPI::SetIndexBuffer(const Ref<IndexBuffer>& indexBuffer)
+    {
+        m_CommandBuffer->SetIndexBuffer(indexBuffer);
+    }
+
+    void VulkanRendererAPI::SubmitCommandBuffer(const Ref<CommandBuffer>& commandBuffer)
+    {
+        VulkanCommandBuffer* cmdBuffer = std::static_pointer_cast<VulkanCmdBuffer>(commandBuffer).get()->GetBuffer();
+        if (cmdBuffer == nullptr)
+            m_CommandBuffer->Submit();
+        else
+            cmdBuffer->Submit();
+
+        if (cmdBuffer == m_CommandBuffer)
+        {
+            m_CmdBuffer = std::static_pointer_cast<VulkanCmdBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
+            m_CommandBuffer = m_CmdBuffer.get()->GetBuffer();
+        }
     }
     
     void VulkanRendererAPI::RebuildSwapChain()
     {
         GetPresentDevice()->WaitIdle();
         VulkanSwapChain* old = m_SwapChain;
-        m_SwapChain = new VulkanSwapChain(m_Surface, m_)
+        uint32_t width = Application::Get().GetWindow().GetWidth();
+        uint32_t height = Application::Get().GetWindow().GetHeight();
+        bool vsync = Application::Get().GetWindow().GetVSync();
+        SurfaceFormat surface = GetPresentDevice()->GetSurfaceFormat(m_Surface);
+        m_SwapChain = new VulkanSwapChain(m_Surface, width, height, vsync, surface.ColorFormat, surface.ColorSpace, true, surface.DepthFormat);
+    }
+
+    void VulkanRendererAPI::SetDrawMode(DrawMode drawMode)
+    {
+        m_CommandBuffer->SetDrawMode(drawMode);
+    }
+
+    void VulkanRendererAPI::Draw(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount)
+    {
+        m_CommandBuffer->Draw(vertexOffset, vertexCount, instanceCount);
+        //TODO: Render stats: draw call, verts, prims
     }
     
+    void VulkanRendererAPI::DrawIndexed(uint32_t startIndex, uint32_t indexCount, uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount)
+    {
+        uint32_t primCount = 0;
+        m_CommandBuffer->DrawIndexed(startIndex, indexCount, vertexOffset, instanceCount);
+        //TODO: Render stats: draw call, verts, prims
+    }
+
+    void VulkanRendererAPI::DispatchCompute(uint32_t x, uint32_t y, uint32_t z)
+    {
+        //m_CommandBuffer->Dispatch(x, y, z); //TODO: Compute calls
+    }
+
     void VulkanRendererAPI::SetGraphicsPipeline(const Ref<GraphicsPipeline>& pipeline)
     {
-        m_CommandBuffer->SetPipeline(pipeline);
-        //TODO: stats for pipeline change
+        m_CommandBuffer->SetPipeline(pipeline); //TODO: stats for pipeline change
     }
     
     void VulkanRendererAPI::SetComputePipeline(const Ref<ComputePipeline>& pipeline)
@@ -299,6 +382,7 @@ namespace Crowny
                 default:
                     caps.DeviceVendor = GPU_UNKNOWN; break;
             }
+            CW_ENGINE_INFO(RenderCapabilities::VendorToString(caps.DeviceVendor));
             
             caps.RenderAPIName = "Vulkan";
             

@@ -4,6 +4,7 @@
 #include "Crowny/Events/KeyEvent.h"
 #include "Crowny/Events/MouseEvent.h"
 #include "Crowny/Events/ApplicationEvent.h"
+#include "Crowny/Input/Input.h"
 
 #ifdef CW_PLATFORM_WINDOWS
 #include "Platform/Windows/WindowsWindow.h"

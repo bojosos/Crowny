@@ -53,7 +53,7 @@ project "Crowny"
     "%{IncludeDir.Bitsery}"
 	}
 
-	libdirs { "/usr/lib/mono-2.0", "Crowny/Dependencies/vulkan/lib" }
+	libdirs { "/usr/lib/mono-2.0" }
 
 	links 
 	{
@@ -64,7 +64,7 @@ project "Crowny"
 		"freetype2", "glfw", "glad",
 		"mono-2.0",
 		"yaml-cpp",
-		"ImGuizmo"
+		"ImGuizmo",
 	}
 
 

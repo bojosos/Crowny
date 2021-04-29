@@ -1,16 +1,47 @@
 #include "cwpch.h"
 
+
 #include "Platform/Vulkan/VulkanPipeline.h"
 
+#include "Platform/Vulkan/VulkanRenderPass.h"
+#include "Platform/Vulkan/VulkanRendererAPI.h"
 #include "Platform/Vulkan/VulkanShader.h"
 
 namespace Crowny
 {
     
-    VulkanGraphicsPipeline::VulkanGraphicsPipeline(const PipelineStateDesc& desc)
-        : m_Data(desc)
+    VulkanPipeline::VulkanPipeline(VkDevice device, VkPipeline pipeline) : m_Device(device), m_Pipeline(pipeline) { }
+
+    VulkanPipeline::~VulkanPipeline()
     {
-        
+        vkDestroyPipeline(m_Device, m_Pipeline, nullptr);
+    }
+
+    VulkanGraphicsPipeline::GpuPipelineKey::GpuPipelineKey(uint32_t id, DrawMode drawMode)
+        : FramebufferId(id), DrawOp(drawMode) { }
+
+    size_t VulkanGraphicsPipeline::GpuPipelineKey::HashFunction::operator()(const GpuPipelineKey& key) const
+    {
+        size_t hash = 0;
+        HashCombine(hash, key.FramebufferId);
+        HashCombine(hash, key.DrawOp);
+        return hash;
+    }
+
+    bool VulkanGraphicsPipeline::GpuPipelineKey::EqualFunction::operator()(const GpuPipelineKey& lhs, const GpuPipelineKey& rhs) const
+    {
+        if (lhs.FramebufferId != rhs.FramebufferId)
+            return false;
+        if (lhs.DrawOp != rhs.DrawOp)
+            return false;
+
+        return true;
+    }
+
+    VulkanGraphicsPipeline::VulkanGraphicsPipeline(const PipelineStateDesc& desc, VulkanVertexBuffer* vertexBuffer)
+    {
+        m_Data = desc;
+        m_Device = gVulkanRendererAPI().GetPresentDevice()->GetLogicalDevice();
         std::vector<VkDynamicState> dynamicStates =
         {
             VK_DYNAMIC_STATE_VIEWPORT,
@@ -35,7 +66,7 @@ namespace Crowny
         
         uint32_t outputIdx = 0;
         uint32_t numStages = sizeof(stages) / sizeof(stages[0]);
-        for (uint32_t i = 0; i < 5; i++)
+        for (uint32_t i = 0; i < numStages; i++)
         {
             VulkanShader* shader = static_cast<VulkanShader*>(stages[i].second);
             if (shader == nullptr)
@@ -57,7 +88,7 @@ namespace Crowny
         m_InputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
         m_InputAssemblyInfo.pNext = nullptr;
         m_InputAssemblyInfo.flags = 0;
-        m_InputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        m_InputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; // runtime
         m_InputAssemblyInfo.primitiveRestartEnable = false;
         
         m_RasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -106,14 +137,59 @@ namespace Crowny
         m_MultiSampleInfo.pSampleMask = nullptr;
         m_MultiSampleInfo.alphaToOneEnable = VK_FALSE;
         
+        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount = 0;
+        pipelineLayoutInfo.pushConstantRangeCount = 0;
+
+        CW_ENGINE_ASSERT(vkCreatePipelineLayout(m_Device, &pipelineLayoutInfo, nullptr, &m_PipelineLayout) == VK_SUCCESS);
+
+        BufferLayout layout = vertexBuffer->GetLayout();
+        VkVertexInputBindingDescription vertexInput{};
+        vertexInput.binding = 0;
+        vertexInput.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        vertexInput.stride = layout.GetStride();
+        
+        std::vector<VkVertexInputAttributeDescription> attrs(layout.GetElements().size());
+
+        // loc, binding, format, offset
+		for (int idx = 0; idx < layout.GetElements().size(); idx++)
+		{
+            const auto& element = layout.GetElements().at(idx);
+            uint32_t offset = static_cast<uint32_t>(element.Offset);
+            uint32_t i = static_cast<uint32_t>(idx);
+			switch (element.Type)
+			{
+                case ShaderDataType::Float:  { attrs[i] = { i, 0, VK_FORMAT_R32_SFLOAT, offset }; break; }
+				case ShaderDataType::Float2: { attrs[i] = { i, 0, VK_FORMAT_R32G32_SFLOAT, offset }; break; }
+				case ShaderDataType::Float3: { attrs[i] = { i, 0, VK_FORMAT_R32G32B32_SFLOAT, offset }; break; }
+				case ShaderDataType::Float4: { attrs[i] = { i, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offset }; break; }
+                //case ShaderDataType::Bool:   // dk how to do this one
+                case ShaderDataType::Mat3:   //attrs[i] = { i, 0, VK_FORMAT_R32_SFLOAT, element.Offset }; 
+                case ShaderDataType::Mat4:   { CW_ENGINE_ASSERT(false); break; }// these will probably be sent as 3/4 vectors }
+                case ShaderDataType::Int:    { attrs[i] = { i, 0, VK_FORMAT_R32_SINT, offset }; break; }
+				case ShaderDataType::Int2:   { attrs[i] = { i, 0, VK_FORMAT_R32G32_SINT, offset }; break; }
+				case ShaderDataType::Int3:   { attrs[i] = { i, 0, VK_FORMAT_R32G32B32_SINT, offset }; break; }
+				case ShaderDataType::Int4:   { attrs[i] = { i, 0, VK_FORMAT_R32G32B32A32_SINT, offset }; break; }
+				default:
+					CW_ENGINE_ASSERT(false, "Unknown ShaderDataType!");
+			}
+		}
+
+        VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo{};
+        vertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        vertexInputStateCreateInfo.vertexBindingDescriptionCount = 1;
+        vertexInputStateCreateInfo.pVertexBindingDescriptions = &vertexInput;
+        vertexInputStateCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
+        vertexInputStateCreateInfo.pVertexAttributeDescriptions = attrs.data();
+        
         m_PipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
         m_PipelineInfo.pNext = nullptr;
         m_PipelineInfo.flags = 0;
         m_PipelineInfo.stageCount = outputIdx;
         m_PipelineInfo.pStages = m_ShaderStageInfos;
-        m_PipelineInfo.pVertexInputState = nullptr; // runtime
-        m_PipelineInfo.layout = VK_NULL_HANDLE; // runtime, 
-        m_PipelineInfo.renderPass = VK_NULL_HANDLE; // runtime
+        m_PipelineInfo.pVertexInputState = &vertexInputStateCreateInfo; // runtime
+        m_PipelineInfo.layout = m_PipelineLayout; // runtime, //TODO: fix this, for uniforms
         m_PipelineInfo.pInputAssemblyState = &m_InputAssemblyInfo;
         m_PipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
         m_PipelineInfo.pDepthStencilState = &m_DepthStencilInfo; // runtime
@@ -124,22 +200,49 @@ namespace Crowny
         m_PipelineInfo.subpass = 0;
         m_PipelineInfo.pDynamicState = &dynamicStateCreateInfo;
     }
-    
-    VulkanPipeline* VulkanGraphicsPipeline::CreatePipeline(VulkanRenderPass* renderPass, const BufferLayout& layout, DrawMode drawMode)
+
+    VulkanGraphicsPipeline::~VulkanGraphicsPipeline()
     {
-        m_InputAssemblyInfo.topology = VulkanUtility::GetDrawMode(drawMode);
-        
-        // TODO: depth write
-            
-        m_PipelineInfo.renderPass = renderPass->GetVkRenderPass();
-        m_PipelineInfo.layout = renderPass->GetVkRenderPass();
-        m_PipelineInfo.pVertexInputState = VulkanUtil::layout
-            
-        if (renderPass->HasDepthAttachment())
-            m_PipelineInfo.p
-        
-        VkResult result = vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &m_PipelineInfo, nullptr, &m_Pipeline);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        for (auto& entry : m_Pipelines)
+            delete entry.second;
     }
-    
+
+    VulkanPipeline* VulkanGraphicsPipeline::GetPipeline(VulkanRenderPass* renderpass, DrawMode drawMode)
+    {
+        GpuPipelineKey key(renderpass->GetId(), drawMode);
+        auto iter = m_Pipelines.find(key);
+        if (iter != m_Pipelines.end())
+            return iter->second;
+
+        VulkanPipeline* result = CreatePipeline(renderpass, drawMode);
+        m_Pipelines[key] = result;
+        return result;
+    }
+
+    VulkanPipeline* VulkanGraphicsPipeline::CreatePipeline(VulkanRenderPass* renderpass, DrawMode drawMode)
+    {
+        m_MultiSampleInfo.rasterizationSamples = renderpass->GetSampleFlags();
+        m_ColorBlendStateInfo.attachmentCount = renderpass->GetNumColorAttachments();
+
+        m_PipelineInfo.renderPass = renderpass->GetHandle();
+        // TODO: Vertex input, depth stencil, color blending, stages
+        m_PipelineInfo.layout = m_PipelineLayout;
+        //m_PipelineInfo.pVertexInputState
+        VkPipeline pipeline;
+        VkResult result = vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &m_PipelineInfo, nullptr, &pipeline);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        
+        return new VulkanPipeline(m_Device, pipeline);
+    }
+
+    VulkanComputePipeline::VulkanComputePipeline(const Ref<Shader>& shader)
+    {
+
+    }
+
+    VulkanComputePipeline::~VulkanComputePipeline()
+    {
+        
+    }
+      
 }

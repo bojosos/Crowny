@@ -156,4 +156,47 @@ namespace Crowny
 	void WindowsWindow::SetCursor(Cursor cursor)
 	{
 		if (!m_Cursor)
-			glfwSet
+			glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+		glfwDestroyCursor(m_Cursor);
+
+		switch (cursor)
+		{
+		case Cursor::NO_CURSOR: m_Cursor = nullptr; glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); break;
+		case Cursor::POINTER: m_Cursor = glfwCreateStandardCursor(GLFW_ARROW_CURSOR); break;
+		case Cursor::IBEAM: m_Cursor = glfwCreateStandardCursor(GLFW_IBEAM_CURSOR); break;
+		case Cursor::CROSSHAIR:  m_Cursor = glfwCreateStandardCursor(GLFW_CROSSHAIR_CURSOR); break;
+		case Cursor::HAND:  m_Cursor = glfwCreateStandardCursor(GLFW_HAND_CURSOR); break;
+		case Cursor::HRESIZE:  m_Cursor = glfwCreateStandardCursor(GLFW_HRESIZE_CURSOR); break;
+		case Cursor::VRESIZE:   m_Cursor = glfwCreateStandardCursor(GLFW_VRESIZE_CURSOR); break;
+		}
+
+		if (cursor != Cursor::NO_CURSOR)
+			glfwSetCursor(m_Window, m_Cursor);
+	}
+
+	void WindowsWindow::Shutdown()
+	{
+		glfwDestroyWindow(m_Window);
+		s_GLFWWindowCount--;
+
+		if (s_GLFWWindowCount == 0)
+			glfwTerminate();
+	}
+
+	void WindowsWindow::SetVSync(bool enabled)
+	{
+		if (enabled)
+			glfwSwapInterval(1);
+		else
+			glfwSwapInterval(0);
+
+		m_Data.VSync = enabled;
+	}
+
+	bool WindowsWindow::IsVSync() const
+	{
+		return m_Data.VSync;
+	}
+	
+}

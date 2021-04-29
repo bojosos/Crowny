@@ -23,15 +23,21 @@ namespace Crowny
         void QueueSubmit(VulkanCommandBuffer* cmdBuffer, VulkanSemaphore* waitSemaphores, uint32_t semaphoreCount);
 
         VkResult Present(VulkanSwapChain* swapChain, VulkanSemaphore** waitSemaphores, uint32_t semaphoreLength);
-        void PrepareSemaphores(VulkanSemaphore** inSemaphores, VkSemaphore* outSemaphores, uint32_t& semaphoreCount);
         void WaitIdle() const;
-        void RefreshStates(bool forceWait, bool queueEmpty = false);
 
         void GetSubmitInfo(VkCommandBuffer* cmdBuffer, VkSemaphore* signalSemaphores, uint32_t numSemaphores, 
                            VkSemaphore* waitSemaphores, uint32_t numWaitSemaphores, VkSubmitInfo& submitInfo);
-        
+        void Refresh(bool wait, bool queueEmpty);
+
+    private:
+        void PrepareSemaphores(VulkanSemaphore** inSemaphores, VkSemaphore* outSemaphores, uint32_t& semaphoreCount);
+
         struct SubmitInfo
         {
+            SubmitInfo(VulkanCommandBuffer* buffer, uint32_t idx, uint32_t semaphores, uint32_t cmdBuffers)
+                : CmdBuffer(buffer), SubmitIdx(idx), NumSemaphores(semaphores), NumCommandBuffers(cmdBuffers)
+                { }
+            
             VulkanCommandBuffer* CmdBuffer;
             uint32_t SubmitIdx;
             uint32_t NumSemaphores;
@@ -42,7 +48,8 @@ namespace Crowny
         VulkanDevice& m_Device;
         GpuQueueType m_Type;
         uint32_t m_Index;
-
+        
+        VkPipelineStageFlags m_SubmitDstWaitMask[32]; //TODO: Do not hardcode
         std::vector<SubmitInfo> m_QueuedBuffers;
         std::vector<VulkanSemaphore*> m_QueuedSemaphores;
         std::list<SubmitInfo> m_ActiveSubmissions;

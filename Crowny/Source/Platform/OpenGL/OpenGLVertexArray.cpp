@@ -26,7 +26,7 @@ namespace Crowny
 		case ShaderDataType::Int2:     return GL_INT;
 		case ShaderDataType::Int3:     return GL_INT;
 		case ShaderDataType::Int4:     return GL_INT;
-		case ShaderDataType::Bool:     return GL_BOOL;
+		//case ShaderDataType::Bool:     return GL_BOOL;
 		default:					   CW_ENGINE_ASSERT(false, "Unknown ShaderDataType!"); return 0;
 		}
 
@@ -72,7 +72,7 @@ namespace Crowny
 				case ShaderDataType::Float:
 				case ShaderDataType::Float2:
 				case ShaderDataType::Float3:
-				case ShaderDataType::Float4:
+				case ShaderDataType::Float4:/*
 				case ShaderDataType::Bool:
 				{
 					glEnableVertexAttribArray(m_VertexBufferIndex); 
@@ -84,7 +84,7 @@ namespace Crowny
 						(const void*)element.Offset); 
 					m_VertexBufferIndex++; 
 					break;
-				}
+				}*/
 				case ShaderDataType::Mat3:
 				case ShaderDataType::Mat4:
 				{

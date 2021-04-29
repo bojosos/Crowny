@@ -25,7 +25,7 @@ namespace Crowny
 	void LinuxWindow::OnUpdate()
 	{
 		glfwPollEvents();
-		m_Context->SwapBuffers();
+		//m_Context->SwapBuffers();
 	}
 
 	LinuxWindow::~LinuxWindow()
@@ -50,17 +50,16 @@ namespace Crowny
 			glfwSetErrorCallback(GLFWErrorCallback);
 		}
 
+		m_Window = glfwCreateWindow((int)props.Width, (int)props.Height, m_Data.Title.c_str(), nullptr, nullptr);
 #ifdef CW_DEBUG
 		if(Renderer::GetAPI() == RendererAPI::API::OpenGL)
-		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE); // No idea what this does...
 #endif
 		glfwWindowHint(GLFW_SAMPLES, 8);
-		m_Window = glfwCreateWindow((int)props.Width, (int)props.Height, m_Data.Title.c_str(), nullptr, nullptr);
 		s_GLFWWindowCount++;
 
-		m_Context = GraphicsContext::Create(m_Window);
-		m_Context->Init();
-
+		//m_Context = GraphicsContext::Create(m_Window);
+		//m_Context->Init();
 		glfwSetWindowUserPointer(m_Window, &m_Data);
 		SetVSync(true);
 
@@ -163,13 +162,13 @@ namespace Crowny
 
 		switch (cursor)
 		{
-		case Cursor::NO_CURSOR: m_Cursor = nullptr; glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); break;
-		case Cursor::POINTER: m_Cursor = glfwCreateStandardCursor(GLFW_ARROW_CURSOR); break;
-		case Cursor::IBEAM: m_Cursor = glfwCreateStandardCursor(GLFW_IBEAM_CURSOR); break;
-		case Cursor::CROSSHAIR:  m_Cursor = glfwCreateStandardCursor(GLFW_CROSSHAIR_CURSOR); break;
-		case Cursor::HAND:  m_Cursor = glfwCreateStandardCursor(GLFW_HAND_CURSOR); break;
-		case Cursor::HRESIZE:  m_Cursor = glfwCreateStandardCursor(GLFW_HRESIZE_CURSOR); break;
-		case Cursor::VRESIZE:   m_Cursor = glfwCreateStandardCursor(GLFW_VRESIZE_CURSOR); break;
+			case Cursor::NO_CURSOR:   m_Cursor = nullptr; glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); break;
+			case Cursor::POINTER:     m_Cursor = glfwCreateStandardCursor(GLFW_ARROW_CURSOR); break;
+			case Cursor::IBEAM:       m_Cursor = glfwCreateStandardCursor(GLFW_IBEAM_CURSOR); break;
+			case Cursor::CROSSHAIR:   m_Cursor = glfwCreateStandardCursor(GLFW_CROSSHAIR_CURSOR); break;
+			case Cursor::HAND:        m_Cursor = glfwCreateStandardCursor(GLFW_HAND_CURSOR); break;
+			case Cursor::HRESIZE:     m_Cursor = glfwCreateStandardCursor(GLFW_HRESIZE_CURSOR); break;
+			case Cursor::VRESIZE:     m_Cursor = glfwCreateStandardCursor(GLFW_VRESIZE_CURSOR); break;
 		}
 
 		if (cursor != Cursor::NO_CURSOR)
@@ -186,13 +185,13 @@ namespace Crowny
 	}
 
 	void LinuxWindow::SetVSync(bool enabled)
-	{
+	{/*
 		if (enabled)
 			glfwSwapInterval(1);
 		else
 			glfwSwapInterval(0);
 
-		m_Data.VSync = enabled;
+		m_Data.VSync = enabled;*/
 	}
 
 	bool LinuxWindow::IsVSync() const

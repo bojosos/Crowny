@@ -21,7 +21,7 @@ namespace Crowny
         ~VulkanDevice();
         
         SurfaceFormat GetSurfaceFormat(const VkSurfaceKHR& surface) const;
-
+        VulkanCommandBufferPool& GetCmdBufferPool() const { return *m_CommandBufferPool; }
         uint32_t GetMemoryType(uint32_t typeBits, VkMemoryPropertyFlags properties, VkBool32* found = nullptr);
         VkDevice GetLogicalDevice() const { return m_LogicalDevice; }
         VkPhysicalDeviceProperties GetDeviceProperties() const { return m_DeviceProperties; }
@@ -31,12 +31,13 @@ namespace Crowny
         void SetIndex(uint32_t idx);
         VulkanQueue* GetQueue(GpuQueueType type, uint32_t idx) const { return m_QueueInfos[(int)type].Queues[idx]; }
         uint32_t GetQueueFamily(GpuQueueType type) const { return m_QueueInfos[(int)type].FamilyIdx; }
+        void Refresh(bool wait = false);
         
         void WaitIdle();
-        void RefreshStates(bool forceWait);
+        uint32_t GetNumQueues(GpuQueueType type) const { return (uint32_t)m_QueueInfos[(int)type].Queues.size(); }
+    private:
     private:
         VulkanCommandBufferPool* m_CommandBufferPool;
-        //VulkanQueryPool* m_QueryPool;
         
         struct QueueInfo
         {

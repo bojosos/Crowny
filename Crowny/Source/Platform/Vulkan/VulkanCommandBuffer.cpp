@@ -7,6 +7,28 @@
 namespace Crowny
 {
 
+    VulkanCmdBuffer::VulkanCmdBuffer(GpuQueueType queueType)
+    {
+        const VulkanDevice& device = *gVulkanRendererAPI().GetPresentDevice().get();
+        uint32_t numQueues = device.GetNumQueues(queueType);
+        if (numQueues == 0)
+        {
+            queueType = GRAPHICS_QUEUE;
+            numQueues = device.GetNumQueues(GRAPHICS_QUEUE);
+        }
+
+        //m_Buffer = new VulkanCommandBuffer(device.GetQueue(queueType));
+        VulkanCommandBufferPool& pool = device.GetCmdBufferPool();
+        uint32_t queueFamily = device.GetQueueFamily(queueType);
+        m_Buffer = pool.GetBuffer(queueFamily, false);
+        m_Buffer->m_Queue = device.GetQueue(queueType, 0);
+    }
+
+    VulkanCmdBuffer::~VulkanCmdBuffer()
+    {
+        //delete m_Buffer;
+    }
+
     VulkanSemaphore::VulkanSemaphore()
     {
         VkDevice device = gVulkanRendererAPI().GetPresentDevice()->GetLogicalDevice();
@@ -14,14 +36,16 @@ namespace Crowny
         semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
         semaphoreCreateInfo.pNext = nullptr;
         semaphoreCreateInfo.flags = 0;
-        VkResult result = vkCreateSemaphore(device, &semaphoreCreateInfo, gVulkanAllocator, &m_Semaphore);
+        //VkResult result = vkCreateSemaphore(device, &semaphoreCreateInfo, gVulkanAllocator, &m_Semaphore);
+        VkResult result = vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &m_Semaphore);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
     }
 
     VulkanSemaphore::~VulkanSemaphore()
     {
         VkDevice device = gVulkanRendererAPI().GetPresentDevice()->GetLogicalDevice();
-        vkDestroySemaphore(device, m_Semaphore, gVulkanAllocator);
+        //vkDestroySemaphore(device, m_Semaphore, gVulkanAllocator);
+        vkDestroySemaphore(device, m_Semaphore, nullptr);
     }
 
     VulkanCommandBufferPool::VulkanCommandBufferPool(VulkanDevice& device) : m_Device(device)
@@ -39,7 +63,8 @@ namespace Crowny
             
             m_Pools[familyIdx].QueueFamily = familyIdx;
             memset(m_Pools[familyIdx].Buffers, 0, sizeof(m_Pools[familyIdx].Buffers));
-            vkCreateCommandPool(device.GetLogicalDevice(), &poolCreateInfo, gVulkanAllocator, &m_Pools[familyIdx].Pool);
+            //vkCreateCommandPool(device.GetLogicalDevice(), &poolCreateInfo, gVulkanAllocator, &m_Pools[familyIdx].Pool);
+            vkCreateCommandPool(device.GetLogicalDevice(), &poolCreateInfo, nullptr, &m_Pools[familyIdx].Pool);
         }
     }
 
@@ -55,18 +80,19 @@ namespace Crowny
                     break;
                 delete buffer;
             }
-            vkDestroyCommandPool(m_Device.GetLogicalDevice(), info.Pool, gVulkanAllocator);
+            //vkDestroyCommandPool(m_Device.GetLogicalDevice(), info.Pool, gVulkanAllocator);
+            vkDestroyCommandPool(m_Device.GetLogicalDevice(), info.Pool, nullptr);
         }
     }
     
-    VulkanCommandBuffer* VulkandCommandBufferPool::GetBuffer(uint32_t queueFamily, bool secondary)
+    VulkanCommandBuffer* VulkanCommandBufferPool::GetBuffer(uint32_t queueFamily, bool secondary)
     {
         auto iter = m_Pools.find(queueFamily);
         if (iter == m_Pools.end())
             return nullptr;
         VulkanCommandBuffer** buffers = iter->second.Buffers;
         
-        uint32_t i = 0
+        uint32_t i = 0;
         for (; i < MAX_VULKAN_CB_PER_QUEUE_FAMILY; i++)
         {
             if (buffers[i] == nullptr)
@@ -78,7 +104,7 @@ namespace Crowny
             }
         }
         
-        CW_ENGINE_ASSERT(i, MAX_VULKAN_CB_PER_QUEUE_FAMILY, "Too many command buffers allocated.");
+        CW_ENGINE_ASSERT(i < MAX_VULKAN_CB_PER_QUEUE_FAMILY, "Too many command buffers allocated.");
         
         buffers[i] = CreateBuffer(queueFamily, secondary);
         buffers[i]->Begin();
@@ -92,12 +118,12 @@ namespace Crowny
         if (iter == m_Pools.end())
             return nullptr;
         const PoolInfo& poolInfo = iter->second;
-        return new VulkandCommandBuffer(m_Device, m_NextId++, poolInfo.Pool, poolInfo.QueueFamily, secondary);
+        return new VulkanCommandBuffer(m_Device, m_NextId++, poolInfo.Pool, poolInfo.QueueFamily, secondary);
     }
     
     VulkanCommandBuffer::VulkanCommandBuffer(VulkanDevice& device, uint32_t id, VkCommandPool pool, uint32_t queueFamily, bool secondary)
-        : m_ScissorRequiresBind(true), m_ViewportRequiresBind(true), m_VertexInputsRequriesBind(true), m_GraphicsPipelineRequiresBind(true)
-          m_Id(id), m_QueueFamily(queueFamily), m_Device(device), m_Pool(pool), m_CommandPipelineRequiresBind(true)
+        : m_ScissorRequiresBind(true), m_ViewportRequiresBind(true), m_VertexInputsRequriesBind(true), m_GraphicsPipelineRequiresBind(true),
+          m_Id(id), m_QueueFamily(queueFamily), m_Device(device), m_Pool(pool), m_ComputePipelineRequiresBind(true)
     {
         uint32_t maxBoundDescriptorSets = device.GetDeviceProperties().limits.maxBoundDescriptorSets;
         m_DescriptorSetsTemp = new VkDescriptorSet[maxBoundDescriptorSets];
@@ -117,8 +143,11 @@ namespace Crowny
 		fenceCI.pNext = nullptr;
 		fenceCI.flags = 0;
 
-		result = vkCreateFence(m_Device.GetLogicalDevice(), &fenceCI, gVulkanAllocator, &m_Fence);
-		assert(result == VK_SUCCESS);
+		//result = vkCreateFence(m_Device.GetLogicalDevice(), &fenceCI, gVulkanAllocator, &m_Fence);
+        result = vkCreateFence(m_Device.GetLogicalDevice(), &fenceCI, nullptr, &m_Fence);
+		CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        m_SwapChain = gVulkanRendererAPI().GetSwapChain();
+        m_Semaphore = new VulkanSemaphore();
     }
 
     VulkanCommandBuffer::~VulkanCommandBuffer()
@@ -128,27 +157,48 @@ namespace Crowny
         if (m_State == State::Submitted)
         {
             uint64_t wait = 1000 * 1000 * 1000;
-            VkResult result = vkWaitFences(device, 1, &m_Fence, true, waitTime);
+            VkResult result = vkWaitForFences(device, 1, &m_Fence, true, wait);
             CW_ENGINE_ASSERT(result == VK_SUCCESS || result == VK_TIMEOUT);
 
             if (result == VK_TIMEOUT)
                 CW_ENGINE_WARN("Command buffer freed, fence wait expired!");
             Reset();
         }
-        if (m_IntraQueueSemaphore != nullptr)
-            delete m_IntraQueueSemaphore;
-
+        //if (m_IntraQueueSemaphore != nullptr)
+          //  delete m_IntraQueueSemaphore;
+/*
         for (uint32_t i = 0; i < MAX_VULKAN_CB_DEPENDENCIES; i++)
         {
             if (m_InterQueueSemaphores[i] != nullptr)
                 delete m_InterQueueSemaphores[i];
         }
-
-        vkDestroyFence(device, m_Fence, gVulkanAllocator);
+*/
+        //vkDestroyFence(device, m_Fence, gVulkanAllocator);
+        vkDestroyFence(device, m_Fence, nullptr);
         vkFreeCommandBuffers(device, m_Pool, 1, &m_CmdBuffer);
-        delete m_DesciptorSetsTemp;
+        delete m_Semaphore;
+      //  delete m_DesciptorSetsTemp;
     }
 
+    bool VulkanCommandBuffer::BindGraphicsPipeline()
+    {
+        VulkanRenderPass* renderPass = m_RenderTarget->GetRenderPass();
+        VulkanPipeline* pipeline = m_GraphicsPipeline->GetPipeline(renderPass, m_DrawMode);
+        // get pipeline using the vertex layout and renderpass here, make sure that the flags are correct... not just this
+        vkCmdBindPipeline(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetHandle());
+        BindDynamicStates(true);
+        m_GraphicsPipelineRequiresBind = false;
+        return true;
+    }
+
+    void VulkanCommandBuffer::SetViewport(const Rect2F& rect)
+    {
+        if (m_Viewport == rect)
+            return;
+        m_Viewport = rect;
+        m_ViewportRequiresBind = true;
+    }
+    
     void VulkanCommandBuffer::BindDynamicStates(bool force)
     {
         if (m_ViewportRequiresBind || force)
@@ -176,10 +226,36 @@ namespace Crowny
         }
         
     }
+
+    void VulkanCommandBuffer::SetPipeline(const Ref<GraphicsPipeline>& pipeline)
+    {
+        if (m_GraphicsPipeline == pipeline)
+            return;
+        m_GraphicsPipeline = std::static_pointer_cast<VulkanGraphicsPipeline>(pipeline);
+        m_GraphicsPipelineRequiresBind = true;
+    }
+    
+    void VulkanCommandBuffer::SetPipeline(const Ref<ComputePipeline>& pipeline)
+    {
+        if (m_ComputePipeline == pipeline)
+            return;
+        
+        m_ComputePipeline = std::static_pointer_cast<VulkanComputePipeline>(pipeline);
+        m_ComputePipelineRequiresBind = true;
+    }
+
+    CommandBufferState VulkanCommandBuffer::GetState() const
+    {
+        if (IsSubmitted())
+            return CheckFenceStatus(false) ? CommandBufferState::Done : CommandBufferState::Executing;
+
+        bool recording = IsRecording() || IsReadyForSubmit() || IsInRenderPass();
+        return recording ? CommandBufferState::Recording : CommandBufferState::Empty;
+    }
     
     void VulkanCommandBuffer::BindVertexInputs()
     {
-        if (!m_VertexBuffer.empty())
+        if (!m_VertexBuffers.empty())
         {
             uint32_t lastValidIdx = (uint32_t)-1;
             uint32_t idx = 0;
@@ -188,9 +264,40 @@ namespace Crowny
                 bool validBuffer = false;
                 if (vertexBuffer != nullptr)
                 {
-                    
+                    m_VertexBuffersTemp[idx] = vertexBuffer->GetHandle();// gethandle
+                    // registerbuffer
+                    if (lastValidIdx == (uint32_t)-1)
+                        lastValidIdx = idx;
+                    validBuffer = true;
+                }
+
+                if (!validBuffer && lastValidIdx != (uint32_t)-1)
+                {
+                    uint32_t count = idx - lastValidIdx;
+                    if (count > 0)
+                    {
+                        vkCmdBindVertexBuffers(m_CmdBuffer, lastValidIdx, count, m_VertexBuffersTemp, m_VertexBufferOffsets);
+                        lastValidIdx = (uint32_t)-1;
+                    }
+                }
+                idx++;
+            }
+
+            if (lastValidIdx != (uint32_t)-1)
+            {
+                uint32_t count = idx - lastValidIdx;
+                if (count > 0)
+                {
+                    vkCmdBindVertexBuffers(m_CmdBuffer, lastValidIdx, count, m_VertexBuffersTemp, m_VertexBufferOffsets);
                 }
             }
+        }
+
+        if (m_IndexBuffer != nullptr)
+        {
+            VkBuffer vkBuffer = m_IndexBuffer->GetHandle();
+            VkIndexType indexType = VK_INDEX_TYPE_UINT32;
+            vkCmdBindIndexBuffer(m_CmdBuffer, vkBuffer, 0, indexType);
         }
     }
     
@@ -224,13 +331,13 @@ namespace Crowny
         CW_ENGINE_ASSERT(m_State == State::Recording);
         CW_ENGINE_ASSERT(m_RenderTarget != nullptr, "Render target is nullptr");
         
-        // TODO: Execute layout transitions
+        // TODO: layout transitions, barriers
 
         VkRenderPassBeginInfo renderPassBeginInfo;
         renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassBeginInfo.pNext = nullptr;
-        renderPassBeginInfo.framebuffer = m_RenderTarget->GetVkFramebuffer();
-        renderPassBeginInfo.renderPass = renderPass->GetVkRenderPass();
+        renderPassBeginInfo.framebuffer = m_RenderTarget->GetHandle();
+        renderPassBeginInfo.renderPass = m_RenderTarget->GetRenderPass()->GetHandle();
         renderPassBeginInfo.renderArea.offset.x = 0;
         renderPassBeginInfo.renderArea.offset.y = 0;
         renderPassBeginInfo.renderArea.extent.width = m_RenderTarget->GetWidth();
@@ -255,13 +362,13 @@ namespace Crowny
         VkRenderPassBeginInfo renderPassBeginInfo;
         renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassBeginInfo.pNext = nullptr;
-        renderPassBeginInfo.framebuffer = m_RenderTarget->GetVkFramebuffer();
-        renderPassBeginInfo.renderPass = renderPass->GetVkRenderPass();
+        renderPassBeginInfo.framebuffer = m_RenderTarget->GetHandle();
+        renderPassBeginInfo.renderPass = renderPass->GetHandle();
         renderPassBeginInfo.renderArea.offset.x = m_ClearArea.X;
         renderPassBeginInfo.renderArea.offset.y = m_ClearArea.Y;
         renderPassBeginInfo.renderArea.extent.width = m_ClearArea.Width;
-        renderPassBeginInfo.renderArea.extent.height = m_ClaerArea.Height;
-        renderPassBeginInfo.clearValueCount =
+        renderPassBeginInfo.renderArea.extent.height = m_ClearArea.Height;
+        renderPassBeginInfo.clearValueCount = 5;
         renderPassBeginInfo.pClearValues = m_ClearValues.data();
         
         vkCmdBeginRenderPass(m_CmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -273,55 +380,59 @@ namespace Crowny
         bool submitted = m_State == State::Submitted;
 
         m_State = State::Ready;
+        // maybe dont reset the cb itself only the state
         vkResetCommandBuffer(m_CmdBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
     }
     
-    void VulkanCommandBuffer::Submit(VulkanQueue* queue, uint32_t queueIdx)
+    void VulkanCommandBuffer::Submit()
     {
-        CW_ENGINE_ASSERT(IsReadyForSubmit());
+        CW_ENGINE_ASSERT(vkWaitForFences(m_Device.GetLogicalDevice(), 1, &m_Fence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
+        CW_ENGINE_ASSERT(vkResetFences(m_Device.GetLogicalDevice(), 1, &m_Fence) == VK_SUCCESS);
         
-        VkResult result = vkResetFences(m_Device.GetLogicalDevice(), 1, &m_Fence);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        
-        VulkanDevice& device = queue->GetDevice();
-        for (auto& entry : m_Buffers)
-        {
-            VulkanBuffer* resource = static_cast<VulkanBuffer*>(entry.first);
-            uint32_t currentQueueFamily 
+        VkResult result = m_SwapChain->AcquireBackBuffer();
+        if ((result == VK_ERROR_OUT_OF_DATE_KHR) || (result == VK_SUBOPTIMAL_KHR)) {
+            //windowResize();
+            CW_ENGINE_ASSERT(true);
         }
+		else
+            CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
-        for (auto& entry : m_ActiveSwapChains)
-        {
-            const SwapChainSurface& surface = entry->GetBackBuffer();
-            if (surface.NeedWait)
-            {
-                VulkanSemaphore* semaphore = entry->GetBackBuffer().Sync;
-                if (numSemaphores >= (uint32_t)m_SemaphoresTemp.size())
-                    m_SemaphoresTemp.push_Back(semaphore);
-                else
-                    m_SemaphoresTemp[numSemaphores] = semaphore;
-                numSemaphores++;
-            }
-        }
-
-        queue->QueueSubmit(this, m_SemaphoresTemp.data(), numSemaphores);
-        queue->SubmitQueued();
+        const SwapChainSurface& surface = m_SwapChain->GetBackBuffer();
+        VulkanSemaphore* semaphore = { surface.Sync };
+        m_Queue->Submit(this, &semaphore, 1); // might not work
+        m_SwapChain->BackBufferWaitIssued();
         
         m_GraphicsPipeline = nullptr;
         m_ComputePipeline = nullptr;
         m_GraphicsPipelineRequiresBind = true;
         m_ComputePipelineRequiresBind = true;
         m_RenderTarget = nullptr;
-        m_DescriptorSetsBindState = DescriptorSetBindFlag::Graphics | DescriptorSetBindFlag::Compute;
-        m_IndexBuffer = nullptr;
+        //m_DescriptorSetsBindState = DescriptorSetBindFlag::Graphics | DescriptorSetBindFlag::Compute;
+        //m_IndexBuffer = nullptr;
         m_VertexBuffers.clear();
-        m_VertexInputsRequiresBind = true;
-        m_ActiveSwapChains.clear();
+        //m_VertexInputsRequiresBind = true;
+        //m_ActiveSwapChains.clear();
+    }
+    
+    void VulkanCommandBuffer::SetRenderTarget(const Ref<Framebuffer>& framebuffer)
+    {
+        CW_ENGINE_ASSERT(m_State != State::Submitted);/*
+        
+        if (framebuffer != nullptr)
+        {
+           // m_RenderTarget = std::static_pointer_cast<VulkanFramebuffer>(framebuffer);
+            m_RenderTargetModified = true;
+            m_GraphicsPipelineRequiresBind = true;
+        }*/
+        if (IsInRenderPass())
+            EndRenderPass();
+        m_SwapChain->AcquireBackBuffer();
+        m_RenderTarget = m_SwapChain->GetBackBuffer().Framebuffer;
     }
     
     bool VulkanCommandBuffer::CheckFenceStatus(bool blocking) const
     {
-        VkResult result = vkWaitForFences(m_Device.GetLogicalDevice(), 1, &m_Fence, true, block ? 1000000000 : 0);
+        VkResult result = vkWaitForFences(m_Device.GetLogicalDevice(), 1, &m_Fence, true, blocking ? 1000000000 : 0);
         CW_ENGINE_ASSERT(result == VK_SUCCESS || result == VK_TIMEOUT);
         
         return result == VK_SUCCESS;
@@ -332,7 +443,40 @@ namespace Crowny
         if (m_GraphicsPipeline == nullptr)
             return false;
 
-        return m_RenderTarget != nullptr && mVertexDecl != nullptr;
+        return m_RenderTarget != nullptr;// && mVertexDecl != nullptr;
+    }
+
+    void VulkanCommandBuffer::BindUniforms()
+    {
+
+    }
+
+    void VulkanCommandBuffer::SetDrawMode(DrawMode drawMode)
+    {
+        if (m_DrawMode == drawMode)
+            return;
+        m_DrawMode = drawMode;
+        m_GraphicsPipelineRequiresBind = true;
+    }
+
+    void VulkanCommandBuffer::SetVertexBuffers(uint32_t idx, Ref<VertexBuffer>* buffers, uint32_t bufferCount)
+    {
+        if (bufferCount == 0)
+            return;
+        uint32_t endIdx = idx + bufferCount;
+        if (m_VertexBuffers.size() < endIdx)
+            m_VertexBuffers.resize(endIdx);
+        for (uint32_t i = idx; i < endIdx; i++)
+        {
+            m_VertexBuffers[i] = std::static_pointer_cast<VulkanVertexBuffer>(buffers[i]);
+        }
+        m_VertexInputsRequriesBind = true;
+    }
+
+    void VulkanCommandBuffer::SetIndexBuffer(const Ref<IndexBuffer>& indexBuffer)
+    {
+        m_IndexBuffer = std::static_pointer_cast<VulkanIndexBuffer>(indexBuffer);
+        m_VertexInputsRequriesBind = true;
     }
 
     void VulkanCommandBuffer::Draw(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount)
@@ -356,7 +500,7 @@ namespace Crowny
                 return;
         }
         else
-            BindDynamicStates(false);
+            BindDynamicStates(false);/*
         if (m_DescriptorSetBindState.IsSet(DescriptorSetBindFlag::Graphics))
         {
             if (m_NumBoundDescriptorSets > 0)
@@ -365,9 +509,10 @@ namespace Crowny
                 vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, m_NumberBoundDescriptorSets, m_DescriptorSetsTemp, 0, nullptr);
             }
             m_DescriptorSetBindState.Unset(DescriptorSetBindFlag::Graphics);
-        }
+        }*/
         
-        vkCmdDraw(m_CmdBuffer, vertexCount, instanceCount, vertexOffset, 0);
+        //vkCmdDraw(m_CmdBuffer, vertexCount, instanceCount, vertexOffset, 0);
+        vkCmdDraw(m_CmdBuffer, 3, 1, 0, 0);
     }
 
     void VulkanCommandBuffer::DrawIndexed(uint32_t startIdx, uint32_t idxCount, uint32_t vertexOffset, uint32_t instanceCount)
@@ -392,7 +537,7 @@ namespace Crowny
         }
         else
             BindDynamicStates(false);
-        if (m_DescriptorSetBindState.IsSet(DescriptorSetBindFlag::Graphics))
+      /*  if (m_DescriptorSetBindState.IsSet(DescriptorSetBindFlag::Graphics))
         {
             if (m_NumBoundDescriptorSets > 0)
             {
@@ -400,13 +545,15 @@ namespace Crowny
                 vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, m_NumberBoundDescriptorSets, m_DescriptorSetsTemp, 0, nullptr);
             }
             m_DescriptorSetBindState.Unset(DescriptorSetBindFlag::Graphics);
-        }
+        }*/
 
-        vkCmdDrawIndexed(m_CmdBuffer, idxCount, instanceCount, startIdx, 0);
+        vkCmdDrawIndexed(m_CmdBuffer, idxCount, instanceCount, startIdx, vertexOffset, 0);
     }
 
     void VulkanCommandBuffer::AllocateSemaphores(VkSemaphore* semaphores)
     {
+        semaphores = &m_Semaphore->m_Semaphore;
+        /*
         if (m_IntraQueueSemaphore != nullptr)
             delete m_IntraQueueSemaphore;
 
@@ -421,50 +568,16 @@ namespace Crowny
             semaphores[i + 1] = m_InterQueueSemaphores[i]->GetHandle();
         }
 
-        m_NumUsedInterQueueSemaphores = 0;
+        m_NumUsedInterQueueSemaphores = 0;*/
     }
-    
-    VulkanSemaphore* VulkanCommandBuffer::RequiestInterQueueSemaphore() const
+    /*
+    VulkanSemaphore* VulkanCommandBuffer::RequestInterQueueSemaphore() const
     {
-        if (m_NumUsedInterQueueSemaphores >= MAX_VULKAN_CB_DEPENDENCIES)
-            return nullptr;
-        return m_InterQueueSemaphores[m_NumUsedInterQueueSemaphores++];
-    }
+       // if (m_NumUsedInterQueueSemaphores >= MAX_VULKAN_CB_DEPENDENCIES)
+       //     return nullptr;
+        //return m_InterQueueSemaphores[m_NumUsedInterQueueSemaphores++];
+    }*/
 
-    void VulkanCommandBuffer::SetLayout(VkImage image, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags,
-                                        VkImageLayout oldLayout, VkImageLayout newLayout, const VkImageSubresourceRange& range)
-    {
-        VkImageMemoryBarrier barrier{};
-        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barrier.pNext = nullptr;
-        barrier.srcAccessMask = srcAccessFlags;
-        barrier.dstAccessMask = dstAccessFlags;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.oldLayout = oldLayout;
-        barrier.newLayout = newLayout;
-        barrier.subresourceRange = range;
-        VkPipelineStageFlags srcStage = GetPipelineStageFlags(srcAccessFlags);
-        VkPipelineStageFlags dstStage = GetPipelineStageFlags(dstAccessFlags);
-        vkCmdPipelineBarrier(m_CmdBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-    }
-    
-    void VulkanCommandBuffer::MemoryBarrier(VkBuffer buffer, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags, 
-                                            VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage)
-    {
-        VkBufferMemoryBarrier barrier{};
-        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barrier.pNext = nullptr;
-        barrier.srcAccessMask = srcAccessFlags;
-        barrier.dstAccessMask = dstAccessFlags;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.size = VK_WHOLE_SIZE;
-        barrier.buffer = buffer;
-        
-        vkCmdPipelineBarrier(m_CmdBuffer, srcStage, dstStage, 0, 0, nullptr, 1, &barrier, 0, nullptr);
-    }
-    
     VkPipelineStageFlags GetPipelineStageFlags(VkAccessFlags accessFlags)
     {
         VkPipelineStageFlags flags = 0;
@@ -508,4 +621,38 @@ namespace Crowny
 		return flags;
     }
 
+    void VulkanCommandBuffer::SetLayout(VkImage image, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags,
+                                        VkImageLayout oldLayout, VkImageLayout newLayout, const VkImageSubresourceRange& range)
+    {
+        VkImageMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.pNext = nullptr;
+        barrier.srcAccessMask = srcAccessFlags;
+        barrier.dstAccessMask = dstAccessFlags;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.oldLayout = oldLayout;
+        barrier.newLayout = newLayout;
+        barrier.subresourceRange = range;
+        VkPipelineStageFlags srcStage = GetPipelineStageFlags(srcAccessFlags);
+        VkPipelineStageFlags dstStage = GetPipelineStageFlags(dstAccessFlags);
+        vkCmdPipelineBarrier(m_CmdBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+    }
+    
+    void VulkanCommandBuffer::MemoryBarrier(VkBuffer buffer, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags, 
+                                            VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage)
+    {
+        VkBufferMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.pNext = nullptr;
+        barrier.srcAccessMask = srcAccessFlags;
+        barrier.dstAccessMask = dstAccessFlags;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.size = VK_WHOLE_SIZE;
+        barrier.buffer = buffer;
+        
+        vkCmdPipelineBarrier(m_CmdBuffer, srcStage, dstStage, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+    }
+    
 }

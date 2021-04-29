@@ -11,6 +11,7 @@
 #include "Crowny/Renderer/IDBufferRenderer.h"
 #include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Scene/ScriptRuntime.h"
+#include "Crowny/Renderer/Framebuffer.h"
 
 #include "Editor/EditorAssets.h"
 
@@ -37,8 +38,15 @@ namespace Crowny
 
 	}
 
+	static Ref<VertexBuffer> vbo;
+	static Ref<GraphicsPipeline> pipeline;
+	static Ref<Framebuffer> framebuffer;
+	static Ref<Shader> vertex, fragment;
+
+	class VulkanFramebuffer;
+
 	void EditorLayer::OnAttach()
-	{
+	{/*
 		m_MenuBar = new ImGuiMenuBar();
 
 		ImGuiMenu* fileMenu = new ImGuiMenu("File");
@@ -78,6 +86,7 @@ namespace Crowny
 
 		SceneManager::AddScene(CreateRef<Scene>("Editor scene")); // To be loaded
 
+		//TODO: Vulkan shader
 		Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(Shader::Create("/Shaders/PBRShader.glsl"));
 		
 		//auto& manifest = AssetManager::Get().ImportManifest("Sandbox.yaml", "Sandbox");
@@ -96,7 +105,7 @@ namespace Crowny
 		mat->SetAoMap(white);
 
 		ImGuiMaterialPanel::SetSelectedMaterial(mat);
-		ForwardRenderer::Init(); // Why here?
+		//ForwardRenderer::Init(); // Why here?
 
 		SceneSerializer serializer(SceneManager::GetActiveScene());
 		serializer.Deserialize("Test.yaml");
@@ -104,7 +113,19 @@ namespace Crowny
 		SceneRenderer::Init();
 		VirtualFileSystem::Get()->Mount("Icons", "Resources/Icons");
 		EditorAssets::Load();
-		ScriptRuntime::Init();
+		ScriptRuntime::Init();*/
+
+		glm::vec3 verts[3] = { { 1, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } };
+		vbo = VertexBuffer::Create(verts, 3);
+    vbo->SetLayout({{ShaderDataType::Float3, "position"}});
+
+		vertex = Shader::Create("/Shaders/vert.spv");
+		fragment = Shader::Create("/Shaders/frag.spv");
+		PipelineStateDesc desc;
+		desc.FragmentShader = fragment;
+		desc.VertexShader = vertex;
+		
+		pipeline = GraphicsPipeline::Create(desc, vbo);
 	}
 
 	void EditorLayer::CreateNewScene()
@@ -154,6 +175,13 @@ namespace Crowny
 
 	void EditorLayer::OnUpdate(Timestep ts)
 	{
+		auto& rapi = RendererAPI::Get();
+		//rapi.SetVertexBuffers(0, &vbo, 1);
+		rapi.SetGraphicsPipeline(pipeline);
+		rapi.SetDrawMode(DrawMode::TRIANGLE_LIST);
+		rapi.Draw(0, 3);
+		rapi.SwapBuffers();
+		/*
 		Ref<Scene> scene = SceneManager::GetActiveScene();
 		m_ViewportSize = m_ViewportPanel->GetViewportSize();
 		if (m_Temp)
@@ -163,9 +191,12 @@ namespace Crowny
 		}
 		s_EditorCamera.OnUpdate(ts);
 		SceneRenderer::SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
-		s_EditorCamera.SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
+		s_EditorCamera.SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);*/
 
-		SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
+		//SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
+		
+		
+		/*
 		if (m_GameMode && !m_Paused)
 		{
 			ScriptRuntime::OnUpdate();
@@ -184,11 +215,11 @@ namespace Crowny
 		{
 			m_HoveredEntity = Entity((entt::entity)IDBufferRenderer::ReadPixel(coords.x, coords.y), scene.get());
 		}
-		m_HierarchyPanel->Update();
+		m_HierarchyPanel->Update();*/
 	}
 	
 	void EditorLayer::OnImGuiRender()
-	{
+	{/*
 		ImGui::ShowDemoWindow();
 		static bool dockspaceOpen = true;
 		static bool opt_fullscreen_persistant = true;
@@ -272,7 +303,7 @@ namespace Crowny
 		m_ConsolePanel->Render();
 		m_MaterialEditor->Render();
 
-		ImGui::End();
+		ImGui::End();*/
 	}
 
 	bool EditorLayer::OnKeyPressed(KeyPressedEvent& e)

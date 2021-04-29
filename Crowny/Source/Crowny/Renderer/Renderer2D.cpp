@@ -64,15 +64,15 @@ namespace Crowny
 
 	void Renderer2D::Init()
 	{
-		Renderer::SubmitCommand([]() { s_Data.VertexArray = VertexArray::Create(); });
-		Renderer::SubmitCommand([]() { s_Data.VertexBuffer = VertexBuffer::Create(nullptr, RENDERER_BUFFER_SIZE, { BufferUsage::DYNAMIC_DRAW }); });
+		s_Data.VertexArray = VertexArray::Create();
+		s_Data.VertexBuffer = VertexBuffer::Create(nullptr, RENDERER_BUFFER_SIZE, { BufferUsage::DYNAMIC_DRAW });
 		BufferLayout layout = { { ShaderDataType::Float4, "a_Coordinates" },
 								{ ShaderDataType::Float2, "a_Uvs" },
 								{ ShaderDataType::Float , "a_Tid" },
 								{ ShaderDataType::Float4, "a_Color" } };
 
-		Renderer::SubmitCommand([&layout]() { s_Data.VertexBuffer->SetLayout(layout);
-		Renderer::SubmitCommand([]() { s_Data.VertexArray->AddVertexBuffer(s_Data.VertexBuffer); });
+		s_Data.VertexBuffer->SetLayout(layout);
+		s_Data.VertexArray->AddVertexBuffer(s_Data.VertexBuffer);
 
 		uint32_t* indices = new uint32_t[RENDERER_INDICES_SIZE];
 
@@ -91,15 +91,14 @@ namespace Crowny
 		}
 
 		Ref<IndexBuffer> ibo;
-		Renderer::SubmitCommand([indices]() { ibo = IndexBuffer::Create(indices, RENDERER_INDICES_SIZE); });
-		Renderer::SubmitCommand([&ibo]() { s_Data.VertexArray->SetIndexBuffer(ibo); });
+		ibo = IndexBuffer::Create(indices, RENDERER_INDICES_SIZE);
+		s_Data.VertexArray->SetIndexBuffer(ibo);
 
-		Renderer::SubmitCommand([]() { s_Data.WhiteTexture = Texture2D::Create(1, 1); });
-		Renderer::SubmitCommand([]() { uint32_t whiteTextureData = 0xffffffff; s_Data.WhiteTexture->SetData(&whiteTextureData, sizeof(uint32_t)); });
-
-		Renderer::SubmitCommand([]() { s_Data.Shader = Shader::Create("/Shaders/BatchRenderer.glsl"); });
-		Renderer::SubmitCommand([]() { s_Data.Shader->Bind(); });
-		Renderer::SubmitCommand([]() { s_Data.SystemUniforms.resize(2); });
+		s_Data.WhiteTexture = Texture2D::Create(1, 1);
+		uint32_t whiteTextureData = 0xffffffff; s_Data.WhiteTexture->SetData(&whiteTextureData, sizeof(uint32_t));
+		s_Data.Shader = Shader::Create("/Shaders/BatchRenderer.glsl");
+		s_Data.Shader->Bind();
+		s_Data.SystemUniforms.resize(2);
 
 		const ShaderUniformBufferList& vsuniforms = s_Data.Shader->GetVSSystemUniforms();
 
@@ -120,21 +119,21 @@ namespace Crowny
 		
 		s_Data.TextureSlots[s_Data.TextureIndex] = s_Data.WhiteTexture;
 
-		Renderer::SubmitCommand([]() { s_Data.VertexArray->Unbind(); });
+		s_Data.VertexArray->Unbind();
 		delete[] indices;
 	}
 
 	void Renderer2D::Begin(const Camera& camera, const glm::mat4& viewMatrix)
 	{
-		Renderer::Submit([]() { RenderCommand::SetDepthTest(false); });
+		RenderCommand::SetDepthTest(false);
 		memcpy(s_Data.SystemUniforms[UniformIndex_ProjectionMatrix].Buffer.Buffer + s_Data.SystemUniforms[UniformIndex_ProjectionMatrix].Offset, glm::value_ptr(camera.GetProjection()), sizeof(glm::mat4));
 		memcpy(s_Data.SystemUniforms[UniformIndex_ViewMatrix].Buffer.Buffer + s_Data.SystemUniforms[UniformIndex_ViewMatrix].Offset, glm::value_ptr(viewMatrix), sizeof(glm::mat4));
 
-		Renderer::SubmitCommand([s_Data]() { s_Data.Shader->Bind(); });
 		//s_Data.Shader->SetVSSystemUniformBuffer(s_Data.SystemUniforms);
-		Renderer::SubmitCommand([s_Data]() { s_Data.Shader->SetUniformMat4("cw_ProjectionMatrix", camera.GetProjection()); });
-		Renderer::SubmitCommand([s_Data]() { s_Data.Shader->SetUniformMat4("cw_ViewMatrix", viewMatrix); });
-		Renderer::SubmitCommand([s_Data]() { s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->GetPointer(RENDERER_MAX_SPRITES * 4); });
+		s_Data.Shader->Bind();
+		s_Data.Shader->SetUniformMat4("cw_ProjectionMatrix", camera.GetProjection());
+		s_Data.Shader->SetUniformMat4("cw_ViewMatrix", viewMatrix);
+		s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->GetPointer(RENDERER_MAX_SPRITES * 4);
 	}
 
 	float Renderer2D::FindTexture(const Ref<Texture2D>& texture)
@@ -158,7 +157,7 @@ namespace Crowny
 			if (s_Data.TextureIndex == 32) // TODO: not 32 please
 			{
 				End();
-				Renderer::SubmitCommand([s_Data]() { s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->GetPointer(RENDERER_MAX_SPRITES * 4); }); // TODO: Begin or semething instead of this 
+				s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->GetPointer(RENDERER_MAX_SPRITES * 4); // TODO: Begin or semething instead of this 
 			}
 			s_Data.TextureSlots[++s_Data.TextureIndex] = texture;
 			ts = (float)s_Data.TextureIndex;
@@ -166,7 +165,7 @@ namespace Crowny
 		return ts;
 	}
 	
-	void Renderer2D::FillRect(const Rectangle& bounds, const glm::vec4& color)
+	void Renderer2D::FillRect(const Rect2F& bounds, const glm::vec4& color)
 	{
 		glm::mat4 transform = glm::translate(glm::mat4(1.0f), 
 											{ bounds.X, bounds.Y, 1.0f }) *
@@ -190,7 +189,7 @@ namespace Crowny
 		s_Data.IndexCount += 6;
 	}
 
-	void Renderer2D::FillRect(const Rectangle& bounds, const Ref<Texture2D>& texture, const glm::vec4& color)
+	void Renderer2D::FillRect(const Rect2F& bounds, const Ref<Texture2D>& texture, const glm::vec4& color)
 	{
 		glm::mat4 transform = glm::translate(glm::mat4(1.0f), { bounds.X, bounds.Y, 1.0f }) * glm::scale(glm::mat4(1.0f), { bounds.Width, bounds.Height, 1.0f });
 
@@ -267,11 +266,11 @@ namespace Crowny
 
 	void Renderer2D::End()
 	{
-		Renderer::SubmitCommand([s_Data]() { s_Data.VertexBuffer->FreePointer(); });
+		s_Data.VertexBuffer->FreePointer();
 		Flush();
 		s_Data.IndexCount = 0;
 		s_Data.TextureIndex = 0;
-		Renderer::SubmitCommand([]() { RenderCommand::SetDepthTest(true); });
+		RenderCommand::SetDepthTest(true);
 	}
 
 	void Renderer2D::Flush()
@@ -279,22 +278,22 @@ namespace Crowny
 		s_Data.Shader->Bind();
 		for (uint32_t i = 0; i < s_Data.SystemUniformBuffers.size(); i++)
 		{
-			Renderer::SubmitCommand([s_Data]() { s_Data.Shader->SetVSSystemUniformBuffer(s_Data.SystemUniformBuffers[i].Buffer, s_Data.SystemUniformBuffers[i].Size, i); });
+			s_Data.Shader->SetVSSystemUniformBuffer(s_Data.SystemUniformBuffers[i].Buffer, s_Data.SystemUniformBuffers[i].Size, i);
 		}
 
 		for (uint8_t i = 0; i <= s_Data.TextureIndex; i++)
 		{
-			Renderer::SubmitCommand([s_Data]() { s_Data.TextureSlots[i]->Bind(i); });
+			s_Data.TextureSlots[i]->Bind(i);
 		}
 
-		Renderer::SubmitCommand([s_Data]() { s_Data.VertexArray->Bind(); });
-		Renderer::SubmitCommand([s_Data]() { RenderCommand::DrawIndexed(s_Data.VertexArray, s_Data.IndexCount); });
+		s_Data.VertexArray->Bind();
+		RenderCommand::DrawIndexed(s_Data.VertexArray, s_Data.IndexCount);
 		
 		for (uint8_t i = 0; i <= s_Data.TextureIndex; i++)
 		{
-			Renderer::SubmitCommand([s_Data]() { s_Data.TextureSlots[i]->Unbind(i); });
+			s_Data.TextureSlots[i]->Unbind(i);
 		}
-		Renderer::SubmitCommand([s_Data]() { s_Data.VertexArray->Unbind(); });
+		s_Data.VertexArray->Unbind();
 	}
 
 	void Renderer2D::Shutdown()

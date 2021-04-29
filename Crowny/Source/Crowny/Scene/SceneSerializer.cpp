@@ -7,11 +7,11 @@
 #include "Crowny/Scene/SceneSerializer.h"
 
 #include "Crowny/Common/Yaml.h"
-
+/*
 #include <bitsery/traits/vector.h>
 #include <bitsery/adapter/buffer.h>
 #include <bitsery/bitsery.h>
-
+*/
 namespace Crowny
 {
 
@@ -210,7 +210,7 @@ namespace Crowny
     void SceneSerializer::SerializeBinary(const std::string& filepath)
     {
         std::vector<uint8_t> buffer;
-        bitsery::quickSerialization(bitsery::OutputBufferAdapter<std::vector<uint8_t>{buffer}, m_Scene);
+        //bitsery::quickSerialization(bitsery::OutputBufferAdapter<std::vector<uint8_t>{buffer}, m_Scene);
     }
 
     void SceneSerializer::Deserialize(const std::string& filepath)

@@ -19,6 +19,11 @@ namespace Crowny
 		{
 			return (X <= pos.x && Y <= pos.y && X + Width >= pos.x && Y + Height >= pos.y);
 		}
+
+    bool operator==(const Rect2F& other)
+    {
+      return X == other.X && Y == other.Y && Width == other.Width && Height == other.Height;
+    }
 	};
 	
 	struct Rect2I
