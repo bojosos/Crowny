@@ -6,7 +6,9 @@ namespace Crowny
 {
     
     VulkanVertexBuffer::VulkanVertexBuffer(void* data, uint32_t size, const VertexBufferProperties& props)
-    {/*
+    {
+        CW_ENGINE_INFO("test");
+        /*
         m_Device = gVulkanRendererAPI().GetPresentDevice()->GetLogicalDevice();
         VkBufferCreateInfo bufferCreateInfo{};
         bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;

@@ -109,7 +109,7 @@ namespace Crowny
 		static Ref<Shader> Create(const std::string& name, const std::string& vertSrc, const std::string& fragSrc);
 
 		// Creates a shader from a file
-		static Ref<Shader> Create(const std::string& filepath);
+		static Ref<Shader> Create(const std::string& filepath, ShaderType shaderType = VERTEX_SHADER);
 
 		virtual void SetUniformFloat(const std::string& name, float value) {};// = 0;
 		virtual void SetUniformFloat2(const std::string& name, const glm::vec2& value) {};// = 0;

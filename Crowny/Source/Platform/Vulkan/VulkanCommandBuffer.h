@@ -13,7 +13,7 @@
 namespace Crowny
 {
 
-    #define MAX_VULKAN_CB_PER_QUEUE_FAMILY 64
+    #define MAX_VULKAN_CB_PER_QUEUE_FAMILY 256
 
     class VulkanCmdBuffer;
     class VulkanCommandBufer;
@@ -80,7 +80,7 @@ namespace Crowny
         void SetIsSubmitted() { m_State = State::Submitted; }
 
         bool CheckFenceStatus(bool block) const;
-        void AllocateSemaphores(VkSemaphore* semaphores);
+        VkSemaphore AllocateSemaphores(VkSemaphore* semaphores);
         VulkanSemaphore* GetRenderCompleteSemaphore() const { return m_Semaphore; }
         void SetRenderTarget(const Ref<Framebuffer>& target);
         void ClearRenderTarget(uint32_t buffers, const glm::vec4& color, float depth);
@@ -145,7 +145,7 @@ namespace Crowny
         VkCommandBuffer m_CmdBuffer;
         VulkanQueue* m_Queue;
         VulkanDevice& m_Device;
-        State m_State;
+        State m_State = State::Ready;
         friend class VulkanCmdBuffer;
     };
 

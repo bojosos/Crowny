@@ -4,15 +4,14 @@
 
 namespace Crowny
 {
+	void Random::OnStartUp()
+	{
+		m_RandomEngine.seed(std::random_device()());
+	}
 
 	void Random::Seed(uint32_t seed)
 	{
 		Get().m_RandomEngine.seed(seed ? seed : std::random_device()());
-	}
-	
-	void Random::OnInitialize()
-	{
-		m_RandomEngine.seed(std::random_device()());
 	}
 
 	float Random::Float()

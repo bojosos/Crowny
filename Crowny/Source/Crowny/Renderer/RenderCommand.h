@@ -10,7 +10,7 @@ namespace Crowny
 	public:
 		static void Init()
 		{
-			s_RendererAPI->Init();
+			RendererAPI::Get().Init();
 		}
 
 		static void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height)
@@ -42,9 +42,6 @@ namespace Crowny
 		{
 			//s_RendererAPI->SwapBuffers();
 		}
-		
-	private:
-		static Scope<RendererAPI> s_RendererAPI;
 
 	};
 }

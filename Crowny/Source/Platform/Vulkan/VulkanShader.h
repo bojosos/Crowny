@@ -11,7 +11,7 @@ namespace Crowny
     {
     public:
         VulkanShader(const std::string& name, const std::string& vertSrc, const std::string& fragSrc);
-        VulkanShader(const std::string& filepath);
+        VulkanShader(const std::string& filepath, ShaderType shaderType);
         ~VulkanShader();
 
         //virtual void Reload() override;
