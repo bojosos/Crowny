@@ -1,10 +1,7 @@
 name: Crowy-Sharp
 
 on:
-  push:
-    branches: [ scripting ]
-  pull_request:
-    branches: [ scripting ]
+  [push, pull_request]
 
 jobs:
   build:
