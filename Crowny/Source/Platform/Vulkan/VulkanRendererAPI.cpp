@@ -5,13 +5,15 @@
 #include "Crowny/Application/Application.h"
 #include "Crowny/Renderer/RenderCapabilities.h"
 
+#include "Crowny/Common/Timer.h"
+
 #include <GLFW/glfw3.h>
 
 namespace Crowny
 {
     
-    PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT = nullptr;
-    PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT = nullptr;
+    PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = nullptr;
+    PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT = nullptr;
 
     PFN_vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceSupportKHR = nullptr;
     PFN_vkGetPhysicalDeviceSurfaceFormatsKHR vkGetPhysicalDeviceSurfaceFormatsKHR = nullptr;
@@ -23,22 +25,23 @@ namespace Crowny
     PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR = nullptr;
     PFN_vkQueuePresentKHR vkQueuePresentKHR = nullptr;
 
-    VkBool32 DebugMsgCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg, void* pUserData)
+    VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
     {
-        std::stringstream message;
-
-        message << "[" << pLayerPrefix << "] Code " << msgCode << pMsg;
-
-        if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-            CW_ENGINE_ERROR(message.str());
-        if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
-            CW_ENGINE_WARN(message.str());
-        if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
-            CW_ENGINE_WARN(message.str());
-        if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
-            CW_ENGINE_INFO(message.str());
-        if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
-            CW_ENGINE_INFO(message.str());
+        std::stringstream debugMessage;
+        debugMessage << "[" << pCallbackData->messageIdNumber << "][" << pCallbackData->pMessageIdName << "] : " << pCallbackData->pMessage;
+        if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
+            CW_ENGINE_INFO(debugMessage.str());
+        }
+        else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
+            CW_ENGINE_INFO(debugMessage.str());
+        }
+        else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+            CW_ENGINE_WARN(debugMessage.str());
+        }
+        else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+            CW_ENGINE_ERROR(debugMessage.str());
+        }
+        //CW_ENGINE_ASSERT(false);
         
         return VK_FALSE;
     }
@@ -55,25 +58,23 @@ namespace Crowny
 
         appInfo.apiVersion = VK_API_VERSION_1_1;
 
-        //TODO: need glfw extensions here
-#ifdef CW_DEBUG
-        const char* layers[] = { "VK_LAYER_KHRONOS_validation" };
+//#ifdef CW_DEBUG
+        std::vector<const char*> layers = { "VK_LAYER_KHRONOS_validation", "VK_LAYER_NV_optimus" };
         uint32_t numExtensions;
         const char** glfwExts = glfwGetRequiredInstanceExtensions(&numExtensions);
         std::vector<const char*> extensions(glfwExts, glfwExts + numExtensions);
         
-        //extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         for (auto ext : extensions)
             CW_ENGINE_INFO(ext);
-        uint32_t numLayers = 1;
-#else
-        const char** layers = nullptr;  
-        std::vector<const char*> extensions = { nullptr, nullptr };
-        uint32_t numLayers = 0;
-#endif
-        //extensions[0] = VK_KHR_SURFACE_EXTENSION_NAME;
-
-        //extensions[1] = VK_KHR_XLIB_SURFACE_EXTENSION_NAME; //TODO: platforms glfw might not work in release
+        uint32_t numLayers = (uint32_t)layers.size();
+//#else
+//        std::vector<const char*> layers;
+ //       uint32_t numExtensions;
+ //       const char** glfwExts = glfwGetRequiredInstanceExtensions(&numExtensions);
+  //      std::vector<const char*> extensions(glfwExts, glfwExts + numExtensions);
+   //     uint32_t numLayers = (uint32_t)layers.size();
+//#endif
         numExtensions = extensions.size();
         CW_ENGINE_INFO(numExtensions);
         uint32_t layerCount;
@@ -102,7 +103,7 @@ namespace Crowny
         instanceInfo.flags = 0;
         instanceInfo.pApplicationInfo = &appInfo;
         instanceInfo.enabledLayerCount = numLayers;
-        instanceInfo.ppEnabledExtensionNames = layers;
+        instanceInfo.ppEnabledLayerNames = layers.data();
         instanceInfo.enabledExtensionCount = numExtensions;
         instanceInfo.ppEnabledExtensionNames = extensions.data();
         
@@ -110,26 +111,27 @@ namespace Crowny
         VkResult result = vkCreateInstance(&instanceInfo, nullptr, &m_Instance);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         
-#if 0
+//#if CW_DEBUG
         VkDebugReportFlagsEXT debugFlags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
-        GET_INSTANCE_PROC_ADDR(m_Instance, CreateDebugReportCallbackEXT);
-        GET_INSTANCE_PROC_ADDR(m_Instance, DestroyDebugReportCallbackEXT);
+        GET_INSTANCE_PROC_ADDR(m_Instance, CreateDebugUtilsMessengerEXT);
+        GET_INSTANCE_PROC_ADDR(m_Instance, DestroyDebugUtilsMessengerEXT);
+               
+        VkDebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCI{};
+        debugUtilsMessengerCI.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+        debugUtilsMessengerCI.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+        debugUtilsMessengerCI.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+        debugUtilsMessengerCI.pfnUserCallback = &DebugCallback;
         
-        VkDebugReportCallbackCreateInfoEXT debugInfo;
-        debugInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        debugInfo.pNext = nullptr;
-        debugInfo.pfnCallback = (PFN_vkDebugReportCallbackEXT)DebugMsgCallback;
-        debugInfo.flags = debugFlags;
-        
-        result = vkCreateDebugReportCallbackEXT(m_Instance, &debugInfo, nullptr, &m_DebugReportCallback);
+        result = vkCreateDebugUtilsMessengerEXT(m_Instance, &debugUtilsMessengerCI, nullptr, &m_DebugUtilsMessenger);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-#endif
+//#endif
         
         // need molten vk
         result = vkEnumeratePhysicalDevices(m_Instance, &m_NumDevices, nullptr);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         std::vector<VkPhysicalDevice> physicalDevices(m_NumDevices);
         result = vkEnumeratePhysicalDevices(m_Instance, &m_NumDevices, physicalDevices.data());
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
         m_Devices.resize(m_NumDevices);
         for (uint32_t i = 0; i < m_NumDevices; i++)
             m_Devices[i] = CreateRef<VulkanDevice>(physicalDevices[i], i);
@@ -192,7 +194,6 @@ namespace Crowny
         surfaceCreateInfo.dpy = glfwGetX11Display();
         err = vkCreateWaylandSurfaceKHR(instance, &surfaceCreateInfo, nullptr, &surface);
         */
-
         VkPhysicalDevice device = m_PrimaryDevices[0]->GetPhysicalDevice();
         uint32_t queueCount;
         vkGetPhysicalDeviceQueueFamilyProperties(device, &queueCount, nullptr);
@@ -207,7 +208,6 @@ namespace Crowny
         
         uint32_t graphicsQueueNodeIdx = std::numeric_limits<uint32_t>::max();
         uint32_t presentQueueNodeIdx = std::numeric_limits<uint32_t>::max();
-        
         for (uint32_t i = 0; i < queueCount; i++)
         {
             if (queueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
@@ -237,23 +237,22 @@ namespace Crowny
         
         CW_ENGINE_ASSERT(graphicsQueueNodeIdx != std::numeric_limits<uint32_t>::max() && presentQueueNodeIdx != std::numeric_limits<uint32_t>::max());
         CW_ENGINE_ASSERT(graphicsQueueNodeIdx == presentQueueNodeIdx);
-        
         uint32_t width = Application::Get().GetWindow().GetWidth();
         uint32_t height = Application::Get().GetWindow().GetHeight();
         bool vsync = Application::Get().GetWindow().GetVSync();
         SurfaceFormat surface = GetPresentDevice()->GetSurfaceFormat(m_Surface);
+        VulkanRenderPasses::StartUp(); // has to be done before swapchain is created
         m_SwapChain = new VulkanSwapChain(m_Surface, width, height, vsync, surface.ColorFormat, surface.ColorSpace, true, surface.DepthFormat);
         m_CmdBuffer = std::static_pointer_cast<VulkanCmdBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
         m_CommandBuffer = m_CmdBuffer.get()->GetBuffer();
-        VulkanRenderPasses::Init();
     }
 
     void VulkanRendererAPI::SwapBuffers()
     {
+        VulkanSemaphore* semaphore[1] = { m_CommandBuffer->GetRenderCompleteSemaphore() };
         SubmitCommandBuffer(m_CmdBuffer);
         
-        VulkanQueue* queue = GetPresentDevice()->GetQueue(GRAPHICS_QUEUE, 0);
-        VulkanSemaphore* semaphore[1] = { m_CommandBuffer->GetRenderCompleteSemaphore() };
+        VulkanQueue* queue = GetPresentDevice()->GetQueue(GRAPHICS_QUEUE, 0); // present queue
         VkResult result = queue->Present(m_SwapChain, semaphore, 1);
         if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
             RebuildSwapChain();
@@ -342,7 +341,7 @@ namespace Crowny
     void VulkanRendererAPI::Shutdown()
     {
 #ifdef CW_DEBUG
-        vkDestroyDebugReportCallbackEXT(m_Instance, m_DebugReportCallback, nullptr);
+        vkDestroyDebugUtilsMessengerEXT(m_Instance, m_DebugUtilsMessenger, nullptr);
 #endif
         vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
         vkDestroyInstance(m_Instance, nullptr);
@@ -462,6 +461,7 @@ namespace Crowny
             deviceIdx++;
         }
     }
+    
     
     VulkanRendererAPI& gVulkanRendererAPI()
     {

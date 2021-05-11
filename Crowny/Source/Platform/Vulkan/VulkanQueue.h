@@ -17,6 +17,8 @@ namespace Crowny
         VulkanDevice& GetDevice() const { return m_Device; }
         GpuQueueType GetType() const { return m_Type; }
         bool IsExecuting() const;
+        
+        VulkanCommandBuffer* GetLastCommandBuffer() const { return m_LastCommandBuffer; }
 
         void Submit(VulkanCommandBuffer* buffer, VulkanSemaphore** waitSemaphores, uint32_t semaphoreLength);
         void SubmitQueued();

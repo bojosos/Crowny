@@ -116,16 +116,17 @@ namespace Crowny
 		ScriptRuntime::Init();*/
 
 		glm::vec3 verts[3] = { { 1, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } };
-		vbo = VertexBuffer::Create(verts, 3);
-    vbo->SetLayout({{ShaderDataType::Float3, "position"}});
-
-		vertex = Shader::Create("/Shaders/vert.spv");
-		fragment = Shader::Create("/Shaders/frag.spv");
+		//vbo = VertexBuffer::Create(verts, 3);
+    	//vbo->SetLayout();
+		CW_ENGINE_INFO(121);
+		vertex = Shader::Create("/Shaders/vert.spv", VERTEX_SHADER);
+		fragment = Shader::Create("/Shaders/frag.spv", FRAGMENT_SHADER);
 		PipelineStateDesc desc;
 		desc.FragmentShader = fragment;
 		desc.VertexShader = vertex;
 		
-		pipeline = GraphicsPipeline::Create(desc, vbo);
+		pipeline = GraphicsPipeline::Create(desc, {{ShaderDataType::Float3, "position"}});
+		CW_ENGINE_INFO(123);
 	}
 
 	void EditorLayer::CreateNewScene()
@@ -175,12 +176,21 @@ namespace Crowny
 
 	void EditorLayer::OnUpdate(Timestep ts)
 	{
+		CW_ENGINE_INFO("11111");
 		auto& rapi = RendererAPI::Get();
 		//rapi.SetVertexBuffers(0, &vbo, 1);
+		rapi.SetRenderTarget(nullptr);
+		CW_ENGINE_INFO("22222");
 		rapi.SetGraphicsPipeline(pipeline);
+		CW_ENGINE_INFO("33333");
+		rapi.SetViewport(0, 0, Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight());
+		CW_ENGINE_INFO("44444");
 		rapi.SetDrawMode(DrawMode::TRIANGLE_LIST);
+		CW_ENGINE_INFO("55555");
 		rapi.Draw(0, 3);
+		CW_ENGINE_INFO("66666");
 		rapi.SwapBuffers();
+		CW_ENGINE_INFO("77777");
 		/*
 		Ref<Scene> scene = SceneManager::GetActiveScene();
 		m_ViewportSize = m_ViewportPanel->GetViewportSize();

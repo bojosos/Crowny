@@ -41,7 +41,7 @@ namespace Crowny
         
         struct QueueInfo
         {
-            uint32_t FamilyIdx;
+            uint32_t FamilyIdx = -1;
             std::vector<VulkanQueue*> Queues;
         };
         QueueInfo m_QueueInfos[QUEUE_COUNT];
@@ -54,6 +54,5 @@ namespace Crowny
         VkPhysicalDeviceFeatures m_EnabledFeatures;
         VkPhysicalDeviceMemoryProperties m_MemoryProperties;
         std::vector<std::string> m_SupportedExtensions;
-        std::vector<VkQueueFamilyProperties> queueFamiliProperties;
     };
 }

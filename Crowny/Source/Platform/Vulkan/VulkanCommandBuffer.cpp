@@ -4,6 +4,8 @@
 #include "Platform/Vulkan/VulkanRendererAPI.h"
 #include "Platform/Vulkan/VulkanRenderPass.h"
 
+#include "Crowny/Common/Timer.h"
+
 namespace Crowny
 {
 
@@ -50,6 +52,7 @@ namespace Crowny
 
     VulkanCommandBufferPool::VulkanCommandBufferPool(VulkanDevice& device) : m_Device(device)
     {
+        CW_ENGINE_INFO("1");
         for (uint32_t i = 0; i < QUEUE_COUNT; i++)
         {
             uint32_t familyIdx = device.GetQueueFamily((GpuQueueType)i);
@@ -60,7 +63,7 @@ namespace Crowny
             poolCreateInfo.pNext = nullptr;
             poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
             poolCreateInfo.queueFamilyIndex = familyIdx;
-            
+            CW_ENGINE_INFO("2");
             m_Pools[familyIdx].QueueFamily = familyIdx;
             memset(m_Pools[familyIdx].Buffers, 0, sizeof(m_Pools[familyIdx].Buffers));
             //vkCreateCommandPool(device.GetLogicalDevice(), &poolCreateInfo, gVulkanAllocator, &m_Pools[familyIdx].Pool);
@@ -145,6 +148,7 @@ namespace Crowny
 
 		//result = vkCreateFence(m_Device.GetLogicalDevice(), &fenceCI, gVulkanAllocator, &m_Fence);
         result = vkCreateFence(m_Device.GetLogicalDevice(), &fenceCI, nullptr, &m_Fence);
+        vkResetFences(m_Device.GetLogicalDevice(), 1, &m_Fence);
 		CW_ENGINE_ASSERT(result == VK_SUCCESS);
         m_SwapChain = gVulkanRendererAPI().GetSwapChain();
         m_Semaphore = new VulkanSemaphore();
@@ -182,7 +186,7 @@ namespace Crowny
 
     bool VulkanCommandBuffer::BindGraphicsPipeline()
     {
-        VulkanRenderPass* renderPass = m_RenderTarget->GetRenderPass();
+        VulkanRenderPass* renderPass = m_RenderTarget->GetRenderPass();        
         VulkanPipeline* pipeline = m_GraphicsPipeline->GetPipeline(renderPass, m_DrawMode);
         // get pipeline using the vertex layout and renderpass here, make sure that the flags are correct... not just this
         vkCmdBindPipeline(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetHandle());
@@ -386,32 +390,41 @@ namespace Crowny
     
     void VulkanCommandBuffer::Submit()
     {
-        CW_ENGINE_ASSERT(vkWaitForFences(m_Device.GetLogicalDevice(), 1, &m_Fence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
-        CW_ENGINE_ASSERT(vkResetFences(m_Device.GetLogicalDevice(), 1, &m_Fence) == VK_SUCCESS);
+        if (IsInRenderPass())
+            EndRenderPass();
         
-        VkResult result = m_SwapChain->AcquireBackBuffer();
-        if ((result == VK_ERROR_OUT_OF_DATE_KHR) || (result == VK_SUBOPTIMAL_KHR)) {
-            //windowResize();
-            CW_ENGINE_ASSERT(true);
-        }
-		else
+        if (IsRecording())
+            End();
+        
+        if (IsReadyForSubmit())
+        {
+            VkResult result = vkResetFences(m_Device.GetLogicalDevice(), 1, &m_Fence);
             CW_ENGINE_ASSERT(result == VK_SUCCESS);
+         //   VkResult result = m_SwapChain->AcquireBackBuffer();
+           // if ((result == VK_ERROR_OUT_OF_DATE_KHR) || (result == VK_SUBOPTIMAL_KHR)) {
+             //   //windowResize();
+              //  CW_ENGINE_ASSERT(true);
+                //}
+            //else
+                //CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
-        const SwapChainSurface& surface = m_SwapChain->GetBackBuffer();
-        VulkanSemaphore* semaphore = { surface.Sync };
-        m_Queue->Submit(this, &semaphore, 1); // might not work
-        m_SwapChain->BackBufferWaitIssued();
-        
-        m_GraphicsPipeline = nullptr;
-        m_ComputePipeline = nullptr;
-        m_GraphicsPipelineRequiresBind = true;
-        m_ComputePipelineRequiresBind = true;
-        m_RenderTarget = nullptr;
-        //m_DescriptorSetsBindState = DescriptorSetBindFlag::Graphics | DescriptorSetBindFlag::Compute;
-        //m_IndexBuffer = nullptr;
-        m_VertexBuffers.clear();
-        //m_VertexInputsRequiresBind = true;
-        //m_ActiveSwapChains.clear();
+            const SwapChainSurface& surface = m_SwapChain->GetBackBuffer();
+            VulkanSemaphore* semaphore = { surface.Sync };
+            m_Queue->Submit(this, &semaphore, 1); // might not work
+            m_SwapChain->BackBufferWaitIssued();
+
+            m_GraphicsPipeline = nullptr;
+            m_ComputePipeline = nullptr;
+            m_GraphicsPipelineRequiresBind = true;
+            m_ComputePipelineRequiresBind = true;
+            m_RenderTarget = nullptr;
+            //m_DescriptorSetsBindState = DescriptorSetBindFlag::Graphics | DescriptorSetBindFlag::Compute;
+            //m_IndexBuffer = nullptr;
+            m_VertexBuffers.clear();
+            //m_VertexInputsRequiresBind = true;
+            //m_ActiveSwapChains.clear();
+           // CW_ENGINE_ASSERT(vkWaitForFences(m_Device.GetLogicalDevice(), 1, &m_Fence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
+        }
     }
     
     void VulkanCommandBuffer::SetRenderTarget(const Ref<Framebuffer>& framebuffer)
@@ -481,8 +494,8 @@ namespace Crowny
 
     void VulkanCommandBuffer::Draw(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount)
     {
-        if (!IsReadyForRender())
-            return;
+        //if (!IsReadyForRender())
+        //    return;
 
         BindUniforms();
         if (!IsInRenderPass())
@@ -550,9 +563,10 @@ namespace Crowny
         vkCmdDrawIndexed(m_CmdBuffer, idxCount, instanceCount, startIdx, vertexOffset, 0);
     }
 
-    void VulkanCommandBuffer::AllocateSemaphores(VkSemaphore* semaphores)
+    VkSemaphore VulkanCommandBuffer::AllocateSemaphores(VkSemaphore* semaphores)
     {
-        semaphores = &m_Semaphore->m_Semaphore;
+        //semaphores = &(m_Semaphore->m_Semaphore);
+        return m_Semaphore->GetHandle();
         /*
         if (m_IntraQueueSemaphore != nullptr)
             delete m_IntraQueueSemaphore;

@@ -56,12 +56,12 @@ namespace Crowny
 		return nullptr;
 	}
 
-	Ref<Shader> Shader::Create(const std::string& m_Filepath)
+	Ref<Shader> Shader::Create(const std::string& m_Filepath, ShaderType shaderType)
 	{
 		switch (Renderer::GetAPI())
 		{
 			case RendererAPI::API::OpenGL: return CreateRef<OpenGLShader>(m_Filepath);
-			case RendererAPI::API::Vulkan: return CreateRef<VulkanShader>(m_Filepath);
+			case RendererAPI::API::Vulkan: return CreateRef<VulkanShader>(m_Filepath, shaderType);
 			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); return nullptr;
 		}
 

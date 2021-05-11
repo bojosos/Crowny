@@ -10,11 +10,7 @@ namespace Crowny
         vkGetPhysicalDeviceProperties(physicalDevice, &m_DeviceProperties);
         vkGetPhysicalDeviceFeatures(physicalDevice, &m_DeviceFeatures);
         vkGetPhysicalDeviceMemoryProperties(physicalDevice, &m_MemoryProperties);
- 
-        m_CommandBufferPool = new VulkanCommandBufferPool(*this);
-        for (uint32_t i = 0; i < QUEUE_COUNT; i++)
-            m_QueueInfos[i].FamilyIdx = (uint32_t)-1;
-        
+         
         uint32_t numQueueFamilies;
         vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &numQueueFamilies, nullptr);
         std::vector<VkQueueFamilyProperties> queueFamilyProperties(numQueueFamilies);
@@ -42,6 +38,7 @@ namespace Crowny
             if ((queueFamilyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) && 
                 (queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0)
             {
+                CW_ENGINE_INFO("Compute queue");
                 populateQueueInfo(COMPUTE_QUEUE, i);
                 break;
             }
@@ -49,10 +46,11 @@ namespace Crowny
         
         for (uint32_t i = 0; i < (uint32_t)queueFamilyProperties.size(); i++)
         {
-            if ((queueFamiliProperties[i].queueFlags & VK_QUEUE_TRANSFER_BIT) &&
-                ((queueFamiliProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0) &&
-                ((queueFamiliProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) == 0))
+            if ((queueFamilyProperties[i].queueFlags & VK_QUEUE_TRANSFER_BIT) &&
+                ((queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0) &&
+                ((queueFamilyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) == 0))
             {
+                CW_ENGINE_INFO("Transfer queue");
                 populateQueueInfo(UPLOAD_QUEUE, i);
                 break;
             }
@@ -60,46 +58,26 @@ namespace Crowny
         
         for (uint32_t i = 0; i < (uint32_t)queueFamilyProperties.size(); i++)
         {
-            if (queueFamiliProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            if (queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
             {
+                CW_ENGINE_INFO("Graphics queue");
                 populateQueueInfo(GRAPHICS_QUEUE, i);
                 break;
             }
         }
-        const char* extensions[6];
-        uint32_t numExts;
-        extensions[numExts++] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-        extensions[numExts++] = VK_KHR_MAINTENANCE1_EXTENSION_NAME;
-        extensions[numExts++] = VK_KHR_MAINTENANCE2_EXTENSION_NAME;
-        extensions[numExts++] = VK_EXT_DEBUG_MARKER_EXTENSION_NAME;
-
-        uint32_t extCount = 0;
-        vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extCount, nullptr);
-        if (extCount > 0)
-        {
-            std::vector<VkExtensionProperties> exts(extCount);
-            if (vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extCount, &exts.front()) == VK_SUCCESS)
+        
+        for (uint32_t i = 0; i < (uint32_t)queueFamilyProperties.size(); i++)
+        {/*
+            if (queueFamilyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT)
             {
-                for (auto ext : exts)
-                {
-                    if (std::strcmp(ext.extensionName, VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME) == 0)
-                        extensions[numExts++] = VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME;
-                    else if (std::strcmp(ext.extensionName, VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME) == 0)
-                        extensions[numExts++] = VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME;
-                    #ifdef CW_DEBUG
-                        CW_ENGINE_INFO("{0} - {1}", ext.extensionName, ext.specVersion);
-                    #endif
-                }
-            }
+                populateQueueInfo(COMPUTE_QUEUE, i);
+            }*/
         }
-        
-#ifdef CW_DEBUG
-        for (uint32_t i = 0; i < numExts; i++)
-        {
-            CW_ENGINE_INFO(extensions[i]);
-        }
-#endif
-        
+
+        const char* extensions[1];
+        uint32_t numExts = 0;
+        extensions[0] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+                
         VkDeviceCreateInfo deviceInfo;
         deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         deviceInfo.pNext = nullptr;
@@ -107,24 +85,29 @@ namespace Crowny
         deviceInfo.queueCreateInfoCount = (uint32_t)queueCreateInfos.size();
         deviceInfo.pQueueCreateInfos = queueCreateInfos.data();
         deviceInfo.pEnabledFeatures = &m_DeviceFeatures;
-        deviceInfo.enabledExtensionCount = extCount;
+        deviceInfo.enabledExtensionCount = 1;
         deviceInfo.ppEnabledExtensionNames = extensions;
         deviceInfo.enabledLayerCount = 0;
         deviceInfo.ppEnabledLayerNames = nullptr;
         
         //VkResult result = vkCreateDevice(m_PhysicalDevice, &deviceInfo, gVulkanAllocator, &m_LogicalDevice);
-        VkResult result = vkCreateDevice(m_PhysicalDevice, &deviceInfo, nullptr, &m_LogicalDevice);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        
-        for (uint32_t i = 0; i < QUEUE_COUNT; i++)
+        CW_ENGINE_INFO("Before create");
+        if (m_DeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
         {
-            uint32_t numQueues = (uint32_t)m_QueueInfos[i].Queues.size();
-            for (uint32_t j = 0; j < numQueues; j++)
-            {
-                VkQueue queue;
-                vkGetDeviceQueue(m_LogicalDevice, m_QueueInfos[i].FamilyIdx, j, &queue);
-                m_QueueInfos[i].Queues[j] = new VulkanQueue(*this, queue, (GpuQueueType)i, j);
-            }
+            VkResult result = vkCreateDevice(m_PhysicalDevice, &deviceInfo, nullptr, &m_LogicalDevice);
+            CW_ENGINE_ASSERT(result == VK_SUCCESS);
+            CW_ENGINE_INFO(result);
+            for (uint32_t i = 0; i < QUEUE_COUNT; i++)
+                {
+                uint32_t numQueues = (uint32_t)m_QueueInfos[i].Queues.size();
+                for (uint32_t j = 0; j < numQueues; j++)
+                    {
+                    VkQueue queue;
+                    vkGetDeviceQueue(m_LogicalDevice, m_QueueInfos[i].FamilyIdx, j, &queue);
+                    m_QueueInfos[i].Queues[j] = new VulkanQueue(*this, queue, (GpuQueueType)i, j);
+                    }
+                }
+            m_CommandBufferPool = new VulkanCommandBufferPool(*this);
         }
         /*
         VmaAllocatorCreateInfo allocatorCI = {};
@@ -136,6 +119,7 @@ namespace Crowny
             allocatorCI.flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
         
         vmaCreateAllocator(&allocatorCI, &m_Allocator);*/
+        CW_ENGINE_INFO("Device init");
     }
     
     VulkanDevice::~VulkanDevice()

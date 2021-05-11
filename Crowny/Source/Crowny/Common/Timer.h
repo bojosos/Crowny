@@ -17,8 +17,8 @@ namespace Crowny
         {
             
             auto endTime = std::chrono::steady_clock::now();
-            auto elapsed = std::chrono::time_point_cast<std::chrono::milliseconds>(endTime).time_since_epoch()
-                - std::chrono::time_point_cast<std::chrono::milliseconds>(m_StartTime).time_since_epoch();
+            auto elapsed = std::chrono::time_point_cast<std::chrono::microseconds>(endTime).time_since_epoch()
+                - std::chrono::time_point_cast<std::chrono::microseconds>(m_StartTime).time_since_epoch();
             return elapsed.count();
         }
         

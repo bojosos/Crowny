@@ -9,7 +9,7 @@ END_MONO_INCLUDE
 
 namespace Crowny
 {
-    
+#undef Bool
     enum class MonoPrimitiveType
     {
         Bool,

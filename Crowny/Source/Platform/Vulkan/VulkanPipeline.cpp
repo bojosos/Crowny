@@ -38,22 +38,21 @@ namespace Crowny
         return true;
     }
 
-    VulkanGraphicsPipeline::VulkanGraphicsPipeline(const PipelineStateDesc& desc, VulkanVertexBuffer* vertexBuffer)
+    VulkanGraphicsPipeline::VulkanGraphicsPipeline(const PipelineStateDesc& desc, const BufferLayout& layout)
     {
         m_Data = desc;
         m_Device = gVulkanRendererAPI().GetPresentDevice()->GetLogicalDevice();
-        std::vector<VkDynamicState> dynamicStates =
+        static std::vector<VkDynamicState> dynamicStates =
         {
             VK_DYNAMIC_STATE_VIEWPORT,
             VK_DYNAMIC_STATE_SCISSOR
         };
         
-        VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo{};
-        dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-        dynamicStateCreateInfo.pNext = nullptr;
-        dynamicStateCreateInfo.flags = 0;
-        dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
-        dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+        m_DynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        m_DynamicStateCreateInfo.pNext = nullptr;
+        m_DynamicStateCreateInfo.flags = 0;
+        m_DynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
+        m_DynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
         
         std::pair<VkShaderStageFlagBits, Shader*> stages[] =
         {
@@ -71,8 +70,8 @@ namespace Crowny
             VulkanShader* shader = static_cast<VulkanShader*>(stages[i].second);
             if (shader == nullptr)
                 continue;
-            
-            VkPipelineShaderStageCreateInfo& stageCreateInfo = m_ShaderStageInfos[i];
+            /*
+            VkPipelineShaderStageCreateInfo& stageCreateInfo = m_ShaderStageInfos[outputIdx];
             stageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
             stageCreateInfo.pNext = nullptr;
             stageCreateInfo.flags = 0;
@@ -81,7 +80,8 @@ namespace Crowny
             //stageCreateInfo.pName = shader->GetEntryPoint().c_str(); //TODO: entry point of shaders when compiling!
             stageCreateInfo.pName = "main";
             stageCreateInfo.pSpecializationInfo = nullptr;
-            
+            */
+            m_ShaderStageInfos[outputIdx] = shader->GetShaderStage();
             outputIdx++;
         }
         
@@ -96,9 +96,12 @@ namespace Crowny
         m_RasterizationInfo.flags = 0;
         m_RasterizationInfo.lineWidth = 1.0f;
         m_RasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL;
-        m_RasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+        m_RasterizationInfo.cullMode = VK_CULL_MODE_NONE;
         m_RasterizationInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         m_RasterizationInfo.lineWidth = 1.0f;
+        m_RasterizationInfo.depthBiasEnable = VK_FALSE;
+        m_RasterizationInfo.depthClampEnable = VK_FALSE;
+        m_RasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
         
 		m_BlendAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 		m_BlendAttachmentState.blendEnable = VK_FALSE;
@@ -110,6 +113,10 @@ namespace Crowny
         m_ColorBlendStateInfo.logicOpEnable = VK_FALSE;
         m_ColorBlendStateInfo.attachmentCount = 1;
         m_ColorBlendStateInfo.pAttachments = &m_BlendAttachmentState;
+        m_ColorBlendStateInfo.blendConstants[0] = 0.0f;
+        m_ColorBlendStateInfo.blendConstants[1] = 0.0f;
+        m_ColorBlendStateInfo.blendConstants[2] = 0.0f;
+        m_ColorBlendStateInfo.blendConstants[3] = 0.0f;
         
         m_DepthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         m_DepthStencilInfo.pNext = nullptr;
@@ -142,15 +149,15 @@ namespace Crowny
         pipelineLayoutInfo.setLayoutCount = 0;
         pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-        CW_ENGINE_ASSERT(vkCreatePipelineLayout(m_Device, &pipelineLayoutInfo, nullptr, &m_PipelineLayout) == VK_SUCCESS);
+        VkResult result = vkCreatePipelineLayout(m_Device, &pipelineLayoutInfo, nullptr, &m_PipelineLayout);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
-        BufferLayout layout = vertexBuffer->GetLayout();
-        VkVertexInputBindingDescription vertexInput{};
+        static VkVertexInputBindingDescription vertexInput{};
         vertexInput.binding = 0;
         vertexInput.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
         vertexInput.stride = layout.GetStride();
         
-        std::vector<VkVertexInputAttributeDescription> attrs(layout.GetElements().size());
+        static std::vector<VkVertexInputAttributeDescription> attrs(layout.GetElements().size());
 
         // loc, binding, format, offset
 		for (int idx = 0; idx < layout.GetElements().size(); idx++)
@@ -175,20 +182,25 @@ namespace Crowny
 					CW_ENGINE_ASSERT(false, "Unknown ShaderDataType!");
 			}
 		}
+/*
+        m_VertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        m_VertexInputStateCreateInfo.vertexBindingDescriptionCount = 1;
+        m_VertexInputStateCreateInfo.flags = 0;
+        m_VertexInputStateCreateInfo.pNext = nullptr;
+        m_VertexInputStateCreateInfo.pVertexBindingDescriptions = &vertexInput;
+        m_VertexInputStateCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
+        m_VertexInputStateCreateInfo.pVertexAttributeDescriptions = attrs.data();*/
 
-        VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo{};
-        vertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        vertexInputStateCreateInfo.vertexBindingDescriptionCount = 1;
-        vertexInputStateCreateInfo.pVertexBindingDescriptions = &vertexInput;
-        vertexInputStateCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
-        vertexInputStateCreateInfo.pVertexAttributeDescriptions = attrs.data();
-        
+        m_VertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        m_VertexInputStateCreateInfo.vertexBindingDescriptionCount = 0;
+        m_VertexInputStateCreateInfo.vertexAttributeDescriptionCount = 0;
+  
         m_PipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
         m_PipelineInfo.pNext = nullptr;
         m_PipelineInfo.flags = 0;
         m_PipelineInfo.stageCount = outputIdx;
         m_PipelineInfo.pStages = m_ShaderStageInfos;
-        m_PipelineInfo.pVertexInputState = &vertexInputStateCreateInfo; // runtime
+        m_PipelineInfo.pVertexInputState = &m_VertexInputStateCreateInfo; // runtime
         m_PipelineInfo.layout = m_PipelineLayout; // runtime, //TODO: fix this, for uniforms
         m_PipelineInfo.pInputAssemblyState = &m_InputAssemblyInfo;
         m_PipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -198,7 +210,7 @@ namespace Crowny
         m_PipelineInfo.pRasterizationState = &m_RasterizationInfo;
         m_PipelineInfo.pMultisampleState = &m_MultiSampleInfo;
         m_PipelineInfo.subpass = 0;
-        m_PipelineInfo.pDynamicState = &dynamicStateCreateInfo;
+        m_PipelineInfo.pDynamicState = &m_DynamicStateCreateInfo;
     }
 
     VulkanGraphicsPipeline::~VulkanGraphicsPipeline()
@@ -225,9 +237,7 @@ namespace Crowny
         m_ColorBlendStateInfo.attachmentCount = renderpass->GetNumColorAttachments();
 
         m_PipelineInfo.renderPass = renderpass->GetHandle();
-        // TODO: Vertex input, depth stencil, color blending, stages
-        m_PipelineInfo.layout = m_PipelineLayout;
-        //m_PipelineInfo.pVertexInputState
+
         VkPipeline pipeline;
         VkResult result = vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &m_PipelineInfo, nullptr, &pipeline);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);

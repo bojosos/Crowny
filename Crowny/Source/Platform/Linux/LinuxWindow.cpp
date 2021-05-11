@@ -50,12 +50,14 @@ namespace Crowny
 			glfwSetErrorCallback(GLFWErrorCallback);
 		}
 
+		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+		glfwWindowHint(GLFW_SAMPLES, 8);
+		
 		m_Window = glfwCreateWindow((int)props.Width, (int)props.Height, m_Data.Title.c_str(), nullptr, nullptr);
 #ifdef CW_DEBUG
 		if(Renderer::GetAPI() == RendererAPI::API::OpenGL)
 			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE); // No idea what this does...
 #endif
-		glfwWindowHint(GLFW_SAMPLES, 8);
 		s_GLFWWindowCount++;
 
 		//m_Context = GraphicsContext::Create(m_Window);

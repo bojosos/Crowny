@@ -16,7 +16,7 @@ namespace Crowny
 		static int32_t Int(int32_t min, int32_t max);
 
 	private:
-		virtual void OnInitialize() override;
+		virtual void OnStartUp() override;
 
 	private:
 		std::default_random_engine m_RandomEngine;

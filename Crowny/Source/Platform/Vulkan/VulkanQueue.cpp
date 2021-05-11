@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
 #include "Platform/Vulkan/VulkanQueue.h"
+#include "Crowny/Common/Timer.h"
 
 namespace Crowny
 {
@@ -15,21 +16,22 @@ namespace Crowny
 
     void VulkanQueue::Submit(VulkanCommandBuffer* cmdBuffer, VulkanSemaphore** waitSemaphores, uint32_t semaphoreCount)
     {
-        VkSemaphore signalSemaphores[1];
-        cmdBuffer->AllocateSemaphores(signalSemaphores);
+        VkSemaphore signalSemaphore = cmdBuffer->GetRenderCompleteSemaphore()->GetHandle();
+        //signalSemaphore = cmdBuffer->AllocateSemaphores(nullptr);
         VkCommandBuffer vkCmdBuffer = cmdBuffer->GetHandle();
 
         m_SemaphoresTemp.resize(semaphoreCount); // leak?
         PrepareSemaphores(waitSemaphores, m_SemaphoresTemp.data(), semaphoreCount);
         
         VkSubmitInfo submitInfo;
-        GetSubmitInfo(&vkCmdBuffer, signalSemaphores, 1, m_SemaphoresTemp.data(), semaphoreCount, submitInfo);
-        
+        GetSubmitInfo(&vkCmdBuffer, &signalSemaphore, 1, m_SemaphoresTemp.data(), semaphoreCount, submitInfo);
         VkResult result = vkQueueSubmit(m_Queue, 1, &submitInfo, cmdBuffer->GetFence());
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        CW_ENGINE_INFO("preesnt");
         cmdBuffer->SetIsSubmitted();
         m_ActiveSubmissions.push_back(SubmitInfo(cmdBuffer, m_NextSubmitIdx++, semaphoreCount, 1));
         m_ActiveBuffers.push(cmdBuffer);
+        m_LastCommandBuffer = cmdBuffer;
     }
 
     bool VulkanQueue::IsExecuting() const
@@ -52,7 +54,7 @@ namespace Crowny
         
         if (numWaitSemaphores > 0)
         {
-            submitInfo.pWaitSemaphores = waitSemaphores; // last present/sync with other cb complete
+            submitInfo.pWaitSemaphores = waitSemaphores; // acquire/sync with other cb
             submitInfo.pWaitDstStageMask = m_SubmitDstWaitMask;
         }
         else
@@ -90,7 +92,6 @@ namespace Crowny
             presentInfo.pWaitSemaphores = nullptr;
             presentInfo.waitSemaphoreCount = 0;
         }
-
         VkResult result = vkQueuePresentKHR(m_Queue, &presentInfo);
         CW_ENGINE_ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR); // maybe shouldn't do this here
 

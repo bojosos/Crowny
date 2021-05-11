@@ -67,7 +67,7 @@ namespace Crowny
 #endif
 			CW_ENGINE_WARN("File {0} does not exist", virtualPath);
 			return false;
-}
+		}
 
 		std::string remaining = virtualPath.substr(virtualDir.size() + 1, virtualPath.size() - virtualDir.size());
 		for (const std::string& phPath : m_MountedDirectories[virtualDir])

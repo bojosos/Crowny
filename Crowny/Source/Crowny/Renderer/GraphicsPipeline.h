@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Crowny/Renderer/Shader.h"
-#include "Crowny/Renderer/VertexBuffer.h"
+#include "Crowny/Renderer/Buffer.h"
 
 namespace Crowny
 {
@@ -24,7 +24,7 @@ namespace Crowny
     public:
         virtual ~GraphicsPipeline() = default;
 
-        static Ref<GraphicsPipeline> Create(const PipelineStateDesc& props, const Ref<VertexBuffer>& vbo);
+        static Ref<GraphicsPipeline> Create(const PipelineStateDesc& props, const BufferLayout& layout);
         
     protected:
         PipelineStateDesc m_Data;

@@ -10,6 +10,8 @@
 #include "Crowny/Renderer/IDBufferRenderer.h"
 #include "Crowny/Scene/SceneManager.h"
 
+#include "Platform/Vulkan/VulkanRendererAPI.h"
+
 #include "Crowny/Scripting/CWMonoRuntime.h"
 #include "Crowny/Scripting/Bindings/ScriptRandom.h"
 #include "Crowny/Scripting/Bindings/ScriptInput.h"
@@ -35,7 +37,8 @@ namespace Crowny
 		VirtualFileSystem::Get()->Mount("Assemblies", "Resources/Assemblies");
 		VirtualFileSystem::Get()->Mount("Models", "Resources/Models");
 
-		Random::Init(); // wat
+		Random::StartUp(); // wat
+		RendererAPI::StartUp<VulkanRendererAPI>();
 		Renderer::Init();/*
 		ForwardPlusRenderer::Init();
 		Renderer2D::Init();

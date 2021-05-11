@@ -17,7 +17,9 @@ namespace Crowny
     
     VulkanSwapChain::VulkanSwapChain(VkSurfaceKHR surface, uint32_t width, uint32_t height, bool vsync, VkFormat colorFormat,VkColorSpaceKHR colorSpace, bool createDepth, VkFormat depthFormat, VulkanSwapChain* oldChain)
     {
-        VkPhysicalDevice physicalDevice;
+        auto& device = gVulkanRendererAPI().GetPresentDevice();
+        m_Device = device->GetLogicalDevice();
+        VkPhysicalDevice physicalDevice = device->GetPhysicalDevice();
         VkSurfaceCapabilitiesKHR surfCaps;
         VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfCaps);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
@@ -118,13 +120,16 @@ namespace Crowny
         swapchainCreateInfo.oldSwapchain = oldChain ? oldChain->GetHandle() : VK_NULL_HANDLE;
         swapchainCreateInfo.clipped = VK_TRUE;
         swapchainCreateInfo.compositeAlpha = compositeAlpha;
-
+/*
         if (surfCaps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
             swapchainCreateInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         
         if (surfCaps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT)
             swapchainCreateInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-
+*/
+        result = vkCreateSwapchainKHR(m_Device, &swapchainCreateInfo, nullptr, &m_SwapChain);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        
         uint32_t imageCount;
         result = vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &imageCount, nullptr);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
@@ -180,6 +185,7 @@ namespace Crowny
             //desc.Layers = 1;
             desc.Color[0].Image = m_Surfaces[i].Image;
             desc.Depth.Image = m_DepthStencilImage;
+            desc.Color[0].View = m_Surfaces[i].ImageView;
             m_Surfaces[i].Framebuffer = new VulkanFramebuffer(renderPass, desc);
         }
     }

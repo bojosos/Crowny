@@ -25,14 +25,16 @@ namespace Crowny
 		return TextureFormat::NONE;
 	}
 	
-	VulkanFramebuffer::VulkanFramebuffer(VulkanRenderPass* renderPass, const VulkanFramebufferDesc& desc)
+	VulkanFramebuffer::VulkanFramebuffer(VulkanRenderPass* renderPass, const VulkanFramebufferDesc& desc) : m_RenderPass(renderPass)
 	{
+		m_Width = desc.Width;
+		m_Height = desc.Height;
 		m_Device = gVulkanRendererAPI().GetPresentDevice()->GetLogicalDevice();
 		VkImageView attachmentViews[8 + 1];
 		VkFramebufferCreateInfo framebufferCI;
 		uint32_t idx = 0;
 		for (uint32_t i = 0; i < 8; i++)
-			{
+		{
 			if (desc.Color[i].Image == VK_NULL_HANDLE)
 				continue;
 			m_ColorAttachments[idx].Image = desc.Color[i].Image;
@@ -40,6 +42,7 @@ namespace Crowny
 			m_ColorAttachments[idx].Index = i;
 			
 			//TODO: image view
+			attachmentViews[idx] = desc.Color[i].View;
 			idx++;
 		}
 
@@ -50,7 +53,7 @@ namespace Crowny
 			m_DepthStencilAttachment.Index = 0;
 			
 			//TODO: image view
-			
+			attachmentViews[idx] = desc.Depth.View;
 			idx++;
 		}
 		

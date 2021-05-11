@@ -5,7 +5,7 @@
 
 #include "Platform/Vulkan/VulkanDevice.h"
 #include "Platform/Vulkan/VulkanRenderPass.h"
-#include "Platform/Vulkan/VulkanVertexBuffer.h"
+#include "Crowny/Renderer/Buffer.h"
 #include "Platform/Vulkan/VulkanPipeline.h"
 #include "Platform/Vulkan/VulkanShader.h"
 
@@ -29,7 +29,7 @@ namespace Crowny
     class VulkanGraphicsPipeline : public GraphicsPipeline
     {
     public:
-        VulkanGraphicsPipeline(const PipelineStateDesc& desc, VulkanVertexBuffer* vertexBuffer);
+        VulkanGraphicsPipeline(const PipelineStateDesc& desc, const BufferLayout& layout);
         ~VulkanGraphicsPipeline();
         
         VulkanPipeline* GetPipeline(VulkanRenderPass* renderPass, DrawMode drawMode);
@@ -40,14 +40,16 @@ namespace Crowny
         VkDevice m_Device;
 
         VkPipelineShaderStageCreateInfo m_ShaderStageInfos[5];
-        VkPipelineRasterizationStateCreateInfo m_RasterizationInfo;
-        VkPipelineColorBlendAttachmentState m_BlendAttachmentState;
-        VkPipelineColorBlendStateCreateInfo m_ColorBlendStateInfo;
-        VkPipelineInputAssemblyStateCreateInfo m_InputAssemblyInfo;
-        VkPipelineViewportStateCreateInfo m_ViewportInfo;
-        VkPipelineMultisampleStateCreateInfo m_MultiSampleInfo;
-        VkPipelineDepthStencilStateCreateInfo m_DepthStencilInfo;
-        VkGraphicsPipelineCreateInfo m_PipelineInfo;
+        VkPipelineRasterizationStateCreateInfo m_RasterizationInfo = {};
+        VkPipelineColorBlendAttachmentState m_BlendAttachmentState = {};
+        VkPipelineColorBlendStateCreateInfo m_ColorBlendStateInfo = {};
+        VkPipelineInputAssemblyStateCreateInfo m_InputAssemblyInfo = {};
+        VkPipelineViewportStateCreateInfo m_ViewportInfo = {};
+        VkPipelineMultisampleStateCreateInfo m_MultiSampleInfo = {};
+        VkPipelineDepthStencilStateCreateInfo m_DepthStencilInfo = {};
+        VkGraphicsPipelineCreateInfo m_PipelineInfo = {};
+        VkPipelineDynamicStateCreateInfo m_DynamicStateCreateInfo = {};
+        VkPipelineVertexInputStateCreateInfo m_VertexInputStateCreateInfo = {};
 
     public:
         struct GpuPipelineKey
