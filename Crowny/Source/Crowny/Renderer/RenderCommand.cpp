@@ -4,5 +4,5 @@
 
 namespace Crowny
 {
-	Scope<RendererAPI> RenderCommand::s_RendererAPI = RendererAPI::Create();
+//	Scope<RendererAPI> RenderCommand::s_RendererAPI = RendererAPI::Create();
 }

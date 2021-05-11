@@ -37,18 +37,18 @@ namespace Crowny
             else
                 colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
             
-            VkAttachmentReference ref{};
+            VkAttachmentReference& ref = colorRefs[idx];
             ref.attachment = i;
             ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             idx++;
         }
         
         m_HasDepth = desc.Depth.Enabled;
-        m_NumColorAttachments = 8;
+        m_NumColorAttachments = idx;
         
         if (m_HasDepth)
         {
-            VkAttachmentDescription colorAttachment = m_Attachments[idx];
+            VkAttachmentDescription& colorAttachment = m_Attachments[idx];
             colorAttachment.flags = 0;
             colorAttachment.format = desc.Depth.Format;
             colorAttachment.samples = m_SampleFlags;
@@ -59,7 +59,7 @@ namespace Crowny
             colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             colorAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             
-            VkAttachmentReference ref{};
+            VkAttachmentReference& ref = depthRef;
             ref.attachment = idx;
             ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             idx++;
@@ -89,6 +89,7 @@ namespace Crowny
         
         VkSubpassDependency deps[2];
         // read?
+        /*
         deps[0].srcSubpass = VK_SUBPASS_EXTERNAL;
         deps[0].dstSubpass = 0;
         deps[0].srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
@@ -106,8 +107,25 @@ namespace Crowny
         deps[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | 
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT; // flush these from cache?
         deps[1].dstAccessMask = 0;
-        deps[1].dependencyFlags = 0;
+        deps[1].dependencyFlags = 0;*/
         // read?
+        
+        deps[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+        deps[0].dstSubpass = 0;
+        deps[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        deps[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        deps[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+        deps[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        deps[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+        deps[1].srcSubpass = 0;
+        deps[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+        deps[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        deps[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        deps[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        deps[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+        deps[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+        
         VkRenderPassCreateInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
         renderPassInfo.pNext = nullptr;
@@ -119,7 +137,8 @@ namespace Crowny
         renderPassInfo.dependencyCount = 2;
         renderPassInfo.pDependencies = deps;
 
-        CW_ENGINE_ASSERT(vkCreateRenderPass(m_Device, &renderPassInfo, nullptr, &m_RenderPass) == VK_SUCCESS);
+        VkResult result = vkCreateRenderPass(m_Device, &renderPassInfo, nullptr, &m_RenderPass);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
     }
 
     VulkanRenderPass::~VulkanRenderPass()

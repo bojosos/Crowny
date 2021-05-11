@@ -8,7 +8,7 @@ namespace Crowny
     public:
         static T& Get()
         {
-            if (!IsInitialized())
+            if (!IsStartedUp())
                 CW_ENGINE_ASSERT(false);
             if (IsDestroyed())
                 CW_ENGINE_ASSERT(false);
@@ -18,7 +18,7 @@ namespace Crowny
         
         static T* GetPtr()
         {
-            if (!IsInitialized())
+            if (!IsStartedUp())
                 CW_ENGINE_ASSERT(false);
             if (IsDestroyed())
                 CW_ENGINE_ASSERT(false);
@@ -27,19 +27,35 @@ namespace Crowny
         }
         
         template<class... Args>
-        static void Init(Args&&... args)
+        static void StartUp(Args&&... args)
         {
-            if (IsInitialized())
+            if (IsStartedUp())
                 CW_ENGINE_ASSERT(false);
             InstanceInternal() = new T(std::forward<Args>(args)...);
             
-            IsInitialized() = true;
-            ((Module*)InstanceInternal())->OnInitialize();
+            IsStartedUp() = true;
+            ((Module*)InstanceInternal())->OnStartUp();
+        }
+
+        template<class SubType, class... Args>
+        static void StartUp(Args&&...args)
+        {
+            static_assert(std::is_base_of<T, SubType>::value, "Provided type is not derived from the initialization type.");
+            
+            if (IsStartedUp())
+                CW_ENGINE_ASSERT(false);
+
+            InstanceInternal() = new SubType(std::forward<Args>(args)...);
+            IsStartedUp() = true;
+
+            ((Module*)InstanceInternal())->OnStartUp();
         }
         
         static void Shutdown()
         {
-            if (!IsInitialized())
+            CW_ENGINE_INFO("Here");
+            
+            if (!IsStartedUp())
                 CW_ENGINE_ASSERT(false);
             if (IsDestroyed())
                 CW_ENGINE_ASSERT(false);
@@ -58,7 +74,7 @@ namespace Crowny
         Module& operator=(Module&&) = delete;
         Module& operator=(const Module&) = delete;
         
-        virtual void OnInitialize() { }
+        virtual void OnStartUp() { }
         virtual void OnShutdown() { }
         
         static bool& IsDestroyed()
@@ -67,10 +83,10 @@ namespace Crowny
             return s_Destroyed;
         }
         
-        static bool& IsInitialized()
+        static bool& IsStartedUp()
         {
-            static bool s_Initialized = false;
-            return s_Initialized;
+            static bool s_StartedUp = false;
+            return s_StartedUp;
         }
         
     private:
