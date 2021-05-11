@@ -31,14 +31,14 @@ namespace Crowny
             moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
             moduleCreateInfo.codeSize = size;
             moduleCreateInfo.pCode = (uint32_t*)data; // ???? hmmm
-            vkCreateShaderModule(m_Device, &moduleCreateInfo, nullptr, &m_ShaderStage.module);
+            vkCreateShaderModule(m_Device, &moduleCreateInfo, gVulkanAllocator, &m_ShaderStage.module);
             delete[] data;
         }
     }
     
     VulkanShader::~VulkanShader()
     {
-        vkDestroyShaderModule(m_Device, m_ShaderStage.module, nullptr);
+        vkDestroyShaderModule(m_Device, m_ShaderStage.module, gVulkanAllocator);
     }
     
 }

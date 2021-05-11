@@ -6,21 +6,22 @@ namespace Crowny
 {
     
     VulkanVertexBuffer::VulkanVertexBuffer(void* data, uint32_t size, const VertexBufferProperties& props)
-    {
-        CW_ENGINE_INFO("test");
-        /*
+    {/*
         m_Device = gVulkanRendererAPI().GetPresentDevice()->GetLogicalDevice();
         VkBufferCreateInfo bufferCreateInfo{};
         bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
         bufferCreateInfo.size = size;
+        bufferCreateInfo.flags = 0;
         bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         VkResult result = vkCreateBuffer(m_Device, &bufferCreateInfo, nullptr, &m_Buffer);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
         VkMemoryRequirements memReqs;
         VkMemoryAllocateInfo memAlloc{};
         memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         vkGetBufferMemoryRequirements(m_Device, m_Buffer, &memReqs);
+
         memAlloc.allocationSize = memReqs.size;
         memAlloc.memoryTypeIndex = m_Device.GetMemoryType(memReqs.memoryTypeBits, memoryPropertyFlags);
         result = vkAllocateMemory(m_Device, &memAlloc, nullptr, &m_Memory);
@@ -35,6 +36,11 @@ namespace Crowny
         }
         result = vkBindBufferMemory(m_Device, m_Buffer, m_Memory, 0);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);*/
+    }
+
+    VulkanVertexBuffer::~VulkanVertexBuffer()
+    {
+        vkDestroyBuffer(m_Device, m_Buffer, gVulkanAllocator);
     }
     
     void* VulkanVertexBuffer::GetPointer(uint32_t size) const

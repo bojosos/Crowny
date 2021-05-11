@@ -127,7 +127,7 @@ namespace Crowny
         if (surfCaps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT)
             swapchainCreateInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 */
-        result = vkCreateSwapchainKHR(m_Device, &swapchainCreateInfo, nullptr, &m_SwapChain);
+        result = vkCreateSwapchainKHR(m_Device, &swapchainCreateInfo, gVulkanAllocator, &m_SwapChain);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         
         uint32_t imageCount;
@@ -154,7 +154,7 @@ namespace Crowny
             viewCreateInfo.subresourceRange.baseArrayLayer = 0;
             viewCreateInfo.subresourceRange.layerCount = 1;
             viewCreateInfo.image = images[i];
-            result = vkCreateImageView(m_Device, &viewCreateInfo, nullptr, &m_Surfaces[i].ImageView);
+            result = vkCreateImageView(m_Device, &viewCreateInfo, gVulkanAllocator, &m_Surfaces[i].ImageView);
             CW_ENGINE_ASSERT(result == VK_SUCCESS);
             
             m_Surfaces[i].Image = images[i];
@@ -203,7 +203,7 @@ namespace Crowny
                 //delete surface.Image;
                 surface.Image = nullptr;
             }
-            vkDestroySwapchainKHR(m_Device, m_SwapChain, nullptr);
+            vkDestroySwapchainKHR(m_Device, m_SwapChain, gVulkanAllocator);
         }/*
         if (m_DepthStencilImage != nullptr)
         {

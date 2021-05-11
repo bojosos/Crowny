@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
 #include "Platform/Vulkan/VulkanDevice.h"
+#include "Platform/Vulkan/VulkanRendererAPI.h"
 
 namespace Crowny
 {
@@ -38,7 +39,6 @@ namespace Crowny
             if ((queueFamilyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) && 
                 (queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0)
             {
-                CW_ENGINE_INFO("Compute queue");
                 populateQueueInfo(COMPUTE_QUEUE, i);
                 break;
             }
@@ -50,7 +50,6 @@ namespace Crowny
                 ((queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0) &&
                 ((queueFamilyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) == 0))
             {
-                CW_ENGINE_INFO("Transfer queue");
                 populateQueueInfo(UPLOAD_QUEUE, i);
                 break;
             }
@@ -60,7 +59,6 @@ namespace Crowny
         {
             if (queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
             {
-                CW_ENGINE_INFO("Graphics queue");
                 populateQueueInfo(GRAPHICS_QUEUE, i);
                 break;
             }
@@ -90,13 +88,10 @@ namespace Crowny
         deviceInfo.enabledLayerCount = 0;
         deviceInfo.ppEnabledLayerNames = nullptr;
         
-        //VkResult result = vkCreateDevice(m_PhysicalDevice, &deviceInfo, gVulkanAllocator, &m_LogicalDevice);
-        CW_ENGINE_INFO("Before create");
         if (m_DeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
         {
-            VkResult result = vkCreateDevice(m_PhysicalDevice, &deviceInfo, nullptr, &m_LogicalDevice);
+            VkResult result = vkCreateDevice(m_PhysicalDevice, &deviceInfo, gVulkanAllocator, &m_LogicalDevice);
             CW_ENGINE_ASSERT(result == VK_SUCCESS);
-            CW_ENGINE_INFO(result);
             for (uint32_t i = 0; i < QUEUE_COUNT; i++)
                 {
                 uint32_t numQueues = (uint32_t)m_QueueInfos[i].Queues.size();
@@ -108,18 +103,17 @@ namespace Crowny
                     }
                 }
             m_CommandBufferPool = new VulkanCommandBufferPool(*this);
-        }
-        /*
-        VmaAllocatorCreateInfo allocatorCI = {};
-        allocatorCI.physicalDevice = m_PhysicalDevice;
-        allocatorCI.device = m_LogicalDevice;
-        allocatorCI.pAllocationCallbacks = gVulkanAllocator;
         
-        if (dedicatedAllocExt && getMemReqExt)
+            VmaAllocatorCreateInfo allocatorCI = {};
+            allocatorCI.physicalDevice = m_PhysicalDevice;
+            allocatorCI.device = m_LogicalDevice;
+            allocatorCI.pAllocationCallbacks = gVulkanAllocator;
             allocatorCI.flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
-        
-        vmaCreateAllocator(&allocatorCI, &m_Allocator);*/
-        CW_ENGINE_INFO("Device init");
+            allocatorCI.instance = gVulkanRendererAPI().GetInstance();
+            allocatorCI.vulkanApiVersion = VK_API_VERSION_1_1;
+            
+            vmaCreateAllocator(&allocatorCI, &m_Allocator);
+        }
     }
     
     VulkanDevice::~VulkanDevice()
@@ -137,7 +131,7 @@ namespace Crowny
             }
         }
         delete m_CommandBufferPool;
-        vkDestroyDevice(m_LogicalDevice, nullptr);
+        vkDestroyDevice(m_LogicalDevice, gVulkanAllocator);
     }
 
     void VulkanDevice::Refresh(bool wait)
@@ -212,31 +206,50 @@ namespace Crowny
         Refresh(true);
     }
 
-    /*
-    uint32_t VulkanDevice::GetMemoryType(uint32_t typeBits, VkMemoryPropertyFlags properties, VkBool32* found = nullptr)
+    VmaAllocation VulkanDevice::AllocateMemory(VkImage image, VkMemoryPropertyFlags flags)
     {
-        for (uint32_t i = 0; m_MemoryProperties.memoryTypeCount; i++)
+        VmaAllocationCreateInfo allocCreateInfo{};
+        allocCreateInfo.requiredFlags = flags;
+        
+        VmaAllocationInfo allocInfo;
+        VmaAllocation memory;
+        VkResult result = vmaAllocateMemoryForImage(m_Allocator, image, &allocCreateInfo, &memory, &allocInfo);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+
+        result = vkBindImageMemory(m_LogicalDevice, image, allocInfo.deviceMemory, allocInfo.offset);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        return memory;
+    }
+
+    VmaAllocation VulkanDevice::AllocateMemory(VkBuffer buffer, VkMemoryPropertyFlags flags)
+    {
+        VmaAllocationCreateInfo allocCreateInfo{};
+        allocCreateInfo.requiredFlags = flags;
+        
+        VmaAllocationInfo allocInfo;
+        VmaAllocation memory;
+        VkResult result = vmaAllocateMemoryForBuffer(m_Allocator, buffer, &allocCreateInfo, &memory, &allocInfo);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+
+        result = vkBindBufferMemory(m_LogicalDevice, buffer, allocInfo.deviceMemory, allocInfo.offset);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        return memory;
+    }
+
+    void VulkanDevice::FreeMemory(VmaAllocation allocation)
+    {
+        vmaFreeMemory(m_Allocator, allocation);
+    }
+    
+    uint32_t VulkanDevice::FindMemoryType(uint32_t requirement, VkMemoryPropertyFlags flags)
+    {
+        for (uint32_t i = 0; i < m_MemoryProperties.memoryTypeCount; i++)
         {
-            if ((typeBits & 1) == 1)
-            {
-                if ((memoryProperies.memoryTypes[i].propertyFlags & propertoes) == properties)
-                {
-                    if (memTypeFound)
-                        *memTypeFound = true;
+            if (requirement & (1 << i))
+                if ((m_MemoryProperties.memoryTypes[i].propertyFlags & flags) == flags)
                     return i;
-                }
-            }
-            typeBits >>= 1;
         }
-
-        if (memTypeFound)
-        {
-            *memTypeFound = false;
-            return 0;
-        }
-        else
-            CW_ENGINE_ASSERT(false);
-
-    }*/
+        return -1;
+    }
 
 }

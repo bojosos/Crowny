@@ -67,13 +67,13 @@ namespace Crowny
 		framebufferCI.layers = 1;
 		
 		framebufferCI.renderPass = m_RenderPass->GetHandle();
-		VkResult result = vkCreateFramebuffer(m_Device, &framebufferCI, nullptr, &m_Framebuffer);
+		VkResult result = vkCreateFramebuffer(m_Device, &framebufferCI, gVulkanAllocator, &m_Framebuffer);
 		CW_ENGINE_ASSERT(result == VK_SUCCESS);
 	}
 
 	VulkanFramebuffer::~VulkanFramebuffer()
 	{
-		vkDestroyFramebuffer(m_Device, m_Framebuffer, nullptr);
+		vkDestroyFramebuffer(m_Device, m_Framebuffer, gVulkanAllocator);
 	}
 /*
 	VulkanRenderTexture::VulkanRenderTexture(const FramebufferProperties& desc) : m_Properties(*desc)
