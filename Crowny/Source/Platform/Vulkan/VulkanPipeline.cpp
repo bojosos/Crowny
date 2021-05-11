@@ -14,7 +14,7 @@ namespace Crowny
 
     VulkanPipeline::~VulkanPipeline()
     {
-        vkDestroyPipeline(m_Device, m_Pipeline, nullptr);
+        vkDestroyPipeline(m_Device, m_Pipeline, gVulkanAllocator);
     }
 
     VulkanGraphicsPipeline::GpuPipelineKey::GpuPipelineKey(uint32_t id, DrawMode drawMode)
@@ -149,7 +149,7 @@ namespace Crowny
         pipelineLayoutInfo.setLayoutCount = 0;
         pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-        VkResult result = vkCreatePipelineLayout(m_Device, &pipelineLayoutInfo, nullptr, &m_PipelineLayout);
+        VkResult result = vkCreatePipelineLayout(m_Device, &pipelineLayoutInfo, gVulkanAllocator, &m_PipelineLayout);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
         static VkVertexInputBindingDescription vertexInput{};
@@ -239,7 +239,7 @@ namespace Crowny
         m_PipelineInfo.renderPass = renderpass->GetHandle();
 
         VkPipeline pipeline;
-        VkResult result = vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &m_PipelineInfo, nullptr, &pipeline);
+        VkResult result = vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &m_PipelineInfo, gVulkanAllocator, &pipeline);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         
         return new VulkanPipeline(m_Device, pipeline);
