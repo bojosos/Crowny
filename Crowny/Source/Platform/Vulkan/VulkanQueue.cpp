@@ -17,7 +17,6 @@ namespace Crowny
     void VulkanQueue::Submit(VulkanCommandBuffer* cmdBuffer, VulkanSemaphore** waitSemaphores, uint32_t semaphoreCount)
     {
         VkSemaphore signalSemaphore = cmdBuffer->GetRenderCompleteSemaphore()->GetHandle();
-        //signalSemaphore = cmdBuffer->AllocateSemaphores(nullptr);
         VkCommandBuffer vkCmdBuffer = cmdBuffer->GetHandle();
 
         m_SemaphoresTemp.resize(semaphoreCount); // leak?
@@ -27,7 +26,6 @@ namespace Crowny
         GetSubmitInfo(&vkCmdBuffer, &signalSemaphore, 1, m_SemaphoresTemp.data(), semaphoreCount, submitInfo);
         VkResult result = vkQueueSubmit(m_Queue, 1, &submitInfo, cmdBuffer->GetFence());
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        CW_ENGINE_INFO("preesnt");
         cmdBuffer->SetIsSubmitted();
         m_ActiveSubmissions.push_back(SubmitInfo(cmdBuffer, m_NextSubmitIdx++, semaphoreCount, 1));
         m_ActiveBuffers.push(cmdBuffer);
@@ -94,8 +92,6 @@ namespace Crowny
         }
         VkResult result = vkQueuePresentKHR(m_Queue, &presentInfo);
         CW_ENGINE_ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR); // maybe shouldn't do this here
-
-        //m_ActiveSubmissions.push_back(SubmitInfo(nullptr, m_NextSubmitIdx++, numSemaphores, 0));
         return result;
     }
 

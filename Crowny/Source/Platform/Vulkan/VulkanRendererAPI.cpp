@@ -8,9 +8,12 @@
 #include "Crowny/Common/Timer.h"
 
 #include <GLFW/glfw3.h>
+#define VMA_IMPLEMENTATION
+#include <vulkan/vk_mem_alloc.h>
 
 namespace Crowny
 {
+    VkAllocationCallbacks* gVulkanAllocator = nullptr;
     
     PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = nullptr;
     PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT = nullptr;
@@ -58,25 +61,22 @@ namespace Crowny
 
         appInfo.apiVersion = VK_API_VERSION_1_1;
 
-//#ifdef CW_DEBUG
+#ifdef CW_DEBUG
         std::vector<const char*> layers = { "VK_LAYER_KHRONOS_validation", "VK_LAYER_NV_optimus" };
         uint32_t numExtensions;
         const char** glfwExts = glfwGetRequiredInstanceExtensions(&numExtensions);
         std::vector<const char*> extensions(glfwExts, glfwExts + numExtensions);
         
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-        for (auto ext : extensions)
-            CW_ENGINE_INFO(ext);
         uint32_t numLayers = (uint32_t)layers.size();
-//#else
-//        std::vector<const char*> layers;
- //       uint32_t numExtensions;
- //       const char** glfwExts = glfwGetRequiredInstanceExtensions(&numExtensions);
-  //      std::vector<const char*> extensions(glfwExts, glfwExts + numExtensions);
-   //     uint32_t numLayers = (uint32_t)layers.size();
-//#endif
+#else
+       std::vector<const char*> layers;
+       uint32_t numExtensions;
+       const char** glfwExts = glfwGetRequiredInstanceExtensions(&numExtensions);
+       std::vector<const char*> extensions(glfwExts, glfwExts + numExtensions);
+       uint32_t numLayers = (uint32_t)layers.size();
+#endif
         numExtensions = extensions.size();
-        CW_ENGINE_INFO(numExtensions);
         uint32_t layerCount;
         vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
         std::vector<VkLayerProperties> availableLayers(layerCount);
@@ -107,11 +107,10 @@ namespace Crowny
         instanceInfo.enabledExtensionCount = numExtensions;
         instanceInfo.ppEnabledExtensionNames = extensions.data();
         
-        //VkResult result = vkCreateInstance(&instanceInfo, gVulkanAllocator, &m_Instance);
-        VkResult result = vkCreateInstance(&instanceInfo, nullptr, &m_Instance);
+        VkResult result = vkCreateInstance(&instanceInfo, gVulkanAllocator, &m_Instance);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         
-//#if CW_DEBUG
+#if CW_DEBUG
         VkDebugReportFlagsEXT debugFlags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
         GET_INSTANCE_PROC_ADDR(m_Instance, CreateDebugUtilsMessengerEXT);
         GET_INSTANCE_PROC_ADDR(m_Instance, DestroyDebugUtilsMessengerEXT);
@@ -122,9 +121,9 @@ namespace Crowny
         debugUtilsMessengerCI.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
         debugUtilsMessengerCI.pfnUserCallback = &DebugCallback;
         
-        result = vkCreateDebugUtilsMessengerEXT(m_Instance, &debugUtilsMessengerCI, nullptr, &m_DebugUtilsMessenger);
+        result = vkCreateDebugUtilsMessengerEXT(m_Instance, &debugUtilsMessengerCI, gVulkanAllocator, &m_DebugUtilsMessenger);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-//#endif
+#endif
         
         // need molten vk
         result = vkEnumeratePhysicalDevices(m_Instance, &m_NumDevices, nullptr);
@@ -182,7 +181,7 @@ namespace Crowny
         GET_DEVICE_PROC_ADDR(presentDevice, QueuePresentKHR);
         
         InitCaps();
-        result = glfwCreateWindowSurface(m_Instance, (GLFWwindow*)Application::Get().GetWindow().GetNativeWindow(), nullptr, &m_Surface);
+        result = glfwCreateWindowSurface(m_Instance, (GLFWwindow*)Application::Get().GetWindow().GetNativeWindow(), gVulkanAllocator, &m_Surface);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         /*
         VkXlibSurfaceCreateInfoKHR surfaceCreateInfo = {};
@@ -341,10 +340,10 @@ namespace Crowny
     void VulkanRendererAPI::Shutdown()
     {
 #ifdef CW_DEBUG
-        vkDestroyDebugUtilsMessengerEXT(m_Instance, m_DebugUtilsMessenger, nullptr);
+        vkDestroyDebugUtilsMessengerEXT(m_Instance, m_DebugUtilsMessenger, gVulkanAllocator);
 #endif
-        vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
-        vkDestroyInstance(m_Instance, nullptr);
+        vkDestroySurfaceKHR(m_Instance, m_Surface, gVulkanAllocator);
+        vkDestroyInstance(m_Instance, gVulkanAllocator);
     }
     
     void VulkanRendererAPI::InitCaps()
@@ -381,7 +380,6 @@ namespace Crowny
                 default:
                     caps.DeviceVendor = GPU_UNKNOWN; break;
             }
-            CW_ENGINE_INFO(RenderCapabilities::VendorToString(caps.DeviceVendor));
             
             caps.RenderAPIName = "Vulkan";
             

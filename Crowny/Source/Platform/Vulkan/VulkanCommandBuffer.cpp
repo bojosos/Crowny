@@ -38,21 +38,18 @@ namespace Crowny
         semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
         semaphoreCreateInfo.pNext = nullptr;
         semaphoreCreateInfo.flags = 0;
-        //VkResult result = vkCreateSemaphore(device, &semaphoreCreateInfo, gVulkanAllocator, &m_Semaphore);
-        VkResult result = vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &m_Semaphore);
+        VkResult result = vkCreateSemaphore(device, &semaphoreCreateInfo, gVulkanAllocator, &m_Semaphore);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
     }
 
     VulkanSemaphore::~VulkanSemaphore()
     {
         VkDevice device = gVulkanRendererAPI().GetPresentDevice()->GetLogicalDevice();
-        //vkDestroySemaphore(device, m_Semaphore, gVulkanAllocator);
-        vkDestroySemaphore(device, m_Semaphore, nullptr);
+        vkDestroySemaphore(device, m_Semaphore, gVulkanAllocator);
     }
 
     VulkanCommandBufferPool::VulkanCommandBufferPool(VulkanDevice& device) : m_Device(device)
     {
-        CW_ENGINE_INFO("1");
         for (uint32_t i = 0; i < QUEUE_COUNT; i++)
         {
             uint32_t familyIdx = device.GetQueueFamily((GpuQueueType)i);
@@ -63,11 +60,9 @@ namespace Crowny
             poolCreateInfo.pNext = nullptr;
             poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
             poolCreateInfo.queueFamilyIndex = familyIdx;
-            CW_ENGINE_INFO("2");
             m_Pools[familyIdx].QueueFamily = familyIdx;
             memset(m_Pools[familyIdx].Buffers, 0, sizeof(m_Pools[familyIdx].Buffers));
-            //vkCreateCommandPool(device.GetLogicalDevice(), &poolCreateInfo, gVulkanAllocator, &m_Pools[familyIdx].Pool);
-            vkCreateCommandPool(device.GetLogicalDevice(), &poolCreateInfo, nullptr, &m_Pools[familyIdx].Pool);
+            vkCreateCommandPool(device.GetLogicalDevice(), &poolCreateInfo, gVulkanAllocator, &m_Pools[familyIdx].Pool);
         }
     }
 
@@ -83,8 +78,7 @@ namespace Crowny
                     break;
                 delete buffer;
             }
-            //vkDestroyCommandPool(m_Device.GetLogicalDevice(), info.Pool, gVulkanAllocator);
-            vkDestroyCommandPool(m_Device.GetLogicalDevice(), info.Pool, nullptr);
+            vkDestroyCommandPool(m_Device.GetLogicalDevice(), info.Pool, gVulkanAllocator);
         }
     }
     
@@ -146,8 +140,7 @@ namespace Crowny
 		fenceCI.pNext = nullptr;
 		fenceCI.flags = 0;
 
-		//result = vkCreateFence(m_Device.GetLogicalDevice(), &fenceCI, gVulkanAllocator, &m_Fence);
-        result = vkCreateFence(m_Device.GetLogicalDevice(), &fenceCI, nullptr, &m_Fence);
+		result = vkCreateFence(m_Device.GetLogicalDevice(), &fenceCI, gVulkanAllocator, &m_Fence);
         vkResetFences(m_Device.GetLogicalDevice(), 1, &m_Fence);
 		CW_ENGINE_ASSERT(result == VK_SUCCESS);
         m_SwapChain = gVulkanRendererAPI().GetSwapChain();
@@ -168,17 +161,8 @@ namespace Crowny
                 CW_ENGINE_WARN("Command buffer freed, fence wait expired!");
             Reset();
         }
-        //if (m_IntraQueueSemaphore != nullptr)
-          //  delete m_IntraQueueSemaphore;
-/*
-        for (uint32_t i = 0; i < MAX_VULKAN_CB_DEPENDENCIES; i++)
-        {
-            if (m_InterQueueSemaphores[i] != nullptr)
-                delete m_InterQueueSemaphores[i];
-        }
-*/
-        //vkDestroyFence(device, m_Fence, gVulkanAllocator);
-        vkDestroyFence(device, m_Fence, nullptr);
+        
+        vkDestroyFence(device, m_Fence, gVulkanAllocator);
         vkFreeCommandBuffers(device, m_Pool, 1, &m_CmdBuffer);
         delete m_Semaphore;
       //  delete m_DesciptorSetsTemp;
@@ -336,6 +320,8 @@ namespace Crowny
         CW_ENGINE_ASSERT(m_RenderTarget != nullptr, "Render target is nullptr");
         
         // TODO: layout transitions, barriers
+        VkClearValue clearValue;
+        clearValue.color = { 0.0f, 0.0f, 0.0f, 1.0f };
 
         VkRenderPassBeginInfo renderPassBeginInfo;
         renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -347,6 +333,7 @@ namespace Crowny
         renderPassBeginInfo.renderArea.extent.width = m_RenderTarget->GetWidth();
         renderPassBeginInfo.renderArea.extent.height = m_RenderTarget->GetHeight();
         renderPassBeginInfo.clearValueCount = 1;
+        renderPassBeginInfo.pClearValues = &clearValue;
         
         vkCmdBeginRenderPass(m_CmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
         m_State = State::RecordingRenderPass;
@@ -400,13 +387,6 @@ namespace Crowny
         {
             VkResult result = vkResetFences(m_Device.GetLogicalDevice(), 1, &m_Fence);
             CW_ENGINE_ASSERT(result == VK_SUCCESS);
-         //   VkResult result = m_SwapChain->AcquireBackBuffer();
-           // if ((result == VK_ERROR_OUT_OF_DATE_KHR) || (result == VK_SUBOPTIMAL_KHR)) {
-             //   //windowResize();
-              //  CW_ENGINE_ASSERT(true);
-                //}
-            //else
-                //CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
             const SwapChainSurface& surface = m_SwapChain->GetBackBuffer();
             VulkanSemaphore* semaphore = { surface.Sync };
@@ -423,7 +403,6 @@ namespace Crowny
             m_VertexBuffers.clear();
             //m_VertexInputsRequiresBind = true;
             //m_ActiveSwapChains.clear();
-           // CW_ENGINE_ASSERT(vkWaitForFences(m_Device.GetLogicalDevice(), 1, &m_Fence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
         }
     }
     
@@ -494,8 +473,8 @@ namespace Crowny
 
     void VulkanCommandBuffer::Draw(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount)
     {
-        //if (!IsReadyForRender())
-        //    return;
+        if (!IsReadyForRender())
+            return;
 
         BindUniforms();
         if (!IsInRenderPass())
