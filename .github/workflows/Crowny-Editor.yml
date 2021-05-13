@@ -1,7 +1,6 @@
 name: Crowny-Editor
 
-on:
-  [push, pull_request]
+on: [push, pull_request]
 
 jobs:
   build:
@@ -11,12 +10,14 @@ jobs:
         with:
           submodules: true
       - name: Download deps
-        run:   |
-             sudo apt update
-             sudo apt-get -y install xorg-dev libgl1-mesa-dev libx11-dev libxcursor-dev uuid-dev clang-10
+        run: |
+          sudo apt update
+          sudo apt-get -y install xorg-dev libgl1-mesa-dev libx11-dev libxcursor-dev uuid-dev clang-10
+          sudo apt-get install libvulkan-dev
+          sudo apt-get install vulkan-validationlayers-dev spirv-tools
       - name: Generate projects
-        run:   |
-             chmod +x 3rdparty/premake/premake5
-             bash Scripts/generate.sh
+        run: |
+          chmod +x 3rdparty/premake/premake5
+          bash Scripts/generate.sh
       - name: Build
         run: make Crowny-Editor -j2 config=release_linux64 CXX=clang++-10
