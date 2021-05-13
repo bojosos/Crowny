@@ -39,6 +39,7 @@ namespace Crowny
 	}
 
 	static Ref<VertexBuffer> vbo;
+	static Ref<IndexBuffer> ibo;
 	static Ref<GraphicsPipeline> pipeline;
 	static Ref<Framebuffer> framebuffer;
 	static Ref<Shader> vertex, fragment;
@@ -117,10 +118,11 @@ namespace Crowny
 
 		glm::vec3 verts[3] = { { 0.0f, -0.5f, 0.0f }, { 0.5f, 0.5f, 0.0f }, { -0.5f, 0.5f, 0.0f } };
 		vbo = VertexBuffer::Create(verts, 3 * 3 * 4);
-		void* dest = vbo->GetPointer(3 * 3 * 4);
-		memcpy(dest, verts, 3 * 3 * 4);
-		vbo->FreePointer();
     	vbo->SetLayout({{ShaderDataType::Float3, "position"}});
+		
+		uint16_t indices[3] = { 0 ,1, 2 };
+		ibo = IndexBuffer::Create(indices, 3);
+
 		vertex = Shader::Create("/Shaders/vert.spv", VERTEX_SHADER);
 		fragment = Shader::Create("/Shaders/frag.spv", FRAGMENT_SHADER);
 		PipelineStateDesc desc;
@@ -182,6 +184,7 @@ namespace Crowny
 		rapi.SetRenderTarget(nullptr);
 		rapi.SetGraphicsPipeline(pipeline);
 		rapi.SetVertexBuffers(0, &vbo, 1);
+		rapi.SetIndexBuffer(ibo);
 		rapi.SetViewport(0, 0, Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight());
 		rapi.SetDrawMode(DrawMode::TRIANGLE_LIST);
 		rapi.Draw(0, 3);
