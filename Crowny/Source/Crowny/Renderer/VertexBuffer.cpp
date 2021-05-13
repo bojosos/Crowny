@@ -13,7 +13,7 @@ namespace Crowny
 		switch (Renderer::GetAPI())
 		{
 			case RendererAPI::API::OpenGL: return CreateRef<OpenGLVertexBuffer>(vertices, size, props);
-			//case RendererAPI::API::Vulkan: return CreateRef<VulkanVertexBuffer>(vertices, size, props);
+			case RendererAPI::API::Vulkan: return CreateRef<VulkanVertexBuffer>(vertices, size, props);
 			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); return nullptr;
 		}
 		return nullptr;

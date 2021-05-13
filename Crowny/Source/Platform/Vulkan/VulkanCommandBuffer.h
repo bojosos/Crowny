@@ -7,13 +7,13 @@
 #include "Platform/Vulkan/VulkanFramebuffer.h"
 #include "Platform/Vulkan/VulkanVertexBuffer.h"
 #include "Platform/Vulkan/VulkanIndexBuffer.h"
+
+#include "Crowny/Common/Module.h"
 #include "Crowny/Renderer/VertexBuffer.h"
 #include "Crowny/Renderer/CommandBuffer.h"
 
 namespace Crowny
 {
-
-    #define MAX_VULKAN_CB_PER_QUEUE_FAMILY 256
 
     class VulkanCmdBuffer;
     class VulkanCommandBufer;
@@ -29,6 +29,49 @@ namespace Crowny
         friend class VulkanCommandBuffer;
     private:
         VkSemaphore m_Semaphore;        
+    };
+    
+    class VulkanTransferManager;
+    
+    class VulkanTransferBuffer
+    {
+    public:
+        VulkanTransferBuffer() = default;
+        VulkanTransferBuffer(VulkanDevice* device, GpuQueueType type, uint32_t queueIdx);
+        ~VulkanTransferBuffer();
+
+        void AppendMask(uint32_t syncMask) { m_SyncMask |= syncMask; }
+        void ClearMask() { m_SyncMask = 0; }
+
+        void MemoryBarrier(VkBuffer buffer, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage);
+
+        void Flush(bool wait);
+        VulkanCommandBuffer* GetCB() const { return m_CommandBuffer; }
+
+    private:
+        friend class VulkanTransferManager;
+
+        void Allocate();
+
+        VulkanDevice* m_Device = nullptr;
+        GpuQueueType m_Type = GRAPHICS_QUEUE;
+        uint32_t m_QueueIdx = 0;
+        VulkanQueue* m_Queue = nullptr;
+        uint32_t m_QueueMask = 0;
+        VulkanCommandBuffer* m_CommandBuffer = nullptr;
+        uint32_t m_SyncMask = 0;
+    };
+    
+    class VulkanTransferManager : public Module<VulkanTransferManager>
+    {
+    public:
+        VulkanTransferManager();
+        ~VulkanTransferManager() = default;
+        VulkanTransferBuffer* GetTransferBuffer(GpuQueueType type, uint32_t queueIdx);
+        void FlushTransferBuffers();
+
+    private:
+        VulkanTransferBuffer m_TransferBuffers[QUEUE_COUNT][MAX_QUEUES_PER_TYPE];
     };
 
     class VulkanCommandBufferPool
@@ -74,7 +117,7 @@ namespace Crowny
         void EndRenderPass();
         void End();
         uint32_t GetQueueFamily() const { return m_QueueFamily; }
-        void Submit();
+        void Submit(bool transfer = false);
         VkCommandBuffer GetHandle() const { return m_CmdBuffer; }
         VkFence GetFence() const { return m_Fence; }
         void SetIsSubmitted() { m_State = State::Submitted; }
@@ -147,6 +190,7 @@ namespace Crowny
         VulkanDevice& m_Device;
         State m_State = State::Ready;
         friend class VulkanCmdBuffer;
+        
     };
 
     class VulkanCmdBuffer : public CommandBuffer

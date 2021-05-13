@@ -19,8 +19,8 @@ namespace Crowny
 		virtual void SetLayout(const BufferLayout& layout) override { m_Layout = layout; }
 		virtual void SetData(void* verts, uint32_t size) override;
 
-		virtual void* GetPointer(uint32_t size) const override;
-		virtual void FreePointer() const override;
+		virtual void* GetPointer(uint32_t size) override;
+		virtual void FreePointer() override;
 	private:
 		VertexBufferProperties m_Properties;
 		uint32_t m_RendererID, m_Size;

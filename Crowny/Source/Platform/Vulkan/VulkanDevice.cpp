@@ -17,7 +17,7 @@ namespace Crowny
         std::vector<VkQueueFamilyProperties> queueFamilyProperties(numQueueFamilies);
         vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &numQueueFamilies, queueFamilyProperties.data());
         
-        const float defaultQueuePrios[] = { 0.0f };
+        const float defaultQueuePrios[MAX_QUEUES_PER_TYPE] = { 0.0f };
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
         
         auto populateQueueInfo = [&](GpuQueueType type, uint32_t familyIdx)
@@ -28,7 +28,7 @@ namespace Crowny
             createInfo.pNext = nullptr;
             createInfo.flags = 0;
             createInfo.queueFamilyIndex = familyIdx;
-            createInfo.queueCount = std::min(queueFamilyProperties[familyIdx].queueCount, (uint32_t)8); // TODO: do not hardcode max gpu queues
+            createInfo.queueCount = std::min(queueFamilyProperties[familyIdx].queueCount, (uint32_t)MAX_QUEUES_PER_TYPE);
             createInfo.pQueuePriorities = defaultQueuePrios;
             m_QueueInfos[type].FamilyIdx = familyIdx;
             m_QueueInfos[type].Queues.resize(createInfo.queueCount, nullptr);
@@ -93,15 +93,15 @@ namespace Crowny
             VkResult result = vkCreateDevice(m_PhysicalDevice, &deviceInfo, gVulkanAllocator, &m_LogicalDevice);
             CW_ENGINE_ASSERT(result == VK_SUCCESS);
             for (uint32_t i = 0; i < QUEUE_COUNT; i++)
-                {
+            {
                 uint32_t numQueues = (uint32_t)m_QueueInfos[i].Queues.size();
                 for (uint32_t j = 0; j < numQueues; j++)
-                    {
+                {
                     VkQueue queue;
                     vkGetDeviceQueue(m_LogicalDevice, m_QueueInfos[i].FamilyIdx, j, &queue);
                     m_QueueInfos[i].Queues[j] = new VulkanQueue(*this, queue, (GpuQueueType)i, j);
-                    }
                 }
+            }
             m_CommandBufferPool = new VulkanCommandBufferPool(*this);
         
             VmaAllocatorCreateInfo allocatorCI = {};
@@ -132,6 +132,22 @@ namespace Crowny
         }
         delete m_CommandBufferPool;
         vkDestroyDevice(m_LogicalDevice, gVulkanAllocator);
+    }
+    
+    uint32_t VulkanDevice::GetQueueMask(GpuQueueType type, uint32_t queueIdx) const
+    {
+        uint32_t numQueues = GetNumQueues(type);
+        if (numQueues == 0)
+            return 0;
+
+        uint32_t idMask = 0;
+        uint32_t curIdx = queueIdx % numQueues;
+        while (curIdx < MAX_QUEUES_PER_TYPE)
+        {
+          //  idMask |= CommandSyncMask::GetGlobalQueueMask(type, curIdx);
+            curIdx += numQueues;
+        }
+        return idMask;
     }
 
     void VulkanDevice::Refresh(bool wait)
@@ -234,6 +250,15 @@ namespace Crowny
         result = vkBindBufferMemory(m_LogicalDevice, buffer, allocInfo.deviceMemory, allocInfo.offset);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         return memory;
+    }
+
+    void VulkanDevice::GetAllocationInfo(VmaAllocation allocation, VkDeviceMemory& memory, VkDeviceSize& offset)
+    {
+        VmaAllocationInfo allocInfo;
+        vmaGetAllocationInfo(m_Allocator, allocation, &allocInfo);
+
+        memory = allocInfo.deviceMemory;
+        offset = allocInfo.offset;
     }
 
     void VulkanDevice::FreeMemory(VmaAllocation allocation)

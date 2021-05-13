@@ -241,6 +241,7 @@ namespace Crowny
         bool vsync = Application::Get().GetWindow().GetVSync();
         SurfaceFormat surface = GetPresentDevice()->GetSurfaceFormat(m_Surface);
         VulkanRenderPasses::StartUp(); // has to be done before swapchain is created
+        VulkanTransferManager::StartUp();
         m_SwapChain = new VulkanSwapChain(m_Surface, width, height, vsync, surface.ColorFormat, surface.ColorSpace, true, surface.DepthFormat);
         m_CmdBuffer = std::static_pointer_cast<VulkanCmdBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
         m_CommandBuffer = m_CmdBuffer.get()->GetBuffer();
@@ -280,6 +281,7 @@ namespace Crowny
 
     void VulkanRendererAPI::SubmitCommandBuffer(const Ref<CommandBuffer>& commandBuffer)
     {
+        VulkanTransferManager::Get().FlushTransferBuffers();
         VulkanCommandBuffer* cmdBuffer = std::static_pointer_cast<VulkanCmdBuffer>(commandBuffer).get()->GetBuffer();
         if (cmdBuffer == nullptr)
             m_CommandBuffer->Submit();
