@@ -65,7 +65,7 @@ namespace Crowny
 	void Renderer2D::Init()
 	{
 		s_Data.VertexArray = VertexArray::Create();
-		s_Data.VertexBuffer = VertexBuffer::Create(nullptr, RENDERER_BUFFER_SIZE, { BufferUsage::DYNAMIC_DRAW });
+		s_Data.VertexBuffer = VertexBuffer::Create(RENDERER_BUFFER_SIZE, { BufferUsage::DYNAMIC_DRAW });
 		BufferLayout layout = { { ShaderDataType::Float4, "a_Coordinates" },
 								{ ShaderDataType::Float2, "a_Uvs" },
 								{ ShaderDataType::Float , "a_Tid" },
@@ -133,7 +133,7 @@ namespace Crowny
 		s_Data.Shader->Bind();
 		s_Data.Shader->SetUniformMat4("cw_ProjectionMatrix", camera.GetProjection());
 		s_Data.Shader->SetUniformMat4("cw_ViewMatrix", viewMatrix);
-		s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->GetPointer(RENDERER_MAX_SPRITES * 4);
+		s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->Map(0, RENDERER_MAX_SPRITES * 4, GpuLockOptions::WRITE_DISCARD);
 	}
 
 	float Renderer2D::FindTexture(const Ref<Texture2D>& texture)
@@ -157,7 +157,7 @@ namespace Crowny
 			if (s_Data.TextureIndex == 32) // TODO: not 32 please
 			{
 				End();
-				s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->GetPointer(RENDERER_MAX_SPRITES * 4); // TODO: Begin or semething instead of this 
+				s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->Map(0, RENDERER_MAX_SPRITES * 4, GpuLockOptions::WRITE_DISCARD); // TODO: Begin or semething instead of this 
 			}
 			s_Data.TextureSlots[++s_Data.TextureIndex] = texture;
 			ts = (float)s_Data.TextureIndex;
@@ -266,7 +266,7 @@ namespace Crowny
 
 	void Renderer2D::End()
 	{
-		s_Data.VertexBuffer->FreePointer();
+		s_Data.VertexBuffer->Unmap();
 		Flush();
 		s_Data.IndexCount = 0;
 		s_Data.TextureIndex = 0;

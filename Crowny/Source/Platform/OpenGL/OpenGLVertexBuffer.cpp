@@ -1,48 +1,37 @@
 #include "cwpch.h"
 
 #include "Platform/OpenGL/OpenGLVertexBuffer.h"
+#include "Platform/OpenGL/OpenGLUtils.h"
 
 #include <glad/glad.h>
 
 namespace Crowny
 {
-
-	static uint32_t BufferUsageToOpenGLBufferUsage(BufferUsage usage)
+	
+	OpenGLVertexBuffer::OpenGLVertexBuffer(uint32_t size, BufferUsage) : m_Size(size)
 	{
-		switch (usage)
-		{
-		case(BufferUsage::STATIC_DRAW): return GL_STATIC_DRAW;
-		case(BufferUsage::DYNAMIC_DRAW): return GL_DYNAMIC_DRAW;
-		}
-		CW_ENGINE_ASSERT(false, "Drawing mode not support");
-		return GL_NONE;
+#ifndef MC_WEB
+		glGenBuffers(1, &m_RendererID);
+#else
+		glCreateBuffers(1, &m_RendererID);
+#endif	
 	}
-
-	OpenGLVertexBuffer::OpenGLVertexBuffer(void* data, uint32_t size, const VertexBufferProperties& properties) : m_Size(size), m_Properties(properties)
+	
+	OpenGLVertexBuffer::OpenGLVertexBuffer(void* data, uint32_t size, BufferUsage usage) : m_Size(size)
 	{
 #ifndef MC_WEB
 		glGenBuffers(1, &m_RendererID);
 		glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);
-		glBufferData(GL_ARRAY_BUFFER, size, data, BufferUsageToOpenGLBufferUsage(m_Properties.Usage));
+		glBufferData(GL_ARRAY_BUFFER, size, data, OpenGLUtils::BufferUsageToOpenGLBufferUsage(usage));
 #else
 		glCreateBuffers(1, &m_RendererID);
-		glNamedBufferData(m_RendererID, size, data, BufferUsageToOpenGLBufferUsage(m_Properties.Usage));
+		glNamedBufferData(m_RendererID, size, data, OpenGLUtils::BufferUsageToOpenGLBufferUsage(usage));
 #endif	
 	}
 
 	OpenGLVertexBuffer::~OpenGLVertexBuffer()
 	{
 		glDeleteBuffers(1, &m_RendererID);
-	}
-
-	void OpenGLVertexBuffer::SetData(void* verts, uint32_t size)
-	{
-#ifdef MC_WEB
-		glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);
-		glBufferData(GL_ARRAY_BUFFER, size, verts, BufferUsageToOpenGLBufferUsage(m_Properties.Usage));
-#else
-		glNamedBufferData(m_RendererID, size, verts, BufferUsageToOpenGLBufferUsage(m_Properties.Usage));
-#endif
 	}
 
 	void OpenGLVertexBuffer::Bind() const
@@ -55,20 +44,22 @@ namespace Crowny
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
 
-	void* OpenGLVertexBuffer::GetPointer(uint32_t size)
+	void* OpenGLVertexBuffer::Map(uint32_t offset, uint32_t size, GpuLockOptions options)
 	{
-#ifdef MC_WEB
 		glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);
-		return glMapBufferRange(GL_ARRAY_BUFFER, 0, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);                                                                            
-#else
-		return glMapNamedBuffer(m_RendererID, GL_WRITE_ONLY);
-#endif
+		switch(options)
+		{
+			case(GpuLockOptions::READ_ONLY): 			return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_READ_BIT);
+			case(GpuLockOptions::WRITE_ONLY): 			return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_WRITE_BIT);
+			case(GpuLockOptions::WRITE_DISCARD): 		return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
+			case(GpuLockOptions::WRITE_DISCARD_RANGE):  return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT);
+		}
+		return nullptr;
 	}
 
-	void OpenGLVertexBuffer::FreePointer()
+	void OpenGLVertexBuffer::Unmap()
 	{
-		//TODO: Breaks web?
-		glUnmapNamedBuffer(m_RendererID);
+		glUnmapNamedBuffer(m_RendererID); // TODO: es2, might work with emscripten
 	}
 
 }
