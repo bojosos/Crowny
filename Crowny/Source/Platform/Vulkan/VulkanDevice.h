@@ -31,11 +31,14 @@ namespace Crowny
         void SetIndex(uint32_t idx);
         VulkanQueue* GetQueue(GpuQueueType type, uint32_t idx) const { return m_QueueInfos[(int)type].Queues[idx]; }
         uint32_t GetQueueFamily(GpuQueueType type) const { return m_QueueInfos[(int)type].FamilyIdx; }
+        uint32_t GetQueueMask(GpuQueueType type, uint32_t queueIdx) const;
         void Refresh(bool wait = false);
         uint32_t FindMemoryType(uint32_t requirement, VkMemoryPropertyFlags flags);
         VmaAllocation AllocateMemory(VkBuffer buffer, VkMemoryPropertyFlags flags);
         VmaAllocation AllocateMemory(VkImage image, VkMemoryPropertyFlags flags);
+        void GetAllocationInfo(VmaAllocation allocation, VkDeviceMemory& memory, VkDeviceSize& offset);
         void FreeMemory(VmaAllocation allocation);
+
         
         void WaitIdle();
         uint32_t GetNumQueues(GpuQueueType type) const { return (uint32_t)m_QueueInfos[(int)type].Queues.size(); }

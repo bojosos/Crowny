@@ -17,6 +17,9 @@
 #undef None
 #include <vulkan/vk_mem_alloc.h>
 
+#define MAX_QUEUES_PER_TYPE 8
+#define MAX_VULKAN_CB_PER_QUEUE_FAMILY MAX_QUEUES_PER_TYPE * 32
+
 namespace Crowny
 {
     class VulkanRenderAPI;
