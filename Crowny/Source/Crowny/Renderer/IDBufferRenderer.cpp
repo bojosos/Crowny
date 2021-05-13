@@ -40,7 +40,7 @@ namespace Crowny
         s_Data.Framebuffer = Framebuffer::Create(fbProps);
 
         s_Data.VertexArray = VertexArray::Create();
-		s_Data.VertexBuffer = VertexBuffer::Create(nullptr, sizeof(IDBufferData) * 4 * RENDERER_MAX_SPRITES, { BufferUsage::DYNAMIC_DRAW });
+		s_Data.VertexBuffer = VertexBuffer::Create(sizeof(IDBufferData) * 4 * RENDERER_MAX_SPRITES, BufferUsage::DYNAMIC_DRAW);
 		BufferLayout layout = { { ShaderDataType::Float4, "a_Coordinates" },
 								{ ShaderDataType::Int, "a_ObjectID" } };
 
@@ -76,7 +76,7 @@ namespace Crowny
     {
         s_Data.Framebuffer->Bind();
 		s_Data.Framebuffer->GetColorAttachment(0)->Clear((int32_t)entt::entity(entt::null));
-  		s_Data.Buffer = (IDBufferData*)s_Data.VertexBuffer->GetPointer(RENDERER_MAX_SPRITES * 4);
+  		s_Data.Buffer = (IDBufferData*)s_Data.VertexBuffer->Map(0, RENDERER_MAX_SPRITES * 4, GpuLockOptions::WRITE_DISCARD);
 		s_Data.Shader3D->Bind();
 		s_Data.Shader3D->SetUniformMat4("u_ProjectionMatrix", projection);
 		s_Data.Shader3D->SetUniformMat4("u_ViewMatrix", view);
@@ -106,7 +106,7 @@ namespace Crowny
     {
         s_Data.Shader2D->Bind();
 		s_Data.VertexArray->Bind();
-        s_Data.VertexBuffer->FreePointer();
+        s_Data.VertexBuffer->Unmap();
 		RenderCommand::DrawIndexed(s_Data.VertexArray, s_Data.IndexCount);
 		s_Data.IndexCount = 0;
 		s_Data.VertexArray->Unbind();
