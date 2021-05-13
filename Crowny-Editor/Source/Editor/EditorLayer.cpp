@@ -115,16 +115,19 @@ namespace Crowny
 		EditorAssets::Load();
 		ScriptRuntime::Init();*/
 
-		glm::vec3 verts[3] = { { 1, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } };
-		//vbo = VertexBuffer::Create(verts, 3);
-    	//vbo->SetLayout();
+		glm::vec3 verts[3] = { { 0.0f, -0.5f, 0.0f }, { 0.5f, 0.5f, 0.0f }, { -0.5f, 0.5f, 0.0f } };
+		vbo = VertexBuffer::Create(verts, 3 * 3 * 4);
+		void* dest = vbo->GetPointer(3 * 3 * 4);
+		memcpy(dest, verts, 3 * 3 * 4);
+		vbo->FreePointer();
+    	vbo->SetLayout({{ShaderDataType::Float3, "position"}});
 		vertex = Shader::Create("/Shaders/vert.spv", VERTEX_SHADER);
 		fragment = Shader::Create("/Shaders/frag.spv", FRAGMENT_SHADER);
 		PipelineStateDesc desc;
 		desc.FragmentShader = fragment;
 		desc.VertexShader = vertex;
 		
-		pipeline = GraphicsPipeline::Create(desc, {{ShaderDataType::Float3, "position"}});
+		pipeline = GraphicsPipeline::Create(desc, vbo->GetLayout());
 	}
 
 	void EditorLayer::CreateNewScene()
@@ -178,6 +181,7 @@ namespace Crowny
 		//rapi.SetVertexBuffers(0, &vbo, 1);//
 		rapi.SetRenderTarget(nullptr);
 		rapi.SetGraphicsPipeline(pipeline);
+		rapi.SetVertexBuffers(0, &vbo, 1);
 		rapi.SetViewport(0, 0, Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight());
 		rapi.SetDrawMode(DrawMode::TRIANGLE_LIST);
 		rapi.Draw(0, 3);

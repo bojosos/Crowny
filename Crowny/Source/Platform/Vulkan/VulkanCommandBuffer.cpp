@@ -47,6 +47,83 @@ namespace Crowny
         VkDevice device = gVulkanRendererAPI().GetPresentDevice()->GetLogicalDevice();
         vkDestroySemaphore(device, m_Semaphore, gVulkanAllocator);
     }
+    
+    VulkanTransferBuffer::VulkanTransferBuffer(VulkanDevice* device, GpuQueueType type, uint32_t queueIdx) : m_Device(device), m_Type(type), m_QueueIdx(queueIdx)
+    {
+        uint32_t numQueues = device->GetNumQueues(type);
+        if (numQueues == 0)
+        {
+            m_Type = GRAPHICS_QUEUE;
+            numQueues = device->GetNumQueues(m_Type);
+        }
+
+        uint32_t physicalQueueIdx = queueIdx % numQueues;
+        m_Queue = device->GetQueue(m_Type, physicalQueueIdx);
+        m_QueueMask = device->GetQueueMask(m_Type, queueIdx);
+    }
+
+    VulkanTransferBuffer::~VulkanTransferBuffer()
+    {
+        if (m_CommandBuffer != nullptr)
+            m_CommandBuffer->End();
+    }
+
+    void VulkanTransferBuffer::MemoryBarrier(VkBuffer buffer, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags, 
+                                            VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage)
+    {
+        m_CommandBuffer->MemoryBarrier(buffer, srcAccessFlags, dstAccessFlags, srcStage, dstStage);
+    }
+
+    void VulkanTransferBuffer::Allocate()
+    {
+        if (m_CommandBuffer != nullptr)
+            return;
+        
+        uint32_t queueFamily = m_Device->GetQueueFamily(m_Type);
+        m_CommandBuffer = (new VulkanCmdBuffer(m_Type))->GetBuffer();
+    }
+
+    void VulkanTransferBuffer::Flush(bool wait)
+    {
+        if (m_CommandBuffer == nullptr)
+            return;
+
+        m_CommandBuffer->End();
+        m_CommandBuffer->Submit(true);
+        if (wait)
+        {
+            m_Queue->WaitIdle();
+            m_Device->Refresh();
+        }
+        m_CommandBuffer = nullptr;
+    }
+    
+    VulkanTransferManager::VulkanTransferManager()
+    {
+        VulkanDevice* device = gVulkanRendererAPI().GetPresentDevice().get();
+        for (uint32_t i = 0; i < QUEUE_COUNT; i++)
+        {
+            GpuQueueType queueType = (GpuQueueType)i;
+            for (uint32_t j = 0; j < MAX_QUEUES_PER_TYPE; j++)
+                m_TransferBuffers[i][j] = VulkanTransferBuffer(device, queueType, j);
+        }
+    }
+
+    VulkanTransferBuffer* VulkanTransferManager::GetTransferBuffer(GpuQueueType queueType, uint32_t queueIdx)
+    {
+        VulkanTransferBuffer* buffer = &m_TransferBuffers[queueType][queueIdx];
+        buffer->Allocate();
+        return buffer;
+    }
+    
+    void VulkanTransferManager::FlushTransferBuffers()
+    {
+        for (uint32_t i = 0; i < QUEUE_COUNT; i++)
+        {
+            for (uint32_t j = 0; j < MAX_QUEUES_PER_TYPE; j++)
+            m_TransferBuffers[i][j].Flush(false);
+        }
+    }
 
     VulkanCommandBufferPool::VulkanCommandBufferPool(VulkanDevice& device) : m_Device(device)
     {
@@ -375,7 +452,7 @@ namespace Crowny
         vkResetCommandBuffer(m_CmdBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
     }
     
-    void VulkanCommandBuffer::Submit()
+    void VulkanCommandBuffer::Submit(bool transfer)
     {
         if (IsInRenderPass())
             EndRenderPass();
@@ -388,11 +465,17 @@ namespace Crowny
             VkResult result = vkResetFences(m_Device.GetLogicalDevice(), 1, &m_Fence);
             CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
-            const SwapChainSurface& surface = m_SwapChain->GetBackBuffer();
-            VulkanSemaphore* semaphore = { surface.Sync };
-            m_Queue->Submit(this, &semaphore, 1); // might not work
-            m_SwapChain->BackBufferWaitIssued();
-
+            if (!transfer)
+            {
+                const SwapChainSurface& surface = m_SwapChain->GetBackBuffer();
+                VulkanSemaphore* semaphore = { surface.Sync };
+                m_Queue->Submit(this, &semaphore, 1);
+                m_SwapChain->BackBufferWaitIssued();
+            }
+            else
+            {
+                m_Queue->Submit(this, nullptr, 0);
+            }
             m_GraphicsPipeline = nullptr;
             m_ComputePipeline = nullptr;
             m_GraphicsPipelineRequiresBind = true;
@@ -647,5 +730,5 @@ namespace Crowny
         
         vkCmdPipelineBarrier(m_CmdBuffer, srcStage, dstStage, 0, 0, nullptr, 1, &barrier, 0, nullptr);
     }
-    
+
 }

@@ -55,7 +55,7 @@ namespace Crowny
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
 
-	void* OpenGLVertexBuffer::GetPointer(uint32_t size) const
+	void* OpenGLVertexBuffer::GetPointer(uint32_t size)
 	{
 #ifdef MC_WEB
 		glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);
@@ -65,7 +65,7 @@ namespace Crowny
 #endif
 	}
 
-	void OpenGLVertexBuffer::FreePointer() const
+	void OpenGLVertexBuffer::FreePointer()
 	{
 		//TODO: Breaks web?
 		glUnmapNamedBuffer(m_RendererID);
