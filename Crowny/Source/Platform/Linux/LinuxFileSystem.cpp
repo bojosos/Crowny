@@ -64,12 +64,12 @@ namespace Crowny
 		return res;
 	}
 
-	bool FileSystem::WriteFile(const std::string& path, byte* buffer)
+	bool FileSystem::WriteFile(const std::string& path, byte* buffer, uint64_t size)
 	{
 		FixPath(path);
 		std::ofstream fout;
 		fout.open(path, std::ios::binary | std::ios::out);
-		fout.write((char*)buffer, sizeof(buffer));
+		fout.write((char*)buffer, size);
 		fout.close();
 		return buffer != nullptr;
 	}

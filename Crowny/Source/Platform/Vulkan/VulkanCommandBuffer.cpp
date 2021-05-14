@@ -363,8 +363,7 @@ namespace Crowny
         if (m_IndexBuffer != nullptr)
         {
             VkBuffer vkBuffer = m_IndexBuffer->GetHandle();
-            VkIndexType indexType = VK_INDEX_TYPE_UINT32;
-            vkCmdBindIndexBuffer(m_CmdBuffer, vkBuffer, 0, indexType);
+            vkCmdBindIndexBuffer(m_CmdBuffer, vkBuffer, 0, VulkanUtils::GetIndexType(m_IndexBuffer->GetIndexType()));
         }
     }
     
@@ -577,7 +576,8 @@ namespace Crowny
                 return;
         }
         else
-            BindDynamicStates(false);/*
+            BindDynamicStates(false);
+            /*
         if (m_DescriptorSetBindState.IsSet(DescriptorSetBindFlag::Graphics))
         {
             if (m_NumBoundDescriptorSets > 0)
@@ -587,9 +587,9 @@ namespace Crowny
             }
             m_DescriptorSetBindState.Unset(DescriptorSetBindFlag::Graphics);
         }*/
-        
-        //vkCmdDraw(m_CmdBuffer, vertexCount, instanceCount, vertexOffset, 0);
-        vkCmdDraw(m_CmdBuffer, 3, 1, 0, 0);
+        if (instanceCount <= 0)
+            instanceCount = 1;
+        vkCmdDraw(m_CmdBuffer, vertexCount, instanceCount, vertexOffset, 0);
     }
 
     void VulkanCommandBuffer::DrawIndexed(uint32_t startIdx, uint32_t idxCount, uint32_t vertexOffset, uint32_t instanceCount)
@@ -623,7 +623,8 @@ namespace Crowny
             }
             m_DescriptorSetBindState.Unset(DescriptorSetBindFlag::Graphics);
         }*/
-
+        if (instanceCount <= 0)
+            instanceCount = 1;
         vkCmdDrawIndexed(m_CmdBuffer, idxCount, instanceCount, startIdx, vertexOffset, 0);
     }
 

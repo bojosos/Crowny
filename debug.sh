@@ -1,1 +1,1 @@
-make -j8 Crowny-Editor config=debug_linux64 CXX="clang++ -fuse-ld=lld"
+make -j8 Crowny-Editor config=debug_linux64 CXX="clang++ -fstandalone-debug -fuse-ld=lld"

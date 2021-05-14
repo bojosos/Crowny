@@ -59,7 +59,7 @@ namespace Crowny
         appInfo.pEngineName = "Crowny";
         appInfo.engineVersion = VK_MAKE_VERSION(1,0,0); // TODO: Engine version
 
-        appInfo.apiVersion = VK_API_VERSION_1_1;
+        appInfo.apiVersion = VK_API_VERSION_1_2;
 
 #ifdef CW_DEBUG
         std::vector<const char*> layers = { "VK_LAYER_KHRONOS_validation", "VK_LAYER_NV_optimus" };
@@ -239,10 +239,10 @@ namespace Crowny
         uint32_t width = Application::Get().GetWindow().GetWidth();
         uint32_t height = Application::Get().GetWindow().GetHeight();
         bool vsync = Application::Get().GetWindow().GetVSync();
-        SurfaceFormat surface = GetPresentDevice()->GetSurfaceFormat(m_Surface);
+        m_SurfaceFormat = GetPresentDevice()->GetSurfaceFormat(m_Surface);
         VulkanRenderPasses::StartUp(); // has to be done before swapchain is created
         VulkanTransferManager::StartUp();
-        m_SwapChain = new VulkanSwapChain(m_Surface, width, height, vsync, surface.ColorFormat, surface.ColorSpace, true, surface.DepthFormat);
+        m_SwapChain = new VulkanSwapChain(m_Surface, width, height, vsync, m_SurfaceFormat.ColorFormat, m_SurfaceFormat.ColorSpace, true, m_SurfaceFormat.DepthFormat);
         m_CmdBuffer = std::static_pointer_cast<VulkanCmdBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
         m_CommandBuffer = m_CmdBuffer.get()->GetBuffer();
     }
@@ -286,7 +286,7 @@ namespace Crowny
         if (cmdBuffer == nullptr)
             m_CommandBuffer->Submit();
         else
-            cmdBuffer->Submit();
+            cmdBuffer->Submit(true);
 
         if (cmdBuffer == m_CommandBuffer)
         {

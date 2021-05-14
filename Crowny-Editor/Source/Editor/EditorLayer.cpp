@@ -12,6 +12,7 @@
 #include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Renderer/Framebuffer.h"
+#include "Crowny/Common/Timer.h"
 
 #include "Editor/EditorAssets.h"
 
@@ -116,15 +117,22 @@ namespace Crowny
 		EditorAssets::Load();
 		ScriptRuntime::Init();*/
 
-		glm::vec3 verts[3] = { { 0.0f, -0.5f, 0.0f }, { 0.5f, 0.5f, 0.0f }, { -0.5f, 0.5f, 0.0f } };
-		vbo = VertexBuffer::Create(verts, 3 * 3 * 4);
+		ShaderCompiler compiler;
+		
+		{
+		Timer t;
+		vertex = Shader::Create(compiler.Compile("/Shaders/vk.vert", VERTEX_SHADER));
+		fragment = Shader::Create(compiler.Compile("/Shaders/vk.frag", FRAGMENT_SHADER));
+		CW_ENGINE_INFO(t.ElapsedMillis());
+		}
+		
+		glm::vec3 verts[4] = { { -0.5f, -0.5f, 0.0f }, { 0.5f, 0.5f, 0.0f }, { -0.5f, 0.5f, 0.0f }, { 0.5f, -0.5f, 0.0f } };
+		vbo = VertexBuffer::Create(verts, 3 * 4 * 4);
     	vbo->SetLayout({{ShaderDataType::Float3, "position"}});
 		
-		uint16_t indices[3] = { 0 ,1, 2 };
-		ibo = IndexBuffer::Create(indices, 3);
+		uint16_t indices[6] = { 0, 1, 2, 0, 3, 1 };
+		ibo = IndexBuffer::Create(indices, 6);
 
-		vertex = Shader::Create("/Shaders/vert.spv", VERTEX_SHADER);
-		fragment = Shader::Create("/Shaders/frag.spv", FRAGMENT_SHADER);
 		PipelineStateDesc desc;
 		desc.FragmentShader = fragment;
 		desc.VertexShader = vertex;
@@ -187,7 +195,7 @@ namespace Crowny
 		rapi.SetIndexBuffer(ibo);
 		rapi.SetViewport(0, 0, Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight());
 		rapi.SetDrawMode(DrawMode::TRIANGLE_LIST);
-		rapi.Draw(0, 3);
+		rapi.DrawIndexed(0, 6, 0, 0);
 		rapi.SwapBuffers();
 		/*
 		Ref<Scene> scene = SceneManager::GetActiveScene();
