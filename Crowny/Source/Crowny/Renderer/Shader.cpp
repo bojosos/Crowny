@@ -67,4 +67,17 @@ namespace Crowny
 
 		return nullptr;
 	}
+
+	Ref<Shader> Shader::Create(const BinaryShaderData& data)
+	{
+		switch (Renderer::GetAPI())
+		{
+			//TODO: Add support for binary OpenGL shaders
+			//case RendererAPI::API::OpenGL: return CreateRef<OpenGLShader>(m_Filepath);
+			case RendererAPI::API::Vulkan: return CreateRef<VulkanShader>(data);
+			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); return nullptr;
+		}
+
+		return nullptr;
+	}
 }
