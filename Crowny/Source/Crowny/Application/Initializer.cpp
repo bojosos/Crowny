@@ -36,10 +36,13 @@ namespace Crowny
 		VirtualFileSystem::Get()->Mount("Fonts", "Resources/Fonts");
 		VirtualFileSystem::Get()->Mount("Assemblies", "Resources/Assemblies");
 		VirtualFileSystem::Get()->Mount("Models", "Resources/Models");
+		VirtualFileSystem::Get()->Mount("Cache", "Resources/Cache");
 
 		Random::StartUp(); // wat
 		RendererAPI::StartUp<VulkanRendererAPI>();
-		Renderer::Init();/*
+		Renderer::Init();
+		
+		/*
 		ForwardPlusRenderer::Init();
 		Renderer2D::Init();
 		IDBufferRenderer::Init();
