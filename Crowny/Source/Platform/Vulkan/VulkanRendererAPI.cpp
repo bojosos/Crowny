@@ -59,7 +59,7 @@ namespace Crowny
         appInfo.pEngineName = "Crowny";
         appInfo.engineVersion = VK_MAKE_VERSION(1,0,0); // TODO: Engine version
 
-        appInfo.apiVersion = VK_API_VERSION_1_2;
+        appInfo.apiVersion = VK_API_VERSION_1_1;
 
 #ifdef CW_DEBUG
         std::vector<const char*> layers = { "VK_LAYER_KHRONOS_validation", "VK_LAYER_NV_optimus" };
@@ -250,7 +250,7 @@ namespace Crowny
     void VulkanRendererAPI::SwapBuffers()
     {
         VulkanSemaphore* semaphore[1] = { m_CommandBuffer->GetRenderCompleteSemaphore() };
-        SubmitCommandBuffer(m_CmdBuffer);
+        SubmitCommandBuffer(nullptr);
         
         VulkanQueue* queue = GetPresentDevice()->GetQueue(GRAPHICS_QUEUE, 0); // present queue
         VkResult result = queue->Present(m_SwapChain, semaphore, 1);
@@ -282,13 +282,13 @@ namespace Crowny
     void VulkanRendererAPI::SubmitCommandBuffer(const Ref<CommandBuffer>& commandBuffer)
     {
         VulkanTransferManager::Get().FlushTransferBuffers();
-        VulkanCommandBuffer* cmdBuffer = std::static_pointer_cast<VulkanCmdBuffer>(commandBuffer).get()->GetBuffer();
+        VulkanCmdBuffer* cmdBuffer = std::static_pointer_cast<VulkanCmdBuffer>(commandBuffer).get();
         if (cmdBuffer == nullptr)
             m_CommandBuffer->Submit();
         else
-            cmdBuffer->Submit(true);
+            cmdBuffer->GetBuffer()->Submit(true);
 
-        if (cmdBuffer == m_CommandBuffer)
+        if (cmdBuffer == nullptr || cmdBuffer->GetBuffer() == m_CommandBuffer)
         {
             m_CmdBuffer = std::static_pointer_cast<VulkanCmdBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
             m_CommandBuffer = m_CmdBuffer.get()->GetBuffer();

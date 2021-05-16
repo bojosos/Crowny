@@ -475,6 +475,7 @@ namespace Crowny
             }
             else
             {
+            CW_ENGINE_INFO("TRANSFER");
                 m_Queue->Submit(this, nullptr, 0);
             }
             m_GraphicsPipeline = nullptr;
