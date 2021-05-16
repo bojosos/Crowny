@@ -45,6 +45,7 @@ namespace Crowny
 		Padding(float top, float right, float bottom, float left) : Top(top), Left(left), Right(right), Bottom(bottom) { }
 	};
 	
+	//TODO: refactor these enums, make same style
 	enum ShaderType
 	{
 		VERTEX_SHADER,
@@ -68,6 +69,26 @@ namespace Crowny
 		COMPUTE_QUEUE,
 		UPLOAD_QUEUE,
 		QUEUE_COUNT
+	};
+
+	enum class IndexType
+	{
+		Index_16,
+		Index_32
+	};
+
+	enum class BufferUsage
+	{
+		STATIC_DRAW,
+		DYNAMIC_DRAW
+	};
+	
+	enum class GpuLockOptions
+	{
+		READ_ONLY,
+		WRITE_ONLY,
+		WRITE_DISCARD,
+		WRITE_DISCARD_RANGE
 	};
 	
 	enum class DrawMode

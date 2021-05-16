@@ -49,7 +49,7 @@ namespace Crowny
 		if (virtualPath[0] != '/')
 		{
 			outPath = virtualPath;
-			return FileSystem::FileExists(virtualPath);
+			return true;
 		}
 
 		std::vector<std::string> dirs = StringUtils::SplitString(virtualPath, "/");
@@ -59,25 +59,17 @@ namespace Crowny
 		//return false;
 		{
 #ifdef CW_PLATFORM_LINUX // on linux full paths start with /
-			if (FileSystem::FileExists(virtualPath))
-			{
-				outPath = virtualPath;
-				return true;
-			}
+			outPath = virtualPath;
 #endif
 			CW_ENGINE_WARN("File {0} does not exist", virtualPath);
-			return false;
 		}
 
 		std::string remaining = virtualPath.substr(virtualDir.size() + 1, virtualPath.size() - virtualDir.size());
 		for (const std::string& phPath : m_MountedDirectories[virtualDir])
 		{
 			std::string path = phPath + remaining;
-			if (FileSystem::FileExists(path))
-			{
-				outPath = path;
-				return true;
-			}
+			outPath = path;
+			return true;
 		}
 
 		CW_ENGINE_WARN("File {0} does not exist", virtualPath);
@@ -98,11 +90,11 @@ namespace Crowny
 		return ResolvePhyiscalPath(path, phPath) ? FileSystem::ReadTextFile(phPath) : std::string();
 	}
 
-	bool VirtualFileSystem::WriteFile(const std::string& path, byte* buff)
+	bool VirtualFileSystem::WriteFile(const std::string& path, byte* buff, uint64_t size)
 	{
 		CW_ENGINE_ASSERT(s_Instance);
 		std::string phPath;
-		return ResolvePhyiscalPath(path, phPath) ? FileSystem::WriteFile(phPath, buff) : false;
+		return ResolvePhyiscalPath(path, phPath) ? FileSystem::WriteFile(phPath, buff, size) : false;
 	}
 
 	bool VirtualFileSystem::WriteTextFile(const std::string& path, const std::string& text)

@@ -8,12 +8,23 @@
 namespace Crowny
 {
 
-	Ref<VertexBuffer> VertexBuffer::Create(void* vertices, uint32_t size, const VertexBufferProperties& props)
+	Ref<VertexBuffer> VertexBuffer::Create(uint32_t size, BufferUsage usage)
 	{
 		switch (Renderer::GetAPI())
 		{
-			case RendererAPI::API::OpenGL: return CreateRef<OpenGLVertexBuffer>(vertices, size, props);
-			case RendererAPI::API::Vulkan: return CreateRef<VulkanVertexBuffer>(vertices, size, props);
+			case RendererAPI::API::OpenGL: return CreateRef<OpenGLVertexBuffer>(size, usage);
+			case RendererAPI::API::Vulkan: return CreateRef<VulkanVertexBuffer>(size, usage);
+			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); return nullptr;
+		}
+		return nullptr;
+	}
+
+	Ref<VertexBuffer> VertexBuffer::Create(void* vertices, uint32_t size, BufferUsage usage)
+	{
+		switch (Renderer::GetAPI())
+		{
+			case RendererAPI::API::OpenGL: return CreateRef<OpenGLVertexBuffer>(vertices, size, usage);
+			case RendererAPI::API::Vulkan: return CreateRef<VulkanVertexBuffer>(vertices, size, usage);
 			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); return nullptr;
 		}
 		return nullptr;

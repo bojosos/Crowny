@@ -9,7 +9,8 @@ namespace Crowny
 	class OpenGLVertexBuffer : public VertexBuffer
 	{
 	public:
-		OpenGLVertexBuffer(void* data, uint32_t size, const VertexBufferProperties& props);
+		OpenGLVertexBuffer(void* vertices, uint32_t size, BufferUsage usage);
+		OpenGLVertexBuffer(uint32_t size, BufferUsage usage);
 		~OpenGLVertexBuffer();
 
 		virtual void Bind() const override;
@@ -17,12 +18,11 @@ namespace Crowny
 
 		virtual const BufferLayout& GetLayout() const override { return m_Layout; };
 		virtual void SetLayout(const BufferLayout& layout) override { m_Layout = layout; }
-		virtual void SetData(void* verts, uint32_t size) override;
 
-		virtual void* GetPointer(uint32_t size) override;
-		virtual void FreePointer() override;
+		virtual void* Map(uint32_t offset, uint32_t size, GpuLockOptions options) override;
+		virtual void Unmap() override;
+		
 	private:
-		VertexBufferProperties m_Properties;
 		uint32_t m_RendererID, m_Size;
 		BufferLayout m_Layout;
 	};

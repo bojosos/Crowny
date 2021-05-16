@@ -180,10 +180,6 @@ namespace Crowny
         m_VertexInputStateCreateInfo.pVertexBindingDescriptions = &vertexInput;
         m_VertexInputStateCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
         m_VertexInputStateCreateInfo.pVertexAttributeDescriptions = attrs.data();
-
-    //    m_VertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    //    m_VertexInputStateCreateInfo.vertexBindingDescriptionCount = 0;
-    //    m_VertexInputStateCreateInfo.vertexAttributeDescriptionCount = 0;
   
         m_PipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
         m_PipelineInfo.pNext = nullptr;
