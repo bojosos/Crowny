@@ -43,7 +43,8 @@ project "Crowny-Editor"
 		"freetype2", "glfw", "glad",
 		"mono-2.0",
 		"yaml-cpp",
-    "vulkan"
+    "vulkan",
+    "shaderc_shared"
 	}
 
 	filter "system:windows"

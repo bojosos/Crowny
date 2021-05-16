@@ -70,7 +70,10 @@ namespace Crowny
 			verts[i].Tangent = glm::vec3{ mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z };
 		}
 
-		Ref<VertexBuffer> vbo = VertexBuffer::Create(verts, sizeof(Vertex) * mesh->mNumVertices);
+		Ref<VertexBuffer> vbo = VertexBuffer::Create(sizeof(Vertex) * mesh->mNumVertices);
+		void* dest = vbo->Map(0, sizeof(Vertex) * mesh->mNumVertices, GpuLockOptions::WRITE_DISCARD);
+		memcpy(dest, verts, sizeof(Vertex) * mesh->mNumVertices);
+		vbo->Unbind();
 		vbo->SetLayout({ {ShaderDataType::Float3, "Position"},
 						 {ShaderDataType::Float3, "Normal"},
 						 {ShaderDataType::Float2, "Uv"},
