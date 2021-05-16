@@ -98,7 +98,8 @@ namespace Crowny
 		return success ? res : std::string();
 	}
 
-	bool FileSystem::WriteFile(const std::string& path, byte* buffer)
+	// TODO: investigate this, or just use c++ api
+	bool FileSystem::WriteFile(const std::string& path, byte* buffer, uint64_t sz)
 	{
 		HANDLE file = CreateFile(path.c_str(), GENERIC_WRITE, NULL, NULL, CREATE_NEW | OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 		CW_ENGINE_ASSERT(file != INVALID_HANDLE_VALUE, path);

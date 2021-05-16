@@ -40,7 +40,11 @@ namespace Crowny
 		data[3].Binormal = glm::rotate(glm::mat4(1.0f), 90.0f, glm::vec3(0, 1, 0)) * glm::vec4(normal, 1.0f);
 		data[3].Tangent = glm::rotate(glm::mat4(1.0f), 90.0f, glm::vec3(0, 0, 1)) * glm::vec4(normal, 1.0f);
 
-		Ref<VertexBuffer> vbo = VertexBuffer::Create(data, 4);
+		Ref<VertexBuffer> vbo = VertexBuffer::Create(4 * sizeof(Vertex));
+		void* dest = vbo->Map(0, 4 * sizeof(Vertex), GpuLockOptions::WRITE_DISCARD);
+		memcpy(dest, data, 4 * sizeof(Vertex));
+		vbo->Unbind();
+		
 		vbo->SetLayout({
 						{ ShaderDataType::Float3, "Position" },
 						{ ShaderDataType::Float3, "Normal" },
@@ -136,7 +140,10 @@ namespace Crowny
 			}
 		}
 		
-		Ref<VertexBuffer> vbo = VertexBuffer::Create(data.data(), data.size() * sizeof(float));
+		Ref<VertexBuffer> vbo = VertexBuffer::Create(data.size() * sizeof(float));
+		void* dest = vbo->Map(0, data.size() * sizeof(float), GpuLockOptions::WRITE_DISCARD);
+		memcpy(dest, data.data(), data.size() * sizeof(float));
+		
 		Ref<IndexBuffer> ibo = IndexBuffer::Create(indices.data(), indices.size());
 		vbo->SetLayout({
 					   { ShaderDataType::Float3, "Position" },
