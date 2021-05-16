@@ -5,20 +5,21 @@
 #include "Platform/Vulkan/VulkanDevice.h"
 #include "Platform/Vulkan/VulkanPipeline.h"
 #include "Platform/Vulkan/VulkanFramebuffer.h"
-#include "Platform/Vulkan/VulkanVertexBuffer.h"
-#include "Platform/Vulkan/VulkanIndexBuffer.h"
 
 #include "Crowny/Common/Module.h"
 #include "Crowny/Renderer/VertexBuffer.h"
+#include "Crowny/Renderer/IndexBuffer.h"
 #include "Crowny/Renderer/CommandBuffer.h"
 
-namespace Crowny
+namespace Crowny                                                                                                
 {
 
     class VulkanCmdBuffer;
     class VulkanCommandBufer;
     class VulkanGraphicsPipeline;
     class VulkanComputePipeline;
+    class VulkanVertexBuffer;
+    class VulkanIndexBuffer;
     
     class VulkanSemaphore
     {

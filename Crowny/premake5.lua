@@ -50,7 +50,6 @@ project "Crowny"
 		"%{IncludeDir.vulkan}",
 		"%{IncludeDir.yamlcpp}",
 		"%{IncludeDir.ImGuizmo}",
-    "%{IncludeDir.Bitsery}"
 	}
 
 	libdirs { "/usr/lib/mono-2.0" }
@@ -65,6 +64,8 @@ project "Crowny"
 		"mono-2.0",
 		"yaml-cpp",
 		"ImGuizmo",
+		"shaderc_shared",
+    "spirv-cross-c-shared"
 	}
 
 

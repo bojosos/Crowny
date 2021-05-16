@@ -239,10 +239,10 @@ namespace Crowny
         uint32_t width = Application::Get().GetWindow().GetWidth();
         uint32_t height = Application::Get().GetWindow().GetHeight();
         bool vsync = Application::Get().GetWindow().GetVSync();
-        SurfaceFormat surface = GetPresentDevice()->GetSurfaceFormat(m_Surface);
+        m_SurfaceFormat = GetPresentDevice()->GetSurfaceFormat(m_Surface);
         VulkanRenderPasses::StartUp(); // has to be done before swapchain is created
         VulkanTransferManager::StartUp();
-        m_SwapChain = new VulkanSwapChain(m_Surface, width, height, vsync, surface.ColorFormat, surface.ColorSpace, true, surface.DepthFormat);
+        m_SwapChain = new VulkanSwapChain(m_Surface, width, height, vsync, m_SurfaceFormat.ColorFormat, m_SurfaceFormat.ColorSpace, true, m_SurfaceFormat.DepthFormat);
         m_CmdBuffer = std::static_pointer_cast<VulkanCmdBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
         m_CommandBuffer = m_CmdBuffer.get()->GetBuffer();
     }
@@ -250,7 +250,7 @@ namespace Crowny
     void VulkanRendererAPI::SwapBuffers()
     {
         VulkanSemaphore* semaphore[1] = { m_CommandBuffer->GetRenderCompleteSemaphore() };
-        SubmitCommandBuffer(m_CmdBuffer);
+        SubmitCommandBuffer(nullptr);
         
         VulkanQueue* queue = GetPresentDevice()->GetQueue(GRAPHICS_QUEUE, 0); // present queue
         VkResult result = queue->Present(m_SwapChain, semaphore, 1);
@@ -282,13 +282,13 @@ namespace Crowny
     void VulkanRendererAPI::SubmitCommandBuffer(const Ref<CommandBuffer>& commandBuffer)
     {
         VulkanTransferManager::Get().FlushTransferBuffers();
-        VulkanCommandBuffer* cmdBuffer = std::static_pointer_cast<VulkanCmdBuffer>(commandBuffer).get()->GetBuffer();
+        VulkanCmdBuffer* cmdBuffer = std::static_pointer_cast<VulkanCmdBuffer>(commandBuffer).get();
         if (cmdBuffer == nullptr)
             m_CommandBuffer->Submit();
         else
-            cmdBuffer->Submit();
+            cmdBuffer->GetBuffer()->Submit(true);
 
-        if (cmdBuffer == m_CommandBuffer)
+        if (cmdBuffer == nullptr || cmdBuffer->GetBuffer() == m_CommandBuffer)
         {
             m_CmdBuffer = std::static_pointer_cast<VulkanCmdBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
             m_CommandBuffer = m_CmdBuffer.get()->GetBuffer();

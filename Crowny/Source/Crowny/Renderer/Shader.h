@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Utils/ShaderCompiler.h"
+
 namespace Crowny
 {
 
@@ -110,6 +112,8 @@ namespace Crowny
 
 		// Creates a shader from a file
 		static Ref<Shader> Create(const std::string& filepath, ShaderType shaderType = VERTEX_SHADER);
+
+		static Ref<Shader> Create(const BinaryShaderData& shaderData);
 
 		virtual void SetUniformFloat(const std::string& name, float value) {};// = 0;
 		virtual void SetUniformFloat2(const std::string& name, const glm::vec2& value) {};// = 0;

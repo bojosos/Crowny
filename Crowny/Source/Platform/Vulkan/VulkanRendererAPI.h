@@ -35,6 +35,7 @@ namespace Crowny
 
         virtual void Shutdown() override;
 
+        SurfaceFormat GetSurfaceFormat() const { return m_SurfaceFormat; }
         VkInstance GetInstance() const { return m_Instance; }
         VulkanCommandBuffer* GetMainCommandBuffer() const { return m_CommandBuffer; }
         const std::vector<Ref<VulkanDevice>>& GetPrimaryDevices() const { return m_PrimaryDevices; }
@@ -48,6 +49,7 @@ namespace Crowny
         void InitCaps();
     
     private:
+        SurfaceFormat m_SurfaceFormat;
         VkDebugUtilsMessengerEXT m_DebugUtilsMessenger;
         VkSurfaceKHR m_Surface;
         VkInstance m_Instance = nullptr;
