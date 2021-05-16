@@ -203,7 +203,7 @@ namespace Crowny
 		} 
 		s_EditorCamera.OnUpdate(ts); 
 		//SceneRenderer::SetViewportSize(m_ViewportSize.x, m_ViewportSize.y); 
-		s_EditorCamera.SetViewportSize(m_ViewportSize.x, m_ViewportSize.y); 
+		s_EditorCamera.SetViewportSize(500, 250); 
  
 		//SceneRenderer::OnEditorUpdate(ts, s_EditorCamera); 
 		 
