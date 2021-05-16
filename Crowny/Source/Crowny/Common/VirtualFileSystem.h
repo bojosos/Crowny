@@ -2,6 +2,8 @@
 
 namespace Crowny
 {
+
+	//TODO: make this a module.
 	class VirtualFileSystem
 	{
 	public:
@@ -12,7 +14,7 @@ namespace Crowny
 		std::tuple<byte*, uint64_t> ReadFile(const std::string& path);
 		std::string ReadTextFile(const std::string& path);
 
-		bool WriteFile(const std::string& path, byte* buff);
+		bool WriteFile(const std::string& path, byte* buff, uint64_t size);
 		bool WriteTextFile(const std::string& path, const std::string& text);
 
 		static VirtualFileSystem* Get()
@@ -28,4 +30,5 @@ namespace Crowny
 	private:
 		static VirtualFileSystem* s_Instance;
 	};
+	
 }

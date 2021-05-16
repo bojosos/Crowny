@@ -11,6 +11,6 @@ vec3 colors[3] = vec3[](
 layout(location = 0) out vec3 fragColor;
 
 void main() {
-	fragColor = colors[gl_VertexIndex];
+	fragColor = colors[gl_VertexIndex % 3];
   gl_Position = vec4(a_Position, 1.0);
 }

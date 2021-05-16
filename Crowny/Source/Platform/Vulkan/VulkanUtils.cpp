@@ -35,4 +35,31 @@ namespace Crowny
         
         return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     }
+
+    VkShaderStageFlagBits VulkanUtils::GetShaderFlags(ShaderType shaderType)
+    {
+        switch (shaderType)
+        {
+            case VERTEX_SHADER:   return VK_SHADER_STAGE_VERTEX_BIT;
+            case FRAGMENT_SHADER: return VK_SHADER_STAGE_FRAGMENT_BIT;
+            case GEOMETRY_SHADER: return VK_SHADER_STAGE_GEOMETRY_BIT;
+            case DOMAIN_SHADER:   return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+            case HULL_SHADER:     return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+            case COMPUTE_SHADER:  return VK_SHADER_STAGE_COMPUTE_BIT;
+        }
+        
+        return VK_SHADER_STAGE_VERTEX_BIT;
+    }
+    
+    VkIndexType VulkanUtils::GetIndexType(IndexType indexType)
+    {
+        switch(indexType)
+        {
+            case(IndexType::Index_16): return VK_INDEX_TYPE_UINT16;
+            case(IndexType::Index_32): return VK_INDEX_TYPE_UINT32;
+        }
+
+        return VK_INDEX_TYPE_UINT32;
+    }
+    
 }

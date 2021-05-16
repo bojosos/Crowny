@@ -5,27 +5,40 @@
 namespace Crowny
 {
 
-    VulkanIndexBuffer::VulkanIndexBuffer(uint32_t count)
+    VulkanIndexBuffer::VulkanIndexBuffer(uint32_t count, IndexType indexType, BufferUsage usage) : m_Count(count), m_IndexType(indexType)
     {
-
+        m_Buffer = new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_INDEX, usage, (uint32_t)(sizeof(uint16_t) * count));
     }
 
-    VulkanIndexBuffer::VulkanIndexBuffer(uint32_t* indices, uint32_t count)
-    {/*
-        VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-        VkBufferCreateInfo m_BufferCreateInfo;
-        m_BufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        m_BufferCreateInfo.pNext = nullptr;
-        m_BufferCreateInfo.flags = 0;
-        m_BufferCreateInfo.usage = usageFlags;
-        m_BufferCreateInfo.queueFamilyIndexCount = 0;
-        m_BufferCreateInfo.pQueueFamilyIndices = nullptr;
-        m_BufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VulkanIndexBuffer::VulkanIndexBuffer(uint16_t* indices, uint32_t count, BufferUsage usage) : m_Count(count), m_IndexType(IndexType::Index_16)
+    {
+        m_Buffer = new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_INDEX, usage, (uint32_t)(sizeof(uint16_t) * count));
+        void* dest = m_Buffer->Map(0, count * sizeof(uint16_t), GpuLockOptions::WRITE_DISCARD);
+        memcpy(dest, indices, count * sizeof(uint16_t));
+        m_Buffer->Unmap();
+    }
+    
+    VulkanIndexBuffer::VulkanIndexBuffer(uint32_t* indices, uint32_t count, BufferUsage usage) : m_Count(count), m_IndexType(IndexType::Index_32)
+    {
+        m_Buffer = new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_INDEX, usage, (uint32_t)(sizeof(uint32_t) * count));
+        void* dest = m_Buffer->Map(0, count * sizeof(uint32_t), GpuLockOptions::WRITE_DISCARD);
+        memcpy(dest, indices, count * sizeof(uint32_t));
+        m_Buffer->Unmap();
+    }
 
-        VkBuffer buffer;
-        VkResult result = vkCreateBuffer(device, &m_BufferCreateInfo, nullptr, &buffer);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS);*/
+    VulkanIndexBuffer::~VulkanIndexBuffer()
+    {
+        delete m_Buffer;
+    }
+    
+    void* VulkanIndexBuffer::Map(uint32_t offset, uint32_t size, GpuLockOptions options)
+    {
+        return m_Buffer->Map(offset, size, options);
+    }
 
+    void VulkanIndexBuffer::Unmap()
+    {
+        m_Buffer->Unmap();
     }
 
 }

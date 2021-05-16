@@ -49,6 +49,8 @@ namespace Crowny
     public:
          static VkSampleCountFlagBits GetSampleFlags(uint32_t numSamples);
          static VkPrimitiveTopology GetDrawFlags(DrawMode drawMode);
+         static VkShaderStageFlagBits GetShaderFlags(ShaderType shaderType);
+         static VkIndexType GetIndexType(IndexType indexType);
     };
 }
 
