@@ -49,6 +49,7 @@ namespace Crowny
         void InitCaps();
     
     private:
+        SurfaceFormat m_SurfaceFormat;
         VkDebugUtilsMessengerEXT m_DebugUtilsMessenger;
         VkSurfaceKHR m_Surface;
         VkInstance m_Instance = nullptr;
