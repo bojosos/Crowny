@@ -17,10 +17,12 @@ Features:
   Windows, Linux
   
 Roadmap:
+  Да взема геометрията и ЕАИ
   Finish Vulkan
   Refactor OpenGL
+  Multithreading?
   Implement audio using OpenAL
   Implememt 2D physics using Box2d
   Implement 3D physics using PhysX
   Shadows
-  Game builds
+  Game builds (Usable engine)
