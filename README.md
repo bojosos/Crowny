@@ -9,18 +9,19 @@ A C++ game engine
 
 GOAL: Run the same code I wrote in a Minecraft clone I made in Unity with Crowny
 
-Features:
-  Editor
-  C# scripting using Mono
-  PBR
-  OpenGL, Vulkan
-  Windows, Linux
+### Features:
+  * Editor
+  * C# scripting using Mono
+  * PBR
+  * OpenGL, Vulkan
+  * Windows, Linux
   
-Roadmap:
-  Finish Vulkan
-  Refactor OpenGL
-  Implement audio using OpenAL
-  Implememt 2D physics using Box2d
-  Implement 3D physics using PhysX
-  Shadows
-  Game builds
+### Roadmap:
+  * Да взема Геометрия и ЕАИ
+  * Finish Vulkan
+  * Refactor OpenGL
+  * Implement audio using OpenAL
+  * Implememt 2D physics using Box2d
+  * Implement 3D physics using PhysX
+  * Shadows
+  * Game builds
