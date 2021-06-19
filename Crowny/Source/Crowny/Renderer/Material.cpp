@@ -7,11 +7,11 @@ namespace Crowny
 	Material::Material(const Ref<Shader>& shader) : m_Shader(shader)
 	{
 		AllocateStorage();
-		m_Resources = &shader->GetResources();
+		//m_Resources = &shader->GetResources();
 	}
 
 	void Material::AllocateStorage()
-	{
+	{/*
 		m_VSUserUniformBuffer = nullptr;
 		m_VSUserUniformBufferSize = 0;
 
@@ -37,11 +37,11 @@ namespace Crowny
 			m_PSUserUniformBuffer = new byte[m_PSUserUniformBufferSize];
 			memset(m_PSUserUniformBuffer, 0, m_PSUserUniformBufferSize);
 			m_PSUserUniforms = &fsBuffer->GetUniformDeclarations();
-		}
+		}*/
 	}
 
 	void Material::Bind(uint32_t startslot)
-	{
+	{/*
 		m_Shader->Bind();
 
 		if (m_VSUserUniformBuffer)
@@ -53,35 +53,35 @@ namespace Crowny
 		{
 			if (m_Textures[i])
 				m_Textures[i]->Bind(i);
-		}
+		}*/
 	}
 
 	void Material::Unbind()
-	{
+	{/*
 		for (uint32_t i = 0; i < m_Textures.size(); i++)
 		{
 			if (m_Textures[i])
 				m_Textures[i]->Unbind(i);
-		}
+		}*/
 	}
 
 	void Material::SetUniformData(const std::string& name, byte* data)
-	{
+	{/*
 		byte* buf;
 		ShaderUniformDeclaration* decl = FindUniformDeclaration(name, &buf);
-		memcpy(buf + decl->GetOffset(), data, decl->GetSize());
+		memcpy(buf + decl->GetOffset(), data, decl->GetSize());*/
 	}
 
 	void Material::SetTexture(const std::string& name, const Ref<Texture>& texture)
-	{
+	{/*
 		ShaderResourceDeclaration* declaration = FindResourceDeclaration(name);
 		CW_ENGINE_ASSERT(declaration);
 		uint32_t slot = declaration->GetRegister();
 		if (m_Textures.size() <= slot)
 			m_Textures.resize(slot + 1);
-		m_Textures[slot] = texture;
+		m_Textures[slot] = texture;*/
 	}
-
+/*
 	ShaderUniformDeclaration* Material::FindUniformDeclaration(const std::string& name, byte** outBuffer)
 	{
 		if (m_VSUserUniforms)
@@ -107,8 +107,8 @@ namespace Crowny
 			}
 		}
 		return nullptr;
-	}
-
+	}*/
+/*
 	ShaderResourceDeclaration* Material::FindResourceDeclaration(const std::string& name)
 	{
 		for (ShaderResourceDeclaration* resource : *m_Resources)
@@ -117,10 +117,10 @@ namespace Crowny
 				return resource;
 		}
 		return nullptr;
-	}
+	}*/
 
 	MaterialInstance::MaterialInstance(const Ref<Material>& material) : m_Material(material)
-	{
+	{/*
 		m_VSUserUniformBuffer = nullptr;
 		m_PSUserUniformBuffer = nullptr;
 		AllocateStorage();
@@ -129,11 +129,11 @@ namespace Crowny
 		if (m_PSUserUniformBuffer)
 			memcpy(m_PSUserUniformBuffer, m_Material->m_PSUserUniformBuffer, m_PSUserUniformBufferSize);
 		
-		m_Resources = &m_Material->GetShader()->GetResources();
+		m_Resources = &m_Material->GetShader()->GetResources();*/
 	}
 
 	void MaterialInstance::AllocateStorage()
-	{
+	{/*
 		const ShaderUniformBufferDeclaration* vsbuff = m_Material->m_Shader->GetVSUserUniformBuffer();
 		if (vsbuff)
 		{
@@ -148,11 +148,11 @@ namespace Crowny
 			m_PSUserUniformBufferSize = fsbuff->GetSize();
 			m_PSUserUniformBuffer = new byte[m_PSUserUniformBufferSize];
 			m_PSUseUniforms = &fsbuff->GetUniformDeclarations();
-		}
+		}/*
 	}
 
 	void MaterialInstance::Bind(uint32_t startslot)
-	{
+	{/*
 		m_Material->Bind(startslot);
 
 		if (m_VSUserUniformBuffer)
@@ -164,7 +164,7 @@ namespace Crowny
 		{
 			if (m_Textures[i])
 				m_Textures[i]->Bind(i);
-		}
+		}*/
 	}
 
 
@@ -178,24 +178,24 @@ namespace Crowny
 				m_Textures[i]->Unbind(i);
 		}
 	}
-	
+	/*
 	void MaterialInstance::SetUniformData(const std::string& name, byte* data)
 	{
 		byte* buff;
 		ShaderUniformDeclaration* decl = FindUniformDeclaration(name, &buff);
 		CW_ENGINE_ASSERT(buff);
 		memcpy(buff + decl->GetOffset(), data, decl->GetSize());
-	}
+	}*/
 
 	void MaterialInstance::SetTexture(const std::string& name, const Ref<Texture>& texture)
 	{
-		ShaderResourceDeclaration* decl = FindResourceDeclaration(name);
+		/*ShaderResourceDeclaration* decl = FindResourceDeclaration(name);
 		uint32_t slot = decl->GetRegister();
 		if (m_Textures.size() <= slot)
 			m_Textures.resize(slot + 1);
-		m_Textures[slot] = texture;
+		m_Textures[slot] = texture;*/
 	}
-
+/*
 	ShaderUniformDeclaration* MaterialInstance::FindUniformDeclaration(const std::string& name, byte** outBuffer)
 	{
 		if (m_VSUseUniforms)
@@ -234,5 +234,5 @@ namespace Crowny
 		}
 
 		return nullptr;
-	}
+	}*/
 }

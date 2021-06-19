@@ -8,6 +8,7 @@ namespace Crowny
 {
 	class ImGuiComponentEditor;
 	class ImGuiHierarchyWindow;
+  class ScriptableEntity;
 
 	class Entity
 	{
@@ -65,8 +66,8 @@ namespace Crowny
 
 		friend class ImGuiComponentEditor;
 		friend class ImGuiHierarchyWindow;
+    friend class ScriptableEntity;
 		friend struct std::hash<Entity>;
-
 	private:
 		entt::entity m_EntityHandle{ entt::null };
 		Scene* m_Scene;

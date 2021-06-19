@@ -9,12 +9,12 @@
 namespace Crowny
 {
 
-	VulkanShader::VulkanShader(const BinaryShaderData& data)
+	VulkanShader::VulkanShader(const BinaryShaderData& data) : m_ShaderDesc(data)
     {
         m_Device = gVulkanRendererAPI().GetPresentDevice()->GetLogicalDevice();
         m_ShaderStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         m_ShaderStage.stage = VulkanUtils::GetShaderFlags(data.ShaderType);
-        m_ShaderStage.pName = "main";
+        m_ShaderStage.pName = data.EntryPoint.c_str();
         m_ShaderStage.pSpecializationInfo = nullptr;
         m_ShaderStage.pNext = nullptr;
         m_ShaderStage.flags = 0;

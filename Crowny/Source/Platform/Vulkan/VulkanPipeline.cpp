@@ -42,6 +42,51 @@ namespace Crowny
     {
         m_Data = desc;
         m_Device = gVulkanRendererAPI().GetPresentDevice()->GetLogicalDevice();
+        if (desc.VertexShader != nullptr)
+        {
+            const auto& uniforms = desc.VertexShader->GetUniformDesc();
+            VkDescriptorSetLayoutBinding* bindings = new VkDescriptorSetLayoutBinding[uniforms.Uniforms.size()];
+            uint32_t idx = 0;
+            for (const auto& uniform : uniforms.Uniforms)
+            {
+                bindings[idx].binding = uniform.second.Slot;
+                bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+                bindings[idx].pImmutableSamplers = nullptr;
+                bindings[idx].descriptorCount = 1;    
+                bindings[idx++].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            }
+
+            VkDescriptorSetLayoutCreateInfo layoutInfo{};
+            layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            layoutInfo.pNext = nullptr;
+            layoutInfo.flags = 0;
+            layoutInfo.bindingCount = uniforms.Uniforms.size();
+            layoutInfo.pBindings = bindings;
+
+            VkDescriptorSetLayout layout;
+            VkResult result = vkCreateDescriptorSetLayout(m_Device, &layoutInfo, nullptr, &layout);
+            CW_ENGINE_ASSERT(result == VK_SUCCESS);
+            
+            VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+            pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+            pipelineLayoutInfo.setLayoutCount = 1;
+            pipelineLayoutInfo.pSetLayouts = &layout;
+            pipelineLayoutInfo.pushConstantRangeCount = 0;
+            result = vkCreatePipelineLayout(m_Device, &pipelineLayoutInfo, gVulkanAllocator, &m_PipelineLayout);
+            CW_ENGINE_ASSERT(result == VK_SUCCESS);
+            delete[] bindings;
+        }
+        
+        /*
+        if (desc.FragmentShader != nullptr)
+            desc.FragmentShader->GetUniformDesc();
+        if (desc.GeometryShader != nullptr)
+            desc.GeometryShader->GetUniformDesc();
+        if (desc.HullShader != nullptr)
+            desc.HullShader->GetUniformDesc();
+        if (desc.DomainShader != nullptr)
+            desc.DomainShader->GetUniformDesc();*/
+
         static std::vector<VkDynamicState> dynamicStates =
         {
             VK_DYNAMIC_STATE_VIEWPORT,
@@ -133,14 +178,6 @@ namespace Crowny
         m_MultiSampleInfo.minSampleShading = 1.0f;
         m_MultiSampleInfo.pSampleMask = nullptr;
         m_MultiSampleInfo.alphaToOneEnable = VK_FALSE;
-        
-        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 0;
-        pipelineLayoutInfo.pushConstantRangeCount = 0;
-
-        VkResult result = vkCreatePipelineLayout(m_Device, &pipelineLayoutInfo, gVulkanAllocator, &m_PipelineLayout);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
         static VkVertexInputBindingDescription vertexInput{};
         vertexInput.binding = 0;
@@ -187,7 +224,7 @@ namespace Crowny
         m_PipelineInfo.stageCount = outputIdx;
         m_PipelineInfo.pStages = m_ShaderStageInfos;
         m_PipelineInfo.pVertexInputState = &m_VertexInputStateCreateInfo; // runtime
-        m_PipelineInfo.layout = m_PipelineLayout; // runtime, //TODO: fix this, for uniforms
+        m_PipelineInfo.layout = m_PipelineLayout;
         m_PipelineInfo.pInputAssemblyState = &m_InputAssemblyInfo;
         m_PipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
         m_PipelineInfo.pDepthStencilState = &m_DepthStencilInfo; // runtime

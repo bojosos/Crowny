@@ -5,6 +5,7 @@
 #include "Platform/Vulkan/VulkanRenderPass.h"
 #include "Platform/Vulkan/VulkanVertexBuffer.h"
 #include "Platform/Vulkan/VulkanIndexBuffer.h"
+#include "Platform/Vulkan/VulkanUniformParams.h"
 
 #include "Crowny/Common/Timer.h"
 
@@ -479,6 +480,9 @@ namespace Crowny
             {
                 m_Queue->Submit(this, nullptr, 0);
             }
+            result = vkWaitForFences(m_Device.GetLogicalDevice(), 1, &m_Fence, true, 1000000000000);
+            CW_ENGINE_ASSERT(result == VK_SUCCESS);
+
             m_GraphicsPipeline = nullptr;
             m_ComputePipeline = nullptr;
             m_GraphicsPipelineRequiresBind = true;
@@ -524,11 +528,6 @@ namespace Crowny
         return m_RenderTarget != nullptr;// && mVertexDecl != nullptr;
     }
 
-    void VulkanCommandBuffer::BindUniforms()
-    {
-
-    }
-
     void VulkanCommandBuffer::SetDrawMode(DrawMode drawMode)
     {
         if (m_DrawMode == drawMode)
@@ -557,6 +556,35 @@ namespace Crowny
         m_VertexInputsRequriesBind = true;
     }
 
+    void VulkanCommandBuffer::SetUniforms(const Ref<UniformParams>& uniforms)
+    {
+        m_BoundUniforms = std::static_pointer_cast<VulkanUniformParams>(uniforms);
+        if (m_BoundUniforms != nullptr)
+            m_BoundUniformsDirty = true;
+        else
+        {
+            m_NumBoundDescriptorSets = 0;
+            m_BoundUniformsDirty = false;
+        }
+    }
+
+    void VulkanCommandBuffer::BindUniforms()
+    {
+        if (m_BoundUniformsDirty)
+        {
+            if (m_BoundUniforms != nullptr)
+            {
+                //m_NumBoundDescriptorSets = m_BoundUniforms->GetNumSets();
+                //m_BoundUniforms->Prepare(*this, m_DescriptorSetsTemp);
+            }
+            else
+                m_NumBoundDescriptorSets = 0;
+            m_BoundUniformsDirty = false;
+        }
+        else
+            m_NumBoundDescriptorSets = 0;
+    }
+
     void VulkanCommandBuffer::Draw(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount)
     {
         if (!IsReadyForRender())
@@ -579,16 +607,12 @@ namespace Crowny
         }
         else
             BindDynamicStates(false);
-            /*
-        if (m_DescriptorSetBindState.IsSet(DescriptorSetBindFlag::Graphics))
+            
+        if (m_NumBoundDescriptorSets > 0)
         {
-            if (m_NumBoundDescriptorSets > 0)
-            {
-                VkPipelineLayout pipelineLayout = m_GraphicsPipeline->GetPipelineLayout();
-                vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, m_NumberBoundDescriptorSets, m_DescriptorSetsTemp, 0, nullptr);
-            }
-            m_DescriptorSetBindState.Unset(DescriptorSetBindFlag::Graphics);
-        }*/
+            VkPipelineLayout pipelineLayout = m_GraphicsPipeline->GetLayout();
+            vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, m_NumBoundDescriptorSets, m_DescriptorSetsTemp, 0, nullptr);
+        }
         if (instanceCount <= 0)
             instanceCount = 1;
         vkCmdDraw(m_CmdBuffer, vertexCount, instanceCount, vertexOffset, 0);
@@ -616,15 +640,13 @@ namespace Crowny
         }
         else
             BindDynamicStates(false);
-      /*  if (m_DescriptorSetBindState.IsSet(DescriptorSetBindFlag::Graphics))
+        
+        if (m_NumBoundDescriptorSets > 0)
         {
-            if (m_NumBoundDescriptorSets > 0)
-            {
-                VkPipelineLayout pipelineLayout = m_GraphicsPipeline->GetPipelineLayout();
-                vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, m_NumberBoundDescriptorSets, m_DescriptorSetsTemp, 0, nullptr);
-            }
-            m_DescriptorSetBindState.Unset(DescriptorSetBindFlag::Graphics);
-        }*/
+            VkPipelineLayout pipelineLayout = m_GraphicsPipeline->GetLayout();
+            vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, m_NumBoundDescriptorSets, m_DescriptorSetsTemp, 0, nullptr);
+        }
+
         if (instanceCount <= 0)
             instanceCount = 1;
         vkCmdDrawIndexed(m_CmdBuffer, idxCount, instanceCount, startIdx, vertexOffset, 0);

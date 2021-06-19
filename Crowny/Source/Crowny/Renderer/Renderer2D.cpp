@@ -15,7 +15,7 @@ namespace Crowny
 
 	constexpr glm::vec2 QuadUv[] = { { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 1.0f } };
 	constexpr glm::vec4 QuadVertices[] = { { -0.5f, -0.5f, 0.0f, 1.0f }, { 0.5f, -0.5f, 0.0f, 1.0f }, { 0.5f,  0.5f, 0.0f, 1.0f }, { -0.5f,  0.5f, 0.0f, 1.0f } };
-
+/*
 	constexpr const char* RequiredSystemUniforms[2] = { "cw_ProjectionMatrix", "cw_ViewMatrix" };
 
 	enum SystemUniformIndices : int32_t
@@ -42,7 +42,7 @@ namespace Crowny
 		Renderer2DSystemUniform() { }
 		Renderer2DSystemUniform(const UniformBuffer& buffer, uint32_t offset) : Buffer(buffer), Offset(offset) { }
 	};
-
+*/
 	struct Renderer2DData
 	{
 		Ref<VertexArray> VertexArray;
@@ -56,8 +56,8 @@ namespace Crowny
 		std::array<Ref<Texture2D>, 32> TextureSlots;
 		uint32_t TextureIndex = 0;
 		
-		std::vector<Renderer2DSystemUniform> SystemUniforms;
-		std::vector<UniformBuffer> SystemUniformBuffers;
+		//std::vector<Renderer2DSystemUniform> SystemUniforms;
+		//std::vector<UniformBuffer> SystemUniformBuffers;
 	};
 
 	static Renderer2DData s_Data;
@@ -65,7 +65,7 @@ namespace Crowny
 	void Renderer2D::Init()
 	{
 		s_Data.VertexArray = VertexArray::Create();
-		s_Data.VertexBuffer = VertexBuffer::Create(RENDERER_BUFFER_SIZE, { BufferUsage::DYNAMIC_DRAW });
+		s_Data.VertexBuffer = VertexBuffer::Create(RENDERER_BUFFER_SIZE, BufferUsage::DYNAMIC_DRAW);
 		BufferLayout layout = { { ShaderDataType::Float4, "a_Coordinates" },
 								{ ShaderDataType::Float2, "a_Uvs" },
 								{ ShaderDataType::Float , "a_Tid" },
@@ -98,10 +98,10 @@ namespace Crowny
 		uint32_t whiteTextureData = 0xffffffff; s_Data.WhiteTexture->SetData(&whiteTextureData, sizeof(uint32_t));
 		s_Data.Shader = Shader::Create("/Shaders/BatchRenderer.glsl");
 		s_Data.Shader->Bind();
-		s_Data.SystemUniforms.resize(2);
+		//s_Data.SystemUniforms.resize(2);
 
-		const ShaderUniformBufferList& vsuniforms = s_Data.Shader->GetVSSystemUniforms();
-
+		//const ShaderUniformBufferList& vsuniforms = s_Data.Shader->GetVSSystemUniforms();
+/*
 		for (auto* buffdecl : vsuniforms)
 		{
 			UniformBuffer buffer(new byte[buffdecl->GetSize()], buffdecl->GetSize());
@@ -115,7 +115,7 @@ namespace Crowny
 						s_Data.SystemUniforms[j] = Renderer2DSystemUniform(buffer, decl->GetOffset());
 				}
 			}
-		}
+		}*/
 		
 		s_Data.TextureSlots[s_Data.TextureIndex] = s_Data.WhiteTexture;
 
@@ -126,14 +126,14 @@ namespace Crowny
 	void Renderer2D::Begin(const Camera& camera, const glm::mat4& viewMatrix)
 	{
 		RenderCommand::SetDepthTest(false);
-		memcpy(s_Data.SystemUniforms[UniformIndex_ProjectionMatrix].Buffer.Buffer + s_Data.SystemUniforms[UniformIndex_ProjectionMatrix].Offset, glm::value_ptr(camera.GetProjection()), sizeof(glm::mat4));
-		memcpy(s_Data.SystemUniforms[UniformIndex_ViewMatrix].Buffer.Buffer + s_Data.SystemUniforms[UniformIndex_ViewMatrix].Offset, glm::value_ptr(viewMatrix), sizeof(glm::mat4));
+	//	memcpy(s_Data.SystemUniforms[UniformIndex_ProjectionMatrix].Buffer.Buffer + s_Data.SystemUniforms[UniformIndex_ProjectionMatrix].Offset, glm::value_ptr(camera.GetProjection()), sizeof(glm::mat4));
+		//memcpy(s_Data.SystemUniforms[UniformIndex_ViewMatrix].Buffer.Buffer + s_Data.SystemUniforms[UniformIndex_ViewMatrix].Offset, glm::value_ptr(viewMatrix), sizeof(glm::mat4));
 
 		//s_Data.Shader->SetVSSystemUniformBuffer(s_Data.SystemUniforms);
 		s_Data.Shader->Bind();
-		s_Data.Shader->SetUniformMat4("cw_ProjectionMatrix", camera.GetProjection());
-		s_Data.Shader->SetUniformMat4("cw_ViewMatrix", viewMatrix);
-		s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->Map(0, RENDERER_MAX_SPRITES * 4, GpuLockOptions::WRITE_DISCARD);
+		//s_Data.Shader->SetUniformMat4("cw_ProjectionMatrix", camera.GetProjection());
+	//	s_Data.Shader->SetUniformMat4("cw_ViewMatrix", viewMatrix);
+		//s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->Map(0, RENDERER_MAX_SPRITES * 4, GpuLockOptions::WRITE_DISCARD);
 	}
 
 	float Renderer2D::FindTexture(const Ref<Texture2D>& texture)
@@ -276,9 +276,9 @@ namespace Crowny
 	void Renderer2D::Flush()
 	{
 		s_Data.Shader->Bind();
-		for (uint32_t i = 0; i < s_Data.SystemUniformBuffers.size(); i++)
+		//for (uint32_t i = 0; i < s_Data.SystemUniformBuffers.size(); i++)
 		{
-			s_Data.Shader->SetVSSystemUniformBuffer(s_Data.SystemUniformBuffers[i].Buffer, s_Data.SystemUniformBuffers[i].Size, i);
+		//	s_Data.Shader->SetVSSystemUniformBuffer(s_Data.SystemUniformBuffers[i].Buffer, s_Data.SystemUniformBuffers[i].Size, i);
 		}
 
 		for (uint8_t i = 0; i <= s_Data.TextureIndex; i++)

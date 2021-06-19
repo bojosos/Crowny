@@ -11,18 +11,18 @@ namespace Crowny
 {
 	struct ForwardRendererData
 	{
-		byte* VSSystemUniformBuffer = nullptr;
-		uint32_t VSSystemUniformBufferSize = 0;
-		byte* FSSystemUniformBuffer = nullptr;
-		uint32_t FSSystemUniformBufferSize = 0;
+		//byte* VSSystemUniformBuffer = nullptr;
+		//uint32_t VSSystemUniformBufferSize = 0;
+		//byte* FSSystemUniformBuffer = nullptr;
+		//uint32_t FSSystemUniformBufferSize = 0;
 
-		std::vector<uint32_t> VSSystemUniformBufferOffsets;
-		std::vector<uint32_t> FSSystemUniformBufferOffsets;
+		////std::vector<uint32_t> VSSystemUniformBufferOffsets;
+		//std::vector<uint32_t> FSSystemUniformBufferOffsets;
 
 		Ref<Shader> BackgroundShader = nullptr;
 		Ref<EnvironmentMap> Envmap = nullptr;
 	};
-
+/*
 	enum VSSystemUniformIndices : int32_t
 	{
 		VSSystemUniformIndex_ProjectionMatrix = 0,
@@ -37,11 +37,11 @@ namespace Crowny
 		FSSystemUniformIndex_Lights = 0,
 		FSSystemUniformIndex_Size
 	};
-
+*/
 	static ForwardRendererData s_Data;
 
 	void ForwardRenderer::Init()
-	{
+	{/*
 		s_Data.VSSystemUniformBufferSize = sizeof(glm::mat4) + sizeof(glm::mat4) + sizeof(glm::vec3) + sizeof(glm::mat4);
 		s_Data.VSSystemUniformBuffer = new byte[s_Data.VSSystemUniformBufferSize];
 		memset(s_Data.VSSystemUniformBuffer, 0 , s_Data.VSSystemUniformBufferSize);
@@ -60,7 +60,7 @@ namespace Crowny
 
 		// Per Scene System Uniforms
 		s_Data.FSSystemUniformBufferOffsets[FSSystemUniformIndex_Lights] = 0;
-
+*/
 		s_Data.BackgroundShader = Shader::Create("/Shaders/Background.glsl");
 		s_Data.Envmap = EnvironmentMap::Create("/Textures/envmap.hdr");
 	}
@@ -71,7 +71,7 @@ namespace Crowny
 	}
 
 	void ForwardRenderer::BeginScene(const Camera& camera, const glm::mat4& viewMatrix)
-	{
+	{/*
 		s_Data.Envmap->Bind(0);
 		byte* data = new byte[sizeof(glm::mat4) * 2];
 		memcpy(data, glm::value_ptr(camera.GetProjection()), sizeof(glm::mat4));
@@ -82,17 +82,17 @@ namespace Crowny
 		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ProjectionMatrix], glm::value_ptr(camera.GetProjection()), sizeof(glm::mat4));
 		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ViewMatrix], glm::value_ptr(viewMatrix), sizeof(glm::mat4)); // no inverse?
 		glm::vec3 pos = glm::vec3(glm::inverse(viewMatrix)[3]);
-		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_CameraPosition], glm::value_ptr(pos), sizeof(glm::vec3));
+		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_CameraPosition], glm::value_ptr(pos), sizeof(glm::vec3));*/
 	}
 
 	void ForwardRenderer::SetSystemUniforms(const Ref<Shader>& shader)
-	{
+	{/*
 		shader->SetVSSystemUniformBuffer(s_Data.VSSystemUniformBuffer, s_Data.VSSystemUniformBufferSize, 0);
-		shader->SetFSSystemUniformBuffer(s_Data.FSSystemUniformBuffer, s_Data.FSSystemUniformBufferSize, 0);
+		shader->SetFSSystemUniformBuffer(s_Data.FSSystemUniformBuffer, s_Data.FSSystemUniformBufferSize, 0);*/
 	}
 
 	void ForwardRenderer::SubmitLightSetup()
-	{
+	{/*
 		glm::vec3 lightPositions[] = {
 			glm::vec3(-10.0f,  10.0f, 10.0f),
 			glm::vec3(10.0f,  10.0f, 10.0f),
@@ -107,7 +107,7 @@ namespace Crowny
 		};
 
 		ImGuiMaterialPanel::GetSlectedMaterial()->SetUniform("lightPositions", lightPositions);
-		ImGuiMaterialPanel::GetSlectedMaterial()->SetUniform("lightColors", lightColors);
+		ImGuiMaterialPanel::GetSlectedMaterial()->SetUniform("lightColors", lightColors);*/
 	}
 
 	void ForwardRenderer::Submit(const Ref<Model>& model)
@@ -119,18 +119,18 @@ namespace Crowny
 	}
 
 	void ForwardRenderer::SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform)
-	{
+	{/*
 		mesh->GetMaterialInstance()->Bind(3);
 		memcpy(s_Data.VSSystemUniformBuffer + s_Data.VSSystemUniformBufferOffsets[VSSystemUniformIndex_ModelMatrix], glm::value_ptr(transform), sizeof(glm::mat4));
 		SetSystemUniforms(mesh->GetMaterialInstance()->GetMaterial()->GetShader());
 		s_Data.Envmap->Bind(0);
 		mesh->GetVertexArray()->Bind();
 		SubmitLightSetup();
-		RenderCommand::DrawIndexed(mesh->GetVertexArray());
+		RenderCommand::DrawIndexed(mesh->GetVertexArray());*/
 	}
 
 	void ForwardRenderer::EndScene()
-	{
+	{/*
 		s_Data.BackgroundShader->Bind();
 		s_Data.Envmap->BindSkybox(0);
 		static unsigned int cubeVAO = 0;
@@ -199,7 +199,7 @@ namespace Crowny
 		}
 		glBindVertexArray(cubeVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
-		glBindVertexArray(0);
+		glBindVertexArray(0);*/
 	}
 
 	void ForwardRenderer::End()

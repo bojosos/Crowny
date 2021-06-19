@@ -12,7 +12,9 @@
 #include "Crowny/Scene/SceneRenderer.h" 
 #include "Crowny/Scene/ScriptRuntime.h" 
 #include "Crowny/Renderer/Framebuffer.h" 
+#include "Crowny/Renderer/UniformParams.h"
 #include "Crowny/Common/Timer.h" 
+#include "Crowny/Utils/ShaderCompiler.h"
  
 #include "Editor/EditorAssets.h" 
  
@@ -44,6 +46,8 @@ namespace Crowny
 	static Ref<GraphicsPipeline> pipeline; 
 	static Ref<Framebuffer> framebuffer; 
 	static Ref<Shader> vertex, fragment; 
+	static Ref<UniformParams> uniforms;
+	static Ref<UniformBufferBlock> mvp;
  
 	class VulkanFramebuffer; 
  
@@ -119,15 +123,20 @@ namespace Crowny
 		ShaderCompiler compiler; 
 		 
 		{ 
-		Timer t; 
-		vertex = Shader::Create(compiler.Compile("/Shaders/vk.vert", VERTEX_SHADER)); 
-		fragment = Shader::Create(compiler.Compile("/Shaders/vk.frag", FRAGMENT_SHADER)); 
-		CW_ENGINE_INFO(t.ElapsedMillis()); 
+			Timer t; 
+			vertex = Shader::Create(compiler.Compile("/Shaders/vk.vert", VERTEX_SHADER)); 
+			fragment = Shader::Create(compiler.Compile("/Shaders/vk.frag", FRAGMENT_SHADER)); 
+			CW_ENGINE_INFO(t.ElapsedMillis()); 
 		} 
-		 
-		glm::vec3 verts[4] = { { -0.5f, -0.5f, 0.0f }, { 0.5f, 0.5f, 0.0f }, { -0.5f, 0.5f, 0.0f }, { 0.5f, -0.5f, 0.0f } }; 
-		vbo = VertexBuffer::Create(verts, 3 * 4 * 4); 
-    	vbo->SetLayout({{ShaderDataType::Float3, "position"}}); 
+		
+		struct vert { glm::vec3 v; glm::vec3 c; };
+		vert verts[4] = {
+				{ { -0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+				{ {   0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+				{ {  -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+				{ {  0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f } } };
+		vbo = VertexBuffer::Create(verts, sizeof(verts)); 
+    	vbo->SetLayout({{ShaderDataType::Float3, "position"}, {ShaderDataType::Float3, "color"}}); 
 		 
 		uint16_t indices[6] = { 0, 1, 2, 0, 3, 1 }; 
 		ibo = IndexBuffer::Create(indices, 6); 
@@ -135,7 +144,14 @@ namespace Crowny
 		PipelineStateDesc desc; 
 		desc.FragmentShader = fragment; 
 		desc.VertexShader = vertex; 
-		 
+
+		PipelineUniformDesc uniformDesc;
+		uniformDesc.VertexUniforms = vertex->GetUniformDesc();
+		uniformDesc.FragmentUniforms = fragment->GetUniformDesc();
+		
+		uniforms = UniformParams::Create(uniformDesc);
+		mvp = UniformBufferBlock::Create(sizeof(glm::mat4) * 2, BufferUsage::DYNAMIC_DRAW);
+		uniforms->SetUniformBlockBuffer(mvp);
 		pipeline = GraphicsPipeline::Create(desc, vbo->GetLayout()); 
 	} 
  
@@ -187,12 +203,13 @@ namespace Crowny
 	void EditorLayer::OnUpdate(Timestep ts) 
 	{ 
 		auto& rapi = RendererAPI::Get(); 
-		//rapi.SetVertexBuffers(0, &vbo, 1);// 
 		rapi.SetRenderTarget(nullptr); 
 		rapi.SetGraphicsPipeline(pipeline); 
 		rapi.SetVertexBuffers(0, &vbo, 1); 
+		rapi.SetIndexBuffer(ibo);
 		rapi.SetViewport(0, 0, Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight()); 
-		rapi.Draw(0, 0, 0); 
+		rapi.SetUniforms(uniforms);
+		rapi.DrawIndexed(0, 6, 0, 4); 
 		Ref<Scene> scene = SceneManager::GetActiveScene(); 
 		//m_ViewportSize = m_ViewportPanel->GetViewportSize();
 		if (m_Temp) 

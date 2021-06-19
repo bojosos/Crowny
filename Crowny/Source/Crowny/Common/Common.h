@@ -22,6 +22,15 @@ namespace Crowny {
 
 	constexpr void HashCombine(std::size_t& seed) { }
 
+	/**
+	 * @brief Hashes multiple variables of the same type and combines their hashes.
+	 * 
+	 * @tparam Type 
+	 * @tparam Rest
+	 * @param seed Output seed.
+	 * @param v First value to hash.
+	 * @param rest The rest of the values to hash.
+	 */
 	template <typename T, typename... Rest>
 	constexpr void HashCombine(std::size_t& seed, const T& v, Rest... rest)
 	{
@@ -30,6 +39,13 @@ namespace Crowny {
 		HashCombine(seed, rest...);
 	}
 
+	/**
+	 * @brief Hashes a variable.
+	 * 
+	 * @tparam Type.
+	 * @param Value.
+	 * @return size_t hash of the variable.
+	 */
 	template <typename T>
 	constexpr size_t Hash(const T& v)
 	{
@@ -37,6 +53,12 @@ namespace Crowny {
 		return hasher(v);
 	}
 
+
+	/**
+	 * @brief Create a unique pointer
+	 * 
+	 * @tparam Smart pointer type.
+	 */
 	template <typename T>
 	using Scope = std::unique_ptr<T>;
 	template<typename T, typename ... Args>
@@ -45,6 +67,12 @@ namespace Crowny {
 		return std::make_unique<T>(std::forward<Args>(args)...);
 	}
 
+
+	/**
+	 * @brief Creates a shared pointer.
+	 * 
+	 * @tparam Smart pointer type.
+	 */
 	template <typename T>
 	using Ref = std::shared_ptr<T>;
 	template <typename T, typename ... Args>
