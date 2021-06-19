@@ -14,6 +14,6 @@ namespace Crowny
         
     protected:
         uint32_t m_Size;
-        BuferUsage m_Usage;
+        BufferUsage m_Usage;
     };
 }

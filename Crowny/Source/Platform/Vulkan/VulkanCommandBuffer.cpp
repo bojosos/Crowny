@@ -466,6 +466,8 @@ namespace Crowny
             VkResult result = vkResetFences(m_Device.GetLogicalDevice(), 1, &m_Fence);
             CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
+
+            // Move out of cmd buffer. Make window classes for OpenGL and Vulkan.
             if (!transfer)
             {
                 const SwapChainSurface& surface = m_SwapChain->GetBackBuffer();
@@ -475,7 +477,6 @@ namespace Crowny
             }
             else
             {
-            CW_ENGINE_INFO("TRANSFER");
                 m_Queue->Submit(this, nullptr, 0);
             }
             m_GraphicsPipeline = nullptr;

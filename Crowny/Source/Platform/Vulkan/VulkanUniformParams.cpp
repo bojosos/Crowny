@@ -1,6 +1,6 @@
 #include "cwpch.h"
 
-#include "Platform/Vulkan/VulkanUniforms.h"
+#include "Platform/Vulkan/VulkanUniformParams.h"
 
 namespace Crowny
 {
@@ -53,7 +53,7 @@ namespace Crowny
 
     void VulkanUniforms::SetParamBlock(uint32_t set, uint32_t slot, const Ref<UniformBufferBlock>& buffer)
     {
-        Uniforms::SetParamBlock(set, slot, buffer);
+        UniformParams::SetParamBlock(set, slot, buffer);
         VulkanUniformBlock* block = static_cast<VulkanUniformBlock*>(buffer.get());
         
         VulkanBuffer* buffer = nullptr;

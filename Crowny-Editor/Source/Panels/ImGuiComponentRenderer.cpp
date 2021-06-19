@@ -358,7 +358,7 @@ namespace Crowny
 							rng->GetField("max")->Get(obj, &max);
 							field->Get(script.ManagedInstance, &val);
 							if (ImGui::SliderFloat("##slider", &val, min, max))
-								field->Set(script.ManagedInstance, &val); // These should prob be set at start up, not here
+								field->Set(script.ManagedInstance, &val); // These should prob be set after compilation, not here
 						}
 						break;
 					}

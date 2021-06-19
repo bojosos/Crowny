@@ -86,9 +86,8 @@ namespace Crowny
  
 		m_MenuBar->AddMenu(viewMenu); 
  
-		SceneManager::AddScene(CreateRef<Scene>("Editor scene")); // To be loaded 
+		SceneManager::AddScene(CreateRef<Scene>("Editor scene"));
  
-		//TODO: Vulkan shader 
 		// Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(Shader::Create("/Shaders/PBRShader.glsl")); 
 		/* 
 		//auto& manifest = AssetManager::Get().ImportManifest("Sandbox.yaml", "Sandbox"); 

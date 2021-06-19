@@ -1,7 +1,6 @@
 To implement my Minecraft game using Crowny:
  - PerlinNoise
  - Mathf.FloorToInt, Mathf.RoundToInt
- - Search for game objects
  - Raycasting
  - Prefab instanciation
  - Mesh filter

@@ -1,3 +1,7 @@
-[02:50:03] [info] CROWNY: TRANSFER
-[02:50:03] [info] CROWNY: 0.4
-[02:50:03] [info] CROWNY: TRANSFER
+[23:09:51] [warning] CROWNY: Creating Window: Crowny Editor
+[23:09:51] [info] CROWNY: TRANSFER
+[23:09:52] [error] CROWNY: [7060244][UNASSIGNED-CoreValidation-Shader-InconsistentSpirv] : Validation Error: [ UNASSIGNED-CoreValidation-Shader-InconsistentSpirv ] Object 0: handle = 0x2f58698, type = VK_OBJECT_TYPE_DEVICE; | MessageID = 0x6bbb14 | SPIR-V module not valid: Invalid SPIR-V binary version 1.5 for target environment SPIR-V 1.3 (under Vulkan 1.1 semantics).
+[23:09:52] [error] CROWNY: [7060244][UNASSIGNED-CoreValidation-Shader-InconsistentSpirv] : Validation Error: [ UNASSIGNED-CoreValidation-Shader-InconsistentSpirv ] Object 0: handle = 0x2f58698, type = VK_OBJECT_TYPE_DEVICE; | MessageID = 0x6bbb14 | SPIR-V module not valid: Invalid SPIR-V binary version 1.5 for target environment SPIR-V 1.3 (under Vulkan 1.1 semantics).
+[23:09:52] [info] CROWNY: 0.791
+[23:09:52] [info] CROWNY: TRANSFER
+[23:09:53] [error] CROWNY: Assertion failed: Too many command buffers allocated.

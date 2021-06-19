@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Crowny/Renderer/UniformParameters.h"
+#include "Crowny/Renderer/UniformParams.h"
 
 namespace Crowny
 {
     
-    class VulkanUniformParameters : public UniformParameters
+    class VulkanUniformParameters : public UniformParams
     {
     public:
         virtual void SetUniformBlockBuffer(uint32_t set, uint32_t slot, const Ref<UniformBufferBlock>* uniformBlock) override;
