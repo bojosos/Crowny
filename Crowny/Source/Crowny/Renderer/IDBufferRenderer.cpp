@@ -78,8 +78,8 @@ namespace Crowny
 		s_Data.Framebuffer->GetColorAttachment(0)->Clear((int32_t)entt::entity(entt::null));
   		s_Data.Buffer = (IDBufferData*)s_Data.VertexBuffer->Map(0, RENDERER_MAX_SPRITES * 4, GpuLockOptions::WRITE_DISCARD);
 		s_Data.Shader3D->Bind();
-		s_Data.Shader3D->SetUniformMat4("u_ProjectionMatrix", projection);
-		s_Data.Shader3D->SetUniformMat4("u_ViewMatrix", view);
+		//s_Data.Shader3D->SetUniformMat4("u_ProjectionMatrix", projection);
+		//s_Data.Shader3D->SetUniformMat4("u_ViewMatrix", view);
     }
     
     void IDBufferRenderer::DrawQuad(const glm::mat4& transform, uint32_t entityId)
@@ -95,8 +95,8 @@ namespace Crowny
     void IDBufferRenderer::DrawMesh(const Ref<Mesh>& mesh, const glm::mat4& transform, uint32_t entityId)
     {
         s_Data.Shader3D->Bind();
-        s_Data.Shader3D->SetUniformMat4("u_ModelMatrix", transform);
-		s_Data.Shader3D->SetUniformInt("ObjectID", (int32_t)entityId);
+        //s_Data.Shader3D->SetUniformMat4("u_ModelMatrix", transform);
+		//s_Data.Shader3D->SetUniformInt("ObjectID", (int32_t)entityId);
 		mesh->GetVertexArray()->Bind();
         //CW_ENGINE_INFO("Here: {0}", mesh->GetVertexArray()->GetIndexBuffer()->GetCount());
         RenderCommand::DrawIndexed(mesh->GetVertexArray(), mesh->GetVertexArray()->GetIndexBuffer()->GetCount());

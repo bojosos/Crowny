@@ -8,6 +8,7 @@
 #include "Crowny/Renderer/VertexBuffer.h"
 #include "Crowny/Renderer/GraphicsPipeline.h"
 #include "Crowny/Renderer/CommandBuffer.h"
+#include "Crowny/Renderer/UniformParams.h"
 
 #include <glm/glm.hpp>
 
@@ -43,6 +44,7 @@ namespace Crowny {
 		virtual void DrawIndexed(uint32_t startIndex, uint32_t indexCount, uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount = 0) = 0;
         virtual void SetRenderTarget(const Ref<Framebuffer>& target) = 0;
 		virtual void SetDrawMode(DrawMode drawMode) = 0;
+		virtual void SetUniforms(const Ref<UniformParams>& params) = 0;
 
 		virtual void Shutdown() = 0;
 		

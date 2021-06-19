@@ -6,6 +6,7 @@
 
 #include <shaderc/shaderc.hpp>
 #include <spirv_cross/spirv_cross.hpp>
+#include <spirv-reflect/spirv_reflect.h>
 #include <spirv_cross/spirv_glsl.hpp>
 
 #include <filesystem>
@@ -58,6 +59,33 @@ namespace Crowny
         return std::string();
     }
     
+    static UniformResourceType SPIRTypeToResourceType(const spirv_cross::SPIRType& type)
+    {
+        if (type.basetype == spirv_cross::SPIRType::SampledImage)
+        {
+            switch(type.image.dim)
+            {
+                case SpvDim1D:   return SAMPLER1D;
+                case SpvDim2D:   return SAMPLER2D;
+                case SpvDim3D:   return SAMPLER3D;
+                case SpvDimCube: return SAMPLERCUBE;
+            }
+        }
+        
+        if (type.basetype == spirv_cross::SPIRType::Image)
+        {
+            switch(type.image.dim)
+            {
+                case SpvDim1D:   return TEXTURE1D;
+                case SpvDim2D:   return TEXTURE2D;
+                case SpvDim3D:   return TEXTURE3D;
+                case SpvDimCube: return TEXTURECUBE;
+            }
+        }
+        
+        return TEXTURE_UNKNOWN;
+    }
+    
     static std::string ShaderTypeToPath(ShaderType shaderType, const std::string& filename, ShaderOutputFormat outputFormat)
     {
         return CachePath / (filename + "." + ShaderTypeToString(shaderType) + "." + ShaderFormatToExtension(outputFormat));
@@ -78,8 +106,13 @@ namespace Crowny
         std::string shaderFilename = std::filesystem::path(sourcePath).filename();
         std::string shaderPath = ShaderTypeToPath(shaderType, shaderFilename, m_OutputFormat);
         auto [data, size] = VirtualFileSystem::Get()->ReadFile(ShaderTypeToPath(shaderType, shaderFilename, m_OutputFormat));
+        
+        uint8_t* result;
+        uint64_t sz;
+        
         if (data)
-            return { data, size, shaderType };
+            //result = { data, size, shaderType };
+            result = data;
         else
         {
             shaderc::Compiler compiler;
@@ -99,35 +132,91 @@ namespace Crowny
             {
                 CW_ENGINE_ERROR("Shader compilation error: {1}", module.GetErrorMessage());
                 CW_ENGINE_ASSERT(false);
-                return { nullptr, 0 };
+                //return { nullptr, 0 };
+                result = nullptr;
+                sz = 0;
             }
             dat = std::vector<uint32_t>(module.cbegin(), module.cend());
             VirtualFileSystem::Get()->WriteFile(shaderPath, (byte*)dat.data(), dat.size() * sizeof(uint32_t));
-            
-            spirv_cross::Compiler rfl(dat);
-            spirv_cross::ShaderResources resources = rfl.get_shader_resources();
-            for (const auto& buffer : resources.uniform_buffers)
-            {
-                const auto& bufferType = rfl.get_type(buffer.base_type_id);
-                uint32_t bufferSize = rfl.get_declared_struct_size(bufferType);
-                uint32_t binding = rfl.get_decoration(buffer.id, spv::DecorationBinding);
-                uint32_t set = rfl.get_decoration(buffer.id, spv::DecorationDescriptorSet);
-                uint32_t memberCount = bufferType.member_types.size();
-            }
+            //result = { dat.data(), dat.size() * sizeof(uint32_t), shaderType };
+            result = (uint8_t*)dat.data();
+            sz = dat.size() * sizeof(uint32_t);
+        }
 
-            for (const auto& sampler : resources.sampled_images)
-            {
-                const auto& bufferType = rfl.get_type(sampler.base_type_id);
-                uint32_t bufferSize = rfl.get_declared_struct_size(bufferType);
-                uint32_t binding = rfl.get_decoration(sampler.id, spv::DecorationBinding);
-                uint32_t slot = rfl.get_decoration(sampler.id, spv::DecorationDescriptorSet);
-                uint32_t memberCount = bufferType.member_types.size();
-            }
+        if (!result)
+            return { nullptr, 0, "main", shaderType };
+        spirv_cross::Compiler compiler((uint32_t*)result, sz / sizeof(uint32_t));
+		spirv_cross::ShaderResources resources = compiler.get_shader_resources();
+        
+        BinaryShaderData dataResult;
+        dataResult.Data = result;
+        dataResult.Size = sz / sizeof(uint32_t);
+        dataResult.ShaderType = shaderType;
+        dataResult.EntryPoint = compiler.get_entry_points_and_stages().front().name;
+        
+        for (const auto& uniform : resources.uniform_buffers)
+        {
+            const auto& bufferType = compiler.get_type(uniform.base_type_id);
+            uint32_t bufferSize = compiler.get_declared_struct_size(bufferType);
+            uint32_t binding = compiler.get_decoration(uniform.id, spv::DecorationBinding);
+            uint32_t set = compiler.get_decoration(uniform.id, spv::DecorationDescriptorSet);
+            uint32_t memberCount = bufferType.member_types.size();
             
-            return { dat.data(), dat.size() * sizeof(uint32_t), shaderType };
+            UniformBufferBlock buffer;
+            buffer.Name = uniform.name;
+            buffer.BlockSize = bufferSize;
+            buffer.Slot = binding;
+            buffer.Set = set;
+            
+            dataResult.Description.Uniforms[uniform.name] = buffer;
         }
         
-        return { nullptr, 0 };
+        for (const auto& sampler : resources.sampled_images)
+        {
+            const auto& bufferType = compiler.get_type(sampler.base_type_id);
+            uint32_t binding = compiler.get_decoration(sampler.id, spv::DecorationBinding);
+            uint32_t set = compiler.get_decoration(sampler.id, spv::DecorationDescriptorSet);
+
+            UniformResource resource;
+            resource.Name = sampler.name;
+            resource.Type = SPIRTypeToResourceType(bufferType);
+            resource.Slot = binding;
+            resource.Set = set;
+
+            dataResult.Description.CombinedSamplers[resource.Name] = resource;
+        }
+
+        for (const auto& texture : resources.separate_images)
+        {
+            const auto& bufferType = compiler.get_type(texture.base_type_id);
+            uint32_t binding = compiler.get_decoration(texture.id, spv::DecorationBinding);
+            uint32_t set = compiler.get_decoration(texture.id, spv::DecorationDescriptorSet);
+            
+            UniformResource resource;
+            resource.Name = texture.name;
+            resource.Type = SPIRTypeToResourceType(bufferType);
+            resource.Slot = binding;
+            resource.Set = set;
+                
+            dataResult.Description.Textures[resource.Name] = resource;
+        }
+
+        for (const auto& sampler : resources.separate_samplers)
+        {
+            const auto& bufferType = compiler.get_type(sampler.base_type_id);
+            uint32_t binding = compiler.get_decoration(sampler.id, spv::DecorationBinding);
+            uint32_t set = compiler.get_decoration(sampler.id, spv::DecorationDescriptorSet);
+
+            UniformResource resource;
+            resource.Name = sampler.name;
+            resource.Type = SPIRTypeToResourceType(bufferType);
+            resource.Slot = binding;
+            resource.Set = set;
+
+            dataResult.Description.Samplers[resource.Name] = resource;
+        }
+
+        return dataResult;
     }
     
 }

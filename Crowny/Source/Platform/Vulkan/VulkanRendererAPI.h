@@ -23,8 +23,8 @@ namespace Crowny
         virtual void Clear() override {};
 
         virtual void SetGraphicsPipeline(const Ref<GraphicsPipeline>& pipeline) override;
-        virtual void SetComputePipeline(const Ref<ComputePipeline>& pipeline) override; // TODO: Make virtual
-        virtual void SubmitCommandBuffer(const Ref<CommandBuffer>& commandBuffer) override; // TODO: Make virtual, create cmd buffer class
+        virtual void SetComputePipeline(const Ref<ComputePipeline>& pipeline) override;
+        virtual void SubmitCommandBuffer(const Ref<CommandBuffer>& commandBuffer) override;
         virtual void DispatchCompute(uint32_t groupsX, uint32_t groupsY = 1, uint32_t groupsZ = 1) override;
         virtual void SetIndexBuffer(const Ref<IndexBuffer>& buffer) override;
         virtual void SetVertexBuffers(uint32_t idx, Ref<VertexBuffer>* buffers, uint32_t bufferCount) override;
@@ -32,6 +32,7 @@ namespace Crowny
         virtual void DrawIndexed(uint32_t startIndex, uint32_t indexCount, uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount = 0) override;
         virtual void SetRenderTarget(const Ref<Framebuffer>& target) override;
         virtual void SetDrawMode(DrawMode drawMode) override;
+        virtual void SetUniforms(const Ref<UniformParams>& params) override;
 
         virtual void Shutdown() override;
 

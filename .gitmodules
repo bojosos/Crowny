@@ -12,7 +12,7 @@
 	url = https://github.com/bojosos/entt
 [submodule "Crowny/Dependencies/freetype2"]
 	path = Crowny/Dependencies/freetype2
-	url = https://github.com/aseprite/freetype2
+	url = https://github.com/bojosos/freetype2
 [submodule "Crowny/Dependencies/freetype-gl"]
 	path = Crowny/Dependencies/freetype-gl
 	url = https://github.com/bojosos/freetype-gl

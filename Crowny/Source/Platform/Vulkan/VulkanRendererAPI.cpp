@@ -328,6 +328,24 @@ namespace Crowny
     {
         //m_CommandBuffer->Dispatch(x, y, z); //TODO: Compute calls
     }
+    
+    void VulkanRendererAPI::SetUnforms(const Ref<UniformParams>& params)
+    {
+        for (uint32_t i = 0; i < 6; i++)
+        {
+            Ref<UniformDesc> desc = params->GetUniformDesc((ShaderType)i);
+            if (desc == nullptr)
+                continue;
+            
+            for (auto iter = desc->Uniforms.begin(); iter != desc->Uniforms.end(); ++iter)
+            {
+                Ref<UniformBufferBlock> block = params->GetUniformBlockBuffer(iter->second.set, iter->second.slot);
+                if (block != nullptr)
+                    block->FlushToGpu();
+            }
+        }
+        m_CommandBuffer->SetUniforms(params);
+    }
 
     void VulkanRendererAPI::SetGraphicsPipeline(const Ref<GraphicsPipeline>& pipeline)
     {
