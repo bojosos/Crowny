@@ -304,11 +304,14 @@ GENERATED += $(OBJDIR)/StringUtils.o
 GENERATED += $(OBJDIR)/Texture.o
 GENERATED += $(OBJDIR)/TextureManager.o
 GENERATED += $(OBJDIR)/UniformBuffer.o
+GENERATED += $(OBJDIR)/UniformBufferBlock.o
+GENERATED += $(OBJDIR)/UniformParams.o
 GENERATED += $(OBJDIR)/Uuid.o
 GENERATED += $(OBJDIR)/VertexArray.o
 GENERATED += $(OBJDIR)/VertexBuffer.o
 GENERATED += $(OBJDIR)/VirtualFileSystem.o
 GENERATED += $(OBJDIR)/VulkanCommandBuffer.o
+GENERATED += $(OBJDIR)/VulkanDescriptorPool.o
 GENERATED += $(OBJDIR)/VulkanDevice.o
 GENERATED += $(OBJDIR)/VulkanFramebuffer.o
 GENERATED += $(OBJDIR)/VulkanGpuBuffer.o
@@ -322,6 +325,8 @@ GENERATED += $(OBJDIR)/VulkanSwapChain.o
 GENERATED += $(OBJDIR)/VulkanTexture.o
 GENERATED += $(OBJDIR)/VulkanTextureCube.o
 GENERATED += $(OBJDIR)/VulkanUniformBuffer.o
+GENERATED += $(OBJDIR)/VulkanUniformBufferBlock.o
+GENERATED += $(OBJDIR)/VulkanUniformParams.o
 GENERATED += $(OBJDIR)/VulkanUtils.o
 GENERATED += $(OBJDIR)/VulkanVertexBuffer.o
 GENERATED += $(OBJDIR)/Win32Window.o
@@ -423,11 +428,14 @@ OBJECTS += $(OBJDIR)/StringUtils.o
 OBJECTS += $(OBJDIR)/Texture.o
 OBJECTS += $(OBJDIR)/TextureManager.o
 OBJECTS += $(OBJDIR)/UniformBuffer.o
+OBJECTS += $(OBJDIR)/UniformBufferBlock.o
+OBJECTS += $(OBJDIR)/UniformParams.o
 OBJECTS += $(OBJDIR)/Uuid.o
 OBJECTS += $(OBJDIR)/VertexArray.o
 OBJECTS += $(OBJDIR)/VertexBuffer.o
 OBJECTS += $(OBJDIR)/VirtualFileSystem.o
 OBJECTS += $(OBJDIR)/VulkanCommandBuffer.o
+OBJECTS += $(OBJDIR)/VulkanDescriptorPool.o
 OBJECTS += $(OBJDIR)/VulkanDevice.o
 OBJECTS += $(OBJDIR)/VulkanFramebuffer.o
 OBJECTS += $(OBJDIR)/VulkanGpuBuffer.o
@@ -441,6 +449,8 @@ OBJECTS += $(OBJDIR)/VulkanSwapChain.o
 OBJECTS += $(OBJDIR)/VulkanTexture.o
 OBJECTS += $(OBJDIR)/VulkanTextureCube.o
 OBJECTS += $(OBJDIR)/VulkanUniformBuffer.o
+OBJECTS += $(OBJDIR)/VulkanUniformBufferBlock.o
+OBJECTS += $(OBJDIR)/VulkanUniformParams.o
 OBJECTS += $(OBJDIR)/VulkanUtils.o
 OBJECTS += $(OBJDIR)/VulkanVertexBuffer.o
 OBJECTS += $(OBJDIR)/Win32Window.o
@@ -664,6 +674,12 @@ $(OBJDIR)/TextureManager.o: Source/Crowny/Renderer/TextureManager.cpp
 $(OBJDIR)/UniformBuffer.o: Source/Crowny/Renderer/UniformBuffer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/UniformBufferBlock.o: Source/Crowny/Renderer/UniformBufferBlock.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/UniformParams.o: Source/Crowny/Renderer/UniformParams.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/VertexArray.o: Source/Crowny/Renderer/VertexArray.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -808,6 +824,9 @@ $(OBJDIR)/OpenGLVertexBuffer.o: Source/Platform/OpenGL/OpenGLVertexBuffer.cpp
 $(OBJDIR)/VulkanCommandBuffer.o: Source/Platform/Vulkan/VulkanCommandBuffer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/VulkanDescriptorPool.o: Source/Platform/Vulkan/VulkanDescriptorPool.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/VulkanDevice.o: Source/Platform/Vulkan/VulkanDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -845,6 +864,12 @@ $(OBJDIR)/VulkanTextureCube.o: Source/Platform/Vulkan/VulkanTextureCube.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/VulkanUniformBuffer.o: Source/Platform/Vulkan/VulkanUniformBuffer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/VulkanUniformBufferBlock.o: Source/Platform/Vulkan/VulkanUniformBufferBlock.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/VulkanUniformParams.o: Source/Platform/Vulkan/VulkanUniformParams.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/VulkanUtils.o: Source/Platform/Vulkan/VulkanUtils.cpp

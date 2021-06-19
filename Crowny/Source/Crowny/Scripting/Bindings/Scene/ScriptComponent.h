@@ -1,9 +1,9 @@
 #pragma once
 
-#include <entt/entt.hpp>
-
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
+
+#include <entt/entt.hpp>
 #include <mono/metadata/object.h>
 
 namespace Crowny

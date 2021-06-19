@@ -19,7 +19,7 @@ namespace Crowny
     private:
         BufferUsage m_Usage;
         GpuBuffer* m_Buffer;
-        uint8_t m_CachedData;
+        uint8_t* m_CachedData;
         uint32_t m_Size;
         bool m_BufferDirty = true;
     };
