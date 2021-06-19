@@ -48,9 +48,9 @@ namespace Crowny
     }
     
     VulkanGpuBuffer::VulkanGpuBuffer(BufferType type, BufferUsage usage, uint32_t size)
-        : m_Buffer(nullptr), m_StagingBuffer(nullptr), m_StagingMemory(nullptr), m_MappedOffset(0), m_MappedSize(0),
+        : GpuBuffer(size, usage), m_Buffer(nullptr), m_StagingBuffer(nullptr), m_StagingMemory(nullptr), m_MappedOffset(0), m_MappedSize(0),
           m_MappedLockOptions(GpuLockOptions::WRITE_ONLY), m_DirectlyMappable(usage == BufferUsage::DYNAMIC_DRAW),
-        m_IsMapped(false), m_SupportsGpuWrites(false), m_Size(size)
+          m_IsMapped(false), m_SupportsGpuWrites(false)
     {
         auto& device = gVulkanRendererAPI().GetPresentDevice();
         

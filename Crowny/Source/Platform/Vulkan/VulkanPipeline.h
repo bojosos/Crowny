@@ -34,6 +34,7 @@ namespace Crowny
         
         VulkanPipeline* GetPipeline(VulkanRenderPass* renderPass, DrawMode drawMode);
         VulkanPipeline* CreatePipeline(VulkanRenderPass* renderPass, DrawMode drawMode);
+        VkPipelineLayout GetLayout() const { return m_PipelineLayout; }
         
     private:
         VkPipelineLayout m_PipelineLayout;

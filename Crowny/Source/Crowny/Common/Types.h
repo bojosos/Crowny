@@ -100,5 +100,21 @@ namespace Crowny
 		TRIANGLE_STRIP,
 		TRIANGLE_FAN
 	};
+	
+	enum UniformResourceType
+	{
+		SAMPLER1D = 1,
+		SAMPLER2D = 2,
+		SAMPLER3D = 3,
+		SAMPLERCUBE = 4,
+		TEXTURE1D = 5,
+		TEXTURE2D = 6,
+		TEXTURE3D = 7,
+		TEXTURECUBE = 8,
+		// RWTEXTURE1D = 9,
+		// RWTEXTURE2D = 10,
+		// RWTEXTURE3D = 11,
+		TEXTURE_UNKNOWN = 256
+	};
 
 }

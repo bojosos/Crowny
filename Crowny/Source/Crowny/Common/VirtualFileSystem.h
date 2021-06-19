@@ -7,6 +7,12 @@ namespace Crowny
 	class VirtualFileSystem
 	{
 	public:
+		/**
+		 * @brief Mounts a directory. Virtual path must start with "/"
+		 * 
+		 * @param virtualPath Virtual path
+		 * @param physicalPath Physical path.
+		 */
 		void Mount(const std::string& virtualPath, const std::string& physicalPath);
 		void Unmount(const std::string& path);
 

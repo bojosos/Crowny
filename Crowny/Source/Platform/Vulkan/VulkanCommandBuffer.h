@@ -7,9 +7,10 @@
 #include "Platform/Vulkan/VulkanFramebuffer.h"
 
 #include "Crowny/Common/Module.h"
+#include "Crowny/Renderer/CommandBuffer.h"
 #include "Crowny/Renderer/VertexBuffer.h"
 #include "Crowny/Renderer/IndexBuffer.h"
-#include "Crowny/Renderer/CommandBuffer.h"
+#include "Crowny/Renderer/UniformParams.h"
 
 namespace Crowny                                                                                                
 {
@@ -20,6 +21,7 @@ namespace Crowny
     class VulkanComputePipeline;
     class VulkanVertexBuffer;
     class VulkanIndexBuffer;
+    class VulkanUniformParams;
     
     class VulkanSemaphore
     {
@@ -132,7 +134,7 @@ namespace Crowny
         void ExecuteClearPass();
         void SetPipeline(const Ref<GraphicsPipeline>& pipeline);
         void SetPipeline(const Ref<ComputePipeline>& pipeline);
-        //void SetUniforms(const Ref<UniformBuffer>& uniforms);
+        void SetUniforms(const Ref<UniformParams>& uniforms);
         bool BindGraphicsPipeline();
         void BindUniforms();
         void SetViewport(const Rect2F& area);
@@ -160,12 +162,15 @@ namespace Crowny
         bool m_GraphicsPipelineRequiresBind : 1;
         bool m_ComputePipelineRequiresBind : 1;
         bool m_VertexInputsRequriesBind : 1;
+        bool m_BoundUniformsDirty : 1;
         
         std::array<VkClearValue, 8> m_ClearValues{};
         Rect2I m_ClearArea;
         uint32_t m_QueueFamily;
         uint32_t m_Id;
+        uint32_t m_NumBoundDescriptorSets;
 
+        Ref<VulkanUniformParams> m_BoundUniforms;
         bool m_RenderTargetModified = false;
         VkFence m_Fence;
         Rect2F m_Viewport;

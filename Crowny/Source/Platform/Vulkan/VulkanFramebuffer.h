@@ -13,10 +13,10 @@ namespace Crowny
 	struct VulkanAttachmentDesc
 	{
 		VkImage Image;
-		VkDeviceMemory Memory;
 		VkImageView View;
-		VkFormat Format;
+		VkDeviceMemory Memory;
 		VkImageSubresourceRange SubresourceRange;
+		VkFormat Format;
 		VkAttachmentDescription Description;
 	};
 
@@ -29,9 +29,9 @@ namespace Crowny
 	};
 
 	struct VulkanFramebufferAttachment {
-		uint32_t Index = 0;
 		VkImage Image = VK_NULL_HANDLE;
 		VkImageView View;
+		uint32_t Index = 0;
 		VkFormat Format;
 		VkImageLayout FinalLayout = VK_IMAGE_LAYOUT_UNDEFINED;		
 	};

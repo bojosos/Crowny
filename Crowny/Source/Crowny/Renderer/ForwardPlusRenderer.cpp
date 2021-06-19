@@ -194,20 +194,20 @@ namespace Crowny
 
         glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(0.1f, 0.1f, 0.1f));
         s_Data.DepthShader->Bind();
-        s_Data.DepthShader->SetUniformMat4("model", model);
+       // s_Data.DepthShader->SetUniformMat4("model", model);
 
         s_Data.LightCullingShader->Bind();
-        s_Data.LightCullingShader->SetUniformInt("lightCount", 1024);
-        s_Data.LightCullingShader->SetUniformInt2("screenSize", (int32_t)s_Data.ScreenSize.x, (int32_t)s_Data.ScreenSize.y);
+       // s_Data.LightCullingShader->SetUniformInt("lightCount", 1024);
+       // s_Data.LightCullingShader->SetUniformInt2("screenSize", (int32_t)s_Data.ScreenSize.x, (int32_t)s_Data.ScreenSize.y);
 
         s_Data.DepthDebugShader->Bind();
-        s_Data.DepthDebugShader->SetUniformMat4("model", model);
-        s_Data.DepthDebugShader->SetUniformFloat("near", 0.1f);
-        s_Data.DepthDebugShader->SetUniformFloat("far", 300.0f);
+        //s_Data.DepthDebugShader->SetUniformMat4("model", model);
+       // s_Data.DepthDebugShader->SetUniformFloat("near", 0.1f);
+        //s_Data.DepthDebugShader->SetUniformFloat("far", 300.0f);
 
         s_Data.LightAccumulationShader->Bind();
-        s_Data.LightAccumulationShader->SetUniformMat4("model", model);
-        s_Data.LightAccumulationShader->SetUniformInt("numberOfTilesX", s_Data.WorkGroupsX);
+        //s_Data.LightAccumulationShader->SetUniformMat4("model", model);
+        //s_Data.LightAccumulationShader->SetUniformInt("numberOfTilesX", s_Data.WorkGroupsX);
 
         glViewport(0, 0, s_Data.ScreenSize.x, s_Data.ScreenSize.y);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -216,22 +216,22 @@ namespace Crowny
     void ForwardPlusRenderer::BeginFrame(const EditorCamera& camera)
     {
         s_Data.LightAccumulationShader->Bind();
-        s_Data.LightAccumulationShader->SetUniformMat4("projection", camera.GetProjection());
-        s_Data.LightAccumulationShader->SetUniformMat4("view", camera.GetViewMatrix());
-        s_Data.LightAccumulationShader->SetUniformFloat3("viewPosition", camera.GetPosition());
+      //  s_Data.LightAccumulationShader->SetUniformMat4("projection", camera.GetProjection());
+     //   s_Data.LightAccumulationShader->SetUniformMat4("view", camera.GetViewMatrix());
+       // s_Data.LightAccumulationShader->SetUniformFloat3("viewPosition", camera.GetPosition());
 
         s_Data.LightCullingShader->Bind();
-		s_Data.LightCullingShader->SetUniformMat4("projection", camera.GetProjection());
-		s_Data.LightCullingShader->SetUniformMat4("view", camera.GetViewMatrix());
+		//s_Data.LightCullingShader->SetUniformMat4("projection", camera.GetProjection());
+		//s_Data.LightCullingShader->SetUniformMat4("view", camera.GetViewMatrix());
 
         s_Data.DepthShader->Bind();
-		s_Data.DepthShader->SetUniformMat4("projection", camera.GetProjection());
-		s_Data.DepthShader->SetUniformMat4("view", camera.GetViewMatrix());
+		//s_Data.DepthShader->SetUniformMat4("projection", camera.GetProjection());
+		//s_Data.DepthShader->SetUniformMat4("view", camera.GetViewMatrix());
         
         s_Data.DepthDebugShader->Bind();
-        s_Data.DepthDebugShader->SetUniformMat4("projection", camera.GetProjection());
-        s_Data.DepthDebugShader->SetUniformMat4("view", camera.GetViewMatrix());
-        
+      //  s_Data.DepthDebugShader->SetUniformMat4("projection", camera.GetProjection());
+       // s_Data.DepthDebugShader->SetUniformMat4("view", camera.GetViewMatrix());
+       
         UpdateLights();
     }
 
@@ -270,13 +270,13 @@ namespace Crowny
         s_Data.LightAccumulationShader->Bind();
         for (auto& mt : s_Meshes)
         {
-            s_Data.LightAccumulationShader->SetUniformMat4("model", mt.tran);
+          //  s_Data.LightAccumulationShader->SetUniformMat4("model", mt.tran);
             mt.mesh->Draw();
         }
         s_Data.HdrShader->Bind();
         glBindTextureUnit(0, s_Data.ColorBuffer);
         float exposure = 1.0f;
-        s_Data.HdrShader->SetUniformFloat("exposure", exposure);
+       // s_Data.HdrShader->SetUniformFloat("exposure", exposure);
         DrawQuad();
         glBindTextureUnit(0, 0);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);

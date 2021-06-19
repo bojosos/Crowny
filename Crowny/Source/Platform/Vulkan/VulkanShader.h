@@ -19,9 +19,12 @@ namespace Crowny
         virtual const std::string& GetName() const override { return m_Name; };
         virtual const std::string& GetFilepath() const override { return m_Filepath; }
 
+        virtual const UniformDescription& GetUniformDesc() const override { return m_ShaderDesc.Description; }
+
         const VkPipelineShaderStageCreateInfo& GetShaderStage() const { return m_ShaderStage; }
 
     private:
+        BinaryShaderData m_ShaderDesc;
         VkDevice m_Device;
         VkPipelineShaderStageCreateInfo m_ShaderStage;
         std::string m_Filepath;

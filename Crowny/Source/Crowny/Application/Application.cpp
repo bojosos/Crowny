@@ -17,7 +17,7 @@
  
 // NONONONONONO 
 #include <GLFW/glfw3.h> 
- 
+
 namespace Crowny 
 { 
  
@@ -38,8 +38,8 @@ namespace Crowny
 		m_Window->SetEventCallback(CW_BIND_EVENT_FN(Application::OnEvent)); 
 		Initializer::Init(); 
  
-		m_ImGuiLayer = new ImGuiLayer(); 
-		PushOverlay(m_ImGuiLayer); 
+	//	m_ImGuiLayer = new ImGuiLayer(); 
+	//	PushOverlay(m_ImGuiLayer); 
 	} 
  
 	Application::~Application() 
@@ -96,12 +96,12 @@ namespace Crowny
 				for (Layer* layer : m_LayerStack) 
 					layer->OnUpdate(timestep); 
 			 
-				m_ImGuiLayer->Begin(); 
-				{ 
-					for (Layer* layer : m_LayerStack) 
-						layer->OnImGuiRender(); 
-				} 
-				m_ImGuiLayer->End(); 
+				// m_ImGuiLayer->Begin(); 
+				// { 
+				// 	for (Layer* layer : m_LayerStack) 
+				// 		layer->OnImGuiRender(); 
+				// } 
+				// m_ImGuiLayer->End(); 
 			 
 			} 
  

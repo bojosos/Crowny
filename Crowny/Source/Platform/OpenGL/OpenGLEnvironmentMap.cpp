@@ -17,7 +17,7 @@
 namespace Crowny
 {
     OpenGLEnvironmentMap::OpenGLEnvironmentMap(const std::string& filepath)
-    {
+    {/*
         stbi_set_flip_vertically_on_load(true);
         auto [dat, size] = VirtualFileSystem::Get()->ReadFile(filepath);
         int width, height, channels;
@@ -42,11 +42,11 @@ namespace Crowny
             std::cout << "Failed to load HDR image." << std::endl;
         }
         delete dat;
-        ToCubemap();
+        ToCubemap();*/
     }
 
     static void RenderCube()
-    {
+    {/*
         static unsigned int cubeVAO1 = 0;
 		static unsigned int cubeVBO1 = 0;
     	if (cubeVAO1 == 0)
@@ -113,11 +113,11 @@ namespace Crowny
 		} 
         glBindVertexArray(cubeVAO1);
         glDrawArrays(GL_TRIANGLES, 0, 36);
-        glBindVertexArray(0);
+        glBindVertexArray(0);*/
     }
 
     static void RenderQuad()
-    {
+    {/*
         static unsigned int quadVAO = 0;
         static unsigned int quadVBO;
         if (quadVAO == 0)
@@ -142,7 +142,7 @@ namespace Crowny
         }
         glBindVertexArray(quadVAO);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        glBindVertexArray(0);
+        glBindVertexArray(0);*/
     }
 
     void OpenGLEnvironmentMap::Clear(int32_t clearColor)
@@ -170,7 +170,7 @@ namespace Crowny
     }
 
     void OpenGLEnvironmentMap::ToCubemap()
-    {
+    {/*
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LEQUAL);
         glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
@@ -342,7 +342,7 @@ namespace Crowny
         m_Cubemap = envCubemap;
         m_IrradianceMap = irradianceMap;
         m_BrdfLUTTexture = brdfLUTTexture;
-        m_PrefilterMap = prefilterMap;
+        m_PrefilterMap = prefilterMap;*/
     }
 
 }

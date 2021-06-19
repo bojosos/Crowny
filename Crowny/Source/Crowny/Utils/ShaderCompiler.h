@@ -1,8 +1,10 @@
 #pragma once
 
+#include "Crowny/Renderer/Shader.h"
+
 namespace Crowny
 {
-    
+
     enum class ShaderInputLanguage
     {
         HLSL,
@@ -19,11 +21,13 @@ namespace Crowny
     
     struct BinaryShaderData
     {
-        void* Data;
+        void* Data; // TODO: use blob or vector
         size_t Size;
+        std::string EntryPoint;
         Crowny::ShaderType ShaderType;
+        UniformDescription Description;
     };
-    
+
     class ShaderCompiler
     {
     public:

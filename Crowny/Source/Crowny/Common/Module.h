@@ -6,6 +6,12 @@ namespace Crowny
     class Module
     {
     public:
+
+        /**
+         * @brief Returns a reference to the instance.
+         * 
+         * @return T reference
+         */
         static T& Get()
         {
             if (!IsStartedUp())
@@ -16,6 +22,11 @@ namespace Crowny
             return *InstanceInternal();
         }
         
+        /**
+         * @brief Get a pointer to the instance.
+         * 
+         * @return T pointer
+         */
         static T* GetPtr()
         {
             if (!IsStartedUp())
@@ -26,6 +37,12 @@ namespace Crowny
             return InstanceInternal();
         }
         
+        /**
+         * @brief Initializes the module.
+         * 
+         * @tparam Args 
+         * @param args Arguments to forward to the constructor.
+         */
         template<class... Args>
         static void StartUp(Args&&... args)
         {
@@ -37,6 +54,13 @@ namespace Crowny
             ((Module*)InstanceInternal())->OnStartUp();
         }
 
+        /**
+         * @brief Initializes the module.
+         * 
+         * @tparam SubType Module subtype.
+         * @tparam Args 
+         * @param args Arguments to forward to the constructor.
+         */
         template<class SubType, class... Args>
         static void StartUp(Args&&...args)
         {
@@ -51,6 +75,10 @@ namespace Crowny
             ((Module*)InstanceInternal())->OnStartUp();
         }
         
+        /**
+         * @brief Destroys the module.
+         * 
+         */
         static void Shutdown()
         {
             CW_ENGINE_INFO("Here");

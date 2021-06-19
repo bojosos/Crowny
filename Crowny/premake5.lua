@@ -52,7 +52,7 @@ project "Crowny"
 		"%{IncludeDir.ImGuizmo}",
 	}
 
-	libdirs { "/usr/lib/mono-2.0" }
+	libdirs { "/usr/lib/mono-2.0", "%{wks.location}/Crowny/Dependencies/vulkan/lib" }
 
 	links 
 	{
@@ -65,7 +65,10 @@ project "Crowny"
 		"yaml-cpp",
 		"ImGuizmo",
 		"shaderc_shared",
-    "spirv-cross-c-shared"
+    "spirv-cross-c-shared",
+    "SPIRV-Tools-opt",
+    "SPIRV-Tools",
+    "SPIRV-Tools-link"
 	}
 
 

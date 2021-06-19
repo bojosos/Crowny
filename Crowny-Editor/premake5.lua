@@ -30,7 +30,7 @@ project "Crowny-Editor"
 		"%{IncludeDir.ImGuizmo}"
 	}
 
-	libdirs { "/usr/lib/mono-2.0", "/home/life/Desktop/dev/Crowny/Crowny/Dependencies/vulkan/lib" }
+	libdirs { "/usr/lib/mono-2.0", "%{wks.location}/Crowny/Dependencies/vulkan/lib" }
 
 	links 
 	{
@@ -44,7 +44,8 @@ project "Crowny-Editor"
 		"mono-2.0",
 		"yaml-cpp",
     "vulkan",
-    "shaderc_shared"
+    "shaderc_shared",
+    "spirv-cross-core"
 	}
 
 	filter "system:windows"
