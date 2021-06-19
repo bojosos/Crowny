@@ -103,6 +103,27 @@ namespace Crowny
             }
             dat = std::vector<uint32_t>(module.cbegin(), module.cend());
             VirtualFileSystem::Get()->WriteFile(shaderPath, (byte*)dat.data(), dat.size() * sizeof(uint32_t));
+            
+            spirv_cross::Compiler rfl(dat);
+            spirv_cross::ShaderResources resources = rfl.get_shader_resources();
+            for (const auto& buffer : resources.uniform_buffers)
+            {
+                const auto& bufferType = rfl.get_type(buffer.base_type_id);
+                uint32_t bufferSize = rfl.get_declared_struct_size(bufferType);
+                uint32_t binding = rfl.get_decoration(buffer.id, spv::DecorationBinding);
+                uint32_t set = rfl.get_decoration(buffer.id, spv::DecorationDescriptorSet);
+                uint32_t memberCount = bufferType.member_types.size();
+            }
+
+            for (const auto& sampler : resources.sampled_images)
+            {
+                const auto& bufferType = rfl.get_type(sampler.base_type_id);
+                uint32_t bufferSize = rfl.get_declared_struct_size(bufferType);
+                uint32_t binding = rfl.get_decoration(sampler.id, spv::DecorationBinding);
+                uint32_t slot = rfl.get_decoration(sampler.id, spv::DecorationDescriptorSet);
+                uint32_t memberCount = bufferType.member_types.size();
+            }
+            
             return { dat.data(), dat.size() * sizeof(uint32_t), shaderType };
         }
         
