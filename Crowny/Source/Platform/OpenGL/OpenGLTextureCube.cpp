@@ -1,4 +1,4 @@
-#include "cwpch.h"
+/*#include "cwpch.h"
 
 #include "Platform/OpenGL/OpenGLTextureCube.h"
 #include "Platform/OpenGL/OpenGLTexture.h"
@@ -89,3 +89,4 @@ namespace Crowny
 		glBindTextureUnit(slot, 0);
 	}
 }
+*/

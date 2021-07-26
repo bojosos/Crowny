@@ -2,7 +2,7 @@
 
 #include "Crowny/Events/ApplicationEvent.h"
 #include "Crowny/Layers/LayerStack.h"
-#include "Crowny/Window/Window.h"
+#include "Crowny/Window/RenderWindow.h"
 
 #include "Crowny/ImGui/ImGuiLayer.h"
 
@@ -23,8 +23,8 @@ namespace Crowny
 		void PushLayer(Layer* layer);
 		void PushOverlay(Layer* layer);
 
-
-		Window& GetWindow() const { return *m_Window; }
+		Window& GetWindow() const { return *m_Window->GetWindow(); }
+		const Ref<RenderWindow>& GetRenderWindow() const { return m_Window; }
 		ImGuiLayer* GetImGuiLayer() { return m_ImGuiLayer; }
 		void Exit();
 
@@ -37,7 +37,7 @@ namespace Crowny
 		void Run();
 
 	private:
-		Scope<Window> m_Window;
+		Ref<RenderWindow> m_Window;
 		bool m_Running = true;
 		bool m_Minimized = false;
 		float m_LastFrameTime = 0.0f;
@@ -48,6 +48,9 @@ namespace Crowny
 	private:
 		static Application* s_Instance;
 		friend int ::main(int argc, char** argv);
+		
+	public:
+		static uint8_t s_GLFWWindowCount;
 	};
 
 	Application* CreateApplication();

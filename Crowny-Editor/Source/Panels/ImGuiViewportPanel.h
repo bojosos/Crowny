@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ImGuiPanel.h"
-#include "Crowny/Renderer/Framebuffer.h"
 
 namespace Crowny
 {

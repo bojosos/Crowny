@@ -7,10 +7,10 @@ namespace Crowny
     
     struct EditorAssetsLibrary
     {
-        Ref<Texture2D> UnassignedTexture;
-        Ref<Texture2D> PlayIcon;
-        Ref<Texture2D> PauseIcon;
-        Ref<Texture2D> StopIcon;
+        // Ref<Texture2D> UnassignedTexture;
+        // Ref<Texture2D> PlayIcon;
+        // Ref<Texture2D> PauseIcon;
+        // Ref<Texture2D> StopIcon;
     };
 
     class EditorAssets

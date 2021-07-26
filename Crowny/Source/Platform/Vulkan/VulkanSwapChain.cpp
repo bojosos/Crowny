@@ -15,11 +15,12 @@
 namespace Crowny
 {
     
-    VulkanSwapChain::VulkanSwapChain(VkSurfaceKHR surface, uint32_t width, uint32_t height, bool vsync, VkFormat colorFormat,VkColorSpaceKHR colorSpace, bool createDepth, VkFormat depthFormat, VulkanSwapChain* oldChain)
+    VulkanSwapChain::VulkanSwapChain(VulkanResourceManager* owner, VkSurfaceKHR surface, uint32_t width, uint32_t height, bool vsync, VkFormat colorFormat,VkColorSpaceKHR colorSpace, bool createDepth, VkFormat depthFormat, VulkanSwapChain* oldChain)
+        : VulkanResource(owner, false)
     {
-        auto& device = gVulkanRendererAPI().GetPresentDevice();
-        m_Device = device->GetLogicalDevice();
-        VkPhysicalDevice physicalDevice = device->GetPhysicalDevice();
+        VulkanDevice& device = owner->GetDevice();
+        m_Device = device.GetLogicalDevice();
+        VkPhysicalDevice physicalDevice = device.GetPhysicalDevice();
         VkSurfaceCapabilitiesKHR surfCaps;
         VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfCaps);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
@@ -110,7 +111,6 @@ namespace Crowny
         swapchainCreateInfo.imageColorSpace = colorSpace;
         swapchainCreateInfo.imageExtent = { swapChainExtent.width, swapChainExtent.height };
         swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        //swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         swapchainCreateInfo.preTransform = (VkSurfaceTransformFlagBitsKHR)preTransform;
         swapchainCreateInfo.imageArrayLayers = 1;
         swapchainCreateInfo.queueFamilyIndexCount = 0;
@@ -120,13 +120,7 @@ namespace Crowny
         swapchainCreateInfo.oldSwapchain = oldChain ? oldChain->GetHandle() : VK_NULL_HANDLE;
         swapchainCreateInfo.clipped = VK_TRUE;
         swapchainCreateInfo.compositeAlpha = compositeAlpha;
-/*
-        if (surfCaps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
-            swapchainCreateInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-        
-        if (surfCaps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT)
-            swapchainCreateInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-*/
+
         result = vkCreateSwapchainKHR(m_Device, &swapchainCreateInfo, gVulkanAllocator, &m_SwapChain);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         
@@ -138,32 +132,58 @@ namespace Crowny
         result = vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &imageCount, images);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         
+        VulkanImageDesc imageDesc;
+        imageDesc.Format = colorFormat;
+        imageDesc.Shape = TextureShape::TEXTURE_2D;
+        imageDesc.Usage = TextureUsage::TEXTURE_RENDERTARGET;
+        imageDesc.Layout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageDesc.Faces = 1;
+        imageDesc.NumMips = 1;
+        imageDesc.Allocation = VK_NULL_HANDLE;
+
         m_Surfaces.resize(imageCount);
         for (uint32_t i = 0; i < imageCount; i++)
         {
-            VkImageViewCreateInfo viewCreateInfo{};
-            viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            viewCreateInfo.pNext = nullptr;
-            viewCreateInfo.flags = 0;
-            viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            viewCreateInfo.format = colorFormat;
-            viewCreateInfo.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
-            viewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            viewCreateInfo.subresourceRange.baseMipLevel = 0;
-            viewCreateInfo.subresourceRange.levelCount = 1;
-            viewCreateInfo.subresourceRange.baseArrayLayer = 0;
-            viewCreateInfo.subresourceRange.layerCount = 1;
-            viewCreateInfo.image = images[i];
-            result = vkCreateImageView(m_Device, &viewCreateInfo, gVulkanAllocator, &m_Surfaces[i].ImageView);
-            CW_ENGINE_ASSERT(result == VK_SUCCESS);
-            
-            m_Surfaces[i].Image = images[i];
+            imageDesc.Image = images[i];
             m_Surfaces[i].NeedsWait = false;
             m_Surfaces[i].Acquired = false;
-            m_Surfaces[i].Sync = new VulkanSemaphore();
+            m_Surfaces[i].Sync = owner->Create<VulkanSemaphore>();;
+            m_Surfaces[i].Image = owner->Create<VulkanImage>(imageDesc, false);
         }
         
         delete[] images;
+        if (createDepth)
+        {
+            VkImageCreateInfo depthStencilImageCI;
+            depthStencilImageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+            depthStencilImageCI.pNext = nullptr;
+            depthStencilImageCI.flags = 0;
+            depthStencilImageCI.imageType = VK_IMAGE_TYPE_2D;
+            depthStencilImageCI.format = depthFormat;
+            depthStencilImageCI.extent = { m_Width, m_Height, 1 };
+            depthStencilImageCI.mipLevels = 1;
+            depthStencilImageCI.arrayLayers = 1;
+            depthStencilImageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            depthStencilImageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            depthStencilImageCI.samples = VK_SAMPLE_COUNT_1_BIT;
+            depthStencilImageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
+            depthStencilImageCI.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+            depthStencilImageCI.pQueueFamilyIndices = nullptr;
+            depthStencilImageCI.queueFamilyIndexCount = 0;
+
+            VkImage depthStencilImage;
+            result = vkCreateImage(m_Device, &depthStencilImageCI, gVulkanAllocator, &depthStencilImage);
+            CW_ENGINE_ASSERT(result == VK_SUCCESS);
+
+            imageDesc.Image = depthStencilImage;
+            imageDesc.Usage = TextureUsage::TEXTURE_DEPTHSTENCIL;
+            imageDesc.Format = depthFormat;
+            imageDesc.Allocation = device.AllocateMemory(depthStencilImage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+            m_DepthStencilImage = owner->Create<VulkanImage>(imageDesc, true);
+        }
+        else
+            m_DepthStencilImage = nullptr;
 
         VulkanRenderPassDesc passDesc;
         passDesc.Samples = 1;
@@ -171,22 +191,27 @@ namespace Crowny
         passDesc.Color[0].Format = colorFormat;
         passDesc.Color[0].Enabled = true;
 
-        // TODO: Depth stencil
-        //if (m_DepthStencilImage)
-            //passDesc.Depth.Format = depthFormat;
-        VulkanRenderPass* renderPass = VulkanRenderPasses::Get().GetRenderPass(passDesc);
+        if (m_DepthStencilImage)
+        {
+            passDesc.Depth.Format = depthFormat;
+            passDesc.Depth.Enabled = true;
+        }
 
+        VulkanRenderPass* renderPass = VulkanRenderPasses::Get().GetRenderPass(passDesc);
         uint32_t numFramebuffers = (uint32_t)m_Surfaces.size();
         for (uint32_t i = 0; i < numFramebuffers; i++)
         {
             VulkanFramebufferDesc desc;
             desc.Width = m_Width;
             desc.Height = m_Height;
-            //desc.Layers = 1;
+            desc.LayerCount = 1;
             desc.Color[0].Image = m_Surfaces[i].Image;
+            desc.Color[0].Surface = TextureSurface::COMPLETE;
+            desc.Color[0].BaseLayer = 0;
             desc.Depth.Image = m_DepthStencilImage;
-            desc.Color[0].View = m_Surfaces[i].ImageView;
-            m_Surfaces[i].Framebuffer = new VulkanFramebuffer(renderPass, desc);
+            desc.Depth.Surface = TextureSurface::COMPLETE;
+            desc.Depth.BaseLayer = 0;
+            m_Surfaces[i].Framebuffer = owner->Create<VulkanFramebuffer>(renderPass, desc);
         }
     }
     
@@ -196,20 +221,20 @@ namespace Crowny
         {
             for (auto& surface : m_Surfaces)
             {
-                delete surface.Framebuffer;
+                surface.Framebuffer->Destroy();
                 surface.Framebuffer = nullptr;
-                delete surface.Sync;
+                surface.Sync->Destroy();
                 surface.Sync = nullptr;
-                //delete surface.Image;
+                surface.Image->Destroy();
                 surface.Image = nullptr;
             }
             vkDestroySwapchainKHR(m_Device, m_SwapChain, gVulkanAllocator);
-        }/*
+        }
         if (m_DepthStencilImage != nullptr)
         {
-            delete m_DepthStencilImage;
+            m_DepthStencilImage->Destroy();
             m_DepthStencilImage = nullptr;
-        }*/
+        }
     }
 
     void VulkanSwapChain::BackBufferWaitIssued()

@@ -1,4 +1,4 @@
-#pragma once
+/*#pragma once
 
 #include "Crowny/Renderer/Texture.h"
 
@@ -41,3 +41,4 @@ namespace Crowny
 		//void LoadFromVCross(uint32_t mips);
 	};
 }
+*/

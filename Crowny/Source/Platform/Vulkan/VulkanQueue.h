@@ -4,10 +4,11 @@
 
 #include "Platform/Vulkan/VulkanDevice.h"
 #include "Platform/Vulkan/VulkanSwapChain.h"
-#include "Platform/Vulkan/VulkanCommandBuffer.h"
 
 namespace Crowny
 {
+    class VulkanCmdBuffer;
+    
     class VulkanQueue
     {
     public:
@@ -18,11 +19,11 @@ namespace Crowny
         GpuQueueType GetType() const { return m_Type; }
         bool IsExecuting() const;
         
-        VulkanCommandBuffer* GetLastCommandBuffer() const { return m_LastCommandBuffer; }
+        VulkanCmdBuffer* GetLastCommandBuffer() const { return m_LastCommandBuffer; }
 
-        void Submit(VulkanCommandBuffer* buffer, VulkanSemaphore** waitSemaphores, uint32_t semaphoreLength);
+        void Submit(VulkanCmdBuffer* buffer, VulkanSemaphore** waitSemaphores, uint32_t semaphoreLength);
         void SubmitQueued();
-        void QueueSubmit(VulkanCommandBuffer* cmdBuffer, VulkanSemaphore* waitSemaphores, uint32_t semaphoreCount);
+        void QueueSubmit(VulkanCmdBuffer* cmdBuffer, VulkanSemaphore** waitSemaphores, uint32_t semaphoreCount);
 
         VkResult Present(VulkanSwapChain* swapChain, VulkanSemaphore** waitSemaphores, uint32_t semaphoreLength);
         void WaitIdle() const;
@@ -36,11 +37,11 @@ namespace Crowny
 
         struct SubmitInfo
         {
-            SubmitInfo(VulkanCommandBuffer* buffer, uint32_t idx, uint32_t semaphores, uint32_t cmdBuffers)
+            SubmitInfo(VulkanCmdBuffer* buffer, uint32_t idx, uint32_t semaphores, uint32_t cmdBuffers)
                 : CmdBuffer(buffer), SubmitIdx(idx), NumSemaphores(semaphores), NumCommandBuffers(cmdBuffers)
                 { }
             
-            VulkanCommandBuffer* CmdBuffer;
+            VulkanCmdBuffer* CmdBuffer;
             uint32_t SubmitIdx;
             uint32_t NumSemaphores;
             uint32_t NumCommandBuffers;
@@ -51,13 +52,13 @@ namespace Crowny
         GpuQueueType m_Type;
         uint32_t m_Index;
         
-        VkPipelineStageFlags m_SubmitDstWaitMask[32]; //TODO: Do not hardcode
+        VkPipelineStageFlags m_SubmitDstWaitMask[MAX_UNIQUE_QUEUES];
         std::vector<SubmitInfo> m_QueuedBuffers;
         std::vector<VulkanSemaphore*> m_QueuedSemaphores;
         std::list<SubmitInfo> m_ActiveSubmissions;
-        std::queue<VulkanCommandBuffer*> m_ActiveBuffers;
+        std::queue<VulkanCmdBuffer*> m_ActiveBuffers;
         std::queue<VulkanSemaphore*> m_ActiveSemaphores;
-        VulkanCommandBuffer* m_LastCommandBuffer = nullptr;
+        VulkanCmdBuffer* m_LastCommandBuffer = nullptr;
         bool m_LastCBSemaphoreUsed = false;
         uint32_t m_NextSubmitIdx = 1;
         std::vector<VkSemaphore> m_SemaphoresTemp;

@@ -3,78 +3,28 @@
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Texture.h"
 
-#include "Platform/OpenGL/OpenGLTextureCube.h"
 #include "Platform/OpenGL/OpenGLTexture.h"
 #include "Platform/Vulkan/VulkanTexture.h"
-#include "Platform/OpenGL/OpenGLEnvironmentMap.h"
 
 namespace Crowny
 {
 
-	Ref<Texture2D> Texture2D::Create(uint32_t width, uint32_t height, const TextureParameters& parameters)
-	{
-		switch (Renderer::GetAPI())
-		{
-			case RendererAPI::API::OpenGL: return CreateRef<OpenGLTexture2D>(width, height, parameters);
-			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); return nullptr;
-		}
-		
-		return nullptr;
-	}
+    Texture::Texture(const TextureParameters& params) : m_Params(params)
+    { }
 
-	Ref<Texture2D> Texture2D::Create(const std::string& filepath, const TextureParameters& parameters, const std::string& name)
-	{
-		switch (Renderer::GetAPI())
+	const TextureSurface TextureSurface::COMPLETE = TextureSurface(0, 0, 0, 0);
+
+    Ref<Texture> Texture::Create(const TextureParameters& params)
+    {
+        switch (Renderer::GetAPI())
 		{
-			case RendererAPI::API::OpenGL: return CreateRef<OpenGLTexture2D>(filepath, parameters, name);
+			//TODO: Add support for binary OpenGL shaders
+			//case RendererAPI::API::OpenGL: return CreateRef<OpenGLShader>(m_Filepath);
+			case RendererAPI::API::Vulkan: return CreateRef<VulkanTexture>(params);
 			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); return nullptr;
 		}
 
 		return nullptr;
-	}
+    }
 
-
-	Ref<TextureCube> TextureCube::Create(const std::string& filepath, const TextureParameters& parameters)
-	{
-		switch (Renderer::GetAPI())
-		{
-			case RendererAPI::API::OpenGL: return CreateRef<OpenGLTextureCube>(filepath, parameters);
-			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); return nullptr;
-		}
-
-		return nullptr;
-	}
-
-	Ref<TextureCube> TextureCube::Create(const std::array<std::string, 6>& files, const TextureParameters& parameters)
-	{
-		switch (Renderer::GetAPI())
-		{
-			case RendererAPI::API::OpenGL: return CreateRef<OpenGLTextureCube>(files, parameters);
-			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); return nullptr;
-		}
-
-		return nullptr;
-	}
-
-	Ref<TextureCube> TextureCube::Create(const std::array<std::string, 6>& files, uint32_t mips, const TextureParameters& parameters)
-	{
-		switch (Renderer::GetAPI())
-		{
-			case RendererAPI::API::OpenGL: return CreateRef<OpenGLTextureCube>(files, mips, InputFormat::VERTICAL_CROSS, parameters);
-			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); return nullptr;
-		}
-
-		return nullptr;
-	}
-
-	Ref<EnvironmentMap> EnvironmentMap::Create(const std::string& filepath)
-	{
-		switch (Renderer::GetAPI())
-		{
-			case RendererAPI::API::OpenGL: return CreateRef<OpenGLEnvironmentMap>(filepath);
-			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); return nullptr;
-		}
-
-		return nullptr;
-	}
 }

@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Renderer/IDBufferRenderer.h"
-#include "Crowny/Renderer/Framebuffer.h"
+//#include "Crowny/Renderer/Framebuffer.h"
 #include "Crowny/Renderer/RenderCommand.h"
 
 #include <glad/glad.h>
@@ -17,7 +17,7 @@ namespace Crowny
 	{
 		Ref<Shader> Shader2D;
         Ref<Shader> Shader3D;
-        Ref<Framebuffer> Framebuffer;
+        //Ref<Framebuffer> Framebuffer;
             // For 2D batch rendering
 		Ref<VertexArray> VertexArray;
 		Ref<VertexBuffer> VertexBuffer;
@@ -33,11 +33,11 @@ namespace Crowny
         s_Data.Shader2D = Shader::Create("/Shaders/IDBufferShader.glsl");
         s_Data.Shader3D = Shader::Create("/Shaders/IDBuffer3DShader.glsl");
         
-		FramebufferProperties fbProps;
+		/*FramebufferProperties fbProps;
 		fbProps.Width = 681;
 		fbProps.Height = 355;
 		fbProps.Attachments = { FramebufferTextureFormat::R32I };
-        s_Data.Framebuffer = Framebuffer::Create(fbProps);
+        s_Data.Framebuffer = Framebuffer::Create(fbProps);*/
 
         s_Data.VertexArray = VertexArray::Create();
 		s_Data.VertexBuffer = VertexBuffer::Create(sizeof(IDBufferData) * 4 * RENDERER_MAX_SPRITES, BufferUsage::DYNAMIC_DRAW);
@@ -69,13 +69,13 @@ namespace Crowny
 	
 	void IDBufferRenderer::OnResize(uint32_t width, uint32_t height)
 	{
-		s_Data.Framebuffer->Resize(width, height);
+		//s_Data.Framebuffer->Resize(width, height);
 	}
 
     void IDBufferRenderer::Begin(const glm::mat4& projection, const glm::mat4& view)
     {
-        s_Data.Framebuffer->Bind();
-		s_Data.Framebuffer->GetColorAttachment(0)->Clear((int32_t)entt::entity(entt::null));
+        //s_Data.Framebuffer->Bind();
+		//s_Data.Framebuffer->GetColorAttachment(0)->Clear((int32_t)entt::entity(entt::null));
   		s_Data.Buffer = (IDBufferData*)s_Data.VertexBuffer->Map(0, RENDERER_MAX_SPRITES * 4, GpuLockOptions::WRITE_DISCARD);
 		s_Data.Shader3D->Bind();
 		//s_Data.Shader3D->SetUniformMat4("u_ProjectionMatrix", projection);
@@ -110,17 +110,17 @@ namespace Crowny
 		RenderCommand::DrawIndexed(s_Data.VertexArray, s_Data.IndexCount);
 		s_Data.IndexCount = 0;
 		s_Data.VertexArray->Unbind();
-        s_Data.Framebuffer->Unbind();
+        //s_Data.Framebuffer->Unbind();
 	}
     
     int32_t IDBufferRenderer::ReadPixel(int32_t x, int32_t y)
     {
-		s_Data.Framebuffer->Bind();
+		//s_Data.Framebuffer->Bind();
         glReadBuffer(GL_COLOR_ATTACHMENT0);
         int32_t pixelValue;
 		//CW_ENGINE_INFO("{0}, {1}", x, y);
         glReadPixels(x, y, 1, 1, GL_RED_INTEGER, GL_INT, &pixelValue);
-		s_Data.Framebuffer->Unbind();
+		//s_Data.Framebuffer->Unbind();
         return pixelValue;
     }
 }

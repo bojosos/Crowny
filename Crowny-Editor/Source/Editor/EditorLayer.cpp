@@ -11,7 +11,6 @@
 #include "Crowny/Renderer/IDBufferRenderer.h" 
 #include "Crowny/Scene/SceneRenderer.h" 
 #include "Crowny/Scene/ScriptRuntime.h" 
-#include "Crowny/Renderer/Framebuffer.h" 
 #include "Crowny/Renderer/UniformParams.h"
 #include "Crowny/Common/Timer.h" 
 #include "Crowny/Utils/ShaderCompiler.h"
@@ -44,10 +43,10 @@ namespace Crowny
 	static Ref<VertexBuffer> vbo; 
 	static Ref<IndexBuffer> ibo; 
 	static Ref<GraphicsPipeline> pipeline; 
-	static Ref<Framebuffer> framebuffer; 
+	//static Ref<Framebuffer> framebuffer; 
 	static Ref<Shader> vertex, fragment; 
-	static Ref<UniformParams> uniforms;
 	static Ref<UniformBufferBlock> mvp;
+	static Ref<UniformParams> uniformParams;
  
 	class VulkanFramebuffer; 
  
@@ -119,24 +118,18 @@ namespace Crowny
 		VirtualFileSystem::Get()->Mount("Icons", "Resources/Icons"); 
 		EditorAssets::Load(); 
 		ScriptRuntime::Init();*/ 
- 
-		ShaderCompiler compiler; 
-		 
-		{ 
-			Timer t; 
-			vertex = Shader::Create(compiler.Compile("/Shaders/vk.vert", VERTEX_SHADER)); 
-			fragment = Shader::Create(compiler.Compile("/Shaders/vk.frag", FRAGMENT_SHADER)); 
-			CW_ENGINE_INFO(t.ElapsedMillis()); 
-		} 
+		ShaderCompiler compiler;
+		vertex = Shader::Create(compiler.Compile("/Shaders/vk.vert", VERTEX_SHADER));
+		fragment = Shader::Create(compiler.Compile("/Shaders/vk.frag", FRAGMENT_SHADER));
 		
 		struct vert { glm::vec3 v; glm::vec3 c; };
 		vert verts[4] = {
-				{ { -0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
-				{ {   0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
-				{ {  -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
-				{ {  0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f } } };
+				{ { -0.5f, -0.5f, -10.0f }, { 0.8f, 0.2f, 0.5f } },
+				{ {   0.5f, 0.5f, -10.0f }, { 0.8f, 0.2f, 0.5f } },
+				{ {  -0.5f, 0.5f, -10.0f }, { 0.8f, 0.2f, 0.5f } },
+				{ {  0.5f, -0.5f, -10.0f }, { 0.8f, 0.2f, 0.5f } } };
 		vbo = VertexBuffer::Create(verts, sizeof(verts)); 
-    	vbo->SetLayout({{ShaderDataType::Float3, "position"}, {ShaderDataType::Float3, "color"}}); 
+    	vbo->SetLayout({{ShaderDataType::Float3, "position"}, { ShaderDataType::Float3, "color" }}); 
 		 
 		uint16_t indices[6] = { 0, 1, 2, 0, 3, 1 }; 
 		ibo = IndexBuffer::Create(indices, 6); 
@@ -145,14 +138,14 @@ namespace Crowny
 		desc.FragmentShader = fragment; 
 		desc.VertexShader = vertex; 
 
-		PipelineUniformDesc uniformDesc;
-		uniformDesc.VertexUniforms = vertex->GetUniformDesc();
-		uniformDesc.FragmentUniforms = fragment->GetUniformDesc();
-		
-		uniforms = UniformParams::Create(uniformDesc);
-		mvp = UniformBufferBlock::Create(sizeof(glm::mat4) * 2, BufferUsage::DYNAMIC_DRAW);
-		uniforms->SetUniformBlockBuffer(mvp);
-		pipeline = GraphicsPipeline::Create(desc, vbo->GetLayout()); 
+		pipeline = GraphicsPipeline::Create(desc, vbo->GetLayout());
+		for (auto& desc : vertex->GetUniformDesc()->Uniforms)
+		{
+			CW_ENGINE_INFO("Uniform buffer: {0}, name: {1}, set: {2} slot: {3}, size: {4}", desc.first, desc.second.Name, desc.second.Set, desc.second.Slot, desc.second.BlockSize);
+		}
+		mvp = UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("MVP").BlockSize, BufferUsage::DYNAMIC_DRAW);
+		uniformParams = UniformParams::Create(pipeline);
+		uniformParams->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "MVP", mvp);
 	} 
  
 	void EditorLayer::CreateNewScene() 
@@ -199,16 +192,20 @@ namespace Crowny
 			delete win; 
 		} 
 	} 
-	 
 	void EditorLayer::OnUpdate(Timestep ts) 
 	{ 
+		glm::mat4 id(1.0f);
+		mvp->Write(0, &id, sizeof(glm::mat4));
+		mvp->Write(sizeof(glm::mat4), &s_EditorCamera.GetProjection(), sizeof(glm::mat4));
+		mvp->Write(sizeof(glm::mat4) * 2, &s_EditorCamera.GetViewMatrix(), sizeof(glm::mat4));
+		
 		auto& rapi = RendererAPI::Get(); 
-		rapi.SetRenderTarget(nullptr); 
+		rapi.SetRenderTarget(Application::Get().GetRenderWindow()); 
 		rapi.SetGraphicsPipeline(pipeline); 
 		rapi.SetVertexBuffers(0, &vbo, 1); 
 		rapi.SetIndexBuffer(ibo);
 		rapi.SetViewport(0, 0, Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight()); 
-		rapi.SetUniforms(uniforms);
+		rapi.SetUniforms(uniformParams);
 		rapi.DrawIndexed(0, 6, 0, 4); 
 		Ref<Scene> scene = SceneManager::GetActiveScene(); 
 		//m_ViewportSize = m_ViewportPanel->GetViewportSize();
@@ -360,12 +357,12 @@ namespace Crowny
 			{ 
 				if (ctrl) 
 				{ 
-					Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(Shader::Create("/Shaders/PBRShader.glsl")); 
-					mat->SetAlbedoMap(Texture2D::Create("/Textures/rustediron2_basecolor.png")); 
-					mat->SetMetalnessMap(Texture2D::Create("/Textures/rustediron2_metallic.png")); 
-					mat->SetNormalMap(Texture2D::Create("/Textures/rustediron2_normal.png")); 
-					mat->SetRoughnessMap(Texture2D::Create("/Textures/rustediron2_roughness.png")); 
-					ImGuiMaterialPanel::SetSelectedMaterial(mat); 
+					// Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(Shader::Create("/Shaders/PBRShader.glsl")); 
+					// mat->SetAlbedoMap(Texture2D::Create("/Textures/rustediron2_basecolor.png")); 
+					// mat->SetMetalnessMap(Texture2D::Create("/Textures/rustediron2_metallic.png")); 
+					// mat->SetNormalMap(Texture2D::Create("/Textures/rustediron2_normal.png")); 
+					// mat->SetRoughnessMap(Texture2D::Create("/Textures/rustediron2_roughness.png")); 
+					// ImGuiMaterialPanel::SetSelectedMaterial(mat); 
 				} 
 				break; 
 			} 
@@ -385,12 +382,12 @@ namespace Crowny
 	} 
  
 	bool EditorLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e) 
-	{ 
+	{ /*
 		if (m_ViewportPanel->IsHovered() && m_ViewportPanel->IsFocused()) 
 		{ 
 			ImGuiHierarchyPanel::SetSelectedEntity(m_HoveredEntity); 
 			return true; 
-		} 
+		} */
     return false; 
 	} 
  

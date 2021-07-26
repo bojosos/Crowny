@@ -27,27 +27,42 @@ namespace Crowny
 			delete[] m_CachedData;
 	}
 
-	void UniformBufferBlock::UniformBufferBlock(uint32_t size, BufferUsage usage)
+	UniformBufferBlock::UniformBufferBlock(uint32_t size, BufferUsage usage)
 		: m_CachedData(nullptr), m_Usage(usage), m_Size(size)
 	{
 		if (m_Size > 0)
 		{
 			m_CachedData = new uint8_t[m_Size];
-			memset(m_CachedData, 0, m_Size);
+			Cw_ZeroOut(m_CachedData, m_Size);
 		}
 	}
 
 	void UniformBufferBlock::Write(uint32_t offset, const void* data, uint32_t size)
 	{
-		CW_ENGINE_ASSERT(offset + size > m_Size);
+		CW_ENGINE_ASSERT(offset + size <= m_Size);
+		std::memcpy(m_CachedData + offset, data, size);
+		m_BufferDirty = true;
+	}
+	
+	void UniformBufferBlock::Read(uint32_t offset, void* data, uint32_t size)
+	{
+		CW_ENGINE_ASSERT(offset + size <= m_Size);
+		std::memcpy(data, m_CachedData + offset, size);
+	}
+	
+	void UniformBufferBlock::ZeroOut(uint32_t offset, uint32_t size)
+	{
+		CW_ENGINE_ASSERT(offset + size <= m_Size);
+		std::memset(m_CachedData, offset, size);
+		m_BufferDirty = true;
 	}
 
 	void UniformBufferBlock::FlushToGpu()
 	{
-		if (!m_BufferDirty)
+		if (m_BufferDirty)
 		{
-			void* dest = m_Buffer->Map(0, m_Size, WRITE_DISCARD);
-			memcpy(dest, m_CachedData, m_Size);
+			void* dest = m_Buffer->Map(0, m_Size, GpuLockOptions::WRITE_DISCARD);
+			std::memcpy(dest, m_CachedData, m_Size);
 			m_Buffer->Unmap();
 			m_BufferDirty = false;
 		}

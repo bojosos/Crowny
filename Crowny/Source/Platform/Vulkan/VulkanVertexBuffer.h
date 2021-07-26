@@ -22,6 +22,7 @@ namespace Crowny
 		virtual void Unmap() override;
 		
 		VkBuffer GetHandle() const { return m_Buffer->GetHandle(); }
+		VulkanBuffer* GetBuffer() const { return m_Buffer->GetBuffer(); }
 	private:
 		VulkanGpuBuffer* m_Buffer;
 		BufferUsage m_Usage;

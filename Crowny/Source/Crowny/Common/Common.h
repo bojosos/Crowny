@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <cstring>
 #include <functional>
 
 #ifdef CW_DEBUG
@@ -54,13 +55,14 @@ namespace Crowny {
 	}
 
 
+	template <typename T>
+	using Scope = std::unique_ptr<T>;
+	
 	/**
-	 * @brief Create a unique pointer
+	 * @brief Creates a unique pointer.
 	 * 
 	 * @tparam Smart pointer type.
 	 */
-	template <typename T>
-	using Scope = std::unique_ptr<T>;
 	template<typename T, typename ... Args>
 	constexpr Scope<T> CreateScope(Args&& ... args)
 	{
@@ -68,19 +70,56 @@ namespace Crowny {
 	}
 
 
+	template <typename T>
+	using Ref = std::shared_ptr<T>;
+	
 	/**
 	 * @brief Creates a shared pointer.
 	 * 
 	 * @tparam Smart pointer type.
 	 */
-	template <typename T>
-	using Ref = std::shared_ptr<T>;
 	template <typename T, typename ... Args>
 	constexpr Ref<T> CreateRef(Args&& ... args)
 	{
 		return std::make_shared<T>(std::forward<Args>(args)...);
 	}
+	
+	template<class T>
+	void Cw_ZeroOut(T& s)
+	{
+		std::memset(&s, 0, sizeof(T));
+	}
+	
+	template<class T>
+	void Cw_ZeroOut(T* arr, size_t count)
+	{
+		std::memset(arr, 0, sizeof(T) * count);
+	}
+	
+	template<class T, size_t N>
+	void Cw_ZeroOut(T(&arr)[N])
+	{
+		std::memset(arr, 0, sizeof(T) * N);
+	}
+	
+	template<class T>
+	void Cw_Copy(T* dst, T* src, size_t count)
+	{
+		std::memcpy(dst, src, sizeof(T) * count);
+	}
+	
+	template<class T, size_t N>
+	void Cw_Copy(T(&dst)[N], T(&src)[N], size_t count)
+	{
+		std::memcpy(dst, src, sizeof(T) * count);
+	}
 
+	template<class T, size_t N>
+	constexpr size_t Cw_Size(const T(&array)[N])
+	{
+		return N;
+	}
+	
 }
 
 #include "Crowny/Common/Assert.h"

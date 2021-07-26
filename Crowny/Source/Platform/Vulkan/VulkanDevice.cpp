@@ -2,6 +2,7 @@
 
 #include "Platform/Vulkan/VulkanDevice.h"
 #include "Platform/Vulkan/VulkanRendererAPI.h"
+#include "Platform/Vulkan/VulkanDescriptorPool.h"
 
 namespace Crowny
 {
@@ -102,7 +103,6 @@ namespace Crowny
                     m_QueueInfos[i].Queues[j] = new VulkanQueue(*this, queue, (GpuQueueType)i, j);
                 }
             }
-            m_CommandBufferPool = new VulkanCommandBufferPool(*this);
         
             VmaAllocatorCreateInfo allocatorCI = {};
             allocatorCI.physicalDevice = m_PhysicalDevice;
@@ -113,6 +113,10 @@ namespace Crowny
             allocatorCI.vulkanApiVersion = VK_API_VERSION_1_1;
             
             vmaCreateAllocator(&allocatorCI, &m_Allocator);
+
+            m_CommandBufferPool = new VulkanCommandBufferPool(*this);
+            m_DescriptorManager = new VulkanDescriptorManager(*this);
+            m_ResourceManager = new VulkanResourceManager(*this);
         }
     }
     
@@ -130,7 +134,11 @@ namespace Crowny
                 delete m_QueueInfos[i].Queues[j];
             }
         }
+        
         delete m_CommandBufferPool;
+        delete m_DescriptorManager;
+        delete m_ResourceManager;
+        vmaDestroyAllocator(m_Allocator);
         vkDestroyDevice(m_LogicalDevice, gVulkanAllocator);
     }
     
