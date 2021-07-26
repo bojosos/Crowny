@@ -16,8 +16,9 @@ namespace Crowny
 
 	void ShaderLibrary::Add(const Ref<Shader>& shader)
 	{
-		auto& name = shader->GetName();
-		Add(name, shader);
+		//auto& name = shader->GetName();
+		//Add(name, shader);
+		Add("test", shader);
 	}
 
 	Ref<Shader> ShaderLibrary::Load(const std::string& filepath)

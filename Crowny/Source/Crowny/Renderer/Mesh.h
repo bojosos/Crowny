@@ -21,10 +21,10 @@ namespace Crowny
 		Ref<VertexArray> m_VertexArray;
 		Ref<IndexBuffer> m_IndexBuffer;
 		Ref<MaterialInstance> m_MaterialInstance;
-		std::vector<Ref<Texture2D>> m_Textures;
+		std::vector<Ref<Texture>> m_Textures;
 
 	public:
-		Mesh(const Ref<VertexArray>& vao, const Ref<IndexBuffer>& ibo, const Ref<MaterialInstance>& material = nullptr, const std::vector<Ref<Texture2D>>& textures = {});
+		Mesh(const Ref<VertexArray>& vao, const Ref<IndexBuffer>& ibo, const Ref<MaterialInstance>& material = nullptr, const std::vector<Ref<Texture>>& textures = {});
 		~Mesh() = default;
 
 		void Draw();

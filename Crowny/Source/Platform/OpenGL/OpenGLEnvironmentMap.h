@@ -1,4 +1,4 @@
-#pragma once
+/*#pragma once
 
 #include "Crowny/Renderer/Texture.h"
 
@@ -39,4 +39,4 @@ namespace Crowny
 
 	};
 
-}
+}*/

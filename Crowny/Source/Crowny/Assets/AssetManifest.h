@@ -28,7 +28,7 @@ namespace Crowny
         std::unordered_map<std::string, Uuid> m_Uuids;
         std::unordered_map<Uuid, std::string> m_Paths;
     };
-
+/*
     template <>
     inline Ref<Texture2D> AssetManifest::Load<Texture2D>(const Uuid& id)
     {
@@ -41,5 +41,5 @@ namespace Crowny
     {
         return nullptr;
     }
-
+*/
 }

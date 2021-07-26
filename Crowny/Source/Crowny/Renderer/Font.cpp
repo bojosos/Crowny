@@ -20,19 +20,20 @@ namespace Crowny
 			texture_font_load_glyph(m_Font, &f);
 		}
 
-		TextureParameters params = { TextureFormat::RGBA8, TextureFilter::LINEAR, TextureWrap::REPEAT };
+		//TextureParameters params;
+		//params.
 
-		m_Texture = Texture2D::Create(512, 512, params);
+		//m_Texture = Texture::Create(512, 512, params);
 
 		byte* data = new byte[512 * 512 * 4];
-		memset(data, 0xff, 512 * 512 * 4);
+		std::memset(data, 0xff, 512 * 512 * 4);
 
 		for (uint32_t i = 0; i < 512 * 512; i++)
 		{
 			data[i * 4 + 3] = m_Atlas->data[i];
 		}
 
-		m_Texture->SetData(data, TextureChannel::CHANNEL_RGBA);
+		//m_Texture->SetData(data, TextureChannel::CHANNEL_RGBA);
 
 		delete[] data;
 		delete mem;

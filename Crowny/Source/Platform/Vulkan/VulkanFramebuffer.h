@@ -1,23 +1,20 @@
 #pragma once
 
 #include "Platform/Vulkan/VulkanUtils.h"
-
-#include "Crowny/Renderer/Framebuffer.h"
-#include "Crowny/Renderer/Texture.h"
-
 #include "Platform/Vulkan/VulkanRenderPass.h"
+#include "Platform/Vulkan/VulkanResource.h"
+#include "Platform/Vulkan/VulkanTexture.h"
 
 namespace Crowny
 {
 
+  class VulkanImage;
+
 	struct VulkanAttachmentDesc
 	{
-		VkImage Image;
-		VkImageView View;
-		VkDeviceMemory Memory;
-		VkImageSubresourceRange SubresourceRange;
-		VkFormat Format;
-		VkAttachmentDescription Description;
+		VulkanImage* Image = nullptr;
+		TextureSurface Surface;
+		uint32_t BaseLayer;
 	};
 
 	struct VulkanFramebufferDesc
@@ -25,21 +22,21 @@ namespace Crowny
 		uint32_t Width, Height;
 		uint32_t LayerCount;
 		VulkanAttachmentDesc Depth;
-		VulkanAttachmentDesc Color[8];
+		VulkanAttachmentDesc Color[MAX_FRAMEBUFFER_COLOR_ATTACHMENTS];
 	};
 
 	struct VulkanFramebufferAttachment {
-		VkImage Image = VK_NULL_HANDLE;
-		VkImageView View;
 		uint32_t Index = 0;
-		VkFormat Format;
+		uint32_t BaseLayer = 0;
+		TextureSurface Surface;
+		VulkanImage* Image = nullptr;
 		VkImageLayout FinalLayout = VK_IMAGE_LAYOUT_UNDEFINED;		
 	};
 		
-    class VulkanFramebuffer
+    class VulkanFramebuffer : public VulkanResource
     {
     public:
-		VulkanFramebuffer(VulkanRenderPass* renderPass, const VulkanFramebufferDesc& desc);
+		VulkanFramebuffer(VulkanResourceManager* owner, VulkanRenderPass* renderPass, const VulkanFramebufferDesc& desc);
 		~VulkanFramebuffer();
 
 		VulkanRenderPass* GetRenderPass() const { return m_RenderPass; }
@@ -49,26 +46,15 @@ namespace Crowny
 		
 		const VulkanFramebufferAttachment& GetColorAttachment(uint32_t colorIdx) const { return m_ColorAttachments[colorIdx]; }
 		const VulkanFramebufferAttachment& GetDepthStencilAttachment() const { return m_DepthStencilAttachment; }
-		
+		uint32_t GetNumLayers() const { return m_NumLayers; }
 	private:
 		uint32_t m_Width;
 		uint32_t m_Height;
-		VulkanFramebufferAttachment m_ColorAttachments[8]{};
+		uint32_t m_NumLayers;
+		VulkanFramebufferAttachment m_ColorAttachments[MAX_FRAMEBUFFER_COLOR_ATTACHMENTS]{};
 		VulkanFramebufferAttachment m_DepthStencilAttachment;
-		VkDevice m_Device;
 		VulkanRenderPass* m_RenderPass;
 		VkFramebuffer m_Framebuffer;
     };
-/*
-	class VulkanRenderTexture : public Framebuffer
-	{
-	public:
-		~VulkanRenderTexture() = default;
-
-		VulkanRenderTexture(const FramebufferProperties& desc);
-	private:
-		FramebufferProperties m_Properties;
-		VulkanFramebuffer* m_Framebuffer;
-	};*/
 
 }

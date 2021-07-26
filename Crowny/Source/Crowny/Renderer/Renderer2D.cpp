@@ -48,12 +48,12 @@ namespace Crowny
 		Ref<VertexArray> VertexArray;
 		Ref<VertexBuffer> VertexBuffer;
 		Ref<Shader> Shader;
-		Ref<Texture2D> WhiteTexture;
+		Ref<Texture> WhiteTexture;
 
 		uint32_t IndexCount = 0;
 		VertexData* Buffer = nullptr;
 
-		std::array<Ref<Texture2D>, 32> TextureSlots;
+		std::array<Ref<Texture>, 32> TextureSlots;
 		uint32_t TextureIndex = 0;
 		
 		//std::vector<Renderer2DSystemUniform> SystemUniforms;
@@ -94,8 +94,9 @@ namespace Crowny
 		ibo = IndexBuffer::Create(indices, RENDERER_INDICES_SIZE);
 		s_Data.VertexArray->SetIndexBuffer(ibo);
 
-		s_Data.WhiteTexture = Texture2D::Create(1, 1);
-		uint32_t whiteTextureData = 0xffffffff; s_Data.WhiteTexture->SetData(&whiteTextureData, sizeof(uint32_t));
+		// VULKAN IMPL: Fix
+		//s_Data.WhiteTexture = Texture::Create(1, 1);
+		//uint32_t whiteTextureData = 0xffffffff; s_Data.WhiteTexture->SetData(&whiteTextureData, sizeof(uint32_t));
 		s_Data.Shader = Shader::Create("/Shaders/BatchRenderer.glsl");
 		s_Data.Shader->Bind();
 		//s_Data.SystemUniforms.resize(2);
@@ -136,7 +137,7 @@ namespace Crowny
 		//s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->Map(0, RENDERER_MAX_SPRITES * 4, GpuLockOptions::WRITE_DISCARD);
 	}
 
-	float Renderer2D::FindTexture(const Ref<Texture2D>& texture)
+	float Renderer2D::FindTexture(const Ref<Texture>& texture)
 	{
 		if (!texture)
 			return 0;
@@ -145,7 +146,7 @@ namespace Crowny
 
 		for (uint8_t i = 1; i <= s_Data.TextureIndex; i++)
 		{
-			if (*s_Data.TextureSlots[i] == *texture)
+			if (s_Data.TextureSlots[i] == texture)
 			{
 				ts = (float)(i + 1);
 				break;
@@ -175,7 +176,7 @@ namespace Crowny
 		FillRect(transform, nullptr, color);
 	}
 
-	void Renderer2D::FillRect(const glm::mat4& transform, const Ref<Texture2D>& texture, const glm::vec4& color)
+	void Renderer2D::FillRect(const glm::mat4& transform, const Ref<Texture>& texture, const glm::vec4& color)
 	{
 		float ts = FindTexture(texture);
 		for (uint8_t i = 0; i < 4; i++) {
@@ -189,7 +190,7 @@ namespace Crowny
 		s_Data.IndexCount += 6;
 	}
 
-	void Renderer2D::FillRect(const Rect2F& bounds, const Ref<Texture2D>& texture, const glm::vec4& color)
+	void Renderer2D::FillRect(const Rect2F& bounds, const Ref<Texture>& texture, const glm::vec4& color)
 	{
 		glm::mat4 transform = glm::translate(glm::mat4(1.0f), { bounds.X, bounds.Y, 1.0f }) * glm::scale(glm::mat4(1.0f), { bounds.Width, bounds.Height, 1.0f });
 
@@ -276,6 +277,7 @@ namespace Crowny
 	void Renderer2D::Flush()
 	{
 		s_Data.Shader->Bind();
+		// VULKAN IMPL: Fix
 		//for (uint32_t i = 0; i < s_Data.SystemUniformBuffers.size(); i++)
 		{
 		//	s_Data.Shader->SetVSSystemUniformBuffer(s_Data.SystemUniformBuffers[i].Buffer, s_Data.SystemUniformBuffers[i].Size, i);
@@ -283,7 +285,7 @@ namespace Crowny
 
 		for (uint8_t i = 0; i <= s_Data.TextureIndex; i++)
 		{
-			s_Data.TextureSlots[i]->Bind(i);
+		//	s_Data.TextureSlots[i]->Bind(i);
 		}
 
 		s_Data.VertexArray->Bind();
@@ -291,7 +293,7 @@ namespace Crowny
 		
 		for (uint8_t i = 0; i <= s_Data.TextureIndex; i++)
 		{
-			s_Data.TextureSlots[i]->Unbind(i);
+			//s_Data.TextureSlots[i]->Unbind(i);
 		}
 		s_Data.VertexArray->Unbind();
 	}

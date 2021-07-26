@@ -45,6 +45,147 @@ namespace Crowny
 		Padding(float top, float right, float bottom, float left) : Top(top), Left(left), Right(right), Bottom(bottom) { }
 	};
 	
+	struct TextureSurface
+	{
+		TextureSurface(uint32_t mipLevel = 0, uint32_t numMipLevels = 1, uint32_t face = 0, uint32_t numFaces = 1)
+			: MipLevel(mipLevel), NumMipLevels(numMipLevels), Face(face), NumFaces(numFaces) {}
+		
+		uint32_t MipLevel;
+		uint32_t NumMipLevels;
+		uint32_t Face;
+		uint32_t NumFaces;
+
+		static const TextureSurface COMPLETE;
+	};
+
+	enum class BlendFunction
+	{
+		ADD,
+		SUBTRACT,
+		MIN,
+		MAX,
+		REVERSE_SUBTRACT
+	};
+	
+	enum class CompareFunction
+	{
+		ALWAYS_FAIL,
+		ALWAYS_PASS,
+		LESS,
+		LESS_EQUAL,
+		EQUAL,
+		NOT_EQUAL,
+		GREATER,
+		GREATER_EQUAL,
+	};
+
+	enum class CullingMode
+	{
+		CULL_NONE,
+		CULL_CLOCKWISE,
+		CULL_COUNTERCLOCKWISE
+	};
+	
+	enum class TextureFormat
+	{
+		NONE = 0,
+		
+		R8 = 1,
+		RG8 = 2,
+		RGB8 = 3,
+		RGBA8 = 4,
+		
+		RGBA16F = 5,
+		RGBA32F = 6,
+		RG32F = 7,
+		R32I = 8,
+		DEPTH32F = 9,
+		DEPTH24STENCIL8 = 10
+	};
+	
+	enum class TextureChannel
+	{
+		NONE,
+		CHANNEL_RED,
+		CHANNEL_RG,
+		CHANNEL_RGB,
+		CHANNEL_BGR,
+		CHANNEL_RGBA,
+		CHANNEL_BGRA,
+		CHANNEL_DEPTH_COMPONENT,
+		CHANNEL_STENCIL_INDEX
+	};
+
+	enum class TextureWrap
+	{
+		NONE = 0,
+		REPEAT,
+		MIRRORED_REPEAT,
+		CLAMP_TO_EDGE,
+		CLAMP_TO_BORDER
+	};
+	
+	struct TextureAddressingMode
+	{
+		TextureWrap U, V, W;
+	};
+
+	enum class TextureFilter
+	{
+		NONE = 0,
+		LINEAR,
+		NEAREST,
+		ANISOTROPIC
+	};
+
+	enum class SwizzleType
+	{
+		NONE = 0,
+		SWIZZLE_RGBA,
+		SWIZZLE_R,
+		SWIZZLE_G,
+		SWIZZLE_B,
+		SWIZZLE_A
+	};
+
+	enum class SwizzleChannel
+	{
+		NONE = 0,
+		RED,
+		GREEN,
+		BLUE,
+		ALPHA,
+		ONE,
+		ZERO
+	};
+
+	enum class TextureShape
+	{
+		TEXTURE_1D,
+		TEXTURE_2D, 
+		TEXTURE_3D,
+		TEXTURE_CUBE
+	};
+
+	enum class TextureType
+	{
+		TEXTURE_SPRITE, 
+		TEXTURE_DEFAULT, 
+		TEXTURE_CURSOR, 
+		TEXTURE_NORMAL, 
+		TEXTURE_LIGHTMAP, 
+		TEXTURE_SINGLECHANNEL
+	};
+
+	enum TextureUsage // should not be here?
+	{
+		TEXTURE_STATIC = 1 << 0,
+		TEXTURE_LOADSTORE = 1 << 1,
+		TEXTURE_RENDERTARGET = 1 << 2,
+		TEXTURE_DEPTHSTENCIL = 1 << 3,
+		TEXTURE_DYNAMIC = 1 << 4
+	};
+
 	//TODO: refactor these enums, make same style
 	enum ShaderType
 	{
@@ -83,12 +224,47 @@ namespace Crowny
 		DYNAMIC_DRAW
 	};
 	
+	enum RenderSurfaceMaskBits
+	{
+		RT_NONE = 0,
+		RT_COLOR0 = 1 << 0,	
+		RT_COLOR1 = 1 << 1,
+		RT_COLOR2 = 1 << 2,
+		RT_COLOR3 = 1 << 3,
+		RT_COLOR4 = 1 << 4,
+		RT_COLOR5 = 1 << 5,
+		RT_COLOR6 = 1 << 6,
+		RT_COLOR7 = 1 << 7,
+		RT_DEPTH = 1 << 30,
+		RT_STENCIL = 1 << 31,
+		RT_DEPTH_STENCIL = (1 << 30) | (1 << 31),
+		RT_ALL = 0xFFFFFFFF
+	};
+    typedef Flags<RenderSurfaceMaskBits> RenderSurfaceMask;
+    CW_FLAGS_OPERATORS(RenderSurfaceMaskBits);
+	
+	enum FramebufferType
+	{
+		FBT_COLOR = 1 << 0,
+		FBT_DEPTH = 1 << 1,
+		FBT_STENCIL = 1 << 2
+	};
+	
 	enum class GpuLockOptions
 	{
 		READ_ONLY,
+		READ_WRITE,
 		WRITE_ONLY,
+		WRITE_ONLY_NO_OVERWRITE,
 		WRITE_DISCARD,
 		WRITE_DISCARD_RANGE
+	};
+
+	enum BufferWriteOptions
+	{
+		BWT_NORMAL,
+		BWT_DISCARD,
+		BWT_NO_OVERWRITE
 	};
 	
 	enum class DrawMode
@@ -115,6 +291,37 @@ namespace Crowny
 		// RWTEXTURE2D = 10,
 		// RWTEXTURE3D = 11,
 		TEXTURE_UNKNOWN = 256
+	};
+	
+	enum GpuBufferFormat
+	{
+		BF_UNKNOWN,
+		BF_16x1F, // 1D 16-bit float
+		BF_16X2F, // 2D 16-bit float
+		BF_32x1F, // 1D 32-bit float
+		BF_32x2F, // 2D 32-bit float
+		BF_32x3F, // 3D 32-bit float
+		BF_32x4F, // 4D 32-bit float
+		
+		BF_8X1,   // 1D 8-bit normalized
+		BF_8X2,   // 2D 8-bit normalized
+		BF_8X4,   // 4D 8-bit normalized
+		BF_16X1,   // 1D 16-bit normalized
+		BF_16X2,   // 2D 16-bit normalized
+		BF_16X4,   // 4D 16-bit normalized
+		
+		BF_8X1U,   // 1D 8-bit unsigned int
+		BF_8X2U,   // 2D 8-bit unsigned int
+		BF_8X4U,   // 4D 8-bit unsigned int
+		
+		BF_16X1U,   // 1D 16-bit unsigned int
+		BF_16X2U,   // 2D 16-bit unsigned int
+		BF_16X4U,   // 4D 16-bit unsigned int
+		
+		BF_32X1U,   // 1D 32-bit unsigned int
+		BF_32X2U,   // 2D 32-bit unsigned int
+		BF_32X3U,   // 3D 32-bit unsigned int
+		BF_32X4U,   // 4D 32-bit unsigned int
 	};
 
 }

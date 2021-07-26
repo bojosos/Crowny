@@ -4,7 +4,6 @@
 #include "Crowny/Common/Uuid.h"
 
 #include "Crowny/Renderer/EditorCamera.h"
-#include "Crowny/Renderer/Framebuffer.h"
 
 #include <entt/entt.hpp>
 

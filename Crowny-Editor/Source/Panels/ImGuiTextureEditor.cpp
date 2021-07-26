@@ -7,7 +7,7 @@ namespace Crowny
 
     Ref<Texture> ImGuiTextureEditor::s_Texture = nullptr;
 
-    void ImGuiTextureEditor::SetTexture(const Ref<Texture2D>& texture)
+    void ImGuiTextureEditor::SetTexture(const Ref<Texture>& texture)
     {
         s_Texture = texture;
     }

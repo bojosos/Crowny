@@ -39,6 +39,6 @@ namespace Crowny
 		virtual bool IsVSync() const = 0;
 
 	public:
-		static Scope<Window> Create(const WindowProperties& props = WindowProperties());
+		static Window* Create(const WindowProperties& props = WindowProperties());
 	};
 }

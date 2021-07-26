@@ -17,33 +17,63 @@ namespace Crowny
     {
         uint32_t Samples = 1;
         bool Offscreen = false;
-        VulkanRenderPassAttachmentDesc Color[8]; // TODO: max render targets
+        VulkanRenderPassAttachmentDesc Color[MAX_FRAMEBUFFER_COLOR_ATTACHMENTS];
         VulkanRenderPassAttachmentDesc Depth;
     };
 
     class VulkanRenderPass
     {
     public:
-        VulkanRenderPass(const VulkanDevice& device, const VulkanRenderPassDesc& desc);
+        VulkanRenderPass(const VkDevice& device, const VulkanRenderPassDesc& desc);
         ~VulkanRenderPass();
         
-        VkRenderPass GetHandle() const { return m_RenderPass; }
+        VkRenderPass GetHandle() const { return m_DefaultRenderPass; }
         VkSampleCountFlagBits GetSampleFlags() const { return m_SampleFlags; }
-        uint32_t GetNumAttachments() const { return m_NumColorAttachments; }
+        uint32_t GetNumAttachments() const { return m_NumAttachments; }
         uint32_t GetNumColorAttachments() const { return m_NumColorAttachments; }
         bool HasDepthAttachment() const { return m_HasDepth; }
         const VkAttachmentDescription& GetColorDesc(uint32_t idx) const { return m_Attachments[idx]; }
         const VkAttachmentDescription& GetDepthDesc() const { CW_ENGINE_ASSERT(m_HasDepth); return m_Attachments[m_NumColorAttachments]; }
         uint32_t GetId() const { return m_Id; }
+        VkRenderPass GetVkRenderPass(RenderSurfaceMask loadMask, RenderSurfaceMask readMask, ClearMask clearMask) const;
+        uint32_t GetNumClearEntries(ClearMask clearMask) const;
     private:
-        VkAttachmentDescription m_Attachments[8 + 1];
+        VkRenderPass CreateVariant(RenderSurfaceMask loadMask, RenderSurfaceMask readMask, ClearMask clearMask) const;
+        struct VariantKey
+        {
+            VariantKey(RenderSurfaceMask loadMask, RenderSurfaceMask readMask, ClearMask clearMask);
+            struct HashFunction
+            {
+                size_t operator()(const VariantKey& key) const;
+            };
+            
+            struct EqualFunction
+            {
+                bool operator()(const VariantKey& lhs, const VariantKey& rhs) const;
+            };
+
+            RenderSurfaceMask LoadMask;
+            RenderSurfaceMask ReadMask;
+            Crowny::ClearMask ClearMask;
+        };
+        
         bool m_HasDepth;
         uint32_t m_NumAttachments;
         uint32_t m_NumColorAttachments;
         VkSampleCountFlagBits m_SampleFlags = VK_SAMPLE_COUNT_1_BIT;
-        VkRenderPass m_RenderPass;
         VkDevice m_Device;
         uint32_t m_Id;
+        uint32_t m_Indices[MAX_FRAMEBUFFER_COLOR_ATTACHMENTS]{0};
+
+        mutable VkAttachmentDescription m_Attachments[MAX_FRAMEBUFFER_COLOR_ATTACHMENTS + 1];
+        mutable VkAttachmentReference m_ColorReferences[MAX_FRAMEBUFFER_COLOR_ATTACHMENTS];
+        mutable VkAttachmentReference m_DepthReference;
+        mutable VkSubpassDependency m_Dependencies[2];
+        mutable VkSubpassDescription m_SubpassDesc;
+        mutable VkRenderPassCreateInfo m_RenderPassCreateInfo;
+
+        VkRenderPass m_DefaultRenderPass;
+        mutable std::unordered_map<VariantKey, VkRenderPass, VariantKey::HashFunction, VariantKey::EqualFunction> m_Variants;
         static uint32_t s_NextValidId;
     };
     
@@ -51,7 +81,7 @@ namespace Crowny
     {
     public:
         ~VulkanRenderPasses();
-        VulkanRenderPass* GetRenderPass(const VulkanRenderPassDesc& desc);
+        VulkanRenderPass* GetRenderPass(const VulkanRenderPassDesc& desc) const;
     private:
         struct PassVariant
         {   

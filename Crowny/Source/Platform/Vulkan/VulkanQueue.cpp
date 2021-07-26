@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
 #include "Platform/Vulkan/VulkanQueue.h"
-#include "Crowny/Common/Timer.h"
+#include "Platform/Vulkan/VulkanCommandBuffer.h"
 
 namespace Crowny
 {
@@ -9,27 +9,29 @@ namespace Crowny
     VulkanQueue::VulkanQueue(VulkanDevice& device, VkQueue queue, GpuQueueType type, uint32_t index)
         : m_Device(device), m_Queue(queue), m_Type(type), m_Index(index)
     {
-        for (uint32_t i = 0; i < 32; i++)
-//            m_SubmitDstWaitMask[i] = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-              m_SubmitDstWaitMask[i] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        for (uint32_t i = 0; i < MAX_UNIQUE_QUEUES; i++)
+            m_SubmitDstWaitMask[i] = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+            // m_SubmitDstWaitMask[i] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     }
 
-    void VulkanQueue::Submit(VulkanCommandBuffer* cmdBuffer, VulkanSemaphore** waitSemaphores, uint32_t semaphoreCount)
+    void VulkanQueue::Submit(VulkanCmdBuffer* cmdBuffer, VulkanSemaphore** waitSemaphores, uint32_t semaphoreCount)
     {
-        VkSemaphore signalSemaphore = cmdBuffer->GetRenderCompleteSemaphore()->GetHandle();
+        VkSemaphore signalSemaphores[MAX_VULKAN_CB_DEPENDENCIES + 1];
+        cmdBuffer->AllocateSemaphores(signalSemaphores);
         VkCommandBuffer vkCmdBuffer = cmdBuffer->GetHandle();
 
-        m_SemaphoresTemp.resize(semaphoreCount); // leak?
+        m_SemaphoresTemp.resize(semaphoreCount + 1);
         PrepareSemaphores(waitSemaphores, m_SemaphoresTemp.data(), semaphoreCount);
         
         VkSubmitInfo submitInfo;
-        GetSubmitInfo(&vkCmdBuffer, &signalSemaphore, 1, m_SemaphoresTemp.data(), semaphoreCount, submitInfo);
+        GetSubmitInfo(&vkCmdBuffer, signalSemaphores, MAX_VULKAN_CB_DEPENDENCIES + 1, m_SemaphoresTemp.data(), semaphoreCount, submitInfo);
         VkResult result = vkQueueSubmit(m_Queue, 1, &submitInfo, cmdBuffer->GetFence());
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         cmdBuffer->SetIsSubmitted();
         m_ActiveSubmissions.push_back(SubmitInfo(cmdBuffer, m_NextSubmitIdx++, semaphoreCount, 1));
         m_ActiveBuffers.push(cmdBuffer);
         m_LastCommandBuffer = cmdBuffer;
+        m_LastCBSemaphoreUsed = false;
     }
 
     bool VulkanQueue::IsExecuting() const
@@ -47,12 +49,12 @@ namespace Crowny
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = cmdBuffer;
         submitInfo.signalSemaphoreCount = numSignalSemaphores;
-        submitInfo.pSignalSemaphores = signalSemaphores; // render complete
+        submitInfo.pSignalSemaphores = signalSemaphores;
         submitInfo.waitSemaphoreCount = numWaitSemaphores;
         
         if (numWaitSemaphores > 0)
         {
-            submitInfo.pWaitSemaphores = waitSemaphores; // acquire/sync with other cb
+            submitInfo.pWaitSemaphores = waitSemaphores;
             submitInfo.pWaitDstStageMask = m_SubmitDstWaitMask;
         }
         else
@@ -68,7 +70,7 @@ namespace Crowny
         if (!swapChain->PrepareForPresent(backIdx))
             return VK_SUCCESS;
         
-        m_SemaphoresTemp.resize(numSemaphores);
+        m_SemaphoresTemp.resize(numSemaphores + 1);
         PrepareSemaphores(waitSemaphores, m_SemaphoresTemp.data(), numSemaphores);
         
         VkSwapchainKHR vkSwapChain = swapChain->GetHandle();
@@ -92,6 +94,7 @@ namespace Crowny
         }
         VkResult result = vkQueuePresentKHR(m_Queue, &presentInfo);
         CW_ENGINE_ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR); // maybe shouldn't do this here
+        m_ActiveSubmissions.push_back(SubmitInfo(nullptr, m_NextSubmitIdx++, numSemaphores, 0));
         return result;
     }
 
@@ -107,17 +110,31 @@ namespace Crowny
         for (uint32_t i = 0; i < semaphoreCount; i++)
         {
             VulkanSemaphore* semaphore = inSemaphores[i];
+            semaphore->NotifyBound();
+            semaphore->NotifyUsed(0, 0, VulkanAccessFlagBits::Read | VulkanAccessFlagBits::Write);
             outSemaphores[semaphoreIdx++] = semaphore->GetHandle();
+            m_ActiveSemaphores.push(semaphore);
         }
+
+        if (m_LastCommandBuffer != nullptr && m_LastCommandBuffer->IsSubmitted() && !m_LastCBSemaphoreUsed)
+        {
+            VulkanSemaphore* prevSemaphore = m_LastCommandBuffer->GetIntraQueueSemaphore();
+            prevSemaphore->NotifyBound();
+            prevSemaphore->NotifyUsed(0, 0, VulkanAccessFlagBits::Read | VulkanAccessFlagBits::Write);
+            outSemaphores[semaphoreIdx++] = prevSemaphore->GetHandle();
+            m_ActiveSemaphores.push(prevSemaphore);
+            m_LastCBSemaphoreUsed = true;
+        }
+        semaphoreCount = semaphoreIdx;
     }
-/*
-    void VulkanQueue::QueueSubmit(VulkanCommandBuffer* cmdBuffer, VulkanSemaphore* waitSemaphores, uint32_t semaphoreCount)
+
+    void VulkanQueue::QueueSubmit(VulkanCmdBuffer* cmdBuffer, VulkanSemaphore** waitSemaphores, uint32_t semaphoreCount)
     {
-        m_QueuedBuffers.push_back(SubmitInfo(cmdBuffer, 0, semaphoresCount, 1));
+        m_QueuedBuffers.push_back(SubmitInfo(cmdBuffer, 0, semaphoreCount, 1));
         for (uint32_t i = 0; i < semaphoreCount; i++)
             m_QueuedSemaphores.push_back(waitSemaphores[i]);
-    }*/
-/*
+    }
+
     void VulkanQueue::SubmitQueued()
     {
         uint32_t numCbs = (uint32_t)m_QueuedBuffers.size();
@@ -127,8 +144,8 @@ namespace Crowny
         uint32_t totalNumWaitSemaphores = (uint32_t)m_QueuedSemaphores.size() + numCbs;
         uint32_t signalSemaphoresPerCB = MAX_VULKAN_CB_DEPENDENCIES + 1;
         
-        byte* data = new byte[(sizeof(VkSubmitInfo) + sizeof(VkCommandBuffer)) * numCbs + sizeof(VkSemaphore) * signalSemaphoresPerCB * numCbs + sizeof(VkSemaphore) * totalNumWaitSemaphores];
-        byte* dataPtr = data;
+        uint8_t* data = new uint8_t[(sizeof(VkSubmitInfo) + sizeof(VkCommandBuffer)) * numCbs + sizeof(VkSemaphore) * signalSemaphoresPerCB * numCbs + sizeof(VkSemaphore) * totalNumWaitSemaphores];
+        uint8_t* dataPtr = data;
         
         VkSubmitInfo* submitInfos = (VkSubmitInfo*)dataPtr;
         dataPtr += sizeof(VkSubmitInfo) * numCbs;
@@ -164,7 +181,7 @@ namespace Crowny
             signalSemaphoreIdx += signalSemaphoresPerCB;
         }
 
-        VulkanCommandBuffer* lastCB = m_QueuedBuffers[numCbs - 1].CmdBuffer;
+        VulkanCmdBuffer* lastCB = m_QueuedBuffers[numCbs - 1].CmdBuffer;
         uint32_t totalNumSemaphores = writeSemaphoreIdx;
         m_ActiveSubmissions.push_back(SubmitInfo(lastCB, m_NextSubmitIdx++, totalNumSemaphores, numCbs));
 
@@ -174,11 +191,6 @@ namespace Crowny
         m_QueuedSemaphores.clear();
         delete[] data;
     }
-*//*
-    void VulkanQueue::RefreshStates(bool forceWait, bool queueEmpty)
-    {
-        
-    }*/
 
     void VulkanQueue::Refresh(bool wait, bool empty)
     {
@@ -186,7 +198,7 @@ namespace Crowny
         auto iter = m_ActiveSubmissions.begin();
         while (iter != m_ActiveSubmissions.end())
         {
-            VulkanCommandBuffer* cmdBuffer = iter->CmdBuffer;
+            VulkanCmdBuffer* cmdBuffer = iter->CmdBuffer;
             if (cmdBuffer == nullptr)
             {
                 ++iter;
@@ -209,9 +221,17 @@ namespace Crowny
         {
             if (iter->SubmitIdx > lastFinished)
                 break;
+            
+            for (uint32_t i = 0; i < iter->NumSemaphores; i++)
+            {
+                VulkanSemaphore* semaphore = m_ActiveSemaphores.front();
+                m_ActiveSemaphores.pop();
+                semaphore->NotifyDone(0, VulkanAccessFlagBits::Read | VulkanAccessFlagBits::Write);
+            }
+            
             for (uint32_t i = 0; i < iter->NumCommandBuffers; i++)
             {
-                VulkanCommandBuffer* cmdBuffer = m_ActiveBuffers.front();
+                VulkanCmdBuffer* cmdBuffer = m_ActiveBuffers.front();
                 m_ActiveBuffers.pop();
                 cmdBuffer->Reset();
             }

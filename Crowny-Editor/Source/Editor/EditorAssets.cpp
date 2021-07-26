@@ -15,9 +15,9 @@ namespace Crowny
 	void EditorAssets::Load()
 	{
 		//AssetManifest editorAssets = AssetManager::ImportManifest("Editor");
-		s_Library.UnassignedTexture = Texture2D::Create(UnassignedTexture);// editorAssets.LoadTexture(UnassignedTexture);
-		s_Library.PlayIcon = Texture2D::Create(PlayIcon);
-		s_Library.PauseIcon = Texture2D::Create(PauseIcon);
-		s_Library.StopIcon = Texture2D::Create(StopIcon);
+		// s_Library.UnassignedTexture = Texture2D::Create(UnassignedTexture);// editorAssets.LoadTexture(UnassignedTexture);
+		// s_Library.PlayIcon = Texture2D::Create(PlayIcon);
+		// s_Library.PauseIcon = Texture2D::Create(PauseIcon);
+		// s_Library.StopIcon = Texture2D::Create(StopIcon);
 	}
 }

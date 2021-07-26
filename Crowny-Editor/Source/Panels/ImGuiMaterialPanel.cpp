@@ -25,7 +25,8 @@ namespace Crowny
 		
 		if (s_SelectedMaterial)
 		{
-
+			// VULKAN IMPL: Fix
+			/*
 			if (ImGui::CollapsingHeader("Albedo", ImGuiTreeNodeFlags_DefaultOpen))
 			{
 				Ref<Texture2D> albedo = s_SelectedMaterial->GetAlbedoMap();
@@ -153,7 +154,7 @@ namespace Crowny
 						s_SelectedMaterial->SetAoMap(Texture2D::Create(outPaths[0]));
 					}
 				}
-			}
+			}*/
 		}
 
 		ImGui::End();

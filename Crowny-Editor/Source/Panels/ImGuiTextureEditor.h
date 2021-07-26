@@ -16,7 +16,7 @@ namespace Crowny
 		virtual void Render() override;
 	
 	public:
-		static void SetTexture(const Ref<Texture2D>& texture);
+		static void SetTexture(const Ref<Texture>& texture);
 
 	private:
 		static Ref<Texture> s_Texture;

@@ -20,8 +20,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "Crowny/Common/Log.h"
 #include "Crowny/Common/Constants.h"
+#include "Crowny/Common/Flags.h"
+#include "Crowny/Common/Log.h"
 #include "Crowny/Common/Types.h"
 
 #ifdef CW_WINDOWS

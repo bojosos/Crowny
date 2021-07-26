@@ -116,10 +116,10 @@ namespace Crowny
 		virtual void Bind() const override;
 		virtual void Unbind() const override;
 		
-		virtual const UniformDescription& GetUniformDesc() const override {}
+		virtual const Ref<UniformDesc>& GetUniformDesc() const override { return nullptr; }
 
-		virtual const std::string& GetName() const override { return m_Name; };
-		virtual const std::string& GetFilepath() const override { return m_Filepath; }
+		//virtual const std::string& GetName() const override { return m_Name; };
+		//virtual const std::string& GetFilepath() const override { return m_Filepath; }
 
 	private:
 		uint32_t GetUniformLocation(const std::string& name);

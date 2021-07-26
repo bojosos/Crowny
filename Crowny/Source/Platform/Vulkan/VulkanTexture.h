@@ -1,61 +1,80 @@
 #pragma once
 
 #include "Crowny/Renderer/Texture.h"
+#include "Crowny/Utils/PixelUtils.h"
+
+#include "Platform/Vulkan/VulkanResource.h"
+#include "Platform/Vulkan/VulkanGpuBuffer.h"
 
 namespace Crowny
 {
-/*
+
+	class VulkanTransferBuffer;
+	class VulkanBuffer;
+
 	struct VulkanImageDesc
 	{
 		VkImage Image;
-		VkDeviceMemory Memory;
+		VmaAllocation Allocation;
 		VkImageLayout Layout;
-		VkFormat Foramt;
+		VkFormat Format;
 		uint32_t Faces;
 		uint32_t NumMips;
 		uint32_t Usage;
 		TextureShape Shape;
 	};
 
-	class VulkanImageSubresource
+	class VulkanImageSubresource : public VulkanResource
 	{
 	public:
-		VulkanImageSubresource(VkImageLayout layout);
+		VulkanImageSubresource(VulkanResourceManager* owner, VkImageLayout layout);
 		VkImageLayout GetLayout() const { return m_Layout; }
 		void SetLayout(VkImageLayout layout)  { m_Layout = layout; }
 	private:
 		VkImageLayout m_Layout;
 	};
 
-	class VulkanImage
+	class VulkanImage : public VulkanResource
 	{
 	public:
-		VulkanImage(VkImage image, VkDeviceMemory memory, VkImageLayout layout, VkFormat format, const TextureParameters& props, bool ownsImage = true);
-		VulkanImage(VulkanImageDesc& desc, bool ownsImage = true);
+		VulkanImage(VulkanResourceManager* owner, VkImage image, VmaAllocation allocation, VkImageLayout layout, VkFormat format, const TextureParameters& params, bool ownsImage = true);
+		VulkanImage(VulkanResourceManager* owner, const VulkanImageDesc& desc, bool ownsImage = true);
 		~VulkanImage();
 
 		VkImage GetHandle() const { return m_Image; }
+		
 		VkImageView GetView(bool framebuffer) const;
 		VkImageView GetView(VkFormat format, bool framebuffer) const;
+		VkImageView GetView(const TextureSurface& surface, bool framebuffer) const;
+		VkImageView GetView(VkFormat format, const TextureSurface& surface, bool framebuffer) const;
+
 		VkImageAspectFlags GetAspectFlags() const;
+		VkImageLayout GetOptimalLayout() const;
 		VkImageSubresourceRange GetRange() const;
-		VulkanImageSubresource GetSubresource(uint32_t face, uint32_t mipLevel);
-	//	void Map(uint32_t face, uint32_t mipLevel, ImageData& output) const;
-//		void Unmap();
+		VkImageSubresourceRange GetRange(const TextureSurface& surface) const;
+		VulkanImageSubresource* GetSubresource(uint32_t face, uint32_t mipLevel);
+		
+		void Map(uint32_t face, uint32_t mipLevel, PixelData& output) const;
+		uint8_t* Map(uint32_t offset, uint32_t size) const;
+		void Unmap();
+		void Copy(VulkanTransferBuffer* cb, VulkanBuffer* dest, const VkExtent3D& extent, const VkImageSubresourceLayers& range, VkImageLayout layout);
+		
 		VkAccessFlags GetAccessFlags(VkImageLayout layout, bool readonly = false);
+		void GetBarriers(const VkImageSubresourceRange& range, std::vector<VkImageMemoryBarrier>& barriers);
 		
 	private:
-		VkImageView CreateView(VkFormat format , VkImageAspectFlags mask) const;
+		VkImageView CreateView(const TextureSurface& surface, VkFormat format , VkImageAspectFlags mask) const;
 
 		struct ImageViewInfo
 		{
+			TextureSurface Surface;
 			bool Framebuffer;
 			VkImageView View;
 			VkFormat Format;
 		};
 
 		VkImage m_Image;
-		VkDeviceMemory m_Allocation;
+		VmaAllocation m_Allocation;
 		VkImageView m_MainView;
 		VkImageView m_FramebufferMainView;
 		int32_t m_Usage;
@@ -64,57 +83,43 @@ namespace Crowny
 		uint32_t m_NumMipLevels;
 		VulkanImageSubresource** m_Subresources;
 
-		mutable VkImageViewCreateInfo m_ImageViewCI;
+		mutable VkImageViewCreateInfo m_ImageViewCreateInfo;
 		mutable std::vector<ImageViewInfo> m_ImageInfos;
 	};
 
-	class VulkanTexture2D : public Texture2D
+	class VulkanTexture : public Texture
 	{
 	public:
-		VulkanTexture2D(uint32_t width, uint32_t height, const TextureParameters& parameters);
-		VulkanTexture2D(const std::string& filepath, const TextureParameters& parameters, const std::string& name);
-		~VulkanTexture2D();
+		VulkanTexture(const TextureParameters& parameters);
+		~VulkanTexture();
 
-		virtual uint32_t GetWidth() const override { return m_Width; }
-		virtual uint32_t GetHeight() const override { return m_Height; }
+		virtual PixelData Lock(GpuLockOptions options, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) override;
+		virtual void Unlock() override;
+		// virtual void Copy(const Ref<Texture>& target, )
+		virtual void ReadData(PixelData& dest, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) override;
+		virtual void WriteData(const PixelData& src, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) override;
 
-		virtual const std::string& GetName() const override { return ""; }
-		virtual const std::string& GetFilepath() const override { return m_FilePath; }
-
-		virtual uint32_t GetRendererID() const override { return m_RendererID; };
-
-		virtual void Bind(uint32_t slot) const override;
-		virtual void Unbind(uint32_t slot) const override;
-		virtual void Clear(int32_t clearColor) override;
-		virtual void SetData(void* data, uint32_t size) override;
-		virtual void SetData(void* data, TextureChannel channel = TextureChannel::CHANNEL_RGBA) override;
-
-		virtual bool operator==(const Texture& other) const override
-		{
-			return (other.GetRendererID() == m_RendererID);
-		}
+		VulkanImage* GetImage() const { return m_Image; }
 
 	private:
-		TextureParameters m_Parameters;
-		uint32_t m_RendererID;
-		std::string m_FilePath;
-		uint32_t m_Width, m_Height;
-		VkImage m_Image = VK_NULL_HANDLE;
-		VkImageLayout m_ImageLayout;
-		VkImageView m_ImageView;
-		VkDeviceMemory m_DeviceMemory;
-		VkDescriptorImageInfo m_Descriptor;
-		VkSampler m_Sampler;
+		VulkanImage* CreateImage(VulkanDevice& device, TextureFormat format);
+		VulkanBuffer* CreateStagingBuffer(VulkanDevice& device, const PixelData& src, bool needsRead);
+		void CopyImage(VulkanTransferBuffer* cb, VulkanImage* srcImage, VulkanImage* dstImage, VkImageLayout srcFinalLayout, VkImageLayout dstFinalLayout);
 		
-	private:
-		static VkImageLayout GetOptimalLayout();
-		static uint32_t TextureChannelToVulkanChannel(TextureChannel channel);
-		static VkFormat TextureFormatToVulkanFormat(TextureFormat format);
-		static VkSampleCountFlagBits TextureSamplesToVulkanSamples(uint32_t samples);
-		static VkSamplerMipmapMode TextureFilterToVulkanFilter(TextureFilter filter);
-		static VkSamplerAddressMode TextureWrapToVulkanWrap(TextureWrap wrap);
-		static std::array<VkComponentSwizzle, 4> TextureSwizzleToVulkanSwizzle(SwizzleType swizzle);
+		VulkanImage* m_Image;
+		TextureFormat m_InternalFormat;
+		VulkanBuffer* m_StagingBuffer;
+		uint32_t m_MappedGlobalQueueIdx;
+		uint32_t m_MappedMip;
+		uint32_t m_MappedFace;
+		uint32_t m_MappedRowPitch;
+		uint32_t m_MappedSlicePitch;
+		GpuLockOptions m_MappedLockOptions;
+		
+		VkImageCreateInfo m_ImageCreateInfo;
+		bool m_DirectlyMappable : 1;
+		bool m_SupportsGpuWrites : 1;
+		bool m_IsMapped : 1;
 	};
 
-*/
 }

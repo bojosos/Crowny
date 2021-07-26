@@ -9,6 +9,23 @@
 namespace Crowny
 {
 
+	GraphicsPipeline::GraphicsPipeline(const PipelineStateDesc& desc) : m_Data(desc)
+	{
+		UniformParamDesc uniformDesc;
+		if (desc.VertexShader != nullptr)
+			uniformDesc.VertexParams = desc.VertexShader->GetUniformDesc();
+		if (desc.FragmentShader != nullptr)
+			uniformDesc.FragmentParams = desc.FragmentShader->GetUniformDesc();
+		if (desc.GeometryShader != nullptr)
+			uniformDesc.GeometryParams = desc.GeometryShader->GetUniformDesc();
+		if (desc.HullShader != nullptr)
+			uniformDesc.HullParams = desc.HullShader->GetUniformDesc();
+		if (desc.DomainShader != nullptr)
+			uniformDesc.DomainParams = desc.DomainShader->GetUniformDesc();
+
+		m_ParamInfo = UniformParamInfo::Create(uniformDesc);
+	}
+	
 	Ref<GraphicsPipeline> GraphicsPipeline::Create(const PipelineStateDesc& props, const BufferLayout& layout)
 	{
 		switch (Renderer::GetAPI())
@@ -19,6 +36,14 @@ namespace Crowny
 		}
 
 		return nullptr;
+	}
+
+	ComputePipeline::ComputePipeline(const Ref<Shader>& shader) : m_Shader(shader)
+	{
+		UniformParamDesc paramDesc;
+		paramDesc.ComputeParams = shader->GetUniformDesc();
+
+		m_ParamInfo = UniformParamInfo::Create(paramDesc);
 	}
 
 	Ref<ComputePipeline> ComputePipeline::Create(const Ref<Shader>& shader)

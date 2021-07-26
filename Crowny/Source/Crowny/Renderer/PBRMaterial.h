@@ -7,6 +7,7 @@
 
 namespace Crowny
 {
+	// VULKAN IMPL: Fix
 	class PBRMaterial : public Material 
 	{
 	private:
@@ -20,17 +21,17 @@ namespace Crowny
 		void SetMetalness(float value);
 		void SetRoughness(float value);
 
-		void SetAlbedoMap(const Ref<Texture2D>& texture);
-		void SetMetalnessMap(const Ref<Texture2D>& texture);
-		void SetRoughnessMap(const Ref<Texture2D>& texture);
-		void SetNormalMap(const Ref<Texture2D>& texture);
-		void SetAoMap(const Ref<Texture2D>& texture);
+		void SetAlbedoMap(const Ref<Texture>& texture);
+		void SetMetalnessMap(const Ref<Texture>& texture);
+		void SetRoughnessMap(const Ref<Texture>& texture);
+		void SetNormalMap(const Ref<Texture>& texture);
+		void SetAoMap(const Ref<Texture>& texture);
 
-		Ref<Texture2D> GetAlbedoMap();
-		Ref<Texture2D> GetMetalnessMap();
-		Ref<Texture2D> GetNormalMap();
-		Ref<Texture2D> GetRoughnessMap();
-		Ref<Texture2D> GetAoMap();
+		Ref<Texture> GetAlbedoMap();
+		Ref<Texture> GetMetalnessMap();
+		Ref<Texture> GetNormalMap();
+		Ref<Texture> GetRoughnessMap();
+		Ref<Texture> GetAoMap();
 
 	};
 }

@@ -21,14 +21,14 @@ namespace Crowny
 	{
 		auto& t = e.GetComponent<TransformComponent>();
 		bool changed = false;
-
+        
 		ImGui::Columns(2);
 		ImGui::Text("Transform"); ImGui::NextColumn();
 		ImGui::DragFloat3("Transform##", glm::value_ptr(t.Position)); ImGui::NextColumn();
 		
 		ImGui::Text("Rotation"); ImGui::NextColumn();
 		glm::vec3 deg = glm::degrees(t.Rotation);
-		ImGui::DragFloat3("Rotation##", glm::value_ptr(deg)); ImGui::NextColumn();
+        ImGui::DragFloat3("Rotation##", glm::value_ptr(deg)); ImGui::NextColumn();
 		t.Rotation = glm::radians(deg);
 
 		ImGui::Text("Scale"); ImGui::NextColumn();
@@ -43,7 +43,7 @@ namespace Crowny
 		glm::vec3 tmp = cam.GetBackgroundColor();
 		if (ImGui::ColorEdit3("Background", glm::value_ptr(tmp)))
 			cam.SetBackgroundColor(tmp);
-
+        
 		ImGui::Columns(2);
 		ImGui::Text("Projection"); ImGui::NextColumn();
 		const char* projections[2] = { "Orthographic", "Perspective" };
@@ -105,7 +105,7 @@ namespace Crowny
 
 			ImGui::Columns(1);
 			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-
+            
 			if (ImGui::CollapsingHeader("Clipping Planes"))
 			{
 				ImGui::Indent(30.f);
@@ -210,7 +210,7 @@ namespace Crowny
 		{
 			ImGui::Text("%s", t.Font->GetName().c_str());
 			ImGui::Separator();
-			ImGui::Image(reinterpret_cast<void*>(t.Font->GetTexture()->GetRendererID()), ImVec2(t.Font->GetTexture()->GetWidth(), t.Font->GetTexture()->GetHeight()));
+//			ImGui::Image(reinterpret_cast<void*>(t.Font->GetTexture()->GetRendererID()), ImVec2(t.Font->GetTexture()->GetWidth(), t.Font->GetTexture()->GetHeight()));
 			ImGui::EndPopup();
 		}
 #endif
@@ -231,17 +231,18 @@ namespace Crowny
 	{
 		auto& t = e.GetComponent<SpriteRendererComponent>();
 
-		if(t.Texture)
+		/*if(t.Texture)
 			ImGui::Image(reinterpret_cast<void*>(t.Texture->GetRendererID()), { 150.0f, 150.0f });
 		else
 			ImGui::Image(reinterpret_cast<void*>(EditorAssets::Get().UnassignedTexture->GetRendererID()), { 150.0f, 150.0f });
-
+		*/
 		if (ImGui::IsItemClicked())
 		{
 			std::vector<std::string> outPaths;
 			if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
 			{
-				t.Texture = Texture2D::Create(outPaths[0]);
+				// VULKAN IMPL: Fix
+				//t.Texture = Texture2D::Create(outPaths[0]);
 			}
 		}
 

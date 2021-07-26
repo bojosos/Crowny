@@ -16,7 +16,7 @@ namespace Crowny
 	{
 		for (auto& texture : m_Textures)
 		{
-			if (texture->GetName() == name)
+//			if (texture->GetName() == name)
 				return texture;
 		}
 		

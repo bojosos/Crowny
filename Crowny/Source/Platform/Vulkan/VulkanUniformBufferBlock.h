@@ -12,6 +12,7 @@ namespace Crowny
     public:
         VulkanUniformBufferBlock(uint32_t size, BufferUsage usage);
         ~VulkanUniformBufferBlock();
+                
         VulkanBuffer* GetBuffer() const;
     };
 

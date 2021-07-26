@@ -22,7 +22,7 @@ namespace Crowny
 		ftgl::texture_font_t* GetFTGLFont() const { return m_Font; }
 		ftgl::texture_atlas_t* GetFTGLAtlas() const { return m_Atlas; }
 
-		const Ref<Texture2D> GetTexture() const { return m_Texture; };
+		const Ref<Texture> GetTexture() const { return m_Texture; };
 
 		static float GetWidth(const std::string& font, const std::string& text);
 		static float GetHeight(const std::string& font, const std::string& text);
@@ -34,7 +34,7 @@ namespace Crowny
 		ftgl::texture_font_t* m_Font;
 		float m_Size;
 		std::string m_Name, m_Filepath;
-		Ref<Texture2D> m_Texture;
+		Ref<Texture> m_Texture;
 	};
 
 	class FontManager

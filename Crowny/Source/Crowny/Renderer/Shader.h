@@ -5,7 +5,7 @@ namespace Crowny
 
 	struct BinaryShaderData;
 
-	struct UniformBufferBlock
+	struct UniformBufferBlockDesc
 	{
 		std::string Name;
 		uint32_t Slot;
@@ -13,22 +13,22 @@ namespace Crowny
 		uint32_t BlockSize;
 	};
 
-	struct UniformResource
+	struct UniformResourceDesc
 	{
 		std::string Name;
 		UniformResourceType Type;
 		uint32_t Slot;
 		uint32_t Set;
+		GpuBufferFormat ElementType = BF_UNKNOWN;
 	};
 
 	struct UniformDesc
 	{
-		std::unordered_map<std::string, UniformBufferBlock> Uniforms;
+		std::unordered_map<std::string, UniformBufferBlockDesc> Uniforms;
 		
-		std::unordered_map<std::string, UniformResource> CombinedSamplers;
-		std::unordered_map<std::string, UniformResource> Samplers;
-		std::unordered_map<std::string, UniformResource> Textures;
-		std::unordered_map<std::string, UniformResource> LoadStoreTextures;
+		std::unordered_map<std::string, UniformResourceDesc> Samplers;
+		std::unordered_map<std::string, UniformResourceDesc> Textures;
+		std::unordered_map<std::string, UniformResourceDesc> LoadStoreTextures;
 	};
 
 	class Shader
@@ -41,10 +41,10 @@ namespace Crowny
 		virtual void Bind() const{}// = 0;
 		virtual void Unbind() const{}// = 0;
 		
-		virtual const std::string& GetName() const{}// = 0;
-		virtual const std::string& GetFilepath() const{}// = 0 {};
+		//virtual const std::string& GetName() const{}// = 0;
+		//virtual const std::string& GetFilepath() const{}// = 0 {};
 		
-		virtual const UniformDesc& GetUniformDesc() const = 0;
+		virtual const Ref<UniformDesc>& GetUniformDesc() const = 0;
 
 		// Creates a shader from a vertex and fragment source
 		static Ref<Shader> Create(const std::string& name, const std::string& vertSrc, const std::string& fragSrc);

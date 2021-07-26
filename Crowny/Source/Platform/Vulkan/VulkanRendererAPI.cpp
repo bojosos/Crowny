@@ -8,6 +8,7 @@
 #include "Crowny/Common/Timer.h"
 
 #include <GLFW/glfw3.h>
+
 #define VMA_IMPLEMENTATION
 #include <vulkan/vk_mem_alloc.h>
 
@@ -44,7 +45,7 @@ namespace Crowny
         else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
             CW_ENGINE_ERROR(debugMessage.str());
         }
-        //CW_ENGINE_ASSERT(false);
+        CW_ENGINE_ASSERT(false);
         
         return VK_FALSE;
     }
@@ -55,12 +56,20 @@ namespace Crowny
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         appInfo.pNext = nullptr;
         appInfo.pApplicationName = "Crowny app";
-        appInfo.applicationVersion = VK_MAKE_VERSION(1,0,0);
+        appInfo.applicationVersion = VK_VERSION_1_2;
         appInfo.pEngineName = "Crowny";
         appInfo.engineVersion = VK_MAKE_VERSION(1,0,0); // TODO: Engine version
 
-        appInfo.apiVersion = VK_API_VERSION_1_1;
-
+        appInfo.apiVersion = VK_API_VERSION_1_2;
+        uint32_t count;
+        vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
+        std::vector<VkExtensionProperties> exts(count);
+        vkEnumerateInstanceExtensionProperties(nullptr, &count, exts.data());
+        std::set<std::string> results;
+        for (auto & extension : exts) {
+            CW_ENGINE_INFO(extension.extensionName);
+        
+        }
 #ifdef CW_DEBUG
         std::vector<const char*> layers = { "VK_LAYER_KHRONOS_validation", "VK_LAYER_NV_optimus" };
         uint32_t numExtensions;
@@ -160,6 +169,8 @@ namespace Crowny
             m_PrimaryDevices.push_back(m_Devices[0]);
         }
         
+        VulkanGpuBufferManager::StartUp();
+
         //GPUInfo gpuInfo;
         //gpuInfo.numGPUs = std::min(4U, m_NumDevices);
         
@@ -181,8 +192,7 @@ namespace Crowny
         GET_DEVICE_PROC_ADDR(presentDevice, QueuePresentKHR);
         
         InitCaps();
-        result = glfwCreateWindowSurface(m_Instance, (GLFWwindow*)Application::Get().GetWindow().GetNativeWindow(), gVulkanAllocator, &m_Surface);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        
         /*
         VkXlibSurfaceCreateInfoKHR surfaceCreateInfo = {};
         surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
@@ -193,143 +203,100 @@ namespace Crowny
         surfaceCreateInfo.dpy = glfwGetX11Display();
         err = vkCreateWaylandSurfaceKHR(instance, &surfaceCreateInfo, nullptr, &surface);
         */
-        VkPhysicalDevice device = m_PrimaryDevices[0]->GetPhysicalDevice();
-        uint32_t queueCount;
-        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueCount, nullptr);
-        CW_ENGINE_ASSERT(queueCount > 0);
-        
-        std::vector<VkQueueFamilyProperties> queueProps(queueCount);
-        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueCount, queueProps.data());
 
-        std::vector<VkBool32> supportsPresent(queueCount);
-        for (uint32_t i = 0; i < queueCount; i++)
-            vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_Surface, &supportsPresent[i]);
-        
-        uint32_t graphicsQueueNodeIdx = std::numeric_limits<uint32_t>::max();
-        uint32_t presentQueueNodeIdx = std::numeric_limits<uint32_t>::max();
-        for (uint32_t i = 0; i < queueCount; i++)
-        {
-            if (queueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-            {
-                if (graphicsQueueNodeIdx == std::numeric_limits<uint32_t>::max())
-                    graphicsQueueNodeIdx = i;
-                if (supportsPresent[i] == VK_TRUE)
-                {
-                    graphicsQueueNodeIdx = i;
-                    presentQueueNodeIdx = i;
-                    break;
-                }
-            }
-        }
-        
-        if (presentQueueNodeIdx == std::numeric_limits<uint32_t>::max())
-        {
-            for (uint32_t i = 0; i < queueCount; i++)
-            {
-                if (supportsPresent[i] == VK_TRUE)
-                {
-                    presentQueueNodeIdx = i;
-                    break;
-                }
-            }
-        }
-        
-        CW_ENGINE_ASSERT(graphicsQueueNodeIdx != std::numeric_limits<uint32_t>::max() && presentQueueNodeIdx != std::numeric_limits<uint32_t>::max());
-        CW_ENGINE_ASSERT(graphicsQueueNodeIdx == presentQueueNodeIdx);
-        uint32_t width = Application::Get().GetWindow().GetWidth();
-        uint32_t height = Application::Get().GetWindow().GetHeight();
-        bool vsync = Application::Get().GetWindow().GetVSync();
-        m_SurfaceFormat = GetPresentDevice()->GetSurfaceFormat(m_Surface);
-        VulkanRenderPasses::StartUp(); // has to be done before swapchain is created
+        VulkanRenderPasses::StartUp();
         VulkanTransferManager::StartUp();
-        m_SwapChain = new VulkanSwapChain(m_Surface, width, height, vsync, m_SurfaceFormat.ColorFormat, m_SurfaceFormat.ColorSpace, true, m_SurfaceFormat.DepthFormat);
-        m_CmdBuffer = std::static_pointer_cast<VulkanCmdBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
-        m_CommandBuffer = m_CmdBuffer.get()->GetBuffer();
+        m_CommandBuffer = std::static_pointer_cast<VulkanCommandBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
     }
 
-    void VulkanRendererAPI::SwapBuffers()
+    VulkanCommandBuffer* VulkanRendererAPI::GetCB(const Ref<CommandBuffer>& buffer)
     {
-        VulkanSemaphore* semaphore[1] = { m_CommandBuffer->GetRenderCompleteSemaphore() };
-        SubmitCommandBuffer(nullptr);
+        if (buffer != nullptr)
+            return static_cast<VulkanCommandBuffer*>(buffer.get());
+        return static_cast<VulkanCommandBuffer*>(m_CommandBuffer.get());
+    }
+
+    void VulkanRendererAPI::SwapBuffers(const Ref<RenderTarget>& renderTarget, uint32_t syncMask)
+    {
+        SubmitCommandBuffer(m_CommandBuffer, syncMask);
+        renderTarget->SwapBuffers(syncMask);
         
-        VulkanQueue* queue = GetPresentDevice()->GetQueue(GRAPHICS_QUEUE, 0); // present queue
-        VkResult result = queue->Present(m_SwapChain, semaphore, 1);
-        if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
-            RebuildSwapChain();
         GetPresentDevice()->Refresh();
     }
 
-    void VulkanRendererAPI::SetRenderTarget(const Ref<Framebuffer>& framebuffer)
+    void VulkanRendererAPI::SetRenderTarget(const Ref<RenderTarget>& renderTarget, uint32_t readOnlyFlags, RenderSurfaceMask loadMask, const Ref<CommandBuffer>& commandBuffer)
     {
-        m_CommandBuffer->SetRenderTarget(framebuffer);
+        VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
+        vkCB->SetRenderTarget(renderTarget, readOnlyFlags, loadMask);
     }
     
-    void VulkanRendererAPI::SetVertexBuffers(uint32_t idx, Ref<VertexBuffer>* buffers, uint32_t numBuffers)
+    void VulkanRendererAPI::SetVertexBuffers(uint32_t idx, Ref<VertexBuffer>* buffers, uint32_t numBuffers, const Ref<CommandBuffer>& commandBuffer)
     {
-        m_CommandBuffer->SetVertexBuffers(idx, buffers, numBuffers);
+        VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
+        vkCB->SetVertexBuffers(idx, buffers, numBuffers);
     }
 
-    void VulkanRendererAPI::SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height)
+    void VulkanRendererAPI::SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height, const Ref<CommandBuffer>& commandBuffer)
     {
-        m_CommandBuffer->SetViewport(Rect2F(x, y, width, height));
+        VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
+        vkCB->SetViewport(Rect2F(x, y, width, height));
     }
 
-    void VulkanRendererAPI::SetIndexBuffer(const Ref<IndexBuffer>& indexBuffer)
+    void VulkanRendererAPI::SetIndexBuffer(const Ref<IndexBuffer>& indexBuffer, const Ref<CommandBuffer>& commandBuffer)
     {
-        m_CommandBuffer->SetIndexBuffer(indexBuffer);
+        VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
+        vkCB->SetIndexBuffer(indexBuffer);
     }
 
-    void VulkanRendererAPI::SubmitCommandBuffer(const Ref<CommandBuffer>& commandBuffer)
+    void VulkanRendererAPI::SubmitCommandBuffer(const Ref<CommandBuffer>& commandBuffer, uint32_t syncMask)
     {
-        VulkanTransferManager::Get().FlushTransferBuffers();
-        VulkanCmdBuffer* cmdBuffer = std::static_pointer_cast<VulkanCmdBuffer>(commandBuffer).get();
-        if (cmdBuffer == nullptr)
-            m_CommandBuffer->Submit();
-        else
-            cmdBuffer->GetBuffer()->Submit(true);
-
-        if (cmdBuffer == nullptr || cmdBuffer->GetBuffer() == m_CommandBuffer)
-        {
-            m_CmdBuffer = std::static_pointer_cast<VulkanCmdBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
-            m_CommandBuffer = m_CmdBuffer.get()->GetBuffer();
-        }
-    }
-    
-    void VulkanRendererAPI::RebuildSwapChain()
-    {
-        GetPresentDevice()->WaitIdle();
-        VulkanSwapChain* old = m_SwapChain;
-        uint32_t width = Application::Get().GetWindow().GetWidth();
-        uint32_t height = Application::Get().GetWindow().GetHeight();
-        bool vsync = Application::Get().GetWindow().GetVSync();
-        SurfaceFormat surface = GetPresentDevice()->GetSurfaceFormat(m_Surface);
-        m_SwapChain = new VulkanSwapChain(m_Surface, width, height, vsync, surface.ColorFormat, surface.ColorSpace, true, surface.DepthFormat);
+        VulkanCommandBuffer* cmdBuffer = GetCB(commandBuffer);
+        VulkanTransferManager& cbm = VulkanTransferManager::Get();
+        cbm.FlushTransferBuffers();
+        cmdBuffer->Submit(syncMask);
+        if (cmdBuffer == m_CommandBuffer.get())
+            m_CommandBuffer = std::static_pointer_cast<VulkanCommandBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
     }
 
-    void VulkanRendererAPI::SetDrawMode(DrawMode drawMode)
+    void VulkanRendererAPI::SetDrawMode(DrawMode drawMode, const Ref<CommandBuffer>& commandBuffer)
     {
-        m_CommandBuffer->SetDrawMode(drawMode);
+        VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
+        vkCB->SetDrawMode(drawMode);
     }
 
-    void VulkanRendererAPI::Draw(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount)
+    void VulkanRendererAPI::ClearViewport(uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil, uint8_t targetMask, const Ref<CommandBuffer>& commandBuffer)
     {
-        m_CommandBuffer->Draw(vertexOffset, vertexCount, instanceCount);
+        VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
+        vkCB->ClearViewport(buffers, color, depth, stencil, targetMask);
+    }
+
+    void VulkanRendererAPI::ClearRenderTarget(uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil, uint8_t targetMask, const Ref<CommandBuffer>& commandBuffer)
+    {
+        VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
+        vkCB->ClearRenderTarget(buffers, color, depth, stencil, targetMask);
+    }
+
+    void VulkanRendererAPI::Draw(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount, const Ref<CommandBuffer>& commandBuffer)
+    {
+        VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
+        vkCB->Draw(vertexOffset, vertexCount, instanceCount);
         //TODO: Render stats: draw call, verts, prims
     }
     
-    void VulkanRendererAPI::DrawIndexed(uint32_t startIndex, uint32_t indexCount, uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount)
+    void VulkanRendererAPI::DrawIndexed(uint32_t startIndex, uint32_t indexCount, uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount, const Ref<CommandBuffer>& commandBuffer)
     {
         uint32_t primCount = 0;
-        m_CommandBuffer->DrawIndexed(startIndex, indexCount, vertexOffset, instanceCount);
+        VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
+        vkCB->DrawIndexed(startIndex, indexCount, vertexOffset, instanceCount);
         //TODO: Render stats: draw call, verts, prims
     }
 
-    void VulkanRendererAPI::DispatchCompute(uint32_t x, uint32_t y, uint32_t z)
+    void VulkanRendererAPI::DispatchCompute(uint32_t x, uint32_t y, uint32_t z, const Ref<CommandBuffer>& commandBuffer)
     {
         //m_CommandBuffer->Dispatch(x, y, z); //TODO: Compute calls
     }
     
-    void VulkanRendererAPI::SetUnforms(const Ref<UniformParams>& params)
+    void VulkanRendererAPI::SetUniforms(const Ref<UniformParams>& params, const Ref<CommandBuffer>& commandBuffer)
     {
         for (uint32_t i = 0; i < 6; i++)
         {
@@ -339,22 +306,25 @@ namespace Crowny
             
             for (auto iter = desc->Uniforms.begin(); iter != desc->Uniforms.end(); ++iter)
             {
-                Ref<UniformBufferBlock> block = params->GetUniformBlockBuffer(iter->second.set, iter->second.slot);
+                Ref<UniformBufferBlock> block = params->GetUniformBlockBuffer(iter->second.Set, iter->second.Slot);
                 if (block != nullptr)
                     block->FlushToGpu();
             }
         }
-        m_CommandBuffer->SetUniforms(params);
+        VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
+        vkCB->SetUniforms(params);
     }
 
-    void VulkanRendererAPI::SetGraphicsPipeline(const Ref<GraphicsPipeline>& pipeline)
+    void VulkanRendererAPI::SetGraphicsPipeline(const Ref<GraphicsPipeline>& pipeline, const Ref<CommandBuffer>& commandBuffer)
     {
-        m_CommandBuffer->SetPipeline(pipeline); //TODO: stats for pipeline change
+        VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
+        vkCB->SetPipeline(pipeline); //TODO: stats for pipeline change
     }
     
-    void VulkanRendererAPI::SetComputePipeline(const Ref<ComputePipeline>& pipeline)
+    void VulkanRendererAPI::SetComputePipeline(const Ref<ComputePipeline>& pipeline, const Ref<CommandBuffer>& commandBuffer)
     {
-        m_CommandBuffer->SetPipeline(pipeline); //TODO: stats
+        VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
+        vkCB->SetPipeline(pipeline); //TODO: stats
     }
     
     void VulkanRendererAPI::Shutdown()
@@ -362,7 +332,6 @@ namespace Crowny
 #ifdef CW_DEBUG
         vkDestroyDebugUtilsMessengerEXT(m_Instance, m_DebugUtilsMessenger, gVulkanAllocator);
 #endif
-        vkDestroySurfaceKHR(m_Instance, m_Surface, gVulkanAllocator);
         vkDestroyInstance(m_Instance, gVulkanAllocator);
     }
     
@@ -479,7 +448,6 @@ namespace Crowny
             deviceIdx++;
         }
     }
-    
     
     VulkanRendererAPI& gVulkanRendererAPI()
     {

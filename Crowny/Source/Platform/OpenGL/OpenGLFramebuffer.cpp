@@ -1,4 +1,4 @@
-#include "cwpch.h"
+/*#include "cwpch.h"
 
 #include "Platform/OpenGL/OpenGLFramebuffer.h"
 #include "Crowny/Renderer/Texture.h"
@@ -44,8 +44,9 @@ namespace Crowny
 		m_Attachments.resize(attachments.size());
 		for (int i = 0; i < attachments.size(); i++)
 		{
-			m_Attachments[i] = Texture2D::Create(m_Properties.Width, m_Properties.Height, 
-													 { FramebufferToTextureFormat(attachments[i].TextureFormat)} );
+			// VULKAN IMPL: Fix
+			//m_Attachments[i] = Texture2D::Create(m_Properties.Width, m_Properties.Height, 
+			//										 { FramebufferToTextureFormat(attachments[i].TextureFormat)} );
 			if (attachments[i].TextureFormat == FramebufferTextureFormat::DEPTH24STENCIL8)
 			{
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, m_Attachments[i]->GetRendererID(), 0);
@@ -86,3 +87,4 @@ namespace Crowny
 		Invalidate();
 	}
 }
+*/

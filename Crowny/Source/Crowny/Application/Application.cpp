@@ -21,6 +21,8 @@
 namespace Crowny 
 { 
  
+	uint8_t Application::s_GLFWWindowCount = 0; 
+
 	static void DispatchMain(void* fp) 
 	{ 
 		auto* func = (std::function<void()>*)fp; 
@@ -33,13 +35,22 @@ namespace Crowny
 	{ 
 		CW_ENGINE_ASSERT(!s_Instance, "Application already exists!"); 
 		s_Instance = this; 
-		m_Window = Window::Create({ name }); 
- 
-		m_Window->SetEventCallback(CW_BIND_EVENT_FN(Application::OnEvent)); 
+		RenderWindowProperties props;
+		props.Title = name;
+		props.Width = 1280;
+		props.Height = 720;
+		
+		if (s_GLFWWindowCount == 0)
+		{
+			int success = glfwInit();
+			CW_ENGINE_ASSERT(success, "Could not initialize GLFW!");
+		}
 		Initializer::Init(); 
  
-	//	m_ImGuiLayer = new ImGuiLayer(); 
-	//	PushOverlay(m_ImGuiLayer); 
+		m_Window = RenderWindow::Create(props); 
+		m_Window->GetWindow()->SetEventCallback(CW_BIND_EVENT_FN(Application::OnEvent)); 
+		// m_ImGuiLayer = new ImGuiLayer(); 
+		// PushOverlay(m_ImGuiLayer); 
 	} 
  
 	Application::~Application() 
@@ -98,15 +109,16 @@ namespace Crowny
 			 
 				// m_ImGuiLayer->Begin(); 
 				// { 
-				// 	for (Layer* layer : m_LayerStack) 
-				// 		layer->OnImGuiRender(); 
+					// for (Layer* layer : m_LayerStack) 
+						// layer->OnImGuiRender(); 
 				// } 
 				// m_ImGuiLayer->End(); 
-			 
 			} 
  
 			Input::OnUpdate(); 
-			m_Window->OnUpdate(); 
+			m_Window->GetWindow()->OnUpdate(); 
+			auto& rapi = RendererAPI::Get(); 
+			rapi.SwapBuffers(m_Window);
 #ifdef MC_WEB 
 		}; 
 		emscripten_set_main_loop_arg(DispatchMain, &loop, 0, 1); 

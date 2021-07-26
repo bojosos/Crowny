@@ -69,15 +69,15 @@ namespace Crowny
 		uint32_t numQueues = gVulkanRendererAPI().GetPresentDevice()->GetNumQueues(GRAPHICS_QUEUE);  
 		init_info.Queue = gVulkanRendererAPI().GetPresentDevice()->GetQueue(GRAPHICS_QUEUE, numQueues - 1)->GetHandle();  
 		init_info.DescriptorPool = imguiPool;  
-		init_info.MinImageCount = gVulkanRendererAPI().GetSwapChain()->GetColorSurfacesCount();  
-		init_info.ImageCount = gVulkanRendererAPI().GetSwapChain()->GetColorSurfacesCount();  
+		// init_info.MinImageCount = gVulkanRendererAPI().GetSwapChain()->GetColorSurfacesCount();  
+		// init_info.ImageCount = gVulkanRendererAPI().GetSwapChain()->GetColorSurfacesCount();  
 		init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;  
 		init_info.Allocator = gVulkanAllocator;  
   
 		VulkanRenderPassDesc passDesc;  
         passDesc.Samples = 1;  
         passDesc.Offscreen = false;  
-        passDesc.Color[0].Format = gVulkanRendererAPI().GetSurfaceFormat().ColorFormat;  
+        // passDesc.Color[0].Format = gVulkanRendererAPI().GetSurfaceFormat().ColorFormat;  
         passDesc.Color[0].Enabled = true;  
   
 		VulkanRenderPass* renderPass = VulkanRenderPasses::Get().GetRenderPass(passDesc);  
@@ -92,10 +92,10 @@ namespace Crowny
 		}  
 		io.FontDefault = io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto-Regular.ttf", 18.0f);  
 		  
-		Ref<VulkanCmdBuffer> cmdBuffer = std::static_pointer_cast<VulkanCmdBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));  
-		ImGui_ImplVulkan_CreateFontsTexture(cmdBuffer->GetBuffer()->GetHandle());  
+		Ref<VulkanCommandBuffer> cmdBuffer = std::static_pointer_cast<VulkanCommandBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));  
+		ImGui_ImplVulkan_CreateFontsTexture(cmdBuffer->GetInternal()->GetHandle());  
 		gVulkanRendererAPI().SubmitCommandBuffer(cmdBuffer);  
-		cmdBuffer->GetBuffer()->CheckFenceStatus(true);  
+		cmdBuffer->GetInternal()->CheckFenceStatus(true);  
 		ImGui_ImplVulkan_DestroyFontUploadObjects();  
   
 		//Application& app = Application::Get();  
@@ -218,7 +218,7 @@ namespace Crowny
 		ImGui::Render();  
 		  
 //		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());  
-		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), gVulkanRendererAPI().GetMainCommandBuffer()->GetHandle());  
+		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), gVulkanRendererAPI().GetMainCommandBuffer()->GetInternal()->GetHandle());  
   
 		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)  
 		{  

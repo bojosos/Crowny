@@ -7,7 +7,7 @@
 namespace Crowny
 {
 
-	Mesh::Mesh(const Ref<VertexArray>& vao, const Ref<IndexBuffer>& ibo, const Ref<MaterialInstance>& material, const std::vector<Ref<Texture2D>>& textures) 
+	Mesh::Mesh(const Ref<VertexArray>& vao, const Ref<IndexBuffer>& ibo, const Ref<MaterialInstance>& material, const std::vector<Ref<Texture>>& textures) 
 								: m_VertexArray(vao), m_IndexBuffer(ibo), m_MaterialInstance(material), m_Textures(textures)
 	{
 
