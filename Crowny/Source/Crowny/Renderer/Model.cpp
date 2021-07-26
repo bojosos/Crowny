@@ -101,26 +101,26 @@ namespace Crowny
 		Ref<IndexBuffer> ibo = IndexBuffer::Create(indices.data(), indices.size());
 		vao->AddVertexBuffer(vbo);
 		vao->SetIndexBuffer(ibo);
-		std::vector<Ref<Texture2D>> textures;
+		std::vector<Ref<Texture>> textures;
 		if (mesh->mMaterialIndex >= 0)
 		{
 			aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-			std::vector<Ref<Texture2D>> diffuseMaps = this->LoadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
+			std::vector<Ref<Texture>> diffuseMaps = this->LoadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
 			textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-			std::vector<Ref<Texture2D>> specularMaps = this->LoadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
+			std::vector<Ref<Texture>> specularMaps = this->LoadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
 			textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
-			std::vector<Ref<Texture2D>> normalMaps = this->LoadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal");
+			std::vector<Ref<Texture>> normalMaps = this->LoadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal");
 			textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
-			std::vector<Ref<Texture2D>> heightMaps = this->LoadMaterialTextures(material, aiTextureType_AMBIENT, "texture_height");
+			std::vector<Ref<Texture>> heightMaps = this->LoadMaterialTextures(material, aiTextureType_AMBIENT, "texture_height");
 			textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
 		}
 
 		return CreateRef<Mesh>(vao, ibo, nullptr, textures);
 	}
 
-	std::vector<Ref<Texture2D>> Model::LoadMaterialTextures(aiMaterial* material, aiTextureType type, const std::string& typeName)
+	std::vector<Ref<Texture>> Model::LoadMaterialTextures(aiMaterial* material, aiTextureType type, const std::string& typeName)
 	{
-		std::vector<Ref<Texture2D>> textures;
+		std::vector<Ref<Texture>> textures;
 		textures.resize(material->GetTextureCount(type));
 		aiString name;
 		material->Get(AI_MATKEY_NAME, name);
@@ -131,7 +131,8 @@ namespace Crowny
 			bool skip = false;
 			for (uint32_t j = 0; j < m_TexturesLoaded.size(); j++)
 			{
-				if (m_TexturesLoaded[j]->GetFilepath() == std::string(m_Directory + "/" + str.C_Str()))
+				// VULKAN IMPL: Fix
+				//if (m_TexturesLoaded[j]->GetFilepath() == std::string(m_Directory + "/" + str.C_Str()))
 				{
 					textures.push_back(m_TexturesLoaded[j]);
 					skip = true;
@@ -140,9 +141,10 @@ namespace Crowny
 			}
 			if (!skip)
 			{
-				Ref<Texture2D> texture = Texture2D::Create(m_Directory + "/" + str.C_Str(), {}, str.C_Str());
-				textures[i] = texture;
-				m_TexturesLoaded.push_back(texture);
+				// VULKAN IMPL: Fix
+				// Ref<Texture> texture = Texture::Create(m_Directory + "/" + str.C_Str(), {}, str.C_Str());
+				//textures[i] = texture;
+				//m_TexturesLoaded.push_back(texture);
 			}
 		}
 

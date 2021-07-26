@@ -95,12 +95,12 @@ namespace Crowny
 
 	struct SpriteRendererComponent : public Component
 	{
-		Ref<Texture2D> Texture;
+		Ref<Crowny::Texture> Texture;
 		glm::vec4 Color;
 
 		SpriteRendererComponent() = default;
 		SpriteRendererComponent(const SpriteRendererComponent&) = default;
-		SpriteRendererComponent(const Ref<Texture2D>& texture, Crowny::Color color) : Texture(texture), Color(color) {}
+		SpriteRendererComponent(const Ref<Crowny::Texture>& texture, Crowny::Color color) : Texture(texture), Color(color) {}
 	};
 
 	template <>

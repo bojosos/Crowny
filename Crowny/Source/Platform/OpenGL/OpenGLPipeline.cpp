@@ -5,7 +5,7 @@
 namespace Crowny
 {
 
-    OpenGLGraphicsPipeline::OpenGLGraphicsPipeline(const PipelineStateDesc& desc)
+    OpenGLGraphicsPipeline::OpenGLGraphicsPipeline(const PipelineStateDesc& desc) : GraphicsPipeline(desc)
     {
         
     }
@@ -15,7 +15,7 @@ namespace Crowny
 
     }
 
-    OpenGLComputePipeline::OpenGLComputePipeline(const Ref<Shader>& shader) : m_Shader(shader)
+    OpenGLComputePipeline::OpenGLComputePipeline(const Ref<Shader>& shader) : ComputePipeline(shader)
     {
 
     }

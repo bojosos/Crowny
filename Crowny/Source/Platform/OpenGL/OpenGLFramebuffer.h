@@ -1,4 +1,4 @@
-#pragma once
+/*#pragma once
 
 #include "Crowny/Renderer/Framebuffer.h"
 
@@ -30,3 +30,4 @@ namespace Crowny
 	};
 
 }
+*/

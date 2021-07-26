@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Renderer/Shader.h"
+#include "Crowny/Common/Types.h"
 
 namespace Crowny
 {
@@ -24,8 +25,8 @@ namespace Crowny
         void* Data; // TODO: use blob or vector
         size_t Size;
         std::string EntryPoint;
-        Crowny::ShaderType ShaderType;
-        UniformDescription Description;
+        ShaderType Type;
+        Ref<UniformDesc> Description;
     };
 
     class ShaderCompiler

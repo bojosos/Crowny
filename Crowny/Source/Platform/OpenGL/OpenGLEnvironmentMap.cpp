@@ -1,4 +1,4 @@
-#include "cwpch.h"
+/*#include "cwpch.h"
 
 #include "Platform/OpenGL/OpenGLEnvironmentMap.h"
 #include "Crowny/Renderer/Framebuffer.h"
@@ -42,7 +42,7 @@ namespace Crowny
             std::cout << "Failed to load HDR image." << std::endl;
         }
         delete dat;
-        ToCubemap();*/
+        ToCubemap();
     }
 
     static void RenderCube()
@@ -113,7 +113,7 @@ namespace Crowny
 		} 
         glBindVertexArray(cubeVAO1);
         glDrawArrays(GL_TRIANGLES, 0, 36);
-        glBindVertexArray(0);*/
+        glBindVertexArray(0);
     }
 
     static void RenderQuad()
@@ -142,7 +142,7 @@ namespace Crowny
         }
         glBindVertexArray(quadVAO);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        glBindVertexArray(0);*/
+        glBindVertexArray(0);
     }
 
     void OpenGLEnvironmentMap::Clear(int32_t clearColor)
@@ -342,7 +342,8 @@ namespace Crowny
         m_Cubemap = envCubemap;
         m_IrradianceMap = irradianceMap;
         m_BrdfLUTTexture = brdfLUTTexture;
-        m_PrefilterMap = prefilterMap;*/
+        m_PrefilterMap = prefilterMap;
     }
 
 }
+*/

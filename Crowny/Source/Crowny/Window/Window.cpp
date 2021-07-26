@@ -17,12 +17,13 @@
 namespace Crowny
 {
 	
-	Scope<Window> Window::Create(const WindowProperties& props)
+	Window* Window::Create(const WindowProperties& props)
 	{
 	#ifdef CW_PLATFORM_WINDOWS
-		return CreateScope<WindowsWindow>(props);
+		return CreateRef<WindowsWindow>(props);
 	#elif defined (CW_PLATFORM_LINUX)
-		return CreateScope<LinuxWindow>(props);
+		//return CreateRef<LinuxWindow>(props);
+		return new LinuxWindow(props);
 	#else
 		CW_ENGINE_ASSERT(false, "Platform not supported");
 		return nullptr;

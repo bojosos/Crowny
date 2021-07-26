@@ -170,12 +170,12 @@ namespace Crowny
 
 	void MaterialInstance::Unbind()
 	{
-		m_Material->Unbind();
+		//m_Material->Unbind();
 
 		for (uint32_t i = 0; i < m_Textures.size(); i++)
 		{
-			if (m_Textures[i])
-				m_Textures[i]->Unbind(i);
+			//if (m_Textures[i])
+				//m_Textures[i]->Unbind(i);
 		}
 	}
 	/*

@@ -28,6 +28,7 @@ namespace Crowny
 		virtual void Unmap() override;
         
         virtual IndexType GetIndexType() const override { return m_IndexType; }
+        VulkanBuffer* GetBuffer() const { return m_Buffer->GetBuffer(); }
         
     private:
         VulkanGpuBuffer* m_Buffer;

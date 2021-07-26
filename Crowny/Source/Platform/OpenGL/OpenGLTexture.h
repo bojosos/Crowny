@@ -4,7 +4,7 @@
 
 namespace Crowny
 {
-
+/*
 	class OpenGLTexture2D : public Texture2D
 	{
 	public:
@@ -49,5 +49,5 @@ namespace Crowny
 		static int32_t  TextureSwizzleColorToOpenGLSwizzleColor(SwizzleChannel color);
 	};
 
-
+*/
 }

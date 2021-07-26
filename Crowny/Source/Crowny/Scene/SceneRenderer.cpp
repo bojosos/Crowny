@@ -14,7 +14,7 @@ namespace Crowny
     
     struct SceneRendererData
     {
-        Ref<Framebuffer> MainFramebuffer;
+        //Ref<Framebuffer> MainFramebuffer;
         uint32_t ViewportWidth, ViewportHeight;
     };
 
@@ -31,20 +31,20 @@ namespace Crowny
     static SceneRendererStats s_Stats;
     
     void SceneRenderer::Init()
-    {
+    {/*
         FramebufferProperties fbprops;
 		fbprops.Width = 100;
 		fbprops.Height = 100;
         fbprops.Attachments = { FramebufferTextureFormat::RGBA8, FramebufferTextureFormat::Depth };
         fbprops.Samples = 8;
         fbprops.ClearColor = { 0.1f, 0.1f, 0.1f, 1.0f };
-        s_Data.MainFramebuffer = Framebuffer::Create(fbprops);
+        s_Data.MainFramebuffer = Framebuffer::Create(fbprops);*/
     }
 
-	Ref<Framebuffer> SceneRenderer::GetMainFramebuffer() { return s_Data.MainFramebuffer; }
+	//Ref<Framebuffer> SceneRenderer::GetMainFramebuffer() { return s_Data.MainFramebuffer; }
 
     void SceneRenderer::OnEditorUpdate(Timestep ts, const EditorCamera& camera)
-    {
+    {/*
 		Ref<Scene> scene = SceneManager::GetActiveScene();
         if (FramebufferProperties spec = s_Data.MainFramebuffer->GetProperties(); s_Data.ViewportWidth > 0.0f 
             && s_Data.ViewportHeight > 0.0f && (spec.Width != s_Data.ViewportWidth || spec.Height != s_Data.ViewportHeight))
@@ -110,7 +110,7 @@ namespace Crowny
 		}
 		IDBufferRenderer::End();
         s_Stats.Frames += 1;
-        s_Stats.FrameTime = ts;
+        s_Stats.FrameTime = ts;*/
     }
 
     void SceneRenderer::OnRuntimeUpdate(Timestep ts, const Camera& camera, const glm::mat4& cameraTransform)
@@ -119,9 +119,9 @@ namespace Crowny
     }
 
     void SceneRenderer::SetViewportSize(float width, float height)
-    {
+    {/*
         s_Data.ViewportWidth = (uint32_t)width;
-        s_Data.ViewportHeight = (uint32_t)height;
+        s_Data.ViewportHeight = (uint32_t)height;*/
     }
         
 }

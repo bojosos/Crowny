@@ -1,22 +1,24 @@
 #pragma once
 
-#include "Platform/Vulkan/VulkanUtils.h"
 #include "Crowny/Renderer/GraphicsPipeline.h"
+#include "Crowny/Renderer/Buffer.h"
 
+#include "Platform/Vulkan/VulkanUtils.h"
 #include "Platform/Vulkan/VulkanDevice.h"
 #include "Platform/Vulkan/VulkanRenderPass.h"
-#include "Crowny/Renderer/Buffer.h"
+#include "Platform/Vulkan/VulkanResource.h"
 #include "Platform/Vulkan/VulkanPipeline.h"
 #include "Platform/Vulkan/VulkanShader.h"
 
 namespace Crowny
 {
     class VulkanRenderPass;
+    class VulkanCmdBuffer;
 
-    class VulkanPipeline
+    class VulkanPipeline : public VulkanResource
     {
     public:
-        VulkanPipeline(VkDevice device, VkPipeline pipeline);
+        VulkanPipeline(VulkanResourceManager* owner, VkPipeline pipeline);
         ~VulkanPipeline();
 
         VkPipeline GetHandle() const { return m_Pipeline; }
@@ -35,10 +37,10 @@ namespace Crowny
         VulkanPipeline* GetPipeline(VulkanRenderPass* renderPass, DrawMode drawMode);
         VulkanPipeline* CreatePipeline(VulkanRenderPass* renderPass, DrawMode drawMode);
         VkPipelineLayout GetLayout() const { return m_PipelineLayout; }
+        void RegisterPipelineResources(VulkanCmdBuffer* cmdBuffer);
         
     private:
         VkPipelineLayout m_PipelineLayout;
-        VkDevice m_Device;
 
         VkPipelineShaderStageCreateInfo m_ShaderStageInfos[5];
         VkPipelineRasterizationStateCreateInfo m_RasterizationInfo = {};
@@ -82,9 +84,9 @@ namespace Crowny
         
         VkPipeline GetHandle() const { return m_Pipeline; };
         VkPipelineLayout GetLayout() const { return m_PipelineLayout; }
+        void RegisterPipelineResources(VulkanCmdBuffer* cmdBuffer);
     private:
         Ref<VulkanShader> m_Shader;
-        VkDevice m_Device;
         VkPipeline m_Pipeline;
         VkPipelineLayout m_PipelineLayout;
     };

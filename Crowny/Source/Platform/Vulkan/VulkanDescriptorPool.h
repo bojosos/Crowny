@@ -5,6 +5,7 @@
 
 namespace Crowny
 {
+    class VulkanDescriptorLayout;
     
     struct VulkanLayoutKey
     {
@@ -43,10 +44,10 @@ namespace Crowny
         VulkanDescriptorLayout** Layouts;
     };
     
-    class VulkanDescriptorSet
+    class VulkanDescriptorSet : public VulkanResource
     {
     public:
-        VulkanDescriptorSet(VkDescriptorSet set, VkDescriptorPool pool);
+        VulkanDescriptorSet(VulkanResourceManager* owner, VkDescriptorSet set, VkDescriptorPool pool);
         ~VulkanDescriptorSet();
 
         VkDescriptorSet GetHandle() const { return m_Set; }
@@ -110,4 +111,4 @@ namespace Crowny
         std::vector<VulkanDescriptorPool*> m_Pools;
     };
     
-}
+}            

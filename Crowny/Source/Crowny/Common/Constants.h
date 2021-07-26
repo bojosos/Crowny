@@ -6,7 +6,9 @@ namespace Crowny
 #define DEFAULT_FONT_FILENAME std::string("roboto-thin.ttf")
 
 	// ------------- Global Renderer -------------
-#define MAX_FRAMEBUFFER_COLOR_ATTACHMENTS      4
+#define MAX_FRAMEBUFFER_COLOR_ATTACHMENTS      8
+#define MAX_QUEUES_PER_TYPE 				   8
+#define MAX_BOUND_VERTEX_BUFFERS  			   16
 
 	// ------------- Batch Renderer -------------
 #define RENDERER_MAX_SPRITES	               60000

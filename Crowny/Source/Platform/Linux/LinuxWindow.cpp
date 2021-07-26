@@ -3,14 +3,13 @@
 #include "Crowny/Events/KeyEvent.h" 
 #include "Crowny/Events/MouseEvent.h" 
 #include "Crowny/Events/ApplicationEvent.h" 
+#include "Crowny/Application/Application.h"
 #include "Crowny/Renderer/Renderer.h" 
  
 #include "Platform/Linux/LinuxWindow.h" 
  
 namespace Crowny 
 { 
-	static byte s_GLFWWindowCount = 0; 
- 
  
 	static void GLFWErrorCallback(int error, const char* desc) 
 	{ 
@@ -27,8 +26,8 @@ namespace Crowny
 		glfwPollEvents(); 
 		//m_Context->SwapBuffers(); 
 		 
-		auto& rapi = RendererAPI::Get(); 
-		rapi.SwapBuffers(); 
+		//auto& rapi = RendererAPI::Get(); 
+		//rapi.SwapBuffers(); 
 	} 
  
 	LinuxWindow::~LinuxWindow() 
@@ -45,13 +44,7 @@ namespace Crowny
 #ifdef CW_DEBUG 
 		CW_ENGINE_WARN("Creating Window: {0}", m_Data.Title); 
 #endif 
- 
-		if (s_GLFWWindowCount == 0) 
-		{ 
-			int success = glfwInit(); 
-			CW_ENGINE_ASSERT(success, "Could not initialize GLFW!"); 
-			glfwSetErrorCallback(GLFWErrorCallback); 
-		} 
+ 		glfwSetErrorCallback(GLFWErrorCallback); 
  
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); 
 		glfwWindowHint(GLFW_SAMPLES, 8); 
@@ -61,7 +54,7 @@ namespace Crowny
 		if(Renderer::GetAPI() == RendererAPI::API::OpenGL) 
 			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE); // No idea what this does... 
 #endif 
-		s_GLFWWindowCount++; 
+		Application::s_GLFWWindowCount++; 
  
 		//m_Context = GraphicsContext::Create(m_Window); 
 		//m_Context->Init(); 
@@ -183,9 +176,9 @@ namespace Crowny
 	void LinuxWindow::Shutdown() 
 	{ 
 		glfwDestroyWindow(m_Window); 
-		s_GLFWWindowCount--; 
+		Application::s_GLFWWindowCount--; 
  
-		if (s_GLFWWindowCount == 0) 
+		if (Application::s_GLFWWindowCount == 0) 
 			glfwTerminate(); 
 	} 
  

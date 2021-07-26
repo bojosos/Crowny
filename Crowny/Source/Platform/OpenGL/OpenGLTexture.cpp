@@ -1,4 +1,4 @@
-#include "cwpch.h"
+/*#include "cwpch.h"
 
 #include "Platform/OpenGL/OpenGLTexture.h"
 #include "Crowny/Common/VirtualFileSystem.h"
@@ -301,4 +301,4 @@ namespace Crowny
 		glBindTextureUnit(slot, 0);
 	}
 
-}
+}*/

@@ -6,15 +6,18 @@
 #include "Platform/Vulkan/VulkanRenderPass.h"
 #include "Platform/Vulkan/VulkanRendererAPI.h"
 #include "Platform/Vulkan/VulkanShader.h"
+#include "Platform/Vulkan/VulkanUniformParams.h"
+#include "Platform/Vulkan/VulkanDescriptorPool.h"
+#include "Platform/Vulkan/VulkanCommandBuffer.h"
 
 namespace Crowny
 {
     
-    VulkanPipeline::VulkanPipeline(VkDevice device, VkPipeline pipeline) : m_Device(device), m_Pipeline(pipeline) { }
+    VulkanPipeline::VulkanPipeline(VulkanResourceManager* owner, VkPipeline pipeline) : VulkanResource(owner, true), m_Pipeline(pipeline) { }
 
     VulkanPipeline::~VulkanPipeline()
     {
-        vkDestroyPipeline(m_Device, m_Pipeline, gVulkanAllocator);
+        vkDestroyPipeline(m_Owner->GetDevice().GetLogicalDevice(), m_Pipeline, gVulkanAllocator);
     }
 
     VulkanGraphicsPipeline::GpuPipelineKey::GpuPipelineKey(uint32_t id, DrawMode drawMode)
@@ -38,55 +41,8 @@ namespace Crowny
         return true;
     }
 
-    VulkanGraphicsPipeline::VulkanGraphicsPipeline(const PipelineStateDesc& desc, const BufferLayout& layout)
+    VulkanGraphicsPipeline::VulkanGraphicsPipeline(const PipelineStateDesc& desc, const BufferLayout& layout) : GraphicsPipeline(desc)
     {
-        m_Data = desc;
-        m_Device = gVulkanRendererAPI().GetPresentDevice()->GetLogicalDevice();
-        if (desc.VertexShader != nullptr)
-        {
-            const auto& uniforms = desc.VertexShader->GetUniformDesc();
-            VkDescriptorSetLayoutBinding* bindings = new VkDescriptorSetLayoutBinding[uniforms.Uniforms.size()];
-            uint32_t idx = 0;
-            for (const auto& uniform : uniforms.Uniforms)
-            {
-                bindings[idx].binding = uniform.second.Slot;
-                bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-                bindings[idx].pImmutableSamplers = nullptr;
-                bindings[idx].descriptorCount = 1;    
-                bindings[idx++].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            }
-
-            VkDescriptorSetLayoutCreateInfo layoutInfo{};
-            layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-            layoutInfo.pNext = nullptr;
-            layoutInfo.flags = 0;
-            layoutInfo.bindingCount = uniforms.Uniforms.size();
-            layoutInfo.pBindings = bindings;
-
-            VkDescriptorSetLayout layout;
-            VkResult result = vkCreateDescriptorSetLayout(m_Device, &layoutInfo, nullptr, &layout);
-            CW_ENGINE_ASSERT(result == VK_SUCCESS);
-            
-            VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-            pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-            pipelineLayoutInfo.setLayoutCount = 1;
-            pipelineLayoutInfo.pSetLayouts = &layout;
-            pipelineLayoutInfo.pushConstantRangeCount = 0;
-            result = vkCreatePipelineLayout(m_Device, &pipelineLayoutInfo, gVulkanAllocator, &m_PipelineLayout);
-            CW_ENGINE_ASSERT(result == VK_SUCCESS);
-            delete[] bindings;
-        }
-        
-        /*
-        if (desc.FragmentShader != nullptr)
-            desc.FragmentShader->GetUniformDesc();
-        if (desc.GeometryShader != nullptr)
-            desc.GeometryShader->GetUniformDesc();
-        if (desc.HullShader != nullptr)
-            desc.HullShader->GetUniformDesc();
-        if (desc.DomainShader != nullptr)
-            desc.DomainShader->GetUniformDesc();*/
-
         static std::vector<VkDynamicState> dynamicStates =
         {
             VK_DYNAMIC_STATE_VIEWPORT,
@@ -117,6 +73,7 @@ namespace Crowny
                 continue;
             
             m_ShaderStageInfos[outputIdx] = shader->GetShaderStage();
+            CW_ENGINE_INFO("Shader entry: {0}", m_ShaderStageInfos[outputIdx].pName);
             outputIdx++;
         }
         
@@ -227,6 +184,7 @@ namespace Crowny
         m_PipelineInfo.layout = m_PipelineLayout;
         m_PipelineInfo.pInputAssemblyState = &m_InputAssemblyInfo;
         m_PipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+        m_PipelineInfo.basePipelineIndex = -1;
         m_PipelineInfo.pDepthStencilState = &m_DepthStencilInfo; // runtime
         m_PipelineInfo.pColorBlendState = &m_ColorBlendStateInfo; // runtime
         m_PipelineInfo.pViewportState = &m_ViewportInfo;
@@ -234,6 +192,15 @@ namespace Crowny
         m_PipelineInfo.pMultisampleState = &m_MultiSampleInfo;
         m_PipelineInfo.subpass = 0;
         m_PipelineInfo.pDynamicState = &m_DynamicStateCreateInfo;
+
+        VulkanDescriptorManager& descManager = gVulkanRendererAPI().GetPresentDevice()->GetDescriptorManager();
+        VulkanUniformParamInfo& paramInfo = static_cast<VulkanUniformParamInfo&>(*m_ParamInfo);
+        uint32_t numLayouts = paramInfo.GetNumSets();
+        VulkanDescriptorLayout** layouts = new VulkanDescriptorLayout*[numLayouts];
+        for (uint32_t i = 0; i < numLayouts; i++)
+            layouts[i] = paramInfo.GetLayout(i);
+        m_PipelineLayout = descManager.GetPipelineLayout(layouts, numLayouts);
+        delete[] layouts;
     }
 
     VulkanGraphicsPipeline::~VulkanGraphicsPipeline()
@@ -254,23 +221,56 @@ namespace Crowny
         return result;
     }
 
+    void VulkanGraphicsPipeline::RegisterPipelineResources(VulkanCmdBuffer* buffer)
+    {
+        std::array<VulkanShader*, 5> shaders = {
+            static_cast<VulkanShader*>(m_Data.VertexShader.get()),
+            static_cast<VulkanShader*>(m_Data.HullShader.get()),
+            static_cast<VulkanShader*>(m_Data.DomainShader.get()),
+            static_cast<VulkanShader*>(m_Data.GeometryShader.get()),
+            static_cast<VulkanShader*>(m_Data.FragmentShader.get()),
+        };
+
+        for (auto& shader: shaders)
+        {
+            if (shader != nullptr)
+            {
+                VulkanShaderModule* module = shader->GetShaderModule();
+                if (module != nullptr)
+                    buffer->RegisterResource(module, VulkanAccessFlagBits::Read);
+            }
+        }
+    }
+
     VulkanPipeline* VulkanGraphicsPipeline::CreatePipeline(VulkanRenderPass* renderpass, DrawMode drawMode)
     {
+        VulkanDevice& device = *gVulkanRendererAPI().GetPresentDevice().get();
         m_MultiSampleInfo.rasterizationSamples = renderpass->GetSampleFlags();
         m_ColorBlendStateInfo.attachmentCount = renderpass->GetNumColorAttachments();
 
         m_PipelineInfo.renderPass = renderpass->GetHandle();
-
+        m_PipelineInfo.layout = m_PipelineLayout;
         VkPipeline pipeline;
-        VkResult result = vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &m_PipelineInfo, gVulkanAllocator, &pipeline);
+        VkResult result = vkCreateGraphicsPipelines(device.GetLogicalDevice(), VK_NULL_HANDLE, 1, &m_PipelineInfo, gVulkanAllocator, &pipeline);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         
-        return new VulkanPipeline(m_Device, pipeline);
+        return device.GetResourceManager().Create<VulkanPipeline>(pipeline);
     }
 
-    VulkanComputePipeline::VulkanComputePipeline(const Ref<Shader>& shader)
+    VulkanComputePipeline::VulkanComputePipeline(const Ref<Shader>& shader) : ComputePipeline(shader)
     {
 
+    }
+
+    void VulkanComputePipeline::RegisterPipelineResources(VulkanCmdBuffer* cmdBuffer)
+    {
+        VulkanShader* shader = static_cast<VulkanShader*>(m_Shader.get());
+        if (shader != nullptr)
+        {
+            VulkanShaderModule* module = shader->GetShaderModule();
+            if (module != nullptr)
+                cmdBuffer->RegisterResource(module, VulkanAccessFlagBits::Read);
+        }
     }
 
     VulkanComputePipeline::~VulkanComputePipeline()

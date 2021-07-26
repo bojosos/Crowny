@@ -11,6 +11,18 @@ namespace Crowny
     {
         
     }
+
+    size_t VulkanLayoutKey::HashFunction::operator()(const VulkanLayoutKey& key) const
+    {
+        size_t hash = 0;
+        for (uint32_t i = 0; i < key.NumBindings; i++)
+        {
+            size_t hashC = 0;
+            HashCombine(hash, key.Bindings[i].binding, key.Bindings[i].descriptorCount, key.Bindings[i].descriptorType, key.Bindings[i].stageFlags);
+        }
+        
+        return hash;
+    }
     
     bool VulkanLayoutKey::EqualsFunction::operator()(const VulkanLayoutKey& lhs, const VulkanLayoutKey& rhs) const
     {
@@ -116,7 +128,7 @@ namespace Crowny
             CW_ENGINE_ASSERT(result == VK_SUCCESS);
         }
         
-        return new VulkanDescriptorSet(set, allocateInfo.descriptorPool);
+        return m_Device.GetResourceManager().Create<VulkanDescriptorSet>(set, allocateInfo.descriptorPool);
     }
 
     VkPipelineLayout VulkanDescriptorManager::GetPipelineLayout(VulkanDescriptorLayout** layouts, uint32_t numLayouts)
@@ -193,8 +205,8 @@ namespace Crowny
         vkDestroyDescriptorPool(m_Device.GetLogicalDevice(), m_Pool, gVulkanAllocator);
     }
     
-    VulkanDescriptorSet::VulkanDescriptorSet(VkDescriptorSet set, VkDescriptorPool pool)
-        : m_Set(set), m_Pool(pool)
+    VulkanDescriptorSet::VulkanDescriptorSet(VulkanResourceManager* owner, VkDescriptorSet set, VkDescriptorPool pool)
+        : VulkanResource(owner, true), m_Set(set), m_Pool(pool)
     {
         m_Device = gVulkanRendererAPI().GetPresentDevice()->GetLogicalDevice();
     }

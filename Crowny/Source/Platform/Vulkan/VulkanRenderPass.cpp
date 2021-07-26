@@ -7,16 +7,30 @@
 namespace Crowny
 {
     
+    VulkanRenderPass::VariantKey::VariantKey(RenderSurfaceMask loadMask, RenderSurfaceMask readMask, Crowny::ClearMask clearMask)
+        : LoadMask(loadMask), ReadMask(readMask), ClearMask(clearMask)
+    { }
+
+    size_t VulkanRenderPass::VariantKey::HashFunction::operator()(const VariantKey& key) const
+    {
+        size_t hash = 0;
+        HashCombine(hash, (uint32_t)key.ReadMask, (uint32_t)key.LoadMask, (uint32_t)key.ClearMask);
+        return hash;
+    }
+
+    bool VulkanRenderPass::VariantKey::EqualFunction::operator()(const VariantKey& lhs, const VariantKey& rhs) const
+    {
+        return lhs.LoadMask == rhs.LoadMask && lhs.ReadMask == rhs.ReadMask && lhs.ClearMask == rhs.ClearMask;
+    }
+
     uint32_t VulkanRenderPass::s_NextValidId = 1;
     
-    VulkanRenderPass::VulkanRenderPass(const VulkanDevice& device, const VulkanRenderPassDesc& desc)
+    VulkanRenderPass::VulkanRenderPass(const VkDevice& device, const VulkanRenderPassDesc& desc) : m_Device(device)
     {
         m_Id = s_NextValidId++;
         m_SampleFlags = VulkanUtils::GetSampleFlags(desc.Samples);
-        m_Device = device.GetLogicalDevice();
+        
         uint32_t idx = 0;
-        VkAttachmentReference colorRefs[8];
-        VkAttachmentReference depthRef;
         for (uint32_t i = 0; i < 8; i++)
         {
             if (!desc.Color[i].Enabled)
@@ -26,7 +40,7 @@ namespace Crowny
             colorAttachment.flags = 0;
             colorAttachment.format = desc.Color[i].Format;
             colorAttachment.samples = m_SampleFlags;
-            colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
             colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -37,9 +51,10 @@ namespace Crowny
             else
                 colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
             
-            VkAttachmentReference& ref = colorRefs[idx];
-            ref.attachment = i;
+            VkAttachmentReference& ref = m_ColorReferences[idx];
+            ref.attachment = idx;
             ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            m_Indices[idx] = i;
             idx++;
         }
         
@@ -59,7 +74,7 @@ namespace Crowny
             colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             colorAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             
-            VkAttachmentReference& ref = depthRef;
+            VkAttachmentReference& ref = m_DepthReference;
             ref.attachment = idx;
             ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             idx++;
@@ -78,18 +93,18 @@ namespace Crowny
         subpass.pResolveAttachments = nullptr;
         
         if (m_NumColorAttachments > 0)
-            subpass.pColorAttachments = colorRefs;
+            subpass.pColorAttachments = m_ColorReferences;
         else
             subpass.pColorAttachments = nullptr;
 
         if (m_HasDepth)
-            subpass.pDepthStencilAttachment = &depthRef;
+            subpass.pDepthStencilAttachment = &m_DepthReference;
         else
             subpass.pDepthStencilAttachment = nullptr;
         
         VkSubpassDependency deps[2];
+        
         // read?
-        /*
         deps[0].srcSubpass = VK_SUBPASS_EXTERNAL;
         deps[0].dstSubpass = 0;
         deps[0].srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
@@ -99,7 +114,6 @@ namespace Crowny
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT; // make these available for renderpass?
         deps[0].dependencyFlags = 0;
         
-        // since I sync here Vulkan should add a dependency here implicitly with dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, dstAccessMask = 0
         deps[1].srcSubpass = 0;
         deps[1].dstSubpass = VK_SUBPASS_EXTERNAL;
         deps[1].srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT; // for this stage flush the ones in srcAccessMask
@@ -107,43 +121,131 @@ namespace Crowny
         deps[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | 
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT; // flush these from cache?
         deps[1].dstAccessMask = 0;
-        deps[1].dependencyFlags = 0;*/
-        // read?
+        deps[1].dependencyFlags = 0;
         
-        deps[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-        deps[0].dstSubpass = 0;
-        deps[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-        deps[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        deps[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-        deps[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        deps[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+        m_RenderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        m_RenderPassCreateInfo.pNext = nullptr;
+        m_RenderPassCreateInfo.flags = 0;
+        m_RenderPassCreateInfo.attachmentCount = m_NumAttachments;
+        m_RenderPassCreateInfo.pAttachments = m_Attachments;
+        m_RenderPassCreateInfo.subpassCount = 1;
+        m_RenderPassCreateInfo.pSubpasses = &subpass;
+        m_RenderPassCreateInfo.dependencyCount = 2;
+        m_RenderPassCreateInfo.pDependencies = deps;
 
-        deps[1].srcSubpass = 0;
-        deps[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-        deps[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        deps[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-        deps[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        deps[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-        deps[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-        
-        VkRenderPassCreateInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        renderPassInfo.pNext = nullptr;
-        renderPassInfo.flags = 0;
-        renderPassInfo.attachmentCount = m_NumColorAttachments;
-        renderPassInfo.pAttachments = m_Attachments;
-        renderPassInfo.subpassCount = 1;
-        renderPassInfo.pSubpasses = &subpass;
-        renderPassInfo.dependencyCount = 2;
-        renderPassInfo.pDependencies = deps;
-
-        VkResult result = vkCreateRenderPass(m_Device, &renderPassInfo, nullptr, &m_RenderPass);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        m_DefaultRenderPass = CreateVariant(RT_NONE, RT_NONE, CLEAR_NONE);
     }
 
     VulkanRenderPass::~VulkanRenderPass()
     {
-        vkDestroyRenderPass(m_Device, m_RenderPass, nullptr);
+        for (auto& entry : m_Variants)
+            vkDestroyRenderPass(m_Device, entry.second, gVulkanAllocator);
+    }
+    
+    VkRenderPass VulkanRenderPass::CreateVariant(RenderSurfaceMask loadMask, RenderSurfaceMask readMask, ClearMask clearMask) const
+    {
+        for (uint32_t i = 0; i < m_NumColorAttachments; i++)
+        {
+            VkAttachmentDescription& attachmentDesc = m_Attachments[i];
+            VkAttachmentReference& attachmentRef = m_ColorReferences[i];
+            uint32_t idx = m_Indices[i];
+            
+            if (loadMask.IsSet((RenderSurfaceMaskBits)(1 << idx)))
+            {
+                attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+                attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            }
+            else if (clearMask.IsSet((ClearMaskBits)(1 << idx)))
+            {
+                attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+                attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            }
+            else
+            {
+                attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            }
+            
+            if (readMask.IsSet((RenderSurfaceMaskBits)(1 << idx)))
+                attachmentRef.layout = VK_IMAGE_LAYOUT_GENERAL;
+            else
+                attachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        }
+        
+        if (m_HasDepth)
+        {
+            VkAttachmentDescription& attachmentDesc = m_Attachments[m_NumColorAttachments];
+            VkAttachmentReference& attachmentRef = m_DepthReference;
+            
+            if (loadMask.IsSet(RT_DEPTH) || loadMask.IsSet(RT_STENCIL))
+            {
+                attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+                attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+                attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            }
+            else
+            {
+                if (clearMask.IsSet(CLEAR_DEPTH))
+                    attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+                else
+                    attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                
+                if (clearMask.IsSet(CLEAR_STENCIL))
+                    attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+                else
+                    attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                
+                attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            }
+            
+            if (readMask.IsSet(RT_DEPTH))
+            {
+                if (readMask.IsSet(RT_STENCIL))
+                    attachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR;
+                else
+                    attachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            }
+        }
+        
+        VkRenderPass output;
+        VkResult result = vkCreateRenderPass(m_Device, &m_RenderPassCreateInfo, gVulkanAllocator, &output);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        return output;
+    }
+
+    VkRenderPass VulkanRenderPass::GetVkRenderPass(RenderSurfaceMask loadMask, RenderSurfaceMask readMask, ClearMask clearMask) const
+    {
+        if (loadMask == RT_NONE && readMask == RT_NONE && clearMask == CLEAR_NONE)
+            return m_DefaultRenderPass;
+
+        VariantKey key(loadMask, readMask, clearMask);
+        auto iter = m_Variants.find(key);
+        if (iter == m_Variants.end())
+            return iter->second;
+        VkRenderPass newVariant = CreateVariant(loadMask, readMask, clearMask);
+        m_Variants[key] = newVariant;
+        return newVariant;
+    }
+    
+    uint32_t VulkanRenderPass::GetNumClearEntries(ClearMask clearMask) const
+    {
+        if (clearMask == CLEAR_NONE)
+            return 0;
+        else if (clearMask == CLEAR_ALL)
+            return GetNumAttachments();
+        else if (((uint32_t)clearMask & (uint32_t)(CLEAR_DEPTH | CLEAR_STENCIL)) != 0 && HasDepthAttachment())
+            return GetNumAttachments();
+        
+        uint32_t numAttachments = 0;
+        for (int32_t i = MAX_FRAMEBUFFER_COLOR_ATTACHMENTS - 1; i >= 0; i--)
+        {
+            if (((1 << i) & (uint32_t)clearMask) != 0)
+            {
+                numAttachments = i + 1;
+                break;
+            }
+        }
+        return std::min(numAttachments, GetNumColorAttachments());
     }
 
     VulkanRenderPasses::~VulkanRenderPasses()
@@ -152,7 +254,7 @@ namespace Crowny
             delete entry.second;
     }
     
-    VulkanRenderPass* VulkanRenderPasses::GetRenderPass(const VulkanRenderPassDesc& desc)
+    VulkanRenderPass* VulkanRenderPasses::GetRenderPass(const VulkanRenderPassDesc& desc) const
     {
         PassVariant key(desc);
         VulkanRenderPass* pass;
@@ -160,7 +262,7 @@ namespace Crowny
         if (iter != m_Passes.end())
             return iter->second;
 
-        pass = new VulkanRenderPass(*gVulkanRendererAPI().GetPresentDevice().get(), desc);
+        pass = new VulkanRenderPass(gVulkanRendererAPI().GetPresentDevice()->GetLogicalDevice(), desc);
         m_Passes[key] = pass;
         return pass;
     }

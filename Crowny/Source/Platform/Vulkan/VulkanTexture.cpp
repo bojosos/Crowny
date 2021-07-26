@@ -2,214 +2,139 @@
 
 #include "Platform/Vulkan/VulkanTexture.h"
 #include "Platform/Vulkan/VulkanRendererAPI.h"
+#include "Platform/Vulkan/VulkanCommandBuffer.h"
 
 #include "Crowny/Common/VirtualFileSystem.h"
+#include "Crowny/Utils/PixelUtils.h"
 
 #include <glad/glad.h>
 #include <stb_image.h>
 
 namespace Crowny
-{/*
-	GLenum VulkanTexture2D::TextureChannelToVulkanChannel(TextureChannel channel)
-	{
-		switch (channel)
-		{
-			case Crowny::TextureChannel::CHANNEL_RED:                return GL_RED;
-			case Crowny::TextureChannel::CHANNEL_RG:                 return GL_RG;
-			case Crowny::TextureChannel::CHANNEL_RGB:                return GL_RGB;
-			case Crowny::TextureChannel::CHANNEL_RGBA:               return GL_RGBA;
-			case Crowny::TextureChannel::CHANNEL_DEPTH_COMPONENT:    return GL_DEPTH_COMPONENT;
-			case Crowny::TextureChannel::CHANNEL_BGR:                return GL_BGR;
-			case Crowny::TextureChannel::CHANNEL_BGRA:               return GL_BGRA;
-			case Crowny::TextureChannel::CHANNEL_STENCIL_INDEX:      return GL_STENCIL_INDEX;
-			default: 												 CW_ENGINE_ASSERT(false, "Unknown TextureChannel!"); return GL_NONE;
-		}
+{
 
-		return GL_NONE;
-	}
-
-	VkFormat VulkanTexture2D::TextureFormatToVulkanFormat(TextureFormat format)
-	{
-		switch (format)
-		{
-			case Crowny::TextureFormat::R8:					return VK_FORMAT_R8_UINT;
-			case Crowny::TextureFormat::R32I:     			return VK_FORMAT_R32_SINT;
-			case Crowny::TextureFormat::RG32F:				return VK_FORMAT_R32G32_SFLOAT;
-			case Crowny::TextureFormat::RGB8:     			return VK_FORMAT_R8G8B8_SRGB;
-			case Crowny::TextureFormat::RGBA8:				return VK_FORMAT_R8G8B8A8_SRGB;
-			case Crowny::TextureFormat::RGBA16F:  			return VK_FORMAT_R16G16B16A16_SFLOAT;
-			case Crowny::TextureFormat::RGBA32F:  			return VK_FORMAT_R32G32B32A32_SFLOAT;
-			case Crowny::TextureFormat::DEPTH32F:     		return VK_FORMAT_D32_SFLOAT;
-			case Crowny::TextureFormat::DEPTH24STENCIL8:    return VK_FORMAT_D32_SFLOAT_S8_UINT;
-			default:										CW_ENGINE_ASSERT(false, "Unknown TextureFormat!"); return VK_FORMAT_UNDEFINED;
-		}
-
-		return VK_FORMAT_UNDEFINED;
-	}
-
-	VkSamplerMipmapMode VulkanTexture2D::TextureFilterToVulkanFilter(TextureFilter filter)
-	{
-		switch (filter)
-		{
-			case Crowny::TextureFilter::LINEAR:  return VK_SAMPLER_MIPMAP_MODE_LINEAR;
-			case Crowny::TextureFilter::NEAREST: return VK_SAMPLER_MIPMAP_MODE_NEAREST;
-			default: 							 CW_ENGINE_ASSERT(false, "Unknown TextureFilter!"); return VK_SAMPLER_MIPMAP_MODE_LINEAR;
-		}
-		
-		return VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	}
-
-	VkSamplerAddressMode VulkanTexture2D::TextureWrapToVulkanWrap(TextureWrap wrap)
-	{
-		switch (wrap)
-		{
-			case Crowny::TextureWrap::REPEAT:             return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-			case Crowny::TextureWrap::MIRRORED_REPEAT:    return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
-			case Crowny::TextureWrap::CLAMP_TO_EDGE:      return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			case Crowny::TextureWrap::CLAMP_TO_BORDER:    return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-			default: 									  CW_ENGINE_ASSERT(false, "Unknown TextureWrap!"); return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		}
-
-		return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	}
-
-	GLenum VulkanTexture2D::TextureSwizzleToOpenGLSwizzle(SwizzleType swizzle)
-	{
-		switch (swizzle)
-		{
-			case Crowny::SwizzleType::SWIZZLE_RGBA:  return GL_TEXTURE_SWIZZLE_RGBA;
-			case Crowny::SwizzleType::SWIZZLE_R:     return GL_TEXTURE_SWIZZLE_R;
-			case Crowny::SwizzleType::SWIZZLE_G:     return GL_TEXTURE_SWIZZLE_G;
-			case Crowny::SwizzleType::SWIZZLE_B:     return GL_TEXTURE_SWIZZLE_B;
-			case Crowny::SwizzleType::SWIZZLE_A:     return GL_TEXTURE_SWIZZLE_A;
-			default: 								 CW_ENGINE_ASSERT(false, "Unknown TextureSwizzle!"); return GL_NONE;
-		}
-
-		return GL_NONE;
-	}
-
-	std::array<VkComponentSwizzle, 4> VulkanTexture2D::TextureSwizzleColorToOpenGLSwizzleColor(SwizzleChannel color)
-	{
-		std::array<VkComponentSwizzle, 4> res;
-		if (swizzle.Type != swizzle.None)
-		for (uint32_t i = 0; i < 4; i++)
-		{
-
-		}
-		return res;
-	}
-
-	VkImageLayout VulkanTexture2D::GetOptimalLayout(TextureUsage usage)
-	{
-		switch (usage)
-		{
-			case TEXTURE_LOADSTORE:       return VK_IMAGE_LAYOUT_GENERAL;
-			case TEXTURE_RENDERTARGET:    return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			case TEXTURE_DEPTHSTENCIL:    return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			case TEXTURE_SHADERREAD:
-			default:                      return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		}
-		
-		return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-	}
-/*
-	VulkanImageDesc CreateDesc(VkImage image, VkDeviceMemory memory, VkImageLayout layout, VkFormat format, const TextureParameters& props)
+	VulkanImageDesc CreateDesc(VkImage image, VmaAllocation allocation, VkImageLayout layout, VkFormat actualFormat, const TextureParameters& params)
 	{
 		VulkanImageDesc desc;
 		desc.Image = image;
-		desc.Memory = memory;
+		desc.Allocation = allocation;
+		desc.Shape = params.Shape;
+		desc.NumMips = params.MipLevels + 1;
 		desc.Layout = layout;
-		desc.Usage = props.Usage;
-		desc.Shape = props.Shape;
-		desc.NumMips = props.MipLevels;
-		desc.Format = format;
-		return desc;
+		desc.Faces = params.NumArraySlices;
+		desc.Format = actualFormat;
+		desc.Usage = params.Usage;
 	}
 
-	VulkanImage::VulkanImage(VkImage image, VkDeviceMemory memory, VkImageLayout layout, VkFormat format, const VulkanImageDesc& props, bool ownsImage)
-	 						: VulkanImage(CreateDesc(image, memory, layout, format, props), ownsImage);
-	{
+	VulkanImage::VulkanImage(VulkanResourceManager* owner, VkImage image, VmaAllocation allocation, VkImageLayout layout, VkFormat format, const TextureParameters& params, bool ownsImage) :
+        VulkanImage(owner, CreateDesc(image, allocation, layout, format, params), ownsImage)
+	{ }
 
-	}
-
-	VulkanImage::VulkanImage(const VulkanImageDesc& props, bool ownsImage)
+	VulkanImage::VulkanImage(VulkanResourceManager* owner, const VulkanImageDesc& desc, bool ownsImage)
+		: VulkanResource(owner, false), m_FramebufferMainView(VK_NULL_HANDLE), m_Image(desc.Image), m_Allocation(desc.Allocation), m_Usage(desc.Usage), m_OwnsImage(ownsImage), m_NumFaces(desc.Faces), m_NumMipLevels(desc.NumMips)
 	{
-		m_ImageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		m_ImageViewCI.pNext = nullptr;
-		m_ImageViewCI.flags = 0;
-		m_ImageViewCI.image = desc.Image;
-		m_ImageViewCI.format = props.Format;
-		m_ImageViewCI.components { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
-		switch(desc.Type)
+        m_ImageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		m_ImageViewCreateInfo.pNext = nullptr;
+		m_ImageViewCreateInfo.flags = 0;
+		m_ImageViewCreateInfo.image = desc.Image;
+		m_ImageViewCreateInfo.format = desc.Format;
+		m_ImageViewCreateInfo.components = {
+			VK_COMPONENT_SWIZZLE_R,
+			VK_COMPONENT_SWIZZLE_G,
+			VK_COMPONENT_SWIZZLE_B,
+			VK_COMPONENT_SWIZZLE_A
+		};
+		
+		switch(desc.Shape)
 		{
-		case TEXTURE_1D:
-			m_ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_1D;
-			break;
-		default:
-		case TEXTURE_2D;
-			m_ImageViewCI.viewType = VK_IAMGE_VIEW_TYPE_CUBE;
-			m_ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		case TEXTURE_3D:
-			m_ImageViewCI.viewType = VK_IAMGE_VIEW_TYPE_CUBE;
-			m_ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_3D;
-		case TEXTURE_CUBE_MAP:
-			m_ImageViewCI.viewType = VK_IAMGE_VIEW_TYPE_CUBE;
-			break;
+			case TextureShape::TEXTURE_1D:   m_ImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_1D; break;
+			case TextureShape::TEXTURE_2D:   m_ImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D; break;
+			case TextureShape::TEXTURE_3D:   m_ImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_3D; break;
+			case TextureShape::TEXTURE_CUBE: m_ImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE; break;
 		}
 
-		if (TextureUsage == TextureUsage::TEXTURE_DEPTHSTENCIL)
-			{
-			m_FramebufferMainView = CreateView(desc.Format, GetAspectFlags());
-			m_MainView = CreateView(desc.Format, VK_IMAGE_ASPECT_DEPTH);
+		TextureSurface completeSurface(0, desc.NumMips, 0 ,desc.Faces);
+		if ((m_Usage & TextureUsage::TEXTURE_DEPTHSTENCIL) != 0)
+		{
+			m_FramebufferMainView = CreateView(completeSurface, desc.Format, GetAspectFlags());
+			m_MainView = CreateView(completeSurface, desc.Format, VK_IMAGE_ASPECT_DEPTH_BIT);
 		}
 		else
-			m_MainView = CreateView(desc.Format, VK_IMAGE_ASPECT_COLOR_BIT);
+			m_MainView = CreateView(completeSurface, desc.Format, VK_IMAGE_ASPECT_COLOR_BIT);
 
-		ImageViewInfo ivi;
-		ivi.Framebuffer = false;
-		ivi.view = m_MainView;
-		ivi.Format = desc.Format;
-		m_ImageInfos.push_back(ivi);
+		ImageViewInfo mainViewInfo;
+		mainViewInfo.Surface = completeSurface;
+		mainViewInfo.Framebuffer = false;
+		mainViewInfo.View = m_MainView;
+		mainViewInfo.Format = desc.Format;
 
+		m_ImageInfos.push_back(mainViewInfo);
 		if (m_FramebufferMainView != VK_NULL_HANDLE)
 		{
 			ImageViewInfo fbMainViewInfo;
+			fbMainViewInfo.Surface = completeSurface;
 			fbMainViewInfo.Framebuffer = true;
 			fbMainViewInfo.View = m_FramebufferMainView;
 			fbMainViewInfo.Format = desc.Format;
 			m_ImageInfos.push_back(fbMainViewInfo);
 		}
 
-		uint32_t subrss = m_NumMipLevels;
-		m_Subresources = new VulkanImageSubresource*[subrss];
-		for (uint32_t i = 0; i < subrss; i++)
-			m_Subresources[i] = new VulkanImageSubresource(desc.Layout);
+		uint32_t numSubresources = m_NumFaces * m_NumMipLevels;
+		m_Subresources = new VulkanImageSubresource*[numSubresources];
+		for (uint32_t i = 0; i < numSubresources; i++)
+			m_Subresources[i] = owner->Create<VulkanImageSubresource>(desc.Layout);
 	}
 
 	VulkanImage::~VulkanImage()
 	{
-		for (auto& info : m_ImageInfos)
-			vkDestroyImageView(m_Device, info.View, nullptr);
+		VulkanDevice& device = m_Owner->GetDevice();
+		VkDevice vkDevice = device.GetLogicalDevice();
+
+		uint32_t numSubresources = m_NumFaces * m_NumMipLevels;
+		for (uint32_t i = 0; i < numSubresources; i++)
+		{
+			CW_ENGINE_ASSERT(!m_Subresources[i]->IsBound());
+			m_Subresources[i]->Destroy();
+		}
+
+		for (auto& entry : m_ImageInfos)
+			vkDestroyImageView(vkDevice, entry.View, gVulkanAllocator);
+
 		if (m_OwnsImage)
 		{
-			vkDestroyImage(m_Device, m_Image, nullptr);
-			vkFreeMemory(device.GetLogicalDevice(), m_Allocation, nullptr)
+			vkDestroyImage(vkDevice, m_Image, gVulkanAllocator);
+			device.FreeMemory(m_Allocation);
 		}
 	}
-	
+
 	VkImageView VulkanImage::GetView(bool framebuffer) const
 	{
-		if (framebuffer && m_Usage == TextureUsage::TEXTURE_DEPTHSTENCIL)
+		if (framebuffer && (m_Usage & TextureUsage::TEXTURE_DEPTHSTENCIL) != 0)
 			return m_FramebufferMainView;
 		return m_MainView;
 	}
 
+	VkImageView VulkanImage::GetView(const TextureSurface& surface, bool framebuffer) const
+	{
+		return GetView(m_ImageViewCreateInfo.format, surface, framebuffer);
+	}
+
 	VkImageView VulkanImage::GetView(VkFormat format, bool framebuffer) const
 	{
-		for(auto& entry : m_ImageInfos)
+		TextureSurface complete(0, m_NumMipLevels, 0, m_NumFaces);
+		return GetView(format, complete, framebuffer);
+	}
+	
+	VkImageView VulkanImage::GetView(VkFormat format, const TextureSurface& surface, bool framebuffer) const
+	{
+		for (auto& entry : m_ImageInfos)
 		{
-			if (entry.Format == format) {
-				if (m_Usage != TextureUsage::TEXTURE_DEPTHSTENCIL)
+			if (surface.MipLevel == entry.Surface.MipLevel && 
+				surface.NumMipLevels == entry.Surface.NumMipLevels &&
+				surface.Face == entry.Surface.Face &&
+				surface.NumFaces == entry.Surface.NumFaces && format == entry.Format)
+			{
+				if ((m_Usage & TextureUsage::TEXTURE_DEPTHSTENCIL) == 0)
 					return entry.View;
 				else
 					if (framebuffer == entry.Framebuffer)
@@ -217,346 +142,857 @@ namespace Crowny
 			}
 		}
 		
-		ImageViewInfo info;
-		info.Framebuffer = framebuffer;
-		info.format = format;
+		ImageViewInfo viewInfo;
+		viewInfo.Surface = surface;
+		viewInfo.Framebuffer = framebuffer;
+		viewInfo.Format = format;
 		
-		if (m_Usage == TextureUsage::TEXTURE_DEPTHSTENCIL)
-			{
+		if ((m_Usage & TextureUsage::TEXTURE_DEPTHSTENCIL) != 0)
+		{
 			if (framebuffer)
-				info.View = CreateView(format, GetAspectFlags());
+				viewInfo.View = CreateView(surface, format, GetAspectFlags());
 			else
-				info.View = CreateView(format, VK_IMAGE_ASPECT_DEPTH_BIT);
-			}
-		else info.View = CreateView(format, VK_IMAGE_ASPECT_COLOR_BIT);
-		m_ImageInfos.push_back(info);
-		return info.View;
+				viewInfo.View = CreateView(surface, format, VK_IMAGE_ASPECT_DEPTH_BIT);
+		}
+		else
+			viewInfo.View = CreateView(surface, format, VK_IMAGE_ASPECT_COLOR_BIT);
+		m_ImageInfos.push_back(viewInfo);
+		return viewInfo.View;
 	}
 	
-	VulkanImageSubresource::VulkanImageSubresource(VkImageLayout layout) : m_Layout(layout) {}
+	VkImageView VulkanImage::CreateView(const TextureSurface& surface, VkFormat format, VkImageAspectFlags aspectFlags) const
+	{
+		VkImageViewType oldViewType = m_ImageViewCreateInfo.viewType;
+		VkFormat oldFormat = m_ImageViewCreateInfo.format;
+		
+		uint32_t numFaces = surface.NumFaces == 0 ? m_NumFaces : surface.NumFaces;
+		switch(oldViewType)
+		{
+			case VK_IMAGE_VIEW_TYPE_CUBE:
+				if (numFaces == 1)
+					m_ImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+				else if (numFaces % 6 == 0)
+					{
+					if (m_NumFaces > 6)
+						m_ImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+					}
+				else m_ImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+				break;
+			case VK_IMAGE_VIEW_TYPE_1D:
+				if (m_NumFaces > 0)
+				m_ImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
+				break;
+			case VK_IMAGE_VIEW_TYPE_2D:
+			case VK_IMAGE_VIEW_TYPE_3D:
+				if (m_NumFaces > 1)
+					m_ImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+				break;
+			default:
+				break;
+		}
+
+		m_ImageViewCreateInfo.subresourceRange.aspectMask = aspectFlags;
+		m_ImageViewCreateInfo.subresourceRange.baseMipLevel = surface.MipLevel;
+		m_ImageViewCreateInfo.subresourceRange.levelCount = surface.NumMipLevels == 0 ? VK_REMAINING_MIP_LEVELS : surface.NumMipLevels;
+		m_ImageViewCreateInfo.subresourceRange.baseArrayLayer = surface.Face;
+		m_ImageViewCreateInfo.subresourceRange.layerCount = surface.NumFaces == 0 ? VK_REMAINING_ARRAY_LAYERS : surface.NumFaces;
+		m_ImageViewCreateInfo.format = format;
+		
+		VkImageView view;
+		VkResult result = vkCreateImageView(m_Owner->GetDevice().GetLogicalDevice(), &m_ImageViewCreateInfo, gVulkanAllocator, &view);
+		CW_ENGINE_ASSERT(result == VK_SUCCESS);
+		m_ImageViewCreateInfo.viewType = oldViewType;
+		m_ImageViewCreateInfo.format = oldFormat;
+		return view;
+	}
+	
+	VkImageLayout VulkanImage::GetOptimalLayout() const
+	{
+		if ((m_Usage & TextureUsage::TEXTURE_LOADSTORE) != 0)
+			return VK_IMAGE_LAYOUT_GENERAL;
+		if ((m_Usage & TextureUsage::TEXTURE_RENDERTARGET) != 0)
+			return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		if ((m_Usage & TextureUsage::TEXTURE_DEPTHSTENCIL) != 0)
+			return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		if ((m_Usage & TextureUsage::TEXTURE_DYNAMIC) != 0)
+			return VK_IMAGE_LAYOUT_GENERAL;
+		
+		return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	}
+	
+	VkImageSubresourceRange VulkanImage::GetRange() const
+	{
+		VkImageSubresourceRange range;
+		range.baseArrayLayer = 0;
+		range.layerCount = m_NumFaces;
+		range.baseMipLevel = 0;
+		range.levelCount = m_NumMipLevels;
+		range.aspectMask = GetAspectFlags();
+		
+		return range;
+	}
+	
+	VkImageSubresourceRange VulkanImage::GetRange(const TextureSurface& surface) const
+	{
+		VkImageSubresourceRange range;
+		range.baseArrayLayer = surface.Face;
+		range.layerCount = surface.NumFaces == 0 ? m_NumFaces : surface.NumFaces;
+		range.baseMipLevel = surface.MipLevel;
+		range.levelCount = surface.NumMipLevels == 0 ? m_NumMipLevels : surface.NumMipLevels;
+		range.aspectMask = GetAspectFlags();
+		
+		return range;
+	}
+	
+	VulkanImageSubresource* VulkanImage::GetSubresource(uint32_t face, uint32_t mipLevel)
+	{
+		CW_ENGINE_ASSERT(mipLevel * m_NumFaces + face < m_NumFaces* m_NumMipLevels);
+		return m_Subresources[mipLevel * m_NumFaces + face];
+	}
+	
+	void VulkanImage::Map(uint32_t face, uint32_t mip, PixelData& output) const
+	{
+		VulkanDevice& device = m_Owner->GetDevice();
+		
+		VkImageSubresource range;
+		range.mipLevel = mip;
+		range.arrayLayer = face;
+		
+		if (m_ImageViewCreateInfo.subresourceRange.aspectMask == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+			range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		else
+			range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		
+		VkSubresourceLayout layout;
+		vkGetImageSubresourceLayout(device.GetLogicalDevice(), m_Image, &range, &layout);
+		
+		output.SetRowPitch((uint32_t)layout.rowPitch);
+		output.SetSlicePitch((uint32_t)layout.depthPitch);
+		VkDeviceMemory memory;
+		VkDeviceSize memoryOffset;
+		device.GetAllocationInfo(m_Allocation, memory, memoryOffset);
+		
+		uint8_t* data;
+		VkResult result = vkMapMemory(device.GetLogicalDevice(), memory, memoryOffset + layout.offset, layout.size, 0, (void**)&data);
+		CW_ENGINE_ASSERT(result == VK_SUCCESS);
+		
+		output.SetBuffer(data);
+	}
+	
+	uint8_t* VulkanImage::Map(uint32_t offset, uint32_t size) const
+	{
+		VulkanDevice& device = m_Owner->GetDevice();
+		
+		VkDeviceMemory memory;
+		VkDeviceSize memoryOffset;
+		device.GetAllocationInfo(m_Allocation, memory, memoryOffset);
+		uint8_t* data;
+		VkResult result = vkMapMemory(device.GetLogicalDevice(), memory, memoryOffset + offset, size, 0, (void**)&data);
+		CW_ENGINE_ASSERT(result == VK_SUCCESS);
+		return data;
+	}
+	
+	void VulkanImage::Unmap()
+	{
+		VulkanDevice& device = m_Owner->GetDevice();
+		VkDeviceMemory memory;
+		VkDeviceSize memoryOffset;
+		device.GetAllocationInfo(m_Allocation, memory, memoryOffset);
+		vkUnmapMemory(device.GetLogicalDevice(), memory);
+	}
+	
+	void VulkanImage::Copy(VulkanTransferBuffer* cb, VulkanBuffer* dest, const VkExtent3D& extent, const VkImageSubresourceLayers& range, VkImageLayout layout)
+	{
+		VkBufferImageCopy region;
+		region.bufferRowLength = dest->GetRowPitch();
+		region.bufferImageHeight = dest->GetSliceHeight();
+		region.bufferOffset = 0;
+		region.imageOffset.x = 0;
+		region.imageOffset.y = 0;
+		region.imageOffset.z = 0;
+		region.imageExtent = extent;
+		region.imageSubresource = range;
+		
+		vkCmdCopyImageToBuffer(cb->GetCB()->GetHandle(), m_Image, layout, dest->GetHandle(), 1, &region);
+	}
 
 	VkAccessFlags VulkanImage::GetAccessFlags(VkImageLayout layout, bool readOnly)
 	{
-		VkAccessFlags accessFlags = 0;
+		VkAccessFlags accessFlags;
 		switch(layout)
 		{
-		case VK_IMAGE_LAYOUT_GENERAL:
-		{
-		accessFlags = VK_ACCESS_SHADER_READ_BIT;
-			if (m_Usage == TextureUsage::TEXTURE_LOADSTORE)
-				if (!readOnly) accessFlags |= VK_ACCESS_SHADER_WRITE_BIT;
-			if (m_Usage == TextureUsage::TEXTURE_RENDERTARGET)
+			case VK_IMAGE_LAYOUT_GENERAL:
 			{
-				accessFlags |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-				if (!readOnly)
-					accessFlags |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			}
-			else if (m_Usage == TextureUsage::TEXTURE_DEPTHSTENCIL)
-			{
-				accessFlags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-				if (!readOnly)
-					accessFlags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+				accessFlags = VK_ACCESS_SHADER_READ_BIT;
+				if ((m_Usage & TextureUsage::TEXTURE_LOADSTORE) != 0)
+				{
+					if (!readOnly)
+						accessFlags |= VK_ACCESS_SHADER_WRITE_BIT;
+				}
+				else if ((m_Usage & TextureUsage::TEXTURE_RENDERTARGET) != 0)
+				{
+					accessFlags |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+					if (!readOnly)
+						accessFlags |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				}
+				else if ((m_Usage & TextureUsage::TEXTURE_DEPTHSTENCIL) != 0)
+				{
+					accessFlags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+					if (!readOnly)
+						accessFlags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+				}
 			}
 			break;
+			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+				accessFlags = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+				break;
+			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+				accessFlags = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+				break;
+			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+			case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR:
+			case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR:
+				accessFlags = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
+				break;
+			case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+				accessFlags = VK_ACCESS_SHADER_READ_BIT;
+				break;
+			case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+				accessFlags = VK_ACCESS_TRANSFER_READ_BIT;
+				break;
+			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+				accessFlags = VK_ACCESS_TRANSFER_WRITE_BIT;
+				break;
+			case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+				accessFlags = VK_ACCESS_MEMORY_READ_BIT;
+				break;
+			case VK_IMAGE_LAYOUT_UNDEFINED:
+			case VK_IMAGE_LAYOUT_PREINITIALIZED:
+				accessFlags = 0;
+				break;
+			default:
+				accessFlags = 0;
+				CW_ENGINE_ASSERT(false);
+				break;
+			return accessFlags;
 		}
-		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL: accessFlags = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT; break;
-		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL: accessFlags = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; break;
-		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
-		case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR:
-		case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR: accessFlags = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_SHADER_READ_BIT; break;
-		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL: accessFlags = VK_ACCESS_SHADER_READ_BIT; break;
-		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: accessFlags = VK_ACCESS_TRANSFER_READ_BIT; break;
-		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL break;
-		case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR: accessFlags = VK_ACCESS_MEMORY_READ_BIT; break;
-		}
-		return accessFlags;
 	}
 	
-	VkImageView VulkanImage::CreateView(VkFormat format, VkImageAspectFlags aspectMask) const
+	void VulkanImage::GetBarriers(const VkImageSubresourceRange& range, std::vector<VkImageMemoryBarrier>& barriers)
 	{
-		VkImageViewType oldViewType = m_ImageViewCI.viewType;
-		VkFormat oldFormat = m_ImageViewCI.format;
-		mImageViewCI.subresourceRange.aspectMask = aspectMask;
-
-	}*/
-/*
-	VulkanTexture2D::VulkanTexture2D(uint32_t width, uint32_t height, const TextureParameters& parameters) : m_Width(width), m_Height(height), m_Parameters(parameters)
-	{
+		uint32_t numSubresources = range.levelCount * range.layerCount;
+		if (numSubresources == 0)
+			return;
+		uint32_t mip = range.baseMipLevel;
+		uint32_t face = range.baseArrayLayer;
+		uint32_t lastMip = range.baseMipLevel + range.levelCount - 1;
+		uint32_t lastFace = range.baseArrayLayer + range.layerCount - 1;
 		
-	}
-
-	VulkanTexture2D::VulkanTexture2D(const std::string& filepath, const TextureParameters& parameters, const std::string& name) 
-									: m_FilePath(filepath), m_Parameters(parameters), m_Name(name)
-	{
-		m_Device = static_cast<VulkanRendererAPI>(RendererAPI::Get()).GetDevices();
-		int width, height, channels;
-		stbi_set_flip_vertically_on_load(1);
-
-		auto [loaded, size] = VirtualFileSystem::Get()->ReadFile(filepath);
-		auto* data = stbi_load_from_memory(loaded, size, &width, &height, &channels, 0);
-
-		CW_ENGINE_ASSERT(data, "Failed to load texture!");
+		VkImageMemoryBarrier defaultBarrier;
+		defaultBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		defaultBarrier.pNext = nullptr;
+		defaultBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		defaultBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		defaultBarrier.image = m_Image;
+		defaultBarrier.subresourceRange.aspectMask = range.aspectMask;
+		defaultBarrier.subresourceRange.levelCount = 1;
+		defaultBarrier.subresourceRange.layerCount = 1;
+		defaultBarrier.subresourceRange.baseArrayLayer = 0;
+		defaultBarrier.subresourceRange.baseMipLevel = 0;
 		
-		m_Width = width;
-		m_Height = height;
-
-		if (channels == 4)
+		auto createNewBarrier = [&](VulkanImageSubresource* subresource, uint32_t face, uint32_t mip)
 		{
-			m_Parameters.Format = TextureFormat::RGBA8;
-		}
-		else if (channels == 3)
+			barriers.push_back(defaultBarrier);
+			VkImageMemoryBarrier* barrier = &barriers.back();
+			barrier->subresourceRange.baseArrayLayer = face;
+			barrier->subresourceRange.baseMipLevel = mip;
+			barrier->srcAccessMask = GetAccessFlags(subresource->GetLayout());
+			barrier->oldLayout = subresource->GetLayout();
+			return barrier;
+		};
+	
+		std::vector<bool> processed(numSubresources);
+		VulkanImageSubresource* subresource = GetSubresource(face, mip);
+		createNewBarrier(subresource, face, mip);
+		numSubresources--;
+		while (numSubresources > 0)
 		{
-			m_Parameters.Format = TextureFormat::RGB8;
-		}
-		else if (channels == 1)
-		{
-			m_Parameters.Format = TextureFormat::R8;
-		}
-		
-		VkDevice device = m_Device.GetLogicalDevice();
-		
-		VkMemoryAllocateInfo memAllocInfo{ };
-		memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		VkMemoryRequirements memReqs;
-		
-		VkCommandBuffer copyCmd = m_Device->CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
-		
-		VkBuffer stagingBuffer;
-		VkDeviceMemory stagingMemory;
-		
-		VkBufferCreateInfo bufferCreateInfo {};
-		bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferCreateInfo.size = size;
-		bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-		bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		
-		VkResult result = vkCreateBuffer(device, &bufferCreateInfo, nullptr, &stagingBuffer);
-		CW_ENGINE_ASSERT(result == VK_SUCCESS);
-		vkGetBufferMemoryRequirements(device, stagingBuffer, &memReqs);
-		memAllocInfo.allocationSize = memReqs.size;
-		memAllocInfo.memoryTypeIndex = m_Device.GetMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-		
-		result = vkAllocateMemory(device, &memAllocInfo, nullptr, &stagingMemory);
-		CW_ENGINE_ASSERT(result == VK_SUCCESS);
-		result = vkBindBufferMemory(device, stagingBuffer, stagingMemory, 0);
-		CW_ENGINE_ASSERT(result == VK_SUCCESS);
-		uint8_t* cpyData;
-		result = vkMapMemory(device, stagingMemory, 0, memReqs.size, 0, (void**)&cpyData);
-		memcpy(cpyData, data, size);
-		vkUnmapMemory(device, stagingMemory);
-		
-		VkBufferImageCopy bufferCopyRegion{};
-		bufferCopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		bufferCopyRegion.imageSubresource.mipLevel = 0;
-		bufferCopyRegion.imageSubresource.baseArrayLayer = 0;
-		bufferCopyRegion.imageSubresource.layerCount = 1;
-		bufferCopyRegion.imageExtent.width = m_Width;
-		bufferCopyRegion.imageExtent.height = m_Height;
-		bufferCopyRegion.imageExtent.depth = 1;
-		bufferCopyRegion.bufferOffset = 0;
-
-		VkImageCreateInfo imageCreateInfo {};
-		imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-		imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-		imageCreateInfo.format = TextureFormatToVulkanFormat(m_Parameters.Format);
-		imageCreateInfo.mipLevels = m_Parameters.MipLevels;
-		imageCreateInfo.arrayLayers = 1;
-		imageCreateInfo.samples = VulkanUtils::GetSampleFlags(m_Parameters.Samples);
-		imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-		imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageCreateInfo.extent = { m_Width, m_Height, 1 };
-		imageCreateInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-		
-		if (m_Parameters.Usage == TextureUsage::TEXTURE_RENDERTARGET)
-			imageCreateInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-		else if (m_Parameters.Usage == TextureUsage::TEXTURE_DEPTHSTENCIL)
-			imageCreateInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-		
-		if (m_Parameters.Usage == TextureUsage::TEXTURE_LOADSTORE)
-			imageCreateInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
-
-
-		VkResult result = vkCreateImage(device, &imageCreateInfo, nullptr, &m_Image);
-		CW_ENGINE_ASSERT(result == VK_SUCCESS);
-		vkGetImageMemoryRequirements(device, m_Image, &memReqs);
-		memAllocInfo.allocationSize = memReqs.size;
-		memAllocInfo.memoryTypeIndex = m_Device->GetMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-		result = vkAllocateMemory(device, &memAllocInfo, nullptr, &m_DeviceMemory);
-		CW_ENGINE_ASSERT(result == VK_SUCCESS);
-		result = vkBindImageMemory(device, m_Image, m_DeviceMemory, 0);
-		CW_ENGINE_ASSERT(result == VK_SUCCESS);
-
-		VkImageSubresourceRange subresRange { };
-		subresRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		subresRange.baseMipLevel = 0;
-		subresRange.levelCount = m_Parameters.MipLevels;
-		subresRange.layerCount = 1;
-		
-		VkImageMemoryBarrier imageMemoryBarrier{ };
-		imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		imageMemoryBarrier.srcAccessMask = 0;
-		imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		imageMemoryBarrier.image = m_Image;
-		imageMemoryBarrier.subresourceRange = subresRange;
-		vkCmdPipelineBarrier(copyCmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
-		
-		vkCmdCopyBufferToImage(copyCmd, stagingBuffer, m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bufferCopyRegion);
-
-		m_ImageLayout = imageLayout;
-
-		vkFreeMemory(device, stagingMemory, nullptr);
-		vkDestroyBuffer(device, stagingBuffer, nullptr);
-
-		VkSamplerCreateInfo samplerCreateInfo;
-		samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-		samplerCreateInfo.magFilter = TextureFilterToVulkanFilter(m_Parameters.Filter);
-		samplerCreateInfo.minFilter = TextureFilterToVulkanFilter(m_Parameters.Filter);;
-		samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-		samplerCreateInfo.addressModeU = TextureWrapToVulkanWrap(m_Parameters.Wrap);
-		samplerCreateInfo.addressModeV = TextureWrapToVulkanWrap(m_Parameters.Wrap);
-		samplerCreateInfo.addressModeW = TextureWrapToVulkanWrap(m_Parameters.Wrap);
-		samplerCreateInfo.mipLodBias = 0.0f;
-		samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
-		samplerCreateInfo.minLod = 0.0f;
-		samplerCreateInfo.maxLod = static_cast<float>(m_Parameters.MipLevels);
-		samplerCreateInfo.maxAnisotropy = 1.0f;
-		result = vkCreateSampler(device, &samplerCreateInfo, nullptr, &m_Sampler);
-		CW_ENGINE_ASSERT(result == VK_SUCCESS);
-		
-		VkImageViewCreateInfo viewCreateInfo{ };
-		viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		viewCreateInfo.pNext = nullptr;
-		viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		viewCreateInfo.format = format;
-		viewCreateInfo.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
-		viewCreateInfo.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0 ,1 };
-		viewCreateInfo.subresourceRange.levelCount = m_Parameters.MipLevels;
-		viewCreateInfo.image = m_Image;
-		result = vkCreateImageView(device, &viewCreateInfo, nullptr, &m_ImageView);
-		CW_ENGINE_ASSERT(result == VK_SUCCESS);
-		
-		if (m_Parameters.GenerateMipmaps)
-		{
-			m_Parameters.MipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(m_Width, m_Height)))) + 1;
-			VkImageMemoryBarrier barrier{};
-			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			barrier.image = m_Image;
-			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			barrier.subresourceRange.baseArrayLayer = 0;
-			barrier.subresourceRange.layerCount = 1;
-			barrier.subresourceRange.levelCount = 1;
-			
-			uint32_t mipWidth = m_Width;
-			uint32_t mipHeight = m_Height;
-			
-			for (uint32_t i = 1; i < m_Parameters.MipLevels; i++)
+			VkImageMemoryBarrier* barrier = &barriers.back();
+			while (true)
 			{
-				barrier.subresourceRange.baseMipLevel = i - 1;
-				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-				barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-				
-				vkCmdPipelineBarrier(copyCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-				
-				VkImageBlit blit{};
-				blit.srcOffsets[0] = { 0, 0, 0 };
-				blit.srcOffsets[1] = { mipWidth, mipHeight, 1 };
-				blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				blit.srcSubresource.mipLevel = i - 1;
-				blit.srcSubresource.baseArrayLayer = 0;
-				blit.srcSubresource.layerCount = 1;
-				blit.dstOffsets[0] = { 0, 0, 0 };
-				blit.dstOffsets[1] = { mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 };
-				blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				blit.dstSubresource.mipLevel = i;
-				blit.dstSubresource.baseArrayLayer = 0;
-				blit.dstSubresource.layerCount = 1;
-				
-				vkCmdBlitImage(copyCmd, m_Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
-				
-				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-				barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-				
-				vkCmdPipelineBarrier(copyCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-				if (mipWidth > 1) mipWidth /= 2;
-				if (mipHeight > 1) mipHeight /= 2;
+				bool expandedFace = true;
+				if (face < lastFace)
+				{
+					for (uint32_t i = 0; i < barrier->subresourceRange.levelCount; i++)
+					{
+						uint32_t curMip = barrier->subresourceRange.baseMipLevel + i;
+						VulkanImageSubresource* subresource = GetSubresource(face + 1, curMip);
+						if (barrier->oldLayout != subresource->GetLayout())
+						{
+							expandedFace = false;
+							break;
+						}
+					}
+					
+					if (expandedFace)
+					{
+						barrier->subresourceRange.layerCount++;
+						numSubresources -= barrier->subresourceRange.levelCount;
+						face++;
+						
+						for (uint32_t i = 0; i < barrier->subresourceRange.levelCount; i++)
+						{
+							uint32_t curMip = (barrier->subresourceRange.baseMipLevel + i) - range.baseMipLevel;
+							uint32_t idx = curMip * range.layerCount + (face - range.baseArrayLayer);
+							processed[idx] = true;
+						}
+					}
+				}
+				else
+					expandedFace = false;
+				bool expandedMip = true;
+				if (mip < lastMip)
+				{
+					for (uint32_t i = 0; i < barrier->subresourceRange.layerCount; i++)
+					{
+						uint32_t curFace = barrier->subresourceRange.baseArrayLayer + i;
+						VulkanImageSubresource* subresource = GetSubresource(curFace, mip + 1);
+						if (barrier->oldLayout != subresource->GetLayout())
+						{
+							expandedMip = false;
+							break;
+						}
+					}
+					
+					if (expandedMip)
+					{
+						barrier->subresourceRange.layerCount++;
+						numSubresources -= barrier->subresourceRange.layerCount;
+						mip++;
+						for (uint32_t i = 0; i < barrier->subresourceRange.layerCount; i++)
+						{
+							uint32_t curFace = (barrier->subresourceRange.baseArrayLayer + i) - range.baseArrayLayer;
+							uint32_t idx = (mip - range.baseMipLevel) * range.layerCount + curFace;
+							processed[idx] = true;
+						}
+					}
+				}
+				else
+					expandedMip = false;
+				if (!expandedMip && !expandedFace)
+					break;
 			}
 			
-			barrier.subresourceRange.baseMipLevel = m_Parameters.MipLevels - 1;
-			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			barrier.newLayout = GetOptimalLayout(m_Parameters.Usage); // get optimal
-			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-			
-			vkCmdPipelineBarrier(copyCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+			for (uint32_t i = 0; i < range.levelCount; i++)
+			{
+				bool found = false;
+				for (uint32_t j = 0; j < range.layerCount; j++)
+				{
+					uint32_t idx = i * range.layerCount + j;
+					if (!processed[idx])
+					{
+						mip = range.baseMipLevel + i;
+						face = range.baseArrayLayer + j;
+						found = true;
+						processed[idx] = true;
+						break;
+					}
+				}
+				if (found)
+				{
+					VulkanImageSubresource* subresource = GetSubresource(face, mip);
+					createNewBarrier(subresource, face, mip);
+					numSubresources--;
+					break;
+				}
+			}
 		}
 		
-		CW_ENGINE_INFO("Loaded texture {0}, {1}x{2}x{3}.", m_FilePath, m_Width, m_Height, channels);
-		stbi_image_free(data);
-		delete loaded;
-	}
-
-	VulkanTexture2D::~VulkanTexture2D()
-	{
-		vkDestroyImageView(m_Device.GetLogicalDevice(), m_Sampler, nullptr);
-		vkDestroyImage(m_Device.GetLogicalDevice(), m_Image, nullptr);
-		if (m_Sampler)
-		{
-			vkDestroySampler(device.GetLogicalDevice(), m_Sampler, nullptr);
-		}
-		vkFreeMemory(device.GetLogicalDevice(), m_DeviceMemory, nullptr)
-	}
-
-	void VulkanTexture2D::Clear(int32_t clearColor)
-	{
-		glClearTexImage(m_RendererID, 0, TextureFormatToOpenGLType(m_Parameters.Format), GL_INT, &clearColor);
 	}
 	
-	void VulkanTexture2D::SetData(void* data, uint32_t size)
+	VkImageAspectFlags VulkanImage::GetAspectFlags() const
 	{
-		uint32_t bpp = m_Parameters.Format == TextureFormat::RGBA8 ? 4 : 3; // TODO: Fix this!
-		//CW_ENGINE_ASSERT(size == m_Width * m_Height * bpp, "Data must be an entire texture!");
-#ifdef MC_WEB
-		glBindTexture(GL_TEXTURE_2D, m_RendererID);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_Width, m_Height, TextureFormatToOpenGLFormat(m_Parameters.Format), GL_UNSIGNED_BYTE, data);
-#else
-		glTextureSubImage2D(m_RendererID, 0, 0, 0, m_Width, m_Height, TextureFormatToOpenGLFormat(m_Parameters.Format), GL_UNSIGNED_BYTE, data);
-#endif
+		if ((m_Usage & TextureUsage::TEXTURE_DEPTHSTENCIL) != 0)
+		{
+			bool hasStencil = m_ImageViewCreateInfo.format == VK_FORMAT_D16_UNORM_S8_UINT ||
+				m_ImageViewCreateInfo.format == VK_FORMAT_D24_UNORM_S8_UINT ||
+				m_ImageViewCreateInfo.format == VK_FORMAT_D32_SFLOAT_S8_UINT;
+			if (hasStencil)
+				return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+			return VK_IMAGE_ASPECT_DEPTH_BIT;
+		}
+		
+		return VK_IMAGE_ASPECT_COLOR_BIT;
+	}
+	
+	VulkanImageSubresource::VulkanImageSubresource(VulkanResourceManager* owner, VkImageLayout layout) : VulkanResource(owner, false), m_Layout(layout)
+		{ }
+	
+	VulkanTexture::VulkanTexture(const TextureParameters& params)
+		: Texture(params), m_Image(nullptr), m_InternalFormat(), m_StagingBuffer(nullptr), m_MappedGlobalQueueIdx((uint32_t)-1), m_MappedMip(0), m_MappedFace(0), m_MappedRowPitch(0), m_MappedSlicePitch(0),
+		m_MappedLockOptions(GpuLockOptions::WRITE_ONLY), m_DirectlyMappable(false), m_SupportsGpuWrites(false), m_IsMapped(false)
+	{
+		switch(params.Shape)
+		{
+			case TextureShape::TEXTURE_1D:
+				m_ImageCreateInfo.imageType = VK_IMAGE_TYPE_1D;
+				break;
+			case TextureShape::TEXTURE_2D:
+				m_ImageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+				break;
+			case TextureShape::TEXTURE_3D:
+				m_ImageCreateInfo.imageType = VK_IMAGE_TYPE_3D;
+				break;
+			case TextureShape::TEXTURE_CUBE:
+				m_ImageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+				m_ImageCreateInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+				break;
+		}
+		m_ImageCreateInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		
+		int32_t usage = (int32_t)params.Usage;
+		if ((usage & TEXTURE_RENDERTARGET) != 0)
+		{
+			m_ImageCreateInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+			m_SupportsGpuWrites = true;
+		}
+		else if ((usage & TEXTURE_DEPTHSTENCIL) != 0)
+		{
+			m_ImageCreateInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+			m_SupportsGpuWrites = true;
+		}
+		
+		if ((usage & TEXTURE_LOADSTORE) != 0)
+		{
+			m_ImageCreateInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+			m_SupportsGpuWrites = true;
+		}
+		
+		VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
+		VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		
+		if ((usage & TEXTURE_DYNAMIC) != 0)
+		{
+			if (params.Shape == TextureShape::TEXTURE_2D && params.Samples <= 1 && params.MipLevels == 0 && params.Faces == 1 && (m_ImageCreateInfo.usage & VK_IMAGE_USAGE_SAMPLED_BIT) != 0)
+			{
+				if (!m_SupportsGpuWrites)
+				{
+					m_DirectlyMappable = true;
+					tiling = VK_IMAGE_TILING_LINEAR;
+					layout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+				}
+			}
+		}
+		
+		uint32_t width = std::max(m_Params.Width, 1U);
+		uint32_t height = std::max(m_Params.Height, 1U);
+		uint32_t depth = std::max(m_Params.Depth, 1U);
+		
+		m_ImageCreateInfo.extent = { width, height, depth };
+		m_ImageCreateInfo.mipLevels = params.MipLevels + 1;
+		m_ImageCreateInfo.arrayLayers = params.Faces;
+		m_ImageCreateInfo.samples = VulkanUtils::GetSampleFlags(params.Samples);
+		m_ImageCreateInfo.tiling = tiling;
+		m_ImageCreateInfo.initialLayout = layout;
+		m_ImageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		m_ImageCreateInfo.queueFamilyIndexCount = 0;
+		m_ImageCreateInfo.pQueueFamilyIndices = nullptr;
+		
+		VulkanDevice& device = *gVulkanRendererAPI().GetPresentDevice().get();
+		
+		bool optimalTiling = tiling == VK_IMAGE_TILING_OPTIMAL;
+		m_InternalFormat = VulkanUtils::GetClosestSupportedTextureFormat(device, params.Format, params.Shape, params.Usage, optimalTiling);
+		m_Image = CreateImage(device, m_InternalFormat);
+	}	
+	VulkanTexture::~VulkanTexture()
+	{
+		m_Image->Destroy();
+		CW_ENGINE_ASSERT(m_StagingBuffer == nullptr);
 	}
 
-	void VulkanTexture2D::SetData(void* data, TextureChannel channel)
+	VulkanImage* VulkanTexture::CreateImage(VulkanDevice& device, TextureFormat format)
 	{
-#ifdef MC_WEB
-		glBindTexture(GL_TEXTURE_2D, m_RendererID);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_Width, m_Height, TextureChannelToOpenGLChannel(channel), GL_UNSIGNED_BYTE, data);
-#else
-		glTextureSubImage2D(m_RendererID, 0, 0, 0, m_Width, m_Height, TextureChannelToOpenGLChannel(channel), GL_UNSIGNED_BYTE, data);
-#endif
+		bool directlyMappable = m_ImageCreateInfo.tiling == VK_IMAGE_TILING_LINEAR;
+		VkMemoryPropertyFlags memoryFlags;
+		if (directlyMappable)
+			memoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		else
+			memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+		
+		m_ImageCreateInfo.format = VulkanUtils::GetTextureFormat(format, false);
+		VkImage image;
+		VkResult result = vkCreateImage(device.GetLogicalDevice(), &m_ImageCreateInfo, gVulkanAllocator, &image);
+		CW_ENGINE_ASSERT(result == VK_SUCCESS);
+		VmaAllocation allocation = device.AllocateMemory(image, memoryFlags);
+		return device.GetResourceManager().Create<VulkanImage>(image, allocation, m_ImageCreateInfo.initialLayout, m_ImageCreateInfo.format, m_Params);
 	}
 
-	void VulkanTexture2D::Bind(uint32_t slot) const
+	VulkanBuffer* VulkanTexture::CreateStagingBuffer(VulkanDevice& device, const PixelData& data, bool readable)
 	{
-#ifdef MC_WEB
-		glActiveTexture(GL_TEXTURE0 + slot);
-		glBindTexture(GL_TEXTURE_2D, m_RendererID);
-#else
-		glBindTextureUnit(slot, m_RendererID);
-#endif
+		uint32_t blockSize = PixelUtils::GetBlockSize(data.GetFormat());
+		VkBufferCreateInfo bufferCreateInfo;
+		bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferCreateInfo.pNext = nullptr;
+		bufferCreateInfo.flags = 0;
+		bufferCreateInfo.size = data.GetSize();
+		bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		bufferCreateInfo.queueFamilyIndexCount = 0;
+		bufferCreateInfo.pQueueFamilyIndices = nullptr;
+		
+		if (readable)
+			bufferCreateInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+		VkBuffer buffer;
+		VkResult result = vkCreateBuffer(device.GetLogicalDevice(), &bufferCreateInfo, gVulkanAllocator, &buffer);
+		CW_ENGINE_ASSERT(result == VK_SUCCESS);
+		
+		VkMemoryPropertyFlags flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		VmaAllocation allocation = device.AllocateMemory(buffer, flags);
+		
+		uint32_t rowPitchInPixels = data.GetRowPitch() / blockSize;
+		uint32_t slicePitchInPixels = data.GetSlicePitch() / blockSize;
+		//TODO: Texture compression.
+		
+		return device.GetResourceManager().Create<VulkanBuffer>(buffer, allocation, rowPitchInPixels, slicePitchInPixels);
 	}
 
-	void VulkanTexture2D::Unbind(uint32_t slot) const
+	void VulkanTexture::CopyImage(VulkanTransferBuffer* cb, VulkanImage* srcImage, VulkanImage* dstImage, VkImageLayout srcFinalLayout, VkImageLayout dstFinalLayout)
 	{
-		glBindTextureUnit(slot, 0);
+		uint32_t numFaces = m_Params.Faces;
+		uint32_t numMips = m_Params.MipLevels;
+
+		uint32_t mipWidth = m_Params.Width;
+		uint32_t mipHeight = m_Params.Height;
+		uint32_t mipDepth = m_Params.Depth;
+
+		VkImageCopy* imageRegions = new VkImageCopy[numMips];
+		for (uint32_t i = 0; i < numMips; i++)
+		{
+			VkImageCopy& region = imageRegions[i];
+			region.srcOffset = { 0, 0, 0 };
+			region.dstOffset = { 0, 0, 0 };
+			region.extent = { mipWidth, mipHeight, mipDepth };
+			region.srcSubresource.baseArrayLayer = 0;
+			region.srcSubresource.layerCount = numFaces;
+			region.srcSubresource.mipLevel = i;
+			region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			region.srcSubresource.baseArrayLayer = 0;
+			region.srcSubresource.layerCount = numFaces;
+			region.srcSubresource.mipLevel = i;
+			region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+			if (mipWidth != 1) mipWidth /= 2;
+			if (mipHeight != 1) mipHeight /= 2;
+			if (mipDepth != 1) mipDepth /= 2;
+		}
+
+		VkImageSubresourceRange range;
+		range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		range.baseArrayLayer = 0;
+		range.layerCount = numFaces;
+		range.baseMipLevel = 0;
+		range.levelCount = numMips;
+
+		VkImageLayout transferSrcLayout, transferDstLayout;
+		if (m_DirectlyMappable)
+		{
+			transferSrcLayout = VK_IMAGE_LAYOUT_GENERAL;
+			transferDstLayout = VK_IMAGE_LAYOUT_GENERAL;
+		}
+		else
+		{
+			transferSrcLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			transferDstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		}
+
+		cb->SetLayout(srcImage, range, VK_ACCESS_TRANSFER_READ_BIT, transferSrcLayout);
+		cb->SetLayout(dstImage, range, VK_ACCESS_TRANSFER_WRITE_BIT, transferDstLayout);
+		vkCmdCopyImage(cb->GetCB()->GetHandle(), srcImage->GetHandle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage->GetHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, numMips, imageRegions);
+		
+		VkAccessFlags srcAccessMask = srcImage->GetAccessFlags(srcFinalLayout);
+		cb->SetLayout(srcImage->GetHandle(), VK_ACCESS_TRANSFER_READ_BIT, srcAccessMask, transferSrcLayout, srcFinalLayout, range);
+
+		VkAccessFlags dstAccessMask = dstImage->GetAccessFlags(dstFinalLayout);
+		cb->SetLayout(dstImage->GetHandle(), VK_ACCESS_TRANSFER_WRITE_BIT, dstAccessMask, transferDstLayout, dstFinalLayout, range);
+		cb->GetCB()->RegisterImageTransfer(srcImage, range, srcFinalLayout, VulkanAccessFlagBits::Read);
+		cb->GetCB()->RegisterImageTransfer(dstImage, range, dstFinalLayout, VulkanAccessFlagBits::Write);
+		delete[] imageRegions;
 	}
-*/
+	
+	//void VulkanTexture::Copy(const Ref<Texture>& tranfer, const Te)
+	
+	PixelData VulkanTexture::Lock(GpuLockOptions options, uint32_t mipLevel, uint32_t face, uint32_t queueIdx)
+	{
+		uint32_t mipWidth = std::max(1U, m_Params.Width >> mipLevel);
+		uint32_t mipHeight = std::max(1U, m_Params.Height >> mipLevel);
+		uint32_t mipDepth = std::max(1U, m_Params.Depth >> mipLevel);
+		
+		m_IsMapped = true;
+		m_MappedGlobalQueueIdx = queueIdx;
+		m_MappedFace = face;
+		m_MappedMip = mipLevel;
+		m_MappedLockOptions = options;
+		
+		PixelData lockedData(mipWidth, mipHeight, mipDepth, m_InternalFormat);
+		VulkanDevice& device = *gVulkanRendererAPI().GetPresentDevice().get();
+		VulkanTransferManager& vtm = VulkanTransferManager::Get();
+		GpuQueueType queueType;
+		uint32_t localQueueIdx = CommandSyncMask::GetQueueIdxAndType(queueIdx, queueType);
+		VulkanImageSubresource* subresource = m_Image->GetSubresource(face, mipLevel);
+		
+		if (m_DirectlyMappable)
+		{
+			CW_ENGINE_ASSERT(subresource->GetLayout() == VK_IMAGE_LAYOUT_PREINITIALIZED || subresource->GetLayout() == VK_IMAGE_LAYOUT_GENERAL);
+			CW_ENGINE_ASSERT(!m_SupportsGpuWrites);
+			
+			uint32_t useMask = subresource->GetUseInfo(VulkanAccessFlagBits::Read);
+			bool isUsedOnGpu = useMask != 0;
+			if (!isUsedOnGpu)
+			{
+				if (subresource->IsBound())
+				{
+					VulkanImage* newImage = CreateImage(device, m_InternalFormat);
+					if (options != GpuLockOptions::WRITE_ONLY_NO_OVERWRITE)
+					{
+						VkMemoryRequirements memReqs;
+						vkGetImageMemoryRequirements(device.GetLogicalDevice(), m_Image->GetHandle(), &memReqs);
+						uint8_t* src = m_Image->Map(0, (uint32_t)memReqs.size);
+						uint8_t* dst = newImage->Map(0, (uint32_t)memReqs.size);
+						std::memcpy(dst, src, memReqs.size);
+						
+						m_Image->Unmap();
+						newImage->Unmap();
+					}
+					
+					m_Image->Destroy();
+					m_Image = newImage;
+				}
+				
+				m_Image->Map(face, mipLevel, lockedData);
+				return lockedData;
+			}
+			
+			if (options == GpuLockOptions::WRITE_ONLY_NO_OVERWRITE)
+			{
+				m_Image->Map(face, mipLevel, lockedData);
+				return lockedData;
+			}
+			
+			if (options == GpuLockOptions::WRITE_DISCARD)
+			{
+				m_Image->Destroy();
+				m_Image = CreateImage(device, m_InternalFormat);
+				m_Image->Map(face, mipLevel, lockedData);
+				return lockedData;
+			}
+			
+			if (options == GpuLockOptions::READ_ONLY || options == GpuLockOptions::READ_WRITE)
+			{
+				VulkanTransferBuffer* transferCB = vtm.GetTransferBuffer(queueType, localQueueIdx);
+				if (options == GpuLockOptions::READ_ONLY)
+					useMask = subresource->GetUseInfo(VulkanAccessFlagBits::Write);
+				else
+					useMask = subresource->GetUseInfo(VulkanAccessFlagBits::Read | VulkanAccessFlagBits::Write);
+				
+				transferCB->AppendMask(useMask);
+				transferCB->Flush(true);
+				
+				if (options == GpuLockOptions::READ_WRITE && subresource->IsBound())
+				{
+					VulkanImage* newImage = CreateImage(device, m_InternalFormat);
+					VkMemoryRequirements memReqs;
+					vkGetImageMemoryRequirements(device.GetLogicalDevice(), m_Image->GetHandle(), &memReqs);
+					
+					uint8_t* src = m_Image->Map(0, (uint32_t)memReqs.size);
+					uint8_t* dst = newImage->Map(0, (uint32_t)memReqs.size);
+					std::memcpy(dst, src, memReqs.size);
+					m_Image->Unmap();
+					newImage->Unmap();
+					
+					m_Image->Destroy();
+					m_Image = newImage;
+				}
+				
+				m_Image->Map(face, mipLevel, lockedData);
+				return lockedData;
+			}
+		}
+		
+		bool needRead = options != GpuLockOptions::WRITE_DISCARD && options != GpuLockOptions::WRITE_DISCARD_RANGE;
+		m_StagingBuffer = CreateStagingBuffer(device, lockedData, needRead);
+		if (needRead)
+		{
+			VulkanTransferBuffer* transferCB = vtm.GetTransferBuffer(queueType, localQueueIdx);
+			uint32_t writeUseMask = subresource->GetUseInfo(VulkanAccessFlagBits::Write);
+			if (m_SupportsGpuWrites || writeUseMask != 0)
+				transferCB->AppendMask(writeUseMask);
+			
+			VkImageSubresourceRange range;
+			range.aspectMask = m_Image->GetAspectFlags();
+			range.baseArrayLayer = face;
+			range.layerCount = 1;
+			range.baseMipLevel = mipLevel;
+			range.levelCount = 1;
+			
+			VkImageSubresourceLayers rangeLayers;
+			if ((m_Params.Usage & TEXTURE_DEPTHSTENCIL) != 0)
+				rangeLayers.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+			else
+				rangeLayers.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			
+			rangeLayers.baseArrayLayer = range.baseArrayLayer;
+			rangeLayers.layerCount = range.layerCount;
+			rangeLayers.mipLevel = range.baseMipLevel;
+			
+			VkExtent3D extent;
+			PixelUtils::GetMipSizeForLevel(m_Width, m_Height, 1, m_MappedMip, extent.width, extent.height, extent.depth);
+			
+			VkAccessFlags currentAccessMask = m_Image->GetAccessFlags(subresource->GetLayout());
+			transferCB->SetLayout(m_Image->GetHandle(), currentAccessMask, VK_ACCESS_TRANSFER_READ_BIT, subresource->GetLayout(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, range);
+			
+			m_Image->Copy(transferCB, m_StagingBuffer, extent, rangeLayers, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+			VkImageLayout dstLayout = m_Image->GetOptimalLayout();
+			currentAccessMask = m_Image->GetAccessFlags(dstLayout);
+			
+			transferCB->SetLayout(m_Image->GetHandle(), VK_ACCESS_TRANSFER_READ_BIT, currentAccessMask, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstLayout, range);
+			transferCB->GetCB()->RegisterImageTransfer(m_Image, range, dstLayout, VulkanAccessFlagBits::Read);
+			
+			VkAccessFlags stagingAccessFlags;
+			if (options == GpuLockOptions::READ_ONLY)
+				stagingAccessFlags = VK_ACCESS_HOST_READ_BIT;
+			else
+				stagingAccessFlags = VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT;
+			
+			transferCB->MemoryBarrier(m_StagingBuffer->GetHandle(), VK_ACCESS_TRANSFER_WRITE_BIT, stagingAccessFlags, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT);
+			
+			transferCB->Flush(true);
+		}
+		
+		uint8_t* data = m_StagingBuffer->Map(0, lockedData.GetSize());
+		lockedData.SetBuffer(data);
+		return lockedData;
+	}
+	
+	void VulkanTexture::Unlock()
+	{
+		if (!m_IsMapped)
+			return;
+		if (m_StagingBuffer == nullptr)
+			m_Image->Unmap();
+		else
+		{
+			m_StagingBuffer->Unmap();
+			bool isWrite = m_MappedLockOptions != GpuLockOptions::READ_ONLY;
+			if (isWrite)
+			{
+				VulkanDevice& device = *gVulkanRendererAPI().GetPresentDevice().get();
+				VulkanTransferManager& vtm = VulkanTransferManager::Get();
+				GpuQueueType queueType;
+				uint32_t localQueueIdx = CommandSyncMask::GetQueueIdxAndType(m_MappedGlobalQueueIdx, queueType);
+				
+				VulkanImage* image = m_Image;
+				VulkanTransferBuffer* transferCB = vtm.GetTransferBuffer(queueType, localQueueIdx);
+				VulkanImageSubresource* subresource = image->GetSubresource(m_MappedFace, m_MappedMip);
+				VkImageLayout curLayout = subresource->GetLayout();
+				
+				uint32_t useMask = subresource->GetUseInfo(VulkanAccessFlagBits::Read | VulkanAccessFlagBits::Write);
+				bool isNormalWrite = false;
+				if (useMask != 0)
+				{
+					if (m_MappedLockOptions == GpuLockOptions::WRITE_ONLY_NO_OVERWRITE)
+					{
+
+					}
+					else if (m_MappedLockOptions == GpuLockOptions::WRITE_DISCARD)
+					{
+						image->Destroy();
+						image = CreateImage(device, m_InternalFormat);
+						subresource = image->GetSubresource(m_MappedFace, m_MappedMip);
+					}
+					else
+					{
+						transferCB->AppendMask(useMask);
+						isNormalWrite = true;
+					}
+				}
+				else
+					isNormalWrite = true;
+				
+				if (isNormalWrite)
+				{
+					uint32_t useCount = subresource->GetUseCount();
+					uint32_t boundCount = subresource->GetBoundCount();
+					bool isBoundWithoutUse = boundCount > useCount;
+					if (isBoundWithoutUse)
+					{
+						VulkanImage* newImage = CreateImage(device, m_InternalFormat);
+						if (m_Params.MipLevels > 0 || m_Params.Faces > 1)
+						{
+							VkImageLayout oldImageLayout = image->GetOptimalLayout();
+							curLayout = newImage->GetOptimalLayout();
+							CopyImage(transferCB, image, newImage, oldImageLayout, curLayout);
+						}
+						
+						image->Destroy();
+						image = newImage;
+						m_Image = image;
+					}
+				}
+				
+				VkImageSubresourceRange range;
+				range.aspectMask = image->GetAspectFlags();
+				range.baseArrayLayer = m_MappedFace;
+				range.layerCount = 1;
+				range.baseMipLevel = m_MappedMip;
+				range.levelCount = 1;
+				
+				VkImageSubresourceLayers rangeLayers;
+				rangeLayers.aspectMask = range.aspectMask;
+				rangeLayers.baseArrayLayer = range.baseArrayLayer;
+				rangeLayers.layerCount = range.layerCount;
+				rangeLayers.mipLevel = range.baseMipLevel;
+				
+				VkExtent3D extent;
+				PixelUtils::GetMipSizeForLevel(m_Width, m_Height, 1, m_MappedMip, extent.width, extent.height, extent.depth);
+				
+				VkImageLayout transferLayout;
+				if (m_DirectlyMappable)
+					transferLayout = VK_IMAGE_LAYOUT_GENERAL;
+				else
+					transferLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				
+				VkAccessFlags currentAccessMask = image->GetAccessFlags(curLayout);
+				transferCB->SetLayout(image->GetHandle(), currentAccessMask, VK_ACCESS_TRANSFER_WRITE_BIT, curLayout, transferLayout, range);
+				
+				m_StagingBuffer->Copy(transferCB->GetCB(), image, extent, rangeLayers, transferLayout);
+				VkImageLayout dstLayout = image->GetOptimalLayout();
+				currentAccessMask = image->GetAccessFlags(dstLayout);
+				transferCB->SetLayout(image->GetHandle(), VK_ACCESS_TRANSFER_WRITE_BIT, currentAccessMask, transferLayout, dstLayout, range);
+				
+				transferCB->GetCB()->RegisterBuffer(m_StagingBuffer, BufferUseFlagBits::Transfer, VulkanAccessFlagBits::Read);
+				transferCB->GetCB()->RegisterImageTransfer(image, range, dstLayout, VulkanAccessFlagBits::Write);
+			}
+			m_StagingBuffer->Destroy();
+			m_StagingBuffer = nullptr;
+		}
+		
+		m_IsMapped = false;
+	}
+	
+	void VulkanTexture::ReadData(PixelData& dest, uint32_t mipLevel, uint32_t face, uint32_t queueIdx)
+	{
+		PixelData data = Lock(GpuLockOptions::READ_ONLY, mipLevel, face, queueIdx);
+		std::memcpy(dest.GetData(), data.GetData(), dest.GetSize());
+		Unlock();
+	}
+	
+	void VulkanTexture::WriteData(const PixelData& src, uint32_t mipLevel, uint32_t face, uint32_t queueIdx)
+	{
+		mipLevel = glm::clamp(mipLevel, (uint32_t)mipLevel, m_Params.MipLevels);
+		face = glm::clamp(face, (uint32_t)0, m_Params.Faces - 1);
+		
+		PixelData data = Lock(/*discardWholeBuffer ? */GpuLockOptions::WRITE_DISCARD/* : GpuLockOptions::WRITE_DISCARD_RANGE*/, mipLevel, face, queueIdx);
+		std::memcpy(data.GetData(), src.GetData(), src.GetSize());
+		Unlock();
+	}
 }
