@@ -27,6 +27,7 @@ project "Crowny-Editor"
 		"%{IncludeDir.entt}",
 		"%{IncludeDir.assimp}",
 		"%{IncludeDir.mono}",
+    "%{IncludeDir.vulkan}",
 		"%{IncludeDir.ImGuizmo}"
 	}
 

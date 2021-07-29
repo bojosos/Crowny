@@ -63,7 +63,6 @@ namespace Crowny
             uint32_t Slot;
         };
         
-        // as many as the shaders
         std::array<Ref<UniformDesc>, 6> m_ParamDescs;
         
         uint32_t m_NumSets;

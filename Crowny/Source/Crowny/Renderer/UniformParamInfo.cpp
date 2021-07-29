@@ -163,8 +163,9 @@ namespace Crowny
                 if (m_SetInfos[set].SlotSamplers[slot] != (uint32_t)-1)
                     return m_SetInfos[set].SlotSamplers[slot];
             }
-            CW_ENGINE_ASSERT(false, "Requested paramter is not of the valid type.");
-            return -1;
+            //CW_ENGINE_ASSERT(false, "Requested paramter is not of the valid type.");
+            CW_ENGINE_INFO("Here, {0}, {1}", (uint32_t)paramType, (uint32_t)m_SetInfos[set].SlotTypes[slot]);
+            //return -1;
         }
         
         return m_SetInfos[set].SlotIndices[slot];

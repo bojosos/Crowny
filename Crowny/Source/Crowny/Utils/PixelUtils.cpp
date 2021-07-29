@@ -57,7 +57,7 @@ namespace Crowny
     }
 
 
-    PixelData::PixelData(uint32_t width, uint32_t height, uint32_t depth, TextureFormat textureFormat)
+    PixelData::PixelData(uint32_t width, uint32_t height, uint32_t depth, TextureFormat textureFormat) : m_Format(textureFormat), m_Width(width), m_Height(height), m_Depth(depth)
     {
         PixelUtils::GetPitch(width, height, depth, textureFormat, m_RowPitch, m_SlicePitch);
         m_Buffer = new uint8_t[GetSize()];
@@ -70,9 +70,9 @@ namespace Crowny
 
     void PixelData::SetBuffer(uint8_t* data)
     {
-        if (m_Buffer)
-            delete[] m_Buffer;
         m_Buffer = data;
+        //if (m_Buffer) TODO: bad 
+         //   delete[] m_Buffer;
     }
     
 }
