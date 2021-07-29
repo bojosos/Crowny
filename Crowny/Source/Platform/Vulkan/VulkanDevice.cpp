@@ -122,6 +122,8 @@ namespace Crowny
     
     VulkanDevice::~VulkanDevice()
     {
+        if (m_LogicalDevice == VK_NULL_HANDLE)
+            return;
         VkResult result = vkDeviceWaitIdle(m_LogicalDevice);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         
@@ -225,6 +227,8 @@ namespace Crowny
     
     void VulkanDevice::WaitIdle()
     {
+        if (m_LogicalDevice == VK_NULL_HANDLE)
+            return;
         VkResult result = vkDeviceWaitIdle(m_LogicalDevice);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         Refresh(true);

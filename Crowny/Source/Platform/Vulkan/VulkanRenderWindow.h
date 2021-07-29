@@ -34,6 +34,8 @@ namespace Crowny
         virtual Window* GetWindow() const override { return m_Window; }
         
         VulkanSwapChain* GetSwapChain() const { return m_SwapChain; }
+        VkFormat GetColorFormat() const { return m_ColorFormat; }
+        VkFormat GetDepthFormat() const { return m_DepthFormat; }
         VulkanFramebuffer* GetFramebuffer() const { return m_SwapChain->GetBackBuffer().Framebuffer; }
 
     private:

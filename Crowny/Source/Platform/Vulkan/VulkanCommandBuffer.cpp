@@ -7,6 +7,7 @@
 #include "Platform/Vulkan/VulkanIndexBuffer.h"
 #include "Platform/Vulkan/VulkanUniformParams.h"
 #include "Platform/Vulkan/VulkanRenderWindow.h"
+#include "Platform/Vulkan/VulkanRenderTexture.h"
 
 #include "Crowny/Common/Timer.h"
 
@@ -759,7 +760,7 @@ namespace Crowny
             {
                 if (VulkanUtils::RangeOverlaps(subresources[i].Range, range))
                 {
-                    if (subresources[i].Range.layerCount == range.layerCount && subresources[i].Range.levelCount == range.levelCount && subresources[i].Range.baseArrayLayer && subresources[i].Range.baseMipLevel == range.baseMipLevel)
+                    if (subresources[i].Range.layerCount == range.layerCount && subresources[i].Range.levelCount == range.levelCount && subresources[i].Range.baseArrayLayer == range.baseArrayLayer && subresources[i].Range.baseMipLevel == range.baseMipLevel)
                     {
                         switch(use)
                         {
@@ -1487,6 +1488,7 @@ namespace Crowny
             for (auto& entry : m_Images)
                 entry.first->NotifyUnbound();
         }
+        
         m_Resources.clear();
         m_Images.clear();
         m_Buffers.clear();
@@ -1785,8 +1787,8 @@ namespace Crowny
                 m_ActiveSwapChains.insert(swapChain);
                 newBuffer = window->GetFramebuffer();
             }
-            //else
-              //  newBuffer = static_cast<VulkanRenderTexture*>(renderTarget.get())->GetFramebuffer();
+            else
+                newBuffer = static_cast<VulkanRenderTexture*>(renderTarget.get())->GetFramebuffer();
         }
         else
         {
@@ -2051,6 +2053,7 @@ namespace Crowny
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.oldLayout = oldLayout;
         barrier.newLayout = newLayout;
+        barrier.image = image;
         barrier.subresourceRange = range;
         VkPipelineStageFlags srcStage = GetPipelineStageFlags(srcAccessFlags);
         VkPipelineStageFlags dstStage = GetPipelineStageFlags(dstAccessFlags);

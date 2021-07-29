@@ -5,6 +5,7 @@
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
+#include "Crowny/Renderer/RendererAPI.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/ForwardPlusRenderer.h"
 #include "Crowny/Renderer/IDBufferRenderer.h"
@@ -47,7 +48,7 @@ namespace Crowny
 		Renderer2D::Init();
 		IDBufferRenderer::Init();
 		FontManager::Add(CreateRef<Font>("Roboto Thin", "/Fonts/" + DEFAULT_FONT_FILENAME, 64)); // default font, move out of here
-
+*/
 		CWMonoRuntime::Init("Crowny C# Runtime");
 		CWMonoRuntime::LoadAssemblies("/Assemblies");
 		
@@ -61,7 +62,7 @@ namespace Crowny
 		ScriptInput::InitRuntimeFunctions();
     	ScriptNoise::InitRuntimeFunctions();
 		ScriptGameObject::InitRuntimeFunctions();
-		ScriptCameraComponent::InitRuntimeFunctions();*/
+		ScriptCameraComponent::InitRuntimeFunctions();
 	}
 
 	void Initializer::Shutdown()
@@ -71,6 +72,7 @@ namespace Crowny
 		ForwardPlusRenderer::Shutdown();
 		SceneManager::Shutdown();
 		VirtualFileSystem::Shutdown();*/
+		RendererAPI::Get().Shutdown();
 	}
 
 }

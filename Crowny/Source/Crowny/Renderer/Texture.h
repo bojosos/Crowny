@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Renderer/TextureView.h"
 #include "Crowny/Utils/PixelUtils.h"
 
 namespace Crowny
@@ -65,11 +66,15 @@ namespace Crowny
 		virtual void WriteData(const PixelData& src, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) = 0;
 
 		const TextureParameters& GetProperties() const { return m_Params; }
+		Ref<TextureView> CreateView(const TextureViewDesc& desc);
+		Ref<TextureView> RequestView(uint32_t mip, uint32_t numMips, uint32_t firstArraySlice, uint32_t numArraySlices, GpuViewUsage usage);
+
+	public:
 		static Ref<Texture> Create(const TextureParameters& params);
 	protected:
+		std::unordered_map<TextureViewDesc, Ref<TextureView>, TextureView::HashFunction, TextureView::EqualFunction> m_TextureViews;
 		Texture(const TextureParameters& params);
 		TextureParameters m_Params;
-		uint32_t m_Width, m_Height;
 	};
 
 }

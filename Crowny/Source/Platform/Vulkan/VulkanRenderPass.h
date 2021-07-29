@@ -69,7 +69,7 @@ namespace Crowny
         mutable VkAttachmentReference m_ColorReferences[MAX_FRAMEBUFFER_COLOR_ATTACHMENTS];
         mutable VkAttachmentReference m_DepthReference;
         mutable VkSubpassDependency m_Dependencies[2];
-        mutable VkSubpassDescription m_SubpassDesc;
+        mutable VkSubpassDescription m_SubpassDesc{};
         mutable VkRenderPassCreateInfo m_RenderPassCreateInfo;
 
         VkRenderPass m_DefaultRenderPass;

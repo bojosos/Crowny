@@ -24,6 +24,8 @@ namespace Crowny
 		desc.Faces = params.NumArraySlices;
 		desc.Format = actualFormat;
 		desc.Usage = params.Usage;
+		
+		return desc;
 	}
 
 	VulkanImage::VulkanImage(VulkanResourceManager* owner, VkImage image, VmaAllocation allocation, VkImageLayout layout, VkFormat format, const TextureParameters& params, bool ownsImage) :
@@ -374,8 +376,8 @@ namespace Crowny
 				accessFlags = 0;
 				CW_ENGINE_ASSERT(false);
 				break;
-			return accessFlags;
 		}
+		return accessFlags;
 	}
 	
 	void VulkanImage::GetBarriers(const VkImageSubresourceRange& range, std::vector<VkImageMemoryBarrier>& barriers)
@@ -532,6 +534,10 @@ namespace Crowny
 		: Texture(params), m_Image(nullptr), m_InternalFormat(), m_StagingBuffer(nullptr), m_MappedGlobalQueueIdx((uint32_t)-1), m_MappedMip(0), m_MappedFace(0), m_MappedRowPitch(0), m_MappedSlicePitch(0),
 		m_MappedLockOptions(GpuLockOptions::WRITE_ONLY), m_DirectlyMappable(false), m_SupportsGpuWrites(false), m_IsMapped(false)
 	{
+		m_ImageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		m_ImageCreateInfo.pNext = nullptr;
+		m_ImageCreateInfo.flags = 0;
+		
 		switch(params.Shape)
 		{
 			case TextureShape::TEXTURE_1D:
@@ -619,7 +625,7 @@ namespace Crowny
 		else
 			memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 		
-		m_ImageCreateInfo.format = VulkanUtils::GetTextureFormat(format, false);
+		m_ImageCreateInfo.format = VulkanUtils::GetTextureFormat(format, false); // TODO: Fix this somehow.
 		VkImage image;
 		VkResult result = vkCreateImage(device.GetLogicalDevice(), &m_ImageCreateInfo, gVulkanAllocator, &image);
 		CW_ENGINE_ASSERT(result == VK_SUCCESS);
@@ -845,7 +851,7 @@ namespace Crowny
 			rangeLayers.mipLevel = range.baseMipLevel;
 			
 			VkExtent3D extent;
-			PixelUtils::GetMipSizeForLevel(m_Width, m_Height, 1, m_MappedMip, extent.width, extent.height, extent.depth);
+			PixelUtils::GetMipSizeForLevel(m_Params.Width, m_Params.Height, m_Params.Depth, m_MappedMip, extent.width, extent.height, extent.depth);
 			
 			VkAccessFlags currentAccessMask = m_Image->GetAccessFlags(subresource->GetLayout());
 			transferCB->SetLayout(m_Image->GetHandle(), currentAccessMask, VK_ACCESS_TRANSFER_READ_BIT, subresource->GetLayout(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, range);
@@ -953,7 +959,7 @@ namespace Crowny
 				rangeLayers.mipLevel = range.baseMipLevel;
 				
 				VkExtent3D extent;
-				PixelUtils::GetMipSizeForLevel(m_Width, m_Height, 1, m_MappedMip, extent.width, extent.height, extent.depth);
+				PixelUtils::GetMipSizeForLevel(m_Params.Width, m_Params.Height, m_Params.Depth, m_MappedMip, extent.width, extent.height, extent.depth);
 				
 				VkImageLayout transferLayout;
 				if (m_DirectlyMappable)
@@ -983,6 +989,7 @@ namespace Crowny
 	{
 		PixelData data = Lock(GpuLockOptions::READ_ONLY, mipLevel, face, queueIdx);
 		std::memcpy(dest.GetData(), data.GetData(), dest.GetSize());
+		data.SetBuffer(nullptr); // TODO: temp fix.
 		Unlock();
 	}
 	
@@ -993,6 +1000,7 @@ namespace Crowny
 		
 		PixelData data = Lock(/*discardWholeBuffer ? */GpuLockOptions::WRITE_DISCARD/* : GpuLockOptions::WRITE_DISCARD_RANGE*/, mipLevel, face, queueIdx);
 		std::memcpy(data.GetData(), src.GetData(), src.GetSize());
+		data.SetBuffer(nullptr); // TODO: temp fix.
 		Unlock();
 	}
 }

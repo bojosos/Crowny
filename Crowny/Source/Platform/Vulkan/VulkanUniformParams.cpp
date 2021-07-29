@@ -177,12 +177,14 @@ namespace Crowny
             return;
         m_SetsDirty = new bool[numSets];
         m_UniformBuffers = new VkBuffer[numParamBlocks];
+        m_SampledImages = new VkImage[numTextures];
+        m_Samplers = new VkSampler[numSamplers];
         m_PerSetData = new PerSetData[numSets];
         const Ref<VulkanDevice>& device = gVulkanRendererAPI().GetPresentDevice();
         VulkanGpuBufferManager& bufferManager = VulkanGpuBufferManager::Get();
         VulkanDescriptorManager& descManager = device->GetDescriptorManager();
         VulkanSamplerState* defaultSampler = static_cast<VulkanSamplerState*>(SamplerState::GetDefault().get());
-        VulkanSampler* vkDefaultSampler = defaultSampler->GetSampler();
+    VulkanSampler* vkDefaultSampler = defaultSampler->GetSampler();
        
         if (numSets == 0)
             return;
@@ -259,7 +261,7 @@ namespace Crowny
                                 imageInfo.sampler = vkDefaultSampler->GetHandle();
                             else
                                 imageInfo.sampler = VK_NULL_HANDLE;
-                            //imageInfo.imageView = res->GetView(format, false);
+                            //imageInfo.imageView = image->GetView(format, false);
                             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                             uint32_t seqIdx = paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::Texture, j, slot);
                             //m_SampledImages[seqIdx] = res->GetHandle();
@@ -382,7 +384,7 @@ namespace Crowny
             return;
         }
 
-        uint32_t seqIdx = paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::SamplerState, set, slot);
+        uint32_t seqIdx = paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::Texture, set, slot);
         VulkanTexture* vulkanTexture = static_cast<VulkanTexture*>(texture.get());
         VulkanImage* image;
         if (vulkanTexture != nullptr)

@@ -82,46 +82,43 @@ namespace Crowny
         
         m_NumAttachments = idx;
 
-        VkSubpassDescription subpass{};
-        subpass.flags = 0;
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = m_NumColorAttachments;
-        subpass.inputAttachmentCount = 0;
-        subpass.pInputAttachments = nullptr;
-        subpass.preserveAttachmentCount = 0;
-        subpass.pPreserveAttachments = nullptr;
-        subpass.pResolveAttachments = nullptr;
+        m_SubpassDesc.flags = 0;
+        m_SubpassDesc.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        m_SubpassDesc.colorAttachmentCount = m_NumColorAttachments;
+        m_SubpassDesc.inputAttachmentCount = 0;
+        m_SubpassDesc.pInputAttachments = nullptr;
+        m_SubpassDesc.preserveAttachmentCount = 0;
+        m_SubpassDesc.pPreserveAttachments = nullptr;
+        m_SubpassDesc.pResolveAttachments = nullptr;
         
         if (m_NumColorAttachments > 0)
-            subpass.pColorAttachments = m_ColorReferences;
+            m_SubpassDesc.pColorAttachments = m_ColorReferences;
         else
-            subpass.pColorAttachments = nullptr;
+            m_SubpassDesc.pColorAttachments = nullptr;
 
         if (m_HasDepth)
-            subpass.pDepthStencilAttachment = &m_DepthReference;
+            m_SubpassDesc.pDepthStencilAttachment = &m_DepthReference;
         else
-            subpass.pDepthStencilAttachment = nullptr;
-        
-        VkSubpassDependency deps[2];
-        
+            m_SubpassDesc.pDepthStencilAttachment = nullptr;
+                
         // read?
-        deps[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-        deps[0].dstSubpass = 0;
-        deps[0].srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        deps[0].dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-        deps[0].srcAccessMask = 0; // wiki says not necessary
-        deps[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+        m_Dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+        m_Dependencies[0].dstSubpass = 0;
+        m_Dependencies[0].srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        m_Dependencies[0].dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+        m_Dependencies[0].srcAccessMask = 0; // wiki says not necessary
+        m_Dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT; // make these available for renderpass?
-        deps[0].dependencyFlags = 0;
+        m_Dependencies[0].dependencyFlags = 0;
         
-        deps[1].srcSubpass = 0;
-        deps[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-        deps[1].srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT; // for this stage flush the ones in srcAccessMask
-        deps[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT; 
-        deps[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | 
+        m_Dependencies[1].srcSubpass = 0;
+        m_Dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+        m_Dependencies[1].srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT; // for this stage flush the ones in srcAccessMask
+        m_Dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT; 
+        m_Dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | 
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT; // flush these from cache?
-        deps[1].dstAccessMask = 0;
-        deps[1].dependencyFlags = 0;
+        m_Dependencies[1].dstAccessMask = 0;
+        m_Dependencies[1].dependencyFlags = 0;
         
         m_RenderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
         m_RenderPassCreateInfo.pNext = nullptr;
@@ -129,9 +126,9 @@ namespace Crowny
         m_RenderPassCreateInfo.attachmentCount = m_NumAttachments;
         m_RenderPassCreateInfo.pAttachments = m_Attachments;
         m_RenderPassCreateInfo.subpassCount = 1;
-        m_RenderPassCreateInfo.pSubpasses = &subpass;
+        m_RenderPassCreateInfo.pSubpasses = &m_SubpassDesc;
         m_RenderPassCreateInfo.dependencyCount = 2;
-        m_RenderPassCreateInfo.pDependencies = deps;
+        m_RenderPassCreateInfo.pDependencies = m_Dependencies;
 
         m_DefaultRenderPass = CreateVariant(RT_NONE, RT_NONE, CLEAR_NONE);
     }
@@ -220,7 +217,7 @@ namespace Crowny
 
         VariantKey key(loadMask, readMask, clearMask);
         auto iter = m_Variants.find(key);
-        if (iter == m_Variants.end())
+        if (iter != m_Variants.end())
             return iter->second;
         VkRenderPass newVariant = CreateVariant(loadMask, readMask, clearMask);
         m_Variants[key] = newVariant;
@@ -278,12 +275,12 @@ namespace Crowny
         size_t hash = 0;
         HashCombine(hash, v.Desc.Offscreen, v.Desc.Samples, v.Desc.Depth.Enabled, v.Desc.Depth.Format);
 
-        for (uint32_t i = 0; i < sizeof(v.Desc.Color); i++)
+        for (uint32_t i = 0; i < MAX_FRAMEBUFFER_COLOR_ATTACHMENTS; i++)
         {
             HashCombine(hash, v.Desc.Color[i].Enabled);
             HashCombine(hash, v.Desc.Color[i].Format);
         }
-        
+        CW_ENGINE_INFO("Hash: {0}", hash);
         return hash;
     }
 
@@ -295,12 +292,12 @@ namespace Crowny
             || lhs.Desc.Depth.Format != rhs.Desc.Depth.Format)
                 return false;
 
-        for (uint32_t i = 0; i < sizeof(lhs.Desc.Color); i++)
+        for (uint32_t i = 0; i < MAX_FRAMEBUFFER_COLOR_ATTACHMENTS; i++)
         {
             if (lhs.Desc.Color[i].Enabled != rhs.Desc.Color[i].Enabled || lhs.Desc.Color[i].Format != rhs.Desc.Color[i].Format)
                 return false;
         }
-
+        CW_ENGINE_INFO("Not false");
         return true;
     }
 
