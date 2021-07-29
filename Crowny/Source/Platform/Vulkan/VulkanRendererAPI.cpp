@@ -329,9 +329,17 @@ namespace Crowny
     
     void VulkanRendererAPI::Shutdown()
     {
+        VulkanTransferManager::Shutdown();
+        VulkanRenderPasses::Shutdown();
+        m_CommandBuffer = nullptr;
+        for (uint32_t i = 0; i < (uint32_t)m_Devices.size(); i++)
+            m_Devices[i]->WaitIdle();
+        m_Devices.clear();
+        m_PrimaryDevices.clear();
 #ifdef CW_DEBUG
         vkDestroyDebugUtilsMessengerEXT(m_Instance, m_DebugUtilsMessenger, gVulkanAllocator);
 #endif
+        
         vkDestroyInstance(m_Instance, gVulkanAllocator);
     }
     

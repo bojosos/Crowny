@@ -14,6 +14,8 @@
 #include "Crowny/Renderer/UniformParams.h"
 #include "Crowny/Common/Timer.h" 
 #include "Crowny/Utils/ShaderCompiler.h"
+#include "Crowny/Renderer/Texture.h"
+#include "Crowny/Renderer/RenderTexture.h"
  
 #include "Editor/EditorAssets.h" 
  
@@ -22,6 +24,7 @@
 #include <glm/gtc/type_ptr.hpp> 
  
 #include <imgui.h> 
+#include "Crowny/../../Dependencies/stb_image/stb_image.h"
  
 namespace Crowny 
 { 
@@ -43,10 +46,10 @@ namespace Crowny
 	static Ref<VertexBuffer> vbo; 
 	static Ref<IndexBuffer> ibo; 
 	static Ref<GraphicsPipeline> pipeline; 
-	//static Ref<Framebuffer> framebuffer; 
 	static Ref<Shader> vertex, fragment; 
 	static Ref<UniformBufferBlock> mvp;
 	static Ref<UniformParams> uniformParams;
+	Ref<RenderTarget> renderTarget;
  
 	class VulkanFramebuffer; 
  
@@ -72,8 +75,8 @@ namespace Crowny
 		m_HierarchyPanel = new ImGuiHierarchyPanel("Hierarchy"); 
 		viewMenu->AddItem(new ImGuiMenuItem("Hierarchy", "", [&](auto& event) { m_HierarchyPanel->Show(); })); 
  
-		// m_ViewportPanel = new ImGuiViewportPanel("Viewport"); 
-		// viewMenu->AddItem(new ImGuiMenuItem("Viewport", "", [&](auto& event) { m_ViewportPanel->Show(); })); 
+		m_ViewportPanel = new ImGuiViewportPanel("Viewport"); 
+		viewMenu->AddItem(new ImGuiMenuItem("Viewport", "", [&](auto& event) { m_ViewportPanel->Show(); })); 
  
 		//m_ImGuiWindows.push_back(new ImGuiTextureEditor("Texture Properties")); 
 		//viewMenu->AddItem(new ImGuiMenuItem("Texture Properties", [&](auto& event) { m_ImGuiWindows.back()->Show(); })); 
@@ -122,14 +125,14 @@ namespace Crowny
 		vertex = Shader::Create(compiler.Compile("/Shaders/vk.vert", VERTEX_SHADER));
 		fragment = Shader::Create(compiler.Compile("/Shaders/vk.frag", FRAGMENT_SHADER));
 		
-		struct vert { glm::vec3 v; glm::vec3 c; };
+		struct vert { glm::vec3 v; glm::vec3 c; glm::vec2 t; };
 		vert verts[4] = {
-				{ { -0.5f, -0.5f, -10.0f }, { 0.8f, 0.2f, 0.5f } },
-				{ {   0.5f, 0.5f, -10.0f }, { 0.8f, 0.2f, 0.5f } },
-				{ {  -0.5f, 0.5f, -10.0f }, { 0.8f, 0.2f, 0.5f } },
-				{ {  0.5f, -0.5f, -10.0f }, { 0.8f, 0.2f, 0.5f } } };
+				{ { -0.5f, -0.5f, -10.0f }, { 0.8f, 0.2f, 0.5f }, { 0.0, 0.0 } },
+				{ {   0.5f, 0.5f, -10.0f }, { 0.8f, 0.2f, 0.5f }, { 1.0, 1.0 } },
+				{ {  -0.5f, 0.5f, -10.0f }, { 0.8f, 0.2f, 0.5f }, { 0.0, 1.0 } },
+				{ {  0.5f, -0.5f, -10.0f }, { 0.8f, 0.2f, 0.5f }, { 1.0, 0.0 } } };
 		vbo = VertexBuffer::Create(verts, sizeof(verts)); 
-    	vbo->SetLayout({{ShaderDataType::Float3, "position"}, { ShaderDataType::Float3, "color" }}); 
+    	vbo->SetLayout({ {ShaderDataType::Float3, "position"}, { ShaderDataType::Float3, "color" }, { ShaderDataType::Float2, "a_TexCoord" } }); 
 		 
 		uint16_t indices[6] = { 0, 1, 2, 0, 3, 1 }; 
 		ibo = IndexBuffer::Create(indices, 6); 
@@ -143,9 +146,50 @@ namespace Crowny
 		{
 			CW_ENGINE_INFO("Uniform buffer: {0}, name: {1}, set: {2} slot: {3}, size: {4}", desc.first, desc.second.Name, desc.second.Set, desc.second.Slot, desc.second.BlockSize);
 		}
-		mvp = UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("MVP").BlockSize, BufferUsage::DYNAMIC_DRAW);
+		
+		for (auto& desc : fragment->GetUniformDesc()->Textures)
+		{
+			CW_ENGINE_INFO("Texture: {0}, name: {1}, set: {2} slot: {3}", desc.first, desc.second.Name, desc.second.Set, desc.second.Slot);
+		}
+		
+		int width, height, channels;
+		stbi_set_flip_vertically_on_load(1);
+
+		auto [loaded, size] = VirtualFileSystem::Get()->ReadFile("/Textures/unknown.png");
+		
+		auto* data = stbi_load_from_memory(loaded, size, &width, &height, &channels, 0);
+		TextureParameters params;
+		params.Width = width;
+		params.Height = height;
+		Ref<Texture> texture = Texture::Create(params);
+		PixelData pd(width, height, 1, TextureFormat::RGBA8);
+		pd.SetBuffer(data);
+		texture->WriteData(pd);
+		pd.SetBuffer(nullptr);
+		//mvp = UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("MVP").BlockSize, BufferUsage::DYNAMIC_DRAW);
 		uniformParams = UniformParams::Create(pipeline);
-		uniformParams->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "MVP", mvp);
+		//uniformParams->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "MVP", mvp);
+		
+		uniformParams->SetTexture(0, 0, texture, TextureSurface::COMPLETE);
+		TextureParameters colorParams;
+		colorParams.Width = 720;
+		colorParams.Height = 720;
+		colorParams.Usage = TextureUsage::TEXTURE_RENDERTARGET;
+
+		TextureParameters depthParams;
+		depthParams.Width = 720;
+		depthParams.Height = 720;
+		depthParams.Usage = TextureUsage::TEXTURE_DEPTHSTENCIL;
+		depthParams.Format = TextureFormat::DEPTH24STENCIL8;
+
+		Ref<Texture> color = Texture::Create(colorParams);
+		Ref<Texture> depth = Texture::Create(depthParams);
+		RenderTextureProperties rtProps;
+		rtProps.ColorSurfaces[0] = { color };
+		rtProps.DepthSurface = { depth };
+		rtProps.Width = 720;
+		rtProps.Height = 720;
+		renderTarget = RenderTexture::Create(rtProps);
 	} 
  
 	void EditorLayer::CreateNewScene() 
@@ -195,18 +239,18 @@ namespace Crowny
 	void EditorLayer::OnUpdate(Timestep ts) 
 	{ 
 		glm::mat4 id(1.0f);
-		mvp->Write(0, &id, sizeof(glm::mat4));
-		mvp->Write(sizeof(glm::mat4), &s_EditorCamera.GetProjection(), sizeof(glm::mat4));
-		mvp->Write(sizeof(glm::mat4) * 2, &s_EditorCamera.GetViewMatrix(), sizeof(glm::mat4));
+		//mvp->Write(0, &id, sizeof(glm::mat4));
+		//mvp->Write(sizeof(glm::mat4), &s_EditorCamera.GetProjection(), sizeof(glm::mat4));
+		//mvp->Write(sizeof(glm::mat4) * 2, &s_EditorCamera.GetViewMatrix(), sizeof(glm::mat4));
 		
 		auto& rapi = RendererAPI::Get(); 
-		rapi.SetRenderTarget(Application::Get().GetRenderWindow()); 
+		rapi.SetRenderTarget(renderTarget); 
 		rapi.SetGraphicsPipeline(pipeline); 
-		rapi.SetVertexBuffers(0, &vbo, 1); 
-		rapi.SetIndexBuffer(ibo);
 		rapi.SetViewport(0, 0, Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight()); 
+		rapi.SetVertexBuffers(0, &vbo, 1);
+		rapi.SetIndexBuffer(ibo);
 		rapi.SetUniforms(uniformParams);
-		rapi.DrawIndexed(0, 6, 0, 4); 
+		rapi.DrawIndexed(0, 6, 0, 4);
 		Ref<Scene> scene = SceneManager::GetActiveScene(); 
 		//m_ViewportSize = m_ViewportPanel->GetViewportSize();
 		if (m_Temp) 
@@ -322,7 +366,7 @@ namespace Crowny
 		m_HierarchyPanel->Render(); 
 		m_InspectorPanel->Render(); 
 		//m_GLInfoPanel->Render(); 
-		//m_ViewportPanel->Render(); 
+		m_ViewportPanel->Render(); 
 		m_ConsolePanel->Render(); 
 		m_MaterialEditor->Render(); 
  

@@ -1,28 +1,5074 @@
-[23:04:03] [info] CROWNY: VK_KHR_device_group_creation
-[23:04:03] [info] CROWNY: VK_KHR_display
-[23:04:03] [info] CROWNY: VK_KHR_external_fence_capabilities
-[23:04:03] [info] CROWNY: VK_KHR_external_memory_capabilities
-[23:04:03] [info] CROWNY: VK_KHR_external_semaphore_capabilities
-[23:04:03] [info] CROWNY: VK_KHR_get_display_properties2
-[23:04:03] [info] CROWNY: VK_KHR_get_physical_device_properties2
-[23:04:03] [info] CROWNY: VK_KHR_get_surface_capabilities2
-[23:04:03] [info] CROWNY: VK_KHR_surface
-[23:04:03] [info] CROWNY: VK_KHR_surface_protected_capabilities
-[23:04:03] [info] CROWNY: VK_KHR_xcb_surface
-[23:04:03] [info] CROWNY: VK_KHR_xlib_surface
-[23:04:03] [info] CROWNY: VK_EXT_acquire_xlib_display
-[23:04:03] [info] CROWNY: VK_EXT_debug_report
-[23:04:03] [info] CROWNY: VK_EXT_debug_utils
-[23:04:03] [info] CROWNY: VK_EXT_direct_mode_display
-[23:04:03] [info] CROWNY: VK_EXT_display_surface_counter
-[23:04:03] [info] CROWNY: VK_KHR_wayland_surface
-[23:04:03] [warning] CROWNY: Creating Window: Crowny Editor
-[23:04:03] [info] CROWNY: 409
-[23:04:03] [info] CROWNY: Uniform buffers: 1
-[23:04:03] [info] CROWNY: MVP
-[23:04:03] [info] CROWNY: 151
-[23:04:03] [info] CROWNY: Uniform buffers: 0
-[23:04:03] [info] CROWNY: Shader entry: main
-[23:04:03] [info] CROWNY: Shader entry: main
-[23:04:03] [info] CROWNY: Uniform buffer: MVP, name: MVP, set: 0 slot: 0, size: 192
-[23:04:03] [info] CROWNY: Param blocks 1: 
+[19:52:14] [info] CROWNY: VK_KHR_device_group_creation
+[19:52:14] [info] CROWNY: VK_KHR_display
+[19:52:14] [info] CROWNY: VK_KHR_external_fence_capabilities
+[19:52:14] [info] CROWNY: VK_KHR_external_memory_capabilities
+[19:52:14] [info] CROWNY: VK_KHR_external_semaphore_capabilities
+[19:52:14] [info] CROWNY: VK_KHR_get_display_properties2
+[19:52:14] [info] CROWNY: VK_KHR_get_physical_device_properties2
+[19:52:14] [info] CROWNY: VK_KHR_get_surface_capabilities2
+[19:52:14] [info] CROWNY: VK_KHR_surface
+[19:52:14] [info] CROWNY: VK_KHR_surface_protected_capabilities
+[19:52:14] [info] CROWNY: VK_KHR_xcb_surface
+[19:52:14] [info] CROWNY: VK_KHR_xlib_surface
+[19:52:14] [info] CROWNY: VK_EXT_acquire_xlib_display
+[19:52:14] [info] CROWNY: VK_EXT_debug_report
+[19:52:14] [info] CROWNY: VK_EXT_debug_utils
+[19:52:14] [info] CROWNY: VK_EXT_direct_mode_display
+[19:52:14] [info] CROWNY: VK_EXT_display_surface_counter
+[19:52:14] [info] CROWNY: VK_KHR_wayland_surface
+[19:52:16] [info] CROWNY: Domain Crowny C# Runtime created!
+[19:52:16] [info] CROWNY: Loading debug: Resources/Assemblies/Crowny.dll.mdb
+[19:52:16] [info] CROWNY: Loading debug: Resources/Assemblies/Client.dll.mdb
+[19:52:16] [info] CROWNY: Assembly Crowny.dll loaded.
+[19:52:16] [info] CROWNY: Assembly Client.dll loaded.
+[19:52:16] [info] CROWNY: Assembly corlib loaded.
+[19:52:16] [warning] CROWNY: Creating Window: Crowny Editor
+[19:52:16] [info] CROWNY: Hash: 12176734026161100220
+[19:52:16] [info] CROWNY: Hash: 12176734026161100220
+[19:52:16] [info] CROWNY: Hash: 12176734026161100220
+[19:52:16] [info] CROWNY: Not false
+[19:52:16] [info] CROWNY: Hash
+[19:52:16] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: 322
+[19:52:17] [info] CROWNY: Uniform buffers: 0
+[19:52:17] [info] CROWNY: 191
+[19:52:17] [info] CROWNY: Uniform buffers: 0
+[19:52:17] [info] CROWNY: Shader entry: main
+[19:52:17] [info] CROWNY: Shader entry: main
+[19:52:17] [info] CROWNY: Texture: texSampler, name: texSampler, set: 0 slot: 0
+[19:52:17] [info] CROWNY: Param blocks 0: 
+[19:52:17] [info] CROWNY: Hash: 3176540416477142130
+[19:52:17] [info] CROWNY: Hash: 3176540416477142130
+[19:52:17] [info] CROWNY: 1045, 663, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:17] [info] CROWNY: 878, 434, sizes
+[19:52:17] [info] CROWNY: Hash
+[19:52:17] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:18] [info] CROWNY: 878, 434, sizes
+[19:52:18] [info] CROWNY: Hash
+[19:52:18] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:19] [info] CROWNY: 878, 434, sizes
+[19:52:19] [info] CROWNY: Hash
+[19:52:19] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:20] [info] CROWNY: 878, 434, sizes
+[19:52:20] [info] CROWNY: Hash
+[19:52:20] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:21] [info] CROWNY: 878, 434, sizes
+[19:52:21] [info] CROWNY: Hash
+[19:52:21] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:22] [info] CROWNY: 878, 434, sizes
+[19:52:22] [info] CROWNY: Hash
+[19:52:22] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:23] [info] CROWNY: 878, 434, sizes
+[19:52:23] [info] CROWNY: Hash
+[19:52:23] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: 878, 434, sizes
+[19:52:24] [info] CROWNY: Hash
+[19:52:24] [info] CROWNY: Eq
+[19:52:24] [info] CROWNY: Here
+[19:52:24] [info] CROWNY: Here

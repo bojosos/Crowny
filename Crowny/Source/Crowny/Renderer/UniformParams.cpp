@@ -72,6 +72,18 @@ namespace Crowny
         return m_BufferBlocks[globalSlot];
     }
 
+    void UniformParams::SetTexture(ShaderType type, const std::string& name, const Ref<Texture>& texture, const TextureSurface& surface)
+    {
+        /*const Ref<UniformParamDesc>& paramDescs = m_ParamInfo->GetParamDescs(type);
+        CW_ENGINE_ASSERT(paramDescs != nullptr);
+
+        auto iter = paramDescs->Textures.find(name)
+        CW_ENGINE_ASSERT(iter != paramDescs->Textures.end());
+        
+        GetTextureParam(type, name, param);
+        param.Set(texture, surface);*/
+    }
+
     void UniformParams::SetTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture, const TextureSurface& surface)
     {
         uint32_t globalSlot = m_ParamInfo->GetSequentialSlot(UniformParamInfo::ParamType::Texture, set, slot);

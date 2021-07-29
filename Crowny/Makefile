@@ -307,6 +307,7 @@ GENERATED += $(OBJDIR)/ShaderCompiler.o
 GENERATED += $(OBJDIR)/StringUtils.o
 GENERATED += $(OBJDIR)/Texture.o
 GENERATED += $(OBJDIR)/TextureManager.o
+GENERATED += $(OBJDIR)/TextureView.o
 GENERATED += $(OBJDIR)/UniformBufferBlock.o
 GENERATED += $(OBJDIR)/UniformParamInfo.o
 GENERATED += $(OBJDIR)/UniformParams.o
@@ -324,6 +325,7 @@ GENERATED += $(OBJDIR)/VulkanIndexBuffer.o
 GENERATED += $(OBJDIR)/VulkanPipeline.o
 GENERATED += $(OBJDIR)/VulkanQueue.o
 GENERATED += $(OBJDIR)/VulkanRenderPass.o
+GENERATED += $(OBJDIR)/VulkanRenderTexture.o
 GENERATED += $(OBJDIR)/VulkanRenderWindow.o
 GENERATED += $(OBJDIR)/VulkanRendererAPI.o
 GENERATED += $(OBJDIR)/VulkanResource.o
@@ -438,6 +440,7 @@ OBJECTS += $(OBJDIR)/ShaderCompiler.o
 OBJECTS += $(OBJDIR)/StringUtils.o
 OBJECTS += $(OBJDIR)/Texture.o
 OBJECTS += $(OBJDIR)/TextureManager.o
+OBJECTS += $(OBJDIR)/TextureView.o
 OBJECTS += $(OBJDIR)/UniformBufferBlock.o
 OBJECTS += $(OBJDIR)/UniformParamInfo.o
 OBJECTS += $(OBJDIR)/UniformParams.o
@@ -455,6 +458,7 @@ OBJECTS += $(OBJDIR)/VulkanIndexBuffer.o
 OBJECTS += $(OBJDIR)/VulkanPipeline.o
 OBJECTS += $(OBJDIR)/VulkanQueue.o
 OBJECTS += $(OBJDIR)/VulkanRenderPass.o
+OBJECTS += $(OBJDIR)/VulkanRenderTexture.o
 OBJECTS += $(OBJDIR)/VulkanRenderWindow.o
 OBJECTS += $(OBJDIR)/VulkanRendererAPI.o
 OBJECTS += $(OBJDIR)/VulkanResource.o
@@ -691,6 +695,9 @@ $(OBJDIR)/Texture.o: Source/Crowny/Renderer/Texture.cpp
 $(OBJDIR)/TextureManager.o: Source/Crowny/Renderer/TextureManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/TextureView.o: Source/Crowny/Renderer/TextureView.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/UniformBufferBlock.o: Source/Crowny/Renderer/UniformBufferBlock.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -875,6 +882,9 @@ $(OBJDIR)/VulkanQueue.o: Source/Platform/Vulkan/VulkanQueue.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/VulkanRenderPass.o: Source/Platform/Vulkan/VulkanRenderPass.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/VulkanRenderTexture.o: Source/Platform/Vulkan/VulkanRenderTexture.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/VulkanRenderWindow.o: Source/Platform/Vulkan/VulkanRenderWindow.cpp

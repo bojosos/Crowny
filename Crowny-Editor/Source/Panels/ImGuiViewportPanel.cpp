@@ -5,18 +5,23 @@
 #include "Crowny/Application/Application.h"
 #include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Input/Input.h"
+#include "Crowny/Renderer/RenderTexture.h"
+#include "Crowny/Renderer/SamplerState.h"
+#include "Platform/Vulkan/VulkanSamplerState.h"
+#include "Platform/Vulkan/VulkanTexture.h"
 
 #include "Panels/ImGuiViewportPanel.h"
 #include "Panels/ImGuiHierarchyPanel.h"
 
 #include <imgui.h>
+#include <backends/imgui_impl_vulkan.h>
 #include <ImGuizmo.h>
 #include <glm/gtc/type_ptr.hpp>
 
 namespace Crowny
 {
-
-	//static Ref<EnvironmentMap> envmap;
+	extern Ref<RenderTarget> renderTarget;
+	
 	ImGuiViewportPanel::ImGuiViewportPanel(const std::string& name) : ImGuiPanel(name)
 	{
 		
@@ -32,10 +37,17 @@ namespace Crowny
 		ImVec2 minBound = ImGui::GetWindowPos();
 		ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
 		ImVec2 viewportOffset = ImGui::GetCursorPos();
+		CW_ENGINE_INFO("{0}, {1}, sizes", viewportPanelSize.x, viewportPanelSize.y);
 		m_ViewportSize = { viewportPanelSize.x, viewportPanelSize.y };
-		//uint32_t textureID = SceneRenderer::GetMainFramebuffer()->GetColorAttachmentRendererID();
-		uint32_t textureID = 97;
-		ImGui::Image(reinterpret_cast<void*>(textureID), ImVec2(m_ViewportSize.x, m_ViewportSize.y), ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
+		RenderTexture* rt = static_cast<RenderTexture*>(renderTarget.get());
+		Ref<Texture> texture = rt->GetColorTexture(0);
+		VulkanTexture* vkTexture = static_cast<VulkanTexture*>(texture.get());
+		VulkanImage* image = vkTexture->GetImage();
+		Ref<SamplerState> samplerState = SamplerState::GetDefault();
+		VulkanSamplerState* vkSampler = static_cast<VulkanSamplerState*>(samplerState.get());
+		VkSampler vkDefaultSampler = vkSampler->GetSampler()->GetHandle();
+		ImTextureID textureID = ImGui_ImplVulkan_AddTexture(vkDefaultSampler, image->GetView(false), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		ImGui::Image(textureID, ImVec2(m_ViewportSize.x, m_ViewportSize.y), ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
 		
 		ImVec2 windowSize = ImGui::GetWindowSize();
 		minBound.x += viewportOffset.x;

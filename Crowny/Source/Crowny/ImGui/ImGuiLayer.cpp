@@ -7,7 +7,12 @@
 #include "Platform/Vulkan/VulkanRendererAPI.h"  
 #include "Platform/Vulkan/VulkanRenderPass.h"  
 #include "Crowny/Renderer/CommandBuffer.h"  
-  
+#include "Platform/Vulkan/VulkanRenderWindow.h"
+#include "Crowny/Renderer/RenderTarget.h"
+#include "Crowny/Renderer/RenderTexture.h"
+#include "Platform/Vulkan/VulkanTexture.h"
+#include "Platform/Vulkan/VulkanCommandBuffer.h"
+
 #include <imgui.h>  
 #include <ImGuizmo.h>  
 #include <backends/imgui_impl_glfw.h>  
@@ -19,6 +24,8 @@
 namespace Crowny  
 {  
   
+	extern Ref<RenderTarget> renderTarget;
+
 	ImGuiLayer::ImGuiLayer() : Layer("ImGuiLayer")  
 	{  
   
@@ -69,19 +76,22 @@ namespace Crowny
 		uint32_t numQueues = gVulkanRendererAPI().GetPresentDevice()->GetNumQueues(GRAPHICS_QUEUE);  
 		init_info.Queue = gVulkanRendererAPI().GetPresentDevice()->GetQueue(GRAPHICS_QUEUE, numQueues - 1)->GetHandle();  
 		init_info.DescriptorPool = imguiPool;  
-		// init_info.MinImageCount = gVulkanRendererAPI().GetSwapChain()->GetColorSurfacesCount();  
-		// init_info.ImageCount = gVulkanRendererAPI().GetSwapChain()->GetColorSurfacesCount();  
+		init_info.MinImageCount = static_cast<VulkanRenderWindow*>(Application::Get().GetRenderWindow().get())->GetSwapChain()->GetColorSurfacesCount();  
+		init_info.ImageCount = static_cast<VulkanRenderWindow*>(Application::Get().GetRenderWindow().get())->GetSwapChain()->GetColorSurfacesCount();
 		init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;  
 		init_info.Allocator = gVulkanAllocator;  
+		init_info.QueueFamily = gVulkanRendererAPI().GetPresentDevice()->GetQueueFamily(GRAPHICS_QUEUE);
   
-		VulkanRenderPassDesc passDesc;  
-        passDesc.Samples = 1;  
-        passDesc.Offscreen = false;  
-        // passDesc.Color[0].Format = gVulkanRendererAPI().GetSurfaceFormat().ColorFormat;  
-        passDesc.Color[0].Enabled = true;  
+		VulkanRenderPassDesc passDesc;
+        passDesc.Samples = 1;
+        passDesc.Offscreen = false;
+        passDesc.Color[0].Format = VK_FORMAT_B8G8R8A8_UNORM;
+        passDesc.Color[0].Enabled = true;
+		passDesc.Depth.Enabled = true;
+		passDesc.Depth.Format = VK_FORMAT_D32_SFLOAT_S8_UINT;
   
 		VulkanRenderPass* renderPass = VulkanRenderPasses::Get().GetRenderPass(passDesc);  
-		ImGui_ImplVulkan_Init(&init_info, renderPass->GetHandle());  
+		ImGui_ImplVulkan_Init(&init_info, renderPass->GetVkRenderPass((RenderSurfaceMaskBits)0, (RenderSurfaceMaskBits)0, (ClearMask)0));  
   
 		ImGui::StyleColorsDark();  
 		ImGuiStyle& style = ImGui::GetStyle();  
@@ -217,13 +227,26 @@ namespace Crowny
   
 		ImGui::Render();  
 		  
-//		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());  
-		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), gVulkanRendererAPI().GetMainCommandBuffer()->GetInternal()->GetHandle());  
-  
+		// ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());  
+		VulkanCmdBuffer* vkCmdBuffer = gVulkanRendererAPI().GetMainCommandBuffer()->GetInternal();
+
+		RendererAPI::Get().SetRenderTarget(Application::Get().GetRenderWindow());
+		
+		RenderTexture* rt = static_cast<RenderTexture*>(renderTarget.get());
+		Ref<Texture> texture = rt->GetColorTexture(0);
+		VulkanTexture* vkTexture = static_cast<VulkanTexture*>(texture.get());
+		VulkanImage* image = vkTexture->GetImage();
+		
+		VkImageSubresourceRange range = image->GetRange(TextureSurface::COMPLETE);	
+		vkCmdBuffer->RegisterImageShader(image, range, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VulkanAccessFlagBits::Read, VK_SHADER_STAGE_FRAGMENT_BIT);
+		gVulkanRendererAPI().GetMainCommandBuffer()->GetInternal()->BeginRenderPass();
+		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkCmdBuffer->GetHandle());
+		gVulkanRendererAPI().GetMainCommandBuffer()->GetInternal()->EndRenderPass();
+
 		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)  
 		{  
 //			GLFWwindow* backup_current_context = glfwGetCurrentContext();  
-			ImGui::UpdatePlatformWindows();  
+			ImGui::UpdatePlatformWindows();
 			ImGui::RenderPlatformWindowsDefault();  
 //			glfwMakeContextCurrent(backup_current_context);  
 		}  
