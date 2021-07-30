@@ -364,28 +364,10 @@ namespace Crowny
 						break;
 					}
 				}
+				ImGui::NextColumn();
 			}
 
 			ImGui::PopID();
-		}
-		
-		for (CWMonoProperty* prop : script.DisplayableProperties)
-		{
-			ImGui::Text("%s", prop->GetName().c_str()); ImGui::NextColumn();
-			if (script.ManagedInstance) // Might not need it.
-			{
-				CWMonoClass* rng = CWMonoRuntime::GetBuiltinClasses().RangeAttribute;
-				MonoObject* obj = prop->GetAttribute(rng);
-				if(obj)
-				{
-					float min, max, val;
-					rng->GetField("min")->Get(obj, &min);
-					rng->GetField("max")->Get(obj, &max);
-					//val = *prop->Get(script.Instance); // have to box
-					//if (ImGui::SliderFloat("##field1", &val, min, max))
-					//	prop->Set(script.Instance, &val);
-				}
-			}
 		}
 		
 		ImGui::Columns(1);

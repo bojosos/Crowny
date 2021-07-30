@@ -297,7 +297,7 @@ namespace Crowny
                 YAML::Node mesh = entity["MeshRendererComponent"];
                 if (mesh)
                 {
-                    auto& mc = deserialized.AddComponent<MeshRendererComponent>();
+                    //auto& mc = deserialized.AddComponent<MeshRendererComponent>();
                 }
 
                 YAML::Node rel = entity["RelationshipComponent"];

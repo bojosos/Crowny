@@ -24,9 +24,10 @@ namespace Crowny
             switch (level)
             {
                 case ImGuiConsoleBuffer::Message::Level::Info:     return { 0.00f, 0.50f, 0.00f, 1.00f }; // Green
-                case ImGuiConsoleBuffer::Message::Level::Warn:     return { 1.00f, 1.00f, 0.00f, 1.00f }; // Yellow
+                case ImGuiConsoleBuffer::Message::Level::Warn:     return { 1.00f, 1.00f, 0.00f, 1.00f } // Yellow
                 case ImGuiConsoleBuffer::Message::Level::Error:    return { 1.00f, 0.00f, 0.00f, 1.00f }; // Red
                 case ImGuiConsoleBuffer::Message::Level::Critical: return { 1.00f, 0.00f, 0.00f, 1.00f }; // White-white
+                default:                                           return { 0.00f, 0.00f, 0.00f, 1.00f }; // Stupid warnings
             }
             return { 1.0f, 1.0f, 1.0f, 1.0f };
         }

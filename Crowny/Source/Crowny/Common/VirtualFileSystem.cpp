@@ -60,6 +60,7 @@ namespace Crowny
 		{
 #ifdef CW_PLATFORM_LINUX // on linux full paths start with /
 			outPath = virtualPath;
+			return true; // ?
 #endif
 			CW_ENGINE_WARN("File {0} does not exist", virtualPath);
 		}

@@ -16,6 +16,7 @@
 #include "Crowny/Utils/ShaderCompiler.h"
 #include "Crowny/Renderer/Texture.h"
 #include "Crowny/Renderer/RenderTexture.h"
+#include "Crowny/Events/ImGuiEvent.h"
  
 #include "Editor/EditorAssets.h" 
  
@@ -24,6 +25,7 @@
 #include <glm/gtc/type_ptr.hpp> 
  
 #include <imgui.h> 
+#include <backends/imgui_impl_vulkan.h>
 #include "Crowny/../../Dependencies/stb_image/stb_image.h"
  
 namespace Crowny 
@@ -55,6 +57,9 @@ namespace Crowny
  
 	void EditorLayer::OnAttach() 
 	{ 
+		VirtualFileSystem::Get()->Mount("Icons", "Resources/Icons"); 
+		SceneRenderer::Init(); 
+		EditorAssets::Load(); 
 		m_MenuBar = new ImGuiMenuBar(); 
  
 		ImGuiMenu* fileMenu = new ImGuiMenu("File"); 
@@ -77,11 +82,12 @@ namespace Crowny
  
 		m_ViewportPanel = new ImGuiViewportPanel("Viewport"); 
 		viewMenu->AddItem(new ImGuiMenuItem("Viewport", "", [&](auto& event) { m_ViewportPanel->Show(); })); 
+		m_ViewportPanel->SetEventCallback(CW_BIND_EVENT_FN(OnViewportEvent));
  
 		//m_ImGuiWindows.push_back(new ImGuiTextureEditor("Texture Properties")); 
 		//viewMenu->AddItem(new ImGuiMenuItem("Texture Properties", [&](auto& event) { m_ImGuiWindows.back()->Show(); })); 
  
-		m_InspectorPanel= new ImGuiInspectorPanel("Inspector"); 
+		m_InspectorPanel = new ImGuiInspectorPanel("Inspector"); 
 		viewMenu->AddItem(new ImGuiMenuItem("Inspector", "", [&](auto& event) { m_InspectorPanel->Show(); })); 
  
 		m_MaterialEditor = new ImGuiMaterialPanel("Material Editor"); 
@@ -89,10 +95,14 @@ namespace Crowny
  
 		m_ConsolePanel = new ImGuiConsolePanel("Console"); 
 		viewMenu->AddItem(new ImGuiMenuItem("Console", "", [&](auto& entity) { m_ConsolePanel->Show(); })); 
+		
+		m_AssetBrowser = new ImGuiAssetBrowserPanel("Asset browser");
+		viewMenu->AddItem(new ImGuiMenuItem("Asset browser", "", [&](auto& event) { m_AssetBrowser->Show(); }));
  
 		m_MenuBar->AddMenu(viewMenu); 
  
 		SceneManager::AddScene(CreateRef<Scene>("Editor scene"));
+		ScriptRuntime::Init();
  
 		// Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(Shader::Create("/Shaders/PBRShader.glsl")); 
 		/* 
@@ -116,11 +126,7 @@ namespace Crowny
  
 		SceneSerializer serializer(SceneManager::GetActiveScene()); 
 		serializer.Deserialize("Test.yaml"); 
- 
-		SceneRenderer::Init(); 
-		VirtualFileSystem::Get()->Mount("Icons", "Resources/Icons"); 
-		EditorAssets::Load(); 
-		ScriptRuntime::Init();*/ 
+		*/
 		ShaderCompiler compiler;
 		vertex = Shader::Create(compiler.Compile("/Shaders/vk.vert", VERTEX_SHADER));
 		fragment = Shader::Create(compiler.Compile("/Shaders/vk.frag", FRAGMENT_SHADER));
@@ -172,13 +178,13 @@ namespace Crowny
 		
 		uniformParams->SetTexture(0, 0, texture, TextureSurface::COMPLETE);
 		TextureParameters colorParams;
-		colorParams.Width = 720;
-		colorParams.Height = 720;
+		colorParams.Width = 878;
+		colorParams.Height = 434;
 		colorParams.Usage = TextureUsage::TEXTURE_RENDERTARGET;
 
 		TextureParameters depthParams;
-		depthParams.Width = 720;
-		depthParams.Height = 720;
+		depthParams.Width = 878;
+		depthParams.Height = 434;
 		depthParams.Usage = TextureUsage::TEXTURE_DEPTHSTENCIL;
 		depthParams.Format = TextureFormat::DEPTH24STENCIL8;
 
@@ -187,10 +193,17 @@ namespace Crowny
 		RenderTextureProperties rtProps;
 		rtProps.ColorSurfaces[0] = { color };
 		rtProps.DepthSurface = { depth };
-		rtProps.Width = 720;
-		rtProps.Height = 720;
+		rtProps.Width = 878;
+		rtProps.Height = 434;
 		renderTarget = RenderTexture::Create(rtProps);
 	} 
+	
+	bool EditorLayer::OnViewportEvent(Event& event)
+	{
+		EventDispatcher dispatcher(event);
+		dispatcher.Dispatch<ImGuiViewportSceneDraggedEvent>([this](ImGuiViewportSceneDraggedEvent& event) { OpenScene("Resources/" + event.GetSceneFilepath()); return true; });
+		return true;
+	}
  
 	void EditorLayer::CreateNewScene() 
 	{ 
@@ -205,12 +218,17 @@ namespace Crowny
 		std::vector<std::string> outPaths; 
 		if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths)) 
 		{ 
-			m_Temp = CreateRef<Scene>(); 
-			SceneSerializer serializer(m_Temp); 
-			serializer.Deserialize(outPaths[0]); 
-			ScriptComponent::s_EntityComponents.clear(); 
+			OpenScene(outPaths[0]);
 		} 
 	} 
+
+	void EditorLayer::OpenScene(const std::string& filepath)
+	{
+		m_Temp = CreateRef<Scene>(); 
+		SceneSerializer serializer(m_Temp); 
+		serializer.Deserialize(filepath); 
+		ScriptComponent::s_EntityComponents.clear(); 
+	}
  
 	void EditorLayer::SaveActiveSceneAs() 
 	{ 
@@ -246,7 +264,7 @@ namespace Crowny
 		auto& rapi = RendererAPI::Get(); 
 		rapi.SetRenderTarget(renderTarget); 
 		rapi.SetGraphicsPipeline(pipeline); 
-		rapi.SetViewport(0, 0, Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight()); 
+		rapi.SetViewport(0, 0, 878, 434); 
 		rapi.SetVertexBuffers(0, &vbo, 1);
 		rapi.SetIndexBuffer(ibo);
 		rapi.SetUniforms(uniformParams);
@@ -287,7 +305,7 @@ namespace Crowny
 	 
 	void EditorLayer::OnImGuiRender() 
 	{ 
-		//ImGui::ShowDemoWindow(); 
+		ImGui::ShowDemoWindow(); 
 		static bool dockspaceOpen = true; 
 		static bool opt_fullscreen_persistant = true; 
 		bool opt_fullscreen = opt_fullscreen_persistant; 
@@ -318,9 +336,9 @@ namespace Crowny
 		 
 		m_MenuBar->Render(); 
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetStyle().FramePadding.y); 
-		ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 - 43.5f);/* 
-		if (ImGui::ImageButton(reinterpret_cast<void*>(EditorAssets::Get().PlayIcon->GetRendererID()),  
-							   ImVec2(25.0f, 25.0f), ImVec2(0, 0), ImVec2(1,1), -1, ImVec4(1.0f, 1.0f, 1.0f, 0.0f), ImVec4(0.1f, 0.105f, 0.11f, 1.0f))) 
+		ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 - 43.5f);
+		ImTextureID textureID = ImGui_ImplVulkan_AddTexture(EditorAssets::Get().PlayIcon);
+		if (ImGui::ImageButton(textureID, ImVec2(25.0f, 25.0f), ImVec2(0, 0), ImVec2(1,1), -1, ImVec4(1.0f, 1.0f, 1.0f, 0.0f), ImVec4(0.1f, 0.105f, 0.11f, 1.0f))) 
 		{ 
 			if (!m_GameMode) 
 			{ 
@@ -329,8 +347,8 @@ namespace Crowny
 			} 
 		} 
 		ImGui::SameLine(0.0f, 8.0f); 
-		if (ImGui::ImageButton(reinterpret_cast<void*>(EditorAssets::Get().PauseIcon->GetRendererID()),  
-							   ImVec2(25.0f, 25.0f), ImVec2(0, 0), ImVec2(1,1), -1, ImVec4(1.0f, 1.0f, 1.0f, 0.0f), ImVec4(0.1f, 0.105f, 0.11f, 1.0f))) 
+		textureID = ImGui_ImplVulkan_AddTexture(EditorAssets::Get().PauseIcon);
+		if (ImGui::ImageButton(textureID, ImVec2(25.0f, 25.0f), ImVec2(0, 0), ImVec2(1,1), -1, ImVec4(1.0f, 1.0f, 1.0f, 0.0f), ImVec4(0.1f, 0.105f, 0.11f, 1.0f))) 
 		{ 
 			if (m_GameMode) 
 			{ 
@@ -338,8 +356,8 @@ namespace Crowny
 			} 
 		} 
 		ImGui::SameLine(0.0f, 8.0f); 
-		if (ImGui::ImageButton(reinterpret_cast<void*>(EditorAssets::Get().StopIcon->GetRendererID()),  
-							   ImVec2(25.0f, 25.0f), ImVec2(0, 0), ImVec2(1,1), -1, ImVec4(1.0f, 1.0f, 1.0f, 0.0f), ImVec4(0.1f, 0.105f, 0.11f, 1.0f))) 
+		textureID = ImGui_ImplVulkan_AddTexture(EditorAssets::Get().StopIcon);
+		if (ImGui::ImageButton(textureID, ImVec2(25.0f, 25.0f), ImVec2(0, 0), ImVec2(1,1), -1, ImVec4(1.0f, 1.0f, 1.0f, 0.0f), ImVec4(0.1f, 0.105f, 0.11f, 1.0f))) 
 		{ 
 			if (m_GameMode) 
 			{ 
@@ -352,7 +370,7 @@ namespace Crowny
 				s_FixedDeltaTime = 0.0f; 
 				s_FrameCount = 0.0f; 
 			} 
-		}*/ 
+		}
 		ImGui::Separator(); 
  
 		// DockSpace 
@@ -369,6 +387,7 @@ namespace Crowny
 		m_ViewportPanel->Render(); 
 		m_ConsolePanel->Render(); 
 		m_MaterialEditor->Render(); 
+		m_AssetBrowser->Render();
  
 		ImGui::End(); 
 	} 
@@ -426,13 +445,14 @@ namespace Crowny
 	} 
  
 	bool EditorLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e) 
-	{ /*
+	{
 		if (m_ViewportPanel->IsHovered() && m_ViewportPanel->IsFocused()) 
 		{ 
 			ImGuiHierarchyPanel::SetSelectedEntity(m_HoveredEntity); 
 			return true; 
-		} */
-    return false; 
+		}
+
+    	return false; 
 	} 
  
 	void EditorLayer::OnEvent(Event& e) 

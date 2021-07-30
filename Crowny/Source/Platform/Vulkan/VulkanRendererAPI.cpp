@@ -192,17 +192,6 @@ namespace Crowny
         GET_DEVICE_PROC_ADDR(presentDevice, QueuePresentKHR);
         
         InitCaps();
-        
-        /*
-        VkXlibSurfaceCreateInfoKHR surfaceCreateInfo = {};
-        surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-        
-        surfaceCreateInfo.flags = 0;
-        surfaceCreateInfo.pNext = nullptr;
-        surfaceCreateInfo.window = glfwGetX11Window((GLFWwindow*)Application::Get().GetWindow().GetNativeWindow());
-        surfaceCreateInfo.dpy = glfwGetX11Display();
-        err = vkCreateWaylandSurfaceKHR(instance, &surfaceCreateInfo, nullptr, &surface);
-        */
 
         VulkanRenderPasses::StartUp();
         VulkanTransferManager::StartUp();
@@ -341,6 +330,11 @@ namespace Crowny
 #endif
         
         vkDestroyInstance(m_Instance, gVulkanAllocator);
+    }
+    
+    void VulkanRendererAPI::PrintAllocationInfo(VmaAllocation allocation) const
+    {
+        CW_ENGINE_INFO("Freeing memory: type: {0}, size: {1}", allocation->GetType(), allocation->GetSize());
     }
     
     void VulkanRendererAPI::InitCaps()

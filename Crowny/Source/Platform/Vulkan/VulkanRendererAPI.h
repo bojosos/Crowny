@@ -46,6 +46,7 @@ namespace Crowny
         uint32_t GetDeviceCount() const { return (uint32_t)m_Devices.size(); }
         Ref<VulkanDevice> GetDevice(uint32_t idx) const { return m_Devices[idx]; }
         bool IsReadyForRender() const;
+        void PrintAllocationInfo(VmaAllocation allocation) const;
     private:
         VulkanCommandBuffer* GetCB(const Ref<CommandBuffer>& buffer);
         void RebuildSwapChain();
