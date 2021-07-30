@@ -12,7 +12,7 @@ namespace Crowny
 		AppTick, AppUpdate, AppRender,
 		KeyPressed, KeyReleased, KeyTyped,
 		MouseButtonPressed, MouseButtonReleased, MouseMoved, MouseScrolled,
-		ImGuiMenuItemClicked
+		ImGuiMenuItemClicked, ImGuiViewportSceneDragged, ImGuiViewportMeshDragged
 	};
 
 	enum EventCategory

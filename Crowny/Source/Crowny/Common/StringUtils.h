@@ -11,6 +11,7 @@ namespace Crowny
 		static float ParseFloat(const std::string& value);
 		static uint64_t ParseLong(const std::string& value);
 		static double ParseDouble(const std::string& value);
+		static bool EndWith(const std::string& value, const std::string& end);
 		
 		static const char* FindToken(const char* string, const std::string& token);
 

@@ -1,15 +1,17 @@
 #pragma once
 
-#include "Panels/ImGuiComponentEditor.h"
-#include "Panels/ImGuiPanel.h"
 #include "Crowny/ImGui/ImGuiMenu.h"
 
+#include "Panels/ImGuiPanel.h"
+#include "Panels/ImGuiComponentEditor.h"
 #include "Panels/ImGuiGLInfoPanel.h"
 #include "Panels/ImGuiViewportPanel.h"
 #include "Panels/ImGuiHierarchyPanel.h"
 #include "Panels/ImGuiInspectorPanel.h"
 #include "Panels/ImGuiMaterialPanel.h"
 #include "Panels/ImGuiConsolePanel.h"
+#include "Panels/ImGuiAssetBrowserPanel.h"
+
 #include "Crowny/Scene/Scene.h"
 #include "Crowny/Renderer/EditorCamera.h"
 
@@ -39,9 +41,11 @@ namespace Crowny
 
 		bool OnKeyPressed(KeyPressedEvent& e);
 		bool OnMouseButtonPressed(MouseButtonPressedEvent& e);
+		bool OnViewportEvent(Event& event);
 
 		void CreateNewScene();
 		void OpenScene();
+		void OpenScene(const std::string& filepath);
 		void SaveActiveScene();
 		void SaveActiveSceneAs();
 
@@ -57,6 +61,7 @@ namespace Crowny
 		ImGuiTextureEditor* m_TextureEditor;
 		ImGuiMaterialPanel* m_MaterialEditor;
 		ImGuiConsolePanel* m_ConsolePanel;
+		ImGuiAssetBrowserPanel* m_AssetBrowser;
 
 		uint32_t m_GizmoMode = 0;
 

@@ -75,12 +75,13 @@ namespace Crowny
 		auto& rc = e.GetComponent<RelationshipComponent>();
 
 		ImGui::SetCursorPosX(ImGui::GetCursorPos().x + ImGui::GetStyle().FramePadding.x);
+		ImGui::SetKeyboardFocusHere();
 		if (ImGui::InputText("##renaming", &tc.Tag, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
 		{
 			m_Renaming = {};
 		}
 
-		if (ImGui::IsMouseClicked(0) && !ImGui::IsItemClicked())
+		if (ImGui::IsMouseClicked(ImGuiMouseButton_Left | ImGuiMouseButton_Right) && !ImGui::IsItemClicked())
 		{
 			m_Renaming = {};
 		}

@@ -9,6 +9,8 @@ namespace Crowny
     {
     public:
         static Uuid GenerateUuid();
+        static void ShowInExplorer(const std::string& filepath);
+        static void OpenExternally(const std::string& filepath);
     };
 
 }

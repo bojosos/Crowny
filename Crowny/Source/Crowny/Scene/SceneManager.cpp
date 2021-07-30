@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Scene/SceneManager.h"
+#include "Crowny/Scene/ScriptRuntime.h"
 
 namespace Crowny
 {
@@ -16,6 +17,7 @@ namespace Crowny
 	{
 		s_Scenes.push_back(scene);
 		s_ActiveIndex = s_Scenes.size() - 1;
+		ScriptRuntime::Init();
 	}
 
 	void SceneManager::Shutdown()
