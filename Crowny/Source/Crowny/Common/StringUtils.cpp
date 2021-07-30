@@ -47,6 +47,13 @@ namespace Crowny
 		return std::stod(value);
 	}
 
+	bool StringUtils::EndWith(const std::string& value, const std::string& end)
+	{
+		if (end.size() > value.size())
+			return false;
+    	return std::equal(end.rbegin(), end.rend(), value.rbegin());
+	}
+
 	const char* StringUtils::FindToken(const char* str, const std::string& token)
 	{
 		const char* t = str;

@@ -3,10 +3,11 @@
 #include "Editor/EditorLayer.h"
 
 #include "Crowny/Application/Application.h"
-#include "Crowny/Scene/SceneRenderer.h"
+#include "Crowny/Events/ImGuiEvent.h"
 #include "Crowny/Input/Input.h"
 #include "Crowny/Renderer/RenderTexture.h"
 #include "Crowny/Renderer/SamplerState.h"
+#include "Crowny/Scene/SceneRenderer.h"
 #include "Platform/Vulkan/VulkanSamplerState.h"
 #include "Platform/Vulkan/VulkanTexture.h"
 
@@ -31,24 +32,32 @@ namespace Crowny
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
 		ImGui::Begin("Viewport", &m_Shown);
-    UpdateState();
+  		UpdateState();
 		Application::Get().GetImGuiLayer()->BlockEvents(!m_Focused && !m_Hovered);
 			
 		ImVec2 minBound = ImGui::GetWindowPos();
 		ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
 		ImVec2 viewportOffset = ImGui::GetCursorPos();
-		CW_ENGINE_INFO("{0}, {1}, sizes", viewportPanelSize.x, viewportPanelSize.y);
+		
 		m_ViewportSize = { viewportPanelSize.x, viewportPanelSize.y };
 		RenderTexture* rt = static_cast<RenderTexture*>(renderTarget.get());
 		Ref<Texture> texture = rt->GetColorTexture(0);
-		VulkanTexture* vkTexture = static_cast<VulkanTexture*>(texture.get());
-		VulkanImage* image = vkTexture->GetImage();
-		Ref<SamplerState> samplerState = SamplerState::GetDefault();
-		VulkanSamplerState* vkSampler = static_cast<VulkanSamplerState*>(samplerState.get());
-		VkSampler vkDefaultSampler = vkSampler->GetSampler()->GetHandle();
-		ImTextureID textureID = ImGui_ImplVulkan_AddTexture(vkDefaultSampler, image->GetView(false), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		
+		ImTextureID textureID = ImGui_ImplVulkan_AddTexture(texture);
 		ImGui::Image(textureID, ImVec2(m_ViewportSize.x, m_ViewportSize.y), ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
 		
+		if (ImGui::BeginDragDropTarget())
+		{
+			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_ITEM");
+			if (payload)
+			{
+				const char* path = (const char*)payload->Data;
+				ImGuiViewportSceneDraggedEvent event(path);
+				OnEvent(event);
+			}
+			ImGui::EndDragDropTarget();
+		}
+
 		ImVec2 windowSize = ImGui::GetWindowSize();
 		minBound.x += viewportOffset.x;
 		minBound.y += viewportOffset.y;
@@ -92,6 +101,11 @@ namespace Crowny
 
 		ImGui::End();
 		ImGui::PopStyleVar();
+	}
+
+	void ImGuiViewportPanel::SetEventCallback(const EventCallbackFn& onEvent)
+	{
+		OnEvent = onEvent;
 	}
 
 }

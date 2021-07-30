@@ -108,7 +108,7 @@ namespace Crowny
         auto [data, size] = VirtualFileSystem::Get()->ReadFile(ShaderTypeToPath(shaderType, shaderFilename, m_OutputFormat));
         
         uint8_t* result = data;
-        uint64_t sz = size * sizeof(uint32_t);
+        uint64_t sz = size;
         
         if (data == nullptr)
         {

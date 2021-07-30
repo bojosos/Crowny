@@ -181,6 +181,7 @@ OBJECTS :=
 GENERATED += $(OBJDIR)/CrownyEditor.o
 GENERATED += $(OBJDIR)/EditorAssets.o
 GENERATED += $(OBJDIR)/EditorLayer.o
+GENERATED += $(OBJDIR)/ImGuiAssetBrowserPanel.o
 GENERATED += $(OBJDIR)/ImGuiComponentEditor.o
 GENERATED += $(OBJDIR)/ImGuiComponentRenderer.o
 GENERATED += $(OBJDIR)/ImGuiConsolePanel.o
@@ -195,6 +196,7 @@ GENERATED += $(OBJDIR)/cwepch.o
 OBJECTS += $(OBJDIR)/CrownyEditor.o
 OBJECTS += $(OBJDIR)/EditorAssets.o
 OBJECTS += $(OBJDIR)/EditorLayer.o
+OBJECTS += $(OBJDIR)/ImGuiAssetBrowserPanel.o
 OBJECTS += $(OBJDIR)/ImGuiComponentEditor.o
 OBJECTS += $(OBJDIR)/ImGuiComponentRenderer.o
 OBJECTS += $(OBJDIR)/ImGuiConsolePanel.o
@@ -276,6 +278,9 @@ $(OBJDIR)/EditorAssets.o: Source/Editor/EditorAssets.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/EditorLayer.o: Source/Editor/EditorLayer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ImGuiAssetBrowserPanel.o: Source/Panels/ImGuiAssetBrowserPanel.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ImGuiComponentEditor.o: Source/Panels/ImGuiComponentEditor.cpp

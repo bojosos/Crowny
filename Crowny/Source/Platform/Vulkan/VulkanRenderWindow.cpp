@@ -1,6 +1,9 @@
 #include "cwpch.h"
 
 #include "Platform/Vulkan/VulkanRenderWindow.h"
+#include "Crowny/Common/Timer.h"
+
+#include "Crowny/Application/Application.h"
 
 #include <GLFW/glfw3.h>
 
@@ -92,6 +95,14 @@ namespace Crowny
     {
         Ref<VulkanDevice> device = gVulkanRendererAPI().GetPresentDevice();
         device->WaitIdle();
+        {
+        Timer t;
+        long sum = 69;
+        for (uint32_t i = 0; i < 1000000000; i++)
+            sum *= sum * 69;
+        CW_ENGINE_INFO(t.ElapsedMillis());
+        }
+        glfwWaitEvents();
         VulkanSwapChain* oldSwapChain = m_SwapChain;
         m_SwapChain = device->GetResourceManager().Create<VulkanSwapChain>(m_Surface, m_Properties.Width, m_Properties.Height, m_Properties.Vsync, m_ColorFormat, m_ColorSpace, m_Properties.DepthBuffer, m_DepthFormat);
         oldSwapChain->Destroy();

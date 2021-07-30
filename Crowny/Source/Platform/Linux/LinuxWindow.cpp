@@ -52,7 +52,7 @@ namespace Crowny
 		m_Window = glfwCreateWindow((int)props.Width, (int)props.Height, m_Data.Title.c_str(), nullptr, nullptr); 
 #ifdef CW_DEBUG 
 		if(Renderer::GetAPI() == RendererAPI::API::OpenGL) 
-			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE); // No idea what this does... 
+			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE); // No idea what this does... https://www.khronos.org/registry/OpenGL/extensions/KHR/KHR_debug.txt
 #endif 
 		Application::s_GLFWWindowCount++; 
  
@@ -183,13 +183,13 @@ namespace Crowny
 	} 
  
 	void LinuxWindow::SetVSync(bool enabled) 
-	{/* 
-		if (enabled) 
-			glfwSwapInterval(1); 
-		else 
-			glfwSwapInterval(0); 
- 
-		m_Data.VSync = enabled;*/ 
+	{
+		// if (enabled) 
+			// glfwSwapInterval(1); 
+		// else 
+			// glfwSwapInterval(0); 
+//  
+		// m_Data.VSync = enabled;
 	} 
  
 	bool LinuxWindow::IsVSync() const 

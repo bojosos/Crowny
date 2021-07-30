@@ -145,29 +145,25 @@ namespace Crowny
 			Class = CWMonoRuntime::GetClientAssembly()->GetClass("Sandbox", name);
 			if (Class)
 			{
-				CW_ENGINE_INFO("Here");
 				for (auto* field : Class->GetFields())
 				{
-					if (field && !field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().HideInInspector)
-						&& ((field->GetVisibility() == CWMonoVisibility::Public)
-							|| field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().SerializeFieldAttribute)
-							|| field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().ShowInInspector)))
-					{
+					bool isHidden = field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().HideInInspector);
+					bool isVisible = field->GetVisibility() == CWMonoVisibility::Public
+									  || field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().SerializeFieldAttribute)
+									  || field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().ShowInInspector);
+					if (field != nullptr && !isHidden && isVisible)
 						DisplayableFields.push_back(field);
-					}
 				}
 
 				for (auto* prop : Class->GetProperties())
 				{
-					if (prop && prop->HasAttribute(CWMonoRuntime::GetBuiltinClasses().HideInInspector)
-						&& ((prop->GetVisibility() == CWMonoVisibility::Public)
-							|| prop->HasAttribute(CWMonoRuntime::GetBuiltinClasses().SerializeFieldAttribute)
-							|| prop->HasAttribute(CWMonoRuntime::GetBuiltinClasses().ShowInInspector)))
-					{
+					bool isHidden = prop->HasAttribute(CWMonoRuntime::GetBuiltinClasses().HideInInspector);
+					bool isVisible = prop->GetVisibility() == CWMonoVisibility::Public
+									  || prop->HasAttribute(CWMonoRuntime::GetBuiltinClasses().SerializeFieldAttribute)
+									  || prop->HasAttribute(CWMonoRuntime::GetBuiltinClasses().ShowInInspector);
+					if (prop && !isHidden && isVisible)
 						DisplayableProperties.push_back(prop);
-					}
 				}
-				CW_ENGINE_INFO("After Here");
 			}
 		}
 	};

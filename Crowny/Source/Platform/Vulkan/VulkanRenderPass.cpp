@@ -280,7 +280,7 @@ namespace Crowny
             HashCombine(hash, v.Desc.Color[i].Enabled);
             HashCombine(hash, v.Desc.Color[i].Format);
         }
-        CW_ENGINE_INFO("Hash: {0}", hash);
+        
         return hash;
     }
 
@@ -297,7 +297,7 @@ namespace Crowny
             if (lhs.Desc.Color[i].Enabled != rhs.Desc.Color[i].Enabled || lhs.Desc.Color[i].Format != rhs.Desc.Color[i].Format)
                 return false;
         }
-        CW_ENGINE_INFO("Not false");
+        
         return true;
     }
 
