@@ -49,10 +49,12 @@ namespace Crowny
 		glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);
 		switch(options)
 		{
-			case(GpuLockOptions::READ_ONLY): 			return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_READ_BIT);
-			case(GpuLockOptions::WRITE_ONLY): 			return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_WRITE_BIT);
-			case(GpuLockOptions::WRITE_DISCARD): 		return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
-			case(GpuLockOptions::WRITE_DISCARD_RANGE):  return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT);
+			case(GpuLockOptions::READ_ONLY): 			    return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_READ_BIT);
+			case(GpuLockOptions::WRITE_ONLY): 			    return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_WRITE_BIT);
+			case(GpuLockOptions::WRITE_DISCARD): 		    return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
+			case(GpuLockOptions::WRITE_DISCARD_RANGE):      return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT);
+			case(GpuLockOptions::READ_WRITE):               return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_WRITE_BIT | GL_MAP_READ_BIT);
+			case(GpuLockOptions::WRITE_ONLY_NO_OVERWRITE):  return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_WRITE_BIT);
 		}
 		return nullptr;
 	}

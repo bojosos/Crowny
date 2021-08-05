@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Application/Initializer.h"
+#include "Crowny/Audio/AudioManager.h"
 #include "Crowny/Common/Random.h"
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Renderer/Renderer.h"
@@ -39,7 +40,8 @@ namespace Crowny
 		VirtualFileSystem::Get()->Mount("Models", "Resources/Models");
 		VirtualFileSystem::Get()->Mount("Cache", "Resources/Cache");
 
-		Random::StartUp(); // wat
+		Random::StartUp();
+		AudioManager::StartUp();
 		RendererAPI::StartUp<VulkanRendererAPI>();
 		Renderer::Init();
 		

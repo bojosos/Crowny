@@ -10,6 +10,8 @@
 #include "Crowny/Common/Random.h" 
 #include "Crowny/Application/Initializer.h" 
 #include "Crowny/Input/Input.h" 
+#include "Crowny/ImGui/ImGuiVulkanLayer.h"
+#include "Crowny/ImGui/ImGuiOpenGLLayer.h"
  
 /*#ifdef MC_WEB 
 #include <emscripten/emscripten.h> 
@@ -37,8 +39,8 @@ namespace Crowny
 		s_Instance = this; 
 		RenderWindowProperties props;
 		props.Title = name;
-		props.Width = 1280;
-		props.Height = 720;
+		props.Width = 1920;
+		props.Height = 1080;
 		
 		if (s_GLFWWindowCount == 0)
 		{
@@ -49,8 +51,14 @@ namespace Crowny
  
 		m_Window = RenderWindow::Create(props); 
 		m_Window->GetWindow()->SetEventCallback(CW_BIND_EVENT_FN(Application::OnEvent)); 
-		m_ImGuiLayer = new ImGuiLayer(); 
-		PushOverlay(m_ImGuiLayer); 
+		switch (Renderer::GetAPI())
+		{
+			case RendererAPI::API::OpenGL: m_ImGuiLayer = new ImGuiOpenGLLayer(); break;
+			case RendererAPI::API::Vulkan: m_ImGuiLayer = new ImGuiVulkanLayer();  break;
+			default: 					   CW_ENGINE_ASSERT(false, "Renderer API not supporter"); m_ImGuiLayer = nullptr;
+		}
+		if (m_ImGuiLayer)
+			PushOverlay(m_ImGuiLayer); 
 	} 
  
 	Application::~Application() 
@@ -108,12 +116,15 @@ namespace Crowny
 				for (Layer* layer : m_LayerStack) 
 					layer->OnUpdate(timestep); 
 			 
-				m_ImGuiLayer->Begin(); 
-				{ 
-					for (Layer* layer : m_LayerStack) 
-						layer->OnImGuiRender(); 
-				} 
-				m_ImGuiLayer->End(); 
+			 	if (m_ImGuiLayer)
+				{
+					m_ImGuiLayer->Begin(); 
+					{ 
+						for (Layer* layer : m_LayerStack) 
+							layer->OnImGuiRender(); 
+					} 
+					m_ImGuiLayer->End(); 
+				}
 			} 
  
 			Input::OnUpdate(); 

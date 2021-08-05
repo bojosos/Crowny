@@ -1,24 +1,28 @@
 #pragma once
 
-#include <iostream>
 #include <memory>
-#include <utility>
 #include <algorithm>
 #include <functional>
 #include <random>
+#include <utility>
 
-#include <string>
-#include <sstream>
 #include <array>
-#include <vector>
-#include <stack>
-#include <queue>
 #include <deque>
 #include <list>
-#include <set>
 #include <map>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <stack>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
+
+#include <iostream>
+#include <istream>
+
+#include <filesystem> // Hmm
 
 #include "Crowny/Common/Constants.h"
 #include "Crowny/Common/Flags.h"
