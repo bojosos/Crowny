@@ -17,7 +17,7 @@ namespace Crowny
     
     MonoObject* ScriptCameraComponent::Internal_GetCamera(CameraComponent* component)
     {
-        
+        return nullptr;
     }
         
     void ScriptCameraComponent::Internal_SetCamera(CameraComponent* component, Camera* camera)

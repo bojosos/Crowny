@@ -19,6 +19,9 @@ namespace Crowny
 		m_ComponentEditor.RegisterComponent<TextComponent>("Text");
 		m_ComponentEditor.RegisterComponent<SpriteRendererComponent>("Sprite Renderer");
 		m_ComponentEditor.RegisterComponent<MonoScriptComponent>("C# Script");
+		
+		m_ComponentEditor.RegisterComponent<AudioListenerComponent>("Audio Listener");
+		m_ComponentEditor.RegisterComponent<AudioSourceComponent>("Audio Source");
 	}
 
 	void ImGuiInspectorPanel::Render()

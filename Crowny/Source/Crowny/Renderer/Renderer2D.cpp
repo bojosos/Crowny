@@ -98,7 +98,7 @@ namespace Crowny
 		//s_Data.WhiteTexture = Texture::Create(1, 1);
 		//uint32_t whiteTextureData = 0xffffffff; s_Data.WhiteTexture->SetData(&whiteTextureData, sizeof(uint32_t));
 		s_Data.Shader = Shader::Create("/Shaders/BatchRenderer.glsl");
-		s_Data.Shader->Bind();
+		//s_Data.Shader->Bind();
 		//s_Data.SystemUniforms.resize(2);
 
 		//const ShaderUniformBufferList& vsuniforms = s_Data.Shader->GetVSSystemUniforms();
@@ -131,7 +131,7 @@ namespace Crowny
 		//memcpy(s_Data.SystemUniforms[UniformIndex_ViewMatrix].Buffer.Buffer + s_Data.SystemUniforms[UniformIndex_ViewMatrix].Offset, glm::value_ptr(viewMatrix), sizeof(glm::mat4));
 
 		//s_Data.Shader->SetVSSystemUniformBuffer(s_Data.SystemUniforms);
-		s_Data.Shader->Bind();
+		//s_Data.Shader->Bind();
 		//s_Data.Shader->SetUniformMat4("cw_ProjectionMatrix", camera.GetProjection());
 	//	s_Data.Shader->SetUniformMat4("cw_ViewMatrix", viewMatrix);
 		//s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->Map(0, RENDERER_MAX_SPRITES * 4, GpuLockOptions::WRITE_DISCARD);
@@ -276,7 +276,7 @@ namespace Crowny
 
 	void Renderer2D::Flush()
 	{
-		s_Data.Shader->Bind();
+		//s_Data.Shader->Bind();
 		// VULKAN IMPL: Fix
 		//for (uint32_t i = 0; i < s_Data.SystemUniformBuffers.size(); i++)
 		{
@@ -288,7 +288,7 @@ namespace Crowny
 		//	s_Data.TextureSlots[i]->Bind(i);
 		}
 
-		s_Data.VertexArray->Bind();
+		//s_Data.VertexArray->Bind();
 		RenderCommand::DrawIndexed(s_Data.VertexArray, s_Data.IndexCount);
 		
 		for (uint8_t i = 0; i <= s_Data.TextureIndex; i++)

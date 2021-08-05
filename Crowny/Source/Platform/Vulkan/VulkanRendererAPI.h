@@ -18,10 +18,8 @@ namespace Crowny
         virtual void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height, const Ref<CommandBuffer>& commandBuffer = nullptr) override;
 
         virtual void SetClearColor(const glm::vec4& color) override {};
-        virtual void SetDepthTest(bool value, const Ref<CommandBuffer>& commandBuffer = nullptr) override {};
         virtual void SwapBuffers(const Ref<RenderTarget>& renderTarget, uint32_t syncMask = 0xFFFFFFFF) override;
         
-
         virtual void SubmitCommandBuffer(const Ref<CommandBuffer>& commandBuffer, uint32_t syncMask = 0xFFFFFFFF) override;
 
         virtual void SetGraphicsPipeline(const Ref<GraphicsPipeline>& pipeline, const Ref<CommandBuffer>& commandBuffer = nullptr) override;

@@ -26,9 +26,8 @@ namespace Crowny
             case DOMAIN_SHADER:   return shaderc_glsl_tess_control_shader;
             case HULL_SHADER:     return shaderc_glsl_tess_evaluation_shader;
             case COMPUTE_SHADER:  return shaderc_glsl_compute_shader;
+            default:              return shaderc_glsl_vertex_shader;
         }
-        
-        return shaderc_glsl_vertex_shader;
     }
     
     static std::string ShaderFormatToExtension(ShaderOutputFormat shaderFormat)
@@ -54,9 +53,8 @@ namespace Crowny
             case HULL_SHADER:     return "hull";
             case DOMAIN_SHADER:   return "domain";
             case COMPUTE_SHADER:  return "compute";
+            default:              return std::string();
         }
-        
-        return std::string();
     }
     
     static UniformResourceType SPIRTypeToResourceType(const spirv_cross::SPIRType& type)
@@ -69,6 +67,7 @@ namespace Crowny
                 case spv::Dim::Dim2D:   return SAMPLER2D;
                 case spv::Dim::Dim3D:   return SAMPLER3D;
                 case spv::Dim::DimCube: return SAMPLERCUBE;
+                default:                return TEXTURE_UNKNOWN;
             }
         }
         
@@ -80,6 +79,7 @@ namespace Crowny
                 case spv::Dim::Dim2D:   return TEXTURE2D;
                 case spv::Dim::Dim3D:   return TEXTURE3D;
                 case spv::Dim::DimCube: return TEXTURECUBE;
+                default:                return TEXTURE_UNKNOWN;
             }
         }
         
@@ -136,7 +136,6 @@ namespace Crowny
             else
             {
                 dat = std::vector<uint32_t>(module.cbegin(), module.cend()); // TODO: memcpy
-                CW_ENGINE_INFO(dat.size());
                 VirtualFileSystem::Get()->WriteFile(shaderPath, (byte*)dat.data(), dat.size() * sizeof(uint32_t));
                 result = (uint8_t*)dat.data();
                 sz = dat.size() * sizeof(uint32_t);
@@ -153,9 +152,7 @@ namespace Crowny
         dataResult.Size = sz;
         dataResult.Type = shaderType;
         dataResult.EntryPoint = "main";//compiler.get_entry_points_and_stages().front().name;
-        //CW_ENGINE_INFO(dataResult.EntryPoint);
         dataResult.Description = CreateRef<UniformDesc>();
-        CW_ENGINE_INFO("Uniform buffers: {0}", resources.uniform_buffers.size());
         for (const auto& uniform : resources.uniform_buffers)
         {
             const auto& bufferType = compiler.get_type(uniform.base_type_id);

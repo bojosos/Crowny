@@ -6,9 +6,16 @@
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/Mesh.h"
 #include "Crowny/Renderer/MeshFactory.h"
+#include "Crowny/Audio/AudioSource.h"
+#include "Crowny/Audio/AudioListener.h"
+#include "Crowny/Audio/AudioManager.h"
+#include "Crowny/Audio/OggVorbisDecoder.h"
+#include "Crowny/Audio/AudioClip.h"
+#include "Crowny/Audio/AudioUtils.h"
+#include "Crowny/Common/FileSystem.h"
 
 #include "Crowny/Scene/SceneCamera.h"
-#include "../../Crowny-Editor/Source/Panels/ImGuiMaterialPanel.h" // ?
+#include "../../Crowny-Editor/Source/Panels/ImGuiMaterialPanel.h" // ?????????????????????
 
 #include "Crowny/Scripting/CWMonoRuntime.h"
 
@@ -28,7 +35,7 @@ namespace Crowny
 	struct Component
 	{
 		Entity ComponentParent;
-    MonoObject* ManagedInstance = nullptr;
+    	MonoObject* ManagedInstance = nullptr;
 	};
 
 	struct TagComponent : public Component
@@ -126,6 +133,69 @@ namespace Crowny
 		RelationshipComponent(const RelationshipComponent&) = default;
 		RelationshipComponent(const Entity& parent) : Parent(parent) { }
 	};
+	
+	struct AudioSourceComponent : public Component
+	{
+		Ref<AudioSource> Source;
+
+		AudioSourceComponent()
+		{
+			Source = gAudio().CreateSource();
+			Ref<DataStream> stream = FileSystem::OpenFile("test.ogg", true);
+			Ref<OggVorbisDecoder> decoder = CreateRef<OggVorbisDecoder>();
+			AudioDataInfo info;
+			decoder->Open(stream, info);
+			uint32_t bps = info.BitDepth / 8;
+			uint32_t bufferSize = info.NumSamples * bps;
+			Ref<MemoryDataStream> samples = CreateRef<MemoryDataStream>(bufferSize);
+			decoder->Read(samples->Data(), info.NumSamples);
+			
+			{ // covert to mono
+				if (info.NumChannels > 1)
+				{
+					uint32_t samplesPerChannel = info.NumSamples / info.NumChannels;
+					uint32_t monoBufferSize = samplesPerChannel * bps;
+					CW_ENGINE_INFO("{0}, {1}", info.NumSamples, info.NumChannels);
+					Ref<MemoryDataStream> monoStream = CreateRef<MemoryDataStream>(monoBufferSize);
+					CW_ENGINE_INFO(bps);
+					AudioUtils::ConvertToMono(samples->Data(), monoStream->Data(), info.BitDepth, samplesPerChannel, info.NumChannels);
+					info.NumSamples = samplesPerChannel;
+					info.NumChannels = 1;
+					samples = monoStream;
+					bufferSize = monoBufferSize;
+				}
+			}
+			AudioClipDesc clipDesc;
+			clipDesc.BitDepth = info.BitDepth;
+			clipDesc.Format = AudioFormat::VORBIS;
+			clipDesc.Frequency = info.SampleRate;
+			clipDesc.NumChannels = info.NumChannels;
+			clipDesc.ReadMode = AudioReadMode::LoadDecompressed;
+			clipDesc.Is3D = true;
+			Ref<AudioClip> clip = CreateRef<AudioClip>(stream, bufferSize, info.NumSamples, clipDesc);
+			Source->SetClip(clip);
+		}
+		AudioSourceComponent(const AudioSourceComponent&) = default;
+		AudioSourceComponent(const Ref<AudioSource>& source) : Source(source)
+		{
+			
+		}
+	};
+
+	template <>
+	void ComponentEditorWidget<AudioSourceComponent>(Entity e);
+	
+	struct AudioListenerComponent : public Component
+	{
+		Ref<AudioListener> Listener;
+		
+		AudioListenerComponent() { Listener = gAudio().CreateListener(); }
+		AudioListenerComponent(const AudioListenerComponent&) = default;
+		AudioListenerComponent(const Ref<AudioListener>& listener) : Listener(listener) { }
+	};
+
+	template <>
+	void ComponentEditorWidget<AudioListenerComponent>(Entity e);
 
 	struct MonoScriptComponent : public Component
 	{

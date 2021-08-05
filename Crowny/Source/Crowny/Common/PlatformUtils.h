@@ -11,6 +11,8 @@ namespace Crowny
         static Uuid GenerateUuid();
         static void ShowInExplorer(const std::string& filepath);
         static void OpenExternally(const std::string& filepath);
+        static void CopyToClipboard(const std::string& string);
+        static std::string CopyFromClipboard();
     };
 
 }

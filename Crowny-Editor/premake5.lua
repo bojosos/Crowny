@@ -16,6 +16,8 @@ project "Crowny-Editor"
 		"Source/**.cpp"
 	}
 
+  toolset "clang"
+
 	includedirs
 	{
 		"%{wks.location}/Crowny/Dependencies/spdlog/include",
@@ -27,11 +29,17 @@ project "Crowny-Editor"
 		"%{IncludeDir.entt}",
 		"%{IncludeDir.assimp}",
 		"%{IncludeDir.mono}",
-    "%{IncludeDir.vulkan}",
-		"%{IncludeDir.ImGuizmo}"
+   	"%{IncludeDir.vulkan}",
+		"%{IncludeDir.ImGuizmo}",
+    "%{IncludeDir.openal}"
 	}
 
-	libdirs { "/usr/lib/mono-2.0", "%{wks.location}/Crowny/Dependencies/vulkan/lib" }
+	libdirs
+	{
+		"/usr/lib/mono-2.0",
+		"%{wks.location}/Crowny/Dependencies/vulkan/lib",
+		"%{wks.location}/Crowny/Dependencies/openal-soft/build"
+	}
 
 	links 
 	{
@@ -44,9 +52,13 @@ project "Crowny-Editor"
 		"freetype2", "glfw", "glad",
 		"mono-2.0",
 		"yaml-cpp",
-    "vulkan",
-    "shaderc_shared",
-    "spirv-cross-core"
+		"vulkan",
+		"shaderc_shared",
+		"spirv-cross-core",
+		"openal",
+    "ogg",
+    "vorbis",
+    "vorbisfile"
 	}
 
 	filter "system:windows"

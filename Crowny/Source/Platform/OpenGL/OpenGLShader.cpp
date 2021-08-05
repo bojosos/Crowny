@@ -156,7 +156,7 @@ namespace Crowny
 			glDeleteShader(id);
 		}
 	}
-
+/*
 	void OpenGLShader::Bind() const
 	{
 		glUseProgram(m_RendererID);
@@ -166,5 +166,5 @@ namespace Crowny
 	{
 		glUseProgram(0);
 	}
-
+*/
 }

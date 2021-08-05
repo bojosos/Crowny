@@ -1,8 +1,10 @@
 #include "cwpch.h"
 
 #include "Crowny/Common/PlatformUtils.h"
+#include "Crowny/Application/Application.h"
 
 #include <uuid/uuid.h>
+#include <GLFW/glfw3.h>
 
 namespace Crowny
 {
@@ -32,6 +34,16 @@ namespace Crowny
         
         if (system(cmdStr)) {};
         delete[] cmdStr;
+    }
+
+    void PlatformUtils::CopyToClipboard(const std::string& string)
+    {
+        glfwSetClipboardString((GLFWwindow*)Application::Get().GetWindow().GetNativeWindow(), string.c_str());
+    }
+
+    std::string PlatformUtils::CopyFromClipboard()
+    {
+        return glfwGetClipboardString((GLFWwindow*)Application::Get().GetWindow().GetNativeWindow());
     }
 
 }

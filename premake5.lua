@@ -45,6 +45,7 @@ IncludeDir["Bitsery"] = "%{wks.location}/Crowny/Dependencies/bitsery/include/bit
 IncludeDir['vulkan'] = "%{wks.location}/Crowny/Dependencies/vulkan/include"
 IncludeDir['yamlcpp'] = "%{wks.location}/Crowny/Dependencies/yaml-cpp/include"
 IncludeDir["ImGuizmo"] = "%{wks.location}/Crowny/Dependencies/ImGuizmo"
+IncludeDir["openal"] = "%{wks.location}/Crowny/Dependencies/openal-soft/include"
 
 group "Dependencies"
 	include "3rdparty/premake"

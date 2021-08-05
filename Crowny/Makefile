@@ -18,10 +18,19 @@ endif
 # Configurations
 # #############################################
 
+ifeq ($(origin CC), default)
+  CC = clang
+endif
+ifeq ($(origin CXX), default)
+  CXX = clang++
+endif
+ifeq ($(origin AR), default)
+  AR = ar
+endif
 PCH = Source/cwpch.h
 PCH_PLACEHOLDER = $(OBJDIR)/$(notdir $(PCH))
 GCH = $(PCH_PLACEHOLDER).gch
-INCLUDES += -ISource -IDependencies/spdlog/include -IDependencies/glfw/include -IDependencies/freetype-gl -IDependencies/glad/include -IDependencies/entt/single_include -IDependencies/imgui -IDependencies/glm -IDependencies/stb_image -IDependencies/assimp/include -I/usr/include/mono-2.0 -IDependencies/vulkan/include -IDependencies/yaml-cpp/include -IDependencies/ImGuizmo
+INCLUDES += -ISource -IDependencies/spdlog/include -IDependencies/glfw/include -IDependencies/freetype-gl -IDependencies/glad/include -IDependencies/entt/single_include -IDependencies/imgui -IDependencies/glm -IDependencies/stb_image -IDependencies/assimp/include -I/usr/include/mono-2.0 -IDependencies/vulkan/include -IDependencies/yaml-cpp/include -IDependencies/ImGuizmo -IDependencies/openal-soft/include
 FORCE_INCLUDE +=
 ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
 ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
@@ -34,172 +43,136 @@ define POSTBUILDCMDS
 endef
 
 ifeq ($(config),debug_win64)
-RESCOMP = windres
 TARGETDIR = ../bin/Debug-windows-x86_64/Crowny
 TARGET = $(TARGETDIR)/Crowny.lib
 OBJDIR = ../bin-int/Debug-windows-x86_64/Crowny
 DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_WIN -DCW_WINDOWS -DGLFW_INCLUDE_NONE -DCW_DEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -std=c++17
-LIBS += Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link
+LIBS += Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
 LDDEPS += Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib/mono-2.0 -LDependencies/vulkan/lib -L/usr/lib64 -m64
 
 else ifeq ($(config),debug_linux64)
-RESCOMP = windres
 TARGETDIR = ../bin/Debug-linux-x86_64/Crowny
 TARGET = $(TARGETDIR)/libCrowny.a
 OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny/Linux64
 DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -std=c++17
-LIBS += Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link
+LIBS += Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
 LDDEPS += Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib/mono-2.0 -LDependencies/vulkan/lib -L/usr/lib64 -m64
 
 else ifeq ($(config),debug_macos64)
-ifeq ($(origin CC), default)
-  CC = clang
-endif
-ifeq ($(origin CXX), default)
-  CXX = clang++
-endif
-ifeq ($(origin AR), default)
-  AR = ar
-endif
 TARGETDIR = ../bin/Debug-macosx-x86_64/Crowny
 TARGET = $(TARGETDIR)/libCrowny.a
 OBJDIR = ../bin-int/Debug-macosx-x86_64/Crowny
 DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_MACOSX -DCW_DEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -std=c++17
-LIBS += Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link
+LIBS += Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
 LDDEPS += Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib/mono-2.0 -LDependencies/vulkan/lib -m64
 
 else ifeq ($(config),debug_web)
-RESCOMP = windres
 TARGETDIR = ../bin/Debug-linux-x86_64/Crowny
 TARGET = $(TARGETDIR)/libCrowny.a
 OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny/Web
 DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_EMSCRIPTEN -DGLFW_INCLUDE_ES31 -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -std=c++17
-LIBS += Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link
+LIBS += Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
 LDDEPS += Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib/mono-2.0 -LDependencies/vulkan/lib -L/usr/lib64 -m64 -s USE_FREETYPE=1 -s MAX_WEBGL_VERSION=2 -s USE_GLFW=3 -s TOTAL_MEMORY=512MB -s SAFE_HEAP=1
 
 else ifeq ($(config),release_win64)
-RESCOMP = windres
 TARGETDIR = ../bin/Release-windows-x86_64/Crowny
 TARGET = $(TARGETDIR)/Crowny.lib
 OBJDIR = ../bin-int/Release-windows-x86_64/Crowny
 DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_WIN -DCW_WINDOWS -DGLFW_INCLUDE_NONE -DCW_RELEASE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -std=c++17
-LIBS += Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link
+LIBS += Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
 LDDEPS += Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a
-ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib/mono-2.0 -LDependencies/vulkan/lib -L/usr/lib64 -m64 -s
+ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib/mono-2.0 -LDependencies/vulkan/lib -L/usr/lib64 -m64
 
 else ifeq ($(config),release_linux64)
-RESCOMP = windres
 TARGETDIR = ../bin/Release-linux-x86_64/Crowny
 TARGET = $(TARGETDIR)/libCrowny.a
 OBJDIR = ../bin-int/Release-linux-x86_64/Crowny/Linux64
 DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_RELEASE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -std=c++17
-LIBS += Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link
+LIBS += Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
 LDDEPS += Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a
-ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib/mono-2.0 -LDependencies/vulkan/lib -L/usr/lib64 -m64 -s
+ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib/mono-2.0 -LDependencies/vulkan/lib -L/usr/lib64 -m64
 
 else ifeq ($(config),release_macos64)
-ifeq ($(origin CC), default)
-  CC = clang
-endif
-ifeq ($(origin CXX), default)
-  CXX = clang++
-endif
-ifeq ($(origin AR), default)
-  AR = ar
-endif
 TARGETDIR = ../bin/Release-macosx-x86_64/Crowny
 TARGET = $(TARGETDIR)/libCrowny.a
 OBJDIR = ../bin-int/Release-macosx-x86_64/Crowny
 DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_MACOSX -DCW_RELEASE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -std=c++17
-LIBS += Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link
+LIBS += Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
 LDDEPS += Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib/mono-2.0 -LDependencies/vulkan/lib -m64
 
 else ifeq ($(config),release_web)
-RESCOMP = windres
 TARGETDIR = ../bin/Release-linux-x86_64/Crowny
 TARGET = $(TARGETDIR)/libCrowny.a
 OBJDIR = ../bin-int/Release-linux-x86_64/Crowny/Web
 DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_EMSCRIPTEN -DGLFW_INCLUDE_ES31 -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_RELEASE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -std=c++17
-LIBS += Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link
+LIBS += Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
 LDDEPS += Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a
-ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib/mono-2.0 -LDependencies/vulkan/lib -L/usr/lib64 -m64 -s -s USE_FREETYPE=1 -s MAX_WEBGL_VERSION=2 -s USE_GLFW=3 -s TOTAL_MEMORY=512MB -s SAFE_HEAP=1
+ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib/mono-2.0 -LDependencies/vulkan/lib -L/usr/lib64 -m64 -s USE_FREETYPE=1 -s MAX_WEBGL_VERSION=2 -s USE_GLFW=3 -s TOTAL_MEMORY=512MB -s SAFE_HEAP=1
 
 else ifeq ($(config),dist_win64)
-RESCOMP = windres
 TARGETDIR = ../bin/Dist-windows-x86_64/Crowny
 TARGET = $(TARGETDIR)/Crowny.lib
 OBJDIR = ../bin-int/Dist-windows-x86_64/Crowny
 DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_WIN -DCW_WINDOWS -DGLFW_INCLUDE_NONE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -std=c++17
-LIBS += Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link
+LIBS += Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
 LDDEPS += Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a
-ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib/mono-2.0 -LDependencies/vulkan/lib -L/usr/lib64 -m64 -s
+ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib/mono-2.0 -LDependencies/vulkan/lib -L/usr/lib64 -m64
 
 else ifeq ($(config),dist_linux64)
-RESCOMP = windres
 TARGETDIR = ../bin/Dist-linux-x86_64/Crowny
 TARGET = $(TARGETDIR)/libCrowny.a
 OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny/Linux64
 DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -std=c++17
-LIBS += Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link
+LIBS += Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
 LDDEPS += Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a
-ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib/mono-2.0 -LDependencies/vulkan/lib -L/usr/lib64 -m64 -s
+ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib/mono-2.0 -LDependencies/vulkan/lib -L/usr/lib64 -m64
 
 else ifeq ($(config),dist_macos64)
-ifeq ($(origin CC), default)
-  CC = clang
-endif
-ifeq ($(origin CXX), default)
-  CXX = clang++
-endif
-ifeq ($(origin AR), default)
-  AR = ar
-endif
 TARGETDIR = ../bin/Dist-macosx-x86_64/Crowny
 TARGET = $(TARGETDIR)/libCrowny.a
 OBJDIR = ../bin-int/Dist-macosx-x86_64/Crowny
 DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_MACOSX
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -std=c++17
-LIBS += Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link
+LIBS += Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
 LDDEPS += Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib/mono-2.0 -LDependencies/vulkan/lib -m64
 
 else ifeq ($(config),dist_web)
-RESCOMP = windres
 TARGETDIR = ../bin/Dist-linux-x86_64/Crowny
 TARGET = $(TARGETDIR)/libCrowny.a
 OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny/Web
 DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_EMSCRIPTEN -DGLFW_INCLUDE_ES31 -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -std=c++17
-LIBS += Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link
+LIBS += Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
 LDDEPS += Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a
-ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib/mono-2.0 -LDependencies/vulkan/lib -L/usr/lib64 -m64 -s -s USE_FREETYPE=1 -s MAX_WEBGL_VERSION=2 -s USE_GLFW=3 -s TOTAL_MEMORY=512MB -s SAFE_HEAP=1
+ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib/mono-2.0 -LDependencies/vulkan/lib -L/usr/lib64 -m64 -s USE_FREETYPE=1 -s MAX_WEBGL_VERSION=2 -s USE_GLFW=3 -s TOTAL_MEMORY=512MB -s SAFE_HEAP=1
 
 endif
 
@@ -217,6 +190,11 @@ GENERATED += $(OBJDIR)/Allocator.o
 GENERATED += $(OBJDIR)/Application.o
 GENERATED += $(OBJDIR)/AssetManager.o
 GENERATED += $(OBJDIR)/AssetManifest.o
+GENERATED += $(OBJDIR)/AudioClip.o
+GENERATED += $(OBJDIR)/AudioListener.o
+GENERATED += $(OBJDIR)/AudioManager.o
+GENERATED += $(OBJDIR)/AudioSource.o
+GENERATED += $(OBJDIR)/AudioUtils.o
 GENERATED += $(OBJDIR)/CWMonoArray.o
 GENERATED += $(OBJDIR)/CWMonoAssembly.o
 GENERATED += $(OBJDIR)/CWMonoClass.o
@@ -228,6 +206,7 @@ GENERATED += $(OBJDIR)/CWMonoType.o
 GENERATED += $(OBJDIR)/CmdArgs.o
 GENERATED += $(OBJDIR)/Color.o
 GENERATED += $(OBJDIR)/CommandBuffer.o
+GENERATED += $(OBJDIR)/DataStream.o
 GENERATED += $(OBJDIR)/EditorCamera.o
 GENERATED += $(OBJDIR)/Entity.o
 GENERATED += $(OBJDIR)/Font.o
@@ -242,6 +221,8 @@ GENERATED += $(OBJDIR)/ImGuiBuild.o
 GENERATED += $(OBJDIR)/ImGuiConsoleBuffer.o
 GENERATED += $(OBJDIR)/ImGuiLayer.o
 GENERATED += $(OBJDIR)/ImGuiMenu.o
+GENERATED += $(OBJDIR)/ImGuiOpenGLLayer.o
+GENERATED += $(OBJDIR)/ImGuiVulkanLayer.o
 GENERATED += $(OBJDIR)/IndexBuffer.o
 GENERATED += $(OBJDIR)/Initializer.o
 GENERATED += $(OBJDIR)/Layer.o
@@ -261,6 +242,7 @@ GENERATED += $(OBJDIR)/MeshFactory.o
 GENERATED += $(OBJDIR)/Model.o
 GENERATED += $(OBJDIR)/MonoUtils.o
 GENERATED += $(OBJDIR)/Noise.o
+GENERATED += $(OBJDIR)/OggVorbisDecoder.o
 GENERATED += $(OBJDIR)/OpenGLContext.o
 GENERATED += $(OBJDIR)/OpenGLEnvironmentMap.o
 GENERATED += $(OBJDIR)/OpenGLFramebuffer.o
@@ -350,6 +332,11 @@ OBJECTS += $(OBJDIR)/Allocator.o
 OBJECTS += $(OBJDIR)/Application.o
 OBJECTS += $(OBJDIR)/AssetManager.o
 OBJECTS += $(OBJDIR)/AssetManifest.o
+OBJECTS += $(OBJDIR)/AudioClip.o
+OBJECTS += $(OBJDIR)/AudioListener.o
+OBJECTS += $(OBJDIR)/AudioManager.o
+OBJECTS += $(OBJDIR)/AudioSource.o
+OBJECTS += $(OBJDIR)/AudioUtils.o
 OBJECTS += $(OBJDIR)/CWMonoArray.o
 OBJECTS += $(OBJDIR)/CWMonoAssembly.o
 OBJECTS += $(OBJDIR)/CWMonoClass.o
@@ -361,6 +348,7 @@ OBJECTS += $(OBJDIR)/CWMonoType.o
 OBJECTS += $(OBJDIR)/CmdArgs.o
 OBJECTS += $(OBJDIR)/Color.o
 OBJECTS += $(OBJDIR)/CommandBuffer.o
+OBJECTS += $(OBJDIR)/DataStream.o
 OBJECTS += $(OBJDIR)/EditorCamera.o
 OBJECTS += $(OBJDIR)/Entity.o
 OBJECTS += $(OBJDIR)/Font.o
@@ -375,6 +363,8 @@ OBJECTS += $(OBJDIR)/ImGuiBuild.o
 OBJECTS += $(OBJDIR)/ImGuiConsoleBuffer.o
 OBJECTS += $(OBJDIR)/ImGuiLayer.o
 OBJECTS += $(OBJDIR)/ImGuiMenu.o
+OBJECTS += $(OBJDIR)/ImGuiOpenGLLayer.o
+OBJECTS += $(OBJDIR)/ImGuiVulkanLayer.o
 OBJECTS += $(OBJDIR)/IndexBuffer.o
 OBJECTS += $(OBJDIR)/Initializer.o
 OBJECTS += $(OBJDIR)/Layer.o
@@ -394,6 +384,7 @@ OBJECTS += $(OBJDIR)/MeshFactory.o
 OBJECTS += $(OBJDIR)/Model.o
 OBJECTS += $(OBJDIR)/MonoUtils.o
 OBJECTS += $(OBJDIR)/Noise.o
+OBJECTS += $(OBJDIR)/OggVorbisDecoder.o
 OBJECTS += $(OBJDIR)/OpenGLContext.o
 OBJECTS += $(OBJDIR)/OpenGLEnvironmentMap.o
 OBJECTS += $(OBJDIR)/OpenGLFramebuffer.o
@@ -560,7 +551,28 @@ $(OBJDIR)/AssetManager.o: Source/Crowny/Assets/AssetManager.cpp
 $(OBJDIR)/AssetManifest.o: Source/Crowny/Assets/AssetManifest.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/AudioClip.o: Source/Crowny/Audio/AudioClip.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/AudioListener.o: Source/Crowny/Audio/AudioListener.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/AudioManager.o: Source/Crowny/Audio/AudioManager.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/AudioSource.o: Source/Crowny/Audio/AudioSource.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/AudioUtils.o: Source/Crowny/Audio/AudioUtils.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/OggVorbisDecoder.o: Source/Crowny/Audio/OggVorbisDecoder.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Color.o: Source/Crowny/Common/Color.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/DataStream.o: Source/Crowny/Common/DataStream.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Log.o: Source/Crowny/Common/Log.cpp
@@ -597,6 +609,12 @@ $(OBJDIR)/ImGuiLayer.o: Source/Crowny/ImGui/ImGuiLayer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ImGuiMenu.o: Source/Crowny/ImGui/ImGuiMenu.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ImGuiOpenGLLayer.o: Source/Crowny/ImGui/ImGuiOpenGLLayer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ImGuiVulkanLayer.o: Source/Crowny/ImGui/ImGuiVulkanLayer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Layer.o: Source/Crowny/Layers/Layer.cpp

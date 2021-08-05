@@ -178,13 +178,13 @@ namespace Crowny
 		
 		uniformParams->SetTexture(0, 0, texture, TextureSurface::COMPLETE);
 		TextureParameters colorParams;
-		colorParams.Width = 878;
-		colorParams.Height = 434;
+		colorParams.Width = 1386;
+		colorParams.Height = 728;
 		colorParams.Usage = TextureUsage::TEXTURE_RENDERTARGET;
 
 		TextureParameters depthParams;
-		depthParams.Width = 878;
-		depthParams.Height = 434;
+		depthParams.Width = 1386;
+		depthParams.Height = 728;
 		depthParams.Usage = TextureUsage::TEXTURE_DEPTHSTENCIL;
 		depthParams.Format = TextureFormat::DEPTH24STENCIL8;
 
@@ -193,8 +193,8 @@ namespace Crowny
 		RenderTextureProperties rtProps;
 		rtProps.ColorSurfaces[0] = { color };
 		rtProps.DepthSurface = { depth };
-		rtProps.Width = 878;
-		rtProps.Height = 434;
+		rtProps.Width = 1386;
+		rtProps.Height = 728;
 		renderTarget = RenderTexture::Create(rtProps);
 	} 
 	
