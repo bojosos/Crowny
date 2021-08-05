@@ -65,11 +65,6 @@ namespace Crowny
         vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
         std::vector<VkExtensionProperties> exts(count);
         vkEnumerateInstanceExtensionProperties(nullptr, &count, exts.data());
-        std::set<std::string> results;
-        for (auto & extension : exts) {
-            CW_ENGINE_INFO(extension.extensionName);
-        
-        }
 #ifdef CW_DEBUG
         std::vector<const char*> layers = { "VK_LAYER_KHRONOS_validation", "VK_LAYER_NV_optimus" };
         uint32_t numExtensions;

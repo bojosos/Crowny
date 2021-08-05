@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
-#include "Crowny/Common/FileSystem.h"
 #include "Crowny/Application/Application.h"
+#include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/StringUtils.h"
 
 #include <fstream>
@@ -84,6 +84,15 @@ namespace Crowny
 		return !text.empty();
 	}
 
+	Ref<DataStream> FileSystem::OpenFile(const std::string& filepath, bool readOnly)
+	{
+		DataStream::AccessMode accessMode = DataStream::READ;
+		if (!readOnly)
+			accessMode = (DataStream::AccessMode)(accessMode | DataStream::WRITE);
+		
+		return CreateRef<FileDataStream>(filepath, accessMode, true);
+	}
+	
 	bool FileSystem::OpenFileDialog(FileDialogType type, const std::string& initialDir, const std::string& filter, std::vector<std::string>& outPaths)
 	{	
 		FixPath(initialDir);

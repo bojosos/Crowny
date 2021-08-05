@@ -256,6 +256,52 @@ namespace Crowny
 
 		ImGui::Text("Path");
 	}
+	
+	template <>
+	void ComponentEditorWidget<AudioListenerComponent>(Entity e) 
+	{
+	}
+
+	template <>
+	void ComponentEditorWidget<AudioSourceComponent>(Entity e) 
+	{
+		auto& source = e.GetComponent<AudioSourceComponent>().Source;
+
+		ImGui::Columns(2);
+		ImGui::Text("Audio Clip"); ImGui::NextColumn();
+		ImGui::Text("Audio clip goes here"); ImGui::NextColumn();
+		ImGui::Text("Mute"); ImGui::NextColumn();
+		bool mute = source->GetVolume() != 0;
+		if (ImGui::Checkbox("##mute", &mute))
+		{
+			source->SetVolume(0.0f);
+		}
+		ImGui::NextColumn();
+		ImGui::Text("Play On Awake"); ImGui::NextColumn();
+		bool playOnAwake = false;
+		if (ImGui::Checkbox("##playonawake", &playOnAwake))
+		{
+
+		}
+		ImGui::NextColumn();
+		ImGui::Text("Loop"); ImGui::NextColumn();
+		bool value = source->GetLooping();
+		if (ImGui::Checkbox("##loop", &value))
+		{
+			source->SetLooping(value);
+		}
+		ImGui::NextColumn();
+		ImGui::Text("Volume"); ImGui::NextColumn();
+		float volume = source->GetVolume();
+		if (ImGui::SliderFloat("##volume", &volume, 0.0f, 1.0f, "%.2f"))
+			source->SetVolume(volume);
+		ImGui::NextColumn();
+		ImGui::Text("Pitch"); ImGui::NextColumn();
+		float pitch = source->GetPitch();
+		if (ImGui::SliderFloat("##pitch", &pitch, -3.0f, 3.0f, "%.2f"))
+			source->SetPitch(pitch);
+
+	}
 
 	template <>
 	void ComponentEditorWidget<MonoScriptComponent>(Entity e)

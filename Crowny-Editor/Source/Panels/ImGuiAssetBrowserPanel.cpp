@@ -19,7 +19,24 @@ namespace Crowny
     
     static const std::filesystem::path s_AssetPath = "Resources";
     extern void LoadTexture(const std::string& filepath, Ref<Texture>& texture);
-        
+    
+    static std::string GetDefaultFileNameFromType(AssetBrowserItem type)
+    {
+        switch(type)
+        {
+            case AssetBrowserItem::CScript:          return "NewScript.cs";
+            case AssetBrowserItem::Folder:           return "New Folder";
+            case AssetBrowserItem::Material:         return "New Material.mat";
+            case AssetBrowserItem::Prefab:           return "New Prefab.prefab";
+            case AssetBrowserItem::Shader:           return "New Shader.shader";
+            case AssetBrowserItem::ComputeShader:    return "New ComputeShader.cshader";
+            case AssetBrowserItem::PhysicsMaterial:  return "New PhysicsMaterial.pmat";
+            case AssetBrowserItem::RenderTexture:    return "New RenderTexture.rt";
+            case AssetBrowserItem::Scene:            return "New Scene.cwscene";
+            default:                                 return "New File";
+        }
+    }
+    
 	ImGuiAssetBrowserPanel::ImGuiAssetBrowserPanel(const std::string& name) : ImGuiPanel(name), m_CurrentDirectory(s_AssetPath)
 	{
         m_FolderIcon = ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FolderIcon);
@@ -102,7 +119,11 @@ namespace Crowny
         ImGui::Separator();
         ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
         ImGui::BeginChild("child", ImVec2(0, 0), false, window_flags);
-        
+        if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_NoOpenOverExistingPopup | ImGuiPopupFlags_MouseButtonRight))
+        {
+            ShowContextMenuContents();
+            ImGui::EndPopup();
+        }
         static float padding = 12.0f;
         static float thumbnailSize = 48.0f;
         float cellSize = thumbnailSize + padding;
@@ -121,7 +142,7 @@ namespace Crowny
                 default: tid = m_FileIcon;
             }
             ImGui::ImageButton(tid, { thumbnailSize, thumbnailSize }, { 0, 1 }, { 1, 0 }/*, -1, ImGui::GetStyleColorVec4(ImGuiCol_Header)*/);
-            m_Filename = "New folder";
+            m_Filename = GetDefaultFileNameFromType(m_RenamingType);
             ImGui::SetKeyboardFocusHere();
             auto completeRename = [&]()
             {
@@ -138,9 +159,10 @@ namespace Crowny
                     CW_ENGINE_INFO("How make file");
                 m_RenamingPath.clear();
             };
-            
-            if (ImGui::InputText("##renaming", &m_Filename, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AlwaysOverwrite))
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 5));
+            if (ImGui::InputText("##renaming", &m_Filename, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CodeSelectNoExt))
                 completeRename();
+            ImGui::PopStyleVar();
             
             if ((ImGui::IsMouseClicked(ImGuiMouseButton_Left) || ImGui::IsMouseClicked(ImGuiMouseButton_Right)) && !ImGui::IsItemClicked())
                 completeRename();
@@ -148,8 +170,57 @@ namespace Crowny
             ImGui::NextColumn();
         }
         
-        for (auto& dir : std::filesystem::directory_iterator(m_CurrentDirectory))
+        std::map<long, std::filesystem::directory_entry> sortedFiles; // assumes time_t is long
+        if (m_FileSorting == FileSorting::SortByName)
         {
+            std::set<std::filesystem::directory_entry> sortedDirs;
+            for (auto& dir : std::filesystem::directory_iterator(m_CurrentDirectory))
+            {
+                sortedDirs.insert(dir);
+            }
+            
+            long id = 0;
+            for (auto& dir : sortedDirs)
+            {
+                sortedFiles[id++] = dir;
+            }
+        }
+        else
+        {
+            std::set<std::filesystem::directory_entry> folders;
+            for (auto& dir : std::filesystem::directory_iterator(m_CurrentDirectory))
+            {
+                if (m_FileSorting == FileSorting::SortBySize)
+                {
+                    if (dir.is_regular_file())
+                    {
+                        long id = dir.file_size();
+                        sortedFiles[id] = dir;
+                    }
+                    else if (dir.is_directory())
+                        folders.insert(dir);
+                }
+                if (m_FileSorting == FileSorting::SortByDate)
+                {
+                    if (dir.is_regular_file())
+                    {
+                        long id = dir.file_size();
+                        sortedFiles[id] = dir;
+                    }
+                    else if (dir.is_directory())
+                        folders.insert(dir);
+                }
+            }
+            long id = LONG_LONG_MAX - folders.size() - 10;
+            for (auto& folder : folders)
+            {
+                sortedFiles[id++] = folder;
+            }
+        }
+        
+        for (auto& entry : sortedFiles)
+        {
+            std::filesystem::directory_entry dir = entry.second;
             const auto& path = dir.path();
             auto relativePath = std::filesystem::relative(path, s_AssetPath);
             std::string filename = relativePath.filename().string();
@@ -234,19 +305,20 @@ namespace Crowny
                     m_SelectedFiles.insert(filename);
                 }
             }
-            
+            if (ImGui::BeginPopupContextItem(filename.c_str()))
+            {
+                ShowContextMenuContents(relativePath.string());
+                ImGui::EndPopup();
+            }
             ImGui::NextColumn();
         }
         
-        if (ImGui::BeginPopupContextWindow())
-        {
-            ShowContextMenuContents();
-            ImGui::EndPopup();
-        }
         
-        ImGui::EndChild();
+        
         ImGui::Columns(1);
+        ImGui::EndChild();
         ImGui::SliderFloat("Icon size", &thumbnailSize, 16, 512);
+        ImGui::SameLine();
         ImGui::SliderFloat("Padding", &padding, 0, 32);
         
 		ImGui::End();
@@ -305,23 +377,36 @@ namespace Crowny
             if (filepath.empty())
                 PlatformUtils::ShowInExplorer(m_CurrentDirectory);
             else
-                PlatformUtils::ShowInExplorer(filepath);
+                PlatformUtils::ShowInExplorer(s_AssetPath / filepath);
         }
         
-        if (!filepath.empty()) ImGui::PushDisabled();
+        if (filepath.empty()) ImGui::PushDisabled();
         if (ImGui::MenuItem("Open"))
         {
             PlatformUtils::OpenExternally(filepath);
         }
-        if (!filepath.empty()) ImGui::PopDisabled();
         
-        if (!filepath.empty()) ImGui::PushDisabled();
         if (ImGui::MenuItem("Delete"))
         {
-            if (!std::filesystem::remove(filepath.c_str()))
+            if (!std::filesystem::remove((s_AssetPath / filepath).c_str()))
                 CW_ENGINE_ERROR("Error deleting file.");
         }
-        if (!filepath.empty()) ImGui::PopDisabled();
+        
+        if (ImGui::MenuItem("Rename"))
+        {
+            m_RenamingPath = filepath;
+            //m_RenamingType = 
+        }
+        
+        if (filepath.empty()) ImGui::PopDisabled();
+        
+        if (ImGui::MenuItem("Copy Path"))
+        {
+            if (!filepath.empty())
+                PlatformUtils::CopyToClipboard(std::filesystem::absolute(s_AssetPath / filepath));
+            else
+                PlatformUtils::CopyToClipboard(std::filesystem::absolute(m_CurrentDirectory));
+        }
         
         ImGui::Separator();
         if (ImGui::MenuItem("Refresh", "Ctrl+R"))

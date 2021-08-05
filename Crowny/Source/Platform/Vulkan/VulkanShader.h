@@ -29,9 +29,6 @@ namespace Crowny
         VulkanShader(const BinaryShaderData& shaderData);
         ~VulkanShader();
 
-        //virtual const std::string& GetName() const override { return m_Name; };
-        //virtual const std::string& GetFilepath() const override { return m_Filepath; }
-
         virtual const Ref<UniformDesc>& GetUniformDesc() const override { return m_ShaderDesc.Description; }
 
         const VkPipelineShaderStageCreateInfo& GetShaderStage() const { return m_ShaderStage; }

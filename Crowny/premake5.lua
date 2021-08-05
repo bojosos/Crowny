@@ -19,7 +19,7 @@ project "Crowny"
 		"Dependencies/stb_image/**.cpp",
 		"Dependencies/glm/glm/**.hpp",
 		"Dependencies/glm/glm/**.inl",
-    "Dependencies/bitsery/include/bitsery/**.h"
+    	"Dependencies/bitsery/include/bitsery/**.h"
 	}
 
 --	filter { "system:windows", "files: Linux*" }
@@ -27,6 +27,8 @@ project "Crowny"
 
 	--filter { "system:linux", "files: Windows*" }
   --		flags { "ExcludeFromBuild" }
+
+  toolset "clang"
 
 	defines
 	{
@@ -50,6 +52,7 @@ project "Crowny"
 		"%{IncludeDir.vulkan}",
 		"%{IncludeDir.yamlcpp}",
 		"%{IncludeDir.ImGuizmo}",
+		"%{IncludeDir.openal}"
 	}
 
 	libdirs { "/usr/lib/mono-2.0", "%{wks.location}/Crowny/Dependencies/vulkan/lib" }
@@ -68,7 +71,9 @@ project "Crowny"
     "spirv-cross-c-shared",
     "SPIRV-Tools-opt",
     "SPIRV-Tools",
-    "SPIRV-Tools-link"
+    "SPIRV-Tools-link",
+    "vorbis",
+    "ogg"
 	}
 
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Common/DataStream.h"
+
 namespace Crowny
 {
 
@@ -25,5 +27,6 @@ namespace Crowny
 		static bool WriteTextFile(const std::string& path, const std::string& text);
 
 		static bool OpenFileDialog(FileDialogType type, const std::string& initialDir, const std::string& filter, std::vector<std::string>& outpaths);
+		static Ref<DataStream> OpenFile(const std::string& filepath, bool readOnly);
 	};
 }
