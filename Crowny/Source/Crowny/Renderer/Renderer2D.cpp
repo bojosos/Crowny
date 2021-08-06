@@ -1,305 +1,313 @@
 #include "cwpch.h"
 
-#include "Crowny/Renderer/Shader.h"
-#include "Crowny/Renderer/Texture.h"
-#include "Crowny/Renderer/RenderCommand.h"
-#include "Crowny/Renderer/Renderer2D.h"
+#include "Crowny/RenderAPI/RenderCommand.h"
+#include "Crowny/RenderAPI/Shader.h"
+#include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/Renderer/Renderer.h"
+#include "Crowny/Renderer/Renderer2D.h"
 
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/ext/matrix_transform.hpp>
 #include <freetype-gl.h>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 namespace Crowny
 {
 
-	constexpr glm::vec2 QuadUv[] = { { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 1.0f } };
-	constexpr glm::vec4 QuadVertices[] = { { -0.5f, -0.5f, 0.0f, 1.0f }, { 0.5f, -0.5f, 0.0f, 1.0f }, { 0.5f,  0.5f, 0.0f, 1.0f }, { -0.5f,  0.5f, 0.0f, 1.0f } };
-/*
-	constexpr const char* RequiredSystemUniforms[2] = { "cw_ProjectionMatrix", "cw_ViewMatrix" };
+    constexpr glm::vec2 QuadUv[] = { { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 1.0f } };
+    constexpr glm::vec4 QuadVertices[] = { { -0.5f, -0.5f, 0.0f, 1.0f },
+                                           { 0.5f, -0.5f, 0.0f, 1.0f },
+                                           { 0.5f, 0.5f, 0.0f, 1.0f },
+                                           { -0.5f, 0.5f, 0.0f, 1.0f } };
+    /*
+        constexpr const char* RequiredSystemUniforms[2] = { "cw_ProjectionMatrix", "cw_ViewMatrix" };
 
-	enum SystemUniformIndices : int32_t
-	{
-		UniformIndex_ProjectionMatrix = 0,
-		UniformIndex_ViewMatrix = 1
-	};
+        enum SystemUniformIndices : int32_t
+        {
+            UniformIndex_ProjectionMatrix = 0,
+            UniformIndex_ViewMatrix = 1
+        };
 
-	struct UniformBuffer
-	{
-		byte* Buffer = nullptr;
-		uint32_t Size = 0;
+        struct UniformBuffer
+        {
+            byte* Buffer = nullptr;
+            uint32_t Size = 0;
 
-		UniformBuffer() { }
-		UniformBuffer(byte* buffer, uint32_t size) : Buffer(buffer), Size(size) { memset(Buffer, 0, Size); }
+            UniformBuffer() { }
+            UniformBuffer(byte* buffer, uint32_t size) : Buffer(buffer), Size(size) { memset(Buffer, 0, Size); }
 
-	};
+        };
 
-	struct Renderer2DSystemUniform
-	{
-		UniformBuffer Buffer;
-		uint32_t Offset = 0;
+        struct Renderer2DSystemUniform
+        {
+            UniformBuffer Buffer;
+            uint32_t Offset = 0;
 
-		Renderer2DSystemUniform() { }
-		Renderer2DSystemUniform(const UniformBuffer& buffer, uint32_t offset) : Buffer(buffer), Offset(offset) { }
-	};
-*/
-	struct Renderer2DData
-	{
-		Ref<VertexArray> VertexArray;
-		Ref<VertexBuffer> VertexBuffer;
-		Ref<Shader> Shader;
-		Ref<Texture> WhiteTexture;
+            Renderer2DSystemUniform() { }
+            Renderer2DSystemUniform(const UniformBuffer& buffer, uint32_t offset) : Buffer(buffer), Offset(offset) { }
+        };
+    */
+    struct Renderer2DData
+    {
+        Ref<VertexArray> VertexArray;
+        Ref<VertexBuffer> VertexBuffer;
+        Ref<Shader> Shader;
+        Ref<Texture> WhiteTexture;
 
-		uint32_t IndexCount = 0;
-		VertexData* Buffer = nullptr;
+        uint32_t IndexCount = 0;
+        VertexData* Buffer = nullptr;
 
-		std::array<Ref<Texture>, 32> TextureSlots;
-		uint32_t TextureIndex = 0;
-		
-		//std::vector<Renderer2DSystemUniform> SystemUniforms;
-		//std::vector<UniformBuffer> SystemUniformBuffers;
-	};
+        std::array<Ref<Texture>, 32> TextureSlots;
+        uint32_t TextureIndex = 0;
 
-	static Renderer2DData s_Data;
+        // std::vector<Renderer2DSystemUniform> SystemUniforms;
+        // std::vector<UniformBuffer> SystemUniformBuffers;
+    };
 
-	void Renderer2D::Init()
-	{
-		s_Data.VertexArray = VertexArray::Create();
-		s_Data.VertexBuffer = VertexBuffer::Create(RENDERER_BUFFER_SIZE, BufferUsage::DYNAMIC_DRAW);
-		BufferLayout layout = { { ShaderDataType::Float4, "a_Coordinates" },
-								{ ShaderDataType::Float2, "a_Uvs" },
-								{ ShaderDataType::Float , "a_Tid" },
-								{ ShaderDataType::Float4, "a_Color" } };
+    static Renderer2DData s_Data;
 
-		s_Data.VertexBuffer->SetLayout(layout);
-		s_Data.VertexArray->AddVertexBuffer(s_Data.VertexBuffer);
+    void Renderer2D::Init()
+    {
+        s_Data.VertexArray = VertexArray::Create();
+        s_Data.VertexBuffer = VertexBuffer::Create(RENDERER_BUFFER_SIZE, BufferUsage::DYNAMIC_DRAW);
+        BufferLayout layout = { { ShaderDataType::Float4, "a_Coordinates" },
+                                { ShaderDataType::Float2, "a_Uvs" },
+                                { ShaderDataType::Float, "a_Tid" },
+                                { ShaderDataType::Float4, "a_Color" } };
 
-		uint32_t* indices = new uint32_t[RENDERER_INDICES_SIZE];
+        s_Data.VertexBuffer->SetLayout(layout);
+        s_Data.VertexArray->AddVertexBuffer(s_Data.VertexBuffer);
 
-		int offset = 0;
-		for (int i = 0; i < RENDERER_INDICES_SIZE; i += 6)
-		{
-			indices[i] = offset + 0;
-			indices[i + 1] = offset + 1;
-			indices[i + 2] = offset + 2;
+        uint32_t* indices = new uint32_t[RENDERER_INDICES_SIZE];
 
-			indices[i + 3] = offset + 2;
-			indices[i + 4] = offset + 3;
-			indices[i + 5] = offset + 0;
+        int offset = 0;
+        for (int i = 0; i < RENDERER_INDICES_SIZE; i += 6)
+        {
+            indices[i] = offset + 0;
+            indices[i + 1] = offset + 1;
+            indices[i + 2] = offset + 2;
 
-			offset += 4;
-		}
+            indices[i + 3] = offset + 2;
+            indices[i + 4] = offset + 3;
+            indices[i + 5] = offset + 0;
 
-		Ref<IndexBuffer> ibo;
-		ibo = IndexBuffer::Create(indices, RENDERER_INDICES_SIZE);
-		s_Data.VertexArray->SetIndexBuffer(ibo);
+            offset += 4;
+        }
 
-		// VULKAN IMPL: Fix
-		//s_Data.WhiteTexture = Texture::Create(1, 1);
-		//uint32_t whiteTextureData = 0xffffffff; s_Data.WhiteTexture->SetData(&whiteTextureData, sizeof(uint32_t));
-		s_Data.Shader = Shader::Create("/Shaders/BatchRenderer.glsl");
-		//s_Data.Shader->Bind();
-		//s_Data.SystemUniforms.resize(2);
+        Ref<IndexBuffer> ibo;
+        ibo = IndexBuffer::Create(indices, RENDERER_INDICES_SIZE);
+        s_Data.VertexArray->SetIndexBuffer(ibo);
 
-		//const ShaderUniformBufferList& vsuniforms = s_Data.Shader->GetVSSystemUniforms();
-/*
-		for (auto* buffdecl : vsuniforms)
-		{
-			UniformBuffer buffer(new byte[buffdecl->GetSize()], buffdecl->GetSize());
-			s_Data.SystemUniformBuffers.push_back(buffer);
+        // VULKAN IMPL: Fix
+        // s_Data.WhiteTexture = Texture::Create(1, 1);
+        // uint32_t whiteTextureData = 0xffffffff; s_Data.WhiteTexture->SetData(&whiteTextureData, sizeof(uint32_t));
+        s_Data.Shader = Shader::Create("/Shaders/BatchRenderer.glsl");
+        // s_Data.Shader->Bind();
+        // s_Data.SystemUniforms.resize(2);
 
-			for (auto* decl : buffdecl->GetUniformDeclarations())
-			{
-				for (uint32_t j = 0; j < 2; j++)
-				{
-					if (decl->GetName() == RequiredSystemUniforms[j])
-						s_Data.SystemUniforms[j] = Renderer2DSystemUniform(buffer, decl->GetOffset());
-				}
-			}
-		}*/
-		
-		s_Data.TextureSlots[s_Data.TextureIndex] = s_Data.WhiteTexture;
+        // const ShaderUniformBufferList& vsuniforms = s_Data.Shader->GetVSSystemUniforms();
+        /*
+                for (auto* buffdecl : vsuniforms)
+                {
+                    UniformBuffer buffer(new byte[buffdecl->GetSize()], buffdecl->GetSize());
+                    s_Data.SystemUniformBuffers.push_back(buffer);
 
-		s_Data.VertexArray->Unbind();
-		delete[] indices;
-	}
+                    for (auto* decl : buffdecl->GetUniformDeclarations())
+                    {
+                        for (uint32_t j = 0; j < 2; j++)
+                        {
+                            if (decl->GetName() == RequiredSystemUniforms[j])
+                                s_Data.SystemUniforms[j] = Renderer2DSystemUniform(buffer, decl->GetOffset());
+                        }
+                    }
+                }*/
 
-	void Renderer2D::Begin(const Camera& camera, const glm::mat4& viewMatrix)
-	{
-		RenderCommand::SetDepthTest(false);
-	//	memcpy(s_Data.SystemUniforms[UniformIndex_ProjectionMatrix].Buffer.Buffer + s_Data.SystemUniforms[UniformIndex_ProjectionMatrix].Offset, glm::value_ptr(camera.GetProjection()), sizeof(glm::mat4));
-		//memcpy(s_Data.SystemUniforms[UniformIndex_ViewMatrix].Buffer.Buffer + s_Data.SystemUniforms[UniformIndex_ViewMatrix].Offset, glm::value_ptr(viewMatrix), sizeof(glm::mat4));
+        s_Data.TextureSlots[s_Data.TextureIndex] = s_Data.WhiteTexture;
 
-		//s_Data.Shader->SetVSSystemUniformBuffer(s_Data.SystemUniforms);
-		//s_Data.Shader->Bind();
-		//s_Data.Shader->SetUniformMat4("cw_ProjectionMatrix", camera.GetProjection());
-	//	s_Data.Shader->SetUniformMat4("cw_ViewMatrix", viewMatrix);
-		//s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->Map(0, RENDERER_MAX_SPRITES * 4, GpuLockOptions::WRITE_DISCARD);
-	}
+        s_Data.VertexArray->Unbind();
+        delete[] indices;
+    }
 
-	float Renderer2D::FindTexture(const Ref<Texture>& texture)
-	{
-		if (!texture)
-			return 0;
+    void Renderer2D::Begin(const Camera& camera, const glm::mat4& viewMatrix)
+    {
+        RenderCommand::SetDepthTest(false);
+        //	memcpy(s_Data.SystemUniforms[UniformIndex_ProjectionMatrix].Buffer.Buffer +
+        //s_Data.SystemUniforms[UniformIndex_ProjectionMatrix].Offset, glm::value_ptr(camera.GetProjection()),
+        //sizeof(glm::mat4)); memcpy(s_Data.SystemUniforms[UniformIndex_ViewMatrix].Buffer.Buffer +
+        // s_Data.SystemUniforms[UniformIndex_ViewMatrix].Offset, glm::value_ptr(viewMatrix), sizeof(glm::mat4));
 
-		float ts = 0.0f;
+        // s_Data.Shader->SetVSSystemUniformBuffer(s_Data.SystemUniforms);
+        // s_Data.Shader->Bind();
+        // s_Data.Shader->SetUniformMat4("cw_ProjectionMatrix", camera.GetProjection());
+        //	s_Data.Shader->SetUniformMat4("cw_ViewMatrix", viewMatrix);
+        // s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->Map(0, RENDERER_MAX_SPRITES * 4,
+        // GpuLockOptions::WRITE_DISCARD);
+    }
 
-		for (uint8_t i = 1; i <= s_Data.TextureIndex; i++)
-		{
-			if (s_Data.TextureSlots[i] == texture)
-			{
-				ts = (float)(i + 1);
-				break;
-			}
-		}
+    float Renderer2D::FindTexture(const Ref<Texture>& texture)
+    {
+        if (!texture)
+            return 0;
 
-		if (ts == 0)
-		{
-			if (s_Data.TextureIndex == 32) // TODO: not 32 please
-			{
-				End();
-				s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->Map(0, RENDERER_MAX_SPRITES * 4, GpuLockOptions::WRITE_DISCARD); // TODO: Begin or semething instead of this 
-			}
-			s_Data.TextureSlots[++s_Data.TextureIndex] = texture;
-			ts = (float)s_Data.TextureIndex;
-		}
-		return ts;
-	}
-	
-	void Renderer2D::FillRect(const Rect2F& bounds, const glm::vec4& color)
-	{
-		glm::mat4 transform = glm::translate(glm::mat4(1.0f), 
-											{ bounds.X, bounds.Y, 1.0f }) *
-											glm::scale(glm::mat4(1.0f), 
-											{ bounds.Width, bounds.Height, 1.0f });
+        float ts = 0.0f;
 
-		FillRect(transform, nullptr, color);
-	}
+        for (uint8_t i = 1; i <= s_Data.TextureIndex; i++)
+        {
+            if (s_Data.TextureSlots[i] == texture)
+            {
+                ts = (float)(i + 1);
+                break;
+            }
+        }
 
-	void Renderer2D::FillRect(const glm::mat4& transform, const Ref<Texture>& texture, const glm::vec4& color)
-	{
-		float ts = FindTexture(texture);
-		for (uint8_t i = 0; i < 4; i++) {
-			s_Data.Buffer->Position = QuadVertices[i] * transform;
-			s_Data.Buffer->Uv = QuadUv[i];
-			s_Data.Buffer->Tid = ts;
-			s_Data.Buffer->Color = color;
-			s_Data.Buffer++;
-		}
+        if (ts == 0)
+        {
+            if (s_Data.TextureIndex == 32) // TODO: not 32 please
+            {
+                End();
+                s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->Map(
+                  0, RENDERER_MAX_SPRITES * 4,
+                  GpuLockOptions::WRITE_DISCARD); // TODO: Begin or semething instead of this
+            }
+            s_Data.TextureSlots[++s_Data.TextureIndex] = texture;
+            ts = (float)s_Data.TextureIndex;
+        }
+        return ts;
+    }
 
-		s_Data.IndexCount += 6;
-	}
+    void Renderer2D::FillRect(const Rect2F& bounds, const glm::vec4& color)
+    {
+        glm::mat4 transform = glm::translate(glm::mat4(1.0f), { bounds.X, bounds.Y, 1.0f }) *
+                              glm::scale(glm::mat4(1.0f), { bounds.Width, bounds.Height, 1.0f });
 
-	void Renderer2D::FillRect(const Rect2F& bounds, const Ref<Texture>& texture, const glm::vec4& color)
-	{
-		glm::mat4 transform = glm::translate(glm::mat4(1.0f), { bounds.X, bounds.Y, 1.0f }) * glm::scale(glm::mat4(1.0f), { bounds.Width, bounds.Height, 1.0f });
+        FillRect(transform, nullptr, color);
+    }
 
-		FillRect(transform, texture, color);
-	}
+    void Renderer2D::FillRect(const glm::mat4& transform, const Ref<Texture>& texture, const glm::vec4& color)
+    {
+        float ts = FindTexture(texture);
+        for (uint8_t i = 0; i < 4; i++)
+        {
+            s_Data.Buffer->Position = QuadVertices[i] * transform;
+            s_Data.Buffer->Uv = QuadUv[i];
+            s_Data.Buffer->Tid = ts;
+            s_Data.Buffer->Color = color;
+            s_Data.Buffer++;
+        }
 
-	void Renderer2D::DrawString(const std::string& text, float x, float y, const Ref<Font>& font, const glm::vec4& color)
-	{
-		float ts = FindTexture(font->GetTexture());
+        s_Data.IndexCount += 6;
+    }
 
-		texture_font_t* ftFont = font->GetFTGLFont();
+    void Renderer2D::FillRect(const Rect2F& bounds, const Ref<Texture>& texture, const glm::vec4& color)
+    {
+        glm::mat4 transform = glm::translate(glm::mat4(1.0f), { bounds.X, bounds.Y, 1.0f }) *
+                              glm::scale(glm::mat4(1.0f), { bounds.Width, bounds.Height, 1.0f });
 
-		for (uint32_t i = 0; i < text.length(); i++)
-		{
-			char c = text[i];
-			texture_glyph_t* glyph = texture_font_get_glyph(ftFont, &c);
+        FillRect(transform, texture, color);
+    }
 
-			if (glyph)
-			{
-				if (i > 0)
-				{
-					float kerning = texture_glyph_get_kerning(glyph, &text[i - 1]);
-					x += kerning;
-				}
+    void Renderer2D::DrawString(const std::string& text, float x, float y, const Ref<Font>& font,
+                                const glm::vec4& color)
+    {
+        float ts = FindTexture(font->GetTexture());
 
-				float x0 = x + glyph->offset_x;
-				float y0 = y - glyph->offset_y;
-				float x1 = x0 + glyph->width;
-				float y1 = y0 + glyph->height;
+        texture_font_t* ftFont = font->GetFTGLFont();
 
-				float u0 = glyph->s0;
-				float v0 = glyph->t0;
-				float u1 = glyph->s1;
-				float v1 = glyph->t1;
+        for (uint32_t i = 0; i < text.length(); i++)
+        {
+            char c = text[i];
+            texture_glyph_t* glyph = texture_font_get_glyph(ftFont, &c);
 
-				s_Data.Buffer->Position = glm::vec4(x0, y0, 0, 1.0f);
-				s_Data.Buffer->Uv = glm::vec2(u0, v0);
-				s_Data.Buffer->Tid = ts;
-				s_Data.Buffer->Color = color;
-				s_Data.Buffer++;
+            if (glyph)
+            {
+                if (i > 0)
+                {
+                    float kerning = texture_glyph_get_kerning(glyph, &text[i - 1]);
+                    x += kerning;
+                }
 
-				s_Data.Buffer->Position = glm::vec4(x0, y1, 0, 1.0f);
-				s_Data.Buffer->Uv = glm::vec2(u0, v1);
-				s_Data.Buffer->Tid = ts;
-				s_Data.Buffer->Color = color;
-				s_Data.Buffer++;
-				
-				s_Data.Buffer->Position = glm::vec4(x1, y1, 0, 1.0f);
-				s_Data.Buffer->Uv = glm::vec2(u1, v1);
-				s_Data.Buffer->Tid = ts;
-				s_Data.Buffer->Color = color;
-				s_Data.Buffer++;
+                float x0 = x + glyph->offset_x;
+                float y0 = y - glyph->offset_y;
+                float x1 = x0 + glyph->width;
+                float y1 = y0 + glyph->height;
 
-				s_Data.Buffer->Position = glm::vec4(x1, y0, 0, 1.0f);
-				s_Data.Buffer->Uv = glm::vec2(u1, v0);
-				s_Data.Buffer->Tid = ts;
-				s_Data.Buffer->Color = color;
-				s_Data.Buffer++;
+                float u0 = glyph->s0;
+                float v0 = glyph->t0;
+                float u1 = glyph->s1;
+                float v1 = glyph->t1;
 
-				s_Data.IndexCount += 6;
+                s_Data.Buffer->Position = glm::vec4(x0, y0, 0, 1.0f);
+                s_Data.Buffer->Uv = glm::vec2(u0, v0);
+                s_Data.Buffer->Tid = ts;
+                s_Data.Buffer->Color = color;
+                s_Data.Buffer++;
 
-				x += glyph->advance_x;
-			}
-		}
-	}
+                s_Data.Buffer->Position = glm::vec4(x0, y1, 0, 1.0f);
+                s_Data.Buffer->Uv = glm::vec2(u0, v1);
+                s_Data.Buffer->Tid = ts;
+                s_Data.Buffer->Color = color;
+                s_Data.Buffer++;
 
-	void Renderer2D::DrawString(const std::string& text, const glm::mat4& transform, const Ref<Font>& font, const glm::vec4& color)
-	{
-		float x = transform[3][0];
-		float y = transform[3][1];
+                s_Data.Buffer->Position = glm::vec4(x1, y1, 0, 1.0f);
+                s_Data.Buffer->Uv = glm::vec2(u1, v1);
+                s_Data.Buffer->Tid = ts;
+                s_Data.Buffer->Color = color;
+                s_Data.Buffer++;
 
-		DrawString(text, x, y, font, color);
-	}
+                s_Data.Buffer->Position = glm::vec4(x1, y0, 0, 1.0f);
+                s_Data.Buffer->Uv = glm::vec2(u1, v0);
+                s_Data.Buffer->Tid = ts;
+                s_Data.Buffer->Color = color;
+                s_Data.Buffer++;
 
-	void Renderer2D::End()
-	{
-		s_Data.VertexBuffer->Unmap();
-		Flush();
-		s_Data.IndexCount = 0;
-		s_Data.TextureIndex = 0;
-		RenderCommand::SetDepthTest(true);
-	}
+                s_Data.IndexCount += 6;
 
-	void Renderer2D::Flush()
-	{
-		//s_Data.Shader->Bind();
-		// VULKAN IMPL: Fix
-		//for (uint32_t i = 0; i < s_Data.SystemUniformBuffers.size(); i++)
-		{
-		//	s_Data.Shader->SetVSSystemUniformBuffer(s_Data.SystemUniformBuffers[i].Buffer, s_Data.SystemUniformBuffers[i].Size, i);
-		}
+                x += glyph->advance_x;
+            }
+        }
+    }
 
-		for (uint8_t i = 0; i <= s_Data.TextureIndex; i++)
-		{
-		//	s_Data.TextureSlots[i]->Bind(i);
-		}
+    void Renderer2D::DrawString(const std::string& text, const glm::mat4& transform, const Ref<Font>& font,
+                                const glm::vec4& color)
+    {
+        float x = transform[3][0];
+        float y = transform[3][1];
 
-		//s_Data.VertexArray->Bind();
-		RenderCommand::DrawIndexed(s_Data.VertexArray, s_Data.IndexCount);
-		
-		for (uint8_t i = 0; i <= s_Data.TextureIndex; i++)
-		{
-			//s_Data.TextureSlots[i]->Unbind(i);
-		}
-		s_Data.VertexArray->Unbind();
-	}
+        DrawString(text, x, y, font, color);
+    }
 
-	void Renderer2D::Shutdown()
-	{
-		
-	}
-}
+    void Renderer2D::End()
+    {
+        s_Data.VertexBuffer->Unmap();
+        Flush();
+        s_Data.IndexCount = 0;
+        s_Data.TextureIndex = 0;
+        RenderCommand::SetDepthTest(true);
+    }
+
+    void Renderer2D::Flush()
+    {
+        // s_Data.Shader->Bind();
+        // VULKAN IMPL: Fix
+        // for (uint32_t i = 0; i < s_Data.SystemUniformBuffers.size(); i++)
+        {
+            //	s_Data.Shader->SetVSSystemUniformBuffer(s_Data.SystemUniformBuffers[i].Buffer,
+            //s_Data.SystemUniformBuffers[i].Size, i);
+        }
+
+        for (uint8_t i = 0; i <= s_Data.TextureIndex; i++)
+        {
+            //	s_Data.TextureSlots[i]->Bind(i);
+        }
+
+        // s_Data.VertexArray->Bind();
+        RenderCommand::DrawIndexed(s_Data.VertexArray, s_Data.IndexCount);
+
+        for (uint8_t i = 0; i <= s_Data.TextureIndex; i++)
+        {
+            // s_Data.TextureSlots[i]->Unbind(i);
+        }
+        s_Data.VertexArray->Unbind();
+    }
+
+    void Renderer2D::Shutdown() {}
+} // namespace Crowny

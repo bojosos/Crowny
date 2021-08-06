@@ -7,18 +7,18 @@
 namespace Crowny
 {
 
-	class ImGuiTextureEditor : public ImGuiPanel
-	{
-	public:
-		ImGuiTextureEditor(const std::string& name) : ImGuiPanel(name) { }
-		virtual ~ImGuiTextureEditor() = default;
+    class ImGuiTextureEditor : public ImGuiPanel
+    {
+    public:
+        ImGuiTextureEditor(const std::string& name) : ImGuiPanel(name) {}
+        virtual ~ImGuiTextureEditor() = default;
 
-		virtual void Render() override;
-	
-	public:
-		static void SetTexture(const Ref<Texture>& texture);
+        virtual void Render() override;
 
-	private:
-		static Ref<Texture> s_Texture;
-	};
-}
+    public:
+        static void SetTexture(const Ref<Texture>& texture);
+
+    private:
+        static Ref<Texture> s_Texture;
+    };
+} // namespace Crowny

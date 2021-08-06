@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
-#include "Platform/Vulkan/VulkanRenderWindow.h"
 #include "Crowny/Common/Timer.h"
+#include "Platform/Vulkan/VulkanRenderWindow.h"
 
 #include "Crowny/Application/Application.h"
 
@@ -12,29 +12,31 @@ namespace Crowny
 
     VulkanRenderWindow::~VulkanRenderWindow()
     {
-        gVulkanRendererAPI().GetPresentDevice()->WaitIdle();
+        gVulkanRenderAPI().GetPresentDevice()->WaitIdle();
         m_SwapChain->Destroy();
-        vkDestroySurfaceKHR(gVulkanRendererAPI().GetInstance(), m_Surface, gVulkanAllocator);
+        vkDestroySurfaceKHR(gVulkanRenderAPI().GetInstance(), m_Surface, gVulkanAllocator);
         delete m_Window;
     }
-    
-    VulkanRenderWindow::VulkanRenderWindow(const RenderWindowProperties& props) : RenderWindow(props), m_RequiresNewBackBuffer(true)
+
+    VulkanRenderWindow::VulkanRenderWindow(const RenderWindowProperties& props)
+      : RenderWindow(props), m_RequiresNewBackBuffer(true)
     {
         m_Properties.SwapChainTarget = true;
         WindowProperties windowProps;
-		windowProps.Title = props.Title;
-		windowProps.Width = props.Width;
-		windowProps.Height = props.Height;
+        windowProps.Title = props.Title;
+        windowProps.Width = props.Width;
+        windowProps.Height = props.Height;
         m_Window = Window::Create(windowProps);
-        
-        VkResult result = glfwCreateWindowSurface(gVulkanRendererAPI().GetInstance(), (GLFWwindow*)m_Window->GetNativeWindow(), gVulkanAllocator, &m_Surface);
+
+        VkResult result = glfwCreateWindowSurface(
+          gVulkanRenderAPI().GetInstance(), (GLFWwindow*)m_Window->GetNativeWindow(), gVulkanAllocator, &m_Surface);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        
-        Ref<VulkanDevice> device = gVulkanRendererAPI().GetPresentDevice();
+
+        Ref<VulkanDevice> device = gVulkanRenderAPI().GetPresentDevice();
         VkPhysicalDevice physicalDevice = device->GetPhysicalDevice();
 
         m_PresentQueueFamily = device->GetQueueFamily(GRAPHICS_QUEUE);
-        
+
         VkBool32 supportsPresent;
         vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, m_PresentQueueFamily, m_Surface, &supportsPresent);
         if (!supportsPresent)
@@ -44,10 +46,11 @@ namespace Crowny
         m_ColorFormat = format.ColorFormat;
         m_DepthFormat = format.DepthFormat;
         m_ColorSpace = format.ColorSpace;
-        m_SwapChain = device->GetResourceManager().Create<VulkanSwapChain>(m_Surface, m_Properties.Width, m_Properties.Height, m_Properties.Vsync, m_ColorFormat, m_ColorSpace, m_Properties.DepthBuffer, m_DepthFormat);
+        m_SwapChain = device->GetResourceManager().Create<VulkanSwapChain>(
+          m_Surface, m_Properties.Width, m_Properties.Height, m_Properties.Vsync, m_ColorFormat, m_ColorSpace,
+          m_Properties.DepthBuffer, m_DepthFormat);
         if (props.Fullscreen)
         {
-            
         }
     }
 
@@ -63,13 +66,13 @@ namespace Crowny
         }
         m_RequiresNewBackBuffer = false;
     }
-    
+
     void VulkanRenderWindow::SwapBuffers(uint32_t syncMask)
     {
-       // if (m_ShowOnSwap)
-         //   SetHidden(false);
+        // if (m_ShowOnSwap)
+        //   SetHidden(false);
 
-        Ref<VulkanDevice> device = gVulkanRendererAPI().GetPresentDevice();
+        Ref<VulkanDevice> device = gVulkanRenderAPI().GetPresentDevice();
         VulkanQueue* queue = device->GetQueue(GRAPHICS_QUEUE, 0);
         uint32_t queueMask = device->GetQueueMask(GRAPHICS_QUEUE, 0);
         syncMask &= ~queueMask;
@@ -90,14 +93,16 @@ namespace Crowny
             RebuildSwapChain();
         m_RequiresNewBackBuffer = true;
     }
-    
+
     void VulkanRenderWindow::RebuildSwapChain()
     {
-        Ref<VulkanDevice> device = gVulkanRendererAPI().GetPresentDevice();
+        Ref<VulkanDevice> device = gVulkanRenderAPI().GetPresentDevice();
         device->WaitIdle();
         VulkanSwapChain* oldSwapChain = m_SwapChain;
-        m_SwapChain = device->GetResourceManager().Create<VulkanSwapChain>(m_Surface, m_Properties.Width, m_Properties.Height, m_Properties.Vsync, m_ColorFormat, m_ColorSpace, m_Properties.DepthBuffer, m_DepthFormat);
+        m_SwapChain = device->GetResourceManager().Create<VulkanSwapChain>(
+          m_Surface, m_Properties.Width, m_Properties.Height, m_Properties.Vsync, m_ColorFormat, m_ColorSpace,
+          m_Properties.DepthBuffer, m_DepthFormat);
         oldSwapChain->Destroy();
     }
 
-}
+} // namespace Crowny

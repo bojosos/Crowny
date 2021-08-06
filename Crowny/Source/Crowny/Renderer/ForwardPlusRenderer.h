@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Crowny/Renderer/Texture.h"
+#include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/Renderer/Camera.h"
-#include "Crowny/Renderer/Model.h"
 #include "Crowny/Renderer/EditorCamera.h"
+#include "Crowny/Renderer/Model.h"
 
 #include <glm/glm.hpp>
 
@@ -25,7 +25,7 @@ namespace Crowny
         static void Submit(const Ref<Model>& model, const glm::mat4& transform);
         static void EndFrame();
         static void Shutdown();
-        
+
         static std::vector<MeshTran> s_Meshes;
     };
-}
+} // namespace Crowny

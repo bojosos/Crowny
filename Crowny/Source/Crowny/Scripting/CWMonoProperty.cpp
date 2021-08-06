@@ -1,18 +1,18 @@
 #include "cwpch.h"
 
-#include "Crowny/Scripting/CWMonoProperty.h"
 #include "Crowny/Scripting/CWMonoClass.h"
+#include "Crowny/Scripting/CWMonoProperty.h"
 
 BEGIN_MONO_INCLUDE
-#include <mono/metadata/reflection.h>
 #include <mono/metadata/object.h>
+#include <mono/metadata/reflection.h>
 END_MONO_INCLUDE
 
 namespace Crowny
 {
 
     CWMonoProperty::CWMonoProperty(MonoProperty* prop)
-        : m_Property(prop), m_IsIndexed(false), m_IsFullyInitialized(false), m_ReturnType(nullptr)
+      : m_Property(prop), m_IsIndexed(false), m_IsFullyInitialized(false), m_ReturnType(nullptr)
     {
         m_GetMethod = mono_property_get_get_method(m_Property);
         m_SetMethod = mono_property_get_set_method(m_Property);
@@ -23,7 +23,7 @@ namespace Crowny
     MonoObject* CWMonoProperty::Get(MonoObject* instance) const
     {
         if (m_GetMethod == nullptr)
-            return  nullptr;
+            return nullptr;
         return mono_runtime_invoke(m_GetMethod, instance, nullptr, nullptr);
     }
 
@@ -46,7 +46,7 @@ namespace Crowny
     {
         if (m_SetMethod == nullptr)
             return;
-        
+
         void* args[1];
         args[0] = value;
         mono_runtime_invoke(m_SetMethod, instance, args, nullptr);
@@ -84,12 +84,12 @@ namespace Crowny
 
         m_IsFullyInitialized = true;
     }
-    
+
     bool CWMonoProperty::IsIndexed() const
     {
         if (!m_IsFullyInitialized)
             InitializeDeferred();
-        
+
         return m_IsIndexed;
     }
 
@@ -110,7 +110,7 @@ namespace Crowny
         MonoObject* attr = nullptr;
         if (mono_custom_attrs_has_attr(info, monoClass->GetInternalPtr()))
             attr = mono_custom_attrs_get_attr(info, monoClass->GetInternalPtr());
-        
+
         mono_custom_attrs_free(info);
         return attr;
     }
@@ -145,7 +145,6 @@ namespace Crowny
         if (getterVisibility < setterVisibility)
             return getterVisibility;
         return setterVisibility;
-
     }
 
-}
+} // namespace Crowny

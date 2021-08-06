@@ -1,8 +1,8 @@
 #pragma once
 
-#include <memory>
 #include <algorithm>
 #include <functional>
+#include <memory>
 #include <random>
 #include <utility>
 

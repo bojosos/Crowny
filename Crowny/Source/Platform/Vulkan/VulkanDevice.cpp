@@ -1,50 +1,49 @@
 #include "cwpch.h"
 
-#include "Platform/Vulkan/VulkanDevice.h"
-#include "Platform/Vulkan/VulkanRendererAPI.h"
 #include "Platform/Vulkan/VulkanDescriptorPool.h"
+#include "Platform/Vulkan/VulkanDevice.h"
+#include "Platform/Vulkan/VulkanRenderAPI.h"
 
 namespace Crowny
 {
-    VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, uint32_t idx)
-        : m_PhysicalDevice(physicalDevice)
+    VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, uint32_t idx) : m_PhysicalDevice(physicalDevice)
     {
         vkGetPhysicalDeviceProperties(physicalDevice, &m_DeviceProperties);
         vkGetPhysicalDeviceFeatures(physicalDevice, &m_DeviceFeatures);
         vkGetPhysicalDeviceMemoryProperties(physicalDevice, &m_MemoryProperties);
-         
+
         uint32_t numQueueFamilies;
         vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &numQueueFamilies, nullptr);
         std::vector<VkQueueFamilyProperties> queueFamilyProperties(numQueueFamilies);
         vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &numQueueFamilies, queueFamilyProperties.data());
-        
+
         const float defaultQueuePrios[MAX_QUEUES_PER_TYPE] = { 0.0f };
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-        
-        auto populateQueueInfo = [&](GpuQueueType type, uint32_t familyIdx)
-        {
+
+        auto populateQueueInfo = [&](GpuQueueType type, uint32_t familyIdx) {
             queueCreateInfos.push_back(VkDeviceQueueCreateInfo());
             VkDeviceQueueCreateInfo& createInfo = queueCreateInfos.back();
             createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
             createInfo.pNext = nullptr;
             createInfo.flags = 0;
             createInfo.queueFamilyIndex = familyIdx;
-            createInfo.queueCount = std::min(queueFamilyProperties[familyIdx].queueCount, (uint32_t)MAX_QUEUES_PER_TYPE);
+            createInfo.queueCount =
+              std::min(queueFamilyProperties[familyIdx].queueCount, (uint32_t)MAX_QUEUES_PER_TYPE);
             createInfo.pQueuePriorities = defaultQueuePrios;
             m_QueueInfos[type].FamilyIdx = familyIdx;
             m_QueueInfos[type].Queues.resize(createInfo.queueCount, nullptr);
         };
-        
+
         for (uint32_t i = 0; i < (uint32_t)queueFamilyProperties.size(); i++)
         {
-            if ((queueFamilyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) && 
+            if ((queueFamilyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) &&
                 (queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0)
             {
                 populateQueueInfo(COMPUTE_QUEUE, i);
                 break;
             }
         }
-        
+
         for (uint32_t i = 0; i < (uint32_t)queueFamilyProperties.size(); i++)
         {
             if ((queueFamilyProperties[i].queueFlags & VK_QUEUE_TRANSFER_BIT) &&
@@ -55,7 +54,7 @@ namespace Crowny
                 break;
             }
         }
-        
+
         for (uint32_t i = 0; i < (uint32_t)queueFamilyProperties.size(); i++)
         {
             if (queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
@@ -64,19 +63,19 @@ namespace Crowny
                 break;
             }
         }
-        
+
         for (uint32_t i = 0; i < (uint32_t)queueFamilyProperties.size(); i++)
-        {/*
-            if (queueFamilyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT)
-            {
-                populateQueueInfo(COMPUTE_QUEUE, i);
-            }*/
+        { /*
+             if (queueFamilyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT)
+             {
+                 populateQueueInfo(COMPUTE_QUEUE, i);
+             }*/
         }
 
         const char* extensions[1];
         uint32_t numExts = 0;
         extensions[0] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-                
+
         VkDeviceCreateInfo deviceInfo;
         deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         deviceInfo.pNext = nullptr;
@@ -88,7 +87,7 @@ namespace Crowny
         deviceInfo.ppEnabledExtensionNames = extensions;
         deviceInfo.enabledLayerCount = 0;
         deviceInfo.ppEnabledLayerNames = nullptr;
-        
+
         if (m_DeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
         {
             VkResult result = vkCreateDevice(m_PhysicalDevice, &deviceInfo, gVulkanAllocator, &m_LogicalDevice);
@@ -103,15 +102,15 @@ namespace Crowny
                     m_QueueInfos[i].Queues[j] = new VulkanQueue(*this, queue, (GpuQueueType)i, j);
                 }
             }
-        
+
             VmaAllocatorCreateInfo allocatorCI = {};
             allocatorCI.physicalDevice = m_PhysicalDevice;
             allocatorCI.device = m_LogicalDevice;
             allocatorCI.pAllocationCallbacks = gVulkanAllocator;
             allocatorCI.flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
-            allocatorCI.instance = gVulkanRendererAPI().GetInstance();
+            allocatorCI.instance = gVulkanRenderAPI().GetInstance();
             allocatorCI.vulkanApiVersion = VK_API_VERSION_1_1;
-            
+
             vmaCreateAllocator(&allocatorCI, &m_Allocator);
 
             m_CommandBufferPool = new VulkanCommandBufferPool(*this);
@@ -119,14 +118,14 @@ namespace Crowny
             m_ResourceManager = new VulkanResourceManager(*this);
         }
     }
-    
+
     VulkanDevice::~VulkanDevice()
     {
         if (m_LogicalDevice == VK_NULL_HANDLE)
             return;
         VkResult result = vkDeviceWaitIdle(m_LogicalDevice);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        
+
         for (uint32_t i = 0; i < QUEUE_COUNT; i++)
         {
             uint32_t numq = (uint32_t)m_QueueInfos[i].Queues.size();
@@ -136,14 +135,14 @@ namespace Crowny
                 delete m_QueueInfos[i].Queues[j];
             }
         }
-        
+
         delete m_CommandBufferPool;
         delete m_DescriptorManager;
         delete m_ResourceManager;
         vmaDestroyAllocator(m_Allocator);
         vkDestroyDevice(m_LogicalDevice, gVulkanAllocator);
     }
-    
+
     uint32_t VulkanDevice::GetQueueMask(GpuQueueType type, uint32_t queueIdx) const
     {
         uint32_t numQueues = GetNumQueues(type);
@@ -154,7 +153,7 @@ namespace Crowny
         uint32_t curIdx = queueIdx % numQueues;
         while (curIdx < MAX_QUEUES_PER_TYPE)
         {
-          //  idMask |= CommandSyncMask::GetGlobalQueueMask(type, curIdx);
+            //  idMask |= CommandSyncMask::GetGlobalQueueMask(type, curIdx);
             curIdx += numQueues;
         }
         return idMask;
@@ -172,18 +171,18 @@ namespace Crowny
             }
         }
     }
-    
+
     SurfaceFormat VulkanDevice::GetSurfaceFormat(const VkSurfaceKHR& surface) const
     {
         SurfaceFormat resultFormat;
         uint32_t formatCount;
         VkResult result = vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, surface, &formatCount, nullptr);
         CW_ENGINE_ASSERT(result == VK_SUCCESS && formatCount > 0);
-        
+
         std::vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
         result = vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, surface, &formatCount, surfaceFormats.data());
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        
+
         if (formatCount == 1 && surfaceFormats[0].format == VK_FORMAT_UNDEFINED)
         {
             resultFormat.ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
@@ -202,7 +201,7 @@ namespace Crowny
                     break;
                 }
             }
-            
+
             if (!foundFormat)
             {
                 resultFormat.ColorFormat = surfaceFormats[0].format;
@@ -210,12 +209,16 @@ namespace Crowny
             }
         }
 
-        std::vector<VkFormat> depthFormats = { VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT, VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D16_UNORM_S8_UINT, VK_FORMAT_D16_UNORM };
+        std::vector<VkFormat> depthFormats = { VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT,
+                                               VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D16_UNORM_S8_UINT,
+                                               VK_FORMAT_D16_UNORM };
         VkBool32 validDepthFormat = false;
-        for (auto& format : depthFormats) {
+        for (auto& format : depthFormats)
+        {
             VkFormatProperties formatProps;
             vkGetPhysicalDeviceFormatProperties(m_PhysicalDevice, format, &formatProps);
-            if (formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+            if (formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+            {
                 resultFormat.DepthFormat = format;
                 validDepthFormat = true;
                 break;
@@ -224,7 +227,7 @@ namespace Crowny
         CW_ENGINE_ASSERT(resultFormat.DepthFormat);
         return resultFormat;
     }
-    
+
     void VulkanDevice::WaitIdle()
     {
         if (m_LogicalDevice == VK_NULL_HANDLE)
@@ -238,12 +241,12 @@ namespace Crowny
     {
         VmaAllocationCreateInfo allocCreateInfo{};
         allocCreateInfo.requiredFlags = flags;
-        
+
         VmaAllocationInfo allocInfo;
         VmaAllocation memory;
         VkResult result = vmaAllocateMemoryForImage(m_Allocator, image, &allocCreateInfo, &memory, &allocInfo);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        //CW_ENGINE_INFO("Allocating image memory: type: {0}, size: {1}", allocInfo.memoryType, allocInfo.size);
+        // CW_ENGINE_INFO("Allocating image memory: type: {0}, size: {1}", allocInfo.memoryType, allocInfo.size);
 
         result = vkBindImageMemory(m_LogicalDevice, image, allocInfo.deviceMemory, allocInfo.offset);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
@@ -254,12 +257,12 @@ namespace Crowny
     {
         VmaAllocationCreateInfo allocCreateInfo{};
         allocCreateInfo.requiredFlags = flags;
-        
+
         VmaAllocationInfo allocInfo;
         VmaAllocation memory;
         VkResult result = vmaAllocateMemoryForBuffer(m_Allocator, buffer, &allocCreateInfo, &memory, &allocInfo);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        //CW_ENGINE_INFO("Allocating buffer memory: type: {0}, size: {1}", allocInfo.memoryType, allocInfo.size);
+        // CW_ENGINE_INFO("Allocating buffer memory: type: {0}, size: {1}", allocInfo.memoryType, allocInfo.size);
 
         result = vkBindBufferMemory(m_LogicalDevice, buffer, allocInfo.deviceMemory, allocInfo.offset);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
@@ -277,10 +280,10 @@ namespace Crowny
 
     void VulkanDevice::FreeMemory(VmaAllocation allocation)
     {
-        //gVulkanRendererAPI().PrintAllocationInfo(allocation);
+        // gVulkanRenderAPI().PrintAllocationInfo(allocation);
         vmaFreeMemory(m_Allocator, allocation);
     }
-    
+
     uint32_t VulkanDevice::FindMemoryType(uint32_t requirement, VkMemoryPropertyFlags flags)
     {
         for (uint32_t i = 0; i < m_MemoryProperties.memoryTypeCount; i++)
@@ -292,4 +295,4 @@ namespace Crowny
         return -1;
     }
 
-}
+} // namespace Crowny

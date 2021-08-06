@@ -4,11 +4,11 @@
 
 namespace Crowny
 {
-    
+
     class OpenGLUtils
     {
     public:
         static uint32_t BufferUsageToOpenGLBufferUsage(BufferUsage usage);
     };
-    
-}
+
+} // namespace Crowny

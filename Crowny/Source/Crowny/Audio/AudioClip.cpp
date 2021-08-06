@@ -8,9 +8,10 @@
 
 namespace Crowny
 {
-    
-    AudioClip::AudioClip(const Ref<DataStream>& stream, uint32_t streamSize, uint32_t numSamples, const AudioClipDesc& desc)
-        : m_StreamSize(streamSize), m_StreamData(stream), m_NumSamples(numSamples), m_Desc(desc)
+
+    AudioClip::AudioClip(const Ref<DataStream>& stream, uint32_t streamSize, uint32_t numSamples,
+                         const AudioClipDesc& desc)
+      : m_StreamSize(streamSize), m_StreamData(stream), m_NumSamples(numSamples), m_Desc(desc)
     {
         m_StreamOffset = (uint32_t)stream->Tell();
         AudioDataInfo info;
@@ -25,7 +26,7 @@ namespace Crowny
             auto memStream = CreateRef<MemoryDataStream>(m_StreamSize);
             m_SourceStreamData = memStream;
         }
-        
+
         bool loadDecompressed = m_Desc.ReadMode == AudioReadMode::LoadDecompressed;
         if (loadDecompressed)
         {
@@ -47,14 +48,14 @@ namespace Crowny
                 if (reader.Open(stream, info, offset))
                     reader.Read(sampleBuffer, info.NumSamples);
                 else
-                    CW_ENGINE_ERROR("Audio file stream failed.");                    
+                    CW_ENGINE_ERROR("Audio file stream failed.");
             }
             else*/
             {
                 stream->Seek(offset);
                 stream->Read(sampleBuffer, bufferSize);
             }
-            
+
             alGenBuffers(1, &m_BufferID);
             gAudio().WriteToOpenALBuffer(m_BufferID, sampleBuffer, info);
             m_StreamData = nullptr;
@@ -78,7 +79,7 @@ namespace Crowny
                 m_StreamOffset = 0;
             }
         }
-        
+
         if (m_Desc.Format == AudioFormat::VORBIS && m_Desc.ReadMode != AudioReadMode::LoadDecompressed)
         {
             m_NeedsDecompression = true;
@@ -90,7 +91,7 @@ namespace Crowny
         }
         AudioUtils::CheckOpenALErrors("Audio clip", 89);
     }
-    
+
     void AudioClip::GetSamples(uint8_t* samples, uint32_t offset, uint32_t count) const
     {
         if (m_StreamData != nullptr)
@@ -110,11 +111,11 @@ namespace Crowny
             }
             return;
         }
-        
+
         if (m_SourceStreamData != nullptr)
         {
             CW_ENGINE_ASSERT(!m_NeedsDecompression)
-                uint32_t bytesPerSample = m_Desc.BitDepth / 8;
+            uint32_t bytesPerSample = m_Desc.BitDepth / 8;
             uint32_t size = count * bytesPerSample;
             uint32_t streamOffset = offset * bytesPerSample;
             m_SourceStreamData->Seek(streamOffset);
@@ -122,12 +123,12 @@ namespace Crowny
             return;
         }
     }
-    
+
     Ref<DataStream> AudioClip::GetSourceStream(uint32_t& size)
     {
         size = m_SourceStreamSize;
         m_SourceStreamData->Seek(0);
         return m_SourceStreamData;
     }
-    
-}
+
+} // namespace Crowny

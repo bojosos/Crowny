@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Crowny/Renderer/SamplerState.h"
+#include "Crowny/RenderAPI/SamplerState.h"
 
 #include "Platform/Vulkan/VulkanResource.h"
 
@@ -12,7 +12,7 @@ namespace Crowny
     public:
         VulkanSampler(VulkanResourceManager* owner, VkSampler sampler);
         ~VulkanSampler();
-        VkSampler GetHandle() const  {return m_Sampler; }
+        VkSampler GetHandle() const { return m_Sampler; }
 
     private:
         VkSampler m_Sampler;
@@ -27,7 +27,6 @@ namespace Crowny
 
     private:
         VulkanSampler* m_Sampler;
-        
     };
 
-}
+} // namespace Crowny

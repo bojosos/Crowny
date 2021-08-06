@@ -1,21 +1,22 @@
 #include "cwpch.h"
 
 #include "Platform/Vulkan/VulkanCommandBuffer.h"
-#include "Platform/Vulkan/VulkanRendererAPI.h"
-#include "Platform/Vulkan/VulkanRenderPass.h"
-#include "Platform/Vulkan/VulkanVertexBuffer.h"
 #include "Platform/Vulkan/VulkanIndexBuffer.h"
-#include "Platform/Vulkan/VulkanUniformParams.h"
-#include "Platform/Vulkan/VulkanRenderWindow.h"
+#include "Platform/Vulkan/VulkanRenderAPI.h"
+#include "Platform/Vulkan/VulkanRenderPass.h"
 #include "Platform/Vulkan/VulkanRenderTexture.h"
+#include "Platform/Vulkan/VulkanRenderWindow.h"
+#include "Platform/Vulkan/VulkanUniformParams.h"
+#include "Platform/Vulkan/VulkanVertexBuffer.h"
 
 #include "Crowny/Common/Timer.h"
 
 namespace Crowny
 {
-    
-    VulkanCommandBuffer::VulkanCommandBuffer(VulkanDevice& device, GpuQueueType queueType, uint32_t queueIdx, bool secondary)
-        : CommandBuffer(queueType, queueIdx, secondary), m_Queue(nullptr), m_IdMask(0), m_Device(device)
+
+    VulkanCommandBuffer::VulkanCommandBuffer(VulkanDevice& device, GpuQueueType queueType, uint32_t queueIdx,
+                                             bool secondary)
+      : CommandBuffer(queueType, queueIdx, secondary), m_Queue(nullptr), m_IdMask(0), m_Device(device)
     {
         uint32_t numQueues = device.GetNumQueues(queueType);
         if (numQueues == 0)
@@ -47,10 +48,7 @@ namespace Crowny
         return recording ? CommandBufferState::Recording : CommandBufferState::Empty;
     }
 
-    void VulkanCommandBuffer::Reset()
-    {
-        AcquireNewBuffer();
-    }
+    void VulkanCommandBuffer::Reset() { AcquireNewBuffer(); }
 
     void VulkanCommandBuffer::Submit(uint32_t syncMask)
     {
@@ -80,7 +78,8 @@ namespace Crowny
         semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
         semaphoreCreateInfo.pNext = nullptr;
         semaphoreCreateInfo.flags = 0;
-        VkResult result = vkCreateSemaphore(m_Owner->GetDevice().GetLogicalDevice(), &semaphoreCreateInfo, gVulkanAllocator, &m_Semaphore);
+        VkResult result = vkCreateSemaphore(m_Owner->GetDevice().GetLogicalDevice(), &semaphoreCreateInfo,
+                                            gVulkanAllocator, &m_Semaphore);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
     }
 
@@ -88,8 +87,9 @@ namespace Crowny
     {
         vkDestroySemaphore(m_Owner->GetDevice().GetLogicalDevice(), m_Semaphore, gVulkanAllocator);
     }
-    
-    VulkanTransferBuffer::VulkanTransferBuffer(VulkanDevice* device, GpuQueueType type, uint32_t queueIdx) : m_Device(device), m_Type(type), m_QueueIdx(queueIdx)
+
+    VulkanTransferBuffer::VulkanTransferBuffer(VulkanDevice* device, GpuQueueType type, uint32_t queueIdx)
+      : m_Device(device), m_Type(type), m_QueueIdx(queueIdx)
     {
         uint32_t numQueues = device->GetNumQueues(type);
         if (numQueues == 0)
@@ -109,18 +109,22 @@ namespace Crowny
             m_CommandBuffer->End();
     }
 
-    void VulkanTransferBuffer::MemoryBarrier(VkBuffer buffer, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags, 
-                                            VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage)
+    void VulkanTransferBuffer::MemoryBarrier(VkBuffer buffer, VkAccessFlags srcAccessFlags,
+                                             VkAccessFlags dstAccessFlags, VkPipelineStageFlags srcStage,
+                                             VkPipelineStageFlags dstStage)
     {
         m_CommandBuffer->MemoryBarrier(buffer, srcAccessFlags, dstAccessFlags, srcStage, dstStage);
     }
 
-    void VulkanTransferBuffer::SetLayout(VkImage image, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags, VkImageLayout oldLayout, VkImageLayout newLayout, const VkImageSubresourceRange& range)
+    void VulkanTransferBuffer::SetLayout(VkImage image, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags,
+                                         VkImageLayout oldLayout, VkImageLayout newLayout,
+                                         const VkImageSubresourceRange& range)
     {
         m_CommandBuffer->SetLayout(image, srcAccessFlags, dstAccessFlags, oldLayout, newLayout, range);
     }
 
-    void VulkanTransferBuffer::SetLayout(VulkanImage* image, const VkImageSubresourceRange& range, VkAccessFlags newAccessMask, VkImageLayout newLayout)
+    void VulkanTransferBuffer::SetLayout(VulkanImage* image, const VkImageSubresourceRange& range,
+                                         VkAccessFlags newAccessMask, VkImageLayout newLayout)
     {
         image->GetBarriers(range, m_BarriersTemp);
         if (m_BarriersTemp.size() == 0)
@@ -135,7 +139,7 @@ namespace Crowny
                 if (i < (count - 1))
                     std::swap(m_BarriersTemp[i], m_BarriersTemp[count - 1]);
                 m_BarriersTemp.erase(m_BarriersTemp.begin() + count - 1);
-                count --;
+                count--;
                 i--;
             }
         }
@@ -146,17 +150,18 @@ namespace Crowny
             entry.newLayout = newLayout;
         }
 
-        vkCmdPipelineBarrier(m_CommandBuffer->GetHandle(), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, (uint32_t)m_BarriersTemp.size(), m_BarriersTemp.data());
+        vkCmdPipelineBarrier(m_CommandBuffer->GetHandle(), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr,
+                             (uint32_t)m_BarriersTemp.size(), m_BarriersTemp.data());
 
         m_BarriersTemp.clear();
     }
-
 
     void VulkanTransferBuffer::Allocate()
     {
         if (m_CommandBuffer != nullptr)
             return;
-        
+
         uint32_t queueFamily = m_Device->GetQueueFamily(m_Type);
         m_CommandBuffer = m_Device->GetCmdBufferPool().GetBuffer(queueFamily, false);
     }
@@ -166,7 +171,7 @@ namespace Crowny
         if (m_CommandBuffer == nullptr)
             return;
         uint32_t syncMask = m_SyncMask & ~m_QueueMask;
-        
+
         m_CommandBuffer->End();
         m_CommandBuffer->Submit(m_Queue, m_QueueIdx, syncMask);
         if (wait)
@@ -177,10 +182,10 @@ namespace Crowny
         }
         m_CommandBuffer = nullptr;
     }
-    
+
     VulkanTransferManager::VulkanTransferManager()
     {
-        VulkanDevice* device = gVulkanRendererAPI().GetPresentDevice().get();
+        VulkanDevice* device = gVulkanRenderAPI().GetPresentDevice().get();
         for (uint32_t i = 0; i < QUEUE_COUNT; i++)
         {
             GpuQueueType queueType = (GpuQueueType)i;
@@ -192,13 +197,13 @@ namespace Crowny
     void VulkanTransferManager::GetSyncSemaphores(uint32_t syncMask, VulkanSemaphore** semaphores, uint32_t& count)
     {
         bool failed = false;
-        Ref<VulkanDevice> device = gVulkanRendererAPI().GetPresentDevice();
+        Ref<VulkanDevice> device = gVulkanRenderAPI().GetPresentDevice();
         uint32_t semaphoreIdx = 0;
         for (uint32_t i = 0; i < QUEUE_COUNT; i++)
         {
             GpuQueueType queueType = (GpuQueueType)i;
             uint32_t numQueues = device->GetNumQueues(queueType);
-            for(uint32_t j = 0; j < numQueues; j++)
+            for (uint32_t j = 0; j < numQueues; j++)
             {
                 VulkanQueue* queue = device->GetQueue(queueType, j);
                 VulkanCmdBuffer* lastCb = queue->GetLastCommandBuffer();
@@ -229,13 +234,13 @@ namespace Crowny
         buffer->Allocate();
         return buffer;
     }
-    
+
     void VulkanTransferManager::FlushTransferBuffers()
     {
         for (uint32_t i = 0; i < QUEUE_COUNT; i++)
         {
             for (uint32_t j = 0; j < MAX_QUEUES_PER_TYPE; j++)
-            m_TransferBuffers[i][j].Flush(false);
+                m_TransferBuffers[i][j].Flush(false);
         }
     }
 
@@ -272,14 +277,14 @@ namespace Crowny
             vkDestroyCommandPool(m_Device.GetLogicalDevice(), info.Pool, gVulkanAllocator);
         }
     }
-    
+
     VulkanCmdBuffer* VulkanCommandBufferPool::GetBuffer(uint32_t queueFamily, bool secondary)
     {
         auto iter = m_Pools.find(queueFamily);
         if (iter == m_Pools.end())
             return nullptr;
         VulkanCmdBuffer** buffers = iter->second.Buffers;
-        
+
         uint32_t i = 0;
         for (; i < MAX_VULKAN_CB_PER_QUEUE_FAMILY; i++)
         {
@@ -291,15 +296,15 @@ namespace Crowny
                 return buffers[i];
             }
         }
-        
+
         CW_ENGINE_ASSERT(i < MAX_VULKAN_CB_PER_QUEUE_FAMILY, "Too many command buffers allocated.");
-        
+
         buffers[i] = CreateBuffer(queueFamily, secondary);
         buffers[i]->Begin();
-        
+
         return buffers[i];
     }
-    
+
     VulkanCmdBuffer* VulkanCommandBufferPool::CreateBuffer(uint32_t queueFamily, bool secondary)
     {
         auto iter = m_Pools.find(queueFamily);
@@ -308,38 +313,40 @@ namespace Crowny
         const PoolInfo& poolInfo = iter->second;
         return new VulkanCmdBuffer(m_Device, m_NextId++, poolInfo.Pool, poolInfo.QueueFamily, secondary);
     }
-    
-    VulkanCmdBuffer::VulkanCmdBuffer(VulkanDevice& device, uint32_t id, VkCommandPool pool, uint32_t queueFamily, bool secondary)
-        : m_ScissorRequiresBind(true), m_ViewportRequiresBind(true), m_VertexInputsRequriesBind(true), m_GraphicsPipelineRequiresBind(true),
-          m_Id(id), m_QueueFamily(queueFamily), m_Device(device), m_Pool(pool), m_ComputePipelineRequiresBind(true)
+
+    VulkanCmdBuffer::VulkanCmdBuffer(VulkanDevice& device, uint32_t id, VkCommandPool pool, uint32_t queueFamily,
+                                     bool secondary)
+      : m_ScissorRequiresBind(true), m_ViewportRequiresBind(true), m_VertexInputsRequriesBind(true),
+        m_GraphicsPipelineRequiresBind(true), m_Id(id), m_QueueFamily(queueFamily), m_Device(device), m_Pool(pool),
+        m_ComputePipelineRequiresBind(true)
     {
         uint32_t maxBoundDescriptorSets = device.GetDeviceProperties().limits.maxBoundDescriptorSets;
         m_DescriptorSetsTemp = new VkDescriptorSet[maxBoundDescriptorSets];
 
-		VkCommandBufferAllocateInfo cmdBufferAllocInfo;
-		cmdBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		cmdBufferAllocInfo.pNext = nullptr;
-		cmdBufferAllocInfo.commandPool = pool;
-		cmdBufferAllocInfo.level = secondary ? VK_COMMAND_BUFFER_LEVEL_SECONDARY : VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		cmdBufferAllocInfo.commandBufferCount = 1;
+        VkCommandBufferAllocateInfo cmdBufferAllocInfo;
+        cmdBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        cmdBufferAllocInfo.pNext = nullptr;
+        cmdBufferAllocInfo.commandPool = pool;
+        cmdBufferAllocInfo.level = secondary ? VK_COMMAND_BUFFER_LEVEL_SECONDARY : VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        cmdBufferAllocInfo.commandBufferCount = 1;
 
-		VkResult result = vkAllocateCommandBuffers(m_Device.GetLogicalDevice(), &cmdBufferAllocInfo, &m_CmdBuffer);
-		assert(result == VK_SUCCESS);
+        VkResult result = vkAllocateCommandBuffers(m_Device.GetLogicalDevice(), &cmdBufferAllocInfo, &m_CmdBuffer);
+        assert(result == VK_SUCCESS);
 
-		VkFenceCreateInfo fenceCI;
-		fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		fenceCI.pNext = nullptr;
-		fenceCI.flags = 0;
+        VkFenceCreateInfo fenceCI;
+        fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceCI.pNext = nullptr;
+        fenceCI.flags = 0;
 
-		result = vkCreateFence(m_Device.GetLogicalDevice(), &fenceCI, gVulkanAllocator, &m_Fence);
+        result = vkCreateFence(m_Device.GetLogicalDevice(), &fenceCI, gVulkanAllocator, &m_Fence);
         vkResetFences(m_Device.GetLogicalDevice(), 1, &m_Fence);
-		CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
     }
 
     VulkanCmdBuffer::~VulkanCmdBuffer()
     {
         VkDevice device = m_Device.GetLogicalDevice();
-        
+
         if (m_State == State::Submitted)
         {
             uint64_t wait = 1000 * 1000 * 1000;
@@ -358,7 +365,7 @@ namespace Crowny
                 CW_ENGINE_ASSERT(!useHandle.Used);
                 entry.first->NotifyUnbound();
             }
-            
+
             for (auto& entry : m_Images)
             {
                 uint32_t imageInfoIdx = entry.second;
@@ -367,13 +374,13 @@ namespace Crowny
                 CW_ENGINE_ASSERT(!useHandle.Used);
                 entry.first->NotifyUnbound();
             }
-            
+
             for (auto& entry : m_Buffers)
             {
                 ResourceUseHandle& useHandle = entry.second.UseHandle;
                 CW_ENGINE_ASSERT(!useHandle.Used);
                 entry.first->NotifyUnbound();
-            }            
+            }
         }
 
         if (m_IntraQueueSemaphore != nullptr)
@@ -384,7 +391,7 @@ namespace Crowny
             if (m_InterQueueSemaphores[i] != nullptr)
                 m_InterQueueSemaphores[i]->Destroy();
         }
-        
+
         vkDestroyFence(device, m_Fence, gVulkanAllocator);
         vkFreeCommandBuffers(device, m_Pool, 1, &m_CmdBuffer);
         delete m_DescriptorSetsTemp;
@@ -392,9 +399,10 @@ namespace Crowny
 
     bool VulkanCmdBuffer::BindGraphicsPipeline()
     {
-        VulkanRenderPass* renderPass = m_Framebuffer->GetRenderPass();        
+        VulkanRenderPass* renderPass = m_Framebuffer->GetRenderPass();
         VulkanPipeline* pipeline = m_GraphicsPipeline->GetPipeline(renderPass, m_DrawMode);
-        // get pipeline using the vertex layout and renderpass here, make sure that the flags are correct... not just this
+        // get pipeline using the vertex layout and renderpass here, make sure that the flags are correct... not just
+        // this
         m_GraphicsPipeline->RegisterPipelineResources(this);
         RegisterResource(pipeline, VulkanAccessFlagBits::Read);
         vkCmdBindPipeline(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetHandle());
@@ -410,7 +418,7 @@ namespace Crowny
         m_Viewport = rect;
         m_ViewportRequiresBind = true;
     }
-    
+
     void VulkanCmdBuffer::BindDynamicStates(bool force)
     {
         if (m_ViewportRequiresBind || force)
@@ -425,7 +433,7 @@ namespace Crowny
             vkCmdSetViewport(m_CmdBuffer, 0, 1, &viewport);
             m_ViewportRequiresBind = false;
         }
-        
+
         if (m_ScissorRequiresBind || force)
         {
             VkRect2D scissors;
@@ -445,12 +453,12 @@ namespace Crowny
         m_GraphicsPipeline = std::static_pointer_cast<VulkanGraphicsPipeline>(pipeline);
         m_GraphicsPipelineRequiresBind = true;
     }
-    
+
     void VulkanCmdBuffer::SetPipeline(const Ref<ComputePipeline>& pipeline)
     {
         if (m_ComputePipeline == pipeline)
             return;
-        
+
         m_ComputePipeline = std::static_pointer_cast<VulkanComputePipeline>(pipeline);
         m_ComputePipelineRequiresBind = true;
     }
@@ -459,45 +467,46 @@ namespace Crowny
     {
         VkPipelineStageFlags flags = 0;
 
-		if ((accessFlags & VK_ACCESS_INDIRECT_COMMAND_READ_BIT) != 0)
-			flags |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+        if ((accessFlags & VK_ACCESS_INDIRECT_COMMAND_READ_BIT) != 0)
+            flags |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
 
-		if ((accessFlags & (VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)) != 0)
-			flags |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+        if ((accessFlags & (VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)) != 0)
+            flags |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
 
-		if ((accessFlags & (VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT)) != 0)
-		{
-			flags |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
-			flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-			flags |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        if ((accessFlags & (VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT)) != 0)
+        {
+            flags |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+            flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            flags |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 
-			flags |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
-			flags |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT;
-			flags |= VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
-		}
+            flags |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
+            flags |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT;
+            flags |= VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+        }
 
-		if ((accessFlags & VK_ACCESS_INPUT_ATTACHMENT_READ_BIT) != 0)
-			flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        if ((accessFlags & VK_ACCESS_INPUT_ATTACHMENT_READ_BIT) != 0)
+            flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 
-		if ((accessFlags & (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)) != 0)
-			flags |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        if ((accessFlags & (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)) != 0)
+            flags |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-		if ((accessFlags & (VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)) != 0)
-			flags |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        if ((accessFlags &
+             (VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)) != 0)
+            flags |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 
-		if ((accessFlags & (VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT)) != 0)
-			flags |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+        if ((accessFlags & (VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT)) != 0)
+            flags |= VK_PIPELINE_STAGE_TRANSFER_BIT;
 
-		if ((accessFlags & (VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT)) != 0)
-			flags |= VK_PIPELINE_STAGE_HOST_BIT;
+        if ((accessFlags & (VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT)) != 0)
+            flags |= VK_PIPELINE_STAGE_HOST_BIT;
 
-		if (flags == 0)
-			flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        if (flags == 0)
+            flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
-		return flags;
+        return flags;
     }
 
-    template<class T>
+    template <class T>
     void GetPipelineStageFlags(const std::vector<T>& barriers, VkPipelineStageFlags& src, VkPipelineStageFlags& dst)
     {
         for (auto& entry : barriers)
@@ -510,8 +519,9 @@ namespace Crowny
         if (dst == 0)
             dst = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     }
-    
-    void VulkanCmdBuffer::RegisterBuffer(VulkanBuffer* buffer, BufferUseFlagBits useFlags, VulkanAccessFlags accessFlags, VkPipelineStageFlags stages)
+
+    void VulkanCmdBuffer::RegisterBuffer(VulkanBuffer* buffer, BufferUseFlagBits useFlags,
+                                         VulkanAccessFlags accessFlags, VkPipelineStageFlags stages)
     {
         auto res = m_Buffers.insert(std::make_pair(buffer, BufferInfo()));
         if (res.second)
@@ -545,28 +555,30 @@ namespace Crowny
                         m_MemoryBarrierSrcStages |= bufferInfo.WriteHazardUse.Stages;
                         m_MemoryBarrierDstStages |= stages;
                         m_MemoryBarrierSrcAccess |= VK_ACCESS_SHADER_WRITE_BIT;
-                        switch(useFlags)
+                        switch (useFlags)
                         {
-                            case(BufferUseFlagBits::Generic):
-                                if (accessFlags == VulkanAccessFlagBits::Read) m_MemoryBarrierDstAccess |= VK_ACCESS_SHADER_READ_BIT;
-                                if (accessFlags == VulkanAccessFlagBits::Write) m_MemoryBarrierDstAccess |= VK_ACCESS_SHADER_WRITE_BIT;
-                                break;
+                        case (BufferUseFlagBits::Generic):
+                            if (accessFlags == VulkanAccessFlagBits::Read)
+                                m_MemoryBarrierDstAccess |= VK_ACCESS_SHADER_READ_BIT;
+                            if (accessFlags == VulkanAccessFlagBits::Write)
+                                m_MemoryBarrierDstAccess |= VK_ACCESS_SHADER_WRITE_BIT;
+                            break;
 
-                            case (BufferUseFlagBits::Index):
-                                m_MemoryBarrierDstAccess |= VK_ACCESS_INDEX_READ_BIT;
-                                break;
-                            case (BufferUseFlagBits::Vertex):
-                                m_MemoryBarrierDstAccess |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-                                break;
-                            case (BufferUseFlagBits::Uniform):
-                                m_MemoryBarrierDstAccess |= VK_ACCESS_UNIFORM_READ_BIT;
-                                break;
-                            case (BufferUseFlagBits::Transfer):
-                                if (accessFlags == VulkanAccessFlagBits::Read)
-                                    m_MemoryBarrierDstAccess |= VK_ACCESS_TRANSFER_READ_BIT;
-                                if (accessFlags == VulkanAccessFlagBits::Write)
-                                    m_MemoryBarrierDstAccess |= VK_ACCESS_TRANSFER_WRITE_BIT;
-                                    break;
+                        case (BufferUseFlagBits::Index):
+                            m_MemoryBarrierDstAccess |= VK_ACCESS_INDEX_READ_BIT;
+                            break;
+                        case (BufferUseFlagBits::Vertex):
+                            m_MemoryBarrierDstAccess |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+                            break;
+                        case (BufferUseFlagBits::Uniform):
+                            m_MemoryBarrierDstAccess |= VK_ACCESS_UNIFORM_READ_BIT;
+                            break;
+                        case (BufferUseFlagBits::Transfer):
+                            if (accessFlags == VulkanAccessFlagBits::Read)
+                                m_MemoryBarrierDstAccess |= VK_ACCESS_TRANSFER_READ_BIT;
+                            if (accessFlags == VulkanAccessFlagBits::Write)
+                                m_MemoryBarrierDstAccess |= VK_ACCESS_TRANSFER_WRITE_BIT;
+                            break;
                         }
                         resetRenderPass = true;
                     }
@@ -587,10 +599,10 @@ namespace Crowny
                 bufferInfo.WriteHazardUse.AccessFlags |= accessFlags;
                 bufferInfo.WriteHazardUse.Stages |= stages;
             }
-            
+
             bufferInfo.UseHandle.Flags |= accessFlags;
             bufferInfo.UseFlags |= useFlags;
-            
+
             if (resetRenderPass && IsInRenderPass())
                 EndRenderPass();
         }
@@ -598,21 +610,21 @@ namespace Crowny
 
     void VulkanCmdBuffer::RegisterResource(VulkanSwapChain* swapChain)
     {
-      auto insertResult = m_Resources.insert(std::make_pair(swapChain, ResourceUseHandle()));
-      if (insertResult.second)
-      {
-        ResourceUseHandle& useHandle = insertResult.first->second;
-        useHandle.Used = false;
-        useHandle.Flags = VulkanAccessFlagBits::Write;
+        auto insertResult = m_Resources.insert(std::make_pair(swapChain, ResourceUseHandle()));
+        if (insertResult.second)
+        {
+            ResourceUseHandle& useHandle = insertResult.first->second;
+            useHandle.Used = false;
+            useHandle.Flags = VulkanAccessFlagBits::Write;
 
-        swapChain->NotifyBound();
-      }
-      else
-      {
-        ResourceUseHandle& useHandle = insertResult.first->second;
-        CW_ENGINE_ASSERT(!useHandle.Used);
-        useHandle.Flags |= VulkanAccessFlagBits::Write;
-      }
+            swapChain->NotifyBound();
+        }
+        else
+        {
+            ResourceUseHandle& useHandle = insertResult.first->second;
+            CW_ENGINE_ASSERT(!useHandle.Used);
+            useHandle.Flags |= VulkanAccessFlagBits::Write;
+        }
     }
 
     void VulkanCmdBuffer::RegisterResource(VulkanResource* resource, VulkanAccessFlags flags)
@@ -631,10 +643,10 @@ namespace Crowny
             CW_ENGINE_ASSERT(!useHandle.Used);
             useHandle.Flags |= flags;
         }
-        
     }
 
-    void VulkanCmdBuffer::RegisterResource(VulkanFramebuffer* framebuffer, RenderSurfaceMask loadMask, uint32_t readMask)
+    void VulkanCmdBuffer::RegisterResource(VulkanFramebuffer* framebuffer, RenderSurfaceMask loadMask,
+                                           uint32_t readMask)
     {
         auto insertResult = m_Resources.insert(std::make_pair(framebuffer, ResourceUseHandle()));
         if (insertResult.second)
@@ -661,10 +673,12 @@ namespace Crowny
                 layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             else
                 layout = VK_IMAGE_LAYOUT_UNDEFINED;
-            
-            VulkanAccessFlagBits access = ((readMask & FBT_COLOR) != 0) ? VulkanAccessFlagBits::Read : VulkanAccessFlagBits::Write;
+
+            VulkanAccessFlagBits access =
+              ((readMask & FBT_COLOR) != 0) ? VulkanAccessFlagBits::Read : VulkanAccessFlagBits::Write;
             VkImageSubresourceRange range = attachment.Image->GetRange(attachment.Surface);
-            RegisterImageFramebuffer(attachment.Image, range, layout, attachment.FinalLayout, access, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+            RegisterImageFramebuffer(attachment.Image, range, layout, attachment.FinalLayout, access,
+                                     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
         }
 
         if (renderPass->HasDepthAttachment())
@@ -675,34 +689,45 @@ namespace Crowny
                 layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             else
                 layout = VK_IMAGE_LAYOUT_UNDEFINED;
-            
-            VulkanAccessFlagBits access = (((readMask & FBT_DEPTH) != 0) && ((readMask & FBT_STENCIL) != 0)) ? VulkanAccessFlagBits::Read : VulkanAccessFlagBits::Write;
+
+            VulkanAccessFlagBits access = (((readMask & FBT_DEPTH) != 0) && ((readMask & FBT_STENCIL) != 0))
+                                            ? VulkanAccessFlagBits::Read
+                                            : VulkanAccessFlagBits::Write;
             VkImageSubresourceRange range = attachment.Image->GetRange(attachment.Surface);
-            RegisterImageFramebuffer(attachment.Image, range, layout, attachment.FinalLayout, access, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
+            RegisterImageFramebuffer(attachment.Image, range, layout, attachment.FinalLayout, access,
+                                     VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+                                       VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
         }
     }
 
-    void VulkanCmdBuffer::RegisterImageShader(VulkanImage* image, const VkImageSubresourceRange& range, VkImageLayout layout, VulkanAccessFlags accessFlags, VkPipelineStageFlags stages)
+    void VulkanCmdBuffer::RegisterImageShader(VulkanImage* image, const VkImageSubresourceRange& range,
+                                              VkImageLayout layout, VulkanAccessFlags accessFlags,
+                                              VkPipelineStageFlags stages)
     {
         CW_ENGINE_ASSERT(layout != VK_IMAGE_LAYOUT_UNDEFINED);
         RegisterResource(image, range, ImageUseFlagBits::Shader, layout, layout, accessFlags, stages);
     }
-    
-    void VulkanCmdBuffer::RegisterImageFramebuffer(VulkanImage* image, const VkImageSubresourceRange& range, VkImageLayout layout, VkImageLayout finalLayout, VulkanAccessFlags accessFlags, VkPipelineStageFlags stages)
+
+    void VulkanCmdBuffer::RegisterImageFramebuffer(VulkanImage* image, const VkImageSubresourceRange& range,
+                                                   VkImageLayout layout, VkImageLayout finalLayout,
+                                                   VulkanAccessFlags accessFlags, VkPipelineStageFlags stages)
     {
         RegisterResource(image, range, ImageUseFlagBits::Framebuffer, layout, finalLayout, accessFlags, stages);
     }
 
-    void VulkanCmdBuffer::RegisterImageTransfer(VulkanImage* image, const VkImageSubresourceRange& range, VkImageLayout layout, VulkanAccessFlags accessFlags)
+    void VulkanCmdBuffer::RegisterImageTransfer(VulkanImage* image, const VkImageSubresourceRange& range,
+                                                VkImageLayout layout, VulkanAccessFlags accessFlags)
     {
-        RegisterResource(image, range, ImageUseFlagBits::Transfer, layout, layout, accessFlags, VK_PIPELINE_STAGE_TRANSFER_BIT);
+        RegisterResource(image, range, ImageUseFlagBits::Transfer, layout, layout, accessFlags,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT);
     }
-    
-    void VulkanCmdBuffer::RegisterResource(VulkanImage* image, const VkImageSubresourceRange& range, ImageUseFlagBits use, VkImageLayout layout, VkImageLayout finalLayout, VulkanAccessFlags accessFlags, VkPipelineStageFlags stages)
+
+    void VulkanCmdBuffer::RegisterResource(VulkanImage* image, const VkImageSubresourceRange& range,
+                                           ImageUseFlagBits use, VkImageLayout layout, VkImageLayout finalLayout,
+                                           VulkanAccessFlags accessFlags, VkPipelineStageFlags stages)
     {
         uint32_t nextImageInfoIdx = (uint32_t)m_ImageInfos.size();
-        auto registerSubresourceInfo = [&](const VkImageSubresourceRange& subresourceRange)
-        {
+        auto registerSubresourceInfo = [&](const VkImageSubresourceRange& subresourceRange) {
             m_SubresourceInfoStorage.push_back(ImageSubresourceInfo());
             ImageSubresourceInfo& subresourceInfo = m_SubresourceInfoStorage.back();
             subresourceInfo.CurrentLayout = layout;
@@ -711,30 +736,30 @@ namespace Crowny
             subresourceInfo.RequiredLayout = layout;
             subresourceInfo.RenderPassLayout = finalLayout;
             subresourceInfo.Range = subresourceRange;
-            switch(use)
+            switch (use)
             {
-                default:
-                case ImageUseFlagBits::Shader:
-                    subresourceInfo.ShaderUse.AccessFlags = accessFlags;
-                    subresourceInfo.ShaderUse.Stages = stages;
-                    subresourceInfo.WriteHazardUse.AccessFlags = accessFlags;
-                    subresourceInfo.WriteHazardUse.Stages = stages;
-                    break;
-                case ImageUseFlagBits::Framebuffer:
-                    subresourceInfo.FbUse.AccessFlags = accessFlags;
-                    subresourceInfo.FbUse.Stages = stages;
-                    break;
-                case ImageUseFlagBits::Transfer:
-                    subresourceInfo.TransferUse.AccessFlags = accessFlags;
-                    subresourceInfo.TransferUse.Stages = stages;
-                    break;
+            default:
+            case ImageUseFlagBits::Shader:
+                subresourceInfo.ShaderUse.AccessFlags = accessFlags;
+                subresourceInfo.ShaderUse.Stages = stages;
+                subresourceInfo.WriteHazardUse.AccessFlags = accessFlags;
+                subresourceInfo.WriteHazardUse.Stages = stages;
+                break;
+            case ImageUseFlagBits::Framebuffer:
+                subresourceInfo.FbUse.AccessFlags = accessFlags;
+                subresourceInfo.FbUse.Stages = stages;
+                break;
+            case ImageUseFlagBits::Transfer:
+                subresourceInfo.TransferUse.AccessFlags = accessFlags;
+                subresourceInfo.TransferUse.Stages = stages;
+                break;
             }
-            
+
             subresourceInfo.UseFlags = use;
             if (use == ImageUseFlagBits::Shader)
                 m_ShaderBoundSubresourceInfos.insert((int32_t)m_SubresourceInfoStorage.size() - 1);
         };
-        
+
         auto insertResult = m_Images.insert(std::make_pair(image, nextImageInfoIdx));
         if (insertResult.second)
         {
@@ -760,22 +785,27 @@ namespace Crowny
             {
                 if (VulkanUtils::RangeOverlaps(subresources[i].Range, range))
                 {
-                    if (subresources[i].Range.layerCount == range.layerCount && subresources[i].Range.levelCount == range.levelCount && subresources[i].Range.baseArrayLayer == range.baseArrayLayer && subresources[i].Range.baseMipLevel == range.baseMipLevel)
+                    if (subresources[i].Range.layerCount == range.layerCount &&
+                        subresources[i].Range.levelCount == range.levelCount &&
+                        subresources[i].Range.baseArrayLayer == range.baseArrayLayer &&
+                        subresources[i].Range.baseMipLevel == range.baseMipLevel)
                     {
-                        switch(use)
+                        switch (use)
                         {
-                            default:
-                            case ImageUseFlagBits::Shader:
-                                UpdateShaderSubresource(image, imageInfoIdx, subresources[i], layout, accessFlags, stages);
-                                break;
-                            case ImageUseFlagBits::Framebuffer:
-                                UpdateFramebufferSubresource(image, imageInfoIdx, subresources[i], layout, finalLayout, accessFlags, stages);
-                                break;
-                            case ImageUseFlagBits::Transfer:
-                                UpdateTransferSubresource(image, imageInfoIdx, subresources[i], layout, accessFlags, stages);
-                                break;
+                        default:
+                        case ImageUseFlagBits::Shader:
+                            UpdateShaderSubresource(image, imageInfoIdx, subresources[i], layout, accessFlags, stages);
+                            break;
+                        case ImageUseFlagBits::Framebuffer:
+                            UpdateFramebufferSubresource(image, imageInfoIdx, subresources[i], layout, finalLayout,
+                                                         accessFlags, stages);
+                            break;
+                        case ImageUseFlagBits::Transfer:
+                            UpdateTransferSubresource(image, imageInfoIdx, subresources[i], layout, accessFlags,
+                                                      stages);
+                            break;
                         }
-                        
+
                         if (use == ImageUseFlagBits::Shader)
                             m_ShaderBoundSubresourceInfos.insert(imageInfo.SubresourceInfoIdx + i);
                         foundRange = true;
@@ -784,7 +814,7 @@ namespace Crowny
                     break;
                 }
             }
-            
+
             if (!foundRange)
             {
                 CW_ENGINE_INFO("Here bad");
@@ -795,7 +825,7 @@ namespace Crowny
                 {
                     uint32_t subresourceIdx = imageInfo.SubresourceInfoIdx + i;
                     ImageSubresourceInfo& subresource = m_SubresourceInfoStorage[subresourceIdx];
-                    
+
                     if (!VulkanUtils::RangeOverlaps(subresource.Range, range))
                     {
                         m_SubresourceInfoStorage.push_back(subresource);
@@ -812,22 +842,24 @@ namespace Crowny
                             newInfo.Range = tempRanges[j];
                             if (VulkanUtils::RangeOverlaps(tempRanges[j], range))
                             {
-                                switch(use)
+                                switch (use)
                                 {
-                                    default:
-                                    case ImageUseFlagBits::Shader:
-                                        UpdateShaderSubresource(image, imageInfoIdx, newInfo, layout, accessFlags, stages);
-                                        break;
-                                    case ImageUseFlagBits::Framebuffer:
-                                        UpdateFramebufferSubresource(image, imageInfoIdx, newInfo, layout, finalLayout, accessFlags, stages);
-                                        break;
-                                    case ImageUseFlagBits::Transfer:
-                                        UpdateTransferSubresource(image, imageInfoIdx, newInfo, layout, accessFlags, stages);
-                                        break;
+                                default:
+                                case ImageUseFlagBits::Shader:
+                                    UpdateShaderSubresource(image, imageInfoIdx, newInfo, layout, accessFlags, stages);
+                                    break;
+                                case ImageUseFlagBits::Framebuffer:
+                                    UpdateFramebufferSubresource(image, imageInfoIdx, newInfo, layout, finalLayout,
+                                                                 accessFlags, stages);
+                                    break;
+                                case ImageUseFlagBits::Transfer:
+                                    UpdateTransferSubresource(image, imageInfoIdx, newInfo, layout, accessFlags,
+                                                              stages);
+                                    break;
                                 }
                                 overlappingRanges.push_back((uint32_t)m_SubresourceInfoStorage.size());
                             }
-                                
+
                             m_SubresourceInfoStorage.push_back(newInfo);
                             if (use == ImageUseFlagBits::Shader)
                                 m_ShaderBoundSubresourceInfos.insert((uint32_t)m_SubresourceInfoStorage.size() - 1);
@@ -859,19 +891,19 @@ namespace Crowny
                             }
                         }
                     }
-                    
+
                     while (!ranges.empty())
                     {
                         registerSubresourceInfo(ranges.front());
                         ranges.pop();
                     }
                 }
-                    
+
                 imageInfo.SubresourceInfoIdx = newSubresourceIdx;
                 imageInfo.NumSubresourceInfos = (uint32_t)m_SubresourceInfoStorage.size() - newSubresourceIdx;
             }
         }
-        
+
         for (uint32_t i = 0; i < range.layerCount; i++)
         {
             for (uint32_t j = -0; j < range.levelCount; j++)
@@ -882,8 +914,10 @@ namespace Crowny
             }
         }
     }
-    
-    void VulkanCmdBuffer::UpdateShaderSubresource(VulkanImage* image, uint32_t imageInfoIdx, ImageSubresourceInfo& subresourceInfo, VkImageLayout layout, VulkanAccessFlags access, VkPipelineStageFlags stages)
+
+    void VulkanCmdBuffer::UpdateShaderSubresource(VulkanImage* image, uint32_t imageInfoIdx,
+                                                  ImageSubresourceInfo& subresourceInfo, VkImageLayout layout,
+                                                  VulkanAccessFlags access, VkPipelineStageFlags stages)
     {
         if (layout != VK_IMAGE_LAYOUT_UNDEFINED)
         {
@@ -893,31 +927,33 @@ namespace Crowny
             }
             else
             {
-                bool firstUseInRenderPass = !subresourceInfo.UseFlags.IsSetAny(ImageUseFlagBits::Shader | ImageUseFlagBits::Framebuffer);
+                bool firstUseInRenderPass =
+                  !subresourceInfo.UseFlags.IsSetAny(ImageUseFlagBits::Shader | ImageUseFlagBits::Framebuffer);
                 if (firstUseInRenderPass || subresourceInfo.RequiredLayout == VK_IMAGE_LAYOUT_UNDEFINED)
                     subresourceInfo.RequiredLayout = layout;
                 else if (subresourceInfo.RequiredLayout != layout)
                     subresourceInfo.RequiredLayout = VK_IMAGE_LAYOUT_GENERAL;
             }
         }
-        
+
         if (subresourceInfo.CurrentLayout != subresourceInfo.RequiredLayout)
             m_QueuedLayoutTransitions[image] = imageInfoIdx;
-        
+
         bool resetRenderPass = false;
         if (!subresourceInfo.UseFlags.IsSet(ImageUseFlagBits::Shader))
         {
             if (subresourceInfo.UseFlags.IsSet(ImageUseFlagBits::Framebuffer))
             {
                 if (subresourceInfo.RequiredLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-                    {
-                    resetRenderPass = ((m_RenderTargetReadOnlyFlags & FBT_DEPTH) == 0 && (m_RenderTargetReadOnlyFlags & FBT_STENCIL) == 0);
-                    }
+                {
+                    resetRenderPass = ((m_RenderTargetReadOnlyFlags & FBT_DEPTH) == 0 &&
+                                       (m_RenderTargetReadOnlyFlags & FBT_STENCIL) == 0);
+                }
                 else
                     resetRenderPass = true;
             }
         }
-        
+
         if (access.IsSetAny(VulkanAccessFlagBits::Read | VulkanAccessFlagBits::Write))
         {
             if (subresourceInfo.WriteHazardUse.AccessFlags.IsSet(VulkanAccessFlagBits::Write))
@@ -926,14 +962,13 @@ namespace Crowny
                 m_MemoryBarrierSrcStages |= subresourceInfo.WriteHazardUse.Stages;
                 m_MemoryBarrierDstStages |= stages;
                 m_MemoryBarrierSrcAccess |= VK_ACCESS_SHADER_WRITE_BIT;
-                
+
                 if (access.IsSet(VulkanAccessFlagBits::Read))
                     m_MemoryBarrierDstAccess |= VK_ACCESS_SHADER_READ_BIT;
                 if (access.IsSet(VulkanAccessFlagBits::Write))
                     m_MemoryBarrierDstAccess |= VK_ACCESS_SHADER_WRITE_BIT;
-                
+
                 resetRenderPass = true;
-                    
             }
         }
 
@@ -947,32 +982,34 @@ namespace Crowny
                 resetRenderPass = true;
             }
         }
-        
+
         subresourceInfo.ShaderUse.AccessFlags |= access;
         subresourceInfo.ShaderUse.Stages |= stages;
-        
+
         subresourceInfo.WriteHazardUse.AccessFlags |= access;
         subresourceInfo.WriteHazardUse.Stages |= stages;
-        
+
         subresourceInfo.UseFlags |= ImageUseFlagBits::Shader;
-        
+
         if (resetRenderPass && IsInRenderPass())
             EndRenderPass();
-
     }
-    
-    void VulkanCmdBuffer::UpdateFramebufferSubresource(VulkanImage* image, uint32_t imageInfoIdx, ImageSubresourceInfo& subresourceInfo, VkImageLayout layout, VkImageLayout finalLayout, VulkanAccessFlags access, VkPipelineStageFlags stages)
+
+    void VulkanCmdBuffer::UpdateFramebufferSubresource(VulkanImage* image, uint32_t imageInfoIdx,
+                                                       ImageSubresourceInfo& subresourceInfo, VkImageLayout layout,
+                                                       VkImageLayout finalLayout, VulkanAccessFlags access,
+                                                       VkPipelineStageFlags stages)
     {
         subresourceInfo.RequiredLayout = layout;
         subresourceInfo.RenderPassLayout = finalLayout;
-        
+
         if (subresourceInfo.CurrentLayout != subresourceInfo.RequiredLayout)
             m_QueuedLayoutTransitions[image] = imageInfoIdx;
-        
+
         bool resetRenderPass = false;
         if (!subresourceInfo.UseFlags.IsSet(ImageUseFlagBits::Framebuffer))
             resetRenderPass = subresourceInfo.UseFlags.IsSet(ImageUseFlagBits::Shader);
-        
+
         if (access.IsSetAny(VulkanAccessFlagBits::Read | VulkanAccessFlagBits::Write))
         {
             if (subresourceInfo.WriteHazardUse.AccessFlags.IsSet(VulkanAccessFlagBits::Write))
@@ -986,30 +1023,34 @@ namespace Crowny
                 {
                     if ((stages & VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT) != 0)
                         m_MemoryBarrierDstAccess |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-                    if ((stages & VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT) != 0 || (stages & VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT) != 0)
+                    if ((stages & VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT) != 0 ||
+                        (stages & VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT) != 0)
                         m_MemoryBarrierDstAccess |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
                 }
-                
+
                 if (access.IsSet(VulkanAccessFlagBits::Write))
                 {
                     if ((stages & VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT) != 0)
                         m_MemoryBarrierDstAccess |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-                    if ((stages & VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT) != 0 || (stages & VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT) != 0)
+                    if ((stages & VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT) != 0 ||
+                        (stages & VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT) != 0)
                         m_MemoryBarrierDstAccess |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
                 }
                 resetRenderPass = true;
             }
         }
-        
+
         subresourceInfo.FbUse.AccessFlags |= access;
         subresourceInfo.FbUse.Stages |= stages;
         subresourceInfo.UseFlags |= ImageUseFlagBits::Framebuffer;
-        
+
         if (resetRenderPass && IsInRenderPass())
             EndRenderPass();
     }
 
-    void VulkanCmdBuffer::UpdateTransferSubresource(VulkanImage* image, uint32_t imageInfoIdx, ImageSubresourceInfo& subresourceInfo, VkImageLayout layout, VulkanAccessFlags access, VkPipelineStageFlags stages)
+    void VulkanCmdBuffer::UpdateTransferSubresource(VulkanImage* image, uint32_t imageInfoIdx,
+                                                    ImageSubresourceInfo& subresourceInfo, VkImageLayout layout,
+                                                    VulkanAccessFlags access, VkPipelineStageFlags stages)
     {
         subresourceInfo.CurrentLayout = layout;
         subresourceInfo.RequiredLayout = layout;
@@ -1031,11 +1072,13 @@ namespace Crowny
             barrier.srcAccessMask = m_MemoryBarrierSrcAccess;
             barrier.dstAccessMask = m_MemoryBarrierDstAccess;
 
-            vkCmdPipelineBarrier(m_CmdBuffer, m_MemoryBarrierSrcStages, m_MemoryBarrierDstStages, 0, 1, &barrier, 0, nullptr, 0, nullptr);
+            vkCmdPipelineBarrier(m_CmdBuffer, m_MemoryBarrierSrcStages, m_MemoryBarrierDstStages, 0, 1, &barrier, 0,
+                                 nullptr, 0, nullptr);
         }
         else
         {
-            vkCmdPipelineBarrier(m_CmdBuffer, m_MemoryBarrierSrcStages, m_MemoryBarrierDstStages, 0, 0, nullptr, 0, nullptr, 0, nullptr);
+            vkCmdPipelineBarrier(m_CmdBuffer, m_MemoryBarrierSrcStages, m_MemoryBarrierDstStages, 0, 0, nullptr, 0,
+                                 nullptr, 0, nullptr);
         }
 
         m_NeedsRawMemoryBarrier = false;
@@ -1052,19 +1095,19 @@ namespace Crowny
             bufferInfo.WriteHazardUse.Stages = 0;
         }
     }
-    
+
     void VulkanCmdBuffer::ExecuteLayoutTransitions()
     {
-        auto createLayoutTransitionBarrier = [&](VulkanImage* image, ImageInfo& imageInfo)
-        {
+        auto createLayoutTransitionBarrier = [&](VulkanImage* image, ImageInfo& imageInfo) {
             ImageSubresourceInfo* infos = &m_SubresourceInfoStorage[imageInfo.SubresourceInfoIdx];
             for (uint32_t i = 0; i < imageInfo.NumSubresourceInfos; i++)
             {
                 ImageSubresourceInfo& info = infos[i];
                 if (info.RequiredLayout == VK_IMAGE_LAYOUT_UNDEFINED || info.CurrentLayout == info.RequiredLayout)
                     continue;
-                const bool isReadOnly = !info.FbUse.AccessFlags.IsSet(VulkanAccessFlagBits::Write) && !info.ShaderUse.AccessFlags.IsSet(VulkanAccessFlagBits::Write);
-                
+                const bool isReadOnly = !info.FbUse.AccessFlags.IsSet(VulkanAccessFlagBits::Write) &&
+                                        !info.ShaderUse.AccessFlags.IsSet(VulkanAccessFlagBits::Write);
+
                 m_LayoutTransitionBarriersTemp.push_back(VkImageMemoryBarrier());
                 VkImageMemoryBarrier& barrier = m_LayoutTransitionBarriersTemp.back();
                 barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -1077,7 +1120,7 @@ namespace Crowny
                 barrier.newLayout = info.RequiredLayout;
                 barrier.image = image->GetHandle();
                 barrier.subresourceRange = info.Range;
-                
+
                 info.CurrentLayout = info.RequiredLayout;
             }
         };
@@ -1088,18 +1131,19 @@ namespace Crowny
             ImageInfo& imageInfo = m_ImageInfos[imageInfoIdx];
             createLayoutTransitionBarrier(entry.first, imageInfo);
         }
-        
+
         VkPipelineStageFlags srcStage = 0;
         VkPipelineStageFlags dstStage = 0;
         GetPipelineStageFlags(m_LayoutTransitionBarriersTemp, srcStage, dstStage);
-        if(!m_LayoutTransitionBarriersTemp.empty())
+        if (!m_LayoutTransitionBarriersTemp.empty())
         {
-            vkCmdPipelineBarrier(m_CmdBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, (uint32_t)m_LayoutTransitionBarriersTemp.size(), m_LayoutTransitionBarriersTemp.data());
+            vkCmdPipelineBarrier(m_CmdBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr,
+                                 (uint32_t)m_LayoutTransitionBarriersTemp.size(),
+                                 m_LayoutTransitionBarriersTemp.data());
         }
-        
+
         m_QueuedLayoutTransitions.clear();
         m_LayoutTransitionBarriersTemp.clear();
-        
     }
 
     void VulkanCmdBuffer::UpdateFinalLayouts()
@@ -1112,7 +1156,8 @@ namespace Crowny
         for (uint32_t i = 0; i < numColorAttachments; i++)
         {
             const VulkanFramebufferAttachment& fbAttachment = m_Framebuffer->GetColorAttachment(i);
-            ImageSubresourceInfo& subresourceInfo = FindSubresourceInfo(fbAttachment.Image, fbAttachment.Surface.Face, fbAttachment.Surface.MipLevel);
+            ImageSubresourceInfo& subresourceInfo =
+              FindSubresourceInfo(fbAttachment.Image, fbAttachment.Surface.Face, fbAttachment.Surface.MipLevel);
             subresourceInfo.CurrentLayout = subresourceInfo.RenderPassLayout;
             subresourceInfo.RequiredLayout = subresourceInfo.RenderPassLayout;
         }
@@ -1120,7 +1165,8 @@ namespace Crowny
         if (renderPass->HasDepthAttachment())
         {
             const VulkanFramebufferAttachment& fbAttachment = m_Framebuffer->GetDepthStencilAttachment();
-            ImageSubresourceInfo& subresourceInfo = FindSubresourceInfo(fbAttachment.Image, fbAttachment.Surface.Face, fbAttachment.Surface.MipLevel);
+            ImageSubresourceInfo& subresourceInfo =
+              FindSubresourceInfo(fbAttachment.Image, fbAttachment.Surface.Face, fbAttachment.Surface.MipLevel);
             subresourceInfo.CurrentLayout = subresourceInfo.RenderPassLayout;
             subresourceInfo.RequiredLayout = subresourceInfo.RenderPassLayout;
         }
@@ -1149,7 +1195,8 @@ namespace Crowny
                     uint32_t count = idx - lastValidIdx;
                     if (count > 0)
                     {
-                        vkCmdBindVertexBuffers(m_CmdBuffer, lastValidIdx, count, m_VertexBuffersTemp, m_VertexBufferOffsets);
+                        vkCmdBindVertexBuffers(m_CmdBuffer, lastValidIdx, count, m_VertexBuffersTemp,
+                                               m_VertexBufferOffsets);
                         lastValidIdx = (uint32_t)-1;
                     }
                 }
@@ -1161,7 +1208,8 @@ namespace Crowny
                 uint32_t count = idx - lastValidIdx;
                 if (count > 0)
                 {
-                    vkCmdBindVertexBuffers(m_CmdBuffer, lastValidIdx, count, m_VertexBuffersTemp, m_VertexBufferOffsets);
+                    vkCmdBindVertexBuffers(m_CmdBuffer, lastValidIdx, count, m_VertexBuffersTemp,
+                                           m_VertexBufferOffsets);
                 }
             }
         }
@@ -1173,23 +1221,23 @@ namespace Crowny
             vkCmdBindIndexBuffer(m_CmdBuffer, vkBuffer, 0, VulkanUtils::GetIndexType(m_IndexBuffer->GetIndexType()));
         }
     }
-    
+
     void VulkanCmdBuffer::Begin()
     {
         CW_ENGINE_ASSERT(m_State == State::Ready);
-        
+
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.pNext = nullptr;
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         beginInfo.pInheritanceInfo = nullptr;
-        
+
         VkResult result = vkBeginCommandBuffer(m_CmdBuffer, &beginInfo);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        
+
         m_State = State::Recording;
     }
-    
+
     void VulkanCmdBuffer::End()
     {
         CW_ENGINE_ASSERT(m_State == State::Recording);
@@ -1200,19 +1248,20 @@ namespace Crowny
         m_RenderTarget = nullptr;
         m_State = State::RecordingDone;
     }
-    
+
     void VulkanCmdBuffer::BeginRenderPass()
     {
         CW_ENGINE_ASSERT(m_State == State::Recording);
         CW_ENGINE_ASSERT(m_RenderTarget != nullptr, "Render target is nullptr");
-        
+
         if (m_ClearMask != CLEAR_NONE)
         {
             Rect2I clrArea(0, 0, m_Framebuffer->GetWidth(), m_Framebuffer->GetHeight());
-            if (m_ClearArea.X != clrArea.X || m_ClearArea.Y != clrArea.Y || m_ClearArea.Width != clrArea.Width || m_ClearArea.Height != clrArea.Height)
+            if (m_ClearArea.X != clrArea.X || m_ClearArea.Y != clrArea.Y || m_ClearArea.Width != clrArea.Width ||
+                m_ClearArea.Height != clrArea.Height)
                 ExecuteClearPass();
         }
-        
+
         ExecuteWriteHazardBarrier();
         ExecuteLayoutTransitions();
         VkClearValue clearValue;
@@ -1231,17 +1280,17 @@ namespace Crowny
         renderPassBeginInfo.renderArea.extent.height = m_Framebuffer->GetHeight();
         renderPassBeginInfo.clearValueCount = renderPass->GetNumClearEntries(m_ClearMask);
         renderPassBeginInfo.pClearValues = &clearValue;
-        
+
         vkCmdBeginRenderPass(m_CmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
         m_ClearMask = CLEAR_NONE;
         m_State = State::RecordingRenderPass;
     }
-    
+
     void VulkanCmdBuffer::EndRenderPass()
     {
         CW_ENGINE_ASSERT(m_State == State::RecordingRenderPass);
         vkCmdEndRenderPass(m_CmdBuffer);
-        
+
         for (auto& entry : m_ShaderBoundSubresourceInfos)
         {
             ImageSubresourceInfo& subresourceInfo = m_SubresourceInfoStorage[entry];
@@ -1252,18 +1301,19 @@ namespace Crowny
 
         m_ShaderBoundSubresourceInfos.clear();
         UpdateFinalLayouts();
-        
+
         m_State = State::Recording;
         m_BoundUniformsDirty = true;
     }
-    
-    void VulkanCmdBuffer::ClearViewport(const Rect2I& area, uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil, uint8_t targetMask)
+
+    void VulkanCmdBuffer::ClearViewport(const Rect2I& area, uint32_t buffers, const glm::vec4& color, float depth,
+                                        uint16_t stencil, uint8_t targetMask)
     {
         if (buffers == 0 || m_Framebuffer == nullptr)
             return;
-        
+
         VulkanRenderPass* renderPass = m_Framebuffer->GetRenderPass();
-        
+
         if (IsInRenderPass())
         {
             VkClearAttachment attachments[MAX_FRAMEBUFFER_COLOR_ATTACHMENTS + 1];
@@ -1300,7 +1350,7 @@ namespace Crowny
                     attachmentIdx++;
                 }
             }
-            
+
             if ((buffers & FBT_DEPTH) != 0 || (buffers & FBT_STENCIL) != 0)
             {
                 if (renderPass->HasDepthAttachment())
@@ -1311,13 +1361,13 @@ namespace Crowny
                         attachments[attachmentIdx].aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
                         attachments[attachmentIdx].clearValue.depthStencil.depth = depth;
                     }
-                    
+
                     if ((buffers & FBT_STENCIL) != 0)
                     {
                         attachments[attachmentIdx].aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
                         attachments[attachmentIdx].clearValue.depthStencil.stencil = stencil;
                     }
-                    
+
                     attachments[attachmentIdx].colorAttachment = 0;
 
                     uint32_t curBaseLayer = m_Framebuffer->GetDepthStencilAttachment().BaseLayer;
@@ -1330,11 +1380,11 @@ namespace Crowny
                             CW_ENGINE_ASSERT(false);
                         }
                     }
-                    
-                    attachmentIdx++;                    
+
+                    attachmentIdx++;
                 }
             }
-            
+
             uint32_t numAttachments = attachmentIdx;
             if (numAttachments == 0)
                 return;
@@ -1359,7 +1409,7 @@ namespace Crowny
                     const VulkanFramebufferAttachment& attachment = m_Framebuffer->GetColorAttachment(i);
                     if (((1 << attachment.Index) & targetMask) == 0)
                         continue;
-                    
+
                     clearMask |= (ClearMaskBits)(1 << attachment.Index);
                     VkClearColorValue& colorValue = clearValues[i].color;
                     colorValue.float32[0] = color.r;
@@ -1368,7 +1418,7 @@ namespace Crowny
                     colorValue.float32[3] = color.a;
                 }
             }
-            
+
             if ((buffers & FBT_DEPTH) != 0 || (buffers & FBT_STENCIL) != 0)
             {
                 if (renderPass->HasDepthAttachment())
@@ -1379,7 +1429,7 @@ namespace Crowny
                         clearValues[depthAttachmentIdx].depthStencil.depth = depth;
                         clearMask |= CLEAR_DEPTH;
                     }
-                    
+
                     if ((buffers & FBT_STENCIL) != 0)
                     {
                         clearValues[depthAttachmentIdx].depthStencil.stencil = stencil;
@@ -1387,37 +1437,39 @@ namespace Crowny
                     }
                 }
             }
-            
+
             if (!clearMask)
                 return;
-            
+
             bool prevClear = (m_ClearMask & clearMask) != CLEAR_NONE;
             if (prevClear)
                 ExecuteClearPass();
-            
+
             m_ClearMask |= clearMask;
             m_ClearValues = clearValues;
             m_ClearArea = area;
         }
     }
-    
-    void VulkanCmdBuffer::ClearRenderTarget(uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil, uint8_t targetMask)
+
+    void VulkanCmdBuffer::ClearRenderTarget(uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil,
+                                            uint8_t targetMask)
     {
         Rect2I area(0, 0, m_Framebuffer->GetWidth(), m_Framebuffer->GetHeight());
         ClearViewport(area, buffers, color, depth, stencil, targetMask);
     }
-    
-    void VulkanCmdBuffer::ClearViewport(uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil, uint8_t targetMask)
+
+    void VulkanCmdBuffer::ClearViewport(uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil,
+                                        uint8_t targetMask)
     {
         Rect2I area;
         area.X = (uint32_t)(m_Viewport.X * m_Framebuffer->GetWidth());
         area.Y = (uint32_t)(m_Viewport.Y * m_Framebuffer->GetHeight());
         area.X = (uint32_t)(m_Viewport.Width * m_Framebuffer->GetWidth());
         area.X = (uint32_t)(m_Viewport.Height * m_Framebuffer->GetWidth());
-        
+
         ClearViewport(area, buffers, color, depth, stencil, targetMask);
     }
-    
+
     void VulkanCmdBuffer::ExecuteClearPass()
     {
         CW_ENGINE_ASSERT(m_State == State::Recording);
@@ -1433,11 +1485,11 @@ namespace Crowny
         renderPassBeginInfo.renderArea.extent.height = m_ClearArea.Height;
         renderPassBeginInfo.clearValueCount = 5;
         renderPassBeginInfo.pClearValues = m_ClearValues.data();
-        
+
         vkCmdBeginRenderPass(m_CmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-        vkCmdEndRenderPass(m_CmdBuffer);   
+        vkCmdEndRenderPass(m_CmdBuffer);
     }
-    
+
     void VulkanCmdBuffer::Reset()
     {
         bool submitted = m_State == State::Submitted;
@@ -1457,7 +1509,7 @@ namespace Crowny
             {
                 uint32_t imageInfoIdx = entry.second;
                 ImageInfo& imageInfo = m_ImageInfos[imageInfoIdx];
-                
+
                 ResourceUseHandle& useHandle = imageInfo.UseHandle;
                 CW_ENGINE_ASSERT(useHandle.Used);
                 entry.first->NotifyDone(m_GlobalQueueIdx, useHandle.Flags);
@@ -1488,7 +1540,7 @@ namespace Crowny
             for (auto& entry : m_Images)
                 entry.first->NotifyUnbound();
         }
-        
+
         m_Resources.clear();
         m_Images.clear();
         m_Buffers.clear();
@@ -1503,17 +1555,16 @@ namespace Crowny
         m_MemoryBarrierSrcStages = 0;
         m_MemoryBarrierDstStages = 0;
     }
-    
+
     void VulkanCmdBuffer::Submit(VulkanQueue* queue, uint32_t queueIdx, uint32_t syncMask)
     {
         CW_ENGINE_ASSERT(IsReadyForSubmit());
-        
+
         VkResult result = vkResetFences(m_Device.GetLogicalDevice(), 1, &m_Fence);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
         VulkanDevice& device = queue->GetDevice();
-        
-        
+
         for (auto& entry : m_Buffers)
         {
             VulkanBuffer* buffer = static_cast<VulkanBuffer*>(entry.first);
@@ -1523,7 +1574,7 @@ namespace Crowny
             if (currentQueueFamily != (uint32_t)-1 && currentQueueFamily != m_QueueFamily)
             {
                 std::vector<VkBufferMemoryBarrier>& barriers = m_TransitionInfoTemp[currentQueueFamily].BufferBarriers;
-                
+
                 barriers.push_back(VkBufferMemoryBarrier());
                 VkBufferMemoryBarrier& barrier = barriers.back();
                 barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -1544,7 +1595,8 @@ namespace Crowny
             VulkanImage* image = static_cast<VulkanImage*>(entry.first);
             ImageInfo& imageInfo = m_ImageInfos[entry.second];
             uint32_t currentQueueFamily = image->GetQueueFamily();
-            bool queueMismatch = image->IsExclusive() && currentQueueFamily != (uint32_t)-1 && currentQueueFamily != m_QueueFamily;
+            bool queueMismatch =
+              image->IsExclusive() && currentQueueFamily != (uint32_t)-1 && currentQueueFamily != m_QueueFamily;
             ImageSubresourceInfo* subresourceInfos = &m_SubresourceInfoStorage[imageInfo.SubresourceInfoIdx];
             if (queueMismatch)
             {
@@ -1564,14 +1616,14 @@ namespace Crowny
                     }
                 }
             }
-            
+
             for (uint32_t i = 0; i < imageInfo.NumSubresourceInfos; i++)
             {
                 ImageSubresourceInfo& subresourceInfo = subresourceInfos[i];
                 const VkImageSubresourceRange& range = subresourceInfo.Range;
                 uint32_t mipEnd = range.baseMipLevel + range.levelCount;
                 uint32_t faceEnd = range.baseArrayLayer + range.layerCount;
-                
+
                 VkImageLayout initialLayout = subresourceInfo.InitialLayout;
                 if (initialLayout != VK_IMAGE_LAYOUT_UNDEFINED)
                 {
@@ -1587,11 +1639,11 @@ namespace Crowny
                                 break;
                             }
                         }
-                        
+
                         if (layoutMismatch)
                             break;
                     }
-                    
+
                     if (layoutMismatch)
                     {
                         uint32_t startIdx = (uint32_t)localBarriers.size();
@@ -1599,12 +1651,13 @@ namespace Crowny
                         for (uint32_t j = startIdx; j < (uint32_t)localBarriers.size(); j++)
                         {
                             VkImageMemoryBarrier& barrier = localBarriers[j];
-                            barrier.dstAccessMask = image->GetAccessFlags(initialLayout, subresourceInfo.InitialReadOnly);
+                            barrier.dstAccessMask =
+                              image->GetAccessFlags(initialLayout, subresourceInfo.InitialReadOnly);
                             barrier.newLayout = initialLayout;
                         }
                     }
                 }
-                
+
                 for (uint32_t mip = range.baseMipLevel; mip < mipEnd; mip++)
                 {
                     for (uint32_t face = range.baseArrayLayer; face < faceEnd; face++)
@@ -1615,13 +1668,13 @@ namespace Crowny
                 }
             }
         }
-        
+
         for (auto& entry : m_TransitionInfoTemp)
         {
             bool empty = entry.second.ImageBarriers.empty() && entry.second.BufferBarriers.empty();
             if (empty)
                 continue;
-            
+
             uint32_t entryQueueFamily = entry.first;
             if (entryQueueFamily != (uint32_t)-1 && entryQueueFamily == m_QueueFamily)
                 continue;
@@ -1631,13 +1684,14 @@ namespace Crowny
             TransitionInfo& barriers = entry.second;
             uint32_t numImgBarriers = (uint32_t)barriers.ImageBarriers.size();
             uint32_t numBufferBarriers = (uint32_t)barriers.BufferBarriers.size();
-            
+
             VkPipelineStageFlags srcStage = 0;
             VkPipelineStageFlags dstStage = 0;
             GetPipelineStageFlags(barriers.ImageBarriers, srcStage, dstStage);
-            
-            vkCmdPipelineBarrier(vkCmdBuffer, srcStage, dstStage, 0, 0, nullptr, numBufferBarriers, barriers.BufferBarriers.data(), numImgBarriers, barriers.ImageBarriers.data());
-            
+
+            vkCmdPipelineBarrier(vkCmdBuffer, srcStage, dstStage, 0, 0, nullptr, numBufferBarriers,
+                                 barriers.BufferBarriers.data(), numImgBarriers, barriers.ImageBarriers.data());
+
             uint32_t otherQueueIdx = 0;
             VulkanQueue* otherQueue = nullptr;
             GpuQueueType otherQueueType = GRAPHICS_QUEUE;
@@ -1655,7 +1709,7 @@ namespace Crowny
                         otherQueueIdx = j;
                     }
                 }
-                
+
                 if (otherQueue == nullptr)
                 {
                     otherQueue = device.GetQueue(otherQueueType, 0);
@@ -1663,7 +1717,7 @@ namespace Crowny
                 }
                 break;
             }
-            
+
             syncMask |= CommandSyncMask::GetGlobalQueueMask(otherQueueType, otherQueueIdx);
             cmdBuffer->End();
             otherQueue->Submit(cmdBuffer, nullptr, 0);
@@ -1671,7 +1725,7 @@ namespace Crowny
 
         uint32_t deviceIdx = device.GetIndex();
         VulkanTransferManager& cbm = VulkanTransferManager::Get();
-        
+
         uint32_t numSemaphores;
         cbm.GetSyncSemaphores(syncMask, m_SemaphoresTemp.data(), numSemaphores);
         for (auto& entry : m_ActiveSwapChains)
@@ -1689,34 +1743,35 @@ namespace Crowny
                 entry->BackBufferWaitIssued();
             }
         }
-        
+
         for (auto& entry : m_TransitionInfoTemp)
         {
             bool empty = entry.second.ImageBarriers.size() == 0 && entry.second.BufferBarriers.size() == 0;
             if (empty)
                 continue;
-            
+
             VulkanCmdBuffer* cmdBuffer = device.GetCmdBufferPool().GetBuffer(m_QueueFamily, false);
             VkCommandBuffer vkCmdBuffer = cmdBuffer->GetHandle();
-            
+
             TransitionInfo& barriers = entry.second;
             uint32_t numImageBarriers = (uint32_t)barriers.ImageBarriers.size();
             uint32_t numBufferBarriers = (uint32_t)barriers.BufferBarriers.size();
-            
+
             VkPipelineStageFlags srcStage = 0;
             VkPipelineStageFlags dstStage = 0;
             GetPipelineStageFlags(barriers.ImageBarriers, srcStage, dstStage);
-            
-            vkCmdPipelineBarrier(vkCmdBuffer, srcStage, dstStage, 0, 0, nullptr, numBufferBarriers, barriers.BufferBarriers.data(), numImageBarriers, barriers.ImageBarriers.data());
-            
+
+            vkCmdPipelineBarrier(vkCmdBuffer, srcStage, dstStage, 0, 0, nullptr, numBufferBarriers,
+                                 barriers.BufferBarriers.data(), numImageBarriers, barriers.ImageBarriers.data());
+
             cmdBuffer->End();
             queue->QueueSubmit(cmdBuffer, m_SemaphoresTemp.data(), numSemaphores);
             numSemaphores = 0;
         }
-        
+
         queue->QueueSubmit(this, m_SemaphoresTemp.data(), numSemaphores);
         queue->SubmitQueued();
-        
+
         m_GlobalQueueIdx = CommandSyncMask::GetGlobalQueueIdx(queue->GetType(), queueIdx);
         for (auto& entry : m_Resources)
         {
@@ -1725,7 +1780,7 @@ namespace Crowny
             useHandle.Used = true;
             entry.first->NotifyUsed(m_GlobalQueueIdx, m_QueueFamily, useHandle.Flags);
         }
-        
+
         for (auto& entry : m_Images)
         {
             uint32_t imageInfoIdx = entry.second;
@@ -1735,7 +1790,7 @@ namespace Crowny
             useHandle.Used = true;
             entry.first->NotifyUsed(m_GlobalQueueIdx, m_QueueFamily, useHandle.Flags);
         }
-        
+
         for (auto& entry : m_Buffers)
         {
             ResourceUseHandle& useHandle = entry.second.UseHandle;
@@ -1743,7 +1798,7 @@ namespace Crowny
             useHandle.Used = true;
             entry.first->NotifyUsed(m_GlobalQueueIdx, m_QueueFamily, useHandle.Flags);
         }
-        
+
         for (auto& entry : m_SwapChains)
         {
             ResourceUseHandle& useHandle = entry.second;
@@ -1751,13 +1806,13 @@ namespace Crowny
             useHandle.Used = true;
             entry.first->NotifyUsed(m_GlobalQueueIdx, m_QueueFamily, useHandle.Flags);
         }
-        
+
         for (auto& entry : m_TransitionInfoTemp)
         {
             entry.second.ImageBarriers.clear();
             entry.second.BufferBarriers.clear();
         }
-        
+
         m_GraphicsPipeline = nullptr;
         m_ComputePipeline = nullptr;
         m_GraphicsPipelineRequiresBind = true;
@@ -1771,8 +1826,9 @@ namespace Crowny
         m_VertexInputsRequriesBind = true;
         m_ActiveSwapChains.clear();
     }
-    
-    void VulkanCmdBuffer::SetRenderTarget(const Ref<RenderTarget>& renderTarget, uint32_t readOnlyFlags, RenderSurfaceMask loadMask)
+
+    void VulkanCmdBuffer::SetRenderTarget(const Ref<RenderTarget>& renderTarget, uint32_t readOnlyFlags,
+                                          RenderSurfaceMask loadMask)
     {
         CW_ENGINE_ASSERT(m_State != State::Submitted);
         VulkanFramebuffer* newBuffer;
@@ -1796,12 +1852,13 @@ namespace Crowny
         }
         m_RenderTarget = renderTarget;
         m_RenderTargetModified = false;
-        
+
         // TODO: Check load mask
-        
-        if (m_Framebuffer == newBuffer && m_RenderTargetReadOnlyFlags == readOnlyFlags && m_RenderTargetLoadMask == loadMask)
+
+        if (m_Framebuffer == newBuffer && m_RenderTargetReadOnlyFlags == readOnlyFlags &&
+            m_RenderTargetLoadMask == loadMask)
             return;
-        
+
         if (IsInRenderPass())
             EndRenderPass();
         else if (m_ClearMask)
@@ -1864,15 +1921,15 @@ namespace Crowny
         }
         m_GraphicsPipelineRequiresBind = true;
     }
-    
+
     bool VulkanCmdBuffer::CheckFenceStatus(bool blocking) const
     {
         VkResult result = vkWaitForFences(m_Device.GetLogicalDevice(), 1, &m_Fence, true, blocking ? 1000000000 : 0);
         CW_ENGINE_ASSERT(result == VK_SUCCESS || result == VK_TIMEOUT);
-        
+
         return result == VK_SUCCESS;
     }
-    
+
     bool VulkanCmdBuffer::IsReadyForRender() const
     {
         if (m_GraphicsPipeline == nullptr)
@@ -1919,7 +1976,7 @@ namespace Crowny
             m_NumBoundDescriptorSets = 0;
             m_BoundUniformsDirty = false;
         }
-        
+
         m_DescriptorSetsBindState = DescriptorSetBindFlagBits::Graphics | DescriptorSetBindFlagBits::Compute;
     }
 
@@ -1954,7 +2011,7 @@ namespace Crowny
             BindVertexInputs();
             m_VertexInputsRequriesBind = false;
         }
-        
+
         if (m_GraphicsPipelineRequiresBind)
         {
             if (!BindGraphicsPipeline())
@@ -1962,13 +2019,14 @@ namespace Crowny
         }
         else
             BindDynamicStates(false);
-            
+
         if (m_DescriptorSetsBindState.IsSet(DescriptorSetBindFlagBits::Graphics))
         {
             if (m_NumBoundDescriptorSets > 0)
             {
                 VkPipelineLayout pipelineLayout = m_GraphicsPipeline->GetLayout();
-                vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, m_NumBoundDescriptorSets, m_DescriptorSetsTemp, 0, nullptr);
+                vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0,
+                                        m_NumBoundDescriptorSets, m_DescriptorSetsTemp, 0, nullptr);
             }
             m_DescriptorSetsBindState.Unset(DescriptorSetBindFlagBits::Graphics);
         }
@@ -1977,7 +2035,8 @@ namespace Crowny
         vkCmdDraw(m_CmdBuffer, vertexCount, instanceCount, vertexOffset, 0);
     }
 
-    void VulkanCmdBuffer::DrawIndexed(uint32_t startIdx, uint32_t idxCount, uint32_t vertexOffset, uint32_t instanceCount)
+    void VulkanCmdBuffer::DrawIndexed(uint32_t startIdx, uint32_t idxCount, uint32_t vertexOffset,
+                                      uint32_t instanceCount)
     {
         if (!IsReadyForRender())
             return;
@@ -1991,7 +2050,7 @@ namespace Crowny
             BindVertexInputs();
             m_VertexInputsRequriesBind = false;
         }
-        
+
         if (m_GraphicsPipelineRequiresBind)
         {
             if (!BindGraphicsPipeline())
@@ -1999,13 +2058,14 @@ namespace Crowny
         }
         else
             BindDynamicStates(false);
-        
+
         if (m_DescriptorSetsBindState.IsSet(DescriptorSetBindFlagBits::Graphics))
         {
             if (m_NumBoundDescriptorSets > 0)
             {
                 VkPipelineLayout pipelineLayout = m_GraphicsPipeline->GetLayout();
-                vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, m_NumBoundDescriptorSets, m_DescriptorSetsTemp, 0, nullptr);
+                vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0,
+                                        m_NumBoundDescriptorSets, m_DescriptorSetsTemp, 0, nullptr);
             }
             m_DescriptorSetsBindState.Unset(DescriptorSetBindFlagBits::Graphics);
         }
@@ -2033,16 +2093,17 @@ namespace Crowny
 
         m_NumUsedInterQueueSemaphores = 0;
     }
-    
+
     VulkanSemaphore* VulkanCmdBuffer::RequestInterQueueSemaphore() const
     {
-       if (m_NumUsedInterQueueSemaphores >= MAX_VULKAN_CB_DEPENDENCIES)
-           return nullptr;
+        if (m_NumUsedInterQueueSemaphores >= MAX_VULKAN_CB_DEPENDENCIES)
+            return nullptr;
         return m_InterQueueSemaphores[m_NumUsedInterQueueSemaphores++];
     }
 
     void VulkanCmdBuffer::SetLayout(VkImage image, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags,
-                                        VkImageLayout oldLayout, VkImageLayout newLayout, const VkImageSubresourceRange& range)
+                                    VkImageLayout oldLayout, VkImageLayout newLayout,
+                                    const VkImageSubresourceRange& range)
     {
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -2059,9 +2120,9 @@ namespace Crowny
         VkPipelineStageFlags dstStage = GetPipelineStageFlags(dstAccessFlags);
         vkCmdPipelineBarrier(m_CmdBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
     }
-    
-    void VulkanCmdBuffer::MemoryBarrier(VkBuffer buffer, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags, 
-                                            VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage)
+
+    void VulkanCmdBuffer::MemoryBarrier(VkBuffer buffer, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags,
+                                        VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage)
     {
         VkBufferMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -2072,11 +2133,12 @@ namespace Crowny
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.size = VK_WHOLE_SIZE;
         barrier.buffer = buffer;
-        
+
         vkCmdPipelineBarrier(m_CmdBuffer, srcStage, dstStage, 0, 0, nullptr, 1, &barrier, 0, nullptr);
     }
 
-    VulkanCmdBuffer::ImageSubresourceInfo& VulkanCmdBuffer::FindSubresourceInfo(VulkanImage* image, uint32_t face, uint32_t mip)
+    VulkanCmdBuffer::ImageSubresourceInfo& VulkanCmdBuffer::FindSubresourceInfo(VulkanImage* image, uint32_t face,
+                                                                                uint32_t mip)
     {
         uint32_t imageInfoIdx = m_Images[image];
         ImageInfo& imageInfo = m_ImageInfos[imageInfoIdx];
@@ -2085,9 +2147,9 @@ namespace Crowny
         for (uint32_t i = 0; i < imageInfo.NumSubresourceInfos; i++)
         {
             ImageSubresourceInfo& entry = subresourceInfos[i];
-            if (face >= entry.Range.baseArrayLayer && face < (entry.Range.baseArrayLayer + entry.Range.layerCount) && 
+            if (face >= entry.Range.baseArrayLayer && face < (entry.Range.baseArrayLayer + entry.Range.layerCount) &&
                 mip >= entry.Range.baseMipLevel && mip < (entry.Range.baseMipLevel + entry.Range.levelCount))
-                    return entry;
+                return entry;
         }
 
         CW_ENGINE_ASSERT(false);
@@ -2102,32 +2164,35 @@ namespace Crowny
         for (uint32_t i = 0; i < numColorAttachments; i++)
         {
             const VulkanFramebufferAttachment& attachment = m_Framebuffer->GetColorAttachment(i);
-            ImageSubresourceInfo& subresourceInfo = FindSubresourceInfo(attachment.Image, attachment.Surface.Face, attachment.Surface.MipLevel);
+            ImageSubresourceInfo& subresourceInfo =
+              FindSubresourceInfo(attachment.Image, attachment.Surface.Face, attachment.Surface.MipLevel);
             bool readOnly = subresourceInfo.UseFlags.IsSet(ImageUseFlagBits::Shader);
             if (readOnly)
                 readMask.Set((RenderSurfaceMaskBits)(1 << i));
         }
-        
+
         if (renderPass->HasDepthAttachment())
         {
             const VulkanFramebufferAttachment& attachment = m_Framebuffer->GetDepthStencilAttachment();
-            ImageSubresourceInfo& subresourceInfo = FindSubresourceInfo(attachment.Image, attachment.Surface.Face, attachment.Surface.MipLevel);
-            
+            ImageSubresourceInfo& subresourceInfo =
+              FindSubresourceInfo(attachment.Image, attachment.Surface.Face, attachment.Surface.MipLevel);
+
             bool readOnly = subresourceInfo.UseFlags.IsSet(ImageUseFlagBits::Shader);
             if (readOnly)
                 readMask.Set(RT_DEPTH);
-            
+
             if ((m_RenderTargetReadOnlyFlags & FBT_DEPTH) != 0)
                 readMask.Set(RT_DEPTH);
-            
+
             if ((m_RenderTargetReadOnlyFlags & FBT_STENCIL) != 0)
                 readMask.Set(RT_STENCIL);
         }
-        
+
         return readMask;
     }
 
-    VkImageLayout VulkanCmdBuffer::GetCurrentLayout(VulkanImage* image, const VkImageSubresourceRange& range, bool inRenderPass)
+    VkImageLayout VulkanCmdBuffer::GetCurrentLayout(VulkanImage* image, const VkImageSubresourceRange& range,
+                                                    bool inRenderPass)
     {
         uint32_t face = range.baseArrayLayer;
         uint32_t mip = range.baseMipLevel;
@@ -2147,7 +2212,8 @@ namespace Crowny
         for (uint32_t i = 0; i < imageInfo.NumSubresourceInfos; i++)
         {
             ImageSubresourceInfo& entry = subresourceInfos[i];
-            if (face >= entry.Range.baseArrayLayer && face < (entry.Range.baseArrayLayer + entry.Range.layerCount) && mip >= entry.Range.baseMipLevel && mip < (entry.Range.baseMipLevel + entry.Range.levelCount))
+            if (face >= entry.Range.baseArrayLayer && face < (entry.Range.baseArrayLayer + entry.Range.layerCount) &&
+                mip >= entry.Range.baseMipLevel && mip < (entry.Range.baseMipLevel + entry.Range.levelCount))
             {
                 if (entry.UseFlags.IsSet(ImageUseFlagBits::Framebuffer) && inRenderPass && m_Framebuffer)
                 {
@@ -2188,8 +2254,8 @@ namespace Crowny
                 return entry.RequiredLayout;
             }
         }
-        
+
         return subresource->GetLayout();
     }
-    
-}
+
+} // namespace Crowny

@@ -1,42 +1,42 @@
 #pragma once
 
-#include "ImGuiPanel.h"
 #include "Crowny/Ecs/Entity.h"
+#include "ImGuiPanel.h"
 
 namespace Crowny
 {
-		
-	class ImGuiHierarchyPanel : public ImGuiPanel
-	{
-	public:
-		ImGuiHierarchyPanel(const std::string& name);
-		~ImGuiHierarchyPanel() = default;
 
-		virtual void Render() override;
-		void Update();
+    class ImGuiHierarchyPanel : public ImGuiPanel
+    {
+    public:
+        ImGuiHierarchyPanel(const std::string& name);
+        ~ImGuiHierarchyPanel() = default;
 
-		virtual void Show() override;
-		virtual void Hide() override;
+        virtual void Render() override;
+        void Update();
 
-	public:
-		static void SetSelectedEntity(Entity entity) { s_SelectedEntity = entity; }
-		static Entity GetSelectedEntity() { return s_SelectedEntity; }
+        virtual void Show() override;
+        virtual void Hide() override;
 
-	private:
-		static Entity s_SelectedEntity;
+    public:
+        static void SetSelectedEntity(Entity entity) { s_SelectedEntity = entity; }
+        static Entity GetSelectedEntity() { return s_SelectedEntity; }
 
-	private:
-		void DisplayTree(Entity e);
-		void Select(Entity e);
-		void DisplayLeafNode(Entity e);
-		void DisplayTreeNode(Entity e);
-		void DisplayPopup(Entity e);
-		void Rename(Entity e);
+    private:
+        static Entity s_SelectedEntity;
 
-	private:
-		bool m_Deleted = false;
-		Entity m_NewEntityParent = { };
-		Entity m_Renaming = { };
-		std::unordered_set<Entity> m_SelectedItems;
-	};
-}
+    private:
+        void DisplayTree(Entity e);
+        void Select(Entity e);
+        void DisplayLeafNode(Entity e);
+        void DisplayTreeNode(Entity e);
+        void DisplayPopup(Entity e);
+        void Rename(Entity e);
+
+    private:
+        bool m_Deleted = false;
+        Entity m_NewEntityParent = {};
+        Entity m_Renaming = {};
+        std::unordered_set<Entity> m_SelectedItems;
+    };
+} // namespace Crowny

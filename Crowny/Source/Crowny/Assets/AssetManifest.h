@@ -2,8 +2,8 @@
 
 #include "Crowny/Common/Uuid.h"
 
-#include "Crowny/Renderer/Texture.h"
-#include "Crowny/Renderer/Shader.h"
+#include "Crowny/RenderAPI/Shader.h"
+#include "Crowny/RenderAPI/Texture.h"
 
 namespace Crowny
 {
@@ -14,8 +14,7 @@ namespace Crowny
     public:
         void Serialize(const std::string& filepath);
         const std::string& GetName() const { return m_Name; }
-        template<class T>
-        Ref<T> Load(const Uuid& id);
+        template <class T> Ref<T> Load(const Uuid& id);
         AssetManifest(const std::string& name);
         ~AssetManifest() = default;
 
@@ -28,18 +27,18 @@ namespace Crowny
         std::unordered_map<std::string, Uuid> m_Uuids;
         std::unordered_map<Uuid, std::string> m_Paths;
     };
-/*
-    template <>
-    inline Ref<Texture2D> AssetManifest::Load<Texture2D>(const Uuid& id)
-    {
-        //TODO: Load the texture metadata here
-        return Texture2D::Create(m_Paths[id]);
-    }
+    /*
+        template <>
+        inline Ref<Texture2D> AssetManifest::Load<Texture2D>(const Uuid& id)
+        {
+            //TODO: Load the texture metadata here
+            return Texture2D::Create(m_Paths[id]);
+        }
 
-    template <>
-    inline Ref<Shader> AssetManifest::Load<Shader>(const Uuid& id)
-    {
-        return nullptr;
-    }
-*/
-}
+        template <>
+        inline Ref<Shader> AssetManifest::Load<Shader>(const Uuid& id)
+        {
+            return nullptr;
+        }
+    */
+} // namespace Crowny

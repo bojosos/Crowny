@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Crowny/Renderer/Shader.h"
+#include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/Utils/ShaderCompiler.h"
 
-#include "Platform/Vulkan/VulkanUtils.h"
 #include "Platform/Vulkan/VulkanResource.h"
+#include "Platform/Vulkan/VulkanUtils.h"
 
 namespace Crowny
 {
@@ -42,4 +42,4 @@ namespace Crowny
         uint32_t m_RendererID;
         VulkanShaderModule* m_Module;
     };
-}
+} // namespace Crowny

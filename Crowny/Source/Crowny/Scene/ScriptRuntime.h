@@ -10,4 +10,4 @@ namespace Crowny
         static void OnUpdate();
         static void OnShutdown();
     };
-}
+} // namespace Crowny

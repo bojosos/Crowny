@@ -6,6 +6,5 @@ namespace Crowny
     {
     public:
         static void InitRuntimeFunctions();
-        
     };
-}
+} // namespace Crowny
