@@ -1,50 +1,51 @@
 #pragma once
 
-#include "Crowny/Renderer/Texture.h"
+#include "Crowny/RenderAPI/Texture.h"
 
-namespace ftgl {
-	struct texture_font_t;
-	struct texture_atlas_t;
-}
+namespace ftgl
+{
+    struct texture_font_t;
+    struct texture_atlas_t;
+} // namespace ftgl
 
 namespace Crowny
 {
-	
-	class Font
-	{
-	public:
-		Font(const std::string& filepath, const std::string& name, float size);
 
-		const std::string& GetName() const { return m_Name; }
-		float GetSize() const { return m_Size; }
-		const std::string& GetFilepath() const { return m_Filepath; }
+    class Font
+    {
+    public:
+        Font(const std::string& filepath, const std::string& name, float size);
 
-		ftgl::texture_font_t* GetFTGLFont() const { return m_Font; }
-		ftgl::texture_atlas_t* GetFTGLAtlas() const { return m_Atlas; }
+        const std::string& GetName() const { return m_Name; }
+        float GetSize() const { return m_Size; }
+        const std::string& GetFilepath() const { return m_Filepath; }
 
-		const Ref<Texture> GetTexture() const { return m_Texture; };
+        ftgl::texture_font_t* GetFTGLFont() const { return m_Font; }
+        ftgl::texture_atlas_t* GetFTGLAtlas() const { return m_Atlas; }
 
-		static float GetWidth(const std::string& font, const std::string& text);
-		static float GetHeight(const std::string& font, const std::string& text);
-		static float GetWidth(const Ref<Font>& font, const std::string& text);
-		static float GetHeight(const Ref<Font>& font, const std::string& text);
+        const Ref<Texture> GetTexture() const { return m_Texture; };
 
-	private:
-		ftgl::texture_atlas_t* m_Atlas;
-		ftgl::texture_font_t* m_Font;
-		float m_Size;
-		std::string m_Name, m_Filepath;
-		Ref<Texture> m_Texture;
-	};
+        static float GetWidth(const std::string& font, const std::string& text);
+        static float GetHeight(const std::string& font, const std::string& text);
+        static float GetWidth(const Ref<Font>& font, const std::string& text);
+        static float GetHeight(const Ref<Font>& font, const std::string& text);
 
-	class FontManager
-	{
-	public:
-		static void Add(const Ref<Font>& font);
-		static Ref<Font> Get(const std::string& name);
-		static Ref<Font> Get(const std::string& name, float size);
+    private:
+        ftgl::texture_atlas_t* m_Atlas;
+        ftgl::texture_font_t* m_Font;
+        float m_Size;
+        std::string m_Name, m_Filepath;
+        Ref<Texture> m_Texture;
+    };
 
-	private:
-		static std::vector<Ref<Font>> s_Fonts;
-	};
-}
+    class FontManager
+    {
+    public:
+        static void Add(const Ref<Font>& font);
+        static Ref<Font> Get(const std::string& name);
+        static Ref<Font> Get(const std::string& name, float size);
+
+    private:
+        static std::vector<Ref<Font>> s_Fonts;
+    };
+} // namespace Crowny

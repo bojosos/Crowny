@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Crowny/Renderer/GraphicsPipeline.h"
+#include "Crowny/RenderAPI/GraphicsPipeline.h"
 
 namespace Crowny
 {
-    
+
     class OpenGLGraphicsPipeline : public GraphicsPipeline
     {
     public:
@@ -17,8 +17,9 @@ namespace Crowny
     public:
         OpenGLComputePipeline(const Ref<Shader>& shader);
         ~OpenGLComputePipeline();
+
     private:
         Ref<Shader> m_Shader;
     };
-    
-}
+
+} // namespace Crowny

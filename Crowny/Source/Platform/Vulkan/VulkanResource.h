@@ -4,7 +4,7 @@
 
 namespace Crowny
 {
-    
+
     enum class VulkanAccessFlagBits
     {
         None = 1 << 0,
@@ -13,7 +13,7 @@ namespace Crowny
     };
     typedef Flags<VulkanAccessFlagBits> VulkanAccessFlags;
     CW_FLAGS_OPERATORS(VulkanAccessFlagBits);
-    
+
     class VulkanResourceManager;
 
     class VulkanResource
@@ -21,7 +21,7 @@ namespace Crowny
     public:
         VulkanResource(VulkanResourceManager* owner, bool concurrent);
         virtual ~VulkanResource();
-        
+
         void NotifyBound();
         void NotifyUsed(uint32_t globalQueueIdx, uint32_t queueFamily, VulkanAccessFlags useFlags);
         virtual void NotifyDone(uint32_t globalQueueIdx, VulkanAccessFlags useFlags);
@@ -36,6 +36,7 @@ namespace Crowny
         uint32_t GetUseCount() const { return m_NumUsedHandles; }
         uint32_t GetBoundCount() const { return m_NumBoundHandles; }
         uint32_t GetUseInfo(VulkanAccessFlags accessFlags) const;
+
     protected:
         enum class State
         {
@@ -52,7 +53,6 @@ namespace Crowny
 
         uint32_t m_NumUsedHandles;
         uint32_t m_NumBoundHandles;
-        
     };
 
     class VulkanResourceManager
@@ -61,8 +61,7 @@ namespace Crowny
         VulkanResourceManager(VulkanDevice& device);
         ~VulkanResourceManager();
 
-        template<class Type, class... Args>
-        Type* Create(Args... args)
+        template <class Type, class... Args> Type* Create(Args... args)
         {
             return new Type(this, std::forward<Args>(args)...);
         }
@@ -75,5 +74,5 @@ namespace Crowny
         void Destroy(VulkanResource* resource);
         VulkanDevice& m_Device;
     };
-    
-}
+
+} // namespace Crowny

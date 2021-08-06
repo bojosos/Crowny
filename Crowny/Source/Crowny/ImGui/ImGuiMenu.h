@@ -5,47 +5,48 @@
 namespace Crowny
 {
 
-	class ImGuiMenuItem
-	{
-	public:
-		ImGuiMenuItem(const std::string& title, const std::string& combination, const EventCallbackFn& onclicked);
-		~ImGuiMenuItem() = default;
+    class ImGuiMenuItem
+    {
+    public:
+        ImGuiMenuItem(const std::string& title, const std::string& combination, const EventCallbackFn& onclicked);
+        ~ImGuiMenuItem() = default;
 
-		void Render(uint32_t maxWidth);
-		uint32_t GetTotalWidth();
-	private:
-		EventCallbackFn OnClicked;
-		std::string m_Combination;
-		std::string m_Title;
-	};
+        void Render(uint32_t maxWidth);
+        uint32_t GetTotalWidth();
 
-	class ImGuiMenu
-	{
-	public:
-		ImGuiMenu(const std::string& title);
-		~ImGuiMenu();
+    private:
+        EventCallbackFn OnClicked;
+        std::string m_Combination;
+        std::string m_Title;
+    };
 
-		void Render();
-		void AddMenu(ImGuiMenu* menu);
-		void AddItem(ImGuiMenuItem* item);
+    class ImGuiMenu
+    {
+    public:
+        ImGuiMenu(const std::string& title);
+        ~ImGuiMenu();
 
-	private:
-		std::vector<ImGuiMenuItem*> m_Items;
-		std::vector<ImGuiMenu*> m_Menus;
-		std::vector<bool> m_Order;
+        void Render();
+        void AddMenu(ImGuiMenu* menu);
+        void AddItem(ImGuiMenuItem* item);
 
-		std::string m_Title;
-	};
+    private:
+        std::vector<ImGuiMenuItem*> m_Items;
+        std::vector<ImGuiMenu*> m_Menus;
+        std::vector<bool> m_Order;
 
-	class ImGuiMenuBar
-	{
-	public:
-		ImGuiMenuBar() = default;
-		~ImGuiMenuBar();
-		void AddMenu(ImGuiMenu* menu);
-		void Render();
+        std::string m_Title;
+    };
 
-	private:
-		std::vector<ImGuiMenu*> m_Menus;
-	};
-}
+    class ImGuiMenuBar
+    {
+    public:
+        ImGuiMenuBar() = default;
+        ~ImGuiMenuBar();
+        void AddMenu(ImGuiMenu* menu);
+        void Render();
+
+    private:
+        std::vector<ImGuiMenu*> m_Menus;
+    };
+} // namespace Crowny

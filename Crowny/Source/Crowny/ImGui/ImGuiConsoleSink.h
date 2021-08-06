@@ -6,14 +6,13 @@
 
 namespace Crowny
 {
-    template<class Mutex>
-    class ImGuiConsoleSink : public spdlog::sinks::base_sink<std::mutex>
+    template <class Mutex> class ImGuiConsoleSink : public spdlog::sinks::base_sink<std::mutex>
     {
     public:
         explicit ImGuiConsoleSink(bool forceFlush = false, uint8_t capacity = 10)
-            : m_MessageBufferCapacity(forceFlush ? 1 : capacity), m_MessageBuffer(std::vector<Ref<ImGuiConsoleBuffer::Message>>(forceFlush ? 1 : capacity))
+          : m_MessageBufferCapacity(forceFlush ? 1 : capacity),
+            m_MessageBuffer(std::vector<Ref<ImGuiConsoleBuffer::Message>>(forceFlush ? 1 : capacity))
         {
-
         }
 
         ImGuiConsoleSink(const ImGuiConsoleSink&) = delete;
@@ -25,14 +24,15 @@ namespace Crowny
         {
             spdlog::memory_buf_t formatted;
             base_sink<Mutex>::formatter_->format(message, formatted);
-            *(m_MessageBuffer.begin() + m_MessagesBuffered) = CreateRef<ImGuiConsoleBuffer::Message>(fmt::to_string(formatted), GetMessageLevel(message.level));
+            *(m_MessageBuffer.begin() + m_MessagesBuffered) =
+              CreateRef<ImGuiConsoleBuffer::Message>(fmt::to_string(formatted), GetMessageLevel(message.level));
             if (++m_MessagesBuffered == m_MessageBufferCapacity)
                 flush_();
         }
 
         void flush_() override
         {
-            for (int i= 0; i < m_MessagesBuffered; i++)
+            for (int i = 0; i < m_MessagesBuffered; i++)
                 ImGuiConsoleBuffer::AddMessage(m_MessageBuffer[i]);
             m_MessagesBuffered = 0;
         }
@@ -42,10 +42,14 @@ namespace Crowny
         {
             switch (level)
             {
-                case spdlog::level::level_enum::info:     return ImGuiConsoleBuffer::Message::Level::Info;
-                case spdlog::level::level_enum::warn:     return ImGuiConsoleBuffer::Message::Level::Warn;
-                case spdlog::level::level_enum::err:      return ImGuiConsoleBuffer::Message::Level::Error;
-                case spdlog::level::level_enum::critical: return ImGuiConsoleBuffer::Message::Level::Critical;
+            case spdlog::level::level_enum::info:
+                return ImGuiConsoleBuffer::Message::Level::Info;
+            case spdlog::level::level_enum::warn:
+                return ImGuiConsoleBuffer::Message::Level::Warn;
+            case spdlog::level::level_enum::err:
+                return ImGuiConsoleBuffer::Message::Level::Error;
+            case spdlog::level::level_enum::critical:
+                return ImGuiConsoleBuffer::Message::Level::Critical;
             }
 
             return ImGuiConsoleBuffer::Message::Level::Invalid;
@@ -56,13 +60,13 @@ namespace Crowny
         uint8_t m_MessageBufferCapacity;
         std::vector<Ref<ImGuiConsoleBuffer::Message>> m_MessageBuffer;
     };
-}
+} // namespace Crowny
 
-#include <spdlog/details/null_mutex.h>
 #include <mutex>
+#include <spdlog/details/null_mutex.h>
 
 namespace Crowny
 {
     using ImGuiConsoleSink_mt = ImGuiConsoleSink<std::mutex>;
     using ImGuiConsoleSink_st = ImGuiConsoleSink<spdlog::details::null_mutex>;
-}
+} // namespace Crowny

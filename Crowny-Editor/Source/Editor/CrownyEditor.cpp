@@ -7,17 +7,11 @@
 namespace Crowny
 {
 
-	class CrownyEditor : public Application
-	{
-	public:
-		CrownyEditor() : Application("Crowny Editor")
-		{
-			PushLayer(new EditorLayer());
-		}
-	};
+    class CrownyEditor : public Application
+    {
+    public:
+        CrownyEditor() : Application("Crowny Editor") { PushLayer(new EditorLayer()); }
+    };
 
-	Application* CreateApplication()
-	{
-		return new CrownyEditor();
-	}
-}
+    Application* CreateApplication() { return new CrownyEditor(); }
+} // namespace Crowny

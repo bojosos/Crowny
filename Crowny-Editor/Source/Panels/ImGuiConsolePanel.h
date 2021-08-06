@@ -10,10 +10,10 @@ namespace Crowny
     class ImGuiConsolePanel : public ImGuiPanel
     {
     public:
-		ImGuiConsolePanel(const std::string& name);
-		~ImGuiConsolePanel() = default;
+        ImGuiConsolePanel(const std::string& name);
+        ~ImGuiConsolePanel() = default;
 
-		virtual void Render() override;
+        virtual void Render() override;
         void RenderMessages();
         void RenderHeader();
         void RenderSettings();
@@ -23,11 +23,16 @@ namespace Crowny
         {
             switch (level)
             {
-                case ImGuiConsoleBuffer::Message::Level::Info:     return { 0.00f, 0.50f, 0.00f, 1.00f }; // Green
-                case ImGuiConsoleBuffer::Message::Level::Warn:     return { 1.00f, 1.00f, 0.00f, 1.00f }; // Yellow
-                case ImGuiConsoleBuffer::Message::Level::Error:    return { 1.00f, 0.00f, 0.00f, 1.00f }; // Red
-                case ImGuiConsoleBuffer::Message::Level::Critical: return { 1.00f, 0.00f, 0.00f, 1.00f }; // White-white
-                default:                                           return { 0.00f, 0.00f, 0.00f, 1.00f }; // Stupid warnings
+            case ImGuiConsoleBuffer::Message::Level::Info:
+                return { 0.00f, 0.50f, 0.00f, 1.00f }; // Green
+            case ImGuiConsoleBuffer::Message::Level::Warn:
+                return { 1.00f, 1.00f, 0.00f, 1.00f }; // Yellow
+            case ImGuiConsoleBuffer::Message::Level::Error:
+                return { 1.00f, 0.00f, 0.00f, 1.00f }; // Red
+            case ImGuiConsoleBuffer::Message::Level::Critical:
+                return { 1.00f, 0.00f, 0.00f, 1.00f }; // White-white
+            default:
+                return { 0.00f, 0.00f, 0.00f, 1.00f }; // Stupid warnings
             }
             return { 1.0f, 1.0f, 1.0f, 1.0f };
         }
@@ -38,7 +43,7 @@ namespace Crowny
         ImGuiConsoleBuffer::Message::Level m_MessageBufferRenderFilter = ImGuiConsoleBuffer::Message::Level::Info;
         float m_DisplayScale = 1.0f;
         bool m_AllowScrollingToBottom = true;
-	    bool m_RequestScrollToBottom = false;
+        bool m_RequestScrollToBottom = false;
     };
 
-}
+} // namespace Crowny

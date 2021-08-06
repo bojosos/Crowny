@@ -1,8 +1,8 @@
 #include "cwpch.h"
 
 #include "Crowny/Audio/AudioManager.h"
-#include "Crowny/Common/StringUtils.h"
 #include "Crowny/Audio/AudioUtils.h"
+#include "Crowny/Common/StringUtils.h"
 
 #include <AL/al.h>
 #include <glm/glm.hpp>
@@ -18,7 +18,7 @@ namespace Crowny
             const ALCchar* defaultDevice = alcGetString(nullptr, ALC_DEFAULT_ALL_DEVICES_SPECIFIER);
             m_DefaultDevice.Name = defaultDevice;
             const ALCchar* devices = alcGetString(nullptr, ALC_ALL_DEVICES_SPECIFIER);
-            
+
             std::vector<char> deviceName;
             while (true)
             {
@@ -33,7 +33,7 @@ namespace Crowny
                     devices++;
                     continue;
                 }
-                
+
                 deviceName.push_back(*devices);
                 devices++;
             }
@@ -44,7 +44,7 @@ namespace Crowny
             m_Devices.push_back({ "" });
             enumerated = false;
         }
-        
+
         m_ActiveDevice = m_DefaultDevice;
         std::string defaultDeviceName = m_DefaultDevice.Name;
         if (enumerated)
@@ -54,13 +54,13 @@ namespace Crowny
         if (m_Device == nullptr)
             CW_ENGINE_ERROR("OpenAL device creation failed. Device: {0}", defaultDeviceName);
     }
-    
+
     AudioManager::~AudioManager()
     {
         alcMakeContextCurrent(nullptr);
         alcDestroyContext(m_Context);
         m_Context = nullptr;
-        
+
         if (m_Device != nullptr)
             alcCloseDevice(m_Device);
     }
@@ -70,22 +70,13 @@ namespace Crowny
         m_Volume = glm::clamp(volume, 0.0f, 1.0f);
         m_Listener->SetVolume(volume);
     }
-    
-    float AudioManager::GetVolume() const
-    {
-        return m_Volume;
-    }
-    
-    void AudioManager::RegisterSource(AudioSource* source)
-    {
-        m_Sources.insert(source);
-    }
-    
-    void AudioManager::UnregisterSource(AudioSource* source)
-    {
-        m_Sources.erase(source);
-    }
-    
+
+    float AudioManager::GetVolume() const { return m_Volume; }
+
+    void AudioManager::RegisterSource(AudioSource* source) { m_Sources.insert(source); }
+
+    void AudioManager::UnregisterSource(AudioSource* source) { m_Sources.erase(source); }
+
     void AudioManager::RegisterListener(AudioListener* listener)
     {
         if (m_Listener != nullptr)
@@ -102,15 +93,9 @@ namespace Crowny
         m_Listener = nullptr;
     }
 
-    Ref<AudioSource> AudioManager::CreateSource()
-    {
-        return CreateRef<AudioSource>();
-    }
-    
-    Ref<AudioListener> AudioManager::CreateListener()
-    {
-        return CreateRef<AudioListener>();
-    }
+    Ref<AudioSource> AudioManager::CreateSource() { return CreateRef<AudioSource>(); }
+
+    Ref<AudioListener> AudioManager::CreateListener() { return CreateRef<AudioListener>(); }
 
     void AudioManager::SetPaused(bool paused)
     {
@@ -120,27 +105,25 @@ namespace Crowny
         for (auto& source : m_Sources)
             source->SetGlobalPause(paused);
     }
-    
+
     void AudioManager::SetActiveDevice(const AudioDevice& device)
     {
         if (m_Devices.size() == 1)
             return;
-        
+
         alcMakeContextCurrent(nullptr);
         if (m_Context != nullptr)
             alcDestroyContext(m_Context);
         m_Context = nullptr;
-        
+
         if (m_Device != nullptr)
             alcCloseDevice(m_Device);
         m_ActiveDevice = device;
         m_Device = alcOpenDevice(device.Name.c_str());
         if (m_Device == nullptr)
             CW_ENGINE_ERROR("OpenAL device creation failed. Device: {0}", device.Name);
-        
-        
     }
-    
+
     bool AudioManager::IsExtSupported(const std::string& ext) const
     {
         if (m_Device == nullptr)
@@ -150,12 +133,9 @@ namespace Crowny
         else
             return alIsExtensionPresent(ext.c_str()) != AL_FALSE;
     }
-    
-    ALCcontext* AudioManager::GetContext() const
-    {
-        return m_Context;
-    }
-    
+
+    ALCcontext* AudioManager::GetContext() const { return m_Context; }
+
     void AudioManager::WriteToOpenALBuffer(uint32_t bufferId, uint8_t* samples, const AudioDataInfo& info)
     {
         if (info.NumChannels <= 2) // stereo or mono
@@ -207,7 +187,7 @@ namespace Crowny
                 AudioUtils::ConvertBitDepth(samples, info.BitDepth, samples32, 32, info.NumSamples);
                 ALenum format = AudioUtils::GetOpenALFormat(info.NumChannels, 32);
                 alBufferData(bufferId, format, samples32, bufferSize, info.SampleRate);
-                delete[] samples32;                
+                delete[] samples32;
             }
             else if (info.BitDepth == 8)
             {
@@ -226,10 +206,7 @@ namespace Crowny
             }
         }
     }
-    
-    AudioManager& gAudio()
-    {
-        return AudioManager::Get();
-    }
-    
-}
+
+    AudioManager& gAudio() { return AudioManager::Get(); }
+
+} // namespace Crowny

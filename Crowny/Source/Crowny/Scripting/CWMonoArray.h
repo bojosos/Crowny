@@ -12,11 +12,9 @@ namespace Crowny
         ScriptArray(MonoArray* array);
         ScriptArray(CWMonoClass& monoClass, uint32_t size);
 
-        template <class T>
-        T Get(uint32_t idx);
+        template <class T> T Get(uint32_t idx);
 
-        template <class T>
-        void Set(uint32_t idx, const T& value);
+        template <class T> void Set(uint32_t idx, const T& value);
 
         ~ScriptArray();
 
@@ -25,4 +23,4 @@ namespace Crowny
     private:
         MonoArray* m_Array;
     };
-}
+} // namespace Crowny

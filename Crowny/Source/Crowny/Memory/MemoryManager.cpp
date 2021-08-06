@@ -5,14 +5,8 @@
 namespace Crowny
 {
 
-	void MemoryManager::Init()
-	{
-		
-	}
+    void MemoryManager::Init() {}
 
-	void MemoryManager::Shutdown()
-	{
+    void MemoryManager::Shutdown() {}
 
-	}
-
-}
+} // namespace Crowny

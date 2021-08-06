@@ -32,16 +32,16 @@ namespace Crowny
         Enum,
         Unknown
     };
-    
+
     class MonoUtils
     {
     public:
         static void CheckException(MonoException* exception);
         static void CheckException(MonoObject* exception);
-        
+
         static bool IsEnum(MonoClass* monoClass);
         static std::string FromMonoString(MonoString* value);
         static MonoString* ToMonoString(const std::string& value);
         static MonoType* GetType(MonoClass* monoClass);
     };
-}
+} // namespace Crowny

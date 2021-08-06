@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Crowny/Renderer/UniformBufferBlock.h"
+#include "Crowny/RenderAPI/UniformBufferBlock.h"
 
 #include "Platform/Vulkan/VulkanGpuBuffer.h"
 
@@ -12,8 +12,8 @@ namespace Crowny
     public:
         VulkanUniformBufferBlock(uint32_t size, BufferUsage usage);
         ~VulkanUniformBufferBlock();
-                
+
         VulkanBuffer* GetBuffer() const;
     };
 
-}
+} // namespace Crowny

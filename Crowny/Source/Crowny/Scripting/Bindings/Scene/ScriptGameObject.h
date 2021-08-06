@@ -4,13 +4,13 @@
 
 namespace Crowny
 {
-  class ScriptGameObject 
-  {
-  public:
-    static void InitRuntimeFunctions();
+    class ScriptGameObject
+    {
+    public:
+        static void InitRuntimeFunctions();
 
-  private:
-    static MonoObject* Internal_FindObject(MonoString* name);
-  };
+    private:
+        static MonoObject* Internal_FindObject(MonoString* name);
+    };
 
-}
+} // namespace Crowny

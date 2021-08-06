@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Crowny/Common/DataStream.h"
 #include "Crowny/Audio/OggVorbisDecoder.h"
+#include "Crowny/Common/DataStream.h"
 
 namespace Crowny
 {
-    
+
     struct AudioDataInfo
     {
         uint32_t NumSamples;
@@ -13,19 +13,19 @@ namespace Crowny
         uint32_t NumChannels;
         uint32_t BitDepth;
     };
-    
+
     enum class AudioFormat
     {
         VORBIS
     };
-    
+
     enum class AudioReadMode
     {
         LoadDecompressed,
         LoadCompressed,
         Stream,
     };
-    
+
     struct AudioClipDesc
     {
         AudioReadMode ReadMode = AudioReadMode::LoadDecompressed;
@@ -34,9 +34,8 @@ namespace Crowny
         uint32_t BitDepth = 16;
         uint32_t NumChannels = 2;
         bool Is3D = true;
-        
     };
-    
+
     class AudioClip
     {
     public:
@@ -48,7 +47,7 @@ namespace Crowny
         Ref<DataStream> GetSourceStream(uint32_t& size);
         uint32_t GetOpenALBuffer() const { return m_BufferID; }
         bool Is3D() const { return m_Desc.Is3D; }
-        
+
     private:
         AudioClipDesc m_Desc;
         float m_Length = 0.0f;
@@ -58,12 +57,12 @@ namespace Crowny
         uint32_t m_NumSamples;
         uint32_t m_StreamSize;
         uint32_t m_StreamOffset = 0;
-        
+
         Ref<DataStream> m_StreamData;
-        
+
         Ref<DataStream> m_SourceStreamData;
         uint32_t m_SourceStreamSize = 0;
         bool m_KeepSourceData;
     };
-    
-}
+
+} // namespace Crowny

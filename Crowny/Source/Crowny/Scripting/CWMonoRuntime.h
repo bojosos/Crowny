@@ -11,7 +11,7 @@ END_MONO_INCLUDE
 #define CLIENT_ASSEMBLY "Client.dll"
 #define CORLIB_ASSEMBLY "corlib"
 
-#define ASSEMBLY_COUNT        3
+#define ASSEMBLY_COUNT 3
 
 #define CROWNY_ASSEMBLY_INDEX 0
 #define CLIENT_ASSEMBLY_INDEX 1
@@ -19,7 +19,7 @@ END_MONO_INCLUDE
 
 namespace Crowny
 {
-	struct BuiltinScriptClasses
+    struct BuiltinScriptClasses
     {
         CWMonoClass* SystemArrayClass = nullptr;
         CWMonoClass* SystemGenericListClass = nullptr;
@@ -30,30 +30,29 @@ namespace Crowny
         CWMonoClass* RangeAttribute = nullptr;
         CWMonoClass* ShowInInspector = nullptr;
         CWMonoClass* HideInInspector = nullptr;
-		CWMonoClass* ScriptUtils = nullptr;
+        CWMonoClass* ScriptUtils = nullptr;
     };
 
-	class CWMonoRuntime
-	{
-	public:
-		
-		static bool Init(const std::string& domainName);
-		static void Shutdown();
+    class CWMonoRuntime
+    {
+    public:
+        static bool Init(const std::string& domainName);
+        static void Shutdown();
 
-		static void LoadAssemblies(const std::string& directory);
+        static void LoadAssemblies(const std::string& directory);
 
-		static CWMonoAssembly* GetCrownyAssembly() { return s_Instance->m_Assemblies[CROWNY_ASSEMBLY_INDEX]; }
-		static CWMonoAssembly* GetClientAssembly() { return s_Instance->m_Assemblies[CLIENT_ASSEMBLY_INDEX]; }
-		static CWMonoAssembly* GetCorlibAssembly() { return s_Instance->m_Assemblies[CORLIB_ASSEMBLY_INDEX]; }
+        static CWMonoAssembly* GetCrownyAssembly() { return s_Instance->m_Assemblies[CROWNY_ASSEMBLY_INDEX]; }
+        static CWMonoAssembly* GetClientAssembly() { return s_Instance->m_Assemblies[CLIENT_ASSEMBLY_INDEX]; }
+        static CWMonoAssembly* GetCorlibAssembly() { return s_Instance->m_Assemblies[CORLIB_ASSEMBLY_INDEX]; }
 
-		static MonoDomain* GetDomain() { return s_Instance->m_Domain; }
-		static BuiltinScriptClasses GetBuiltinClasses() { return s_Instance->m_BuiltinScriptClasses; }
+        static MonoDomain* GetDomain() { return s_Instance->m_Domain; }
+        static BuiltinScriptClasses GetBuiltinClasses() { return s_Instance->m_BuiltinScriptClasses; }
 
-	private:
-		static CWMonoRuntime* s_Instance;
-		BuiltinScriptClasses m_BuiltinScriptClasses;
-		std::vector<CWMonoAssembly*> m_Assemblies;
-		MonoDomain* m_Domain;
-	};
+    private:
+        static CWMonoRuntime* s_Instance;
+        BuiltinScriptClasses m_BuiltinScriptClasses;
+        std::vector<CWMonoAssembly*> m_Assemblies;
+        MonoDomain* m_Domain;
+    };
 
-}
+} // namespace Crowny

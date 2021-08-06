@@ -8,9 +8,9 @@
 
 #include "Crowny/Common/Yaml.h"
 /*
-#include <bitsery/traits/vector.h>
 #include <bitsery/adapter/buffer.h>
 #include <bitsery/bitsery.h>
+#include <bitsery/traits/vector.h>
 */
 namespace Crowny
 {
@@ -34,33 +34,29 @@ namespace Crowny
         out << uuid.ToString();
         return out;
     }
-    
-    template <typename S>
-    void serialize(S& s, const Ref<Scene>& scene)
-    {/*
-        s.text1b(scene->GetName());
-        s.container(*(m_Scene->m_Entities), std::limit<uint32_t>, [&kv])
-        {
-            Uuid id = kv.first;
-            Entity entity = kv.second;
-            if (!entity)
-                continue;
-            s.value4b()
-            if (entity.HasComponent<TagComponent>())
-            {
-                
-            }
-        }*/
+
+    template <typename S> void serialize(S& s, const Ref<Scene>& scene)
+    { /*
+         s.text1b(scene->GetName());
+         s.container(*(m_Scene->m_Entities), std::limit<uint32_t>, [&kv])
+         {
+             Uuid id = kv.first;
+             Entity entity = kv.second;
+             if (!entity)
+                 continue;
+             s.value4b()
+             if (entity.HasComponent<TagComponent>())
+             {
+
+             }
+         }*/
     }
 
-    SceneSerializer::SceneSerializer(const Ref<Scene>& scene) : m_Scene(scene)
-    {
-
-    }
+    SceneSerializer::SceneSerializer(const Ref<Scene>& scene) : m_Scene(scene) {}
 
     void SceneSerializer::SerializeEntity(YAML::Emitter& out, const Uuid& uuid, Entity entity)
     {
-        if  (!entity)
+        if (!entity)
             return;
         out << YAML::BeginMap; // Entity
         out << YAML::Key << "Entity" << YAML::Value << uuid;
@@ -91,7 +87,7 @@ namespace Crowny
                 }
                 out << YAML::EndMap;
             }
-            
+
             if (msc.DisplayableFields.size() > 0)
             {
                 out << YAML::Key << "Properties";
@@ -137,12 +133,12 @@ namespace Crowny
             auto& camera = entity.GetComponent<CameraComponent>().Camera;
             out << YAML::Key << "ProjectionType" << YAML::Value << (int32_t)camera.GetProjectionType();
             out << YAML::Key << "PerspectiveFOV" << YAML::Value << camera.GetPerspectiveVerticalFOV();
-			out << YAML::Key << "PerspectiveNear" << YAML::Value << camera.GetPerspectiveNearClip();
-			out << YAML::Key << "PerspectiveFar" << YAML::Value << camera.GetPerspectiveFarClip();
-			out << YAML::Key << "OrthographicSize" << YAML::Value << camera.GetOrthographicSize();
-			out << YAML::Key << "OrthographicNear" << YAML::Value << camera.GetOrthographicNearClip();
-			out << YAML::Key << "OrthographicFar" << YAML::Value << camera.GetOrthographicFarClip();
-            
+            out << YAML::Key << "PerspectiveNear" << YAML::Value << camera.GetPerspectiveNearClip();
+            out << YAML::Key << "PerspectiveFar" << YAML::Value << camera.GetPerspectiveFarClip();
+            out << YAML::Key << "OrthographicSize" << YAML::Value << camera.GetOrthographicSize();
+            out << YAML::Key << "OrthographicNear" << YAML::Value << camera.GetOrthographicNearClip();
+            out << YAML::Key << "OrthographicFar" << YAML::Value << camera.GetOrthographicFarClip();
+
             out << YAML::Key << "HDR" << YAML::Value << camera.GetHDR();
             out << YAML::Key << "MSAA" << YAML::Value << camera.GetMSAA();
             out << YAML::Key << "OcclusionCulling" << camera.GetOcclusionCulling();
@@ -176,7 +172,7 @@ namespace Crowny
             out << YAML::BeginMap;
             const auto& rc = entity.GetComponent<RelationshipComponent>();
             out << YAML::Key << "Children" << YAML::Value << YAML::BeginSeq;
-            
+
             for (Entity e : rc.Children)
             {
                 out << m_Scene->GetUuid(e);
@@ -184,7 +180,7 @@ namespace Crowny
 
             out << YAML::EndSeq << YAML::EndMap;
         }
-        
+
         out << YAML::EndMap; // Entity
     }
 
@@ -210,7 +206,7 @@ namespace Crowny
     void SceneSerializer::SerializeBinary(const std::string& filepath)
     {
         std::vector<uint8_t> buffer;
-        //bitsery::quickSerialization(bitsery::OutputBufferAdapter<std::vector<uint8_t>{buffer}, m_Scene);
+        // bitsery::quickSerialization(bitsery::OutputBufferAdapter<std::vector<uint8_t>{buffer}, m_Scene);
     }
 
     void SceneSerializer::Deserialize(const std::string& filepath)
@@ -224,7 +220,7 @@ namespace Crowny
         std::string sceneName = data["Scene"].as<std::string>();
         m_Scene->m_Name = sceneName;
         m_Scene->m_Filepath = filepath;
-        
+
         YAML::Node entities = data["Entities"];
         if (entities)
         {
@@ -239,7 +235,7 @@ namespace Crowny
 
                 Entity deserialized = m_Scene->CreateEntity(id, tag);
                 m_Scene->m_RootEntity->AddChild(deserialized);
-                
+
                 YAML::Node transform = entity["TransformComponent"];
                 if (transform)
                 {
@@ -256,12 +252,12 @@ namespace Crowny
                     auto& cc = deserialized.AddComponent<CameraComponent>();
                     cc.Camera.SetProjectionType((SceneCamera::CameraProjection)camera["ProjectionType"].as<int>());
                     cc.Camera.SetPerspectiveVerticalFOV(camera["PerspectiveFOV"].as<float>());
-					cc.Camera.SetPerspectiveNearClip(camera["PerspectiveNear"].as<float>());
-					cc.Camera.SetPerspectiveFarClip(camera["PerspectiveFar"].as<float>());
+                    cc.Camera.SetPerspectiveNearClip(camera["PerspectiveNear"].as<float>());
+                    cc.Camera.SetPerspectiveFarClip(camera["PerspectiveFar"].as<float>());
 
-					cc.Camera.SetOrthographicSize(camera["OrthographicSize"].as<float>());
-					cc.Camera.SetOrthographicNearClip(camera["OrthographicNear"].as<float>());
-					cc.Camera.SetOrthographicFarClip(camera["OrthographicFar"].as<float>());
+                    cc.Camera.SetOrthographicSize(camera["OrthographicSize"].as<float>());
+                    cc.Camera.SetOrthographicNearClip(camera["OrthographicNear"].as<float>());
+                    cc.Camera.SetOrthographicFarClip(camera["OrthographicFar"].as<float>());
 
                     cc.Camera.SetHDR(camera["HDR"].as<bool>());
                     cc.Camera.SetMSAA(camera["MSAA"].as<bool>());
@@ -297,7 +293,7 @@ namespace Crowny
                 YAML::Node mesh = entity["MeshRendererComponent"];
                 if (mesh)
                 {
-                    //auto& mc = deserialized.AddComponent<MeshRendererComponent>();
+                    // auto& mc = deserialized.AddComponent<MeshRendererComponent>();
                 }
 
                 YAML::Node rel = entity["RelationshipComponent"];
@@ -320,9 +316,6 @@ namespace Crowny
         }
     }
 
-    void SceneSerializer::DeserializeBinary(const std::string& filepath)
-    {
-        
-    }
+    void SceneSerializer::DeserializeBinary(const std::string& filepath) {}
 
-}
+} // namespace Crowny

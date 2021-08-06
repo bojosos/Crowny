@@ -1,11 +1,11 @@
 #include "cwpch.h"
 
-#include "Crowny/Renderer/ForwardPlusRenderer.h"
 #include "Crowny/Input/Input.h"
+#include "Crowny/Renderer/ForwardPlusRenderer.h"
 
 #include <glad/glad.h>
-#include <glm/gtc/type_ptr.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 /*
 namespace Crowny
 {
@@ -31,14 +31,14 @@ namespace Crowny
 
         uint32_t LightBuffer;
         uint32_t VisibleLightIndicesBuffer;
-        
+
         uint32_t RboDepth;
         uint32_t DepthMapFBO;
         uint32_t HdrFBO;
-        
+
         uint32_t DepthMap;
         uint32_t ColorBuffer;
-        
+
         glm::vec2 ScreenSize;
         uint32_t WorkGroupsX, WorkGroupsY;
     };
@@ -131,8 +131,8 @@ namespace Crowny
     {
         s_Data.ScreenSize = { 789.0f, 470.0f }; // temp
         s_Data.WorkGroupsX = ((int32_t)s_Data.ScreenSize.x + ((int32_t)s_Data.ScreenSize.x % 16)) / 16;
-	    s_Data.WorkGroupsY = ((int32_t)s_Data.ScreenSize.y + ((int32_t)s_Data.ScreenSize.y % 16)) / 16;
-	    size_t numberOfTiles = s_Data.WorkGroupsX * s_Data.WorkGroupsY;
+        s_Data.WorkGroupsY = ((int32_t)s_Data.ScreenSize.y + ((int32_t)s_Data.ScreenSize.y % 16)) / 16;
+        size_t numberOfTiles = s_Data.WorkGroupsX * s_Data.WorkGroupsY;
         // TODO: Make these directories relative to root directory of project
         s_Data.DepthShader = Shader::Create("/Shaders/Depth.glsl");
         s_Data.LightCullingShader = Shader::Create("/Shaders/LightCulling.glsl");
@@ -160,8 +160,8 @@ namespace Crowny
 
         glGenTextures(1, &s_Data.DepthMap);
         glBindTexture(GL_TEXTURE_2D, s_Data.DepthMap);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, s_Data.ScreenSize.x, s_Data.ScreenSize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, s_Data.ScreenSize.x, s_Data.ScreenSize.y, 0,
+GL_DEPTH_COMPONENT, GL_FLOAT, NULL); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
@@ -197,7 +197,8 @@ namespace Crowny
 
         s_Data.LightCullingShader->Bind();
        // s_Data.LightCullingShader->SetUniformInt("lightCount", 1024);
-       // s_Data.LightCullingShader->SetUniformInt2("screenSize", (int32_t)s_Data.ScreenSize.x, (int32_t)s_Data.ScreenSize.y);
+       // s_Data.LightCullingShader->SetUniformInt2("screenSize", (int32_t)s_Data.ScreenSize.x,
+(int32_t)s_Data.ScreenSize.y);
 
         s_Data.DepthDebugShader->Bind();
         //s_Data.DepthDebugShader->SetUniformMat4("model", model);
@@ -220,17 +221,17 @@ namespace Crowny
        // s_Data.LightAccumulationShader->SetUniformFloat3("viewPosition", camera.GetPosition());
 
         s_Data.LightCullingShader->Bind();
-		//s_Data.LightCullingShader->SetUniformMat4("projection", camera.GetProjection());
-		//s_Data.LightCullingShader->SetUniformMat4("view", camera.GetViewMatrix());
+        //s_Data.LightCullingShader->SetUniformMat4("projection", camera.GetProjection());
+        //s_Data.LightCullingShader->SetUniformMat4("view", camera.GetViewMatrix());
 
         s_Data.DepthShader->Bind();
-		//s_Data.DepthShader->SetUniformMat4("projection", camera.GetProjection());
-		//s_Data.DepthShader->SetUniformMat4("view", camera.GetViewMatrix());
-        
+        //s_Data.DepthShader->SetUniformMat4("projection", camera.GetProjection());
+        //s_Data.DepthShader->SetUniformMat4("view", camera.GetViewMatrix());
+
         s_Data.DepthDebugShader->Bind();
       //  s_Data.DepthDebugShader->SetUniformMat4("projection", camera.GetProjection());
        // s_Data.DepthDebugShader->SetUniformMat4("view", camera.GetViewMatrix());
-       
+
         UpdateLights();
     }
 
@@ -238,7 +239,7 @@ namespace Crowny
     {
         s_Meshes.push_back({ mesh, transform });
     }
-    
+
     void ForwardPlusRenderer::Submit(const Ref<Model>& model, const glm::mat4& transform)
     {
 
@@ -246,26 +247,26 @@ namespace Crowny
 
     void ForwardPlusRenderer::EndFrame()
     {
-        s_Data.DepthShader->Bind();	
-		glBindFramebuffer(GL_FRAMEBUFFER, s_Data.DepthMapFBO);
-		glClear(GL_DEPTH_BUFFER_BIT);
-		for (auto& mt : s_Meshes)
+        s_Data.DepthShader->Bind();
+        glBindFramebuffer(GL_FRAMEBUFFER, s_Data.DepthMapFBO);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        for (auto& mt : s_Meshes)
         {
             mt.mesh->Draw();
         }
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		s_Data.LightCullingShader->Bind();
+        s_Data.LightCullingShader->Bind();
 
-		glBindTextureUnit(0, s_Data.DepthMap);
+        glBindTextureUnit(0, s_Data.DepthMap);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, s_Data.LightBuffer);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, s_Data.VisibleLightIndicesBuffer);
-		glDispatchCompute(s_Data.WorkGroupsX, s_Data.WorkGroupsY, 1);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, s_Data.VisibleLightIndicesBuffer);
+        glDispatchCompute(s_Data.WorkGroupsX, s_Data.WorkGroupsY, 1);
 
-		glBindTextureUnit(0, 0);
-		glBindFramebuffer(GL_FRAMEBUFFER, s_Data.HdrFBO);
+        glBindTextureUnit(0, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, s_Data.HdrFBO);
 
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         s_Data.LightAccumulationShader->Bind();
         for (auto& mt : s_Meshes)
         {
@@ -278,14 +279,14 @@ namespace Crowny
        // s_Data.HdrShader->SetUniformFloat("exposure", exposure);
         DrawQuad();
         glBindTextureUnit(0, 0);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
         s_Meshes.clear();
     }
-    
+
     void ForwardPlusRenderer::Shutdown()
     {
-        
+
     }
 
 }*/

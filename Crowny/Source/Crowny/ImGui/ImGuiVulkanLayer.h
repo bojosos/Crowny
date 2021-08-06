@@ -4,16 +4,16 @@
 
 namespace Crowny
 {
-	class ImGuiVulkanLayer : public ImGuiLayer
-	{
-	public:
-		ImGuiVulkanLayer();
-		~ImGuiVulkanLayer() = default;
+    class ImGuiVulkanLayer : public ImGuiLayer
+    {
+    public:
+        ImGuiVulkanLayer();
+        ~ImGuiVulkanLayer() = default;
 
-		virtual void OnAttach() override;
-		virtual void OnDetach() override;
+        virtual void OnAttach() override;
+        virtual void OnDetach() override;
 
-		virtual void Begin() override;
-		virtual void End() override;
-	};
-}
+        virtual void Begin() override;
+        virtual void End() override;
+    };
+} // namespace Crowny

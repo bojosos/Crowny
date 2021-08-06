@@ -11,7 +11,7 @@
 
 namespace Crowny
 {
-    
+
     AudioListener::AudioListener()
     {
         gAudio().RegisterListener(this);
@@ -31,16 +31,15 @@ namespace Crowny
         AudioUtils::CheckOpenALErrors("Audio listener", 31);
     }
 
-    AudioListener::~AudioListener()
-    {
-        gAudio().UnregisterListener(this);
-    }
+    AudioListener::~AudioListener() { gAudio().UnregisterListener(this); }
 
     void AudioListener::SetTransform(const TransformComponent& transform)
     {
         alListener3f(AL_POSITION, transform.Position.x, transform.Position.y, transform.Position.z);
         glm::mat4 tran = transform.GetTransform();
-        std::array<float, 6> orientation = { -tran[2].x, -tran[2].y, -tran[2].z, tran[1].x, tran[1].y, tran[1].z }; // TODO: is this math correct?
+        std::array<float, 6> orientation = {
+            -tran[2].x, -tran[2].y, -tran[2].z, tran[1].x, tran[1].y, tran[1].z
+        }; // TODO: is this math correct?
         alListenerfv(AL_ORIENTATION, orientation.data());
     }
 
@@ -49,9 +48,6 @@ namespace Crowny
         alListener3f(AL_VELOCITY, velocity.x, velocity.y, velocity.z);
     }
 
-    void AudioListener::SetVolume(float volume)
-    {
-        alListenerf(AL_GAIN, volume);
-    }
+    void AudioListener::SetVolume(float volume) { alListenerf(AL_GAIN, volume); }
 
-}
+} // namespace Crowny

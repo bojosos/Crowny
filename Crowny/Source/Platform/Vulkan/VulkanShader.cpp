@@ -2,7 +2,7 @@
 
 #include "Platform/Vulkan/VulkanShader.h"
 
-#include "Platform/Vulkan/VulkanRendererAPI.h"
+#include "Platform/Vulkan/VulkanRenderAPI.h"
 
 #include "Crowny/Common/VirtualFileSystem.h"
 
@@ -10,25 +10,26 @@ namespace Crowny
 {
 
     VulkanShaderModule::VulkanShaderModule(VulkanResourceManager* owner, VkShaderModule module)
-        : VulkanResource(owner, true), m_Module(module)
-    { }
+      : VulkanResource(owner, true), m_Module(module)
+    {
+    }
 
     VulkanShaderModule::~VulkanShaderModule()
     {
         vkDestroyShaderModule(m_Owner->GetDevice().GetLogicalDevice(), m_Module, gVulkanAllocator);
     }
 
-	VulkanShader::VulkanShader(const BinaryShaderData& data) : m_ShaderDesc(data)
+    VulkanShader::VulkanShader(const BinaryShaderData& data) : m_ShaderDesc(data)
     {
-        VulkanDevice& device = *gVulkanRendererAPI().GetPresentDevice().get();
+        VulkanDevice& device = *gVulkanRenderAPI().GetPresentDevice().get();
         m_ShaderStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         m_ShaderStage.pNext = nullptr;
         m_ShaderStage.flags = 0;
         m_ShaderStage.stage = VulkanUtils::GetShaderFlags(data.Type);
-        //m_ShaderStage.pName = data.EntryPoint.c_str();
+        // m_ShaderStage.pName = data.EntryPoint.c_str();
         m_ShaderStage.pName = "main";
         m_ShaderStage.pSpecializationInfo = nullptr;
-        
+
         VkShaderModuleCreateInfo moduleCreateInfo{};
         moduleCreateInfo.pNext = nullptr;
         moduleCreateInfo.flags = 0;
@@ -41,10 +42,7 @@ namespace Crowny
 
     VulkanShader::VulkanShader(const std::string& name, const std::string& vertSrc, const std::string& fragSrc) {}
     VulkanShader::VulkanShader(const std::string& filepath, ShaderType shaderType) {}
-    
-    VulkanShader::~VulkanShader()
-    {
-        m_Module->Destroy();
-    }
-    
-}
+
+    VulkanShader::~VulkanShader() { m_Module->Destroy(); }
+
+} // namespace Crowny

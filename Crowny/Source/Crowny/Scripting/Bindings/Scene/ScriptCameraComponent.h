@@ -8,12 +8,12 @@ namespace Crowny
 {
     class ScriptCameraComponent
     {
-        
-	public:
-		static void InitRuntimeFunctions();
 
-	private:
+    public:
+        static void InitRuntimeFunctions();
+
+    private:
         static MonoObject* Internal_GetCamera(CameraComponent* component);
         static void Internal_SetCamera(CameraComponent* component, Camera* camera);
     };
-}
+} // namespace Crowny

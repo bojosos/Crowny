@@ -2,7 +2,7 @@
 
 #include "Platform/Vulkan/VulkanRenderTexture.h"
 
-#include "Platform/Vulkan/VulkanRendererAPI.h"
+#include "Platform/Vulkan/VulkanRenderAPI.h"
 #include "Platform/Vulkan/VulkanTexture.h"
 
 namespace Crowny
@@ -83,7 +83,7 @@ namespace Crowny
                     surface.NumFaces = view->GetNumArraySlices();
                     fbDesc.LayerCount = view->GetNumArraySlices();
                 }
-                
+
                 fbDesc.Depth.Image = image;
                 fbDesc.Depth.Surface = surface;
                 fbDesc.Depth.BaseLayer = view->GetFirstArraySlice();
@@ -91,15 +91,12 @@ namespace Crowny
                 rpDesc.Depth.Format = VulkanUtils::GetTextureFormat(texture->GetProperties().Format, false);
             }
         }
-        
-        VulkanDevice& device = *gVulkanRendererAPI().GetPresentDevice().get();
+
+        VulkanDevice& device = *gVulkanRenderAPI().GetPresentDevice().get();
         VulkanRenderPass* renderPass = VulkanRenderPasses::Get().GetRenderPass(rpDesc);
         m_Framebuffer = device.GetResourceManager().Create<VulkanFramebuffer>(renderPass, fbDesc);
     }
-    
-    VulkanRenderTexture::~VulkanRenderTexture()
-    {
-        m_Framebuffer->Destroy();
-    }
 
-}
+    VulkanRenderTexture::~VulkanRenderTexture() { m_Framebuffer->Destroy(); }
+
+} // namespace Crowny

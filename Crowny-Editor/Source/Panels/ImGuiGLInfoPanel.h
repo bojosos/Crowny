@@ -4,12 +4,12 @@
 
 namespace Crowny
 {
-	class OpenGLInformationPanel : public ImGuiPanel
-	{
-	public:
-		OpenGLInformationPanel(const std::string& name);
-		~OpenGLInformationPanel() = default;
+    class OpenGLInformationPanel : public ImGuiPanel
+    {
+    public:
+        OpenGLInformationPanel(const std::string& name);
+        ~OpenGLInformationPanel() = default;
 
-		virtual void Render() override;
-	};
-}
+        virtual void Render() override;
+    };
+} // namespace Crowny

@@ -249,7 +249,7 @@ GENERATED += $(OBJDIR)/OpenGLFramebuffer.o
 GENERATED += $(OBJDIR)/OpenGLIndexBuffer.o
 GENERATED += $(OBJDIR)/OpenGLInfo.o
 GENERATED += $(OBJDIR)/OpenGLPipeline.o
-GENERATED += $(OBJDIR)/OpenGLRendererAPI.o
+GENERATED += $(OBJDIR)/OpenGLRenderAPI.o
 GENERATED += $(OBJDIR)/OpenGLShader.o
 GENERATED += $(OBJDIR)/OpenGLTexture.o
 GENERATED += $(OBJDIR)/OpenGLTextureCube.o
@@ -260,13 +260,13 @@ GENERATED += $(OBJDIR)/PBRMaterial.o
 GENERATED += $(OBJDIR)/Physics.o
 GENERATED += $(OBJDIR)/PixelUtils.o
 GENERATED += $(OBJDIR)/Random.o
+GENERATED += $(OBJDIR)/RenderAPI.o
 GENERATED += $(OBJDIR)/RenderCapabilities.o
 GENERATED += $(OBJDIR)/RenderCommand.o
 GENERATED += $(OBJDIR)/RenderTexture.o
 GENERATED += $(OBJDIR)/RenderWindow.o
 GENERATED += $(OBJDIR)/Renderer.o
 GENERATED += $(OBJDIR)/Renderer2D.o
-GENERATED += $(OBJDIR)/RendererAPI.o
 GENERATED += $(OBJDIR)/SamplerState.o
 GENERATED += $(OBJDIR)/Scene.o
 GENERATED += $(OBJDIR)/SceneCamera.o
@@ -306,10 +306,10 @@ GENERATED += $(OBJDIR)/VulkanGpuBufferManager.o
 GENERATED += $(OBJDIR)/VulkanIndexBuffer.o
 GENERATED += $(OBJDIR)/VulkanPipeline.o
 GENERATED += $(OBJDIR)/VulkanQueue.o
+GENERATED += $(OBJDIR)/VulkanRenderAPI.o
 GENERATED += $(OBJDIR)/VulkanRenderPass.o
 GENERATED += $(OBJDIR)/VulkanRenderTexture.o
 GENERATED += $(OBJDIR)/VulkanRenderWindow.o
-GENERATED += $(OBJDIR)/VulkanRendererAPI.o
 GENERATED += $(OBJDIR)/VulkanResource.o
 GENERATED += $(OBJDIR)/VulkanSamplerState.o
 GENERATED += $(OBJDIR)/VulkanShader.o
@@ -391,7 +391,7 @@ OBJECTS += $(OBJDIR)/OpenGLFramebuffer.o
 OBJECTS += $(OBJDIR)/OpenGLIndexBuffer.o
 OBJECTS += $(OBJDIR)/OpenGLInfo.o
 OBJECTS += $(OBJDIR)/OpenGLPipeline.o
-OBJECTS += $(OBJDIR)/OpenGLRendererAPI.o
+OBJECTS += $(OBJDIR)/OpenGLRenderAPI.o
 OBJECTS += $(OBJDIR)/OpenGLShader.o
 OBJECTS += $(OBJDIR)/OpenGLTexture.o
 OBJECTS += $(OBJDIR)/OpenGLTextureCube.o
@@ -402,13 +402,13 @@ OBJECTS += $(OBJDIR)/PBRMaterial.o
 OBJECTS += $(OBJDIR)/Physics.o
 OBJECTS += $(OBJDIR)/PixelUtils.o
 OBJECTS += $(OBJDIR)/Random.o
+OBJECTS += $(OBJDIR)/RenderAPI.o
 OBJECTS += $(OBJDIR)/RenderCapabilities.o
 OBJECTS += $(OBJDIR)/RenderCommand.o
 OBJECTS += $(OBJDIR)/RenderTexture.o
 OBJECTS += $(OBJDIR)/RenderWindow.o
 OBJECTS += $(OBJDIR)/Renderer.o
 OBJECTS += $(OBJDIR)/Renderer2D.o
-OBJECTS += $(OBJDIR)/RendererAPI.o
 OBJECTS += $(OBJDIR)/SamplerState.o
 OBJECTS += $(OBJDIR)/Scene.o
 OBJECTS += $(OBJDIR)/SceneCamera.o
@@ -448,10 +448,10 @@ OBJECTS += $(OBJDIR)/VulkanGpuBufferManager.o
 OBJECTS += $(OBJDIR)/VulkanIndexBuffer.o
 OBJECTS += $(OBJDIR)/VulkanPipeline.o
 OBJECTS += $(OBJDIR)/VulkanQueue.o
+OBJECTS += $(OBJDIR)/VulkanRenderAPI.o
 OBJECTS += $(OBJDIR)/VulkanRenderPass.o
 OBJECTS += $(OBJDIR)/VulkanRenderTexture.o
 OBJECTS += $(OBJDIR)/VulkanRenderWindow.o
-OBJECTS += $(OBJDIR)/VulkanRendererAPI.o
 OBJECTS += $(OBJDIR)/VulkanResource.o
 OBJECTS += $(OBJDIR)/VulkanSamplerState.o
 OBJECTS += $(OBJDIR)/VulkanShader.o
@@ -638,7 +638,58 @@ $(OBJDIR)/MemoryManager.o: Source/Crowny/Memory/MemoryManager.cpp
 $(OBJDIR)/Physics.o: Source/Crowny/Physics.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/CommandBuffer.o: Source/Crowny/Renderer/CommandBuffer.cpp
+$(OBJDIR)/CommandBuffer.o: Source/Crowny/RenderAPI/CommandBuffer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/GpuBuffer.o: Source/Crowny/RenderAPI/GpuBuffer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/GraphicsContext.o: Source/Crowny/RenderAPI/GraphicsContext.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/GraphicsPipeline.o: Source/Crowny/RenderAPI/GraphicsPipeline.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/IndexBuffer.o: Source/Crowny/RenderAPI/IndexBuffer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/RenderAPI.o: Source/Crowny/RenderAPI/RenderAPI.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/RenderCapabilities.o: Source/Crowny/RenderAPI/RenderCapabilities.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/RenderCommand.o: Source/Crowny/RenderAPI/RenderCommand.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/RenderTexture.o: Source/Crowny/RenderAPI/RenderTexture.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/SamplerState.o: Source/Crowny/RenderAPI/SamplerState.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/Shader.o: Source/Crowny/RenderAPI/Shader.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/Texture.o: Source/Crowny/RenderAPI/Texture.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/TextureView.o: Source/Crowny/RenderAPI/TextureView.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/UniformBufferBlock.o: Source/Crowny/RenderAPI/UniformBufferBlock.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/UniformParamInfo.o: Source/Crowny/RenderAPI/UniformParamInfo.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/UniformParams.o: Source/Crowny/RenderAPI/UniformParams.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/VertexArray.o: Source/Crowny/RenderAPI/VertexArray.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/VertexBuffer.o: Source/Crowny/RenderAPI/VertexBuffer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/EditorCamera.o: Source/Crowny/Renderer/EditorCamera.cpp
@@ -653,19 +704,7 @@ $(OBJDIR)/ForwardPlusRenderer.o: Source/Crowny/Renderer/ForwardPlusRenderer.cpp
 $(OBJDIR)/ForwardRenderer.o: Source/Crowny/Renderer/ForwardRenderer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/GpuBuffer.o: Source/Crowny/Renderer/GpuBuffer.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/GraphicsContext.o: Source/Crowny/Renderer/GraphicsContext.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/GraphicsPipeline.o: Source/Crowny/Renderer/GraphicsPipeline.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/IDBufferRenderer.o: Source/Crowny/Renderer/IDBufferRenderer.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/IndexBuffer.o: Source/Crowny/Renderer/IndexBuffer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Material.o: Source/Crowny/Renderer/Material.cpp
@@ -683,52 +722,13 @@ $(OBJDIR)/Model.o: Source/Crowny/Renderer/Model.cpp
 $(OBJDIR)/PBRMaterial.o: Source/Crowny/Renderer/PBRMaterial.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/RenderCapabilities.o: Source/Crowny/Renderer/RenderCapabilities.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/RenderCommand.o: Source/Crowny/Renderer/RenderCommand.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/RenderTexture.o: Source/Crowny/Renderer/RenderTexture.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Renderer.o: Source/Crowny/Renderer/Renderer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Renderer2D.o: Source/Crowny/Renderer/Renderer2D.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/RendererAPI.o: Source/Crowny/Renderer/RendererAPI.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/SamplerState.o: Source/Crowny/Renderer/SamplerState.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/Shader.o: Source/Crowny/Renderer/Shader.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/Texture.o: Source/Crowny/Renderer/Texture.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/TextureManager.o: Source/Crowny/Renderer/TextureManager.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/TextureView.o: Source/Crowny/Renderer/TextureView.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/UniformBufferBlock.o: Source/Crowny/Renderer/UniformBufferBlock.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/UniformParamInfo.o: Source/Crowny/Renderer/UniformParamInfo.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/UniformParams.o: Source/Crowny/Renderer/UniformParams.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/VertexArray.o: Source/Crowny/Renderer/VertexArray.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/VertexBuffer.o: Source/Crowny/Renderer/VertexBuffer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Scene.o: Source/Crowny/Scene/Scene.cpp
@@ -851,7 +851,7 @@ $(OBJDIR)/OpenGLInfo.o: Source/Platform/OpenGL/OpenGLInfo.cpp
 $(OBJDIR)/OpenGLPipeline.o: Source/Platform/OpenGL/OpenGLPipeline.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/OpenGLRendererAPI.o: Source/Platform/OpenGL/OpenGLRendererAPI.cpp
+$(OBJDIR)/OpenGLRenderAPI.o: Source/Platform/OpenGL/OpenGLRenderAPI.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/OpenGLShader.o: Source/Platform/OpenGL/OpenGLShader.cpp
@@ -899,6 +899,9 @@ $(OBJDIR)/VulkanPipeline.o: Source/Platform/Vulkan/VulkanPipeline.cpp
 $(OBJDIR)/VulkanQueue.o: Source/Platform/Vulkan/VulkanQueue.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/VulkanRenderAPI.o: Source/Platform/Vulkan/VulkanRenderAPI.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/VulkanRenderPass.o: Source/Platform/Vulkan/VulkanRenderPass.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -906,9 +909,6 @@ $(OBJDIR)/VulkanRenderTexture.o: Source/Platform/Vulkan/VulkanRenderTexture.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/VulkanRenderWindow.o: Source/Platform/Vulkan/VulkanRenderWindow.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/VulkanRendererAPI.o: Source/Platform/Vulkan/VulkanRendererAPI.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/VulkanResource.o: Source/Platform/Vulkan/VulkanResource.cpp

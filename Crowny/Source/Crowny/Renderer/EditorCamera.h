@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Crowny/Renderer/Camera.h"
 #include "Crowny/Common/Timestep.h"
 #include "Crowny/Events/MouseEvent.h"
+#include "Crowny/Renderer/Camera.h"
 
 #include <glm/glm.hpp>
 
@@ -18,10 +18,15 @@ namespace Crowny
         void OnUpdate(Timestep ts);
         void OnEvent(Event& e);
 
-        float GetDistance() const { return m_Distance;  }
+        float GetDistance() const { return m_Distance; }
         void SetDistance(float distance) { m_Distance = distance; }
 
-        void SetViewportSize(float width, float height) { m_ViewportWidth = width; m_ViewportHeight = height; UpdateProjection(); }
+        void SetViewportSize(float width, float height)
+        {
+            m_ViewportWidth = width;
+            m_ViewportHeight = height;
+            UpdateProjection();
+        }
 
         const glm::mat4& GetViewMatrix() const { return m_ViewMatrix; }
         glm::mat4 GetViewProjection() const { return m_Projection * m_ViewMatrix; }
@@ -43,25 +48,25 @@ namespace Crowny
         void MousePan(const glm::vec2& delta);
         void MouseRoate(const glm::vec2& delta);
         void MouseZoom(float delta);
-        
+
         glm::vec3 CalcualtePosition() const;
-        
+
         std::pair<float, float> PanSpeed() const;
         float RotationSpeed() const;
         float ZoomSpeed() const;
-        
+
     private:
         float m_Fov = 45.0f, m_AspectRatio = 1.778f, m_NearClip = 0.1f, m_FarClip = 1000.0f;
-        
+
         glm::mat4 m_ViewMatrix;
         glm::vec3 m_Position = { 0.0f, 0.0f, 0.0f };
         glm::vec3 m_FocalPoint = { 0.0f, 0.0f, 0.0f };
-        
+
         glm::vec2 m_InitialMousePosition;
-        
+
         float m_Distance = 10.0f;
         float m_Pitch = 0.0f, m_Yaw = 0.0f;
-        
+
         float m_ViewportWidth = 1280.0f, m_ViewportHeight = 720.0f;
     };
-}
+} // namespace Crowny

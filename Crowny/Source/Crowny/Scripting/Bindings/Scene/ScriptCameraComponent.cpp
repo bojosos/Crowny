@@ -10,19 +10,13 @@ namespace Crowny
     void ScriptCameraComponent::InitRuntimeFunctions()
     {
         CWMonoClass* cameraClass = CWMonoRuntime::GetCrownyAssembly()->GetClass("Crowny", "CameraComponent");
-        
+
         cameraClass->AddInternalCall("get_camera", (void*)&Internal_GetCamera);
         cameraClass->AddInternalCall("set_camera", (void*)&Internal_SetCamera);
     }
-    
-    MonoObject* ScriptCameraComponent::Internal_GetCamera(CameraComponent* component)
-    {
-        return nullptr;
-    }
-        
-    void ScriptCameraComponent::Internal_SetCamera(CameraComponent* component, Camera* camera)
-    {
-        
-    }
-    
-}
+
+    MonoObject* ScriptCameraComponent::Internal_GetCamera(CameraComponent* component) { return nullptr; }
+
+    void ScriptCameraComponent::Internal_SetCamera(CameraComponent* component, Camera* camera) {}
+
+} // namespace Crowny

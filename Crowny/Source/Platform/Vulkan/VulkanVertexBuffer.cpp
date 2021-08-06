@@ -18,19 +18,13 @@ namespace Crowny
         m_Buffer->Unmap();
     }
 
-    VulkanVertexBuffer::~VulkanVertexBuffer()
-    {
-        delete m_Buffer;
-    }
-    
+    VulkanVertexBuffer::~VulkanVertexBuffer() { delete m_Buffer; }
+
     void* VulkanVertexBuffer::Map(uint32_t offset, uint32_t size, GpuLockOptions options)
     {
         return m_Buffer->Map(offset, size, options);
     }
 
-    void VulkanVertexBuffer::Unmap()
-    {
-        m_Buffer->Unmap();
-    }
+    void VulkanVertexBuffer::Unmap() { m_Buffer->Unmap(); }
 
-}
+} // namespace Crowny

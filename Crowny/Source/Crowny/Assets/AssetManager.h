@@ -22,8 +22,7 @@ namespace Crowny
         std::unordered_map<std::string, Ref<AssetManifest>> m_Manifests;
 
     public:
-
         Ref<AssetManifest>& ImportManifest(const std::string& path, const std::string& name);
         Ref<AssetManifest>& CreateManifest(const std::string& path, const std::string& name);
     };
-}
+} // namespace Crowny

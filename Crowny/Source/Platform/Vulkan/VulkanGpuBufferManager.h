@@ -12,11 +12,11 @@ namespace Crowny
     public:
         VulkanGpuBufferManager();
         ~VulkanGpuBufferManager();
-        
+
         VulkanGpuBuffer* GetDummyUniformBuffer() const { return m_DummyUniformBuffer; }
 
     private:
         VulkanGpuBuffer* m_DummyUniformBuffer;
     };
-    
-}
+
+} // namespace Crowny

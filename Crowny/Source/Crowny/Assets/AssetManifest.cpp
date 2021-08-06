@@ -8,11 +8,8 @@
 namespace Crowny
 {
 
-    AssetManifest::AssetManifest(const std::string& name) : m_Name(name)
-    {
-        
-    }
-    
+    AssetManifest::AssetManifest(const std::string& name) : m_Name(name) {}
+
     void AssetManifest::Serialize(const std::string& filepath)
     {
         YAML::Emitter out;
@@ -54,4 +51,4 @@ namespace Crowny
         }
     }
 
-}
+} // namespace Crowny

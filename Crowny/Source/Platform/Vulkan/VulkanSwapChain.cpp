@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
+#include "Platform/Vulkan/VulkanRenderAPI.h"
 #include "Platform/Vulkan/VulkanSwapChain.h"
-#include "Platform/Vulkan/VulkanRendererAPI.h"
 
 #include "Crowny/Application/Application.h"
 
@@ -14,9 +14,11 @@
 
 namespace Crowny
 {
-    
-    VulkanSwapChain::VulkanSwapChain(VulkanResourceManager* owner, VkSurfaceKHR surface, uint32_t width, uint32_t height, bool vsync, VkFormat colorFormat,VkColorSpaceKHR colorSpace, bool createDepth, VkFormat depthFormat, VulkanSwapChain* oldChain)
-        : VulkanResource(owner, false)
+
+    VulkanSwapChain::VulkanSwapChain(VulkanResourceManager* owner, VkSurfaceKHR surface, uint32_t width,
+                                     uint32_t height, bool vsync, VkFormat colorFormat, VkColorSpaceKHR colorSpace,
+                                     bool createDepth, VkFormat depthFormat, VulkanSwapChain* oldChain)
+      : VulkanResource(owner, false)
     {
         VulkanDevice& device = owner->GetDevice();
         m_Device = device.GetLogicalDevice();
@@ -30,7 +32,8 @@ namespace Crowny
         CW_ENGINE_ASSERT(result == VK_SUCCESS && presentModeCount > 0);
 
         std::vector<VkPresentModeKHR> presentModes(presentModeCount);
-        result = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes.data());
+        result =
+          vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes.data());
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
         VkExtent2D swapChainExtent{};
@@ -43,7 +46,7 @@ namespace Crowny
         {
             swapChainExtent = surfCaps.currentExtent;
         }
-        
+
         m_Width = swapChainExtent.width;
         m_Height = swapChainExtent.height;
 
@@ -64,7 +67,7 @@ namespace Crowny
         }
         else
         {
-            //TODO: prob should not do this one mobile
+            // TODO: prob should not do this one mobile
             for (uint32_t i = 0; i < presentModeCount; i++)
             {
                 if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
@@ -74,10 +77,9 @@ namespace Crowny
                 }
             }
         }
-        
-        
+
         uint32_t numOfImages = surfCaps.minImageCount;
-        
+
         VkSurfaceTransformFlagsKHR preTransform;
         if (surfCaps.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
             preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
@@ -85,12 +87,10 @@ namespace Crowny
             preTransform = surfCaps.currentTransform;
 
         VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        std::vector<VkCompositeAlphaFlagBitsKHR> compositeAlphaFlags = {
-            VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-		    VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
-		    VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
-		    VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR
-        };
+        std::vector<VkCompositeAlphaFlagBitsKHR> compositeAlphaFlags = { VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+                                                                         VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+                                                                         VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+                                                                         VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR };
 
         for (auto& flag : compositeAlphaFlags)
         {
@@ -123,7 +123,7 @@ namespace Crowny
 
         result = vkCreateSwapchainKHR(m_Device, &swapchainCreateInfo, gVulkanAllocator, &m_SwapChain);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        
+
         uint32_t imageCount;
         result = vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &imageCount, nullptr);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
@@ -131,7 +131,7 @@ namespace Crowny
         VkImage* images = new VkImage[imageCount];
         result = vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &imageCount, images);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        
+
         VulkanImageDesc imageDesc;
         imageDesc.Format = colorFormat;
         imageDesc.Shape = TextureShape::TEXTURE_2D;
@@ -147,10 +147,11 @@ namespace Crowny
             imageDesc.Image = images[i];
             m_Surfaces[i].NeedsWait = false;
             m_Surfaces[i].Acquired = false;
-            m_Surfaces[i].Sync = owner->Create<VulkanSemaphore>();;
+            m_Surfaces[i].Sync = owner->Create<VulkanSemaphore>();
+            ;
             m_Surfaces[i].Image = owner->Create<VulkanImage>(imageDesc, false);
         }
-        
+
         delete[] images;
         if (createDepth)
         {
@@ -214,7 +215,7 @@ namespace Crowny
             m_Surfaces[i].Framebuffer = owner->Create<VulkanFramebuffer>(renderPass, desc);
         }
     }
-    
+
     VulkanSwapChain::~VulkanSwapChain()
     {
         if (m_SwapChain != VK_NULL_HANDLE)
@@ -247,7 +248,9 @@ namespace Crowny
     VkResult VulkanSwapChain::AcquireBackBuffer()
     {
         uint32_t imageIndex;
-        VkResult result = vkAcquireNextImageKHR(m_Device, m_SwapChain, std::numeric_limits<uint64_t>::max(), m_Surfaces[m_CurrentSemaphoreIdx].Sync->GetHandle(), VK_NULL_HANDLE, &imageIndex);
+        VkResult result =
+          vkAcquireNextImageKHR(m_Device, m_SwapChain, std::numeric_limits<uint64_t>::max(),
+                                m_Surfaces[m_CurrentSemaphoreIdx].Sync->GetHandle(), VK_NULL_HANDLE, &imageIndex);
         if (result != VK_SUCCESS)
             return result;
 
@@ -255,7 +258,7 @@ namespace Crowny
             std::swap(m_Surfaces[m_CurrentSemaphoreIdx].Sync, m_Surfaces[imageIndex].Sync);
 
         m_CurrentSemaphoreIdx = (m_CurrentSemaphoreIdx + 1) % m_Surfaces.size();
-        
+
         CW_ENGINE_ASSERT(!m_Surfaces[imageIndex].Acquired, "Swap chain image acquired twice!");
         m_Surfaces[imageIndex].Acquired = true;
         m_Surfaces[imageIndex].NeedsWait = true;
@@ -272,5 +275,5 @@ namespace Crowny
         backBufferIdx = m_CurrentBackBufferIdx;
         return true;
     }
-    
-}
+
+} // namespace Crowny

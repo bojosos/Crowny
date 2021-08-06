@@ -1,14 +1,14 @@
 #pragma once
 
-#include "Crowny/Renderer/GraphicsPipeline.h"
-#include "Crowny/Renderer/Buffer.h"
+#include "Crowny/RenderAPI/Buffer.h"
+#include "Crowny/RenderAPI/GraphicsPipeline.h"
 
-#include "Platform/Vulkan/VulkanUtils.h"
 #include "Platform/Vulkan/VulkanDevice.h"
+#include "Platform/Vulkan/VulkanPipeline.h"
 #include "Platform/Vulkan/VulkanRenderPass.h"
 #include "Platform/Vulkan/VulkanResource.h"
-#include "Platform/Vulkan/VulkanPipeline.h"
 #include "Platform/Vulkan/VulkanShader.h"
+#include "Platform/Vulkan/VulkanUtils.h"
 
 namespace Crowny
 {
@@ -27,18 +27,18 @@ namespace Crowny
         VkDevice m_Device;
         VkPipeline m_Pipeline;
     };
-    
+
     class VulkanGraphicsPipeline : public GraphicsPipeline
     {
     public:
         VulkanGraphicsPipeline(const PipelineStateDesc& desc, const BufferLayout& layout);
         ~VulkanGraphicsPipeline();
-        
+
         VulkanPipeline* GetPipeline(VulkanRenderPass* renderPass, DrawMode drawMode);
         VulkanPipeline* CreatePipeline(VulkanRenderPass* renderPass, DrawMode drawMode);
         VkPipelineLayout GetLayout() const { return m_PipelineLayout; }
         void RegisterPipelineResources(VulkanCmdBuffer* cmdBuffer);
-        
+
     private:
         VkPipelineLayout m_PipelineLayout;
 
@@ -72,8 +72,9 @@ namespace Crowny
             uint32_t FramebufferId;
             DrawMode DrawOp;
         };
-        
-        std::unordered_map<GpuPipelineKey, VulkanPipeline*, GpuPipelineKey::HashFunction, GpuPipelineKey::EqualFunction> m_Pipelines;
+
+        std::unordered_map<GpuPipelineKey, VulkanPipeline*, GpuPipelineKey::HashFunction, GpuPipelineKey::EqualFunction>
+          m_Pipelines;
     };
 
     class VulkanComputePipeline : public ComputePipeline
@@ -81,14 +82,15 @@ namespace Crowny
     public:
         VulkanComputePipeline(const Ref<Shader>& shader);
         ~VulkanComputePipeline();
-        
+
         VkPipeline GetHandle() const { return m_Pipeline; };
         VkPipelineLayout GetLayout() const { return m_PipelineLayout; }
         void RegisterPipelineResources(VulkanCmdBuffer* cmdBuffer);
+
     private:
         Ref<VulkanShader> m_Shader;
         VkPipeline m_Pipeline;
         VkPipelineLayout m_PipelineLayout;
     };
 
-}
+} // namespace Crowny

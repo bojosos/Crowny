@@ -17,7 +17,7 @@
 #undef None
 #include <vulkan/vk_mem_alloc.h>
 
-#define MAX_UNIQUE_QUEUES MAX_QUEUES_PER_TYPE * QUEUE_COUNT
+#define MAX_UNIQUE_QUEUES MAX_QUEUES_PER_TYPE* QUEUE_COUNT
 
 namespace Crowny
 {
@@ -42,7 +42,7 @@ namespace Crowny
         std::vector<VkImageMemoryBarrier> ImageBarriers;
         std::vector<VkBufferMemoryBarrier> BufferBarriers;
     };
-    
+
     enum ClearMaskBits
     {
         CLEAR_NONE = 0,
@@ -60,7 +60,7 @@ namespace Crowny
     };
     typedef Flags<ClearMaskBits> ClearMask;
     CW_FLAGS_OPERATORS(ClearMaskBits);
-    
+
     class VulkanUtils
     {
     public:
@@ -71,20 +71,22 @@ namespace Crowny
         static VkCullModeFlagBits GetCullMode(CullingMode mode);
         static VkBlendOp GetBlendOp(BlendFunction blendFunc);
         static VkFormat GetTextureFormat(TextureFormat format, bool sRGB);
-        static TextureFormat GetClosestSupportedTextureFormat(const VulkanDevice& device, TextureFormat format, TextureShape shape, int usage, bool optimapTiling);
+        static TextureFormat GetClosestSupportedTextureFormat(const VulkanDevice& device, TextureFormat format,
+                                                              TextureShape shape, int usage, bool optimapTiling);
         static VkSampleCountFlagBits GetSampleFlags(uint32_t numSamples);
         static VkPrimitiveTopology GetDrawFlags(DrawMode drawMode);
         static VkShaderStageFlagBits GetShaderFlags(ShaderType shaderType);
         static VkIndexType GetIndexType(IndexType indexType);
         static VkPipelineStageFlags ShaderToPipelineStage(VkShaderStageFlags shaderStageFlags);
         static bool RangeOverlaps(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b);
-        static void CutRange(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b, std::array<VkImageSubresourceRange, 5>& output, uint32_t& numAreas);
+        static void CutRange(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b,
+                             std::array<VkImageSubresourceRange, 5>& output, uint32_t& numAreas);
         static VkFormat GetDummyViewFormat(GpuBufferFormat format);
     };
-}
+} // namespace Crowny
 
-#define GET_INSTANCE_PROC_ADDR(instance, name) \
-    vk##name = reinterpret_cast<PFN_vk##name>(vkGetInstanceProcAddr(instance, "vk"#name));
+#define GET_INSTANCE_PROC_ADDR(instance, name)                                                                         \
+    vk##name = reinterpret_cast<PFN_vk##name>(vkGetInstanceProcAddr(instance, "vk" #name));
 
-#define GET_DEVICE_PROC_ADDR(device, name) \
-    vk##name = reinterpret_cast<PFN_vk##name>(vkGetDeviceProcAddr(device, "vk"#name));
+#define GET_DEVICE_PROC_ADDR(device, name)                                                                             \
+    vk##name = reinterpret_cast<PFN_vk##name>(vkGetDeviceProcAddr(device, "vk" #name));
