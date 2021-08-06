@@ -22,12 +22,13 @@ namespace Crowny
 		PhysicsMaterial
 	};
 
-	enum class FileSorting
+	enum class FileSortingMode
 	{
-		SortByDate,
-		SortBySize,
-		SortByName,
-		SortByType // not supported, slightly harder to implement
+		SortByName = 0,
+		SortBySize = 1,
+		SortByDate = 2,
+		SortByType = 3,// not supported, slightly harder to implement
+		SortCount = 4
 	};
 	
 	class ImGuiAssetBrowserPanel : public ImGuiPanel
@@ -52,7 +53,7 @@ namespace Crowny
 		std::filesystem::path m_PreviousDirectory;
 		std::filesystem::path m_CurrentDirectory;
 		
-		FileSorting m_FileSorting = FileSorting::SortBySize;
+		FileSortingMode m_FileSortingMode = FileSortingMode::SortBySize;
 		
 		std::string m_Filename;
 		AssetBrowserItem m_RenamingType;

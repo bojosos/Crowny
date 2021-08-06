@@ -3,6 +3,7 @@
 #include "Panels/ImGuiAssetBrowserPanel.h"
 
 #include "Editor/EditorAssets.h"
+#include "Editor/EditorDefaults.h"
 #include "Crowny/Input/Input.h"
 #include "Crowny/Common/StringUtils.h"
 #include "Crowny/Common/PlatformUtils.h"
@@ -13,6 +14,7 @@
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 #include <filesystem>
+#include <ctime>
 
 namespace Crowny
 {
@@ -20,11 +22,19 @@ namespace Crowny
     static const std::filesystem::path s_AssetPath = "Resources";
     extern void LoadTexture(const std::string& filepath, Ref<Texture>& texture);
     
+    // https://stackoverflow.com/questions/61030383/how-to-convert-stdfilesystemfile-time-type-to-time-t
+    template <typename TP>
+    static time_t ToCTime(TP tp) {
+        using namespace std::chrono;
+        auto sctp = time_point_cast<system_clock::duration>(tp - TP::clock::now() + system_clock::now());
+        return system_clock::to_time_t(sctp);
+    }
+    
     static std::string GetDefaultFileNameFromType(AssetBrowserItem type)
     {
         switch(type)
         {
-            case AssetBrowserItem::CScript:          return "NewScript.cs";
+            case AssetBrowserItem::CScript:          return "New Script.cs";
             case AssetBrowserItem::Folder:           return "New Folder";
             case AssetBrowserItem::Material:         return "New Material.mat";
             case AssetBrowserItem::Prefab:           return "New Prefab.prefab";
@@ -36,6 +46,14 @@ namespace Crowny
             default:                                 return "New File";
         }
     }
+    
+    struct FileSortingEntry
+    {
+        FileSortingEntry(long key, const std::filesystem::directory_entry& entry) : Key(key), Entry(entry) { }
+        
+        long Key;
+        std::filesystem::directory_entry Entry;
+    };
     
 	ImGuiAssetBrowserPanel::ImGuiAssetBrowserPanel(const std::string& name) : ImGuiPanel(name), m_CurrentDirectory(s_AssetPath)
 	{
@@ -59,6 +77,7 @@ namespace Crowny
 	{
 		UpdateState();
 		ImGui::Begin("Asset browser", &m_Shown, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        
         if (m_CurrentDirectory != std::filesystem::path(s_AssetPath))
         {
             if (ImGui::ArrowButton("<-", ImGuiDir_Left))
@@ -115,17 +134,47 @@ namespace Crowny
             ImGui::Text("/");
             ImGui::SameLine();
         }
+
+        /* scale slider */
+        const float maxWidth = 150.0f * 1.1f;
+		const float spacing = ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(" ").x;
+		const float checkboxSize = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2;
+		
+		ImGui::SameLine(ImGui::GetWindowWidth() - maxWidth - 150.0f);
+        
+        static float padding = 12.0f;
+        static float thumbnailSize = DEFAULT_ASSET_THUMBNAIL_SIZE;
+        ImGui::SetNextItemWidth(150.0f);
+        float thumbnailChange = thumbnailSize;
+        if (ImGui::SliderFloat("##iconsize", &thumbnailChange, MIN_ASSET_THUMBNAIL_SIZE, MAX_ASSET_THUMBNAIL_SIZE))
+        {
+            padding *= thumbnailChange / thumbnailSize;
+            thumbnailSize = thumbnailChange;
+        }
+        /* file sorting */
+        ImGui::SetNextItemWidth(150.0f);
+        ImGui::SameLine(ImGui::GetContentRegionMax().x - 150.0f);
+        static const char* sortingStr[4] = { "Sort By Name", "Sort By Size", "Sort By Date", "Sort By Type" };
+        uint32_t currentMode = (uint32_t)m_FileSortingMode;
+        if (ImGui::BeginCombo("##sort", sortingStr[currentMode]))
+        {
+            for (uint32_t i = 0; i < (uint32_t)FileSortingMode::SortCount; i++)
+            {
+                FileSortingMode mode =(FileSortingMode)i;
+                if (ImGui::Selectable(sortingStr[i], i == currentMode))
+                    m_FileSortingMode = mode;
+            }
+            ImGui::EndCombo();
+        }
         
         ImGui::Separator();
-        ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
-        ImGui::BeginChild("child", ImVec2(0, 0), false, window_flags);
+        /* files */
+        ImGui::BeginChild("child", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
         if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_NoOpenOverExistingPopup | ImGuiPopupFlags_MouseButtonRight))
         {
             ShowContextMenuContents();
             ImGui::EndPopup();
         }
-        static float padding = 12.0f;
-        static float thumbnailSize = 48.0f;
         float cellSize = thumbnailSize + padding;
         float panelWidth = ImGui::GetContentRegionAvail().x;
         int columnCount = (int)(panelWidth / cellSize);
@@ -170,8 +219,8 @@ namespace Crowny
             ImGui::NextColumn();
         }
         
-        std::map<long, std::filesystem::directory_entry> sortedFiles; // assumes time_t is long
-        if (m_FileSorting == FileSorting::SortByName)
+        std::vector<FileSortingEntry> sortedFiles; // assumes time_t is long
+        if (m_FileSortingMode == FileSortingMode::SortByName)
         {
             std::set<std::filesystem::directory_entry> sortedDirs;
             for (auto& dir : std::filesystem::directory_iterator(m_CurrentDirectory))
@@ -182,7 +231,7 @@ namespace Crowny
             long id = 0;
             for (auto& dir : sortedDirs)
             {
-                sortedFiles[id++] = dir;
+                sortedFiles.emplace_back(id++, dir);
             }
         }
         else
@@ -190,37 +239,63 @@ namespace Crowny
             std::set<std::filesystem::directory_entry> folders;
             for (auto& dir : std::filesystem::directory_iterator(m_CurrentDirectory))
             {
-                if (m_FileSorting == FileSorting::SortBySize)
+                if (m_FileSortingMode == FileSortingMode::SortBySize)
                 {
                     if (dir.is_regular_file())
                     {
                         long id = dir.file_size();
-                        sortedFiles[id] = dir;
+                        sortedFiles.emplace_back(id, dir);
                     }
                     else if (dir.is_directory())
                         folders.insert(dir);
                 }
-                if (m_FileSorting == FileSorting::SortByDate)
+                if (m_FileSortingMode == FileSortingMode::SortByDate)
                 {
                     if (dir.is_regular_file())
                     {
-                        long id = dir.file_size();
-                        sortedFiles[id] = dir;
+                        long id = ToCTime(dir.last_write_time());
+                        sortedFiles.emplace_back(id, dir);
                     }
                     else if (dir.is_directory())
                         folders.insert(dir);
                 }
             }
-            long id = LONG_LONG_MAX - folders.size() - 10;
+            
+            std::sort(sortedFiles.begin(), sortedFiles.end(), [](const FileSortingEntry& a, const FileSortingEntry& b) { // lambda ception
+                if (a.Key != b.Key)
+                    return a.Key > b.Key;
+                return std::lexicographical_compare(a.Entry.path().filename().string().begin(),
+                                                    a.Entry.path().filename().string().end(), b.Entry.path().filename().string().begin(),
+                                                    b.Entry.path().filename().string().end(), [](char a, char b) { return std::tolower(a) < std::tolower(b); });
+            });
+        
             for (auto& folder : folders)
             {
-                sortedFiles[id++] = folder;
+                sortedFiles.emplace_back(0, folder);
+            }
+        }
+        
+        if (m_Focused)
+        {
+            if (Input::IsKeyPressed(Key::Delete))
+            {
+                for (auto& entry : m_SelectedFiles)
+                {
+                    if (!std::filesystem::remove((s_AssetPath / entry).c_str()))
+                        CW_ENGINE_ERROR("Error deleting file.");
+                }
+            }
+            //if (Input::IsKeyPressed(Key::F2))
+             //   m_RenamingPath = m_SelectedFiles.begin().string();
+            if (Input::IsKeyPressed(Key::Left) || Input::IsKeyPressed(Key::Right))
+            {
+                m_SelectedFiles.insert(sortedFiles[0].Entry.path().filename().string());
             }
         }
         
         for (auto& entry : sortedFiles)
         {
-            std::filesystem::directory_entry dir = entry.second;
+            std::filesystem::directory_entry dir = entry.Entry;
             const auto& path = dir.path();
             auto relativePath = std::filesystem::relative(path, s_AssetPath);
             std::string filename = relativePath.filename().string();
@@ -313,13 +388,8 @@ namespace Crowny
             ImGui::NextColumn();
         }
         
-        
-        
         ImGui::Columns(1);
         ImGui::EndChild();
-        ImGui::SliderFloat("Icon size", &thumbnailSize, 16, 512);
-        ImGui::SameLine();
-        ImGui::SliderFloat("Padding", &padding, 0, 32);
         
 		ImGui::End();
 	}
@@ -393,10 +463,7 @@ namespace Crowny
         }
         
         if (ImGui::MenuItem("Rename"))
-        {
             m_RenamingPath = filepath;
-            //m_RenamingType = 
-        }
         
         if (filepath.empty()) ImGui::PopDisabled();
         

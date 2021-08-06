@@ -1,16 +1,11 @@
-[13:30:14] [info] CROWNY: Built-in Audio Analog Stereo
-[13:30:14] [info] CROWNY: Domain Crowny C# Runtime created!
-[13:30:14] [info] CROWNY: Loading debug: Resources/Assemblies/Crowny.dll.mdb
-[13:30:14] [info] CROWNY: Loading debug: Resources/Assemblies/Client.dll.mdb
-[13:30:14] [info] CROWNY: Assembly Crowny.dll loaded.
-[13:30:14] [info] CROWNY: Assembly Client.dll loaded.
-[13:30:14] [info] CROWNY: Assembly corlib loaded.
-[13:30:14] [info] CROWNY: Shader entry: main
-[13:30:14] [info] CROWNY: Shader entry: main
-[13:30:14] [info] CROWNY: Texture: texSampler, name: texSampler, set: 0 slot: 0
-[13:30:14] [info] CROWNY: Param blocks 0: 
-[13:30:24] [info] CROWNY: 4758350
-[13:30:25] [info] CROWNY: 4758350, 2
-[13:30:25] [info] CROWNY: 2
-[13:30:25] [info] CROWNY: Depth: 16, samples 2379175, channels 2
-[13:30:25] [info] CROWNY: Playing
+[10:29:30] [info] CROWNY: Built-in Audio Analog Stereo
+[10:29:36] [info] CROWNY: Domain Crowny C# Runtime created!
+[10:29:36] [info] CROWNY: Loading debug: Resources/Assemblies/Crowny.dll.mdb
+[10:29:36] [info] CROWNY: Loading debug: Resources/Assemblies/Client.dll.mdb
+[10:29:36] [info] CROWNY: Assembly Crowny.dll loaded.
+[10:29:36] [info] CROWNY: Assembly Client.dll loaded.
+[10:29:36] [info] CROWNY: Assembly corlib loaded.
+[10:29:37] [info] CROWNY: Shader entry: main
+[10:29:37] [info] CROWNY: Shader entry: main
+[10:29:37] [info] CROWNY: Texture: texSampler, name: texSampler, set: 0 slot: 0
+[10:29:37] [info] CROWNY: Param blocks 0: 

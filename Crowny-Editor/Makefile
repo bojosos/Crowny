@@ -47,7 +47,7 @@ ifeq ($(config),debug_win64)
 TARGETDIR = ../bin/Debug-linux-x86_64/Crowny-Editor
 TARGET = $(TARGETDIR)/Crowny-Editor
 OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny-Editor/Win64
-DEFINES += -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DEBUG
+DEFINES += -DCW -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -std=c++17
 LIBS += ../Crowny/Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a ../bin/Debug-windows-x86_64/Crowny/Crowny.lib ../Crowny/Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a ../Crowny/Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a ../Crowny/Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a ../Crowny/Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a ../Crowny/Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a ../Crowny/Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a ../Crowny/Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lvulkan -lshaderc_shared -lspirv-cross-core -lopenal -logg -lvorbis -lvorbisfile
@@ -57,7 +57,7 @@ else ifeq ($(config),debug_linux64)
 TARGETDIR = ../bin/Debug-linux-x86_64/Crowny-Editor
 TARGET = $(TARGETDIR)/Crowny-Editor
 OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny-Editor/Linux64
-DEFINES += -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DEBUG
+DEFINES += -DCW -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -std=c++17
 LIBS += ../Crowny/Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a ../bin/Debug-linux-x86_64/Crowny/libCrowny.a ../Crowny/Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a ../Crowny/Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a ../Crowny/Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a ../Crowny/Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a ../Crowny/Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a ../Crowny/Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a ../Crowny/Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lvulkan -lshaderc_shared -lspirv-cross-core -lopenal -logg -lvorbis -lvorbisfile
@@ -67,7 +67,7 @@ else ifeq ($(config),debug_macos64)
 TARGETDIR = ../bin/Debug-linux-x86_64/Crowny-Editor
 TARGET = $(TARGETDIR)/Crowny-Editor
 OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny-Editor/MacOS64
-DEFINES += -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DEBUG
+DEFINES += -DCW -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -std=c++17
 LIBS += ../Crowny/Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a ../bin/Debug-macosx-x86_64/Crowny/libCrowny.a ../Crowny/Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a ../Crowny/Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a ../Crowny/Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a ../Crowny/Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a ../Crowny/Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a ../Crowny/Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a ../Crowny/Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lvulkan -lshaderc_shared -lspirv-cross-core -lopenal -logg -lvorbis -lvorbisfile
@@ -77,7 +77,7 @@ else ifeq ($(config),debug_web)
 TARGETDIR = ../bin/Debug-linux-x86_64/Crowny-Editor
 TARGET = $(TARGETDIR)/Crowny-Editor
 OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny-Editor/Web
-DEFINES += -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DEBUG
+DEFINES += -DCW -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -std=c++17
 LIBS += ../Crowny/Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a ../bin/Debug-linux-x86_64/Crowny/libCrowny.a ../Crowny/Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a ../Crowny/Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a ../Crowny/Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a ../Crowny/Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a ../Crowny/Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a ../Crowny/Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a ../Crowny/Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lvulkan -lshaderc_shared -lspirv-cross-core -lopenal -logg -lvorbis -lvorbisfile
@@ -87,7 +87,7 @@ else ifeq ($(config),release_win64)
 TARGETDIR = ../bin/Release-linux-x86_64/Crowny-Editor
 TARGET = $(TARGETDIR)/Crowny-Editor
 OBJDIR = ../bin-int/Release-linux-x86_64/Crowny-Editor/Win64
-DEFINES += -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_RELEASE
+DEFINES += -DCW -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_RELEASE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -std=c++17
 LIBS += ../Crowny/Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a ../bin/Release-windows-x86_64/Crowny/Crowny.lib ../Crowny/Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a ../Crowny/Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a ../Crowny/Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a ../Crowny/Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a ../Crowny/Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a ../Crowny/Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a ../Crowny/Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lvulkan -lshaderc_shared -lspirv-cross-core -lopenal -logg -lvorbis -lvorbisfile
@@ -97,7 +97,7 @@ else ifeq ($(config),release_linux64)
 TARGETDIR = ../bin/Release-linux-x86_64/Crowny-Editor
 TARGET = $(TARGETDIR)/Crowny-Editor
 OBJDIR = ../bin-int/Release-linux-x86_64/Crowny-Editor/Linux64
-DEFINES += -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_RELEASE
+DEFINES += -DCW -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_RELEASE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -std=c++17
 LIBS += ../Crowny/Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a ../bin/Release-linux-x86_64/Crowny/libCrowny.a ../Crowny/Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a ../Crowny/Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a ../Crowny/Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a ../Crowny/Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a ../Crowny/Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a ../Crowny/Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a ../Crowny/Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lvulkan -lshaderc_shared -lspirv-cross-core -lopenal -logg -lvorbis -lvorbisfile
@@ -107,7 +107,7 @@ else ifeq ($(config),release_macos64)
 TARGETDIR = ../bin/Release-linux-x86_64/Crowny-Editor
 TARGET = $(TARGETDIR)/Crowny-Editor
 OBJDIR = ../bin-int/Release-linux-x86_64/Crowny-Editor/MacOS64
-DEFINES += -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_RELEASE
+DEFINES += -DCW -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_RELEASE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -std=c++17
 LIBS += ../Crowny/Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a ../bin/Release-macosx-x86_64/Crowny/libCrowny.a ../Crowny/Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a ../Crowny/Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a ../Crowny/Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a ../Crowny/Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a ../Crowny/Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a ../Crowny/Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a ../Crowny/Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lvulkan -lshaderc_shared -lspirv-cross-core -lopenal -logg -lvorbis -lvorbisfile
@@ -117,7 +117,7 @@ else ifeq ($(config),release_web)
 TARGETDIR = ../bin/Release-linux-x86_64/Crowny-Editor
 TARGET = $(TARGETDIR)/Crowny-Editor
 OBJDIR = ../bin-int/Release-linux-x86_64/Crowny-Editor/Web
-DEFINES += -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_RELEASE
+DEFINES += -DCW -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_RELEASE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -std=c++17
 LIBS += ../Crowny/Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a ../bin/Release-linux-x86_64/Crowny/libCrowny.a ../Crowny/Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a ../Crowny/Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a ../Crowny/Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a ../Crowny/Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a ../Crowny/Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a ../Crowny/Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a ../Crowny/Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lvulkan -lshaderc_shared -lspirv-cross-core -lopenal -logg -lvorbis -lvorbisfile
@@ -127,7 +127,7 @@ else ifeq ($(config),dist_win64)
 TARGETDIR = ../bin/Dist-linux-x86_64/Crowny-Editor
 TARGET = $(TARGETDIR)/Crowny-Editor
 OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny-Editor/Win64
-DEFINES += -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DIST
+DEFINES += -DCW -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DIST
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -std=c++17
 LIBS += ../Crowny/Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a ../bin/Dist-windows-x86_64/Crowny/Crowny.lib ../Crowny/Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a ../Crowny/Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a ../Crowny/Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a ../Crowny/Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a ../Crowny/Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a ../Crowny/Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a ../Crowny/Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lvulkan -lshaderc_shared -lspirv-cross-core -lopenal -logg -lvorbis -lvorbisfile
@@ -137,7 +137,7 @@ else ifeq ($(config),dist_linux64)
 TARGETDIR = ../bin/Dist-linux-x86_64/Crowny-Editor
 TARGET = $(TARGETDIR)/Crowny-Editor
 OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny-Editor/Linux64
-DEFINES += -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DIST
+DEFINES += -DCW -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DIST
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -std=c++17
 LIBS += ../Crowny/Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a ../bin/Dist-linux-x86_64/Crowny/libCrowny.a ../Crowny/Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a ../Crowny/Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a ../Crowny/Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a ../Crowny/Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a ../Crowny/Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a ../Crowny/Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a ../Crowny/Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lvulkan -lshaderc_shared -lspirv-cross-core -lopenal -logg -lvorbis -lvorbisfile
@@ -147,7 +147,7 @@ else ifeq ($(config),dist_macos64)
 TARGETDIR = ../bin/Dist-linux-x86_64/Crowny-Editor
 TARGET = $(TARGETDIR)/Crowny-Editor
 OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny-Editor/MacOS64
-DEFINES += -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DIST
+DEFINES += -DCW -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DIST
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -std=c++17
 LIBS += ../Crowny/Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a ../bin/Dist-macosx-x86_64/Crowny/libCrowny.a ../Crowny/Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a ../Crowny/Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a ../Crowny/Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a ../Crowny/Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a ../Crowny/Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a ../Crowny/Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a ../Crowny/Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lvulkan -lshaderc_shared -lspirv-cross-core -lopenal -logg -lvorbis -lvorbisfile
@@ -157,7 +157,7 @@ else ifeq ($(config),dist_web)
 TARGETDIR = ../bin/Dist-linux-x86_64/Crowny-Editor
 TARGET = $(TARGETDIR)/Crowny-Editor
 OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny-Editor/Web
-DEFINES += -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DIST
+DEFINES += -DCW -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DIST
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -std=c++17
 LIBS += ../Crowny/Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a ../bin/Dist-linux-x86_64/Crowny/libCrowny.a ../Crowny/Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a ../Crowny/Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a ../Crowny/Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a ../Crowny/Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a ../Crowny/Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a ../Crowny/Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a ../Crowny/Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lvulkan -lshaderc_shared -lspirv-cross-core -lopenal -logg -lvorbis -lvorbisfile

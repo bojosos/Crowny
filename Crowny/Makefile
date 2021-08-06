@@ -46,7 +46,7 @@ ifeq ($(config),debug_win64)
 TARGETDIR = ../bin/Debug-windows-x86_64/Crowny
 TARGET = $(TARGETDIR)/Crowny.lib
 OBJDIR = ../bin-int/Debug-windows-x86_64/Crowny
-DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_WIN -DCW_WINDOWS -DGLFW_INCLUDE_NONE -DCW_DEBUG
+DEFINES += -DCW -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_WIN -DCW_WINDOWS -DGLFW_INCLUDE_NONE -DCW_DEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -std=c++17
 LIBS += Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
@@ -57,7 +57,7 @@ else ifeq ($(config),debug_linux64)
 TARGETDIR = ../bin/Debug-linux-x86_64/Crowny
 TARGET = $(TARGETDIR)/libCrowny.a
 OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny/Linux64
-DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DEBUG
+DEFINES += -DCW -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -std=c++17
 LIBS += Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
@@ -68,7 +68,7 @@ else ifeq ($(config),debug_macos64)
 TARGETDIR = ../bin/Debug-macosx-x86_64/Crowny
 TARGET = $(TARGETDIR)/libCrowny.a
 OBJDIR = ../bin-int/Debug-macosx-x86_64/Crowny
-DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_MACOSX -DCW_DEBUG
+DEFINES += -DCW -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_MACOSX -DCW_DEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -std=c++17
 LIBS += Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
@@ -79,7 +79,7 @@ else ifeq ($(config),debug_web)
 TARGETDIR = ../bin/Debug-linux-x86_64/Crowny
 TARGET = $(TARGETDIR)/libCrowny.a
 OBJDIR = ../bin-int/Debug-linux-x86_64/Crowny/Web
-DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_EMSCRIPTEN -DGLFW_INCLUDE_ES31 -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DEBUG
+DEFINES += -DCW -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_EMSCRIPTEN -DGLFW_INCLUDE_ES31 -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_DEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -std=c++17
 LIBS += Dependencies/imgui/bin/Debug-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Debug-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Debug-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Debug-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Debug-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Debug-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Debug-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Debug-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
@@ -90,7 +90,7 @@ else ifeq ($(config),release_win64)
 TARGETDIR = ../bin/Release-windows-x86_64/Crowny
 TARGET = $(TARGETDIR)/Crowny.lib
 OBJDIR = ../bin-int/Release-windows-x86_64/Crowny
-DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_WIN -DCW_WINDOWS -DGLFW_INCLUDE_NONE -DCW_RELEASE
+DEFINES += -DCW -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_WIN -DCW_WINDOWS -DGLFW_INCLUDE_NONE -DCW_RELEASE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -std=c++17
 LIBS += Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
@@ -101,7 +101,7 @@ else ifeq ($(config),release_linux64)
 TARGETDIR = ../bin/Release-linux-x86_64/Crowny
 TARGET = $(TARGETDIR)/libCrowny.a
 OBJDIR = ../bin-int/Release-linux-x86_64/Crowny/Linux64
-DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_RELEASE
+DEFINES += -DCW -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_RELEASE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -std=c++17
 LIBS += Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
@@ -112,7 +112,7 @@ else ifeq ($(config),release_macos64)
 TARGETDIR = ../bin/Release-macosx-x86_64/Crowny
 TARGET = $(TARGETDIR)/libCrowny.a
 OBJDIR = ../bin-int/Release-macosx-x86_64/Crowny
-DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_MACOSX -DCW_RELEASE
+DEFINES += -DCW -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_MACOSX -DCW_RELEASE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -std=c++17
 LIBS += Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
@@ -123,7 +123,7 @@ else ifeq ($(config),release_web)
 TARGETDIR = ../bin/Release-linux-x86_64/Crowny
 TARGET = $(TARGETDIR)/libCrowny.a
 OBJDIR = ../bin-int/Release-linux-x86_64/Crowny/Web
-DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_EMSCRIPTEN -DGLFW_INCLUDE_ES31 -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_RELEASE
+DEFINES += -DCW -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_EMSCRIPTEN -DGLFW_INCLUDE_ES31 -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE -DCW_RELEASE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -std=c++17
 LIBS += Dependencies/imgui/bin/Release-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Release-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Release-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Release-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Release-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Release-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Release-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Release-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
@@ -134,7 +134,7 @@ else ifeq ($(config),dist_win64)
 TARGETDIR = ../bin/Dist-windows-x86_64/Crowny
 TARGET = $(TARGETDIR)/Crowny.lib
 OBJDIR = ../bin-int/Dist-windows-x86_64/Crowny
-DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_WIN -DCW_WINDOWS -DGLFW_INCLUDE_NONE
+DEFINES += -DCW -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_WIN -DCW_WINDOWS -DGLFW_INCLUDE_NONE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -std=c++17
 LIBS += Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
@@ -145,7 +145,7 @@ else ifeq ($(config),dist_linux64)
 TARGETDIR = ../bin/Dist-linux-x86_64/Crowny
 TARGET = $(TARGETDIR)/libCrowny.a
 OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny/Linux64
-DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE
+DEFINES += -DCW -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -std=c++17
 LIBS += Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
@@ -156,7 +156,7 @@ else ifeq ($(config),dist_macos64)
 TARGETDIR = ../bin/Dist-macosx-x86_64/Crowny
 TARGET = $(TARGETDIR)/libCrowny.a
 OBJDIR = ../bin-int/Dist-macosx-x86_64/Crowny
-DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_MACOSX
+DEFINES += -DCW -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_MACOSX
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -std=c++17
 LIBS += Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
@@ -167,7 +167,7 @@ else ifeq ($(config),dist_web)
 TARGETDIR = ../bin/Dist-linux-x86_64/Crowny
 TARGET = $(TARGETDIR)/libCrowny.a
 OBJDIR = ../bin-int/Dist-linux-x86_64/Crowny/Web
-DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_EMSCRIPTEN -DGLFW_INCLUDE_ES31 -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE
+DEFINES += -DCW -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DCW_EMSCRIPTEN -DGLFW_INCLUDE_ES31 -DCW_PLATFORM_LINUX -DGLFW_INCLUDE_NONE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -std=c++17
 LIBS += Dependencies/imgui/bin/Dist-linux-x86_64/imgui/libimgui.a Dependencies/freetype-gl/bin/Dist-linux-x86_64/freetype-gl/libfreetype-gl.a Dependencies/assimp/bin/Dist-linux-x86_64/assimp/libassimp.a Dependencies/freetype2/bin/Dist-linux-x86_64/freetype2/libfreetype2.a Dependencies/glfw/bin/Dist-linux-x86_64/glfw/libglfw.a Dependencies/glad/bin/Dist-linux-x86_64/glad/libglad.a Dependencies/yaml-cpp/bin/Dist-linux-x86_64/yaml-cpp/libyaml-cpp.a Dependencies/ImGuizmo/bin/Dist-linux-x86_64/ImGuizmo/libImGuizmo.a -lGL -lXxf86vm -lXrandr -lpthread -lXi -ldl -luuid -lmono-2.0 -lshaderc_shared -lspirv-cross-c-shared -lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link -lvorbis -logg
