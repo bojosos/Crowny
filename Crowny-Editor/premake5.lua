@@ -66,6 +66,7 @@ project "Crowny-Editor"
 
 		defines
 		{
+      "CW",
 			"CW_WINDOWS",
 			"GLFW_INCLUDE_NONE"
 		}
@@ -74,6 +75,7 @@ project "Crowny-Editor"
 		systemversion "latest"
 		defines
 		{
+      "CW",
 			"CW_PLATFORM_LINUX",
 			"GLFW_INCLUDE_NONE"
 		}
