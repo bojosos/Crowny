@@ -32,6 +32,7 @@ project "Crowny"
 
 	defines
 	{
+    "CW",
 		"_CRT_NONSTDC_NO_DEPRECATE",
 		"_CRT_SECURE_NO_WARNINGS"
 	}
