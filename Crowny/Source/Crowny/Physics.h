@@ -5,10 +5,10 @@
 namespace Crowny
 {
 
-	class Physics
-	{
-	public:
-		static void VoxelRaycast(const glm::vec3& location, const glm::vec3& direction, float length, bool button);
-	};
-	
-}
+    class Physics
+    {
+    public:
+        static void VoxelRaycast(const glm::vec3& location, const glm::vec3& direction, float length, bool button);
+    };
+
+} // namespace Crowny

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Crowny/Renderer/Texture.h"
+#include "Crowny/RenderAPI/Texture.h"
 
 namespace Crowny
 {
-    
+
     struct EditorAssetsLibrary
     {
         Ref<Texture> UnassignedTexture;
@@ -18,24 +18,21 @@ namespace Crowny
     class EditorAssets
     {
     public:
-
         static void Load();
-        static EditorAssetsLibrary Get()
-        {
-            return s_Library;
-        }
+        static EditorAssetsLibrary Get() { return s_Library; }
 
         static const std::string DefaultScriptPath;
+
     private:
         static const std::string UnassignedTexture;
         static const std::string PlayIcon;
         static const std::string PauseIcon;
         static const std::string StopIcon;
-        
+
         static const std::string FileIcon;
         static const std::string FolderIcon;
-        
+
         static EditorAssetsLibrary s_Library;
     };
 
-}
+} // namespace Crowny

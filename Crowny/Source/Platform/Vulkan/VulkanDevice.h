@@ -3,13 +3,13 @@
 #include "Platform/Vulkan/VulkanUtils.h"
 
 #include "Platform/Vulkan/VulkanCommandBuffer.h"
-#include "Platform/Vulkan/VulkanQueue.h"
 #include "Platform/Vulkan/VulkanGpuBufferManager.h"
+#include "Platform/Vulkan/VulkanQueue.h"
 #include "Platform/Vulkan/VulkanResource.h"
 
 namespace Crowny
 {
-    
+
     class VulkanDescriptorManager;
 
     struct SurfaceFormat
@@ -18,13 +18,13 @@ namespace Crowny
         VkFormat DepthFormat;
         VkColorSpaceKHR ColorSpace;
     };
-    
+
     class VulkanDevice
     {
     public:
         VulkanDevice(VkPhysicalDevice device, uint32_t deviceIdx);
         ~VulkanDevice();
-        
+
         SurfaceFormat GetSurfaceFormat(const VkSurfaceKHR& surface) const;
         VulkanCommandBufferPool& GetCmdBufferPool() const { return *m_CommandBufferPool; }
         uint32_t GetMemoryType(uint32_t typeBits, VkMemoryPropertyFlags properties, VkBool32* found = nullptr);
@@ -49,19 +49,20 @@ namespace Crowny
 
         VulkanDescriptorManager& GetDescriptorManager() const { return *m_DescriptorManager; }
         VulkanResourceManager& GetResourceManager() const { return *m_ResourceManager; }
-        
+
         void WaitIdle();
+
     private:
     private:
         VulkanCommandBufferPool* m_CommandBufferPool;
-        
+
         struct QueueInfo
         {
             uint32_t FamilyIdx = -1;
             std::vector<VulkanQueue*> Queues;
         };
         QueueInfo m_QueueInfos[QUEUE_COUNT];
-        
+
         VkPhysicalDevice m_PhysicalDevice;
         VkDevice m_LogicalDevice = nullptr;
         VmaAllocator m_Allocator;
@@ -75,4 +76,4 @@ namespace Crowny
         VkPhysicalDeviceMemoryProperties m_MemoryProperties;
         std::vector<std::string> m_SupportedExtensions;
     };
-}
+} // namespace Crowny

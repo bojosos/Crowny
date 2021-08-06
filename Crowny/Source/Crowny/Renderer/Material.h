@@ -1,111 +1,109 @@
 #pragma once
 
-#include "Crowny/Renderer/Shader.h"
-#include "Crowny/Renderer/Texture.h"
+#include "Crowny/RenderAPI/Shader.h"
+#include "Crowny/RenderAPI/Texture.h"
 
 namespace Crowny
 {
-	class Material
-	{
-	protected:
-		std::vector<Ref<Texture>> m_Textures;
+    class Material
+    {
+    protected:
+        std::vector<Ref<Texture>> m_Textures;
 
-		Ref<Shader> m_Shader;
-		// byte* m_VSUserUniformBuffer;
-		// uint32_t m_VSUserUniformBufferSize;
- 
-		// byte* m_PSUserUniformBuffer;
-		// uint32_t m_PSUserUniformBufferSize;
+        Ref<Shader> m_Shader;
+        // byte* m_VSUserUniformBuffer;
+        // uint32_t m_VSUserUniformBufferSize;
 
-		//const ShaderUniformList* m_VSUserUniforms;
-		//const ShaderUniformList* m_PSUserUniforms;
-		//const ShaderResourceList* m_Resources;
+        // byte* m_PSUserUniformBuffer;
+        // uint32_t m_PSUserUniformBufferSize;
 
-	private:
-		friend class MaterialInstance;
+        // const ShaderUniformList* m_VSUserUniforms;
+        // const ShaderUniformList* m_PSUserUniforms;
+        // const ShaderResourceList* m_Resources;
 
-	public:
-		Material(const Ref<Shader>& shader);
-		~Material() = default;
+    private:
+        friend class MaterialInstance;
 
-		void Bind(uint32_t startslot);
-		void Unbind();
+    public:
+        Material(const Ref<Shader>& shader);
+        ~Material() = default;
 
-		template<typename T>
-		void SetUniform(const std::string& name, const T& data)
-		{
-			//byte* buffer;
-			//ShaderUniformDeclaration* declaration = FindUniformDeclaration(name, &buffer);
-			//CW_ENGINE_ASSERT(declaration, "Could not find uniform with name " + name + "!");
-			//memcpy(buffer + declaration->GetOffset(), &data, declaration->GetSize());
-		}
+        void Bind(uint32_t startslot);
+        void Unbind();
 
-		void SetUniformData(const std::string& name, byte* data);
-		void SetTexture(const std::string& name, const Ref<Texture>& texture);
+        template <typename T> void SetUniform(const std::string& name, const T& data)
+        {
+            // byte* buffer;
+            // ShaderUniformDeclaration* declaration = FindUniformDeclaration(name, &buffer);
+            // CW_ENGINE_ASSERT(declaration, "Could not find uniform with name " + name + "!");
+            // memcpy(buffer + declaration->GetOffset(), &data, declaration->GetSize());
+        }
 
-		Ref<Shader> GetShader() { return m_Shader; }
+        void SetUniformData(const std::string& name, byte* data);
+        void SetTexture(const std::string& name, const Ref<Texture>& texture);
 
-//		template<typename T>
-//		const T* GetUniform(const std::string& name) const 
-//		{
-//			return GetUniform<T>(GetUniformDeclaration(name));
-//		}
+        Ref<Shader> GetShader() { return m_Shader; }
 
-//		template<typename T>
-//		const T* GetUniform(const ShaderUniformDeclaration* uniform) const
-//		{
-//			return (T*)&m_UniformData[uniform->GetOffset()];
-//		}
-		
-	protected:
-		void AllocateStorage();
-		// ShaderUniformDeclaration* FindUniformDeclaration(const std::string& name, byte** outBuffer = nullptr);
-		// ShaderResourceDeclaration* FindResourceDeclaration(const std::string& name);
-	};
+        //		template<typename T>
+        //		const T* GetUniform(const std::string& name) const
+        //		{
+        //			return GetUniform<T>(GetUniformDeclaration(name));
+        //		}
 
-	class MaterialInstance
-	{
-	private:
-		Ref<Material> m_Material;
-		std::vector<Ref<Texture>> m_Textures;
+        //		template<typename T>
+        //		const T* GetUniform(const ShaderUniformDeclaration* uniform) const
+        //		{
+        //			return (T*)&m_UniformData[uniform->GetOffset()];
+        //		}
 
-		// byte* m_VSUserUniformBuffer;
-		// uint32_t m_VSUserUniformBufferSize;
+    protected:
+        void AllocateStorage();
+        // ShaderUniformDeclaration* FindUniformDeclaration(const std::string& name, byte** outBuffer = nullptr);
+        // ShaderResourceDeclaration* FindResourceDeclaration(const std::string& name);
+    };
 
-		// byte* m_PSUserUniformBuffer;
-		// uint32_t m_PSUserUniformBufferSize;
-// 
-		// const ShaderUniformList* m_VSUseUniforms;
-		// const ShaderUniformList* m_PSUseUniforms;
-		// const ShaderResourceList* m_Resources;
+    class MaterialInstance
+    {
+    private:
+        Ref<Material> m_Material;
+        std::vector<Ref<Texture>> m_Textures;
 
-	public:
-		MaterialInstance(const Ref<Material>& material);
-		const Ref<Material>& GetMaterial() const { return m_Material; }
+        // byte* m_VSUserUniformBuffer;
+        // uint32_t m_VSUserUniformBufferSize;
 
-		void Bind(uint32_t startslot);
-		void Unbind();
-		//void SetUniformData(const std::string& name, byte* data);
-		void SetTexture(const std::string& name, const Ref<Texture>& texture);
+        // byte* m_PSUserUniformBuffer;
+        // uint32_t m_PSUserUniformBufferSize;
+        //
+        // const ShaderUniformList* m_VSUseUniforms;
+        // const ShaderUniformList* m_PSUseUniforms;
+        // const ShaderResourceList* m_Resources;
 
-		template<typename T>
-		void SetUniform(const std::string& name, const T& data)
-		{
-			//byte* buf;
-			//auto* decl = FindUniformDeclaration(name, &buf);
-			//CW_ENGINE_ASSERT(decl);
-			//memcpy(buf + decl->GetOffset(), &data, decl->GetSize());
-		}
+    public:
+        MaterialInstance(const Ref<Material>& material);
+        const Ref<Material>& GetMaterial() const { return m_Material; }
 
-//		template<typename T>
-//		const T* GetUniform(const std::string& name) const
-//		{
-//			return GetUniform<T>(GetUniformDeclaration(name));
-//		}
+        void Bind(uint32_t startslot);
+        void Unbind();
+        // void SetUniformData(const std::string& name, byte* data);
+        void SetTexture(const std::string& name, const Ref<Texture>& texture);
 
-	private:
-		void AllocateStorage();
-		//ShaderUniformDeclaration* FindUniformDeclaration(const std::string& name, byte** outBuffer = nullptr);
-		//ShaderResourceDeclaration* FindResourceDeclaration(const std::string& name);
-	};
-}
+        template <typename T> void SetUniform(const std::string& name, const T& data)
+        {
+            // byte* buf;
+            // auto* decl = FindUniformDeclaration(name, &buf);
+            // CW_ENGINE_ASSERT(decl);
+            // memcpy(buf + decl->GetOffset(), &data, decl->GetSize());
+        }
+
+        //		template<typename T>
+        //		const T* GetUniform(const std::string& name) const
+        //		{
+        //			return GetUniform<T>(GetUniformDeclaration(name));
+        //		}
+
+    private:
+        void AllocateStorage();
+        // ShaderUniformDeclaration* FindUniformDeclaration(const std::string& name, byte** outBuffer = nullptr);
+        // ShaderResourceDeclaration* FindResourceDeclaration(const std::string& name);
+    };
+} // namespace Crowny

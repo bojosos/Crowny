@@ -16,6 +16,7 @@ namespace Crowny
         static void OnResize(uint32_t width, uint32_t height);
         static void End();
         static int32_t ReadPixel(int32_t x, int32_t y);
+
     public:
         struct IDBufferData
         {
@@ -23,4 +24,4 @@ namespace Crowny
             int32_t ObjectID;
         };
     };
-}
+} // namespace Crowny

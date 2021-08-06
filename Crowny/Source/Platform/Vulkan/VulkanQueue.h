@@ -8,7 +8,7 @@
 namespace Crowny
 {
     class VulkanCmdBuffer;
-    
+
     class VulkanQueue
     {
     public:
@@ -18,7 +18,7 @@ namespace Crowny
         VulkanDevice& GetDevice() const { return m_Device; }
         GpuQueueType GetType() const { return m_Type; }
         bool IsExecuting() const;
-        
+
         VulkanCmdBuffer* GetLastCommandBuffer() const { return m_LastCommandBuffer; }
 
         void Submit(VulkanCmdBuffer* buffer, VulkanSemaphore** waitSemaphores, uint32_t semaphoreLength);
@@ -28,7 +28,7 @@ namespace Crowny
         VkResult Present(VulkanSwapChain* swapChain, VulkanSemaphore** waitSemaphores, uint32_t semaphoreLength);
         void WaitIdle() const;
 
-        void GetSubmitInfo(VkCommandBuffer* cmdBuffer, VkSemaphore* signalSemaphores, uint32_t numSemaphores, 
+        void GetSubmitInfo(VkCommandBuffer* cmdBuffer, VkSemaphore* signalSemaphores, uint32_t numSemaphores,
                            VkSemaphore* waitSemaphores, uint32_t numWaitSemaphores, VkSubmitInfo& submitInfo);
         void Refresh(bool wait, bool queueEmpty);
 
@@ -38,20 +38,22 @@ namespace Crowny
         struct SubmitInfo
         {
             SubmitInfo(VulkanCmdBuffer* buffer, uint32_t idx, uint32_t semaphores, uint32_t cmdBuffers)
-                : CmdBuffer(buffer), SubmitIdx(idx), NumSemaphores(semaphores), NumCommandBuffers(cmdBuffers)
-                { }
-            
+              : CmdBuffer(buffer), SubmitIdx(idx), NumSemaphores(semaphores), NumCommandBuffers(cmdBuffers)
+            {
+            }
+
             VulkanCmdBuffer* CmdBuffer;
             uint32_t SubmitIdx;
             uint32_t NumSemaphores;
             uint32_t NumCommandBuffers;
         };
+
     private:
         VkQueue m_Queue;
         VulkanDevice& m_Device;
         GpuQueueType m_Type;
         uint32_t m_Index;
-        
+
         VkPipelineStageFlags m_SubmitDstWaitMask[MAX_UNIQUE_QUEUES];
         std::vector<SubmitInfo> m_QueuedBuffers;
         std::vector<VulkanSemaphore*> m_QueuedSemaphores;
@@ -63,4 +65,4 @@ namespace Crowny
         uint32_t m_NextSubmitIdx = 1;
         std::vector<VkSemaphore> m_SemaphoresTemp;
     };
-}
+} // namespace Crowny

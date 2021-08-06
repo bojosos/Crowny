@@ -7,20 +7,17 @@
 namespace Crowny
 {
 
-    SceneCamera::SceneCamera()
-    {
-        RecalculateProjection();
-    }
+    SceneCamera::SceneCamera() { RecalculateProjection(); }
 
-	void SceneCamera::SetPerspective(float verticalFov, float near, float far)
-	{
-		m_ProjectionType = CameraProjection::Perspective;
+    void SceneCamera::SetPerspective(float verticalFov, float near, float far)
+    {
+        m_ProjectionType = CameraProjection::Perspective;
         m_PerspectiveFOV = verticalFov;
         m_PerspectiveNear = near;
         m_PerspectiveFar = far;
         RecalculateProjection();
-	}
-    
+    }
+
     void SceneCamera::SetOrthographic(float size, float near, float far)
     {
         m_ProjectionType = CameraProjection::Orthographic;
@@ -30,13 +27,13 @@ namespace Crowny
         RecalculateProjection();
     }
 
-	void SceneCamera::SetViewportSize(uint32_t width, uint32_t height)
-	{
-		m_AspectRatio = (float)width / (float)height;
+    void SceneCamera::SetViewportSize(uint32_t width, uint32_t height)
+    {
+        m_AspectRatio = (float)width / (float)height;
         RecalculateProjection();
-	}
+    }
 
-	void SceneCamera::RecalculateProjection()
+    void SceneCamera::RecalculateProjection()
     {
         if (m_ProjectionType == CameraProjection::Perspective)
         {
@@ -53,4 +50,4 @@ namespace Crowny
         }
     }
 
-};
+}; // namespace Crowny

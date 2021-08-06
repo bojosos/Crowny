@@ -8,7 +8,7 @@ namespace Crowny
     Ref<AssetManifest>& AssetManager::CreateManifest(const std::string& filepath, const std::string& name)
     {
         CW_ENGINE_ASSERT(false, "Not implemented");
-        //return nullptr;
+        // return nullptr;
     }
 
     Ref<AssetManifest>& AssetManager::ImportManifest(const std::string& filepath, const std::string& name)
@@ -24,4 +24,4 @@ namespace Crowny
             return it->second;
     }
 
-}
+} // namespace Crowny

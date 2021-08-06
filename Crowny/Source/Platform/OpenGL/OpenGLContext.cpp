@@ -7,21 +7,15 @@
 
 namespace Crowny
 {
-	OpenGLContext::OpenGLContext(void* window) : m_Window(window)
-	{
+    OpenGLContext::OpenGLContext(void* window) : m_Window(window) {}
 
-	}
+    void OpenGLContext::Init()
+    {
+        glfwMakeContextCurrent((GLFWwindow*)m_Window);
+        int status = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
-	void OpenGLContext::Init()
-	{
-		glfwMakeContextCurrent((GLFWwindow*)m_Window);
-		int status = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+        CW_ENGINE_ASSERT(status, "Failed to initialize GLAD!");
+    }
 
-		CW_ENGINE_ASSERT(status, "Failed to initialize GLAD!");
-	}
-
-	void OpenGLContext::SwapBuffers()
-	{
-		glfwSwapBuffers((GLFWwindow*)m_Window);
-	}
-}
+    void OpenGLContext::SwapBuffers() { glfwSwapBuffers((GLFWwindow*)m_Window); }
+} // namespace Crowny

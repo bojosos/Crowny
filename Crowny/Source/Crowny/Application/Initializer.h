@@ -2,10 +2,10 @@
 
 namespace Crowny
 {
-	class Initializer
-	{
-	public:
-		static void Init();
-		static void Shutdown();
-	};
-}
+    class Initializer
+    {
+    public:
+        static void Init();
+        static void Shutdown();
+    };
+} // namespace Crowny

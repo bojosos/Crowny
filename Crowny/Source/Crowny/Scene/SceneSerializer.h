@@ -1,10 +1,13 @@
 #pragma once
 
-#include "Crowny/Scene/Scene.h"
 #include "Crowny/Common/Uuid.h"
 #include "Crowny/Ecs/Entity.h"
+#include "Crowny/Scene/Scene.h"
 
-namespace YAML { class Emitter; }
+namespace YAML
+{
+    class Emitter;
+}
 namespace Crowny
 {
 
@@ -12,7 +15,7 @@ namespace Crowny
     {
     public:
         SceneSerializer(const Ref<Scene>& scene);
-        
+
         void Serialize(const std::string& filepath);
         void SerializeEntity(YAML::Emitter& out, const Uuid& uuid, Entity entity);
         void SerializeBinary(const std::string& filepath);
@@ -23,4 +26,4 @@ namespace Crowny
     private:
         Ref<Scene> m_Scene;
     };
-}
+} // namespace Crowny

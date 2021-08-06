@@ -4,38 +4,63 @@
 
 namespace Crowny
 {
-    
+
     class SceneCamera : public Camera
-	{
+    {
     public:
         enum class CameraProjection
-	    {
-		    Orthographic = 0, Perspective = 1
-	    };
+        {
+            Orthographic = 0,
+            Perspective = 1
+        };
 
-	public:
-		SceneCamera();
-		SceneCamera(const glm::mat4& projection);
-		~SceneCamera() = default;
+    public:
+        SceneCamera();
+        SceneCamera(const glm::mat4& projection);
+        ~SceneCamera() = default;
 
-		void SetPerspective(float verticalFov, float near, float far);
+        void SetPerspective(float verticalFov, float near, float far);
         void SetOrthographic(float size, float near, float far);
 
         void SetViewportSize(uint32_t width, uint32_t height);
 
         float GetPerspectiveVerticalFOV() const { return m_PerspectiveFOV; }
-        void SetPerspectiveVerticalFOV(float fov) { m_PerspectiveFOV = fov; RecalculateProjection(); }
+        void SetPerspectiveVerticalFOV(float fov)
+        {
+            m_PerspectiveFOV = fov;
+            RecalculateProjection();
+        }
         float GetPerspectiveNearClip() const { return m_PerspectiveNear; }
-        void SetPerspectiveNearClip(float near) { m_PerspectiveNear = near; RecalculateProjection(); }
+        void SetPerspectiveNearClip(float near)
+        {
+            m_PerspectiveNear = near;
+            RecalculateProjection();
+        }
         float GetPerspectiveFarClip() const { return m_PerspectiveFar; }
-        void SetPerspectiveFarClip(float far) { m_PerspectiveFar = far; RecalculateProjection(); }
+        void SetPerspectiveFarClip(float far)
+        {
+            m_PerspectiveFar = far;
+            RecalculateProjection();
+        }
 
         float GetOrthographicSize() const { return m_OrthographicSize; }
-        void SetOrthographicSize(float size) { m_OrthographicSize = size; RecalculateProjection(); }
+        void SetOrthographicSize(float size)
+        {
+            m_OrthographicSize = size;
+            RecalculateProjection();
+        }
         float GetOrthographicNearClip() const { return m_OrthographicNear; }
-        void SetOrthographicNearClip(float near) { m_OrthographicNear = near; RecalculateProjection(); }
+        void SetOrthographicNearClip(float near)
+        {
+            m_OrthographicNear = near;
+            RecalculateProjection();
+        }
         float GetOrthographicFarClip() const { return m_OrthographicFar; }
-        void SetOrthographicFarClip(float far) { m_OrthographicFar = far; RecalculateProjection(); }
+        void SetOrthographicFarClip(float far)
+        {
+            m_OrthographicFar = far;
+            RecalculateProjection();
+        }
 
         // TODO: Should use glViewport to render
         const glm::vec4& GetViewportRect() const { return m_ViewportRectangle; }
@@ -45,7 +70,11 @@ namespace Crowny
         void SetBackgroundColor(const glm::vec3& color) { m_BackgroundColor = color; }
 
         CameraProjection GetProjectionType() const { return m_ProjectionType; }
-        void SetProjectionType(CameraProjection type) { m_ProjectionType = type; RecalculateProjection(); }
+        void SetProjectionType(CameraProjection type)
+        {
+            m_ProjectionType = type;
+            RecalculateProjection();
+        }
 
         bool GetHDR() const { return m_HDR; }
         void SetHDR(bool hdr) { m_HDR = hdr; }
@@ -59,8 +88,8 @@ namespace Crowny
     private:
         void RecalculateProjection();
 
-	private:
-		CameraProjection m_ProjectionType = CameraProjection::Orthographic;
+    private:
+        CameraProjection m_ProjectionType = CameraProjection::Orthographic;
         float m_PerspectiveFOV = glm::radians(45.0f);
         float m_PerspectiveNear = 0.01f, m_PerspectiveFar = 1000.0f;
 
@@ -69,9 +98,9 @@ namespace Crowny
         float m_AspectRatio = 0.0f;
 
         glm::vec3 m_BackgroundColor = { 0.0f, 0.3f, 0.3f };
-		glm::vec4 m_ViewportRectangle = { 0.0f, 0.0f, 1.0f, 1.0f };
-		bool m_HDR = false;
-		bool m_MSAA = false;
-		bool m_OcclusionCulling = false;
-	};
-}
+        glm::vec4 m_ViewportRectangle = { 0.0f, 0.0f, 1.0f, 1.0f };
+        bool m_HDR = false;
+        bool m_MSAA = false;
+        bool m_OcclusionCulling = false;
+    };
+} // namespace Crowny

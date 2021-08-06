@@ -2,7 +2,7 @@
 
 namespace Crowny
 {
-    
+
     struct TransformComponent;
 
     class AudioListener
@@ -13,8 +13,8 @@ namespace Crowny
         void SetTransform(const TransformComponent& transform);
         void SetVelocity(const glm::vec3& velocity);
         void SetVolume(float volume);
-    private:
 
+    private:
     };
 
-}
+} // namespace Crowny

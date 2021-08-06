@@ -6,14 +6,13 @@
 
 namespace Crowny
 {
-	
-	class ScriptNoise
-	{
-	public:
-		static void InitRuntimeFunctions();
 
-	private:
-		static float Internal_PerlinNoise(float x, float y);
-   
-	};
-}
+    class ScriptNoise
+    {
+    public:
+        static void InitRuntimeFunctions();
+
+    private:
+        static float Internal_PerlinNoise(float x, float y);
+    };
+} // namespace Crowny
