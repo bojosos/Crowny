@@ -5,10 +5,11 @@
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/RenderAPI/Shader.h"
 
-#include <shaderc/shaderc.hpp>
 #include <spirv-reflect/spirv_reflect.h>
 #include <spirv_cross/spirv_cross.hpp>
 #include <spirv_cross/spirv_glsl.hpp>
+
+#include <shaderc/shaderc.hpp>
 
 #include <filesystem>
 
@@ -197,7 +198,6 @@ namespace Crowny
             uint32_t binding = compiler.get_decoration(uniform.id, spv::DecorationBinding);
             uint32_t set = compiler.get_decoration(uniform.id, spv::DecorationDescriptorSet);
             uint32_t memberCount = bufferType.member_types.size();
-            CW_ENGINE_INFO(uniform.name);
 
             UniformBufferBlockDesc buffer;
             buffer.Name = uniform.name;

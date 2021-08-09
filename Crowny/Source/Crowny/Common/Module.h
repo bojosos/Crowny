@@ -78,8 +78,6 @@ namespace Crowny
          */
         static void Shutdown()
         {
-            CW_ENGINE_INFO("Here");
-
             if (!IsStartedUp())
                 CW_ENGINE_ASSERT(false);
             if (IsDestroyed())

@@ -363,7 +363,6 @@ namespace Crowny
                     if (payload)
                     {
                         const char* path = (const char*)payload->Data;
-                        CW_ENGINE_INFO(path);
                         if (std::rename((s_AssetPath / path).c_str(), (s_AssetPath / relativePath / path).c_str()) < 0)
                             CW_ENGINE_ERROR("Error moving file: {0}, {1} -> {2}", strerror(errno), path,
                                             (relativePath / filename).string());

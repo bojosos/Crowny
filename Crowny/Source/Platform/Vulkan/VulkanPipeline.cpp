@@ -7,7 +7,7 @@
 #include "Platform/Vulkan/VulkanRenderAPI.h"
 #include "Platform/Vulkan/VulkanRenderPass.h"
 #include "Platform/Vulkan/VulkanShader.h"
-#include "Platform/Vulkan/VulkanUniformParams.h"
+#include "Platform/Vulkan/VulkanUniformParamInfo.h"
 
 namespace Crowny
 {
@@ -74,7 +74,6 @@ namespace Crowny
                 continue;
 
             m_ShaderStageInfos[outputIdx] = shader->GetShaderStage();
-            CW_ENGINE_INFO("Shader entry: {0}", m_ShaderStageInfos[outputIdx].pName);
             outputIdx++;
         }
 

@@ -75,11 +75,12 @@ namespace Crowny
             out << YAML::Key << "MonoScriptComponent";
             out << YAML::BeginMap;
             auto msc = entity.GetComponent<MonoScriptComponent>();
-            const std::string& name = msc.Class->GetName();
-            if (msc.DisplayableFields.size() > 0)
+            const std::string& name = msc.GetManagedClass()->GetName();
+            auto& fields = msc.GetSerializableFields();
+            if (fields.size() > 0)
             {
                 out << YAML::Key << "Fields";
-                for (auto* field : msc.DisplayableFields)
+                for (auto* field : fields)
                 {
                     out << YAML::BeginMap;
                     out << YAML::Key << field->GetName();
@@ -88,10 +89,11 @@ namespace Crowny
                 out << YAML::EndMap;
             }
 
-            if (msc.DisplayableFields.size() > 0)
+            auto& props = msc.GetSerializableProperties();
+            if (props.size() > 0)
             {
                 out << YAML::Key << "Properties";
-                for (auto* prop : msc.DisplayableProperties)
+                for (auto* prop : props)
                 {
                     out << YAML::BeginMap;
                     out << YAML::Key << prop->GetName();
@@ -100,6 +102,26 @@ namespace Crowny
                 out << YAML::EndMap;
             }
             out << YAML::Key << "Name" << YAML::Value << name;
+            out << YAML::EndMap;
+        }
+
+        if (entity.HasComponent<AudioListenerComponent>())
+            out << YAML::Key << "AudioListenerComponent";
+        
+        if (entity.HasComponent<AudioSourceComponent>())
+        {
+            out << YAML::Key << "AudioSourceComponent";
+            out << YAML::BeginMap;
+            const auto& asc = entity.GetComponent<AudioSourceComponent>();
+            
+            out << YAML::Key << "AudioClip" << YAML::Value << 111; // Some uuid here
+            out << YAML::Key << "Volume" << YAML::Value << asc.GetVolume();
+            out << YAML::Key << "Pitch" << YAML::Value << asc.GetPitch();
+            out << YAML::Key << "Loop" << YAML::Value << asc.GetLooping();
+            out << YAML::Key << "MinDistance" << YAML::Value << asc.GetMinDistance();
+            out << YAML::Key << "MaxDistance" << YAML::Value << asc.GetMaxDistance();
+            out << YAML::Key << "PlayOnAwake" << YAML::Value << asc.GetPlayOnAwake();
+            out << YAML::Key << "Muted" << YAML::Value << asc.GetIsMuted();
             out << YAML::EndMap;
         }
 
@@ -296,11 +318,31 @@ namespace Crowny
                     // auto& mc = deserialized.AddComponent<MeshRendererComponent>();
                 }
 
+                YAML::Node alc = entity["AudioListenerComponent"];
+                if (alc)
+                {
+                    deserialized.AddComponent<AudioListenerComponent>();
+                }
+
+                YAML::Node source = entity["AudioSourceComponent"];
+                if (source)
+                {
+                    auto& asc = deserialized.AddComponent<AudioSourceComponent>();
+                    asc.SetPlayOnAwake(source["PlayOnAwake"].as<bool>());
+                    //asc.SetAudioClip(source["AudioClip"].as<Uuid>());
+                    asc.SetVolume(source["Volume"].as<float>());
+                    asc.SetPitch(source["Pitch"].as<float>());
+                    asc.SetMinDistance(source["MinDistance"].as<float>());
+                    asc.SetMaxDistance(source["MaxDistance"].as<float>());
+                    asc.SetLooping(source["Loop"].as<bool>());
+                }
+
                 YAML::Node rel = entity["RelationshipComponent"];
                 if (rel)
                 {
                     serializedComponents[deserialized] = rel;
                 }
+                
             }
 
             for (auto rc : serializedComponents)

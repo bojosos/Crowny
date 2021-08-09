@@ -6,25 +6,7 @@
 
 namespace Crowny
 {
-    /*
-        static TextureFormat FramebufferToTextureFormat(FramebufferTextureFormat textureFormat)
-        {
-            switch(textureFormat)
-            {
-                case FramebufferTextureFormat::R32I:			    return TextureFormat::R32I;
-                case FramebufferTextureFormat::RGB8:    			return TextureFormat::RGB8;
-                case FramebufferTextureFormat::RG32F:   			return TextureFormat::RG32F;
-                case FramebufferTextureFormat::RGBA16F: 			return TextureFormat::RGBA16F;
-                case FramebufferTextureFormat::RGBA32F:		  		return TextureFormat::RGBA32F;
-                case FramebufferTextureFormat::DEPTH24STENCIL8: 	return TextureFormat::DEPTH24STENCIL8;
-                case FramebufferTextureFormat::DEPTH32F:        	return TextureFormat::DEPTH32F;
-                case FramebufferTextureFormat::RGBA8: 				return TextureFormat::RGBA8;
-                default: 											return TextureFormat::NONE;
-            }
-
-            return TextureFormat::NONE;
-        }
-        */
+    
     VulkanFramebuffer::VulkanFramebuffer(VulkanResourceManager* owner, VulkanRenderPass* renderPass,
                                          const VulkanFramebufferDesc& desc)
       : VulkanResource(owner, false), m_RenderPass(renderPass), m_NumLayers(desc.LayerCount)
