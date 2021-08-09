@@ -81,10 +81,6 @@ namespace Crowny
         viewMenu->AddItem(new ImGuiMenuItem("Viewport", "", [&](auto& event) { m_ViewportPanel->Show(); }));
         m_ViewportPanel->SetEventCallback(CW_BIND_EVENT_FN(OnViewportEvent));
 
-        // m_ImGuiWindows.push_back(new ImGuiTextureEditor("Texture Properties"));
-        // viewMenu->AddItem(new ImGuiMenuItem("Texture Properties", [&](auto& event) { m_ImGuiWindows.back()->Show();
-        // }));
-
         m_InspectorPanel = new ImGuiInspectorPanel("Inspector");
         viewMenu->AddItem(new ImGuiMenuItem("Inspector", "", [&](auto& event) { m_InspectorPanel->Show(); }));
 
@@ -121,10 +117,11 @@ namespace Crowny
 
         ImGuiMaterialPanel::SetSelectedMaterial(mat);
         //ForwardRenderer::Init(); // Why here?
+        */
 
         SceneSerializer serializer(SceneManager::GetActiveScene());
         serializer.Deserialize("Test.yaml");
-        */
+        
         ShaderCompiler compiler;
         vertex = Shader::Create(compiler.Compile("/Shaders/vk.vert", VERTEX_SHADER));
         fragment = Shader::Create(compiler.Compile("/Shaders/vk.frag", FRAGMENT_SHADER));
@@ -178,12 +175,13 @@ namespace Crowny
         pd.SetBuffer(data);
         texture->WriteData(pd);
         pd.SetBuffer(nullptr);
-        // mvp = UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("MVP").BlockSize,
-        // BufferUsage::DYNAMIC_DRAW);
-        uniformParams = UniformParams::Create(pipeline);
-        // uniformParams->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "MVP", mvp);
 
-        uniformParams->SetTexture(0, 0, texture, TextureSurface::COMPLETE);
+        mvp = UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("MVP").BlockSize,
+              BufferUsage::DYNAMIC_DRAW);
+        uniformParams = UniformParams::Create(pipeline);
+        uniformParams->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "MVP", mvp);
+
+        uniformParams->SetTexture(0, 1, texture, TextureSurface::COMPLETE);
         TextureParameters colorParams;
         colorParams.Width = 1386;
         colorParams.Height = 728;
@@ -267,9 +265,9 @@ namespace Crowny
     void EditorLayer::OnUpdate(Timestep ts)
     {
         glm::mat4 id(1.0f);
-        // mvp->Write(0, &id, sizeof(glm::mat4));
-        // mvp->Write(sizeof(glm::mat4), &s_EditorCamera.GetProjection(), sizeof(glm::mat4));
-        // mvp->Write(sizeof(glm::mat4) * 2, &s_EditorCamera.GetViewMatrix(), sizeof(glm::mat4));
+        mvp->Write(0, &id, sizeof(glm::mat4));
+        mvp->Write(sizeof(glm::mat4), &s_EditorCamera.GetProjection(), sizeof(glm::mat4));
+        mvp->Write(sizeof(glm::mat4) * 2, &s_EditorCamera.GetViewMatrix(), sizeof(glm::mat4));
 
         auto& rapi = RenderAPI::Get();
         rapi.SetRenderTarget(renderTarget);

@@ -5,7 +5,6 @@
 #include "Crowny/Input/Input.h"
 
 #include <GLFW/glfw3.h>
-#include <ImGuizmo.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.cpp>
 #include <imgui.h>

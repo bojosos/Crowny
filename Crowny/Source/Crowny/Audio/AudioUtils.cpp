@@ -246,7 +246,6 @@ namespace Crowny
     void ConvertToMono16(const int16_t* input, int16_t* output, uint32_t bitDepth, uint32_t numSamples,
                          uint32_t numChannels)
     {
-        CW_ENGINE_INFO("Depth: {0}, samples {1}, channels {2}", bitDepth, numSamples, numChannels);
         for (uint32_t i = 0; i < numSamples; i++)
         {
             int32_t sum = 0;

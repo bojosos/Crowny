@@ -18,7 +18,6 @@ namespace Crowny
             const ALCchar* defaultDevice = alcGetString(nullptr, ALC_DEFAULT_ALL_DEVICES_SPECIFIER);
             m_DefaultDevice.Name = defaultDevice;
             const ALCchar* devices = alcGetString(nullptr, ALC_ALL_DEVICES_SPECIFIER);
-
             std::vector<char> deviceName;
             while (true)
             {
@@ -27,7 +26,6 @@ namespace Crowny
                     if (deviceName.empty())
                         break;
                     std::string name(deviceName.data(), deviceName.size());
-                    CW_ENGINE_INFO(name);
                     m_Devices.push_back({ name });
                     deviceName.clear();
                     devices++;

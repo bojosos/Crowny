@@ -817,7 +817,6 @@ namespace Crowny
 
             if (!foundRange)
             {
-                CW_ENGINE_INFO("Here bad");
                 std::array<VkImageSubresourceRange, 5> tempRanges;
                 uint32_t newSubresourceIdx = (uint32_t)m_SubresourceInfoStorage.size();
                 std::vector<uint32_t> overlappingRanges;

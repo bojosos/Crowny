@@ -120,7 +120,6 @@ namespace Crowny
                 Stream();
             }
         }
-        CW_ENGINE_INFO("Playing");
         alSourcePlay(m_SourceID);
         AudioUtils::CheckOpenALErrors("Audio source", 122);
     }

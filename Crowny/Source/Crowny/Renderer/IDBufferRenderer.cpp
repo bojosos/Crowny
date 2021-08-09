@@ -102,7 +102,6 @@ namespace Crowny
         // s_Data.Shader3D->SetUniformMat4("u_ModelMatrix", transform);
         // s_Data.Shader3D->SetUniformInt("ObjectID", (int32_t)entityId);
         mesh->GetVertexArray()->Bind();
-        // CW_ENGINE_INFO("Here: {0}", mesh->GetVertexArray()->GetIndexBuffer()->GetCount());
         RenderCommand::DrawIndexed(mesh->GetVertexArray(), mesh->GetVertexArray()->GetIndexBuffer()->GetCount());
     }
 
@@ -122,7 +121,6 @@ namespace Crowny
         // s_Data.Framebuffer->Bind();
         glReadBuffer(GL_COLOR_ATTACHMENT0);
         int32_t pixelValue;
-        // CW_ENGINE_INFO("{0}, {1}", x, y);
         glReadPixels(x, y, 1, 1, GL_RED_INTEGER, GL_INT, &pixelValue);
         // s_Data.Framebuffer->Unbind();
         return pixelValue;

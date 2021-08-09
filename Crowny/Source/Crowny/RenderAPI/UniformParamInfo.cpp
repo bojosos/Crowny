@@ -1,8 +1,10 @@
 #include "cwpch.h"
 
 #include "Crowny/RenderAPI/UniformParamInfo.h"
+
 #include "Crowny/Renderer/Renderer.h"
-#include "Platform/Vulkan/VulkanUniformParams.h"
+
+#include "Platform/Vulkan/VulkanUniformParamInfo.h"
 
 namespace Crowny
 {
@@ -156,17 +158,16 @@ namespace Crowny
             return -1;
         }
 
-        ParamType slotType = m_SetInfos[set].SlotTypes[slot];
-        if (slotType != paramType)
+        ParamType type = m_SetInfos[set].SlotTypes[slot];
+        if (type != paramType)
         {
-            if (paramType == ParamType::SamplerState)
+            if (type == ParamType::SamplerState)
             {
-                if (m_SetInfos[set].SlotSamplers[slot] != (uint32_t)-1)
+                if (m_SetInfos[set].SlotSamplers[set] != (uint32_t)-1)
                     return m_SetInfos[set].SlotSamplers[slot];
             }
-            // CW_ENGINE_ASSERT(false, "Requested paramter is not of the valid type.");
-            CW_ENGINE_INFO("Here, {0}, {1}", (uint32_t)paramType, (uint32_t)m_SetInfos[set].SlotTypes[slot]);
-            // return -1;
+            CW_ENGINE_ERROR("Parameters are of the wrong type. Requested: {0}, actual:", (uint32_t)type, uint32_t(m_SetInfos[set].SlotTypes[slot]));
+            return -1;
         }
 
         return m_SetInfos[set].SlotIndices[slot];

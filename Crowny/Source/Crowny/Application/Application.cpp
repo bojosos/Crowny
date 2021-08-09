@@ -13,9 +13,11 @@
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/Renderer.h"
 
-/*#ifdef MC_WEB
+/*
+#ifdef MC_WEB
 #include <emscripten/emscripten.h>
-#endif*/
+#endif
+*/
 
 // NONONONONONO
 #include <GLFW/glfw3.h>

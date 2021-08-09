@@ -9,6 +9,7 @@ namespace Crowny
 {
 
     class VulkanImage;
+    class VulkanRenderPass;
 
     struct VulkanAttachmentDesc
     {
