@@ -13,7 +13,6 @@ namespace Crowny
 
     OpenGLShader::OpenGLShader(const std::string& filepath) : m_Filepath(filepath)
     {
-        CW_ENGINE_INFO(filepath);
         Load(filepath);
     }
 

@@ -15,6 +15,16 @@
 #define CW_DEBUGBREAK() asm("int $3") // it's 2021..... we deserve better
 #endif
 
+#if defined(__clang__)
+#define CW_STDCALL __attribute__((stdcall))
+#elif defined(__GNUC__)
+#define CW_STDCALL __attribute__((stdcall))
+#elif defined (__INTEL_COMPILER)
+#define CW_STDCALL __stdcall
+#elif defined(_MSV_VER)
+#define CW_STDCALL __stdcall
+#endif
+
 #define BIT(x) (1 << x)
 
 #define CW_BIND_EVENT_FN(fn)                                                                                           \

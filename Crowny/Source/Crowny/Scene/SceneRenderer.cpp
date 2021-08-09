@@ -56,7 +56,6 @@ namespace Crowny
          }
 
          s_Data.MainFramebuffer->Bind();
-     //CW_ENGINE_INFO("Here");
          RenderCommand::Clear();
 
          ForwardRenderer::Begin();

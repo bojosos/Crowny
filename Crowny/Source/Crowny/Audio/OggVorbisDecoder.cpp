@@ -11,20 +11,14 @@ namespace Crowny
     size_t OggRead(void* ptr, size_t size, size_t nmemb, void* data)
     {
         OggDecoderData* decoderData = static_cast<OggDecoderData*>(data);
-        CW_ENGINE_INFO(size);
-        CW_ENGINE_INFO(nmemb);
-        CW_ENGINE_INFO(decoderData->Offset);
-        CW_ENGINE_INFO(decoderData->Stream->Tell());
         size_t read = static_cast<size_t>(decoderData->Stream->Read(ptr, size * nmemb));
         if (read == 1)
             return 0;
-        CW_ENGINE_INFO("Read: {0}", read);
         return read;
     }
 
     int OggSeek(void* data, ogg_int64_t offset, int whence)
     {
-        CW_ENGINE_INFO("Seek: {0}, {1}", offset, whence);
         OggDecoderData* decoderData = static_cast<OggDecoderData*>(data);
         switch (whence)
         {
@@ -44,7 +38,6 @@ namespace Crowny
 
     long OggTell(void* data)
     {
-        CW_ENGINE_INFO("Tell");
         OggDecoderData* decoderData = static_cast<OggDecoderData*>(data);
         return (long)(decoderData->Stream->Tell() - decoderData->Offset);
     }
@@ -103,7 +96,6 @@ namespace Crowny
 
     uint32_t OggVorbisDecoder::Read(uint8_t* samples, uint32_t count)
     {
-        CW_ENGINE_INFO(count);
         uint32_t numSamples = 0;
         while (numSamples < count)
         {

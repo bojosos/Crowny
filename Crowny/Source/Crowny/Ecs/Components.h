@@ -114,7 +114,7 @@ namespace Crowny
 
         MeshRendererComponent()
         {
-            Mesh = MeshFactory::CreateSphere();
+                Mesh = MeshFactory::CreateSphere();
             Mesh->SetMaterialInstnace(CreateRef<MaterialInstance>(ImGuiMaterialPanel::GetSlectedMaterial()));
         };
         MeshRendererComponent(const MeshRendererComponent&) = default;
@@ -134,102 +134,92 @@ namespace Crowny
 
     struct AudioSourceComponent : public Component
     {
-        Ref<AudioSource> Source;
-
-        AudioSourceComponent()
-        {
-            Source = gAudio().CreateSource();
-            Ref<DataStream> stream = FileSystem::OpenFile("test.ogg", true);
-            Ref<OggVorbisDecoder> decoder = CreateRef<OggVorbisDecoder>();
-            AudioDataInfo info;
-            decoder->Open(stream, info);
-            uint32_t bps = info.BitDepth / 8;
-            uint32_t bufferSize = info.NumSamples * bps;
-            Ref<MemoryDataStream> samples = CreateRef<MemoryDataStream>(bufferSize);
-            decoder->Read(samples->Data(), info.NumSamples);
-
-            { // covert to mono
-                if (info.NumChannels > 1)
-                {
-                    uint32_t samplesPerChannel = info.NumSamples / info.NumChannels;
-                    uint32_t monoBufferSize = samplesPerChannel * bps;
-                    CW_ENGINE_INFO("{0}, {1}", info.NumSamples, info.NumChannels);
-                    Ref<MemoryDataStream> monoStream = CreateRef<MemoryDataStream>(monoBufferSize);
-                    CW_ENGINE_INFO(bps);
-                    AudioUtils::ConvertToMono(samples->Data(), monoStream->Data(), info.BitDepth, samplesPerChannel,
-                                              info.NumChannels);
-                    info.NumSamples = samplesPerChannel;
-                    info.NumChannels = 1;
-                    samples = monoStream;
-                    bufferSize = monoBufferSize;
-                }
-            }
-            AudioClipDesc clipDesc;
-            clipDesc.BitDepth = info.BitDepth;
-            clipDesc.Format = AudioFormat::VORBIS;
-            clipDesc.Frequency = info.SampleRate;
-            clipDesc.NumChannels = info.NumChannels;
-            clipDesc.ReadMode = AudioReadMode::LoadDecompressed;
-            clipDesc.Is3D = true;
-            Ref<AudioClip> clip = CreateRef<AudioClip>(stream, bufferSize, info.NumSamples, clipDesc);
-            Source->SetClip(clip);
-        }
+    public:
+        AudioSourceComponent() {}
         AudioSourceComponent(const AudioSourceComponent&) = default;
-        AudioSourceComponent(const Ref<AudioSource>& source) : Source(source) {}
+        
+        void Initialize();
+        void SetVolume(float volume);
+        void SetPitch(float pitch);
+        void SetClip(const Ref<AudioClip>& clip);
+        void SetPlayOnAwake(bool playOnAwake);
+        void SetMinDistance(float minDistnace);
+        void SetMaxDistance(float maxDistance);
+        void SetLooping(bool loop);
+        void SetIsMuted(bool muted);
+
+        float GetVolume() const { return m_Volume; }
+        float GetPitch() const { return m_Pitch; }
+        Ref<AudioClip> GetClip() const { return m_AudioClip; }
+        bool GetPlayOnAwake() const { return m_PlayOnAwake; }
+        float GetMinDistance() const { return m_MinDistance; }
+        float GetMaxDistance() const { return m_MaxDistance; }
+        bool GetLooping() const { return m_Loop; }
+        bool GetIsMuted() const { return m_IsMuted; }
+
+        AudioSourceState GetState() const;
+    private:
+        bool m_IsMuted;
+        Ref<Crowny::AudioClip> m_AudioClip;
+        float m_Volume;
+        float m_Pitch;
+        bool m_Loop;
+        float m_MinDistance;
+        float m_MaxDistance;
+        bool m_PlayOnAwake;
+        Ref<Crowny::AudioSource> m_Internal;
     };
 
     template <> void ComponentEditorWidget<AudioSourceComponent>(Entity e);
 
-    struct AudioListenerComponent : public Component
+    class AudioListenerComponent : public Component
     {
-        Ref<AudioListener> Listener;
-
-        AudioListenerComponent() { Listener = gAudio().CreateListener(); }
+    public:
+        AudioListenerComponent() = default;
         AudioListenerComponent(const AudioListenerComponent&) = default;
-        AudioListenerComponent(const Ref<AudioListener>& listener) : Listener(listener) {}
+
+        void Initialize()
+        {
+            m_Internal = gAudio().CreateListener();
+        }
+
+    private:
+        Ref<AudioListener> m_Internal;
     };
 
     template <> void ComponentEditorWidget<AudioListenerComponent>(Entity e);
 
-    struct MonoScriptComponent : public Component
+    class MonoScriptComponent : public Component
     {
-        CWMonoClass* Class = nullptr;
-        MonoObject* Instance = nullptr;
-        CWMonoMethod* OnUpdate = nullptr;
-        CWMonoMethod* OnStart = nullptr;
-        CWMonoMethod* OnDestroy = nullptr;
-        std::vector<CWMonoField*> DisplayableFields;
-        std::vector<CWMonoProperty*> DisplayableProperties;
-
+    public:
         MonoScriptComponent() = default;
+        MonoScriptComponent(const std::string& name);
         MonoScriptComponent(const MonoScriptComponent&) = default;
 
-        MonoScriptComponent(const std::string& name)
-        {
-            Class = CWMonoRuntime::GetClientAssembly()->GetClass("Sandbox", name);
-            if (Class)
-            {
-                for (auto* field : Class->GetFields())
-                {
-                    bool isHidden = field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().HideInInspector);
-                    bool isVisible = field->GetVisibility() == CWMonoVisibility::Public ||
-                                     field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().SerializeFieldAttribute) ||
-                                     field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().ShowInInspector);
-                    if (field != nullptr && !isHidden && isVisible)
-                        DisplayableFields.push_back(field);
-                }
+        void SetClassName(const std::string& className);
+        CWMonoClass* GetManagedClass() const { return m_Class; }
+        MonoObject* GetManagedInstance() const { return MonoUtils::GetObjectFromGCHandle(m_Handle); }
 
-                for (auto* prop : Class->GetProperties())
-                {
-                    bool isHidden = prop->HasAttribute(CWMonoRuntime::GetBuiltinClasses().HideInInspector);
-                    bool isVisible = prop->GetVisibility() == CWMonoVisibility::Public ||
-                                     prop->HasAttribute(CWMonoRuntime::GetBuiltinClasses().SerializeFieldAttribute) ||
-                                     prop->HasAttribute(CWMonoRuntime::GetBuiltinClasses().ShowInInspector);
-                    if (prop && !isHidden && isVisible)
-                        DisplayableProperties.push_back(prop);
-                }
-            }
-        }
+        const std::vector<CWMonoField*>& GetSerializableFields() const { return m_DisplayableFields; }
+        const std::vector<CWMonoProperty*>& GetSerializableProperties() const { return m_DisplayableProperties; }
+
+        void Initialize();
+        void OnStart();
+        void OnUpdate();
+        void OnDestroy();
+
+    private:
+        typedef void(CW_THUNKCALL *OnStartThunkDef) (MonoObject*, MonoException**);
+        typedef void(CW_THUNKCALL *OnUpdateThunkDef) (MonoObject*, MonoException**);
+        typedef void(CW_THUNKCALL *OnDestroyThunkDef) (MonoObject*, MonoException**);
+
+        CWMonoClass* m_Class = nullptr;
+        std::vector<CWMonoField*> m_DisplayableFields;
+        std::vector<CWMonoProperty*> m_DisplayableProperties;
+        uint32_t m_Handle = 0;
+        OnStartThunkDef m_OnStartThunk = nullptr;
+        OnUpdateThunkDef m_OnUpdateThunk = nullptr;
+        OnDestroyThunkDef m_OnDestroyThunk = nullptr;
     };
 
     template <> void ComponentEditorWidget<MonoScriptComponent>(Entity e);

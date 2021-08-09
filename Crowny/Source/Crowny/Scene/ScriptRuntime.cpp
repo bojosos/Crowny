@@ -42,21 +42,7 @@ namespace Crowny
 
         // Create managed script components
         scene->m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent& sc) {
-            if (!sc.Class)
-                return;
-
-            CWMonoField* scriptPtr = sc.Class->GetField("m_InternalPtr");
-            sc.OnUpdate = sc.Class->GetMethod("Update");
-            MonoObject* scriptInstance = sc.Class->CreateInstance();
-            sc.ManagedInstance = scriptInstance;
-            uint32_t handle = mono_gchandle_new(scriptInstance, false); // TODO: delete this store these
-            size_t tmp = (size_t)&sc;
-            scriptPtr->Set(scriptInstance, &tmp);
-
-            CWMonoMethod* ctor = sc.Class->GetMethod(".ctor", 0);
-            if (ctor)
-                ctor->Invoke(scriptInstance, nullptr);
-            sc.OnStart = sc.Class->GetMethod("Start", 0);
+            sc.Initialize();
         });
     }
 
@@ -64,8 +50,7 @@ namespace Crowny
     {
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
         activeScene->m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent& sc) {
-            if (sc.OnStart)
-                sc.OnStart->Invoke(sc.ManagedInstance, nullptr);
+            sc.OnStart();
         });
     }
 
@@ -73,8 +58,7 @@ namespace Crowny
     {
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
         activeScene->m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent& sc) {
-            if (sc.OnUpdate)
-                sc.OnUpdate->Invoke(sc.ManagedInstance, nullptr);
+            sc.OnUpdate();
         });
     }
 
@@ -82,8 +66,7 @@ namespace Crowny
     {
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
         activeScene->m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent& sc) {
-            if (sc.OnDestroy)
-                sc.OnDestroy->Invoke(sc.ManagedInstance, nullptr);
+            sc.OnDestroy();
         });
     }
 
