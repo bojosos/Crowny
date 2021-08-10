@@ -1,4 +1,4 @@
-#pragma once
+/*#pragma once
 
 #include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/Renderer/Camera.h"
@@ -25,4 +25,4 @@ namespace Crowny
     private:
         static void SetSystemUniforms(const Ref<Shader>& shader);
     };
-} // namespace Crowny
+}*/ // namespace Crowny

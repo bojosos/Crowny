@@ -45,9 +45,9 @@ namespace Crowny
         RenderAPI::StartUp<VulkanRenderAPI>();
         Renderer::Init();
 
+        Renderer2D::Init();
         /*
         ForwardPlusRenderer::Init();
-        Renderer2D::Init();
         IDBufferRenderer::Init();
         FontManager::Add(CreateRef<Font>("Roboto Thin", "/Fonts/" + DEFAULT_FONT_FILENAME, 64)); // default font, move
         out of here
@@ -69,12 +69,12 @@ namespace Crowny
     }
 
     void Initializer::Shutdown()
-    { /*
-         Renderer::Shutdown();
-         Renderer2D::Shutdown();
-         ForwardPlusRenderer::Shutdown();
-         SceneManager::Shutdown();
-         VirtualFileSystem::Shutdown();*/
+    {
+        Renderer2D::Shutdown(); /*
+        Renderer::Shutdown();
+        ForwardPlusRenderer::Shutdown();
+        SceneManager::Shutdown();
+        VirtualFileSystem::Shutdown();*/
         RenderAPI::Get().Shutdown();
     }
 

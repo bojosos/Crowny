@@ -9,7 +9,6 @@ layout(location = 3) in vec4 a_Color;
 
 uniform mat4 cw_ProjectionMatrix;
 uniform mat4 cw_ViewMatrix;
-//uniform mat4 cw_ModelMatrix;
 
 out DATA
 {

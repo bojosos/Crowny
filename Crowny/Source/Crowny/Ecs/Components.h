@@ -82,7 +82,7 @@ namespace Crowny
     struct TextComponent : public Component
     {
         std::string Text = "";
-        Ref<::Crowny::Font> Font;
+        Ref<::Crowny::Font> Font = nullptr;
         glm::vec4 Color{ 0.0f, 0.3f, 0.3f, 1.0f };
         // Crowny::Material Material;
 
@@ -95,8 +95,8 @@ namespace Crowny
 
     struct SpriteRendererComponent : public Component
     {
-        Ref<Crowny::Texture> Texture;
-        glm::vec4 Color;
+        Ref<Crowny::Texture> Texture = nullptr;
+        glm::vec4 Color = glm::vec4(1.0f);
 
         SpriteRendererComponent() = default;
         SpriteRendererComponent(const SpriteRendererComponent&) = default;
@@ -110,11 +110,11 @@ namespace Crowny
 
     struct MeshRendererComponent : public Component
     {
-        Ref<::Crowny::Mesh> Mesh;
+        Ref<::Crowny::Mesh> Mesh = nullptr;
 
         MeshRendererComponent()
         {
-                Mesh = MeshFactory::CreateSphere();
+            Mesh = MeshFactory::CreateSphere();
             Mesh->SetMaterialInstnace(CreateRef<MaterialInstance>(ImGuiMaterialPanel::GetSlectedMaterial()));
         };
         MeshRendererComponent(const MeshRendererComponent&) = default;
@@ -137,7 +137,7 @@ namespace Crowny
     public:
         AudioSourceComponent() {}
         AudioSourceComponent(const AudioSourceComponent&) = default;
-        
+
         void Initialize();
         void SetVolume(float volume);
         void SetPitch(float pitch);
@@ -158,6 +158,7 @@ namespace Crowny
         bool GetIsMuted() const { return m_IsMuted; }
 
         AudioSourceState GetState() const;
+
     private:
         bool m_IsMuted;
         Ref<Crowny::AudioClip> m_AudioClip;
@@ -178,10 +179,7 @@ namespace Crowny
         AudioListenerComponent() = default;
         AudioListenerComponent(const AudioListenerComponent&) = default;
 
-        void Initialize()
-        {
-            m_Internal = gAudio().CreateListener();
-        }
+        void Initialize() { m_Internal = gAudio().CreateListener(); }
 
     private:
         Ref<AudioListener> m_Internal;
@@ -209,9 +207,9 @@ namespace Crowny
         void OnDestroy();
 
     private:
-        typedef void(CW_THUNKCALL *OnStartThunkDef) (MonoObject*, MonoException**);
-        typedef void(CW_THUNKCALL *OnUpdateThunkDef) (MonoObject*, MonoException**);
-        typedef void(CW_THUNKCALL *OnDestroyThunkDef) (MonoObject*, MonoException**);
+        typedef void(CW_THUNKCALL* OnStartThunkDef)(MonoObject*, MonoException**);
+        typedef void(CW_THUNKCALL* OnUpdateThunkDef)(MonoObject*, MonoException**);
+        typedef void(CW_THUNKCALL* OnDestroyThunkDef)(MonoObject*, MonoException**);
 
         CWMonoClass* m_Class = nullptr;
         std::vector<CWMonoField*> m_DisplayableFields;

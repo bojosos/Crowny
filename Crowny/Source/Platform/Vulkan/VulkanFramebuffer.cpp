@@ -6,7 +6,7 @@
 
 namespace Crowny
 {
-    
+
     VulkanFramebuffer::VulkanFramebuffer(VulkanResourceManager* owner, VulkanRenderPass* renderPass,
                                          const VulkanFramebufferDesc& desc)
       : VulkanResource(owner, false), m_RenderPass(renderPass), m_NumLayers(desc.LayerCount)

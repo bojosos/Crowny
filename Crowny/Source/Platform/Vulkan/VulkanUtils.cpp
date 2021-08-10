@@ -48,7 +48,8 @@ namespace Crowny
             return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         case TextureWrap::CLAMP_TO_BORDER:
             return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-        default: return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        default:
+            return VK_SAMPLER_ADDRESS_MODE_REPEAT;
         }
     }
 
@@ -70,10 +71,9 @@ namespace Crowny
             return VK_COMPARE_OP_GREATER;
         case CompareFunction::GREATER_EQUAL:
             return VK_COMPARE_OP_GREATER_OR_EQUAL;
-        default: return VK_COMPARE_OP_ALWAYS;
+        default:
+            return VK_COMPARE_OP_ALWAYS;
         }
-
-        
     }
 
     VkCullModeFlagBits VulkanUtils::GetCullMode(CullingMode mode)
@@ -171,10 +171,9 @@ namespace Crowny
             return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
         case COMPUTE_SHADER:
             return VK_SHADER_STAGE_COMPUTE_BIT;
-        default: return VK_SHADER_STAGE_VERTEX_BIT;
+        default:
+            return VK_SHADER_STAGE_VERTEX_BIT;
         }
-
-        
     }
 
     VkPipelineStageFlags VulkanUtils::ShaderToPipelineStage(VkShaderStageFlags shaderStageFlags)
@@ -292,7 +291,8 @@ namespace Crowny
             return VK_FORMAT_D32_SFLOAT;
         case TextureFormat::DEPTH24STENCIL8:
             return VK_FORMAT_D24_UNORM_S8_UINT;
-        default: return VK_FORMAT_R8_UNORM;
+        default:
+            return VK_FORMAT_R8_UNORM;
         }
     }
 
