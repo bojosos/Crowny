@@ -13,13 +13,12 @@
 
 namespace Crowny
 {
-    
+
     VulkanUniformParams::VulkanUniformParams(const Ref<UniformParamInfo>& params) : UniformParams(params)
     {
         VulkanUniformParamInfo& paramInfo = static_cast<VulkanUniformParamInfo&>(*m_ParamInfo.get());
 
         uint32_t numParamBlocks = paramInfo.GetNumElements(UniformParamInfo::ParamType::ParamBlock);
-        CW_ENGINE_INFO("Param blocks {0}: ", numParamBlocks);
         uint32_t numTextures = paramInfo.GetNumElements(UniformParamInfo::ParamType::Texture);
         uint32_t numStorageTextures = paramInfo.GetNumElements(UniformParamInfo::ParamType::LoadStoreTexture);
         uint32_t numBuffers = paramInfo.GetNumElements(UniformParamInfo::ParamType::Buffer);
@@ -337,7 +336,7 @@ namespace Crowny
             uint32_t bindIdx = paramInfo.GetBindingIdx(set, slot);
             VkDescriptorSetLayoutBinding* bindingsPerSet = paramInfo.GetBindings(set);
             VkPipelineStageFlags stages = VulkanUtils::ShaderToPipelineStage(bindingsPerSet[bindIdx].stageFlags);
-
+            CW_ENGINE_INFO(stages);
             buffer.RegisterBuffer(res, BufferUseFlagBits::Uniform, VulkanAccessFlagBits::Read, stages);
             CW_ENGINE_ASSERT(m_UniformBuffers[i] != VK_NULL_HANDLE);
             VkBuffer vkBuffer = res->GetHandle();
@@ -439,7 +438,7 @@ namespace Crowny
             PerSetData& data = m_PerSetData[i];
             if (!m_SetsDirty[i])
                 continue;
-            
+
             if (data.LatestSet->IsBound())
             {
                 data.LatestSet = nullptr;

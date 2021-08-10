@@ -49,19 +49,10 @@ namespace Crowny
 
     MonoType* MonoUtils::GetType(MonoClass* monoClass) { return mono_class_get_type(monoClass); }
 
-    uint32_t MonoUtils::NewGCHandle(MonoObject* object, bool pinned)
-    {
-        return mono_gchandle_new(object, pinned);
-    }
-    
-    void MonoUtils::FreeGCHandle(uint32_t handle)
-    {
-        mono_gchandle_free(handle);
-    }
-    
-    MonoObject* MonoUtils::GetObjectFromGCHandle(uint32_t handle)
-    {
-        return mono_gchandle_get_target(handle);
-    }
+    uint32_t MonoUtils::NewGCHandle(MonoObject* object, bool pinned) { return mono_gchandle_new(object, pinned); }
+
+    void MonoUtils::FreeGCHandle(uint32_t handle) { mono_gchandle_free(handle); }
+
+    MonoObject* MonoUtils::GetObjectFromGCHandle(uint32_t handle) { return mono_gchandle_get_target(handle); }
 
 } // namespace Crowny

@@ -48,19 +48,18 @@ namespace Crowny
         static void FreeGCHandle(uint32_t handle);
         static MonoObject* GetObjectFromGCHandle(uint32_t handle);
 
-        template <class T, class... Args>
-        static void InvokeThunk(T* thunk, Args... args)
+        template <class T, class... Args> static void InvokeThunk(T* thunk, Args... args)
         {
             MonoException* exception = nullptr;
             thunk(std::forward<Args>(args)..., &exception);
             CheckException(exception);
         }
     };
-    
+
 } // namespace Crowny
 
 #ifdef CW_PLATFORM_WIN32
-    #define CW_THUNKCALL CW_STDCALL
+#define CW_THUNKCALL CW_STDCALL
 #else
-    #define CW_THUNKCALL
+#define CW_THUNKCALL
 #endif

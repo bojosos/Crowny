@@ -31,7 +31,7 @@ namespace Crowny
     }
 
     UniformBufferBlock::UniformBufferBlock(uint32_t size, BufferUsage usage)
-      : m_CachedData(nullptr), m_Usage(usage), m_Size(size)
+      : m_CachedData(nullptr), m_Usage(usage), m_Size(size), m_BufferDirty(false)
     {
         if (m_Size > 0)
         {

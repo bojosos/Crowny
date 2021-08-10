@@ -6,17 +6,14 @@
 
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/FileSystem.h"
-#include "Crowny/Common/Timer.h"
 #include "Crowny/Events/ImGuiEvent.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/RenderAPI/Texture.h"
-#include "Crowny/RenderAPI/UniformParams.h"
 #include "Crowny/Renderer/IDBufferRenderer.h"
 #include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Scene/SceneSerializer.h"
 #include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
-#include "Crowny/Utils/ShaderCompiler.h"
 
 #include "Editor/EditorAssets.h"
 
@@ -41,16 +38,6 @@ namespace Crowny
     EditorCamera EditorLayer::s_EditorCamera = EditorCamera(30.0f, 1280.0f / 720.0f, 0.1f, 1000.0f);
 
     EditorLayer::EditorLayer() : Layer("EditorLayer") {}
-
-    static Ref<VertexBuffer> vbo;
-    static Ref<IndexBuffer> ibo;
-    static Ref<GraphicsPipeline> pipeline;
-    static Ref<Shader> vertex, fragment;
-    static Ref<UniformBufferBlock> mvp;
-    static Ref<UniformParams> uniformParams;
-    Ref<RenderTarget> renderTarget;
-
-    class VulkanFramebuffer;
 
     void EditorLayer::OnAttach()
     {
@@ -119,69 +106,11 @@ namespace Crowny
         //ForwardRenderer::Init(); // Why here?
         */
 
-        SceneSerializer serializer(SceneManager::GetActiveScene());
-        serializer.Deserialize("Test.yaml");
-        
-        ShaderCompiler compiler;
-        vertex = Shader::Create(compiler.Compile("/Shaders/vk.vert", VERTEX_SHADER));
-        fragment = Shader::Create(compiler.Compile("/Shaders/vk.frag", FRAGMENT_SHADER));
+        // Ref<Scene> scene;
+        // SceneSerializer serializer(scene);
+        // serializer.Deserialize("Resources/Scenes/Test.yaml");
+        // SceneManager::SetActiveScene(scene);
 
-        struct vert
-        {
-            glm::vec3 v;
-            glm::vec3 c;
-            glm::vec2 t;
-        };
-        vert verts[4] = { { { -0.5f, -0.5f, -10.0f }, { 0.8f, 0.2f, 0.5f }, { 0.0, 0.0 } },
-                          { { 0.5f, 0.5f, -10.0f }, { 0.8f, 0.2f, 0.5f }, { 1.0, 1.0 } },
-                          { { -0.5f, 0.5f, -10.0f }, { 0.8f, 0.2f, 0.5f }, { 0.0, 1.0 } },
-                          { { 0.5f, -0.5f, -10.0f }, { 0.8f, 0.2f, 0.5f }, { 1.0, 0.0 } } };
-        vbo = VertexBuffer::Create(verts, sizeof(verts));
-        vbo->SetLayout({ { ShaderDataType::Float3, "position" },
-                         { ShaderDataType::Float3, "color" },
-                         { ShaderDataType::Float2, "a_TexCoord" } });
-
-        uint16_t indices[6] = { 0, 1, 2, 0, 3, 1 };
-        ibo = IndexBuffer::Create(indices, 6);
-
-        PipelineStateDesc desc;
-        desc.FragmentShader = fragment;
-        desc.VertexShader = vertex;
-
-        pipeline = GraphicsPipeline::Create(desc, vbo->GetLayout());
-        for (auto& desc : vertex->GetUniformDesc()->Uniforms)
-        {
-            CW_ENGINE_INFO("Uniform buffer: {0}, name: {1}, set: {2} slot: {3}, size: {4}", desc.first,
-                           desc.second.Name, desc.second.Set, desc.second.Slot, desc.second.BlockSize);
-        }
-
-        for (auto& desc : fragment->GetUniformDesc()->Textures)
-        {
-            CW_ENGINE_INFO("Texture: {0}, name: {1}, set: {2} slot: {3}", desc.first, desc.second.Name, desc.second.Set,
-                           desc.second.Slot);
-        }
-
-        int width, height, channels;
-        stbi_set_flip_vertically_on_load(1);
-
-        auto [loaded, size] = VirtualFileSystem::Get()->ReadFile("/Textures/unknown.png");
-
-        auto* data = stbi_load_from_memory(loaded, size, &width, &height, &channels, 0);
-        TextureParameters params;
-        params.Width = width;
-        params.Height = height;
-        Ref<Texture> texture = Texture::Create(params);
-        PixelData pd(width, height, 1, TextureFormat::RGBA8);
-        pd.SetBuffer(data);
-        texture->WriteData(pd);
-        pd.SetBuffer(nullptr);
-
-        mvp = UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("MVP").BlockSize,
-              BufferUsage::DYNAMIC_DRAW);
-        uniformParams = UniformParams::Create(pipeline);
-        uniformParams->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "MVP", mvp);
-
-        uniformParams->SetTexture(0, 1, texture, TextureSurface::COMPLETE);
         TextureParameters colorParams;
         colorParams.Width = 1386;
         colorParams.Height = 728;
@@ -200,7 +129,7 @@ namespace Crowny
         rtProps.DepthSurface = { depth };
         rtProps.Width = 1386;
         rtProps.Height = 728;
-        renderTarget = RenderTexture::Create(rtProps);
+        m_RenderTarget = RenderTexture::Create(rtProps);
     }
 
     bool EditorLayer::OnViewportEvent(Event& event)
@@ -264,31 +193,20 @@ namespace Crowny
     }
     void EditorLayer::OnUpdate(Timestep ts)
     {
-        glm::mat4 id(1.0f);
-        mvp->Write(0, &id, sizeof(glm::mat4));
-        mvp->Write(sizeof(glm::mat4), &s_EditorCamera.GetProjection(), sizeof(glm::mat4));
-        mvp->Write(sizeof(glm::mat4) * 2, &s_EditorCamera.GetViewMatrix(), sizeof(glm::mat4));
-
-        auto& rapi = RenderAPI::Get();
-        rapi.SetRenderTarget(renderTarget);
-        rapi.SetGraphicsPipeline(pipeline);
-        rapi.SetViewport(0, 0, 878, 434);
-        rapi.SetVertexBuffers(0, &vbo, 1);
-        rapi.SetIndexBuffer(ibo);
-        rapi.SetUniforms(uniformParams);
-        rapi.DrawIndexed(0, 6, 0, 4);
         Ref<Scene> scene = SceneManager::GetActiveScene();
-        // m_ViewportSize = m_ViewportPanel->GetViewportSize();
+        m_ViewportSize = m_ViewportPanel->GetViewportSize();
         if (m_Temp)
         {
             SceneManager::SetActiveScene(m_Temp);
             m_Temp = nullptr;
         }
         s_EditorCamera.OnUpdate(ts);
-        // SceneRenderer::SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
+        SceneRenderer::SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
         s_EditorCamera.SetViewportSize(500, 250);
 
-        // SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
+        auto& rapi = RenderAPI::Get();
+        rapi.SetRenderTarget(m_RenderTarget);
+        SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
 
         if (m_GameMode && !m_Paused)
         {
@@ -396,6 +314,7 @@ namespace Crowny
         m_HierarchyPanel->Render();
         m_InspectorPanel->Render();
         // m_GLInfoPanel->Render();
+        m_ViewportPanel->SetEditorRenderTarget(m_RenderTarget);
         m_ViewportPanel->Render();
         m_ConsolePanel->Render();
         m_MaterialEditor->Render();

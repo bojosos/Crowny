@@ -8,6 +8,11 @@
 
 namespace Crowny
 {
+
+    /**
+     * @brief A struct containing information about a single vertex.
+     *
+     */
     struct VertexData
     {
         glm::vec4 Position;
@@ -16,6 +21,10 @@ namespace Crowny
         glm::vec4 Color;
     };
 
+    /**
+     * @brief General purpose renderer for rendering 2D objects (text, quads).
+     *
+     */
     class Renderer2D
     {
     public:
@@ -74,6 +83,18 @@ namespace Crowny
          * @param color Color to draw with.
          */
         static void FillRect(const Rect2F& bounds, const Ref<Texture>& texture, const glm::vec4& color);
+
+        /**
+         * @brief Draws a quad on the screen from (0, 0) to (1, 1)
+         *
+         * @param uvs The uvs of the texture we want to use.
+         */
+        static void DrawScreenQuad(const Rect2F& uvs);
+
+        /**
+         * @brief Draws a quad on the screen from (0, 0) to (1, 1)
+         */
+        static void DrawScreenQuad();
 
         /**
          * @brief Draws a string on the screen.

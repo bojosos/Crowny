@@ -97,6 +97,7 @@ namespace Crowny
     void VulkanRenderWindow::RebuildSwapChain()
     {
         Ref<VulkanDevice> device = gVulkanRenderAPI().GetPresentDevice();
+        gVulkanRenderAPI().SetRenderTarget(nullptr);
         device->WaitIdle();
         VulkanSwapChain* oldSwapChain = m_SwapChain;
         m_SwapChain = device->GetResourceManager().Create<VulkanSwapChain>(
