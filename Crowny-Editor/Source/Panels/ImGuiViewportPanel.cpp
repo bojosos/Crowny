@@ -19,7 +19,6 @@
 
 namespace Crowny
 {
-    extern Ref<RenderTarget> renderTarget;
 
     ImGuiViewportPanel::ImGuiViewportPanel(const std::string& name) : ImGuiPanel(name) {}
 
@@ -35,7 +34,7 @@ namespace Crowny
         ImVec2 viewportOffset = ImGui::GetCursorPos();
 
         m_ViewportSize = { viewportPanelSize.x, viewportPanelSize.y };
-        RenderTexture* rt = static_cast<RenderTexture*>(renderTarget.get());
+        RenderTexture* rt = static_cast<RenderTexture*>(m_RenderTarget.get());
         Ref<Texture> texture = rt->GetColorTexture(0);
 
         ImTextureID textureID = ImGui_ImplVulkan_AddTexture(texture);
@@ -100,5 +99,7 @@ namespace Crowny
     }
 
     void ImGuiViewportPanel::SetEventCallback(const EventCallbackFn& onEvent) { OnEvent = onEvent; }
+
+    void ImGuiViewportPanel::SetEditorRenderTarget(const Ref<RenderTarget>& rt) { m_RenderTarget = rt; }
 
 } // namespace Crowny

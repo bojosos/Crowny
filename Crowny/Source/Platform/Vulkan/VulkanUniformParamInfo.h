@@ -47,4 +47,4 @@ namespace Crowny
         VulkanDescriptorLayout** m_Layouts;
         LayoutInfo* m_LayoutInfos;
     };
-}
+} // namespace Crowny

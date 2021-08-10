@@ -4,7 +4,7 @@
 
 namespace Crowny
 {
-    
+
     void AudioSourceComponent::Initialize()
     {
         if (m_Internal != nullptr)
@@ -21,7 +21,7 @@ namespace Crowny
         if (m_PlayOnAwake)
             m_Internal->Play();
     }
-    
+
     void AudioSourceComponent::SetVolume(float volume)
     {
         if (m_Volume == volume)
@@ -85,11 +85,8 @@ namespace Crowny
             m_Internal->SetLooping(loop);
     }
 
-    void AudioSourceComponent::SetPlayOnAwake(bool playOnAwake)
-    {
-        m_PlayOnAwake = playOnAwake;
-    }
-    
+    void AudioSourceComponent::SetPlayOnAwake(bool playOnAwake) { m_PlayOnAwake = playOnAwake; }
+
     void MonoScriptComponent::Initialize()
     {
         if (!m_Class)
@@ -127,11 +124,8 @@ namespace Crowny
         }
     }
 
-    MonoScriptComponent::MonoScriptComponent(const std::string& name)
-    {
-        SetClassName(name);
-    }
-    
+    MonoScriptComponent::MonoScriptComponent(const std::string& name) { SetClassName(name); }
+
     void MonoScriptComponent::SetClassName(const std::string& className)
     {
         m_Class = CWMonoRuntime::GetClientAssembly()->GetClass("Sandbox", className);
@@ -141,8 +135,8 @@ namespace Crowny
             {
                 bool isHidden = field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().HideInInspector);
                 bool isVisible = field->GetVisibility() == CWMonoVisibility::Public ||
-                                    field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().SerializeFieldAttribute) ||
-                                    field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().ShowInInspector);
+                                 field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().SerializeFieldAttribute) ||
+                                 field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().ShowInInspector);
                 if (field != nullptr && !isHidden && isVisible)
                     m_DisplayableFields.push_back(field);
             }
@@ -151,8 +145,8 @@ namespace Crowny
             {
                 bool isHidden = prop->HasAttribute(CWMonoRuntime::GetBuiltinClasses().HideInInspector);
                 bool isVisible = prop->GetVisibility() == CWMonoVisibility::Public ||
-                                    prop->HasAttribute(CWMonoRuntime::GetBuiltinClasses().SerializeFieldAttribute) ||
-                                    prop->HasAttribute(CWMonoRuntime::GetBuiltinClasses().ShowInInspector);
+                                 prop->HasAttribute(CWMonoRuntime::GetBuiltinClasses().SerializeFieldAttribute) ||
+                                 prop->HasAttribute(CWMonoRuntime::GetBuiltinClasses().ShowInInspector);
                 if (prop && !isHidden && isVisible)
                     m_DisplayableProperties.push_back(prop);
             }
@@ -185,5 +179,5 @@ namespace Crowny
             MonoUtils::InvokeThunk(m_OnDestroyThunk, instance);
         }
     }
-    
-}
+
+} // namespace Crowny

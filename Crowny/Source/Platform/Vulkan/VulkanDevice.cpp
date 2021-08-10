@@ -262,7 +262,8 @@ namespace Crowny
         VmaAllocation memory;
         VkResult result = vmaAllocateMemoryForBuffer(m_Allocator, buffer, &allocCreateInfo, &memory, &allocInfo);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        // CW_ENGINE_INFO("Allocating buffer memory: type: {0}, size: {1}", allocInfo.memoryType, allocInfo.size);
+        // CW_ENGINE_INFO("Allocating buffer memory: type: {0}, size: {1}, offset: {2}", allocInfo.memoryType,
+        // allocInfo.size, allocInfo.offset);
 
         result = vkBindBufferMemory(m_LogicalDevice, buffer, allocInfo.deviceMemory, allocInfo.offset);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);

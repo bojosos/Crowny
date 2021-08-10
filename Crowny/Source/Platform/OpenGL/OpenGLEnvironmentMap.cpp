@@ -1,7 +1,7 @@
 /*#include "cwpch.h"
 
 #include "Platform/OpenGL/OpenGLEnvironmentMap.h"
-#include "Crowny/RenderAPI/Framebuffer.h"
+#include "Crowny/RenderAPI/RenderTexture.h"
 
 #include "Crowny/Common/VirtualFileSystem.h"
 
@@ -17,7 +17,7 @@
 namespace Crowny
 {
     OpenGLEnvironmentMap::OpenGLEnvironmentMap(const std::string& filepath)
-    {/*
+    {
         stbi_set_flip_vertically_on_load(true);
         auto [dat, size] = VirtualFileSystem::Get()->ReadFile(filepath);
         int width, height, channels;
@@ -46,7 +46,7 @@ namespace Crowny
     }
 
     static void RenderCube()
-    {/*
+    {
         static unsigned int cubeVAO1 = 0;
         static unsigned int cubeVBO1 = 0;
         if (cubeVAO1 == 0)
@@ -117,7 +117,7 @@ namespace Crowny
     }
 
     static void RenderQuad()
-    {/*
+    {/
         static unsigned int quadVAO = 0;
         static unsigned int quadVBO;
         if (quadVAO == 0)
@@ -170,7 +170,7 @@ namespace Crowny
     }
 
     void OpenGLEnvironmentMap::ToCubemap()
-    {/*
+    {
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LEQUAL);
         glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);

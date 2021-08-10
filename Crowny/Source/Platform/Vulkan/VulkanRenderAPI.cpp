@@ -60,6 +60,7 @@ namespace Crowny
 
     void VulkanRenderAPI::Init()
     {
+        CW_ENGINE_INFO("Init Vulkan");
         VkApplicationInfo appInfo;
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         appInfo.pNext = nullptr;

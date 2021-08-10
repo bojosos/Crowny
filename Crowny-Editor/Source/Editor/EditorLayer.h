@@ -12,6 +12,7 @@
 #include "Panels/ImGuiPanel.h"
 #include "Panels/ImGuiViewportPanel.h"
 
+#include "Crowny/RenderAPI/RenderTarget.h"
 #include "Crowny/Renderer/EditorCamera.h"
 #include "Crowny/Scene/Scene.h"
 
@@ -53,6 +54,7 @@ namespace Crowny
         friend class Time;
         ImGuiMenuBar* m_MenuBar;
         Ref<Scene> m_Temp;
+        Ref<RenderTarget> m_RenderTarget;
 
         ImGuiPanel* m_GLInfoPanel;
         ImGuiInspectorPanel* m_InspectorPanel;

@@ -160,5 +160,5 @@ namespace Crowny
         for (uint32_t i = 0; i < m_NumSets; i++)
             m_Layouts[i] = descManager.GetLayout(m_LayoutInfos[i].Bindings, m_LayoutInfos[i].NumBindings);
     }
-    
-}
+
+} // namespace Crowny

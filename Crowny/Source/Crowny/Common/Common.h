@@ -19,7 +19,7 @@
 #define CW_STDCALL __attribute__((stdcall))
 #elif defined(__GNUC__)
 #define CW_STDCALL __attribute__((stdcall))
-#elif defined (__INTEL_COMPILER)
+#elif defined(__INTEL_COMPILER)
 #define CW_STDCALL __stdcall
 #elif defined(_MSV_VER)
 #define CW_STDCALL __stdcall

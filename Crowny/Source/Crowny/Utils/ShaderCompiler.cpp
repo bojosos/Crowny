@@ -16,6 +16,8 @@
 namespace Crowny
 {
 
+    // TODO: Make sure this dir exists, in project save it as .cache, with options to show hidden files in the asset
+    // browser
     static std::filesystem::path CachePath = "/Cache";
 
     static shaderc_shader_kind ShaderTypeToShaderC(ShaderType shaderType)

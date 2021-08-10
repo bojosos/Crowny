@@ -41,33 +41,29 @@ namespace Crowny
         });
 
         // Create managed script components
-        scene->m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent& sc) {
-            sc.Initialize();
-        });
+        scene->m_Registry.view<MonoScriptComponent>().each(
+          [&](entt::entity entity, MonoScriptComponent& sc) { sc.Initialize(); });
     }
 
     void ScriptRuntime::OnStart()
     {
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
-        activeScene->m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent& sc) {
-            sc.OnStart();
-        });
+        activeScene->m_Registry.view<MonoScriptComponent>().each(
+          [&](entt::entity entity, MonoScriptComponent& sc) { sc.OnStart(); });
     }
 
     void ScriptRuntime::OnUpdate()
     {
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
-        activeScene->m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent& sc) {
-            sc.OnUpdate();
-        });
+        activeScene->m_Registry.view<MonoScriptComponent>().each(
+          [&](entt::entity entity, MonoScriptComponent& sc) { sc.OnUpdate(); });
     }
 
     void ScriptRuntime::OnShutdown()
     {
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
-        activeScene->m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent& sc) {
-            sc.OnDestroy();
-        });
+        activeScene->m_Registry.view<MonoScriptComponent>().each(
+          [&](entt::entity entity, MonoScriptComponent& sc) { sc.OnDestroy(); });
     }
 
 } // namespace Crowny

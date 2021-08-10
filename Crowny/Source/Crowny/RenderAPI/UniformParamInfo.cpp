@@ -166,7 +166,8 @@ namespace Crowny
                 if (m_SetInfos[set].SlotSamplers[set] != (uint32_t)-1)
                     return m_SetInfos[set].SlotSamplers[slot];
             }
-            CW_ENGINE_ERROR("Parameters are of the wrong type. Requested: {0}, actual:", (uint32_t)type, uint32_t(m_SetInfos[set].SlotTypes[slot]));
+            CW_ENGINE_ERROR("Parameters are of the wrong type. Requested: {0}, actual:", (uint32_t)type,
+                            uint32_t(m_SetInfos[set].SlotTypes[slot]));
             return -1;
         }
 

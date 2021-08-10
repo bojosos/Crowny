@@ -25,8 +25,6 @@
 namespace Crowny
 {
 
-    extern Ref<RenderTarget> renderTarget;
-
     ImGuiVulkanLayer::ImGuiVulkanLayer() : ImGuiLayer() {}
 
     void ImGuiVulkanLayer::OnAttach()
@@ -118,16 +116,8 @@ namespace Crowny
         VulkanCmdBuffer* vkCmdBuffer = gVulkanRenderAPI().GetMainCommandBuffer()->GetInternal();
 
         RenderAPI::Get().SetRenderTarget(Application::Get().GetRenderWindow());
-
-        RenderTexture* rt = static_cast<RenderTexture*>(renderTarget.get());
-        Ref<Texture> texture = rt->GetColorTexture(0);
-        VulkanTexture* vkTexture = static_cast<VulkanTexture*>(texture.get());
-        VulkanImage* image = vkTexture->GetImage();
-
-        VkImageSubresourceRange range = image->GetRange(TextureSurface::COMPLETE);
-        vkCmdBuffer->RegisterImageShader(image, range, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                         VulkanAccessFlagBits::Read, VK_SHADER_STAGE_FRAGMENT_BIT);
         gVulkanRenderAPI().GetMainCommandBuffer()->GetInternal()->BeginRenderPass();
+        ImGui_ImplVulkan_TransitionLayouts(vkCmdBuffer);
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkCmdBuffer->GetHandle());
         gVulkanRenderAPI().GetMainCommandBuffer()->GetInternal()->EndRenderPass();
 

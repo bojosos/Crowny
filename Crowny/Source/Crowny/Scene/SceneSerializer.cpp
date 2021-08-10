@@ -107,13 +107,13 @@ namespace Crowny
 
         if (entity.HasComponent<AudioListenerComponent>())
             out << YAML::Key << "AudioListenerComponent";
-        
+
         if (entity.HasComponent<AudioSourceComponent>())
         {
             out << YAML::Key << "AudioSourceComponent";
             out << YAML::BeginMap;
             const auto& asc = entity.GetComponent<AudioSourceComponent>();
-            
+
             out << YAML::Key << "AudioClip" << YAML::Value << 111; // Some uuid here
             out << YAML::Key << "Volume" << YAML::Value << asc.GetVolume();
             out << YAML::Key << "Pitch" << YAML::Value << asc.GetPitch();
@@ -329,7 +329,7 @@ namespace Crowny
                 {
                     auto& asc = deserialized.AddComponent<AudioSourceComponent>();
                     asc.SetPlayOnAwake(source["PlayOnAwake"].as<bool>());
-                    //asc.SetAudioClip(source["AudioClip"].as<Uuid>());
+                    // asc.SetAudioClip(source["AudioClip"].as<Uuid>());
                     asc.SetVolume(source["Volume"].as<float>());
                     asc.SetPitch(source["Pitch"].as<float>());
                     asc.SetMinDistance(source["MinDistance"].as<float>());
@@ -342,7 +342,6 @@ namespace Crowny
                 {
                     serializedComponents[deserialized] = rel;
                 }
-                
             }
 
             for (auto rc : serializedComponents)

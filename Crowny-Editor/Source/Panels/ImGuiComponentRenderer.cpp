@@ -5,7 +5,9 @@
 #include "Crowny/Ecs/Components.h"
 
 #include "Editor/EditorAssets.h"
+#include "Editor/EditorDefaults.h"
 
+#include <backends/imgui_impl_vulkan.h>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 
@@ -17,6 +19,8 @@
 namespace Crowny
 {
 
+    extern void LoadTexture(const std::string& path, Ref<Texture>& out);
+
     template <> void ComponentEditorWidget<TransformComponent>(Entity e)
     {
         auto& t = e.GetComponent<TransformComponent>();
@@ -25,19 +29,19 @@ namespace Crowny
         ImGui::Columns(2);
         ImGui::Text("Transform");
         ImGui::NextColumn();
-        ImGui::DragFloat3("Transform##", glm::value_ptr(t.Position));
+        ImGui::DragFloat3("Transform##", glm::value_ptr(t.Position), DRAG_SENSITIVITY);
         ImGui::NextColumn();
 
         ImGui::Text("Rotation");
         ImGui::NextColumn();
         glm::vec3 deg = glm::degrees(t.Rotation);
-        ImGui::DragFloat3("Rotation##", glm::value_ptr(deg));
+        ImGui::DragFloat3("Rotation##", glm::value_ptr(deg), DRAG_SENSITIVITY);
         ImGui::NextColumn();
         t.Rotation = glm::radians(deg);
 
         ImGui::Text("Scale");
         ImGui::NextColumn();
-        ImGui::DragFloat3("Scale##", glm::value_ptr(t.Scale));
+        ImGui::DragFloat3("Scale##", glm::value_ptr(t.Scale), DRAG_SENSITIVITY);
         ImGui::NextColumn();
         ImGui::Columns(1);
     }
@@ -238,7 +242,7 @@ namespace Crowny
             ImGui::Text("%s", t.Font->GetName().c_str());
             ImGui::Separator();
             //			ImGui::Image(reinterpret_cast<void*>(t.Font->GetTexture()->GetRendererID()),
-            //ImVec2(t.Font->GetTexture()->GetWidth(), t.Font->GetTexture()->GetHeight()));
+            // ImVec2(t.Font->GetTexture()->GetWidth(), t.Font->GetTexture()->GetHeight()));
             ImGui::EndPopup();
         }
 #endif
@@ -259,19 +263,19 @@ namespace Crowny
     {
         auto& t = e.GetComponent<SpriteRendererComponent>();
 
-        /*if(t.Texture)
-            ImGui::Image(reinterpret_cast<void*>(t.Texture->GetRendererID()), { 150.0f, 150.0f });
+        if (t.Texture)
+            ImGui::Image(ImGui_ImplVulkan_AddTexture(t.Texture), { 150.0f, 150.0f });
         else
-            ImGui::Image(reinterpret_cast<void*>(EditorAssets::Get().UnassignedTexture->GetRendererID()), { 150.0f,
-        150.0f });
-        */
+            ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), { 150.0f, 150.0f });
+
         if (ImGui::IsItemClicked())
         {
             std::vector<std::string> outPaths;
             if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
             {
-                // VULKAN IMPL: Fix
-                // t.Texture = Texture2D::Create(outPaths[0]);
+                Ref<Texture> result;
+                LoadTexture(outPaths[0], result);
+                t.Texture = result;
             }
         }
 
@@ -292,34 +296,42 @@ namespace Crowny
         auto& sourceComponent = e.GetComponent<AudioSourceComponent>();
 
         ImGui::Columns(2);
-        
-        ImGui::Text("Audio Clip"); ImGui::NextColumn();
-        ImGui::Text("Audio clip goes here"); ImGui::NextColumn();
 
-        ImGui::Text("Volume"); ImGui::NextColumn();
+        ImGui::Text("Audio Clip");
+        ImGui::NextColumn();
+        ImGui::Text("Audio clip goes here");
+        ImGui::NextColumn();
+
+        ImGui::Text("Volume");
+        ImGui::NextColumn();
         float volume = sourceComponent.GetVolume();
         if (ImGui::SliderFloat("##volume", &volume, 0.0f, 1.0f, "%.2f"))
             sourceComponent.SetVolume(volume);
         ImGui::NextColumn();
 
-        ImGui::Text("Mute"); ImGui::NextColumn();
+        ImGui::Text("Mute");
+        ImGui::NextColumn();
         bool mute = sourceComponent.GetIsMuted();
         if (ImGui::Checkbox("##mute", &mute))
-                sourceComponent.SetIsMuted(mute);
+            sourceComponent.SetIsMuted(mute);
         ImGui::NextColumn();
 
-        ImGui::Text("Pitch"); ImGui::NextColumn();
+        ImGui::Text("Pitch");
+        ImGui::NextColumn();
         float pitch = sourceComponent.GetPitch();
         if (ImGui::SliderFloat("##pitch", &pitch, -3.0f, 3.0f, "%.2f"))
             sourceComponent.SetPitch(pitch);
-        
-        ImGui::NextColumn(); ImGui::Text("Play On Awake"); ImGui::NextColumn();
+
+        ImGui::NextColumn();
+        ImGui::Text("Play On Awake");
+        ImGui::NextColumn();
         bool playOnAwake = sourceComponent.GetPlayOnAwake();
         if (ImGui::Checkbox("##playonawake", &playOnAwake))
             sourceComponent.SetPlayOnAwake(playOnAwake);
         ImGui::NextColumn();
-        
-        ImGui::Text("Loop"); ImGui::NextColumn();
+
+        ImGui::Text("Loop");
+        ImGui::NextColumn();
         bool looping = sourceComponent.GetLooping();
         if (ImGui::Checkbox("##loop", &looping))
             sourceComponent.SetLooping(looping);
@@ -332,8 +344,6 @@ namespace Crowny
         float maxDistance = sourceComponent.GetMaxDistance();
         if (ImGui::SliderFloat("##maxdistance", &maxDistance, -3.0f, 3.0f, "%.2f"))
             sourceComponent.SetMaxDistance(maxDistance);
-
-
 
         ImGui::Columns(1);
     }
@@ -442,45 +452,56 @@ namespace Crowny
                             float min, max, val;
                             rng->GetField("min")->Get(obj, &min); // TODO: cache these
                             rng->GetField("max")->Get(obj, &max);
-                            
+
                             bool slider;
-                            rng->GetField("slider")->Get(obj, &slider); // TODO: fall thourgh to the code down below, with the provided range if we don't need a slider.
+                            rng->GetField("slider")->Get(obj,
+                                                         &slider); // TODO: fall thourgh to the code down below, with
+                                                                   // the provided range if we don't need a slider.
                             field->Get(instance, &val);
                             if (slider && ImGui::SliderFloat("##sliderfloat", &val, min, max))
                                 field->Set(instance, &val); // These should prob be set after compilation, not here
-                        } else if (field->GetPrimitiveType() == MonoPrimitiveType::R64)
+                        }
+                        else if (field->GetPrimitiveType() == MonoPrimitiveType::R64)
                         {
                             float min, max;
                             double val;
                             rng->GetField("min")->Get(obj, &min); // TODO: cache these
                             rng->GetField("max")->Get(obj, &max);
-                            
+
                             bool slider;
-                            rng->GetField("slider")->Get(obj, &slider); // TODO: fall thourgh to the code down below, with the provided range if we don't need a slider.
+                            rng->GetField("slider")->Get(obj,
+                                                         &slider); // TODO: fall thourgh to the code down below, with
+                                                                   // the provided range if we don't need a slider.
                             field->Get(instance, &val);
                             if (slider && ImGui::SliderScalar("##sliderdouble", ImGuiDataType_Double, &val, &min, &max))
                                 field->Set(instance, &val); // These should prob be set after compilation, not here
-                        } else if (field->GetPrimitiveType() == MonoPrimitiveType::I8)
+                        }
+                        else if (field->GetPrimitiveType() == MonoPrimitiveType::I8)
                         {
                             float min, max;
                             int8_t val;
                             rng->GetField("min")->Get(obj, &min); // TODO: cache these
                             rng->GetField("max")->Get(obj, &max);
-                            
-                            bool slider;  // TODO: Clamp the values, so that they are in Int8 range
-                            rng->GetField("slider")->Get(obj, &slider); // TODO: fall thourgh to the code down below, with the provided range if we don't need a slider.
+
+                            bool slider; // TODO: Clamp the values, so that they are in Int8 range
+                            rng->GetField("slider")->Get(obj,
+                                                         &slider); // TODO: fall thourgh to the code down below, with
+                                                                   // the provided range if we don't need a slider.
                             field->Get(instance, &val);
                             if (slider && ImGui::SliderInt("##sliderint", (int*)&val, (int8_t)min, (int8_t)max))
                                 field->Set(instance, &val); // These should prob be set after compilation, not here
-                        } else if (field->GetPrimitiveType() == MonoPrimitiveType::I16)
+                        }
+                        else if (field->GetPrimitiveType() == MonoPrimitiveType::I16)
                         {
                             float min, max;
                             int16_t val;
                             rng->GetField("min")->Get(obj, &min); // TODO: cache these
                             rng->GetField("max")->Get(obj, &max);
-                            
+
                             bool slider; // TODO: Clamp the values, so that they are in Int16 range
-                            rng->GetField("slider")->Get(obj, &slider); // TODO: fall thourgh to the code down below, with the provided range if we don't need a slider.
+                            rng->GetField("slider")->Get(obj,
+                                                         &slider); // TODO: fall thourgh to the code down below, with
+                                                                   // the provided range if we don't need a slider.
                             field->Get(instance, &val);
                             if (slider && ImGui::SliderInt("##sliderdouble", (int*)&val, (int16_t)min, (int16_t)max))
                                 field->Set(instance, &val); // These should prob be set after compilation, not here
@@ -514,7 +535,8 @@ namespace Crowny
                         }
                         int64_t value; // do all int cases here (nobody "should" need to use full UINT64_MAX, I hope)
                         field->Get(instance, &value);
-                        std::string strInt = std::to_string(value); // use string so we can accept math expressions ( 1 + 2 -> 3)
+                        std::string strInt =
+                          std::to_string(value); // use string so we can accept math expressions ( 1 + 2 -> 3)
                         if (ImGui::InputText("##field2", &strInt))
                         {
                             if (field->GetPrimitiveType() == MonoPrimitiveType::I8)
@@ -525,7 +547,8 @@ namespace Crowny
                                 else if (val < INT8_MIN)
                                     val = INT8_MIN;
                                 field->Set(instance, &val);
-                            } else if (field->GetPrimitiveType() == MonoPrimitiveType::I16)
+                            }
+                            else if (field->GetPrimitiveType() == MonoPrimitiveType::I16)
                             {
                                 int64_t val = StringUtils::ParseLong(strInt);
                                 if (val < INT16_MAX)
@@ -533,7 +556,8 @@ namespace Crowny
                                 else if (val < INT16_MIN)
                                     val = INT16_MIN;
                                 field->Set(instance, &val);
-                            } else if (field->GetPrimitiveType() == MonoPrimitiveType::I32)
+                            }
+                            else if (field->GetPrimitiveType() == MonoPrimitiveType::I32)
                             {
                                 int64_t val = StringUtils::ParseLong(strInt);
                                 if (val < INT32_MAX)
@@ -541,7 +565,8 @@ namespace Crowny
                                 else if (val < INT32_MIN)
                                     val = INT32_MIN;
                                 field->Set(instance, &val);
-                            } else if (field->GetPrimitiveType() == MonoPrimitiveType::I64)
+                            }
+                            else if (field->GetPrimitiveType() == MonoPrimitiveType::I64)
                             {
                                 int64_t val = StringUtils::ParseLong(strInt);
                                 if (val < INT64_MAX)
@@ -558,7 +583,8 @@ namespace Crowny
                                 else if (val < 0)
                                     val = 0;
                                 field->Set(instance, &val);
-                            } else if (field->GetPrimitiveType() == MonoPrimitiveType::U16)
+                            }
+                            else if (field->GetPrimitiveType() == MonoPrimitiveType::U16)
                             {
                                 int64_t val = StringUtils::ParseLong(strInt);
                                 if (val < UINT16_MAX)
@@ -566,7 +592,8 @@ namespace Crowny
                                 else if (val < 0)
                                     val = 0;
                                 field->Set(instance, &val);
-                            } else if (field->GetPrimitiveType() == MonoPrimitiveType::U32)
+                            }
+                            else if (field->GetPrimitiveType() == MonoPrimitiveType::U32)
                             {
                                 int64_t val = StringUtils::ParseLong(strInt);
                                 if (val < UINT32_MAX)
@@ -574,7 +601,8 @@ namespace Crowny
                                 else if (val < 0)
                                     val = 0;
                                 field->Set(instance, &val);
-                            } else if (field->GetPrimitiveType() == MonoPrimitiveType::U64)
+                            }
+                            else if (field->GetPrimitiveType() == MonoPrimitiveType::U64)
                             {
                                 int64_t val = StringUtils::ParseLong(strInt);
                                 if (val < UINT64_MAX) // not possibe
@@ -582,7 +610,8 @@ namespace Crowny
                                 else if (val < 0)
                                     val = 0;
                                 field->Set(instance, &val);
-                            } else if (field->GetPrimitiveType() == MonoPrimitiveType::Char)
+                            }
+                            else if (field->GetPrimitiveType() == MonoPrimitiveType::Char)
                             {
                                 if (strInt.size() > 1)
                                     strInt = std::string(strInt.data(), 1);

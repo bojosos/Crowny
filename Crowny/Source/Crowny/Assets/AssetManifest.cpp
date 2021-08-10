@@ -11,7 +11,7 @@ namespace Crowny
     AssetManifest::AssetManifest(const std::string& name) : m_Name(name) {}
 
     /*
-    
+
     Source = gAudio().CreateSource();
     Ref<DataStream> stream = FileSystem::OpenFile("test.ogg", true);
     Ref<OggVorbisDecoder> decoder = CreateRef<OggVorbisDecoder>();

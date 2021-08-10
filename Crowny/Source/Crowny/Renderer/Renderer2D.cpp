@@ -1,10 +1,13 @@
 #include "cwpch.h"
 
+#include "Crowny/Renderer/Renderer2D.h"
+
+#include "Crowny/RenderAPI/GraphicsPipeline.h"
 #include "Crowny/RenderAPI/RenderCommand.h"
 #include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/Renderer/Renderer.h"
-#include "Crowny/Renderer/Renderer2D.h"
+#include "Crowny/Utils/ShaderCompiler.h"
 
 #include <freetype-gl.h>
 #include <glm/ext/matrix_transform.hpp>
@@ -18,67 +21,32 @@ namespace Crowny
                                            { 0.5f, -0.5f, 0.0f, 1.0f },
                                            { 0.5f, 0.5f, 0.0f, 1.0f },
                                            { -0.5f, 0.5f, 0.0f, 1.0f } };
-    /*
-        constexpr const char* RequiredSystemUniforms[2] = { "cw_ProjectionMatrix", "cw_ViewMatrix" };
 
-        enum SystemUniformIndices : int32_t
-        {
-            UniformIndex_ProjectionMatrix = 0,
-            UniformIndex_ViewMatrix = 1
-        };
-
-        struct UniformBuffer
-        {
-            byte* Buffer = nullptr;
-            uint32_t Size = 0;
-
-            UniformBuffer() { }
-            UniformBuffer(byte* buffer, uint32_t size) : Buffer(buffer), Size(size) { memset(Buffer, 0, Size); }
-
-        };
-
-        struct Renderer2DSystemUniform
-        {
-            UniformBuffer Buffer;
-            uint32_t Offset = 0;
-
-            Renderer2DSystemUniform() { }
-            Renderer2DSystemUniform(const UniformBuffer& buffer, uint32_t offset) : Buffer(buffer), Offset(offset) { }
-        };
-    */
     struct Renderer2DData
     {
-        Ref<VertexArray> VertexArray;
         Ref<VertexBuffer> VertexBuffer;
         Ref<Shader> Shader;
         Ref<Texture> WhiteTexture;
+        Ref<GraphicsPipeline> Pipeline;
+        Ref<UniformBufferBlock> ProjectionView;
+        Ref<UniformParams> Uniforms;
+        Ref<IndexBuffer> IndexBuffer;
 
         uint32_t IndexCount = 0;
+        uint32_t VertexCount = 0;
         VertexData* Buffer = nullptr;
+        VertexData* TmpBuffer = nullptr;
 
-        std::array<Ref<Texture>, 32> TextureSlots;
+        std::array<Ref<Texture>, 32> Textures;
         uint32_t TextureIndex = 0;
-
-        // std::vector<Renderer2DSystemUniform> SystemUniforms;
-        // std::vector<UniformBuffer> SystemUniformBuffers;
     };
 
     static Renderer2DData s_Data;
 
     void Renderer2D::Init()
     {
-        s_Data.VertexArray = VertexArray::Create();
-        s_Data.VertexBuffer = VertexBuffer::Create(RENDERER_BUFFER_SIZE, BufferUsage::DYNAMIC_DRAW);
-        BufferLayout layout = { { ShaderDataType::Float4, "a_Coordinates" },
-                                { ShaderDataType::Float2, "a_Uvs" },
-                                { ShaderDataType::Float, "a_Tid" },
-                                { ShaderDataType::Float4, "a_Color" } };
 
-        s_Data.VertexBuffer->SetLayout(layout);
-        s_Data.VertexArray->AddVertexBuffer(s_Data.VertexBuffer);
-
-        uint32_t* indices = new uint32_t[RENDERER_INDICES_SIZE];
-
+        uint16_t* indices = new uint16_t[RENDERER_INDICES_SIZE];
         int offset = 0;
         for (int i = 0; i < RENDERER_INDICES_SIZE; i += 6)
         {
@@ -93,54 +61,56 @@ namespace Crowny
             offset += 4;
         }
 
-        Ref<IndexBuffer> ibo;
-        ibo = IndexBuffer::Create(indices, RENDERER_INDICES_SIZE);
-        s_Data.VertexArray->SetIndexBuffer(ibo);
+        s_Data.IndexBuffer = IndexBuffer::Create(indices, RENDERER_INDICES_SIZE);
+        ShaderCompiler compiler;
+        Ref<Shader> vertex = Shader::Create(compiler.Compile("/Shaders/BatchRenderer.vert", VERTEX_SHADER));
+        Ref<Shader> fragment = Shader::Create(compiler.Compile("/Shaders/BatchRenderer.frag", FRAGMENT_SHADER));
+        s_Data.VertexBuffer = VertexBuffer::Create(RENDERER_SPRITE_SIZE, BufferUsage::DYNAMIC_DRAW);
+        BufferLayout layout = { { ShaderDataType::Float4, "a_Coordinates" },
+                                { ShaderDataType::Float2, "a_Uvs" },
+                                { ShaderDataType::Float, "a_Tid" },
+                                { ShaderDataType::Float4, "a_Color" } };
+        s_Data.VertexBuffer->SetLayout(layout);
 
-        // VULKAN IMPL: Fix
-        // s_Data.WhiteTexture = Texture::Create(1, 1);
-        // uint32_t whiteTextureData = 0xffffffff; s_Data.WhiteTexture->SetData(&whiteTextureData, sizeof(uint32_t));
-        s_Data.Shader = Shader::Create("/Shaders/BatchRenderer.glsl");
-        // s_Data.Shader->Bind();
-        // s_Data.SystemUniforms.resize(2);
+        PipelineStateDesc desc;
+        desc.FragmentShader = fragment;
+        desc.VertexShader = vertex;
 
-        // const ShaderUniformBufferList& vsuniforms = s_Data.Shader->GetVSSystemUniforms();
-        /*
-                for (auto* buffdecl : vsuniforms)
-                {
-                    UniformBuffer buffer(new byte[buffdecl->GetSize()], buffdecl->GetSize());
-                    s_Data.SystemUniformBuffers.push_back(buffer);
+        s_Data.Pipeline = GraphicsPipeline::Create(desc, s_Data.VertexBuffer->GetLayout());
+        CW_ENGINE_INFO(vertex->GetUniformDesc()->Uniforms.at("VP").BlockSize);
+        s_Data.ProjectionView =
+          UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("VP").BlockSize, BufferUsage::DYNAMIC_DRAW);
+        s_Data.Uniforms = UniformParams::Create(s_Data.Pipeline);
 
-                    for (auto* decl : buffdecl->GetUniformDeclarations())
-                    {
-                        for (uint32_t j = 0; j < 2; j++)
-                        {
-                            if (decl->GetName() == RequiredSystemUniforms[j])
-                                s_Data.SystemUniforms[j] = Renderer2DSystemUniform(buffer, decl->GetOffset());
-                        }
-                    }
-                }*/
+        s_Data.Uniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "VP", s_Data.ProjectionView);
 
-        s_Data.TextureSlots[s_Data.TextureIndex] = s_Data.WhiteTexture;
+        glm::mat4 cam(1.0f);
+        glm::mat4 v = glm::inverse(glm::mat4(1.0f));
 
-        s_Data.VertexArray->Unbind();
+        TextureParameters params;
+        params.Width = 1;
+        params.Height = 1;
+        params.Shape = TextureShape::TEXTURE_2D;
+        params.Format = TextureFormat::RGBA8;
+
+        s_Data.Textures[0] = Texture::Create(params);
+        PixelData src = PixelData(1, 1, 1, TextureFormat::RGBA8);
+        uint32_t val = 0xffffffff;
+        std::memcpy(src.GetData(), &val, sizeof(uint32_t));
+        s_Data.Textures[0]->WriteData(src); // texture 0 is white
+        s_Data.Buffer = s_Data.TmpBuffer = new VertexData[RENDERER_SPRITE_SIZE];
         delete[] indices;
     }
 
     void Renderer2D::Begin(const Camera& camera, const glm::mat4& viewMatrix)
     {
-        RenderCommand::SetDepthTest(false);
-        //	memcpy(s_Data.SystemUniforms[UniformIndex_ProjectionMatrix].Buffer.Buffer +
-        //s_Data.SystemUniforms[UniformIndex_ProjectionMatrix].Offset, glm::value_ptr(camera.GetProjection()),
-        //sizeof(glm::mat4)); memcpy(s_Data.SystemUniforms[UniformIndex_ViewMatrix].Buffer.Buffer +
-        // s_Data.SystemUniforms[UniformIndex_ViewMatrix].Offset, glm::value_ptr(viewMatrix), sizeof(glm::mat4));
+        s_Data.ProjectionView->Write(0, glm::value_ptr(camera.GetProjection()), sizeof(glm::mat4));
+        s_Data.ProjectionView->Write(sizeof(glm::mat4), glm::value_ptr(viewMatrix), sizeof(glm::mat4));
 
-        // s_Data.Shader->SetVSSystemUniformBuffer(s_Data.SystemUniforms);
-        // s_Data.Shader->Bind();
-        // s_Data.Shader->SetUniformMat4("cw_ProjectionMatrix", camera.GetProjection());
-        //	s_Data.Shader->SetUniformMat4("cw_ViewMatrix", viewMatrix);
-        // s_Data.Buffer = (VertexData*)s_Data.VertexBuffer->Map(0, RENDERER_MAX_SPRITES * 4,
-        // GpuLockOptions::WRITE_DISCARD);
+        RenderAPI::Get().SetGraphicsPipeline(s_Data.Pipeline);
+        RenderAPI::Get().SetViewport(0, 0, 1000, 1000);
+        RenderAPI::Get().SetVertexBuffers(0, &s_Data.VertexBuffer, 1);
+        RenderAPI::Get().SetIndexBuffer(s_Data.IndexBuffer);
     }
 
     float Renderer2D::FindTexture(const Ref<Texture>& texture)
@@ -152,7 +122,7 @@ namespace Crowny
 
         for (uint8_t i = 1; i <= s_Data.TextureIndex; i++)
         {
-            if (s_Data.TextureSlots[i] == texture)
+            if (s_Data.Textures[i] == texture)
             {
                 ts = (float)(i + 1);
                 break;
@@ -168,7 +138,7 @@ namespace Crowny
                   0, RENDERER_MAX_SPRITES * 4,
                   GpuLockOptions::WRITE_DISCARD); // TODO: Begin or semething instead of this
             }
-            s_Data.TextureSlots[++s_Data.TextureIndex] = texture;
+            s_Data.Textures[++s_Data.TextureIndex] = texture;
             ts = (float)s_Data.TextureIndex;
         }
         return ts;
@@ -185,15 +155,16 @@ namespace Crowny
     void Renderer2D::FillRect(const glm::mat4& transform, const Ref<Texture>& texture, const glm::vec4& color)
     {
         float ts = FindTexture(texture);
-        for (uint8_t i = 0; i < 4; i++)
+        for (uint32_t i = 0; i < 4; i++)
         {
-            s_Data.Buffer->Position = QuadVertices[i] * transform;
+            s_Data.Buffer->Position = transform * QuadVertices[i];
             s_Data.Buffer->Uv = QuadUv[i];
             s_Data.Buffer->Tid = ts;
             s_Data.Buffer->Color = color;
             s_Data.Buffer++;
         }
 
+        s_Data.VertexCount += 4;
         s_Data.IndexCount += 6;
     }
 
@@ -277,36 +248,26 @@ namespace Crowny
 
     void Renderer2D::End()
     {
+        void* data =
+          s_Data.VertexBuffer->Map(0, s_Data.VertexCount * sizeof(VertexData), GpuLockOptions::WRITE_DISCARD);
+        std::memcpy(data, s_Data.TmpBuffer, s_Data.VertexCount * sizeof(VertexData));
         s_Data.VertexBuffer->Unmap();
         Flush();
+        s_Data.Buffer = s_Data.TmpBuffer;
         s_Data.IndexCount = 0;
+        s_Data.VertexCount = 0;
         s_Data.TextureIndex = 0;
-        RenderCommand::SetDepthTest(true);
     }
 
     void Renderer2D::Flush()
     {
-        // s_Data.Shader->Bind();
-        // VULKAN IMPL: Fix
-        // for (uint32_t i = 0; i < s_Data.SystemUniformBuffers.size(); i++)
-        {
-            //	s_Data.Shader->SetVSSystemUniformBuffer(s_Data.SystemUniformBuffers[i].Buffer,
-            //s_Data.SystemUniformBuffers[i].Size, i);
-        }
-
-        for (uint8_t i = 0; i <= s_Data.TextureIndex; i++)
-        {
-            //	s_Data.TextureSlots[i]->Bind(i);
-        }
-
-        // s_Data.VertexArray->Bind();
-        RenderCommand::DrawIndexed(s_Data.VertexArray, s_Data.IndexCount);
-
-        for (uint8_t i = 0; i <= s_Data.TextureIndex; i++)
-        {
-            // s_Data.TextureSlots[i]->Unbind(i);
-        }
-        s_Data.VertexArray->Unbind();
+        for (uint32_t i = 0; i < 8; i++)
+            if (s_Data.Textures[i])
+                s_Data.Uniforms->SetTexture(0, 1 + i, s_Data.Textures[i]);
+            else
+                s_Data.Uniforms->SetTexture(0, 1 + i, s_Data.Textures[0]);
+        RenderAPI::Get().SetUniforms(s_Data.Uniforms);
+        RenderAPI::Get().DrawIndexed(0, s_Data.IndexCount, 0, s_Data.VertexCount);
     }
 
     void Renderer2D::Shutdown() {}

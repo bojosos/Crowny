@@ -11,10 +11,7 @@
 namespace Crowny
 {
 
-    OpenGLShader::OpenGLShader(const std::string& filepath) : m_Filepath(filepath)
-    {
-        Load(filepath);
-    }
+    OpenGLShader::OpenGLShader(const std::string& filepath) : m_Filepath(filepath) { Load(filepath); }
 
     OpenGLShader::OpenGLShader(const std::string& name, const std::string& vertSrc, const std::string& fragSrc)
       : m_Filepath("")

@@ -271,7 +271,6 @@ namespace Crowny
                     m_Buffer->Destroy();
                     m_Buffer = newBuffer;
                 }
-
                 return m_Buffer->Map(offset, length);
             }
 
@@ -358,7 +357,6 @@ namespace Crowny
 
         if (m_StagingMemory == nullptr && m_StagingBuffer == nullptr) // directly mapped
             m_Buffer->Unmap();
-
         else // we are using staging buffer/memory
         {
             if (m_StagingBuffer != nullptr)
@@ -375,6 +373,7 @@ namespace Crowny
                 VulkanTransferBuffer* transferCB = vtm.GetTransferBuffer(queueType, localQueueIdx);
 
                 uint32_t useMask = m_Buffer->GetUseInfo(VulkanAccessFlagBits::Read | VulkanAccessFlagBits::Write);
+
                 bool isNormalWrite = false;
                 if (useMask != 0)
                 {
