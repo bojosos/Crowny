@@ -42,7 +42,7 @@ namespace Crowny
         bool m_Minimized = false;
         float m_LastFrameTime = 0.0f;
 
-        LayerStack m_LayerStack;
+        LayerStack* m_LayerStack;
         ImGuiLayer* m_ImGuiLayer;
 
     private:

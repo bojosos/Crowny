@@ -9,7 +9,6 @@
 #include "Crowny/Events/ImGuiEvent.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/RenderAPI/Texture.h"
-#include "Crowny/Renderer/IDBufferRenderer.h"
 #include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Scene/SceneSerializer.h"
 #include "Crowny/Scene/ScriptRuntime.h"
@@ -116,19 +115,28 @@ namespace Crowny
         colorParams.Height = 728;
         colorParams.Usage = TextureUsage::TEXTURE_RENDERTARGET;
 
+        TextureParameters objectId;
+        objectId.Width = 1386;
+        objectId.Height = 728;
+        objectId.Format = TextureFormat::R32I;
+        objectId.Usage = TextureUsage(TextureUsage::TEXTURE_RENDERTARGET | TextureUsage::TEXTURE_DYNAMIC);
+        
         TextureParameters depthParams;
         depthParams.Width = 1386;
         depthParams.Height = 728;
         depthParams.Usage = TextureUsage::TEXTURE_DEPTHSTENCIL;
         depthParams.Format = TextureFormat::DEPTH24STENCIL8;
 
-        Ref<Texture> color = Texture::Create(colorParams);
+        Ref<Texture> color1 = Texture::Create(colorParams);
+        Ref<Texture> color2 = Texture::Create(objectId);
         Ref<Texture> depth = Texture::Create(depthParams);
         RenderTextureProperties rtProps;
-        rtProps.ColorSurfaces[0] = { color };
+        rtProps.ColorSurfaces[0] = { color1 };
+        rtProps.ColorSurfaces[1] = { color2 };
         rtProps.DepthSurface = { depth };
         rtProps.Width = 1386;
         rtProps.Height = 728;
+        
         m_RenderTarget = RenderTexture::Create(rtProps);
     }
 
@@ -186,11 +194,16 @@ namespace Crowny
 
     void EditorLayer::OnDetach()
     {
-        for (ImGuiPanel* win : m_ImGuiWindows)
-        {
-            delete win;
-        }
+        delete m_InspectorPanel;
+        delete m_HierarchyPanel;
+        delete m_ViewportPanel;
+        delete m_MaterialEditor;
+        delete m_ConsolePanel;
+        delete m_AssetBrowser;
+     
+        EditorAssets::Unload();
     }
+    
     void EditorLayer::OnUpdate(Timestep ts)
     {
         Ref<Scene> scene = SceneManager::GetActiveScene();

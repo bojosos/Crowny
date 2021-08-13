@@ -224,10 +224,10 @@ namespace Crowny
             {
                 surface.Framebuffer->Destroy();
                 surface.Framebuffer = nullptr;
-                surface.Sync->Destroy();
-                surface.Sync = nullptr;
                 surface.Image->Destroy();
                 surface.Image = nullptr;
+                surface.Sync->Destroy();
+                surface.Sync = nullptr;
             }
             vkDestroySwapchainKHR(m_Device, m_SwapChain, gVulkanAllocator);
         }

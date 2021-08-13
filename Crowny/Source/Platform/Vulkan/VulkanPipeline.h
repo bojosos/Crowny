@@ -44,7 +44,7 @@ namespace Crowny
 
         VkPipelineShaderStageCreateInfo m_ShaderStageInfos[5];
         VkPipelineRasterizationStateCreateInfo m_RasterizationInfo = {};
-        VkPipelineColorBlendAttachmentState m_BlendAttachmentState = {};
+        VkPipelineColorBlendAttachmentState m_BlendAttachmentStates[MAX_FRAMEBUFFER_COLOR_ATTACHMENTS];
         VkPipelineColorBlendStateCreateInfo m_ColorBlendStateInfo = {};
         VkPipelineInputAssemblyStateCreateInfo m_InputAssemblyInfo = {};
         VkPipelineViewportStateCreateInfo m_ViewportInfo = {};

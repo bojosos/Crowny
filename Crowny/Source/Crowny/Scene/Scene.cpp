@@ -5,7 +5,6 @@
 #include "Crowny/RenderAPI/RenderCommand.h"
 #include "Crowny/Renderer/ForwardPlusRenderer.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
-#include "Crowny/Renderer/IDBufferRenderer.h"
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Scene/Scene.h"
@@ -82,7 +81,6 @@ namespace Crowny
     {
         m_ViewportWidth = width;
         m_ViewportHeight = height;
-        IDBufferRenderer::OnResize(width, height);
         m_Registry.view<CameraComponent>().each([&](auto& e, auto& cc) {
             //		if(!cc.FixedAspectRatio)
             cc.Camera.SetViewportSize(width, height);

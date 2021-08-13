@@ -6,7 +6,6 @@
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/RenderAPI/RenderCommand.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
-#include "Crowny/Renderer/IDBufferRenderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
 
 namespace Crowny
@@ -80,7 +79,7 @@ namespace Crowny
         for (auto ee : group)
         {
             auto [transform, sprite] = scene->m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
-            Renderer2D::FillRect(transform.GetTransform(), sprite.Texture, sprite.Color);
+            Renderer2D::FillRect(transform.GetTransform(), sprite.Texture, sprite.Color, (uint32_t)ee);
             s_Stats.Vertices += 6;
             s_Stats.Triangles += 2;
         }

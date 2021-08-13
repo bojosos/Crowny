@@ -12,6 +12,8 @@
 #define VMA_IMPLEMENTATION
 #include <vulkan/vk_mem_alloc.h>
 
+#define CW_DEBUG 1
+
 namespace Crowny
 {
     VkAllocationCallbacks* gVulkanAllocator = nullptr;
@@ -60,7 +62,6 @@ namespace Crowny
 
     void VulkanRenderAPI::Init()
     {
-        CW_ENGINE_INFO("Init Vulkan");
         VkApplicationInfo appInfo;
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         appInfo.pNext = nullptr;
@@ -339,6 +340,7 @@ namespace Crowny
     {
         VulkanTransferManager::Shutdown();
         VulkanRenderPasses::Shutdown();
+        VulkanGpuBufferManager::Shutdown();
         m_CommandBuffer = nullptr;
         for (uint32_t i = 0; i < (uint32_t)m_Devices.size(); i++)
             m_Devices[i]->WaitIdle();
@@ -349,11 +351,6 @@ namespace Crowny
 #endif
 
         vkDestroyInstance(m_Instance, gVulkanAllocator);
-    }
-
-    void VulkanRenderAPI::PrintAllocationInfo(VmaAllocation allocation) const
-    {
-        CW_ENGINE_INFO("Freeing memory: type: {0}, size: {1}", allocation->GetType(), allocation->GetSize());
     }
 
     void VulkanRenderAPI::InitCaps()
@@ -471,3 +468,4 @@ namespace Crowny
 
     VulkanRenderAPI& gVulkanRenderAPI() { return static_cast<VulkanRenderAPI&>(RenderAPI::Get()); }
 } // namespace Crowny
+#undef CW_DEBUG

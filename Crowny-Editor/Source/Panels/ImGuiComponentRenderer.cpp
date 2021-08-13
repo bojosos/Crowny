@@ -264,10 +264,9 @@ namespace Crowny
         auto& t = e.GetComponent<SpriteRendererComponent>();
 
         if (t.Texture)
-            ImGui::Image(ImGui_ImplVulkan_AddTexture(t.Texture), { 150.0f, 150.0f });
+            ImGui::Image(ImGui_ImplVulkan_AddTexture(t.Texture), { 50.0f, 50.0f}, { 0, 1 }, { 1, 0 });
         else
-            ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), { 150.0f, 150.0f });
-
+            ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), { 50.0f, 50.0f }, { 0, 1 }, { 1, 0 });
         if (ImGui::IsItemClicked())
         {
             std::vector<std::string> outPaths;
@@ -279,6 +278,7 @@ namespace Crowny
             }
         }
 
+        ImGui::SameLine();
         ImGui::ColorEdit4("Color", glm::value_ptr(t.Color));
     }
 

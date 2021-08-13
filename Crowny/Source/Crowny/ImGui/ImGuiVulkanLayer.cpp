@@ -20,8 +20,6 @@
 
 #include <imgui.h>
 
-#include <vulkan/vulkan.hpp>
-
 namespace Crowny
 {
 
@@ -33,13 +31,6 @@ namespace Crowny
         VkDescriptorPoolSize pool_sizes[] = { { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
                                               { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
                                               { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-                                              { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-                                              { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
-                                              { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-                                              { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
-                                              { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-                                              { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-                                              { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
                                               { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 } };
 
         VkDescriptorPoolCreateInfo poolCreateInfo{};
@@ -49,9 +40,9 @@ namespace Crowny
         poolCreateInfo.poolSizeCount = std::size(pool_sizes);
         poolCreateInfo.pPoolSizes = pool_sizes;
 
-        VkDescriptorPool imguiPool;
+        
         VkResult result = vkCreateDescriptorPool(gVulkanRenderAPI().GetPresentDevice()->GetLogicalDevice(),
-                                                 &poolCreateInfo, nullptr, &imguiPool);
+                                                 &poolCreateInfo, gVulkanAllocator, &m_ImguiPool);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
         Application& app = Application::Get();
@@ -64,7 +55,7 @@ namespace Crowny
         init_info.Device = gVulkanRenderAPI().GetPresentDevice()->GetLogicalDevice();
         uint32_t numQueues = gVulkanRenderAPI().GetPresentDevice()->GetNumQueues(GRAPHICS_QUEUE);
         init_info.Queue = gVulkanRenderAPI().GetPresentDevice()->GetQueue(GRAPHICS_QUEUE, numQueues - 1)->GetHandle();
-        init_info.DescriptorPool = imguiPool;
+        init_info.DescriptorPool = m_ImguiPool;
         init_info.MinImageCount = static_cast<VulkanRenderWindow*>(Application::Get().GetRenderWindow().get())
                                     ->GetSwapChain()
                                     ->GetColorSurfacesCount();
@@ -97,8 +88,11 @@ namespace Crowny
 
     void ImGuiVulkanLayer::OnDetach()
     {
+        gVulkanRenderAPI().GetPresentDevice()->WaitIdle();
+        ImGui_ImplVulkan_ClearTextures();
         ImGui_ImplVulkan_Shutdown();
         ImGuiLayer::OnDetach();
+        vkDestroyDescriptorPool(gVulkanRenderAPI().GetPresentDevice()->GetLogicalDevice(), m_ImguiPool, gVulkanAllocator);
     }
 
     void ImGuiVulkanLayer::Begin()

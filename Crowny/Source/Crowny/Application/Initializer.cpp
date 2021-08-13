@@ -7,7 +7,6 @@
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/ForwardPlusRenderer.h"
-#include "Crowny/Renderer/IDBufferRenderer.h"
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Scene/SceneManager.h"
@@ -48,7 +47,6 @@ namespace Crowny
         Renderer2D::Init();
         /*
         ForwardPlusRenderer::Init();
-        IDBufferRenderer::Init();
         FontManager::Add(CreateRef<Font>("Roboto Thin", "/Fonts/" + DEFAULT_FONT_FILENAME, 64)); // default font, move
         out of here
 */
@@ -70,12 +68,16 @@ namespace Crowny
 
     void Initializer::Shutdown()
     {
-        Renderer2D::Shutdown(); /*
+        Renderer2D::Shutdown();
+        SamplerState::s_DefaultSamplerState = nullptr;
+        /*
         Renderer::Shutdown();
         ForwardPlusRenderer::Shutdown();
         SceneManager::Shutdown();
-        VirtualFileSystem::Shutdown();*/
+        VirtualFileSystem::Shutdown();
+        */
         RenderAPI::Get().Shutdown();
+        AudioManager::Shutdown();
     }
 
 } // namespace Crowny

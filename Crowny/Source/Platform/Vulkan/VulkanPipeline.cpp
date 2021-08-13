@@ -95,9 +95,12 @@ namespace Crowny
         m_RasterizationInfo.depthClampEnable = VK_FALSE;
         m_RasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
 
-        m_BlendAttachmentState.colorWriteMask =
-          VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        m_BlendAttachmentState.blendEnable = VK_FALSE;
+        for (uint32_t i = 0; i < MAX_FRAMEBUFFER_COLOR_ATTACHMENTS; i++)
+        {
+            m_BlendAttachmentStates[i] = {};
+            m_BlendAttachmentStates[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+            m_BlendAttachmentStates[i].blendEnable = VK_FALSE;
+        }
 
         m_ColorBlendStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
         m_ColorBlendStateInfo.pNext = nullptr;
@@ -105,7 +108,7 @@ namespace Crowny
         m_ColorBlendStateInfo.logicOp = VK_LOGIC_OP_NO_OP;
         m_ColorBlendStateInfo.logicOpEnable = VK_FALSE;
         m_ColorBlendStateInfo.attachmentCount = 1;
-        m_ColorBlendStateInfo.pAttachments = &m_BlendAttachmentState;
+        m_ColorBlendStateInfo.pAttachments = m_BlendAttachmentStates;
         m_ColorBlendStateInfo.blendConstants[0] = 0.0f;
         m_ColorBlendStateInfo.blendConstants[1] = 0.0f;
         m_ColorBlendStateInfo.blendConstants[2] = 0.0f;
@@ -234,7 +237,7 @@ namespace Crowny
     VulkanGraphicsPipeline::~VulkanGraphicsPipeline()
     {
         for (auto& entry : m_Pipelines)
-            delete entry.second;
+            entry.second->Destroy();
     }
 
     VulkanPipeline* VulkanGraphicsPipeline::GetPipeline(VulkanRenderPass* renderpass, DrawMode drawMode)
