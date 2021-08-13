@@ -2,8 +2,11 @@
 
 #include "Crowny/ImGui/ImGuiLayer.h"
 
+#include <vulkan/vulkan.hpp>
+
 namespace Crowny
 {
+
     class ImGuiVulkanLayer : public ImGuiLayer
     {
     public:
@@ -15,5 +18,8 @@ namespace Crowny
 
         virtual void Begin() override;
         virtual void End() override;
+
+    private:
+        VkDescriptorPool m_ImguiPool;    
     };
 } // namespace Crowny

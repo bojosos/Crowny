@@ -39,6 +39,8 @@ namespace Crowny
     {
         CW_ENGINE_ASSERT(!s_Instance, "Application already exists!");
         s_Instance = this;
+        
+        m_LayerStack = new LayerStack();
         RenderWindowProperties props;
         props.Title = name;
         props.Width = 1920;
@@ -71,19 +73,21 @@ namespace Crowny
 
     Application::~Application()
     {
+        delete m_LayerStack;
         Renderer::Shutdown();
+        m_Window = nullptr;
         Initializer::Shutdown();
     }
 
     void Application::PushLayer(Layer* layer)
     {
-        m_LayerStack.PushLayer(layer);
+        m_LayerStack->PushLayer(layer);
         layer->OnAttach();
     }
 
     void Application::PushOverlay(Layer* layer)
     {
-        m_LayerStack.PushOverlay(layer);
+        m_LayerStack->PushOverlay(layer);
         layer->OnAttach();
     }
 
@@ -95,7 +99,7 @@ namespace Crowny
         dispatcher.Dispatch<WindowCloseEvent>(CW_BIND_EVENT_FN(Application::OnWindowClose));
         dispatcher.Dispatch<WindowResizeEvent>(CW_BIND_EVENT_FN(Application::OnWindowResize));
 
-        for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
+        for (auto it = m_LayerStack->rbegin(); it != m_LayerStack->rend(); ++it)
         {
             (*it)->OnEvent(e);
             if (e.Handled)
@@ -117,14 +121,14 @@ namespace Crowny
 
             if (!m_Minimized)
             {
-                for (Layer* layer : m_LayerStack)
+                for (Layer* layer : *m_LayerStack)
                     layer->OnUpdate(timestep);
 
                 if (m_ImGuiLayer)
                 {
                     m_ImGuiLayer->Begin();
                     {
-                        for (Layer* layer : m_LayerStack)
+                        for (Layer* layer : *m_LayerStack)
                             layer->OnImGuiRender();
                     }
                     m_ImGuiLayer->End();

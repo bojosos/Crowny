@@ -217,7 +217,6 @@ GENERATED += $(OBJDIR)/Frustum.o
 GENERATED += $(OBJDIR)/GpuBuffer.o
 GENERATED += $(OBJDIR)/GraphicsContext.o
 GENERATED += $(OBJDIR)/GraphicsPipeline.o
-GENERATED += $(OBJDIR)/IDBufferRenderer.o
 GENERATED += $(OBJDIR)/ImGuiBuild.o
 GENERATED += $(OBJDIR)/ImGuiConsoleBuffer.o
 GENERATED += $(OBJDIR)/ImGuiLayer.o
@@ -361,7 +360,6 @@ OBJECTS += $(OBJDIR)/Frustum.o
 OBJECTS += $(OBJDIR)/GpuBuffer.o
 OBJECTS += $(OBJDIR)/GraphicsContext.o
 OBJECTS += $(OBJDIR)/GraphicsPipeline.o
-OBJECTS += $(OBJDIR)/IDBufferRenderer.o
 OBJECTS += $(OBJDIR)/ImGuiBuild.o
 OBJECTS += $(OBJDIR)/ImGuiConsoleBuffer.o
 OBJECTS += $(OBJDIR)/ImGuiLayer.o
@@ -709,9 +707,6 @@ $(OBJDIR)/ForwardPlusRenderer.o: Source/Crowny/Renderer/ForwardPlusRenderer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ForwardRenderer.o: Source/Crowny/Renderer/ForwardRenderer.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/IDBufferRenderer.o: Source/Crowny/Renderer/IDBufferRenderer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Material.o: Source/Crowny/Renderer/Material.cpp

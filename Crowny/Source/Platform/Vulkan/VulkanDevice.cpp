@@ -153,7 +153,7 @@ namespace Crowny
         uint32_t curIdx = queueIdx % numQueues;
         while (curIdx < MAX_QUEUES_PER_TYPE)
         {
-            //  idMask |= CommandSyncMask::GetGlobalQueueMask(type, curIdx);
+            idMask |= CommandSyncMask::GetGlobalQueueMask(type, curIdx);
             curIdx += numQueues;
         }
         return idMask;
@@ -246,8 +246,7 @@ namespace Crowny
         VmaAllocation memory;
         VkResult result = vmaAllocateMemoryForImage(m_Allocator, image, &allocCreateInfo, &memory, &allocInfo);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        // CW_ENGINE_INFO("Allocating image memory: type: {0}, size: {1}", allocInfo.memoryType, allocInfo.size);
-
+        
         result = vkBindImageMemory(m_LogicalDevice, image, allocInfo.deviceMemory, allocInfo.offset);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         return memory;
@@ -262,9 +261,7 @@ namespace Crowny
         VmaAllocation memory;
         VkResult result = vmaAllocateMemoryForBuffer(m_Allocator, buffer, &allocCreateInfo, &memory, &allocInfo);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        // CW_ENGINE_INFO("Allocating buffer memory: type: {0}, size: {1}, offset: {2}", allocInfo.memoryType,
-        // allocInfo.size, allocInfo.offset);
-
+        
         result = vkBindBufferMemory(m_LogicalDevice, buffer, allocInfo.deviceMemory, allocInfo.offset);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         return memory;
@@ -274,14 +271,12 @@ namespace Crowny
     {
         VmaAllocationInfo allocInfo;
         vmaGetAllocationInfo(m_Allocator, allocation, &allocInfo);
-
         memory = allocInfo.deviceMemory;
         offset = allocInfo.offset;
     }
 
     void VulkanDevice::FreeMemory(VmaAllocation allocation)
-    {
-        // gVulkanRenderAPI().PrintAllocationInfo(allocation);
+    {   
         vmaFreeMemory(m_Allocator, allocation);
     }
 

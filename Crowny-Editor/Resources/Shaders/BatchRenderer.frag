@@ -5,12 +5,14 @@
 layout(location = 0) in DATA
 {
 	vec4 position;
+	vec4 color;
 	vec2 uv;
 	flat float tid;
-	vec4 color;
+    flat int objectId;
 } fs_in;
 
-layout(location = 0) out vec4 color;
+layout(location = 0) out vec4 color1;
+layout(location = 1) out int color2;
 
 layout(binding = 1) uniform sampler2D u_Texture1; // white
 layout(binding = 2) uniform sampler2D u_Texture2;
@@ -37,5 +39,6 @@ void main() {
     case 7: texColor = fs_in.color * texture(u_Texture8, fs_in.uv); break;
     }
     
-    color = texColor * fs_in.color;
+    color1 = texColor;
+    color2 = int(fs_in.objectId);
 }

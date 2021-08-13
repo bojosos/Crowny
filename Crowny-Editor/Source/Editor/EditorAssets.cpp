@@ -58,4 +58,14 @@ namespace Crowny
         LoadTexture(FolderIcon, s_Library.FolderIcon);
         LoadTexture(FileIcon, s_Library.FileIcon);
     }
+    
+    void EditorAssets::Unload()
+    {
+        s_Library.UnassignedTexture = nullptr;
+        s_Library.PlayIcon = nullptr;
+        s_Library.StopIcon = nullptr;
+        s_Library.PauseIcon = nullptr;
+        s_Library.FolderIcon = nullptr;
+        s_Library.FileIcon = nullptr;
+    }
 } // namespace Crowny
