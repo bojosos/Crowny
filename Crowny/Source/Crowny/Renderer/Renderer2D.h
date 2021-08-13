@@ -16,9 +16,10 @@ namespace Crowny
     struct VertexData
     {
         glm::vec4 Position;
+        glm::vec4 Color;
         glm::vec2 Uv;
         float Tid;
-        glm::vec4 Color;
+        int32_t ObjectID;
     };
 
     /**
@@ -65,7 +66,7 @@ namespace Crowny
          * @param texture Texture to use.
          * @param color Color to draw with.
          */
-        static void FillRect(const glm::mat4& transform, const Ref<Texture>& texture, const glm::vec4& color);
+        static void FillRect(const glm::mat4& transform, const Ref<Texture>& texture, const glm::vec4& color, uint32_t entityId);
 
         /**
          * @brief Draws a filled Rectangle.
@@ -73,7 +74,7 @@ namespace Crowny
          * @param bounds Bounds of the rectangle.
          * @param color Color to draw with.
          */
-        static void FillRect(const Rect2F& bounds, const glm::vec4& color);
+        static void FillRect(const Rect2F& bounds, const glm::vec4& color, uint32_t entityId);
 
         /**
          * @brief Draws a filled rectangle.
@@ -82,7 +83,7 @@ namespace Crowny
          * @param texture Texture to use.
          * @param color Color to draw with.
          */
-        static void FillRect(const Rect2F& bounds, const Ref<Texture>& texture, const glm::vec4& color);
+        static void FillRect(const Rect2F& bounds, const Ref<Texture>& texture, const glm::vec4& color, uint32_t entityId);
 
         /**
          * @brief Draws a quad on the screen from (0, 0) to (1, 1)

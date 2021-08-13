@@ -184,6 +184,7 @@ namespace Crowny
 
     VulkanUniformParams::~VulkanUniformParams()
     {
+        CW_ENGINE_INFO("Destroy params");
         uint32_t numSets = m_ParamInfo->GetNumSets();
         for (uint32_t i = 0; i < numSets; i++)
         {
@@ -336,7 +337,6 @@ namespace Crowny
             uint32_t bindIdx = paramInfo.GetBindingIdx(set, slot);
             VkDescriptorSetLayoutBinding* bindingsPerSet = paramInfo.GetBindings(set);
             VkPipelineStageFlags stages = VulkanUtils::ShaderToPipelineStage(bindingsPerSet[bindIdx].stageFlags);
-            CW_ENGINE_INFO(stages);
             buffer.RegisterBuffer(res, BufferUseFlagBits::Uniform, VulkanAccessFlagBits::Read, stages);
             CW_ENGINE_ASSERT(m_UniformBuffers[i] != VK_NULL_HANDLE);
             VkBuffer vkBuffer = res->GetHandle();

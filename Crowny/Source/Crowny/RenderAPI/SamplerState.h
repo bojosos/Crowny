@@ -5,6 +5,8 @@
 namespace Crowny
 {
 
+    class Initializer;
+
     struct SamplerStateDesc
     {
         SamplerStateDesc() = default;
@@ -36,6 +38,7 @@ namespace Crowny
         SamplerStateDesc m_Properties;
 
     private:
+        friend class Initializer;
         static Ref<SamplerState> s_DefaultSamplerState;
     };
 } // namespace Crowny

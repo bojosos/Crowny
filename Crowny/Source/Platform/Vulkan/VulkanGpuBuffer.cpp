@@ -14,6 +14,7 @@ namespace Crowny
       : VulkanResource(owner, false), m_Buffer(buffer), m_Allocation(allocation), m_RowPitch(rowPitch),
         m_SliceHeight(slicePitch)
     {
+     
     }
 
     VulkanBuffer::~VulkanBuffer()

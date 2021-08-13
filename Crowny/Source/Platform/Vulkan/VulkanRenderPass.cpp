@@ -144,6 +144,7 @@ namespace Crowny
     {
         for (auto& entry : m_Variants)
             vkDestroyRenderPass(m_Device, entry.second, gVulkanAllocator);
+        vkDestroyRenderPass(m_Device, m_DefaultRenderPass, gVulkanAllocator);
     }
 
     VkRenderPass VulkanRenderPass::CreateVariant(RenderSurfaceMask loadMask, RenderSurfaceMask readMask,

@@ -19,6 +19,7 @@ namespace Crowny
     {
     public:
         static void Load();
+        static void Unload();
         static EditorAssetsLibrary Get() { return s_Library; }
 
         static const std::string DefaultScriptPath;

@@ -24,7 +24,7 @@ namespace Crowny
         };
 
         UniformParams(const Ref<UniformParamInfo>& desc);
-        virtual ~UniformParams() = default;
+        virtual ~UniformParams();
 
         void SetUniformBlockBuffer(ShaderType type, const std::string& name,
                                    const Ref<UniformBufferBlock>& uniformBuffer);

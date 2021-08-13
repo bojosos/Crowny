@@ -21,6 +21,13 @@ namespace Crowny
         m_SamplerStates = new Ref<SamplerState>[numSamplers];
     }
 
+    UniformParams::~UniformParams()
+    {
+        delete[] m_BufferBlocks;
+        delete[] m_SampledTextureData;
+        delete[] m_SamplerStates;
+    }
+
     void UniformParams::SetUniformBlockBuffer(uint32_t set, uint32_t slot, const Ref<UniformBufferBlock>& uniformBlock)
     {
         uint32_t globalSlot = m_ParamInfo->GetSequentialSlot(UniformParamInfo::ParamType::ParamBlock, set, slot);
