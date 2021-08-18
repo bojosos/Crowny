@@ -12,13 +12,13 @@ GOAL: Run the same code I wrote in a Minecraft clone I made in Unity with Crowny
   * OpenGL, Vulkan
   * Windows, Linux
   
-Roadmap:
-  Finish Vulkan
-  Audio
-  Refactor OpenGL
-  Multithreading?
-  Implement audio using OpenAL
-  Implememt 2D physics using Box2d
-  Implement 3D physics using PhysX
-  Shadows
-  Game builds (Usable engine)
+### Roadmap:
+  * Finish Vulkan
+  * Audio
+  * Refactor OpenGL
+  * Multithreading?
+  * Implement audio using OpenAL
+  * Implememt 2D physics using Box2d
+  * Implement 3D physics using PhysX
+  * Shadows
+  * Game builds (Usable engine)
