@@ -12,10 +12,9 @@ GOAL: Run the same code I wrote in a Minecraft clone I made in Unity with Crowny
   * OpenGL, Vulkan
   * Windows, Linux
   
-<<<<<<< HEAD
 Roadmap:
-  Да взема геометрията и ЕАИ
   Finish Vulkan
+  Audio
   Refactor OpenGL
   Multithreading?
   Implement audio using OpenAL
@@ -23,14 +22,3 @@ Roadmap:
   Implement 3D physics using PhysX
   Shadows
   Game builds (Usable engine)
-=======
-### Roadmap:
-  * Да взема Геометрия и ЕАИ
-  * Finish Vulkan
-  * Refactor OpenGL
-  * Implement audio using OpenAL
-  * Implememt 2D physics using Box2d
-  * Implement 3D physics using PhysX
-  * Shadows
-  * Game builds
->>>>>>> vulkan
