@@ -20,6 +20,6 @@ namespace Crowny
         virtual void End() override;
 
     private:
-        VkDescriptorPool m_ImguiPool;    
+        VkDescriptorPool m_ImguiPool;
     };
 } // namespace Crowny

@@ -58,7 +58,7 @@ namespace Crowny
         LoadTexture(FolderIcon, s_Library.FolderIcon);
         LoadTexture(FileIcon, s_Library.FileIcon);
     }
-    
+
     void EditorAssets::Unload()
     {
         s_Library.UnassignedTexture = nullptr;

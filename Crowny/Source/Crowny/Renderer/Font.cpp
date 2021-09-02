@@ -18,8 +18,8 @@ namespace Crowny
         m_Font = ftgl::texture_font_new_from_memory(m_Atlas, m_Size, mem, memSize);
         m_Font->rendermode = RENDER_SIGNED_DISTANCE_FIELD;
         const char* cache = " !\"#$%&'()*+,-./0123456789:;<=>?"
-                        "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
-                        "`abcdefghijklmnopqrstuvwxyz{|}~";
+                            "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
+                            "`abcdefghijklmnopqrstuvwxyz{|}~";
         texture_font_load_glyphs(m_Font, cache);
 
         TextureParameters tProps;
