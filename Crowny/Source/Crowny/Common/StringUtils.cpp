@@ -43,7 +43,7 @@ namespace Crowny
             return false;
         return std::equal(end.rbegin(), end.rend(), value.rbegin());
     }
-    
+
     void StringUtils::ToLower(std::string& string)
     {
         std::transform(string.begin(), string.end(), string.begin(), [](unsigned char c) { return std::tolower(c); });

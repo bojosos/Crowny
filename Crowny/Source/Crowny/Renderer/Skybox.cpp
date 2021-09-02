@@ -1,14 +1,14 @@
 #include "cwpch.h"
 
-#include "Crowny/Renderer/Skybox.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
+#include "Crowny/Renderer/Skybox.h"
 
-#include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Common/Timer.h"
+#include "Crowny/Common/VirtualFileSystem.h"
 
-#include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
+#include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/Utils/ShaderCompiler.h"
 
 #include <glad/glad.h>
@@ -21,42 +21,18 @@
 namespace Crowny
 {
 
-    float vertices[] = {
-        -1.0f, -1.0f,  1.0f,
-        1.0f, -1.0f,  1.0f,
-        1.0f,  1.0f,  1.0f,
-        -1.0f,  1.0f,  1.0f,
-        -1.0f, -1.0f, -1.0f,
-        -1.0f,  1.0f, -1.0f,
-        1.0f,  1.0f, -1.0f,
-        1.0f, -1.0f, -1.0f,
-        -1.0f,  1.0f, -1.0f,
-        -1.0f,  1.0f,  1.0f,
-        1.0f,  1.0f,  1.0f,
-        1.0f,  1.0f, -1.0f,
-        -1.0f, -1.0f, -1.0f,
-        1.0f, -1.0f, -1.0f,
-        1.0f, -1.0f,  1.0f,
-        -1.0f, -1.0f,  1.0f,
-        1.0f, -1.0f, -1.0f,
-        1.0f,  1.0f, -1.0f,
-        1.0f,  1.0f,  1.0f,
-        1.0f, -1.0f,  1.0f,
-        -1.0f, -1.0f, -1.0f,
-        -1.0f, -1.0f,  1.0f,
-        -1.0f,  1.0f,  1.0f,
-        -1.0f,  1.0f, -1.0f
-    };
+    float vertices[] = { -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,
+                         -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f,
+                         -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  -1.0f,
+                         -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,
+                         1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,
+                         -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f };
 
     uint32_t indices[] = {
-        0,  1,  2, 0,  2,  3,
-        4,  5,  6, 4,  6,  7,
-        8,  9,  10, 8,  10, 11,
-        12, 13, 14, 12, 14, 15,
-        16, 17, 18, 16, 18, 19,
-        20, 21, 22, 20, 22, 23,
+        0,  1,  2,  0,  2,  3,  4,  5,  6,  4,  6,  7,  8,  9,  10, 8,  10, 11,
+        12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23,
     };
-    
+
     Skybox::Skybox(const std::string& filepath)
     {
         // Load equirectangular map
@@ -89,14 +65,13 @@ namespace Crowny
         delete dat;
 
         glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
-        glm::mat4 captureViews[] =
-        {
-            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
-            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
-            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+        glm::mat4 captureViews[] = {
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f))
         };
         auto& rapi = RenderAPI::Get();
         TextureParameters tProps;
@@ -106,12 +81,14 @@ namespace Crowny
         tProps.Shape = TextureShape::TEXTURE_CUBE;
         tProps.Usage = TextureUsage::TEXTURE_RENDERTARGET;
         tProps.Format = TextureFormat::RGBA32F;
-        
+
         m_EnvironmentMap = Texture::Create(tProps);
-        
+
         // Convert HDR equirectangular environment map to cubemap
-        Ref<Shader> eqToCubeVert = Shader::Create(ShaderCompiler().Compile("/Shaders/EqToCube.vert", ShaderType::VERTEX_SHADER));
-        Ref<Shader> eqToCubeFrag = Shader::Create(ShaderCompiler().Compile("/Shaders/EqToCube.frag", ShaderType::FRAGMENT_SHADER));
+        Ref<Shader> eqToCubeVert =
+          Shader::Create(ShaderCompiler().Compile("/Shaders/EqToCube.vert", ShaderType::VERTEX_SHADER));
+        Ref<Shader> eqToCubeFrag =
+          Shader::Create(ShaderCompiler().Compile("/Shaders/EqToCube.frag", ShaderType::FRAGMENT_SHADER));
         PipelineStateDesc desc;
         desc.VertexShader = eqToCubeVert;
         desc.FragmentShader = eqToCubeFrag;
@@ -119,7 +96,8 @@ namespace Crowny
         Ref<GraphicsPipeline> pipeline = GraphicsPipeline::Create(desc, layout);
 
         Ref<UniformParams> uniforms = UniformParams::Create(pipeline);
-        Ref<UniformBufferBlock> block = UniformBufferBlock::Create(eqToCubeVert->GetUniformDesc()->Uniforms.at("VP").BlockSize, BufferUsage::DYNAMIC_DRAW);
+        Ref<UniformBufferBlock> block = UniformBufferBlock::Create(
+          eqToCubeVert->GetUniformDesc()->Uniforms.at("VP").BlockSize, BufferUsage::DYNAMIC_DRAW);
         uniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "VP", block);
         uniforms->SetTexture(0, 1, equirectangularTexture);
         block->Write(0, &captureProjection, sizeof(glm::mat4));
@@ -127,7 +105,7 @@ namespace Crowny
         m_SkyboxVbo = VertexBuffer::Create(vertices, 72 * sizeof(float));
         m_SkyboxIbo = IndexBuffer::Create(indices, 36);
         m_SkyboxVbo->SetLayout(layout);
-        
+
         rapi.SetViewport(0, 0, 512, 512);
         rapi.SetGraphicsPipeline(pipeline);
 
@@ -142,7 +120,7 @@ namespace Crowny
             rtProps.Height = tProps.Height;
             Ref<RenderTexture> cubemap = RenderTexture::Create(rtProps);
             rapi.SetRenderTarget(cubemap);
-            
+
             block->Write(sizeof(glm::mat4), &captureViews[i], sizeof(glm::mat4));
             rapi.SetVertexBuffers(0, &m_SkyboxVbo, 1);
             rapi.SetIndexBuffer(m_SkyboxIbo);
@@ -165,7 +143,7 @@ namespace Crowny
         tProps.Format = TextureFormat::RG32F;
         tProps.Usage = TextureUsage::TEXTURE_RENDERTARGET;
         m_Brdf = Texture::Create(tProps);
-        
+
         RenderTextureProperties rtProps;
         rtProps.Width = tProps.Width;
         rtProps.Height = tProps.Height;
@@ -187,7 +165,7 @@ namespace Crowny
         rapi.SetViewport(0, 0, 512, 512);
         rapi.SetUniforms(uniforms);
         rapi.Draw(0, 3, 1);
-        
+
         CW_ENGINE_INFO("BRDFLut generation took: {0}", t.ElapsedSeconds());
     }
 
@@ -205,7 +183,7 @@ namespace Crowny
         tProps.Faces = tProps.NumArraySlices = 6;
         tProps.Shape = TextureShape::TEXTURE_CUBE;
         m_IrradianceMap = Texture::Create(tProps);
-        
+
         ShaderCompiler compiler;
         Ref<Shader> vertex = Shader::Create(compiler.Compile("/Shaders/filter.vert", VERTEX_SHADER));
         Ref<Shader> fragment = Shader::Create(compiler.Compile("/Shaders/irradiance.frag", FRAGMENT_SHADER));
@@ -218,15 +196,18 @@ namespace Crowny
         Ref<UniformParams> uniforms = UniformParams::Create(pipeline);
 
         std::vector<glm::mat4> matrices = {
-			glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // POSITIVE_X
-			glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // NEGATIVE_X
-			glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // POSITIVE_Y
-			glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // NEGATIVE_Y
-			glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // POSITIVE_Z
-			glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f)), // NEGATIVE_Z
+            glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+                        glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // POSITIVE_X
+            glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+                        glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)),                  // NEGATIVE_X
+            glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // POSITIVE_Y
+            glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),  // NEGATIVE_Y
+            glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // POSITIVE_Z
+            glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f)), // NEGATIVE_Z
         };
-        
-        Ref<UniformBufferBlock> mvp = UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("MVP").BlockSize, BufferUsage::DYNAMIC_DRAW);
+
+        Ref<UniformBufferBlock> mvp =
+          UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("MVP").BlockSize, BufferUsage::DYNAMIC_DRAW);
         uniforms = UniformParams::Create(pipeline);
         uniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "MVP", mvp);
         uniforms->SetTexture(0, 1, m_EnvironmentMap);
@@ -279,7 +260,7 @@ namespace Crowny
         tProps.Faces = tProps.NumArraySlices = 6;
         tProps.Shape = TextureShape::TEXTURE_CUBE;
         m_PrefilteredMap = Texture::Create(tProps);
-        
+
         ShaderCompiler compiler;
         Ref<Shader> vertex = Shader::Create(compiler.Compile("/Shaders/filter.vert", VERTEX_SHADER));
         Ref<Shader> fragment = Shader::Create(compiler.Compile("/Shaders/prefilter.frag", FRAGMENT_SHADER));
@@ -292,19 +273,23 @@ namespace Crowny
         Ref<UniformParams> uniforms = UniformParams::Create(pipeline);
 
         std::vector<glm::mat4> matrices = {
-			glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // POSITIVE_X
-			glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // NEGATIVE_X
-			glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // POSITIVE_Y
-			glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // NEGATIVE_Y
-			glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // POSITIVE_Z
-			glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f)), // NEGATIVE_Z
+            glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+                        glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // POSITIVE_X
+            glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+                        glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)),                  // NEGATIVE_X
+            glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // POSITIVE_Y
+            glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),  // NEGATIVE_Y
+            glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // POSITIVE_Z
+            glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f)), // NEGATIVE_Z
         };
-        
-        Ref<UniformBufferBlock> mvp = UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("MVP").BlockSize, BufferUsage::DYNAMIC_DRAW);
+
+        Ref<UniformBufferBlock> mvp =
+          UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("MVP").BlockSize, BufferUsage::DYNAMIC_DRAW);
         uniforms = UniformParams::Create(pipeline);
         uniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "MVP", mvp);
         uniforms->SetTexture(0, 1, m_EnvironmentMap);
-        Ref<UniformBufferBlock> fragBlock = UniformBufferBlock::Create(fragment->GetUniformDesc()->Uniforms.at("Params").BlockSize, BufferUsage::DYNAMIC_DRAW);
+        Ref<UniformBufferBlock> fragBlock = UniformBufferBlock::Create(
+          fragment->GetUniformDesc()->Uniforms.at("Params").BlockSize, BufferUsage::DYNAMIC_DRAW);
         uniforms->SetUniformBlockBuffer(ShaderType::FRAGMENT_SHADER, "Params", fragBlock);
         for (uint32_t j = 0; j < 6; j++)
         {
@@ -333,8 +318,8 @@ namespace Crowny
                 rapi.DrawIndexed(0, 36, 0, 72);
             }
         }
-        
+
         CW_ENGINE_INFO("Prefiltered cube took: {0}", timer.ElapsedSeconds());
     }
 
-}
+} // namespace Crowny

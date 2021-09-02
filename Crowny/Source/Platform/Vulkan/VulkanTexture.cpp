@@ -648,7 +648,7 @@ namespace Crowny
         VkImage image;
         VkResult result = vkCreateImage(device.GetLogicalDevice(), &m_ImageCreateInfo, gVulkanAllocator, &image);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        
+
         VmaAllocation allocation = device.AllocateMemory(image, memoryFlags);
         return device.GetResourceManager().Create<VulkanImage>(image, allocation, m_ImageCreateInfo.initialLayout,
                                                                m_ImageCreateInfo.format, m_Params);

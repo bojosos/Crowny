@@ -1,22 +1,35 @@
-[19:33:26] [info] CROWNY: Domain Crowny C# Runtime created!
-[19:33:26] [info] CROWNY: Loading debug: Resources/Assemblies/Crowny.dll.mdb
-[19:33:26] [info] CROWNY: Loading debug: Resources/Assemblies/Client.dll.mdb
-[19:33:26] [info] CROWNY: Assembly Crowny.dll loaded.
-[19:33:26] [info] CROWNY: Assembly Client.dll loaded.
-[19:33:26] [info] CROWNY: Assembly corlib loaded.
-[19:33:26] [warning] CROWNY: Creating Window: Crowny Editor
-[19:33:28] [info] CROWNY: BRDFLut generation took: 0.003977
-[19:33:28] [info] CROWNY: Destroy params
-[19:33:28] [info] CROWNY: Destroy params
-[19:33:28] [info] CROWNY: Destroy params
-[19:33:32] [info] CROWNY: Destroy params
-[19:33:32] [error] CROWNY: [1303270965][UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout] : Validation Error: [ UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout ] Object 0: handle = 0x2694078, type = VK_OBJECT_TYPE_COMMAND_BUFFER; | MessageID = 0x4dae5635 | Submitted command buffer expects VkImage 0x40b43c0000000049[] (subresource: aspectMask 0x1 array layer 1, mip level 0) to be in layout VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL--instead, current layout is VK_IMAGE_LAYOUT_UNDEFINED.
-[19:33:32] [error] CROWNY: [1303270965][UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout] : Validation Error: [ UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout ] Object 0: handle = 0x2694078, type = VK_OBJECT_TYPE_COMMAND_BUFFER; | MessageID = 0x4dae5635 | Submitted command buffer expects VkImage 0x40b43c0000000049[] (subresource: aspectMask 0x1 array layer 2, mip level 0) to be in layout VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL--instead, current layout is VK_IMAGE_LAYOUT_UNDEFINED.
-[19:33:32] [error] CROWNY: [1303270965][UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout] : Validation Error: [ UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout ] Object 0: handle = 0x2694078, type = VK_OBJECT_TYPE_COMMAND_BUFFER; | MessageID = 0x4dae5635 | Submitted command buffer expects VkImage 0x40b43c0000000049[] (subresource: aspectMask 0x1 array layer 3, mip level 0) to be in layout VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL--instead, current layout is VK_IMAGE_LAYOUT_UNDEFINED.
-[19:33:32] [error] CROWNY: [1303270965][UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout] : Validation Error: [ UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout ] Object 0: handle = 0x2694078, type = VK_OBJECT_TYPE_COMMAND_BUFFER; | MessageID = 0x4dae5635 | Submitted command buffer expects VkImage 0x40b43c0000000049[] (subresource: aspectMask 0x1 array layer 4, mip level 0) to be in layout VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL--instead, current layout is VK_IMAGE_LAYOUT_UNDEFINED.
-[19:33:32] [error] CROWNY: [1303270965][UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout] : Validation Error: [ UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout ] Object 0: handle = 0x2694078, type = VK_OBJECT_TYPE_COMMAND_BUFFER; | MessageID = 0x4dae5635 | Submitted command buffer expects VkImage 0x40b43c0000000049[] (subresource: aspectMask 0x1 array layer 5, mip level 0) to be in layout VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL--instead, current layout is VK_IMAGE_LAYOUT_UNDEFINED.
-[19:33:46] [error] CROWNY: Unrecognized font, using fallback font Roboto Thin!
-[19:33:48] [error] CROWNY: [-1934215230][VUID-vkCmdDrawIndexed-renderPass-02684] : Validation Error: [ VUID-vkCmdDrawIndexed-renderPass-02684 ] Object 0: handle = 0xd32739000000a77d, type = VK_OBJECT_TYPE_RENDER_PASS; Object 1: handle = 0x3fbcd60000000028, type = VK_OBJECT_TYPE_RENDER_PASS; | MessageID = 0x8cb637c2 | vkCmdDrawIndexed(): RenderPasses incompatible between active render pass w/ VkRenderPass 0xd32739000000a77d[] and pipeline state object w/ VkRenderPass 0x3fbcd60000000028[] Attachment 4294967295 is not compatible with 1: The first is unused while the second is not.. The Vulkan spec states: The current render pass must be compatible with the renderPass member of the VkGraphicsPipelineCreateInfo structure specified when creating the VkPipeline bound to VK_PIPELINE_BIND_POINT_GRAPHICS (https://vulkan.lunarg.com/doc/view/1.2.176.1/linux/1.2-extensions/vkspec.html#VUID-vkCmdDrawIndexed-renderPass-02684)
-[19:33:48] [error] CROWNY: [-1934215230][VUID-vkCmdDrawIndexed-renderPass-02684] : Validation Error: [ VUID-vkCmdDrawIndexed-renderPass-02684 ] Object 0: handle = 0xd32739000000a77d, type = VK_OBJECT_TYPE_RENDER_PASS; Object 1: handle = 0x3fbcd60000000028, type = VK_OBJECT_TYPE_RENDER_PASS; | MessageID = 0x8cb637c2 | vkCmdDrawIndexed(): RenderPasses incompatible between active render pass w/ VkRenderPass 0xd32739000000a77d[] and pipeline state object w/ VkRenderPass 0x3fbcd60000000028[] Attachment 4294967295 is not compatible with 1: The first is unused while the second is not.. The Vulkan spec states: The current render pass must be compatible with the renderPass member of the VkGraphicsPipelineCreateInfo structure specified when creating the VkPipeline bound to VK_PIPELINE_BIND_POINT_GRAPHICS (https://vulkan.lunarg.com/doc/view/1.2.176.1/linux/1.2-extensions/vkspec.html#VUID-vkCmdDrawIndexed-renderPass-02684)
-[19:33:48] [error] CROWNY: [-1934215230][VUID-vkCmdDrawIndexed-renderPass-02684] : Validation Error: [ VUID-vkCmdDrawIndexed-renderPass-02684 ] Object 0: handle = 0xd32739000000a77d, type = VK_OBJECT_TYPE_RENDER_PASS; Object 1: handle = 0x3fbcd60000000028, type = VK_OBJECT_TYPE_RENDER_PASS; | MessageID = 0x8cb637c2 | vkCmdDrawIndexed(): RenderPasses incompatible between active render pass w/ VkRenderPass 0xd32739000000a77d[] and pipeline state object w/ VkRenderPass 0x3fbcd60000000028[] Attachment 4294967295 is not compatible with 1: The first is unused while the second is not.. The Vulkan spec states: The current render pass must be compatible with the renderPass member of the VkGraphicsPipelineCreateInfo structure specified when creating the VkPipeline bound to VK_PIPELINE_BIND_POINT_GRAPHICS (https://vulkan.lunarg.com/doc/view/1.2.176.1/linux/1.2-extensions/vkspec.html#VUID-vkCmdDrawIndexed-renderPass-02684)
-[19:33:50] [info] CROWNY: Destroy params
+[00:30:04] [info] CROWNY: Domain Crowny C# Runtime created!
+[00:30:04] [info] CROWNY: Loading debug: Resources/Assemblies/Crowny.dll.mdb
+[00:30:04] [info] CROWNY: Loading debug: Resources/Assemblies/Client.dll.mdb
+[00:30:04] [info] CROWNY: Assembly Crowny.dll loaded.
+[00:30:04] [info] CROWNY: Assembly Client.dll loaded.
+[00:30:04] [info] CROWNY: Assembly corlib loaded.
+[00:30:04] [warning] CROWNY: Creating Window: Crowny Editor
+[00:30:04] [info] CROWNY: Domain Crowny C# Runtime created!
+[00:30:04] [info] CROWNY: Loading debug: Resources/Assemblies/Crowny.dll.mdb
+[00:30:04] [info] CROWNY: Loading debug: Resources/Assemblies/Client.dll.mdb
+[00:30:04] [info] CROWNY: Assembly Crowny.dll loaded.
+[00:30:04] [info] CROWNY: Assembly Client.dll loaded.
+[00:30:04] [info] CROWNY: Assembly corlib loaded.
+[00:30:04] [warning] CROWNY: Creating Window: Crowny Editor
+[00:30:07] [info] CROWNY: BRDFLut generation took: 0.003631
+[00:30:07] [info] CROWNY: Destroy params
+[00:30:07] [info] CROWNY: Destroy params
+[00:30:07] [info] CROWNY: Prefiltered cube took: 0.153203
+[00:30:07] [info] CROWNY: Destroy params
+[00:30:07] [info] CROWNY: Destroy params
+[00:30:07] [info] CROWNY: Irrdiance cube took: 0.006547
+[00:30:07] [info] CROWNY: Destroy params
+[00:30:07] [info] CROWNY: BRDFLut generation took: 0.003807
+[00:30:07] [info] CROWNY: Destroy params
+[00:30:07] [info] CROWNY: Destroy params
+[00:30:07] [info] CROWNY: Prefiltered cube took: 0.072406
+[00:30:07] [info] CROWNY: Destroy params
+[00:30:07] [info] CROWNY: Destroy params
+[00:30:07] [info] CROWNY: Irrdiance cube took: 0.0069089998
+[00:30:07] [info] CROWNY: Destroy params
+[00:30:11] [info] CROWNY: Destroy params
+[00:30:11] [info] CROWNY: Destroy params
+[00:30:22] [info] CROWNY: Destroy params
+[00:30:22] [error] CROWNY: Mono error: debugger-agent: Unable to listen on 52
+

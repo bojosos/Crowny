@@ -241,7 +241,8 @@ namespace Crowny
         {
             ImGui::Text("%s", t.Font->GetName().c_str());
             ImGui::Separator();
-            ImGui::Image(ImGui_ImplVulkan_AddTexture(t.Font->GetTexture()), { (float)t.Font->GetTexture()->GetWidth(), (float)t.Font->GetTexture()->GetHeight() });
+            ImGui::Image(ImGui_ImplVulkan_AddTexture(t.Font->GetTexture()),
+                         { (float)t.Font->GetTexture()->GetWidth(), (float)t.Font->GetTexture()->GetHeight() });
             ImGui::EndPopup();
         }
 #endif
@@ -261,9 +262,10 @@ namespace Crowny
         auto& t = e.GetComponent<SpriteRendererComponent>();
 
         if (t.Texture)
-            ImGui::Image(ImGui_ImplVulkan_AddTexture(t.Texture), { 50.0f, 50.0f}, { 0, 1 }, { 1, 0 });
+            ImGui::Image(ImGui_ImplVulkan_AddTexture(t.Texture), { 50.0f, 50.0f }, { 0, 1 }, { 1, 0 });
         else
-            ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), { 50.0f, 50.0f }, { 0, 1 }, { 1, 0 });
+            ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), { 50.0f, 50.0f }, { 0, 1 },
+                         { 1, 0 });
         if (ImGui::IsItemClicked())
         {
             std::vector<std::string> outPaths;

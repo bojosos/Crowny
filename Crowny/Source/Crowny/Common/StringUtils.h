@@ -16,6 +16,5 @@ namespace Crowny
 
         static void ToLower(std::string& string);
         static void ToUpper(std::string& string);
-
     };
 } // namespace Crowny

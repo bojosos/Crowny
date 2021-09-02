@@ -246,7 +246,7 @@ namespace Crowny
         VmaAllocation memory;
         VkResult result = vmaAllocateMemoryForImage(m_Allocator, image, &allocCreateInfo, &memory, &allocInfo);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        
+
         result = vkBindImageMemory(m_LogicalDevice, image, allocInfo.deviceMemory, allocInfo.offset);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         return memory;
@@ -261,7 +261,7 @@ namespace Crowny
         VmaAllocation memory;
         VkResult result = vmaAllocateMemoryForBuffer(m_Allocator, buffer, &allocCreateInfo, &memory, &allocInfo);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        
+
         result = vkBindBufferMemory(m_LogicalDevice, buffer, allocInfo.deviceMemory, allocInfo.offset);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         return memory;
@@ -275,10 +275,7 @@ namespace Crowny
         offset = allocInfo.offset;
     }
 
-    void VulkanDevice::FreeMemory(VmaAllocation allocation)
-    {   
-        vmaFreeMemory(m_Allocator, allocation);
-    }
+    void VulkanDevice::FreeMemory(VmaAllocation allocation) { vmaFreeMemory(m_Allocator, allocation); }
 
     uint32_t VulkanDevice::FindMemoryType(uint32_t requirement, VkMemoryPropertyFlags flags)
     {

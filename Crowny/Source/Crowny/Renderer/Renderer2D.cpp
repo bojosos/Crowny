@@ -70,7 +70,7 @@ namespace Crowny
                                 { ShaderDataType::Float4, "a_Color" },
                                 { ShaderDataType::Float2, "a_Uvs" },
                                 { ShaderDataType::Float, "a_Tid" },
-                                { ShaderDataType::Int, "a_ObjectID"} };
+                                { ShaderDataType::Int, "a_ObjectID" } };
         s_Data->VertexBuffer->SetLayout(layout);
 
         PipelineStateDesc desc;
@@ -152,7 +152,8 @@ namespace Crowny
         FillRect(transform, nullptr, color, entityId);
     }
 
-    void Renderer2D::FillRect(const glm::mat4& transform, const Ref<Texture>& texture, const glm::vec4& color, uint32_t entityId)
+    void Renderer2D::FillRect(const glm::mat4& transform, const Ref<Texture>& texture, const glm::vec4& color,
+                              uint32_t entityId)
     {
         float ts = FindTexture(texture);
         for (uint32_t i = 0; i < 4; i++)
@@ -169,7 +170,8 @@ namespace Crowny
         s_Data->IndexCount += 6;
     }
 
-    void Renderer2D::FillRect(const Rect2F& bounds, const Ref<Texture>& texture, const glm::vec4& color, uint32_t entityId)
+    void Renderer2D::FillRect(const Rect2F& bounds, const Ref<Texture>& texture, const glm::vec4& color,
+                              uint32_t entityId)
     {
         glm::mat4 transform = glm::translate(glm::mat4(1.0f), { bounds.X, bounds.Y, 1.0f }) *
                               glm::scale(glm::mat4(1.0f), { bounds.Width, bounds.Height, 1.0f });
@@ -230,7 +232,7 @@ namespace Crowny
                 s_Data->Buffer->Tid = ts;
                 s_Data->Buffer->Color = color;
                 s_Data->Buffer++;
-                
+
                 s_Data->VertexCount += 4;
                 s_Data->IndexCount += 6;
 
@@ -241,7 +243,7 @@ namespace Crowny
 
     void Renderer2D::DrawString(const std::string& text, const glm::mat4& transform, const Ref<Font>& font,
                                 const glm::vec4& color)
-        {
+    {
         float x = transform[3][0];
         float y = transform[3][1];
         float ts = FindTexture(font->GetTexture());
@@ -294,7 +296,7 @@ namespace Crowny
                 s_Data->Buffer->Tid = ts;
                 s_Data->Buffer->Color = color;
                 s_Data->Buffer++;
-                
+
                 s_Data->VertexCount += 4;
                 s_Data->IndexCount += 6;
 
