@@ -13,7 +13,7 @@
 #include "Crowny/Scene/SceneSerializer.h"
 #include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
-#include "Platform/OpenGL/OpenGLEnvironmentMap.h"
+#include "Crowny/Renderer/Skybox.h"
 
 #include "Editor/EditorAssets.h"
 
@@ -41,7 +41,7 @@ namespace Crowny
 
     void EditorLayer::OnAttach()
     {
-        static OpenGLEnvironmentMap map("/Textures/envmap.hdr");
+        Skybox map("/Textures/envmap.hdr");
         VirtualFileSystem::Get()->Mount("Icons", "Resources/Icons");
         SceneRenderer::Init();
         EditorAssets::Load();
