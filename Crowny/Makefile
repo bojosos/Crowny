@@ -315,7 +315,6 @@ GENERATED += $(OBJDIR)/VulkanSamplerState.o
 GENERATED += $(OBJDIR)/VulkanShader.o
 GENERATED += $(OBJDIR)/VulkanSwapChain.o
 GENERATED += $(OBJDIR)/VulkanTexture.o
-GENERATED += $(OBJDIR)/VulkanTextureCube.o
 GENERATED += $(OBJDIR)/VulkanUniformBufferBlock.o
 GENERATED += $(OBJDIR)/VulkanUniformParamInfo.o
 GENERATED += $(OBJDIR)/VulkanUniformParams.o
@@ -458,7 +457,6 @@ OBJECTS += $(OBJDIR)/VulkanSamplerState.o
 OBJECTS += $(OBJDIR)/VulkanShader.o
 OBJECTS += $(OBJDIR)/VulkanSwapChain.o
 OBJECTS += $(OBJDIR)/VulkanTexture.o
-OBJECTS += $(OBJDIR)/VulkanTextureCube.o
 OBJECTS += $(OBJDIR)/VulkanUniformBufferBlock.o
 OBJECTS += $(OBJDIR)/VulkanUniformParamInfo.o
 OBJECTS += $(OBJDIR)/VulkanUniformParams.o
@@ -926,9 +924,6 @@ $(OBJDIR)/VulkanSwapChain.o: Source/Platform/Vulkan/VulkanSwapChain.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/VulkanTexture.o: Source/Platform/Vulkan/VulkanTexture.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/VulkanTextureCube.o: Source/Platform/Vulkan/VulkanTextureCube.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/VulkanUniformBufferBlock.o: Source/Platform/Vulkan/VulkanUniformBufferBlock.cpp

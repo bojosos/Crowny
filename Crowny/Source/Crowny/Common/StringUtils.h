@@ -1,3 +1,4 @@
+
 #pragma once
 
 namespace Crowny
@@ -13,11 +14,8 @@ namespace Crowny
         static double ParseDouble(const std::string& value);
         static bool EndWith(const std::string& value, const std::string& end);
 
-        static const char* FindToken(const char* string, const std::string& token);
+        static void ToLower(std::string& string);
+        static void ToUpper(std::string& string);
 
-        static std::vector<std::string> Tokenize(const std::string& string);
-
-        static std::string GetStatement(const char* str, const char** outPosition);
-        static std::string GetBlock(const char* str, const char** outPosition);
     };
 } // namespace Crowny

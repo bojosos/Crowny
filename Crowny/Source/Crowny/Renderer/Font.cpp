@@ -3,6 +3,8 @@
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Renderer/Font.h"
 
+#include "Crowny/Utils/PixelUtils.h"
+
 #include <freetype-gl.h>
 
 namespace Crowny
@@ -14,30 +16,37 @@ namespace Crowny
         m_Atlas = ftgl::texture_atlas_new(512, 512, 1);
         auto [mem, memSize] = VirtualFileSystem::Get()->ReadFile(path);
         m_Font = ftgl::texture_font_new_from_memory(m_Atlas, m_Size, mem, memSize);
+        m_Font->rendermode = RENDER_SIGNED_DISTANCE_FIELD;
+        const char* cache = " !\"#$%&'()*+,-./0123456789:;<=>?"
+                        "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
+                        "`abcdefghijklmnopqrstuvwxyz{|}~";
+        texture_font_load_glyphs(m_Font, cache);
 
-        for (uint8_t c = 0; c < 128; c++)
-        {
-            char f = (char)c;
-            texture_font_load_glyph(m_Font, &f);
-        }
-
-        // TextureParameters params;
-        // params.
-
-        // m_Texture = Texture::Create(512, 512, params);
+        TextureParameters tProps;
+        tProps.Width = 512;
+        tProps.Height = 512;
+        tProps.Format = TextureFormat::RGBA8;
+        m_Texture = Texture::Create(tProps);
 
         byte* data = new byte[512 * 512 * 4];
         std::memset(data, 0xff, 512 * 512 * 4);
+        PixelData src(512, 512, 1, TextureFormat::RGBA8);
+        src.SetBuffer(data);
 
         for (uint32_t i = 0; i < 512 * 512; i++)
-        {
             data[i * 4 + 3] = m_Atlas->data[i];
-        }
 
-        // m_Texture->SetData(data, TextureChannel::CHANNEL_RGBA);
+        m_Texture->WriteData(src);
+        src.SetBuffer(nullptr);
 
         delete[] data;
         delete mem;
+    }
+
+    Font::~Font()
+    {
+        texture_font_delete(m_Font);
+        texture_atlas_delete(m_Atlas);
     }
 
     std::vector<Ref<Font>> FontManager::s_Fonts;

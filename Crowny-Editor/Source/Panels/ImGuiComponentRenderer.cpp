@@ -227,7 +227,7 @@ namespace Crowny
         ImGui::ColorEdit4("##textcolor", glm::value_ptr(t.Color));
         ImGui::NextColumn();
 
-        ImGui::Text("Font");
+        ImGui::Text("Font"); // Hook up drag drop here.
         ImGui::NextColumn();
         ImGui::Text("%s", t.Font->GetName().c_str());
 #ifdef CW_DEBUG
@@ -241,8 +241,7 @@ namespace Crowny
         {
             ImGui::Text("%s", t.Font->GetName().c_str());
             ImGui::Separator();
-            //			ImGui::Image(reinterpret_cast<void*>(t.Font->GetTexture()->GetRendererID()),
-            // ImVec2(t.Font->GetTexture()->GetWidth(), t.Font->GetTexture()->GetHeight()));
+            ImGui::Image(ImGui_ImplVulkan_AddTexture(t.Font->GetTexture()), { (float)t.Font->GetTexture()->GetWidth(), (float)t.Font->GetTexture()->GetHeight() }, { 0, 1 }, { 1, 0 });
             ImGui::EndPopup();
         }
 #endif
@@ -253,9 +252,7 @@ namespace Crowny
 
         int32_t size = t.Font->GetSize();
         if (ImGui::InputInt("##fontsize", &size))
-        {
             t.Font = FontManager::Get(t.Font->GetName(), size);
-        }
         ImGui::Columns(1);
     }
 

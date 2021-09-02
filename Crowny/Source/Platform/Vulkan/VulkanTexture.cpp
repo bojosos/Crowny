@@ -429,6 +429,7 @@ namespace Crowny
         VulkanImageSubresource* subresource = GetSubresource(face, mip);
         createNewBarrier(subresource, face, mip);
         numSubresources--;
+        processed[0] = true;
         while (numSubresources > 0)
         {
             VkImageMemoryBarrier* barrier = &barriers.back();
@@ -547,7 +548,7 @@ namespace Crowny
       : Texture(params), m_Image(nullptr), m_InternalFormat(), m_StagingBuffer(nullptr),
         m_MappedGlobalQueueIdx((uint32_t)-1), m_MappedMip(0), m_MappedFace(0), m_MappedRowPitch(0),
         m_MappedSlicePitch(0), m_MappedLockOptions(GpuLockOptions::WRITE_ONLY), m_DirectlyMappable(false),
-        m_SupportsGpuWrites(false), m_IsMapped(false)
+        m_SupportsGpuWrites(false), m_IsMapped(false), m_ImageCreateInfo()
     {
         m_ImageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         m_ImageCreateInfo.pNext = nullptr;
@@ -1037,8 +1038,7 @@ namespace Crowny
         PixelData data =
           Lock(/*discardWholeBuffer ? */ GpuLockOptions::WRITE_DISCARD /* : GpuLockOptions::WRITE_DISCARD_RANGE*/,
                mipLevel, face, queueIdx);
-        std::memcpy(data.GetData(), src.GetData(), src.GetSize());
-        data.SetBuffer(nullptr); // TODO: temp fix.
+        PixelUtils::ConvertPixels(src, data);
         Unlock();
     }
 } // namespace Crowny

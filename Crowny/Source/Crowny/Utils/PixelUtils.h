@@ -4,17 +4,25 @@
 
 namespace Crowny
 {
-    class PixelUtils
+    enum PixelComponentType
     {
-    public:
-        // TODO: Texture compression.
-        static uint32_t GetBlockSize(TextureFormat format);
-        static glm::ivec2 GetBlockDimensions(TextureFormat format);
-        static uint32_t GetNumBytes(TextureFormat format);
-        static void GetPitch(uint32_t width, uint32_t height, uint32_t depth, TextureFormat format, uint32_t& rowPitch,
-                             uint32_t& depthPitch);
-        static void GetMipSizeForLevel(uint32_t width, uint32_t height, uint32_t depth, uint32_t mipLevel,
-                                       uint32_t& mipWidth, uint32_t& mipHeight, uint32_t& mipDepth);
+      PCT_BYTE = 0,
+      PCT_SHORT = 1,
+      PCT_INT = 2,
+      PCT_FLOAT16 = 3,
+      PCT_FLOAT32 = 4,
+      PCT_COUNT
+    };
+
+    enum PixelFormatFlags
+    {
+      PFF_HASALPHA = 0x1,
+      PFF_COMPRESSED = 0x2,
+      PFF_FLOAT = 0x4,
+      PFF_DEPTH = 0x8,
+      PFF_INTEGER = 0x10,
+      PFF_SIGNED = 0x20,
+      PFF_NORMALIZED = 0x40
     };
 
     // TODO: Copy constructor, copy-assignment operator
@@ -36,11 +44,32 @@ namespace Crowny
         void SetBuffer(uint8_t* data);
         void SetRowPitch(uint32_t rowPitch) { m_RowPitch = rowPitch; }
         void SetSlicePitch(uint32_t slicePitch) { m_SlicePitch = slicePitch; }
-
+        uint32_t GetRowSkip() const { return 0; }
+        uint32_t GetSliceSkip() const { return 0; }
     private:
         TextureFormat m_Format = TextureFormat::NONE;
         uint32_t m_Width, m_Height, m_Depth;
         uint32_t m_RowPitch = 0, m_SlicePitch = 0;
         uint8_t* m_Buffer = nullptr;
     };
+
+    class PixelUtils
+    {
+    public:
+        // TODO: Texture compression.
+        static uint32_t GetBlockSize(TextureFormat format);
+        static glm::ivec2 GetBlockDimensions(TextureFormat format);
+        static uint32_t GetNumBytes(TextureFormat format);
+        static void GetPitch(uint32_t width, uint32_t height, uint32_t depth, TextureFormat format, uint32_t& rowPitch,
+                             uint32_t& depthPitch);
+        static void GetMipSizeForLevel(uint32_t width, uint32_t height, uint32_t depth, uint32_t mipLevel,
+                                       uint32_t& mipWidth, uint32_t& mipHeight, uint32_t& mipDepth);
+    
+        static void ConvertPixels(const PixelData& src, PixelData& dst);
+        static void PackPixel(float r, float g, float b, float a, TextureFormat format, uint8_t* dst);
+        static void UnpackPixel(float* r, float* g, float* b, float* a, TextureFormat format, uint8_t* src);
+
+    };
+
+
 } // namespace Crowny

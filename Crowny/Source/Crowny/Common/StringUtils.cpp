@@ -2,6 +2,8 @@
 
 #include "Crowny/Common/StringUtils.h"
 
+#include <algorithm>
+
 namespace Crowny
 {
 
@@ -41,47 +43,15 @@ namespace Crowny
             return false;
         return std::equal(end.rbegin(), end.rend(), value.rbegin());
     }
-
-    const char* StringUtils::FindToken(const char* str, const std::string& token)
+    
+    void StringUtils::ToLower(std::string& string)
     {
-        const char* t = str;
-        while ((t = strstr(t, token.c_str())))
-        {
-            bool left = str == t || isspace(t[-1]);
-            bool right = !t[token.size()] || isspace(t[token.size()]);
-            if (left && right)
-                return t;
-
-            t += token.size();
-        }
-        return nullptr;
+        std::transform(string.begin(), string.end(), string.begin(), [](unsigned char c) { return std::tolower(c); });
     }
 
-    std::string StringUtils::GetBlock(const char* str, const char** outPosition)
+    void StringUtils::ToUpper(std::string& string)
     {
-        const char* end = strstr(str, "}");
-        if (!end)
-            return std::string(str);
-
-        if (outPosition)
-            *outPosition = end;
-        uint32_t length = end - str + 1;
-        return std::string(str, length);
+        std::transform(string.begin(), string.end(), string.begin(), [](unsigned char c) { return std::toupper(c); });
     }
-
-    std::string StringUtils::GetStatement(const char* str, const char** outPosition)
-    {
-        const char* end = strstr(str, ";");
-        if (!end)
-            return std::string(str);
-
-        if (outPosition)
-            *outPosition = end;
-        uint32_t length = end - str + 1;
-        std::string res = std::string(str, length);
-        return res;
-    }
-
-    std::vector<std::string> StringUtils::Tokenize(const std::string& string) { return SplitString(string, " \t\n"); }
 
 } // namespace Crowny

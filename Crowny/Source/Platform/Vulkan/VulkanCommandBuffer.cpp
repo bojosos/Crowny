@@ -80,8 +80,6 @@ namespace Crowny
         semaphoreCreateInfo.flags = 0;
         VkResult result = vkCreateSemaphore(m_Owner->GetDevice().GetLogicalDevice(), &semaphoreCreateInfo,
                                             gVulkanAllocator, &m_Semaphore);
-        if (0x2cfba2000000001c == (size_t)((void*)m_Semaphore))
-            CW_ENGINE_ASSERT(false);
 
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
     }
@@ -908,7 +906,7 @@ namespace Crowny
 
         for (uint32_t i = 0; i < range.layerCount; i++)
         {
-            for (uint32_t j = -0; j < range.levelCount; j++)
+            for (uint32_t j = 0; j < range.levelCount; j++)
             {
                 uint32_t layer = range.baseArrayLayer + i;
                 uint32_t mipLevel = range.baseMipLevel + j;
