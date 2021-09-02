@@ -39,7 +39,7 @@ namespace Crowny
     {
         CW_ENGINE_ASSERT(!s_Instance, "Application already exists!");
         s_Instance = this;
-        
+
         m_LayerStack = new LayerStack();
         RenderWindowProperties props;
         props.Title = name;

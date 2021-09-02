@@ -9,11 +9,11 @@
 #include "Crowny/Events/ImGuiEvent.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/RenderAPI/Texture.h"
+#include "Crowny/Renderer/Skybox.h"
 #include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Scene/SceneSerializer.h"
 #include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
-#include "Crowny/Renderer/Skybox.h"
 
 #include "Editor/EditorAssets.h"
 
@@ -122,7 +122,7 @@ namespace Crowny
         objectId.Height = 728;
         objectId.Format = TextureFormat::R32I;
         objectId.Usage = TextureUsage(TextureUsage::TEXTURE_RENDERTARGET | TextureUsage::TEXTURE_DYNAMIC);
-        
+
         TextureParameters depthParams;
         depthParams.Width = 1386;
         depthParams.Height = 728;
@@ -138,7 +138,7 @@ namespace Crowny
         rtProps.DepthSurface = { depth };
         rtProps.Width = 1386;
         rtProps.Height = 728;
-        
+
         m_RenderTarget = RenderTexture::Create(rtProps);
     }
 
@@ -202,10 +202,10 @@ namespace Crowny
         delete m_MaterialEditor;
         delete m_ConsolePanel;
         delete m_AssetBrowser;
-     
+
         EditorAssets::Unload();
     }
-    
+
     void EditorLayer::OnUpdate(Timestep ts)
     {
         Ref<Scene> scene = SceneManager::GetActiveScene();

@@ -124,7 +124,7 @@ namespace Crowny
         std::string res = "";
         while (fgets(buffer.data(), 128, f))
             res += buffer.data();
-     
+
         if (res.empty())
             return false;
 
@@ -133,22 +133,22 @@ namespace Crowny
 
         return true;
     }
-/*
-    static bool ZenityCheck()
-    {
-        FILE* fp;
-        char path[LINUX_MAX_PATH];
-        fp = popen("which zenity", "r");
-        if (fp == NULL)
-            CW_ENGINE_WARN("Null file ptr");
-        if (fgets(path, LINUX_PATH_MAX, fp) == NULL)
+    /*
+        static bool ZenityCheck()
         {
-            CW_ENGINE_WARN("Zenity not found in path.");
+            FILE* fp;
+            char path[LINUX_MAX_PATH];
+            fp = popen("which zenity", "r");
+            if (fp == NULL)
+                CW_ENGINE_WARN("Null file ptr");
+            if (fgets(path, LINUX_PATH_MAX, fp) == NULL)
+            {
+                CW_ENGINE_WARN("Zenity not found in path.");
+                pclose(fp);
+                return false;
+            }
             pclose(fp);
-            return false;
-        }
-        pclose(fp);
-        return true;
-    }*/
+            return true;
+        }*/
 
 } // namespace Crowny

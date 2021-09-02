@@ -40,7 +40,6 @@ namespace Crowny
         poolCreateInfo.poolSizeCount = std::size(pool_sizes);
         poolCreateInfo.pPoolSizes = pool_sizes;
 
-        
         VkResult result = vkCreateDescriptorPool(gVulkanRenderAPI().GetPresentDevice()->GetLogicalDevice(),
                                                  &poolCreateInfo, gVulkanAllocator, &m_ImguiPool);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
@@ -92,7 +91,8 @@ namespace Crowny
         ImGui_ImplVulkan_ClearTextures();
         ImGui_ImplVulkan_Shutdown();
         ImGuiLayer::OnDetach();
-        vkDestroyDescriptorPool(gVulkanRenderAPI().GetPresentDevice()->GetLogicalDevice(), m_ImguiPool, gVulkanAllocator);
+        vkDestroyDescriptorPool(gVulkanRenderAPI().GetPresentDevice()->GetLogicalDevice(), m_ImguiPool,
+                                gVulkanAllocator);
     }
 
     void ImGuiVulkanLayer::Begin()
