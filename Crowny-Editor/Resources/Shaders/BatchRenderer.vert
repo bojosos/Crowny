@@ -1,9 +1,9 @@
 #version 460 core
 
 layout(location = 0) in vec4 a_Position;
-layout(location = 3) in vec4 a_Color;
-layout(location = 1) in vec2 a_UV;
-layout(location = 2) in float a_Tid;
+layout(location = 1) in vec4 a_Color;
+layout(location = 2) in vec2 a_UV;
+layout(location = 3) in float a_Tid;
 layout(location = 4) in int a_ObjectId;
 
 layout(binding = 0) uniform VP

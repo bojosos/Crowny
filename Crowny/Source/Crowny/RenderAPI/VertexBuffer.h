@@ -20,6 +20,6 @@ namespace Crowny
         virtual void Unmap() = 0;
 
         static Ref<VertexBuffer> Create(uint32_t size, BufferUsage usage = BufferUsage::STATIC_DRAW);
-        static Ref<VertexBuffer> Create(void* indices, uint32_t size, BufferUsage usage = BufferUsage::STATIC_DRAW);
+        static Ref<VertexBuffer> Create(void* vertices, uint32_t size, BufferUsage usage = BufferUsage::STATIC_DRAW);
     };
 } // namespace Crowny

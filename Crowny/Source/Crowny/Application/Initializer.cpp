@@ -47,9 +47,8 @@ namespace Crowny
         Renderer2D::Init();
         /*
         ForwardPlusRenderer::Init();
-        FontManager::Add(CreateRef<Font>("Roboto Thin", "/Fonts/" + DEFAULT_FONT_FILENAME, 64)); // default font, move
-        out of here
 */
+        FontManager::Add(CreateRef<Font>("Roboto Thin", "/Fonts/" + DEFAULT_FONT_FILENAME, 64));
         CWMonoRuntime::Init("Crowny C# Runtime");
         CWMonoRuntime::LoadAssemblies("/Assemblies");
 

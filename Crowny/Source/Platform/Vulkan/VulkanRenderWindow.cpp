@@ -102,7 +102,7 @@ namespace Crowny
         VulkanSwapChain* oldSwapChain = m_SwapChain;
         m_SwapChain = device->GetResourceManager().Create<VulkanSwapChain>(
           m_Surface, m_Properties.Width, m_Properties.Height, m_Properties.Vsync, m_ColorFormat, m_ColorSpace,
-          m_Properties.DepthBuffer, m_DepthFormat);
+          m_Properties.DepthBuffer, m_DepthFormat, oldSwapChain);
         oldSwapChain->Destroy();
     }
 

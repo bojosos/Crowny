@@ -15,6 +15,7 @@ namespace Crowny
     {
     public:
         Font(const std::string& filepath, const std::string& name, float size);
+        ~Font();
 
         const std::string& GetName() const { return m_Name; }
         float GetSize() const { return m_Size; }

@@ -43,6 +43,8 @@ namespace Crowny
         VkPipelineLayout m_PipelineLayout;
 
         VkPipelineShaderStageCreateInfo m_ShaderStageInfos[5];
+        VkVertexInputBindingDescription m_VertexInput = {};
+        std::vector<VkVertexInputAttributeDescription> m_Attrs;
         VkPipelineRasterizationStateCreateInfo m_RasterizationInfo = {};
         VkPipelineColorBlendAttachmentState m_BlendAttachmentStates[MAX_FRAMEBUFFER_COLOR_ATTACHMENTS];
         VkPipelineColorBlendStateCreateInfo m_ColorBlendStateInfo = {};

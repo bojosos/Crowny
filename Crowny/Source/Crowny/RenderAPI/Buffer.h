@@ -134,6 +134,13 @@ namespace Crowny
             CalculateOffsetsAndStride();
         }
 
+        BufferLayout& operator=(std::initializer_list<BufferElement> elements)
+        {
+            m_Elements = elements;
+            CalculateOffsetsAndStride();
+            return *this;
+        }
+
         uint32_t GetStride() const { return m_Stride; }
         const std::vector<BufferElement>& GetElements() const { return m_Elements; }
 
