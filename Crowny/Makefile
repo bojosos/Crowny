@@ -244,7 +244,6 @@ GENERATED += $(OBJDIR)/MonoUtils.o
 GENERATED += $(OBJDIR)/Noise.o
 GENERATED += $(OBJDIR)/OggVorbisDecoder.o
 GENERATED += $(OBJDIR)/OpenGLContext.o
-GENERATED += $(OBJDIR)/OpenGLEnvironmentMap.o
 GENERATED += $(OBJDIR)/OpenGLFramebuffer.o
 GENERATED += $(OBJDIR)/OpenGLIndexBuffer.o
 GENERATED += $(OBJDIR)/OpenGLInfo.o
@@ -286,6 +285,7 @@ GENERATED += $(OBJDIR)/ScriptTime.o
 GENERATED += $(OBJDIR)/ScriptTransform.o
 GENERATED += $(OBJDIR)/Shader.o
 GENERATED += $(OBJDIR)/ShaderCompiler.o
+GENERATED += $(OBJDIR)/Skybox.o
 GENERATED += $(OBJDIR)/StringUtils.o
 GENERATED += $(OBJDIR)/Texture.o
 GENERATED += $(OBJDIR)/TextureManager.o
@@ -386,7 +386,6 @@ OBJECTS += $(OBJDIR)/MonoUtils.o
 OBJECTS += $(OBJDIR)/Noise.o
 OBJECTS += $(OBJDIR)/OggVorbisDecoder.o
 OBJECTS += $(OBJDIR)/OpenGLContext.o
-OBJECTS += $(OBJDIR)/OpenGLEnvironmentMap.o
 OBJECTS += $(OBJDIR)/OpenGLFramebuffer.o
 OBJECTS += $(OBJDIR)/OpenGLIndexBuffer.o
 OBJECTS += $(OBJDIR)/OpenGLInfo.o
@@ -428,6 +427,7 @@ OBJECTS += $(OBJDIR)/ScriptTime.o
 OBJECTS += $(OBJDIR)/ScriptTransform.o
 OBJECTS += $(OBJDIR)/Shader.o
 OBJECTS += $(OBJDIR)/ShaderCompiler.o
+OBJECTS += $(OBJDIR)/Skybox.o
 OBJECTS += $(OBJDIR)/StringUtils.o
 OBJECTS += $(OBJDIR)/Texture.o
 OBJECTS += $(OBJDIR)/TextureManager.o
@@ -728,6 +728,9 @@ $(OBJDIR)/Renderer.o: Source/Crowny/Renderer/Renderer.cpp
 $(OBJDIR)/Renderer2D.o: Source/Crowny/Renderer/Renderer2D.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/Skybox.o: Source/Crowny/Renderer/Skybox.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/TextureManager.o: Source/Crowny/Renderer/TextureManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -834,9 +837,6 @@ $(OBJDIR)/LinuxWindow.o: Source/Platform/Linux/LinuxWindow.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/OpenGLContext.o: Source/Platform/OpenGL/OpenGLContext.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/OpenGLEnvironmentMap.o: Source/Platform/OpenGL/OpenGLEnvironmentMap.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/OpenGLFramebuffer.o: Source/Platform/OpenGL/OpenGLFramebuffer.cpp

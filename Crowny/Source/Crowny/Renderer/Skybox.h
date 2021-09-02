@@ -8,28 +8,27 @@
 namespace Crowny
 {
 
-    class OpenGLEnvironmentMap
+    class Skybox
     {
     public:
-        OpenGLEnvironmentMap(const std::string& filepath);
-        ~OpenGLEnvironmentMap() = default;
+        Skybox(const std::string& filepath);
+        ~Skybox() = default;
 
-        void ToCubemap();
+    private:
         void GenerateBRDFLUT();
         void GeneratePrefilteredCube();
         void GenerateIrradianceCube();
 
     private:
-        Ref<Texture> m_Texture;
-        Ref<Texture> m_Cubemap;
+        Ref<Texture> m_EnvironmentMap; // the loaded map
+        Ref<Texture> m_PrefilteredMap; // the filtered map
+        Ref<Texture> m_IrradianceMap; // the irradiance map
+        Ref<Texture> m_Brdf; // should not be here
+
         uint32_t m_Width, m_Height, m_Channels;
 
         Ref<VertexBuffer> m_SkyboxVbo;
         Ref<IndexBuffer> m_SkyboxIbo;
-        BufferLayout m_FilterLayout;
-        
-        Ref<Texture> m_Envmap;
-
     };
 
 }
