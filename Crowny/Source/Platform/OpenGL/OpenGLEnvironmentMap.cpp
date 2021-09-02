@@ -22,52 +22,44 @@ namespace Crowny
 {
 
     float vertices[] = {
-                // back face
-                -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
-                1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
-                1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f, // bottom-right
-                1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
-                -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
-                -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f, // top-left
-                // front face
-                -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
-                1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f, // bottom-right
-                1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
-                1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
-                -1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f, // top-left
-                -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
-                // left face
-                -1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
-                -1.0f,  1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-left
-                -1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
-                -1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
-                -1.0f, -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-right
-                -1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
-                // right face
-                1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
-                1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
-                1.0f,  1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-right
-                1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
-                1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
-                1.0f, -1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-left
-                // bottom face
-                -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
-                1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 1.0f, // top-left
-                1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
-                1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
-                -1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 0.0f, // bottom-right
-                -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
-                // top face
-                -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
-                1.0f,  1.0f , 1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
-                1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 1.0f, // top-right
-                1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
-                -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
-                -1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f  // bottom-left
+        -1.0f, -1.0f,  1.0f,
+        1.0f, -1.0f,  1.0f,
+        1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f, -1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        1.0f,  1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f,  1.0f,
+        1.0f,  1.0f,  1.0f,
+        1.0f,  1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+        1.0f, -1.0f, -1.0f,
+        1.0f,  1.0f, -1.0f,
+        1.0f,  1.0f,  1.0f,
+        1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f, -1.0f
+    };
+
+    uint32_t indices[] = {
+        0,  1,  2, 0,  2,  3,
+        4,  5,  6, 4,  6,  7,
+        8,  9,  10, 8,  10, 11,
+        12, 13, 14, 12, 14, 15,
+        16, 17, 18, 16, 18, 19,
+        20, 21, 22, 20, 22, 23,
     };
     
     OpenGLEnvironmentMap::OpenGLEnvironmentMap(const std::string& filepath)
-    {
+        {
+        // Load equirectangular map
         stbi_set_flip_vertically_on_load(true);
         auto [dat, size] = VirtualFileSystem::Get()->ReadFile(filepath);
         int width, height, channels;
@@ -87,13 +79,6 @@ namespace Crowny
             dat.SetBuffer((uint8_t*)data);
             m_Texture->WriteData(dat);
             dat.SetBuffer(nullptr);
-
-            // probably going to have to create a sampler
-            // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, m_Width, m_Height, 0, GL_RGB, GL_FLOAT, data);
-            // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             stbi_image_free(data);
         }
         else
@@ -123,7 +108,7 @@ namespace Crowny
         
         m_Envmap = Texture::Create(tProps);
         
-        // convert HDR equirectangular environment map to cubemap
+        // Convert HDR equirectangular environment map to cubemap
         Ref<Shader> eqToCubeVert = Shader::Create(ShaderCompiler().Compile("/Shaders/EqToCube.vert", ShaderType::VERTEX_SHADER));
         Ref<Shader> eqToCubeFrag = Shader::Create(ShaderCompiler().Compile("/Shaders/EqToCube.frag", ShaderType::FRAGMENT_SHADER));
         PipelineStateDesc desc;
@@ -138,7 +123,8 @@ namespace Crowny
         uniforms->SetTexture(0, 1, m_Texture);
         block->Write(0, &captureProjection, sizeof(glm::mat4));
 
-        m_SkyboxVbo = VertexBuffer::Create(vertices, 288 * sizeof(float));
+        m_SkyboxVbo = VertexBuffer::Create(vertices, 72 * sizeof(float));
+        m_SkyboxIbo = IndexBuffer::Create(indices, 36);
         m_FilterLayout = { { ShaderDataType::Float3, "a_Position" } };
         m_SkyboxVbo->SetLayout(m_FilterLayout);
         
@@ -159,12 +145,12 @@ namespace Crowny
             
             block->Write(sizeof(glm::mat4), &captureViews[i], sizeof(glm::mat4));
             rapi.SetVertexBuffers(0, &m_SkyboxVbo, 1);
+            rapi.SetIndexBuffer(m_SkyboxIbo);
             rapi.SetUniforms(uniforms);
-            rapi.Draw(0, 288);
-            //rapi.SetRenderTarget(nullptr);
+            rapi.DrawIndexed(0, 36, 0, 72);
         }
 
-        GenerateBRDFLUT(); // Looks like this works
+        GenerateBRDFLUT();
         GeneratePrefilteredCube();
         GenerateIrradianceCube();
     }
@@ -176,7 +162,7 @@ namespace Crowny
         TextureParameters tProps;
         tProps.Width = 512;
         tProps.Height = 512;
-        tProps.Format = TextureFormat::RG16F;
+        tProps.Format = TextureFormat::RG32F;
         tProps.Usage = TextureUsage::TEXTURE_RENDERTARGET;
         Ref<Texture> brdf = Texture::Create(tProps);
         
@@ -207,6 +193,7 @@ namespace Crowny
 
     void OpenGLEnvironmentMap::GenerateIrradianceCube()
     {
+        Timer timer;
         auto& rapi = RenderAPI::Get();
         const uint32_t numMips = static_cast<uint32_t>(std::floor(std::log2(64)));
         TextureParameters tProps;
@@ -245,7 +232,7 @@ namespace Crowny
         uniforms->SetTexture(0, 1, m_Envmap);
         for (uint32_t j = 0; j < 6; j++)
         {
-            auto persp = glm::perspective((float)(M_PI / 2.0), 1.0f, 0.1f, 512.0f) * matrices[j];
+            auto persp = glm::perspective((float)(M_PI / 2.0), 1.0f, 0.1f, 64.0f) * matrices[j];
             mvp->Write(0, &persp, sizeof(glm::mat4));
             for (uint32_t i = 0; i < numMips; i++)
             {
@@ -264,14 +251,90 @@ namespace Crowny
                 rapi.SetViewport(viewport.X, viewport.Y, viewport.Width, viewport.Height);
                 rapi.SetUniforms(uniforms);
                 rapi.SetVertexBuffers(0, &m_SkyboxVbo, 1);
-                rapi.Draw(0, 288, 1);
+                rapi.SetIndexBuffer(m_SkyboxIbo);
+                rapi.DrawIndexed(0, 36, 0, 72);
             }
         }
+        CW_ENGINE_INFO("Irrdiance cube took: {0}", timer.ElapsedSeconds());
     }
 
     void OpenGLEnvironmentMap::GeneratePrefilteredCube()
     {
+        Timer timer;
 
+        struct PrefilterParams
+        {
+            uint32_t samples = 32;
+            float roughness;
+        } params;
+
+        auto& rapi = RenderAPI::Get();
+        const uint32_t numMips = static_cast<uint32_t>(std::floor(std::log2(64)));
+        TextureParameters tProps;
+        tProps.Width = 512;
+        tProps.Height = 512;
+        tProps.Format = TextureFormat::RGBA32F;
+        tProps.Usage = TextureUsage::TEXTURE_RENDERTARGET;
+        tProps.MipLevels = numMips;
+        tProps.Faces = tProps.NumArraySlices = 6;
+        tProps.Shape = TextureShape::TEXTURE_CUBE;
+        Ref<Texture> texture = Texture::Create(tProps);
+        
+        ShaderCompiler compiler;
+        Ref<Shader> vertex = Shader::Create(compiler.Compile("/Shaders/filter.vert", VERTEX_SHADER));
+        Ref<Shader> fragment = Shader::Create(compiler.Compile("/Shaders/prefilter.frag", FRAGMENT_SHADER));
+        PipelineStateDesc desc;
+        desc.FragmentShader = fragment;
+        desc.VertexShader = vertex;
+
+        Ref<GraphicsPipeline> pipeline = GraphicsPipeline::Create(desc, m_FilterLayout);
+        Rect2F viewport = { 0.0f, 0.0f, 512.0f, 512.0f };
+        Ref<UniformParams> uniforms = UniformParams::Create(pipeline);
+
+        std::vector<glm::mat4> matrices = {
+			glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // POSITIVE_X
+			glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // NEGATIVE_X
+			glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // POSITIVE_Y
+			glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // NEGATIVE_Y
+			glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // POSITIVE_Z
+			glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f)), // NEGATIVE_Z
+        };
+        
+        Ref<UniformBufferBlock> mvp = UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("MVP").BlockSize, BufferUsage::DYNAMIC_DRAW);
+        uniforms = UniformParams::Create(pipeline);
+        uniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "MVP", mvp);
+        uniforms->SetTexture(0, 1, m_Envmap);
+        Ref<UniformBufferBlock> fragBlock = UniformBufferBlock::Create(fragment->GetUniformDesc()->Uniforms.at("Params").BlockSize, BufferUsage::DYNAMIC_DRAW);
+        uniforms->SetUniformBlockBuffer(ShaderType::FRAGMENT_SHADER, "Params", fragBlock);
+        for (uint32_t j = 0; j < 6; j++)
+        {
+            auto persp = glm::perspective((float)(M_PI / 2.0), 1.0f, 0.1f, 512.0f) * matrices[j];
+            mvp->Write(0, &persp, sizeof(glm::mat4));
+            for (uint32_t i = 0; i < numMips; i++)
+            {
+                params.roughness = (float)i / (float)(numMips);
+                fragBlock->Write(0, &params, sizeof(PrefilterParams));
+                RenderTextureProperties rtProps;
+                rtProps.ColorSurfaces[0].Texture = texture;
+                rtProps.ColorSurfaces[0].Face = j;
+                rtProps.ColorSurfaces[0].NumFaces = 1;
+                rtProps.ColorSurfaces[0].MipLevel = i;
+                rtProps.Width = tProps.Width / std::pow(2, i);
+                rtProps.Height = tProps.Height / std::pow(2, i);
+                Ref<RenderTexture> cubemap = RenderTexture::Create(rtProps);
+                rapi.SetRenderTarget(cubemap);
+                rapi.SetGraphicsPipeline(pipeline);
+                viewport.Width = static_cast<float>(512 * std::pow(0.5f, i));
+                viewport.Height = static_cast<float>(512 * std::pow(0.5f, i));
+                rapi.SetViewport(viewport.X, viewport.Y, viewport.Width, viewport.Height);
+                rapi.SetUniforms(uniforms);
+                rapi.SetVertexBuffers(0, &m_SkyboxVbo, 1);
+                rapi.SetIndexBuffer(m_SkyboxIbo);
+                rapi.DrawIndexed(0, 36, 0, 72);
+            }
+        }
+        
+        CW_ENGINE_INFO("Prefiltered cube took: {0}", timer.ElapsedSeconds());
     }
     
     static void Draw()

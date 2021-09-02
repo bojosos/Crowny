@@ -737,7 +737,7 @@ namespace Crowny
             subresourceInfo.RequiredLayout = layout;
             subresourceInfo.RenderPassLayout = finalLayout;
             subresourceInfo.Range = subresourceRange;
-            switch (use)
+            switch (use) 
             {
             default:
             case ImageUseFlagBits::Shader:
