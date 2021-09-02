@@ -302,7 +302,7 @@ namespace Crowny
     bool VulkanUtils::RangeOverlaps(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b)
     {
         int32_t aRight = a.baseArrayLayer + (int32_t)a.layerCount;
-        int32_t bRight = b.baseArrayLayer + (int32_t)a.layerCount;
+        int32_t bRight = b.baseArrayLayer + (int32_t)b.layerCount;
 
         int32_t aBottom = a.baseMipLevel + (int32_t)a.levelCount;
         int32_t bBottom = b.baseMipLevel + (int32_t)b.levelCount;

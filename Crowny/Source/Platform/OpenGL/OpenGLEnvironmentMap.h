@@ -3,6 +3,7 @@
 #include "Crowny/RenderAPI/GraphicsPipeline.h"
 #include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/RenderAPI/VertexBuffer.h"
+#include "Crowny/RenderAPI/IndexBuffer.h"
 
 namespace Crowny
 {
@@ -24,6 +25,7 @@ namespace Crowny
         uint32_t m_Width, m_Height, m_Channels;
 
         Ref<VertexBuffer> m_SkyboxVbo;
+        Ref<IndexBuffer> m_SkyboxIbo;
         BufferLayout m_FilterLayout;
         
         Ref<Texture> m_Envmap;
