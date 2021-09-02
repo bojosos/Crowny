@@ -83,6 +83,14 @@ namespace Crowny
             s_Stats.Vertices += 6;
             s_Stats.Triangles += 2;
         }
+        auto texts = scene->m_Registry.group<TextComponent>(entt::get<TransformComponent>);
+        for (auto ee : texts)
+        {
+            auto [transform, text] = scene->m_Registry.get<TransformComponent, TextComponent>(ee);
+            Renderer2D::DrawString(text.Text, transform.GetTransform(), text.Font, text.Color);
+            s_Stats.Vertices += text.Text.size() * 6;
+            s_Stats.Triangles += text.Text.size() * 2;
+        }
         Renderer2D::End();
         /*
                  IDBufferRenderer::Begin(camera.GetProjection(), camera.GetViewMatrix());

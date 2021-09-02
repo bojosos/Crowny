@@ -140,12 +140,11 @@ namespace Crowny
         m_MultiSampleInfo.pSampleMask = nullptr;
         m_MultiSampleInfo.alphaToOneEnable = VK_FALSE;
 
-        static VkVertexInputBindingDescription vertexInput{};
-        vertexInput.binding = 0;
-        vertexInput.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-        vertexInput.stride = layout.GetStride();
+        m_VertexInput.binding = 0;
+        m_VertexInput.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        m_VertexInput.stride = layout.GetStride();
 
-        static std::vector<VkVertexInputAttributeDescription> attrs(layout.GetElements().size());
+        m_Attrs.resize(layout.GetElements().size());
 
         // loc, binding, format, offset
         for (int idx = 0; idx < layout.GetElements().size(); idx++)
@@ -156,41 +155,41 @@ namespace Crowny
             switch (element.Type)
             {
             case ShaderDataType::Float: {
-                attrs[i] = { i, 0, VK_FORMAT_R32_SFLOAT, offset };
+                m_Attrs[i] = { i, 0, VK_FORMAT_R32_SFLOAT, offset };
                 break;
             }
             case ShaderDataType::Float2: {
-                attrs[i] = { i, 0, VK_FORMAT_R32G32_SFLOAT, offset };
+                m_Attrs[i] = { i, 0, VK_FORMAT_R32G32_SFLOAT, offset };
                 break;
             }
             case ShaderDataType::Float3: {
-                attrs[i] = { i, 0, VK_FORMAT_R32G32B32_SFLOAT, offset };
+                m_Attrs[i] = { i, 0, VK_FORMAT_R32G32B32_SFLOAT, offset };
                 break;
             }
             case ShaderDataType::Float4: {
-                attrs[i] = { i, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offset };
+                m_Attrs[i] = { i, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offset };
                 break;
             }
             // case ShaderDataType::Bool:   // dk how to do this one
-            case ShaderDataType::Mat3: // attrs[i] = { i, 0, VK_FORMAT_R32_SFLOAT, element.Offset };
+            case ShaderDataType::Mat3: // m_Attrs[i] = { i, 0, VK_FORMAT_R32_SFLOAT, element.Offset };
             case ShaderDataType::Mat4: {
                 CW_ENGINE_ASSERT(false);
                 break;
             } // these will probably be sent as 3/4 vectors }
             case ShaderDataType::Int: {
-                attrs[i] = { i, 0, VK_FORMAT_R32_SINT, offset };
+                m_Attrs[i] = { i, 0, VK_FORMAT_R32_SINT, offset };
                 break;
             }
             case ShaderDataType::Int2: {
-                attrs[i] = { i, 0, VK_FORMAT_R32G32_SINT, offset };
+                m_Attrs[i] = { i, 0, VK_FORMAT_R32G32_SINT, offset };
                 break;
             }
             case ShaderDataType::Int3: {
-                attrs[i] = { i, 0, VK_FORMAT_R32G32B32_SINT, offset };
+                m_Attrs[i] = { i, 0, VK_FORMAT_R32G32B32_SINT, offset };
                 break;
             }
             case ShaderDataType::Int4: {
-                attrs[i] = { i, 0, VK_FORMAT_R32G32B32A32_SINT, offset };
+                m_Attrs[i] = { i, 0, VK_FORMAT_R32G32B32A32_SINT, offset };
                 break;
             }
             default:
@@ -199,12 +198,12 @@ namespace Crowny
         }
 
         m_VertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        m_VertexInputStateCreateInfo.vertexBindingDescriptionCount = 1;
+        m_VertexInputStateCreateInfo.vertexBindingDescriptionCount = layout.GetStride() == 0 ? 0 : 1;
         m_VertexInputStateCreateInfo.flags = 0;
         m_VertexInputStateCreateInfo.pNext = nullptr;
-        m_VertexInputStateCreateInfo.pVertexBindingDescriptions = &vertexInput;
-        m_VertexInputStateCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
-        m_VertexInputStateCreateInfo.pVertexAttributeDescriptions = attrs.data();
+        m_VertexInputStateCreateInfo.pVertexBindingDescriptions = layout.GetStride() == 0 ? nullptr : &m_VertexInput;
+        m_VertexInputStateCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_Attrs.size());
+        m_VertexInputStateCreateInfo.pVertexAttributeDescriptions = m_Attrs.data();
 
         m_PipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
         m_PipelineInfo.pNext = nullptr;

@@ -102,11 +102,13 @@ namespace Crowny
         RGBA8 = 4,
 
         RGBA16F = 5,
-        RGBA32F = 6,
-        RG32F = 7,
-        R32I = 8,
-        DEPTH32F = 9,
-        DEPTH24STENCIL8 = 10
+        RGB32F = 6,
+        RGBA32F = 7,
+        RG16F = 8,
+        RG32F = 9,
+        R32I = 10,
+        DEPTH32F = 11,
+        DEPTH24STENCIL8 = 12
     };
 
     enum class TextureChannel

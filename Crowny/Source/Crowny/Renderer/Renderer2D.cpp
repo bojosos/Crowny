@@ -65,7 +65,7 @@ namespace Crowny
         ShaderCompiler compiler;
         Ref<Shader> vertex = Shader::Create(compiler.Compile("/Shaders/BatchRenderer.vert", VERTEX_SHADER));
         Ref<Shader> fragment = Shader::Create(compiler.Compile("/Shaders/BatchRenderer.frag", FRAGMENT_SHADER));
-        s_Data->VertexBuffer = VertexBuffer::Create(RENDERER_SPRITE_SIZE, BufferUsage::DYNAMIC_DRAW);
+        s_Data->VertexBuffer = VertexBuffer::Create(RENDERER_BUFFER_SIZE, BufferUsage::DYNAMIC_DRAW);
         BufferLayout layout = { { ShaderDataType::Float4, "a_Coordinates" },
                                 { ShaderDataType::Float4, "a_Color" },
                                 { ShaderDataType::Float2, "a_Uvs" },
@@ -198,9 +198,9 @@ namespace Crowny
                 }
 
                 float x0 = x + glyph->offset_x;
-                float y0 = y - glyph->offset_y;
+                float y0 = y + glyph->offset_y;
                 float x1 = x0 + glyph->width;
-                float y1 = y0 + glyph->height;
+                float y1 = y0 - glyph->height;
 
                 float u0 = glyph->s0;
                 float v0 = glyph->t0;
@@ -230,7 +230,8 @@ namespace Crowny
                 s_Data->Buffer->Tid = ts;
                 s_Data->Buffer->Color = color;
                 s_Data->Buffer++;
-
+                
+                s_Data->VertexCount += 4;
                 s_Data->IndexCount += 6;
 
                 x += glyph->advance_x;
@@ -240,11 +241,66 @@ namespace Crowny
 
     void Renderer2D::DrawString(const std::string& text, const glm::mat4& transform, const Ref<Font>& font,
                                 const glm::vec4& color)
-    {
+        {
         float x = transform[3][0];
         float y = transform[3][1];
+        float ts = FindTexture(font->GetTexture());
 
-        DrawString(text, x, y, font, color);
+        texture_font_t* ftFont = font->GetFTGLFont();
+
+        for (uint32_t i = 0; i < text.length(); i++)
+        {
+            char c = text[i];
+            texture_glyph_t* glyph = texture_font_get_glyph(ftFont, &c);
+
+            if (glyph)
+            {
+                if (i > 0)
+                {
+                    float kerning = texture_glyph_get_kerning(glyph, &text[i - 1]);
+                    x += kerning;
+                }
+
+                float x0 = x + glyph->offset_x;
+                float y0 = y + glyph->offset_y;
+                float x1 = x0 + glyph->width;
+                float y1 = y0 - glyph->height;
+
+                float u0 = glyph->s0;
+                float v0 = glyph->t0;
+                float u1 = glyph->s1;
+                float v1 = glyph->t1;
+
+                s_Data->Buffer->Position = transform * glm::vec4(x0, y0, 0, 1.0f);
+                s_Data->Buffer->Uv = glm::vec2(u0, v0);
+                s_Data->Buffer->Tid = ts;
+                s_Data->Buffer->Color = color;
+                s_Data->Buffer++;
+
+                s_Data->Buffer->Position = transform * glm::vec4(x0, y1, 0, 1.0f);
+                s_Data->Buffer->Uv = glm::vec2(u0, v1);
+                s_Data->Buffer->Tid = ts;
+                s_Data->Buffer->Color = color;
+                s_Data->Buffer++;
+
+                s_Data->Buffer->Position = transform * glm::vec4(x1, y1, 0, 1.0f);
+                s_Data->Buffer->Uv = glm::vec2(u1, v1);
+                s_Data->Buffer->Tid = ts;
+                s_Data->Buffer->Color = color;
+                s_Data->Buffer++;
+
+                s_Data->Buffer->Position = transform * glm::vec4(x1, y0, 0, 1.0f);
+                s_Data->Buffer->Uv = glm::vec2(u1, v0);
+                s_Data->Buffer->Tid = ts;
+                s_Data->Buffer->Color = color;
+                s_Data->Buffer++;
+                
+                s_Data->VertexCount += 4;
+                s_Data->IndexCount += 6;
+
+                x += glyph->advance_x;
+            }
+        }
     }
 
     void Renderer2D::End()
@@ -277,7 +333,6 @@ namespace Crowny
         s_Data->VertexBuffer = nullptr;
         s_Data->Pipeline = nullptr;
         s_Data->Uniforms = nullptr;
-        CW_ENGINE_INFO("Refs: {0}", s_Data->Textures[0].use_count());
         for (uint32_t i = 0; i < 8; i++)
             s_Data->Textures[i] = nullptr;
         delete s_Data;

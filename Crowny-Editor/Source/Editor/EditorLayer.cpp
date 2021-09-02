@@ -13,6 +13,7 @@
 #include "Crowny/Scene/SceneSerializer.h"
 #include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
+#include "Platform/OpenGL/OpenGLEnvironmentMap.h"
 
 #include "Editor/EditorAssets.h"
 
@@ -34,12 +35,13 @@ namespace Crowny
     float EditorLayer::s_FixedDeltaTime = 0.0f;
     float EditorLayer::s_FrameCount = 0.0f;
 
-    EditorCamera EditorLayer::s_EditorCamera = EditorCamera(30.0f, 1280.0f / 720.0f, 0.1f, 1000.0f);
+    EditorCamera EditorLayer::s_EditorCamera = EditorCamera(30.0f, 1280.0f / 720.0f, 0.001f, 100000.0f);
 
     EditorLayer::EditorLayer() : Layer("EditorLayer") {}
 
     void EditorLayer::OnAttach()
     {
+        static OpenGLEnvironmentMap map("/Textures/envmap.hdr");
         VirtualFileSystem::Get()->Mount("Icons", "Resources/Icons");
         SceneRenderer::Init();
         EditorAssets::Load();

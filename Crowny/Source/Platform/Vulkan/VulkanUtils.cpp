@@ -255,7 +255,6 @@ namespace Crowny
                 // If the format is compressed, fall back to uncompressed.
             }
         }
-
         return format;
     }
 
@@ -281,8 +280,12 @@ namespace Crowny
             return VK_FORMAT_R8G8B8A8_UNORM;
         case TextureFormat::RGBA16F:
             return VK_FORMAT_R16G16B16A16_SFLOAT;
+        case TextureFormat::RGB32F:
+            return VK_FORMAT_R32G32B32_SFLOAT;
         case TextureFormat::RGBA32F:
             return VK_FORMAT_R32G32B32A32_SFLOAT;
+        case TextureFormat::RG16F:
+            return VK_FORMAT_R16G16_SFLOAT;
         case TextureFormat::RG32F:
             return VK_FORMAT_R32G32_SFLOAT;
         case TextureFormat::R32I:

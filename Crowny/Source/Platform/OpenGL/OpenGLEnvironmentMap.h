@@ -1,26 +1,33 @@
-/*#pragma once
+#pragma once
 
+#include "Crowny/RenderAPI/GraphicsPipeline.h"
 #include "Crowny/RenderAPI/Texture.h"
+#include "Crowny/RenderAPI/VertexBuffer.h"
 
 namespace Crowny
 {
 
-    class OpenGLEnvironmentMap : public EnvironmentMap
+    class OpenGLEnvironmentMap
     {
     public:
         OpenGLEnvironmentMap(const std::string& filepath);
         ~OpenGLEnvironmentMap() = default;
 
         void ToCubemap();
+        void GenerateBRDFLUT();
+        void GeneratePrefilteredCube();
+        void GenerateIrradianceCube();
 
     private:
-        uint32_t m_RendererID;
+        Ref<Texture> m_Texture;
+        Ref<Texture> m_Cubemap;
         uint32_t m_Width, m_Height, m_Channels;
-        uint32_t m_Cubemap, m_IrradianceMap;
-        uint32_t m_BrdfLUTTexture;
-        uint32_t m_PrefilterMap;
-        std::string m_Name;
+
+        Ref<VertexBuffer> m_SkyboxVbo;
+        BufferLayout m_FilterLayout;
+        
+        Ref<Texture> m_Envmap;
 
     };
 
-}*/
+}
