@@ -2,7 +2,7 @@
 
 layout (location = 0) in vec3 inPos;
 
-layout(binding = 0 ) uniform MVP {
+layout(binding = 0) uniform MVP {
 	mat4 mvp;
 } mvp;
 
