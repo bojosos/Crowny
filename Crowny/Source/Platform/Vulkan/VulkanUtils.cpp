@@ -313,9 +313,117 @@ namespace Crowny
         return false;
     }
 
-    void VulkanUtils::CutRange(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b,
+    void VulkanUtils::CutHorizontal(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith,
+                                    VkImageSubresourceRange* output, uint32_t& numAreas)
+    {
+        numAreas = 0;
+        int32_t leftCut =
+          glm::clamp((int32_t)cutWith.baseArrayLayer - (int32_t)toCut.baseArrayLayer, 0, (int32_t)toCut.layerCount);
+        int32_t rightCut =
+          glm::clamp((int32_t)(cutWith.baseArrayLayer + cutWith.layerCount) - (int32_t)toCut.baseArrayLayer, 0,
+                     (int32_t)toCut.layerCount);
+        if (leftCut > 0 && leftCut < (int32_t)toCut.layerCount)
+        {
+            output[numAreas] = toCut;
+            VkImageSubresourceRange& range = output[numAreas];
+            range.baseArrayLayer = toCut.baseArrayLayer;
+            range.layerCount = leftCut;
+            numAreas++;
+        }
+
+        if (rightCut > 0 && rightCut < (int32_t)toCut.layerCount)
+        {
+            output[numAreas] = toCut;
+            VkImageSubresourceRange& range = output[numAreas];
+            range.baseArrayLayer = toCut.baseArrayLayer + rightCut;
+            range.layerCount = toCut.layerCount - rightCut;
+            numAreas++;
+        }
+
+        if (rightCut > leftCut)
+        {
+            output[numAreas] = toCut;
+            VkImageSubresourceRange& range = output[numAreas];
+            range.baseArrayLayer = toCut.baseArrayLayer + leftCut;
+            range.layerCount = toCut.layerCount - (toCut.layerCount - rightCut) - leftCut;
+            numAreas++;
+        }
+
+        if (numAreas == 0)
+        {
+            output[numAreas] = toCut;
+            numAreas++;
+        }
+    }
+
+    void VulkanUtils::CutVertical(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith,
+                                  VkImageSubresourceRange* output, uint32_t& numAreas)
+    {
+
+        numAreas = 0;
+        int32_t topCut =
+          glm::clamp((int32_t)cutWith.baseMipLevel - (int32_t)toCut.baseMipLevel, 0, (int32_t)toCut.levelCount);
+        int32_t bottomCut =
+          glm::clamp((int32_t)(cutWith.baseMipLevel + cutWith.levelCount) - (int32_t)toCut.baseMipLevel, 0,
+                     (int32_t)toCut.levelCount);
+        if (topCut > 0 && topCut < (int32_t)toCut.levelCount)
+        {
+            output[numAreas] = toCut;
+            VkImageSubresourceRange& range = output[numAreas];
+            range.baseMipLevel = toCut.baseMipLevel;
+            range.levelCount = topCut;
+            numAreas++;
+        }
+
+        if (bottomCut > 0 && bottomCut < (int32_t)toCut.levelCount)
+        {
+            output[numAreas] = toCut;
+            VkImageSubresourceRange& range = output[numAreas];
+            range.baseMipLevel = toCut.baseMipLevel + bottomCut;
+            range.levelCount = toCut.levelCount - bottomCut;
+            numAreas++;
+        }
+
+        if (bottomCut > topCut)
+        {
+            output[numAreas] = toCut;
+            VkImageSubresourceRange& range = output[numAreas];
+            range.baseMipLevel = toCut.baseMipLevel + topCut;
+            range.levelCount = toCut.levelCount - (toCut.levelCount - bottomCut) - topCut;
+            numAreas++;
+        }
+
+        if (numAreas == 0)
+        {
+            output[numAreas] = toCut;
+            numAreas++;
+        }
+    }
+
+    void VulkanUtils::CutRange(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith,
                                std::array<VkImageSubresourceRange, 5>& output, uint32_t& numAreas)
     {
+        numAreas = 0;
+        uint32_t numHorizontalCuts = 0;
+        std::array<VkImageSubresourceRange, 3> horzCuts;
+        CutHorizontal(toCut, cutWith, horzCuts.data(), numHorizontalCuts);
+        for (uint32_t i = 0; i < numHorizontalCuts; i++)
+        {
+            VkImageSubresourceRange& range = horzCuts[i];
+            if (range.baseArrayLayer >= cutWith.baseArrayLayer &&
+                (range.baseArrayLayer + range.layerCount) <= (cutWith.baseArrayLayer + cutWith.layerCount))
+            {
+                uint32_t numVertCuts = 0;
+                CutVertical(range, cutWith, output.data() + numAreas, numVertCuts);
+                numAreas += numVertCuts;
+            }
+            else
+            {
+                output[numAreas] = range;
+                numAreas++;
+            }
+        }
+        CW_ENGINE_ASSERT(numAreas <= 5);
     }
 
     VkFormat VulkanUtils::GetDummyViewFormat(GpuBufferFormat format)

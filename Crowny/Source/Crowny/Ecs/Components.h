@@ -12,6 +12,7 @@
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/Mesh.h"
 #include "Crowny/Renderer/MeshFactory.h"
+#include "Crowny/Renderer/Model.h"
 #include "Crowny/Renderer/TextureManager.h"
 
 #include "../../Crowny-Editor/Source/Panels/ImGuiMaterialPanel.h" // ?????????????????????
@@ -111,11 +112,14 @@ namespace Crowny
     struct MeshRendererComponent : public Component
     {
         Ref<::Crowny::Mesh> Mesh = nullptr;
+        Ref<::Crowny::Model> Model = nullptr;
 
         MeshRendererComponent()
         {
-            Mesh = MeshFactory::CreateSphere();
-            Mesh->SetMaterialInstnace(CreateRef<MaterialInstance>(ImGuiMaterialPanel::GetSlectedMaterial()));
+            Model = CreateRef<::Crowny::Model>("/Models/sphere.gltf");
+
+            Model->m_Meshes[0]->SetMaterialInstance(
+              CreateRef<MaterialInstance>(ImGuiMaterialPanel::GetSlectedMaterial()));
         };
         MeshRendererComponent(const MeshRendererComponent&) = default;
     };

@@ -278,7 +278,7 @@ namespace Crowny
         }
 
         ImGui::SameLine();
-        ImGui::ColorEdit4("Color", glm::value_ptr(t.Color));
+        ImGui::ColorEdit4("##SpriteColor", glm::value_ptr(t.Color));
     }
 
     template <> void ComponentEditorWidget<MeshRendererComponent>(Entity e)

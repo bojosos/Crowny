@@ -24,6 +24,13 @@ namespace Crowny
 
     void ImGuiViewportPanel::Render()
     {
+        if (Input::IsKeyPressed(Key::Q))
+            m_GizmoMode = ImGuizmo::TRANSLATE;
+        if (Input::IsKeyPressed(Key::W))
+            m_GizmoMode = ImGuizmo::ROTATE;
+        if (Input::IsKeyPressed(Key::E))
+            m_GizmoMode = ImGuizmo::SCALE;
+
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
         ImGui::Begin("Viewport", &m_Shown);
         UpdateState();
@@ -59,6 +66,13 @@ namespace Crowny
         m_ViewportBounds = { minBound.x, minBound.y, maxBound.x, maxBound.y };
 
         Entity selected = ImGuiHierarchyPanel::GetSelectedEntity();
+        EditorCamera camera = EditorLayer::GetEditorCamera();
+        const glm::mat4& proj = camera.GetProjection();
+        glm::mat4 view = camera.GetViewMatrix();
+        glm::mat4 id(1.0f);
+        ImGuizmo::SetRect(m_ViewportBounds.x, m_ViewportBounds.y, windowSize.x, windowSize.y);
+        ImGuizmo::DrawGrid(glm::value_ptr(view), glm::value_ptr(proj), glm::value_ptr(id), 100.0f);
+
         if (selected && m_GizmoMode != -1)
         {
             ImGuizmo::SetOrthographic(false);
@@ -66,10 +80,6 @@ namespace Crowny
 
             float width = (float)ImGui::GetWindowWidth();
             float height = (float)ImGui::GetWindowHeight();
-            ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, width, height);
-            EditorCamera camera = EditorLayer::GetEditorCamera();
-            const glm::mat4& proj = camera.GetProjection();
-            glm::mat4 view = camera.GetViewMatrix();
             auto& tc = selected.GetComponent<TransformComponent>();
             glm::mat4 transform = tc.GetTransform();
 
@@ -84,13 +94,13 @@ namespace Crowny
             if (ImGuizmo::IsUsing())
             {
                 glm::vec3 position, rotation, scale;
-                if (Math::DecomposeMatrix(transform, position, rotation, scale))
-                {
-                    glm::vec3 deltaRot = rotation - tc.Rotation;
-                    tc.Position = position;
-                    tc.Rotation += deltaRot;
-                    tc.Scale = scale;
-                }
+                // if (Math::DecomposeMatrix(transform, position, rotation, scale))
+                ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(transform), glm::value_ptr(position),
+                                                      glm::value_ptr(rotation), glm::value_ptr(scale));
+                glm::vec3 deltaRot = rotation - tc.Rotation;
+                tc.Position = position;
+                tc.Rotation += deltaRot;
+                tc.Scale = scale;
             }
         }
 

@@ -426,7 +426,7 @@ namespace Crowny
         {
             VkViewport viewport;
             viewport.x = m_Viewport.X;
-            viewport.x = m_Viewport.Y;
+            viewport.y = m_Viewport.Y;
             viewport.width = m_Viewport.Width;
             viewport.height = m_Viewport.Height;
             viewport.minDepth = 0.0f;

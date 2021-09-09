@@ -1,7 +1,8 @@
 #pragma once
 
+#include "Crowny/RenderAPI/IndexBuffer.h"
 #include "Crowny/RenderAPI/Texture.h"
-#include "Crowny/RenderAPI/VertexArray.h"
+#include "Crowny/RenderAPI/VertexBuffer.h"
 #include "Crowny/Renderer/Material.h"
 
 namespace Crowny
@@ -12,28 +13,25 @@ namespace Crowny
         glm::vec3 Normal;
         glm::vec2 Uv;
         glm::vec3 Tangent;
-        glm::vec3 Binormal;
     };
 
     class Mesh
     {
-    private:
-        Ref<VertexArray> m_VertexArray;
-        Ref<IndexBuffer> m_IndexBuffer;
-        Ref<MaterialInstance> m_MaterialInstance;
-        std::vector<Ref<Texture>> m_Textures;
 
     public:
-        Mesh(const Ref<VertexArray>& vao, const Ref<IndexBuffer>& ibo, const Ref<MaterialInstance>& material = nullptr,
-             const std::vector<Ref<Texture>>& textures = {});
+        Mesh(const Ref<VertexBuffer>& vbo, const Ref<IndexBuffer>& ibo);
         ~Mesh() = default;
 
         void Draw();
-        Ref<VertexArray> GetVertexArray() { return m_VertexArray; }
         Ref<MaterialInstance> GetMaterialInstance() { return m_MaterialInstance; }
-        void SetMaterialInstnace(const Ref<MaterialInstance>& materialInstance)
+        void SetMaterialInstance(const Ref<MaterialInstance>& materialInstance)
         {
             m_MaterialInstance = materialInstance;
         }
+
+    private:
+        Ref<VertexBuffer> m_VertexBuffer;
+        Ref<IndexBuffer> m_IndexBuffer;
+        Ref<MaterialInstance> m_MaterialInstance;
     };
 } // namespace Crowny

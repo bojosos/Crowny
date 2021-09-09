@@ -4,7 +4,6 @@
 
 layout(location = 0) in DATA
 {
-	vec4 position;
 	vec4 color;
 	vec2 uv;
 	flat float tid;

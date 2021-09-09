@@ -8,13 +8,12 @@ layout(location = 4) in int a_ObjectId;
 
 layout(binding = 0) uniform VP
 {
-  mat4 proj;
   mat4 view;
+  mat4 proj;
 } vp;
 
 layout(location = 0) out DATA
 {
-	vec4 position;
 	vec4 color;
 	vec2 uv;
 	flat float tid;
@@ -24,8 +23,6 @@ layout(location = 0) out DATA
 void main()
 {
 	gl_Position = vp.proj * vp.view * a_Position;
-	// gl_Position = a_Position;
-	vs_out.position = a_Position;
 	vs_out.uv = a_UV;
 	vs_out.tid = a_Tid;
 	vs_out.color = a_Color;
