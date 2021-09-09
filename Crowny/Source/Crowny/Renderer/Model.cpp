@@ -53,8 +53,6 @@ namespace Crowny
 
     Ref<Mesh> Model::ProcessMesh(aiMesh* mesh, const aiScene* scene)
     {
-        Ref<VertexArray> vao = VertexArray::Create();
-
         Vertex* verts = new Vertex[mesh->mNumVertices];
         for (uint32_t i = 0; i < mesh->mNumVertices; i++)
         {
@@ -68,7 +66,7 @@ namespace Crowny
             else
                 verts[i].Uv = glm::vec2(0.0f, 0.0f);
 
-            verts[i].Binormal = glm::vec3{ mesh->mBitangents[i].x, mesh->mBitangents[i].y, mesh->mBitangents[i].z };
+            // verts[i].Binormal = glm::vec3{ mesh->mBitangents[i].x, mesh->mBitangents[i].y, mesh->mBitangents[i].z };
             verts[i].Tangent = glm::vec3{ mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z };
         }
 
@@ -76,15 +74,15 @@ namespace Crowny
         void* dest = vbo->Map(0, sizeof(Vertex) * mesh->mNumVertices, GpuLockOptions::WRITE_DISCARD);
         memcpy(dest, verts, sizeof(Vertex) * mesh->mNumVertices);
         vbo->Unbind();
-        vbo->SetLayout({ { ShaderDataType::Float3, "Position" },
+        /*vbo->SetLayout({ { ShaderDataType::Float3, "Position" },
                          { ShaderDataType::Float3, "Normal" },
                          { ShaderDataType::Float2, "Uv" },
                          { ShaderDataType::Float3, "Tangent" },
-                         { ShaderDataType::Float3, "Binormal" } });
-        /*vbo->SetLayout({ {ShaderDataType::Float3, "Position"},
-            {ShaderDataType::Float2, "Uv"},
-            {ShaderDataType::Float3, "Normal"},
-        });*/
+                         { ShaderDataType::Float3, "Binormal" } });*/
+        vbo->SetLayout({ { ShaderDataType::Float3, "Position" },
+                         { ShaderDataType::Float3, "Normal" },
+                         { ShaderDataType::Float2, "Uv" },
+                         { ShaderDataType::Float3, "Tangent" } });
         delete[] verts;
 
         // TODO: Optimize
@@ -100,8 +98,7 @@ namespace Crowny
         }
 
         Ref<IndexBuffer> ibo = IndexBuffer::Create(indices.data(), indices.size());
-        vao->AddVertexBuffer(vbo);
-        vao->SetIndexBuffer(ibo);
+        /*
         std::vector<Ref<Texture>> textures;
         if (mesh->mMaterialIndex >= 0)
         {
@@ -119,8 +116,8 @@ namespace Crowny
               this->LoadMaterialTextures(material, aiTextureType_AMBIENT, "texture_height");
             textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
         }
-
-        return CreateRef<Mesh>(vao, ibo, nullptr, textures);
+        */
+        return CreateRef<Mesh>(vbo, ibo);
     }
 
     std::vector<Ref<Texture>> Model::LoadMaterialTextures(aiMaterial* material, aiTextureType type,

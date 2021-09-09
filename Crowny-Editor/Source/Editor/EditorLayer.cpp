@@ -19,9 +19,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
-#include "Crowny/../../Dependencies/stb_image/stb_image.h"
 #include <backends/imgui_impl_vulkan.h>
 #include <imgui.h>
 
@@ -56,11 +54,6 @@ namespace Crowny
         m_MenuBar->AddMenu(fileMenu);
 
         ImGuiMenu* viewMenu = new ImGuiMenu("View");
-
-        // ImGuiMenu* renderInfo = new ImGuiMenu("Rendering Info");
-        // m_GLInfoPanel = new OpenGLInformationPanel("OpenGL");
-        // renderInfo->AddItem(new ImGuiMenuItem("OpenGL", "", [&](auto& event) { m_GLInfoPanel->Show(); }));
-        // viewMenu->AddMenu(renderInfo);
 
         m_HierarchyPanel = new ImGuiHierarchyPanel("Hierarchy");
         viewMenu->AddItem(new ImGuiMenuItem("Hierarchy", "", [&](auto& event) { m_HierarchyPanel->Show(); }));
@@ -113,19 +106,19 @@ namespace Crowny
         // SceneManager::SetActiveScene(scene);
 
         TextureParameters colorParams;
-        colorParams.Width = 1386;
-        colorParams.Height = 728;
+        colorParams.Width = 1337;
+        colorParams.Height = 508;
         colorParams.Usage = TextureUsage::TEXTURE_RENDERTARGET;
 
         TextureParameters objectId;
-        objectId.Width = 1386;
-        objectId.Height = 728;
+        objectId.Width = 1337;
+        objectId.Height = 508;
         objectId.Format = TextureFormat::R32I;
         objectId.Usage = TextureUsage(TextureUsage::TEXTURE_RENDERTARGET | TextureUsage::TEXTURE_DYNAMIC);
 
         TextureParameters depthParams;
-        depthParams.Width = 1386;
-        depthParams.Height = 728;
+        depthParams.Width = 1337;
+        depthParams.Height = 508;
         depthParams.Usage = TextureUsage::TEXTURE_DEPTHSTENCIL;
         depthParams.Format = TextureFormat::DEPTH24STENCIL8;
 
@@ -136,8 +129,8 @@ namespace Crowny
         rtProps.ColorSurfaces[0] = { color1 };
         rtProps.ColorSurfaces[1] = { color2 };
         rtProps.DepthSurface = { depth };
-        rtProps.Width = 1386;
-        rtProps.Height = 728;
+        rtProps.Width = 1337;
+        rtProps.Height = 508;
 
         m_RenderTarget = RenderTexture::Create(rtProps);
     }
@@ -215,9 +208,9 @@ namespace Crowny
             SceneManager::SetActiveScene(m_Temp);
             m_Temp = nullptr;
         }
+        s_EditorCamera.SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
         s_EditorCamera.OnUpdate(ts);
         SceneRenderer::SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
-        s_EditorCamera.SetViewportSize(500, 250);
 
         auto& rapi = RenderAPI::Get();
         rapi.SetRenderTarget(m_RenderTarget);

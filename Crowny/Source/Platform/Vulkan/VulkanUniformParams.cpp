@@ -259,7 +259,6 @@ namespace Crowny
                 copy.NumMipLevels = texProps.MipLevels + 1;
             if (surface.NumFaces == 0)
                 copy.NumFaces = texProps.Faces;
-
             VkImageView view = image->GetView(copy, false);
             data.WriteInfos[bindingIdx].Image.imageView = view;
             m_SampledImages[seqIdx] = image->GetHandle();
