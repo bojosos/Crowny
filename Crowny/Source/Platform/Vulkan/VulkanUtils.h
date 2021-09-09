@@ -79,9 +79,14 @@ namespace Crowny
         static VkIndexType GetIndexType(IndexType indexType);
         static VkPipelineStageFlags ShaderToPipelineStage(VkShaderStageFlags shaderStageFlags);
         static bool RangeOverlaps(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b);
+        static VkFormat GetDummyViewFormat(GpuBufferFormat format);
+
         static void CutRange(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b,
                              std::array<VkImageSubresourceRange, 5>& output, uint32_t& numAreas);
-        static VkFormat GetDummyViewFormat(GpuBufferFormat format);
+        static void CutVertical(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith,
+                                VkImageSubresourceRange* output, uint32_t& numAreas);
+        static void CutHorizontal(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith,
+                                  VkImageSubresourceRange* output, uint32_t& numAreas);
     };
 } // namespace Crowny
 

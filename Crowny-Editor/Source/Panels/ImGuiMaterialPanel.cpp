@@ -5,12 +5,13 @@
 #include "Editor/EditorAssets.h"
 #include "ImGuiMaterialPanel.h"
 
-#include "glm/gtc/type_ptr.inl"
+#include <backends/imgui_impl_vulkan.h>
+#include <glm/gtc/type_ptr.inl>
 #include <imgui.h>
 
 namespace Crowny
 {
-
+    extern void LoadTexture(const std::string& path, Ref<Texture>& out);
     Ref<PBRMaterial> ImGuiMaterialPanel::s_SelectedMaterial = nullptr;
 
     ImGuiMaterialPanel::ImGuiMaterialPanel(const std::string& name) : ImGuiPanel(name) {}
@@ -22,23 +23,22 @@ namespace Crowny
 
         if (s_SelectedMaterial)
         {
-            // VULKAN IMPL: Fix
-            /*
             if (ImGui::CollapsingHeader("Albedo", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                Ref<Texture2D> albedo = s_SelectedMaterial->GetAlbedoMap();
+                Ref<Texture> albedo = s_SelectedMaterial->GetAlbedoMap();
                 if (albedo)
-                    ImGui::Image(reinterpret_cast<void*>(albedo->GetRendererID()), ImVec2(100, 100));
+                    ImGui::Image(ImGui_ImplVulkan_AddTexture(albedo), ImVec2(100, 100));
                 else
-                    ImGui::Image(reinterpret_cast<void*>(EditorAssets::Get().UnassignedTexture->GetRendererID()),
-            ImVec2(100, 100));
+                    ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), ImVec2(100, 100));
 
                 if (ImGui::IsItemClicked())
                 {
                     std::vector<std::string> outPaths;
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
-                        s_SelectedMaterial->SetAlbedoMap(Texture2D::Create(outPaths[0]));
+                        Ref<Texture> albedo;
+                        LoadTexture(outPaths[0], albedo);
+                        s_SelectedMaterial->SetAlbedoMap(albedo);
                     }
                 }
 
@@ -56,19 +56,20 @@ namespace Crowny
 
             if (ImGui::CollapsingHeader("Metalness", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                Ref<Texture2D> metalness = s_SelectedMaterial->GetMetalnessMap();
+                Ref<Texture> metalness = s_SelectedMaterial->GetMetalnessMap();
                 if (metalness)
-                    ImGui::Image(reinterpret_cast<void*>(metalness->GetRendererID()), ImVec2(100, 100));
+                    ImGui::Image(ImGui_ImplVulkan_AddTexture(metalness), ImVec2(100, 100));
                 else
-                    ImGui::Image(reinterpret_cast<void*>(EditorAssets::Get().UnassignedTexture->GetRendererID()),
-            ImVec2(100, 100));
+                    ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), ImVec2(100, 100));
 
                 if (ImGui::IsItemClicked())
                 {
                     std::vector<std::string> outPaths;
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
-                        s_SelectedMaterial->SetMetalnessMap(Texture2D::Create(outPaths[0]));
+                        Ref<Texture> metalness;
+                        LoadTexture(outPaths[0], metalness);
+                        s_SelectedMaterial->SetMetalnessMap(metalness);
                     }
                 }
 
@@ -88,19 +89,20 @@ namespace Crowny
 
             if (ImGui::CollapsingHeader("Normal", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                Ref<Texture2D> normal = s_SelectedMaterial->GetNormalMap();
+                Ref<Texture> normal = s_SelectedMaterial->GetNormalMap();
                 if (normal)
-                    ImGui::Image(reinterpret_cast<void*>(normal->GetRendererID()), ImVec2(100, 100));
+                    ImGui::Image(ImGui_ImplVulkan_AddTexture(normal), ImVec2(100, 100));
                 else
-                    ImGui::Image(reinterpret_cast<void*>(EditorAssets::Get().UnassignedTexture->GetRendererID()),
-            ImVec2(100, 100));
+                    ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), ImVec2(100, 100));
 
                 if (ImGui::IsItemClicked())
                 {
                     std::vector<std::string> outPaths;
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
-                        s_SelectedMaterial->SetNormalMap(Texture2D::Create(outPaths[0]));
+                        Ref<Texture> normal;
+                        LoadTexture(outPaths[0], normal);
+                        s_SelectedMaterial->SetNormalMap(normal);
                     }
                 }
                 if (ImGui::Button("Reset##resetNormal"))
@@ -111,19 +113,20 @@ namespace Crowny
 
             if (ImGui::CollapsingHeader("Roughness", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                Ref<Texture2D> rougness = s_SelectedMaterial->GetRoughnessMap();
-                if (rougness)
-                    ImGui::Image(reinterpret_cast<void*>(rougness->GetRendererID()), ImVec2(100, 100));
+                Ref<Texture> roughness = s_SelectedMaterial->GetRoughnessMap();
+                if (roughness)
+                    ImGui::Image(ImGui_ImplVulkan_AddTexture(roughness), ImVec2(100, 100));
                 else
-                    ImGui::Image(reinterpret_cast<void*>(EditorAssets::Get().UnassignedTexture->GetRendererID()),
-            ImVec2(100, 100));
+                    ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), ImVec2(100, 100));
 
                 if (ImGui::IsItemClicked())
                 {
                     std::vector<std::string> outPaths;
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
-                        s_SelectedMaterial->SetRoughnessMap(Texture2D::Create(outPaths[0]));
+                        Ref<Texture> roughness;
+                        LoadTexture(outPaths[0], roughness);
+                        s_SelectedMaterial->SetRoughnessMap(roughness);
                     }
                 }
 
@@ -141,22 +144,23 @@ namespace Crowny
 
             if (ImGui::CollapsingHeader("Ao Map", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                Ref<Texture2D> ao = s_SelectedMaterial->GetAoMap();
+                Ref<Texture> ao = s_SelectedMaterial->GetAoMap();
                 if (ao)
-                    ImGui::Image(reinterpret_cast<void*>(ao->GetRendererID()), ImVec2(100, 100));
+                    ImGui::Image(ImGui_ImplVulkan_AddTexture(ao), ImVec2(100, 100));
                 else
-                    ImGui::Image(reinterpret_cast<void*>(EditorAssets::Get().UnassignedTexture->GetRendererID()),
-            ImVec2(100, 100));
+                    ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), ImVec2(100, 100));
 
                 if (ImGui::IsItemClicked())
                 {
                     std::vector<std::string> outPaths;
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
-                        s_SelectedMaterial->SetAoMap(Texture2D::Create(outPaths[0]));
+                        Ref<Texture> ao;
+                        LoadTexture(outPaths[0], ao);
+                        s_SelectedMaterial->SetAoMap(ao);
                     }
                 }
-            }*/
+            }
         }
 
         ImGui::End();

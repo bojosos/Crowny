@@ -7,18 +7,14 @@
 namespace Crowny
 {
 
-    Mesh::Mesh(const Ref<VertexArray>& vao, const Ref<IndexBuffer>& ibo, const Ref<MaterialInstance>& material,
-               const std::vector<Ref<Texture>>& textures)
-      : m_VertexArray(vao), m_IndexBuffer(ibo), m_MaterialInstance(material), m_Textures(textures)
-    {
-    }
+    Mesh::Mesh(const Ref<VertexBuffer>& vbo, const Ref<IndexBuffer>& ibo) : m_VertexBuffer(vbo), m_IndexBuffer(ibo) {}
 
-    void Mesh::Draw() // this should prob not be here
+    void Mesh::Draw()
     {
-        m_VertexArray->Bind();
-        RenderCommand::DrawIndexed(m_VertexArray);
-        m_VertexArray->Unbind();
-        m_MaterialInstance->Unbind();
+        auto& rapi = RenderAPI::Get();
+        rapi.SetVertexBuffers(0, &m_VertexBuffer, 1);
+        rapi.SetIndexBuffer(m_IndexBuffer);
+        rapi.DrawIndexed(0, m_IndexBuffer->GetCount(), 0, 1);
     }
 
 } // namespace Crowny

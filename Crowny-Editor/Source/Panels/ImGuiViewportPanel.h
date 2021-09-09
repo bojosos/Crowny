@@ -5,6 +5,8 @@
 #include "Crowny/Events/Event.h"
 #include "Crowny/RenderAPI/RenderTarget.h"
 
+#include <ImGuizmo.h>
+
 namespace Crowny
 {
 
@@ -23,8 +25,8 @@ namespace Crowny
     private:
         Ref<RenderTarget> m_RenderTarget;
         EventCallbackFn OnEvent;
-        int32_t m_GizmoMode = 0;
-        glm::vec2 m_ViewportSize;
+        int32_t m_GizmoMode = ImGuizmo::TRANSLATE;
+        glm::vec2 m_ViewportSize = { 1.0f, 1.0f };
         glm::vec4 m_ViewportBounds;
     };
 

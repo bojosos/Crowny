@@ -25,8 +25,6 @@ namespace Crowny
     struct Renderer2DData
     {
         Ref<VertexBuffer> VertexBuffer;
-        Ref<Shader> Shader;
-        Ref<Texture> WhiteTexture;
         Ref<GraphicsPipeline> Pipeline;
         Ref<UniformBufferBlock> ProjectionView;
         Ref<UniformParams> Uniforms;
@@ -81,11 +79,7 @@ namespace Crowny
         s_Data->ProjectionView =
           UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("VP").BlockSize, BufferUsage::DYNAMIC_DRAW);
         s_Data->Uniforms = UniformParams::Create(s_Data->Pipeline);
-
         s_Data->Uniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "VP", s_Data->ProjectionView);
-
-        glm::mat4 cam(1.0f);
-        glm::mat4 v = glm::inverse(glm::mat4(1.0f));
 
         TextureParameters params;
         params.Width = 1;
@@ -104,11 +98,11 @@ namespace Crowny
 
     void Renderer2D::Begin(const Camera& camera, const glm::mat4& viewMatrix)
     {
-        s_Data->ProjectionView->Write(0, glm::value_ptr(camera.GetProjection()), sizeof(glm::mat4));
-        s_Data->ProjectionView->Write(sizeof(glm::mat4), glm::value_ptr(viewMatrix), sizeof(glm::mat4));
+        s_Data->ProjectionView->Write(0, glm::value_ptr(viewMatrix), sizeof(glm::mat4));
+        s_Data->ProjectionView->Write(sizeof(glm::mat4), glm::value_ptr(camera.GetProjection()), sizeof(glm::mat4));
 
         RenderAPI::Get().SetGraphicsPipeline(s_Data->Pipeline);
-        RenderAPI::Get().SetViewport(0, 0, 1000, 1000);
+        RenderAPI::Get().SetViewport(0, 0, 1337, 508);
         RenderAPI::Get().SetVertexBuffers(0, &s_Data->VertexBuffer, 1);
         RenderAPI::Get().SetIndexBuffer(s_Data->IndexBuffer);
     }
