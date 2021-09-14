@@ -74,6 +74,10 @@ namespace Crowny
     public:
         static Ref<Texture> Create(const TextureParameters& params);
 
+    public:
+        static Ref<Texture> WHITE;
+        static Ref<Texture> BLACK;
+
     protected:
         std::unordered_map<TextureViewDesc, Ref<TextureView>, TextureView::HashFunction, TextureView::EqualFunction>
           m_TextureViews;

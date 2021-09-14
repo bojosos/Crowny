@@ -32,7 +32,7 @@ namespace Sandbox
 
         public void Start()
         {
-            TestFunc();   
+            TestFunc();
             int c = 0;
             int a = 5 / c;
 //            camera = GetComponent<CameraComponent>().camera;

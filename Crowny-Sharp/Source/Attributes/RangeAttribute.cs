@@ -20,7 +20,7 @@ namespace Crowny
         /// </summary>
         /// <param name="min">Minimum value of the range.</param>
         /// <param name="max">Maximum value of the range.</param>
-        /// <param name="slider">WHether it should be rendered as a slider.</param>
+        /// <param name="slider">Whether it should be rendered as a slider.</param>
         public Range(float min, float max, bool slider = true)
         {
             this.min = min;

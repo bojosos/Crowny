@@ -35,11 +35,12 @@ namespace Crowny
 
     EditorCamera EditorLayer::s_EditorCamera = EditorCamera(30.0f, 1280.0f / 720.0f, 0.001f, 100000.0f);
 
+    void LoadTexture(const std::string& filepath, Ref<Texture>& texture);
+
     EditorLayer::EditorLayer() : Layer("EditorLayer") {}
 
     void EditorLayer::OnAttach()
     {
-        Skybox map("/Textures/envmap.hdr");
         VirtualFileSystem::Get()->Mount("Icons", "Resources/Icons");
         SceneRenderer::Init();
         EditorAssets::Load();
@@ -78,27 +79,29 @@ namespace Crowny
 
         SceneManager::AddScene(CreateRef<Scene>("Editor scene"));
         ScriptRuntime::Init();
+        ShaderCompiler compiler;
+        Ref<Shader> vertex = Shader::Create(compiler.Compile("/Shaders/pbribl.vert", VERTEX_SHADER));
+        Ref<Shader> fragment = Shader::Create(compiler.Compile("/Shaders/pbribl.frag", FRAGMENT_SHADER));
+        Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(vertex, fragment);
+        /// auto& manifest = AssetManager::Get().ImportManifest("Sandbox.yaml", "Sandbox");
+        // AssetManifest("Sandbox").Serialize("Sandbox.yaml");
 
-        // Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(Shader::Create("/Shaders/PBRShader.glsl"));
-        /*
-        //auto& manifest = AssetManager::Get().ImportManifest("Sandbox.yaml", "Sandbox");
-        AssetManifest("Sandbox").Serialize("Sandbox.yaml");
+        Ref<Texture> albedo, metallic, roughness, normal;
+        LoadTexture("/Textures/rustediron2_basecolor.png", albedo);
+        LoadTexture("/Textures/rustediron2_metallic.png", metallic);
+        LoadTexture("/Textures/rustediron2_roughness.png", roughness);
+        LoadTexture("/Textures/rustediron2_normal.png", normal);
 
-        mat->SetAlbedoMap(Texture2D::Create("/Textures/rustediron2_basecolor.png"));
-        mat->SetMetalnessMap(Texture2D::Create("/Textures/rustediron2_metallic.png"));
-        mat->SetNormalMap(Texture2D::Create("/Textures/rustediron2_normal.png"));
-        mat->SetRoughnessMap(Texture2D::Create("/Textures/rustediron2_roughness.png"));
+        Ref<Texture> ao = Texture::WHITE;
 
-        Ref<Texture2D> white = Texture2D::Create(2048, 2048);
-        uint32_t* whiteTextureData = new uint32_t[2048 * 2048];
-        for (int i = 0; i < 2048 * 2048; i++)
-            whiteTextureData[i] = 0xffffffff;
-        white->SetData(whiteTextureData, sizeof(uint32_t) * 2048 * 2048);
-        mat->SetAoMap(white);
+        mat->SetAlbedoMap(albedo);
+        mat->SetNormalMap(normal);
+        mat->SetMetalnessMap(metallic);
+        mat->SetRoughnessMap(roughness);
+        mat->SetAoMap(ao);
 
         ImGuiMaterialPanel::SetSelectedMaterial(mat);
-        //ForwardRenderer::Init(); // Why here?
-        */
+        ForwardRenderer::Init(); // Why here?
 
         // Ref<Scene> scene;
         // SceneSerializer serializer(scene);
@@ -214,6 +217,7 @@ namespace Crowny
 
         auto& rapi = RenderAPI::Get();
         rapi.SetRenderTarget(m_RenderTarget);
+        rapi.SetViewport(0, 0, m_ViewportSize.x, m_ViewportSize.y);
         SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
 
         if (m_GameMode && !m_Paused)

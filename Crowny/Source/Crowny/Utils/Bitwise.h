@@ -13,7 +13,7 @@ namespace Crowny
             if (value <= 0.0f)
                 return 0;
             if (value >= 1.0f)
-                return 1;
+                return (1 << bits) - 1;
             return (int)glm::round(value * (1 << bits));
         }
 

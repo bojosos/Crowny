@@ -8,6 +8,8 @@
 namespace Crowny
 {
 
+    class ForwardRenderer;
+
     class Skybox
     {
     public:
@@ -20,6 +22,7 @@ namespace Crowny
         void GenerateIrradianceCube();
 
     private:
+        friend class ForwardRenderer;
         Ref<Texture> m_EnvironmentMap; // the loaded map
         Ref<Texture> m_PrefilteredMap; // the filtered map
         Ref<Texture> m_IrradianceMap;  // the irradiance map

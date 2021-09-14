@@ -29,6 +29,7 @@ namespace Crowny
     class PixelData
     {
     public:
+        PixelData() = default;
         PixelData(uint32_t width, uint32_t height, uint32_t depth, TextureFormat textureFormat);
         ~PixelData();
 
@@ -47,9 +48,18 @@ namespace Crowny
         uint32_t GetRowSkip() const { return 0; }
         uint32_t GetSliceSkip() const { return 0; }
 
+        void AllocateInternalBuffer();
+        void SetColorAt(uint32_t x, uint32_t y, const glm::vec4& color);
+        void SetColorAt(uint32_t x, uint32_t y, uint32_t z, const glm::vec4& color);
+
+    public:
+        static Ref<PixelData> Create(uint32_t width, uint32_t height, TextureFormat format);
+        static Ref<PixelData> Create(uint32_t width, uint32_t height, uint32_t depth, TextureFormat format);
+
     private:
+        bool m_OwnsData;
         TextureFormat m_Format = TextureFormat::NONE;
-        uint32_t m_Width, m_Height, m_Depth;
+        uint32_t m_Width = 0, m_Height = 0, m_Depth = 0;
         uint32_t m_RowPitch = 0, m_SlicePitch = 0;
         uint8_t* m_Buffer = nullptr;
     };
@@ -69,6 +79,7 @@ namespace Crowny
         static void ConvertPixels(const PixelData& src, PixelData& dst);
         static void PackPixel(float r, float g, float b, float a, TextureFormat format, uint8_t* dst);
         static void UnpackPixel(float* r, float* g, float* b, float* a, TextureFormat format, uint8_t* src);
+        static void GetBitDepths(TextureFormat format, int (&rgba)[4]);
     };
 
 } // namespace Crowny

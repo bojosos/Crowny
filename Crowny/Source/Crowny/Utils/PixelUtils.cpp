@@ -23,10 +23,10 @@ namespace Crowny
         { "None", 0, 0, PCT_BYTE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
         { "R8", 1, PFF_INTEGER | PFF_NORMALIZED, PCT_BYTE, 1, 8, 0, 0, 0, 0x000000FF, 0, 0, 0, 0, 0, 0, 0 },
         { "RG8", 2, PFF_INTEGER | PFF_NORMALIZED, PCT_BYTE, 2, 8, 8, 0, 0, 0x000000FF, 0x0000FF00, 0, 0, 0, 8, 0, 0 },
-        { "RGB8", 4, PFF_INTEGER | PFF_NORMALIZED, PCT_BYTE, 3, 8, 8, 8, 0, 0x00FF0000, 0x0000FF00, 0x000000FF, 0, 0, 8,
+        { "RGB8", 4, PFF_INTEGER | PFF_NORMALIZED, PCT_BYTE, 3, 8, 8, 8, 0, 0x000000FF, 0x0000FF00, 0x00FF0000, 0, 0, 8,
           16, 0 },
-        { "RGBA8", 4, PFF_INTEGER | PFF_NORMALIZED | PFF_HASALPHA, PCT_BYTE, 3, 8, 8, 8, 8, 0x00FF0000, 0x0000FF00,
-          0x000000FF, 0, 0, 8, 16, 32 },
+        { "RGBA8", 4, PFF_INTEGER | PFF_NORMALIZED | PFF_HASALPHA, PCT_BYTE, 4, 8, 8, 8, 8, 0x000000FF, 0x0000FF00,
+          0x00FF0000, 0xFF000000, 0, 8, 16, 24 },
         { "RGBA16F", 8, PFF_FLOAT | PFF_HASALPHA, PCT_FLOAT16, 4, 16, 16, 16, 16, 0x0000FFFF, 0xFFFF0000, 0x0000FFFF,
           0xFFFF0000, 0, 16, 0, 16 },
         { "RGB32F", 12, PFF_FLOAT, PCT_FLOAT32, 3, 32, 32, 32, 32, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0, 0, 0, 0, 0 },
@@ -214,7 +214,9 @@ namespace Crowny
                 if (desc.ComponentType == PCT_FLOAT16)
                     val |= (Bitwise::FloatToHalf(inputs[i]) << shifts[i]) & masks[i];
                 else
+                {
                     val |= *(uint32_t*)&inputs[i];
+                }
             }
             else
             {
@@ -249,6 +251,8 @@ namespace Crowny
             return 8;
         case TextureFormat::RGB32F:
             return 12;
+        case TextureFormat::RGBA16F:
+            return 8;
         case TextureFormat::RGBA32F:
             return 16;
         case TextureFormat::DEPTH32F:
@@ -262,22 +266,66 @@ namespace Crowny
         return 0;
     }
 
+    void PixelUtils::GetBitDepths(TextureFormat format, int (&rgba)[4])
+    {
+        const PixelFormatDesc& desc = GetFormatDesc(format);
+        rgba[0] = desc.Rbits;
+        rgba[1] = desc.Gbits;
+        rgba[2] = desc.Bbits;
+        rgba[3] = desc.Abits;
+    }
+
     PixelData::PixelData(uint32_t width, uint32_t height, uint32_t depth, TextureFormat textureFormat)
-      : m_Format(textureFormat), m_Width(width), m_Height(height), m_Depth(depth)
+      : m_Format(textureFormat), m_Width(width), m_Height(height), m_Depth(depth), m_Buffer(nullptr), m_OwnsData(false)
     {
         PixelUtils::GetPitch(width, height, depth, textureFormat, m_RowPitch, m_SlicePitch);
-        m_Buffer = new uint8_t[GetSize()];
     }
 
     PixelData::~PixelData()
-    { /*delete[] m_Buffer;*/
+    {
+        if (m_OwnsData && m_Buffer)
+            delete[] m_Buffer;
+    }
+
+    void PixelData::SetColorAt(uint32_t x, uint32_t y, const glm::vec4& color) { SetColorAt(x, y, 0, color); }
+
+    void PixelData::SetColorAt(uint32_t x, uint32_t y, uint32_t z, const glm::vec4& color)
+    {
+        uint32_t size = PixelUtils::GetNumBytes(m_Format);
+        uint32_t offset = z * m_SlicePitch + y * m_RowPitch + x * size;
+        CW_ENGINE_INFO("Size: {0}, offset: {1}", size, offset);
+        PixelUtils::PackPixel(color.r, color.g, color.b, color.a, m_Format, (uint8_t*)GetData() + offset);
+    }
+
+    void PixelData::AllocateInternalBuffer()
+    {
+        if (m_Buffer != nullptr && m_OwnsData)
+            delete[] m_Buffer;
+        m_Buffer = nullptr;
+        m_Buffer = new uint8_t[GetSize()];
+        m_OwnsData = true;
     }
 
     void PixelData::SetBuffer(uint8_t* data)
     {
+        if (m_Buffer && m_OwnsData)
+            delete[] m_Buffer;
         m_Buffer = data;
-        // if (m_Buffer) TODO: bad
-        //   delete[] m_Buffer;
+        m_OwnsData = false;
+    }
+
+    Ref<PixelData> PixelData::Create(uint32_t width, uint32_t height, TextureFormat format)
+    {
+        Ref<PixelData> pixelData = CreateRef<PixelData>(width, height, 1, format);
+        pixelData->AllocateInternalBuffer();
+        return pixelData;
+    }
+
+    Ref<PixelData> PixelData::Create(uint32_t width, uint32_t height, uint32_t depth, TextureFormat format)
+    {
+        Ref<PixelData> pixelData = CreateRef<PixelData>(width, height, depth, format);
+        pixelData->AllocateInternalBuffer();
+        return pixelData;
     }
 
 } // namespace Crowny
