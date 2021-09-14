@@ -44,10 +44,33 @@ namespace Crowny
         RenderAPI::StartUp<VulkanRenderAPI>();
         Renderer::Init();
 
+        TextureParameters params;
+        params.Type = TextureType::TEXTURE_DEFAULT;
+        params.Shape = TextureShape::TEXTURE_2D;
+        params.Usage = TextureUsage::TEXTURE_STATIC;
+        params.Width = 2;
+        params.Height = 2;
+        params.Format = TextureFormat::RGBA8;
+
+        Ref<PixelData> whiteData = PixelData::Create(2, 2, 1, TextureFormat::RGBA8);
+        whiteData->SetColorAt(0, 0, glm::vec4(1.0f));
+        whiteData->SetColorAt(0, 1, glm::vec4(1.0f));
+        whiteData->SetColorAt(1, 0, glm::vec4(1.0f));
+        whiteData->SetColorAt(1, 1, glm::vec4(1.0f));
+        Texture::WHITE = Texture::Create(params);
+        Texture::WHITE->WriteData(*whiteData);
+
+        Ref<PixelData> blackData = PixelData::Create(2, 2, 1, TextureFormat::RGBA8);
+        blackData->SetColorAt(0, 0, glm::vec4(0.0f));
+        blackData->SetColorAt(0, 1, glm::vec4(0.0f));
+        blackData->SetColorAt(1, 0, glm::vec4(0.0f));
+        blackData->SetColorAt(1, 1, glm::vec4(0.0f));
+        Texture::BLACK = Texture::Create(params);
+        Texture::BLACK->WriteData(*blackData);
+
         Renderer2D::Init();
-        /*
-        ForwardPlusRenderer::Init();
-*/
+        // ForwardRenderer::Init();
+
         FontManager::Add(CreateRef<Font>("Roboto Thin", "/Fonts/" + DEFAULT_FONT_FILENAME, 64));
         CWMonoRuntime::Init("Crowny C# Runtime");
         CWMonoRuntime::LoadAssemblies("/Assemblies");

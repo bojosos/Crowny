@@ -15,7 +15,6 @@
 #include "Crowny/Renderer/Model.h"
 #include "Crowny/Renderer/TextureManager.h"
 
-#include "../../Crowny-Editor/Source/Panels/ImGuiMaterialPanel.h" // ?????????????????????
 #include "Crowny/Scene/SceneCamera.h"
 
 #include "Crowny/Scripting/CWMonoRuntime.h"
@@ -114,13 +113,7 @@ namespace Crowny
         Ref<::Crowny::Mesh> Mesh = nullptr;
         Ref<::Crowny::Model> Model = nullptr;
 
-        MeshRendererComponent()
-        {
-            Model = CreateRef<::Crowny::Model>("/Models/sphere.gltf");
-
-            Model->m_Meshes[0]->SetMaterialInstance(
-              CreateRef<MaterialInstance>(ImGuiMaterialPanel::GetSlectedMaterial()));
-        };
+        MeshRendererComponent() { Model = CreateRef<::Crowny::Model>("/Models/sphere.gltf"); };
         MeshRendererComponent(const MeshRendererComponent&) = default;
     };
 

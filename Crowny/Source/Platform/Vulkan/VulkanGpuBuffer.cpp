@@ -32,7 +32,6 @@ namespace Crowny
         VkDeviceMemory memory;
         VkDeviceSize memoryOffset;
         device.GetAllocationInfo(m_Allocation, memory, memoryOffset);
-
         uint8_t* data;
         VkResult result =
           vkMapMemory(device.GetLogicalDevice(), memory, memoryOffset + offset, length, 0, (void**)&data);
@@ -47,6 +46,7 @@ namespace Crowny
         VkDeviceMemory memory;
         VkDeviceSize memoryOffset;
         device.GetAllocationInfo(m_Allocation, memory, memoryOffset);
+
         vkUnmapMemory(device.GetLogicalDevice(), memory);
     }
 

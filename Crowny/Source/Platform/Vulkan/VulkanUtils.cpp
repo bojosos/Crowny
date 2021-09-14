@@ -251,8 +251,14 @@ namespace Crowny
             }
             else
             {
-                // Use the bit depths to determine the closest format.
-                // If the format is compressed, fall back to uncompressed.
+                int bitDepths[4];
+                PixelUtils::GetBitDepths(format, bitDepths);
+                if (bitDepths[0] == 16)
+                    format = TextureFormat::RGBA16F;
+                else if (bitDepths[0] == 32)
+                    format = TextureFormat::RGBA32F;
+                else
+                    format = TextureFormat::RGBA8;
             }
         }
         return format;

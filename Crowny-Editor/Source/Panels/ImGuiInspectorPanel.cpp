@@ -2,9 +2,10 @@
 
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Scene/SceneManager.h"
-#include "ImGuiComponentEditor.h"
-#include "ImGuiHierarchyPanel.h"
-#include "ImGuiInspectorPanel.h"
+
+#include "Panels/ImGuiComponentEditor.h"
+#include "Panels/ImGuiHierarchyPanel.h"
+#include "Panels/ImGuiInspectorPanel.h"
 
 #include <imgui.h>
 

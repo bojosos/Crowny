@@ -29,7 +29,7 @@ namespace Crowny
         TextureParameters params;
         params.Width = width;
         params.Height = height;
-        texture = Texture::Create(params);
+        CW_ENGINE_INFO("Path: {0}, channels: {1}", filepath, channels);
         PixelData* pd;
         if (channels == 1)
         {
@@ -43,6 +43,7 @@ namespace Crowny
         }
         else
             pd = new PixelData(width, height, 1, TextureFormat::RGBA8);
+        texture = Texture::Create(params);
         pd->SetBuffer(data);
         texture->WriteData(*pd);
         pd->SetBuffer(nullptr);

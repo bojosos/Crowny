@@ -4,14 +4,14 @@ layout(location = 0) in DATA
 {
     vec3 worldPos;
     vec3 normal;
-    vec4 tangent;
+    vec3 tangent;
     vec2 uv;
 } fs_in;
 
 layout (binding = 2) uniform UBOParams {
 	vec4 lights[4];
-	float exposure;
 	float gamma;
+	float exposure;
 	vec3 camPos;
 } uboParams;
 

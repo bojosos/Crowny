@@ -389,7 +389,7 @@ namespace Crowny
                 {
                 case (MonoPrimitiveType::Bool): {
                     bool value = false;
-                    field->Get(script.ManagedInstance, &value);
+                    field->Get(instance, &value);
                     if (ImGui::Checkbox("##bool", &value))
                         field->Set(instance, &value);
                     break;

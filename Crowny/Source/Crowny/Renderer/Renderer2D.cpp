@@ -87,11 +87,7 @@ namespace Crowny
         params.Shape = TextureShape::TEXTURE_2D;
         params.Format = TextureFormat::RGBA8;
 
-        s_Data->Textures[0] = Texture::Create(params);
-        PixelData src = PixelData(1, 1, 1, TextureFormat::RGBA8);
-        uint32_t val = 0xffffffff;
-        std::memcpy(src.GetData(), &val, sizeof(uint32_t));
-        s_Data->Textures[0]->WriteData(src); // texture 0 is white
+        s_Data->Textures[0] = Texture::WHITE;
         s_Data->Buffer = s_Data->TmpBuffer = new VertexData[RENDERER_SPRITE_SIZE];
         delete[] indices;
     }
@@ -102,7 +98,6 @@ namespace Crowny
         s_Data->ProjectionView->Write(sizeof(glm::mat4), glm::value_ptr(camera.GetProjection()), sizeof(glm::mat4));
 
         RenderAPI::Get().SetGraphicsPipeline(s_Data->Pipeline);
-        RenderAPI::Get().SetViewport(0, 0, 1337, 508);
         RenderAPI::Get().SetVertexBuffers(0, &s_Data->VertexBuffer, 1);
         RenderAPI::Get().SetIndexBuffer(s_Data->IndexBuffer);
     }

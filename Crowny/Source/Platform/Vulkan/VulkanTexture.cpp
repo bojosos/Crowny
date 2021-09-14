@@ -481,7 +481,7 @@ namespace Crowny
 
                     if (expandedMip)
                     {
-                        barrier->subresourceRange.layerCount++;
+                        barrier->subresourceRange.levelCount++;
                         numSubresources -= barrier->subresourceRange.layerCount;
                         mip++;
                         for (uint32_t i = 0; i < barrier->subresourceRange.layerCount; i++)
@@ -758,6 +758,13 @@ namespace Crowny
 
     PixelData VulkanTexture::Lock(GpuLockOptions options, uint32_t mipLevel, uint32_t face, uint32_t queueIdx)
     {
+
+        if (m_Params.Samples > 1)
+        {
+            CW_ENGINE_ERROR("Multisampled textures cannot be accessed directly.");
+            return PixelData();
+        }
+
         uint32_t mipWidth = std::max(1U, m_Params.Width >> mipLevel);
         uint32_t mipHeight = std::max(1U, m_Params.Height >> mipLevel);
         uint32_t mipDepth = std::max(1U, m_Params.Depth >> mipLevel);
@@ -1025,15 +1032,27 @@ namespace Crowny
     void VulkanTexture::ReadData(PixelData& dest, uint32_t mipLevel, uint32_t face, uint32_t queueIdx)
     {
         PixelData data = Lock(GpuLockOptions::READ_ONLY, mipLevel, face, queueIdx);
-        std::memcpy(dest.GetData(), data.GetData(), dest.GetSize());
-        data.SetBuffer(nullptr); // TODO: temp fix.
+        PixelUtils::ConvertPixels(data, dest);
         Unlock();
     }
 
     void VulkanTexture::WriteData(const PixelData& src, uint32_t mipLevel, uint32_t face, uint32_t queueIdx)
     {
+        if (src.GetSize() == 0)
+            return;
+        if (m_Params.Samples > 1)
+        {
+            CW_ENGINE_ERROR("Multisampled texture cannot be written directly!");
+            return;
+        }
+
         mipLevel = glm::clamp(mipLevel, (uint32_t)mipLevel, m_Params.MipLevels);
         face = glm::clamp(face, (uint32_t)0, m_Params.Faces - 1);
+        if (face > 0 && m_Params.Shape == TextureShape::TEXTURE_3D)
+        {
+            CW_ENGINE_ERROR("3D array not supported.");
+            return;
+        }
 
         PixelData data =
           Lock(/*discardWholeBuffer ? */ GpuLockOptions::WRITE_DISCARD /* : GpuLockOptions::WRITE_DISCARD_RANGE*/,
