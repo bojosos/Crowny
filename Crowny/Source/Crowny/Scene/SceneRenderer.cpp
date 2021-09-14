@@ -55,25 +55,24 @@ namespace Crowny
 
         /*
         RenderCommand::Clear();
+*/
 
         ForwardRenderer::Begin();
         ForwardRenderer::BeginScene(camera, camera.GetViewMatrix());
-        ForwardRenderer::SubmitLightSetup();
         auto objs = scene->m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
         for (auto obj : objs)
         {
             auto [transform, mesh] = scene->m_Registry.get<TransformComponent, MeshRendererComponent>(obj);
-            if (mesh.Mesh)
+            if (mesh.Model)
             {
-                mesh.Mesh->SetMaterialInstnace(CreateRef<MaterialInstance>(ImGuiMaterialPanel::GetSlectedMaterial()));
-                ForwardRenderer::SubmitMesh(mesh.Mesh, transform.GetTransform());
-                //TODO: Update stats... triangle count has to take into account the draw mode
+                ForwardRenderer::Submit(mesh.Model, transform.GetTransform());
+                // TODO: Update stats... triangle count has to take into account the draw mode
             }
         }
         ForwardRenderer::Flush();
         ForwardRenderer::EndScene();
         ForwardRenderer::End();
-*/
+
         Renderer2D::Begin(camera, camera.GetViewMatrix());
         auto group = scene->m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
         for (auto ee : group)

@@ -39,6 +39,9 @@ namespace Crowny
         return iter->second;
     }
 
+    Ref<Texture> Texture::WHITE;
+    Ref<Texture> Texture::BLACK;
+
     Ref<Texture> Texture::Create(const TextureParameters& params)
     {
         switch (Renderer::GetAPI())

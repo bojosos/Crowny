@@ -73,7 +73,7 @@ namespace Crowny
         Ref<VertexBuffer> vbo = VertexBuffer::Create(sizeof(Vertex) * mesh->mNumVertices);
         void* dest = vbo->Map(0, sizeof(Vertex) * mesh->mNumVertices, GpuLockOptions::WRITE_DISCARD);
         memcpy(dest, verts, sizeof(Vertex) * mesh->mNumVertices);
-        vbo->Unbind();
+        vbo->Unmap();
         /*vbo->SetLayout({ { ShaderDataType::Float3, "Position" },
                          { ShaderDataType::Float3, "Normal" },
                          { ShaderDataType::Float2, "Uv" },
