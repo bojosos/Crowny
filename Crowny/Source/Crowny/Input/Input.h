@@ -1,49 +1,50 @@
 #pragma once
 
-#include "cwpch.h"
-#include "keycodes.h"
-#include "mousecodes.h"
-
-#include <glm/glm.hpp>
+#include "Crowny/Common/Common.h"
+#include "Crowny/Input/KeyCodes.h"
+#include "Crowny/Input/MouseCodes.h"
 
 namespace Crowny
 {
-	enum class CursorType
-	{
-		NO_CURSOR,
-		POINTER
-	};
-	class Input
-	{
-	public:
-		inline static bool IsKeyPressed(KeyCode key) { return s_Instance->IsKeyPressedImpl(key); }
+    enum class Cursor
+    {
+        NO_CURSOR,
+        POINTER,
+        IBEAM,
+        CROSSHAIR,
+        HAND,
+        HRESIZE,
+        VRESIZE
+    };
 
-		inline static bool IsMouseButtonPressed(MouseCode button) { return s_Instance->IsMouseButtonPressedImpl(button); }
+    class Application;
 
-		inline static glm::vec2 GetMousePosition() { return s_Instance->GetMousePositionImpl(); };
+    class Input
+    {
+    public:
+        static bool IsKeyPressed(const KeyCode key);
+        static bool IsKeyDown(const KeyCode key);
+        static bool IsKeyUp(const KeyCode key);
 
-		inline static float GetMouseX() { return s_Instance->GetMouseXImpl(); }
-		inline static float GetMouseY() { return s_Instance->GetMouseYImpl(); }
-		
-		inline static bool IsMouseGrabbed() { return s_Instance->IsMouseGrabbedImpl(); }
-		inline static void SetMousePosition(const glm::vec2& position) { s_Instance->SetMousePositionImpl(position); }
-		inline static void SetMouseGrabbed(bool grabbed) { s_Instance->SetMouseGrabbedImpl(grabbed); }
-		inline static void SetMouseCursor(CursorType cursor) { s_Instance->SetMouseCursorImpl(cursor); }
+        static bool IsMouseButtonPressed(const MouseCode button);
+        static bool IsMouseButtonDown(const MouseCode button);
+        static bool IsMouseButtonUp(const MouseCode button);
 
-	private:
-		inline bool IsMouseGrabbedImpl() { return m_Grabbed; }
-		inline void SetMouseGrabbedImpl(bool grabbed) { m_Grabbed = grabbed; }
-		void SetMousePositionImpl(const glm::vec2& position);
-		void SetMouseCursorImpl(CursorType cursor);
+        static glm::vec2 GetMousePosition();
+        static float GetMouseX();
+        static float GetMouseY();
+        static void SetMouseGrabbed(bool grabbed);
+        static bool IsMouseGrabbed();
+        static void SetMousePosition(const glm::vec2& position);
+        // static uint32_t GetMouseScroll();
+    private:
+        friend class Application;
+        static void OnUpdate();
 
-		bool IsKeyPressedImpl(KeyCode key);
-		bool IsMouseButtonPressedImpl(MouseCode button);
-		glm::vec2 GetMousePositionImpl();
-		float GetMouseXImpl();
-		float GetMouseYImpl();
-	private:
-		bool m_Grabbed = false;
-	private:
-		static Scope<Input> s_Instance;
-	};
-}
+        static bool GetKey(const KeyCode key);
+        static bool GetMouseButton(const MouseCode button);
+
+    private:
+        static bool s_Grabbed;
+    };
+} // namespace Crowny
