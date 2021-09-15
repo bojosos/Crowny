@@ -91,6 +91,24 @@ namespace Crowny
         return VK_CULL_MODE_NONE;
     }
 
+    VkBlendFactor VulkanUtils::GetBlendFactor(BlendFactor factor)
+    {
+        switch(factor)
+        {
+            case(BlendFactor::One): return VK_BLEND_FACTOR_ONE;
+            case(BlendFactor::Zero): return VK_BLEND_FACTOR_ZERO;
+            case(BlendFactor::DestColor): return VK_BLEND_FACTOR_DST_COLOR;
+            case(BlendFactor::SourceColor): return VK_BLEND_FACTOR_SRC_COLOR;
+            case(BlendFactor::InvDestColor): return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+            case(BlendFactor::InvSourceColor): return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+            case(BlendFactor::DestAlpha): return VK_BLEND_FACTOR_DST_ALPHA;
+            case(BlendFactor::SourceAlpha): return VK_BLEND_FACTOR_SRC_ALPHA;
+            case(BlendFactor::InvDestAlpha): return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+            case(BlendFactor::InvSourceAlpha): return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+
+            }
+    }
+
     VkBlendOp VulkanUtils::GetBlendOp(BlendFunction blendFunc)
     {
         switch (blendFunc)

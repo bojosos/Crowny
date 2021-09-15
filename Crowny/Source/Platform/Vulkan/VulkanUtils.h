@@ -70,6 +70,7 @@ namespace Crowny
         static VkCompareOp GetCompareOp(CompareFunction compareFunc);
         static VkCullModeFlagBits GetCullMode(CullingMode mode);
         static VkBlendOp GetBlendOp(BlendFunction blendFunc);
+        static VkBlendFactor GetBlendFactor(BlendFactor factor);
         static VkFormat GetTextureFormat(TextureFormat format, bool sRGB);
         static TextureFormat GetClosestSupportedTextureFormat(const VulkanDevice& device, TextureFormat format,
                                                               TextureShape shape, int usage, bool optimapTiling);

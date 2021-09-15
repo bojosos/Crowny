@@ -100,14 +100,20 @@ namespace Crowny
             m_BlendAttachmentStates[i] = {};
             m_BlendAttachmentStates[i].colorWriteMask =
               VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-            m_BlendAttachmentStates[i].blendEnable = VK_FALSE;
-        }
+            m_BlendAttachmentStates[i].blendEnable = desc.BlendState.EnableBlending;
+            m_BlendAttachmentStates[i].colorBlendOp = VulkanUtils::GetBlendOp(desc.BlendState.BlendOp);
+            m_BlendAttachmentStates[i].srcColorBlendFactor = VulkanUtils::GetBlendFactor(desc.BlendState.SrcBlend);
+            m_BlendAttachmentStates[i].dstColorBlendFactor = VulkanUtils::GetBlendFactor(desc.BlendState.DstBlend);
+            m_BlendAttachmentStates[i].alphaBlendOp = VulkanUtils::GetBlendOp(desc.BlendState.BlendOpAlpha);
+            m_BlendAttachmentStates[i].srcAlphaBlendFactor = VulkanUtils::GetBlendFactor(desc.BlendState.SrcBlendAlpha);
+            m_BlendAttachmentStates[i].dstAlphaBlendFactor = VulkanUtils::GetBlendFactor(desc.BlendState.DstBlendAlpha);
+            }
 
         m_ColorBlendStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
         m_ColorBlendStateInfo.pNext = nullptr;
         m_ColorBlendStateInfo.flags = 0;
-        m_ColorBlendStateInfo.logicOp = VK_LOGIC_OP_NO_OP;
         m_ColorBlendStateInfo.logicOpEnable = VK_FALSE;
+        m_ColorBlendStateInfo.logicOp = VK_LOGIC_OP_NO_OP;
         m_ColorBlendStateInfo.attachmentCount = 1;
         m_ColorBlendStateInfo.pAttachments = m_BlendAttachmentStates;
         m_ColorBlendStateInfo.blendConstants[0] = 0.0f;
@@ -118,9 +124,9 @@ namespace Crowny
         m_DepthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         m_DepthStencilInfo.pNext = nullptr;
         m_DepthStencilInfo.flags = 0;
-        m_DepthStencilInfo.depthTestEnable = VK_TRUE;
-        m_DepthStencilInfo.depthWriteEnable = VK_TRUE;
-        m_DepthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS;
+        m_DepthStencilInfo.depthTestEnable = desc.DepthStencilState.EnableDepthRead;
+        m_DepthStencilInfo.depthWriteEnable = desc.DepthStencilState.EnableDepthWrite;
+        m_DepthStencilInfo.depthCompareOp = VulkanUtils::GetCompareOp(desc.DepthStencilState.DepthCompareFunction);
         m_DepthStencilInfo.front = m_DepthStencilInfo.back;
         m_DepthStencilInfo.back.compareOp = VK_COMPARE_OP_ALWAYS;
 
