@@ -1,6 +1,8 @@
+include "./3rdparty/premake/premake_customization/solution_items.lua"
+
 workspace "Crowny"
 	architecture "x86_64"
-	startproject "Sandbox"
+	startproject "Crowny-Editor"
 
 	configurations
 	{
@@ -25,289 +27,40 @@ workspace "Crowny"
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 IncludeDir = {}
-IncludeDir["glfw"] = "Crowny/Dependencies/glfw/include"
-IncludeDir["glad"] = "Crowny/Dependencies/glad/include"
-IncludeDir["freetypegl"] = "Crowny/Dependencies/freetype-gl"
-IncludeDir["imgui"] = "Crowny/Dependencies/imgui"
-IncludeDir["glm"] = "Crowny/Dependencies/glm"
-IncludeDir["stb_image"] = "Crowny/Dependencies/stb_image"
+IncludeDir["glfw"] = "%{wks.location}/Crowny/Dependencies/glfw/include"
+IncludeDir["glad"] = "%{wks.location}/Crowny/Dependencies/glad/include"
+IncludeDir["freetypegl"] = "%{wks.location}/Crowny/Dependencies/freetype-gl"
+IncludeDir["imgui"] = "%{wks.location}/Crowny/Dependencies/imgui"
+IncludeDir["glm"] = "%{wks.location}/Crowny/Dependencies/glm"
+IncludeDir["entt"] = "%{wks.location}/Crowny/Dependencies/entt/single_include"
+IncludeDir["stb_image"] = "%{wks.location}/Crowny/Dependencies/stb_image"
+IncludeDir["assimp"] = "%{wks.location}/Crowny/Dependencies/assimp/include"
+--IncludeDir["mono"] = "Crowny/Dependencies/mono/include/mono-2.0"
+IncludeDir["mono"] = "/usr/include/mono-2.0" --- huh
+IncludeDir["gtk"] = "/usr/include/gtk-3.0/" --- fix for windows
+IncludeDir["glib"] = "/usr/include//glib-2.0"
+IncludeDir["Bitsery"] = "%{wks.location}/Crowny/Dependencies/bitsery/include/bitsery"
+--"/usr/include/gtk-3.0 -I/usr/include/at-spi2-atk/2.0 -I/usr/include/at-spi-2.0 -I/usr/include/dbus-1.0 -I/usr/lib/x86_64-linux-gnu/dbus-1.0/include -I/usr/include/gtk-3.0 -I/usr/include/gio-unix-2.0 -I/usr/include/cairo -I/usr/include/pango-1.0 -I/usr/include/fribidi -I/usr/include/harfbuzz -I/usr/include/atk-1.0 -I/usr/include/cairo -I/usr/include/pixman-1 -I/usr/include/uuid -I/usr/include/freetype2 -I/usr/include/libpng16 -I/usr/include/gdk-pixbuf-2.0 -I/usr/include/libmount -I/usr/include/blkid -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include
+
+IncludeDir['vulkan'] = "%{wks.location}/Crowny/Dependencies/vulkan/include"
+IncludeDir['yamlcpp'] = "%{wks.location}/Crowny/Dependencies/yaml-cpp/include"
+IncludeDir["ImGuizmo"] = "%{wks.location}/Crowny/Dependencies/ImGuizmo"
+IncludeDir["openal"] = "%{wks.location}/Crowny/Dependencies/openal-soft/include"
 
 group "Dependencies"
+	include "3rdparty/premake"
 	include "Crowny/Dependencies/glfw"
 	include "Crowny/Dependencies/glad"
 	include "Crowny/Dependencies/freetype-gl"
-	include "Crowny/Dependencies/imgui"
-<<<<<<< HEAD
 	include "Crowny/Dependencies/freetype2"
-	---include "Crowny/Dependencies/FreeType"
-=======
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
-
+	include "Crowny/Dependencies/imgui"
+	include "Crowny/Dependencies/assimp"
+	include "Crowny/Dependencies/yaml-cpp"
+	include "Crowny/Dependencies/ImGuizmo"
 group ""
 
-project "Crowny"
-	location "Crowny"
-	kind "StaticLib"
-	language "C++"
-	cppdialect "C++17"
-	staticruntime "on"
-
-	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
-	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
-
-	pchheader "cwpch.h"
-	pchsource "Crowny/Source/cwpch.cpp"
-
-	files
-	{
-		"%{prj.name}/Source/**.h",
-		"%{prj.name}/Source/**.cpp",
-		"%{prj.name}/Dependencies/stb_image/**.h",
-		"%{prj.name}/Dependencies/freetype-gl/freetype-gl.h",
-		"%{prj.name}/Dependencies/stb_image/**.cpp",
-		"%{prj.name}/Dependencies/glm/glm/**.hpp",
-		"%{prj.name}/Dependencies/glm/glm/**.inl",
-		"%{prj.name}/res/**"
-	}
-
-	defines
-	{
-		"_CRT_NONSTDC_NO_DEPRECATE",
-		"_CRT_SECURE_NO_WARNINGS"
-	}
-
-	includedirs
-	{
-		"%{prj.name}/Source",
-		"%{prj.name}/Dependencies/spdlog/include",
-		"%{IncludeDir.glfw}",
-		"%{IncludeDir.freetypegl}",
-		"%{IncludeDir.glad}",
-		"%{IncludeDir.imgui}",
-		"%{IncludeDir.glm}",
-		"%{IncludeDir.stb_image}"
-	}
-
-	links 
-<<<<<<< HEAD
-	{
-=======
-	{ 
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
-		"imgui",
-		"freetype-gl"
-	}
-
-	filter { "platforms:Win64" }
-<<<<<<< HEAD
-		links { "freetype2", "glfw", "glad", "opengl32.lib" }
-=======
-		links { "freetyp2", "glfw", "glad", "opengl32.lib" }
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
-
-		defines
-		{
-			"CW_WIN"
-		}
-		system("windows")
-
-	filter { "platforms:Linux64"}
-<<<<<<< HEAD
-		links { "freetype2", "glfw", "glad" }
-=======
-		links { "freetyp2", "glfw", "glad" }
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
-
-		defines
-		{
-			"CW_LINUX"
-		}
-
-		system("linux")
-
-	filter { "platforms:MacOS64"}
-<<<<<<< HEAD
-		links { "freetype2", "glfw", "glad" }
-=======
-		links { "freetyp2", "glfw", "glad" }
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
-
-		defines
-		{
-			"CW_MACOSX"
-		}
-
-		system("macosx")
-
-	filter { "platforms:Web" }
-		defines 
-		{
-			"CW_EMSCRIPTEN",
-			"GLFW_INCLUDE_ES31"
-		}
-
-		linkoptions { "-s USE_FREETYPE=1", "-s MAX_WEBGL_VERSION=2", "-s USE_GLFW=3", "-s TOTAL_MEMORY=512MB", "-s SAFE_HEAP=1" }
-
-	filter "system:windows"
-		systemversion "latest"
-
-		defines
-		{
-			"CW_WINDOWS",
-			"GLFW_INCLUDE_NONE"
-		}
-
-	filter "system:linux"
-		systemversion "latest"
-		defines
-		{
-			"CW_LINUX",
-			"GLFW_INCLUDE_NONE"
-		}
-
-	filter "configurations:Debug"
-		defines { "CW_DEBUG" }
-		runtime "Debug"
-		symbols "on"
-
-	filter "configurations:Release"
-		defines "MC_RELEASE"
-		runtime "Release"
-		optimize "on"
-
-
-project "Crowny-Editor"
-	location "Crowny-Editor"
-	kind "ConsoleApp"
-	language "C++"
-	cppdialect "C++17"
-	staticruntime "on"
-
-	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
-	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
-
-	files
-	{
-		"%{prj.name}/Source/**.h",
-		"%{prj.name}/Source/**.cpp"
-	}
-
-	includedirs
-	{
-<<<<<<< HEAD
-		"Crowny/Source",
-		"%{IncludeDir.imgui}",
-		"%{IncludeDir.glm}"
-=======
-		"Crowny/Source"
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
-	}
-
-	links
-	{
-<<<<<<< HEAD
-		"imgui",
-=======
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
-		"Crowny"
-	}
-
-	filter "system:windows"
-		systemversion "latest"
-
-	filter "configurations:Debug"
-		defines "CW_DEBUG"
-		runtime "Debug"
-		symbols "on"
-
-	filter "configurations:Release"
-		defines "CW_RELEASE"
-		runtime "Release"
-		optimize "on"
-
-	filter "configurations:Dist"
-		defines "CW_DIST"
-		runtime "Release"
-		optimize "on"
-
-project "Crowny-CLI"
-	location "Crowny-CLI"
-	kind "SharedLib"
-	language "C++"
-	cppdialect "C++17"
-	clr "On"
-
-	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
-	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
-
-	files
-	{
-		"%{prj.name}/Source/**.h",
-		"%{prj.name}/Source/**.cpp"
-	}
-
-	includedirs
-	{
-		"%{prj.name}/Source/",
-		"%{prj.name}/../Crowny/Dependencies/glm"
-	}
-
-	links
-	{
-<<<<<<< HEAD
-		"Crowny"
-=======
-		---"Crowny"
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
-	}
-
-	filter "system:windows"
-		systemversion "latest"
-
-	filter "configurations:Debug"
-		defines "CW_DEBUG"
-		runtime "Debug"
-		symbols "on"
-
-	filter "configurations:Release"
-		defines "CW_RELEASE"
-		runtime "Release"
-		optimize "on"
-
-	filter "configurations:Dist"
-		defines "CW_DIST"
-		runtime "Release"
-		optimize "on"
-
-project "Crowny-Sandbox"
-	location "Crowny-Sandbox"
-	kind "ConsoleApp"
-	language "C#"
-	staticruntime "on"
-
-	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
-	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
-
-	links
-	{
-		"Crowny-CLI"
-	}
-
-	filter "system:windows"
-		systemversion "latest"
-
-	filter "configurations:Debug"
-		defines "CW_DEBUG"
-		runtime "Debug"
-		symbols "on"
-
-	filter "configurations:Release"
-		defines "CW_RELEASE"
-		runtime "Release"
-		optimize "on"
-
-	filter "configurations:Dist"
-		defines "CW_DIST"
-		runtime "Release"
-		optimize "on"
-
+include "Crowny"
+include "Crowny-Editor"
+include "Crowny-Sandbox"
+include "Crowny-Sharp"
+include "Crowny-Sandbox"

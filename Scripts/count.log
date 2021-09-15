@@ -1,0 +1,115 @@
+19/07/2020 22:57:36
+8418 lines, 145 files, 58.055172 avgl, 206078 characters
+OpenGLShader.cpp, 555 lines, 16296 characters
+20/07/2020 02:16:47
+8486 lines, 148 files, 57.337838 avgl, 207851 characters
+OpenGLShader.cpp, 555 lines, 16296 characters
+22/07/2020 01:57:24
+25/07/2020 14:33:58
+8995 lines, 151 files, 59.569536 avgl, 224905 characters
+OpenGLShader.cpp, 555 lines, 16296 characters
+26/07/2020 00:32:34
+9234 lines, 157 files, 58.815287 avgl, 231209 characters
+OpenGLShader.cpp, 555 lines, 16296 characters
+16/08/2020 17:37:39
+9490 lines, 158 files, 60.063291 avgl, 236484 characters
+OpenGLShader.cpp, 555 lines, 16295 characters
+19/08/2020 23:09:48
+9356 lines, 163 files, 57.398773 avgl, 232319 characters
+OpenGLShader.cpp, 555 lines, 16295 characters
+25/08/2020 20:55:48
+9772 lines, 168 files, 58.166667 avgl, 243745 characters
+OpenGLShader.cpp, 741 lines, 21645 characters
+26/08/2020 13:42:16
+10007 lines, 170 files, 58.864706 avgl, 250299 characters
+OpenGLShader.cpp, 741 lines, 21645 characters
+31/08/2020 03:02:00
+9988 lines, 170 files, 58.752941 avgl, 247417 characters
+OpenGLShader.cpp, 746 lines, 22102 characters
+02/09/2020 22:34:13
+9988 lines, 169 files, 59.100592 avgl, 248126 characters
+OpenGLShader.cpp, 778 lines, 23281 characters
+03/09/2020 21:57:05
+10110 lines, 173 files, 58.439306 avgl, 250439 characters
+OpenGLShader.cpp, 778 lines, 23281 characters
+07/09/2020 17:24:03
+10150 lines, 173 files, 58.670520 avgl, 251395 characters
+OpenGLShader.cpp, 778 lines, 23281 characters
+10/09/2020 17:07:48
+10216 lines, 173 files, 59.052023 avgl, 252748 characters
+OpenGLShader.cpp, 778 lines, 23281 characters
+10/09/2020 17:07:58
+10216 lines, 173 files, 59.052023 avgl, 252748 characters
+OpenGLShader.cpp, 778 lines, 23281 characters
+10/09/2020 17:17:26
+10220 lines, 173 files, 59.075145 avgl, 252848 characters
+OpenGLShader.cpp, 778 lines, 23281 characters
+14/09/2020 00:26:34
+10629 lines, 177 files, 60.050847 avgl, 264736 characters
+OpenGLShader.cpp, 778 lines, 23281 characters
+14/09/2020 22:17:20
+10860 lines, 177 files, 61.355932 avgl, 274734 characters
+OpenGLShader.cpp, 778 lines, 23281 characters
+14/09/2020 23:35:41
+10866 lines, 177 files, 61.389831 avgl, 274882 characters
+OpenGLShader.cpp, 778 lines, 23281 characters
+16/09/2020 00:35:27
+10949 lines, 177 files, 61.858757 avgl, 277288 characters
+OpenGLShader.cpp, 778 lines, 23313 characters
+19/09/2020 02:28:47
+11314 lines, 187 files, 60.502674 avgl, 285623 characters
+OpenGLShader.cpp, 778 lines, 23313 characters
+19/09/2020 22:28:33
+11415 lines, 189 files, 60.396825 avgl, 288352 characters
+OpenGLShader.cpp, 778 lines, 23313 characters
+01/10/2020 00:05:50
+11779 lines, 196 files, 60.096939 avgl, 296774 characters
+OpenGLShader.cpp, 778 lines, 23313 characters
+18/11/2020 00:44:31
+12065 lines, 199 files, 60.628141 avgl, 308496 characters
+OpenGLShader.cpp, 778 lines, 23313 characters
+18/11/2020 00:47:44
+12535 lines, 208 files, 60.264423 avgl, 322017 characters
+OpenGLShader.cpp, 778 lines, 23313 characters
+27/11/2020 22:48:19
+14190 lines, 225 files, 63.066667 avgl, 370491 characters
+OpenGLShader.cpp, 781 lines, 23463 characters
+27/11/2020 22:54:11
+14190 lines, 225 files, 63.066667 avgl, 370515 characters
+OpenGLShader.cpp, 781 lines, 23463 characters
+02/12/2020 12:21:02
+15199 lines, 237 files, 64.130802 avgl, 402253 characters
+OpenGLShader.cpp, 779 lines, 23430 characters
+04/12/2020 21:58:46
+16487 lines, 249 files, 66.212851 avgl, 449672 characters
+OpenGLShader.cpp, 781 lines, 23444 characters
+04/01/2021 18:43:00
+18343 lines, 271 files, 67.686347 avgl, 510256 characters
+OpenGLShader.cpp, 802 lines, 24027 characters
+21/01/2021 21:31:06
+18396 lines, 271 files, 67.881919 avgl, 511583 characters
+OpenGLShader.cpp, 802 lines, 24027 characters
+29/01/2021 23:57:14
+18914 lines, 276 files, 68.528986 avgl, 531342 characters
+OpenGLShader.cpp, 803 lines, 24055 characters
+01/02/2021 14:47:36
+19556 lines, 278 files, 70.345324 avgl, 550025 characters
+OpenGLShader.cpp, 803 lines, 24055 characters
+02/02/2021 22:16:46
+19572 lines, 278 files, 70.402878 avgl, 550705 characters
+OpenGLShader.cpp, 803 lines, 24055 characters
+08/02/2021 14:45:34
+20230 lines, 283 files, 71.484099 avgl, 572022 characters
+OpenGLShader.cpp, 803 lines, 24082 characters
+11/05/2021 19:41:26
+25416 lines, 326 files, 77.963190 avgl, 763582 characters
+VulkanCommandBuffer.cpp, 651 lines, 24800 characters
+22/07/2021 01:43:34
+29984 lines, 361 files, 83.058172 avgl, 934168 characters
+VulkanCommandBuffer.cpp, 1138 lines, 45219 characters
+23/07/2021 01:40:26
+30504 lines, 361 files, 84.498615 avgl, 960057 characters
+VulkanCommandBuffer.cpp, 1617 lines, 68354 characters
+26/08/2021 20:47:36
+35849 lines, 400 files, 89.622500 avgl, 1230871 characters
+VulkanCommandBuffer.cpp, 2261 lines, 95209 characters
