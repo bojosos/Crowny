@@ -73,6 +73,20 @@ namespace Crowny
         REVERSE_SUBTRACT
     };
 
+    enum class BlendFactor
+    {
+        One,
+        Zero,
+        DestColor,
+        SourceColor,
+        InvDestColor,
+        InvSourceColor,
+        DestAlpha,
+        SourceAlpha,
+        InvDestAlpha,
+        InvSourceAlpha
+    };
+
     enum class CompareFunction
     {
         ALWAYS_FAIL,
@@ -82,7 +96,7 @@ namespace Crowny
         EQUAL,
         NOT_EQUAL,
         GREATER,
-        GREATER_EQUAL,
+        GREATER_EQUAL
     };
 
     enum class CullingMode
