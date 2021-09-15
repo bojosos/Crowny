@@ -9,14 +9,43 @@ namespace Crowny
 
     class VulkanRenderPass;
 
+    struct DepthStencilStateDesc
+    {
+        bool EnableDepthRead = true;
+        bool EnableDepthWrite = true;
+        CompareFunction DepthCompareFunction = CompareFunction::LESS;
+        bool EnableStencil = false;  
+    };
+
+    struct BlendStateDesc
+    {
+        bool EnableBlending = false;
+
+        BlendFactor SrcBlend = BlendFactor::One;
+        BlendFactor DstBlend = BlendFactor::Zero;
+        BlendFunction BlendOp = BlendFunction::ADD;
+        
+        BlendFactor SrcBlendAlpha = BlendFactor::One;
+        BlendFactor DstBlendAlpha = BlendFactor::Zero;
+        BlendFunction BlendOpAlpha = BlendFunction::ADD;
+    };
+
+    struct RasterizerStateDesc
+    {
+        
+    };
+
     struct PipelineStateDesc
     {
-        // TODO: blend, resterizer, depth stencil
         Ref<Shader> VertexShader;
         Ref<Shader> FragmentShader;
         Ref<Shader> GeometryShader;
         Ref<Shader> HullShader;
         Ref<Shader> DomainShader;
+        
+        RasterizerStateDesc RasterizerState;
+        DepthStencilStateDesc DepthStencilState;
+        BlendStateDesc BlendState;
     };
 
     // TODO: Change the name of the file

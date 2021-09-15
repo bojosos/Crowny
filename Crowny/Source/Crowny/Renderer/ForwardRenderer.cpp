@@ -67,6 +67,8 @@ namespace Crowny
         PipelineStateDesc desc;
         desc.VertexShader = skyboxVertex;
         desc.FragmentShader = skyboxFragment;
+        desc.DepthStencilState.EnableDepthRead = false;
+        desc.DepthStencilState.EnableDepthWrite = false;
         s_Data->SkyboxPipeline = GraphicsPipeline::Create(desc, s_Data->SkyboxVbo->GetLayout());
         s_Data->SkyboxUniforms = UniformParams::Create(s_Data->SkyboxPipeline);
 
