@@ -118,9 +118,9 @@ namespace Crowny
         m_DepthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         m_DepthStencilInfo.pNext = nullptr;
         m_DepthStencilInfo.flags = 0;
-        m_DepthStencilInfo.depthTestEnable = VK_FALSE;
-        m_DepthStencilInfo.depthWriteEnable = VK_FALSE;
-        m_DepthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+        m_DepthStencilInfo.depthTestEnable = VK_TRUE;
+        m_DepthStencilInfo.depthWriteEnable = VK_TRUE;
+        m_DepthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS;
         m_DepthStencilInfo.front = m_DepthStencilInfo.back;
         m_DepthStencilInfo.back.compareOp = VK_COMPARE_OP_ALWAYS;
 

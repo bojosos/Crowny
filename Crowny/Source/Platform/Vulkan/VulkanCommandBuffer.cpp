@@ -1264,8 +1264,7 @@ namespace Crowny
 
         ExecuteWriteHazardBarrier();
         ExecuteLayoutTransitions();
-        VkClearValue clearValue;
-        clearValue.color = { 0.0f, 0.0f, 0.0f, 1.0f };
+
         RenderSurfaceMask readMask = GetFBReadMask();
         VulkanRenderPass* renderPass = m_Framebuffer->GetRenderPass();
 
@@ -1279,7 +1278,7 @@ namespace Crowny
         renderPassBeginInfo.renderArea.extent.width = m_Framebuffer->GetWidth();
         renderPassBeginInfo.renderArea.extent.height = m_Framebuffer->GetHeight();
         renderPassBeginInfo.clearValueCount = renderPass->GetNumClearEntries(m_ClearMask);
-        renderPassBeginInfo.pClearValues = &clearValue;
+        renderPassBeginInfo.pClearValues = m_ClearValues.data();
 
         vkCmdBeginRenderPass(m_CmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
         m_ClearMask = CLEAR_NONE;
@@ -1462,10 +1461,10 @@ namespace Crowny
                                         uint8_t targetMask)
     {
         Rect2I area;
-        area.X = (uint32_t)(m_Viewport.X * m_Framebuffer->GetWidth());
-        area.Y = (uint32_t)(m_Viewport.Y * m_Framebuffer->GetHeight());
-        area.X = (uint32_t)(m_Viewport.Width * m_Framebuffer->GetWidth());
-        area.X = (uint32_t)(m_Viewport.Height * m_Framebuffer->GetWidth());
+        area.X = (uint32_t)(m_Viewport.X);
+        area.Y = (uint32_t)(m_Viewport.Y);
+        area.Width = (uint32_t)(m_Viewport.Width);
+        area.Height = (uint32_t)(m_Viewport.Height);
 
         ClearViewport(area, buffers, color, depth, stencil, targetMask);
     }
@@ -1483,7 +1482,7 @@ namespace Crowny
         renderPassBeginInfo.renderArea.offset.y = m_ClearArea.Y;
         renderPassBeginInfo.renderArea.extent.width = m_ClearArea.Width;
         renderPassBeginInfo.renderArea.extent.height = m_ClearArea.Height;
-        renderPassBeginInfo.clearValueCount = 5;
+        renderPassBeginInfo.clearValueCount = renderPass->GetNumClearEntries(m_ClearMask);
         renderPassBeginInfo.pClearValues = m_ClearValues.data();
 
         vkCmdBeginRenderPass(m_CmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);

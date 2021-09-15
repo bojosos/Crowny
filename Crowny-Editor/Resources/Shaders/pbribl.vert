@@ -7,9 +7,9 @@ layout (location = 3) in vec3 inTangent;
 
 layout (binding = 0) uniform MVP
 {
-        mat4 projection;
-        mat4 view;
-        mat4 model;
+    mat4 projection;
+    mat4 view;
+    mat4 model;
 } mvp;
 
 layout(location = 0) out DATA
@@ -20,17 +20,12 @@ layout(location = 0) out DATA
     vec2 uv;
 } vs_out;
 
-out gl_PerVertex 
-{
-    vec4 gl_Position;
-};
-
 void main() 
 {
-        vec3 locPos = vec3(mvp.model * vec4(inPos, 1.0));
-        vs_out.worldPos = locPos;
-        vs_out.normal = mat3(mvp.model) * inNormal;
-        vs_out.uv = inUV;
-        vs_out.tangent = mat3(mvp.model) * inTangent.xyz;
-        gl_Position =  mvp.projection * mvp.view * vec4(locPos, 1.0);
+    vec3 locPos = vec3(mvp.model * vec4(inPos, 1.0));
+    vs_out.worldPos = locPos;
+    vs_out.normal = mat3(mvp.model) * inNormal;
+    vs_out.uv = inUV;
+    vs_out.tangent = mat3(mvp.model) * inTangent.xyz;
+    gl_Position =  mvp.projection * mvp.view * vec4(locPos, 1.0);
 }
