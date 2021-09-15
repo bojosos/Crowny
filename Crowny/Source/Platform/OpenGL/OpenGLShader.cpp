@@ -1,211 +1,164 @@
 #include "cwpch.h"
-#include "OpenGLShader.h"
-#include "Crowny/Common/FileUtils.h"
 
-#ifdef MC_WEB
-#include <GLES3/gl32.h>
-#else
+#include "Platform/OpenGL/OpenGLShader.h"
+
+#include "Crowny/Common/StringUtils.h"
+#include "Crowny/Common/VirtualFileSystem.h"
+
 #include <glad/glad.h>
-#endif
-
 #include <glm/gtc/type_ptr.hpp>
 
 namespace Crowny
 {
 
-	void OpenGLShader::Reload()
-	{
-		if (m_Filepath == "")
+    OpenGLShader::OpenGLShader(const std::string& filepath) : m_Filepath(filepath) { Load(filepath); }
 
-			return;
-		Load(m_Filepath);
-	}
+    OpenGLShader::OpenGLShader(const std::string& name, const std::string& vertSrc, const std::string& fragSrc)
+      : m_Filepath("")
+    {
+        std::unordered_map<GLenum, std::string> sources;
+        sources[GL_VERTEX_SHADER] = vertSrc;
+        sources[GL_FRAGMENT_SHADER] = fragSrc;
+        Compile(sources);
+    }
 
-	OpenGLShader::OpenGLShader(const std::string& filepath) : m_Filepath(filepath)
-	{
-		Load(filepath);
-	}
+    OpenGLShader::~OpenGLShader() { glDeleteProgram(m_RendererID); }
 
-	void OpenGLShader::Load(const std::string& filepath)
-	{
-		std::string source = ReadFile(DIRECTORY_PREFIX + filepath);
-		auto shaderSources = ShaderPreProcess(source);
-		Compile(shaderSources);
+    void OpenGLShader::Load(const std::string& filepath)
+    {
+        std::string source = VirtualFileSystem::Get()->ReadTextFile(filepath);
+        auto shaderSources = ShaderPreProcess(source);
+        Compile(shaderSources);
 
-		auto lastSlash = filepath.find_last_of("/\\");
-		lastSlash = lastSlash == std::string::npos ? 0 : lastSlash + 1;
-		auto lastDot = filepath.rfind('.');
-		auto count = lastDot == std::string::npos ? filepath.size() - lastSlash : lastDot - lastSlash;
-		m_Name = filepath.substr(lastSlash, count);
-	}
+        auto lastSlash = filepath.find_last_of("/\\");
+        lastSlash = lastSlash == std::string::npos ? 0 : lastSlash + 1;
+        auto lastDot = filepath.rfind('.');
+        auto count = lastDot == std::string::npos ? filepath.size() - lastSlash : lastDot - lastSlash;
+        m_Name = filepath.substr(lastSlash, count);
+    }
 
-	OpenGLShader::OpenGLShader(const std::string& name, const std::string& vertSrc, const std::string& fragSrc) : m_Filepath("")
-	{
-		std::unordered_map<GLenum, std::string> sources;
-		sources[GL_VERTEX_SHADER] = vertSrc;
-		sources[GL_FRAGMENT_SHADER] = fragSrc;
-		Compile(sources);
-	}
+    static GLenum ShaderTypeFromString(const std::string& type)
+    {
+        if (type == "vertex")
+            return GL_VERTEX_SHADER;
+        if (type == "fragment" || type == "pixel")
+            return GL_FRAGMENT_SHADER;
+        if (type == "compute")
+            return GL_COMPUTE_SHADER;
 
-	OpenGLShader::~OpenGLShader()
-	{
-		glDeleteProgram(m_RendererID);
-	}
+        CW_ENGINE_ASSERT(false, "Unknown shader type!");
+        return 0;
+    }
 
-	void OpenGLShader::Compile(const std::unordered_map<GLenum, std::string>& shaderSources)
-	{
-		GLuint program = glCreateProgram();
-		CW_ENGINE_ASSERT(shaderSources.size() <= 2, "We only support 2 shaders for now");
-		std::array<GLenum, 2> glShaderIDs;
-		int glShaderIDIndex = 0;
-		for (auto& kv : shaderSources)
-		{
-			GLenum type = kv.first;
-			const std::string& source = kv.second;
+    std::unordered_map<GLenum, std::string> OpenGLShader::ShaderPreProcess(const std::string& source)
+    {
+        std::unordered_map<GLenum, std::string> shaderSources;
 
-			GLuint shader = glCreateShader(type);
+        const char* typeToken = "#type";
+        size_t typeTokenLength = strlen(typeToken);
+        size_t pos = source.find(typeToken, 0);
+        while (pos != std::string::npos)
+        {
+            size_t eol = source.find_first_of("\r\n", pos);
+            CW_ENGINE_ASSERT(eol != std::string::npos, "Syntax error");
+            size_t begin = pos + typeTokenLength + 1;
+            std::string type = source.substr(begin, eol - begin);
 
-			const GLchar* sourceCStr = source.c_str();
-			glShaderSource(shader, 1, &sourceCStr, 0);
+            if (type == "compute")
+            {
+                shaderSources[ShaderTypeFromString(type)] = source.substr(begin + type.size());
+                return shaderSources;
+            }
+            CW_ENGINE_ASSERT(ShaderTypeFromString(type), "Invalid shader type specified");
 
-			glCompileShader(shader);
+            size_t nextLinePos = source.find_first_not_of("\r\n", eol);
+            CW_ENGINE_ASSERT(nextLinePos != std::string::npos, "Syntax error");
+            pos = source.find(typeToken, nextLinePos);
 
-			GLint isCompiled = 0;
-			glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
-			if (isCompiled == GL_FALSE)
-			{
-				GLint maxLength = 0;
-				glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
+            shaderSources[ShaderTypeFromString(type)] =
+              (pos == std::string::npos) ? source.substr(nextLinePos) : source.substr(nextLinePos, pos - nextLinePos);
+        }
+        return shaderSources;
+    }
 
-				std::vector<GLchar> infoLog(maxLength);
-				glGetShaderInfoLog(shader, maxLength, &maxLength, &infoLog[0]);
+    void OpenGLShader::Compile(const std::unordered_map<GLenum, std::string>& shaderSources)
+    {
+        GLuint program = glCreateProgram();
+        CW_ENGINE_ASSERT(shaderSources.size() <= 2, "We only support 2 shaders for now");
+        // std::array<GLenum, 2> glShaderIDs;
+        std::vector<GLenum> glShaderIDs;
+        glShaderIDs.resize(shaderSources.size());
+        int glShaderIDIndex = 0;
+        for (auto& kv : shaderSources)
+        {
+            GLenum type = kv.first;
+            const std::string& source = kv.second;
 
-				glDeleteShader(shader);
+            GLuint shader = glCreateShader(type);
 
-				CW_ENGINE_ERROR("{0}", infoLog.data());
-				CW_ENGINE_ASSERT(false, "Shader compilation failure!");
-				break;
-			}
+            const GLchar* sourceCStr = source.c_str();
+            glShaderSource(shader, 1, &sourceCStr, 0);
 
-			glAttachShader(program, shader);
-			glShaderIDs[glShaderIDIndex++] = shader;
-		}
+            glCompileShader(shader);
 
-		m_RendererID = program;
+            GLint isCompiled = 0;
+            glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
+            if (isCompiled == GL_FALSE)
+            {
+                GLint maxLength = 0;
+                glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
 
-		glLinkProgram(program);
+                std::vector<GLchar> infoLog(maxLength);
+                glGetShaderInfoLog(shader, maxLength, &maxLength, &infoLog[0]);
 
-		GLint isLinked = 0;
-		glGetProgramiv(program, GL_LINK_STATUS, (int*)&isLinked);
-		if (isLinked == GL_FALSE)
-		{
-			GLint maxLength = 0;
-			glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
-			std::vector<GLchar> infoLog(maxLength);
-			glGetProgramInfoLog(program, maxLength, &maxLength, &infoLog[0]);
-			glDeleteProgram(program);
+                glDeleteShader(shader);
 
-			for (auto id : glShaderIDs)
-				glDeleteShader(id);
+                CW_ENGINE_ERROR("{0}", infoLog.data());
+                CW_ENGINE_ASSERT(false, "Shader compilation failure!");
+                break;
+            }
 
-			CW_ENGINE_ERROR("{0}", infoLog.data());
-			CW_ENGINE_ASSERT(false, "Shader link failure!");
-			return;
-		}
+            glAttachShader(program, shader);
+            glShaderIDs[glShaderIDIndex++] = shader;
+        }
 
-		for (auto id : glShaderIDs)
-		{
-			glDetachShader(program, id);
-			glDeleteShader(id);
-		}
-	}
+        m_RendererID = program;
 
-	void OpenGLShader::Bind() const
-	{
-		glUseProgram(m_RendererID);
-	}
+        glLinkProgram(program);
 
-	void OpenGLShader::Unbind() const
-	{
-		glUseProgram(0);
-	}
+        GLint isLinked = 0;
+        glGetProgramiv(program, GL_LINK_STATUS, (int*)&isLinked);
+        if (isLinked == GL_FALSE)
+        {
+            GLint maxLength = 0;
+            glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
+            std::vector<GLchar> infoLog(maxLength);
+            glGetProgramInfoLog(program, maxLength, &maxLength, &infoLog[0]);
+            glDeleteProgram(program);
 
-	void OpenGLShader::RetrieveLocations(const std::vector<std::string>& uniforms)
-	{
-		for (auto& uniform : uniforms)
-		{
-			m_UniformLocations[uniform] = glGetUniformLocation(m_RendererID, uniform.c_str());
-		}
-	}
+            for (auto id : glShaderIDs)
+                glDeleteShader(id);
 
-	void OpenGLShader::SetInt(const std::string& name, int value)
-	{
-		UploadUniformInt(name, value);
-	}
+            CW_ENGINE_ERROR("{0}", infoLog.data());
+            CW_ENGINE_ASSERT(false, "Shader link failure!");
+            return;
+        }
 
-	void OpenGLShader::SetIntV(const std::string& name, uint32_t count, int* ptr)
-	{
-		UploadUniformIntV(name, count, ptr);
-	}
+        for (auto id : glShaderIDs)
+        {
+            glDetachShader(program, id);
+            glDeleteShader(id);
+        }
+    }
+    /*
+        void OpenGLShader::Bind() const
+        {
+            glUseProgram(m_RendererID);
+        }
 
-	void OpenGLShader::SetFloat3(const std::string& name, const glm::vec3& value)
-	{
-		UploadUniformFloat3(name, value);
-	}
-
-	void OpenGLShader::SetFloat4(const std::string& name, const glm::vec4& value)
-	{
-		UploadUniformFloat4(name, value);
-	}
-
-	void OpenGLShader::SetMat4(const std::string& name, const glm::mat4& value)
-	{
-		UploadUniformMat4(name, value);
-	}
-
-	void OpenGLShader::UploadUniformIntV(const std::string& name, int count, int* ptr)
-	{
-		glUniform1iv(GetUniformLocation(name), count, ptr);
-	}
-
-	void OpenGLShader::UploadUniformInt(const std::string& name, int value)
-	{
-		glUniform1i(GetUniformLocation(name), value);
-	}
-
-	void OpenGLShader::UploadUniformFloat(const std::string& name, float value)
-	{
-		glUniform1f(GetUniformLocation(name), value);
-	}
-
-	void OpenGLShader::UploadUniformFloat2(const std::string& name, const glm::vec2& value)
-	{
-		glUniform2f(GetUniformLocation(name), value.x, value.y);
-	}
-
-	void OpenGLShader::UploadUniformFloat3(const std::string& name, const glm::vec3& value)
-	{
-		glUniform3f(GetUniformLocation(name), value.x, value.y, value.z);
-	}
-
-	void OpenGLShader::UploadUniformFloat4(const std::string& name, const glm::vec4& value)
-	{
-		glUniform4f(GetUniformLocation(name), value.x, value.y, value.z, value.w);
-	}
-
-	void OpenGLShader::UploadUniformMat3(const std::string& name, const glm::mat3& matrix)
-	{
-		glUniformMatrix3fv(GetUniformLocation(name), 1, GL_FALSE, glm::value_ptr(matrix));
-	}
-
-	void OpenGLShader::UploadUniformMat4(const std::string& name, const glm::mat4& matrix)
-	{
-		glUniformMatrix4fv(GetUniformLocation(name), 1, GL_FALSE, glm::value_ptr(matrix));
-	}
-
-	uint32_t OpenGLShader::GetUniformLocation(const std::string& name)
-	{
-		return m_UniformLocations[name];
-	}
-
-}
+        void OpenGLShader::Unbind() const
+        {
+            glUseProgram(0);
+        }
+    */
+} // namespace Crowny

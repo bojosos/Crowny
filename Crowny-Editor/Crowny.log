@@ -1,0 +1,46 @@
+[19:50:29] [info] CROWNY: Size: 4, offset: 0
+[19:50:29] [info] CROWNY: Size: 4, offset: 8
+[19:50:29] [info] CROWNY: Size: 4, offset: 4
+[19:50:29] [info] CROWNY: Size: 4, offset: 12
+[19:50:29] [info] CROWNY: Size: 4, offset: 0
+[19:50:29] [info] CROWNY: Size: 4, offset: 8
+[19:50:29] [info] CROWNY: Size: 4, offset: 4
+[19:50:29] [info] CROWNY: Size: 4, offset: 12
+[19:50:29] [info] CROWNY: Domain Crowny C# Runtime created!
+[19:50:29] [info] CROWNY: Loading debug: Resources/Assemblies/Crowny.dll.mdb
+[19:50:29] [info] CROWNY: Loading debug: Resources/Assemblies/Client.dll.mdb
+[19:50:29] [info] CROWNY: Assembly Crowny.dll loaded.
+[19:50:29] [info] CROWNY: Assembly Client.dll loaded.
+[19:50:29] [info] CROWNY: Assembly corlib loaded.
+[19:50:29] [info] CROWNY: Path: /Textures/Unassigned.png, channels: 3
+[19:50:29] [info] CROWNY: Path: /Icons/Play.png, channels: 4
+[19:50:29] [info] CROWNY: Path: /Icons/Stop.png, channels: 4
+[19:50:29] [info] CROWNY: Path: /Icons/Pause.png, channels: 4
+[19:50:29] [info] CROWNY: Path: /Icons/Folder.png, channels: 4
+[19:50:29] [info] CROWNY: Path: /Icons/File.png, channels: 4
+[19:50:29] [info] CROWNY: Path: Resources/Icons/File.png, channels: 4
+[19:50:29] [info] CROWNY: Path: Resources/Icons/Pause.png, channels: 4
+[19:50:29] [info] CROWNY: Path: Resources/Icons/Folder.png, channels: 4
+[19:50:29] [info] CROWNY: Path: Resources/Icons/Stop.png, channels: 4
+[19:50:29] [info] CROWNY: Path: Resources/Icons/Play.png, channels: 4
+[19:50:29] [info] CROWNY: Path: Resources/Textures/Unassigned.png, channels: 3
+[19:50:29] [info] CROWNY: Path: Resources/Textures/unknown.png, channels: 4
+[19:50:29] [info] CROWNY: Path: Resources/Textures/rustediron2_normal.png, channels: 3
+[19:50:30] [info] CROWNY: Path: Resources/Textures/rustediron2_metallic.png, channels: 1
+[19:50:30] [info] CROWNY: Path: Resources/Textures/rustediron2_basecolor.png, channels: 4
+[19:50:30] [info] CROWNY: Path: Resources/Textures/rustediron2_roughness.png, channels: 1
+[19:50:30] [info] CROWNY: Path: /Textures/rustediron2_basecolor.png, channels: 4
+[19:50:30] [info] CROWNY: Path: /Textures/rustediron2_metallic.png, channels: 1
+[19:50:30] [info] CROWNY: Path: /Textures/rustediron2_roughness.png, channels: 1
+[19:50:30] [info] CROWNY: Path: /Textures/rustediron2_normal.png, channels: 3
+[19:50:31] [info] CROWNY: BRDFLut generation took: 0.046586
+[19:50:31] [info] CROWNY: Destroy params
+[19:50:31] [info] CROWNY: Destroy params
+[19:50:31] [info] CROWNY: Prefiltered cube took: 0.025159
+[19:50:31] [info] CROWNY: Destroy params
+[19:50:31] [info] CROWNY: Destroy params
+[19:50:31] [info] CROWNY: Irrdiance cube took: 0.004346
+[19:50:31] [info] CROWNY: Destroy params
+[19:50:31] [info] CROWNY: Destroy params
+[19:50:42] [warning] CROWNY: [602160055][UNASSIGNED-CoreValidation-Shader-InputNotProduced] : Validation Warning: [ UNASSIGNED-CoreValidation-Shader-InputNotProduced ] Object 0: handle = 0xb3c7bc000000007f, type = VK_OBJECT_TYPE_SHADER_MODULE; | MessageID = 0x23e43bb7 | Attachment 1 not written by fragment shader; undefined values will be written to attachment
+[19:50:55] [info] CROWNY: Destroy params

@@ -4,71 +4,82 @@
 
 namespace Crowny
 {
-	enum class EventType
-	{
-		None = 0,
-		WindowClose, WindowResize, WindowFocus, WindowLostFocus, WindowMoved,
-		AppTick, AppUpdate, AppRender,
-		KeyPressed, KeyReleased, KeyTyped,
-		MouseButtonPressed, MouseButtonReleased, MouseMoved, MouseScrolled
-	};
 
-	enum EventCategory
-	{
-		None = 0,
-		EventCategoryApplication = BIT(0),
-		EventCategoryInput = BIT(1),
-		EventCategoryKeyboard = BIT(2),
-		EventCategoryMouse = BIT(3),
-		EventCategoryMouseButton = BIT(4)
-	};
+    enum class EventType
+    {
+        None = 0,
+        WindowClose,
+        WindowResize,
+        WindowFocus,
+        WindowLostFocus,
+        WindowMoved,
+        AppTick,
+        AppUpdate,
+        AppRender,
+        KeyPressed,
+        KeyReleased,
+        KeyTyped,
+        MouseButtonPressed,
+        MouseButtonReleased,
+        MouseMoved,
+        MouseScrolled,
+        ImGuiMenuItemClicked,
+        ImGuiViewportSceneDragged,
+        ImGuiViewportMeshDragged
+    };
 
-#define EVENT_CLASS_TYPE(type) static EventType GetStaticType() { return EventType::type; }\
-								virtual EventType GetEventType() const override { return GetStaticType(); }\
-								virtual const char* GetName() const override { return #type; }
+    enum EventCategory
+    {
+        None = 0,
+        EventCategoryApplication = BIT(0),
+        EventCategoryInput = BIT(1),
+        EventCategoryKeyboard = BIT(2),
+        EventCategoryMouse = BIT(3),
+        EventCategoryMouseButton = BIT(4),
+        EventCategoryImGui = BIT(5)
+    };
 
-#define EVENT_CLASS_CATEGORY(category) virtual int GetCategoryFlags() const override { return category; }
+#define EVENT_CLASS_TYPE(type)                                                                                         \
+    static EventType GetStaticType() { return EventType::type; }                                                       \
+    virtual EventType GetEventType() const override { return GetStaticType(); }                                        \
+    virtual const char* GetName() const override { return #type; }
 
-	class Event
-	{
-	public:
-		bool Handled = false;
-		virtual EventType GetEventType() const = 0;
-		virtual const char* GetName() const = 0;
-		virtual int GetCategoryFlags() const = 0;
-		virtual std::string ToString() const { return GetName(); }
+#define EVENT_CLASS_CATEGORY(category)                                                                                 \
+    virtual int GetCategoryFlags() const override { return category; }
 
-		inline bool IsInCategory(EventCategory category)
-		{
-			return GetCategoryFlags() & category;
-		}
-	};
+    class Event
+    {
+    public:
+        bool Handled = false;
+        virtual EventType GetEventType() const = 0;
+        virtual const char* GetName() const = 0;
+        virtual int GetCategoryFlags() const = 0;
+        virtual std::string ToString() const { return GetName(); }
 
-	class EventDispatcher
-	{
-	public:
-		EventDispatcher(Event& event)
-			: m_Event(event)
-		{
-		}
+        bool IsInCategory(EventCategory category) { return GetCategoryFlags() & category; }
+    };
 
-		template<typename T, typename F>
-		bool Dispatch(const F& func)
-		{
-			if (m_Event.GetEventType() == T::GetStaticType())
-			{
-				m_Event.Handled = func(static_cast<T&>(m_Event));
-				return true;
-			}
-			return false;
-		}
-	private:
-		Event& m_Event;
-	};
+    using EventCallbackFn = std::function<void(Event&)>;
 
-	inline std::ostream& operator<<(std::ostream& os, Event& event)
-	{
-		return os << event.ToString();
-	}
+    class EventDispatcher
+    {
+    public:
+        EventDispatcher(Event& event) : m_Event(event) {}
 
-}
+        template <typename T, typename F> bool Dispatch(const F& func)
+        {
+            if (m_Event.GetEventType() == T::GetStaticType())
+            {
+                m_Event.Handled |= func(static_cast<T&>(m_Event));
+                return true;
+            }
+            return false;
+        }
+
+    private:
+        Event& m_Event;
+    };
+
+    inline std::ostream& operator<<(std::ostream& os, Event& event) { return os << event.ToString(); }
+
+} // namespace Crowny

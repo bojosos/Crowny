@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstring>
+#include <functional>
 #include <memory>
 
 #ifdef CW_DEBUG
@@ -7,39 +9,100 @@
 #endif
 
 #if defined(_MSC_VER)
-	#define CW_DEBUGBREAK() __debugbreak()
+#define CW_DEBUGBREAK() __debugbreak()
 #elif defined(CW_PLATFORM_LINUX)
-	#define CW_DEBUGBREAK() raise(SIGTRAP)
+//#define CW_DEBUGBREAK() __builtin_trap()
+#define CW_DEBUGBREAK() asm("int $3") // it's 2021..... we deserve better
 #endif
 
-#ifdef CW_ENABLE_ASSERTS
-	#define CW_CLIENT_ASSERT(x, ...) { if(!(x)) { CW_CLIENT_ERROR("Assertion Failed: {0}", __VA_ARGS__); CW_DEBUGBREAK(); } }
-	#define CW_ENGINE_ASSERT(x, ...) { if(!(x)) { CW_ENGINE_ERROR("Assertion Failed: {0}", __VA_ARGS__); CW_DEBUGBREAK(); } }
-#else
-	#define CW_CLIENT_ASSERT(x, ...)
-	#define CW_ENGINE_ASSERT(x, ...)
+#if defined(__clang__)
+#define CW_STDCALL __attribute__((stdcall))
+#elif defined(__GNUC__)
+#define CW_STDCALL __attribute__((stdcall))
+#elif defined(__INTEL_COMPILER)
+#define CW_STDCALL __stdcall
+#elif defined(_MSV_VER)
+#define CW_STDCALL __stdcall
 #endif
 
 #define BIT(x) (1 << x)
 
-#define CW_BIND_EVENT_FN(fn) std::bind(&fn, this, std::placeholders::_1)
+#define CW_BIND_EVENT_FN(fn)                                                                                           \
+    [this](auto&&... args) -> decltype(auto) { return this->fn(std::forward<decltype(args)>(args)...); }
 
-namespace Crowny {
+namespace Crowny
+{
 
-	template<typename T>
-	using Scope = std::unique_ptr<T>;
-	template<typename T, typename ... Args>
-	constexpr Scope<T> CreateScope(Args&& ... args)
-	{
-		return std::make_unique<T>(std::forward<Args>(args)...);
-	}
+    constexpr void HashCombine(std::size_t& seed) {}
 
-	template<typename T>
-	using Ref = std::shared_ptr<T>;
-	template<typename T, typename ... Args>
-	constexpr Ref<T> CreateRef(Args&& ... args)
-	{
-		return std::make_shared<T>(std::forward<Args>(args)...);
-	}
+    /**
+     * @brief Hashes multiple variables of the same type and combines their hashes.
+     *
+     * @tparam Type
+     * @tparam Rest
+     * @param seed Output seed.
+     * @param v First value to hash.
+     * @param rest The rest of the values to hash.
+     */
+    template <typename T, typename... Rest> constexpr void HashCombine(std::size_t& seed, const T& v, Rest... rest)
+    {
+        std::hash<T> hasher;
+        seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+        HashCombine(seed, rest...);
+    }
 
-}
+    /**
+     * @brief Hashes a variable.
+     *
+     * @tparam Type.
+     * @param Value.
+     * @return size_t hash of the variable.
+     */
+    template <typename T> constexpr size_t Hash(const T& v)
+    {
+        std::hash<T> hasher;
+        return hasher(v);
+    }
+
+    template <typename T> using Scope = std::unique_ptr<T>;
+
+    /**
+     * @brief Creates a unique pointer.
+     *
+     * @tparam Smart pointer type.
+     */
+    template <typename T, typename... Args> constexpr Scope<T> CreateScope(Args&&... args)
+    {
+        return std::make_unique<T>(std::forward<Args>(args)...);
+    }
+
+    template <typename T> using Ref = std::shared_ptr<T>;
+
+    /**
+     * @brief Creates a shared pointer.
+     *
+     * @tparam Smart pointer type.
+     */
+    template <typename T, typename... Args> constexpr Ref<T> CreateRef(Args&&... args)
+    {
+        return std::make_shared<T>(std::forward<Args>(args)...);
+    }
+
+    template <class T> void Cw_ZeroOut(T& s) { std::memset(&s, 0, sizeof(T)); }
+
+    template <class T> void Cw_ZeroOut(T* arr, size_t count) { std::memset(arr, 0, sizeof(T) * count); }
+
+    template <class T, size_t N> void Cw_ZeroOut(T (&arr)[N]) { std::memset(arr, 0, sizeof(T) * N); }
+
+    template <class T> void Cw_Copy(T* dst, T* src, size_t count) { std::memcpy(dst, src, sizeof(T) * count); }
+
+    template <class T, size_t N> void Cw_Copy(T (&dst)[N], T (&src)[N], size_t count)
+    {
+        std::memcpy(dst, src, sizeof(T) * count);
+    }
+
+    template <class T, size_t N> constexpr size_t Cw_Size(const T (&array)[N]) { return N; }
+
+} // namespace Crowny
+
+#include "Crowny/Common/Assert.h"

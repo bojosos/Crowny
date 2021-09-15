@@ -1,9 +1,5 @@
 **/bin/
-<<<<<<< HEAD
 !3rdparty
-=======
-!3rdparty/premake/
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
 bin-int/
 
 .vs/
@@ -11,9 +7,23 @@ bin-int/
 **.vcxproj
 **.vcxproj.filters
 **.vcxproj.user
+**.csproj
+**.csproj.filters
+**.csproj.user
+**/Makefile
+Crowny/Dependencies/mono/
+Crowny/Dependencies/vulkan/
 
-<<<<<<< HEAD
-Crowny/Dependencies/
+Crowny-Editor/Resources/Models/
 
-=======
->>>>>>> 8d51831a55da8001ceaabdbd722f54bfd1f9b2a2
+.vscode/c_cpp_properties.json
+
+.vscode/
+
+PVS-Studio.log
+
+report.html
+
+report.tasks
+
+strace_out
