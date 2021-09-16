@@ -1,6 +1,6 @@
 #include "cwpch.h"
 
-#include "../../Crowny-Editor/Source/Panels/ImGuiMaterialPanel.h"
+#include "../../Crowny-Editor/Source/Panels/ImGuiInspectorPanel.h"
 #include "Crowny/RenderAPI/RenderCommand.h"
 #include "Crowny/RenderAPI/VertexBuffer.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
@@ -26,13 +26,13 @@ namespace Crowny
     };
 
     static ForwardRendererData* s_Data;
-    
+
     float verts[] = { -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,
-                         -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f,
-                         -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  -1.0f,
-                         -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,
-                         1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,
-                         -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f };
+                      -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f,
+                      -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  -1.0f,
+                      -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,
+                      1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,
+                      -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f };
 
     uint32_t inds[] = {
         0,  1,  2,  0,  2,  3,  4,  5,  6,  4,  6,  7,  8,  9,  10, 8,  10, 11,
@@ -42,7 +42,7 @@ namespace Crowny
     void ForwardRenderer::Init()
     {
         s_Data = new ForwardRendererData();
-        Ref<UniformParams>& uniforms = ImGuiMaterialPanel::GetSlectedMaterial()->GetUniformParams();
+        Ref<UniformParams>& uniforms = ImGuiInspectorPanel::GetSelectedMaterial()->GetUniformParams();
         ShaderCompiler compiler;
         Ref<Shader> vertex = Shader::Create(compiler.Compile("/Shaders/pbribl.vert", VERTEX_SHADER));
         Ref<Shader> fragment = Shader::Create(compiler.Compile("/Shaders/pbribl.frag", FRAGMENT_SHADER));
@@ -58,7 +58,7 @@ namespace Crowny
 
         s_Data->Skybox = CreateRef<Skybox>("/Textures/envmap.hdr");
         s_Data->SkyboxVbo = VertexBuffer::Create(verts, sizeof(verts));
-        s_Data->SkyboxVbo->SetLayout({ {ShaderDataType::Float3, "a_Pos"} });
+        s_Data->SkyboxVbo->SetLayout({ { ShaderDataType::Float3, "a_Pos" } });
         s_Data->SkyboxIbo = IndexBuffer::Create(inds, sizeof(inds) / sizeof(uint32_t));
 
         Ref<Shader> skyboxVertex = Shader::Create(compiler.Compile("/Shaders/skybox.vert", VERTEX_SHADER));
@@ -89,17 +89,13 @@ namespace Crowny
         s_Data->Mvp->Write(0, glm::value_ptr(camera.GetProjection()), sizeof(glm::mat4));
         s_Data->Mvp->Write(sizeof(glm::mat4), glm::value_ptr(viewMatrix), sizeof(glm::mat4));
 
-        Ref<UniformParams> uniforms = ImGuiMaterialPanel::GetSlectedMaterial()->GetUniformParams();
+        Ref<UniformParams> uniforms = ImGuiInspectorPanel::GetSelectedMaterial()->GetUniformParams();
         uniforms->SetTexture(0, 3, s_Data->Skybox->m_IrradianceMap);
         uniforms->SetTexture(0, 4, s_Data->Skybox->m_Brdf);
         uniforms->SetTexture(0, 5, s_Data->Skybox->m_PrefilteredMap);
 
-        glm::vec4 lightPositions[] = {
-            glm::vec4(-10.0f, 10.0f, 10.0f, 1.0f),
-            glm::vec4(10.0f, 10.0f, 10.0f, 1.0f),
-            glm::vec4(-10.0f, -10.0f, 10.0f, 1.0f),
-            glm::vec4(10.0f, -10.0f, 10.0f, 1.0f)
-        };
+        glm::vec4 lightPositions[] = { glm::vec4(-10.0f, 10.0f, 10.0f, 1.0f), glm::vec4(10.0f, 10.0f, 10.0f, 1.0f),
+                                       glm::vec4(-10.0f, -10.0f, 10.0f, 1.0f), glm::vec4(10.0f, -10.0f, 10.0f, 1.0f) };
         glm::vec3 lightColors[] = { glm::vec3(300.0f, 300.0f, 300.0f), glm::vec3(300.0f, 300.0f, 300.0f),
                                     glm::vec3(300.0f, 300.0f, 300.0f), glm::vec3(300.0f, 300.0f, 300.0f) };
         float gamma = 2.2f, exposure = 4.5f;
@@ -116,7 +112,7 @@ namespace Crowny
         rapi.SetGraphicsPipeline(s_Data->SkyboxPipeline);
         rapi.SetVertexBuffers(0, &s_Data->SkyboxVbo, 1);
         rapi.SetIndexBuffer(s_Data->SkyboxIbo);
-        
+
         rapi.SetUniforms(s_Data->SkyboxUniforms);
         rapi.DrawIndexed(0, s_Data->SkyboxIbo->GetCount(), 0, 1);
     }
@@ -126,7 +122,7 @@ namespace Crowny
     void ForwardRenderer::Submit(const Ref<Model>& model, const glm::mat4& transform)
     {
         s_Data->Mvp->Write(sizeof(glm::mat4) * 2, glm::value_ptr(transform), sizeof(glm::mat4));
-        ImGuiMaterialPanel::GetSlectedMaterial()->Bind();
+        ImGuiInspectorPanel::GetSelectedMaterial()->Bind();
         for (auto& mesh : model->GetMeshes())
             model->Draw();
     }

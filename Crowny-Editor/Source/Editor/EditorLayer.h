@@ -8,7 +8,6 @@
 #include "Panels/ImGuiGLInfoPanel.h"
 #include "Panels/ImGuiHierarchyPanel.h"
 #include "Panels/ImGuiInspectorPanel.h"
-#include "Panels/ImGuiMaterialPanel.h"
 #include "Panels/ImGuiPanel.h"
 #include "Panels/ImGuiViewportPanel.h"
 
@@ -61,7 +60,6 @@ namespace Crowny
         ImGuiHierarchyPanel* m_HierarchyPanel;
         ImGuiViewportPanel* m_ViewportPanel;
         ImGuiTextureEditor* m_TextureEditor;
-        ImGuiMaterialPanel* m_MaterialEditor;
         ImGuiConsolePanel* m_ConsolePanel;
         ImGuiAssetBrowserPanel* m_AssetBrowser;
 

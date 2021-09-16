@@ -184,7 +184,6 @@ namespace Crowny
 
     VulkanUniformParams::~VulkanUniformParams()
     {
-        CW_ENGINE_INFO("Destroy params");
         uint32_t numSets = m_ParamInfo->GetNumSets();
         for (uint32_t i = 0; i < numSets; i++)
         {

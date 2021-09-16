@@ -107,7 +107,7 @@ namespace Crowny
             m_BlendAttachmentStates[i].alphaBlendOp = VulkanUtils::GetBlendOp(desc.BlendState.BlendOpAlpha);
             m_BlendAttachmentStates[i].srcAlphaBlendFactor = VulkanUtils::GetBlendFactor(desc.BlendState.SrcBlendAlpha);
             m_BlendAttachmentStates[i].dstAlphaBlendFactor = VulkanUtils::GetBlendFactor(desc.BlendState.DstBlendAlpha);
-            }
+        }
 
         m_ColorBlendStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
         m_ColorBlendStateInfo.pNext = nullptr;
