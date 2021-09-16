@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Audio/AudioDecoder.h"
 #include "Crowny/Common/DataStream.h"
 
 #include <vorbis/vorbisfile.h>
@@ -15,15 +16,15 @@ namespace Crowny
         uint32_t Offset;
     };
 
-    class OggVorbisDecoder
+    class OggVorbisDecoder : public AudioDecoder
     {
     public:
         OggVorbisDecoder();
         ~OggVorbisDecoder();
-        bool Open(const Ref<DataStream>& stream, AudioDataInfo& info, uint32_t offset = 0);
-        uint32_t Read(uint8_t* samples, uint32_t count);
-        void Seek(uint32_t offset);
-        bool IsValid(const Ref<DataStream>& stream, uint32_t offset);
+        virtual bool Open(const Ref<DataStream>& stream, AudioDataInfo& info, uint32_t offset = 0) override;
+        virtual uint32_t Read(uint8_t* samples, uint32_t count) override;
+        virtual void Seek(uint32_t offset) override;
+        virtual bool IsValid(const Ref<DataStream>& stream, uint32_t offset = 0) override;
 
     private:
         OggDecoderData m_DecoderData;

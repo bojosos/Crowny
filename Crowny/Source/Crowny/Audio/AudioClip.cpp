@@ -19,12 +19,13 @@ namespace Crowny
         info.NumChannels = m_Desc.NumChannels;
         info.NumSamples = m_NumSamples;
         info.SampleRate = m_Desc.Frequency;
-        m_KeepSourceData = false;
-        if (m_KeepSourceData)
+        if (m_KeepData)
         {
             m_StreamData->Seek(m_StreamOffset);
             auto memStream = CreateRef<MemoryDataStream>(m_StreamSize);
             m_SourceStreamData = memStream;
+            m_StreamData->Read(memStream->Data(), m_StreamSize);
+            m_SourceStreamSize = m_StreamSize;
         }
 
         bool loadDecompressed = m_Desc.ReadMode == AudioReadMode::LoadDecompressed;

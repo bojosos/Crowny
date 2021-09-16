@@ -66,9 +66,6 @@ namespace Crowny
         m_InspectorPanel = new ImGuiInspectorPanel("Inspector");
         viewMenu->AddItem(new ImGuiMenuItem("Inspector", "", [&](auto& event) { m_InspectorPanel->Show(); }));
 
-        m_MaterialEditor = new ImGuiMaterialPanel("Material Editor");
-        viewMenu->AddItem(new ImGuiMenuItem("Material Editor", "", [&](auto& event) { m_MaterialEditor->Show(); }));
-
         m_ConsolePanel = new ImGuiConsolePanel("Console");
         viewMenu->AddItem(new ImGuiMenuItem("Console", "", [&](auto& entity) { m_ConsolePanel->Show(); }));
 
@@ -100,7 +97,7 @@ namespace Crowny
         mat->SetRoughnessMap(roughness);
         mat->SetAoMap(ao);
 
-        ImGuiMaterialPanel::SetSelectedMaterial(mat);
+        ImGuiInspectorPanel::SetSelectedMaterial(mat);
         ForwardRenderer::Init(); // Why here?
 
         // Ref<Scene> scene;
@@ -142,7 +139,7 @@ namespace Crowny
     {
         EventDispatcher dispatcher(event);
         dispatcher.Dispatch<ImGuiViewportSceneDraggedEvent>([this](ImGuiViewportSceneDraggedEvent& event) {
-            OpenScene("Resources/" + event.GetSceneFilepath());
+            OpenScene(event.GetSceneFilepath());
             return true;
         });
         return true;
@@ -195,7 +192,6 @@ namespace Crowny
         delete m_InspectorPanel;
         delete m_HierarchyPanel;
         delete m_ViewportPanel;
-        delete m_MaterialEditor;
         delete m_ConsolePanel;
         delete m_AssetBrowser;
 
@@ -329,7 +325,6 @@ namespace Crowny
         m_ViewportPanel->SetEditorRenderTarget(m_RenderTarget);
         m_ViewportPanel->Render();
         m_ConsolePanel->Render();
-        m_MaterialEditor->Render();
         m_AssetBrowser->Render();
 
         ImGui::End();

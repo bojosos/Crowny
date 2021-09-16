@@ -28,6 +28,6 @@ namespace Crowny
 
         static bool OpenFileDialog(FileDialogType type, const std::string& initialDir, const std::string& filter,
                                    std::vector<std::string>& outpaths);
-        static Ref<DataStream> OpenFile(const std::string& filepath, bool readOnly);
+        static Ref<DataStream> OpenFile(const std::string& filepath, bool readOnly = true);
     };
 } // namespace Crowny
