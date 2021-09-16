@@ -191,6 +191,7 @@ GENERATED += $(OBJDIR)/Application.o
 GENERATED += $(OBJDIR)/AssetManager.o
 GENERATED += $(OBJDIR)/AssetManifest.o
 GENERATED += $(OBJDIR)/AudioClip.o
+GENERATED += $(OBJDIR)/AudioClipImporter.o
 GENERATED += $(OBJDIR)/AudioListener.o
 GENERATED += $(OBJDIR)/AudioManager.o
 GENERATED += $(OBJDIR)/AudioSource.o
@@ -223,6 +224,7 @@ GENERATED += $(OBJDIR)/ImGuiLayer.o
 GENERATED += $(OBJDIR)/ImGuiMenu.o
 GENERATED += $(OBJDIR)/ImGuiOpenGLLayer.o
 GENERATED += $(OBJDIR)/ImGuiVulkanLayer.o
+GENERATED += $(OBJDIR)/Importer.o
 GENERATED += $(OBJDIR)/IndexBuffer.o
 GENERATED += $(OBJDIR)/Initializer.o
 GENERATED += $(OBJDIR)/Layer.o
@@ -333,6 +335,7 @@ OBJECTS += $(OBJDIR)/Application.o
 OBJECTS += $(OBJDIR)/AssetManager.o
 OBJECTS += $(OBJDIR)/AssetManifest.o
 OBJECTS += $(OBJDIR)/AudioClip.o
+OBJECTS += $(OBJDIR)/AudioClipImporter.o
 OBJECTS += $(OBJDIR)/AudioListener.o
 OBJECTS += $(OBJDIR)/AudioManager.o
 OBJECTS += $(OBJDIR)/AudioSource.o
@@ -365,6 +368,7 @@ OBJECTS += $(OBJDIR)/ImGuiLayer.o
 OBJECTS += $(OBJDIR)/ImGuiMenu.o
 OBJECTS += $(OBJDIR)/ImGuiOpenGLLayer.o
 OBJECTS += $(OBJDIR)/ImGuiVulkanLayer.o
+OBJECTS += $(OBJDIR)/Importer.o
 OBJECTS += $(OBJDIR)/IndexBuffer.o
 OBJECTS += $(OBJDIR)/Initializer.o
 OBJECTS += $(OBJDIR)/Layer.o
@@ -618,6 +622,12 @@ $(OBJDIR)/ImGuiOpenGLLayer.o: Source/Crowny/ImGui/ImGuiOpenGLLayer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ImGuiVulkanLayer.o: Source/Crowny/ImGui/ImGuiVulkanLayer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/AudioClipImporter.o: Source/Crowny/Import/AudioClipImporter.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/Importer.o: Source/Crowny/Import/Importer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Layer.o: Source/Crowny/Layers/Layer.cpp

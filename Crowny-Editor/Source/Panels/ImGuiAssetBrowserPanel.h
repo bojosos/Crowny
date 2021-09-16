@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Editor/EditorDefaults.h"
 #include "ImGuiPanel.h"
 
 #include <filesystem>
@@ -44,6 +45,10 @@ namespace Crowny
 
     private:
         void ShowContextMenuContents(const std::string& filepath = "");
+        void DrawHeader();
+        void DrawFiles();
+        void CreateNew(AssetBrowserItem itemType);
+        std::string GetDefaultContents(AssetBrowserItem itemType);
 
     private:
         ImTextureID m_FolderIcon;
@@ -54,8 +59,11 @@ namespace Crowny
         std::filesystem::path m_PreviousDirectory;
         std::filesystem::path m_CurrentDirectory;
 
-        FileSortingMode m_FileSortingMode = FileSortingMode::SortBySize;
+        std::string m_CsDefaultText;
 
+        FileSortingMode m_FileSortingMode = FileSortingMode::SortBySize;
+        float m_Padding = 12.0f;
+        float m_ThumbnailSize = DEFAULT_ASSET_THUMBNAIL_SIZE;
         std::string m_Filename;
         AssetBrowserItem m_RenamingType;
         std::filesystem::path m_RenamingPath;

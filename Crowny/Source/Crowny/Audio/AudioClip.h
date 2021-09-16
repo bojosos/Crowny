@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Crowny/Audio/OggVorbisDecoder.h"
+
+#include "Crowny/Assets/Asset.h"
 #include "Crowny/Common/DataStream.h"
 
 namespace Crowny
@@ -16,6 +18,7 @@ namespace Crowny
 
     enum class AudioFormat
     {
+        PCM,
         VORBIS
     };
 
@@ -23,7 +26,7 @@ namespace Crowny
     {
         LoadDecompressed,
         LoadCompressed,
-        Stream,
+        Stream
     };
 
     struct AudioClipDesc
@@ -36,7 +39,7 @@ namespace Crowny
         bool Is3D = true;
     };
 
-    class AudioClip
+    class AudioClip : public Asset
     {
     public:
         AudioClip(const Ref<DataStream>& stream, uint32_t streamSize, uint32_t numSamples, const AudioClipDesc& desc);
@@ -62,7 +65,6 @@ namespace Crowny
 
         Ref<DataStream> m_SourceStreamData;
         uint32_t m_SourceStreamSize = 0;
-        bool m_KeepSourceData;
     };
 
 } // namespace Crowny

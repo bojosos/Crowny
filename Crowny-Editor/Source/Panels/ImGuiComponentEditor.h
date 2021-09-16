@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Crowny.h"
-#include "Panels/ImGuiPanel.h"
+#include "Crowny/Ecs/Entity.h"
 
 #include <entt/entt.hpp>
 #include <imgui.h>

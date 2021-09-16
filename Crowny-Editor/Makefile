@@ -185,10 +185,10 @@ GENERATED += $(OBJDIR)/ImGuiConsolePanel.o
 GENERATED += $(OBJDIR)/ImGuiGLInfoPanel.o
 GENERATED += $(OBJDIR)/ImGuiHierarchyPanel.o
 GENERATED += $(OBJDIR)/ImGuiInspectorPanel.o
-GENERATED += $(OBJDIR)/ImGuiMaterialPanel.o
 GENERATED += $(OBJDIR)/ImGuiPanel.o
 GENERATED += $(OBJDIR)/ImGuiTextureEditor.o
 GENERATED += $(OBJDIR)/ImGuiViewportPanel.o
+GENERATED += $(OBJDIR)/Project.o
 GENERATED += $(OBJDIR)/cwepch.o
 OBJECTS += $(OBJDIR)/CrownyEditor.o
 OBJECTS += $(OBJDIR)/EditorAssets.o
@@ -200,10 +200,10 @@ OBJECTS += $(OBJDIR)/ImGuiConsolePanel.o
 OBJECTS += $(OBJDIR)/ImGuiGLInfoPanel.o
 OBJECTS += $(OBJDIR)/ImGuiHierarchyPanel.o
 OBJECTS += $(OBJDIR)/ImGuiInspectorPanel.o
-OBJECTS += $(OBJDIR)/ImGuiMaterialPanel.o
 OBJECTS += $(OBJDIR)/ImGuiPanel.o
 OBJECTS += $(OBJDIR)/ImGuiTextureEditor.o
 OBJECTS += $(OBJDIR)/ImGuiViewportPanel.o
+OBJECTS += $(OBJDIR)/Project.o
 OBJECTS += $(OBJDIR)/cwepch.o
 
 # Rules
@@ -277,6 +277,9 @@ $(OBJDIR)/EditorAssets.o: Source/Editor/EditorAssets.cpp
 $(OBJDIR)/EditorLayer.o: Source/Editor/EditorLayer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/Project.o: Source/Editor/Project.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ImGuiAssetBrowserPanel.o: Source/Panels/ImGuiAssetBrowserPanel.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -296,9 +299,6 @@ $(OBJDIR)/ImGuiHierarchyPanel.o: Source/Panels/ImGuiHierarchyPanel.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ImGuiInspectorPanel.o: Source/Panels/ImGuiInspectorPanel.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/ImGuiMaterialPanel.o: Source/Panels/ImGuiMaterialPanel.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ImGuiPanel.o: Source/Panels/ImGuiPanel.cpp

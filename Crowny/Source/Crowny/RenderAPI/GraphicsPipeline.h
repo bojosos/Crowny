@@ -14,7 +14,7 @@ namespace Crowny
         bool EnableDepthRead = true;
         bool EnableDepthWrite = true;
         CompareFunction DepthCompareFunction = CompareFunction::LESS;
-        bool EnableStencil = false;  
+        bool EnableStencil = false;
     };
 
     struct BlendStateDesc
@@ -24,7 +24,7 @@ namespace Crowny
         BlendFactor SrcBlend = BlendFactor::One;
         BlendFactor DstBlend = BlendFactor::Zero;
         BlendFunction BlendOp = BlendFunction::ADD;
-        
+
         BlendFactor SrcBlendAlpha = BlendFactor::One;
         BlendFactor DstBlendAlpha = BlendFactor::Zero;
         BlendFunction BlendOpAlpha = BlendFunction::ADD;
@@ -32,7 +32,6 @@ namespace Crowny
 
     struct RasterizerStateDesc
     {
-        
     };
 
     struct PipelineStateDesc
@@ -42,7 +41,7 @@ namespace Crowny
         Ref<Shader> GeometryShader;
         Ref<Shader> HullShader;
         Ref<Shader> DomainShader;
-        
+
         RasterizerStateDesc RasterizerState;
         DepthStencilStateDesc DepthStencilState;
         BlendStateDesc BlendState;
