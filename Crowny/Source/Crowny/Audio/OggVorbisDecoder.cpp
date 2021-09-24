@@ -11,10 +11,7 @@ namespace Crowny
     size_t OggRead(void* ptr, size_t size, size_t nmemb, void* data)
     {
         OggDecoderData* decoderData = static_cast<OggDecoderData*>(data);
-        size_t read = static_cast<size_t>(decoderData->Stream->Read(ptr, size * nmemb));
-        if (read == 1)
-            return 0;
-        return read;
+        return static_cast<std::size_t>(decoderData->Stream->Read(ptr, size * nmemb));
     }
 
     int OggSeek(void* data, ogg_int64_t offset, int whence)
@@ -74,12 +71,10 @@ namespace Crowny
         stream->Seek(offset);
         m_DecoderData.Stream = stream;
         m_DecoderData.Offset = offset;
-        FILE* f = fopen("test.ogg", "rb");
-        // int status = ov_open_callbacks(&m_DecoderData, &m_OggVorbisFile, nullptr, 0, callbacks);
-        int status = ov_open(f, &m_OggVorbisFile, nullptr, 0);
+        int status = ov_open_callbacks(&m_DecoderData, &m_OggVorbisFile, nullptr, 0, callbacks);
         if (status < 0)
         {
-            CW_ENGINE_ERROR("Failed toload Ogg Vorbis file: code {0}.", status);
+            CW_ENGINE_ERROR("Failed to load Ogg Vorbis file: code {0}.", status);
             return false;
         }
 

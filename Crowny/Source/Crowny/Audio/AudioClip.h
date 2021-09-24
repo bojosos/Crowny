@@ -16,17 +16,17 @@ namespace Crowny
         uint32_t BitDepth;
     };
 
-    enum class AudioFormat
+    enum class AudioFormat : uint8_t
     {
-        PCM,
-        VORBIS
+        PCM = 0,
+        VORBIS = 1
     };
 
-    enum class AudioReadMode
+    enum class AudioReadMode : uint8_t
     {
-        LoadDecompressed,
-        LoadCompressed,
-        Stream
+        LoadDecompressed = 0,
+        LoadCompressed = 1,
+        Stream = 2
     };
 
     struct AudioClipDesc
@@ -37,21 +37,27 @@ namespace Crowny
         uint32_t BitDepth = 16;
         uint32_t NumChannels = 2;
         bool Is3D = true;
+        bool KeepSourceData = true; // Need it for import, otherwise keeping source data is controlled by Resource::Load
     };
 
     class AudioClip : public Asset
     {
     public:
+        AudioClip() = default;
         AudioClip(const Ref<DataStream>& stream, uint32_t streamSize, uint32_t numSamples, const AudioClipDesc& desc);
+        ~AudioClip() = default;
+
         float GetLength() const { return m_Length; }
         uint32_t GetNumSamples() const { return m_NumSamples; }
         const AudioClipDesc& GetDesc() const { return m_Desc; }
         void GetSamples(uint8_t* samples, uint32_t offset, uint32_t count) const;
-        Ref<DataStream> GetSourceStream(uint32_t& size);
+        Ref<DataStream> GetSourceStream(uint32_t& size) const;
         uint32_t GetOpenALBuffer() const { return m_BufferID; }
         bool Is3D() const { return m_Desc.Is3D; }
 
     private:
+        CW_SERIALIZABLE(AudioClip);
+
         AudioClipDesc m_Desc;
         float m_Length = 0.0f;
         mutable OggVorbisDecoder m_VorbisReader;
@@ -63,7 +69,7 @@ namespace Crowny
 
         Ref<DataStream> m_StreamData;
 
-        Ref<DataStream> m_SourceStreamData;
+        mutable Ref<DataStream> m_SourceStreamData;
         uint32_t m_SourceStreamSize = 0;
     };
 

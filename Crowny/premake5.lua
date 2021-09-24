@@ -19,7 +19,7 @@ project "Crowny"
 		"Dependencies/stb_image/**.cpp",
 		"Dependencies/glm/glm/**.hpp",
 		"Dependencies/glm/glm/**.inl",
-    	"Dependencies/bitsery/include/bitsery/**.h"
+  	"Dependencies/cereal/include/cereal/**.h"
 	}
 
 --	filter { "system:windows", "files: Linux*" }
@@ -53,7 +53,8 @@ project "Crowny"
 		"%{IncludeDir.vulkan}",
 		"%{IncludeDir.yamlcpp}",
 		"%{IncludeDir.ImGuizmo}",
-		"%{IncludeDir.openal}"
+		"%{IncludeDir.openal}",
+    "%{IncludeDir.cereal}"
 	}
 
 	libdirs { "/usr/lib/mono-2.0", "%{wks.location}/Crowny/Dependencies/vulkan/lib" }
