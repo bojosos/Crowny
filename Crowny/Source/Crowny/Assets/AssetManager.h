@@ -14,8 +14,7 @@ namespace Crowny
     public:
         Ref<Asset> Load(const std::string& path, bool keepSourceData = false);
 
-        template <class T>
-        Ref<T> Load(const std::string& filepath, bool keepSourceData = false)
+        template <class T> Ref<T> Load(const std::string& filepath, bool keepSourceData = false)
         {
             return std::static_pointer_cast<T>(Load(filepath, keepSourceData));
         }
@@ -24,6 +23,7 @@ namespace Crowny
 
         void Save(const Ref<Asset>& resource); // TODO: Compression
         void Save(const Ref<Asset>& resource, const std::string& filepath);
+
     private:
         Ref<Asset> Load(const Uuid& uuid, const std::string& filepath, bool keepSourceData);
         void GetFilepathFromUuid(const Uuid& uuid, std::string& outFilepath);

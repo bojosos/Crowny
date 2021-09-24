@@ -3,16 +3,16 @@
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/FileSystem.h"
 
-#include "Crowny/Audio/AudioSource.h"
 #include "Crowny/Assets/CerealDataStreamArchive.h"
+#include "Crowny/Audio/AudioSource.h"
 
 #include <cereal/cereal.hpp>
 
 #include <cereal/archives/portable_binary.hpp>
 
-#include <cereal/types/vector.hpp>
 #include <cereal/types/base_class.hpp>
 #include <cereal/types/polymorphic.hpp>
+#include <cereal/types/vector.hpp>
 
 #include <fstream>
 
@@ -22,25 +22,17 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::AudioClip)
 namespace Crowny
 {
 
-    template <class Archive>
-    void save(Archive& archive, const Asset& asset)
-    {
-        archive(asset.m_KeepData);
-    }
+    template <class Archive> void save(Archive& archive, const Asset& asset) { archive(asset.m_KeepData); }
 
-    template <typename Archive>
-    void load(Archive& archive, Asset& asset)
-    {
-        archive(asset.m_KeepData);
-    }
+    template <typename Archive> void load(Archive& archive, Asset& asset) { archive(asset.m_KeepData); }
 
-    template <typename Archive>
-    void load(Archive& archive, AudioClip& clip)
+    template <typename Archive> void load(Archive& archive, AudioClip& clip)
     {
         archive(cereal::base_class<Asset>(&clip)); // Save asset base class
-        AudioClipDesc& desc = clip.m_Desc; // Save clip desc
+        AudioClipDesc& desc = clip.m_Desc;         // Save clip desc
         archive(desc.ReadMode, desc.Format, desc.Frequency, desc.BitDepth, desc.NumChannels, desc.Is3D);
-        CW_ENGINE_INFO("Readmode {0}, format: {1}, freq: {2}, bitdepth: {3}, numchannels: {4}, is3d: {5}", desc.ReadMode, desc.Format, desc.Frequency, desc.BitDepth, desc.NumChannels, desc.Is3D);
+        CW_ENGINE_INFO("Readmode {0}, format: {1}, freq: {2}, bitdepth: {3}, numchannels: {4}, is3d: {5}",
+                       desc.ReadMode, desc.Format, desc.Frequency, desc.BitDepth, desc.NumChannels, desc.Is3D);
         archive(clip.m_Length, clip.m_NumSamples);
         CW_ENGINE_INFO("Length: {0}, samples: {1}", clip.m_Length, clip.m_NumSamples);
         // std::vector<uint8_t> samples(clip.GetNumSamples()); // Save the samples
@@ -48,17 +40,17 @@ namespace Crowny
         // archive(samples);
     }
 
-    template <class Archive>
-    void save(Archive& archive, const AudioClip& clip)
+    template <class Archive> void save(Archive& archive, const AudioClip& clip)
     {
         archive(cereal::base_class<Asset>(&clip)); // Save asset base class
-        const AudioClipDesc& desc = clip.m_Desc; // Save clip desc
+        const AudioClipDesc& desc = clip.m_Desc;   // Save clip desc
         archive(desc.ReadMode, desc.Format, desc.Frequency, desc.BitDepth, desc.NumChannels, desc.Is3D);
         archive(clip.m_Length, clip.m_NumSamples);
-        CW_ENGINE_INFO("Readmode {0}, format: {1}, freq: {2}, bitdepth: {3}, numchannels: {4}, is3d: {5}", desc.ReadMode, desc.Format, desc.Frequency, desc.BitDepth, desc.NumChannels, desc.Is3D);
+        CW_ENGINE_INFO("Readmode {0}, format: {1}, freq: {2}, bitdepth: {3}, numchannels: {4}, is3d: {5}",
+                       desc.ReadMode, desc.Format, desc.Frequency, desc.BitDepth, desc.NumChannels, desc.Is3D);
         CW_ENGINE_INFO("Length: {0}, samples: {1}", clip.m_Length, clip.m_NumSamples);
-        
-        uint32_t size = 0;  // Save the samples
+
+        uint32_t size = 0; // Save the samples
         auto sourceStream = clip.GetSourceStream(size);
         std::vector<uint8_t> samples(clip.GetNumSamples());
         sourceStream->Read(samples.data(), size);
@@ -67,10 +59,10 @@ namespace Crowny
 
     Ref<Asset> AssetManager::Load(const std::string& filepath, bool keepSourceData)
     {
-//        if (!FileSystem::FileExists(filepath))
+        //        if (!FileSystem::FileExists(filepath))
         {
-    //        CW_ENGINE_WARN("Resource {0} does not exist.", filepath);
-  //          return nullptr;
+            //        CW_ENGINE_WARN("Resource {0} does not exist.", filepath);
+            //          return nullptr;
         }
 
         Uuid uuid;

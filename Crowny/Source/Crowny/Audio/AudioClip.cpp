@@ -31,7 +31,8 @@ namespace Crowny
             m_SourceStreamSize = m_StreamSize;
         }
 
-        bool loadDecompressed = m_Desc.ReadMode == AudioReadMode::LoadDecompressed || (m_Desc.ReadMode == AudioReadMode::LoadCompressed && m_Desc.Format == AudioFormat::PCM);
+        bool loadDecompressed = m_Desc.ReadMode == AudioReadMode::LoadDecompressed ||
+                                (m_Desc.ReadMode == AudioReadMode::LoadCompressed && m_Desc.Format == AudioFormat::PCM);
         if (loadDecompressed)
         {
             Ref<DataStream> stream;

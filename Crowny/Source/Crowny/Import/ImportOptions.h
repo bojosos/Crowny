@@ -40,7 +40,7 @@ namespace Crowny
         AudioReadMode ReadMode;
         bool Is3D = true;
         uint32_t BitDepth = 16;
-        
+
         // Only available for Ogg Vorbis
         float Quality = 1.0f;
 
@@ -57,7 +57,7 @@ namespace Crowny
         VKSL = 0,
         GLSL = 1,
         HLSL = 2,
-        MSL  = 3
+        MSL = 3
     };
 
     class ShaderImportOptions : public ImportOptions

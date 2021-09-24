@@ -9,7 +9,6 @@ namespace Crowny
     class AudioUtils
     {
     public:
-    
         static ALenum GetOpenALFormat(uint32_t numChannels, uint32_t bitDepth);
         static void ConvertBitDepth(const uint8_t* samples, uint32_t inBitDepth, uint8_t* output, uint32_t outBitDepth,
                                     uint32_t numSamples);
