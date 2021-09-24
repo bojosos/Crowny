@@ -15,20 +15,12 @@ namespace Crowny
     AudioListener::AudioListener()
     {
         gAudio().RegisterListener(this);
-        ALCcontext* context = alcCreateContext(gAudio().GetDevice(), nullptr);
-        AudioUtils::CheckOpenALCErrors("Audio listener", 28, gAudio().GetDevice());
-        if (context)
-            gAudio().SetContext(context);
-        alcMakeContextCurrent(context);
         float globalVolume = gAudio().GetVolume();
         alListenerf(AL_GAIN, globalVolume);
         alListener3f(AL_POSITION, 0.0f, 0.0f, 0.0f);
-        AudioUtils::CheckOpenALErrors("Audio listener", 26);
         alListener3f(AL_VELOCITY, 0.0f, 0.0f, 0.0f);
-        AudioUtils::CheckOpenALErrors("Audio listener", 28);
         std::array<float, 6> orientation = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
         alListenerfv(AL_ORIENTATION, orientation.data());
-        AudioUtils::CheckOpenALErrors("Audio listener", 31);
     }
 
     AudioListener::~AudioListener() { gAudio().UnregisterListener(this); }

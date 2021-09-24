@@ -5,6 +5,8 @@
 #include "Crowny/Scripting/CWMonoRuntime.h"
 
 #include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Import/Importer.h"
+
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Events/ImGuiEvent.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
@@ -34,8 +36,6 @@ namespace Crowny
     float EditorLayer::s_FrameCount = 0.0f;
 
     EditorCamera EditorLayer::s_EditorCamera = EditorCamera(30.0f, 1280.0f / 720.0f, 0.001f, 100000.0f);
-
-    void LoadTexture(const std::string& filepath, Ref<Texture>& texture);
 
     EditorLayer::EditorLayer() : Layer("EditorLayer") {}
 
@@ -83,11 +83,20 @@ namespace Crowny
         /// auto& manifest = AssetManager::Get().ImportManifest("Sandbox.yaml", "Sandbox");
         // AssetManifest("Sandbox").Serialize("Sandbox.yaml");
 
+        Uuid uuid;
+        Ref<AudioClipImportOptions> importOptions = CreateRef<AudioClipImportOptions>();
+        Ref<AudioClip> resource = Importer::Get().Import<AudioClip>("Resources/Audio/test.ogg", importOptions, uuid);
+        AssetManager::Get().Save(resource, "Resources/Audio/test.asset");
+        Ref<AudioClip> clip = AssetManager::Get().Load<AudioClip>("Resources/Audio/test.asset");
+//        CW_ENGINE_ASSERT(resource->Is3D() == clip->Is3D());
+//        CW_ENGINE_INFO(std::memcmp(&resource->GetDesc(), &clip->GetDesc(), sizeof(AudioClipDesc)));
+
         Ref<Texture> albedo, metallic, roughness, normal;
-        LoadTexture("/Textures/rustediron2_basecolor.png", albedo);
-        LoadTexture("/Textures/rustediron2_metallic.png", metallic);
-        LoadTexture("/Textures/rustediron2_roughness.png", roughness);
-        LoadTexture("/Textures/rustediron2_normal.png", normal);
+        Ref<ImportOptions> tio = CreateRef<TextureImportOptions>();
+        albedo = Importer::Get().Import<Texture>("/Textures/rustediron2_basecolor.png", tio, uuid);
+        metallic = Importer::Get().Import<Texture>("/Textures/rustediron2_metallic.png", tio, uuid);
+        roughness = Importer::Get().Import<Texture>("/Textures/rustediron2_roughness.png", tio, uuid);
+        normal = Importer::Get().Import<Texture>("/Textures/rustediron2_normal.png", tio, uuid);
 
         Ref<Texture> ao = Texture::WHITE;
 

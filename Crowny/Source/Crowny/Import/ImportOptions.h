@@ -16,6 +16,7 @@ namespace Crowny
     public:
         TextureImportOptions() = default;
 
+        bool AutomaticFormat = true;
         TextureFormat Format = TextureFormat::RGBA8;
         TextureShape Shape = TextureShape::TEXTURE_2D;
         bool GenerateMips = false;
@@ -27,12 +28,6 @@ namespace Crowny
         virtual Ref<ImportOptions> Clone() const override
         {
             Ref<TextureImportOptions> clone = CreateRef<TextureImportOptions>();
-            // clone->Format = Format;
-            // clone->Shape = Shape;
-            // clone->GenerateMips = GenerateMips;
-            // clone->MaxMip = MaxMip;
-            // clone->CpuCached = CpuCached;
-            // clone->SRGB = SRGB;
             *clone = *this;
             return clone;
         }
@@ -45,14 +40,13 @@ namespace Crowny
         AudioReadMode ReadMode;
         bool Is3D = true;
         uint32_t BitDepth = 16;
+        
+        // Only available for Ogg Vorbis
+        float Quality = 1.0f;
 
         virtual Ref<ImportOptions> Clone() const override
         {
             Ref<AudioClipImportOptions> clone = CreateRef<AudioClipImportOptions>();
-            // clone->Format = Format;
-            // clone->ReadMode = ReadMode;
-            // clone->Is3D = Is3D;
-            // clone->BitDepth = BitDepth;
             *clone = *this;
             return clone;
         }
@@ -60,10 +54,10 @@ namespace Crowny
 
     enum class ShaderLanguage
     {
-        VKSL,
-        GLSL,
-        HLSL,
-        MSL
+        VKSL = 0,
+        GLSL = 1,
+        HLSL = 2,
+        MSL  = 3
     };
 
     class ShaderImportOptions : public ImportOptions

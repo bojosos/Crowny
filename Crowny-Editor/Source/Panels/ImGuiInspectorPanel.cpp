@@ -20,7 +20,6 @@
 namespace Crowny
 {
 
-    extern void LoadTexture(const std::string& path, Ref<Texture>& out);
     Ref<PBRMaterial> ImGuiInspectorPanel::s_SelectedMaterial = nullptr;
 
     ImGuiInspectorPanel::ImGuiInspectorPanel(const std::string& name) : ImGuiPanel(name)
@@ -81,7 +80,7 @@ namespace Crowny
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
                         Ref<Texture> albedo;
-                        LoadTexture(outPaths[0], albedo);
+                       // LoadTexture(outPaths[0], albedo);
                         s_SelectedMaterial->SetAlbedoMap(albedo);
                     }
                 }
@@ -112,7 +111,7 @@ namespace Crowny
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
                         Ref<Texture> metalness;
-                        LoadTexture(outPaths[0], metalness);
+                      //  LoadTexture(outPaths[0], metalness);
                         s_SelectedMaterial->SetMetalnessMap(metalness);
                     }
                 }
@@ -145,7 +144,7 @@ namespace Crowny
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
                         Ref<Texture> normal;
-                        LoadTexture(outPaths[0], normal);
+                       // LoadTexture(outPaths[0], normal);
                         s_SelectedMaterial->SetNormalMap(normal);
                     }
                 }
@@ -169,7 +168,7 @@ namespace Crowny
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
                         Ref<Texture> roughness;
-                        LoadTexture(outPaths[0], roughness);
+                       // LoadTexture(outPaths[0], roughness);
                         s_SelectedMaterial->SetRoughnessMap(roughness);
                     }
                 }
@@ -200,7 +199,7 @@ namespace Crowny
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
                         Ref<Texture> ao;
-                        LoadTexture(outPaths[0], ao);
+                       // LoadTexture(outPaths[0], ao);
                         s_SelectedMaterial->SetAoMap(ao);
                     }
                 }

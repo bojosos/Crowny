@@ -19,8 +19,6 @@
 namespace Crowny
 {
 
-    extern void LoadTexture(const std::string& path, Ref<Texture>& out);
-
     template <> void ComponentEditorWidget<TransformComponent>(Entity e)
     {
         auto& t = e.GetComponent<TransformComponent>();
@@ -272,7 +270,7 @@ namespace Crowny
             if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
             {
                 Ref<Texture> result;
-                LoadTexture(outPaths[0], result);
+                // LoadTexture(outPaths[0], result);
                 t.Texture = result;
             }
         }

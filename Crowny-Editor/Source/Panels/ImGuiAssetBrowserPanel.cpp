@@ -78,7 +78,7 @@ namespace Crowny
             if (StringUtils::EndWith(filename, ".png"))
             {
                 Ref<Texture> result;
-                LoadTexture(path, result);
+                // LoadTexture(path, result);
                 m_Textures[filename] = result;
             }
         }

@@ -109,7 +109,7 @@ namespace Crowny
             written = count;
             size_t numUsedBytes = (m_Cursor - m_Data);
             size_t newSize = numUsedBytes + count;
-            if (newSize < m_Size)
+            if (newSize > m_Size)
             {
                 if (m_OwnsMemory)
                     Reallocate(newSize);
@@ -129,8 +129,8 @@ namespace Crowny
 
     void MemoryDataStream::Seek(size_t pos)
     {
-        CW_ENGINE_ASSERT(m_Cursor + pos <= m_End);
-        m_Cursor = std::min(m_Cursor + pos, m_End);
+        CW_ENGINE_ASSERT(m_Data + pos <= m_End);
+        m_Cursor = std::min(m_Data + pos, m_End);
     }
 
     void MemoryDataStream::Skip(size_t count)
@@ -139,7 +139,7 @@ namespace Crowny
         m_Cursor = std::min(m_Cursor + count, m_End);
     }
 
-    size_t MemoryDataStream::Tell() const { return m_Cursor - m_End; }
+    size_t MemoryDataStream::Tell() const { return m_Cursor - m_Data; }
 
     bool MemoryDataStream::Eof() const { return m_Cursor >= m_End; }
 
@@ -157,7 +157,7 @@ namespace Crowny
     {
         if (bytes == m_Size)
             return;
-        CW_ENGINE_ASSERT(bytes <= m_Size);
+        CW_ENGINE_ASSERT(bytes > m_Size);
         uint8_t* buffer = new uint8_t[bytes];
         if (m_Data)
         {
@@ -199,7 +199,7 @@ namespace Crowny
 
         if (m_InStream->fail())
         {
-            CW_ENGINE_ERROR("Cannot open file: P{0}", path.string());
+            CW_ENGINE_ERROR("Cannot open file: {0}", path.string());
             return;
         }
 

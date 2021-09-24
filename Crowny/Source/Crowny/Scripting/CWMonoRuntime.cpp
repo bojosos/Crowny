@@ -18,6 +18,8 @@ namespace Crowny
 
     static void OnLogCallback(const char* domain, const char* level, const char* message, mono_bool, void*)
     {
+        CW_ENGINE_INFO(message);
+        CW_ENGINE_INFO(domain);
         if (strcmp(level, "critical") == 0)
             CW_ENGINE_CRITICAL("{0} -> {1}", domain, message);
         if (strcmp(level, "error") == 0)
