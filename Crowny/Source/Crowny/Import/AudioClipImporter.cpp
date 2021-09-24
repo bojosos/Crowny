@@ -6,6 +6,7 @@
 #include "Crowny/Audio/AudioUtils.h"
 #include "Crowny/Audio/OggVorbisDecoder.h"
 #include "Crowny/Audio/OggVorbisEncoder.h"
+#include "Crowny/Audio/WaveDecoder.h"
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/StringUtils.h"
 
@@ -16,7 +17,7 @@ namespace Crowny
     {
         std::string lower = ext;
         StringUtils::ToLower(lower);
-        return lower == "ogg"; // for now ogg only
+        return lower == "ogg" || lower == "wav"; // for now ogg only
     }
 
     template <>
@@ -34,6 +35,8 @@ namespace Crowny
         Ref<AudioDecoder> reader;
         if (ext == "ogg")
             reader = CreateRef<OggVorbisDecoder>();
+        if (ext == "wav")
+            reader = CreateRef<WaveDecoder>();
 
         if (reader == nullptr)
             return nullptr;
@@ -41,7 +44,7 @@ namespace Crowny
             return nullptr;
         if (!reader->Open(stream, info))
             return nullptr;
-        
+
         bytesPerSample = info.BitDepth / 8;
         bufferSize = info.NumSamples * bytesPerSample;
         sampleStream = CreateRef<MemoryDataStream>(bufferSize);
@@ -60,7 +63,7 @@ namespace Crowny
             sampleStream = monoStream;
             bufferSize = monoBufferSize;
         }
-        
+
         if (audioImportOptions->BitDepth != info.BitDepth)
         {
             uint32_t outBufferSize = info.NumSamples * (audioImportOptions->BitDepth / 8);
@@ -72,7 +75,8 @@ namespace Crowny
             bufferSize = outBufferSize;
         }
         if (audioImportOptions->Format == AudioFormat::VORBIS)
-            sampleStream = OggVorbisEncoder::PCMToOggVorbis(sampleStream->Data(), info, bufferSize, audioImportOptions->Quality);
+            sampleStream =
+              OggVorbisEncoder::PCMToOggVorbis(sampleStream->Data(), info, bufferSize, audioImportOptions->Quality);
 
         AudioClipDesc clipDesc;
         clipDesc.BitDepth = info.BitDepth;
