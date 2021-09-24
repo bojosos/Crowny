@@ -293,7 +293,6 @@ namespace Crowny
     {
         uint32_t size = PixelUtils::GetNumBytes(m_Format);
         uint32_t offset = z * m_SlicePitch + y * m_RowPitch + x * size;
-        CW_ENGINE_INFO("Size: {0}, offset: {1}", size, offset);
         PixelUtils::PackPixel(color.r, color.g, color.b, color.a, m_Format, (uint8_t*)GetData() + offset);
     }
 

@@ -51,6 +51,11 @@ namespace Crowny
             m_Device = alcOpenDevice(nullptr);
         if (m_Device == nullptr)
             CW_ENGINE_ERROR("OpenAL device creation failed. Device: {0}", defaultDeviceName);
+
+        ALCcontext* context = alcCreateContext(m_Device, nullptr);
+        if (context)
+            SetContext(context);
+        alcMakeContextCurrent(context);
     }
 
     AudioManager::~AudioManager()

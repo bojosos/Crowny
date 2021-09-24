@@ -35,16 +35,16 @@ namespace Crowny
         return in.tellg();
     }
 
-    std::tuple<byte*, uint64_t> FileSystem::ReadFile(const std::string& path)
+    std::tuple<uint8_t*, uint64_t> FileSystem::ReadFile(const std::string& path)
     {
         FixPath(path);
         std::ifstream input(path, std::ios::binary);
 
-        std::vector<byte>* bytes =
-          new std::vector<byte>((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
+        std::vector<uint8_t>* uint8_ts =
+          new std::vector<uint8_t>((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
 
         input.close();
-        return std::make_tuple(bytes->data(), bytes->size());
+        return std::make_tuple(uint8_ts->data(), uint8_ts->size());
     }
 
     bool FileSystem::ReadFile(const std::string& path, void* buffer, int64_t size)
@@ -64,7 +64,7 @@ namespace Crowny
         return res;
     }
 
-    bool FileSystem::WriteFile(const std::string& path, byte* buffer, uint64_t size)
+    bool FileSystem::WriteFile(const std::string& path, uint8_t* buffer, uint64_t size)
     {
         FixPath(path);
         std::ofstream fout;

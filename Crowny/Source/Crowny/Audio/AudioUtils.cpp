@@ -90,13 +90,13 @@ namespace Crowny
             output[i] = input[i] << 16;
     }
 
-    int32_t Convert24To32Bits(const uint8_t* in) { return (in[2] << 24) | (in[1] << 16) | (in[0] << 8); }
+    int32_t AudioUtils::Convert24To32Bits(const uint8_t* in) { return (in[2] << 24) | (in[1] << 16) | (in[0] << 8); }
 
     void Convert24To32Bits(const uint8_t* input, int32_t* output, uint32_t numSamples)
     {
         for (uint32_t i = 0; i < numSamples; i++)
         {
-            output[i] = Convert24To32Bits(input);
+            output[i] = AudioUtils::Convert24To32Bits(input);
             input += 3;
         }
     }
@@ -209,7 +209,7 @@ namespace Crowny
         {
             for (uint32_t i = 0; i < numSamples; i++)
             {
-                int32_t sample = Convert24To32Bits(samples);
+                int32_t sample = AudioUtils::Convert24To32Bits(samples);
                 output[i] = sample / 2147483647.0f;
                 samples += 3;
             }

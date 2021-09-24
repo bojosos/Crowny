@@ -217,11 +217,8 @@ namespace Crowny
 
     bool AudioSource::RequiresStreaming() const
     {
-        /*   if (!m_AudioClip->IsLoaded())
-               return false;
-           AudioReadMode readMode = m_AudioClip->GetReadMode();
-           bool isCompressed = readMode == AudioReadMode::LoadCompressed && m_AudioClip->GetFormat() ==
-           AudioFormat::VORBIS; return (readMode == AudioReadMode::Stream) || isCompressed;*/
-        return false;
+        AudioReadMode readMode = m_AudioClip->GetDesc().ReadMode;
+        bool isCompressed = readMode == AudioReadMode::LoadCompressed && m_AudioClip->GetDesc().Format != AudioFormat::PCM;
+        return (readMode == AudioReadMode::Stream) || isCompressed;
     }
 } // namespace Crowny

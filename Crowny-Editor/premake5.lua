@@ -56,9 +56,10 @@ project "Crowny-Editor"
 		"shaderc_shared",
 		"spirv-cross-core",
 		"openal",
-    "ogg",
-    "vorbis",
-    "vorbisfile"
+		"ogg",
+		"vorbis",
+		"vorbisfile",
+		"vorbisenc"
 	}
 
 	filter "system:windows"

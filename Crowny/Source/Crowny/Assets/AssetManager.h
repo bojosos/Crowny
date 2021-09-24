@@ -2,23 +2,32 @@
 
 #include "Crowny/Assets/Asset.h"
 #include "Crowny/Assets/AssetManifest.h"
+
+#include "Crowny/Common/Module.h"
+
 #include "Crowny/Import/ImportOptions.h"
 
 namespace Crowny
 {
-    class AssetManager
+    class AssetManager : public Module<AssetManager>
     {
     public:
-        static AssetManager& Get()
+        Ref<Asset> Load(const std::string& path, bool keepSourceData = false);
+
+        template <class T>
+        Ref<T> Load(const std::string& filepath, bool keepSourceData = false)
         {
-            static AssetManager instance;
-            return instance;
+            return std::static_pointer_cast<T>(Load(filepath, keepSourceData));
         }
 
+        Ref<Asset> LoadFromUUID(const Uuid& uuid, bool keepSourceData = false);
+
+        void Save(const Ref<Asset>& resource); // TODO: Compression
+        void Save(const Ref<Asset>& resource, const std::string& filepath);
     private:
-        AssetManager() {}
-        AssetManager(AssetManager const&);
-        void operator=(AssetManager const&);
+        Ref<Asset> Load(const Uuid& uuid, const std::string& filepath, bool keepSourceData);
+        void GetFilepathFromUuid(const Uuid& uuid, std::string& outFilepath);
+        bool GetUuidFromFilepath(const std::string& filepath, Uuid& outUuid);
 
     private:
         std::unordered_map<std::string, Ref<AssetManifest>> m_Manifests;

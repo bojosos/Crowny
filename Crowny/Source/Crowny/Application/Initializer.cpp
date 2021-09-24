@@ -1,9 +1,11 @@
 #include "cwpch.h"
 
 #include "Crowny/Application/Initializer.h"
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Audio/AudioManager.h"
 #include "Crowny/Common/Random.h"
 #include "Crowny/Common/VirtualFileSystem.h"
+#include "Crowny/Import/Importer.h"
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/ForwardPlusRenderer.h"
@@ -23,6 +25,7 @@
 #include "Crowny/Scripting/Bindings/Scene/ScriptTime.h"
 #include "Crowny/Scripting/Bindings/ScriptInput.h"
 #include "Crowny/Scripting/Bindings/ScriptRandom.h"
+
 #include "Crowny/Scripting/CWMonoRuntime.h"
 
 namespace Crowny
@@ -30,6 +33,8 @@ namespace Crowny
 
     void Initializer::Init()
     {
+        Importer::StartUp();
+        AssetManager::StartUp();
         // Most of these should be in the editor
         VirtualFileSystem::Init();
         VirtualFileSystem::Get()->Mount("Shaders", "Resources/Shaders");
@@ -100,6 +105,8 @@ namespace Crowny
         */
         RenderAPI::Get().Shutdown();
         AudioManager::Shutdown();
+        Importer::Shutdown();
+        AssetManager::Shutdown();
     }
 
 } // namespace Crowny
