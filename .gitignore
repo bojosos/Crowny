@@ -27,3 +27,5 @@ report.html
 report.tasks
 
 strace_out
+
+*.log
