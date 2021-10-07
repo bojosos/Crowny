@@ -314,7 +314,7 @@ namespace Crowny
         }
     }
 
-    bool AudioUtils::CheckOpenALErrors(const std::string& filename, const std::uint_fast32_t line)
+    bool AudioUtils::CheckOpenALErrors(const String& filename, const std::uint_fast32_t line)
     {
         ALenum error = alGetError();
         if (error != AL_NO_ERROR)
@@ -346,7 +346,7 @@ namespace Crowny
         return true;
     }
 
-    bool AudioUtils::CheckOpenALCErrors(const std::string& filename, const std::uint_fast32_t line, ALCdevice* device)
+    bool AudioUtils::CheckOpenALCErrors(const String& filename, const std::uint_fast32_t line, ALCdevice* device)
     {
         ALCenum error = alcGetError(device);
         if (error != ALC_NO_ERROR)

@@ -9,64 +9,47 @@
 
 namespace Crowny
 {
-    static std::string FixPath(const std::string& badPath)
-    {
-        std::string res = badPath;
-        size_t startPos = 0;
-        while ((startPos = res.find("\\", startPos)) != std::string::npos)
-        {
-            res.replace(startPos, 1, "/");
-            startPos++;
-        }
-        return res;
-    }
 
-    bool FileSystem::FileExists(const std::string& path)
+    bool FileSystem::FileExists(const Path& path)
     {
-        FixPath(path);
         std::ifstream f(path);
         return f.good();
     }
 
-    int64_t FileSystem::GetFileSize(const std::string& path)
+    int64_t FileSystem::GetFileSize(const Path& path)
     {
-        FixPath(path);
         std::ifstream in(path, std::ifstream::ate | std::ifstream::binary);
         return in.tellg();
     }
 
-    std::tuple<uint8_t*, uint64_t> FileSystem::ReadFile(const std::string& path)
+    std::tuple<uint8_t*, uint64_t> FileSystem::ReadFile(const Path& path)
     {
-        FixPath(path);
         std::ifstream input(path, std::ios::binary);
 
-        std::vector<uint8_t>* uint8_ts =
-          new std::vector<uint8_t>((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
+        Vector<uint8_t>* uint8_ts =
+          new Vector<uint8_t>((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
 
         input.close();
         return std::make_tuple(uint8_ts->data(), uint8_ts->size());
     }
 
-    bool FileSystem::ReadFile(const std::string& path, void* buffer, int64_t size)
+    bool FileSystem::ReadFile(const Path& path, void* buffer, int64_t size)
     {
-        FixPath(path);
         CW_ENGINE_CRITICAL("Read file void* not implemented");
         return false;
     }
 
-    std::string FileSystem::ReadTextFile(const std::string& path)
+    String FileSystem::ReadTextFile(const Path& path)
     {
-        FixPath(path);
         std::ifstream input(path);
 
-        std::string res((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+        String res((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
         input.close();
         return res;
     }
 
-    bool FileSystem::WriteFile(const std::string& path, uint8_t* buffer, uint64_t size)
+    bool FileSystem::WriteFile(const Path& path, uint8_t* buffer, uint64_t size)
     {
-        FixPath(path);
         std::ofstream fout;
         fout.open(path, std::ios::binary | std::ios::out);
         fout.write((char*)buffer, size);
@@ -74,9 +57,8 @@ namespace Crowny
         return buffer != nullptr;
     }
 
-    bool FileSystem::WriteTextFile(const std::string& path, const std::string& text)
+    bool FileSystem::WriteTextFile(const Path& path, const String& text)
     {
-        FixPath(path);
         std::ofstream fout;
         fout.open(path, std::ios::out);
         fout.write(text.c_str(), text.size());
@@ -84,7 +66,7 @@ namespace Crowny
         return !text.empty();
     }
 
-    Ref<DataStream> FileSystem::OpenFile(const std::string& filepath, bool readOnly)
+    Ref<DataStream> FileSystem::OpenFile(const Path& filepath, bool readOnly)
     {
         DataStream::AccessMode accessMode = DataStream::READ;
         if (!readOnly)
@@ -93,11 +75,10 @@ namespace Crowny
         return CreateRef<FileDataStream>(filepath, accessMode, true);
     }
 
-    bool FileSystem::OpenFileDialog(FileDialogType type, const std::string& initialDir, const std::string& filter,
-                                    std::vector<std::string>& outPaths)
+    bool FileSystem::OpenFileDialog(FileDialogType type, const Path& initialDir, const String& filter,
+                                    Vector<Path>& outPaths)
     {
-        FixPath(initialDir);
-        std::string add;
+        String add;
         // TODO: Check if all of these work, make it more configurable
         switch (type)
         {
@@ -115,13 +96,13 @@ namespace Crowny
             break;
         }
 
-        std::string cmd = "zenity --file-selection --filename=\"" + initialDir + "\"" + add;
+        String cmd = "zenity --file-selection --filename=\"" + initialDir.string() + "\"" + add;
         FILE* f = popen(cmd.c_str(), "r");
         if (!f)
             return false;
 
         std::array<char, 128> buffer;
-        std::string res = "";
+        String res = "";
         while (fgets(buffer.data(), 128, f))
             res += buffer.data();
 
@@ -129,26 +110,30 @@ namespace Crowny
             return false;
 
         res = res.erase(res.find_last_not_of(" \n\r\t") + 1);
-        outPaths = StringUtils::SplitString(res, "|");
+        for (const String& str : StringUtils::SplitString(res, "|"))
+        {
+            outPaths.push_back(Path(std::move(str))); // TODO: Can i std::move
+        }
 
         return true;
     }
-    /*
-        static bool ZenityCheck()
+
+    static bool ZenityCheck()
+    {
+        FILE* fp;
+        const uint32_t ZENITY_MAX_PATH = 512;
+        char path[ZENITY_MAX_PATH];
+        fp = popen("which zenity", "r");
+        if (fp == NULL)
+            CW_ENGINE_ERROR("Zenity check: null file ptr.");
+        if (fgets(path, ZENITY_MAX_PATH, fp) == NULL)
         {
-            FILE* fp;
-            char path[LINUX_MAX_PATH];
-            fp = popen("which zenity", "r");
-            if (fp == NULL)
-                CW_ENGINE_WARN("Null file ptr");
-            if (fgets(path, LINUX_PATH_MAX, fp) == NULL)
-            {
-                CW_ENGINE_WARN("Zenity not found in path.");
-                pclose(fp);
-                return false;
-            }
+            CW_ENGINE_ERROR("Zenity not found in path. You will not be able to open file browse dialogs");
             pclose(fp);
-            return true;
-        }*/
+            return false;
+        }
+        pclose(fp);
+        return true;
+    }
 
 } // namespace Crowny

@@ -36,7 +36,7 @@ namespace Crowny
                                                  const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
                                                  void* pUserData)
     {
-        std::stringstream debugMessage;
+        Stringstream debugMessage;
         debugMessage << "[" << pCallbackData->messageIdNumber << "][" << pCallbackData->pMessageIdName
                      << "] : " << pCallbackData->pMessage;
         if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
@@ -73,27 +73,27 @@ namespace Crowny
         appInfo.apiVersion = VK_API_VERSION_1_2;
         uint32_t count;
         vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
-        std::vector<VkExtensionProperties> exts(count);
+        Vector<VkExtensionProperties> exts(count);
         vkEnumerateInstanceExtensionProperties(nullptr, &count, exts.data());
 #ifdef CW_DEBUG
-        std::vector<const char*> layers = { "VK_LAYER_KHRONOS_validation", "VK_LAYER_NV_optimus" };
+        Vector<const char*> layers = { "VK_LAYER_KHRONOS_validation", "VK_LAYER_NV_optimus" };
         uint32_t numExtensions;
         const char** glfwExts = glfwGetRequiredInstanceExtensions(&numExtensions);
-        std::vector<const char*> extensions(glfwExts, glfwExts + numExtensions);
+        Vector<const char*> extensions(glfwExts, glfwExts + numExtensions);
 
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         uint32_t numLayers = (uint32_t)layers.size();
 #else
-        std::vector<const char*> layers;
+        Vector<const char*> layers;
         uint32_t numExtensions;
         const char** glfwExts = glfwGetRequiredInstanceExtensions(&numExtensions);
-        std::vector<const char*> extensions(glfwExts, glfwExts + numExtensions);
+        Vector<const char*> extensions(glfwExts, glfwExts + numExtensions);
         uint32_t numLayers = (uint32_t)layers.size();
 #endif
         numExtensions = extensions.size();
         uint32_t layerCount;
         vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-        std::vector<VkLayerProperties> availableLayers(layerCount);
+        Vector<VkLayerProperties> availableLayers(layerCount);
         vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
         for (uint32_t i = 0; i < numLayers; i++) // 1 validation layer
         {
@@ -108,7 +108,7 @@ namespace Crowny
                 }
             }
             if (!layerFound)
-                CW_ENGINE_ASSERT(false, std::string("Validation layer not found: ") + layerName);
+                CW_ENGINE_ASSERT(false, String("Validation layer not found: ") + layerName);
         }
 
         VkInstanceCreateInfo instanceInfo;
@@ -147,7 +147,7 @@ namespace Crowny
         // need molten vk
         result = vkEnumeratePhysicalDevices(m_Instance, &m_NumDevices, nullptr);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        std::vector<VkPhysicalDevice> physicalDevices(m_NumDevices);
+        Vector<VkPhysicalDevice> physicalDevices(m_NumDevices);
         result = vkEnumeratePhysicalDevices(m_Instance, &m_NumDevices, physicalDevices.data());
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         m_Devices.resize(m_NumDevices);

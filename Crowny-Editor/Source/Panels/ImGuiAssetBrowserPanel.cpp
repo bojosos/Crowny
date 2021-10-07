@@ -7,6 +7,7 @@
 #include "Crowny/Common/StringUtils.h"
 #include "Crowny/Input/Input.h"
 #include "Editor/EditorAssets.h"
+#include "Editor/EditorUtils.h"
 
 #include <backends/imgui_impl_vulkan.h>
 #include <imgui_internal.h>
@@ -20,17 +21,8 @@ namespace Crowny
 {
 
     static const std::filesystem::path s_AssetPath = "Resources";
-    extern void LoadTexture(const std::string& filepath, Ref<Texture>& texture);
 
-    // https://stackoverflow.com/questions/61030383/how-to-convert-stdfilesystemfile-time-type-to-time-t
-    template <typename TP> static time_t ToCTime(TP tp)
-    {
-        using namespace std::chrono;
-        auto sctp = time_point_cast<system_clock::duration>(tp - TP::clock::now() + system_clock::now());
-        return system_clock::to_time_t(sctp);
-    }
-
-    static std::string GetDefaultFileNameFromType(AssetBrowserItem type)
+    static String GetDefaultFileNameFromType(AssetBrowserItem type)
     {
         switch (type)
         {
@@ -65,7 +57,7 @@ namespace Crowny
         std::filesystem::directory_entry Entry;
     };
 
-    ImGuiAssetBrowserPanel::ImGuiAssetBrowserPanel(const std::string& name)
+    ImGuiAssetBrowserPanel::ImGuiAssetBrowserPanel(const String& name)
       : ImGuiPanel(name), m_CurrentDirectory(s_AssetPath)
     {
         m_FolderIcon = ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FolderIcon);
@@ -74,8 +66,8 @@ namespace Crowny
         for (auto& dir : std::filesystem::recursive_directory_iterator(s_AssetPath))
         {
             const auto& path = dir.path();
-            std::string filename = path.filename().string();
-            if (StringUtils::EndWith(filename, ".png"))
+            String filename = path.filename().string();
+            if (StringUtils::EndsWith(filename, ".png")) // TODO: Replace the .png
             {
                 Ref<Texture> result;
                 // LoadTexture(path, result);
@@ -207,7 +199,7 @@ namespace Crowny
             columnCount = 1;
         ImGui::Columns(columnCount, 0, false);
 
-        std::vector<FileSortingEntry> sortedFiles; // assumes time_t is long
+        Vector<FileSortingEntry> sortedFiles; // assumes time_t is long
         if (m_FileSortingMode == FileSortingMode::SortByName)
         {
             std::set<std::filesystem::directory_entry> sortedDirs;
@@ -225,27 +217,27 @@ namespace Crowny
         else
         {
             std::set<std::filesystem::directory_entry> folders;
-            for (auto& dir : std::filesystem::directory_iterator(m_CurrentDirectory))
+            for (auto& dirEntry : std::filesystem::directory_iterator(m_CurrentDirectory))
             {
                 if (m_FileSortingMode == FileSortingMode::SortBySize)
                 {
-                    if (dir.is_regular_file())
+                    if (dirEntry.is_regular_file())
                     {
-                        long id = dir.file_size();
-                        sortedFiles.emplace_back(id, dir);
+                        long id = dirEntry.file_size();
+                        sortedFiles.emplace_back(id, dirEntry);
                     }
-                    else if (dir.is_directory())
-                        folders.insert(dir);
+                    else if (dirEntry.is_directory())
+                        folders.insert(dirEntry);
                 }
                 if (m_FileSortingMode == FileSortingMode::SortByDate)
                 {
-                    if (dir.is_regular_file())
+                    if (dirEntry.is_regular_file())
                     {
-                        long id = ToCTime(dir.last_write_time());
-                        sortedFiles.emplace_back(id, dir);
+                        long id = EditorUtils::FileTimeToCTime(dirEntry.last_write_time());
+                        sortedFiles.emplace_back(id, dirEntry);
                     }
-                    else if (dir.is_directory())
-                        folders.insert(dir);
+                    else if (dirEntry.is_directory())
+                        folders.insert(dirEntry);
                 }
             }
 
@@ -253,8 +245,8 @@ namespace Crowny
                       [](const FileSortingEntry& a, const FileSortingEntry& b) { // lambda ception
                           if (a.Key != b.Key)
                               return a.Key > b.Key;
-                          std::string aStr = a.Entry.path().filename().string();
-                          std::string bStr = b.Entry.path().filename().string();
+                          String aStr = a.Entry.path().filename().string();
+                          String bStr = b.Entry.path().filename().string();
                           return std::lexicographical_compare(
                             aStr.begin(), aStr.end(), bStr.begin(), bStr.end(),
                             [](char a, char b) { return std::tolower(a) < std::tolower(b); });
@@ -278,14 +270,11 @@ namespace Crowny
             }
             if (Input::IsKeyPressed(Key::F2))
             {
-                m_RenamingPath = *m_SelectedFiles.begin(); // TODO: Make sure this is the first file
+                m_RenamingPath = *m_SelectedFiles.begin(); // TODO: Make sure this is the first selected file
                 m_Filename = m_RenamingPath.filename();
             }
             if (Input::IsKeyPressed(Key::Left) || Input::IsKeyPressed(Key::Right))
-            {
-                CW_ENGINE_INFO(sortedFiles[0].Entry.path().filename().string());
                 m_SelectedFiles.insert(sortedFiles[0].Entry.path().filename().string());
-            }
         }
 
         for (auto& entry : sortedFiles)
@@ -293,15 +282,14 @@ namespace Crowny
             std::filesystem::directory_entry dir = entry.Entry;
             const auto& path = dir.path();
             auto relativePath = std::filesystem::relative(path, s_AssetPath);
-            std::string filename = relativePath.filename().string();
+            String filename = relativePath.filename().string();
             ImGui::PushID(filename.c_str());
+
             auto iterFind = m_SelectedFiles.find(filename); // Show selected files
             bool selected = iterFind != m_SelectedFiles.end();
+
             ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-            if (selected)
-            {
-            }
-            else
+            if (!selected)
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
             ImTextureID tid;
             if (dir.is_directory())
@@ -340,7 +328,7 @@ namespace Crowny
                 ImGui::PopStyleVar();
 
                 if ((ImGui::IsMouseClicked(ImGuiMouseButton_Left) || ImGui::IsMouseClicked(ImGuiMouseButton_Right)) &&
-                    !ImGui::IsItemClicked())
+                    !ImGui::IsItemClicked()) // TODO: ESC cancel input
                     completeRename();
 
                 ImGui::NextColumn();
@@ -424,7 +412,7 @@ namespace Crowny
         ImGui::Columns(1);
     }
 
-    void ImGuiAssetBrowserPanel::ShowContextMenuContents(const std::string& filepath)
+    void ImGuiAssetBrowserPanel::ShowContextMenuContents(const Path& filepath)
     {
         if (ImGui::BeginMenu("Create"))
         {
@@ -499,7 +487,7 @@ namespace Crowny
 
     void ImGuiAssetBrowserPanel::CreateNew(AssetBrowserItem itemType)
     {
-        std::string filename = GetDefaultFileNameFromType(itemType);
+        String filename = GetDefaultFileNameFromType(itemType);
         if (itemType == AssetBrowserItem::Folder)
         {
             if (!std::filesystem::create_directory(m_CurrentDirectory / filename))
@@ -507,14 +495,14 @@ namespace Crowny
         }
         else
         {
-            const std::string text = GetDefaultContents(itemType);
+            const String text = GetDefaultContents(itemType);
             FileSystem::WriteTextFile(m_CurrentDirectory / filename, text);
         }
         m_RenamingPath = m_CurrentDirectory / filename;
         m_Filename = filename;
     }
 
-    std::string ImGuiAssetBrowserPanel::GetDefaultContents(AssetBrowserItem itemType)
+    String ImGuiAssetBrowserPanel::GetDefaultContents(AssetBrowserItem itemType)
     {
         switch (itemType)
         {

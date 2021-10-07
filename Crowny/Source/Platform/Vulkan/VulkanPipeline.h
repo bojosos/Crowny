@@ -44,7 +44,7 @@ namespace Crowny
 
         VkPipelineShaderStageCreateInfo m_ShaderStageInfos[5];
         VkVertexInputBindingDescription m_VertexInput = {};
-        std::vector<VkVertexInputAttributeDescription> m_Attrs;
+        Vector<VkVertexInputAttributeDescription> m_Attrs;
         VkPipelineRasterizationStateCreateInfo m_RasterizationInfo = {};
         VkPipelineColorBlendAttachmentState m_BlendAttachmentStates[MAX_FRAMEBUFFER_COLOR_ATTACHMENTS];
         VkPipelineColorBlendStateCreateInfo m_ColorBlendStateInfo = {};
@@ -75,7 +75,7 @@ namespace Crowny
             DrawMode DrawOp;
         };
 
-        std::unordered_map<GpuPipelineKey, VulkanPipeline*, GpuPipelineKey::HashFunction, GpuPipelineKey::EqualFunction>
+        UnorderedMap<GpuPipelineKey, VulkanPipeline*, GpuPipelineKey::HashFunction, GpuPipelineKey::EqualFunction>
           m_Pipelines;
     };
 

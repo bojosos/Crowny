@@ -10,8 +10,7 @@
 namespace Crowny
 {
 
-    Font::Font(const std::string& name, const std::string& path, float size)
-      : m_Name(name), m_Filepath(path), m_Size(size)
+    Font::Font(const Path& path, const String& name, float size) : m_Name(name), m_Filepath(path), m_Size(size)
     {
         m_Atlas = ftgl::texture_atlas_new(512, 512, 1);
         auto [mem, memSize] = VirtualFileSystem::Get()->ReadFile(path);
@@ -49,11 +48,11 @@ namespace Crowny
         texture_atlas_delete(m_Atlas);
     }
 
-    std::vector<Ref<Font>> FontManager::s_Fonts;
+    Vector<Ref<Font>> FontManager::s_Fonts;
 
     void FontManager::Add(const Ref<Font>& font) { s_Fonts.push_back(font); }
 
-    Ref<Font> FontManager::Get(const std::string& name)
+    Ref<Font> FontManager::Get(const String& name)
     {
         for (Ref<Font>& font : s_Fonts)
         {
@@ -66,7 +65,7 @@ namespace Crowny
         return s_Fonts[0];
     }
 
-    Ref<Font> FontManager::Get(const std::string& name, float size)
+    Ref<Font> FontManager::Get(const String& name, float size)
     {
         for (Ref<Font>& font : s_Fonts)
         {
@@ -98,12 +97,12 @@ namespace Crowny
         return s_Fonts[0];
     }
 
-    float Font::GetWidth(const std::string& fontName, const std::string& text)
+    float Font::GetWidth(const String& fontName, const String& text)
     {
         return GetWidth(FontManager::Get(fontName), text);
     }
 
-    float Font::GetWidth(const Ref<Font>& font, const std::string& text)
+    float Font::GetWidth(const Ref<Font>& font, const String& text)
     {
         float width = 0.0f;
 
@@ -121,12 +120,12 @@ namespace Crowny
         return width;
     }
 
-    float Font::GetHeight(const std::string& fontName, const std::string& text)
+    float Font::GetHeight(const String& fontName, const String& text)
     {
         return GetHeight(FontManager::Get(fontName), text);
     }
 
-    float Font::GetHeight(const Ref<Font>& font, const std::string& text)
+    float Font::GetHeight(const Ref<Font>& font, const String& text)
     {
         float min = 0.0f;
         float max = 0.0f;

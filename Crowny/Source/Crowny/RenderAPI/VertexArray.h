@@ -19,7 +19,7 @@ namespace Crowny
 
         virtual void SetIndexBuffer(const Ref<IndexBuffer>& ibo) = 0;
 
-        virtual const std::vector<Ref<VertexBuffer>>& GetVertexBuffers() const = 0;
+        virtual const Vector<Ref<VertexBuffer>>& GetVertexBuffers() const = 0;
         virtual const Ref<IndexBuffer>& GetIndexBuffer() const = 0;
         virtual DrawMode GetDrawMode() const = 0;
 

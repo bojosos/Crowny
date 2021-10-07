@@ -36,7 +36,7 @@ namespace Crowny
         struct PerSetData
         {
             VulkanDescriptorSet* LatestSet;
-            std::vector<VulkanDescriptorSet*> Sets;
+            Vector<VulkanDescriptorSet*> Sets;
             VkWriteDescriptorSet* WriteSetInfos;
             WriteInfo* WriteInfos;
             uint32_t Count;

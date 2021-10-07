@@ -20,22 +20,25 @@
 namespace Crowny
 {
 
-    ImGuiViewportPanel::ImGuiViewportPanel(const std::string& name) : ImGuiPanel(name) {}
+    ImGuiViewportPanel::ImGuiViewportPanel(const String& name) : ImGuiPanel(name) {}
 
     void ImGuiViewportPanel::Render()
     {
-        if (Input::IsKeyPressed(Key::Q))
-            m_GizmoMode = ImGuizmo::TRANSLATE;
-        if (Input::IsKeyPressed(Key::W))
-            m_GizmoMode = ImGuizmo::ROTATE;
-        if (Input::IsKeyPressed(Key::E))
-            m_GizmoMode = ImGuizmo::SCALE;
-
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
         ImGui::Begin("Viewport", &m_Shown);
         UpdateState();
         Application::Get().GetImGuiLayer()->BlockEvents(!m_Focused && !m_Hovered);
-
+        if (m_Focused || m_Hovered) // Change gizmo type
+        {
+            if (Input::IsKeyPressed(Key::W))
+                m_GizmoMode = ImGuizmo::TRANSLATE;
+            if (Input::IsKeyPressed(Key::E))
+                m_GizmoMode = ImGuizmo::ROTATE;
+            if (Input::IsKeyPressed(Key::R))
+                m_GizmoMode = ImGuizmo::SCALE;
+            if (Input::IsKeyPressed(Key::T))
+                m_GizmoMode = ImGuizmo::BOUNDS;
+        }
         ImVec2 minBound = ImGui::GetWindowPos();
         ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
         ImVec2 viewportOffset = ImGui::GetCursorPos();
@@ -45,9 +48,10 @@ namespace Crowny
         Ref<Texture> texture = rt->GetColorTexture(0);
 
         ImTextureID textureID = ImGui_ImplVulkan_AddTexture(texture);
-        ImGui::Image(textureID, ImVec2(m_ViewportSize.x, m_ViewportSize.y), ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
+        ImGui::Image(textureID, ImVec2(m_ViewportSize.x, m_ViewportSize.y), ImVec2{ 0, 1 },
+                     ImVec2{ 1, 0 }); // The viewport itself
 
-        if (ImGui::BeginDragDropTarget())
+        if (ImGui::BeginDragDropTarget()) // Drag drop scenes and meshes
         {
             const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_ITEM");
             if (payload)
@@ -71,7 +75,8 @@ namespace Crowny
         glm::mat4 view = camera.GetViewMatrix();
         glm::mat4 id(1.0f);
         ImGuizmo::SetRect(m_ViewportBounds.x, m_ViewportBounds.y, windowSize.x, windowSize.y);
-        ImGuizmo::DrawGrid(glm::value_ptr(view), glm::value_ptr(proj), glm::value_ptr(id), 100.0f);
+        ImGuizmo::DrawGrid(glm::value_ptr(view), glm::value_ptr(proj), glm::value_ptr(id),
+                           100.0f); // A 1x1m grid, TODO: depth test
 
         if (selected && m_GizmoMode != -1)
         {
@@ -90,12 +95,14 @@ namespace Crowny
 
             float snapValues[3] = { snapValue, snapValue, snapValue };
             ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj), (ImGuizmo::OPERATION)m_GizmoMode,
-                                 ImGuizmo::LOCAL, glm::value_ptr(transform), nullptr, snap ? snapValues : nullptr);
+                                 ImGuizmo::LOCAL, glm::value_ptr(transform), nullptr,
+                                 snap ? snapValues : nullptr); // TODO: Bounds
             if (ImGuizmo::IsUsing())
             {
                 glm::vec3 position, rotation, scale;
                 // if (Math::DecomposeMatrix(transform, position, rotation, scale))
-                ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(transform), glm::value_ptr(position),
+                ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(transform),
+                                                      glm::value_ptr(position), // This does some wierd things
                                                       glm::value_ptr(rotation), glm::value_ptr(scale));
                 glm::vec3 deltaRot = rotation - tc.Rotation;
                 tc.Position = position;

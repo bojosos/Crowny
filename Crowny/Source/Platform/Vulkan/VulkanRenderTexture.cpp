@@ -36,9 +36,9 @@ namespace Crowny
 
             if (texture->GetProperties().Shape == TextureShape::TEXTURE_3D)
             {
-                if (view->GetFirstArraySlice() > 0)
+                if (view->GetFirstFace() > 0)
                     CW_ENGINE_ASSERT(false, "Non zero slice in a 3D texture.");
-                if (view->GetNumArraySlices() > 1)
+                if (view->GetNumFaces() > 1)
                     CW_ENGINE_ASSERT(false, "3D texture with more than one slice.");
                 surface.Face = 0;
                 surface.NumFaces = m_Props.NumSlices;
@@ -46,10 +46,10 @@ namespace Crowny
             }
             else
             {
-                surface.Face = view->GetFirstArraySlice();
-                surface.NumFaces = view->GetNumArraySlices();
-                fbDesc.Color[i].BaseLayer = view->GetFirstArraySlice();
-                fbDesc.LayerCount = view->GetNumArraySlices();
+                surface.Face = view->GetFirstFace();
+                surface.NumFaces = view->GetNumFaces();
+                fbDesc.Color[i].BaseLayer = view->GetFirstFace();
+                fbDesc.LayerCount = view->GetNumFaces();
             }
 
             fbDesc.Color[i].Image = image;
@@ -70,23 +70,23 @@ namespace Crowny
                 surface.NumMipLevels = view->GetNumMips();
                 if (texture->GetProperties().Shape == TextureShape::TEXTURE_3D)
                 {
-                    if (view->GetFirstArraySlice() > 0)
+                    if (view->GetFirstFace() > 0)
                         CW_ENGINE_ASSERT(false, "Non zero slice in a 3D texture.");
-                    if (view->GetNumArraySlices() > 1)
+                    if (view->GetNumFaces() > 1)
                         CW_ENGINE_ASSERT(false, "3D texture with more than one slice.");
                     surface.Face = 0;
                     surface.NumFaces = m_Props.NumSlices;
                 }
                 else
                 {
-                    surface.Face = view->GetFirstArraySlice();
-                    surface.NumFaces = view->GetNumArraySlices();
-                    fbDesc.LayerCount = view->GetNumArraySlices();
+                    surface.Face = view->GetFirstFace();
+                    surface.NumFaces = view->GetNumFaces();
+                    fbDesc.LayerCount = view->GetNumFaces();
                 }
 
                 fbDesc.Depth.Image = image;
                 fbDesc.Depth.Surface = surface;
-                fbDesc.Depth.BaseLayer = view->GetFirstArraySlice();
+                fbDesc.Depth.BaseLayer = view->GetFirstFace();
                 rpDesc.Depth.Enabled = true;
                 rpDesc.Depth.Format = VulkanUtils::GetTextureFormat(texture->GetProperties().Format, false);
             }

@@ -7,17 +7,17 @@
 namespace Crowny
 {
 
-    std::vector<OpenGLDetail> OpenGLInfo::s_Information;
+    Vector<OpenGLDetail> OpenGLInfo::s_Information;
 
-    std::vector<OpenGLDetail>& OpenGLInfo::GetInformation() { return s_Information; }
+    Vector<OpenGLDetail>& OpenGLInfo::GetInformation() { return s_Information; }
 
     void OpenGLInfo::RetrieveInformation()
     {
-        s_Information.push_back({ "Vendor", "GL_VENDOR", std::string((char*)glGetString(GL_VENDOR)) });
-        s_Information.push_back({ "Renderer", "GL_RENDERER", std::string((char*)glGetString(GL_RENDERER)) });
-        s_Information.push_back({ "Version", "GL_VERSION", std::string((char*)glGetString(GL_VERSION)) });
-        s_Information.push_back({ "GLSL Version", "GL_SHADING_LANGUAGE_VERSION",
-                                  std::string((char*)glGetString(GL_SHADING_LANGUAGE_VERSION)) });
+        s_Information.push_back({ "Vendor", "GL_VENDOR", String((char*)glGetString(GL_VENDOR)) });
+        s_Information.push_back({ "Renderer", "GL_RENDERER", String((char*)glGetString(GL_RENDERER)) });
+        s_Information.push_back({ "Version", "GL_VERSION", String((char*)glGetString(GL_VERSION)) });
+        s_Information.push_back(
+          { "GLSL Version", "GL_SHADING_LANGUAGE_VERSION", String((char*)glGetString(GL_SHADING_LANGUAGE_VERSION)) });
 
         int maxTexture2DSize;
         glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexture2DSize);

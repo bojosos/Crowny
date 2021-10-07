@@ -38,11 +38,15 @@ namespace Crowny
 
     Entity Entity::GetChild(uint32_t index) const { return GetComponent<RelationshipComponent>().Children[index]; }
 
-    const std::vector<Entity>& Entity::GetChildren() const { return GetComponent<RelationshipComponent>().Children; }
+    const Vector<Entity>& Entity::GetChildren() const { return GetComponent<RelationshipComponent>().Children; }
 
     uint32_t Entity::GetChildCount() const { return (uint32_t)GetComponent<RelationshipComponent>().Children.size(); }
 
     Entity Entity::GetParent() const { return GetComponent<RelationshipComponent>().Parent; }
+
+    const UUID& Entity::GetUuid() const { return GetComponent<IDComponent>().Uuid; }
+    const TransformComponent& Entity::GetTransform() const { return GetComponent<TransformComponent>(); }
+    const String& Entity::GetName() const { return GetComponent<TagComponent>().Tag; }
 
     void Entity::Destroy()
     {

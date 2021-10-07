@@ -33,7 +33,7 @@ namespace Crowny
         12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23,
     };
 
-    Skybox::Skybox(const std::string& filepath)
+    Skybox::Skybox(const Path& filepath)
     {
         // Load equirectangular map
         stbi_set_flip_vertically_on_load(true);
@@ -77,7 +77,7 @@ namespace Crowny
         TextureParameters tProps;
         tProps.Width = 512;
         tProps.Height = 512;
-        tProps.NumArraySlices = tProps.Faces = 6;
+        tProps.Faces = 6;
         tProps.Shape = TextureShape::TEXTURE_CUBE;
         tProps.Usage = TextureUsage::TEXTURE_RENDERTARGET;
         tProps.Format = TextureFormat::RGBA32F;
@@ -180,7 +180,7 @@ namespace Crowny
         tProps.Format = TextureFormat::RGBA32F;
         tProps.Usage = TextureUsage::TEXTURE_RENDERTARGET;
         tProps.MipLevels = numMips;
-        tProps.Faces = tProps.NumArraySlices = 6;
+        tProps.Faces = 6;
         tProps.Shape = TextureShape::TEXTURE_CUBE;
         m_IrradianceMap = Texture::Create(tProps);
 
@@ -195,7 +195,7 @@ namespace Crowny
         Rect2F viewport = { 0.0f, 0.0f, 64.0f, 64.0f };
         Ref<UniformParams> uniforms = UniformParams::Create(pipeline);
 
-        std::vector<glm::mat4> matrices = {
+        Vector<glm::mat4> matrices = {
             glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
                         glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // POSITIVE_X
             glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
@@ -257,7 +257,7 @@ namespace Crowny
         tProps.Format = TextureFormat::RGBA32F;
         tProps.Usage = TextureUsage::TEXTURE_RENDERTARGET;
         tProps.MipLevels = numMips;
-        tProps.Faces = tProps.NumArraySlices = 6;
+        tProps.Faces = 6;
         tProps.Shape = TextureShape::TEXTURE_CUBE;
         m_PrefilteredMap = Texture::Create(tProps);
 
@@ -272,7 +272,7 @@ namespace Crowny
         Rect2F viewport = { 0.0f, 0.0f, 512.0f, 512.0f };
         Ref<UniformParams> uniforms = UniformParams::Create(pipeline);
 
-        std::vector<glm::mat4> matrices = {
+        Vector<glm::mat4> matrices = {
             glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
                         glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // POSITIVE_X
             glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)),

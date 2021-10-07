@@ -56,7 +56,7 @@ namespace Crowny
 
         VkInstance GetInstance() const { return m_Instance; }
         VulkanCommandBuffer* GetMainCommandBuffer() const { return m_CommandBuffer.get(); }
-        const std::vector<Ref<VulkanDevice>>& GetPrimaryDevices() const { return m_PrimaryDevices; }
+        const Vector<Ref<VulkanDevice>>& GetPrimaryDevices() const { return m_PrimaryDevices; }
         const Ref<VulkanDevice>& GetPresentDevice() const { return m_PrimaryDevices[0]; }
         uint32_t GetDeviceCount() const { return (uint32_t)m_Devices.size(); }
         Ref<VulkanDevice> GetDevice(uint32_t idx) const { return m_Devices[idx]; }
@@ -70,8 +70,8 @@ namespace Crowny
     private:
         VkDebugUtilsMessengerEXT m_DebugUtilsMessenger;
         VkInstance m_Instance = nullptr;
-        std::vector<Ref<VulkanDevice>> m_Devices;
-        std::vector<Ref<VulkanDevice>> m_PrimaryDevices;
+        Vector<Ref<VulkanDevice>> m_Devices;
+        Vector<Ref<VulkanDevice>> m_PrimaryDevices;
         RenderCapabilities* m_CurrentCapabilities;
         Ref<VulkanCmdBuffer> m_CmdBuffer;
         Ref<VulkanCommandBuffer> m_CommandBuffer;

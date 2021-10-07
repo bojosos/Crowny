@@ -23,7 +23,7 @@ namespace Crowny
         virtual const FramebufferProperties& GetProperties() const override { return m_Properties; }
 
     private:
-        std::vector<Ref<Texture2D>> m_Attachments;
+        Vector<Ref<Texture2D>> m_Attachments;
         uint32_t m_RendererID = 0;
         FramebufferProperties m_Properties;
 

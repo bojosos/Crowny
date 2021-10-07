@@ -6,11 +6,11 @@ namespace Crowny
 {
     struct WindowProperties
     {
-        std::string Title;
+        String Title;
         uint32_t Width;
         uint32_t Height;
 
-        WindowProperties(const std::string& title = "Crowny", uint32_t width = 1280, uint32_t height = 720)
+        WindowProperties(const String& title = "Crowny", uint32_t width = 1280, uint32_t height = 720)
           : Title(title), Width(width), Height(height)
         {
         }
@@ -28,7 +28,7 @@ namespace Crowny
         virtual uint32_t GetWidth() const = 0;
         virtual uint32_t GetHeight() const = 0;
         virtual bool GetVSync() const = 0;
-        virtual const std::string& GetTitle() const = 0;
+        virtual const String& GetTitle() const = 0;
 
         virtual void SetCursor(Cursor cursor) = 0;
 

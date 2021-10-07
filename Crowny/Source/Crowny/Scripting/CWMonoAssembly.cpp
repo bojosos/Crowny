@@ -50,21 +50,21 @@ namespace Crowny
         return a.NamespaceName == b.NamespaceName && a.Name == b.Name;
     }
 
-    CWMonoAssembly::ClassId::ClassId(const std::string& namespaceName, const std::string& name)
+    CWMonoAssembly::ClassId::ClassId(const String& namespaceName, const String& name)
       : Name(name), NamespaceName(namespaceName)
     {
     }
 
-    CWMonoAssembly::CWMonoAssembly(const std::string& filepath, const std::string& name)
+    CWMonoAssembly::CWMonoAssembly(const Path& filepath, const String& name)
       : m_IsLoaded(false), m_AllClassesCached(false)
     {
         MonoImageOpenStatus status;
-        auto [data, size] = VirtualFileSystem::Get()->ReadFile(filepath + "/" + name);
+        auto [data, size] = VirtualFileSystem::Get()->ReadFile(filepath / name);
         m_Image = mono_image_open_from_data(reinterpret_cast<char*>(data), size, true, &status);
         CW_ENGINE_ASSERT(CheckImageOpenStatus(status) && m_Image);
 
-        std::string dbgPath;
-        if (VirtualFileSystem::Get()->ResolvePhyiscalPath(filepath + "/" + name + ".mdb", dbgPath))
+        String dbgPath;
+        if (VirtualFileSystem::Get()->ResolvePhyiscalPath(filepath / name / ".mdb", dbgPath))
         {
             CW_ENGINE_INFO("Loading debug: {0}", dbgPath);
             auto [data, size] = FileSystem::ReadFile(dbgPath);
@@ -76,7 +76,7 @@ namespace Crowny
         m_IsLoaded = true;
     }
 
-    CWMonoAssembly::CWMonoAssembly(MonoImage* image, const std::string& name) : m_AllClassesCached(false)
+    CWMonoAssembly::CWMonoAssembly(MonoImage* image, const String& name) : m_AllClassesCached(false)
     {
         MonoAssembly* assembly = mono_image_get_assembly(image);
         CW_ENGINE_ASSERT(assembly, "Cannot get assembly from image");
@@ -97,14 +97,14 @@ namespace Crowny
         m_Classes.clear();
     }
 
-    CWMonoClass* CWMonoAssembly::GetClass(const std::string& fullName) const
+    CWMonoClass* CWMonoAssembly::GetClass(const String& fullName) const
     {
         auto res = StringUtils::SplitString(fullName, ".");
         CW_ENGINE_ASSERT(res.size() == 2, "Name has to be in the format (Namespace.ClassName)");
         return GetClass(res[0], res[1]);
     }
 
-    CWMonoClass* CWMonoAssembly::GetClass(const std::string& namespaceName, const std::string& className) const
+    CWMonoClass* CWMonoAssembly::GetClass(const String& namespaceName, const String& className) const
     {
         CW_ENGINE_ASSERT(m_IsLoaded, "Assembly isn't loaded.");
 
@@ -122,7 +122,7 @@ namespace Crowny
         return result;
     }
 
-    const std::vector<CWMonoClass*>& CWMonoAssembly::GetClasses() const
+    const Vector<CWMonoClass*>& CWMonoAssembly::GetClasses() const
     {
         if (m_AllClassesCached)
             return m_ClassList;
@@ -160,7 +160,7 @@ namespace Crowny
                             break;
                         if (cclass)
                         {
-                            std::string nestedType = nested->GetName() + "+" + mono_class_get_name(cclass);
+                            String nestedType = nested->GetName() + "+" + mono_class_get_name(cclass);
                             CWMonoClass* nestedClass =
                               new CWMonoClass(cclass); // name might be wrong? not the nested one
                             if (nestedClass->HasAttribute(compilerGeneratedAttrib))

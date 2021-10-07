@@ -7,10 +7,10 @@ namespace Crowny
     char const* const RenderCapabilities::GPU_VENDOR_STRINGS[GPU_VENDOR_COUNT] = { "unknown", "nvidia", "amd",
                                                                                    "intel" };
 
-    GPUVendor RenderCapabilities::VendorFromString(const std::string& vendorString)
+    GPUVendor RenderCapabilities::VendorFromString(const String& vendorString)
     {
         GPUVendor ret = GPU_UNKNOWN;
-        std::string str = vendorString;
+        String str = vendorString;
         // TODO: to lower case
         for (int i = 0; i < GPU_VENDOR_COUNT; i++)
         {
@@ -24,5 +24,5 @@ namespace Crowny
         return ret;
     }
 
-    std::string RenderCapabilities::VendorToString(GPUVendor vendor) { return GPU_VENDOR_STRINGS[vendor]; }
+    String RenderCapabilities::VendorToString(GPUVendor vendor) { return GPU_VENDOR_STRINGS[vendor]; }
 } // namespace Crowny

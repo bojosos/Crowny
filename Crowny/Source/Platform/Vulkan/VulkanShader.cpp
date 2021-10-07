@@ -40,8 +40,8 @@ namespace Crowny
         m_Module = device.GetResourceManager().Create<VulkanShaderModule>(m_ShaderStage.module);
     }
 
-    VulkanShader::VulkanShader(const std::string& name, const std::string& vertSrc, const std::string& fragSrc) {}
-    VulkanShader::VulkanShader(const std::string& filepath, ShaderType shaderType) {}
+    VulkanShader::VulkanShader(const String& name, const String& vertSrc, const String& fragSrc) {}
+    VulkanShader::VulkanShader(const Path& filepath, ShaderType shaderType) {}
 
     VulkanShader::~VulkanShader() { m_Module->Destroy(); }
 

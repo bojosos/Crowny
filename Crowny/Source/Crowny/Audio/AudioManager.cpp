@@ -18,14 +18,14 @@ namespace Crowny
             const ALCchar* defaultDevice = alcGetString(nullptr, ALC_DEFAULT_ALL_DEVICES_SPECIFIER);
             m_DefaultDevice.Name = defaultDevice;
             const ALCchar* devices = alcGetString(nullptr, ALC_ALL_DEVICES_SPECIFIER);
-            std::vector<char> deviceName;
+            Vector<char> deviceName;
             while (true)
             {
                 if (*devices == 0)
                 {
                     if (deviceName.empty())
                         break;
-                    std::string name(deviceName.data(), deviceName.size());
+                    String name(deviceName.data(), deviceName.size());
                     m_Devices.push_back({ name });
                     deviceName.clear();
                     devices++;
@@ -44,7 +44,7 @@ namespace Crowny
         }
 
         m_ActiveDevice = m_DefaultDevice;
-        std::string defaultDeviceName = m_DefaultDevice.Name;
+        String defaultDeviceName = m_DefaultDevice.Name;
         if (enumerated)
             m_Device = alcOpenDevice(defaultDeviceName.c_str());
         else
@@ -56,6 +56,39 @@ namespace Crowny
         if (context)
             SetContext(context);
         alcMakeContextCurrent(context);
+    }
+
+    void AudioManager::Play(const Ref<AudioClip>& clip, const glm::vec3& positio, float volume)
+    {
+        Ref<AudioSource> source = CreateSource();
+        source->SetClip(clip);
+        // source->SetTransfrom(position);
+        source->SetVolume(volume);
+        source->Play();
+
+        m_ManualSources.push_back(source);
+    }
+
+    void AudioManager::StopManualSources()
+    {
+        for (auto& source : m_ManualSources)
+            source->Stop();
+
+        m_ManualSources.clear();
+    }
+
+    void AudioManager::OnUpdate()
+    {
+        // Clear sources that are finished playing
+        const uint32_t numSources = (uint32_t)m_ManualSources.size();
+        for (uint32_t i = 0; i < numSources; i++)
+        {
+            if (m_ManualSources[i]->GetState() != AudioSourceState::Stopped)
+                m_TempSources.push_back(m_ManualSources[i]);
+        }
+
+        std::swap(m_TempSources, m_ManualSources);
+        m_TempSources.clear();
     }
 
     AudioManager::~AudioManager()
@@ -127,7 +160,7 @@ namespace Crowny
             CW_ENGINE_ERROR("OpenAL device creation failed. Device: {0}", device.Name);
     }
 
-    bool AudioManager::IsExtSupported(const std::string& ext) const
+    bool AudioManager::IsExtSupported(const String& ext) const
     {
         if (m_Device == nullptr)
             return false;

@@ -26,14 +26,13 @@ namespace Crowny
         UniformParams(const Ref<UniformParamInfo>& desc);
         virtual ~UniformParams();
 
-        void SetUniformBlockBuffer(ShaderType type, const std::string& name,
-                                   const Ref<UniformBufferBlock>& uniformBuffer);
-        void SetUniformBlockBuffer(const std::string& name, const Ref<UniformBufferBlock>& uniformBuffer);
+        void SetUniformBlockBuffer(ShaderType type, const String& name, const Ref<UniformBufferBlock>& uniformBuffer);
+        void SetUniformBlockBuffer(const String& name, const Ref<UniformBufferBlock>& uniformBuffer);
         virtual void SetUniformBlockBuffer(uint32_t set, uint32_t slot, const Ref<UniformBufferBlock>& uniformBuffer);
 
         virtual void SetTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture,
                                 const TextureSurface& surface = TextureSurface::COMPLETE);
-        void SetTexture(ShaderType type, const std::string& name, const Ref<Texture>& texture,
+        void SetTexture(ShaderType type, const String& name, const Ref<Texture>& texture,
                         const TextureSurface& surface = TextureSurface::COMPLETE);
 
         // virtual void SetLoadStoreTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture);

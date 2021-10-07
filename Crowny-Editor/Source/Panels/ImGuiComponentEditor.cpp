@@ -15,7 +15,17 @@ namespace Crowny
 
         if (entity)
         {
-            ImGui::Text("%s", entity.GetComponent<TagComponent>().Tag.c_str());
+            const String& name = entity.GetName();
+            ImGui::Text("%s", name.c_str());
+            const String uuid = entity.GetUuid().ToString();
+            float uuidLen = ImGui::CalcTextSize(uuid.c_str()).x;
+            float nameLen = ImGui::CalcTextSize(name.c_str()).x;
+            if (ImGui::GetContentRegionAvail().x > uuidLen + 10.0f + nameLen)
+            {
+                ImGui::SameLine();
+                ImGui::SetCursorPosX(ImGui::GetWindowContentRegionWidth() - uuidLen);
+                ImGui::Text("%s", uuid.c_str());
+            }
         }
         else
         {
@@ -37,7 +47,7 @@ namespace Crowny
                     {
                         ci.destroy(entity);
                         ImGui::PopID();
-                        continue; // early out to prevent access to deleted data
+                        continue;
                     }
                     else
                     {

@@ -8,11 +8,11 @@ namespace Crowny
     class PlatformUtils
     {
     public:
-        static Uuid GenerateUuid();
-        static void ShowInExplorer(const std::string& filepath);
-        static void OpenExternally(const std::string& filepath);
-        static void CopyToClipboard(const std::string& string);
-        static std::string CopyFromClipboard();
+        static UUID GenerateUUID();
+        static void ShowInExplorer(const Path& filepath);
+        static void OpenExternally(const Path& filepath);
+        static void CopyToClipboard(const String& string);
+        static String CopyFromClipboard();
     };
 
 } // namespace Crowny

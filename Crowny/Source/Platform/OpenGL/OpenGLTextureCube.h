@@ -12,13 +12,13 @@ namespace Crowny
         uint32_t m_Height;
         uint32_t m_Bits;
         TextureParameters m_Parameters;
-        std::array<std::string, 6> m_Files;
-        std::string m_Name;
+        std::array<String, 6> m_Files;
+        String m_Name;
 
     public:
-        OpenGLTextureCube(const std::string& filepath, const TextureParameters& parameters);
-        OpenGLTextureCube(const std::array<std::string, 6>& files, const TextureParameters& parameters);
-        OpenGLTextureCube(const std::array<std::string, 6>& filepath, uint32_t mips, InputFormat format, const
+        OpenGLTextureCube(const Path& filepath, const TextureParameters& parameters);
+        OpenGLTextureCube(const std::array<String, 6>& files, const TextureParameters& parameters);
+        OpenGLTextureCube(const std::array<String, 6>& filepath, uint32_t mips, InputFormat format, const
 TextureParameters& parameters); ~OpenGLTextureCube();
 
         virtual void SetData(void* data, uint32_t size) override { CW_ENGINE_ASSERT(false); };
@@ -29,8 +29,8 @@ TextureParameters& parameters); ~OpenGLTextureCube();
         virtual uint32_t GetWidth() const override { return m_Width; }
         virtual uint32_t GetHeight() const override { return m_Height; }
 
-        //virtual const std::string& GetFilepath() override { return m_Files[0]; }
-        virtual const std::string& GetName() const override { return m_Name; }
+        //virtual const String& GetFilepath() override { return m_Files[0]; }
+        virtual const String& GetName() const override { return m_Name; }
 
         virtual void Bind(uint32_t slot = 0) const override;
         virtual void Unbind(uint32_t slot = 0) const override;

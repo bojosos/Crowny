@@ -10,20 +10,20 @@
 namespace Crowny
 {
 
-    Model::Model(const std::string& filepath)
+    Model::Model(const Path& filepath)
     {
         auto [data, size] = VirtualFileSystem::Get()->ReadFile(filepath);
         Assimp::Importer importer;
         // const aiScene* scene = importer.ReadFileFromMemory(data, size, aiProcess_Triangulate | aiProcess_FlipUVs |
         // aiProcess_CalcTangentSpace);
         const aiScene* scene = nullptr;
-        std::string outstr;
+        String outstr;
         if (VirtualFileSystem::Get()->ResolvePhyiscalPath(filepath, outstr))
             scene = importer.ReadFile(outstr, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
         CW_ENGINE_ASSERT(scene && !(scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) && scene->mRootNode,
                          "Error loading scene");
 
-        m_Directory = filepath.substr(0, filepath.find_last_of('/'));
+        m_Directory = filepath.parent_path();
         ProcessNode(scene->mRootNode, scene);
         delete data;
     }
@@ -86,7 +86,7 @@ namespace Crowny
         delete[] verts;
 
         // TODO: Optimize
-        std::vector<uint32_t> indices;
+        Vector<uint32_t> indices;
 
         for (uint32_t i = 0; i < mesh->mNumFaces; i++)
         {
@@ -99,20 +99,20 @@ namespace Crowny
 
         Ref<IndexBuffer> ibo = IndexBuffer::Create(indices.data(), indices.size());
         /*
-        std::vector<Ref<Texture>> textures;
+        Vector<Ref<Texture>> textures;
         if (mesh->mMaterialIndex >= 0)
         {
             aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-            std::vector<Ref<Texture>> diffuseMaps =
+            Vector<Ref<Texture>> diffuseMaps =
               this->LoadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
             textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-            std::vector<Ref<Texture>> specularMaps =
+            Vector<Ref<Texture>> specularMaps =
               this->LoadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
             textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
-            std::vector<Ref<Texture>> normalMaps =
+            Vector<Ref<Texture>> normalMaps =
               this->LoadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal");
             textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
-            std::vector<Ref<Texture>> heightMaps =
+            Vector<Ref<Texture>> heightMaps =
               this->LoadMaterialTextures(material, aiTextureType_AMBIENT, "texture_height");
             textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
         }
@@ -120,10 +120,9 @@ namespace Crowny
         return CreateRef<Mesh>(vbo, ibo);
     }
 
-    std::vector<Ref<Texture>> Model::LoadMaterialTextures(aiMaterial* material, aiTextureType type,
-                                                          const std::string& typeName)
+    Vector<Ref<Texture>> Model::LoadMaterialTextures(aiMaterial* material, aiTextureType type, const String& typeName)
     {
-        std::vector<Ref<Texture>> textures;
+        Vector<Ref<Texture>> textures;
         textures.resize(material->GetTextureCount(type));
         aiString name;
         material->Get(AI_MATKEY_NAME, name);
@@ -135,7 +134,7 @@ namespace Crowny
             for (uint32_t j = 0; j < m_TexturesLoaded.size(); j++)
             {
                 // VULKAN IMPL: Fix
-                // if (m_TexturesLoaded[j]->GetFilepath() == std::string(m_Directory + "/" + str.C_Str()))
+                // if (m_TexturesLoaded[j]->GetFilepath() == String(m_Directory + "/" + str.C_Str()))
                 {
                     textures.push_back(m_TexturesLoaded[j]);
                     skip = true;

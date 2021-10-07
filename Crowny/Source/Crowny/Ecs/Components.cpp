@@ -2,22 +2,24 @@
 
 #include "Crowny/Ecs/Components.h"
 
+#include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Import/Importer.h"
+
 namespace Crowny
 {
 
-    void AudioSourceComponent::Initialize()
+    void AudioSourceComponent::OnInitialize()
     {
         if (m_Internal != nullptr)
             return;
         m_Internal = gAudio().CreateSource();
-
-        m_Internal->SetClip(m_AudioClip);
+        m_Internal->SetClip(AssetManager::Get().Load<AudioClip>("Resources/Audio/test.asset"));
         m_Internal->SetVolume(m_Volume);
         m_Internal->SetPitch(m_Pitch);
         m_Internal->SetLooping(m_Loop);
         m_Internal->SetMinDistance(m_MinDistance);
         m_Internal->SetMaxDistance(m_MaxDistance);
-
+        m_PlayOnAwake = true;
         if (m_PlayOnAwake)
             m_Internal->Play();
     }
@@ -87,7 +89,7 @@ namespace Crowny
 
     void AudioSourceComponent::SetPlayOnAwake(bool playOnAwake) { m_PlayOnAwake = playOnAwake; }
 
-    void MonoScriptComponent::Initialize()
+    void MonoScriptComponent::OnInitialize()
     {
         if (!m_Class)
             return;
@@ -124,9 +126,9 @@ namespace Crowny
         }
     }
 
-    MonoScriptComponent::MonoScriptComponent(const std::string& name) { SetClassName(name); }
+    MonoScriptComponent::MonoScriptComponent(const String& name) { SetClassName(name); }
 
-    void MonoScriptComponent::SetClassName(const std::string& className)
+    void MonoScriptComponent::SetClassName(const String& className)
     {
         m_Class = CWMonoRuntime::GetClientAssembly()->GetClass("Sandbox", className);
         if (m_Class != nullptr)

@@ -15,13 +15,13 @@ namespace Crowny
     public:
         CWMonoType(MonoType* type);
 
-        const std::string& GetName() const { return m_Name; }
+        const String& GetName() const { return m_Name; }
         bool IsValueType();
 
         friend class CWMonoField;
 
     private:
         MonoType* m_Type;
-        std::string m_Name;
+        String m_Name;
     };
 } // namespace Crowny

@@ -53,7 +53,7 @@ namespace Crowny
     const unsigned int NUM_LIGHTS = 1024;
     const float LIGHT_RADIUS = 30.0f;
 
-    std::vector<MeshTran> ForwardPlusRenderer::s_Meshes = {};
+    Vector<MeshTran> ForwardPlusRenderer::s_Meshes = {};
 
     static glm::vec3 RandomPosition(std::uniform_real_distribution<> dis, std::mt19937 gen) {
         glm::vec3 position = glm::vec3(0.0);

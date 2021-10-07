@@ -13,7 +13,7 @@ namespace Crowny
     class ImGuiViewportPanel : public ImGuiPanel
     {
     public:
-        ImGuiViewportPanel(const std::string& name);
+        ImGuiViewportPanel(const String& name);
         ~ImGuiViewportPanel() = default;
 
         virtual void Render() override;

@@ -9,14 +9,14 @@ namespace Crowny
         {
         public:
             OpenGLTexture2D(uint32_t width, uint32_t height, const TextureParameters& parameters);
-            OpenGLTexture2D(const std::string& filepath, const TextureParameters& parameters, const std::string& name);
+            OpenGLTexture2D(const Path& filepath, const TextureParameters& parameters, const String& name);
             ~OpenGLTexture2D();
 
             virtual uint32_t GetWidth() const override { return m_Width; }
             virtual uint32_t GetHeight() const override { return m_Height; }
 
-            virtual const std::string& GetName() const override { return m_Name; }
-            virtual const std::string& GetFilepath() const override { return m_FilePath; }
+            virtual const String& GetName() const override { return m_Name; }
+            virtual const String& GetFilepath() const override { return m_FilePath; }
 
             virtual uint32_t GetRendererID() const override { return m_RendererID; };
 
@@ -34,9 +34,9 @@ namespace Crowny
         private:
             TextureParameters m_Parameters;
             uint32_t m_RendererID;
-            std::string m_FilePath;
+            String m_FilePath;
             uint32_t m_Width, m_Height;
-            std::string m_Name;
+            String m_Name;
 
         public:
             static uint32_t TextureChannelToOpenGLChannel(TextureChannel channel);

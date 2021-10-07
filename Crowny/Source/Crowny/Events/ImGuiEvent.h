@@ -9,43 +9,43 @@ namespace Crowny
     class ImGuiMenuItemClickedEvent : public Event
     {
     public:
-        const std::string& GetTitle() const { return m_Title; }
+        const String& GetTitle() const { return m_Title; }
 
         EVENT_CLASS_CATEGORY(EventCategoryImGui);
         EVENT_CLASS_TYPE(ImGuiMenuItemClicked);
 
-        ImGuiMenuItemClickedEvent(const std::string& title) : m_Title(title) {}
+        ImGuiMenuItemClickedEvent(const String& title) : m_Title(title) {}
 
     private:
-        std::string m_Title;
+        String m_Title;
     };
 
     class ImGuiViewportSceneDraggedEvent : public Event
     {
     public:
-        const std::string& GetSceneFilepath() const { return m_Filepath; }
+        const Path& GetSceneFilepath() const { return m_Filepath; }
 
         EVENT_CLASS_CATEGORY(EventCategoryImGui);
         EVENT_CLASS_TYPE(ImGuiViewportSceneDragged);
 
-        ImGuiViewportSceneDraggedEvent(const std::string& title) : m_Filepath(title) {}
+        ImGuiViewportSceneDraggedEvent(const Path& scenePath) : m_Filepath(scenePath) {}
 
     private:
-        std::string m_Filepath;
+        Path m_Filepath;
     };
 
     class ImGuiViewportMeshDraggedEvent : public Event
     {
     public:
-        const std::string& GetSceneFilepath() const { return m_Filepath; }
+        const Path& GetSceneFilepath() const { return m_Filepath; }
 
         EVENT_CLASS_CATEGORY(EventCategoryImGui);
         EVENT_CLASS_TYPE(ImGuiViewportMeshDragged);
 
-        ImGuiViewportMeshDraggedEvent(const std::string& title) : m_Filepath(title) {}
+        ImGuiViewportMeshDraggedEvent(const Path& meshPath) : m_Filepath(meshPath) {}
 
     private:
-        std::string m_Filepath;
+        Path m_Filepath;
     };
 
 } // namespace Crowny

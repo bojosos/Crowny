@@ -6,7 +6,7 @@ namespace Crowny
     {
     public:
         static void Create(int argc, char** argv);
-        static std::vector<std::string>& Get() { return Instance().m_Args; }
+        static Vector<String>& Get() { return Instance().m_Args; }
 
     private:
         static CommandLineArgs& Instance()
@@ -16,6 +16,6 @@ namespace Crowny
         };
 
         CommandLineArgs();
-        std::vector<std::string> m_Args;
+        Vector<String> m_Args;
     };
 } // namespace Crowny

@@ -24,11 +24,11 @@ namespace Crowny
                          mono_method_full_name(m_Method, true);
     }
 
-    std::vector<CWMonoClass*> CWMonoMethod::GetParameterTypes()
+    Vector<CWMonoClass*> CWMonoMethod::GetParameterTypes()
     {
         void* iter = nullptr;
         MonoType* type;
-        std::vector<CWMonoClass*> res;
+        Vector<CWMonoClass*> res;
         while ((type = mono_signature_get_params(m_Signature, &iter)))
         {
             res.emplace_back(new CWMonoClass(mono_type_get_class(type)));

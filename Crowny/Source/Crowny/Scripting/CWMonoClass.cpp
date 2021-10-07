@@ -12,7 +12,7 @@ END_MONO_INCLUDE
 namespace Crowny
 {
 
-    CWMonoClass::MethodId::MethodId(const std::string& name, uint32_t numParams) : Name(name), NumParams(numParams) {}
+    CWMonoClass::MethodId::MethodId(const String& name, uint32_t numParams) : Name(name), NumParams(numParams) {}
 
     size_t CWMonoClass::MethodId::Hash::operator()(const CWMonoClass::MethodId& value) const
     {
@@ -59,12 +59,12 @@ namespace Crowny
         return mono_object_new(CWMonoRuntime::GetDomain(), m_Class); // call ctor
     }
 
-    void CWMonoClass::AddInternalCall(const std::string& managed, const void* func)
+    void CWMonoClass::AddInternalCall(const String& managed, const void* func)
     {
         mono_add_internal_call((m_FullName + "::" + managed).c_str(), func);
     }
 
-    const std::vector<CWMonoMethod*>& CWMonoClass::GetMethods() const
+    const Vector<CWMonoMethod*>& CWMonoClass::GetMethods() const
     {
         if (m_AllMethodsCached)
             return m_MethodList;
@@ -85,7 +85,7 @@ namespace Crowny
         return m_MethodList;
     }
 
-    const std::vector<CWMonoField*>& CWMonoClass::GetFields() const
+    const Vector<CWMonoField*>& CWMonoClass::GetFields() const
     {
         if (m_AllFieldsCached)
             return m_FieldList;
@@ -104,7 +104,7 @@ namespace Crowny
         return m_FieldList;
     }
 
-    const std::vector<CWMonoProperty*>& CWMonoClass::GetProperties() const
+    const Vector<CWMonoProperty*>& CWMonoClass::GetProperties() const
     {
         if (m_AllPropertiesCached)
             return m_PropertyList;
@@ -132,9 +132,9 @@ namespace Crowny
         return new CWMonoClass(base);
     }
 
-    std::vector<CWMonoClass*> CWMonoClass::GetAttributes() const
+    Vector<CWMonoClass*> CWMonoClass::GetAttributes() const
     {
-        std::vector<CWMonoClass*> res;
+        Vector<CWMonoClass*> res;
 
         MonoCustomAttrInfo* info = mono_custom_attrs_from_class(m_Class);
         if (info == nullptr)
@@ -165,7 +165,7 @@ namespace Crowny
         return hasAttr;
     }
 
-    bool CWMonoClass::HasField(const std::string& fieldName) const
+    bool CWMonoClass::HasField(const String& fieldName) const
     {
         MonoClassField* field = mono_class_get_field_from_name(m_Class, fieldName.c_str());
         return field != nullptr;
@@ -181,7 +181,7 @@ namespace Crowny
 
     bool CWMonoClass::IsValueType() const { return mono_class_is_valuetype(m_Class); }
 
-    CWMonoMethod* CWMonoClass::GetMethod(const std::string& name, const std::string& signature) const
+    CWMonoMethod* CWMonoClass::GetMethod(const String& name, const String& signature) const
     {
         MethodId id(name + "(" + signature + ")", 0);
         auto iterFind = m_Methods.find(id);
@@ -210,7 +210,7 @@ namespace Crowny
         return nullptr;
     }
 
-    CWMonoMethod* CWMonoClass::GetMethod(const std::string& name, uint32_t argc) const
+    CWMonoMethod* CWMonoClass::GetMethod(const String& name, uint32_t argc) const
     {
         MethodId id(name, argc);
         auto iter = m_Methods.find(id);
@@ -225,7 +225,7 @@ namespace Crowny
         return result;
     }
 
-    CWMonoField* CWMonoClass::GetField(const std::string& name) const
+    CWMonoField* CWMonoClass::GetField(const String& name) const
     {
         auto iter = m_Fields.find(name);
         if (iter != m_Fields.end())
@@ -239,7 +239,7 @@ namespace Crowny
         return result;
     }
 
-    CWMonoProperty* CWMonoClass::GetProperty(const std::string& name) const
+    CWMonoProperty* CWMonoClass::GetProperty(const String& name) const
     {
         auto iter = m_Properties.find(name);
         if (iter != m_Properties.end())

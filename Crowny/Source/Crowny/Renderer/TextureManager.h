@@ -10,11 +10,11 @@ namespace Crowny
         TextureManager() = delete;
 
     private:
-        static std::vector<Ref<Texture>> m_Textures;
+        static Vector<Ref<Texture>> m_Textures;
 
     public:
         static Ref<Texture> Add(const Ref<Texture>& texture);
-        static Ref<Texture> Get(const std::string& name);
+        static Ref<Texture> Get(const String& name);
         static void Clear();
     };
 

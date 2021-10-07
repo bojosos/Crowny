@@ -47,16 +47,16 @@ namespace Crowny
     {
         DriverVersion() = default;
 
-        std::string ToString() const
+        String ToString() const
         {
-            std::stringstream str;
+            Stringstream str;
             str << major << "." << minor << "." << release << "." << build;
             return str.str();
         }
 
-        void FromString(const std::string& version)
+        void FromString(const String& version)
         {
-            std::vector<std::string> toks = StringUtils::SplitString(version, ".");
+            Vector<String> toks = StringUtils::SplitString(version, ".");
 
             if (!toks.empty()) // TODO: Parse string
             {
@@ -89,9 +89,9 @@ namespace Crowny
     class RenderCapabilities
     {
     public:
-        std::string RenderAPIName;
+        String RenderAPIName;
         Crowny::DriverVersion DriverVersion;
-        std::string DeviceName;
+        String DeviceName;
         GPUVendor DeviceVendor = GPU_UNKNOWN;
         uint16_t NumTextureUnitsPerStage[SHADER_COUNT] = { 0 };
         uint16_t NumCombinedTextureUnits = 0;
@@ -124,23 +124,23 @@ namespace Crowny
             return true;
         }
 
-        void AddShaderProfile(const std::string& profile) { m_SupportedShaderProfiles.insert(profile); }
+        void AddShaderProfile(const String& profile) { m_SupportedShaderProfiles.insert(profile); }
 
-        bool IsShaderProfileSupported(const std::string& profile) const
+        bool IsShaderProfileSupported(const String& profile) const
         {
             return (m_SupportedShaderProfiles.find(profile) != m_SupportedShaderProfiles.end());
         }
 
-        const std::unordered_set<std::string>& GetSupportedShaderProfiles() const { return m_SupportedShaderProfiles; }
+        const Set<String>& GetSupportedShaderProfiles() const { return m_SupportedShaderProfiles; }
 
-        static GPUVendor VendorFromString(const std::string& vendorString);
-        static std::string VendorToString(GPUVendor vendor);
+        static GPUVendor VendorFromString(const String& vendorString);
+        static String VendorToString(GPUVendor vendor);
 
     private:
         static char const* const GPU_VENDOR_STRINGS[GPU_VENDOR_COUNT];
 
         uint32_t m_Capabilities[CAPS_CATEGORY_COUNT]{ 0 };
-        std::unordered_set<std::string> m_SupportedShaderProfiles;
+        Set<String> m_SupportedShaderProfiles;
     };
 
 } // namespace Crowny

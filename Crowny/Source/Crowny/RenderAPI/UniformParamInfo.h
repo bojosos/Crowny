@@ -47,9 +47,9 @@ namespace Crowny
 
         void GetBinding(ParamType type, uint32_t seqSlot, uint32_t& set, uint32_t& slot) const;
 
-        void GetBinding(ShaderType shaderType, ParamType type, const std::string& name, UniformBinding& binding);
+        void GetBinding(ShaderType shaderType, ParamType type, const String& name, UniformBinding& binding);
 
-        void GetBinding(ParamType type, const std::string& name, UniformBinding (&bindings)[SHADER_COUNT]);
+        void GetBinding(ParamType type, const String& name, UniformBinding (&bindings)[SHADER_COUNT]);
 
         const Ref<UniformDesc>& GetUniformDesc(ShaderType type) const { return m_ParamDescs[(int)type]; }
         static Ref<UniformParamInfo> Create(const UniformParamDesc& desc);

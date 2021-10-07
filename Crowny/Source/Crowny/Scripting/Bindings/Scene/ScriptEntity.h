@@ -21,6 +21,7 @@ namespace Crowny
         static void Internal_SetName(Entity* thisptr, MonoString* string);
 
         static MonoObject* Internal_GetParent(Entity* thisptr);
+        static MonoObject* Internal_GetUuid(Entity* thisptr);
         static MonoObject* Internal_GetTransform(entt::entity thisptr);
 
         // static MonoObject* Internal_GetComponent(SceneObject* thisptr, MonoReflectionType type)

@@ -21,11 +21,9 @@ namespace Crowny
         VkShaderModule m_Module;
     };
 
-    class VulkanShader : public Shader
+    class VulkanShader : public ShaderStage
     {
     public:
-        VulkanShader(const std::string& name, const std::string& vertSrc, const std::string& fragSrc);
-        VulkanShader(const std::string& filepath, ShaderType shaderType);
         VulkanShader(const BinaryShaderData& shaderData);
         ~VulkanShader();
 
@@ -37,9 +35,6 @@ namespace Crowny
     private:
         BinaryShaderData m_ShaderDesc;
         VkPipelineShaderStageCreateInfo m_ShaderStage;
-        std::string m_Filepath;
-        std::string m_Name;
-        uint32_t m_RendererID;
         VulkanShaderModule* m_Module;
     };
 } // namespace Crowny

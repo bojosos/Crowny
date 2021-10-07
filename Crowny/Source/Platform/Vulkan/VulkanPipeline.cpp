@@ -49,7 +49,7 @@ namespace Crowny
     VulkanGraphicsPipeline::VulkanGraphicsPipeline(const PipelineStateDesc& desc, const BufferLayout& layout)
       : GraphicsPipeline(desc)
     {
-        static std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+        static Vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 
         m_DynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
         m_DynamicStateCreateInfo.pNext = nullptr;
