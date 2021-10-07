@@ -8,9 +8,9 @@
 
 namespace Crowny
 {
-    std::unordered_map<uint32_t, MonoObject*> ScriptComponent::s_EntityComponents = {};
-    std::unordered_map<MonoClass*, uint32_t> ScriptComponent::s_TypeMap = {};
-    std::unordered_map<uint32_t, ScriptComponent::ComponentInfo> ScriptComponent::s_ComponentInfos;
+    UnorderedMap<uint32_t, MonoObject*> ScriptComponent::s_EntityComponents = {};
+    UnorderedMap<MonoClass*, uint32_t> ScriptComponent::s_TypeMap = {};
+    UnorderedMap<uint32_t, ScriptComponent::ComponentInfo> ScriptComponent::s_ComponentInfos;
 
     void ScriptComponent::InitRuntimeFunctions()
     {

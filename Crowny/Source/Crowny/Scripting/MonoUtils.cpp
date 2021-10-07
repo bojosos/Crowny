@@ -40,9 +40,9 @@ namespace Crowny
 
     bool MonoUtils::IsEnum(MonoClass* monoClass) { return mono_class_is_enum(monoClass); }
 
-    std::string MonoUtils::FromMonoString(MonoString* value) { return mono_string_to_utf8(value); }
+    String MonoUtils::FromMonoString(MonoString* value) { return mono_string_to_utf8(value); }
 
-    MonoString* MonoUtils::ToMonoString(const std::string& value)
+    MonoString* MonoUtils::ToMonoString(const String& value)
     {
         return mono_string_from_utf16((mono_unichar2*)value.c_str());
     }

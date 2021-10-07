@@ -13,15 +13,15 @@ namespace Crowny
          * @param virtualPath Virtual path
          * @param physicalPath Physical path.
          */
-        void Mount(const std::string& virtualPath, const std::string& physicalPath);
-        void Unmount(const std::string& path);
+        void Mount(const String& virtualPath, const String& physicalPath);
+        void Unmount(const String& path);
 
-        bool ResolvePhyiscalPath(const std::string& path, std::string& outPath);
-        std::tuple<byte*, uint64_t> ReadFile(const std::string& path);
-        std::string ReadTextFile(const std::string& path);
+        bool ResolvePhyiscalPath(const String& path, String& outPath);
+        std::tuple<byte*, uint64_t> ReadFile(const String& path);
+        String ReadTextFile(const String& path);
 
-        bool WriteFile(const std::string& path, byte* buff, uint64_t size);
-        bool WriteTextFile(const std::string& path, const std::string& text);
+        bool WriteFile(const String& path, byte* buff, uint64_t size);
+        bool WriteTextFile(const String& path, const String& text);
 
         static VirtualFileSystem* Get() { return s_Instance; }
 
@@ -30,7 +30,7 @@ namespace Crowny
         static void Shutdown();
 
     private:
-        std::unordered_map<std::string, std::vector<std::string>> m_MountedDirectories;
+        UnorderedMap<String, Vector<String>> m_MountedDirectories;
 
     private:
         static VirtualFileSystem* s_Instance;

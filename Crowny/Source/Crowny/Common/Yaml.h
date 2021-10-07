@@ -7,20 +7,20 @@
 
 namespace YAML
 {
-    template <> struct convert<Crowny::Uuid>
+    template <> struct convert<Crowny::UUID>
     {
-        static Node encode(const Crowny::Uuid& uuid)
+        static Node encode(const Crowny::UUID& uuid)
         {
             Node node;
             node = uuid.ToString();
             return node;
         }
 
-        static bool decode(const Node& node, Crowny::Uuid& rhs)
+        static bool decode(const Node& node, Crowny::UUID& rhs)
         {
             if (!node.IsScalar())
                 return false;
-            rhs = Crowny::Uuid(node.as<std::string>());
+            rhs = Crowny::UUID(node.as<std::string>());
 
             return true;
         }

@@ -16,8 +16,8 @@ namespace Crowny
     {
     public:
         CWMonoField(MonoClassField* field);
-        const std::string& GetName() const { return m_Name; };
-        const std::string& GetFullDeclName() const { return m_FullDeclName; }
+        const String& GetName() const { return m_Name; };
+        const String& GetFullDeclName() const { return m_FullDeclName; }
         CWMonoClass* GetType() const { return m_Type; };
         CWMonoVisibility GetVisibility() const;
         bool IsStatic() const;
@@ -34,7 +34,7 @@ namespace Crowny
         MonoClassField* m_Field = nullptr;
         MonoVTable* m_OwningTypeVTable = nullptr;
         CWMonoClass* m_Type;
-        std::string m_Name;
-        std::string m_FullDeclName;
+        String m_Name;
+        String m_FullDeclName;
     };
 } // namespace Crowny

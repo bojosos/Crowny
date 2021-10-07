@@ -13,7 +13,7 @@ namespace Crowny
     class Skybox
     {
     public:
-        Skybox(const std::string& filepath);
+        Skybox(const Path& filepath);
         ~Skybox() = default;
 
     private:

@@ -25,7 +25,7 @@ namespace Crowny
         struct ComponentInfo
         {
             using Callback = std::function<void(Entity)>;
-            std::string name;
+            String name;
             Callback widget, create, destroy;
         };
 
@@ -50,7 +50,7 @@ namespace Crowny
         }
 
         template <class Component>
-        ComponentInfo& RegisterComponent(const std::string& name, typename ComponentInfo::Callback widget)
+        ComponentInfo& RegisterComponent(const String& name, typename ComponentInfo::Callback widget)
         {
             return RegisterComponent<Component>(ComponentInfo{
               name,
@@ -60,7 +60,7 @@ namespace Crowny
             });
         }
 
-        template <class Component> ComponentInfo& RegisterComponent(const std::string& name)
+        template <class Component> ComponentInfo& RegisterComponent(const String& name)
         {
             return RegisterComponent<Component>(name, ComponentEditorWidget<Component>);
         }

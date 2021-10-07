@@ -12,7 +12,7 @@ namespace Crowny
         Public
     };
 
-    static std::string CWMonoVisibilityToString(CWMonoVisibility visibility)
+    static String CWMonoVisibilityToString(CWMonoVisibility visibility)
     {
         switch (visibility)
         {

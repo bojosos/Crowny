@@ -13,13 +13,13 @@ namespace Crowny
 
         // void Bind(uint32_t startslot);
 
-        void SetUniformData(const std::string& name, byte* data);
-        void SetTexture(const std::string& name, const Ref<Texture>& texture);
+        void SetUniformData(const String& name, byte* data);
+        void SetTexture(const String& name, const Ref<Texture>& texture);
 
         Ref<Shader> GetShader() { return m_Shader; }
 
     protected:
-        std::vector<Ref<Texture>> m_Textures;
+        Vector<Ref<Texture>> m_Textures;
         Ref<Shader> m_Shader;
 
     private:
@@ -33,11 +33,11 @@ namespace Crowny
         const Ref<Material>& GetMaterial() const { return m_Material; }
 
         // void Bind(uint32_t startslot);
-        void SetUniformData(const std::string& name, byte* data);
-        void SetTexture(const std::string& name, const Ref<Texture>& texture);
+        void SetUniformData(const String& name, byte* data);
+        void SetTexture(const String& name, const Ref<Texture>& texture);
 
     private:
-        std::vector<Ref<Texture>> m_Textures;
+        Vector<Ref<Texture>> m_Textures;
         Ref<Material> m_Material;
     };
 } // namespace Crowny

@@ -18,6 +18,6 @@ jobs:
       - name: Generate projects
         run: |
           chmod +x 3rdparty/premake/premake5
-          bash Scripts/generate.sh
+          bash Scripts/genprojects.sh
       - name: Build
         run: make Crowny-Editor -j2 config=release_linux64 CXX=clang++-10

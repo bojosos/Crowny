@@ -10,7 +10,7 @@ namespace Crowny
     class ImGuiConsolePanel : public ImGuiPanel
     {
     public:
-        ImGuiConsolePanel(const std::string& name);
+        ImGuiConsolePanel(const String& name);
         ~ImGuiConsolePanel() = default;
 
         virtual void Render() override;

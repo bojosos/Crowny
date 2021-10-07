@@ -8,72 +8,42 @@
 
 namespace Crowny
 {
-    void ShaderLibrary::Add(const std::string& name, const Ref<Shader>& shader)
+    void ShaderLibrary::Add(const String& name, const Ref<Shader>& shader)
     {
-        CW_ENGINE_ASSERT(!Exists(name), "Shader already exists!");
-        m_Shaders[name] = shader;
+        // CW_ENGINE_ASSERT(!Exists(name), "Shader already exists!");
+        // m_Shaders[name] = shader;
     }
 
     void ShaderLibrary::Add(const Ref<Shader>& shader)
     {
         // auto& name = shader->GetName();
         // Add(name, shader);
-        Add("test", shader);
+        // Add("test", shader);
     }
 
-    Ref<Shader> ShaderLibrary::Load(const std::string& filepath)
+    Ref<Shader> ShaderLibrary::Load(const Path& filepath)
     {
-        auto shader = Shader::Create(filepath);
-        Add(shader);
-        return shader;
+        // auto shader = Shader::Create(filepath);
+        // Add(shader);
+        // return shader;
     }
 
-    Ref<Shader> ShaderLibrary::Load(const std::string& name, const std::string& filepath)
+    Ref<Shader> ShaderLibrary::Load(const String& name, const Path& filepath)
     {
-        auto shader = Shader::Create(filepath);
-        Add(name, shader);
-        return shader;
+        // auto shader = Shader::Create(filepath);
+        // Add(name, shader);
+        // return shader;
     }
 
-    Ref<Shader> ShaderLibrary::Get(const std::string& name)
+    Ref<Shader> ShaderLibrary::Get(const String& name)
     {
         CW_ENGINE_ASSERT(Exists(name), "Shader not found!");
         return m_Shaders[name];
     }
 
-    bool ShaderLibrary::Exists(const std::string& name) const { return m_Shaders.find(name) != m_Shaders.end(); }
+    bool ShaderLibrary::Exists(const String& name) const { return m_Shaders.find(name) != m_Shaders.end(); }
 
-    Ref<Shader> Shader::Create(const std::string& name, const std::string& vertSrc, const std::string& fragSrc)
-    {
-        switch (Renderer::GetAPI())
-        {
-        case RenderAPI::API::OpenGL:
-            return CreateRef<OpenGLShader>(name, vertSrc, fragSrc);
-        default:
-            CW_ENGINE_ASSERT(false, "Renderer API not supporter");
-            return nullptr;
-        }
-
-        return nullptr;
-    }
-
-    Ref<Shader> Shader::Create(const std::string& m_Filepath, ShaderType shaderType)
-    {
-        switch (Renderer::GetAPI())
-        {
-        case RenderAPI::API::OpenGL:
-            return CreateRef<OpenGLShader>(m_Filepath);
-        case RenderAPI::API::Vulkan:
-            return CreateRef<VulkanShader>(m_Filepath, shaderType);
-        default:
-            CW_ENGINE_ASSERT(false, "Renderer API not supporter");
-            return nullptr;
-        }
-
-        return nullptr;
-    }
-
-    Ref<Shader> Shader::Create(const BinaryShaderData& data)
+    Ref<ShaderStage> ShaderStage::Create(const Ref<BinaryShaderData>& data)
     {
         switch (Renderer::GetAPI())
         {
@@ -88,4 +58,23 @@ namespace Crowny
 
         return nullptr;
     }
+
+    Ref<Shader> Shader::Create(const ShaderDesc& shaderDesc)
+    {
+        Ref<Shader> result = CreateRef<Shader>();
+        if (shaderDesc.VertexShader)
+            result->m_ShaderStages[VERTEX_SHADER] = ShaderStage::Create(shaderDesc.VertexShader);
+        if (shaderDesc.FragmentShader)
+            ;
+        result->m_ShaderStages[FRAGMENT_SHADER] = ShaderStage::Create(shaderDesc.FragmentShader);
+        if (shaderDesc.DomainShader)
+            result->m_ShaderStages[DOMAIN_SHADER] = ShaderStage::Create(shaderDesc.DomainShader);
+        if (shaderDesc.HullShader)
+            result->m_ShaderStages[HULL_SHADER] = ShaderStage::Create(shaderDesc.HullShader);
+        if (shaderDesc.GeometryShader)
+            result->m_ShaderStages[GEOMETRY_SHADER] = ShaderStage::Create(shaderDesc.GeometryShader);
+        if (shaderDesc.ComputeShader)
+            result->m_ShaderStages[COMPUTE_SHADER] = ShaderStage::Create(shaderDesc.ComputeShader);
+    }
+
 } // namespace Crowny

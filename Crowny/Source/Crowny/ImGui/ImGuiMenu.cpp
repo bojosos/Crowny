@@ -25,7 +25,7 @@ namespace Crowny
 
     void ImGuiMenuBar::AddMenu(ImGuiMenu* menu) { m_Menus.push_back(menu); }
 
-    ImGuiMenu::ImGuiMenu(const std::string& title) : m_Title(title) {}
+    ImGuiMenu::ImGuiMenu(const String& title) : m_Title(title) {}
 
     ImGuiMenu::~ImGuiMenu()
     {
@@ -70,8 +70,7 @@ namespace Crowny
         m_Menus.push_back(menu);
     }
 
-    ImGuiMenuItem::ImGuiMenuItem(const std::string& title, const std::string& combination,
-                                 const EventCallbackFn& onclicked)
+    ImGuiMenuItem::ImGuiMenuItem(const String& title, const String& combination, const EventCallbackFn& onclicked)
       : m_Title(title), m_Combination(combination), OnClicked(onclicked)
     {
     }

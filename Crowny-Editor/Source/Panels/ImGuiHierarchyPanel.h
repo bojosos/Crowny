@@ -9,7 +9,7 @@ namespace Crowny
     class ImGuiHierarchyPanel : public ImGuiPanel
     {
     public:
-        ImGuiHierarchyPanel(const std::string& name);
+        ImGuiHierarchyPanel(const String& name);
         ~ImGuiHierarchyPanel() = default;
 
         virtual void Render() override;
@@ -37,6 +37,6 @@ namespace Crowny
         bool m_Deleted = false;
         Entity m_NewEntityParent = {};
         Entity m_Renaming = {};
-        std::unordered_set<Entity> m_SelectedItems;
+        Set<Entity> m_SelectedItems;
     };
 } // namespace Crowny

@@ -9,7 +9,7 @@ namespace Crowny
     struct RenderWindowProperties : public RenderTargetProperties
     {
         bool Fullscreen = false; // not supported
-        std::string Title = "";
+        String Title = "";
         bool Vsync = true;
         uint32_t VsyncInterval = 1; // not supported
         bool Hidden = false;        // not supported

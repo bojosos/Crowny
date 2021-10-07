@@ -3,7 +3,7 @@
 namespace Crowny
 {
 
-#define DEFAULT_FONT_FILENAME std::string("roboto-thin.ttf")
+#define DEFAULT_FONT_FILENAME String("roboto-thin.ttf")
 
     // ------------- Global Renderer -------------
 #define MAX_FRAMEBUFFER_COLOR_ATTACHMENTS 8

@@ -37,7 +37,7 @@ namespace Crowny
         m_BufferBlocks[globalSlot] = uniformBlock;
     }
 
-    void UniformParams::SetUniformBlockBuffer(ShaderType type, const std::string& name,
+    void UniformParams::SetUniformBlockBuffer(ShaderType type, const String& name,
                                               const Ref<UniformBufferBlock>& uniformBuffer)
     {
         const Ref<UniformDesc>& paramDesc = m_ParamInfo->GetUniformDesc(type);
@@ -57,7 +57,7 @@ namespace Crowny
         SetUniformBlockBuffer(iterFind->second.Set, iterFind->second.Slot, uniformBuffer);
     }
 
-    void UniformParams::SetUniformBlockBuffer(const std::string& name, const Ref<UniformBufferBlock>& uniformBuffer)
+    void UniformParams::SetUniformBlockBuffer(const String& name, const Ref<UniformBufferBlock>& uniformBuffer)
     {
         for (uint32_t i = 0; i < 6; i++)
         {
@@ -80,7 +80,7 @@ namespace Crowny
         return m_BufferBlocks[globalSlot];
     }
 
-    void UniformParams::SetTexture(ShaderType type, const std::string& name, const Ref<Texture>& texture,
+    void UniformParams::SetTexture(ShaderType type, const String& name, const Ref<Texture>& texture,
                                    const TextureSurface& surface)
     {
         /*const Ref<UniformParamDesc>& paramDescs = m_ParamInfo->GetParamDescs(type);

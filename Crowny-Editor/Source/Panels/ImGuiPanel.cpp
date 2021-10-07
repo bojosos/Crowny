@@ -6,7 +6,7 @@
 
 namespace Crowny
 {
-    ImGuiPanel::ImGuiPanel(const std::string& name) : m_Name(name), m_Shown(true) {}
+    ImGuiPanel::ImGuiPanel(const String& name) : m_Name(name), m_Shown(true) {}
 
     void ImGuiPanel::UpdateState()
     {

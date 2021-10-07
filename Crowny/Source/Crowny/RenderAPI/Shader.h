@@ -7,7 +7,7 @@ namespace Crowny
 
     struct UniformBufferBlockDesc
     {
-        std::string Name;
+        String Name;
         uint32_t Slot;
         uint32_t Set;
         uint32_t BlockSize;
@@ -15,7 +15,7 @@ namespace Crowny
 
     struct UniformResourceDesc
     {
-        std::string Name;
+        String Name;
         UniformResourceType Type;
         uint32_t Slot;
         uint32_t Set;
@@ -24,41 +24,57 @@ namespace Crowny
 
     struct UniformDesc
     {
-        std::unordered_map<std::string, UniformBufferBlockDesc> Uniforms;
+        UnorderedMap<String, UniformBufferBlockDesc> Uniforms;
 
-        std::unordered_map<std::string, UniformResourceDesc> Samplers;
-        std::unordered_map<std::string, UniformResourceDesc> Textures;
-        std::unordered_map<std::string, UniformResourceDesc> LoadStoreTextures;
+        UnorderedMap<String, UniformResourceDesc> Samplers;
+        UnorderedMap<String, UniformResourceDesc> Textures;
+        UnorderedMap<String, UniformResourceDesc> LoadStoreTextures;
+    };
+
+    struct ShaderStageDesc
+    {
+    };
+
+    class ShaderStage
+    {
+    public:
+        virtual const Ref<UniformDesc>& GetUniformDesc() const = 0;
+        static Ref<ShaderStage> Create(const Ref<BinaryShaderData>& shaderData);
+    };
+
+    struct ShaderDesc
+    {
+        Ref<BinaryShaderData> VertexShader;
+        Ref<BinaryShaderData> FragmentShader;
+        Ref<BinaryShaderData> GeometryShader;
+        Ref<BinaryShaderData> HullShader;
+        Ref<BinaryShaderData> DomainShader;
+        Ref<BinaryShaderData> ComputeShader;
     };
 
     class Shader
     {
     public:
-        virtual const Ref<UniformDesc>& GetUniformDesc() const = 0;
+        static Ref<Shader> Create(const ShaderDesc& stateDesc);
 
-        // Creates a shader from a vertex and fragment source
-        static Ref<Shader> Create(const std::string& name, const std::string& vertSrc, const std::string& fragSrc);
-
-        // Creates a shader from a file
-        static Ref<Shader> Create(const std::string& filepath, ShaderType shaderType = VERTEX_SHADER);
-
-        static Ref<Shader> Create(const BinaryShaderData& shaderData);
+    private:
+        Array<Ref<ShaderStage>, SHADER_COUNT> m_ShaderStages;
     };
 
     class ShaderLibrary
     {
     public:
-        void Add(const std::string& name, const Ref<Shader>& shader);
+        void Add(const String& name, const Ref<Shader>& shader);
         void Add(const Ref<Shader>& shader);
-        Ref<Shader> Load(const std::string& filepath);
-        Ref<Shader> Load(const std::string& name, const std::string& filepath);
+        Ref<Shader> Load(const Path& filepath);
+        Ref<Shader> Load(const String& name, const Path& filepath);
 
-        Ref<Shader> Get(const std::string& name);
+        Ref<Shader> Get(const String& name);
 
-        bool Exists(const std::string& name) const;
+        bool Exists(const String& name) const;
 
     private:
-        std::string m_Name;
-        std::unordered_map<std::string, Ref<Shader>> m_Shaders;
+        String m_Name;
+        UnorderedMap<String, Ref<Shader>> m_Shaders;
     };
 } // namespace Crowny

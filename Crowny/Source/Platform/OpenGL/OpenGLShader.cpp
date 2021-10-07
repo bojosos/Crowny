@@ -11,12 +11,11 @@
 namespace Crowny
 {
 
-    OpenGLShader::OpenGLShader(const std::string& filepath) : m_Filepath(filepath) { Load(filepath); }
+    OpenGLShader::OpenGLShader(const Path& filepath) : m_Filepath(filepath) { Load(filepath); }
 
-    OpenGLShader::OpenGLShader(const std::string& name, const std::string& vertSrc, const std::string& fragSrc)
-      : m_Filepath("")
+    OpenGLShader::OpenGLShader(const String& name, const String& vertSrc, const String& fragSrc) : m_Filepath("")
     {
-        std::unordered_map<GLenum, std::string> sources;
+        UnorderedMap<GLenum, String> sources;
         sources[GL_VERTEX_SHADER] = vertSrc;
         sources[GL_FRAGMENT_SHADER] = fragSrc;
         Compile(sources);
@@ -24,20 +23,15 @@ namespace Crowny
 
     OpenGLShader::~OpenGLShader() { glDeleteProgram(m_RendererID); }
 
-    void OpenGLShader::Load(const std::string& filepath)
+    void OpenGLShader::Load(const Path& filepath)
     {
-        std::string source = VirtualFileSystem::Get()->ReadTextFile(filepath);
+        String source = VirtualFileSystem::Get()->ReadTextFile(filepath);
         auto shaderSources = ShaderPreProcess(source);
         Compile(shaderSources);
-
-        auto lastSlash = filepath.find_last_of("/\\");
-        lastSlash = lastSlash == std::string::npos ? 0 : lastSlash + 1;
-        auto lastDot = filepath.rfind('.');
-        auto count = lastDot == std::string::npos ? filepath.size() - lastSlash : lastDot - lastSlash;
-        m_Name = filepath.substr(lastSlash, count);
+        m_Name = filepath.filename();
     }
 
-    static GLenum ShaderTypeFromString(const std::string& type)
+    static GLenum ShaderTypeFromString(const String& type)
     {
         if (type == "vertex")
             return GL_VERTEX_SHADER;
@@ -50,19 +44,19 @@ namespace Crowny
         return 0;
     }
 
-    std::unordered_map<GLenum, std::string> OpenGLShader::ShaderPreProcess(const std::string& source)
+    UnorderedMap<GLenum, String> OpenGLShader::ShaderPreProcess(const String& source)
     {
-        std::unordered_map<GLenum, std::string> shaderSources;
+        UnorderedMap<GLenum, String> shaderSources;
 
         const char* typeToken = "#type";
         size_t typeTokenLength = strlen(typeToken);
         size_t pos = source.find(typeToken, 0);
-        while (pos != std::string::npos)
+        while (pos != String::npos)
         {
             size_t eol = source.find_first_of("\r\n", pos);
-            CW_ENGINE_ASSERT(eol != std::string::npos, "Syntax error");
+            CW_ENGINE_ASSERT(eol != String::npos, "Syntax error");
             size_t begin = pos + typeTokenLength + 1;
-            std::string type = source.substr(begin, eol - begin);
+            String type = source.substr(begin, eol - begin);
 
             if (type == "compute")
             {
@@ -72,27 +66,27 @@ namespace Crowny
             CW_ENGINE_ASSERT(ShaderTypeFromString(type), "Invalid shader type specified");
 
             size_t nextLinePos = source.find_first_not_of("\r\n", eol);
-            CW_ENGINE_ASSERT(nextLinePos != std::string::npos, "Syntax error");
+            CW_ENGINE_ASSERT(nextLinePos != String::npos, "Syntax error");
             pos = source.find(typeToken, nextLinePos);
 
             shaderSources[ShaderTypeFromString(type)] =
-              (pos == std::string::npos) ? source.substr(nextLinePos) : source.substr(nextLinePos, pos - nextLinePos);
+              (pos == String::npos) ? source.substr(nextLinePos) : source.substr(nextLinePos, pos - nextLinePos);
         }
         return shaderSources;
     }
 
-    void OpenGLShader::Compile(const std::unordered_map<GLenum, std::string>& shaderSources)
+    void OpenGLShader::Compile(const UnorderedMap<GLenum, String>& shaderSources)
     {
         GLuint program = glCreateProgram();
         CW_ENGINE_ASSERT(shaderSources.size() <= 2, "We only support 2 shaders for now");
         // std::array<GLenum, 2> glShaderIDs;
-        std::vector<GLenum> glShaderIDs;
+        Vector<GLenum> glShaderIDs;
         glShaderIDs.resize(shaderSources.size());
         int glShaderIDIndex = 0;
         for (auto& kv : shaderSources)
         {
             GLenum type = kv.first;
-            const std::string& source = kv.second;
+            const String& source = kv.second;
 
             GLuint shader = glCreateShader(type);
 
@@ -108,7 +102,7 @@ namespace Crowny
                 GLint maxLength = 0;
                 glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
 
-                std::vector<GLchar> infoLog(maxLength);
+                Vector<GLchar> infoLog(maxLength);
                 glGetShaderInfoLog(shader, maxLength, &maxLength, &infoLog[0]);
 
                 glDeleteShader(shader);
@@ -132,7 +126,7 @@ namespace Crowny
         {
             GLint maxLength = 0;
             glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
-            std::vector<GLchar> infoLog(maxLength);
+            Vector<GLchar> infoLog(maxLength);
             glGetProgramInfoLog(program, maxLength, &maxLength, &infoLog[0]);
             glDeleteProgram(program);
 

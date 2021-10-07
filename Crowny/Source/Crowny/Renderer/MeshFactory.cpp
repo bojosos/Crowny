@@ -63,11 +63,11 @@ namespace Crowny
 
     Ref<Mesh> MeshFactory::CreateSphere(float xSegments, float ySegments)
     { /*
-         std::vector<glm::vec3> positions;
-         std::vector<glm::vec2> uv;
-         std::vector<glm::vec3> normals;
-         std::vector<glm::vec3> tangents;
-         std::vector<uint32_t> indices;
+         Vector<glm::vec3> positions;
+         Vector<glm::vec2> uv;
+         Vector<glm::vec3> normals;
+         Vector<glm::vec3> tangents;
+         Vector<uint32_t> indices;
 
          const float PI = 3.14159265359;
          for (uint32_t y = 0; y <= ySegments; y++)
@@ -110,7 +110,7 @@ namespace Crowny
              oddRow = !oddRow;
          }
 
-         std::vector<float> data;
+         Vector<float> data;
          for (std::size_t i = 0; i < positions.size(); i++)
          {
              data.push_back(positions[i].x);

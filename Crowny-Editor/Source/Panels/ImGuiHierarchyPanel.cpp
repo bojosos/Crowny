@@ -14,7 +14,7 @@ namespace Crowny
 {
     Entity ImGuiHierarchyPanel::s_SelectedEntity;
 
-    ImGuiHierarchyPanel::ImGuiHierarchyPanel(const std::string& name) : ImGuiPanel(name) {}
+    ImGuiHierarchyPanel::ImGuiHierarchyPanel(const String& name) : ImGuiPanel(name) {}
 
     void ImGuiHierarchyPanel::DisplayPopup(Entity e)
     {
@@ -89,7 +89,7 @@ namespace Crowny
     {
         auto& tc = e.GetComponent<TagComponent>();
         auto& rc = e.GetComponent<RelationshipComponent>();
-        std::string name = tc.Tag.empty() ? "Entity" : tc.Tag.c_str();
+        String name = tc.Tag.empty() ? "Entity" : tc.Tag.c_str();
 
         ImGuiTreeNodeFlags selected =
           (m_SelectedItems.find(e) != m_SelectedItems.end()) ? ImGuiTreeNodeFlags_Selected : 0;
@@ -157,7 +157,7 @@ namespace Crowny
     {
         auto& tc = e.GetComponent<TagComponent>();
 
-        std::string name = tc.Tag.empty() ? "Entity" : tc.Tag.c_str();
+        String name = tc.Tag.empty() ? "Entity" : tc.Tag.c_str();
 
         ImGuiTreeNodeFlags selected =
           (m_SelectedItems.find(e) != m_SelectedItems.end()) ? ImGuiTreeNodeFlags_Selected : 0;
@@ -204,8 +204,6 @@ namespace Crowny
             }
         }
     }
-
-    static int var = 100;
 
     void ImGuiHierarchyPanel::DisplayTree(Entity e)
     {

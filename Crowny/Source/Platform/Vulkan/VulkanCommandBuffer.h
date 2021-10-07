@@ -106,7 +106,7 @@ namespace Crowny
         uint32_t m_QueueMask = 0;
         VulkanCmdBuffer* m_CommandBuffer = nullptr;
         uint32_t m_SyncMask = 0;
-        std::vector<VkImageMemoryBarrier> m_BarriersTemp;
+        Vector<VkImageMemoryBarrier> m_BarriersTemp;
     };
 
     class VulkanTransferManager : public Module<VulkanTransferManager>
@@ -142,7 +142,7 @@ namespace Crowny
         VulkanCmdBuffer* CreateBuffer(uint32_t queueFamily, bool secondary);
 
         VulkanDevice& m_Device;
-        std::unordered_map<uint32_t, PoolInfo> m_Pools;
+        UnorderedMap<uint32_t, PoolInfo> m_Pools;
         uint32_t m_NextId = 1;
     };
 
@@ -310,10 +310,10 @@ namespace Crowny
 
         mutable uint32_t m_NumUsedInterQueueSemaphores = 0;
         std::array<VkClearValue, MAX_FRAMEBUFFER_COLOR_ATTACHMENTS + 1> m_ClearValues{};
-        std::unordered_map<VulkanResource*, BufferInfo> m_Buffers;
-        std::unordered_map<VulkanResource*, ResourceUseHandle> m_Resources;
-        std::unordered_map<VulkanResource*, uint32_t> m_Images;
-        std::unordered_map<VulkanSwapChain*, ResourceUseHandle> m_SwapChains;
+        UnorderedMap<VulkanResource*, BufferInfo> m_Buffers;
+        UnorderedMap<VulkanResource*, ResourceUseHandle> m_Resources;
+        UnorderedMap<VulkanResource*, uint32_t> m_Images;
+        UnorderedMap<VulkanSwapChain*, ResourceUseHandle> m_SwapChains;
         std::set<uint32_t> m_ShaderBoundSubresourceInfos;
         uint32_t m_GlobalQueueIdx = -1;
 
@@ -333,22 +333,22 @@ namespace Crowny
         DrawMode m_DrawMode = DrawMode::TRIANGLE_LIST;
         VkDescriptorSet* m_DescriptorSetsTemp;
         DescriptorSetBindFlags m_DescriptorSetsBindState;
-        std::vector<ImageSubresourceInfo> m_SubresourceInfoStorage;
-        std::vector<ImageInfo> m_ImageInfos;
-        std::unordered_map<uint32_t, TransitionInfo> m_TransitionInfoTemp;
-        std::vector<VkImageMemoryBarrier> m_LayoutTransitionBarriersTemp;
-        std::unordered_map<VulkanImage*, uint32_t> m_QueuedLayoutTransitions;
-        std::vector<VulkanSemaphore*> m_SemaphoresTemp{ MAX_UNIQUE_QUEUES };
+        Vector<ImageSubresourceInfo> m_SubresourceInfoStorage;
+        Vector<ImageInfo> m_ImageInfos;
+        UnorderedMap<uint32_t, TransitionInfo> m_TransitionInfoTemp;
+        Vector<VkImageMemoryBarrier> m_LayoutTransitionBarriersTemp;
+        UnorderedMap<VulkanImage*, uint32_t> m_QueuedLayoutTransitions;
+        Vector<VulkanSemaphore*> m_SemaphoresTemp{ MAX_UNIQUE_QUEUES };
         VkBuffer m_VertexBuffersTemp[MAX_BOUND_VERTEX_BUFFERS] = {};
         VkDeviceSize m_VertexBufferOffsets[MAX_BOUND_VERTEX_BUFFERS]{};
         Ref<VulkanIndexBuffer> m_IndexBuffer;
-        std::vector<Ref<VulkanVertexBuffer>> m_VertexBuffers;
+        Vector<Ref<VulkanVertexBuffer>> m_VertexBuffers;
         VulkanFramebuffer* m_Framebuffer = nullptr;
         Ref<RenderTarget> m_RenderTarget;
         Ref<VulkanGraphicsPipeline> m_GraphicsPipeline;
         Ref<VulkanComputePipeline> m_ComputePipeline;
         VulkanDevice& m_Device;
-        std::unordered_set<VulkanSwapChain*> m_ActiveSwapChains;
+        Set<VulkanSwapChain*> m_ActiveSwapChains;
 
         VulkanSemaphore* m_IntraQueueSemaphore = nullptr;
         VulkanSemaphore* m_InterQueueSemaphores[MAX_VULKAN_CB_DEPENDENCIES]{};

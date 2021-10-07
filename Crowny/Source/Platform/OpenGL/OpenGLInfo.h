@@ -4,19 +4,19 @@ namespace Crowny
 {
     struct OpenGLDetail
     {
-        std::string Name;
-        std::string GLName;
-        std::string Value;
+        String Name;
+        String GLName;
+        String Value;
     };
 
     class OpenGLInfo
     {
 
     public:
-        static std::vector<OpenGLDetail>& GetInformation();
+        static Vector<OpenGLDetail>& GetInformation();
         static void RetrieveInformation();
 
     private:
-        static std::vector<OpenGLDetail> s_Information;
+        static Vector<OpenGLDetail> s_Information;
     };
 } // namespace Crowny

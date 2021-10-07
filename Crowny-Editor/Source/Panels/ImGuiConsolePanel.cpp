@@ -5,7 +5,7 @@
 namespace Crowny
 {
 
-    ImGuiConsolePanel::ImGuiConsolePanel(const std::string& name) : ImGuiPanel(name) {}
+    ImGuiConsolePanel::ImGuiConsolePanel(const String& name) : ImGuiPanel(name) {}
 
     void ImGuiConsolePanel::Render()
     {

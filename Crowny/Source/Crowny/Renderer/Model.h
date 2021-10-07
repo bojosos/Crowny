@@ -13,16 +13,15 @@ namespace Crowny
     class Model
     {
     public:
-        Model(const std::string& filepath);
+        Model(const Path& filepath);
         void Draw();
-        const std::vector<Ref<Texture>>& GetTextures() const { return m_Textures; }
-        const std::vector<Ref<Mesh>>& GetMeshes() const { return m_Meshes; }
+        const Vector<Ref<Texture>>& GetTextures() const { return m_Textures; }
+        const Vector<Ref<Mesh>>& GetMeshes() const { return m_Meshes; }
 
     private:
         void ProcessNode(aiNode* node, const aiScene* scene);
         Ref<Mesh> ProcessMesh(aiMesh* mesh, const aiScene* scene);
-        std::vector<Ref<Texture>> LoadMaterialTextures(aiMaterial* material, aiTextureType type,
-                                                       const std::string& typeName);
+        Vector<Ref<Texture>> LoadMaterialTextures(aiMaterial* material, aiTextureType type, const String& typeName);
 
         struct Vertex
         {
@@ -34,9 +33,9 @@ namespace Crowny
         };
         friend class MeshRendererComponent;
 
-        std::vector<Ref<Mesh>> m_Meshes;
-        std::vector<Ref<Texture>> m_Textures;
-        std::vector<Ref<Texture>> m_TexturesLoaded;
-        std::string m_Directory;
+        Vector<Ref<Mesh>> m_Meshes;
+        Vector<Ref<Texture>> m_Textures;
+        Vector<Ref<Texture>> m_TexturesLoaded;
+        String m_Directory;
     };
 } // namespace Crowny

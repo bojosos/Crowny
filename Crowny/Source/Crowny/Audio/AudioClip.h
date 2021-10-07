@@ -47,6 +47,8 @@ namespace Crowny
         AudioClip(const Ref<DataStream>& stream, uint32_t streamSize, uint32_t numSamples, const AudioClipDesc& desc);
         ~AudioClip() = default;
 
+        virtual void Init() override;
+
         float GetLength() const { return m_Length; }
         uint32_t GetNumSamples() const { return m_NumSamples; }
         const AudioClipDesc& GetDesc() const { return m_Desc; }

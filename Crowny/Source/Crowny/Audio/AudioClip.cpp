@@ -13,7 +13,14 @@ namespace Crowny
                          const AudioClipDesc& desc)
       : m_StreamSize(streamSize), m_StreamData(stream), m_NumSamples(numSamples), m_Desc(desc)
     {
-        m_StreamOffset = (uint32_t)stream->Tell();
+        if (stream != nullptr)
+            m_StreamOffset = (uint32_t)stream->Tell();
+        m_KeepData = desc.KeepSourceData;
+        Init();
+    }
+
+    void AudioClip::Init()
+    {
         AudioDataInfo info;
         info.BitDepth = m_Desc.BitDepth;
         info.NumChannels = m_Desc.NumChannels;
@@ -21,7 +28,6 @@ namespace Crowny
         info.SampleRate = m_Desc.Frequency;
 
         m_Length = m_NumSamples / m_Desc.NumChannels / (float)m_Desc.Frequency;
-        m_KeepData = desc.KeepSourceData;
         if (m_KeepData)
         {
             m_StreamData->Seek(m_StreamOffset);
@@ -60,12 +66,8 @@ namespace Crowny
                 stream->Seek(offset);
                 stream->Read(sampleBuffer, bufferSize);
             }
-            AudioUtils::CheckOpenALErrors("Audio clip", 62);
-            AudioUtils::CheckOpenALErrors("Audio clip", 64);
             alGenBuffers(1, &m_BufferID);
-            AudioUtils::CheckOpenALErrors("Audio clip", 66);
             gAudio().WriteToOpenALBuffer(m_BufferID, sampleBuffer, info);
-            AudioUtils::CheckOpenALErrors("Audio clip", 68);
             m_StreamData = nullptr;
             m_StreamOffset = 0;
             m_StreamSize = 0;
@@ -97,7 +99,6 @@ namespace Crowny
                     CW_ENGINE_ERROR("Audio file stream failed.");
             }
         }
-        AudioUtils::CheckOpenALErrors("Audio clip", 89);
     }
 
     void AudioClip::GetSamples(uint8_t* samples, uint32_t offset, uint32_t count) const

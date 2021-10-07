@@ -187,10 +187,9 @@ namespace Crowny
         slot = m_ResourceInfos[(int)type][seqSlot].Slot;
     }
 
-    void UniformParamInfo::GetBinding(ShaderType type, ParamType paramType, const std::string& name,
-                                      UniformBinding& binding)
+    void UniformParamInfo::GetBinding(ShaderType type, ParamType paramType, const String& name, UniformBinding& binding)
     {
-        auto findBinding = [](auto& paramMap, const std::string& name, UniformBinding& binding) {
+        auto findBinding = [](auto& paramMap, const String& name, UniformBinding& binding) {
             auto iterFind = paramMap.find(name);
             if (iterFind != paramMap.end())
             {

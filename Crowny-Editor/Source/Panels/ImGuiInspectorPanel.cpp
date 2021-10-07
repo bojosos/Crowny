@@ -22,7 +22,7 @@ namespace Crowny
 
     Ref<PBRMaterial> ImGuiInspectorPanel::s_SelectedMaterial = nullptr;
 
-    ImGuiInspectorPanel::ImGuiInspectorPanel(const std::string& name) : ImGuiPanel(name)
+    ImGuiInspectorPanel::ImGuiInspectorPanel(const String& name) : ImGuiPanel(name)
     {
         m_ComponentEditor.RegisterComponent<TransformComponent>("Transform");
         m_ComponentEditor.RegisterComponent<CameraComponent>("Camera");
@@ -76,7 +76,7 @@ namespace Crowny
 
                 if (ImGui::IsItemClicked())
                 {
-                    std::vector<std::string> outPaths;
+                    Vector<String> outPaths;
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
                         Ref<Texture> albedo;
@@ -107,7 +107,7 @@ namespace Crowny
 
                 if (ImGui::IsItemClicked())
                 {
-                    std::vector<std::string> outPaths;
+                    Vector<String> outPaths;
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
                         Ref<Texture> metalness;
@@ -140,7 +140,7 @@ namespace Crowny
 
                 if (ImGui::IsItemClicked())
                 {
-                    std::vector<std::string> outPaths;
+                    Vector<String> outPaths;
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
                         Ref<Texture> normal;
@@ -164,7 +164,7 @@ namespace Crowny
 
                 if (ImGui::IsItemClicked())
                 {
-                    std::vector<std::string> outPaths;
+                    Vector<String> outPaths;
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
                         Ref<Texture> roughness;
@@ -195,7 +195,7 @@ namespace Crowny
 
                 if (ImGui::IsItemClicked())
                 {
-                    std::vector<std::string> outPaths;
+                    Vector<String> outPaths;
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
                         Ref<Texture> ao;
@@ -218,7 +218,7 @@ namespace Crowny
 
             ImGui::Columns(2);
             ImGui::Text("Format");
-            ImGui::SameLine();
+            ImGui::NextColumn();
             const char* formatTexts[2] = { "PCM", "Vorbis" };
             uint32_t formatIndex = (uint32_t)audioClipImport->Format;
             if (ImGui::BeginCombo("##AudioFormat", formatTexts[formatIndex]))
@@ -236,7 +236,7 @@ namespace Crowny
             }
 
             ImGui::Text("Load Mode");
-            ImGui::SameLine();
+            ImGui::NextColumn();
             const char* loadModeTexts[3] = { "Load Decompressed", "Load Compressed", "Stream" };
             uint32_t loadModeIndex = (uint32_t)audioClipImport->ReadMode;
             if (ImGui::BeginCombo("##AudioLoadMode", loadModeTexts[loadModeIndex]))
@@ -254,7 +254,7 @@ namespace Crowny
             }
 
             ImGui::Text("Bit Depth");
-            ImGui::SameLine();
+            ImGui::NextColumn();
             const char* bitDepthTexts[4] = { "8", "16", "24", "32" };
             uint32_t bitDepthIndex = (uint32_t)audioClipImport->BitDepth / 8 - 1;
             if (ImGui::BeginCombo("##AudioBitDepth", loadModeTexts[bitDepthIndex]))
@@ -272,7 +272,7 @@ namespace Crowny
             }
 
             ImGui::Text("3D");
-            ImGui::SameLine();
+            ImGui::NextColumn();
             ImGui::Checkbox("##IsClip3D", &audioClipImport->Is3D);
 
             if (ImGui::Button("Apply"))
@@ -298,10 +298,10 @@ namespace Crowny
 
     void ImGuiInspectorPanel::RenderPrefabInspector() {}
 
-    void ImGuiInspectorPanel::SetSelectedAssetPath(const std::string& filepath)
+    void ImGuiInspectorPanel::SetSelectedAssetPath(const Path& filepath)
     {
         // m_ImportOptions =
-        // ProjectManager::Get().GetActiveProject().GetFileEntry(m_InspectedAssetPath).Meta->GetOptions();
+        // ProjectManager::Get().GetActiveProject().FindEntry(filepath).Meta->GetOptions();
         // m_OldImportOptions = m_ImportOptions->Clone();
     }
 

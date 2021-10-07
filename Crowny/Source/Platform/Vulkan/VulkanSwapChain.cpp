@@ -31,7 +31,7 @@ namespace Crowny
         result = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr);
         CW_ENGINE_ASSERT(result == VK_SUCCESS && presentModeCount > 0);
 
-        std::vector<VkPresentModeKHR> presentModes(presentModeCount);
+        Vector<VkPresentModeKHR> presentModes(presentModeCount);
         result =
           vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes.data());
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
@@ -51,7 +51,6 @@ namespace Crowny
         m_Height = swapChainExtent.height;
 
         VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
-
         if (!vsync)
         {
             for (size_t i = 0; i < presentModeCount; i++)
@@ -78,7 +77,9 @@ namespace Crowny
             }
         }
 
-        uint32_t numOfImages = surfCaps.minImageCount;
+        uint32_t numOfImages = surfCaps.minImageCount + 1;
+        if ((surfCaps.maxImageCount > 0) && numOfImages > surfCaps.maxImageCount)
+            numOfImages = surfCaps.maxImageCount;
 
         VkSurfaceTransformFlagsKHR preTransform;
         if (surfCaps.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
@@ -87,10 +88,10 @@ namespace Crowny
             preTransform = surfCaps.currentTransform;
 
         VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        std::vector<VkCompositeAlphaFlagBitsKHR> compositeAlphaFlags = { VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-                                                                         VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
-                                                                         VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
-                                                                         VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR };
+        Vector<VkCompositeAlphaFlagBitsKHR> compositeAlphaFlags = { VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+                                                                    VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+                                                                    VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+                                                                    VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR };
 
         for (auto& flag : compositeAlphaFlags)
         {

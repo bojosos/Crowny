@@ -11,37 +11,37 @@ namespace Crowny
 
     void ImGuiTextureEditor::Render()
     {
-        const std::vector<const char*> TextureTypes = { "Default", "Normal",   "Sprite",
-                                                        "Cursor",  "Lightmap", "Single channel" };
+        const Vector<const char*> TextureTypes = {
+            "Default", "Normal", "Sprite", "Cursor", "Lightmap", "Single channel"
+        };
         uint32_t SelectedTextureType = 0;
 
-        const std::vector<const char*> TextureShapes = { "2D", "Cube" };
+        const Vector<const char*> TextureShapes = { "2D", "Cube" };
         uint32_t SelectedTextureShape = 0;
 
         bool sRGB = true;
 
-        const std::vector<const char*> AlphaSources = { "From Grayscale", "Input Texture Alpha" };
+        const Vector<const char*> AlphaSources = { "From Grayscale", "Input Texture Alpha" };
         uint32_t m_SelectedAlphaSource = 0;
 
         bool ReadWrite = false;
 
         bool GenerateMipmaps = false;
 
-        const std::vector<const char*> WrapModes = { "Repeat", "Clamp", "Mirror", "Mirror Once" };
+        const Vector<const char*> WrapModes = { "Repeat", "Clamp", "Mirror", "Mirror Once" };
         uint32_t SelectedWrapMode = 0;
 
-        const std::vector<const char*> FilterModes = { "Point", "Bilinear", "Trilinear" };
+        const Vector<const char*> FilterModes = { "Point", "Bilinear", "Trilinear" };
         uint32_t SelectedFilterMode = 0;
 
         uint32_t AnsioLevel;
 
         uint32_t MaxSize;
 
-        const std::vector<const char*> ResizeAlgorithms = { "Mitchell", "Bilinear" };
+        const Vector<const char*> ResizeAlgorithms = { "Mitchell", "Bilinear" };
         uint32_t SelectedResizeAlgorithm = 0;
 
-        const std::vector<const char*> CompressionQualities = { "None", "Low Quality", "Normal Quality",
-                                                                "High Quality" };
+        const Vector<const char*> CompressionQualities = { "None", "Low Quality", "Normal Quality", "High Quality" };
         uint32_t SelectedCompressionQuality = 0;
 
         {
