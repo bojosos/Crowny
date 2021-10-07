@@ -70,8 +70,7 @@ namespace Crowny
         passDesc.Offscreen = false;
         passDesc.Color[0].Format = VK_FORMAT_B8G8R8A8_UNORM;
         passDesc.Color[0].Enabled = true;
-        passDesc.Depth.Enabled = true;
-        passDesc.Depth.Format = VK_FORMAT_D32_SFLOAT_S8_UINT;
+        passDesc.Depth.Enabled = false;
 
         VulkanRenderPass* renderPass = VulkanRenderPasses::Get().GetRenderPass(passDesc);
         ImGui_ImplVulkan_Init(
@@ -110,6 +109,8 @@ namespace Crowny
         VulkanCmdBuffer* vkCmdBuffer = gVulkanRenderAPI().GetMainCommandBuffer()->GetInternal();
 
         RenderAPI::Get().SetRenderTarget(Application::Get().GetRenderWindow());
+        RenderAPI::Get().SetViewport(0, 0, Application::Get().GetWindow().GetWidth(),
+                                     Application::Get().GetWindow().GetHeight());
         gVulkanRenderAPI().GetMainCommandBuffer()->GetInternal()->BeginRenderPass();
         ImGui_ImplVulkan_TransitionLayouts(vkCmdBuffer);
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkCmdBuffer->GetHandle());

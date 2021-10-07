@@ -17,8 +17,8 @@ namespace Crowny
     {
         uint32_t MostDetailedMip;
         uint32_t NumMips;
-        uint32_t FirstArraySlice;
-        uint32_t NumArraySlices;
+        uint32_t FirstFace;
+        uint32_t NumFaces;
         GpuViewUsage Usage;
     };
 
@@ -28,8 +28,8 @@ namespace Crowny
         virtual ~TextureView() = default;
         uint32_t GetMostDetailedMip() const { return m_Desc.MostDetailedMip; }
         uint32_t GetNumMips() const { return m_Desc.NumMips; }
-        uint32_t GetFirstArraySlice() const { return m_Desc.FirstArraySlice; }
-        uint32_t GetNumArraySlices() const { return m_Desc.NumArraySlices; }
+        uint32_t GetFirstFace() const { return m_Desc.FirstFace; }
+        uint32_t GetNumFaces() const { return m_Desc.NumFaces; }
         GpuViewUsage GetUsage() const { return m_Desc.Usage; }
 
         struct HashFunction

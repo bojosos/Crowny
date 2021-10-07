@@ -108,11 +108,11 @@ namespace Crowny
 
     private:
         VulkanDevice& m_Device;
-        std::unordered_set<VulkanLayoutKey, VulkanLayoutKey::HashFunction, VulkanLayoutKey::EqualsFunction> m_Layouts;
-        std::unordered_map<VulkanPipelineLayoutKey, VkPipelineLayout, VulkanPipelineLayoutKey::HashFunction,
-                           VulkanPipelineLayoutKey::EqualsFunction>
+        Set<VulkanLayoutKey, VulkanLayoutKey::HashFunction, VulkanLayoutKey::EqualsFunction> m_Layouts;
+        UnorderedMap<VulkanPipelineLayoutKey, VkPipelineLayout, VulkanPipelineLayoutKey::HashFunction,
+                     VulkanPipelineLayoutKey::EqualsFunction>
           m_PipelineLayouts;
-        std::vector<VulkanDescriptorPool*> m_Pools;
+        Vector<VulkanDescriptorPool*> m_Pools;
     };
 
 } // namespace Crowny

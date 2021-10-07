@@ -26,6 +26,6 @@ namespace Crowny
         static void EndFrame();
         static void Shutdown();
 
-        static std::vector<MeshTran> s_Meshes;
+        static Vector<MeshTran> s_Meshes;
     };
 } // namespace Crowny

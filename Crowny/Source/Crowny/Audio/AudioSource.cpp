@@ -54,7 +54,6 @@ namespace Crowny
         if (m_SavedState == AudioSourceState::Paused)
             Pause();
         gAudio().RegisterSource(this);
-        AudioUtils::CheckOpenALErrors("Audio source", 56);
     }
 
     AudioSource::~AudioSource()
@@ -97,7 +96,7 @@ namespace Crowny
         if (!RequiresStreaming())
         {
             uint32_t oaBuffer = 0;
-            // if (m_AudioClip.IsLoaded())
+            if (m_AudioClip != nullptr)
             {
                 oaBuffer = m_AudioClip->GetOpenALBuffer();
             }
@@ -106,7 +105,6 @@ namespace Crowny
         }
         SetLooping(m_Loop);
         Play();
-        AudioUtils::CheckOpenALErrors("Audio source", 107);
     }
 
     void AudioSource::Play()
@@ -121,7 +119,6 @@ namespace Crowny
             }
         }
         alSourcePlay(m_SourceID);
-        AudioUtils::CheckOpenALErrors("Audio source", 122);
     }
 
     void AudioSource::Pause() { alSourcePause(m_SourceID); }
@@ -217,6 +214,8 @@ namespace Crowny
 
     bool AudioSource::RequiresStreaming() const
     {
+        if (m_AudioClip == nullptr)
+            return false;
         AudioReadMode readMode = m_AudioClip->GetDesc().ReadMode;
         bool isCompressed =
           readMode == AudioReadMode::LoadCompressed && m_AudioClip->GetDesc().Format != AudioFormat::PCM;

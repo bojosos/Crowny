@@ -27,7 +27,7 @@ namespace Crowny
     class ImGuiInspectorPanel : public ImGuiPanel
     {
     public:
-        ImGuiInspectorPanel(const std::string& name);
+        ImGuiInspectorPanel(const String& name);
         ~ImGuiInspectorPanel() = default;
 
         virtual void Render() override;
@@ -39,7 +39,7 @@ namespace Crowny
         static void SetSelectedMaterial(const Ref<PBRMaterial>& material) { s_SelectedMaterial = material; }
 
         void SetInspectorMode(InspectorMode mode);
-        void SetSelectedAssetPath(const std::string& filepath);
+        void SetSelectedAssetPath(const Path& filepath);
 
     private:
         void RenderMaterialInspector();
@@ -58,7 +58,7 @@ namespace Crowny
         InspectorMode m_InspectorMode = InspectorMode::GameObject;
         Ref<ImportOptions> m_ImportOptions;
         Ref<ImportOptions> m_OldImportOptions;
-        std::string m_InspectedAssetPath;
+        String m_InspectedAssetPath;
         ImGuiComponentEditor m_ComponentEditor;
     };
 } // namespace Crowny

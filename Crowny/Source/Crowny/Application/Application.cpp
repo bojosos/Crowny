@@ -35,7 +35,7 @@ namespace Crowny
 
     Application* Application::s_Instance = nullptr;
 
-    Application::Application(const std::string& name)
+    Application::Application(const String& name)
     {
         CW_ENGINE_ASSERT(!s_Instance, "Application already exists!");
         s_Instance = this;

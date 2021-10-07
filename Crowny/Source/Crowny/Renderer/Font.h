@@ -14,28 +14,28 @@ namespace Crowny
     class Font
     {
     public:
-        Font(const std::string& filepath, const std::string& name, float size);
+        Font(const Path& filepath, const String& name, float size);
         ~Font();
 
-        const std::string& GetName() const { return m_Name; }
+        const String& GetName() const { return m_Name; }
         float GetSize() const { return m_Size; }
-        const std::string& GetFilepath() const { return m_Filepath; }
+        const String& GetFilepath() const { return m_Filepath; }
 
         ftgl::texture_font_t* GetFTGLFont() const { return m_Font; }
         ftgl::texture_atlas_t* GetFTGLAtlas() const { return m_Atlas; }
 
         const Ref<Texture> GetTexture() const { return m_Texture; };
 
-        static float GetWidth(const std::string& font, const std::string& text);
-        static float GetHeight(const std::string& font, const std::string& text);
-        static float GetWidth(const Ref<Font>& font, const std::string& text);
-        static float GetHeight(const Ref<Font>& font, const std::string& text);
+        static float GetWidth(const String& font, const String& text);
+        static float GetHeight(const String& font, const String& text);
+        static float GetWidth(const Ref<Font>& font, const String& text);
+        static float GetHeight(const Ref<Font>& font, const String& text);
 
     private:
         ftgl::texture_atlas_t* m_Atlas;
         ftgl::texture_font_t* m_Font;
         float m_Size;
-        std::string m_Name, m_Filepath;
+        String m_Name, m_Filepath;
         Ref<Texture> m_Texture;
     };
 
@@ -43,10 +43,10 @@ namespace Crowny
     {
     public:
         static void Add(const Ref<Font>& font);
-        static Ref<Font> Get(const std::string& name);
-        static Ref<Font> Get(const std::string& name, float size);
+        static Ref<Font> Get(const String& name);
+        static Ref<Font> Get(const String& name, float size);
 
     private:
-        static std::vector<Ref<Font>> s_Fonts;
+        static Vector<Ref<Font>> s_Fonts;
     };
 } // namespace Crowny

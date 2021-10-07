@@ -78,8 +78,7 @@ namespace Crowny
         mutable VkRenderPassCreateInfo m_RenderPassCreateInfo;
 
         VkRenderPass m_DefaultRenderPass;
-        mutable std::unordered_map<VariantKey, VkRenderPass, VariantKey::HashFunction, VariantKey::EqualFunction>
-          m_Variants;
+        mutable UnorderedMap<VariantKey, VkRenderPass, VariantKey::HashFunction, VariantKey::EqualFunction> m_Variants;
         static uint32_t s_NextValidId;
     };
 
@@ -110,8 +109,7 @@ namespace Crowny
         };
 
     private:
-        mutable std::unordered_map<PassVariant, VulkanRenderPass*, PassVariant::HashFunction,
-                                   PassVariant::EqualFunction>
+        mutable UnorderedMap<PassVariant, VulkanRenderPass*, PassVariant::HashFunction, PassVariant::EqualFunction>
           m_Passes;
     };
 

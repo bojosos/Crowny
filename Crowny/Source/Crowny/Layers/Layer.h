@@ -10,7 +10,7 @@ namespace Crowny
     class Layer
     {
     public:
-        Layer(const std::string& name = "Layer");
+        Layer(const String& name = "Layer");
         virtual ~Layer() = default;
 
         virtual void OnAttach() {}
@@ -21,9 +21,9 @@ namespace Crowny
 
         virtual void OnEvent(Event& event) {}
 
-        const std::string& GetName() const { return m_Name; }
+        const String& GetName() const { return m_Name; }
 
     private:
-        std::string m_Name;
+        String m_Name;
     };
 } // namespace Crowny

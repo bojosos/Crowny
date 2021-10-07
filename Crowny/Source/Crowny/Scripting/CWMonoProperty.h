@@ -17,7 +17,7 @@ namespace Crowny
     public:
         CWMonoProperty(MonoProperty* property);
 
-        const std::string& GetName() const { return m_Name; }
+        const String& GetName() const { return m_Name; }
         MonoObject* GetAttribute(CWMonoClass* monoClass) const;
         CWMonoClass* GetReturnType() const;
         bool HasAttribute(CWMonoClass* monoClass) const;
@@ -32,7 +32,7 @@ namespace Crowny
         void InitializeDeferred() const;
 
     private:
-        std::string m_Name;
+        String m_Name;
         MonoProperty* m_Property;
         MonoMethod* m_GetMethod;
         MonoMethod* m_SetMethod;

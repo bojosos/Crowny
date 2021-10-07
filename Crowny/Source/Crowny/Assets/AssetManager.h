@@ -12,29 +12,29 @@ namespace Crowny
     class AssetManager : public Module<AssetManager>
     {
     public:
-        Ref<Asset> Load(const std::string& path, bool keepSourceData = false);
+        Ref<Asset> Load(const Path& path, bool keepSourceData = false);
 
-        template <class T> Ref<T> Load(const std::string& filepath, bool keepSourceData = false)
+        template <class T> Ref<T> Load(const Path& filepath, bool keepSourceData = false)
         {
             return std::static_pointer_cast<T>(Load(filepath, keepSourceData));
         }
 
-        Ref<Asset> LoadFromUUID(const Uuid& uuid, bool keepSourceData = false);
+        Ref<Asset> LoadFromUUID(const UUID& uuid, bool keepSourceData = false);
 
         void Save(const Ref<Asset>& resource); // TODO: Compression
-        void Save(const Ref<Asset>& resource, const std::string& filepath);
+        void Save(const Ref<Asset>& resource, const Path& filepath);
 
     private:
-        Ref<Asset> Load(const Uuid& uuid, const std::string& filepath, bool keepSourceData);
-        void GetFilepathFromUuid(const Uuid& uuid, std::string& outFilepath);
-        bool GetUuidFromFilepath(const std::string& filepath, Uuid& outUuid);
+        Ref<Asset> Load(const UUID& uuid, const Path& filepath, bool keepSourceData);
+        void GetFilepathFromUUID(const UUID& uuid, Path& outFilepath);
+        bool GetUUIDFromFilepath(const Path& filepath, UUID& outUUID);
 
     private:
-        std::unordered_map<std::string, Ref<AssetManifest>> m_Manifests;
+        Vector<Ref<AssetManifest>> m_Manifests;
 
     public:
-        Ref<Asset> Import(const std::string& filepath, const Ref<ImportOptions>& importOptions, const Uuid& uuid);
-        Ref<AssetManifest>& ImportManifest(const std::string& path, const std::string& name);
-        Ref<AssetManifest>& CreateManifest(const std::string& path, const std::string& name);
+        Ref<Asset> Import(const Path& filepath, const Ref<ImportOptions>& importOptions, const UUID& uuid);
+        Ref<AssetManifest>& ImportManifest(const Path& path, const String& name);
+        Ref<AssetManifest>& CreateManifest(const Path& path, const String& name);
     };
 } // namespace Crowny

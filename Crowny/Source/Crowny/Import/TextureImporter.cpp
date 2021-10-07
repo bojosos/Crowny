@@ -11,9 +11,9 @@
 namespace Crowny
 {
 
-    // bool IsFileTypeSupported(const std::string& ext)
+    // bool IsFileTypeSupported(const String& ext)
     // {
-    // std::string lower = ext;
+    // String lower = ext;
     // StringUtils::ToLower(lower);
     // return lower == "png" || lower == "jpeg" || lower == "psd"
     // || lower == "gif" || lower == "tga" || lower == "bmp" || lower == "hdr";
@@ -22,8 +22,7 @@ namespace Crowny
     // Importer currently only supports 32-bit 1,3,4-channel images
     // Going to switch to FreeImage soon
     template <>
-    Ref<Texture> Importer::Import(const std::string& filepath, const Ref<ImportOptions>& importOptions,
-                                  const Uuid& uuid)
+    Ref<Texture> Importer::Import(const Path& filepath, const Ref<ImportOptions>& importOptions, const UUID& uuid)
     {
         Ref<const TextureImportOptions> textureImportOptions =
           std::static_pointer_cast<const TextureImportOptions>(importOptions);

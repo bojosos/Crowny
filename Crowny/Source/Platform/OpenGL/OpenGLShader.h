@@ -11,22 +11,22 @@ namespace Crowny
     class OpenGLShader : public Shader
     {
     public:
-        OpenGLShader(const std::string& name, const std::string& vertSrc, const std::string& fragSrc);
-        OpenGLShader(const std::string& filepath);
+        OpenGLShader(const String& name, const String& vertSrc, const String& fragSrc);
+        OpenGLShader(const Path& filepath);
         OpenGLShader(const BinaryShaderData& data) {}
         ~OpenGLShader();
 
         virtual const Ref<UniformDesc>& GetUniformDesc() const override { return m_UniformDesc; }
 
     private:
-        void Load(const std::string& path);
-        std::unordered_map<uint32_t, std::string> ShaderPreProcess(const std::string& source);
-        void Compile(const std::unordered_map<uint32_t, std::string>& shaderSources);
+        void Load(const Path& path);
+        UnorderedMap<uint32_t, String> ShaderPreProcess(const String& source);
+        void Compile(const UnorderedMap<uint32_t, String>& shaderSources);
 
     private:
         Ref<UniformDesc> m_UniformDesc;
-        std::string m_Filepath;
-        std::string m_Name;
+        String m_Filepath;
+        String m_Name;
         uint32_t m_RendererID;
     };
 

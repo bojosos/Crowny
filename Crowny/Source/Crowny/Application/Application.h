@@ -15,7 +15,7 @@ namespace Crowny
     class Application
     {
     public:
-        Application(const std::string& name);
+        Application(const String& name);
         ~Application();
 
         void OnEvent(Event& event);

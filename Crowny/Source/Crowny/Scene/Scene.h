@@ -18,22 +18,21 @@ namespace Crowny
     class Scene
     {
     public:
-        Scene(const std::string& name = std::string());
-        Scene(const Scene& other) = delete;
-        Scene& operator=(const Scene& other) { return *this; }
+        Scene(const String& name = String());
+        Scene(Scene& other);
+        Scene& operator=(Scene& other);
         ~Scene();
 
         void OnViewportResize(uint32_t width, uint32_t height);
 
-        Entity CreateEntity(const std::string& name = "");
-        Entity CreateEntity(const Uuid& uuid, const std::string& name);
-        Entity GetEntity(const Uuid& uuid);
-        Entity FindEntityByName(const std::string& name);
+        Entity CreateEntity(const String& name = "");
+        Entity CreateEntityWithUuid(const UUID& uuid, const String& name);
+        Entity FindEntityByName(const String& name);
         Entity GetRootEntity();
-        Uuid& GetUuid(Entity entity);
+        Entity GetEntityFromUuid(const UUID& uuid);
 
-        const std::string& GetName() const { return m_Name; }
-        const std::string& GetFilepath() const { return m_Filepath; }
+        const String& GetName() const { return m_Name; }
+        const String& GetFilepath() const { return m_Filepath; }
 
         friend class ImGuiComponentEditor;
         friend class SceneRenderer;
@@ -42,14 +41,11 @@ namespace Crowny
         friend class ScriptRuntime;
 
     private:
-        bool m_HasChanged = true;
-        std::string m_Name;
-        std::string m_Filepath;
+        String m_Name;
+        String m_Filepath;
         entt::registry m_Registry;
         uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
 
-        std::unordered_map<Uuid, Entity>* m_Entities;
-        std::unordered_map<Entity, Uuid>* m_Uuids;
         Entity* m_RootEntity;
     };
 } // namespace Crowny

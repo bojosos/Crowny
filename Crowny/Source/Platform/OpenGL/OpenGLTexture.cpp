@@ -205,8 +205,8 @@ TextureSwizzleColorToOpenGLSwizzleColor(m_Parameters.Swizzle.Swizzle[0]));
 #endif
     }
 
-    OpenGLTexture2D::OpenGLTexture2D(const std::string& filepath, const TextureParameters& parameters, const
-std::string& name) : m_FilePath(filepath), m_Parameters(parameters), m_Name(name)
+    OpenGLTexture2D::OpenGLTexture2D(const Path& filepath, const TextureParameters& parameters, const
+String& name) : m_FilePath(filepath), m_Parameters(parameters), m_Name(name)
     {
         int width, height, channels;
         stbi_set_flip_vertically_on_load(1);

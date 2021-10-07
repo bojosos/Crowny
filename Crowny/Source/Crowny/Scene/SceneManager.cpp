@@ -6,7 +6,7 @@
 namespace Crowny
 {
     uint32_t SceneManager::s_ActiveIndex;
-    std::vector<Ref<Scene>> SceneManager::s_Scenes;
+    Vector<Ref<Scene>> SceneManager::s_Scenes;
 
     Ref<Scene> SceneManager::GetActiveScene() { return s_Scenes[s_ActiveIndex]; }
 

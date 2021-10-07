@@ -35,7 +35,7 @@ namespace Crowny
     class ImGuiAssetBrowserPanel : public ImGuiPanel
     {
     public:
-        ImGuiAssetBrowserPanel(const std::string& name);
+        ImGuiAssetBrowserPanel(const String& name);
         ~ImGuiAssetBrowserPanel() = default;
 
         virtual void Render() override;
@@ -44,27 +44,27 @@ namespace Crowny
         virtual void Hide() override;
 
     private:
-        void ShowContextMenuContents(const std::string& filepath = "");
+        void ShowContextMenuContents(const Path& filepath = "");
         void DrawHeader();
         void DrawFiles();
         void CreateNew(AssetBrowserItem itemType);
-        std::string GetDefaultContents(AssetBrowserItem itemType);
+        String GetDefaultContents(AssetBrowserItem itemType);
 
     private:
         ImTextureID m_FolderIcon;
         ImTextureID m_FileIcon;
 
-        std::unordered_map<std::string, Ref<Texture>> m_Textures; // For showing the textures in the asset browser.
-        std::unordered_set<std::string> m_SelectedFiles;
+        UnorderedMap<String, Ref<Texture>> m_Textures; // For showing the textures in the asset browser.
+        Set<String> m_SelectedFiles;
         std::filesystem::path m_PreviousDirectory;
         std::filesystem::path m_CurrentDirectory;
 
-        std::string m_CsDefaultText;
+        String m_CsDefaultText;
 
         FileSortingMode m_FileSortingMode = FileSortingMode::SortBySize;
         float m_Padding = 12.0f;
         float m_ThumbnailSize = DEFAULT_ASSET_THUMBNAIL_SIZE;
-        std::string m_Filename;
+        String m_Filename;
         AssetBrowserItem m_RenamingType;
         std::filesystem::path m_RenamingPath;
     };

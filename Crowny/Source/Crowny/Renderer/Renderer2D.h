@@ -108,8 +108,7 @@ namespace Crowny
          * @param font Font to use.
          * @param color Color draw with.
          */
-        static void DrawString(const std::string& text, float x, float y, const Ref<Font>& font,
-                               const glm::vec4& color);
+        static void DrawString(const String& text, float x, float y, const Ref<Font>& font, const glm::vec4& color);
 
         /**
          * @brief Draws a string on the screen.
@@ -119,7 +118,7 @@ namespace Crowny
          * @param font Font to use.
          * @param color Color to draw with.
          */
-        static void DrawString(const std::string& text, const glm::mat4& transform, const Ref<Font>& font,
+        static void DrawString(const String& text, const glm::mat4& transform, const Ref<Font>& font,
                                const glm::vec4& color);
 
         /**

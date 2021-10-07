@@ -83,7 +83,7 @@ namespace Crowny
         /// auto& manifest = AssetManager::Get().ImportManifest("Sandbox.yaml", "Sandbox");
         // AssetManifest("Sandbox").Serialize("Sandbox.yaml");
 
-        Uuid uuid;
+        UUID uuid;
         Ref<AudioClipImportOptions> importOptions = CreateRef<AudioClipImportOptions>();
         Ref<AudioClip> resource = Importer::Get().Import<AudioClip>("Resources/Audio/test.ogg", importOptions, uuid);
         AssetManager::Get().Save(resource, "Resources/Audio/test.asset");
@@ -164,14 +164,14 @@ namespace Crowny
 
     void EditorLayer::OpenScene()
     {
-        std::vector<std::string> outPaths;
+        Vector<String> outPaths;
         if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
         {
             OpenScene(outPaths[0]);
         }
     }
 
-    void EditorLayer::OpenScene(const std::string& filepath)
+    void EditorLayer::OpenScene(const Path& filepath)
     {
         m_Temp = CreateRef<Scene>();
         SceneSerializer serializer(m_Temp);
@@ -181,7 +181,7 @@ namespace Crowny
 
     void EditorLayer::SaveActiveSceneAs()
     {
-        std::vector<std::string> outPaths;
+        Vector<String> outPaths;
         if (FileSystem::OpenFileDialog(FileDialogType::SaveFile, "", "", outPaths))
         {
             SceneSerializer serializer(SceneManager::GetActiveScene());

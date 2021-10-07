@@ -13,11 +13,11 @@ namespace Crowny
         static void Shutdown();
         /*
         static Scene& LoadScene(uint32_t buildIndex);
-        static Scene& LoadScene(const std::string& name);
+        static Scene& LoadScene(const String& name);
         */
     private:
         static uint32_t s_ActiveIndex;
-        static std::vector<Ref<Scene>> s_Scenes;
+        static Vector<Ref<Scene>> s_Scenes;
         friend class Scene;
     };
 } // namespace Crowny

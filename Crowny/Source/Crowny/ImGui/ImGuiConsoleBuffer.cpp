@@ -4,7 +4,7 @@
 
 namespace Crowny
 {
-    std::vector<Ref<ImGuiConsoleBuffer::Message>> ImGuiConsoleBuffer::s_MessageBuffer;
+    Vector<Ref<ImGuiConsoleBuffer::Message>> ImGuiConsoleBuffer::s_MessageBuffer;
     bool ImGuiConsoleBuffer::s_HasNewMessages = true;
 
     void ImGuiConsoleBuffer::AddMessage(const Ref<Message>& message)
@@ -17,14 +17,12 @@ namespace Crowny
 
     void ImGuiConsoleBuffer::Clear() { s_MessageBuffer.clear(); }
 
-    std::vector<ImGuiConsoleBuffer::Message::Level> ImGuiConsoleBuffer::Message::s_Levels{
+    Vector<ImGuiConsoleBuffer::Message::Level> ImGuiConsoleBuffer::Message::s_Levels{
         ImGuiConsoleBuffer::Message::Level::Info, ImGuiConsoleBuffer::Message::Level::Warn,
         ImGuiConsoleBuffer::Message::Level::Error, ImGuiConsoleBuffer::Message::Level::Critical
     };
 
-    ImGuiConsoleBuffer::Message::Message(const std::string& message, Level level) : m_Message(message), m_Level(level)
-    {
-    }
+    ImGuiConsoleBuffer::Message::Message(const String& message, Level level) : m_Message(message), m_Level(level) {}
 
     const char* ImGuiConsoleBuffer::Message::GetLevelName(Level level)
     {

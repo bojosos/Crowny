@@ -8,21 +8,21 @@
 
 namespace Crowny
 {
-    const std::string EditorAssets::UnassignedTexture = "/Textures/Unassigned.png";
-    const std::string EditorAssets::PlayIcon = "/Icons/Play.png";
-    const std::string EditorAssets::PauseIcon = "/Icons/Pause.png";
-    const std::string EditorAssets::StopIcon = "/Icons/Stop.png";
-    const std::string EditorAssets::FileIcon = "/Icons/File.png";
-    const std::string EditorAssets::FolderIcon = "/Icons/Folder.png";
+    const String EditorAssets::UnassignedTexture = "/Textures/Unassigned.png";
+    const String EditorAssets::PlayIcon = "/Icons/Play.png";
+    const String EditorAssets::PauseIcon = "/Icons/Pause.png";
+    const String EditorAssets::StopIcon = "/Icons/Stop.png";
+    const String EditorAssets::FileIcon = "/Icons/File.png";
+    const String EditorAssets::FolderIcon = "/Icons/Folder.png";
 
-    const std::string EditorAssets::DefaultScriptPath = "Resources/Default/DefaultScript.cs";
+    const String EditorAssets::DefaultScriptPath = "Resources/Default/DefaultScript.cs";
 
     EditorAssetsLibrary EditorAssets::s_Library;
 
     void EditorAssets::Load()
     {
         Ref<ImportOptions> importOptions = CreateRef<TextureImportOptions>();
-        Uuid uuid;
+        UUID uuid;
         s_Library.UnassignedTexture = Importer::Get().Import<Texture>(UnassignedTexture, importOptions, uuid);
         s_Library.PlayIcon = Importer::Get().Import<Texture>(PlayIcon, importOptions, uuid);
         s_Library.StopIcon = Importer::Get().Import<Texture>(StopIcon, importOptions, uuid);

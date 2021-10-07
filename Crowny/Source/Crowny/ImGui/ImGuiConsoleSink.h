@@ -11,7 +11,7 @@ namespace Crowny
     public:
         explicit ImGuiConsoleSink(bool forceFlush = false, uint8_t capacity = 10)
           : m_MessageBufferCapacity(forceFlush ? 1 : capacity),
-            m_MessageBuffer(std::vector<Ref<ImGuiConsoleBuffer::Message>>(forceFlush ? 1 : capacity))
+            m_MessageBuffer(Vector<Ref<ImGuiConsoleBuffer::Message>>(forceFlush ? 1 : capacity))
         {
         }
 
@@ -58,7 +58,7 @@ namespace Crowny
     private:
         uint8_t m_MessagesBuffered = 0;
         uint8_t m_MessageBufferCapacity;
-        std::vector<Ref<ImGuiConsoleBuffer::Message>> m_MessageBuffer;
+        Vector<Ref<ImGuiConsoleBuffer::Message>> m_MessageBuffer;
     };
 } // namespace Crowny
 

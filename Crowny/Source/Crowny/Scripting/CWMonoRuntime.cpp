@@ -41,7 +41,7 @@ namespace Crowny
         CW_ENGINE_ERROR("Mono error: {0}", message);
     }
 
-    bool CWMonoRuntime::Init(const std::string& domainName)
+    bool CWMonoRuntime::Init(const String& domainName)
     {
         mono_debug_init(MONO_DEBUG_FORMAT_MONO);
         s_Instance = new CWMonoRuntime();
@@ -68,7 +68,7 @@ namespace Crowny
         return s_Instance->m_Domain != nullptr;
     }
 
-    void CWMonoRuntime::LoadAssemblies(const std::string& directory)
+    void CWMonoRuntime::LoadAssemblies(const String& directory)
     {
         s_Instance->m_Assemblies.resize(ASSEMBLY_COUNT);
         s_Instance->m_Assemblies[CROWNY_ASSEMBLY_INDEX] = new CWMonoAssembly(directory, CROWNY_ASSEMBLY);

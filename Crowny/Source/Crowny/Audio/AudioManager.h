@@ -11,7 +11,7 @@ namespace Crowny
 
     struct AudioDevice
     {
-        std::string Name;
+        String Name;
     };
 
     class AudioManager : public Module<AudioManager>
@@ -25,7 +25,7 @@ namespace Crowny
         bool IsPaused() const { return m_IsPaused; }
         void SetActiveDevice(const AudioDevice& device);
         const AudioDevice& GetDefaultDevice() const { return m_DefaultDevice; }
-        const std::vector<AudioDevice>& GetAllDevices() const { return m_Devices; }
+        const Vector<AudioDevice>& GetAllDevices() const { return m_Devices; }
         void WriteToOpenALBuffer(uint32_t bufferId, uint8_t* samples, const AudioDataInfo& info);
 
         ALCdevice* GetDevice() { return m_Device; }
@@ -40,8 +40,12 @@ namespace Crowny
         void RegisterSource(AudioSource* source);
         void UnregisterSource(AudioSource* source);
 
+        void Play(const Ref<AudioClip>& clip, const glm::vec3& position = glm::vec3(0.0f), float volume = 1.0f);
+        void OnUpdate();
+        void StopManualSources();
+
     private:
-        bool IsExtSupported(const std::string& ext) const;
+        bool IsExtSupported(const String& ext) const;
         ALCcontext* GetContext() const;
 
     private:
@@ -49,13 +53,16 @@ namespace Crowny
         bool m_IsPaused = false;
 
         ALCdevice* m_Device = nullptr;
-        std::vector<AudioDevice> m_Devices;
+        Vector<AudioDevice> m_Devices;
         AudioDevice m_DefaultDevice;
         AudioDevice m_ActiveDevice;
 
         AudioListener* m_Listener = nullptr;
         ALCcontext* m_Context = nullptr;
-        std::unordered_set<AudioSource*> m_Sources;
+        Set<AudioSource*> m_Sources;
+
+        Vector<Ref<AudioSource>> m_ManualSources;
+        Vector<Ref<AudioSource>> m_TempSources;
     };
 
     AudioManager& gAudio();

@@ -19,7 +19,7 @@ namespace Crowny
         virtual uint32_t GetWidth() const override { return m_Data.Width; }
         virtual uint32_t GetHeight() const override { return m_Data.Height; }
         virtual bool GetVSync() const override { return m_Data.VSync; };
-        virtual const std::string& GetTitle() const override { return m_Data.Title; }
+        virtual const String& GetTitle() const override { return m_Data.Title; }
 
         virtual void SetCursor(Cursor cursor) override;
 
@@ -40,7 +40,7 @@ namespace Crowny
 
         struct WindowData
         {
-            std::string Title;
+            String Title;
             uint32_t Width, Height;
             bool VSync;
             EventCallbackFn EventCallback;

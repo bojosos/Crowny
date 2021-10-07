@@ -14,11 +14,11 @@ namespace Crowny
 
         uint32_t numQueueFamilies;
         vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &numQueueFamilies, nullptr);
-        std::vector<VkQueueFamilyProperties> queueFamilyProperties(numQueueFamilies);
+        Vector<VkQueueFamilyProperties> queueFamilyProperties(numQueueFamilies);
         vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &numQueueFamilies, queueFamilyProperties.data());
 
         const float defaultQueuePrios[MAX_QUEUES_PER_TYPE] = { 0.0f };
-        std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+        Vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 
         auto populateQueueInfo = [&](GpuQueueType type, uint32_t familyIdx) {
             queueCreateInfos.push_back(VkDeviceQueueCreateInfo());
@@ -179,7 +179,7 @@ namespace Crowny
         VkResult result = vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, surface, &formatCount, nullptr);
         CW_ENGINE_ASSERT(result == VK_SUCCESS && formatCount > 0);
 
-        std::vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
+        Vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
         result = vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, surface, &formatCount, surfaceFormats.data());
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
@@ -209,9 +209,9 @@ namespace Crowny
             }
         }
 
-        std::vector<VkFormat> depthFormats = { VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT,
-                                               VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D16_UNORM_S8_UINT,
-                                               VK_FORMAT_D16_UNORM };
+        Vector<VkFormat> depthFormats = { VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT,
+                                          VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D16_UNORM_S8_UINT,
+                                          VK_FORMAT_D16_UNORM };
         VkBool32 validDepthFormat = false;
         for (auto& format : depthFormats)
         {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/Uuid.h"
 #include "Crowny/Scene/Scene.h"
 
 #include <entt/entt.hpp>
@@ -10,6 +11,8 @@ namespace Crowny
     class ImGuiHierarchyWindow;
     class ScriptableEntity;
 
+    class TransformComponent;
+
     class Entity
     {
     public:
@@ -19,7 +22,13 @@ namespace Crowny
 
         template <typename T, typename... Args> T& AddComponent(Args&&... args) const
         {
+            CW_ENGINE_ASSERT(!HasComponent<T>());
             return m_Scene->m_Registry.emplace<T>(m_EntityHandle, std::forward<Args>(args)...);
+        }
+
+        template <typename T, typename... Args> T& AddOrReplaceComponent(Args&&... args) const
+        {
+            return m_Scene->m_Registry.emplace_or_replace<T>(m_EntityHandle, std::forward<Args>(args)...);
         }
 
         template <typename T> T& GetComponent() const { return m_Scene->m_Registry.get<T>(m_EntityHandle); }
@@ -34,7 +43,7 @@ namespace Crowny
 
         void AddChild(Entity entity);
         Entity GetChild(uint32_t index) const;
-        const std::vector<Entity>& GetChildren() const;
+        const Vector<Entity>& GetChildren() const;
         uint32_t GetChildCount() const;
         Entity GetParent() const;
         void SetParent(Entity entity);
@@ -46,6 +55,10 @@ namespace Crowny
             return m_EntityHandle == other.m_EntityHandle; //&& m_Scene == other.m_Scene;
         }
 
+        // Helpers
+        const UUID& GetUuid() const;
+        const TransformComponent& GetTransform() const;
+        const String& GetName() const;
         operator bool() const { return IsValid(); }
 
         friend class ImGuiComponentEditor;

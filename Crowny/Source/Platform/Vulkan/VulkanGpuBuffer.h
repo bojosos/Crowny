@@ -48,7 +48,7 @@ namespace Crowny
         void DestroyUnusedViews();
 
         VkBuffer m_Buffer;
-        std::vector<ViewInfo> m_Views;
+        Vector<ViewInfo> m_Views;
         uint32_t m_RowPitch;
         uint32_t m_SliceHeight;
         VmaAllocation m_Allocation;

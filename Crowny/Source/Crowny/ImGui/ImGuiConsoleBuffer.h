@@ -18,26 +18,26 @@ namespace Crowny
             };
 
         public:
-            Message(const std::string& message = "", Level level = Level::Invalid);
+            Message(const String& message = "", Level level = Level::Invalid);
             static const char* GetLevelName(Level level);
 
         public:
-            const std::string& GetMessage() const { return m_Message; }
+            const String& GetMessage() const { return m_Message; }
             Level GetLevel() const { return m_Level; }
 
         private:
-            std::string m_Message;
+            String m_Message;
             Level m_Level;
 
         public:
-            static std::vector<Level> s_Levels;
+            static Vector<Level> s_Levels;
         };
 
     public:
         ~ImGuiConsoleBuffer() = default;
         static void AddMessage(const Ref<Message>& message);
         static void Clear();
-        static std::vector<Ref<Message>> GetBuffer()
+        static Vector<Ref<Message>> GetBuffer()
         {
             s_HasNewMessages = false;
             return s_MessageBuffer;
@@ -49,6 +49,6 @@ namespace Crowny
 
     private:
         static bool s_HasNewMessages;
-        static std::vector<Ref<Message>> s_MessageBuffer;
+        static Vector<Ref<Message>> s_MessageBuffer;
     };
 } // namespace Crowny

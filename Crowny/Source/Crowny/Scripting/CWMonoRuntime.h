@@ -36,10 +36,10 @@ namespace Crowny
     class CWMonoRuntime
     {
     public:
-        static bool Init(const std::string& domainName);
+        static bool Init(const String& domainName);
         static void Shutdown();
 
-        static void LoadAssemblies(const std::string& directory);
+        static void LoadAssemblies(const String& directory);
 
         static CWMonoAssembly* GetCrownyAssembly() { return s_Instance->m_Assemblies[CROWNY_ASSEMBLY_INDEX]; }
         static CWMonoAssembly* GetClientAssembly() { return s_Instance->m_Assemblies[CLIENT_ASSEMBLY_INDEX]; }
@@ -51,7 +51,7 @@ namespace Crowny
     private:
         static CWMonoRuntime* s_Instance;
         BuiltinScriptClasses m_BuiltinScriptClasses;
-        std::vector<CWMonoAssembly*> m_Assemblies;
+        Vector<CWMonoAssembly*> m_Assemblies;
         MonoDomain* m_Domain;
     };
 

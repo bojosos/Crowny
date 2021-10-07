@@ -22,16 +22,16 @@ namespace Crowny
         static void Unload();
         static EditorAssetsLibrary Get() { return s_Library; }
 
-        static const std::string DefaultScriptPath;
+        static const String DefaultScriptPath;
 
     private:
-        static const std::string UnassignedTexture;
-        static const std::string PlayIcon;
-        static const std::string PauseIcon;
-        static const std::string StopIcon;
+        static const String UnassignedTexture;
+        static const String PlayIcon;
+        static const String PauseIcon;
+        static const String StopIcon;
 
-        static const std::string FileIcon;
-        static const std::string FolderIcon;
+        static const String FileIcon;
+        static const String FolderIcon;
 
         static EditorAssetsLibrary s_Library;
     };

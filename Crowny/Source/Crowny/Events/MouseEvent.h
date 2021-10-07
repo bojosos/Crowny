@@ -14,9 +14,9 @@ namespace Crowny
         float GetX() { return m_MouseX; }
         float GetY() { return m_MouseY; }
 
-        std::string ToString() const override
+        String ToString() const override
         {
-            std::stringstream ss;
+            Stringstream ss;
             ss << "MouseMovedEvent: " << m_MouseX << ", " << m_MouseY;
             return ss.str();
         }
@@ -36,9 +36,9 @@ namespace Crowny
         float GetXOffset() const { return m_XOffset; }
         float GetYOffset() const { return m_YOffset; }
 
-        std::string ToString() const override
+        String ToString() const override
         {
-            std::stringstream ss;
+            Stringstream ss;
             ss << "MouseScrolledEvent: " << GetXOffset() << ", " << GetYOffset();
             return ss.str();
         }
@@ -68,9 +68,9 @@ namespace Crowny
     public:
         MouseButtonPressedEvent(const MouseCode button) : MouseButtonEvent(button) {}
 
-        std::string ToString() const override
+        String ToString() const override
         {
-            std::stringstream ss;
+            Stringstream ss;
             ss << "MouseButtonPressedEvent: " << m_Button;
             return ss.str();
         }
@@ -83,9 +83,9 @@ namespace Crowny
     public:
         MouseButtonReleasedEvent(const MouseCode button) : MouseButtonEvent(button) {}
 
-        std::string ToString() const override
+        String ToString() const override
         {
-            std::stringstream ss;
+            Stringstream ss;
             ss << "MouseButtonReleasedEvent: " << m_Button;
             return ss.str();
         }

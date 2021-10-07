@@ -3,12 +3,6 @@
 namespace Crowny
 {
 
-    enum class StringEncoding
-    {
-        UTF8,
-        UTF16
-    };
-
     class DataStream
     {
     public:
@@ -30,8 +24,7 @@ namespace Crowny
         virtual bool IsFile() const = 0;
         virtual size_t Read(void* buf, size_t count) const = 0;
         virtual size_t Write(const void* buf, size_t count) { return 0; }
-        virtual void WriteString(const std::string& string, StringEncoding encoding = StringEncoding::UTF8);
-        virtual std::string GetAsString();
+        virtual String GetAsString();
 
         virtual void Skip(size_t count) = 0;
         virtual void Seek(size_t pos) = 0;
@@ -39,6 +32,8 @@ namespace Crowny
         size_t Size() const { return m_Size; }
         virtual void Close() = 0;
         virtual bool Eof() const = 0;
+
+        virtual Ref<DataStream> Clone(bool copyData = true) const = 0;
 
     protected:
         static const uint32_t StreamTempSize;
@@ -72,6 +67,8 @@ namespace Crowny
         virtual void Close() override;
         virtual bool Eof() const override;
 
+        virtual Ref<DataStream> Clone(bool copyData = true) const override;
+
     private:
         void Reallocate(size_t bytes);
         uint8_t* m_Data = nullptr;
@@ -95,6 +92,7 @@ namespace Crowny
         virtual bool Eof() const override;
 
         virtual void Close() override;
+        virtual Ref<DataStream> Clone(bool copyData = true) const override;
 
     private:
         std::filesystem::path m_Path;

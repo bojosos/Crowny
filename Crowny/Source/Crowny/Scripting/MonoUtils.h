@@ -40,8 +40,8 @@ namespace Crowny
         static void CheckException(MonoObject* exception);
 
         static bool IsEnum(MonoClass* monoClass);
-        static std::string FromMonoString(MonoString* value);
-        static MonoString* ToMonoString(const std::string& value);
+        static String FromMonoString(MonoString* value);
+        static MonoString* ToMonoString(const String& value);
         static MonoType* GetType(MonoClass* monoClass);
 
         static uint32_t NewGCHandle(MonoObject* object, bool pinned);

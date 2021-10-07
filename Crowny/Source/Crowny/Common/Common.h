@@ -12,7 +12,7 @@
 #define CW_DEBUGBREAK() __debugbreak()
 #elif defined(CW_PLATFORM_LINUX)
 //#define CW_DEBUGBREAK() __builtin_trap()
-#define CW_DEBUGBREAK() asm("int $3") // it's 2021..... we deserve better
+#define CW_DEBUGBREAK() asm("int $3")
 #endif
 
 #if defined(__clang__)
@@ -30,25 +30,33 @@
 #define CW_BIND_EVENT_FN(fn)                                                                                           \
     [this](auto&&... args) -> decltype(auto) { return this->fn(std::forward<decltype(args)>(args)...); }
 
+class BinaryDataStreamInputArchive;
+class BinaryDataStreamOutputArchive;
+
 namespace Crowny
 {
+
+#define CW_SERIALIZABLE(...)                                                                                           \
+    friend void Save(BinaryDataStreamOutputArchive& ar, const __VA_ARGS__& asset);                                     \
+    friend void Load(BinaryDataStreamInputArchive& ar, __VA_ARGS__& asset);
 
     constexpr void HashCombine(std::size_t& seed) {}
 
     /**
      * @brief Hashes multiple variables of the same type and combines their hashes.
      *
-     * @tparam Type
-     * @tparam Rest
-     * @param seed Output seed.
-     * @param v First value to hash.
+     * @tparam Type of the first value.
+     * @tparam Types of the rest of the values.
+     * @param outSeed Output seed.
+     * @param value First value to hash.
      * @param rest The rest of the values to hash.
      */
-    template <typename T, typename... Rest> constexpr void HashCombine(std::size_t& seed, const T& v, Rest... rest)
+    template <typename T, typename... Rest>
+    constexpr void HashCombine(std::size_t& outSeed, const T& value, Rest... rest)
     {
         std::hash<T> hasher;
-        seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-        HashCombine(seed, rest...);
+        outSeed ^= hasher(value) + 0x9e3779b9 + (outSeed << 6) + (outSeed >> 2);
+        HashCombine(outSeed, rest...);
     }
 
     /**
@@ -58,34 +66,10 @@ namespace Crowny
      * @param Value.
      * @return size_t hash of the variable.
      */
-    template <typename T> constexpr size_t Hash(const T& v)
+    template <typename T> constexpr size_t Hash(const T& value)
     {
         std::hash<T> hasher;
-        return hasher(v);
-    }
-
-    template <typename T> using Scope = std::unique_ptr<T>;
-
-    /**
-     * @brief Creates a unique pointer.
-     *
-     * @tparam Smart pointer type.
-     */
-    template <typename T, typename... Args> constexpr Scope<T> CreateScope(Args&&... args)
-    {
-        return std::make_unique<T>(std::forward<Args>(args)...);
-    }
-
-    template <typename T> using Ref = std::shared_ptr<T>;
-
-    /**
-     * @brief Creates a shared pointer.
-     *
-     * @tparam Smart pointer type.
-     */
-    template <typename T, typename... Args> constexpr Ref<T> CreateRef(Args&&... args)
-    {
-        return std::make_shared<T>(std::forward<Args>(args)...);
+        return hasher(value);
     }
 
     template <class T> void Cw_ZeroOut(T& s) { std::memset(&s, 0, sizeof(T)); }

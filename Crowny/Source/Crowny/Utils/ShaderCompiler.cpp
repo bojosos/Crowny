@@ -41,7 +41,7 @@ namespace Crowny
         }
     }
 
-    static std::string ShaderFormatToExtension(ShaderOutputFormat shaderFormat)
+    static String ShaderFormatToExtension(ShaderOutputFormat shaderFormat)
     {
         switch (shaderFormat)
         {
@@ -55,10 +55,10 @@ namespace Crowny
             return "d3d";
         }
 
-        return std::string();
+        return String();
     }
 
-    static std::string ShaderTypeToString(ShaderType shaderType)
+    static String ShaderTypeToString(ShaderType shaderType)
     {
         switch (shaderType)
         {
@@ -75,7 +75,7 @@ namespace Crowny
         case COMPUTE_SHADER:
             return "compute";
         default:
-            return std::string();
+            return String();
         }
     }
 
@@ -118,29 +118,42 @@ namespace Crowny
         return TEXTURE_UNKNOWN;
     }
 
-    static std::string ShaderTypeToPath(ShaderType shaderType, const std::string& filename,
-                                        ShaderOutputFormat outputFormat)
+    static String ShaderTypeToPath(ShaderType shaderType, const String& filename, ShaderOutputFormat outputFormat)
     {
         return CachePath /
                (filename + "." + ShaderTypeToString(shaderType) + "." + ShaderFormatToExtension(outputFormat));
     }
 
-    ShaderCompiler::ShaderCompiler(ShaderInputLanguage inputLanguage, ShaderOutputFormat outputFormat)
-      : m_InputLanguage(inputLanguage), m_OutputFormat(outputFormat)
+    static ShaderType GetShaderTypeFromString(const String& type)
     {
+        if (type == "vertex")
+            return VERTEX_SHADER;
+        if (type == "fragment" || type == "pixel")
+            return FRAGMENT_SHADER;
+        if (type == "geometry")
+            return GEOMETRY_SHADER;
+        if (type == "domain")
+            return DOMAIN_SHADER;
+        if (type == "hull")
+            return HULL_SHADER;
+        if (type == "compute")
+            return COMPUTE_SHADER;
+
+        CW_ENGINE_ASSERT(false, "Unknown shader type!");
+        return SHADER_COUNT;
     }
 
-    static std::vector<uint32_t> dat{}; // sorry
-
-    BinaryShaderData ShaderCompiler::Compile(const std::string& filepath, ShaderType shaderType)
+    Ref<BinaryShaderData> ShaderCompiler::Compile(const String& source, ShaderType shaderType,
+                                                  ShaderInputLanguage inputLanguage, ShaderOutputFormat outputFormat)
     {
-        std::string sourcePath;
+        String sourcePath;
         VirtualFileSystem::Get()->ResolvePhyiscalPath(filepath, sourcePath);
-        std::string shaderFilename = std::filesystem::path(sourcePath).filename();
-        std::string shaderPath = ShaderTypeToPath(shaderType, shaderFilename, m_OutputFormat);
+        String shaderFilename = std::filesystem::path(sourcePath).filename();
+        String shaderPath = ShaderTypeToPath(shaderType, shaderFilename, outputFormat);
         auto [data, size] =
-          VirtualFileSystem::Get()->ReadFile(ShaderTypeToPath(shaderType, shaderFilename, m_OutputFormat));
+          VirtualFileSystem::Get()->ReadFile(ShaderTypeToPath(shaderType, shaderFilename, outputFormat));
 
+        Vector<uint8_t> shaderBinaryData;
         uint8_t* result = data;
         uint64_t sz = size;
 
@@ -148,7 +161,7 @@ namespace Crowny
         {
             shaderc::Compiler compiler;
             shaderc::CompileOptions options;
-            switch (m_InputLanguage)
+            switch (inputLanguage)
             {
             case (ShaderInputLanguage::GLSL):
                 options.SetSourceLanguage(shaderc_source_language_glsl);
@@ -159,40 +172,38 @@ namespace Crowny
             }
             options.SetSourceLanguage(shaderc_source_language_glsl);
             options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
-            // options.SetOptimizationLevel(shaderc_optimization_level_performance); // if set, we can't use uniform
-            // names
+            // options.SetOptimizationLevel(shaderc_optimization_level_performance); // if set, can't use uniform names
 
-            std::string source = VirtualFileSystem::Get()->ReadTextFile(sourcePath);
             shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(
               source.c_str(), source.size(), ShaderTypeToShaderC(shaderType), shaderFilename.c_str(), options);
             if (module.GetCompilationStatus() != shaderc_compilation_status_success)
             {
-                CW_ENGINE_ERROR("Shader compilation error: {0}", module.GetErrorMessage());
-                CW_ENGINE_ASSERT(false);
-                // return { nullptr, 0 };
-                result = nullptr;
-                sz = 0;
+                String shaderTypeString = ShaderTypeToString(shaderType);
+                shaderTypeString[0] = std::toupper(shaderTypeString[0]);
+                CW_ENGINE_ERROR("{0} shader compilation error: {1}", shaderTypeString, module.GetErrorMessage());
             }
             else
-            {
-                dat = std::vector<uint32_t>(module.cbegin(), module.cend()); // TODO: memcpy
-                VirtualFileSystem::Get()->WriteFile(shaderPath, (byte*)dat.data(), dat.size() * sizeof(uint32_t));
-                result = (uint8_t*)dat.data();
-                sz = dat.size() * sizeof(uint32_t);
-            }
+                shaderBinaryData = Vector<uint8_t>((uint8_t*)module.cbegin(), (uint8_t*)module.cend());
         }
 
-        if (!result)
-            return { nullptr, 0, "main", shaderType };
-        spirv_cross::Compiler compiler((uint32_t*)result, sz / sizeof(uint32_t));
+        if (shaderBinaryData.empty())
+            return CreateRef<BinaryShaderData>(shaderBinaryData, "main", shaderType);
+
+        Ref<BinaryShaderData> dataResult = CreateRef<BinaryShaderData>();
+        dataResult->Data = shaderBinaryData;
+        dataResult->Type = shaderType;
+        dataResult->EntryPoint = "main"; // compiler.get_entry_points_and_stages().front().name;
+        dataResult->Description = GetUniformDesc(shaderBinaryData);
+
+        return dataResult;
+    }
+
+    Ref<UniformDesc> ShaderCompiler::GetUniformDesc(const Vector<uint8_t>& shaderBinaryData)
+    {
+        spirv_cross::Compiler compiler((uint32_t*)shaderBinaryData.data(), shaderBinaryData.size() / sizeof(uint32_t));
         spirv_cross::ShaderResources resources = compiler.get_shader_resources();
 
-        BinaryShaderData dataResult;
-        dataResult.Data = result;
-        dataResult.Size = sz;
-        dataResult.Type = shaderType;
-        dataResult.EntryPoint = "main"; // compiler.get_entry_points_and_stages().front().name;
-        dataResult.Description = CreateRef<UniformDesc>();
+        Ref<UniformDesc> uniformDesc = CreateRef<UniformDesc>();
         for (const auto& uniform : resources.uniform_buffers)
         {
             const auto& bufferType = compiler.get_type(uniform.base_type_id);
@@ -206,7 +217,7 @@ namespace Crowny
             buffer.BlockSize = bufferSize;
             buffer.Slot = binding;
             buffer.Set = set;
-            dataResult.Description->Uniforms[uniform.name] = buffer;
+            uniformDesc->Uniforms[uniform.name] = buffer;
         }
 
         for (const auto& sampler : resources.sampled_images)
@@ -221,8 +232,8 @@ namespace Crowny
             resource.Slot = binding;
             resource.Set = set;
 
-            dataResult.Description->Samplers[resource.Name] = resource;
-            dataResult.Description->Textures[resource.Name] = resource;
+            uniformDesc->Samplers[resource.Name] = resource;
+            uniformDesc->Textures[resource.Name] = resource;
         }
 
         for (const auto& texture : resources.separate_images)
@@ -237,7 +248,7 @@ namespace Crowny
             resource.Slot = binding;
             resource.Set = set;
 
-            dataResult.Description->Textures[resource.Name] = resource;
+            uniformDesc->Textures[resource.Name] = resource;
         }
 
         for (const auto& sampler : resources.separate_samplers)
@@ -252,10 +263,48 @@ namespace Crowny
             resource.Slot = binding;
             resource.Set = set;
 
-            dataResult.Description->Samplers[resource.Name] = resource;
+            uniformDesc->Samplers[resource.Name] = resource;
         }
+    }
 
-        return dataResult;
+    UnorderedMap<ShaderType, String> ShaderCompiler::Parse(const String& source)
+    {
+        UnorderedMap<ShaderType, String> shaderSources;
+
+        const char* typeToken = "#type";
+        size_t typeTokenLength = strlen(typeToken);
+        size_t pos = source.find(typeToken, 0);
+        while (pos != String::npos)
+        {
+            size_t eol = source.find_first_of("\r\n", pos);
+            CW_ENGINE_ASSERT(eol != String::npos, "Syntax error");
+            size_t begin = pos + typeTokenLength + 1;
+            String typeString = source.substr(begin, eol - begin);
+            ShaderType shaderType = GetShaderTypeFromString(typeString);
+            if (shaderType == SHADER_COUNT)
+            {
+                CW_ENGINE_ERROR("Shader type string {0} not recognized.", typeString);
+                break;
+            }
+            if (typeString == "compute")
+            {
+                shaderSources[shaderType] = source.substr(begin + typeString.size());
+                CW_ENGINE_ASSERT(shaderSources.size() == 1);
+                return shaderSources;
+            }
+
+            size_t nextLinePos = source.find_first_not_of("\r\n", eol);
+            CW_ENGINE_ASSERT(nextLinePos != String::npos, "Syntax error");
+            pos = source.find(typeToken, nextLinePos);
+
+            shaderSources[shaderType] =
+              (pos == String::npos) ? source.substr(nextLinePos) : source.substr(nextLinePos, pos - nextLinePos);
+        }
+        if (shaderSources.size() < 2)
+        {
+            CW_ENGINE_ERROR("You are required to provide at least a vertex and a fragment shader.");
+        }
+        return shaderSources;
     }
 
 } // namespace Crowny

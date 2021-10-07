@@ -4,7 +4,7 @@
 
 namespace Crowny
 {
-    std::vector<Ref<Texture>> TextureManager::m_Textures;
+    Vector<Ref<Texture>> TextureManager::m_Textures;
 
     Ref<Texture> TextureManager::Add(const Ref<Texture>& texture)
     {
@@ -12,7 +12,7 @@ namespace Crowny
         return texture;
     }
 
-    Ref<Texture> TextureManager::Get(const std::string& name)
+    Ref<Texture> TextureManager::Get(const String& name)
     {
         for (auto& texture : m_Textures)
         {

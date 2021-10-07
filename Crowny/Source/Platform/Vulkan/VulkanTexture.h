@@ -63,7 +63,7 @@ namespace Crowny
                   const VkImageSubresourceLayers& range, VkImageLayout layout);
 
         VkAccessFlags GetAccessFlags(VkImageLayout layout, bool readonly = false);
-        void GetBarriers(const VkImageSubresourceRange& range, std::vector<VkImageMemoryBarrier>& barriers);
+        void GetBarriers(const VkImageSubresourceRange& range, Vector<VkImageMemoryBarrier>& barriers);
 
     private:
         VkImageView CreateView(const TextureSurface& surface, VkFormat format, VkImageAspectFlags mask) const;
@@ -87,7 +87,7 @@ namespace Crowny
         VulkanImageSubresource** m_Subresources;
 
         mutable VkImageViewCreateInfo m_ImageViewCreateInfo;
-        mutable std::vector<ImageViewInfo> m_ImageInfos;
+        mutable Vector<ImageViewInfo> m_ImageInfos;
     };
 
     class VulkanTexture : public Texture

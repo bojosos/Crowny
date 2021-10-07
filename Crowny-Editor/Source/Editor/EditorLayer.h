@@ -45,7 +45,7 @@ namespace Crowny
 
         void CreateNewScene();
         void OpenScene();
-        void OpenScene(const std::string& filepath);
+        void OpenScene(const Path& filepath);
         void SaveActiveScene();
         void SaveActiveSceneAs();
 
@@ -65,7 +65,7 @@ namespace Crowny
 
         uint32_t m_GizmoMode = 0;
 
-        std::vector<ImGuiPanel*> m_ImGuiWindows;
+        Vector<ImGuiPanel*> m_ImGuiWindows;
         static EditorCamera s_EditorCamera;
         Entity m_HoveredEntity;
         bool m_GameMode = false;

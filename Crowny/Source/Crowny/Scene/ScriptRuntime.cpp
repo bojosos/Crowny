@@ -42,7 +42,7 @@ namespace Crowny
 
         // Create managed script components
         scene->m_Registry.view<MonoScriptComponent>().each(
-          [&](entt::entity entity, MonoScriptComponent& sc) { sc.Initialize(); });
+          [&](entt::entity entity, MonoScriptComponent& sc) { sc.OnInitialize(); });
     }
 
     void ScriptRuntime::OnStart()
@@ -50,6 +50,8 @@ namespace Crowny
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
         activeScene->m_Registry.view<MonoScriptComponent>().each(
           [&](entt::entity entity, MonoScriptComponent& sc) { sc.OnStart(); });
+        activeScene->m_Registry.view<AudioSourceComponent>().each(
+          [&](entt::entity entity, AudioSourceComponent& sc) { sc.OnInitialize(); });
     }
 
     void ScriptRuntime::OnUpdate()

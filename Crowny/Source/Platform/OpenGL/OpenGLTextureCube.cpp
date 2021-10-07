@@ -9,20 +9,20 @@
 namespace Crowny
 {
 
-  OpenGLTextureCube::OpenGLTextureCube(const std::string& filepath, const TextureParameters& parameters) :
+  OpenGLTextureCube::OpenGLTextureCube(const Path& filepath, const TextureParameters& parameters) :
 m_Parameters(parameters)
   {
     m_Files[0] = filepath;
     LoadFromFile();
   }
 
-  OpenGLTextureCube::OpenGLTextureCube(const std::array<std::string, 6>& files, const TextureParameters& parameters) :
+  OpenGLTextureCube::OpenGLTextureCube(const std::array<String, 6>& files, const TextureParameters& parameters) :
 m_Parameters(parameters)
   {
     CW_ENGINE_ASSERT(false, "Not implemented");
   }
 
-  OpenGLTextureCube::OpenGLTextureCube(const std::array<std::string, 6>& files, uint32_t mips, InputFormat format, const
+  OpenGLTextureCube::OpenGLTextureCube(const std::array<String, 6>& files, uint32_t mips, InputFormat format, const
 TextureParameters& parameters) : m_Parameters(parameters)
   {
     CW_ENGINE_ASSERT(false, "Not implemented");

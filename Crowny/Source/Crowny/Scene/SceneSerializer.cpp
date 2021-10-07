@@ -1,19 +1,22 @@
 #include "cwpch.h"
 
-#include "Crowny/Common/VirtualFileSystem.h"
-#include "Crowny/Scripting/CWMonoRuntime.h"
-
-#include "Crowny/Ecs/Components.h"
 #include "Crowny/Scene/SceneSerializer.h"
 
+#include "Crowny/Common/Uuid.h"
+#include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Common/Yaml.h"
-/*
-#include <bitsery/adapter/buffer.h>
-#include <bitsery/bitsery.h>
-#include <bitsery/traits/vector.h>
-*/
+#include "Crowny/Ecs/Components.h"
+#include "Crowny/Scripting/CWMonoRuntime.h"
+
 namespace Crowny
 {
+
+    YAML::Emitter& operator<<(YAML::Emitter& out, const glm::vec2& v)
+    {
+        out << YAML::Flow;
+        out << YAML::BeginSeq << v.x << v.y << YAML::EndSeq;
+        return out;
+    }
 
     YAML::Emitter& operator<<(YAML::Emitter& out, const glm::vec3& v)
     {
@@ -29,33 +32,17 @@ namespace Crowny
         return out;
     }
 
-    YAML::Emitter& operator<<(YAML::Emitter& out, const Uuid& uuid)
+    YAML::Emitter& operator<<(YAML::Emitter& out, const UUID& uuid)
     {
         out << uuid.ToString();
         return out;
     }
 
-    template <typename S> void serialize(S& s, const Ref<Scene>& scene)
-    { /*
-         s.text1b(scene->GetName());
-         s.container(*(m_Scene->m_Entities), std::limit<uint32_t>, [&kv])
-         {
-             Uuid id = kv.first;
-             Entity entity = kv.second;
-             if (!entity)
-                 continue;
-             s.value4b()
-             if (entity.HasComponent<TagComponent>())
-             {
-
-             }
-         }*/
-    }
-
     SceneSerializer::SceneSerializer(const Ref<Scene>& scene) : m_Scene(scene) {}
 
-    void SceneSerializer::SerializeEntity(YAML::Emitter& out, const Uuid& uuid, Entity entity)
+    void SceneSerializer::SerializeEntity(YAML::Emitter& out, Entity entity)
     {
+        const UUID& uuid = entity.GetUuid();
         if (!entity)
             return;
         out << YAML::BeginMap; // Entity
@@ -65,7 +52,7 @@ namespace Crowny
         {
             out << YAML::Key << "TagComponent";
             out << YAML::BeginMap;
-            const std::string& tag = entity.GetComponent<TagComponent>().Tag;
+            const String& tag = entity.GetComponent<TagComponent>().Tag;
             out << YAML::Key << "Tag" << YAML::Value << tag;
             out << YAML::EndMap;
         }
@@ -75,7 +62,7 @@ namespace Crowny
             out << YAML::Key << "MonoScriptComponent";
             out << YAML::BeginMap;
             auto msc = entity.GetComponent<MonoScriptComponent>();
-            const std::string& name = msc.GetManagedClass()->GetName();
+            const String& name = msc.GetManagedClass()->GetName();
             auto& fields = msc.GetSerializableFields();
             if (fields.size() > 0)
             {
@@ -184,7 +171,7 @@ namespace Crowny
             out << YAML::Key << "MeshRendererComponent";
             out << YAML::BeginMap;
             const auto& mesh = entity.GetComponent<MeshRendererComponent>();
-            out << YAML::Key << "Uuid" << YAML::Value << UuidGenerator::Generate();
+            out << YAML::Key << "UUID" << YAML::Value << UuidGenerator::Generate();
             out << YAML::EndMap;
         }
 
@@ -197,7 +184,7 @@ namespace Crowny
 
             for (Entity e : rc.Children)
             {
-                out << m_Scene->GetUuid(e);
+                out << e.GetUuid();
             }
 
             out << YAML::EndSeq << YAML::EndMap;
@@ -206,7 +193,7 @@ namespace Crowny
         out << YAML::EndMap; // Entity
     }
 
-    void SceneSerializer::Serialize(const std::string& filepath)
+    void SceneSerializer::Serialize(const Path& filepath)
     {
         YAML::Emitter out;
         out << YAML::Comment("Crowny Scene");
@@ -215,31 +202,29 @@ namespace Crowny
         out << YAML::Key << "Scene" << YAML::Value << m_Scene->GetName();
         out << YAML::Key << "Entities" << YAML::Value << YAML::BeginSeq;
 
-        for (auto kv : *(m_Scene->m_Entities))
-        {
-            SerializeEntity(out, kv.first, kv.second);
-        };
+        m_Scene->m_Registry.each([&](auto entityID) {
+            Entity entity = { entityID, m_Scene.get() };
+            if (!entity)
+                return;
+            SerializeEntity(out, entity);
+        });
 
         out << YAML::EndSeq << YAML::EndMap;
         m_Scene->m_Filepath = filepath;
         VirtualFileSystem::Get()->WriteTextFile(filepath, out.c_str());
     }
 
-    void SceneSerializer::SerializeBinary(const std::string& filepath)
-    {
-        std::vector<uint8_t> buffer;
-        // bitsery::quickSerialization(bitsery::OutputBufferAdapter<std::vector<uint8_t>{buffer}, m_Scene);
-    }
+    void SceneSerializer::SerializeBinary(const Path& filepath) {}
 
-    void SceneSerializer::Deserialize(const std::string& filepath)
+    void SceneSerializer::Deserialize(const Path& filepath)
     {
-        std::string text = VirtualFileSystem::Get()->ReadTextFile(filepath);
+        String text = VirtualFileSystem::Get()->ReadTextFile(filepath);
         YAML::Node data = YAML::Load(text);
         if (!data["Scene"])
             return;
 
-        std::unordered_map<Entity, YAML::Node> serializedComponents;
-        std::string sceneName = data["Scene"].as<std::string>();
+        UnorderedMap<Entity, YAML::Node> serializedComponents;
+        String sceneName = data["Scene"].as<String>();
         m_Scene->m_Name = sceneName;
         m_Scene->m_Filepath = filepath;
 
@@ -248,14 +233,14 @@ namespace Crowny
         {
             for (YAML::Node entity : entities)
             {
-                Uuid id = entity["Entity"].as<Uuid>();
+                UUID id = entity["Entity"].as<UUID>();
 
-                std::string tag;
+                String tag;
                 YAML::Node tc = entity["TagComponent"];
                 if (tc)
-                    tag = tc["Tag"].as<std::string>();
+                    tag = tc["Tag"].as<String>();
 
-                Entity deserialized = m_Scene->CreateEntity(id, tag);
+                Entity deserialized = m_Scene->CreateEntityWithUuid(id, tag);
                 m_Scene->m_RootEntity->AddChild(deserialized);
 
                 YAML::Node transform = entity["TransformComponent"];
@@ -299,7 +284,7 @@ namespace Crowny
                 YAML::Node script = entity["MonoScriptComponent"];
                 if (script)
                 {
-                    auto& sc = deserialized.AddComponent<MonoScriptComponent>(script["Name"].as<std::string>());
+                    auto& sc = deserialized.AddComponent<MonoScriptComponent>(script["Name"].as<String>());
                     sc.ComponentParent = deserialized;
                 }
 
@@ -307,8 +292,8 @@ namespace Crowny
                 if (text)
                 {
                     auto& tc = deserialized.AddComponent<TextComponent>();
-                    tc.Text = text["Text"].as<std::string>();
-                    tc.Font = CreateRef<Font>(text["Font"].as<std::string>(), "Deserialized font", 16);
+                    tc.Text = text["Text"].as<String>();
+                    tc.Font = CreateRef<Font>(text["Font"].as<String>(), "Deserialized font", 16);
                     tc.Color = text["Color"].as<glm::vec4>();
                 }
 
@@ -329,7 +314,7 @@ namespace Crowny
                 {
                     auto& asc = deserialized.AddComponent<AudioSourceComponent>();
                     asc.SetPlayOnAwake(source["PlayOnAwake"].as<bool>());
-                    // asc.SetAudioClip(source["AudioClip"].as<Uuid>());
+                    // asc.SetAudioClip(source["AudioClip"].as<UUID>());
                     asc.SetVolume(source["Volume"].as<float>());
                     asc.SetPitch(source["Pitch"].as<float>());
                     asc.SetMinDistance(source["MinDistance"].as<float>());
@@ -350,13 +335,13 @@ namespace Crowny
                 YAML::Node children = rc.second["Children"];
                 for (auto child : children)
                 {
-                    Entity e = m_Scene->GetEntity(child.as<Uuid>());
+                    Entity e = m_Scene->GetEntityFromUuid(child.as<UUID>());
                     e.SetParent(rc.first);
                 }
             }
         }
     }
 
-    void SceneSerializer::DeserializeBinary(const std::string& filepath) {}
+    void SceneSerializer::DeserializeBinary(const Path& filepath) {}
 
 } // namespace Crowny

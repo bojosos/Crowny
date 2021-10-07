@@ -1,6 +1,9 @@
 #pragma once
 
+#include "Crowny/Assets/CerealDataStreamArchive.h"
 #include "Crowny/Audio/AudioClip.h"
+
+#include "Crowny/Utils/ShaderCompiler.h"
 
 namespace Crowny
 {
@@ -52,22 +55,14 @@ namespace Crowny
         }
     };
 
-    enum class ShaderLanguage
-    {
-        VKSL = 0,
-        GLSL = 1,
-        HLSL = 2,
-        MSL = 3
-    };
-
     class ShaderImportOptions : public ImportOptions
     {
     public:
-        ShaderLanguage Language;
+        ShaderInputLanguage Language;
 
-        void SetDefine(const std::string& key, const std::string& value) { m_Defines[key] = value; }
+        void SetDefine(const String& key, const String& value) { m_Defines[key] = value; }
 
-        bool GetDefine(const std::string& key, std::string& value) const
+        bool GetDefine(const String& key, String& value) const
         {
             auto iter = m_Defines.find(key);
             if (iter != m_Defines.end())
@@ -78,7 +73,7 @@ namespace Crowny
             return false;
         }
 
-        bool HasDefine(const std::string& key) const
+        bool HasDefine(const String& key) const
         {
             auto iter = m_Defines.find(key);
             if (iter != m_Defines.end())
@@ -86,7 +81,9 @@ namespace Crowny
             return false;
         }
 
-        void RemoveDefine(const std::string& key) { m_Defines.erase(key); }
+        void RemoveDefine(const String& key) { m_Defines.erase(key); }
+
+        const UnorderedMap<String, String>& GetDefines() const { return m_Defines; }
 
         virtual Ref<ImportOptions> Clone() const override
         {
@@ -95,8 +92,10 @@ namespace Crowny
             return clone;
         }
 
+        friend void Serialize(BinaryDataStreamOutputArchive& archive, ShaderImportOptions& importOptions);
+
     private:
-        std::unordered_map<std::string, std::string> m_Defines;
+        UnorderedMap<String, String> m_Defines;
     };
 
     class CSharpScriptImportOptions : public ImportOptions
@@ -109,5 +108,22 @@ namespace Crowny
             return clone;
         }
     };
+
+    template <typename Archive> void Serialize(Archive& archive, TextureImportOptions& importOptions)
+    {
+        archive(importOptions.AutomaticFormat, importOptions.CpuCached, importOptions.Format,
+                importOptions.GenerateMips, importOptions.MaxMip, importOptions.Shape, importOptions.SRGB);
+    }
+
+    template <typename Archive> void Serialize(Archive& archive, AudioClipImportOptions& importOptions)
+    {
+        archive(importOptions.Format, importOptions.Quality, importOptions.ReadMode, importOptions.BitDepth,
+                importOptions.Is3D);
+    }
+
+    template <typename Archive> void Serialize(Archive& archive, ShaderImportOptions& importOptions)
+    {
+        archive(importOptions.Language, importOptions.m_Defines);
+    }
 
 } // namespace Crowny

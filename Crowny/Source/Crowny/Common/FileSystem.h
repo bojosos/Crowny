@@ -5,7 +5,7 @@
 namespace Crowny
 {
 
-    enum class FileDialogType
+    enum class FileDialogType // TODO: Make this enum better
     {
         OpenFile,
         OpenFolder,
@@ -16,18 +16,18 @@ namespace Crowny
     class FileSystem
     {
     public:
-        static bool FileExists(const std::string& path);
-        static int64_t GetFileSize(const std::string& path);
+        static bool FileExists(const Path& path);
+        static int64_t GetFileSize(const Path& path);
 
-        static std::tuple<byte*, uint64_t> ReadFile(const std::string& path);
-        static bool ReadFile(const std::string& path, void* buffer, int64_t size = -1);
-        static std::string ReadTextFile(const std::string& path);
+        static std::tuple<byte*, uint64_t> ReadFile(const Path& path);
+        static bool ReadFile(const Path& path, void* buffer, int64_t size = -1);
+        static String ReadTextFile(const Path& path);
 
-        static bool WriteFile(const std::string& path, byte* buffer, uint64_t size);
-        static bool WriteTextFile(const std::string& path, const std::string& text);
+        static bool WriteFile(const Path& path, byte* buffer, uint64_t size);
+        static bool WriteTextFile(const Path& path, const String& text);
 
-        static bool OpenFileDialog(FileDialogType type, const std::string& initialDir, const std::string& filter,
-                                   std::vector<std::string>& outpaths);
-        static Ref<DataStream> OpenFile(const std::string& filepath, bool readOnly = true);
+        static bool OpenFileDialog(FileDialogType type, const Path& initialDir, const String& filter,
+                                   Vector<Path>& outpaths);
+        static Ref<DataStream> OpenFile(const Path& filepath, bool readOnly = true);
     };
 } // namespace Crowny

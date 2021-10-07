@@ -8,6 +8,22 @@ namespace Crowny
 
     const uint32_t DataStream::StreamTempSize = 128;
 
+    static bool IsUTF32LE(const uint8_t* buffer)
+    {
+        return buffer[0] == 0xFF && buffer[1] == 0xFE && buffer[2] == 0x00 && buffer[3] == 0x00;
+    }
+
+    static bool IsUTF32BE(const uint8_t* buffer)
+    {
+        return buffer[0] == 0x00 && buffer[1] == 0x00 && buffer[2] == 0xFE && buffer[3] == 0xFF;
+    }
+
+    static bool IsUTF16LE(const uint8_t* buffer) { return buffer[0] == 0xFF && buffer[1] == 0xFE; }
+
+    static bool IsUTF16BE(const uint8_t* buffer) { return buffer[0] == 0xFE && buffer[1] == 0xFF; }
+
+    static bool IsUTF8(const uint8_t* buffer) { return buffer[0] == 0xEF && buffer[1] == 0xBB && buffer[2] == 0xBF; }
+
     template <typename T> DataStream& DataStream::operator>>(T& val)
     {
         Read(static_cast<void*>(&val), sizeof(T));
@@ -153,6 +169,13 @@ namespace Crowny
         }
     }
 
+    Ref<DataStream> MemoryDataStream::Clone(bool copyData) const
+    {
+        if (!copyData)
+            return CreateRef<MemoryDataStream>(m_Data, m_Size);
+        return CreateRef<MemoryDataStream>(*this);
+    }
+
     void MemoryDataStream::Reallocate(size_t bytes)
     {
         if (bytes == m_Size)
@@ -228,9 +251,70 @@ namespace Crowny
         return written;
     }
 
-    std::string DataStream::GetAsString() {}
+    String DataStream::GetAsString()
+    {
+        Seek(0);
+        uint8_t header[4];
+        size_t numHeaderBytes = Read(header, 4);
+        size_t dataOffset = 0;
+        if (numHeaderBytes >= 4)
+        {
+            if (IsUTF32LE(header))
+                dataOffset = 4;
+            else if (IsUTF32BE(header))
+            {
+                dataOffset = 4;
+                CW_ENGINE_WARN("UTF-32 big endian not supported");
+                return u8"";
+            }
+        }
 
-    void DataStream::WriteString(const std::string& string, StringEncoding encoding) {}
+        if (dataOffset == 0 && numHeaderBytes >= 3)
+        {
+            if (IsUTF8(header))
+                dataOffset = 3;
+        }
+
+        if (dataOffset == 0 && numHeaderBytes >= 2)
+        {
+            if (IsUTF16LE(header))
+                dataOffset = 2;
+            else if (IsUTF16BE(header))
+            {
+                CW_ENGINE_WARN("UTF-16 big endian not supported");
+                return u8"";
+            }
+        }
+
+        Seek(dataOffset);
+        size_t bufSize = (m_Size > 0 ? m_Size : 4096);
+        auto tempBuffer = new std::stringstream::char_type((uint32_t)bufSize);
+        std::stringstream res;
+        while (!Eof())
+        {
+            size_t numReadBytes = Read(tempBuffer, bufSize);
+            res.write(tempBuffer, numReadBytes);
+        }
+
+        delete tempBuffer;
+        String string = res.str();
+
+        switch (dataOffset)
+        {
+        default:
+        case 0: // UTF-8 no BOM
+        case 3: // UTF-8
+            return string;
+        case 2: {
+            uint32_t numElements = (uint32_t)string.size() / 2;
+            return UTF8::FromUTF16(U16String((char16_t)string.data(), numElements));
+        }
+        case 4: {
+            uint32_t numElements = (uint32_t)string.size() / 4;
+            return UTF8::FromUTF32(U32String((char32_t*)string.data(), numElements));
+        }
+        }
+    }
 
     void FileDataStream::Skip(size_t count)
     {
@@ -280,5 +364,10 @@ namespace Crowny
                 m_FStream = nullptr;
             }
         }
+    }
+
+    Ref<DataStream> FileDataStream::Clone(bool copyData) const
+    {
+        return CreateRef<FileDataStream>(m_Path, (AccessMode)GetAccessMode(), true);
     }
 } // namespace Crowny

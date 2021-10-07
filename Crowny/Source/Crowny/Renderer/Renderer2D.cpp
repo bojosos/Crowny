@@ -168,8 +168,7 @@ namespace Crowny
         FillRect(transform, texture, color, entityId);
     }
 
-    void Renderer2D::DrawString(const std::string& text, float x, float y, const Ref<Font>& font,
-                                const glm::vec4& color)
+    void Renderer2D::DrawString(const String& text, float x, float y, const Ref<Font>& font, const glm::vec4& color)
     {
         float ts = FindTexture(font->GetTexture());
 
@@ -230,7 +229,7 @@ namespace Crowny
         }
     }
 
-    void Renderer2D::DrawString(const std::string& text, const glm::mat4& transform, const Ref<Font>& font,
+    void Renderer2D::DrawString(const String& text, const glm::mat4& transform, const Ref<Font>& font,
                                 const glm::vec4& color)
     {
         float x = transform[3][0];

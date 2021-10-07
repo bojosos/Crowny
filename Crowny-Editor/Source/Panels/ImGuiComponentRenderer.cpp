@@ -27,19 +27,19 @@ namespace Crowny
         ImGui::Columns(2);
         ImGui::Text("Transform");
         ImGui::NextColumn();
-        ImGui::DragFloat3("Transform##", glm::value_ptr(t.Position), DRAG_SENSITIVITY);
+        ImGui::DragFloat3("##TransformTransform", glm::value_ptr(t.Position), DRAG_SENSITIVITY);
         ImGui::NextColumn();
 
         ImGui::Text("Rotation");
         ImGui::NextColumn();
         glm::vec3 deg = glm::degrees(t.Rotation);
-        ImGui::DragFloat3("Rotation##", glm::value_ptr(deg), DRAG_SENSITIVITY);
+        ImGui::DragFloat3("##TransformRotation", glm::value_ptr(deg), DRAG_SENSITIVITY);
         ImGui::NextColumn();
         t.Rotation = glm::radians(deg);
 
         ImGui::Text("Scale");
         ImGui::NextColumn();
-        ImGui::DragFloat3("Scale##", glm::value_ptr(t.Scale), DRAG_SENSITIVITY);
+        ImGui::DragFloat3("##TransformScale", glm::value_ptr(t.Scale), DRAG_SENSITIVITY);
         ImGui::NextColumn();
         ImGui::Columns(1);
     }
@@ -55,7 +55,7 @@ namespace Crowny
         ImGui::Text("Projection");
         ImGui::NextColumn();
         const char* projections[2] = { "Orthographic", "Perspective" };
-        if (ImGui::BeginCombo("Projection##", projections[(int32_t)cam.GetProjectionType()]))
+        if (ImGui::BeginCombo("##Projection", projections[(int32_t)cam.GetProjectionType()]))
         {
             for (uint32_t i = 0; i < 2; i++)
             {
@@ -266,7 +266,7 @@ namespace Crowny
                          { 1, 0 });
         if (ImGui::IsItemClicked())
         {
-            std::vector<std::string> outPaths;
+            Vector<String> outPaths;
             if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
             {
                 Ref<Texture> result;
@@ -318,8 +318,8 @@ namespace Crowny
         float pitch = sourceComponent.GetPitch();
         if (ImGui::SliderFloat("##pitch", &pitch, -3.0f, 3.0f, "%.2f"))
             sourceComponent.SetPitch(pitch);
-
         ImGui::NextColumn();
+
         ImGui::Text("Play On Awake");
         ImGui::NextColumn();
         bool playOnAwake = sourceComponent.GetPlayOnAwake();
@@ -334,14 +334,19 @@ namespace Crowny
             sourceComponent.SetLooping(looping);
         ImGui::NextColumn();
 
+        ImGui::Text("Min Distance");
+        ImGui::NextColumn();
         float minDistance = sourceComponent.GetMinDistance();
-        if (ImGui::SliderFloat("##mindistnace", &minDistance, -3.0f, 3.0f, "%.2f"))
+        if (ImGui::SliderFloat("##mindistnaceaudio", &minDistance, -3.0f, 3.0f, "%.2f"))
             sourceComponent.SetMinDistance(minDistance);
+        ImGui::NextColumn();
 
+        ImGui::Text("Max Distance");
+        ImGui::NextColumn();
         float maxDistance = sourceComponent.GetMaxDistance();
-        if (ImGui::SliderFloat("##maxdistance", &maxDistance, -3.0f, 3.0f, "%.2f"))
+        if (ImGui::SliderFloat("##maxdistanceaudio", &maxDistance, -3.0f, 3.0f, "%.2f"))
             sourceComponent.SetMaxDistance(maxDistance);
-
+        ImGui::NextColumn();
         ImGui::Columns(1);
     }
 
@@ -358,7 +363,7 @@ namespace Crowny
         }
         else
             ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(0, 255, 0));
-        std::string name = script.GetManagedClass() ? std::string(script.GetManagedClass()->GetName()) : "";
+        String name = script.GetManagedClass() ? String(script.GetManagedClass()->GetName()) : "";
         if (ImGui::InputText("##scriptName", &name))
         {
             script.SetClassName(name);
@@ -395,7 +400,7 @@ namespace Crowny
                 case (MonoPrimitiveType::String): {
                     MonoString* value;
                     field->Get(instance, value);
-                    std::string nativeValue = MonoUtils::FromMonoString(value);
+                    String nativeValue = MonoUtils::FromMonoString(value);
                     if (ImGui::InputText("##field2", &nativeValue))
                         field->Set(instance, MonoUtils::ToMonoString(nativeValue));
                     break;
@@ -411,7 +416,7 @@ namespace Crowny
                                           .ScriptUtils->GetMethod("GetEnumNames", 1)
                                           ->Invoke(nullptr, &enumType);
                         uint32_t size = mono_array_length(ar);
-                        std::vector<std::string> enumValues;
+                        Vector<String> enumValues;
                         enumValues.resize(size);
                         for (uint32_t j = 0; j < size; j++) // Do this once!
                         {
@@ -510,7 +515,7 @@ namespace Crowny
                         {
                             float value;
                             field->Get(instance, &value);
-                            std::string strFloat = std::to_string(value);
+                            String strFloat = std::to_string(value);
                             if (ImGui::InputText("##field1", &strFloat))
                             {
                                 float val = StringUtils::ParseFloat(strFloat);
@@ -522,7 +527,7 @@ namespace Crowny
                         {
                             double value;
                             field->Get(instance, &value);
-                            std::string strDouble = std::to_string(value);
+                            String strDouble = std::to_string(value);
                             if (ImGui::InputText("##field1", &strDouble))
                             {
                                 float val = StringUtils::ParseDouble(strDouble);
@@ -532,7 +537,7 @@ namespace Crowny
                         }
                         int64_t value; // do all int cases here (nobody "should" need to use full UINT64_MAX, I hope)
                         field->Get(instance, &value);
-                        std::string strInt =
+                        String strInt =
                           std::to_string(value); // use string so we can accept math expressions ( 1 + 2 -> 3)
                         if (ImGui::InputText("##field2", &strInt))
                         {
@@ -611,7 +616,7 @@ namespace Crowny
                             else if (field->GetPrimitiveType() == MonoPrimitiveType::Char)
                             {
                                 if (strInt.size() > 1)
-                                    strInt = std::string(strInt.data(), 1);
+                                    strInt = String(strInt.data(), 1);
                                 field->Set(instance, &strInt[0]);
                             }
                         }

@@ -508,7 +508,7 @@ namespace Crowny
     }
 
     template <class T>
-    void GetPipelineStageFlags(const std::vector<T>& barriers, VkPipelineStageFlags& src, VkPipelineStageFlags& dst)
+    void GetPipelineStageFlags(const Vector<T>& barriers, VkPipelineStageFlags& src, VkPipelineStageFlags& dst)
     {
         for (auto& entry : barriers)
         {
@@ -820,7 +820,7 @@ namespace Crowny
             {
                 std::array<VkImageSubresourceRange, 5> tempRanges;
                 uint32_t newSubresourceIdx = (uint32_t)m_SubresourceInfoStorage.size();
-                std::vector<uint32_t> overlappingRanges;
+                Vector<uint32_t> overlappingRanges;
                 for (uint32_t i = 0; i < imageInfo.NumSubresourceInfos; i++)
                 {
                     uint32_t subresourceIdx = imageInfo.SubresourceInfoIdx + i;
@@ -1572,7 +1572,7 @@ namespace Crowny
             uint32_t currentQueueFamily = buffer->GetQueueFamily();
             if (currentQueueFamily != (uint32_t)-1 && currentQueueFamily != m_QueueFamily)
             {
-                std::vector<VkBufferMemoryBarrier>& barriers = m_TransitionInfoTemp[currentQueueFamily].BufferBarriers;
+                Vector<VkBufferMemoryBarrier>& barriers = m_TransitionInfoTemp[currentQueueFamily].BufferBarriers;
 
                 barriers.push_back(VkBufferMemoryBarrier());
                 VkBufferMemoryBarrier& barrier = barriers.back();
@@ -1588,7 +1588,7 @@ namespace Crowny
             }
         }
 
-        std::vector<VkImageMemoryBarrier>& localBarriers = m_TransitionInfoTemp[m_QueueFamily].ImageBarriers;
+        Vector<VkImageMemoryBarrier>& localBarriers = m_TransitionInfoTemp[m_QueueFamily].ImageBarriers;
         for (auto& entry : m_Images)
         {
             VulkanImage* image = static_cast<VulkanImage*>(entry.first);
@@ -1599,7 +1599,7 @@ namespace Crowny
             ImageSubresourceInfo* subresourceInfos = &m_SubresourceInfoStorage[imageInfo.SubresourceInfoIdx];
             if (queueMismatch)
             {
-                std::vector<VkImageMemoryBarrier>& barriers = m_TransitionInfoTemp[currentQueueFamily].ImageBarriers;
+                Vector<VkImageMemoryBarrier>& barriers = m_TransitionInfoTemp[currentQueueFamily].ImageBarriers;
                 for (uint32_t i = 0; i < imageInfo.NumSubresourceInfos; i++)
                 {
                     ImageSubresourceInfo& subresourceInfo = subresourceInfos[i];

@@ -5,11 +5,9 @@
 namespace Crowny
 {
 
-    Ref<Asset> Importer::Import(const std::string& filepath, const Ref<ImportOptions>& importOptions, const Uuid& uuid)
-    {
-    }
+    Ref<Asset> Importer::Import(const Path& filepath, const Ref<ImportOptions>& importOptions, const UUID& uuid) {}
 
-    Ref<Asset> Importer::Reimport(const std::string& filepath, const Ref<ImportOptions>& importOptions)
+    Ref<Asset> Importer::Reimport(const Path& filepath, const Ref<ImportOptions>& importOptions)
     {
         // return Import()
     }

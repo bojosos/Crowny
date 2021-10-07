@@ -19,7 +19,7 @@ namespace Crowny
 
 	}
 
-	static HANDLE OpenFileForReadingWin32(const std::string& path)
+	static HANDLE OpenFileForReadingWin32(const String& path)
 	{
 		return CreateFile(path.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, NULL);
 	}
@@ -37,13 +37,13 @@ namespace Crowny
 		return size.QuadPart;
 	}
 
-	bool FileSystem::FileExists(const std::string& path)
+	bool FileSystem::FileExists(const String& path)
 	{
 		DWORD res = GetFileAttributes(path.c_str()); // is this safe?
 		return !(res == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND);
 	}
 
-	int64_t FileSystem::GetFileSize(const std::string& path)
+	int64_t FileSystem::GetFileSize(const String& path)
 	{
 		HANDLE file = OpenFileForReadingWin32(path);
 		if (file == INVALID_HANDLE_VALUE)
@@ -53,7 +53,7 @@ namespace Crowny
 		return size;
 	}
 
-	std::tuple<byte*, uint64_t> FileSystem::ReadFile(const std::string& path)
+	std::tuple<byte*, uint64_t> FileSystem::ReadFile(const String& path)
 	{
 		HANDLE file = OpenFileForReadingWin32(path);
 
@@ -70,7 +70,7 @@ namespace Crowny
 		return success ? std::make_tuple(buff, size) : std::make_tuple(nullptr, -1);
 	}
 
-	bool FileSystem::ReadFile(const std::string& path, void* buffer, int64_t size)
+	bool FileSystem::ReadFile(const String& path, void* buffer, int64_t size)
 	{
 		HANDLE file = OpenFileForReadingWin32(path);
 		CW_ENGINE_ASSERT(file != INVALID_HANDLE_VALUE, path);
@@ -85,21 +85,21 @@ namespace Crowny
 		return success;
 	}
 
-	std::string FileSystem::ReadTextFile(const std::string& path)
+	String FileSystem::ReadTextFile(const String& path)
 	{
 		HANDLE file = OpenFileForReadingWin32(path);
 		CW_ENGINE_ASSERT(file != INVALID_HANDLE_VALUE, path);
 
 		int64_t size = GetFileSizeWin32(file);
-		std::string res(size, 0);
+		String res(size, 0);
 		bool success = ReadFileWin32(file, &res[0], size);
 		CloseHandle(file);
 
-		return success ? res : std::string();
+		return success ? res : String();
 	}
 
 	// TODO: investigate this, or just use c++ api
-	bool FileSystem::WriteFile(const std::string& path, byte* buffer, uint64_t sz)
+	bool FileSystem::WriteFile(const String& path, byte* buffer, uint64_t sz)
 	{
 		HANDLE file = CreateFile(path.c_str(), GENERIC_WRITE, NULL, NULL, CREATE_NEW | OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 		CW_ENGINE_ASSERT(file != INVALID_HANDLE_VALUE, path);
@@ -112,12 +112,12 @@ namespace Crowny
 		return success;
 	}
 
-	bool FileSystem::WriteTextFile(const std::string& path, const std::string& text)
+	bool FileSystem::WriteTextFile(const String& path, const String& text)
 	{
 		return WriteFile(path, (byte*)text[0]);
 	}
 
-	bool FileSystem::OpenFileDialog(FileDialogType type, const std::string& initialDir = "", const std::string& filter, std::vector<std::string>& outpaths)
+	bool FileSystem::OpenFileDialog(FileDialogType type, const String& initialDir = "", const String& filter, Vector<String>& outpaths)
 	{
 		OPENFILENAME ofn = { 0 };
 		TCHAR szFile[260] = { 0 };

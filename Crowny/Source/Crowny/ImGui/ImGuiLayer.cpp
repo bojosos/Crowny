@@ -15,8 +15,6 @@
 namespace Crowny
 {
 
-    extern Ref<RenderTarget> renderTarget;
-
     ImGuiLayer::ImGuiLayer() : Layer("ImGuiLayer") {}
 
     void ImGuiLayer::OnAttach()
@@ -40,6 +38,8 @@ namespace Crowny
         }
 
         io.FontDefault = io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto-Regular.ttf", 18.0f);
+        io.Fonts->GetGlyphRangesCyrillic();
+        io.Fonts->GetGlyphRangesChineseSimplifiedCommon();
 
         style.WindowRounding = 0;
         style.GrabRounding = style.FrameRounding = 0;

@@ -22,19 +22,19 @@ namespace Crowny
                 bool operator()(const ClassId& a, const ClassId& b) const;
             };
 
-            ClassId(const std::string& namespaceName, const std::string& name);
+            ClassId(const String& namespaceName, const String& name);
 
-            std::string NamespaceName;
-            std::string Name;
+            String NamespaceName;
+            String Name;
         };
 
     public:
-        CWMonoAssembly(const std::string& filepath, const std::string& name);
-        CWMonoAssembly(MonoImage* image, const std::string& name);
+        CWMonoAssembly(const Path& filepath, const String& name);
+        CWMonoAssembly(MonoImage* image, const String& name);
         ~CWMonoAssembly();
-        CWMonoClass* GetClass(const std::string& namespaceName, const std::string& className) const;
-        CWMonoClass* GetClass(const std::string& fullName) const;
-        const std::vector<CWMonoClass*>& GetClasses() const;
+        CWMonoClass* GetClass(const String& namespaceName, const String& className) const;
+        CWMonoClass* GetClass(const String& fullName) const;
+        const Vector<CWMonoClass*>& GetClasses() const;
 
     private:
         MonoAssembly* m_Assembly;
@@ -42,7 +42,7 @@ namespace Crowny
         bool m_IsLoaded;
 
         mutable bool m_AllClassesCached;
-        mutable std::vector<CWMonoClass*> m_ClassList;
-        mutable std::unordered_map<ClassId, CWMonoClass*, ClassId::Hash, ClassId::Equals> m_Classes;
+        mutable Vector<CWMonoClass*> m_ClassList;
+        mutable UnorderedMap<ClassId, CWMonoClass*, ClassId::Hash, ClassId::Equals> m_Classes;
     };
 } // namespace Crowny

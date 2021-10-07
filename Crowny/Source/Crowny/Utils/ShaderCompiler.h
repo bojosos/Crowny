@@ -8,8 +8,10 @@ namespace Crowny
 
     enum class ShaderInputLanguage
     {
-        HLSL,
-        GLSL
+        VKSL = 0,
+        GLSL = 1,
+        HLSL = 2,
+        MSL = 3
     };
 
     enum class ShaderOutputFormat
@@ -22,9 +24,8 @@ namespace Crowny
 
     struct BinaryShaderData
     {
-        void* Data; // TODO: use blob or vector
-        size_t Size;
-        std::string EntryPoint;
+        std::vector<uint8_t> Data;
+        String EntryPoint;
         ShaderType Type;
         Ref<UniformDesc> Description;
     };
@@ -32,13 +33,13 @@ namespace Crowny
     class ShaderCompiler
     {
     public:
-        ShaderCompiler(ShaderInputLanguage inputLanguage = ShaderInputLanguage::GLSL,
-                       ShaderOutputFormat outputFormat = ShaderOutputFormat::Vulkan);
-        BinaryShaderData Compile(const std::string& filepath, ShaderType shaderType);
+        static Ref<BinaryShaderData> Compile(const Path& filepath, ShaderType shaderType,
+                                             ShaderInputLanguage inputLanguage = ShaderInputLanguage::GLSL,
+                                             ShaderOutputFormat outputFormat = ShaderOutputFormat::Vulkan);
 
     private:
-        ShaderInputLanguage m_InputLanguage;
-        ShaderOutputFormat m_OutputFormat;
+        static Ref<UniformDesc> GetUniformDesc(const Vector<uint8_t>& binaryShaderData);
+        static UnorderedMap<ShaderType, String> Parse(const String& streamData);
     };
 
 } // namespace Crowny

@@ -8,7 +8,7 @@
 namespace Crowny
 {
 
-    OpenGLInformationPanel::OpenGLInformationPanel(const std::string& name) : ImGuiPanel(name) {}
+    OpenGLInformationPanel::OpenGLInformationPanel(const String& name) : ImGuiPanel(name) {}
 
     void OpenGLInformationPanel::Render()
     {

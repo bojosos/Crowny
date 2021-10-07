@@ -43,7 +43,7 @@ namespace Crowny
         {
             uint32_t numBindingsPerSet = paramInfo.GetNumBindings(i);
             PerSetData& setData = m_PerSetData[i];
-            new (&setData.Sets) std::vector<VulkanDescriptorSet*>();
+            new (&setData.Sets) Vector<VulkanDescriptorSet*>();
 
             VkWriteDescriptorSet* writeSetInfos = new VkWriteDescriptorSet[numBindingsPerSet];
             WriteInfo* writeInfos = new WriteInfo[numBindingsPerSet];

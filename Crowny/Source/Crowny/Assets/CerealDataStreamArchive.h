@@ -21,6 +21,8 @@ public:
         CW_ENGINE_ASSERT(writtenSize == size);
     }
 
+    Ref<DataStream> GetStream() { return m_Stream; };
+
 private:
     Ref<DataStream> m_Stream;
 };
@@ -38,6 +40,8 @@ public:
         auto const readSize = m_Stream->Read(data, size);
         CW_ENGINE_ASSERT(readSize == size);
     }
+
+    Ref<DataStream> GetStream() { return m_Stream; };
 
 private:
     Ref<DataStream> m_Stream;

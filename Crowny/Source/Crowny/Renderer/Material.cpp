@@ -6,13 +6,13 @@ namespace Crowny
 {
     Material::Material(const Ref<Shader>& shader) : m_Shader(shader) {}
 
-    void Material::SetUniformData(const std::string& name, byte* data) {}
+    void Material::SetUniformData(const String& name, byte* data) {}
 
-    void Material::SetTexture(const std::string& name, const Ref<Texture>& texture) {}
+    void Material::SetTexture(const String& name, const Ref<Texture>& texture) {}
 
-    void MaterialInstance::SetUniformData(const std::string& name, byte* data) {}
+    void MaterialInstance::SetUniformData(const String& name, byte* data) {}
 
-    void MaterialInstance::SetTexture(const std::string& name, const Ref<Texture>& texture) {}
+    void MaterialInstance::SetTexture(const String& name, const Ref<Texture>& texture) {}
 
     MaterialInstance::MaterialInstance(const Ref<Material>& material) {}
 

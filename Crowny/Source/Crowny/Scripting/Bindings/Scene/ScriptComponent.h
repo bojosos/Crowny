@@ -20,12 +20,12 @@ namespace Crowny
         };
 
         static void InitRuntimeFunctions();
-        static std::unordered_map<uint32_t, MonoObject*> s_EntityComponents;
+        static UnorderedMap<uint32_t, MonoObject*> s_EntityComponents;
 
     private:
         template <typename Component> static void RegisterComponent();
-        static std::unordered_map<MonoClass*, uint32_t> s_TypeMap;
-        static std::unordered_map<uint32_t, ComponentInfo> s_ComponentInfos;
+        static UnorderedMap<MonoClass*, uint32_t> s_TypeMap;
+        static UnorderedMap<uint32_t, ComponentInfo> s_ComponentInfos;
         static MonoObject* Internal_GetEntity(MonoScriptComponent* component);
         static MonoObject* Internal_GetComponent(MonoScriptComponent* thisptr, MonoReflectionType* type);
         static bool Internal_HasComponent(MonoScriptComponent* thisptr, MonoReflectionType* type);

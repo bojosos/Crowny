@@ -13,7 +13,7 @@ namespace Sandbox
             Quads
         }
 
-        [Crowny.Range(0.0f, 10.0f), ShowInInspector]
+        [Crowny.Range(0.0f, 15.0f), ShowInInspector]
         private float speed = 1.0f;
 
         [ShowInInspector]
@@ -35,11 +35,11 @@ namespace Sandbox
             TestFunc();
             int c = 0;
             int a = 5 / c;
-//            camera = GetComponent<CameraComponent>().camera;
         }
 
         public void Update()
         {
+            Debug.Log("test");
             if (Input.GetKey(KeyCode.Left))
         	    transform.position += Vector3.left * speed * Time.smoothDeltaTime;
             if (Input.GetKey(KeyCode.Right))

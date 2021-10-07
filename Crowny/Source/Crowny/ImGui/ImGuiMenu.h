@@ -8,7 +8,7 @@ namespace Crowny
     class ImGuiMenuItem
     {
     public:
-        ImGuiMenuItem(const std::string& title, const std::string& combination, const EventCallbackFn& onclicked);
+        ImGuiMenuItem(const String& title, const String& combination, const EventCallbackFn& onclicked);
         ~ImGuiMenuItem() = default;
 
         void Render(uint32_t maxWidth);
@@ -16,14 +16,14 @@ namespace Crowny
 
     private:
         EventCallbackFn OnClicked;
-        std::string m_Combination;
-        std::string m_Title;
+        String m_Combination;
+        String m_Title;
     };
 
     class ImGuiMenu
     {
     public:
-        ImGuiMenu(const std::string& title);
+        ImGuiMenu(const String& title);
         ~ImGuiMenu();
 
         void Render();
@@ -31,11 +31,11 @@ namespace Crowny
         void AddItem(ImGuiMenuItem* item);
 
     private:
-        std::vector<ImGuiMenuItem*> m_Items;
-        std::vector<ImGuiMenu*> m_Menus;
-        std::vector<bool> m_Order;
+        Vector<ImGuiMenuItem*> m_Items;
+        Vector<ImGuiMenu*> m_Menus;
+        Vector<bool> m_Order;
 
-        std::string m_Title;
+        String m_Title;
     };
 
     class ImGuiMenuBar
@@ -47,6 +47,6 @@ namespace Crowny
         void Render();
 
     private:
-        std::vector<ImGuiMenu*> m_Menus;
+        Vector<ImGuiMenu*> m_Menus;
     };
 } // namespace Crowny

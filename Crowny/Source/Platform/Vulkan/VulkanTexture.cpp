@@ -22,7 +22,7 @@ namespace Crowny
         desc.Shape = params.Shape;
         desc.NumMips = params.MipLevels + 1;
         desc.Layout = layout;
-        desc.Faces = params.NumArraySlices;
+        desc.Faces = params.Faces;
         desc.Format = actualFormat;
         desc.Usage = params.Usage;
 
@@ -393,7 +393,7 @@ namespace Crowny
         return accessFlags;
     }
 
-    void VulkanImage::GetBarriers(const VkImageSubresourceRange& range, std::vector<VkImageMemoryBarrier>& barriers)
+    void VulkanImage::GetBarriers(const VkImageSubresourceRange& range, Vector<VkImageMemoryBarrier>& barriers)
     {
         uint32_t numSubresources = range.levelCount * range.layerCount;
         if (numSubresources == 0)
@@ -425,7 +425,7 @@ namespace Crowny
             return barrier;
         };
 
-        std::vector<bool> processed(numSubresources);
+        Vector<bool> processed(numSubresources);
         VulkanImageSubresource* subresource = GetSubresource(face, mip);
         createNewBarrier(subresource, face, mip);
         numSubresources--;

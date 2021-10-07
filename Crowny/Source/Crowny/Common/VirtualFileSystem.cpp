@@ -9,12 +9,12 @@ namespace Crowny
 
     VirtualFileSystem* VirtualFileSystem::s_Instance = nullptr;
 
-    static std::string FixPath(const std::string& badPath)
+    static String FixPath(const String& badPath)
     {
         // TODO: Replace all?
-        std::string res = badPath;
+        String res = badPath;
         size_t startPos = 0;
-        while ((startPos = res.find("\\", startPos)) != std::string::npos)
+        while ((startPos = res.find("\\", startPos)) != String::npos)
         {
             res.replace(startPos, 1, "/");
             startPos++;
@@ -26,29 +26,29 @@ namespace Crowny
 
     void VirtualFileSystem::Shutdown() { delete s_Instance; }
 
-    void VirtualFileSystem::Mount(const std::string& virtualPath, const std::string& physicalPath)
+    void VirtualFileSystem::Mount(const String& virtualPath, const String& physicalPath)
     {
         CW_ENGINE_ASSERT(s_Instance);
         m_MountedDirectories[virtualPath].push_back(physicalPath);
     }
 
-    void VirtualFileSystem::Unmount(const std::string& path)
+    void VirtualFileSystem::Unmount(const String& path)
     {
         CW_ENGINE_ASSERT(s_Instance);
         m_MountedDirectories[path].clear();
     }
 
-    bool VirtualFileSystem::ResolvePhyiscalPath(const std::string& inPath, std::string& outPath)
+    bool VirtualFileSystem::ResolvePhyiscalPath(const String& inPath, String& outPath)
     {
-        std::string virtualPath = FixPath(inPath);
+        String virtualPath = FixPath(inPath);
         if (virtualPath[0] != '/')
         {
             outPath = virtualPath;
             return true;
         }
 
-        std::vector<std::string> dirs = StringUtils::SplitString(virtualPath, "/");
-        const std::string& virtualDir = dirs.front();
+        Vector<String> dirs = StringUtils::SplitString(virtualPath, "/");
+        const String& virtualDir = dirs.front();
 
         if (m_MountedDirectories.find(virtualDir) == m_MountedDirectories.end() ||
             m_MountedDirectories[virtualDir].empty())
@@ -61,10 +61,10 @@ namespace Crowny
             CW_ENGINE_WARN("File {0} does not exist", virtualPath);
         }
 
-        std::string remaining = virtualPath.substr(virtualDir.size() + 1, virtualPath.size() - virtualDir.size());
-        for (const std::string& phPath : m_MountedDirectories[virtualDir])
+        String remaining = virtualPath.substr(virtualDir.size() + 1, virtualPath.size() - virtualDir.size());
+        for (const String& phPath : m_MountedDirectories[virtualDir])
         {
-            std::string path = phPath + remaining;
+            String path = phPath + remaining;
             outPath = path;
             return true;
         }
@@ -73,31 +73,31 @@ namespace Crowny
         return false;
     }
 
-    std::tuple<byte*, uint64_t> VirtualFileSystem::ReadFile(const std::string& path)
+    std::tuple<byte*, uint64_t> VirtualFileSystem::ReadFile(const String& path)
     {
         CW_ENGINE_ASSERT(s_Instance);
-        std::string phPath;
+        String phPath;
         return ResolvePhyiscalPath(path, phPath) ? FileSystem::ReadFile(phPath) : std::make_tuple(nullptr, -1);
     }
 
-    std::string VirtualFileSystem::ReadTextFile(const std::string& path)
+    String VirtualFileSystem::ReadTextFile(const String& path)
     {
         CW_ENGINE_ASSERT(s_Instance);
-        std::string phPath;
-        return ResolvePhyiscalPath(path, phPath) ? FileSystem::ReadTextFile(phPath) : std::string();
+        String phPath;
+        return ResolvePhyiscalPath(path, phPath) ? FileSystem::ReadTextFile(phPath) : String();
     }
 
-    bool VirtualFileSystem::WriteFile(const std::string& path, byte* buff, uint64_t size)
+    bool VirtualFileSystem::WriteFile(const String& path, byte* buff, uint64_t size)
     {
         CW_ENGINE_ASSERT(s_Instance);
-        std::string phPath;
+        String phPath;
         return ResolvePhyiscalPath(path, phPath) ? FileSystem::WriteFile(phPath, buff, size) : false;
     }
 
-    bool VirtualFileSystem::WriteTextFile(const std::string& path, const std::string& text)
+    bool VirtualFileSystem::WriteTextFile(const String& path, const String& text)
     {
         CW_ENGINE_ASSERT(s_Instance);
-        std::string phPath;
+        String phPath;
         return ResolvePhyiscalPath(path, phPath) ? FileSystem::WriteTextFile(phPath, text) : false;
     }
 

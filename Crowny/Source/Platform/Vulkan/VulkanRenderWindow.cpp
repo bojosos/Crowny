@@ -22,6 +22,7 @@ namespace Crowny
       : RenderWindow(props), m_RequiresNewBackBuffer(true)
     {
         m_Properties.SwapChainTarget = true;
+        m_Properties.DepthBuffer = false;
         WindowProperties windowProps;
         windowProps.Title = props.Title;
         windowProps.Width = props.Width;

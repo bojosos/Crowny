@@ -41,11 +41,11 @@ namespace Crowny
         void Clear(VkSwapchainKHR swapChain);
 
     private:
-        std::vector<VkFramebuffer> m_Framebuffers;
+        Vector<VkFramebuffer> m_Framebuffers;
         VkDevice m_Device = VK_NULL_HANDLE;
         VkSwapchainKHR m_SwapChain = VK_NULL_HANDLE;
         uint32_t m_Width, m_Height;
-        std::vector<SwapChainSurface> m_Surfaces;
+        Vector<SwapChainSurface> m_Surfaces;
         VulkanImage* m_DepthStencilImage = nullptr;
 
         uint32_t m_CurrentSemaphoreIdx = 0;

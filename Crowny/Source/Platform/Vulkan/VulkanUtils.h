@@ -39,8 +39,8 @@ namespace Crowny
 
     struct TransitionInfo
     {
-        std::vector<VkImageMemoryBarrier> ImageBarriers;
-        std::vector<VkBufferMemoryBarrier> BufferBarriers;
+        Vector<VkImageMemoryBarrier> ImageBarriers;
+        Vector<VkBufferMemoryBarrier> BufferBarriers;
     };
 
     enum ClearMaskBits
