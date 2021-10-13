@@ -43,6 +43,10 @@ namespace Crowny
 
     bool ShaderLibrary::Exists(const String& name) const { return m_Shaders.find(name) != m_Shaders.end(); }
 
+    ShaderStage::ShaderStage(const Ref<BinaryShaderData>& shaderData) : m_ShaderData(shaderData) {}
+
+    const Ref<UniformDesc>& ShaderStage::GetUniformDesc() const { return m_ShaderData->Description; }
+
     Ref<ShaderStage> ShaderStage::Create(const Ref<BinaryShaderData>& data)
     {
         switch (Renderer::GetAPI())
@@ -62,19 +66,19 @@ namespace Crowny
     Ref<Shader> Shader::Create(const ShaderDesc& shaderDesc)
     {
         Ref<Shader> result = CreateRef<Shader>();
-        if (shaderDesc.VertexShader)
+        if (shaderDesc.VertexShader != nullptr)
             result->m_ShaderStages[VERTEX_SHADER] = ShaderStage::Create(shaderDesc.VertexShader);
-        if (shaderDesc.FragmentShader)
-            ;
-        result->m_ShaderStages[FRAGMENT_SHADER] = ShaderStage::Create(shaderDesc.FragmentShader);
-        if (shaderDesc.DomainShader)
+        if (shaderDesc.FragmentShader != nullptr)
+            result->m_ShaderStages[FRAGMENT_SHADER] = ShaderStage::Create(shaderDesc.FragmentShader);
+        if (shaderDesc.DomainShader != nullptr)
             result->m_ShaderStages[DOMAIN_SHADER] = ShaderStage::Create(shaderDesc.DomainShader);
-        if (shaderDesc.HullShader)
+        if (shaderDesc.HullShader != nullptr)
             result->m_ShaderStages[HULL_SHADER] = ShaderStage::Create(shaderDesc.HullShader);
-        if (shaderDesc.GeometryShader)
+        if (shaderDesc.GeometryShader != nullptr)
             result->m_ShaderStages[GEOMETRY_SHADER] = ShaderStage::Create(shaderDesc.GeometryShader);
-        if (shaderDesc.ComputeShader)
+        if (shaderDesc.ComputeShader != nullptr)
             result->m_ShaderStages[COMPUTE_SHADER] = ShaderStage::Create(shaderDesc.ComputeShader);
+        return result;
     }
 
 } // namespace Crowny

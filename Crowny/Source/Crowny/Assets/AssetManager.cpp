@@ -5,14 +5,9 @@
 
 #include "Crowny/Assets/CerealDataStreamArchive.h"
 #include "Crowny/Audio/AudioSource.h"
-
-#include <cereal/cereal.hpp>
+#include "Crowny/RenderAPI/Shader.h"
 
 #include <cereal/archives/portable_binary.hpp>
-
-#include <cereal/types/base_class.hpp>
-#include <cereal/types/polymorphic.hpp>
-#include <cereal/types/vector.hpp>
 
 #include <fstream>
 
@@ -23,24 +18,6 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Texture)
 
 namespace Crowny
 {
-
-    void Save(BinaryDataStreamOutputArchive& archive, const glm::vec2& vec) { archive(vec.x, vec.y); }
-    void Load(BinaryDataStreamInputArchive& archive, glm::vec2& vec) { archive(vec.x, vec.y); }
-
-    void Save(BinaryDataStreamOutputArchive& archive, const glm::vec3& vec) { archive(vec.x, vec.y, vec.z); }
-    void Load(BinaryDataStreamInputArchive& archive, glm::vec3& vec) { archive(vec.x, vec.y, vec.z); }
-
-    void Save(BinaryDataStreamOutputArchive& archive, const glm::vec4& vec) { archive(vec.x, vec.y, vec.z, vec.w); }
-    void Load(BinaryDataStreamInputArchive& archive, glm::vec4& vec) { archive(vec.x, vec.y, vec.z, vec.w); }
-
-    void Save(BinaryDataStreamOutputArchive& archive, const UUID& uuid)
-    {
-        archive(uuid.m_Data[0], uuid.m_Data[1], uuid.m_Data[2], uuid.m_Data[3]);
-    }
-    void Load(BinaryDataStreamInputArchive& archive, UUID& uuid)
-    {
-        archive(uuid.m_Data[0], uuid.m_Data[1], uuid.m_Data[2], uuid.m_Data[3]);
-    }
 
     void Save(BinaryDataStreamOutputArchive& archive, const Asset& asset) { archive(asset.m_KeepData); }
 
@@ -112,6 +89,43 @@ namespace Crowny
                                             pixelData->GetSize())); // TODO: Save more pixel data
             }
         }
+    }
+
+    template <class Archive> void Serialize(Archive& archive, UniformDesc& desc)
+    {
+        archive(desc.Uniforms, desc.Samplers, desc.Textures, desc.LoadStoreTextures);
+    }
+
+    void Save(BinaryDataStreamOutputArchive& archive, const ShaderStage& shaderStage)
+    {
+        archive(shaderStage.m_ShaderData->Data);
+        archive(shaderStage.m_ShaderData->EntryPoint);
+        archive(shaderStage.m_ShaderData->Type);
+        archive(shaderStage.m_ShaderData->Description);
+    }
+
+    void Load(BinaryDataStreamInputArchive& archive, ShaderStage& shaderStage)
+    {
+        archive(shaderStage.m_ShaderData->Data);
+        archive(shaderStage.m_ShaderData->EntryPoint);
+        archive(shaderStage.m_ShaderData->Type);
+        archive(shaderStage.m_ShaderData->Description);
+        // shaderStage.Init();
+    }
+
+    void Save(BinaryDataStreamOutputArchive& archive, const Shader& shader)
+    {
+        for (uint32_t i = 0; i < SHADER_COUNT; i++)
+        {
+            if (shader.m_ShaderStages[i])
+                archive(shader.m_ShaderStages[i]);
+        }
+    }
+
+    void Load(BinaryDataStreamInputArchive& archive, Shader& shader)
+    {
+        for (uint32_t i = 0; i < SHADER_COUNT; i++)
+            archive(shader.m_ShaderStages[i]);
     }
 
     Ref<Asset> AssetManager::Load(const Path& filepath, bool keepSourceData)

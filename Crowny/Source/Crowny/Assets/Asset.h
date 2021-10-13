@@ -26,13 +26,12 @@ namespace Crowny
         Vector<Ref<Asset>> m_Dependencies;
     };
 
-    class AssetMetaData
+    struct AssetMetaData
     {
-    private:
         // TODO: Preview icons, with different sizes (128....32)
-        UUID m_Uuid;                        // Resource UUID
-        Ref<ImportOptions> m_ImportOptions; // Resource import options
-        bool m_IncludeInBuild;
+        UUID Uuid;                        // Resource UUID
+        Ref<ImportOptions> ImportOptions; // Resource import options
+        bool IncludeInBuild;
     };
 
 } // namespace Crowny

@@ -13,7 +13,7 @@ namespace Crowny
     class PBRMaterial : public Material
     {
     public:
-        PBRMaterial(const Ref<Shader>& vert, const Ref<Shader>& frag);
+        PBRMaterial(const Ref<Shader>& shader);
         ~PBRMaterial() = default;
 
         void Bind();

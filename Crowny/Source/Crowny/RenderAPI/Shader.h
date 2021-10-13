@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Assets/Asset.h"
+
 namespace Crowny
 {
 
@@ -11,6 +13,8 @@ namespace Crowny
         uint32_t Slot;
         uint32_t Set;
         uint32_t BlockSize;
+
+        template <typename Archive> void Serialize(Archive& archive) { archive(Name, Slot, Set, BlockSize); }
     };
 
     struct UniformResourceDesc
@@ -20,6 +24,8 @@ namespace Crowny
         uint32_t Slot;
         uint32_t Set;
         GpuBufferFormat ElementType = BF_UNKNOWN;
+
+        template <typename Archive> void Serialize(Archive& archive) { archive(Name, Type, Slot, Set, ElementType); }
     };
 
     struct UniformDesc
@@ -31,15 +37,17 @@ namespace Crowny
         UnorderedMap<String, UniformResourceDesc> LoadStoreTextures;
     };
 
-    struct ShaderStageDesc
-    {
-    };
-
     class ShaderStage
     {
     public:
-        virtual const Ref<UniformDesc>& GetUniformDesc() const = 0;
+        ShaderStage() = default;
+        ShaderStage(const Ref<BinaryShaderData>& shaderData);
+        const Ref<UniformDesc>& GetUniformDesc() const;
         static Ref<ShaderStage> Create(const Ref<BinaryShaderData>& shaderData);
+
+    private:
+        CW_SERIALIZABLE(ShaderStage);
+        Ref<BinaryShaderData> m_ShaderData;
     };
 
     struct ShaderDesc
@@ -52,12 +60,16 @@ namespace Crowny
         Ref<BinaryShaderData> ComputeShader;
     };
 
-    class Shader
+    class Shader : public Asset
     {
     public:
+        Shader() = default;
+
         static Ref<Shader> Create(const ShaderDesc& stateDesc);
+        Ref<ShaderStage> GetStage(ShaderType shaderType) const { return m_ShaderStages[shaderType]; }
 
     private:
+        CW_SERIALIZABLE(Shader);
         Array<Ref<ShaderStage>, SHADER_COUNT> m_ShaderStages;
     };
 

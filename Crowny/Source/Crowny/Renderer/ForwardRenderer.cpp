@@ -1,6 +1,8 @@
 #include "cwpch.h"
 
 #include "../../Crowny-Editor/Source/Panels/ImGuiInspectorPanel.h"
+
+#include "Crowny/Import/Importer.h"
 #include "Crowny/RenderAPI/RenderCommand.h"
 #include "Crowny/RenderAPI/VertexBuffer.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
@@ -43,9 +45,10 @@ namespace Crowny
     {
         s_Data = new ForwardRendererData();
         Ref<UniformParams>& uniforms = ImGuiInspectorPanel::GetSelectedMaterial()->GetUniformParams();
-        ShaderCompiler compiler;
-        Ref<Shader> vertex = Shader::Create(compiler.Compile("/Shaders/pbribl.vert", VERTEX_SHADER));
-        Ref<Shader> fragment = Shader::Create(compiler.Compile("/Shaders/pbribl.frag", FRAGMENT_SHADER));
+
+        Ref<Shader> shader = Importer::Get().Import<Shader>(PBRIBL_SHADER_PATH);
+        Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
+        Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
 
         s_Data->Mvp =
           UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("MVP").BlockSize, BufferUsage::DYNAMIC_DRAW);
@@ -61,8 +64,9 @@ namespace Crowny
         s_Data->SkyboxVbo->SetLayout({ { ShaderDataType::Float3, "a_Pos" } });
         s_Data->SkyboxIbo = IndexBuffer::Create(inds, sizeof(inds) / sizeof(uint32_t));
 
-        Ref<Shader> skyboxVertex = Shader::Create(compiler.Compile("/Shaders/skybox.vert", VERTEX_SHADER));
-        Ref<Shader> skyboxFragment = Shader::Create(compiler.Compile("/Shaders/skybox.frag", FRAGMENT_SHADER));
+        shader = Importer::Get().Import<Shader>(SKYBOX_SHADER_PATH);
+        Ref<ShaderStage> skyboxVertex = shader->GetStage(VERTEX_SHADER);
+        Ref<ShaderStage> skyboxFragment = shader->GetStage(FRAGMENT_SHADER);
 
         PipelineStateDesc desc;
         desc.VertexShader = skyboxVertex;

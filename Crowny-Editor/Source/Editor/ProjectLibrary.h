@@ -53,7 +53,7 @@ namespace Crowny
         ProjectLibrary();
         ~ProjectLibrary();
 
-        void Refresh();
+        void Refresh(const Path& path);
         const Ref<LibraryEntry> GetRoot() const { return m_RootEntry; }
         Ref<LibraryEntry> FindEntry(const Path& path) const;
 

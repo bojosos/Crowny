@@ -10,7 +10,7 @@ namespace Crowny
 
     void Editor::CreateProject(const Path& projectParentPath, const String& projectName)
     {
-        Path projectPath = projectPath / projectName;
+        Path projectPath = projectParentPath / projectName;
         Path assetDirectory = projectPath / "Resources";
         Path assetCache = projectPath / "Cache";
 
