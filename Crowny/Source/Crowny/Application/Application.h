@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Input/Input.h"
+
 #include "Crowny/Events/ApplicationEvent.h"
 #include "Crowny/Layers/LayerStack.h"
 #include "Crowny/Window/RenderWindow.h"

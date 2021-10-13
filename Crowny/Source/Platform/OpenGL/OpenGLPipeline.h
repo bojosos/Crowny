@@ -17,9 +17,6 @@ namespace Crowny
     public:
         OpenGLComputePipeline(const Ref<Shader>& shader);
         ~OpenGLComputePipeline();
-
-    private:
-        Ref<Shader> m_Shader;
     };
 
 } // namespace Crowny

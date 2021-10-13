@@ -10,6 +10,23 @@
 namespace Crowny
 {
 
+    ProjectLibrary::LibraryEntry::LibraryEntry(const Path& path, const String& name, DirectoryEntry* parent,
+                                               LibraryEntryType type)
+      : Filepath(path), ElementName(name), Parent(parent), Type(type)
+    {
+        ElementNameHash = Hash(name);
+    }
+
+    ProjectLibrary::FileEntry::FileEntry(const Path& path, const String& name, DirectoryEntry* parent)
+      : LibraryEntry(path, name, parent, LibraryEntryType::File)
+    {
+    }
+
+    ProjectLibrary::DirectoryEntry::DirectoryEntry(const Path& path, const String& name, DirectoryEntry* parent)
+      : LibraryEntry(path, name, parent, LibraryEntryType::Directory)
+    {
+    }
+
     void ProjectLibrary::MoveEntry(const Path& oldPath, const Path& newPath, bool overwrite)
     {
         if (!overwrite)
@@ -57,9 +74,9 @@ namespace Crowny
         {
             if (std::filesystem::exists(metaPath))
             {
-                Ref<AssetMetaData> metadata = DeserializeMetadata(metaPath);
-                if (metadata != nullptr)
-                    m_UuidToPath[metadata->GetUuid()] = fileEntry->Filepath;
+                // Ref<AssetMetaData> metadata = DeserializeMetadata(metaPath);
+                // if (metadata != nullptr)
+                //     m_UuidToPath[metadata->Uuid] = fileEntry->Filepath;
             }
         }
 
@@ -69,9 +86,9 @@ namespace Crowny
             if (importOptions != nullptr)
             {
                 if (fileEntry->Metadata != nullptr)
-                    curImportOptions = fileEntry->Metadata->GetImportOptions();
-                else
-                    curImportOptions = Importer::Get().CreateImportOptions(fileEntry->Filepath);
+                    curImportOptions = fileEntry->Metadata->ImportOptions;
+                // else
+                // curImportOptions = Importer::Get().CreateImportOptions(fileEntry->Filepath);
             }
             else
                 curImportOptions = importOptions;
@@ -81,13 +98,17 @@ namespace Crowny
         }
     }
 
+    Ref<ProjectLibrary::LibraryEntry> ProjectLibrary::FindEntry(const Path& path) const {}
+
+    void ProjectLibrary::Refresh(const Path& path) {}
+
     bool ProjectLibrary::IsUpToDate(const Ref<FileEntry>& resource) const
     {
         if (resource->Metadata == nullptr)
             return false;
         Path internalPath;
-        if (!m_AssetManifest->UuidFromFilepath(resource->Metadata->GetUuid(), internalPath))
-            return false;
+        // if (!m_AssetManifest->UuidFromFilepath(resource->Metadata->Uuid, internalPath))
+        // return false;
 
         if (!std::filesystem::exists(internalPath))
             return false;

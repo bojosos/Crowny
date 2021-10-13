@@ -36,11 +36,11 @@ namespace Crowny
 
     struct PipelineStateDesc
     {
-        Ref<Shader> VertexShader;
-        Ref<Shader> FragmentShader;
-        Ref<Shader> GeometryShader;
-        Ref<Shader> HullShader;
-        Ref<Shader> DomainShader;
+        Ref<ShaderStage> VertexShader;
+        Ref<ShaderStage> FragmentShader;
+        Ref<ShaderStage> GeometryShader;
+        Ref<ShaderStage> HullShader;
+        Ref<ShaderStage> DomainShader;
 
         RasterizerStateDesc RasterizerState;
         DepthStencilStateDesc DepthStencilState;
@@ -76,7 +76,7 @@ namespace Crowny
         static Ref<ComputePipeline> Create(const Ref<Shader>& computeShader);
 
     protected:
-        Ref<Shader> m_Shader;
+        Ref<ShaderStage> m_Shader;
         Ref<UniformParamInfo> m_ParamInfo;
     };
 

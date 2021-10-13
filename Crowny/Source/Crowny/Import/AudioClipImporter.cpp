@@ -20,8 +20,7 @@ namespace Crowny
         return lower == "ogg" || lower == "wav"; // for now ogg only
     }
 
-    template <>
-    Ref<AudioClip> Importer::Import(const Path& filepath, const Ref<ImportOptions>& importOptions, const UUID& uuid)
+    template <> Ref<AudioClip> Importer::Import(const Path& filepath, const Ref<ImportOptions>& importOptions)
     {
         Ref<AudioClipImportOptions> audioImportOptions =
           std::static_pointer_cast<AudioClipImportOptions>(importOptions);

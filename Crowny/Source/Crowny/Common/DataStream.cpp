@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Common/DataStream.h"
-#include <fstream>
+#include "Crowny/Common/UTF8.h"
 
 namespace Crowny
 {
@@ -288,7 +288,7 @@ namespace Crowny
 
         Seek(dataOffset);
         size_t bufSize = (m_Size > 0 ? m_Size : 4096);
-        auto tempBuffer = new std::stringstream::char_type((uint32_t)bufSize);
+        auto tempBuffer = new std::stringstream::char_type[(uint32_t)bufSize];
         std::stringstream res;
         while (!Eof())
         {
@@ -296,7 +296,7 @@ namespace Crowny
             res.write(tempBuffer, numReadBytes);
         }
 
-        delete tempBuffer;
+        delete[] tempBuffer;
         String string = res.str();
 
         switch (dataOffset)
@@ -307,7 +307,7 @@ namespace Crowny
             return string;
         case 2: {
             uint32_t numElements = (uint32_t)string.size() / 2;
-            return UTF8::FromUTF16(U16String((char16_t)string.data(), numElements));
+            return UTF8::FromUTF16(U16String((char16_t*)string.data(), numElements));
         }
         case 4: {
             uint32_t numElements = (uint32_t)string.size() / 4;

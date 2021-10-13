@@ -1,3 +1,4 @@
+
 #include "cwpch.h"
 
 #include "Crowny/Import/Importer.h"
@@ -21,8 +22,7 @@ namespace Crowny
 
     // Importer currently only supports 32-bit 1,3,4-channel images
     // Going to switch to FreeImage soon
-    template <>
-    Ref<Texture> Importer::Import(const Path& filepath, const Ref<ImportOptions>& importOptions, const UUID& uuid)
+    template <> Ref<Texture> Importer::Import(const Path& filepath, const Ref<ImportOptions>& importOptions)
     {
         Ref<const TextureImportOptions> textureImportOptions =
           std::static_pointer_cast<const TextureImportOptions>(importOptions);
@@ -58,7 +58,7 @@ namespace Crowny
         TextureParameters params;
         params.Width = width;
         params.Height = height;
-        if (textureImportOptions->AutomaticFormat)
+        if (textureImportOptions == nullptr || textureImportOptions->AutomaticFormat)
             params.Format = format;
         else
             params.Format = textureImportOptions->Format;

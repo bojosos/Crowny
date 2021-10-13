@@ -3,6 +3,7 @@
 #include "Crowny/Application/Application.h"
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/StringUtils.h"
+#include "Crowny/Common/VirtualFileSystem.h"
 
 #include <GLFW/glfw3.h>
 #include <fstream>
@@ -68,11 +69,13 @@ namespace Crowny
 
     Ref<DataStream> FileSystem::OpenFile(const Path& filepath, bool readOnly)
     {
+        String outPath;
+        VirtualFileSystem::Get()->ResolvePhyiscalPath(filepath, outPath);
         DataStream::AccessMode accessMode = DataStream::READ;
         if (!readOnly)
             accessMode = (DataStream::AccessMode)(accessMode | DataStream::WRITE);
 
-        return CreateRef<FileDataStream>(filepath, accessMode, true);
+        return CreateRef<FileDataStream>(outPath, accessMode, true);
     }
 
     bool FileSystem::OpenFileDialog(FileDialogType type, const Path& initialDir, const String& filter,

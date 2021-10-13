@@ -22,13 +22,13 @@ namespace Crowny
     void EditorAssets::Load()
     {
         Ref<ImportOptions> importOptions = CreateRef<TextureImportOptions>();
-        UUID uuid;
-        s_Library.UnassignedTexture = Importer::Get().Import<Texture>(UnassignedTexture, importOptions, uuid);
-        s_Library.PlayIcon = Importer::Get().Import<Texture>(PlayIcon, importOptions, uuid);
-        s_Library.StopIcon = Importer::Get().Import<Texture>(StopIcon, importOptions, uuid);
-        s_Library.PauseIcon = Importer::Get().Import<Texture>(PauseIcon, importOptions, uuid);
-        s_Library.FolderIcon = Importer::Get().Import<Texture>(FolderIcon, importOptions, uuid);
-        s_Library.FileIcon = Importer::Get().Import<Texture>(FileIcon, importOptions, uuid);
+
+        s_Library.UnassignedTexture = Importer::Get().Import<Texture>(UnassignedTexture, importOptions);
+        s_Library.PlayIcon = Importer::Get().Import<Texture>(PlayIcon, importOptions);
+        s_Library.StopIcon = Importer::Get().Import<Texture>(StopIcon, importOptions);
+        s_Library.PauseIcon = Importer::Get().Import<Texture>(PauseIcon, importOptions);
+        s_Library.FolderIcon = Importer::Get().Import<Texture>(FolderIcon, importOptions);
+        s_Library.FileIcon = Importer::Get().Import<Texture>(FileIcon, importOptions);
     }
 
     void EditorAssets::Unload()

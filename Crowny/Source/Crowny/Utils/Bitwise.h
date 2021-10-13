@@ -53,6 +53,7 @@ namespace Crowny
             case 3:
                 CW_ENGINE_ASSERT(false, "3-byte int read not implemented.");
                 break;
+                return 0;
             case 4:
                 return ((uint32_t*)src)[0];
             default:
