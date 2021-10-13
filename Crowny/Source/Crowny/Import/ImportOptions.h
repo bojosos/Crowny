@@ -58,7 +58,7 @@ namespace Crowny
     class ShaderImportOptions : public ImportOptions
     {
     public:
-        ShaderInputLanguage Language;
+        ShaderLanguage Language;
 
         void SetDefine(const String& key, const String& value) { m_Defines[key] = value; }
 

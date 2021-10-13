@@ -6,6 +6,7 @@
 #include "Crowny/Common/Timer.h"
 #include "Crowny/Common/VirtualFileSystem.h"
 
+#include "Crowny/Import/Importer.h"
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/RenderAPI/Texture.h"
@@ -85,10 +86,9 @@ namespace Crowny
         m_EnvironmentMap = Texture::Create(tProps);
 
         // Convert HDR equirectangular environment map to cubemap
-        Ref<Shader> eqToCubeVert =
-          Shader::Create(ShaderCompiler().Compile("/Shaders/EqToCube.vert", ShaderType::VERTEX_SHADER));
-        Ref<Shader> eqToCubeFrag =
-          Shader::Create(ShaderCompiler().Compile("/Shaders/EqToCube.frag", ShaderType::FRAGMENT_SHADER));
+        Ref<Shader> shader = Importer::Get().Import<Shader>(EQUIRECTTOCUBE_SHADER_PATH);
+        Ref<ShaderStage> eqToCubeVert = shader->GetStage(VERTEX_SHADER);
+        Ref<ShaderStage> eqToCubeFrag = shader->GetStage(FRAGMENT_SHADER);
         PipelineStateDesc desc;
         desc.VertexShader = eqToCubeVert;
         desc.FragmentShader = eqToCubeFrag;
@@ -150,9 +150,9 @@ namespace Crowny
         rtProps.ColorSurfaces[0] = { m_Brdf };
         Ref<RenderTexture> target = RenderTexture::Create(rtProps);
 
-        ShaderCompiler compiler;
-        Ref<Shader> vertex = Shader::Create(compiler.Compile("/Shaders/Brdf.vert", VERTEX_SHADER));
-        Ref<Shader> fragment = Shader::Create(compiler.Compile("/Shaders/Brdf.frag", FRAGMENT_SHADER));
+        Ref<Shader> shader = Importer::Get().Import<Shader>(BRDF_SHADER_PATH);
+        Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
+        Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
         PipelineStateDesc desc;
         desc.FragmentShader = fragment;
         desc.VertexShader = vertex;
@@ -184,9 +184,9 @@ namespace Crowny
         tProps.Shape = TextureShape::TEXTURE_CUBE;
         m_IrradianceMap = Texture::Create(tProps);
 
-        ShaderCompiler compiler;
-        Ref<Shader> vertex = Shader::Create(compiler.Compile("/Shaders/filter.vert", VERTEX_SHADER));
-        Ref<Shader> fragment = Shader::Create(compiler.Compile("/Shaders/irradiance.frag", FRAGMENT_SHADER));
+        Ref<Shader> shader = Importer::Get().Import<Shader>(FILTER_SHADER_PATH);
+        Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
+        Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
         PipelineStateDesc desc;
         desc.FragmentShader = fragment;
         desc.VertexShader = vertex;
@@ -261,9 +261,9 @@ namespace Crowny
         tProps.Shape = TextureShape::TEXTURE_CUBE;
         m_PrefilteredMap = Texture::Create(tProps);
 
-        ShaderCompiler compiler;
-        Ref<Shader> vertex = Shader::Create(compiler.Compile("/Shaders/filter.vert", VERTEX_SHADER));
-        Ref<Shader> fragment = Shader::Create(compiler.Compile("/Shaders/prefilter.frag", FRAGMENT_SHADER));
+        Ref<Shader> shader = Importer::Get().Import<Shader>(FILTER_SHADER_PATH);
+        Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
+        Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
         PipelineStateDesc desc;
         desc.FragmentShader = fragment;
         desc.VertexShader = vertex;

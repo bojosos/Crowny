@@ -38,7 +38,7 @@ namespace Crowny
         }
 
         friend struct std::hash<UUID>;
-        CW_SERIALIZABLE(UUID);
+        CW_SIMPLESERIALZABLE(UUID);
 
     private:
         uint32_t m_Data[4] = { 0, 0, 0, 0 };

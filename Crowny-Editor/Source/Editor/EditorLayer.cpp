@@ -77,26 +77,22 @@ namespace Crowny
         SceneManager::AddScene(CreateRef<Scene>("Editor scene"));
         ScriptRuntime::Init();
         ShaderCompiler compiler;
-        Ref<Shader> vertex = Shader::Create(compiler.Compile("/Shaders/pbribl.vert", VERTEX_SHADER));
-        Ref<Shader> fragment = Shader::Create(compiler.Compile("/Shaders/pbribl.frag", FRAGMENT_SHADER));
-        Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(vertex, fragment);
+        Ref<Shader> shader = Importer::Get().Import<Shader>("/Shaders/Pbribl.glsl");
+        Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(shader);
         /// auto& manifest = AssetManager::Get().ImportManifest("Sandbox.yaml", "Sandbox");
         // AssetManifest("Sandbox").Serialize("Sandbox.yaml");
 
         UUID uuid;
         Ref<AudioClipImportOptions> importOptions = CreateRef<AudioClipImportOptions>();
-        Ref<AudioClip> resource = Importer::Get().Import<AudioClip>("Resources/Audio/test.ogg", importOptions, uuid);
-        AssetManager::Get().Save(resource, "Resources/Audio/test.asset");
-        Ref<AudioClip> clip = AssetManager::Get().Load<AudioClip>("Resources/Audio/test.asset");
-        //        CW_ENGINE_ASSERT(resource->Is3D() == clip->Is3D());
-        //        CW_ENGINE_INFO(std::memcmp(&resource->GetDesc(), &clip->GetDesc(), sizeof(AudioClipDesc)));
-
+        // Ref<AudioClip> resource = Importer::Get().Import<AudioClip>("Resources/Audio/test.ogg", importOptions, uuid);
+        // AssetManager::Get().Save(resource, "Resources/Audio/test.asset");
+        // Ref<AudioClip> clip = AssetManager::Get().Load<AudioClip>("Resources/Audio/test.asset");
         Ref<Texture> albedo, metallic, roughness, normal;
         Ref<ImportOptions> tio = CreateRef<TextureImportOptions>();
-        albedo = Importer::Get().Import<Texture>("/Textures/rustediron2_basecolor.png", tio, uuid);
-        metallic = Importer::Get().Import<Texture>("/Textures/rustediron2_metallic.png", tio, uuid);
-        roughness = Importer::Get().Import<Texture>("/Textures/rustediron2_roughness.png", tio, uuid);
-        normal = Importer::Get().Import<Texture>("/Textures/rustediron2_normal.png", tio, uuid);
+        albedo = Importer::Get().Import<Texture>("/Textures/rustediron2_basecolor.png", tio);
+        metallic = Importer::Get().Import<Texture>("/Textures/rustediron2_metallic.png", tio);
+        roughness = Importer::Get().Import<Texture>("/Textures/rustediron2_roughness.png", tio);
+        normal = Importer::Get().Import<Texture>("/Textures/rustediron2_normal.png", tio);
 
         Ref<Texture> ao = Texture::WHITE;
 
@@ -164,7 +160,7 @@ namespace Crowny
 
     void EditorLayer::OpenScene()
     {
-        Vector<String> outPaths;
+        Vector<Path> outPaths;
         if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
         {
             OpenScene(outPaths[0]);
@@ -181,7 +177,7 @@ namespace Crowny
 
     void EditorLayer::SaveActiveSceneAs()
     {
-        Vector<String> outPaths;
+        Vector<Path> outPaths;
         if (FileSystem::OpenFileDialog(FileDialogType::SaveFile, "", "", outPaths))
         {
             SceneSerializer serializer(SceneManager::GetActiveScene());

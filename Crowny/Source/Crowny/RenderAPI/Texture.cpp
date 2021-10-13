@@ -24,7 +24,7 @@ namespace Crowny
         desc.MostDetailedMip = mip;
         desc.NumMips = numMips == 0 ? (props.MipLevels + 1) : numMips;
         desc.FirstFace = firstFace;
-        desc.Faces = numFaces == 0 ? props.Faces : numFaces;
+        desc.NumFaces = numFaces == 0 ? props.Faces : numFaces;
         desc.Usage = usage;
 
         auto iter = m_TextureViews.find(desc);

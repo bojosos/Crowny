@@ -5,7 +5,9 @@
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Common/StringUtils.h"
+#include "Crowny/Import/Importer.h"
 #include "Crowny/Input/Input.h"
+
 #include "Editor/EditorAssets.h"
 #include "Editor/EditorUtils.h"
 
@@ -69,8 +71,7 @@ namespace Crowny
             String filename = path.filename().string();
             if (StringUtils::EndsWith(filename, ".png")) // TODO: Replace the .png
             {
-                Ref<Texture> result;
-                // LoadTexture(path, result);
+                Ref<Texture> result = Importer::Get().Import<Texture>(path);
                 m_Textures[filename] = result;
             }
         }

@@ -42,10 +42,10 @@ namespace Crowny
         return nullptr;
     }
 
-    ComputePipeline::ComputePipeline(const Ref<Shader>& shader) : m_Shader(shader)
+    ComputePipeline::ComputePipeline(const Ref<Shader>& shader) : m_Shader(shader->GetStage(COMPUTE_SHADER))
     {
         UniformParamDesc paramDesc;
-        paramDesc.ComputeParams = shader->GetUniformDesc();
+        paramDesc.ComputeParams = m_Shader->GetUniformDesc();
 
         m_ParamInfo = UniformParamInfo::Create(paramDesc);
     }

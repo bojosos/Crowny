@@ -24,16 +24,13 @@ namespace Crowny
     class VulkanShader : public ShaderStage
     {
     public:
-        VulkanShader(const BinaryShaderData& shaderData);
+        VulkanShader(const Ref<BinaryShaderData>& shaderData);
         ~VulkanShader();
-
-        virtual const Ref<UniformDesc>& GetUniformDesc() const override { return m_ShaderDesc.Description; }
 
         const VkPipelineShaderStageCreateInfo& GetShaderStage() const { return m_ShaderStage; }
         VulkanShaderModule* GetShaderModule() const { return m_Module; }
 
     private:
-        BinaryShaderData m_ShaderDesc;
         VkPipelineShaderStageCreateInfo m_ShaderStage;
         VulkanShaderModule* m_Module;
     };

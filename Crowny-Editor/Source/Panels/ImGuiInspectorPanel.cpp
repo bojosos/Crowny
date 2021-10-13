@@ -12,7 +12,7 @@
 #include "Editor/EditorAssets.h"
 
 #include <backends/imgui_impl_vulkan.h>
-#include <glm/gtc/type_ptr.inl>
+#include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 
 #include <imgui.h>
@@ -76,7 +76,7 @@ namespace Crowny
 
                 if (ImGui::IsItemClicked())
                 {
-                    Vector<String> outPaths;
+                    Vector<Path> outPaths;
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
                         Ref<Texture> albedo;
@@ -107,7 +107,7 @@ namespace Crowny
 
                 if (ImGui::IsItemClicked())
                 {
-                    Vector<String> outPaths;
+                    Vector<Path> outPaths;
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
                         Ref<Texture> metalness;
@@ -140,7 +140,7 @@ namespace Crowny
 
                 if (ImGui::IsItemClicked())
                 {
-                    Vector<String> outPaths;
+                    Vector<Path> outPaths;
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
                         Ref<Texture> normal;
@@ -164,7 +164,7 @@ namespace Crowny
 
                 if (ImGui::IsItemClicked())
                 {
-                    Vector<String> outPaths;
+                    Vector<Path> outPaths;
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
                         Ref<Texture> roughness;
@@ -195,7 +195,7 @@ namespace Crowny
 
                 if (ImGui::IsItemClicked())
                 {
-                    Vector<String> outPaths;
+                    Vector<Path> outPaths;
                     if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
                     {
                         Ref<Texture> ao;

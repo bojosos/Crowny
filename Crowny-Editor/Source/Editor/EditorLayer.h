@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Platform/Vulkan/VulkanRenderAPI.h"
+
 #include "Crowny/ImGui/ImGuiMenu.h"
 
 #include "Panels/ImGuiAssetBrowserPanel.h"

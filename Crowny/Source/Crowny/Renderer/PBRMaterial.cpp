@@ -7,7 +7,7 @@
 
 namespace Crowny
 {
-    PBRMaterial::PBRMaterial(const Ref<Shader>& vert, const Ref<Shader>& frag) : Material(frag)
+    PBRMaterial::PBRMaterial(const Ref<Shader>& shader) : Material(shader)
     {
         BufferLayout layout = { { ShaderDataType::Float3, "a_Position" },
                                 { ShaderDataType::Float3, "a_Normal" },
@@ -15,13 +15,15 @@ namespace Crowny
                                 { ShaderDataType::Float3, "a_Tangent" } };
 
         PipelineStateDesc desc;
-        desc.VertexShader = vert;
-        desc.FragmentShader = frag;
+        Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
+        Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
+        desc.VertexShader = vertex;
+        desc.FragmentShader = fragment;
 
         m_Pipeline = GraphicsPipeline::Create(desc, layout);
         m_Uniforms = UniformParams::Create(m_Pipeline);
 
-        m_MaterialParams = UniformBufferBlock::Create(frag->GetUniformDesc()->Uniforms.at("Parameters").BlockSize,
+        m_MaterialParams = UniformBufferBlock::Create(fragment->GetUniformDesc()->Uniforms.at("Parameters").BlockSize,
                                                       BufferUsage::DYNAMIC_DRAW);
         m_Uniforms->SetUniformBlockBuffer(0, 11, m_MaterialParams);
         m_Textures.resize(5);

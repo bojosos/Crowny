@@ -2,6 +2,7 @@
 
 #include "Crowny/Renderer/Renderer2D.h"
 
+#include "Crowny/Import/Importer.h"
 #include "Crowny/RenderAPI/GraphicsPipeline.h"
 #include "Crowny/RenderAPI/RenderCommand.h"
 #include "Crowny/RenderAPI/Shader.h"
@@ -61,8 +62,9 @@ namespace Crowny
 
         s_Data->IndexBuffer = IndexBuffer::Create(indices, RENDERER_INDICES_SIZE);
         ShaderCompiler compiler;
-        Ref<Shader> vertex = Shader::Create(compiler.Compile("/Shaders/BatchRenderer.vert", VERTEX_SHADER));
-        Ref<Shader> fragment = Shader::Create(compiler.Compile("/Shaders/BatchRenderer.frag", FRAGMENT_SHADER));
+        Ref<Shader> shader = Importer::Get().Import<Shader>(RENDERER2D_SHADER_PATH);
+        Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
+        Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
         s_Data->VertexBuffer = VertexBuffer::Create(RENDERER_BUFFER_SIZE, BufferUsage::DYNAMIC_DRAW);
         BufferLayout layout = { { ShaderDataType::Float4, "a_Coordinates" },
                                 { ShaderDataType::Float4, "a_Color" },

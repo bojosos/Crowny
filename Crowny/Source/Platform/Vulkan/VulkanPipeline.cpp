@@ -57,7 +57,7 @@ namespace Crowny
         m_DynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
         m_DynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
 
-        std::pair<VkShaderStageFlagBits, Shader*> stages[] = {
+        std::pair<VkShaderStageFlagBits, ShaderStage*> stages[] = {
             { VK_SHADER_STAGE_VERTEX_BIT, m_Data.VertexShader.get() },
             { VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, m_Data.HullShader.get() },
             { VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, m_Data.DomainShader.get() },

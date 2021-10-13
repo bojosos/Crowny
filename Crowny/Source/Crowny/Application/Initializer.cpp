@@ -12,7 +12,6 @@
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Scene/SceneManager.h"
-
 #include "Platform/Vulkan/VulkanRenderAPI.h"
 
 #include "Crowny/Scripting/Bindings/Logging/ScriptDebug.h"
@@ -76,7 +75,7 @@ namespace Crowny
         Renderer2D::Init();
         // ForwardRenderer::Init();
 
-        FontManager::Add(CreateRef<Font>("Roboto Thin", "/Fonts/" + DEFAULT_FONT_FILENAME, 64));
+        FontManager::Add(CreateRef<Font>("/Fonts/" + DEFAULT_FONT_FILENAME, "Roboto Thin", 64));
         CWMonoRuntime::Init("Crowny C# Runtime");
         CWMonoRuntime::LoadAssemblies("/Assemblies");
 

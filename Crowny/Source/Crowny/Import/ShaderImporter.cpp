@@ -14,15 +14,18 @@ namespace Crowny
     {
         String lower = ext;
         StringUtils::ToLower(lower);
-        return lower == "cwsl" || lower == "glsl" || lower == "vksl" || lower == "hlsl";
+        return lower == "cwsl"; // || lower == "glsl" || lower == "vksl" || lower == "hlsl";
     }
 
-    template <>
-    Ref<Shader> Importer::Import(const Path& filepath, const Ref<ImportOptions>& importOptions, const UUID& uuid)
+    template <> Ref<Shader> Importer::Import(const Path& filepath, const Ref<ImportOptions>& importOptions)
     {
         Ref<DataStream> stream = FileSystem::OpenFile(filepath);
+        Ref<ShaderImportOptions> shaderImportOptions = std::static_pointer_cast<ShaderImportOptions>(importOptions);
         ShaderCompiler compiler;
-        Ref<Shader> vertex = Shader::Create(compiler.Compile(stream->GetAsString()));
-        return Shader::Create(shaderDesc);
+        ShaderType shaderType;
+        String ext = filepath.extension();
+        String source = FileSystem::OpenFile(filepath)->GetAsString();
+        return Shader::Create(ShaderCompiler::Compile(source, importOptions != nullptr ? shaderImportOptions->Language
+                                                                                       : ShaderLanguage::ALL));
     }
 } // namespace Crowny

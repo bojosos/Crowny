@@ -1,9 +1,5 @@
 #pragma once
 
-#include <cstring>
-#include <functional>
-#include <memory>
-
 #ifdef CW_DEBUG
 #define CW_ENABLE_ASSERTS
 #endif
@@ -36,9 +32,12 @@ class BinaryDataStreamOutputArchive;
 namespace Crowny
 {
 
+#define CW_SIMPLESERIALZABLE(...)                                                                                      \
+    template <typename Archive> friend void Serialize(Archive& archive, __VA_ARGS__& type);
+
 #define CW_SERIALIZABLE(...)                                                                                           \
-    friend void Save(BinaryDataStreamOutputArchive& ar, const __VA_ARGS__& asset);                                     \
-    friend void Load(BinaryDataStreamInputArchive& ar, __VA_ARGS__& asset);
+    friend void Save(BinaryDataStreamOutputArchive& ar, const __VA_ARGS__& type);                                      \
+    friend void Load(BinaryDataStreamInputArchive& ar, __VA_ARGS__& type);
 
     constexpr void HashCombine(std::size_t& seed) {}
 

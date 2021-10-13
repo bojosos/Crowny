@@ -15,6 +15,16 @@
 
 #include <vulkan/vulkan.h>
 #undef None
+#undef Button1
+#undef Button2
+#undef Button3
+#undef Button4
+#undef Button5
+#undef Button6
+#undef Button7
+#undef Button8
+#undef Button9
+
 #include <vulkan/vk_mem_alloc.h>
 
 #define MAX_UNIQUE_QUEUES MAX_QUEUES_PER_TYPE* QUEUE_COUNT

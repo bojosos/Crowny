@@ -16,10 +16,6 @@
 namespace Crowny
 {
 
-    // TODO: Make sure this dir exists, in project save it as .cache, with options to show hidden files in the asset
-    // browser
-    static std::filesystem::path CachePath = "/Cache";
-
     static shaderc_shader_kind ShaderTypeToShaderC(ShaderType shaderType)
     {
         switch (shaderType)
@@ -39,23 +35,6 @@ namespace Crowny
         default:
             return shaderc_glsl_vertex_shader;
         }
-    }
-
-    static String ShaderFormatToExtension(ShaderOutputFormat shaderFormat)
-    {
-        switch (shaderFormat)
-        {
-        case (ShaderOutputFormat::Vulkan):
-            return "vk";
-        case (ShaderOutputFormat::OpenGL):
-            return "gl";
-        case (ShaderOutputFormat::Metal):
-            return "msl";
-        case (ShaderOutputFormat::D3D):
-            return "d3d";
-        }
-
-        return String();
     }
 
     static String ShaderTypeToString(ShaderType shaderType)
@@ -118,84 +97,123 @@ namespace Crowny
         return TEXTURE_UNKNOWN;
     }
 
-    static String ShaderTypeToPath(ShaderType shaderType, const String& filename, ShaderOutputFormat outputFormat)
-    {
-        return CachePath /
-               (filename + "." + ShaderTypeToString(shaderType) + "." + ShaderFormatToExtension(outputFormat));
-    }
-
-    static ShaderType GetShaderTypeFromString(const String& type)
+    static bool GetShaderTypeFromString(const String& type, ShaderType& outShaderType)
     {
         if (type == "vertex")
-            return VERTEX_SHADER;
-        if (type == "fragment" || type == "pixel")
-            return FRAGMENT_SHADER;
-        if (type == "geometry")
-            return GEOMETRY_SHADER;
-        if (type == "domain")
-            return DOMAIN_SHADER;
-        if (type == "hull")
-            return HULL_SHADER;
-        if (type == "compute")
-            return COMPUTE_SHADER;
-
-        CW_ENGINE_ASSERT(false, "Unknown shader type!");
-        return SHADER_COUNT;
+            outShaderType = VERTEX_SHADER;
+        else if (type == "fragment" || type == "pixel")
+            outShaderType = FRAGMENT_SHADER;
+        else if (type == "geometry")
+            outShaderType = GEOMETRY_SHADER;
+        else if (type == "domain")
+            outShaderType = DOMAIN_SHADER;
+        else if (type == "hull")
+            outShaderType = HULL_SHADER;
+        else if (type == "compute")
+            outShaderType = COMPUTE_SHADER;
+        else
+            return false;
+        return true;
     }
 
-    Ref<BinaryShaderData> ShaderCompiler::Compile(const String& source, ShaderType shaderType,
-                                                  ShaderInputLanguage inputLanguage, ShaderOutputFormat outputFormat)
+    static bool GetShaderLanguage(const String& lang, ShaderLanguage& outShaderLanguage)
     {
-        String sourcePath;
-        VirtualFileSystem::Get()->ResolvePhyiscalPath(filepath, sourcePath);
-        String shaderFilename = std::filesystem::path(sourcePath).filename();
-        String shaderPath = ShaderTypeToPath(shaderType, shaderFilename, outputFormat);
-        auto [data, size] =
-          VirtualFileSystem::Get()->ReadFile(ShaderTypeToPath(shaderType, shaderFilename, outputFormat));
+        if (lang == "hlsl")
+            outShaderLanguage = ShaderLanguage::HLSL;
+        else if (lang == "glsl")
+            outShaderLanguage = ShaderLanguage::GLSL;
+        else
+            return false;
+        return true;
+    }
 
+    Ref<BinaryShaderData> ShaderCompiler::CompileStage(const String& source, ShaderType shaderType,
+                                                       ShaderLanguage inputLanguage,
+                                                       ShaderLanguageFlags outputLanguages)
+    {
         Vector<uint8_t> shaderBinaryData;
-        uint8_t* result = data;
-        uint64_t sz = size;
 
-        if (data == nullptr)
+        shaderc::Compiler compiler;
+        shaderc::CompileOptions options;
+        switch (inputLanguage)
         {
-            shaderc::Compiler compiler;
-            shaderc::CompileOptions options;
-            switch (inputLanguage)
-            {
-            case (ShaderInputLanguage::GLSL):
-                options.SetSourceLanguage(shaderc_source_language_glsl);
-                break;
-            case (ShaderInputLanguage::HLSL):
-                options.SetSourceLanguage(shaderc_source_language_hlsl);
-                break;
-            }
+        case (ShaderLanguage::GLSL):
             options.SetSourceLanguage(shaderc_source_language_glsl);
-            options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
-            // options.SetOptimizationLevel(shaderc_optimization_level_performance); // if set, can't use uniform names
-
-            shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(
-              source.c_str(), source.size(), ShaderTypeToShaderC(shaderType), shaderFilename.c_str(), options);
-            if (module.GetCompilationStatus() != shaderc_compilation_status_success)
-            {
-                String shaderTypeString = ShaderTypeToString(shaderType);
-                shaderTypeString[0] = std::toupper(shaderTypeString[0]);
-                CW_ENGINE_ERROR("{0} shader compilation error: {1}", shaderTypeString, module.GetErrorMessage());
-            }
-            else
-                shaderBinaryData = Vector<uint8_t>((uint8_t*)module.cbegin(), (uint8_t*)module.cend());
+            break;
+        case (ShaderLanguage::HLSL):
+            options.SetSourceLanguage(shaderc_source_language_hlsl);
+            break;
         }
 
+        options.SetSourceLanguage(shaderc_source_language_glsl);
+        options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
+        // options.SetOptimizationLevel(shaderc_optimization_level_performance); // if set, can't use uniform names
+
+        shaderc::SpvCompilationResult module =
+          compiler.CompileGlslToSpv(source.c_str(), source.size(), ShaderTypeToShaderC(shaderType),
+                                    ShaderTypeToString(shaderType).c_str(), options);
+        if (module.GetCompilationStatus() != shaderc_compilation_status_success)
+        {
+            String shaderTypeString = ShaderTypeToString(shaderType);
+            shaderTypeString[0] = std::toupper(shaderTypeString[0]);
+            CW_ENGINE_ERROR("{0} shader compilation error: {1}", shaderTypeString, module.GetErrorMessage());
+        }
+        else
+            shaderBinaryData = Vector<uint8_t>((uint8_t*)module.cbegin(), (uint8_t*)module.cend());
+
         if (shaderBinaryData.empty())
-            return CreateRef<BinaryShaderData>(shaderBinaryData, "main", shaderType);
+            return CreateRef<BinaryShaderData>(shaderBinaryData, "main", shaderType, nullptr);
 
         Ref<BinaryShaderData> dataResult = CreateRef<BinaryShaderData>();
         dataResult->Data = shaderBinaryData;
         dataResult->Type = shaderType;
         dataResult->EntryPoint = "main"; // compiler.get_entry_points_and_stages().front().name;
         dataResult->Description = GetUniformDesc(shaderBinaryData);
-
         return dataResult;
+    }
+
+    ShaderDesc ShaderCompiler::Compile(const String& source, ShaderLanguageFlags shaderLanguage)
+    {
+        const char* langToken = "#lang";
+        size_t langTokenLength = strlen(langToken);
+        size_t pos = source.find(langToken, 0);
+        ShaderLanguage inputLanguage = ShaderLanguage::GLSL;
+        if (pos != String::npos)
+        {
+            size_t eol = source.find_first_of("\n\r", pos);
+            if (eol != String::npos)
+            {
+                size_t begin = pos + langTokenLength + 1;
+                String langString = source.substr(begin, eol - begin);
+                if (!GetShaderLanguage(langString, inputLanguage))
+                    CW_ENGINE_ERROR("Shader language string {0} not recognized. Assuming shader is in GLSL.",
+                                    langString);
+            }
+        }
+        else
+            CW_ENGINE_WARN("#lang directive not found, assuming shader is in GLSL.");
+
+        ShaderDesc shaderDesc;
+
+        auto sourceShaders = Parse(source);
+        for (auto entry : sourceShaders)
+        {
+            Ref<BinaryShaderData> shaderData = CompileStage(entry.second, entry.first, inputLanguage, shaderLanguage);
+            if (entry.first == VERTEX_SHADER)
+                shaderDesc.VertexShader = shaderData;
+            else if (entry.first == FRAGMENT_SHADER)
+                shaderDesc.FragmentShader = shaderData;
+            else if (entry.first == GEOMETRY_SHADER)
+                shaderDesc.GeometryShader = shaderData;
+            else if (entry.first == HULL_SHADER)
+                shaderDesc.DomainShader = shaderData;
+            else if (entry.first == DOMAIN_SHADER)
+                shaderDesc.DomainShader = shaderData;
+            else if (entry.first == COMPUTE_SHADER)
+                shaderDesc.ComputeShader = shaderData;
+        }
+
+        return shaderDesc;
     }
 
     Ref<UniformDesc> ShaderCompiler::GetUniformDesc(const Vector<uint8_t>& shaderBinaryData)
@@ -265,6 +283,8 @@ namespace Crowny
 
             uniformDesc->Samplers[resource.Name] = resource;
         }
+
+        return uniformDesc;
     }
 
     UnorderedMap<ShaderType, String> ShaderCompiler::Parse(const String& source)
@@ -280,12 +300,13 @@ namespace Crowny
             CW_ENGINE_ASSERT(eol != String::npos, "Syntax error");
             size_t begin = pos + typeTokenLength + 1;
             String typeString = source.substr(begin, eol - begin);
-            ShaderType shaderType = GetShaderTypeFromString(typeString);
-            if (shaderType == SHADER_COUNT)
+            ShaderType shaderType;
+            if (!GetShaderTypeFromString(typeString, shaderType))
             {
                 CW_ENGINE_ERROR("Shader type string {0} not recognized.", typeString);
                 break;
             }
+
             if (typeString == "compute")
             {
                 shaderSources[shaderType] = source.substr(begin + typeString.size());
@@ -301,9 +322,8 @@ namespace Crowny
               (pos == String::npos) ? source.substr(nextLinePos) : source.substr(nextLinePos, pos - nextLinePos);
         }
         if (shaderSources.size() < 2)
-        {
             CW_ENGINE_ERROR("You are required to provide at least a vertex and a fragment shader.");
-        }
+
         return shaderSources;
     }
 

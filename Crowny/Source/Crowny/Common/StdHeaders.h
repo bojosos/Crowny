@@ -19,10 +19,13 @@
 #include <unordered_set>
 #include <vector>
 
+#include <cstring>
+
 #include <iostream>
 #include <istream>
 
 #include <filesystem>
+#include <fstream>
 
 namespace Crowny
 {
@@ -66,6 +69,10 @@ namespace Crowny
     template <typename T> using Queue = std::queue<T>;
 
     using String = std::string;
+
+    using U16String = std::u16string;
+
+    using U32String = std::u32string;
 
     using Stringstream = std::stringstream;
 

@@ -108,7 +108,7 @@ namespace Crowny
 
     private:
         VulkanDevice& m_Device;
-        Set<VulkanLayoutKey, VulkanLayoutKey::HashFunction, VulkanLayoutKey::EqualsFunction> m_Layouts;
+        UnorderedSet<VulkanLayoutKey, VulkanLayoutKey::HashFunction, VulkanLayoutKey::EqualsFunction> m_Layouts;
         UnorderedMap<VulkanPipelineLayoutKey, VkPipelineLayout, VulkanPipelineLayoutKey::HashFunction,
                      VulkanPipelineLayoutKey::EqualsFunction>
           m_PipelineLayouts;

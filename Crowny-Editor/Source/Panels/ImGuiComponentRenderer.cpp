@@ -12,7 +12,7 @@
 #include <misc/cpp/imgui_stdlib.h>
 
 #include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/euler_angles.inl>
+#include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 #include <mono/metadata/object.h>
 
@@ -266,7 +266,7 @@ namespace Crowny
                          { 1, 0 });
         if (ImGui::IsItemClicked())
         {
-            Vector<String> outPaths;
+            Vector<Path> outPaths;
             if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
             {
                 Ref<Texture> result;

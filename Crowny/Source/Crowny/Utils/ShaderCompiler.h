@@ -6,36 +6,39 @@
 namespace Crowny
 {
 
-    enum class ShaderInputLanguage
+    enum class ShaderLanguage
     {
-        VKSL = 0,
-        GLSL = 1,
-        HLSL = 2,
-        MSL = 3
-    };
+        VKSL = 1 << 0,
+        GLSL = 1 << 1,
+        HLSL = 1 << 2,
+        MSL = 1 << 3,
 
-    enum class ShaderOutputFormat
-    {
-        OpenGL,
-        Vulkan,
-        Metal,
-        D3D
+        ALL = VKSL | GLSL | HLSL | MSL
     };
+    typedef Flags<ShaderLanguage> ShaderLanguageFlags;
+    CW_FLAGS_OPERATORS(ShaderLanguageFlags);
 
     struct BinaryShaderData
     {
-        std::vector<uint8_t> Data;
+        Vector<uint8_t> Data;
         String EntryPoint;
         ShaderType Type;
         Ref<UniformDesc> Description;
+
+        BinaryShaderData(){};
+        BinaryShaderData(const Vector<uint8_t>& data, const String& entryPoint, ShaderType type,
+                         const Ref<UniformDesc>& uniformDesc)
+          : Data(data), EntryPoint(entryPoint), Type(type), Description(uniformDesc)
+        {
+        }
     };
 
     class ShaderCompiler
     {
     public:
-        static Ref<BinaryShaderData> Compile(const Path& filepath, ShaderType shaderType,
-                                             ShaderInputLanguage inputLanguage = ShaderInputLanguage::GLSL,
-                                             ShaderOutputFormat outputFormat = ShaderOutputFormat::Vulkan);
+        static ShaderDesc Compile(const String& source, ShaderLanguageFlags language = ShaderLanguage::VKSL);
+        static Ref<BinaryShaderData> CompileStage(const String& source, ShaderType shaderType, ShaderLanguage language,
+                                                  ShaderLanguageFlags flags);
 
     private:
         static Ref<UniformDesc> GetUniformDesc(const Vector<uint8_t>& binaryShaderData);
