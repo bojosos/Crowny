@@ -31,7 +31,9 @@ project "Crowny-Editor"
 		"%{IncludeDir.mono}",
    	"%{IncludeDir.vulkan}",
 		"%{IncludeDir.ImGuizmo}",
-    "%{IncludeDir.openal}"
+    "%{IncludeDir.openal}",
+    "%{IncludeDir.cereal}",
+    "%{IncludeDir.yamlcpp}"
 	}
 
 	libdirs

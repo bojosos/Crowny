@@ -8,12 +8,12 @@
 
 namespace Crowny
 {
-    const String EditorAssets::UnassignedTexture = "/Textures/Unassigned.png";
-    const String EditorAssets::PlayIcon = "/Icons/Play.png";
-    const String EditorAssets::PauseIcon = "/Icons/Pause.png";
-    const String EditorAssets::StopIcon = "/Icons/Stop.png";
-    const String EditorAssets::FileIcon = "/Icons/File.png";
-    const String EditorAssets::FolderIcon = "/Icons/Folder.png";
+    const String EditorAssets::UnassignedTexture = "Resources/Textures/Unassigned.png";
+    const String EditorAssets::PlayIcon = "Resources/Icons/Play.png";
+    const String EditorAssets::PauseIcon = "Resources/Icons/Pause.png";
+    const String EditorAssets::StopIcon = "Resources/Icons/Stop.png";
+    const String EditorAssets::FileIcon = "Resources/Icons/File.png";
+    const String EditorAssets::FolderIcon = "Resources/Icons/Folder.png";
 
     const String EditorAssets::DefaultScriptPath = "Resources/Default/DefaultScript.cs";
 

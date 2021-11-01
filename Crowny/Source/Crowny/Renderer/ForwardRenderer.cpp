@@ -59,7 +59,7 @@ namespace Crowny
           fragment->GetUniformDesc()->Uniforms.at("UBOParams").BlockSize, BufferUsage::DYNAMIC_DRAW);
         uniforms->SetUniformBlockBuffer(0, 2, s_Data->GlobalFragmentParams);
 
-        s_Data->Skybox = CreateRef<Skybox>("/Textures/envmap.hdr");
+        s_Data->Skybox = CreateRef<Skybox>("Resources/Textures/envmap.hdr");
         s_Data->SkyboxVbo = VertexBuffer::Create(verts, sizeof(verts));
         s_Data->SkyboxVbo->SetLayout({ { ShaderDataType::Float3, "a_Pos" } });
         s_Data->SkyboxIbo = IndexBuffer::Create(inds, sizeof(inds) / sizeof(uint32_t));

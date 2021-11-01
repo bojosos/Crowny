@@ -52,7 +52,6 @@ namespace Crowny
                 return ((uint16_t*)src)[0];
             case 3:
                 CW_ENGINE_ASSERT(false, "3-byte int read not implemented.");
-                break;
                 return 0;
             case 4:
                 return ((uint32_t*)src)[0];

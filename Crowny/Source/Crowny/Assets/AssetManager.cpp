@@ -4,15 +4,15 @@
 #include "Crowny/Common/FileSystem.h"
 
 #include "Crowny/Assets/CerealDataStreamArchive.h"
+
 #include "Crowny/Audio/AudioSource.h"
 #include "Crowny/RenderAPI/Shader.h"
+#include "Crowny/RenderAPI/Texture.h"
 
-#include <cereal/archives/portable_binary.hpp>
-
-#include <fstream>
-
+CEREAL_REGISTER_TYPE(Crowny::Shader)
 CEREAL_REGISTER_TYPE(Crowny::AudioClip)
 CEREAL_REGISTER_TYPE(Crowny::Texture)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Shader)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::AudioClip)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Texture)
 
@@ -152,11 +152,33 @@ namespace Crowny
 
     Ref<Asset> AssetManager::Load(const UUID& uuid, const Path& filepath, bool keepSourceData)
     {
+        /*
+        auto findIter = m_LoadedAssets.find(uuid);
+        if (findIter != m_LoadedAssets.end())
+            return findIter->second;
+        AssetHandle assetHandle;
+        auto findIter = m_Handles.find(uuid);
+        if (findIter != m_Handles.end())
+            assetHandle = findIter->second;
+        else
+        {
+            assetHandle = AssetHandle(uuid);
+            m_Handles[uuid] = assetHandle.GetWeakHandle();
+        }
+
         Ref<DataStream> stream = FileSystem::OpenFile(filepath);
         BinaryDataStreamInputArchive archive(stream);
-        Ref<Asset> output;
-        archive(output);
-        return output;
+        Ref<Asset> asset;
+        archive(asset);
+        assetHandle.SetAssetHandle(asset);
+        m_LoadedAssets[uuid] = asset;
+        return assetHandle;*/
+
+        Ref<DataStream> stream = FileSystem::OpenFile(filepath);
+        BinaryDataStreamInputArchive archive(stream);
+        Ref<Asset> asset;
+        archive(asset);
+        return asset;
     }
 
     void AssetManager::Save(const Ref<Asset>& resource, const Path& filepath)
@@ -164,6 +186,23 @@ namespace Crowny
         Ref<DataStream> stream = FileSystem::OpenFile(filepath, false);
         BinaryDataStreamOutputArchive archive(stream);
         archive(resource);
+        stream->Close();
+    }
+
+    void AssetManager::RegisterAssetManifest(const Ref<AssetManifest>& manifest)
+    {
+        auto iterFind = std::find(m_Manifests.begin(), m_Manifests.end(), manifest);
+        if (iterFind == m_Manifests.end())
+            m_Manifests.push_back(manifest);
+        else
+            *iterFind = manifest;
+    }
+
+    void AssetManager::UnregisterAssetManifest(const Ref<AssetManifest>& manifest)
+    {
+        auto iterFind = std::find(m_Manifests.begin(), m_Manifests.end(), manifest);
+        if (iterFind != m_Manifests.end())
+            m_Manifests.erase(iterFind);
     }
 
     void AssetManager::GetFilepathFromUUID(const UUID& uuid, Path& outFilepath) {}

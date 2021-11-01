@@ -1,9 +1,10 @@
 #pragma once
 
-#include "Editor/EditorDefaults.h"
 #include "ImGuiPanel.h"
 
-#include <filesystem>
+#include "Editor/EditorDefaults.h"
+#include "Editor/ProjectLibrary.h"
+
 #include <imgui.h>
 
 namespace Crowny
@@ -28,7 +29,6 @@ namespace Crowny
         SortByName = 0,
         SortBySize = 1,
         SortByDate = 2,
-        SortByType = 3, // not supported, slightly harder to implement
         SortCount = 4
     };
 
@@ -43,6 +43,8 @@ namespace Crowny
         virtual void Show() override;
         virtual void Hide() override;
 
+        void Initialize();
+
     private:
         void ShowContextMenuContents(const Path& filepath = "");
         void DrawHeader();
@@ -55,11 +57,12 @@ namespace Crowny
         ImTextureID m_FileIcon;
 
         UnorderedMap<String, Ref<Texture>> m_Textures; // For showing the textures in the asset browser.
-        Set<String> m_SelectedFiles;
-        std::filesystem::path m_PreviousDirectory;
-        std::filesystem::path m_CurrentDirectory;
-
+        Set<Path> m_SelectedFiles;
+        DirectoryEntry* m_CurrentDirectoryEntry;
         String m_CsDefaultText;
+
+        Stack<DirectoryEntry*> m_BackwardHistory;
+        Stack<DirectoryEntry*> m_ForwardHistory;
 
         FileSortingMode m_FileSortingMode = FileSortingMode::SortBySize;
         float m_Padding = 12.0f;

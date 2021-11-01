@@ -1,6 +1,6 @@
 #include "cwpch.h"
 
-#include "Crowny/Import/Importer.h"
+#include "Crowny/Import/AudioClipImporter.h"
 
 #include "Crowny/Audio/AudioClip.h"
 #include "Crowny/Audio/AudioUtils.h"
@@ -13,27 +13,30 @@
 namespace Crowny
 {
 
-    bool IsFileTypeSupported(const String& ext)
+    bool AudioClipImporter::IsExtensionSupported(const String& ext) const
     {
         String lower = ext;
         StringUtils::ToLower(lower);
-        return lower == "ogg" || lower == "wav"; // for now ogg only
+        return lower == "ogg" || lower == "wav";
     }
 
-    template <> Ref<AudioClip> Importer::Import(const Path& filepath, const Ref<ImportOptions>& importOptions)
+    bool AudioClipImporter::IsMagicNumSupported(uint8_t* num, uint32_t numSize) const { return true; }
+
+    Ref<Asset> AudioClipImporter::Import(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
-        Ref<AudioClipImportOptions> audioImportOptions =
-          std::static_pointer_cast<AudioClipImportOptions>(importOptions);
+        Ref<const AudioClipImportOptions> audioImportOptions =
+          std::static_pointer_cast<const AudioClipImportOptions>(importOptions);
         AudioDataInfo info;
         uint32_t bytesPerSample;
         uint32_t bufferSize;
         Ref<MemoryDataStream> sampleStream;
         Ref<DataStream> stream = FileSystem::OpenFile(filepath);
         String ext = filepath.extension();
+        ext = ext.substr(1, ext.size() - 1); // remove .
         Ref<AudioDecoder> reader;
         if (ext == "ogg")
             reader = CreateRef<OggVorbisDecoder>();
-        if (ext == "wav")
+        else if (ext == "wav")
             reader = CreateRef<WaveDecoder>();
 
         if (reader == nullptr)
@@ -87,4 +90,6 @@ namespace Crowny
         clip->SetName(filepath.filename());
         return clip;
     }
+
+    Ref<ImportOptions> AudioClipImporter::CreateImportOptions() const { return CreateRef<AudioClipImportOptions>(); }
 } // namespace Crowny

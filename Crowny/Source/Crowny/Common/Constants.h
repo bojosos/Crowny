@@ -10,13 +10,13 @@ namespace Crowny
 #define MAX_QUEUES_PER_TYPE 8
 #define MAX_BOUND_VERTEX_BUFFERS 16
 
-#define RENDERER2D_SHADER_PATH "/Shaders/BatchRenderer.glsl"
-#define BRDF_SHADER_PATH "/Shaders/Brdf.glsl"
-#define PREFILTER_SHADER_PATH "/Shaders/Prefilter.glsl"
-#define FILTER_SHADER_PATH "/Shaders/Filter.glsl"
-#define SKYBOX_SHADER_PATH "/Shaders/Skybox.glsl"
-#define PBRIBL_SHADER_PATH "/Shaders/Pbribl.glsl"
-#define EQUIRECTTOCUBE_SHADER_PATH "/Shaders/EquirectToCube.glsl"
+#define RENDERER2D_SHADER_PATH "Resources/Shaders/BatchRenderer.glsl"
+#define BRDF_SHADER_PATH "Resources/Shaders/Brdf.glsl"
+#define PREFILTER_SHADER_PATH "Resources/Shaders/Prefilter.glsl"
+#define FILTER_SHADER_PATH "Resources/Shaders/Filter.glsl"
+#define SKYBOX_SHADER_PATH "Resources/Shaders/Skybox.glsl"
+#define PBRIBL_SHADER_PATH "Resources/Shaders/Pbribl.glsl"
+#define EQUIRECTTOCUBE_SHADER_PATH "Resources/Shaders/EquirectToCube.glsl"
 
     // ------------- Batch Renderer -------------
 #define RENDERER_MAX_SPRITES 60000

@@ -17,13 +17,16 @@
 #include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
 
+#include "Editor/Editor.h"
 #include "Editor/EditorAssets.h"
+#include "Editor/ProjectLibrary.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <backends/imgui_impl_vulkan.h>
 #include <imgui.h>
+#include <misc/cpp/imgui_stdlib.h>
 
 namespace Crowny
 {
@@ -41,16 +44,24 @@ namespace Crowny
 
     void EditorLayer::OnAttach()
     {
+        ProjectLibrary::StartUp();
+        Editor::StartUp();
+
         VirtualFileSystem::Get()->Mount("Icons", "Resources/Icons");
         SceneRenderer::Init();
         EditorAssets::Load();
         m_MenuBar = new ImGuiMenuBar();
 
         ImGuiMenu* fileMenu = new ImGuiMenu("File");
-        fileMenu->AddItem(new ImGuiMenuItem("New", "Ctrl+N", [&](auto& event) { CreateNewScene(); }));
-        fileMenu->AddItem(new ImGuiMenuItem("Open", "Ctrl+O", [&](auto& event) { OpenScene(); }));
-        fileMenu->AddItem(new ImGuiMenuItem("Save", "Ctrl+S", [&](auto& event) { SaveActiveScene(); }));
-        fileMenu->AddItem(new ImGuiMenuItem("Save as", "Ctrl+Shift+S", [&](auto& event) { SaveActiveSceneAs(); }));
+        fileMenu->AddItem(new ImGuiMenuItem("New Project", "", [&](auto& event) { NewProject(); }));
+        fileMenu->AddItem(new ImGuiMenuItem("Open Project", "", [&](auto& event) { OpenProject(); }));
+        fileMenu->AddItem(new ImGuiMenuItem("Save Project", "", [&](auto& event) { Editor::Get().SaveProject(); }));
+
+        fileMenu->AddItem(new ImGuiMenuItem("New Scene", "Ctrl+N", [&](auto& event) { CreateNewScene(); }));
+        fileMenu->AddItem(new ImGuiMenuItem("Open Scene", "Ctrl+O", [&](auto& event) { OpenScene(); }));
+        fileMenu->AddItem(new ImGuiMenuItem("Save Scene", "Ctrl+S", [&](auto& event) { SaveActiveScene(); }));
+        fileMenu->AddItem(
+          new ImGuiMenuItem("Save Scene as", "Ctrl+Shift+S", [&](auto& event) { SaveActiveSceneAs(); }));
         fileMenu->AddItem(new ImGuiMenuItem("Exit", "Alt+F4", [&](auto& event) { Application::Get().Exit(); }));
         m_MenuBar->AddMenu(fileMenu);
 
@@ -76,23 +87,15 @@ namespace Crowny
 
         SceneManager::AddScene(CreateRef<Scene>("Editor scene"));
         ScriptRuntime::Init();
-        ShaderCompiler compiler;
-        Ref<Shader> shader = Importer::Get().Import<Shader>("/Shaders/Pbribl.glsl");
-        Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(shader);
-        /// auto& manifest = AssetManager::Get().ImportManifest("Sandbox.yaml", "Sandbox");
-        // AssetManifest("Sandbox").Serialize("Sandbox.yaml");
 
-        UUID uuid;
-        Ref<AudioClipImportOptions> importOptions = CreateRef<AudioClipImportOptions>();
-        // Ref<AudioClip> resource = Importer::Get().Import<AudioClip>("Resources/Audio/test.ogg", importOptions, uuid);
-        // AssetManager::Get().Save(resource, "Resources/Audio/test.asset");
-        // Ref<AudioClip> clip = AssetManager::Get().Load<AudioClip>("Resources/Audio/test.asset");
+        Ref<Shader> shader = Importer::Get().Import<Shader>("Resources/Shaders/Pbribl.glsl");
+        Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(shader);
+
         Ref<Texture> albedo, metallic, roughness, normal;
-        Ref<ImportOptions> tio = CreateRef<TextureImportOptions>();
-        albedo = Importer::Get().Import<Texture>("/Textures/rustediron2_basecolor.png", tio);
-        metallic = Importer::Get().Import<Texture>("/Textures/rustediron2_metallic.png", tio);
-        roughness = Importer::Get().Import<Texture>("/Textures/rustediron2_roughness.png", tio);
-        normal = Importer::Get().Import<Texture>("/Textures/rustediron2_normal.png", tio);
+        albedo = Importer::Get().Import<Texture>("Resources/Textures/rustediron2_basecolor.png");
+        metallic = Importer::Get().Import<Texture>("Resources/Textures/rustediron2_metallic.png");
+        roughness = Importer::Get().Import<Texture>("Resources/Textures/rustediron2_roughness.png");
+        normal = Importer::Get().Import<Texture>("Resources/Textures/rustediron2_normal.png");
 
         Ref<Texture> ao = Texture::WHITE;
 
@@ -150,6 +153,18 @@ namespace Crowny
         return true;
     }
 
+    void EditorLayer::NewProject()
+    {
+        ImGui::CloseCurrentPopup();
+        ImGui::OpenPopup("New Project");
+    }
+
+    void EditorLayer::OpenProject()
+    {
+        ImGui::CloseCurrentPopup();
+        ImGui::OpenPopup("Project Manager");
+    }
+
     void EditorLayer::CreateNewScene()
     {
         Ref<Scene> tmp = CreateRef<Scene>();
@@ -161,7 +176,7 @@ namespace Crowny
     void EditorLayer::OpenScene()
     {
         Vector<Path> outPaths;
-        if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
+        if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, ProjectLibrary::Get().GetAssetFolder(), "", outPaths))
         {
             OpenScene(outPaths[0]);
         }
@@ -178,7 +193,7 @@ namespace Crowny
     void EditorLayer::SaveActiveSceneAs()
     {
         Vector<Path> outPaths;
-        if (FileSystem::OpenFileDialog(FileDialogType::SaveFile, "", "", outPaths))
+        if (FileSystem::OpenFileDialog(FileDialogType::SaveFile, ProjectLibrary::Get().GetAssetFolder(), "", outPaths))
         {
             SceneSerializer serializer(SceneManager::GetActiveScene());
             serializer.Serialize(outPaths[0]);
@@ -242,9 +257,80 @@ namespace Crowny
         m_HierarchyPanel->Update();
     }
 
+    static bool open = true;
+
     void EditorLayer::OnImGuiRender()
     {
-        ImGui::ShowDemoWindow();
+        ImGui::ShowDemoWindow(&open);
+        if (!Editor::Get().IsProjectLoaded() && !ImGui::IsPopupOpen("New Project"))
+        {
+            if (!ImGui::IsPopupOpen("Project Manager"))
+                ImGui::OpenPopup("Project Manager");
+            if (ImGui::BeginPopupModal("Project Manager"))
+            {
+                ImGui::Text("Recent Projects");
+                for (uint32_t i = 0; i < 5; i++)
+                {
+                    ImGui::Selectable(("Project_" + std::to_string(i)).c_str());
+                }
+                bool shouldEnd = true;
+                if (ImGui::Button("Open"))
+                {
+                    shouldEnd = false;
+                    ImGui::EndPopup();
+                    Vector<Path> outPaths;
+                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFolder, "/home/life/Desktop/dev", String(),
+                                                   outPaths))
+                    {
+                        if (outPaths.size() > 0)
+                        {
+                            Editor::Get().LoadProject(outPaths[0]);
+                            m_AssetBrowser->Initialize();
+                        }
+                    }
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("New"))
+                {
+                    shouldEnd = false;
+                    ImGui::EndPopup();
+                    NewProject();
+                }
+
+                if (shouldEnd)
+                    ImGui::EndPopup();
+            }
+            return;
+        }
+        if (ImGui::BeginPopupModal("New Project"))
+        {
+            ImGui::Text("Path: ");
+            ImGui::SameLine();
+            if (m_NewProjectPath.empty())
+            {
+                m_NewProjectPath = "/home/life/Desktop/dev/";
+                m_NewProjectName = "New Project";
+            }
+            ImGui::InputText("##newProjectPath", &m_NewProjectPath);
+            ImGui::Text("ProjectName: ");
+            ImGui::InputText("##newProjectName", &m_NewProjectName);
+            if (!fs::exists(m_NewProjectPath))
+                ImGui::Text("* Path does not exist");
+            else if (fs::exists(Path(m_NewProjectPath) / m_NewProjectName))
+                ImGui::Text("* A folder with the name of the project already exists there.");
+
+            if (ImGui::Button("Create"))
+            {
+                Editor::Get().CreateProject(m_NewProjectPath, m_NewProjectName);
+                Editor::Get().LoadProject(Path(m_NewProjectPath) / m_NewProjectName);
+                m_NewProjectPath.clear();
+                ImGui::CloseCurrentPopup();
+                m_AssetBrowser->Initialize();
+            }
+            ImGui::EndPopup();
+            return;
+        }
+
         static bool dockspaceOpen = true;
         static bool opt_fullscreen_persistant = true;
         bool opt_fullscreen = opt_fullscreen_persistant;

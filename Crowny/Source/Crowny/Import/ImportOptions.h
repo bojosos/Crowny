@@ -8,10 +8,21 @@
 namespace Crowny
 {
 
+    enum class ImportOptionsType
+    {
+        None,
+        Texture,
+        Shader,
+        AudioClip,
+        Script
+    };
+
     class ImportOptions
     {
     public:
-        virtual Ref<ImportOptions> Clone() const = 0;
+        ImportOptions() = default;
+        virtual ImportOptionsType GetImportOptionsType() const { return ImportOptionsType::None; }
+        virtual Ref<ImportOptions> Clone() const { return CreateRef<ImportOptions>(); };
     };
 
     class TextureImportOptions : public ImportOptions
@@ -27,6 +38,8 @@ namespace Crowny
         bool CpuCached = false;
         bool SRGB = false;
         // CubemapSourceType CubemapSource = CubemapSourceType::Faces;
+
+        virtual ImportOptionsType GetImportOptionsType() const override { return ImportOptionsType::Texture; }
 
         virtual Ref<ImportOptions> Clone() const override
         {
@@ -46,6 +59,8 @@ namespace Crowny
 
         // Only available for Ogg Vorbis
         float Quality = 1.0f;
+
+        virtual ImportOptionsType GetImportOptionsType() const override { return ImportOptionsType::AudioClip; }
 
         virtual Ref<ImportOptions> Clone() const override
         {
@@ -85,6 +100,8 @@ namespace Crowny
 
         const UnorderedMap<String, String>& GetDefines() const { return m_Defines; }
 
+        virtual ImportOptionsType GetImportOptionsType() const override { return ImportOptionsType::Shader; }
+
         virtual Ref<ImportOptions> Clone() const override
         {
             Ref<ShaderImportOptions> clone = CreateRef<ShaderImportOptions>();
@@ -101,6 +118,8 @@ namespace Crowny
     class CSharpScriptImportOptions : public ImportOptions
     {
     public:
+        virtual ImportOptionsType GetImportOptionsType() const override { return ImportOptionsType::Script; }
+
         virtual Ref<ImportOptions> Clone() const override
         {
             Ref<CSharpScriptImportOptions> clone = CreateRef<CSharpScriptImportOptions>();
