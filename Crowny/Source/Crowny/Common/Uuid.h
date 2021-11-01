@@ -32,6 +32,8 @@ namespace Crowny
             return false;
         }
 
+        bool Empty() const { return m_Data[0] == 0 && m_Data[1] == 0 && m_Data[2] == 0 && m_Data[3] == 0; }
+
         template <typename OStream> friend OStream& operator<<(OStream& os, const UUID& ms)
         {
             return os << ms.ToString();

@@ -8,6 +8,8 @@
 #include "Crowny/Import/Importer.h"
 #include "Crowny/Input/Input.h"
 
+#include "Editor/ProjectLibrary.h"
+
 #include "Editor/EditorAssets.h"
 #include "Editor/EditorUtils.h"
 
@@ -22,7 +24,7 @@
 namespace Crowny
 {
 
-    static const std::filesystem::path s_AssetPath = "Resources";
+    static const fs::path s_AssetPath = "Resources";
 
     static String GetDefaultFileNameFromType(AssetBrowserItem type)
     {
@@ -53,30 +55,33 @@ namespace Crowny
 
     struct FileSortingEntry
     {
-        FileSortingEntry(long key, const std::filesystem::directory_entry& entry) : Key(key), Entry(entry) {}
+        FileSortingEntry(long key, const fs::directory_entry& entry) : Key(key), Entry(entry) {}
 
         long Key;
-        std::filesystem::directory_entry Entry;
+        fs::directory_entry Entry;
     };
 
-    ImGuiAssetBrowserPanel::ImGuiAssetBrowserPanel(const String& name)
-      : ImGuiPanel(name), m_CurrentDirectory(s_AssetPath)
+    ImGuiAssetBrowserPanel::ImGuiAssetBrowserPanel(const String& name) : ImGuiPanel(name)
     {
+        m_CsDefaultText = FileSystem::ReadTextFile(EditorAssets::DefaultScriptPath);
         m_FolderIcon = ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FolderIcon);
         m_FileIcon = ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FileIcon);
+    }
 
-        for (auto& dir : std::filesystem::recursive_directory_iterator(s_AssetPath))
+    void ImGuiAssetBrowserPanel::Initialize()
+    {
+        m_CurrentDirectoryEntry = ProjectLibrary::Get().GetRoot().get();
+
+        for (auto child : m_CurrentDirectoryEntry->Children)
         {
-            const auto& path = dir.path();
-            String filename = path.filename().string();
-            if (StringUtils::EndsWith(filename, ".png")) // TODO: Replace the .png
+            const auto& path = child->Filepath;
+            String ext = path.extension();
+            if (ext == ".png") // TODO: Replace the .png
             {
                 Ref<Texture> result = Importer::Get().Import<Texture>(path);
-                m_Textures[filename] = result;
+                m_Textures[child->ElementName] = result;
             }
         }
-
-        m_CsDefaultText = FileSystem::ReadTextFile(EditorAssets::DefaultScriptPath);
     }
 
     void ImGuiAssetBrowserPanel::Render()
@@ -105,23 +110,29 @@ namespace Crowny
 
     void ImGuiAssetBrowserPanel::DrawHeader()
     {
-        if (m_CurrentDirectory != std::filesystem::path(s_AssetPath))
+        const Ref<DirectoryEntry>& entry = ProjectLibrary::Get().GetRoot();
+        if (m_BackwardHistory.empty())
         {
             if (ImGui::ArrowButton("<-", ImGuiDir_Left))
             {
-                m_PreviousDirectory = m_CurrentDirectory;
-                m_CurrentDirectory = m_CurrentDirectory.parent_path();
+                m_ForwardHistory.push(m_CurrentDirectoryEntry);
+                m_CurrentDirectoryEntry = m_BackwardHistory.top();
+                m_BackwardHistory.pop();
             }
             ImGui::SameLine();
 
-            if (m_PreviousDirectory.empty())
+            if (m_ForwardHistory.empty())
             {
                 ImGui::PushDisabled();
                 ImGui::ArrowButton("->", ImGuiDir_Right);
                 ImGui::PopDisabled();
             }
             else if (ImGui::ArrowButton("->", ImGuiDir_Right))
-                m_CurrentDirectory = m_PreviousDirectory;
+            {
+                m_BackwardHistory.push(m_CurrentDirectoryEntry);
+                m_CurrentDirectoryEntry = m_ForwardHistory.top();
+                m_ForwardHistory.pop();
+            }
         }
         else
         {
@@ -130,34 +141,42 @@ namespace Crowny
             ImGui::PopDisabled();
             ImGui::SameLine();
 
-            if (m_PreviousDirectory.empty())
+            if (m_ForwardHistory.empty())
             {
                 ImGui::PushDisabled();
                 ImGui::ArrowButton("->", ImGuiDir_Right);
                 ImGui::PopDisabled();
             }
             else if (ImGui::ArrowButton("->", ImGuiDir_Right))
-                m_CurrentDirectory = m_PreviousDirectory;
+            {
+                m_BackwardHistory.push(m_CurrentDirectoryEntry);
+                m_CurrentDirectoryEntry = m_ForwardHistory.top();
+                m_ForwardHistory.pop();
+            }
         }
 
         ImGui::SameLine();
         if (ImGui::Button("Refresh"))
         {
+            ProjectLibrary::Get().Refresh(m_CurrentDirectoryEntry->Filepath);
         }
         ImGui::SameLine();
 
-        std::filesystem::path tmpPath;
-        for (auto& dir : m_CurrentDirectory)
+        fs::path tmpPath;
+        DirectoryEntry* tmp = m_CurrentDirectoryEntry;
+        while (tmp != nullptr)
         {
-            tmpPath /= dir;
-            if (ImGui::Selectable(dir.c_str(), false, 0, ImVec2(ImGui::CalcTextSize(dir.c_str(), NULL, true).x, 0.0f)))
+            tmpPath /= tmp->Filepath.filename();
+            if (ImGui::Selectable(
+                  tmp->Filepath.filename().c_str() /*, false, 0, ImVec2(ImGui::CalcTextSize(dir.c_str()).x, 0.0f)*/))
             {
-                m_CurrentDirectory = tmpPath;
+                m_CurrentDirectoryEntry = tmp;
                 break;
             }
             ImGui::SameLine();
             ImGui::Text("/");
             ImGui::SameLine();
+            tmp = tmp->Parent;
         }
 
         /* scale slider */
@@ -200,64 +219,30 @@ namespace Crowny
             columnCount = 1;
         ImGui::Columns(columnCount, 0, false);
 
-        Vector<FileSortingEntry> sortedFiles; // assumes time_t is long
-        if (m_FileSortingMode == FileSortingMode::SortByName)
+        if (m_CurrentDirectoryEntry == nullptr)
         {
-            std::set<std::filesystem::directory_entry> sortedDirs;
-            for (auto& dir : std::filesystem::directory_iterator(m_CurrentDirectory))
-            {
-                sortedDirs.insert(dir);
-            }
-
-            long id = 0;
-            for (auto& dir : sortedDirs)
-            {
-                sortedFiles.emplace_back(id++, dir);
-            }
+            ImGui::Columns(1);
+            return;
         }
-        else
-        {
-            std::set<std::filesystem::directory_entry> folders;
-            for (auto& dirEntry : std::filesystem::directory_iterator(m_CurrentDirectory))
-            {
-                if (m_FileSortingMode == FileSortingMode::SortBySize)
-                {
-                    if (dirEntry.is_regular_file())
-                    {
-                        long id = dirEntry.file_size();
-                        sortedFiles.emplace_back(id, dirEntry);
-                    }
-                    else if (dirEntry.is_directory())
-                        folders.insert(dirEntry);
-                }
-                if (m_FileSortingMode == FileSortingMode::SortByDate)
-                {
-                    if (dirEntry.is_regular_file())
-                    {
-                        long id = EditorUtils::FileTimeToCTime(dirEntry.last_write_time());
-                        sortedFiles.emplace_back(id, dirEntry);
-                    }
-                    else if (dirEntry.is_directory())
-                        folders.insert(dirEntry);
-                }
-            }
 
-            std::sort(sortedFiles.begin(), sortedFiles.end(),
-                      [](const FileSortingEntry& a, const FileSortingEntry& b) { // lambda ception
-                          if (a.Key != b.Key)
-                              return a.Key > b.Key;
-                          String aStr = a.Entry.path().filename().string();
-                          String bStr = b.Entry.path().filename().string();
-                          return std::lexicographical_compare(
-                            aStr.begin(), aStr.end(), bStr.begin(), bStr.end(),
-                            [](char a, char b) { return std::tolower(a) < std::tolower(b); });
-                      });
-
-            for (auto& folder : folders)
+        Vector<Ref<LibraryEntry>> entries = m_CurrentDirectoryEntry->Children;
+        std::sort(entries.begin(), entries.end(), [&](const auto& l, const auto& r) {
+            if (m_FileSortingMode == FileSortingMode::SortByName)
             {
-                sortedFiles.emplace_back(0, folder);
+                if (l->Type == r->Type)
+                    return l->ElementName > r->ElementName;
+                return l->Type == LibraryEntryType::File;
             }
-        }
+            else if (m_FileSortingMode == FileSortingMode::SortByDate)
+                return l->LastUpdateTime > r->LastUpdateTime;
+            else if (m_FileSortingMode == FileSortingMode::SortBySize)
+            {
+                if (l->Type == r->Type && l->Type == LibraryEntryType::File)
+                    return static_cast<FileEntry*>(l.get())->Filesize > static_cast<FileEntry*>(r.get())->Filesize;
+                return l->Type == LibraryEntryType::File;
+            }
+            return false;
+        });
 
         if (m_Focused || m_Hovered)
         {
@@ -265,7 +250,7 @@ namespace Crowny
             {
                 for (auto& entry : m_SelectedFiles)
                 {
-                    if (!std::filesystem::remove((s_AssetPath / entry).c_str()))
+                    if (!fs::remove((s_AssetPath / entry).c_str()))
                         CW_ENGINE_ERROR("Error deleting file.");
                 }
             }
@@ -274,15 +259,14 @@ namespace Crowny
                 m_RenamingPath = *m_SelectedFiles.begin(); // TODO: Make sure this is the first selected file
                 m_Filename = m_RenamingPath.filename();
             }
-            if (Input::IsKeyPressed(Key::Left) || Input::IsKeyPressed(Key::Right))
-                m_SelectedFiles.insert(sortedFiles[0].Entry.path().filename().string());
+            // if (Input::IsKeyPressed(Key::Left) || Input::IsKeyPressed(Key::Right))
+            //     m_SelectedFiles.insert(sortedFiles[0].Entry.path().filename().string());
         }
 
-        for (auto& entry : sortedFiles)
+        for (const auto& entry : entries)
         {
-            std::filesystem::directory_entry dir = entry.Entry;
-            const auto& path = dir.path();
-            auto relativePath = std::filesystem::relative(path, s_AssetPath);
+            const auto& path = entry->Filepath;
+            auto relativePath = fs::relative(path, ProjectLibrary::Get().GetAssetFolder());
             String filename = relativePath.filename().string();
             ImGui::PushID(filename.c_str());
 
@@ -293,7 +277,7 @@ namespace Crowny
             if (!selected)
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
             ImTextureID tid;
-            if (dir.is_directory())
+            if (entry->Type == LibraryEntryType::Directory)
                 tid = m_FolderIcon;
             else
             {
@@ -315,8 +299,8 @@ namespace Crowny
             {
                 auto completeRename = [&]() {
                     if (m_RenamingType == AssetBrowserItem::Folder)
-                        std::filesystem::rename(m_RenamingPath,
-                                                m_CurrentDirectory / m_Filename); // Hmm does not feel safe
+                        ProjectLibrary::Get().MoveEntry(m_RenamingPath,
+                                                        m_CurrentDirectoryEntry->Parent->Filepath / m_Filename);
                     m_RenamingPath.clear();
                 };
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 5));
@@ -349,16 +333,15 @@ namespace Crowny
                 ImGui::EndDragDropSource();
             }
 
-            if (dir.is_directory()) // Drop in directoriesy
+            if (entry->Type == LibraryEntryType::Directory) // Drop in directories
             {
                 if (ImGui::BeginDragDropTarget())
                 {
                     const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_ITEM");
                     if (payload)
                     {
-                        std::filesystem::path payloadPath =
-                          std::filesystem::path((const char*)payload->Data).filename();
-                        std::filesystem::rename(path.parent_path() / payloadPath, path / payloadPath);
+                        fs::path payloadPath = fs::path((const char*)payload->Data).filename();
+                        ProjectLibrary::Get().MoveEntry(path.parent_path() / payloadPath, path / payloadPath);
                     }
                     ImGui::EndDragDropTarget();
                 }
@@ -370,10 +353,10 @@ namespace Crowny
 
             if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) // Enter directory
             {
-                if (dir.is_directory())
+                if (entry->Type == LibraryEntryType::Directory)
                 {
-                    m_PreviousDirectory.clear();
-                    m_CurrentDirectory /= path.filename();
+                    m_BackwardHistory.push(entry->Parent);
+                    m_CurrentDirectoryEntry = static_cast<DirectoryEntry*>(entry.get());
                     m_SelectedFiles.clear();
                 }
                 else // Open the file
@@ -445,7 +428,7 @@ namespace Crowny
         if (ImGui::MenuItem("Show In Explorer"))
         {
             if (filepath.empty())
-                PlatformUtils::ShowInExplorer(m_CurrentDirectory);
+                PlatformUtils::ShowInExplorer(m_CurrentDirectoryEntry->Filepath);
             else
                 PlatformUtils::ShowInExplorer(filepath);
         }
@@ -459,8 +442,7 @@ namespace Crowny
 
         if (ImGui::MenuItem("Delete"))
         {
-            if (!std::filesystem::remove((filepath).c_str()))
-                CW_ENGINE_ERROR("Error deleting file.");
+            ProjectLibrary::Get().DeleteEntry(filepath);
         }
 
         if (ImGui::MenuItem("Rename"))
@@ -475,15 +457,14 @@ namespace Crowny
         if (ImGui::MenuItem("Copy Path"))
         {
             if (!filepath.empty())
-                PlatformUtils::CopyToClipboard(std::filesystem::absolute(filepath));
+                PlatformUtils::CopyToClipboard(fs::absolute(filepath));
             else
-                PlatformUtils::CopyToClipboard(std::filesystem::absolute(m_CurrentDirectory));
+                PlatformUtils::CopyToClipboard(fs::absolute(m_CurrentDirectoryEntry->Filepath));
         }
 
         ImGui::Separator();
         if (ImGui::MenuItem("Refresh", "Ctrl+R"))
-        {
-        }
+            ProjectLibrary::Get().Refresh(m_CurrentDirectoryEntry->Filepath);
     }
 
     void ImGuiAssetBrowserPanel::CreateNew(AssetBrowserItem itemType)
@@ -491,16 +472,16 @@ namespace Crowny
         String filename = GetDefaultFileNameFromType(itemType);
         if (itemType == AssetBrowserItem::Folder)
         {
-            if (!std::filesystem::create_directory(m_CurrentDirectory / filename))
-                CW_ENGINE_ERROR("Error creating directory {0}", (m_CurrentDirectory / filename).string());
+            // if (!fs::create_directory(m_CurrentDirectoryEntry / filename))
+            // CW_ENGINE_ERROR("Error creating directory {0}", (m_CurrentDirectory / filename).string());
         }
         else
         {
-            const String text = GetDefaultContents(itemType);
-            FileSystem::WriteTextFile(m_CurrentDirectory / filename, text);
+            // const String text = GetDefaultContents(itemType);
+            // FileSystem::WriteTextFile(m_CurrentDirectory / filename, text);
         }
-        m_RenamingPath = m_CurrentDirectory / filename;
-        m_Filename = filename;
+        // m_RenamingPath = m_CurrentDirectory / filename;
+        // m_Filename = filename;
     }
 
     String ImGuiAssetBrowserPanel::GetDefaultContents(AssetBrowserItem itemType)

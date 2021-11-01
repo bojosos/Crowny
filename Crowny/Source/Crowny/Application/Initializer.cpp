@@ -1,6 +1,10 @@
 #include "cwpch.h"
 
 #include "Crowny/Application/Initializer.h"
+
+// Has to be here due to ambiguous refs caused by Xlib(which is included by vulkan on linux) and my Input class
+#include "Platform/Vulkan/VulkanRenderAPI.h"
+
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Audio/AudioManager.h"
 #include "Crowny/Common/Random.h"
@@ -12,8 +16,8 @@
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Scene/SceneManager.h"
-#include "Platform/Vulkan/VulkanRenderAPI.h"
 
+// Script bindings
 #include "Crowny/Scripting/Bindings/Logging/ScriptDebug.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptNoise.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptTransform.h"
@@ -25,7 +29,13 @@
 #include "Crowny/Scripting/Bindings/ScriptInput.h"
 #include "Crowny/Scripting/Bindings/ScriptRandom.h"
 
+// Script runtime
 #include "Crowny/Scripting/CWMonoRuntime.h"
+
+// Importers
+#include "Crowny/Import/AudioClipImporter.h"
+#include "Crowny/Import/ShaderImporter.h"
+#include "Crowny/Import/TextureImporter.h"
 
 namespace Crowny
 {
@@ -33,6 +43,10 @@ namespace Crowny
     void Initializer::Init()
     {
         Importer::StartUp();
+        Importer::Get().RegisterImporter(new AudioClipImporter());
+        Importer::Get().RegisterImporter(new ShaderImporter());
+        Importer::Get().RegisterImporter(new TextureImporter());
+
         AssetManager::StartUp();
         // Most of these should be in the editor
         VirtualFileSystem::Init();
@@ -75,9 +89,9 @@ namespace Crowny
         Renderer2D::Init();
         // ForwardRenderer::Init();
 
-        FontManager::Add(CreateRef<Font>("/Fonts/" + DEFAULT_FONT_FILENAME, "Roboto Thin", 64));
+        FontManager::Add(CreateRef<Font>("Resources/Fonts/" + DEFAULT_FONT_FILENAME, "Roboto Thin", 64));
         CWMonoRuntime::Init("Crowny C# Runtime");
-        CWMonoRuntime::LoadAssemblies("/Assemblies");
+        CWMonoRuntime::LoadAssemblies("Resources/Assemblies");
 
         // TODO: Out of here, maybe
         ScriptTransform::InitRuntimeFunctions();

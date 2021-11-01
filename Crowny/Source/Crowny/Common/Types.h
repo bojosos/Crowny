@@ -122,7 +122,9 @@ namespace Crowny
         RG32F = 9,
         R32I = 10,
         DEPTH32F = 11,
-        DEPTH24STENCIL8 = 12
+        DEPTH24STENCIL8 = 12,
+
+        FormatCount = 13
     };
 
     enum class TextureChannel

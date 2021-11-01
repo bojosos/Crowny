@@ -21,6 +21,20 @@ namespace glm // cereal requires that these in the glm namespace(maybe)
     }
 } // namespace glm
 
+namespace std
+{
+    namespace filesystem
+    {
+        template <class Archive> void Load(Archive& archive, path& fp)
+        {
+            string res;
+            archive(res);
+            fp = res;
+        }
+        template <class Archive> void Save(Archive& archive, const path& fp) { archive(fp.string()); }
+    } // namespace filesystem
+} // namespace std
+
 namespace Crowny
 {
     template <class Archive> void Serialize(Archive& archive, UUID& uuid)

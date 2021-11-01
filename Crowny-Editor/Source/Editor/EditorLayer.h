@@ -45,6 +45,9 @@ namespace Crowny
         bool OnMouseButtonPressed(MouseButtonPressedEvent& e);
         bool OnViewportEvent(Event& event);
 
+        void NewProject();
+        void OpenProject();
+
         void CreateNewScene();
         void OpenScene();
         void OpenScene(const Path& filepath);
@@ -53,6 +56,7 @@ namespace Crowny
 
     private:
         friend class Time;
+
         ImGuiMenuBar* m_MenuBar;
         Ref<Scene> m_Temp;
         Ref<RenderTarget> m_RenderTarget;
@@ -70,7 +74,10 @@ namespace Crowny
         Vector<ImGuiPanel*> m_ImGuiWindows;
         static EditorCamera s_EditorCamera;
         Entity m_HoveredEntity;
+        bool m_CreatingNewProject = false;
         bool m_GameMode = false;
+        String m_NewProjectPath;
+        String m_NewProjectName;
         bool m_Paused = false;
         glm::vec2 m_ViewportSize = { 1280.0f, 720.0f }; // and dis
 

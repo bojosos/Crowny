@@ -24,17 +24,17 @@ namespace Crowny
         void Save(const Ref<Asset>& resource); // TODO: Compression
         void Save(const Ref<Asset>& resource, const Path& filepath);
 
+        void RegisterAssetManifest(const Ref<AssetManifest>& manifest);
+        void UnregisterAssetManifest(const Ref<AssetManifest>& manifest);
+
     private:
         Ref<Asset> Load(const UUID& uuid, const Path& filepath, bool keepSourceData);
         void GetFilepathFromUUID(const UUID& uuid, Path& outFilepath);
         bool GetUUIDFromFilepath(const Path& filepath, UUID& outUUID);
 
     private:
+        UnorderedMap<UUID, Ref<Asset>> m_LoadedAssets;
+        // UnorderedMap<UUID, WeakAssetHandle<Asset>> m_Handles;
         Vector<Ref<AssetManifest>> m_Manifests;
-
-    public:
-        Ref<Asset> Import(const Path& filepath, const Ref<ImportOptions>& importOptions, const UUID& uuid);
-        Ref<AssetManifest>& ImportManifest(const Path& path, const String& name);
-        Ref<AssetManifest>& CreateManifest(const Path& path, const String& name);
     };
 } // namespace Crowny

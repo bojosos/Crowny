@@ -130,7 +130,7 @@ namespace Crowny
         Ref<::Crowny::Mesh> Mesh = nullptr;
         Ref<::Crowny::Model> Model = nullptr;
 
-        MeshRendererComponent() { Model = CreateRef<::Crowny::Model>("/Models/sphere.gltf"); };
+        MeshRendererComponent() { Model = CreateRef<::Crowny::Model>("Resources/Models/sphere.gltf"); };
         MeshRendererComponent(const MeshRendererComponent&) = default;
     };
 
