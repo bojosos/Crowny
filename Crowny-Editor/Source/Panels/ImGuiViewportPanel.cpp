@@ -70,6 +70,7 @@ namespace Crowny
         m_ViewportBounds = { minBound.x, minBound.y, maxBound.x, maxBound.y };
 
         Entity selected = ImGuiHierarchyPanel::GetSelectedEntity();
+
         EditorCamera camera = EditorLayer::GetEditorCamera();
         const glm::mat4& proj = camera.GetProjection();
         glm::mat4 view = camera.GetViewMatrix();

@@ -31,3 +31,5 @@
 [submodule "Crowny/Dependencies/cereal"]
 	path = Crowny/Dependencies/cereal
 	url = https://github.com/bojosos/cereal
+[submodule "Crowny/Dependencies/openal-soft"]
+	url = https://github.com/bojosos/openal-soft

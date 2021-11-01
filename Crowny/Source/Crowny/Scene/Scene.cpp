@@ -69,6 +69,7 @@ namespace Crowny
     {
         m_RootEntity = new Entity(m_Registry.create(), this);
 
+        m_RootEntity->AddComponent<TransformComponent>();
         m_RootEntity->AddComponent<IDComponent>(UuidGenerator::Generate());
         m_RootEntity->AddComponent<TagComponent>(m_Name);
         m_RootEntity->AddComponent<RelationshipComponent>();

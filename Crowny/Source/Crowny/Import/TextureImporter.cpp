@@ -1,7 +1,7 @@
 
 #include "cwpch.h"
 
-#include "Crowny/Import/Importer.h"
+#include "Crowny/Import/TextureImporter.h"
 
 #include "Crowny/Common/StringUtils.h"
 #include "Crowny/Common/VirtualFileSystem.h"
@@ -12,17 +12,19 @@
 namespace Crowny
 {
 
-    // bool IsFileTypeSupported(const String& ext)
-    // {
-    // String lower = ext;
-    // StringUtils::ToLower(lower);
-    // return lower == "png" || lower == "jpeg" || lower == "psd"
-    // || lower == "gif" || lower == "tga" || lower == "bmp" || lower == "hdr";
-    // }
+    bool TextureImporter::IsExtensionSupported(const String& ext) const
+    {
+        String lower = ext;
+        StringUtils::ToLower(lower);
+        return lower == "png" || lower == "jpeg" || lower == "psd" || lower == "gif" || lower == "tga" ||
+               lower == "bmp" || lower == "hdr";
+    }
+
+    bool TextureImporter::IsMagicNumSupported(uint8_t* num, uint32_t numSize) const { return true; }
 
     // Importer currently only supports 32-bit 1,3,4-channel images
     // Going to switch to FreeImage soon
-    template <> Ref<Texture> Importer::Import(const Path& filepath, const Ref<ImportOptions>& importOptions)
+    Ref<Asset> TextureImporter::Import(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
         Ref<const TextureImportOptions> textureImportOptions =
           std::static_pointer_cast<const TextureImportOptions>(importOptions);
@@ -58,7 +60,7 @@ namespace Crowny
         TextureParameters params;
         params.Width = width;
         params.Height = height;
-        if (textureImportOptions == nullptr || textureImportOptions->AutomaticFormat)
+        if (textureImportOptions->AutomaticFormat)
             params.Format = format;
         else
             params.Format = textureImportOptions->Format;
@@ -69,4 +71,7 @@ namespace Crowny
         texture->WriteData(pixelData);
         return texture;
     }
+
+    Ref<ImportOptions> TextureImporter::CreateImportOptions() const { return CreateRef<TextureImportOptions>(); }
+
 } // namespace Crowny

@@ -277,7 +277,7 @@ namespace Crowny
 
             if (ImGui::Button("Apply"))
             {
-                Importer::Get().Reimport(m_InspectedAssetPath, m_ImportOptions);
+                // Importer::Get().Reimport(m_InspectedAssetPath, m_ImportOptions);
             }
             if (ImGui::Button("Revert"))
             {
