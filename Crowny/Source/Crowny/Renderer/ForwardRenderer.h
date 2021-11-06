@@ -20,6 +20,6 @@ namespace Crowny
         static void EndScene();
         static void End();
         static void Flush();
-        void Shutdown();
+        static void Shutdown();
     };
 } // namespace Crowny

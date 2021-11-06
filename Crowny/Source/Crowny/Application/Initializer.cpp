@@ -13,6 +13,7 @@
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/ForwardPlusRenderer.h"
+#include "Crowny/Renderer/ForwardRenderer.h"
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Scene/SceneManager.h"
@@ -116,10 +117,11 @@ namespace Crowny
         SceneManager::Shutdown();
         VirtualFileSystem::Shutdown();
         */
-        RenderAPI::Get().Shutdown();
-        AudioManager::Shutdown();
-        Importer::Shutdown();
         AssetManager::Shutdown();
+        Importer::Shutdown();
+        AudioManager::Shutdown();
+        ForwardRenderer::Shutdown();
+        RenderAPI::Get().Shutdown();
     }
 
 } // namespace Crowny

@@ -11,8 +11,8 @@ namespace Crowny
     void Editor::CreateProject(const Path& projectParentPath, const String& projectName)
     {
         Path projectPath = projectParentPath / projectName;
-        Path assetDirectory = projectPath / "Assets";
-        Path assetCache = projectPath / "Cache";
+        Path assetDirectory = projectPath / ProjectLibrary::ASSET_DIR;
+        Path assetCache = projectPath / ProjectLibrary::INTERNAL_ASSET_DIR;
 
         if (!std::filesystem::exists(projectPath))
             std::filesystem::create_directory(projectPath);
@@ -44,6 +44,7 @@ namespace Crowny
                 Ref<DataStream> stream = FileSystem::OpenFile(settingsPath);
                 BinaryDataStreamInputArchive archive(stream);
                 archive(m_ProjectSettings);
+                stream->Close();
             }
         }
         if (m_ProjectSettings == nullptr)
@@ -65,10 +66,11 @@ namespace Crowny
         if (m_ProjectSettings == nullptr || !IsProjectLoaded())
             return;
 
-        Path absPath = GetProjectPath();
-        absPath.append("ProjectSettings.yaml");
+        Path absPath = GetProjectPath() / "ProjectSettings.yaml";
 
-        Ref<DataStream> stream = FileSystem::OpenFile(absPath, false);
+        if (!fs::is_directory(absPath.parent_path()))
+            fs::create_directories(absPath.parent_path());
+        Ref<DataStream> stream = FileSystem::CreateAndOpenFile(absPath);
         BinaryDataStreamOutputArchive archive(stream);
         archive(m_ProjectSettings);
         stream->Close();

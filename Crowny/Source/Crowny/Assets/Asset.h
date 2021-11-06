@@ -34,4 +34,13 @@ namespace Crowny
         bool IncludeInBuild;
     };
 
+    class ScriptCode : public Asset
+    {
+    public:
+        ScriptCode(const String& source) : m_Source(source) {}
+
+    private:
+        String m_Source;
+    };
+
 } // namespace Crowny

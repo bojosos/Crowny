@@ -35,7 +35,7 @@ namespace Crowny
     class ImGuiAssetBrowserPanel : public ImGuiPanel
     {
     public:
-        ImGuiAssetBrowserPanel(const String& name);
+        ImGuiAssetBrowserPanel(const String& name, std::function<void(const Path&)> selectedPathCallback);
         ~ImGuiAssetBrowserPanel() = default;
 
         virtual void Render() override;
@@ -70,6 +70,8 @@ namespace Crowny
         String m_Filename;
         AssetBrowserItem m_RenamingType;
         std::filesystem::path m_RenamingPath;
+
+        std::function<void(const Path&)> m_SetSelectedPathCallback;
     };
 
 } // namespace Crowny

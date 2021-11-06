@@ -48,6 +48,7 @@ namespace Crowny
 
     void AssetManifest::RegisterAsset(const UUID& uuid, const Path& path)
     {
+        CW_ENGINE_INFO("Register {0}, {1}", uuid.ToString(), path);
         auto findIter = m_UuidToFilepath.find(uuid);
         if (findIter != m_UuidToFilepath.end())
         {
@@ -81,6 +82,9 @@ namespace Crowny
 
     void AssetManifest::Serialize(const Ref<AssetManifest>& manifest, const Path& filepath, const Path& relativeTo)
     {
+        CW_ENGINE_INFO("Wat");
+        CW_ENGINE_INFO(manifest->m_UuidToFilepath.size());
+        CW_ENGINE_INFO(manifest->m_FilepathToUuid.size());
         Ref<AssetManifest> copy = manifest;
         if (!relativeTo.empty())
         {
@@ -97,9 +101,11 @@ namespace Crowny
                 copy->m_UuidToFilepath[entry.first] = relativePath;
             }
         }
-
+        CW_ENGINE_INFO("Wat");
+        CW_ENGINE_INFO(copy->m_UuidToFilepath.size());
+        CW_ENGINE_INFO(copy->m_FilepathToUuid.size());
         YAML::Emitter out;
-        out << YAML::Comment("Crowny manfiest");
+        out << YAML::Comment("Crowny manifest");
         out << YAML::BeginMap;
         out << YAML::Key << "Manifest" << YAML::Value << copy->m_Name;
 
@@ -135,10 +141,13 @@ namespace Crowny
         }
         for (auto asset : assets)
         {
-            UUID id = asset["UUID"].as<UUID>();
-            String path = asset["Path"].as<String>();
-            result->m_FilepathToUuid[path] = id;
-            result->m_UuidToFilepath[id] = path;
+            for (const auto& kv : asset)
+            {
+                UUID id = kv.first.as<UUID>();
+                String path = kv.second.as<String>();
+                result->m_FilepathToUuid[path] = id;
+                result->m_UuidToFilepath[id] = path;
+            }
         }
 
         if (relativeTo.empty())

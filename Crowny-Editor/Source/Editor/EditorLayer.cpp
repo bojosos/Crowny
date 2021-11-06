@@ -46,7 +46,6 @@ namespace Crowny
     {
         ProjectLibrary::StartUp();
         Editor::StartUp();
-
         VirtualFileSystem::Get()->Mount("Icons", "Resources/Icons");
         SceneRenderer::Init();
         EditorAssets::Load();
@@ -74,14 +73,18 @@ namespace Crowny
         viewMenu->AddItem(new ImGuiMenuItem("Viewport", "", [&](auto& event) { m_ViewportPanel->Show(); }));
         m_ViewportPanel->SetEventCallback(CW_BIND_EVENT_FN(OnViewportEvent));
 
-        m_InspectorPanel = new ImGuiInspectorPanel("Inspector");
-        viewMenu->AddItem(new ImGuiMenuItem("Inspector", "", [&](auto& event) { m_InspectorPanel->Show(); }));
-
         m_ConsolePanel = new ImGuiConsolePanel("Console");
         viewMenu->AddItem(new ImGuiMenuItem("Console", "", [&](auto& entity) { m_ConsolePanel->Show(); }));
 
-        m_AssetBrowser = new ImGuiAssetBrowserPanel("Asset browser");
+        m_InspectorPanel = new ImGuiInspectorPanel("Inspector");
+        viewMenu->AddItem(new ImGuiMenuItem("Inspector", "", [&](auto& event) { m_InspectorPanel->Show(); }));
+
+        m_AssetBrowser = new ImGuiAssetBrowserPanel(
+          "Asset browser", [&](const Path& path) { m_InspectorPanel->SetSelectedAssetPath(path); });
         viewMenu->AddItem(new ImGuiMenuItem("Asset browser", "", [&](auto& event) { m_AssetBrowser->Show(); }));
+
+        Editor::Get().LoadProject("/home/life/Desktop/dev/New Project");
+        m_AssetBrowser->Initialize();
 
         m_MenuBar->AddMenu(viewMenu);
 

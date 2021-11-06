@@ -183,7 +183,9 @@ namespace Crowny
 
     void AssetManager::Save(const Ref<Asset>& resource, const Path& filepath)
     {
-        Ref<DataStream> stream = FileSystem::OpenFile(filepath, false);
+        if (!fs::is_directory(filepath.parent_path()))
+            fs::create_directories(filepath.parent_path());
+        Ref<DataStream> stream = FileSystem::CreateAndOpenFile(filepath);
         BinaryDataStreamOutputArchive archive(stream);
         archive(resource);
         stream->Close();

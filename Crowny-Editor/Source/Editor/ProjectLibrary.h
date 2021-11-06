@@ -4,11 +4,11 @@
 
 #include "Crowny/Assets/Asset.h"
 #include "Crowny/Assets/AssetManifest.h"
+#include "Crowny/Assets/CerealDataStreamArchive.h"
+#include "Crowny/Common/StringUtils.h"
 #include "Crowny/Import/ImportOptions.h"
 
 #include "Editor/Settings/ProjectSettings.h"
-
-#include "Crowny/Assets/CerealDataStreamArchive.h"
 
 namespace Crowny
 {
@@ -25,6 +25,7 @@ namespace Crowny
     {
         LibraryEntry() = default;
         LibraryEntry(const Path& path, const String& name, DirectoryEntry* parent, LibraryEntryType type);
+        virtual ~LibraryEntry() = default;
 
         LibraryEntryType Type;
         Path Filepath;
@@ -39,59 +40,19 @@ namespace Crowny
     {
         FileEntry() = default;
         FileEntry(const Path& path, const String& name, DirectoryEntry* parent);
+        ~FileEntry() = default;
+
         Ref<AssetMetadata> Metadata;
         uint32_t Filesize;
-
-        template <class Archive> void Serialize(Archive& archive)
-        {
-            archive(Type, Filepath, ElementName, ElementNameHash, LastUpdateTime, Filesize);
-        }
     };
 
     struct DirectoryEntry : public LibraryEntry
     {
         DirectoryEntry() = default;
         DirectoryEntry(const Path& path, const String& name, DirectoryEntry* parent);
+        ~DirectoryEntry() = default;
 
         Vector<Ref<LibraryEntry>> Children;
-
-        void Save(BinaryDataStreamOutputArchive& archive) const
-        {
-            archive(Type, Filepath, ElementName, ElementNameHash, LastUpdateTime, Children.size());
-            for (auto& child : Children)
-            {
-                if (child->Type == LibraryEntryType::File)
-                    archive(std::static_pointer_cast<FileEntry>(child));
-                else
-                    archive(std::static_pointer_cast<DirectoryEntry>(child));
-            }
-        }
-
-        void Load(BinaryDataStreamOutputArchive& archive)
-        {
-            size_t numChildren = 0;
-            archive(Type, Filepath, ElementName, ElementNameHash, LastUpdateTime, numChildren);
-
-            for (size_t i = 0; i < numChildren; i++)
-            {
-                LibraryEntryType type = LibraryEntryType::File;
-                archive(type);
-                if (type == LibraryEntryType::File)
-                {
-                    Ref<FileEntry> childEntry = CreateRef<FileEntry>();
-                    archive(childEntry);
-                    Children.push_back(childEntry);
-                    childEntry->Parent = this;
-                }
-                else
-                {
-                    Ref<DirectoryEntry> childEntry = CreateRef<DirectoryEntry>();
-                    archive(childEntry);
-                    Children.push_back(childEntry);
-                    childEntry->Parent = this;
-                }
-            }
-        }
     };
 
     class ProjectLibrary : public Module<ProjectLibrary>
