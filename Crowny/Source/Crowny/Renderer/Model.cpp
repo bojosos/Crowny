@@ -1,6 +1,5 @@
 #include "cwpch.h"
 
-#include "../../Crowny-Editor/Source/Panels/ImGuiInspectorPanel.h"
 #include "Crowny/Renderer/Model.h"
 
 #include "Crowny/Common/VirtualFileSystem.h"

@@ -12,6 +12,7 @@ namespace Crowny
 
     enum class InspectorMode
     {
+        Default,
         GameObject,
         Material,
         PhysicsMaterial,
@@ -52,13 +53,17 @@ namespace Crowny
         void RenderMeshImportInspector();
         void RenderPrefabInspector();
 
+        void DrawApplyRevert(float xOffset, float width);
+        void DrawHeader();
+
     private:
         static Ref<PBRMaterial> s_SelectedMaterial;
 
+        bool m_HasPropertyChanged = false;
         InspectorMode m_InspectorMode = InspectorMode::GameObject;
         Ref<ImportOptions> m_ImportOptions;
         Ref<ImportOptions> m_OldImportOptions;
-        String m_InspectedAssetPath;
+        Path m_InspectedAssetPath;
         ImGuiComponentEditor m_ComponentEditor;
     };
 } // namespace Crowny

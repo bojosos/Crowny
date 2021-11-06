@@ -19,23 +19,20 @@ namespace Crowny
         case ImportOptionsType::AudioClip: {
             Ref<AudioClipImportOptions> audioImportOptions =
               std::static_pointer_cast<AudioClipImportOptions>(importOptions);
-            out << YAML::BeginMap;
             out << YAML::Key << "AudioImporter" << YAML::Value;
-            out << YAML::BeginMap << YAML::Key << "Format" << YAML::Value << (uint32_t)audioImportOptions->Format
-                << YAML::EndMap;
-            out << YAML::BeginMap << YAML::Key << "ReadMode" << YAML::Value << (uint32_t)audioImportOptions->ReadMode
-                << YAML::EndMap;
-            out << YAML::BeginMap << YAML::Key << "Is3D" << YAML::Value << audioImportOptions->Is3D << YAML::EndMap;
-            out << YAML::BeginMap << YAML::Key << "BitDepth" << YAML::Value << audioImportOptions->BitDepth
-                << YAML::EndMap;
-            out << YAML::BeginMap << YAML::Key << "Quality" << YAML::Value << audioImportOptions->Quality
-                << YAML::EndMap;
+            out << YAML::BeginMap;
+            out << YAML::Key << "Format" << YAML::Value << (uint32_t)audioImportOptions->Format;
+            out << YAML::Key << "ReadMode" << YAML::Value << (uint32_t)audioImportOptions->ReadMode;
+            out << YAML::Key << "Is3D" << YAML::Value << audioImportOptions->Is3D;
+            out << YAML::Key << "BitDepth" << YAML::Value << audioImportOptions->BitDepth;
+            out << YAML::Key << "Quality" << YAML::Value << audioImportOptions->Quality;
+            out << YAML::EndMap;
             break;
         }
         case ImportOptionsType::Shader: {
             Ref<ShaderImportOptions> shaderImportOptions = std::static_pointer_cast<ShaderImportOptions>(importOptions);
-            out << YAML::BeginMap;
             out << YAML::Key << "ShaderImproter" << YAML::Value;
+            out << YAML::BeginMap;
             // out << YAML::Key << shaderImportOptions->GetDefines();
             out << YAML::EndMap;
             break;
@@ -43,28 +40,25 @@ namespace Crowny
         case ImportOptionsType::Texture: {
             Ref<TextureImportOptions> textureImportOptions =
               std::static_pointer_cast<TextureImportOptions>(importOptions);
-            out << YAML::BeginMap;
             out << YAML::Key << "TextureImporter" << YAML::Value;
-            out << YAML::Key << "AutoFormat" << YAML::Value << textureImportOptions->AutomaticFormat << YAML::EndMap;
-            out << YAML::Key << "CpuCached" << YAML::Value << textureImportOptions->CpuCached << YAML::EndMap;
-            out << YAML::Key << "Format" << YAML::Value << (uint32_t)textureImportOptions->Format << YAML::EndMap;
-            out << YAML::Key << "GenerateMips" << YAML::Value << textureImportOptions->GenerateMips << YAML::EndMap;
-            out << YAML::Key << "MaxMip" << YAML::Value << textureImportOptions->MaxMip << YAML::EndMap;
-            out << YAML::Key << "Shape" << YAML::Value << (uint32_t)textureImportOptions->Shape << YAML::EndMap;
-            out << YAML::Key << "sRGB" << YAML::Value << textureImportOptions->SRGB << YAML::EndMap;
+            out << YAML::BeginMap;
+            out << YAML::Key << "AutoFormat" << YAML::Value << textureImportOptions->AutomaticFormat;
+            out << YAML::Key << "CpuCached" << YAML::Value << textureImportOptions->CpuCached;
+            out << YAML::Key << "Format" << YAML::Value << (uint32_t)textureImportOptions->Format;
+            out << YAML::Key << "GenerateMips" << YAML::Value << textureImportOptions->GenerateMips;
+            out << YAML::Key << "MaxMip" << YAML::Value << textureImportOptions->MaxMip;
+            out << YAML::Key << "Shape" << YAML::Value << (uint32_t)textureImportOptions->Shape;
+            out << YAML::Key << "sRGB" << YAML::Value << textureImportOptions->SRGB;
             out << YAML::EndMap;
             break;
         }
         case ImportOptionsType::Script: {
             Ref<CSharpScriptImportOptions> scriptImportOptions =
               std::static_pointer_cast<CSharpScriptImportOptions>(importOptions);
-            out << YAML::BeginMap;
             out << YAML::Key << "ScriptImporter";
-            out << YAML::EndMap;
             break;
         }
         }
-        out << YAML::EndMap;
     }
 
     Ref<ImportOptions> ImportOptionsSerializer::Deserialize(const YAML::Node& data)

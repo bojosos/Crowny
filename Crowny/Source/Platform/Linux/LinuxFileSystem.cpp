@@ -69,13 +69,16 @@ namespace Crowny
 
     Ref<DataStream> FileSystem::OpenFile(const Path& filepath, bool readOnly)
     {
-        String outPath;
-        VirtualFileSystem::Get()->ResolvePhyiscalPath(filepath, outPath);
         DataStream::AccessMode accessMode = DataStream::READ;
         if (!readOnly)
             accessMode = (DataStream::AccessMode)(accessMode | DataStream::WRITE);
 
-        return CreateRef<FileDataStream>(outPath, accessMode, true);
+        return CreateRef<FileDataStream>(filepath, accessMode, true);
+    }
+
+    Ref<DataStream> FileSystem::CreateAndOpenFile(const Path& filepath)
+    {
+        return CreateRef<FileDataStream>(filepath, DataStream::WRITE, true);
     }
 
     bool FileSystem::OpenFileDialog(FileDialogType type, const Path& initialDir, const String& filter,

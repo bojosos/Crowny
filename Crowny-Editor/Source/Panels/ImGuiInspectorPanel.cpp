@@ -1,6 +1,7 @@
 #include "cwepch.h"
 
 #include "Crowny/Common/FileSystem.h"
+#include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Import/Importer.h"
 #include "Crowny/Renderer/TextureManager.h"
@@ -10,12 +11,13 @@
 #include "Panels/ImGuiInspectorPanel.h"
 
 #include "Editor/EditorAssets.h"
+#include "Editor/ProjectLibrary.h"
+
+#include <glm/gtc/type_ptr.hpp>
 
 #include <backends/imgui_impl_vulkan.h>
-#include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
-
-#include <imgui.h>
+#include <imgui_internal.h>
 
 namespace Crowny
 {
@@ -40,6 +42,7 @@ namespace Crowny
         ImGui::Begin("Inspector", &m_Shown);
         UpdateState();
 
+        DrawHeader();
         if (m_InspectorMode == InspectorMode::GameObject)
             m_ComponentEditor.Render();
         else if (m_InspectorMode == InspectorMode::Material)
@@ -215,7 +218,6 @@ namespace Crowny
         {
             Ref<AudioClipImportOptions> audioClipImport =
               std::static_pointer_cast<AudioClipImportOptions>(m_ImportOptions);
-
             ImGui::Columns(2);
             ImGui::Text("Format");
             ImGui::NextColumn();
@@ -227,14 +229,14 @@ namespace Crowny
                 {
                     const bool is_selected = (formatIndex == i);
                     if (ImGui::Selectable(formatTexts[i], is_selected))
-                        audioClipImport->Format = (AudioFormat)formatIndex;
+                        audioClipImport->Format = (AudioFormat)i;
 
                     if (is_selected)
                         ImGui::SetItemDefaultFocus();
                 }
                 ImGui::EndCombo();
             }
-
+            ImGui::NextColumn();
             ImGui::Text("Load Mode");
             ImGui::NextColumn();
             const char* loadModeTexts[3] = { "Load Decompressed", "Load Compressed", "Stream" };
@@ -245,44 +247,41 @@ namespace Crowny
                 {
                     const bool is_selected = (loadModeIndex == i);
                     if (ImGui::Selectable(loadModeTexts[i], is_selected))
-                        audioClipImport->ReadMode = (AudioReadMode)loadModeIndex;
+                        audioClipImport->ReadMode = (AudioReadMode)i;
 
                     if (is_selected)
                         ImGui::SetItemDefaultFocus();
                 }
                 ImGui::EndCombo();
             }
-
+            ImGui::NextColumn();
             ImGui::Text("Bit Depth");
             ImGui::NextColumn();
             const char* bitDepthTexts[4] = { "8", "16", "24", "32" };
             uint32_t bitDepthIndex = (uint32_t)audioClipImport->BitDepth / 8 - 1;
-            if (ImGui::BeginCombo("##AudioBitDepth", loadModeTexts[bitDepthIndex]))
+            if (ImGui::BeginCombo("##AudioBitDepth", bitDepthTexts[bitDepthIndex]))
             {
                 for (uint32_t i = 0; i < 4; i++)
                 {
                     const bool is_selected = (bitDepthIndex == i);
-                    if (ImGui::Selectable(loadModeTexts[i], is_selected))
-                        audioClipImport->BitDepth = (bitDepthIndex + 1) * 8;
+                    if (ImGui::Selectable(bitDepthTexts[i], is_selected))
+                        audioClipImport->BitDepth = (i + 1) * 8;
 
                     if (is_selected)
                         ImGui::SetItemDefaultFocus();
                 }
                 ImGui::EndCombo();
             }
-
+            ImGui::NextColumn();
             ImGui::Text("3D");
             ImGui::NextColumn();
+            float x = ImGui::GetCursorPosX();
+            float width = ImGui::GetColumnWidth();
             ImGui::Checkbox("##IsClip3D", &audioClipImport->Is3D);
-
-            if (ImGui::Button("Apply"))
-            {
-                // Importer::Get().Reimport(m_InspectedAssetPath, m_ImportOptions);
-            }
-            if (ImGui::Button("Revert"))
-            {
-                m_ImportOptions = m_OldImportOptions;
-            }
+            ImGui::NextColumn();
+            ImGui::NextColumn();
+            ImGui::Columns(1);
+            DrawApplyRevert(x, width);
         }
     }
 
@@ -298,11 +297,126 @@ namespace Crowny
 
     void ImGuiInspectorPanel::RenderPrefabInspector() {}
 
+    void ImGuiInspectorPanel::DrawHeader()
+    {
+        // Consider drawing an icon too
+        auto drawHeader = [&](const String& head) {
+            float maxx = ImGui::GetContentRegionAvail().x;
+            ImGui::Text("%s", (m_InspectedAssetPath.filename().string() + " (" + head + ") Import Settings").c_str());
+            float padding = ImGui::GetStyle().FramePadding.x;
+            float open = ImGui::CalcTextSize("Open").x;
+            float reset = ImGui::CalcTextSize("Reset").x;
+            ImGui::SameLine();
+            ImGui::SetCursorPosX(maxx - open - reset - padding * 3);
+            if (ImGui::Button("Reset"))
+            {
+                m_ImportOptions = Importer::Get().CreateImportOptions(m_InspectedAssetPath);
+                m_HasPropertyChanged = true;
+            }
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::BeginTooltip();
+                ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+                ImGui::TextUnformatted("Reset the import properties.");
+                ImGui::PopTextWrapPos();
+                ImGui::EndTooltip();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Open"))
+                PlatformUtils::OpenExternally(m_InspectedAssetPath);
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::BeginTooltip();
+                ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+                ImGui::TextUnformatted("Open in an external program.");
+                ImGui::PopTextWrapPos();
+                ImGui::EndTooltip();
+            }
+            ImGui::Separator();
+        };
+        switch (m_InspectorMode)
+        {
+        case (InspectorMode::AudioClipImport):
+            drawHeader("Audio Clip");
+            break;
+        case (InspectorMode::TextureImport):
+            drawHeader("Texture");
+            break;
+        case (InspectorMode::FontImport):
+            drawHeader("Font");
+            break;
+        case (InspectorMode::PhysicsMaterial):
+            drawHeader("Physics Material");
+            break;
+        case (InspectorMode::ScriptImport):
+            drawHeader("C# script");
+            break;
+        // case (InspectorMode::GameObject):   drawHeader("Texture"); break; This should be different
+        case (InspectorMode::ShaderImport):
+            drawHeader("Shader");
+            break;
+        case (InspectorMode::MeshImport):
+            drawHeader("Mesh");
+            break;
+        case (InspectorMode::Material):
+            drawHeader("Material");
+            break;
+        default:
+            break;
+        }
+    }
+
+    void ImGuiInspectorPanel::DrawApplyRevert(float xOffset, float width)
+    {
+        ImGui::Separator();
+        float padding = ImGui::GetStyle().FramePadding.x;
+        ImGui::SetCursorPosX(xOffset);
+        if (ImGui::Button("Apply", ImVec2(width / 2 - padding * 4, 0)))
+            ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions, true);
+        ImGui::SameLine(xOffset + width / 2);
+        bool changed = m_HasPropertyChanged;
+        if (!changed)
+            ImGui::PushDisabled();
+        if (ImGui::Button("Revert", ImVec2(width / 2 - padding * 4, 0)))
+        {
+            m_ImportOptions = m_OldImportOptions;
+            m_HasPropertyChanged = false;
+        }
+        if (!changed)
+            ImGui::PopDisabled();
+    }
+
     void ImGuiInspectorPanel::SetSelectedAssetPath(const Path& filepath)
     {
-        // m_ImportOptions =
-        // ProjectManager::Get().GetActiveProject().FindEntry(filepath).Meta->GetOptions();
-        // m_OldImportOptions = m_ImportOptions->Clone();
+        m_InspectedAssetPath = filepath;
+        if (fs::is_directory(filepath))
+        {
+            m_InspectorMode = InspectorMode::Default;
+            return;
+        }
+        String ext = filepath.extension();
+        ext = ext.substr(1, ext.size() - 1);
+        if (ext == "ogg" || ext == "wav" || ext == "flac")
+            m_InspectorMode = InspectorMode::AudioClipImport;
+        else if (ext == "png" || ext == "jpeg" || ext == "psd" || ext == "gif" || ext == "tga" || ext == "bmp" ||
+                 ext == "hdr")
+            m_InspectorMode = InspectorMode::TextureImport;
+        else
+            m_InspectorMode = InspectorMode::Default;
+        Ref<LibraryEntry> entry = ProjectLibrary::Get().FindEntry(filepath);
+        if (entry != nullptr)
+        {
+            if (entry->Type == LibraryEntryType::File)
+            {
+                FileEntry* fileEntry = static_cast<FileEntry*>(entry.get());
+                if (fileEntry->Metadata != nullptr)
+                {
+                    m_HasPropertyChanged = false;
+                    m_ImportOptions = fileEntry->Metadata->ImportOptions;
+                    m_OldImportOptions = m_ImportOptions->Clone();
+                }
+            }
+        }
     }
 
     void ImGuiInspectorPanel::SetInspectorMode(InspectorMode mode) { m_InspectorMode = mode; }
