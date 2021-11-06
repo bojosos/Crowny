@@ -7,7 +7,6 @@
 #include "Crowny/Input/Input.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/Scene/SceneRenderer.h"
-#include "Platform/Vulkan/VulkanTexture.h"
 
 #include "Panels/ImGuiHierarchyPanel.h"
 #include "Panels/ImGuiViewportPanel.h"

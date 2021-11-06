@@ -222,7 +222,7 @@ namespace Crowny
 
         if (m_InStream->fail())
         {
-            CW_ENGINE_ERROR("Cannot open file: {0}", path.string());
+            CW_ENGINE_ERROR("Cannot open file: {0}", path);
             return;
         }
 

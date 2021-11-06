@@ -28,6 +28,8 @@ namespace Crowny
         static bool WriteTextFile(const Path& path, const String& text);
         static bool OpenFileDialog(FileDialogType type, const Path& initialDir, const String& filter,
                                    Vector<Path>& outpaths);
+
         static Ref<DataStream> OpenFile(const Path& filepath, bool readOnly = true);
+        static Ref<DataStream> CreateAndOpenFile(const Path& filepath);
     };
 } // namespace Crowny

@@ -61,7 +61,9 @@ namespace Crowny
         fs::directory_entry Entry;
     };
 
-    ImGuiAssetBrowserPanel::ImGuiAssetBrowserPanel(const String& name) : ImGuiPanel(name)
+    ImGuiAssetBrowserPanel::ImGuiAssetBrowserPanel(const String& name,
+                                                   std::function<void(const Path&)> selectedPathCallback)
+      : ImGuiPanel(name), m_SetSelectedPathCallback(selectedPathCallback)
     {
         m_CsDefaultText = FileSystem::ReadTextFile(EditorAssets::DefaultScriptPath);
         m_FolderIcon = ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FolderIcon);
@@ -111,7 +113,7 @@ namespace Crowny
     void ImGuiAssetBrowserPanel::DrawHeader()
     {
         const Ref<DirectoryEntry>& entry = ProjectLibrary::Get().GetRoot();
-        if (m_BackwardHistory.empty())
+        if (!m_BackwardHistory.empty())
         {
             if (ImGui::ArrowButton("<-", ImGuiDir_Left))
             {
@@ -167,8 +169,8 @@ namespace Crowny
         while (tmp != nullptr)
         {
             tmpPath /= tmp->Filepath.filename();
-            if (ImGui::Selectable(
-                  tmp->Filepath.filename().c_str() /*, false, 0, ImVec2(ImGui::CalcTextSize(dir.c_str()).x, 0.0f)*/))
+            if (ImGui::Selectable(tmp->ElementName.c_str(), false, 0,
+                                  ImVec2(ImGui::CalcTextSize(tmp->ElementName.c_str()).x, 0.0f)))
             {
                 m_CurrentDirectoryEntry = tmp;
                 break;
@@ -355,7 +357,7 @@ namespace Crowny
             {
                 if (entry->Type == LibraryEntryType::Directory)
                 {
-                    m_BackwardHistory.push(entry->Parent);
+                    m_BackwardHistory.push(m_CurrentDirectoryEntry);
                     m_CurrentDirectoryEntry = static_cast<DirectoryEntry*>(entry.get());
                     m_SelectedFiles.clear();
                 }
@@ -382,6 +384,7 @@ namespace Crowny
                 {
                     m_SelectedFiles.clear();
                     m_SelectedFiles.insert(filename);
+                    m_SetSelectedPathCallback(path);
                 }
             }
             if (ImGui::BeginPopupContextItem(filename.c_str())) // Right click on a file
@@ -470,18 +473,20 @@ namespace Crowny
     void ImGuiAssetBrowserPanel::CreateNew(AssetBrowserItem itemType)
     {
         String filename = GetDefaultFileNameFromType(itemType);
-        if (itemType == AssetBrowserItem::Folder)
+        Path newEntryPath = EditorUtils::GetUniquePath(m_CurrentDirectoryEntry->Filepath / filename);
+        switch (itemType)
         {
-            // if (!fs::create_directory(m_CurrentDirectoryEntry / filename))
-            // CW_ENGINE_ERROR("Error creating directory {0}", (m_CurrentDirectory / filename).string());
+        case AssetBrowserItem::Folder:
+            ProjectLibrary::Get().CreateFolderEntry(newEntryPath);
+            break;
+        default: {
+            FileSystem::WriteTextFile(newEntryPath, GetDefaultContents(itemType));
+            ProjectLibrary::Get().Refresh(newEntryPath);
+            break;
         }
-        else
-        {
-            // const String text = GetDefaultContents(itemType);
-            // FileSystem::WriteTextFile(m_CurrentDirectory / filename, text);
         }
-        // m_RenamingPath = m_CurrentDirectory / filename;
-        // m_Filename = filename;
+        m_RenamingPath = newEntryPath;
+        m_Filename = newEntryPath.filename();
     }
 
     String ImGuiAssetBrowserPanel::GetDefaultContents(AssetBrowserItem itemType)
