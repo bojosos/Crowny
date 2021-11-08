@@ -9,16 +9,15 @@ namespace Crowny
 
     VulkanFramebuffer::VulkanFramebuffer(VulkanResourceManager* owner, VulkanRenderPass* renderPass,
                                          const VulkanFramebufferDesc& desc)
-      : VulkanResource(owner, false), m_RenderPass(renderPass), m_NumLayers(desc.LayerCount)
+      : VulkanResource(owner, false), m_RenderPass(renderPass), m_NumLayers(desc.LayerCount), m_Width(desc.Width),
+        m_Height(desc.Height)
     {
-        m_Width = desc.Width;
-        m_Height = desc.Height;
         VkImageView attachmentViews[MAX_FRAMEBUFFER_COLOR_ATTACHMENTS + 1];
         VkFramebufferCreateInfo framebufferCI;
         uint32_t idx = 0;
         for (uint32_t i = 0; i < MAX_FRAMEBUFFER_COLOR_ATTACHMENTS; i++)
         {
-            if (desc.Color[i].Image == VK_NULL_HANDLE)
+            if (desc.Color[i].Image == nullptr)
                 continue;
             m_ColorAttachments[idx].Image = desc.Color[i].Image;
             m_ColorAttachments[idx].FinalLayout = renderPass->GetColorDesc(idx).finalLayout;
@@ -69,12 +68,5 @@ namespace Crowny
         VulkanDevice& device = m_Owner->GetDevice();
         vkDestroyFramebuffer(device.GetLogicalDevice(), m_Framebuffer, gVulkanAllocator);
     }
-    /*
-        VulkanRenderTexture::VulkanRenderTexture(const FramebufferProperties& desc) : m_Properties(desc)
-        {
-            if (desc.SwapChainTarget)
-            {
-            }
-        }*/
 
 } // namespace Crowny

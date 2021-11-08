@@ -83,10 +83,11 @@ namespace Crowny
           "Asset browser", [&](const Path& path) { m_InspectorPanel->SetSelectedAssetPath(path); });
         viewMenu->AddItem(new ImGuiMenuItem("Asset browser", "", [&](auto& event) { m_AssetBrowser->Show(); }));
 
-        Editor::Get().LoadProject("/home/life/Desktop/dev/New Project");
-        m_AssetBrowser->Initialize();
-
         m_MenuBar->AddMenu(viewMenu);
+
+        Editor::Get().LoadProject("/home/life/Desktop/dev/New Project");
+        // ProjectLibrary::Get().Refresh(ProjectLibrary::Get().GetAssetFolder());
+        m_AssetBrowser->Initialize();
 
         SceneManager::AddScene(CreateRef<Scene>("Editor scene"));
         ScriptRuntime::Init();
@@ -110,11 +111,6 @@ namespace Crowny
 
         ImGuiInspectorPanel::SetSelectedMaterial(mat);
         ForwardRenderer::Init(); // Why here?
-
-        // Ref<Scene> scene;
-        // SceneSerializer serializer(scene);
-        // serializer.Deserialize("Resources/Scenes/Test.yaml");
-        // SceneManager::SetActiveScene(scene);
 
         TextureParameters colorParams;
         colorParams.Width = 1337;
@@ -219,11 +215,44 @@ namespace Crowny
         delete m_AssetBrowser;
 
         EditorAssets::Unload();
+        Editor::Get().SaveProject();
     }
 
     void EditorLayer::OnUpdate(Timestep ts)
     {
         Ref<Scene> scene = SceneManager::GetActiveScene();
+        auto& rapi = RenderAPI::Get();
+        if (m_ViewportSize.x != m_ViewportPanel->GetViewportSize().x ||
+            m_ViewportSize.y != m_ViewportPanel->GetViewportSize().y)
+        {
+            TextureParameters colorParams;
+            colorParams.Width = m_ViewportPanel->GetViewportSize().x;
+            colorParams.Height = m_ViewportPanel->GetViewportSize().y;
+            colorParams.Usage = TextureUsage::TEXTURE_RENDERTARGET;
+
+            TextureParameters objectId;
+            objectId.Width = m_ViewportPanel->GetViewportSize().x;
+            objectId.Height = m_ViewportPanel->GetViewportSize().y;
+            objectId.Format = TextureFormat::R32I;
+            objectId.Usage = TextureUsage(TextureUsage::TEXTURE_RENDERTARGET | TextureUsage::TEXTURE_DYNAMIC);
+
+            TextureParameters depthParams;
+            depthParams.Width = m_ViewportPanel->GetViewportSize().x;
+            depthParams.Height = m_ViewportPanel->GetViewportSize().y;
+            depthParams.Usage = TextureUsage::TEXTURE_DEPTHSTENCIL;
+            depthParams.Format = TextureFormat::DEPTH24STENCIL8;
+
+            Ref<Texture> color1 = Texture::Create(colorParams);
+            Ref<Texture> color2 = Texture::Create(objectId);
+            Ref<Texture> depth = Texture::Create(depthParams);
+            RenderTextureProperties rtProps;
+            rtProps.ColorSurfaces[0] = { color1 };
+            rtProps.ColorSurfaces[1] = { color2 };
+            rtProps.DepthSurface = { depth };
+            rtProps.Width = m_ViewportPanel->GetViewportSize().x;
+            rtProps.Height = m_ViewportPanel->GetViewportSize().y;
+            m_RenderTarget = RenderTexture::Create(rtProps);
+        }
         m_ViewportSize = m_ViewportPanel->GetViewportSize();
         if (m_Temp)
         {
@@ -234,7 +263,6 @@ namespace Crowny
         s_EditorCamera.OnUpdate(ts);
         SceneRenderer::SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
 
-        auto& rapi = RenderAPI::Get();
         rapi.SetRenderTarget(m_RenderTarget);
         rapi.SetViewport(0, 0, m_ViewportSize.x, m_ViewportSize.y);
         SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);

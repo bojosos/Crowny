@@ -60,6 +60,7 @@ namespace Crowny
         ImGuiMenuBar* m_MenuBar;
         Ref<Scene> m_Temp;
         Ref<RenderTarget> m_RenderTarget;
+        Ref<RenderTarget> m_ResizedRenderTarget;
 
         ImGuiPanel* m_GLInfoPanel;
         ImGuiInspectorPanel* m_InspectorPanel;
@@ -68,8 +69,6 @@ namespace Crowny
         ImGuiTextureEditor* m_TextureEditor;
         ImGuiConsolePanel* m_ConsolePanel;
         ImGuiAssetBrowserPanel* m_AssetBrowser;
-
-        uint32_t m_GizmoMode = 0;
 
         Vector<ImGuiPanel*> m_ImGuiWindows;
         static EditorCamera s_EditorCamera;
