@@ -257,9 +257,10 @@ namespace Crowny
             poolCreateInfo.pNext = nullptr;
             poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
             poolCreateInfo.queueFamilyIndex = familyIdx;
-            m_Pools[familyIdx].QueueFamily = familyIdx;
-            memset(m_Pools[familyIdx].Buffers, 0, sizeof(m_Pools[familyIdx].Buffers));
-            vkCreateCommandPool(device.GetLogicalDevice(), &poolCreateInfo, gVulkanAllocator, &m_Pools[familyIdx].Pool);
+            PoolInfo& poolInfo = m_Pools[familyIdx];
+            poolInfo.QueueFamily = familyIdx;
+            std::memset(poolInfo.Buffers, 0, sizeof(poolInfo.Buffers));
+            vkCreateCommandPool(device.GetLogicalDevice(), &poolCreateInfo, gVulkanAllocator, &poolInfo.Pool);
         }
     }
 
@@ -319,7 +320,7 @@ namespace Crowny
                                      bool secondary)
       : m_ScissorRequiresBind(true), m_ViewportRequiresBind(true), m_VertexInputsRequriesBind(true),
         m_GraphicsPipelineRequiresBind(true), m_Id(id), m_QueueFamily(queueFamily), m_Device(device), m_Pool(pool),
-        m_ComputePipelineRequiresBind(true)
+        m_ComputePipelineRequiresBind(true), m_NeedsRawMemoryBarrier(false), m_NeedsWarMemoryBarrier(false)
     {
         uint32_t maxBoundDescriptorSets = device.GetDeviceProperties().limits.maxBoundDescriptorSets;
         m_DescriptorSetsTemp = new VkDescriptorSet[maxBoundDescriptorSets];
@@ -340,7 +341,7 @@ namespace Crowny
         fenceCI.flags = 0;
 
         result = vkCreateFence(m_Device.GetLogicalDevice(), &fenceCI, gVulkanAllocator, &m_Fence);
-        vkResetFences(m_Device.GetLogicalDevice(), 1, &m_Fence);
+        // vkResetFences(m_Device.GetLogicalDevice(), 1, &m_Fence);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
     }
 
@@ -382,6 +383,13 @@ namespace Crowny
                 CW_ENGINE_ASSERT(!useHandle.Used);
                 entry.first->NotifyUnbound();
             }
+
+            for (auto& entry : m_SwapChains)
+            {
+                ResourceUseHandle& useHandle = entry.second;
+                CW_ENGINE_ASSERT(!useHandle.Used);
+                entry.first->NotifyUnbound();
+            }
         }
 
         if (m_IntraQueueSemaphore != nullptr)
@@ -395,7 +403,7 @@ namespace Crowny
 
         vkDestroyFence(device, m_Fence, gVulkanAllocator);
         vkFreeCommandBuffers(device, m_Pool, 1, &m_CmdBuffer);
-        delete m_DescriptorSetsTemp;
+        delete[] m_DescriptorSetsTemp;
     }
 
     bool VulkanCmdBuffer::BindGraphicsPipeline()
@@ -818,6 +826,7 @@ namespace Crowny
 
             if (!foundRange)
             {
+                CW_ENGINE_INFO("range not found bad");
                 std::array<VkImageSubresourceRange, 5> tempRanges;
                 uint32_t newSubresourceIdx = (uint32_t)m_SubresourceInfoStorage.size();
                 Vector<uint32_t> overlappingRanges;
@@ -1696,6 +1705,7 @@ namespace Crowny
             GpuQueueType otherQueueType = GRAPHICS_QUEUE;
             for (uint32_t i = 0; i < QUEUE_COUNT; i++)
             {
+                otherQueueType = (GpuQueueType)i;
                 if (device.GetQueueFamily(otherQueueType) != entryQueueFamily)
                     continue;
                 uint32_t numQueues = device.GetNumQueues(otherQueueType);
@@ -1852,7 +1862,17 @@ namespace Crowny
         m_RenderTarget = renderTarget;
         m_RenderTargetModified = false;
 
-        // TODO: Check load mask
+        if (loadMask.IsSet(RT_DEPTH) && !loadMask.IsSet(RT_STENCIL))
+        {
+            CW_ENGINE_WARN("SetRenderTarget() with invalid load mask. Depth enabled but stencil disabled.");
+            loadMask.Set(RT_STENCIL);
+        }
+
+        if (!loadMask.IsSet(RT_DEPTH) && loadMask.IsSet(RT_STENCIL))
+        {
+            CW_ENGINE_WARN("SetRenderTarget() with invalid load mask. Stencil enabled but depth disabled.");
+            loadMask.Set(RT_STENCIL);
+        }
 
         if (m_Framebuffer == newBuffer && m_RenderTargetReadOnlyFlags == readOnlyFlags &&
             m_RenderTargetLoadMask == loadMask)

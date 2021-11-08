@@ -19,6 +19,7 @@
 #include <ctime>
 #include <filesystem>
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
 
 namespace Crowny
@@ -121,15 +122,17 @@ namespace Crowny
                 m_CurrentDirectoryEntry = m_BackwardHistory.top();
                 m_BackwardHistory.pop();
             }
-            ImGui::SameLine();
-
-            if (m_ForwardHistory.empty())
-            {
-                ImGui::PushDisabled();
-                ImGui::ArrowButton("->", ImGuiDir_Right);
-                ImGui::PopDisabled();
-            }
-            else if (ImGui::ArrowButton("->", ImGuiDir_Right))
+        }
+        else
+        {
+            ImGui::PushDisabled();
+            ImGui::ArrowButton("<-", ImGuiDir_Left);
+            ImGui::PopDisabled();
+        }
+        ImGui::SameLine();
+        if (!m_ForwardHistory.empty())
+        {
+            if (ImGui::ArrowButton("->", ImGuiDir_Right))
             {
                 m_BackwardHistory.push(m_CurrentDirectoryEntry);
                 m_CurrentDirectoryEntry = m_ForwardHistory.top();
@@ -139,29 +142,14 @@ namespace Crowny
         else
         {
             ImGui::PushDisabled();
-            ImGui::ArrowButton("<-", ImGuiDir_Left);
+            ImGui::ArrowButton("->", ImGuiDir_Right);
             ImGui::PopDisabled();
-            ImGui::SameLine();
-
-            if (m_ForwardHistory.empty())
-            {
-                ImGui::PushDisabled();
-                ImGui::ArrowButton("->", ImGuiDir_Right);
-                ImGui::PopDisabled();
-            }
-            else if (ImGui::ArrowButton("->", ImGuiDir_Right))
-            {
-                m_BackwardHistory.push(m_CurrentDirectoryEntry);
-                m_CurrentDirectoryEntry = m_ForwardHistory.top();
-                m_ForwardHistory.pop();
-            }
         }
 
         ImGui::SameLine();
         if (ImGui::Button("Refresh"))
-        {
             ProjectLibrary::Get().Refresh(m_CurrentDirectoryEntry->Filepath);
-        }
+
         ImGui::SameLine();
 
         fs::path tmpPath;
@@ -292,17 +280,25 @@ namespace Crowny
 
             // The thumbnail
             ImGui::BeginGroup();
-            ImGui::ImageButton(tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 },
-                               { 1, 0 } /*, -1, ImGui::GetStyleColorVec4(ImGuiCol_Header)*/);
-
+            ImGui::ImageButton(tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 }, 0.0f);
+            ImGui::SetNextItemWidth(m_ThumbnailSize);
             if (m_RenamingPath.empty() || m_RenamingPath != path)
-                ImGui::TextWrapped("%s", filename.c_str());
+            {
+                float textWidth = ImGui::CalcTextSize(entry->ElementName.c_str()).x;
+                if (m_ThumbnailSize >= textWidth)
+                    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + m_ThumbnailSize / 2 - textWidth / 2);
+
+                ImGui::GetCurrentWindow()->DrawList->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(),
+                                                             IM_COL32(255, 255, 0, 255));
+
+                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + m_ThumbnailSize);
+                ImGui::Text("%s", entry->ElementName.c_str());
+                ImGui::PopTextWrapPos();
+            }
             else
             {
                 auto completeRename = [&]() {
-                    if (m_RenamingType == AssetBrowserItem::Folder)
-                        ProjectLibrary::Get().MoveEntry(m_RenamingPath,
-                                                        m_CurrentDirectoryEntry->Parent->Filepath / m_Filename);
+                    ProjectLibrary::Get().MoveEntry(m_RenamingPath, m_RenamingPath.parent_path() / m_Filename);
                     m_RenamingPath.clear();
                 };
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 5));
@@ -315,7 +311,9 @@ namespace Crowny
                 ImGui::PopStyleVar();
 
                 if ((ImGui::IsMouseClicked(ImGuiMouseButton_Left) || ImGui::IsMouseClicked(ImGuiMouseButton_Right)) &&
-                    !ImGui::IsItemClicked()) // TODO: ESC cancel input
+                    !ImGui::IsItemClicked())
+                    completeRename();
+                if (m_Focused && Input::IsKeyPressed(Key::Escape))
                     completeRename();
 
                 ImGui::NextColumn();
@@ -328,9 +326,15 @@ namespace Crowny
             {
                 const char* itemPath = path.c_str();
                 ImGui::SetDragDropPayload("ASSET_ITEM", itemPath, strlen(itemPath) * sizeof(char));
-                ImGui::ImageButton(tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 },
-                                   { 1, 0 } /*, -1, ImGui::GetStyleColorVec4(ImGuiCol_Header)*/);
-                ImGui::TextWrapped("%s", filename.c_str());
+                ImGui::ImageButton(tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 }, 0.0f);
+                ImGui::SetNextItemWidth(m_ThumbnailSize);
+                float textWidth = ImGui::CalcTextSize(entry->ElementName.c_str()).x;
+                if (m_ThumbnailSize >= textWidth)
+                    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + m_ThumbnailSize / 2 - textWidth / 2);
+
+                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + m_ThumbnailSize);
+                ImGui::Text("%s", entry->ElementName.c_str());
+                ImGui::PopTextWrapPos();
 
                 ImGui::EndDragDropSource();
             }
@@ -358,6 +362,8 @@ namespace Crowny
                 if (entry->Type == LibraryEntryType::Directory)
                 {
                     m_BackwardHistory.push(m_CurrentDirectoryEntry);
+                    while (!m_ForwardHistory.empty())
+                        m_ForwardHistory.pop();
                     m_CurrentDirectoryEntry = static_cast<DirectoryEntry*>(entry.get());
                     m_SelectedFiles.clear();
                 }
@@ -474,6 +480,7 @@ namespace Crowny
     {
         String filename = GetDefaultFileNameFromType(itemType);
         Path newEntryPath = EditorUtils::GetUniquePath(m_CurrentDirectoryEntry->Filepath / filename);
+        CW_ENGINE_INFO(newEntryPath);
         switch (itemType)
         {
         case AssetBrowserItem::Folder:
@@ -485,6 +492,7 @@ namespace Crowny
             break;
         }
         }
+        ProjectLibrary::Get().Refresh(newEntryPath);
         m_RenamingPath = newEntryPath;
         m_Filename = newEntryPath.filename();
     }

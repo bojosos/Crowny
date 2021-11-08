@@ -90,7 +90,7 @@ namespace Crowny
     void ProjectLibrary::Refresh(const Path& path)
     {
 
-        if (std::search(m_AssetFolder.begin(), m_AssetFolder.end(), path.begin(), path.end()) == m_AssetFolder.end())
+        if (std::search(path.begin(), path.end(), m_AssetFolder.begin(), m_AssetFolder.end()) == path.end())
             return;
 
         if (m_RootEntry == nullptr)
@@ -464,8 +464,8 @@ namespace Crowny
         Ref<LibraryEntry> oldEntry = FindEntry(oldFullPath);
         if (oldEntry != nullptr)
         {
-            if (std::search(m_AssetFolder.begin(), m_AssetFolder.end(), newFullPath.begin(), newFullPath.end()) ==
-                m_AssetFolder.end())
+            if (std::search(newFullPath.begin(), newFullPath.end(), m_AssetFolder.begin(), m_AssetFolder.end()) ==
+                newFullPath.end())
             {
                 if (oldEntry->Type == LibraryEntryType::File)
                     DeleteAssetInternal(std::static_pointer_cast<FileEntry>(oldEntry));
@@ -640,8 +640,8 @@ namespace Crowny
 
         fs::copy(oldPath, newPath, overwrite ? fs::copy_options::overwrite_existing : fs::copy_options::none);
 
-        if (std::search(m_AssetFolder.begin(), m_AssetFolder.end(), newFullPath.begin(), newFullPath.end()) ==
-            m_AssetFolder.end())
+        if (std::search(newFullPath.begin(), newFullPath.end(), m_AssetFolder.begin(), m_AssetFolder.end()) ==
+            newFullPath.end())
             return;
 
         Path parentPath = newFullPath.parent_path();
@@ -719,8 +719,7 @@ namespace Crowny
         Path fullPath = path;
         if (fullPath.is_absolute())
         {
-            if (std::search(m_AssetFolder.begin(), m_AssetFolder.end(), path.begin(), path.end()) ==
-                m_AssetFolder.end())
+            if (std::search(path.begin(), path.end(), m_AssetFolder.begin(), m_AssetFolder.end()) == path.end())
                 return;
         }
         else
@@ -755,8 +754,8 @@ namespace Crowny
         Path assetPath = path;
         if (path.is_absolute())
         {
-            if (std::search(m_AssetFolder.begin(), m_AssetFolder.end(), assetPath.begin(), assetPath.end()) ==
-                m_AssetFolder.end())
+            if (std::search(assetPath.begin(), assetPath.end(), m_AssetFolder.begin(), m_AssetFolder.end()) ==
+                assetPath.end())
                 return;
             assetPath = path.relative_path(); // c++ ppl are stupid
         }
@@ -791,8 +790,9 @@ namespace Crowny
         }
     }
 
-    Ref<LibraryEntry> ProjectLibrary::FindEntry(const Path& path) const
+    Ref<LibraryEntry> ProjectLibrary::FindEntry(const Path& inPath) const
     {
+        Path path = inPath.lexically_normal();
         Path relPath;
         const Path* searchPath;
         if (path.is_absolute())

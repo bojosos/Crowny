@@ -28,11 +28,18 @@ namespace Crowny
     {
     public:
         VulkanImageSubresource(VulkanResourceManager* owner, VkImageLayout layout);
-        VkImageLayout GetLayout() const { return m_Layout; }
-        void SetLayout(VkImageLayout layout) { m_Layout = layout; }
+        VkImageLayout GetLayout() const
+        {
+            CW_ENGINE_ASSERT(m_Layout != 96);
+            return m_Layout;
+        }
+        void SetLayout(VkImageLayout layout)
+        { /*CW_ENGINE_INFO(layout);*/
+            m_Layout = layout;
+        }
 
     private:
-        VkImageLayout m_Layout;
+        VkImageLayout m_Layout = VK_IMAGE_LAYOUT_UNDEFINED;
     };
 
     class VulkanImage : public VulkanResource

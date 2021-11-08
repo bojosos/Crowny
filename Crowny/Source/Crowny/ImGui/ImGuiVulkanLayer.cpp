@@ -86,7 +86,6 @@ namespace Crowny
     void ImGuiVulkanLayer::OnDetach()
     {
         gVulkanRenderAPI().GetPresentDevice()->WaitIdle();
-        ImGui_ImplVulkan_ClearTextures();
         ImGui_ImplVulkan_Shutdown();
         ImGuiLayer::OnDetach();
         vkDestroyDescriptorPool(gVulkanRenderAPI().GetPresentDevice()->GetLogicalDevice(), m_ImguiPool,
@@ -114,6 +113,7 @@ namespace Crowny
         ImGui_ImplVulkan_TransitionLayouts(vkCmdBuffer);
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkCmdBuffer->GetHandle());
         gVulkanRenderAPI().GetMainCommandBuffer()->GetInternal()->EndRenderPass();
+        // ImGui_ImplVulkan_ClearTextures();
 
         ImGuiIO& io = ImGui::GetIO();
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
