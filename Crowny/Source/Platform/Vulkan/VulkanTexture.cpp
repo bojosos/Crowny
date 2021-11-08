@@ -116,6 +116,7 @@ namespace Crowny
             vkDestroyImage(vkDevice, m_Image, gVulkanAllocator);
             device.FreeMemory(m_Allocation);
         }
+        delete[] m_Subresources;
     }
 
     VkImageView VulkanImage::GetView(bool framebuffer) const
@@ -542,6 +543,7 @@ namespace Crowny
     VulkanImageSubresource::VulkanImageSubresource(VulkanResourceManager* owner, VkImageLayout layout)
       : VulkanResource(owner, false), m_Layout(layout)
     {
+        // CW_ENGINE_INFO(layout);
     }
 
     VulkanTexture::VulkanTexture(const TextureParameters& params)

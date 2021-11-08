@@ -436,7 +436,7 @@ namespace Crowny
 
             if (m_StagingMemory != nullptr)
             {
-                delete m_StagingMemory;
+                delete[] m_StagingMemory;
                 m_StagingMemory = nullptr;
             }
         }
