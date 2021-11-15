@@ -31,7 +31,7 @@ namespace Crowny
 
         if (!SupportsFileType(ext))
         {
-            CW_ENGINE_WARN("There is not importer that supports {0} files. Aborting import for {1}.", ext, path);
+            CW_ENGINE_WARN("There is no importer that supports {0} files. Aborting import for {1}.", ext, path);
             return nullptr;
         }
 

@@ -21,7 +21,6 @@ namespace Crowny
 
     Ref<Asset> ShaderImporter::Import(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
-        CW_ENGINE_INFO("Shader Path: {0}", filepath);
         Ref<DataStream> stream = FileSystem::OpenFile(filepath);
         Ref<const ShaderImportOptions> shaderImportOptions =
           std::static_pointer_cast<const ShaderImportOptions>(importOptions);

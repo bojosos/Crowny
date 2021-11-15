@@ -204,7 +204,7 @@ namespace Crowny
             }
         }
     }
-
+    static int var = 1;
     void ImGuiHierarchyPanel::DisplayTree(Entity e)
     {
         if (!e.IsValid())
@@ -214,7 +214,7 @@ namespace Crowny
 
         ImGui::AlignTextToFramePadding();
 
-        ImGui::PushID((int32_t)e.GetHandle());
+        // ImGui::PushID((int32_t)e.GetHandle());
 
         if (!rc.Children.empty())
         {
@@ -242,7 +242,7 @@ namespace Crowny
             ImGuiHierarchyPanel::s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
         }
 
-        ImGui::PopID();
+        // ImGui::PopID();
     }
 
     void ImGuiHierarchyPanel::Update()

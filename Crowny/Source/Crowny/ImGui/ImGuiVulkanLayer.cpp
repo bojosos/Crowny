@@ -73,7 +73,7 @@ namespace Crowny
 
         VulkanRenderPass* renderPass = VulkanRenderPasses::Get().GetRenderPass(passDesc);
         ImGui_ImplVulkan_Init(
-          &init_info, renderPass->GetVkRenderPass((RenderSurfaceMaskBits)0, (RenderSurfaceMaskBits)0, (ClearMask)0));
+          &init_info, renderPass->GetVkRenderPass((RenderSurfaceMaskBits)0, (RenderSurfaceMaskBits)0, CLEAR_ALL));
 
         Ref<VulkanCommandBuffer> cmdBuffer =
           std::static_pointer_cast<VulkanCommandBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
@@ -109,10 +109,11 @@ namespace Crowny
         RenderAPI::Get().SetRenderTarget(Application::Get().GetRenderWindow());
         RenderAPI::Get().SetViewport(0, 0, Application::Get().GetWindow().GetWidth(),
                                      Application::Get().GetWindow().GetHeight());
+        gVulkanRenderAPI().ClearViewport(FBT_COLOR | FBT_DEPTH);
         gVulkanRenderAPI().GetMainCommandBuffer()->GetInternal()->BeginRenderPass();
         ImGui_ImplVulkan_TransitionLayouts(vkCmdBuffer);
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkCmdBuffer->GetHandle());
-        gVulkanRenderAPI().GetMainCommandBuffer()->GetInternal()->EndRenderPass();
+        // gVulkanRenderAPI().GetMainCommandBuffer()->GetInternal()->EndRenderPass();
         // ImGui_ImplVulkan_ClearTextures();
 
         ImGuiIO& io = ImGui::GetIO();

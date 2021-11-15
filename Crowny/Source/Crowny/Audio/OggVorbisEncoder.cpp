@@ -46,7 +46,7 @@ namespace Crowny
         vorbis_info_init(&m_VorbisInfo);
 
         // Automatic bitrate management with quality 0.4 (~128 kbps for 44 KHz stereo sound)
-        CW_ENGINE_INFO("Channels: {0}, sampleRate: {1}", numChannels, sampleRate);
+        // CW_ENGINE_INFO("Channels: {0}, sampleRate: {1}", numChannels, sampleRate);
         int32_t status = vorbis_encode_init_vbr(&m_VorbisInfo, numChannels, sampleRate, 1.0f);
         if (status != 0)
         {
@@ -91,7 +91,7 @@ namespace Crowny
     void OggVorbisEncoder::Write(uint8_t* samples, uint32_t numSamples)
     {
         static const uint32_t WRITE_LENGTH = 1024;
-        CW_ENGINE_INFO(numSamples);
+        // CW_ENGINE_INFO(numSamples);
         uint32_t numFrames = numSamples / m_NumChannels;
         while (numFrames > 0)
         {
@@ -239,11 +239,11 @@ namespace Crowny
 
         OggVorbisEncoder writer;
         writer.Open(writeCallback, info.SampleRate, info.BitDepth, info.NumChannels, quality);
-        CW_ENGINE_INFO("Total size: {0}", totalEncodedSize);
+        // CW_ENGINE_INFO("Total size: {0}", totalEncodedSize);
         writer.Write(samples, info.NumSamples);
-        CW_ENGINE_INFO("Total size: {0}", totalEncodedSize);
+        // CW_ENGINE_INFO("Total size: {0}", totalEncodedSize);
         writer.Close();
-        CW_ENGINE_INFO("Total size: {0}", totalEncodedSize);
+        // CW_ENGINE_INFO("Total size: {0}", totalEncodedSize);
 
         auto output = CreateRef<MemoryDataStream>(totalEncodedSize);
         uint32_t offset = 0;
@@ -254,7 +254,7 @@ namespace Crowny
         }
 
         size = totalEncodedSize;
-        CW_ENGINE_INFO("Total size: {0}", totalEncodedSize);
+        // CW_ENGINE_INFO("Total size: {0}", totalEncodedSize);
         return output;
     }
 

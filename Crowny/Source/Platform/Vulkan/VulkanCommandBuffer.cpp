@@ -69,6 +69,7 @@ namespace Crowny
         {
             m_Buffer->Submit(m_Queue, m_QueueIdx, syncMask);
             m_Device.Refresh(false);
+            // m_Device.Refresh(true);
         }
     }
 
@@ -826,7 +827,6 @@ namespace Crowny
 
             if (!foundRange)
             {
-                CW_ENGINE_INFO("range not found bad");
                 std::array<VkImageSubresourceRange, 5> tempRanges;
                 uint32_t newSubresourceIdx = (uint32_t)m_SubresourceInfoStorage.size();
                 Vector<uint32_t> overlappingRanges;

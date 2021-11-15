@@ -406,6 +406,7 @@ namespace Crowny
                 curImportOptions = importOptions;
 
             Ref<Asset> asset = Importer::Get().Import(entry->Filepath, curImportOptions);
+            entry->Filesize = fs::file_size(entry->Filepath);
             if (asset == nullptr)
                 return false;
             Path outputPath = m_ProjectFolder / PROJECT_INTERNAL_DIR;
@@ -543,7 +544,7 @@ namespace Crowny
             fullPath = fs::absolute(fullPath);
 
         if (fs::exists(fullPath))
-            fs::remove(fullPath);
+            fs::remove_all(fullPath);
 
         Ref<LibraryEntry> entry = FindEntry(fullPath);
         if (entry != nullptr)
@@ -925,7 +926,7 @@ namespace Crowny
     {
         std::function<void(LibraryEntry*)> makeAbsolute = [&](LibraryEntry* entry) {
             entry->Filepath = m_AssetFolder / entry->Filepath;
-            CW_ENGINE_INFO(entry->Filepath);
+            // CW_ENGINE_INFO(entry->Filepath);
             if (entry->Type == LibraryEntryType::Directory)
             {
                 DirectoryEntry* dirEntry = static_cast<DirectoryEntry*>(entry);
@@ -975,6 +976,7 @@ namespace Crowny
                 if (child->Type == LibraryEntryType::File)
                 {
                     Ref<FileEntry> entry = std::static_pointer_cast<FileEntry>(child);
+                    CW_ENGINE_INFO("Filesize: {0}, {1}", entry->Filesize, entry->Filepath);
                     if (fs::is_regular_file(entry->Filepath))
                     {
                         if (entry->Metadata == nullptr)
@@ -1052,27 +1054,27 @@ namespace Crowny
     {
         if (!m_IsLoaded)
             return;
-        String tabs;
-        std::function<void(const Ref<LibraryEntry>&)> traverse = [&](const Ref<LibraryEntry>& entry) {
-            CW_ENGINE_INFO("{0} Entry: {1}, {2}", tabs, entry->Filepath, entry->ElementName);
-            if (entry->Type == LibraryEntryType::Directory)
-            {
-                tabs += "\t";
-                for (auto& child : std::static_pointer_cast<DirectoryEntry>(entry)->Children)
-                    traverse(child);
-                tabs = tabs.substr(0, tabs.size() - 2);
-            }
-        };
-        CW_ENGINE_INFO("Original entries");
-        traverse(m_RootEntry);
+        // String tabs;
+        // std::function<void(const Ref<LibraryEntry>&)> traverse = [&](const Ref<LibraryEntry>& entry) {
+        //     CW_ENGINE_INFO("{0} Entry: {1}, {2}", tabs, entry->Filepath, entry->ElementName);
+        //     if (entry->Type == LibraryEntryType::Directory)
+        //     {
+        //         tabs += "\t";
+        //         for (auto& child : std::static_pointer_cast<DirectoryEntry>(entry)->Children)
+        //             traverse(child);
+        //         tabs = tabs.substr(0, tabs.size() - 2);
+        //     }
+        // };
+        // CW_ENGINE_INFO("Original entries");
+        // traverse(m_RootEntry);
         MakeEntriesRelative();
-        CW_ENGINE_INFO("Relative entries");
-        traverse(m_RootEntry);
+        // CW_ENGINE_INFO("Relative entries");
+        // traverse(m_RootEntry);
         Path libEntriesPath = m_ProjectFolder / PROJECT_INTERNAL_DIR / LIBRARY_ENTRIES_FILENAME;
         SerializeLibraryEntries(libEntriesPath);
         MakeEntriesAbsolute();
-        CW_ENGINE_INFO("Absolute entries");
-        traverse(m_RootEntry);
+        // CW_ENGINE_INFO("Absolute entries");
+        // traverse(m_RootEntry);
         Path assetManifestPath = m_ProjectFolder / PROJECT_INTERNAL_DIR / ASSET_MANIFEST_FILENAME;
         AssetManifest::Serialize(m_AssetManifest, assetManifestPath, m_ProjectFolder);
     }

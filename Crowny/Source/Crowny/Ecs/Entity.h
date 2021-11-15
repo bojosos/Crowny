@@ -58,6 +58,7 @@ namespace Crowny
         // Helpers
         const UUID& GetUuid() const;
         const TransformComponent& GetTransform() const;
+        TransformComponent& GetTransform();
         const String& GetName() const;
         operator bool() const { return IsValid(); }
 
