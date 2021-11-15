@@ -37,6 +37,6 @@ namespace Crowny
         bool m_Deleted = false;
         Entity m_NewEntityParent = {};
         Entity m_Renaming = {};
-        Set<Entity> m_SelectedItems;
+        UnorderedSet<Entity> m_SelectedItems;
     };
 } // namespace Crowny

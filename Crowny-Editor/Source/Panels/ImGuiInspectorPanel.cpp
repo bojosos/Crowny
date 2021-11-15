@@ -27,14 +27,29 @@ namespace Crowny
     ImGuiInspectorPanel::ImGuiInspectorPanel(const String& name) : ImGuiPanel(name)
     {
         m_ComponentEditor.RegisterComponent<TransformComponent>("Transform");
+
+        // Rendering
+        m_ComponentEditor.PushComponentGroup("Rendering");
         m_ComponentEditor.RegisterComponent<CameraComponent>("Camera");
         m_ComponentEditor.RegisterComponent<MeshRendererComponent>("Mesh Filter");
         m_ComponentEditor.RegisterComponent<TextComponent>("Text");
         m_ComponentEditor.RegisterComponent<SpriteRendererComponent>("Sprite Renderer");
+        m_ComponentEditor.PopComponentGroup();
+        // Scripting
         m_ComponentEditor.RegisterComponent<MonoScriptComponent>("C# Script");
 
+        // Physics
+        m_ComponentEditor.PushComponentGroup("Physics");
+        m_ComponentEditor.RegisterComponent<Rigidbody2DComponent>("Rigidbody 2D");
+        m_ComponentEditor.RegisterComponent<BoxCollider2DComponent>("Box Collider 2D");
+        m_ComponentEditor.RegisterComponent<CircleCollider2DComponent>("Circle Collider 2D");
+        m_ComponentEditor.PopComponentGroup();
+
+        // Audio
+        m_ComponentEditor.PushComponentGroup("Audio");
         m_ComponentEditor.RegisterComponent<AudioListenerComponent>("Audio Listener");
         m_ComponentEditor.RegisterComponent<AudioSourceComponent>("Audio Source");
+        m_ComponentEditor.PopComponentGroup();
     }
 
     void ImGuiInspectorPanel::Render()
@@ -59,8 +74,8 @@ namespace Crowny
             RenderMeshImportInspector();
         else if (m_InspectorMode == InspectorMode::Prefab)
             RenderPrefabInspector();
-        else
-            CW_ENGINE_ASSERT(false, "Invalid inspector mode");
+        // else
+        //     CW_ENGINE_ASSERT(false, "Invalid inspector mode");
 
         ImGui::End();
     }
@@ -223,6 +238,7 @@ namespace Crowny
             ImGui::NextColumn();
             const char* formatTexts[2] = { "PCM", "Vorbis" };
             uint32_t formatIndex = (uint32_t)audioClipImport->Format;
+            ImGui::SetNextItemWidth(-1);
             if (ImGui::BeginCombo("##AudioFormat", formatTexts[formatIndex]))
             {
                 for (uint32_t i = 0; i < 2; i++)
@@ -241,6 +257,7 @@ namespace Crowny
             ImGui::NextColumn();
             const char* loadModeTexts[3] = { "Load Decompressed", "Load Compressed", "Stream" };
             uint32_t loadModeIndex = (uint32_t)audioClipImport->ReadMode;
+            ImGui::SetNextItemWidth(-1);
             if (ImGui::BeginCombo("##AudioLoadMode", loadModeTexts[loadModeIndex]))
             {
                 for (uint32_t i = 0; i < 3; i++)
@@ -259,6 +276,7 @@ namespace Crowny
             ImGui::NextColumn();
             const char* bitDepthTexts[4] = { "8", "16", "24", "32" };
             uint32_t bitDepthIndex = (uint32_t)audioClipImport->BitDepth / 8 - 1;
+            ImGui::SetNextItemWidth(-1);
             if (ImGui::BeginCombo("##AudioBitDepth", bitDepthTexts[bitDepthIndex]))
             {
                 for (uint32_t i = 0; i < 4; i++)
@@ -297,17 +315,21 @@ namespace Crowny
 
     void ImGuiInspectorPanel::RenderPrefabInspector() {}
 
+    static uint32_t i = 0;
+
     void ImGuiInspectorPanel::DrawHeader()
     {
         // Consider drawing an icon too
         auto drawHeader = [&](const String& head) {
             float maxx = ImGui::GetContentRegionAvail().x;
             ImGui::Text("%s", (m_InspectedAssetPath.filename().string() + " (" + head + ") Import Settings").c_str());
+            ImGui::Text("%d", i);
+            ++i;
             float padding = ImGui::GetStyle().FramePadding.x;
             float open = ImGui::CalcTextSize("Open").x;
             float reset = ImGui::CalcTextSize("Reset").x;
             ImGui::SameLine();
-            ImGui::SetCursorPosX(maxx - open - reset - padding * 3);
+            ImGui::SetCursorPosX(maxx - open - reset - padding * 4);
             if (ImGui::Button("Reset"))
             {
                 m_ImportOptions = Importer::Get().CreateImportOptions(m_InspectedAssetPath);
@@ -362,7 +384,26 @@ namespace Crowny
             drawHeader("Material");
             break;
         default:
+        {
+            float maxx = ImGui::GetContentRegionAvail().x;
+            ImGui::Text("%s", m_InspectedAssetPath.filename().c_str());
+            float padding = ImGui::GetStyle().FramePadding.x;
+            float open = ImGui::CalcTextSize("Open").x;
+            ImGui::SameLine();
+            ImGui::SetCursorPosX(maxx - open);
+            if (ImGui::Button("Open"))
+                PlatformUtils::OpenExternally(m_InspectedAssetPath);
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::BeginTooltip();
+                ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+                ImGui::TextUnformatted("Open externally.");
+                ImGui::PopTextWrapPos();
+                ImGui::EndTooltip();
+            }
+            ImGui::Separator();
             break;
+        }
         }
     }
 
@@ -376,14 +417,14 @@ namespace Crowny
         ImGui::SameLine(xOffset + width / 2);
         bool changed = m_HasPropertyChanged;
         if (!changed)
-            ImGui::PushDisabled();
+            ImGui::BeginDisabled();
         if (ImGui::Button("Revert", ImVec2(width / 2 - padding * 4, 0)))
         {
             m_ImportOptions = m_OldImportOptions;
             m_HasPropertyChanged = false;
         }
         if (!changed)
-            ImGui::PopDisabled();
+            ImGui::EndDisabled();
     }
 
     void ImGuiInspectorPanel::SetSelectedAssetPath(const Path& filepath)

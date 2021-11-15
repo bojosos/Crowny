@@ -46,6 +46,7 @@ namespace Crowny
 
     const UUID& Entity::GetUuid() const { return GetComponent<IDComponent>().Uuid; }
     const TransformComponent& Entity::GetTransform() const { return GetComponent<TransformComponent>(); }
+    TransformComponent& Entity::GetTransform() { return GetComponent<TransformComponent>(); }
     const String& Entity::GetName() const { return GetComponent<TagComponent>().Tag; }
 
     void Entity::Destroy()

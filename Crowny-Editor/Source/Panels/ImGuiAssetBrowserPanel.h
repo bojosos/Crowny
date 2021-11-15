@@ -29,7 +29,7 @@ namespace Crowny
         SortByName = 0,
         SortBySize = 1,
         SortByDate = 2,
-        SortCount = 4
+        SortCount = 3
     };
 
     class ImGuiAssetBrowserPanel : public ImGuiPanel
@@ -46,7 +46,7 @@ namespace Crowny
         void Initialize();
 
     private:
-        void ShowContextMenuContents(const Path& filepath = "");
+        void ShowContextMenuContents(LibraryEntry* entry = nullptr);
         void DrawHeader();
         void DrawFiles();
         void CreateNew(AssetBrowserItem itemType);
@@ -56,20 +56,25 @@ namespace Crowny
         ImTextureID m_FolderIcon;
         ImTextureID m_FileIcon;
 
-        UnorderedMap<String, Ref<Texture>> m_Textures; // For showing the textures in the asset browser.
-        Set<Path> m_SelectedFiles;
-        DirectoryEntry* m_CurrentDirectoryEntry;
+        UnorderedMap<size_t, Ref<Texture>> m_Textures; // For showing the textures in the asset browser.
         String m_CsDefaultText;
+        
+        Vector<Path> m_OrderedSelection;
+        UnorderedSet<size_t> m_SelectionSet;
+        uint32_t m_SelectionStartIndex;
+
+        DirectoryEntry* m_CurrentDirectoryEntry;
 
         Stack<DirectoryEntry*> m_BackwardHistory;
         Stack<DirectoryEntry*> m_ForwardHistory;
 
         FileSortingMode m_FileSortingMode = FileSortingMode::SortBySize;
+        
         float m_Padding = 12.0f;
         float m_ThumbnailSize = DEFAULT_ASSET_THUMBNAIL_SIZE;
-        String m_Filename;
-        AssetBrowserItem m_RenamingType;
-        std::filesystem::path m_RenamingPath;
+        
+        Path m_RenamingPath;
+        String m_RenamingText;
 
         std::function<void(const Path&)> m_SetSelectedPathCallback;
     };
