@@ -274,6 +274,8 @@ namespace Crowny
         void ClearRenderTarget(uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil,
                                uint8_t targetMask);
         void ClearViewport(uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil, uint8_t targetMask);
+        
+        void BindVertexInputs();
 
     private:
         friend class VulkanCommandBuffer;
@@ -282,7 +284,6 @@ namespace Crowny
         bool BindGraphicsPipeline();
         bool IsReadyForRender() const;
         void BindDynamicStates(bool force);
-        void BindVertexInputs();
         void ClearViewport(const Rect2I& area, uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil,
                            uint8_t targetMask);
         void ExecuteClearPass();

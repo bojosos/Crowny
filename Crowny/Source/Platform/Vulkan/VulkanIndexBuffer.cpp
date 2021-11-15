@@ -8,7 +8,7 @@ namespace Crowny
     VulkanIndexBuffer::VulkanIndexBuffer(uint32_t count, IndexType indexType, BufferUsage usage)
       : m_Count(count), m_IndexType(indexType)
     {
-        m_Buffer = new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_INDEX, usage, (uint32_t)(sizeof(uint16_t) * count));
+        m_Buffer = new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_INDEX, usage, indexType == IndexType::Index_16 ? sizeof(uint16_t) * count : sizeof(uint32_t) * count);
     }
 
     VulkanIndexBuffer::VulkanIndexBuffer(uint16_t* indices, uint32_t count, BufferUsage usage)
