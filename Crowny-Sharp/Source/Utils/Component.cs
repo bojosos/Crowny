@@ -13,7 +13,8 @@ namespace Crowny
 		/// <returns>The game object.</returns>
 		public Entity entity { get { return Internal_GetEntity(m_InternalPtr); } }
 
-		public Transform transform { get { return entity.transform; } }
+		/// <value>The transform of the object</value>
+		public Transform transform { get { return GetComponent<Transform>(); } }
 
 		/// <summary>
 		/// Retrieves a component.
@@ -22,7 +23,7 @@ namespace Crowny
 		/// <returns>Returns the component if the operation was successful, otherwise nullptr.</returns>
 		public T GetComponent<T>() where T : Component
 		{
-			return (T)Internal_GetComponent(m_InternalPtr, typeof(T));
+			return (T)Internal_GetComponent(entity, typeof(T));
 		}
 
 		/// <summary>
@@ -32,7 +33,7 @@ namespace Crowny
 		/// <returns>Whether the game object has the component.</returns>
 		public bool HasComponent<T>() where T : Component
 		{
-			return Internal_HasComponent(m_InternalPtr, typeof(T));
+			return Internal_HasComponent(entity, typeof(T));
 		}
 
 		/// <summary>
@@ -43,15 +44,15 @@ namespace Crowny
 		/// <returns>Returns the component if the operation was successful, otherwise nullptr.</returns>
 		public T AddComponent<T>(T t) where T : Component
 		{
-			return (T)Internal_AddComponent(m_InternalPtr, typeof(T));
+			return (T)Internal_AddComponent(entity, typeof(T));
 		}
 
 		[MethodImpl(MethodImplOptions.InternalCall)]
-		private static extern Component Internal_GetComponent(IntPtr parent, Type type);
+		private static extern Component Internal_GetComponent(Entity parent, Type type);
 		[MethodImpl(MethodImplOptions.InternalCall)]
-		private static extern bool Internal_HasComponent(IntPtr parent, Type type);
+		private static extern bool Internal_HasComponent(Entity parent, Type type);
 		[MethodImpl(MethodImplOptions.InternalCall)]
-		private static extern Component Internal_AddComponent(IntPtr parent, Type type);
+		private static extern Component Internal_AddComponent(Entity parent, Type type);
 		[MethodImpl(MethodImplOptions.InternalCall)]
 		private static extern Entity Internal_GetEntity(IntPtr internalPtr);
 	}

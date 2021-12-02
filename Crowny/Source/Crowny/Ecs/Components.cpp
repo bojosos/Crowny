@@ -5,6 +5,9 @@
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Import/Importer.h"
 
+#include "Crowny/Scripting/Bindings/Scene/ScriptEntityBehaviour.h"
+#include "Crowny/Scripting/ScriptInfoManager.h"
+
 namespace Crowny
 {
 
@@ -89,66 +92,68 @@ namespace Crowny
 
     void AudioSourceComponent::SetPlayOnAwake(bool playOnAwake) { m_PlayOnAwake = playOnAwake; }
 
-    void MonoScriptComponent::OnInitialize()
+    MonoScriptComponent::MonoScriptComponent(const String& name) { SetClassName(name); }
+
+    MonoClass* MonoScriptComponent::GetManagedClass() const { return m_Class; }
+    MonoObject* MonoScriptComponent::GetManagedInstance() const
+    {
+        return m_ScriptEntityBehaviour->GetManagedInstance();
+    }
+
+    void MonoScriptComponent::OnInitialize(Entity entity)
     {
         if (!m_Class)
             return;
+        MonoObject* instance = m_Class->CreateInstance();
 
-        CWMonoField* scriptPtr = m_Class->GetField("m_InternalPtr");
-        MonoObject* scriptInstance = m_Class->CreateInstance();
-        m_Handle = MonoUtils::NewGCHandle(scriptInstance, false);
-        size_t tmp = (size_t)this;
-        scriptPtr->Set(scriptInstance, &tmp);
-
-        CWMonoMethod* ctor = m_Class->GetMethod(".ctor", 0);
-        if (ctor)
-            ctor->Invoke(scriptInstance, nullptr);
+        m_ScriptEntityBehaviour = static_cast<ScriptEntityBehaviour*>(
+          ScriptSceneObjectManager::Get().CreateScriptComponent(instance, entity, *this));
 
         if (m_OnStartThunk == nullptr)
         {
-            CWMonoMethod* onStartMethod = m_Class->GetMethod("OnStart", 0);
+            MonoMethod* onStartMethod = m_Class->GetMethod("Start", 0);
             if (onStartMethod != nullptr)
                 m_OnStartThunk = (OnStartThunkDef)onStartMethod->GetThunk();
         }
 
         if (m_OnUpdateThunk == nullptr)
         {
-            CWMonoMethod* onUpdateMethod = m_Class->GetMethod("OnUpdate", 0);
+            MonoMethod* onUpdateMethod = m_Class->GetMethod("Update", 0);
             if (onUpdateMethod != nullptr)
                 m_OnUpdateThunk = (OnUpdateThunkDef)onUpdateMethod->GetThunk();
         }
 
         if (m_OnDestroyThunk == nullptr)
         {
-            CWMonoMethod* onDestroyMethod = m_Class->GetMethod("OnDestroy", 0);
+            MonoMethod* onDestroyMethod = m_Class->GetMethod("Destroy", 0);
             if (onDestroyMethod != nullptr)
                 m_OnDestroyThunk = (OnDestroyThunkDef)onDestroyMethod->GetThunk();
         }
     }
 
-    MonoScriptComponent::MonoScriptComponent(const String& name) { SetClassName(name); }
-
     void MonoScriptComponent::SetClassName(const String& className)
     {
-        m_Class = CWMonoRuntime::GetClientAssembly()->GetClass("Sandbox", className);
+        m_Class = MonoManager::Get().GetAssembly(GAME_ASSEMBLY)->GetClass("Sandbox", className);
         if (m_Class != nullptr)
         {
-            for (auto* field : m_Class->GetFields())
+            for (auto* field : m_Class->GetFields()) // TODO: These should not be normal Mono fields
             {
-                bool isHidden = field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().HideInInspector);
-                bool isVisible = field->GetVisibility() == CWMonoVisibility::Public ||
-                                 field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().SerializeFieldAttribute) ||
-                                 field->HasAttribute(CWMonoRuntime::GetBuiltinClasses().ShowInInspector);
+                bool isHidden = field->HasAttribute(ScriptInfoManager::Get().GetBuiltinClasses().HideInInspector);
+                bool isVisible =
+                  field->GetVisibility() == CrownyMonoVisibility::Public ||
+                  field->HasAttribute(ScriptInfoManager::Get().GetBuiltinClasses().SerializeFieldAttribute) ||
+                  field->HasAttribute(ScriptInfoManager::Get().GetBuiltinClasses().ShowInInspector);
                 if (field != nullptr && !isHidden && isVisible)
                     m_DisplayableFields.push_back(field);
             }
 
             for (auto* prop : m_Class->GetProperties())
             {
-                bool isHidden = prop->HasAttribute(CWMonoRuntime::GetBuiltinClasses().HideInInspector);
-                bool isVisible = prop->GetVisibility() == CWMonoVisibility::Public ||
-                                 prop->HasAttribute(CWMonoRuntime::GetBuiltinClasses().SerializeFieldAttribute) ||
-                                 prop->HasAttribute(CWMonoRuntime::GetBuiltinClasses().ShowInInspector);
+                bool isHidden = prop->HasAttribute(ScriptInfoManager::Get().GetBuiltinClasses().HideInInspector);
+                bool isVisible =
+                  prop->GetVisibility() == CrownyMonoVisibility::Public ||
+                  prop->HasAttribute(ScriptInfoManager::Get().GetBuiltinClasses().SerializeFieldAttribute) ||
+                  prop->HasAttribute(ScriptInfoManager::Get().GetBuiltinClasses().ShowInInspector);
                 if (prop && !isHidden && isVisible)
                     m_DisplayableProperties.push_back(prop);
             }
@@ -159,7 +164,7 @@ namespace Crowny
     {
         if (m_OnStartThunk != nullptr)
         {
-            MonoObject* instance = GetManagedInstance();
+            MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
             MonoUtils::InvokeThunk(m_OnStartThunk, instance);
         }
     }
@@ -168,7 +173,7 @@ namespace Crowny
     {
         if (m_OnUpdateThunk != nullptr)
         {
-            MonoObject* instance = GetManagedInstance();
+            MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
             MonoUtils::InvokeThunk(m_OnUpdateThunk, instance);
         }
     }
@@ -177,7 +182,7 @@ namespace Crowny
     {
         if (m_OnDestroyThunk != nullptr)
         {
-            MonoObject* instance = GetManagedInstance();
+            MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
             MonoUtils::InvokeThunk(m_OnDestroyThunk, instance);
         }
     }

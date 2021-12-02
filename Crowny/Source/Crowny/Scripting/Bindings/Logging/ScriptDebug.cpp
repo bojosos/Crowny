@@ -2,18 +2,18 @@
 
 #include "Crowny/Scripting/Bindings/Logging/ScriptDebug.h"
 
-#include "Crowny/Scripting/CWMonoRuntime.h"
+#include <mono/metadata/object.h>
 
 namespace Crowny
 {
-    void ScriptDebug::InitRuntimeFunctions()
-    {
-        CWMonoClass* debugClass = CWMonoRuntime::GetCrownyAssembly()->GetClass("Crowny", "Debug");
+    ScriptDebug::ScriptDebug() : ScriptObject() {}
 
-        debugClass->AddInternalCall("Internal_Log", (void*)&Internal_Log);
-        debugClass->AddInternalCall("Internal_LogWarning", (void*)&Internal_LogWarning);
-        debugClass->AddInternalCall("Internal_LogError", (void*)&Internal_LogError);
-        debugClass->AddInternalCall("Internal_LogException", (void*)&Internal_LogException);
+    void ScriptDebug::InitRuntimeData()
+    {
+        MetaData.ScriptClass->AddInternalCall("Internal_Log", (void*)&Internal_Log);
+        MetaData.ScriptClass->AddInternalCall("Internal_LogWarning", (void*)&Internal_LogWarning);
+        MetaData.ScriptClass->AddInternalCall("Internal_LogError", (void*)&Internal_LogError);
+        MetaData.ScriptClass->AddInternalCall("Internal_LogException", (void*)&Internal_LogException);
     }
 
     void ScriptDebug::Internal_Log(MonoString* message)

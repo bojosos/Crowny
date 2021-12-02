@@ -2,8 +2,6 @@
 
 #include "EditorLayer.h"
 
-#include "Crowny/Scripting/CWMonoRuntime.h"
-
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Import/Importer.h"
 
@@ -15,11 +13,16 @@
 #include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Scene/SceneSerializer.h"
 #include "Crowny/Scene/ScriptRuntime.h"
-#include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
 
 #include "Editor/Editor.h"
 #include "Editor/EditorAssets.h"
 #include "Editor/ProjectLibrary.h"
+
+#include "Crowny/Scripting/Bindings/Logging/ScriptDebug.h"
+#include "Crowny/Scripting/Bindings/Math/ScriptNoise.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptTime.h"
+#include "Crowny/Scripting/Bindings/ScriptInput.h"
+#include "Crowny/Scripting/Bindings/ScriptRandom.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -44,6 +47,12 @@ namespace Crowny
 
     void EditorLayer::OnAttach()
     {
+        // Well constructors get discareded and the static data is gone, so construct a few empty objects
+        ScriptTime();
+        ScriptInput();
+        ScriptDebug();
+        ScriptRandom();
+        ScriptNoise();
         ProjectLibrary::StartUp();
         Editor::StartUp();
         VirtualFileSystem::Get()->Mount("Icons", "Resources/Icons");
@@ -66,7 +75,11 @@ namespace Crowny
 
         ImGuiMenu* viewMenu = new ImGuiMenu("View");
 
-        m_HierarchyPanel = new ImGuiHierarchyPanel("Hierarchy");
+        m_InspectorPanel =
+          new ImGuiInspectorPanel("Inspector"); // Has to be done before hierarchy and asset browser panels
+
+        m_HierarchyPanel =
+          new ImGuiHierarchyPanel("Hierarchy", [&](Entity e) { m_InspectorPanel->SetSelectedEntity(e); });
         viewMenu->AddItem(new ImGuiMenuItem("Hierarchy", "", [&](auto& event) { m_HierarchyPanel->Show(); }));
 
         m_ViewportPanel = new ImGuiViewportPanel("Viewport");
@@ -76,7 +89,6 @@ namespace Crowny
         m_ConsolePanel = new ImGuiConsolePanel("Console");
         viewMenu->AddItem(new ImGuiMenuItem("Console", "", [&](auto& entity) { m_ConsolePanel->Show(); }));
 
-        m_InspectorPanel = new ImGuiInspectorPanel("Inspector");
         viewMenu->AddItem(new ImGuiMenuItem("Inspector", "", [&](auto& event) { m_InspectorPanel->Show(); }));
 
         m_AssetBrowser = new ImGuiAssetBrowserPanel(
@@ -169,7 +181,6 @@ namespace Crowny
         Ref<Scene> tmp = CreateRef<Scene>();
         tmp->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
         SceneManager::SetActiveScene(tmp);
-        ScriptComponent::s_EntityComponents.clear();
     }
 
     void EditorLayer::OpenScene()
@@ -186,7 +197,6 @@ namespace Crowny
         m_Temp = CreateRef<Scene>();
         SceneSerializer serializer(m_Temp);
         serializer.Deserialize(filepath);
-        ScriptComponent::s_EntityComponents.clear();
     }
 
     void EditorLayer::SaveActiveSceneAs()
@@ -223,8 +233,9 @@ namespace Crowny
         Ref<Scene> scene = SceneManager::GetActiveScene();
         auto& rapi = RenderAPI::Get();
         if (m_ViewportSize.x != m_ViewportPanel->GetViewportSize().x ||
-            m_ViewportSize.y != m_ViewportPanel->GetViewportSize().y)
+            m_ViewportSize.y != m_ViewportPanel->GetViewportSize().y) // TODO: Move out
         {
+            SceneManager().GetActiveScene()->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
             TextureParameters colorParams;
             colorParams.Width = m_ViewportPanel->GetViewportSize().x;
             colorParams.Height = m_ViewportPanel->GetViewportSize().y;
@@ -254,37 +265,52 @@ namespace Crowny
             m_RenderTarget = RenderTexture::Create(rtProps);
         }
         m_ViewportSize = m_ViewportPanel->GetViewportSize();
-        if (m_Temp)
+        if (m_Temp) // Delay scene reload
         {
             SceneManager::SetActiveScene(m_Temp);
             m_Temp = nullptr;
         }
-        s_EditorCamera.SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
-        s_EditorCamera.OnUpdate(ts);
         SceneRenderer::SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
 
         rapi.SetRenderTarget(m_RenderTarget);
         rapi.SetViewport(0, 0, m_ViewportSize.x, m_ViewportSize.y);
-        SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
 
-        if (m_GameMode && !m_Paused)
+        switch (m_SceneState)
         {
+        case SceneState::Edit: {
+            s_EditorCamera.SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
+            s_EditorCamera.OnUpdate(ts);
+
+            SceneManager::GetActiveScene()->OnUpdateEditor(ts);
+            SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
+            break;
+        }
+        case SceneState::Play: {
+            SceneManager().GetActiveScene()->OnUpdateRuntime(ts);
             ScriptRuntime::OnUpdate();
+            SceneRenderer::OnRuntimeUpdate(ts);
             s_FrameCount += 1;
             s_DeltaTime = ts;
             s_Time += ts;
             s_RealtimeSinceStartup += ts;
             s_SmoothDeltaTime = s_DeltaTime + s_Time / (s_FrameCount + 1);
+            break;
         }
-        /*
+        }
+
         glm::vec4 bounds = m_ViewportPanel->GetViewportBounds();
         ImVec2 mouseCoords = ImGui::GetMousePos();
         glm::vec2 coords = { mouseCoords.x - bounds.x, mouseCoords.y - bounds.y };
         coords.y = m_ViewportSize.y - coords.y;
         if (coords.x >= 0 && coords.x < m_ViewportSize.x && coords.y >= 0 && coords.y < m_ViewportSize.y)
         {
-            m_HoveredEntity = Entity((entt::entity)IDBufferRenderer::ReadPixel(coords.x, coords.y), scene.get());
-        }*/
+            // RenderTexture* rt = static_cast<RenderTexture*>(m_RenderTarget.get());
+            // PixelData outPixelData;
+            // rt->GetColorTexture(1)->ReadData(outPixelData);
+            // glm::vec4 col = outPixelData.GetColorAt(coords.x, coords.y);
+            // CW_ENGINE_INFO("Hover: {0}, {1}, {2}, {3}, {4}", col.x, col.y, col.z, col.w);
+            // m_HoveredEntity = Entity((entt::entity)
+        }
         m_HierarchyPanel->Update();
     }
 
@@ -301,9 +327,7 @@ namespace Crowny
             {
                 ImGui::Text("Recent Projects");
                 for (uint32_t i = 0; i < 5; i++)
-                {
                     ImGui::Selectable(("Project_" + std::to_string(i)).c_str());
-                }
                 bool shouldEnd = true;
                 if (ImGui::Button("Open"))
                 {
@@ -398,10 +422,12 @@ namespace Crowny
         if (ImGui::ImageButton(textureID, ImVec2(25.0f, 25.0f), ImVec2(0, 0), ImVec2(1, 1), -1,
                                ImVec4(1.0f, 1.0f, 1.0f, 0.0f), ImVec4(0.1f, 0.105f, 0.11f, 1.0f)))
         {
-            if (!m_GameMode)
+            if (m_SceneState == SceneState::Edit)
             {
+                SceneManager::GetActiveScene()->OnRuntimeStart();
                 ScriptRuntime::OnStart();
-                m_GameMode = true;
+                m_SceneState = SceneState::Play;
+                m_ViewportPanel->DisalbeGizmo();
             }
         }
         ImGui::SameLine(0.0f, 8.0f);
@@ -409,9 +435,16 @@ namespace Crowny
         if (ImGui::ImageButton(textureID, ImVec2(25.0f, 25.0f), ImVec2(0, 0), ImVec2(1, 1), -1,
                                ImVec4(1.0f, 1.0f, 1.0f, 0.0f), ImVec4(0.1f, 0.105f, 0.11f, 1.0f)))
         {
-            if (m_GameMode)
+            if (m_SceneState == SceneState::Play)
             {
-                m_Paused = !m_Paused;
+                SceneManager::GetActiveScene()->OnRuntimePause();
+                m_SceneState = SceneState::PausePlay;
+                m_ViewportPanel->EnableGizmo();
+            }
+            else if (m_SceneState == SceneState::PausePlay)
+            {
+                m_SceneState = SceneState::Play;
+                m_ViewportPanel->DisalbeGizmo();
             }
         }
         ImGui::SameLine(0.0f, 8.0f);
@@ -419,9 +452,12 @@ namespace Crowny
         if (ImGui::ImageButton(textureID, ImVec2(25.0f, 25.0f), ImVec2(0, 0), ImVec2(1, 1), -1,
                                ImVec4(1.0f, 1.0f, 1.0f, 0.0f), ImVec4(0.1f, 0.105f, 0.11f, 1.0f)))
         {
-            if (m_GameMode)
+            if (m_SceneState == SceneState::Play)
             {
+                SceneManager::GetActiveScene()->OnRuntimeStop();
                 ScriptRuntime::OnShutdown();
+                m_ViewportPanel->EnableGizmo();
+                m_SceneState = SceneState::Edit;
                 m_GameMode = false;
                 s_DeltaTime = 0.0f;
                 s_SmoothDeltaTime = 0.0f;

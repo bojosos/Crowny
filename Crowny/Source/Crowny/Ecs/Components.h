@@ -4,22 +4,24 @@
 #include "Crowny/Audio/AudioListener.h"
 #include "Crowny/Audio/AudioManager.h"
 #include "Crowny/Audio/AudioSource.h"
-#include "Crowny/Audio/AudioUtils.h"
-#include "Crowny/Audio/OggVorbisDecoder.h"
+
+#include "Crowny/Common/Color.h"
 #include "Crowny/Common/Uuid.h"
+
+#include "Crowny/Physics/PhysicsMaterial.h"
+
 #include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/Mesh.h"
 #include "Crowny/Renderer/MeshFactory.h"
 #include "Crowny/Renderer/Model.h"
-#include "Crowny/Renderer/TextureManager.h"
 
 #include "Crowny/Scene/SceneCamera.h"
 
-#include "Crowny/Scripting/CWMonoRuntime.h"
+#include "Crowny/Scripting/Mono/MonoClass.h"
+#include "Crowny/Scripting/Mono/MonoManager.h"
 
-#include "Crowny/Common/Color.h"
 #include "Crowny/Ecs/Entity.h"
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -29,6 +31,7 @@
 
 namespace Crowny
 {
+    class ScriptEntityBehaviour;
 
     enum class TransformChangedFlags
     {
@@ -37,19 +40,24 @@ namespace Crowny
         Parent
     };
 
-    template <class Component> void ComponentEditorWidget(Entity entity);
+    static uint64_t s_NextAvailableId = 1;
 
+    template <class Component> void ComponentEditorWidget(Entity entity);
     struct ComponentBase
     {
-        Entity ComponentParent;
-        MonoObject* ManagedInstance = nullptr;
+        ComponentBase()
+        {
+            InstanceId = s_NextAvailableId;
+            s_NextAvailableId++;
+        }
+        uint64_t InstanceId;
     };
 
-    struct IDComponent
+    struct IDComponent : public ComponentBase
     {
         UUID Uuid;
 
-        IDComponent() = default;
+        IDComponent() : ComponentBase(){};
         IDComponent(const IDComponent&) = default;
         IDComponent(const UUID& uuid) : Uuid(uuid) {}
     };
@@ -58,7 +66,7 @@ namespace Crowny
     {
         String Tag = "";
 
-        TagComponent() = default;
+        TagComponent() : ComponentBase() {}
         TagComponent(const TagComponent&) = default;
         TagComponent(const String& tag) : Tag(tag) {}
 
@@ -72,7 +80,7 @@ namespace Crowny
         glm::vec3 Rotation = { 0.0f, 0.0f, 0.0f };
         glm::vec3 Scale = { 1.0f, 1.0f, 1.0f };
 
-        TransformComponent() = default;
+        TransformComponent() : ComponentBase() {}
         TransformComponent(const TransformComponent&) = default;
         TransformComponent(const glm::vec3& position) : Position(position) {}
 
@@ -90,7 +98,7 @@ namespace Crowny
     {
         SceneCamera Camera;
 
-        CameraComponent() = default;
+        CameraComponent() : ComponentBase() {}
         CameraComponent(const CameraComponent&) = default;
     };
 
@@ -103,7 +111,7 @@ namespace Crowny
         glm::vec4 Color{ 0.0f, 0.3f, 0.3f, 1.0f };
         // Crowny::Material Material;
 
-        TextComponent() { Font = FontManager::Get("default"); };
+        TextComponent() : ComponentBase() { Font = FontManager::Get("default"); };
         TextComponent(const TextComponent&) = default;
         TextComponent(const String& text) : Text(text) {}
     };
@@ -115,7 +123,7 @@ namespace Crowny
         Ref<Crowny::Texture> Texture = nullptr;
         glm::vec4 Color = glm::vec4(1.0f);
 
-        SpriteRendererComponent() = default;
+        SpriteRendererComponent() : ComponentBase() {}
         SpriteRendererComponent(const SpriteRendererComponent&) = default;
         SpriteRendererComponent(const Ref<Crowny::Texture>& texture, Crowny::Color color)
           : Texture(texture), Color(color)
@@ -130,7 +138,10 @@ namespace Crowny
         Ref<::Crowny::Mesh> Mesh = nullptr;
         Ref<::Crowny::Model> Model = nullptr;
 
-        MeshRendererComponent() { Model = CreateRef<::Crowny::Model>("Resources/Models/sphere.gltf"); };
+        MeshRendererComponent() : ComponentBase()
+        {
+            Model = CreateRef<::Crowny::Model>("Resources/Models/sphere.gltf");
+        };
         MeshRendererComponent(const MeshRendererComponent&) = default;
     };
 
@@ -141,7 +152,7 @@ namespace Crowny
         Vector<Entity> Children;
         Entity Parent;
 
-        RelationshipComponent() = default;
+        RelationshipComponent() : ComponentBase() {}
         RelationshipComponent(const RelationshipComponent&) = default;
         RelationshipComponent(const Entity& parent) : Parent(parent) {}
     };
@@ -149,7 +160,7 @@ namespace Crowny
     struct AudioSourceComponent : public ComponentBase
     {
     public:
-        AudioSourceComponent() {}
+        AudioSourceComponent() : ComponentBase() {}
         AudioSourceComponent(const AudioSourceComponent&) = default;
 
         void OnInitialize();
@@ -210,18 +221,18 @@ namespace Crowny
     class MonoScriptComponent : public ComponentBase
     {
     public:
-        MonoScriptComponent() = default;
+        MonoScriptComponent() : ComponentBase() {}
         MonoScriptComponent(const String& name);
         MonoScriptComponent(const MonoScriptComponent&) = default;
 
         void SetClassName(const String& className);
-        CWMonoClass* GetManagedClass() const { return m_Class; }
-        MonoObject* GetManagedInstance() const { return MonoUtils::GetObjectFromGCHandle(m_Handle); }
+        MonoClass* GetManagedClass() const;
+        MonoObject* GetManagedInstance() const;
 
-        const Vector<CWMonoField*>& GetSerializableFields() const { return m_DisplayableFields; }
-        const Vector<CWMonoProperty*>& GetSerializableProperties() const { return m_DisplayableProperties; }
+        const Vector<MonoField*>& GetSerializableFields() const { return m_DisplayableFields; }
+        const Vector<MonoProperty*>& GetSerializableProperties() const { return m_DisplayableProperties; }
 
-        void OnInitialize();
+        void OnInitialize(Entity entity);
         void OnStart();
         void OnUpdate();
         void OnDestroy();
@@ -231,13 +242,14 @@ namespace Crowny
         typedef void(CW_THUNKCALL* OnUpdateThunkDef)(MonoObject*, MonoException**);
         typedef void(CW_THUNKCALL* OnDestroyThunkDef)(MonoObject*, MonoException**);
 
-        CWMonoClass* m_Class = nullptr;
-        Vector<CWMonoField*> m_DisplayableFields;
-        Vector<CWMonoProperty*> m_DisplayableProperties;
+        MonoClass* m_Class = nullptr;
+        Vector<MonoField*> m_DisplayableFields;
+        Vector<MonoProperty*> m_DisplayableProperties;
         uint32_t m_Handle = 0;
         OnStartThunkDef m_OnStartThunk = nullptr;
         OnUpdateThunkDef m_OnUpdateThunk = nullptr;
         OnDestroyThunkDef m_OnDestroyThunk = nullptr;
+        ScriptEntityBehaviour* m_ScriptEntityBehaviour;
     };
 
     template <> void ComponentEditorWidget<MonoScriptComponent>(Entity e);

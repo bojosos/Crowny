@@ -15,7 +15,7 @@ namespace Crowny
     public:
         static void Init();
         static void OnEditorUpdate(Timestep ts, const EditorCamera& camera);
-        static void OnRuntimeUpdate(Timestep ts, const Camera& camera, const glm::mat4& cameraTransform);
+        static void OnRuntimeUpdate(Timestep ts);
         static void SetViewportSize(float width, float height);
         //      static Ref<Framebuffer> GetMainFramebuffer();
     };

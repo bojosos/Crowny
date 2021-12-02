@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Crowny
 {
-    public class CameraComponent : Component
+    public class Camera : Component
     {
         public Camera camera
         {

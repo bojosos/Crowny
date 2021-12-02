@@ -7,6 +7,8 @@
 
 #include <entt/entt.hpp>
 
+class b2World;
+
 namespace Crowny
 {
     class Entity;
@@ -34,6 +36,13 @@ namespace Crowny
         const String& GetName() const { return m_Name; }
         const String& GetFilepath() const { return m_Filepath; }
 
+        void OnRuntimeStart();
+        void OnRuntimePause();
+        void OnRuntimeStop();
+
+        void OnUpdateRuntime(Timestep ts);
+        void OnUpdateEditor(Timestep ts);
+
         friend class ImGuiComponentEditor;
         friend class SceneRenderer;
         friend class SceneSerializer;
@@ -45,6 +54,8 @@ namespace Crowny
         String m_Filepath;
         entt::registry m_Registry;
         uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
+
+        b2World* m_PhysicsWorld2D = nullptr;
 
         Entity* m_RootEntity;
     };

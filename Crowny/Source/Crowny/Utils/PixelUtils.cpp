@@ -287,6 +287,15 @@ namespace Crowny
             delete[] m_Buffer;
     }
 
+    glm::vec4 PixelData::GetColorAt(uint32_t x, uint32_t y, uint32_t z) const
+    {
+        glm::vec4 res;
+        uint32_t sz = PixelUtils::GetNumBytes(m_Format);
+        uint32_t pixelOffset = z * m_SlicePitch + y * m_RowPitch + x * sz;
+        PixelUtils::UnpackPixel(&res.x, &res.y, &res.z, &res.w, m_Format, (unsigned char*)GetData() + pixelOffset);
+        return res;
+    }
+
     void PixelData::SetColorAt(uint32_t x, uint32_t y, const glm::vec4& color) { SetColorAt(x, y, 0, color); }
 
     void PixelData::SetColorAt(uint32_t x, uint32_t y, uint32_t z, const glm::vec4& color)

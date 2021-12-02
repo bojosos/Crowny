@@ -4,21 +4,21 @@
 
 #include "Crowny/ImGui/ImGuiMenu.h"
 
-#include "Panels/ImGuiAssetBrowserPanel.h"
-#include "Panels/ImGuiComponentEditor.h"
-#include "Panels/ImGuiConsolePanel.h"
-#include "Panels/ImGuiGLInfoPanel.h"
-#include "Panels/ImGuiHierarchyPanel.h"
-#include "Panels/ImGuiInspectorPanel.h"
+#include "Panels/AssetBrowserPanel.h"
+#include "Panels/ComponentEditor.h"
+#include "Panels/ConsolePanel.h"
+#include "Panels/GLInfoPanel.h"
+#include "Panels/HierarchyPanel.h"
 #include "Panels/ImGuiPanel.h"
-#include "Panels/ImGuiViewportPanel.h"
+#include "Panels/InspectorPanel.h"
+#include "Panels/ViewportPanel.h"
 
 #include "Crowny/RenderAPI/RenderTarget.h"
 #include "Crowny/Renderer/EditorCamera.h"
 #include "Crowny/Scene/Scene.h"
 
 #include "Crowny/Common/Time.h"
-#include "Crowny/Scripting/CWMonoClass.h"
+#include "Crowny/Scripting/Mono/MonoClass.h"
 
 #include <Crowny.h>
 #include <entt/entt.hpp>
@@ -77,7 +77,6 @@ namespace Crowny
         bool m_GameMode = false;
         String m_NewProjectPath;
         String m_NewProjectName;
-        bool m_Paused = false;
         glm::vec2 m_ViewportSize = { 1280.0f, 720.0f }; // and dis
 
         static float s_DeltaTime;
@@ -86,6 +85,16 @@ namespace Crowny
         static float s_Time;
         static float s_FixedDeltaTime;
         static float s_FrameCount;
+
+        enum class SceneState
+        {
+            Edit = 0,
+            Play = 1,
+            Simulate = 2,
+            PausePlay = 3
+        };
+
+        SceneState m_SceneState = SceneState::Edit;
 
     public:
         static EditorCamera GetEditorCamera() { return s_EditorCamera; }

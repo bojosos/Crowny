@@ -4,21 +4,20 @@
 #include "Crowny/Scripting/Bindings/Scene/ScriptTime.h"
 
 #include "Crowny/Scene/SceneManager.h"
-#include "Crowny/Scripting/CWMonoRuntime.h"
 
 namespace Crowny
 {
 
-    void ScriptTime::InitRuntimeFunctions()
-    {
-        CWMonoClass* timeClass = CWMonoRuntime::GetCrownyAssembly()->GetClass("Crowny", "Time");
+    ScriptTime::ScriptTime() : ScriptObject() {}
 
-        timeClass->AddInternalCall("get_time", (void*)&Internal_GetTime);
-        timeClass->AddInternalCall("get_deltaTime", (void*)&Internal_GetDeltaTime);
-        timeClass->AddInternalCall("get_fixedDeltaTime", (void*)&Internal_GetFixedDeltaTime);
-        timeClass->AddInternalCall("get_smoothDeltaTime", (void*)&Internal_GetSmoothDeltaTime);
-        timeClass->AddInternalCall("get_realtimeSinceStartup", (void*)&Internal_RealtimeSinceStartup);
-        timeClass->AddInternalCall("get_frameCount", (void*)&Internal_GetFrameCount);
+    void ScriptTime::InitRuntimeData()
+    {
+        MetaData.ScriptClass->AddInternalCall("get_time", (void*)&Internal_GetTime);
+        MetaData.ScriptClass->AddInternalCall("get_deltaTime", (void*)&Internal_GetDeltaTime);
+        MetaData.ScriptClass->AddInternalCall("get_fixedDeltaTime", (void*)&Internal_GetFixedDeltaTime);
+        MetaData.ScriptClass->AddInternalCall("get_smoothDeltaTime", (void*)&Internal_GetSmoothDeltaTime);
+        MetaData.ScriptClass->AddInternalCall("get_realtimeSinceStartup", (void*)&Internal_RealtimeSinceStartup);
+        MetaData.ScriptClass->AddInternalCall("get_frameCount", (void*)&Internal_GetFrameCount);
     }
 
     float ScriptTime::Internal_GetTime() { return Time::GetTime(); }
