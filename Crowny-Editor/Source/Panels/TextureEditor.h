@@ -7,11 +7,11 @@
 namespace Crowny
 {
 
-    class ImGuiTextureEditor : public ImGuiPanel
+    class TextureEditor : public ImGuiPanel
     {
     public:
-        ImGuiTextureEditor(const String& name) : ImGuiPanel(name) {}
-        virtual ~ImGuiTextureEditor() = default;
+        TextureEditor(const String& name) : ImGuiPanel(name) {}
+        virtual ~TextureEditor() = default;
 
         virtual void Render() override;
 

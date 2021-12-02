@@ -76,22 +76,22 @@ namespace Crowny
         ImGuiMenu* viewMenu = new ImGuiMenu("View");
 
         m_InspectorPanel =
-          new ImGuiInspectorPanel("Inspector"); // Has to be done before hierarchy and asset browser panels
+          new InspectorPanel("Inspector"); // Has to be done before hierarchy and asset browser panels
 
         m_HierarchyPanel =
-          new ImGuiHierarchyPanel("Hierarchy", [&](Entity e) { m_InspectorPanel->SetSelectedEntity(e); });
+          new HierarchyPanel("Hierarchy", [&](Entity e) { m_InspectorPanel->SetSelectedEntity(e); });
         viewMenu->AddItem(new ImGuiMenuItem("Hierarchy", "", [&](auto& event) { m_HierarchyPanel->Show(); }));
 
-        m_ViewportPanel = new ImGuiViewportPanel("Viewport");
+        m_ViewportPanel = new ViewportPanel("Viewport");
         viewMenu->AddItem(new ImGuiMenuItem("Viewport", "", [&](auto& event) { m_ViewportPanel->Show(); }));
         m_ViewportPanel->SetEventCallback(CW_BIND_EVENT_FN(OnViewportEvent));
 
-        m_ConsolePanel = new ImGuiConsolePanel("Console");
+        m_ConsolePanel = new ConsolePanel("Console");
         viewMenu->AddItem(new ImGuiMenuItem("Console", "", [&](auto& entity) { m_ConsolePanel->Show(); }));
 
         viewMenu->AddItem(new ImGuiMenuItem("Inspector", "", [&](auto& event) { m_InspectorPanel->Show(); }));
 
-        m_AssetBrowser = new ImGuiAssetBrowserPanel(
+        m_AssetBrowser = new AssetBrowserPanel(
           "Asset browser", [&](const Path& path) { m_InspectorPanel->SetSelectedAssetPath(path); });
         viewMenu->AddItem(new ImGuiMenuItem("Asset browser", "", [&](auto& event) { m_AssetBrowser->Show(); }));
 
@@ -121,7 +121,7 @@ namespace Crowny
         mat->SetRoughnessMap(roughness);
         mat->SetAoMap(ao);
 
-        ImGuiInspectorPanel::SetSelectedMaterial(mat);
+        InspectorPanel::SetSelectedMaterial(mat);
         ForwardRenderer::Init(); // Why here?
 
         TextureParameters colorParams;
@@ -540,7 +540,7 @@ namespace Crowny
     {
         if (m_ViewportPanel->IsHovered() && m_ViewportPanel->IsFocused())
         {
-            ImGuiHierarchyPanel::SetSelectedEntity(m_HoveredEntity);
+            HierarchyPanel::SetSelectedEntity(m_HoveredEntity);
             return true;
         }
 

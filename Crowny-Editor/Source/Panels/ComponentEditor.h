@@ -13,13 +13,12 @@ namespace Crowny
     template <class Component> void ComponentAddAction(Entity entity)
     {
         entity.AddComponent<Component>();
-        entity.GetComponent<Component>().ComponentParent = entity;
         // TODO: Focus component SetKeyboardFocusHere(-1);
     }
 
     template <class Component> void ComponentRemoveAction(Entity entity) { entity.RemoveComponent<Component>(); }
 
-    class ImGuiComponentEditor
+    class ComponentEditor
     {
     public:
         using ComponentTypeID = ENTT_ID_TYPE;
@@ -51,15 +50,9 @@ namespace Crowny
             });
         }
 
-        void PushComponentGroup(const String& name)
-        {
-            m_CurrentComponentGroup = name;
-        }
+        void PushComponentGroup(const String& name) { m_CurrentComponentGroup = name; }
 
-        void PopComponentGroup()
-        {
-            m_CurrentComponentGroup.clear();
-        }
+        void PopComponentGroup() { m_CurrentComponentGroup.clear(); }
 
         template <class Component> ComponentInfo& RegisterComponent(const String& name)
         {
