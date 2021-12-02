@@ -28,34 +28,11 @@ namespace Crowny
     static SceneRendererData s_Data;
     static SceneRendererStats s_Stats;
 
-    void SceneRenderer::Init()
-    { /*
-         FramebufferProperties fbprops;
-         fbprops.Width = 100;
-         fbprops.Height = 100;
-         fbprops.Attachments = { FramebufferTextureFormat::RGBA8, FramebufferTextureFormat::Depth };
-         fbprops.Samples = 8;
-         fbprops.ClearColor = { 0.1f, 0.1f, 0.1f, 1.0f };
-         s_Data.MainFramebuffer = Framebuffer::Create(fbprops);*/
-    }
-
-    // Ref<Framebuffer> SceneRenderer::GetMainFramebuffer() { return s_Data.MainFramebuffer; }
+    void SceneRenderer::Init() {}
 
     void SceneRenderer::OnEditorUpdate(Timestep ts, const EditorCamera& camera)
     {
-        Ref<Scene> scene = SceneManager::GetActiveScene(); /*
-         if (FramebufferProperties spec = s_Data.MainFramebuffer->GetProperties(); s_Data.ViewportWidth > 0.0f
-             && s_Data.ViewportHeight > 0.0f && (spec.Width != s_Data.ViewportWidth || spec.Height !=
-     s_Data.ViewportHeight))
-         {
-             //IDBufferRenderer::OnResize(s_Data.ViewportWidth, s_Data.ViewportHeight);
-             //s_Data.MainFramebuffer->Resize(s_Data.ViewportWidth, s_Data.ViewportHeight);
-             scene->OnViewportResize(s_Data.ViewportWidth, s_Data.ViewportHeight);
-         }*/
-
-        /*
-        RenderCommand::Clear();
-*/
+        Ref<Scene> scene = SceneManager::GetActiveScene();
 
         ForwardRenderer::Begin();
         ForwardRenderer::BeginScene(camera, camera.GetViewMatrix());
@@ -117,7 +94,61 @@ namespace Crowny
         s_Stats.FrameTime = ts;
     }
 
-    void SceneRenderer::OnRuntimeUpdate(Timestep ts, const Camera& camera, const glm::mat4& cameraTransform) {}
+    void SceneRenderer::OnRuntimeUpdate(Timestep ts)
+    {
+        Ref<Scene> scene = SceneManager::GetActiveScene();
+
+        // Get the main camera to render from
+        Camera* mainCamera = nullptr;
+        glm::mat4 cameraTransform;
+        auto view = scene->m_Registry.view<TransformComponent, CameraComponent>();
+        for (auto entity : view)
+        {
+            auto [transform, camera] = view.get<TransformComponent, CameraComponent>(entity);
+            mainCamera = &camera.Camera;
+            cameraTransform = transform.GetTransform();
+            break;
+        }
+
+        // Render the scene
+        if (mainCamera)
+        {
+            ForwardRenderer::Begin();
+            ForwardRenderer::BeginScene(*mainCamera, glm::inverse(cameraTransform));
+            auto objs = scene->m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
+            for (auto obj : objs)
+            {
+                auto [transform, mesh] = scene->m_Registry.get<TransformComponent, MeshRendererComponent>(obj);
+                if (mesh.Model)
+                {
+                    ForwardRenderer::Submit(mesh.Model, transform.GetTransform());
+                    // TODO: Update stats... triangle count has to take into account the draw mode
+                }
+            }
+            ForwardRenderer::Flush();
+            ForwardRenderer::EndScene();
+            ForwardRenderer::End();
+
+            Renderer2D::Begin(*mainCamera, glm::inverse(cameraTransform));
+            auto group = scene->m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
+            for (auto ee : group)
+            {
+                auto [transform, sprite] = scene->m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
+                Renderer2D::FillRect(transform.GetTransform(), sprite.Texture, sprite.Color, (uint32_t)ee);
+                s_Stats.Vertices += 4;
+                s_Stats.Triangles += 2;
+            }
+            auto texts = scene->m_Registry.group<TextComponent>(entt::get<TransformComponent>);
+            for (auto ee : texts)
+            {
+                auto [transform, text] = scene->m_Registry.get<TransformComponent, TextComponent>(ee);
+                Renderer2D::DrawString(text.Text, transform.GetTransform(), text.Font, text.Color);
+                s_Stats.Vertices += text.Text.size() * 4;
+                s_Stats.Triangles += text.Text.size() * 2;
+            }
+            Renderer2D::End();
+        }
+    }
 
     void SceneRenderer::SetViewportSize(float width, float height)
     {

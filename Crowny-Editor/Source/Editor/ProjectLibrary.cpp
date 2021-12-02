@@ -336,7 +336,7 @@ namespace Crowny
     {
         if (!fs::is_directory(libEntriesPath.parent_path()))
             fs::create_directories(libEntriesPath.parent_path());
-        CW_ENGINE_INFO(libEntriesPath);
+        // CW_ENGINE_INFO(libEntriesPath);
         Ref<DataStream> stream = FileSystem::CreateAndOpenFile(libEntriesPath);
         BinaryDataStreamOutputArchive archive(stream);
         archive(m_RootEntry);
@@ -976,7 +976,7 @@ namespace Crowny
                 if (child->Type == LibraryEntryType::File)
                 {
                     Ref<FileEntry> entry = std::static_pointer_cast<FileEntry>(child);
-                    CW_ENGINE_INFO("Filesize: {0}, {1}", entry->Filesize, entry->Filepath);
+                    // CW_ENGINE_INFO("Filesize: {0}, {1}", entry->Filesize, entry->Filepath);
                     if (fs::is_regular_file(entry->Filepath))
                     {
                         if (entry->Metadata == nullptr)

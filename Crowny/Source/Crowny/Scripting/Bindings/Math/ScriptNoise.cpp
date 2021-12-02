@@ -5,10 +5,11 @@
 
 namespace Crowny
 {
-    void ScriptNoise::InitRuntimeFunctions()
+    ScriptNoise::ScriptNoise() : ScriptObject() {}
+
+    void ScriptNoise::InitRuntimeData()
     {
-        CWMonoClass* noiseClass = CWMonoRuntime::GetCrownyAssembly()->GetClass("Crowny", "Noise");
-        noiseClass->AddInternalCall("PerlinNoise", (void*)&Internal_PerlinNoise);
+        MetaData.ScriptClass->AddInternalCall("PerlinNoise", (void*)&Internal_PerlinNoise);
     }
 
     float ScriptNoise::Internal_PerlinNoise(float x, float y)

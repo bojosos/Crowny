@@ -165,8 +165,6 @@ namespace Crowny
         rapi.SetViewport(0, 0, 512, 512);
         rapi.SetUniforms(uniforms);
         rapi.Draw(0, 3, 1);
-
-        CW_ENGINE_INFO("BRDFLut generation took: {0}", t.ElapsedSeconds());
     }
 
     void Skybox::GenerateIrradianceCube()
@@ -236,7 +234,6 @@ namespace Crowny
                 rapi.DrawIndexed(0, 36, 0, 72);
             }
         }
-        CW_ENGINE_INFO("Irrdiance cube took: {0}", timer.ElapsedSeconds());
     }
 
     void Skybox::GeneratePrefilteredCube()
@@ -318,8 +315,6 @@ namespace Crowny
                 rapi.DrawIndexed(0, 36, 0, 72);
             }
         }
-
-        CW_ENGINE_INFO("Prefiltered cube took: {0}", timer.ElapsedSeconds());
     }
 
 } // namespace Crowny

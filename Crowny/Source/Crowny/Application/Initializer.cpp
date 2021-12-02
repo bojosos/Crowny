@@ -18,20 +18,11 @@
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Scene/SceneManager.h"
 
-// Script bindings
-#include "Crowny/Scripting/Bindings/Logging/ScriptDebug.h"
-#include "Crowny/Scripting/Bindings/Math/ScriptNoise.h"
-#include "Crowny/Scripting/Bindings/Math/ScriptTransform.h"
-#include "Crowny/Scripting/Bindings/Scene/ScriptCameraComponent.h"
-#include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
-#include "Crowny/Scripting/Bindings/Scene/ScriptEntity.h"
-#include "Crowny/Scripting/Bindings/Scene/ScriptGameObject.h"
-#include "Crowny/Scripting/Bindings/Scene/ScriptTime.h"
-#include "Crowny/Scripting/Bindings/ScriptInput.h"
-#include "Crowny/Scripting/Bindings/ScriptRandom.h"
-
 // Script runtime
-#include "Crowny/Scripting/CWMonoRuntime.h"
+#include "Crowny/Scripting/Mono/MonoManager.h"
+#include "Crowny/Scripting/ScriptInfoManager.h"
+#include "Crowny/Scripting/ScriptObjectManager.h"
+#include "Crowny/Scripting/ScriptSceneObjectManager.h"
 
 // Importers
 #include "Crowny/Import/AudioClipImporter.h"
@@ -91,20 +82,15 @@ namespace Crowny
         // ForwardRenderer::Init();
 
         FontManager::Add(CreateRef<Font>("Resources/Fonts/" + DEFAULT_FONT_FILENAME, "Roboto Thin", 64));
-        CWMonoRuntime::Init("Crowny C# Runtime");
-        CWMonoRuntime::LoadAssemblies("Resources/Assemblies");
 
-        // TODO: Out of here, maybe
-        ScriptTransform::InitRuntimeFunctions();
-        ScriptDebug::InitRuntimeFunctions();
-        ScriptComponent::InitRuntimeFunctions();
-        ScriptEntity::InitRuntimeFunctions();
-        ScriptTime::InitRuntimeFunctions();
-        ScriptRandom::InitRuntimeFunctions();
-        ScriptInput::InitRuntimeFunctions();
-        ScriptNoise::InitRuntimeFunctions();
-        ScriptGameObject::InitRuntimeFunctions();
-        ScriptCameraComponent::InitRuntimeFunctions();
+        // Scripting
+        MonoManager::StartUp();
+        MonoManager::Get().LoadAssembly(String("Resources/Assemblies/") + CROWNY_ASSEMBLY + ".dll", CROWNY_ASSEMBLY);
+        MonoManager::Get().LoadAssembly(String("Resources/Assemblies/") + GAME_ASSEMBLY + ".dll", GAME_ASSEMBLY);
+        ScriptInfoManager::StartUp();
+        ScriptInfoManager::Get().InitializeTypes();
+        ScriptSceneObjectManager::StartUp();
+        ScriptObjectManager::StartUp();
     }
 
     void Initializer::Shutdown()

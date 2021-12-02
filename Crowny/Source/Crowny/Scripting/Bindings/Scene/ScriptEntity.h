@@ -1,29 +1,21 @@
 #pragma once
 
-#include "Crowny/Ecs/Components.h"
-#include "ScriptComponent.h"
-
-#include <entt/entt.hpp>
-#include <glm/glm.hpp>
-#include <mono/metadata/object.h>
+#include "Crowny/Scripting/ScriptSceneObject.h"
 
 namespace Crowny
 {
-    class ScriptEntity
+    class ScriptEntity : public ScriptObject<ScriptEntity, ScriptSceneObjectBase>
     {
 
     public:
-        static void InitRuntimeFunctions();
-        // static unordered_map<Component, MonoObject *> s_ScriptComponents;
+        SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "Entity")
+
+        ScriptEntity(MonoObject* instance, Entity entity);
 
     private:
-        static MonoString* Internal_GetName(Entity* thisptr);
-        static void Internal_SetName(Entity* thisptr, MonoString* string);
-
-        static MonoObject* Internal_GetParent(Entity* thisptr);
-        static MonoObject* Internal_GetUuid(Entity* thisptr);
-        static MonoObject* Internal_GetTransform(entt::entity thisptr);
-
-        // static MonoObject* Internal_GetComponent(SceneObject* thisptr, MonoReflectionType type)
+        static MonoString* Internal_GetName(ScriptEntity* thisptr);
+        static void Internal_SetName(ScriptEntity* thisptr, MonoString* string);
+        static MonoObject* Internal_GetParent(ScriptEntity* thisptr);
+        static MonoObject* Internal_FindEntityByName(MonoString* name);
     };
 } // namespace Crowny

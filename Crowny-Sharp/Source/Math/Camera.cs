@@ -9,7 +9,7 @@ namespace Crowny
         Perspective
     }
 
-    public class Camera : ScriptObject
+    public class Camera2 : ScriptObject
     {
         /// <summary>
         /// The vertical field of view of the camera.

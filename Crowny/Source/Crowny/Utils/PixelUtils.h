@@ -51,6 +51,7 @@ namespace Crowny
         void AllocateInternalBuffer();
         void SetColorAt(uint32_t x, uint32_t y, const glm::vec4& color);
         void SetColorAt(uint32_t x, uint32_t y, uint32_t z, const glm::vec4& color);
+        glm::vec4 GetColorAt(uint32_t x, uint32_t y, uint32_t z = 0) const;
 
     public:
         static Ref<PixelData> Create(uint32_t width, uint32_t height, TextureFormat format);

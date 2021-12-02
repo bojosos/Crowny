@@ -134,7 +134,6 @@ namespace Crowny
         entity.AddComponent<TagComponent>(name);
         entity.AddComponent<TransformComponent>();
         entity.AddComponent<RelationshipComponent>(*m_RootEntity);
-        // m_HasChanged = true;
 
         return entity;
     }
@@ -147,7 +146,6 @@ namespace Crowny
         entity.AddComponent<TagComponent>(name);
         entity.AddComponent<RelationshipComponent>();
         entity.AddComponent<TransformComponent>();
-        // m_HasChanged = true;
 
         return entity;
     }

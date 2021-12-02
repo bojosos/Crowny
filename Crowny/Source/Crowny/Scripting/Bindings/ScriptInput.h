@@ -1,10 +1,13 @@
 #pragma once
 
+#include "Crowny/Scripting/ScriptObject.h"
+
 namespace Crowny
 {
-    class ScriptInput
+    class ScriptInput : public ScriptObject<ScriptInput>
     {
     public:
-        static void InitRuntimeFunctions();
+        SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "Input")
+        ScriptInput();
     };
 } // namespace Crowny

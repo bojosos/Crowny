@@ -1,12 +1,15 @@
 #pragma once
 
+#include "Crowny/Scripting/ScriptObject.h"
+
 namespace Crowny
 {
-    class ScriptTime
+    class ScriptTime : public ScriptObject<ScriptTime>
     {
 
     public:
-        static void InitRuntimeFunctions();
+        SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "Time")
+        ScriptTime();
 
     private:
         static float Internal_GetTime();
