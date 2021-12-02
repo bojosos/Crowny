@@ -22,6 +22,7 @@ namespace Crowny
         m_Internal->SetLooping(m_Loop);
         m_Internal->SetMinDistance(m_MinDistance);
         m_Internal->SetMaxDistance(m_MaxDistance);
+        m_Internal->SetTime(m_Time);
         m_PlayOnAwake = true;
         if (m_PlayOnAwake)
             m_Internal->Play();
@@ -87,10 +88,44 @@ namespace Crowny
             return;
         m_Loop = loop;
         if (m_Internal != nullptr)
-            m_Internal->SetLooping(loop);
+            m_Internal->SetLooping(m_Loop);
+    }
+
+    void AudioSourceComponent::SetTime(float time)
+    {
+        if (m_Time != time)
+            return;
+        m_Time = time;
+        if (m_Internal != nullptr)
+            m_Internal->SetTime(m_Time);
     }
 
     void AudioSourceComponent::SetPlayOnAwake(bool playOnAwake) { m_PlayOnAwake = playOnAwake; }
+
+    AudioSourceState AudioSourceComponent::GetState() const
+    {
+        if (m_Internal != nullptr)
+            return m_Internal->GetState();
+        return AudioSourceState::Stopped;
+    }
+
+    void AudioSourceComponent::Play()
+    {
+        if (m_Internal != nullptr)
+            m_Internal->Play();
+    }
+
+    void AudioSourceComponent::Pause()
+    {
+        if (m_Internal != nullptr)
+            m_Internal->Pause();
+    }
+
+    void AudioSourceComponent::Stop()
+    {
+        if (m_Internal != nullptr)
+            m_Internal->Stop();
+    }
 
     MonoScriptComponent::MonoScriptComponent(const String& name) { SetClassName(name); }
 

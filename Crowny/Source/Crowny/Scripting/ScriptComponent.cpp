@@ -59,6 +59,20 @@ namespace Crowny
         return info->AddCallback(entity)->GetManagedInstance();
     }
 
-    void ScriptComponent::Internal_RemoveComponent(MonoObject* parentEntity, MonoReflectionType* type) {}
+    void ScriptComponent::Internal_RemoveComponent(MonoObject* parentEntity, MonoReflectionType* type)
+    {
+        ScriptEntity* scriptEntity = ScriptEntity::ToNative(parentEntity);
+        Entity entity = scriptEntity->GetNativeEntity();
+        ComponentInfo* info = ScriptInfoManager::Get().GetComponentInfo(type);
+        if (info == nullptr)
+        {
+            if (info->HasCallback(entity))
+                info->RemoveCallback(entity);
+            else
+                CW_ENGINE_ERROR("Entity doesn't have that component");
+        }
+        else
+            CW_ENGINE_ERROR("That is not a component");
+    }
 
 } // namespace Crowny

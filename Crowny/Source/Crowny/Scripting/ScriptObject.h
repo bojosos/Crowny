@@ -90,8 +90,6 @@ namespace Crowny
         {
             ScriptMeta localMetaData =
               ScriptMeta(Type::GetAssemblyName(), Type::GetNamespace(), Type::GetTypeName(), &Type::InitRuntimeData);
-            std::cout << "Here: " << Type::GetAssemblyName() << Type::GetNamespace() << Type::GetTypeName()
-                      << std::endl;
             MonoManager::RegisterScriptType(&MetaData, localMetaData);
         }
 

@@ -24,15 +24,15 @@ namespace Sandbox
 
         private float deltaSum = 0;
         private int fps = 0;
+        private AudioSource source;
 
         public void Start()
         {
-
+            source = GetComponent<AudioSource>();
         }
 
         public void Update()
         {
-            // Debug.Log("Here");/*
             if (Input.GetKey(KeyCode.Left))
         	    transform.position += Vector3.left * speed * Time.smoothDeltaTime;
             if (Input.GetKey(KeyCode.Right))
@@ -48,6 +48,10 @@ namespace Sandbox
                 Debug.Log(fps);
                 fps = 0;
                 deltaSum = 0;
+                if (source.state == AudioSourceState.Playing)
+                    source.Pause();
+                else
+                    source.Play();
             }
         }
     }
