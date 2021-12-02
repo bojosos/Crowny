@@ -19,16 +19,10 @@ project "Crowny"
 		"Dependencies/stb_image/**.cpp",
 		"Dependencies/glm/glm/**.hpp",
 		"Dependencies/glm/glm/**.inl",
-  	"Dependencies/cereal/include/cereal/**.h"
+  		"Dependencies/cereal/include/cereal/**.h"
 	}
 
---	filter { "system:windows", "files: Linux*" }
-  --		flags { "ExcludeFromBuild" }
-
-	--filter { "system:linux", "files: Windows*" }
-  --		flags { "ExcludeFromBuild" }
-
-  toolset "clang"
+	toolset "clang"
 
 	defines
 	{
@@ -54,7 +48,8 @@ project "Crowny"
 		"%{IncludeDir.yamlcpp}",
 		"%{IncludeDir.ImGuizmo}",
 		"%{IncludeDir.openal}",
-    "%{IncludeDir.cereal}"
+    "%{IncludeDir.cereal}",
+		"%{IncludeDir.Box2D}"
 	}
 
 	libdirs { "/usr/lib/mono-2.0", "%{wks.location}/Crowny/Dependencies/vulkan/lib" }
@@ -70,12 +65,13 @@ project "Crowny"
 		"yaml-cpp",
 		"ImGuizmo",
 		"shaderc_shared",
-    "spirv-cross-c-shared",
-    "SPIRV-Tools-opt",
-    "SPIRV-Tools",
-    "SPIRV-Tools-link",
-    "vorbis",
-    "ogg"
+		"spirv-cross-c-shared",
+		"SPIRV-Tools-opt",
+		"SPIRV-Tools",
+		"SPIRV-Tools-link",
+		"vorbis",
+		"ogg",
+		"Box2D"
 	}
 
 

@@ -261,10 +261,61 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<MonoScriptComponent>(Entity e);
 
+    struct Rigidbody2DComponent : public ComponentBase
+    {
+        enum class BodyType
+        {
+            Static = 0,
+            Dynamic = 1,
+            Kinematic = 2
+        };
+        BodyType Type = BodyType::Static;
+        bool FixedRotation = false;
+        bool FixedPositionX = false, FixedPositionY = false;
+
+        void* RuntimeBody = nullptr;
+
+        Rigidbody2DComponent() : ComponentBase() {}
+        Rigidbody2DComponent(const Rigidbody2DComponent& rb) = default;
+    };
+
+    template <> void ComponentEditorWidget<Rigidbody2DComponent>(Entity e);
+
+    struct BoxCollider2DComponent : public ComponentBase
+    {
+        glm::vec2 Offset = { 0.0f, 0.0f };
+        glm::vec2 Size = { 0.5f, 0.5f };
+        bool IsTrigger;
+        PhysicsMaterial2D Material;
+
+        void* RuntimeFixture;
+
+        BoxCollider2DComponent() : ComponentBase() {}
+        BoxCollider2DComponent(const BoxCollider2DComponent& collider) = default;
+    };
+
+    template <> void ComponentEditorWidget<BoxCollider2DComponent>(Entity e);
+
+    struct CircleCollider2DComponent : public ComponentBase
+    {
+        glm::vec2 Offset = { 0.0f, 0.0f };
+        float Radius = 0.5f;
+
+        PhysicsMaterial2D Material;
+
+        void* RuntimeFixture;
+
+        CircleCollider2DComponent() : ComponentBase() {}
+        CircleCollider2DComponent(const CircleCollider2DComponent& collider) = default;
+    };
+
+    template <> void ComponentEditorWidget<CircleCollider2DComponent>(Entity e);
+
     template <typename... Component> struct ComponentGroup
     {
     };
     using AllComponents =
       ComponentGroup<TransformComponent, CameraComponent, TextComponent, SpriteRendererComponent, MeshRendererComponent,
-                     AudioSourceComponent, AudioListenerComponent, RelationshipComponent, MonoScriptComponent>;
+                     AudioSourceComponent, AudioListenerComponent, RelationshipComponent, MonoScriptComponent,
+                     Rigidbody2DComponent, BoxCollider2DComponent, CircleCollider2DComponent>;
 } // namespace Crowny
