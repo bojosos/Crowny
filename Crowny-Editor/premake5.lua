@@ -29,11 +29,12 @@ project "Crowny-Editor"
 		"%{IncludeDir.entt}",
 		"%{IncludeDir.assimp}",
 		"%{IncludeDir.mono}",
-   	"%{IncludeDir.vulkan}",
+	   	"%{IncludeDir.vulkan}",
 		"%{IncludeDir.ImGuizmo}",
-    "%{IncludeDir.openal}",
-    "%{IncludeDir.cereal}",
-    "%{IncludeDir.yamlcpp}"
+    	"%{IncludeDir.openal}",
+		"%{IncludeDir.cereal}",
+		"%{IncludeDir.yamlcpp}",
+		"%{IncludeDir.Box2D}",
 	}
 
 	libdirs
@@ -61,7 +62,8 @@ project "Crowny-Editor"
 		"ogg",
 		"vorbis",
 		"vorbisfile",
-		"vorbisenc"
+		"vorbisenc",
+		"Box2D"
 	}
 
 	filter "system:windows"
