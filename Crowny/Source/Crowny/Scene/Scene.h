@@ -12,7 +12,7 @@ class b2World;
 namespace Crowny
 {
     class Entity;
-    class ImGuiComponentEditor;
+    class ComponentEditor;
     class SceneSerializer;
     class SceneRenderer;
     class ScriptRuntime;
@@ -43,7 +43,7 @@ namespace Crowny
         void OnUpdateRuntime(Timestep ts);
         void OnUpdateEditor(Timestep ts);
 
-        friend class ImGuiComponentEditor;
+        friend class ComponentEditor;
         friend class SceneRenderer;
         friend class SceneSerializer;
         friend class Entity;
