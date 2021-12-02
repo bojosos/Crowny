@@ -177,6 +177,7 @@ namespace Crowny
         void SetMaxDistance(float maxDistance);
         void SetLooping(bool loop);
         void SetIsMuted(bool muted);
+        void SetTime(float time);
 
         float GetVolume() const { return m_Volume; }
         float GetPitch() const { return m_Pitch; }
@@ -186,6 +187,11 @@ namespace Crowny
         float GetMaxDistance() const { return m_MaxDistance; }
         bool GetLooping() const { return m_Loop; }
         bool GetIsMuted() const { return m_IsMuted; }
+        float GetTime() const { return m_Time; }
+
+        void Play();
+        void Pause();
+        void Stop();
 
         AudioSourceState GetState() const;
 
@@ -198,6 +204,7 @@ namespace Crowny
         float m_MinDistance = 1.0f;
         float m_MaxDistance = 500.0f;
         bool m_PlayOnAwake = true;
+        float m_Time = 0.0f;
 
         Ref<AudioSource> m_Internal;
     };
