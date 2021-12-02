@@ -56,6 +56,9 @@ namespace Crowny
         Ref<DataStream> GetSourceStream(uint32_t& size) const;
         uint32_t GetOpenALBuffer() const { return m_BufferID; }
         bool Is3D() const { return m_Desc.Is3D; }
+        
+        float GetFrequency() const { return m_Desc.Frequency; }
+        uint32_t GetNumChannels() const { return m_Desc.NumChannels; }
 
     private:
         CW_SERIALIZABLE(AudioClip);

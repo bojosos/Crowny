@@ -39,6 +39,8 @@ namespace Crowny
         void Stop();
         AudioSourceState GetState() const;
         void SetGlobalPause(bool paused);
+        void SetTime(float time);
+        float GetTime() const;
 
     private:
         bool RequiresStreaming() const;

@@ -32,6 +32,7 @@ namespace Crowny
     {
         std::function<ScriptComponentBase*(Entity)> AddCallback;
         std::function<bool(Entity)> HasCallback;
+        std::function<void(Entity)> RemoveCallback;
         std::function<ScriptComponentBase*(Entity)> GetCallback;
         std::function<ScriptComponentBase*(Entity)> CreateCallback;
     };
@@ -66,7 +67,8 @@ namespace Crowny
                 return ScriptSceneObjectManager::Get().GetScriptComponent(entity, entity.GetComponent<Component>(),
                                                                           reflType);
             };
-            componentInfo.HasCallback = [reflType](Entity entity) { return entity.HasComponent<Component>(); };
+            componentInfo.HasCallback = [](Entity entity) { return entity.HasComponent<Component>(); };
+            componentInfo.RemoveCallback = [](Entity entity) { entity.RemoveComponent<Component>(); };
             componentInfo.CreateCallback = [](Entity entity) {
                 MonoObject* managedInstance = ScriptType::GetMetaData()->ScriptClass->CreateInstance();
                 return new ScriptType(managedInstance, entity);

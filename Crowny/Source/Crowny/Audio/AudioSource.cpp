@@ -123,9 +123,55 @@ namespace Crowny
 
     void AudioSource::Pause() { alSourcePause(m_SourceID); }
 
-    void AudioSource::Stop() { alSourceStop(m_SourceID); }
+    void AudioSource::Stop()
+    {
+        alSourceStop(m_SourceID);
+        alSourcef(m_SourceID, AL_SEC_OFFSET, 0.0f);
+        if (m_IsStreaming)
+            StopStreaming();
+    }
 
     void AudioSource::SetPriority(int32_t priority) { m_Priority = priority; }
+ 
+    void AudioSource::SetTime(float time)
+    {
+        AudioSourceState state = GetState();
+        Stop();
+        bool requiresStream = RequiresStreaming();
+        float cTime;
+        if (!requiresStream)
+            cTime = time;
+        else
+        {
+            m_StreamProcessedPosition = (uint32_t)(time * m_AudioClip->GetFrequency() * m_AudioClip->GetNumChannels());
+            m_StreamQueuePosition = m_StreamProcessedPosition;
+            cTime = 0.0f;
+        }
+
+        alSourcef(m_SourceID, AL_SEC_OFFSET, cTime);
+        if (state != AudioSourceState::Stopped)
+            Play();
+        if (state == AudioSourceState::Paused)
+            Pause();
+    }
+
+    float AudioSource::GetTime() const
+    {
+        bool requiresStream = RequiresStreaming();
+        float time;
+        if (!requiresStream)
+        {
+            alGetSourcef(m_SourceID, AL_SEC_OFFSET, &time);
+            return time;
+        }
+        else
+        {
+            float timeOffset = 0.0f;
+            timeOffset = (float)m_StreamProcessedPosition / m_AudioClip->GetFrequency() / m_AudioClip->GetNumChannels();
+            alGetSourcef(m_SourceID, AL_SEC_OFFSET, &time);
+            return timeOffset + time;
+        }
+    }
 
     void AudioSource::SetPitch(float pitch)
     {

@@ -8,8 +8,8 @@
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntityBehaviour.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptTransform.h"
 
-// #include "Crowny/Scripting/Bindings/Scene/ScriptAudioSource.h"
-// #include "Crowny/Scripting/Bindings/Scene/ScriptAudioListener.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptAudioSource.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptAudioListener.h"
 
 namespace Crowny
 {
@@ -19,8 +19,8 @@ namespace Crowny
         RegisterComponent<TransformComponent, ScriptTransform>();
         RegisterComponent<CameraComponent, ScriptCamera>();
         RegisterComponent<MonoScriptComponent, ScriptEntityBehaviour>();
-        // RegisterComponent<AudioSourceComponent, ScriptAudioSource>();
-        // RegisterComponent<AudioListenerComponent, ScriptAudioListener>();
+        RegisterComponent<AudioSourceComponent, ScriptAudioSource>();
+        RegisterComponent<AudioListenerComponent, ScriptAudioListener>();
     }
 
     void ScriptInfoManager::InitializeTypes()
