@@ -1,15 +1,15 @@
 #include "cwepch.h"
 
-#include "Panels/ImGuiTextureEditor.h"
+#include "Panels/TextureEditor.h"
 
 namespace Crowny
 {
 
-    Ref<Texture> ImGuiTextureEditor::s_Texture = nullptr;
+    Ref<Texture> TextureEditor::s_Texture = nullptr;
 
-    void ImGuiTextureEditor::SetTexture(const Ref<Texture>& texture) { s_Texture = texture; }
+    void TextureEditor::SetTexture(const Ref<Texture>& texture) { s_Texture = texture; }
 
-    void ImGuiTextureEditor::Render()
+    void TextureEditor::Render()
     {
         const Vector<const char*> TextureTypes = {
             "Default", "Normal", "Sprite", "Cursor", "Lightmap", "Single channel"

@@ -1,6 +1,6 @@
 #include "cwepch.h"
 
-#include "ImGuiGLInfoPanel.h"
+#include "Panels/GLInfoPanel.h"
 #include "Platform/OpenGL/OpenGLInfo.h"
 
 #include <imgui.h>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ImGuiPanel.h"
+#include "Panels/ImGuiPanel.h"
 
 #include "Editor/EditorDefaults.h"
 #include "Editor/ProjectLibrary.h"
@@ -32,11 +32,11 @@ namespace Crowny
         SortCount = 3
     };
 
-    class ImGuiAssetBrowserPanel : public ImGuiPanel
+    class AssetBrowserPanel : public ImGuiPanel
     {
     public:
-        ImGuiAssetBrowserPanel(const String& name, std::function<void(const Path&)> selectedPathCallback);
-        ~ImGuiAssetBrowserPanel() = default;
+        AssetBrowserPanel(const String& name, std::function<void(const Path&)> selectedPathCallback);
+        ~AssetBrowserPanel() = default;
 
         virtual void Render() override;
 
@@ -58,7 +58,7 @@ namespace Crowny
 
         UnorderedMap<size_t, Ref<Texture>> m_Textures; // For showing the textures in the asset browser.
         String m_CsDefaultText;
-        
+
         Vector<Path> m_OrderedSelection;
         UnorderedSet<size_t> m_SelectionSet;
         uint32_t m_SelectionStartIndex;
@@ -69,10 +69,10 @@ namespace Crowny
         Stack<DirectoryEntry*> m_ForwardHistory;
 
         FileSortingMode m_FileSortingMode = FileSortingMode::SortBySize;
-        
+
         float m_Padding = 12.0f;
         float m_ThumbnailSize = DEFAULT_ASSET_THUMBNAIL_SIZE;
-        
+
         Path m_RenamingPath;
         String m_RenamingText;
 

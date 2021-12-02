@@ -1,13 +1,13 @@
 #include "cwepch.h"
 
-#include "Panels/ImGuiComponentEditor.h"
-#include "Panels/ImGuiHierarchyPanel.h"
+#include "Panels/ComponentEditor.h"
+#include "Panels/HierarchyPanel.h"
 
 namespace Crowny
 {
-    void ImGuiComponentEditor::Render()
+    void ComponentEditor::Render()
     {
-        Entity entity = ImGuiHierarchyPanel::GetSelectedEntity();
+        Entity entity = HierarchyPanel::GetSelectedEntity();
         entt::registry& registry = SceneManager::GetActiveScene()->m_Registry;
         entt::entity e = entity.m_EntityHandle;
 
@@ -85,7 +85,7 @@ namespace Crowny
                     {
                         if (!kv.first.empty())
                         {
-                            ImGui::PushStyleColor(ImGuiCol_Text, {0, 200, 0, 1});
+                            ImGui::PushStyleColor(ImGuiCol_Text, { 0, 200, 0, 1 });
                             ImGui::PushID(kv.first.c_str());
                             if (ImGui::Selectable(kv.first.c_str(), false, ImGuiSelectableFlags_DontClosePopups))
                                 m_CurrentComponentGroup = kv.first;
@@ -117,7 +117,7 @@ namespace Crowny
                             ImGui::PushID(component_type_id);
                             if (ImGui::Selectable(ci.name.c_str()))
                                 ci.create(entity);
-                            
+
                             ImGui::PopID();
                         }
                     }

@@ -7,8 +7,8 @@
 
 namespace Crowny
 {
-    class ImGuiComponentEditor;
-    class ImGuiHierarchyWindow;
+    class ComponentEditor;
+    class HierarchyPanelchyWindow;
     class ScriptableEntity;
 
     class TransformComponent;
@@ -62,8 +62,8 @@ namespace Crowny
         const String& GetName() const;
         operator bool() const { return IsValid(); }
 
-        friend class ImGuiComponentEditor;
-        friend class ImGuiHierarchyWindow;
+        friend class ComponentEditor;
+        friend class HierarchyPanelchyWindow;
         friend class ScriptableEntity;
         friend struct std::hash<Entity>;
 

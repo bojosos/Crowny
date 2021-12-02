@@ -1,6 +1,6 @@
 #include "cwepch.h"
 
-#include "ImGuiHierarchyPanel.h"
+#include "Panels/HierarchyPanel.h"
 
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
@@ -12,11 +12,14 @@
 
 namespace Crowny
 {
-    Entity ImGuiHierarchyPanel::s_SelectedEntity;
+    Entity HierarchyPanel::s_SelectedEntity;
 
-    ImGuiHierarchyPanel::ImGuiHierarchyPanel(const String& name) : ImGuiPanel(name) {}
+    HierarchyPanel::HierarchyPanel(const String& name, std::function<void(Entity)> callback)
+      : ImGuiPanel(name), m_SelectionChanged(callback)
+    {
+    }
 
-    void ImGuiHierarchyPanel::DisplayPopup(Entity e)
+    void HierarchyPanel::DisplayPopup(Entity e)
     {
         if (ImGui::MenuItem("New Entity"))
         {
@@ -33,7 +36,7 @@ namespace Crowny
             auto& rr = e.GetParent().GetComponent<RelationshipComponent>().Children;
             for (int i = 0; i < rr.size(); i++)
             {
-                if (rr[i] == ImGuiHierarchyPanel::s_SelectedEntity)
+                if (rr[i] == HierarchyPanel::s_SelectedEntity)
                 {
                     rr[i].Destroy();
                     rr.erase(rr.begin() + i);
@@ -41,11 +44,12 @@ namespace Crowny
                 }
             }
 
-            ImGuiHierarchyPanel::s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
+            HierarchyPanel::s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
+            m_SelectionChanged(s_SelectedEntity);
         }
     }
 
-    void ImGuiHierarchyPanel::Select(Entity e)
+    void HierarchyPanel::Select(Entity e)
     {
         if (!m_SelectedItems.empty() && Input::IsKeyPressed(Key::LeftControl))
         {
@@ -55,18 +59,22 @@ namespace Crowny
             {
                 m_SelectedItems.erase(e);
                 if (m_SelectedItems.empty())
+                {
                     s_SelectedEntity = {};
+                    m_SelectionChanged(s_SelectedEntity);
+                }
             }
         }
         else
         {
             m_SelectedItems.clear();
             m_SelectedItems.insert(e);
-            ImGuiHierarchyPanel::s_SelectedEntity = e;
+            HierarchyPanel::s_SelectedEntity = e;
+            m_SelectionChanged(s_SelectedEntity);
         }
     }
 
-    void ImGuiHierarchyPanel::Rename(Entity e)
+    void HierarchyPanel::Rename(Entity e)
     {
         auto& tc = e.GetComponent<TagComponent>();
         auto& rc = e.GetComponent<RelationshipComponent>();
@@ -85,7 +93,7 @@ namespace Crowny
         }
     }
 
-    void ImGuiHierarchyPanel::DisplayTreeNode(Entity e)
+    void HierarchyPanel::DisplayTreeNode(Entity e)
     {
         auto& tc = e.GetComponent<TagComponent>();
         auto& rc = e.GetComponent<RelationshipComponent>();
@@ -153,7 +161,7 @@ namespace Crowny
         }
     }
 
-    void ImGuiHierarchyPanel::DisplayLeafNode(Entity e)
+    void HierarchyPanel::DisplayLeafNode(Entity e)
     {
         auto& tc = e.GetComponent<TagComponent>();
 
@@ -205,7 +213,7 @@ namespace Crowny
         }
     }
     static int var = 1;
-    void ImGuiHierarchyPanel::DisplayTree(Entity e)
+    void HierarchyPanel::DisplayTree(Entity e)
     {
         if (!e.IsValid())
             return;
@@ -231,7 +239,7 @@ namespace Crowny
             auto& rr = s_SelectedEntity.GetParent().GetComponent<RelationshipComponent>().Children;
             for (int i = 0; i < rr.size(); i++)
             {
-                if (rr[i] == ImGuiHierarchyPanel::s_SelectedEntity)
+                if (rr[i] == HierarchyPanel::s_SelectedEntity)
                 {
                     rr[i].Destroy();
                     rr.erase(rr.begin() + i);
@@ -239,21 +247,23 @@ namespace Crowny
                 }
             }
 
-            ImGuiHierarchyPanel::s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
+            HierarchyPanel::s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
+            m_SelectionChanged(s_SelectedEntity);
         }
 
         // ImGui::PopID();
     }
 
-    void ImGuiHierarchyPanel::Update()
+    void HierarchyPanel::Update()
     {
         if (m_NewEntityParent)
         {
             Entity newEntity = SceneManager::GetActiveScene()->CreateEntity("New Entity");
             m_NewEntityParent.AddChild(newEntity);
-            ImGuiHierarchyPanel::s_SelectedEntity = newEntity;
+            HierarchyPanel::s_SelectedEntity = newEntity;
+            m_SelectionChanged(s_SelectedEntity);
             m_SelectedItems.clear();
-            m_SelectedItems.insert(ImGuiHierarchyPanel::s_SelectedEntity);
+            m_SelectedItems.insert(HierarchyPanel::s_SelectedEntity);
             m_NewEntityParent = {};
         }
 
@@ -263,7 +273,7 @@ namespace Crowny
         }
     }
 
-    void ImGuiHierarchyPanel::Render()
+    void HierarchyPanel::Render()
     {
         m_Deleted = false;
         ImGui::Begin("Hierarchy", &m_Shown);
@@ -313,8 +323,8 @@ namespace Crowny
         ImGui::End();
     }
 
-    void ImGuiHierarchyPanel::Show() { m_Shown = true; }
+    void HierarchyPanel::Show() { m_Shown = true; }
 
-    void ImGuiHierarchyPanel::Hide() { m_Shown = false; }
+    void HierarchyPanel::Hide() { m_Shown = false; }
 
 } // namespace Crowny

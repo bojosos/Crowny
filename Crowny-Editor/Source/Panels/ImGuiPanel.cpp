@@ -1,6 +1,6 @@
 #include "cwepch.h"
 
-#include "ImGuiPanel.h"
+#include "Panels/ImGuiPanel.h"
 
 #include <imgui.h>
 

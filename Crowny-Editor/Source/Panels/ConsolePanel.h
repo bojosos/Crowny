@@ -7,11 +7,11 @@
 
 namespace Crowny
 {
-    class ImGuiConsolePanel : public ImGuiPanel
+    class ConsolePanel : public ImGuiPanel
     {
     public:
-        ImGuiConsolePanel(const String& name);
-        ~ImGuiConsolePanel() = default;
+        ConsolePanel(const String& name);
+        ~ConsolePanel() = default;
 
         virtual void Render() override;
         void RenderMessages();

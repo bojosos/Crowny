@@ -60,9 +60,8 @@ namespace Crowny
             stbi_image_free(data);
         }
         else
-        {
-            std::cout << "Failed to load HDR image." << std::endl;
-        }
+            CW_ENGINE_ERROR("Failed to load HDR image.");
+            
         delete dat;
 
         glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);

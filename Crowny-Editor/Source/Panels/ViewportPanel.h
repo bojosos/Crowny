@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ImGuiPanel.h"
+#include "Panels/ImGuiPanel.h"
 
 #include "Crowny/Events/Event.h"
 #include "Crowny/RenderAPI/RenderTarget.h"
@@ -10,17 +10,20 @@
 namespace Crowny
 {
 
-    class ImGuiViewportPanel : public ImGuiPanel
+    class ViewportPanel : public ImGuiPanel
     {
     public:
-        ImGuiViewportPanel(const String& name);
-        ~ImGuiViewportPanel() = default;
+        ViewportPanel(const String& name);
+        ~ViewportPanel() = default;
 
         virtual void Render() override;
         const glm::vec2& GetViewportSize() const { return m_ViewportSize; }
         const glm::vec4& GetViewportBounds() const { return m_ViewportBounds; }
         void SetEventCallback(const EventCallbackFn& onclicked);
         void SetEditorRenderTarget(const Ref<RenderTarget>& rt);
+
+        void DisalbeGizmo() { m_GizmoMode = -1; }
+        void EnableGizmo() { m_GizmoMode = ImGuizmo::TRANSLATE; }
 
     private:
         Ref<RenderTarget> m_RenderTarget;

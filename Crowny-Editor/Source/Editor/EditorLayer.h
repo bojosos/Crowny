@@ -25,7 +25,7 @@
 
 namespace Crowny
 {
-    class ImGuiTextureEditor;
+    class TextureEditor;
     class ImGuiViewportWindow;
 
     class EditorLayer : public Layer
@@ -63,12 +63,12 @@ namespace Crowny
         Ref<RenderTarget> m_ResizedRenderTarget;
 
         ImGuiPanel* m_GLInfoPanel;
-        ImGuiInspectorPanel* m_InspectorPanel;
-        ImGuiHierarchyPanel* m_HierarchyPanel;
-        ImGuiViewportPanel* m_ViewportPanel;
-        ImGuiTextureEditor* m_TextureEditor;
-        ImGuiConsolePanel* m_ConsolePanel;
-        ImGuiAssetBrowserPanel* m_AssetBrowser;
+        InspectorPanel* m_InspectorPanel;
+        HierarchyPanel* m_HierarchyPanel;
+        ViewportPanel* m_ViewportPanel;
+        TextureEditor* m_TextureEditor;
+        ConsolePanel* m_ConsolePanel;
+        AssetBrowserPanel* m_AssetBrowser;
 
         Vector<ImGuiPanel*> m_ImGuiWindows;
         static EditorCamera s_EditorCamera;

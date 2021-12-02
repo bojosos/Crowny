@@ -1,16 +1,16 @@
 #pragma once
 
 #include "Crowny/Ecs/Entity.h"
-#include "ImGuiPanel.h"
+#include "Panels/ImGuiPanel.h"
 
 namespace Crowny
 {
 
-    class ImGuiHierarchyPanel : public ImGuiPanel
+    class HierarchyPanel : public ImGuiPanel
     {
     public:
-        ImGuiHierarchyPanel(const String& name);
-        ~ImGuiHierarchyPanel() = default;
+        HierarchyPanel(const String& name, std::function<void(Entity)> callback);
+        ~HierarchyPanel() = default;
 
         virtual void Render() override;
         void Update();
@@ -34,6 +34,7 @@ namespace Crowny
         void Rename(Entity e);
 
     private:
+        std::function<void(Entity)> m_SelectionChanged;
         bool m_Deleted = false;
         Entity m_NewEntityParent = {};
         Entity m_Renaming = {};

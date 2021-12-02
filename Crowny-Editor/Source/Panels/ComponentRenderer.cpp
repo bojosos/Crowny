@@ -7,6 +7,9 @@
 #include "Editor/EditorAssets.h"
 #include "Editor/EditorDefaults.h"
 
+#include "Crowny/Scripting/Mono/MonoManager.h"
+#include "Crowny/Scripting/ScriptInfoManager.h"
+
 #include <backends/imgui_impl_vulkan.h>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
@@ -15,6 +18,7 @@
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 #include <mono/metadata/object.h>
+#include <mono/metadata/reflection.h>
 
 namespace Crowny
 {
@@ -286,6 +290,126 @@ namespace Crowny
         ImGui::Text("Path");
     }
 
+    template <> void ComponentEditorWidget<Rigidbody2DComponent>(Entity e)
+    {
+        auto& rb2d = e.GetComponent<Rigidbody2DComponent>();
+
+        ImGui::Columns(2);
+        ImGui::Text("Body Type");
+        ImGui::NextColumn();
+
+        const char* bodyTypes[3] = { "Static", "Dynamic", "Kinematic" };
+        if (ImGui::BeginCombo("##rb2dbodyType", bodyTypes[(uint32_t)rb2d.Type]))
+        {
+            for (uint32_t i = 0; i < 3; i++)
+            {
+                const bool isSelected = ((uint32_t)rb2d.Type == i);
+                if (ImGui::Selectable(bodyTypes[i], isSelected))
+                    rb2d.Type = (Rigidbody2DComponent::BodyType)i;
+
+                if (isSelected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+
+        ImGui::Columns(1);
+        ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+
+        if (ImGui::CollapsingHeader("Constraints"))
+        {
+            ImGui::Indent(30.f);
+            ImGui::Columns(2);
+            ImGui::Text("Fixed Position");
+            ImGui::NextColumn();
+
+            ImGui::Text("X");
+            ImGui::SameLine();
+            ImGui::Checkbox("##rb2dxPosLock", &rb2d.FixedPositionX);
+            ImGui::SameLine();
+            ImGui::Text("Y");
+            ImGui::SameLine();
+            ImGui::Checkbox("##rb2dyPosLock", &rb2d.FixedPositionY);
+            ImGui::NextColumn();
+            ImGui::Text("Fixed Rotation");
+            ImGui::NextColumn();
+            ImGui::Text("Z");
+            ImGui::SameLine();
+            ImGui::Checkbox("##rb2dzRotLock", &rb2d.FixedRotation);
+
+            ImGui::Unindent(30.0f);
+        }
+
+        ImGui::Columns(1);
+    }
+
+    static void DrawPhysicsMaterial(PhysicsMaterial2D& material)
+    {
+        ImGui::Columns(2);
+        ImGui::Text("Density");
+        ImGui::NextColumn();
+        ImGui::DragFloat("##physicsMatDensity", &material.Density, DRAG_SENSITIVITY);
+        ImGui::NextColumn();
+        ImGui::Text("Friction");
+        ImGui::NextColumn();
+        ImGui::DragFloat("##physicsMatFriction", &material.Friction, DRAG_SENSITIVITY);
+        ImGui::NextColumn();
+        ImGui::Text("Restitution");
+        ImGui::NextColumn();
+        ImGui::DragFloat("##physicsMatRestition", &material.Restitution, DRAG_SENSITIVITY);
+        ImGui::NextColumn();
+        ImGui::Text("Restitution Threshold");
+        ImGui::NextColumn();
+        ImGui::DragFloat("##physicsMatRestitionThreshold", &material.RestitutionThreshold, DRAG_SENSITIVITY);
+        ImGui::NextColumn();
+    }
+
+    template <> void ComponentEditorWidget<BoxCollider2DComponent>(Entity e)
+    {
+        BoxCollider2DComponent& bc2d = e.GetComponent<BoxCollider2DComponent>();
+
+        ImGui::Columns(2);
+        ImGui::Text("Offset");
+        ImGui::NextColumn();
+        ImGui::DragFloat2("##boxCollider2Doffset", glm::value_ptr(bc2d.Offset), DRAG_SENSITIVITY);
+        ImGui::NextColumn();
+
+        ImGui::Text("Size");
+        ImGui::NextColumn();
+        ImGui::DragFloat2("##boxCollider2Dsize", glm::value_ptr(bc2d.Size), DRAG_SENSITIVITY);
+        ImGui::NextColumn();
+
+        ImGui::Text("Is Trigger");
+        ImGui::NextColumn();
+        ImGui::Checkbox("##boxCollider2Dtrigger", &bc2d.IsTrigger);
+        ImGui::NextColumn();
+        DrawPhysicsMaterial(bc2d.Material);
+        ImGui::Columns(1);
+    }
+
+    template <> void ComponentEditorWidget<CircleCollider2DComponent>(Entity e)
+    {
+        auto& cc2d = e.GetComponent<CircleCollider2DComponent>();
+
+        ImGui::Columns(2);
+        ImGui::Text("Offset");
+        ImGui::NextColumn();
+        ImGui::DragFloat2("##circleCollider2Doffset", glm::value_ptr(cc2d.Offset), DRAG_SENSITIVITY);
+        ImGui::NextColumn();
+
+        ImGui::Text("Radius");
+        ImGui::NextColumn();
+        ImGui::DragFloat("##circleCollider2Dradius", &cc2d.Radius, DRAG_SENSITIVITY);
+        ImGui::NextColumn();
+
+        // ImGui::Text("Is Trigger"); ImGui::NextColumn();
+        // ImGui::Checkbox("##circleCollider2Dtrigger", &cc2d.IsTrigger);
+        // ImGui::NextColumn();
+        DrawPhysicsMaterial(cc2d.Material);
+
+        ImGui::Columns(1);
+    }
+
     template <> void ComponentEditorWidget<AudioListenerComponent>(Entity e) {}
 
     template <> void ComponentEditorWidget<AudioSourceComponent>(Entity e)
@@ -367,6 +491,7 @@ namespace Crowny
         if (ImGui::InputText("##scriptName", &name))
         {
             script.SetClassName(name);
+            script.OnInitialize(e);
         }
 
         ImGui::PopStyleColor(1);
@@ -386,7 +511,7 @@ namespace Crowny
             ImGui::Text("%s", field->GetName().c_str());
             ImGui::NextColumn();
             MonoObject* instance = script.GetManagedInstance();
-            if (instance)
+            if (instance != nullptr)
             {
                 switch (field->GetPrimitiveType())
                 {
@@ -410,9 +535,9 @@ namespace Crowny
                     {
                         // TODO: These commonly used methods (GetEnumNames, Compile) should be stored globally instead
                         // of having to get them every time Also no mono code in the editor please.
-                        void* enumType = (void*)mono_type_get_object(
-                          CWMonoRuntime::GetDomain(), MonoUtils::GetType(field->GetType()->GetInternalPtr()));
-                        MonoArray* ar = (MonoArray*)CWMonoRuntime::GetBuiltinClasses()
+                        void* enumType = (void*)MonoUtils::GetType(field->GetType()->GetInternalPtr());
+                        MonoArray* ar = (MonoArray*)ScriptInfoManager::Get()
+                                          .GetBuiltinClasses()
                                           .ScriptUtils->GetMethod("GetEnumNames", 1)
                                           ->Invoke(nullptr, &enumType);
                         uint32_t size = mono_array_length(ar);
@@ -445,7 +570,7 @@ namespace Crowny
                     break;
                 }
                 default: {
-                    CWMonoClass* rng = CWMonoRuntime::GetBuiltinClasses().RangeAttribute;
+                    MonoClass* rng = ScriptInfoManager::Get().GetBuiltinClasses().RangeAttribute;
                     MonoObject* obj = field->GetAttribute(rng);
                     if (obj) // show slider, more types?
                     {
@@ -629,7 +754,6 @@ namespace Crowny
 
             ImGui::PopID();
         }
-
         ImGui::Columns(1);
     }
 

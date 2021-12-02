@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ImGuiComponentEditor.h"
+#include "ComponentEditor.h"
 #include "ImGuiPanel.h"
 
 #include "Crowny/Import/ImportOptions.h"
@@ -25,11 +25,11 @@ namespace Crowny
         Prefab
     };
 
-    class ImGuiInspectorPanel : public ImGuiPanel
+    class InspectorPanel : public ImGuiPanel
     {
     public:
-        ImGuiInspectorPanel(const String& name);
-        ~ImGuiInspectorPanel() = default;
+        InspectorPanel(const String& name);
+        ~InspectorPanel() = default;
 
         virtual void Render() override;
 
@@ -41,6 +41,7 @@ namespace Crowny
 
         void SetInspectorMode(InspectorMode mode);
         void SetSelectedAssetPath(const Path& filepath);
+        void SetSelectedEntity(Entity e);
 
     private:
         void RenderMaterialInspector();
@@ -59,11 +60,17 @@ namespace Crowny
     private:
         static Ref<PBRMaterial> s_SelectedMaterial;
 
-        bool m_HasPropertyChanged = false;
         InspectorMode m_InspectorMode = InspectorMode::GameObject;
+
+        // For import options inspection
+        bool m_HasPropertyChanged = false;
         Ref<ImportOptions> m_ImportOptions;
         Ref<ImportOptions> m_OldImportOptions;
         Path m_InspectedAssetPath;
-        ImGuiComponentEditor m_ComponentEditor;
+
+        // For normal Entity use
+        Entity m_InspectedEntity;
+
+        ComponentEditor m_ComponentEditor; // Helper object for rendering components of entities
     };
 } // namespace Crowny
