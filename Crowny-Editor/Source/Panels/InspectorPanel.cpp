@@ -7,8 +7,8 @@
 #include "Crowny/Renderer/TextureManager.h"
 #include "Crowny/Scene/SceneManager.h"
 
-#include "Panels/ImGuiComponentEditor.h"
-#include "Panels/ImGuiInspectorPanel.h"
+#include "Panels/ComponentEditor.h"
+#include "Panels/InspectorPanel.h"
 
 #include "Editor/EditorAssets.h"
 #include "Editor/ProjectLibrary.h"
@@ -22,9 +22,9 @@
 namespace Crowny
 {
 
-    Ref<PBRMaterial> ImGuiInspectorPanel::s_SelectedMaterial = nullptr;
+    Ref<PBRMaterial> InspectorPanel::s_SelectedMaterial = nullptr;
 
-    ImGuiInspectorPanel::ImGuiInspectorPanel(const String& name) : ImGuiPanel(name)
+    InspectorPanel::InspectorPanel(const String& name) : ImGuiPanel(name)
     {
         m_ComponentEditor.RegisterComponent<TransformComponent>("Transform");
 
@@ -52,7 +52,7 @@ namespace Crowny
         m_ComponentEditor.PopComponentGroup();
     }
 
-    void ImGuiInspectorPanel::Render()
+    void InspectorPanel::Render()
     {
         ImGui::Begin("Inspector", &m_Shown);
         UpdateState();
@@ -80,7 +80,7 @@ namespace Crowny
         ImGui::End();
     }
 
-    void ImGuiInspectorPanel::RenderMaterialInspector()
+    void InspectorPanel::RenderMaterialInspector()
     {
         if (s_SelectedMaterial)
         {
@@ -225,9 +225,9 @@ namespace Crowny
         }
     }
 
-    void ImGuiInspectorPanel::RenderPhysicsMaterialInspector() {}
+    void InspectorPanel::RenderPhysicsMaterialInspector() {}
 
-    void ImGuiInspectorPanel::RenderAudioClipImportInspector()
+    void InspectorPanel::RenderAudioClipImportInspector()
     {
         if (m_ImportOptions)
         {
@@ -303,21 +303,21 @@ namespace Crowny
         }
     }
 
-    void ImGuiInspectorPanel::RenderFontImportInspector() {}
+    void InspectorPanel::RenderFontImportInspector() {}
 
-    void ImGuiInspectorPanel::RenderScriptImportInspector() {}
+    void InspectorPanel::RenderScriptImportInspector() {}
 
-    void ImGuiInspectorPanel::RenderTextureImportInspector() {}
+    void InspectorPanel::RenderTextureImportInspector() {}
 
-    void ImGuiInspectorPanel::RenderShaderImportInspector() {}
+    void InspectorPanel::RenderShaderImportInspector() {}
 
-    void ImGuiInspectorPanel::RenderMeshImportInspector() {}
+    void InspectorPanel::RenderMeshImportInspector() {}
 
-    void ImGuiInspectorPanel::RenderPrefabInspector() {}
+    void InspectorPanel::RenderPrefabInspector() {}
 
     static uint32_t i = 0;
 
-    void ImGuiInspectorPanel::DrawHeader()
+    void InspectorPanel::DrawHeader()
     {
         // Consider drawing an icon too
         auto drawHeader = [&](const String& head) {
@@ -383,8 +383,7 @@ namespace Crowny
         case (InspectorMode::Material):
             drawHeader("Material");
             break;
-        default:
-        {
+        default: {
             float maxx = ImGui::GetContentRegionAvail().x;
             ImGui::Text("%s", m_InspectedAssetPath.filename().c_str());
             float padding = ImGui::GetStyle().FramePadding.x;
@@ -407,7 +406,7 @@ namespace Crowny
         }
     }
 
-    void ImGuiInspectorPanel::DrawApplyRevert(float xOffset, float width)
+    void InspectorPanel::DrawApplyRevert(float xOffset, float width)
     {
         ImGui::Separator();
         float padding = ImGui::GetStyle().FramePadding.x;
@@ -427,7 +426,7 @@ namespace Crowny
             ImGui::EndDisabled();
     }
 
-    void ImGuiInspectorPanel::SetSelectedAssetPath(const Path& filepath)
+    void InspectorPanel::SetSelectedAssetPath(const Path& filepath)
     {
         m_InspectedAssetPath = filepath;
         if (fs::is_directory(filepath))
@@ -460,10 +459,16 @@ namespace Crowny
         }
     }
 
-    void ImGuiInspectorPanel::SetInspectorMode(InspectorMode mode) { m_InspectorMode = mode; }
+    void InspectorPanel::SetSelectedEntity(Entity e)
+    {
+        m_InspectorMode = InspectorMode::GameObject;
+        m_InspectedEntity = e;
+    }
 
-    void ImGuiInspectorPanel::Show() { m_Shown = true; }
+    void InspectorPanel::SetInspectorMode(InspectorMode mode) { m_InspectorMode = mode; }
 
-    void ImGuiInspectorPanel::Hide() { m_Shown = false; }
+    void InspectorPanel::Show() { m_Shown = true; }
+
+    void InspectorPanel::Hide() { m_Shown = false; }
 
 } // namespace Crowny

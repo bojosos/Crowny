@@ -1,6 +1,6 @@
 #include "cwpch.h"
 
-#include "../../Crowny-Editor/Source/Panels/ImGuiInspectorPanel.h"
+#include "../../Crowny-Editor/Source/Panels/InspectorPanel.h"
 
 #include "Crowny/Import/Importer.h"
 #include "Crowny/RenderAPI/RenderCommand.h"
@@ -44,7 +44,7 @@ namespace Crowny
     void ForwardRenderer::Init()
     {
         s_Data = new ForwardRendererData();
-        Ref<UniformParams>& uniforms = ImGuiInspectorPanel::GetSelectedMaterial()->GetUniformParams();
+        Ref<UniformParams>& uniforms = InspectorPanel::GetSelectedMaterial()->GetUniformParams();
 
         Ref<Shader> shader = Importer::Get().Import<Shader>(PBRIBL_SHADER_PATH);
         Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
@@ -93,7 +93,7 @@ namespace Crowny
         s_Data->Mvp->Write(0, glm::value_ptr(camera.GetProjection()), sizeof(glm::mat4));
         s_Data->Mvp->Write(sizeof(glm::mat4), glm::value_ptr(viewMatrix), sizeof(glm::mat4));
 
-        Ref<UniformParams> uniforms = ImGuiInspectorPanel::GetSelectedMaterial()->GetUniformParams();
+        Ref<UniformParams> uniforms = InspectorPanel::GetSelectedMaterial()->GetUniformParams();
         uniforms->SetTexture(0, 3, s_Data->Skybox->m_IrradianceMap);
         uniforms->SetTexture(0, 4, s_Data->Skybox->m_Brdf);
         uniforms->SetTexture(0, 5, s_Data->Skybox->m_PrefilteredMap);
@@ -126,7 +126,7 @@ namespace Crowny
     void ForwardRenderer::Submit(const Ref<Model>& model, const glm::mat4& transform)
     {
         s_Data->Mvp->Write(sizeof(glm::mat4) * 2, glm::value_ptr(transform), sizeof(glm::mat4));
-        ImGuiInspectorPanel::GetSelectedMaterial()->Bind();
+        InspectorPanel::GetSelectedMaterial()->Bind();
         for (auto& mesh : model->GetMeshes())
             model->Draw();
     }

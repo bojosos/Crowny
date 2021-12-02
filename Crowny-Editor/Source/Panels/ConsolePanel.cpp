@@ -1,13 +1,13 @@
 #include "cwepch.h"
 
-#include "Panels/ImGuiConsolePanel.h"
+#include "Panels/ConsolePanel.h"
 
 namespace Crowny
 {
 
-    ImGuiConsolePanel::ImGuiConsolePanel(const String& name) : ImGuiPanel(name) {}
+    ConsolePanel::ConsolePanel(const String& name) : ImGuiPanel(name) {}
 
-    void ImGuiConsolePanel::Render()
+    void ConsolePanel::Render()
     {
         m_RequestScrollToBottom = ImGuiConsoleBuffer::HasNewMessages();
         ImGui::Begin("Console", &m_Shown);
@@ -18,7 +18,7 @@ namespace Crowny
         ImGui::End();
     }
 
-    void ImGuiConsolePanel::RenderHeader()
+    void ConsolePanel::RenderHeader()
     {
         ImGuiStyle& style = ImGui::GetStyle();
         const float spacing = style.ItemInnerSpacing.x;
@@ -37,7 +37,7 @@ namespace Crowny
         RenderSettings();
     }
 
-    void ImGuiConsolePanel::RenderSettings()
+    void ConsolePanel::RenderSettings()
     {
         const float maxWidth = ImGui::CalcTextSize("Scroll to bottom").x * 1.1f;
         const float spacing = ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(" ").x;
@@ -54,7 +54,7 @@ namespace Crowny
             ImGuiConsoleBuffer::Clear();
     }
 
-    void ImGuiConsolePanel::RenderMessages()
+    void ConsolePanel::RenderMessages()
     {
         ImGui::BeginChild("ScrollRegion", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
         {
@@ -72,7 +72,7 @@ namespace Crowny
         ImGui::EndChild();
     }
 
-    void ImGuiConsolePanel::RenderMessage(const Ref<ImGuiConsoleBuffer::Message>& message)
+    void ConsolePanel::RenderMessage(const Ref<ImGuiConsoleBuffer::Message>& message)
     {
         ImGuiConsoleBuffer::Message::Level level = message->GetLevel();
         if (level != ImGuiConsoleBuffer::Message::Level::Invalid && m_EnabledLevels[(int8_t)level])

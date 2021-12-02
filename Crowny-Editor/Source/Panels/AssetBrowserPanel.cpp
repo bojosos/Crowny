@@ -1,6 +1,6 @@
 #include "cwpch.h"
 
-#include "Panels/ImGuiAssetBrowserPanel.h"
+#include "Panels/AssetBrowserPanel.h"
 
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/PlatformUtils.h"
@@ -48,7 +48,7 @@ namespace Crowny
         }
     }
 
-    ImGuiAssetBrowserPanel::ImGuiAssetBrowserPanel(const String& name,
+    AssetBrowserPanel::AssetBrowserPanel(const String& name,
                                                    std::function<void(const Path&)> selectedPathCallback)
       : ImGuiPanel(name), m_SetSelectedPathCallback(selectedPathCallback)
     {
@@ -57,7 +57,7 @@ namespace Crowny
         m_FileIcon = ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FileIcon);
     }
 
-    void ImGuiAssetBrowserPanel::Initialize()
+    void AssetBrowserPanel::Initialize()
     {
         m_CurrentDirectoryEntry = ProjectLibrary::Get().GetRoot().get();
 
@@ -73,7 +73,7 @@ namespace Crowny
         }
     }
 
-    void ImGuiAssetBrowserPanel::Render()
+    void AssetBrowserPanel::Render()
     {
         ImGui::Begin("Asset browser", &m_Shown, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
         UpdateState();
@@ -81,7 +81,8 @@ namespace Crowny
         DrawHeader();
         ImGui::Separator();
 
-        ImGui::BeginChild("AssetBrowser", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoNav);
+        ImGui::BeginChild("AssetBrowser", ImVec2(0, 0), false,
+                          ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoNav);
 
         // Right click not on a file
         if (ImGui::BeginPopupContextWindow(nullptr,
@@ -98,7 +99,7 @@ namespace Crowny
         ImGui::End();
     }
 
-    void ImGuiAssetBrowserPanel::DrawHeader()
+    void AssetBrowserPanel::DrawHeader()
     {
         const Ref<DirectoryEntry>& entry = ProjectLibrary::Get().GetRoot();
         if (!m_BackwardHistory.empty())
@@ -189,8 +190,7 @@ namespace Crowny
 
         if ((FileSortingMode)currentMode != m_FileSortingMode)
         {
-            std::function<void(DirectoryEntry*)> sortChildren = [&](DirectoryEntry* dirEntry)
-            {
+            std::function<void(DirectoryEntry*)> sortChildren = [&](DirectoryEntry* dirEntry) {
                 std::sort(dirEntry->Children.begin(), dirEntry->Children.end(), [&](const auto& l, const auto& r) {
                     if (m_FileSortingMode == FileSortingMode::SortByName)
                     {
@@ -203,7 +203,8 @@ namespace Crowny
                     else if (m_FileSortingMode == FileSortingMode::SortBySize)
                     {
                         if (l->Type == r->Type && l->Type == LibraryEntryType::File)
-                            return static_cast<FileEntry*>(l.get())->Filesize > static_cast<FileEntry*>(r.get())->Filesize;
+                            return static_cast<FileEntry*>(l.get())->Filesize >
+                                   static_cast<FileEntry*>(r.get())->Filesize;
                         return l->Type == LibraryEntryType::File;
                     }
                     return false;
@@ -219,7 +220,7 @@ namespace Crowny
         }
     }
 
-    void ImGuiAssetBrowserPanel::DrawFiles()
+    void AssetBrowserPanel::DrawFiles()
     {
         float cellSize = m_ThumbnailSize + m_Padding;
         float panelWidth = ImGui::GetContentRegionAvail().x;
@@ -246,10 +247,11 @@ namespace Crowny
                 m_SelectionStartIndex = 0;
                 m_SelectionSet.clear();
             }
-            
+
             if (Input::IsKeyUp(Key::F2)) // Rename the first selected item
             {
-                m_RenamingPath = m_CurrentDirectoryEntry->Children[m_SelectionStartIndex]->Filepath; // TODO: Use hash instead of path
+                m_RenamingPath =
+                  m_CurrentDirectoryEntry->Children[m_SelectionStartIndex]->Filepath; // TODO: Use hash instead of path
                 m_RenamingText = m_RenamingPath.filename();
             }
 
@@ -258,8 +260,10 @@ namespace Crowny
                 if (m_CurrentDirectoryEntry->Type == LibraryEntryType::Directory)
                 {
                     m_BackwardHistory.push(m_CurrentDirectoryEntry);
-                    while (!m_ForwardHistory.empty()) m_ForwardHistory.pop();
-                    m_CurrentDirectoryEntry = static_cast<DirectoryEntry*>(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex].get());
+                    while (!m_ForwardHistory.empty())
+                        m_ForwardHistory.pop();
+                    m_CurrentDirectoryEntry =
+                      static_cast<DirectoryEntry*>(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex].get());
                 }
                 else
                     PlatformUtils::OpenExternally(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex]->Filepath);
@@ -270,7 +274,8 @@ namespace Crowny
                 if (m_CurrentDirectoryEntry->Parent != nullptr)
                 {
                     m_ForwardHistory.push(m_CurrentDirectoryEntry);
-                    while (!m_BackwardHistory.empty()) m_BackwardHistory.pop();
+                    while (!m_BackwardHistory.empty())
+                        m_BackwardHistory.pop();
                     m_CurrentDirectoryEntry = m_CurrentDirectoryEntry->Parent;
                 }
             }
@@ -281,7 +286,8 @@ namespace Crowny
                 {
                     if (m_CurrentDirectoryEntry->Children.size() > 0)
                     {
-                        m_SelectionSet.insert(m_CurrentDirectoryEntry->Children[0]->ElementNameHash); // Select the first entry
+                        m_SelectionSet.insert(
+                          m_CurrentDirectoryEntry->Children[0]->ElementNameHash); // Select the first entry
                         m_SelectionStartIndex = 0;
                     }
                 }
@@ -290,8 +296,9 @@ namespace Crowny
                     if (m_CurrentDirectoryEntry->Children.size() > 0)
                     {
                         size_t lastIdx = m_CurrentDirectoryEntry->Children.size() - 1;
-                        m_SelectionSet.insert(m_CurrentDirectoryEntry->Children[lastIdx]->ElementNameHash); // Select the last entry
-                        m_SelectionStartIndex =  lastIdx;
+                        m_SelectionSet.insert(
+                          m_CurrentDirectoryEntry->Children[lastIdx]->ElementNameHash); // Select the last entry
+                        m_SelectionStartIndex = lastIdx;
                     }
                 }
             }
@@ -304,9 +311,10 @@ namespace Crowny
                     m_SelectionSet.insert(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex]->ElementNameHash);
                 }
                 if (Input::IsKeyDown(Key::Right))
-                {   
+                {
                     m_SelectionSet.clear();
-                    m_SelectionStartIndex = std::min(m_SelectionStartIndex + 1, (uint32_t)m_CurrentDirectoryEntry->Children.size() - 1);
+                    m_SelectionStartIndex =
+                      std::min(m_SelectionStartIndex + 1, (uint32_t)m_CurrentDirectoryEntry->Children.size() - 1);
                     m_SelectionSet.insert(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex]->ElementNameHash);
                 }
                 if (Input::IsKeyUp(Key::Up))
@@ -318,7 +326,8 @@ namespace Crowny
                 if (Input::IsKeyUp(Key::Down))
                 {
                     m_SelectionSet.clear();
-                    m_SelectionStartIndex = std::min(m_SelectionStartIndex + columnCount, (uint32_t)m_CurrentDirectoryEntry->Children.size() - 1);
+                    m_SelectionStartIndex = std::min(m_SelectionStartIndex + columnCount,
+                                                     (uint32_t)m_CurrentDirectoryEntry->Children.size() - 1);
                     m_SelectionSet.insert(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex]->ElementNameHash);
                 }
             }
@@ -476,7 +485,7 @@ namespace Crowny
         ImGui::Columns(1);
     }
 
-    void ImGuiAssetBrowserPanel::ShowContextMenuContents(LibraryEntry* entry)
+    void AssetBrowserPanel::ShowContextMenuContents(LibraryEntry* entry)
     {
         if (ImGui::BeginMenu("Create"))
         {
@@ -543,7 +552,7 @@ namespace Crowny
             ProjectLibrary::Get().Refresh(m_CurrentDirectoryEntry->Filepath);
     }
 
-    void ImGuiAssetBrowserPanel::CreateNew(AssetBrowserItem itemType)
+    void AssetBrowserPanel::CreateNew(AssetBrowserItem itemType)
     {
         String filename = GetDefaultFileNameFromType(itemType);
         Path newEntryPath = EditorUtils::GetUniquePath(m_CurrentDirectoryEntry->Filepath / filename);
@@ -564,7 +573,7 @@ namespace Crowny
         m_RenamingText = newEntryPath.filename();
     }
 
-    String ImGuiAssetBrowserPanel::GetDefaultContents(AssetBrowserItem itemType)
+    String AssetBrowserPanel::GetDefaultContents(AssetBrowserItem itemType)
     {
         switch (itemType)
         {
@@ -588,8 +597,8 @@ namespace Crowny
         return "";
     }
 
-    void ImGuiAssetBrowserPanel::Show() { m_Shown = true; }
+    void AssetBrowserPanel::Show() { m_Shown = true; }
 
-    void ImGuiAssetBrowserPanel::Hide() { m_Shown = false; }
+    void AssetBrowserPanel::Hide() { m_Shown = false; }
 
 } // namespace Crowny

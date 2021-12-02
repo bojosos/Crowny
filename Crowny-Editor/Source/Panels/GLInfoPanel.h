@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ImGuiPanel.h"
+#include "Panels/ImGuiPanel.h"
 
 namespace Crowny
 {
