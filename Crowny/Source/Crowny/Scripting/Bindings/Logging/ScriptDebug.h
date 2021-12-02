@@ -1,13 +1,14 @@
 #pragma once
 
-#include <mono/metadata/object.h>
+#include "Crowny/Scripting/ScriptObject.h"
 
 namespace Crowny
 {
-    class ScriptDebug
+    class ScriptDebug : public ScriptObject<ScriptDebug>
     {
     public:
-        static void InitRuntimeFunctions();
+        SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "Debug")
+        ScriptDebug();
 
     private:
         static void Internal_Log(MonoString* message);

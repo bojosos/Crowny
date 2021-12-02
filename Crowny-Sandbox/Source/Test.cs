@@ -22,34 +22,33 @@ namespace Sandbox
         [ShowInInspector]
         private bool dummy = true;
 
-        private Camera camera;
-
-        private void TestFunc()
-        {       
-            int c = 0;
-            int a = 5 / c;
-        }
+        private float deltaSum = 0;
+        private int fps = 0;
 
         public void Start()
         {
-            TestFunc();
-            int c = 0;
-            int a = 5 / c;
+
         }
 
         public void Update()
         {
-            Debug.Log("test");
+            // Debug.Log("Here");/*
             if (Input.GetKey(KeyCode.Left))
         	    transform.position += Vector3.left * speed * Time.smoothDeltaTime;
             if (Input.GetKey(KeyCode.Right))
         	    transform.position += Vector3.right * speed * Time.smoothDeltaTime;
             if (Input.GetKey(KeyCode.Up))
-               transform.position += Vector3.up * speed * Time.smoothDeltaTime;
+                transform.position += Vector3.up * speed * Time.smoothDeltaTime;
             if (Input.GetKey(KeyCode.Down))
         	    transform.position += Vector3.down * speed * Time.smoothDeltaTime;
-            if (Input.GetKey(KeyCode.T))
-                Crowny.Debug.Log(transform.position);
+            deltaSum += Time.deltaTime;
+            fps++;
+            if (deltaSum > 1.0f)
+            {
+                Debug.Log(fps);
+                fps = 0;
+                deltaSum = 0;
+            }
         }
     }
 }

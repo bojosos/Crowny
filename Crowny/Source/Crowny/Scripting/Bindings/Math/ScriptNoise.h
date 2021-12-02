@@ -1,16 +1,15 @@
 #pragma once
 
-#include "Crowny/Ecs/Components.h"
-
-#include <glm/glm.hpp>
+#include "Crowny/Scripting/ScriptObject.h"
 
 namespace Crowny
 {
 
-    class ScriptNoise
+    class ScriptNoise : public ScriptObject<ScriptNoise>
     {
     public:
-        static void InitRuntimeFunctions();
+        SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "Noise")
+        ScriptNoise();
 
     private:
         static float Internal_PerlinNoise(float x, float y);

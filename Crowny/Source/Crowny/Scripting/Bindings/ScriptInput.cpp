@@ -1,21 +1,21 @@
 #include "cwpch.h"
 
 #include "Crowny/Scripting/Bindings/ScriptInput.h"
-#include "Crowny/Scripting/CWMonoRuntime.h"
 
 #include "Crowny/Input/Input.h"
 
 namespace Crowny
 {
-    void ScriptInput::InitRuntimeFunctions()
+    ScriptInput::ScriptInput() : ScriptObject() {}
+
+    void ScriptInput::InitRuntimeData()
     {
-        CWMonoClass* input = CWMonoRuntime::GetCrownyAssembly()->GetClass("Crowny", "Input");
-        // TODO: check for focus for the editor
-        input->AddInternalCall("GetKey", (void*)&Input::IsKeyPressed);
-        input->AddInternalCall("GetKeyDown", (void*)&Input::IsKeyDown);
-        input->AddInternalCall("GetKeyUp", (void*)&Input::IsKeyUp);
-        input->AddInternalCall("GetMouseButton", (void*)&Input::IsMouseButtonPressed);
-        input->AddInternalCall("GetMouseButtonDown", (void*)&Input::IsMouseButtonDown);
-        input->AddInternalCall("GetMouseButtonUp", (void*)&Input::IsMouseButtonUp);
+        // // TODO: check for focus for the editor
+        MetaData.ScriptClass->AddInternalCall("GetKey", (void*)&Input::IsKeyPressed);
+        MetaData.ScriptClass->AddInternalCall("GetKeyDown", (void*)&Input::IsKeyDown);
+        MetaData.ScriptClass->AddInternalCall("GetKeyUp", (void*)&Input::IsKeyUp);
+        MetaData.ScriptClass->AddInternalCall("GetMouseButton", (void*)&Input::IsMouseButtonPressed);
+        MetaData.ScriptClass->AddInternalCall("GetMouseButtonDown", (void*)&Input::IsMouseButtonDown);
+        MetaData.ScriptClass->AddInternalCall("GetMouseButtonUp", (void*)&Input::IsMouseButtonUp);
     }
 } // namespace Crowny

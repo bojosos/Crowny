@@ -6,7 +6,6 @@
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Common/Yaml.h"
 #include "Crowny/Ecs/Components.h"
-#include "Crowny/Scripting/CWMonoRuntime.h"
 
 namespace Crowny
 {
@@ -247,7 +246,7 @@ namespace Crowny
                 if (transform)
                 {
                     auto& tc = deserialized.GetComponent<TransformComponent>();
-                    tc.ComponentParent = deserialized;
+                    // tc.ComponentParent = deserialized;
                     tc.Position = transform["Position"].as<glm::vec3>();
                     tc.Rotation = transform["Rotation"].as<glm::vec3>();
                     tc.Scale = transform["Scale"].as<glm::vec3>();
@@ -285,7 +284,7 @@ namespace Crowny
                 if (script)
                 {
                     auto& sc = deserialized.AddComponent<MonoScriptComponent>(script["Name"].as<String>());
-                    sc.ComponentParent = deserialized;
+                    // sc.ComponentParent = deserialized;
                 }
 
                 YAML::Node text = entity["TextComponent"];

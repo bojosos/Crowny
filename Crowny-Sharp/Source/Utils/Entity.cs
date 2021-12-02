@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Crowny
 {
-	public class Entity : GameObject
+	public class Entity : ScriptObject
 	{
 		/// <summary>
 		/// The name of the game object.
@@ -34,11 +34,15 @@ namespace Crowny
 			get { return Internal_GetTransform(m_InternalPtr); }
 		}
 
-		/// This should probably stay here and not be in Component.cs
- 		//public T GetComponent<T>() where T : Component
-		//{
-			//return (T)Component.Internal_GetComponent(this, typeof(T));
-		//}
+		/// <summary>
+        /// Searches for a game object by its name.
+        /// </summary>
+        /// <param name="name">The name of the game object.</param>
+        /// <returns>The object if found, nullptr otherwise.</returns>
+        public static Entity FindByName(string name)
+        {
+           return Internal_FindByName(name);
+        }
 
 		[MethodImpl(MethodImplOptions.InternalCall)]
 		private static extern string Internal_GetName(IntPtr internalPtr);
@@ -48,6 +52,8 @@ namespace Crowny
 		private static extern Entity Internal_GetParent(IntPtr internalPtr);
 		[MethodImpl(MethodImplOptions.InternalCall)]
 		private static extern Transform Internal_GetTransform(IntPtr internalPtr);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern Entity Internal_FindByName(string name);
 	}
 
 }

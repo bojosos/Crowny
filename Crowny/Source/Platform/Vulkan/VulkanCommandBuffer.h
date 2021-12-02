@@ -274,7 +274,7 @@ namespace Crowny
         void ClearRenderTarget(uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil,
                                uint8_t targetMask);
         void ClearViewport(uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil, uint8_t targetMask);
-        
+
         void BindVertexInputs();
 
     private:

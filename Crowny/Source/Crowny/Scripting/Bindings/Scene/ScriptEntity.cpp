@@ -1,33 +1,39 @@
 #include "cwpch.h"
 
-#include "Crowny/Scripting/Bindings/Scene/ScriptComponent.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntity.h"
+#include "Crowny/Scripting/ScriptSceneObjectManager.h"
 
-#include "Crowny/Ecs/Components.h"
 #include "Crowny/Scene/SceneManager.h"
 
 namespace Crowny
 {
 
-    void ScriptEntity::InitRuntimeFunctions()
+    ScriptEntity::ScriptEntity(MonoObject* instance, Entity entity) : ScriptObject(instance)
     {
-        CWMonoClass* entityClass = CWMonoRuntime::GetCrownyAssembly()->GetClass("Crowny", "Entity");
-        entityClass->AddInternalCall("Internal_GetName", (void*)&Internal_GetName);
-        entityClass->AddInternalCall("Internal_SetName", (void*)&Internal_SetName);
-        entityClass->AddInternalCall("Internal_GetParent", (void*)&Internal_GetParent);
-        entityClass->AddInternalCall("Internal_GetTransform", (void*)&Internal_GetTransform);
+        m_Entity = entity;
+        SetManagedInstance(instance);
     }
 
-    MonoString* ScriptEntity::Internal_GetName(Entity* thisptr) { return nullptr; }
-
-    void ScriptEntity::Internal_SetName(Entity* thisptr, MonoString* string) {}
-
-    MonoObject* ScriptEntity::Internal_GetParent(Entity* thisptr) { return nullptr; }
-
-    MonoObject* ScriptEntity::Internal_GetTransform(entt::entity e)
+    void ScriptEntity::InitRuntimeData()
     {
-        Entity entity = Entity(e, SceneManager::GetActiveScene().get());
-        return entity.GetComponent<TransformComponent>().ManagedInstance;
+        MetaData.ScriptClass->AddInternalCall("Internal_GetName", (void*)&Internal_GetName);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetName", (void*)&Internal_SetName);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetParent", (void*)&Internal_GetParent);
+        MetaData.ScriptClass->AddInternalCall("Internal_FindByName", (void*)&Internal_FindEntityByName);
+    }
+
+    MonoString* ScriptEntity::Internal_GetName(ScriptEntity* thisptr) { return nullptr; }
+
+    void ScriptEntity::Internal_SetName(ScriptEntity* thisptr, MonoString* string) {}
+
+    MonoObject* ScriptEntity::Internal_GetParent(ScriptEntity* thisptr) { return nullptr; }
+
+    MonoObject* ScriptEntity::Internal_FindEntityByName(MonoString* name)
+    {
+        Entity e = SceneManager::GetActiveScene()->FindEntityByName(MonoUtils::FromMonoString(name));
+        if (e)
+            return ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(e)->GetManagedInstance();
+        return nullptr;
     }
 
 } // namespace Crowny
