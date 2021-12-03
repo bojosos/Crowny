@@ -3,7 +3,9 @@ using System.Runtime.CompilerServices;
 
 namespace Crowny
 {
-
+    /// <summary>
+    /// Audio source playback state.
+    /// </summary>
     public enum AudioSourceState
     {
         Playing,
@@ -13,75 +15,115 @@ namespace Crowny
 
     public class AudioSource : Component
     {
+        /// <summary>
+        /// The volume of the source.
+        /// </summary>
+        /// <value>A value in the range [0.0, 1.0].</value>
         public float volume
         {
             get { return Internal_GetVolume(m_InternalPtr); }
             set { Internal_SetVolume(m_InternalPtr, value); }
         }
 
+        /// <summary>
+        /// The pitch of the source.
+        /// </summary>
         public float pitch
         {
             get { return Internal_GetPitch(m_InternalPtr); }
             set { Internal_SetPitch(m_InternalPtr, value); }
         }
         
+        /// <summary>
+        /// Min distance the source can be heard from.
+        /// </summary>
         public float minDistance
         {
             get { return Internal_GetMinDistance(m_InternalPtr); }
             set { Internal_SetMinDistance(m_InternalPtr, value); }
         }
 
+        /// <summary>
+        /// Max distance the source can be heard from.
+        /// </summary>
         public float maxDistance
         {
             get { return Internal_GetMaxDistance(m_InternalPtr); }
             set { Internal_SetMaxDistance(m_InternalPtr, value); }
         }
 
+        /// <summary>
+        /// Looping of the source.
+        /// </summary>
         public bool loop
         {
             get { return Internal_GetLooping(m_InternalPtr); }
             set { Internal_SetLooping(m_InternalPtr, value); }
         }
 
+        /// <summary>
+        /// Mute/Unmute the source. Sets the volume to 0.
+        /// </summary>
         public bool muted
         {
             get { return Internal_GetIsMuted(m_InternalPtr); }
             set { Internal_SetIsMuted(m_InternalPtr, value); }
         }
 
+        /// <summary>
+        /// If enabled the clip will play every time the object is enabled.
+        /// </summary>
         public bool playOnAwake
         {
             get { return Internal_GetPlayOnAwake(m_InternalPtr); }
             set { Internal_SetPlayOnAwake(m_InternalPtr, value); }
         }
         
+        /// <summary>
+        /// The current position in the source.
+        /// </summary>
         public float time
         {
             get { return Internal_GetTime(m_InternalPtr); }
             set { Internal_SetTime(m_InternalPtr, value); }
         }
 
+        /// <summary>
+        /// The clip attached to the source.
+        /// </summary>
         public AudioClip clip
         {
             get { return Internal_GetClip(m_InternalPtr); }
             set { Internal_SetClip(m_InternalPtr, value); }
         }
 
+        /// <summary>
+        /// The playback state of the source.
+        /// </summary>
         public AudioSourceState state
         {
             get { return Internal_GetState(m_InternalPtr); }
         }
 
+        /// <summary>
+        /// Plays the source.
+        /// </summary>
         public void Play()
         {
             Internal_Play(m_InternalPtr);
         }
 
+        /// <summary>
+        /// Pauses the source.
+        /// </summary>
         public void Pause()
         {
             Internal_Pause(m_InternalPtr);
         }
 
+        /// <summary>
+        /// Stops the source. Resets the playback time to 0.
+        /// </summary>
         public void Stop()
         {
             Internal_Stop(m_InternalPtr);

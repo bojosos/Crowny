@@ -12,10 +12,6 @@ namespace Crowny
     void ScriptComponent::InitRuntimeData()
     {
         MetaData.ScriptClass->AddInternalCall("Internal_GetEntity", (void*)&Internal_GetEntity);
-        MetaData.ScriptClass->AddInternalCall("Internal_GetComponent", (void*)&Internal_GetComponent);
-        MetaData.ScriptClass->AddInternalCall("Internal_HasComponent", (void*)&Internal_HasComponent);
-        MetaData.ScriptClass->AddInternalCall("Internal_AddComponent", (void*)&Internal_AddComponent);
-        MetaData.ScriptClass->AddInternalCall("Internal_RemoveComponent", (void*)&Internal_RemoveComponent);
     }
 
     MonoObject* ScriptComponent::Internal_GetEntity(ScriptComponentBase* nativeInstance)
@@ -23,56 +19,6 @@ namespace Crowny
         Entity native = nativeInstance->GetNativeEntity();
         ScriptEntity* scriptEntity = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(native);
         return scriptEntity->GetManagedInstance();
-    }
-
-    MonoObject* ScriptComponent::Internal_GetComponent(MonoObject* parentEntity, MonoReflectionType* type)
-    {
-        ScriptEntity* scriptEntity = ScriptEntity::ToNative(parentEntity);
-        Entity entity = scriptEntity->GetNativeEntity();
-        ComponentInfo* info = ScriptInfoManager::Get().GetComponentInfo(type);
-        if (info == nullptr)
-            return nullptr;
-        if (!info->HasCallback(entity))
-            return nullptr;
-        return info->GetCallback(entity)->GetManagedInstance();
-    }
-
-    bool ScriptComponent::Internal_HasComponent(MonoObject* parentEntity, MonoReflectionType* type)
-    {
-        ScriptEntity* scriptEntity = ScriptEntity::ToNative(parentEntity);
-        Entity entity = scriptEntity->GetNativeEntity();
-        ComponentInfo* info = ScriptInfoManager::Get().GetComponentInfo(type);
-        if (info == nullptr)
-            return false;
-        return info->HasCallback(entity);
-    }
-
-    MonoObject* ScriptComponent::Internal_AddComponent(MonoObject* parentEntity, MonoReflectionType* type)
-    {
-        ScriptEntity* scriptEntity = ScriptEntity::ToNative(parentEntity);
-        Entity entity = scriptEntity->GetNativeEntity();
-        ComponentInfo* info = ScriptInfoManager::Get().GetComponentInfo(type);
-        if (info == nullptr)
-            return nullptr;
-        if (!info->HasCallback(entity))
-            return nullptr;
-        return info->AddCallback(entity)->GetManagedInstance();
-    }
-
-    void ScriptComponent::Internal_RemoveComponent(MonoObject* parentEntity, MonoReflectionType* type)
-    {
-        ScriptEntity* scriptEntity = ScriptEntity::ToNative(parentEntity);
-        Entity entity = scriptEntity->GetNativeEntity();
-        ComponentInfo* info = ScriptInfoManager::Get().GetComponentInfo(type);
-        if (info == nullptr)
-        {
-            if (info->HasCallback(entity))
-                info->RemoveCallback(entity);
-            else
-                CW_ENGINE_ERROR("Entity doesn't have that component");
-        }
-        else
-            CW_ENGINE_ERROR("That is not a component");
     }
 
 } // namespace Crowny

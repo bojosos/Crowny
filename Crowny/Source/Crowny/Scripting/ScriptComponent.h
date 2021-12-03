@@ -69,10 +69,6 @@ namespace Crowny
     private:
         ScriptComponent(MonoObject* instance);
 
-        static MonoObject* Internal_AddComponent(MonoObject* parentEntity, MonoReflectionType* type);
-        static bool Internal_HasComponent(MonoObject* parentEntity, MonoReflectionType* type);
-        static MonoObject* Internal_GetComponent(MonoObject* parentEntity, MonoReflectionType* type);
-        static void Internal_RemoveComponent(MonoObject* parentEntity, MonoReflectionType* type);
         static MonoObject* Internal_GetEntity(ScriptComponentBase* nativeInstance);
     };
 
