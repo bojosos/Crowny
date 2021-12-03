@@ -28,7 +28,12 @@ namespace Sandbox
 
         public void Start()
         {
-            source = GetComponent<AudioSource>();
+            if (!HasComponent<AudioListener>()) // Do [RequireComponent(AudioListener, AudioSource)] for the script at some point
+                AddComponent<AudioListener>();
+            if (!HasComponent<AudioSource>())
+                source = AddComponent<AudioSource>();
+            else
+                source = GetComponent<AudioSource>();
         }
 
         public void Update()

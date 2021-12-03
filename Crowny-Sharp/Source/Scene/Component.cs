@@ -8,9 +8,9 @@ namespace Crowny
 	{
 
 		/// <summary>
-		/// Returns the game object of this component.
+		/// Returns the parent entity of this component.
 		/// </summary>
-		/// <returns>The game object.</returns>
+		/// <returns>The entity.</returns>
 		public Entity entity { get { return Internal_GetEntity(m_InternalPtr); } }
 
 		/// <value>The transform of the object</value>
@@ -23,38 +23,41 @@ namespace Crowny
 		/// <returns>Returns the component if the operation was successful, otherwise nullptr.</returns>
 		public T GetComponent<T>() where T : Component
 		{
-			return (T)Internal_GetComponent(entity, typeof(T));
+			return entity.GetComponent<T>();
 		}
 
 		/// <summary>
-		/// Determines if a game object has a component.
+		/// Determines if a entity has a component.
 		/// </summary>
 		/// <typeparam name="T">The type of the component.</typeparam>
 		/// <returns>Whether the game object has the component.</returns>
 		public bool HasComponent<T>() where T : Component
 		{
-			return Internal_HasComponent(entity, typeof(T));
+			return entity.HasComponent<T>();
 		}
 
 		/// <summary>
-		/// Adds a new component to the game object.
+		/// Adds a new component to the entity.
 		/// </summary>
-		/// <param name="t">Type of the component.</param>
-		/// <typeparam name="T"></typeparam>
 		/// <returns>Returns the component if the operation was successful, otherwise nullptr.</returns>
-		public T AddComponent<T>(T t) where T : Component
+		public T AddComponent<T>() where T : Component
 		{
-			return (T)Internal_AddComponent(entity, typeof(T));
+			return entity.AddComponent<T>();
 		}
 
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		private static extern Component Internal_GetComponent(Entity parent, Type type);
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		private static extern bool Internal_HasComponent(Entity parent, Type type);
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		private static extern Component Internal_AddComponent(Entity parent, Type type);
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		private static extern Entity Internal_GetEntity(IntPtr internalPtr);
+        /// <summary>
+        /// Removes the component from the entity.
+        /// </summary>
+        /// <returns>The component.</returns>
+        /// <param name="t">T.</param>
+        /// <typeparam name="T">The 1st type parameter.</typeparam>
+        public void RemoveComponent<T>(T t) where T : Component
+        {
+            entity.RemoveComponent<T>();
+        }
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern Entity Internal_GetEntity(IntPtr internalPtr);
 	}
 
 }

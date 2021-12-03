@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 
 namespace Crowny
 {
@@ -8,7 +9,12 @@ namespace Crowny
 
 		~ScriptObject()
 		{
-			// TODO: Notify native that I have been destroyed
+            if (m_InternalPtr == IntPtr.Zero)
+                Debug.LogError("Wat");
+            Internal_ManagedInstanceDeleted(m_InternalPtr);
 		}
+
+        [MethodImpl(MethodImplOptions.InternalCall]
+        private static extern void Internal_ManagedInstanceDeleted(IntPtr instance);
 	}
 }
