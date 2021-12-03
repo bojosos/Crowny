@@ -18,8 +18,8 @@ GOAL: Run the same code I wrote in a Minecraft clone I made in Unity with Crowny
   * Refactor OpenGL (Should be quite quick, requires a few changes to the old rendering system)
   * Multithreading? (Firstly only "queable" tasks (async resource loading, audio streaming, then whole engine)
   * Implememt 2D physics using Box2d (Should be fairly straightforward)
-  * Implement 3D physics using PhysX (Should be fairly straightforward)
+  * Implement 3D physics using PhysX
   * Proper material system and shadows
   * Documentation
-  * Game builds (I have a usable engine here)
+  * Game builds (I have a "usable" engine here)
   * Big refactor/clean up
