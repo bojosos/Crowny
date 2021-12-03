@@ -1,12 +1,12 @@
 #include "cwepch.h"
 
-#include "Panels/ImGuiUtils.h"
+#include "Panels/UIUtils.h"
 
 #include <imgui.h>
 
 namespace Crowny
 {
-    bool ImGuiUtils::ShowYesNoMessageBox(const String& title, const String& message)
+    bool UIUtils::ShowYesNoMessageBox(const String& title, const String& message)
     {
         // if (ImGui::BeginPopupModal(title, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
         {

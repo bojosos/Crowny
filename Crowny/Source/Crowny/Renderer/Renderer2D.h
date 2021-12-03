@@ -10,19 +10,6 @@ namespace Crowny
 {
 
     /**
-     * @brief A struct containing information about a single vertex.
-     *
-     */
-    struct VertexData
-    {
-        glm::vec4 Position;
-        glm::vec4 Color;
-        glm::vec2 Uv;
-        float Tid;
-        int32_t ObjectID;
-    };
-
-    /**
      * @brief General purpose renderer for rendering 2D objects (text, quads).
      *
      */
@@ -86,6 +73,33 @@ namespace Crowny
          */
         static void FillRect(const Rect2F& bounds, const Ref<Texture>& texture, const glm::vec4& color,
                              uint32_t entityId);
+
+        
+        /**
+         * @brief Draws a circle. Thickness controls how 'filled' the circle is. 1.0 means it is full and 0.0 no circle at all.
+         * 
+         * 
+         * @param transform Transform of the circle.
+         * @param color Color of the cirlce.
+         * @param thickness Thickness.
+         * @param fade Fade.
+         * @param entityId Id of the object for mouse picking.
+         */
+        static void DrawCircle(const glm::mat4& transform, const glm::vec4& color, float thickness = 1.0f, float fade = 0.005f, int32_t entityId = -1);
+
+        /**
+         * @brief Draws a line.
+         * 
+         * @param p1 Starting point.
+         * @param p2 End point.
+         * @param color Color of the line.
+         * @param thickness Thickness.
+         */
+        static void DrawLine(const glm::vec3& p1, const glm::vec3& p2, const glm::vec4& color, float thickness = 0.02f);
+
+        static void DrawRect(const glm::vec3& position, const glm::vec2& size, const glm::vec4& color, float thickness = 0.02f);
+
+        static void DrawRect(const glm::mat4& transform, const glm::vec4& color, float thickness = 0.02f);
 
         /**
          * @brief Draws a quad on the screen from (0, 0) to (1, 1)

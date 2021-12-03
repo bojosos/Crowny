@@ -12,6 +12,7 @@
 
 #include "Editor/EditorAssets.h"
 #include "Editor/ProjectLibrary.h"
+#include "Panels/UIUtils.h"
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -245,7 +246,11 @@ namespace Crowny
                 {
                     const bool is_selected = (formatIndex == i);
                     if (ImGui::Selectable(formatTexts[i], is_selected))
+                    {
+                        if (audioClipImport->Format != (AudioFormat)i)
+                            m_HasPropertyChanged = true;
                         audioClipImport->Format = (AudioFormat)i;
+                    }
 
                     if (is_selected)
                         ImGui::SetItemDefaultFocus();
@@ -264,7 +269,11 @@ namespace Crowny
                 {
                     const bool is_selected = (loadModeIndex == i);
                     if (ImGui::Selectable(loadModeTexts[i], is_selected))
+                    {
+                        if (audioClipImport->ReadMode != (AudioReadMode)i)
+                            m_HasPropertyChanged = true;
                         audioClipImport->ReadMode = (AudioReadMode)i;
+                    }
 
                     if (is_selected)
                         ImGui::SetItemDefaultFocus();
@@ -283,7 +292,11 @@ namespace Crowny
                 {
                     const bool is_selected = (bitDepthIndex == i);
                     if (ImGui::Selectable(bitDepthTexts[i], is_selected))
+                    {
+                        if (audioClipImport->BitDepth != (i + 1) * 8)
+                            m_HasPropertyChanged = true;
                         audioClipImport->BitDepth = (i + 1) * 8;
+                    }
 
                     if (is_selected)
                         ImGui::SetItemDefaultFocus();
@@ -295,7 +308,8 @@ namespace Crowny
             ImGui::NextColumn();
             float x = ImGui::GetCursorPosX();
             float width = ImGui::GetColumnWidth();
-            ImGui::Checkbox("##IsClip3D", &audioClipImport->Is3D);
+            if (ImGui::Checkbox("##IsClip3D", &audioClipImport->Is3D))
+                m_HasPropertyChanged = true;
             ImGui::NextColumn();
             ImGui::NextColumn();
             ImGui::Columns(1);
@@ -315,16 +329,12 @@ namespace Crowny
 
     void InspectorPanel::RenderPrefabInspector() {}
 
-    static uint32_t i = 0;
-
     void InspectorPanel::DrawHeader()
     {
         // Consider drawing an icon too
         auto drawHeader = [&](const String& head) {
             float maxx = ImGui::GetContentRegionAvail().x;
             ImGui::Text("%s", (m_InspectedAssetPath.filename().string() + " (" + head + ") Import Settings").c_str());
-            ImGui::Text("%d", i);
-            ++i;
             float padding = ImGui::GetStyle().FramePadding.x;
             float open = ImGui::CalcTextSize("Open").x;
             float reset = ImGui::CalcTextSize("Reset").x;
@@ -411,13 +421,13 @@ namespace Crowny
         ImGui::Separator();
         float padding = ImGui::GetStyle().FramePadding.x;
         ImGui::SetCursorPosX(xOffset);
-        if (ImGui::Button("Apply", ImVec2(width / 2 - padding * 4, 0)))
-            ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions, true);
-        ImGui::SameLine(xOffset + width / 2);
         bool changed = m_HasPropertyChanged;
         if (!changed)
             ImGui::BeginDisabled();
-        if (ImGui::Button("Revert", ImVec2(width / 2 - padding * 4, 0)))
+        if (ImGui::Button("Apply", ImVec2(width * 0.5f - padding * 4, 0)))
+            ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions, true);
+        ImGui::SameLine(xOffset + width * 0.5f);
+        if (ImGui::Button("Revert", ImVec2(width * 0.5f - padding * 4, 0)))
         {
             m_ImportOptions = m_OldImportOptions;
             m_HasPropertyChanged = false;

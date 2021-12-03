@@ -38,6 +38,9 @@ namespace Crowny
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
         activeScene->m_Registry.view<MonoScriptComponent>().each(
           [&](entt::entity entity, MonoScriptComponent& sc) { sc.OnDestroy(); });
+
+        activeScene->m_Registry.view<AudioSourceComponent>().each(
+          [&](entt::entity entity, AudioSourceComponent& sc) { sc.Stop(); });
     }
 
 } // namespace Crowny

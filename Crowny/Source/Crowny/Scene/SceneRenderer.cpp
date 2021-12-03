@@ -8,6 +8,9 @@
 #include "Crowny/Renderer/ForwardRenderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
 
+#include <glm/glm.hpp>
+#include <glm/ext/matrix_transform.hpp>
+
 namespace Crowny
 {
 
@@ -55,6 +58,8 @@ namespace Crowny
         for (auto ee : group)
         {
             auto [transform, sprite] = scene->m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
+            Renderer2D::DrawCircle(glm::scale(transform.GetTransform(), glm::vec3(1.5f)), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.01f);
+            Renderer2D::DrawRect(glm::scale(transform.GetTransform(), glm::vec3(1.5f)), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.2f);
             Renderer2D::FillRect(transform.GetTransform(), sprite.Texture, sprite.Color, (uint32_t)ee);
             s_Stats.Vertices += 6;
             s_Stats.Triangles += 2;
@@ -134,6 +139,8 @@ namespace Crowny
             for (auto ee : group)
             {
                 auto [transform, sprite] = scene->m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
+                Renderer2D::DrawCircle(glm::scale(transform.GetTransform(), glm::vec3(1.5f)), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.01f);
+                Renderer2D::DrawRect(glm::scale(transform.GetTransform(), glm::vec3(1.5f)), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.2f);
                 Renderer2D::FillRect(transform.GetTransform(), sprite.Texture, sprite.Color, (uint32_t)ee);
                 s_Stats.Vertices += 4;
                 s_Stats.Triangles += 2;

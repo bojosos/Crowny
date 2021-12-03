@@ -235,11 +235,11 @@ namespace Crowny
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object other)
+        public override bool Equals(object obj)
         {
-            if (!(other is Vector3))
+            if (!(obj is Vector3))
                 return false;
-            Vector3 v = (Vector3)other;
+            Vector3 v = (Vector3)obj;
             return x.Equals(v.x) && y.Equals(v.y) && z.Equals(v.z);
         }
     }
