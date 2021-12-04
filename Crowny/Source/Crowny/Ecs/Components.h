@@ -285,7 +285,7 @@ namespace Crowny
     {
         glm::vec2 Offset = { 0.0f, 0.0f };
         glm::vec2 Size = { 0.5f, 0.5f };
-        bool IsTrigger;
+        bool IsTrigger = false;
         PhysicsMaterial2D Material;
 
         void* RuntimeFixture;
@@ -300,6 +300,7 @@ namespace Crowny
     {
         glm::vec2 Offset = { 0.0f, 0.0f };
         float Radius = 0.5f;
+        bool IsTrigger = false;
 
         PhysicsMaterial2D Material;
 

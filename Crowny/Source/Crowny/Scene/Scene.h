@@ -16,6 +16,7 @@ namespace Crowny
     class SceneSerializer;
     class SceneRenderer;
     class ScriptRuntime;
+    class CameraComponent;
 
     class Scene
     {
@@ -43,13 +44,21 @@ namespace Crowny
         void OnUpdateRuntime(Timestep ts);
         void OnUpdateEditor(Timestep ts);
 
+        Entity GetPrimaryCameraEntity();
+
+        template<typename... Components>
+        auto GetAllEntitiesWith()
+        {
+            return m_Registry.view<Components...>();
+        }
+
+    private:
         friend class ComponentEditor;
         friend class SceneRenderer;
         friend class SceneSerializer;
         friend class Entity;
         friend class ScriptRuntime;
 
-    private:
         String m_Name;
         String m_Filepath;
         entt::registry m_Registry;
