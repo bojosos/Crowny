@@ -53,6 +53,9 @@ namespace Crowny
         void OpenScene(const Path& filepath);
         void SaveActiveScene();
         void SaveActiveSceneAs();
+        
+    private:
+        void RenderOverlay();
 
     private:
         friend class Time;
@@ -69,6 +72,9 @@ namespace Crowny
         TextureEditor* m_TextureEditor;
         ConsolePanel* m_ConsolePanel;
         AssetBrowserPanel* m_AssetBrowser;
+
+        bool m_ShowDemoWindow = false;
+        bool m_ShowColliders = false;
 
         Vector<ImGuiPanel*> m_ImGuiWindows;
         static EditorCamera s_EditorCamera;

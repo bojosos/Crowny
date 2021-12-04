@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Common/Uuid.h"
+#include "Crowny/Physics/PhysicsMaterial.h"
 
 #include <glm/glm.hpp>
 #include <yaml-cpp/yaml.h>
@@ -74,4 +75,5 @@ namespace YAML
             return true;
         }
     };
+
 } // namespace YAML

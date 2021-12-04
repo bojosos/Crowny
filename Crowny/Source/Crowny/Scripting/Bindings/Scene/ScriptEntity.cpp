@@ -42,7 +42,8 @@ namespace Crowny
 
     MonoObject* ScriptEntity::Internal_GetParent(ScriptEntity* thisPtr)
     {
-        ScriptEntity* scriptEntity = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(thisPtr->GetNativeEntity().GetParent());
+        Entity parent = thisPtr->GetNativeEntity().GetParent();
+        ScriptEntity* scriptEntity = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(parent);
         if (scriptEntity != nullptr)
             return scriptEntity->GetManagedInstance();
         return nullptr;
@@ -57,9 +58,10 @@ namespace Crowny
 
     MonoObject* ScriptEntity::Internal_FindEntityByName(MonoString* name)
     {
-        Entity e = SceneManager::GetActiveScene()->FindEntityByName(MonoUtils::FromMonoString(name));
-        if (e)
-            return ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(e)->GetManagedInstance();
+        Entity entity = SceneManager::GetActiveScene()->FindEntityByName(MonoUtils::FromMonoString(name));
+        ScriptEntity* scriptEntity = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(entity);
+        if (scriptEntity != nullptr)
+            return scriptEntity->GetManagedInstance();
         return nullptr;
     }
 

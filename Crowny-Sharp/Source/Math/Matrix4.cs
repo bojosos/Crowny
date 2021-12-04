@@ -7,20 +7,18 @@ namespace Crowny
 {
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct Matrix4 : IFormattable, IEquatable<Matrix4>
+    public partial struct Matrix4 : IFormattable, IEquatable<Matrix4>
     {
         public static readonly Matrix4 zero = new Matrix4();
         public static readonly Matrix4 identity = new Matrix4(new Vector4(1, 0, 0, 0),
                                                               new Vector4(0, 1, 0, 0),
                                                               new Vector4(0, 0, 1, 0),
                                                               new Vector4(0, 0, 0, 1));
-        //                row no (=vertical)
-        //               |  0   1   2   3
-        //            ---+----------------
-        //            0  | m00 m10 m20 m30
-        // column no  1  | m01 m11 m21 m31
-        // (=horiz)   2  | m02 m12 m22 m32
-        //            3  | m03 m13 m23 m33
+        
+        //    m00 m10 m20 m30
+        //    m01 m11 m21 m31
+        //    m02 m12 m22 m32
+        //    m03 m13 m23 m33
 
         public float m00;
         public float m10;

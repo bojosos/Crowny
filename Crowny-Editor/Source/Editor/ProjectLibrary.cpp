@@ -229,7 +229,7 @@ namespace Crowny
 
                         for (auto& child : toDelete)
                         {
-                            if (child->Type == LibraryEntryType::Directory)
+                            if (child->Type == LibraryEntryType::Directory) // Here we get a crash on refresh
                                 DeleteDirectoryInternal(std::static_pointer_cast<DirectoryEntry>(child));
                             else if (child->Type == LibraryEntryType::File)
                                 DeleteAssetInternal(std::static_pointer_cast<FileEntry>(child));
@@ -424,6 +424,7 @@ namespace Crowny
             SerializeMetadata(metaPath, entry->Metadata);
             const String uuidStr = uuid.ToString();
             outputPath /= (uuidStr + ".asset");
+            CW_ENGINE_INFO("Register: {0}", outputPath);
             m_AssetManifest->RegisterAsset(uuid, outputPath);
             AssetManager::Get().Save(asset, outputPath);
             return true;
@@ -1076,7 +1077,7 @@ namespace Crowny
         // CW_ENGINE_INFO("Absolute entries");
         // traverse(m_RootEntry);
         Path assetManifestPath = m_ProjectFolder / PROJECT_INTERNAL_DIR / ASSET_MANIFEST_FILENAME;
-        AssetManifest::Serialize(m_AssetManifest, assetManifestPath, m_ProjectFolder);
+        AssetManifest::Serialize(m_AssetManifest, assetManifestPath, m_ProjectFolder.parent_path());
     }
 
 } // namespace Crowny

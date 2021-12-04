@@ -314,6 +314,25 @@ namespace Crowny
             ImGui::NextColumn();
             ImGui::Columns(1);
             DrawApplyRevert(x, width);
+
+            // Footer
+            float yPos = ImGui::GetContentRegionAvail().y - ImGui::GetFrameHeightWithSpacing();
+            ImGui::SetCursorPosY(yPos);
+            if (ImGui::Button("Play"))
+            {
+                if (m_HasPropertyChanged)
+                {
+                    ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions, true);
+                }
+                CW_ENGINE_INFO(m_InspectedAssetPath);
+                Ref<AudioClip> clip = std::static_pointer_cast<AudioClip>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
+                AudioManager::Get().Play(clip);
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Stop"))
+            {
+                AudioManager::Get().StopManualSources();
+            }
         }
     }
 

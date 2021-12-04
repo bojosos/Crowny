@@ -174,6 +174,28 @@ namespace Crowny
             out << YAML::EndMap;
         }
 
+        if (entity.HasComponent<BoxCollider2DComponent>())
+        {
+            out << YAML::Key << "BoxCollider2D";
+            out << YAML::BeginMap;
+            const auto& bc2d = entity.GetComponent<BoxCollider2DComponent>();
+            out << YAML::Key << "Offset" << YAML::Value << bc2d.Offset;
+            out << YAML::Key << "Size" << YAML::Value << bc2d.Size;
+            out << YAML::Key << "IsTrigger" << YAML::Value << bc2d.IsTrigger;
+            // out << YAML::Key << "Material" << YAML::Value << bc2d.Material;
+        }
+
+        if (entity.HasComponent<CircleCollider2DComponent>())
+        {
+            out << YAML::Key << "CircleCollider2D";
+            out << YAML::BeginMap;
+            const auto& cc2d = entity.GetComponent<CircleCollider2DComponent>();
+            out << YAML::Key << "Offset" << YAML::Value << cc2d.Offset;
+            out << YAML::Key << "Size" << YAML::Value << cc2d.Radius;
+            out << YAML::Key << "IsTrigger" << YAML::Value << cc2d.IsTrigger;
+            // out << YAML::Key << "Material" << YAML::Value << cc2d.Material;
+        }
+
         if (entity.HasComponent<RelationshipComponent>())
         {
             out << YAML::Key << "RelationshipComponent";

@@ -20,6 +20,7 @@
 
 #include "Crowny/Scripting/Bindings/Logging/ScriptDebug.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptNoise.h"
+#include "Crowny/Scripting/Bindings/Math/ScriptMath.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptTime.h"
 #include "Crowny/Scripting/Bindings/ScriptInput.h"
 #include "Crowny/Scripting/Bindings/ScriptRandom.h"
@@ -53,6 +54,7 @@ namespace Crowny
         ScriptDebug();
         ScriptRandom();
         ScriptNoise();
+        ScriptMath();
         ProjectLibrary::StartUp();
         Editor::StartUp();
         VirtualFileSystem::Get()->Mount("Icons", "Resources/Icons");
@@ -297,6 +299,7 @@ namespace Crowny
             break;
         }
         }
+        RenderOverlay();
 
         glm::vec4 bounds = m_ViewportPanel->GetViewportBounds();
         ImVec2 mouseCoords = ImGui::GetMousePos();
@@ -314,11 +317,52 @@ namespace Crowny
         m_HierarchyPanel->Update();
     }
 
-    static bool open = true;
+    void EditorLayer::RenderOverlay()
+    {
+        Ref<Scene> scene = SceneManager::GetActiveScene();
+        if (m_SceneState == SceneState::Play)
+        {
+            Entity camera = scene->GetPrimaryCameraEntity();
+            if (!camera)
+                return;
+            Renderer2D::Begin(camera.GetComponent<CameraComponent>().Camera, camera.GetComponent<TransformComponent>().GetTransform());
+        }
+        else
+            Renderer2D::Begin(s_EditorCamera, s_EditorCamera.GetViewMatrix());
+        
+        if (m_ShowColliders)
+        {
+            {
+                auto view = scene->GetAllEntitiesWith<TransformComponent, BoxCollider2DComponent>();
+                for (auto entity : view)
+                {
+                    auto [tc, bc2d] = view.get<TransformComponent, BoxCollider2DComponent>(entity);
+                    glm::vec3 translation = tc.Position + glm::vec3(bc2d.Offset, 0.001f);
+                    glm::vec3 scale = tc.Scale * glm::vec3(bc2d.Size * 2.0f, 1.0f);
+                    glm::mat4 transform = glm::translate(glm::mat4(1.0f), translation) * glm::rotate(glm::mat4(1.0f), tc.Rotation.z, glm::vec3(0.0f, 0.0f, 1.0f)) * glm::scale(glm::mat4(1.0f), scale);
+                    Renderer2D::DrawRect(transform, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.01);
+                }
+            }
+
+            {
+                auto view = scene->GetAllEntitiesWith<TransformComponent, CircleCollider2DComponent>();
+                for (auto entity : view)
+                {
+                    auto [tc, cc2d] = view.get<TransformComponent, CircleCollider2DComponent>(entity);
+                    glm::vec3 translation = tc.Position + glm::vec3(cc2d.Offset, 0.001f);
+                    glm::vec3 scale = tc.Scale * glm::vec3(cc2d.Radius * 2.0f);
+                    glm::mat4 transform = glm::translate(glm::mat4(1.0f), translation) * glm::scale(glm::mat4(1.0f), scale);
+                    Renderer2D::DrawCircle(transform, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.01);
+                }
+            }
+        }
+        Renderer2D::End();
+    }
 
     void EditorLayer::OnImGuiRender()
     {
-        ImGui::ShowDemoWindow(&open);
+        if (m_ShowDemoWindow)
+            ImGui::ShowDemoWindow(&m_ShowDemoWindow);
         if (!Editor::Get().IsProjectLoaded() && !ImGui::IsPopupOpen("New Project"))
         {
             if (!ImGui::IsPopupOpen("Project Manager"))
@@ -484,6 +528,11 @@ namespace Crowny
         m_ViewportPanel->Render();
         m_ConsolePanel->Render();
         m_AssetBrowser->Render();
+
+        ImGui::Begin("Settings");
+        ImGui::Checkbox("Show colliders", &m_ShowColliders);
+        ImGui::Checkbox("Show demo window", &m_ShowDemoWindow);
+        ImGui::End();
 
         ImGui::End();
     }
