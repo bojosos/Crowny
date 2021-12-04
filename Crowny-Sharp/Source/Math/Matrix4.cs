@@ -14,7 +14,7 @@ namespace Crowny
                                                               new Vector4(0, 1, 0, 0),
                                                               new Vector4(0, 0, 1, 0),
                                                               new Vector4(0, 0, 0, 1));
-        
+
         //    m00 m10 m20 m30
         //    m01 m11 m21 m31
         //    m02 m12 m22 m32
@@ -279,7 +279,7 @@ namespace Crowny
                 format = "F5";
             if (formatProvider == null)
                 formatProvider = CultureInfo.InvariantCulture.NumberFormat;
-            return String.Format("({0}, {1}, {2}, {3},\n{4}, {5}, {6}, {7}\n{8}, {9}, {10}, {11}\n{12}, {13}, {14}, {15})",
+            return String.Format("(({0}, {1}, {2}, {3}), ({4}, {5}, {6}, {7}), ({8}, {9}, {10}, {11}), ({12}, {13}, {14}, {15}))",
                                    m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33);
         }
     }

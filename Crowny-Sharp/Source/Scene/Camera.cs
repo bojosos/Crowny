@@ -69,8 +69,7 @@ namespace Crowny
         {
             get
             {
-                Vector3 temp;
-                Internal_GetCameraBackgroundColor(m_InternalPtr, out temp);
+                Internal_GetCameraBackgroundColor(m_InternalPtr, out Vector3 temp);
                 return temp;
             }
             set { Internal_SetCameraBackgroundColor(m_InternalPtr, ref value); }
@@ -84,8 +83,7 @@ namespace Crowny
         {
             get
             {
-                Vector4 temp;
-                Internal_GetCameraViewportRectangle(m_InternalPtr, out temp);
+                Internal_GetCameraViewportRectangle(m_InternalPtr, out Vector4 temp);
                 return temp;
             }
             set { Internal_SetCameraViewportRectangle(m_InternalPtr, ref value); }
