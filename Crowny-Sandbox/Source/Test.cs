@@ -34,6 +34,20 @@ namespace Sandbox
                 source = AddComponent<AudioSource>();
             else
                 source = GetComponent<AudioSource>();
+
+            Matrix4 example = new Matrix4(new Vector4(1, 2, 3, 4), new Vector4(1, 2, 3, 4), new Vector4(1, 2, 3, 4), new Vector4(1, 2, 3, 4));
+            Matrix4 result = example.inverse.inverse.inverse.inverse;
+            Debug.Log("Matrix test is: \n\t" + example + "\nResult\n\t" + result);
+            Debug.Log(example == result);
+            Entity cur = Entity.FindByName("Test");
+            int idx = 0;
+            while (cur != null)
+            {
+                Debug.Log(idx);
+                cur.Name = idx.ToString();
+                cur = cur.parent;
+                idx++;
+            }
         }
 
         public void Update()

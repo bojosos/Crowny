@@ -144,6 +144,17 @@ namespace Crowny
 
     Scene::~Scene() { delete m_RootEntity; }
 
+    Entity Scene::GetPrimaryCameraEntity()
+    {
+        auto view = m_Registry.view<CameraComponent>();
+		for (auto entity : view)
+		{
+			const auto& camera = view.get<CameraComponent>(entity);
+            return Entity{entity, this};
+		}
+		return {};
+    }
+
     void Scene::OnRuntimeStart()
     {
         m_PhysicsWorld2D = new b2World({ 0.0, -9.8f });
@@ -287,9 +298,14 @@ namespace Crowny
 
     Entity Scene::FindEntityByName(const String& name)
     {
-        Entity result{ entt::null, this };
-        m_Registry.view<TagComponent>().each([&](const auto& entity, auto& tc) { result = { entity, this }; });
-        return result;
+        auto view = m_Registry.view<TagComponent>();
+        for (auto entity : view)
+        {
+            CW_ENGINE_INFO("Search: {0}, {1}, {2}", view.get<TagComponent>(entity).Tag, name, view.get<TagComponent>(entity).Tag == name);
+            if (view.get<TagComponent>(entity).Tag == name)
+                return Entity(entity, this);
+        }
+        return Entity{};
     }
 
     void Scene::OnViewportResize(uint32_t width, uint32_t height)

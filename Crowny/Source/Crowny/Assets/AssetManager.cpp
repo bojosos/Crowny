@@ -207,7 +207,23 @@ namespace Crowny
             m_Manifests.erase(iterFind);
     }
 
-    void AssetManager::GetFilepathFromUUID(const UUID& uuid, Path& outFilepath) {}
-    bool AssetManager::GetUUIDFromFilepath(const Path& filepath, UUID& outUUID) { return true; }
+    void AssetManager::GetFilepathFromUUID(const UUID& uuid, Path& outFilepath)
+    {
+        for (auto& manifest : m_Manifests)
+        {
+            if (manifest->UuidToFilepath(uuid, outFilepath))
+                return;
+        }
+    }
+    bool AssetManager::GetUUIDFromFilepath(const Path& filepath, UUID& outUUID)
+    {
+        // broken
+        for (auto& manifest : m_Manifests)
+        {
+            if (manifest->FilepathToUuid(filepath, outUUID))
+                return true;
+        }
+        return false;
+    }
 
 } // namespace Crowny

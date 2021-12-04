@@ -14,7 +14,7 @@ namespace Crowny
             Internal_ManagedInstanceDeleted(m_InternalPtr);
 		}
 
-        [MethodImpl(MethodImplOptions.InternalCall]
+        [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern void Internal_ManagedInstanceDeleted(IntPtr instance);
 	}
 }

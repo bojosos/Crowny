@@ -9,7 +9,7 @@ namespace Crowny
 		/// The name of the entity.
 		/// </summary>
 		/// <value>The entity name.</value>
-		public string Name
+		public string name
 		{
 			get { return Internal_GetName(m_InternalPtr); }
 			set { Internal_SetName(m_InternalPtr, value); }

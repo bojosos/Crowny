@@ -58,7 +58,7 @@ namespace Crowny
         alcMakeContextCurrent(context);
     }
 
-    void AudioManager::Play(const Ref<AudioClip>& clip, const glm::vec3& positio, float volume)
+    void AudioManager::Play(const Ref<AudioClip>& clip, const glm::vec3& position, float volume)
     {
         Ref<AudioSource> source = CreateSource();
         source->SetClip(clip);

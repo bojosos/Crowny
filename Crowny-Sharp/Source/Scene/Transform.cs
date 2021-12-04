@@ -13,8 +13,7 @@ namespace Crowny
         {
             get
             {
-                Vector3 tmp;
-                Internal_GetPosition(m_InternalPtr, out tmp);
+                Internal_GetPosition(m_InternalPtr, out Vector3 tmp);
                 return tmp;
             }
             set { Internal_SetPosition(m_InternalPtr, ref value); }
@@ -26,10 +25,9 @@ namespace Crowny
         /// <value>A Vector3 local position.</value>
         public Vector3 localPosition 
         { 
-            get 
-            { 
-                Vector3 temp;
-                Internal_GetLocalPosition(m_InternalPtr, out temp);
+            get
+            {
+                Internal_GetLocalPosition(m_InternalPtr, out Vector3 temp);
                 return temp;
             } 
             set { Internal_SetLocalPosition(m_InternalPtr, ref value); }
@@ -60,9 +58,8 @@ namespace Crowny
         public Vector3 eulerAngles
         {
             get
-            { 
-                Vector3 temp;
-                Internal_GetEulerAngles(m_InternalPtr, out temp);
+            {
+                Internal_GetEulerAngles(m_InternalPtr, out Vector3 temp);
                 return temp;
             } 
             set { Internal_SetEulerAngles(m_InternalPtr, ref value); } 
@@ -76,8 +73,7 @@ namespace Crowny
         {
             get
             {
-                Vector3 temp;
-                Internal_GetLocalEulerAngles(m_InternalPtr, out temp);
+                Internal_GetLocalEulerAngles(m_InternalPtr, out Vector3 temp);
                 return temp;
             } 
             set { Internal_SetEulerAngles(m_InternalPtr, ref value); } 

@@ -62,6 +62,9 @@ namespace Crowny
             RecalculateProjection();
         }
 
+        float GetAspectRatio() const { return m_AspectRatio; }
+        void SetAspectRatio(float value) { m_AspectRatio = value; }
+
         // TODO: Should use glViewport to render
         const glm::vec4& GetViewportRect() const { return m_ViewportRectangle; }
         void SetViewportRect(const glm::vec4& rect) { m_ViewportRectangle = rect; }

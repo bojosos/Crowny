@@ -10,6 +10,8 @@ namespace Crowny
 
     ScriptEntity* ScriptSceneObjectManager::GetOrCreateScriptEntity(Entity entity)
     {
+        if (!entity)
+            return nullptr;
         ScriptEntity* scriptEntity = GetScriptEntity(entity);
         if (scriptEntity != nullptr)
             return scriptEntity;
