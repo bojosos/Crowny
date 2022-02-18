@@ -1,6 +1,7 @@
 #include "cwepch.h"
 
 #include "Panels/HierarchyPanel.h"
+#include "Panels/UIUtils.h"
 
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
@@ -22,30 +23,42 @@ namespace Crowny
     void HierarchyPanel::DisplayPopup(Entity e)
     {
         if (ImGui::MenuItem("New Entity"))
-        {
-            m_NewEntityParent = e;
-        }
+            CreateEmptyEntity(e);
 
         if (ImGui::MenuItem("Rename"))
         {
             m_Renaming = e;
+            m_RenamingString = e.GetName();
         }
 
         if (ImGui::MenuItem("Delete"))
         {
-            auto& rr = e.GetParent().GetComponent<RelationshipComponent>().Children;
-            for (int i = 0; i < rr.size(); i++)
-            {
-                if (rr[i] == HierarchyPanel::s_SelectedEntity)
-                {
-                    rr[i].Destroy();
-                    rr.erase(rr.begin() + i);
-                    break;
-                }
-            }
-
+            m_DeferedActions.push_back([e]() mutable { e.Destroy(); }); // not sure if neccessary
             HierarchyPanel::s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
             m_SelectionChanged(s_SelectedEntity);
+        }
+
+        if (ImGui::BeginMenu("Create"))
+        {
+            if (ImGui::MenuItem("Camera"))
+                CreateEntityWith<CameraComponent>(e, "Camera");
+
+            if (ImGui::MenuItem("Audio Source"))
+                CreateEntityWith<AudioSourceComponent>(e, "Audio Source");
+
+            if (ImGui::MenuItem("Light"))
+            {
+                // Currently is impossible to do
+                // m_NewEntityParent = activeScene->GetRootEntity();
+            }
+
+            if (ImGui::MenuItem("Sphere"))
+            {
+                // Currently is impossible to do
+                // m_NewEntityParent = activeScene->GetRootEntity();
+            }
+
+            ImGui::EndMenu();
         }
     }
 
@@ -81,14 +94,16 @@ namespace Crowny
 
         ImGui::SetCursorPosX(ImGui::GetCursorPos().x + ImGui::GetStyle().FramePadding.x);
         ImGui::SetKeyboardFocusHere();
-        if (ImGui::InputText("##renaming", &tc.Tag,
+        if (ImGui::InputText("##renaming", &m_RenamingString,
                              ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
         {
+            m_Renaming.GetComponent<TagComponent>().Tag = m_RenamingString;
             m_Renaming = {};
         }
 
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Left | ImGuiMouseButton_Right) && !ImGui::IsItemClicked())
         {
+            m_Renaming.GetComponent<TagComponent>().Tag = m_RenamingString;
             m_Renaming = {};
         }
     }
@@ -111,29 +126,30 @@ namespace Crowny
             Rename(e);
             ImGui::SetCursorPosX(ImGui::GetCursorPos().x + 2 * ImGui::GetStyle().FramePadding.x);
             for (auto& c : rc.Children)
-            {
                 DisplayTree(c);
-            }
         }
         else
         {
+            if (m_NewOpenEntity == e)
+            {
+                ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+                m_NewOpenEntity = {};
+            }
             open = ImGui::TreeNodeEx(name.c_str(), selected | flags);
 
             if (ImGui::BeginDragDropSource())
             {
-                uint32_t tmp = (uint32_t)e.GetHandle();
-                ImGui::SetDragDropPayload("ID", &tmp, sizeof(uint32_t));
+                UIUtils::SetEntityPayload(e);
                 ImGui::Text("%s", name.c_str());
                 ImGui::EndDragDropSource();
             }
 
             if (ImGui::BeginDragDropTarget())
             {
-                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ID"))
+                if (const ImGuiPayload* payload = UIUtils::AcceptEntityPayload())
                 {
-                    CW_ENGINE_ASSERT(payload->DataSize == sizeof(uint32_t));
-                    uint32_t id = *(const uint32_t*)payload->Data;
-                    Entity((entt::entity)id, SceneManager::GetActiveScene().get()).SetParent(e);
+                    Entity entity = UIUtils::GetEntityFromPayload(payload);
+                    entity.SetParent(e);
                 }
                 ImGui::EndDragDropTarget();
             }
@@ -151,10 +167,8 @@ namespace Crowny
 
             if (open)
             {
-                for (auto& c : rc.Children)
-                {
+                for (auto c : rc.Children)
                     DisplayTree(c);
-                }
 
                 ImGui::TreePop();
             }
@@ -184,14 +198,14 @@ namespace Crowny
             if (ImGui::BeginDragDropSource())
             {
                 uint32_t tmp = (uint32_t)e.GetHandle();
-                ImGui::SetDragDropPayload("ID", &tmp, sizeof(uint32_t));
+                ImGui::SetDragDropPayload("Entity_ID", &tmp, sizeof(uint32_t));
                 ImGui::Text("%s", name.c_str());
                 ImGui::EndDragDropSource();
             }
 
             if (ImGui::BeginDragDropTarget())
             {
-                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ID"))
+                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Entity_ID"))
                 {
                     CW_ENGINE_ASSERT(payload->DataSize == sizeof(uint32_t));
                     uint32_t id = *(const uint32_t*)payload->Data;
@@ -222,95 +236,97 @@ namespace Crowny
 
         ImGui::AlignTextToFramePadding();
 
-        // ImGui::PushID((int32_t)e.GetHandle());
+        ImGui::PushID((int32_t)e.GetHandle());
 
         if (!rc.Children.empty())
-        {
             DisplayTreeNode(e);
-        }
         else
-        {
             DisplayLeafNode(e);
-        }
 
-        if (Input::IsKeyUp(Key::Delete) && !m_Deleted && ImGui::IsWindowFocused())
-        {
-            m_Deleted = true;
-            auto& rr = s_SelectedEntity.GetParent().GetComponent<RelationshipComponent>().Children;
-            for (int i = 0; i < rr.size(); i++)
-            {
-                if (rr[i] == HierarchyPanel::s_SelectedEntity)
-                {
-                    rr[i].Destroy();
-                    rr.erase(rr.begin() + i);
-                    break;
-                }
-            }
+        ImGui::PopID();
+    }
 
-            HierarchyPanel::s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
+    void HierarchyPanel::CreateEmptyEntity(Entity parent)
+    {
+        m_DeferedActions.push_back([this, parent]() mutable {
+            auto activeScene = SceneManager::GetActiveScene();
+            Entity newEntity = activeScene->CreateEntity("New Entity");
+            parent.AddChild(newEntity);
+            HierarchyPanel::s_SelectedEntity = newEntity;
             m_SelectionChanged(s_SelectedEntity);
-        }
+            m_SelectedItems.clear();
+            m_SelectedItems.insert(newEntity);
 
-        // ImGui::PopID();
+            m_NewOpenEntity = parent;
+        });
     }
 
     void HierarchyPanel::Update()
     {
-        if (m_NewEntityParent)
-        {
-            Entity newEntity = SceneManager::GetActiveScene()->CreateEntity("New Entity");
-            m_NewEntityParent.AddChild(newEntity);
-            HierarchyPanel::s_SelectedEntity = newEntity;
-            m_SelectionChanged(s_SelectedEntity);
-            m_SelectedItems.clear();
-            m_SelectedItems.insert(HierarchyPanel::s_SelectedEntity);
-            m_NewEntityParent = {};
-        }
+        for (auto action : m_DeferedActions)
+            action();
+        m_DeferedActions.clear();
 
-        if (Input::IsKeyDown(Key::F2) && ImGui::IsWindowFocused())
+        Scene* activeScene = SceneManager::GetActiveScene().get();
+        
+        if (m_Focused && s_SelectedEntity)
         {
-            m_Renaming = s_SelectedEntity;
+            bool ctrl = Input::IsKeyPressed(Key::LeftControl);
+            if (ctrl && Input::IsKeyDown(Key::D)) // Duplicate entities
+            {
+                if (s_SelectedEntity.GetParent())
+                    activeScene->DuplicateEntity(s_SelectedEntity).SetParent(s_SelectedEntity.GetParent());
+                else
+                activeScene->DuplicateEntity(s_SelectedEntity).SetParent(s_SelectedEntity.GetParent());
+            }
+
+            if (ctrl && Input::IsKeyDown(Key::N)) // Create empty entity
+            {
+                Entity newEntity = activeScene->CreateEntity("New Entity");
+                s_SelectedEntity.AddChild(newEntity);
+                m_NewOpenEntity = s_SelectedEntity;
+                s_SelectedEntity = newEntity;
+                m_SelectionChanged(newEntity);
+                m_SelectedItems.clear();
+                m_SelectedItems.insert(s_SelectedEntity);
+            }
+
+            if (Input::IsKeyDown(Key::F2)) // Renaming
+            {
+                m_Renaming = s_SelectedEntity;
+                m_RenamingString = s_SelectedEntity.GetName();
+            }
+
+            if (Input::IsKeyDown(Key::Delete)) // Deleting
+                s_SelectedEntity.Destroy();
         }
     }
 
     void HierarchyPanel::Render()
     {
-        m_Deleted = false;
-        ImGui::Begin("Hierarchy", &m_Shown);
-        UpdateState();
+        // PrintDebugHierarchy();
+        BeginPanel();
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
         if (ImGui::BeginPopupContextWindow(nullptr,
                                            ImGuiPopupFlags_NoOpenOverExistingPopup | ImGuiPopupFlags_MouseButtonRight))
         {
             if (ImGui::MenuItem("New Entity"))
-            {
-                m_NewEntityParent = activeScene->GetRootEntity();
-            }
+                CreateEmptyEntity(activeScene->GetRootEntity());
 
             if (ImGui::BeginMenu("Create"))
             {
                 if (ImGui::MenuItem("Camera"))
-                {
-                    // Currently is impossible to do
-                    // m_NewEntityParent = activeScene->GetRootEntity();
-                }
+                    CreateEntityWith<CameraComponent>(activeScene->GetRootEntity(), "Camera");
 
-                if (ImGui::MenuItem("Camera"))
-                {
-                    // Currently is impossible to do
-                    // m_NewEntityParent = activeScene->GetRootEntity();
-                }
+                if (ImGui::MenuItem("Audio Source"))
+                    CreateEntityWith<AudioSourceComponent>(activeScene->GetRootEntity(), "Audio Source");
 
                 if (ImGui::MenuItem("Light"))
                 {
-                    // Currently is impossible to do
-                    // m_NewEntityParent = activeScene->GetRootEntity();
                 }
 
                 if (ImGui::MenuItem("Sphere"))
                 {
-                    // Currently is impossible to do
-                    // m_NewEntityParent = activeScene->GetRootEntity();
                 }
 
                 ImGui::EndMenu();
@@ -320,11 +336,24 @@ namespace Crowny
 
         ImGui::SetNextItemOpen(true, ImGuiCond_Once);
         DisplayTree(activeScene->GetRootEntity());
-        ImGui::End();
+        EndPanel();
     }
 
-    void HierarchyPanel::Show() { m_Shown = true; }
+#ifdef CW_DEBUG
+    void HierarchyPanel::PrintDebugHierarchy()
+    {
+        String tabs;
+        std::function<void(Entity)> traverse = [&](Entity entity) {
+            if (!entity) return;
+            CW_ENGINE_INFO("{0}{1}: {2}", tabs, entity.GetName(), entity.GetParent() ? entity.GetParent().GetName() : "");
+            tabs += "\t";
+            for (auto child : entity.GetComponent<RelationshipComponent>().Children)
+                traverse(child);
+            tabs = tabs.substr(0, tabs.size() - 1);
+        };
 
-    void HierarchyPanel::Hide() { m_Shown = false; }
+    traverse(s_SelectedEntity);
+    }
+#endif
 
 } // namespace Crowny

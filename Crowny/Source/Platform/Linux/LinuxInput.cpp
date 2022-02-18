@@ -9,6 +9,8 @@
 namespace Crowny
 {
     bool Input::s_Grabbed = false;
+    float Input::m_FrameScrollX = 0.0f;
+    float Input::m_FrameScrollY = 0.0f;
     static UnorderedMap<KeyCode, bool> s_KeyStates(0);
     static UnorderedMap<MouseCode, bool> s_MouseStates(0);
 
@@ -179,6 +181,22 @@ namespace Crowny
         return { (float)xpos, (float)ypos };
     }
 
+    float Input::GetMouseScrollX()
+    {
+        return m_FrameScrollX;
+    }
+
+    float Input::GetMouseScrollY()
+    {
+        return m_FrameScrollY;
+    }
+
+    void Input::OnMouseScroll(float xOffset, float yOffset)
+    {
+        m_FrameScrollX += xOffset;
+        m_FrameScrollY += yOffset;
+    }
+
     float Input::GetMouseX() { return GetMousePosition().x; }
 
     float Input::GetMouseY() { return GetMousePosition().y; }
@@ -204,6 +222,7 @@ namespace Crowny
         {
             s_MouseStates[btn] = GetMouseButton(btn);
         }
+        m_FrameScrollX = m_FrameScrollY = 0;
     }
 
 } // namespace Crowny

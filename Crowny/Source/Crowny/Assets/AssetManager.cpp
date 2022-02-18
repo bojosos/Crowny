@@ -12,16 +12,18 @@
 CEREAL_REGISTER_TYPE(Crowny::Shader)
 CEREAL_REGISTER_TYPE(Crowny::AudioClip)
 CEREAL_REGISTER_TYPE(Crowny::Texture)
+CEREAL_REGISTER_TYPE(Crowny::ScriptCode)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Shader)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::AudioClip)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Texture)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::ScriptCode)
 
 namespace Crowny
 {
 
-    void Save(BinaryDataStreamOutputArchive& archive, const Asset& asset) { archive(asset.m_KeepData); }
+    void Save(BinaryDataStreamOutputArchive& archive, const Asset& asset) { archive(asset.m_KeepData, asset.m_Name); }
 
-    void Load(BinaryDataStreamInputArchive& archive, Asset& asset) { archive(asset.m_KeepData); }
+    void Load(BinaryDataStreamInputArchive& archive, Asset& asset) { archive(asset.m_KeepData, asset.m_Name); }
 
     void Load(BinaryDataStreamInputArchive& archive, AudioClip& clip)
     {

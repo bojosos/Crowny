@@ -18,18 +18,24 @@ namespace Sandbox
             Quads
         }
         [ShowInInspector]
-        private DrawMode drawMode = DrawMode.Quads;
+        private DrawMode dummyEnumInspector = DrawMode.Quads;
 
         // Test bools
         [ShowInInspector]
-        private bool dummy = true;
+        private bool dummyCheckboxInspector = true;
 
-        // Test normal types
-        private float deltaSum = 0;
-        private int fps = 0;
+        // Test normal type inspector
+        private float deltaSum = 0.69f; // This crashes the editor
+
+        // This is wrong with new editor
+        public int fps = 0;
 
         // Test audio
         private AudioSource source;
+
+        private Test test;
+
+        public Entity entityTest;
 
         public void Start()
         {
@@ -61,6 +67,16 @@ namespace Sandbox
                 cur = cur.parent;
                 idx++;
             }
+            // Test retrieve script component of another entity from this one. Soon will make it work as GetComponent<Test>();
+            if (entity.parent != null)
+            {
+                EntityBehaviour script = entity.parent.GetComponent<EntityBehaviour>();
+                Debug.Log(script);
+                if (script != null)
+                    test = script as Test;
+            }
+            if (entityTest != null)
+                Debug.Log(entityTest.name);
         }
 
         public void Update()
@@ -77,7 +93,9 @@ namespace Sandbox
             fps++;
             if (deltaSum > 1.0f)
             {
-                Debug.Log(fps);
+                // Print out the fps counter of the parent
+                if (test != null)
+                    Debug.Log(test.fps); // Update order matters here
                 fps = 0;
                 deltaSum = 0;
                 if (source.state == AudioSourceState.Playing)

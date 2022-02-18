@@ -315,7 +315,7 @@ namespace Crowny
         UnorderedMap<VulkanResource*, ResourceUseHandle> m_Resources;
         UnorderedMap<VulkanResource*, uint32_t> m_Images;
         UnorderedMap<VulkanSwapChain*, ResourceUseHandle> m_SwapChains;
-        std::set<uint32_t> m_ShaderBoundSubresourceInfos;
+        Set<uint32_t> m_ShaderBoundSubresourceInfos;
         uint32_t m_GlobalQueueIdx = -1;
 
         uint32_t m_RenderTargetReadOnlyFlags = 0;

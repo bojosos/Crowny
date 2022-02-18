@@ -33,9 +33,6 @@ namespace Crowny
 
         virtual void Render() override;
 
-        virtual void Show() override;
-        virtual void Hide() override;
-
         static const Ref<PBRMaterial>& GetSelectedMaterial() { return s_SelectedMaterial; };
         static void SetSelectedMaterial(const Ref<PBRMaterial>& material) { s_SelectedMaterial = material; }
 

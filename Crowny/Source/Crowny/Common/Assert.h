@@ -21,7 +21,7 @@
     CW_INTERNAL_ASSERT_IMPL(type, check, "Assertion failed: {0}", __VA_ARGS__)
 #define CW_INTERNAL_ASSERT_NO_MSG(type, check)                                                                         \
     CW_INTERNAL_ASSERT_IMPL(type, check, "Assertion '{0}' failed at {1}:{2}", CW_STRINGIFY_MACRO(check),               \
-                            std::filesystem::path(__FILE__).filename().string(), __LINE__)
+                            fs::path(__FILE__).filename().string(), __LINE__)
 
 #define CW_INTERNAL_ASSERT_GET_MACRO_NAME(arg1, arg2, macro, ...) macro
 #define CW_INTERNAL_ASSERT_GET_MACRO(...)                                                                              \

@@ -2,8 +2,6 @@
 
 #include "Panels/ImGuiPanel.h"
 
-#include <imgui.h>
-
 namespace Crowny
 {
 

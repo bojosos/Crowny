@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Events/ApplicationEvent.h"
+#include "Crowny/Events/MouseEvent.h"
 #include "Crowny/Layers/LayerStack.h"
 #include "Crowny/Window/RenderWindow.h"
 
@@ -33,6 +34,7 @@ namespace Crowny
     private:
         bool OnWindowClose(WindowCloseEvent& e);
         bool OnWindowResize(WindowResizeEvent& e);
+        bool OnMouseScroll(MouseScrolledEvent& event);
 
         void Run();
 

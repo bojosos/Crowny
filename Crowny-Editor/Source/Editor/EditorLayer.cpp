@@ -24,6 +24,7 @@
 #include "Crowny/Scripting/Bindings/Scene/ScriptTime.h"
 #include "Crowny/Scripting/Bindings/ScriptInput.h"
 #include "Crowny/Scripting/Bindings/ScriptRandom.h"
+#include "Crowny/Scripting/ScriptObjectManager.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -67,8 +68,8 @@ namespace Crowny
         fileMenu->AddItem(new ImGuiMenuItem("Open Project", "", [&](auto& event) { OpenProject(); }));
         fileMenu->AddItem(new ImGuiMenuItem("Save Project", "", [&](auto& event) { Editor::Get().SaveProject(); }));
 
-        fileMenu->AddItem(new ImGuiMenuItem("New Scene", "Ctrl+N", [&](auto& event) { CreateNewScene(); }));
-        fileMenu->AddItem(new ImGuiMenuItem("Open Scene", "Ctrl+O", [&](auto& event) { OpenScene(); }));
+        fileMenu->AddItem(new ImGuiMenuItem("New Scene", "Ctrl+Shift+N", [&](auto& event) { CreateNewScene(); }));
+        fileMenu->AddItem(new ImGuiMenuItem("Open Scene", "Ctrl+Shift+O", [&](auto& event) { OpenScene(); }));
         fileMenu->AddItem(new ImGuiMenuItem("Save Scene", "Ctrl+S", [&](auto& event) { SaveActiveScene(); }));
         fileMenu->AddItem(
           new ImGuiMenuItem("Save Scene as", "Ctrl+Shift+S", [&](auto& event) { SaveActiveSceneAs(); }));
@@ -76,26 +77,20 @@ namespace Crowny
         m_MenuBar->AddMenu(fileMenu);
 
         ImGuiMenu* viewMenu = new ImGuiMenu("View");
-
-        m_InspectorPanel =
-          new InspectorPanel("Inspector"); // Has to be done before hierarchy and asset browser panels
-
-        m_HierarchyPanel =
-          new HierarchyPanel("Hierarchy", [&](Entity e) { m_InspectorPanel->SetSelectedEntity(e); });
-        viewMenu->AddItem(new ImGuiMenuItem("Hierarchy", "", [&](auto& event) { m_HierarchyPanel->Show(); }));
-
+        
+        // Has to be done before hierarchy and asset browser panels
+        m_InspectorPanel = new InspectorPanel("Inspector");
+        m_HierarchyPanel = new HierarchyPanel("Hierarchy", [&](Entity e) { m_InspectorPanel->SetSelectedEntity(e); });
         m_ViewportPanel = new ViewportPanel("Viewport");
-        viewMenu->AddItem(new ImGuiMenuItem("Viewport", "", [&](auto& event) { m_ViewportPanel->Show(); }));
         m_ViewportPanel->SetEventCallback(CW_BIND_EVENT_FN(OnViewportEvent));
-
         m_ConsolePanel = new ConsolePanel("Console");
-        viewMenu->AddItem(new ImGuiMenuItem("Console", "", [&](auto& entity) { m_ConsolePanel->Show(); }));
-
-        viewMenu->AddItem(new ImGuiMenuItem("Inspector", "", [&](auto& event) { m_InspectorPanel->Show(); }));
-
-        m_AssetBrowser = new AssetBrowserPanel(
-          "Asset browser", [&](const Path& path) { m_InspectorPanel->SetSelectedAssetPath(path); });
-        viewMenu->AddItem(new ImGuiMenuItem("Asset browser", "", [&](auto& event) { m_AssetBrowser->Show(); }));
+        m_AssetBrowser = new AssetBrowserPanel("Asset browser", [&](const Path& path) { m_InspectorPanel->SetSelectedAssetPath(path); });
+        
+        m_ViewportPanel->RegisterInMenu(viewMenu);
+        m_InspectorPanel->RegisterInMenu(viewMenu);
+        m_HierarchyPanel->RegisterInMenu(viewMenu);
+        m_ConsolePanel->RegisterInMenu(viewMenu);
+        m_AssetBrowser->RegisterInMenu(viewMenu);
 
         m_MenuBar->AddMenu(viewMenu);
 
@@ -234,8 +229,8 @@ namespace Crowny
     {
         Ref<Scene> scene = SceneManager::GetActiveScene();
         auto& rapi = RenderAPI::Get();
-        if (m_ViewportSize.x != m_ViewportPanel->GetViewportSize().x ||
-            m_ViewportSize.y != m_ViewportPanel->GetViewportSize().y) // TODO: Move out
+        if (m_ViewportPanel->IsShown() && (m_ViewportSize.x != m_ViewportPanel->GetViewportSize().x ||
+            m_ViewportSize.y != m_ViewportPanel->GetViewportSize().y)) // TODO: Move out
         {
             SceneManager().GetActiveScene()->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
             TextureParameters colorParams;
@@ -272,15 +267,15 @@ namespace Crowny
             SceneManager::SetActiveScene(m_Temp);
             m_Temp = nullptr;
         }
-        SceneRenderer::SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
+        SceneRenderer::SetViewportSize(m_RenderTarget->GetProperties().Width, m_RenderTarget->GetProperties().Height);
 
         rapi.SetRenderTarget(m_RenderTarget);
-        rapi.SetViewport(0, 0, m_ViewportSize.x, m_ViewportSize.y);
+        rapi.SetViewport(0, 0, m_RenderTarget->GetProperties().Width, m_RenderTarget->GetProperties().Height);
 
         switch (m_SceneState)
         {
         case SceneState::Edit: {
-            s_EditorCamera.SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
+            s_EditorCamera.SetViewportSize(m_RenderTarget->GetProperties().Width, m_RenderTarget->GetProperties().Height);
             s_EditorCamera.OnUpdate(ts);
 
             SceneManager::GetActiveScene()->OnUpdateEditor(ts);
@@ -315,6 +310,7 @@ namespace Crowny
             // m_HoveredEntity = Entity((entt::entity)
         }
         m_HierarchyPanel->Update();
+        ScriptObjectManager::Get().Update();
     }
 
     void EditorLayer::RenderOverlay()
@@ -332,12 +328,13 @@ namespace Crowny
         
         if (m_ShowColliders)
         {
+            float zOffset = s_EditorCamera.GetPosition().z > 0 ? 0.001f : -0.001f;
             {
                 auto view = scene->GetAllEntitiesWith<TransformComponent, BoxCollider2DComponent>();
                 for (auto entity : view)
                 {
                     auto [tc, bc2d] = view.get<TransformComponent, BoxCollider2DComponent>(entity);
-                    glm::vec3 translation = tc.Position + glm::vec3(bc2d.Offset, 0.001f);
+                    glm::vec3 translation = tc.Position + glm::vec3(bc2d.Offset, zOffset);
                     glm::vec3 scale = tc.Scale * glm::vec3(bc2d.Size * 2.0f, 1.0f);
                     glm::mat4 transform = glm::translate(glm::mat4(1.0f), translation) * glm::rotate(glm::mat4(1.0f), tc.Rotation.z, glm::vec3(0.0f, 0.0f, 1.0f)) * glm::scale(glm::mat4(1.0f), scale);
                     Renderer2D::DrawRect(transform, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.01);
@@ -349,7 +346,7 @@ namespace Crowny
                 for (auto entity : view)
                 {
                     auto [tc, cc2d] = view.get<TransformComponent, CircleCollider2DComponent>(entity);
-                    glm::vec3 translation = tc.Position + glm::vec3(cc2d.Offset, 0.001f);
+                    glm::vec3 translation = tc.Position + glm::vec3(cc2d.Offset, zOffset);
                     glm::vec3 scale = tc.Scale * glm::vec3(cc2d.Radius * 2.0f);
                     glm::mat4 transform = glm::translate(glm::mat4(1.0f), translation) * glm::scale(glm::mat4(1.0f), scale);
                     Renderer2D::DrawCircle(transform, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.01);
@@ -461,7 +458,7 @@ namespace Crowny
 
         m_MenuBar->Render();
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetStyle().FramePadding.y);
-        ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 - 43.5f);
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() * 0.5f - 43.5f);
         ImTextureID textureID = ImGui_ImplVulkan_AddTexture(EditorAssets::Get().PlayIcon);
         if (ImGui::ImageButton(textureID, ImVec2(25.0f, 25.0f), ImVec2(0, 0), ImVec2(1, 1), -1,
                                ImVec4(1.0f, 1.0f, 1.0f, 0.0f), ImVec4(0.1f, 0.105f, 0.11f, 1.0f)))
@@ -523,7 +520,6 @@ namespace Crowny
 
         m_HierarchyPanel->Render();
         m_InspectorPanel->Render();
-        // m_GLInfoPanel->Render();
         m_ViewportPanel->SetEditorRenderTarget(m_RenderTarget);
         m_ViewportPanel->Render();
         m_ConsolePanel->Render();
@@ -548,13 +544,13 @@ namespace Crowny
         switch (e.GetKeyCode())
         {
         case Key::N: {
-            if (ctrl)
+            if (ctrl && shift)
                 CreateNewScene();
             break;
         }
 
         case Key::O: {
-            if (ctrl)
+            if (ctrl && shift)
                 OpenScene();
             break;
         }

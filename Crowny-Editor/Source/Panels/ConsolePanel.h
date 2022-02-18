@@ -3,8 +3,6 @@
 #include "Crowny/ImGui/ImGuiConsoleBuffer.h"
 #include "Panels/ImGuiPanel.h"
 
-#include <imgui.h>
-
 namespace Crowny
 {
     class ConsolePanel : public ImGuiPanel
@@ -17,7 +15,7 @@ namespace Crowny
         void RenderMessages();
         void RenderHeader();
         void RenderSettings();
-        void RenderMessage(const Ref<ImGuiConsoleBuffer::Message>& message);
+        void RenderMessage(const ImGuiConsoleBuffer::Message& message);
 
         static glm::vec4 GetRenderColor(ImGuiConsoleBuffer::Message::Level level)
         {
@@ -38,10 +36,12 @@ namespace Crowny
         }
 
     private:
-        Ref<ImGuiConsoleBuffer::Message> m_SelectedMessage;
-        bool m_EnabledLevels[5] = { true, true, true, true, true };
+        size_t m_SelectedMessageHash;
         ImGuiConsoleBuffer::Message::Level m_MessageBufferRenderFilter = ImGuiConsoleBuffer::Message::Level::Info;
         float m_DisplayScale = 1.0f;
+        
+        bool m_EnabledLevels[5] = { true, true, true, true, true };
+        bool m_Collapse;
         bool m_AllowScrollingToBottom = true;
         bool m_RequestScrollToBottom = false;
     };

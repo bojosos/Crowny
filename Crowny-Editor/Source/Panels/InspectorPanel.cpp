@@ -9,6 +9,7 @@
 
 #include "Panels/ComponentEditor.h"
 #include "Panels/InspectorPanel.h"
+#include "Panels/HierarchyPanel.h"
 
 #include "Editor/EditorAssets.h"
 #include "Editor/ProjectLibrary.h"
@@ -36,8 +37,6 @@ namespace Crowny
         m_ComponentEditor.RegisterComponent<TextComponent>("Text");
         m_ComponentEditor.RegisterComponent<SpriteRendererComponent>("Sprite Renderer");
         m_ComponentEditor.PopComponentGroup();
-        // Scripting
-        m_ComponentEditor.RegisterComponent<MonoScriptComponent>("C# Script");
 
         // Physics
         m_ComponentEditor.PushComponentGroup("Physics");
@@ -51,12 +50,15 @@ namespace Crowny
         m_ComponentEditor.RegisterComponent<AudioListenerComponent>("Audio Listener");
         m_ComponentEditor.RegisterComponent<AudioSourceComponent>("Audio Source");
         m_ComponentEditor.PopComponentGroup();
+        
+        // Scripting
+        m_ComponentEditor.RegisterComponent<MonoScriptComponent>("C# Script");
     }
 
     void InspectorPanel::Render()
     {
-        ImGui::Begin("Inspector", &m_Shown);
-        UpdateState();
+        BeginPanel();
+        ImGui::BeginChild("InspectorChild");
 
         DrawHeader();
         if (m_InspectorMode == InspectorMode::GameObject)
@@ -78,7 +80,46 @@ namespace Crowny
         // else
         //     CW_ENGINE_ASSERT(false, "Invalid inspector mode");
 
-        ImGui::End();
+        ImGui::EndChild();
+
+        Entity selectedEntity = HierarchyPanel::GetSelectedEntity();
+        if (m_InspectorMode == InspectorMode::GameObject && selectedEntity)
+        {
+            if (ImGui::BeginDragDropTarget()) // Add components when files are dropped on entities in the inspector (C# script, AudioSource)
+            {
+                if (const ImGuiPayload* payload = UIUtils::AcceptAssetPayload())
+                {
+                    Path payloadPath = UIUtils::GetPathFromPayload(payload);
+                    String ext = payloadPath.extension();
+                    ext = ext.substr(1, ext.size() - 1);
+                    if (ext == "ogg" || ext == "wav" || ext == "flac")
+                    {
+                        if (!selectedEntity.HasComponent<AudioSourceComponent>())
+                        {
+                            AudioSourceComponent& audioSource = selectedEntity.AddComponent<AudioSourceComponent>();
+                            Ref<AudioClip> clip = std::static_pointer_cast<AudioClip>(ProjectLibrary::Get().Load(payloadPath));
+                            audioSource.SetClip(clip);
+                        }
+                    }
+                    else if (ext == "cs")
+                    {
+                        if (!selectedEntity.HasComponent<MonoScriptComponent>())
+                        {
+                            MonoScriptComponent& scriptComponent = selectedEntity.AddComponent<MonoScriptComponent>();
+                            Ref<ScriptCode> scriptCode = std::static_pointer_cast<ScriptCode>(ProjectLibrary::Get().Load(payloadPath)); // TODO: Analyze the code to extract the name of the MonoBehaviour class
+                            scriptComponent.SetClassName(payloadPath.filename().replace_extension(""));
+                            scriptComponent.OnInitialize(selectedEntity);
+                        }
+                    }
+                }
+                ImGui::EndDragDropTarget();
+            }
+        }
+
+        EndPanel();
+        // ImGui::Begin("Material");
+        // RenderMaterialInspector();
+        // ImGui::End();
     }
 
     void InspectorPanel::RenderMaterialInspector()
@@ -324,7 +365,6 @@ namespace Crowny
                 {
                     ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions, true);
                 }
-                CW_ENGINE_INFO(m_InspectedAssetPath);
                 Ref<AudioClip> clip = std::static_pointer_cast<AudioClip>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
                 AudioManager::Get().Play(clip);
             }
@@ -412,6 +452,8 @@ namespace Crowny
         case (InspectorMode::Material):
             drawHeader("Material");
             break;
+        case (InspectorMode::GameObject):
+            break;
         default: {
             float maxx = ImGui::GetContentRegionAvail().x;
             ImGui::Text("%s", m_InspectedAssetPath.filename().c_str());
@@ -495,9 +537,5 @@ namespace Crowny
     }
 
     void InspectorPanel::SetInspectorMode(InspectorMode mode) { m_InspectorMode = mode; }
-
-    void InspectorPanel::Show() { m_Shown = true; }
-
-    void InspectorPanel::Hide() { m_Shown = false; }
 
 } // namespace Crowny

@@ -30,9 +30,9 @@
 namespace Crowny
 {
 
-    using Path = std::filesystem::path;
-
     namespace fs = std::filesystem;
+ 
+    using Path = fs::path;
 
     struct HashPath
     {

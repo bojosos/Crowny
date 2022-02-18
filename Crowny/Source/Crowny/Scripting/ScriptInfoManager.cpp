@@ -11,16 +11,14 @@
 #include "Crowny/Scripting/Bindings/Scene/ScriptAudioSource.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptAudioListener.h"
 
+#include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
+
 namespace Crowny
 {
 
     ScriptInfoManager::ScriptInfoManager()
     {
-        RegisterComponent<TransformComponent, ScriptTransform>();
-        RegisterComponent<CameraComponent, ScriptCamera>();
-        RegisterComponent<MonoScriptComponent, ScriptEntityBehaviour>();
-        RegisterComponent<AudioSourceComponent, ScriptAudioSource>();
-        RegisterComponent<AudioListenerComponent, ScriptAudioListener>();
+        RegisterComponents();
     }
 
     void ScriptInfoManager::InitializeTypes()
@@ -36,6 +34,9 @@ namespace Crowny
         m_Builtin.SystemTypeClass = corlib->GetClass("System", "Type");
         if (m_Builtin.SystemTypeClass == nullptr)
             CW_ENGINE_ERROR("Cannot find System.Type class.");
+        m_Builtin.SystemTypeClass = corlib->GetClass("System", "Serializable");
+        if (m_Builtin.SystemSerializable == nullptr)
+            CW_ENGINE_ERROR("Cannot find System.SystemSerializable class.");
         m_Builtin.SystemArrayClass = corlib->GetClass("System", "Array");
         if (m_Builtin.SystemArrayClass == nullptr)
             CW_ENGINE_ERROR("Cannot find System.Array class.");
@@ -66,17 +67,431 @@ namespace Crowny
         if (m_Builtin.RangeAttribute == nullptr)
             CW_ENGINE_ERROR("Cannot find {0}.Range class.", CROWNY_NS);
 
-        m_Builtin.ShowInInspector = crownyAssembly->GetClass(CROWNY_NS, "ShowInInspector");
-        if (m_Builtin.ShowInInspector == nullptr)
+        m_Builtin.ShowInInspectorAttribute = crownyAssembly->GetClass(CROWNY_NS, "ShowInInspector");
+        if (m_Builtin.ShowInInspectorAttribute == nullptr)
             CW_ENGINE_ERROR("Cannot find {0}.ShowInInspector class.", CROWNY_NS);
 
-        m_Builtin.HideInInspector = crownyAssembly->GetClass(CROWNY_NS, "HideInInspector");
-        if (m_Builtin.HideInInspector == nullptr)
+        m_Builtin.HideInInspectorAttribute = crownyAssembly->GetClass(CROWNY_NS, "HideInInspector");
+        if (m_Builtin.HideInInspectorAttribute == nullptr)
             CW_ENGINE_ERROR("Cannot find {0}.HideInInspector class.", CROWNY_NS);
+
+        m_Builtin.SerializableObjectAtrribute = crownyAssembly->GetClass(CROWNY_NS, "SerializableObject");
+        if (m_Builtin.SerializableObjectAtrribute == nullptr)
+            CW_ENGINE_ERROR("Cannot find {0}.SerializableObject class.", CROWNY_NS);
+
+        m_Builtin.DontSerializeFieldAttribute = crownyAssembly->GetClass(CROWNY_NS, "DontSerialize");
+        if (m_Builtin.DontSerializeFieldAttribute == nullptr)
+            CW_ENGINE_ERROR("Cannot find {0}.DontSerialize class.", CROWNY_NS);
 
         m_Builtin.ScriptUtils = crownyAssembly->GetClass(CROWNY_NS, "ScriptUtils");
         if (m_Builtin.ScriptUtils == nullptr)
             CW_ENGINE_ERROR("Cannot find {0}.ScriptUtils class.", CROWNY_NS);
+    }
+
+    void ScriptInfoManager::LoadAssemblyInfo(const String& assemblyName)
+    {
+        MonoAssembly* curAssembly = MonoManager::Get().GetAssembly(assemblyName);
+        if (curAssembly == nullptr)
+            return;
+        Ref<SerializableAssemblyInfo> assemblyInfo = CreateRef<SerializableAssemblyInfo>();
+        assemblyInfo->m_Name = assemblyName;
+
+        m_AssemblyInfos[assemblyName] = assemblyInfo;
+        // MonoClass* assetClass = ScriptAsset::GetMetaData()->ScriptClass;
+
+        const Vector<MonoClass*>& allClasses = curAssembly->GetClasses();
+        for (auto& klass : allClasses)
+        {
+            const bool isSerializable = klass->IsSubClassOf(m_Builtin.ComponentClass) || /*klass->IsSubClassOf(assetClass) ||*/ klass->HasAttribute(m_Builtin.SerializableObjectAtrribute);
+            const bool isInspectable = klass->HasAttribute(m_Builtin.ShowInInspectorAttribute);
+            if ((isSerializable || isInspectable) && klass != m_Builtin.ComponentClass/* && klass != m_Builtin.AssetClass*/)
+            {
+                Ref<SerializableTypeInfoObject> typeInfo = CreateRef<SerializableTypeInfoObject>();
+                typeInfo->m_TypeNamespace = klass->GetNamespace();
+                typeInfo->m_TypeName = klass->GetName();
+                typeInfo->m_TypeId = m_UniqueTypeId++;
+
+                if (isSerializable)
+                    typeInfo->m_Flags |= ScriptFieldFlagBits::Serializable;
+                if (isSerializable || isInspectable)
+                    typeInfo->m_Flags |= ScriptFieldFlagBits::Inspectable;
+                MonoPrimitiveType monoPrimitiveType = MonoUtils::GetPrimitiveType(klass->GetInternalPtr());
+                if (monoPrimitiveType == MonoPrimitiveType::ValueType)
+                    typeInfo->m_ValueType = true;
+                else
+                    typeInfo->m_ValueType = false;
+                MonoReflectionType* type = MonoUtils::GetType(klass->GetInternalPtr());
+                ScriptTypeInfo* reflTypeInfo = GetSerializableTypeInfo(type);
+                if (reflTypeInfo != nullptr)
+                    typeInfo->m_TypeId = reflTypeInfo->TypeId;
+                else
+                    typeInfo->m_TypeId = 0;
+                Ref<SerializableObjectInfo> objInfo = CreateRef<SerializableObjectInfo>();
+                objInfo->m_TypeInfo = typeInfo;
+                objInfo->m_MonoClass = klass;
+                assemblyInfo->m_TypeNameToId[objInfo->GetFullTypeName()] = typeInfo->m_TypeId;
+                assemblyInfo->m_ObjectInfos[typeInfo->m_TypeId] = objInfo;
+            }
+        }
+
+        // Fields and properties
+        for (auto& curClassInfo : assemblyInfo->m_ObjectInfos)
+        {
+            Ref<SerializableObjectInfo> objInfo = curClassInfo.second;
+            uint32_t m_UniqueFieldId = 1;
+            const Vector<MonoField*>& fields = objInfo->m_MonoClass->GetFields();
+            for (auto& field : fields)
+            {
+                if (field->IsStatic())
+                    continue;
+                Ref<SerializableTypeInfo> typeInfo = GetTypeInfo(field->GetType());
+                if (typeInfo == nullptr)
+                    continue;
+                bool isSerializable = true;
+                bool isInspectable = true;
+                if (typeInfo->GetType() == SerializableType::Object)
+                {
+                    SerializableTypeInfoObject* objTypeInfo = static_cast<SerializableTypeInfoObject*>(typeInfo.get());
+                    isSerializable = objTypeInfo->m_Flags.IsSet(ScriptFieldFlagBits::Serializable);
+                    isInspectable = isSerializable || objTypeInfo->m_Flags.IsSet(ScriptFieldFlagBits::Inspectable);
+                }
+
+                Ref<SerializableFieldInfo> fieldInfo = CreateRef<SerializableFieldInfo>();
+                fieldInfo->m_FieldId = m_UniqueFieldId++;
+                fieldInfo->m_Name = field->GetName();
+                fieldInfo->m_Field = field;
+                fieldInfo->m_TypeInfo = typeInfo;
+                fieldInfo->m_ParentTypeId = objInfo->m_TypeInfo->m_TypeId;
+
+                CrownyMonoVisibility visibility = field->GetVisibility();
+                if (visibility == CrownyMonoVisibility::Public)
+                {
+                    if (isSerializable && !field->HasAttribute(m_Builtin.DontSerializeFieldAttribute))
+                        fieldInfo->m_Flags |= ScriptFieldFlagBits::Serializable;
+                    if (isInspectable && !field->HasAttribute(m_Builtin.HideInInspectorAttribute))
+                        fieldInfo->m_Flags |= ScriptFieldFlagBits::Inspectable;
+                }
+                else
+                {
+                    if (isSerializable && field->HasAttribute(m_Builtin.SerializeFieldAttribute))
+                        fieldInfo->m_Flags |= ScriptFieldFlagBits::Serializable;
+                    if (isInspectable && field->HasAttribute(m_Builtin.ShowInInspectorAttribute))
+                        fieldInfo->m_Flags |= ScriptFieldFlagBits::Inspectable;
+                }
+
+                if (field->HasAttribute(m_Builtin.RangeAttribute))
+                    fieldInfo->m_Flags |= ScriptFieldFlagBits::Range;
+                if (field->HasAttribute(m_Builtin.StepAttribute))
+                    fieldInfo->m_Flags |= ScriptFieldFlagBits::Step;
+                if (field->HasAttribute(m_Builtin.NotNullAttribute))
+                    fieldInfo->m_Flags |= ScriptFieldFlagBits::NotNull;
+                objInfo->m_FieldNameToId[fieldInfo->m_Name] = fieldInfo->m_FieldId;
+                objInfo->m_Fields[fieldInfo->m_FieldId] = fieldInfo;
+            }
+
+            const Vector<MonoProperty*>& properties = objInfo->m_MonoClass->GetProperties();
+            for (auto& property : properties)
+            {
+                Ref<SerializableTypeInfo> typeInfo = GetTypeInfo(property->GetReturnType());
+                if (typeInfo == nullptr)
+                    continue;
+                bool isSerializable = true;
+                bool isInspectable = true;
+                if (typeInfo->GetType() == SerializableType::Object)
+                {
+                    SerializableTypeInfoObject* objTypeInfo = static_cast<SerializableTypeInfoObject*>(typeInfo.get());
+                    isSerializable = objTypeInfo->m_Flags.IsSet(ScriptFieldFlagBits::Serializable);
+                    isInspectable = isSerializable || objTypeInfo->m_Flags.IsSet(ScriptFieldFlagBits::Inspectable);
+                }
+
+                Ref<SerializablePropertyInfo> propertyInfo = CreateRef<SerializablePropertyInfo>();
+                propertyInfo->m_FieldId = m_UniqueFieldId++;
+                propertyInfo->m_Name = property->GetName();
+                propertyInfo->m_Property = property;
+                propertyInfo->m_TypeInfo = typeInfo;
+                propertyInfo->m_ParentTypeId = objInfo->m_TypeInfo->m_TypeId;
+
+                CrownyMonoVisibility visibility = property->GetVisibility();
+                if (visibility == CrownyMonoVisibility::Public)
+                {
+                    if (isSerializable && !property->HasAttribute(m_Builtin.DontSerializeFieldAttribute))
+                        propertyInfo->m_Flags |= ScriptFieldFlagBits::Serializable;
+                    if (isInspectable && !property->HasAttribute(m_Builtin.HideInInspectorAttribute))
+                        propertyInfo->m_Flags |= ScriptFieldFlagBits::Inspectable;
+                }
+                else
+                {
+                    if (isSerializable && property->HasAttribute(m_Builtin.SerializeFieldAttribute))
+                        propertyInfo->m_Flags |= ScriptFieldFlagBits::Serializable;
+                    if (isInspectable && property->HasAttribute(m_Builtin.ShowInInspectorAttribute))
+                        propertyInfo->m_Flags |= ScriptFieldFlagBits::Inspectable;
+                }
+
+                if (property->HasAttribute(m_Builtin.RangeAttribute))
+                    propertyInfo->m_Flags |= ScriptFieldFlagBits::Range;
+                if (property->HasAttribute(m_Builtin.StepAttribute))
+                    propertyInfo->m_Flags |= ScriptFieldFlagBits::Step;
+                if (property->HasAttribute(m_Builtin.NotNullAttribute))
+                    propertyInfo->m_Flags |= ScriptFieldFlagBits::NotNull;
+                objInfo->m_FieldNameToId[propertyInfo->m_Name] = propertyInfo->m_FieldId;
+                objInfo->m_Fields[propertyInfo->m_FieldId] = propertyInfo;
+            }
+        }
+
+        for (auto& klass : assemblyInfo->m_ObjectInfos)
+        {
+            MonoClass* base = klass.second->m_MonoClass->GetBaseClass();
+            while (base != nullptr)
+            {
+                Ref<SerializableObjectInfo> baseObjInfo;
+                if (GetSerializableObjectInfo(base->GetNamespace(), base->GetName(), baseObjInfo))
+                {
+                    klass.second->m_BaseClass = baseObjInfo;
+                    baseObjInfo->m_DerivedClasses.push_back(klass.second);
+                    break;
+                }
+                base = base->GetBaseClass();
+            }
+        }
+    }
+
+    void ScriptInfoManager::RegisterComponents()
+    {
+        RegisterComponent<TransformComponent, ScriptTransform>();
+        RegisterComponent<CameraComponent, ScriptCamera>();
+        RegisterComponent<MonoScriptComponent, ScriptEntityBehaviour>();
+        RegisterComponent<AudioSourceComponent, ScriptAudioSource>();
+        RegisterComponent<AudioListenerComponent, ScriptAudioListener>();
+    }
+
+    Ref<SerializableTypeInfo> ScriptInfoManager::GetTypeInfo(MonoClass* monoClass)
+    {
+        CW_ENGINE_ASSERT(m_BaseTypeInitialized);
+        MonoPrimitiveType primitiveType = MonoUtils::GetPrimitiveType(monoClass->GetInternalPtr());
+        bool isEnum = MonoUtils::IsEnum(monoClass->GetInternalPtr());
+        if (isEnum)
+            primitiveType = MonoUtils::GetEnumPrimitiveType(monoClass->GetInternalPtr());
+        ScriptPrimitiveType scriptPrimitiveType = ScriptPrimitiveType::U32;
+        bool isSimpleType = false;
+        switch (primitiveType)
+        {
+        case MonoPrimitiveType::Bool:
+            scriptPrimitiveType = ScriptPrimitiveType::Bool;
+            isSimpleType = true;
+            break;
+        case MonoPrimitiveType::Char:
+            scriptPrimitiveType = ScriptPrimitiveType::Char;
+            isSimpleType = true;
+            break;
+        case MonoPrimitiveType::I8:
+            scriptPrimitiveType = ScriptPrimitiveType::I8;
+            isSimpleType = true;
+            break;
+        case MonoPrimitiveType::U8:
+            scriptPrimitiveType = ScriptPrimitiveType::U8;
+            isSimpleType = true;
+            break;
+        case MonoPrimitiveType::I16:
+            scriptPrimitiveType = ScriptPrimitiveType::I16;
+            isSimpleType = true;
+            break;
+        case MonoPrimitiveType::U16:
+            scriptPrimitiveType = ScriptPrimitiveType::U16;
+            isSimpleType = true;
+            break;
+        case MonoPrimitiveType::I32:
+            scriptPrimitiveType = ScriptPrimitiveType::I32;
+            isSimpleType = true;
+            break;
+        case MonoPrimitiveType::U32:
+            scriptPrimitiveType = ScriptPrimitiveType::U32;
+            isSimpleType = true;
+            break;
+        case MonoPrimitiveType::I64:
+            scriptPrimitiveType = ScriptPrimitiveType::I64;
+            isSimpleType = true;
+            break;
+        case MonoPrimitiveType::U64:
+            scriptPrimitiveType = ScriptPrimitiveType::U64;
+            isSimpleType = true;
+            break;
+        case MonoPrimitiveType::Float:
+            scriptPrimitiveType = ScriptPrimitiveType::Float;
+            isSimpleType = true;
+            break;
+        case MonoPrimitiveType::Double:
+            scriptPrimitiveType = ScriptPrimitiveType::Double;
+            isSimpleType = true;
+            break;
+        case MonoPrimitiveType::String:
+            scriptPrimitiveType = ScriptPrimitiveType::String;
+            isSimpleType = true;
+            break;
+        default: break;
+        }
+
+        if (isSimpleType)
+        {
+            if (isEnum)
+            {
+                Ref<SerializableTypeInfoEnum> typeInfo = CreateRef<SerializableTypeInfoEnum>();
+                typeInfo->m_UnderlyingType = scriptPrimitiveType;
+                typeInfo->m_TypeNamespace = monoClass->GetNamespace();
+                typeInfo->m_TypeName = monoClass->GetName();
+                return typeInfo;
+            }
+            else
+            {
+                Ref<SerializableTypeInfoPrimitive> typeInfo = CreateRef<SerializableTypeInfoPrimitive>();
+                typeInfo->m_Type = scriptPrimitiveType;
+                return typeInfo;
+            }
+        }
+
+        switch (primitiveType)
+        {
+            // case MonoPrimitiveType::Class:
+            //     if (monoClass->IsSubclassOf(ScriptAsset::GetMetaData()->ScriptClass)) // Asset
+            //     {
+            //         Ref<SerializableTypeInfoRef> typeInfo = CreateRef<SerializableTypeInfoRef>();
+            //         typeInfo->m_TypeNamespace = monoClass->GetNamespace();
+            //         typeInfo->m_TypeName = monoClass->GetName();
+            //         typeInfo->m_TypeId = 0;
+
+            //         if (monoClass == ScriptAsset::GetMetaData()->ScriptClass) // Asset handle
+            //             typeInfo->m_Type = ScriptReferenceType::AssetBase;
+            //         else // Specific asset (Texture, AudioClip...)
+            //         {
+            //             typeInfo->m_Type = ScriptReferenceType::Asset;
+            //             MonoReflectionType* type = MonoUtils::GetType(monoClass->GetInternalPtr());
+            //             AssetInfo* assetInfo = GetBuiltinAssetInfo(type);
+            //             CW_ENGINE_ASSERT(builtinInfo != nullptr);
+            //             typeInfo->m_TypeId = assetInfo->TypeId;
+            //         }
+            //         return typeInfo;
+            //     }
+            //     else if (monoClass == m_Builtin.EntityClass) // Entity
+            //     {
+            //         Ref<SerializableTypeInfoRef> typeInfo = CreateRef<SerializableTypeInfoRef>();
+            //         typeInfo->m_TypeNamespace = monoClass->GetNamespace();
+            //         typeInfo->m_TypeName = monoClass->GetName();
+            //         typeInfo->m_TypeId = 0;
+            //         typeInfo->m_Type = ScriptReferenceType::Entity;
+            //     }
+            //     else if (monoClass->IsSubClassOf(m_Builtin.ComponentClass))
+            //     {
+            //         if (monoClass == m_Builtin.ComponentClass)
+            //             typeInfo->m_Type = ScriptReferenceType::ComponentBase;
+            //         else
+            //         {
+            //             typeInfo->m_Type = ScriptReferenceType::Component;
+            //             MonoReflectionType* type = MonoUtils::GetType(monoClass->GetInternalPtr());
+            //             ComponentInfo* componentInfo = GetComponentInfo(type);
+            //             CW_ENGINE_ASSERT(componentInfo != nullptr);
+            //             typeInfo->m_TypeId = componentInfo->TypeId;
+            //         }
+            //     }
+            //     else
+            //     {
+                     // normal object
+            //     }
+            case MonoPrimitiveType::ValueType:
+            {
+                Ref<SerializableObjectInfo> objInfo;
+                if (GetSerializableObjectInfo(monoClass->GetNamespace(), monoClass->GetName(), objInfo))
+                    return objInfo->m_TypeInfo;
+            }
+            case MonoPrimitiveType::Generic:
+                // if (monoClass->GetFullName() == m_Builtin.SystemGenericListClass->GetFullName())
+                // {
+                //     Ref<SerializableTypeInfoList> typeInfo = CreateRef<SerializableTypeInfoList>();
+                //     MonoProperty* itemProperty = monoClass->GetProperty("Item");
+                //     MonoClass* itemClass = itemProperty->GetReturnType();
+                //     if (itemClass != nullptr)
+                //         typeInfo->m_ElementType = GetTypeInfo(itemClass);
+                //     if (typeInfo->m_ElementType != nullptr)
+                //         return typeInfo;
+                //     return nullptr;
+                // }
+                // else if (monoClass->GetFullName() == m_Builtin.SystemGenericDictionaryClass->GetFullName())
+                // {
+                //     Ref<SerializableTypeInfoDictionary> typeInfo = CreateRef<SerializableTypeInfoDictionary>();
+                //     MonoMethod* enumerator = monoClass->GetMethod("GetEnumerator");
+                //     MonoClass* enumClass = GetEnumerator->GetReturnType();
+                    
+                //     MonoProperty* currentProperty = enumClass->GetProperty("Current");
+                //     MonoClass* kvp = currentProperty->GetReturnType();
+
+                //     MonoProperty* keyProperty = kvp->GetProperty("Key");
+                //     MonoProperty* valueProperty = kvp->GetProperty("Value");
+
+                //     MonoClass* keyClass = keyProperty->GetReturnType();
+                //     if (keyClass != nullptr)
+                //         typeInfo->m_KeyType = GetTypeInfo(keyClass);
+
+                //     MonoClass* valueclass = valueProperty->GetReturnType();
+                //     if (valueClass != nullptr)
+                //         typeInfo->m_ValueType = GetTypeInfo(valueClass);
+                    
+                //     if (typeInfo->m_KeyType != nullptr && typeInfo->m_ValueType != nullptr)
+                //         return typeInfo;
+                //     return nullptr;
+                // }
+                // else if (monoClass->GetFullName() == m_Builtin)
+            case MonoPrimitiveType::Array:
+                // Ref<SerializableTypeInfoArray> typeInfo = CreateRef<SerializableTypeInfoArray>();
+                // ::MonoClass* elementClass = ScriptArray::GetElementClass(monoClass->GetInternalPtr());
+                // if (elementClass != nullptr)
+                // {
+                //     MonoClass* monoElementClass = MonoManager::Get().FindClass(elementClass);
+                //     if (monoElementClass != nullptr)
+                //         typeInfo->m_ElementType = GetTypeInfo(monoElementClass);
+                // }
+                // if (typeInfo->m_ElementType == nullptr)
+                //     return nullptr;
+                // typeInfo->m_Rank = ScriptArray::GetRank(monoClass->GetInternalPtr());
+                // return typeInfo;
+            default: break;
+        }
+        return nullptr;
+    }
+
+    bool ScriptInfoManager::GetSerializableObjectInfo(const String& ns, const String& name, Ref<SerializableObjectInfo>& outInfo)
+    {
+        String fullName = ns + "." + name;
+        for (auto& curAssembly : m_AssemblyInfos)
+        {
+            if (curAssembly.second == nullptr)
+                continue;
+            auto findIter = curAssembly.second->m_TypeNameToId.find(fullName);
+            if (findIter != curAssembly.second->m_TypeNameToId.end())
+            {
+                outInfo = curAssembly.second->m_ObjectInfos[findIter->second];
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void ScriptInfoManager::ClearScriptObjects()
+    {
+        m_BaseTypesInitialized = false;
+        m_Builtin = BuiltinScriptClasses();
+    }
+
+    void ScriptInfoManager::ClearAssemblyInfo()
+    {
+        ClearScriptObjects();
+        m_ComponentInfos.clear();
+        m_AssemblyInfos.clear();
+    }
+
+    ScriptTypeInfo* ScriptInfoManager::GetSerializableTypeInfo(MonoReflectionType* type)
+    {
+        auto findIter = m_ScriptTypeInfos.find(type);
+        if (findIter == m_ScriptTypeInfos.end())
+            return nullptr;
+        return &findIter->second;
     }
 
     ComponentInfo* ScriptInfoManager::GetComponentInfo(MonoReflectionType* type)

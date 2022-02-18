@@ -18,9 +18,14 @@
 #include "Crowny/Renderer/Model.h"
 
 #include "Crowny/Scene/SceneCamera.h"
+#include "Crowny/Scene/SceneManager.h"
 
 #include "Crowny/Scripting/Mono/MonoClass.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
+#include "Crowny/Scripting/ScriptObject.h"
+
+#include "Crowny/Scripting/Serialization/SerializableObject.h"
+#include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
 
 #include "Crowny/Ecs/Entity.h"
 
@@ -153,8 +158,10 @@ namespace Crowny
         Entity Parent;
 
         RelationshipComponent() : ComponentBase() {}
-        RelationshipComponent(const RelationshipComponent&) = default;
+        RelationshipComponent(const RelationshipComponent& other) = default;
         RelationshipComponent(const Entity& parent) : Parent(parent) {}
+
+        RelationshipComponent& operator=(const RelationshipComponent& other);
     };
 
     struct AudioSourceComponent : public ComponentBase
@@ -236,8 +243,8 @@ namespace Crowny
         MonoClass* GetManagedClass() const;
         MonoObject* GetManagedInstance() const;
 
-        const Vector<MonoField*>& GetSerializableFields() const { return m_DisplayableFields; }
-        const Vector<MonoProperty*>& GetSerializableProperties() const { return m_DisplayableProperties; }
+        ScriptObjectBackupData BeginRefresh();
+        void EndRefresh(const ScriptObjectBackupData& data);
 
         void OnInitialize(Entity entity);
         void OnStart();
@@ -249,9 +256,12 @@ namespace Crowny
         typedef void(CW_THUNKCALL* OnUpdateThunkDef)(MonoObject*, MonoException**);
         typedef void(CW_THUNKCALL* OnDestroyThunkDef)(MonoObject*, MonoException**);
 
+        String m_TypeName;
+        String m_Namespace;
+        bool m_MissingType;
+        Ref<SerializableObject> m_SerializedObjectData;
+        Ref<SerializableObjectInfo> m_ObjectInfo;
         MonoClass* m_Class = nullptr;
-        Vector<MonoField*> m_DisplayableFields;
-        Vector<MonoProperty*> m_DisplayableProperties;
         uint32_t m_Handle = 0;
         OnStartThunkDef m_OnStartThunk = nullptr;
         OnUpdateThunkDef m_OnUpdateThunk = nullptr;
@@ -288,7 +298,7 @@ namespace Crowny
         bool IsTrigger = false;
         PhysicsMaterial2D Material;
 
-        void* RuntimeFixture;
+        void* RuntimeFixture; // duplicating during runtime will be wrong
 
         BoxCollider2DComponent() : ComponentBase() {}
         BoxCollider2DComponent(const BoxCollider2DComponent& collider) = default;
@@ -304,7 +314,7 @@ namespace Crowny
 
         PhysicsMaterial2D Material;
 
-        void* RuntimeFixture;
+        void* RuntimeFixture; // duplicating during runtime will be wrong
 
         CircleCollider2DComponent() : ComponentBase() {}
         CircleCollider2DComponent(const CircleCollider2DComponent& collider) = default;

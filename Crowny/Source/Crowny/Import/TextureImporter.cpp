@@ -69,6 +69,7 @@ namespace Crowny
         Ref<Texture> texture = Texture::Create(params);
         pixelData.SetBuffer(rawPixelData);
         texture->WriteData(pixelData);
+        texture->SetName(filepath.filename());
         return texture;
     }
 

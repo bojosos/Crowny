@@ -10,11 +10,11 @@
 
 #include "Panels/HierarchyPanel.h"
 #include "Panels/ViewportPanel.h"
+#include "Panels/UIUtils.h"
 
 #include <ImGuizmo.h>
 #include <backends/imgui_impl_vulkan.h>
 #include <glm/gtc/type_ptr.hpp>
-#include <imgui.h>
 
 namespace Crowny
 {
@@ -24,10 +24,9 @@ namespace Crowny
     void ViewportPanel::Render()
     {
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
-        ImGui::Begin("Viewport", &m_Shown);
-        UpdateState();
+        BeginPanel();
         Application::Get().GetImGuiLayer()->BlockEvents(!m_Focused && !m_Hovered);
-        if (m_Focused || m_Hovered) // Change gizmo type
+        if (m_Focused) // Change gizmo type
         {
             if (Input::IsKeyPressed(Key::W))
                 m_GizmoMode = ImGuizmo::TRANSLATE;
@@ -52,11 +51,10 @@ namespace Crowny
 
         if (ImGui::BeginDragDropTarget()) // Drag drop scenes and meshes
         {
-            const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_ITEM");
-            if (payload)
+            if (const ImGuiPayload* payload = UIUtils::AcceptAssetPayload())
             {
-                const char* path = (const char*)payload->Data;
-                ImGuiViewportSceneDraggedEvent event(path);
+                Path assetPath = UIUtils::GetPathFromPayload(payload);
+                ImGuiViewportSceneDraggedEvent event(assetPath);
                 OnEvent(event);
             }
             ImGui::EndDragDropTarget();
@@ -111,7 +109,7 @@ namespace Crowny
             }
         }
 
-        ImGui::End();
+        EndPanel();
         ImGui::PopStyleVar();
     }
 

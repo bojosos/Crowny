@@ -118,6 +118,7 @@ namespace Crowny
     class CSharpScriptImportOptions : public ImportOptions
     {
     public:
+        bool IsEditorScript = false;
         virtual ImportOptionsType GetImportOptionsType() const override { return ImportOptionsType::Script; }
 
         virtual Ref<ImportOptions> Clone() const override
@@ -143,6 +144,11 @@ namespace Crowny
     template <typename Archive> void Serialize(Archive& archive, ShaderImportOptions& importOptions)
     {
         archive(importOptions.Language, importOptions.m_Defines);
+    }
+
+    template <typename Archive> void Serialize(Archive& archive, CSharpScriptImportOptions& importOptions)
+    {
+        archive(importOptions.IsEditorScript);
     }
 
 } // namespace Crowny

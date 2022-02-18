@@ -26,6 +26,8 @@ namespace Crowny
         Scene& operator=(Scene& other);
         ~Scene();
 
+        Entity DuplicateEntity(Entity entity, bool includeChildren = true);
+
         void OnViewportResize(uint32_t width, uint32_t height);
 
         Entity CreateEntity(const String& name = "");

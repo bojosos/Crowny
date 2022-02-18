@@ -4,6 +4,79 @@
 
 namespace Crowny
 {
+    class Component;
+    class TransformComponent;
+    class CameraComponent;
+    class MonoScriptComponent;
+    class AudioSourceComponent;
+    class AudioListenerComponent;
+    class TagComponent;
+    class IDComponent;
+    class ImportOptions;
+    class AudioClipImportOptions;
+    class TextureImportOptions;
+    class ShaderImportOptions;
+    class ScriptImportOptions;
+    // Poor man's rtti
+    enum TypeId
+    {
+        TID_Component = 1,
+        TID_TransformComponent = 2,
+        TID_CameraComponent = 3,
+        TID_MonoScriptComponent = 4,
+        TID_AudioSourceComponent = 5,
+        TID_AudioListenerComponent = 6,
+        TID_IDComponent = 7,
+        TID_TagComponent = 8,
+
+        TID_ImportOptions = 20,
+        TID_AudioClipImportOptions = 21,
+        TID_TextureImportOptions = 22,
+        TID_ShaderImportOptions = 23,
+        TID_ScriptImportOptions = 24
+    };
+
+    template <typename T>
+    uint32_t GetRuntimeId();
+
+    template <>
+    uint32_t GetRuntimeId<Component>() { return TID_Component; }
+
+    template <>
+    uint32_t GetRuntimeId<TransformComponent>() { return TID_TransformComponent; }
+
+    template <>
+    uint32_t GetRuntimeId<CameraComponent>() { return TID_CameraComponent; }
+
+    template <>
+    uint32_t GetRuntimeId<MonoScriptComponent>() { return TID_MonoScriptComponent; }
+
+    template <>
+    uint32_t GetRuntimeId<AudioSourceComponent>() { return TID_AudioSourceComponent; }
+
+    template <>
+    uint32_t GetRuntimeId<AudioListenerComponent>() { return TID_AudioListenerComponent; }
+
+    template <>
+    uint32_t GetRuntimeId<TagComponent>() { return TID_TagComponent; }
+
+    template <>
+    uint32_t GetRuntimeId<IDComponent>() { return TID_IDComponent; }
+
+    template <>
+    uint32_t GetRuntimeId<ImportOptions>() { return TID_ImportOptions; }
+
+    template <>
+    uint32_t GetRuntimeId<AudioClipImportOptions>() { return TID_AudioClipImportOptions; }
+
+    template <>
+    uint32_t GetRuntimeId<TextureImportOptions>() { return TID_TextureImportOptions; }
+
+    template <>
+    uint32_t GetRuntimeId<ShaderImportOptions>() { return TID_ShaderImportOptions; }
+
+    template <>
+    uint32_t GetRuntimeId<ScriptImportOptions>() { return TID_ScriptImportOptions; }
 
     using byte = uint8_t;
 

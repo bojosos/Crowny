@@ -6,6 +6,7 @@
 #include "Crowny/Scripting/Mono/MonoClass.h"
 #include "Crowny/Scripting/ScriptComponent.h"
 #include "Crowny/Scripting/ScriptSceneObjectManager.h"
+#include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
 
 namespace Crowny
 {
@@ -16,15 +17,22 @@ namespace Crowny
         MonoClass* SystemGenericListClass = nullptr;
         MonoClass* SystemGenericDictionaryClass = nullptr;
         MonoClass* SystemTypeClass = nullptr;
+        MonoClass* SystemSerializable = nullptr;
 
         MonoClass* ComponentClass = nullptr;
         MonoClass* EntityClass = nullptr;
         MonoClass* EntityBehaviour = nullptr;
+        MonoClass* AssetClass = nullptr;
 
         MonoClass* SerializeFieldAttribute = nullptr;
         MonoClass* RangeAttribute = nullptr;
-        MonoClass* ShowInInspector = nullptr;
-        MonoClass* HideInInspector = nullptr;
+        MonoClass* StepAttribute = nullptr;
+        MonoClass* ShowInInspectorAttribute = nullptr;
+        MonoClass* HideInInspectorAttribute = nullptr;
+        MonoClass* SerializableObjectAtrribute = nullptr;
+        MonoClass* NotNullAttribute = nullptr;
+        MonoClass* DontSerializeFieldAttribute = nullptr;
+        
         MonoClass* ScriptUtils = nullptr;
     };
 
@@ -35,11 +43,15 @@ namespace Crowny
         std::function<void(Entity)> RemoveCallback;
         std::function<ScriptComponentBase*(Entity)> GetCallback;
         std::function<ScriptComponentBase*(Entity)> CreateCallback;
+
+        const ScriptMeta* Metadata;
     };
 
-    struct BuiltinTypeMappings
+    struct ScriptTypeInfo
     {
-        Vector<ComponentInfo> Components;
+        const ScriptMeta* Metadata;
+        MonoClass* ScriptClass;
+        uint32_t TypeId;
     };
 
     class ScriptInfoManager : public Module<ScriptInfoManager>
@@ -47,14 +59,20 @@ namespace Crowny
     public:
         ScriptInfoManager();
         ~ScriptInfoManager() = default;
-        void LoadAssemblyInfo(const String& assemblyName, const BuiltinTypeMappings& typeMappings);
         void ClearAssemblyInfo();
         ComponentInfo* GetComponentInfo(MonoReflectionType* type);
         void InitializeTypes();
 
         const BuiltinScriptClasses& GetBuiltinClasses() { return m_Builtin; }
 
+        void LoadAssemblyInfo(const String& assemblyName);
+
+        ScriptTypeInfo* GetSerializableTypeInfo(MonoReflectionType* reflType);
+
+        bool GetSerializableObjectInfo(const String& ns, const String& name, Ref<SerializableObjectInfo>& outInfo);
     private:
+        Ref<SerializableTypeInfo> GetTypeInfo(MonoClass* monoClass);
+        void RegisterComponents();
         template <typename Component, class ScriptType> void RegisterComponent()
         {
             MonoReflectionType* reflType = MonoUtils::GetType(ScriptType::GetMetaData()->ScriptClass->GetInternalPtr());
@@ -73,11 +91,29 @@ namespace Crowny
                 MonoObject* managedInstance = ScriptType::GetMetaData()->ScriptClass->CreateInstance();
                 return new ScriptType(managedInstance, entity);
             };
+            componentInfo.Metadata = ScriptType::GetMetaData();
             m_ComponentInfos[reflType] = componentInfo;
         }
 
+        template <typename SerializableType, class ScriptType>
+        void RegisterSerializableType()
+        {
+            MonoReflectionType* reflType = MonoUtils::GetType(ScriptType::GetMetaData()->ScriptClass->GetInternalPtr());
+            ScriptTypeInfo scriptTypeInfo;
+            scriptTypeInfo.Metadata = ScriptType::GetMetaData();
+            scriptTypeInfo.ScriptClass = nullptr;
+            scriptTypeInfo.TypeId = GetRuntimeId<SerializableType>();
+            m_ScriptTypeInfos[reflType] = scriptTypeInfo;
+        }
+
+        void ClearScriptObjects();
+
     private:
+        bool m_BaseTypesInitialized;
+        uint32_t m_UniqueTypeId = 1;
         BuiltinScriptClasses m_Builtin;
-        UnorderedMap<MonoReflectionType*, ComponentInfo> m_ComponentInfos;
+        UnorderedMap<MonoReflectionType*, ComponentInfo> m_ComponentInfos; // TODO: Have to replace the reflection type with scriptmeta or update the map after reload
+        UnorderedMap<MonoReflectionType*, ScriptTypeInfo> m_ScriptTypeInfos;
+        UnorderedMap<String, Ref<SerializableAssemblyInfo>> m_AssemblyInfos;
     };
 } // namespace Crowny
