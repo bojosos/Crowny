@@ -31,7 +31,7 @@ namespace Crowny
         }
         case ImportOptionsType::Shader: {
             Ref<ShaderImportOptions> shaderImportOptions = std::static_pointer_cast<ShaderImportOptions>(importOptions);
-            out << YAML::Key << "ShaderImproter" << YAML::Value;
+            out << YAML::Key << "ShaderImporter" << YAML::Value;
             out << YAML::BeginMap;
             // out << YAML::Key << shaderImportOptions->GetDefines();
             out << YAML::EndMap;
@@ -56,6 +56,9 @@ namespace Crowny
             Ref<CSharpScriptImportOptions> scriptImportOptions =
               std::static_pointer_cast<CSharpScriptImportOptions>(importOptions);
             out << YAML::Key << "ScriptImporter";
+            out << YAML::BeginMap;
+            out << YAML::Key << "IsEditorScript" << YAML::Value << scriptImportOptions->IsEditorScript;
+            out << YAML::EndMap;
             break;
         }
         }
@@ -163,6 +166,15 @@ namespace Crowny
                 // const auto& map = mapNode.as<UnorderedMap<String, String>>();
                 // for (const auto& kvp : map)
                 // importOptions->SetDefine(kvp.first, kvp.second);
+            }
+            return importOptions;
+        }
+        else if (const auto& scriptIo = data["ScriptImporter"])
+        {
+            Ref<CSharpScriptImportOptions> importOptions = CreateRef<CSharpScriptImportOptions>();
+            if (const auto& isEditorScript = scriptIo["IsEditorScript"])
+            {
+                importOptions->IsEditorScript = isEditorScript.as<bool>();
             }
             return importOptions;
         }

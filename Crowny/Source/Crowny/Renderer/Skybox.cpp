@@ -210,7 +210,7 @@ namespace Crowny
         uniforms->SetTexture(0, 1, m_EnvironmentMap);
         for (uint32_t j = 0; j < 6; j++)
         {
-            auto persp = glm::perspective((float)(M_PI / 2.0), 1.0f, 0.1f, 64.0f) * matrices[j];
+            auto persp = glm::perspective((float)(M_PI * 0.5f), 1.0f, 0.1f, 64.0f) * matrices[j];
             mvp->Write(0, &persp, sizeof(glm::mat4));
             for (uint32_t i = 0; i < numMips; i++)
             {
@@ -289,7 +289,7 @@ namespace Crowny
         uniforms->SetUniformBlockBuffer(ShaderType::FRAGMENT_SHADER, "Params", fragBlock);
         for (uint32_t j = 0; j < 6; j++)
         {
-            auto persp = glm::perspective((float)(M_PI / 2.0), 1.0f, 0.1f, 512.0f) * matrices[j];
+            auto persp = glm::perspective((float)(M_PI * 0.5f), 1.0f, 0.1f, 512.0f) * matrices[j];
             mvp->Write(0, &persp, sizeof(glm::mat4));
             for (uint32_t i = 0; i < numMips; i++)
             {

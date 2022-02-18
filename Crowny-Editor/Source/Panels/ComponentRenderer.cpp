@@ -9,6 +9,7 @@
 
 #include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
+#include "Crowny/Scripting/ScriptSceneObjectManager.h"
 
 #include <backends/imgui_impl_vulkan.h>
 #include <imgui.h>
@@ -17,7 +18,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
-#include <mono/metadata/object.h>
+
+#include <mono/metadata/object.h> // Remove
 #include <mono/metadata/reflection.h>
 
 namespace Crowny
@@ -414,13 +416,16 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<AudioSourceComponent>(Entity e)
     {
-        auto& sourceComponent = e.GetComponent<AudioSourceComponent>();
+        AudioSourceComponent& sourceComponent = e.GetComponent<AudioSourceComponent>();
 
         ImGui::Columns(2);
 
         ImGui::Text("Audio Clip");
         ImGui::NextColumn();
-        ImGui::Text("Audio clip goes here");
+        if (sourceComponent.GetClip() != nullptr)
+            ImGui::Text("%s", sourceComponent.GetClip()->GetName().c_str());
+        else
+            ImGui::Text("Audio clip goes here");
         ImGui::NextColumn();
 
         ImGui::Text("Volume");
@@ -503,14 +508,35 @@ namespace Crowny
         }
 
         ImGui::NextColumn();
-        auto& fields = script.GetSerializableFields();
+        // auto& fields = script.GetSerializableFields();
+        /*
         for (uint32_t i = 0; i < fields.size(); i++)
         {
-            auto* field = fields[i];
+            MonoField* field = fields[i];
+            MonoClass* fieldClass = field->GetType();
             ImGui::PushID(i);
             ImGui::Text("%s", field->GetName().c_str());
             ImGui::NextColumn();
             MonoObject* instance = script.GetManagedInstance();
+
+            if (ImGui::BeginPopup(field->GetName().c_str()))
+            {
+                Scene* activeScene = SceneManager::GetActiveScene().get();
+                auto view = activeScene->GetAllEntitiesWith<TagComponent>();
+                for (auto id : view)
+                {
+                    Entity entity{ id, activeScene };
+                    ImGui::PushID((int32_t)id);
+                    if (ImGui::Selectable(entity.GetName().c_str()))
+                    {
+                        MonoObject* value = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(entity)->GetManagedInstance();
+                        field->Set(instance, value);
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::PopID();
+                }
+                ImGui::EndPopup();
+            }
             if (instance != nullptr)
             {
                 switch (field->GetPrimitiveType())
@@ -565,6 +591,28 @@ namespace Crowny
                                 field->Set(instance, tmp);
                             }
                             ImGui::EndCombo();
+                        }
+                    }
+                    break;
+                }
+                case (MonoPrimitiveType::Class):
+                {
+                    if (fieldClass->IsSubClassOf(ScriptInfoManager::Get().GetBuiltinClasses().EntityClass)) // Entity handle
+                    {
+                        if (ImGui::Button("Select entity")) // Open entity selection modal
+                            ImGui::OpenPopup(field->GetName().c_str());
+
+                        if (ImGui::BeginDragDropTarget()) // Drag entities on the control
+                        {
+                            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Entity_ID"))
+                            {
+                                CW_ENGINE_ASSERT(payload->DataSize == sizeof(uint32_t));
+                                uint32_t id = *(const uint32_t*)payload->Data;
+                                Entity entity{ (entt::entity)id, SceneManager::GetActiveScene().get() };
+                                MonoObject* value = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(entity)->GetManagedInstance();
+                                field->Set(instance, value);
+                            }
+                            ImGui::EndDragDropTarget();
                         }
                     }
                     break;
@@ -754,6 +802,7 @@ namespace Crowny
 
             ImGui::PopID();
         }
+        */
         ImGui::Columns(1);
     }
 

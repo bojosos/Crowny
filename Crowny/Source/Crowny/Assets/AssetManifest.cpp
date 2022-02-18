@@ -71,6 +71,7 @@ namespace Crowny
 
     void AssetManifest::UnregisterAsset(const UUID& uuid)
     {
+        CW_ENGINE_INFO("Unregister");
         auto findIter = m_UuidToFilepath.find(uuid);
         if (findIter != m_UuidToFilepath.end())
         {

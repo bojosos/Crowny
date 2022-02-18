@@ -24,6 +24,27 @@ namespace Crowny
         static void GetClassName(::MonoClass* obj, String& ns, String& typeName);
         static void GetClassName(MonoReflectionType* reflType, String& ns, String& typeName);
 
+        static ::MonoClass* GetObjectClass();
+        static ::MonoClass* GetBoolClass();
+        static ::MonoClass* GetCharClass();
+        static ::MonoClass* GetSByteClass();
+        static ::MonoClass* GetByteClass();
+        static ::MonoClass* GetI16Class();
+        static ::MonoClass* GetU16Class();
+        static ::MonoClass* GetI32Class();
+        static ::MonoClass* GetU32Class();
+        static ::MonoClass* GetI64Class();        
+        static ::MonoClass* GetU64Class();
+        static ::MonoClass* GetFloatClass();
+        static ::MonoClass* GetDoubleClass();
+        static ::MonoClass* GetStringClass();
+
+        static MonoPrimitiveType GetPrimitiveType(::MonoClass* monoClass);
+        static MonoPrimitiveType GetEnumPrimitiveType(::MonoClass* monoClass);
+
+        static MonoObject* Box(void* value);
+        static void* Unbox(MonoObject* object);
+
         template <class T, class... Args> static void InvokeThunk(T* thunk, Args... args)
         {
             MonoException* exception = nullptr;

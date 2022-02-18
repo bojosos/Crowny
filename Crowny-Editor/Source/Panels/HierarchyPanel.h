@@ -15,8 +15,18 @@ namespace Crowny
         virtual void Render() override;
         void Update();
 
-        virtual void Show() override;
-        virtual void Hide() override;
+        template <class T>
+        void CreateEntityWith(Entity parent, const String& entityName)
+        {
+            m_DeferedActions.push_back([parent, entityName, this]() mutable {
+                auto activeScene = SceneManager::GetActiveScene();
+                Entity newEntity = activeScene->CreateEntity(entityName);
+                newEntity.AddComponent<T>();
+                parent.AddChild(newEntity);
+                m_NewOpenEntity = parent;
+            });
+        }
+        void CreateEmptyEntity(Entity parent);
 
     public:
         static void SetSelectedEntity(Entity entity) { s_SelectedEntity = entity; }
@@ -33,11 +43,17 @@ namespace Crowny
         void DisplayPopup(Entity e);
         void Rename(Entity e);
 
+#ifdef CW_DEBUG
+        void PrintDebugHierarchy();
+#endif
+
     private:
+        Entity m_NewOpenEntity;
+        Vector<std::function<void()>> m_DeferedActions;
         std::function<void(Entity)> m_SelectionChanged;
         bool m_Deleted = false;
-        Entity m_NewEntityParent = {};
         Entity m_Renaming = {};
+        String m_RenamingString;
         UnorderedSet<Entity> m_SelectedItems;
     };
 } // namespace Crowny

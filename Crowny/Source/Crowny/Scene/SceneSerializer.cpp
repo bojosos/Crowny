@@ -62,31 +62,31 @@ namespace Crowny
             out << YAML::BeginMap;
             auto msc = entity.GetComponent<MonoScriptComponent>();
             const String& name = msc.GetManagedClass()->GetName();
-            auto& fields = msc.GetSerializableFields();
-            if (fields.size() > 0)
-            {
-                out << YAML::Key << "Fields";
-                for (auto* field : fields)
-                {
-                    out << YAML::BeginMap;
-                    out << YAML::Key << field->GetName();
-                    out << YAML::Value << 5;
-                }
-                out << YAML::EndMap;
-            }
+            // auto& fields = msc.GetSerializableFields();
+            // if (fields.size() > 0)
+            // {
+            //     out << YAML::Key << "Fields";
+            //     for (auto* field : fields)
+            //     {
+            //         out << YAML::BeginMap;
+            //         out << YAML::Key << field->GetName();
+            //         out << YAML::Value << 5;
+            //     }
+            //     out << YAML::EndMap;
+            // }
 
-            auto& props = msc.GetSerializableProperties();
-            if (props.size() > 0)
-            {
-                out << YAML::Key << "Properties";
-                for (auto* prop : props)
-                {
-                    out << YAML::BeginMap;
-                    out << YAML::Key << prop->GetName();
-                    out << YAML::Value << 5;
-                }
-                out << YAML::EndMap;
-            }
+            // auto& props = msc.GetSerializableProperties();
+            // if (props.size() > 0)
+            // {
+            //     out << YAML::Key << "Properties";
+            //     for (auto* prop : props)
+            //     {
+            //         out << YAML::BeginMap;
+            //         out << YAML::Key << prop->GetName();
+            //         out << YAML::Value << 5;
+            //     }
+            //     out << YAML::EndMap;
+            // }
             out << YAML::Key << "Name" << YAML::Value << name;
             out << YAML::EndMap;
         }

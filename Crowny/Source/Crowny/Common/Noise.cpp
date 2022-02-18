@@ -27,15 +27,11 @@ namespace Crowny
 
             float noise = 0.0f;
             if (ops.NoiseFunc == NoiseFunc::Perlin)
-            {
                 noise = glm::perlin(glm::vec3(ops.Seed + x, ops.Seed + y, ops.Seed));
-            }
             else
-            {
                 noise = glm::simplex(glm::vec3(ops.Seed + x, ops.Seed + y, ops.Seed));
-            }
 
-            noise = (noise + 1.0f) / 2.0f;
+            noise = (noise + 1.0f) * 0.5f;
             val += noise * amp;
             accAmps += amp;
         }

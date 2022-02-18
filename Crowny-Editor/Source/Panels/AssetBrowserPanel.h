@@ -5,8 +5,6 @@
 #include "Editor/EditorDefaults.h"
 #include "Editor/ProjectLibrary.h"
 
-#include <imgui.h>
-
 namespace Crowny
 {
 
@@ -32,6 +30,8 @@ namespace Crowny
         SortCount = 3
     };
 
+    typedef void* ImTextureID;
+
     class AssetBrowserPanel : public ImGuiPanel
     {
     public:
@@ -39,9 +39,6 @@ namespace Crowny
         ~AssetBrowserPanel() = default;
 
         virtual void Render() override;
-
-        virtual void Show() override;
-        virtual void Hide() override;
 
         void Initialize();
 
@@ -51,8 +48,10 @@ namespace Crowny
         void DrawFiles();
         void CreateNew(AssetBrowserItem itemType);
         String GetDefaultContents(AssetBrowserItem itemType);
+        void HandleKeyboardNavigation();
 
     private:
+        uint32_t m_ColumnCount;
         ImTextureID m_FolderIcon;
         ImTextureID m_FileIcon;
 

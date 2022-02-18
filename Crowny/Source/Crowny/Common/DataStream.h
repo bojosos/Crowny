@@ -80,7 +80,7 @@ namespace Crowny
     class FileDataStream : public DataStream
     {
     public:
-        FileDataStream(const std::filesystem::path& path, AccessMode accessMode = READ, bool freeOnClose = true);
+        FileDataStream(const fs::path& path, AccessMode accessMode = READ, bool freeOnClose = true);
         ~FileDataStream();
         bool IsFile() const override { return true; }
         virtual size_t Read(void* buf, size_t count) const override;
@@ -95,7 +95,7 @@ namespace Crowny
         virtual Ref<DataStream> Clone(bool copyData = true) const override;
 
     private:
-        std::filesystem::path m_Path;
+        fs::path m_Path;
         Ref<std::istream> m_InStream;
         Ref<std::ifstream> m_FStreamRO;
         Ref<std::fstream> m_FStream;

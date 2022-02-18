@@ -2,6 +2,8 @@
 
 #include "Panels/TextureEditor.h"
 
+#include <imgui.h>
+
 namespace Crowny
 {
 

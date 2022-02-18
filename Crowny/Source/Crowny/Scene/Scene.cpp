@@ -144,6 +144,20 @@ namespace Crowny
 
     Scene::~Scene() { delete m_RootEntity; }
 
+    Entity Scene::DuplicateEntity(Entity entity, bool includeChildren)
+    {
+        Entity newEntity = CreateEntity(entity.GetName());
+        CopyAllExistingComponents(newEntity, entity);
+
+        const auto& children = entity.GetChildren();
+        for (auto child : children)
+        {
+            Entity e = DuplicateEntity(child);
+            e.SetParent(newEntity);
+        }
+        return newEntity;
+    }
+
     Entity Scene::GetPrimaryCameraEntity()
     {
         auto view = m_Registry.view<CameraComponent>();
@@ -301,7 +315,6 @@ namespace Crowny
         auto view = m_Registry.view<TagComponent>();
         for (auto entity : view)
         {
-            CW_ENGINE_INFO("Search: {0}, {1}, {2}", view.get<TagComponent>(entity).Tag, name, view.get<TagComponent>(entity).Tag == name);
             if (view.get<TagComponent>(entity).Tag == name)
                 return Entity(entity, this);
         }

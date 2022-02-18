@@ -200,7 +200,7 @@ namespace Crowny
         m_Size = bytes;
     }
 
-    FileDataStream::FileDataStream(const std::filesystem::path& path, AccessMode accessMode, bool freeOnClose)
+    FileDataStream::FileDataStream(const fs::path& path, AccessMode accessMode, bool freeOnClose)
       : DataStream(accessMode), m_Path(path), m_FreeOnClose(freeOnClose)
     {
         std::ios::openmode mode = std::ios::binary;

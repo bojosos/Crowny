@@ -8,13 +8,14 @@ namespace Crowny
     class ImGuiMenuItem
     {
     public:
-        ImGuiMenuItem(const String& title, const String& combination, const EventCallbackFn& onclicked);
+        ImGuiMenuItem(const String& title, const String& combination, const EventCallbackFn& onclicked, bool* shown = nullptr);
         ~ImGuiMenuItem() = default;
 
         void Render(uint32_t maxWidth);
         uint32_t GetTotalWidth();
 
     private:
+        bool* m_Shown = nullptr;
         EventCallbackFn OnClicked;
         String m_Combination;
         String m_Title;

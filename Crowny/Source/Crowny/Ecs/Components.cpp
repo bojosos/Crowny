@@ -7,16 +7,23 @@
 
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntityBehaviour.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
+#include "Crowny/Scripting/Serialization/SerializableObject.h"
 
 namespace Crowny
 {
+
+    RelationshipComponent& RelationshipComponent::operator=(const RelationshipComponent& other)
+    {
+        Parent = other.Parent;
+        return *this;
+    }
 
     void AudioSourceComponent::OnInitialize()
     {
         if (m_Internal != nullptr)
             return;
         m_Internal = gAudio().CreateSource();
-        m_Internal->SetClip(AssetManager::Get().Load<AudioClip>("Resources/Audio/test.asset"));
+        m_Internal->SetClip(m_AudioClip);
         m_Internal->SetVolume(m_Volume);
         m_Internal->SetPitch(m_Pitch);
         m_Internal->SetLooping(m_Loop);
@@ -127,7 +134,7 @@ namespace Crowny
             m_Internal->Stop();
     }
 
-    MonoScriptComponent::MonoScriptComponent(const String& name) { SetClassName(name); }
+    MonoScriptComponent::MonoScriptComponent(const String& name) : ComponentBase() { SetClassName(name); }
 
     MonoClass* MonoScriptComponent::GetManagedClass() const { return m_Class; }
     MonoObject* MonoScriptComponent::GetManagedInstance() const
@@ -137,12 +144,27 @@ namespace Crowny
 
     void MonoScriptComponent::OnInitialize(Entity entity)
     {
-        if (!m_Class)
-            return;
-        MonoObject* instance = m_Class->CreateInstance();
+        MonoObject* managedInstance;
+        if (m_Class != nullptr)
+        {
+            m_ObjectInfo = nullptr;
+            if (ScriptInfoManager::Get().GetSerializableObjectInfo(m_Namespace, m_TypeName, m_ObjectInfo))
+            {
+                m_MissingType = false;
+                managedInstance = m_ObjectInfo->m_MonoClass->CreateInstance();
+            }
+            else
+            {
+                managedInstance = nullptr;
+                m_MissingType = true;
+            }
+        }
+        // ScriptSceneObjectManager::Get().CreateManagedScriptComponent(managedInstance, component); // TODO: Create a managed component so that in C# land 
+                                                                                              // we can do ManagedComponent c = GetComponent<ManagedComponent>();
+                                                                                              // and not have to cast it
 
         m_ScriptEntityBehaviour = static_cast<ScriptEntityBehaviour*>(
-          ScriptSceneObjectManager::Get().CreateScriptComponent(instance, entity, *this));
+          ScriptSceneObjectManager::Get().CreateScriptComponent(managedInstance, entity, *this));
 
         if (m_OnStartThunk == nullptr)
         {
@@ -164,35 +186,46 @@ namespace Crowny
             if (onDestroyMethod != nullptr)
                 m_OnDestroyThunk = (OnDestroyThunkDef)onDestroyMethod->GetThunk();
         }
+
+        MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
+        if (m_SerializedObjectData != nullptr && !m_MissingType)
+        {
+            m_SerializedObjectData->Deserialize(instance, m_ObjectInfo);
+            m_SerializedObjectData = nullptr;
+        }
+        // Could add and call an OnAwake method like in Unity here
+    }
+
+    ScriptObjectBackupData MonoScriptComponent::BeginRefresh()
+    {
+        MonoObject* instance = GetManagedInstance();
+        Ref<SerializableObject> serializableObject = SerializableObject::CreateFromMonoObject(instance);
+        if (serializableObject == nullptr)
+            return { nullptr, 0 };
+        Ref<MemoryDataStream> stream = CreateRef<MemoryDataStream>();
+        // YamlSerializer ys;
+        // ys.Serialize(serializableObject, stream);
+        ScriptObjectBackupData backupData;
+        // backupData.Size = stream->GetSize();
+        // backupData.Data = stream->DisownMemory(); // TODO: implement in datastream
+        return backupData;
+    }
+
+    void MonoScriptComponent::EndRefresh(const ScriptObjectBackupData& data)
+    {
+        MonoObject* instance = GetManagedInstance();
+        if (instance != nullptr && data.Data != nullptr)
+        {
+            // Deserialize
+            // ScriptInfoManager::Get().GetSerializableObjectInfo(namespace, typename, objInfo);
+
+        }
     }
 
     void MonoScriptComponent::SetClassName(const String& className)
     {
         m_Class = MonoManager::Get().GetAssembly(GAME_ASSEMBLY)->GetClass("Sandbox", className);
-        if (m_Class != nullptr)
-        {
-            for (auto* field : m_Class->GetFields()) // TODO: These should not be normal Mono fields
-            {
-                bool isHidden = field->HasAttribute(ScriptInfoManager::Get().GetBuiltinClasses().HideInInspector);
-                bool isVisible =
-                  field->GetVisibility() == CrownyMonoVisibility::Public ||
-                  field->HasAttribute(ScriptInfoManager::Get().GetBuiltinClasses().SerializeFieldAttribute) ||
-                  field->HasAttribute(ScriptInfoManager::Get().GetBuiltinClasses().ShowInInspector);
-                if (field != nullptr && !isHidden && isVisible)
-                    m_DisplayableFields.push_back(field);
-            }
-
-            for (auto* prop : m_Class->GetProperties())
-            {
-                bool isHidden = prop->HasAttribute(ScriptInfoManager::Get().GetBuiltinClasses().HideInInspector);
-                bool isVisible =
-                  prop->GetVisibility() == CrownyMonoVisibility::Public ||
-                  prop->HasAttribute(ScriptInfoManager::Get().GetBuiltinClasses().SerializeFieldAttribute) ||
-                  prop->HasAttribute(ScriptInfoManager::Get().GetBuiltinClasses().ShowInInspector);
-                if (prop && !isHidden && isVisible)
-                    m_DisplayableProperties.push_back(prop);
-            }
-        }
+        
     }
 
     void MonoScriptComponent::OnStart()

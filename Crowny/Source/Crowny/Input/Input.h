@@ -18,6 +18,8 @@ namespace Crowny
     };
 
     class Application;
+    class LinuxWindow;
+    class WindowsWindow;
 
     class Input
     {
@@ -36,7 +38,11 @@ namespace Crowny
         static void SetMouseGrabbed(bool grabbed);
         static bool IsMouseGrabbed();
         static void SetMousePosition(const glm::vec2& position);
-        // static uint32_t GetMouseScroll();
+
+        static float GetMouseScrollX();
+        static float GetMouseScrollY();
+
+        static void OnMouseScroll(float xOffset, float yOffset);
     private:
         friend class Application;
         static void OnUpdate();
@@ -45,6 +51,10 @@ namespace Crowny
         static bool GetMouseButton(const MouseCode button);
 
     private:
+        friend class LinuxWindow;
+        friend class WindowsWindow;
+
+        static float m_FrameScrollX, m_FrameScrollY;
         static bool s_Grabbed;
     };
 } // namespace Crowny

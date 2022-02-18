@@ -4,6 +4,9 @@
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Scene/ScriptRuntime.h"
 
+#include "Crowny/Scripting/Mono/MonoManager.h"
+#include "Crowny/Scripting/ScriptObjectManager.h"
+
 namespace Crowny
 {
 
@@ -41,6 +44,26 @@ namespace Crowny
 
         activeScene->m_Registry.view<AudioSourceComponent>().each(
           [&](entt::entity entity, AudioSourceComponent& sc) { sc.Stop(); });
+    }
+
+    void ScriptRuntime::Reload()
+    {
+        Vector<AssemblyRefreshInfo> assemblies;
+
+        Path engineAssemblyPath = String("Resources/Assemblies/") + CROWNY_ASSEMBLY + ".dll";
+        assemblies.push_back(AssemblyRefreshInfo(CROWNY_ASSEMBLY, &engineAssemblyPath));
+
+        Path gameAssmeblyPath = String("Resources/Assemblies/") + GAME_ASSEMBLY + ".dll";
+        if (fs::exists(gameAssmeblyPath))
+            assemblies.push_back(AssemblyRefreshInfo(GAME_ASSEMBLY, &gameAssmeblyPath));
+
+        ScriptObjectManager::Get().RefreshAssemblies(assemblies);
+    }
+
+    void ScriptRuntime::UnloadAssemblies()
+    {
+        MonoManager::Get().UnloadScriptDomain();
+        ScriptObjectManager::Get().ProcessFinalizedObjects();
     }
 
 } // namespace Crowny
