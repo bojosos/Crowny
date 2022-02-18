@@ -15,6 +15,7 @@ namespace Crowny
     class Editor : public Module<Editor>
     {
     public:
+        ~Editor() = default;
         const Path& GetProjectPath() const { return m_ProjectPath; }
         bool IsProjectLoaded() const { return !m_ProjectPath.empty(); }
 

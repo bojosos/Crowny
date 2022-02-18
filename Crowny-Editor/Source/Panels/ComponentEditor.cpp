@@ -3,6 +3,8 @@
 #include "Panels/ComponentEditor.h"
 #include "Panels/HierarchyPanel.h"
 
+#include <imgui.h>
+
 namespace Crowny
 {
     void ComponentEditor::Render()
@@ -37,34 +39,31 @@ namespace Crowny
         if (registry.valid(e))
         {
             ImGui::PushID(entt::to_integral(e));
-            for (auto& kv : m_ComponentInfos)
+            for (auto& [component_type_id, ci] : m_OrderedComponentInfos)
             {
-                for (auto& [component_type_id, ci] : kv.second)
+                if (EntityHasComponent(registry, e, component_type_id))
                 {
-                    if (EntityHasComponent(registry, e, component_type_id))
+                    ImGui::PushID(component_type_id);
+                    if (ImGui::Button("-"))
                     {
-                        ImGui::PushID(component_type_id);
-                        if (ImGui::Button("-"))
-                        {
-                            ci.destroy(entity);
-                            ImGui::PopID();
-                            continue;
-                        }
-                        else
-                        {
-                            ImGui::SameLine();
-                        }
-                        ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-                        if (ImGui::CollapsingHeader(ci.name.c_str()))
-                        {
-                            ImGui::Indent(30.f);
-                            ImGui::PushID("Widget");
-                            ci.widget(entity);
-                            ImGui::PopID();
-                            ImGui::Unindent(30.f);
-                        }
+                        ci.destroy(entity);
                         ImGui::PopID();
+                        continue;
                     }
+                    else
+                    {
+                        ImGui::SameLine();
+                    }
+                    ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+                    if (ImGui::CollapsingHeader(ci.name.c_str()))
+                    {
+                        ImGui::Indent(30.f);
+                        ImGui::PushID("Widget");
+                        ci.widget(entity);
+                        ImGui::PopID();
+                        ImGui::Unindent(30.f);
+                    }
+                    ImGui::PopID();
                 }
             }
             if (ImGui::Button("+ Add Component"))

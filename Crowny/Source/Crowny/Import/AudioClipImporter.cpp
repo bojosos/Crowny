@@ -87,6 +87,8 @@ namespace Crowny
         clipDesc.Is3D = audioImportOptions->Is3D;
         clipDesc.ReadMode = audioImportOptions->ReadMode;
         Ref<AudioClip> clip = CreateRef<AudioClip>(sampleStream, bufferSize, info.NumSamples, clipDesc);
+        CW_ENGINE_INFO(filepath);
+        CW_ENGINE_INFO(filepath.filename());
         clip->SetName(filepath.filename());
         return clip;
     }

@@ -10,8 +10,7 @@ namespace Crowny
     {
     public:
         explicit ImGuiConsoleSink(bool forceFlush = false, uint8_t capacity = 10)
-          : m_MessageBufferCapacity(forceFlush ? 1 : capacity),
-            m_MessageBuffer(Vector<Ref<ImGuiConsoleBuffer::Message>>(forceFlush ? 1 : capacity))
+          : m_MessageBufferCapacity(forceFlush ? 1 : capacity), m_MessageBuffer(m_MessageBufferCapacity)
         {
         }
 
@@ -25,7 +24,7 @@ namespace Crowny
             spdlog::memory_buf_t formatted;
             base_sink<Mutex>::formatter_->format(message, formatted);
             *(m_MessageBuffer.begin() + m_MessagesBuffered) =
-              CreateRef<ImGuiConsoleBuffer::Message>(fmt::to_string(formatted), GetMessageLevel(message.level));
+              ImGuiConsoleBuffer::Message(fmt::to_string(formatted), GetMessageLevel(message.level));
             if (++m_MessagesBuffered == m_MessageBufferCapacity)
                 flush_();
         }
@@ -33,7 +32,7 @@ namespace Crowny
         void flush_() override
         {
             for (int i = 0; i < m_MessagesBuffered; i++)
-                ImGuiConsoleBuffer::AddMessage(m_MessageBuffer[i]);
+                ImGuiConsoleBuffer::Get().AddMessage(m_MessageBuffer[i]);
             m_MessagesBuffered = 0;
         }
 
@@ -50,15 +49,17 @@ namespace Crowny
                 return ImGuiConsoleBuffer::Message::Level::Error;
             case spdlog::level::level_enum::critical:
                 return ImGuiConsoleBuffer::Message::Level::Critical;
+            default:
+                return ImGuiConsoleBuffer::Message::Level::Info; // trace info and off
             }
 
-            return ImGuiConsoleBuffer::Message::Level::Invalid;
+            return ImGuiConsoleBuffer::Message::Level::Info;
         }
 
     private:
         uint8_t m_MessagesBuffered = 0;
         uint8_t m_MessageBufferCapacity;
-        Vector<Ref<ImGuiConsoleBuffer::Message>> m_MessageBuffer;
+        Vector<ImGuiConsoleBuffer::Message> m_MessageBuffer;
     };
 } // namespace Crowny
 

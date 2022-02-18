@@ -86,8 +86,8 @@ def long_info():
     readfiles.sort(key=operator.attrgetter('charcount'))
     for f in readfiles:
         print(f)
-    short_info();
-long_info();
+    short_info()
+long_info()
 
 from datetime import datetime
 now = datetime.now()

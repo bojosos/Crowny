@@ -25,8 +25,8 @@ namespace Crowny
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-        io.MouseDoubleClickTime = 0.30f;
-        io.MouseDoubleClickMaxDist = 15.0f;
+        io.MouseDoubleClickTime = 0.15f;
+        io.MouseDoubleClickMaxDist = 6.0f;
 
         ImGui::StyleColorsDark();
         ImGuiStyle& style = ImGui::GetStyle();

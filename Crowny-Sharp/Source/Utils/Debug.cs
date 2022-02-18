@@ -23,7 +23,6 @@ namespace Crowny
         {
             if (message == null)
                 return "Null";
-            
             var formattable = message as IFormattable;
             if (formattable != null)
                 return formattable.ToString(null, CultureInfo.InvariantCulture);

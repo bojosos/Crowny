@@ -37,10 +37,13 @@ namespace Crowny
     class ScriptCode : public Asset
     {
     public:
-        ScriptCode(const String& source) : m_Source(source) {}
+        ScriptCode() = default;
+        ScriptCode(const String& source, bool isEditorScript) : m_Source(source), m_IsEditorScript(isEditorScript) {}
 
+        ~ScriptCode() = default;
     private:
         String m_Source;
+        bool m_IsEditorScript;
     };
 
 } // namespace Crowny

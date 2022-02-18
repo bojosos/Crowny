@@ -15,28 +15,33 @@ namespace Crowny
 
     void Entity::AddChild(Entity entity)
     {
+        if (entity.IsChildOf(*this))
+            return;
         auto& rc = GetComponent<RelationshipComponent>();
-        rc.Children.push_back(entity);
         entity.GetComponent<RelationshipComponent>().Parent = *this;
+        rc.Children.push_back(entity);
     }
 
     void Entity::SetParent(Entity entity)
     {
+        if (IsChildOf(entity))
+            return;
         auto& children = GetParent().GetComponent<RelationshipComponent>().Children;
-        for (int i = 0; i < children.size(); i++)
-        {
-            if (children[i] == *this)
-            {
-                children.erase(children.begin() + i);
-                break;
-            }
-        }
+        auto iterFind = std::find(children.begin(), children.end(), *this);
+        if (iterFind != children.end())
+            children.erase(iterFind);
 
         GetComponent<RelationshipComponent>().Parent = entity;
         entity.AddChild(*this);
     }
 
     Entity Entity::GetChild(uint32_t index) const { return GetComponent<RelationshipComponent>().Children[index]; }
+
+    bool Entity::IsChildOf(Entity other)
+    {
+        const auto& rc = GetComponent<RelationshipComponent>();
+        return std::find(rc.Children.begin(), rc.Children.end(), other) != rc.Children.end();
+    }
 
     const Vector<Entity>& Entity::GetChildren() const { return GetComponent<RelationshipComponent>().Children; }
 
@@ -51,6 +56,10 @@ namespace Crowny
 
     void Entity::Destroy()
     {
+        auto& children = GetParent().GetComponent<RelationshipComponent>().Children;
+        auto iterFind = std::find(children.begin(), children.end(), *this);
+        if (iterFind != children.end())
+            children.erase(iterFind);
         m_Scene->m_Registry.destroy(m_EntityHandle);
         m_EntityHandle = entt::null;
     }

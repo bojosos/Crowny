@@ -10,6 +10,8 @@ namespace Crowny
 {
     bool Input::s_Grabbed = false;
     static UnorderedMap<KeyCode, bool> s_KeyStates(0);
+    float Input::m_FrameScrollX = 0.0f;
+    float Input::m_FrameScrollY = 0.0f;
     static UnorderedMap<MouseCode, bool> s_MouseStates(0);
 
     static Vector<KeyCode> s_Keys = { Key::Space,
@@ -193,6 +195,16 @@ namespace Crowny
 
     bool Input::IsMouseGrabbed() { return s_Grabbed; }
 
+    float Input::GetMouseScrollX()
+    {
+        return m_FrameScrollX;
+    }
+
+    float Input::GetMouseScrollY()
+    {
+        return m_FrameScrollY;
+    }
+
     void Input::OnUpdate()
     {
         for (KeyCode key : s_Keys)
@@ -204,6 +216,7 @@ namespace Crowny
         {
             s_MouseStates[btn] = GetMouseButton(btn);
         }
+        m_FrameScrollX = m_FrameScrollY = 0;
     }
 
 } // namespace Crowny

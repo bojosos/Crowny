@@ -218,25 +218,25 @@ namespace Crowny
                             if (existingEntry == nullptr)
                                 AddDirectoryInternal(currentDir, dirPath);
                         }
-
-                        for (uint32_t i = 0; i < existingEntries.size(); i++)
-                        {
-                            if (existingEntries[i])
-                                continue;
-
-                            toDelete.push_back(currentDir->Children[i]);
-                        }
-
-                        for (auto& child : toDelete)
-                        {
-                            if (child->Type == LibraryEntryType::Directory) // Here we get a crash on refresh
-                                DeleteDirectoryInternal(std::static_pointer_cast<DirectoryEntry>(child));
-                            else if (child->Type == LibraryEntryType::File)
-                                DeleteAssetInternal(std::static_pointer_cast<FileEntry>(child));
-                        }
-
-                        toDelete.clear();
                     }
+
+                    for (uint32_t i = 0; i < existingEntries.size(); i++)
+                    {
+                        if (existingEntries[i])
+                            continue;
+
+                        toDelete.push_back(currentDir->Children[i]);
+                    }
+
+                    for (auto& child : toDelete)
+                    {
+                        if (child->Type == LibraryEntryType::Directory) // Here we get a crash on refresh
+                            DeleteDirectoryInternal(std::static_pointer_cast<DirectoryEntry>(child));
+                        else if (child->Type == LibraryEntryType::File)
+                            DeleteAssetInternal(std::static_pointer_cast<FileEntry>(child));
+                    }
+
+                    toDelete.clear();
 
                     for (auto& child : currentDir->Children)
                     {
@@ -255,7 +255,7 @@ namespace Crowny
     Path ProjectLibrary::GetMetadataPath(const Path& path) const
     {
         Path metaPath = path;
-        metaPath = metaPath.replace_filename(metaPath.filename().string() + ".meta");
+        metaPath = metaPath.replace_extension(metaPath.extension().string() + ".meta");
         return metaPath;
     }
 
@@ -336,7 +336,6 @@ namespace Crowny
     {
         if (!fs::is_directory(libEntriesPath.parent_path()))
             fs::create_directories(libEntriesPath.parent_path());
-        // CW_ENGINE_INFO(libEntriesPath);
         Ref<DataStream> stream = FileSystem::CreateAndOpenFile(libEntriesPath);
         BinaryDataStreamOutputArchive archive(stream);
         archive(m_RootEntry);
@@ -378,7 +377,7 @@ namespace Crowny
                                                bool forceReimport)
     {
         Path metaPath = entry->Filepath;
-        metaPath = metaPath.replace_extension("meta");
+        metaPath = metaPath.replace_filename(metaPath.filename().string() + ".meta");
         if (entry->Metadata == nullptr)
         {
             if (fs::is_regular_file(metaPath))
@@ -424,7 +423,6 @@ namespace Crowny
             SerializeMetadata(metaPath, entry->Metadata);
             const String uuidStr = uuid.ToString();
             outputPath /= (uuidStr + ".asset");
-            CW_ENGINE_INFO("Register: {0}", outputPath);
             m_AssetManifest->RegisterAsset(uuid, outputPath);
             AssetManager::Get().Save(asset, outputPath);
             return true;
@@ -434,7 +432,7 @@ namespace Crowny
 
     void ProjectLibrary::MoveEntry(const Path& oldPath, const Path& newPath, bool overwrite)
     {
-        Path oldFullPath = oldPath;
+        Path oldFullPath = oldPath; // These don't work
         if (!oldFullPath.is_absolute())
             oldFullPath = fs::absolute(oldFullPath);
 
@@ -453,11 +451,18 @@ namespace Crowny
         {
             if (!overwrite)
             {
+                CW_ENGINE_INFO("Here: {0}, {1}", oldFullPath, newFullPath);
                 if (!fs::exists(newFullPath))
+                {
+                    CW_ENGINE_INFO("Here2");
                     fs::rename(oldFullPath, newFullPath);
+                }
             }
             else
+            {
                 fs::rename(oldFullPath, newFullPath);
+            CW_ENGINE_INFO("Here2");
+            }
         }
 
         Path oldMetaPath = GetMetadataPath(oldFullPath);
@@ -466,9 +471,11 @@ namespace Crowny
         Ref<LibraryEntry> oldEntry = FindEntry(oldFullPath);
         if (oldEntry != nullptr)
         {
+            CW_ENGINE_INFO("We have old entry");
             if (std::search(newFullPath.begin(), newFullPath.end(), m_AssetFolder.begin(), m_AssetFolder.end()) ==
                 newFullPath.end())
             {
+                CW_ENGINE_INFO("Search");
                 if (oldEntry->Type == LibraryEntryType::File)
                     DeleteAssetInternal(std::static_pointer_cast<FileEntry>(oldEntry));
                 else if (oldEntry->Type == LibraryEntryType::Directory)
@@ -483,9 +490,12 @@ namespace Crowny
                     if (fileEntry->Metadata != nullptr)
                         m_UuidToPath[fileEntry->Metadata->Uuid] = newFullPath;
                 }
-
+                CW_ENGINE_INFO("Old meta path");
                 if (fs::is_regular_file(oldMetaPath))
+                {
+                    CW_ENGINE_INFO("Rename");
                     fs::rename(oldMetaPath, newMetaPath);
+                }
 
                 DirectoryEntry* parent = oldEntry->Parent;
                 auto iterFind = std::find(parent->Children.begin(), parent->Children.end(), oldEntry);
@@ -897,13 +907,12 @@ namespace Crowny
         if (entry->Metadata == nullptr)
             return false;
         Path internalPath;
-
         if (!m_AssetManifest->UuidToFilepath(entry->Metadata->Uuid, internalPath))
             return false;
-        if (!std::filesystem::exists(internalPath))
+        if (!fs::exists(internalPath))
             return false;
 
-        std::time_t lastModifiedTime = EditorUtils::FileTimeToCTime(std::filesystem::last_write_time(entry->Filepath));
+        std::time_t lastModifiedTime = EditorUtils::FileTimeToCTime(fs::last_write_time(entry->Filepath));
         std::time_t lastUpdateTime = entry->LastUpdateTime;
         return lastModifiedTime <= lastUpdateTime;
     }
@@ -926,8 +935,7 @@ namespace Crowny
     void ProjectLibrary::MakeEntriesAbsolute()
     {
         std::function<void(LibraryEntry*)> makeAbsolute = [&](LibraryEntry* entry) {
-            entry->Filepath = m_AssetFolder / entry->Filepath;
-            // CW_ENGINE_INFO(entry->Filepath);
+            entry->Filepath = (m_AssetFolder / entry->Filepath).lexically_normal();
             if (entry->Type == LibraryEntryType::Directory)
             {
                 DirectoryEntry* dirEntry = static_cast<DirectoryEntry*>(entry);
@@ -955,10 +963,24 @@ namespace Crowny
             m_RootEntry->Parent = nullptr;
         }
 
+        String tabs;
+        std::function<void(const Ref<LibraryEntry>&)> traverse = [&](const Ref<LibraryEntry>& entry) {
+            CW_ENGINE_INFO("{0} Entry: {1}, {2}", tabs, entry->Filepath, entry->ElementName);
+            if (entry->Type == LibraryEntryType::Directory)
+            {
+                tabs += "\t";
+                for (auto& child : std::static_pointer_cast<DirectoryEntry>(entry)->Children)
+                    traverse(child);
+                tabs = tabs.substr(0, tabs.size() - 2);
+            }
+        };
+        CW_ENGINE_INFO("Original entries");
+        traverse(m_RootEntry);
+
         MakeEntriesAbsolute();
         Path assetManifestPath = m_ProjectFolder / PROJECT_INTERNAL_DIR / ASSET_MANIFEST_FILENAME;
         if (fs::exists(assetManifestPath))
-            m_AssetManifest = AssetManifest::Deserialize(assetManifestPath, m_AssetFolder);
+            m_AssetManifest = AssetManifest::Deserialize(assetManifestPath, m_ProjectFolder);
         else
             m_AssetManifest = CreateRef<AssetManifest>("ProjectLibrary");
 
@@ -977,7 +999,6 @@ namespace Crowny
                 if (child->Type == LibraryEntryType::File)
                 {
                     Ref<FileEntry> entry = std::static_pointer_cast<FileEntry>(child);
-                    // CW_ENGINE_INFO("Filesize: {0}, {1}", entry->Filesize, entry->Filepath);
                     if (fs::is_regular_file(entry->Filepath))
                     {
                         if (entry->Metadata == nullptr)
@@ -1055,19 +1076,20 @@ namespace Crowny
     {
         if (!m_IsLoaded)
             return;
-        // String tabs;
-        // std::function<void(const Ref<LibraryEntry>&)> traverse = [&](const Ref<LibraryEntry>& entry) {
-        //     CW_ENGINE_INFO("{0} Entry: {1}, {2}", tabs, entry->Filepath, entry->ElementName);
-        //     if (entry->Type == LibraryEntryType::Directory)
-        //     {
-        //         tabs += "\t";
-        //         for (auto& child : std::static_pointer_cast<DirectoryEntry>(entry)->Children)
-        //             traverse(child);
-        //         tabs = tabs.substr(0, tabs.size() - 2);
-        //     }
-        // };
-        // CW_ENGINE_INFO("Original entries");
-        // traverse(m_RootEntry);
+        String tabs;
+        std::function<void(const Ref<LibraryEntry>&)> traverse = [&](const Ref<LibraryEntry>& entry) {
+            CW_ENGINE_INFO("{0} Entry: {1}, {2}", tabs, entry->Filepath, entry->ElementName);
+            if (entry->Type == LibraryEntryType::Directory)
+            {
+                tabs += "\t";
+                for (auto& child : std::static_pointer_cast<DirectoryEntry>(entry)->Children)
+                    traverse(child);
+                tabs = tabs.substr(0, tabs.size() - 2);
+            }
+        };
+        CW_ENGINE_INFO("Original entries");
+        traverse(m_RootEntry);
+
         MakeEntriesRelative();
         // CW_ENGINE_INFO("Relative entries");
         // traverse(m_RootEntry);
@@ -1077,7 +1099,7 @@ namespace Crowny
         // CW_ENGINE_INFO("Absolute entries");
         // traverse(m_RootEntry);
         Path assetManifestPath = m_ProjectFolder / PROJECT_INTERNAL_DIR / ASSET_MANIFEST_FILENAME;
-        AssetManifest::Serialize(m_AssetManifest, assetManifestPath, m_ProjectFolder.parent_path());
+        AssetManifest::Serialize(m_AssetManifest, assetManifestPath, m_ProjectFolder);
     }
 
 } // namespace Crowny

@@ -118,7 +118,7 @@ namespace Crowny
         rapi.SetIndexBuffer(s_Data->SkyboxIbo);
 
         rapi.SetUniforms(s_Data->SkyboxUniforms);
-        // rapi.DrawIndexed(0, s_Data->SkyboxIbo->GetCount(), 0, 1);
+        rapi.DrawIndexed(0, s_Data->SkyboxIbo->GetCount(), 0, 1);
     }
 
     void ForwardRenderer::SubmitLightSetup() {}

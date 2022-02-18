@@ -45,7 +45,8 @@ namespace Crowny
                 }
             }
         }
-
+        if (logDomain == nullptr)
+            logDomain = "Null";
         if (errorLevel == 0)
             CW_ENGINE_ERROR("Mono: {0} in {1}", message, logDomain);
         else if (errorLevel <= 2)

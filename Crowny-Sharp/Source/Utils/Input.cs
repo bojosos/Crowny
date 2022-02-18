@@ -200,5 +200,18 @@ namespace Crowny
         /// <returns>True if the mouse button was pressed last frame and now isn't, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.InternalCall)]
         public extern static bool GetMouseButtonUp(MouseCode code);
+
+        /// <summary>
+        /// The horizontal delta of mouse wheel.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        public extern static float GetMouseScrollX();
+
+        /// <summary>
+        /// The vertical delta of the mouse wheel.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        public extern static float GetMouseScrollY();
+        
     }
 }

@@ -9,5 +9,8 @@ namespace Crowny
         static void OnStart();
         static void OnUpdate();
         static void OnShutdown();
+
+        static void Reload();
+        static void UnloadAssemblies();
     };
 } // namespace Crowny

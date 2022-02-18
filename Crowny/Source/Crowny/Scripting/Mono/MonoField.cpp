@@ -70,55 +70,6 @@ namespace Crowny
         return hasAttr;
     }
 
-    MonoPrimitiveType MonoField::GetPrimitiveType() const
-    {
-        MonoType* type = mono_class_get_type(m_Type->GetInternalPtr());
-        int primitiveType = mono_type_get_type(type);
-        switch (primitiveType)
-        {
-        case (MONO_TYPE_BOOLEAN):
-            return MonoPrimitiveType::Bool;
-        case (MONO_TYPE_CHAR):
-            return MonoPrimitiveType::Char;
-        case (MONO_TYPE_I1):
-            return MonoPrimitiveType::I8;
-        case (MONO_TYPE_U1):
-            return MonoPrimitiveType::U8;
-        case (MONO_TYPE_I2):
-            return MonoPrimitiveType::I16;
-        case (MONO_TYPE_U2):
-            return MonoPrimitiveType::U16;
-        case (MONO_TYPE_I4):
-            return MonoPrimitiveType::I32;
-        case (MONO_TYPE_U4):
-            return MonoPrimitiveType::U32;
-        case (MONO_TYPE_I8):
-            return MonoPrimitiveType::I64;
-        case (MONO_TYPE_U8):
-            return MonoPrimitiveType::U64;
-        case (MONO_TYPE_R4):
-            return MonoPrimitiveType::R32;
-        case (MONO_TYPE_R8):
-            return MonoPrimitiveType::R64;
-        case (MONO_TYPE_STRING):
-            return MonoPrimitiveType::String;
-        case (MONO_TYPE_CLASS):
-            return MonoPrimitiveType::Class;
-        case (MONO_TYPE_VALUETYPE):
-            return MonoPrimitiveType::ValueType;
-        case (MONO_TYPE_ARRAY):
-            return MonoPrimitiveType::Array;
-        case (MONO_TYPE_GENERICINST):
-            return MonoPrimitiveType::Generic;
-        case (MONO_TYPE_ENUM):
-            return MonoPrimitiveType::Enum;
-        default:
-            break;
-        }
-
-        return MonoPrimitiveType::Unknown;
-    }
-
     MonoObject* MonoField::GetAttribute(MonoClass* monoClass) const
     {
         ::MonoClass* parent = mono_field_get_parent(m_Field);

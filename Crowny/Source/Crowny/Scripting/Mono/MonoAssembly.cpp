@@ -82,18 +82,14 @@ namespace Crowny
           mono_image_open_from_data_with_name(assemblyData, assemblySize, true, &status, false, imageName.c_str());
         delete[] assemblyData;
 
-        if (status != MONO_IMAGE_OK || image == nullptr)
-        {
-            CW_ENGINE_ERROR("Failed to load image data from assembly: {0}", m_Path);
-            return;
-        }
+        CheckImageOpenStatus(status);
+        if (image == nullptr)
+            CW_ENGINE_ERROR("Could not open assembly image.");
 
         // #ifdef CW_DEBUG
-        Path mdbPath = m_Path;
-        m_Path.replace_extension(mdbPath.extension().string() + ".mdb");
+        Path mdbPath = m_Path.replace_extension(m_Path.extension().string() + ".mdb");
         if (fs::exists(mdbPath))
         {
-            CW_ENGINE_INFO("Loaded mdb");
             Ref<DataStream> mdbStream = FileSystem::OpenFile(mdbPath);
             if (mdbStream != nullptr)
             {
@@ -101,22 +97,20 @@ namespace Crowny
                 m_DebugData = new uint8_t[mdbSize];
                 mdbStream->Read(m_DebugData, mdbSize);
                 mono_debug_open_image_from_memory(image, m_DebugData, mdbSize);
+                CW_ENGINE_INFO("Loaded mdb");
             }
         }
         // #endif
 
         m_Assembly = mono_assembly_load_from_full(image, imageName.c_str(), &status, false);
-        if (status != MONO_IMAGE_OK || m_Assembly == nullptr)
-        {
-            CW_ENGINE_ERROR("Failed to load assembly from: {0}", m_Path);
-            return;
-        }
+        CheckImageOpenStatus(status);
+        if (m_Assembly == nullptr)
+            CW_ENGINE_ERROR("Failed to load assembly {0}.", m_Path);
+
 
         m_Image = image;
         if (m_Image == nullptr)
-        {
             CW_ENGINE_ERROR("Failed to get assembly image: {0}", m_Path);
-        }
 
         m_IsLoaded = true;
         m_IsDependency = false;

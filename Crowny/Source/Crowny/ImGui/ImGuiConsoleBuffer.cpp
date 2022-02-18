@@ -1,28 +1,54 @@
 #include "cwpch.h"
 
 #include "Crowny/ImGui/ImGuiConsoleBuffer.h"
+#include "Crowny/Common/Time.h"
 
 namespace Crowny
 {
-    Vector<Ref<ImGuiConsoleBuffer::Message>> ImGuiConsoleBuffer::s_MessageBuffer;
-    bool ImGuiConsoleBuffer::s_HasNewMessages = true;
 
-    void ImGuiConsoleBuffer::AddMessage(const Ref<Message>& message)
+    void ImGuiConsoleBuffer::AddMessage(const Message& message)
     {
-        if (message->GetLevel() == Message::Level::Invalid)
-            return;
-        s_HasNewMessages = true;
-        s_MessageBuffer.push_back(message);
+        // if (m_Collapsed)
+        // {
+            auto findIter = m_HashToIndex.find(message.Hash);
+            if (findIter != m_HashToIndex.end())
+                m_CollapsedMessageBuffer[findIter->second].RepeatCount++;
+            else
+            {
+                m_CollapsedMessageBuffer.push_back(message);
+                m_HashToIndex[message.Hash] = m_CollapsedMessageBuffer.size() - 1;
+            }
+        // }
+        // else
+            m_NormalMessageBuffer.push_back(message);
+        m_HasNewMessages = true;
     }
 
-    void ImGuiConsoleBuffer::Clear() { s_MessageBuffer.clear(); }
+    void ImGuiConsoleBuffer::Clear() { m_NormalMessageBuffer.clear(); m_HashToIndex.clear(); m_CollapsedMessageBuffer.clear(); }
 
-    Vector<ImGuiConsoleBuffer::Message::Level> ImGuiConsoleBuffer::Message::s_Levels{
-        ImGuiConsoleBuffer::Message::Level::Info, ImGuiConsoleBuffer::Message::Level::Warn,
-        ImGuiConsoleBuffer::Message::Level::Error, ImGuiConsoleBuffer::Message::Level::Critical
-    };
+    ImGuiConsoleBuffer::Message::Message(const String& message, Level level) : MessageText(message), LogLevel(level)
+    {
+        Hash = Crowny::Hash(message);
+        Timestamp = std::time(nullptr);
+    }
 
-    ImGuiConsoleBuffer::Message::Message(const String& message, Level level) : m_Message(message), m_Level(level) {}
+    const Vector<ImGuiConsoleBuffer::Message>& ImGuiConsoleBuffer::GetBuffer()
+    {
+        m_HasNewMessages = false;
+        if (m_Collapsed)
+            return m_CollapsedMessageBuffer;
+        return m_NormalMessageBuffer;
+    }
+
+    void ImGuiConsoleBuffer::Collapse()
+    {
+        m_Collapsed = true;
+    }
+
+    void ImGuiConsoleBuffer::Uncollapse()
+    { 
+        m_Collapsed = false;
+    }
 
     const char* ImGuiConsoleBuffer::Message::GetLevelName(Level level)
     {

@@ -23,21 +23,30 @@
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptObjectManager.h"
 #include "Crowny/Scripting/ScriptSceneObjectManager.h"
+#include "Crowny/Scene/ScriptRuntime.h"
 
 // Importers
 #include "Crowny/Import/AudioClipImporter.h"
 #include "Crowny/Import/ShaderImporter.h"
 #include "Crowny/Import/TextureImporter.h"
+#include "Crowny/Import/TextFileImporter.h"
+#include "Crowny/Import/ScriptImporter.h"
+
+#include "Crowny/ImGui/ImGuiConsoleBuffer.h"
 
 namespace Crowny
 {
 
     void Initializer::Init()
     {
+        ImGuiConsoleBuffer::StartUp();
+        
         Importer::StartUp();
         Importer::Get().RegisterImporter(new AudioClipImporter());
         Importer::Get().RegisterImporter(new ShaderImporter());
         Importer::Get().RegisterImporter(new TextureImporter());
+        Importer::Get().RegisterImporter(new ScriptImporter());
+        Importer::Get().RegisterImporter(new TextFileImporter());
 
         AssetManager::StartUp();
         // Most of these should be in the editor
@@ -85,8 +94,18 @@ namespace Crowny
 
         // Scripting
         MonoManager::StartUp();
-        MonoManager::Get().LoadAssembly(String("Resources/Assemblies/") + CROWNY_ASSEMBLY + ".dll", CROWNY_ASSEMBLY);
-        MonoManager::Get().LoadAssembly(String("Resources/Assemblies/") + GAME_ASSEMBLY + ".dll", GAME_ASSEMBLY);
+        Path engineAssemblyPath = String("Resources/Assemblies/") + CROWNY_ASSEMBLY + ".dll";
+        if (fs::exists(engineAssemblyPath))
+        {
+            MonoManager::Get().LoadAssembly(engineAssemblyPath, CROWNY_ASSEMBLY);
+            ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
+        }
+        Path gameAssmeblyPath = String("Resources/Assemblies/") + GAME_ASSEMBLY + ".dll";
+        if (fs::exists(gameAssmeblyPath))
+        {
+            MonoManager::Get().LoadAssembly(gameAssmeblyPath, GAME_ASSEMBLY);
+            ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
+        }
         ScriptInfoManager::StartUp();
         ScriptInfoManager::Get().InitializeTypes();
         ScriptSceneObjectManager::StartUp();
@@ -95,19 +114,24 @@ namespace Crowny
 
     void Initializer::Shutdown()
     {
+        ScriptRuntime::UnloadAssemblies();
         Renderer2D::Shutdown();
         SamplerState::s_DefaultSamplerState = nullptr;
         /*
         Renderer::Shutdown();
         ForwardPlusRenderer::Shutdown();
+        */
         SceneManager::Shutdown();
         VirtualFileSystem::Shutdown();
-        */
         AssetManager::Shutdown();
         Importer::Shutdown();
         AudioManager::Shutdown();
         ForwardRenderer::Shutdown();
         RenderAPI::Get().Shutdown();
+
+        ScriptInfoManager::Shutdown();
+        ScriptSceneObjectManager::Shutdown();
+        ScriptObjectManager::Shutdown();
     }
 
 } // namespace Crowny

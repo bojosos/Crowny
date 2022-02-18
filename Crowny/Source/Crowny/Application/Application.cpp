@@ -99,6 +99,7 @@ namespace Crowny
         EventDispatcher dispatcher(e);
         dispatcher.Dispatch<WindowCloseEvent>(CW_BIND_EVENT_FN(Application::OnWindowClose));
         dispatcher.Dispatch<WindowResizeEvent>(CW_BIND_EVENT_FN(Application::OnWindowResize));
+        dispatcher.Dispatch<MouseScrolledEvent>(CW_BIND_EVENT_FN(Application::OnMouseScroll));
 
         for (auto it = m_LayerStack->rbegin(); it != m_LayerStack->rend(); ++it)
         {
@@ -106,6 +107,12 @@ namespace Crowny
             if (e.Handled)
                 break;
         }
+    }
+
+    bool Application::OnMouseScroll(MouseScrolledEvent& event)
+    {
+        Input::OnMouseScroll(event.GetXOffset(), event.GetYOffset());
+        return false;
     }
 
     void Application::Run()

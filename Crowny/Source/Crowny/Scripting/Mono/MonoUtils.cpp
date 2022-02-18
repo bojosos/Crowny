@@ -7,6 +7,7 @@
 #include <mono/metadata/metadata.h>
 #include <mono/metadata/object.h>
 #include <mono/metadata/reflection.h>
+#include <mono/metadata/appdomain.h>
 
 namespace Crowny
 {
@@ -44,7 +45,8 @@ namespace Crowny
 
     MonoString* MonoUtils::ToMonoString(const String& value)
     {
-        return mono_string_from_utf16((mono_unichar2*)value.c_str());
+        // Is this right? bfs does something completely differnt (using wstring), but Bulgarian guy wth git-repo does this
+        return mono_string_new(MonoManager::Get().GetDomain(), value.c_str());
     }
 
     uint32_t MonoUtils::NewGCHandle(MonoObject* object, bool pinned) { return mono_gchandle_new(object, pinned); }
@@ -105,6 +107,132 @@ namespace Crowny
     {
         MonoType* type = mono_class_get_type(klass);
         return mono_type_get_object(MonoManager::Get().GetDomain(), type);
+    }
+
+    MonoPrimitiveType MonoUtils::GetEnumPrimitiveType(::MonoClass* monoClass)
+    {
+        MonoType* monoType = mono_class_get_type(monoClass);
+        MonoType* underlyingType = mono_type_get_underlying_type(monoType);
+
+        return GetPrimitiveType(mono_class_from_mono_type(underlyingType));
+    }
+
+    MonoPrimitiveType MonoUtils::GetPrimitiveType(::MonoClass* monoClass)
+    {
+        MonoType* type = mono_class_get_type(monoClass);
+        int primitiveType = mono_type_get_type(type);
+        switch (primitiveType)
+        {
+        case (MONO_TYPE_BOOLEAN):
+            return MonoPrimitiveType::Bool;
+        case (MONO_TYPE_CHAR):
+            return MonoPrimitiveType::Char;
+        case (MONO_TYPE_I1):
+            return MonoPrimitiveType::I8;
+        case (MONO_TYPE_U1):
+            return MonoPrimitiveType::U8;
+        case (MONO_TYPE_I2):
+            return MonoPrimitiveType::I16;
+        case (MONO_TYPE_U2):
+            return MonoPrimitiveType::U16;
+        case (MONO_TYPE_I4):
+            return MonoPrimitiveType::I32;
+        case (MONO_TYPE_U4):
+            return MonoPrimitiveType::U32;
+        case (MONO_TYPE_I8):
+            return MonoPrimitiveType::I64;
+        case (MONO_TYPE_U8):
+            return MonoPrimitiveType::U64;
+        case (MONO_TYPE_R4):
+            return MonoPrimitiveType::Float;
+        case (MONO_TYPE_R8):
+            return MonoPrimitiveType::Double;
+        case (MONO_TYPE_STRING):
+            return MonoPrimitiveType::String;
+        case (MONO_TYPE_CLASS):
+            return MonoPrimitiveType::Class;
+        case (MONO_TYPE_VALUETYPE):
+            return MonoPrimitiveType::ValueType;
+        case (MONO_TYPE_ARRAY):
+        case (MONO_TYPE_SZARRAY):
+            return MonoPrimitiveType::Array;
+        case (MONO_TYPE_GENERICINST):
+            return MonoPrimitiveType::Generic;
+        default:
+            break;
+        }
+
+        return MonoPrimitiveType::Unknown;
+    }
+
+    ::MonoClass* MonoUtils::GetObjectClass()
+    {
+        return mono_get_object_class();
+    }
+
+    ::MonoClass* MonoUtils::GetBoolClass()
+    {
+        return mono_get_boolean_class();
+    }
+
+    ::MonoClass* MonoUtils::GetCharClass()
+    {
+        return mono_get_char_class();
+    }
+
+    ::MonoClass* MonoUtils::GetSByteClass()
+    {
+        return mono_get_sbyte_class();
+    }
+
+    ::MonoClass* MonoUtils::GetByteClass()
+    {
+        return mono_get_byte_class();
+    }
+
+    ::MonoClass* MonoUtils::GetI16Class()
+    {
+        return mono_get_int16_class();
+    }
+
+    ::MonoClass* MonoUtils::GetU16Class()
+    {
+        return mono_get_uint16_class();
+    }
+
+    ::MonoClass* MonoUtils::GetI32Class()
+    {
+        return mono_get_int32_class();
+    }
+
+    ::MonoClass* MonoUtils::GetU32Class()
+    {
+        return mono_get_uint32_class();
+    }
+
+    ::MonoClass* MonoUtils::GetI64Class()
+    {
+        return mono_get_int64_class();
+    }
+
+    ::MonoClass* MonoUtils::GetU64Class()
+    {
+        return mono_get_uint64_class();
+    }
+
+    ::MonoClass* MonoUtils::GetFloatClass()
+    {
+        return mono_get_single_class();
+    }
+
+    ::MonoClass* MonoUtils::GetDoubleClass()
+    {
+        return mono_get_double_class();
+    }
+
+    ::MonoClass* MonoUtils::GetStringClass()
+    {
+        return mono_get_string_class();
     }
 
 } // namespace Crowny

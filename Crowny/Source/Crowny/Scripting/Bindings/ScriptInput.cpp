@@ -17,5 +17,7 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("GetMouseButton", (void*)&Input::IsMouseButtonPressed);
         MetaData.ScriptClass->AddInternalCall("GetMouseButtonDown", (void*)&Input::IsMouseButtonDown);
         MetaData.ScriptClass->AddInternalCall("GetMouseButtonUp", (void*)&Input::IsMouseButtonUp);
+        MetaData.ScriptClass->AddInternalCall("GetMouseScrollX", (void*)&Input::GetMouseScrollX);
+        MetaData.ScriptClass->AddInternalCall("GetMouseScrollY", (void*)&Input::GetMouseScrollY);
     }
 } // namespace Crowny

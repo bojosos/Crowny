@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Crowny/Scene/SceneManager.h"
+#include "Crowny/Ecs/Entity.h"
+
 #include <imgui.h>
 
 namespace Crowny
@@ -17,6 +20,42 @@ namespace Crowny
          * @return false
          */
         static bool ShowYesNoMessageBox(const String& title, const String& message);
+
+        static Entity GetEntityFromPayload(const ImGuiPayload* payload)
+        {
+            CW_ENGINE_ASSERT(payload->DataSize == sizeof(uint32_t));
+            uint32_t id = *(const uint32_t*)payload->Data;
+            Entity result {(entt::entity)id, SceneManager::GetActiveScene().get()};
+            return result;
+        }
+
+        static Path GetPathFromPayload(const ImGuiPayload* payload)
+        {
+            String path((const char*)payload->Data, payload->DataSize);
+            return Path(path);
+        }
+
+        static const ImGuiPayload* AcceptEntityPayload()
+        {
+            return ImGui::AcceptDragDropPayload("Entity_ID");
+        }
+
+        static const ImGuiPayload* AcceptAssetPayload()
+        {
+            return ImGui::AcceptDragDropPayload("ASSET_ITEM");
+        }
+
+        static void SetEntityPayload(Entity entity)
+        {
+            uint32_t tmp = (uint32_t)entity.GetHandle();
+            ImGui::SetDragDropPayload("Entity_ID", &tmp, sizeof(uint32_t));
+        }
+
+        static void SetAssetPayload(const Path& path)
+        {
+            const char* itemPath = path.c_str();
+            ImGui::SetDragDropPayload("ASSET_ITEM", itemPath, strlen(itemPath) * sizeof(char));
+        }
 
         struct ScopedDisable
         { 

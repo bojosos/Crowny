@@ -20,7 +20,7 @@ namespace Crowny
 
         logSinks[0]->set_pattern("%^[%T] %n: %v%$");
         logSinks[1]->set_pattern("[%T] [%l] %n: %v");
-        logSinks[2]->set_pattern("[%T] %n: %v");
+        logSinks[2]->set_pattern("%v");
 
         s_EngineLogger = CreateRef<spdlog::logger>("CROWNY", begin(logSinks), end(logSinks));
         spdlog::register_logger(s_EngineLogger);

@@ -69,9 +69,9 @@ namespace Crowny
         m_Order.push_back(true);
         m_Menus.push_back(menu);
     }
-
-    ImGuiMenuItem::ImGuiMenuItem(const String& title, const String& combination, const EventCallbackFn& onclicked)
-      : m_Title(title), m_Combination(combination), OnClicked(onclicked)
+    
+    ImGuiMenuItem::ImGuiMenuItem(const String& title, const String& combination, const EventCallbackFn& onclicked, bool* shown)
+      : m_Title(title), m_Combination(combination), OnClicked(onclicked), m_Shown(shown)
     {
     }
 
@@ -82,8 +82,7 @@ namespace Crowny
 
     void ImGuiMenuItem::Render(uint32_t maxWidth)
     {
-
-        bool clicked = ImGui::MenuItem(m_Title.c_str());
+        bool clicked = ImGui::MenuItem(m_Title.c_str(), nullptr, m_Shown);
 
         ImGui::SameLine();
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + maxWidth - ImGui::CalcTextSize(m_Combination.c_str()).x -

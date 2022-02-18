@@ -1,16 +1,17 @@
 #pragma once
 
+#include "Crowny/Common/Module.h"
+
 namespace Crowny
 {
-    class ImGuiConsoleBuffer
+    class ImGuiConsoleBuffer : public Module<ImGuiConsoleBuffer>
     {
     public:
-        class Message
+        struct Message
         {
         public:
-            enum class Level : int8_t
+            enum class Level : uint8_t
             {
-                Invalid = -1,
                 Info = 0,
                 Warn = 1,
                 Error = 2,
@@ -18,37 +19,40 @@ namespace Crowny
             };
 
         public:
-            Message(const String& message = "", Level level = Level::Invalid);
+            Message() = default;
+            Message(const String& message, Level level);
+
+            Vector<Level> s_Levels;
+
             static const char* GetLevelName(Level level);
+            static constexpr Array<Level, 4> Levels = { Level::Info, Level::Warn, Level::Error, Level::Critical };
 
         public:
-            const String& GetMessage() const { return m_Message; }
-            Level GetLevel() const { return m_Level; }
-
-        private:
-            String m_Message;
-            Level m_Level;
-
-        public:
-            static Vector<Level> s_Levels;
+            String MessageText;
+            Level LogLevel;
+            size_t Hash; // for collapse
+            std::time_t Timestamp;
+            String Source;
+            uint32_t RepeatCount = 1;
         };
 
     public:
-        ~ImGuiConsoleBuffer() = default;
-        static void AddMessage(const Ref<Message>& message);
-        static void Clear();
-        static Vector<Ref<Message>> GetBuffer()
-        {
-            s_HasNewMessages = false;
-            return s_MessageBuffer;
-        }
-        static bool HasNewMessages() { return s_HasNewMessages; }
-
-    protected:
         ImGuiConsoleBuffer() = default;
+        ~ImGuiConsoleBuffer() = default;
+        void AddMessage(const Message& message);
+
+        void Clear();
+        const Vector<Message>& GetBuffer();
+        void Collapse();
+        void Uncollapse();
+        bool HasNewMessages() { return m_HasNewMessages; }
 
     private:
-        static bool s_HasNewMessages;
-        static Vector<Ref<Message>> s_MessageBuffer;
+        bool m_HasNewMessages = false;
+        bool m_Collapsed = false;
+
+        Vector<Message> m_NormalMessageBuffer;
+        Vector<Message> m_CollapsedMessageBuffer;
+        UnorderedMap<size_t, uint32_t> m_HashToIndex;
     };
 } // namespace Crowny

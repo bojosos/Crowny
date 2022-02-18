@@ -6,7 +6,7 @@ namespace Crowny
 {
     Path EditorUtils::GetUniquePath(const Path& path, FileNamingScheme scheme)
     {
-        String cleanPath = path.stem();
+        String cleanPath = Path(path).replace_extension("");
         String ext = path.extension();
 
         int idx = 1;
@@ -34,8 +34,10 @@ namespace Crowny
         }
 
         String dest = path;
-        while (std::filesystem::exists(dest))
+        CW_ENGINE_INFO(dest);
+        while (fs::exists(dest))
         {
+            CW_ENGINE_INFO(dest);
             switch (scheme)
             {
             case FileNamingScheme::BracesIdx:
