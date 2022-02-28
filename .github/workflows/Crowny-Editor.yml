@@ -12,7 +12,7 @@ jobs:
       - name: Download deps
         run: |
           sudo apt update
-          sudo apt-get -y install xorg-dev libgl1-mesa-dev libx11-dev libxcursor-dev uuid-dev clang-10
+          sudo apt-get -y install xorg-dev libgl1-mesa-dev libx11-dev libxcursor-dev uuid-dev clang-12 libvorbis-dev
           sudo apt-get install libvulkan-dev
           sudo apt-get install vulkan-validationlayers-dev spirv-tools
           mkdir -p Crowny/Crowny/Dependencies/vulkan/include/vulkan
@@ -22,4 +22,4 @@ jobs:
           chmod +x 3rdparty/premake/premake5
           bash Scripts/genprojects.sh
       - name: Build
-        run: make Crowny-Editor -j2 config=release_linux64 CXX=clang++-10
+        run: make Crowny-Editor -j2 config=release_linux64 CXX=clang++-12
