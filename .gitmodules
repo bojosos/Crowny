@@ -32,8 +32,8 @@
 	path = Crowny/Dependencies/cereal
 	url = https://github.com/bojosos/cereal
 [submodule "Crowny/Dependencies/openal-soft"]
-	url = https://github.com/bojosos/openal-soft
-  url = https://github.com/bojosos/openal-soft
+	path = Crowny/Dependencies/openal-soft
+  	url = https://github.com/bojosos/openal-soft
 [submodule "Crowny/Dependencies/box2d"]
 	path = Crowny/Dependencies/box2d
 	url = https://github.com/bojosos/box2d
