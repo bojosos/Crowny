@@ -36,7 +36,7 @@ namespace Crowny
             style.Colors[ImGuiCol_WindowBg].w = 1.0f;
         }
 
-        io.FontDefault = io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto-Regular.ttf", 18.0f);
+        io.FontDefault = io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto-Regular.ttf", 14.0f);
         io.Fonts->GetGlyphRangesCyrillic();
         io.Fonts->GetGlyphRangesChineseSimplifiedCommon();
 
@@ -46,7 +46,12 @@ namespace Crowny
         style.TabRounding = 0;
         style.ScrollbarRounding = 5.0f;
         style.FrameBorderSize = 1.0f;
-        style.ItemSpacing.y = 6.5f;
+        style.ItemSpacing.y = 3.0f;
+        style.ItemSpacing.y = 3.0f;
+        style.FramePadding = ImVec2(2, 2);
+        style.WindowPadding = ImVec2(2, 2);
+        style.TabRounding = 4;
+        style.WindowMenuButtonPosition = ImGuiDir_None;
 
         style.Colors[ImGuiCol_Text] = { 0.73333335f, 0.73333335f, 0.73333335f, 1.00f };
         style.Colors[ImGuiCol_TextDisabled] = { 0.34509805f, 0.34509805f, 0.34509805f, 1.00f };

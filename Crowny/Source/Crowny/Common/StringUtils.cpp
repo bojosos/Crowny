@@ -29,6 +29,28 @@ namespace Crowny
         return output;
     }
 
+	Vector<std::wstring> StringUtils::SplitString(const std::wstring& s, const std::wstring& separator)
+	{
+		Vector<std::wstring> output;
+
+		std::wstring::size_type start = 0, end = s.find_first_of(separator);
+
+		while (end <= String::npos)
+		{
+			std::wstring tok = s.substr(start, end - start);
+			if (!tok.empty())
+				output.push_back(tok);
+
+			if (end == std::wstring::npos)
+				break;
+
+			start = end + 1;
+			end = s.find_first_of(separator, start);
+		}
+
+		return output;
+	}
+
     int32_t StringUtils::ParseInt(const String& value) { return std::strtol(value.c_str(), nullptr, 10); }
 
     float StringUtils::ParseFloat(const String& value) { return std::strtof(value.c_str(), nullptr); }

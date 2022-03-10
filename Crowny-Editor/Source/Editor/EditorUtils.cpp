@@ -6,8 +6,8 @@ namespace Crowny
 {
     Path EditorUtils::GetUniquePath(const Path& path, FileNamingScheme scheme)
     {
-        String cleanPath = Path(path).replace_extension("");
-        String ext = path.extension();
+        String cleanPath = Path(path).replace_extension("").string();
+        String ext = path.extension().string();
 
         int idx = 1;
         size_t sepIdx;
@@ -33,7 +33,7 @@ namespace Crowny
             idx++;
         }
 
-        String dest = path;
+        String dest = path.string();
         CW_ENGINE_INFO(dest);
         while (fs::exists(dest))
         {

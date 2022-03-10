@@ -9,9 +9,9 @@
 namespace Crowny
 {
 
-    EditorCamera::EditorCamera(float fov, float aspectRatio, float near, float far)
-      : m_Fov(fov), m_ViewMatrix(1.0f), m_AspectRatio(aspectRatio), m_NearClip(near), m_FarClip(far),
-        Camera(glm::perspective(glm::radians(fov), aspectRatio, near, far))
+    EditorCamera::EditorCamera(float fov, float aspectRatio, float nearPlane, float farPlane)
+      : m_Fov(fov), m_ViewMatrix(1.0f), m_AspectRatio(aspectRatio), m_NearClip(nearPlane), m_FarClip(farPlane),
+        Camera(glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane))
     {
     }
 

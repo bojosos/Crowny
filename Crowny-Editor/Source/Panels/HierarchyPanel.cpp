@@ -160,10 +160,8 @@ namespace Crowny
                 ImGui::EndPopup();
             }
 
-            if (ImGui::IsItemClicked())
-            {
+            if (Input::IsMouseButtonUp(Mouse::ButtonLeft) && ImGui::IsItemHovered())
                 Select(e);
-            }
 
             if (open)
             {
@@ -214,10 +212,8 @@ namespace Crowny
                 ImGui::EndDragDropTarget();
             }
 
-            if (ImGui::IsItemClicked())
-            {
+            if (Input::IsMouseButtonUp(Mouse::ButtonLeft) && ImGui::IsItemHovered())
                 Select(e);
-            }
 
             if (ImGui::BeginPopupContextItem())
             {
@@ -267,7 +263,7 @@ namespace Crowny
             action();
         m_DeferedActions.clear();
 
-        Scene* activeScene = SceneManager::GetActiveScene().get();
+        Scene& activeScene = *SceneManager::GetActiveScene().get();
         
         if (m_Focused && s_SelectedEntity)
         {
@@ -275,14 +271,14 @@ namespace Crowny
             if (ctrl && Input::IsKeyDown(Key::D)) // Duplicate entities
             {
                 if (s_SelectedEntity.GetParent())
-                    activeScene->DuplicateEntity(s_SelectedEntity).SetParent(s_SelectedEntity.GetParent());
+                    activeScene.DuplicateEntity(s_SelectedEntity).SetParent(s_SelectedEntity.GetParent());
                 else
-                activeScene->DuplicateEntity(s_SelectedEntity).SetParent(s_SelectedEntity.GetParent());
+                activeScene.DuplicateEntity(s_SelectedEntity).SetParent(s_SelectedEntity.GetParent());
             }
 
             if (ctrl && Input::IsKeyDown(Key::N)) // Create empty entity
             {
-                Entity newEntity = activeScene->CreateEntity("New Entity");
+                Entity newEntity = activeScene.CreateEntity("New Entity");
                 s_SelectedEntity.AddChild(newEntity);
                 m_NewOpenEntity = s_SelectedEntity;
                 s_SelectedEntity = newEntity;

@@ -1,6 +1,7 @@
 #include "cwepch.h"
 
 #include "Panels/UIUtils.h"
+#include "Editor/EditorDefaults.h"
 
 #include <imgui.h>
 
@@ -24,5 +25,13 @@ namespace Crowny
             ImGui::EndPopup();
         }
         return false;
+    }
+
+    bool UIUtils::DrawFloatControl(float& value, float minValue, float maxValue, bool asSlider)
+    {
+        if (asSlider)
+            return ImGui::SliderFloat("##sliderFloat", &value, minValue, maxValue);
+        else
+            return ImGui::DragFloat("##dragFloatScript", &value, DRAG_SENSITIVITY, minValue, maxValue);
     }
 } // namespace Crowny

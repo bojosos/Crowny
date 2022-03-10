@@ -30,6 +30,15 @@ namespace Crowny
         return *this;
     }
 
+    MemoryDataStream::MemoryDataStream() : DataStream(READ | WRITE) { }
+
+    MemoryDataStream::MemoryDataStream(const Ref<DataStream>& stream) : DataStream(READ | WRITE)
+    {
+        m_Size = stream->Size();
+        m_Data = m_Cursor = new uint8_t[m_Size];
+        m_End = m_Data + stream->Read(m_Data, m_Size);
+    }
+
     MemoryDataStream::MemoryDataStream(size_t capacity) : DataStream(READ | WRITE)
     {
         Reallocate(capacity);

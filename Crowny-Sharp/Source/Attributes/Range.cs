@@ -4,7 +4,7 @@ namespace Crowny
 {
 
     /// <summary>
-    /// Displays a field as a slider in the editor.
+    /// Used to specify the minimum and maximum values for a numeric field. This attribute can also be used for List/Array that contain numeric elements.
     /// </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public class Range : Attribute

@@ -13,7 +13,7 @@ namespace Crowny
     void SceneManager::SetActiveScene(const Ref<Scene>& scene)
     {
         s_Scenes.push_back(scene);
-        s_ActiveIndex = s_Scenes.size() - 1;
+        s_ActiveIndex = (uint32_t)s_Scenes.size() - 1;
         ScriptRuntime::Init();
     }
 

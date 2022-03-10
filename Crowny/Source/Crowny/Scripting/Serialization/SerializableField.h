@@ -34,9 +34,9 @@ namespace Crowny
         virtual ~SerializableFieldData() = default;
 
         virtual void* GetValue() = 0;
-        virtual void* GetValueBoxed() = 0;
+        virtual MonoObject* GetValueBoxed() = 0;
         virtual void Serialize(YAML::Emitter& out) { };
-        virtual void Deserialize(const YAML::Node& node) { };
+        virtual void Deserialize() { };
 
         static Ref<SerializableFieldData> Create(const Ref<SerializableTypeInfo>& typeInfo, MonoObject* value);
     };
@@ -44,117 +44,130 @@ namespace Crowny
     class SerializableFieldBool : public SerializableFieldData
     {
     public:
-        void* GetValue() override { return &Value; }
+        virtual void* GetValue() override { return &Value; }
+        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetBoolClass(), &Value); }
         virtual void Serialize(YAML::Emitter& out) override { out << Value; }
-        virtual void Deserialize(const YAML::Node& node) override { Value = node.as<bool>(); }
+        virtual void Deserialize() override { /* Value = node.as<bool>(); */ }
         bool Value = false;
     };
 
     class SerializableFieldChar : public SerializableFieldData
     {
     public:
-        void* GetValue() override  { return &Value; }
+        virtual void* GetValue() override  { return &Value; }
+        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
         virtual void Serialize(YAML::Emitter& out) override { out << Value; }
-        virtual void Deserialize(const YAML::Node& node) override { Value = node.as<char>(); }
+        virtual void Deserialize() override { /*Value = node.as<char>();*/ }
         char Value = 0;
     };
 
     class SerializableFieldI8 : public SerializableFieldData
     {
     public:
-        void* GetValue() override  { return &Value; }
+        virtual void* GetValue() override  { return &Value; }
+        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
         virtual void Serialize(YAML::Emitter& out) override { out << Value; }
-        virtual void Deserialize(const YAML::Node& node) override { Value = node.as<int8_t>(); }
+        virtual void Deserialize() override { /*Value = node.as<int8_t>(); */ }
         int8_t Value = 0;
     };
 
     class SerializableFieldU8 : public SerializableFieldData
     {
     public:
-        void* GetValue() override { return &Value; }
+        virtual void* GetValue() override { return &Value; }
+        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
         virtual void Serialize(YAML::Emitter& out) override { out << Value; }
-        virtual void Deserialize(const YAML::Node& node) override { Value = node.as<uint8_t>(); }
+        virtual void Deserialize() override { /*Value = node.as<uint8_t>(); */ }
         uint8_t Value = 0U;
     };
 
     class SerializableFieldI16 : public SerializableFieldData
     {
     public:
-        void* GetValue() override { return &Value; }
+        virtual void* GetValue() override { return &Value; }
+        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
         virtual void Serialize(YAML::Emitter& out) override { out << Value; }
-        virtual void Deserialize(const YAML::Node& node) override { Value = node.as<int16_t>(); }
+        virtual void Deserialize() override { /*Value = node.as<int16_t>();*/ }
         int16_t Value = 0;
     };
 
     class SerializableFieldU16 : public SerializableFieldData
     {
     public:
-        void* GetValue() override { return &Value; }
+        virtual void* GetValue() override { return &Value; }
+        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
         virtual void Serialize(YAML::Emitter& out) override { out << Value; }
-        virtual void Deserialize(const YAML::Node& node) override { Value = node.as<uint16_t>(); }
+        virtual void Deserialize() override { /*Value = node.as<uint16_t>(); */ }
         uint16_t Value = 0U;
     };
 
     class SerializableFieldI32 : public SerializableFieldData
     {
     public:
-        void* GetValue() override { return &Value; }
+        virtual void* GetValue() override { return &Value; }
+        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
         virtual void Serialize(YAML::Emitter& out) override { out << Value; }
-        virtual void Deserialize(const YAML::Node& node) override { Value = node.as<int32_t>(); }
+        virtual void Deserialize() override { /*Value = node.as<int32_t>();*/ }
         int32_t Value = 0;
     };
 
     class SerializableFieldU32 : public SerializableFieldData
     {
     public:
-        void* GetValue() override { return &Value; }
+        virtual void* GetValue() override { return &Value; }
+        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
         virtual void Serialize(YAML::Emitter& out) override { out << Value; }
-        virtual void Deserialize(const YAML::Node& node) override { Value = node.as<uint32_t>(); }
+        virtual void Deserialize() override { /*Value = node.as<uint32_t>(); */ }
         uint32_t Value = 0U;
     };
 
     class SerializableFieldI64 : public SerializableFieldData
     {
     public:
-        void* GetValue() override { return &Value; }
+        virtual void* GetValue() override { return &Value; }
+        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
         virtual void Serialize(YAML::Emitter& out) override { out << Value; }
-        virtual void Deserialize(const YAML::Node& node) override { Value = node.as<int64_t>(); }
+        virtual void Deserialize() override { /*Value = node.as<int64_t>();*/ }
         int64_t Value = 0;
     };
 
     class SerializableFieldU64 : public SerializableFieldData
     {
     public:
-        void* GetValue() override { return &Value; }
+        virtual void* GetValue() override { return &Value; }
+        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
         virtual void Serialize(YAML::Emitter& out) override { out << Value; }
-        virtual void Deserialize(const YAML::Node& node) override { Value = node.as<uint64_t>(); }
+        virtual void Deserialize() override { /*Value = node.as<uint64_t>(); */ }
         uint64_t Value = 0U;
     };
 
     class SerializableFieldFloat : public SerializableFieldData
     {
     public:
-        void* GetValue() override { return &Value; }
+        virtual void* GetValue() override { return &Value; }
+        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
         virtual void Serialize(YAML::Emitter& out) override { out << Value; }
-        virtual void Deserialize(const YAML::Node& node) override { Value = node.as<float>(); }
+        virtual void Deserialize() override { /*Value = node.as<float>();*/ }
         float Value = 0.0f;
     };
 
     class SerializableFieldDouble : public SerializableFieldData
     {
     public:
-        void* GetValue() override { return &Value; }
+        virtual void* GetValue() override { return &Value; }
+        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
         virtual void Serialize(YAML::Emitter& out) override { out << Value; }
-        virtual void Deserialize(const YAML::Node& node) override { Value = node.as<double>(); }
+        virtual void Deserialize() override { /*Value = node.as<double>();*/ }
         double Value = 0.0;
     };
 
     class SerializableFieldString : public SerializableFieldData
     {
     public:
-        void* GetValue() override { return &Value; } // Need to do something more fancy here
+        virtual void* GetValue() override { return &Value; } // Need to do something more fancy here
+        virtual MonoObject* GetValueBoxed() override { return (MonoObject*)GetValue(); }
         virtual void Serialize(YAML::Emitter& out) override { out << Value; }
-        virtual void Deserialize(const YAML::Node& node) override { Value = node.as<String>(); }
+        virtual void Deserialize() override { /*Value = node.as<String>();*/ }
 
         String Value;
         bool Null = false;
@@ -163,9 +176,10 @@ namespace Crowny
     class SerializableFieldEntity : public SerializableFieldData
     {
     public:
-        void* GetValue() override { return &Value; }
-        // virtual void Serialize(YAML::Emitter& out) override { out << Value.GetUuid(); }
-        // virtual void Deserialize(const YAML::Node& node) override { Value = SceneManager::GetActiveScene()->GetEntityFromUuid(node.as<UUID>()); }
+		virtual void* GetValue() override { return &Value; }
+		virtual MonoObject* GetValueBoxed() override { return (MonoObject*)GetValue(); }
+        virtual void Serialize(YAML::Emitter& out) override { /* out << Value.GetUuid(); */ }
+        virtual void Deserialize() override { /* Value = SceneManager::GetActiveScene()->GetEntityFromUuid(node.as<UUID>()); */}
         Entity Value;
     };
 

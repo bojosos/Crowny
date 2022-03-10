@@ -24,7 +24,7 @@ namespace Crowny
           std::static_pointer_cast<const ShaderImportOptions>(importOptions);
         ShaderCompiler compiler;
         ShaderType shaderType;
-        String ext = filepath.extension();
+        String ext = filepath.extension().string();
         String source = FileSystem::OpenFile(filepath)->GetAsString();
         // return Text::Create(ShaderCompiler::Compile(source, shaderImportOptions->Language));
         return nullptr;

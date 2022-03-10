@@ -2,6 +2,8 @@
 
 #include "Crowny/Common/Uuid.h"
 
+#include <cereal/types/polymorphic.hpp>
+
 namespace Crowny
 {
 
@@ -21,29 +23,18 @@ namespace Crowny
         void AddDependency(const Ref<Asset>& asset);
         const Vector<Ref<Asset>>& GetDependencies() const;
 
-        bool m_KeepData;
+        bool m_KeepData = true;
         String m_Name;
         Vector<Ref<Asset>> m_Dependencies;
     };
 
     struct AssetMetadata
     {
-        // TODO: Preview icons, with different sizes (128....32)
+        // TODO: Preview icons, with different sizes (256....16)
         UUID Uuid;                        // Asset UUID
         Ref<ImportOptions> ImportOptions; // Asset import options
         bool IncludeInBuild;
     };
 
-    class ScriptCode : public Asset
-    {
-    public:
-        ScriptCode() = default;
-        ScriptCode(const String& source, bool isEditorScript) : m_Source(source), m_IsEditorScript(isEditorScript) {}
-
-        ~ScriptCode() = default;
-    private:
-        String m_Source;
-        bool m_IsEditorScript;
-    };
 
 } // namespace Crowny

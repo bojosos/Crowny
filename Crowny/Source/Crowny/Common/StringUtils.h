@@ -6,6 +6,7 @@ namespace Crowny
     {
     public:
         static Vector<String> SplitString(const String& s, const String& separator);
+        static Vector<std::wstring> SplitString(const std::wstring& s, const std::wstring& separator);
 
         static int32_t ParseInt(const String& value);
         static float ParseFloat(const String& value);

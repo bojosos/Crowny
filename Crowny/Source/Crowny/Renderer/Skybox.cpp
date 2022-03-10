@@ -5,6 +5,7 @@
 
 #include "Crowny/Common/Timer.h"
 #include "Crowny/Common/VirtualFileSystem.h"
+#include "Crowny/Common/FileSystem.h"
 
 #include "Crowny/Import/Importer.h"
 #include "Crowny/RenderAPI/RenderAPI.h"
@@ -38,9 +39,14 @@ namespace Crowny
     {
         // Load equirectangular map
         stbi_set_flip_vertically_on_load(true);
-        auto [dat, size] = VirtualFileSystem::Get()->ReadFile(filepath);
+        Ref<DataStream> stream = FileSystem::OpenFile(filepath);
+        std::vector<uint8_t> buf;
+        buf.resize(stream->Size());
+        stream->Read(buf.data(), stream->Size());
+        stream->Close();
+        // auto [dat, size] = VirtualFileSystem::Get()->ReadFile(filepath);
         int width, height, channels;
-        float* data = stbi_loadf_from_memory(dat, size, &width, &height, &channels, 0);
+        float* data = stbi_loadf_from_memory(buf.data(), (int)buf.size(), &width, &height, &channels, 0);
         Ref<Texture> equirectangularTexture;
         if (data)
         {
@@ -62,7 +68,7 @@ namespace Crowny
         else
             CW_ENGINE_ERROR("Failed to load HDR image.");
             
-        delete dat;
+        // delete dat;
 
         glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
         glm::mat4 captureViews[] = {
@@ -210,7 +216,7 @@ namespace Crowny
         uniforms->SetTexture(0, 1, m_EnvironmentMap);
         for (uint32_t j = 0; j < 6; j++)
         {
-            auto persp = glm::perspective((float)(M_PI * 0.5f), 1.0f, 0.1f, 64.0f) * matrices[j];
+            glm::mat4 persp = glm::perspective((float)(M_PI * 0.5f), 1.0f, 0.1f, 64.0f) * matrices[j];
             mvp->Write(0, &persp, sizeof(glm::mat4));
             for (uint32_t i = 0; i < numMips; i++)
             {
@@ -219,14 +225,14 @@ namespace Crowny
                 rtProps.ColorSurfaces[0].Face = j;
                 rtProps.ColorSurfaces[0].NumFaces = 1;
                 rtProps.ColorSurfaces[0].MipLevel = i;
-                rtProps.Width = tProps.Width / std::pow(2, i);
-                rtProps.Height = tProps.Height / std::pow(2, i);
+                rtProps.Width = tProps.Width / (int)std::pow(2, i);
+                rtProps.Height = tProps.Height / (int)std::pow(2, i);
                 Ref<RenderTexture> cubemap = RenderTexture::Create(rtProps);
                 rapi.SetRenderTarget(cubemap);
                 rapi.SetGraphicsPipeline(pipeline);
                 viewport.Width = static_cast<float>(64 * std::pow(0.5f, i));
                 viewport.Height = static_cast<float>(64 * std::pow(0.5f, i));
-                rapi.SetViewport(viewport.X, viewport.Y, viewport.Width, viewport.Height);
+                rapi.SetViewport((uint32_t)viewport.X, (uint32_t)viewport.Y, (uint32_t)viewport.Width, (uint32_t)viewport.Height);
                 rapi.SetUniforms(uniforms);
                 rapi.SetVertexBuffers(0, &m_SkyboxVbo, 1);
                 rapi.SetIndexBuffer(m_SkyboxIbo);
@@ -242,7 +248,7 @@ namespace Crowny
         struct PrefilterParams
         {
             uint32_t samples = 32;
-            float roughness;
+            float roughness = 0.1f;
         } params;
 
         auto& rapi = RenderAPI::Get();
@@ -300,14 +306,14 @@ namespace Crowny
                 rtProps.ColorSurfaces[0].Face = j;
                 rtProps.ColorSurfaces[0].NumFaces = 1;
                 rtProps.ColorSurfaces[0].MipLevel = i;
-                rtProps.Width = tProps.Width / std::pow(2, i);
-                rtProps.Height = tProps.Height / std::pow(2, i);
+                rtProps.Width = tProps.Width / (int)std::pow(2, i);
+                rtProps.Height = tProps.Height / (int)std::pow(2, i);
                 Ref<RenderTexture> cubemap = RenderTexture::Create(rtProps);
                 rapi.SetRenderTarget(cubemap);
                 rapi.SetGraphicsPipeline(pipeline);
                 viewport.Width = static_cast<float>(512 * std::pow(0.5f, i));
                 viewport.Height = static_cast<float>(512 * std::pow(0.5f, i));
-                rapi.SetViewport(viewport.X, viewport.Y, viewport.Width, viewport.Height);
+                rapi.SetViewport((uint32_t)viewport.X, (uint32_t)viewport.Y, (uint32_t)viewport.Width, (uint32_t)viewport.Height);
                 rapi.SetUniforms(uniforms);
                 rapi.SetVertexBuffers(0, &m_SkyboxVbo, 1);
                 rapi.SetIndexBuffer(m_SkyboxIbo);

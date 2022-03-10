@@ -31,15 +31,15 @@ namespace Crowny
             RecalculateProjection();
         }
         float GetPerspectiveNearClip() const { return m_PerspectiveNear; }
-        void SetPerspectiveNearClip(float near)
+        void SetPerspectiveNearClip(float nearPlane)
         {
-            m_PerspectiveNear = near;
+            m_PerspectiveNear = nearPlane;
             RecalculateProjection();
         }
         float GetPerspectiveFarClip() const { return m_PerspectiveFar; }
-        void SetPerspectiveFarClip(float far)
+        void SetPerspectiveFarClip(float farPlane)
         {
-            m_PerspectiveFar = far;
+            m_PerspectiveFar = farPlane;
             RecalculateProjection();
         }
 
@@ -50,15 +50,15 @@ namespace Crowny
             RecalculateProjection();
         }
         float GetOrthographicNearClip() const { return m_OrthographicNear; }
-        void SetOrthographicNearClip(float near)
+        void SetOrthographicNearClip(float nearPlane)
         {
-            m_OrthographicNear = near;
+            m_OrthographicNear = nearPlane;
             RecalculateProjection();
         }
         float GetOrthographicFarClip() const { return m_OrthographicFar; }
-        void SetOrthographicFarClip(float far)
+        void SetOrthographicFarClip(float farPlane)
         {
-            m_OrthographicFar = far;
+            m_OrthographicFar = farPlane;
             RecalculateProjection();
         }
 

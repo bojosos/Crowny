@@ -1,22 +1,13 @@
 #include "cwpch.h"
 
+#include "Crowny/Assets/CerealDataStreamArchive.h"
+
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/FileSystem.h"
-
-#include "Crowny/Assets/CerealDataStreamArchive.h"
 
 #include "Crowny/Audio/AudioSource.h"
 #include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/RenderAPI/Texture.h"
-
-CEREAL_REGISTER_TYPE(Crowny::Shader)
-CEREAL_REGISTER_TYPE(Crowny::AudioClip)
-CEREAL_REGISTER_TYPE(Crowny::Texture)
-CEREAL_REGISTER_TYPE(Crowny::ScriptCode)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Shader)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::AudioClip)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Texture)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::ScriptCode)
 
 namespace Crowny
 {
@@ -88,10 +79,22 @@ namespace Crowny
                 Ref<PixelData> pixelData = texture.AllocatePixelData(face, mip);
                 texture.ReadData(*pixelData, face, mip);
                 archive(cereal::binary_data((uint8_t*)pixelData->GetData(),
-                                            pixelData->GetSize())); // TODO: Save more pixel data
+                                            pixelData->GetSize())); // TODO: Save more pixel data (wat does this mean, maybe pixel data serializer?)?
             }
         }
     }
+
+    void Save(BinaryDataStreamOutputArchive& archive, const ScriptCode& code)
+	{
+		archive(cereal::base_class<Asset>(&code));
+        archive(code.m_Source);
+    }
+
+	void Load(BinaryDataStreamInputArchive& archive, ScriptCode& code)
+	{
+		archive(cereal::base_class<Asset>(&code));
+		archive(code.m_Source);
+	}
 
     template <class Archive> void Serialize(Archive& archive, UniformDesc& desc)
     {
@@ -229,3 +232,13 @@ namespace Crowny
     }
 
 } // namespace Crowny
+
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::AudioClip, "AudioClip")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Texture, "Texture")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::ScriptCode, "ScriptCode")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Shader, "Shader")
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Shader)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::AudioClip)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Texture)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::ScriptCode)
+CEREAL_REGISTER_DYNAMIC_INIT(AssetManager)

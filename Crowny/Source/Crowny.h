@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Crowny/Common/Types.h"
-
 #include "Crowny/Common/Color.h"
 #include "Crowny/Common/Common.h"
 #include "Crowny/Common/FileSystem.h"

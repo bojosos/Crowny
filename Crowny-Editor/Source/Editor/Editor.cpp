@@ -28,7 +28,7 @@ namespace Crowny
     {
         UnloadProject();
         m_ProjectPath = projectPath;
-        m_ProjectName = projectPath.filename();
+        m_ProjectName = projectPath.filename().string();
 
         LoadProjectSettings();
         ProjectLibrary::Get().LoadLibrary();

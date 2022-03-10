@@ -1,5 +1,5 @@
-#if 0
 #pragma once
+#if 0
 
 #include "Crowny/Window/Window.h"
 

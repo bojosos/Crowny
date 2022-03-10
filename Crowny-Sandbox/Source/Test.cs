@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 using Crowny;
 
@@ -6,30 +7,37 @@ namespace Sandbox
 {
     public class Test : EntityBehaviour
     {
+        public Test()
+        {
+            TestStructList.Add(new TestStruct());
+            listOfBools.Add(false);
+            listOfBools.Add(true);
+            listOfInts.Add(69);
+            listOfInts.Add(420);
+        }
         // Test range attr
-        [Crowny.Range(0.0f, 15.0f), ShowInInspector]
+        [Crowny.Range(0.0f, 15.0f, true), ShowInInspector]
         private float speed = 1.0f;
 
         // Test enums in editor
-        public enum DrawMode
+        public enum DrawMode : uint
         {
             Traingles,
             TriangleStrip,
             Quads
         }
-        [ShowInInspector]
-        private DrawMode dummyEnumInspector = DrawMode.Quads;
+        [SerializeField]
+        public DrawMode dummyEnumInspector = DrawMode.Quads;
 
-        // Test bools
         [ShowInInspector]
         private bool dummyCheckboxInspector = true;
 
         // Test normal type inspector
-        private float deltaSum = 0.69f; // This crashes the editor
+        [ShowInInspector]
+        private float deltaSum = 0.69f;
 
-        // This is wrong with new editor
+        private int fpsAcc = 0;
         public int fps = 0;
-
         // Test audio
         private AudioSource source;
 
@@ -37,8 +45,55 @@ namespace Sandbox
 
         public Entity entityTest;
 
+        public float Float = 14f;
+        public double Double = 32;
+
+        public sbyte Byte = 1;
+        public byte UByte = 2;
+        public short Short = 3;
+        public ushort UShort = 4;
+        public int Int = 5;
+        public uint UInt = 6;
+        public long Long = 7;
+        public ulong ULong = 8;
+
+        public string String = "Test123";
+        public char Char = 'c';
+
+        [Crowny.Range(0, 10, false)]
+        public List<int> listOfInts = new List<int>();
+        public List<bool> listOfBools = new List<bool>();
+
+        public int Property { get; set; }
+
+        [SerializeObject]
+        public struct TestStruct
+        {
+            public TestStruct(int aa, int bb, int cc) { a = aa; b = bb; c = cc; }
+            
+            public int a, b, c;
+            /*public int a { get; set; }
+            public int b { get; set; }
+            public int c { get; set; }*/
+        }
+        public TestStruct Struct = new TestStruct(1, 2, 3);
+        public TestStruct DefaultStruct = new TestStruct();
+
+        public List<TestStruct> TestStructList = new List<TestStruct>();
+
+        [SerializeObject]
+        public class TestClass
+        {
+            public TestClass(int a, int b, int c) { _a = a; _b = b; _c = c; }
+            public int a { get { return _a; } set { _a = value; } }
+            public int b { get { return _b; } set { _b = value; } }
+            public int c { get { return _c; } set { _c = value; } }
+            private int _a, _b, _c;
+        }
+        public TestClass testObj = new TestClass(31, 32, 33);
         public void Start()
         {
+            Debug.Log("Length: " + listOfInts.Count);
             // Test component stuff
             if (!HasComponent<AudioListener>()) // Do [RequireComponent(AudioListener, AudioSource)] for the script at some point
                 AddComponent<AudioListener>();
@@ -68,35 +123,38 @@ namespace Sandbox
                 idx++;
             }
             // Test retrieve script component of another entity from this one. Soon will make it work as GetComponent<Test>();
-            if (entity.parent != null)
-            {
-                EntityBehaviour script = entity.parent.GetComponent<EntityBehaviour>();
-                Debug.Log(script);
-                if (script != null)
-                    test = script as Test;
-            }
+            /*   if (entity.parent != null)
+               {
+                   EntityBehaviour script = entity.parent.GetComponent<EntityBehaviour>();
+                   Debug.Log(script);
+                   if (script != null)
+                       test = script as Test;
+               }*/
             if (entityTest != null)
                 Debug.Log(entityTest.name);
         }
 
         public void Update()
         {
+            Struct.a++;
+            Struct.b--;
             if (Input.GetKey(KeyCode.Left))
-        	    transform.position += Vector3.left * speed * Time.smoothDeltaTime;
+                transform.position += Vector3.left * speed * Time.smoothDeltaTime;
             if (Input.GetKey(KeyCode.Right))
-        	    transform.position += Vector3.right * speed * Time.smoothDeltaTime;
+                transform.position += Vector3.right * speed * Time.smoothDeltaTime;
             if (Input.GetKey(KeyCode.Up))
                 transform.position += Vector3.up * speed * Time.smoothDeltaTime;
             if (Input.GetKey(KeyCode.Down))
-        	    transform.position += Vector3.down * speed * Time.smoothDeltaTime;
+                transform.position += Vector3.down * speed * Time.smoothDeltaTime;
             deltaSum += Time.deltaTime;
-            fps++;
+            fpsAcc++;
             if (deltaSum > 1.0f)
             {
                 // Print out the fps counter of the parent
-                if (test != null)
-                    Debug.Log(test.fps); // Update order matters here
-                fps = 0;
+                // if (test != null)
+                // Debug.Log(test.fps); // Update order matters here
+                fps = fpsAcc;
+                fpsAcc = 0;
                 deltaSum = 0;
                 if (source.state == AudioSourceState.Playing)
                     source.Pause();

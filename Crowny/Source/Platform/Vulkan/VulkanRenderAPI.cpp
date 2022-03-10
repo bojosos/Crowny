@@ -55,7 +55,7 @@ namespace Crowny
         {
             CW_ENGINE_ERROR(debugMessage.str());
         }
-        CW_ENGINE_ASSERT(false);
+        // CW_ENGINE_ASSERT(false);
 
         return VK_FALSE;
     }
@@ -90,7 +90,7 @@ namespace Crowny
         Vector<const char*> extensions(glfwExts, glfwExts + numExtensions);
         uint32_t numLayers = (uint32_t)layers.size();
 #endif
-        numExtensions = extensions.size();
+        numExtensions = (uint32_t)extensions.size();
         uint32_t layerCount;
         vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
         Vector<VkLayerProperties> availableLayers(layerCount);
@@ -241,7 +241,7 @@ namespace Crowny
                                       const Ref<CommandBuffer>& commandBuffer)
     {
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
-        vkCB->SetViewport(Rect2F(x, y, width, height));
+        vkCB->SetViewport(Rect2F((float)x, (float)y, (float)width, (float)height));
     }
 
     void VulkanRenderAPI::SetIndexBuffer(const Ref<IndexBuffer>& indexBuffer, const Ref<CommandBuffer>& commandBuffer)

@@ -73,7 +73,7 @@ namespace Crowny
     class ShaderImportOptions : public ImportOptions
     {
     public:
-        ShaderLanguage Language;
+        ShaderLanguage Language = ShaderLanguage::VKSL;
 
         void SetDefine(const String& key, const String& value) { m_Defines[key] = value; }
 

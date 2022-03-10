@@ -16,7 +16,7 @@ namespace Crowny
     class SceneSerializer;
     class SceneRenderer;
     class ScriptRuntime;
-    class CameraComponent;
+    struct CameraComponent;
 
     class Scene
     {
@@ -37,7 +37,7 @@ namespace Crowny
         Entity GetEntityFromUuid(const UUID& uuid);
 
         const String& GetName() const { return m_Name; }
-        const String& GetFilepath() const { return m_Filepath; }
+        const Path& GetFilepath() const { return m_Filepath; }
 
         void OnRuntimeStart();
         void OnRuntimePause();
@@ -62,7 +62,7 @@ namespace Crowny
         friend class ScriptRuntime;
 
         String m_Name;
-        String m_Filepath;
+        Path m_Filepath;
         entt::registry m_Registry;
         uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
 

@@ -181,6 +181,12 @@ namespace Crowny
         return { (float)xpos, (float)ypos };
     }
 
+	void Input::OnMouseScroll(float xOffset, float yOffset)
+	{
+		m_FrameScrollX += xOffset;
+		m_FrameScrollY += yOffset;
+	}
+
     float Input::GetMouseX() { return GetMousePosition().x; }
 
     float Input::GetMouseY() { return GetMousePosition().y; }

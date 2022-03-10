@@ -9,6 +9,8 @@
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/Serialization/SerializableObject.h"
 
+#include <box2d/box2d.h>
+
 namespace Crowny
 {
 
@@ -134,6 +136,50 @@ namespace Crowny
             m_Internal->Stop();
     }
 
+    void Rigidbody2DComponent::SetBodyType(BodyType bodyType)
+	{
+		if (RuntimeBody != nullptr)
+        {
+            if (bodyType == BodyType::Static)
+			    RuntimeBody->SetType(b2_staticBody);
+            else if (bodyType == BodyType::Dynamic)
+                RuntimeBody->SetType(b2_dynamicBody);
+            else if (bodyType == BodyType::Kinematic)
+                RuntimeBody->SetType(b2_kinematicBody);
+        }
+		m_Type = bodyType;
+	}
+
+    void Rigidbody2DComponent::SetMass(float mass)
+    {
+		if (RuntimeBody != nullptr)
+        {
+            b2MassData massData;
+            massData.mass = mass;
+			RuntimeBody->SetMassData(&massData);
+        }
+		m_Mass = mass;
+    }
+
+    void Rigidbody2DComponent::SetGravityScale(float scale)
+	{
+		if (RuntimeBody != nullptr)
+			RuntimeBody->SetGravityScale(scale);
+		m_GravityScale = scale;
+	}
+
+    void Rigidbody2DComponent::SetConstraints(Rigidbody2DConstraints constraints)
+	{
+		if (RuntimeBody != nullptr)
+		{
+			if (constraints.IsSet(Rigidbody2DConstraintsBits::FreezeRotation))
+				RuntimeBody->SetFixedRotation(true);
+			else
+				RuntimeBody->SetFixedRotation(false);
+		}
+		m_Constraints = constraints;
+	}
+
     MonoScriptComponent::MonoScriptComponent(const String& name) : ComponentBase() { SetClassName(name); }
 
     MonoClass* MonoScriptComponent::GetManagedClass() const { return m_Class; }
@@ -144,20 +190,19 @@ namespace Crowny
 
     void MonoScriptComponent::OnInitialize(Entity entity)
     {
-        MonoObject* managedInstance;
-        if (m_Class != nullptr)
+        MonoObject* managedInstance = nullptr;
+        if (m_Class == nullptr)
+            return;
+        m_ObjectInfo = nullptr;
+        if (ScriptInfoManager::Get().GetSerializableObjectInfo(m_Class->GetNamespace(), m_Class->GetName(), m_ObjectInfo))
         {
-            m_ObjectInfo = nullptr;
-            if (ScriptInfoManager::Get().GetSerializableObjectInfo(m_Namespace, m_TypeName, m_ObjectInfo))
-            {
-                m_MissingType = false;
-                managedInstance = m_ObjectInfo->m_MonoClass->CreateInstance();
-            }
-            else
-            {
-                managedInstance = nullptr;
-                m_MissingType = true;
-            }
+            m_MissingType = false;
+            managedInstance = m_ObjectInfo->m_MonoClass->CreateInstance();
+        }
+        else
+        {
+            managedInstance = nullptr;
+            m_MissingType = true;
         }
         // ScriptSceneObjectManager::Get().CreateManagedScriptComponent(managedInstance, component); // TODO: Create a managed component so that in C# land 
                                                                                               // we can do ManagedComponent c = GetComponent<ManagedComponent>();

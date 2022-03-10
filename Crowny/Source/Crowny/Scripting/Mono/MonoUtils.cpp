@@ -3,6 +3,8 @@
 #include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/Mono/MonoUtils.h"
 
+#include "Crowny/Common/UTF8.h"
+
 #include <mono/metadata/class.h>
 #include <mono/metadata/metadata.h>
 #include <mono/metadata/object.h>
@@ -11,6 +13,28 @@
 
 namespace Crowny
 {
+
+	std::wstring MonoUtils::WFromMonoString(MonoString* str)
+	{
+		if (str == nullptr)
+			return L"";
+
+		int len = mono_string_length(str);
+		mono_unichar2* monoChars = mono_string_chars(str);
+
+		std::wstring ret(len, '0');
+		for (int i = 0; i < len; i++)
+			ret[i] = monoChars[i];
+
+		return ret;
+	}
+
+	std::string MonoUtils::FromMonoString(MonoString* str)
+	{
+		std::wstring wideString = WFromMonoString(str);
+
+		return UTF8::FromWide(wideString);
+	}
 
     void MonoUtils::CheckException(MonoException* exception)
     {
@@ -41,11 +65,24 @@ namespace Crowny
 
     bool MonoUtils::IsEnum(::MonoClass* monoClass) { return mono_class_is_enum(monoClass) != 0; }
 
-    String MonoUtils::FromMonoString(MonoString* value) { return mono_string_to_utf8(value); }
+    bool MonoUtils::IsValueType(::MonoClass* monoClass) { return mono_class_is_valuetype(monoClass) != 0; }
+
+    ::MonoClass* MonoUtils::GetClass(MonoObject* object)
+    {
+        return mono_object_get_class(object);
+    }
+
+    ::MonoClass* MonoUtils::GetClass(MonoReflectionType* type)
+    {
+        MonoType* monoType = mono_reflection_type_get_type(type);
+        return mono_type_get_class(monoType);
+    }
+
+    // String MonoUtils::FromMonoString(MonoString* value) { return mono_string_to_utf8(value); }
 
     MonoString* MonoUtils::ToMonoString(const String& value)
     {
-        // Is this right? bfs does something completely differnt (using wstring), but Bulgarian guy wth git-repo does this
+        // Is this right? bfs does something completely different (using wstring), but Bulgarian guy wth git-repo does this
         return mono_string_new(MonoManager::Get().GetDomain(), value.c_str());
     }
 
@@ -101,6 +138,16 @@ namespace Crowny
                 }
             } while (true);
         }
+    }
+
+    MonoObject* MonoUtils::Box(::MonoClass* klass, void* value)
+    {
+        return mono_value_box(MonoManager::Get().GetDomain(), klass, value);
+    }
+
+    void* MonoUtils::Unbox(MonoObject* value)
+    {
+        return mono_object_unbox(value);
     }
 
     MonoReflectionType* MonoUtils::GetType(::MonoClass* klass)

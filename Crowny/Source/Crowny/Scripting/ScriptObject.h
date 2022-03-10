@@ -113,7 +113,7 @@ namespace Crowny
     class ScriptObjectWrapper : public ScriptObject<ScriptObjectWrapper>
     {
     public:
-        SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "ScriptOjbect");
+        SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "ScriptObject");
 
     private:
         ScriptObjectWrapper(MonoObject* instance);

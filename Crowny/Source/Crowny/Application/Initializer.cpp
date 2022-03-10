@@ -90,24 +90,26 @@ namespace Crowny
         Renderer2D::Init();
         // ForwardRenderer::Init();
 
-        FontManager::Add(CreateRef<Font>("Resources/Fonts/" + DEFAULT_FONT_FILENAME, "Roboto Thin", 64));
+        FontManager::Add(CreateRef<Font>(Path("Resources/Fonts/") / DEFAULT_FONT_FILENAME, "Roboto Thin", 64));
 
         // Scripting
         MonoManager::StartUp();
-        Path engineAssemblyPath = String("Resources/Assemblies/") + CROWNY_ASSEMBLY + ".dll";
+        Path engineAssemblyPath = Path("Resources/Assemblies/") / (std::string(CROWNY_ASSEMBLY) + ".dll");
         if (fs::exists(engineAssemblyPath))
         {
             MonoManager::Get().LoadAssembly(engineAssemblyPath, CROWNY_ASSEMBLY);
+            ScriptInfoManager::StartUp();
+            ScriptInfoManager::Get().InitializeTypes();
             ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
+            CW_ENGINE_INFO("Loaded engine assembly");
         }
-        Path gameAssmeblyPath = String("Resources/Assemblies/") + GAME_ASSEMBLY + ".dll";
+        Path gameAssmeblyPath = Path("C:/dev/Crowny/Crowny-Sandbox") / (std::string(GAME_ASSEMBLY) + ".dll");
         if (fs::exists(gameAssmeblyPath))
         {
             MonoManager::Get().LoadAssembly(gameAssmeblyPath, GAME_ASSEMBLY);
-            ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
+            ScriptInfoManager::Get().LoadAssemblyInfo(GAME_ASSEMBLY);
+            CW_ENGINE_INFO("Loaded game assembly");
         }
-        ScriptInfoManager::StartUp();
-        ScriptInfoManager::Get().InitializeTypes();
         ScriptSceneObjectManager::StartUp();
         ScriptObjectManager::StartUp();
     }

@@ -49,7 +49,7 @@ namespace Crowny
 
     void EditorLayer::OnAttach()
     {
-        // Well constructors get discareded and the static data is gone, so construct a few empty objects
+        // Well constructors get discarded and the static data is gone, so construct a few empty objects
         ScriptTime();
         ScriptInput();
         ScriptDebug();
@@ -94,7 +94,7 @@ namespace Crowny
 
         m_MenuBar->AddMenu(viewMenu);
 
-        Editor::Get().LoadProject("/home/life/Desktop/dev/New Project");
+        Editor::Get().LoadProject("C:/dev/New Project");
         // ProjectLibrary::Get().Refresh(ProjectLibrary::Get().GetAssetFolder());
         m_AssetBrowser->Initialize();
 

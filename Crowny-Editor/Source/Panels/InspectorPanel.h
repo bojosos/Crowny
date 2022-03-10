@@ -22,7 +22,9 @@ namespace Crowny
         TextureImport,
         ShaderImport,
         MeshImport,
-        Prefab
+        Prefab,
+
+        TextImport
     };
 
     class InspectorPanel : public ImGuiPanel
@@ -64,6 +66,10 @@ namespace Crowny
         Ref<ImportOptions> m_ImportOptions;
         Ref<ImportOptions> m_OldImportOptions;
         Path m_InspectedAssetPath;
+
+        String m_TemporaryImGuiString;
+
+        UnorderedMap<Path, String, HashPath> m_CachedScriptText;
 
         // For normal Entity use
         Entity m_InspectedEntity;

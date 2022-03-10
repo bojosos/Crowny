@@ -11,7 +11,10 @@ namespace Crowny
         Enum,
         Entity,
         Asset,
-        Object
+        Object,
+        Array,
+        List,
+        Dictionary
     };
 
     enum class ScriptPrimitiveType
@@ -33,11 +36,11 @@ namespace Crowny
 
     enum class ScriptFieldFlagBits
     {
-        Serializable,
-        Inspectable,
-        Range,
-        Step,
-        NotNull
+        Serializable = 1 << 0,
+        Inspectable = 1 << 1,
+        Range = 1 << 2,
+        Step = 1 << 3,
+        NotNull = 1 << 4
     };
     typedef Flags<ScriptFieldFlagBits> ScriptFieldFlags;
     CW_FLAGS_OPERATORS(ScriptFieldFlagBits);
@@ -71,6 +74,7 @@ namespace Crowny
         ScriptPrimitiveType m_UnderlyingType;
         String m_TypeNamespace;
         String m_TypeName;
+        Vector<String> m_EnumNames;
     };
 
     class SerializableTypeInfoEntity : public SerializableTypeInfo
@@ -83,6 +87,25 @@ namespace Crowny
         ScriptPrimitiveType m_UnderlyingType;
         String m_TypeNamespace;
         String m_TypeName;
+    };
+
+    class SerializableTypeInfoList : public SerializableTypeInfo
+    {
+    public:
+        virtual bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override { return false; };
+        ::MonoClass* GetMonoClass() const override { return nullptr; }
+        /*{
+            ::MonoClass* monoClass = m_ElementType->GetMonoClass();
+            if (monoClass == nullptr)
+                return nullptr;
+            MonoClass* genericListClass = ScriptInfoManager::Get().GetBuiltinClasses().SystemGenericListClass;
+            ::MonoClass* genParams[1] = { monoClass };
+
+            return MonoUtils::BindGenericParams(genericListClass->GetInternalPtr(), genParams, 1);
+        }*/
+        virtual SerializableType GetType() override { return SerializableType::List; }
+    
+        Ref<SerializableTypeInfo> m_ElementType;
     };
 
     class SerializableTypeInfoObject : public SerializableTypeInfo
@@ -124,9 +147,9 @@ namespace Crowny
     public:
         SerializableFieldInfo() = default;
 
-        MonoObject* GetAttribute(MonoClass* monoClass) override;
-        MonoObject* GetValue(MonoObject* instance) const override;
-        void SetValue(MonoObject* instance, void* value) const override;
+        virtual MonoObject* GetAttribute(MonoClass* monoClass) override;
+        virtual MonoObject* GetValue(MonoObject* instance) const override;
+        virtual void SetValue(MonoObject* instance, void* value) const override;
 
         MonoField* m_Field;
     };
@@ -136,9 +159,9 @@ namespace Crowny
     public:
         SerializablePropertyInfo() = default;
 
-        MonoObject* GetAttribute(MonoClass* monoClass) override;
-        MonoObject* GetValue(MonoObject* instance) const override;
-        void SetValue(MonoObject* instance, void* value) const override;
+        virtual MonoObject* GetAttribute(MonoClass* monoClass) override;
+        virtual MonoObject* GetValue(MonoObject* instance) const override;
+        virtual void SetValue(MonoObject* instance, void* value) const override;
         
         MonoProperty* m_Property;
     };

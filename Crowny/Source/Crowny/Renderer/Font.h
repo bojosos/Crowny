@@ -19,7 +19,7 @@ namespace Crowny
 
         const String& GetName() const { return m_Name; }
         float GetSize() const { return m_Size; }
-        const String& GetFilepath() const { return m_Filepath; }
+        const Path& GetFilepath() const { return m_Filepath; }
 
         ftgl::texture_font_t* GetFTGLFont() const { return m_Font; }
         ftgl::texture_atlas_t* GetFTGLAtlas() const { return m_Atlas; }
@@ -35,7 +35,8 @@ namespace Crowny
         ftgl::texture_atlas_t* m_Atlas;
         ftgl::texture_font_t* m_Font;
         float m_Size;
-        String m_Name, m_Filepath;
+        String m_Name;
+        Path m_Filepath;
         Ref<Texture> m_Texture;
     };
 

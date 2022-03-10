@@ -1,5 +1,5 @@
 #include "cwpch.h"
-
+#if 0
 #include "Crowny/Application/Application.h"
 #include "Crowny/Common/PlatformUtils.h"
 
@@ -51,3 +51,4 @@ namespace Crowny
     }
 
 } // namespace Crowny
+#endif

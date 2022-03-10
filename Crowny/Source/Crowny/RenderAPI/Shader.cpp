@@ -19,6 +19,7 @@ namespace Crowny
         // auto& name = shader->GetName();
         // Add(name, shader);
         // Add("test", shader);
+        return;
     }
 
     Ref<Shader> ShaderLibrary::Load(const Path& filepath)
@@ -26,6 +27,7 @@ namespace Crowny
         // auto shader = Shader::Create(filepath);
         // Add(shader);
         // return shader;
+        return nullptr;
     }
 
     Ref<Shader> ShaderLibrary::Load(const String& name, const Path& filepath)
@@ -33,6 +35,7 @@ namespace Crowny
         // auto shader = Shader::Create(filepath);
         // Add(name, shader);
         // return shader;
+        return nullptr;
     }
 
     Ref<Shader> ShaderLibrary::Get(const String& name)

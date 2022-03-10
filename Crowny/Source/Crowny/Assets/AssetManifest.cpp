@@ -108,7 +108,7 @@ namespace Crowny
         for (auto uuidPath : copy->m_UuidToFilepath)
         {
             out << YAML::BeginMap;
-            out << YAML::Key << uuidPath.first << YAML::Value << uuidPath.second;
+            out << YAML::Key << uuidPath.first << YAML::Value << uuidPath.second.string();
             out << YAML::EndMap;
         }
 

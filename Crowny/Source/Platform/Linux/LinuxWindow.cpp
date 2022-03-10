@@ -1,5 +1,6 @@
 #include "cwpch.h"
 
+// #if 0
 #include "Crowny/Application/Application.h"
 #include "Crowny/Events/ApplicationEvent.h"
 #include "Crowny/Events/KeyEvent.h"
@@ -190,3 +191,4 @@ namespace Crowny
 
     bool LinuxWindow::IsVSync() const { return m_Data.VSync; }
 } // namespace Crowny
+// #endif

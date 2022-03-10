@@ -7,6 +7,7 @@
 #include <utility>
 
 #include <array>
+#include <cmath>
 #include <deque>
 #include <list>
 #include <map>

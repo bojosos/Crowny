@@ -37,3 +37,9 @@
 [submodule "Crowny/Dependencies/box2d"]
 	path = Crowny/Dependencies/box2d
 	url = https://github.com/bojosos/box2d
+[submodule "Crowny/Dependencies/vorbis"]
+	path = Crowny/Dependencies/vorbis
+	url = https://github.com/xiph/vorbis
+[submodule "Crowny/Dependencies/libogg"]
+	path = Crowny/Dependencies/libogg
+	url = https://github.com/gcp/libogg

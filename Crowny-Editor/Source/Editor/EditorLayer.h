@@ -60,18 +60,18 @@ namespace Crowny
     private:
         friend class Time;
 
-        ImGuiMenuBar* m_MenuBar;
+        ImGuiMenuBar* m_MenuBar = nullptr;
         Ref<Scene> m_Temp;
         Ref<RenderTarget> m_RenderTarget;
         Ref<RenderTarget> m_ResizedRenderTarget;
 
-        ImGuiPanel* m_GLInfoPanel;
-        InspectorPanel* m_InspectorPanel;
-        HierarchyPanel* m_HierarchyPanel;
-        ViewportPanel* m_ViewportPanel;
-        TextureEditor* m_TextureEditor;
-        ConsolePanel* m_ConsolePanel;
-        AssetBrowserPanel* m_AssetBrowser;
+        ImGuiPanel* m_GLInfoPanel = nullptr;
+        InspectorPanel* m_InspectorPanel = nullptr;
+        HierarchyPanel* m_HierarchyPanel = nullptr;
+        ViewportPanel* m_ViewportPanel = nullptr;
+        TextureEditor* m_TextureEditor = nullptr;
+        ConsolePanel* m_ConsolePanel = nullptr;
+        AssetBrowserPanel* m_AssetBrowser = nullptr;
 
         bool m_ShowDemoWindow = false;
         bool m_ShowColliders = false;

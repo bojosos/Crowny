@@ -69,6 +69,7 @@ namespace Crowny
 
         // mono_set_dirs(libDir.c_str(), etcDir.c_str());
         // mono_set_assemblies_path(assembliesDir.c_str());
+        mono_set_dirs("C:\\Program Files\\Mono\\lib", "C:\\Program Files\\Mono\\etc");
 
         // #if CW_DEBUG
         mono_debug_init(MONO_DEBUG_FORMAT_MONO);

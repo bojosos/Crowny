@@ -22,10 +22,10 @@ namespace Crowny
     {
         Vector<uint8_t> Data;
         String EntryPoint;
-        ShaderType Type;
+        ShaderType Type = ShaderType::VERTEX_SHADER;
         Ref<UniformDesc> Description;
 
-        BinaryShaderData(){};
+        BinaryShaderData() = default;
         BinaryShaderData(const Vector<uint8_t>& data, const String& entryPoint, ShaderType type,
                          const Ref<UniformDesc>& uniformDesc)
           : Data(data), EntryPoint(entryPoint), Type(type), Description(uniformDesc)
