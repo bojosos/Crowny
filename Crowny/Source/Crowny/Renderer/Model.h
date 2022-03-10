@@ -8,7 +8,7 @@
 
 namespace Crowny
 {
-    class MeshRendererComponent;
+    struct MeshRendererComponent;
 
     class Model
     {
@@ -31,7 +31,7 @@ namespace Crowny
             glm::vec3 Tangent;
             // glm::vec3 Binormal;
         };
-        friend class MeshRendererComponent;
+        friend struct MeshRendererComponent;
 
         Vector<Ref<Mesh>> m_Meshes;
         Vector<Ref<Texture>> m_Textures;

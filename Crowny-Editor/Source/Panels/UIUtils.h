@@ -53,8 +53,9 @@ namespace Crowny
 
         static void SetAssetPayload(const Path& path)
         {
-            const char* itemPath = path.c_str();
-            ImGui::SetDragDropPayload("ASSET_ITEM", itemPath, strlen(itemPath) * sizeof(char));
+            String str = path.string();
+            const char* itemPath = str.c_str();
+            ImGui::SetDragDropPayload("ASSET_ITEM", itemPath, str.size() * sizeof(char));
         }
 
         struct ScopedDisable
@@ -62,6 +63,8 @@ namespace Crowny
             ScopedDisable(bool disabled) : m_Disable(disabled) { if (m_Disable) ImGui::BeginDisabled(); }
             ~ScopedDisable() { if (m_Disable) ImGui::EndDisabled(); } bool m_Disable;
         };
+
+        static bool DrawFloatControl(float& value, float minValue = 0.0f, float maxValue = 1.0f, bool asSlider = false);
     };
 
 } // namespace Crowny

@@ -20,6 +20,7 @@
 #include <backends/imgui_impl_vulkan.h>
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <misc/cpp/imgui_stdlib.h>
 
 namespace Crowny
 {
@@ -90,7 +91,7 @@ namespace Crowny
                 if (const ImGuiPayload* payload = UIUtils::AcceptAssetPayload())
                 {
                     Path payloadPath = UIUtils::GetPathFromPayload(payload);
-                    String ext = payloadPath.extension();
+                    String ext = payloadPath.extension().string();
                     ext = ext.substr(1, ext.size() - 1);
                     if (ext == "ogg" || ext == "wav" || ext == "flac")
                     {
@@ -107,7 +108,7 @@ namespace Crowny
                         {
                             MonoScriptComponent& scriptComponent = selectedEntity.AddComponent<MonoScriptComponent>();
                             Ref<ScriptCode> scriptCode = std::static_pointer_cast<ScriptCode>(ProjectLibrary::Get().Load(payloadPath)); // TODO: Analyze the code to extract the name of the MonoBehaviour class
-                            scriptComponent.SetClassName(payloadPath.filename().replace_extension(""));
+                            scriptComponent.SetClassName(payloadPath.filename().replace_extension("").string());
                             scriptComponent.OnInitialize(selectedEntity);
                         }
                     }
@@ -186,7 +187,7 @@ namespace Crowny
                 {
                     metalnessVal = 0.8f;
                     s_SelectedMaterial->SetMetalnessMap(nullptr);
-                    s_SelectedMaterial->SetMetalness(0.8);
+                    s_SelectedMaterial->SetMetalness(0.8f);
                 }
             }
 
@@ -362,9 +363,7 @@ namespace Crowny
             if (ImGui::Button("Play"))
             {
                 if (m_HasPropertyChanged)
-                {
                     ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions, true);
-                }
                 Ref<AudioClip> clip = std::static_pointer_cast<AudioClip>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
                 AudioManager::Get().Play(clip);
             }
@@ -378,11 +377,43 @@ namespace Crowny
 
     void InspectorPanel::RenderFontImportInspector() {}
 
-    void InspectorPanel::RenderScriptImportInspector() {}
+    void InspectorPanel::RenderScriptImportInspector()
+    {
+        auto iterFind = m_CachedScriptText.find(m_InspectedAssetPath);
+        if (iterFind == m_CachedScriptText.end())
+        {
+            Ref<ScriptCode> scriptCode = std::static_pointer_cast<ScriptCode>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
+            CW_ENGINE_INFO(scriptCode->GetSource());
+            m_CachedScriptText[m_InspectedAssetPath] = scriptCode->GetSource();
+        }
+        ImGui::Text(m_CachedScriptText[m_InspectedAssetPath].c_str());
+    }
 
     void InspectorPanel::RenderTextureImportInspector() {}
 
-    void InspectorPanel::RenderShaderImportInspector() {}
+    void InspectorPanel::RenderShaderImportInspector()
+    {
+		if (m_ImportOptions)
+		{
+			Ref<ShaderImportOptions> shaderImport =
+				std::static_pointer_cast<ShaderImportOptions>(m_ImportOptions);
+			ImGui::Columns(2);
+			ImGui::Text("Defines");
+            ImGui::NextColumn();
+			float x = ImGui::GetCursorPosX();
+			float width = ImGui::GetColumnWidth();
+            if (ImGui::InputTextMultiline("##defines", &m_TemporaryImGuiString))
+			ImGui::NextColumn();
+			ImGui::NextColumn();
+			ImGui::Columns(1);
+			DrawApplyRevert(x, width);
+            {
+                // shaderImport->SetDefine()
+            }
+            ImGui::NextColumn(); ImGui::NextColumn();
+            DrawApplyRevert(x, width);
+        }
+    }
 
     void InspectorPanel::RenderMeshImportInspector() {}
 
@@ -456,7 +487,7 @@ namespace Crowny
             break;
         default: {
             float maxx = ImGui::GetContentRegionAvail().x;
-            ImGui::Text("%s", m_InspectedAssetPath.filename().c_str());
+            ImGui::Text("%s", m_InspectedAssetPath.filename().string().c_str());
             float padding = ImGui::GetStyle().FramePadding.x;
             float open = ImGui::CalcTextSize("Open").x;
             ImGui::SameLine();
@@ -500,18 +531,25 @@ namespace Crowny
     void InspectorPanel::SetSelectedAssetPath(const Path& filepath)
     {
         m_InspectedAssetPath = filepath;
+        m_TemporaryImGuiString.clear();
         if (fs::is_directory(filepath))
         {
             m_InspectorMode = InspectorMode::Default;
             return;
         }
-        String ext = filepath.extension();
+        String ext = filepath.extension().string();
         ext = ext.substr(1, ext.size() - 1);
         if (ext == "ogg" || ext == "wav" || ext == "flac")
             m_InspectorMode = InspectorMode::AudioClipImport;
         else if (ext == "png" || ext == "jpeg" || ext == "psd" || ext == "gif" || ext == "tga" || ext == "bmp" ||
                  ext == "hdr")
             m_InspectorMode = InspectorMode::TextureImport;
+        else if (ext == "cs")
+            m_InspectorMode = InspectorMode::ScriptImport;
+        else if (ext == "txt" || ext == "json" || ext == "xml" || ext == "log")
+            m_InspectorMode = InspectorMode::TextImport;
+        else if (ext == "glsl" || ext == "vksl" || ext == "cwsl" || ext == "hlsl")
+            m_InspectorMode = InspectorMode::ShaderImport;
         else
             m_InspectorMode = InspectorMode::Default;
         Ref<LibraryEntry> entry = ProjectLibrary::Get().FindEntry(filepath);

@@ -34,6 +34,8 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 
+class b2Body;
+
 namespace Crowny
 {
     class ScriptEntityBehaviour;
@@ -243,6 +245,8 @@ namespace Crowny
         MonoClass* GetManagedClass() const;
         MonoObject* GetManagedInstance() const;
 
+        Ref<SerializableObjectInfo> GetObjectInfo() const { return m_ObjectInfo; }
+
         ScriptObjectBackupData BeginRefresh();
         void EndRefresh(const ScriptObjectBackupData& data);
 
@@ -258,7 +262,7 @@ namespace Crowny
 
         String m_TypeName;
         String m_Namespace;
-        bool m_MissingType;
+        bool m_MissingType = false;
         Ref<SerializableObject> m_SerializedObjectData;
         Ref<SerializableObjectInfo> m_ObjectInfo;
         MonoClass* m_Class = nullptr;
@@ -266,27 +270,58 @@ namespace Crowny
         OnStartThunkDef m_OnStartThunk = nullptr;
         OnUpdateThunkDef m_OnUpdateThunk = nullptr;
         OnDestroyThunkDef m_OnDestroyThunk = nullptr;
-        ScriptEntityBehaviour* m_ScriptEntityBehaviour;
+        ScriptEntityBehaviour* m_ScriptEntityBehaviour = nullptr;
     };
 
     template <> void ComponentEditorWidget<MonoScriptComponent>(Entity e);
 
+    enum class Rigidbody2DConstraintsBits
+    {
+		None = 0,
+		FreezeRotation = 1,
+		FreezePositionX = 2,
+		FreezePositionY = 4,
+		FreezePosition = FreezePositionX | FreezePositionY,
+		FreezeAll = FreezeRotation | FreezePosition
+    };
+	typedef Flags<Rigidbody2DConstraintsBits> Rigidbody2DConstraints;
+	CW_FLAGS_OPERATORS(Rigidbody2DConstraintsBits);
+    
+    enum class ForceMode
+    {
+        Force,
+        Impulse
+    };
+
+    enum class BodyType
+    {
+        Static = 0,
+        Dynamic = 1,
+        Kinematic = 2
+    };
+
     struct Rigidbody2DComponent : public ComponentBase
     {
-        enum class BodyType
-        {
-            Static = 0,
-            Dynamic = 1,
-            Kinematic = 2
-        };
-        BodyType Type = BodyType::Static;
-        bool FixedRotation = false;
-        bool FixedPositionX = false, FixedPositionY = false;
-
-        void* RuntimeBody = nullptr;
-
         Rigidbody2DComponent() : ComponentBase() {}
         Rigidbody2DComponent(const Rigidbody2DComponent& rb) = default;
+
+        void SetBodyType(BodyType bodyType);
+        void SetGravityScale(float scale);
+        void SetMass(float mass);
+        void SetConstraints(Rigidbody2DConstraints constraints);
+
+        BodyType GetBodyType() { return m_Type; }
+        float GetMass() const { return m_Mass; }
+        float GetGravityScale() const { return m_GravityScale; }
+        Rigidbody2DConstraints GetConstraints() const { return m_Constraints; }
+        BodyType GetBodyType() const { return m_Type; }
+
+        b2Body* RuntimeBody = nullptr;
+    private:
+        BodyType m_Type = BodyType::Static;
+        Rigidbody2DConstraints m_Constraints = Rigidbody2DConstraintsBits::None;
+        float m_Mass = 1.0f;
+        float m_GravityScale = 1.0f;
     };
 
     template <> void ComponentEditorWidget<Rigidbody2DComponent>(Entity e);
@@ -298,7 +333,7 @@ namespace Crowny
         bool IsTrigger = false;
         PhysicsMaterial2D Material;
 
-        void* RuntimeFixture; // duplicating during runtime will be wrong
+        void* RuntimeFixture = nullptr; // duplicating during runtime will be wrong
 
         BoxCollider2DComponent() : ComponentBase() {}
         BoxCollider2DComponent(const BoxCollider2DComponent& collider) = default;
@@ -314,7 +349,7 @@ namespace Crowny
 
         PhysicsMaterial2D Material;
 
-        void* RuntimeFixture; // duplicating during runtime will be wrong
+        void* RuntimeFixture = nullptr; // duplicating during runtime will be wrong
 
         CircleCollider2DComponent() : ComponentBase() {}
         CircleCollider2DComponent(const CircleCollider2DComponent& collider) = default;

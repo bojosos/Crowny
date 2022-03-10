@@ -76,7 +76,7 @@ namespace Crowny
         uint32_t assemblySize = (uint32_t)assemblyStream->Size();
         char* assemblyData = new char[assemblySize];
         assemblyStream->Read(assemblyData, assemblySize);
-        String imageName = m_Path.filename();
+        String imageName = m_Path.filename().string();
         MonoImageOpenStatus status = MONO_IMAGE_OK;
         MonoImage* image =
           mono_image_open_from_data_with_name(assemblyData, assemblySize, true, &status, false, imageName.c_str());

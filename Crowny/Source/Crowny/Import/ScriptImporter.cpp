@@ -22,8 +22,9 @@ namespace Crowny
     {
         Ref<DataStream> stream = FileSystem::OpenFile(filepath);
         Ref<const CSharpScriptImportOptions> scriptImportOptions = std::static_pointer_cast<const CSharpScriptImportOptions>(importOptions);
+        CW_ENGINE_INFO(stream->Size());
         Ref<ScriptCode> code = CreateRef<ScriptCode>(stream->GetAsString(), scriptImportOptions->IsEditorScript);
-        code->SetName(filepath.filename());
+        code->SetName(filepath.filename().string());
         return code;
     }
 

@@ -12,6 +12,7 @@ namespace Crowny
 
         static bool IsEnum(MonoClass* monoClass);
         static String FromMonoString(MonoString* value);
+        static std::wstring WFromMonoString(MonoString* value);
         static MonoString* ToMonoString(const String& value);
 
         static uint32_t NewGCHandle(MonoObject* object, bool pinned);
@@ -19,10 +20,14 @@ namespace Crowny
         static MonoObject* GetObjectFromGCHandle(uint32_t handle);
 
         static MonoReflectionType* GetType(::MonoClass* klass);
+        static ::MonoClass* GetClass(MonoObject* object);
+        static ::MonoClass* GetClass(MonoReflectionType* reflType);
 
         static void GetClassName(MonoObject* obj, String& ns, String& typeName);
         static void GetClassName(::MonoClass* obj, String& ns, String& typeName);
         static void GetClassName(MonoReflectionType* reflType, String& ns, String& typeName);
+
+        static bool IsValueType(::MonoClass* monoClass);
 
         static ::MonoClass* GetObjectClass();
         static ::MonoClass* GetBoolClass();
@@ -42,7 +47,7 @@ namespace Crowny
         static MonoPrimitiveType GetPrimitiveType(::MonoClass* monoClass);
         static MonoPrimitiveType GetEnumPrimitiveType(::MonoClass* monoClass);
 
-        static MonoObject* Box(void* value);
+        static MonoObject* Box(::MonoClass* klass, void* value);
         static void* Unbox(MonoObject* object);
 
         template <class T, class... Args> static void InvokeThunk(T* thunk, Args... args)

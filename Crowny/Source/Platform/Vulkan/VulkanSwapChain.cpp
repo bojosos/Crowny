@@ -7,7 +7,7 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#define GLFW_EXPOSE_NATIVE_X11
+#define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 
 #include <glm/glm.hpp>
@@ -47,8 +47,8 @@ namespace Crowny
             swapChainExtent = surfCaps.currentExtent;
         }
 
-        m_Width = swapChainExtent.width;
-        m_Height = swapChainExtent.height;
+        width = m_Width = swapChainExtent.width;
+        height = m_Height = swapChainExtent.height;
 
         VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
         if (!vsync)

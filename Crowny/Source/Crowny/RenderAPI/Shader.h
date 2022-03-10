@@ -2,6 +2,8 @@
 
 #include "Crowny/Assets/Asset.h"
 
+#include <cereal/types/polymorphic.hpp>
+
 namespace Crowny
 {
 

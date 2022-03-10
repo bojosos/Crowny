@@ -20,9 +20,9 @@ namespace Crowny
 
     void ScriptRandom::Internal_InitState(int32_t seed) { Random::Seed(seed); }
 
-    void ScriptRandom::Internal_UnitCircle(glm::vec2* out) {}
+    void ScriptRandom::Internal_UnitCircle(glm::vec2* out) { *out = Random::InsideUnitCircle(); }
 
-    void ScriptRandom::Internal_UnitSphere(glm::vec3* out) {}
+    void ScriptRandom::Internal_UnitSphere(glm::vec3* out) { *out = Random::InsideUnitSphere(); }
 
     float ScriptRandom::Internal_Range(float min, float max) { return Random::Float(min, max); }
 

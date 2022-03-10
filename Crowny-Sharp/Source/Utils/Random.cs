@@ -12,7 +12,7 @@ namespace Crowny
         /// <value>A random Vector3 with a length of (0, 1).</value>
         public static Vector3 insideUnitSphere
         { 
-            get { Vector3 tmp; Internal_UnitSphere(out tmp); return tmp; }
+            get { Internal_UnitSphere(out Vector3 tmp); return tmp; }
         }
 
         /// <summary>
@@ -21,7 +21,7 @@ namespace Crowny
         /// <value>A random Vector2 with a length of (0, 1).</value>
         public static Vector2 insideUnitCircle 
         { 
-            get { Vector2 tmp; Internal_UnitCircle(out tmp); return tmp; }
+            get { Internal_UnitCircle(out Vector2 tmp); return tmp; }
         }
 
         /// <summary>

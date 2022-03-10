@@ -22,7 +22,7 @@ namespace Crowny
 
         virtual glm::vec2 ScreenToWindowPosition(const glm::vec2& screenPos) override { return glm::vec2(); };
         virtual glm::vec2 WindowToScreenPos(const glm::vec2& windowPos) override { return glm::vec2(); };
-        virtual void Resize(uint32_t width, uint32_t height) override{};
+        virtual void Resize(uint32_t width, uint32_t height) override { m_Properties.Width = width; m_Properties.Height = height; }
         virtual void Hide() override{};
         virtual void Move(float left, float top) override{};
         virtual void Show() override{};

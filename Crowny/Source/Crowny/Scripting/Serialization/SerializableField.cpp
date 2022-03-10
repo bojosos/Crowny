@@ -121,10 +121,10 @@ namespace Crowny
             if (value != nullptr)
             {
                 ScriptEntity* scriptEntity = ScriptEntity::ToNative(value);
-                fieldData->Value = scriptEntity->GetNativeHandle();
+                fieldData->Value = scriptEntity->GetNativeEntity();
             }
             return fieldData;
-        } else if (typeInfo->GetTypeId() == SerializableType::Array)
+        } else if (typeInfo->GetType() == SerializableType::Array)
         {
             // auto fieldData = CreateRef<SerializableFieldArray>();
             // if (value != nullptr)
@@ -135,7 +135,7 @@ namespace Crowny
             //     fieldData->Value = SerializableFieldArray::CreateNew(arrayTypeInfo, sizes);
             // }
             return nullptr;
-        } else if (typeInfo->GetTypeId() == SerializableType::List)
+        } else if (typeInfo->GetType() == SerializableType::List)
         {
             // auto fieldData = CreateRef<SerializableFieldArray>();
             // if (value != nullptr)
@@ -146,7 +146,7 @@ namespace Crowny
             //     fieldData->Value = SerializableFieldArray::CreateNew(arrayTypeInfo, sizes);
             // }
             return nullptr;
-        } else if (typeInfo->GetTypeId() == SerializableType::Dictionary)
+        } else if (typeInfo->GetType() == SerializableType::Dictionary)
         {
             // auto fieldData = CreateRef<SerializableFieldArray>();
             // if (value != nullptr)
@@ -160,5 +160,10 @@ namespace Crowny
         }
         // TODO: Handle objects
     }
+
+	SerializableFieldKey::SerializableFieldKey(uint32_t typeId, uint32_t fieldId) : m_TypeId(typeId), m_FieldIdx(fieldId)
+	{
+
+	}
 
 }

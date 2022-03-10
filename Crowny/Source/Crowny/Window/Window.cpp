@@ -6,12 +6,12 @@
 #include "Crowny/Input/Input.h"
 #include "Crowny/Window/Window.h"
 
-#ifdef CW_PLATFORM_WINDOWS
+#ifdef CW_WINDOWS
 #include "Platform/Windows/WindowsWindow.h"
 #endif
 
-#ifdef CW_PLATFORM_LINUX
 #include "Platform/Linux/LinuxWindow.h"
+#ifdef CW_LINUX
 #endif
 
 namespace Crowny
@@ -19,9 +19,9 @@ namespace Crowny
 
     Window* Window::Create(const WindowProperties& props)
     {
-#ifdef CW_PLATFORM_WINDOWS
-        return CreateRef<WindowsWindow>(props);
-#elif defined(CW_PLATFORM_LINUX)
+#ifdef CW_WINDOWS
+        return new LinuxWindow(props);
+#elif defined(CW_LINUX)
         // return CreateRef<LinuxWindow>(props);
         return new LinuxWindow(props);
 #else

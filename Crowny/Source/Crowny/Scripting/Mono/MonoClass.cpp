@@ -35,26 +35,21 @@ namespace Crowny
     MonoClass::~MonoClass()
     {
         for (auto& method : m_Methods)
-        {
             delete method.second;
-        }
         m_Methods.clear();
 
         for (auto& field : m_Fields)
-        {
             delete field.second;
-        }
         m_Fields.clear();
 
         for (auto& prop : m_Properties)
-        {
             delete prop.second;
-        }
         m_Properties.clear();
     }
     MonoObject* MonoClass::CreateInstance(bool construct) const
     {
         MonoObject* obj = mono_object_new(MonoManager::Get().GetDomain(), m_Class);
+        CW_ENGINE_INFO(construct);
         if (construct)
             mono_runtime_object_init(obj);
         return obj;
@@ -143,7 +138,7 @@ namespace Crowny
         MonoCustomAttrInfo* info = mono_custom_attrs_from_class(m_Class);
         if (info == nullptr)
             return res;
-        for (uint32_t i = 0; i < info->num_attrs; i++)
+        for (uint32_t i = 0; i < (uint32_t)info->num_attrs; i++)
         {
             ::MonoClass* monoClass = mono_method_get_class(info->attrs[i].ctor);
 

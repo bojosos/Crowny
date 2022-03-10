@@ -66,10 +66,10 @@ namespace Crowny
         MonoObject* Deserialize();
         void Deserialize(MonoObject* instance, const Ref<SerializableObjectInfo>& objInfo);
 
-    private:
+        ~SerializableObject();
         SerializableObject(Ref<SerializableObjectInfo> objInfo, MonoObject* instance);
         SerializableObject();
-        ~SerializableObject();
+    private:
         
         struct Hash
         {

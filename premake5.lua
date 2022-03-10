@@ -36,15 +36,24 @@ IncludeDir["glm"] = "%{wks.location}/Crowny/Dependencies/glm"
 IncludeDir["entt"] = "%{wks.location}/Crowny/Dependencies/entt/single_include"
 IncludeDir["stb_image"] = "%{wks.location}/Crowny/Dependencies/stb_image"
 IncludeDir["assimp"] = "%{wks.location}/Crowny/Dependencies/assimp/include"
-IncludeDir["mono"] = "/usr/include/mono-2.0" --- huh
-IncludeDir["gtk"] = "/usr/include/gtk-3.0/" --- fix for windows
-IncludeDir["glib"] = "/usr/include/glib-2.0"
 IncludeDir["cereal"] = "%{wks.location}/Crowny/Dependencies/cereal/include"
-IncludeDir['vulkan'] = "%{wks.location}/Crowny/Dependencies/vulkan/include"
 IncludeDir['yamlcpp'] = "%{wks.location}/Crowny/Dependencies/yaml-cpp/include"
 IncludeDir["ImGuizmo"] = "%{wks.location}/Crowny/Dependencies/ImGuizmo"
-IncludeDir["openal"] = "%{wks.location}/Crowny/Dependencies/openal-soft/include"
+IncludeDir["openal"] = "%{wks.location}/Crowny/Dependencies/openal-soft/include" -- this one is also somewhat installable
+IncludeDir["libvorbis"] = "%{wks.location}/Crowny/Dependencies/vorbis/include"
+IncludeDir["libogg"] = "%{wks.location}/Crowny/Dependencies/libogg/include"
+IncludeDir["vkalloc"] = "%{wks.location}/Crowny/Dependencies/vulkan/include"
 
+-- installed/platform
+filter "system:linux"
+	IncludeDir["gtk"] = "/usr/include/gtk-3.0/" --- fix for windows
+	IncludeDir["glib"] = "/usr/include/glib-2.0"
+	IncludeDir['vulkan'] = "/usr/include/vulkan"
+	IncludeDir["mono"] = "/usr/include/mono-2.0"
+filter "system:windows"
+	IncludeDir["mono"] = "C:/Program Files/Mono/include/mono-2.0"
+	IncludeDir['vulkan'] = "C:/VulkanSDK/1.3.204.1/Include"
+	
 group "Dependencies"
 	include "3rdparty/premake"
 	include "Crowny/Dependencies/glfw"
@@ -56,6 +65,8 @@ group "Dependencies"
   	include "Crowny/Dependencies/yaml-cpp"
 	include "Crowny/Dependencies/ImGuizmo"
 	include "Crowny/Dependencies/box2d"
+	include "Crowny/Dependencies/vorbis"
+	include "Crowny/Dependencies/libogg"
   --- include "Crowny/Dependencies/openal-soft"
 group ""
 
