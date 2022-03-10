@@ -43,6 +43,9 @@ namespace Crowny
          */
         static int32_t Int(int32_t min, int32_t max);
 
+        static glm::vec2 InsideUnitCircle();
+        static glm::vec3 InsideUnitSphere();
+
     private:
         virtual void OnStartUp() override;
 

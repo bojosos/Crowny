@@ -5,6 +5,8 @@
 #include "Crowny/Common/Uuid.h"
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Common/Yaml.h"
+#include "Crowny/Common/FileSystem.h"
+
 #include "Crowny/Ecs/Components.h"
 
 namespace Crowny
@@ -117,7 +119,7 @@ namespace Crowny
             out << YAML::BeginMap;
             const auto& tc = entity.GetComponent<TextComponent>();
             out << YAML::Key << "Text" << YAML::Value << tc.Text;
-            out << YAML::Key << "Font" << YAML::Value << tc.Font->GetFilepath(); // TODO: Do this better
+            out << YAML::Key << "Font" << YAML::Value << tc.Font->GetFilepath().string(); // TODO: Do this better
             out << YAML::Key << "Color" << YAML::Value << tc.Color;
             out << YAML::EndMap;
         }
@@ -174,6 +176,18 @@ namespace Crowny
             out << YAML::EndMap;
         }
 
+        if (entity.HasComponent<Rigidbody2DComponent>())
+        {
+            out << YAML::Key << "Rigidbody2D";
+            out << YAML::BeginMap;
+            const auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
+            out << YAML::Key << "BodyType" << YAML::Value << (uint32_t)rb2d.GetBodyType();
+            out << YAML::Key << "Mass" << YAML::Value << rb2d.GetMass();
+            out << YAML::Key << "GravityScale" << YAML::Value << rb2d.GetGravityScale();
+            out << YAML::Key << "Constraints" << YAML::Value << (uint32_t)rb2d.GetConstraints();
+            out << YAML::EndMap;
+        }
+
         if (entity.HasComponent<BoxCollider2DComponent>())
         {
             out << YAML::Key << "BoxCollider2D";
@@ -182,6 +196,7 @@ namespace Crowny
             out << YAML::Key << "Offset" << YAML::Value << bc2d.Offset;
             out << YAML::Key << "Size" << YAML::Value << bc2d.Size;
             out << YAML::Key << "IsTrigger" << YAML::Value << bc2d.IsTrigger;
+            out << YAML::EndMap;
             // out << YAML::Key << "Material" << YAML::Value << bc2d.Material;
         }
 
@@ -193,6 +208,7 @@ namespace Crowny
             out << YAML::Key << "Offset" << YAML::Value << cc2d.Offset;
             out << YAML::Key << "Size" << YAML::Value << cc2d.Radius;
             out << YAML::Key << "IsTrigger" << YAML::Value << cc2d.IsTrigger;
+            out << YAML::EndMap;
             // out << YAML::Key << "Material" << YAML::Value << cc2d.Material;
         }
 
@@ -232,14 +248,19 @@ namespace Crowny
 
         out << YAML::EndSeq << YAML::EndMap;
         m_Scene->m_Filepath = filepath;
-        VirtualFileSystem::Get()->WriteTextFile(filepath, out.c_str());
+        Ref<DataStream> stream = FileSystem::CreateAndOpenFile(filepath);
+        const char* str = out.c_str();
+        stream->Write(str, std::strlen(str));
+        stream->Close();
+        // VirtualFileSystem::Get()->WriteTextFile(filepath, out.c_str());
     }
 
     void SceneSerializer::SerializeBinary(const Path& filepath) {}
 
     void SceneSerializer::Deserialize(const Path& filepath)
     {
-        String text = VirtualFileSystem::Get()->ReadTextFile(filepath);
+        String text = FileSystem::OpenFile(filepath)->GetAsString();
+        // String text = VirtualFileSystem::Get()->ReadTextFile(filepath);
         YAML::Node data = YAML::Load(text);
         if (!data["Scene"])
             return;
@@ -343,11 +364,37 @@ namespace Crowny
                     asc.SetLooping(source["Loop"].as<bool>());
                 }
 
+                YAML::Node rb2d = entity["Rigidbody2D"];
+                if (rb2d)
+                {
+					auto& rb2dc = deserialized.AddComponent<Rigidbody2DComponent>();
+					rb2dc.SetBodyType((BodyType)rb2d["BodyType"].as<uint32_t>());
+                    rb2dc.SetMass(rb2d["Mass"].as<float>());
+                    rb2dc.SetGravityScale(rb2d["GravityScale"].as<float>());
+                    rb2dc.SetConstraints((Rigidbody2DConstraints)rb2d["Constraints"].as<uint32_t>());
+                }
+
+                YAML::Node bc2d = entity["BoxCollider2D"];
+				if (bc2d)
+				{
+					auto& bc2dc = deserialized.AddComponent<BoxCollider2DComponent>();
+					bc2dc.Offset = bc2d["Offset"].as<glm::vec2>();
+                    bc2dc.Size = bc2d["Size"].as<glm::vec2>();
+                    bc2dc.IsTrigger = bc2d["IsTrigger"].as<bool>();
+				}
+
+                YAML::Node cc2d = entity["CircleCollider2D"];
+				if (cc2d)
+				{
+					auto& cc2dc = deserialized.AddComponent<CircleCollider2DComponent>();
+                    cc2dc.Offset = cc2d["Offset"].as<glm::vec2>();
+                    cc2dc.Radius = cc2d["Size"].as<float>();
+                    cc2dc.IsTrigger = cc2d["IsTrigger"].as<bool>();
+				}
+
                 YAML::Node rel = entity["RelationshipComponent"];
                 if (rel)
-                {
                     serializedComponents[deserialized] = rel;
-                }
             }
 
             for (auto rc : serializedComponents)

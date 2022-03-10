@@ -5,6 +5,7 @@
 
 #include "Crowny/Common/StringUtils.h"
 #include "Crowny/Common/VirtualFileSystem.h"
+#include "Crowny/Common//FileSystem.h"
 #include "Crowny/RenderAPI/Texture.h"
 
 #include <stb_image.h>
@@ -31,15 +32,19 @@ namespace Crowny
         int width, height, channels;
         stbi_set_flip_vertically_on_load(1);
 
-        auto [loaded, size] = VirtualFileSystem::Get()->ReadFile(filepath);
-
-        bool is16 = stbi_is_16_bit_from_memory(loaded, size);
+        //auto [loaded, size] = VirtualFileSystem::Get()->ReadFile(filepath);
+        std::vector<uint8_t> data;
+        Ref<DataStream> stream = FileSystem::OpenFile(filepath);
+        data.resize(stream->Size());
+        stream->Read(data.data(), data.size());
+        stream->Close();
+        bool is16 = stbi_is_16_bit_from_memory(data.data(), (int)data.size());
         uint8_t* rawPixelData;
 
         if (is16)
-            rawPixelData = (uint8_t*)stbi_load_16_from_memory(loaded, size, &width, &height, &channels, 0);
+            rawPixelData = (uint8_t*)stbi_load_16_from_memory(data.data(), (int)data.size(), &width, &height, &channels, 0);
         else
-            rawPixelData = stbi_load_from_memory(loaded, size, &width, &height, &channels, 0);
+            rawPixelData = stbi_load_from_memory(data.data(), (int)data.size(), &width, &height, &channels, 0);
 
         if (rawPixelData == nullptr)
         {
@@ -69,7 +74,7 @@ namespace Crowny
         Ref<Texture> texture = Texture::Create(params);
         pixelData.SetBuffer(rawPixelData);
         texture->WriteData(pixelData);
-        texture->SetName(filepath.filename());
+        texture->SetName(filepath.filename().string());
         return texture;
     }
 

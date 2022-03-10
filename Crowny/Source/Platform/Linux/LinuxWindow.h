@@ -1,4 +1,5 @@
 #pragma once
+// #if 0
 
 #include "Crowny/RenderAPI/GraphicsContext.h"
 #include "Crowny/Window/Window.h"
@@ -49,3 +50,4 @@ namespace Crowny
         WindowData m_Data;
     };
 } // namespace Crowny
+// #endif

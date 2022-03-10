@@ -1,166 +1,290 @@
-#if 0
 #include "cwpch.h"
 
 #include "Crowny/Application/Application.h"
 #include "Crowny/Common/FileSystem.h"
+#include "Crowny/Common//StringUtils.h"
+#include "Crowny/Common/UTF8.h"
 
 #include <GLFW/glfw3.h>
 
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 #include <commdlg.h>
+#include <ShlObj_core.h>
 #undef GLFW_EXPOSE_NATIVE_WIN32
 
 namespace Crowny
 {
-	//TODO: Make all of these work with Unicode
-	void CALLBACK FileIOCompleted(DWORD dwErrorCode, DWORD dwBytesTransfered, LPOVERLAPPED ol)
+	bool FileSystem::FileExists(const Path& path)
 	{
-
+		std::ifstream f(path);
+		return f.good();
 	}
 
-	static HANDLE OpenFileForReadingWin32(const String& path)
+	int64_t FileSystem::GetFileSize(const Path& path)
 	{
-		return CreateFile(path.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, NULL);
+		std::ifstream in(path, std::ifstream::ate | std::ifstream::binary);
+		return in.tellg();
 	}
 
-	static bool ReadFileWin32(HANDLE file, void* buffer, int64_t size)
+	std::tuple<uint8_t*, uint64_t> FileSystem::ReadFile(const Path& path)
 	{
-		OVERLAPPED ol = { 0 };
-		return ReadFileEx(file, buffer, size, &ol, FileIOCompleted);
+		std::ifstream input(path, std::ios::binary);
+
+		Vector<uint8_t>* uint8_ts =
+			new Vector<uint8_t>((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
+
+		input.close();
+		return std::make_tuple(uint8_ts->data(), uint8_ts->size());
 	}
 
-	static int64_t GetFileSizeWin32(HANDLE file)
+	bool FileSystem::ReadFile(const Path& path, void* buffer, int64_t size)
 	{
-		LARGE_INTEGER size;
-		GetFileSizeEx(file, &size);
-		return size.QuadPart;
+		CW_ENGINE_CRITICAL("Read file void* not implemented");
+		return false;
 	}
 
-	bool FileSystem::FileExists(const String& path)
+	String FileSystem::ReadTextFile(const Path& path)
 	{
-		DWORD res = GetFileAttributes(path.c_str()); // is this safe?
-		return !(res == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND);
+		std::ifstream input(path);
+
+		String res((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+		input.close();
+		return res;
 	}
 
-	int64_t FileSystem::GetFileSize(const String& path)
+	bool FileSystem::WriteFile(const Path& path, uint8_t* buffer, uint64_t size)
 	{
-		HANDLE file = OpenFileForReadingWin32(path);
-		if (file == INVALID_HANDLE_VALUE)
-			return -1;
-		int64_t size = GetFileSizeWin32(file);
-		CloseHandle(file);
-		return size;
+		std::ofstream fout;
+		fout.open(path, std::ios::binary | std::ios::out);
+		fout.write((char*)buffer, size);
+		fout.close();
+		return buffer != nullptr;
 	}
 
-	std::tuple<byte*, uint64_t> FileSystem::ReadFile(const String& path)
+	bool FileSystem::WriteTextFile(const Path& path, const String& text)
 	{
-		HANDLE file = OpenFileForReadingWin32(path);
-
-		int64_t size = GetFileSizeWin32(file);
-
-		byte* buff = new byte[size];
-		bool success = ReadFileWin32(file, buff, size);
-
-		CloseHandle(file);
-
-		if (!success)
-			delete[] buff;
-
-		return success ? std::make_tuple(buff, size) : std::make_tuple(nullptr, -1);
+		std::ofstream fout;
+		fout.open(path, std::ios::out);
+		fout.write(text.c_str(), text.size());
+		fout.close();
+		return !text.empty();
 	}
 
-	bool FileSystem::ReadFile(const String& path, void* buffer, int64_t size)
+	Ref<DataStream> FileSystem::OpenFile(const Path& filepath, bool readOnly)
 	{
-		HANDLE file = OpenFileForReadingWin32(path);
-		CW_ENGINE_ASSERT(file != INVALID_HANDLE_VALUE, path);
+		DataStream::AccessMode accessMode = DataStream::READ;
+		if (!readOnly)
+			accessMode = (DataStream::AccessMode)(accessMode | DataStream::WRITE);
 
-		if (size < 0)
+		return CreateRef<FileDataStream>(filepath, accessMode, true);
+	}
+
+	Ref<DataStream> FileSystem::CreateAndOpenFile(const Path& filepath)
+	{
+		return CreateRef<FileDataStream>(filepath, DataStream::WRITE, true);
+	}
+
+	void AddFilters(IFileDialog* fileDialog, const String& filter)
+	{
+		const wchar_t empty[] = L"";
+		if (filter.empty())
+			return;
+		std::wstring wideFilterList = UTF8::ToWide(filter);
+		Vector<std::wstring> filters = StringUtils::SplitString(wideFilterList, L";");
+		uint32_t numFilters = (int32_t)filters.size();
+		if (filters.size() == 0)
+			return;
+
+		COMDLG_FILTERSPEC* specList = new COMDLG_FILTERSPEC[numFilters];
+		for (uint32_t i = 0; i < numFilters; i++)
 		{
-			size = GetFileSizeWin32(file);
+			specList[i].pszName = empty;
+			specList[i].pszSpec = filters[i].c_str();
 		}
 
-		bool success = ReadFileWin32(file, buffer, size);
-		CloseHandle(file);
-		return success;
+		fileDialog->SetFileTypes(numFilters, specList);
+		delete[] specList;
 	}
 
-	String FileSystem::ReadTextFile(const String& path)
+	void SetInitialDir(IFileDialog* fileDialog, const Path& initialDir)
 	{
-		HANDLE file = OpenFileForReadingWin32(path);
-		CW_ENGINE_ASSERT(file != INVALID_HANDLE_VALUE, path);
-
-		int64_t size = GetFileSizeWin32(file);
-		String res(size, 0);
-		bool success = ReadFileWin32(file, &res[0], size);
-		CloseHandle(file);
-
-		return success ? res : String();
+		const wchar_t* pathStr = initialDir.c_str();
+		IShellItem* folder;
+		HRESULT result = SHCreateItemFromParsingName(pathStr, NULL, IID_PPV_ARGS(&folder));
+		if (result == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) || result == HRESULT_FROM_WIN32(ERROR_INVALID_DRIVE))
+			return;
+		if (!SUCCEEDED(result))
+			return;
+		fileDialog->SetFolder(folder);
+		folder->Release();
 	}
 
-	// TODO: investigate this, or just use c++ api
-	bool FileSystem::WriteFile(const String& path, byte* buffer, uint64_t sz)
+	void GetPaths(IShellItemArray* shellItems, Vector<Path>& outPaths)
 	{
-		HANDLE file = CreateFile(path.c_str(), GENERIC_WRITE, NULL, NULL, CREATE_NEW | OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		CW_ENGINE_ASSERT(file != INVALID_HANDLE_VALUE, path);
-
-		int64_t size = GetFileSizeWin32(file);
-		DWORD written;
-		bool success = ::WriteFile(file, buffer, size, &written, nullptr);
-		CloseHandle(file);
-
-		return success;
-	}
-
-	bool FileSystem::WriteTextFile(const String& path, const String& text)
-	{
-		return WriteFile(path, (byte*)text[0]);
-	}
-
-	bool FileSystem::OpenFileDialog(FileDialogType type, const String& initialDir = "", const String& filter, Vector<String>& outpaths)
-	{
-		OPENFILENAME ofn = { 0 };
-		TCHAR szFile[260] = { 0 };
-		
-		ofn.lStructSize = sizeof(ofn);
-		ofn.hwndOwner = glfwGetWin32Window((GLFWwindow*)Application::Get().GetWindow().GetNativeWindow());
-		ofn.lpstrFile = szFile;
-		ofn.nMaxFile = sizeof(szFile);
-		ofn.lpstrTitle = title.c_str();
-		ofn.lpstrFilter = filter;
-		ofn.nFilterIndex = 1;
-		ofn.lpstrFileTitle = NULL;
-		ofn.nMaxFileTitle = 0;
-		ofn.lpstrInitialDir = initialDir.empty() ? NULL : initialDir.c_str();
-		ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-
-		if (type == FileDialogType::OpenFile)
+		DWORD numItems;
+		shellItems->GetCount(&numItems);
+		for (DWORD i = 0; i < numItems; i++)
 		{
-			if (GetOpenFileName(&ofn) == TRUE)
+			IShellItem* shellItem = nullptr;
+			shellItems->GetItemAt(i, &shellItem);
+			SFGAOF attribs;
+			shellItem->GetAttributes(SFGAO_FILESYSTEM, &attribs);
+			
+			if (!(attribs & SFGAO_FILESYSTEM))
+				continue;
+			LPWSTR name;
+			shellItem->GetDisplayName(SIGDN_FILESYSPATH, &name);
+			outPaths.push_back(Path(name));
+			CoTaskMemFree(name);
+		}
+	}
+
+	bool FileSystem::OpenFileDialog(FileDialogType type, const Path& initialDir, const String& filter, Vector<Path>& outPaths)
+	{
+		CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+		IFileDialog* fileDialog = nullptr;
+		bool isOpenDialog = type == FileDialogType::OpenFile || type == FileDialogType::OpenFolder || type == FileDialogType::Multiselect;
+		IID classId = isOpenDialog ? CLSID_FileOpenDialog : CLSID_FileSaveDialog;
+		CoCreateInstance(classId, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&fileDialog));
+
+		AddFilters(fileDialog, filter);
+		SetInitialDir(fileDialog, initialDir);
+
+		bool isMultiselected = type == FileDialogType::Multiselect;
+		if (isOpenDialog)
+		{
+			if (type == FileDialogType::OpenFolder)
 			{
-				return std::make_tuple(true, ofn.lpstrFile);
+				DWORD dwFlags;
+				fileDialog->GetOptions(&dwFlags);
+				fileDialog->SetOptions(dwFlags | FOS_PICKFOLDERS);
+			}
+			else if (type == FileDialogType::Multiselect)
+			{
+				DWORD dwFlags;
+				fileDialog->GetOptions(&dwFlags);
+				fileDialog->SetOptions(dwFlags | FOS_ALLOWMULTISELECT);
 			}
 		}
 
-		if (type == FileDialogType::SaveFile)
+		bool finalResult = false;
+		if (SUCCEEDED(fileDialog->Show(nullptr)))
 		{
-			if (GetSaveFileName(&ofn) == TRUE)
+			if (type == FileDialogType::Multiselect)
 			{
-				return std::make_tuple(true, ofn.lpstrFile);
+				IFileOpenDialog* fileOpenDialog;
+				fileDialog->QueryInterface(IID_IFileOpenDialog, (void**)&fileOpenDialog);
+				IShellItemArray* shellItems = nullptr;
+				fileOpenDialog->GetResults(&shellItems);
+				GetPaths(shellItems, outPaths);
+				shellItems->Release();
+				fileOpenDialog->Release();
 			}
+			else
+			{
+				IShellItem* shellItem = nullptr;
+				fileDialog->GetResult(&shellItem);
+				LPWSTR filePath = nullptr;
+				shellItem->GetDisplayName(SIGDN_FILESYSPATH, &filePath);
+				outPaths.push_back(Path(filePath));
+				CoTaskMemFree(filePath);
+				shellItem->Release();
+			}
+			finalResult = true;
 		}
 
-		if (type == FileDialogType::Multiselect)
-		{
-			ofn.Flags |= OFN_ALLOWMULTISELECT;
-			if (GetOpenFileName(&ofn) == TRUE)
-			{
-				return std::make_tuple(true, ofn.lpstrFile);
-			}
-		}
-
-		return std::make_tuple(false, "");
+		CoUninitialize();
+		return finalResult;
 	}
+
+	//bool FileSystem::OpenFileDialog(FileDialogType type, const Path& initialDir, const String& filter, Vector<Path>& outPaths)
+	//{
+	//	OPENFILENAME ofn = { 0 };
+	//	TCHAR szFile[260] = { 0 };
+	//
+	//	char* title = nullptr;
+	//	switch (type)
+	//	{
+	//	case FileDialogType::OpenFile:
+	//		title = "Open file";
+	//		break;
+	//	case FileDialogType::SaveFile:
+	//		title = "Save file";
+	//		break;
+	//	case FileDialogType::Multiselect:
+	//		title = "Open files";
+	//		break;
+	//	case FileDialogType::OpenFolder:
+	//		title = "Open folder";
+	//		break;
+	//	}
+
+	//	ofn.lStructSize = sizeof(ofn);
+	//	ofn.hwndOwner = glfwGetWin32Window((GLFWwindow*)Application::Get().GetWindow().GetNativeWindow());
+	//	ofn.lpstrFile = szFile;
+	//	ofn.nMaxFile = sizeof(szFile);
+	//	ofn.lpstrTitle = title;
+	//	ofn.lpstrFilter = filter.c_str();
+	//	ofn.nFilterIndex = 1;
+	//	ofn.lpstrFileTitle = NULL;
+	//	ofn.nMaxFileTitle = 0; // TODO: maybe use cur dir here if empty?
+	//	ofn.lpstrInitialDir = initialDir.empty() ? NULL : initialDir.string().c_str();
+	//	ofn.Flags = /*OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | */ OFN_EXPLORER | OFN_ENABLESIZING;
+
+	//	if (type == FileDialogType::OpenFile)
+	//	{
+	//		if (GetOpenFileName(&ofn) == TRUE)
+	//		{
+	//			outPaths.push_back(Path(ofn.lpstrFile));
+	//			return true;
+	//		}
+	//	}
+
+	//	if (type == FileDialogType::SaveFile)
+	//	{
+	//		if (GetSaveFileName(&ofn) == TRUE)
+	//		{
+	//			outPaths.push_back(Path(ofn.lpstrFile));
+	//			return true;
+	//		}
+	//	}
+
+	//	if (type == FileDialogType::Multiselect)
+	//	{
+	//		ofn.Flags |= OFN_ALLOWMULTISELECT;
+	//		if (GetOpenFileName(&ofn) == TRUE)
+	//		{
+	//			// TODO: fix this
+	//			// outPaths.push_back(Path(ofn.lpstrFile)); null separated and another null after?
+	//			CW_ENGINE_INFO(ofn.lpstrFile);
+	//			return true;
+	//		}
+	//	}
+
+	//	if (type == FileDialogType::OpenFolder)
+	//	{
+	//		std::string path;
+	//		path.resize(256);
+	//		BROWSEINFO browseinfo = { 0 };
+	//		browseinfo.hwndOwner = glfwGetWin32Window((GLFWwindow*)Application::Get().GetWindow().GetNativeWindow());;
+	//		browseinfo.lpszTitle = title;
+	//		browseinfo.ulFlags = BIF_NEWDIALOGSTYLE /* | BIF_RETURNONLYFSDIRS 0*/ ;
+	//		LPITEMIDLIST pidl = SHBrowseForFolder(&browseinfo);
+	//		if (pidl != nullptr)
+	//		{
+	//			SHGetPathFromIDList(pidl, path.data());
+	//			IMalloc* imalloc = nullptr;
+	//			if (SUCCEEDED(SHGetMalloc(&imalloc)))
+	//			{
+	//				imalloc->Free(pidl);
+	//				imalloc->Release();
+	//			}
+	//		}
+	//		outPaths.push_back(path);
+	//	}
+
+	//	return false;
+	//}
 
 }
-#endif

@@ -9,21 +9,21 @@ namespace Crowny
 
     SceneCamera::SceneCamera() { RecalculateProjection(); }
 
-    void SceneCamera::SetPerspective(float verticalFov, float near, float far)
+    void SceneCamera::SetPerspective(float verticalFov, float nearPlane, float farPlane)
     {
         m_ProjectionType = CameraProjection::Perspective;
         m_PerspectiveFOV = verticalFov;
-        m_PerspectiveNear = near;
-        m_PerspectiveFar = far;
+        m_PerspectiveNear = nearPlane;
+        m_PerspectiveFar = farPlane;
         RecalculateProjection();
     }
 
-    void SceneCamera::SetOrthographic(float size, float near, float far)
+    void SceneCamera::SetOrthographic(float size, float nearPlane, float farPlane)
     {
         m_ProjectionType = CameraProjection::Orthographic;
         m_OrthographicSize = size;
-        m_OrthographicNear = near;
-        m_OrthographicFar = far;
+        m_OrthographicNear = nearPlane;
+        m_OrthographicFar = farPlane;
         RecalculateProjection();
     }
 

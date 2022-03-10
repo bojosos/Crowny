@@ -2,7 +2,7 @@ project "Crowny"
 	kind "StaticLib"
 	language "C++"
 	cppdialect "C++17"
-	staticruntime "on"
+	staticruntime "off"
 	characterset ("MBCS")
 
 	targetdir ("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
@@ -22,11 +22,9 @@ project "Crowny"
   		"Dependencies/cereal/include/cereal/**.h"
 	}
 
-	toolset "clang"
-
 	defines
 	{
-    "CW",
+	    "CW",
 		"_CRT_NONSTDC_NO_DEPRECATE",
 		"_CRT_SECURE_NO_WARNINGS"
 	}
@@ -48,15 +46,18 @@ project "Crowny"
 		"%{IncludeDir.yamlcpp}",
 		"%{IncludeDir.ImGuizmo}",
 		"%{IncludeDir.openal}",
-    "%{IncludeDir.cereal}",
-		"%{IncludeDir.Box2D}"
+		"%{IncludeDir.cereal}",
+		"%{IncludeDir.libvorbis}",
+		"%{IncludeDir.libogg}",
+		"%{IncludeDir.Box2D}",
+		"%{IncludeDir.vkalloc}"
 	}
 
-	libdirs { "/usr/lib/mono-2.0", "%{wks.location}/Crowny/Dependencies/vulkan/lib" }
+	libdirs { "/usr/lib/mono-2.0", "%{wks.location}/Crowny/Dependencies/vulkan/lib", "C:/VulkanSDK/1.3.204.1/Lib", "C:/dev/Crowny/Crowny/Dependencies/vorbis/bin/Debug-windows-x86_64/libvorbis" }
 
 	links 
 	{
-		"GL", "Xxf86vm", "Xrandr", "pthread", "Xi", "dl", "uuid",
+		-- "GL", "Xxf86vm", "Xrandr", "pthread", "Xi", "dl", "uuid",
 		"imgui",
 		"freetype-gl",
 		"assimp",
@@ -69,8 +70,10 @@ project "Crowny"
 		"SPIRV-Tools-opt",
 		"SPIRV-Tools",
 		"SPIRV-Tools-link",
-		"vorbis",
-		"ogg",
+		"vorbisenc",
+		"libvorbisfile_static",
+		"libvorbis_static",
+		"libogg",
 		"Box2D"
 	}
 

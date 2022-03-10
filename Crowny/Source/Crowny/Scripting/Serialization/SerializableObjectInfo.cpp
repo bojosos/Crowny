@@ -2,6 +2,7 @@
 
 #include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
 #include "Crowny/Scripting/Serialization/SerializableField.h"
+#include "Crowny/Scripting/ScriptInfoManager.h"
 
 namespace Crowny
 {
@@ -44,7 +45,9 @@ namespace Crowny
 
     MonoObject* SerializableFieldInfo::GetValue(MonoObject* instance) const
     {
+        // void* value;
         return m_Field->GetBoxed(instance);
+        // return value;
     }
 
     void SerializableFieldInfo::SetValue(MonoObject* instance, void* value) const
@@ -59,7 +62,7 @@ namespace Crowny
 
     MonoObject* SerializablePropertyInfo::GetValue(MonoObject* instance) const
     {
-        return m_Property->GetBoxed(instance);
+        return m_Property->Get(instance);
     }
 
     void SerializablePropertyInfo::SetValue(MonoObject* instance, void* value) const
@@ -121,7 +124,7 @@ namespace Crowny
     {
         if (typeInfo->GetType() == SerializableType::Entity)
         {
-            const auto* entityTypeInfo = static_cast<SerializableTypeEntity*>(typeInfo.get());
+            const auto* entityTypeInfo = static_cast<SerializableTypeInfoEntity*>(typeInfo.get());
             return entityTypeInfo->m_TypeNamespace == m_TypeNamespace && entityTypeInfo->m_TypeName == m_TypeName;
         }
         return false;

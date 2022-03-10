@@ -8,7 +8,7 @@
 namespace Crowny
 {
 
-    SerializableObject::SerializableObject(const Ref<SerializableObjectInfo>& objInfo, MonoObject* managedInstance) : m_ObjectInfo(objInfo)
+    SerializableObject::SerializableObject(Ref<SerializableObjectInfo> objInfo, MonoObject* managedInstance) : m_ObjectInfo(objInfo)
     {
         m_GCHandle = MonoUtils::NewGCHandle(managedInstance, false);
     }
@@ -58,7 +58,7 @@ namespace Crowny
         if (m_GCHandle != 0)
         {
             MonoObject* managedInstance = MonoUtils::GetObjectFromGCHandle(m_GCHandle);
-            MonoObject* fieldValue = fieldInfo->GetValue(managedInstance);
+            MonoObject* fieldValue = (MonoObject*)fieldInfo->GetValue(managedInstance);
             return SerializableFieldData::Create(fieldInfo->m_TypeInfo, fieldValue);
         }
         else
@@ -115,5 +115,18 @@ namespace Crowny
         return CreateRef<SerializableObject>(objInfo, managedInstance);
 
     }
+
+	size_t SerializableObject::Hash::operator()(const SerializableFieldKey& x) const
+	{
+        size_t seed = 0;
+        HashCombine(seed, (uint32_t)x.m_FieldIdx);
+        HashCombine(seed, (uint32_t)x.m_TypeId);
+        return seed;
+	}
+
+	bool SerializableObject::Equals::operator()(const SerializableFieldKey& l, const SerializableFieldKey& r) const
+	{
+        return l.m_FieldIdx == r.m_FieldIdx && l.m_TypeId == r.m_TypeId;
+	}
 
 }

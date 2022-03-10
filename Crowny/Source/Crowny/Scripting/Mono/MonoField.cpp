@@ -20,7 +20,7 @@ namespace Crowny
         if (classType == nullptr)
             m_Type = nullptr;
 
-        m_Type = new MonoClass(classType);
+        m_Type = MonoManager::Get().FindClass(classType);
         m_Name = mono_field_get_name(m_Field);
         m_FullDeclName = CrownyMonoVisibilityToString(GetVisibility()) + (IsStatic() ? " static " : " ") +
                          mono_field_full_name(m_Field);

@@ -48,7 +48,7 @@ namespace Crowny
         MemoryDataStream(size_t capacity);
         MemoryDataStream(void* memory, size_t capacity);
         MemoryDataStream(const MemoryDataStream& other);
-        MemoryDataStream(const Ref<MemoryDataStream>& other);
+        MemoryDataStream(const Ref<DataStream>& other);
         MemoryDataStream(MemoryDataStream&& other);
         ~MemoryDataStream();
 

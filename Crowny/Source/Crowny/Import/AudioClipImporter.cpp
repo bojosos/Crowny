@@ -31,7 +31,7 @@ namespace Crowny
         uint32_t bufferSize;
         Ref<MemoryDataStream> sampleStream;
         Ref<DataStream> stream = FileSystem::OpenFile(filepath);
-        String ext = filepath.extension();
+        String ext = filepath.extension().string();
         ext = ext.substr(1, ext.size() - 1); // remove .
         Ref<AudioDecoder> reader;
         if (ext == "ogg")
@@ -88,8 +88,8 @@ namespace Crowny
         clipDesc.ReadMode = audioImportOptions->ReadMode;
         Ref<AudioClip> clip = CreateRef<AudioClip>(sampleStream, bufferSize, info.NumSamples, clipDesc);
         CW_ENGINE_INFO(filepath);
-        CW_ENGINE_INFO(filepath.filename());
-        clip->SetName(filepath.filename());
+        CW_ENGINE_INFO(filepath.filename().string());
+        clip->SetName(filepath.filename().string());
         return clip;
     }
 

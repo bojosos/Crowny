@@ -102,13 +102,15 @@ namespace Crowny
                 {
                     if (message.type == CompilerMessageType.Warning)
                     {
-                        lock (warnings)
-                            warnings.Add(message);
+                        Debug.LogWarning(message.message);
+                        /*lock (warnings)
+                            warnings.Add(message);*/
                     }
                     else if (message.type == CompilerMessageType.Error)
                     {
-                        lock (errors)
-                            errors.Add(message);
+                        Debug.LogError(message);
+                        /*lock (errors)
+                            errors.Add(message);*/
                     }
                 }
             }

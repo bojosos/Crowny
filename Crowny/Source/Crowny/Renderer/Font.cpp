@@ -12,8 +12,8 @@ namespace Crowny
 
     Font::Font(const Path& path, const String& name, float size) : m_Name(name), m_Filepath(path), m_Size(size)
     {
-        m_Atlas = ftgl::texture_atlas_new(512, 512, 1);
-        auto [mem, memSize] = VirtualFileSystem::Get()->ReadFile(path);
+        /*m_Atlas = ftgl::texture_atlas_new(512, 512, 1);
+        auto [mem, memSize] =   VirtualFileSystem::Get()->ReadFile(path);
         m_Font = ftgl::texture_font_new_from_memory(m_Atlas, m_Size, mem, memSize);
         m_Font->rendermode = RENDER_SIGNED_DISTANCE_FIELD;
         const char* cache = " !\"#$%&'()*+,-./0123456789:;<=>?"
@@ -39,7 +39,7 @@ namespace Crowny
         src.SetBuffer(nullptr);
 
         delete[] data;
-        delete mem;
+        delete mem;*/
     }
 
     Font::~Font()
@@ -77,7 +77,7 @@ namespace Crowny
                 }
                 else
                 {
-                    s_Fonts.push_back(CreateRef<Font>(name, font->GetFilepath(), size));
+                    s_Fonts.push_back(CreateRef<Font>(font->GetFilepath(), name, size));
                     return s_Fonts.back();
                 }
             }
@@ -90,7 +90,7 @@ namespace Crowny
         }
         else
         {
-            s_Fonts.push_back(CreateRef<Font>(name, DEFAULT_FONT_FILENAME, size));
+            s_Fonts.push_back(CreateRef<Font>(DEFAULT_FONT_FILENAME, name, size));
             return s_Fonts.back();
         }
 
@@ -132,8 +132,8 @@ namespace Crowny
         for (int i = 0; i < text.size(); i++)
         {
             ftgl::texture_glyph_t* glyph = texture_font_get_glyph(font->GetFTGLFont(), &text[i]);
-            float height = glyph->height;
-            float offset = glyph->offset_y - height;
+            float height = (float)glyph->height;
+            float offset = (float)glyph->offset_y - height;
             if (offset < min)
                 min = offset;
             if (height > max)

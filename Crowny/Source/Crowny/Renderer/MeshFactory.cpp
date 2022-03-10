@@ -10,7 +10,9 @@ namespace Crowny
 {
     Ref<Mesh> MeshFactory::CreatePlane(float width, float height, const glm::vec3& normal,
                                        const Ref<MaterialInstance>& material)
-    { /*
+    {
+        return nullptr;
+        /*
          glm::vec3 v = normal * 90.f;
 
          glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), v.z, glm::vec3(1, 0, 0)) *
@@ -62,7 +64,9 @@ namespace Crowny
     Ref<Mesh> MeshFactory::CreateCube(float size, const Ref<MaterialInstance>& material) { return nullptr; }
 
     Ref<Mesh> MeshFactory::CreateSphere(float xSegments, float ySegments)
-    { /*
+    {
+        return nullptr;
+        /*
          Vector<glm::vec3> positions;
          Vector<glm::vec2> uv;
          Vector<glm::vec3> normals;

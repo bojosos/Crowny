@@ -2,7 +2,7 @@ project "Crowny-Editor"
 	kind "ConsoleApp"
 	language "C++"
 	cppdialect "C++17"
-	staticruntime "on"
+	staticruntime "off"
 
 	targetdir ("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
 	objdir ("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
@@ -15,8 +15,6 @@ project "Crowny-Editor"
 		"Source/**.h",
 		"Source/**.cpp"
 	}
-
-  toolset "clang"
 
 	includedirs
 	{
@@ -34,21 +32,25 @@ project "Crowny-Editor"
     	"%{IncludeDir.openal}",
 		"%{IncludeDir.cereal}",
 		"%{IncludeDir.yamlcpp}",
+		"%{IncludeDir.libvorbis}",
+		"%{IncludeDir.libogg}",
 		"%{IncludeDir.Box2D}",
+		"%{IncludeDir.vkalloc}"
 	}
 
 	libdirs
 	{
 		"/usr/lib/mono-2.0",
 		"%{wks.location}/Crowny/Dependencies/vulkan/lib",
-		"%{wks.location}/Crowny/Dependencies/openal-soft/build"
+		"%{wks.location}/Crowny/Dependencies/openal-soft/build",
+		"C:/dev/Crowny/Crowny/Dependencies/vorbis/bin/Debug-windows-x86_64/libvorbis"
 	}
 
 	links 
 	{
 		"ImGuizmo",
 		"Crowny",
-		"GL", "Xxf86vm", "Xrandr", "pthread", "Xi", "dl", "uuid",
+		-- "GL", -- "Xxf86vm", "Xrandr", "pthread", "Xi", "dl", "uuid",
 		"imgui",
 		"freetype-gl",
 		"assimp",
@@ -59,9 +61,9 @@ project "Crowny-Editor"
 		"shaderc_shared",
 		"spirv-cross-core",
 		"openal",
-		"ogg",
-		"vorbis",
-		"vorbisfile",
+		"libogg",
+		"libvorbis_static",
+		"libvorbisfile_static",
 		"vorbisenc",
 		"Box2D"
 	}
@@ -71,7 +73,7 @@ project "Crowny-Editor"
 
 		defines
 		{
-      "CW",
+			"CW",
 			"CW_WINDOWS",
 			"GLFW_INCLUDE_NONE"
 		}
@@ -80,7 +82,7 @@ project "Crowny-Editor"
 		systemversion "latest"
 		defines
 		{
-      "CW",
+			"CW",
 			"CW_PLATFORM_LINUX",
 			"GLFW_INCLUDE_NONE"
 		}

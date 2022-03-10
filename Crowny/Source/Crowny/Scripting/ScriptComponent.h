@@ -51,9 +51,6 @@ namespace Crowny
 
         virtual void ClearManagedInstance() override { this->FreeManagedInstance(); }
 
-        virtual ScriptObjectBackupData BeginRefresh() override;
-        virtual void EndRefresh(const ScriptObjectBackupData& data) override;
-
         CompType& GetComponent() { return this->GetNativeEntity().template GetComponent<CompType>(); }
 
         virtual void OnManagedInstanceDeleted(bool assemblyRefresh) override

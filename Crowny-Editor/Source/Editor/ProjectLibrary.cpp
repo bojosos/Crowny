@@ -94,7 +94,7 @@ namespace Crowny
             return;
 
         if (m_RootEntry == nullptr)
-            m_RootEntry = CreateRef<DirectoryEntry>(m_AssetFolder, m_AssetFolder.filename(), nullptr);
+            m_RootEntry = CreateRef<DirectoryEntry>(m_AssetFolder, m_AssetFolder.filename().string(), nullptr);
 
         Path pathToSearch = path;
         Ref<LibraryEntry> entry = FindEntry(pathToSearch);
@@ -262,7 +262,7 @@ namespace Crowny
     Ref<FileEntry> ProjectLibrary::AddAssetInternal(DirectoryEntry* parent, const Path& filepath,
                                                     const Ref<ImportOptions>& importOptions, bool forceReimport)
     {
-        Ref<FileEntry> newAsset = CreateRef<FileEntry>(filepath, filepath.filename(), parent);
+        Ref<FileEntry> newAsset = CreateRef<FileEntry>(filepath, filepath.filename().string(), parent);
         parent->Children.push_back(newAsset);
         ReimportAssetInternal(newAsset.get(), importOptions, forceReimport);
         return newAsset;
@@ -270,7 +270,7 @@ namespace Crowny
 
     Ref<DirectoryEntry> ProjectLibrary::AddDirectoryInternal(DirectoryEntry* parent, const Path& dirPath)
     {
-        Ref<DirectoryEntry> newDir = CreateRef<DirectoryEntry>(dirPath, dirPath.filename(), parent);
+        Ref<DirectoryEntry> newDir = CreateRef<DirectoryEntry>(dirPath, dirPath.filename().string(), parent);
         parent->Children.push_back(newDir);
         return newDir;
     }
@@ -405,7 +405,7 @@ namespace Crowny
                 curImportOptions = importOptions;
 
             Ref<Asset> asset = Importer::Get().Import(entry->Filepath, curImportOptions);
-            entry->Filesize = fs::file_size(entry->Filepath);
+            entry->Filesize = (uint32_t)fs::file_size(entry->Filepath);
             if (asset == nullptr)
                 return false;
             Path outputPath = m_ProjectFolder / PROJECT_INTERNAL_DIR;
@@ -518,7 +518,7 @@ namespace Crowny
                 newEntryParent->Children.push_back(oldEntry);
                 oldEntry->Parent = newEntryParent;
                 oldEntry->Filepath = newFullPath;
-                oldEntry->ElementName = newFullPath.filename();
+                oldEntry->ElementName = newFullPath.filename().string();
                 String lower = oldEntry->ElementName;
                 StringUtils::ToLower(lower);
                 oldEntry->ElementNameHash = Hash(lower);
@@ -773,7 +773,7 @@ namespace Crowny
         }
 
         DeleteEntry(assetPath);
-        asset->SetName(path.filename());
+        asset->SetName(path.filename().string());
 
         Path absPath = fs::absolute(assetPath);
         AssetManager::Get().Save(asset, absPath);
@@ -830,8 +830,8 @@ namespace Crowny
             if (idx == paths.size())
                 return *current;
 
-            const String& cur =
-              (fs::is_regular_file(*searchPath) && idx == (paths.size() - 1)) ? searchPath->filename() : paths[idx];
+            String cur =
+              (fs::is_regular_file(*searchPath) && idx == (paths.size() - 1)) ? searchPath->filename().string() : paths[idx].string();
             if ((*current)->Type == LibraryEntryType::Directory)
             {
                 DirectoryEntry* dirEntry = static_cast<DirectoryEntry*>(current->get());
@@ -953,7 +953,7 @@ namespace Crowny
 
         m_ProjectFolder = Editor::Get().GetProjectPath();
         m_AssetFolder = m_ProjectFolder / ASSET_DIR;
-        m_RootEntry = CreateRef<DirectoryEntry>(m_AssetFolder, m_AssetFolder.filename(), nullptr);
+        m_RootEntry = CreateRef<DirectoryEntry>(m_AssetFolder, m_AssetFolder.filename().string(), nullptr);
 
         Path libEntriesPath = m_ProjectFolder / PROJECT_INTERNAL_DIR / LIBRARY_ENTRIES_FILENAME;
 
@@ -1038,7 +1038,7 @@ namespace Crowny
         {
             Vector<Path> toDelete;
             auto processFile = [&](const Path& path) {
-                UUID uuid = UUID(path.filename().replace_extension(""));
+                UUID uuid = UUID(path.filename().replace_extension("").string());
                 if (m_UuidToPath.find(uuid) != m_UuidToPath.end())
                 {
                     m_AssetManifest->UnregisterAsset(uuid);
@@ -1066,7 +1066,7 @@ namespace Crowny
         m_AssetFolder = Path();
         m_ProjectFolder = Path();
         ClearEntries();
-        m_RootEntry = CreateRef<DirectoryEntry>(m_AssetFolder, m_AssetFolder.filename(), nullptr);
+        m_RootEntry = CreateRef<DirectoryEntry>(m_AssetFolder, m_AssetFolder.filename().string(), nullptr);
         AssetManager::Get().UnregisterAssetManifest(m_AssetManifest);
         m_AssetManifest = nullptr;
         m_IsLoaded = false;

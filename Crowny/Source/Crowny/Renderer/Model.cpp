@@ -11,20 +11,20 @@ namespace Crowny
 
     Model::Model(const Path& filepath)
     {
-        auto [data, size] = VirtualFileSystem::Get()->ReadFile(filepath);
-        Assimp::Importer importer;
-        // const aiScene* scene = importer.ReadFileFromMemory(data, size, aiProcess_Triangulate | aiProcess_FlipUVs |
-        // aiProcess_CalcTangentSpace);
-        const aiScene* scene = nullptr;
-        String outstr;
-        if (VirtualFileSystem::Get()->ResolvePhyiscalPath(filepath, outstr))
-            scene = importer.ReadFile(outstr, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
-        CW_ENGINE_ASSERT(scene && !(scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) && scene->mRootNode,
-                         "Error loading scene");
+        //auto [data, size] = VirtualFileSystem::Get()->ReadFile(filepath);
+        //Assimp::Importer importer;
+        //// const aiScene* scene = importer.ReadFileFromMemory(data, size, aiProcess_Triangulate | aiProcess_FlipUVs |
+        //// aiProcess_CalcTangentSpace);
+        //const aiScene* scene = nullptr;
+        //String outstr;
+        //if (VirtualFileSystem::Get()->ResolvePhyiscalPath(filepath, outstr))
+        //    scene = importer.ReadFile(outstr, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+        //CW_ENGINE_ASSERT(scene && !(scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) && scene->mRootNode,
+        //                 "Error loading scene");
 
-        m_Directory = filepath.parent_path();
-        ProcessNode(scene->mRootNode, scene);
-        delete data;
+        //m_Directory = filepath.parent_path();
+        //ProcessNode(scene->mRootNode, scene);
+        //delete data;
     }
 
     void Model::Draw()

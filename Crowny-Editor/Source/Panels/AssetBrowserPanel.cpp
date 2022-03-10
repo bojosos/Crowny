@@ -1,4 +1,4 @@
-#include "cwpch.h"
+#include "cwepch.h"
 
 #include "Panels/AssetBrowserPanel.h"
 
@@ -65,7 +65,7 @@ namespace Crowny
         for (auto child : m_CurrentDirectoryEntry->Children)
         {
             const auto& path = child->Filepath;
-            String ext = path.extension();
+            String ext = path.extension().string();
             if (ext == ".png") // TODO: Replace the .png
             {
                 Ref<Texture> result = Importer::Get().Import<Texture>(path);
@@ -253,9 +253,13 @@ namespace Crowny
 
         if (Input::IsKeyUp(Key::F2)) // Rename the first selected item
         {
-            m_RenamingPath =
-                m_CurrentDirectoryEntry->Children[m_SelectionStartIndex]->Filepath; // TODO: Use hash instead of path
-            m_RenamingText = m_RenamingPath.filename();
+            if (m_SelectionStartIndex >= m_CurrentDirectoryEntry->Children.size())
+                return;
+            const Ref<LibraryEntry>& entry = m_CurrentDirectoryEntry->Children[m_SelectionStartIndex];
+            if (!entry)
+                return;
+            m_RenamingPath = entry->Filepath; // TODO: Use hash instead of path
+            m_RenamingText = m_RenamingPath.filename().string();
         }
 
         if (Input::IsKeyUp(Key::Enter)) // Enter a directory using the keyboard
@@ -524,7 +528,7 @@ namespace Crowny
                     m_SetSelectedPathCallback(path);
                 }
             }
-            if (ImGui::BeginPopupContextItem(entry->Filepath.c_str())) // Right click on a file
+            if (ImGui::BeginPopupContextItem(entry->Filepath.string().c_str())) // Right click on a file
             {
                 ShowContextMenuContents(entry.get());
                 ImGui::EndPopup();
@@ -584,7 +588,7 @@ namespace Crowny
         if (ImGui::MenuItem("Rename"))
         {
             m_RenamingPath = entry->Filepath;
-            m_RenamingText = m_RenamingPath.filename();
+            m_RenamingText = m_RenamingPath.filename().string();
         }
 
         if (entry == nullptr)
@@ -593,9 +597,9 @@ namespace Crowny
         if (ImGui::MenuItem("Copy Path"))
         {
             if (entry != nullptr)
-                PlatformUtils::CopyToClipboard(fs::absolute(entry->Filepath));
+                PlatformUtils::CopyToClipboard(fs::absolute(entry->Filepath).string());
             else
-                PlatformUtils::CopyToClipboard(fs::absolute(m_CurrentDirectoryEntry->Filepath));
+                PlatformUtils::CopyToClipboard(fs::absolute(m_CurrentDirectoryEntry->Filepath).string());
         }
 
         ImGui::Separator();
@@ -619,7 +623,7 @@ namespace Crowny
         }
         ProjectLibrary::Get().Refresh(newEntryPath);
         m_RenamingPath = ProjectLibrary::Get().FindEntry(newEntryPath)->Filepath;
-        m_RenamingText = newEntryPath.filename();
+        m_RenamingText = newEntryPath.filename().string();
     }
 
     String AssetBrowserPanel::GetDefaultContents(AssetBrowserItem itemType)

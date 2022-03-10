@@ -5,7 +5,6 @@
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/RenderAPI/Shader.h"
 
-#include <spirv-reflect/spirv_reflect.h>
 #include <spirv_cross/spirv_cross.hpp>
 #include <spirv_cross/spirv_glsl.hpp>
 
@@ -225,10 +224,10 @@ namespace Crowny
         for (const auto& uniform : resources.uniform_buffers)
         {
             const auto& bufferType = compiler.get_type(uniform.base_type_id);
-            uint32_t bufferSize = compiler.get_declared_struct_size(bufferType);
+            uint32_t bufferSize = (uint32_t)compiler.get_declared_struct_size(bufferType);
             uint32_t binding = compiler.get_decoration(uniform.id, spv::DecorationBinding);
             uint32_t set = compiler.get_decoration(uniform.id, spv::DecorationDescriptorSet);
-            uint32_t memberCount = bufferType.member_types.size();
+            uint32_t memberCount = (uint32_t)bufferType.member_types.size();
 
             UniformBufferBlockDesc buffer;
             buffer.Name = uniform.name;
