@@ -1,5 +1,7 @@
 #include "cwepch.h"
 
+#include <mono/metadata/object.h> // TODO: Implement array class
+
 #include "EditorLayer.h"
 
 #include "Crowny/Assets/AssetManager.h"
@@ -25,6 +27,7 @@
 #include "Crowny/Scripting/Bindings/ScriptInput.h"
 #include "Crowny/Scripting/Bindings/ScriptRandom.h"
 #include "Crowny/Scripting/ScriptObjectManager.h"
+#include "Crowny/Scripting/ScriptInfoManager.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -32,6 +35,7 @@
 #include <backends/imgui_impl_vulkan.h>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
+
 
 namespace Crowny
 {
@@ -92,6 +96,11 @@ namespace Crowny
         m_ConsolePanel->RegisterInMenu(viewMenu);
         m_AssetBrowser->RegisterInMenu(viewMenu);
 
+        ImGuiMenu* buildMenu = new ImGuiMenu("Build");
+        buildMenu->AddItem(new ImGuiMenuItem("Rebuild game assembly", "Ctrl+Shift+B", CW_BIND_EVENT_FN(RebuildAssemblies)));
+        buildMenu->AddItem(new ImGuiMenuItem("Build game", "Ctrl+B", CW_BIND_EVENT_FN(BuildGame)));
+
+        m_MenuBar->AddMenu(buildMenu);
         m_MenuBar->AddMenu(viewMenu);
 
         Editor::Get().LoadProject("C:/dev/New Project");
@@ -151,6 +160,28 @@ namespace Crowny
         m_RenderTarget = RenderTexture::Create(rtProps);
     }
 
+    void EditorLayer::BuildGame(Event& event)
+    {
+
+    }
+
+    void EditorLayer::RebuildAssemblies(Event& event)
+    {
+        MonoClass* scriptCompiler = ScriptInfoManager::Get().GetBuiltinClasses().ScriptCompiler;
+        uint32_t type = 0;
+        bool debug = true;
+        MonoArray* libDirs = mono_array_new(MonoManager::Get().GetDomain(), MonoUtils::GetStringClass(), 1);
+        mono_array_setref(libDirs, 0, MonoUtils::ToMonoString("C:/dev/Crowny/Crowny-Sharp/"));
+        MonoArray* refs = mono_array_new(MonoManager::Get().GetDomain(), MonoUtils::GetStringClass(), 1);
+        mono_array_setref(refs, 0, MonoUtils::ToMonoString("CrownySharp.dll"));
+
+        void* params[6] = {
+            &type, &debug, MonoUtils::ToMonoString((Editor::Get().GetProjectPath() / INTERNAL_ASSEMBLY_PATH).string()), MonoUtils::ToMonoString(Editor::Get().GetProjectPath().string()),
+            libDirs, refs
+        };
+        scriptCompiler->GetMethod("Compile", 6)->Invoke(nullptr, params);
+    }
+
     bool EditorLayer::OnViewportEvent(Event& event)
     {
         EventDispatcher dispatcher(event);
@@ -183,9 +214,9 @@ namespace Crowny
     void EditorLayer::OpenScene()
     {
         Vector<Path> outPaths;
-        if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, ProjectLibrary::Get().GetAssetFolder(), "", outPaths))
+        if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, ProjectLibrary::Get().GetAssetFolder(), { Editor::GetSceneDialogFilter() }, outPaths))
         {
-            OpenScene(outPaths[0]);
+            OpenScene(outPaths[0].replace_extension(".cwscene"));
         }
     }
 
@@ -199,10 +230,10 @@ namespace Crowny
     void EditorLayer::SaveActiveSceneAs()
     {
         Vector<Path> outPaths;
-        if (FileSystem::OpenFileDialog(FileDialogType::SaveFile, ProjectLibrary::Get().GetAssetFolder(), "", outPaths))
+        if (FileSystem::OpenFileDialog(FileDialogType::SaveFile, ProjectLibrary::Get().GetAssetFolder(), { Editor::GetSceneDialogFilter() }, outPaths))
         {
             SceneSerializer serializer(SceneManager::GetActiveScene());
-            serializer.Serialize(outPaths[0]);
+            serializer.Serialize(outPaths[0].replace_extension(".cwscene"));
         }
     }
 
@@ -210,7 +241,10 @@ namespace Crowny
     {
         const auto& scene = SceneManager::GetActiveScene();
         SceneSerializer serializer(scene);
-        serializer.Serialize(scene->GetFilepath());
+        if (scene->GetFilepath().empty())
+            SaveActiveSceneAs();
+        else
+            serializer.Serialize(scene->GetFilepath());
     }
 
     void EditorLayer::OnDetach()
@@ -375,8 +409,7 @@ namespace Crowny
                     shouldEnd = false;
                     ImGui::EndPopup();
                     Vector<Path> outPaths;
-                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFolder, "/home/life/Desktop/dev", String(),
-                                                   outPaths))
+                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFolder, "/home/life/Desktop/dev", { }, outPaths))
                     {
                         if (outPaths.size() > 0)
                         {

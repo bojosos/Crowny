@@ -27,6 +27,8 @@ namespace Crowny
     SpecificImporter* Importer::GetImporterForFile(const Path& path) const
     {
         String ext = path.extension().string();
+        if (ext.empty())
+            return nullptr;
         ext = ext.substr(1, ext.size() - 1); // remove .
 
         if (!SupportsFileType(ext))

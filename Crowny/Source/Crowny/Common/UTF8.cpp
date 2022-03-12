@@ -63,6 +63,8 @@ namespace Crowny
         uint8_t first = (uint8_t)*begin;
         if (first < 192)
             numBytes = 1;
+        else if (first < 224)
+            numBytes = 2;
         else if (first < 240)
             numBytes = 3;
         else if (first < 248)
@@ -85,11 +87,11 @@ namespace Crowny
 		case 4: output += (UINT8)(*begin); ++begin; output <<= 6; [[fallthrough]];
 		case 3: output += (UINT8)(*begin); ++begin; output <<= 6; [[fallthrough]];
 		case 2: output += (UINT8)(*begin); ++begin; output <<= 6; [[fallthrough]];
-		case 1: output += (UINT8)(*begin); ++begin; [[fallthrough]];;
+		case 1: output += (UINT8)(*begin); ++begin;
 		default: break;
 		}
 
-		constexpr UINT32 offsets[6] = { 0x00000000, 0x00003080, 0x000E2080, 0x03C82080, 0xFA082080, 0x82082080 };
+		constexpr uint32_t offsets[6] = { 0x00000000, 0x00003080, 0x000E2080, 0x03C82080, 0xFA082080, 0x82082080 };
 		output -= offsets[numBytes - 1];
 
 		return begin;

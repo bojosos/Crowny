@@ -13,6 +13,12 @@ namespace Crowny
         Multiselect
     };
 
+    struct DialogFilter
+    {
+        String Name;
+        String FilterSpec;
+    };
+
     class FileSystem
     {
     public:
@@ -26,7 +32,7 @@ namespace Crowny
         static bool WriteFile(const Path& path, byte* buffer, uint64_t size);
 
         static bool WriteTextFile(const Path& path, const String& text);
-        static bool OpenFileDialog(FileDialogType type, const Path& initialDir, const String& filter,
+        static bool OpenFileDialog(FileDialogType type, const Path& initialDir, const Vector<DialogFilter>& filter,
                                    Vector<Path>& outpaths);
 
         static Ref<DataStream> OpenFile(const Path& filepath, bool readOnly = true);

@@ -35,12 +35,14 @@ namespace Crowny
         Ref<AudioSource> CreateSource();
         Ref<AudioClip> CreateClip();
 
+        float GetGlobalSourceProgress(const String& name);
+
         void RegisterListener(AudioListener* listener);
         void UnregisterListener(AudioListener* listener);
         void RegisterSource(AudioSource* source);
         void UnregisterSource(AudioSource* source);
 
-        void Play(const Ref<AudioClip>& clip, const glm::vec3& position = glm::vec3(0.0f), float volume = 1.0f);
+        void Play(const String& name, const Ref<AudioClip>& clip, const glm::vec3& position = glm::vec3(0.0f), float volume = 1.0f);
         void OnUpdate();
         void StopManualSources();
 
@@ -61,8 +63,8 @@ namespace Crowny
         ALCcontext* m_Context = nullptr;
         Set<AudioSource*> m_Sources;
 
-        Vector<Ref<AudioSource>> m_ManualSources;
-        Vector<Ref<AudioSource>> m_TempSources;
+        UnorderedMap<String, Ref<AudioSource>> m_ManualSources;
+        UnorderedMap<String, Ref<AudioSource>> m_TempSources;
     };
 
     AudioManager& gAudio();

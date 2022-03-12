@@ -48,6 +48,9 @@ namespace Crowny
         void NewProject();
         void OpenProject();
 
+        void RebuildAssemblies(Event& event);
+        void BuildGame(Event& event);
+
         void CreateNewScene();
         void OpenScene();
         void OpenScene(const Path& filepath);

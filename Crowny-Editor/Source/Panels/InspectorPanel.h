@@ -49,6 +49,7 @@ namespace Crowny
         void RenderFontImportInspector();
         void RenderScriptImportInspector();
         void RenderTextureImportInspector();
+        void RenderTextImportInspector();
         void RenderShaderImportInspector();
         void RenderMeshImportInspector();
         void RenderPrefabInspector();
