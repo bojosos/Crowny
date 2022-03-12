@@ -34,6 +34,7 @@ namespace Crowny
         MonoClass* DontSerializeFieldAttribute = nullptr;
         
         MonoClass* ScriptUtils = nullptr;
+        MonoClass* ScriptCompiler = nullptr;
     };
 
     struct ComponentInfo

@@ -9,6 +9,12 @@ namespace Crowny
 
     struct BinaryShaderData;
 
+    struct ShaderDefines
+    {
+        Vector<String>  SingularDefines;
+        UnorderedMap<String, String> ValueDefines;
+    };
+
     struct UniformBufferBlockDesc
     {
         String Name;
