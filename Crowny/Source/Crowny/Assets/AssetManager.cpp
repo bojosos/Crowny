@@ -9,6 +9,8 @@
 #include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/RenderAPI/Texture.h"
 
+// TODO: Fix Audio clips being loaded every time play in inspector is used.
+
 namespace Crowny
 {
 
@@ -94,6 +96,34 @@ namespace Crowny
 	{
 		archive(cereal::base_class<Asset>(&code));
 		archive(code.m_Source);
+	}
+
+
+	template <typename Archive> void Serialize(Archive& archive, TextureImportOptions& importOptions)
+	{
+		archive(importOptions.AutomaticFormat, importOptions.CpuCached, importOptions.Format,
+			importOptions.GenerateMips, importOptions.MaxMip, importOptions.Shape, importOptions.SRGB);
+	}
+
+	template <typename Archive> void Serialize(Archive& archive, AudioClipImportOptions& importOptions)
+	{
+		archive(importOptions.Format, importOptions.Quality, importOptions.ReadMode, importOptions.BitDepth,
+			importOptions.Is3D);
+	}
+
+	void Save(BinaryDataStreamOutputArchive& archive, const ShaderImportOptions& importOptions)
+	{
+		archive(importOptions.Language, importOptions.m_Defines);
+	}
+
+	void Load(BinaryDataStreamInputArchive& archive, ShaderImportOptions& importOptions)
+	{
+		archive(importOptions.Language, importOptions.m_Defines);
+	}
+
+	template <typename Archive> void Serialize(Archive& archive, CSharpScriptImportOptions& importOptions)
+	{
+		archive(importOptions.IsEditorScript);
 	}
 
     template <class Archive> void Serialize(Archive& archive, UniformDesc& desc)

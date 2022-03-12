@@ -99,6 +99,7 @@ namespace Crowny
         void RemoveDefine(const String& key) { m_Defines.erase(key); }
 
         const UnorderedMap<String, String>& GetDefines() const { return m_Defines; }
+        UnorderedMap<String, String>& GetDefines() { return m_Defines; }
 
         virtual ImportOptionsType GetImportOptionsType() const override { return ImportOptionsType::Shader; }
 
@@ -109,9 +110,8 @@ namespace Crowny
             return clone;
         }
 
-        friend void Serialize(BinaryDataStreamOutputArchive& archive, ShaderImportOptions& importOptions);
-
     private:
+        CW_SERIALIZABLE(ShaderImportOptions);
         UnorderedMap<String, String> m_Defines;
     };
 
@@ -128,27 +128,5 @@ namespace Crowny
             return clone;
         }
     };
-
-    template <typename Archive> void Serialize(Archive& archive, TextureImportOptions& importOptions)
-    {
-        archive(importOptions.AutomaticFormat, importOptions.CpuCached, importOptions.Format,
-                importOptions.GenerateMips, importOptions.MaxMip, importOptions.Shape, importOptions.SRGB);
-    }
-
-    template <typename Archive> void Serialize(Archive& archive, AudioClipImportOptions& importOptions)
-    {
-        archive(importOptions.Format, importOptions.Quality, importOptions.ReadMode, importOptions.BitDepth,
-                importOptions.Is3D);
-    }
-
-    template <typename Archive> void Serialize(Archive& archive, ShaderImportOptions& importOptions)
-    {
-        archive(importOptions.Language, importOptions.m_Defines);
-    }
-
-    template <typename Archive> void Serialize(Archive& archive, CSharpScriptImportOptions& importOptions)
-    {
-        archive(importOptions.IsEditorScript);
-    }
 
 } // namespace Crowny

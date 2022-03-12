@@ -106,6 +106,10 @@ namespace Crowny
 		m_Builtin.ScriptUtils = crownyAssembly->GetClass(CROWNY_NS, "ScriptUtils");
 		if (m_Builtin.ScriptUtils == nullptr)
 			CW_ENGINE_ERROR("Cannot find {0}.ScriptUtils class.", CROWNY_NS);
+
+		m_Builtin.ScriptCompiler = crownyAssembly->GetClass(CROWNY_NS, "ScriptCompiler");
+		if (m_Builtin.ScriptCompiler == nullptr)
+			CW_ENGINE_ERROR("Cannot find {0}.ScriptCompiler class.", CROWNY_NS);
 	}
 
 	void ScriptInfoManager::LoadAssemblyInfo(const String& assemblyName)

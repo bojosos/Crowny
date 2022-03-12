@@ -85,25 +85,26 @@ namespace Crowny
 		return CreateRef<FileDataStream>(filepath, DataStream::WRITE, true);
 	}
 
-	void AddFilters(IFileDialog* fileDialog, const String& filter)
+	void AddFilters(IFileDialog* fileDialog, const Vector<DialogFilter>& filters)
 	{
-		const wchar_t empty[] = L"";
-		if (filter.empty())
-			return;
-		std::wstring wideFilterList = UTF8::ToWide(filter);
-		Vector<std::wstring> filters = StringUtils::SplitString(wideFilterList, L";");
-		uint32_t numFilters = (int32_t)filters.size();
 		if (filters.size() == 0)
 			return;
 
-		COMDLG_FILTERSPEC* specList = new COMDLG_FILTERSPEC[numFilters];
-		for (uint32_t i = 0; i < numFilters; i++)
+		COMDLG_FILTERSPEC* specList = new COMDLG_FILTERSPEC[filters.size()];
+		for (uint32_t i = 0; i < (uint32_t)filters.size(); i++)
 		{
-			specList[i].pszName = empty;
-			specList[i].pszSpec = filters[i].c_str();
+			std::wstring str1 = UTF8::ToWide(filters[i].Name);
+			std::wstring str2 = UTF8::ToWide(filters[i].FilterSpec);
+			wchar_t* name = new wchar_t[str1.size() + 1];
+			name[str1.size()] = L'\0';
+			wchar_t* spec = new wchar_t[str2.size() + 1];
+			spec[str2.size()] = L'\0';
+			std::memcpy((void*)name, str1.c_str(), str1.size() * sizeof(wchar_t));
+			std::memcpy((void*)spec, str2.c_str(), str2.size() * sizeof(wchar_t));
+			specList[i].pszName = name;
+			specList[i].pszSpec = spec;
 		}
-
-		fileDialog->SetFileTypes(numFilters, specList);
+		fileDialog->SetFileTypes((uint32_t)filters.size(), specList);
 		delete[] specList;
 	}
 
@@ -140,7 +141,7 @@ namespace Crowny
 		}
 	}
 
-	bool FileSystem::OpenFileDialog(FileDialogType type, const Path& initialDir, const String& filter, Vector<Path>& outPaths)
+	bool FileSystem::OpenFileDialog(FileDialogType type, const Path& initialDir, const Vector<DialogFilter>& filter, Vector<Path>& outPaths)
 	{
 		CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 		IFileDialog* fileDialog = nullptr;

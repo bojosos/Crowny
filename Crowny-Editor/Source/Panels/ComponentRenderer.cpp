@@ -272,7 +272,7 @@ namespace Crowny
 		if (ImGui::IsItemClicked())
 		{
 			Vector<Path> outPaths;
-			if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", "", outPaths))
+			if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", { }, outPaths))
 			{
 				Ref<Texture> result;
 				// LoadTexture(outPaths[0], result);
@@ -597,8 +597,8 @@ namespace Crowny
 			rangeClass->GetField("min")->Get(rangeAttr, &minValue);
 			rangeClass->GetField("max")->Get(rangeAttr, &maxValue);
 			rangeClass->GetField("slider")->Get(rangeAttr, &displayAsSlider);
-			minValueInt = minValue;
-			maxValueInt = maxValue;
+			minValueInt = (int32_t)minValue;
+			maxValueInt = (int32_t)maxValue;
 		}
 
 		switch (primitive->m_Type)

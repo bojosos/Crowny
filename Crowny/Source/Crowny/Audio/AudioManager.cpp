@@ -58,7 +58,19 @@ namespace Crowny
         alcMakeContextCurrent(context);
     }
 
-    void AudioManager::Play(const Ref<AudioClip>& clip, const glm::vec3& position, float volume)
+    float AudioManager::GetGlobalSourceProgress(const String& name)
+    {
+
+        auto iterFind = m_ManualSources.find(name);
+        if (iterFind != m_ManualSources.end())
+        {
+        CW_ENGINE_INFO("{0}, {1}", iterFind->second->GetTime(), iterFind->second->GetAudioClip()->GetLength());
+            return iterFind->second->GetTime() / iterFind->second->GetAudioClip()->GetLength(); // TODO: Fix inconsistent setter/getter for clips
+    }
+        return 0;
+    }
+
+    void AudioManager::Play(const String& name, const Ref<AudioClip>& clip, const glm::vec3& position, float volume)
     {
         Ref<AudioSource> source = CreateSource();
         source->SetClip(clip);
@@ -66,13 +78,13 @@ namespace Crowny
         source->SetVolume(volume);
         source->Play();
 
-        m_ManualSources.push_back(source);
+        m_ManualSources[name] = source;
     }
 
     void AudioManager::StopManualSources()
     {
         for (auto& source : m_ManualSources)
-            source->Stop();
+            source.second->Stop();
 
         m_ManualSources.clear();
     }
@@ -80,11 +92,10 @@ namespace Crowny
     void AudioManager::OnUpdate()
     {
         // Clear sources that are finished playing
-        const uint32_t numSources = (uint32_t)m_ManualSources.size();
-        for (uint32_t i = 0; i < numSources; i++)
+        for (auto kv : m_ManualSources)
         {
-            if (m_ManualSources[i]->GetState() != AudioSourceState::Stopped)
-                m_TempSources.push_back(m_ManualSources[i]);
+            if (kv.second->GetState() != AudioSourceState::Stopped)
+                m_TempSources[kv.first] = kv.second;
         }
 
         std::swap(m_TempSources, m_ManualSources);

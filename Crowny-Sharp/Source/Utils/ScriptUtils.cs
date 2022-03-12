@@ -47,7 +47,7 @@ namespace Crowny
         private static Regex compileErrorRegex = new Regex(@"\s*(?<file>.*)\(\s*(?<line>\d+)\s*,\s*(?<column>\d+)\s*\)\s*:\s*(?<type>warning|error)\s+(.*):\s*(?<message>.*)");
         private static Regex compilerErrorRegex = new Regex(@"\s*error[^:]*:\s*(?<message>.*)");
 
-        public static void Compile(ScriptAssemblyType type, bool debug, string outputDirectory, string projectPath)
+        public static void Compile(ScriptAssemblyType type, bool debug, string outputDirectory, string projectPath, string[] libDirs, string[] references)
         {
             errors.Clear();
             warnings.Clear();
@@ -55,15 +55,33 @@ namespace Crowny
             ProcessStartInfo psi = new ProcessStartInfo();
             StringBuilder argBuilder = new StringBuilder();
 
-            argBuilder.Append("msc -noconfig");
+            argBuilder.Append("-noconfig");
+
             if (debug)
                 argBuilder.Append(" -debug+ -o-");
             else
                 argBuilder.Append(" -debug- -o+");
 
-            argBuilder.Append(" -target:library -out:" + outputDirectory);
+            argBuilder.Append(" -target:library -out:" + "\"" + Path.Combine(outputDirectory, "GameAssembly.dll") + "\"");
+            
+            if (libDirs != null && libDirs.Length > 0)
+            {
+                argBuilder.Append(" -lib:\"");
+                for (int i = 0; i < libDirs.Length - 1; i++)
+                    argBuilder.Append(libDirs[i] + ",");
+                argBuilder.Append(libDirs[libDirs.Length - 1] + "\"");
+            }
+
+            if (references != null && references.Length > 0)
+            {
+                argBuilder.Append(" -r:");
+                for (int i = 0; i < references.Length - 1; i++)
+                    argBuilder.Append(references[i] + ",");
+                argBuilder.Append(references[references.Length - 1]);
+            }
+
             foreach (string file in files)
-                argBuilder.Append("\"" + file + "\"");
+                argBuilder.Append(" \"" + file + "\"");
 
             if (File.Exists(outputDirectory))
                 File.Delete(outputDirectory);
@@ -72,7 +90,7 @@ namespace Crowny
 
             psi.Arguments = argBuilder.ToString();
             psi.CreateNoWindow = true;
-            psi.FileName = "msc";
+            psi.FileName = "C:\\Program Files\\Mono\\bin\\mcs.bat";
             psi.RedirectStandardError = true;
             psi.RedirectStandardOutput = false;
             psi.UseShellExecute = false;
@@ -90,6 +108,8 @@ namespace Crowny
         {
             while (true)
             {
+                if (process.HasExited)
+                    Debug.Log("Compiled");
                 if (process == null || process.HasExited)
                     return;
 

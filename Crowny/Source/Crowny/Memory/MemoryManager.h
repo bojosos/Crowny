@@ -7,10 +7,10 @@ namespace Crowny
 
     struct MemoryStats
     {
-        uint64_t TotalAllocated;
-        uint64_t TotalFreed;
-        uint64_t CurrentAllcoated;
-        uint64_t Allocations;
+        uint64_t TotalAllocated = 0;
+        uint64_t TotalFreed = 0;
+        uint64_t CurrentAllcoated = 0;
+        uint64_t Allocations = 0;
 
         MemoryStats() : TotalAllocated(0), TotalFreed(0), CurrentAllcoated(0), Allocations(0) {}
 
@@ -24,11 +24,11 @@ namespace Crowny
 
     struct SystemMemoryInfo
     {
-        uint64_t AvaliablePhysicalMemory;
-        uint64_t TotalPhysicalMemory;
+        uint64_t AvaliablePhysicalMemory = 0;
+        uint64_t TotalPhysicalMemory = 0;
 
-        uint64_t AvailableVirtualMemory;
-        uint64_t TotalVirtualMemory;
+        uint64_t AvailableVirtualMemory = 0;
+        uint64_t TotalVirtualMemory = 0;
 
         template <typename OStream> friend OStream& operator<<(OStream& os, const SystemMemoryInfo& smi)
         {
