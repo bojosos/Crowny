@@ -99,7 +99,7 @@ namespace Crowny
 			name[str1.size()] = L'\0';
 			wchar_t* spec = new wchar_t[str2.size() + 1];
 			spec[str2.size()] = L'\0';
-			std::memcpy((void*)name, str1.c_str(), str1.size() * sizeof(wchar_t));
+			std::memcpy((void*)name, str1.c_str(), str1.size() * sizeof(wchar_t)); // leak?
 			std::memcpy((void*)spec, str2.c_str(), str2.size() * sizeof(wchar_t));
 			specList[i].pszName = name;
 			specList[i].pszSpec = spec;

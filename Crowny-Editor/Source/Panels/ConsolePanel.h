@@ -41,7 +41,7 @@ namespace Crowny
         float m_DisplayScale = 1.0f;
         
         bool m_EnabledLevels[5] = { true, true, true, true, true };
-        bool m_Collapse;
+        bool m_Collapse = false;
         bool m_AllowScrollingToBottom = true;
         bool m_RequestScrollToBottom = false;
     };
