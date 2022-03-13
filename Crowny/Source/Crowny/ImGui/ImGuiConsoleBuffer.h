@@ -41,6 +41,7 @@ namespace Crowny
         ~ImGuiConsoleBuffer() = default;
         void AddMessage(const Message& message);
 
+        void Sort(uint32_t sortIdx, bool ascending);
         void Clear();
         const Vector<Message>& GetBuffer();
         void Collapse();

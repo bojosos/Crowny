@@ -4,6 +4,18 @@
 
 #include <imgui.h>
 
+// TODO: Use ImGuiListClipper
+// This causes some problems. Can't use severity filters for now.
+// Solutions: 
+//   Console buffer with a list for every message type. Then when creating the Clipper give it the size of all enabled. Getting the next message would be slower.
+//      Also using the clipper I would need to go trough the first clipper.DisplayStart elements, defeating the purpose
+//   Add another buffer to console buffer and reconstruct every time some setting changes? Maybe a buffer with ints only could work?
+// TODO: Add binary search for placing new messages in the right place, for collapsed mode I would need to add the count and then check if the message has to be moved up
+// TODO: Move localtime call to buffer
+// TODO: Consider sorting case insensitive
+// TODO: Consider displaying newer messages first in collapsed mode when no sorting is used with std::max(timestamp1, timestamp2)
+// TODO: Fix scroll to bottom
+
 namespace Crowny
 {
 
@@ -69,20 +81,50 @@ namespace Crowny
 
     void ConsolePanel::RenderMessages()
     {
-        ImGui::BeginChild("ScrollRegion", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+       // ImGui::BeginChild("ScrollRegion", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
         {
             ImGui::SetWindowFontScale(m_DisplayScale);
-            for (auto& message : ImGuiConsoleBuffer::Get().GetBuffer())
-                RenderMessage(message);
+            ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_SortMulti | ImGuiTableFlags_Sortable | ImGuiTableFlags_Resizable | ImGuiTableFlags_Hideable | ImGuiTableFlags_ScrollY;
+            if (ImGui::BeginTable("##consoleTable", 2, flags))
+            {
+                float width = ImGui::GetContentRegionAvailWidth();
+                if (!m_Collapse)
+                    ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort, 0.03f);
+                if (m_Collapse)
+                    ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort, 0.03f);
+                ImGui::TableSetupColumn("Message", ImGuiTableColumnFlags_WidthStretch, 0.97f);
+                ImGui::TableHeadersRow();
 
+                const auto& buffer = ImGuiConsoleBuffer::Get().GetBuffer();
+				ImGuiListClipper clipper;
+				clipper.Begin(buffer.size());
+				while (clipper.Step())
+				{
+                    ImGui::TableNextRow();
+					for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
+                        RenderMessage(buffer[row]);
+                }
+				
+                bool needSort = false;
+				ImGuiTableSortSpecs* sortSpec = ImGui::TableGetSortSpecs();
+				if (sortSpec && sortSpec->SpecsDirty)
+					needSort = true;
+				if (sortSpec && needSort)
+				{
+                    ImGuiConsoleBuffer::Get().Sort(sortSpec->Specs[0].ColumnIndex, sortSpec->Specs[0].SortDirection == ImGuiSortDirection_Ascending);
+					sortSpec->SpecsDirty = false;
+				}
+
+                ImGui::EndTable();
+            }
             if (m_RequestScrollToBottom && ImGui::GetScrollMaxY() > 0)
             {
-                // ImGui::SetScrollY(ImGui::GetScrollMaxY());
-                ImGui::SetScrollHereY(1.0f);
+                ImGui::SetScrollY(ImGui::GetScrollMaxY());
+                // ImGui::SetScrollHereY(1.0f);
                 m_RequestScrollToBottom = false;
             }
         }
-        ImGui::EndChild();
+       // ImGui::EndChild();
     }
 
     void ConsolePanel::RenderMessage(const ImGuiConsoleBuffer::Message& message)
@@ -94,20 +136,27 @@ namespace Crowny
             ImGui::PushStyleColor(ImGuiCol_Text, { color.r, color.g, color.b, color.a });
             ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.0f, 0.5f));
             bool selected = m_SelectedMessageHash == message.Hash;
-            if (ImGui::Selectable(message.MessageText.c_str(), &selected, 0, { ImGui::GetContentRegionAvail().x, ImGui::CalcTextSize(message.MessageText.c_str()).y * 2.0f }))
+            ImGui::TableNextColumn(); // Draw timestamp here
+			if (!m_Collapse)
+			{
+                char res[9];
+			    tm* timeinfo;
+			    timeinfo = localtime(&message.Timestamp);
+                strftime(res, 9, "%T", timeinfo);
+                ImGui::Text(res);
+            }
+            else
+			{
+                ImGui::AlignTextToFramePadding();
+                ImGui::Text("%d", message.RepeatCount);
+			}
+            ImGui::TableNextColumn();
+            if (ImGui::Selectable(message.MessageText.c_str(), &selected))
                 m_SelectedMessageHash = message.Hash;
             ImGui::PopStyleVar();
-
-            ImDrawList* draw_list = ImGui::GetWindowDrawList(); // border
-            draw_list->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 255, 255));
             ImGui::PopStyleColor(1);
-            if (m_Collapse)
-            {
-                ImGui::AlignTextToFramePadding();
-                ImGui::SameLine(ImGui::GetContentRegionAvail().x - ImGui::GetFontSize() * 5);
-                ImGui::Text("%d", message.RepeatCount);
-                // ImGui::SameLine();
-            }
+            
+//			ImGui::TableNextRow(); // Do it here, due to severity check
         }
     }
 } // namespace Crowny
