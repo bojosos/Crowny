@@ -229,7 +229,7 @@ namespace Crowny
         }
 
         m_Assemblies.clear();
-        m_Assemblies["colrlib"] = m_CorlibAssembly;
+        m_Assemblies["corlib"] = m_CorlibAssembly;
     }
 
     Path MonoManager::GetFrameworkAssembliesFolder() const { return MONO_VERSION_DATA[(int)MONO_VERSION].Path; }

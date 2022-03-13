@@ -6,7 +6,7 @@
 namespace Crowny
 {
 
-    void ImGuiConsoleBuffer::AddMessage(const Message& message)
+    void ImGuiConsoleBuffer::AddMessage(const Message& message) // Binary search here
     {
         // if (m_Collapsed)
         // {
@@ -25,6 +25,30 @@ namespace Crowny
     }
 
     void ImGuiConsoleBuffer::Clear() { m_NormalMessageBuffer.clear(); m_HashToIndex.clear(); m_CollapsedMessageBuffer.clear(); }
+
+    void ImGuiConsoleBuffer::Sort(uint32_t sortIdx, bool ascending)
+    {
+        if (m_Collapsed)
+        {
+			std::sort(m_CollapsedMessageBuffer.begin(), m_CollapsedMessageBuffer.end(), [ascending, sortIdx](const ImGuiConsoleBuffer::Message& a, const ImGuiConsoleBuffer::Message& b) {
+				if (sortIdx == 1)
+					return ascending ? a.MessageText < b.MessageText : a.MessageText > b.MessageText;
+				else if (sortIdx == 0)
+					return ascending ? a.RepeatCount < b.RepeatCount : a.RepeatCount > b.RepeatCount;
+				return false;
+			});
+        }
+        else
+        {
+            std::sort(m_NormalMessageBuffer.begin(), m_NormalMessageBuffer.end(), [ascending, sortIdx](const ImGuiConsoleBuffer::Message& a, const ImGuiConsoleBuffer::Message& b) {
+                if (sortIdx == 0)
+                    return ascending ? a.Timestamp < b.Timestamp : a.Timestamp > b.Timestamp;
+                else if (sortIdx == 1)
+                    return ascending ? a.MessageText < b.MessageText : a.MessageText > b.MessageText;
+                return false;
+            });
+        }
+    }
 
     ImGuiConsoleBuffer::Message::Message(const String& message, Level level) : MessageText(message), LogLevel(level)
     {

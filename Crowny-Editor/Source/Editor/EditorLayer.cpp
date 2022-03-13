@@ -180,6 +180,12 @@ namespace Crowny
             libDirs, refs
         };
         scriptCompiler->GetMethod("Compile", 6)->Invoke(nullptr, params);
+        Vector<AssemblyRefreshInfo> refreshInfos;
+        Path engineAssemblyPath = "C:/dev/Crowny/Crowny-Sharp/CrownySharp.dll";
+        Path gameAssemblyPath = Editor::Get().GetProjectPath() / INTERNAL_ASSEMBLY_PATH / "GameAssembly.dll";
+        refreshInfos.emplace_back(CROWNY_ASSEMBLY, &engineAssemblyPath);
+		refreshInfos.emplace_back(GAME_ASSEMBLY, &gameAssemblyPath);
+        ScriptObjectManager::Get().RefreshAssemblies(refreshInfos);
     }
 
     bool EditorLayer::OnViewportEvent(Event& event)
@@ -215,9 +221,7 @@ namespace Crowny
     {
         Vector<Path> outPaths;
         if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, ProjectLibrary::Get().GetAssetFolder(), { Editor::GetSceneDialogFilter() }, outPaths))
-        {
             OpenScene(outPaths[0].replace_extension(".cwscene"));
-        }
     }
 
     void EditorLayer::OpenScene(const Path& filepath)
@@ -392,6 +396,36 @@ namespace Crowny
 
     void EditorLayer::OnImGuiRender()
     {
+        ImGui::Begin("C# debug");
+        MonoAssembly* gameAssembly = MonoManager::Get().GetAssembly(GAME_ASSEMBLY);
+        for (MonoClass* klass : gameAssembly->GetClasses())
+        {
+            if (ImGui::TreeNode(klass->GetName().c_str()))
+            {
+                if (ImGui::TreeNode("Methods"))
+                {
+					for (MonoMethod* method : klass->GetMethods())
+						ImGui::Text(method->GetName().c_str());
+					ImGui::TreePop();
+                }
+				if (ImGui::TreeNode("Fields"))
+                {
+					for (MonoField* field : klass->GetFields())
+						ImGui::Text(field->GetName().c_str());
+					ImGui::TreePop();
+                }
+				if (ImGui::TreeNode("Properties"))
+                {
+					for (MonoProperty* prop : klass->GetProperties())
+						ImGui::Text(prop->GetName().c_str());
+					ImGui::TreePop();
+                }
+                ImGui::TreePop();
+            }
+            
+        }
+        ImGui::End();
+
         if (m_ShowDemoWindow)
             ImGui::ShowDemoWindow(&m_ShowDemoWindow);
         if (!Editor::Get().IsProjectLoaded() && !ImGui::IsPopupOpen("New Project"))

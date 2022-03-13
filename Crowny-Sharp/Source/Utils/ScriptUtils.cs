@@ -102,6 +102,7 @@ namespace Crowny
 
             readErrorsThread = new Thread(ReadErrors);
             readErrorsThread.Start();
+            process.WaitForExit();
         }
 
         private static void ReadErrors()
