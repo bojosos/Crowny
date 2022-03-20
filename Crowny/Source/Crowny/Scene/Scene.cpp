@@ -330,7 +330,8 @@ namespace Crowny
 				result = e;
 			});
 
-		CW_ENGINE_ERROR("Entity with uuid {0} not found.", uuid);
+		if (!result)
+			CW_ENGINE_ERROR("Entity with uuid {0} not found.", uuid);
 		return result;
 	}
 

@@ -13,13 +13,12 @@ namespace Crowny
     {
     public:
         EditorCamera() = default;
-        EditorCamera(float fov, float aspectRatio, float near, float far);
+        EditorCamera(float fov, float aspectRatio, float nearPlane, float farPlane);
 
         void OnUpdate(Timestep ts);
         void OnEvent(Event& e);
 
         float GetDistance() const { return m_Distance; }
-        void SetDistance(float distance) { m_Distance = distance; }
 
         void SetViewportSize(float width, float height)
         {
@@ -36,6 +35,12 @@ namespace Crowny
         glm::vec3 GetForwardDirection() const;
         const glm::vec3& GetPosition() const { return m_Position; }
         glm::quat GetOrientation() const;
+
+        void SetPosition(const glm::vec3& position) { m_Position = position; }
+        void SetFocalPoint(const glm::vec3& focalPoint) { m_FocalPoint = focalPoint; }
+        void SetYaw(float yaw) { m_Yaw = yaw; }
+        void SetPitch(float pitch) { m_Pitch = pitch; }
+        void SetDistance(float dist) { m_Distance = dist; }
 
         float GetPitch() const { return m_Pitch; }
         float GetYaw() const { return m_Yaw; }

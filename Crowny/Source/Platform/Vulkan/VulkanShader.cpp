@@ -20,26 +20,26 @@ namespace Crowny
     }
 
     VulkanShader::VulkanShader(const Ref<BinaryShaderData>& data) : ShaderStage(data)
-    {
-        VulkanDevice& device = *gVulkanRenderAPI().GetPresentDevice().get();
-        m_ShaderStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        m_ShaderStage.pNext = nullptr;
-        m_ShaderStage.flags = 0;
-        m_ShaderStage.stage = VulkanUtils::GetShaderFlags(data->Type);
-        // m_ShaderStage.pName = data.EntryPoint.c_str();
-        m_ShaderStage.pName = "main";
-        m_ShaderStage.pSpecializationInfo = nullptr;
+	{
+		VulkanDevice& device = *gVulkanRenderAPI().GetPresentDevice().get();
+		m_ShaderStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		m_ShaderStage.pNext = nullptr;
+		m_ShaderStage.flags = 0;
+		m_ShaderStage.stage = VulkanUtils::GetShaderFlags(m_ShaderData->Type);
+		// m_ShaderStage.pName = data.EntryPoint.c_str();
+		m_ShaderStage.pName = "main";
+		m_ShaderStage.pSpecializationInfo = nullptr;
 
-        VkShaderModuleCreateInfo moduleCreateInfo{};
-        moduleCreateInfo.pNext = nullptr;
-        moduleCreateInfo.flags = 0;
-        moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        moduleCreateInfo.codeSize = data->Data.size();
-        moduleCreateInfo.pCode = (uint32_t*)data->Data.data();
-        vkCreateShaderModule(device.GetLogicalDevice(), &moduleCreateInfo, gVulkanAllocator, &m_ShaderStage.module);
-        m_Module = device.GetResourceManager().Create<VulkanShaderModule>(m_ShaderStage.module);
+		VkShaderModuleCreateInfo moduleCreateInfo{};
+		moduleCreateInfo.pNext = nullptr;
+		moduleCreateInfo.flags = 0;
+		moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		moduleCreateInfo.codeSize = m_ShaderData->Data.size();
+		moduleCreateInfo.pCode = (uint32_t*)m_ShaderData->Data.data();
+		vkCreateShaderModule(device.GetLogicalDevice(), &moduleCreateInfo, gVulkanAllocator, &m_ShaderStage.module);
+		m_Module = device.GetResourceManager().Create<VulkanShaderModule>(m_ShaderStage.module);
     }
-
+        
     VulkanShader::~VulkanShader() { m_Module->Destroy(); }
 
 } // namespace Crowny

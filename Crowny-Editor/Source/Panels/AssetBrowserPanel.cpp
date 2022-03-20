@@ -8,6 +8,7 @@
 #include "Crowny/Import/Importer.h"
 #include "Crowny/Input/Input.h"
 
+#include "Editor/Editor.h"
 #include "Editor/EditorAssets.h"
 #include "Editor/EditorUtils.h"
 #include "Editor/ProjectLibrary.h"
@@ -60,7 +61,15 @@ namespace Crowny
 
     void AssetBrowserPanel::Initialize()
     {
-        m_CurrentDirectoryEntry = ProjectLibrary::Get().GetRoot().get();
+        // m_CurrentDirectoryEntry = ProjectLibrary::Get().GetRoot().get();
+        LibraryEntry* entry = ProjectLibrary::Get().FindEntry(Editor::Get().GetProjectSettings()->LastAssetBrowserSelectedEntry).get();
+        if (entry->Type == LibraryEntryType::Directory)
+            m_CurrentDirectoryEntry = static_cast<DirectoryEntry*>(entry);
+        else
+        {
+            m_CurrentDirectoryEntry = entry->Parent;
+            m_SelectionSet.insert(entry->ElementNameHash);
+        }
 
         for (auto child : m_CurrentDirectoryEntry->Children)
         {
@@ -97,6 +106,7 @@ namespace Crowny
 
         ImGui::EndChild();
         EndPanel();
+        DrawTreeView();
     }
 
     void AssetBrowserPanel::DrawHeader()
@@ -540,12 +550,87 @@ namespace Crowny
         ImGui::Columns(1);
     }
 
-    void AssetBrowserPanel::ShowContextMenuContents(LibraryEntry* entry)
+    void AssetBrowserPanel::DrawTreeView()
+    {
+        ImGui::Begin("Tree view");
+        bool foundCurrent = false;  
+        std::function<void(const Ref<LibraryEntry>&)> display = [&](const Ref<LibraryEntry>& cur)
+        {
+			if (cur->Type == LibraryEntryType::Directory)
+			{
+				DirectoryEntry* dirEntry = static_cast<DirectoryEntry*>(cur.get());
+                bool hasChildren = false;
+                for (const auto& child : dirEntry->Children)
+                    if (child->Type == LibraryEntryType::Directory)
+                        hasChildren = true;
+                ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | (hasChildren ? 0 : ImGuiTreeNodeFlags_Leaf);
+                if (m_CurrentDirectoryEntry->ElementNameHash == cur->ElementNameHash && m_CurrentDirectoryEntry->Filepath == cur->Filepath)
+                {
+                    flags |= ImGuiTreeNodeFlags_Selected;
+                    foundCurrent = true;
+                }
+                if (!foundCurrent) // This is wrong. It will open all entries above the one needed.
+                    ImGui::SetNextItemOpen(ImGuiCond_Once);
+				if (ImGui::TreeNodeEx(cur->ElementName.c_str(), flags))
+				{
+					if (ImGui::BeginDragDropTarget())
+					{
+						if (const ImGuiPayload* payload = UIUtils::AcceptAssetPayload())
+						{
+							Path payloadPath = UIUtils::GetPathFromPayload(payload);
+							ProjectLibrary::Get().MoveEntry(payloadPath, cur->Filepath / payloadPath.filename());
+						}
+						ImGui::EndDragDropTarget();
+					}
+					if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) // Allow dragging
+					{
+						UIUtils::SetAssetPayload(cur->Filepath);
+						ImGui::EndDragDropSource();
+					}
+
+					//if (ImGui::BeginPopupContextItem(cur->Filepath.string().c_str())) // Right click on a file
+					//{
+					//	ShowContextMenuContents(cur.get(), true);
+     //                   ImGui::EndPopup();
+     //               }
+
+                    if (Input::IsMouseButtonUp(Mouse::ButtonLeft) && ImGui::IsItemHovered())
+                    {
+                        while (!m_ForwardHistory.empty()) m_ForwardHistory.pop();
+                        while (!m_BackwardHistory.empty()) m_BackwardHistory.pop();
+                        if (hasChildren)
+                        {
+                            if (!m_BackwardHistory.empty())
+                            {
+                                if (m_BackwardHistory.top()->ElementNameHash != dirEntry->ElementNameHash)
+                                    m_BackwardHistory.push(dirEntry);
+                            }
+                            else
+                                m_BackwardHistory.push(dirEntry);
+                        }
+                        m_CurrentDirectoryEntry = dirEntry;
+                    }
+					for (const auto& child : dirEntry->Children)
+						display(child);
+					ImGui::TreePop();
+				}
+			}
+        };
+        const Ref<DirectoryEntry>& root = ProjectLibrary::Get().GetRoot();
+        display(root);
+        ImGui::End();
+    }
+
+    void AssetBrowserPanel::ShowContextMenuContents(LibraryEntry* entry, bool isTreeView)
     {
         if (ImGui::BeginMenu("Create"))
         {
             if (ImGui::MenuItem("Folder"))
+			{
+				if (isTreeView)
+					m_CurrentDirectoryEntry = m_CurrentDirectoryEntry->Parent;
                 CreateNew(AssetBrowserItem::Folder);
+            }
             ImGui::Separator();
             if (ImGui::MenuItem("C# script"))
                 CreateNew(AssetBrowserItem::CScript);

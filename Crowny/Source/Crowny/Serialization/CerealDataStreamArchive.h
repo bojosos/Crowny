@@ -2,9 +2,7 @@
 
 #include "Crowny/Common/DataStream.h"
 
-#include "Crowny/Assets/CerealDataStreamArchive.h"
-
-#include "Crowny/Assets/SerializeUtils.h"
+#include "Crowny/Serialization/SerializeUtils.h"
 
 #include <cereal/cereal.hpp>
 #include <cereal/types/base_class.hpp>

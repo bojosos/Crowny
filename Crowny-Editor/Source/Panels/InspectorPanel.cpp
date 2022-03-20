@@ -94,6 +94,8 @@ namespace Crowny
                 {
                     Path payloadPath = UIUtils::GetPathFromPayload(payload);
                     String ext = payloadPath.extension().string();
+                    if (ext.empty())
+                        return;
                     ext = ext.substr(1, ext.size() - 1);
                     if (ext == "ogg" || ext == "wav" || ext == "flac")
                     {
@@ -569,6 +571,8 @@ namespace Crowny
             return;
         }
         String ext = filepath.extension().string();
+        if (ext.empty())
+            return;
         ext = ext.substr(1, ext.size() - 1);
         if (ext == "ogg" || ext == "wav" || ext == "flac")
             m_InspectorMode = InspectorMode::AudioClipImport;

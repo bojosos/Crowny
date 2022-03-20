@@ -38,5 +38,3 @@ namespace Crowny
         Vector<Ref<AssetManifest>> m_Manifests;
     };
 } // namespace Crowny
-
-CEREAL_FORCE_DYNAMIC_INIT(AssetManager);

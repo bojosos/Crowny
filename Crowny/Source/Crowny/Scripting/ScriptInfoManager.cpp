@@ -38,9 +38,6 @@ namespace Crowny
 		m_Builtin.SystemTypeClass = corlib->GetClass("System", "Type");
 		if (m_Builtin.SystemTypeClass == nullptr)
 			CW_ENGINE_ERROR("Cannot find System.Type class.");
-		/*m_Builtin.SystemTypeClass = corlib->GetClass("System", "SerializeObject");
-		if (m_Builtin.SystemSerializable == nullptr)
-			CW_ENGINE_ERROR("Cannot find System.SerializeObject class.");*/
 		m_Builtin.SystemArrayClass = corlib->GetClass("System", "Array");
 		if (m_Builtin.SystemArrayClass == nullptr)
 			CW_ENGINE_ERROR("Cannot find System.Array class.");

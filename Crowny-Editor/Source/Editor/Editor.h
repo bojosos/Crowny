@@ -5,6 +5,8 @@
 #include "Editor/Settings/ProjectSettings.h"
 #include "Crowny/Common/FileSystem.h"
 
+#include "Editor/Settings/EditorSettings.h"
+
 namespace Crowny
 {
 
@@ -13,6 +15,8 @@ namespace Crowny
     static const Path PROJECT_INTERNAL_DIR = u8"Internal";
     static const Path INTERNAL_ASSEMBLY_PATH = PROJECT_INTERNAL_DIR / "Assemblies";
     static const DialogFilter SCENE_FILTER = { "CrownyScene", "*.cwscene" };
+    static const Path DEFAULT_PROJECT_PATH_WIN32 = "C:/dev/Projects";
+    static const Path DEFAULT_PROJECT_PATH_LINUX = "/home/life/Desktop/dev";
 
     class Editor : public Module<Editor>
     {
@@ -27,13 +31,32 @@ namespace Crowny
         void LoadProjectSettings();
         void SaveProjectSettings();
 
+        void LoadEditorSettings();
+        void SaveEditorSettings();
+
         void UnloadProject();
 
+        Ref<ProjectSettings> GetProjectSettings() const { return m_ProjectSettings; }
+        Ref<EditorSettings> GetEditorSettings() const { return m_EditorSettings; }
+
         static const DialogFilter& GetSceneDialogFilter() { return SCENE_FILTER; }
+        const Path& GetDefaultProjectPath() const
+        {
+#ifdef CW_WINDOWS
+            return DEFAULT_PROJECT_PATH_WIN32;
+#else
+            return DEFAULT_PROJECT_PATH_LINUX;
+#endif
+        }
+
+    private:
+        virtual void OnStartUp() override;
+        virtual void OnShutdown() override;
 
     private:
         Path m_ProjectPath;
         Ref<ProjectSettings> m_ProjectSettings;
+        Ref<EditorSettings> m_EditorSettings;
         String m_ProjectName;
     };
 

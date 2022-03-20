@@ -1,6 +1,6 @@
 #include "cwpch.h"
 
-#include "Crowny/Utils/ScriptSerializer.h"
+#include "Crowny/Serialization/ScriptSerializer.h"
 
 namespace Crowny
 {
