@@ -5,6 +5,8 @@
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/Yaml.h"
 
+#include "Crowny/Serialization/FileEncoder.h"
+
 namespace Crowny
 {
 
@@ -98,22 +100,8 @@ namespace Crowny
                 copy->m_UuidToFilepath[entry.first] = relativePath;
             }
         }
-        YAML::Emitter out;
-        out << YAML::Comment("Crowny manifest");
-        out << YAML::BeginMap;
-        out << YAML::Key << "Manifest" << YAML::Value << copy->m_Name;
-
-        out << YAML::Key << "Assets" << YAML::Value;
-        out << YAML::BeginSeq;
-        for (auto uuidPath : copy->m_UuidToFilepath)
-        {
-            out << YAML::BeginMap;
-            out << YAML::Key << uuidPath.first << YAML::Value << uuidPath.second.string();
-            out << YAML::EndMap;
-        }
-
-        out << YAML::EndSeq << YAML::EndMap;
-        FileSystem::WriteTextFile(filepath, out.c_str());
+        FileEncoder<AssetManifest, SerializerType::Yaml> encoder(filepath);
+        encoder.Encode(copy);
     }
 
     Ref<AssetManifest> AssetManifest::Deserialize(const Path& filepath, const Path& relativeTo)

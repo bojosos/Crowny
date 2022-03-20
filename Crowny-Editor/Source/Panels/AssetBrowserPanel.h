@@ -43,9 +43,10 @@ namespace Crowny
         void Initialize();
 
     private:
-        void ShowContextMenuContents(LibraryEntry* entry = nullptr);
+        void ShowContextMenuContents(LibraryEntry* entry = nullptr, bool isTreeView = false);
         void DrawHeader();
         void DrawFiles();
+        void DrawTreeView();
         void CreateNew(AssetBrowserItem itemType);
         String GetDefaultContents(AssetBrowserItem itemType);
         void HandleKeyboardNavigation();

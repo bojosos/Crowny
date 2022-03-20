@@ -14,7 +14,7 @@ namespace Crowny
     {
         s_Scenes.push_back(scene);
         s_ActiveIndex = (uint32_t)s_Scenes.size() - 1;
-        ScriptRuntime::Init();
+        // ScriptRuntime::Init();
     }
 
     void SceneManager::Shutdown() {}

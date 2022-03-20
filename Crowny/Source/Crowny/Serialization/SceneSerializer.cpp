@@ -1,6 +1,6 @@
 #include "cwpch.h"
 
-#include "Crowny/Scene/SceneSerializer.h"
+#include "Crowny/Serialization/SceneSerializer.h"
 
 #include "Crowny/Common/Uuid.h"
 #include "Crowny/Common/VirtualFileSystem.h"
@@ -11,34 +11,6 @@
 
 namespace Crowny
 {
-
-    YAML::Emitter& operator<<(YAML::Emitter& out, const glm::vec2& v)
-    {
-        out << YAML::Flow;
-        out << YAML::BeginSeq << v.x << v.y << YAML::EndSeq;
-        return out;
-    }
-
-    YAML::Emitter& operator<<(YAML::Emitter& out, const glm::vec3& v)
-    {
-        out << YAML::Flow;
-        out << YAML::BeginSeq << v.x << v.y << v.z << YAML::EndSeq;
-        return out;
-    }
-
-    YAML::Emitter& operator<<(YAML::Emitter& out, const glm::vec4& v)
-    {
-        out << YAML::Flow;
-        out << YAML::BeginSeq << v.x << v.y << v.z << v.w << YAML::EndSeq;
-        return out;
-    }
-
-    YAML::Emitter& operator<<(YAML::Emitter& out, const UUID& uuid)
-    {
-        out << uuid.ToString();
-        return out;
-    }
-
     SceneSerializer::SceneSerializer(const Ref<Scene>& scene) : m_Scene(scene) {}
 
     void SceneSerializer::SerializeEntity(YAML::Emitter& out, Entity entity)
@@ -260,7 +232,6 @@ namespace Crowny
     void SceneSerializer::Deserialize(const Path& filepath)
     {
         String text = FileSystem::OpenFile(filepath)->GetAsString();
-        // String text = VirtualFileSystem::Get()->ReadTextFile(filepath);
         YAML::Node data = YAML::Load(text);
         if (!data["Scene"])
             return;
