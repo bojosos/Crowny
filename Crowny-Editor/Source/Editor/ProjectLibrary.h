@@ -4,7 +4,7 @@
 
 #include "Crowny/Assets/Asset.h"
 #include "Crowny/Assets/AssetManifest.h"
-#include "Crowny/Assets/CerealDataStreamArchive.h"
+#include "Crowny/Serialization/CerealDataStreamArchive.h"
 #include "Crowny/Common/StringUtils.h"
 #include "Crowny/Import/ImportOptions.h"
 
@@ -30,7 +30,7 @@ namespace Crowny
         LibraryEntryType Type;
         Path Filepath;
         String ElementName;
-        size_t ElementNameHash = 0;
+        size_t ElementNameHash = 0; // Bug: Since I use ToLower on the name before calculating the hash, on Unix platforms files with same names will both get highlighted.
 
         std::time_t LastUpdateTime = 0;
         DirectoryEntry* Parent = nullptr;

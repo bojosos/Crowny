@@ -59,6 +59,8 @@ namespace Crowny
         
     private:
         void RenderOverlay();
+        void AddRecentEntry(const Path& path);
+        void SetProjectSettings();
 
     private:
         friend class Time;
@@ -78,6 +80,7 @@ namespace Crowny
 
         bool m_ShowDemoWindow = false;
         bool m_ShowColliders = false;
+        bool m_AutoLoadLastProject = false;
 
         Vector<ImGuiPanel*> m_ImGuiWindows;
         static EditorCamera s_EditorCamera;

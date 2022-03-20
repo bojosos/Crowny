@@ -8,6 +8,7 @@
 namespace Crowny
 {
     class AssetManager;
+    class AssetManifestSerializer;
 
     class AssetManifest
     {
@@ -27,9 +28,10 @@ namespace Crowny
         static Ref<AssetManifest> Deserialize(const Path& filepath, const Path& relativeTo);
 
         const String& GetName() const { return m_Name; }
-
+        using Serializer = AssetManifestSerializer;
     private:
         friend class AssetManager;
+        friend class AssetManifestSerializer;
 
         String m_Name;
         UnorderedMap<UUID, Path> m_UuidToFilepath;

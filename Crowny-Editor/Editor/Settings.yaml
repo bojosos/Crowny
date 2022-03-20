@@ -1,0 +1,17 @@
+# Crowny Editor Settings
+GridMoveSnap: [0.100000001, 0.100000001, 0.100000001]
+GridRotateSnap: 15
+GridScaleSnap: 0.100000001
+LastOpenProject: C:\dev\Projects\Project1
+AutoLoadLastProject: true
+ShowImGuiDemo: false
+ShowPhysicsColliders2D: false
+RecentProjects:
+  - Path: C:\dev\Projects\Project1
+    Timestamp: 1647807397
+  - Path: C:\dev\Projects\New Project
+    Timestamp: 1647625353
+  - Path: C:/dev/Projects\Project4
+    Timestamp: 1647607440
+  - Path: C:/dev/Projects\Project3
+    Timestamp: 1647605544

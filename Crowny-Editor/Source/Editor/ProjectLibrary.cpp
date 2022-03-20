@@ -3,7 +3,7 @@
 #include "Editor/ProjectLibrary.h"
 
 #include "Crowny/Assets/AssetManager.h"
-#include "Crowny/Import/ImportOptionsSerializer.h"
+#include "Crowny/Serialization/ImportOptionsSerializer.h"
 #include "Crowny/Import/Importer.h"
 
 #include "Editor/Editor.h"
@@ -31,9 +31,9 @@ namespace Crowny
     void Load(BinaryDataStreamInputArchive& archive, FileEntry& entry)
     {
         archive(cereal::base_class<LibraryEntry>(&entry));
-        String nameCopy = entry.ElementName;
-        StringUtils::ToLower(nameCopy);
-        entry.ElementNameHash = Hash(nameCopy);
+        String pathCopy = entry.ElementName;
+        StringUtils::ToLower(pathCopy);
+        entry.ElementNameHash = Hash(pathCopy);
         archive(entry.Filesize);
     }
 
@@ -50,9 +50,9 @@ namespace Crowny
     void Load(BinaryDataStreamInputArchive& archive, DirectoryEntry& entry)
     {
         archive(cereal::base_class<LibraryEntry>(&entry), entry.Children);
-        String nameCopy = entry.ElementName;
-        StringUtils::ToLower(nameCopy);
-        entry.ElementNameHash = Hash(nameCopy);
+        String pathCopy = entry.ElementName;
+        StringUtils::ToLower(pathCopy);
+        entry.ElementNameHash = Hash(pathCopy);
         for (auto& child : entry.Children)
             child->Parent = &entry;
     }
@@ -62,7 +62,7 @@ namespace Crowny
 
     const Path ProjectLibrary::ASSET_DIR = "Assets";
     const Path ProjectLibrary::INTERNAL_ASSET_DIR = PROJECT_INTERNAL_DIR / ASSET_DIR;
-    const char* ProjectLibrary::ASSET_MANIFEST_FILENAME = "AssetManifest.asset";
+    const char* ProjectLibrary::ASSET_MANIFEST_FILENAME = "AssetManifest.yaml";
     const char* ProjectLibrary::LIBRARY_ENTRIES_FILENAME = "Entries.asset";
 
     LibraryEntry::LibraryEntry(const Path& path, const String& name, DirectoryEntry* parent, LibraryEntryType type)
@@ -74,7 +74,7 @@ namespace Crowny
     }
 
     FileEntry::FileEntry(const Path& path, const String& name, DirectoryEntry* parent)
-      : LibraryEntry(path, name, parent, LibraryEntryType::File)
+      : LibraryEntry(path, name, parent, LibraryEntryType::File), Filesize(0)
     {
     }
 
@@ -408,7 +408,7 @@ namespace Crowny
             entry->Filesize = (uint32_t)fs::file_size(entry->Filepath);
             if (asset == nullptr)
                 return false;
-            Path outputPath = m_ProjectFolder / PROJECT_INTERNAL_DIR;
+            Path outputPath = m_ProjectFolder / INTERNAL_ASSET_DIR;
             if (entry->Metadata == nullptr)
                 entry->Metadata = CreateRef<AssetMetadata>();
 
@@ -450,8 +450,8 @@ namespace Crowny
         if (fs::is_regular_file(oldFullPath) || fs::is_directory(oldFullPath))
         {
             if (!overwrite)
-            {
-                CW_ENGINE_INFO("Here: {0}, {1}", oldFullPath, newFullPath);
+			{
+				CW_ENGINE_INFO("Here: {0}, {1}", oldFullPath, newFullPath);
                 if (!fs::exists(newFullPath))
                 {
                     CW_ENGINE_INFO("Here2");
@@ -461,8 +461,16 @@ namespace Crowny
             else
             {
                 fs::rename(oldFullPath, newFullPath);
-            CW_ENGINE_INFO("Here2");
+                CW_ENGINE_INFO("Here2");
             }
+			/*if (fs::exists(newFullPath))
+			{
+				if (overwrite)
+					fs::remove(newFullPath);
+				else
+					CW_ENGINE_WARN("File {0} already exists.", newFullPath);
+			}
+			fs::rename(oldFullPath, newFullPath);*/
         }
 
         Path oldMetaPath = GetMetadataPath(oldFullPath);

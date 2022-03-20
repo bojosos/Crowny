@@ -923,7 +923,7 @@ namespace Crowny
 			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + depth * 15);
 			ImGui::Text(memberInfo->m_Name.c_str()); ImGui::NextColumn();
 			MonoObject* val = memberInfo->GetValue(instance);
-			auto valueGetter = [&]() { return /*objectInfo->m_TypeInfo->m_ValueType ? instance : */val; };
+			auto valueGetter = [&]() { return val; };
 			auto valueSetter = [&](void* value) {
 				memberInfo->SetValue(instance, value);
 				if (objectInfo->m_TypeInfo->m_ValueType)
@@ -945,12 +945,10 @@ namespace Crowny
 		ImGui::NextColumn();
 
 		if (!script.GetManagedClass())
-		{
 			ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(255, 0, 0));
-		}
 		else
 			ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(0, 255, 0));
-		String name = script.GetManagedClass() ? String(script.GetManagedClass()->GetName()) : "";
+		String name = script.GetManagedClass() ? script.GetManagedClass()->GetName() : "";
 		if (ImGui::InputText("##scriptName", &name))
 		{
 			script.SetClassName(name);

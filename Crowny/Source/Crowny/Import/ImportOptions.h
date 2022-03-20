@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Crowny/Assets/CerealDataStreamArchive.h"
+#include "Crowny/Serialization/CerealDataStreamArchive.h"
 #include "Crowny/Audio/AudioClip.h"
 
 #include "Crowny/Utils/ShaderCompiler.h"

@@ -1,6 +1,6 @@
 #include "cwpch.h"
 
-#include "Crowny/Assets/CerealDataStreamArchive.h"
+#include "Crowny/Serialization/CerealDataStreamArchive.h"
 
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/FileSystem.h"
@@ -131,36 +131,45 @@ namespace Crowny
         archive(desc.Uniforms, desc.Samplers, desc.Textures, desc.LoadStoreTextures);
     }
 
-    void Save(BinaryDataStreamOutputArchive& archive, const ShaderStage& shaderStage)
-    {
-        archive(shaderStage.m_ShaderData->Data);
-        archive(shaderStage.m_ShaderData->EntryPoint);
-        archive(shaderStage.m_ShaderData->Type);
-        archive(shaderStage.m_ShaderData->Description);
-    }
-
-    void Load(BinaryDataStreamInputArchive& archive, ShaderStage& shaderStage)
-    {
-        archive(shaderStage.m_ShaderData->Data);
-        archive(shaderStage.m_ShaderData->EntryPoint);
-        archive(shaderStage.m_ShaderData->Type);
-        archive(shaderStage.m_ShaderData->Description);
-        // shaderStage.Init();
-    }
-
     void Save(BinaryDataStreamOutputArchive& archive, const Shader& shader)
     {
-        for (uint32_t i = 0; i < SHADER_COUNT; i++)
-        {
-            if (shader.m_ShaderStages[i])
-                archive(shader.m_ShaderStages[i]);
-        }
+        // TODO: Fix these for all stages
+        archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->Data);
+        archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->EntryPoint);
+        archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->Type);
+        archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->Description);
+
+		archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->Data);
+		archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->EntryPoint);
+		archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->Type);
+		archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->Description);
+        // archive(shader.m_ShaderStages[FRAGMENT_SHADER]);
+        // archive(shader.m_ShaderStages);
+        //for (uint32_t i = 0; i < SHADER_COUNT; i++)
+        //{
+        //    // if (shader.m_ShaderStages[i])
+        //        archive(shader.m_ShaderStages[i]);
+        //}
     }
 
     void Load(BinaryDataStreamInputArchive& archive, Shader& shader)
     {
-        for (uint32_t i = 0; i < SHADER_COUNT; i++)
-            archive(shader.m_ShaderStages[i]);
+        Ref<BinaryShaderData> data = CreateRef<BinaryShaderData>();
+		archive(data->Data);
+		archive(data->EntryPoint);
+		archive(data->Type);
+		archive(data->Description);
+        shader.m_ShaderStages[VERTEX_SHADER] = ShaderStage::Create(data);
+
+		data = CreateRef<BinaryShaderData>();
+		archive(data->Data);
+		archive(data->EntryPoint);
+		archive(data->Type);
+		archive(data->Description);
+		shader.m_ShaderStages[FRAGMENT_SHADER] = ShaderStage::Create(data);
+        // archive(shader.m_ShaderStages);
+        /*for (uint32_t i = 0; i < SHADER_COUNT; i++)
+            archive(shader.m_ShaderStages[i]);*/
     }
 
     Ref<Asset> AssetManager::Load(const Path& filepath, bool keepSourceData)

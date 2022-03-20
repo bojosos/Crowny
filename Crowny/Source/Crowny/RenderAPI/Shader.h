@@ -45,6 +45,8 @@ namespace Crowny
         UnorderedMap<String, UniformResourceDesc> LoadStoreTextures;
     };
 
+    class Shader;
+
     class ShaderStage
     {
     public:
@@ -52,9 +54,8 @@ namespace Crowny
         ShaderStage(const Ref<BinaryShaderData>& shaderData);
         const Ref<UniformDesc>& GetUniformDesc() const;
         static Ref<ShaderStage> Create(const Ref<BinaryShaderData>& shaderData);
-
-    private:
-        CW_SERIALIZABLE(ShaderStage);
+    protected:
+        CW_SERIALIZABLE(Shader);
         Ref<BinaryShaderData> m_ShaderData;
     };
 
@@ -75,7 +76,6 @@ namespace Crowny
 
         static Ref<Shader> Create(const ShaderDesc& stateDesc);
         Ref<ShaderStage> GetStage(ShaderType shaderType) const { return m_ShaderStages[shaderType]; }
-
     private:
         CW_SERIALIZABLE(Shader);
         Array<Ref<ShaderStage>, SHADER_COUNT> m_ShaderStages;

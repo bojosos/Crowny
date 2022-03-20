@@ -103,7 +103,7 @@ namespace Crowny
             ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
             CW_ENGINE_INFO("Loaded engine assembly");
         }
-        Path gameAssmeblyPath = Path("C:/dev/Crowny/Crowny-Sandbox") / (std::string(GAME_ASSEMBLY) + ".dll");
+        Path gameAssmeblyPath = Path("C:/dev/Projects/New Project/Internal/Assemblies") / (std::string(GAME_ASSEMBLY) + ".dll");
         if (fs::exists(gameAssmeblyPath))
         {
             MonoManager::Get().LoadAssembly(gameAssmeblyPath, GAME_ASSEMBLY);
