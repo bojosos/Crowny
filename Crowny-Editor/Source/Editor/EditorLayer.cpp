@@ -338,19 +338,19 @@ namespace Crowny
         {
             scene->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
             TextureParameters colorParams;
-            colorParams.Width = m_ViewportPanel->GetViewportSize().x;
-            colorParams.Height = m_ViewportPanel->GetViewportSize().y;
+            colorParams.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
+            colorParams.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
             colorParams.Usage = TextureUsage::TEXTURE_RENDERTARGET;
 
             TextureParameters objectId;
-            objectId.Width = m_ViewportPanel->GetViewportSize().x;
-            objectId.Height = m_ViewportPanel->GetViewportSize().y;
+            objectId.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
+            objectId.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
             objectId.Format = TextureFormat::R32I;
             objectId.Usage = TextureUsage(TextureUsage::TEXTURE_RENDERTARGET | TextureUsage::TEXTURE_DYNAMIC);
 
             TextureParameters depthParams;
-            depthParams.Width = m_ViewportPanel->GetViewportSize().x;
-            depthParams.Height = m_ViewportPanel->GetViewportSize().y;
+            depthParams.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
+            depthParams.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
             depthParams.Usage = TextureUsage::TEXTURE_DEPTHSTENCIL;
             depthParams.Format = TextureFormat::DEPTH24STENCIL8;
 
@@ -361,8 +361,8 @@ namespace Crowny
             rtProps.ColorSurfaces[0] = { color1 };
             rtProps.ColorSurfaces[1] = { color2 };
             rtProps.DepthSurface = { depth };
-            rtProps.Width = m_ViewportPanel->GetViewportSize().x;
-            rtProps.Height = m_ViewportPanel->GetViewportSize().y;
+            rtProps.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
+            rtProps.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
             m_RenderTarget = RenderTexture::Create(rtProps);
         }
         m_ViewportSize = m_ViewportPanel->GetViewportSize();
@@ -393,7 +393,7 @@ namespace Crowny
             break;
         }
         }
-        RenderOverlay(); Comment:
+        RenderOverlay();
 
         glm::vec4 bounds = m_ViewportPanel->GetViewportBounds();
         ImVec2 mouseCoords = ImGui::GetMousePos();
@@ -401,12 +401,13 @@ namespace Crowny
         coords.y = m_ViewportSize.y - coords.y;
         if (coords.x >= 0 && coords.x < m_ViewportSize.x && coords.y >= 0 && coords.y < m_ViewportSize.y)
         {
-            // RenderTexture* rt = static_cast<RenderTexture*>(m_RenderTarget.get());
-            // PixelData outPixelData;
-            // rt->GetColorTexture(1)->ReadData(outPixelData);
-            // glm::vec4 col = outPixelData.GetColorAt(coords.x, coords.y);
-            // CW_ENGINE_INFO("Hover: {0}, {1}, {2}, {3}, {4}", col.x, col.y, col.z, col.w);
-            // m_HoveredEntity = Entity((entt::entity)
+            RenderTexture* rt = static_cast<RenderTexture*>(m_RenderTarget.get());
+            Ref<PixelData> outPixelData = PixelData::Create(rt->GetColorTexture(1)->GetWidth(), rt->GetColorTexture(1)->GetHeight(), rt->GetColorTexture(1)->GetFormat());
+            rt->GetColorTexture(1)->ReadData(*outPixelData);
+            glm::vec4 col = outPixelData->GetColorAt(coords.x, coords.y);
+            if (col.x == -1.0f)
+                m_HoveredEntity = Entity(entt::null, scene.get());
+            m_HoveredEntity = Entity((entt::entity)(col.x + 1), scene.get());
         }
         m_HierarchyPanel->Update();
         ScriptObjectManager::Get().Update();
@@ -436,7 +437,7 @@ namespace Crowny
                     glm::vec3 translation = tc.Position + glm::vec3(bc2d.Offset, zOffset);
                     glm::vec3 scale = tc.Scale * glm::vec3(bc2d.Size * 2.0f, 1.0f);
                     glm::mat4 transform = glm::translate(glm::mat4(1.0f), translation) * glm::rotate(glm::mat4(1.0f), tc.Rotation.z, glm::vec3(0.0f, 0.0f, 1.0f)) * glm::scale(glm::mat4(1.0f), scale);
-                    Renderer2D::DrawRect(transform, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.01);
+                    Renderer2D::DrawRect(transform, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.01f);
                 }
             }
 
@@ -448,7 +449,7 @@ namespace Crowny
                     glm::vec3 translation = tc.Position + glm::vec3(cc2d.Offset, zOffset);
                     glm::vec3 scale = tc.Scale * glm::vec3(cc2d.Radius * 2.0f);
                     glm::mat4 transform = glm::translate(glm::mat4(1.0f), translation) * glm::scale(glm::mat4(1.0f), scale);
-                    Renderer2D::DrawCircle(transform, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.01);
+                    Renderer2D::DrawCircle(transform, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.01f);
                 }
             }
         }
@@ -759,9 +760,9 @@ namespace Crowny
 
     bool EditorLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e)
     {
-        if (m_ViewportPanel->IsHovered() && m_ViewportPanel->IsFocused())
+        if (!Input::IsKeyPressed(Key::LeftAlt) && !Input::IsKeyPressed(Key::RightAlt))
         {
-            HierarchyPanel::SetSelectedEntity(m_HoveredEntity);
+            m_HierarchyPanel->SetSelectedEntity(m_HoveredEntity);
             return true;
         }
 

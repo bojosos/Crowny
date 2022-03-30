@@ -66,6 +66,10 @@ namespace Crowny
         ImVec2 viewportOffset2 = ImGui::GetWindowPos();
         bounds[0] = { viewportMinRegion.x + viewportOffset2.x, viewportMinRegion.y + viewportOffset2.y };
         bounds[1] = { viewportMaxRegion.x + viewportOffset2.x, viewportMaxRegion.y + viewportOffset2.y };
+        m_ViewportBounds.x = bounds[0].x;
+        m_ViewportBounds.y = bounds[0].y;
+        m_ViewportBounds.z = bounds[1].x;
+        m_ViewportBounds.w = bounds[1].y;
 
         Entity selected = HierarchyPanel::GetSelectedEntity();
 
