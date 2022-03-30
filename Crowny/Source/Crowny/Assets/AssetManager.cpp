@@ -172,9 +172,9 @@ namespace Crowny
             archive(shader.m_ShaderStages[i]);*/
     }
 
-    Ref<Asset> AssetManager::Load(const Path& filepath, bool keepSourceData)
+    AssetHandle<Asset> AssetManager::Load(const Path& filepath, bool keepInternalRef, bool keepSourceData)
     {
-        if (!FileSystem::FileExists(filepath))
+        if (!fs::exists(filepath))
         {
             CW_ENGINE_WARN("Resource {0} does not exist.", filepath);
             return nullptr;
@@ -184,17 +184,17 @@ namespace Crowny
         bool exists = GetUUIDFromFilepath(filepath, uuid);
         if (!exists)
             uuid = UuidGenerator::Generate();
-        return Load(uuid, filepath, keepSourceData);
+        return Load(uuid, filepath, keepInternalRef, keepSourceData);
     }
 
-    Ref<Asset> AssetManager::LoadFromUUID(const UUID& uuid, bool keepSourceData)
+    AssetHandle<Asset> AssetManager::LoadFromUUID(const UUID& uuid, bool keepInternalRef, bool keepSourceData)
     {
         Path filepath;
         GetFilepathFromUUID(uuid, filepath);
-        return Load(uuid, filepath, keepSourceData);
+        return Load(uuid, filepath, keepInternalRef, keepSourceData);
     }
 
-    Ref<Asset> AssetManager::Load(const UUID& uuid, const Path& filepath, bool keepSourceData)
+    AssetHandle<Asset> AssetManager::Load(const UUID& uuid, const Path& filepath, bool keepInternalRef, bool keepSourceData)
     {
         /*
         auto findIter = m_LoadedAssets.find(uuid);
@@ -222,7 +222,9 @@ namespace Crowny
         BinaryDataStreamInputArchive archive(stream);
         Ref<Asset> asset;
         archive(asset);
-        return asset;
+        AssetHandle<Asset> output = AssetHandle<Asset>(asset, uuid);
+        m_Handles[uuid] = output.GetWeak();
+        return output;
     }
 
     void AssetManager::Save(const Ref<Asset>& resource, const Path& filepath)

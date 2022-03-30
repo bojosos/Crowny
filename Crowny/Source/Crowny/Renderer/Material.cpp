@@ -4,7 +4,7 @@
 
 namespace Crowny
 {
-    Material::Material(const Ref<Shader>& shader) : m_Shader(shader) {}
+    Material::Material(const AssetHandle<Shader>& shader) : m_Shader(shader) {}
 
     void Material::SetUniformData(const String& name, byte* data) {}
 

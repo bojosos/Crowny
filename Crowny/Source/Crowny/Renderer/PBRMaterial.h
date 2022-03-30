@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Assets/AssetHandle.h"
+
 #include "Crowny/RenderAPI/GraphicsPipeline.h"
 #include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/RenderAPI/UniformBufferBlock.h"
@@ -13,7 +15,7 @@ namespace Crowny
     class PBRMaterial : public Material
     {
     public:
-        PBRMaterial(const Ref<Shader>& shader);
+        PBRMaterial(const AssetHandle<Shader>& shader);
         ~PBRMaterial() = default;
 
         void Bind();

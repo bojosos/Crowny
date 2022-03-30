@@ -57,7 +57,7 @@ namespace Crowny
             m_Internal->SetPitch(m_Pitch);
     }
 
-    void AudioSourceComponent::SetClip(const Ref<AudioClip>& clip)
+    void AudioSourceComponent::SetClip(const AssetHandle<AudioClip>& clip)
     {
         if (m_AudioClip == clip)
             return;
