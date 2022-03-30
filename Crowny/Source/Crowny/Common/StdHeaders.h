@@ -28,6 +28,11 @@
 #include <filesystem>
 #include <fstream>
 
+#include <thread>
+#include <mutex>
+#include <atomic>
+
+
 namespace Crowny
 {
 
@@ -76,6 +81,14 @@ namespace Crowny
     using U32String = std::u32string;
 
     using Stringstream = std::stringstream;
+
+    using Thread = std::thread;
+    
+    using Mutex = std::mutex;
+
+    using Signal = std::condition_variable;
+
+    using Lock = std::unique_lock<Mutex>;
 
     template <typename T> using Scope = std::unique_ptr<T>;
 

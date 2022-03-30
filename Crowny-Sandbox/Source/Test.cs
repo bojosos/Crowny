@@ -91,6 +91,7 @@ namespace Sandbox
             private int _a, _b, _c;
         }
         public TestClass testObj = new TestClass(31, 32, 33);
+
         public void Start()
         {
             Debug.Log("Length: " + listOfInts.Count);
@@ -161,6 +162,14 @@ namespace Sandbox
                 else
                     source.Play();
             }
+        }
+
+        public void OnCollisionExit2D(Collision2D collision)
+        {
+            foreach (Vector2 vec in collision.points)
+                Debug.Log(vec);
+            foreach (Entity e in collision.colliders)
+                Debug.Log(e.GetName());
         }
     }
 }

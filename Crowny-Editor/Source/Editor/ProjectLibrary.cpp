@@ -608,14 +608,14 @@ namespace Crowny
         return fileEntry->Metadata;
     }
 
-    Ref<Asset> ProjectLibrary::Load(const Path& path)
+    AssetHandle<Asset> ProjectLibrary::Load(const Path& path)
     {
         Ref<AssetMetadata> meta = FindAssetMetadata(path);
         if (meta == nullptr)
-            return CreateRef<Asset>();
+            return AssetHandle<Asset>();
 
         const UUID& uuid = meta->Uuid;
-        return AssetManager::Get().LoadFromUUID(uuid, true);
+        return AssetManager::Get().LoadFromUUID(uuid, true, true);
     }
 
     Vector<Ref<FileEntry>> ProjectLibrary::GetAssetsForBuild() const
