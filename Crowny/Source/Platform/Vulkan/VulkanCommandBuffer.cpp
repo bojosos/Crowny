@@ -2144,7 +2144,7 @@ namespace Crowny
                                         VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage)
     {
         VkBufferMemoryBarrier barrier{};
-        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
         barrier.pNext = nullptr;
         barrier.srcAccessMask = srcAccessFlags;
         barrier.dstAccessMask = dstAccessFlags;

@@ -67,8 +67,6 @@ project "Crowny"
 		"glad",
 		
 		"yaml-cpp",
-		
-		"Crowny"
 	}
 
 	filter "system:windows"

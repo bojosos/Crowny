@@ -60,7 +60,7 @@ namespace Crowny
 		ImGui::Text("Projection");
 		ImGui::NextColumn();
 		const char* projections[2] = { "Orthographic", "Perspective" };
-		if (ImGui::BeginCombo("##Projection", projections[(int32_t)cam.GetProjectionType()]))
+		if (ImGui::BeginCombo("##Projection", projections[(uint32_t)cam.GetProjectionType()]))
 		{
 			for (uint32_t i = 0; i < 2; i++)
 			{
@@ -86,7 +86,7 @@ namespace Crowny
 				cam.SetPerspectiveVerticalFOV(glm::radians(fov));
 
 			ImGui::Columns(1);
-			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+			// ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 
 			if (ImGui::CollapsingHeader("Clipping Planes"))
 			{
@@ -123,7 +123,7 @@ namespace Crowny
 				cam.SetOrthographicSize(size);
 
 			ImGui::Columns(1);
-			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+			// ImGui::SetNextItemOpen(true, ImGuiCond_Once); TODO: maybe replace with tree node? collapsing header too thick
 
 			if (ImGui::CollapsingHeader("Clipping Planes"))
 			{

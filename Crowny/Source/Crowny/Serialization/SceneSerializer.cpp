@@ -113,7 +113,7 @@ namespace Crowny
             out << YAML::BeginMap;
 
             auto& camera = entity.GetComponent<CameraComponent>().Camera;
-            out << YAML::Key << "ProjectionType" << YAML::Value << (int32_t)camera.GetProjectionType();
+            out << YAML::Key << "ProjectionType" << YAML::Value << (uint32_t)camera.GetProjectionType();
             out << YAML::Key << "PerspectiveFOV" << YAML::Value << camera.GetPerspectiveVerticalFOV();
             out << YAML::Key << "PerspectiveNear" << YAML::Value << camera.GetPerspectiveNearClip();
             out << YAML::Key << "PerspectiveFar" << YAML::Value << camera.GetPerspectiveFarClip();
@@ -157,6 +157,8 @@ namespace Crowny
             out << YAML::Key << "Mass" << YAML::Value << rb2d.GetMass();
             out << YAML::Key << "GravityScale" << YAML::Value << rb2d.GetGravityScale();
             out << YAML::Key << "Constraints" << YAML::Value << (uint32_t)rb2d.GetConstraints();
+            out << YAML::Key << "CollisionDetectionMode" << YAML::Value << rb2d.GetContinuousCollisionDetection();
+            out << YAML::Key << "SleepMode" << YAML::Value << (uint32_t)rb2d.GetSleepMode();
             out << YAML::EndMap;
         }
 
@@ -236,148 +238,159 @@ namespace Crowny
         if (!data["Scene"])
             return;
 
-        UnorderedMap<Entity, YAML::Node> serializedComponents;
-        String sceneName = data["Scene"].as<String>();
-        m_Scene->m_Name = sceneName;
-        m_Scene->m_Filepath = filepath;
-
-        YAML::Node entities = data["Entities"];
-        if (entities)
+        try
         {
-            for (YAML::Node entity : entities)
+            UnorderedMap<Entity, YAML::Node> serializedComponents;
+            String sceneName = data["Scene"].as<String>();
+            m_Scene->m_Name = sceneName;
+            m_Scene->m_Filepath = filepath;
+
+            const YAML::Node&  entities = data["Entities"];
+            if (entities)
             {
-                UUID id = entity["Entity"].as<UUID>();
-
-                String tag;
-                YAML::Node tc = entity["TagComponent"];
-                if (tc)
-                    tag = tc["Tag"].as<String>();
-
-                Entity deserialized = m_Scene->CreateEntityWithUuid(id, tag);
-                m_Scene->m_RootEntity->AddChild(deserialized);
-
-                YAML::Node transform = entity["TransformComponent"];
-                if (transform)
+                for (const YAML::Node& entity : entities)
                 {
-                    auto& tc = deserialized.GetComponent<TransformComponent>();
-                    // tc.ComponentParent = deserialized;
-                    tc.Position = transform["Position"].as<glm::vec3>();
-                    tc.Rotation = transform["Rotation"].as<glm::vec3>();
-                    tc.Scale = transform["Scale"].as<glm::vec3>();
+                    UUID id = entity["Entity"].as<UUID>();
+
+                    String tag;
+                    const YAML::Node& tc = entity["TagComponent"];
+                    if (tc)
+                        tag = tc["Tag"].as<String>();
+
+                    Entity deserialized = m_Scene->CreateEntityWithUuid(id, tag);
+                    m_Scene->m_RootEntity->AddChild(deserialized);
+
+                    const YAML::Node& transform = entity["TransformComponent"];
+                    if (transform)
+                    {
+                        auto& tc = deserialized.GetComponent<TransformComponent>();
+                        // tc.ComponentParent = deserialized;
+                        tc.Position = transform["Position"].as<glm::vec3>();
+                        tc.Rotation = transform["Rotation"].as<glm::vec3>();
+                        tc.Scale = transform["Scale"].as<glm::vec3>();
+                    }
+
+                    const YAML::Node& camera = entity["CameraComponent"];
+                    if (camera)
+                    {
+                        auto& cc = deserialized.AddComponent<CameraComponent>();
+                        cc.Camera.SetProjectionType((SceneCamera::CameraProjection)camera["ProjectionType"].as<uint32_t>());
+                        cc.Camera.SetPerspectiveVerticalFOV(camera["PerspectiveFOV"].as<float>());
+                        cc.Camera.SetPerspectiveNearClip(camera["PerspectiveNear"].as<float>());
+                        cc.Camera.SetPerspectiveFarClip(camera["PerspectiveFar"].as<float>());
+
+                        cc.Camera.SetOrthographicSize(camera["OrthographicSize"].as<float>());
+                        cc.Camera.SetOrthographicNearClip(camera["OrthographicNear"].as<float>());
+                        cc.Camera.SetOrthographicFarClip(camera["OrthographicFar"].as<float>());
+
+                        cc.Camera.SetHDR(camera["HDR"].as<bool>());
+                        cc.Camera.SetMSAA(camera["MSAA"].as<bool>());
+                        cc.Camera.SetOcclusionCulling(camera["OcclusionCulling"].as<bool>());
+
+                        cc.Camera.SetBackgroundColor(camera["BackgroundColor"].as<glm::vec3>());
+                        cc.Camera.SetViewportRect(camera["ViewportRect"].as<glm::vec4>());
+                    }
+
+                    const YAML::Node& sprite = entity["SpriteRendererComponent"];
+                    if (sprite)
+                    {
+                        auto& tc = deserialized.AddComponent<SpriteRendererComponent>();
+                        tc.Color = sprite["Color"].as<glm::vec4>();
+                    }
+
+                    const YAML::Node& script = entity["MonoScriptComponent"];
+                    if (script)
+                    {
+                        auto& sc = deserialized.AddComponent<MonoScriptComponent>(script["Name"].as<String>());
+                        // sc.ComponentParent = deserialized;
+                    }
+
+                    const YAML::Node& text = entity["TextComponent"];
+                    if (text)
+                    {
+                        auto& tc = deserialized.AddComponent<TextComponent>();
+                        tc.Text = text["Text"].as<String>();
+                        tc.Font = CreateRef<Font>(text["Font"].as<String>(), "Deserialized font", 16);
+                        tc.Color = text["Color"].as<glm::vec4>();
+                    }
+
+                    const YAML::Node& mesh = entity["MeshRendererComponent"];
+                    if (mesh)
+                    {
+                        // auto& mc = deserialized.AddComponent<MeshRendererComponent>();
+                    }
+
+                    const YAML::Node& alc = entity["AudioListenerComponent"];
+                    if (alc)
+                    {
+                        deserialized.AddComponent<AudioListenerComponent>();
+                    }
+
+                    const YAML::Node& source = entity["AudioSourceComponent"];
+                    if (source)
+                    {
+                        auto& asc = deserialized.AddComponent<AudioSourceComponent>();
+                        asc.SetPlayOnAwake(source["PlayOnAwake"].as<bool>());
+                        // asc.SetAudioClip(source["AudioClip"].as<UUID>());
+                        asc.SetVolume(source["Volume"].as<float>());
+                        asc.SetPitch(source["Pitch"].as<float>());
+                        asc.SetMinDistance(source["MinDistance"].as<float>());
+                        asc.SetMaxDistance(source["MaxDistance"].as<float>());
+                        asc.SetLooping(source["Loop"].as<bool>());
+                    }
+
+                    const YAML::Node& rb2d = entity["Rigidbody2D"];
+                    if (rb2d)
+                    {
+					    auto& rb2dc = deserialized.AddComponent<Rigidbody2DComponent>();
+					    rb2dc.SetBodyType((RigidbodyBodyType)rb2d["BodyType"].as<uint32_t>());
+                        rb2dc.SetMass(rb2d["Mass"].as<float>());
+                        rb2dc.SetGravityScale(rb2d["GravityScale"].as<float>());
+                        if (const YAML::Node& collisionDetectionMode = entity["CollisionDetectionMode"])
+                            rb2dc.SetContinuousCollisionDetection(collisionDetectionMode.as<String>() == "Continuous");
+                        if (const YAML::Node& sleepMode = entity["SleepMode"])
+                            rb2dc.SetSleepMode((RigidbodySleepMode)sleepMode.as<uint32_t>());
+                        rb2dc.SetConstraints((Rigidbody2DConstraints)rb2d["Constraints"].as<uint32_t>());
+                    }
+
+                    const YAML::Node& bc2d = entity["BoxCollider2D"];
+				    if (bc2d)
+				    {
+					    auto& bc2dc = deserialized.AddComponent<BoxCollider2DComponent>();
+					    bc2dc.Offset = bc2d["Offset"].as<glm::vec2>();
+                        bc2dc.Size = bc2d["Size"].as<glm::vec2>();
+                        bc2dc.IsTrigger = bc2d["IsTrigger"].as<bool>();
+				    }
+
+                    const YAML::Node& cc2d = entity["CircleCollider2D"];
+				    if (cc2d)
+				    {
+					    auto& cc2dc = deserialized.AddComponent<CircleCollider2DComponent>();
+                        cc2dc.Offset = cc2d["Offset"].as<glm::vec2>();
+                        cc2dc.Radius = cc2d["Size"].as<float>();
+                        cc2dc.IsTrigger = cc2d["IsTrigger"].as<bool>();
+				    }
+
+                    const YAML::Node& rel = entity["RelationshipComponent"];
+                    if (rel)
+                        serializedComponents[deserialized] = rel;
                 }
 
-                YAML::Node camera = entity["CameraComponent"];
-                if (camera)
+                for (auto rc : serializedComponents)
                 {
-                    auto& cc = deserialized.AddComponent<CameraComponent>();
-                    cc.Camera.SetProjectionType((SceneCamera::CameraProjection)camera["ProjectionType"].as<int>());
-                    cc.Camera.SetPerspectiveVerticalFOV(camera["PerspectiveFOV"].as<float>());
-                    cc.Camera.SetPerspectiveNearClip(camera["PerspectiveNear"].as<float>());
-                    cc.Camera.SetPerspectiveFarClip(camera["PerspectiveFar"].as<float>());
-
-                    cc.Camera.SetOrthographicSize(camera["OrthographicSize"].as<float>());
-                    cc.Camera.SetOrthographicNearClip(camera["OrthographicNear"].as<float>());
-                    cc.Camera.SetOrthographicFarClip(camera["OrthographicFar"].as<float>());
-
-                    cc.Camera.SetHDR(camera["HDR"].as<bool>());
-                    cc.Camera.SetMSAA(camera["MSAA"].as<bool>());
-                    cc.Camera.SetOcclusionCulling(camera["OcclusionCulling"].as<bool>());
-
-                    cc.Camera.SetBackgroundColor(camera["BackgroundColor"].as<glm::vec3>());
-                    cc.Camera.SetViewportRect(camera["ViewportRect"].as<glm::vec4>());
+                    auto& rl = rc.first.GetComponent<RelationshipComponent>();
+                    const YAML::Node& children = rc.second["Children"];
+                    for (const auto& child : children)
+                    {
+                        Entity e = m_Scene->GetEntityFromUuid(child.as<UUID>());
+                        e.SetParent(rc.first);
+                    }
                 }
-
-                YAML::Node sprite = entity["SpriteRendererComponent"];
-                if (sprite)
-                {
-                    auto& tc = deserialized.AddComponent<SpriteRendererComponent>();
-                    tc.Color = sprite["Color"].as<glm::vec4>();
-                }
-
-                YAML::Node script = entity["MonoScriptComponent"];
-                if (script)
-                {
-                    auto& sc = deserialized.AddComponent<MonoScriptComponent>(script["Name"].as<String>());
-                    // sc.ComponentParent = deserialized;
-                }
-
-                YAML::Node text = entity["TextComponent"];
-                if (text)
-                {
-                    auto& tc = deserialized.AddComponent<TextComponent>();
-                    tc.Text = text["Text"].as<String>();
-                    tc.Font = CreateRef<Font>(text["Font"].as<String>(), "Deserialized font", 16);
-                    tc.Color = text["Color"].as<glm::vec4>();
-                }
-
-                YAML::Node mesh = entity["MeshRendererComponent"];
-                if (mesh)
-                {
-                    // auto& mc = deserialized.AddComponent<MeshRendererComponent>();
-                }
-
-                YAML::Node alc = entity["AudioListenerComponent"];
-                if (alc)
-                {
-                    deserialized.AddComponent<AudioListenerComponent>();
-                }
-
-                YAML::Node source = entity["AudioSourceComponent"];
-                if (source)
-                {
-                    auto& asc = deserialized.AddComponent<AudioSourceComponent>();
-                    asc.SetPlayOnAwake(source["PlayOnAwake"].as<bool>());
-                    // asc.SetAudioClip(source["AudioClip"].as<UUID>());
-                    asc.SetVolume(source["Volume"].as<float>());
-                    asc.SetPitch(source["Pitch"].as<float>());
-                    asc.SetMinDistance(source["MinDistance"].as<float>());
-                    asc.SetMaxDistance(source["MaxDistance"].as<float>());
-                    asc.SetLooping(source["Loop"].as<bool>());
-                }
-
-                YAML::Node rb2d = entity["Rigidbody2D"];
-                if (rb2d)
-                {
-					auto& rb2dc = deserialized.AddComponent<Rigidbody2DComponent>();
-					rb2dc.SetBodyType((RigidbodyBodyType)rb2d["BodyType"].as<uint32_t>());
-                    rb2dc.SetMass(rb2d["Mass"].as<float>());
-                    rb2dc.SetGravityScale(rb2d["GravityScale"].as<float>());
-                    rb2dc.SetConstraints((Rigidbody2DConstraints)rb2d["Constraints"].as<uint32_t>());
-                }
-
-                YAML::Node bc2d = entity["BoxCollider2D"];
-				if (bc2d)
-				{
-					auto& bc2dc = deserialized.AddComponent<BoxCollider2DComponent>();
-					bc2dc.Offset = bc2d["Offset"].as<glm::vec2>();
-                    bc2dc.Size = bc2d["Size"].as<glm::vec2>();
-                    bc2dc.IsTrigger = bc2d["IsTrigger"].as<bool>();
-				}
-
-                YAML::Node cc2d = entity["CircleCollider2D"];
-				if (cc2d)
-				{
-					auto& cc2dc = deserialized.AddComponent<CircleCollider2DComponent>();
-                    cc2dc.Offset = cc2d["Offset"].as<glm::vec2>();
-                    cc2dc.Radius = cc2d["Size"].as<float>();
-                    cc2dc.IsTrigger = cc2d["IsTrigger"].as<bool>();
-				}
-
-                YAML::Node rel = entity["RelationshipComponent"];
-                if (rel)
-                    serializedComponents[deserialized] = rel;
             }
-
-            for (auto rc : serializedComponents)
-            {
-                auto& rl = rc.first.GetComponent<RelationshipComponent>();
-                YAML::Node children = rc.second["Children"];
-                for (auto child : children)
-                {
-                    Entity e = m_Scene->GetEntityFromUuid(child.as<UUID>());
-                    e.SetParent(rc.first);
-                }
-            }
+        }
+        catch (const std::exception& ex)
+        {
+            CW_ENGINE_ERROR("Error deserializing scene \"{0}\". {1}.", filepath, std::string(ex.what()));
         }
     }
 
