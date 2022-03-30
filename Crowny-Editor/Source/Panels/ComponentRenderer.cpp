@@ -306,7 +306,7 @@ namespace Crowny
 			{
 				const bool isSelected = ((uint32_t)rb2d.GetBodyType() == i);
 				if (ImGui::Selectable(bodyTypes[i], isSelected))
-					rb2d.SetBodyType((BodyType)i);
+					rb2d.SetBodyType((RigidbodyBodyType)i);
 
 				if (isSelected)
 					ImGui::SetItemDefaultFocus();
@@ -318,7 +318,6 @@ namespace Crowny
 		float mass = rb2d.GetMass();
 		if (ImGui::DragFloat("##rb2dmass", &mass, DRAG_SENSITIVITY))
 			rb2d.SetMass(mass);
-		ImGui::NextColumn();
 
 		ImGui::NextColumn();
 		ImGui::Text("Gravity Scale"); ImGui::NextColumn();
@@ -326,8 +325,40 @@ namespace Crowny
 		if (ImGui::DragFloat("##rb2dmass", &gravityScale, DRAG_SENSITIVITY))
 			rb2d.SetGravityScale(gravityScale);
 
+		ImGui::NextColumn();
+		ImGui::Text("Collision Detection"); ImGui::NextColumn();
+		if (ImGui::BeginCombo("##rb2dcollisionDetectionMode", rb2d.GetContinuousCollisionDetection() ? "Continuous" : "Discrete"))
+		{
+			if (ImGui::Selectable("Discrete", rb2d.GetContinuousCollisionDetection() == false))
+				rb2d.SetContinuousCollisionDetection(false);
+
+			if (ImGui::Selectable("Continuous", rb2d.GetContinuousCollisionDetection() == true))
+				rb2d.SetContinuousCollisionDetection(true);
+
+			if (rb2d.GetContinuousCollisionDetection())
+				ImGui::SetItemDefaultFocus();
+			ImGui::EndCombo();
+		}
+
+		ImGui::NextColumn();
+		ImGui::Text("Sleeping Mode"); ImGui::NextColumn();
+		const char* sleepModes[3] = { "NeverSleep", "StartAwake", "StartSleeping" };
+		if (ImGui::BeginCombo("##rb2dsleepMode", sleepModes[(uint32_t)rb2d.GetSleepMode()]))
+		{
+			for (uint32_t i = 0; i < 3; i++)
+			{
+				const bool isSelected = ((uint32_t)rb2d.GetSleepMode() == i);
+				if (ImGui::Selectable(sleepModes[i], isSelected))
+					rb2d.SetSleepMode((RigidbodySleepMode)i);
+
+				if (isSelected)
+					ImGui::SetItemDefaultFocus();
+			}
+			ImGui::EndCombo();
+		}
+
 		ImGui::Columns(1);
-		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+		// ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 
 		if (ImGui::CollapsingHeader("Constraints"))
 		{

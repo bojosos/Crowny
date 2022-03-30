@@ -138,15 +138,15 @@ namespace Crowny
             m_Internal->Stop();
     }
 
-    void Rigidbody2DComponent::SetBodyType(BodyType bodyType)
+    void Rigidbody2DComponent::SetBodyType(RigidbodyBodyType bodyType)
 	{
 		if (RuntimeBody != nullptr)
         {
-            if (bodyType == BodyType::Static)
+            if (bodyType == RigidbodyBodyType::Static)
 			    RuntimeBody->SetType(b2_staticBody);
-            else if (bodyType == BodyType::Dynamic)
+            else if (bodyType == RigidbodyBodyType::Dynamic)
                 RuntimeBody->SetType(b2_dynamicBody);
-            else if (bodyType == BodyType::Kinematic)
+            else if (bodyType == RigidbodyBodyType::Kinematic)
                 RuntimeBody->SetType(b2_kinematicBody);
         }
 		m_Type = bodyType;
@@ -181,6 +181,25 @@ namespace Crowny
 		}
 		m_Constraints = constraints;
 	}
+
+    void Rigidbody2DComponent::SetContinuousCollisionDetection(bool value)
+    {
+        if (RuntimeBody != nullptr)
+            RuntimeBody->SetBullet(value);
+        m_ContinuousCollisionDetection = value;
+    }
+
+    void Rigidbody2DComponent::SetSleepMode(RigidbodySleepMode sleepMode)
+    {
+        if (RuntimeBody != nullptr)
+        {
+        if (sleepMode == RigidbodySleepMode::NeverSleep)
+            RuntimeBody->SetSleepingAllowed(false);
+        else
+            RuntimeBody->SetSleepingAllowed(true);
+        }
+        m_SleepMode = sleepMode;
+    }
 
     MonoScriptComponent::MonoScriptComponent(const String& name) : ComponentBase() { SetClassName(name); }
 

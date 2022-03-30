@@ -301,11 +301,18 @@ namespace Crowny
         Impulse
     };
 
-    enum class BodyType
+    enum class RigidbodyBodyType
     {
         Static = 0,
         Dynamic = 1,
         Kinematic = 2
+    };
+
+    enum class RigidbodySleepMode
+    {
+        NeverSleep,
+        StartAwake,
+        StartSleeping
     };
 
     struct Rigidbody2DComponent : public ComponentBase
@@ -313,23 +320,28 @@ namespace Crowny
         Rigidbody2DComponent() : ComponentBase() {}
         Rigidbody2DComponent(const Rigidbody2DComponent& rb) = default;
 
-        void SetBodyType(BodyType bodyType);
+        void SetBodyType(RigidbodyBodyType bodyType);
         void SetGravityScale(float scale);
         void SetMass(float mass);
         void SetConstraints(Rigidbody2DConstraints constraints);
+        void SetSleepMode(RigidbodySleepMode sleepMode);
+        void SetContinuousCollisionDetection(bool value);
 
-        BodyType GetBodyType() { return m_Type; }
         float GetMass() const { return m_Mass; }
         float GetGravityScale() const { return m_GravityScale; }
         Rigidbody2DConstraints GetConstraints() const { return m_Constraints; }
-        BodyType GetBodyType() const { return m_Type; }
+        RigidbodyBodyType GetBodyType() const { return m_Type; }
+        RigidbodySleepMode GetSleepMode() const { return m_SleepMode; }
+        bool GetContinuousCollisionDetection() const { return m_ContinuousCollisionDetection; }
 
         b2Body* RuntimeBody = nullptr;
     private:
-        BodyType m_Type = BodyType::Static;
+        RigidbodyBodyType m_Type = RigidbodyBodyType::Static;
+        RigidbodySleepMode m_SleepMode = RigidbodySleepMode::StartAwake;
         Rigidbody2DConstraints m_Constraints = Rigidbody2DConstraintsBits::None;
         float m_Mass = 1.0f;
         float m_GravityScale = 1.0f;
+        bool m_ContinuousCollisionDetection = false;
     };
 
     template <> void ComponentEditorWidget<Rigidbody2DComponent>(Entity e);
