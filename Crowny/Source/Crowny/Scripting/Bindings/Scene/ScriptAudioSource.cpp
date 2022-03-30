@@ -5,7 +5,7 @@
 namespace Crowny
 {
 
-    ScriptAudioSource::ScriptAudioSource(MonoObject* instance, Entity entity) : TScriptComponent(instance, entity) { }
+    ScriptAudioSource::ScriptAudioSource(MonoObject* instance, Entity entity) : TScriptComponent(instance, entity) {}
 
     void ScriptAudioSource::InitRuntimeData()
     {
@@ -13,9 +13,9 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_GetPitch", (void*)&Internal_GetPitch);
         MetaData.ScriptClass->AddInternalCall("Internal_GetMinDistance", (void*)&Internal_GetMinDistance);
         MetaData.ScriptClass->AddInternalCall("Internal_GetMaxDistance", (void*)&Internal_GetMaxDistance);
-        MetaData.ScriptClass->AddInternalCall("Internal_GetLooping" , (void*)&Internal_GetLooping);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetLooping", (void*)&Internal_GetLooping);
         MetaData.ScriptClass->AddInternalCall("Internal_GetIsMuted", (void*)&Internal_GetIsMuted);
-        MetaData.ScriptClass->AddInternalCall("Internal_GetPlayOnAwake" , (void*)&Internal_GetPlayOnAwake);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetPlayOnAwake", (void*)&Internal_GetPlayOnAwake);
         MetaData.ScriptClass->AddInternalCall("Internal_GetTime", (void*)&Internal_GetTime);
         MetaData.ScriptClass->AddInternalCall("Internal_GetClip", (void*)&Internal_GetClip);
         MetaData.ScriptClass->AddInternalCall("Internal_GetState", (void*)&Internal_GetState);
@@ -24,9 +24,9 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_SetPitch", (void*)&Internal_SetPitch);
         MetaData.ScriptClass->AddInternalCall("Internal_SetMinDistance", (void*)&Internal_SetMinDistance);
         MetaData.ScriptClass->AddInternalCall("Internal_SetMaxDistance", (void*)&Internal_SetMaxDistance);
-        MetaData.ScriptClass->AddInternalCall("Internal_SetLooping" , (void*)&Internal_SetLooping);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetLooping", (void*)&Internal_SetLooping);
         MetaData.ScriptClass->AddInternalCall("Internal_SetIsMuted", (void*)&Internal_SetIsMuted);
-        MetaData.ScriptClass->AddInternalCall("Internal_SetPlayOnAwake" , (void*)&Internal_SetPlayOnAwake);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetPlayOnAwake", (void*)&Internal_SetPlayOnAwake);
         MetaData.ScriptClass->AddInternalCall("Internal_SetTime", (void*)&Internal_SetTime);
         MetaData.ScriptClass->AddInternalCall("Internal_SetClip", (void*)&Internal_SetClip);
 
@@ -96,10 +96,7 @@ namespace Crowny
         return thisPtr->GetComponent().GetPitch();
     }
 
-    MonoObject* ScriptAudioSource::Internal_GetClip(ScriptAudioSource* thisPtr)
-    {
-        return nullptr;
-    }
+    MonoObject* ScriptAudioSource::Internal_GetClip(ScriptAudioSource* thisPtr) { return nullptr; }
 
     bool ScriptAudioSource::Internal_GetPlayOnAwake(ScriptAudioSource* thisPtr)
     {
@@ -126,23 +123,11 @@ namespace Crowny
         return thisPtr->GetComponent().GetIsMuted();
     }
 
-    float ScriptAudioSource::Internal_GetTime(ScriptAudioSource* thisPtr)
-    {
-        return thisPtr->GetComponent().GetTime();
-    }
+    float ScriptAudioSource::Internal_GetTime(ScriptAudioSource* thisPtr) { return thisPtr->GetComponent().GetTime(); }
 
-    void ScriptAudioSource::Internal_Play(ScriptAudioSource* thisPtr)
-    {
-        thisPtr->GetComponent().Play();
-    }
+    void ScriptAudioSource::Internal_Play(ScriptAudioSource* thisPtr) { thisPtr->GetComponent().Play(); }
 
-    void ScriptAudioSource::Internal_Pause(ScriptAudioSource* thisPtr)
-    {
-        thisPtr->GetComponent().Pause();
-    }
+    void ScriptAudioSource::Internal_Pause(ScriptAudioSource* thisPtr) { thisPtr->GetComponent().Pause(); }
 
-    void ScriptAudioSource::Internal_Stop(ScriptAudioSource* thisPtr)
-    {
-        thisPtr->GetComponent().Stop();
-    }
-}
+    void ScriptAudioSource::Internal_Stop(ScriptAudioSource* thisPtr) { thisPtr->GetComponent().Stop(); }
+} // namespace Crowny

@@ -1,8 +1,8 @@
 #include "cwpch.h"
 
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntity.h"
-#include "Crowny/Scripting/ScriptSceneObjectManager.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
+#include "Crowny/Scripting/ScriptSceneObjectManager.h"
 
 #include "Crowny/Scene/SceneManager.h"
 

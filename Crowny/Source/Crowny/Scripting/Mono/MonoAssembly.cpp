@@ -107,7 +107,6 @@ namespace Crowny
         if (m_Assembly == nullptr)
             CW_ENGINE_ERROR("Failed to load assembly {0}.", m_Path);
 
-
         m_Image = image;
         if (m_Image == nullptr)
             CW_ENGINE_ERROR("Failed to get assembly image: {0}", m_Path);

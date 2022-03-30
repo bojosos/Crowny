@@ -8,8 +8,8 @@
 #include "Crowny/Scene/SceneManager.h"
 
 #include "Panels/ComponentEditor.h"
-#include "Panels/InspectorPanel.h"
 #include "Panels/HierarchyPanel.h"
+#include "Panels/InspectorPanel.h"
 
 #include "Editor/EditorAssets.h"
 #include "Editor/ProjectLibrary.h"
@@ -51,7 +51,7 @@ namespace Crowny
         m_ComponentEditor.RegisterComponent<AudioListenerComponent>("Audio Listener");
         m_ComponentEditor.RegisterComponent<AudioSourceComponent>("Audio Source");
         m_ComponentEditor.PopComponentGroup();
-        
+
         // Scripting
         m_ComponentEditor.RegisterComponent<MonoScriptComponent>("C# Script");
     }
@@ -88,7 +88,8 @@ namespace Crowny
         Entity selectedEntity = HierarchyPanel::GetSelectedEntity();
         if (m_InspectorMode == InspectorMode::GameObject && selectedEntity)
         {
-            if (ImGui::BeginDragDropTarget()) // Add components when files are dropped on entities in the inspector (C# script, AudioSource)
+            if (ImGui::BeginDragDropTarget()) // Add components when files are dropped on entities in the inspector (C#
+                                              // script, AudioSource)
             {
                 if (const ImGuiPayload* payload = UIUtils::AcceptAssetPayload())
                 {
@@ -102,7 +103,8 @@ namespace Crowny
                         if (!selectedEntity.HasComponent<AudioSourceComponent>())
                         {
                             AudioSourceComponent& audioSource = selectedEntity.AddComponent<AudioSourceComponent>();
-                            AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(payloadPath));
+                            AssetHandle<AudioClip> clip =
+                              static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(payloadPath));
                             audioSource.SetClip(clip);
                         }
                     }
@@ -111,7 +113,9 @@ namespace Crowny
                         if (!selectedEntity.HasComponent<MonoScriptComponent>())
                         {
                             MonoScriptComponent& scriptComponent = selectedEntity.AddComponent<MonoScriptComponent>();
-                            AssetHandle<ScriptCode> scriptCode = static_asset_cast<ScriptCode>(ProjectLibrary::Get().Load(payloadPath)); // TODO: Analyze the code to extract the name of the MonoBehaviour class
+                            AssetHandle<ScriptCode> scriptCode =
+                              static_asset_cast<ScriptCode>(ProjectLibrary::Get().Load(
+                                payloadPath)); // TODO: Analyze the code to extract the name of the MonoBehaviour class
                             scriptComponent.SetClassName(payloadPath.filename().replace_extension("").string());
                             scriptComponent.OnInitialize(selectedEntity);
                         }
@@ -142,7 +146,7 @@ namespace Crowny
                 if (ImGui::IsItemClicked())
                 {
                     Vector<Path> outPaths;
-                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", { }, outPaths))
+                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
                     {
                         Ref<Texture> albedo;
                         // LoadTexture(outPaths[0], albedo);
@@ -173,7 +177,7 @@ namespace Crowny
                 if (ImGui::IsItemClicked())
                 {
                     Vector<Path> outPaths;
-                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", { }, outPaths))
+                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
                     {
                         Ref<Texture> metalness;
                         //  LoadTexture(outPaths[0], metalness);
@@ -206,7 +210,7 @@ namespace Crowny
                 if (ImGui::IsItemClicked())
                 {
                     Vector<Path> outPaths;
-                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", { }, outPaths))
+                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
                     {
                         Ref<Texture> normal;
                         // LoadTexture(outPaths[0], normal);
@@ -230,7 +234,7 @@ namespace Crowny
                 if (ImGui::IsItemClicked())
                 {
                     Vector<Path> outPaths;
-                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", { }, outPaths))
+                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
                     {
                         Ref<Texture> roughness;
                         // LoadTexture(outPaths[0], roughness);
@@ -261,7 +265,7 @@ namespace Crowny
                 if (ImGui::IsItemClicked())
                 {
                     Vector<Path> outPaths;
-                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", { }, outPaths))
+                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
                     {
                         Ref<Texture> ao;
                         // LoadTexture(outPaths[0], ao);
@@ -368,7 +372,8 @@ namespace Crowny
             {
                 if (m_HasPropertyChanged)
                     ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions, true);
-                AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
+                AssetHandle<AudioClip> clip =
+                  static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
                 AudioManager::Get().Play("Inspector", clip);
             }
             ImGui::SameLine();
@@ -389,7 +394,8 @@ namespace Crowny
         auto iterFind = m_CachedScriptText.find(m_InspectedAssetPath);
         if (iterFind == m_CachedScriptText.end())
         {
-            AssetHandle<ScriptCode> scriptCode = static_asset_cast<ScriptCode>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
+            AssetHandle<ScriptCode> scriptCode =
+              static_asset_cast<ScriptCode>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
             CW_ENGINE_INFO(scriptCode->GetSource());
             m_CachedScriptText[m_InspectedAssetPath] = scriptCode->GetSource();
         }
@@ -398,26 +404,28 @@ namespace Crowny
 
     void InspectorPanel::RenderTextImportInspector()
     {
-		/*auto iterFind = m_CachedScriptText.find(m_InspectedAssetPath);
-		if (iterFind == m_CachedScriptText.end())
-		{
-			Ref<TextureImportOptions> scriptCode = std::static_pointer_cast<ScriptCode>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
-			CW_ENGINE_INFO(scriptCode->GetSource());
-			m_CachedScriptText[m_InspectedAssetPath] = scriptCode->GetSource();
-		}
-		ImGui::Text(m_CachedScriptText[m_InspectedAssetPath].c_str());*/
+        /*auto iterFind = m_CachedScriptText.find(m_InspectedAssetPath);
+        if (iterFind == m_CachedScriptText.end())
+        {
+            Ref<TextureImportOptions> scriptCode =
+        std::static_pointer_cast<ScriptCode>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
+            CW_ENGINE_INFO(scriptCode->GetSource());
+            m_CachedScriptText[m_InspectedAssetPath] = scriptCode->GetSource();
+        }
+        ImGui::Text(m_CachedScriptText[m_InspectedAssetPath].c_str());*/
     }
 
     void InspectorPanel::RenderTextureImportInspector() {}
 
     void InspectorPanel::RenderShaderImportInspector()
     {
-		if (m_ImportOptions)
-		{
-			Ref<ShaderImportOptions> shaderImport =
-				std::static_pointer_cast<ShaderImportOptions>(m_ImportOptions);
-			ImGui::Columns(2);
-            ImGui::Text("Defines"); ImGui::NextColumn(); ImGui::NextColumn();
+        if (m_ImportOptions)
+        {
+            Ref<ShaderImportOptions> shaderImport = std::static_pointer_cast<ShaderImportOptions>(m_ImportOptions);
+            ImGui::Columns(2);
+            ImGui::Text("Defines");
+            ImGui::NextColumn();
+            ImGui::NextColumn();
             UnorderedMap<String, String>& defines = shaderImport->GetDefines(); // this needs a bit more work
             uint32_t id = 0;
             for (auto kv : defines)
@@ -437,13 +445,14 @@ namespace Crowny
             ImGui::SameLine();
             if (ImGui::Button("-"))
                 defines.erase(std::prev(defines.end()));
-			float x = ImGui::GetCursorPosX();
-			float width = ImGui::GetColumnWidth();
-			// ImGui::NextColumn();
-			ImGui::NextColumn();
-			ImGui::Columns(1);
-			DrawApplyRevert(x, width);
-            ImGui::NextColumn(); ImGui::NextColumn();
+            float x = ImGui::GetCursorPosX();
+            float width = ImGui::GetColumnWidth();
+            // ImGui::NextColumn();
+            ImGui::NextColumn();
+            ImGui::Columns(1);
+            DrawApplyRevert(x, width);
+            ImGui::NextColumn();
+            ImGui::NextColumn();
             DrawApplyRevert(x, width);
         }
     }

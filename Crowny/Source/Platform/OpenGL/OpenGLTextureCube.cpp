@@ -1,8 +1,8 @@
 #include "cwpch.h"
 /*
 
-#include "Platform/OpenGL/OpenGLTextureCube.h"
 #include "Platform/OpenGL/OpenGLTexture.h"
+#include "Platform/OpenGL/OpenGLTextureCube.h"
 
 #include <glad/glad.h>
 #include <stb_image.h>

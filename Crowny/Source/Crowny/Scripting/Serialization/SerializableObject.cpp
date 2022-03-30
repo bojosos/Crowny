@@ -1,14 +1,15 @@
 #include "cwpch.h"
 
-#include "Crowny/Scripting/Serialization/SerializableObject.h"
-#include "Crowny/Scripting/Serialization/SerializableField.h"
-#include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/Mono/MonoUtils.h"
+#include "Crowny/Scripting/ScriptInfoManager.h"
+#include "Crowny/Scripting/Serialization/SerializableField.h"
+#include "Crowny/Scripting/Serialization/SerializableObject.h"
 
 namespace Crowny
 {
 
-    SerializableObject::SerializableObject(Ref<SerializableObjectInfo> objInfo, MonoObject* managedInstance) : m_ObjectInfo(objInfo)
+    SerializableObject::SerializableObject(Ref<SerializableObjectInfo> objInfo, MonoObject* managedInstance)
+      : m_ObjectInfo(objInfo)
     {
         m_GCHandle = MonoUtils::NewGCHandle(managedInstance, false);
     }
@@ -71,7 +72,8 @@ namespace Crowny
         }
     }
 
-    void SerializableObject::SetFieldData(const Ref<SerializableMemberInfo>& fieldInfo, const Ref<SerializableFieldData>& val)
+    void SerializableObject::SetFieldData(const Ref<SerializableMemberInfo>& fieldInfo,
+                                          const Ref<SerializableFieldData>& val)
     {
         if (m_GCHandle != 0)
         {
@@ -113,20 +115,19 @@ namespace Crowny
         if (!ScriptInfoManager::Get().GetSerializableObjectInfo(ns, typeName, objInfo))
             return nullptr;
         return CreateRef<SerializableObject>(objInfo, managedInstance);
-
     }
 
-	size_t SerializableObject::Hash::operator()(const SerializableFieldKey& x) const
-	{
+    size_t SerializableObject::Hash::operator()(const SerializableFieldKey& x) const
+    {
         size_t seed = 0;
         HashCombine(seed, (uint32_t)x.m_FieldIdx);
         HashCombine(seed, (uint32_t)x.m_TypeId);
         return seed;
-	}
+    }
 
-	bool SerializableObject::Equals::operator()(const SerializableFieldKey& l, const SerializableFieldKey& r) const
-	{
+    bool SerializableObject::Equals::operator()(const SerializableFieldKey& l, const SerializableFieldKey& r) const
+    {
         return l.m_FieldIdx == r.m_FieldIdx && l.m_TypeId == r.m_TypeId;
-	}
+    }
 
-}
+} // namespace Crowny

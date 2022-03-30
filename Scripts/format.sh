@@ -1,6 +1,6 @@
 #!/bin/bash
 
-declare -a dirs=("$HOME/Desktop/dev/Crowny/Crowny/Source" "$HOME/Desktop/dev/Crowny/Crowny-Editor/Source")
+declare -a dirs=("/mnt/c/dev/Crowny/Crowny/Source" "/mnt/c/dev/Crowny/Crowny-Editor/Source")
 
 for dir in "${dirs[@]}"; do
   echo $dir

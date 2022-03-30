@@ -29,6 +29,7 @@ namespace Crowny
 
         const String& GetName() const { return m_Name; }
         using Serializer = AssetManifestSerializer;
+
     private:
         friend class AssetManager;
         friend class AssetManifestSerializer;

@@ -3,9 +3,9 @@
 #include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/Renderer/Skybox.h"
 
+#include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/Timer.h"
 #include "Crowny/Common/VirtualFileSystem.h"
-#include "Crowny/Common/FileSystem.h"
 
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Import/Importer.h"
@@ -68,7 +68,7 @@ namespace Crowny
         }
         else
             CW_ENGINE_ERROR("Failed to load HDR image.");
-            
+
         // delete dat;
 
         glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
@@ -92,7 +92,7 @@ namespace Crowny
         m_EnvironmentMap = Texture::Create(tProps);
 
         // Convert HDR equirectangular environment map to cubemap
-        
+
         AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(EQUIRECTTOCUBE_SHADER_PATH);
         // Ref<Shader> shader = Importer::Get().Import<Shader>(EQUIRECTTOCUBE_SHADER_PATH);
         Ref<ShaderStage> eqToCubeVert = shader->GetStage(VERTEX_SHADER);
@@ -237,7 +237,8 @@ namespace Crowny
                 rapi.SetGraphicsPipeline(pipeline);
                 viewport.Width = static_cast<float>(64 * std::pow(0.5f, i));
                 viewport.Height = static_cast<float>(64 * std::pow(0.5f, i));
-                rapi.SetViewport((uint32_t)viewport.X, (uint32_t)viewport.Y, (uint32_t)viewport.Width, (uint32_t)viewport.Height);
+                rapi.SetViewport((uint32_t)viewport.X, (uint32_t)viewport.Y, (uint32_t)viewport.Width,
+                                 (uint32_t)viewport.Height);
                 rapi.SetUniforms(uniforms);
                 rapi.SetVertexBuffers(0, &m_SkyboxVbo, 1);
                 rapi.SetIndexBuffer(m_SkyboxIbo);
@@ -319,7 +320,8 @@ namespace Crowny
                 rapi.SetGraphicsPipeline(pipeline);
                 viewport.Width = static_cast<float>(512 * std::pow(0.5f, i));
                 viewport.Height = static_cast<float>(512 * std::pow(0.5f, i));
-                rapi.SetViewport((uint32_t)viewport.X, (uint32_t)viewport.Y, (uint32_t)viewport.Width, (uint32_t)viewport.Height);
+                rapi.SetViewport((uint32_t)viewport.X, (uint32_t)viewport.Y, (uint32_t)viewport.Width,
+                                 (uint32_t)viewport.Height);
                 rapi.SetUniforms(uniforms);
                 rapi.SetVertexBuffers(0, &m_SkyboxVbo, 1);
                 rapi.SetIndexBuffer(m_SkyboxIbo);

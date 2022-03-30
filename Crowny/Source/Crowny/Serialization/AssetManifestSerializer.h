@@ -5,12 +5,12 @@
 namespace Crowny
 {
 
-	class AssetManifest;
-	
-	class AssetManifestSerializer
-	{
-	public:
-		static void Serialize(const Ref<AssetManifest>& manifest, YAML::Emitter& out);
-	};
+    class AssetManifest;
 
-}
+    class AssetManifestSerializer
+    {
+    public:
+        static void Serialize(const Ref<AssetManifest>& manifest, YAML::Emitter& out);
+    };
+
+} // namespace Crowny

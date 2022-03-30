@@ -36,5 +36,4 @@ namespace Crowny
         bool IncludeInBuild;
     };
 
-
 } // namespace Crowny

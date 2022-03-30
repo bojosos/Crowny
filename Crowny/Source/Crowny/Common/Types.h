@@ -37,47 +37,33 @@ namespace Crowny
         TID_ScriptImportOptions = 24
     };
 
-    template <typename T>
-    inline uint32_t GetRuntimeId();
+    template <typename T> inline uint32_t GetRuntimeId();
 
-    template <>
-    inline uint32_t GetRuntimeId<Component>() { return TID_Component; }
+    template <> inline uint32_t GetRuntimeId<Component>() { return TID_Component; }
 
-    template <>
-    inline uint32_t GetRuntimeId<TransformComponent>() { return TID_TransformComponent; }
+    template <> inline uint32_t GetRuntimeId<TransformComponent>() { return TID_TransformComponent; }
 
-    template <>
-    inline uint32_t GetRuntimeId<CameraComponent>() { return TID_CameraComponent; }
+    template <> inline uint32_t GetRuntimeId<CameraComponent>() { return TID_CameraComponent; }
 
-    template <>
-    inline uint32_t GetRuntimeId<MonoScriptComponent>() { return TID_MonoScriptComponent; }
+    template <> inline uint32_t GetRuntimeId<MonoScriptComponent>() { return TID_MonoScriptComponent; }
 
-    template <>
-    inline uint32_t GetRuntimeId<AudioSourceComponent>() { return TID_AudioSourceComponent; }
+    template <> inline uint32_t GetRuntimeId<AudioSourceComponent>() { return TID_AudioSourceComponent; }
 
-    template <>
-    inline uint32_t GetRuntimeId<AudioListenerComponent>() { return TID_AudioListenerComponent; }
+    template <> inline uint32_t GetRuntimeId<AudioListenerComponent>() { return TID_AudioListenerComponent; }
 
-    template <>
-    inline uint32_t GetRuntimeId<TagComponent>() { return TID_TagComponent; }
+    template <> inline uint32_t GetRuntimeId<TagComponent>() { return TID_TagComponent; }
 
-    template <>
-    inline uint32_t GetRuntimeId<IDComponent>() { return TID_IDComponent; }
+    template <> inline uint32_t GetRuntimeId<IDComponent>() { return TID_IDComponent; }
 
-    template <>
-    inline uint32_t GetRuntimeId<ImportOptions>() { return TID_ImportOptions; }
+    template <> inline uint32_t GetRuntimeId<ImportOptions>() { return TID_ImportOptions; }
 
-    template <>
-    inline uint32_t GetRuntimeId<AudioClipImportOptions>() { return TID_AudioClipImportOptions; }
+    template <> inline uint32_t GetRuntimeId<AudioClipImportOptions>() { return TID_AudioClipImportOptions; }
 
-    template <>
-    inline uint32_t GetRuntimeId<TextureImportOptions>() { return TID_TextureImportOptions; }
+    template <> inline uint32_t GetRuntimeId<TextureImportOptions>() { return TID_TextureImportOptions; }
 
-    template <>
-    inline uint32_t GetRuntimeId<ShaderImportOptions>() { return TID_ShaderImportOptions; }
+    template <> inline uint32_t GetRuntimeId<ShaderImportOptions>() { return TID_ShaderImportOptions; }
 
-    template <>
-    inline uint32_t GetRuntimeId<ScriptImportOptions>() { return TID_ScriptImportOptions; }
+    template <> inline uint32_t GetRuntimeId<ScriptImportOptions>() { return TID_ScriptImportOptions; }
 
     using byte = uint8_t;
 

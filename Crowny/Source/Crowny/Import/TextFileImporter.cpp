@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
-#include "Crowny/Import/TextFileImporter.h"
 #include "Crowny/Import/ImportOptions.h"
+#include "Crowny/Import/TextFileImporter.h"
 
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/StringUtils.h"
@@ -31,4 +31,4 @@ namespace Crowny
     }
 
     Ref<ImportOptions> TextFileImporter::CreateImportOptions() const { return CreateRef<ShaderImportOptions>(); }
-}
+} // namespace Crowny

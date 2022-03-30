@@ -5,16 +5,16 @@
 namespace Crowny
 {
 
-	void AssetHandleBase::Destroy()
-	{
-		//if (m_Data*->m_Ptr != nullptr)
-			//AssetManager::Get().Destroy();
-	}
+    void AssetHandleBase::Destroy()
+    {
+        // if (m_Data*->m_Ptr != nullptr)
+        // AssetManager::Get().Destroy();
+    }
 
-	void AssetHandleBase::SetHandleData(const Ref<Asset>& ptr, const UUID& uuid)
-	{
-		m_Data->m_Ptr = ptr;
-		if (m_Data->m_Ptr != nullptr)
-			m_Data->m_UUID = uuid;
-	}
-}
+    void AssetHandleBase::SetHandleData(const Ref<Asset>& ptr, const UUID& uuid)
+    {
+        m_Data->m_Ptr = ptr;
+        if (m_Data->m_Ptr != nullptr)
+            m_Data->m_UUID = uuid;
+    }
+} // namespace Crowny

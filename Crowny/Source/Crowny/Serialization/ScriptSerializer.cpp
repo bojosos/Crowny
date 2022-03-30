@@ -21,10 +21,10 @@ namespace Crowny
     //     // out << YAML::EndSeq << YAML::EndMap;
     //     // m_Scene->m_Filepath = filepath;
     // }
-    
+
     // Ref<SerializableScriptObject> ScriptSerializer::Deserialize(Ref<MemoryDataStream>& stream)
     // {
     //     // for (auto& field : )
     // }
 
-}
+} // namespace Crowny

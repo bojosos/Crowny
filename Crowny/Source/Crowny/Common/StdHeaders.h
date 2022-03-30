@@ -28,16 +28,15 @@
 #include <filesystem>
 #include <fstream>
 
-#include <thread>
-#include <mutex>
 #include <atomic>
-
+#include <mutex>
+#include <thread>
 
 namespace Crowny
 {
 
     namespace fs = std::filesystem;
- 
+
     using Path = fs::path;
 
     struct HashPath
@@ -83,7 +82,7 @@ namespace Crowny
     using Stringstream = std::stringstream;
 
     using Thread = std::thread;
-    
+
     using Mutex = std::mutex;
 
     using Signal = std::condition_variable;

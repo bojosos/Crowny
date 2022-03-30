@@ -4,7 +4,7 @@
 
 namespace Crowny
 {
-    SettingsPanel::SettingsPanel(const String& name) : ImGuiPanel(name) { }
+    SettingsPanel::SettingsPanel(const String& name) : ImGuiPanel(name) {}
 
     void SettingsPanel::Render()
     {
@@ -13,4 +13,4 @@ namespace Crowny
         // ImGui::Checkbox("Show demo window", &m_ShowDemoWindow);
         EndPanel();
     }
-}
+} // namespace Crowny
