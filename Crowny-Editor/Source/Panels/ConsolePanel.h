@@ -39,7 +39,7 @@ namespace Crowny
         size_t m_SelectedMessageHash;
         ImGuiConsoleBuffer::Message::Level m_MessageBufferRenderFilter = ImGuiConsoleBuffer::Message::Level::Info;
         float m_DisplayScale = 1.0f;
-        
+
         bool m_EnabledLevels[5] = { true, true, true, true, true };
         bool m_Collapse = false;
         bool m_AllowScrollingToBottom = true;

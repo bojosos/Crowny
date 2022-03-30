@@ -38,22 +38,22 @@ namespace Crowny
         uint32_t NumChannels = 2;
         bool Is3D = true;
         bool KeepSourceData = true; // Need it for import, otherwise keeping source data is controlled by Asset::Load
-	};
+    };
 
-	class ScriptCode : public Asset
-	{
-	public:
-		ScriptCode() = default;
-		ScriptCode(const String& source, bool isEditorScript) : m_Source(source), m_IsEditorScript(isEditorScript) {}
-		~ScriptCode() = default;
+    class ScriptCode : public Asset
+    {
+    public:
+        ScriptCode() = default;
+        ScriptCode(const String& source, bool isEditorScript) : m_Source(source), m_IsEditorScript(isEditorScript) {}
+        ~ScriptCode() = default;
 
-		const String& GetSource() const { return m_Source; }
+        const String& GetSource() const { return m_Source; }
 
-	private:
-		CW_SERIALIZABLE(ScriptCode);
-		String m_Source;
-		bool m_IsEditorScript = false;
-	};
+    private:
+        CW_SERIALIZABLE(ScriptCode);
+        String m_Source;
+        bool m_IsEditorScript = false;
+    };
 
     class AudioClip : public Asset
     {
@@ -71,7 +71,7 @@ namespace Crowny
         Ref<DataStream> GetSourceStream(uint32_t& size) const;
         uint32_t GetOpenALBuffer() const { return m_BufferID; }
         bool Is3D() const { return m_Desc.Is3D; }
-        
+
         uint32_t GetFrequency() const { return m_Desc.Frequency; }
         uint32_t GetNumChannels() const { return m_Desc.NumChannels; }
 
@@ -92,6 +92,5 @@ namespace Crowny
         mutable Ref<DataStream> m_SourceStreamData;
         uint32_t m_SourceStreamSize = 0;
     };
-
 
 } // namespace Crowny

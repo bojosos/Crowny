@@ -128,7 +128,8 @@ namespace Crowny
 
     Ref<BinaryShaderData> ShaderCompiler::CompileStage(const String& source, ShaderType shaderType,
                                                        ShaderLanguage inputLanguage,
-                                                       ShaderLanguageFlags outputLanguages, const UnorderedMap<String, String>& defines)
+                                                       ShaderLanguageFlags outputLanguages,
+                                                       const UnorderedMap<String, String>& defines)
     {
         Vector<uint8_t> shaderBinaryData;
 
@@ -148,7 +149,8 @@ namespace Crowny
 
         options.SetSourceLanguage(shaderc_source_language_glsl);
         options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
-        // options.SetOptimizationLevel(shaderc_optimization_level_performance); // if set, can't use uniform names, so maybe compile twice?
+        // options.SetOptimizationLevel(shaderc_optimization_level_performance); // if set, can't use uniform names, so
+        // maybe compile twice?
 
         shaderc::SpvCompilationResult module =
           compiler.CompileGlslToSpv(source.c_str(), source.size(), ShaderTypeToShaderC(shaderType),
@@ -173,7 +175,8 @@ namespace Crowny
         return dataResult;
     }
 
-    ShaderDesc ShaderCompiler::Compile(const String& source, ShaderLanguageFlags shaderLanguage, const UnorderedMap<String, String>& defines)
+    ShaderDesc ShaderCompiler::Compile(const String& source, ShaderLanguageFlags shaderLanguage,
+                                       const UnorderedMap<String, String>& defines)
     {
         const char* langToken = "#lang";
         size_t langTokenLength = strlen(langToken);
@@ -199,7 +202,8 @@ namespace Crowny
         auto sourceShaders = Parse(source);
         for (auto entry : sourceShaders)
         {
-            Ref<BinaryShaderData> shaderData = CompileStage(entry.second, entry.first, inputLanguage, shaderLanguage, defines);
+            Ref<BinaryShaderData> shaderData =
+              CompileStage(entry.second, entry.first, inputLanguage, shaderLanguage, defines);
             if (entry.first == VERTEX_SHADER)
                 shaderDesc.VertexShader = shaderData;
             else if (entry.first == FRAGMENT_SHADER)

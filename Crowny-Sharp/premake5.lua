@@ -5,9 +5,9 @@ project "Crowny-Sharp"
 	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
 	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
 
-	links
+	files
 	{
-		"Crowny-Wrapper"
+		"Source/**.cs"
 	}
 
 	filter "system:windows"

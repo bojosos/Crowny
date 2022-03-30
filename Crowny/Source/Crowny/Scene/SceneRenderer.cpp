@@ -8,8 +8,8 @@
 #include "Crowny/Renderer/ForwardRenderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
 
-#include <glm/glm.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#include <glm/glm.hpp>
 
 namespace Crowny
 {

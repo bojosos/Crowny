@@ -3,8 +3,8 @@
 #include "Editor/ProjectLibrary.h"
 
 #include "Crowny/Assets/AssetManager.h"
-#include "Crowny/Serialization/ImportOptionsSerializer.h"
 #include "Crowny/Import/Importer.h"
+#include "Crowny/Serialization/ImportOptionsSerializer.h"
 
 #include "Editor/Editor.h"
 #include "Editor/EditorUtils.h"
@@ -450,8 +450,8 @@ namespace Crowny
         if (fs::is_regular_file(oldFullPath) || fs::is_directory(oldFullPath))
         {
             if (!overwrite)
-			{
-				CW_ENGINE_INFO("Here: {0}, {1}", oldFullPath, newFullPath);
+            {
+                CW_ENGINE_INFO("Here: {0}, {1}", oldFullPath, newFullPath);
                 if (!fs::exists(newFullPath))
                 {
                     CW_ENGINE_INFO("Here2");
@@ -463,14 +463,14 @@ namespace Crowny
                 fs::rename(oldFullPath, newFullPath);
                 CW_ENGINE_INFO("Here2");
             }
-			/*if (fs::exists(newFullPath))
-			{
-				if (overwrite)
-					fs::remove(newFullPath);
-				else
-					CW_ENGINE_WARN("File {0} already exists.", newFullPath);
-			}
-			fs::rename(oldFullPath, newFullPath);*/
+            /*if (fs::exists(newFullPath))
+            {
+                if (overwrite)
+                    fs::remove(newFullPath);
+                else
+                    CW_ENGINE_WARN("File {0} already exists.", newFullPath);
+            }
+            fs::rename(oldFullPath, newFullPath);*/
         }
 
         Path oldMetaPath = GetMetadataPath(oldFullPath);
@@ -838,8 +838,9 @@ namespace Crowny
             if (idx == paths.size())
                 return *current;
 
-            String cur =
-              (fs::is_regular_file(*searchPath) && idx == (paths.size() - 1)) ? searchPath->filename().string() : paths[idx].string();
+            String cur = (fs::is_regular_file(*searchPath) && idx == (paths.size() - 1))
+                           ? searchPath->filename().string()
+                           : paths[idx].string();
             if ((*current)->Type == LibraryEntryType::Directory)
             {
                 DirectoryEntry* dirEntry = static_cast<DirectoryEntry*>(current->get());

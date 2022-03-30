@@ -9,8 +9,8 @@
 #include "Crowny/Scene/SceneRenderer.h"
 
 #include "Panels/HierarchyPanel.h"
-#include "Panels/ViewportPanel.h"
 #include "Panels/UIUtils.h"
+#include "Panels/ViewportPanel.h"
 
 #include <ImGuizmo.h>
 #include <backends/imgui_impl_vulkan.h>
@@ -19,7 +19,7 @@
 namespace Crowny
 {
 
-    ViewportPanel::ViewportPanel(const String& name) : ImGuiPanel(name) {}
+    ViewportPanel::ViewportPanel(const String& name) : ImGuiPanel(name), m_ViewportBounds(0.0f) {}
 
     void ViewportPanel::Render()
     {
@@ -79,7 +79,7 @@ namespace Crowny
         glm::mat4 id(1.0f);
         ImGuizmo::SetRect(bounds[0].x, bounds[0].y, bounds[1].x - bounds[0].x, bounds[1].y - bounds[0].y);
         // ImGuizmo::DrawGrid(glm::value_ptr(view), glm::value_ptr(proj), glm::value_ptr(id),
-           //                 100.0f); // A 1x1m grid, TODO: depth test
+        //                 100.0f); // A 1x1m grid, TODO: depth test
 
         if (selected && m_GizmoMode != -1)
         {

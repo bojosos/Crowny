@@ -18,4 +18,4 @@ namespace Crowny
         Scene* m_Scene;
     };
 
-}
+} // namespace Crowny

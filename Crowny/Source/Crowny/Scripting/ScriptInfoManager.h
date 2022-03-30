@@ -32,7 +32,7 @@ namespace Crowny
         MonoClass* SerializableObjectAtrribute = nullptr;
         MonoClass* NotNullAttribute = nullptr;
         MonoClass* DontSerializeFieldAttribute = nullptr;
-        
+
         MonoClass* ScriptUtils = nullptr;
         MonoClass* ScriptCompiler = nullptr;
     };
@@ -71,6 +71,7 @@ namespace Crowny
         ScriptTypeInfo* GetSerializableTypeInfo(MonoReflectionType* reflType);
 
         bool GetSerializableObjectInfo(const String& ns, const String& name, Ref<SerializableObjectInfo>& outInfo);
+
     private:
         Ref<SerializableTypeInfo> GetTypeInfo(MonoClass* monoClass);
         void RegisterComponents();
@@ -96,8 +97,7 @@ namespace Crowny
             m_ComponentInfos[reflType] = componentInfo;
         }
 
-        template <typename SerializableType, class ScriptType>
-        void RegisterSerializableType()
+        template <typename SerializableType, class ScriptType> void RegisterSerializableType()
         {
             MonoReflectionType* reflType = MonoUtils::GetType(ScriptType::GetMetaData()->ScriptClass->GetInternalPtr());
             ScriptTypeInfo scriptTypeInfo;
@@ -113,7 +113,8 @@ namespace Crowny
         bool m_BaseTypesInitialized;
         uint32_t m_UniqueTypeId = 1;
         BuiltinScriptClasses m_Builtin;
-        UnorderedMap<MonoReflectionType*, ComponentInfo> m_ComponentInfos; // TODO: Have to replace the reflection type with scriptmeta or update the map after reload
+        UnorderedMap<MonoReflectionType*, ComponentInfo>
+          m_ComponentInfos; // TODO: Have to replace the reflection type with scriptmeta or update the map after reload
         UnorderedMap<MonoReflectionType*, ScriptTypeInfo> m_ScriptTypeInfos;
         UnorderedMap<String, Ref<SerializableAssemblyInfo>> m_AssemblyInfos;
     };

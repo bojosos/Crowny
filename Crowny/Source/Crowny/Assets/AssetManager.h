@@ -15,8 +15,7 @@ namespace Crowny
         struct LoadedAssetData
         {
             LoadedAssetData() = default;
-            LoadedAssetData(const WeakAssetHandle<Asset>& asset, uint32_t size)
-                : Asset(asset), Size(size) { }
+            LoadedAssetData(const WeakAssetHandle<Asset>& asset, uint32_t size) : Asset(asset), Size(size) {}
 
             WeakAssetHandle<Asset> Asset;
             uint32_t NumInternalRefs = 0;
@@ -26,7 +25,8 @@ namespace Crowny
     public:
         AssetHandle<Asset> Load(const Path& path, bool keepinternalRef = true, bool keepSourceData = false);
 
-        template <class T> AssetHandle<T> Load(const Path& filepath, bool keepInternalRef = true, bool keepSourceData = false)
+        template <class T>
+        AssetHandle<T> Load(const Path& filepath, bool keepInternalRef = true, bool keepSourceData = false)
         {
             return static_asset_cast<T>(Load(filepath, keepSourceData));
         }

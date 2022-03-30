@@ -6,11 +6,9 @@ namespace Crowny
 {
     class ScriptCollider2DBase : public ComponentBase
     {
-
     };
 
-    class ScriptPhysics2D : public TScriptComponent<ScriptCollider2DBase, Collider2D,
+    class ScriptPhysics2D : public TScriptComponent < ScriptCollider2DBase, Collider2D,
     {
-
     }
-}
+} // namespace Crowny

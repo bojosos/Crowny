@@ -14,21 +14,21 @@
 #include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/Renderer/Skybox.h"
 #include "Crowny/Scene/SceneRenderer.h"
-#include "Crowny/Serialization/SceneSerializer.h"
 #include "Crowny/Scene/ScriptRuntime.h"
+#include "Crowny/Serialization/SceneSerializer.h"
 
 #include "Editor/Editor.h"
 #include "Editor/EditorAssets.h"
 #include "Editor/ProjectLibrary.h"
 
 #include "Crowny/Scripting/Bindings/Logging/ScriptDebug.h"
-#include "Crowny/Scripting/Bindings/Math/ScriptNoise.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptMath.h"
+#include "Crowny/Scripting/Bindings/Math/ScriptNoise.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptTime.h"
 #include "Crowny/Scripting/Bindings/ScriptInput.h"
 #include "Crowny/Scripting/Bindings/ScriptRandom.h"
-#include "Crowny/Scripting/ScriptObjectManager.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
+#include "Crowny/Scripting/ScriptObjectManager.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -36,7 +36,6 @@
 #include <backends/imgui_impl_vulkan.h>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
-
 
 namespace Crowny
 {
@@ -55,46 +54,53 @@ namespace Crowny
     void EditorLayer::OnAttach()
     {
         // Well constructors get discarded and the static data is gone, so construct a few empty objects
-		ScriptTime(); ScriptInput(); ScriptDebug(); ScriptRandom(); ScriptNoise(); ScriptMath();
-		EditorAssets::Load();
+        ScriptTime();
+        ScriptInput();
+        ScriptDebug();
+        ScriptRandom();
+        ScriptNoise();
+        ScriptMath();
+        EditorAssets::Load();
 
-		m_MenuBar = new ImGuiMenuBar();
+        m_MenuBar = new ImGuiMenuBar();
 
-		ImGuiMenu* fileMenu = new ImGuiMenu("File");
-		fileMenu->AddItem(new ImGuiMenuItem("New Project", "", [&](auto& event) { NewProject(); }));
-		fileMenu->AddItem(new ImGuiMenuItem("Open Project", "", [&](auto& event) { OpenProject(); }));
-		fileMenu->AddItem(new ImGuiMenuItem("Save Project", "", [&](auto& event) { Editor::Get().SaveProject(); }));
+        ImGuiMenu* fileMenu = new ImGuiMenu("File");
+        fileMenu->AddItem(new ImGuiMenuItem("New Project", "", [&](auto& event) { NewProject(); }));
+        fileMenu->AddItem(new ImGuiMenuItem("Open Project", "", [&](auto& event) { OpenProject(); }));
+        fileMenu->AddItem(new ImGuiMenuItem("Save Project", "", [&](auto& event) { Editor::Get().SaveProject(); }));
 
-		fileMenu->AddItem(new ImGuiMenuItem("New Scene", "Ctrl+Shift+N", [&](auto& event) { CreateNewScene(); }));
-		fileMenu->AddItem(new ImGuiMenuItem("Open Scene", "Ctrl+Shift+O", [&](auto& event) { OpenScene(); }));
-		fileMenu->AddItem(new ImGuiMenuItem("Save Scene", "Ctrl+S", [&](auto& event) { SaveActiveScene(); }));
-		fileMenu->AddItem(
-			new ImGuiMenuItem("Save Scene as", "Ctrl+Shift+S", [&](auto& event) { SaveActiveSceneAs(); }));
-		fileMenu->AddItem(new ImGuiMenuItem("Exit", "Alt+F4", [&](auto& event) { Application::Get().Exit(); }));
-		m_MenuBar->AddMenu(fileMenu);
+        fileMenu->AddItem(new ImGuiMenuItem("New Scene", "Ctrl+Shift+N", [&](auto& event) { CreateNewScene(); }));
+        fileMenu->AddItem(new ImGuiMenuItem("Open Scene", "Ctrl+Shift+O", [&](auto& event) { OpenScene(); }));
+        fileMenu->AddItem(new ImGuiMenuItem("Save Scene", "Ctrl+S", [&](auto& event) { SaveActiveScene(); }));
+        fileMenu->AddItem(
+          new ImGuiMenuItem("Save Scene as", "Ctrl+Shift+S", [&](auto& event) { SaveActiveSceneAs(); }));
+        fileMenu->AddItem(new ImGuiMenuItem("Exit", "Alt+F4", [&](auto& event) { Application::Get().Exit(); }));
+        m_MenuBar->AddMenu(fileMenu);
 
-		ImGuiMenu* viewMenu = new ImGuiMenu("View");
+        ImGuiMenu* viewMenu = new ImGuiMenu("View");
 
-		// Has to be done before hierarchy and asset browser panels
-		m_InspectorPanel = new InspectorPanel("Inspector");
-		m_HierarchyPanel = new HierarchyPanel("Hierarchy", [&](Entity e) { m_InspectorPanel->SetSelectedEntity(e); });
-		m_ViewportPanel = new ViewportPanel("Viewport");
-		m_ViewportPanel->SetEventCallback(CW_BIND_EVENT_FN(OnViewportEvent));
-		m_ConsolePanel = new ConsolePanel("Console");
-		m_AssetBrowser = new AssetBrowserPanel("Asset browser", [&](const Path& path) { m_InspectorPanel->SetSelectedAssetPath(path); });
+        // Has to be done before hierarchy and asset browser panels
+        m_InspectorPanel = new InspectorPanel("Inspector");
+        m_HierarchyPanel = new HierarchyPanel("Hierarchy", [&](Entity e) { m_InspectorPanel->SetSelectedEntity(e); });
+        m_ViewportPanel = new ViewportPanel("Viewport");
+        m_ViewportPanel->SetEventCallback(CW_BIND_EVENT_FN(OnViewportEvent));
+        m_ConsolePanel = new ConsolePanel("Console");
+        m_AssetBrowser = new AssetBrowserPanel("Asset browser",
+                                               [&](const Path& path) { m_InspectorPanel->SetSelectedAssetPath(path); });
 
-		m_ViewportPanel->RegisterInMenu(viewMenu);
-		m_InspectorPanel->RegisterInMenu(viewMenu);
-		m_HierarchyPanel->RegisterInMenu(viewMenu);
-		m_ConsolePanel->RegisterInMenu(viewMenu);
-		m_AssetBrowser->RegisterInMenu(viewMenu);
+        m_ViewportPanel->RegisterInMenu(viewMenu);
+        m_InspectorPanel->RegisterInMenu(viewMenu);
+        m_HierarchyPanel->RegisterInMenu(viewMenu);
+        m_ConsolePanel->RegisterInMenu(viewMenu);
+        m_AssetBrowser->RegisterInMenu(viewMenu);
 
-		ImGuiMenu* buildMenu = new ImGuiMenu("Build");
-		buildMenu->AddItem(new ImGuiMenuItem("Rebuild game assembly", "Ctrl+Shift+B", CW_BIND_EVENT_FN(RebuildAssemblies)));
-		buildMenu->AddItem(new ImGuiMenuItem("Build game", "Ctrl+B", CW_BIND_EVENT_FN(BuildGame)));
+        ImGuiMenu* buildMenu = new ImGuiMenu("Build");
+        buildMenu->AddItem(
+          new ImGuiMenuItem("Rebuild game assembly", "Ctrl+Shift+B", CW_BIND_EVENT_FN(RebuildAssemblies)));
+        buildMenu->AddItem(new ImGuiMenuItem("Build game", "Ctrl+B", CW_BIND_EVENT_FN(BuildGame)));
 
-		m_MenuBar->AddMenu(buildMenu);
-		m_MenuBar->AddMenu(viewMenu);
+        m_MenuBar->AddMenu(buildMenu);
+        m_MenuBar->AddMenu(viewMenu);
 
         // Move out maybe?
         Editor::StartUp();
@@ -169,23 +175,20 @@ namespace Crowny
 
     void EditorLayer::SetProjectSettings()
     {
-		Ref<ProjectSettings> projSettings = Editor::Get().GetProjectSettings();
-		s_EditorCamera.SetPosition(projSettings->EditorCameraPosition);
-		s_EditorCamera.SetFocalPoint(projSettings->EditorCameraFocalPoint);
-		s_EditorCamera.SetPitch(projSettings->EditorCameraRotation.x);
-		s_EditorCamera.SetYaw(projSettings->EditorCameraRotation.y);
-		s_EditorCamera.SetDistance(projSettings->EditorCameraDistance);
-		Ref<Scene> scene = CreateRef<Scene>();
-		SceneSerializer serializer(scene);
+        Ref<ProjectSettings> projSettings = Editor::Get().GetProjectSettings();
+        s_EditorCamera.SetPosition(projSettings->EditorCameraPosition);
+        s_EditorCamera.SetFocalPoint(projSettings->EditorCameraFocalPoint);
+        s_EditorCamera.SetPitch(projSettings->EditorCameraRotation.x);
+        s_EditorCamera.SetYaw(projSettings->EditorCameraRotation.y);
+        s_EditorCamera.SetDistance(projSettings->EditorCameraDistance);
+        Ref<Scene> scene = CreateRef<Scene>();
+        SceneSerializer serializer(scene);
         if (fs::is_regular_file(projSettings->LastOpenScenePath))
-		    serializer.Deserialize(projSettings->LastOpenScenePath);
+            serializer.Deserialize(projSettings->LastOpenScenePath);
         m_Temp = scene;
     }
 
-    void EditorLayer::BuildGame(Event& event)
-    {
-
-    }
+    void EditorLayer::BuildGame(Event& event) {}
 
     void EditorLayer::RebuildAssemblies(Event& event)
     {
@@ -197,21 +200,23 @@ namespace Crowny
         MonoArray* refs = mono_array_new(MonoManager::Get().GetDomain(), MonoUtils::GetStringClass(), 1);
         mono_array_setref(refs, 0, MonoUtils::ToMonoString("CrownySharp.dll"));
 
-        void* params[6] = {
-            &type, &debug, MonoUtils::ToMonoString((Editor::Get().GetProjectPath() / INTERNAL_ASSEMBLY_PATH).string()), MonoUtils::ToMonoString(Editor::Get().GetProjectPath().string()),
-            libDirs, refs
-        };
+        void* params[6] = { &type,
+                            &debug,
+                            MonoUtils::ToMonoString((Editor::Get().GetProjectPath() / INTERNAL_ASSEMBLY_PATH).string()),
+                            MonoUtils::ToMonoString(Editor::Get().GetProjectPath().string()),
+                            libDirs,
+                            refs };
         scriptCompiler->GetMethod("Compile", 6)->Invoke(nullptr, params);
-        Vector<AssemblyRefreshInfo> refreshInfos; 
+        Vector<AssemblyRefreshInfo> refreshInfos;
         Path engineAssemblyPath = "C:/dev/Crowny/Crowny-Sharp/CrownySharp.dll";
         Path gameAssemblyPath = Editor::Get().GetProjectPath() / INTERNAL_ASSEMBLY_PATH / "GameAssembly.dll";
         refreshInfos.emplace_back(CROWNY_ASSEMBLY, &engineAssemblyPath);
-		refreshInfos.emplace_back(GAME_ASSEMBLY, &gameAssemblyPath);
-		ScriptObjectManager::Get().RefreshAssemblies(refreshInfos);
-        
-		ScriptInfoManager::Get().InitializeTypes();
+        refreshInfos.emplace_back(GAME_ASSEMBLY, &gameAssemblyPath);
+        ScriptObjectManager::Get().RefreshAssemblies(refreshInfos);
+
+        ScriptInfoManager::Get().InitializeTypes();
         ScriptInfoManager::Get().LoadAssemblyInfo(GAME_ASSEMBLY);
-		ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
+        ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
 
         auto view = SceneManager::GetActiveScene()->GetAllEntitiesWith<MonoScriptComponent>();
         for (auto e : view)
@@ -254,7 +259,8 @@ namespace Crowny
     void EditorLayer::OpenScene()
     {
         Vector<Path> outPaths;
-        if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, ProjectLibrary::Get().GetAssetFolder(), { Editor::GetSceneDialogFilter() }, outPaths))
+        if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, ProjectLibrary::Get().GetAssetFolder(),
+                                       { Editor::GetSceneDialogFilter() }, outPaths))
             OpenScene(outPaths[0].replace_extension(".cwscene"));
     }
 
@@ -268,7 +274,8 @@ namespace Crowny
     void EditorLayer::SaveActiveSceneAs()
     {
         Vector<Path> outPaths;
-        if (FileSystem::OpenFileDialog(FileDialogType::SaveFile, ProjectLibrary::Get().GetAssetFolder(), { Editor::GetSceneDialogFilter() }, outPaths))
+        if (FileSystem::OpenFileDialog(FileDialogType::SaveFile, ProjectLibrary::Get().GetAssetFolder(),
+                                       { Editor::GetSceneDialogFilter() }, outPaths))
         {
             SceneSerializer serializer(SceneManager::GetActiveScene());
             serializer.Serialize(outPaths[0].replace_extension(".cwscene"));
@@ -287,19 +294,19 @@ namespace Crowny
 
     void EditorLayer::AddRecentEntry(const Path& path)
     {
-		Ref<EditorSettings> settings = Editor::Get().GetEditorSettings();
-		int recentIdx = settings->RecentProjects.size() - 1;
-		for (uint32_t i = 0; i < settings->RecentProjects.size(); i++)
-		{
-			if (settings->RecentProjects[i].ProjectPath == Editor::Get().GetProjectPath())
-				recentIdx = i;
-		}
-		for (uint32_t i = recentIdx; i >= 1; i--)
+        Ref<EditorSettings> settings = Editor::Get().GetEditorSettings();
+        int recentIdx = settings->RecentProjects.size() - 1;
+        for (uint32_t i = 0; i < settings->RecentProjects.size(); i++)
         {
-			settings->RecentProjects[i] = settings->RecentProjects[i - 1];
+            if (settings->RecentProjects[i].ProjectPath == Editor::Get().GetProjectPath())
+                recentIdx = i;
         }
-		settings->RecentProjects[0].Timestamp = std::time(nullptr);
-		settings->RecentProjects[0].ProjectPath = path;
+        for (uint32_t i = recentIdx; i >= 1; i--)
+        {
+            settings->RecentProjects[i] = settings->RecentProjects[i - 1];
+        }
+        settings->RecentProjects[0].Timestamp = std::time(nullptr);
+        settings->RecentProjects[0].ProjectPath = path;
     }
 
     void EditorLayer::OnDetach()
@@ -310,31 +317,31 @@ namespace Crowny
         delete m_ConsolePanel;
         delete m_AssetBrowser;
 
-		Editor::Get().GetEditorSettings()->ShowImGuiDemoWindow = m_ShowDemoWindow;
+        Editor::Get().GetEditorSettings()->ShowImGuiDemoWindow = m_ShowDemoWindow;
         Editor::Get().GetEditorSettings()->ShowPhysicsColliders2D = m_ShowColliders;
-		Editor::Get().GetEditorSettings()->AutoLoadLastProject = m_AutoLoadLastProject;
+        Editor::Get().GetEditorSettings()->AutoLoadLastProject = m_AutoLoadLastProject;
 
         EditorAssets::Unload();
         Editor::Get().SaveProject();
 
-		AddRecentEntry(Editor::Get().GetProjectPath());
+        AddRecentEntry(Editor::Get().GetProjectPath());
         Editor::Shutdown();
     }
 
     void EditorLayer::OnUpdate(Timestep ts)
-	{
-		if (m_Temp) // Delay scene reload
-		{
-			SceneManager::SetActiveScene(m_Temp);
+    {
+        if (m_Temp) // Delay scene reload
+        {
+            SceneManager::SetActiveScene(m_Temp);
             Editor::Get().GetProjectSettings()->LastOpenScenePath = m_Temp->GetFilepath().string();
-			m_Temp = nullptr;
+            m_Temp = nullptr;
             ScriptRuntime::Init();
-		}
+        }
 
         Ref<Scene> scene = SceneManager::GetActiveScene();
         auto& rapi = RenderAPI::Get();
         if (m_ViewportPanel->IsShown() && (m_ViewportSize.x != m_ViewportPanel->GetViewportSize().x ||
-            m_ViewportSize.y != m_ViewportPanel->GetViewportSize().y)) // TODO: Move out
+                                           m_ViewportSize.y != m_ViewportPanel->GetViewportSize().y)) // TODO: Move out
         {
             scene->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
             TextureParameters colorParams;
@@ -366,7 +373,8 @@ namespace Crowny
             m_RenderTarget = RenderTexture::Create(rtProps);
         }
         m_ViewportSize = m_ViewportPanel->GetViewportSize();
-        SceneRenderer::SetViewportSize(m_RenderTarget->GetProperties().Width, m_RenderTarget->GetProperties().Height); // Comment:
+        SceneRenderer::SetViewportSize(m_RenderTarget->GetProperties().Width,
+                                       m_RenderTarget->GetProperties().Height); // Comment:
 
         rapi.SetRenderTarget(m_RenderTarget);
         rapi.SetViewport(0, 0, m_RenderTarget->GetProperties().Width, m_RenderTarget->GetProperties().Height);
@@ -374,11 +382,12 @@ namespace Crowny
         switch (m_SceneState)
         {
         case SceneState::Edit: {
-            s_EditorCamera.SetViewportSize(m_RenderTarget->GetProperties().Width, m_RenderTarget->GetProperties().Height);
+            s_EditorCamera.SetViewportSize(m_RenderTarget->GetProperties().Width,
+                                           m_RenderTarget->GetProperties().Height);
             s_EditorCamera.OnUpdate(ts);
 
             SceneManager::GetActiveScene()->OnUpdateEditor(ts);
-           SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
+            SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
             break;
         }
         case SceneState::Play: {
@@ -402,7 +411,9 @@ namespace Crowny
         if (coords.x >= 0 && coords.x < m_ViewportSize.x && coords.y >= 0 && coords.y < m_ViewportSize.y)
         {
             RenderTexture* rt = static_cast<RenderTexture*>(m_RenderTarget.get());
-            Ref<PixelData> outPixelData = PixelData::Create(rt->GetColorTexture(1)->GetWidth(), rt->GetColorTexture(1)->GetHeight(), rt->GetColorTexture(1)->GetFormat());
+            Ref<PixelData> outPixelData =
+              PixelData::Create(rt->GetColorTexture(1)->GetWidth(), rt->GetColorTexture(1)->GetHeight(),
+                                rt->GetColorTexture(1)->GetFormat());
             rt->GetColorTexture(1)->ReadData(*outPixelData);
             glm::vec4 col = outPixelData->GetColorAt(coords.x, coords.y);
             if (col.x == -1.0f)
@@ -421,11 +432,12 @@ namespace Crowny
             Entity camera = scene->GetPrimaryCameraEntity();
             if (!camera)
                 return;
-            Renderer2D::Begin(camera.GetComponent<CameraComponent>().Camera, camera.GetComponent<TransformComponent>().GetTransform());
+            Renderer2D::Begin(camera.GetComponent<CameraComponent>().Camera,
+                              camera.GetComponent<TransformComponent>().GetTransform());
         }
         else
             Renderer2D::Begin(s_EditorCamera, s_EditorCamera.GetViewMatrix());
-        
+
         if (m_ShowColliders)
         {
             float zOffset = s_EditorCamera.GetPosition().z > 0 ? 0.001f : -0.001f;
@@ -436,7 +448,9 @@ namespace Crowny
                     auto [tc, bc2d] = view.get<TransformComponent, BoxCollider2DComponent>(entity);
                     glm::vec3 translation = tc.Position + glm::vec3(bc2d.Offset, zOffset);
                     glm::vec3 scale = tc.Scale * glm::vec3(bc2d.Size * 2.0f, 1.0f);
-                    glm::mat4 transform = glm::translate(glm::mat4(1.0f), translation) * glm::rotate(glm::mat4(1.0f), tc.Rotation.z, glm::vec3(0.0f, 0.0f, 1.0f)) * glm::scale(glm::mat4(1.0f), scale);
+                    glm::mat4 transform = glm::translate(glm::mat4(1.0f), translation) *
+                                          glm::rotate(glm::mat4(1.0f), tc.Rotation.z, glm::vec3(0.0f, 0.0f, 1.0f)) *
+                                          glm::scale(glm::mat4(1.0f), scale);
                     Renderer2D::DrawRect(transform, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.01f);
                 }
             }
@@ -448,7 +462,8 @@ namespace Crowny
                     auto [tc, cc2d] = view.get<TransformComponent, CircleCollider2DComponent>(entity);
                     glm::vec3 translation = tc.Position + glm::vec3(cc2d.Offset, zOffset);
                     glm::vec3 scale = tc.Scale * glm::vec3(cc2d.Radius * 2.0f);
-                    glm::mat4 transform = glm::translate(glm::mat4(1.0f), translation) * glm::scale(glm::mat4(1.0f), scale);
+                    glm::mat4 transform =
+                      glm::translate(glm::mat4(1.0f), translation) * glm::scale(glm::mat4(1.0f), scale);
                     Renderer2D::DrawCircle(transform, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.01f);
                 }
             }
@@ -467,25 +482,24 @@ namespace Crowny
             {
                 if (ImGui::TreeNode("Methods"))
                 {
-					for (MonoMethod* method : klass->GetMethods())
-						ImGui::Text(method->GetName().c_str());
-					ImGui::TreePop();
+                    for (MonoMethod* method : klass->GetMethods())
+                        ImGui::Text(method->GetName().c_str());
+                    ImGui::TreePop();
                 }
-				if (ImGui::TreeNode("Fields"))
+                if (ImGui::TreeNode("Fields"))
                 {
-					for (MonoField* field : klass->GetFields())
-						ImGui::Text(field->GetName().c_str());
-					ImGui::TreePop();
+                    for (MonoField* field : klass->GetFields())
+                        ImGui::Text(field->GetName().c_str());
+                    ImGui::TreePop();
                 }
-				if (ImGui::TreeNode("Properties"))
+                if (ImGui::TreeNode("Properties"))
                 {
-					for (MonoProperty* prop : klass->GetProperties())
-						ImGui::Text(prop->GetName().c_str());
-					ImGui::TreePop();
+                    for (MonoProperty* prop : klass->GetProperties())
+                        ImGui::Text(prop->GetName().c_str());
+                    ImGui::TreePop();
                 }
                 ImGui::TreePop();
             }
-            
         }
         ImGui::End();
 #endif
@@ -497,38 +511,41 @@ namespace Crowny
                 ImGui::OpenPopup("Project Manager");
             if (ImGui::BeginPopupModal("Project Manager"))
             {
-				if (ImGui::Button("Open"))
-				{
-					Vector<Path> outPaths;
-					if (FileSystem::OpenFileDialog(FileDialogType::OpenFolder, Editor::Get().GetDefaultProjectPath(), {}, outPaths))
-					{
-						if (outPaths.size() > 0)
-						{
-							Editor::Get().LoadProject(outPaths[0]);
+                if (ImGui::Button("Open"))
+                {
+                    Vector<Path> outPaths;
+                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFolder, Editor::Get().GetDefaultProjectPath(),
+                                                   {}, outPaths))
+                    {
+                        if (outPaths.size() > 0)
+                        {
+                            Editor::Get().LoadProject(outPaths[0]);
                             Editor::Get().GetEditorSettings()->LastOpenProject = outPaths[0];
                             SetProjectSettings();
-							m_AssetBrowser->Initialize();
-						}
-					}
-				}
+                            m_AssetBrowser->Initialize();
+                        }
+                    }
+                }
                 bool end = true;
-				ImGui::SameLine();
-				if (ImGui::Button("New"))
+                ImGui::SameLine();
+                if (ImGui::Button("New"))
                 {
                     ImGui::EndPopup();
                     ImGui::CloseCurrentPopup();
-					NewProject();
+                    NewProject();
                     end = false;
                 }
 
                 ImGui::Text("Recent Projects");
 
                 ImGui::BeginTable("##projectTable", 4);
-				ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort, 0.2f);
-				ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort, 0.5f);
-				ImGui::TableSetupColumn("Modified", ImGuiTableColumnFlags_WidthStretch, 0.2f);
+                ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort,
+                                        0.2f);
+                ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort,
+                                        0.5f);
+                ImGui::TableSetupColumn("Modified", ImGuiTableColumnFlags_WidthStretch, 0.2f);
                 ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch, 0.1f);
-				ImGui::TableHeadersRow();
+                ImGui::TableHeadersRow();
                 Ref<EditorSettings> settings = Editor::Get().GetEditorSettings();
                 for (uint32_t i = 0; i < settings->RecentProjects.size(); i++)
                 {
@@ -537,17 +554,18 @@ namespace Crowny
                         continue;
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
-					char res[9];
-					tm* timeinfo;
-					timeinfo = localtime(&project.Timestamp);
-					strftime(res, 9, "%T", timeinfo);
+                    char res[9];
+                    tm* timeinfo;
+                    timeinfo = localtime(&project.Timestamp);
+                    strftime(res, 9, "%T", timeinfo);
                     const Path& projectPath = project.ProjectPath;
-                    if (ImGui::Selectable(projectPath.filename().string().c_str(), false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap ))
+                    if (ImGui::Selectable(projectPath.filename().string().c_str(), false,
+                                          ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap))
                     {
-						Editor::Get().LoadProject(project.ProjectPath);
+                        Editor::Get().LoadProject(project.ProjectPath);
                         Editor::Get().GetEditorSettings()->LastOpenProject = project.ProjectPath;
                         SetProjectSettings();
-						m_AssetBrowser->Initialize();
+                        m_AssetBrowser->Initialize();
                     }
                     ImGui::TableNextColumn();
                     ImGui::Text(projectPath.string().c_str());
@@ -562,7 +580,8 @@ namespace Crowny
                         settings->RecentProjects[settings->RecentProjects.size() - 1].Timestamp = 0;
                     }
                     ImGui::SameLine();
-                    if (ImGui::ImageButton(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FolderIcon), ImVec2(20.0f, 20.0f), { 0, 1 }, { 1, 0 }, 0.0f))
+                    if (ImGui::ImageButton(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FolderIcon),
+                                           ImVec2(20.0f, 20.0f), { 0, 1 }, { 1, 0 }, 0.0f))
                         PlatformUtils::ShowInExplorer(project.ProjectPath);
                 }
                 ImGui::EndTable();

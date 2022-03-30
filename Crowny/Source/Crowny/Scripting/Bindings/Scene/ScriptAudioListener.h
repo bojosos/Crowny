@@ -11,4 +11,4 @@ namespace Crowny
 
         ScriptAudioListener(MonoObject* instance, Entity entity);
     };
-}
+} // namespace Crowny

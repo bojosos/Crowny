@@ -1,15 +1,15 @@
 #pragma once
 
 #if defined(CW_WINDOWS)
-    #define VK_USE_PLATFORM_WIN32_KHR
-    #define GLFW_EXPOSE_NATIVE_WIN32
+#define VK_USE_PLATFORM_WIN32_KHR
+#define GLFW_EXPOSE_NATIVE_WIN32
 #elif defined(CW_LINUX)
-    #define VK_USE_PLATFORM_XLIB_KHR
-    #define GLFW_EXPOSE_NATIVE_X11
+#define VK_USE_PLATFORM_XLIB_KHR
+#define GLFW_EXPOSE_NATIVE_X11
 #elif defined(CW_ANDROID)
-    #define VK_USE_PLATFORM_ANDROID_KHR
+#define VK_USE_PLATFORM_ANDROID_KHR
 #elif defined(CW_OSX)
-    #define VK_USR_PLATFORM_MACOS_MVK
+#define VK_USR_PLATFORM_MACOS_MVK
 #endif
 
 #include <vulkan/vulkan.h>

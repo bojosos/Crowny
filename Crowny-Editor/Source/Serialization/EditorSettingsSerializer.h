@@ -5,12 +5,12 @@
 namespace Crowny
 {
 
-	struct EditorSettings;
+    struct EditorSettings;
 
-	class EditorSettingsSerializer
-	{
-	public:
-		static void Serialize(const Ref<EditorSettings>& manifest, YAML::Emitter& out);
-		static Ref<EditorSettings> Deserialize(const YAML::Node& node);
-	};
-}
+    class EditorSettingsSerializer
+    {
+    public:
+        static void Serialize(const Ref<EditorSettings>& manifest, YAML::Emitter& out);
+        static Ref<EditorSettings> Deserialize(const YAML::Node& node);
+    };
+} // namespace Crowny

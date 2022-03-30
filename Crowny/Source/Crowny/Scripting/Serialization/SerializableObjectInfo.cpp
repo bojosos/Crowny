@@ -1,13 +1,14 @@
 #include "cwpch.h"
 
-#include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
-#include "Crowny/Scripting/Serialization/SerializableField.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
+#include "Crowny/Scripting/Serialization/SerializableField.h"
+#include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
 
 namespace Crowny
 {
 
-    Ref<SerializableMemberInfo> SerializableObjectInfo::FindMatchingField(const Ref<SerializableMemberInfo>& fieldInfo, const Ref<SerializableTypeInfo>& fieldTypeInfo) const
+    Ref<SerializableMemberInfo> SerializableObjectInfo::FindMatchingField(
+      const Ref<SerializableMemberInfo>& fieldInfo, const Ref<SerializableTypeInfo>& fieldTypeInfo) const
     {
         const SerializableObjectInfo* objInfo = this;
         while (objInfo != nullptr)
@@ -38,10 +39,7 @@ namespace Crowny
         return nullptr;
     }
 
-    MonoObject* SerializableFieldInfo::GetAttribute(MonoClass* monoClass)
-    {
-        return m_Field->GetAttribute(monoClass);
-    }
+    MonoObject* SerializableFieldInfo::GetAttribute(MonoClass* monoClass) { return m_Field->GetAttribute(monoClass); }
 
     MonoObject* SerializableFieldInfo::GetValue(MonoObject* instance) const
     {
@@ -50,20 +48,14 @@ namespace Crowny
         // return value;
     }
 
-    void SerializableFieldInfo::SetValue(MonoObject* instance, void* value) const
-    {
-        m_Field->Set(instance, value);
-    }
-    
+    void SerializableFieldInfo::SetValue(MonoObject* instance, void* value) const { m_Field->Set(instance, value); }
+
     MonoObject* SerializablePropertyInfo::GetAttribute(MonoClass* monoClass)
     {
         return m_Property->GetAttribute(monoClass);
     }
 
-    MonoObject* SerializablePropertyInfo::GetValue(MonoObject* instance) const
-    {
-        return m_Property->Get(instance);
-    }
+    MonoObject* SerializablePropertyInfo::GetValue(MonoObject* instance) const { return m_Property->Get(instance); }
 
     void SerializablePropertyInfo::SetValue(MonoObject* instance, void* value) const
     {
@@ -82,22 +74,36 @@ namespace Crowny
 
     ::MonoClass* SerializableTypeInfoPrimitive::GetMonoClass() const
     {
-        switch(m_Type)
+        switch (m_Type)
         {
-        case ScriptPrimitiveType::Bool: return MonoUtils::GetBoolClass();
-        case ScriptPrimitiveType::Char: return MonoUtils::GetCharClass();
-        case ScriptPrimitiveType::I8: return MonoUtils::GetByteClass();
-        case ScriptPrimitiveType::U8: return MonoUtils::GetByteClass();
-        case ScriptPrimitiveType::I16: return MonoUtils::GetI16Class();
-        case ScriptPrimitiveType::U16: return MonoUtils::GetU16Class();
-        case ScriptPrimitiveType::I32: return MonoUtils::GetI32Class();
-        case ScriptPrimitiveType::U32: return MonoUtils::GetU32Class();
-        case ScriptPrimitiveType::I64: return MonoUtils::GetI64Class();
-        case ScriptPrimitiveType::U64: return MonoUtils::GetU64Class();
-        case ScriptPrimitiveType::Float: return MonoUtils::GetFloatClass();
-        case ScriptPrimitiveType::Double: return MonoUtils::GetDoubleClass();
-        case ScriptPrimitiveType::String: return MonoUtils::GetStringClass();
-        default: break;
+        case ScriptPrimitiveType::Bool:
+            return MonoUtils::GetBoolClass();
+        case ScriptPrimitiveType::Char:
+            return MonoUtils::GetCharClass();
+        case ScriptPrimitiveType::I8:
+            return MonoUtils::GetByteClass();
+        case ScriptPrimitiveType::U8:
+            return MonoUtils::GetByteClass();
+        case ScriptPrimitiveType::I16:
+            return MonoUtils::GetI16Class();
+        case ScriptPrimitiveType::U16:
+            return MonoUtils::GetU16Class();
+        case ScriptPrimitiveType::I32:
+            return MonoUtils::GetI32Class();
+        case ScriptPrimitiveType::U32:
+            return MonoUtils::GetU32Class();
+        case ScriptPrimitiveType::I64:
+            return MonoUtils::GetI64Class();
+        case ScriptPrimitiveType::U64:
+            return MonoUtils::GetU64Class();
+        case ScriptPrimitiveType::Float:
+            return MonoUtils::GetFloatClass();
+        case ScriptPrimitiveType::Double:
+            return MonoUtils::GetDoubleClass();
+        case ScriptPrimitiveType::String:
+            return MonoUtils::GetStringClass();
+        default:
+            break;
         }
         return nullptr;
     }
@@ -107,7 +113,8 @@ namespace Crowny
         if (typeInfo->GetType() == SerializableType::Enum)
         {
             const auto* enumTypeInfo = static_cast<SerializableTypeInfoEnum*>(typeInfo.get());
-            return enumTypeInfo->m_TypeNamespace == m_TypeNamespace && enumTypeInfo->m_TypeName == m_TypeName && enumTypeInfo->m_UnderlyingType == m_UnderlyingType;
+            return enumTypeInfo->m_TypeNamespace == m_TypeNamespace && enumTypeInfo->m_TypeName == m_TypeName &&
+                   enumTypeInfo->m_UnderlyingType == m_UnderlyingType;
         }
         return false;
     }
@@ -140,7 +147,8 @@ namespace Crowny
         if (typeInfo->GetType() == SerializableType::Object)
         {
             const auto* objTypeInfo = static_cast<SerializableTypeInfoObject*>(typeInfo.get());
-            return objTypeInfo->m_TypeNamespace == m_TypeNamespace && objTypeInfo->m_TypeName == m_TypeName && objTypeInfo->m_ValueType == m_ValueType && objTypeInfo->m_TypeId == m_TypeId;
+            return objTypeInfo->m_TypeNamespace == m_TypeNamespace && objTypeInfo->m_TypeName == m_TypeName &&
+                   objTypeInfo->m_ValueType == m_ValueType && objTypeInfo->m_TypeId == m_TypeId;
         }
         return false;
     }
@@ -153,4 +161,4 @@ namespace Crowny
         return objInfo->m_MonoClass->GetInternalPtr();
     }
 
-}
+} // namespace Crowny

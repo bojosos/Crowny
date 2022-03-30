@@ -38,7 +38,7 @@ namespace Crowny
         static ::MonoClass* GetU16Class();
         static ::MonoClass* GetI32Class();
         static ::MonoClass* GetU32Class();
-        static ::MonoClass* GetI64Class();        
+        static ::MonoClass* GetI64Class();
         static ::MonoClass* GetU64Class();
         static ::MonoClass* GetFloatClass();
         static ::MonoClass* GetDoubleClass();

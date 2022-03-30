@@ -4,9 +4,8 @@
 
 namespace Crowny
 {
-	class TextSerializer
-	{
-		template <typename T>
-		static YAML::Emitter Serialize(const Ref<T>& serializable);
-	};
-}
+    class TextSerializer
+    {
+        template <typename T> static YAML::Emitter Serialize(const Ref<T>& serializable);
+    };
+} // namespace Crowny

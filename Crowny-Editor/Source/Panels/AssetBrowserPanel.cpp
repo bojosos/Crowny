@@ -49,9 +49,8 @@ namespace Crowny
             return "New File";
         }
     }
-    
-    AssetBrowserPanel::AssetBrowserPanel(const String& name,
-                                                   std::function<void(const Path&)> selectedPathCallback)
+
+    AssetBrowserPanel::AssetBrowserPanel(const String& name, std::function<void(const Path&)> selectedPathCallback)
       : ImGuiPanel(name), m_SetSelectedPathCallback(selectedPathCallback)
     {
         m_CsDefaultText = FileSystem::ReadTextFile(EditorAssets::DefaultScriptPath);
@@ -62,7 +61,8 @@ namespace Crowny
     void AssetBrowserPanel::Initialize()
     {
         // m_CurrentDirectoryEntry = ProjectLibrary::Get().GetRoot().get();
-        LibraryEntry* entry = ProjectLibrary::Get().FindEntry(Editor::Get().GetProjectSettings()->LastAssetBrowserSelectedEntry).get();
+        LibraryEntry* entry =
+          ProjectLibrary::Get().FindEntry(Editor::Get().GetProjectSettings()->LastAssetBrowserSelectedEntry).get();
         if (entry->Type == LibraryEntryType::Directory)
             m_CurrentDirectoryEntry = static_cast<DirectoryEntry*>(entry);
         else
@@ -162,7 +162,7 @@ namespace Crowny
         for (auto* tmp : entries)
         {
             if (ImGui::Selectable(tmp->ElementName.c_str(), false, 0,
-                                    ImVec2(ImGui::CalcTextSize(tmp->ElementName.c_str()).x, 0.0f)))
+                                  ImVec2(ImGui::CalcTextSize(tmp->ElementName.c_str()).x, 0.0f)))
             {
                 m_CurrentDirectoryEntry = tmp;
                 break;
@@ -280,7 +280,7 @@ namespace Crowny
                 while (!m_ForwardHistory.empty())
                     m_ForwardHistory.pop();
                 m_CurrentDirectoryEntry =
-                    static_cast<DirectoryEntry*>(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex].get());
+                  static_cast<DirectoryEntry*>(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex].get());
             }
             else
                 PlatformUtils::OpenExternally(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex]->Filepath);
@@ -310,13 +310,14 @@ namespace Crowny
                 clipboardString = clipboardString.substr(1, clipboardString.size() - 1);
                 PlatformUtils::CopyToClipboard(clipboardString);
             }
-            
+
             if (Input::IsKeyUp(Key::V)) // Paste (Ctrl+V)
             {
                 String clipboard = PlatformUtils::CopyFromClipboard();
                 Vector<String> paths = StringUtils::SplitString(clipboard, "\n");
                 for (auto& path : paths) // Maybe here I would need to remove the last char
-                    ProjectLibrary::Get().CopyEntry(path, EditorUtils::GetUniquePath(m_CurrentDirectoryEntry->Filepath / Path(path).filename()));
+                    ProjectLibrary::Get().CopyEntry(
+                      path, EditorUtils::GetUniquePath(m_CurrentDirectoryEntry->Filepath / Path(path).filename()));
             }
 
             if (Input::IsKeyUp(Key::R)) // Refresh (Ctrl+R)
@@ -331,7 +332,7 @@ namespace Crowny
                 if (m_CurrentDirectoryEntry->Children.size() > 0)
                 {
                     m_SelectionSet.insert(
-                        m_CurrentDirectoryEntry->Children[0]->ElementNameHash); // Select the first entry
+                      m_CurrentDirectoryEntry->Children[0]->ElementNameHash); // Select the first entry
                     m_SelectionStartIndex = 0;
                 }
             }
@@ -341,7 +342,7 @@ namespace Crowny
                 {
                     size_t lastIdx = m_CurrentDirectoryEntry->Children.size() - 1;
                     m_SelectionSet.insert(
-                        m_CurrentDirectoryEntry->Children[lastIdx]->ElementNameHash); // Select the last entry
+                      m_CurrentDirectoryEntry->Children[lastIdx]->ElementNameHash); // Select the last entry
                     m_SelectionStartIndex = lastIdx;
                 }
             }
@@ -358,7 +359,7 @@ namespace Crowny
             {
                 m_SelectionSet.clear();
                 m_SelectionStartIndex =
-                    std::min(m_SelectionStartIndex + 1, (uint32_t)m_CurrentDirectoryEntry->Children.size() - 1);
+                  std::min(m_SelectionStartIndex + 1, (uint32_t)m_CurrentDirectoryEntry->Children.size() - 1);
                 m_SelectionSet.insert(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex]->ElementNameHash);
             }
             if (Input::IsKeyUp(Key::Up))
@@ -371,7 +372,7 @@ namespace Crowny
             {
                 m_SelectionSet.clear();
                 m_SelectionStartIndex = std::min(m_SelectionStartIndex + m_ColumnCount,
-                                                    (uint32_t)m_CurrentDirectoryEntry->Children.size() - 1);
+                                                 (uint32_t)m_CurrentDirectoryEntry->Children.size() - 1);
                 m_SelectionSet.insert(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex]->ElementNameHash);
             }
         }
@@ -516,8 +517,8 @@ namespace Crowny
                 }
             }
 
-            if (ImGui::IsItemHovered() && !dropping && (ImGui::IsMouseReleased(ImGuiMouseButton_Left) ||
-                                           ImGui::IsMouseReleased(ImGuiMouseButton_Right)))
+            if (ImGui::IsItemHovered() && !dropping &&
+                (ImGui::IsMouseReleased(ImGuiMouseButton_Left) || ImGui::IsMouseReleased(ImGuiMouseButton_Right)))
             {
                 if (Input::IsKeyPressed(Key::LeftControl)) // Multi-select
                 {
@@ -553,51 +554,53 @@ namespace Crowny
     void AssetBrowserPanel::DrawTreeView()
     {
         ImGui::Begin("Tree view");
-        bool foundCurrent = false;  
-        std::function<void(const Ref<LibraryEntry>&)> display = [&](const Ref<LibraryEntry>& cur)
-        {
-			if (cur->Type == LibraryEntryType::Directory)
-			{
-				DirectoryEntry* dirEntry = static_cast<DirectoryEntry*>(cur.get());
+        bool foundCurrent = false;
+        std::function<void(const Ref<LibraryEntry>&)> display = [&](const Ref<LibraryEntry>& cur) {
+            if (cur->Type == LibraryEntryType::Directory)
+            {
+                DirectoryEntry* dirEntry = static_cast<DirectoryEntry*>(cur.get());
                 bool hasChildren = false;
                 for (const auto& child : dirEntry->Children)
                     if (child->Type == LibraryEntryType::Directory)
                         hasChildren = true;
                 ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | (hasChildren ? 0 : ImGuiTreeNodeFlags_Leaf);
-                if (m_CurrentDirectoryEntry->ElementNameHash == cur->ElementNameHash && m_CurrentDirectoryEntry->Filepath == cur->Filepath)
+                if (m_CurrentDirectoryEntry->ElementNameHash == cur->ElementNameHash &&
+                    m_CurrentDirectoryEntry->Filepath == cur->Filepath)
                 {
                     flags |= ImGuiTreeNodeFlags_Selected;
                     foundCurrent = true;
                 }
                 if (!foundCurrent) // This is wrong. It will open all entries above the one needed.
                     ImGui::SetNextItemOpen(ImGuiCond_Once);
-				if (ImGui::TreeNodeEx(cur->ElementName.c_str(), flags))
-				{
-					if (ImGui::BeginDragDropTarget())
-					{
-						if (const ImGuiPayload* payload = UIUtils::AcceptAssetPayload())
-						{
-							Path payloadPath = UIUtils::GetPathFromPayload(payload);
-							ProjectLibrary::Get().MoveEntry(payloadPath, cur->Filepath / payloadPath.filename());
-						}
-						ImGui::EndDragDropTarget();
-					}
-					if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) // Allow dragging
-					{
-						UIUtils::SetAssetPayload(cur->Filepath);
-						ImGui::EndDragDropSource();
-					}
+                if (ImGui::TreeNodeEx(cur->ElementName.c_str(), flags))
+                {
+                    if (ImGui::BeginDragDropTarget())
+                    {
+                        if (const ImGuiPayload* payload = UIUtils::AcceptAssetPayload())
+                        {
+                            Path payloadPath = UIUtils::GetPathFromPayload(payload);
+                            ProjectLibrary::Get().MoveEntry(payloadPath, cur->Filepath / payloadPath.filename());
+                        }
+                        ImGui::EndDragDropTarget();
+                    }
+                    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) // Allow dragging
+                    {
+                        UIUtils::SetAssetPayload(cur->Filepath);
+                        ImGui::EndDragDropSource();
+                    }
 
-					//if (ImGui::BeginPopupContextItem(cur->Filepath.string().c_str())) // Right click on a file
-					//{
-					//	ShowContextMenuContents(cur.get(), true);
-     //                   ImGui::EndPopup();
-     //               }
+                    // if (ImGui::BeginPopupContextItem(cur->Filepath.string().c_str())) // Right click on a file
+                    //{
+                    //	ShowContextMenuContents(cur.get(), true);
+                    //                   ImGui::EndPopup();
+                    //               }
 
                     if (Input::IsMouseButtonUp(Mouse::ButtonLeft) && ImGui::IsItemHovered())
                     {
-                        while (!m_ForwardHistory.empty()) m_ForwardHistory.pop();
-                        while (!m_BackwardHistory.empty()) m_BackwardHistory.pop();
+                        while (!m_ForwardHistory.empty())
+                            m_ForwardHistory.pop();
+                        while (!m_BackwardHistory.empty())
+                            m_BackwardHistory.pop();
                         if (hasChildren)
                         {
                             if (!m_BackwardHistory.empty())
@@ -610,11 +613,11 @@ namespace Crowny
                         }
                         m_CurrentDirectoryEntry = dirEntry;
                     }
-					for (const auto& child : dirEntry->Children)
-						display(child);
-					ImGui::TreePop();
-				}
-			}
+                    for (const auto& child : dirEntry->Children)
+                        display(child);
+                    ImGui::TreePop();
+                }
+            }
         };
         const Ref<DirectoryEntry>& root = ProjectLibrary::Get().GetRoot();
         display(root);
@@ -626,9 +629,9 @@ namespace Crowny
         if (ImGui::BeginMenu("Create"))
         {
             if (ImGui::MenuItem("Folder"))
-			{
-				if (isTreeView)
-					m_CurrentDirectoryEntry = m_CurrentDirectoryEntry->Parent;
+            {
+                if (isTreeView)
+                    m_CurrentDirectoryEntry = m_CurrentDirectoryEntry->Parent;
                 CreateNew(AssetBrowserItem::Folder);
             }
             ImGui::Separator();
@@ -701,13 +704,15 @@ namespace Crowny
         case AssetBrowserItem::Folder:
             ProjectLibrary::Get().CreateFolderEntry(newEntryPath);
             break;
-        case AssetBrowserItem::CScript:
-        {
+        case AssetBrowserItem::CScript: {
             String text = GetDefaultContents(itemType);
             String className = newEntryPath.filename().replace_extension("").string();
             className = StringUtils::Replace(className, " ", "_");
-            String script = StringUtils::Replace(m_CsDefaultText, "#NAMESPACE#", Editor::Get().GetProjectPath().filename().string());
-            script = StringUtils::Replace(script, "#CLASSNAME#", className); // This has to be done after rename, since the file is saved first as NewScript and then as the user name.
+            String script =
+              StringUtils::Replace(m_CsDefaultText, "#NAMESPACE#", Editor::Get().GetProjectPath().filename().string());
+            script = StringUtils::Replace(script, "#CLASSNAME#",
+                                          className); // This has to be done after rename, since the file is saved first
+                                                      // as NewScript and then as the user name.
             FileSystem::WriteTextFile(newEntryPath, script);
             break;
         }

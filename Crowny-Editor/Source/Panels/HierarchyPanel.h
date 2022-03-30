@@ -15,8 +15,7 @@ namespace Crowny
         virtual void Render() override;
         void Update();
 
-        template <class T>
-        void CreateEntityWith(Entity parent, const String& entityName)
+        template <class T> void CreateEntityWith(Entity parent, const String& entityName)
         {
             m_DeferedActions.push_back([parent, entityName, this]() mutable {
                 auto activeScene = SceneManager::GetActiveScene();
@@ -29,7 +28,12 @@ namespace Crowny
         void CreateEmptyEntity(Entity parent);
 
     public:
-        void SetSelectedEntity(Entity entity) { s_SelectedEntity = entity; m_SelectedItems.clear(); m_SelectedItems.insert(entity); }
+        void SetSelectedEntity(Entity entity)
+        {
+            s_SelectedEntity = entity;
+            m_SelectedItems.clear();
+            m_SelectedItems.insert(entity);
+        }
         static Entity GetSelectedEntity() { return s_SelectedEntity; }
 
     private:

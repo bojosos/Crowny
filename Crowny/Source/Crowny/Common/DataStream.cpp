@@ -30,7 +30,7 @@ namespace Crowny
         return *this;
     }
 
-    MemoryDataStream::MemoryDataStream() : DataStream(READ | WRITE) { }
+    MemoryDataStream::MemoryDataStream() : DataStream(READ | WRITE) {}
 
     MemoryDataStream::MemoryDataStream(const Ref<DataStream>& stream) : DataStream(READ | WRITE)
     {

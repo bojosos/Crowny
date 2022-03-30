@@ -11,6 +11,11 @@ project "Crowny-Sandbox"
 		"Crowny-Sharp"
 	}
 
+	files
+	{
+		"Source/**.cs"
+	}
+
 	filter "system:windows"
 		systemversion "latest"
 

@@ -5,36 +5,36 @@
 
 #include "Crowny/Common/UTF8.h"
 
+#include <mono/metadata/appdomain.h>
 #include <mono/metadata/class.h>
 #include <mono/metadata/metadata.h>
 #include <mono/metadata/object.h>
 #include <mono/metadata/reflection.h>
-#include <mono/metadata/appdomain.h>
 
 namespace Crowny
 {
 
-	std::wstring MonoUtils::WFromMonoString(MonoString* str)
-	{
-		if (str == nullptr)
-			return L"";
+    std::wstring MonoUtils::WFromMonoString(MonoString* str)
+    {
+        if (str == nullptr)
+            return L"";
 
-		int len = mono_string_length(str);
-		mono_unichar2* monoChars = mono_string_chars(str);
+        int len = mono_string_length(str);
+        mono_unichar2* monoChars = mono_string_chars(str);
 
-		std::wstring ret(len, '0');
-		for (int i = 0; i < len; i++)
-			ret[i] = monoChars[i];
+        std::wstring ret(len, '0');
+        for (int i = 0; i < len; i++)
+            ret[i] = monoChars[i];
 
-		return ret;
-	}
+        return ret;
+    }
 
-	std::string MonoUtils::FromMonoString(MonoString* str)
-	{
-		std::wstring wideString = WFromMonoString(str);
+    std::string MonoUtils::FromMonoString(MonoString* str)
+    {
+        std::wstring wideString = WFromMonoString(str);
 
-		return UTF8::FromWide(wideString);
-	}
+        return UTF8::FromWide(wideString);
+    }
 
     void MonoUtils::CheckException(MonoException* exception)
     {
@@ -67,10 +67,7 @@ namespace Crowny
 
     bool MonoUtils::IsValueType(::MonoClass* monoClass) { return mono_class_is_valuetype(monoClass) != 0; }
 
-    ::MonoClass* MonoUtils::GetClass(MonoObject* object)
-    {
-        return mono_object_get_class(object);
-    }
+    ::MonoClass* MonoUtils::GetClass(MonoObject* object) { return mono_object_get_class(object); }
 
     ::MonoClass* MonoUtils::GetClass(MonoReflectionType* type)
     {
@@ -82,7 +79,8 @@ namespace Crowny
 
     MonoString* MonoUtils::ToMonoString(const String& value)
     {
-        // Is this right? bfs does something completely different (using wstring), but Bulgarian guy wth git-repo does this
+        // Is this right? bfs does something completely different (using wstring), but Bulgarian guy wth git-repo does
+        // this
         return mono_string_new(MonoManager::Get().GetDomain(), value.c_str());
     }
 
@@ -145,10 +143,7 @@ namespace Crowny
         return mono_value_box(MonoManager::Get().GetDomain(), klass, value);
     }
 
-    void* MonoUtils::Unbox(MonoObject* value)
-    {
-        return mono_object_unbox(value);
-    }
+    void* MonoUtils::Unbox(MonoObject* value) { return mono_object_unbox(value); }
 
     MonoReflectionType* MonoUtils::GetType(::MonoClass* klass)
     {
@@ -212,74 +207,32 @@ namespace Crowny
         return MonoPrimitiveType::Unknown;
     }
 
-    ::MonoClass* MonoUtils::GetObjectClass()
-    {
-        return mono_get_object_class();
-    }
+    ::MonoClass* MonoUtils::GetObjectClass() { return mono_get_object_class(); }
 
-    ::MonoClass* MonoUtils::GetBoolClass()
-    {
-        return mono_get_boolean_class();
-    }
+    ::MonoClass* MonoUtils::GetBoolClass() { return mono_get_boolean_class(); }
 
-    ::MonoClass* MonoUtils::GetCharClass()
-    {
-        return mono_get_char_class();
-    }
+    ::MonoClass* MonoUtils::GetCharClass() { return mono_get_char_class(); }
 
-    ::MonoClass* MonoUtils::GetSByteClass()
-    {
-        return mono_get_sbyte_class();
-    }
+    ::MonoClass* MonoUtils::GetSByteClass() { return mono_get_sbyte_class(); }
 
-    ::MonoClass* MonoUtils::GetByteClass()
-    {
-        return mono_get_byte_class();
-    }
+    ::MonoClass* MonoUtils::GetByteClass() { return mono_get_byte_class(); }
 
-    ::MonoClass* MonoUtils::GetI16Class()
-    {
-        return mono_get_int16_class();
-    }
+    ::MonoClass* MonoUtils::GetI16Class() { return mono_get_int16_class(); }
 
-    ::MonoClass* MonoUtils::GetU16Class()
-    {
-        return mono_get_uint16_class();
-    }
+    ::MonoClass* MonoUtils::GetU16Class() { return mono_get_uint16_class(); }
 
-    ::MonoClass* MonoUtils::GetI32Class()
-    {
-        return mono_get_int32_class();
-    }
+    ::MonoClass* MonoUtils::GetI32Class() { return mono_get_int32_class(); }
 
-    ::MonoClass* MonoUtils::GetU32Class()
-    {
-        return mono_get_uint32_class();
-    }
+    ::MonoClass* MonoUtils::GetU32Class() { return mono_get_uint32_class(); }
 
-    ::MonoClass* MonoUtils::GetI64Class()
-    {
-        return mono_get_int64_class();
-    }
+    ::MonoClass* MonoUtils::GetI64Class() { return mono_get_int64_class(); }
 
-    ::MonoClass* MonoUtils::GetU64Class()
-    {
-        return mono_get_uint64_class();
-    }
+    ::MonoClass* MonoUtils::GetU64Class() { return mono_get_uint64_class(); }
 
-    ::MonoClass* MonoUtils::GetFloatClass()
-    {
-        return mono_get_single_class();
-    }
+    ::MonoClass* MonoUtils::GetFloatClass() { return mono_get_single_class(); }
 
-    ::MonoClass* MonoUtils::GetDoubleClass()
-    {
-        return mono_get_double_class();
-    }
+    ::MonoClass* MonoUtils::GetDoubleClass() { return mono_get_double_class(); }
 
-    ::MonoClass* MonoUtils::GetStringClass()
-    {
-        return mono_get_string_class();
-    }
+    ::MonoClass* MonoUtils::GetStringClass() { return mono_get_string_class(); }
 
 } // namespace Crowny

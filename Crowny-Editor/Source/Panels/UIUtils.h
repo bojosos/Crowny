@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Ecs/Entity.h"
+#include "Crowny/Scene/SceneManager.h"
 
 #include <imgui.h>
 
@@ -25,7 +25,7 @@ namespace Crowny
         {
             CW_ENGINE_ASSERT(payload->DataSize == sizeof(uint32_t));
             uint32_t id = *(const uint32_t*)payload->Data;
-            Entity result {(entt::entity)id, SceneManager::GetActiveScene().get()};
+            Entity result{ (entt::entity)id, SceneManager::GetActiveScene().get() };
             return result;
         }
 
@@ -35,15 +35,9 @@ namespace Crowny
             return Path(path);
         }
 
-        static const ImGuiPayload* AcceptEntityPayload()
-        {
-            return ImGui::AcceptDragDropPayload("Entity_ID");
-        }
+        static const ImGuiPayload* AcceptEntityPayload() { return ImGui::AcceptDragDropPayload("Entity_ID"); }
 
-        static const ImGuiPayload* AcceptAssetPayload()
-        {
-            return ImGui::AcceptDragDropPayload("ASSET_ITEM");
-        }
+        static const ImGuiPayload* AcceptAssetPayload() { return ImGui::AcceptDragDropPayload("ASSET_ITEM"); }
 
         static void SetEntityPayload(Entity entity)
         {
@@ -59,9 +53,18 @@ namespace Crowny
         }
 
         struct ScopedDisable
-        { 
-            ScopedDisable(bool disabled) : m_Disable(disabled) { if (m_Disable) ImGui::BeginDisabled(); }
-            ~ScopedDisable() { if (m_Disable) ImGui::EndDisabled(); } bool m_Disable;
+        {
+            ScopedDisable(bool disabled) : m_Disable(disabled)
+            {
+                if (m_Disable)
+                    ImGui::BeginDisabled();
+            }
+            ~ScopedDisable()
+            {
+                if (m_Disable)
+                    ImGui::EndDisabled();
+            }
+            bool m_Disable;
         };
 
         static bool DrawFloatControl(float& value, float minValue = 0.0f, float maxValue = 1.0f, bool asSlider = false);

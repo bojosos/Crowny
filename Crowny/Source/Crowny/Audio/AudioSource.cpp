@@ -132,7 +132,7 @@ namespace Crowny
     }
 
     void AudioSource::SetPriority(int32_t priority) { m_Priority = priority; }
- 
+
     void AudioSource::SetTime(float time)
     {
         AudioSourceState state = GetState();

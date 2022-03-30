@@ -74,22 +74,23 @@ namespace Crowny
         static void FillRect(const Rect2F& bounds, const Ref<Texture>& texture, const glm::vec4& color,
                              uint32_t entityId);
 
-        
         /**
-         * @brief Draws a circle. Thickness controls how 'filled' the circle is. 1.0 means it is full and 0.0 no circle at all.
-         * 
-         * 
+         * @brief Draws a circle. Thickness controls how 'filled' the circle is. 1.0 means it is full and 0.0 no circle
+         * at all.
+         *
+         *
          * @param transform Transform of the circle.
          * @param color Color of the cirlce.
          * @param thickness Thickness.
          * @param fade Fade.
          * @param entityId Id of the object for mouse picking.
          */
-        static void DrawCircle(const glm::mat4& transform, const glm::vec4& color, float thickness = 1.0f, float fade = 0.005f, int32_t entityId = -1);
+        static void DrawCircle(const glm::mat4& transform, const glm::vec4& color, float thickness = 1.0f,
+                               float fade = 0.005f, int32_t entityId = -1);
 
         /**
          * @brief Draws a line.
-         * 
+         *
          * @param p1 Starting point.
          * @param p2 End point.
          * @param color Color of the line.
@@ -97,7 +98,8 @@ namespace Crowny
          */
         static void DrawLine(const glm::vec3& p1, const glm::vec3& p2, const glm::vec4& color, float thickness = 0.02f);
 
-        static void DrawRect(const glm::vec3& position, const glm::vec2& size, const glm::vec4& color, float thickness = 0.02f);
+        static void DrawRect(const glm::vec3& position, const glm::vec2& size, const glm::vec4& color,
+                             float thickness = 0.02f);
 
         static void DrawRect(const glm::mat4& transform, const glm::vec4& color, float thickness = 0.02f);
 

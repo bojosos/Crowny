@@ -53,11 +53,7 @@ namespace Crowny
 
         Entity GetPrimaryCameraEntity();
 
-        template<typename... Components>
-        auto GetAllEntitiesWith()
-        {
-            return m_Registry.view<Components...>();
-        }
+        template <typename... Components> auto GetAllEntitiesWith() { return m_Registry.view<Components...>(); }
 
     private:
         friend class ComponentEditor;

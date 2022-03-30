@@ -10,6 +10,7 @@ namespace Crowny
     public:
         SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "AudioSource")
         ScriptAudioSource(MonoObject* instance, Entity entity);
+
     private:
         static void Internal_SetVolume(ScriptAudioSource* thisPtr, float volume);
         static void Internal_SetPitch(ScriptAudioSource* thisPtr, float pitch);
@@ -31,10 +32,10 @@ namespace Crowny
         static bool Internal_GetLooping(ScriptAudioSource* thisPtr);
         static bool Internal_GetIsMuted(ScriptAudioSource* thisPtr);
         static float Internal_GetTime(ScriptAudioSource* thisPtr);
-        
+
         static void Internal_Play(ScriptAudioSource* thisPtr);
         static void Internal_Pause(ScriptAudioSource* thisPtr);
         static void Internal_Stop(ScriptAudioSource* thisPtr);
     };
 
-}
+} // namespace Crowny

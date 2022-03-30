@@ -263,13 +263,12 @@ namespace Crowny
         typedef void(CW_THUNKCALL* OnDestroyThunkDef)(MonoObject*, MonoException**);
         OnDestroyThunkDef m_OnDestroyThunk = nullptr;
 
-
-		typedef void(CW_THUNKCALL* OnCollisionEnterThunkDef) (MonoObject* object, MonoObject* data, MonoException** ex);
-		OnCollisionEnterThunkDef m_OnCollisionEnterThunk = nullptr;
-		typedef void(CW_THUNKCALL* OnCollisionStayThunkDef) (MonoObject* object, MonoObject* data, MonoException** ex);
-		OnCollisionStayThunkDef m_OnCollisionStayThunk = nullptr;
-		typedef void(CW_THUNKCALL* OnCollisionExitThunkDef) (MonoObject* object, MonoObject* data, MonoException** ex);
-		OnCollisionExitThunkDef m_OnCollisionExitThunk = nullptr;
+        typedef void(CW_THUNKCALL* OnCollisionEnterThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
+        OnCollisionEnterThunkDef m_OnCollisionEnterThunk = nullptr;
+        typedef void(CW_THUNKCALL* OnCollisionStayThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
+        OnCollisionStayThunkDef m_OnCollisionStayThunk = nullptr;
+        typedef void(CW_THUNKCALL* OnCollisionExitThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
+        OnCollisionExitThunkDef m_OnCollisionExitThunk = nullptr;
 
         String m_TypeName;
         String m_Namespace;
@@ -285,16 +284,16 @@ namespace Crowny
 
     enum class Rigidbody2DConstraintsBits
     {
-		None = 0,
-		FreezeRotation = 1,
-		FreezePositionX = 2,
-		FreezePositionY = 4,
-		FreezePosition = FreezePositionX | FreezePositionY,
-		FreezeAll = FreezeRotation | FreezePosition
+        None = 0,
+        FreezeRotation = 1,
+        FreezePositionX = 2,
+        FreezePositionY = 4,
+        FreezePosition = FreezePositionX | FreezePositionY,
+        FreezeAll = FreezeRotation | FreezePosition
     };
-	typedef Flags<Rigidbody2DConstraintsBits> Rigidbody2DConstraints;
-	CW_FLAGS_OPERATORS(Rigidbody2DConstraintsBits);
-    
+    typedef Flags<Rigidbody2DConstraintsBits> Rigidbody2DConstraints;
+    CW_FLAGS_OPERATORS(Rigidbody2DConstraintsBits);
+
     enum class ForceMode
     {
         Force,
@@ -335,6 +334,7 @@ namespace Crowny
         bool GetContinuousCollisionDetection() const { return m_ContinuousCollisionDetection; }
 
         b2Body* RuntimeBody = nullptr;
+
     private:
         RigidbodyBodyType m_Type = RigidbodyBodyType::Static;
         RigidbodySleepMode m_SleepMode = RigidbodySleepMode::StartAwake;
@@ -348,11 +348,11 @@ namespace Crowny
 
     struct Collider2D : ComponentBase
     {
-        Collider2D() : ComponentBase() { }
+        Collider2D() : ComponentBase() {}
         void OnCollisionBegin(const Collision2D& col)
         {
             if (CallbackEnter)
-            CallbackEnter(col);
+                CallbackEnter(col);
         }
 
         void OnCollisionEnd(const Collision2D& col)

@@ -264,7 +264,7 @@ namespace Crowny
         m_DeferedActions.clear();
 
         Scene& activeScene = *SceneManager::GetActiveScene().get();
-        
+
         if (m_Focused && s_SelectedEntity)
         {
             bool ctrl = Input::IsKeyPressed(Key::LeftControl);
@@ -273,7 +273,7 @@ namespace Crowny
                 if (s_SelectedEntity.GetParent())
                     activeScene.DuplicateEntity(s_SelectedEntity).SetParent(s_SelectedEntity.GetParent());
                 else
-                activeScene.DuplicateEntity(s_SelectedEntity).SetParent(s_SelectedEntity.GetParent());
+                    activeScene.DuplicateEntity(s_SelectedEntity).SetParent(s_SelectedEntity.GetParent());
             }
 
             if (ctrl && Input::IsKeyDown(Key::N)) // Create empty entity
@@ -340,15 +340,17 @@ namespace Crowny
     {
         String tabs;
         std::function<void(Entity)> traverse = [&](Entity entity) {
-            if (!entity) return;
-            CW_ENGINE_INFO("{0}{1}: {2}", tabs, entity.GetName(), entity.GetParent() ? entity.GetParent().GetName() : "");
+            if (!entity)
+                return;
+            CW_ENGINE_INFO("{0}{1}: {2}", tabs, entity.GetName(),
+                           entity.GetParent() ? entity.GetParent().GetName() : "");
             tabs += "\t";
             for (auto child : entity.GetComponent<RelationshipComponent>().Children)
                 traverse(child);
             tabs = tabs.substr(0, tabs.size() - 1);
         };
 
-    traverse(s_SelectedEntity);
+        traverse(s_SelectedEntity);
     }
 #endif
 

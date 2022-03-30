@@ -43,6 +43,7 @@ namespace Crowny
         static float GetMouseScrollY();
 
         static void OnMouseScroll(float xOffset, float yOffset);
+
     private:
         friend class Application;
         static void OnUpdate();

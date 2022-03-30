@@ -19,18 +19,18 @@
 #include "Crowny/Scene/SceneManager.h"
 
 // Script runtime
+#include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptObjectManager.h"
 #include "Crowny/Scripting/ScriptSceneObjectManager.h"
-#include "Crowny/Scene/ScriptRuntime.h"
 
 // Importers
 #include "Crowny/Import/AudioClipImporter.h"
-#include "Crowny/Import/ShaderImporter.h"
-#include "Crowny/Import/TextureImporter.h"
-#include "Crowny/Import/TextFileImporter.h"
 #include "Crowny/Import/ScriptImporter.h"
+#include "Crowny/Import/ShaderImporter.h"
+#include "Crowny/Import/TextFileImporter.h"
+#include "Crowny/Import/TextureImporter.h"
 
 #include "Crowny/ImGui/ImGuiConsoleBuffer.h"
 
@@ -40,7 +40,7 @@ namespace Crowny
     void Initializer::Init()
     {
         ImGuiConsoleBuffer::StartUp();
-        
+
         Importer::StartUp();
         Importer::Get().RegisterImporter(new AudioClipImporter());
         Importer::Get().RegisterImporter(new ShaderImporter());
@@ -103,7 +103,8 @@ namespace Crowny
             ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
             CW_ENGINE_INFO("Loaded engine assembly");
         }
-        Path gameAssmeblyPath = Path("C:/dev/Projects/New Project/Internal/Assemblies") / (std::string(GAME_ASSEMBLY) + ".dll");
+        Path gameAssmeblyPath =
+          Path("C:/dev/Projects/New Project/Internal/Assemblies") / (std::string(GAME_ASSEMBLY) + ".dll");
         if (fs::exists(gameAssmeblyPath))
         {
             MonoManager::Get().LoadAssembly(gameAssmeblyPath, GAME_ASSEMBLY);

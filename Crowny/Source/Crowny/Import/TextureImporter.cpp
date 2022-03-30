@@ -3,9 +3,9 @@
 
 #include "Crowny/Import/TextureImporter.h"
 
+#include "Crowny/Common//FileSystem.h"
 #include "Crowny/Common/StringUtils.h"
 #include "Crowny/Common/VirtualFileSystem.h"
-#include "Crowny/Common//FileSystem.h"
 #include "Crowny/RenderAPI/Texture.h"
 
 #include <stb_image.h>
@@ -32,7 +32,7 @@ namespace Crowny
         int width, height, channels;
         stbi_set_flip_vertically_on_load(1);
 
-        //auto [loaded, size] = VirtualFileSystem::Get()->ReadFile(filepath);
+        // auto [loaded, size] = VirtualFileSystem::Get()->ReadFile(filepath);
         std::vector<uint8_t> data;
         Ref<DataStream> stream = FileSystem::OpenFile(filepath);
         data.resize(stream->Size());
@@ -42,7 +42,8 @@ namespace Crowny
         uint8_t* rawPixelData;
 
         if (is16)
-            rawPixelData = (uint8_t*)stbi_load_16_from_memory(data.data(), (int)data.size(), &width, &height, &channels, 0);
+            rawPixelData =
+              (uint8_t*)stbi_load_16_from_memory(data.data(), (int)data.size(), &width, &height, &channels, 0);
         else
             rawPixelData = stbi_load_from_memory(data.data(), (int)data.size(), &width, &height, &channels, 0);
 

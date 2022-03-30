@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Crowny/Scripting/Serialization/SerializableField.h"
 #include "Crowny/Scripting/Mono/MonoField.h"
 #include "Crowny/Scripting/Mono/MonoProperty.h"
+#include "Crowny/Scripting/Serialization/SerializableField.h"
 
 namespace Crowny
 {
@@ -26,10 +26,8 @@ namespace Crowny
             return value;
         }
 
-        virtual void SetValue(MonoObject* instance, void* data) override
-        {
-            m_Field->Set(instance, data);
-        }
+        virtual void SetValue(MonoObject* instance, void* data) override { m_Field->Set(instance, data); }
+
     private:
         MonoField* m_Field;
     };
@@ -39,15 +37,10 @@ namespace Crowny
     public:
         SerializableProperty() = default;
 
-        virtual void* GetValue(MonoObject* instance) override
-        {
-            return m_Property->Get(instance);
-        }
+        virtual void* GetValue(MonoObject* instance) override { return m_Property->Get(instance); }
 
-        virtual void SetValue(MonoObject* instance, void* data) override
-        {
-            m_Property->Set(instance, data);
-        }
+        virtual void SetValue(MonoObject* instance, void* data) override { m_Property->Set(instance, data); }
+
     private:
         MonoProperty* m_Property;
     };
@@ -69,19 +62,19 @@ namespace Crowny
         ~SerializableObject();
         SerializableObject(Ref<SerializableObjectInfo> objInfo, MonoObject* instance);
         SerializableObject();
+
     private:
-        
         struct Hash
         {
             size_t operator()(const SerializableFieldKey& x) const;
         };
         struct Equals
         {
-            bool operator()(const SerializableFieldKey& l,const SerializableFieldKey& r) const;
+            bool operator()(const SerializableFieldKey& l, const SerializableFieldKey& r) const;
         };
         uint32_t m_GCHandle = 0;
         Ref<SerializableObjectInfo> m_ObjectInfo;
         UnorderedMap<SerializableFieldKey, Ref<SerializableFieldData>, Hash, Equals> m_CachedData;
     };
 
-}
+} // namespace Crowny

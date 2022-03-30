@@ -29,35 +29,36 @@ namespace Crowny
         return output;
     }
 
-	Vector<std::wstring> StringUtils::SplitString(const std::wstring& s, const std::wstring& separator)
-	{
-		Vector<std::wstring> output;
+    Vector<std::wstring> StringUtils::SplitString(const std::wstring& s, const std::wstring& separator)
+    {
+        Vector<std::wstring> output;
 
-		std::wstring::size_type start = 0, end = s.find_first_of(separator);
+        std::wstring::size_type start = 0, end = s.find_first_of(separator);
 
-		while (end <= String::npos)
-		{
-			std::wstring tok = s.substr(start, end - start);
-			if (!tok.empty())
-				output.push_back(tok);
+        while (end <= String::npos)
+        {
+            std::wstring tok = s.substr(start, end - start);
+            if (!tok.empty())
+                output.push_back(tok);
 
-			if (end == std::wstring::npos)
-				break;
+            if (end == std::wstring::npos)
+                break;
 
-			start = end + 1;
-			end = s.find_first_of(separator, start);
-		}
+            start = end + 1;
+            end = s.find_first_of(separator, start);
+        }
 
-		return output;
-	}
+        return output;
+    }
 
     String StringUtils::Replace(const String& str, const String& from, const String& to)
     {
         String result = str;
-        if(from.empty())
+        if (from.empty())
             return String();
         size_t startPos = 0;
-        while((startPos = result.find(from, startPos)) != String::npos) {
+        while ((startPos = result.find(from, startPos)) != String::npos)
+        {
             result.replace(startPos, from.length(), to);
             startPos += to.length();
         }

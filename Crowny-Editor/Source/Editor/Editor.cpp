@@ -4,9 +4,9 @@
 
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
 
-#include "Serialization/ProjectSettingsSerializer.h"
-#include "Serialization/EditorSettingsSerializer.h"
 #include "Crowny/Serialization/FileEncoder.h"
+#include "Serialization/EditorSettingsSerializer.h"
+#include "Serialization/ProjectSettingsSerializer.h"
 
 #include "Editor/ProjectLibrary.h"
 
@@ -15,7 +15,7 @@ namespace Crowny
 
     void Editor::OnStartUp()
     {
-		LoadEditorSettings();
+        LoadEditorSettings();
         m_ProjectSettings = CreateRef<ProjectSettings>();
         ProjectLibrary::StartUp();
     }
@@ -63,12 +63,12 @@ namespace Crowny
 
     void Editor::LoadEditorSettings()
     {
-		Path settingsPath = "Editor/Settings.yaml";
-		if (fs::exists(settingsPath))
-		{
-			FileDecoder<EditorSettings, SerializerType::Yaml> decoder(settingsPath);
+        Path settingsPath = "Editor/Settings.yaml";
+        if (fs::exists(settingsPath))
+        {
+            FileDecoder<EditorSettings, SerializerType::Yaml> decoder(settingsPath);
             m_EditorSettings = decoder.Decode();
-		}
+        }
         if (m_EditorSettings == nullptr)
             m_EditorSettings = CreateRef<EditorSettings>();
     }

@@ -11,7 +11,7 @@ namespace Crowny
 
     struct ShaderDefines
     {
-        Vector<String>  SingularDefines;
+        Vector<String> SingularDefines;
         UnorderedMap<String, String> ValueDefines;
     };
 
@@ -54,6 +54,7 @@ namespace Crowny
         ShaderStage(const Ref<BinaryShaderData>& shaderData);
         const Ref<UniformDesc>& GetUniformDesc() const;
         static Ref<ShaderStage> Create(const Ref<BinaryShaderData>& shaderData);
+
     protected:
         CW_SERIALIZABLE(Shader);
         Ref<BinaryShaderData> m_ShaderData;
@@ -76,6 +77,7 @@ namespace Crowny
 
         static Ref<Shader> Create(const ShaderDesc& stateDesc);
         Ref<ShaderStage> GetStage(ShaderType shaderType) const { return m_ShaderStages[shaderType]; }
+
     private:
         CW_SERIALIZABLE(Shader);
         Array<Ref<ShaderStage>, SHADER_COUNT> m_ShaderStages;

@@ -29,4 +29,4 @@ namespace Crowny
         using Serializer = EditorSettingsSerializer;
     };
 
-}
+} // namespace Crowny

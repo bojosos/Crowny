@@ -64,13 +64,15 @@ namespace Crowny
         auto iterFind = m_ManualSources.find(name);
         if (iterFind != m_ManualSources.end())
         {
-        CW_ENGINE_INFO("{0}, {1}", iterFind->second->GetTime(), iterFind->second->GetAudioClip()->GetLength());
-            return iterFind->second->GetTime() / iterFind->second->GetAudioClip()->GetLength(); // TODO: Fix inconsistent setter/getter for clips
-    }
+            CW_ENGINE_INFO("{0}, {1}", iterFind->second->GetTime(), iterFind->second->GetAudioClip()->GetLength());
+            return iterFind->second->GetTime() /
+                   iterFind->second->GetAudioClip()->GetLength(); // TODO: Fix inconsistent setter/getter for clips
+        }
         return 0;
     }
 
-    void AudioManager::Play(const String& name, const AssetHandle<AudioClip>& clip, const glm::vec3& position, float volume)
+    void AudioManager::Play(const String& name, const AssetHandle<AudioClip>& clip, const glm::vec3& position,
+                            float volume)
     {
         Ref<AudioSource> source = CreateSource();
         source->SetClip(clip);

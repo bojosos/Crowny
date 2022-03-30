@@ -17,7 +17,8 @@ namespace Crowny
 
     void EditorCamera::OnUpdate(Timestep ts)
     {
-        if (Input::IsKeyPressed(Key::LeftAlt) || Input::IsKeyPressed(Key::RightAlt)) // need right alt cuz keyboard not working
+        if (Input::IsKeyPressed(Key::LeftAlt) ||
+            Input::IsKeyPressed(Key::RightAlt)) // need right alt cuz keyboard not working
         {
             glm::vec2 mouse = Input::GetMousePosition();
             glm::vec2 delta = (mouse - m_InitialMousePosition) * 0.003f;
