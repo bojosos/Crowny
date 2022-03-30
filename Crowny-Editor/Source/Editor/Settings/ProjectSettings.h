@@ -15,10 +15,14 @@ namespace Crowny
         String LastOpenScenePath; // This will probably be replaced by the UUID of a scene, and a scene will most likely
                                   // be a prefab.
         int32_t GizmoMode;
+        bool GizmoLocalMode;
+
         glm::vec3 EditorCameraPosition;
         glm::vec3 EditorCameraFocalPoint;
         glm::vec2 EditorCameraRotation;
         float EditorCameraDistance;
+
+		UUID LastSelectedEntityID;
 
         using Serializer = ProjectSettingsSerializer;
 

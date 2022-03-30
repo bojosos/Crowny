@@ -22,11 +22,20 @@ namespace Crowny
         const glm::vec4& GetViewportBounds() const { return m_ViewportBounds; }
         void SetEventCallback(const EventCallbackFn& onclicked);
         void SetEditorRenderTarget(const Ref<RenderTarget>& rt);
+		
+		void SetGizmoMode(int32_t gizmoMode) { m_GizmoMode = gizmoMode; }
+		void SetGizmoLocalMode(bool local) { m_LocalMode = local; }
+		
+		bool GetGizmoLocalMode() const  { return m_LocalMode; }
+		int32_t GetGizmoMode() const { return m_GizmoMode; }
 
         void DisalbeGizmo() { m_GizmoMode = -1; }
         void EnableGizmo() { m_GizmoMode = ImGuizmo::TRANSLATE; }
+		
+		bool IsMouseOverGizmo() const { return ImGuizmo::IsOver(); }
 
     private:
+        bool m_LocalMode = true;
         Ref<RenderTarget> m_RenderTarget;
         EventCallbackFn OnEvent;
         int32_t m_GizmoMode = ImGuizmo::TRANSLATE;
