@@ -77,7 +77,7 @@ namespace Crowny
 
     uint32_t ImGuiMenuItem::GetTotalWidth()
     {
-        return ImGui::CalcTextSize(m_Combination.c_str()).x + 5 + ImGui::CalcTextSize(m_Title.c_str()).x;
+        return ImGui::CalcTextSize(m_Combination.c_str()).x + 5.0f + ImGui::CalcTextSize(m_Title.c_str()).x;
     }
 
     void ImGuiMenuItem::Render(uint32_t maxWidth)

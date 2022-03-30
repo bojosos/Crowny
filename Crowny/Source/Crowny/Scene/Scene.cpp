@@ -2,18 +2,10 @@
 
 #include "Crowny/Scene/Scene.h"
 
-#include "Crowny/Common/Uuid.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
-#include "Crowny/RenderAPI/RenderCommand.h"
-#include "Crowny/Renderer/ForwardPlusRenderer.h"
-#include "Crowny/Renderer/ForwardRenderer.h"
-#include "Crowny/Renderer/Renderer.h"
-#include "Crowny/Renderer/Renderer2D.h"
-#include "Crowny/Scene/SceneManager.h"
 
 #include <entt/entt.hpp>
-
 #include <box2d/box2d.h>
 
 namespace Crowny
@@ -82,9 +74,67 @@ namespace Crowny
 		return b2_staticBody;
 	}
 
+	class ContactListener : public b2ContactListener
+	{
+	public:
+		ContactListener(Scene* scene);
+
+		virtual void BeginContact(b2Contact* contact);
+		virtual void EndContact(b2Contact* contact);
+	private:
+		Scene* m_Scene;
+	};
+
+	ContactListener::ContactListener(Scene* scene) : m_Scene(scene) { }
+
+	void ContactListener::BeginContact(b2Contact* contact)
+	{
+		CW_ENGINE_WARN("Collsion begin");
+		b2WorldManifold manifold;
+		contact->GetWorldManifold(&manifold);
+		Collision2D col;
+		col.Points.push_back(glm::vec2(manifold.points[0].x, manifold.points[0].y));
+		col.Points.push_back(glm::vec2(manifold.points[1].x, manifold.points[1].y));
+		Entity e1 = Entity((entt::entity)contact->GetFixtureA()->GetBody()->GetUserData().pointer, m_Scene);
+		Entity e2 = Entity((entt::entity)contact->GetFixtureB()->GetBody()->GetUserData().pointer, m_Scene);
+		col.Colliders.push_back(e1);
+		col.Colliders.push_back(e2);
+		if (e1.HasComponent<BoxCollider2DComponent>())
+			e1.GetComponent<BoxCollider2DComponent>().OnCollisionBegin(col);
+		if (e1.HasComponent<CircleCollider2DComponent>())
+			e1.GetComponent<CircleCollider2DComponent>().OnCollisionBegin(col);
+		if (e2.HasComponent<BoxCollider2DComponent>())
+			e2.GetComponent<BoxCollider2DComponent>().OnCollisionBegin(col);
+		if (e2.HasComponent<CircleCollider2DComponent>())
+			e2.GetComponent<CircleCollider2DComponent>().OnCollisionBegin(col);
+	}
+
+	void ContactListener::EndContact(b2Contact* contact)
+	{
+		CW_ENGINE_WARN("Collsion end");
+		b2WorldManifold manifold;
+		contact->GetWorldManifold(&manifold);
+		Collision2D col;
+		col.Points.push_back(glm::vec2(manifold.points[0].x, manifold.points[0].y));
+		col.Points.push_back(glm::vec2(manifold.points[1].x, manifold.points[1].y));
+		Entity e1 = Entity((entt::entity)contact->GetFixtureA()->GetBody()->GetUserData().pointer, m_Scene);
+		Entity e2 = Entity((entt::entity)contact->GetFixtureA()->GetBody()->GetUserData().pointer, m_Scene);
+		col.Colliders.push_back(e1);
+		col.Colliders.push_back(e2);
+		if (e1.HasComponent<BoxCollider2DComponent>())
+			e1.GetComponent<BoxCollider2DComponent>().OnCollisionEnd(col);
+		if (e1.HasComponent<CircleCollider2DComponent>())
+			e1.GetComponent<CircleCollider2DComponent>().OnCollisionEnd(col);
+		if (e2.HasComponent<BoxCollider2DComponent>())
+			e2.GetComponent<BoxCollider2DComponent>().OnCollisionEnd(col);
+		if (e2.HasComponent<CircleCollider2DComponent>())
+			e2.GetComponent<CircleCollider2DComponent>().OnCollisionEnd(col);
+	}
+
 	Scene::Scene(const String& name) : m_Name(name)
 	{
 		m_RootEntity = new Entity(m_Registry.create(), this);
+		m_ContactListener2D = new ContactListener(this);
 
 		m_RootEntity->AddComponent<TransformComponent>();
 		m_RootEntity->AddComponent<IDComponent>(UuidGenerator::Generate());
@@ -142,7 +192,11 @@ namespace Crowny
 		return *this;
 	}
 
-	Scene::~Scene() { delete m_RootEntity; }
+	Scene::~Scene()
+	{
+		delete m_RootEntity;
+		delete m_ContactListener2D;
+	}
 
 	Entity Scene::DuplicateEntity(Entity entity, bool includeChildren)
 	{
@@ -172,8 +226,9 @@ namespace Crowny
 	void Scene::OnRuntimeStart()
 	{
 		m_PhysicsWorld2D = new b2World({ 0.0, -9.8f });
+		m_PhysicsWorld2D->SetContactListener(m_ContactListener2D);
 
-		// Create 2D Rigidbodies
+		// Create 2D Rigid bodies
 		{
 			auto view = m_Registry.view<Rigidbody2DComponent>();
 			for (auto e : view)
@@ -186,6 +241,7 @@ namespace Crowny
 				bodyDef.type = GetBox2DType(rb2d.GetBodyType());
 				bodyDef.position.Set(transform.Position.x, transform.Position.y);
 				bodyDef.angle = transform.Rotation.z;
+				bodyDef.userData.pointer = (uintptr_t)e;
 				b2Body* body = m_PhysicsWorld2D->CreateBody(&bodyDef);
 				body->SetFixedRotation(rb2d.GetConstraints().IsSet(Rigidbody2DConstraintsBits::FreezeRotation));
 				rb2d.RuntimeBody = body;
@@ -253,7 +309,7 @@ namespace Crowny
 
 	void Scene::OnUpdateRuntime(Timestep ts)
 	{
-		// update physics
+		// Update 2D Physics
 		{
 			auto view1 = m_Registry.view<Rigidbody2DComponent>();
 			for (auto e : view1)
@@ -280,7 +336,7 @@ namespace Crowny
 				rb2d.RuntimeBody->SetLinearVelocity(linVelocty);
 			}
 			const int32_t velocityIterations = 6;
-			const int32_t positionIterations = 3; // unity defaults
+			const int32_t positionIterations = 3; // unity defaults, TODO: Expose these in the editor
 			m_PhysicsWorld2D->Step(ts, velocityIterations, positionIterations);
 
 			auto view2 = m_Registry.view<Rigidbody2DComponent>();

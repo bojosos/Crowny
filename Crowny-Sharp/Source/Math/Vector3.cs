@@ -7,6 +7,7 @@ namespace Crowny
     /// A three dimensional vector.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
+    // TODO: Maybe IEquatable, IFormattable, for all classes
     public struct Vector3
     {
         public static readonly Vector3 zero = new Vector3(0.0f, 0.0f, 0.0f);

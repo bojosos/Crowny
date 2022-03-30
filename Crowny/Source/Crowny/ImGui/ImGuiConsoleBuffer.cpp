@@ -16,7 +16,7 @@ namespace Crowny
             else
             {
                 m_CollapsedMessageBuffer.push_back(message);
-                m_HashToIndex[message.Hash] = m_CollapsedMessageBuffer.size() - 1;
+                m_HashToIndex[message.Hash] = (uint32_t)m_CollapsedMessageBuffer.size() - 1;
             }
         // }
         // else

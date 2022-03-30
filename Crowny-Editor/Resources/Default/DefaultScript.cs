@@ -1,10 +1,10 @@
-using System;
-
+using System.Collection;
+using System.Collections.Generic;
 using Crowny;
 
-namespace Sandbox
+namespace #NAMESPACE#
 {
-    public class Default : EntityBehaviour
+    public class #CLASSNAME# : EntityBehaviour
     {
         // Called upon game object creation.
         public void Start()

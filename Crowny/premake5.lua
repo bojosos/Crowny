@@ -53,39 +53,61 @@ project "Crowny"
 		"%{IncludeDir.vkalloc}"
 	}
 
-	libdirs { "/usr/lib/mono-2.0", "%{wks.location}/Crowny/Dependencies/vulkan/lib", "C:/VulkanSDK/1.3.204.1/Lib", "C:/dev/Crowny/Crowny/Dependencies/vorbis/bin/Debug-windows-x86_64/libvorbis" }
-
 	links 
 	{
-		-- "GL", "Xxf86vm", "Xrandr", "pthread", "Xi", "dl", "uuid",
-		"imgui",
-		"freetype-gl",
 		"assimp",
-		"freetype2", "glfw", "glad",
-		"mono-2.0",
-		"yaml-cpp",
+		"Box2D",
+		"imgui",
 		"ImGuizmo",
-		"shaderc_shared",
-		"spirv-cross-c-shared",
-		"SPIRV-Tools-opt",
-		"SPIRV-Tools",
-		"SPIRV-Tools-link",
-		"vorbisenc",
-		"libvorbisfile_static",
-		"libvorbis_static",
-		"libogg",
-		"Box2D"
+
+		"freetype-gl",
+		"freetype2",
+
+		"glfw",
+		"glad",
+		
+		"yaml-cpp",
+		
+		"Crowny"
 	}
 
-
-	filter { "platforms:Win64" }
-		--links { "freetype2", "glfw", "glad", "opengl32.lib" }
+	filter "system:windows"
+		systemversion "latest"
 
 		defines
 		{
-			"CW_WIN"
+			"CW",
+			"CW_WINDOWS",
+			"GLFW_INCLUDE_NONE"
 		}
-		system("windows")
+
+		libdirs
+		{
+			"%{wks.location}/Crowny/Dependencies/vorbis/bin/Debug-windows-x86_64/libvorbis",
+			"C:/Program Files/Mono/lib",
+			"C:/VulkanSDK/1.3.204.1/Lib",
+			"C:/Program Files (x86)/OpenAL 1.1 SDK/libs/Win64",
+			"C:/dev/Crowny/Crowny/Dependencies/libogg/bin/Debug-windows-x86_64/libogg"
+		}
+
+		links
+		{
+			"OpenAL32.lib",
+
+			"vorbisenc.lib",
+			"libvorbisfile_static.lib",
+			"libvorbis.lib",
+			"libvorbis_static.lib",
+			"libogg.lib",
+
+			"mono-2.0-sgen.lib",
+
+			"vulkan-1.lib",
+			"shaderc_sharedd.lib",
+			"spirv-cross-cored.lib",
+
+			"Rpcrt4.lib"
+		}
 
 	filter { "platforms:Linux64"}
 		--links { "freetype2", "glfw", "glad" }

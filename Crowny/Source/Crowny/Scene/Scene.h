@@ -3,8 +3,6 @@
 #include "Crowny/Common/Timestep.h"
 #include "Crowny/Common/Uuid.h"
 
-#include "Crowny/Renderer/EditorCamera.h"
-
 #include <entt/entt.hpp>
 
 class b2World;
@@ -16,7 +14,14 @@ namespace Crowny
     class SceneSerializer;
     class SceneRenderer;
     class ScriptRuntime;
+    class ContactListener;
     struct CameraComponent;
+
+    struct Collision2D
+    {
+        Vector<glm::vec2> Points;
+        Vector<Entity> Colliders;
+    };
 
     class Scene
     {
@@ -67,7 +72,8 @@ namespace Crowny
         uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
 
         b2World* m_PhysicsWorld2D = nullptr;
+        ContactListener* m_ContactListener2D = nullptr;
 
-        Entity* m_RootEntity;
+        Entity* m_RootEntity = nullptr;
     };
 } // namespace Crowny

@@ -257,8 +257,19 @@ namespace Crowny
 
     private:
         typedef void(CW_THUNKCALL* OnStartThunkDef)(MonoObject*, MonoException**);
+        OnStartThunkDef m_OnStartThunk = nullptr;
         typedef void(CW_THUNKCALL* OnUpdateThunkDef)(MonoObject*, MonoException**);
+        OnUpdateThunkDef m_OnUpdateThunk = nullptr;
         typedef void(CW_THUNKCALL* OnDestroyThunkDef)(MonoObject*, MonoException**);
+        OnDestroyThunkDef m_OnDestroyThunk = nullptr;
+
+
+		typedef void(CW_THUNKCALL* OnCollisionEnterThunkDef) (MonoObject* object, MonoObject* data, MonoException** ex);
+		OnCollisionEnterThunkDef m_OnCollisionEnterThunk = nullptr;
+		typedef void(CW_THUNKCALL* OnCollisionStayThunkDef) (MonoObject* object, MonoObject* data, MonoException** ex);
+		OnCollisionStayThunkDef m_OnCollisionStayThunk = nullptr;
+		typedef void(CW_THUNKCALL* OnCollisionExitThunkDef) (MonoObject* object, MonoObject* data, MonoException** ex);
+		OnCollisionExitThunkDef m_OnCollisionExitThunk = nullptr;
 
         String m_TypeName;
         String m_Namespace;
@@ -267,9 +278,6 @@ namespace Crowny
         Ref<SerializableObjectInfo> m_ObjectInfo;
         MonoClass* m_Class = nullptr;
         uint32_t m_Handle = 0;
-        OnStartThunkDef m_OnStartThunk = nullptr;
-        OnUpdateThunkDef m_OnUpdateThunk = nullptr;
-        OnDestroyThunkDef m_OnDestroyThunk = nullptr;
         ScriptEntityBehaviour* m_ScriptEntityBehaviour = nullptr;
     };
 
@@ -326,7 +334,26 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<Rigidbody2DComponent>(Entity e);
 
-    struct BoxCollider2DComponent : public ComponentBase
+    struct Collider2D : ComponentBase
+    {
+        Collider2D() : ComponentBase() { }
+        void OnCollisionBegin(const Collision2D& col)
+        {
+            if (CallbackEnter)
+            CallbackEnter(col);
+        }
+
+        void OnCollisionEnd(const Collision2D& col)
+        {
+            if (CallbackExit)
+                CallbackExit(col);
+        }
+
+        std::function<void(const Collision2D&)> CallbackEnter;
+        std::function<void(const Collision2D&)> CallbackExit;
+    };
+
+    struct BoxCollider2DComponent : public Collider2D
     {
         glm::vec2 Offset = { 0.0f, 0.0f };
         glm::vec2 Size = { 0.5f, 0.5f };
@@ -335,13 +362,13 @@ namespace Crowny
 
         void* RuntimeFixture = nullptr; // duplicating during runtime will be wrong
 
-        BoxCollider2DComponent() : ComponentBase() {}
+        BoxCollider2DComponent() : Collider2D() {}
         BoxCollider2DComponent(const BoxCollider2DComponent& collider) = default;
     };
 
     template <> void ComponentEditorWidget<BoxCollider2DComponent>(Entity e);
 
-    struct CircleCollider2DComponent : public ComponentBase
+    struct CircleCollider2DComponent : public Collider2D
     {
         glm::vec2 Offset = { 0.0f, 0.0f };
         float Radius = 0.5f;
@@ -351,7 +378,7 @@ namespace Crowny
 
         void* RuntimeFixture = nullptr; // duplicating during runtime will be wrong
 
-        CircleCollider2DComponent() : ComponentBase() {}
+        CircleCollider2DComponent() : Collider2D() {}
         CircleCollider2DComponent(const CircleCollider2DComponent& collider) = default;
     };
 
