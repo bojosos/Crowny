@@ -29,7 +29,7 @@ namespace Crowny
         void CreateEmptyEntity(Entity parent);
 
     public:
-        static void SetSelectedEntity(Entity entity) { s_SelectedEntity = entity; }
+        void SetSelectedEntity(Entity entity) { s_SelectedEntity = entity; m_SelectedItems.clear(); m_SelectedItems.insert(entity); }
         static Entity GetSelectedEntity() { return s_SelectedEntity; }
 
     private:
