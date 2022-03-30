@@ -339,7 +339,7 @@ namespace Crowny
                 if (rb2d)
                 {
 					auto& rb2dc = deserialized.AddComponent<Rigidbody2DComponent>();
-					rb2dc.SetBodyType((BodyType)rb2d["BodyType"].as<uint32_t>());
+					rb2dc.SetBodyType((RigidbodyBodyType)rb2d["BodyType"].as<uint32_t>());
                     rb2dc.SetMass(rb2d["Mass"].as<float>());
                     rb2dc.SetGravityScale(rb2d["GravityScale"].as<float>());
                     rb2dc.SetConstraints((Rigidbody2DConstraints)rb2d["Constraints"].as<uint32_t>());

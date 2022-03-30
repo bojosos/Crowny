@@ -59,15 +59,15 @@ namespace Crowny
 
 	static void CopyAllExistingComponents(Entity dst, Entity src) { CopyComponentIfExists(AllComponents{}, dst, src); }
 
-	static b2BodyType GetBox2DType(BodyType type)
+	static b2BodyType GetBox2DType(RigidbodyBodyType type)
 	{
 		switch (type)
 		{
-		case BodyType::Static:
+		case RigidbodyBodyType::Static:
 			return b2_staticBody;
-		case BodyType::Dynamic:
+		case RigidbodyBodyType::Dynamic:
 			return b2_dynamicBody;
-		case BodyType::Kinematic:
+		case RigidbodyBodyType::Kinematic:
 			return b2_kinematicBody;
 		}
 		CW_ENGINE_ASSERT(false);
@@ -238,6 +238,8 @@ namespace Crowny
 				auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
 
 				b2BodyDef bodyDef;
+				bodyDef.allowSleep = rb2d.GetSleepMode() != RigidbodySleepMode::NeverSleep;
+				bodyDef.awake = rb2d.GetSleepMode() == RigidbodySleepMode::StartAwake || rb2d.GetSleepMode() == RigidbodySleepMode::NeverSleep;
 				bodyDef.type = GetBox2DType(rb2d.GetBodyType());
 				bodyDef.position.Set(transform.Position.x, transform.Position.y);
 				bodyDef.angle = transform.Rotation.z;

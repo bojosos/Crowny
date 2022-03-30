@@ -21,12 +21,12 @@ namespace Crowny
 		MetaData.ScriptClass->AddInternalCall("Internal_AddTorque", (void*)&Internal_AddTorque);
 	}
 
-	BodyType ScriptRigidbody2D::Internal_GetBodyType(ScriptRigidbody2D* thisPtr)
+	RigidbodyBodyType ScriptRigidbody2D::Internal_GetBodyType(ScriptRigidbody2D* thisPtr)
 	{
 		return thisPtr->GetComponent().GetBodyType();
 	}
 
-	void ScriptRigidbody2D::Internal_SetBodyType(ScriptRigidbody2D* thisPtr, BodyType bodyType)
+	void ScriptRigidbody2D::Internal_SetBodyType(ScriptRigidbody2D* thisPtr, RigidbodyBodyType bodyType)
 	{
 		thisPtr->GetComponent().SetBodyType(bodyType);
 	}
