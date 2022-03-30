@@ -1,7 +1,7 @@
 #include "cwepch.h"
 
-#include "Panels/UIUtils.h"
 #include "Editor/EditorDefaults.h"
+#include "Panels/UIUtils.h"
 
 #include <imgui.h>
 

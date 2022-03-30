@@ -18,7 +18,7 @@ namespace Crowny
 
     PersistentScriptObjectBase::PersistentScriptObjectBase(MonoObject* instance) : ScriptObjectBase(instance) {}
 
-    ScriptObjectWrapper::ScriptObjectWrapper(MonoObject* instance) : ScriptObject(instance) { }
+    ScriptObjectWrapper::ScriptObjectWrapper(MonoObject* instance) : ScriptObject(instance) {}
 
     void ScriptObjectWrapper::InitRuntimeData()
     {

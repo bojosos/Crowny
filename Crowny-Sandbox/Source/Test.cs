@@ -169,7 +169,7 @@ namespace Sandbox
             foreach (Vector2 vec in collision.points)
                 Debug.Log(vec);
             foreach (Entity e in collision.colliders)
-                Debug.Log(e.GetName());
+                Debug.Log(e.name);
         }
     }
 }

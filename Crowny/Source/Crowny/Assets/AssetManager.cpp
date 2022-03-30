@@ -81,50 +81,50 @@ namespace Crowny
                 Ref<PixelData> pixelData = texture.AllocatePixelData(face, mip);
                 texture.ReadData(*pixelData, face, mip);
                 archive(cereal::binary_data((uint8_t*)pixelData->GetData(),
-                                            pixelData->GetSize())); // TODO: Save more pixel data (wat does this mean, maybe pixel data serializer?)?
+                                            pixelData->GetSize())); // TODO: Save more pixel data (wat does this mean,
+                                                                    // maybe pixel data serializer?)?
             }
         }
     }
 
     void Save(BinaryDataStreamOutputArchive& archive, const ScriptCode& code)
-	{
-		archive(cereal::base_class<Asset>(&code));
+    {
+        archive(cereal::base_class<Asset>(&code));
         archive(code.m_Source);
     }
 
-	void Load(BinaryDataStreamInputArchive& archive, ScriptCode& code)
-	{
-		archive(cereal::base_class<Asset>(&code));
-		archive(code.m_Source);
-	}
+    void Load(BinaryDataStreamInputArchive& archive, ScriptCode& code)
+    {
+        archive(cereal::base_class<Asset>(&code));
+        archive(code.m_Source);
+    }
 
+    template <typename Archive> void Serialize(Archive& archive, TextureImportOptions& importOptions)
+    {
+        archive(importOptions.AutomaticFormat, importOptions.CpuCached, importOptions.Format,
+                importOptions.GenerateMips, importOptions.MaxMip, importOptions.Shape, importOptions.SRGB);
+    }
 
-	template <typename Archive> void Serialize(Archive& archive, TextureImportOptions& importOptions)
-	{
-		archive(importOptions.AutomaticFormat, importOptions.CpuCached, importOptions.Format,
-			importOptions.GenerateMips, importOptions.MaxMip, importOptions.Shape, importOptions.SRGB);
-	}
+    template <typename Archive> void Serialize(Archive& archive, AudioClipImportOptions& importOptions)
+    {
+        archive(importOptions.Format, importOptions.Quality, importOptions.ReadMode, importOptions.BitDepth,
+                importOptions.Is3D);
+    }
 
-	template <typename Archive> void Serialize(Archive& archive, AudioClipImportOptions& importOptions)
-	{
-		archive(importOptions.Format, importOptions.Quality, importOptions.ReadMode, importOptions.BitDepth,
-			importOptions.Is3D);
-	}
+    void Save(BinaryDataStreamOutputArchive& archive, const ShaderImportOptions& importOptions)
+    {
+        archive(importOptions.Language, importOptions.m_Defines);
+    }
 
-	void Save(BinaryDataStreamOutputArchive& archive, const ShaderImportOptions& importOptions)
-	{
-		archive(importOptions.Language, importOptions.m_Defines);
-	}
+    void Load(BinaryDataStreamInputArchive& archive, ShaderImportOptions& importOptions)
+    {
+        archive(importOptions.Language, importOptions.m_Defines);
+    }
 
-	void Load(BinaryDataStreamInputArchive& archive, ShaderImportOptions& importOptions)
-	{
-		archive(importOptions.Language, importOptions.m_Defines);
-	}
-
-	template <typename Archive> void Serialize(Archive& archive, CSharpScriptImportOptions& importOptions)
-	{
-		archive(importOptions.IsEditorScript);
-	}
+    template <typename Archive> void Serialize(Archive& archive, CSharpScriptImportOptions& importOptions)
+    {
+        archive(importOptions.IsEditorScript);
+    }
 
     template <class Archive> void Serialize(Archive& archive, UniformDesc& desc)
     {
@@ -139,13 +139,13 @@ namespace Crowny
         archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->Type);
         archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->Description);
 
-		archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->Data);
-		archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->EntryPoint);
-		archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->Type);
-		archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->Description);
+        archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->Data);
+        archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->EntryPoint);
+        archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->Type);
+        archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->Description);
         // archive(shader.m_ShaderStages[FRAGMENT_SHADER]);
         // archive(shader.m_ShaderStages);
-        //for (uint32_t i = 0; i < SHADER_COUNT; i++)
+        // for (uint32_t i = 0; i < SHADER_COUNT; i++)
         //{
         //    // if (shader.m_ShaderStages[i])
         //        archive(shader.m_ShaderStages[i]);
@@ -155,18 +155,18 @@ namespace Crowny
     void Load(BinaryDataStreamInputArchive& archive, Shader& shader)
     {
         Ref<BinaryShaderData> data = CreateRef<BinaryShaderData>();
-		archive(data->Data);
-		archive(data->EntryPoint);
-		archive(data->Type);
-		archive(data->Description);
+        archive(data->Data);
+        archive(data->EntryPoint);
+        archive(data->Type);
+        archive(data->Description);
         shader.m_ShaderStages[VERTEX_SHADER] = ShaderStage::Create(data);
 
-		data = CreateRef<BinaryShaderData>();
-		archive(data->Data);
-		archive(data->EntryPoint);
-		archive(data->Type);
-		archive(data->Description);
-		shader.m_ShaderStages[FRAGMENT_SHADER] = ShaderStage::Create(data);
+        data = CreateRef<BinaryShaderData>();
+        archive(data->Data);
+        archive(data->EntryPoint);
+        archive(data->Type);
+        archive(data->Description);
+        shader.m_ShaderStages[FRAGMENT_SHADER] = ShaderStage::Create(data);
         // archive(shader.m_ShaderStages);
         /*for (uint32_t i = 0; i < SHADER_COUNT; i++)
             archive(shader.m_ShaderStages[i]);*/
@@ -194,7 +194,8 @@ namespace Crowny
         return Load(uuid, filepath, keepInternalRef, keepSourceData);
     }
 
-    AssetHandle<Asset> AssetManager::Load(const UUID& uuid, const Path& filepath, bool keepInternalRef, bool keepSourceData)
+    AssetHandle<Asset> AssetManager::Load(const UUID& uuid, const Path& filepath, bool keepInternalRef,
+                                          bool keepSourceData)
     {
         /*
         auto findIter = m_LoadedAssets.find(uuid);

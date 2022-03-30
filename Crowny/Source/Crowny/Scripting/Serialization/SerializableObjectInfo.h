@@ -104,7 +104,7 @@ namespace Crowny
             return MonoUtils::BindGenericParams(genericListClass->GetInternalPtr(), genParams, 1);
         }*/
         virtual SerializableType GetType() override { return SerializableType::List; }
-    
+
         Ref<SerializableTypeInfo> m_ElementType;
     };
 
@@ -137,7 +137,7 @@ namespace Crowny
         String m_Name;
         uint32_t m_FieldId;
         uint32_t m_ParentTypeId;
-        
+
         Ref<SerializableTypeInfo> m_TypeInfo;
         ScriptFieldFlags m_Flags;
     };
@@ -162,7 +162,7 @@ namespace Crowny
         virtual MonoObject* GetAttribute(MonoClass* monoClass) override;
         virtual MonoObject* GetValue(MonoObject* instance) const override;
         virtual void SetValue(MonoObject* instance, void* value) const override;
-        
+
         MonoProperty* m_Property;
     };
 
@@ -173,7 +173,8 @@ namespace Crowny
 
         String GetFullTypeName() const { return m_TypeInfo->m_TypeNamespace + "." + m_TypeInfo->m_TypeName; }
 
-        Ref<SerializableMemberInfo> FindMatchingField(const Ref<SerializableMemberInfo>& fieldInfo, const Ref<SerializableTypeInfo>& fieldTypeInfo) const;
+        Ref<SerializableMemberInfo> FindMatchingField(const Ref<SerializableMemberInfo>& fieldInfo,
+                                                      const Ref<SerializableTypeInfo>& fieldTypeInfo) const;
 
         Ref<SerializableTypeInfoObject> m_TypeInfo;
         MonoClass* m_MonoClass;
@@ -193,4 +194,4 @@ namespace Crowny
         UnorderedMap<uint32_t, Ref<SerializableObjectInfo>> m_ObjectInfos;
     };
 
-}
+} // namespace Crowny

@@ -2,10 +2,10 @@
 
 #include "Crowny/Serialization/SceneSerializer.h"
 
+#include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/Uuid.h"
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Common/Yaml.h"
-#include "Crowny/Common/FileSystem.h"
 
 #include "Crowny/Ecs/Components.h"
 
@@ -245,7 +245,7 @@ namespace Crowny
             m_Scene->m_Name = sceneName;
             m_Scene->m_Filepath = filepath;
 
-            const YAML::Node&  entities = data["Entities"];
+            const YAML::Node& entities = data["Entities"];
             if (entities)
             {
                 for (const YAML::Node& entity : entities)
@@ -274,7 +274,8 @@ namespace Crowny
                     if (camera)
                     {
                         auto& cc = deserialized.AddComponent<CameraComponent>();
-                        cc.Camera.SetProjectionType((SceneCamera::CameraProjection)camera["ProjectionType"].as<uint32_t>());
+                        cc.Camera.SetProjectionType(
+                          (SceneCamera::CameraProjection)camera["ProjectionType"].as<uint32_t>());
                         cc.Camera.SetPerspectiveVerticalFOV(camera["PerspectiveFOV"].as<float>());
                         cc.Camera.SetPerspectiveNearClip(camera["PerspectiveNear"].as<float>());
                         cc.Camera.SetPerspectiveFarClip(camera["PerspectiveFar"].as<float>());
@@ -342,8 +343,8 @@ namespace Crowny
                     const YAML::Node& rb2d = entity["Rigidbody2D"];
                     if (rb2d)
                     {
-					    auto& rb2dc = deserialized.AddComponent<Rigidbody2DComponent>();
-					    rb2dc.SetBodyType((RigidbodyBodyType)rb2d["BodyType"].as<uint32_t>());
+                        auto& rb2dc = deserialized.AddComponent<Rigidbody2DComponent>();
+                        rb2dc.SetBodyType((RigidbodyBodyType)rb2d["BodyType"].as<uint32_t>());
                         rb2dc.SetMass(rb2d["Mass"].as<float>());
                         rb2dc.SetGravityScale(rb2d["GravityScale"].as<float>());
                         if (const YAML::Node& collisionDetectionMode = entity["CollisionDetectionMode"])
@@ -354,22 +355,22 @@ namespace Crowny
                     }
 
                     const YAML::Node& bc2d = entity["BoxCollider2D"];
-				    if (bc2d)
-				    {
-					    auto& bc2dc = deserialized.AddComponent<BoxCollider2DComponent>();
-					    bc2dc.Offset = bc2d["Offset"].as<glm::vec2>();
+                    if (bc2d)
+                    {
+                        auto& bc2dc = deserialized.AddComponent<BoxCollider2DComponent>();
+                        bc2dc.Offset = bc2d["Offset"].as<glm::vec2>();
                         bc2dc.Size = bc2d["Size"].as<glm::vec2>();
                         bc2dc.IsTrigger = bc2d["IsTrigger"].as<bool>();
-				    }
+                    }
 
                     const YAML::Node& cc2d = entity["CircleCollider2D"];
-				    if (cc2d)
-				    {
-					    auto& cc2dc = deserialized.AddComponent<CircleCollider2DComponent>();
+                    if (cc2d)
+                    {
+                        auto& cc2dc = deserialized.AddComponent<CircleCollider2DComponent>();
                         cc2dc.Offset = cc2d["Offset"].as<glm::vec2>();
                         cc2dc.Radius = cc2d["Size"].as<float>();
                         cc2dc.IsTrigger = cc2d["IsTrigger"].as<bool>();
-				    }
+                    }
 
                     const YAML::Node& rel = entity["RelationshipComponent"];
                     if (rel)

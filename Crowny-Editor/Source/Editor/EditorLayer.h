@@ -56,7 +56,7 @@ namespace Crowny
         void OpenScene(const Path& filepath);
         void SaveActiveScene();
         void SaveActiveSceneAs();
-        
+
     private:
         void RenderOverlay();
         void AddRecentEntry(const Path& path);

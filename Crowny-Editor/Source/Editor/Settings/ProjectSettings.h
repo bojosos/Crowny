@@ -12,7 +12,8 @@ namespace Crowny
     struct ProjectSettings
     {
         Path LastAssetBrowserSelectedEntry;
-        String LastOpenScenePath; // This will probably be replaced by the UUID of a scene, and a scene will most likely be a prefab.
+        String LastOpenScenePath; // This will probably be replaced by the UUID of a scene, and a scene will most likely
+                                  // be a prefab.
         int32_t GizmoMode;
         glm::vec3 EditorCameraPosition;
         glm::vec3 EditorCameraFocalPoint;

@@ -120,7 +120,7 @@ namespace Crowny
 
         glfwSetScrollCallback(m_Window, [](GLFWwindow* window, double xOffset, double yOffset) {
             WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
-            
+
             MouseScrolledEvent event((float)xOffset, (float)yOffset);
             data.EventCallback(event);
         });
@@ -191,4 +191,4 @@ namespace Crowny
 
     bool LinuxWindow::IsVSync() const { return m_Data.VSync; }
 } // namespace Crowny
-// #endif
+  // #endif

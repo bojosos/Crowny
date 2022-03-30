@@ -23,7 +23,7 @@ namespace Crowny
                                            { 0.5f, -0.5f, 0.0f, 1.0f },
                                            { 0.5f, 0.5f, 0.0f, 1.0f },
                                            { -0.5f, 0.5f, 0.0f, 1.0f } };
-   
+
     struct VertexData
     {
         glm::vec4 Position;
@@ -112,23 +112,21 @@ namespace Crowny
             desc.VertexShader = vertex;
 
             s_Data->QuadPipeline = GraphicsPipeline::Create(desc, s_Data->QuadVertexBuffer->GetLayout());
-            s_Data->QuadProjectionView =
-            UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("VP").BlockSize, BufferUsage::DYNAMIC_DRAW);
+            s_Data->QuadProjectionView = UniformBufferBlock::Create(
+              vertex->GetUniformDesc()->Uniforms.at("VP").BlockSize, BufferUsage::DYNAMIC_DRAW);
             s_Data->QuadUniforms = UniformParams::Create(s_Data->QuadPipeline);
             s_Data->QuadUniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "VP", s_Data->QuadProjectionView);
             s_Data->QuadBuffer = s_Data->QuadTmpBuffer = new VertexData[RENDERER_SPRITE_SIZE];
             delete[] indices;
         }
         {
-            s_Data->CircleVertexBuffer = VertexBuffer::Create(s_Data->MaxLineVertices * sizeof(CircleVertex), BufferUsage::DYNAMIC_DRAW);
+            s_Data->CircleVertexBuffer =
+              VertexBuffer::Create(s_Data->MaxLineVertices * sizeof(CircleVertex), BufferUsage::DYNAMIC_DRAW);
             BufferLayout layout = {
-                            { ShaderDataType::Float3, "a_WorldPosition" },
-                            { ShaderDataType::Float3, "a_LocalPosition" },
-                            { ShaderDataType::Float4, "a_Color" },
-                            { ShaderDataType::Float, "a_Thickness" },
-                            { ShaderDataType::Float, "a_Fade" },
-                            { ShaderDataType::Int, "a_Id" }
-                            };
+                { ShaderDataType::Float3, "a_WorldPosition" }, { ShaderDataType::Float3, "a_LocalPosition" },
+                { ShaderDataType::Float4, "a_Color" },         { ShaderDataType::Float, "a_Thickness" },
+                { ShaderDataType::Float, "a_Fade" },           { ShaderDataType::Int, "a_Id" }
+            };
             s_Data->CircleVertexBuffer->SetLayout(layout);
 
             AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>("Resources/Shaders/Circle.asset");
@@ -141,10 +139,11 @@ namespace Crowny
 
             s_Data->CirclePipeline = GraphicsPipeline::Create(desc, layout);
             s_Data->CircleBuffer = s_Data->CircleTmpBuffer = new CircleVertex[s_Data->MaxLineVertices];
-            s_Data->CircleProjectionView =
-            UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("Camera").BlockSize, BufferUsage::DYNAMIC_DRAW);
+            s_Data->CircleProjectionView = UniformBufferBlock::Create(
+              vertex->GetUniformDesc()->Uniforms.at("Camera").BlockSize, BufferUsage::DYNAMIC_DRAW);
             s_Data->CircleUniforms = UniformParams::Create(s_Data->CirclePipeline);
-            s_Data->CircleUniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "Camera", s_Data->CircleProjectionView);
+            s_Data->CircleUniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "Camera",
+                                                          s_Data->CircleProjectionView);
         }
         TextureParameters params;
         params.Width = 1;
@@ -229,7 +228,8 @@ namespace Crowny
         FillRect(transform, texture, color, entityId);
     }
 
-    void Renderer2D::DrawCircle(const glm::mat4& transform, const glm::vec4& color, float thickness, float fade, int32_t entityId)
+    void Renderer2D::DrawCircle(const glm::mat4& transform, const glm::vec4& color, float thickness, float fade,
+                                int32_t entityId)
     {
         for (uint32_t i = 0; i < 4; i++)
         {
@@ -250,35 +250,37 @@ namespace Crowny
         float length = glm::length(p1 - p2);
         glm::vec3 center = (p1 + p2) * 0.5f;
         float angle = glm::atan(glm::abs(p1.y - p2.y) / glm::abs(p1.x - p2.x));
-        glm::mat4 transform = glm::translate(glm::mat4(1.0f), center) * glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.0f, 0.0f, 1.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(length, thickness, 1.0f));
+        glm::mat4 transform = glm::translate(glm::mat4(1.0f), center) *
+                              glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.0f, 0.0f, 1.0f)) *
+                              glm::scale(glm::mat4(1.0f), glm::vec3(length, thickness, 1.0f));
         FillRect(transform, nullptr, color, 0);
     }
 
     void Renderer2D::DrawRect(const glm::vec3& position, const glm::vec2& size, const glm::vec4& color, float thickness)
-	{
-		glm::vec3 p0 = glm::vec3(position.x - size.x * 0.5f, position.y - size.y * 0.5f, position.z);
-		glm::vec3 p1 = glm::vec3(position.x + size.x * 0.5f, position.y - size.y * 0.5f, position.z);
-		glm::vec3 p2 = glm::vec3(position.x + size.x * 0.5f, position.y + size.y * 0.5f, position.z);
-		glm::vec3 p3 = glm::vec3(position.x - size.x * 0.5f, position.y + size.y * 0.5f, position.z);
+    {
+        glm::vec3 p0 = glm::vec3(position.x - size.x * 0.5f, position.y - size.y * 0.5f, position.z);
+        glm::vec3 p1 = glm::vec3(position.x + size.x * 0.5f, position.y - size.y * 0.5f, position.z);
+        glm::vec3 p2 = glm::vec3(position.x + size.x * 0.5f, position.y + size.y * 0.5f, position.z);
+        glm::vec3 p3 = glm::vec3(position.x - size.x * 0.5f, position.y + size.y * 0.5f, position.z);
 
-		DrawLine(p0, p1, color, thickness);
-		DrawLine(p1, p2, color, thickness);
-		DrawLine(p2, p3, color, thickness);
-		DrawLine(p3, p0, color, thickness);
-	}
+        DrawLine(p0, p1, color, thickness);
+        DrawLine(p1, p2, color, thickness);
+        DrawLine(p2, p3, color, thickness);
+        DrawLine(p3, p0, color, thickness);
+    }
 
-	void Renderer2D::DrawRect(const glm::mat4& transform, const glm::vec4& color, float thickness)
-	{
+    void Renderer2D::DrawRect(const glm::mat4& transform, const glm::vec4& color, float thickness)
+    {
         // TODO: Add the thicknes to the calculation since when it is a large value the corners aren't rendered properly
-		glm::vec3 lineVertices[4];
-		for (size_t i = 0; i < 4; i++)
-			lineVertices[i] = transform * QuadVertices[i];
+        glm::vec3 lineVertices[4];
+        for (size_t i = 0; i < 4; i++)
+            lineVertices[i] = transform * QuadVertices[i];
 
-		DrawLine(lineVertices[0], lineVertices[1], color, thickness);
-		DrawLine(lineVertices[1], lineVertices[2], color, thickness);
-		DrawLine(lineVertices[2], lineVertices[3], color, thickness);
-		DrawLine(lineVertices[3], lineVertices[0], color, thickness);
-	}
+        DrawLine(lineVertices[0], lineVertices[1], color, thickness);
+        DrawLine(lineVertices[1], lineVertices[2], color, thickness);
+        DrawLine(lineVertices[2], lineVertices[3], color, thickness);
+        DrawLine(lineVertices[3], lineVertices[0], color, thickness);
+    }
 
     void Renderer2D::DrawString(const String& text, float x, float y, const Ref<Font>& font, const glm::vec4& color)
     {
@@ -424,8 +426,8 @@ namespace Crowny
             RenderAPI::Get().SetGraphicsPipeline(s_Data->QuadPipeline);
             RenderAPI::Get().SetVertexBuffers(0, &s_Data->QuadVertexBuffer, 1);
             RenderAPI::Get().SetIndexBuffer(s_Data->QuadIndexBuffer);
-            void* data =
-            s_Data->QuadVertexBuffer->Map(0, s_Data->QuadVertexCount * sizeof(VertexData), GpuLockOptions::WRITE_DISCARD);
+            void* data = s_Data->QuadVertexBuffer->Map(0, s_Data->QuadVertexCount * sizeof(VertexData),
+                                                       GpuLockOptions::WRITE_DISCARD);
             std::memcpy(data, s_Data->QuadTmpBuffer, s_Data->QuadVertexCount * sizeof(VertexData));
             s_Data->QuadVertexBuffer->Unmap();
             for (uint32_t i = 0; i < 8; i++)
@@ -441,7 +443,8 @@ namespace Crowny
             RenderAPI::Get().SetGraphicsPipeline(s_Data->CirclePipeline);
             RenderAPI::Get().SetVertexBuffers(0, &s_Data->CircleVertexBuffer, 1);
             RenderAPI::Get().SetIndexBuffer(s_Data->QuadIndexBuffer);
-            void* data = s_Data->CircleVertexBuffer->Map(0, s_Data->CircleVertexCount * sizeof(CircleVertex), GpuLockOptions::WRITE_DISCARD);
+            void* data = s_Data->CircleVertexBuffer->Map(0, s_Data->CircleVertexCount * sizeof(CircleVertex),
+                                                         GpuLockOptions::WRITE_DISCARD);
             std::memcpy(data, s_Data->CircleTmpBuffer, s_Data->CircleVertexCount * sizeof(CircleVertex));
             s_Data->CircleVertexBuffer->Unmap();
             RenderAPI::Get().SetUniforms(s_Data->CircleUniforms);

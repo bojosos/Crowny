@@ -18,4 +18,4 @@ namespace Crowny
         virtual Ref<ImportOptions> CreateImportOptions() const override;
     };
 
-}
+} // namespace Crowny

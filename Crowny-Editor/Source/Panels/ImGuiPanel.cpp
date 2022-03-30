@@ -31,6 +31,7 @@ namespace Crowny
 
     void ImGuiPanel::RegisterInMenu(ImGuiMenu* menu)
     {
-        menu->AddItem(new ImGuiMenuItem(m_Name, "", [&](auto& event) { /*m_Shown = !m_Shown;*/ }, &m_Shown));
+        menu->AddItem(new ImGuiMenuItem(
+          m_Name, "", [&](auto& event) { /*m_Shown = !m_Shown;*/ }, &m_Shown));
     }
 } // namespace Crowny

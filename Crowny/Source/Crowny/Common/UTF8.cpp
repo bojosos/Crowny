@@ -54,8 +54,7 @@ namespace Crowny
         return output;
     }
 
-    template <typename T>
-    T UTF8To32(T begin, T end, char32_t& output, char32_t invalid = 0)
+    template <typename T> T UTF8To32(T begin, T end, char32_t& output, char32_t invalid = 0)
     {
         if (begin >= end)
             return begin;
@@ -78,23 +77,46 @@ namespace Crowny
             output = invalid;
             return end;
         }
-        
+
         output = 0;
-		switch (numBytes)
-		{
-		case 6: output += (UINT8)(*begin); ++begin; output <<= 6; [[fallthrough]];
-		case 5: output += (UINT8)(*begin); ++begin; output <<= 6; [[fallthrough]];
-		case 4: output += (UINT8)(*begin); ++begin; output <<= 6; [[fallthrough]];
-		case 3: output += (UINT8)(*begin); ++begin; output <<= 6; [[fallthrough]];
-		case 2: output += (UINT8)(*begin); ++begin; output <<= 6; [[fallthrough]];
-		case 1: output += (UINT8)(*begin); ++begin;
-		default: break;
-		}
+        switch (numBytes)
+        {
+        case 6:
+            output += (UINT8)(*begin);
+            ++begin;
+            output <<= 6;
+            [[fallthrough]];
+        case 5:
+            output += (UINT8)(*begin);
+            ++begin;
+            output <<= 6;
+            [[fallthrough]];
+        case 4:
+            output += (UINT8)(*begin);
+            ++begin;
+            output <<= 6;
+            [[fallthrough]];
+        case 3:
+            output += (UINT8)(*begin);
+            ++begin;
+            output <<= 6;
+            [[fallthrough]];
+        case 2:
+            output += (UINT8)(*begin);
+            ++begin;
+            output <<= 6;
+            [[fallthrough]];
+        case 1:
+            output += (UINT8)(*begin);
+            ++begin;
+        default:
+            break;
+        }
 
-		constexpr uint32_t offsets[6] = { 0x00000000, 0x00003080, 0x000E2080, 0x03C82080, 0xFA082080, 0x82082080 };
-		output -= offsets[numBytes - 1];
+        constexpr uint32_t offsets[6] = { 0x00000000, 0x00003080, 0x000E2080, 0x03C82080, 0xFA082080, 0x82082080 };
+        output -= offsets[numBytes - 1];
 
-		return begin;
+        return begin;
     }
 
     template <typename T> T UTF16ToUTF32(T begin, T end, char32_t& output, char32_t invalidChar = 0)
@@ -128,8 +150,7 @@ namespace Crowny
         return begin;
     }
 
-    template <typename T>
-    T UTF32ToWide(char32_t input, T output, uint32_t maxElems, wchar_t invalidChar = 0)
+    template <typename T> T UTF32ToWide(char32_t input, T output, uint32_t maxElems, wchar_t invalidChar = 0)
     {
         if (sizeof(wchar_t) == 4)
         {
@@ -141,8 +162,7 @@ namespace Crowny
             return UTF32To16(input, output, maxElems, invalidChar);
     }
 
-    template <typename T>
-    T UTF32To16(char32_t input, T output, uint32_t maxElems, char16_t invalidChar = 0)
+    template <typename T> T UTF32To16(char32_t input, T output, uint32_t maxElems, char16_t invalidChar = 0)
     {
         if (maxElems == 0)
             return output;
@@ -182,8 +202,7 @@ namespace Crowny
         return output;
     }
 
-    template <typename T>
-    T WideToUTF32(T begin, T end, char32_t& output, char32_t invalid = 0)
+    template <typename T> T WideToUTF32(T begin, T end, char32_t& output, char32_t invalid = 0)
     {
         if (sizeof(wchar_t) == 4)
         {

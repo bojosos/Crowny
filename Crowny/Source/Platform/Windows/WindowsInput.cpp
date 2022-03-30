@@ -181,11 +181,11 @@ namespace Crowny
         return { (float)xpos, (float)ypos };
     }
 
-	void Input::OnMouseScroll(float xOffset, float yOffset)
-	{
-		m_FrameScrollX += xOffset;
-		m_FrameScrollY += yOffset;
-	}
+    void Input::OnMouseScroll(float xOffset, float yOffset)
+    {
+        m_FrameScrollX += xOffset;
+        m_FrameScrollY += yOffset;
+    }
 
     float Input::GetMouseX() { return GetMousePosition().x; }
 
@@ -201,15 +201,9 @@ namespace Crowny
 
     bool Input::IsMouseGrabbed() { return s_Grabbed; }
 
-    float Input::GetMouseScrollX()
-    {
-        return m_FrameScrollX;
-    }
+    float Input::GetMouseScrollX() { return m_FrameScrollX; }
 
-    float Input::GetMouseScrollY()
-    {
-        return m_FrameScrollY;
-    }
+    float Input::GetMouseScrollY() { return m_FrameScrollY; }
 
     void Input::OnUpdate()
     {
