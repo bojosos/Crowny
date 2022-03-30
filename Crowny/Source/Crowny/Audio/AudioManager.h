@@ -42,7 +42,7 @@ namespace Crowny
         void RegisterSource(AudioSource* source);
         void UnregisterSource(AudioSource* source);
 
-        void Play(const String& name, const Ref<AudioClip>& clip, const glm::vec3& position = glm::vec3(0.0f), float volume = 1.0f);
+        void Play(const String& name, const AssetHandle<AudioClip>& clip, const glm::vec3& position = glm::vec3(0.0f), float volume = 1.0f);
         void OnUpdate();
         void StopManualSources();
 

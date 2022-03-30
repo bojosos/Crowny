@@ -7,7 +7,7 @@
 
 namespace Crowny
 {
-    PBRMaterial::PBRMaterial(const Ref<Shader>& shader) : Material(shader)
+    PBRMaterial::PBRMaterial(const AssetHandle<Shader>& shader) : Material(shader)
     {
         BufferLayout layout = { { ShaderDataType::Float3, "a_Position" },
                                 { ShaderDataType::Float3, "a_Normal" },

@@ -47,7 +47,7 @@ namespace Crowny
         s_Data = new ForwardRendererData();
         Ref<UniformParams>& uniforms = InspectorPanel::GetSelectedMaterial()->GetUniformParams();
 
-        Ref<Shader> shader = AssetManager::Get().Load<Shader>(PBRIBL_SHADER_PATH);
+        AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(PBRIBL_SHADER_PATH);
         // Ref<Shader> shader = Importer::Get().Import<Shader>(PBRIBL_SHADER_PATH);
         Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
         Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);

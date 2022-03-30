@@ -95,7 +95,7 @@ namespace Crowny
             }
 
             s_Data->QuadIndexBuffer = IndexBuffer::Create(indices, RENDERER_INDICES_SIZE);
-            Ref<Shader> shader = AssetManager::Get().Load<Shader>(RENDERER2D_SHADER_PATH);
+            AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(RENDERER2D_SHADER_PATH);
             // Ref<Shader> shader = Importer::Get().Import<Shader>(RENDERER2D_SHADER_PATH);
             Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
             Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
@@ -131,7 +131,7 @@ namespace Crowny
                             };
             s_Data->CircleVertexBuffer->SetLayout(layout);
 
-            Ref<Shader> shader = AssetManager::Get().Load<Shader>("Resources/Shaders/Circle.asset");
+            AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>("Resources/Shaders/Circle.asset");
             // Ref<Shader> shader = Importer::Get().Import<Shader>("Resources/Shaders/Circle.glsl");
             Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
             Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);

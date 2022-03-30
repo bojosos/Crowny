@@ -87,7 +87,7 @@ namespace Crowny
         alSourcef(m_SourceID, AL_GAIN, m_Volume);
     }
 
-    void AudioSource::SetClip(const Ref<AudioClip>& clip)
+    void AudioSource::SetClip(const AssetHandle<AudioClip>& clip)
     {
         Stop();
         m_AudioClip = clip;

@@ -102,7 +102,7 @@ namespace Crowny
                         if (!selectedEntity.HasComponent<AudioSourceComponent>())
                         {
                             AudioSourceComponent& audioSource = selectedEntity.AddComponent<AudioSourceComponent>();
-                            Ref<AudioClip> clip = std::static_pointer_cast<AudioClip>(ProjectLibrary::Get().Load(payloadPath));
+                            AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(payloadPath));
                             audioSource.SetClip(clip);
                         }
                     }
@@ -111,7 +111,7 @@ namespace Crowny
                         if (!selectedEntity.HasComponent<MonoScriptComponent>())
                         {
                             MonoScriptComponent& scriptComponent = selectedEntity.AddComponent<MonoScriptComponent>();
-                            Ref<ScriptCode> scriptCode = std::static_pointer_cast<ScriptCode>(ProjectLibrary::Get().Load(payloadPath)); // TODO: Analyze the code to extract the name of the MonoBehaviour class
+                            AssetHandle<ScriptCode> scriptCode = static_asset_cast<ScriptCode>(ProjectLibrary::Get().Load(payloadPath)); // TODO: Analyze the code to extract the name of the MonoBehaviour class
                             scriptComponent.SetClassName(payloadPath.filename().replace_extension("").string());
                             scriptComponent.OnInitialize(selectedEntity);
                         }
@@ -368,7 +368,7 @@ namespace Crowny
             {
                 if (m_HasPropertyChanged)
                     ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions, true);
-                Ref<AudioClip> clip = std::static_pointer_cast<AudioClip>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
+                AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
                 AudioManager::Get().Play("Inspector", clip);
             }
             ImGui::SameLine();
@@ -389,7 +389,7 @@ namespace Crowny
         auto iterFind = m_CachedScriptText.find(m_InspectedAssetPath);
         if (iterFind == m_CachedScriptText.end())
         {
-            Ref<ScriptCode> scriptCode = std::static_pointer_cast<ScriptCode>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
+            AssetHandle<ScriptCode> scriptCode = static_asset_cast<ScriptCode>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
             CW_ENGINE_INFO(scriptCode->GetSource());
             m_CachedScriptText[m_InspectedAssetPath] = scriptCode->GetSource();
         }

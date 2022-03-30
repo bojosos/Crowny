@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Assets/AssetHandle.h"
+
 #include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/RenderAPI/Texture.h"
 
@@ -8,7 +10,7 @@ namespace Crowny
     class Material
     {
     public:
-        Material(const Ref<Shader>& shader);
+        Material(const AssetHandle<Shader>& shader);
         ~Material() = default;
 
         // void Bind(uint32_t startslot);
@@ -16,11 +18,11 @@ namespace Crowny
         void SetUniformData(const String& name, byte* data);
         void SetTexture(const String& name, const Ref<Texture>& texture);
 
-        Ref<Shader> GetShader() { return m_Shader; }
+        AssetHandle<Shader> GetShader() { return m_Shader; }
 
     protected:
         Vector<Ref<Texture>> m_Textures;
-        Ref<Shader> m_Shader;
+        AssetHandle<Shader> m_Shader;
 
     private:
         friend class MaterialInstance;
