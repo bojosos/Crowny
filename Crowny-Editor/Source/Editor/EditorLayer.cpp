@@ -115,7 +115,7 @@ namespace Crowny
         SceneRenderer::Init();
 
         // Ref<Shader> shader = Importer::Get().Import<Shader>("Resources/Shaders/Pbribl.glsl");
-        Ref<Shader> shader = AssetManager::Get().Load<Shader>("Resources/Shaders/Pbribl.asset");
+        AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>("Resources/Shaders/Pbribl.asset");
         Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(shader);
 
         Ref<Texture> albedo, metallic, roughness, normal;

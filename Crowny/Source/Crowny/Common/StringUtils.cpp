@@ -51,6 +51,19 @@ namespace Crowny
 		return output;
 	}
 
+    String StringUtils::Replace(const String& str, const String& from, const String& to)
+    {
+        String result = str;
+        if(from.empty())
+            return String();
+        size_t startPos = 0;
+        while((startPos = result.find(from, startPos)) != String::npos) {
+            result.replace(startPos, from.length(), to);
+            startPos += to.length();
+        }
+        return result;
+    }
+
     int32_t StringUtils::ParseInt(const String& value) { return std::strtol(value.c_str(), nullptr, 10); }
 
     float StringUtils::ParseFloat(const String& value) { return std::strtof(value.c_str(), nullptr); }

@@ -14,7 +14,6 @@
 // TODO: Move localtime call to buffer
 // TODO: Consider sorting case insensitive
 // TODO: Consider displaying newer messages first in collapsed mode when no sorting is used with std::max(timestamp1, timestamp2)
-// TODO: Fix scroll to bottom
 
 namespace Crowny
 {

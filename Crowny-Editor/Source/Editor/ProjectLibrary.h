@@ -3,6 +3,7 @@
 #include "Crowny/Common/Module.h"
 
 #include "Crowny/Assets/Asset.h"
+#include "Crowny/Assets/AssetHandle.h"
 #include "Crowny/Assets/AssetManifest.h"
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
 #include "Crowny/Common/StringUtils.h"
@@ -80,7 +81,7 @@ namespace Crowny
         void SaveEntry(const Ref<Asset>& asset);
         void SetIncludeInBuild(const Path& path, bool force);
         Vector<Ref<FileEntry>> GetAssetsForBuild() const;
-        Ref<Asset> Load(const Path& path);
+        AssetHandle<Asset> Load(const Path& path);
         const Path& GetAssetFolder() const { return m_AssetFolder; }
 
         static const Path ASSET_DIR;
