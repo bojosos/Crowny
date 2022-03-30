@@ -60,17 +60,17 @@ namespace Crowny
 
     void AssetBrowserPanel::Initialize()
     {
-        // m_CurrentDirectoryEntry = ProjectLibrary::Get().GetRoot().get();
-        LibraryEntry* entry =
-          ProjectLibrary::Get().FindEntry(Editor::Get().GetProjectSettings()->LastAssetBrowserSelectedEntry).get();
-        if (entry->Type == LibraryEntryType::Directory)
-            m_CurrentDirectoryEntry = static_cast<DirectoryEntry*>(entry);
+        if (Editor::Get().GetProjectSettings()->LastAssetBrowserSelectedEntry.empty())
+            m_CurrentDirectoryEntry = ProjectLibrary::Get().GetRoot().get();
         else
         {
-            m_CurrentDirectoryEntry = entry->Parent;
-            m_SelectionSet.insert(entry->ElementNameHash);
+            LibraryEntry* entry =
+              ProjectLibrary::Get().FindEntry(Editor::Get().GetProjectSettings()->LastAssetBrowserSelectedEntry).get();
+			if (entry == nullptr || entry->Type == LibraryEntryType::File)
+				m_CurrentDirectoryEntry = ProjectLibrary::Get().GetRoot().get();
+            else
+                m_CurrentDirectoryEntry = static_cast<DirectoryEntry*>(entry);
         }
-
         for (auto child : m_CurrentDirectoryEntry->Children)
         {
             const auto& path = child->Filepath;

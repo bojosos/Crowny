@@ -1,6 +1,7 @@
 #include "cwepch.h"
 
 #include "Editor/EditorLayer.h"
+#include "Editor/Editor.h"
 
 #include "Crowny/Application/Application.h"
 #include "Crowny/Events/ImGuiEvent.h"
@@ -19,7 +20,12 @@
 namespace Crowny
 {
 
-    ViewportPanel::ViewportPanel(const String& name) : ImGuiPanel(name), m_ViewportBounds(0.0f) {}
+    ViewportPanel::ViewportPanel(const String& name) : ImGuiPanel(name), m_ViewportBounds(0.0f)
+    {
+		Ref<ProjectSettings> projSettings = Editor::Get().GetProjectSettings();
+        m_GizmoMode = projSettings->GizmoMode;
+	    m_LocalMode = projSettings->GizmoLocalMode;
+    }
 
     void ViewportPanel::Render()
     {
@@ -36,6 +42,8 @@ namespace Crowny
                 m_GizmoMode = ImGuizmo::SCALE;
             if (Input::IsKeyPressed(Key::T))
                 m_GizmoMode = ImGuizmo::BOUNDS;
+			if (Input::IsKeyDown(Key::X))
+				m_LocalMode = !m_LocalMode;
         }
         ImVec2 minBound = ImGui::GetWindowPos();
         ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
@@ -98,7 +106,7 @@ namespace Crowny
 
             float snapValues[3] = { snapValue, snapValue, snapValue };
             ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj), (ImGuizmo::OPERATION)m_GizmoMode,
-                                 ImGuizmo::LOCAL, glm::value_ptr(transform), nullptr,
+                                m_LocalMode ? ImGuizmo::LOCAL : ImGuizmo::WORLD, glm::value_ptr(transform), nullptr,
                                  snap ? snapValues : nullptr); // TODO: Bounds
             if (ImGuizmo::IsUsing())
             {
