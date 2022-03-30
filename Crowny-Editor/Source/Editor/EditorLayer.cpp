@@ -60,7 +60,9 @@ namespace Crowny
         ScriptRandom();
         ScriptNoise();
         ScriptMath();
-        EditorAssets::Load();
+		EditorAssets::Load();
+		
+		Editor::StartUp();
 
         m_MenuBar = new ImGuiMenuBar();
 
@@ -103,19 +105,18 @@ namespace Crowny
         m_MenuBar->AddMenu(viewMenu);
 
         // Move out maybe?
-        Editor::StartUp();
 
-        Ref<EditorSettings> editorSettings = Editor::Get().GetEditorSettings();
-        m_ShowDemoWindow = editorSettings->ShowImGuiDemoWindow;
-        m_ShowColliders = editorSettings->ShowPhysicsColliders2D;
-        m_AutoLoadLastProject = editorSettings->AutoLoadLastProject;
+		Ref<EditorSettings> editorSettings = Editor::Get().GetEditorSettings();
+		m_ShowDemoWindow = editorSettings->ShowImGuiDemoWindow;
+		m_ShowColliders = editorSettings->ShowPhysicsColliders2D;
+		m_AutoLoadLastProject = editorSettings->AutoLoadLastProject;
 
-        if (m_AutoLoadLastProject && !editorSettings->LastOpenProject.empty())
-        {
-            Editor::Get().LoadProject(editorSettings->LastOpenProject);
-            SetProjectSettings();
-            m_AssetBrowser->Initialize();
-        }
+		if (m_AutoLoadLastProject && !editorSettings->LastOpenProject.empty())
+		{
+			Editor::Get().LoadProject(editorSettings->LastOpenProject);
+			SetProjectSettings();
+			m_AssetBrowser->Initialize();
+		}
 
         VirtualFileSystem::Get()->Mount("Icons", "Resources/Icons");
         SceneRenderer::Init();
@@ -181,11 +182,38 @@ namespace Crowny
         s_EditorCamera.SetPitch(projSettings->EditorCameraRotation.x);
         s_EditorCamera.SetYaw(projSettings->EditorCameraRotation.y);
         s_EditorCamera.SetDistance(projSettings->EditorCameraDistance);
-        Ref<Scene> scene = CreateRef<Scene>();
-        SceneSerializer serializer(scene);
         if (fs::is_regular_file(projSettings->LastOpenScenePath))
+        {
+            Ref<Scene> scene = CreateRef<Scene>();
+            SceneSerializer serializer(scene);
             serializer.Deserialize(projSettings->LastOpenScenePath);
-        m_Temp = scene;
+            m_Temp = scene;
+        }
+		m_ViewportPanel->SetGizmoMode(projSettings->GizmoMode);
+		m_ViewportPanel->SetGizmoLocalMode(projSettings->GizmoLocalMode);
+		
+		if (m_Temp != nullptr)
+		    m_HierarchyPanel->SetSelectedEntity(m_Temp->GetEntityFromUuid(projSettings->LastSelectedEntityID));
+    }
+	
+    void EditorLayer::SaveProjectSettings()
+    {
+		Ref<ProjectSettings> projSettings = Editor::Get().GetProjectSettings();
+		
+        projSettings->EditorCameraPosition = s_EditorCamera.GetPosition();
+		projSettings->EditorCameraFocalPoint = s_EditorCamera.GetFocalPoint();
+        projSettings->EditorCameraRotation = { s_EditorCamera.GetPitch(), s_EditorCamera.GetYaw() };
+		projSettings->EditorCameraDistance = s_EditorCamera.GetDistance();
+		const Ref<Scene>& activeScene = SceneManager::GetActiveScene();
+		if (fs::is_regular_file(activeScene->GetFilepath()))
+			projSettings->LastOpenScenePath = activeScene->GetFilepath().string();
+		projSettings->LastAssetBrowserSelectedEntry = m_AssetBrowser->GetCurrentEntryPath();
+		
+		projSettings->GizmoMode = m_ViewportPanel->GetGizmoMode();
+		projSettings->GizmoLocalMode = m_ViewportPanel->GetGizmoLocalMode();
+		
+		if (HierarchyPanel::GetSelectedEntity())
+		projSettings->LastSelectedEntityID = HierarchyPanel::GetSelectedEntity().GetUuid();
     }
 
     void EditorLayer::BuildGame(Event& event) {}
@@ -311,12 +339,6 @@ namespace Crowny
 
     void EditorLayer::OnDetach()
     {
-        delete m_InspectorPanel;
-        delete m_HierarchyPanel;
-        delete m_ViewportPanel;
-        delete m_ConsolePanel;
-        delete m_AssetBrowser;
-
         Editor::Get().GetEditorSettings()->ShowImGuiDemoWindow = m_ShowDemoWindow;
         Editor::Get().GetEditorSettings()->ShowPhysicsColliders2D = m_ShowColliders;
         Editor::Get().GetEditorSettings()->AutoLoadLastProject = m_AutoLoadLastProject;
@@ -325,7 +347,14 @@ namespace Crowny
         Editor::Get().SaveProject();
 
         AddRecentEntry(Editor::Get().GetProjectPath());
-        Editor::Shutdown();
+		SaveProjectSettings();
+		Editor::Shutdown();
+		
+		delete m_InspectorPanel;
+		delete m_HierarchyPanel;
+		delete m_ViewportPanel;
+		delete m_ConsolePanel;
+		delete m_AssetBrowser;
     }
 
     void EditorLayer::OnUpdate(Timestep ts)
@@ -404,11 +433,11 @@ namespace Crowny
         }
         RenderOverlay();
 
-        glm::vec4 bounds = m_ViewportPanel->GetViewportBounds();
+        const glm::vec4& bounds = m_ViewportPanel->GetViewportBounds();
         ImVec2 mouseCoords = ImGui::GetMousePos();
         glm::vec2 coords = { mouseCoords.x - bounds.x, mouseCoords.y - bounds.y };
         coords.y = m_ViewportSize.y - coords.y;
-        if (coords.x >= 0 && coords.x < m_ViewportSize.x && coords.y >= 0 && coords.y < m_ViewportSize.y)
+        if (m_ViewportPanel->IsHovered())
         {
             RenderTexture* rt = static_cast<RenderTexture*>(m_RenderTarget.get());
             Ref<PixelData> outPixelData =
@@ -418,7 +447,12 @@ namespace Crowny
             glm::vec4 col = outPixelData->GetColorAt(coords.x, coords.y);
             if (col.x == -1.0f)
                 m_HoveredEntity = Entity(entt::null, scene.get());
-            m_HoveredEntity = Entity((entt::entity)(col.x + 1), scene.get());
+            else
+            {
+                m_HoveredEntity = Entity((entt::entity)(col.x + 1), scene.get());
+			    if (Input::IsMouseButtonDown(Mouse::ButtonLeft) && !Input::IsKeyPressed(Key::LeftAlt) && !Input::IsKeyPressed(Key::RightAlt) && !m_ViewportPanel->IsMouseOverGizmo())
+				    m_HierarchyPanel->SetSelectedEntity(m_HoveredEntity);
+            }
         }
         m_HierarchyPanel->Update();
         ScriptObjectManager::Get().Update();
@@ -519,6 +553,8 @@ namespace Crowny
                     {
                         if (outPaths.size() > 0)
                         {
+							if (Editor::Get().IsProjectLoaded())
+								SaveProjectSettings();
                             Editor::Get().LoadProject(outPaths[0]);
                             Editor::Get().GetEditorSettings()->LastOpenProject = outPaths[0];
                             SetProjectSettings();
@@ -561,7 +597,9 @@ namespace Crowny
                     const Path& projectPath = project.ProjectPath;
                     if (ImGui::Selectable(projectPath.filename().string().c_str(), false,
                                           ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap))
-                    {
+					{
+						if (Editor::Get().IsProjectLoaded())
+							SaveProjectSettings();
                         Editor::Get().LoadProject(project.ProjectPath);
                         Editor::Get().GetEditorSettings()->LastOpenProject = project.ProjectPath;
                         SetProjectSettings();
@@ -610,7 +648,9 @@ namespace Crowny
             if (ImGui::Button("Create"))
             {
                 Editor::Get().CreateProject(m_NewProjectPath, m_NewProjectName);
-                Path newProjectPath = Path(m_NewProjectPath) / m_NewProjectName;
+				Path newProjectPath = Path(m_NewProjectPath) / m_NewProjectName;
+				if (Editor::Get().IsProjectLoaded())
+					SaveProjectSettings();
                 Editor::Get().LoadProject(newProjectPath);
                 Editor::Get().GetEditorSettings()->LastOpenProject = newProjectPath;
                 SetProjectSettings();
@@ -779,12 +819,6 @@ namespace Crowny
 
     bool EditorLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e)
     {
-        if (!Input::IsKeyPressed(Key::LeftAlt) && !Input::IsKeyPressed(Key::RightAlt))
-        {
-            m_HierarchyPanel->SetSelectedEntity(m_HoveredEntity);
-            return true;
-        }
-
         return false;
     }
 

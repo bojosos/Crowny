@@ -44,6 +44,8 @@ namespace Crowny
 
         float GetPitch() const { return m_Pitch; }
         float GetYaw() const { return m_Yaw; }
+		
+		const glm::vec3& GetFocalPoint() const { return m_FocalPoint; }
 
     private:
         void UpdateProjection();

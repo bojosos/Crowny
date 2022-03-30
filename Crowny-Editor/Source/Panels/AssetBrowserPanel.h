@@ -42,6 +42,8 @@ namespace Crowny
 
         void Initialize();
 
+        const Path& GetCurrentEntryPath() const { return m_CurrentDirectoryEntry->Filepath; }
+
     private:
         void ShowContextMenuContents(LibraryEntry* entry = nullptr, bool isTreeView = false);
         void DrawHeader();
@@ -52,7 +54,7 @@ namespace Crowny
         void HandleKeyboardNavigation();
 
     private:
-        uint32_t m_ColumnCount;
+        uint32_t m_ColumnCount = 5;
         ImTextureID m_FolderIcon;
         ImTextureID m_FileIcon;
 
@@ -61,9 +63,9 @@ namespace Crowny
 
         Vector<Path> m_OrderedSelection;
         UnorderedSet<size_t> m_SelectionSet;
-        uint32_t m_SelectionStartIndex;
+        uint32_t m_SelectionStartIndex = 0;
 
-        DirectoryEntry* m_CurrentDirectoryEntry;
+        DirectoryEntry* m_CurrentDirectoryEntry = nullptr;
 
         Stack<DirectoryEntry*> m_BackwardHistory;
         Stack<DirectoryEntry*> m_ForwardHistory;

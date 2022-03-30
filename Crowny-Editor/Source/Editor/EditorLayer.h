@@ -61,6 +61,7 @@ namespace Crowny
         void RenderOverlay();
         void AddRecentEntry(const Path& path);
         void SetProjectSettings();
+        void SaveProjectSettings();
 
     private:
         friend class Time;
