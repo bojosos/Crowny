@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Audio/AudioClip.h"
+#include "Crowny/Assets/AssetHandle.h"
 
 namespace Crowny
 {
@@ -17,8 +18,8 @@ namespace Crowny
     public:
         AudioSource();
         ~AudioSource();
-        void SetClip(const Ref<AudioClip>& clip);
-        Ref<AudioClip> GetAudioClip() const { return m_AudioClip; }
+        void SetClip(const AssetHandle<AudioClip>& clip);
+        AssetHandle<AudioClip> GetAudioClip() const { return m_AudioClip; }
         void SetVolume(float volume);
         float GetVolume() const { return m_Volume; }
         void SetPitch(float pitch);
@@ -50,7 +51,7 @@ namespace Crowny
         void StopStreaming();
 
     private:
-        Ref<AudioClip> m_AudioClip;
+        AssetHandle<AudioClip> m_AudioClip;
         float m_Volume = 1.0f;
         float m_Pitch = 1.0f;
         float m_MinDistace = 1.0f;

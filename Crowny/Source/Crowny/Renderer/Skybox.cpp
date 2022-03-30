@@ -93,7 +93,7 @@ namespace Crowny
 
         // Convert HDR equirectangular environment map to cubemap
         
-        Ref<Shader> shader = AssetManager::Get().Load<Shader>(EQUIRECTTOCUBE_SHADER_PATH);
+        AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(EQUIRECTTOCUBE_SHADER_PATH);
         // Ref<Shader> shader = Importer::Get().Import<Shader>(EQUIRECTTOCUBE_SHADER_PATH);
         Ref<ShaderStage> eqToCubeVert = shader->GetStage(VERTEX_SHADER);
         Ref<ShaderStage> eqToCubeFrag = shader->GetStage(FRAGMENT_SHADER);
@@ -158,7 +158,7 @@ namespace Crowny
         rtProps.ColorSurfaces[0] = { m_Brdf };
         Ref<RenderTexture> target = RenderTexture::Create(rtProps);
 
-        Ref<Shader> shader = AssetManager::Get().Load<Shader>(BRDF_SHADER_PATH);
+        AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(BRDF_SHADER_PATH);
         // Ref<Shader> shader = Importer::Get().Import<Shader>(BRDF_SHADER_PATH);
         Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
         Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
@@ -191,7 +191,7 @@ namespace Crowny
         tProps.Shape = TextureShape::TEXTURE_CUBE;
         m_IrradianceMap = Texture::Create(tProps);
 
-        Ref<Shader> shader = AssetManager::Get().Load<Shader>(FILTER_SHADER_PATH);
+        AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(FILTER_SHADER_PATH);
         // Ref<Shader> shader = Importer::Get().Import<Shader>(FILTER_SHADER_PATH);
         Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
         Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
@@ -268,7 +268,7 @@ namespace Crowny
         tProps.Shape = TextureShape::TEXTURE_CUBE;
         m_PrefilteredMap = Texture::Create(tProps);
 
-        Ref<Shader> shader = AssetManager::Get().Load<Shader>(FILTER_SHADER_PATH);
+        AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(FILTER_SHADER_PATH);
         // Ref<Shader> shader = Importer::Get().Import<Shader>(FILTER_SHADER_PATH);
         Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
         Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);

@@ -70,7 +70,7 @@ namespace Crowny
         return 0;
     }
 
-    void AudioManager::Play(const String& name, const Ref<AudioClip>& clip, const glm::vec3& position, float volume)
+    void AudioManager::Play(const String& name, const AssetHandle<AudioClip>& clip, const glm::vec3& position, float volume)
     {
         Ref<AudioSource> source = CreateSource();
         source->SetClip(clip);

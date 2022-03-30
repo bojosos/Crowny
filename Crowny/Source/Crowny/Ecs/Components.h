@@ -180,7 +180,7 @@ namespace Crowny
 
         void SetVolume(float volume);
         void SetPitch(float pitch);
-        void SetClip(const Ref<AudioClip>& clip);
+        void SetClip(const AssetHandle<AudioClip>& clip);
         void SetPlayOnAwake(bool playOnAwake);
         void SetMinDistance(float minDistnace);
         void SetMaxDistance(float maxDistance);
@@ -190,7 +190,7 @@ namespace Crowny
 
         float GetVolume() const { return m_Volume; }
         float GetPitch() const { return m_Pitch; }
-        Ref<AudioClip> GetClip() const { return m_AudioClip; }
+        AssetHandle<AudioClip> GetClip() const { return m_AudioClip; }
         bool GetPlayOnAwake() const { return m_PlayOnAwake; }
         float GetMinDistance() const { return m_MinDistance; }
         float GetMaxDistance() const { return m_MaxDistance; }
@@ -205,7 +205,7 @@ namespace Crowny
         AudioSourceState GetState() const;
 
     private:
-        Ref<AudioClip> m_AudioClip;
+        AssetHandle<AudioClip> m_AudioClip;
         bool m_IsMuted = false;
         float m_Volume = 1.0f;
         float m_Pitch = 1.0f;
