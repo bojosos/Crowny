@@ -90,7 +90,7 @@ namespace Crowny
         Renderer2D::Init();
         // ForwardRenderer::Init();
 
-        FontManager::Add(CreateRef<Font>(Path("Resources/Fonts/") / DEFAULT_FONT_FILENAME, "Roboto Thin", 64));
+        FontManager::Add(CreateRef<Font>(Path("Resources/Fonts/Roboto") / DEFAULT_FONT_FILENAME, "Roboto Thin", 64));
 
         // Scripting
         MonoManager::StartUp();

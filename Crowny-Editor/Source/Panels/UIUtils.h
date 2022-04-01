@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Application/Application.h"
+
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/Scene/SceneManager.h"
 
@@ -51,6 +53,22 @@ namespace Crowny
             const char* itemPath = str.c_str();
             ImGui::SetDragDropPayload("ASSET_ITEM", itemPath, str.size() * sizeof(char));
         }
+
+        static void PushFontAwesomeFont()
+        {
+            ImGui::PushFont(Application::Get().GetImGuiLayer()->GetFontAwesomeFont());
+        }			
+
+        static void PopFontAwesomeFont()
+        {
+			ImGui::PopFont();
+        }
+
+        struct ScopedFontAwesomeFont
+        {
+			ScopedFontAwesomeFont() { PushFontAwesomeFont(); }
+			~ScopedFontAwesomeFont() { PopFontAwesomeFont(); }
+        };
 
         struct ScopedDisable
         {

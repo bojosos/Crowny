@@ -26,6 +26,13 @@ namespace Crowny
         Path LastOpenProject;
         bool AutoLoadLastProject = true;
 
+        bool EnableConsoleInfoMessages  = true;
+		bool EnableConsoleWarningMessages  = true;
+		bool EnableConsoleErrorMessages  = true;
+		bool EnableConsoleCriticalMessages = true;
+		
+		bool CollapseConsole = false;
+
         using Serializer = EditorSettingsSerializer;
     };
 
