@@ -58,7 +58,7 @@ namespace Crowny
         for (auto ee : group)
         {
             auto [transform, sprite] = scene->m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
-            Renderer2D::FillRect(transform.GetTransform(), sprite.Texture, sprite.Color, ((int32_t)ee) - 1);
+            Renderer2D::FillRect(transform.GetTransform(), sprite.Texture, sprite.Color, ((uint32_t)ee) + 1);
             s_Stats.Vertices += 6;
             s_Stats.Triangles += 2;
         }

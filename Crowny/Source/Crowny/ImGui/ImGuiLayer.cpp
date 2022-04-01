@@ -3,18 +3,18 @@
 #include "Crowny/Application/Application.h"
 #include "Crowny/ImGui/ImGuiLayer.h"
 
+#include "Vendor/FontAwesome/IconsFontAwesome6.h"
+
 #include <GLFW/glfw3.h>
 #include <backends/imgui_impl_glfw.h>
 
 #include <ImGuizmo.h>
 #include <imgui.h>
 
-#include <vulkan/vulkan.hpp>
-
 namespace Crowny
 {
 
-    ImGuiLayer::ImGuiLayer() : Layer("ImGuiLayer") {}
+    ImGuiLayer::ImGuiLayer() : Layer("ImGuiLayer"), m_FontAwesomeFont(nullptr) {}
 
     void ImGuiLayer::OnAttach()
     {
@@ -35,10 +35,23 @@ namespace Crowny
             style.WindowRounding = 0.0f;
             style.Colors[ImGuiCol_WindowBg].w = 1.0f;
         }
+		
 
-        io.FontDefault = io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto-Regular.ttf", 14.0f);
-        io.Fonts->GetGlyphRangesCyrillic();
-        io.Fonts->GetGlyphRangesChineseSimplifiedCommon();
+		io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto/Roboto-Regular.ttf", 17.0f);
+		ImFontConfig config;
+        config.MergeMode = true;
+        config.PixelSnapH = true;
+		config.GlyphMinAdvanceX = 17.f;
+		config.GlyphMaxAdvanceX = 17.0f;
+		io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto/Roboto-Regular.ttf", 17.0f, &config, io.Fonts->GetGlyphRangesCyrillic());
+		// io.Fonts->Build();
+        ImFontConfig configFa;
+        config.PixelSnapH = true;
+        configFa.GlyphMinAdvanceX = 24.f;
+		configFa.GlyphMaxAdvanceX = 24.0f;
+		static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+		io.Fonts->AddFontFromFileTTF("Resources/Fonts/FontAwesome/fa-solid-900.ttf", 24.0f, &configFa, icons_ranges);
+		io.Fonts->Build();
 
         style.WindowRounding = 0;
         style.GrabRounding = style.FrameRounding = 0;
@@ -52,6 +65,7 @@ namespace Crowny
         style.WindowPadding = ImVec2(2, 2);
         style.TabRounding = 4;
         style.WindowMenuButtonPosition = ImGuiDir_None;
+        style.ColorButtonPosition = ImGuiDir_Left;
 
         style.Colors[ImGuiCol_Text] = { 0.73333335f, 0.73333335f, 0.73333335f, 1.00f };
         style.Colors[ImGuiCol_TextDisabled] = { 0.34509805f, 0.34509805f, 0.34509805f, 1.00f };

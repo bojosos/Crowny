@@ -92,7 +92,7 @@ namespace Crowny
         auto& tc = e.GetComponent<TagComponent>();
         auto& rc = e.GetComponent<RelationshipComponent>();
 
-        ImGui::SetCursorPosX(ImGui::GetCursorPos().x + ImGui::GetStyle().FramePadding.x);
+        // ImGui::SetCursorPosX(ImGui::GetCursorPos().x + ImGui::GetStyle().FramePadding.x);
         ImGui::SetKeyboardFocusHere();
         if (ImGui::InputText("##renaming", &m_RenamingString,
                              ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
@@ -124,7 +124,7 @@ namespace Crowny
         if (e == m_Renaming)
         {
             Rename(e);
-            ImGui::SetCursorPosX(ImGui::GetCursorPos().x + 2 * ImGui::GetStyle().FramePadding.x);
+            // ImGui::SetCursorPosX(ImGui::GetCursorPos().x + 2 * ImGui::GetStyle().FramePadding.x);
             for (auto& c : rc.Children)
                 DisplayTree(c);
         }

@@ -63,6 +63,9 @@ namespace Crowny
         void SetProjectSettings();
         void SaveProjectSettings();
 
+        void UI_Header();
+        void UI_Settings();
+
     private:
         friend class Time;
 

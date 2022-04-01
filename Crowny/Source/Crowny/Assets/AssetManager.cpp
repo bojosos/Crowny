@@ -9,7 +9,7 @@
 #include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/RenderAPI/Texture.h"
 
-// TODO: Fix Audio clips being loaded every time play in inspector is used.
+#include "Crowny/Utils/Compression.h"
 
 namespace Crowny
 {
@@ -197,27 +197,9 @@ namespace Crowny
     AssetHandle<Asset> AssetManager::Load(const UUID& uuid, const Path& filepath, bool keepInternalRef,
                                           bool keepSourceData)
     {
-        /*
-        auto findIter = m_LoadedAssets.find(uuid);
-        if (findIter != m_LoadedAssets.end())
-            return findIter->second;
-        AssetHandle assetHandle;
-        auto findIter = m_Handles.find(uuid);
-        if (findIter != m_Handles.end())
-            assetHandle = findIter->second;
-        else
-        {
-            assetHandle = AssetHandle(uuid);
-            m_Handles[uuid] = assetHandle.GetWeakHandle();
-        }
-
-        Ref<DataStream> stream = FileSystem::OpenFile(filepath);
-        BinaryDataStreamInputArchive archive(stream);
-        Ref<Asset> asset;
-        archive(asset);
-        assetHandle.SetAssetHandle(asset);
-        m_LoadedAssets[uuid] = asset;
-        return assetHandle;*/
+        auto iterFind = m_Handles.find(uuid);
+        if (iterFind != m_Handles.end())
+			return iterFind->second.Lock();
 
         Ref<DataStream> stream = FileSystem::OpenFile(filepath);
         BinaryDataStreamInputArchive archive(stream);
@@ -232,9 +214,18 @@ namespace Crowny
     {
         if (!fs::is_directory(filepath.parent_path()))
             fs::create_directories(filepath.parent_path());
-        Ref<DataStream> stream = FileSystem::CreateAndOpenFile(filepath);
-        BinaryDataStreamOutputArchive archive(stream);
+		Ref<MemoryDataStream> memStream = CreateRef<MemoryDataStream>();
+        BinaryDataStreamOutputArchive archive(memStream);
         archive(resource);
+		// TODO: Check if a file is worth compressing, if not, just write the data to the file
+		// No need to compress already compressed files (images, audio, ...).
+		
+		Vector<uint8_t> result;
+		// This buffer might be too small.
+        result.resize(memStream->Size());; // Maybe if I do this in chunks I can avoid this big alloc, since most of this allocate data won't be used.
+		Compression::Compress(result.data(), memStream->Data(), memStream->Size(), CompressionMethod::FastLZ);
+        Ref<DataStream> stream = FileSystem::CreateAndOpenFile(filepath);
+		stream->Write(result.data(), result.size());
         stream->Close();
     }
 

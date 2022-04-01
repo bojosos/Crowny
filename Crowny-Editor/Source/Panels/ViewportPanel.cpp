@@ -34,6 +34,8 @@ namespace Crowny
         Application::Get().GetImGuiLayer()->BlockEvents(!m_Focused && !m_Hovered);
         if (m_Focused) // Change gizmo type
         {
+			if (Input::IsKeyPressed(Key::Q))
+				m_GizmoMode = -1;
             if (Input::IsKeyPressed(Key::W))
                 m_GizmoMode = ImGuizmo::TRANSLATE;
             if (Input::IsKeyPressed(Key::E))
@@ -100,7 +102,7 @@ namespace Crowny
             glm::mat4 transform = tc.GetTransform();
 
             bool snap = Input::IsKeyPressed(Key::LeftControl);
-            float snapValue = 0.1;
+            float snapValue = 0.1; // TODO: These snaps should be loaded from the editor settings
             if (m_GizmoMode == ImGuizmo::OPERATION::ROTATE)
                 snapValue = 15.0f;
 
