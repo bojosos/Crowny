@@ -215,8 +215,6 @@ namespace Crowny
 
         m_Scene->m_Registry.each([&](auto entityID) {
             Entity entity = { entityID, m_Scene.get() };
-            if (!entity)
-                return;
             SerializeEntity(out, entity);
         });
 
@@ -226,7 +224,6 @@ namespace Crowny
         const char* str = out.c_str();
         stream->Write(str, std::strlen(str));
         stream->Close();
-        // VirtualFileSystem::Get()->WriteTextFile(filepath, out.c_str());
     }
 
     void SceneSerializer::SerializeBinary(const Path& filepath) {}

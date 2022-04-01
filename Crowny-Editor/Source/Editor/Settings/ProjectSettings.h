@@ -14,13 +14,13 @@ namespace Crowny
         Path LastAssetBrowserSelectedEntry;
         String LastOpenScenePath; // This will probably be replaced by the UUID of a scene, and a scene will most likely
                                   // be a prefab.
-        int32_t GizmoMode;
-        bool GizmoLocalMode;
+        int32_t GizmoMode = -1;
+        bool GizmoLocalMode = false;
 
-        glm::vec3 EditorCameraPosition;
-        glm::vec3 EditorCameraFocalPoint;
-        glm::vec2 EditorCameraRotation;
-        float EditorCameraDistance;
+        glm::vec3 EditorCameraPosition = { 0.0f, 0.0f, 0.0f };
+        glm::vec3 EditorCameraFocalPoint = { 0.0f, 0.0f, 0.0f };
+        glm::vec2 EditorCameraRotation = { 0.0f, 0.0f };
+        float EditorCameraDistance = 10.0f;
 
 		UUID LastSelectedEntityID;
 

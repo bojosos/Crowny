@@ -99,13 +99,22 @@ namespace Crowny
             ImGui::TableHeadersRow();
 
             const auto& buffer = ImGuiConsoleBuffer::Get().GetBuffer();
+			Vector<uint32_t> messageIndices;
+			messageIndices.resize(buffer.size());
+			uint32_t messageIdx = 0;
+            for (uint32_t i = 0; i < (uint32_t)buffer.size(); i++)
+            {
+				const auto& message = buffer[i];
+				if (m_EnabledLevels[(uint8_t)message.LogLevel])
+					messageIndices[messageIdx++] = i;
+            }
             ImGuiListClipper clipper;
-            clipper.Begin(buffer.size());
+            clipper.Begin(messageIdx);
             while (clipper.Step())
             {
                 ImGui::TableNextRow();
                 for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
-                    RenderMessage(buffer[row]);
+                    RenderMessage(buffer[messageIndices[row]]);
             }
 
             bool needSort = false;

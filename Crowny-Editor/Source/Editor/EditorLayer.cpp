@@ -18,8 +18,11 @@
 #include "Crowny/Serialization/SceneSerializer.h"
 
 #include "Editor/Editor.h"
+#include "Panels/UIUtils.h"
 #include "Editor/EditorAssets.h"
 #include "Editor/ProjectLibrary.h"
+
+#include "Vendor/FontAwesome/IconsFontAwesome6.h"
 
 #include "Crowny/Scripting/Bindings/Logging/ScriptDebug.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptMath.h"
@@ -60,9 +63,9 @@ namespace Crowny
         ScriptRandom();
         ScriptNoise();
         ScriptMath();
-		EditorAssets::Load();
-		
-		Editor::StartUp();
+        EditorAssets::Load();
+        
+        Editor::StartUp();
 
         m_MenuBar = new ImGuiMenuBar();
 
@@ -103,20 +106,18 @@ namespace Crowny
 
         m_MenuBar->AddMenu(buildMenu);
         m_MenuBar->AddMenu(viewMenu);
+        
+        Ref<EditorSettings> editorSettings = Editor::Get().GetEditorSettings();
+        m_ShowDemoWindow = editorSettings->ShowImGuiDemoWindow;
+        m_ShowColliders = editorSettings->ShowPhysicsColliders2D;
+        m_AutoLoadLastProject = editorSettings->AutoLoadLastProject;
 
-        // Move out maybe?
-
-		Ref<EditorSettings> editorSettings = Editor::Get().GetEditorSettings();
-		m_ShowDemoWindow = editorSettings->ShowImGuiDemoWindow;
-		m_ShowColliders = editorSettings->ShowPhysicsColliders2D;
-		m_AutoLoadLastProject = editorSettings->AutoLoadLastProject;
-
-		if (m_AutoLoadLastProject && !editorSettings->LastOpenProject.empty())
-		{
-			Editor::Get().LoadProject(editorSettings->LastOpenProject);
-			SetProjectSettings();
-			m_AssetBrowser->Initialize();
-		}
+        if (m_AutoLoadLastProject && !editorSettings->LastOpenProject.empty())
+        {
+            Editor::Get().LoadProject(editorSettings->LastOpenProject);
+            SetProjectSettings();
+            m_AssetBrowser->Initialize();
+        }
 
         VirtualFileSystem::Get()->Mount("Icons", "Resources/Icons");
         SceneRenderer::Init();
@@ -189,31 +190,31 @@ namespace Crowny
             serializer.Deserialize(projSettings->LastOpenScenePath);
             m_Temp = scene;
         }
-		m_ViewportPanel->SetGizmoMode(projSettings->GizmoMode);
-		m_ViewportPanel->SetGizmoLocalMode(projSettings->GizmoLocalMode);
-		
-		if (m_Temp != nullptr)
-		    m_HierarchyPanel->SetSelectedEntity(m_Temp->GetEntityFromUuid(projSettings->LastSelectedEntityID));
+        m_ViewportPanel->SetGizmoMode(projSettings->GizmoMode);
+        m_ViewportPanel->SetGizmoLocalMode(projSettings->GizmoLocalMode);
+        
+        if (m_Temp != nullptr)
+            m_HierarchyPanel->SetSelectedEntity(m_Temp->GetEntityFromUuid(projSettings->LastSelectedEntityID));
     }
-	
+    
     void EditorLayer::SaveProjectSettings()
     {
-		Ref<ProjectSettings> projSettings = Editor::Get().GetProjectSettings();
-		
+        Ref<ProjectSettings> projSettings = Editor::Get().GetProjectSettings();
+        
         projSettings->EditorCameraPosition = s_EditorCamera.GetPosition();
-		projSettings->EditorCameraFocalPoint = s_EditorCamera.GetFocalPoint();
+        projSettings->EditorCameraFocalPoint = s_EditorCamera.GetFocalPoint();
         projSettings->EditorCameraRotation = { s_EditorCamera.GetPitch(), s_EditorCamera.GetYaw() };
-		projSettings->EditorCameraDistance = s_EditorCamera.GetDistance();
-		const Ref<Scene>& activeScene = SceneManager::GetActiveScene();
-		if (fs::is_regular_file(activeScene->GetFilepath()))
-			projSettings->LastOpenScenePath = activeScene->GetFilepath().string();
-		projSettings->LastAssetBrowserSelectedEntry = m_AssetBrowser->GetCurrentEntryPath();
-		
-		projSettings->GizmoMode = m_ViewportPanel->GetGizmoMode();
-		projSettings->GizmoLocalMode = m_ViewportPanel->GetGizmoLocalMode();
-		
-		if (HierarchyPanel::GetSelectedEntity())
-		projSettings->LastSelectedEntityID = HierarchyPanel::GetSelectedEntity().GetUuid();
+        projSettings->EditorCameraDistance = s_EditorCamera.GetDistance();
+        const Ref<Scene>& activeScene = SceneManager::GetActiveScene();
+        if (fs::is_regular_file(activeScene->GetFilepath()))
+            projSettings->LastOpenScenePath = activeScene->GetFilepath().string();
+        projSettings->LastAssetBrowserSelectedEntry = m_AssetBrowser->GetCurrentEntryPath();
+        
+        projSettings->GizmoMode = m_ViewportPanel->GetGizmoMode();
+        projSettings->GizmoLocalMode = m_ViewportPanel->GetGizmoLocalMode();
+        
+        if (HierarchyPanel::GetSelectedEntity())
+            projSettings->LastSelectedEntityID = HierarchyPanel::GetSelectedEntity().GetUuid();
     }
 
     void EditorLayer::BuildGame(Event& event) {}
@@ -280,8 +281,6 @@ namespace Crowny
     void EditorLayer::CreateNewScene()
     {
         m_Temp = CreateRef<Scene>();
-        /*tmp->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
-        SceneManager::SetActiveScene(tmp);*/
     }
 
     void EditorLayer::OpenScene()
@@ -347,14 +346,14 @@ namespace Crowny
         Editor::Get().SaveProject();
 
         AddRecentEntry(Editor::Get().GetProjectPath());
-		SaveProjectSettings();
-		Editor::Shutdown();
-		
-		delete m_InspectorPanel;
-		delete m_HierarchyPanel;
-		delete m_ViewportPanel;
-		delete m_ConsolePanel;
-		delete m_AssetBrowser;
+        SaveProjectSettings();
+        Editor::Shutdown();
+        
+        delete m_InspectorPanel;
+        delete m_HierarchyPanel;
+        delete m_ViewportPanel;
+        delete m_ConsolePanel;
+        delete m_AssetBrowser;
     }
 
     void EditorLayer::OnUpdate(Timestep ts)
@@ -445,13 +444,13 @@ namespace Crowny
                                 rt->GetColorTexture(1)->GetFormat());
             rt->GetColorTexture(1)->ReadData(*outPixelData);
             glm::vec4 col = outPixelData->GetColorAt(coords.x, coords.y);
-            if (col.x == -1.0f)
+            if (col.x == 0.0f)
                 m_HoveredEntity = Entity(entt::null, scene.get());
             else
             {
-                m_HoveredEntity = Entity((entt::entity)(col.x + 1), scene.get());
-			    if (Input::IsMouseButtonDown(Mouse::ButtonLeft) && !Input::IsKeyPressed(Key::LeftAlt) && !Input::IsKeyPressed(Key::RightAlt) && !m_ViewportPanel->IsMouseOverGizmo())
-				    m_HierarchyPanel->SetSelectedEntity(m_HoveredEntity);
+                m_HoveredEntity = Entity((entt::entity)(col.x - 1), scene.get());
+                if (Input::IsMouseButtonDown(Mouse::ButtonLeft) && !Input::IsKeyPressed(Key::LeftAlt) && !Input::IsKeyPressed(Key::RightAlt) && !m_ViewportPanel->IsMouseOverGizmo())
+                    m_HierarchyPanel->SetSelectedEntity(m_HoveredEntity);
             }
         }
         m_HierarchyPanel->Update();
@@ -553,8 +552,8 @@ namespace Crowny
                     {
                         if (outPaths.size() > 0)
                         {
-							if (Editor::Get().IsProjectLoaded())
-								SaveProjectSettings();
+                            if (Editor::Get().IsProjectLoaded())
+                                SaveProjectSettings();
                             Editor::Get().LoadProject(outPaths[0]);
                             Editor::Get().GetEditorSettings()->LastOpenProject = outPaths[0];
                             SetProjectSettings();
@@ -597,9 +596,9 @@ namespace Crowny
                     const Path& projectPath = project.ProjectPath;
                     if (ImGui::Selectable(projectPath.filename().string().c_str(), false,
                                           ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap))
-					{
-						if (Editor::Get().IsProjectLoaded())
-							SaveProjectSettings();
+                    {
+                        if (Editor::Get().IsProjectLoaded())
+                            SaveProjectSettings();
                         Editor::Get().LoadProject(project.ProjectPath);
                         Editor::Get().GetEditorSettings()->LastOpenProject = project.ProjectPath;
                         SetProjectSettings();
@@ -648,9 +647,9 @@ namespace Crowny
             if (ImGui::Button("Create"))
             {
                 Editor::Get().CreateProject(m_NewProjectPath, m_NewProjectName);
-				Path newProjectPath = Path(m_NewProjectPath) / m_NewProjectName;
-				if (Editor::Get().IsProjectLoaded())
-					SaveProjectSettings();
+                Path newProjectPath = Path(m_NewProjectPath) / m_NewProjectName;
+                if (Editor::Get().IsProjectLoaded())
+                    SaveProjectSettings();
                 Editor::Get().LoadProject(newProjectPath);
                 Editor::Get().GetEditorSettings()->LastOpenProject = newProjectPath;
                 SetProjectSettings();
@@ -689,70 +688,21 @@ namespace Crowny
         ImGui::PopStyleVar();
 
         if (opt_fullscreen)
-            ImGui::PopStyleVar(2);
+			ImGui::PopStyleVar(2);
 
+		// DockSpace
+		ImGuiIO& io = ImGui::GetIO();
+		if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
+		{
+			ImGuiID dockspace_id = ImGui::GetID("Crowny Editor");
+			ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+		}
+        
         m_MenuBar->Render();
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetStyle().FramePadding.y);
-        ImGui::SetCursorPosX(ImGui::GetWindowWidth() * 0.5f - 43.5f);
-        ImTextureID textureID = ImGui_ImplVulkan_AddTexture(EditorAssets::Get().PlayIcon);
-        if (ImGui::ImageButton(textureID, ImVec2(25.0f, 25.0f), ImVec2(0, 0), ImVec2(1, 1), -1,
-                               ImVec4(1.0f, 1.0f, 1.0f, 0.0f), ImVec4(0.1f, 0.105f, 0.11f, 1.0f)))
-        {
-            if (m_SceneState == SceneState::Edit)
-            {
-                SceneManager::GetActiveScene()->OnRuntimeStart();
-                ScriptRuntime::OnStart();
-                m_SceneState = SceneState::Play;
-                m_ViewportPanel->DisalbeGizmo();
-            }
-        }
-        ImGui::SameLine(0.0f, 8.0f);
-        textureID = ImGui_ImplVulkan_AddTexture(EditorAssets::Get().PauseIcon);
-        if (ImGui::ImageButton(textureID, ImVec2(25.0f, 25.0f), ImVec2(0, 0), ImVec2(1, 1), -1,
-                               ImVec4(1.0f, 1.0f, 1.0f, 0.0f), ImVec4(0.1f, 0.105f, 0.11f, 1.0f)))
-        {
-            if (m_SceneState == SceneState::Play)
-            {
-                SceneManager::GetActiveScene()->OnRuntimePause();
-                m_SceneState = SceneState::PausePlay;
-                m_ViewportPanel->EnableGizmo();
-            }
-            else if (m_SceneState == SceneState::PausePlay)
-            {
-                m_SceneState = SceneState::Play;
-                m_ViewportPanel->DisalbeGizmo();
-            }
-        }
-        ImGui::SameLine(0.0f, 8.0f);
-        textureID = ImGui_ImplVulkan_AddTexture(EditorAssets::Get().StopIcon);
-        if (ImGui::ImageButton(textureID, ImVec2(25.0f, 25.0f), ImVec2(0, 0), ImVec2(1, 1), -1,
-                               ImVec4(1.0f, 1.0f, 1.0f, 0.0f), ImVec4(0.1f, 0.105f, 0.11f, 1.0f)))
-        {
-            if (m_SceneState == SceneState::Play)
-            {
-                SceneManager::GetActiveScene()->OnRuntimeStop();
-                ScriptRuntime::OnShutdown();
-                m_ViewportPanel->EnableGizmo();
-                m_SceneState = SceneState::Edit;
-                m_GameMode = false;
-                s_DeltaTime = 0.0f;
-                s_SmoothDeltaTime = 0.0f;
-                s_RealtimeSinceStartup = 0.0f;
-                s_Time = 0.0f;
-                s_FixedDeltaTime = 0.0f;
-                s_FrameCount = 0.0f;
-            }
-        }
-        ImGui::Separator();
 
-        // DockSpace
-        ImGuiIO& io = ImGui::GetIO();
-        if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
-        {
-            ImGuiID dockspace_id = ImGui::GetID("Crowny Editor");
-            ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-        }
-
+		UI_Header();
+        UI_Settings();
+		
         m_HierarchyPanel->Render();
         m_InspectorPanel->Render();
         m_ViewportPanel->SetEditorRenderTarget(m_RenderTarget);
@@ -760,13 +710,124 @@ namespace Crowny
         m_ConsolePanel->Render();
         m_AssetBrowser->Render();
 
-        ImGui::Begin("Settings");
-        ImGui::Checkbox("Show colliders", &m_ShowColliders);
-        ImGui::Checkbox("Show demo window", &m_ShowDemoWindow);
-        ImGui::Checkbox("Auto load last project", &m_AutoLoadLastProject);
         ImGui::End();
+    }
+    
+    void EditorLayer::UI_Header()
+    {
+		ImGui::Begin("Header", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse);
+		ImGui::SetWindowSize(ImVec2(ImGui::GetWindowWidth(), 36.0f));
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetStyle().FramePadding.y);
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2, 2));
+        
 
-        ImGui::End();
+ 		const float width = 26.0f;
+		
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 2);
+
+        auto drawButton = [&](const char* icon, int32_t gizmoMode)
+		{
+			if (m_ViewportPanel->GetGizmoMode() == gizmoMode)
+            {
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.33333334f, 0.3529412f, 0.36078432f, 0.5f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.7f, 0.7f, 1.00f));
+            }
+			else
+            {
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.7f, 0.7f, 1.00f));
+            }
+            if (ImGui::Button(icon))
+				m_ViewportPanel->SetGizmoMode(gizmoMode);
+			ImGui::PopStyleColor(2);
+        };
+		
+        drawButton(ICON_FA_ARROW_POINTER, -1);
+		ImGui::SameLine();
+        drawButton(ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT, 7);
+		ImGui::SameLine();
+        drawButton(ICON_FA_ROTATE, 120);
+		ImGui::SameLine();
+        drawButton(ICON_FA_MAXIMIZE, 896);
+		ImGui::SameLine();
+		if (m_ViewportPanel->GetGizmoLocalMode())
+		{
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.7f, 0.7f, 1.00f));
+		}
+		else
+		{
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.33333334f, 0.3529412f, 0.36078432f, 0.5f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.7f, 0.7f, 1.00f));
+		}
+		if (ImGui::Button(ICON_FA_GLOBE))
+			m_ViewportPanel->SetGizmoLocalMode(!m_ViewportPanel->GetGizmoLocalMode());
+		ImGui::PopStyleColor(2);
+
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+		ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
+
+		ImGui::SameLine(ImGui::GetCursorPosX() + ImGui::GetWindowContentRegionWidth() * 0.5f - 43.5f);
+        if (ImGui::Button(ICON_FA_PLAY, ImVec2(width, 28.0f)))
+		{
+			if (m_SceneState == SceneState::Edit)
+			{
+				SceneManager::GetActiveScene()->OnRuntimeStart();
+				ScriptRuntime::OnStart();
+				m_SceneState = SceneState::Play;
+				m_ViewportPanel->DisalbeGizmo();
+			}
+		}
+		ImGui::SameLine(0.0f, 8.0f);
+		//if (ImGui::Button(ICON_FA_PAUSE, ImVec2(width, 28.0f)))
+        if (ImGui::Button(ICON_FA_PAUSE))
+		{
+			if (m_SceneState == SceneState::Play)
+			{
+				SceneManager::GetActiveScene()->OnRuntimePause();
+				m_SceneState = SceneState::PausePlay;
+				m_ViewportPanel->EnableGizmo();
+			}
+			else if (m_SceneState == SceneState::PausePlay)
+			{
+				m_SceneState = SceneState::Play;
+				m_ViewportPanel->DisalbeGizmo();
+			}
+		}
+		ImGui::SameLine(0.0f, 8.0f);
+		// if (ImGui::Button(ICON_FA_STOP, ImVec2(width, 28.0f)))
+        if (ImGui::Button(ICON_FA_STOP))
+		{
+			if (m_SceneState == SceneState::Play)
+			{
+				SceneManager::GetActiveScene()->OnRuntimeStop();
+				ScriptRuntime::OnShutdown();
+				m_ViewportPanel->EnableGizmo();
+				m_SceneState = SceneState::Edit;
+				m_GameMode = false;
+				s_DeltaTime = 0.0f;
+				s_SmoothDeltaTime = 0.0f;
+				s_RealtimeSinceStartup = 0.0f;
+				s_Time = 0.0f;
+				s_FixedDeltaTime = 0.0f;
+				s_FrameCount = 0.0f;
+			}
+		}
+        ImGui::PopStyleColor(3);
+        ImGui::PopStyleVar(1);
+        ImGui::PopFont();
+		ImGui::End();
+    }
+
+    void EditorLayer::UI_Settings()
+    {
+		ImGui::Begin("Settings");
+		ImGui::Checkbox("Show colliders", &m_ShowColliders);
+		ImGui::Checkbox("Show demo window", &m_ShowDemoWindow);
+		ImGui::Checkbox("Auto load last project", &m_AutoLoadLastProject);
+		ImGui::End();
     }
 
     bool EditorLayer::OnKeyPressed(KeyPressedEvent& e)
