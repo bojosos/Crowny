@@ -22,4 +22,31 @@ namespace Crowny
 			CW_ENGINE_ERROR("Unsupported compression method.");
 		}
 	}
+
+	uint64_t Compression::Decompress(uint8_t* dest, int maxDestSize, const uint8_t* src, int srcSize, CompressionMethod method)
+	{
+		switch (method)
+		{
+		case CompressionMethod::FastLZ:
+		{
+			uint64_t ret = 0;
+			if (maxDestSize < 32)
+			{
+				std::memcpy(dest, src, srcSize);
+				ret = maxDestSize;
+			}
+			else
+				ret = fastlz_decompress(src, srcSize, dest, maxDestSize);
+			return ret;
+		}
+		case CompressionMethod::Deflate:
+			break;
+		case CompressionMethod::Zstd:
+			break;
+		default:
+			break;
+		}
+		return -1;
+	}
+
 }

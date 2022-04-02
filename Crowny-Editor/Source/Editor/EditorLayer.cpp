@@ -111,6 +111,15 @@ namespace Crowny
         m_ShowDemoWindow = editorSettings->ShowImGuiDemoWindow;
         m_ShowColliders = editorSettings->ShowPhysicsColliders2D;
         m_AutoLoadLastProject = editorSettings->AutoLoadLastProject;
+        m_ShowScriptDebugInfo = editorSettings->ShowScriptDebugInfo;
+
+        m_ConsolePanel->SetMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Info, editorSettings->EnableConsoleInfoMessages);
+        m_ConsolePanel->SetMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Warn, editorSettings->EnableConsoleWarningMessages);
+        m_ConsolePanel->SetMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Error, editorSettings->EnableConsoleErrorMessages);
+
+		m_ConsolePanel->SetCollapseEnabled(editorSettings->CollapseConsole);
+	    m_ConsolePanel->SetScrollToBottomEnabled(editorSettings->ScrollToBottom);
+
 
         if (m_AutoLoadLastProject && !editorSettings->LastOpenProject.empty())
         {
@@ -280,7 +289,7 @@ namespace Crowny
 
     void EditorLayer::CreateNewScene()
     {
-        m_Temp = CreateRef<Scene>();
+        m_Temp = CreateRef<Scene>("Scene");
     }
 
     void EditorLayer::OpenScene()
@@ -338,15 +347,27 @@ namespace Crowny
 
     void EditorLayer::OnDetach()
     {
-        Editor::Get().GetEditorSettings()->ShowImGuiDemoWindow = m_ShowDemoWindow;
-        Editor::Get().GetEditorSettings()->ShowPhysicsColliders2D = m_ShowColliders;
-        Editor::Get().GetEditorSettings()->AutoLoadLastProject = m_AutoLoadLastProject;
+		Ref<EditorSettings> settings = Editor::Get().GetEditorSettings();
+        settings->ShowImGuiDemoWindow = m_ShowDemoWindow;
+        settings->ShowPhysicsColliders2D = m_ShowColliders;
+        settings->AutoLoadLastProject = m_AutoLoadLastProject;
+		settings->ShowEntityDebugInfo = m_ShowEntityDebugInfo;
+        settings->ShowAssetInfo = m_ShowAssetInfo;
+        settings->ShowScriptDebugInfo = m_ShowScriptDebugInfo;
+
+        settings->EnableConsoleInfoMessages= m_ConsolePanel->IsMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Info);
+        settings->EnableConsoleWarningMessages = m_ConsolePanel->IsMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Warn);
+        settings->EnableConsoleErrorMessages= m_ConsolePanel->IsMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Error);
+
+        settings->CollapseConsole = m_ConsolePanel->IsCollapseEnabled();
+		settings->ScrollToBottom = m_ConsolePanel->IsScrollToBottomEnabled();
 
         EditorAssets::Unload();
         Editor::Get().SaveProject();
 
         AddRecentEntry(Editor::Get().GetProjectPath());
         SaveProjectSettings();
+		SaveActiveScene();
         Editor::Shutdown();
         
         delete m_InspectorPanel;
@@ -506,36 +527,6 @@ namespace Crowny
 
     void EditorLayer::OnImGuiRender()
     {
-#ifdef CW_DEBUG
-        ImGui::Begin("C# debug");
-        MonoAssembly* gameAssembly = MonoManager::Get().GetAssembly(GAME_ASSEMBLY);
-        for (MonoClass* klass : gameAssembly->GetClasses())
-        {
-            if (ImGui::TreeNode(klass->GetName().c_str()))
-            {
-                if (ImGui::TreeNode("Methods"))
-                {
-                    for (MonoMethod* method : klass->GetMethods())
-                        ImGui::Text(method->GetName().c_str());
-                    ImGui::TreePop();
-                }
-                if (ImGui::TreeNode("Fields"))
-                {
-                    for (MonoField* field : klass->GetFields())
-                        ImGui::Text(field->GetName().c_str());
-                    ImGui::TreePop();
-                }
-                if (ImGui::TreeNode("Properties"))
-                {
-                    for (MonoProperty* prop : klass->GetProperties())
-                        ImGui::Text(prop->GetName().c_str());
-                    ImGui::TreePop();
-                }
-                ImGui::TreePop();
-            }
-        }
-        ImGui::End();
-#endif
         if (m_ShowDemoWindow)
             ImGui::ShowDemoWindow(&m_ShowDemoWindow);
         if (!Editor::Get().IsProjectLoaded() && !ImGui::IsPopupOpen("New Project"))
@@ -702,6 +693,12 @@ namespace Crowny
 
 		UI_Header();
         UI_Settings();
+
+#ifdef CW_DEBUG
+		UI_ScriptInfo();
+		UI_AssetInfo();
+        UI_EntityDebugInfo();
+#endif
 		
         m_HierarchyPanel->Render();
         m_InspectorPanel->Render();
@@ -712,7 +709,101 @@ namespace Crowny
 
         ImGui::End();
     }
+
+    void EditorLayer::UI_EntityDebugInfo()
+    {
+        if (m_ShowEntityDebugInfo)
+        {
+            ImGui::Begin("Entity Debug Info", &m_ShowEntityDebugInfo);
+		    Scene* scene = SceneManager::GetActiveScene().get();
+		    auto view = scene->GetAllEntitiesWith<TagComponent>();
+            for (auto e : view)
+            {
+			    Entity entity = Entity(e, scene);
+			    const String label = entity.GetName() + ": " + entity.GetUuid().ToString();
+                if (ImGui::TreeNode(label.c_str()))
+                {
+				    if (entity.GetParent())
+                    {
+                        const String parentLabel = entity.GetParent().GetName() + ": " + entity.GetParent().GetUuid().ToString();
+				        ImGui::Text(parentLabel.c_str());
+                    }
+				    ImGui::TreePop();
+                }
+            }
+            ImGui::End();
+        }
+    }
+
+    void EditorLayer::UI_AssetInfo()
+    {		
+		if (m_ShowAssetInfo)
+        {
+		    ImGui::Begin("Asset Info", &m_ShowAssetInfo);
+		    ImGui::Columns(2);
+		    ImGui::Text("Project Library"); ImGui::NextColumn();
+            ImGui::Text("Show empty metadata entries"); ImGui::SameLine();
+            ImGui::Checkbox("##showEmptyMetadata", &m_ShowEmptyMetadataAssetInfo); ImGui::NextColumn();
+		
+		    std::function<void(const Ref<LibraryEntry>&)> traverse = [&](const Ref<LibraryEntry>& entry) {
+			    if (entry->Type == LibraryEntryType::Directory)
+			    {
+				    for (auto& child : std::static_pointer_cast<DirectoryEntry>(entry)->Children)
+					    traverse(child);
+			    }
+                else
+                {
+                    FileEntry* file = static_cast<FileEntry*>(entry.get());
+
+				    if (!m_ShowEmptyMetadataAssetInfo && file->Metadata == nullptr)
+                        return;
+				    ImGui::Text(file->Filepath.string().c_str()); ImGui::NextColumn();
+				    if (file->Metadata != nullptr)
+				        ImGui::Text(file->Metadata->Uuid.ToString().c_str());
+                    ImGui::NextColumn();
+                }
+		    };
+            const Ref<DirectoryEntry>& root = ProjectLibrary::Get().GetRoot();
+            traverse(root);
+            ImGui::End();
+        }
+    }
     
+	void EditorLayer::UI_ScriptInfo()
+    {
+		if (m_ShowScriptDebugInfo)
+		{
+            ImGui::Begin("C# debug", &m_ShowScriptDebugInfo);
+			MonoAssembly* gameAssembly = MonoManager::Get().GetAssembly(GAME_ASSEMBLY);
+			for (MonoClass* klass : gameAssembly->GetClasses())
+			{
+				if (ImGui::TreeNode(klass->GetName().c_str()))
+				{
+					if (ImGui::TreeNode("Methods"))
+					{
+						for (MonoMethod* method : klass->GetMethods())
+							ImGui::Text(method->GetName().c_str());
+						ImGui::TreePop();
+					}
+					if (ImGui::TreeNode("Fields"))
+					{
+						for (MonoField* field : klass->GetFields())
+							ImGui::Text(field->GetName().c_str());
+						ImGui::TreePop();
+					}
+					if (ImGui::TreeNode("Properties"))
+					{
+						for (MonoProperty* prop : klass->GetProperties())
+							ImGui::Text(prop->GetName().c_str());
+						ImGui::TreePop();
+					}
+					ImGui::TreePop();
+				}
+			}
+			ImGui::End();
+		}
+    }
+
     void EditorLayer::UI_Header()
     {
 		ImGui::Begin("Header", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse);
@@ -720,9 +811,7 @@ namespace Crowny
         ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetStyle().FramePadding.y);
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2, 2));
-        
-
- 		const float width = 26.0f;
+        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
 		
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 2);
 
@@ -770,10 +859,11 @@ namespace Crowny
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
 
 		ImGui::SameLine(ImGui::GetCursorPosX() + ImGui::GetWindowContentRegionWidth() * 0.5f - 43.5f);
-        if (ImGui::Button(ICON_FA_PLAY, ImVec2(width, 28.0f)))
+        if (ImGui::Button(ICON_FA_PLAY))
 		{
 			if (m_SceneState == SceneState::Edit)
 			{
+                SaveActiveScene(); // Save the scene in case the simulation crashes
 				SceneManager::GetActiveScene()->OnRuntimeStart();
 				ScriptRuntime::OnStart();
 				m_SceneState = SceneState::Play;
@@ -781,7 +871,6 @@ namespace Crowny
 			}
 		}
 		ImGui::SameLine(0.0f, 8.0f);
-		//if (ImGui::Button(ICON_FA_PAUSE, ImVec2(width, 28.0f)))
         if (ImGui::Button(ICON_FA_PAUSE))
 		{
 			if (m_SceneState == SceneState::Play)
@@ -797,7 +886,6 @@ namespace Crowny
 			}
 		}
 		ImGui::SameLine(0.0f, 8.0f);
-		// if (ImGui::Button(ICON_FA_STOP, ImVec2(width, 28.0f)))
         if (ImGui::Button(ICON_FA_STOP))
 		{
 			if (m_SceneState == SceneState::Play)
@@ -815,7 +903,7 @@ namespace Crowny
 				s_FrameCount = 0.0f;
 			}
 		}
-        ImGui::PopStyleColor(3);
+        ImGui::PopStyleColor(4);
         ImGui::PopStyleVar(1);
         ImGui::PopFont();
 		ImGui::End();
@@ -827,6 +915,9 @@ namespace Crowny
 		ImGui::Checkbox("Show colliders", &m_ShowColliders);
 		ImGui::Checkbox("Show demo window", &m_ShowDemoWindow);
 		ImGui::Checkbox("Auto load last project", &m_AutoLoadLastProject);
+        ImGui::Checkbox("Show C# debug info", &m_ShowScriptDebugInfo);
+        ImGui::Checkbox("Show asset info", &m_ShowAssetInfo);
+		ImGui::Checkbox("Show entity debug info", &m_ShowEntityDebugInfo);
 		ImGui::End();
     }
 

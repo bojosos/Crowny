@@ -983,8 +983,8 @@ namespace Crowny
                 tabs = tabs.substr(0, tabs.size() - 2);
             }
         };
-        CW_ENGINE_INFO("Original entries");
-        traverse(m_RootEntry);
+        // CW_ENGINE_INFO("Original entries");
+        // traverse(m_RootEntry);
 
         MakeEntriesAbsolute();
         Path assetManifestPath = m_ProjectFolder / PROJECT_INTERNAL_DIR / ASSET_MANIFEST_FILENAME;
@@ -1096,8 +1096,8 @@ namespace Crowny
                 tabs = tabs.substr(0, tabs.size() - 2);
             }
         };
-        CW_ENGINE_INFO("Original entries");
-        traverse(m_RootEntry);
+        // CW_ENGINE_INFO("Original entries");
+        // traverse(m_RootEntry);
 
         MakeEntriesRelative();
         // CW_ENGINE_INFO("Relative entries");

@@ -54,7 +54,7 @@ namespace Crowny
 		io.Fonts->Build();
 
         style.WindowRounding = 0;
-        style.GrabRounding = style.FrameRounding = 0;
+        style.GrabRounding = style.FrameRounding = 4;
         style.ScrollbarSize = 15;
         style.TabRounding = 0;
         style.ScrollbarRounding = 5.0f;

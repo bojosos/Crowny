@@ -14,7 +14,7 @@ namespace Crowny
     {
         Ref<Scene> scene = SceneManager::GetActiveScene();
 
-        scene->m_Registry.view<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent& sc) {
+        scene->GetAllEntitiesWith<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent& sc) {
             sc.OnInitialize({ entity, scene.get() });
         });
     }
@@ -22,27 +22,27 @@ namespace Crowny
     void ScriptRuntime::OnStart()
     {
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
-        activeScene->m_Registry.view<MonoScriptComponent>().each(
+        activeScene->GetAllEntitiesWith<MonoScriptComponent>().each(
           [&](entt::entity entity, MonoScriptComponent& sc) { sc.OnStart(); });
 
-        activeScene->m_Registry.view<AudioSourceComponent>().each(
+        activeScene->GetAllEntitiesWith<AudioSourceComponent>().each(
           [&](entt::entity entity, AudioSourceComponent& sc) { sc.OnInitialize(); });
     }
 
     void ScriptRuntime::OnUpdate()
     {
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
-        activeScene->m_Registry.view<MonoScriptComponent>().each(
+        activeScene->GetAllEntitiesWith<MonoScriptComponent>().each(
           [&](entt::entity entity, MonoScriptComponent& sc) { sc.OnUpdate(); });
     }
 
     void ScriptRuntime::OnShutdown()
     {
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
-        activeScene->m_Registry.view<MonoScriptComponent>().each(
+        activeScene->GetAllEntitiesWith<MonoScriptComponent>().each(
           [&](entt::entity entity, MonoScriptComponent& sc) { sc.OnDestroy(); });
 
-        activeScene->m_Registry.view<AudioSourceComponent>().each(
+        activeScene->GetAllEntitiesWith<AudioSourceComponent>().each(
           [&](entt::entity entity, AudioSourceComponent& sc) { sc.Stop(); });
     }
 

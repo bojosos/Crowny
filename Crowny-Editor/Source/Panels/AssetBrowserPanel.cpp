@@ -286,14 +286,23 @@ namespace Crowny
                 PlatformUtils::OpenExternally(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex]->Filepath);
         }
 
-        if (Input::IsKeyUp(Key::Backspace)) // Go back
+        if (Input::IsKeyUp(Key::Backspace) || Input::IsMouseButtonDown(Mouse::Button3)) // Go back
         {
-            if (m_CurrentDirectoryEntry->Parent != nullptr)
-            {
-                m_ForwardHistory.push(m_CurrentDirectoryEntry);
-                while (!m_BackwardHistory.empty())
-                    m_BackwardHistory.pop();
-                m_CurrentDirectoryEntry = m_CurrentDirectoryEntry->Parent;
+            if (!m_BackwardHistory.empty())
+			{
+				m_ForwardHistory.push(m_CurrentDirectoryEntry);
+				m_CurrentDirectoryEntry = m_BackwardHistory.top();
+				m_BackwardHistory.pop();
+			}
+        }
+
+        if (Input::IsMouseButtonDown(Mouse::Button4)) // Go forward
+        {	
+            if (!m_ForwardHistory.empty())
+			{
+				m_BackwardHistory.push(m_CurrentDirectoryEntry);
+				m_CurrentDirectoryEntry = m_ForwardHistory.top();
+				m_ForwardHistory.pop();
             }
         }
 
