@@ -132,6 +132,11 @@ namespace Crowny
             e2.GetComponent<CircleCollider2DComponent>().OnCollisionEnd(col);
     }
 
+    Scene::Scene()
+	{
+		m_ContactListener2D = new ContactListener(this);
+    }
+
     Scene::Scene(const String& name) : m_Name(name)
     {
         m_RootEntity = new Entity(m_Registry.create(), this);

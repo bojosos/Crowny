@@ -26,10 +26,13 @@ namespace Crowny
     {
         if (IsChildOf(entity))
             return;
-        auto& children = GetParent().GetComponent<RelationshipComponent>().Children;
-        auto iterFind = std::find(children.begin(), children.end(), *this);
-        if (iterFind != children.end())
-            children.erase(iterFind);
+        if (GetParent())
+        {
+            auto& children = GetParent().GetComponent<RelationshipComponent>().Children;
+            auto iterFind = std::find(children.begin(), children.end(), *this);
+            if (iterFind != children.end())
+                children.erase(iterFind);
+        }
 
         GetComponent<RelationshipComponent>().Parent = entity;
         entity.AddChild(*this);

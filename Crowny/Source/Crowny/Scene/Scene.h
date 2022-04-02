@@ -26,7 +26,8 @@ namespace Crowny
     class Scene
     {
     public:
-        Scene(const String& name = String());
+        Scene();
+        Scene(const String& name);
         Scene(Scene& other);
         Scene& operator=(Scene& other);
         ~Scene();
@@ -60,7 +61,6 @@ namespace Crowny
         friend class SceneRenderer;
         friend class SceneSerializer;
         friend class Entity;
-        friend class ScriptRuntime;
 
         String m_Name;
         Path m_Filepath;

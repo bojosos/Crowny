@@ -241,6 +241,7 @@ namespace Crowny
             String sceneName = data["Scene"].as<String>();
             m_Scene->m_Name = sceneName;
             m_Scene->m_Filepath = filepath;
+			// m_Scene->GetRootEntity().GetComponent<TagComponent>().Tag = sceneName;
 
             const YAML::Node& entities = data["Entities"];
             if (entities)
@@ -255,7 +256,7 @@ namespace Crowny
                         tag = tc["Tag"].as<String>();
 
                     Entity deserialized = m_Scene->CreateEntityWithUuid(id, tag);
-                    m_Scene->m_RootEntity->AddChild(deserialized);
+                    // m_Scene->m_RootEntity->AddChild(deserialized);
 
                     const YAML::Node& transform = entity["TransformComponent"];
                     if (transform)
@@ -374,17 +375,27 @@ namespace Crowny
                         serializedComponents[deserialized] = rel;
                 }
 
-                for (auto rc : serializedComponents)
+                for (auto [entity, node] : serializedComponents)
                 {
-                    auto& rl = rc.first.GetComponent<RelationshipComponent>();
-                    const YAML::Node& children = rc.second["Children"];
+                    auto& rl = entity.GetComponent<RelationshipComponent>();
+                    const YAML::Node& children = node["Children"];
                     for (const auto& child : children)
                     {
                         Entity e = m_Scene->GetEntityFromUuid(child.as<UUID>());
-                        e.SetParent(rc.first);
+                        e.SetParent(entity);
                     }
                 }
             }
+			auto view = m_Scene->GetAllEntitiesWith<TagComponent>();
+            Entity root;
+            for (auto e : view)
+            {
+                Entity entity = { e, m_Scene.get() };
+				if (!entity.GetParent())
+                    root = entity;
+            }
+            if (root)
+                m_Scene->m_RootEntity = new Entity(root.GetHandle(), m_Scene.get());
         }
         catch (const std::exception& ex)
         {
