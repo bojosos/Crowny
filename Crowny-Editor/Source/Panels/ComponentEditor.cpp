@@ -30,9 +30,7 @@ namespace Crowny
             }
         }
         else
-        {
             ImGui::Text("Invalid Entity");
-        }
 
         ImGui::Separator();
 

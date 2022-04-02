@@ -65,6 +65,9 @@ namespace Crowny
 
         void UI_Header();
         void UI_Settings();
+        void UI_ScriptInfo();
+		void UI_AssetInfo();
+		void UI_EntityDebugInfo();
 
     private:
         friend class Time;
@@ -85,6 +88,10 @@ namespace Crowny
         bool m_ShowDemoWindow = false;
         bool m_ShowColliders = false;
         bool m_AutoLoadLastProject = false;
+		bool m_ShowScriptDebugInfo = false;
+        bool m_ShowAssetInfo = false;
+        bool m_ShowEmptyMetadataAssetInfo = false;
+        bool m_ShowEntityDebugInfo = false;
 
         Vector<ImGuiPanel*> m_ImGuiWindows;
         static EditorCamera s_EditorCamera;

@@ -4,14 +4,6 @@
 
 #include <imgui.h>
 
-// TODO: Use ImGuiListClipper
-// This causes some problems. Can't use severity filters for now.
-// Solutions:
-//   Console buffer with a list for every message type. Then when creating the Clipper give it the size of all enabled.
-//   Getting the next message would be slower.
-//      Also using the clipper I would need to go trough the first clipper.DisplayStart elements, defeating the purpose
-//   Add another buffer to console buffer and reconstruct every time some setting changes? Maybe a buffer with ints only
-//   could work?
 // TODO: Add binary search for placing new messages in the right place, for collapsed mode I would need to add the count
 // and then check if the message has to be moved up
 // TODO: Move localtime call to buffer
@@ -19,16 +11,19 @@
 // TODO: Consider displaying newer messages first in collapsed mode when no sorting is used with std::max(timestamp1,
 // timestamp2)
 
+#include "Vendor/FontAwesome/IconsFontAwesome6.h"
+
 namespace Crowny
 {
 
-    ConsolePanel::ConsolePanel(const String& name) : ImGuiPanel(name) {}
+    ConsolePanel::ConsolePanel(const String& name) : ImGuiPanel(name), m_SelectedMessageHash(0) {}
 
     void ConsolePanel::Render()
     {
         BeginPanel();
         m_RequestScrollToBottom = m_AllowScrollingToBottom && ImGuiConsoleBuffer::Get().HasNewMessages();
         RenderHeader();
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 4.0f);
         ImGui::Separator();
         RenderMessages();
         EndPanel();
@@ -37,33 +32,59 @@ namespace Crowny
     void ConsolePanel::RenderHeader()
     {
         ImGuiStyle& style = ImGui::GetStyle();
-        const float spacing = style.ItemInnerSpacing.x;
-        ImGui::AlignTextToFramePadding();
 
-        for (int i = 0; i < ImGuiConsoleBuffer::Message::Levels.size(); i++)
-        {
-            ImGui::SameLine(0.0f, 2.0f * spacing);
-            glm::vec4 color = GetRenderColor(ImGuiConsoleBuffer::Message::Levels[i]);
-            // ImGui::PushStyleColor(ImGuiCol_Text, { color.r, color.g, color.b, color.a });
-            ImGui::Checkbox(ImGuiConsoleBuffer::Message::GetLevelName(ImGuiConsoleBuffer::Message::Levels[i]),
-                            &m_EnabledLevels[i]);
-            // ImGui::PopStyleColor();
-        }
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2, 2));
+        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+
+		auto drawButton = [&](const char* icon, ImGuiConsoleBuffer::Message::Level level)
+		{
+			if (m_EnabledLevels[(uint32_t)level])
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.33333334f, 0.3529412f, 0.36078432f, 0.5f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.7f, 0.7f, 1.00f));
+			}
+			else
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.7f, 0.7f, 1.00f));
+			}
+			if (ImGui::Button(icon))
+				m_EnabledLevels[(uint32_t)level] = !m_EnabledLevels[(uint32_t)level];
+			ImGui::PopStyleColor(2);
+		};
+		
+		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+		glm::vec4 color = GetRenderColor(ImGuiConsoleBuffer::Message::Levels[0]);
+		ImGui::PushStyleColor(ImGuiCol_Text, { color.r, color.g, color.b, color.a });
+        drawButton(ICON_FA_EXCLAMATION, ImGuiConsoleBuffer::Message::Level::Info);
+		ImGui::PopStyleColor();
+		ImGui::SameLine(0.0f, 2.0f * ImGui::GetStyle().ItemInnerSpacing.x);
+		color = GetRenderColor(ImGuiConsoleBuffer::Message::Levels[1]);
+		ImGui::PushStyleColor(ImGuiCol_Text, { color.r, color.g, color.b, color.a });
+        drawButton(ICON_FA_TRIANGLE_EXCLAMATION, ImGuiConsoleBuffer::Message::Level::Warn);
+		ImGui::PopStyleColor();
+		ImGui::SameLine(0.0f, 2.0f * ImGui::GetStyle().ItemInnerSpacing.x);
+		color = GetRenderColor(ImGuiConsoleBuffer::Message::Levels[2]);
+		ImGui::PushStyleColor(ImGuiCol_Text, { color.r, color.g, color.b, color.a });
+        drawButton(ICON_FA_CIRCLE_EXCLAMATION, ImGuiConsoleBuffer::Message::Level::Error);
+		ImGui::PopStyleColor();
+		ImGui::PopFont();
+		ImGui::PopStyleColor();
+        ImGui::PopStyleVar(1);
 
         RenderSettings();
     }
 
     void ConsolePanel::RenderSettings()
     {
-        const float collapseWidth = ImGui::CalcTextSize("Collapse").x * 1.1f;
-
         const float maxWidth = ImGui::CalcTextSize("Scroll to bottom").x * 1.1f;
         const float spacing = ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(" ").x;
         const float checkboxSize = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2;
-
+        const float collapseWidth = ImGui::CalcTextSize("Collapse").x + ImGui::GetStyle().ItemInnerSpacing.x;
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - checkboxSize - ImGui::CalcTextSize("Clear console").x +
-                        1.0f - maxWidth - 2 * spacing - collapseWidth - 2 * spacing - checkboxSize);
-        ImGui::AlignTextToFramePadding();
+                        1.0f - maxWidth - 2 * spacing - collapseWidth - spacing - checkboxSize);
+		
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
         ImGui::Text("Scroll to bottom");
         ImGui::SameLine(0.0f, spacing);
         ImGui::Checkbox("##ScrollToBottom", &m_AllowScrollingToBottom);
@@ -130,7 +151,6 @@ namespace Crowny
 
             if (m_RequestScrollToBottom && ImGui::GetScrollMaxY() > 0)
             {
-                // ImGui::SetScrollY(ImGui::GetScrollMaxY());
                 ImGui::SetScrollHereY(1.0f);
                 m_RequestScrollToBottom = false;
             }
