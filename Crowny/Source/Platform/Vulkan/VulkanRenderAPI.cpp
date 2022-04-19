@@ -12,7 +12,8 @@
 #define VMA_IMPLEMENTATION
 #include <vulkan/vk_mem_alloc.h>
 
-#define CW_DEBUG 1
+// #define CW_DEBUG 0
+#undef CW_DEBUG
 
 namespace Crowny
 {

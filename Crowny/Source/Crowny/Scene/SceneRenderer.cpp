@@ -4,6 +4,7 @@
 #include "Crowny/Scene/SceneRenderer.h"
 
 #include "Crowny/Ecs/Components.h"
+#include "Crowny/RenderAPI/Query.h"
 #include "Crowny/RenderAPI/RenderCommand.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
@@ -17,6 +18,11 @@ namespace Crowny
     struct SceneRendererData
     {
         uint32_t ViewportWidth, ViewportHeight;
+
+		Ref<TimerQuery> Timer2DGeometry = nullptr;
+		Ref<TimerQuery> Timer3DGeometry = nullptr;
+		
+        Ref<PipelineQuery> PipelineQuery = nullptr;
     };
 
     struct SceneRendererStats
@@ -31,28 +37,39 @@ namespace Crowny
     static SceneRendererData s_Data;
     static SceneRendererStats s_Stats;
 
-    void SceneRenderer::Init() {}
+    void SceneRenderer::Init()
+    {
+		s_Data.Timer2DGeometry = TimerQuery::Create();
+		s_Data.Timer3DGeometry = TimerQuery::Create();
+
+		s_Data.PipelineQuery = PipelineQuery::Create();
+    }
 
     void SceneRenderer::OnEditorUpdate(Timestep ts, const EditorCamera& camera)
     {
         Ref<Scene> scene = SceneManager::GetActiveScene();
 
+		// s_Data.PipelineQuery->Begin();
+        // s_Data.Timer3DGeometry->Begin();
+		
         ForwardRenderer::Begin();
         ForwardRenderer::BeginScene(camera, camera.GetViewMatrix());
         auto objs = scene->m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
         for (auto obj : objs)
         {
             auto [transform, mesh] = scene->m_Registry.get<TransformComponent, MeshRendererComponent>(obj);
-            if (mesh.Model)
-            {
-                ForwardRenderer::Submit(mesh.Model, transform.GetTransform());
-                // TODO: Update stats... triangle count has to take into account the draw mode
-            }
+            //if (mesh.Model)
+            //{
+            //    ForwardRenderer::Submit(mesh.Model, transform.GetTransform());
+            //    // TODO: Update stats... triangle count has to take into account the draw mode
+            //}
         }
         ForwardRenderer::Flush();
         ForwardRenderer::EndScene();
         ForwardRenderer::End();
+        // s_Data.Timer3DGeometry->End();
 
+        // s_Data.Timer2DGeometry->Begin();
         Renderer2D::Begin(camera, camera.GetViewMatrix());
         auto group = scene->m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
         for (auto ee : group)
@@ -71,28 +88,11 @@ namespace Crowny
             s_Stats.Triangles += (uint32_t)text.Text.size() * 2;
         }
         Renderer2D::End();
-        /*
-                 IDBufferRenderer::Begin(camera.GetProjection(), camera.GetViewMatrix());
-                 {
-                     auto group = scene->m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
-                     for (auto entity : group)
-                     {
-                         auto [transform, sprite] = scene->m_Registry.get<TransformComponent,
-           SpriteRendererComponent>(entity); IDBufferRenderer::DrawQuad(transform.GetTransform(), (uint32_t)entity);
-                     }
-                 }
-                 {
-                     auto group = scene->m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
-                     for (auto entity : group)
-                     {
-                         auto [transform, mesh] = scene->m_Registry.get<TransformComponent,
-           MeshRendererComponent>(entity); if (mesh.Mesh)
-                         {
-                             IDBufferRenderer::DrawMesh(mesh.Mesh, transform.GetTransform(), (uint32_t)entity);
-                         }
-                     }
-                 }
-                 IDBufferRenderer::End();*/
+        // s_Data.Timer2DGeometry->End();
+        // s_Data.PipelineQuery->End();
+		
+		// s_Stats.FrameTime = s_Data.Timer3DGeometry->GetTimeMs() + s_Data.Timer2DGeometry->GetTimeMs();
+
         s_Stats.Frames += 1;
         s_Stats.FrameTime = ts;
     }
@@ -122,11 +122,11 @@ namespace Crowny
             for (auto obj : objs)
             {
                 auto [transform, mesh] = scene->m_Registry.get<TransformComponent, MeshRendererComponent>(obj);
-                if (mesh.Model)
-                {
-                    ForwardRenderer::Submit(mesh.Model, transform.GetTransform());
-                    // TODO: Update stats... triangle count has to take into account the draw mode
-                }
+                //if (mesh.Model)
+                //{
+                //    ForwardRenderer::Submit(mesh.Model, transform.GetTransform());
+                //    // TODO: Update stats... triangle count has to take into account the draw mode
+                //}
             }
             ForwardRenderer::Flush();
             ForwardRenderer::EndScene();

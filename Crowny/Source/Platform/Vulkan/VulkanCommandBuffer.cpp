@@ -8,6 +8,7 @@
 #include "Platform/Vulkan/VulkanRenderWindow.h"
 #include "Platform/Vulkan/VulkanUniformParams.h"
 #include "Platform/Vulkan/VulkanVertexBuffer.h"
+#include "Platform/Vulkan/VulkanQuery.h"
 
 #include "Crowny/Common/Timer.h"
 
@@ -62,6 +63,22 @@ namespace Crowny
         if (m_Buffer->IsInRenderPass())
             m_Buffer->EndRenderPass();
         m_Buffer->ExecuteLayoutTransitions();
+		
+		Vector<VulkanTimerQuery*> timerQueries;
+        Vector<VulkanPipelineQuery*> pipelineQueries;
+        Vector<VulkanOcclusionQuery*> occlusionQueries;
+
+		m_Buffer->GetInProgressQueries(timerQueries, pipelineQueries, occlusionQueries);
+        if (!timerQueries.empty() || !occlusionQueries.empty())
+        {
+            CW_ENGINE_WARN("Submitting a command buffer with {0} timer queries, {1} pipeline queries and {2} occlusion queries in progress. They will be closed automatically.", timerQueries.size(), pipelineQueries.size(), occlusionQueries.size());
+			for (auto entry : timerQueries)
+				entry->Interrupt(m_Buffer);
+            for (auto entry : pipelineQueries)
+				entry->Interrupt(m_Buffer);
+            for (auto entry : occlusionQueries)
+                entry->Interrupt(m_Buffer);
+        }
 
         if (m_Buffer->IsRecording())
             m_Buffer->End();
@@ -1573,6 +1590,17 @@ namespace Crowny
 
         VulkanDevice& device = queue->GetDevice();
 
+        if (!m_QueuedQueryResets.empty())
+        {
+			VulkanCmdBuffer* cmdBuffer = device.GetCmdBufferPool().GetBuffer(m_QueueFamily, false);
+            VkCommandBuffer vkCmdBuffer = cmdBuffer->GetHandle();
+            for (auto entry : m_QueuedQueryResets)
+				entry->Reset(vkCmdBuffer);
+			cmdBuffer->End();
+            queue->QueueSubmit(cmdBuffer, nullptr, 0);
+            m_QueuedQueryResets.clear();
+        }
+		
         for (auto& entry : m_Buffers)
         {
             VulkanBuffer* buffer = static_cast<VulkanBuffer*>(entry.first);
@@ -2175,7 +2203,29 @@ namespace Crowny
         return subresourceInfos[0];
     }
 
-    RenderSurfaceMask VulkanCmdBuffer::GetFBReadMask()
+
+	void VulkanCmdBuffer::ResetQuery(VulkanQuery* query)
+	{
+        if (IsInRenderPass())
+            m_QueuedQueryResets.push_back(query);
+        else
+			query->Reset(m_CmdBuffer);
+	}
+
+	void VulkanCmdBuffer::GetInProgressQueries(Vector<VulkanTimerQuery*>& timers, Vector<VulkanPipelineQuery*>& pipelines, Vector<VulkanOcclusionQuery*>& occlusions) const
+	{
+		for (auto entry : m_TimerQueries)
+			if (entry->IsInProgress())
+				timers.push_back(entry);
+		for (auto entry : m_PipelineQueries)
+			if (entry->IsInProgress())
+				pipelines.push_back(entry);
+		for (auto entry : m_OcclusionQueries)
+			if (entry->IsInProgress())
+				occlusions.push_back(entry);
+	}
+
+	RenderSurfaceMask VulkanCmdBuffer::GetFBReadMask()
     {
         VulkanRenderPass* renderPass = m_Framebuffer->GetRenderPass();
         RenderSurfaceMask readMask = RT_NONE;

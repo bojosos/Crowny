@@ -11,6 +11,7 @@ namespace Crowny
 {
 
     class VulkanDescriptorManager;
+    class VulkanQueryPool;
 
     struct SurfaceFormat
     {
@@ -26,7 +27,10 @@ namespace Crowny
         ~VulkanDevice();
 
         SurfaceFormat GetSurfaceFormat(const VkSurfaceKHR& surface) const;
+        
         VulkanCommandBufferPool& GetCmdBufferPool() const { return *m_CommandBufferPool; }
+        VulkanQueryPool& GetQueryPool() const { return *m_QueryPool; }
+
         uint32_t GetMemoryType(uint32_t typeBits, VkMemoryPropertyFlags properties, VkBool32* found = nullptr);
         VkDevice GetLogicalDevice() const { return m_LogicalDevice; }
         VkPhysicalDeviceProperties GetDeviceProperties() const { return m_DeviceProperties; }
@@ -53,8 +57,8 @@ namespace Crowny
         void WaitIdle();
 
     private:
-    private:
         VulkanCommandBufferPool* m_CommandBufferPool;
+        VulkanQueryPool* m_QueryPool;
 
         struct QueueInfo
         {

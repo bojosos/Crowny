@@ -76,6 +76,7 @@ namespace Crowny
         pixelData.SetBuffer(rawPixelData);
         texture->WriteData(pixelData);
         texture->SetName(filepath.filename().string());
+        stbi_image_free(rawPixelData);
         return texture;
     }
 
