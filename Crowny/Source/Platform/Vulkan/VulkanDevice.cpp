@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
 #include "Platform/Vulkan/VulkanDescriptorPool.h"
+#include "Platform/Vulkan/VulkanQuery.h"
 #include "Platform/Vulkan/VulkanDevice.h"
 #include "Platform/Vulkan/VulkanRenderAPI.h"
 
@@ -109,11 +110,12 @@ namespace Crowny
             allocatorCI.pAllocationCallbacks = gVulkanAllocator;
             allocatorCI.flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
             allocatorCI.instance = gVulkanRenderAPI().GetInstance();
-            allocatorCI.vulkanApiVersion = VK_API_VERSION_1_1;
+            allocatorCI.vulkanApiVersion = VK_API_VERSION_1_1; // maybe change to 1.3
 
             vmaCreateAllocator(&allocatorCI, &m_Allocator);
 
             m_CommandBufferPool = new VulkanCommandBufferPool(*this);
+            m_QueryPool = new VulkanQueryPool(*this);
             m_DescriptorManager = new VulkanDescriptorManager(*this);
             m_ResourceManager = new VulkanResourceManager(*this);
         }
@@ -136,8 +138,9 @@ namespace Crowny
             }
         }
 
-        delete m_CommandBufferPool;
         delete m_DescriptorManager;
+        delete m_QueryPool;
+        delete m_CommandBufferPool;
         delete m_ResourceManager;
         vmaDestroyAllocator(m_Allocator);
         vkDestroyDevice(m_LogicalDevice, gVulkanAllocator);

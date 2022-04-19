@@ -30,6 +30,10 @@ namespace Crowny
     class VulkanResource;
     class VulkanResourceManager;
     class VulkanImage;
+	class VulkanTimerQuery;
+    class VulkanPipelineQuery;
+    class VulkanOcclusionQuery;
+    class VulkanQuery;
 
     enum class BufferUseFlagBits
     {
@@ -232,6 +236,11 @@ namespace Crowny
                                       VkImageLayout finalLayout, VulkanAccessFlags access, VkPipelineStageFlags stages);
         void RegisterImageTransfer(VulkanImage* image, const VkImageSubresourceRange& range, VkImageLayout layout,
                                    VulkanAccessFlags access);
+		
+		void RegisterQuery(VulkanTimerQuery* query) { m_TimerQueries.insert(query); }
+        void RegisterQuery(VulkanPipelineQuery* query) { m_PipelineQueries.insert(query); }
+		void RegisterQuery(VulkanOcclusionQuery* query) { m_OcclusionQueries.insert(query); }
+
         void UpdateFinalLayouts();
         void UpdateShaderSubresource(VulkanImage* image, uint32_t imageInfoIdx, ImageSubresourceInfo& subresourceInfo,
                                      VkImageLayout layout, VulkanAccessFlags access, VkPipelineStageFlags stages);
@@ -242,6 +251,8 @@ namespace Crowny
         void UpdateTransferSubresource(VulkanImage* image, uint32_t imageInfoIdx, ImageSubresourceInfo& subresourceInfo,
                                        VkImageLayout layout, VulkanAccessFlags access, VkPipelineStageFlags stages);
         ImageSubresourceInfo& FindSubresourceInfo(VulkanImage* image, uint32_t face, uint32_t mip);
+
+		void ResetQuery(VulkanQuery* query);
 
         bool CheckFenceStatus(bool block) const;
 
@@ -290,7 +301,7 @@ namespace Crowny
         void ExecuteWriteHazardBarrier();
         void ExecuteLayoutTransitions();
         RenderSurfaceMask GetFBReadMask();
-
+        void GetInProgressQueries(Vector<VulkanTimerQuery*>& timers, Vector<VulkanPipelineQuery*>& pipelines, Vector<VulkanOcclusionQuery*>& occlusions) const;
     private:
         friend class VulkanCommandBufferPool;
 
@@ -315,6 +326,11 @@ namespace Crowny
         UnorderedMap<VulkanResource*, ResourceUseHandle> m_Resources;
         UnorderedMap<VulkanResource*, uint32_t> m_Images;
         UnorderedMap<VulkanSwapChain*, ResourceUseHandle> m_SwapChains;
+		
+		UnorderedSet<VulkanTimerQuery*> m_TimerQueries;
+		UnorderedSet<VulkanPipelineQuery*> m_PipelineQueries;
+		UnorderedSet<VulkanOcclusionQuery*> m_OcclusionQueries;
+		
         Set<uint32_t> m_ShaderBoundSubresourceInfos;
         uint32_t m_GlobalQueueIdx = -1;
 
@@ -336,14 +352,15 @@ namespace Crowny
         DescriptorSetBindFlags m_DescriptorSetsBindState;
         Vector<ImageSubresourceInfo> m_SubresourceInfoStorage;
         Vector<ImageInfo> m_ImageInfos;
-        UnorderedMap<uint32_t, TransitionInfo> m_TransitionInfoTemp;
         Vector<VkImageMemoryBarrier> m_LayoutTransitionBarriersTemp;
+        Vector<Ref<VulkanVertexBuffer>> m_VertexBuffers;
+        Vector<VulkanQuery*> m_QueuedQueryResets;
+        UnorderedMap<uint32_t, TransitionInfo> m_TransitionInfoTemp;
         UnorderedMap<VulkanImage*, uint32_t> m_QueuedLayoutTransitions;
         Vector<VulkanSemaphore*> m_SemaphoresTemp{ MAX_UNIQUE_QUEUES };
         VkBuffer m_VertexBuffersTemp[MAX_BOUND_VERTEX_BUFFERS] = {};
         VkDeviceSize m_VertexBufferOffsets[MAX_BOUND_VERTEX_BUFFERS]{};
         Ref<VulkanIndexBuffer> m_IndexBuffer;
-        Vector<Ref<VulkanVertexBuffer>> m_VertexBuffers;
         VulkanFramebuffer* m_Framebuffer = nullptr;
         Ref<RenderTarget> m_RenderTarget;
         Ref<VulkanGraphicsPipeline> m_GraphicsPipeline;
