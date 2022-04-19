@@ -35,7 +35,7 @@ namespace Crowny
             out << YAML::Key << "MonoScriptComponent";
             out << YAML::BeginMap;
             auto msc = entity.GetComponent<MonoScriptComponent>();
-            const String& name = msc.GetManagedClass()->GetName();
+            const String& name = msc.GetTypeName();
             // auto& fields = msc.GetSerializableFields();
             // if (fields.size() > 0)
             // {
@@ -66,7 +66,7 @@ namespace Crowny
         }
 
         if (entity.HasComponent<AudioListenerComponent>())
-            out << YAML::Key << "AudioListenerComponent";
+            out << YAML::Key << "AudioListenerComponent" << YAML::Value << "";
 
         if (entity.HasComponent<AudioSourceComponent>())
         {

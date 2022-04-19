@@ -48,7 +48,7 @@ namespace Sandbox
         public float Float = 14f;
         public double Double = 32;
 
-        public sbyte Byte = 1;
+        public sbyte SByte = 1;
         public byte UByte = 2;
         public short Short = 3;
         public ushort UShort = 4;
@@ -65,6 +65,14 @@ namespace Sandbox
         public List<bool> listOfBools = new List<bool>();
 
         public int Property { get; set; }
+
+        public Vector2 TestVec2;
+        public Vector3 TestVec3;
+        public Vector4 TestVec4;
+
+        public Vector2 TestVec22 = new Vector2(1, 2);
+        public Vector3 TestVec32 = new Vector3(1, 2, 3);
+        public Vector4 TestVec42 = new Vector4(1, 2, 3, 4);
 
         [SerializeObject]
         public struct TestStruct

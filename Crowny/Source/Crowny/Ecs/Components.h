@@ -143,11 +143,11 @@ namespace Crowny
     struct MeshRendererComponent : public ComponentBase
     {
         Ref<::Crowny::Mesh> Mesh = nullptr;
-        Ref<::Crowny::Model> Model = nullptr;
-
+        // Ref<::Crowny::Model> Model = nullptr;
+		
         MeshRendererComponent() : ComponentBase()
         {
-            Model = CreateRef<::Crowny::Model>("Resources/Models/sphere.gltf");
+        //    Model = CreateRef<::Crowny::Model>("Resources/Models/sphere.gltf");
         };
         MeshRendererComponent(const MeshRendererComponent&) = default;
     };
@@ -249,6 +249,9 @@ namespace Crowny
 
         ScriptObjectBackupData BeginRefresh();
         void EndRefresh(const ScriptObjectBackupData& data);
+
+		String& GetTypeName() { return m_TypeName; }
+		void SetTypeName(const String& typeName) { m_TypeName = typeName; }
 
         void OnInitialize(Entity entity);
         void OnStart();

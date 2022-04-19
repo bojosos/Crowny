@@ -64,6 +64,7 @@ namespace Crowny
         SerializableObject();
 
     private:
+        CW_SERIALIZABLE(SerializableObject)
         struct Hash
         {
             size_t operator()(const SerializableFieldKey& x) const;

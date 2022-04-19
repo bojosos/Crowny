@@ -19,6 +19,11 @@ namespace Crowny
         MonoClass* SystemTypeClass = nullptr;
         MonoClass* SystemSerializable = nullptr;
 
+		MonoClass* Vector2 = nullptr;
+		MonoClass* Vector3 = nullptr;
+		MonoClass* Vector4 = nullptr;
+		MonoClass* Matrix4 = nullptr;
+
         MonoClass* ComponentClass = nullptr;
         MonoClass* EntityClass = nullptr;
         MonoClass* EntityBehaviour = nullptr;
@@ -32,6 +37,7 @@ namespace Crowny
         MonoClass* SerializableObjectAtrribute = nullptr;
         MonoClass* NotNullAttribute = nullptr;
         MonoClass* DontSerializeFieldAttribute = nullptr;
+		MonoClass* RequireComponent = nullptr;
 
         MonoClass* ScriptUtils = nullptr;
         MonoClass* ScriptCompiler = nullptr;
@@ -64,9 +70,11 @@ namespace Crowny
         ComponentInfo* GetComponentInfo(MonoReflectionType* type);
         void InitializeTypes();
 
+        bool IsBasicType(MonoClass* klass);
         const BuiltinScriptClasses& GetBuiltinClasses() { return m_Builtin; }
 
         void LoadAssemblyInfo(const String& assemblyName);
+		const UnorderedMap<String, MonoClass*> GetEntityBehaviours() const { return m_EntityBehaviourClasses; }
 
         ScriptTypeInfo* GetSerializableTypeInfo(MonoReflectionType* reflType);
 
@@ -114,8 +122,9 @@ namespace Crowny
         uint32_t m_UniqueTypeId = 1;
         BuiltinScriptClasses m_Builtin;
         UnorderedMap<MonoReflectionType*, ComponentInfo>
-          m_ComponentInfos; // TODO: Have to replace the reflection type with scriptmeta or update the map after reload
+          m_ComponentInfos; // TODO: Have to replace the reflection type with script meta or update the map after reload
         UnorderedMap<MonoReflectionType*, ScriptTypeInfo> m_ScriptTypeInfos;
         UnorderedMap<String, Ref<SerializableAssemblyInfo>> m_AssemblyInfos;
+        UnorderedMap<String, MonoClass*> m_EntityBehaviourClasses;
     };
 } // namespace Crowny

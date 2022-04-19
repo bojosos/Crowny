@@ -79,7 +79,7 @@ namespace Crowny
         }
 
         /// <summary>
-        /// Removes the component from the ntity.
+        /// Removes the component from the entity.
         /// </summary>
         /// <typeparam name="T">The type of component.</typeparam>
         public void RemoveComponent<T>() where T : Component

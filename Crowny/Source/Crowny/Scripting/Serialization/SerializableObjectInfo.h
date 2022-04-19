@@ -31,7 +31,12 @@ namespace Crowny
         U64,
         Float,
         Double,
-        String
+        String,
+
+        Vector2,
+        Vector3,
+		Vector4,
+        Matrix4
     };
 
     enum class ScriptFieldFlagBits
@@ -92,8 +97,8 @@ namespace Crowny
     class SerializableTypeInfoList : public SerializableTypeInfo
     {
     public:
-        virtual bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override { return false; };
-        ::MonoClass* GetMonoClass() const override { return nullptr; }
+        virtual bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override { return false; }
+        virtual ::MonoClass* GetMonoClass() const override { return m_Class; }
         /*{
             ::MonoClass* monoClass = m_ElementType->GetMonoClass();
             if (monoClass == nullptr)
@@ -105,7 +110,16 @@ namespace Crowny
         }*/
         virtual SerializableType GetType() override { return SerializableType::List; }
 
+        ::MonoClass* m_Class;
         Ref<SerializableTypeInfo> m_ElementType;
+    };
+
+    class SerializableTypeInfoArray : public SerializableTypeInfo
+    {
+    public:
+		virtual bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override { return false; }
+        virtual ::MonoClass* GetMonoClass() const override { return nullptr; }
+        virtual SerializableType GetType() override { return SerializableType::Array; }
     };
 
     class SerializableTypeInfoObject : public SerializableTypeInfo
@@ -114,7 +128,8 @@ namespace Crowny
         bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override;
         ::MonoClass* GetMonoClass() const override;
         virtual SerializableType GetType() override { return SerializableType::Object; }
-
+        MonoObject* GetAttribute(MonoClass* monoClass);
+		
         ScriptPrimitiveType m_UnderlyingType;
         bool m_ValueType;
         uint32_t m_TypeId;

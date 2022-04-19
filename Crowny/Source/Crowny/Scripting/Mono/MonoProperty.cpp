@@ -36,7 +36,7 @@ namespace Crowny
     {
         void* args[2];
         args[0] = &index;
-        args[1] = value;
+        args[1] = value; // Maybe could get away with using mono_property_set_value and then won't need to box/unbox
         mono_runtime_invoke(m_SetMethod, instance, args, nullptr);
     }
 
@@ -46,7 +46,7 @@ namespace Crowny
             return;
 
         void* args[1];
-        args[0] = value;
+        args[0] = value; // Maybe could get away with using mono_property_set_value and then won't need to box/unbox
         mono_runtime_invoke(m_SetMethod, instance, args, nullptr);
     }
 

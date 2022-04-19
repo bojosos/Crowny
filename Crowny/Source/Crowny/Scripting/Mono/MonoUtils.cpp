@@ -151,6 +151,12 @@ namespace Crowny
         return mono_type_get_object(MonoManager::Get().GetDomain(), type);
     }
 
+    String MonoUtils::GetReflTypeName(MonoReflectionType* reflType)
+    {
+		MonoType* monoType = mono_reflection_type_get_type(reflType);
+        return mono_class_get_name(mono_type_get_class(monoType));
+    }
+
     MonoPrimitiveType MonoUtils::GetEnumPrimitiveType(::MonoClass* monoClass)
     {
         MonoType* monoType = mono_class_get_type(monoClass);

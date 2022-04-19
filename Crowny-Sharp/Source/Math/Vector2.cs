@@ -7,7 +7,7 @@ namespace Crowny
     /// <summary>
     /// A two dimensional vector.
     /// </summary>
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Sequential), SerializeObject]
     public struct Vector2
     {
         public static readonly Vector2 zero = new Vector2(0.0f, 0.0f);

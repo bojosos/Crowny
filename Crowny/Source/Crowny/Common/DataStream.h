@@ -68,6 +68,7 @@ namespace Crowny
         virtual bool Eof() const override;
 
         virtual Ref<DataStream> Clone(bool copyData = true) const override;
+		uint8_t* TakeMemory() { m_OwnsMemory = false; return m_Data; }
 
     private:
         void Reallocate(size_t bytes);

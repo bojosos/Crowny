@@ -6,6 +6,7 @@
 
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Import/Importer.h"
+#include "Crowny/Serialization/FileEncoder.h"
 
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntityBehaviour.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
@@ -201,7 +202,7 @@ namespace Crowny
         m_SleepMode = sleepMode;
     }
 
-    MonoScriptComponent::MonoScriptComponent(const String& name) : ComponentBase() { SetClassName(name); }
+    MonoScriptComponent::MonoScriptComponent(const String& name) : ComponentBase(), m_TypeName(name) { SetClassName(name); }
 
     MonoClass* MonoScriptComponent::GetManagedClass() const { return m_Class; }
     MonoObject* MonoScriptComponent::GetManagedInstance() const
@@ -220,11 +221,40 @@ namespace Crowny
         {
             m_MissingType = false;
             managedInstance = m_ObjectInfo->m_MonoClass->CreateInstance();
+            MonoClass* requireClass = ScriptInfoManager::Get().GetBuiltinClasses().RequireComponent;
+			MonoObject* requireComponent = m_ObjectInfo->m_TypeInfo->GetAttribute(requireClass);
+            if (requireComponent != nullptr)
+            {
+				MonoField* field = requireClass->GetField("components");
+				MonoObject* components = nullptr;
+                components = field->GetBoxed(requireComponent);
+				if (components != nullptr)
+                {
+				    MonoClass* listClass = field->GetType();
+				    MonoProperty* countProp = listClass->GetProperty("Count");
+				    MonoObject* lengthObj = countProp->Get(components);
+				    uint32_t length = *(int32_t*)MonoUtils::Unbox(lengthObj);
+				    MonoProperty* itemProp = listClass->GetProperty("Item");
+				    for (uint32_t i = 0; i < length; i++)
+                    {
+                        MonoReflectionType* reflType = (MonoReflectionType*)itemProp->GetIndexed(components, i);
+                        ComponentInfo* componentInfo = ScriptInfoManager::Get().GetComponentInfo(reflType);
+                        if (componentInfo != nullptr)
+                        {
+							if (!componentInfo->HasCallback(entity))
+						        componentInfo->AddCallback(entity);
+                        }
+                        else
+						    CW_ENGINE_WARN("Could not find component {0} used in RequireComponent for class {1}: ", MonoUtils::GetReflTypeName(reflType), m_Class->GetFullName());
+                    }
+                }
+            }
         }
         else
         {
             managedInstance = nullptr;
             m_MissingType = true;
+            CW_ENGINE_WARN("Missing type");
         }
         // ScriptSceneObjectManager::Get().CreateManagedScriptComponent(managedInstance, component); // TODO: Create a
         // managed component so that in C# land we can do ManagedComponent c = GetComponent<ManagedComponent>(); and not
@@ -314,7 +344,7 @@ namespace Crowny
         };
 
         const MonoScriptComponent& msc = entity.GetComponent<MonoScriptComponent>();
-        MonoMethod* onCollisionEnter = msc.GetManagedClass()->GetMethod("OnCollisionEnter2D", "Collision2D");
+        MonoMethod* onCollisionEnter = msc.GetManagedClass()->GetMethod("OnCollisionEnter2D", "Collision2D"); // Maybe replace these with the other Collider, since Box2D works that way
         if (onCollisionEnter != nullptr)
             m_OnCollisionEnterThunk = (OnCollisionEnterThunkDef)onCollisionEnter->GetThunk();
         MonoMethod* onCollisionStay = msc.GetManagedClass()->GetMethod("OnCollisionStay2D", "Collision2D");
@@ -344,11 +374,11 @@ namespace Crowny
         if (serializableObject == nullptr)
             return { nullptr, 0 };
         Ref<MemoryDataStream> stream = CreateRef<MemoryDataStream>();
-        // YamlSerializer ys;
-        // ys.Serialize(serializableObject, stream);
+		BinaryDataStreamOutputArchive archive(stream);
+		archive(serializableObject);
         ScriptObjectBackupData backupData;
-        // backupData.Size = stream->GetSize();
-        // backupData.Data = stream->DisownMemory(); // TODO: implement in datastream
+        backupData.Size = stream->Size();
+        backupData.Data = stream->TakeMemory();
         return backupData;
     }
 
@@ -364,7 +394,13 @@ namespace Crowny
 
     void MonoScriptComponent::SetClassName(const String& className)
     {
-        m_Class = MonoManager::Get().GetAssembly(GAME_ASSEMBLY)->GetClass("Sandbox", className);
+        m_Class = MonoManager::Get().GetAssembly(GAME_ASSEMBLY)->GetClass("Sandbox", m_TypeName);
+        m_OnStartThunk = nullptr;
+        m_OnUpdateThunk = nullptr;
+        m_OnDestroyThunk = nullptr;
+        m_OnCollisionEnterThunk = nullptr;
+        m_OnCollisionStayThunk = nullptr;
+        m_OnCollisionExitThunk = nullptr;
     }
 
     void MonoScriptComponent::OnStart()
