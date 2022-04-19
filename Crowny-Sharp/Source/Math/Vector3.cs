@@ -6,7 +6,7 @@ namespace Crowny
     /// <summary>
     /// A three dimensional vector.
     /// </summary>
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Sequential), SerializeObject]
     // TODO: Maybe IEquatable, IFormattable, for all classes
     public struct Vector3
     {

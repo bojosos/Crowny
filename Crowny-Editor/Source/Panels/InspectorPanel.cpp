@@ -13,7 +13,7 @@
 
 #include "Editor/EditorAssets.h"
 #include "Editor/ProjectLibrary.h"
-#include "Panels/UIUtils.h"
+#include "UI/UIUtils.h"
 
 #include <glm/gtc/type_ptr.hpp>
 

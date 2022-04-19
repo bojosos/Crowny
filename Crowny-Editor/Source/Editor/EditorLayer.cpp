@@ -18,7 +18,7 @@
 #include "Crowny/Serialization/SceneSerializer.h"
 
 #include "Editor/Editor.h"
-#include "Panels/UIUtils.h"
+#include "UI/UIUtils.h"
 #include "Editor/EditorAssets.h"
 #include "Editor/ProjectLibrary.h"
 
@@ -112,6 +112,7 @@ namespace Crowny
         m_ShowColliders = editorSettings->ShowPhysicsColliders2D;
         m_AutoLoadLastProject = editorSettings->AutoLoadLastProject;
         m_ShowScriptDebugInfo = editorSettings->ShowScriptDebugInfo;
+        m_ShowEntityDebugInfo = editorSettings->ShowEntityDebugInfo;
 
         m_ConsolePanel->SetMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Info, editorSettings->EnableConsoleInfoMessages);
         m_ConsolePanel->SetMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Warn, editorSettings->EnableConsoleWarningMessages);
@@ -248,6 +249,7 @@ namespace Crowny
         Vector<AssemblyRefreshInfo> refreshInfos;
         Path engineAssemblyPath = "C:/dev/Crowny/Crowny-Sharp/CrownySharp.dll";
         Path gameAssemblyPath = Editor::Get().GetProjectPath() / INTERNAL_ASSEMBLY_PATH / "GameAssembly.dll";
+        CW_ENGINE_INFO("{0}, {1}", gameAssemblyPath, Editor::Get().GetProjectPath());
         refreshInfos.emplace_back(CROWNY_ASSEMBLY, &engineAssemblyPath);
         refreshInfos.emplace_back(GAME_ASSEMBLY, &gameAssemblyPath);
         ScriptObjectManager::Get().RefreshAssemblies(refreshInfos);
@@ -260,8 +262,9 @@ namespace Crowny
         for (auto e : view)
         {
             Entity ent = { e, SceneManager::GetActiveScene().get() };
-            ent.GetComponent<MonoScriptComponent>().SetClassName("Test");
-            ent.GetComponent<MonoScriptComponent>().OnInitialize(ent);
+            auto& msc = ent.GetComponent<MonoScriptComponent>();
+            msc.SetClassName(msc.GetManagedClass()->GetName());
+            msc.OnInitialize(ent);
         }
     }
 
@@ -464,14 +467,17 @@ namespace Crowny
               PixelData::Create(rt->GetColorTexture(1)->GetWidth(), rt->GetColorTexture(1)->GetHeight(),
                                 rt->GetColorTexture(1)->GetFormat());
             rt->GetColorTexture(1)->ReadData(*outPixelData);
-            glm::vec4 col = outPixelData->GetColorAt(coords.x, coords.y);
-            if (col.x == 0.0f)
-                m_HoveredEntity = Entity(entt::null, scene.get());
-            else
+			if (outPixelData->GetSize() > coords.x * coords.y)
             {
-                m_HoveredEntity = Entity((entt::entity)(col.x - 1), scene.get());
-                if (Input::IsMouseButtonDown(Mouse::ButtonLeft) && !Input::IsKeyPressed(Key::LeftAlt) && !Input::IsKeyPressed(Key::RightAlt) && !m_ViewportPanel->IsMouseOverGizmo())
-                    m_HierarchyPanel->SetSelectedEntity(m_HoveredEntity);
+                glm::vec4 col = outPixelData->GetColorAt(coords.x, coords.y);
+                if (col.x == 0.0f)
+                    m_HoveredEntity = Entity(entt::null, scene.get());
+                else
+                {
+                    m_HoveredEntity = Entity((entt::entity)(col.x - 1), scene.get());
+                    if (Input::IsMouseButtonDown(Mouse::ButtonLeft) && !Input::IsKeyPressed(Key::LeftAlt) && !Input::IsKeyPressed(Key::RightAlt) && !m_ViewportPanel->IsMouseOverGizmo())
+                        m_HierarchyPanel->SetSelectedEntity(m_HoveredEntity);
+                }
             }
         }
         m_HierarchyPanel->Update();
@@ -709,16 +715,20 @@ namespace Crowny
 
         ImGui::End();
     }
+	
+    String s_String;
 
     void EditorLayer::UI_EntityDebugInfo()
     {
         if (m_ShowEntityDebugInfo)
         {
             ImGui::Begin("Entity Debug Info", &m_ShowEntityDebugInfo);
+            if (UIUtils::SearchWidget(s_String))
+				CW_ENGINE_INFO(s_String);
 		    Scene* scene = SceneManager::GetActiveScene().get();
 		    auto view = scene->GetAllEntitiesWith<TagComponent>();
             for (auto e : view)
-            {
+            { 
 			    Entity entity = Entity(e, scene);
 			    const String label = entity.GetName() + ": " + entity.GetUuid().ToString();
                 if (ImGui::TreeNode(label.c_str()))
@@ -808,14 +818,14 @@ namespace Crowny
     {
 		ImGui::Begin("Header", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse);
 		ImGui::SetWindowSize(ImVec2(ImGui::GetWindowWidth(), 36.0f));
-        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+        // ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetStyle().FramePadding.y);
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2, 2));
         ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
 		
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 2);
 
-        auto drawButton = [&](const char* icon, int32_t gizmoMode)
+        auto drawButton = [&](const Ref<Texture>& icon, int32_t gizmoMode)
 		{
 			if (m_ViewportPanel->GetGizmoMode() == gizmoMode)
             {
@@ -827,18 +837,20 @@ namespace Crowny
 				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.7f, 0.7f, 1.00f));
             }
-            if (ImGui::Button(icon))
+			;
+            ImGui::Image(ImGui_ImplVulkan_AddTexture(icon), { 30.0f, 30.0f }, { 0.0f, 1.0f }, { 1.0f, 0.0f });
+			if (ImGui::IsItemClicked())
 				m_ViewportPanel->SetGizmoMode(gizmoMode);
 			ImGui::PopStyleColor(2);
         };
 		
-        drawButton(ICON_FA_ARROW_POINTER, -1);
+        drawButton(EditorAssets::Get().ArrowPointerIcon, -1);
 		ImGui::SameLine();
-        drawButton(ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT, 7);
+        drawButton(EditorAssets::Get().ArrowsIcon, 7);
 		ImGui::SameLine();
-        drawButton(ICON_FA_ROTATE, 120);
+        drawButton(EditorAssets::Get().RotateIcon, 120);
 		ImGui::SameLine();
-        drawButton(ICON_FA_MAXIMIZE, 896);
+        drawButton(EditorAssets::Get().MaximizeIcon, 896);
 		ImGui::SameLine();
 		if (m_ViewportPanel->GetGizmoLocalMode())
 		{
@@ -850,7 +862,8 @@ namespace Crowny
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.33333334f, 0.3529412f, 0.36078432f, 0.5f));
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.7f, 0.7f, 1.00f));
 		}
-		if (ImGui::Button(ICON_FA_GLOBE))
+		ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().GlobeIcon), { 30.0f, 30.0f }, { 0.0f, 1.0f }, { 1.0f, 0.0f });
+		if (ImGui::IsItemClicked())
 			m_ViewportPanel->SetGizmoLocalMode(!m_ViewportPanel->GetGizmoLocalMode());
 		ImGui::PopStyleColor(2);
 
@@ -859,7 +872,8 @@ namespace Crowny
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
 
 		ImGui::SameLine(ImGui::GetCursorPosX() + ImGui::GetWindowContentRegionWidth() * 0.5f - 43.5f);
-        if (ImGui::Button(ICON_FA_PLAY))
+		ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().PlayIcon), { 30.0f, 30.0f }, { 0.0f, 1.0f }, { 1.0f, 0.0f });
+        if (ImGui::IsItemClicked())
 		{
 			if (m_SceneState == SceneState::Edit)
 			{
@@ -871,7 +885,8 @@ namespace Crowny
 			}
 		}
 		ImGui::SameLine(0.0f, 8.0f);
-        if (ImGui::Button(ICON_FA_PAUSE))
+        ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().PauseIcon), { 30.0f, 30.0f }, { 0.0f, 1.0f }, { 1.0f, 0.0f });
+        if (ImGui::IsItemClicked())
 		{
 			if (m_SceneState == SceneState::Play)
 			{
@@ -886,7 +901,8 @@ namespace Crowny
 			}
 		}
 		ImGui::SameLine(0.0f, 8.0f);
-        if (ImGui::Button(ICON_FA_STOP))
+        ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().StopIcon), { 30.0f, 30.0f }, { 0.0f, 1.0f }, { 1.0f, 0.0f });
+        if (ImGui::IsItemClicked())
 		{
 			if (m_SceneState == SceneState::Play)
 			{
@@ -905,7 +921,7 @@ namespace Crowny
 		}
         ImGui::PopStyleColor(4);
         ImGui::PopStyleVar(1);
-        ImGui::PopFont();
+        // ImGui::PopFont();
 		ImGui::End();
     }
 

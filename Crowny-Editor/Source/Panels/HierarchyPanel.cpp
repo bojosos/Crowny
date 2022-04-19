@@ -1,7 +1,7 @@
 #include "cwepch.h"
 
 #include "Panels/HierarchyPanel.h"
-#include "Panels/UIUtils.h"
+#include "UI/UIUtils.h"
 
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"

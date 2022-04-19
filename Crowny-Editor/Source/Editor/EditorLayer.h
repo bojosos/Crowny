@@ -120,6 +120,6 @@ namespace Crowny
         SceneState m_SceneState = SceneState::Edit;
 
     public:
-        static EditorCamera GetEditorCamera() { return s_EditorCamera; }
+        static EditorCamera& GetEditorCamera() { return s_EditorCamera; }
     };
 } // namespace Crowny

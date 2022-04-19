@@ -13,6 +13,12 @@ namespace Crowny
         Ref<Texture> StopIcon;
         Ref<Texture> FileIcon;
         Ref<Texture> FolderIcon;
+		Ref<Texture> ArrowPointerIcon;
+		Ref<Texture> ArrowsIcon;
+		Ref<Texture> RotateIcon;
+		Ref<Texture> MaximizeIcon;
+        Ref<Texture> GlobeIcon;
+        Ref<Texture> SearchIcon;
     };
 
     class EditorAssets
@@ -32,6 +38,13 @@ namespace Crowny
 
         static const String FileIcon;
         static const String FolderIcon;
+
+		static const String ArrowPointerIcon;
+		static const String ArrowsIcon;
+		static const String RotateIcon;
+		static const String MaximizeIcon;
+        static const String GlobeIcon;
+        static const String SearchIcon;
 
         static EditorAssetsLibrary s_Library;
     };

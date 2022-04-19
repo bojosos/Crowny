@@ -3,6 +3,8 @@
 #include "Panels/ComponentEditor.h"
 #include "Panels/HierarchyPanel.h"
 
+#include "UI/UIUtils.h"
+
 #include <imgui.h>
 
 namespace Crowny
@@ -57,7 +59,9 @@ namespace Crowny
                     {
                         ImGui::Indent(30.f);
                         ImGui::PushID("Widget");
+                        UI::BeginPropertyGrid();
                         ci.widget(entity);
+						UI::EndPropertyGrid();
                         ImGui::PopID();
                         ImGui::Unindent(30.f);
                     }

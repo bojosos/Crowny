@@ -36,7 +36,6 @@ namespace Crowny
             style.Colors[ImGuiCol_WindowBg].w = 1.0f;
         }
 		
-
 		io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto/Roboto-Regular.ttf", 17.0f);
 		ImFontConfig config;
         config.MergeMode = true;
@@ -53,7 +52,7 @@ namespace Crowny
 		io.Fonts->AddFontFromFileTTF("Resources/Fonts/FontAwesome/fa-solid-900.ttf", 24.0f, &configFa, icons_ranges);
 		io.Fonts->Build();
 
-        style.WindowRounding = 0;
+        /*style.WindowRounding = 0;
         style.GrabRounding = style.FrameRounding = 4;
         style.ScrollbarSize = 15;
         style.TabRounding = 0;
@@ -63,9 +62,16 @@ namespace Crowny
         style.ItemSpacing.y = 3.0f;
         style.FramePadding = ImVec2(2, 2);
         style.WindowPadding = ImVec2(2, 2);
-        style.TabRounding = 4;
+        style.TabRounding = 4;*/
         style.WindowMenuButtonPosition = ImGuiDir_None;
         style.ColorButtonPosition = ImGuiDir_Left;
+		
+		style.FrameRounding = 2.5f;
+		style.FrameBorderSize = 1.0f;
+		style.IndentSpacing = 11.0f;
+
+
+		/*
 
         style.Colors[ImGuiCol_Text] = { 0.73333335f, 0.73333335f, 0.73333335f, 1.00f };
         style.Colors[ImGuiCol_TextDisabled] = { 0.34509805f, 0.34509805f, 0.34509805f, 1.00f };
@@ -134,6 +140,90 @@ namespace Crowny
         style.Colors[ImGuiCol_TitleBg] = ImVec4{ 0.15f, 0.1505f, 0.151f, 1.0f };
         style.Colors[ImGuiCol_TitleBgActive] = ImVec4{ 0.15f, 0.1505f, 0.151f, 1.0f };
         style.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4{ 0.15f, 0.1505f, 0.151f, 1.0f };
+		*/
+		// auto& style = ImGui::GetStyle();
+		auto& colors = ImGui::GetStyle().Colors;
+
+		//========================================================
+		/// Colours
+
+		// Headers
+		colors[ImGuiCol_Header] = ImGui::ColorConvertU32ToFloat4(IM_COL32(47, 47, 47, 255));
+		colors[ImGuiCol_HeaderHovered] = ImGui::ColorConvertU32ToFloat4(IM_COL32(47, 47, 47, 255));
+		colors[ImGuiCol_HeaderActive] = ImGui::ColorConvertU32ToFloat4(IM_COL32(47, 47, 47, 255));
+
+		// Buttons
+		colors[ImGuiCol_Button] = ImGui::ColorConvertU32ToFloat4(IM_COL32(56, 56, 56, 200));
+		colors[ImGuiCol_ButtonHovered] = ImGui::ColorConvertU32ToFloat4(IM_COL32(70, 70, 70, 255));
+		colors[ImGuiCol_ButtonActive] = ImGui::ColorConvertU32ToFloat4(IM_COL32(56, 56, 56, 150));
+
+		// Frame BG
+		colors[ImGuiCol_FrameBg] = ImGui::ColorConvertU32ToFloat4(IM_COL32(15, 15, 15, 255));
+		colors[ImGuiCol_FrameBgHovered] = ImGui::ColorConvertU32ToFloat4(IM_COL32(15, 15, 15, 255));
+		colors[ImGuiCol_FrameBgActive] = ImGui::ColorConvertU32ToFloat4(IM_COL32(15, 15, 15, 255));
+
+		// Tabs
+		colors[ImGuiCol_Tab] = ImGui::ColorConvertU32ToFloat4(IM_COL32(21, 21, 21, 255));
+		colors[ImGuiCol_TabHovered] = ImGui::ColorConvertU32ToFloat4(IM_COL32(255, 225, 135, 30));
+		colors[ImGuiCol_TabActive] = ImGui::ColorConvertU32ToFloat4(IM_COL32(255, 225, 135, 60));
+		colors[ImGuiCol_TabUnfocused] = ImGui::ColorConvertU32ToFloat4(IM_COL32(21, 21, 21, 255));
+		colors[ImGuiCol_TabUnfocusedActive] = colors[ImGuiCol_TabHovered];
+
+		// Title
+		colors[ImGuiCol_TitleBg] = ImGui::ColorConvertU32ToFloat4(IM_COL32(21, 21, 21, 255));
+		colors[ImGuiCol_TitleBgActive] = ImGui::ColorConvertU32ToFloat4(IM_COL32(21, 21, 21, 255));
+		colors[ImGuiCol_TitleBgCollapsed] = ImVec4{ 0.15f, 0.1505f, 0.151f, 1.0f };
+
+		// Resize Grip
+		colors[ImGuiCol_ResizeGrip] = ImVec4(0.91f, 0.91f, 0.91f, 0.25f);
+		colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.81f, 0.81f, 0.81f, 0.67f);
+		colors[ImGuiCol_ResizeGripActive] = ImVec4(0.46f, 0.46f, 0.46f, 0.95f);
+
+		// Scrollbar
+		colors[ImGuiCol_ScrollbarBg] = ImVec4(0.02f, 0.02f, 0.02f, 0.53f);
+		colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.31f, 0.31f, 0.31f, 1.0f);
+		colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.41f, 0.41f, 0.41f, 1.0f);
+		colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.51f, 0.51f, 0.51f, 1.0f);
+
+		// Check Mark
+		colors[ImGuiCol_CheckMark] = ImGui::ColorConvertU32ToFloat4(IM_COL32(200, 200, 200, 255));
+
+		// Slider
+		colors[ImGuiCol_SliderGrab] = ImVec4(0.51f, 0.51f, 0.51f, 0.7f);
+		colors[ImGuiCol_SliderGrabActive] = ImVec4(0.66f, 0.66f, 0.66f, 1.0f);
+
+		// Text
+		colors[ImGuiCol_Text] = ImGui::ColorConvertU32ToFloat4(IM_COL32(192, 192, 192, 255));
+
+		// Checkbox
+		colors[ImGuiCol_CheckMark] = ImGui::ColorConvertU32ToFloat4(IM_COL32(192, 192, 192, 255));
+
+		// Separator
+		colors[ImGuiCol_Separator] = ImGui::ColorConvertU32ToFloat4(IM_COL32(26, 26, 26, 255));
+		colors[ImGuiCol_SeparatorActive] = ImGui::ColorConvertU32ToFloat4(IM_COL32(39, 185, 242, 255));
+		colors[ImGuiCol_SeparatorHovered] = ImGui::ColorConvertU32ToFloat4(IM_COL32(39, 185, 242, 150));
+
+		// Window Background
+		colors[ImGuiCol_WindowBg] = ImGui::ColorConvertU32ToFloat4(IM_COL32(21, 21, 21, 255));
+		colors[ImGuiCol_ChildBg] = ImGui::ColorConvertU32ToFloat4(IM_COL32(36, 36, 36, 255));
+		colors[ImGuiCol_PopupBg] = ImGui::ColorConvertU32ToFloat4(IM_COL32(63, 70, 77, 255));
+		colors[ImGuiCol_Border] = ImGui::ColorConvertU32ToFloat4(IM_COL32(26, 26, 26, 255));
+
+		// Tables
+		colors[ImGuiCol_TableHeaderBg] = ImGui::ColorConvertU32ToFloat4(IM_COL32(47, 47, 47, 255));
+		colors[ImGuiCol_TableBorderLight] = ImGui::ColorConvertU32ToFloat4(IM_COL32(26, 26, 26, 255));
+
+		// Menubar
+		colors[ImGuiCol_MenuBarBg] = ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f };
+		// colors[ImGuiCol_WindowBg] = ImVec4(0.15f, 0.15f, 0.15f, style.Colors[ImGuiCol_WindowBg].w);
+
+
+		//========================================================
+		/// Style
+		style.FrameRounding = 2.5f;
+		style.FrameBorderSize = 1.0f;
+		style.IndentSpacing = 11.0f;
+		
     }
 
     void ImGuiLayer::OnDetach()

@@ -12,7 +12,7 @@ namespace Crowny
     public:
         ScriptSerializer() = default;
 
-        // void Serialize(SerializableScriptObject* object, Ref<MemoryDataStream>& stream);
+        void Serialize(SerializableObject* object);
         // Ref<SerializableScriptObject> Deserialize(Ref<MemoryDataStream>& stream);
     private:
         Scene* m_Scene;
