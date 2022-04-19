@@ -35,7 +35,7 @@ namespace Crowny
                 m_Meshes[i]->Draw();
         }
     }
-
+#if 0
     void Model::ProcessNode(aiNode* node, const aiScene* scene)
     {
         for (uint32_t i = 0; i < node->mNumMeshes; i++)
@@ -151,5 +151,5 @@ namespace Crowny
 
         return textures;
     }
-
+#endif
 } // namespace Crowny
