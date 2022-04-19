@@ -10,7 +10,7 @@
 #include "Crowny/Scene/SceneRenderer.h"
 
 #include "Panels/HierarchyPanel.h"
-#include "Panels/UIUtils.h"
+#include "UI/UIUtils.h"
 #include "Panels/ViewportPanel.h"
 
 #include <ImGuizmo.h>
@@ -83,7 +83,7 @@ namespace Crowny
 
         Entity selected = HierarchyPanel::GetSelectedEntity();
 
-        EditorCamera camera = EditorLayer::GetEditorCamera();
+        EditorCamera& camera = EditorLayer::GetEditorCamera();
         const glm::mat4& proj = camera.GetProjection();
         glm::mat4 view = camera.GetViewMatrix();
         glm::mat4 id(1.0f);
@@ -102,14 +102,24 @@ namespace Crowny
             glm::mat4 transform = tc.GetTransform();
 
             bool snap = Input::IsKeyPressed(Key::LeftControl);
-            float snapValue = 0.1; // TODO: These snaps should be loaded from the editor settings
+            float snapValue = 0.1f; // TODO: These snaps should be loaded from the editor settings
             if (m_GizmoMode == ImGuizmo::OPERATION::ROTATE)
                 snapValue = 15.0f;
 
             float snapValues[3] = { snapValue, snapValue, snapValue };
             ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj), (ImGuizmo::OPERATION)m_GizmoMode,
-                                m_LocalMode ? ImGuizmo::LOCAL : ImGuizmo::WORLD, glm::value_ptr(transform), nullptr,
-                                 snap ? snapValues : nullptr); // TODO: Bounds
+                                (!m_LocalMode && m_GizmoMode == ImGuizmo::TRANSLATE) ? ImGuizmo::WORLD : ImGuizmo::LOCAL, glm::value_ptr(transform), nullptr,
+                                 snap ? snapValues : nullptr); // TODO: Bounds, does rotation work?
+            ImGuizmo::ViewManipulate(glm::value_ptr(view), camera.GetDistance(), {m_ViewportBounds.z - 136.0f, m_ViewportBounds.y}, ImVec2(128, 128), 0x10101010);
+			glm::vec3 t, r, s;
+			Math::DecomposeMatrix(view, t, r, s);
+			// ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(view), glm::value_ptr(t), glm::value_ptr(r), glm::value_ptr(s));
+            // r = glm::radians(r);
+			// camera.SetPosition(t);
+            // camera.SetYaw(r.z);
+			// glm::vec3 deltaRot = r - rot;
+            // camera.SetPitch(r.x);
+			
             if (ImGuizmo::IsUsing())
             {
                 glm::vec3 position, rotation, scale;

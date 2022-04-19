@@ -6,7 +6,7 @@ namespace Crowny
     /// <summary>
     /// A four dimensional vector.
     /// </summary>
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Sequential), SerializeObject]
     public struct Vector4
     {
         public static readonly Vector4 zero = new Vector4(0.0f, 0.0f, 0.0f, 0.0f);

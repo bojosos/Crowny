@@ -45,6 +45,22 @@ namespace Crowny
         if (m_Builtin.SystemGenericListClass == nullptr)
             CW_ENGINE_ERROR("Cannot find System.Collections.Generic.List<T> class.");
 
+		m_Builtin.Vector2 = crownyAssembly->GetClass(CROWNY_NS, "Vector2");
+		if (m_Builtin.Vector2 == nullptr)
+			CW_ENGINE_ERROR("Cannot find {0}.Vector2 class.", CROWNY_NS);
+
+		m_Builtin.Vector3 = crownyAssembly->GetClass(CROWNY_NS, "Vector3");
+		if (m_Builtin.Vector3 == nullptr)
+			CW_ENGINE_ERROR("Cannot find {0}.Vector3 class.", CROWNY_NS);
+
+		m_Builtin.Vector4 = crownyAssembly->GetClass(CROWNY_NS, "Vector4");
+		if (m_Builtin.Vector4 == nullptr)
+			CW_ENGINE_ERROR("Cannot find {0}.Vector4 class.", CROWNY_NS);
+
+		m_Builtin.Matrix4 = crownyAssembly->GetClass(CROWNY_NS, "Matrix4");
+		if (m_Builtin.Matrix4 == nullptr)
+			CW_ENGINE_ERROR("Cannot find {0}.Matrix4 class.", CROWNY_NS);
+		
         m_Builtin.ComponentClass = crownyAssembly->GetClass(CROWNY_NS, "Component");
         if (m_Builtin.ComponentClass == nullptr)
             CW_ENGINE_ERROR("Cannot find {0}.Component class.", CROWNY_NS);
@@ -65,10 +81,6 @@ namespace Crowny
         if (m_Builtin.RangeAttribute == nullptr)
             CW_ENGINE_ERROR("Cannot find {0}.Range class.", CROWNY_NS);
 
-        m_Builtin.ShowInInspectorAttribute = crownyAssembly->GetClass(CROWNY_NS, "ShowInInspector");
-        if (m_Builtin.ShowInInspectorAttribute == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.ShowInInspector class.", CROWNY_NS);
-
         m_Builtin.NotNullAttribute = crownyAssembly->GetClass(CROWNY_NS, "NotNull");
         if (m_Builtin.NotNullAttribute == nullptr)
             CW_ENGINE_ERROR("Cannot find {0}.NotNull class.", CROWNY_NS);
@@ -76,10 +88,6 @@ namespace Crowny
         /*m_Builtin.StepAttribute = crownyAssembly->GetClass(CROWNY_NS, "Step");
         if (m_Builtin.StepAttribute == nullptr)
             CW_ENGINE_ERROR("Cannot find {0}.Step class.", CROWNY_NS);*/
-
-        m_Builtin.ShowInInspectorAttribute = crownyAssembly->GetClass(CROWNY_NS, "ShowInInspector");
-        if (m_Builtin.ShowInInspectorAttribute == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.ShowInInspector class.", CROWNY_NS);
 
         m_Builtin.ShowInInspectorAttribute = crownyAssembly->GetClass(CROWNY_NS, "ShowInInspector");
         if (m_Builtin.ShowInInspectorAttribute == nullptr)
@@ -95,7 +103,11 @@ namespace Crowny
 
         m_Builtin.DontSerializeFieldAttribute = crownyAssembly->GetClass(CROWNY_NS, "DontSerializeField");
         if (m_Builtin.DontSerializeFieldAttribute == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.DontSerializeFieldclass.", CROWNY_NS);
+            CW_ENGINE_ERROR("Cannot find {0}.DontSerializeField class.", CROWNY_NS);
+
+		m_Builtin.RequireComponent = crownyAssembly->GetClass(CROWNY_NS, "RequireComponent");
+		if (m_Builtin.RequireComponent == nullptr)
+			CW_ENGINE_ERROR("Cannot find {0}.RequireComponentclass.", CROWNY_NS);
 
         m_Builtin.ScriptUtils = crownyAssembly->GetClass(CROWNY_NS, "ScriptUtils");
         if (m_Builtin.ScriptUtils == nullptr)
@@ -104,6 +116,11 @@ namespace Crowny
         m_Builtin.ScriptCompiler = crownyAssembly->GetClass(CROWNY_NS, "ScriptCompiler");
         if (m_Builtin.ScriptCompiler == nullptr)
             CW_ENGINE_ERROR("Cannot find {0}.ScriptCompiler class.", CROWNY_NS);
+    }
+
+    bool ScriptInfoManager::IsBasicType(MonoClass* klass)
+    {
+        return klass->GetFullName() == m_Builtin.Vector2->GetFullName() || klass->GetFullName() == m_Builtin.Vector3->GetFullName() || klass->GetFullName() == m_Builtin.Vector4->GetFullName() || klass->GetFullName() == m_Builtin.Matrix4->GetFullName();
     }
 
     void ScriptInfoManager::LoadAssemblyInfo(const String& assemblyName)
@@ -118,11 +135,15 @@ namespace Crowny
         // MonoClass* assetClass = ScriptAsset::GetMetaData()->ScriptClass;
 
         const Vector<MonoClass*>& allClasses = curAssembly->GetClasses();
-        for (auto& klass : allClasses)
+        for (auto* klass : allClasses)
         {
+            if (IsBasicType(klass))
+				continue;
             const bool isSerializable =
               klass->IsSubClassOf(m_Builtin.ComponentClass) ||
               /*klass->IsSubClassOf(assetClass) ||*/ klass->HasAttribute(m_Builtin.SerializableObjectAtrribute);
+            if (klass->IsSubClassOf(m_Builtin.EntityBehaviour))
+                m_EntityBehaviourClasses[klass->GetName()] = klass;
             const bool isInspectable = klass->HasAttribute(m_Builtin.ShowInInspectorAttribute);
             if ((isSerializable || isInspectable) &&
                 klass != m_Builtin.ComponentClass /* && klass != m_Builtin.AssetClass*/)
@@ -134,7 +155,7 @@ namespace Crowny
 
                 if (isSerializable)
                     typeInfo->m_Flags |= ScriptFieldFlagBits::Serializable;
-                if (isSerializable || isInspectable)
+                if (isInspectable || isSerializable)
                     typeInfo->m_Flags |= ScriptFieldFlagBits::Inspectable;
                 MonoPrimitiveType monoPrimitiveType = MonoUtils::GetPrimitiveType(klass->GetInternalPtr());
                 if (monoPrimitiveType == MonoPrimitiveType::ValueType)
@@ -164,7 +185,7 @@ namespace Crowny
             for (auto& field : fields)
             {
                 if (field->IsStatic())
-                    continue;
+					continue;
                 Ref<SerializableTypeInfo> typeInfo = GetTypeInfo(field->GetType());
                 if (typeInfo == nullptr)
                     continue;
@@ -294,7 +315,7 @@ namespace Crowny
         if (isEnum)
             primitiveType = MonoUtils::GetEnumPrimitiveType(monoClass->GetInternalPtr());
         ScriptPrimitiveType scriptPrimitiveType = ScriptPrimitiveType::U32;
-        bool isSimpleType = false;
+        bool isSimpleType = IsBasicType(monoClass);
         switch (primitiveType)
         {
         case MonoPrimitiveType::Bool:
@@ -377,8 +398,15 @@ namespace Crowny
             }
             else
             {
-                Ref<SerializableTypeInfoPrimitive> typeInfo = CreateRef<SerializableTypeInfoPrimitive>();
-                // CW_ENGINE_INFO("name: {0}, {1}", monoClass->GetName(), scriptPrimitiveType);
+				Ref<SerializableTypeInfoPrimitive> typeInfo = CreateRef<SerializableTypeInfoPrimitive>();
+				if (monoClass->GetFullName() == m_Builtin.Vector2->GetFullName())
+					scriptPrimitiveType = ScriptPrimitiveType::Vector2;
+				else if (monoClass->GetFullName() == m_Builtin.Vector3->GetFullName())
+					scriptPrimitiveType = ScriptPrimitiveType::Vector3;
+				else if (monoClass->GetFullName() == m_Builtin.Vector4->GetFullName())
+					scriptPrimitiveType = ScriptPrimitiveType::Vector4;
+				else if (monoClass->GetFullName() == m_Builtin.Matrix4->GetFullName())
+					scriptPrimitiveType = ScriptPrimitiveType::Matrix4;
                 typeInfo->m_Type = scriptPrimitiveType;
                 return typeInfo;
             }
@@ -431,7 +459,7 @@ namespace Crowny
                 typeInfo->m_TypeNamespace = monoClass->GetNamespace();
                 typeInfo->m_TypeName = monoClass->GetName();
                 return typeInfo;
-            }
+            } // Do components here
             else
             {
                 Ref<SerializableObjectInfo> objInfo;
@@ -454,6 +482,7 @@ namespace Crowny
                 MonoClass* itemClass = itemProperty->GetReturnType();
                 if (itemClass != nullptr)
                     typeInfo->m_ElementType = GetTypeInfo(itemClass);
+                typeInfo->m_Class = monoClass->GetInternalPtr();
                 if (typeInfo->m_ElementType != nullptr)
                     return typeInfo;
                 return nullptr;
@@ -484,18 +513,20 @@ namespace Crowny
             // }
             // else if (monoClass->GetFullName() == m_Builtin)
         case MonoPrimitiveType::Array:
-            // Ref<SerializableTypeInfoArray> typeInfo = CreateRef<SerializableTypeInfoArray>();
-            // ::MonoClass* elementClass = ScriptArray::GetElementClass(monoClass->GetInternalPtr());
-            // if (elementClass != nullptr)
-            // {
-            //     MonoClass* monoElementClass = MonoManager::Get().FindClass(elementClass);
-            //     if (monoElementClass != nullptr)
-            //         typeInfo->m_ElementType = GetTypeInfo(monoElementClass);
-            // }
-            // if (typeInfo->m_ElementType == nullptr)
-            //     return nullptr;
+        {
+            Ref<SerializableTypeInfoArray> typeInfo = CreateRef<SerializableTypeInfoArray>();
+            /*::MonoClass* elementClass = ScriptArray::GetElementClass(monoClass->GetInternalPtr());
+            if (elementClass != nullptr)
+            {
+                MonoClass* monoElementClass = MonoManager::Get().FindClass(elementClass);
+                if (monoElementClass != nullptr)
+                    typeInfo->m_ElementType = GetTypeInfo(monoElementClass);
+            }
+            if (typeInfo->m_ElementType == nullptr)
+                return nullptr;*/
             // typeInfo->m_Rank = ScriptArray::GetRank(monoClass->GetInternalPtr());
-            // return typeInfo;
+            return typeInfo;
+        }
         default:
             break;
         }

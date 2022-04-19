@@ -13,7 +13,7 @@
 #include "Editor/EditorUtils.h"
 #include "Editor/ProjectLibrary.h"
 
-#include "Panels/UIUtils.h"
+#include "UI/UIUtils.h"
 
 #include <backends/imgui_impl_vulkan.h>
 #include <imgui.h>

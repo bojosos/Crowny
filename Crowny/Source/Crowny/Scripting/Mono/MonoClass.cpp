@@ -49,7 +49,6 @@ namespace Crowny
     MonoObject* MonoClass::CreateInstance(bool construct) const
     {
         MonoObject* obj = mono_object_new(MonoManager::Get().GetDomain(), m_Class);
-        CW_ENGINE_INFO(construct);
         if (construct)
             mono_runtime_object_init(obj);
         return obj;
@@ -162,6 +161,18 @@ namespace Crowny
         bool hasAttr = mono_custom_attrs_has_attr(info, monoClass->GetInternalPtr()) != 0;
         mono_custom_attrs_free(info);
         return hasAttr;
+    }
+
+    MonoObject* MonoClass::GetAttribute(MonoClass* monoClass) const
+    {
+		MonoCustomAttrInfo* info = mono_custom_attrs_from_class(m_Class);
+        if (info == nullptr)
+            return nullptr;
+		MonoObject* attrs = nullptr;
+		if (mono_custom_attrs_has_attr(info, monoClass->GetInternalPtr()))
+			attrs = mono_custom_attrs_get_attr(info, monoClass->GetInternalPtr());
+        mono_custom_attrs_free(info);
+        return attrs;
     }
 
     bool MonoClass::HasField(const String& fieldName) const
