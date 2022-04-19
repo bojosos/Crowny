@@ -6,6 +6,7 @@
 #include "Crowny/Common/Flags.h"
 #include "Crowny/Common/Log.h"
 #include "Crowny/Common/Types.h"
+#include "Crowny/Memory/Memory.h"
 
 #ifdef CW_WINDOWS
 //	#include <Windows.h>
