@@ -120,6 +120,19 @@ namespace Crowny
 		virtual bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override { return false; }
         virtual ::MonoClass* GetMonoClass() const override { return nullptr; }
         virtual SerializableType GetType() override { return SerializableType::Array; }
+
+		Ref<SerializableTypeInfo> m_ElementType;
+    };
+	
+    class SerializableTypeInfoDictionary : public SerializableTypeInfo
+    {
+    public:
+		virtual bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override { return false; }
+		virtual ::MonoClass* GetMonoClass() const override { return m_Class; }
+		virtual SerializableType GetType() override { return SerializableType::Dictionary; }
+		Ref<SerializableTypeInfo> m_KeyType;
+        Ref<SerializableTypeInfo> m_ValueType;
+        ::MonoClass* m_Class;
     };
 
     class SerializableTypeInfoObject : public SerializableTypeInfo

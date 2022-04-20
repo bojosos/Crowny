@@ -555,18 +555,11 @@ namespace Crowny
     template <> void ComponentEditorWidget<MonoScriptComponent>(Entity e)
     {
         MonoScriptComponent& script = e.GetComponent<MonoScriptComponent>();
-        
-        if (!script.GetManagedClass())
-            ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(255, 0, 0));
-        else
-            ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor(0, 255, 0));
         if (UIUtils::PropertyScript("Script", script.GetTypeName()))
         {
             script.SetClassName(script.GetTypeName());
             script.OnInitialize(e);
         }
-
-        ImGui::PopStyleColor(1);
 
         if (script.GetManagedClass() == nullptr)
             return;

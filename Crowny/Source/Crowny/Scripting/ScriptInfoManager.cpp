@@ -487,31 +487,30 @@ namespace Crowny
                     return typeInfo;
                 return nullptr;
             }
-            // else if (monoClass->GetFullName() == m_Builtin.SystemGenericDictionaryClass->GetFullName())
-            // {
-            //     Ref<SerializableTypeInfoDictionary> typeInfo = CreateRef<SerializableTypeInfoDictionary>();
-            //     MonoMethod* enumerator = monoClass->GetMethod("GetEnumerator");
-            //     MonoClass* enumClass = GetEnumerator->GetReturnType();
+            else if (monoClass->GetFullName() == m_Builtin.SystemGenericDictionaryClass->GetFullName())
+            {
+                Ref<SerializableTypeInfoDictionary> typeInfo = CreateRef<SerializableTypeInfoDictionary>();
+                MonoMethod* enumerator = monoClass->GetMethod("GetEnumerator");
+                MonoClass* enumClass = enumerator->GetReturnType();
 
-            //     MonoProperty* currentProperty = enumClass->GetProperty("Current");
-            //     MonoClass* kvp = currentProperty->GetReturnType();
+                MonoProperty* currentProperty = enumClass->GetProperty("Current");
+                MonoClass* kvp = currentProperty->GetReturnType();
 
-            //     MonoProperty* keyProperty = kvp->GetProperty("Key");
-            //     MonoProperty* valueProperty = kvp->GetProperty("Value");
+                MonoProperty* keyProperty = kvp->GetProperty("Key");
+                MonoProperty* valueProperty = kvp->GetProperty("Value");
 
-            //     MonoClass* keyClass = keyProperty->GetReturnType();
-            //     if (keyClass != nullptr)
-            //         typeInfo->m_KeyType = GetTypeInfo(keyClass);
+                MonoClass* keyClass = keyProperty->GetReturnType();
+                if (keyClass != nullptr)
+                    typeInfo->m_KeyType = GetTypeInfo(keyClass);
 
-            //     MonoClass* valueclass = valueProperty->GetReturnType();
-            //     if (valueClass != nullptr)
-            //         typeInfo->m_ValueType = GetTypeInfo(valueClass);
-
-            //     if (typeInfo->m_KeyType != nullptr && typeInfo->m_ValueType != nullptr)
-            //         return typeInfo;
-            //     return nullptr;
-            // }
-            // else if (monoClass->GetFullName() == m_Builtin)
+                MonoClass* valueClass = valueProperty->GetReturnType();
+                if (valueClass != nullptr)
+                    typeInfo->m_ValueType = GetTypeInfo(valueClass);
+                typeInfo->m_Class = monoClass->GetInternalPtr();
+                if (typeInfo->m_KeyType != nullptr && typeInfo->m_ValueType != nullptr)
+                    return typeInfo;
+                return nullptr;
+            }
         case MonoPrimitiveType::Array:
         {
             Ref<SerializableTypeInfoArray> typeInfo = CreateRef<SerializableTypeInfoArray>();
