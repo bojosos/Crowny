@@ -51,5 +51,11 @@ namespace Crowny
         s_Library.PauseIcon = nullptr;
         s_Library.FolderIcon = nullptr;
         s_Library.FileIcon = nullptr;
+		s_Library.ArrowPointerIcon = nullptr;
+		s_Library.ArrowsIcon = nullptr;
+		s_Library.RotateIcon = nullptr;
+		s_Library.MaximizeIcon = nullptr;
+		s_Library.GlobeIcon = nullptr;
+		s_Library.SearchIcon = nullptr;
     }
 } // namespace Crowny

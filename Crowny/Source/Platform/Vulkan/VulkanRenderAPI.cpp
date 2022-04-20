@@ -10,10 +10,14 @@
 #include <GLFW/glfw3.h>
 
 #define VMA_IMPLEMENTATION
+//#define VMA_DEBUG_LOG(format, ...) do { \
+//       printf(format, __VA_ARGS__); \
+//       printf("\n"); \
+//   } while(false)
 #include <vulkan/vk_mem_alloc.h>
 
 // #define CW_DEBUG 0
-#undef CW_DEBUG
+// #undef CW_DEBUG
 
 namespace Crowny
 {

@@ -6,6 +6,7 @@
 
 #include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/ScriptObjectManager.h"
+#include "Crowny/Scripting/ScriptSceneObjectManager.h"
 
 namespace Crowny
 {
@@ -63,7 +64,10 @@ namespace Crowny
     void ScriptRuntime::UnloadAssemblies()
     {
         MonoManager::Get().UnloadScriptDomain();
-        ScriptObjectManager::Get().ProcessFinalizedObjects();
+		ScriptObjectManager::Get().ProcessFinalizedObjects();
+		MonoManager::Shutdown();
+		ScriptSceneObjectManager::Shutdown();
+        ScriptObjectManager::Shutdown();
     }
 
 } // namespace Crowny

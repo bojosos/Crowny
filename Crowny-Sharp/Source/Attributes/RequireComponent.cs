@@ -9,9 +9,11 @@ namespace Crowny
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
     public class RequireComponent : Attribute
     {
-
+        #pragma warning disable 0414
+        // Note: This is a list since normal arrays aren't really supported yet.
         private List<Type> components;
-        
+        #pragma warning restore 0414
+
         public RequireComponent(params Type[] components)
         {
             foreach (var type in components)

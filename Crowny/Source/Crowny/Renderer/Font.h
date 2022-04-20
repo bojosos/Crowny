@@ -32,8 +32,8 @@ namespace Crowny
         static float GetHeight(const Ref<Font>& font, const String& text);
 
     private:
-        ftgl::texture_atlas_t* m_Atlas;
-        ftgl::texture_font_t* m_Font;
+        ftgl::texture_atlas_t* m_Atlas = nullptr;
+        ftgl::texture_font_t* m_Font = nullptr;
         float m_Size;
         String m_Name;
         Path m_Filepath;

@@ -240,10 +240,20 @@ namespace Crowny
         Refresh(true);
     }
 
+    static uint32_t allocIdx = 0;
+
     VmaAllocation VulkanDevice::AllocateMemory(VkImage image, VkMemoryPropertyFlags flags)
     {
         VmaAllocationCreateInfo allocCreateInfo{};
         allocCreateInfo.requiredFlags = flags;
+		
+  //      allocCreateInfo.pUserData = (void*)allocIdx;
+		//CW_ENGINE_INFO(allocIdx);
+		//if (allocIdx >= 8 && allocIdx <= 13)
+		//{
+		//	CW_ENGINE_INFO("Here");
+		//}
+		//allocIdx++;
 
         VmaAllocationInfo allocInfo;
         VmaAllocation memory;

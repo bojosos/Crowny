@@ -95,7 +95,7 @@ namespace Crowny
         // Scripting
         MonoManager::StartUp();
         Path engineAssemblyPath = Path("C:/dev/Crowny/Crowny-Sharp") / (std::string(CROWNY_ASSEMBLY) + ".dll");
-        if (fs::exists(engineAssemblyPath))
+        if (fs::exists(engineAssemblyPath)) 
         {
             MonoManager::Get().LoadAssembly(engineAssemblyPath, CROWNY_ASSEMBLY);
             ScriptInfoManager::StartUp();
@@ -117,6 +117,8 @@ namespace Crowny
 
     void Initializer::Shutdown()
     {
+        Texture::WHITE = Texture::BLACK = nullptr;
+		ScriptSceneObjectManager::Get().Del();
         ScriptRuntime::UnloadAssemblies();
         Renderer2D::Shutdown();
         SamplerState::s_DefaultSamplerState = nullptr;
@@ -133,8 +135,8 @@ namespace Crowny
         RenderAPI::Get().Shutdown();
 
         ScriptInfoManager::Shutdown();
-        ScriptSceneObjectManager::Shutdown();
-        ScriptObjectManager::Shutdown();
+        // ScriptSceneObjectManager::Shutdown();
+        // ScriptObjectManager::Shutdown();
     }
 
 } // namespace Crowny
