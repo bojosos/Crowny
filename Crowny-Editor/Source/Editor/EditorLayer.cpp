@@ -19,6 +19,7 @@
 
 #include "Editor/Editor.h"
 #include "UI/UIUtils.h"
+#include "UI/Properties.h"
 #include "Editor/EditorAssets.h"
 #include "Editor/ProjectLibrary.h"
 
@@ -350,6 +351,8 @@ namespace Crowny
 
     void EditorLayer::OnDetach()
     {
+        SceneRenderer::Shutdown();
+        InspectorPanel::SetSelectedMaterial(nullptr);
 		Ref<EditorSettings> settings = Editor::Get().GetEditorSettings();
         settings->ShowImGuiDemoWindow = m_ShowDemoWindow;
         settings->ShowPhysicsColliders2D = m_ShowColliders;
@@ -798,7 +801,11 @@ namespace Crowny
 					if (ImGui::TreeNode("Fields"))
 					{
 						for (MonoField* field : klass->GetFields())
+                        {
+                            ImGui::Text(field->GetFullDeclName().c_str()); ImGui::SameLine();
+                            ImGui::Text(field->GetType()->GetFullName().c_str()); ImGui::SameLine();
 							ImGui::Text(field->GetName().c_str());
+                        }
 						ImGui::TreePop();
 					}
 					if (ImGui::TreeNode("Properties"))

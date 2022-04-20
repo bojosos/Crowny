@@ -32,6 +32,12 @@ namespace Crowny
         SetRoughness(0.2f);
     }
 
+    PBRMaterial::~PBRMaterial()
+    {
+		m_Uniforms = nullptr;
+        m_Textures.clear();
+    }
+
     void PBRMaterial::Bind()
     {
         auto& rapi = RenderAPI::Get();

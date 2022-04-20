@@ -146,6 +146,18 @@ namespace Crowny
 
     void ForwardRenderer::Flush() {}
 
-    void ForwardRenderer::Shutdown() { delete s_Data; }
+    void ForwardRenderer::Shutdown()
+    {
+		s_Data->Pipeline = nullptr;
+		s_Data->Mvp = nullptr;
+		s_Data->GlobalFragmentParams = nullptr;
+		s_Data->Skybox = nullptr;
+		s_Data->SkyboxVbo = nullptr;
+		s_Data->SkyboxIbo = nullptr;
+		s_Data->SkyboxPipeline = nullptr;
+		s_Data->SkyboxUniforms = nullptr;
+		s_Data->SkyboxMvp = nullptr;
+        delete s_Data;
+    }
 
 } // namespace Crowny

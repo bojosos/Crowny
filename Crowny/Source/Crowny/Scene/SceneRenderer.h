@@ -17,6 +17,7 @@ namespace Crowny
         static void OnEditorUpdate(Timestep ts, const EditorCamera& camera);
         static void OnRuntimeUpdate(Timestep ts);
         static void SetViewportSize(float width, float height);
+        static void Shutdown();
         //      static Ref<Framebuffer> GetMainFramebuffer();
     };
 

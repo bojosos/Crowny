@@ -97,7 +97,7 @@ namespace Crowny
                 m_DebugData = new uint8_t[mdbSize];
                 mdbStream->Read(m_DebugData, mdbSize);
                 mono_debug_open_image_from_memory(image, m_DebugData, mdbSize);
-                CW_ENGINE_INFO("Loaded mdb");
+                CW_ENGINE_INFO("Loaded {0} mdb", mdbPath);
             }
         }
         // #endif

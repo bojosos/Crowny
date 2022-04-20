@@ -33,7 +33,7 @@ namespace Crowny
 
         void DestroyScriptEntity(ScriptEntity* entity);
         void DestroyScriptComponent(ScriptComponentBase* scriptComponent, uint64_t instanceId);
-
+        void Del();
     private:
         UnorderedMap<uint64_t, ScriptComponentBase*> m_ScriptComponents;
         UnorderedMap<uint32_t, ScriptEntity*> m_ScriptEntities;

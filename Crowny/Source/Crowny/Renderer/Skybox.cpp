@@ -49,7 +49,7 @@ namespace Crowny
         int width, height, channels;
         float* data = stbi_loadf_from_memory(buf.data(), (int)buf.size(), &width, &height, &channels, 0);
         Ref<Texture> equirectangularTexture;
-        if (data)
+        if (data != nullptr)
         {
             m_Width = width;
             m_Height = height;

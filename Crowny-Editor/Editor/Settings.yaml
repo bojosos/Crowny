@@ -4,20 +4,20 @@ GridRotateSnap: 15
 GridScaleSnap: 0.100000001
 LastOpenProject: C:\dev\Projects\Project1
 AutoLoadLastProject: true
-ShowImGuiDemo: true
-ShowPhysicsColliders2D: true
+ShowImGuiDemo: false
+ShowPhysicsColliders2D: false
 ShowScriptDebugInfo: true
 ShowAssetInfo: false
 ShowEmptyMetadataAssetInfo: false
 ShowEntityDebugInfo: false
-EnableConsoleInfoMessages: false
+EnableConsoleInfoMessages: true
 EnableConsoleWarningMessages: true
 EnableConsoleErrorMessages: true
 CollapseConsole: false
-ScrollToBottom: false
+ScrollToBottom: true
 RecentProjects:
   - Path: C:\dev\Projects\Project1
-    Timestamp: 1650358550
+    Timestamp: 1650489850
   - Path: C:\dev\Projects\New Project
     Timestamp: 1648668832
   - Path: C:/dev/Projects\Project4

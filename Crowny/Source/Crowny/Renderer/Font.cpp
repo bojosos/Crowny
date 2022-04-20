@@ -44,8 +44,10 @@ namespace Crowny
 
     Font::~Font()
     {
-        texture_font_delete(m_Font);
-        texture_atlas_delete(m_Atlas);
+		if (m_Font != nullptr)
+            texture_font_delete(m_Font);
+		if (m_Atlas != nullptr)
+            texture_atlas_delete(m_Atlas);
     }
 
     Vector<Ref<Font>> FontManager::s_Fonts;

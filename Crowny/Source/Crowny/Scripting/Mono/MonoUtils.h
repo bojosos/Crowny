@@ -2,6 +2,8 @@
 
 #include "Crowny/Scripting/Mono/Mono.h"
 
+#undef GetClassName
+
 namespace Crowny
 {
     class MonoUtils

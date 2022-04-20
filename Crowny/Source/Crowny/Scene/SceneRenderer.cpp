@@ -159,4 +159,11 @@ namespace Crowny
         s_Data.ViewportHeight = (uint32_t)height;
     }
 
+    void SceneRenderer::Shutdown()
+    {
+		s_Data.PipelineQuery = nullptr;
+        s_Data.Timer2DGeometry = nullptr;
+        s_Data.Timer3DGeometry = nullptr;
+    }
+
 } // namespace Crowny
