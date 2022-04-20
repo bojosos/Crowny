@@ -29,6 +29,9 @@ namespace Crowny
 		static ScriptArray Create(uint32_t size);
 		::MonoClass* GetElementClass();
 
+		static uint8_t* GetArrayAddr(MonoArray* array, uint32_t size, uint32_t idx);
+		static void SetArrayVal(MonoArray* array, uint32_t idx, const uint8_t* value, uint32_t size, uint32_t count = 1);
+
     private:
         ::MonoArray* m_Array;
     };
@@ -38,25 +41,13 @@ namespace Crowny
         template <class T>
         T ScriptArray_Get(MonoArray* ar, uint32_t idx)
         {
-            return *(T*)mono_array_addr_with_size(ar, sizeof(T), idx)
+            return *(T*)ScriptArray::GetArrayAddr(ar, sizeof(T), idx);
         }
 		
 		template <class T>
         void ScriptArray_Set(MonoArray* ar, uint32_t idx, const T& value)
         {
-			::MonoClass* arrayClass = mono_object_get_class((MonoObject*)(ar));
-			::MonoClass* elementClass = mono_class_get_element_class(arrayClass);
-
-			CW_ENGINE_ASSERT((UINT32)mono_class_array_element_size(elementClass) == size);
-			CW_ENGINE_ASSERT((idx + count) <= mono_array_length(ar));
-
-			if (mono_class_is_valuetype(elementClass))
-				mono_value_copy_array(array, idx, (void*)value, count);
-			else
-			{
-				uint8_t* dest = (uint8_t*)mono_array_addr_with_size(ar, size, idx);
-				mono_gc_wbarrier_arrayref_copy(dest, (void*)value, count);
-			}
+			ScriptArray::SetArrayVal(ar, idx, (uint8_t*)&value, sizeof(T));
         }
 
         template <>
@@ -176,7 +167,7 @@ namespace Crowny
 	{
 		// uint8_t* data = GetArrayAddr(sizeof(T), idx);
 		// memcpy(data, &value, sizeof(T));
-        return Detail::ScriptArray_Get<T>(m_Array, idx, value);
+        return Detail::ScriptArray_Set<T>(m_Array, idx, value);
 	}
 
 	template<class T>

@@ -75,6 +75,21 @@ namespace Crowny
 			return modified;
 		}
 
+		static bool PropertyDictionary(int32_t& key, String& value)
+		{
+			ShiftCursor(10.0f, 9.0f);
+			bool modified = UI::InputInt32(GenerateID(), &key);
+			ImGui::NextColumn();
+			ShiftCursorY(4.0f);
+			ImGui::PushItemWidth(-1);
+
+			if (IsItemDisabled())
+				ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+			modified |= ImGui::InputText(GenerateID(), &value);
+			Post();
+			return modified;
+		}
+
 		static bool PropertyInput(const char* label, uint32_t& value, uint32_t step = 1, uint32_t stepFast = 1)
 		{
 			Pre(label);
@@ -88,12 +103,20 @@ namespace Crowny
 
 		static char* s_MultilineBuffer;
 
+		static void Property(const char* label)
+		{
+			ShiftCursor(10.0f, 9.0f);
+			ImGui::Text(label);
+			ImGui::NextColumn();
+			ImGui::NextColumn();
+			Underline();
+		}
+
 		static bool Property(const char* label, String& value)
 		{
 			Pre(label);
 			// if ((GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0)
 				// strcpy(buffer, "---");
-			CW_ENGINE_INFO("ID: {0}, counter: {1}", GenerateID(), s_Counter);
 			bool modified = ImGui::InputText(GenerateID(), &value);
 			Post();
 
