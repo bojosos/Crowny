@@ -133,7 +133,7 @@ namespace Crowny
 
     void InspectorPanel::RenderMaterialInspector()
     {
-        if (s_SelectedMaterial)
+        if (s_SelectedMaterial != nullptr)
         {
             if (ImGui::CollapsingHeader("Albedo", ImGuiTreeNodeFlags_DefaultOpen))
             {

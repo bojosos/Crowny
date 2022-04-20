@@ -106,4 +106,18 @@ namespace Crowny
         delete scriptComponent;
     }
 
+
+	void ScriptSceneObjectManager::Del()
+	{
+		CW_ENGINE_INFO("Entities: {0}, components: {1}", m_ScriptEntities.size(), m_ScriptComponents.size());
+		for (auto [id, base] : m_ScriptComponents)
+		{
+			base->ClearManagedInstance();
+		}
+		for (auto [id, base] : m_ScriptEntities)
+		{
+			base->ClearManagedInstance();
+		}
+	}
+
 } // namespace Crowny

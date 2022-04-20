@@ -16,7 +16,7 @@ namespace Crowny
     {
     public:
         PBRMaterial(const AssetHandle<Shader>& shader);
-        ~PBRMaterial() = default;
+        ~PBRMaterial();
 
         void Bind();
 
