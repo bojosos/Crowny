@@ -45,6 +45,7 @@ namespace Crowny
                 }
             }
         }
+        // CW_ENGINE_INFO("Here");
         if (logDomain == nullptr)
             logDomain = "Null";
         if (errorLevel == 0)
