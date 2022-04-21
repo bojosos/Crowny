@@ -345,7 +345,7 @@ namespace Crowny
         Ref<VulkanUniformParams> m_BoundUniforms;
         bool m_RenderTargetModified = false;
         VkFence m_Fence;
-        Rect2F m_Viewport;
+        Rect2F m_Viewport = { 0.0f, 0.0f, 1.0f, 1.0f };
         Rect2I m_Scissor;
         DrawMode m_DrawMode = DrawMode::TRIANGLE_LIST;
         VkDescriptorSet* m_DescriptorSetsTemp;

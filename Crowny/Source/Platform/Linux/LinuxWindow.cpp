@@ -41,7 +41,19 @@ namespace Crowny
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         glfwWindowHint(GLFW_SAMPLES, 8);
 
-        m_Window = glfwCreateWindow((int)props.Width, (int)props.Height, m_Data.Title.c_str(), nullptr, nullptr);
+		/*int32_t monitorCount = 0;
+		GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
+		for (uint32_t i = 0; i < monitorCount; i++)
+			CW_ENGINE_INFO("Monitor: {0}, {1}", i, glfwGetMonitorName(monitors[i]));
+		int xpos, ypos;
+		glfwGetMonitorPos(monitors[1], &xpos, &ypos);
+		CW_ENGINE_INFO("{}, {}", xpos, ypos);*/
+		// glfwWindowHint(GLFW_MAXIMIZED, true);
+		m_Window = glfwCreateWindow((int)props.Width, (int)props.Height, m_Data.Title.c_str(), nullptr, nullptr);
+		/*int xpos2, ypos2;
+        glfwGetWindowPos(m_Window, &xpos2, &ypos2);
+        CW_ENGINE_INFO("{}, {}", xpos2, ypos2);
+		glfwSetWindowPos(m_Window, xpos, ypos2);*/
 #ifdef CW_DEBUG
         if (Renderer::GetAPI() == RenderAPI::API::OpenGL)
             glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,

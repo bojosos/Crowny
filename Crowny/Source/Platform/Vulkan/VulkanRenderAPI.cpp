@@ -60,7 +60,7 @@ namespace Crowny
         {
             CW_ENGINE_ERROR(debugMessage.str());
         }
-        // CW_ENGINE_ASSERT(false);
+        CW_ENGINE_ASSERT(false);
 
         return VK_FALSE;
     }
@@ -242,11 +242,11 @@ namespace Crowny
         vkCB->SetVertexBuffers(idx, buffers, numBuffers);
     }
 
-    void VulkanRenderAPI::SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
+    void VulkanRenderAPI::SetViewport(float x, float y, float width, float height,
                                       const Ref<CommandBuffer>& commandBuffer)
     {
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
-        vkCB->SetViewport(Rect2F((float)x, (float)y, (float)width, (float)height));
+        vkCB->SetViewport({ x, y, width, height });
     }
 
     void VulkanRenderAPI::SetIndexBuffer(const Ref<IndexBuffer>& indexBuffer, const Ref<CommandBuffer>& commandBuffer)
