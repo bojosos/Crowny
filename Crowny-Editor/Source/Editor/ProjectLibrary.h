@@ -8,6 +8,7 @@
 #include "Crowny/Common/StringUtils.h"
 #include "Crowny/Import/ImportOptions.h"
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
+#include "Crowny/Utils/UUIDDirectory.h"
 
 #include "Editor/Settings/ProjectSettings.h"
 
@@ -127,6 +128,7 @@ namespace Crowny
         Path m_ProjectFolder;
         Ref<DirectoryEntry> m_RootEntry;
         Ref<ProjectSettings> m_ProjectSettings;
+		UUIDDirectory m_UuidDirectory;
 
         UnorderedMap<UUID, Path> m_UuidToPath;
     };
