@@ -52,6 +52,7 @@ namespace Crowny
 		// s_Data.PipelineQuery->Begin();
         // s_Data.Timer3DGeometry->Begin();
 		
+		/*
         ForwardRenderer::Begin();
         ForwardRenderer::BeginScene(camera, camera.GetViewMatrix());
         auto objs = scene->m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
@@ -66,7 +67,7 @@ namespace Crowny
         }
         ForwardRenderer::Flush();
         ForwardRenderer::EndScene();
-        ForwardRenderer::End();
+        ForwardRenderer::End();*/
         // s_Data.Timer3DGeometry->End();
 
         // s_Data.Timer2DGeometry->Begin();
@@ -116,6 +117,7 @@ namespace Crowny
         // Render the scene
         if (mainCamera)
         {
+            /*
             ForwardRenderer::Begin();
             ForwardRenderer::BeginScene(*mainCamera, glm::inverse(cameraTransform));
             auto objs = scene->m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
@@ -130,7 +132,7 @@ namespace Crowny
             }
             ForwardRenderer::Flush();
             ForwardRenderer::EndScene();
-            ForwardRenderer::End();
+            ForwardRenderer::End();*/
 
             Renderer2D::Begin(*mainCamera, glm::inverse(cameraTransform));
             auto group = scene->m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
