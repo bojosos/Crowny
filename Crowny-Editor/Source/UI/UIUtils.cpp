@@ -62,8 +62,8 @@ namespace Crowny
 		const float areaPosX = ImGui::GetCursorPosX();
 		const float framePaddingY = ImGui::GetStyle().FramePadding.y;
 
-		ScopedStyle rounding(ImGuiStyleVar_FrameRounding, 3.0f);
-		ScopedStyle padding(ImGuiStyleVar_FramePadding, ImVec2(28.0f, framePaddingY));
+		UI::ScopedStyle rounding(ImGuiStyleVar_FrameRounding, 3.0f);
+		UI::ScopedStyle padding(ImGuiStyleVar_FramePadding, ImVec2(28.0f, framePaddingY));
 
 		if (ImGui::InputText("##input", &searchString))
 			modified = true;
@@ -112,8 +112,8 @@ namespace Crowny
 			{
 				ImGui::SetCursorPosY(ImGui::GetCursorPosY() - framePaddingY + 1.0f);
 				// ScopedColor text(ImGuiCol_Text, Colours::Theme::textDarker);
-				ScopedColor text(ImGuiCol_Text, IM_COL32(128, 128, 128, 255));
-				ScopedStyle padding(ImGuiStyleVar_FramePadding, ImVec2(0.0f, framePaddingY));
+				UI::ScopedColor text(ImGuiCol_Text, IM_COL32(128, 128, 128, 255));
+				UI::ScopedStyle padding(ImGuiStyleVar_FramePadding, ImVec2(0.0f, framePaddingY));
 				ImGui::TextUnformatted(hint);
 				ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 1.0f);
 			}
@@ -136,7 +136,7 @@ namespace Crowny
 			if (ImGui::IsMouseHoveringRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax()))
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 
-			ScopedDisable();
+			UI::ScopedDisable();
 			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
 			ImGui::Button(ICON_FA_XMARK, { lineHeight, lineHeight });
 			ImGui::PopFont();

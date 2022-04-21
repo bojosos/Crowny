@@ -8,7 +8,7 @@ namespace Crowny
     {
     public:
         virtual void Init() override;
-        virtual void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
+        virtual void SetViewport(float x, float y, float width, float height,
                                  const Ref<CommandBuffer>& commandBuffer = nullptr) override{};
 
         virtual void SetClearColor(const glm::vec4& color) override{};

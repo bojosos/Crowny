@@ -10,6 +10,7 @@
 #include <spdlog/fmt/fmt.h>
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <backends/imgui_impl_vulkan.h>
 
 namespace Crowny
 {
@@ -20,6 +21,32 @@ namespace Crowny
 		extern uint32_t s_Counter;
 		extern char s_IDBuffer[16];
 		extern char s_LabelIDBuffer[1024];
+		
+		struct ScopedStyle
+		{
+			ScopedStyle(const ScopedStyle&) = delete;
+			ScopedStyle operator=(const ScopedStyle&) = delete;
+			template <typename T>
+			ScopedStyle(ImGuiStyleVar styleVar, const T& value) { ImGui::PushStyleVar(styleVar, value); }
+			~ScopedStyle() { ImGui::PopStyleVar(); }
+		};
+
+		struct ScopedColor
+		{
+			ScopedColor(const ScopedColor&) = delete;
+			ScopedColor operator=(const ScopedColor&) = delete;
+			template <typename T>
+			ScopedColor(ImGuiCol colorVar, const T& color) { ImGui::PushStyleColor(colorVar, color); }
+			~ScopedColor() { ImGui::PopStyleColor(); }
+		};
+
+		struct ScopedDisable
+		{
+			ScopedDisable(const ScopedDisable&) = delete;
+			ScopedDisable operator=(const ScopedDisable&) = delete;
+			ScopedDisable() { ImGui::BeginDisabled(); }
+			~ScopedDisable() { ImGui::EndDisabled(); }
+		};
 
 		static const char* GenerateID()
 		{
@@ -58,6 +85,21 @@ namespace Crowny
 			result.Max.x += x;
 			result.Max.y += y;
 			return result;
+		}
+
+		static inline ImRect RectOffset(const ImRect& rect, float x, float y)
+		{
+			ImRect result = rect;
+			result.Min.x += x;
+			result.Min.y += y;
+			result.Max.x += x;
+			result.Max.y += y;
+			return result;
+		}
+
+		static inline ImRect RectOffset(const ImRect& rect, ImVec2 xy)
+		{
+			return RectOffset(rect, xy.x, xy.y);
 		}
 
 		static void DrawItemActivityOutline(float rounding = 0.0f, bool drawWhenInactive = false, ImColor colourWhenActive = ImColor(80, 80, 80))
@@ -145,6 +187,41 @@ namespace Crowny
 					ImGui::PopColumnsBackground();
 				else if (ImGui::GetCurrentTable() != nullptr)
 					ImGui::TablePopBackgroundChannel();
+			}
+		}
+
+		static void DrawButtonImage(const Ref<Texture>& imageNormal, const Ref<Texture>& imageHovered, const Ref<Texture>& imagePressed,
+			ImU32 tintNormal, ImU32 tintHovered, ImU32 tintPressed,
+			ImVec2 rectMin, ImVec2 rectMax)
+		{
+			auto* drawList = ImGui::GetWindowDrawList();
+			if (ImGui::IsItemActive())
+				drawList->AddImage(ImGui_ImplVulkan_AddTexture(imagePressed), rectMin, rectMax, ImVec2(0, 0), ImVec2(1, 1), tintPressed);
+			else if (ImGui::IsItemHovered())
+				drawList->AddImage(ImGui_ImplVulkan_AddTexture(imageHovered), rectMin, rectMax, ImVec2(0, 0), ImVec2(1, 1), tintHovered);
+			else
+				drawList->AddImage(ImGui_ImplVulkan_AddTexture(imageNormal), rectMin, rectMax, ImVec2(0, 0), ImVec2(1, 1), tintNormal);
+		}
+
+		static void DrawButtonImage(const Ref<Texture>& image,
+			ImU32 tintNormal, ImU32 tintHovered, ImU32 tintPressed,
+			ImRect rectangle)
+		{
+			DrawButtonImage(image, image, image, tintNormal, tintHovered, tintPressed, rectangle.Min, rectangle.Max);
+		}
+
+		static bool IsItemHovered(float delayInSeconds = 0.1f, ImGuiHoveredFlags flags = 0)
+		{
+			return ImGui::IsItemHovered() && GImGui->HoveredIdTimer > delayInSeconds;
+		}
+
+		static void SetTooltip(std::string_view text, float delayInSeconds = 0.1f, bool allowWhenDisabled = true, ImVec2 padding = ImVec2(5, 5))
+		{
+			if (IsItemHovered(delayInSeconds, allowWhenDisabled ? ImGuiHoveredFlags_AllowWhenDisabled : 0))
+			{
+				ScopedStyle tooltipPadding(ImGuiStyleVar_WindowPadding, padding);
+				ScopedColor textCol(ImGuiCol_Text, IM_COL32(210, 210, 210, 255));
+				ImGui::SetTooltip(text.data());
 			}
 		}
 		
@@ -281,7 +358,7 @@ namespace Crowny
 
 		static bool ScriptSearchPopup(const String& id, String& selectedScript, bool* cleared = nullptr, const char* hint = "Search Entities", const ImVec2& size = ImVec2{ 250.0f, 350.0f })
 		{
-			ScopedColor popupBG(ImGuiCol_PopupBg, (IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255), 1.6f));
+			UI::ScopedColor popupBG(ImGuiCol_PopupBg, (IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255), 1.6f));
 
 			bool modified = false;
 
@@ -317,11 +394,11 @@ namespace Crowny
 
 				if (cleared != nullptr)
 				{
-					ScopedColor buttonColor1(ImGuiCol_Button, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.0f));
-					ScopedColor buttonColor2(ImGuiCol_ButtonHovered, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.2f));
-					ScopedColor buttonColor3(ImGuiCol_ButtonActive, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 0.9f));
+					UI::ScopedColor buttonColor1(ImGuiCol_Button, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.0f));
+					UI::ScopedColor buttonColor2(ImGuiCol_ButtonHovered, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.2f));
+					UI::ScopedColor buttonColor3(ImGuiCol_ButtonActive, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 0.9f));
 
-					ScopedStyle border(ImGuiStyleVar_FrameBorderSize, 0.0f);
+					UI::ScopedStyle border(ImGuiStyleVar_FrameBorderSize, 0.0f);
 
 					ImGui::SetCursorPosX(0);
 
@@ -338,8 +415,8 @@ namespace Crowny
 
 				// List of assets
 				{
-					ScopedColor listBoxBg(ImGuiCol_FrameBg, IM_COL32_DISABLE);
-					ScopedColor listBoxBorder(ImGuiCol_Border, IM_COL32_DISABLE);
+					UI::ScopedColor listBoxBg(ImGuiCol_FrameBg, IM_COL32_DISABLE);
+					UI::ScopedColor listBoxBorder(ImGuiCol_Border, IM_COL32_DISABLE);
 
 					ImGuiID listID = ImGui::GetID("##SearchListBox");
 					//if (ImGui::BeginChild(listID, ImVec2(-FLT_MIN, itemHeight * 10.0f), false))
@@ -396,7 +473,7 @@ namespace Crowny
 
 		static bool EntitySearchPopup(const String& id, Entity& selectedEntity, bool* cleared = nullptr, const char* hint = "Search Entities", const ImVec2& size = ImVec2{ 250.0f, 350.0f })
 		{
-			ScopedColor popupBG(ImGuiCol_PopupBg, (IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255), 1.6f));
+			UI::ScopedColor popupBG(ImGuiCol_PopupBg, (IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255), 1.6f));
 
 			bool modified = false;
 
@@ -432,11 +509,11 @@ namespace Crowny
 
 				if (cleared != nullptr)
 				{
-					ScopedColor buttonColor1(ImGuiCol_Button, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.0f));
-					ScopedColor buttonColor2(ImGuiCol_ButtonHovered, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.2f));
-					ScopedColor buttonColor3(ImGuiCol_ButtonActive, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 0.9f));
+					UI::ScopedColor buttonColor1(ImGuiCol_Button, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.0f));
+					UI::ScopedColor buttonColor2(ImGuiCol_ButtonHovered, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.2f));
+					UI::ScopedColor buttonColor3(ImGuiCol_ButtonActive, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 0.9f));
 
-					ScopedStyle border(ImGuiStyleVar_FrameBorderSize, 0.0f);
+					UI::ScopedStyle border(ImGuiStyleVar_FrameBorderSize, 0.0f);
 
 					ImGui::SetCursorPosX(0);
 
@@ -453,8 +530,8 @@ namespace Crowny
 
 				// List of assets
 				{
-					ScopedColor listBoxBg(ImGuiCol_FrameBg, IM_COL32_DISABLE);
-					ScopedColor listBoxBorder(ImGuiCol_Border, IM_COL32_DISABLE);
+					UI::ScopedColor listBoxBg(ImGuiCol_FrameBg, IM_COL32_DISABLE);
+					UI::ScopedColor listBoxBorder(ImGuiCol_Border, IM_COL32_DISABLE);
 
 					ImGuiID listID = ImGui::GetID("##SearchListBox");
 					//if (ImGui::BeginChild(listID, ImVec2(-FLT_MIN, itemHeight * 10.0f), false))
@@ -655,43 +732,6 @@ namespace Crowny
 			const char* itemPath = str.c_str();
 			ImGui::SetDragDropPayload("ASSET_ITEM", itemPath, str.size() * sizeof(char));
 		}
-
-		static void PushFontAwesomeFont() { ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]); }
-		static void PopFontAwesomeFont() { ImGui::PopFont(); }
-
-		struct ScopedFontAwesomeFont
-		{
-			ScopedFontAwesomeFont(const ScopedFontAwesomeFont&) = delete;
-			ScopedFontAwesomeFont operator=(const ScopedFontAwesomeFont&) = delete;
-			ScopedFontAwesomeFont() { PushFontAwesomeFont(); }
-			~ScopedFontAwesomeFont() { PopFontAwesomeFont(); }
-		};
-
-		struct ScopedStyle
-		{
-			ScopedStyle(const ScopedStyle&) = delete;
-			ScopedStyle operator=(const ScopedStyle&) = delete;
-			template <typename T>
-			ScopedStyle(ImGuiStyleVar styleVar, const T& value) { ImGui::PushStyleVar(styleVar, value); }
-			~ScopedStyle() { ImGui::PopStyleVar(); }
-		};
-
-		struct ScopedColor
-		{
-			ScopedColor(const ScopedColor&) = delete;
-			ScopedColor operator=(const ScopedColor&) = delete;
-			template <typename T>
-			ScopedColor(ImGuiCol colorVar, const T& color) { ImGui::PushStyleColor(colorVar, color); }
-			~ScopedColor() { ImGui::PopStyleColor(); }
-		};
-
-		struct ScopedDisable
-		{
-			ScopedDisable(const ScopedDisable&) = delete;
-			ScopedDisable operator=(const ScopedDisable&) = delete;
-			ScopedDisable() { ImGui::BeginDisabled(); }
-			~ScopedDisable() { ImGui::EndDisabled(); }
-		};
 
 		static bool DrawFloatControl(const char* label, float& value, float minValue = 0.0f, float maxValue = 1.0f, bool asSlider = false);
 

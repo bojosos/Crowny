@@ -95,6 +95,7 @@ namespace Crowny
 		MonoMethod* copyValuesToMethod = valuesProp->GetReturnType()->GetMethod("CopyTo", 2);
 		MonoMethod* containsKey = dictClass->GetMethod("ContainsKey", 1);
 		MonoMethod* addMethod = dictClass->GetMethod("Add", 2);
+		MonoMethod* removeMethod = dictClass->GetMethod("Remove", 1);
 		
 		uint32_t offset = 0;
 		void* params[2];
@@ -103,37 +104,51 @@ namespace Crowny
 		copyKeysToMethod->Invoke(keysProp->Get(dictObject), params);
 		params[0] = values.GetInternal();
 		copyValuesToMethod->Invoke(valuesProp->Get(dictObject), params);
-			
-		ImGui::Columns(4);
+		int32_t keyInt = 0;
+		String keyString;
+		ImGui::Columns(3);
 		for (uint32_t i = 0; i < length; i++)
 		{
 			ImGui::SetCursorPosX(ImGui::GetCursorPos().x + (depth + 1) * 25);
 			auto getterValue = [&values, i]() { return values.Get<MonoObject*>(i); };
-			auto setterValue = [&values, i](void* value) { return values.Set(i, value); };
+			auto setterValue = [i, dictObject, addMethod, removeMethod, dictInfo, keys, params](void* value) mutable
+			{
+				params[1] = value;
+				if (dictInfo->m_KeyType->GetMonoClass() == MonoUtils::GetStringClass())
+				{
+					params[0] = MonoUtils::ToMonoString(keys.Get<String>(i));
+					removeMethod->Invoke(dictObject, params);
+					addMethod->Invoke(dictObject, params);
+				}
+				else
+				{ 
+					int32_t key = keys.Get<int32_t>(i);
+					params[0] = &key;
+					removeMethod->Invoke(dictObject, params);
+					addMethod->Invoke(dictObject, params);
+				}
+			};
 			if (dictInfo->m_KeyType->GetMonoClass() == MonoUtils::GetStringClass())
 			{
-				String key = keys.Get<String>(i);
-				if (UI::Property("Key", key))
-				{
-					keys.Set(i, key);
-					modified = true;
-				}
-				modified |= DrawFieldInspector(memberInfo, key.c_str(), getterValue, setterValue, dictInfo->m_ValueType, depth + 1);
+				keyString = keys.Get<String>(i);
+				modified |= DrawFieldInspector(memberInfo, keyString.c_str(), getterValue, setterValue, dictInfo->m_ValueType, depth + 1);
+				UI::Underline(true);
+				params[0] = MonoUtils::ToMonoString(keyString);
 			}
 			else if (dictInfo->m_KeyType->GetMonoClass() == MonoUtils::GetI32Class())
 			{
-				int32_t key = keys.Get<uint32_t>(i);
-				if (UI::PropertyInput("Key", key))
-				{
-					keys.Set(i, key);
-					modified = true;
-				}
-				modified |= DrawFieldInspector(memberInfo, std::to_string(key).c_str(), getterValue, setterValue, dictInfo->m_ValueType, depth + 1);
+				keyInt = keys.Get<uint32_t>(i);
+				modified |= DrawFieldInspector(memberInfo, std::to_string(keyInt).c_str(), getterValue, setterValue, dictInfo->m_ValueType, depth + 1);
+				UI::Underline(true);
+				params[0] = &keyInt;
 			}
+			if (ImGui::Button("-"))
+				removeMethod->Invoke(dictObject, params);
+			ImGui::NextColumn();
 		}
 		static int32_t key = 0;
 		static String value;
-		ImGui::Columns(3);
+		ImGui::PushItemWidth(-1);
 		UI::PropertyDictionary(key, value);
 		params[0] = &key;
 		MonoObject* containsObject = containsKey->Invoke(dictObject, params);

@@ -451,10 +451,10 @@ namespace Crowny
         if (m_ViewportRequiresBind || force)
         {
             VkViewport viewport;
-            viewport.x = m_Viewport.X;
-            viewport.y = m_Viewport.Y;
-            viewport.width = m_Viewport.Width;
-            viewport.height = m_Viewport.Height;
+            viewport.x = m_Viewport.X * m_Framebuffer->GetWidth();
+            viewport.y = m_Viewport.Y * m_Framebuffer->GetHeight();
+            viewport.width = m_Viewport.Width * m_Framebuffer->GetWidth();
+            viewport.height = m_Viewport.Height * m_Framebuffer->GetHeight();
             viewport.minDepth = 0.0f;
             viewport.maxDepth = 1.0f;
             vkCmdSetViewport(m_CmdBuffer, 0, 1, &viewport);
@@ -466,8 +466,8 @@ namespace Crowny
             VkRect2D scissors;
             scissors.offset.x = m_Viewport.X;
             scissors.offset.y = m_Viewport.Y;
-            scissors.extent.width = m_Viewport.Width;
-            scissors.extent.height = m_Viewport.Height;
+            scissors.extent.width = m_Framebuffer->GetWidth();
+            scissors.extent.height = m_Framebuffer->GetHeight();
             vkCmdSetScissor(m_CmdBuffer, 0, 1, &scissors);
             m_ScissorRequiresBind = false;
         }

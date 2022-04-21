@@ -107,8 +107,7 @@ namespace Crowny
         VulkanCmdBuffer* vkCmdBuffer = gVulkanRenderAPI().GetMainCommandBuffer()->GetInternal();
 
         RenderAPI::Get().SetRenderTarget(Application::Get().GetRenderWindow());
-        RenderAPI::Get().SetViewport(0, 0, Application::Get().GetWindow().GetWidth(),
-                                     Application::Get().GetWindow().GetHeight());
+        RenderAPI::Get().SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
         gVulkanRenderAPI().ClearViewport(FBT_COLOR | FBT_DEPTH);
         gVulkanRenderAPI().GetMainCommandBuffer()->GetInternal()->BeginRenderPass();
         ImGui_ImplVulkan_TransitionLayouts(vkCmdBuffer);
