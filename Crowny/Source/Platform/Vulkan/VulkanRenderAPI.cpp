@@ -60,7 +60,7 @@ namespace Crowny
         {
             CW_ENGINE_ERROR(debugMessage.str());
         }
-        CW_ENGINE_ASSERT(false);
+        // CW_ENGINE_ASSERT(false);
 
         return VK_FALSE;
     }
