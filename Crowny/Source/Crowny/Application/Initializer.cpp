@@ -131,7 +131,7 @@ namespace Crowny
         AssetManager::Shutdown();
         Importer::Shutdown();
         AudioManager::Shutdown();
-        ForwardRenderer::Shutdown();
+        // TODO: reenable ForwardRenderer::Shutdown();
         RenderAPI::Get().Shutdown();
 
         ScriptInfoManager::Shutdown();
