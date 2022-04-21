@@ -421,9 +421,9 @@ namespace Crowny
                 uuid = UuidGenerator::Generate();
             Path metaPath = GetMetadataPath(entry->Filepath);
             SerializeMetadata(metaPath, entry->Metadata);
-            const String uuidStr = uuid.ToString();
-            outputPath /= (uuidStr + ".asset");
             m_AssetManifest->RegisterAsset(uuid, outputPath);
+			outputPath = m_UuidDirectory.GetPath(uuid);
+			outputPath.replace_filename(outputPath.filename().string() + ".asset");
             AssetManager::Get().Save(asset, outputPath);
             return true;
         }
@@ -963,6 +963,7 @@ namespace Crowny
         m_ProjectFolder = Editor::Get().GetProjectPath();
         m_AssetFolder = m_ProjectFolder / ASSET_DIR;
         m_RootEntry = CreateRef<DirectoryEntry>(m_AssetFolder, m_AssetFolder.filename().string(), nullptr);
+        m_UuidDirectory = m_ProjectFolder / INTERNAL_ASSET_DIR;
 
         Path libEntriesPath = m_ProjectFolder / PROJECT_INTERNAL_DIR / LIBRARY_ENTRIES_FILENAME;
 
