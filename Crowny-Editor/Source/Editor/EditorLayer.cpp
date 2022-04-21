@@ -432,7 +432,7 @@ namespace Crowny
                                        m_RenderTarget->GetProperties().Height); // Comment:
 
         rapi.SetRenderTarget(m_RenderTarget);
-        rapi.SetViewport(0, 0, m_RenderTarget->GetProperties().Width, m_RenderTarget->GetProperties().Height);
+        rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
 
         switch (m_SceneState)
         {
@@ -470,7 +470,7 @@ namespace Crowny
               PixelData::Create(rt->GetColorTexture(1)->GetWidth(), rt->GetColorTexture(1)->GetHeight(),
                                 rt->GetColorTexture(1)->GetFormat());
             rt->GetColorTexture(1)->ReadData(*outPixelData);
-			if (outPixelData->GetSize() > coords.x * coords.y)
+			/*if (outPixelData->GetSize() > coords.x * coords.y)
             {
                 glm::vec4 col = outPixelData->GetColorAt(coords.x, coords.y);
                 if (col.x == 0.0f)
@@ -481,7 +481,7 @@ namespace Crowny
                     if (Input::IsMouseButtonDown(Mouse::ButtonLeft) && !Input::IsKeyPressed(Key::LeftAlt) && !Input::IsKeyPressed(Key::RightAlt) && !m_ViewportPanel->IsMouseOverGizmo())
                         m_HierarchyPanel->SetSelectedEntity(m_HoveredEntity);
                 }
-            }
+            }*/
         }
         m_HierarchyPanel->Update();
         ScriptObjectManager::Get().Update();
@@ -726,8 +726,6 @@ namespace Crowny
         if (m_ShowEntityDebugInfo)
         {
             ImGui::Begin("Entity Debug Info", &m_ShowEntityDebugInfo);
-            if (UIUtils::SearchWidget(s_String))
-				CW_ENGINE_INFO(s_String);
 		    Scene* scene = SceneManager::GetActiveScene().get();
 		    auto view = scene->GetAllEntitiesWith<TagComponent>();
             for (auto e : view)
@@ -823,42 +821,123 @@ namespace Crowny
 
     void EditorLayer::UI_Header()
     {
-		ImGui::Begin("Header", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse);
+		UI::PushID();
+
+		UI::ScopedStyle disableSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+		UI::ScopedStyle disableWindowBorder(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		UI::ScopedStyle windowRounding(ImGuiStyleVar_WindowRounding, 4.0f);
+		UI::ScopedStyle disablePadding(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+
+		const float buttonSize = 18.0f + 5.0f;
+		const float edgeOffset = 4.0f;
+		const float windowHeight = 32.0f;
+		const float numberOfButtons = 3.0f;
+		const float backgroundWidth = edgeOffset * 6.0f + buttonSize * numberOfButtons + edgeOffset * (numberOfButtons - 1.0f) * 2.0f;
+
+		float toolbarX = (m_ViewportPanel->GetViewportBounds().x + m_ViewportPanel->GetViewportBounds().z) / 2.0f;
+		ImGui::SetNextWindowPos(ImVec2(toolbarX - (backgroundWidth / 2.0f), m_ViewportPanel->GetViewportBounds().y + edgeOffset));
+		ImGui::SetNextWindowSize(ImVec2(backgroundWidth, windowHeight));
+		ImGui::SetNextWindowBgAlpha(0.0f);
+		ImGui::Begin("##viewport_central_toolbar", 0, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking);
+
+		const float desiredHeight = 26.0f + 5.0f;
+		ImRect background = UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), 0.0f, -(windowHeight - desiredHeight) / 2.0f);
+		ImGui::GetWindowDrawList()->AddRectFilled(background.Min, background.Max, IM_COL32(15, 15, 15, 127), 4.0f);
+
+		ImGui::BeginVertical("##viewport_central_toolbarV", { backgroundWidth, ImGui::GetContentRegionAvail().y });
+		ImGui::Spring();
+		ImGui::BeginHorizontal("##viewport_central_toolbarH", { backgroundWidth, ImGui::GetContentRegionAvail().y });
+		ImGui::Spring();
+        {
+            UI::ScopedStyle enableSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(edgeOffset * 2.0f, 0));
+			const ImColor c_ButtonTint = IM_COL32(192, 192, 192, 255);
+			const ImColor c_SimulateButtonTint = m_SceneState == SceneState::Simulate ? ImColor(1.0f, 0.75f, 0.75f, 1.0f) : c_ButtonTint;
+
+			auto drawButton = [buttonSize](const Ref<Texture>& icon, const ImColor& tint, float paddingY = 0.0f)
+			{
+				const float height = std::min((float)icon->GetHeight(), buttonSize) - paddingY * 2.0f;
+				const float width = (float)icon->GetWidth() / (float)icon->GetHeight() * height;
+				const bool clicked = ImGui::InvisibleButton(UI::GenerateID(), ImVec2(width, height));
+				UI::DrawButtonImage(icon,
+					tint,
+					tint,
+					tint,
+					UI::RectOffset(UI::GetItemRect(), 0.0f, paddingY));
+
+				return clicked;
+			};
+
+			Ref<Texture> buttonTex = m_SceneState == SceneState::Play ? EditorAssets::Get().StopIcon : EditorAssets::Get().PlayIcon;
+			if (drawButton(buttonTex, c_ButtonTint))
+			{
+				if (m_SceneState == SceneState::Edit)
+                {
+					SaveActiveScene(); // Save the scene in case the simulation crashes
+					SceneManager::GetActiveScene()->OnRuntimeStart();
+					ScriptRuntime::OnStart();
+					m_SceneState = SceneState::Play;
+					m_ViewportPanel->DisalbeGizmo();
+                }
+                else if (m_SceneState != SceneState::Simulate)
+                {
+					SceneManager::GetActiveScene()->OnRuntimeStop();
+					ScriptRuntime::OnShutdown();
+					m_ViewportPanel->EnableGizmo();
+					m_SceneState = SceneState::Edit;
+					m_GameMode = false;
+					s_DeltaTime = 0.0f;
+					s_SmoothDeltaTime = 0.0f;
+					s_RealtimeSinceStartup = 0.0f;
+					s_Time = 0.0f;
+					s_FixedDeltaTime = 0.0f;
+					s_FrameCount = 0.0f;
+                }
+			}
+			UI::SetTooltip(m_SceneState == SceneState::Edit ? "Play" : "Stop");
+
+			if (drawButton(EditorAssets::Get().PlayIcon, c_SimulateButtonTint))
+			{
+				/*if (m_SceneState == SceneState::Edit)
+					OnSceneStartSimulation();
+				else if (m_SceneState == SceneState::Simulate)
+					OnSceneStopSimulation();*/
+			}
+			UI::SetTooltip(m_SceneState == SceneState::Simulate ? "Stop" : "Simulate Physics");
+
+			if (drawButton(EditorAssets::Get().PauseIcon, c_ButtonTint))
+			{
+				if (m_SceneState == SceneState::Play)
+				{
+					SceneManager::GetActiveScene()->OnRuntimePause();
+					m_SceneState = SceneState::PausePlay;
+					m_ViewportPanel->EnableGizmo();
+				}
+				else if (m_SceneState == SceneState::PausePlay)
+				{
+					m_SceneState = SceneState::Play;
+					m_ViewportPanel->DisalbeGizmo();
+				}
+			}
+			UI::SetTooltip(m_SceneState == SceneState::PausePlay ? "Resume" : "Pause");
+		}
+		ImGui::Spring();
+		ImGui::EndHorizontal();
+		ImGui::Spring();
+		ImGui::EndVertical();
+
+		ImGui::End();
+
+		UI::PopID();
+
+
+		ImGui::Begin("Header", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse);
 		ImGui::SetWindowSize(ImVec2(ImGui::GetWindowWidth(), 36.0f));
         // ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetStyle().FramePadding.y);
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2, 2));
         ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
 		
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 2);
-
-        auto drawButton = [&](const Ref<Texture>& icon, int32_t gizmoMode)
-		{
-			if (m_ViewportPanel->GetGizmoMode() == gizmoMode)
-            {
-				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.33333334f, 0.3529412f, 0.36078432f, 0.5f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.7f, 0.7f, 1.00f));
-            }
-			else
-            {
-				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.7f, 0.7f, 1.00f));
-            }
-			;
-            ImGui::Image(ImGui_ImplVulkan_AddTexture(icon), { 30.0f, 30.0f }, { 0.0f, 1.0f }, { 1.0f, 0.0f });
-			if (ImGui::IsItemClicked())
-				m_ViewportPanel->SetGizmoMode(gizmoMode);
-			ImGui::PopStyleColor(2);
-        };
 		
-        drawButton(EditorAssets::Get().ArrowPointerIcon, -1);
-		ImGui::SameLine();
-        drawButton(EditorAssets::Get().ArrowsIcon, 7);
-		ImGui::SameLine();
-        drawButton(EditorAssets::Get().RotateIcon, 120);
-		ImGui::SameLine();
-        drawButton(EditorAssets::Get().MaximizeIcon, 896);
-		ImGui::SameLine();
 		if (m_ViewportPanel->GetGizmoLocalMode())
 		{
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
@@ -879,53 +958,7 @@ namespace Crowny
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
 
 		ImGui::SameLine(ImGui::GetCursorPosX() + ImGui::GetWindowContentRegionWidth() * 0.5f - 43.5f);
-		ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().PlayIcon), { 30.0f, 30.0f }, { 0.0f, 1.0f }, { 1.0f, 0.0f });
-        if (ImGui::IsItemClicked())
-		{
-			if (m_SceneState == SceneState::Edit)
-			{
-                SaveActiveScene(); // Save the scene in case the simulation crashes
-				SceneManager::GetActiveScene()->OnRuntimeStart();
-				ScriptRuntime::OnStart();
-				m_SceneState = SceneState::Play;
-				m_ViewportPanel->DisalbeGizmo();
-			}
-		}
-		ImGui::SameLine(0.0f, 8.0f);
-        ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().PauseIcon), { 30.0f, 30.0f }, { 0.0f, 1.0f }, { 1.0f, 0.0f });
-        if (ImGui::IsItemClicked())
-		{
-			if (m_SceneState == SceneState::Play)
-			{
-				SceneManager::GetActiveScene()->OnRuntimePause();
-				m_SceneState = SceneState::PausePlay;
-				m_ViewportPanel->EnableGizmo();
-			}
-			else if (m_SceneState == SceneState::PausePlay)
-			{
-				m_SceneState = SceneState::Play;
-				m_ViewportPanel->DisalbeGizmo();
-			}
-		}
-		ImGui::SameLine(0.0f, 8.0f);
-        ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().StopIcon), { 30.0f, 30.0f }, { 0.0f, 1.0f }, { 1.0f, 0.0f });
-        if (ImGui::IsItemClicked())
-		{
-			if (m_SceneState == SceneState::Play)
-			{
-				SceneManager::GetActiveScene()->OnRuntimeStop();
-				ScriptRuntime::OnShutdown();
-				m_ViewportPanel->EnableGizmo();
-				m_SceneState = SceneState::Edit;
-				m_GameMode = false;
-				s_DeltaTime = 0.0f;
-				s_SmoothDeltaTime = 0.0f;
-				s_RealtimeSinceStartup = 0.0f;
-				s_Time = 0.0f;
-				s_FixedDeltaTime = 0.0f;
-				s_FrameCount = 0.0f;
-			}
-		}
+		
         ImGui::PopStyleColor(4);
         ImGui::PopStyleVar(1);
         // ImGui::PopFont();

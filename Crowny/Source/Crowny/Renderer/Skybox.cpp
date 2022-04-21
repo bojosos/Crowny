@@ -114,7 +114,7 @@ namespace Crowny
         m_SkyboxIbo = IndexBuffer::Create(indices, 36);
         m_SkyboxVbo->SetLayout(layout);
 
-        rapi.SetViewport(0, 0, 512, 512);
+		rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
         rapi.SetGraphicsPipeline(pipeline);
 
         for (uint32_t i = 0; i < 6; i++)
@@ -171,7 +171,7 @@ namespace Crowny
 
         rapi.SetRenderTarget(target);
         rapi.SetGraphicsPipeline(pipeline);
-        rapi.SetViewport(0, 0, 512, 512);
+        rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
         rapi.SetUniforms(uniforms);
         rapi.Draw(0, 3, 1);
     }
@@ -200,7 +200,6 @@ namespace Crowny
         desc.VertexShader = vertex;
 
         Ref<GraphicsPipeline> pipeline = GraphicsPipeline::Create(desc, m_SkyboxVbo->GetLayout());
-        Rect2F viewport = { 0.0f, 0.0f, 64.0f, 64.0f };
         Ref<UniformParams> uniforms = UniformParams::Create(pipeline);
 
         Vector<glm::mat4> matrices = {
@@ -235,10 +234,7 @@ namespace Crowny
                 Ref<RenderTexture> cubemap = RenderTexture::Create(rtProps);
                 rapi.SetRenderTarget(cubemap);
                 rapi.SetGraphicsPipeline(pipeline);
-                viewport.Width = static_cast<float>(64 * std::pow(0.5f, i));
-                viewport.Height = static_cast<float>(64 * std::pow(0.5f, i));
-                rapi.SetViewport((uint32_t)viewport.X, (uint32_t)viewport.Y, (uint32_t)viewport.Width,
-                                 (uint32_t)viewport.Height);
+                rapi.SetViewport(0.0f, 0.0f, std::pow(0.5f, i), std::pow(0.5f, i));
                 rapi.SetUniforms(uniforms);
                 rapi.SetVertexBuffers(0, &m_SkyboxVbo, 1);
                 rapi.SetIndexBuffer(m_SkyboxIbo);
@@ -256,7 +252,7 @@ namespace Crowny
             uint32_t samples = 32;
             float roughness = 0.1f;
         } params;
-
+        
         auto& rapi = RenderAPI::Get();
         const uint32_t numMips = static_cast<uint32_t>(std::floor(std::log2(64)));
         TextureParameters tProps;
@@ -278,7 +274,6 @@ namespace Crowny
         desc.VertexShader = vertex;
 
         Ref<GraphicsPipeline> pipeline = GraphicsPipeline::Create(desc, m_SkyboxVbo->GetLayout());
-        Rect2F viewport = { 0.0f, 0.0f, 512.0f, 512.0f };
         Ref<UniformParams> uniforms = UniformParams::Create(pipeline);
 
         Vector<glm::mat4> matrices = {
@@ -318,10 +313,8 @@ namespace Crowny
                 Ref<RenderTexture> cubemap = RenderTexture::Create(rtProps);
                 rapi.SetRenderTarget(cubemap);
                 rapi.SetGraphicsPipeline(pipeline);
-                viewport.Width = static_cast<float>(512 * std::pow(0.5f, i));
-                viewport.Height = static_cast<float>(512 * std::pow(0.5f, i));
-                rapi.SetViewport((uint32_t)viewport.X, (uint32_t)viewport.Y, (uint32_t)viewport.Width,
-                                 (uint32_t)viewport.Height);
+                rapi.SetViewport(0.0f, 0.0f, std::pow(0.5f, i),
+                                 std::pow(0.5f, i));
                 rapi.SetUniforms(uniforms);
                 rapi.SetVertexBuffers(0, &m_SkyboxVbo, 1);
                 rapi.SetIndexBuffer(m_SkyboxIbo);
