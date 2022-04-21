@@ -21,7 +21,7 @@ namespace Crowny
 		extern uint32_t s_Counter;
 		extern char s_IDBuffer[16];
 		extern char s_LabelIDBuffer[1024];
-		
+
 		struct ScopedStyle
 		{
 			ScopedStyle(const ScopedStyle&) = delete;
@@ -63,7 +63,7 @@ namespace Crowny
 		static void PushID()
 		{
 			ImGui::PushID(s_Id++);
-			s_Counter = 0; 
+			s_Counter = 0;
 		}
 
 		static void PopID()
@@ -76,7 +76,7 @@ namespace Crowny
 		{
 			return ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
 		}
-		
+
 		static inline ImRect RectExpanded(const ImRect& rect, float x, float y)
 		{
 			ImRect result = rect;
@@ -164,7 +164,7 @@ namespace Crowny
 			ImGui::ColorConvertRGBtoHSV(colRow.x, colRow.y, colRow.z, hue, sat, val);
 			return ImColor::HSV(hue, sat, std::min(val * multiplier, 1.0f));
 		}
-		
+
 		static void Underline(bool fullWidth = false, float offsetX = 0.0f, float offsetY = -1.0f)
 		{
 			if (fullWidth)
@@ -224,7 +224,7 @@ namespace Crowny
 				ImGui::SetTooltip(text.data());
 			}
 		}
-		
+
 		static void BeginPropertyGrid()
 		{
 			PushID();
@@ -323,7 +323,7 @@ namespace Crowny
 	public:
 		static bool ShowYesNoMessageBox(const String& title, const String& message);
 
-		static bool BeginPopup(const char* str_id, ImGuiWindowFlags flags)
+		static bool BeginPopup(const char* str_id, ImGuiWindowFlags flags = 0)
 		{
 			bool opened = false;
 			if (ImGui::BeginPopup(str_id, flags))
@@ -347,6 +347,28 @@ namespace Crowny
 			return opened;
 		}
 
+		static bool BeginPopupModal(const char* str_id, ImGuiWindowFlags flags = 0)
+		{
+			bool open = false;
+			if (ImGui::BeginPopupModal(str_id))
+			{
+				open = true;
+				const float padding = ImGui::GetStyle().WindowBorderSize;
+				const ImRect windowRect = UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), -padding, -padding);
+				ImGui::PushClipRect(windowRect.Min, windowRect.Max, false);
+				const ImColor col1 = ImGui::GetStyleColorVec4(ImGuiCol_PopupBg);
+				const ImColor col2 = UI::ColourWithMultipliedValue(col1, 0.8f);
+				ImGui::GetWindowDrawList()->AddRectFilledMultiColor(windowRect.Min, windowRect.Max, col1, col1, col2, col2);
+				ImGui::GetWindowDrawList()->AddRect(windowRect.Min, windowRect.Max, UI::ColourWithMultipliedValue(col1, 1.1f));
+				ImGui::PopClipRect();
+
+				// Popped in EndPopup()
+				ImGui::PushStyleColor(ImGuiCol_HeaderHovered, IM_COL32(0, 0, 0, 80));
+				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(1.0f, 1.0f));
+			}
+			return open;
+		}
+		
 		static void EndPopup()
 		{
 			ImGui::PopStyleVar(); // WindowPadding;

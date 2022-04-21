@@ -45,9 +45,6 @@ namespace Crowny
         bool OnMouseButtonPressed(MouseButtonPressedEvent& e);
         bool OnViewportEvent(Event& event);
 
-        void NewProject();
-        void OpenProject();
-
         void RebuildAssemblies(Event& event);
         void BuildGame(Event& event);
 
@@ -97,7 +94,9 @@ namespace Crowny
         static EditorCamera s_EditorCamera;
         Entity m_HoveredEntity;
         bool m_CreatingNewProject = false;
-        bool m_GameMode = false;
+		bool m_GameMode = false;
+		bool m_OpenProject = false;
+        bool m_NewProject = false;
         String m_NewProjectPath;
         String m_NewProjectName;
         glm::vec2 m_ViewportSize = { 1280.0f, 720.0f }; // and dis
