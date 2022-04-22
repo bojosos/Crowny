@@ -4,7 +4,6 @@
 #include "Editor/EditorAssets.h"
 #include "UI/UIUtils.h"
 #include "UI/Properties.h"
-#include "Vendor/FontAwesome/IconsFontAwesome6.h"
 
 #include <backends/imgui_impl_vulkan.h>
 #include <imgui.h>
@@ -136,9 +135,9 @@ namespace Crowny
 			if (ImGui::IsMouseHoveringRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax()))
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 
-			UI::ScopedDisable();
+			UI::ScopedDisable disable;
 			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-			ImGui::Button(ICON_FA_XMARK, { lineHeight, lineHeight });
+			// ImGui::Button(ICON_FA_XMARK, { lineHeight, lineHeight }); FIXME: Add clear button
 			ImGui::PopFont();
 
 			/*UI::DrawButtonImage(FONT_ICON_XMAR, IM_COL32(160, 160, 160, 200),

@@ -46,6 +46,7 @@ namespace Crowny
 
 
     private:
+        Vector<uint32_t> m_MessageIndices;
         size_t m_SelectedMessageHash;
         float m_DisplayScale = 1.0f;
 
