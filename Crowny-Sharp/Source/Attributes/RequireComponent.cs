@@ -10,7 +10,7 @@ namespace Crowny
     public class RequireComponent : Attribute
     {
         #pragma warning disable 0414
-        // Note: This is a list since normal arrays aren't really supported yet.
+        
         private List<Type> components;
         #pragma warning restore 0414
 
@@ -26,8 +26,7 @@ namespace Crowny
                     toRemove.Add(i);
                 }
             }
-            toRemove.Reverse();
-            foreach (int i in toRemove) // go from back to front to avoid messing up the indices
+            for (int i = toRemove.Count - 1; i >= 0; i--) // go from back to front to avoid messing up the indices
                 this.components.RemoveAt(i);
         }
     }
