@@ -61,7 +61,7 @@ namespace Crowny
     void AssetBrowserPanel::Initialize()
     {
         if (Editor::Get().GetProjectSettings()->LastAssetBrowserSelectedEntry.empty())
-            m_CurrentDirectoryEntry = ProjectLibrary::Get().GetRoot().get();
+			m_CurrentDirectoryEntry = ProjectLibrary::Get().GetRoot().get();
         else
         {
             LibraryEntry* entry =
@@ -70,7 +70,8 @@ namespace Crowny
 				m_CurrentDirectoryEntry = ProjectLibrary::Get().GetRoot().get();
             else
                 m_CurrentDirectoryEntry = static_cast<DirectoryEntry*>(entry);
-        }
+		}
+		RecalculateDirectoryEntries();
         for (auto child : m_CurrentDirectoryEntry->Children)
         {
             const auto& path = child->Filepath;
@@ -84,7 +85,8 @@ namespace Crowny
     }
 
     void AssetBrowserPanel::Render()
-    {
+	{
+		UI::ScopedStyle windowPadding(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, 2.0f));
         BeginPanel(ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
         DrawHeader();
@@ -111,13 +113,18 @@ namespace Crowny
 
     void AssetBrowserPanel::DrawHeader()
     {
+		UI::ScopedStyle itemSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 3));
+		ImGui::BeginVertical("##assetBrowserV", { ImGui::GetContentRegionAvailWidth(), 0 }, 0.5f);
+        ImGui::Spring();
+		ImGui::BeginHorizontal("##assetBrowserH", { ImGui::GetContentRegionAvailWidth(), 0 });
         const Ref<DirectoryEntry>& entry = ProjectLibrary::Get().GetRoot();
         if (!m_BackwardHistory.empty())
         {
             if (ImGui::ArrowButton("<-", ImGuiDir_Left))
             {
                 m_ForwardHistory.push(m_CurrentDirectoryEntry);
-                m_CurrentDirectoryEntry = m_BackwardHistory.top();
+				m_CurrentDirectoryEntry = m_BackwardHistory.top();
+				RecalculateDirectoryEntries();
                 m_BackwardHistory.pop();
             }
         }
@@ -127,13 +134,14 @@ namespace Crowny
             ImGui::ArrowButton("<-", ImGuiDir_Left);
             ImGui::EndDisabled();
         }
-        ImGui::SameLine();
+		
         if (!m_ForwardHistory.empty())
         {
             if (ImGui::ArrowButton("->", ImGuiDir_Right))
             {
                 m_BackwardHistory.push(m_CurrentDirectoryEntry);
-                m_CurrentDirectoryEntry = m_ForwardHistory.top();
+				m_CurrentDirectoryEntry = m_ForwardHistory.top();
+				RecalculateDirectoryEntries();
                 m_ForwardHistory.pop();
             }
         }
@@ -144,40 +152,27 @@ namespace Crowny
             ImGui::EndDisabled();
         }
 
-        ImGui::SameLine();
         if (ImGui::Button("Refresh"))
             ProjectLibrary::Get().Refresh(m_CurrentDirectoryEntry->Filepath);
-
-        ImGui::SameLine();
-
-        fs::path tmpPath;
-        DirectoryEntry* tmp = m_CurrentDirectoryEntry;
-        Vector<DirectoryEntry*> entries; // TODO: Do this once per directory operation
-        while (tmp != nullptr)
-        {
-            entries.push_back(tmp);
-            tmp = tmp->Parent;
-        }
-        std::reverse(entries.begin(), entries.end());
-        for (auto* tmp : entries)
+		
+        for (auto* tmp : m_DirectoryPathEntries)
         {
             if (ImGui::Selectable(tmp->ElementName.c_str(), false, 0,
                                   ImVec2(ImGui::CalcTextSize(tmp->ElementName.c_str()).x, 0.0f)))
             {
-                m_CurrentDirectoryEntry = tmp;
+				m_CurrentDirectoryEntry = tmp;
+				RecalculateDirectoryEntries();
                 break;
             }
-            ImGui::SameLine();
             ImGui::Text("/");
-            ImGui::SameLine();
         }
 
-        /* scale slider */
+		ImGui::Spring();
+		UI::ScopedStyle style(ImGuiStyleVar_LayoutAlign, 1);
+
         const float maxWidth = 150.0f * 1.1f;
         const float spacing = ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(" ").x;
         const float checkboxSize = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2;
-
-        ImGui::SameLine(ImGui::GetWindowWidth() - maxWidth - 150.0f);
 
         ImGui::SetNextItemWidth(150.0f);
         float thumbnailChange = m_ThumbnailSize;
@@ -191,10 +186,8 @@ namespace Crowny
             if (m_ColumnCount < 1)
                 m_ColumnCount = 1;
         }
-
-        /* File sorting modes */
+        
         ImGui::SetNextItemWidth(150.0f);
-        ImGui::SameLine(ImGui::GetContentRegionMax().x - 150.0f);
         static const char* sortingStr[3] = { "Sort By Name", "Sort By Size", "Sort By Date" };
         uint32_t currentMode = (uint32_t)m_FileSortingMode;
         if (ImGui::BeginCombo("##sort", sortingStr[currentMode]))
@@ -238,6 +231,9 @@ namespace Crowny
 
             sortChildren(ProjectLibrary::Get().GetRoot().get());
         }
+        ImGui::EndHorizontal();
+		ImGui::Spring();
+        ImGui::EndVertical();
     }
 
     void AssetBrowserPanel::HandleKeyboardNavigation()
@@ -281,6 +277,7 @@ namespace Crowny
                     m_ForwardHistory.pop();
                 m_CurrentDirectoryEntry =
                   static_cast<DirectoryEntry*>(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex].get());
+                RecalculateDirectoryEntries();
             }
             else
                 PlatformUtils::OpenExternally(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex]->Filepath);
@@ -292,6 +289,7 @@ namespace Crowny
 			{
 				m_ForwardHistory.push(m_CurrentDirectoryEntry);
 				m_CurrentDirectoryEntry = m_BackwardHistory.top();
+				RecalculateDirectoryEntries();
 				m_BackwardHistory.pop();
 			}
         }
@@ -302,6 +300,7 @@ namespace Crowny
 			{
 				m_BackwardHistory.push(m_CurrentDirectoryEntry);
 				m_CurrentDirectoryEntry = m_ForwardHistory.top();
+				RecalculateDirectoryEntries();
 				m_ForwardHistory.pop();
             }
         }
@@ -514,7 +513,8 @@ namespace Crowny
                     m_BackwardHistory.push(m_CurrentDirectoryEntry);
                     while (!m_ForwardHistory.empty())
                         m_ForwardHistory.pop();
-                    m_CurrentDirectoryEntry = static_cast<DirectoryEntry*>(entry.get());
+					m_CurrentDirectoryEntry = static_cast<DirectoryEntry*>(entry.get());
+					RecalculateDirectoryEntries();
                     m_SelectionSet.clear();
                 }
                 else // Open the file
@@ -620,7 +620,8 @@ namespace Crowny
                             else
                                 m_BackwardHistory.push(dirEntry);
                         }
-                        m_CurrentDirectoryEntry = dirEntry;
+						m_CurrentDirectoryEntry = dirEntry;
+						RecalculateDirectoryEntries();
                     }
                     for (const auto& child : dirEntry->Children)
                         display(child);
@@ -640,7 +641,10 @@ namespace Crowny
             if (ImGui::MenuItem("Folder"))
             {
                 if (isTreeView)
-                    m_CurrentDirectoryEntry = m_CurrentDirectoryEntry->Parent;
+                {
+					m_CurrentDirectoryEntry = m_CurrentDirectoryEntry->Parent;
+					RecalculateDirectoryEntries();
+                }
                 CreateNew(AssetBrowserItem::Folder);
             }
             ImGui::Separator();
@@ -733,6 +737,19 @@ namespace Crowny
         ProjectLibrary::Get().Refresh(newEntryPath);
         m_RenamingPath = ProjectLibrary::Get().FindEntry(newEntryPath)->Filepath;
         m_RenamingText = newEntryPath.filename().string();
+    }
+
+    void AssetBrowserPanel::RecalculateDirectoryEntries()
+    {
+		Path tmpPath;
+		DirectoryEntry* tmp = m_CurrentDirectoryEntry;
+		m_DirectoryPathEntries.clear();
+		while (tmp != nullptr)
+		{
+			m_DirectoryPathEntries.push_back(tmp);
+			tmp = tmp->Parent;
+		}
+		std::reverse(m_DirectoryPathEntries.begin(), m_DirectoryPathEntries.end());
     }
 
     String AssetBrowserPanel::GetDefaultContents(AssetBrowserItem itemType)

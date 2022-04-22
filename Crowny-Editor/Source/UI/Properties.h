@@ -181,6 +181,22 @@ namespace Crowny
 			return modified;
 		}
 
+		static bool PropertyColor(const char* label, glm::vec3& value)
+		{
+			Pre(label);
+			bool modified = ImGui::ColorEdit3(GenerateID(), glm::value_ptr(value));
+			Post();
+			return modified;
+		}
+
+		static bool PropertyColor(const char* label, glm::vec4& value)
+		{
+			Pre(label);
+			bool modified = ImGui::ColorEdit4(GenerateID(), glm::value_ptr(value));
+			Post();
+			return modified;
+		}
+
 		static bool Property(const char* label, float& value, float delta = 0.1f, float min = 0.0f, float max = 0.0f, const char* helpText = "")
 		{
 			Pre(label, helpText);
@@ -293,27 +309,64 @@ namespace Crowny
 			return modified;
 		}
 
-		template <typename T>
-		static bool PropertyDropdown(const char* label, const Vector<String>& options, T& selected)
+		template<typename TEnum, typename TUnderlying = int32_t>
+		static bool PropertyDropdown(const char* label, const Vector<String>& options, TEnum& selected)
 		{
+			TUnderlying selectedIndex = (TUnderlying)selected;
+
+			String current = options[selectedIndex];
 			Pre(label);
-			const char* current = options[selected].c_str();
+			bool modified = false;
 			if ((GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0)
 				current = "---";
-			bool modified = false;
-			const String id = "##" + String(label);
-			if (ImGui::BeginCombo(id.c_str(), current))
+
+			const String id = "##" + std::string(label);
+			ImGui::SetNextItemWidth(150);
+			if (ImGui::BeginCombo(id.c_str(), current.c_str()))
 			{
-				for (uint32_t i = 0; i < options.size(); i++)
+				for (int i = 0; i < options.size(); i++)
 				{
-					const bool isSelected = (current == options[i]);
-					if (ImGui::Selectable(options[i].c_str(), isSelected))
+					const bool is_selected = (i == selectedIndex);
+					if (ImGui::Selectable(options[i].c_str(), is_selected))
 					{
-						current = options[i].c_str();
-						selected = (T)i;
+						current = options[i];
+						selected = (TEnum)i;
 						modified = true;
 					}
-					if (isSelected)
+					if (is_selected)
+						ImGui::SetItemDefaultFocus();
+				}
+				ImGui::EndCombo();
+			}
+			Post();
+
+			return modified;
+		}
+
+		template<typename TEnum, typename TUnderlying = int32_t>
+		static bool PropertyDropdown(const char* label, Vector<const char*>& options, TEnum& selected)
+		{
+			TUnderlying selectedIndex = (TUnderlying)selected;
+
+			const char* current = options[selectedIndex];
+			Pre(label);
+			bool modified = false;
+			if ((GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0)
+				current = "---";
+
+			const String id = "##" + std::string(label);
+			if (ImGui::BeginCombo(id.c_str(), current))
+			{
+				for (int i = 0; i < options.size(); i++)
+				{
+					const bool is_selected = (current == options[i]);
+					if (ImGui::Selectable(options[i], is_selected))
+					{
+						current = options[i];
+						selected = (TEnum)i;
+						modified = true;
+					}
+					if (is_selected)
 						ImGui::SetItemDefaultFocus();
 				}
 				ImGui::EndCombo();

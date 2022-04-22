@@ -19,6 +19,9 @@ namespace Crowny
 		Ref<Texture> MaximizeIcon;
         Ref<Texture> GlobeIcon;
         Ref<Texture> SearchIcon;
+        Ref<Texture> ConsoleInfo;
+        Ref<Texture> ConsoleWarn;
+        Ref<Texture> ConsoleError;
     };
 
     class EditorAssets
@@ -45,6 +48,10 @@ namespace Crowny
 		static const String MaximizeIcon;
         static const String GlobeIcon;
         static const String SearchIcon;
+
+        static const String ConsoleInfo;
+        static const String ConsoleWarn;
+        static const String ConsoleError;
 
         static EditorAssetsLibrary s_Library;
     };
