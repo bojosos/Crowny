@@ -16,13 +16,19 @@ namespace Crowny
 
         public RequireComponent(params Type[] components)
         {
-            foreach (var type in components)
-            {
-                if (type.BaseType != null && type.BaseType != typeof(Component))
-                    throw new Exception("RequireComponent can only be used with builtin Components.");
-
-            }
             this.components = new List<Type>(components);
+            List<int> toRemove = new List<int>();
+            for (int i = 0; i < this.components.Count; i++)
+            {
+                if (!this.components[i].IsSubclassOf(typeof(Component)))
+                {
+                    Debug.LogWarning("RequireComponent: " + this.components[i].Name + " is not a Component.");
+                    toRemove.Add(i);
+                }
+            }
+            toRemove.Reverse();
+            foreach (int i in toRemove) // go from back to front to avoid messing up the indices
+                this.components.RemoveAt(i);
         }
     }
 }

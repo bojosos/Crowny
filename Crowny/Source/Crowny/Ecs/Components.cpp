@@ -245,7 +245,7 @@ namespace Crowny
 						        componentInfo->AddCallback(entity);
                         }
                         else
-						    CW_ENGINE_WARN("Could not find component {0} used in RequireComponent for class {1}: ", MonoUtils::GetReflTypeName(reflType), m_Class->GetFullName());
+						    CW_ENGINE_WARN("Could not find component class {0} used in RequireComponent for class {1}: ", MonoUtils::GetReflTypeName(reflType), m_Class->GetFullName());
                     }
                 }
             }
