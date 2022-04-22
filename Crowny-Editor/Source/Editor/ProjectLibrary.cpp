@@ -408,21 +408,18 @@ namespace Crowny
             entry->Filesize = (uint32_t)fs::file_size(entry->Filepath);
             if (asset == nullptr)
                 return false;
-            Path outputPath = m_ProjectFolder / INTERNAL_ASSET_DIR;
             if (entry->Metadata == nullptr)
                 entry->Metadata = CreateRef<AssetMetadata>();
 
             entry->Metadata->ImportOptions = curImportOptions;
             entry->LastUpdateTime = std::time(nullptr);
-            if (!fs::is_directory(outputPath))
-                fs::create_directory(outputPath);
             auto& uuid = entry->Metadata->Uuid;
             if (uuid.Empty())
                 uuid = UuidGenerator::Generate();
             Path metaPath = GetMetadataPath(entry->Filepath);
             SerializeMetadata(metaPath, entry->Metadata);
+			Path outputPath = m_UuidDirectory.GetPath(uuid);
             m_AssetManifest->RegisterAsset(uuid, outputPath);
-			outputPath = m_UuidDirectory.GetPath(uuid);
 			outputPath.replace_filename(outputPath.filename().string() + ".asset");
             AssetManager::Get().Save(asset, outputPath);
             return true;

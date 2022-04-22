@@ -11,6 +11,7 @@
 #include "Crowny/Scripting/Bindings/Scene/ScriptAudioListener.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptAudioSource.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptRigidbody.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptCollider2D.h"
 
 #include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
 
@@ -24,7 +25,6 @@ namespace Crowny
 
     void ScriptInfoManager::InitializeTypes()
     {
-
         MonoAssembly* corlib = MonoManager::Get().GetAssembly("corlib");
         if (corlib == nullptr)
             CW_ENGINE_ERROR("Corlib assembly not loaded.");
@@ -116,6 +116,7 @@ namespace Crowny
         m_Builtin.ScriptCompiler = crownyAssembly->GetClass(CROWNY_NS, "ScriptCompiler");
         if (m_Builtin.ScriptCompiler == nullptr)
             CW_ENGINE_ERROR("Cannot find {0}.ScriptCompiler class.", CROWNY_NS);
+        RegisterComponents();
     }
 
     bool ScriptInfoManager::IsBasicType(MonoClass* klass)
@@ -305,6 +306,10 @@ namespace Crowny
         RegisterComponent<AudioSourceComponent, ScriptAudioSource>();
         RegisterComponent<AudioListenerComponent, ScriptAudioListener>();
         RegisterComponent<Rigidbody2DComponent, ScriptRigidbody2D>();
+		
+		RegisterComponent<Collider2D, ScriptCollider2D>();
+        RegisterComponent<CircleCollider2DComponent, ScriptCircleCollider2D>();
+        RegisterComponent<BoxCollider2DComponent, ScriptBoxCollider2D>();
     }
 
     Ref<SerializableTypeInfo> ScriptInfoManager::GetTypeInfo(MonoClass* monoClass)

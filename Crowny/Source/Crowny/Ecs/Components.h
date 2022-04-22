@@ -351,7 +351,12 @@ namespace Crowny
 
     struct Collider2D : ComponentBase
     {
-        Collider2D() : ComponentBase() {}
+		Collider2D() : ComponentBase() {}
+
+		glm::vec2 Offset = { 0.0f, 0.0f };
+		PhysicsMaterial2D Material;
+		bool IsTrigger = false;
+        
         void OnCollisionBegin(const Collision2D& col)
         {
             if (CallbackEnter)
@@ -362,7 +367,7 @@ namespace Crowny
         {
             if (CallbackExit)
                 CallbackExit(col);
-        }
+		}
 
         std::function<void(const Collision2D&)> CallbackEnter;
         std::function<void(const Collision2D&)> CallbackExit;
@@ -370,10 +375,7 @@ namespace Crowny
 
     struct BoxCollider2DComponent : public Collider2D
     {
-        glm::vec2 Offset = { 0.0f, 0.0f };
         glm::vec2 Size = { 0.5f, 0.5f };
-        bool IsTrigger = false;
-        PhysicsMaterial2D Material;
 
         void* RuntimeFixture = nullptr; // duplicating during runtime will be wrong
 
@@ -385,12 +387,8 @@ namespace Crowny
 
     struct CircleCollider2DComponent : public Collider2D
     {
-        glm::vec2 Offset = { 0.0f, 0.0f };
         float Radius = 0.5f;
-        bool IsTrigger = false;
-
-        PhysicsMaterial2D Material;
-
+        
         void* RuntimeFixture = nullptr; // duplicating during runtime will be wrong
 
         CircleCollider2DComponent() : Collider2D() {}
