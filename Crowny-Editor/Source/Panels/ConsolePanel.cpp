@@ -1,6 +1,8 @@
 #include "cwepch.h"
 
 #include "Panels/ConsolePanel.h"
+#include "UI/UIUtils.h"
+#include "Editor/EditorAssets.h"
 
 #include <imgui.h>
 
@@ -16,14 +18,17 @@
 namespace Crowny
 {
 
-    ConsolePanel::ConsolePanel(const String& name) : ImGuiPanel(name), m_SelectedMessageHash(0) {}
+    ConsolePanel::ConsolePanel(const String& name) : ImGuiPanel(name), m_SelectedMessageHash(0)
+    {
+        m_RequestScrollToBottom = m_AllowScrollingToBottom;
+    }
 
     void ConsolePanel::Render()
     {
+        UI::ScopedStyle windowPadding(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, 2.0f));
         BeginPanel();
         m_RequestScrollToBottom = m_AllowScrollingToBottom && ImGuiConsoleBuffer::Get().HasNewMessages();
         RenderHeader();
-		ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 4.0f);
         ImGui::Separator();
         RenderMessages();
         EndPanel();
@@ -31,66 +36,47 @@ namespace Crowny
 
     void ConsolePanel::RenderHeader()
     {
-        ImGuiStyle& style = ImGui::GetStyle();
-
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2, 2));
-        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-
-		auto drawButton = [&](const char* icon, ImGuiConsoleBuffer::Message::Level level)
-		{
-			if (m_EnabledLevels[(uint32_t)level])
+		UI::ScopedStyle style(ImGuiStyleVar_ItemSpacing, ImVec2(6, 2));
+        UI::ScopedColor color(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        
+        auto drawButton = [](const Ref<Texture>& icon, const ImColor& tint, float paddingY = 0.0f)
 			{
-				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.33333334f, 0.3529412f, 0.36078432f, 0.5f));
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.7f, 0.7f, 1.00f));
-			}
-			else
-			{
-				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.7f, 0.7f, 1.00f));
-			}
-			if (ImGui::Button(icon))
-				m_EnabledLevels[(uint32_t)level] = !m_EnabledLevels[(uint32_t)level];
-			ImGui::PopStyleColor(2);
-		};
+				const float height = std::min((float)icon->GetHeight(), 24.0f) - paddingY * 2.0f;
+				const float width = (float)icon->GetWidth() / (float)icon->GetHeight() * height;
+				const bool clicked = ImGui::InvisibleButton(UI::GenerateID(), ImVec2(width, height));
+				ImColor hover = ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered];
+                ImColor active = ImGui::GetStyle().Colors[ImGuiCol_ButtonActive];
+				UI::DrawButtonImage(icon, tint, hover, active, UI::RectOffset(UI::GetItemRect(), 0.0f, paddingY));
+				return clicked;
+			};
+		ImGui::BeginVertical("##consolePanelV", { ImGui::GetContentRegionAvailWidth(), 0.0f });
+        ImGui::Spring();
+        ImGui::BeginHorizontal("##consolePanelH", { ImGui::GetContentRegionAvailWidth(), 0.0f });
+		ImColor tint = m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Info] ? IM_COL32(236, 158, 36, 255) : IM_COL32(192, 192, 192, 255);
+		if (drawButton(EditorAssets::Get().ConsoleInfo, tint))
+            m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Info] = !m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Info];
+		tint = m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Warn] ? IM_COL32(236, 158, 36, 255) : IM_COL32(192, 192, 192, 255);
+		if (drawButton(EditorAssets::Get().ConsoleWarn, tint))
+        m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Warn] = !m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Warn];
+        tint = m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Error] ? IM_COL32(236, 158, 36, 255) : IM_COL32(192, 192, 192, 255);
+		if (drawButton(EditorAssets::Get().ConsoleError, tint))
+            m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Error] = !m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Error];
 		
-		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-		glm::vec4 color = GetRenderColor(ImGuiConsoleBuffer::Message::Levels[0]);
-		ImGui::PushStyleColor(ImGuiCol_Text, { color.r, color.g, color.b, color.a });
-        drawButton(ICON_FA_EXCLAMATION, ImGuiConsoleBuffer::Message::Level::Info);
-		ImGui::PopStyleColor();
-		ImGui::SameLine(0.0f, 2.0f * ImGui::GetStyle().ItemInnerSpacing.x);
-		color = GetRenderColor(ImGuiConsoleBuffer::Message::Levels[1]);
-		ImGui::PushStyleColor(ImGuiCol_Text, { color.r, color.g, color.b, color.a });
-        drawButton(ICON_FA_TRIANGLE_EXCLAMATION, ImGuiConsoleBuffer::Message::Level::Warn);
-		ImGui::PopStyleColor();
-		ImGui::SameLine(0.0f, 2.0f * ImGui::GetStyle().ItemInnerSpacing.x);
-		color = GetRenderColor(ImGuiConsoleBuffer::Message::Levels[2]);
-		ImGui::PushStyleColor(ImGuiCol_Text, { color.r, color.g, color.b, color.a });
-        drawButton(ICON_FA_CIRCLE_EXCLAMATION, ImGuiConsoleBuffer::Message::Level::Error);
-		ImGui::PopStyleColor();
-		ImGui::PopFont();
-		ImGui::PopStyleColor();
-        ImGui::PopStyleVar(1);
-
+		UI::ScopedStyle layoutRight(ImGuiStyleVar_LayoutAlign, 1.0f);
+		ImGui::Spring();
         RenderSettings();
+        ImGui::EndHorizontal();
+        ImGui::Spring();
+        ImGui::EndVertical();
     }
 
     void ConsolePanel::RenderSettings()
     {
-        const float maxWidth = ImGui::CalcTextSize("Scroll to bottom").x * 1.1f;
-        const float spacing = ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(" ").x;
-        const float checkboxSize = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2;
-        const float collapseWidth = ImGui::CalcTextSize("Collapse").x + ImGui::GetStyle().ItemInnerSpacing.x;
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - checkboxSize - ImGui::CalcTextSize("Clear console").x +
-                        1.0f - maxWidth - 2 * spacing - collapseWidth - spacing - checkboxSize);
-		
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
+		UI::ShiftCursorY(3.0f); // For some reason I need to shift the cursor to make the text align properly
         ImGui::Text("Scroll to bottom");
-        ImGui::SameLine(0.0f, spacing);
+        UI::ShiftCursorY(-3.0f);
         ImGui::Checkbox("##ScrollToBottom", &m_AllowScrollingToBottom);
-        ImGui::SameLine(0.0f, spacing);
         ImGui::Text("Collapse");
-        ImGui::SameLine(0.0f, spacing);
         if (ImGui::Checkbox("##Collapse", &m_Collapse))
         {
             if (m_Collapse)
@@ -98,7 +84,6 @@ namespace Crowny
             else
                 ImGuiConsoleBuffer::Get().Uncollapse();
         }
-        ImGui::SameLine(0.0f, spacing);
         if (ImGui::Button("Clear console"))
             ImGuiConsoleBuffer::Get().Clear();
     }

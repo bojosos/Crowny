@@ -52,8 +52,10 @@ namespace Crowny
         void CreateNew(AssetBrowserItem itemType);
         String GetDefaultContents(AssetBrowserItem itemType);
         void HandleKeyboardNavigation();
-
+        void RecalculateDirectoryEntries();
+		
     private:
+        Vector<DirectoryEntry*> m_DirectoryPathEntries;
         uint32_t m_ColumnCount = 5;
         ImTextureID m_FolderIcon;
         ImTextureID m_FileIcon;

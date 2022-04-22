@@ -8,8 +8,6 @@ namespace Crowny
 
     void ImGuiConsoleBuffer::AddMessage(const Message& message) // Binary search here
     {
-        // if (m_Collapsed)
-        // {
         auto findIter = m_HashToIndex.find(message.Hash);
         if (findIter != m_HashToIndex.end())
             m_CollapsedMessageBuffer[findIter->second].RepeatCount++;
@@ -18,8 +16,6 @@ namespace Crowny
             m_CollapsedMessageBuffer.push_back(message);
             m_HashToIndex[message.Hash] = (uint32_t)m_CollapsedMessageBuffer.size() - 1;
         }
-        // }
-        // else
         m_NormalMessageBuffer.push_back(message);
         m_HasNewMessages = true;
     }
