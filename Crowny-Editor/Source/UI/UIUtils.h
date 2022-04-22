@@ -668,6 +668,63 @@ namespace Crowny
 			return modified;
 		}
 
+		template <typename AssetType>
+		static bool EntityReference(const String& label, Entity& entity)
+		{
+			bool modified = false;
+
+			ImGui::SetCursorPos({ ImGui::GetCursorPosX() + 10.0f, ImGui::GetCursorPosY() + 9.0f });
+			ImGui::Text(label.c_str());
+			ImGui::NextColumn();
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
+			ImGui::PushItemWidth(-1);
+
+			ImVec2 originalButtonTextAlign = ImGui::GetStyle().ButtonTextAlign;
+			{
+				ImGui::GetStyle().ButtonTextAlign = { 0.0f, 0.5f };
+				float width = ImGui::GetContentRegionAvail().x;
+				float itemHeight = 28.0f;
+
+				String buttonText = "Null";
+				if (entity)
+					buttonText = entity.GetName();
+				String entitySearchPopupId = UI::GenerateLabelID("EntitySearch");
+				ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
+				if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
+					ImGui::OpenPopup(entitySearchPopupId.c_str());
+				ImGui::PopStyleColor();
+				ImGui::GetStyle().ButtonTextAlign = originalButtonTextAlign;
+
+				bool clear = false;
+				if (EntitySearchPopup(entitySearchPopupId, entity, &clear))
+				{
+					if (clear)
+						entity = { entt::null, nullptr };
+					modified = true;
+				}
+			}
+
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* data = AcceptEntityPayload())
+				{
+					uint32_t id = *(const uint32_t*)data->Data;
+					entity = { (entt::entity)id, SceneManager::GetActiveScene().get() };
+					modified = true;
+				}
+				ImGui::EndDragDropTarget();
+			}
+
+			if (!UI::IsItemDisabled())
+				UI::DrawItemActivityOutline(2.0f, true, IM_COL32(236, 158, 36, 255));
+
+			ImGui::PopItemWidth();
+			ImGui::NextColumn();
+			UI::Underline();
+
+			return modified;
+		}
+
 		static bool PropertyScript(const String& label, String& name)
 		{
 			bool modified = false;
