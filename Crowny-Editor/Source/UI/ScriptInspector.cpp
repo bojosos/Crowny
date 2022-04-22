@@ -76,6 +76,7 @@ namespace Crowny
 
 	bool ScriptInspector::DrawDictionaryInspector(MonoObject* dictObject, const Ref<SerializableMemberInfo>& memberInfo, std::function<void(void*)> setter, int depth)
 	{		
+		ImGui::PushID(depth);
 		const Ref<SerializableTypeInfoDictionary>& dictInfo =
 			std::static_pointer_cast<SerializableTypeInfoDictionary>(memberInfo->m_TypeInfo);
 		bool modified = false;
@@ -107,14 +108,21 @@ namespace Crowny
 		int32_t keyInt = 0;
 		String keyString;
 		ImGui::Columns(3);
+		bool isKeyString = dictInfo->m_KeyType->GetMonoClass() == MonoUtils::GetStringClass();
+		bool isKeyInt = dictInfo->m_KeyType->GetMonoClass() == MonoUtils::GetI32Class();
 		for (uint32_t i = 0; i < length; i++)
 		{
 			ImGui::SetCursorPosX(ImGui::GetCursorPos().x + (depth + 1) * 25);
-			auto getterValue = [&values, i]() { return values.Get<MonoObject*>(i); };
-			auto setterValue = [i, dictObject, addMethod, removeMethod, dictInfo, keys, params](void* value) mutable
+			auto getterValue = [&]()
+			{
+				if (MonoManager::Get().FindClass(values.GetElementClass())->IsValueType())
+					return MonoUtils::Box(values.GetElementClass(), values.GetRaw(i, values.ElementSize()));
+				return values.Get<MonoObject*>(i);
+			};
+			auto setterValue = [isKeyString, i, dictObject, addMethod, removeMethod, dictInfo, keys, params](void* value) mutable
 			{
 				params[1] = value;
-				if (dictInfo->m_KeyType->GetMonoClass() == MonoUtils::GetStringClass())
+				if (isKeyString)
 				{
 					params[0] = MonoUtils::ToMonoString(keys.Get<String>(i));
 					removeMethod->Invoke(dictObject, params);
@@ -128,39 +136,60 @@ namespace Crowny
 					addMethod->Invoke(dictObject, params);
 				}
 			};
-			if (dictInfo->m_KeyType->GetMonoClass() == MonoUtils::GetStringClass())
+			if (isKeyString)
 			{
 				keyString = keys.Get<String>(i);
 				modified |= DrawFieldInspector(memberInfo, keyString.c_str(), getterValue, setterValue, dictInfo->m_ValueType, depth + 1);
 				UI::Underline(true);
 				params[0] = MonoUtils::ToMonoString(keyString);
 			}
-			else if (dictInfo->m_KeyType->GetMonoClass() == MonoUtils::GetI32Class())
+			else if (isKeyInt)
 			{
 				keyInt = keys.Get<uint32_t>(i);
 				modified |= DrawFieldInspector(memberInfo, std::to_string(keyInt).c_str(), getterValue, setterValue, dictInfo->m_ValueType, depth + 1);
 				UI::Underline(true);
 				params[0] = &keyInt;
 			}
-			if (ImGui::Button("-"))
+			if (ImGui::Button(UI::GenerateLabelID("-")))
 				removeMethod->Invoke(dictObject, params);
 			ImGui::NextColumn();
 		}
-		static int32_t key = 0;
-		static String value;
-		ImGui::PushItemWidth(-1);
-		UI::PropertyDictionary(key, value);
-		params[0] = &key;
-		MonoObject* containsObject = containsKey->Invoke(dictObject, params);
-		bool contains = *(bool*)MonoUtils::Unbox(containsObject);
-		ImGui::BeginDisabled(contains);
-		if (ImGui::Button("Add"))
+		if (isKeyInt)
 		{
-			params[1] = MonoUtils::ToMonoString(value);
-			addMethod->Invoke(dictObject, params);
+			static int32_t keyInt = 0;
+			static String valueString;
+			ImGui::PushItemWidth(-1);
+			UI::PropertyDictionary(keyInt, valueString);
+			params[0] = &keyInt;
+			MonoObject* containsObject = containsKey->Invoke(dictObject, params);
+			bool contains = *(bool*)MonoUtils::Unbox(containsObject);
+			ImGui::BeginDisabled(contains);
+			if (ImGui::Button(UI::GenerateLabelID("Add")))
+			{
+				params[1] = MonoUtils::ToMonoString(valueString);
+				addMethod->Invoke(dictObject, params);
+			}
+			ImGui::EndDisabled();
 		}
-		ImGui::EndDisabled();
+		else if (isKeyString)
+		{
+			static String keyString;
+			static int valueInt = 0;
+			ImGui::PushItemWidth(-1);
+			UI::PropertyDictionary(keyString, valueInt);
+			params[0] = MonoUtils::ToMonoString(keyString);
+			MonoObject* containsObject = containsKey->Invoke(dictObject, params);
+			bool contains = *(bool*)MonoUtils::Unbox(containsObject);
+			ImGui::BeginDisabled(contains);
+			if (ImGui::Button(UI::GenerateLabelID("Add")))
+			{
+				params[1] = &valueInt;
+				addMethod->Invoke(dictObject, params);
+			}
+			ImGui::EndDisabled();
+		}
 		ImGui::Columns(2);
+		ImGui::PopID();
 		return false;
 	}
 

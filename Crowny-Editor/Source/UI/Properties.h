@@ -90,6 +90,21 @@ namespace Crowny
 			return modified;
 		}
 
+		static bool PropertyDictionary(String& key, int32_t& value)
+		{
+			ShiftCursor(10.0f, 9.0f);
+			bool modified = ImGui::InputText(GenerateID(), &key);
+			ImGui::NextColumn();
+			ShiftCursorY(4.0f);
+			ImGui::PushItemWidth(-1);
+
+			if (IsItemDisabled())
+				ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+			modified |= UI::InputInt32(GenerateID(), &value);
+			Post();
+			return modified;
+		}
+
 		static bool PropertyInput(const char* label, uint32_t& value, uint32_t step = 1, uint32_t stepFast = 1)
 		{
 			Pre(label);
