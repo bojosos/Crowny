@@ -23,8 +23,6 @@
 #include "Editor/EditorAssets.h"
 #include "Editor/ProjectLibrary.h"
 
-#include "Vendor/FontAwesome/IconsFontAwesome6.h"
-
 #include "Crowny/Scripting/Bindings/Logging/ScriptDebug.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptMath.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptNoise.h"

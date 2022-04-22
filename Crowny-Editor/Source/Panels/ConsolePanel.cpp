@@ -13,8 +13,6 @@
 // TODO: Consider displaying newer messages first in collapsed mode when no sorting is used with std::max(timestamp1,
 // timestamp2)
 
-#include "Vendor/FontAwesome/IconsFontAwesome6.h"
-
 namespace Crowny
 {
 
@@ -105,14 +103,15 @@ namespace Crowny
             ImGui::TableHeadersRow();
 
             const auto& buffer = ImGuiConsoleBuffer::Get().GetBuffer();
-			Vector<uint32_t> messageIndices;
-			messageIndices.resize(buffer.size());
+			
+            m_MessageIndices.clear();
+			m_MessageIndices.resize(buffer.size());
 			uint32_t messageIdx = 0;
             for (uint32_t i = 0; i < (uint32_t)buffer.size(); i++)
             {
 				const auto& message = buffer[i];
 				if (m_EnabledLevels[(uint8_t)message.LogLevel])
-					messageIndices[messageIdx++] = i;
+					m_MessageIndices[messageIdx++] = i;
             }
             ImGuiListClipper clipper;
             clipper.Begin(messageIdx);
@@ -120,7 +119,7 @@ namespace Crowny
             {
                 ImGui::TableNextRow();
                 for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
-                    RenderMessage(buffer[messageIndices[row]]);
+                    RenderMessage(buffer[m_MessageIndices[row]]);
             }
 
             bool needSort = false;
