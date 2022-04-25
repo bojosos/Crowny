@@ -91,7 +91,12 @@ namespace Crowny
 
         void LoadLibrary();
         void UnloadLibrary();
-        void SaveLibrary();
+		void SaveLibrary();
+
+		AssetType GetAssetType(const Path& path) const;
+		AssetType GetAssetType(const UUID& uuid) const;
+
+        Vector<UUID> GetAllAssets(AssetType type) const;
 
     private:
         void SerializeMetadata(const Path& path, const Ref<AssetMetadata>& metadata);

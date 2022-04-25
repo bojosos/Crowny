@@ -2,10 +2,12 @@
 
 #include "Crowny/Application/Application.h"
 
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Common/StringUtils.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
+#include "Editor/ProjectLibrary.h"
 
 #include <spdlog/fmt/fmt.h>
 #include <imgui.h>
@@ -612,6 +614,123 @@ namespace Crowny
 			return modified;
 		}
 
+		static bool AssetSearchPopup(const String& id, AssetType assetType, AssetHandle<Asset>& assetHandle, bool* cleared = nullptr, const char* hint = "Search Entities", const ImVec2& size = ImVec2{ 250.0f, 350.0f })
+		{
+			UI::ScopedColor popupBG(ImGuiCol_PopupBg, (IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255), 1.6f));
+
+			bool modified = false;
+
+			String preview;
+			float itemHeight = size.y / 20.0f;
+
+			const auto view = SceneManager::GetActiveScene()->GetAllEntitiesWith<TagComponent>();
+			AssetHandle<Asset> current = assetHandle;
+
+			if (ImGui::GetItemFlags() & ImGuiItemFlags_Disabled)
+				ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+
+			ImGui::SetNextWindowSize({ size.x, 0.0f });
+
+			static bool grabFocus = true;
+
+			if (BeginPopup(id.c_str(), ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
+			{
+				static String searchString;
+
+				if (ImGui::GetCurrentWindow()->Appearing)
+				{
+					grabFocus = true;
+					searchString.clear();
+				}
+
+				// Search widget
+				ImGui::SetCursorPos({ ImGui::GetCursorPosX() + 3.0f, ImGui::GetCursorPosY() + 2.0f });
+				ImGui::SetNextItemWidth(ImGui::GetWindowWidth() - ImGui::GetCursorPosX() * 2.0f);
+				SearchWidget(searchString, hint, &grabFocus);
+
+				const bool searching = !searchString.empty();
+
+				if (cleared != nullptr)
+				{
+					UI::ScopedColor buttonColor1(ImGuiCol_Button, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.0f));
+					UI::ScopedColor buttonColor2(ImGuiCol_ButtonHovered, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.2f));
+					UI::ScopedColor buttonColor3(ImGuiCol_ButtonActive, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 0.9f));
+
+					UI::ScopedStyle border(ImGuiStyleVar_FrameBorderSize, 0.0f);
+
+					ImGui::SetCursorPosX(0);
+
+					ImGui::PushItemFlag(ImGuiItemFlags_NoNav, searching);
+
+					if (ImGui::Button("CLEAR", { ImGui::GetWindowWidth(), 0.0f }))
+					{
+						*cleared = true;
+						modified = true;
+					}
+
+					ImGui::PopItemFlag();
+				}
+
+				// List of assets
+				{
+					UI::ScopedColor listBoxBg(ImGuiCol_FrameBg, IM_COL32_DISABLE);
+					UI::ScopedColor listBoxBorder(ImGuiCol_Border, IM_COL32_DISABLE);
+
+					ImGuiID listID = ImGui::GetID("##SearchListBox");
+					if (ImGui::BeginListBox("##SearchListBox", ImVec2(-FLT_MIN, 0.0f)))
+					{
+						bool forwardFocus = false;
+
+						ImGuiContext& g = *GImGui;
+						if (g.NavJustMovedToId != 0)
+						{
+							if (g.NavJustMovedToId == listID)
+							{
+								forwardFocus = true;
+								// ActivateItem moves keyboard navigation focus inside of the window
+								ImGui::ActivateItem(listID);
+								ImGui::SetKeyboardFocusHere(1);
+							}
+						}
+
+						Vector<UUID> assets = ProjectLibrary::Get().GetAllAssets(assetType);
+						for (const auto& uuid : assets)
+						{
+							AssetHandle<Asset> handle = AssetManager::Get().LoadFromUUID(uuid);
+							const String& assetName = handle->GetName();
+							if (!searchString.empty() && !StringUtils::IsSearchMathing(assetName, searchString))
+								continue;
+
+							bool isSelected = (current->GetName() == handle->GetName());
+							if (ImGui::Selectable(assetName.c_str(), isSelected))
+							{
+								current = handle;
+								assetHandle = handle;
+								modified = true;
+							}
+
+							if (forwardFocus)
+								forwardFocus = false;
+							else if (isSelected)
+								ImGui::SetItemDefaultFocus();
+						}
+
+						//ImGui::EndChild();
+						ImGui::EndListBox();
+					}
+				}
+				if (modified)
+					ImGui::CloseCurrentPopup();
+
+				EndPopup();
+			}
+
+			if (ImGui::GetItemFlags() & ImGuiItemFlags_Disabled)
+				ImGui::PopStyleVar();
+
+			return modified;
+		}
+
 		static bool EntityReference(const String& label, Entity& entity)
 		{
 			bool modified = false;
@@ -669,7 +788,7 @@ namespace Crowny
 		}
 
 		template <typename AssetType>
-		static bool EntityReference(const String& label, Entity& entity)
+		static bool AssetReference(const String& label, AssetHandle<AssetType>& assetHandle)
 		{
 			bool modified = false;
 
@@ -686,8 +805,8 @@ namespace Crowny
 				float itemHeight = 28.0f;
 
 				String buttonText = "Null";
-				if (entity)
-					buttonText = entity.GetName();
+				if (assetHandle)
+					buttonText = assetHandle->GetName();
 				String entitySearchPopupId = UI::GenerateLabelID("EntitySearch");
 				ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
 				if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
@@ -696,20 +815,21 @@ namespace Crowny
 				ImGui::GetStyle().ButtonTextAlign = originalButtonTextAlign;
 
 				bool clear = false;
-				if (EntitySearchPopup(entitySearchPopupId, entity, &clear))
+				if (AssetSearchPopup(entitySearchPopupId, AssetType::GetStaticType(), static_asset_cast<Asset>(assetHandle), &clear))
 				{
-					if (clear)
-						entity = { entt::null, nullptr };
+					// if (clear)
+						// assetHandle. = { entt::null, nullptr };
 					modified = true;
 				}
 			}
 
 			if (ImGui::BeginDragDropTarget())
 			{
-				if (const ImGuiPayload* data = AcceptEntityPayload())
+				if (const ImGuiPayload* data = AcceptAssetPayload())
 				{
-					uint32_t id = *(const uint32_t*)data->Data;
-					entity = { (entt::entity)id, SceneManager::GetActiveScene().get() };
+					Path path = GetPathFromPayload(data);
+					if (ProjectLibrary::Get().GetAssetType(path) == AssetType::GetStaticType())
+						assetHandle = static_asset_cast<AssetType>(ProjectLibrary::Get().Load(path));
 					modified = true;
 				}
 				ImGui::EndDragDropTarget();

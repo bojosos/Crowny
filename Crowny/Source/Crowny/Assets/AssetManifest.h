@@ -10,6 +10,8 @@ namespace Crowny
     class AssetManager;
     class AssetManifestSerializer;
 
+    class ProjectLibrary; // Editor class
+
     class AssetManifest
     {
     public:
@@ -33,6 +35,8 @@ namespace Crowny
     private:
         friend class AssetManager;
         friend class AssetManifestSerializer;
+       
+        friend class ProjectLibrary;
 
         String m_Name;
         UnorderedMap<UUID, Path> m_UuidToFilepath;

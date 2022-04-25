@@ -7,6 +7,7 @@ namespace Crowny
     class Asset;
 
     class AssetManager;
+    class UIUtils; // This is an Editor class
 
     struct AssetHandleData
     {
@@ -148,7 +149,8 @@ namespace Crowny
         }
 
     protected:
-        friend AssetManager;
+        friend class AssetManager;
+        friend class UIUtils;
         template <class _Ty, bool _Weak> friend class TAssetHandle;
         template <class _Ty1, class _Ty2, bool _Weak2, bool _Weak1>
         friend TAssetHandle<_Ty1, _Weak1> static_asset_cast(const TAssetHandle<_Ty2, _Weak2>& other);

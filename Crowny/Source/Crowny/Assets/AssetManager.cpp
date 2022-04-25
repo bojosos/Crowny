@@ -133,6 +133,7 @@ namespace Crowny
 
     void Save(BinaryDataStreamOutputArchive& archive, const Shader& shader)
     {
+        archive(cereal::base_class<Asset>(&shader));
         // TODO: Fix these for all stages
         archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->Data);
         archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->EntryPoint);
@@ -154,6 +155,7 @@ namespace Crowny
 
     void Load(BinaryDataStreamInputArchive& archive, Shader& shader)
     {
+        archive(cereal::base_class<Asset>(&shader));
         Ref<BinaryShaderData> data = CreateRef<BinaryShaderData>();
         archive(data->Data);
         archive(data->EntryPoint);
@@ -188,7 +190,10 @@ namespace Crowny
     }
 
     AssetHandle<Asset> AssetManager::LoadFromUUID(const UUID& uuid, bool keepInternalRef, bool keepSourceData)
-    {
+	{
+		auto iterFind = m_Handles.find(uuid);
+		if (iterFind != m_Handles.end())
+			return iterFind->second.Lock();
         Path filepath;
         GetFilepathFromUUID(uuid, filepath);
         return Load(uuid, filepath, keepInternalRef, keepSourceData);
@@ -214,19 +219,24 @@ namespace Crowny
     {
         if (!fs::is_directory(filepath.parent_path()))
             fs::create_directories(filepath.parent_path());
-		Ref<MemoryDataStream> memStream = CreateRef<MemoryDataStream>();
-        BinaryDataStreamOutputArchive archive(memStream);
-        archive(resource);
-		// TODO: Check if a file is worth compressing, if not, just write the data to the file
-		// No need to compress already compressed files (images, audio, ...).
-		
-		Vector<uint8_t> result;
-		// This buffer might be too small.
-        result.resize(memStream->Size());; // Maybe if I do this in chunks I can avoid this big alloc, since most of this allocate data won't be used.
-		Compression::Compress(result.data(), memStream->Data(), memStream->Size(), CompressionMethod::FastLZ);
-        Ref<DataStream> stream = FileSystem::CreateAndOpenFile(filepath);
-		stream->Write(result.data(), result.size());
-        stream->Close();
+		//Ref<MemoryDataStream> memStream = CreateRef<MemoryDataStream>();
+  //      BinaryDataStreamOutputArchive archive(memStream);
+  //      archive(resource);
+		//// TODO: Check if a file is worth compressing, if not, just write the data to the file
+		//// No need to compress already compressed files (images, audio, ...).
+		//
+		//Vector<uint8_t> result;
+		//// This buffer might be too small.
+  //      result.resize(memStream->Size());; // Maybe if I do this in chunks I can avoid this big alloc, since most of this allocate data won't be used.
+		//Compression::Compress(result.data(), memStream->Data(), memStream->Size(), CompressionMethod::FastLZ);
+  //      Ref<DataStream> stream = FileSystem::CreateAndOpenFile(filepath);
+		//stream->Write(result.data(), result.size());
+  //      stream->Close();
+
+		Ref<DataStream> stream = FileSystem::CreateAndOpenFile(filepath);
+		BinaryDataStreamOutputArchive archive(stream);
+		archive(resource);
+		stream->Close();
     }
 
     void AssetManager::RegisterAssetManifest(const Ref<AssetManifest>& manifest)
