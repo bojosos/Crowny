@@ -49,6 +49,8 @@ namespace Crowny
 
         const String& GetSource() const { return m_Source; }
 
+		virtual AssetType GetAssetType() const override { return AssetType::ScriptCode; }
+		static AssetType GetStaticType() { return AssetType::ScriptCode; }
     private:
         CW_SERIALIZABLE(ScriptCode);
         String m_Source;
@@ -63,6 +65,9 @@ namespace Crowny
         ~AudioClip() = default;
 
         virtual void Init() override;
+
+        virtual AssetType GetAssetType() const override { return AssetType::AudioClip; }
+		static AssetType GetStaticType() { return AssetType::AudioClip; }
 
         float GetLength() const { return m_Length; }
         uint32_t GetNumSamples() const { return m_NumSamples; }

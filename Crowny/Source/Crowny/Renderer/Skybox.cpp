@@ -234,7 +234,7 @@ namespace Crowny
                 Ref<RenderTexture> cubemap = RenderTexture::Create(rtProps);
                 rapi.SetRenderTarget(cubemap);
                 rapi.SetGraphicsPipeline(pipeline);
-                rapi.SetViewport(0.0f, 0.0f, std::pow(0.5f, i), std::pow(0.5f, i));
+                rapi.SetViewport(0.0f, 0.0f, (float)std::pow(0.5f, i), (float)std::pow(0.5f, i));
                 rapi.SetUniforms(uniforms);
                 rapi.SetVertexBuffers(0, &m_SkyboxVbo, 1);
                 rapi.SetIndexBuffer(m_SkyboxIbo);
@@ -313,8 +313,8 @@ namespace Crowny
                 Ref<RenderTexture> cubemap = RenderTexture::Create(rtProps);
                 rapi.SetRenderTarget(cubemap);
                 rapi.SetGraphicsPipeline(pipeline);
-                rapi.SetViewport(0.0f, 0.0f, std::pow(0.5f, i),
-                                 std::pow(0.5f, i));
+                rapi.SetViewport(0.0f, 0.0f, (float)std::pow(0.5f, i),
+                                 (float)std::pow(0.5f, i));
                 rapi.SetUniforms(uniforms);
                 rapi.SetVertexBuffers(0, &m_SkyboxVbo, 1);
                 rapi.SetIndexBuffer(m_SkyboxIbo);

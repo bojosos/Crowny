@@ -304,6 +304,7 @@ namespace Crowny
         out << YAML::BeginMap;
         out << YAML::Key << "Uuid" << YAML::Value << metadata->Uuid;
         out << YAML::Key << "IncludeInBuild" << YAML::Value << metadata->IncludeInBuild;
+        out << YAML::Key << "TypeId" << YAML::Value << (uint32_t)metadata->Type;
         ImportOptionsSerializer::Serialize(out, metadata->ImportOptions);
         out << YAML::EndMap;
         if (!fs::is_directory(path.parent_path()))
@@ -327,6 +328,8 @@ namespace Crowny
 
         if (const auto& includeInBuild = data["IncludeInBuild"])
             metadata->IncludeInBuild = includeInBuild.as<bool>();
+		if (const auto& typeId = data["TypeId"])
+			metadata->Type = (AssetType)typeId.as<uint32_t>();
 
         metadata->ImportOptions = ImportOptionsSerializer::Deserialize(data);
         return metadata;
@@ -409,7 +412,10 @@ namespace Crowny
             if (asset == nullptr)
                 return false;
             if (entry->Metadata == nullptr)
+            {
                 entry->Metadata = CreateRef<AssetMetadata>();
+				entry->Metadata->Type = asset->GetAssetType(); // Maybe do this every time so even if id gets messed up it works
+            }
 
             entry->Metadata->ImportOptions = curImportOptions;
             entry->LastUpdateTime = std::time(nullptr);
@@ -419,8 +425,8 @@ namespace Crowny
             Path metaPath = GetMetadataPath(entry->Filepath);
             SerializeMetadata(metaPath, entry->Metadata);
 			Path outputPath = m_UuidDirectory.GetPath(uuid);
-            m_AssetManifest->RegisterAsset(uuid, outputPath);
 			outputPath.replace_filename(outputPath.filename().string() + ".asset");
+            m_AssetManifest->RegisterAsset(uuid, outputPath);
             AssetManager::Get().Save(asset, outputPath);
             return true;
         }
@@ -604,6 +610,37 @@ namespace Crowny
 
         return fileEntry->Metadata;
     }
+
+	Vector<UUID> ProjectLibrary::GetAllAssets(AssetType type) const
+	{
+		Vector<UUID> result;
+		for (auto [path, uuid] : m_AssetManifest->m_FilepathToUuid)
+		{
+			if (GetAssetType(uuid) == type)
+				result.push_back(uuid);
+		}
+		return result;
+	}
+
+    AssetType ProjectLibrary::GetAssetType(const Path& path) const
+    {
+		LibraryEntry* entry = FindEntry(path).get();
+        if (entry->Type == LibraryEntryType::File)
+		{
+			FileEntry* fileEntry = static_cast<FileEntry*>(entry);
+			if (fileEntry->Metadata != nullptr)
+				return fileEntry->Metadata->Type;
+		}
+        return AssetType::None;
+    }
+	
+	AssetType ProjectLibrary::GetAssetType(const UUID& uuid) const
+	{
+        Path outPath;
+        if (m_AssetManifest->UuidToFilepath(uuid, outPath))
+            return GetAssetType(outPath);
+        return AssetType::None;
+	}
 
     AssetHandle<Asset> ProjectLibrary::Load(const Path& path)
     {

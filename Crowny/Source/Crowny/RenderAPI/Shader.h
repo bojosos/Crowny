@@ -78,6 +78,9 @@ namespace Crowny
         static Ref<Shader> Create(const ShaderDesc& stateDesc);
         Ref<ShaderStage> GetStage(ShaderType shaderType) const { return m_ShaderStages[shaderType]; }
 
+        virtual AssetType GetAssetType() const override { return AssetType::Shader; }
+		static AssetType GetStaticType() { return AssetType::Shader; }
+
     private:
         CW_SERIALIZABLE(Shader);
         Array<Ref<ShaderStage>, SHADER_COUNT> m_ShaderStages;
