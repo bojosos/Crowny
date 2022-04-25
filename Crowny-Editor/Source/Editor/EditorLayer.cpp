@@ -777,6 +777,10 @@ namespace Crowny
 		if (m_ShowScriptDebugInfo)
 		{
 			ImGui::Begin("C# debug", &m_ShowScriptDebugInfo);
+			static AssetHandle<AudioClip> audioHandle;
+			UIUtils::AssetReference<AudioClip>("Clip", audioHandle);
+			static AssetHandle<Shader> shaderHandle;
+			UIUtils::AssetReference<Shader>("Shader", shaderHandle);
 			MonoAssembly* gameAssembly = MonoManager::Get().GetAssembly(GAME_ASSEMBLY);
 			for (MonoClass* klass : gameAssembly->GetClasses())
 			{

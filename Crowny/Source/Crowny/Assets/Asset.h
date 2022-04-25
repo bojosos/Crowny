@@ -9,6 +9,20 @@ namespace Crowny
 
     class ImportOptions;
 
+    enum class AssetType
+    {
+		None,
+        AudioClip,
+		Texture,
+		Shader,
+		Material,
+        ScriptCode,
+		PhysicsMaterial2D,
+		PhysicsMaterial,
+        MeshSource,
+        PhysicsMesh
+    };
+
     class Asset
     {
     public:
@@ -17,7 +31,9 @@ namespace Crowny
         virtual void Init(){};
         const String& GetName() const { return m_Name; }
         void SetName(const String& name) { m_Name = name; }
-
+		
+        virtual AssetType GetAssetType() const { return AssetType::None; }
+		static AssetType GetStaticType() { return AssetType::None; }
     protected:
         CW_SERIALIZABLE(Asset);
         void AddDependency(const Ref<Asset>& asset);
@@ -34,6 +50,7 @@ namespace Crowny
         UUID Uuid;                        // Asset UUID
         Ref<ImportOptions> ImportOptions; // Asset import options
         bool IncludeInBuild;
+        AssetType Type;
     };
 
 } // namespace Crowny
