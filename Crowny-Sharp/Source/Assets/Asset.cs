@@ -24,7 +24,7 @@ namespace Crowny
             return lhs.d0 == rhs.d0 && lhs.d1 == rhs.d1 && lhs.d2 == rhs.d2 && lhs.d3 == rhs.d3;
         }
 
-        public static bool operator !=(UUID lhs, UUID rhs)
+        public static bool operator!=(UUID lhs, UUID rhs)
         {
             return !(lhs == rhs);
         }
