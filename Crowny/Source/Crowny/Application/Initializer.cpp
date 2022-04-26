@@ -24,6 +24,7 @@
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptObjectManager.h"
 #include "Crowny/Scripting/ScriptSceneObjectManager.h"
+#include "Crowny/Scripting/ScriptAssetManager.h"
 
 // Importers
 #include "Crowny/Import/AudioClipImporter.h"
@@ -112,7 +113,9 @@ namespace Crowny
             CW_ENGINE_INFO("Loaded game assembly");
         }
         ScriptSceneObjectManager::StartUp();
+        ScriptAssetManager::StartUp();
         ScriptObjectManager::StartUp();
+
     }
 
     void Initializer::Shutdown()
@@ -135,6 +138,7 @@ namespace Crowny
         RenderAPI::Get().Shutdown();
 
         ScriptInfoManager::Shutdown();
+        ScriptSceneObjectManager::Shutdown();
         // ScriptSceneObjectManager::Shutdown();
         // ScriptObjectManager::Shutdown();
     }

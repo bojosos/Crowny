@@ -16,6 +16,7 @@ namespace Crowny
 		Texture,
 		Shader,
 		Material,
+        Mesh,
         ScriptCode,
 		PhysicsMaterial2D,
 		PhysicsMaterial,

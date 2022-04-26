@@ -7,6 +7,7 @@
 #include "Crowny/Scripting/ScriptComponent.h"
 #include "Crowny/Scripting/ScriptSceneObjectManager.h"
 #include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
+#include "Crowny/Scripting/Bindings/Assets/ScriptAsset.h"
 
 namespace Crowny
 {
@@ -54,6 +55,13 @@ namespace Crowny
         const ScriptMeta* Metadata;
     };
 
+    struct AssetInfo
+    {
+		std::function<ScriptAssetBase*(const AssetHandle<Asset>&, MonoObject*)> CreateCallback;
+		MonoClass* AssetClass;
+        AssetType Type;
+    };
+
     struct ScriptTypeInfo
     {
         const ScriptMeta* Metadata;
@@ -67,7 +75,12 @@ namespace Crowny
         ScriptInfoManager();
         ~ScriptInfoManager() = default;
         void ClearAssemblyInfo();
+        
         ComponentInfo* GetComponentInfo(MonoReflectionType* type);
+		AssetInfo* GetAssetInfo(MonoReflectionType* type);
+        AssetInfo* GetAssetInfo(AssetType id);
+        AssetInfo* GetAssetInfo(uint32_t id);
+
         void InitializeTypes();
 
         bool IsBasicType(MonoClass* klass);
@@ -83,6 +96,8 @@ namespace Crowny
     private:
         Ref<SerializableTypeInfo> GetTypeInfo(MonoClass* monoClass);
         void RegisterComponents();
+		void RegisterAssets();
+		
         template <typename Component, class ScriptType> void RegisterComponent()
         {
             MonoReflectionType* reflType = MonoUtils::GetType(ScriptType::GetMetaData()->ScriptClass->GetInternalPtr());
@@ -105,6 +120,24 @@ namespace Crowny
             m_ComponentInfos[reflType] = componentInfo;
         }
 
+        template <typename AssetType, class ScriptType>
+        void RegisterAsset()
+        {
+			MonoReflectionType* reflType = MonoUtils::GetType(ScriptType::GetMetaData()->ScriptClass->GetInternalPtr());
+			AssetInfo assetInfo;
+			assetInfo.CreateCallback = [reflType](const AssetHandle<Asset>& handle, MonoObject* instance) {
+				if (instance == nullptr)
+					instance = ScriptType::GetMetaData()->ScriptClass->CreateInstance();
+				AssetHandle<AssetType> cast = static_asset_cast<AssetType>(handle);
+				ScriptType* scriptAsset = new ScriptType(instance, cast);
+				return (ScriptAssetBase*)scriptAsset;
+            };
+            assetInfo.Type = AssetType::GetStaticType();
+            assetInfo.AssetClass = ScriptType::GetMetaData()->ScriptClass;
+            m_AssetInfos[reflType] = assetInfo;
+            m_AssetInfosById[(uint32_t)AssetType::GetStaticType()] = assetInfo;
+        }
+
         template <typename SerializableType, class ScriptType> void RegisterSerializableType()
         {
             MonoReflectionType* reflType = MonoUtils::GetType(ScriptType::GetMetaData()->ScriptClass->GetInternalPtr());
@@ -121,8 +154,9 @@ namespace Crowny
         bool m_BaseTypesInitialized;
         uint32_t m_UniqueTypeId = 1;
         BuiltinScriptClasses m_Builtin;
-        UnorderedMap<MonoReflectionType*, ComponentInfo>
-          m_ComponentInfos; // TODO: Have to replace the reflection type with script meta or update the map after reload
+        UnorderedMap<MonoReflectionType*, ComponentInfo> m_ComponentInfos;
+		UnorderedMap<MonoReflectionType*, AssetInfo> m_AssetInfos;
+        UnorderedMap<uint32_t, AssetInfo> m_AssetInfosById;
         UnorderedMap<MonoReflectionType*, ScriptTypeInfo> m_ScriptTypeInfos;
         UnorderedMap<String, Ref<SerializableAssemblyInfo>> m_AssemblyInfos;
         UnorderedMap<String, MonoClass*> m_EntityBehaviourClasses;
