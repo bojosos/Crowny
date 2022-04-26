@@ -153,7 +153,7 @@ namespace Crowny
 
     String MonoUtils::GetReflTypeName(MonoReflectionType* reflType)
     {
-		MonoType* monoType = mono_reflection_type_get_type(reflType);
+        MonoType* monoType = mono_reflection_type_get_type(reflType);
         return mono_class_get_name(mono_type_get_class(monoType));
     }
 

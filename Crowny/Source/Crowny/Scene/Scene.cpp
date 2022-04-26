@@ -5,6 +5,9 @@
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
 
+#include "Crowny/Physics/Physics2D.h"
+
+#include <bit>
 #include <box2d/box2d.h>
 #include <entt/entt.hpp>
 
@@ -132,10 +135,7 @@ namespace Crowny
             e2.GetComponent<CircleCollider2DComponent>().OnCollisionEnd(col);
     }
 
-    Scene::Scene()
-	{
-		m_ContactListener2D = new ContactListener(this);
-    }
+    Scene::Scene() { m_ContactListener2D = new ContactListener(this); }
 
     Scene::Scene(const String& name) : m_Name(name)
     {
@@ -271,6 +271,9 @@ namespace Crowny
 
                 b2FixtureDef fixtureDef;
                 fixtureDef.shape = &boxShape;
+                uint32_t firstBit = 0; // std::countr_zero(entity.GetComponent<Rigidbody2DComponent>().LayerMask);
+                fixtureDef.filter.maskBits = entity.GetComponent<Rigidbody2DComponent>().LayerMask;
+                fixtureDef.filter.categoryBits = Physics2D::Get().GetCategoryMask(firstBit);
                 fixtureDef.density = b2d.Material.Density;
                 fixtureDef.friction = b2d.Material.Friction;
                 fixtureDef.restitution = b2d.Material.Restitution;

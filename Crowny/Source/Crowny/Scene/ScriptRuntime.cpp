@@ -64,9 +64,9 @@ namespace Crowny
     void ScriptRuntime::UnloadAssemblies()
     {
         MonoManager::Get().UnloadScriptDomain();
-		ScriptObjectManager::Get().ProcessFinalizedObjects();
-		MonoManager::Shutdown();
-		ScriptSceneObjectManager::Shutdown();
+        ScriptObjectManager::Get().ProcessFinalizedObjects();
+        MonoManager::Shutdown();
+        ScriptSceneObjectManager::Shutdown();
         ScriptObjectManager::Shutdown();
     }
 

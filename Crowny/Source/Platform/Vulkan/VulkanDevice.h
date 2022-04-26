@@ -27,7 +27,7 @@ namespace Crowny
         ~VulkanDevice();
 
         SurfaceFormat GetSurfaceFormat(const VkSurfaceKHR& surface) const;
-        
+
         VulkanCommandBufferPool& GetCmdBufferPool() const { return *m_CommandBufferPool; }
         VulkanQueryPool& GetQueryPool() const { return *m_QueryPool; }
 

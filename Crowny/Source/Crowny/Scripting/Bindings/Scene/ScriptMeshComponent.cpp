@@ -4,13 +4,7 @@
 
 namespace Crowny
 {
-	ScriptMeshComponent::ScriptMeshComponent(MonoObject* instance, Entity e) : TScriptComponent(instance, e)
-	{
-		
-	}
+    ScriptMeshComponent::ScriptMeshComponent(MonoObject* instance, Entity e) : TScriptComponent(instance, e) {}
 
-	void ScriptMeshComponent::InitRuntimeData()
-	{
-
-	}
-}
+    void ScriptMeshComponent::InitRuntimeData() {}
+} // namespace Crowny

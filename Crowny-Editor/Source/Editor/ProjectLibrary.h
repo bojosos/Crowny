@@ -91,10 +91,10 @@ namespace Crowny
 
         void LoadLibrary();
         void UnloadLibrary();
-		void SaveLibrary();
+        void SaveLibrary();
 
-		AssetType GetAssetType(const Path& path) const;
-		AssetType GetAssetType(const UUID& uuid) const;
+        AssetType GetAssetType(const Path& path) const;
+        AssetType GetAssetType(const UUID& uuid) const;
 
         Vector<UUID> GetAllAssets(AssetType type) const;
 
@@ -133,7 +133,7 @@ namespace Crowny
         Path m_ProjectFolder;
         Ref<DirectoryEntry> m_RootEntry;
         Ref<ProjectSettings> m_ProjectSettings;
-		UUIDDirectory m_UuidDirectory;
+        UUIDDirectory m_UuidDirectory;
 
         UnorderedMap<UUID, Path> m_UuidToPath;
     };

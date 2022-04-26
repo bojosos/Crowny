@@ -30,7 +30,7 @@ namespace Crowny
     class VulkanResource;
     class VulkanResourceManager;
     class VulkanImage;
-	class VulkanTimerQuery;
+    class VulkanTimerQuery;
     class VulkanPipelineQuery;
     class VulkanOcclusionQuery;
     class VulkanQuery;
@@ -236,10 +236,10 @@ namespace Crowny
                                       VkImageLayout finalLayout, VulkanAccessFlags access, VkPipelineStageFlags stages);
         void RegisterImageTransfer(VulkanImage* image, const VkImageSubresourceRange& range, VkImageLayout layout,
                                    VulkanAccessFlags access);
-		
-		void RegisterQuery(VulkanTimerQuery* query) { m_TimerQueries.insert(query); }
+
+        void RegisterQuery(VulkanTimerQuery* query) { m_TimerQueries.insert(query); }
         void RegisterQuery(VulkanPipelineQuery* query) { m_PipelineQueries.insert(query); }
-		void RegisterQuery(VulkanOcclusionQuery* query) { m_OcclusionQueries.insert(query); }
+        void RegisterQuery(VulkanOcclusionQuery* query) { m_OcclusionQueries.insert(query); }
 
         void UpdateFinalLayouts();
         void UpdateShaderSubresource(VulkanImage* image, uint32_t imageInfoIdx, ImageSubresourceInfo& subresourceInfo,
@@ -252,7 +252,7 @@ namespace Crowny
                                        VkImageLayout layout, VulkanAccessFlags access, VkPipelineStageFlags stages);
         ImageSubresourceInfo& FindSubresourceInfo(VulkanImage* image, uint32_t face, uint32_t mip);
 
-		void ResetQuery(VulkanQuery* query);
+        void ResetQuery(VulkanQuery* query);
 
         bool CheckFenceStatus(bool block) const;
 
@@ -301,7 +301,9 @@ namespace Crowny
         void ExecuteWriteHazardBarrier();
         void ExecuteLayoutTransitions();
         RenderSurfaceMask GetFBReadMask();
-        void GetInProgressQueries(Vector<VulkanTimerQuery*>& timers, Vector<VulkanPipelineQuery*>& pipelines, Vector<VulkanOcclusionQuery*>& occlusions) const;
+        void GetInProgressQueries(Vector<VulkanTimerQuery*>& timers, Vector<VulkanPipelineQuery*>& pipelines,
+                                  Vector<VulkanOcclusionQuery*>& occlusions) const;
+
     private:
         friend class VulkanCommandBufferPool;
 
@@ -326,11 +328,11 @@ namespace Crowny
         UnorderedMap<VulkanResource*, ResourceUseHandle> m_Resources;
         UnorderedMap<VulkanResource*, uint32_t> m_Images;
         UnorderedMap<VulkanSwapChain*, ResourceUseHandle> m_SwapChains;
-		
-		UnorderedSet<VulkanTimerQuery*> m_TimerQueries;
-		UnorderedSet<VulkanPipelineQuery*> m_PipelineQueries;
-		UnorderedSet<VulkanOcclusionQuery*> m_OcclusionQueries;
-		
+
+        UnorderedSet<VulkanTimerQuery*> m_TimerQueries;
+        UnorderedSet<VulkanPipelineQuery*> m_PipelineQueries;
+        UnorderedSet<VulkanOcclusionQuery*> m_OcclusionQueries;
+
         Set<uint32_t> m_ShaderBoundSubresourceInfos;
         uint32_t m_GlobalQueueIdx = -1;
 
