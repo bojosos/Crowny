@@ -165,12 +165,12 @@ namespace Crowny
 
     MonoObject* MonoClass::GetAttribute(MonoClass* monoClass) const
     {
-		MonoCustomAttrInfo* info = mono_custom_attrs_from_class(m_Class);
+        MonoCustomAttrInfo* info = mono_custom_attrs_from_class(m_Class);
         if (info == nullptr)
             return nullptr;
-		MonoObject* attrs = nullptr;
-		if (mono_custom_attrs_has_attr(info, monoClass->GetInternalPtr()))
-			attrs = mono_custom_attrs_get_attr(info, monoClass->GetInternalPtr());
+        MonoObject* attrs = nullptr;
+        if (mono_custom_attrs_has_attr(info, monoClass->GetInternalPtr()))
+            attrs = mono_custom_attrs_get_attr(info, monoClass->GetInternalPtr());
         mono_custom_attrs_free(info);
         return attrs;
     }

@@ -1,8 +1,8 @@
 #include "cwepch.h"
 
+#include "Editor/EditorAssets.h"
 #include "Panels/ConsolePanel.h"
 #include "UI/UIUtils.h"
-#include "Editor/EditorAssets.h"
 
 #include <imgui.h>
 
@@ -34,34 +34,40 @@ namespace Crowny
 
     void ConsolePanel::RenderHeader()
     {
-		UI::ScopedStyle style(ImGuiStyleVar_ItemSpacing, ImVec2(6, 2));
+        UI::ScopedStyle style(ImGuiStyleVar_ItemSpacing, ImVec2(6, 2));
         UI::ScopedColor color(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-        
-        auto drawButton = [](const Ref<Texture>& icon, const ImColor& tint, float paddingY = 0.0f)
-			{
-				const float height = std::min((float)icon->GetHeight(), 24.0f) - paddingY * 2.0f;
-				const float width = (float)icon->GetWidth() / (float)icon->GetHeight() * height;
-				const bool clicked = ImGui::InvisibleButton(UI::GenerateID(), ImVec2(width, height));
-				ImColor hover = ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered];
-                ImColor active = ImGui::GetStyle().Colors[ImGuiCol_ButtonActive];
-				UI::DrawButtonImage(icon, tint, hover, active, UI::RectOffset(UI::GetItemRect(), 0.0f, paddingY));
-				return clicked;
-			};
-		ImGui::BeginVertical("##consolePanelV", { ImGui::GetContentRegionAvailWidth(), 0.0f });
+
+        auto drawButton = [](const Ref<Texture>& icon, const ImColor& tint, float paddingY = 0.0f) {
+            const float height = std::min((float)icon->GetHeight(), 24.0f) - paddingY * 2.0f;
+            const float width = (float)icon->GetWidth() / (float)icon->GetHeight() * height;
+            const bool clicked = ImGui::InvisibleButton(UI::GenerateID(), ImVec2(width, height));
+            ImColor hover = ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered];
+            ImColor active = ImGui::GetStyle().Colors[ImGuiCol_ButtonActive];
+            UI::DrawButtonImage(icon, tint, hover, active, UI::RectOffset(UI::GetItemRect(), 0.0f, paddingY));
+            return clicked;
+        };
+        ImGui::BeginVertical("##consolePanelV", { ImGui::GetContentRegionAvailWidth(), 0.0f });
         ImGui::Spring();
         ImGui::BeginHorizontal("##consolePanelH", { ImGui::GetContentRegionAvailWidth(), 0.0f });
-		ImColor tint = m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Info] ? IM_COL32(236, 158, 36, 255) : IM_COL32(192, 192, 192, 255);
-		if (drawButton(EditorAssets::Get().ConsoleInfo, tint))
-            m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Info] = !m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Info];
-		tint = m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Warn] ? IM_COL32(236, 158, 36, 255) : IM_COL32(192, 192, 192, 255);
-		if (drawButton(EditorAssets::Get().ConsoleWarn, tint))
-        m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Warn] = !m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Warn];
-        tint = m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Error] ? IM_COL32(236, 158, 36, 255) : IM_COL32(192, 192, 192, 255);
-		if (drawButton(EditorAssets::Get().ConsoleError, tint))
-            m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Error] = !m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Error];
-		
-		UI::ScopedStyle layoutRight(ImGuiStyleVar_LayoutAlign, 1.0f);
-		ImGui::Spring();
+        ImColor tint = m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Info]
+                         ? IM_COL32(236, 158, 36, 255)
+                         : IM_COL32(192, 192, 192, 255);
+        if (drawButton(EditorAssets::Get().ConsoleInfo, tint))
+            m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Info] =
+              !m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Info];
+        tint = m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Warn] ? IM_COL32(236, 158, 36, 255)
+                                                                                   : IM_COL32(192, 192, 192, 255);
+        if (drawButton(EditorAssets::Get().ConsoleWarn, tint))
+            m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Warn] =
+              !m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Warn];
+        tint = m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Error] ? IM_COL32(236, 158, 36, 255)
+                                                                                    : IM_COL32(192, 192, 192, 255);
+        if (drawButton(EditorAssets::Get().ConsoleError, tint))
+            m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Error] =
+              !m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Error];
+
+        UI::ScopedStyle layoutRight(ImGuiStyleVar_LayoutAlign, 1.0f);
+        ImGui::Spring();
         RenderSettings();
         ImGui::EndHorizontal();
         ImGui::Spring();
@@ -70,7 +76,7 @@ namespace Crowny
 
     void ConsolePanel::RenderSettings()
     {
-		UI::ShiftCursorY(3.0f); // For some reason I need to shift the cursor to make the text align properly
+        UI::ShiftCursorY(3.0f); // For some reason I need to shift the cursor to make the text align properly
         ImGui::Text("Scroll to bottom");
         UI::ShiftCursorY(-3.0f);
         ImGui::Checkbox("##ScrollToBottom", &m_AllowScrollingToBottom);
@@ -103,15 +109,15 @@ namespace Crowny
             ImGui::TableHeadersRow();
 
             const auto& buffer = ImGuiConsoleBuffer::Get().GetBuffer();
-			
+
             m_MessageIndices.clear();
-			m_MessageIndices.resize(buffer.size());
-			uint32_t messageIdx = 0;
+            m_MessageIndices.resize(buffer.size());
+            uint32_t messageIdx = 0;
             for (uint32_t i = 0; i < (uint32_t)buffer.size(); i++)
             {
-				const auto& message = buffer[i];
-				if (m_EnabledLevels[(uint8_t)message.LogLevel])
-					m_MessageIndices[messageIdx++] = i;
+                const auto& message = buffer[i];
+                if (m_EnabledLevels[(uint8_t)message.LogLevel])
+                    m_MessageIndices[messageIdx++] = i;
             }
             ImGuiListClipper clipper;
             clipper.Begin(messageIdx);

@@ -10,6 +10,7 @@
 #include "Crowny/Common/Random.h"
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Import/Importer.h"
+#include "Crowny/Physics/Physics2D.h"
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/ForwardPlusRenderer.h"
@@ -21,10 +22,10 @@
 // Script runtime
 #include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
+#include "Crowny/Scripting/ScriptAssetManager.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptObjectManager.h"
 #include "Crowny/Scripting/ScriptSceneObjectManager.h"
-#include "Crowny/Scripting/ScriptAssetManager.h"
 
 // Importers
 #include "Crowny/Import/AudioClipImporter.h"
@@ -59,6 +60,7 @@ namespace Crowny
         VirtualFileSystem::Get()->Mount("Models", "Resources/Models");
         VirtualFileSystem::Get()->Mount("Cache", "Resources/Cache");
 
+        Physics2D::StartUp();
         Random::StartUp();
         AudioManager::StartUp();
         RenderAPI::StartUp<VulkanRenderAPI>();
@@ -96,7 +98,7 @@ namespace Crowny
         // Scripting
         MonoManager::StartUp();
         Path engineAssemblyPath = Path("C:/dev/Crowny/Crowny-Sharp") / (std::string(CROWNY_ASSEMBLY) + ".dll");
-        if (fs::exists(engineAssemblyPath)) 
+        if (fs::exists(engineAssemblyPath))
         {
             MonoManager::Get().LoadAssembly(engineAssemblyPath, CROWNY_ASSEMBLY);
             ScriptInfoManager::StartUp();
@@ -115,13 +117,13 @@ namespace Crowny
         ScriptSceneObjectManager::StartUp();
         ScriptAssetManager::StartUp();
         ScriptObjectManager::StartUp();
-
     }
 
     void Initializer::Shutdown()
     {
+        Physics2D::Shutdown();
         Texture::WHITE = Texture::BLACK = nullptr;
-		ScriptSceneObjectManager::Get().Del();
+        ScriptSceneObjectManager::Get().Del();
         ScriptRuntime::UnloadAssemblies();
         Renderer2D::Shutdown();
         SamplerState::s_DefaultSamplerState = nullptr;
@@ -138,7 +140,7 @@ namespace Crowny
         RenderAPI::Get().Shutdown();
 
         ScriptInfoManager::Shutdown();
-        ScriptSceneObjectManager::Shutdown();
+        // ScriptSceneObjectManager::Shutdown();
         // ScriptSceneObjectManager::Shutdown();
         // ScriptObjectManager::Shutdown();
     }

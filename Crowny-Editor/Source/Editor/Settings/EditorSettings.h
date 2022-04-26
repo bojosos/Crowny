@@ -18,7 +18,7 @@ namespace Crowny
         bool ShowImGuiDemoWindow = false;
         bool ShowScriptDebugInfo = false;
         bool ShowAssetInfo = false;
-		bool ShowEmptyMetadataAssetInfo = false;
+        bool ShowEmptyMetadataAssetInfo = false;
         bool ShowEntityDebugInfo = false;
 
         // Snap
@@ -33,10 +33,10 @@ namespace Crowny
 
         // Console
         bool EnableConsoleInfoMessages = true;
-		bool EnableConsoleWarningMessages  = true;
-		bool EnableConsoleErrorMessages = true;
-		bool CollapseConsole = false;
-		bool ScrollToBottom = true;
+        bool EnableConsoleWarningMessages = true;
+        bool EnableConsoleErrorMessages = true;
+        bool CollapseConsole = false;
+        bool ScrollToBottom = true;
 
         using Serializer = EditorSettingsSerializer;
     };

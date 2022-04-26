@@ -24,8 +24,8 @@ namespace Crowny
         Mesh(const Ref<VertexBuffer>& vbo, const Ref<IndexBuffer>& ibo);
         ~Mesh() = default;
 
-		virtual AssetType GetAssetType() const override { return AssetType::Mesh; }
-		static AssetType GetStaticType() { return AssetType::Mesh; }
+        virtual AssetType GetAssetType() const override { return AssetType::Mesh; }
+        static AssetType GetStaticType() { return AssetType::Mesh; }
 
         void Draw();
         Ref<MaterialInstance> GetMaterialInstance() { return m_MaterialInstance; }

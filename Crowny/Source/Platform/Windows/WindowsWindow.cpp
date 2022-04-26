@@ -115,13 +115,13 @@ namespace Crowny
             }
             }
         });
-        
-		// This is all good, but I want to be able to highlight the area that the user is dragging over, so I would need to use COM, IDropTarget
-		// TODO:a
+
+        // This is all good, but I want to be able to highlight the area that the user is dragging over, so I would need
+        // to use COM, IDropTarget
+        // TODO:a
         glfwSetDropCallback(m_Window, [](GLFWwindow* window, int count, const char** paths) {
             for (uint32_t i = 0; i < count; i++)
             {
-
             }
         });
 

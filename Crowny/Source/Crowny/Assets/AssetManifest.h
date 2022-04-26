@@ -35,7 +35,7 @@ namespace Crowny
     private:
         friend class AssetManager;
         friend class AssetManifestSerializer;
-       
+
         friend class ProjectLibrary;
 
         String m_Name;

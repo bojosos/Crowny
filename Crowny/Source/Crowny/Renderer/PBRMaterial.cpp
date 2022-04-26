@@ -34,7 +34,7 @@ namespace Crowny
 
     PBRMaterial::~PBRMaterial()
     {
-		m_Uniforms = nullptr;
+        m_Uniforms = nullptr;
         m_Textures.clear();
     }
 

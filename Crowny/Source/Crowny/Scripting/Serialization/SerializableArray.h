@@ -1,11 +1,10 @@
 #pragma once
 
 namespace Crowny
-{	
+{
 
-	class SerializableArray
-	{
-		
-	};
+    class SerializableArray
+    {
+    };
 
-}
+} // namespace Crowny

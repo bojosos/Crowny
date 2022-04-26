@@ -10,6 +10,7 @@
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Events/ImGuiEvent.h"
+#include "Crowny/Physics/Physics2D.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/Renderer/Skybox.h"
@@ -18,10 +19,10 @@
 #include "Crowny/Serialization/SceneSerializer.h"
 
 #include "Editor/Editor.h"
-#include "UI/UIUtils.h"
-#include "UI/Properties.h"
 #include "Editor/EditorAssets.h"
 #include "Editor/ProjectLibrary.h"
+#include "UI/Properties.h"
+#include "UI/UIUtils.h"
 
 #include "Crowny/Scripting/Bindings/Logging/ScriptDebug.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptMath.h"
@@ -116,13 +117,15 @@ namespace Crowny
 		m_ShowScriptDebugInfo = editorSettings->ShowScriptDebugInfo;
 		m_ShowEntityDebugInfo = editorSettings->ShowEntityDebugInfo;
 
-		m_ConsolePanel->SetMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Info, editorSettings->EnableConsoleInfoMessages);
-		m_ConsolePanel->SetMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Warn, editorSettings->EnableConsoleWarningMessages);
-		m_ConsolePanel->SetMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Error, editorSettings->EnableConsoleErrorMessages);
+		m_ConsolePanel->SetMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Info,
+			editorSettings->EnableConsoleInfoMessages);
+		m_ConsolePanel->SetMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Warn,
+			editorSettings->EnableConsoleWarningMessages);
+		m_ConsolePanel->SetMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Error,
+			editorSettings->EnableConsoleErrorMessages);
 
 		m_ConsolePanel->SetCollapseEnabled(editorSettings->CollapseConsole);
 		m_ConsolePanel->SetScrollToBottomEnabled(editorSettings->ScrollToBottom);
-
 
 		if (m_AutoLoadLastProject && !editorSettings->LastOpenProject.empty())
 		{
@@ -280,10 +283,7 @@ namespace Crowny
 		return true;
 	}
 
-	void EditorLayer::CreateNewScene()
-	{
-		m_Temp = CreateRef<Scene>("Scene");
-	}
+	void EditorLayer::CreateNewScene() { m_Temp = CreateRef<Scene>("Scene"); }
 
 	void EditorLayer::OpenScene()
 	{
@@ -350,9 +350,12 @@ namespace Crowny
 		settings->ShowAssetInfo = m_ShowAssetInfo;
 		settings->ShowScriptDebugInfo = m_ShowScriptDebugInfo;
 
-		settings->EnableConsoleInfoMessages = m_ConsolePanel->IsMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Info);
-		settings->EnableConsoleWarningMessages = m_ConsolePanel->IsMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Warn);
-		settings->EnableConsoleErrorMessages = m_ConsolePanel->IsMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Error);
+		settings->EnableConsoleInfoMessages =
+			m_ConsolePanel->IsMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Info);
+		settings->EnableConsoleWarningMessages =
+			m_ConsolePanel->IsMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Warn);
+		settings->EnableConsoleErrorMessages =
+			m_ConsolePanel->IsMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Error);
 
 		settings->CollapseConsole = m_ConsolePanel->IsCollapseEnabled();
 		settings->ScrollToBottom = m_ConsolePanel->IsScrollToBottomEnabled();
@@ -467,7 +470,8 @@ namespace Crowny
 				else
 				{
 					m_HoveredEntity = Entity((entt::entity)(col.x - 1), scene.get());
-					if (Input::IsMouseButtonDown(Mouse::ButtonLeft) && !Input::IsKeyPressed(Key::LeftAlt) && !Input::IsKeyPressed(Key::RightAlt) && !m_ViewportPanel->IsMouseOverGizmo())
+					if (Input::IsMouseButtonDown(Mouse::ButtonLeft) && !Input::IsKeyPressed(Key::LeftAlt) &&
+			!Input::IsKeyPressed(Key::RightAlt) && !m_ViewportPanel->IsMouseOverGizmo())
 						m_HierarchyPanel->SetSelectedEntity(m_HoveredEntity);
 				}
 			}*/
@@ -577,8 +581,8 @@ namespace Crowny
 			if (ImGui::Button("Open"))
 			{
 				Vector<Path> outPaths;
-				if (FileSystem::OpenFileDialog(FileDialogType::OpenFolder, Editor::Get().GetDefaultProjectPath(),
-					{}, outPaths))
+				if (FileSystem::OpenFileDialog(FileDialogType::OpenFolder, Editor::Get().GetDefaultProjectPath(), {},
+					outPaths))
 				{
 					if (outPaths.size() > 0)
 					{
@@ -690,12 +694,14 @@ namespace Crowny
 				m_AssetBrowser->Initialize();
 			}
 			UIUtils::EndPopup();
-			if (!Editor::Get().IsProjectLoaded()) // TODO: Consider changing this (fixing panels) as it would look better
+			if (!Editor::Get()
+				.IsProjectLoaded()) // TODO: Consider changing this (fixing panels) as it would look better
 				return;
 		}
-		
+
 		UI_Header();
 		UI_Settings();
+		UI_LayerCollisionMatrix();
 
 #ifdef CW_DEBUG
 		UI_ScriptInfo();
@@ -728,7 +734,8 @@ namespace Crowny
 				{
 					if (entity.GetParent())
 					{
-						const String parentLabel = entity.GetParent().GetName() + ": " + entity.GetParent().GetUuid().ToString();
+						const String parentLabel =
+							entity.GetParent().GetName() + ": " + entity.GetParent().GetUuid().ToString();
 						ImGui::Text(parentLabel.c_str());
 					}
 					ImGui::TreePop();
@@ -744,9 +751,12 @@ namespace Crowny
 		{
 			ImGui::Begin("Asset Info", &m_ShowAssetInfo);
 			ImGui::Columns(2);
-			ImGui::Text("Project Library"); ImGui::NextColumn();
-			ImGui::Text("Show empty metadata entries"); ImGui::SameLine();
-			ImGui::Checkbox("##showEmptyMetadata", &m_ShowEmptyMetadataAssetInfo); ImGui::NextColumn();
+			ImGui::Text("Project Library");
+			ImGui::NextColumn();
+			ImGui::Text("Show empty metadata entries");
+			ImGui::SameLine();
+			ImGui::Checkbox("##showEmptyMetadata", &m_ShowEmptyMetadataAssetInfo);
+			ImGui::NextColumn();
 
 			std::function<void(const Ref<LibraryEntry>&)> traverse = [&](const Ref<LibraryEntry>& entry) {
 				if (entry->Type == LibraryEntryType::Directory)
@@ -760,7 +770,8 @@ namespace Crowny
 
 					if (!m_ShowEmptyMetadataAssetInfo && file->Metadata == nullptr)
 						return;
-					ImGui::Text(file->Filepath.string().c_str()); ImGui::NextColumn();
+					ImGui::Text(file->Filepath.string().c_str());
+					ImGui::NextColumn();
 					if (file->Metadata != nullptr)
 						ImGui::Text(file->Metadata->Uuid.ToString().c_str());
 					ImGui::NextColumn();
@@ -770,6 +781,72 @@ namespace Crowny
 			traverse(root);
 			ImGui::End();
 		}
+	}
+
+	inline void AddTextVertical(ImDrawList* DrawList, const char* text, ImVec2 pos, ImU32 text_color)
+	{
+		pos.x = IM_ROUND(pos.x);
+		pos.y = IM_ROUND(pos.y);
+		ImFont* font = GImGui->Font;
+		const ImFontGlyph* glyph;
+		char c;
+		ImGuiContext& g = *GImGui;
+		ImVec2 text_size = ImGui::CalcTextSize(text);
+		while ((c = *text++))
+		{
+			glyph = font->FindGlyph(c);
+			if (!glyph)
+				continue;
+
+			DrawList->PrimReserve(6, 4);
+			DrawList->PrimQuadUV(pos + ImVec2(glyph->Y0, -glyph->X0), pos + ImVec2(glyph->Y0, -glyph->X1),
+				pos + ImVec2(glyph->Y1, -glyph->X1), pos + ImVec2(glyph->Y1, -glyph->X0),
+
+				ImVec2(glyph->U0, glyph->V0), ImVec2(glyph->U1, glyph->V0),
+				ImVec2(glyph->U1, glyph->V1), ImVec2(glyph->U0, glyph->V1), text_color);
+			pos.y -= glyph->AdvanceX;
+		}
+	}
+
+	static bool s_OpenCollisionMatrix = true;
+
+	void EditorLayer::UI_LayerCollisionMatrix()
+	{
+		ImGui::Begin("Collision Matrix", &s_OpenCollisionMatrix);
+		{
+			UI::ScopedStyle spacing(ImGuiStyleVar_ItemSpacing, ImVec2{ 2.0f, 2.0f });
+			UI::PushID();
+			uint32_t id = 0;
+			UI::ShiftCursorY(50);
+			const ImVec2 text_pos(ImGui::GetCurrentWindow()->DC.CursorPos.x, ImGui::GetCurrentWindow()->DC.CursorPos.y - 2.0f);
+			for (uint32_t i = 0; i < 32; i++) // rows
+			{
+				uint32_t categoryMask = Physics2D::Get().GetCategoryMask(i);
+				ImGui::Text(std::to_string(i).c_str()); ImGui::SameLine();
+				for (uint32_t j = 0; j < 32; j++)
+				{
+					if (i == 0)
+						AddTextVertical(ImGui::GetWindowDrawList(), std::to_string(i).c_str(),
+							text_pos + ImVec2(ImGui::GetCursorPosX() - 6.0f, 0), IM_COL32(192, 192, 192, 255));
+					if (i + j > 31)
+						continue;
+					bool value = (categoryMask & (1 << j)) != 0;
+					ImGui::PushID(id++);
+					if (ImGui::Checkbox("##checkbox", &value))
+					{
+						if (value)
+							Physics2D::Get().SetCategoryMask(i, categoryMask | (1 << j));
+						else
+							Physics2D::Get().SetCategoryMask(i, categoryMask & (~(1 << j)));
+					}
+					if (i + j + 1 <= 31)
+						ImGui::SameLine();
+					ImGui::PopID();
+				}
+			}
+			UI::PopID();
+		}
+		ImGui::End();
 	}
 
 	void EditorLayer::UI_ScriptInfo()
@@ -796,8 +873,10 @@ namespace Crowny
 					{
 						for (MonoField* field : klass->GetFields())
 						{
-							ImGui::Text(field->GetFullDeclName().c_str()); ImGui::SameLine();
-							ImGui::Text(field->GetType()->GetFullName().c_str()); ImGui::SameLine();
+							ImGui::Text(field->GetFullDeclName().c_str());
+							ImGui::SameLine();
+							ImGui::Text(field->GetType()->GetFullName().c_str());
+							ImGui::SameLine();
 							ImGui::Text(field->GetName().c_str());
 						}
 						ImGui::TreePop();
@@ -828,16 +907,19 @@ namespace Crowny
 		const float edgeOffset = 4.0f;
 		const float windowHeight = 32.0f;
 		const float numberOfButtons = 3.0f;
-		const float backgroundWidth = edgeOffset * 6.0f + buttonSize * numberOfButtons + edgeOffset * (numberOfButtons - 1.0f) * 2.0f;
+		const float backgroundWidth =
+			edgeOffset * 6.0f + buttonSize * numberOfButtons + edgeOffset * (numberOfButtons - 1.0f) * 2.0f;
 
 		float toolbarX = (m_ViewportPanel->GetViewportBounds().x + m_ViewportPanel->GetViewportBounds().z) / 2.0f;
-		ImGui::SetNextWindowPos(ImVec2(toolbarX - (backgroundWidth / 2.0f), m_ViewportPanel->GetViewportBounds().y + edgeOffset));
+		ImGui::SetNextWindowPos(
+			ImVec2(toolbarX - (backgroundWidth / 2.0f), m_ViewportPanel->GetViewportBounds().y + edgeOffset));
 		ImGui::SetNextWindowSize(ImVec2(backgroundWidth, windowHeight));
 		ImGui::SetNextWindowBgAlpha(0.0f);
 		ImGui::Begin("##viewport_central_toolbar", 0, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking);
 
 		const float desiredHeight = 26.0f + 5.0f;
-		ImRect background = UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), 0.0f, -(windowHeight - desiredHeight) / 2.0f);
+		ImRect background =
+			UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), 0.0f, -(windowHeight - desiredHeight) / 2.0f);
 		ImGui::GetWindowDrawList()->AddRectFilled(background.Min, background.Max, IM_COL32(15, 15, 15, 127), 4.0f);
 
 		ImGui::BeginVertical("##viewport_central_toolbarV", { backgroundWidth, ImGui::GetContentRegionAvail().y });
@@ -847,23 +929,20 @@ namespace Crowny
 		{
 			UI::ScopedStyle enableSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(edgeOffset * 2.0f, 0));
 			const ImColor c_ButtonTint = IM_COL32(192, 192, 192, 255);
-			const ImColor c_SimulateButtonTint = m_SceneState == SceneState::Simulate ? ImColor(1.0f, 0.75f, 0.75f, 1.0f) : c_ButtonTint;
+			const ImColor c_SimulateButtonTint =
+				m_SceneState == SceneState::Simulate ? ImColor(1.0f, 0.75f, 0.75f, 1.0f) : c_ButtonTint;
 
-			auto drawButton = [buttonSize](const Ref<Texture>& icon, const ImColor& tint, float paddingY = 0.0f)
-			{
+			auto drawButton = [buttonSize](const Ref<Texture>& icon, const ImColor& tint, float paddingY = 0.0f) {
 				const float height = std::min((float)icon->GetHeight(), buttonSize) - paddingY * 2.0f;
 				const float width = (float)icon->GetWidth() / (float)icon->GetHeight() * height;
 				const bool clicked = ImGui::InvisibleButton(UI::GenerateID(), ImVec2(width, height));
-				UI::DrawButtonImage(icon,
-					tint,
-					tint,
-					tint,
-					UI::RectOffset(UI::GetItemRect(), 0.0f, paddingY));
+				UI::DrawButtonImage(icon, tint, tint, tint, UI::RectOffset(UI::GetItemRect(), 0.0f, paddingY));
 
 				return clicked;
 			};
 
-			Ref<Texture> buttonTex = m_SceneState == SceneState::Play ? EditorAssets::Get().StopIcon : EditorAssets::Get().PlayIcon;
+			Ref<Texture> buttonTex =
+				m_SceneState == SceneState::Play ? EditorAssets::Get().StopIcon : EditorAssets::Get().PlayIcon;
 			if (drawButton(buttonTex, c_ButtonTint))
 			{
 				if (m_SceneState == SceneState::Edit)
@@ -925,14 +1004,14 @@ namespace Crowny
 
 		UI::PopID();
 
-
-		ImGui::Begin("Header", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse);
+		ImGui::Begin("Header", nullptr,
+			ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse);
 		ImGui::SetWindowSize(ImVec2(ImGui::GetWindowWidth(), 36.0f));
 		// ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetStyle().FramePadding.y);
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2, 2));
 		ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-
 
 		if (m_ViewportPanel->GetGizmoLocalMode())
 		{
@@ -944,7 +1023,8 @@ namespace Crowny
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.33333334f, 0.3529412f, 0.36078432f, 0.5f));
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.7f, 0.7f, 1.00f));
 		}
-		ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().GlobeIcon), { 30.0f, 30.0f }, { 0.0f, 1.0f }, { 1.0f, 0.0f });
+		ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().GlobeIcon), { 30.0f, 30.0f }, { 0.0f, 1.0f },
+			{ 1.0f, 0.0f });
 		if (ImGui::IsItemClicked())
 			m_ViewportPanel->SetGizmoLocalMode(!m_ViewportPanel->GetGizmoLocalMode());
 		ImGui::PopStyleColor(2);
@@ -1021,10 +1101,7 @@ namespace Crowny
 		return true;
 	}
 
-	bool EditorLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e)
-	{
-		return false;
-	}
+	bool EditorLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e) { return false; }
 
 	void EditorLayer::OnEvent(Event& e)
 	{
