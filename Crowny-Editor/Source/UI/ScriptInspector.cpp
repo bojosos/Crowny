@@ -5,6 +5,7 @@
 
 #include "Crowny/Scripting/Mono/MonoArray.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
+#include "Crowny/Scripting/ScriptAssetManager.h"
 
 #include <imgui.h>
 
@@ -560,6 +561,18 @@ namespace Crowny
 			return DrawDictionaryInspector(getter(), memberInfo, setter, depth);
 		else if (typeInfo->GetType() == SerializableType::Asset)
 		{
+			Ref<SerializableTypeInfoAsset> assetInfo = std::static_pointer_cast<SerializableTypeInfoAsset>(typeInfo);
+			ScriptAsset* scriptAsset = ScriptAsset::ToNative(getter());
+			AssetHandle<Asset> handle;
+			if (scriptAsset != nullptr)
+				handle = scriptAsset->GetGenericHandle();
+			if (UIUtils::AssetReference(memberInfo->m_Name.c_str(), handle, assetInfo->Type) && handle)
+			{
+				MonoObject* value = ScriptAssetManager::Get().GetScriptAsset(handle, true)->GetManagedInstance();
+				setter(value);
+				return true;
+			}
+			return false;
 		}
 		else if (typeInfo->GetType() == SerializableType::Entity)
 		{

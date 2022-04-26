@@ -133,7 +133,8 @@ namespace Crowny
 
     void Save(BinaryDataStreamOutputArchive& archive, const Shader& shader)
     {
-        archive(cereal::base_class<Asset>(&shader));
+        // TODO: Fix this for engine shaders
+        // archive(cereal::base_class<Asset>(&shader));
         // TODO: Fix these for all stages
         archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->Data);
         archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->EntryPoint);
@@ -155,7 +156,8 @@ namespace Crowny
 
     void Load(BinaryDataStreamInputArchive& archive, Shader& shader)
     {
-        archive(cereal::base_class<Asset>(&shader));
+		// TODO: Fix this for engine shaders
+		// archive(cereal::base_class<Asset>(&shader));
         Ref<BinaryShaderData> data = CreateRef<BinaryShaderData>();
         archive(data->Data);
         archive(data->EntryPoint);
