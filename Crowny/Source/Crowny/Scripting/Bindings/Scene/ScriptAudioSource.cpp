@@ -1,6 +1,8 @@
 #include "cwpch.h"
 
 #include "Crowny/Scripting/Bindings/Scene/ScriptAudioSource.h"
+#include "Crowny/Scripting/Bindings/Assets/ScriptAudioClip.h"
+#include "Crowny/Scripting/ScriptAssetManager.h"
 
 namespace Crowny
 {
@@ -47,8 +49,11 @@ namespace Crowny
 
     void ScriptAudioSource::Internal_SetClip(ScriptAudioSource* thisPtr, MonoObject* clip)
     {
-        // ScriptAssetRef ref = ScriptAssetRef::ToNative(clip);
-        // thisPtr->GetComponent().SetClip(ref->GetHandle());
+		ScriptAudioClip* audioClip = ScriptAudioClip::ToNative(clip);
+		if (audioClip != nullptr)
+            thisPtr->GetComponent().SetClip(audioClip->GetHandle());
+        else
+            thisPtr->GetComponent().SetClip(AssetHandle<AudioClip>());
     }
 
     void ScriptAudioSource::Internal_SetPlayOnAwake(ScriptAudioSource* thisPtr, bool playOnAwake)
@@ -96,7 +101,13 @@ namespace Crowny
         return thisPtr->GetComponent().GetPitch();
     }
 
-    MonoObject* ScriptAudioSource::Internal_GetClip(ScriptAudioSource* thisPtr) { return nullptr; }
+    MonoObject* ScriptAudioSource::Internal_GetClip(ScriptAudioSource* thisPtr)
+    {
+        ScriptAssetBase* asset = ScriptAssetManager::Get().GetScriptAsset(thisPtr->GetComponent().GetClip(), true);
+		if (asset != nullptr)
+			return asset->GetManagedInstance();
+		return nullptr;
+    }
 
     bool ScriptAudioSource::Internal_GetPlayOnAwake(ScriptAudioSource* thisPtr)
     {

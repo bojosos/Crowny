@@ -403,14 +403,10 @@ namespace Crowny
     {
         AudioSourceComponent& sourceComponent = e.GetComponent<AudioSourceComponent>();
 
-        ImGui::Text("Audio Clip");
-        ImGui::NextColumn();
-        if (sourceComponent.GetClip() != nullptr)
-            ImGui::Text("%s", sourceComponent.GetClip()->GetName().c_str());
-        else
-            ImGui::Text("Audio clip goes here");
-        ImGui::NextColumn();
-
+		AssetHandle<AudioClip> handle = sourceComponent.GetClip();
+        if (UIUtils::AssetReference<AudioClip>("Audio Clip", handle) && handle)
+			sourceComponent.SetClip(handle);
+        
         ImGui::Text("Volume");
         ImGui::NextColumn();
         float volume = sourceComponent.GetVolume();

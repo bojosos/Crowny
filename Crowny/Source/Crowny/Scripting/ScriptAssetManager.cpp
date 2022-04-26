@@ -18,10 +18,9 @@ namespace Crowny
 
 	ScriptAssetBase* ScriptAssetManager::CreateScriptAsset(const AssetHandle<Asset>& asset, MonoObject* instance)
 	{
-		const UUID& uuid = asset.GetUUID();
+		const UUID uuid = asset.GetUUID(); // Hmmm something weird happens if I don't copy here (maybe some corruption magic?)
 		if (!asset.IsLoaded())
 			return nullptr;
-		
 		AssetInfo* assetInfo = ScriptInfoManager::Get().GetAssetInfo(asset->GetAssetType());
 		if (assetInfo == nullptr)
 			return nullptr;
@@ -44,7 +43,7 @@ namespace Crowny
 		ScriptAssetBase* output = GetScriptAsset(uuid);
 		if (output == nullptr && create)
 			return CreateScriptAsset(asset, nullptr); // TODO: make nullptr default arg
-		return nullptr;
+		return output;
 	}
 
 	void ScriptAssetManager::DestroyScriptAsset(ScriptAssetBase* asset)
