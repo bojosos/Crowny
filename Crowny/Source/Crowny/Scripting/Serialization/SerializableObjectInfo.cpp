@@ -41,10 +41,10 @@ namespace Crowny
 
     MonoObject* SerializableTypeInfoObject::GetAttribute(MonoClass* monoClass)
     {
-		Ref<SerializableObjectInfo> objInfo;
-		if (!ScriptInfoManager::Get().GetSerializableObjectInfo(m_TypeNamespace, m_TypeName, objInfo))
-			return nullptr;
-		return objInfo->m_MonoClass->GetAttribute(monoClass);
+        Ref<SerializableObjectInfo> objInfo;
+        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(m_TypeNamespace, m_TypeName, objInfo))
+            return nullptr;
+        return objInfo->m_MonoClass->GetAttribute(monoClass);
     }
 
     MonoObject* SerializableFieldInfo::GetAttribute(MonoClass* monoClass) { return m_Field->GetAttribute(monoClass); }

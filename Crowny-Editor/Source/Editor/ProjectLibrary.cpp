@@ -328,8 +328,8 @@ namespace Crowny
 
         if (const auto& includeInBuild = data["IncludeInBuild"])
             metadata->IncludeInBuild = includeInBuild.as<bool>();
-		if (const auto& typeId = data["TypeId"])
-			metadata->Type = (AssetType)typeId.as<uint32_t>();
+        if (const auto& typeId = data["TypeId"])
+            metadata->Type = (AssetType)typeId.as<uint32_t>();
 
         metadata->ImportOptions = ImportOptionsSerializer::Deserialize(data);
         return metadata;
@@ -414,7 +414,8 @@ namespace Crowny
             if (entry->Metadata == nullptr)
             {
                 entry->Metadata = CreateRef<AssetMetadata>();
-				entry->Metadata->Type = asset->GetAssetType(); // Maybe do this every time so even if id gets messed up it works
+                entry->Metadata->Type =
+                  asset->GetAssetType(); // Maybe do this every time so even if id gets messed up it works
             }
 
             entry->Metadata->ImportOptions = curImportOptions;
@@ -424,8 +425,8 @@ namespace Crowny
                 uuid = UuidGenerator::Generate();
             Path metaPath = GetMetadataPath(entry->Filepath);
             SerializeMetadata(metaPath, entry->Metadata);
-			Path outputPath = m_UuidDirectory.GetPath(uuid);
-			outputPath.replace_filename(outputPath.filename().string() + ".asset");
+            Path outputPath = m_UuidDirectory.GetPath(uuid);
+            outputPath.replace_filename(outputPath.filename().string() + ".asset");
             m_AssetManifest->RegisterAsset(uuid, outputPath);
             AssetManager::Get().Save(asset, outputPath);
             return true;
@@ -611,36 +612,36 @@ namespace Crowny
         return fileEntry->Metadata;
     }
 
-	Vector<UUID> ProjectLibrary::GetAllAssets(AssetType type) const
-	{
-		Vector<UUID> result;
-		for (auto [path, uuid] : m_AssetManifest->m_FilepathToUuid)
-		{
-			if (GetAssetType(uuid) == type)
-				result.push_back(uuid);
-		}
-		return result;
-	}
+    Vector<UUID> ProjectLibrary::GetAllAssets(AssetType type) const
+    {
+        Vector<UUID> result;
+        for (auto [path, uuid] : m_AssetManifest->m_FilepathToUuid)
+        {
+            if (GetAssetType(uuid) == type)
+                result.push_back(uuid);
+        }
+        return result;
+    }
 
     AssetType ProjectLibrary::GetAssetType(const Path& path) const
     {
-		LibraryEntry* entry = FindEntry(path).get();
+        LibraryEntry* entry = FindEntry(path).get();
         if (entry->Type == LibraryEntryType::File)
-		{
-			FileEntry* fileEntry = static_cast<FileEntry*>(entry);
-			if (fileEntry->Metadata != nullptr)
-				return fileEntry->Metadata->Type;
-		}
+        {
+            FileEntry* fileEntry = static_cast<FileEntry*>(entry);
+            if (fileEntry->Metadata != nullptr)
+                return fileEntry->Metadata->Type;
+        }
         return AssetType::None;
     }
-	
-	AssetType ProjectLibrary::GetAssetType(const UUID& uuid) const
-	{
+
+    AssetType ProjectLibrary::GetAssetType(const UUID& uuid) const
+    {
         Path outPath;
         if (m_AssetManifest->UuidToFilepath(uuid, outPath))
             return GetAssetType(outPath);
         return AssetType::None;
-	}
+    }
 
     AssetHandle<Asset> ProjectLibrary::Load(const Path& path)
     {

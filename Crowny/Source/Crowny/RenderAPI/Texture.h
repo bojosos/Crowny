@@ -29,7 +29,7 @@ namespace Crowny
         virtual ~Texture() = default;
 
         virtual AssetType GetAssetType() const override { return AssetType::Texture; }
-		static AssetType GetStaticType() { return AssetType::Texture; }
+        static AssetType GetStaticType() { return AssetType::Texture; }
 
         uint32_t GetWidth() const { return m_Params.Width; }
         uint32_t GetHeight() const { return m_Params.Height; }

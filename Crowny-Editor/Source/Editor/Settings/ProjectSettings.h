@@ -22,7 +22,7 @@ namespace Crowny
         glm::vec2 EditorCameraRotation = { 0.0f, 0.0f };
         float EditorCameraDistance = 10.0f;
 
-		UUID LastSelectedEntityID;
+        UUID LastSelectedEntityID;
 
         using Serializer = ProjectSettingsSerializer;
 

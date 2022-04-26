@@ -241,7 +241,7 @@ namespace Crowny
             String sceneName = data["Scene"].as<String>();
             m_Scene->m_Name = sceneName;
             m_Scene->m_Filepath = filepath;
-			// m_Scene->GetRootEntity().GetComponent<TagComponent>().Tag = sceneName;
+            // m_Scene->GetRootEntity().GetComponent<TagComponent>().Tag = sceneName;
 
             const YAML::Node& entities = data["Entities"];
             if (entities)
@@ -386,12 +386,12 @@ namespace Crowny
                     }
                 }
             }
-			auto view = m_Scene->GetAllEntitiesWith<TagComponent>();
+            auto view = m_Scene->GetAllEntitiesWith<TagComponent>();
             Entity root;
             for (auto e : view)
             {
                 Entity entity = { e, m_Scene.get() };
-				if (!entity.GetParent())
+                if (!entity.GetParent())
                     root = entity;
             }
             if (root)

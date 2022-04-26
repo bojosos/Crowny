@@ -374,7 +374,7 @@ namespace Crowny
                     ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions, true);
                 AssetHandle<AudioClip> clip =
                   static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
-				AudioManager::Get().StopManualSources();
+                AudioManager::Get().StopManualSources();
                 AudioManager::Get().Play("Inspector", clip);
             }
             ImGui::SameLine();
@@ -425,13 +425,15 @@ namespace Crowny
             ImGui::Text("Defines");
             ImGui::NextColumn();
             ImGui::NextColumn();
-            UnorderedMap<String, String>& defines = shaderImport->GetDefines(); // this needs a bit more work, unordered map bad
+            UnorderedMap<String, String>& defines =
+              shaderImport->GetDefines(); // this needs a bit more work, unordered map bad
             uint32_t id = 0;
             for (auto kv : defines)
             {
                 ImGui::PushID(id++);
                 std::string key = kv.first;
-                if (ImGui::InputText("##defineKey", &key, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
+                if (ImGui::InputText("##defineKey", &key,
+                                     ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
                     defines[key] = kv.second;
                 ImGui::NextColumn();
                 ImGui::InputText("##defineValue", &kv.second, ImGuiInputTextFlags_AutoSelectAll);

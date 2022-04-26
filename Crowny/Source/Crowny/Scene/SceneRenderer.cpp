@@ -19,9 +19,9 @@ namespace Crowny
     {
         uint32_t ViewportWidth, ViewportHeight;
 
-		Ref<TimerQuery> Timer2DGeometry = nullptr;
-		Ref<TimerQuery> Timer3DGeometry = nullptr;
-		
+        Ref<TimerQuery> Timer2DGeometry = nullptr;
+        Ref<TimerQuery> Timer3DGeometry = nullptr;
+
         Ref<PipelineQuery> PipelineQuery = nullptr;
     };
 
@@ -39,20 +39,20 @@ namespace Crowny
 
     void SceneRenderer::Init()
     {
-		s_Data.Timer2DGeometry = TimerQuery::Create();
-		s_Data.Timer3DGeometry = TimerQuery::Create();
+        s_Data.Timer2DGeometry = TimerQuery::Create();
+        s_Data.Timer3DGeometry = TimerQuery::Create();
 
-		s_Data.PipelineQuery = PipelineQuery::Create();
+        s_Data.PipelineQuery = PipelineQuery::Create();
     }
 
     void SceneRenderer::OnEditorUpdate(Timestep ts, const EditorCamera& camera)
     {
         Ref<Scene> scene = SceneManager::GetActiveScene();
 
-		// s_Data.PipelineQuery->Begin();
+        // s_Data.PipelineQuery->Begin();
         // s_Data.Timer3DGeometry->Begin();
-		
-		/*
+
+        /*
         ForwardRenderer::Begin();
         ForwardRenderer::BeginScene(camera, camera.GetViewMatrix());
         auto objs = scene->m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
@@ -91,8 +91,8 @@ namespace Crowny
         Renderer2D::End();
         // s_Data.Timer2DGeometry->End();
         // s_Data.PipelineQuery->End();
-		
-		// s_Stats.FrameTime = s_Data.Timer3DGeometry->GetTimeMs() + s_Data.Timer2DGeometry->GetTimeMs();
+
+        // s_Stats.FrameTime = s_Data.Timer3DGeometry->GetTimeMs() + s_Data.Timer2DGeometry->GetTimeMs();
 
         s_Stats.Frames += 1;
         s_Stats.FrameTime = ts;
@@ -163,7 +163,7 @@ namespace Crowny
 
     void SceneRenderer::Shutdown()
     {
-		s_Data.PipelineQuery = nullptr;
+        s_Data.PipelineQuery = nullptr;
         s_Data.Timer2DGeometry = nullptr;
         s_Data.Timer3DGeometry = nullptr;
     }

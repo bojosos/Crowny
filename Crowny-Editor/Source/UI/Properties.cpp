@@ -2,12 +2,12 @@
 
 namespace Crowny
 {
-	namespace UI
-	{
-		uint32_t s_Id = 1000000;
+    namespace UI
+    {
+        uint32_t s_Id = 1000000;
 
-		uint32_t s_Counter = 0;
-		char s_IDBuffer[16] = "##";
-		char s_LabelIDBuffer[1024];
-	}
-}
+        uint32_t s_Counter = 0;
+        char s_IDBuffer[16] = "##";
+        char s_LabelIDBuffer[1024];
+    } // namespace UI
+} // namespace Crowny

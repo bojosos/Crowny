@@ -3,8 +3,7 @@
 namespace Crowny
 {
 
-	class SerializableDictionary
-	{
-		
-	};
-}
+    class SerializableDictionary
+    {
+    };
+} // namespace Crowny

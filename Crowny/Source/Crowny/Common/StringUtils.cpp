@@ -4,53 +4,53 @@
 
 #include <algorithm>
 
-namespace Crowny	
+namespace Crowny
 {
 
-	bool StringUtils::IsSearchMathing(const String& item, const String& searchQuery, bool caseSensitive, bool stripWhiteSpaces, bool stripUnderscores)
-	{
-		if (searchQuery.empty())
-			return true;
+    bool StringUtils::IsSearchMathing(const String& item, const String& searchQuery, bool caseSensitive,
+                                      bool stripWhiteSpaces, bool stripUnderscores)
+    {
+        if (searchQuery.empty())
+            return true;
 
-		if (item.empty())
-			return false;
+        if (item.empty())
+            return false;
 
-		String itemSanitized = stripUnderscores ? StringUtils::Replace(item, "_", " ") : item;
+        String itemSanitized = stripUnderscores ? StringUtils::Replace(item, "_", " ") : item;
 
-		if (stripWhiteSpaces)
-			itemSanitized = StringUtils::Replace(itemSanitized, " ", "");
+        if (stripWhiteSpaces)
+            itemSanitized = StringUtils::Replace(itemSanitized, " ", "");
 
-		String searchString = stripWhiteSpaces ? StringUtils::Replace(searchQuery, " ", "") : String(searchQuery);
+        String searchString = stripWhiteSpaces ? StringUtils::Replace(searchQuery, " ", "") : String(searchQuery);
 
-		if (!caseSensitive)
-		{
-			StringUtils::ToLower(itemSanitized);
-			StringUtils::ToLower(searchString);
-		}
+        if (!caseSensitive)
+        {
+            StringUtils::ToLower(itemSanitized);
+            StringUtils::ToLower(searchString);
+        }
 
-		bool result = false;
-		if (searchString.find(" ") != String::npos)
-		{
-			Vector<String> searchTerms = SplitString(searchString, " ");
-			for (const auto& searchTerm : searchTerms)
-			{
-				if (!searchTerm.empty() && itemSanitized.find(searchTerm) != String::npos)
-					result = true;
-				else
-				{
-					result = false;
-					break;
-				}
-			}
-		}
-		else
-		{
-			result = itemSanitized.find(searchString) != String::npos;
-		}
+        bool result = false;
+        if (searchString.find(" ") != String::npos)
+        {
+            Vector<String> searchTerms = SplitString(searchString, " ");
+            for (const auto& searchTerm : searchTerms)
+            {
+                if (!searchTerm.empty() && itemSanitized.find(searchTerm) != String::npos)
+                    result = true;
+                else
+                {
+                    result = false;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            result = itemSanitized.find(searchString) != String::npos;
+        }
 
-		return result;
-	}
-
+        return result;
+    }
 
     Vector<String> StringUtils::SplitString(const String& s, const String& separator)
     {

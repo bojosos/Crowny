@@ -13,10 +13,10 @@ namespace Crowny
         Ref<Texture> StopIcon;
         Ref<Texture> FileIcon;
         Ref<Texture> FolderIcon;
-		Ref<Texture> ArrowPointerIcon;
-		Ref<Texture> ArrowsIcon;
-		Ref<Texture> RotateIcon;
-		Ref<Texture> MaximizeIcon;
+        Ref<Texture> ArrowPointerIcon;
+        Ref<Texture> ArrowsIcon;
+        Ref<Texture> RotateIcon;
+        Ref<Texture> MaximizeIcon;
         Ref<Texture> GlobeIcon;
         Ref<Texture> SearchIcon;
         Ref<Texture> ConsoleInfo;
@@ -42,10 +42,10 @@ namespace Crowny
         static const String FileIcon;
         static const String FolderIcon;
 
-		static const String ArrowPointerIcon;
-		static const String ArrowsIcon;
-		static const String RotateIcon;
-		static const String MaximizeIcon;
+        static const String ArrowPointerIcon;
+        static const String ArrowsIcon;
+        static const String RotateIcon;
+        static const String MaximizeIcon;
         static const String GlobeIcon;
         static const String SearchIcon;
 

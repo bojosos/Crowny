@@ -10,7 +10,7 @@
 
 namespace Crowny
 {
-	class UIUtils; // This is an Editor class
+    class UIUtils; // This is an Editor class
 
     class AssetManager : public Module<AssetManager>
     {
@@ -46,8 +46,9 @@ namespace Crowny
         void GetFilepathFromUUID(const UUID& uuid, Path& outFilepath);
         bool GetUUIDFromFilepath(const Path& filepath, UUID& outUUID);
 
-		const UnorderedMap<UUID, WeakAssetHandle<Asset>>& GetLoadedAssets() const { return m_Handles; }
+        const UnorderedMap<UUID, WeakAssetHandle<Asset>>& GetLoadedAssets() const { return m_Handles; }
         friend class UIUtils;
+
     private:
         UnorderedMap<UUID, Ref<Asset>> m_LoadedAssets;
         UnorderedMap<UUID, WeakAssetHandle<Asset>> m_Handles;

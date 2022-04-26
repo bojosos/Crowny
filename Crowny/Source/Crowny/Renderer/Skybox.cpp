@@ -114,7 +114,7 @@ namespace Crowny
         m_SkyboxIbo = IndexBuffer::Create(indices, 36);
         m_SkyboxVbo->SetLayout(layout);
 
-		rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
+        rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
         rapi.SetGraphicsPipeline(pipeline);
 
         for (uint32_t i = 0; i < 6; i++)
@@ -252,7 +252,7 @@ namespace Crowny
             uint32_t samples = 32;
             float roughness = 0.1f;
         } params;
-        
+
         auto& rapi = RenderAPI::Get();
         const uint32_t numMips = static_cast<uint32_t>(std::floor(std::log2(64)));
         TextureParameters tProps;
@@ -313,8 +313,7 @@ namespace Crowny
                 Ref<RenderTexture> cubemap = RenderTexture::Create(rtProps);
                 rapi.SetRenderTarget(cubemap);
                 rapi.SetGraphicsPipeline(pipeline);
-                rapi.SetViewport(0.0f, 0.0f, (float)std::pow(0.5f, i),
-                                 (float)std::pow(0.5f, i));
+                rapi.SetViewport(0.0f, 0.0f, (float)std::pow(0.5f, i), (float)std::pow(0.5f, i));
                 rapi.SetUniforms(uniforms);
                 rapi.SetVertexBuffers(0, &m_SkyboxVbo, 1);
                 rapi.SetIndexBuffer(m_SkyboxIbo);

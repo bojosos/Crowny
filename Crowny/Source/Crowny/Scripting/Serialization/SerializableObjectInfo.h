@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Crowny/Scripting/Mono/MonoClass.h"
 #include "Crowny/Assets/Asset.h"
+#include "Crowny/Scripting/Mono/MonoClass.h"
 
 namespace Crowny
 {
@@ -36,7 +36,7 @@ namespace Crowny
 
         Vector2,
         Vector3,
-		Vector4,
+        Vector4,
         Matrix4
     };
 
@@ -98,11 +98,11 @@ namespace Crowny
     class SerializableTypeInfoAsset : public SerializableTypeInfo
     {
     public:
-		bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override { return false; }
-		::MonoClass* GetMonoClass() const override { return nullptr; }
-		virtual SerializableType GetType() override { return SerializableType::Asset; }
-		
-		AssetType Type;
+        bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override { return false; }
+        ::MonoClass* GetMonoClass() const override { return nullptr; }
+        virtual SerializableType GetType() override { return SerializableType::Asset; }
+
+        AssetType Type;
     };
 
     class SerializableTypeInfoList : public SerializableTypeInfo
@@ -128,20 +128,20 @@ namespace Crowny
     class SerializableTypeInfoArray : public SerializableTypeInfo
     {
     public:
-		virtual bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override { return false; }
+        virtual bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override { return false; }
         virtual ::MonoClass* GetMonoClass() const override { return nullptr; }
         virtual SerializableType GetType() override { return SerializableType::Array; }
 
-		Ref<SerializableTypeInfo> m_ElementType;
+        Ref<SerializableTypeInfo> m_ElementType;
     };
-	
+
     class SerializableTypeInfoDictionary : public SerializableTypeInfo
     {
     public:
-		virtual bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override { return false; }
-		virtual ::MonoClass* GetMonoClass() const override { return m_Class; }
-		virtual SerializableType GetType() override { return SerializableType::Dictionary; }
-		Ref<SerializableTypeInfo> m_KeyType;
+        virtual bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override { return false; }
+        virtual ::MonoClass* GetMonoClass() const override { return m_Class; }
+        virtual SerializableType GetType() override { return SerializableType::Dictionary; }
+        Ref<SerializableTypeInfo> m_KeyType;
         Ref<SerializableTypeInfo> m_ValueType;
         ::MonoClass* m_Class;
     };
@@ -153,7 +153,7 @@ namespace Crowny
         ::MonoClass* GetMonoClass() const override;
         virtual SerializableType GetType() override { return SerializableType::Object; }
         MonoObject* GetAttribute(MonoClass* monoClass);
-		
+
         ScriptPrimitiveType m_UnderlyingType;
         bool m_ValueType;
         uint32_t m_TypeId;

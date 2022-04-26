@@ -44,9 +44,9 @@ namespace Crowny
 
     Font::~Font()
     {
-		if (m_Font != nullptr)
+        if (m_Font != nullptr)
             texture_font_delete(m_Font);
-		if (m_Atlas != nullptr)
+        if (m_Atlas != nullptr)
             texture_atlas_delete(m_Atlas);
     }
 

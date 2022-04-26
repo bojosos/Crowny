@@ -144,11 +144,11 @@ namespace Crowny
     {
         Ref<::Crowny::Mesh> Mesh = nullptr;
         // Ref<::Crowny::Model> Model = nullptr;
-		
-        MeshRendererComponent() : ComponentBase()
-        {
-        //    Model = CreateRef<::Crowny::Model>("Resources/Models/sphere.gltf");
-        };
+
+        MeshRendererComponent()
+          : ComponentBase(){
+                //    Model = CreateRef<::Crowny::Model>("Resources/Models/sphere.gltf");
+            };
         MeshRendererComponent(const MeshRendererComponent&) = default;
     };
 
@@ -250,8 +250,8 @@ namespace Crowny
         ScriptObjectBackupData BeginRefresh();
         void EndRefresh(const ScriptObjectBackupData& data);
 
-		String& GetTypeName() { return m_TypeName; }
-		void SetTypeName(const String& typeName) { m_TypeName = typeName; }
+        String& GetTypeName() { return m_TypeName; }
+        void SetTypeName(const String& typeName) { m_TypeName = typeName; }
 
         void OnInitialize(Entity entity);
         void OnStart();
@@ -322,6 +322,8 @@ namespace Crowny
         Rigidbody2DComponent() : ComponentBase() {}
         Rigidbody2DComponent(const Rigidbody2DComponent& rb) = default;
 
+        uint32_t LayerMask = 0x1;
+
         void SetBodyType(RigidbodyBodyType bodyType);
         void SetGravityScale(float scale);
         void SetMass(float mass);
@@ -351,12 +353,12 @@ namespace Crowny
 
     struct Collider2D : ComponentBase
     {
-		Collider2D() : ComponentBase() {}
+        Collider2D() : ComponentBase() {}
 
-		glm::vec2 Offset = { 0.0f, 0.0f };
-		PhysicsMaterial2D Material;
-		bool IsTrigger = false;
-        
+        glm::vec2 Offset = { 0.0f, 0.0f };
+        PhysicsMaterial2D Material;
+        bool IsTrigger = false;
+
         void OnCollisionBegin(const Collision2D& col)
         {
             if (CallbackEnter)
@@ -367,7 +369,7 @@ namespace Crowny
         {
             if (CallbackExit)
                 CallbackExit(col);
-		}
+        }
 
         std::function<void(const Collision2D&)> CallbackEnter;
         std::function<void(const Collision2D&)> CallbackExit;
@@ -388,7 +390,7 @@ namespace Crowny
     struct CircleCollider2DComponent : public Collider2D
     {
         float Radius = 0.5f;
-        
+
         void* RuntimeFixture = nullptr; // duplicating during runtime will be wrong
 
         CircleCollider2DComponent() : Collider2D() {}

@@ -35,15 +35,20 @@ namespace Crowny
             return { 1.0f, 1.0f, 1.0f, 1.0f };
         }
 
-        void SetMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level level, bool enabled) { m_EnabledLevels[(uint32_t)level] = enabled; }
-		bool IsMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level level) const { return m_EnabledLevels[(uint32_t)level]; }
+        void SetMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level level, bool enabled)
+        {
+            m_EnabledLevels[(uint32_t)level] = enabled;
+        }
+        bool IsMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level level) const
+        {
+            return m_EnabledLevels[(uint32_t)level];
+        }
 
-		void SetCollapseEnabled(bool collapse) { m_Collapse = collapse; }
-		void SetScrollToBottomEnabled(bool scroll) { m_AllowScrollingToBottom = scroll; }
+        void SetCollapseEnabled(bool collapse) { m_Collapse = collapse; }
+        void SetScrollToBottomEnabled(bool scroll) { m_AllowScrollingToBottom = scroll; }
 
-		bool IsCollapseEnabled() const { return m_Collapse; }
-	    bool IsScrollToBottomEnabled() const { return m_AllowScrollingToBottom; }
-
+        bool IsCollapseEnabled() const { return m_Collapse; }
+        bool IsScrollToBottomEnabled() const { return m_AllowScrollingToBottom; }
 
     private:
         Vector<uint32_t> m_MessageIndices;

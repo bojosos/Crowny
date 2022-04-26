@@ -4,10 +4,7 @@
 
 namespace Crowny
 {
-	ScriptMesh::ScriptMesh(MonoObject* instance, const AssetHandle<Mesh>& mesh) : TScriptAsset(instance, mesh) { }
-	
-	void ScriptMesh::InitRuntimeData()
-	{
-		
-	}
-}
+    ScriptMesh::ScriptMesh(MonoObject* instance, const AssetHandle<Mesh>& mesh) : TScriptAsset(instance, mesh) {}
+
+    void ScriptMesh::InitRuntimeData() {}
+} // namespace Crowny

@@ -61,7 +61,7 @@ namespace Crowny
                         ImGui::PushID("Widget");
                         UI::BeginPropertyGrid();
                         ci.widget(entity);
-						UI::EndPropertyGrid();
+                        UI::EndPropertyGrid();
                         ImGui::PopID();
                         ImGui::Unindent(30.f);
                     }

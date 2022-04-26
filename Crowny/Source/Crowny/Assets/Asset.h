@@ -11,15 +11,15 @@ namespace Crowny
 
     enum class AssetType
     {
-		None,
+        None,
         AudioClip,
-		Texture,
-		Shader,
-		Material,
+        Texture,
+        Shader,
+        Material,
         Mesh,
         ScriptCode,
-		PhysicsMaterial2D,
-		PhysicsMaterial,
+        PhysicsMaterial2D,
+        PhysicsMaterial,
         MeshSource,
         PhysicsMesh
     };
@@ -32,9 +32,10 @@ namespace Crowny
         virtual void Init(){};
         const String& GetName() const { return m_Name; }
         void SetName(const String& name) { m_Name = name; }
-		
+
         virtual AssetType GetAssetType() const { return AssetType::None; }
-		static AssetType GetStaticType() { return AssetType::None; }
+        static AssetType GetStaticType() { return AssetType::None; }
+
     protected:
         CW_SERIALIZABLE(Asset);
         void AddDependency(const Ref<Asset>& asset);

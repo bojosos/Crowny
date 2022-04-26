@@ -271,7 +271,8 @@ namespace Crowny
 
     void Renderer2D::DrawRect(const glm::mat4& transform, const glm::vec4& color, float thickness)
     {
-        // TODO: Add the thickness to the calculation since when it is a large value the corners aren't rendered properly
+        // TODO: Add the thickness to the calculation since when it is a large value the corners aren't rendered
+        // properly
         glm::vec3 lineVertices[4];
         for (uint32_t i = 0; i < 4; i++)
             lineVertices[i] = transform * QuadVertices[i];

@@ -16,7 +16,7 @@ namespace Crowny
         out << YAML::Key << "EditorCameraRotation" << YAML::Value << settings->EditorCameraRotation;
         out << YAML::Key << "LastOpenScene" << YAML::Value << settings->LastOpenScenePath;
         out << YAML::Key << "GizmoMode" << YAML::Value << settings->GizmoMode; // TODO: Maybe move to project settings
-		out << YAML::Key << "GizmoLocalMode" << YAML::Value << settings->GizmoLocalMode;
+        out << YAML::Key << "GizmoLocalMode" << YAML::Value << settings->GizmoLocalMode;
         out << YAML::Key << "LastAssetBrowserEntry" << YAML::Value << settings->LastAssetBrowserSelectedEntry.string();
         out << YAML::Key << "LastSelectedEntity" << YAML::Value << settings->LastSelectedEntityID;
         out << YAML::EndMap;
@@ -32,9 +32,9 @@ namespace Crowny
         projectSettings->GizmoMode = node["GizmoMode"].as<int32_t>();
         projectSettings->LastAssetBrowserSelectedEntry = node["LastAssetBrowserEntry"].as<String>();
         projectSettings->LastOpenScenePath = node["LastOpenScene"].as<String>();
-		
-		if (const auto& id = node["LastSelectedEntity"])
-		    projectSettings->LastSelectedEntityID = id.as<UUID>();
+
+        if (const auto& id = node["LastSelectedEntity"])
+            projectSettings->LastSelectedEntityID = id.as<UUID>();
         return projectSettings;
     }
 

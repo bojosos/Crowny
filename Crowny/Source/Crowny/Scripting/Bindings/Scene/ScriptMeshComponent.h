@@ -4,11 +4,11 @@
 
 namespace Crowny
 {
-	class ScriptMeshComponent : public TScriptComponent<ScriptMeshComponent, MeshRendererComponent>
-	{
-	public:
-		SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "MeshComponent")
+    class ScriptMeshComponent : public TScriptComponent<ScriptMeshComponent, MeshRendererComponent>
+    {
+    public:
+        SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "MeshComponent")
 
-		ScriptMeshComponent(MonoObject* instance, Entity entity);
-	};
+        ScriptMeshComponent(MonoObject* instance, Entity entity);
+    };
 } // namespace Crowny
