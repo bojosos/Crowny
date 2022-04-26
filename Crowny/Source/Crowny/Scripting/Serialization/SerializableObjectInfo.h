@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Scripting/Mono/MonoClass.h"
+#include "Crowny/Assets/Asset.h"
 
 namespace Crowny
 {
@@ -92,6 +93,16 @@ namespace Crowny
         ScriptPrimitiveType m_UnderlyingType;
         String m_TypeNamespace;
         String m_TypeName;
+    };
+
+    class SerializableTypeInfoAsset : public SerializableTypeInfo
+    {
+    public:
+		bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override { return false; }
+		::MonoClass* GetMonoClass() const override { return nullptr; }
+		virtual SerializableType GetType() override { return SerializableType::Asset; }
+		
+		AssetType Type;
     };
 
     class SerializableTypeInfoList : public SerializableTypeInfo

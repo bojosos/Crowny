@@ -20,7 +20,7 @@ namespace Crowny
     class AssetHandleBase
     {
     public:
-        bool IsLoaded() const;
+        bool IsLoaded() const { return true; }
         bool BlockUntilLoaded() const;
         void Release();
         const UUID& GetUUID() const { return m_Data != nullptr ? m_Data->m_UUID : UUID(); }
