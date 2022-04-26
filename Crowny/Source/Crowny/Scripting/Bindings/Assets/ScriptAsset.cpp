@@ -51,6 +51,17 @@ namespace Crowny
 
 	void ScriptAsset::InitRuntimeData()
 	{
-		// MetaData.
+		MetaData.ScriptClass->AddInternalCall("Internal_GetName", (void*)&Internal_GetName);
+		MetaData.ScriptClass->AddInternalCall("Internal_GetUUID", (void*)&Internal_GetUUID);
+	}
+
+	MonoString* ScriptAsset::Internal_GetName(ScriptAssetBase* thisPtr)
+	{		
+		return MonoUtils::ToMonoString(thisPtr->GetGenericHandle()->GetName());
+	}
+	
+	void ScriptAsset::Internal_GetUUID(ScriptAssetBase* thisPtr, UUID* outUuid)
+	{
+		*outUuid = thisPtr->GetGenericHandle().GetUUID();
 	}
 }

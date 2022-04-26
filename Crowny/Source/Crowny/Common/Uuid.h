@@ -59,9 +59,9 @@ namespace std
     {
         size_t operator()(const Crowny::UUID& uuid) const
         {
-            size_t left = ((size_t)uuid.m_Data[0] << 32) | uuid.m_Data[1];
-            size_t right = ((size_t)uuid.m_Data[2] << 32) | uuid.m_Data[3];
-            return left ^ right;
+            size_t hash = 0;
+            Crowny::HashCombine(hash, uuid.m_Data[0], uuid.m_Data[1], uuid.m_Data[2], uuid.m_Data[3]);
+            return hash;
         }
     };
 } // namespace std
