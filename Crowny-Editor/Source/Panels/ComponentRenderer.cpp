@@ -297,11 +297,13 @@ namespace Crowny
         ImGui::Text("Path");
     }
 
-    template <> void ComponentEditorWidget<Rigidbody2DComponent>(Entity e)
+    template <> void ComponentEditorWidget<Rigidbody2DComponent>(Entity entity)
     {
-        Rigidbody2DComponent& rb2d = e.GetComponent<Rigidbody2DComponent>();
+        Rigidbody2DComponent& rb2d = entity.GetComponent<Rigidbody2DComponent>();
 
-        UI::Property("Layer", rb2d.LayerMask);
+		uint32_t layerMask = rb2d.GetLayerMask();
+        if (UIUtils::PropertyLayer("Layer", layerMask))
+			rb2d.SetLayerMask(layerMask, entity);
 
         RigidbodyBodyType bodyType = rb2d.GetBodyType();
         if (UI::PropertyDropdown("Body Type", { "Static", "Dynamic", "Kinematic" }, bodyType))
@@ -323,6 +325,14 @@ namespace Crowny
         if (UI::PropertyDropdown("Sleeping Mode", { "Sleeping Mode", "NeverSleep", "StartAwake", "StartSleeping" },
                                  sleepMode))
             rb2d.SetSleepMode(sleepMode);
+
+		float linearDrag = rb2d.GetLinearDrag();
+        if (UI::Property("Linear Drag", linearDrag))
+			rb2d.SetLinearDrag(linearDrag);
+
+		float angularDrag = rb2d.GetAngularDrag();
+        if (UI::Property("Angular Drag", angularDrag))
+            rb2d.SetAngularDrag(angularDrag);
 
         ImGui::Columns(1);
         if (ImGui::CollapsingHeader("Constraints"))
@@ -378,10 +388,10 @@ namespace Crowny
 
     static void DrawPhysicsMaterial(PhysicsMaterial2D& material)
     {
-        UI::Property("Density", material.Density);
-        UI::Property("Friction", material.Friction);
-        UI::Property("Restitution", material.Restitution);
-        UI::Property("Restitution Threshold", material.RestitutionThreshold);
+        UI::Property("Density", material.m_Density);
+        UI::Property("Friction", material.m_Friction);
+        UI::Property("Restitution", material.m_Restitution);
+        UI::Property("Restitution Threshold", material.m_RestitutionThreshold);
     }
 
     template <> void ComponentEditorWidget<BoxCollider2DComponent>(Entity e)

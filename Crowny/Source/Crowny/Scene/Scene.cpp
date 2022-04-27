@@ -62,90 +62,25 @@ namespace Crowny
 
     static void CopyAllExistingComponents(Entity dst, Entity src) { CopyComponentIfExists(AllComponents{}, dst, src); }
 
-    static b2BodyType GetBox2DType(RigidbodyBodyType type)
+    Scene::Scene()
     {
-        switch (type)
-        {
-        case RigidbodyBodyType::Static:
-            return b2_staticBody;
-        case RigidbodyBodyType::Dynamic:
-            return b2_dynamicBody;
-        case RigidbodyBodyType::Kinematic:
-            return b2_kinematicBody;
-        }
-        CW_ENGINE_ASSERT(false);
-        return b2_staticBody;
     }
-
-    class ContactListener : public b2ContactListener
-    {
-    public:
-        ContactListener(Scene* scene);
-
-        virtual void BeginContact(b2Contact* contact);
-        virtual void EndContact(b2Contact* contact);
-
-    private:
-        Scene* m_Scene;
-    };
-
-    ContactListener::ContactListener(Scene* scene) : m_Scene(scene) {}
-
-    void ContactListener::BeginContact(b2Contact* contact)
-    {
-        CW_ENGINE_WARN("Collsion begin");
-        b2WorldManifold manifold;
-        contact->GetWorldManifold(&manifold);
-        Collision2D col;
-        col.Points.push_back(glm::vec2(manifold.points[0].x, manifold.points[0].y));
-        col.Points.push_back(glm::vec2(manifold.points[1].x, manifold.points[1].y));
-        Entity e1 = Entity((entt::entity)contact->GetFixtureA()->GetBody()->GetUserData().pointer, m_Scene);
-        Entity e2 = Entity((entt::entity)contact->GetFixtureB()->GetBody()->GetUserData().pointer, m_Scene);
-        col.Colliders.push_back(e1);
-        col.Colliders.push_back(e2);
-        if (e1.HasComponent<BoxCollider2DComponent>())
-            e1.GetComponent<BoxCollider2DComponent>().OnCollisionBegin(col);
-        if (e1.HasComponent<CircleCollider2DComponent>())
-            e1.GetComponent<CircleCollider2DComponent>().OnCollisionBegin(col);
-        if (e2.HasComponent<BoxCollider2DComponent>())
-            e2.GetComponent<BoxCollider2DComponent>().OnCollisionBegin(col);
-        if (e2.HasComponent<CircleCollider2DComponent>())
-            e2.GetComponent<CircleCollider2DComponent>().OnCollisionBegin(col);
-    }
-
-    void ContactListener::EndContact(b2Contact* contact)
-    {
-        CW_ENGINE_WARN("Collsion end");
-        b2WorldManifold manifold;
-        contact->GetWorldManifold(&manifold);
-        Collision2D col;
-        col.Points.push_back(glm::vec2(manifold.points[0].x, manifold.points[0].y));
-        col.Points.push_back(glm::vec2(manifold.points[1].x, manifold.points[1].y));
-        Entity e1 = Entity((entt::entity)contact->GetFixtureA()->GetBody()->GetUserData().pointer, m_Scene);
-        Entity e2 = Entity((entt::entity)contact->GetFixtureA()->GetBody()->GetUserData().pointer, m_Scene);
-        col.Colliders.push_back(e1);
-        col.Colliders.push_back(e2);
-        if (e1.HasComponent<BoxCollider2DComponent>())
-            e1.GetComponent<BoxCollider2DComponent>().OnCollisionEnd(col);
-        if (e1.HasComponent<CircleCollider2DComponent>())
-            e1.GetComponent<CircleCollider2DComponent>().OnCollisionEnd(col);
-        if (e2.HasComponent<BoxCollider2DComponent>())
-            e2.GetComponent<BoxCollider2DComponent>().OnCollisionEnd(col);
-        if (e2.HasComponent<CircleCollider2DComponent>())
-            e2.GetComponent<CircleCollider2DComponent>().OnCollisionEnd(col);
-    }
-
-    Scene::Scene() { m_ContactListener2D = new ContactListener(this); }
 
     Scene::Scene(const String& name) : m_Name(name)
     {
         m_RootEntity = new Entity(m_Registry.create(), this);
-        m_ContactListener2D = new ContactListener(this);
 
         m_RootEntity->AddComponent<TransformComponent>();
         m_RootEntity->AddComponent<IDComponent>(UuidGenerator::Generate());
         m_RootEntity->AddComponent<TagComponent>(m_Name);
         m_RootEntity->AddComponent<RelationshipComponent>();
+
+		m_Registry.on_construct<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentConstruct>(this);
+		m_Registry.on_destroy<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentDestroy>(this);
+		m_Registry.on_construct<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentConstruct>(this);
+		m_Registry.on_destroy<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentDestroy>(this);
+		m_Registry.on_construct<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentConstruct>(this);
+		m_Registry.on_destroy<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentDestroy>(this);
     }
 
     Scene::Scene(Scene& other)
@@ -169,6 +104,13 @@ namespace Crowny
         }
 
         CopyAllComponents(m_Registry, other.m_Registry, entityMap);
+
+		m_Registry.on_construct<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentConstruct>(this);
+		m_Registry.on_destroy<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentDestroy>(this);
+		m_Registry.on_construct<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentConstruct>(this);
+		m_Registry.on_destroy<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentDestroy>(this);
+		m_Registry.on_construct<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentConstruct>(this);
+		m_Registry.on_destroy<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentDestroy>(this);
     }
 
     Scene& Scene::operator=(Scene& other)
@@ -201,7 +143,6 @@ namespace Crowny
     Scene::~Scene()
     {
         delete m_RootEntity;
-        delete m_ContactListener2D;
     }
 
     Entity Scene::DuplicateEntity(Entity entity, bool includeChildren)
@@ -229,141 +170,63 @@ namespace Crowny
         return {};
     }
 
-    void Scene::OnRuntimeStart()
+	void Scene::OnRigidbody2DComponentConstruct(entt::registry& registry, entt::entity entity)
+	{
+        Entity e = { entity, this };
+		Physics2D::Get().CreateRigidbody(e);
+
+	}
+
+    void Scene::OnRigidbody2DComponentDestroy(entt::registry& registry, entt::entity entity)
+	{
+		Entity e = { entity, this };
+        Physics2D::Get().DestroyRigidbody(e);
+	}
+
+	void Scene::OnBoxCollider2DComponentConstruct(entt::registry& registry, entt::entity entity)
+	{
+		Entity e = { entity, this };
+        Physics2D::Get().CreateBoxCollider(e);
+	}
+
+	void Scene::OnBoxCollider2DComponentDestroy(entt::registry& registry, entt::entity entity)
+	{
+		Entity e = { entity, this };
+        Physics2D::Get().DestroyFixture(e, e.GetComponent<BoxCollider2DComponent>());
+	}
+
+	void Scene::OnCircleCollider2DComponentConstruct(entt::registry& registry, entt::entity entity)
+	{
+		Entity e = { entity, this };
+		Physics2D::Get().CreateCircleCollider(e);
+	}
+
+	void Scene::OnCircleCollider2DComponentDestroy(entt::registry& registry, entt::entity entity)
+	{
+		Entity e = { entity, this };
+		Physics2D::Get().DestroyFixture(e, e.GetComponent<CircleCollider2DComponent>());
+	}
+
+	void Scene::OnRuntimeStart()
     {
-        m_PhysicsWorld2D = new b2World({ 0.0, -9.8f });
-        m_PhysicsWorld2D->SetContactListener(m_ContactListener2D);
-
-        // Create 2D Rigid bodies
-        {
-            auto view = m_Registry.view<Rigidbody2DComponent>();
-            for (auto e : view)
-            {
-                Entity entity = { e, this };
-                auto& transform = entity.GetTransform();
-                auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
-
-                b2BodyDef bodyDef;
-                bodyDef.allowSleep = rb2d.GetSleepMode() != RigidbodySleepMode::NeverSleep;
-                bodyDef.awake = rb2d.GetSleepMode() == RigidbodySleepMode::StartAwake ||
-                                rb2d.GetSleepMode() == RigidbodySleepMode::NeverSleep;
-                bodyDef.type = GetBox2DType(rb2d.GetBodyType());
-                bodyDef.position.Set(transform.Position.x, transform.Position.y);
-                bodyDef.angle = transform.Rotation.z;
-                bodyDef.userData.pointer = (uintptr_t)e;
-                b2Body* body = m_PhysicsWorld2D->CreateBody(&bodyDef);
-                body->SetFixedRotation(rb2d.GetConstraints().IsSet(Rigidbody2DConstraintsBits::FreezeRotation));
-                rb2d.RuntimeBody = body;
-            }
-        }
-
-        // Create 2D Box Colliders
-        {
-            auto view = m_Registry.view<BoxCollider2DComponent>();
-            for (auto e : view)
-            {
-                Entity entity = { e, this };
-                auto& transform = entity.GetTransform();
-                auto& b2d = entity.GetComponent<BoxCollider2DComponent>();
-
-                b2PolygonShape boxShape;
-                boxShape.SetAsBox(b2d.Size.x * transform.Scale.x, b2d.Size.y * transform.Scale.y);
-
-                b2FixtureDef fixtureDef;
-                fixtureDef.shape = &boxShape;
-                uint32_t firstBit = 0; // std::countr_zero(entity.GetComponent<Rigidbody2DComponent>().LayerMask);
-                fixtureDef.filter.maskBits = entity.GetComponent<Rigidbody2DComponent>().LayerMask;
-                fixtureDef.filter.categoryBits = Physics2D::Get().GetCategoryMask(firstBit);
-                fixtureDef.density = b2d.Material.Density;
-                fixtureDef.friction = b2d.Material.Friction;
-                fixtureDef.restitution = b2d.Material.Restitution;
-                fixtureDef.restitutionThreshold = b2d.Material.RestitutionThreshold;
-                if (entity.HasComponent<Rigidbody2DComponent>())
-                    entity.GetComponent<Rigidbody2DComponent>().RuntimeBody->CreateFixture(&fixtureDef);
-            }
-        }
-
-        // Create 2D Circle Colliders
-        {
-            auto view = m_Registry.view<CircleCollider2DComponent>();
-            for (auto e : view)
-            {
-                Entity entity = { e, this };
-                auto& transform = entity.GetTransform();
-                auto& cc2d = entity.GetComponent<CircleCollider2DComponent>();
-
-                b2CircleShape circleShape;
-                circleShape.m_p.Set(cc2d.Offset.y, cc2d.Offset.y);
-                circleShape.m_radius = transform.Scale.x * cc2d.Radius;
-
-                b2FixtureDef fixtureDef;
-                fixtureDef.shape = &circleShape;
-                fixtureDef.density = cc2d.Material.Density;
-                fixtureDef.friction = cc2d.Material.Friction;
-                fixtureDef.restitution = cc2d.Material.Restitution;
-                fixtureDef.restitutionThreshold = cc2d.Material.RestitutionThreshold;
-
-                if (entity.HasComponent<Rigidbody2DComponent>())
-                    entity.GetComponent<Rigidbody2DComponent>().RuntimeBody->CreateFixture(&fixtureDef);
-            }
-        }
+		Physics2D::Get().BeginSimulation(this);
     }
 
-    void Scene::OnRuntimePause() {}
+    void Scene::OnRuntimePause()
+    {
+    
+    }
 
     void Scene::OnRuntimeStop()
     {
-        delete m_PhysicsWorld2D; // This should clear everything box2d related.
-        m_PhysicsWorld2D = nullptr;
+        Physics2D::Get().StopSimulation();
     }
 
     void Scene::OnUpdateEditor(Timestep ts) {}
 
     void Scene::OnUpdateRuntime(Timestep ts)
     {
-        // Update 2D Physics
-        {
-            auto view1 = m_Registry.view<Rigidbody2DComponent>();
-            for (auto e : view1)
-            {
-                Entity entity = { e, this };
-                auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
-                auto& transform = entity.GetComponent<TransformComponent>();
-                if (rb2d.RuntimeBody == nullptr)
-                {
-                    b2BodyDef bodyDef;
-                    bodyDef.type = GetBox2DType(rb2d.GetBodyType());
-                    bodyDef.position.Set(transform.Position.x, transform.Position.y);
-                    bodyDef.angle = transform.Rotation.z;
-                    b2Body* body = m_PhysicsWorld2D->CreateBody(&bodyDef);
-                    body->SetFixedRotation(rb2d.GetConstraints().IsSet(Rigidbody2DConstraintsBits::FreezeRotation));
-                    rb2d.RuntimeBody = body;
-                }
-                Rigidbody2DConstraints constraints = rb2d.GetConstraints();
-                b2Vec2 linVelocty = rb2d.RuntimeBody->GetLinearVelocity();
-                if (constraints.IsSet(Rigidbody2DConstraintsBits::FreezePositionX))
-                    linVelocty.x = 0;
-                else if (constraints.IsSet(Rigidbody2DConstraintsBits::FreezePositionY))
-                    linVelocty.y = 0;
-                rb2d.RuntimeBody->SetLinearVelocity(linVelocty);
-            }
-            const int32_t velocityIterations = 6;
-            const int32_t positionIterations = 3; // unity defaults, TODO: Expose these in the editor
-            m_PhysicsWorld2D->Step(ts, velocityIterations, positionIterations);
-
-            auto view2 = m_Registry.view<Rigidbody2DComponent>();
-            for (auto e : view2)
-            {
-                Entity entity = { e, this };
-                auto& transform = entity.GetTransform();
-                auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
-                b2Body* body = (b2Body*)rb2d.RuntimeBody;
-                const auto& position = body->GetPosition();
-                transform.Position.x = position.x;
-                transform.Position.y = position.y;
-                transform.Rotation.z = body->GetAngle();
-            }
-        }
+        Physics2D::Get().Step(ts, this);
     }
 
     Entity Scene::CreateEntity(const String& name)

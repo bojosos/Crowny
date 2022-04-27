@@ -6,6 +6,7 @@
 
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Import/Importer.h"
+#include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Serialization/FileEncoder.h"
 
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntityBehaviour.h"
@@ -139,6 +140,21 @@ namespace Crowny
             m_Internal->Stop();
     }
 
+    void Rigidbody2DComponent::SetLayerMask(uint32_t layerMask, Entity e)
+    {
+        if (RuntimeBody != nullptr)
+        {
+			b2Filter newFilter;
+			newFilter.maskBits = 1 << layerMask;
+			newFilter.categoryBits = Physics2D::Get().GetCategoryMask(layerMask);
+            if (e.HasComponent<BoxCollider2DComponent>())
+				e.GetComponent<BoxCollider2DComponent>().RuntimeFixture->SetFilterData(newFilter);
+			if (e.HasComponent<CircleCollider2DComponent>())
+                e.GetComponent<CircleCollider2DComponent>().RuntimeFixture->SetFilterData(newFilter);
+        }
+        m_LayerMask = layerMask;
+    }
+
     void Rigidbody2DComponent::SetBodyType(RigidbodyBodyType bodyType)
     {
         if (RuntimeBody != nullptr)
@@ -201,6 +217,20 @@ namespace Crowny
         }
         m_SleepMode = sleepMode;
     }
+
+	void Rigidbody2DComponent::SetLinearDrag(float linearDrag)
+	{
+		if (RuntimeBody != nullptr)
+			RuntimeBody->SetLinearDamping(linearDrag);
+		m_LinearDrag = linearDrag;
+	}
+
+	void Rigidbody2DComponent::SetAngularDrag(float angularDrag)
+	{
+		if (RuntimeBody != nullptr)
+			RuntimeBody->SetAngularDamping(angularDrag);
+		angularDrag = angularDrag;
+	}
 
     MonoScriptComponent::MonoScriptComponent(const String& name) : ComponentBase(), m_TypeName(name)
     {

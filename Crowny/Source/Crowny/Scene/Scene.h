@@ -5,8 +5,6 @@
 
 #include <entt/entt.hpp>
 
-class b2World;
-
 namespace Crowny
 {
     class Entity;
@@ -14,7 +12,6 @@ namespace Crowny
     class SceneSerializer;
     class SceneRenderer;
     class ScriptRuntime;
-    class ContactListener;
     struct CameraComponent;
 
     struct Collision2D
@@ -57,6 +54,14 @@ namespace Crowny
         template <typename... Components> auto GetAllEntitiesWith() { return m_Registry.view<Components...>(); }
 
     private:
+        void OnRigidbody2DComponentConstruct(entt::registry& registry, entt::entity entity);
+        void OnRigidbody2DComponentDestroy(entt::registry& registry, entt::entity entity);
+        void OnBoxCollider2DComponentConstruct(entt::registry& registry, entt::entity entity);
+        void OnBoxCollider2DComponentDestroy(entt::registry& registry, entt::entity entity);
+		void OnCircleCollider2DComponentConstruct(entt::registry& registry, entt::entity entity);
+		void OnCircleCollider2DComponentDestroy(entt::registry& registry, entt::entity entity);
+        
+    private:
         friend class ComponentEditor;
         friend class SceneRenderer;
         friend class SceneSerializer;
@@ -66,9 +71,6 @@ namespace Crowny
         Path m_Filepath;
         entt::registry m_Registry;
         uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
-
-        b2World* m_PhysicsWorld2D = nullptr;
-        ContactListener* m_ContactListener2D = nullptr;
 
         Entity* m_RootEntity = nullptr;
     };

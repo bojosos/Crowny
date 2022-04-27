@@ -159,6 +159,9 @@ namespace Crowny
             out << YAML::Key << "Constraints" << YAML::Value << (uint32_t)rb2d.GetConstraints();
             out << YAML::Key << "CollisionDetectionMode" << YAML::Value << rb2d.GetContinuousCollisionDetection();
             out << YAML::Key << "SleepMode" << YAML::Value << (uint32_t)rb2d.GetSleepMode();
+			out << YAML::Key << "LinearDrag" << YAML::Value << rb2d.GetLinearDrag();
+			out << YAML::Key << "AngularDrag" << YAML::Value << rb2d.GetAngularDrag();
+            out << YAML::Key << "LayerMask" << YAML::Value << rb2d.GetLayerMask();
             out << YAML::EndMap;
         }
 
@@ -338,6 +341,24 @@ namespace Crowny
                         asc.SetLooping(source["Loop"].as<bool>());
                     }
 
+					const YAML::Node& bc2d = entity["BoxCollider2D"];
+					if (bc2d)
+					{
+						auto& bc2dc = deserialized.AddComponent<BoxCollider2DComponent>();
+						bc2dc.Offset = bc2d["Offset"].as<glm::vec2>();
+						bc2dc.Size = bc2d["Size"].as<glm::vec2>();
+						bc2dc.IsTrigger = bc2d["IsTrigger"].as<bool>();
+					}
+
+					const YAML::Node& cc2d = entity["CircleCollider2D"];
+					if (cc2d)
+					{
+						auto& cc2dc = deserialized.AddComponent<CircleCollider2DComponent>();
+						cc2dc.Offset = cc2d["Offset"].as<glm::vec2>();
+						cc2dc.Radius = cc2d["Size"].as<float>();
+						cc2dc.IsTrigger = cc2d["IsTrigger"].as<bool>();
+					}
+                    
                     const YAML::Node& rb2d = entity["Rigidbody2D"];
                     if (rb2d)
                     {
@@ -345,29 +366,17 @@ namespace Crowny
                         rb2dc.SetBodyType((RigidbodyBodyType)rb2d["BodyType"].as<uint32_t>());
                         rb2dc.SetMass(rb2d["Mass"].as<float>());
                         rb2dc.SetGravityScale(rb2d["GravityScale"].as<float>());
-                        if (const YAML::Node& collisionDetectionMode = entity["CollisionDetectionMode"])
+                        if (const YAML::Node& layerMask = rb2d["LayerMask"]) // Maybe store this as a string?
+                            rb2dc.SetLayerMask(layerMask.as<uint32_t>(), deserialized);
+                        if (const YAML::Node& collisionDetectionMode = rb2d["CollisionDetectionMode"])
                             rb2dc.SetContinuousCollisionDetection(collisionDetectionMode.as<String>() == "Continuous");
-                        if (const YAML::Node& sleepMode = entity["SleepMode"])
+                        if (const YAML::Node& sleepMode = rb2d["SleepMode"])
                             rb2dc.SetSleepMode((RigidbodySleepMode)sleepMode.as<uint32_t>());
+						if (const YAML::Node& linearDrag = rb2d["LinearDrag"])
+							rb2dc.SetLinearDrag(linearDrag.as<float>());
+						if (const YAML::Node& angularDrag = rb2d["AngularDrag"])
+							rb2dc.SetAngularDrag(angularDrag.as<float>());
                         rb2dc.SetConstraints((Rigidbody2DConstraints)rb2d["Constraints"].as<uint32_t>());
-                    }
-
-                    const YAML::Node& bc2d = entity["BoxCollider2D"];
-                    if (bc2d)
-                    {
-                        auto& bc2dc = deserialized.AddComponent<BoxCollider2DComponent>();
-                        bc2dc.Offset = bc2d["Offset"].as<glm::vec2>();
-                        bc2dc.Size = bc2d["Size"].as<glm::vec2>();
-                        bc2dc.IsTrigger = bc2d["IsTrigger"].as<bool>();
-                    }
-
-                    const YAML::Node& cc2d = entity["CircleCollider2D"];
-                    if (cc2d)
-                    {
-                        auto& cc2dc = deserialized.AddComponent<CircleCollider2DComponent>();
-                        cc2dc.Offset = cc2d["Offset"].as<glm::vec2>();
-                        cc2dc.Radius = cc2d["Size"].as<float>();
-                        cc2dc.IsTrigger = cc2d["IsTrigger"].as<bool>();
                     }
 
                     const YAML::Node& rel = entity["RelationshipComponent"];
