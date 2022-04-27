@@ -49,7 +49,7 @@ namespace Crowny
         void DestroyRigidbody(Entity e);
         void DestroyFixture(Entity entity, const Collider2D& collider);
         void Step(Timestep ts, Scene* scene);
-        void StopSimulation();
+        void StopSimulation(Scene* scene);
 
     private:
 		b2World* m_PhysicsWorld2D = nullptr;
