@@ -19,6 +19,11 @@ namespace Crowny
         out << YAML::Key << "GizmoLocalMode" << YAML::Value << settings->GizmoLocalMode;
         out << YAML::Key << "LastAssetBrowserEntry" << YAML::Value << settings->LastAssetBrowserSelectedEntry.string();
         out << YAML::Key << "LastSelectedEntity" << YAML::Value << settings->LastSelectedEntityID;
+		
+		out << YAML::Key << "LayerNames" << YAML::Value << YAML::BeginSeq;
+        for (uint32_t i = 0; i < settings->LayerNames.size(); i++)
+		    out << settings->LayerNames[i];
+        out << YAML::EndSeq;
         out << YAML::EndMap;
     }
 
@@ -35,6 +40,12 @@ namespace Crowny
 
         if (const auto& id = node["LastSelectedEntity"])
             projectSettings->LastSelectedEntityID = id.as<UUID>();
+        if (const auto& layerNames = node["LayerNames"])
+        {
+			uint32_t idx = 0;
+			for (const auto& layerName : layerNames)
+				projectSettings->LayerNames[idx++] = layerName.as<String>();
+        }
         return projectSettings;
     }
 
