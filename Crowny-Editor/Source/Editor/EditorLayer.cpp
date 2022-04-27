@@ -450,6 +450,14 @@ namespace Crowny
 			s_SmoothDeltaTime = s_DeltaTime + s_Time / (s_FrameCount + 1);
 			break;
 		}
+		case SceneState::Simulate: {
+			s_EditorCamera.SetViewportSize(m_RenderTarget->GetProperties().Width,
+				m_RenderTarget->GetProperties().Height);
+			s_EditorCamera.OnUpdate(ts);
+			SceneManager().GetActiveScene()->OnUpdateRuntime(ts);
+			SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
+			break;
+		}
 		}
 		RenderOverlay();
 
@@ -464,7 +472,7 @@ namespace Crowny
 				PixelData::Create(rt->GetColorTexture(1)->GetWidth(), rt->GetColorTexture(1)->GetHeight(),
 					rt->GetColorTexture(1)->GetFormat());
 			rt->GetColorTexture(1)->ReadData(*outPixelData);
-			/*if (outPixelData->GetSize() > coords.x * coords.y)
+			if (outPixelData->GetSize() > coords.x * coords.y)
 			{
 				glm::vec4 col = outPixelData->GetColorAt(coords.x, coords.y);
 				if (col.x == 0.0f)
@@ -476,7 +484,7 @@ namespace Crowny
 			!Input::IsKeyPressed(Key::RightAlt) && !m_ViewportPanel->IsMouseOverGizmo())
 						m_HierarchyPanel->SetSelectedEntity(m_HoveredEntity);
 				}
-			}*/
+			}
 		}
 		m_HierarchyPanel->Update();
 		ScriptObjectManager::Get().Update();
@@ -992,10 +1000,16 @@ namespace Crowny
 
 			if (drawButton(EditorAssets::Get().PlayIcon, c_SimulateButtonTint))
 			{
-				/*if (m_SceneState == SceneState::Edit)
-					OnSceneStartSimulation();
+				if (m_SceneState == SceneState::Edit)
+				{
+					m_SceneState = SceneState::Simulate;
+					SceneManager::GetActiveScene()->OnRuntimeStart();
+				}
 				else if (m_SceneState == SceneState::Simulate)
-					OnSceneStopSimulation();*/
+				{
+					m_SceneState = SceneState::Edit;
+					SceneManager::GetActiveScene()->OnRuntimeStop();
+				}
 			}
 			UI::SetTooltip(m_SceneState == SceneState::Simulate ? "Stop" : "Simulate Physics");
 

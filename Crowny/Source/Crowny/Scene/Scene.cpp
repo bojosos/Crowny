@@ -219,7 +219,7 @@ namespace Crowny
 
     void Scene::OnRuntimeStop()
     {
-        Physics2D::Get().StopSimulation();
+        Physics2D::Get().StopSimulation(this);
     }
 
     void Scene::OnUpdateEditor(Timestep ts) {}

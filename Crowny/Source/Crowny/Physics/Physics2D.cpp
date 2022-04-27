@@ -170,7 +170,7 @@ namespace Crowny
 		fixtureDef.isSensor = b2d.IsTrigger;
 		fixtureDef.restitutionThreshold = b2d.Material.m_RestitutionThreshold;
 		if (entity.HasComponent<Rigidbody2DComponent>())
-			entity.GetComponent<Rigidbody2DComponent>().RuntimeBody->CreateFixture(&fixtureDef);
+			b2d.RuntimeFixture = entity.GetComponent<Rigidbody2DComponent>().RuntimeBody->CreateFixture(&fixtureDef);
 	}
 
 	void Physics2D::CreateCircleCollider(Entity entity)
@@ -196,7 +196,7 @@ namespace Crowny
 		fixtureDef.restitutionThreshold = cc2d.Material.m_RestitutionThreshold;
 
 		if (entity.HasComponent<Rigidbody2DComponent>())
-			entity.GetComponent<Rigidbody2DComponent>().RuntimeBody->CreateFixture(&fixtureDef);
+			cc2d.RuntimeFixture = entity.GetComponent<Rigidbody2DComponent>().RuntimeBody->CreateFixture(&fixtureDef);
 	}
 
 	void Physics2D::DestroyRigidbody(Entity entity)
@@ -252,8 +252,17 @@ namespace Crowny
 		}
 	}
 
-	void Physics2D::StopSimulation()
+	void Physics2D::StopSimulation(Scene* scene)
 	{
+		auto rbView = scene->GetAllEntitiesWith<Rigidbody2DComponent>();
+		for (auto e : rbView )
+			Entity(e, scene).GetComponent<Rigidbody2DComponent>().RuntimeBody = nullptr;
+		auto bcView = scene->GetAllEntitiesWith<BoxCollider2DComponent>();
+		for (auto e : bcView)
+			Entity(e, scene).GetComponent<BoxCollider2DComponent>().RuntimeFixture = nullptr;
+		auto ccView = scene->GetAllEntitiesWith<CircleCollider2DComponent>();
+		for (auto e : ccView)
+			Entity(e, scene).GetComponent<CircleCollider2DComponent>().RuntimeFixture = nullptr;
 		delete m_PhysicsWorld2D; // This should clear everything box2d related.
 		m_PhysicsWorld2D = nullptr;
 	}
