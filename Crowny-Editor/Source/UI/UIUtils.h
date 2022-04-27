@@ -8,6 +8,7 @@
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Editor/ProjectLibrary.h"
+#include "Editor/Editor.h"
 
 #include <backends/imgui_impl_vulkan.h>
 #include <imgui.h>
@@ -509,6 +510,138 @@ namespace Crowny
             return modified;
         }
 
+		static bool PropertyLayer(const String& label, uint32_t& selectedLayer)
+		{
+			bool modified = false;
+
+			ImGui::SetCursorPos({ ImGui::GetCursorPosX() + 10.0f, ImGui::GetCursorPosY() + 9.0f });
+			ImGui::Text(label.c_str());
+			ImGui::NextColumn();
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
+			ImGui::PushItemWidth(-1);
+
+			ImVec2 originalButtonTextAlign = ImGui::GetStyle().ButtonTextAlign;
+			{
+				ImGui::GetStyle().ButtonTextAlign = { 0.0f, 0.5f };
+				float width = ImGui::GetContentRegionAvail().x;
+				float itemHeight = 28.0f;
+
+				String buttonText = Editor::Get().GetProjectSettings()->LayerNames[selectedLayer];
+				String entitySearchPopupId = UI::GenerateLabelID("EntitySearch");
+				ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
+				if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
+					ImGui::OpenPopup(entitySearchPopupId.c_str());
+				ImGui::PopStyleColor();
+				ImGui::GetStyle().ButtonTextAlign = originalButtonTextAlign;
+
+				if (LayerSearchPopup(entitySearchPopupId, selectedLayer))
+					modified = true;
+			}
+
+			if (!UI::IsItemDisabled())
+				UI::DrawItemActivityOutline(2.0f, true, IM_COL32(236, 158, 36, 255));
+
+			ImGui::PopItemWidth();
+			ImGui::NextColumn();
+			UI::Underline();
+
+			return modified;
+		}
+
+		static bool LayerSearchPopup(const String& id, uint32_t& selectedLayerMask, const char* hint = "Layer", const ImVec2& size = ImVec2{ 250.0f, 350.0f })
+		{
+			UI::ScopedColor popupBG(ImGuiCol_PopupBg, (IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255), 1.6f));
+
+			bool modified = false;
+
+			String preview;
+			float itemHeight = size.y / 20.0f;
+
+			const auto view = SceneManager::GetActiveScene()->GetAllEntitiesWith<TagComponent>();
+			uint32_t current = selectedLayerMask;
+
+			if (ImGui::GetItemFlags() & ImGuiItemFlags_Disabled)
+				ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+
+			ImGui::SetNextWindowSize({ size.x, 0.0f });
+
+			static bool grabFocus = true;
+
+			if (BeginPopup(id.c_str(), ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
+			{
+				static String searchString;
+
+				if (ImGui::GetCurrentWindow()->Appearing)
+				{
+					grabFocus = true;
+					searchString.clear();
+				}
+
+				// Search widget
+				ImGui::SetCursorPos({ ImGui::GetCursorPosX() + 3.0f, ImGui::GetCursorPosY() + 2.0f });
+				ImGui::SetNextItemWidth(ImGui::GetWindowWidth() - ImGui::GetCursorPosX() * 2.0f);
+				SearchWidget(searchString, hint, &grabFocus);
+
+				const bool searching = !searchString.empty();
+
+				// List of assets
+				{
+					UI::ScopedColor listBoxBg(ImGuiCol_FrameBg, IM_COL32_DISABLE);
+					UI::ScopedColor listBoxBorder(ImGuiCol_Border, IM_COL32_DISABLE);
+
+					ImGuiID listID = ImGui::GetID("##SearchListBox");
+					if (ImGui::BeginListBox("##SearchListBox", ImVec2(-FLT_MIN, 0.0f)))
+					{
+						bool forwardFocus = false;
+
+						ImGuiContext& g = *GImGui;
+						if (g.NavJustMovedToId != 0)
+						{
+							if (g.NavJustMovedToId == listID)
+							{
+								forwardFocus = true;
+								// ActivateItem moves keyboard navigation focus inside of the window
+								ImGui::ActivateItem(listID);
+								ImGui::SetKeyboardFocusHere(1);
+							}
+						}
+
+						const auto& layerNames = Editor::Get().GetProjectSettings()->LayerNames;
+						for (uint32_t i = 0; i < layerNames.size(); i++)
+						{
+                            const String& layerName = layerNames[i];
+							if (layerName.empty() || !searchString.empty() && !StringUtils::IsSearchMathing(layerName, searchString))
+								continue;
+
+							bool isSelected = (current == i);
+							if (ImGui::Selectable(layerName.c_str(), isSelected))
+							{
+								current = i;
+								selectedLayerMask = i;
+								modified = true;
+							}
+
+							if (forwardFocus)
+								forwardFocus = false;
+							else if (isSelected)
+								ImGui::SetItemDefaultFocus();
+						}
+
+						ImGui::EndListBox();
+					}
+				}
+				if (modified)
+					ImGui::CloseCurrentPopup();
+
+				EndPopup();
+			}
+
+			if (ImGui::GetItemFlags() & ImGuiItemFlags_Disabled)
+				ImGui::PopStyleVar();
+
+			return modified;
+		}
+
         static bool EntitySearchPopup(const String& id, Entity& selectedEntity, bool* cleared = nullptr,
                                       const char* hint = "Search Entities",
                                       const ImVec2& size = ImVec2{ 250.0f, 350.0f })
@@ -794,8 +927,7 @@ namespace Crowny
             {
                 if (const ImGuiPayload* data = AcceptEntityPayload())
                 {
-                    uint32_t id = *(const uint32_t*)data->Data;
-                    entity = { (entt::entity)id, SceneManager::GetActiveScene().get() };
+                    entity = GetEntityFromPayload(data);
                     modified = true;
                 }
                 ImGui::EndDragDropTarget();

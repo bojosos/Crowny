@@ -24,6 +24,8 @@ namespace Crowny
 
         UUID LastSelectedEntityID;
 
+		Array<String, 32> LayerNames = { "Default" };
+
         using Serializer = ProjectSettingsSerializer;
 
         // TODO: slightly annoying, but implement expanded hierarchy entities serialization

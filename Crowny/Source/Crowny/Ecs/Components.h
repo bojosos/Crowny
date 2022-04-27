@@ -35,6 +35,7 @@
 #include <glm/gtx/quaternion.hpp>
 
 class b2Body;
+class b2Fixture;
 
 namespace Crowny
 {
@@ -322,7 +323,8 @@ namespace Crowny
         Rigidbody2DComponent() : ComponentBase() {}
         Rigidbody2DComponent(const Rigidbody2DComponent& rb) = default;
 
-        uint32_t LayerMask = 0x1;
+        void SetLayerMask(uint32_t layerMask, Entity e);
+        uint32_t GetLayerMask() const { return m_LayerMask; }
 
         void SetBodyType(RigidbodyBodyType bodyType);
         void SetGravityScale(float scale);
@@ -330,6 +332,8 @@ namespace Crowny
         void SetConstraints(Rigidbody2DConstraints constraints);
         void SetSleepMode(RigidbodySleepMode sleepMode);
         void SetContinuousCollisionDetection(bool value);
+		void SetAngularDrag(float value);
+        void SetLinearDrag(float value);
 
         float GetMass() const { return m_Mass; }
         float GetGravityScale() const { return m_GravityScale; }
@@ -337,6 +341,8 @@ namespace Crowny
         RigidbodyBodyType GetBodyType() const { return m_Type; }
         RigidbodySleepMode GetSleepMode() const { return m_SleepMode; }
         bool GetContinuousCollisionDetection() const { return m_ContinuousCollisionDetection; }
+		float GetAngularDrag() const { return m_AngularDrag; }
+        float GetLinearDrag() const { return m_LinearDrag; }
 
         b2Body* RuntimeBody = nullptr;
 
@@ -344,8 +350,11 @@ namespace Crowny
         RigidbodyBodyType m_Type = RigidbodyBodyType::Static;
         RigidbodySleepMode m_SleepMode = RigidbodySleepMode::StartAwake;
         Rigidbody2DConstraints m_Constraints = Rigidbody2DConstraintsBits::None;
+        uint32_t m_LayerMask = 0;
         float m_Mass = 1.0f;
         float m_GravityScale = 1.0f;
+        float m_LinearDrag = 0.0f;
+        float m_AngularDrag = 0.05f;
         bool m_ContinuousCollisionDetection = false;
     };
 
@@ -371,6 +380,8 @@ namespace Crowny
                 CallbackExit(col);
         }
 
+        b2Fixture* RuntimeFixture = nullptr;
+
         std::function<void(const Collision2D&)> CallbackEnter;
         std::function<void(const Collision2D&)> CallbackExit;
     };
@@ -378,8 +389,6 @@ namespace Crowny
     struct BoxCollider2DComponent : public Collider2D
     {
         glm::vec2 Size = { 0.5f, 0.5f };
-
-        void* RuntimeFixture = nullptr; // duplicating during runtime will be wrong
 
         BoxCollider2DComponent() : Collider2D() {}
         BoxCollider2DComponent(const BoxCollider2DComponent& collider) = default;
@@ -390,8 +399,6 @@ namespace Crowny
     struct CircleCollider2DComponent : public Collider2D
     {
         float Radius = 0.5f;
-
-        void* RuntimeFixture = nullptr; // duplicating during runtime will be wrong
 
         CircleCollider2DComponent() : Collider2D() {}
         CircleCollider2DComponent(const CircleCollider2DComponent& collider) = default;

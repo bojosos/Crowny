@@ -35,6 +35,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <spdlog/fmt/fmt.h>
 
 #include <backends/imgui_impl_vulkan.h>
 #include <imgui.h>
@@ -425,6 +426,7 @@ namespace Crowny
 
 		rapi.SetRenderTarget(m_RenderTarget);
 		rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
+		rapi.ClearRenderTarget(FBT_COLOR | FBT_DEPTH);
 
 		switch (m_SceneState)
 		{
@@ -815,21 +817,39 @@ namespace Crowny
 		ImGui::Begin("Collision Matrix", &s_OpenCollisionMatrix);
 		{
 			UI::ScopedStyle spacing(ImGuiStyleVar_ItemSpacing, ImVec2{ 2.0f, 2.0f });
+			auto& layerNames = Editor::Get().GetProjectSettings()->LayerNames;
+			UI::BeginPropertyGrid();
+			for (uint32_t i = 0; i < layerNames.size(); i++)
+				UI::Property(fmt::format("Layer {0}", i).c_str(), layerNames[i]);
+			UI::EndPropertyGrid();
+
 			UI::PushID();
 			uint32_t id = 0;
-			UI::ShiftCursorY(50);
+			uint32_t nonEmpty = 0;
+			uint32_t maxTextLength = 0;
+			for (uint32_t i = 0; i < 32; i++)
+			{
+				maxTextLength = std::max(maxTextLength, (uint32_t)ImGui::CalcTextSize(layerNames[i].c_str()).x);
+				nonEmpty += !layerNames[i].empty();
+			}
+			nonEmpty--;
+			UI::ShiftCursorY(maxTextLength);
 			const ImVec2 text_pos(ImGui::GetCurrentWindow()->DC.CursorPos.x, ImGui::GetCurrentWindow()->DC.CursorPos.y - 2.0f);
 			for (uint32_t i = 0; i < 32; i++) // rows
 			{
 				uint32_t categoryMask = Physics2D::Get().GetCategoryMask(i);
-				ImGui::Text(std::to_string(i).c_str()); ImGui::SameLine();
+				if (layerNames[i].empty())
+					continue;
+				UI::ShiftCursorX(10);
+				ImGui::Text(layerNames[i].c_str()); ImGui::SameLine();
+				ImGui::SetCursorPosX(maxTextLength + ImGui::GetStyle().WindowPadding.x + 2 + 10);
 				for (uint32_t j = 0; j < 32; j++)
 				{
-					if (i == 0)
-						AddTextVertical(ImGui::GetWindowDrawList(), std::to_string(i).c_str(),
-							text_pos + ImVec2(ImGui::GetCursorPosX() - 6.0f, 0), IM_COL32(192, 192, 192, 255));
-					if (i + j > 31)
+					if (i + j > nonEmpty || layerNames[j].empty())
 						continue;
+					if (i == 0)
+						AddTextVertical(ImGui::GetWindowDrawList(), layerNames[j].c_str(),
+							text_pos + ImVec2(ImGui::GetCursorPosX() - 6.0f, 0), IM_COL32(192, 192, 192, 255));
 					bool value = (categoryMask & (1 << j)) != 0;
 					ImGui::PushID(id++);
 					if (ImGui::Checkbox("##checkbox", &value))
@@ -839,7 +859,7 @@ namespace Crowny
 						else
 							Physics2D::Get().SetCategoryMask(i, categoryMask & (~(1 << j)));
 					}
-					if (i + j + 1 <= 31)
+					if (i + j + 1 <= nonEmpty)
 						ImGui::SameLine();
 					ImGui::PopID();
 				}
