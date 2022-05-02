@@ -332,7 +332,7 @@ namespace Crowny
         void SetConstraints(Rigidbody2DConstraints constraints);
         void SetSleepMode(RigidbodySleepMode sleepMode);
         void SetContinuousCollisionDetection(bool value);
-		void SetAngularDrag(float value);
+        void SetAngularDrag(float value);
         void SetLinearDrag(float value);
 
         float GetMass() const { return m_Mass; }
@@ -341,7 +341,7 @@ namespace Crowny
         RigidbodyBodyType GetBodyType() const { return m_Type; }
         RigidbodySleepMode GetSleepMode() const { return m_SleepMode; }
         bool GetContinuousCollisionDetection() const { return m_ContinuousCollisionDetection; }
-		float GetAngularDrag() const { return m_AngularDrag; }
+        float GetAngularDrag() const { return m_AngularDrag; }
         float GetLinearDrag() const { return m_LinearDrag; }
 
         b2Body* RuntimeBody = nullptr;

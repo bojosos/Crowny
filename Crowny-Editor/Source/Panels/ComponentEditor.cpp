@@ -1,5 +1,6 @@
 #include "cwepch.h"
 
+#include "Editor/ProjectLibrary.h"
 #include "Panels/ComponentEditor.h"
 #include "Panels/HierarchyPanel.h"
 
@@ -9,6 +10,8 @@
 
 namespace Crowny
 {
+    static String s_SearchString;
+
     void ComponentEditor::Render()
     {
         Entity entity = HierarchyPanel::GetSelectedEntity();
@@ -74,6 +77,41 @@ namespace Crowny
             ImGui::SetNextItemWidth(200);
             if (ImGui::BeginPopup("Add Component"))
             {
+                static bool s_GrabFocus = true;
+                if (ImGui::GetCurrentWindow()->Appearing)
+                {
+                    s_GrabFocus = true;
+                    s_SearchString.clear();
+                }
+                UIUtils::SearchWidget(s_SearchString, "Search...", &s_GrabFocus);
+                if (!s_SearchString.empty())
+                {
+                    for (auto& [component_type_id, ci] : m_OrderedComponentInfos)
+                    {
+                        if (StringUtils::IsSearchMathing(ci.name, s_SearchString))
+                        {
+                            ImGui::PushItemWidth(-1);
+                            if (ImGui::Button(ci.name.c_str()))
+                            {
+                                ci.create(entity);
+                                ImGui::CloseCurrentPopup();
+                            }
+                        }
+                    }
+                    if (ImGui::Button(s_SearchString.c_str()))
+                    {
+                        String defaultContents = FileSystem::ReadTextFile(
+                          "C:\\dev\\Crowny\\Crowny-Editor\\Resources\\Default\\DefaultScript.cs");
+                        String script = StringUtils::Replace(defaultContents, "#NAMESPACE#",
+                                                             Editor::Get().GetProjectPath().filename().string());
+                        script = StringUtils::Replace(script, "#CLASSNAME#", s_SearchString);
+                        FileSystem::WriteTextFile(ProjectLibrary::Get().GetAssetFolder(), script);
+                        ProjectLibrary::Get().Refresh(ProjectLibrary::Get().GetAssetFolder());
+                    }
+                    ImGui::EndPopup();
+                    ImGui::PopID();
+                    return;
+                }
                 if (ImGui::ArrowButton("<", ImGuiDir_Left))
                     m_CurrentComponentGroup.clear();
                 ImGui::SameLine();

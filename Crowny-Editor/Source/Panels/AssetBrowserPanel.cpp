@@ -722,7 +722,7 @@ namespace Crowny
             String className = newEntryPath.filename().replace_extension("").string();
             className = StringUtils::Replace(className, " ", "_");
             String script =
-              StringUtils::Replace(m_CsDefaultText, "#NAMESPACE#", Editor::Get().GetProjectPath().filename().string());
+              StringUtils::Replace(text, "#NAMESPACE#", Editor::Get().GetProjectPath().filename().string());
             script = StringUtils::Replace(script, "#CLASSNAME#",
                                           className); // This has to be done after rename, since the file is saved first
                                                       // as NewScript and then as the user name.

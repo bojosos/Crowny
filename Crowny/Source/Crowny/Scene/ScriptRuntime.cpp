@@ -25,9 +25,6 @@ namespace Crowny
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
         activeScene->GetAllEntitiesWith<MonoScriptComponent>().each(
           [&](entt::entity entity, MonoScriptComponent& sc) { sc.OnStart(); });
-
-        activeScene->GetAllEntitiesWith<AudioSourceComponent>().each(
-          [&](entt::entity entity, AudioSourceComponent& sc) { sc.OnInitialize(); });
     }
 
     void ScriptRuntime::OnUpdate()
@@ -42,9 +39,6 @@ namespace Crowny
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
         activeScene->GetAllEntitiesWith<MonoScriptComponent>().each(
           [&](entt::entity entity, MonoScriptComponent& sc) { sc.OnDestroy(); });
-
-        activeScene->GetAllEntitiesWith<AudioSourceComponent>().each(
-          [&](entt::entity entity, AudioSourceComponent& sc) { sc.Stop(); });
     }
 
     void ScriptRuntime::Reload()

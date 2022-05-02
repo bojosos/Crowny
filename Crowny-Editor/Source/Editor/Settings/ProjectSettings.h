@@ -24,7 +24,7 @@ namespace Crowny
 
         UUID LastSelectedEntityID;
 
-		Array<String, 32> LayerNames = { "Default" };
+        Array<String, 32> LayerNames = { "Default" };
 
         using Serializer = ProjectSettingsSerializer;
 

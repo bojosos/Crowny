@@ -23,6 +23,9 @@ namespace Crowny
                 newEntity.AddComponent<T>();
                 parent.AddChild(newEntity);
                 m_NewOpenEntity = parent;
+                m_SelectedItems.clear();
+                m_SelectedItems.insert(newEntity);
+                m_SelectionChanged(newEntity);
             });
         }
         void CreateEmptyEntity(Entity parent);

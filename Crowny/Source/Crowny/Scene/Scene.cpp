@@ -62,9 +62,7 @@ namespace Crowny
 
     static void CopyAllExistingComponents(Entity dst, Entity src) { CopyComponentIfExists(AllComponents{}, dst, src); }
 
-    Scene::Scene()
-    {
-    }
+    Scene::Scene() {}
 
     Scene::Scene(const String& name) : m_Name(name)
     {
@@ -75,12 +73,13 @@ namespace Crowny
         m_RootEntity->AddComponent<TagComponent>(m_Name);
         m_RootEntity->AddComponent<RelationshipComponent>();
 
-		m_Registry.on_construct<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentConstruct>(this);
-		m_Registry.on_destroy<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentDestroy>(this);
-		m_Registry.on_construct<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentConstruct>(this);
-		m_Registry.on_destroy<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentDestroy>(this);
-		m_Registry.on_construct<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentConstruct>(this);
-		m_Registry.on_destroy<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentDestroy>(this);
+        m_Registry.on_construct<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentConstruct>(this);
+        m_Registry.on_destroy<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentDestroy>(this);
+        m_Registry.on_construct<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentConstruct>(this);
+        m_Registry.on_destroy<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentDestroy>(this);
+        m_Registry.on_construct<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentConstruct>(
+          this);
+        m_Registry.on_destroy<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentDestroy>(this);
     }
 
     Scene::Scene(Scene& other)
@@ -105,12 +104,16 @@ namespace Crowny
 
         CopyAllComponents(m_Registry, other.m_Registry, entityMap);
 
-		m_Registry.on_construct<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentConstruct>(this);
-		m_Registry.on_destroy<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentDestroy>(this);
-		m_Registry.on_construct<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentConstruct>(this);
-		m_Registry.on_destroy<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentDestroy>(this);
-		m_Registry.on_construct<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentConstruct>(this);
-		m_Registry.on_destroy<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentDestroy>(this);
+        m_Registry.on_construct<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentConstruct>(this);
+        m_Registry.on_destroy<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentDestroy>(this);
+        m_Registry.on_construct<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentConstruct>(this);
+        m_Registry.on_destroy<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentDestroy>(this);
+        m_Registry.on_construct<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentConstruct>(
+          this);
+        m_Registry.on_destroy<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentDestroy>(this);
+
+        m_Registry.on_construct<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentomponentConstruct>(this);
+        m_Registry.on_destroy<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentComponentDestroy>(this);
     }
 
     Scene& Scene::operator=(Scene& other)
@@ -140,10 +143,7 @@ namespace Crowny
         return *this;
     }
 
-    Scene::~Scene()
-    {
-        delete m_RootEntity;
-    }
+    Scene::~Scene() { delete m_RootEntity; }
 
     Entity Scene::DuplicateEntity(Entity entity, bool includeChildren)
     {
@@ -170,64 +170,109 @@ namespace Crowny
         return {};
     }
 
-	void Scene::OnRigidbody2DComponentConstruct(entt::registry& registry, entt::entity entity)
-	{
+    void Scene::OnRigidbody2DComponentConstruct(entt::registry& registry, entt::entity entity)
+    {
+        if (m_IsEditorScene)
+            return;
         Entity e = { entity, this };
-		Physics2D::Get().CreateRigidbody(e);
-
-	}
+        Physics2D::Get().CreateRigidbody(e);
+    }
 
     void Scene::OnRigidbody2DComponentDestroy(entt::registry& registry, entt::entity entity)
-	{
-		Entity e = { entity, this };
-        Physics2D::Get().DestroyRigidbody(e);
-	}
-
-	void Scene::OnBoxCollider2DComponentConstruct(entt::registry& registry, entt::entity entity)
-	{
-		Entity e = { entity, this };
-        Physics2D::Get().CreateBoxCollider(e);
-	}
-
-	void Scene::OnBoxCollider2DComponentDestroy(entt::registry& registry, entt::entity entity)
-	{
-		Entity e = { entity, this };
-        Physics2D::Get().DestroyFixture(e, e.GetComponent<BoxCollider2DComponent>());
-	}
-
-	void Scene::OnCircleCollider2DComponentConstruct(entt::registry& registry, entt::entity entity)
-	{
-		Entity e = { entity, this };
-		Physics2D::Get().CreateCircleCollider(e);
-	}
-
-	void Scene::OnCircleCollider2DComponentDestroy(entt::registry& registry, entt::entity entity)
-	{
-		Entity e = { entity, this };
-		Physics2D::Get().DestroyFixture(e, e.GetComponent<CircleCollider2DComponent>());
-	}
-
-	void Scene::OnRuntimeStart()
     {
-		Physics2D::Get().BeginSimulation(this);
+        if (m_IsEditorScene)
+            return;
+        Entity e = { entity, this };
+        Physics2D::Get().DestroyRigidbody(e);
+    }
+
+    void Scene::OnBoxCollider2DComponentConstruct(entt::registry& registry, entt::entity entity)
+    {
+        if (m_IsEditorScene)
+            return;
+        Entity e = { entity, this };
+        Physics2D::Get().CreateBoxCollider(e);
+    }
+
+    void Scene::OnBoxCollider2DComponentDestroy(entt::registry& registry, entt::entity entity)
+    {
+        if (m_IsEditorScene)
+            return;
+        Entity e = { entity, this };
+        Physics2D::Get().DestroyFixture(e, e.GetComponent<BoxCollider2DComponent>());
+    }
+
+    void Scene::OnCircleCollider2DComponentConstruct(entt::registry& registry, entt::entity entity)
+    {
+        if (m_IsEditorScene)
+            return;
+        Entity e = { entity, this };
+        Physics2D::Get().CreateCircleCollider(e);
+    }
+
+    void Scene::OnCircleCollider2DComponentDestroy(entt::registry& registry, entt::entity entity)
+    {
+        if (m_IsEditorScene)
+            return;
+        Entity e = { entity, this };
+        Physics2D::Get().DestroyFixture(e, e.GetComponent<CircleCollider2DComponent>());
+    }
+
+    void Scene::OnAudioSourceComponentomponentConstruct(entt::registry& registry, entt::entity entity)
+    {
+        if (m_IsEditorScene)
+            return;
+        Entity e = { entity, this };
+        auto& source = e.GetComponent<AudioSourceComponent>();
+        if (source.GetPlayOnAwake())
+            source.Play();
+    }
+
+    void Scene::OnAudioSourceComponentComponentDestroy(entt::registry& registry, entt::entity entity) {}
+
+    void Scene::OnRuntimeStart()
+    {
+        Physics2D::Get().BeginSimulation(this);
+        auto listenerView = m_Registry.view<AudioListenerComponent>();
+        if (listenerView.size() == 0)
+            CW_ENGINE_WARN("No audio listener in scene");
+        else if (listenerView.size() > 1)
+        {
+            for (auto e : listenerView)
+            {
+                Entity entity = { e, this };
+                entity.GetComponent<AudioListenerComponent>().Initialize();
+                break; // Maybe not necessary
+            }
+        }
+        m_Registry.view<AudioSourceComponent>().each(
+          [&](entt::entity entity, AudioSourceComponent& sc) { sc.OnInitialize(); });
     }
 
     void Scene::OnRuntimePause()
     {
-    
+        auto audioSourceView = m_Registry.view<AudioSourceComponent>();
+        for (auto e : audioSourceView)
+        {
+            Entity entity = { e, this };
+            entity.GetComponent<AudioSourceComponent>().Pause();
+        }
     }
 
     void Scene::OnRuntimeStop()
     {
         Physics2D::Get().StopSimulation(this);
+        auto audioSourceView = m_Registry.view<AudioSourceComponent>();
+        for (auto e : audioSourceView)
+        {
+            Entity entity = { e, this };
+            entity.GetComponent<AudioSourceComponent>().Stop();
+        }
     }
 
     void Scene::OnUpdateEditor(Timestep ts) {}
 
-    void Scene::OnUpdateRuntime(Timestep ts)
-    {
-        Physics2D::Get().Step(ts, this);
-    }
+    void Scene::OnUpdateRuntime(Timestep ts) { Physics2D::Get().Step(ts, this); }
 
     Entity Scene::CreateEntity(const String& name)
     {

@@ -82,7 +82,8 @@ namespace Crowny
         info.NumChannels = vorbisInfo->channels;
         info.SampleRate = vorbisInfo->rate;
         info.NumSamples = (uint32_t)(ov_pcm_total(&m_OggVorbisFile, -1) * vorbisInfo->channels);
-        info.BitDepth = 16;
+        info.BitDepth = info.BitDepth;
+
         m_ChannelCount = info.NumChannels;
         return true;
     }
