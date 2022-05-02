@@ -61,6 +61,7 @@ namespace Crowny
         void SaveProjectSettings();
 
         void UI_Header();
+        void UI_GizmoSettings();
         void UI_Settings();
         void UI_LayerCollisionMatrix();
         void UI_ScriptInfo();
