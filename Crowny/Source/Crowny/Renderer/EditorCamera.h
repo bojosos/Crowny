@@ -47,6 +47,8 @@ namespace Crowny
 
         const glm::vec3& GetFocalPoint() const { return m_FocalPoint; }
 
+        void Focus(const glm::vec3& focalPoint);
+
     private:
         void UpdateProjection();
         void UpdateView();

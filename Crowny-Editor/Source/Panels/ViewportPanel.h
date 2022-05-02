@@ -12,6 +12,15 @@
 namespace Crowny
 {
 
+    enum class GizmoEditMode
+    {
+		None = 0,
+		Translate = 1,
+		Rotate = 2,
+		Scale = 3,
+        Bounds = 4
+    };
+
     class ViewportPanel : public ImGuiPanel
     {
     public:
@@ -24,14 +33,14 @@ namespace Crowny
         void SetEventCallback(const EventCallbackFn& onclicked);
         void SetEditorRenderTarget(const Ref<RenderTarget>& rt);
 
-        void SetGizmoMode(int32_t gizmoMode) { m_GizmoMode = gizmoMode; }
+        void SetGizmoMode(GizmoEditMode gizmoMode) { m_GizmoMode = gizmoMode; }
         void SetGizmoLocalMode(bool local) { m_LocalMode = local; }
 
         bool GetGizmoLocalMode() const { return m_LocalMode; }
-        int32_t GetGizmoMode() const { return m_GizmoMode; }
+        GizmoEditMode GetGizmoMode() const { return m_GizmoMode; }
 
-        void DisalbeGizmo() { m_GizmoMode = -1; }
-        void EnableGizmo() { m_GizmoMode = ImGuizmo::TRANSLATE; }
+        void DisalbeGizmo() { m_GizmoMode = GizmoEditMode::None; }
+        void EnableGizmo() { m_GizmoMode = GizmoEditMode::Translate; }
 
         bool IsMouseOverGizmo() const { return ImGuizmo::IsOver(); }
 
@@ -39,7 +48,7 @@ namespace Crowny
         bool m_LocalMode = true;
         Ref<RenderTarget> m_RenderTarget;
         EventCallbackFn OnEvent;
-        int32_t m_GizmoMode = ImGuizmo::TRANSLATE;
+        GizmoEditMode m_GizmoMode = GizmoEditMode::Translate;
         glm::vec2 m_ViewportSize = { 1.0f, 1.0f };
         glm::vec4 m_ViewportBounds;
     };

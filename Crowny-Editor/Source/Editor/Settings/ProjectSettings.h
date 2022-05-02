@@ -4,6 +4,8 @@
 
 #include "Crowny/Serialization/SerializeUtils.h"
 
+#include "Panels/ViewportPanel.h" // for Gizmo mode
+
 namespace Crowny
 {
 
@@ -14,7 +16,7 @@ namespace Crowny
         Path LastAssetBrowserSelectedEntry;
         String LastOpenScenePath; // This will probably be replaced by the UUID of a scene, and a scene will most likely
                                   // be a prefab.
-        int32_t GizmoMode = -1;
+        GizmoEditMode GizmoMode = GizmoEditMode::Translate;
         bool GizmoLocalMode = false;
 
         glm::vec3 EditorCameraPosition = { 0.0f, 0.0f, 0.0f };

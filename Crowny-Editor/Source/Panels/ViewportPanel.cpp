@@ -20,6 +20,22 @@
 namespace Crowny
 {
 
+    static ImGuizmo::OPERATION GetImGuizmoMode(GizmoEditMode gizmoMode)
+    {
+        switch (gizmoMode)
+        {
+		case GizmoEditMode::Translate:
+			return ImGuizmo::TRANSLATE;
+		case GizmoEditMode::Rotate:
+			return ImGuizmo::ROTATE;
+		case GizmoEditMode::Scale:
+			return ImGuizmo::SCALE;
+        case GizmoEditMode::Bounds:
+			return ImGuizmo::BOUNDS;
+		}
+        return ImGuizmo::TRANSLATE;
+    }
+
     ViewportPanel::ViewportPanel(const String& name) : ImGuiPanel(name), m_ViewportBounds(0.0f)
     {
         Ref<ProjectSettings> projSettings = Editor::Get().GetProjectSettings();
@@ -32,18 +48,26 @@ namespace Crowny
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
         BeginPanel();
         Application::Get().GetImGuiLayer()->BlockEvents(!m_Focused && !m_Hovered);
-        if (Input::IsKeyPressed(Key::Q))
-            m_GizmoMode = -1;
-        if (Input::IsKeyPressed(Key::W))
-            m_GizmoMode = ImGuizmo::TRANSLATE;
-        if (Input::IsKeyPressed(Key::E))
-            m_GizmoMode = ImGuizmo::ROTATE;
-        if (Input::IsKeyPressed(Key::R))
-            m_GizmoMode = ImGuizmo::SCALE;
-        if (Input::IsKeyPressed(Key::T))
-            m_GizmoMode = ImGuizmo::BOUNDS;
-        if (Input::IsKeyDown(Key::X))
-            m_LocalMode = !m_LocalMode;
+
+		if (GImGui->ActiveId == 0)
+		{
+			if (!Input::IsMouseButtonPressed(Mouse::ButtonRight)) // && m_CurrentScene != m_RuntimeScene)
+			{
+				if (Input::IsKeyPressed(Key::Q))
+					m_GizmoMode = GizmoEditMode::None;
+				if (Input::IsKeyPressed(Key::W))
+					m_GizmoMode = GizmoEditMode::Translate;
+				if (Input::IsKeyPressed(Key::E))
+					m_GizmoMode = GizmoEditMode::Rotate;
+				if (Input::IsKeyPressed(Key::R))
+					m_GizmoMode = GizmoEditMode::Scale;
+				if (Input::IsKeyPressed(Key::T))
+					m_GizmoMode = GizmoEditMode::Bounds;
+				if (Input::IsKeyDown(Key::X))
+					m_LocalMode = !m_LocalMode;
+			}
+        }
+
         ImVec2 minBound = ImGui::GetWindowPos();
         ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
         ImVec2 viewportOffset = ImGui::GetCursorPos();
@@ -88,7 +112,7 @@ namespace Crowny
         // ImGuizmo::DrawGrid(glm::value_ptr(view), glm::value_ptr(proj), glm::value_ptr(id),
         //                 100.0f); // A 1x1m grid, TODO: depth test
 
-        if (selected && m_GizmoMode != -1)
+        if (selected && m_GizmoMode != GizmoEditMode::None)
         {
             ImGuizmo::SetOrthographic(false);
             ImGuizmo::SetDrawlist();
@@ -100,12 +124,12 @@ namespace Crowny
 
             bool snap = Input::IsKeyPressed(Key::LeftControl);
             float snapValue = 0.1f; // TODO: These snaps should be loaded from the editor settings
-            if (m_GizmoMode == ImGuizmo::OPERATION::ROTATE)
+            if (m_GizmoMode == GizmoEditMode::Rotate)
                 snapValue = 15.0f;
 
             float snapValues[3] = { snapValue, snapValue, snapValue };
-            ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj), (ImGuizmo::OPERATION)m_GizmoMode,
-                                 (!m_LocalMode && m_GizmoMode == ImGuizmo::TRANSLATE) ? ImGuizmo::WORLD
+            ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj), GetImGuizmoMode(m_GizmoMode),
+                                 (!m_LocalMode && m_GizmoMode == GizmoEditMode::Translate) ? ImGuizmo::WORLD
                                                                                       : ImGuizmo::LOCAL,
                                  glm::value_ptr(transform), nullptr,
                                  snap ? snapValues : nullptr); // TODO: Bounds, does rotation work?

@@ -709,7 +709,8 @@ namespace Crowny
                 return;
         }
 
-        UI_Header();
+		UI_Header();
+		UI_GizmoSettings();
         UI_Settings();
         UI_LayerCollisionMatrix();
 
@@ -959,9 +960,9 @@ namespace Crowny
         ImGui::Spring();
         {
             UI::ScopedStyle enableSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(edgeOffset * 2.0f, 0));
-            const ImColor c_ButtonTint = IM_COL32(192, 192, 192, 255);
+			const ImColor c_ButtonTint = IM_COL32(192, 192, 192, 255);
             const ImColor c_SimulateButtonTint =
-              m_SceneState == SceneState::Simulate ? ImColor(1.0f, 0.25f, 0.75f, 1.0f) : c_ButtonTint;
+              m_SceneState == SceneState::Simulate ? ImColor(39, 185, 242, 255) : c_ButtonTint;
 
             auto drawButton = [buttonSize](const Ref<Texture>& icon, const ImColor& tint, float paddingY = 0.0f) {
                 const float height = std::min((float)icon->GetHeight(), buttonSize) - paddingY * 2.0f;
@@ -1040,90 +1041,91 @@ namespace Crowny
         ImGui::End();
 
         UI::PopID();
-
-        {
-            UI::PushID();
-            UI::ScopedStyle disableSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-            UI::ScopedStyle disableWindowBorder(ImGuiStyleVar_WindowBorderSize, 0.0f);
-            UI::ScopedStyle windowRounding(ImGuiStyleVar_WindowRounding, 4.0f);
-            UI::ScopedStyle disablePadding(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-
-            const float buttonSize = 18.0f + 5.0f;
-            const float edgeOffset = 4.0f;
-            const float windowHeight = 32.0f;
-            const float numberOfButtons = 5.0f;
-            const float backgroundWidth =
-              edgeOffset * 6.0f + buttonSize * numberOfButtons + edgeOffset * (numberOfButtons - 1.0f) * 2.0f;
-
-            float toolbarX = (m_ViewportPanel->GetViewportBounds().x + edgeOffset);
-            ImGui::SetNextWindowPos(ImVec2(toolbarX, m_ViewportPanel->GetViewportBounds().y + edgeOffset));
-            ImGui::SetNextWindowSize(ImVec2(backgroundWidth, windowHeight));
-            ImGui::SetNextWindowBgAlpha(0.0f);
-            ImGui::Begin("##viewport_central_toolbar2", 0, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking);
-
-            const float desiredHeight = 26.0f + 5.0f;
-            ImRect background =
-              UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), 0.0f, -(windowHeight - desiredHeight) / 2.0f);
-            ImGui::GetWindowDrawList()->AddRectFilled(background.Min, background.Max, IM_COL32(15, 15, 15, 127), 4.0f);
-
-            ImGui::BeginVertical("##viewport_central_toolbarV", { backgroundWidth, ImGui::GetContentRegionAvail().y });
-            ImGui::Spring();
-            ImGui::BeginHorizontal("##viewport_central_toolbarH",
-                                   { backgroundWidth, ImGui::GetContentRegionAvail().y });
-            ImGui::Spring();
-            {
-                UI::ScopedStyle enableSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(edgeOffset * 2.0f, 0));
-                const ImColor c_ButtonTint = IM_COL32(192, 192, 192, 255);
-                const ImColor c_SimulateButtonTint =
-                  m_SceneState == SceneState::Simulate ? ImColor(1.0f, 0.25f, 0.75f, 1.0f) : c_ButtonTint;
-
-                auto drawButton = [buttonSize](const Ref<Texture>& icon, const ImColor& tint, float paddingY = 0.0f) {
-                    const float height = std::min((float)icon->GetHeight(), buttonSize) - paddingY * 2.0f;
-                    const float width = (float)icon->GetWidth() / (float)icon->GetHeight() * height;
-                    const bool clicked = ImGui::InvisibleButton(UI::GenerateID(), ImVec2(width, height));
-                    UI::DrawButtonImage(icon, tint, tint, tint, UI::RectOffset(UI::GetItemRect(), 0.0f, paddingY));
-
-                    return clicked;
-                };
-
-                const ImColor activeColor = ImColor(39, 185, 242, 255);
-                ImColor tint = m_ViewportPanel->GetGizmoMode() == -1 ? activeColor : c_ButtonTint;
-                if (drawButton(EditorAssets::Get().ArrowPointerIcon, tint))
-                    m_ViewportPanel->SetGizmoMode(-1);
-                UI::SetTooltip("Normal edit mode");
-                tint = m_ViewportPanel->GetGizmoMode() == 7 ? activeColor : c_ButtonTint;
-                if (drawButton(EditorAssets::Get().ArrowsIcon, tint))
-                    m_ViewportPanel->SetGizmoMode(7);
-                UI::SetTooltip("Translate mode");
-                tint = m_ViewportPanel->GetGizmoMode() == 120 ? activeColor : c_ButtonTint;
-                if (drawButton(EditorAssets::Get().RotateIcon, tint))
-                    m_ViewportPanel->SetGizmoMode(120);
-                UI::SetTooltip("Rotate mode");
-                tint = m_ViewportPanel->GetGizmoMode() == 896 ? activeColor : c_ButtonTint;
-                if (drawButton(EditorAssets::Get().MaximizeIcon, tint))
-                    m_ViewportPanel->SetGizmoMode(896);
-                UI::SetTooltip("Scale mode");
-
-                tint = m_ViewportPanel->GetGizmoLocalMode() ? activeColor : c_ButtonTint;
-                if (drawButton(EditorAssets::Get().GlobeIcon, tint))
-                {
-                    if (m_ViewportPanel->GetGizmoLocalMode())
-                        m_ViewportPanel->SetGizmoLocalMode(false);
-                    else
-                        m_ViewportPanel->SetGizmoLocalMode(true);
-                }
-                UI::SetTooltip("Toggle global gizmo editing");
-            }
-            ImGui::Spring();
-            ImGui::EndHorizontal();
-            ImGui::Spring();
-            ImGui::EndVertical();
-
-            ImGui::End();
-
-            UI::PopID();
-        }
     }
+
+    void EditorLayer::UI_GizmoSettings()
+	{
+		UI::PushID();
+		UI::ScopedStyle disableSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+		UI::ScopedStyle disableWindowBorder(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		UI::ScopedStyle windowRounding(ImGuiStyleVar_WindowRounding, 4.0f);
+		UI::ScopedStyle disablePadding(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+
+		const float buttonSize = 18.0f + 5.0f;
+		const float edgeOffset = 4.0f;
+		const float windowHeight = 32.0f;
+		const float numberOfButtons = 5.0f;
+		const float backgroundWidth =
+			edgeOffset * 6.0f + buttonSize * numberOfButtons + edgeOffset * (numberOfButtons - 1.0f) * 2.0f;
+
+		float toolbarX = (m_ViewportPanel->GetViewportBounds().x + edgeOffset);
+		ImGui::SetNextWindowPos(ImVec2(toolbarX, m_ViewportPanel->GetViewportBounds().y + edgeOffset));
+		ImGui::SetNextWindowSize(ImVec2(backgroundWidth, windowHeight));
+		ImGui::SetNextWindowBgAlpha(0.0f);
+		ImGui::Begin("##viewport_central_toolbar2", 0, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking);
+
+		const float desiredHeight = 26.0f + 5.0f;
+		ImRect background =
+			UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), 0.0f, -(windowHeight - desiredHeight) / 2.0f);
+		ImGui::GetWindowDrawList()->AddRectFilled(background.Min, background.Max, IM_COL32(15, 15, 15, 127), 4.0f);
+
+		ImGui::BeginVertical("##viewport_central_toolbarV", { backgroundWidth, ImGui::GetContentRegionAvail().y });
+		ImGui::Spring();
+		ImGui::BeginHorizontal("##viewport_central_toolbarH",
+			{ backgroundWidth, ImGui::GetContentRegionAvail().y });
+		ImGui::Spring();
+		{
+			UI::ScopedStyle enableSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(edgeOffset * 2.0f, 0));
+			const ImColor c_ButtonTint = IM_COL32(192, 192, 192, 255);
+			const ImColor c_SimulateButtonTint =
+				m_SceneState == SceneState::Simulate ? ImColor(1.0f, 0.25f, 0.75f, 1.0f) : c_ButtonTint;
+
+			auto drawButton = [buttonSize](const Ref<Texture>& icon, const ImColor& tint, float paddingY = 0.0f) {
+				const float height = std::min((float)icon->GetHeight(), buttonSize) - paddingY * 2.0f;
+				const float width = (float)icon->GetWidth() / (float)icon->GetHeight() * height;
+				const bool clicked = ImGui::InvisibleButton(UI::GenerateID(), ImVec2(width, height));
+				UI::DrawButtonImage(icon, tint, tint, tint, UI::RectOffset(UI::GetItemRect(), 0.0f, paddingY));
+
+				return clicked;
+			};
+
+			const ImColor activeColor = ImColor(39, 185, 242, 255);
+			ImColor tint = m_ViewportPanel->GetGizmoMode() == GizmoEditMode::None ? activeColor : c_ButtonTint;
+			if (drawButton(EditorAssets::Get().ArrowPointerIcon, tint))
+				m_ViewportPanel->SetGizmoMode(GizmoEditMode::None);
+			UI::SetTooltip("Normal edit mode");
+			tint = m_ViewportPanel->GetGizmoMode() == GizmoEditMode::Translate ? activeColor : c_ButtonTint;
+			if (drawButton(EditorAssets::Get().ArrowsIcon, tint))
+				m_ViewportPanel->SetGizmoMode(GizmoEditMode::Translate);
+			UI::SetTooltip("Translate mode");
+			tint = m_ViewportPanel->GetGizmoMode() == GizmoEditMode::Rotate ? activeColor : c_ButtonTint;
+			if (drawButton(EditorAssets::Get().RotateIcon, tint))
+				m_ViewportPanel->SetGizmoMode(GizmoEditMode::Rotate);
+			UI::SetTooltip("Rotate mode");
+			tint = m_ViewportPanel->GetGizmoMode() == GizmoEditMode::Scale ? activeColor : c_ButtonTint;
+			if (drawButton(EditorAssets::Get().MaximizeIcon, tint))
+				m_ViewportPanel->SetGizmoMode(GizmoEditMode::Scale);
+			UI::SetTooltip("Scale mode");
+
+			tint = m_ViewportPanel->GetGizmoLocalMode() ? activeColor : c_ButtonTint;
+			if (drawButton(EditorAssets::Get().GlobeIcon, tint))
+			{
+				if (m_ViewportPanel->GetGizmoLocalMode())
+					m_ViewportPanel->SetGizmoLocalMode(false);
+				else
+					m_ViewportPanel->SetGizmoLocalMode(true);
+			}
+			UI::SetTooltip("Toggle global gizmo editing");
+		}
+		ImGui::Spring();
+		ImGui::EndHorizontal();
+		ImGui::Spring();
+		ImGui::EndVertical();
+
+		ImGui::End();
+
+		UI::PopID();
+	}
 
     void EditorLayer::UI_Settings()
     {
@@ -1180,8 +1182,21 @@ namespace Crowny
                 SaveActiveSceneAs();
             break;
         }
+        case Key::F: {
+			if (GImGui->ActiveId == 0)
+			{
+				if (!Input::IsMouseButtonPressed(Mouse::ButtonRight)) // && m_CurrentScene != m_RuntimeScene)
+                {
+                    if (Input::IsKeyDown(Key::F))
+			        {
+				        Entity selectedEntity = HierarchyPanel::GetSelectedEntity();
+				        s_EditorCamera.Focus(selectedEntity.GetTransform().Position);
+				        break;
+			        }
+                }
+            }
         }
-
+        }
         return true;
     }
 

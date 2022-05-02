@@ -15,7 +15,7 @@ namespace Crowny
         out << YAML::Key << "EditorCameraPosition" << YAML::Value << settings->EditorCameraPosition;
         out << YAML::Key << "EditorCameraRotation" << YAML::Value << settings->EditorCameraRotation;
         out << YAML::Key << "LastOpenScene" << YAML::Value << settings->LastOpenScenePath;
-        out << YAML::Key << "GizmoMode" << YAML::Value << settings->GizmoMode; // TODO: Maybe move to project settings
+        out << YAML::Key << "GizmoMode" << YAML::Value << (uint32_t)settings->GizmoMode; // TODO: Maybe move to project settings
         out << YAML::Key << "GizmoLocalMode" << YAML::Value << settings->GizmoLocalMode;
         out << YAML::Key << "LastAssetBrowserEntry" << YAML::Value << settings->LastAssetBrowserSelectedEntry.string();
         out << YAML::Key << "LastSelectedEntity" << YAML::Value << settings->LastSelectedEntityID;
@@ -34,7 +34,7 @@ namespace Crowny
         projectSettings->EditorCameraFocalPoint = node["EditorCameraFocalPoint"].as<glm::vec3>();
         projectSettings->EditorCameraPosition = node["EditorCameraPosition"].as<glm::vec3>();
         projectSettings->EditorCameraRotation = node["EditorCameraRotation"].as<glm::vec2>();
-        projectSettings->GizmoMode = node["GizmoMode"].as<int32_t>();
+        projectSettings->GizmoMode = (GizmoEditMode)node["GizmoMode"].as<uint32_t>();
         projectSettings->LastAssetBrowserSelectedEntry = node["LastAssetBrowserEntry"].as<String>();
         projectSettings->LastOpenScenePath = node["LastOpenScene"].as<String>();
 
