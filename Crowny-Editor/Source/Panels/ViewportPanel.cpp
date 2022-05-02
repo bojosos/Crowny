@@ -32,21 +32,18 @@ namespace Crowny
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
         BeginPanel();
         Application::Get().GetImGuiLayer()->BlockEvents(!m_Focused && !m_Hovered);
-        if (m_Focused) // Change gizmo type
-        {
-            if (Input::IsKeyPressed(Key::Q))
-                m_GizmoMode = -1;
-            if (Input::IsKeyPressed(Key::W))
-                m_GizmoMode = ImGuizmo::TRANSLATE;
-            if (Input::IsKeyPressed(Key::E))
-                m_GizmoMode = ImGuizmo::ROTATE;
-            if (Input::IsKeyPressed(Key::R))
-                m_GizmoMode = ImGuizmo::SCALE;
-            if (Input::IsKeyPressed(Key::T))
-                m_GizmoMode = ImGuizmo::BOUNDS;
-            if (Input::IsKeyDown(Key::X))
-                m_LocalMode = !m_LocalMode;
-        }
+        if (Input::IsKeyPressed(Key::Q))
+            m_GizmoMode = -1;
+        if (Input::IsKeyPressed(Key::W))
+            m_GizmoMode = ImGuizmo::TRANSLATE;
+        if (Input::IsKeyPressed(Key::E))
+            m_GizmoMode = ImGuizmo::ROTATE;
+        if (Input::IsKeyPressed(Key::R))
+            m_GizmoMode = ImGuizmo::SCALE;
+        if (Input::IsKeyPressed(Key::T))
+            m_GizmoMode = ImGuizmo::BOUNDS;
+        if (Input::IsKeyDown(Key::X))
+            m_LocalMode = !m_LocalMode;
         ImVec2 minBound = ImGui::GetWindowPos();
         ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
         ImVec2 viewportOffset = ImGui::GetCursorPos();

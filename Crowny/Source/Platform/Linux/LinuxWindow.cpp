@@ -54,7 +54,8 @@ namespace Crowny
         /*int xpos2, ypos2;
         glfwGetWindowPos(m_Window, &xpos2, &ypos2);
         CW_ENGINE_INFO("{}, {}", xpos2, ypos2);
-        glfwSetWindowPos(m_Window, xpos, ypos2)*/;
+        glfwSetWindowPos(m_Window, xpos, ypos2)*/
+        ;
 #ifdef CW_DEBUG
         if (Renderer::GetAPI() == RenderAPI::API::OpenGL)
             glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,

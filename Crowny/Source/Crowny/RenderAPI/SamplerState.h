@@ -28,7 +28,7 @@ namespace Crowny
     public:
         SamplerState(const SamplerStateDesc& desc);
         virtual ~SamplerState() = default;
-        const SamplerStateDesc& GetProperties() const;
+        const SamplerStateDesc& GetProperties() const { return m_Properties; }
 
     public:
         static Ref<SamplerState> Create(const SamplerStateDesc& desc);

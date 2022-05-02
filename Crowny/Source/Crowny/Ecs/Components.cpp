@@ -26,9 +26,8 @@ namespace Crowny
 
     void AudioSourceComponent::OnInitialize()
     {
-        if (m_Internal != nullptr)
-            return;
-        m_Internal = gAudio().CreateSource();
+        if (m_Internal == nullptr)
+            m_Internal = gAudio().CreateSource();
         m_Internal->SetClip(m_AudioClip);
         m_Internal->SetVolume(m_Volume);
         m_Internal->SetPitch(m_Pitch);
@@ -144,12 +143,12 @@ namespace Crowny
     {
         if (RuntimeBody != nullptr)
         {
-			b2Filter newFilter;
-			newFilter.maskBits = 1 << layerMask;
-			newFilter.categoryBits = Physics2D::Get().GetCategoryMask(layerMask);
+            b2Filter newFilter;
+            newFilter.maskBits = 1 << layerMask;
+            newFilter.categoryBits = Physics2D::Get().GetCategoryMask(layerMask);
             if (e.HasComponent<BoxCollider2DComponent>())
-				e.GetComponent<BoxCollider2DComponent>().RuntimeFixture->SetFilterData(newFilter);
-			if (e.HasComponent<CircleCollider2DComponent>())
+                e.GetComponent<BoxCollider2DComponent>().RuntimeFixture->SetFilterData(newFilter);
+            if (e.HasComponent<CircleCollider2DComponent>())
                 e.GetComponent<CircleCollider2DComponent>().RuntimeFixture->SetFilterData(newFilter);
         }
         m_LayerMask = layerMask;
@@ -218,19 +217,19 @@ namespace Crowny
         m_SleepMode = sleepMode;
     }
 
-	void Rigidbody2DComponent::SetLinearDrag(float linearDrag)
-	{
-		if (RuntimeBody != nullptr)
-			RuntimeBody->SetLinearDamping(linearDrag);
-		m_LinearDrag = linearDrag;
-	}
+    void Rigidbody2DComponent::SetLinearDrag(float linearDrag)
+    {
+        if (RuntimeBody != nullptr)
+            RuntimeBody->SetLinearDamping(linearDrag);
+        m_LinearDrag = linearDrag;
+    }
 
-	void Rigidbody2DComponent::SetAngularDrag(float angularDrag)
-	{
-		if (RuntimeBody != nullptr)
-			RuntimeBody->SetAngularDamping(angularDrag);
-		angularDrag = angularDrag;
-	}
+    void Rigidbody2DComponent::SetAngularDrag(float angularDrag)
+    {
+        if (RuntimeBody != nullptr)
+            RuntimeBody->SetAngularDamping(angularDrag);
+        angularDrag = angularDrag;
+    }
 
     MonoScriptComponent::MonoScriptComponent(const String& name) : ComponentBase(), m_TypeName(name)
     {

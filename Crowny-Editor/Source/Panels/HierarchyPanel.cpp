@@ -94,6 +94,8 @@ namespace Crowny
 
         // ImGui::SetCursorPosX(ImGui::GetCursorPos().x + ImGui::GetStyle().FramePadding.x);
         ImGui::SetKeyboardFocusHere();
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
         if (ImGui::InputText("##renaming", &m_RenamingString,
                              ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
         {
@@ -124,7 +126,6 @@ namespace Crowny
         if (e == m_Renaming)
         {
             Rename(e);
-            // ImGui::SetCursorPosX(ImGui::GetCursorPos().x + 2 * ImGui::GetStyle().FramePadding.x);
             for (auto& c : rc.Children)
                 DisplayTree(c);
         }
@@ -135,6 +136,8 @@ namespace Crowny
                 ImGui::SetNextItemOpen(true, ImGuiCond_Always);
                 m_NewOpenEntity = {};
             }
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
             open = ImGui::TreeNodeEx(name.c_str(), selected | flags);
 
             if (ImGui::BeginDragDropSource())
@@ -191,10 +194,13 @@ namespace Crowny
         }
         else
         {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
             ImGui::TreeNodeEx(name.c_str(), flags | selected);
 
             if (ImGui::BeginDragDropSource())
             {
+                // m_SelectedItems.size()
                 uint32_t tmp = (uint32_t)e.GetHandle();
                 ImGui::SetDragDropPayload("Entity_ID", &tmp, sizeof(uint32_t));
                 ImGui::Text("%s", name.c_str());
@@ -300,7 +306,7 @@ namespace Crowny
 
     void HierarchyPanel::Render()
     {
-        // PrintDebugHierarchy();
+        UI::ScopedStyle windowPadding(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         BeginPanel();
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
         if (ImGui::BeginPopupContextWindow(nullptr,
@@ -330,8 +336,24 @@ namespace Crowny
             ImGui::EndPopup();
         }
 
-        ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-        DisplayTree(activeScene->GetRootEntity());
+        {
+            ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+            UI::ScopedColor tableBg(ImGuiCol_ChildBg, IM_COL32(26, 26, 26, 255));
+            UI::ScopedStyle innerSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
+            UI::ScopedStyle framePadding(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 2.0f));
+            UI::ScopedStyle cellPadding(ImGuiStyleVar_CellPadding, ImVec2(0.0f, 0.0f));
+
+            static ImGuiTableFlags flags = ImGuiTableFlags_NoPadInnerX | ImGuiTableFlags_Resizable |
+                                           ImGuiTableFlags_Reorderable | ImGuiTableFlags_ScrollY;
+
+            if (ImGui::BeginTable("3ways", 1, flags))
+            {
+                ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_NoHide);
+                // ImGui::TableHeadersRow();
+                DisplayTree(activeScene->GetRootEntity());
+                ImGui::EndTable();
+            }
+        }
         EndPanel();
     }
 
