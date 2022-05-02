@@ -224,7 +224,7 @@ namespace Crowny
         ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 
         glm::vec4 viewport = camera.GetViewportRect();
-        if (UI::Property("Viewport", viewport.x, 0.01f, 0.0f, 1.0f))
+        if (UI::Property("Viewport", viewport, 0.01f, 0.0f, 1.0f))
             camera.SetViewportRect(viewport);
 
         bool occlusion = camera.GetOcclusionCulling();
@@ -301,88 +301,93 @@ namespace Crowny
     {
         Rigidbody2DComponent& rb2d = entity.GetComponent<Rigidbody2DComponent>();
 
-		uint32_t layerMask = rb2d.GetLayerMask();
+        uint32_t layerMask = rb2d.GetLayerMask();
         if (UIUtils::PropertyLayer("Layer", layerMask))
-			rb2d.SetLayerMask(layerMask, entity);
+            rb2d.SetLayerMask(layerMask, entity);
 
         RigidbodyBodyType bodyType = rb2d.GetBodyType();
         if (UI::PropertyDropdown("Body Type", { "Static", "Dynamic", "Kinematic" }, bodyType))
             rb2d.SetBodyType(bodyType);
 
-        float mass = rb2d.GetMass();
-        if (UI::Property("Mass", mass))
-            rb2d.SetMass(mass);
-
-        float gravityScale = rb2d.GetGravityScale();
-        if (UI::Property("Gravity Scale", gravityScale))
-            rb2d.SetGravityScale(gravityScale);
-
-        bool continuous = rb2d.GetContinuousCollisionDetection();
-        if (UI::PropertyDropdown("Collision Detection", { "Discrete", "Continuous" }, continuous))
-            rb2d.SetContinuousCollisionDetection(continuous);
-
-        RigidbodySleepMode sleepMode = rb2d.GetSleepMode();
-        if (UI::PropertyDropdown("Sleeping Mode", { "Sleeping Mode", "NeverSleep", "StartAwake", "StartSleeping" },
-                                 sleepMode))
-            rb2d.SetSleepMode(sleepMode);
-
-		float linearDrag = rb2d.GetLinearDrag();
-        if (UI::Property("Linear Drag", linearDrag))
-			rb2d.SetLinearDrag(linearDrag);
-
-		float angularDrag = rb2d.GetAngularDrag();
-        if (UI::Property("Angular Drag", angularDrag))
-            rb2d.SetAngularDrag(angularDrag);
-
-        ImGui::Columns(1);
-        if (ImGui::CollapsingHeader("Constraints"))
+        if (bodyType == RigidbodyBodyType::Dynamic)
         {
-            ImGui::Indent(30.f);
-            ImGui::Columns(2);
-            ImGui::Text("Fixed Position");
-            ImGui::NextColumn();
+            float mass = rb2d.GetMass();
+            if (UI::Property("Mass", mass))
+                rb2d.SetMass(mass);
 
-            ImGui::Text("X");
-            ImGui::SameLine();
-            Rigidbody2DConstraints constraints = rb2d.GetConstraints();
-            bool freezeX = constraints.IsSet(Rigidbody2DConstraintsBits::FreezePositionX);
-            if (ImGui::Checkbox("##rb2dxPosLock", &freezeX))
-            {
-                if (freezeX)
-                    constraints.Set(Rigidbody2DConstraintsBits::FreezePositionX);
-                else
-                    constraints.Unset(Rigidbody2DConstraintsBits::FreezePositionX);
-                rb2d.SetConstraints(constraints);
-            }
+            float gravityScale = rb2d.GetGravityScale();
+            if (UI::Property("Gravity Scale", gravityScale))
+                rb2d.SetGravityScale(gravityScale);
 
-            ImGui::SameLine();
-            ImGui::Text("Y");
-            ImGui::SameLine();
-            bool freezeY = rb2d.GetConstraints().IsSet(Rigidbody2DConstraintsBits::FreezePositionY);
-            if (ImGui::Checkbox("##rb2dyPosLock", &freezeY))
-            {
-                if (freezeY)
-                    constraints.Set(Rigidbody2DConstraintsBits::FreezePositionY);
-                else
-                    constraints.Unset(Rigidbody2DConstraintsBits::FreezePositionY);
-                rb2d.SetConstraints(constraints);
-            }
-            ImGui::NextColumn();
-            ImGui::Text("Fixed Rotation");
-            ImGui::NextColumn();
-            ImGui::Text("Z");
-            ImGui::SameLine();
-            bool freezeRotation = rb2d.GetConstraints().IsSet(Rigidbody2DConstraintsBits::FreezeRotation);
-            if (ImGui::Checkbox("##rb2dyRotLock", &freezeRotation))
-            {
-                if (freezeRotation)
-                    constraints.Set(Rigidbody2DConstraintsBits::FreezeRotation);
-                else
-                    constraints.Unset(Rigidbody2DConstraintsBits::FreezeRotation);
-                rb2d.SetConstraints(constraints);
-            }
+            float linearDrag = rb2d.GetLinearDrag();
+            if (UI::Property("Linear Drag", linearDrag))
+                rb2d.SetLinearDrag(linearDrag);
 
-            ImGui::Unindent(30.0f);
+            float angularDrag = rb2d.GetAngularDrag();
+            if (UI::Property("Angular Drag", angularDrag))
+                rb2d.SetAngularDrag(angularDrag);
+        }
+
+        if (bodyType != RigidbodyBodyType::Static)
+        {
+            bool continuous = rb2d.GetContinuousCollisionDetection();
+            if (UI::PropertyDropdown("Collision Detection", { "Discrete", "Continuous" }, continuous))
+                rb2d.SetContinuousCollisionDetection(continuous);
+
+            RigidbodySleepMode sleepMode = rb2d.GetSleepMode();
+            if (UI::PropertyDropdown("Sleeping Mode", { "NeverSleep", "StartAwake", "StartSleeping" }, sleepMode))
+                rb2d.SetSleepMode(sleepMode);
+
+            ImGui::Columns(1);
+            if (ImGui::CollapsingHeader("Constraints"))
+            {
+                ImGui::Indent(30.f);
+                ImGui::Columns(2);
+                ImGui::Text("Fixed Position");
+                ImGui::NextColumn();
+
+                ImGui::Text("X");
+                ImGui::SameLine();
+                Rigidbody2DConstraints constraints = rb2d.GetConstraints();
+                bool freezeX = constraints.IsSet(Rigidbody2DConstraintsBits::FreezePositionX);
+                if (ImGui::Checkbox("##rb2dxPosLock", &freezeX))
+                {
+                    if (freezeX)
+                        constraints.Set(Rigidbody2DConstraintsBits::FreezePositionX);
+                    else
+                        constraints.Unset(Rigidbody2DConstraintsBits::FreezePositionX);
+                    rb2d.SetConstraints(constraints);
+                }
+
+                ImGui::SameLine();
+                ImGui::Text("Y");
+                ImGui::SameLine();
+                bool freezeY = rb2d.GetConstraints().IsSet(Rigidbody2DConstraintsBits::FreezePositionY);
+                if (ImGui::Checkbox("##rb2dyPosLock", &freezeY))
+                {
+                    if (freezeY)
+                        constraints.Set(Rigidbody2DConstraintsBits::FreezePositionY);
+                    else
+                        constraints.Unset(Rigidbody2DConstraintsBits::FreezePositionY);
+                    rb2d.SetConstraints(constraints);
+                }
+                ImGui::NextColumn();
+                ImGui::Text("Fixed Rotation");
+                ImGui::NextColumn();
+                ImGui::Text("Z");
+                ImGui::SameLine();
+                bool freezeRotation = rb2d.GetConstraints().IsSet(Rigidbody2DConstraintsBits::FreezeRotation);
+                if (ImGui::Checkbox("##rb2dyRotLock", &freezeRotation))
+                {
+                    if (freezeRotation)
+                        constraints.Set(Rigidbody2DConstraintsBits::FreezeRotation);
+                    else
+                        constraints.Unset(Rigidbody2DConstraintsBits::FreezeRotation);
+                    rb2d.SetConstraints(constraints);
+                }
+
+                ImGui::Unindent(30.0f);
+            }
         }
     }
 

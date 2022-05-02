@@ -22,6 +22,9 @@ namespace Crowny
         Ref<Texture> ConsoleInfo;
         Ref<Texture> ConsoleWarn;
         Ref<Texture> ConsoleError;
+        Ref<Texture> AlignLeft;
+        Ref<Texture> AlignCenter;
+        Ref<Texture> AlignRight;
     };
 
     class EditorAssets
@@ -52,6 +55,10 @@ namespace Crowny
         static const String ConsoleInfo;
         static const String ConsoleWarn;
         static const String ConsoleError;
+
+        static const String AlignLeft;
+        static const String AlignCenter;
+        static const String AlignRight;
 
         static EditorAssetsLibrary s_Library;
     };

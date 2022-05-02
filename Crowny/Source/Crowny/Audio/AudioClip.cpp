@@ -52,6 +52,7 @@ namespace Crowny
             }
 
             uint32_t bufferSize = info.NumSamples * info.BitDepth / 8;
+            CW_ENGINE_INFO("Buffer size: ", bufferSize);
             uint8_t* sampleBuffer = new uint8_t[bufferSize];
             if (m_Desc.Format == AudioFormat::VORBIS)
             {
