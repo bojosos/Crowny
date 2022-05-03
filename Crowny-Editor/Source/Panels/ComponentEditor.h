@@ -12,7 +12,6 @@ namespace Crowny
     template <class Component> void ComponentAddAction(Entity entity)
     {
         entity.AddComponent<Component>();
-        // TODO: Focus component SetKeyboardFocusHere(-1);
     }
 
     template <class Component> void ComponentRemoveAction(Entity entity) { entity.RemoveComponent<Component>(); }

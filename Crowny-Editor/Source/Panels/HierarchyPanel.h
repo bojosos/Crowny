@@ -29,6 +29,7 @@ namespace Crowny
             });
         }
         void CreateEmptyEntity(Entity parent);
+        void BuildSerializableHierarchy();
 
     public:
         void SetSelectedEntity(Entity entity)

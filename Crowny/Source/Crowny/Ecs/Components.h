@@ -235,53 +235,73 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<AudioListenerComponent>(Entity e);
 
+    class MonoScript
+    {
+
+	public:
+		MonoScript() = default;
+		MonoScript(const String& name);
+		MonoScript(const MonoScript&) = default;
+
+		void SetClassName(const String & className);
+		MonoClass* GetManagedClass() const;
+		MonoObject* GetManagedInstance() const;
+
+		Ref<SerializableObjectInfo> GetObjectInfo() const { return m_ObjectInfo; }
+
+		ScriptObjectBackupData BeginRefresh();
+		void EndRefresh(const ScriptObjectBackupData & data);
+		
+		const String& GetTypeName() const { return m_TypeName; }
+		void SetTypeName(const String & typeName) { m_TypeName = typeName; }
+
+		void OnInitialize(Entity entity);
+		void OnStart();
+		void OnUpdate();
+		void OnDestroy();
+
+	private:
+		typedef void(CW_THUNKCALL* OnStartThunkDef)(MonoObject*, MonoException**);
+		OnStartThunkDef m_OnStartThunk = nullptr;
+		typedef void(CW_THUNKCALL* OnUpdateThunkDef)(MonoObject*, MonoException**);
+		OnUpdateThunkDef m_OnUpdateThunk = nullptr;
+		typedef void(CW_THUNKCALL* OnDestroyThunkDef)(MonoObject*, MonoException**);
+		OnDestroyThunkDef m_OnDestroyThunk = nullptr;
+
+		typedef void(CW_THUNKCALL* OnCollisionEnterThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
+		OnCollisionEnterThunkDef m_OnCollisionEnterThunk = nullptr;
+		typedef void(CW_THUNKCALL* OnCollisionStayThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
+		OnCollisionStayThunkDef m_OnCollisionStayThunk = nullptr;
+		typedef void(CW_THUNKCALL* OnCollisionExitThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
+		OnCollisionExitThunkDef m_OnCollisionExitThunk = nullptr;
+
+		String m_TypeName;
+		String m_Namespace;
+		bool m_MissingType = false;
+		Ref<SerializableObject> m_SerializedObjectData;
+		Ref<SerializableObjectInfo> m_ObjectInfo;
+		MonoClass* m_Class = nullptr;
+		uint32_t m_Handle = 0;
+		ScriptEntityBehaviour* m_ScriptEntityBehaviour = nullptr;
+    };
+
     class MonoScriptComponent : public ComponentBase
     {
     public:
-        MonoScriptComponent() : ComponentBase() {}
-        MonoScriptComponent(const String& name);
+        MonoScriptComponent() : ComponentBase()
+        {
+            Scripts.push_back({ });
+            Scripts.back().SetTypeName(name);
+        }
+
+        MonoScriptComponent(const String& name) : ComponentBase()
+        {
+            Scripts.push_back({ });
+			Scripts.back().SetTypeName(name);
+        }
         MonoScriptComponent(const MonoScriptComponent&) = default;
 
-        void SetClassName(const String& className);
-        MonoClass* GetManagedClass() const;
-        MonoObject* GetManagedInstance() const;
-
-        Ref<SerializableObjectInfo> GetObjectInfo() const { return m_ObjectInfo; }
-
-        ScriptObjectBackupData BeginRefresh();
-        void EndRefresh(const ScriptObjectBackupData& data);
-
-        String& GetTypeName() { return m_TypeName; }
-        void SetTypeName(const String& typeName) { m_TypeName = typeName; }
-
-        void OnInitialize(Entity entity);
-        void OnStart();
-        void OnUpdate();
-        void OnDestroy();
-
-    private:
-        typedef void(CW_THUNKCALL* OnStartThunkDef)(MonoObject*, MonoException**);
-        OnStartThunkDef m_OnStartThunk = nullptr;
-        typedef void(CW_THUNKCALL* OnUpdateThunkDef)(MonoObject*, MonoException**);
-        OnUpdateThunkDef m_OnUpdateThunk = nullptr;
-        typedef void(CW_THUNKCALL* OnDestroyThunkDef)(MonoObject*, MonoException**);
-        OnDestroyThunkDef m_OnDestroyThunk = nullptr;
-
-        typedef void(CW_THUNKCALL* OnCollisionEnterThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
-        OnCollisionEnterThunkDef m_OnCollisionEnterThunk = nullptr;
-        typedef void(CW_THUNKCALL* OnCollisionStayThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
-        OnCollisionStayThunkDef m_OnCollisionStayThunk = nullptr;
-        typedef void(CW_THUNKCALL* OnCollisionExitThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
-        OnCollisionExitThunkDef m_OnCollisionExitThunk = nullptr;
-
-        String m_TypeName;
-        String m_Namespace;
-        bool m_MissingType = false;
-        Ref<SerializableObject> m_SerializedObjectData;
-        Ref<SerializableObjectInfo> m_ObjectInfo;
-        MonoClass* m_Class = nullptr;
-        uint32_t m_Handle = 0;
-        ScriptEntityBehaviour* m_ScriptEntityBehaviour = nullptr;
+		Vector<MonoScript> Scripts;
     };
 
     template <> void ComponentEditorWidget<MonoScriptComponent>(Entity e);
