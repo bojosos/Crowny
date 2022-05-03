@@ -322,7 +322,7 @@ namespace Crowny
     {
         RegisterComponent<TransformComponent, ScriptTransform>();
         RegisterComponent<CameraComponent, ScriptCamera>();
-        RegisterComponent<MonoScriptComponent, ScriptEntityBehaviour>();
+        // RegisterComponent<MonoScriptComponent, ScriptEntityBehaviour>(); // This should not be needed with the new component system
         RegisterComponent<AudioSourceComponent, ScriptAudioSource>();
         RegisterComponent<AudioListenerComponent, ScriptAudioListener>();
         RegisterComponent<Rigidbody2DComponent, ScriptRigidbody2D>();

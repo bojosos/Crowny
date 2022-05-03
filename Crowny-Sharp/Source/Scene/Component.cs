@@ -51,7 +51,7 @@ namespace Crowny
         /// <returns>The component.</returns>
         /// <param name="t">T.</param>
         /// <typeparam name="T">The 1st type parameter.</typeparam>
-        public void RemoveComponent<T>(T t) where T : Component
+        public void RemoveComponent<T>() where T : Component
         {
             entity.RemoveComponent<T>();
         }

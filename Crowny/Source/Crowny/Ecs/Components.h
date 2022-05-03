@@ -239,11 +239,11 @@ namespace Crowny
     {
 
 	public:
-		MonoScript() = default;
+		MonoScript();
 		MonoScript(const String& name);
 		MonoScript(const MonoScript&) = default;
 
-		void SetClassName(const String & className);
+		void SetClassName(const String& className);
 		MonoClass* GetManagedClass() const;
 		MonoObject* GetManagedInstance() const;
 
@@ -253,12 +253,14 @@ namespace Crowny
 		void EndRefresh(const ScriptObjectBackupData & data);
 		
 		const String& GetTypeName() const { return m_TypeName; }
-		void SetTypeName(const String & typeName) { m_TypeName = typeName; }
+		// void SetTypeName(const String & typeName) { m_TypeName = typeName; }
 
 		void OnInitialize(Entity entity);
 		void OnStart();
 		void OnUpdate();
 		void OnDestroy();
+
+		uint64_t InstanceId; // These also require one for scripting
 
 	private:
 		typedef void(CW_THUNKCALL* OnStartThunkDef)(MonoObject*, MonoException**);
@@ -291,13 +293,11 @@ namespace Crowny
         MonoScriptComponent() : ComponentBase()
         {
             Scripts.push_back({ });
-            Scripts.back().SetTypeName(name);
         }
 
         MonoScriptComponent(const String& name) : ComponentBase()
         {
-            Scripts.push_back({ });
-			Scripts.back().SetTypeName(name);
+            Scripts.push_back(MonoScript(name));
         }
         MonoScriptComponent(const MonoScriptComponent&) = default;
 
