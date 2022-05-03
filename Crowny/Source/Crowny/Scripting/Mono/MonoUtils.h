@@ -31,6 +31,7 @@ namespace Crowny
         static void GetClassName(MonoReflectionType* reflType, String& ns, String& typeName);
 
         static bool IsValueType(::MonoClass* monoClass);
+        static bool IsSubClassOf(::MonoClass* subClass, ::MonoClass* parent);
 
         static ::MonoClass* GetObjectClass();
         static ::MonoClass* GetBoolClass();

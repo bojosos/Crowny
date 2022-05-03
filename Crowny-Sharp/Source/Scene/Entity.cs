@@ -43,17 +43,19 @@ namespace Crowny
         /// Searches for an entity by its name.
         /// </summary>
         /// <param name="name">The name of the game object.</param>
-        /// <returns>The object if found, nullptr otherwise.</returns>
+        /// <returns>The object if found, null otherwise.</returns>
         public static Entity FindByName(string name)
         {
            return Internal_FindByName(name);
         }
 
         /// <summary>
-        /// Retrieves a component.
+        /// Retrieves a component. It can also be used to retrieve script components.
+        /// For example lets say you have an entity behaviour called "PlayerController".
+        /// You can do GetComponent<PlayerController>() on its entity and it will just work.
         /// </summary>
         /// <typeparam name="T">Type of the compoenent.</typeparam>
-        /// <returns>Returns the component if the operation was successful, otherwise nullptr.</returns>
+        /// <returns>Returns the component if the operation was successful, otherwise null.</returns>
         public T GetComponent<T>() where T : Component
         {
             return (T)Internal_GetComponent(m_InternalPtr, typeof(T));
@@ -72,7 +74,7 @@ namespace Crowny
         /// <summary>
         /// Adds a new component to the entity.
         /// </summary>
-        /// <returns>Returns the component if the operation was successful, otherwise nullptr.</returns>
+        /// <returns>Returns the component if the operation was successful, otherwise null.</returns>
         public T AddComponent<T>() where T : Component
         {
             return (T)Internal_AddComponent(m_InternalPtr, typeof(T));
