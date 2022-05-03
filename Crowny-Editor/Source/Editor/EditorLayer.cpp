@@ -267,10 +267,13 @@ namespace Crowny
         auto view = SceneManager::GetActiveScene()->GetAllEntitiesWith<MonoScriptComponent>();
         for (auto e : view)
         {
-            Entity ent = { e, SceneManager::GetActiveScene().get() };
-            auto& msc = ent.GetComponent<MonoScriptComponent>();
-            msc.SetClassName(msc.GetManagedClass()->GetName());
-            msc.OnInitialize(ent);
+            Entity entity = { e, SceneManager::GetActiveScene().get() };
+            auto& msc = entity.GetComponent<MonoScriptComponent>();
+            for (auto& script : msc.Scripts)
+            {
+                script.SetClassName(script.GetTypeName());
+                script.OnInitialize(entity);
+            }
         }
     }
 
@@ -1182,24 +1185,10 @@ namespace Crowny
                 SaveActiveSceneAs();
             break;
         }
-        case Key::F: {
-			if (GImGui->ActiveId == 0)
-			{
-				if (!Input::IsMouseButtonPressed(Mouse::ButtonRight)) // && m_CurrentScene != m_RuntimeScene)
-                {
-                    if (Input::IsKeyDown(Key::F))
-			        {
-				        Entity selectedEntity = HierarchyPanel::GetSelectedEntity();
-				        s_EditorCamera.Focus(selectedEntity.GetTransform().Position);
-				        break;
-			        }
-                }
-            }
-        }
         }
         return true;
     }
-
+    
     bool EditorLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e) { return false; }
 
     void EditorLayer::OnEvent(Event& e)
