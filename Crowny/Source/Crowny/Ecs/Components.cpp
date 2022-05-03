@@ -231,7 +231,9 @@ namespace Crowny
         angularDrag = angularDrag;
     }
 
-    MonoScript::MonoScript(const String& name) : m_TypeName(name)
+	MonoScript::MonoScript() : InstanceId(s_NextAvailableId++) { }
+
+    MonoScript::MonoScript(const String& name) : m_TypeName(name), InstanceId(s_NextAvailableId++)
     {
         SetClassName(name);
     }
@@ -290,11 +292,8 @@ namespace Crowny
             m_MissingType = true;
             CW_ENGINE_WARN("Missing type");
         }
-        // ScriptSceneObjectManager::Get().CreateManagedScriptComponent(managedInstance, component); // TODO: Create a
-        // managed component so that in C# land we can do ManagedComponent c = GetComponent<ManagedComponent>(); and not
-        // have to cast it
 
-        // m_ScriptEntityBehaviour = static_cast<ScriptEntityBehaviour*>(ScriptSceneObjectManager::Get().CreateScriptComponent(managedInstance, entity, *this));
+        m_ScriptEntityBehaviour = ScriptSceneObjectManager::Get().CreateManagedScriptComponent(managedInstance, entity, *this);
 
         if (m_OnStartThunk == nullptr)
         {
@@ -429,6 +428,7 @@ namespace Crowny
     void MonoScript::SetClassName(const String& className)
     {
         m_Class = MonoManager::Get().GetAssembly(GAME_ASSEMBLY)->GetClass("Sandbox", m_TypeName);
+        m_TypeName = className;
         m_OnStartThunk = nullptr;
         m_OnUpdateThunk = nullptr;
         m_OnDestroyThunk = nullptr;
