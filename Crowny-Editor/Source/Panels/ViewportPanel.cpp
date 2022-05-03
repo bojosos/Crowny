@@ -65,6 +65,11 @@ namespace Crowny
 					m_GizmoMode = GizmoEditMode::Bounds;
 				if (Input::IsKeyDown(Key::X))
 					m_LocalMode = !m_LocalMode;
+		        if (Input::IsKeyDown(Key::F))
+				{
+					Entity selectedEntity = HierarchyPanel::GetSelectedEntity();
+					EditorLayer::GetEditorCamera().Focus(selectedEntity.GetTransform().Position);
+				}
 			}
         }
 
@@ -126,7 +131,7 @@ namespace Crowny
             float snapValue = 0.1f; // TODO: These snaps should be loaded from the editor settings
             if (m_GizmoMode == GizmoEditMode::Rotate)
                 snapValue = 15.0f;
-
+            ImGuizmo::AllowAxisFlip(false);
             float snapValues[3] = { snapValue, snapValue, snapValue };
             ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj), GetImGuizmoMode(m_GizmoMode),
                                  (!m_LocalMode && m_GizmoMode == GizmoEditMode::Translate) ? ImGuizmo::WORLD

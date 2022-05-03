@@ -231,18 +231,18 @@ namespace Crowny
         angularDrag = angularDrag;
     }
 
-    MonoScriptComponent::MonoScriptComponent(const String& name) : ComponentBase(), m_TypeName(name)
+    MonoScript::MonoScript(const String& name) : m_TypeName(name)
     {
         SetClassName(name);
     }
 
-    MonoClass* MonoScriptComponent::GetManagedClass() const { return m_Class; }
-    MonoObject* MonoScriptComponent::GetManagedInstance() const
+    MonoClass* MonoScript::GetManagedClass() const { return m_Class; }
+    MonoObject* MonoScript::GetManagedInstance() const
     {
         return m_ScriptEntityBehaviour->GetManagedInstance();
     }
 
-    void MonoScriptComponent::OnInitialize(Entity entity)
+    void MonoScript::OnInitialize(Entity entity)
     {
         MonoObject* managedInstance = nullptr;
         if (m_Class == nullptr)
@@ -294,8 +294,7 @@ namespace Crowny
         // managed component so that in C# land we can do ManagedComponent c = GetComponent<ManagedComponent>(); and not
         // have to cast it
 
-        m_ScriptEntityBehaviour = static_cast<ScriptEntityBehaviour*>(
-          ScriptSceneObjectManager::Get().CreateScriptComponent(managedInstance, entity, *this));
+        // m_ScriptEntityBehaviour = static_cast<ScriptEntityBehaviour*>(ScriptSceneObjectManager::Get().CreateScriptComponent(managedInstance, entity, *this));
 
         if (m_OnStartThunk == nullptr)
         {
@@ -377,16 +376,15 @@ namespace Crowny
                 MonoUtils::InvokeThunk(m_OnCollisionExitThunk, GetManagedInstance(), managedCollision);
         };
 
-        const MonoScriptComponent& msc = entity.GetComponent<MonoScriptComponent>();
-        MonoMethod* onCollisionEnter = msc.GetManagedClass()->GetMethod(
+        MonoMethod* onCollisionEnter = GetManagedClass()->GetMethod(
           "OnCollisionEnter2D",
           "Collision2D"); // Maybe replace these with the other Collider, since Box2D works that way
         if (onCollisionEnter != nullptr)
             m_OnCollisionEnterThunk = (OnCollisionEnterThunkDef)onCollisionEnter->GetThunk();
-        MonoMethod* onCollisionStay = msc.GetManagedClass()->GetMethod("OnCollisionStay2D", "Collision2D");
+        MonoMethod* onCollisionStay = GetManagedClass()->GetMethod("OnCollisionStay2D", "Collision2D");
         if (onCollisionStay != nullptr)
             m_OnCollisionStayThunk = (OnCollisionStayThunkDef)onCollisionStay->GetThunk();
-        MonoMethod* onCollisionExit = msc.GetManagedClass()->GetMethod("OnCollisionExit2D", "Collision2D");
+        MonoMethod* onCollisionExit = GetManagedClass()->GetMethod("OnCollisionExit2D", "Collision2D");
         if (onCollisionExit != nullptr)
             m_OnCollisionExitThunk = (OnCollisionExitThunkDef)onCollisionExit->GetThunk();
         if (entity.HasComponent<BoxCollider2DComponent>())
@@ -403,7 +401,7 @@ namespace Crowny
         // Could add and call an OnAwake method like in Unity here
     }
 
-    ScriptObjectBackupData MonoScriptComponent::BeginRefresh()
+    ScriptObjectBackupData MonoScript::BeginRefresh()
     {
         MonoObject* instance = GetManagedInstance();
         Ref<SerializableObject> serializableObject = SerializableObject::CreateFromMonoObject(instance);
@@ -418,7 +416,7 @@ namespace Crowny
         return backupData;
     }
 
-    void MonoScriptComponent::EndRefresh(const ScriptObjectBackupData& data)
+    void MonoScript::EndRefresh(const ScriptObjectBackupData& data)
     {
         MonoObject* instance = GetManagedInstance();
         if (instance != nullptr && data.Data != nullptr)
@@ -428,7 +426,7 @@ namespace Crowny
         }
     }
 
-    void MonoScriptComponent::SetClassName(const String& className)
+    void MonoScript::SetClassName(const String& className)
     {
         m_Class = MonoManager::Get().GetAssembly(GAME_ASSEMBLY)->GetClass("Sandbox", m_TypeName);
         m_OnStartThunk = nullptr;
@@ -439,7 +437,7 @@ namespace Crowny
         m_OnCollisionExitThunk = nullptr;
     }
 
-    void MonoScriptComponent::OnStart()
+    void MonoScript::OnStart()
     {
         if (m_OnStartThunk != nullptr)
         {
@@ -448,7 +446,7 @@ namespace Crowny
         }
     }
 
-    void MonoScriptComponent::OnUpdate()
+    void MonoScript::OnUpdate()
     {
         if (m_OnUpdateThunk != nullptr)
         {
@@ -457,7 +455,7 @@ namespace Crowny
         }
     }
 
-    void MonoScriptComponent::OnDestroy()
+    void MonoScript::OnDestroy()
     {
         if (m_OnDestroyThunk != nullptr)
         {
@@ -465,5 +463,4 @@ namespace Crowny
             MonoUtils::InvokeThunk(m_OnDestroyThunk, instance);
         }
     }
-
 } // namespace Crowny

@@ -35,7 +35,7 @@ namespace Crowny
             out << YAML::Key << "MonoScriptComponent";
             out << YAML::BeginMap;
             auto msc = entity.GetComponent<MonoScriptComponent>();
-            const String& name = msc.GetTypeName();
+            // const String& name = msc.GetTypeName();
             // auto& fields = msc.GetSerializableFields();
             // if (fields.size() > 0)
             // {
@@ -61,7 +61,7 @@ namespace Crowny
             //     }
             //     out << YAML::EndMap;
             // }
-            out << YAML::Key << "Name" << YAML::Value << name;
+            // out << YAML::Key << "Name" << YAML::Value << name;
             out << YAML::EndMap;
         }
 
@@ -303,7 +303,7 @@ namespace Crowny
                     const YAML::Node& script = entity["MonoScriptComponent"];
                     if (script)
                     {
-                        auto& sc = deserialized.AddComponent<MonoScriptComponent>(script["Name"].as<String>());
+                        // auto& sc = deserialized.AddComponent<MonoScriptComponent>(script["Name"].as<String>());
                         // sc.ComponentParent = deserialized;
                     }
 

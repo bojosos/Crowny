@@ -472,19 +472,51 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<MonoScriptComponent>(Entity e)
     {
-        MonoScriptComponent& script = e.GetComponent<MonoScriptComponent>();
-        if (UIUtils::PropertyScript("Script", script.GetTypeName()))
+        MonoScriptComponent& scriptComponent = e.GetComponent<MonoScriptComponent>();
+        for (uint32_t i = 0; i < scriptComponent.Scripts.size(); i++)
         {
-            script.SetClassName(script.GetTypeName());
-            script.OnInitialize(e);
+            auto& script = scriptComponent.Scripts[i];
+			ImGui::PushID(i);
+			if (ImGui::Button("-"))
+			{
+				scriptComponent.Scripts.erase(scriptComponent.Scripts.begin() + i);
+				ImGui::PopID();
+				continue;
+			}
+			ImGui::SameLine();
+			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+			if (ImGui::CollapsingHeader(script.GetTypeName().c_str()))
+			{
+				ImGui::Indent(30.f);
+				ImGui::PushID("Widget");
+				UI::BeginPropertyGrid();
+				
+                String typeName = script.GetTypeName();
+				if (UIUtils::PropertyScript("Class name", typeName))
+				{
+					script.SetClassName(typeName);
+					script.OnInitialize(e);
+				}
+
+				if (script.GetManagedClass() == nullptr)
+				{
+					UI::EndPropertyGrid();
+					ImGui::PopID();
+					ImGui::Unindent(30.f);
+                    ImGui::PopID();
+					continue;
+                }
+
+				Ref<SerializableObjectInfo> objectInfo = script.GetObjectInfo();
+				MonoObject* instance = script.GetManagedInstance();
+				ScriptInspector::DrawObjectInspector(objectInfo, instance, nullptr);
+
+				UI::EndPropertyGrid();
+				ImGui::PopID();
+				ImGui::Unindent(30.f);
+			}
+            ImGui::PopID();
         }
-
-        if (script.GetManagedClass() == nullptr)
-            return;
-
-        Ref<SerializableObjectInfo> objectInfo = script.GetObjectInfo();
-        MonoObject* instance = script.GetManagedInstance();
-        ScriptInspector::DrawObjectInspector(objectInfo, instance, nullptr);
     }
 
 } // namespace Crowny
