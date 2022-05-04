@@ -10,7 +10,7 @@ namespace Crowny
 		~ScriptObject()
 		{
             if (m_InternalPtr == IntPtr.Zero)
-                Debug.LogError("Wat");
+                Debug.Error("Wat");
             Internal_ManagedInstanceDeleted(m_InternalPtr);
 		}
 

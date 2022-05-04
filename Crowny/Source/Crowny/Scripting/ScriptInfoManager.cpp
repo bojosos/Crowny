@@ -116,7 +116,23 @@ namespace Crowny
 
         m_Builtin.RequireComponent = crownyAssembly->GetClass(CROWNY_NS, "RequireComponent");
         if (m_Builtin.RequireComponent == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.RequireComponentclass.", CROWNY_NS);
+            CW_ENGINE_ERROR("Cannot find {0}.RequireComponent class.", CROWNY_NS);
+
+		m_Builtin.Dropdown = crownyAssembly->GetClass(CROWNY_NS, "Dropdown");
+		if (m_Builtin.Dropdown== nullptr)
+			CW_ENGINE_ERROR("Cannot find {0}.Dropdown class.", CROWNY_NS);
+
+		m_Builtin.Label = crownyAssembly->GetClass(CROWNY_NS, "Label");
+		if (m_Builtin.Label == nullptr)
+			CW_ENGINE_ERROR("Cannot find {0}.Filepath class.", CROWNY_NS);
+
+		m_Builtin.Filepath = crownyAssembly->GetClass(CROWNY_NS, "Filepath");
+		if (m_Builtin.Filepath == nullptr)
+			CW_ENGINE_ERROR("Cannot find {0}.Filepath class.", CROWNY_NS);
+
+		m_Builtin.ReadOnly = crownyAssembly->GetClass(CROWNY_NS, "ReadOnly");
+		if (m_Builtin.ReadOnly == nullptr)
+			CW_ENGINE_ERROR("Cannot find {0}.ReadOnly class.", CROWNY_NS);
 
         m_Builtin.ScriptUtils = crownyAssembly->GetClass(CROWNY_NS, "ScriptUtils");
         if (m_Builtin.ScriptUtils == nullptr)
@@ -240,6 +256,19 @@ namespace Crowny
                     fieldInfo->m_Flags |= ScriptFieldFlagBits::Step;*/
                 if (field->HasAttribute(m_Builtin.NotNullAttribute))
                     fieldInfo->m_Flags |= ScriptFieldFlagBits::NotNull;
+				if (field->HasAttribute(m_Builtin.Dropdown))
+					fieldInfo->m_Flags |= ScriptFieldFlagBits::Dropdown;
+				if (field->HasAttribute(m_Builtin.Filepath))
+					fieldInfo->m_Flags |= ScriptFieldFlagBits::Filepath;
+				if (field->HasAttribute(m_Builtin.ReadOnly))
+					fieldInfo->m_Flags |= ScriptFieldFlagBits::ReadOnly;
+				if (field->HasAttribute(m_Builtin.Label))
+                {
+					MonoObject* label = field->GetAttribute(m_Builtin.Label);
+                    MonoField* labelField = m_Builtin.Label->GetField("label");
+					MonoString* stringValue = (MonoString*)labelField->GetBoxed(label);
+					fieldInfo->m_Name = MonoUtils::FromMonoString(stringValue);
+                }
                 objInfo->m_FieldNameToId[fieldInfo->m_Name] = fieldInfo->m_FieldId;
                 objInfo->m_Fields[fieldInfo->m_FieldId] = fieldInfo;
             }
@@ -288,6 +317,20 @@ namespace Crowny
                     propertyInfo->m_Flags |= ScriptFieldFlagBits::Step;*/
                 if (property->HasAttribute(m_Builtin.NotNullAttribute))
                     propertyInfo->m_Flags |= ScriptFieldFlagBits::NotNull;
+				if (property->HasAttribute(m_Builtin.Dropdown))
+					propertyInfo->m_Flags |= ScriptFieldFlagBits::Dropdown;
+				if (property->HasAttribute(m_Builtin.Filepath))
+					propertyInfo->m_Flags |= ScriptFieldFlagBits::Filepath;
+				if (property->HasAttribute(m_Builtin.ReadOnly))
+					propertyInfo->m_Flags |= ScriptFieldFlagBits::ReadOnly;
+				if (property->HasAttribute(m_Builtin.Label))
+				{
+					MonoObject* label = property->GetAttribute(m_Builtin.Label);
+					MonoField* labelField = m_Builtin.Label->GetField("label");
+					MonoString* stringValue = nullptr;
+					labelField->Get(label, stringValue);
+					propertyInfo->m_Name = MonoUtils::FromMonoString(stringValue);
+				}
                 objInfo->m_FieldNameToId[propertyInfo->m_Name] = propertyInfo->m_FieldId;
                 objInfo->m_Fields[propertyInfo->m_FieldId] = propertyInfo;
             }

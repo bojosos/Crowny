@@ -26,6 +26,8 @@ namespace Crowny
         0xFF, 0xFF, 0xFF, 0xFF
     };
 
+    UUID UUID::EMPTY = { 0, 0, 0, 0 };
+
     UUID::UUID(uint32_t data1, uint32_t data2, uint32_t data3, uint32_t data4) : m_Data{ data1, data2, data3, data4 } {}
 
     UUID::UUID(const String& uuid)

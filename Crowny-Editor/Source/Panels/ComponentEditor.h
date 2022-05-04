@@ -61,10 +61,10 @@ namespace Crowny
         void Render();
 
     private:
-        bool EntityHasComponent(const entt::registry& registry, entt::entity entity, ComponentTypeID tid)
+        bool EntityHasComponent(const entt::registry& registry, Entity entity, ComponentTypeID tid)
         {
             ComponentTypeID type[] = { tid };
-            return registry.runtime_view(std::cbegin(type), std::cend(type)).contains(entity);
+            return registry.runtime_view(std::cbegin(type), std::cend(type)).contains(entity.GetHandle());
         }
 
     private:

@@ -60,7 +60,7 @@ namespace Crowny
         /// Logs a warning message to the console.
         /// </summary>
         /// <param name="message">Message</param>
-        public static void LogWarning(object message)
+        public static void Warn(object message)
         {
             Internal_LogWarning(GetString(message));
         }
@@ -69,7 +69,7 @@ namespace Crowny
         /// Logs an error message to the console.
         /// </summary>
         /// <param name="message">Message.</param>
-        public static void LogError(object message)
+        public static void Error(object message)
         {
             Internal_LogError(GetString(message));
         }
@@ -78,7 +78,7 @@ namespace Crowny
         /// Logs an exception to the console.
         /// </summary>
         /// <param name="message">Message.</param>
-        public static void LogException(object message)
+        public static void Exception(object message)
         {
             Internal_LogException(GetString(message));
         }

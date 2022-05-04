@@ -37,7 +37,9 @@ namespace Crowny
         template <typename OStream> friend OStream& operator<<(OStream& os, const UUID& ms)
         {
             return os << ms.ToString();
-        }
+		}
+		
+		static UUID EMPTY;
 
         friend struct std::hash<UUID>;
         CW_SIMPLESERIALZABLE(UUID);

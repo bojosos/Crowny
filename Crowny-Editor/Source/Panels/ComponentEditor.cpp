@@ -18,7 +18,6 @@ namespace Crowny
     {
         Entity entity = HierarchyPanel::GetSelectedEntity();
         entt::registry& registry = SceneManager::GetActiveScene()->m_Registry;
-        entt::entity e = entity.m_EntityHandle;
 
         ImGui::Separator();
 
@@ -41,21 +40,21 @@ namespace Crowny
 
         ImGui::Separator();
 
-        if (registry.valid(e))
+        if (entity)
         {
-            ImGui::PushID(entt::to_integral(e));
-            for (auto& [component_type_id, ci] : m_OrderedComponentInfos)
+            ImGui::PushID(entity);
+            for (auto& [tid, ci] : m_OrderedComponentInfos)
             {
-                if (EntityHasComponent(registry, e, component_type_id))
+                if (EntityHasComponent(registry, entity, tid))
                 {
-                    if (component_type_id == entt::type_info<MonoScriptComponent>::id())
+                    if (tid == entt::type_info<MonoScriptComponent>::id())
                     {
                         // Draw the collapsing headers in the widget itself, since one component can have multiple scripts
                         ci.widget(entity);
                         // ImGui::PopID();
                         continue;
                     }
-                    ImGui::PushID(component_type_id);
+                    ImGui::PushID(tid);
                     if (ImGui::Button("-"))
                     {
                         ci.destroy(entity);
@@ -95,7 +94,7 @@ namespace Crowny
                 UIUtils::SearchWidget(s_SearchString, "Search...", &s_GrabFocus);
                 if (!s_SearchString.empty())
                 {
-                    for (auto& [component_type_id, ci] : m_OrderedComponentInfos)
+                    for (auto& [tid, ci] : m_OrderedComponentInfos)
                     {
                         if (StringUtils::IsSearchMathing(ci.name, s_SearchString))
                         {
@@ -202,7 +201,7 @@ namespace Crowny
                         {
                             for (auto& [cId, cInfo] : kv.second)
                             {
-                                if (!EntityHasComponent(registry, e, cId))
+                                if (!EntityHasComponent(registry, entity, cId))
                                 {
                                     ImGui::PushID(cId);
                                     if (ImGui::Selectable(cInfo.name.c_str()))
@@ -216,11 +215,11 @@ namespace Crowny
                 }
                 else
                 {
-                    for (auto& [component_type_id, ci] : m_ComponentInfos[m_CurrentComponentGroup])
+                    for (auto& [tid, ci] : m_ComponentInfos[m_CurrentComponentGroup])
                     {
-                        if (!EntityHasComponent(registry, e, component_type_id))
+                        if (!EntityHasComponent(registry, entity, tid))
                         {
-                            ImGui::PushID(component_type_id);
+                            ImGui::PushID(tid);
                             if (ImGui::Selectable(ci.name.c_str()))
                                 ci.create(entity);
 

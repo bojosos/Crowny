@@ -49,9 +49,9 @@ namespace Crowny
 
         struct ScopedDisable
         {
+            ScopedDisable(bool disabled = false) { ImGui::BeginDisabled(disabled); }
             ScopedDisable(const ScopedDisable&) = delete;
             ScopedDisable operator=(const ScopedDisable&) = delete;
-            ScopedDisable() { ImGui::BeginDisabled(); }
             ~ScopedDisable() { ImGui::EndDisabled(); }
         };
 

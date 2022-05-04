@@ -292,7 +292,7 @@ namespace Crowny
     public:
         MonoScriptComponent() : ComponentBase()
         {
-            Scripts.push_back({ });
+            // Scripts.push_back({ });
         }
 
         MonoScriptComponent(const String& name) : ComponentBase()

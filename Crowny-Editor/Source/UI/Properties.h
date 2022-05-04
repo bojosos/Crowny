@@ -2,6 +2,8 @@
 
 #include "UI/UIUtils.h"
 
+#include "Editor/EditorAssets.h"
+
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
@@ -140,8 +142,7 @@ namespace Crowny
         static bool Property(const char* label, bool& value, const char* helpText = "")
         {
             Pre(label, helpText);
-            bool modified = false;
-            modified = ImGui::Checkbox(GenerateID(), &value);
+            bool modified = ImGui::Checkbox(GenerateID(), &value);
             Post();
             return modified;
         }
@@ -311,6 +312,37 @@ namespace Crowny
 
             return modified;
         }
+
+		static bool PropertyFilepath(const char* label, String& value)
+		{
+			ShiftCursor(10.0f, 9.0f);
+			ImGui::Text(label);
+			ImGui::NextColumn();
+			ShiftCursorY(4.0f);
+			const auto& style = ImGui::GetStyle();
+			ImGui::PushItemWidth(-34.0f);
+			if (IsItemDisabled())
+				ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+			
+			bool modified = ImGui::InputText(GenerateID(), &value);
+            ImGui::SameLine();
+			const ImColor c_ButtonTint = IM_COL32(192, 192, 192, 255);
+            const bool clicked = ImGui::InvisibleButton(UI::GenerateID(), { 24, 24 });
+			DrawButtonImage(EditorAssets::Get().FolderIcon, c_ButtonTint, c_ButtonTint, c_ButtonTint, { ImGui::GetCursorPos(), { 24, 24 } });
+			if (clicked)
+            {
+				Vector<Path> outPaths;
+                if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, value, {}, outPaths) && outPaths.size() > 0)
+                {
+					value = outPaths[0].string();
+					modified = true;
+                }
+            }
+			
+			Post();
+
+			return modified;
+		}
 
         template <typename TEnum, typename TUnderlying = int32_t>
         static bool PropertyDropdown(const char* label, const Vector<String>& options, TEnum& selected)

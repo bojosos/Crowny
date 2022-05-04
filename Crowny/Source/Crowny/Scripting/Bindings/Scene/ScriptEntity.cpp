@@ -103,12 +103,13 @@ namespace Crowny
 				String ns, ts;
 				MonoUtils::GetClassName(componentClass, ns, ts);
 				auto& msc = entity.AddComponent<MonoScriptComponent>(ts);
-				MonoScriptComponent& scriptComponent = entity.GetComponent<MonoScriptComponent>();
-				auto findIter = std::find_if(scriptComponent.Scripts.begin(), scriptComponent.Scripts.end(), [&](const MonoScript& script) { return script.GetTypeName() == ts; });
-				if (findIter == scriptComponent.Scripts.end())
-					return false;
-				else
-					return true;
+				const auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
+				for (auto& script : scripts)
+				{
+					if (MonoUtils::IsSubClassOf(script.GetManagedClass()->GetInternalPtr(), componentClass))
+						return true;
+				}
+                return false;
 			}
 		}
 
@@ -136,12 +137,12 @@ namespace Crowny
             {
 				String ns, ts;
 				MonoUtils::GetClassName(componentClass, ns, ts);
-				auto& msc = entity.AddComponent<MonoScriptComponent>(ts);
-                MonoScriptComponent& scriptComponent = entity.GetComponent<MonoScriptComponent>();
-                for (const auto& script : scriptComponent.Scripts)
+                auto& msc = entity.GetComponent<MonoScriptComponent>();
+				const auto& scripts = msc.Scripts;
+				for (auto& script : scripts)
 				{
-					if (script.GetTypeName() == ts)
-                        return nullptr;
+					if (script.GetManagedClass()->GetInternalPtr() == componentClass)
+						return nullptr;
 				}
                 msc.Scripts.push_back(MonoScript(ts));
 				msc.Scripts.back().OnInitialize(entity);
@@ -169,13 +170,12 @@ namespace Crowny
 			{
 				String ns, ts;
 				MonoUtils::GetClassName(componentClass, ns, ts);
-				auto& msc = entity.AddComponent<MonoScriptComponent>(ts);
 				MonoScriptComponent& scriptComponent = entity.GetComponent<MonoScriptComponent>();
-				auto findIter = std::find_if(scriptComponent.Scripts.begin(), scriptComponent.Scripts.end(), [&](const MonoScript& script) { return script.GetTypeName() == ts; });
+				auto findIter = std::find_if(scriptComponent.Scripts.begin(), scriptComponent.Scripts.end(), [&](const MonoScript& script) { return script.GetManagedClass()->GetInternalPtr() == componentClass; });
 				if (findIter == scriptComponent.Scripts.end())
 					CW_ENGINE_ERROR("Entity doesn't have that component");
                 else
-					msc.Scripts.erase(findIter);
+					scriptComponent.Scripts.erase(findIter);
 			}
 		}
 
