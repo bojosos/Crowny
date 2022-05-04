@@ -7,6 +7,8 @@
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Common/Yaml.h"
 
+#include "Crowny/Scripting/ScriptInfoManager.h"
+
 #include "Crowny/Ecs/Components.h"
 
 namespace Crowny
@@ -32,37 +34,15 @@ namespace Crowny
 
         if (entity.HasComponent<MonoScriptComponent>())
         {
-            out << YAML::Key << "MonoScriptComponent";
-            out << YAML::BeginMap;
             auto msc = entity.GetComponent<MonoScriptComponent>();
-            // const String& name = msc.GetTypeName();
-            // auto& fields = msc.GetSerializableFields();
-            // if (fields.size() > 0)
-            // {
-            //     out << YAML::Key << "Fields";
-            //     for (auto* field : fields)
-            //     {
-            //         out << YAML::BeginMap;
-            //         out << YAML::Key << field->GetName();
-            //         out << YAML::Value << 5;
-            //     }
-            //     out << YAML::EndMap;
-            // }
-
-            // auto& props = msc.GetSerializableProperties();
-            // if (props.size() > 0)
-            // {
-            //     out << YAML::Key << "Properties";
-            //     for (auto* prop : props)
-            //     {
-            //         out << YAML::BeginMap;
-            //         out << YAML::Key << prop->GetName();
-            //         out << YAML::Value << 5;
-            //     }
-            //     out << YAML::EndMap;
-            // }
-            // out << YAML::Key << "Name" << YAML::Value << name;
-            out << YAML::EndMap;
+            if (msc.Scripts.size() > 0)
+            {
+                out << YAML::Key << "MonoScriptComponent";
+                out << YAML::Value << YAML::BeginSeq;
+                for (const auto& script : msc.Scripts)
+				    out << script.GetTypeName();
+                out << YAML::EndSeq;
+            }
         }
 
         if (entity.HasComponent<AudioListenerComponent>())
@@ -303,8 +283,20 @@ namespace Crowny
                     const YAML::Node& script = entity["MonoScriptComponent"];
                     if (script)
                     {
-                        // auto& sc = deserialized.AddComponent<MonoScriptComponent>(script["Name"].as<String>());
-                        // sc.ComponentParent = deserialized;
+						auto& msc = deserialized.AddComponent<MonoScriptComponent>();
+                        for (const auto& scriptNode : script)
+                        {
+							String scriptName = scriptNode.as<String>();
+							const auto& entityBehavirous = ScriptInfoManager::Get().GetEntityBehaviours();
+                            auto iterFind = entityBehavirous.find(scriptName);
+							if (iterFind == entityBehavirous.end())
+                            {
+                                CW_ENGINE_WARN("Script {0} does not exist in this assembly.");
+                                continue;
+                            }
+							msc.Scripts.push_back(MonoScript(scriptName));
+							// msc.Scripts.back().OnInitialize(deserialized);
+                        }
                     }
 
                     const YAML::Node& text = entity["TextComponent"];

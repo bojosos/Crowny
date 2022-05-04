@@ -16,7 +16,7 @@ namespace Crowny
 		Ref<Scene> scene = SceneManager::GetActiveScene();
 
 		scene->GetAllEntitiesWith<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent& sc) {
-			for (auto script : sc.Scripts)
+			for (auto& script : sc.Scripts)
 				script.OnInitialize({ entity, scene.get() });
 			});
 	}
@@ -26,7 +26,7 @@ namespace Crowny
 		Ref<Scene> activeScene = SceneManager::GetActiveScene();
 		activeScene->GetAllEntitiesWith<MonoScriptComponent>().each(
 			[&](entt::entity entity, MonoScriptComponent& sc) {
-				for (auto script : sc.Scripts)
+				for (auto& script : sc.Scripts)
 					script.OnStart();
 			});
 	}
@@ -36,7 +36,7 @@ namespace Crowny
 		Ref<Scene> activeScene = SceneManager::GetActiveScene();
 		activeScene->GetAllEntitiesWith<MonoScriptComponent>().each(
 			[&](entt::entity entity, MonoScriptComponent& sc) {
-				for (auto script : sc.Scripts)
+				for (auto& script : sc.Scripts)
 					script.OnUpdate();
 			});
 	}
@@ -46,7 +46,7 @@ namespace Crowny
 		Ref<Scene> activeScene = SceneManager::GetActiveScene();
 		activeScene->GetAllEntitiesWith<MonoScriptComponent>().each(
 			[&](entt::entity entity, MonoScriptComponent& sc) {
-				for (auto script : sc.Scripts)
+				for (auto& script : sc.Scripts)
 					script.OnDestroy();
 			});
 	}

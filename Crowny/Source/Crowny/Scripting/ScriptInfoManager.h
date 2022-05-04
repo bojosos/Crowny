@@ -40,6 +40,11 @@ namespace Crowny
         MonoClass* DontSerializeFieldAttribute = nullptr;
         MonoClass* RequireComponent = nullptr;
 
+        MonoClass* Dropdown = nullptr;
+        MonoClass* Label = nullptr;
+        MonoClass* Filepath = nullptr;
+		MonoClass* ReadOnly = nullptr;
+
         MonoClass* ScriptUtils = nullptr;
         MonoClass* ScriptCompiler = nullptr;
     };

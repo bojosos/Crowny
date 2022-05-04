@@ -210,6 +210,15 @@ namespace Crowny
         {
             MonoString* value = (MonoString*)getter();
             String stringValue = MonoUtils::FromMonoString(value);
+			if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Filepath))
+            {
+                if (UI::PropertyFilepath(label, stringValue))
+                {
+					setter(MonoUtils::ToMonoString(stringValue));
+					return true;
+                }
+            }
+            else
             if (UI::Property(label, stringValue))
             {
                 setter(MonoUtils::ToMonoString(stringValue));
@@ -240,7 +249,17 @@ namespace Crowny
         {
         case ScriptPrimitiveType::Bool: {
             bool value = *(bool*)fieldValue;
-            if (UI::Property(label, value))
+            if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Dropdown))
+            {
+				static Vector<const char*> options = { "False", "True" };
+                if (UI::PropertyDropdown(label, options, value))
+                {
+					modified = true;
+					setter(&value);
+                    return true;
+                }
+            }
+            else if (UI::Property(label, value))
             {
                 modified = true;
                 setter(&value);
@@ -537,6 +556,7 @@ namespace Crowny
                                              std::function<MonoObject*()> getter, std::function<void(void*)> setter,
                                              const Ref<SerializableTypeInfo>& listType, int depth)
     {
+		UI::ScopedDisable disabled(memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::ReadOnly));
         const Ref<SerializableTypeInfo>& typeInfo = listType == nullptr ? memberInfo->m_TypeInfo : listType;
         if (typeInfo->GetType() == SerializableType::Enum)
         {
