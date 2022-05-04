@@ -9,10 +9,10 @@ namespace Crowny
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
     public class RequireComponent : Attribute
     {
-        #pragma warning disable 0414
         
+#pragma warning disable 0414
         private List<Type> components;
-        #pragma warning restore 0414
+#pragma warning restore 0414
 
         public RequireComponent(params Type[] components)
         {
@@ -22,7 +22,7 @@ namespace Crowny
             {
                 if (!this.components[i].IsSubclassOf(typeof(Component)))
                 {
-                    Debug.LogWarning("RequireComponent: " + this.components[i].Name + " is not a Component.");
+                    Debug.Warn("RequireComponent: " + this.components[i].Name + " is not a Component.");
                     toRemove.Add(i);
                 }
             }

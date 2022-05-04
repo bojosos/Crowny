@@ -8,26 +8,44 @@ namespace Crowny
     {
         public float r, g, b, a;
 
+        /// <summary>
+        /// Creates a new color from 4 components.
+        /// </summary>
         public Color(float r, float g, float b, float a)
         {
             this.r = r; this.g = g; this.b = b; this.a = a;
         }
 
+        /// <summary>
+        /// Interpolate between two colors.
+        /// </summary>
+        /// <param name="a">First color.</param>
+        /// <param name="b">Second color.</param>
+        /// <param name="t">Percentage to interpolate between.</param>
+        /// <returns></returns>
         public static Color Lerp(Color a, Color b, float t)
         {
             t = Mathf.Clamp01(t);
             return new Color(a.r + t * (b.r - a.r), a.g + t * (b.g - a.g), a.b + t * (b.b - a.b), a.a + t * (b.a - a.a));
         }
 
+        /// <inheritdoc/>
         public override string ToString()
         {
             return "(" + this.r + ", " + this.g + ", " + this.b + ", " + this.a + ")";
         }
 
-        public bool Equals(object other)
+        /// <inheritdoc/>
+        public override bool Equals(object other)
         {
             if (!(other is Color)) return false;
             return Equals((Color)other);
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode()
+        {
+            return r.GetHashCode() ^ g.GetHashCode() << 2 ^ b.GetHashCode() >> 2 ^ a.GetHashCode() >> 1;
         }
 
         public bool Equals(Color other)
@@ -79,6 +97,9 @@ namespace Crowny
             }
         }
 
+        /// <summary>
+        /// Convert RGB color to HSV.
+        /// </summary>
         public static void RGBToHSV(Color rgbColor, out float h, out float s, out float v)
         {
             if (rgbColor.r > rgbColor.b && rgbColor.b > rgbColor.r)
@@ -130,7 +151,8 @@ namespace Crowny
 
         public static Color HSVToRGB(float h, float s, float b, bool hdr)
         {
-            return Color.black;
+            throw new NotImplementedException();
+            // return Color.black;
         }
     }
 }

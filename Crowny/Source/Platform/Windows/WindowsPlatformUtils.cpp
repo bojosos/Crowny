@@ -38,7 +38,7 @@ namespace Crowny
         {
         };
         delete[] cmdStr;*/
-        ShellExecuteW(NULL, L"explore", filepath.c_str(), NULL, NULL, SW_RESTORE);
+        ShellExecuteW(NULL, L"open", filepath.c_str(), NULL, NULL, SW_SHOWNORMAL);
     }
 
     void PlatformUtils::OpenExternally(const Path& filepath)

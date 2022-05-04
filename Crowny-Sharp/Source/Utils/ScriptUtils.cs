@@ -96,9 +96,9 @@ namespace Crowny
                     continue;
 
                 if (read.Contains(": warning"))
-                    Debug.LogWarning(read);
+                    Debug.Warn(read);
                 else if (read.Contains(": error"))
-                    Debug.LogError(read);
+                    Debug.Error(read);
             }
         }
     }

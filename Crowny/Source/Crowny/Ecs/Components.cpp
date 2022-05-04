@@ -351,41 +351,48 @@ namespace Crowny
             return output;
         };
 
-        auto onCollisionEnterCallback = [&](const Collision2D& collision) {
-            CollisionDataInterop data = collisionDataToManaged(collision);
-            MonoObject* managedCollision =
-              MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
+		MonoMethod* onCollisionEnter = GetManagedClass()->GetMethod(
+			"OnCollisionEnter2D",
+			"Collision2D"); // Maybe replace these with the other Collider, since Box2D works that way
+		if (onCollisionEnter != nullptr)
+			m_OnCollisionEnterThunk = (OnCollisionEnterThunkDef)onCollisionEnter->GetThunk();
+		MonoMethod* onCollisionStay = GetManagedClass()->GetMethod("OnCollisionStay2D", "Collision2D");
+		if (onCollisionStay != nullptr)
+			m_OnCollisionStayThunk = (OnCollisionStayThunkDef)onCollisionStay->GetThunk();
+		MonoMethod* onCollisionExit = GetManagedClass()->GetMethod("OnCollisionExit2D", "Collision2D");
+		if (onCollisionExit != nullptr)
+			m_OnCollisionExitThunk = (OnCollisionExitThunkDef)onCollisionExit->GetThunk();
+		
+        auto onCollisionEnterCallback = [=](const Collision2D& collision) {
             if (m_OnCollisionEnterThunk != nullptr)
+            {
+				CollisionDataInterop data = collisionDataToManaged(collision);
+				MonoObject* managedCollision =
+					MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
                 MonoUtils::InvokeThunk(m_OnCollisionEnterThunk, GetManagedInstance(), managedCollision);
+            }
         };
 
-        auto onCollisionStayCallback = [&](const Collision2D& collision) {
-            CollisionDataInterop data = collisionDataToManaged(collision);
-            MonoObject* managedCollision =
-              MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
+        auto onCollisionStayCallback = [=](const Collision2D& collision) {
             if (m_OnCollisionStayThunk != nullptr)
-                MonoUtils::InvokeThunk(m_OnCollisionStayThunk, GetManagedInstance(), managedCollision);
+			{
+				CollisionDataInterop data = collisionDataToManaged(collision);
+				MonoObject* managedCollision =
+					MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
+				MonoUtils::InvokeThunk(m_OnCollisionStayThunk, GetManagedInstance(), managedCollision);
+            }
         };
 
-        auto onCollisionExitCallback = [&](const Collision2D& collision) {
-            CollisionDataInterop data = collisionDataToManaged(collision);
-            MonoObject* managedCollision =
-              MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
+        auto onCollisionExitCallback = [=](const Collision2D& collision) {
             if (m_OnCollisionExitThunk != nullptr)
-                MonoUtils::InvokeThunk(m_OnCollisionExitThunk, GetManagedInstance(), managedCollision);
+			{
+				CollisionDataInterop data = collisionDataToManaged(collision);
+				MonoObject* managedCollision =
+					MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
+				MonoUtils::InvokeThunk(m_OnCollisionExitThunk, GetManagedInstance(), managedCollision);
+            }
         };
 
-        MonoMethod* onCollisionEnter = GetManagedClass()->GetMethod(
-          "OnCollisionEnter2D",
-          "Collision2D"); // Maybe replace these with the other Collider, since Box2D works that way
-        if (onCollisionEnter != nullptr)
-            m_OnCollisionEnterThunk = (OnCollisionEnterThunkDef)onCollisionEnter->GetThunk();
-        MonoMethod* onCollisionStay = GetManagedClass()->GetMethod("OnCollisionStay2D", "Collision2D");
-        if (onCollisionStay != nullptr)
-            m_OnCollisionStayThunk = (OnCollisionStayThunkDef)onCollisionStay->GetThunk();
-        MonoMethod* onCollisionExit = GetManagedClass()->GetMethod("OnCollisionExit2D", "Collision2D");
-        if (onCollisionExit != nullptr)
-            m_OnCollisionExitThunk = (OnCollisionExitThunkDef)onCollisionExit->GetThunk();
         if (entity.HasComponent<BoxCollider2DComponent>())
         {
             entity.GetComponent<BoxCollider2DComponent>().CallbackEnter = onCollisionEnterCallback;
@@ -410,7 +417,7 @@ namespace Crowny
         BinaryDataStreamOutputArchive archive(stream);
         archive(serializableObject);
         ScriptObjectBackupData backupData;
-        backupData.Size = stream->Size();
+        backupData.Size = (uint32_t)stream->Size();
         backupData.Data = stream->TakeMemory();
         return backupData;
     }

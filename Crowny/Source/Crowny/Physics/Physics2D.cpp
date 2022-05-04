@@ -136,7 +136,7 @@ namespace Crowny
         bodyDef.awake = rigidBody2D.GetSleepMode() == RigidbodySleepMode::StartAwake ||
                         rigidBody2D.GetSleepMode() == RigidbodySleepMode::NeverSleep;
         bodyDef.fixedRotation = rigidBody2D.GetConstraints().IsSet(Rigidbody2DConstraintsBits::FreezeRotation);
-        bodyDef.userData.pointer = (uintptr_t)entity;
+        bodyDef.userData.pointer = (uintptr_t)entity.GetHandle();
         bodyDef.bullet = rigidBody2D.GetContinuousCollisionDetection();
         bodyDef.linearDamping = rigidBody2D.GetGravityScale();
         bodyDef.angularDamping = rigidBody2D.GetAngularDrag();

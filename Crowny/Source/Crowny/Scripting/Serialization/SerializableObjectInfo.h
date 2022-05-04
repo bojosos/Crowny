@@ -46,7 +46,10 @@ namespace Crowny
         Inspectable = 1 << 1,
         Range = 1 << 2,
         Step = 1 << 3,
-        NotNull = 1 << 4
+        NotNull = 1 << 4,
+        ReadOnly = 1 << 5,
+		Dropdown = 1 << 6,
+		Filepath = 1 << 7
     };
     typedef Flags<ScriptFieldFlagBits> ScriptFieldFlags;
     CW_FLAGS_OPERATORS(ScriptFieldFlagBits);
