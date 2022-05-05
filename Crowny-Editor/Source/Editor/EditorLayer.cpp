@@ -24,6 +24,8 @@
 #include "UI/Properties.h"
 #include "UI/UIUtils.h"
 
+#include "Crowny/Scripting/Bindings/Utils/ScriptCompression.h"
+#include "Crowny/Scripting/Bindings/Utils/ScriptLayerMask.h"
 #include "Crowny/Scripting/Bindings/Logging/ScriptDebug.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptMath.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptNoise.h"
@@ -61,12 +63,15 @@ namespace Crowny
     void EditorLayer::OnAttach()
     {
         // Well constructors get discarded and the static data is gone, so construct a few empty objects
-        ScriptTime();
-        ScriptInput();
-        ScriptDebug();
-        ScriptRandom();
-        ScriptNoise();
-        ScriptMath();
+        ScriptTime tempTime = ScriptTime();
+        ScriptMath tempMath = ScriptMath();
+        ScriptInput tempInput = ScriptInput();
+        ScriptDebug tempDebug = ScriptDebug();
+        ScriptNoise tempNoise = ScriptNoise();
+        ScriptRandom tempRandom = ScriptRandom();
+        ScriptLayerMask tempLayerMask = ScriptLayerMask();
+        // ScriptCompression tempCompression = ScriptCompression();
+		
         EditorAssets::Load();
 
         Editor::StartUp();
@@ -826,60 +831,83 @@ namespace Crowny
 
     void EditorLayer::UI_LayerCollisionMatrix()
     {
-        ImGui::Begin("Collision Matrix", &s_OpenCollisionMatrix);
+        ImGui::Begin("Physics 2D", &s_OpenCollisionMatrix);
         {
             UI::ScopedStyle spacing(ImGuiStyleVar_ItemSpacing, ImVec2{ 2.0f, 2.0f });
-            auto& layerNames = Editor::Get().GetProjectSettings()->LayerNames;
-            UI::BeginPropertyGrid();
-            for (uint32_t i = 0; i < layerNames.size(); i++)
-                UI::Property(fmt::format("Layer {0}", i).c_str(), layerNames[i]);
-            UI::EndPropertyGrid();
 
-            UI::PushID();
-            uint32_t id = 0;
-            uint32_t nonEmpty = 0;
-            uint32_t maxTextLength = 0;
-            for (uint32_t i = 0; i < 32; i++)
+			UI::BeginPropertyGrid();
+			glm::vec2 gravity = Physics2D::Get().GetGravity();
+			if (UI::Property("Gravity", gravity))
+				Physics2D::Get().SetGravity(gravity);
+
+			uint32_t velocityIterations = Physics2D::Get().GetVelocityIterations();
+			if (UI::Property("Velocity iterations", velocityIterations ))
+				Physics2D::Get().SetVelocityIterations(velocityIterations );
+
+			uint32_t positionIterations = Physics2D::Get().GetPositionIterations();
+			if (UI::Property("Position iterations", positionIterations))
+				Physics2D::Get().SetPositionIterations(positionIterations);
+			UI::EndPropertyGrid();
+            if (ImGui::CollapsingHeader("Layer Names"))
             {
-                maxTextLength = std::max(maxTextLength, (uint32_t)ImGui::CalcTextSize(layerNames[i].c_str()).x);
-                nonEmpty += !layerNames[i].empty();
-            }
-            nonEmpty--;
-            UI::ShiftCursorY(maxTextLength);
-            const ImVec2 text_pos(ImGui::GetCurrentWindow()->DC.CursorPos.x,
-                                  ImGui::GetCurrentWindow()->DC.CursorPos.y - 2.0f);
-            for (uint32_t i = 0; i < 32; i++) // rows
-            {
-                uint32_t categoryMask = Physics2D::Get().GetCategoryMask(i);
-                if (layerNames[i].empty())
-                    continue;
-                UI::ShiftCursorX(10);
-                ImGui::Text(layerNames[i].c_str());
-                ImGui::SameLine();
-                ImGui::SetCursorPosX(maxTextLength + ImGui::GetStyle().WindowPadding.x + 2 + 10);
-                for (uint32_t j = 0; j < 32; j++)
+                UI::BeginPropertyGrid();
+                for (uint32_t i = 0; i < 32; i++)
                 {
-                    if (i + j > nonEmpty || layerNames[j].empty())
-                        continue;
-                    if (i == 0)
-                        AddTextVertical(ImGui::GetWindowDrawList(), layerNames[j].c_str(),
-                                        text_pos + ImVec2(ImGui::GetCursorPosX() - 6.0f, 0),
-                                        IM_COL32(192, 192, 192, 255));
-                    bool value = (categoryMask & (1 << j)) != 0;
-                    ImGui::PushID(id++);
-                    if (ImGui::Checkbox("##checkbox", &value))
-                    {
-                        if (value)
-                            Physics2D::Get().SetCategoryMask(i, categoryMask | (1 << j));
-                        else
-                            Physics2D::Get().SetCategoryMask(i, categoryMask & (~(1 << j)));
-                    }
-                    if (i + j + 1 <= nonEmpty)
-                        ImGui::SameLine();
-                    ImGui::PopID();
+                    String layerName = Physics2D::Get().GetLayerName(i);
+                    if (UI::Property(fmt::format("Layer {0}", i).c_str(), layerName))
+                        Physics2D::Get().SetLayerName(i, layerName);
                 }
+                UI::EndPropertyGrid();
             }
-            UI::PopID();
+
+			if (ImGui::CollapsingHeader("Collision Matrix"))
+			{
+                UI::PushID();
+                uint32_t id = 0;
+                uint32_t nonEmpty = 0;
+                uint32_t maxTextLength = 0;
+                for (uint32_t i = 0; i < 32; i++)
+                {
+                    maxTextLength = std::max(maxTextLength, (uint32_t)ImGui::CalcTextSize(Physics2D::Get().GetLayerName(i).c_str()).x);
+                    nonEmpty += !Physics2D::Get().GetLayerName(i).empty();
+                }
+                nonEmpty--;
+                UI::ShiftCursorY(maxTextLength);
+                const ImVec2 text_pos(ImGui::GetCurrentWindow()->DC.CursorPos.x,
+                                      ImGui::GetCurrentWindow()->DC.CursorPos.y - 2.0f);
+                for (uint32_t i = 0; i < 32; i++) // rows
+                {
+                    uint32_t categoryMask = Physics2D::Get().GetCategoryMask(i);
+                    if (Physics2D::Get().GetLayerName(i).empty())
+                        continue;
+                    UI::ShiftCursorX(10);
+                    ImGui::Text(Physics2D::Get().GetLayerName(i).c_str());
+                    ImGui::SameLine();
+                    ImGui::SetCursorPosX(maxTextLength + ImGui::GetStyle().WindowPadding.x + 2 + 10);
+                    for (uint32_t j = 0; j < 32; j++)
+                    {
+                        if (i + j > nonEmpty || Physics2D::Get().GetLayerName(j).empty())
+                            continue;
+                        if (i == 0)
+                            AddTextVertical(ImGui::GetWindowDrawList(), Physics2D::Get().GetLayerName(j).c_str(),
+                                            text_pos + ImVec2(ImGui::GetCursorPosX() - 6.0f, 0),
+                                            IM_COL32(192, 192, 192, 255));
+                        bool value = (categoryMask & (1 << j)) != 0;
+                        ImGui::PushID(id++);
+                        if (ImGui::Checkbox("##checkbox", &value))
+                        {
+                            if (value)
+                                Physics2D::Get().SetCategoryMask(i, categoryMask | (1 << j));
+                            else
+                                Physics2D::Get().SetCategoryMask(i, categoryMask & (~(1 << j)));
+                        }
+                        if (i + j + 1 <= nonEmpty)
+                            ImGui::SameLine();
+                        ImGui::PopID();
+                    }
+                }
+                UI::PopID();
+            }
         }
         ImGui::End();
     }

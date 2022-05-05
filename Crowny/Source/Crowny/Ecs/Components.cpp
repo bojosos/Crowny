@@ -198,10 +198,10 @@ namespace Crowny
         m_Constraints = constraints;
     }
 
-    void Rigidbody2DComponent::SetContinuousCollisionDetection(bool value)
+    void Rigidbody2DComponent::SetCollisionDetectionMode(CollisionDetectionMode2D value)
     {
         if (RuntimeBody != nullptr)
-            RuntimeBody->SetBullet(value);
+            RuntimeBody->SetBullet(m_ContinuousCollisionDetection == CollisionDetectionMode2D::Continuous);
         m_ContinuousCollisionDetection = value;
     }
 
@@ -229,6 +229,14 @@ namespace Crowny
         if (RuntimeBody != nullptr)
             RuntimeBody->SetAngularDamping(angularDrag);
         angularDrag = angularDrag;
+    }
+
+    void Rigidbody2DComponent::SetAutoMass(bool autoMass, Entity entity)
+    {		
+		if (RuntimeBody != nullptr)
+			RuntimeBody->ResetMassData();
+        CircleCollider2DComponent& cc = entity.GetComponent<CircleCollider2DComponent>();
+		m_Mass = Physics2D::Get().CalculateMass(entity);
     }
 
 	MonoScript::MonoScript() : InstanceId(s_NextAvailableId++) { }

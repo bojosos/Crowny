@@ -56,6 +56,8 @@ namespace Crowny
 
     private:
         Vector<DirectoryEntry*> m_DirectoryPathEntries;
+        Vector<Ref<LibraryEntry>> m_DisplayList;
+        String m_SearchString;
         uint32_t m_ColumnCount = 5;
         ImTextureID m_FolderIcon;
         ImTextureID m_FileIcon;

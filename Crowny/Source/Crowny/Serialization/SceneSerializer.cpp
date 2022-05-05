@@ -137,7 +137,7 @@ namespace Crowny
             out << YAML::Key << "Mass" << YAML::Value << rb2d.GetMass();
             out << YAML::Key << "GravityScale" << YAML::Value << rb2d.GetGravityScale();
             out << YAML::Key << "Constraints" << YAML::Value << (uint32_t)rb2d.GetConstraints();
-            out << YAML::Key << "CollisionDetectionMode" << YAML::Value << rb2d.GetContinuousCollisionDetection();
+            out << YAML::Key << "CollisionDetectionMode" << YAML::Value << (uint32_t)rb2d.GetCollisionDetectionMode();
             out << YAML::Key << "SleepMode" << YAML::Value << (uint32_t)rb2d.GetSleepMode();
             out << YAML::Key << "LinearDrag" << YAML::Value << rb2d.GetLinearDrag();
             out << YAML::Key << "AngularDrag" << YAML::Value << rb2d.GetAngularDrag();
@@ -361,7 +361,7 @@ namespace Crowny
                         if (const YAML::Node& layerMask = rb2d["LayerMask"]) // Maybe store this as a string?
                             rb2dc.SetLayerMask(layerMask.as<uint32_t>(), deserialized);
                         if (const YAML::Node& collisionDetectionMode = rb2d["CollisionDetectionMode"])
-                            rb2dc.SetContinuousCollisionDetection(collisionDetectionMode.as<String>() == "Continuous");
+                            rb2dc.SetCollisionDetectionMode((CollisionDetectionMode2D)collisionDetectionMode.as<uint32_t>());
                         if (const YAML::Node& sleepMode = rb2d["SleepMode"])
                             rb2dc.SetSleepMode((RigidbodySleepMode)sleepMode.as<uint32_t>());
                         if (const YAML::Node& linearDrag = rb2d["LinearDrag"])

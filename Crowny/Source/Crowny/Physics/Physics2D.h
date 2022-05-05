@@ -21,6 +21,9 @@ namespace Crowny
         glm::vec2 Gravity = { 0.0f, -9.81f };
         uint32_t VelocityIterations = 8;
         uint32_t PositionIterations = 3;
+
+		Array<String, 32> LayerNames = { "Default" };
+		Array<uint32_t, 32> MaskBits;
     };
 
     class Physics2D : public Module<Physics2D>
@@ -33,31 +36,35 @@ namespace Crowny
         {
             m_Settings->DefaultMaterial = material;
         }
-        void SetGravity(const glm::vec2& gravity) { m_Settings->Gravity = gravity; }
-        void SetVelocityIterations(uint32_t iterations) { m_Settings->VelocityIterations = iterations; }
-        void SetPositionIterations(uint32_t iterations) { m_Settings->PositionIterations = iterations; }
+        void SetGravity(const glm::vec2& gravity);
+        void SetVelocityIterations(uint32_t iterations);
+        void SetPositionIterations(uint32_t iterations);
 
         const AssetHandle<PhysicsMaterial2D>& GetDefaultMaterial() const { return m_Settings->DefaultMaterial; }
         const glm::vec2& GetGravity() const { return m_Settings->Gravity; }
-        uint32_t GetVelocityIterations(uint32_t iterations) const { return m_Settings->VelocityIterations; }
-        uint32_t GetPositionIterations(uint32_t iterations) const { return m_Settings->PositionIterations; }
+        uint32_t GetVelocityIterations() const { return m_Settings->VelocityIterations; }
+        uint32_t GetPositionIterations() const { return m_Settings->PositionIterations; }
 
-        void SetCategoryMask(uint32_t idx, uint32_t mask) { m_MaskBits[idx] = mask; }
-        uint32_t GetCategoryMask(uint32_t idx) { return m_MaskBits[idx]; }
+        void SetCategoryMask(uint32_t idx, uint32_t mask);
+        uint32_t GetCategoryMask(uint32_t idx) const { return m_Settings->MaskBits[idx]; }
+		const String& GetLayerName(uint32_t idx) const { return m_Settings->LayerNames[idx]; }
+        void SetLayerName(uint32_t idx, const String& name) { m_Settings->LayerNames[idx] = name; }
 
         void BeginSimulation(Scene* scene);
-        void CreateRigidbody(Entity e);
-        void CreateBoxCollider(Entity e);
-        void CreateCircleCollider(Entity e);
-        void DestroyRigidbody(Entity e);
-        void DestroyFixture(Entity entity, const Collider2D& collider);
+        void CreateRigidbody(Entity entity);
+        void CreateBoxCollider(Entity entity);
+        void CreateCircleCollider(Entity entity);
+        void DestroyRigidbody(Entity entity);
+        void DestroyFixture(Entity entity, Collider2D& collider);
         void Step(Timestep ts, Scene* scene);
         void StopSimulation(Scene* scene);
+		
+        float CalculateMass(Entity entity);
 
     private:
         b2World* m_PhysicsWorld2D = nullptr;
+        b2World* m_TemporaryWorld2D = nullptr; // A world used for calculating mass
         ContactListener* m_ContactListener2D = nullptr;
         Ref<Physics2DSettings> m_Settings;
-        Array<uint32_t, 32> m_MaskBits;
     };
 } // namespace Crowny

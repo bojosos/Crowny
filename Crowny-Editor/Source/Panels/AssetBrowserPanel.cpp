@@ -169,7 +169,11 @@ namespace Crowny
 
         ImGui::Spring();
         UI::ScopedStyle style(ImGuiStyleVar_LayoutAlign, 1);
-
+		
+		ImGui::SetNextItemWidth(150.0f);
+        if (UIUtils::SearchWidget(m_SearchString) && !m_SearchString.empty())
+			m_DisplayList = ProjectLibrary::Get().Search(m_SearchString);
+		
         const float maxWidth = 150.0f * 1.1f;
         const float spacing = ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(" ").x;
         const float checkboxSize = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2;
@@ -270,17 +274,18 @@ namespace Crowny
 
         if (Input::IsKeyUp(Key::Enter)) // Enter a directory using the keyboard
         {
-            if (m_CurrentDirectoryEntry->Type == LibraryEntryType::Directory)
+			LibraryEntry* entry = m_CurrentDirectoryEntry->Children[m_SelectionStartIndex].get();
+            if (entry->Type == LibraryEntryType::Directory)
             {
                 m_BackwardHistory.push(m_CurrentDirectoryEntry);
                 while (!m_ForwardHistory.empty())
                     m_ForwardHistory.pop();
                 m_CurrentDirectoryEntry =
-                  static_cast<DirectoryEntry*>(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex].get());
+                  static_cast<DirectoryEntry*>(entry);
                 RecalculateDirectoryEntries();
             }
             else
-                PlatformUtils::OpenExternally(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex]->Filepath);
+                PlatformUtils::OpenExternally(entry->Filepath);
         }
 
         if (Input::IsKeyUp(Key::Backspace) || Input::IsMouseButtonDown(Mouse::Button3)) // Go back
@@ -407,9 +412,10 @@ namespace Crowny
             HandleKeyboardNavigation();
 
         // Files
-        for (uint32_t entryIdx = 0; entryIdx < m_CurrentDirectoryEntry->Children.size(); entryIdx++)
+		const Vector<Ref<LibraryEntry>>& displayList = m_SearchString.empty() ? m_CurrentDirectoryEntry->Children : m_DisplayList;
+        for (uint32_t entryIdx = 0; entryIdx < displayList.size(); entryIdx++)
         {
-            const auto& entry = m_CurrentDirectoryEntry->Children[entryIdx];
+            const auto& entry = displayList[entryIdx];
             const auto& path = entry->Filepath;
             ImGui::PushID(entry->ElementNameHash);
 
@@ -495,8 +501,9 @@ namespace Crowny
                     dropping = true;
                     if (const ImGuiPayload* payload = UIUtils::AcceptAssetPayload())
                     {
-                        Path payloadPath = UIUtils::GetPathFromPayload(payload).filename();
-                        ProjectLibrary::Get().MoveEntry(path.parent_path() / payloadPath, path / payloadPath);
+						Path payloadPath = UIUtils::GetPathFromPayload(payload);
+                        Path filename = payloadPath.filename();
+                        ProjectLibrary::Get().MoveEntry(payloadPath, path / filename);
                     }
                     ImGui::EndDragDropTarget();
                 }
@@ -750,6 +757,7 @@ namespace Crowny
             tmp = tmp->Parent;
         }
         std::reverse(m_DirectoryPathEntries.begin(), m_DirectoryPathEntries.end());
+        m_SearchString.clear(); // TODO: Don't do this here
     }
 
     String AssetBrowserPanel::GetDefaultContents(AssetBrowserItem itemType)

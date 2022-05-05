@@ -165,7 +165,7 @@ namespace Crowny
 		if (MonoUtils::IsSubClassOf(componentClass, ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetInternalPtr())) // We are trying to remove a behavior, so loop the MonoScriptBehaviour.Scripts
 		{
 			if (!entity.HasComponent<MonoScriptComponent>())
-				CW_ENGINE_ERROR("Entity doesn't have that component");
+				CW_ERROR("Entity doesn't have that component");
 			else
 			{
 				String ns, ts;
@@ -173,7 +173,7 @@ namespace Crowny
 				MonoScriptComponent& scriptComponent = entity.GetComponent<MonoScriptComponent>();
 				auto findIter = std::find_if(scriptComponent.Scripts.begin(), scriptComponent.Scripts.end(), [&](const MonoScript& script) { return script.GetManagedClass()->GetInternalPtr() == componentClass; });
 				if (findIter == scriptComponent.Scripts.end())
-					CW_ENGINE_ERROR("Entity doesn't have that component");
+					CW_ERROR("Entity doesn't have that component");
                 else
 					scriptComponent.Scripts.erase(findIter);
 			}
@@ -185,10 +185,10 @@ namespace Crowny
             if (info->HasCallback(entity))
                 info->RemoveCallback(entity);
             else
-                CW_ENGINE_ERROR("Entity doesn't have that component");
+                CW_ERROR("Entity doesn't have that component");
         }
         else
-            CW_ENGINE_ERROR("That is not a component");
+            CW_ERROR("That is not a component");
     }
 
 } // namespace Crowny
