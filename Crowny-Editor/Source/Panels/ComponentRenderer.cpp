@@ -330,9 +330,9 @@ namespace Crowny
 
         if (bodyType != RigidbodyBodyType::Static)
         {
-            bool continuous = rb2d.GetContinuousCollisionDetection();
+            CollisionDetectionMode2D continuous = rb2d.GetCollisionDetectionMode();
             if (UI::PropertyDropdown("Collision Detection", { "Discrete", "Continuous" }, continuous))
-                rb2d.SetContinuousCollisionDetection(continuous);
+                rb2d.SetCollisionDetectionMode(continuous);
 
             RigidbodySleepMode sleepMode = rb2d.GetSleepMode();
             if (UI::PropertyDropdown("Sleeping Mode", { "NeverSleep", "StartAwake", "StartSleeping" }, sleepMode))

@@ -320,8 +320,8 @@ namespace Crowny
 
     enum class ForceMode
     {
-        Force,
-        Impulse
+        Force = 0,
+        Impulse = 1
     };
 
     enum class RigidbodyBodyType
@@ -333,9 +333,15 @@ namespace Crowny
 
     enum class RigidbodySleepMode
     {
-        NeverSleep,
-        StartAwake,
-        StartSleeping
+        NeverSleep = 0,
+        StartAwake = 1,
+        StartSleeping = 2
+    };
+
+    enum class CollisionDetectionMode2D
+    {
+		Discrete = 0,
+        Continuous = 1
     };
 
     struct Rigidbody2DComponent : public ComponentBase
@@ -351,18 +357,20 @@ namespace Crowny
         void SetMass(float mass);
         void SetConstraints(Rigidbody2DConstraints constraints);
         void SetSleepMode(RigidbodySleepMode sleepMode);
-        void SetContinuousCollisionDetection(bool value);
+        void SetCollisionDetectionMode(CollisionDetectionMode2D value);
         void SetAngularDrag(float value);
         void SetLinearDrag(float value);
+		void SetAutoMass(bool autoMass, Entity entity);
 
         float GetMass() const { return m_Mass; }
         float GetGravityScale() const { return m_GravityScale; }
         Rigidbody2DConstraints GetConstraints() const { return m_Constraints; }
         RigidbodyBodyType GetBodyType() const { return m_Type; }
         RigidbodySleepMode GetSleepMode() const { return m_SleepMode; }
-        bool GetContinuousCollisionDetection() const { return m_ContinuousCollisionDetection; }
+        CollisionDetectionMode2D GetCollisionDetectionMode() const { return m_ContinuousCollisionDetection; }
         float GetAngularDrag() const { return m_AngularDrag; }
         float GetLinearDrag() const { return m_LinearDrag; }
+		bool GetAutoMass() const { return m_AutoMass; }
 
         b2Body* RuntimeBody = nullptr;
 
@@ -375,7 +383,9 @@ namespace Crowny
         float m_GravityScale = 1.0f;
         float m_LinearDrag = 0.0f;
         float m_AngularDrag = 0.05f;
-        bool m_ContinuousCollisionDetection = false;
+        bool m_AutoMass = false;
+		
+        CollisionDetectionMode2D m_ContinuousCollisionDetection = CollisionDetectionMode2D::Discrete;
     };
 
     template <> void ComponentEditorWidget<Rigidbody2DComponent>(Entity e);

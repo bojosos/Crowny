@@ -287,13 +287,12 @@ namespace Crowny
             break;
         }
         case ScriptPrimitiveType::Char: {
-            char ar[] = { *(char*)fieldValue, '\0' };
-            String str(ar);
-            if (UI::Property(label, str)) // meh
+            char c = *(char*)fieldValue;
+            if (UI::Property(label, c)) // meh
             {
                 modified = true;
-                str.resize(1);
-                setter(&ar[0]);
+                // str.resize(1);
+                setter(&c);
             }
             break;
         }
