@@ -10,6 +10,8 @@
 #include "Editor/Editor.h"
 #include "Editor/ProjectLibrary.h"
 
+#include "Crowny/Physics/Physics2D.h"
+
 #include <backends/imgui_impl_vulkan.h>
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -526,7 +528,7 @@ namespace Crowny
                 float width = ImGui::GetContentRegionAvail().x;
                 float itemHeight = 28.0f;
 
-                String buttonText = Editor::Get().GetProjectSettings()->LayerNames[selectedLayer];
+                String buttonText = Physics2D::Get().GetLayerName(selectedLayer);
                 String entitySearchPopupId = UI::GenerateLabelID("EntitySearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
@@ -585,7 +587,6 @@ namespace Crowny
 
                 const bool searching = !searchString.empty();
 
-                // List of assets
                 {
                     UI::ScopedColor listBoxBg(ImGuiCol_FrameBg, IM_COL32_DISABLE);
                     UI::ScopedColor listBoxBorder(ImGuiCol_Border, IM_COL32_DISABLE);
@@ -607,10 +608,9 @@ namespace Crowny
                             }
                         }
 
-                        const auto& layerNames = Editor::Get().GetProjectSettings()->LayerNames;
-                        for (uint32_t i = 0; i < layerNames.size(); i++)
+                        for (uint32_t i = 0; i < 32; i++)
                         {
-                            const String& layerName = layerNames[i];
+                            const String& layerName = Physics2D::Get().GetLayerName(i);
                             if (layerName.empty() ||
                                 !searchString.empty() && !StringUtils::IsSearchMathing(layerName, searchString))
                                 continue;

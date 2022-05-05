@@ -139,6 +139,16 @@ namespace Crowny
             return modified;
         }
 
+        static bool Property(const char* label, char& c)
+        {
+			char ar[2] = { c, '\0' };
+			Pre(label);
+			bool modified = ImGui::InputText(GenerateID(), ar, 2);
+			Post();
+
+			return modified;
+        }
+
         static bool Property(const char* label, bool& value, const char* helpText = "")
         {
             Pre(label, helpText);
@@ -356,7 +366,7 @@ namespace Crowny
                 current = "---";
 
             const String id = "##" + std::string(label);
-            ImGui::SetNextItemWidth(150);
+            // ImGui::SetNextItemWidth(150);
             if (ImGui::BeginCombo(id.c_str(), current.c_str()))
             {
                 for (int i = 0; i < options.size(); i++)

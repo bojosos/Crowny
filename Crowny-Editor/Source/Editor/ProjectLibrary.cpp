@@ -434,6 +434,28 @@ namespace Crowny
         return false;
     }
 
+    Vector<Ref<LibraryEntry>> ProjectLibrary::Search(const String& pattern)
+    {
+        // TODO: t: for types and search directory
+        Vector<Ref<LibraryEntry>> result;
+        Stack<DirectoryEntry*> stack;
+        stack.push(m_RootEntry.get());
+        while (!stack.empty())
+        {
+			DirectoryEntry* cur = stack.top();
+            stack.pop();
+            for (auto& entry : cur->Children)
+			{
+				if (StringUtils::IsSearchMathing(entry->ElementName, pattern))
+					result.push_back(entry);
+				
+				if (entry->Type == LibraryEntryType::Directory)
+					stack.push(static_cast<DirectoryEntry*>(entry.get()));
+            }
+        }
+        return result;
+    }
+
     void ProjectLibrary::MoveEntry(const Path& oldPath, const Path& newPath, bool overwrite)
     {
         Path oldFullPath = oldPath; // These don't work
@@ -455,17 +477,17 @@ namespace Crowny
         {
             if (!overwrite)
             {
-                CW_ENGINE_INFO("Here: {0}, {1}", oldFullPath, newFullPath);
+                // CW_ENGINE_INFO("Here: {0}, {1}", oldFullPath, newFullPath);
                 if (!fs::exists(newFullPath))
                 {
-                    CW_ENGINE_INFO("Here2");
+                    // CW_ENGINE_INFO("Here2");
                     fs::rename(oldFullPath, newFullPath);
                 }
             }
             else
             {
                 fs::rename(oldFullPath, newFullPath);
-                CW_ENGINE_INFO("Here2");
+                // CW_ENGINE_INFO("Here2");
             }
             /*if (fs::exists(newFullPath))
             {
@@ -502,10 +524,10 @@ namespace Crowny
                     if (fileEntry->Metadata != nullptr)
                         m_UuidToPath[fileEntry->Metadata->Uuid] = newFullPath;
                 }
-                CW_ENGINE_INFO("Old meta path");
+                // CW_ENGINE_INFO("Old meta path");
                 if (fs::is_regular_file(oldMetaPath))
                 {
-                    CW_ENGINE_INFO("Rename");
+                    // CW_ENGINE_INFO("Rename");
                     fs::rename(oldMetaPath, newMetaPath);
                 }
 
