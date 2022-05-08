@@ -69,7 +69,7 @@ namespace Crowny
 
     bool MonoUtils::IsSubClassOf(::MonoClass* subClass, ::MonoClass* parent)
     {
-		return mono_class_is_subclass_of(subClass, parent, true) != 0;
+        return mono_class_is_subclass_of(subClass, parent, true) != 0;
     }
 
     ::MonoClass* MonoUtils::GetClass(MonoObject* object) { return mono_object_get_class(object); }

@@ -238,53 +238,53 @@ namespace Crowny
     class MonoScript
     {
 
-	public:
-		MonoScript();
-		MonoScript(const String& name);
-		MonoScript(const MonoScript&) = default;
+    public:
+        MonoScript();
+        MonoScript(const String& name);
+        MonoScript(const MonoScript&) = default;
 
-		void SetClassName(const String& className);
-		MonoClass* GetManagedClass() const;
-		MonoObject* GetManagedInstance() const;
+        void SetClassName(const String& className);
+        MonoClass* GetManagedClass() const;
+        MonoObject* GetManagedInstance() const;
 
-		Ref<SerializableObjectInfo> GetObjectInfo() const { return m_ObjectInfo; }
+        Ref<SerializableObjectInfo> GetObjectInfo() const { return m_ObjectInfo; }
 
-		ScriptObjectBackupData BeginRefresh();
-		void EndRefresh(const ScriptObjectBackupData & data);
-		
-		const String& GetTypeName() const { return m_TypeName; }
-		// void SetTypeName(const String & typeName) { m_TypeName = typeName; }
+        ScriptObjectBackupData BeginRefresh();
+        void EndRefresh(const ScriptObjectBackupData& data);
 
-		void OnInitialize(Entity entity);
-		void OnStart();
-		void OnUpdate();
-		void OnDestroy();
+        const String& GetTypeName() const { return m_TypeName; }
+        // void SetTypeName(const String & typeName) { m_TypeName = typeName; }
 
-		uint64_t InstanceId; // These also require one for scripting
+        void OnInitialize(Entity entity);
+        void OnStart();
+        void OnUpdate();
+        void OnDestroy();
 
-	private:
-		typedef void(CW_THUNKCALL* OnStartThunkDef)(MonoObject*, MonoException**);
-		OnStartThunkDef m_OnStartThunk = nullptr;
-		typedef void(CW_THUNKCALL* OnUpdateThunkDef)(MonoObject*, MonoException**);
-		OnUpdateThunkDef m_OnUpdateThunk = nullptr;
-		typedef void(CW_THUNKCALL* OnDestroyThunkDef)(MonoObject*, MonoException**);
-		OnDestroyThunkDef m_OnDestroyThunk = nullptr;
+        uint64_t InstanceId; // These also require one for scripting
 
-		typedef void(CW_THUNKCALL* OnCollisionEnterThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
-		OnCollisionEnterThunkDef m_OnCollisionEnterThunk = nullptr;
-		typedef void(CW_THUNKCALL* OnCollisionStayThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
-		OnCollisionStayThunkDef m_OnCollisionStayThunk = nullptr;
-		typedef void(CW_THUNKCALL* OnCollisionExitThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
-		OnCollisionExitThunkDef m_OnCollisionExitThunk = nullptr;
+    private:
+        typedef void(CW_THUNKCALL* OnStartThunkDef)(MonoObject*, MonoException**);
+        OnStartThunkDef m_OnStartThunk = nullptr;
+        typedef void(CW_THUNKCALL* OnUpdateThunkDef)(MonoObject*, MonoException**);
+        OnUpdateThunkDef m_OnUpdateThunk = nullptr;
+        typedef void(CW_THUNKCALL* OnDestroyThunkDef)(MonoObject*, MonoException**);
+        OnDestroyThunkDef m_OnDestroyThunk = nullptr;
 
-		String m_TypeName;
-		String m_Namespace;
-		bool m_MissingType = false;
-		Ref<SerializableObject> m_SerializedObjectData;
-		Ref<SerializableObjectInfo> m_ObjectInfo;
-		MonoClass* m_Class = nullptr;
-		uint32_t m_Handle = 0;
-		ScriptEntityBehaviour* m_ScriptEntityBehaviour = nullptr;
+        typedef void(CW_THUNKCALL* OnCollisionEnterThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
+        OnCollisionEnterThunkDef m_OnCollisionEnterThunk = nullptr;
+        typedef void(CW_THUNKCALL* OnCollisionStayThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
+        OnCollisionStayThunkDef m_OnCollisionStayThunk = nullptr;
+        typedef void(CW_THUNKCALL* OnCollisionExitThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
+        OnCollisionExitThunkDef m_OnCollisionExitThunk = nullptr;
+
+        String m_TypeName;
+        String m_Namespace;
+        bool m_MissingType = false;
+        Ref<SerializableObject> m_SerializedObjectData;
+        Ref<SerializableObjectInfo> m_ObjectInfo;
+        MonoClass* m_Class = nullptr;
+        uint32_t m_Handle = 0;
+        ScriptEntityBehaviour* m_ScriptEntityBehaviour = nullptr;
     };
 
     class MonoScriptComponent : public ComponentBase
@@ -295,13 +295,10 @@ namespace Crowny
             // Scripts.push_back({ });
         }
 
-        MonoScriptComponent(const String& name) : ComponentBase()
-        {
-            Scripts.push_back(MonoScript(name));
-        }
+        MonoScriptComponent(const String& name) : ComponentBase() { Scripts.push_back(MonoScript(name)); }
         MonoScriptComponent(const MonoScriptComponent&) = default;
 
-		Vector<MonoScript> Scripts;
+        Vector<MonoScript> Scripts;
     };
 
     template <> void ComponentEditorWidget<MonoScriptComponent>(Entity e);
@@ -340,7 +337,7 @@ namespace Crowny
 
     enum class CollisionDetectionMode2D
     {
-		Discrete = 0,
+        Discrete = 0,
         Continuous = 1
     };
 
@@ -360,9 +357,10 @@ namespace Crowny
         void SetCollisionDetectionMode(CollisionDetectionMode2D value);
         void SetAngularDrag(float value);
         void SetLinearDrag(float value);
-		void SetAutoMass(bool autoMass, Entity entity);
+        void SetAutoMass(bool autoMass, Entity entity);
+        void SetCenterOfMass(const glm::vec2& center);
 
-        float GetMass() const { return m_Mass; }
+        float GetMass() const;
         float GetGravityScale() const { return m_GravityScale; }
         Rigidbody2DConstraints GetConstraints() const { return m_Constraints; }
         RigidbodyBodyType GetBodyType() const { return m_Type; }
@@ -370,7 +368,8 @@ namespace Crowny
         CollisionDetectionMode2D GetCollisionDetectionMode() const { return m_ContinuousCollisionDetection; }
         float GetAngularDrag() const { return m_AngularDrag; }
         float GetLinearDrag() const { return m_LinearDrag; }
-		bool GetAutoMass() const { return m_AutoMass; }
+        bool GetAutoMass() const { return m_AutoMass; }
+        glm::vec2 GetCenterOfMass() const;
 
         b2Body* RuntimeBody = nullptr;
 
@@ -384,7 +383,8 @@ namespace Crowny
         float m_LinearDrag = 0.0f;
         float m_AngularDrag = 0.05f;
         bool m_AutoMass = false;
-		
+        glm::vec2 m_CenterOfMass = { 0.0f, 0.0f };
+
         CollisionDetectionMode2D m_ContinuousCollisionDetection = CollisionDetectionMode2D::Discrete;
     };
 

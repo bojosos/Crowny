@@ -139,6 +139,24 @@ namespace Crowny
             m_Internal->Stop();
     }
 
+    float Rigidbody2DComponent::GetMass() const
+    {
+        if (RuntimeBody != nullptr)
+            return RuntimeBody->GetMass();
+        return m_Mass;
+    }
+
+    glm::vec2 Rigidbody2DComponent::GetCenterOfMass() const
+    {
+        if (RuntimeBody != nullptr)
+        {
+            b2MassData massData;
+            RuntimeBody->GetMassData(&massData);
+            return { massData.center.x, massData.center.y };
+        }
+        return m_CenterOfMass;
+    }
+
     void Rigidbody2DComponent::SetLayerMask(uint32_t layerMask, Entity e)
     {
         if (RuntimeBody != nullptr)
@@ -232,14 +250,26 @@ namespace Crowny
     }
 
     void Rigidbody2DComponent::SetAutoMass(bool autoMass, Entity entity)
-    {		
-		if (RuntimeBody != nullptr)
-			RuntimeBody->ResetMassData();
-        CircleCollider2DComponent& cc = entity.GetComponent<CircleCollider2DComponent>();
-		m_Mass = Physics2D::Get().CalculateMass(entity);
+    {
+        if (RuntimeBody != nullptr)
+            RuntimeBody->ResetMassData();
+        m_AutoMass = autoMass;
+        m_Mass = Physics2D::Get().CalculateMass(entity);
     }
 
-	MonoScript::MonoScript() : InstanceId(s_NextAvailableId++) { }
+    void Rigidbody2DComponent::SetCenterOfMass(const glm::vec2& center)
+    {
+        if (RuntimeBody != nullptr)
+        {
+            b2MassData massData;
+            RuntimeBody->GetMassData(&massData);
+            massData.center = { center.x, center.y };
+            RuntimeBody->SetMassData(&massData);
+        }
+        m_CenterOfMass = center;
+    }
+
+    MonoScript::MonoScript() : InstanceId(s_NextAvailableId++) {}
 
     MonoScript::MonoScript(const String& name) : m_TypeName(name), InstanceId(s_NextAvailableId++)
     {
@@ -247,10 +277,7 @@ namespace Crowny
     }
 
     MonoClass* MonoScript::GetManagedClass() const { return m_Class; }
-    MonoObject* MonoScript::GetManagedInstance() const
-    {
-        return m_ScriptEntityBehaviour->GetManagedInstance();
-    }
+    MonoObject* MonoScript::GetManagedInstance() const { return m_ScriptEntityBehaviour->GetManagedInstance(); }
 
     void MonoScript::OnInitialize(Entity entity)
     {
@@ -263,7 +290,7 @@ namespace Crowny
         {
             m_MissingType = false;
             managedInstance = m_ObjectInfo->m_MonoClass->CreateInstance();
-            MonoClass* requireClass = ScriptInfoManager::Get().GetBuiltinClasses().RequireComponent;
+            MonoClass* requireClass = ScriptInfoManager::Get().GetBuiltinClasses().RequireComponentAttribute;
             MonoObject* requireComponent = m_ObjectInfo->m_TypeInfo->GetAttribute(requireClass);
             if (requireComponent != nullptr)
             {
@@ -301,7 +328,8 @@ namespace Crowny
             CW_ENGINE_WARN("Missing type");
         }
 
-        m_ScriptEntityBehaviour = ScriptSceneObjectManager::Get().CreateManagedScriptComponent(managedInstance, entity, *this);
+        m_ScriptEntityBehaviour =
+          ScriptSceneObjectManager::Get().CreateManagedScriptComponent(managedInstance, entity, *this);
 
         if (m_OnStartThunk == nullptr)
         {
@@ -359,45 +387,45 @@ namespace Crowny
             return output;
         };
 
-		MonoMethod* onCollisionEnter = GetManagedClass()->GetMethod(
-			"OnCollisionEnter2D",
-			"Collision2D"); // Maybe replace these with the other Collider, since Box2D works that way
-		if (onCollisionEnter != nullptr)
-			m_OnCollisionEnterThunk = (OnCollisionEnterThunkDef)onCollisionEnter->GetThunk();
-		MonoMethod* onCollisionStay = GetManagedClass()->GetMethod("OnCollisionStay2D", "Collision2D");
-		if (onCollisionStay != nullptr)
-			m_OnCollisionStayThunk = (OnCollisionStayThunkDef)onCollisionStay->GetThunk();
-		MonoMethod* onCollisionExit = GetManagedClass()->GetMethod("OnCollisionExit2D", "Collision2D");
-		if (onCollisionExit != nullptr)
-			m_OnCollisionExitThunk = (OnCollisionExitThunkDef)onCollisionExit->GetThunk();
-		
+        MonoMethod* onCollisionEnter = GetManagedClass()->GetMethod(
+          "OnCollisionEnter2D",
+          "Collision2D"); // Maybe replace these with the other Collider, since Box2D works that way
+        if (onCollisionEnter != nullptr)
+            m_OnCollisionEnterThunk = (OnCollisionEnterThunkDef)onCollisionEnter->GetThunk();
+        MonoMethod* onCollisionStay = GetManagedClass()->GetMethod("OnCollisionStay2D", "Collision2D");
+        if (onCollisionStay != nullptr)
+            m_OnCollisionStayThunk = (OnCollisionStayThunkDef)onCollisionStay->GetThunk();
+        MonoMethod* onCollisionExit = GetManagedClass()->GetMethod("OnCollisionExit2D", "Collision2D");
+        if (onCollisionExit != nullptr)
+            m_OnCollisionExitThunk = (OnCollisionExitThunkDef)onCollisionExit->GetThunk();
+
         auto onCollisionEnterCallback = [=](const Collision2D& collision) {
             if (m_OnCollisionEnterThunk != nullptr)
             {
-				CollisionDataInterop data = collisionDataToManaged(collision);
-				MonoObject* managedCollision =
-					MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
+                CollisionDataInterop data = collisionDataToManaged(collision);
+                MonoObject* managedCollision =
+                  MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
                 MonoUtils::InvokeThunk(m_OnCollisionEnterThunk, GetManagedInstance(), managedCollision);
             }
         };
 
         auto onCollisionStayCallback = [=](const Collision2D& collision) {
             if (m_OnCollisionStayThunk != nullptr)
-			{
-				CollisionDataInterop data = collisionDataToManaged(collision);
-				MonoObject* managedCollision =
-					MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
-				MonoUtils::InvokeThunk(m_OnCollisionStayThunk, GetManagedInstance(), managedCollision);
+            {
+                CollisionDataInterop data = collisionDataToManaged(collision);
+                MonoObject* managedCollision =
+                  MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
+                MonoUtils::InvokeThunk(m_OnCollisionStayThunk, GetManagedInstance(), managedCollision);
             }
         };
 
         auto onCollisionExitCallback = [=](const Collision2D& collision) {
             if (m_OnCollisionExitThunk != nullptr)
-			{
-				CollisionDataInterop data = collisionDataToManaged(collision);
-				MonoObject* managedCollision =
-					MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
-				MonoUtils::InvokeThunk(m_OnCollisionExitThunk, GetManagedInstance(), managedCollision);
+            {
+                CollisionDataInterop data = collisionDataToManaged(collision);
+                MonoObject* managedCollision =
+                  MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
+                MonoUtils::InvokeThunk(m_OnCollisionExitThunk, GetManagedInstance(), managedCollision);
             }
         };
 

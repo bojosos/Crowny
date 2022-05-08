@@ -114,15 +114,14 @@ namespace Crowny
 
     void EditorCamera::Focus(const glm::vec3& focalPoint)
     {
-		m_FocalPoint = focalPoint;
-		if (m_Distance > 10.0f)
-		{
-			m_Distance -= m_Distance - 10.0f;
-			m_Position = m_FocalPoint - GetForwardDirection() * m_Distance;
-		}
-		m_Position = m_FocalPoint - GetForwardDirection() * m_Distance;
-		UpdateView();
-
+        m_FocalPoint = focalPoint;
+        if (m_Distance > 10.0f)
+        {
+            m_Distance -= m_Distance - 10.0f;
+            m_Position = m_FocalPoint - GetForwardDirection() * m_Distance;
+        }
+        m_Position = m_FocalPoint - GetForwardDirection() * m_Distance;
+        UpdateView();
     }
 
     glm::vec3 EditorCamera::GetUpDirection() const

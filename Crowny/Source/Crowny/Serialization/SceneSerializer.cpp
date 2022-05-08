@@ -40,7 +40,7 @@ namespace Crowny
                 out << YAML::Key << "MonoScriptComponent";
                 out << YAML::Value << YAML::BeginSeq;
                 for (const auto& script : msc.Scripts)
-				    out << script.GetTypeName();
+                    out << script.GetTypeName();
                 out << YAML::EndSeq;
             }
         }
@@ -142,6 +142,7 @@ namespace Crowny
             out << YAML::Key << "LinearDrag" << YAML::Value << rb2d.GetLinearDrag();
             out << YAML::Key << "AngularDrag" << YAML::Value << rb2d.GetAngularDrag();
             out << YAML::Key << "LayerMask" << YAML::Value << rb2d.GetLayerMask();
+            out << YAML::Key << "AutoMass" << YAML::Value << rb2d.GetAutoMass();
             out << YAML::EndMap;
         }
 
@@ -177,9 +178,7 @@ namespace Crowny
             out << YAML::Key << "Children" << YAML::Value << YAML::BeginSeq;
 
             for (Entity e : rc.Children)
-            {
                 out << e.GetUuid();
-            }
 
             out << YAML::EndSeq << YAML::EndMap;
         }
@@ -283,19 +282,19 @@ namespace Crowny
                     const YAML::Node& script = entity["MonoScriptComponent"];
                     if (script)
                     {
-						auto& msc = deserialized.AddComponent<MonoScriptComponent>();
+                        auto& msc = deserialized.AddComponent<MonoScriptComponent>();
                         for (const auto& scriptNode : script)
                         {
-							String scriptName = scriptNode.as<String>();
-							const auto& entityBehavirous = ScriptInfoManager::Get().GetEntityBehaviours();
+                            String scriptName = scriptNode.as<String>();
+                            const auto& entityBehavirous = ScriptInfoManager::Get().GetEntityBehaviours();
                             auto iterFind = entityBehavirous.find(scriptName);
-							if (iterFind == entityBehavirous.end())
+                            if (iterFind == entityBehavirous.end())
                             {
                                 CW_ENGINE_WARN("Script {0} does not exist in this assembly.");
                                 continue;
                             }
-							msc.Scripts.push_back(MonoScript(scriptName));
-							// msc.Scripts.back().OnInitialize(deserialized);
+                            msc.Scripts.push_back(MonoScript(scriptName));
+                            // msc.Scripts.back().OnInitialize(deserialized);
                         }
                     }
 
@@ -331,6 +330,7 @@ namespace Crowny
                         asc.SetMinDistance(source["MinDistance"].as<float>());
                         asc.SetMaxDistance(source["MaxDistance"].as<float>());
                         asc.SetLooping(source["Loop"].as<bool>());
+                        asc.SetIsMuted(source["Muted"].as<bool>(false));
                     }
 
                     const YAML::Node& bc2d = entity["BoxCollider2D"];
@@ -358,17 +358,14 @@ namespace Crowny
                         rb2dc.SetBodyType((RigidbodyBodyType)rb2d["BodyType"].as<uint32_t>());
                         rb2dc.SetMass(rb2d["Mass"].as<float>());
                         rb2dc.SetGravityScale(rb2d["GravityScale"].as<float>());
-                        if (const YAML::Node& layerMask = rb2d["LayerMask"]) // Maybe store this as a string?
-                            rb2dc.SetLayerMask(layerMask.as<uint32_t>(), deserialized);
-                        if (const YAML::Node& collisionDetectionMode = rb2d["CollisionDetectionMode"])
-                            rb2dc.SetCollisionDetectionMode((CollisionDetectionMode2D)collisionDetectionMode.as<uint32_t>());
-                        if (const YAML::Node& sleepMode = rb2d["SleepMode"])
-                            rb2dc.SetSleepMode((RigidbodySleepMode)sleepMode.as<uint32_t>());
-                        if (const YAML::Node& linearDrag = rb2d["LinearDrag"])
-                            rb2dc.SetLinearDrag(linearDrag.as<float>());
-                        if (const YAML::Node& angularDrag = rb2d["AngularDrag"])
-                            rb2dc.SetAngularDrag(angularDrag.as<float>());
+                        rb2dc.SetLayerMask(rb2d["LayerMask"].as<uint32_t>(0), deserialized);
+                        rb2dc.SetCollisionDetectionMode(
+                          (CollisionDetectionMode2D)rb2d["CollisionDetectionMode"].as<uint32_t>(0));
+                        rb2dc.SetSleepMode((RigidbodySleepMode)rb2d["SleepMode"].as<uint32_t>(1));
+                        rb2dc.SetLinearDrag(rb2d["LinearDrag"].as<float>(0.0f));
+                        rb2dc.SetAngularDrag(rb2d["AngularDrag"].as<float>(0.05f));
                         rb2dc.SetConstraints((Rigidbody2DConstraints)rb2d["Constraints"].as<uint32_t>());
+                        rb2dc.SetAutoMass(rb2d["AutoMass"].as<bool>(false), deserialized);
                     }
 
                     const YAML::Node& rel = entity["RelationshipComponent"];
