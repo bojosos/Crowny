@@ -25,8 +25,8 @@ namespace Crowny
         MonoClass* Vector4 = nullptr;
         MonoClass* Matrix4 = nullptr;
 
-        MonoClass* ComponentClass = nullptr;
-        MonoClass* EntityClass = nullptr;
+        MonoClass* Component = nullptr;
+        MonoClass* Entity = nullptr;
         MonoClass* EntityBehaviour = nullptr;
         MonoClass* AssetClass = nullptr;
 
@@ -35,15 +35,16 @@ namespace Crowny
         MonoClass* StepAttribute = nullptr;
         MonoClass* ShowInInspectorAttribute = nullptr;
         MonoClass* HideInInspectorAttribute = nullptr;
-        MonoClass* SerializableObjectAtrribute = nullptr;
+        MonoClass* SerializeObjectAttribute = nullptr;
         MonoClass* NotNullAttribute = nullptr;
         MonoClass* DontSerializeFieldAttribute = nullptr;
-        MonoClass* RequireComponent = nullptr;
+        MonoClass* RequireComponentAttribute = nullptr;
 
-        MonoClass* Dropdown = nullptr;
-        MonoClass* Label = nullptr;
-        MonoClass* Filepath = nullptr;
-		MonoClass* ReadOnly = nullptr;
+        MonoClass* DropdownAttribute = nullptr;
+        MonoClass* LabelAttribute = nullptr;
+        MonoClass* FilepathAttribute = nullptr;
+        MonoClass* ReadOnlyAttribute = nullptr;
+        MonoClass* HeaderAttribute = nullptr;
 
         MonoClass* ScriptUtils = nullptr;
         MonoClass* ScriptCompiler = nullptr;

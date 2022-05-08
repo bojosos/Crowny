@@ -110,39 +110,41 @@ namespace Crowny
         }
     }
 
-    void HierarchyPanel::DisplayTreeNode(Entity e)
+    void HierarchyPanel::DisplayTreeNode(Entity entity)
     {
-        auto& tc = e.GetComponent<TagComponent>();
-        auto& rc = e.GetComponent<RelationshipComponent>();
+        auto& tc = entity.GetComponent<TagComponent>();
+        auto& rc = entity.GetComponent<RelationshipComponent>();
         String name = tc.Tag.empty() ? "Entity" : tc.Tag.c_str();
 
         ImGuiTreeNodeFlags selected =
-          (m_SelectedItems.find(e) != m_SelectedItems.end()) ? ImGuiTreeNodeFlags_Selected : 0;
+          (m_SelectedItems.find(entity) != m_SelectedItems.end()) ? ImGuiTreeNodeFlags_Selected : 0;
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth |
                                    ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap |
                                    ImGuiTreeNodeFlags_OpenOnDoubleClick;
 
         bool open = true;
-        if (e == m_Renaming)
+        if (entity == m_Renaming)
         {
-            Rename(e);
+            Rename(entity);
             for (auto& c : rc.Children)
                 DisplayTree(c);
         }
         else
         {
-            if (m_NewOpenEntity == e)
+            if (m_NewOpenEntity == entity)
             {
-                ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+                ImGui::SetNextItemOpen(true, ImGuiCond_Once);
                 m_NewOpenEntity = {};
             }
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
+            if (m_PreserveHierarchy && m_Hierarchy.find(entity.GetUuid()) != m_Hierarchy.end())
+                ImGui::SetNextItemOpen(true, ImGuiCond_Once);
             open = ImGui::TreeNodeEx(name.c_str(), selected | flags);
 
             if (ImGui::BeginDragDropSource())
             {
-                UIUtils::SetEntityPayload(e);
+                UIUtils::SetEntityPayload(entity);
                 ImGui::Text("%s", name.c_str());
                 ImGui::EndDragDropSource();
             }
@@ -152,22 +154,23 @@ namespace Crowny
                 if (const ImGuiPayload* payload = UIUtils::AcceptEntityPayload())
                 {
                     Entity entity = UIUtils::GetEntityFromPayload(payload);
-                    entity.SetParent(e);
+                    entity.SetParent(entity);
                 }
                 ImGui::EndDragDropTarget();
             }
 
             if (ImGui::BeginPopupContextItem())
             {
-                DisplayPopup(e);
+                DisplayPopup(entity);
                 ImGui::EndPopup();
             }
 
             if (Input::IsMouseButtonUp(Mouse::ButtonLeft) && ImGui::IsItemHovered())
-                Select(e);
+                Select(entity);
 
             if (open)
             {
+                m_Hierarchy.insert(entity.GetUuid());
                 for (auto c : rc.Children)
                     DisplayTree(c);
 
@@ -189,9 +192,7 @@ namespace Crowny
                                    ImGuiTreeNodeFlags_Leaf;
 
         if (e == m_Renaming)
-        {
             Rename(e);
-        }
         else
         {
             ImGui::TableNextRow();
@@ -263,13 +264,15 @@ namespace Crowny
         });
     }
 
+    const UnorderedSet<Crowny::UUID>& HierarchyPanel::GetSerializableHierarchy() { return m_Hierarchy; }
+
     void HierarchyPanel::Update()
     {
         for (auto action : m_DeferedActions)
             action();
         m_DeferedActions.clear();
 
-        Scene& activeScene = *SceneManager::GetActiveScene().get();
+        Scene& activeScene = *SceneManager::GetActiveScene().get(); // Oh god
 
         if (m_Focused && s_SelectedEntity)
         {
@@ -308,6 +311,8 @@ namespace Crowny
     {
         UI::ScopedStyle windowPadding(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         BeginPanel();
+        if (!m_PreserveHierarchy)
+            m_Hierarchy.clear();
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
         if (ImGui::BeginPopupContextWindow(nullptr,
                                            ImGuiPopupFlags_NoOpenOverExistingPopup | ImGuiPopupFlags_MouseButtonRight))
@@ -354,6 +359,7 @@ namespace Crowny
                 ImGui::EndTable();
             }
         }
+        m_PreserveHierarchy = false;
         EndPanel();
     }
 

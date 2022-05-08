@@ -20,7 +20,7 @@ namespace Crowny
 
     ScriptEntity* ScriptSceneObjectManager::CreateScriptEntity(Entity entity)
     {
-        MonoClass* entityClass = ScriptInfoManager::Get().GetBuiltinClasses().EntityClass;
+        MonoClass* entityClass = ScriptInfoManager::Get().GetBuiltinClasses().Entity;
         MonoObject* instance = entityClass->CreateInstance();
         return CreateScriptEntity(instance, entity);
     }
@@ -92,11 +92,12 @@ namespace Crowny
         return nativeInstance;
     }
 
-    ScriptEntityBehaviour* ScriptSceneObjectManager::CreateManagedScriptComponent(MonoObject* instance, Entity entity, MonoScript& script)
-	{
-		ScriptEntityBehaviour* nativeInstance = new ScriptEntityBehaviour(instance, entity);
-		m_ScriptComponents[script.InstanceId] = nativeInstance;
-		return nativeInstance;
+    ScriptEntityBehaviour* ScriptSceneObjectManager::CreateManagedScriptComponent(MonoObject* instance, Entity entity,
+                                                                                  MonoScript& script)
+    {
+        ScriptEntityBehaviour* nativeInstance = new ScriptEntityBehaviour(instance, entity);
+        m_ScriptComponents[script.InstanceId] = nativeInstance;
+        return nativeInstance;
     }
 
     void ScriptSceneObjectManager::DestroyScriptComponent(ScriptComponentBase* scriptComponent, uint64_t instanceId)

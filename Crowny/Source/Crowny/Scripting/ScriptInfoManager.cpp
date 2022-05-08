@@ -23,6 +23,21 @@
 #include <mono/metadata/object.h>
 #include <mono/metadata/reflection.h>
 
+#define LOAD_CW_CLASS(CLASS_NAME)                                                                                      \
+    m_Builtin.##CLASS_NAME = crownyAssembly->GetClass(CROWNY_NS, #CLASS_NAME);                                         \
+    if (m_Builtin.##CLASS_NAME == nullptr)                                                                             \
+        CW_ENGINE_ERROR("Cannot find {0}." #CLASS_NAME " class.", CROWNY_NS);
+
+#define LOAD_CW_ATTR(CLASS_NAME)                                                                                       \
+    m_Builtin.##CLASS_NAME##Attribute = crownyAssembly->GetClass(CROWNY_NS, #CLASS_NAME);                              \
+    if (m_Builtin.CLASS_NAME##Attribute == nullptr)                                                                    \
+        CW_ENGINE_ERROR("Cannot find {0}." #CLASS_NAME " attribute.", CROWNY_NS);
+
+#define LOAD_SYSTEM_CLASS(CLASS_NAME)                                                                                  \
+    m_Builtin.##System##CLASS_NAME##Class = crownyAssembly->GetClass("System", #CLASS_NAME);                           \
+    if (m_Builtin.##System##CLASS_NAME##Class == nullptr)                                                              \
+        CW_ENGINE_ERROR("Cannot find {0}." #CLASS_NAME " attribute.", "System");
+
 namespace Crowny
 {
 
@@ -41,12 +56,6 @@ namespace Crowny
         if (crownyAssembly == nullptr)
             CW_ENGINE_ERROR("Crowny assembly not loaded.");
 
-        m_Builtin.SystemTypeClass = corlib->GetClass("System", "Type");
-        if (m_Builtin.SystemTypeClass == nullptr)
-            CW_ENGINE_ERROR("Cannot find System.Type class.");
-        m_Builtin.SystemArrayClass = corlib->GetClass("System", "Array");
-        if (m_Builtin.SystemArrayClass == nullptr)
-            CW_ENGINE_ERROR("Cannot find System.Array class.");
         m_Builtin.SystemGenericDictionaryClass = corlib->GetClass("System.Collections.Generic", "Dictionary`2");
         if (m_Builtin.SystemGenericDictionaryClass == nullptr)
             CW_ENGINE_ERROR("Cannot find System.Collections.Generic.Dictionary<TKey, TValue> class.");
@@ -54,93 +63,35 @@ namespace Crowny
         if (m_Builtin.SystemGenericListClass == nullptr)
             CW_ENGINE_ERROR("Cannot find System.Collections.Generic.List<T> class.");
 
-        m_Builtin.Vector2 = crownyAssembly->GetClass(CROWNY_NS, "Vector2");
-        if (m_Builtin.Vector2 == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.Vector2 class.", CROWNY_NS);
+        LOAD_SYSTEM_CLASS(Type);
+        LOAD_SYSTEM_CLASS(Array);
 
-        m_Builtin.Vector3 = crownyAssembly->GetClass(CROWNY_NS, "Vector3");
-        if (m_Builtin.Vector3 == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.Vector3 class.", CROWNY_NS);
+        LOAD_CW_CLASS(Vector2);
+        LOAD_CW_CLASS(Vector3);
+        LOAD_CW_CLASS(Vector4);
+        LOAD_CW_CLASS(Matrix4);
+        LOAD_CW_CLASS(Component);
+        LOAD_CW_CLASS(Entity);
+        LOAD_CW_CLASS(EntityBehaviour);
 
-        m_Builtin.Vector4 = crownyAssembly->GetClass(CROWNY_NS, "Vector4");
-        if (m_Builtin.Vector4 == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.Vector4 class.", CROWNY_NS);
+        LOAD_CW_ATTR(SerializeField);
+        LOAD_CW_ATTR(Range);
+        LOAD_CW_ATTR(NotNull);
+        // LOAD_CW_ATTR(Step);
+        LOAD_CW_ATTR(ShowInInspector);
+        LOAD_CW_ATTR(HideInInspector);
+        LOAD_CW_ATTR(SerializeObject);
+        LOAD_CW_ATTR(DontSerializeField);
+        LOAD_CW_ATTR(RequireComponent);
+        LOAD_CW_ATTR(Dropdown);
+        LOAD_CW_ATTR(Label);
+        LOAD_CW_ATTR(Filepath);
+        LOAD_CW_ATTR(ReadOnly);
 
-        m_Builtin.Matrix4 = crownyAssembly->GetClass(CROWNY_NS, "Matrix4");
-        if (m_Builtin.Matrix4 == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.Matrix4 class.", CROWNY_NS);
+        LOAD_CW_ATTR(Header);
+        LOAD_CW_CLASS(ScriptUtils);
+        LOAD_CW_CLASS(ScriptCompiler);
 
-        m_Builtin.ComponentClass = crownyAssembly->GetClass(CROWNY_NS, "Component");
-        if (m_Builtin.ComponentClass == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.Component class.", CROWNY_NS);
-
-        m_Builtin.EntityClass = crownyAssembly->GetClass(CROWNY_NS, "Entity");
-        if (m_Builtin.EntityClass == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.EntityClass class.", CROWNY_NS);
-
-        m_Builtin.EntityBehaviour = crownyAssembly->GetClass(CROWNY_NS, "EntityBehaviour");
-        if (m_Builtin.EntityBehaviour == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.EntityBehaviour class.", CROWNY_NS);
-
-        m_Builtin.SerializeFieldAttribute = crownyAssembly->GetClass(CROWNY_NS, "SerializeField");
-        if (m_Builtin.SerializeFieldAttribute == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.SerializeField class.", CROWNY_NS);
-
-        m_Builtin.RangeAttribute = crownyAssembly->GetClass(CROWNY_NS, "Range");
-        if (m_Builtin.RangeAttribute == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.Range class.", CROWNY_NS);
-
-        m_Builtin.NotNullAttribute = crownyAssembly->GetClass(CROWNY_NS, "NotNull");
-        if (m_Builtin.NotNullAttribute == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.NotNull class.", CROWNY_NS);
-
-        /*m_Builtin.StepAttribute = crownyAssembly->GetClass(CROWNY_NS, "Step");
-        if (m_Builtin.StepAttribute == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.Step class.", CROWNY_NS);*/
-
-        m_Builtin.ShowInInspectorAttribute = crownyAssembly->GetClass(CROWNY_NS, "ShowInInspector");
-        if (m_Builtin.ShowInInspectorAttribute == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.ShowInInspector class.", CROWNY_NS);
-
-        m_Builtin.HideInInspectorAttribute = crownyAssembly->GetClass(CROWNY_NS, "HideInInspector");
-        if (m_Builtin.HideInInspectorAttribute == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.HideInInspector class.", CROWNY_NS);
-
-        m_Builtin.SerializableObjectAtrribute = crownyAssembly->GetClass(CROWNY_NS, "SerializeObject");
-        if (m_Builtin.SerializableObjectAtrribute == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.SerializeObject class.", CROWNY_NS);
-
-        m_Builtin.DontSerializeFieldAttribute = crownyAssembly->GetClass(CROWNY_NS, "DontSerializeField");
-        if (m_Builtin.DontSerializeFieldAttribute == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.DontSerializeField class.", CROWNY_NS);
-
-        m_Builtin.RequireComponent = crownyAssembly->GetClass(CROWNY_NS, "RequireComponent");
-        if (m_Builtin.RequireComponent == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.RequireComponent class.", CROWNY_NS);
-
-		m_Builtin.Dropdown = crownyAssembly->GetClass(CROWNY_NS, "Dropdown");
-		if (m_Builtin.Dropdown== nullptr)
-			CW_ENGINE_ERROR("Cannot find {0}.Dropdown class.", CROWNY_NS);
-
-		m_Builtin.Label = crownyAssembly->GetClass(CROWNY_NS, "Label");
-		if (m_Builtin.Label == nullptr)
-			CW_ENGINE_ERROR("Cannot find {0}.Filepath class.", CROWNY_NS);
-
-		m_Builtin.Filepath = crownyAssembly->GetClass(CROWNY_NS, "Filepath");
-		if (m_Builtin.Filepath == nullptr)
-			CW_ENGINE_ERROR("Cannot find {0}.Filepath class.", CROWNY_NS);
-
-		m_Builtin.ReadOnly = crownyAssembly->GetClass(CROWNY_NS, "ReadOnly");
-		if (m_Builtin.ReadOnly == nullptr)
-			CW_ENGINE_ERROR("Cannot find {0}.ReadOnly class.", CROWNY_NS);
-
-        m_Builtin.ScriptUtils = crownyAssembly->GetClass(CROWNY_NS, "ScriptUtils");
-        if (m_Builtin.ScriptUtils == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.ScriptUtils class.", CROWNY_NS);
-
-        m_Builtin.ScriptCompiler = crownyAssembly->GetClass(CROWNY_NS, "ScriptCompiler");
-        if (m_Builtin.ScriptCompiler == nullptr)
-            CW_ENGINE_ERROR("Cannot find {0}.ScriptCompiler class.", CROWNY_NS);
         RegisterComponents();
         RegisterAssets();
     }
@@ -169,13 +120,12 @@ namespace Crowny
         {
             if (IsBasicType(klass))
                 continue;
-            const bool isSerializable = klass->IsSubClassOf(m_Builtin.ComponentClass) ||
-                                        klass->IsSubClassOf(assetClass) ||
-                                        klass->HasAttribute(m_Builtin.SerializableObjectAtrribute);
+            const bool isSerializable = klass->IsSubClassOf(m_Builtin.Component) || klass->IsSubClassOf(assetClass) ||
+                                        klass->HasAttribute(m_Builtin.SerializeObjectAttribute);
             if (klass->IsSubClassOf(m_Builtin.EntityBehaviour))
                 m_EntityBehaviourClasses[klass->GetName()] = klass;
             const bool isInspectable = klass->HasAttribute(m_Builtin.ShowInInspectorAttribute);
-            if ((isSerializable || isInspectable) && klass != m_Builtin.ComponentClass && klass != assetClass)
+            if ((isSerializable || isInspectable) && klass != m_Builtin.Component && klass != assetClass)
             {
                 Ref<SerializableTypeInfoObject> typeInfo = CreateRef<SerializableTypeInfoObject>();
                 typeInfo->m_TypeNamespace = klass->GetNamespace();
@@ -250,24 +200,36 @@ namespace Crowny
                         fieldInfo->m_Flags |= ScriptFieldFlagBits::Inspectable;
                 }
 
+                // TODO: #ifdef these
                 if (field->HasAttribute(m_Builtin.RangeAttribute))
                     fieldInfo->m_Flags |= ScriptFieldFlagBits::Range;
                 /*if (field->HasAttribute(m_Builtin.StepAttribute))
                     fieldInfo->m_Flags |= ScriptFieldFlagBits::Step;*/
                 if (field->HasAttribute(m_Builtin.NotNullAttribute))
                     fieldInfo->m_Flags |= ScriptFieldFlagBits::NotNull;
-				if (field->HasAttribute(m_Builtin.Dropdown))
-					fieldInfo->m_Flags |= ScriptFieldFlagBits::Dropdown;
-				if (field->HasAttribute(m_Builtin.Filepath))
-					fieldInfo->m_Flags |= ScriptFieldFlagBits::Filepath;
-				if (field->HasAttribute(m_Builtin.ReadOnly))
-					fieldInfo->m_Flags |= ScriptFieldFlagBits::ReadOnly;
-				if (field->HasAttribute(m_Builtin.Label))
+                if (field->HasAttribute(m_Builtin.DropdownAttribute))
+                    fieldInfo->m_Flags |= ScriptFieldFlagBits::Dropdown;
+                if (field->HasAttribute(m_Builtin.FilepathAttribute))
+                    fieldInfo->m_Flags |= ScriptFieldFlagBits::Filepath;
+                if (field->HasAttribute(m_Builtin.ReadOnlyAttribute))
+                    fieldInfo->m_Flags |= ScriptFieldFlagBits::ReadOnly;
+                if (field->HasAttribute(m_Builtin.HeaderAttribute))
                 {
-					MonoObject* label = field->GetAttribute(m_Builtin.Label);
-                    MonoField* labelField = m_Builtin.Label->GetField("label");
-					MonoString* stringValue = (MonoString*)labelField->GetBoxed(label);
-					fieldInfo->m_Name = MonoUtils::FromMonoString(stringValue);
+                    MonoObject* label = field->GetAttribute(m_Builtin.HeaderAttribute);
+                    MonoField* labelField = m_Builtin.HeaderAttribute->GetField("label");
+                    MonoField* collapsableField = m_Builtin.HeaderAttribute->GetField("collapsable");
+                    MonoString* stringValue = (MonoString*)labelField->GetBoxed(label);
+                    String headerLabel = MonoUtils::FromMonoString(stringValue);
+                    bool collapsable = false;
+                    collapsableField->Get(label, &collapsable);
+                    objInfo->m_Headers[fieldInfo->m_FieldId] = { headerLabel, collapsable };
+                }
+                if (field->HasAttribute(m_Builtin.LabelAttribute))
+                {
+                    MonoObject* label = field->GetAttribute(m_Builtin.LabelAttribute);
+                    MonoField* labelField = m_Builtin.LabelAttribute->GetField("label");
+                    MonoString* stringValue = (MonoString*)labelField->GetBoxed(label);
+                    fieldInfo->m_Name = MonoUtils::FromMonoString(stringValue);
                 }
                 objInfo->m_FieldNameToId[fieldInfo->m_Name] = fieldInfo->m_FieldId;
                 objInfo->m_Fields[fieldInfo->m_FieldId] = fieldInfo;
@@ -317,20 +279,20 @@ namespace Crowny
                     propertyInfo->m_Flags |= ScriptFieldFlagBits::Step;*/
                 if (property->HasAttribute(m_Builtin.NotNullAttribute))
                     propertyInfo->m_Flags |= ScriptFieldFlagBits::NotNull;
-				if (property->HasAttribute(m_Builtin.Dropdown))
-					propertyInfo->m_Flags |= ScriptFieldFlagBits::Dropdown;
-				if (property->HasAttribute(m_Builtin.Filepath))
-					propertyInfo->m_Flags |= ScriptFieldFlagBits::Filepath;
-				if (property->HasAttribute(m_Builtin.ReadOnly))
-					propertyInfo->m_Flags |= ScriptFieldFlagBits::ReadOnly;
-				if (property->HasAttribute(m_Builtin.Label))
-				{
-					MonoObject* label = property->GetAttribute(m_Builtin.Label);
-					MonoField* labelField = m_Builtin.Label->GetField("label");
-					MonoString* stringValue = nullptr;
-					labelField->Get(label, stringValue);
-					propertyInfo->m_Name = MonoUtils::FromMonoString(stringValue);
-				}
+                if (property->HasAttribute(m_Builtin.DropdownAttribute))
+                    propertyInfo->m_Flags |= ScriptFieldFlagBits::Dropdown;
+                if (property->HasAttribute(m_Builtin.FilepathAttribute))
+                    propertyInfo->m_Flags |= ScriptFieldFlagBits::Filepath;
+                if (property->HasAttribute(m_Builtin.ReadOnlyAttribute))
+                    propertyInfo->m_Flags |= ScriptFieldFlagBits::ReadOnly;
+                if (property->HasAttribute(m_Builtin.LabelAttribute))
+                {
+                    MonoObject* label = property->GetAttribute(m_Builtin.LabelAttribute);
+                    MonoField* labelField = m_Builtin.LabelAttribute->GetField("label");
+                    MonoString* stringValue = nullptr;
+                    labelField->Get(label, stringValue);
+                    propertyInfo->m_Name = MonoUtils::FromMonoString(stringValue);
+                }
                 objInfo->m_FieldNameToId[propertyInfo->m_Name] = propertyInfo->m_FieldId;
                 objInfo->m_Fields[propertyInfo->m_FieldId] = propertyInfo;
             }
@@ -365,7 +327,8 @@ namespace Crowny
     {
         RegisterComponent<TransformComponent, ScriptTransform>();
         RegisterComponent<CameraComponent, ScriptCamera>();
-        // RegisterComponent<MonoScriptComponent, ScriptEntityBehaviour>(); // This should not be needed with the new component system
+        // RegisterComponent<MonoScriptComponent, ScriptEntityBehaviour>(); // This should not be needed with the new
+        // component system
         RegisterComponent<AudioSourceComponent, ScriptAudioSource>();
         RegisterComponent<AudioListenerComponent, ScriptAudioListener>();
         RegisterComponent<Rigidbody2DComponent, ScriptRigidbody2D>();
@@ -496,7 +459,7 @@ namespace Crowny
         //         }
         //     }
         case MonoPrimitiveType::Class: {
-            if (monoClass->GetFullName() == m_Builtin.EntityClass->GetFullName()) // Entity
+            if (monoClass->GetFullName() == m_Builtin.Entity->GetFullName()) // Entity
             {
                 Ref<SerializableTypeInfoEntity> typeInfo = CreateRef<SerializableTypeInfoEntity>();
                 typeInfo->m_TypeNamespace = monoClass->GetNamespace();

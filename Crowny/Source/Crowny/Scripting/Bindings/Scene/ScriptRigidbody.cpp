@@ -11,25 +11,31 @@ namespace Crowny
     void ScriptRigidbody2D::InitRuntimeData()
     {
         MetaData.ScriptClass->AddInternalCall("Internal_IsAwake", (void*)&Internal_IsAwake);
+
         MetaData.ScriptClass->AddInternalCall("Internal_GetBodyType", (void*)&Internal_GetBodyType);
-        MetaData.ScriptClass->AddInternalCall("Internal_SetBodyType", (void*)&Internal_SetBodyType);
         MetaData.ScriptClass->AddInternalCall("Internal_GetConstraints", (void*)&Internal_GetConstraints);
-		MetaData.ScriptClass->AddInternalCall("Internal_GetMass", (void*)&Internal_GetMass);
-		MetaData.ScriptClass->AddInternalCall("Internal_GetSleepMode", (void*)&Internal_GetSleepMode);
-		MetaData.ScriptClass->AddInternalCall("Internal_GetAngularDrag", (void*)&Internal_GetAngularDrag);
-		MetaData.ScriptClass->AddInternalCall("Internal_GetLinearDrag", (void*)&Internal_GetLinearDrag);
-		MetaData.ScriptClass->AddInternalCall("Internal_GetCollisionDetectionMode", (void*)&Internal_GetCollisionDetectionMode);
-		MetaData.ScriptClass->AddInternalCall("Internal_GetLayer", (void*)&Internal_GetLayer);
-		
+        MetaData.ScriptClass->AddInternalCall("Internal_GetMass", (void*)&Internal_GetMass);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetSleepMode", (void*)&Internal_GetSleepMode);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetAngularDrag", (void*)&Internal_GetAngularDrag);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetLinearDrag", (void*)&Internal_GetLinearDrag);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetCollisionDetectionMode",
+                                              (void*)&Internal_GetCollisionDetectionMode);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetLayer", (void*)&Internal_GetLayer);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetAutoMass", (void*)&Internal_GetAutoMass);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetCenterOfMass", (void*)&Internal_GetCenterOfMass);
+
+        MetaData.ScriptClass->AddInternalCall("Internal_SetBodyType", (void*)&Internal_SetBodyType);
         MetaData.ScriptClass->AddInternalCall("Internal_SetConstraints", (void*)&Internal_SetConstraints);
         MetaData.ScriptClass->AddInternalCall("Internal_SetMass", (void*)&Internal_SetMass);
-		MetaData.ScriptClass->AddInternalCall("Internal_SetSleepMode", (void*)&Internal_SetSleepMode);
-		MetaData.ScriptClass->AddInternalCall("Internal_SetAngularDrag", (void*)&Internal_SetAngularDrag);
-		MetaData.ScriptClass->AddInternalCall("Internal_SetLinearDrag", (void*)&Internal_SetLinearDrag);
-		MetaData.ScriptClass->AddInternalCall("Internal_SetCollisionDetectionMode", (void*)&Internal_SetCollisionDetectionMode);
-		MetaData.ScriptClass->AddInternalCall("Internal_SetLayer", (void*)&Internal_SetLayer);
-		MetaData.ScriptClass->AddInternalCall("Internal_SetSleepMode", (void*)&Internal_SetSleepMode);
-		
+        MetaData.ScriptClass->AddInternalCall("Internal_SetSleepMode", (void*)&Internal_SetSleepMode);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetAngularDrag", (void*)&Internal_SetAngularDrag);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetLinearDrag", (void*)&Internal_SetLinearDrag);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetCollisionDetectionMode",
+                                              (void*)&Internal_SetCollisionDetectionMode);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetLayer", (void*)&Internal_SetLayer);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetAutoMass", (void*)&Internal_SetAutoMass);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetCenterOfMass", (void*)&Internal_SetCenterOfMass);
+
         MetaData.ScriptClass->AddInternalCall("Internal_GetRotation", (void*)&Internal_GetRotation);
         MetaData.ScriptClass->AddInternalCall("Internal_GetPosition", (void*)&Internal_GetPosition);
         MetaData.ScriptClass->AddInternalCall("Internal_AddForce", (void*)&Internal_AddForce);
@@ -37,11 +43,12 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_AddTorque", (void*)&Internal_AddTorque);
     }
 
-	bool ScriptRigidbody2D::Internal_IsAwake(ScriptRigidbody2D* thisPtr)
-	{
-		return thisPtr->GetComponent().RuntimeBody->IsAwake();
-	}
-	
+    bool ScriptRigidbody2D::Internal_IsAwake(ScriptRigidbody2D* thisPtr)
+    {
+        CW_ENGINE_INFO((void*)thisPtr);
+        return thisPtr->GetComponent().RuntimeBody->IsAwake();
+    }
+
     RigidbodyBodyType ScriptRigidbody2D::Internal_GetBodyType(ScriptRigidbody2D* thisPtr)
     {
         return thisPtr->GetComponent().GetBodyType();
@@ -53,10 +60,19 @@ namespace Crowny
     }
 
     float ScriptRigidbody2D::Internal_GetMass(ScriptRigidbody2D* thisPtr) { return thisPtr->GetComponent().GetMass(); }
-    bool ScriptRigidbody2D::Internal_GetAutoMass(ScriptRigidbody2D* thisPtr) { return thisPtr->GetComponent().GetAutoMass(); }
-
-    Rigidbody2DConstraints ScriptRigidbody2D::Internal_GetConstraints(ScriptRigidbody2D* thisPtr)
+    bool ScriptRigidbody2D::Internal_GetAutoMass(ScriptRigidbody2D* thisPtr)
     {
+        return thisPtr->GetComponent().GetAutoMass();
+    }
+    void ScriptRigidbody2D::Internal_GetCenterOfMass(ScriptRigidbody2D* thisPtr, glm::vec2* outCenterOfMass)
+    {
+        *outCenterOfMass = thisPtr->GetComponent().GetCenterOfMass();
+    }
+
+    Rigidbody2DConstraints ScriptRigidbody2D::Internal_GetConstraints(ScriptRigidbody2D* thisPtr,
+                                                                      ScriptRigidbody2D* thisPtr2)
+    {
+        CW_ENGINE_INFO("Ptr: {0}, {1}", (void*)thisPtr, (void*)thisPtr2);
         return thisPtr->GetComponent().GetConstraints();
     }
 
@@ -100,7 +116,8 @@ namespace Crowny
         thisPtr->GetComponent().SetLinearDrag(linearDrag);
     }
 
-    void ScriptRigidbody2D::Internal_SetCollisionDetectionMode(ScriptRigidbody2D* thisPtr, CollisionDetectionMode2D mode)
+    void ScriptRigidbody2D::Internal_SetCollisionDetectionMode(ScriptRigidbody2D* thisPtr,
+                                                               CollisionDetectionMode2D mode)
     {
         thisPtr->GetComponent().SetCollisionDetectionMode(mode);
     }
@@ -115,26 +132,30 @@ namespace Crowny
         thisPtr->GetComponent().SetSleepMode(sleepMode);
     }
 
-
     void ScriptRigidbody2D::Internal_SetConstraints(ScriptRigidbody2D* thisPtr, Rigidbody2DConstraints constraints)
     {
-		thisPtr->GetComponent().SetConstraints(constraints);
+        thisPtr->GetComponent().SetConstraints(constraints);
     }
 
     void ScriptRigidbody2D::Internal_SetMass(ScriptRigidbody2D* thisPtr, float mass)
     {
-		if (thisPtr->GetComponent().GetAutoMass())
+        if (thisPtr->GetComponent().GetAutoMass())
         {
-			CW_ERROR("You cannot set mass if auto mass is enabled");
+            CW_ERROR("You cannot set mass if auto mass is enabled");
             return;
         }
         thisPtr->GetComponent().SetMass(mass);
     }
 
-	void ScriptRigidbody2D::Internal_SetAutoMass(ScriptRigidbody2D* thisPtr, bool autoMass)
-	{
-		thisPtr->GetComponent().SetAutoMass(autoMass, thisPtr->GetNativeEntity());
-	}
+    void ScriptRigidbody2D::Internal_SetAutoMass(ScriptRigidbody2D* thisPtr, bool autoMass)
+    {
+        thisPtr->GetComponent().SetAutoMass(autoMass, thisPtr->GetNativeEntity());
+    }
+
+    void ScriptRigidbody2D::Internal_SetCenterOfMass(ScriptRigidbody2D* thisPtr, glm::vec2* centerOfMass)
+    {
+        thisPtr->GetComponent().SetCenterOfMass(*centerOfMass);
+    }
 
     float ScriptRigidbody2D::Internal_GetGravityScale(ScriptRigidbody2D* thisPtr)
     {

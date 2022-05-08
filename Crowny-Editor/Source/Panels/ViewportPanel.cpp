@@ -24,15 +24,15 @@ namespace Crowny
     {
         switch (gizmoMode)
         {
-		case GizmoEditMode::Translate:
-			return ImGuizmo::TRANSLATE;
-		case GizmoEditMode::Rotate:
-			return ImGuizmo::ROTATE;
-		case GizmoEditMode::Scale:
-			return ImGuizmo::SCALE;
+        case GizmoEditMode::Translate:
+            return ImGuizmo::TRANSLATE;
+        case GizmoEditMode::Rotate:
+            return ImGuizmo::ROTATE;
+        case GizmoEditMode::Scale:
+            return ImGuizmo::SCALE;
         case GizmoEditMode::Bounds:
-			return ImGuizmo::BOUNDS;
-		}
+            return ImGuizmo::BOUNDS;
+        }
         return ImGuizmo::TRANSLATE;
     }
 
@@ -49,28 +49,28 @@ namespace Crowny
         BeginPanel();
         Application::Get().GetImGuiLayer()->BlockEvents(!m_Focused && !m_Hovered);
 
-		if (GImGui->ActiveId == 0)
-		{
-			if (!Input::IsMouseButtonPressed(Mouse::ButtonRight)) // && m_CurrentScene != m_RuntimeScene)
-			{
-				if (Input::IsKeyPressed(Key::Q))
-					m_GizmoMode = GizmoEditMode::None;
-				if (Input::IsKeyPressed(Key::W))
-					m_GizmoMode = GizmoEditMode::Translate;
-				if (Input::IsKeyPressed(Key::E))
-					m_GizmoMode = GizmoEditMode::Rotate;
-				if (Input::IsKeyPressed(Key::R))
-					m_GizmoMode = GizmoEditMode::Scale;
-				if (Input::IsKeyPressed(Key::T))
-					m_GizmoMode = GizmoEditMode::Bounds;
-				if (Input::IsKeyDown(Key::X))
-					m_LocalMode = !m_LocalMode;
-		        if (Input::IsKeyDown(Key::F))
-				{
-					Entity selectedEntity = HierarchyPanel::GetSelectedEntity();
-					EditorLayer::GetEditorCamera().Focus(selectedEntity.GetTransform().Position);
-				}
-			}
+        if (GImGui->ActiveId == 0)
+        {
+            if (!Input::IsMouseButtonPressed(Mouse::ButtonRight)) // && m_CurrentScene != m_RuntimeScene)
+            {
+                if (Input::IsKeyPressed(Key::Q))
+                    m_GizmoMode = GizmoEditMode::None;
+                if (Input::IsKeyPressed(Key::W))
+                    m_GizmoMode = GizmoEditMode::Translate;
+                if (Input::IsKeyPressed(Key::E))
+                    m_GizmoMode = GizmoEditMode::Rotate;
+                if (Input::IsKeyPressed(Key::R))
+                    m_GizmoMode = GizmoEditMode::Scale;
+                if (Input::IsKeyPressed(Key::T))
+                    m_GizmoMode = GizmoEditMode::Bounds;
+                if (Input::IsKeyDown(Key::X))
+                    m_LocalMode = !m_LocalMode;
+                if (Input::IsKeyDown(Key::F))
+                {
+                    Entity selectedEntity = HierarchyPanel::GetSelectedEntity();
+                    EditorLayer::GetEditorCamera().Focus(selectedEntity.GetTransform().Position);
+                }
+            }
         }
 
         ImVec2 minBound = ImGui::GetWindowPos();
@@ -135,7 +135,7 @@ namespace Crowny
             float snapValues[3] = { snapValue, snapValue, snapValue };
             ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj), GetImGuizmoMode(m_GizmoMode),
                                  (!m_LocalMode && m_GizmoMode == GizmoEditMode::Translate) ? ImGuizmo::WORLD
-                                                                                      : ImGuizmo::LOCAL,
+                                                                                           : ImGuizmo::LOCAL,
                                  glm::value_ptr(transform), nullptr,
                                  snap ? snapValues : nullptr); // TODO: Bounds, does rotation work?
             ImGuizmo::ViewManipulate(glm::value_ptr(view), camera.GetDistance(),

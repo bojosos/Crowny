@@ -48,8 +48,8 @@ namespace Crowny
         Step = 1 << 3,
         NotNull = 1 << 4,
         ReadOnly = 1 << 5,
-		Dropdown = 1 << 6,
-		Filepath = 1 << 7
+        Dropdown = 1 << 6,
+        Filepath = 1 << 7
     };
     typedef Flags<ScriptFieldFlagBits> ScriptFieldFlags;
     CW_FLAGS_OPERATORS(ScriptFieldFlagBits);
@@ -208,6 +208,12 @@ namespace Crowny
         MonoProperty* m_Property;
     };
 
+    struct ScriptHeader
+    {
+        String Label;
+        bool Collapsable;
+    };
+
     class SerializableObjectInfo
     {
     public:
@@ -219,12 +225,13 @@ namespace Crowny
                                                       const Ref<SerializableTypeInfo>& fieldTypeInfo) const;
 
         Ref<SerializableTypeInfoObject> m_TypeInfo;
-        MonoClass* m_MonoClass;
+        MonoClass* m_MonoClass = nullptr;
         UnorderedMap<String, uint32_t> m_FieldNameToId;
         UnorderedMap<uint32_t, Ref<SerializableMemberInfo>> m_Fields;
 
         Ref<SerializableObjectInfo> m_BaseClass;
         Vector<std::weak_ptr<SerializableObjectInfo>> m_DerivedClasses;
+        UnorderedMap<uint32_t, ScriptHeader> m_Headers;
     };
 
     class SerializableAssemblyInfo
