@@ -36,7 +36,7 @@ namespace Crowny
 
         io.FontDefault = io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto/Roboto-Regular.ttf", 17.0f, nullptr,
                                                       io.Fonts->GetGlyphRangesCyrillic());
-        io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto/Roboto-Bold.ttf", 14.0f, nullptr,
+        io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto/Roboto-Bold.ttf", 17.0f, nullptr,
                                      io.Fonts->GetGlyphRangesCyrillic());
 
         style.WindowMenuButtonPosition = ImGuiDir_None;

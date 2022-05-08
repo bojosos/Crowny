@@ -22,8 +22,8 @@ namespace Crowny
         uint32_t VelocityIterations = 8;
         uint32_t PositionIterations = 3;
 
-		Array<String, 32> LayerNames = { "Default" };
-		Array<uint32_t, 32> MaskBits;
+        Array<String, 32> LayerNames = { "Default" };
+        Array<uint32_t, 32> MaskBits;
     };
 
     class Physics2D : public Module<Physics2D>
@@ -47,7 +47,7 @@ namespace Crowny
 
         void SetCategoryMask(uint32_t idx, uint32_t mask);
         uint32_t GetCategoryMask(uint32_t idx) const { return m_Settings->MaskBits[idx]; }
-		const String& GetLayerName(uint32_t idx) const { return m_Settings->LayerNames[idx]; }
+        const String& GetLayerName(uint32_t idx) const { return m_Settings->LayerNames[idx]; }
         void SetLayerName(uint32_t idx, const String& name) { m_Settings->LayerNames[idx] = name; }
 
         void BeginSimulation(Scene* scene);
@@ -58,8 +58,9 @@ namespace Crowny
         void DestroyFixture(Entity entity, Collider2D& collider);
         void Step(Timestep ts, Scene* scene);
         void StopSimulation(Scene* scene);
-		
+
         float CalculateMass(Entity entity);
+        glm::vec2 CalculateCenterOfMass(Entity entity);
 
     private:
         b2World* m_PhysicsWorld2D = nullptr;

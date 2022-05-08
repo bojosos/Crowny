@@ -210,16 +210,15 @@ namespace Crowny
         {
             MonoString* value = (MonoString*)getter();
             String stringValue = MonoUtils::FromMonoString(value);
-			if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Filepath))
+            if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Filepath))
             {
                 if (UI::PropertyFilepath(label, stringValue))
                 {
-					setter(MonoUtils::ToMonoString(stringValue));
-					return true;
+                    setter(MonoUtils::ToMonoString(stringValue));
+                    return true;
                 }
             }
-            else
-            if (UI::Property(label, stringValue))
+            else if (UI::Property(label, stringValue))
             {
                 setter(MonoUtils::ToMonoString(stringValue));
                 return true;
@@ -251,11 +250,11 @@ namespace Crowny
             bool value = *(bool*)fieldValue;
             if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Dropdown))
             {
-				static Vector<const char*> options = { "False", "True" };
+                static Vector<const char*> options = { "False", "True" };
                 if (UI::PropertyDropdown(label, options, value))
                 {
-					modified = true;
-					setter(&value);
+                    modified = true;
+                    setter(&value);
                     return true;
                 }
             }
@@ -555,7 +554,7 @@ namespace Crowny
                                              std::function<MonoObject*()> getter, std::function<void(void*)> setter,
                                              const Ref<SerializableTypeInfo>& listType, int depth)
     {
-		UI::ScopedDisable disabled(memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::ReadOnly));
+        UI::ScopedDisable disabled(memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::ReadOnly));
         const Ref<SerializableTypeInfo>& typeInfo = listType == nullptr ? memberInfo->m_TypeInfo : listType;
         if (typeInfo->GetType() == SerializableType::Enum)
         {
@@ -651,22 +650,52 @@ namespace Crowny
                                               std::function<void(void*)> setter, int depth)
     {
         bool totalModified = false;
+        bool closed = false;
         for (auto kv : objectInfo->m_Fields)
         {
             const Ref<SerializableMemberInfo>& memberInfo = kv.second;
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Inspectable))
                 continue;
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + depth * 25);
-            MonoObject* val = memberInfo->GetValue(instance);
-            auto valueGetter = [&]() { return val; };
-            auto valueSetter = [&](void* value) { memberInfo->SetValue(instance, value); };
-            auto objectSetter = [=](void* obj) { setter((MonoObject*)obj); };
-            bool modified = DrawFieldInspector(memberInfo, memberInfo->m_Name.c_str(), valueGetter, valueSetter);
-            totalModified |= modified;
-            if (modified && objectInfo->m_TypeInfo->m_ValueType)
+
+            UI::ShiftCursorX(depth * 25);
+            auto iterFind = objectInfo->m_Headers.find(kv.first);
+            if (iterFind != objectInfo->m_Headers.end())
             {
-                if (setter)
-                    setter(MonoUtils::Unbox(instance));
+                UI::ShiftCursor(10.0f, 9.0f);
+                ImGui::Columns(1);
+                const ScriptHeader& header = iterFind->second;
+                if (header.Collapsable)
+                {
+                    if (UI::IsItemDisabled())
+                    {
+                        ImGui::EndDisabled();
+                        closed = ImGui::CollapsingHeader(header.Label.c_str());
+                        ImGui::BeginDisabled(true);
+                    }
+                    else
+                        closed = ImGui::CollapsingHeader(header.Label.c_str());
+                }
+                else
+                {
+                    UI::ScopedFont font(UI::ScopedFont::Bold);
+                    ImGui::TextUnformatted(header.Label.c_str());
+                }
+                ImGui::Columns(2);
+            }
+
+            if (!closed)
+            {
+                MonoObject* val = memberInfo->GetValue(instance);
+                auto valueGetter = [&]() { return val; };
+                auto valueSetter = [&](void* value) { memberInfo->SetValue(instance, value); };
+                auto objectSetter = [=](void* obj) { setter((MonoObject*)obj); };
+                bool modified = DrawFieldInspector(memberInfo, memberInfo->m_Name.c_str(), valueGetter, valueSetter);
+                totalModified |= modified;
+                if (modified && objectInfo->m_TypeInfo->m_ValueType)
+                {
+                    if (setter)
+                        setter(MonoUtils::Unbox(instance));
+                }
             }
         }
         return totalModified;

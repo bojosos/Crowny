@@ -14,10 +14,10 @@ namespace Crowny
 
     enum class GizmoEditMode
     {
-		None = 0,
-		Translate = 1,
-		Rotate = 2,
-		Scale = 3,
+        None = 0,
+        Translate = 1,
+        Rotate = 2,
+        Scale = 3,
         Bounds = 4
     };
 

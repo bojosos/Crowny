@@ -113,7 +113,8 @@ namespace Crowny
                         String className = payloadPath.filename().replace_extension("").string();
                         if (!selectedEntity.HasComponent<MonoScriptComponent>())
                         {
-                            MonoScriptComponent& msc = selectedEntity.AddComponent<MonoScriptComponent>(payloadPath.filename().replace_extension("").string());
+                            MonoScriptComponent& msc = selectedEntity.AddComponent<MonoScriptComponent>(
+                              payloadPath.filename().replace_extension("").string());
                             AssetHandle<ScriptCode> scriptCode =
                               static_asset_cast<ScriptCode>(ProjectLibrary::Get().Load(
                                 payloadPath)); // TODO: Analyze the code to extract the name of the MonoBehaviour class
@@ -121,14 +122,14 @@ namespace Crowny
                         }
                         else
                         {
-							auto& scripts = selectedEntity.GetComponent<MonoScriptComponent>().Scripts;
+                            auto& scripts = selectedEntity.GetComponent<MonoScriptComponent>().Scripts;
                             bool exists = false;
-							for (auto& script : scripts)
-								if (script.GetTypeName() == className)
+                            for (auto& script : scripts)
+                                if (script.GetTypeName() == className)
                                     exists = true;
                             if (!exists)
-								scripts.push_back(MonoScript(className));
-							scripts.back().OnInitialize(selectedEntity);
+                                scripts.push_back(MonoScript(className));
+                            scripts.back().OnInitialize(selectedEntity);
                         }
                     }
                 }

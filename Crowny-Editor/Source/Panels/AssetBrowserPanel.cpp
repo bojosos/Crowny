@@ -169,11 +169,11 @@ namespace Crowny
 
         ImGui::Spring();
         UI::ScopedStyle style(ImGuiStyleVar_LayoutAlign, 1);
-		
-		ImGui::SetNextItemWidth(150.0f);
+
+        ImGui::SetNextItemWidth(150.0f);
         if (UIUtils::SearchWidget(m_SearchString) && !m_SearchString.empty())
-			m_DisplayList = ProjectLibrary::Get().Search(m_SearchString);
-		
+            m_DisplayList = ProjectLibrary::Get().Search(m_SearchString);
+
         const float maxWidth = 150.0f * 1.1f;
         const float spacing = ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(" ").x;
         const float checkboxSize = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2;
@@ -274,14 +274,13 @@ namespace Crowny
 
         if (Input::IsKeyUp(Key::Enter)) // Enter a directory using the keyboard
         {
-			LibraryEntry* entry = m_CurrentDirectoryEntry->Children[m_SelectionStartIndex].get();
+            LibraryEntry* entry = m_CurrentDirectoryEntry->Children[m_SelectionStartIndex].get();
             if (entry->Type == LibraryEntryType::Directory)
             {
                 m_BackwardHistory.push(m_CurrentDirectoryEntry);
                 while (!m_ForwardHistory.empty())
                     m_ForwardHistory.pop();
-                m_CurrentDirectoryEntry =
-                  static_cast<DirectoryEntry*>(entry);
+                m_CurrentDirectoryEntry = static_cast<DirectoryEntry*>(entry);
                 RecalculateDirectoryEntries();
             }
             else
@@ -412,7 +411,8 @@ namespace Crowny
             HandleKeyboardNavigation();
 
         // Files
-		const Vector<Ref<LibraryEntry>>& displayList = m_SearchString.empty() ? m_CurrentDirectoryEntry->Children : m_DisplayList;
+        const Vector<Ref<LibraryEntry>>& displayList =
+          m_SearchString.empty() ? m_CurrentDirectoryEntry->Children : m_DisplayList;
         for (uint32_t entryIdx = 0; entryIdx < displayList.size(); entryIdx++)
         {
             const auto& entry = displayList[entryIdx];
@@ -501,7 +501,7 @@ namespace Crowny
                     dropping = true;
                     if (const ImGuiPayload* payload = UIUtils::AcceptAssetPayload())
                     {
-						Path payloadPath = UIUtils::GetPathFromPayload(payload);
+                        Path payloadPath = UIUtils::GetPathFromPayload(payload);
                         Path filename = payloadPath.filename();
                         ProjectLibrary::Get().MoveEntry(payloadPath, path / filename);
                     }

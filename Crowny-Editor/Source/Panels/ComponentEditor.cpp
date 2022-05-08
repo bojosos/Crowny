@@ -1,7 +1,7 @@
 #include "cwepch.h"
 
-#include "Editor/ProjectLibrary.h"
 #include "Editor/EditorUtils.h"
+#include "Editor/ProjectLibrary.h"
 #include "Panels/ComponentEditor.h"
 #include "Panels/HierarchyPanel.h"
 
@@ -49,7 +49,8 @@ namespace Crowny
                 {
                     if (tid == entt::type_info<MonoScriptComponent>::id())
                     {
-                        // Draw the collapsing headers in the widget itself, since one component can have multiple scripts
+                        // Draw the collapsing headers in the widget itself, since one component can have multiple
+                        // scripts
                         ci.widget(entity);
                         // ImGui::PopID();
                         continue;
@@ -106,71 +107,81 @@ namespace Crowny
                             }
                         }
                     }
-					
-					const auto& entityBehaviours = ScriptInfoManager::Get().GetEntityBehaviours();
+
+                    const auto& entityBehaviours = ScriptInfoManager::Get().GetEntityBehaviours();
                     for (auto [name, klass] : entityBehaviours)
                     {
                         bool exists = false;
                         if (entity.HasComponent<MonoScriptComponent>())
                         {
                             const auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
-                            if (std::find_if(scripts.begin(), scripts.end(), [&](const auto& script) { return script.GetTypeName() == name; }) != scripts.end())
+                            if (std::find_if(scripts.begin(), scripts.end(), [&](const auto& script) {
+                                    return script.GetTypeName() == name;
+                                }) != scripts.end())
                                 exists = true;
                         }
-						if (!exists && StringUtils::IsSearchMathing(name, s_SearchString))
-						{
-							ImGui::PushItemWidth(-1);
-							if (ImGui::Button(name.c_str()))
-							{
-								if (!entity.HasComponent<MonoScriptComponent>())
-								{
-									MonoScriptComponent& msc = entity.AddComponent<MonoScriptComponent>(name);
-									msc.Scripts[0].OnInitialize(entity);
-								}
-								else
-								{
-									auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
-									scripts.push_back(MonoScript(name));
-									scripts.back().OnInitialize(entity);
-								}
-								ImGui::CloseCurrentPopup();
-							}
-						}
+                        if (!exists && StringUtils::IsSearchMathing(name, s_SearchString))
+                        {
+                            ImGui::PushItemWidth(-1);
+                            if (ImGui::Button(name.c_str()))
+                            {
+                                if (!entity.HasComponent<MonoScriptComponent>())
+                                {
+                                    MonoScriptComponent& msc = entity.AddComponent<MonoScriptComponent>(name);
+                                    msc.Scripts[0].OnInitialize(entity);
+                                }
+                                else
+                                {
+                                    auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
+                                    scripts.push_back(MonoScript(name));
+                                    scripts.back().OnInitialize(entity);
+                                }
+                                ImGui::CloseCurrentPopup();
+                            }
+                        }
                     }
                     if (entityBehaviours.find(s_SearchString) == entityBehaviours.end())
                     {
-                        std::regex validClassName = std::regex("[A-Za-z_][A-Za-z0-9_]*"); // This is not technically correct, but it should work just fine
-                                                                                          // First this allows for keyword classes (which can be used using @ in front of class names)
-                                                                                          // Also not all unicode stuff, but who is going to use Unicode in class names
+                        std::regex validClassName = std::regex(
+                          "[A-Za-z_][A-Za-z0-9_]*"); // This is not technically correct, but it should work just fine
+                                                     // First this allows for keyword classes (which can be used using @
+                                                     // in front of class names) Also not all unicode stuff, but who is
+                                                     // going to use Unicode in class names
                         if (std::regex_match(s_SearchString, validClassName))
                         {
-                            if (ImGui::Button("Create new script") || Input::IsKeyPressed(Key::Enter)) // Create a new script with the search string
+                            if (ImGui::Button("Create new script") ||
+                                Input::IsKeyPressed(Key::Enter)) // Create a new script with the search string
                             {
-                                String defaultContents = FileSystem::ReadTextFile("C:\\dev\\Crowny\\Crowny-Editor\\Resources\\Default\\DefaultScript.cs"); // TODO: Don't load this every time
-                                String script = StringUtils::Replace(defaultContents, "#NAMESPACE#",
-                                                                     Editor::Get().GetProjectPath().filename().string());
+                                String defaultContents = FileSystem::ReadTextFile(
+                                  "C:\\dev\\Crowny\\Crowny-Editor\\Resources\\Default\\DefaultScript.cs"); // TODO:
+                                                                                                           // Don't load
+                                                                                                           // this every
+                                                                                                           // time
+                                String script = StringUtils::Replace(
+                                  defaultContents, "#NAMESPACE#", Editor::Get().GetProjectPath().filename().string());
                                 script = StringUtils::Replace(script, "#CLASSNAME#", s_SearchString);
-                                Path path = EditorUtils::GetUniquePath(ProjectLibrary::Get().GetAssetFolder() / (s_SearchString + ".cs"));
+                                Path path = EditorUtils::GetUniquePath(ProjectLibrary::Get().GetAssetFolder() /
+                                                                       (s_SearchString + ".cs"));
                                 FileSystem::WriteTextFile(path, script);
                                 ProjectLibrary::Get().Refresh(path);
-							    ImGui::CloseCurrentPopup();
+                                ImGui::CloseCurrentPopup();
 
-							    if (!entity.HasComponent<MonoScriptComponent>())
-							    {
-								    MonoScriptComponent& msc = entity.AddComponent<MonoScriptComponent>(s_SearchString);
-								    msc.Scripts[0].OnInitialize(entity);
-							    }
-							    else
-							    {
-								    auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
-								    bool exists = false;
-								    for (auto& script : scripts)
-									    if (script.GetTypeName() == s_SearchString)
-										    exists = true;
-								    if (!exists)
-									    scripts.push_back(MonoScript(s_SearchString));
-								    scripts.back().OnInitialize(entity);
-							    }
+                                if (!entity.HasComponent<MonoScriptComponent>())
+                                {
+                                    MonoScriptComponent& msc = entity.AddComponent<MonoScriptComponent>(s_SearchString);
+                                    msc.Scripts[0].OnInitialize(entity);
+                                }
+                                else
+                                {
+                                    auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
+                                    bool exists = false;
+                                    for (auto& script : scripts)
+                                        if (script.GetTypeName() == s_SearchString)
+                                            exists = true;
+                                    if (!exists)
+                                        scripts.push_back(MonoScript(s_SearchString));
+                                    scripts.back().OnInitialize(entity);
+                                }
                             }
                         }
                     }

@@ -17,19 +17,26 @@ namespace Crowny
         out << YAML::Key << "EditorCameraPosition" << YAML::Value << settings->EditorCameraPosition;
         out << YAML::Key << "EditorCameraRotation" << YAML::Value << settings->EditorCameraRotation;
         out << YAML::Key << "LastOpenScene" << YAML::Value << settings->LastOpenScenePath;
-        out << YAML::Key << "GizmoMode" << YAML::Value << (uint32_t)settings->GizmoMode; // TODO: Maybe move to project settings
+        out << YAML::Key << "GizmoMode" << YAML::Value
+            << (uint32_t)settings->GizmoMode; // TODO: Maybe move to project settings
         out << YAML::Key << "GizmoLocalMode" << YAML::Value << settings->GizmoLocalMode;
         out << YAML::Key << "LastAssetBrowserEntry" << YAML::Value << settings->LastAssetBrowserSelectedEntry.string();
         out << YAML::Key << "LastSelectedEntity" << YAML::Value << settings->LastSelectedEntityID;
-        
+
         out << YAML::Key << "LayerNames" << YAML::Value << YAML::BeginSeq;
         for (uint32_t i = 0; i < 32; i++)
             out << Physics2D::Get().GetLayerName(i);
         out << YAML::EndSeq;
-		out << YAML::Key << "Gravity2D" << YAML::Value << Physics2D::Get().GetGravity();
+        out << YAML::Key << "Gravity2D" << YAML::Value << Physics2D::Get().GetGravity();
         // out << YAML::Key << "DefaultMaterial" << YAML::Value << Physics2D::Get().GetDefaultMaterial();
         out << YAML::Key << "VelocityIterations" << YAML::Value << Physics2D::Get().GetVelocityIterations();
         out << YAML::Key << "PositionIterations" << YAML::Value << Physics2D::Get().GetPositionIterations();
+
+        out << YAML::Key << "Hierarchy" << YAML::Value << YAML::BeginSeq;
+        for (const UUID& uuid : settings->ExpandedEntities)
+            out << uuid;
+        out << YAML::EndSeq;
+
         out << YAML::EndSeq;
         out << YAML::EndMap;
     }
@@ -44,9 +51,7 @@ namespace Crowny
         projectSettings->GizmoMode = (GizmoEditMode)node["GizmoMode"].as<uint32_t>();
         projectSettings->LastAssetBrowserSelectedEntry = node["LastAssetBrowserEntry"].as<String>();
         projectSettings->LastOpenScenePath = node["LastOpenScene"].as<String>();
-
-        if (const auto& id = node["LastSelectedEntity"])
-            projectSettings->LastSelectedEntityID = id.as<UUID>();
+        projectSettings->LastSelectedEntityID = node["LastSelectedEntity"].as<UUID>(UUID::EMPTY);
         if (const auto& layerNames = node["LayerNames"])
         {
             uint32_t idx = 0;
@@ -54,8 +59,13 @@ namespace Crowny
                 Physics2D::Get().SetLayerName(idx++, layerName.as<String>());
         }
         Physics2D::Get().SetGravity(node["Gravity2D"].as<glm::vec2>(glm::vec2(0.0f, -9.81f)));
-		Physics2D::Get().SetVelocityIterations(node["VelocityIterations"].as<uint32_t>(8));
-		Physics2D::Get().SetPositionIterations(node["PositionIterations"].as<uint32_t>(3));
+        Physics2D::Get().SetVelocityIterations(node["VelocityIterations"].as<uint32_t>(8));
+        Physics2D::Get().SetPositionIterations(node["PositionIterations"].as<uint32_t>(3));
+        if (const auto& hierarchy = node["Hierarchy"])
+        {
+            for (const auto& uuid : hierarchy)
+                projectSettings->ExpandedEntities.insert(uuid.as<UUID>());
+        }
         return projectSettings;
     }
 

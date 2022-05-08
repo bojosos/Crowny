@@ -57,6 +57,29 @@ namespace Crowny
             ~ScopedDisable() { ImGui::EndDisabled(); }
         };
 
+        struct ScopedFont
+        {
+            enum Font
+            {
+                Bold
+            };
+            ScopedFont(Font font)
+            {
+                switch (font)
+                {
+                case Bold:
+                    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                    break;
+                default:
+                    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
+                    break;
+                }
+            }
+            ScopedFont(const ScopedFont&) = delete;
+            ScopedFont operator=(const ScopedFont&) = delete;
+            ~ScopedFont() { ImGui::PopFont(); }
+        };
+
         static const char* GenerateID()
         {
             itoa(s_Counter++, s_IDBuffer + 2, 16);

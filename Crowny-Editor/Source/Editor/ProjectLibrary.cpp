@@ -442,15 +442,15 @@ namespace Crowny
         stack.push(m_RootEntry.get());
         while (!stack.empty())
         {
-			DirectoryEntry* cur = stack.top();
+            DirectoryEntry* cur = stack.top();
             stack.pop();
             for (auto& entry : cur->Children)
-			{
-				if (StringUtils::IsSearchMathing(entry->ElementName, pattern))
-					result.push_back(entry);
-				
-				if (entry->Type == LibraryEntryType::Directory)
-					stack.push(static_cast<DirectoryEntry*>(entry.get()));
+            {
+                if (StringUtils::IsSearchMathing(entry->ElementName, pattern))
+                    result.push_back(entry);
+
+                if (entry->Type == LibraryEntryType::Directory)
+                    stack.push(static_cast<DirectoryEntry*>(entry.get()));
             }
         }
         return result;

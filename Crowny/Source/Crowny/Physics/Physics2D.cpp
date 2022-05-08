@@ -84,40 +84,36 @@ namespace Crowny
         m_Settings = CreateRef<Physics2DSettings>();
         for (uint32_t i = 0; i < m_Settings->MaskBits.size(); i++)
             m_Settings->MaskBits[i] = 0xFFFFFFFF;
+        m_TemporaryWorld2D = new b2World({ m_Settings->Gravity.x, m_Settings->Gravity.y });
     }
 
-	void Physics2D::SetGravity(const glm::vec2& gravity)
+    void Physics2D::SetGravity(const glm::vec2& gravity)
     {
         if (m_PhysicsWorld2D != nullptr)
-			m_PhysicsWorld2D->SetGravity({ gravity.x, gravity.y });
+            m_PhysicsWorld2D->SetGravity({ gravity.x, gravity.y });
         m_Settings->Gravity = gravity;
     }
-	void Physics2D::SetVelocityIterations(uint32_t iterations)
-    {
-        m_Settings->VelocityIterations = iterations;
-    }
+    void Physics2D::SetVelocityIterations(uint32_t iterations) { m_Settings->VelocityIterations = iterations; }
 
-	void Physics2D::SetPositionIterations(uint32_t iterations)
-    {
-        m_Settings->PositionIterations = iterations;
-    }
+    void Physics2D::SetPositionIterations(uint32_t iterations) { m_Settings->PositionIterations = iterations; }
 
     void Physics2D::SetCategoryMask(uint32_t idx, uint32_t mask)
     {
         m_Settings->MaskBits[idx] = mask;
         Scene* scene = SceneManager::GetActiveScene().get();
-		auto view = scene->GetAllEntitiesWith<Rigidbody2DComponent>();
+        auto view = scene->GetAllEntitiesWith<Rigidbody2DComponent>();
         for (auto e : view)
         {
-			Entity entity { e, scene };
-			auto& rb = entity.GetComponent<Rigidbody2DComponent>();
-			if (rb.GetLayerMask() == idx)
-			    rb.SetLayerMask(idx, entity);
+            Entity entity{ e, scene };
+            auto& rb = entity.GetComponent<Rigidbody2DComponent>();
+            if (rb.GetLayerMask() == idx)
+                rb.SetLayerMask(idx, entity);
         }
     }
 
     Physics2D::~Physics2D()
     {
+        delete m_TemporaryWorld2D;
         delete m_PhysicsWorld2D;
         delete m_ContactListener2D;
     }
@@ -304,31 +300,43 @@ namespace Crowny
         if (!entity.HasComponent<Rigidbody2DComponent>())
             return 0.0f;
         b2World* tempWorld = m_PhysicsWorld2D;
-		m_PhysicsWorld2D = m_TemporaryWorld2D;
-		
+        m_PhysicsWorld2D = m_TemporaryWorld2D;
+
         CreateRigidbody(entity);
-		if (entity.HasComponent<BoxCollider2DComponent>())
-			CreateBoxCollider(entity);
-		if (entity.HasComponent<CircleCollider2DComponent>())
-			CreateCircleCollider(entity);
+        if (entity.HasComponent<BoxCollider2DComponent>())
+            CreateBoxCollider(entity);
+        if (entity.HasComponent<CircleCollider2DComponent>())
+            CreateCircleCollider(entity);
         float mass = entity.GetComponent<Rigidbody2DComponent>().GetMass();
-        if (entity.HasComponent<Rigidbody2DComponent>())
-        {
-            auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
-            DestroyRigidbody(entity);
-        }
-		if (entity.HasComponent<BoxCollider2DComponent>())
-		{
-			auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
-			DestroyRigidbody(entity);
-		}
-		DestroyRigidbody(entity);
-		if (entity.HasComponent<BoxCollider2DComponent>())
+        if (entity.HasComponent<BoxCollider2DComponent>())
             DestroyFixture(entity, entity.GetComponent<BoxCollider2DComponent>());
-		if (entity.HasComponent<CircleCollider2DComponent>())
-			DestroyFixture(entity, entity.GetComponent<CircleCollider2DComponent>());
+        if (entity.HasComponent<CircleCollider2DComponent>())
+            DestroyFixture(entity, entity.GetComponent<CircleCollider2DComponent>());
+        DestroyRigidbody(entity);
         m_PhysicsWorld2D = tempWorld;
         return mass;
+    }
+
+    glm::vec2 Physics2D::CalculateCenterOfMass(Entity entity)
+    {
+        if (!entity.HasComponent<Rigidbody2DComponent>())
+            return { 0.0f, 0.0f };
+        b2World* tempWorld = m_PhysicsWorld2D;
+        m_PhysicsWorld2D = m_TemporaryWorld2D;
+
+        CreateRigidbody(entity);
+        if (entity.HasComponent<BoxCollider2DComponent>())
+            CreateBoxCollider(entity);
+        if (entity.HasComponent<CircleCollider2DComponent>())
+            CreateCircleCollider(entity);
+        glm::vec2 center = entity.GetComponent<Rigidbody2DComponent>().GetCenterOfMass();
+        if (entity.HasComponent<BoxCollider2DComponent>())
+            DestroyFixture(entity, entity.GetComponent<BoxCollider2DComponent>());
+        if (entity.HasComponent<CircleCollider2DComponent>())
+            DestroyFixture(entity, entity.GetComponent<CircleCollider2DComponent>());
+        DestroyRigidbody(entity);
+        m_PhysicsWorld2D = tempWorld;
+        return center;
     }
 
 } // namespace Crowny

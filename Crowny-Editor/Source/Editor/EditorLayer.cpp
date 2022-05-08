@@ -24,14 +24,14 @@
 #include "UI/Properties.h"
 #include "UI/UIUtils.h"
 
-#include "Crowny/Scripting/Bindings/Utils/ScriptCompression.h"
-#include "Crowny/Scripting/Bindings/Utils/ScriptLayerMask.h"
 #include "Crowny/Scripting/Bindings/Logging/ScriptDebug.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptMath.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptNoise.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptTime.h"
 #include "Crowny/Scripting/Bindings/ScriptInput.h"
 #include "Crowny/Scripting/Bindings/ScriptRandom.h"
+#include "Crowny/Scripting/Bindings/Utils/ScriptCompression.h"
+#include "Crowny/Scripting/Bindings/Utils/ScriptLayerMask.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptObjectManager.h"
 
@@ -71,7 +71,7 @@ namespace Crowny
         ScriptRandom tempRandom = ScriptRandom();
         ScriptLayerMask tempLayerMask = ScriptLayerMask();
         // ScriptCompression tempCompression = ScriptCompression();
-		
+
         EditorAssets::Load();
 
         Editor::StartUp();
@@ -216,6 +216,8 @@ namespace Crowny
 
         if (m_Temp != nullptr)
             m_HierarchyPanel->SetSelectedEntity(m_Temp->GetEntityFromUuid(projSettings->LastSelectedEntityID));
+
+        m_HierarchyPanel->SetHierarchy(projSettings->ExpandedEntities);
     }
 
     void EditorLayer::SaveProjectSettings()
@@ -236,6 +238,7 @@ namespace Crowny
 
         if (HierarchyPanel::GetSelectedEntity())
             projSettings->LastSelectedEntityID = HierarchyPanel::GetSelectedEntity().GetUuid();
+        projSettings->ExpandedEntities = m_HierarchyPanel->GetSerializableHierarchy();
     }
 
     void EditorLayer::BuildGame(Event& event) {}
@@ -253,7 +256,7 @@ namespace Crowny
         void* params[6] = { &type,
                             &debug,
                             MonoUtils::ToMonoString((Editor::Get().GetProjectPath() / INTERNAL_ASSEMBLY_PATH).string()),
-                            MonoUtils::ToMonoString(Editor::Get().GetProjectPath().string()),
+                            MonoUtils::ToMonoString(ProjectLibrary::Get().GetAssetFolder().string()),
                             libDirs,
                             refs };
         scriptCompiler->GetMethod("Compile", 6)->Invoke(nullptr, params);
@@ -263,7 +266,7 @@ namespace Crowny
         CW_ENGINE_INFO("{0}, {1}", gameAssemblyPath, Editor::Get().GetProjectPath());
         refreshInfos.emplace_back(CROWNY_ASSEMBLY, &engineAssemblyPath);
         refreshInfos.emplace_back(GAME_ASSEMBLY, &gameAssemblyPath);
-        ScriptObjectManager::Get().RefreshAssemblies(refreshInfos);
+        // ScriptObjectManager::Get().RefreshAssemblies(refreshInfos);
 
         ScriptInfoManager::Get().InitializeTypes();
         ScriptInfoManager::Get().LoadAssemblyInfo(GAME_ASSEMBLY);
@@ -358,7 +361,6 @@ namespace Crowny
         settings->ShowEntityDebugInfo = m_ShowEntityDebugInfo;
         settings->ShowAssetInfo = m_ShowAssetInfo;
         settings->ShowScriptDebugInfo = m_ShowScriptDebugInfo;
-
         settings->EnableConsoleInfoMessages =
           m_ConsolePanel->IsMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Info);
         settings->EnableConsoleWarningMessages =
@@ -717,10 +719,10 @@ namespace Crowny
                 return;
         }
 
-		UI_Header();
-		UI_GizmoSettings();
+        UI_Header();
+        UI_GizmoSettings();
         UI_Settings();
-        UI_LayerCollisionMatrix();
+        UI_Physics2DSettings();
 
 #ifdef CW_DEBUG
         UI_ScriptInfo();
@@ -829,69 +831,90 @@ namespace Crowny
 
     static bool s_OpenCollisionMatrix = true;
 
-    void EditorLayer::UI_LayerCollisionMatrix()
+    void EditorLayer::UI_Physics2DSettings()
     {
         ImGui::Begin("Physics 2D", &s_OpenCollisionMatrix);
         {
             UI::ScopedStyle spacing(ImGuiStyleVar_ItemSpacing, ImVec2{ 2.0f, 2.0f });
 
-			UI::BeginPropertyGrid();
-			glm::vec2 gravity = Physics2D::Get().GetGravity();
-			if (UI::Property("Gravity", gravity))
-				Physics2D::Get().SetGravity(gravity);
+            UI::BeginPropertyGrid();
+            glm::vec2 gravity = Physics2D::Get().GetGravity();
+            if (UI::Property("Gravity", gravity))
+                Physics2D::Get().SetGravity(gravity);
 
-			uint32_t velocityIterations = Physics2D::Get().GetVelocityIterations();
-			if (UI::Property("Velocity iterations", velocityIterations ))
-				Physics2D::Get().SetVelocityIterations(velocityIterations );
+            uint32_t velocityIterations = Physics2D::Get().GetVelocityIterations();
+            if (UI::Property("Velocity iterations", velocityIterations))
+                Physics2D::Get().SetVelocityIterations(velocityIterations);
 
-			uint32_t positionIterations = Physics2D::Get().GetPositionIterations();
-			if (UI::Property("Position iterations", positionIterations))
-				Physics2D::Get().SetPositionIterations(positionIterations);
-			UI::EndPropertyGrid();
+            uint32_t positionIterations = Physics2D::Get().GetPositionIterations();
+            if (UI::Property("Position iterations", positionIterations))
+                Physics2D::Get().SetPositionIterations(positionIterations);
+            UI::EndPropertyGrid();
             if (ImGui::CollapsingHeader("Layer Names"))
             {
                 UI::BeginPropertyGrid();
+                uint32_t lastNonEmptyIdx = 0;
+                for (uint32_t i = 31; i >= 0; i--)
+                {
+                    if (!Physics2D::Get().GetLayerName(i).empty())
+                    {
+                        lastNonEmptyIdx = i;
+                        break;
+                    }
+                }
                 for (uint32_t i = 0; i < 32; i++)
                 {
+                    if (i > lastNonEmptyIdx + 1 &&
+                        !UI::IsItemDisabled()) // Give the user exactly one non-disabled layer field
+                        ImGui::BeginDisabled(true);
                     String layerName = Physics2D::Get().GetLayerName(i);
                     if (UI::Property(fmt::format("Layer {0}", i).c_str(), layerName))
                         Physics2D::Get().SetLayerName(i, layerName);
                 }
+                if (UI::IsItemDisabled())
+                    ImGui::EndDisabled();
                 UI::EndPropertyGrid();
             }
 
-			if (ImGui::CollapsingHeader("Collision Matrix"))
-			{
+            if (ImGui::CollapsingHeader("Collision Matrix"))
+            {
                 UI::PushID();
                 uint32_t id = 0;
                 uint32_t nonEmpty = 0;
                 uint32_t maxTextLength = 0;
                 for (uint32_t i = 0; i < 32; i++)
                 {
-                    maxTextLength = std::max(maxTextLength, (uint32_t)ImGui::CalcTextSize(Physics2D::Get().GetLayerName(i).c_str()).x);
+                    maxTextLength = std::max(maxTextLength,
+                                             (uint32_t)ImGui::CalcTextSize(Physics2D::Get().GetLayerName(i).c_str()).x);
                     nonEmpty += !Physics2D::Get().GetLayerName(i).empty();
                 }
                 nonEmpty--;
                 UI::ShiftCursorY(maxTextLength);
                 const ImVec2 text_pos(ImGui::GetCurrentWindow()->DC.CursorPos.x,
                                       ImGui::GetCurrentWindow()->DC.CursorPos.y - 2.0f);
+                uint32_t ii = 0;
                 for (uint32_t i = 0; i < 32; i++) // rows
                 {
                     uint32_t categoryMask = Physics2D::Get().GetCategoryMask(i);
                     if (Physics2D::Get().GetLayerName(i).empty())
                         continue;
+                    ii++;
                     UI::ShiftCursorX(10);
                     ImGui::Text(Physics2D::Get().GetLayerName(i).c_str());
                     ImGui::SameLine();
                     ImGui::SetCursorPosX(maxTextLength + ImGui::GetStyle().WindowPadding.x + 2 + 10);
-                    for (uint32_t j = 0; j < 32; j++)
+                    uint32_t jj = 0;
+                    for (uint32_t j = 0; j < 32; j++) // cols
                     {
-                        if (i + j > nonEmpty || Physics2D::Get().GetLayerName(j).empty())
+                        if (ii + jj > nonEmpty + 1 || Physics2D::Get().GetLayerName(j).empty())
                             continue;
-                        if (i == 0)
+                        jj++;
+                        if (ii == 1)
+                        {
                             AddTextVertical(ImGui::GetWindowDrawList(), Physics2D::Get().GetLayerName(j).c_str(),
                                             text_pos + ImVec2(ImGui::GetCursorPosX() - 6.0f, 0),
                                             IM_COL32(192, 192, 192, 255));
+                        }
                         bool value = (categoryMask & (1 << j)) != 0;
                         ImGui::PushID(id++);
                         if (ImGui::Checkbox("##checkbox", &value))
@@ -901,7 +924,7 @@ namespace Crowny
                             else
                                 Physics2D::Get().SetCategoryMask(i, categoryMask & (~(1 << j)));
                         }
-                        if (i + j + 1 <= nonEmpty)
+                        if (ii + jj <= nonEmpty + 1)
                             ImGui::SameLine();
                         ImGui::PopID();
                     }
@@ -991,7 +1014,7 @@ namespace Crowny
         ImGui::Spring();
         {
             UI::ScopedStyle enableSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(edgeOffset * 2.0f, 0));
-			const ImColor c_ButtonTint = IM_COL32(192, 192, 192, 255);
+            const ImColor c_ButtonTint = IM_COL32(192, 192, 192, 255);
             const ImColor c_SimulateButtonTint =
               m_SceneState == SceneState::Simulate ? ImColor(39, 185, 242, 255) : c_ButtonTint;
 
@@ -1075,88 +1098,87 @@ namespace Crowny
     }
 
     void EditorLayer::UI_GizmoSettings()
-	{
-		UI::PushID();
-		UI::ScopedStyle disableSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-		UI::ScopedStyle disableWindowBorder(ImGuiStyleVar_WindowBorderSize, 0.0f);
-		UI::ScopedStyle windowRounding(ImGuiStyleVar_WindowRounding, 4.0f);
-		UI::ScopedStyle disablePadding(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+    {
+        UI::PushID();
+        UI::ScopedStyle disableSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+        UI::ScopedStyle disableWindowBorder(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        UI::ScopedStyle windowRounding(ImGuiStyleVar_WindowRounding, 4.0f);
+        UI::ScopedStyle disablePadding(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 
-		const float buttonSize = 18.0f + 5.0f;
-		const float edgeOffset = 4.0f;
-		const float windowHeight = 32.0f;
-		const float numberOfButtons = 5.0f;
-		const float backgroundWidth =
-			edgeOffset * 6.0f + buttonSize * numberOfButtons + edgeOffset * (numberOfButtons - 1.0f) * 2.0f;
+        const float buttonSize = 18.0f + 5.0f;
+        const float edgeOffset = 4.0f;
+        const float windowHeight = 32.0f;
+        const float numberOfButtons = 5.0f;
+        const float backgroundWidth =
+          edgeOffset * 6.0f + buttonSize * numberOfButtons + edgeOffset * (numberOfButtons - 1.0f) * 2.0f;
 
-		float toolbarX = (m_ViewportPanel->GetViewportBounds().x + edgeOffset);
-		ImGui::SetNextWindowPos(ImVec2(toolbarX, m_ViewportPanel->GetViewportBounds().y + edgeOffset));
-		ImGui::SetNextWindowSize(ImVec2(backgroundWidth, windowHeight));
-		ImGui::SetNextWindowBgAlpha(0.0f);
-		ImGui::Begin("##viewport_central_toolbar2", 0, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking);
+        float toolbarX = (m_ViewportPanel->GetViewportBounds().x + edgeOffset);
+        ImGui::SetNextWindowPos(ImVec2(toolbarX, m_ViewportPanel->GetViewportBounds().y + edgeOffset));
+        ImGui::SetNextWindowSize(ImVec2(backgroundWidth, windowHeight));
+        ImGui::SetNextWindowBgAlpha(0.0f);
+        ImGui::Begin("##viewport_central_toolbar2", 0, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking);
 
-		const float desiredHeight = 26.0f + 5.0f;
-		ImRect background =
-			UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), 0.0f, -(windowHeight - desiredHeight) / 2.0f);
-		ImGui::GetWindowDrawList()->AddRectFilled(background.Min, background.Max, IM_COL32(15, 15, 15, 127), 4.0f);
+        const float desiredHeight = 26.0f + 5.0f;
+        ImRect background =
+          UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), 0.0f, -(windowHeight - desiredHeight) / 2.0f);
+        ImGui::GetWindowDrawList()->AddRectFilled(background.Min, background.Max, IM_COL32(15, 15, 15, 127), 4.0f);
 
-		ImGui::BeginVertical("##viewport_central_toolbarV", { backgroundWidth, ImGui::GetContentRegionAvail().y });
-		ImGui::Spring();
-		ImGui::BeginHorizontal("##viewport_central_toolbarH",
-			{ backgroundWidth, ImGui::GetContentRegionAvail().y });
-		ImGui::Spring();
-		{
-			UI::ScopedStyle enableSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(edgeOffset * 2.0f, 0));
-			const ImColor c_ButtonTint = IM_COL32(192, 192, 192, 255);
-			const ImColor c_SimulateButtonTint =
-				m_SceneState == SceneState::Simulate ? ImColor(1.0f, 0.25f, 0.75f, 1.0f) : c_ButtonTint;
+        ImGui::BeginVertical("##viewport_central_toolbarV", { backgroundWidth, ImGui::GetContentRegionAvail().y });
+        ImGui::Spring();
+        ImGui::BeginHorizontal("##viewport_central_toolbarH", { backgroundWidth, ImGui::GetContentRegionAvail().y });
+        ImGui::Spring();
+        {
+            UI::ScopedStyle enableSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(edgeOffset * 2.0f, 0));
+            const ImColor c_ButtonTint = IM_COL32(192, 192, 192, 255);
+            const ImColor c_SimulateButtonTint =
+              m_SceneState == SceneState::Simulate ? ImColor(1.0f, 0.25f, 0.75f, 1.0f) : c_ButtonTint;
 
-			auto drawButton = [buttonSize](const Ref<Texture>& icon, const ImColor& tint, float paddingY = 0.0f) {
-				const float height = std::min((float)icon->GetHeight(), buttonSize) - paddingY * 2.0f;
-				const float width = (float)icon->GetWidth() / (float)icon->GetHeight() * height;
-				const bool clicked = ImGui::InvisibleButton(UI::GenerateID(), ImVec2(width, height));
-				UI::DrawButtonImage(icon, tint, tint, tint, UI::RectOffset(UI::GetItemRect(), 0.0f, paddingY));
+            auto drawButton = [buttonSize](const Ref<Texture>& icon, const ImColor& tint, float paddingY = 0.0f) {
+                const float height = std::min((float)icon->GetHeight(), buttonSize) - paddingY * 2.0f;
+                const float width = (float)icon->GetWidth() / (float)icon->GetHeight() * height;
+                const bool clicked = ImGui::InvisibleButton(UI::GenerateID(), ImVec2(width, height));
+                UI::DrawButtonImage(icon, tint, tint, tint, UI::RectOffset(UI::GetItemRect(), 0.0f, paddingY));
 
-				return clicked;
-			};
+                return clicked;
+            };
 
-			const ImColor activeColor = ImColor(39, 185, 242, 255);
-			ImColor tint = m_ViewportPanel->GetGizmoMode() == GizmoEditMode::None ? activeColor : c_ButtonTint;
-			if (drawButton(EditorAssets::Get().ArrowPointerIcon, tint))
-				m_ViewportPanel->SetGizmoMode(GizmoEditMode::None);
-			UI::SetTooltip("Normal edit mode");
-			tint = m_ViewportPanel->GetGizmoMode() == GizmoEditMode::Translate ? activeColor : c_ButtonTint;
-			if (drawButton(EditorAssets::Get().ArrowsIcon, tint))
-				m_ViewportPanel->SetGizmoMode(GizmoEditMode::Translate);
-			UI::SetTooltip("Translate mode");
-			tint = m_ViewportPanel->GetGizmoMode() == GizmoEditMode::Rotate ? activeColor : c_ButtonTint;
-			if (drawButton(EditorAssets::Get().RotateIcon, tint))
-				m_ViewportPanel->SetGizmoMode(GizmoEditMode::Rotate);
-			UI::SetTooltip("Rotate mode");
-			tint = m_ViewportPanel->GetGizmoMode() == GizmoEditMode::Scale ? activeColor : c_ButtonTint;
-			if (drawButton(EditorAssets::Get().MaximizeIcon, tint))
-				m_ViewportPanel->SetGizmoMode(GizmoEditMode::Scale);
-			UI::SetTooltip("Scale mode");
+            const ImColor activeColor = ImColor(39, 185, 242, 255);
+            ImColor tint = m_ViewportPanel->GetGizmoMode() == GizmoEditMode::None ? activeColor : c_ButtonTint;
+            if (drawButton(EditorAssets::Get().ArrowPointerIcon, tint))
+                m_ViewportPanel->SetGizmoMode(GizmoEditMode::None);
+            UI::SetTooltip("Normal edit mode");
+            tint = m_ViewportPanel->GetGizmoMode() == GizmoEditMode::Translate ? activeColor : c_ButtonTint;
+            if (drawButton(EditorAssets::Get().ArrowsIcon, tint))
+                m_ViewportPanel->SetGizmoMode(GizmoEditMode::Translate);
+            UI::SetTooltip("Translate mode");
+            tint = m_ViewportPanel->GetGizmoMode() == GizmoEditMode::Rotate ? activeColor : c_ButtonTint;
+            if (drawButton(EditorAssets::Get().RotateIcon, tint))
+                m_ViewportPanel->SetGizmoMode(GizmoEditMode::Rotate);
+            UI::SetTooltip("Rotate mode");
+            tint = m_ViewportPanel->GetGizmoMode() == GizmoEditMode::Scale ? activeColor : c_ButtonTint;
+            if (drawButton(EditorAssets::Get().MaximizeIcon, tint))
+                m_ViewportPanel->SetGizmoMode(GizmoEditMode::Scale);
+            UI::SetTooltip("Scale mode");
 
-			tint = m_ViewportPanel->GetGizmoLocalMode() ? activeColor : c_ButtonTint;
-			if (drawButton(EditorAssets::Get().GlobeIcon, tint))
-			{
-				if (m_ViewportPanel->GetGizmoLocalMode())
-					m_ViewportPanel->SetGizmoLocalMode(false);
-				else
-					m_ViewportPanel->SetGizmoLocalMode(true);
-			}
-			UI::SetTooltip("Toggle global gizmo editing");
-		}
-		ImGui::Spring();
-		ImGui::EndHorizontal();
-		ImGui::Spring();
-		ImGui::EndVertical();
+            tint = m_ViewportPanel->GetGizmoLocalMode() ? activeColor : c_ButtonTint;
+            if (drawButton(EditorAssets::Get().GlobeIcon, tint))
+            {
+                if (m_ViewportPanel->GetGizmoLocalMode())
+                    m_ViewportPanel->SetGizmoLocalMode(false);
+                else
+                    m_ViewportPanel->SetGizmoLocalMode(true);
+            }
+            UI::SetTooltip("Toggle global gizmo editing");
+        }
+        ImGui::Spring();
+        ImGui::EndHorizontal();
+        ImGui::Spring();
+        ImGui::EndVertical();
 
-		ImGui::End();
+        ImGui::End();
 
-		UI::PopID();
-	}
+        UI::PopID();
+    }
 
     void EditorLayer::UI_Settings()
     {
@@ -1216,7 +1238,7 @@ namespace Crowny
         }
         return true;
     }
-    
+
     bool EditorLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e) { return false; }
 
     void EditorLayer::OnEvent(Event& e)

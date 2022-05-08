@@ -69,49 +69,57 @@ namespace Crowny
     {
         Entity entity = thisPtr->GetNativeEntity();
         ::MonoClass* componentClass = MonoUtils::GetClass(type);
-		if (MonoUtils::IsSubClassOf(componentClass, ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetInternalPtr())) // We are trying to retrieve a behavior, so loop the MonoScriptBehaviour.Scripts
-		{
+        if (MonoUtils::IsSubClassOf(componentClass,
+                                    ScriptInfoManager::Get()
+                                      .GetBuiltinClasses()
+                                      .EntityBehaviour->GetInternalPtr())) // We are trying to retrieve a behavior, so
+                                                                           // loop the MonoScriptBehaviour.Scripts
+        {
             if (!entity.HasComponent<MonoScriptComponent>())
                 return nullptr;
             const auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
-			for (auto& script : scripts)
-			{
-				if (MonoUtils::IsSubClassOf(script.GetManagedClass()->GetInternalPtr(), componentClass))
-					return script.GetManagedInstance();
+            for (auto& script : scripts)
+            {
+                if (MonoUtils::IsSubClassOf(script.GetManagedClass()->GetInternalPtr(), componentClass))
+                    return script.GetManagedInstance();
             }
-			return nullptr;
-		}
+            return nullptr;
+        }
 
-		ComponentInfo* info = ScriptInfoManager::Get().GetComponentInfo(type);
-		if (info == nullptr)
-			return nullptr;
-		if (!info->HasCallback(entity))
-			return nullptr;
+        ComponentInfo* info = ScriptInfoManager::Get().GetComponentInfo(type);
+        if (info == nullptr)
+            return nullptr;
+        if (!info->HasCallback(entity))
+            return nullptr;
         return info->GetCallback(entity)->GetManagedInstance();
     }
 
     bool ScriptEntity::Internal_HasComponent(ScriptEntity* thisPtr, MonoReflectionType* type)
     {
         Entity entity = thisPtr->GetNativeEntity();
-		::MonoClass* componentClass = MonoUtils::GetClass(type);
-		if (MonoUtils::IsSubClassOf(componentClass, ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetInternalPtr())) // We are trying to check for a behavior, so loop the MonoScriptBehaviour.Scripts
-		{
-			if (!entity.HasComponent<MonoScriptComponent>())
-				return false;
-			else
-			{
-				String ns, ts;
-				MonoUtils::GetClassName(componentClass, ns, ts);
-				auto& msc = entity.AddComponent<MonoScriptComponent>(ts);
-				const auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
-				for (auto& script : scripts)
-				{
-					if (MonoUtils::IsSubClassOf(script.GetManagedClass()->GetInternalPtr(), componentClass))
-						return true;
-				}
+        ::MonoClass* componentClass = MonoUtils::GetClass(type);
+        if (MonoUtils::IsSubClassOf(componentClass,
+                                    ScriptInfoManager::Get()
+                                      .GetBuiltinClasses()
+                                      .EntityBehaviour->GetInternalPtr())) // We are trying to check for a behavior, so
+                                                                           // loop the MonoScriptBehaviour.Scripts
+        {
+            if (!entity.HasComponent<MonoScriptComponent>())
                 return false;
-			}
-		}
+            else
+            {
+                String ns, ts;
+                MonoUtils::GetClassName(componentClass, ns, ts);
+                auto& msc = entity.AddComponent<MonoScriptComponent>(ts);
+                const auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
+                for (auto& script : scripts)
+                {
+                    if (MonoUtils::IsSubClassOf(script.GetManagedClass()->GetInternalPtr(), componentClass))
+                        return true;
+                }
+                return false;
+            }
+        }
 
         ComponentInfo* info = ScriptInfoManager::Get().GetComponentInfo(type);
         if (info == nullptr)
@@ -121,32 +129,39 @@ namespace Crowny
 
     MonoObject* ScriptEntity::Internal_AddComponent(ScriptEntity* thisPtr, MonoReflectionType* type)
     {
-		Entity entity = thisPtr->GetNativeEntity();
-		::MonoClass* componentClass = MonoUtils::GetClass(type);
-        if (MonoUtils::IsSubClassOf(componentClass, ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetInternalPtr())) // We are trying to add a behavior, so loop the MonoScriptBehaviour.Scripts
+        Entity entity = thisPtr->GetNativeEntity();
+        ::MonoClass* componentClass = MonoUtils::GetClass(type);
+        if (MonoUtils::IsSubClassOf(componentClass,
+                                    ScriptInfoManager::Get()
+                                      .GetBuiltinClasses()
+                                      .EntityBehaviour->GetInternalPtr())) // We are trying to add a behavior, so loop
+                                                                           // the MonoScriptBehaviour.Scripts
         {
             if (!entity.HasComponent<MonoScriptComponent>())
             {
                 String ns, ts;
                 MonoUtils::GetClassName(componentClass, ns, ts);
-				auto& msc = entity.AddComponent<MonoScriptComponent>(ts);
+                auto& msc = entity.AddComponent<MonoScriptComponent>(ts);
                 msc.Scripts.back().OnInitialize(entity);
                 return msc.Scripts.back().GetManagedInstance();
             }
             else
             {
-				String ns, ts;
-				MonoUtils::GetClassName(componentClass, ns, ts);
+                String ns, ts;
+                MonoUtils::GetClassName(componentClass, ns, ts);
                 auto& msc = entity.GetComponent<MonoScriptComponent>();
-				const auto& scripts = msc.Scripts;
-				for (auto& script : scripts)
-				{
-					if (script.GetManagedClass()->GetInternalPtr() == componentClass)
-						return nullptr;
-				}
+                const auto& scripts = msc.Scripts;
+                for (auto& script : scripts)
+                {
+                    if (script.GetManagedClass()->GetInternalPtr() == componentClass)
+                    {
+                        CW_ERROR("Entity already has that component!");
+                        return nullptr;
+                    }
+                }
                 msc.Scripts.push_back(MonoScript(ts));
-				msc.Scripts.back().OnInitialize(entity);
-				return msc.Scripts.back().GetManagedInstance();
+                msc.Scripts.back().OnInitialize(entity);
+                return msc.Scripts.back().GetManagedInstance();
             }
         }
         ComponentInfo* info = ScriptInfoManager::Get().GetComponentInfo(type);
@@ -160,24 +175,31 @@ namespace Crowny
     void ScriptEntity::Internal_RemoveComponent(ScriptEntity* thisPtr, MonoReflectionType* type)
     {
         Entity entity = thisPtr->GetNativeEntity();
-		
-		::MonoClass* componentClass = MonoUtils::GetClass(type);
-		if (MonoUtils::IsSubClassOf(componentClass, ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetInternalPtr())) // We are trying to remove a behavior, so loop the MonoScriptBehaviour.Scripts
-		{
-			if (!entity.HasComponent<MonoScriptComponent>())
-				CW_ERROR("Entity doesn't have that component");
-			else
-			{
-				String ns, ts;
-				MonoUtils::GetClassName(componentClass, ns, ts);
-				MonoScriptComponent& scriptComponent = entity.GetComponent<MonoScriptComponent>();
-				auto findIter = std::find_if(scriptComponent.Scripts.begin(), scriptComponent.Scripts.end(), [&](const MonoScript& script) { return script.GetManagedClass()->GetInternalPtr() == componentClass; });
-				if (findIter == scriptComponent.Scripts.end())
-					CW_ERROR("Entity doesn't have that component");
+
+        ::MonoClass* componentClass = MonoUtils::GetClass(type);
+        if (MonoUtils::IsSubClassOf(componentClass,
+                                    ScriptInfoManager::Get()
+                                      .GetBuiltinClasses()
+                                      .EntityBehaviour->GetInternalPtr())) // We are trying to remove a behavior, so
+                                                                           // loop the MonoScriptBehaviour.Scripts
+        {
+            if (!entity.HasComponent<MonoScriptComponent>())
+                CW_ERROR("Entity doesn't have that component");
+            else
+            {
+                String ns, ts;
+                MonoUtils::GetClassName(componentClass, ns, ts);
+                MonoScriptComponent& scriptComponent = entity.GetComponent<MonoScriptComponent>();
+                auto findIter = std::find_if(scriptComponent.Scripts.begin(), scriptComponent.Scripts.end(),
+                                             [&](const MonoScript& script) {
+                                                 return script.GetManagedClass()->GetInternalPtr() == componentClass;
+                                             });
+                if (findIter == scriptComponent.Scripts.end())
+                    CW_ERROR("Entity doesn't have that component");
                 else
-					scriptComponent.Scripts.erase(findIter);
-			}
-		}
+                    scriptComponent.Scripts.erase(findIter);
+            }
+        }
 
         ComponentInfo* info = ScriptInfoManager::Get().GetComponentInfo(type);
         if (info != nullptr)

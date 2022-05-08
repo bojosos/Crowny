@@ -17,9 +17,9 @@ namespace Crowny
 
     MonoString* ScriptLayerMask::Internal_LayerToName(int layer)
     {
-		if (layer < 0 || layer > 31)
-			return nullptr;
-		return MonoUtils::ToMonoString(Physics2D::Get().GetLayerName(layer));
+        if (layer < 0 || layer > 31)
+            return nullptr;
+        return MonoUtils::ToMonoString(Physics2D::Get().GetLayerName(layer));
     }
 
     int ScriptLayerMask::Internal_NameToLayer(MonoString* name)
@@ -28,7 +28,7 @@ namespace Crowny
         for (int i = 0; i < 32; i++)
         {
             if (Physics2D::Get().GetLayerName(i) == nativeName)
-				return i;
+                return i;
         }
         return -1;
     }

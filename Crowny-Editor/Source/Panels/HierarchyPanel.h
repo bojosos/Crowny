@@ -29,7 +29,8 @@ namespace Crowny
             });
         }
         void CreateEmptyEntity(Entity parent);
-        void BuildSerializableHierarchy();
+        const UnorderedSet<UUID>& GetSerializableHierarchy();
+        void SetHierarchy(const UnorderedSet<UUID>& hierarchy) { m_Hierarchy = hierarchy; }
 
     public:
         void SetSelectedEntity(Entity entity)
@@ -56,6 +57,7 @@ namespace Crowny
 #endif
 
     private:
+        bool m_PreserveHierarchy = true;
         Entity m_NewOpenEntity;
         Vector<std::function<void()>> m_DeferedActions;
         std::function<void(Entity)> m_SelectionChanged;
@@ -63,5 +65,6 @@ namespace Crowny
         Entity m_Renaming = {};
         String m_RenamingString;
         UnorderedSet<Entity> m_SelectedItems;
+        UnorderedSet<UUID> m_Hierarchy;
     };
 } // namespace Crowny

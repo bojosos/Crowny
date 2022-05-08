@@ -9,10 +9,7 @@ namespace Crowny
 
     template <class Component> void ComponentEditorWidget(Entity entity) {}
 
-    template <class Component> void ComponentAddAction(Entity entity)
-    {
-        entity.AddComponent<Component>();
-    }
+    template <class Component> void ComponentAddAction(Entity entity) { entity.AddComponent<Component>(); }
 
     template <class Component> void ComponentRemoveAction(Entity entity) { entity.RemoveComponent<Component>(); }
 

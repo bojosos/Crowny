@@ -17,7 +17,7 @@ namespace Crowny
         Kinematic
     }
 
-    public enum Rigidbody2DConstraints
+    public enum Rigidbody2DConstraints : uint
     {
         None = 0,
         FreezeRotation = 1,
@@ -42,18 +42,18 @@ namespace Crowny
 
     public class Rigidbody2D : Component
     {
-
         public float mass { get { return Internal_GetMass(m_InternalPtr); } }
         public BodyType bodyType { get { return Internal_GetBodyType(m_InternalPtr); } set { Internal_SetBodyType(m_InternalPtr, value); } }
 
         public RigidbodySleepMode sleepMode { get { return Internal_GetSleepMode(m_InternalPtr); } set { Internal_SetSleepMode(m_InternalPtr, value); } }
-        public CollisionDetectionMode2D collisionDetection { get { return Internal_GetCollisionDetection(m_InternalPtr); } set { Internal_SetCollisionDetection(m_InternalPtr, value); } }
+        public CollisionDetectionMode2D collisionDetectionMode { get { return Internal_GetCollisionDetectionMode(m_InternalPtr); } set { Internal_SetCollisionDetectionMode(m_InternalPtr, value); } }
         public bool autoMass { get { return Internal_GetAutoMass(m_InternalPtr); } set { Internal_SetAutoMass(m_InternalPtr, value); } }
         public int layer { get { return Internal_GetLayer(m_InternalPtr); } set { Internal_SetLayer(m_InternalPtr, value); } }
         public float linearDrag { get { return Internal_GetLinearDrag(m_InternalPtr); } set { Internal_SetLinearDrag(m_InternalPtr, value); } }
         public float angularDrag { get { return Internal_GetAngularDrag(m_InternalPtr); } set { Internal_SetAngularDrag(m_InternalPtr, value); } }
+        public Vector2 centerOfMass { get { Internal_GetCenterOfMass(m_InternalPtr, out Vector2 center); return center; } set { Internal_SetCenterOfMass(m_InternalPtr, ref value); } }
 
-        public Rigidbody2DConstraints constraints { get { return Internal_GetConstraints(m_InternalPtr); } set { Internal_SetConstraints(m_InternalPtr, value);  } }
+        public Rigidbody2DConstraints constraints { get { return Internal_GetConstraints(m_InternalPtr, m_InternalPtr); } set { Internal_SetConstraints(m_InternalPtr, value);  } }
 
         public float rotation { get { return Internal_GetRotation(m_InternalPtr); } }
 
@@ -72,13 +72,13 @@ namespace Crowny
             Internal_AddTorque(m_InternalPtr, ref torque, forceMode);
         }
 
-        public bool IsAwake() => Internal_IsSleeping(m_InternalPtr);
+        public bool IsAwake() => Internal_IsAwake(m_InternalPtr);
 
         public bool IsSleeping() => !IsAwake();
 
 
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern bool Internal_IsSleeping(IntPtr thisPtr);
+        private static extern bool Internal_IsAwake(IntPtr thisPtr);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern BodyType Internal_GetBodyType(IntPtr parent);
@@ -87,16 +87,13 @@ namespace Crowny
         private static extern int Internal_GetLayer(IntPtr parent);
         
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern float Internal_GetRotation(IntPtr parent);
-
-        [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern float Internal_GetLinearDrag(IntPtr parent);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern float Internal_GetAngularDrag(IntPtr parent);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private extern Rigidbody2DConstraints Internal_GetConstraints(IntPtr parent);
+        private static extern Rigidbody2DConstraints Internal_GetConstraints(IntPtr parent, IntPtr parent2);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern float Internal_GetMass(IntPtr parent);
@@ -105,16 +102,22 @@ namespace Crowny
         private static extern bool Internal_GetAutoMass(IntPtr parent);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern void Internal_GetCenterOfMass(IntPtr parent, out Vector2 centerOfMass);
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern RigidbodySleepMode Internal_GetSleepMode(IntPtr parent);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern CollisionDetectionMode2D Internal_GetCollisionDetection(IntPtr parent);
+        private static extern CollisionDetectionMode2D Internal_GetCollisionDetectionMode(IntPtr parent);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern void Internal_SetMass(IntPtr parent, float mass);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern void Internal_SetAutoMass(IntPtr parent, bool autoMass);
+        
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern void Internal_SetCenterOfMass(IntPtr parent, ref Vector2 centerOfMass);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern void Internal_SetGravityScale(IntPtr parent, float gravityScale);
@@ -138,7 +141,7 @@ namespace Crowny
         private static extern void Internal_SetSleepMode(IntPtr parent, RigidbodySleepMode sleepMode);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_SetCollisionDetection(IntPtr parent, CollisionDetectionMode2D collisionDetection);
+        private static extern void Internal_SetCollisionDetectionMode(IntPtr parent, CollisionDetectionMode2D collisionDetection);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern void Internal_AddForce(IntPtr parent, ref Vector2 force, ForceMode2D forceMode);
@@ -148,5 +151,11 @@ namespace Crowny
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern void Internal_AddTorque(IntPtr parent, ref Vector2 troque, ForceMode2D forceMode);
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern void Internal_GetPosition(IntPtr parent, ref Vector2 position);
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern float Internal_GetRotation(IntPtr parent);
     }
 }

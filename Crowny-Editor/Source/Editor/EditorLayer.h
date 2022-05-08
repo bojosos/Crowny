@@ -63,7 +63,7 @@ namespace Crowny
         void UI_Header();
         void UI_GizmoSettings();
         void UI_Settings();
-        void UI_LayerCollisionMatrix();
+        void UI_Physics2DSettings();
         void UI_ScriptInfo();
         void UI_AssetInfo();
         void UI_EntityDebugInfo();
