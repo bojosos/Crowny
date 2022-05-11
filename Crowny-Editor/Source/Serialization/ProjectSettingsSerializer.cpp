@@ -32,6 +32,12 @@ namespace Crowny
         out << YAML::Key << "VelocityIterations" << YAML::Value << Physics2D::Get().GetVelocityIterations();
         out << YAML::Key << "PositionIterations" << YAML::Value << Physics2D::Get().GetPositionIterations();
 
+        out << YAML::Key << "CollisionMatrix" << YAML::Value;
+        out << YAML::BeginSeq;
+        for (uint32_t i = 0; i < 32; i++)
+            out << Physics2D::Get().GetCategoryMask(i);
+        out << YAML::EndSeq;
+
         out << YAML::Key << "Hierarchy" << YAML::Value << YAML::BeginSeq;
         for (const UUID& uuid : settings->ExpandedEntities)
             out << uuid;
@@ -61,6 +67,15 @@ namespace Crowny
         Physics2D::Get().SetGravity(node["Gravity2D"].as<glm::vec2>(glm::vec2(0.0f, -9.81f)));
         Physics2D::Get().SetVelocityIterations(node["VelocityIterations"].as<uint32_t>(8));
         Physics2D::Get().SetPositionIterations(node["PositionIterations"].as<uint32_t>(3));
+
+        const auto& collisionMatrix = node["CollisionMatrix"];
+        if (collisionMatrix)
+        {
+            uint32_t i = 0;
+            for (const auto& entry : collisionMatrix)
+                Physics2D::Get().SetCategoryMask(i++, entry.as<uint32_t>());
+        }
+
         if (const auto& hierarchy = node["Hierarchy"])
         {
             for (const auto& uuid : hierarchy)

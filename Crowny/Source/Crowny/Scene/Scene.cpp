@@ -249,6 +249,12 @@ namespace Crowny
           [&](entt::entity entity, AudioSourceComponent& sc) { sc.OnInitialize(); });
     }
 
+    void Scene::OnSimulationStart() { Physics2D::Get().BeginSimulation(this); }
+
+    void Scene::OnSimulationUpdate(Timestep ts) { Physics2D::Get().Step(ts, this); }
+
+    void Scene::OnSimulationEnd() { Physics2D::Get().StopSimulation(this); }
+
     void Scene::OnRuntimePause()
     {
         auto audioSourceView = m_Registry.view<AudioSourceComponent>();

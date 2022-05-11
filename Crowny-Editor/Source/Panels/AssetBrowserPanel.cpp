@@ -736,6 +736,10 @@ namespace Crowny
             FileSystem::WriteTextFile(newEntryPath, script);
             break;
         }
+        case AssetBrowserItem::PhysicsMaterial: {
+            ProjectLibrary::Get().CreateEntry(CreateRef<PhysicsMaterial2D>(), newEntryPath);
+            break;
+        }
         default: {
             FileSystem::WriteTextFile(newEntryPath, GetDefaultContents(itemType));
             break;

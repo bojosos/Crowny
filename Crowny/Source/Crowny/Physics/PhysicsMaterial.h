@@ -6,6 +6,7 @@ namespace Crowny
 {
 
     class Physics2D;
+    class PhysicsMaterial2DSerializer;
 
     class PhysicsMaterial2D : public Asset
     {
@@ -15,9 +16,17 @@ namespace Crowny
         virtual AssetType GetAssetType() const override { return AssetType::PhysicsMaterial2D; }
         static AssetType GetStaticType() { return AssetType::PhysicsMaterial2D; }
 
+        float& GetDensity() { return m_Density; }
+        float& GetFriction() { return m_Friction; }
+        float& GetRestitution() { return m_Restitution; }
+        float& GetRestitutionThreshold() { return m_RestitutionThreshold; }
+
     private:
+        CW_SERIALIZABLE(PhysicsMaterial2D);
+        using Serializer = PhysicsMaterial2DSerializer;
+
         friend class Physics2D;
-        friend static void DrawPhysicsMaterial(PhysicsMaterial2D& material);
+        friend class PhysicsMaterial2DSerializer;
 
         float m_Density = 1.0f;
         float m_Friction = 0.5f;

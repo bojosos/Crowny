@@ -62,6 +62,8 @@ namespace Crowny
         float CalculateMass(Entity entity);
         glm::vec2 CalculateCenterOfMass(Entity entity);
 
+        void UIStats();
+
     private:
         b2World* m_PhysicsWorld2D = nullptr;
         b2World* m_TemporaryWorld2D = nullptr; // A world used for calculating mass

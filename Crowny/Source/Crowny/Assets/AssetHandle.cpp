@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Assets/AssetHandle.h"
+#include "Crowny/Assets/AssetManager.h"
 
 namespace Crowny
 {
@@ -17,4 +18,6 @@ namespace Crowny
         if (m_Data->m_Ptr != nullptr)
             m_Data->m_UUID = uuid;
     }
+
+    void AssetHandleBase::Release() { AssetManager::Get().Release(*this); }
 } // namespace Crowny

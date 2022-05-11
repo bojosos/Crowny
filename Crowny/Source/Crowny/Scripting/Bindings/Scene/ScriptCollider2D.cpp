@@ -21,21 +21,21 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_SetOffset", (void*)&Internal_SetOffset);
     }
 
-    bool ScriptCollider2D::Internal_IsTrigger(ScriptCollider2D* thisPtr) { return thisPtr->GetComponent().IsTrigger; }
+    bool ScriptCollider2D::Internal_IsTrigger(ScriptCollider2D* thisPtr) { return thisPtr->GetComponent().IsTrigger(); }
 
     void ScriptCollider2D::Internal_SetTrigger(ScriptCollider2D* thisPtr, bool trigger)
     {
-        thisPtr->GetComponent().IsTrigger = trigger;
+        thisPtr->GetComponent().SetIsTrigger(trigger);
     }
 
     void ScriptCollider2D::Internal_GetOffset(ScriptCollider2D* thisPtr, glm::vec2* offset)
     {
-        *offset = thisPtr->GetComponent().Offset;
+        *offset = thisPtr->GetComponent().GetOffset();
     }
 
     void ScriptCollider2D::Internal_SetOffset(ScriptCollider2D* thisPtr, glm::vec2* offset)
     {
-        thisPtr->GetComponent().Offset = *offset;
+        // thisPtr->GetComponent().SetOffset(*offset, thisPtr->GetNativeEntity());
     }
 
     ScriptBoxCollider2D::ScriptBoxCollider2D(MonoObject* instance, Entity entity) : TScriptComponent(instance, entity)
@@ -50,12 +50,12 @@ namespace Crowny
 
     void ScriptBoxCollider2D::Internal_GetSize(ScriptBoxCollider2D* thisPtr, glm::vec2* size)
     {
-        *size = thisPtr->GetComponent().Size;
+        *size = thisPtr->GetComponent().GetSize();
     }
 
     void ScriptBoxCollider2D::Internal_SetSize(ScriptBoxCollider2D* thisPtr, glm::vec2* size)
     {
-        thisPtr->GetComponent().Size = *size;
+        thisPtr->GetComponent().SetSize(*size, thisPtr->GetNativeEntity());
     }
 
     ScriptCircleCollider2D::ScriptCircleCollider2D(MonoObject* instance, Entity entity)
@@ -71,11 +71,11 @@ namespace Crowny
 
     float ScriptCircleCollider2D::Internal_GetRadius(ScriptCircleCollider2D* thisPtr)
     {
-        return thisPtr->GetComponent().Radius;
+        return thisPtr->GetComponent().GetRadius();
     }
 
     void ScriptCircleCollider2D::Internal_SetRadius(ScriptCircleCollider2D* thisPtr, float radius)
     {
-        thisPtr->GetComponent().Radius = radius;
+        thisPtr->GetComponent().SetRadius(radius, thisPtr->GetNativeEntity());
     }
 } // namespace Crowny

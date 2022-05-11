@@ -343,9 +343,8 @@ namespace Crowny
                 recentIdx = i;
         }
         for (uint32_t i = recentIdx; i >= 1; i--)
-        {
             settings->RecentProjects[i] = settings->RecentProjects[i - 1];
-        }
+
         settings->RecentProjects[0].Timestamp = std::time(nullptr);
         settings->RecentProjects[0].ProjectPath = path;
     }
@@ -464,7 +463,7 @@ namespace Crowny
             s_EditorCamera.SetViewportSize(m_RenderTarget->GetProperties().Width,
                                            m_RenderTarget->GetProperties().Height);
             s_EditorCamera.OnUpdate(ts);
-            SceneManager().GetActiveScene()->OnUpdateRuntime(ts);
+            SceneManager().GetActiveScene()->OnSimulationUpdate(ts);
             SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
             break;
         }
@@ -522,8 +521,8 @@ namespace Crowny
                 for (auto entity : view)
                 {
                     auto [tc, bc2d] = view.get<TransformComponent, BoxCollider2DComponent>(entity);
-                    glm::vec3 translation = tc.Position + glm::vec3(bc2d.Offset, zOffset);
-                    glm::vec3 scale = tc.Scale * glm::vec3(bc2d.Size * 2.0f, 1.0f);
+                    glm::vec3 translation = tc.Position + glm::vec3(bc2d.GetOffset(), zOffset);
+                    glm::vec3 scale = tc.Scale * glm::vec3(bc2d.GetSize() * 2.0f, 1.0f);
                     glm::mat4 transform = glm::translate(glm::mat4(1.0f), translation) *
                                           glm::rotate(glm::mat4(1.0f), tc.Rotation.z, glm::vec3(0.0f, 0.0f, 1.0f)) *
                                           glm::scale(glm::mat4(1.0f), scale);
@@ -536,8 +535,8 @@ namespace Crowny
                 for (auto entity : view)
                 {
                     auto [tc, cc2d] = view.get<TransformComponent, CircleCollider2DComponent>(entity);
-                    glm::vec3 translation = tc.Position + glm::vec3(cc2d.Offset, zOffset);
-                    glm::vec3 scale = tc.Scale * glm::vec3(cc2d.Radius * 2.0f);
+                    glm::vec3 translation = tc.Position + glm::vec3(cc2d.GetOffset(), zOffset);
+                    glm::vec3 scale = tc.Scale * glm::vec3(cc2d.GetRadius() * 2.0f);
                     glm::mat4 transform =
                       glm::translate(glm::mat4(1.0f), translation) * glm::scale(glm::mat4(1.0f), scale);
                     Renderer2D::DrawCircle(transform, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.01f);
@@ -728,6 +727,7 @@ namespace Crowny
         UI_ScriptInfo();
         UI_AssetInfo();
         UI_EntityDebugInfo();
+        Physics2D::Get().UIStats();
 #endif
 
         m_HierarchyPanel->Render();
@@ -1005,7 +1005,7 @@ namespace Crowny
 
         const float desiredHeight = 26.0f + 5.0f;
         ImRect background =
-          UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), 0.0f, -(windowHeight - desiredHeight) / 2.0f);
+          UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), 0.0f, -(windowHeight - desiredHeight) * 0.5f);
         ImGui::GetWindowDrawList()->AddRectFilled(background.Min, background.Max, IM_COL32(15, 15, 15, 127), 4.0f);
 
         ImGui::BeginVertical("##viewport_central_toolbarV", { backgroundWidth, ImGui::GetContentRegionAvail().y });
@@ -1061,12 +1061,12 @@ namespace Crowny
                 if (m_SceneState == SceneState::Edit)
                 {
                     m_SceneState = SceneState::Simulate;
-                    SceneManager::GetActiveScene()->OnRuntimeStart();
+                    SceneManager::GetActiveScene()->OnSimulationStart();
                 }
                 else if (m_SceneState == SceneState::Simulate)
                 {
                     m_SceneState = SceneState::Edit;
-                    SceneManager::GetActiveScene()->OnRuntimeStop();
+                    SceneManager::GetActiveScene()->OnSimulationEnd();
                 }
             }
             UI::SetTooltip(m_SceneState == SceneState::Simulate ? "Stop" : "Simulate Physics");
@@ -1120,7 +1120,7 @@ namespace Crowny
 
         const float desiredHeight = 26.0f + 5.0f;
         ImRect background =
-          UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), 0.0f, -(windowHeight - desiredHeight) / 2.0f);
+          UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), 0.0f, -(windowHeight - desiredHeight) * 0.5f);
         ImGui::GetWindowDrawList()->AddRectFilled(background.Min, background.Max, IM_COL32(15, 15, 15, 127), 4.0f);
 
         ImGui::BeginVertical("##viewport_central_toolbarV", { backgroundWidth, ImGui::GetContentRegionAvail().y });

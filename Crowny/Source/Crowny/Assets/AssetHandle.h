@@ -8,6 +8,7 @@ namespace Crowny
 
     class AssetManager;
     class UIUtils; // This is an Editor class
+    class SceneSerializer;
 
     struct AssetHandleData
     {
@@ -76,6 +77,8 @@ namespace Crowny
                 }
             }
         }
+
+        friend class SceneSerializer;
     };
 
     template <typename T, bool Weak> class TAssetHandle : public TAssetHandleBase<Weak>

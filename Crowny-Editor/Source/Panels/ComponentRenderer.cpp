@@ -397,61 +397,71 @@ namespace Crowny
         }
     }
 
-    static void DrawPhysicsMaterial(PhysicsMaterial2D& material)
+    static void DrawPhysicsMaterial(const AssetHandle<PhysicsMaterial2D>& material)
     {
-        UI::Property("Density", material.m_Density);
-        UI::Property("Friction", material.m_Friction);
-        UI::Property("Restitution", material.m_Restitution);
-        UI::Property("Restitution Threshold", material.m_RestitutionThreshold);
+        UI::Property("Density", material->GetDensity());
+        UI::Property("Friction", material->GetFriction());
+        UI::Property("Restitution", material->GetRestitution());
+        UI::Property("Restitution Threshold", material->GetRestitutionThreshold());
     }
 
-    template <> void ComponentEditorWidget<BoxCollider2DComponent>(Entity e)
+    template <> void ComponentEditorWidget<BoxCollider2DComponent>(Entity entity)
     {
-        BoxCollider2DComponent& bc2d = e.GetComponent<BoxCollider2DComponent>();
+        BoxCollider2DComponent& bc2d = entity.GetComponent<BoxCollider2DComponent>();
 
-        UI::Property("Offset", bc2d.Offset);
-        UI::Property("Size", bc2d.Size);
-        UI::Property("Is Trigger", bc2d.IsTrigger);
-        DrawPhysicsMaterial(bc2d.Material);
+        glm::vec2 offset = bc2d.GetOffset();
+        if (UI::Property("Offset", offset, 0.05f))
+            bc2d.SetOffset(offset, entity);
+
+        glm::vec2 size = bc2d.GetSize();
+        if (UI::Property("Size", size, 0.05f, 0.0f, 0.0f) && size.x > 0.0f && size.y > 0.0f)
+            bc2d.SetSize(size, entity);
+
+        bool isTrigger = bc2d.IsTrigger();
+        if (UI::Property("Is Trigger", isTrigger))
+            bc2d.SetIsTrigger(isTrigger);
+        DrawPhysicsMaterial(bc2d.GetMaterial());
     }
 
-    template <> void ComponentEditorWidget<CircleCollider2DComponent>(Entity e)
+    template <> void ComponentEditorWidget<CircleCollider2DComponent>(Entity entity)
     {
-        auto& cc2d = e.GetComponent<CircleCollider2DComponent>();
+        CircleCollider2DComponent& cc2d = entity.GetComponent<CircleCollider2DComponent>();
 
-        UI::Property("Offset", cc2d.Offset);
-        UI::Property("Radius", cc2d.Radius);
-        UI::Property("Is Trigger", cc2d.IsTrigger);
-        DrawPhysicsMaterial(cc2d.Material);
+        glm::vec2 offset = cc2d.GetOffset();
+        if (UI::Property("Offset", offset, 0.05f))
+            cc2d.SetOffset(offset, entity);
+
+        float radius = cc2d.GetRadius();
+        if (UI::Property("Radius", radius, 0.05f, 0.0f, 0.0f) && radius > 0.0f)
+            cc2d.SetRadius(radius, entity);
+
+        bool isTrigger = cc2d.IsTrigger();
+        if (UI::Property("Is Trigger", isTrigger))
+            cc2d.SetIsTrigger(isTrigger);
+        DrawPhysicsMaterial(cc2d.GetMaterial());
     }
 
-    template <> void ComponentEditorWidget<AudioListenerComponent>(Entity e) {}
+    template <> void ComponentEditorWidget<AudioListenerComponent>(Entity entity) {}
 
-    template <> void ComponentEditorWidget<AudioSourceComponent>(Entity e)
+    template <> void ComponentEditorWidget<AudioSourceComponent>(Entity entity)
     {
-        AudioSourceComponent& sourceComponent = e.GetComponent<AudioSourceComponent>();
+        AudioSourceComponent& sourceComponent = entity.GetComponent<AudioSourceComponent>();
 
         AssetHandle<AudioClip> handle = sourceComponent.GetClip();
         if (UIUtils::AssetReference<AudioClip>("Audio Clip", handle) && handle)
             sourceComponent.SetClip(handle);
 
-        ImGui::Text("Volume");
-        ImGui::NextColumn();
         float volume = sourceComponent.GetVolume();
-        if (ImGui::SliderFloat("##volume", &volume, 0.0f, 1.0f, "%.2f"))
+        if (UI::PropertySlider("Volume", volume, 0.0f, 1.0f))
             sourceComponent.SetVolume(volume);
-        ImGui::NextColumn();
 
         bool mute = sourceComponent.GetIsMuted();
         if (UI::Property("Mute", mute))
             sourceComponent.SetIsMuted(mute);
 
-        ImGui::Text("Pitch");
-        ImGui::NextColumn();
         float pitch = sourceComponent.GetPitch();
-        if (ImGui::SliderFloat("##pitch", &pitch, -3.0f, 3.0f, "%.2f"))
+        if (UI::PropertySlider("Pitch", pitch, -3.0f, 3.0f))
             sourceComponent.SetPitch(pitch);
-        ImGui::NextColumn();
 
         bool playOnAwake = sourceComponent.GetPlayOnAwake();
         if (UI::Property("Play On Awake", playOnAwake))
@@ -461,19 +471,13 @@ namespace Crowny
         if (UI::Property("Loop", looping))
             sourceComponent.SetLooping(looping);
 
-        ImGui::Text("Min Distance");
-        ImGui::NextColumn();
         float minDistance = sourceComponent.GetMinDistance();
-        if (ImGui::SliderFloat("##mindistnaceaudio", &minDistance, -3.0f, 3.0f, "%.2f"))
+        if (UI::Property("Min Distance", minDistance))
             sourceComponent.SetMinDistance(minDistance);
-        ImGui::NextColumn();
 
-        ImGui::Text("Max Distance");
-        ImGui::NextColumn();
         float maxDistance = sourceComponent.GetMaxDistance();
-        if (ImGui::SliderFloat("##maxdistanceaudio", &maxDistance, -3.0f, 3.0f, "%.2f"))
+        if (UI::Property("Max Distance", minDistance))
             sourceComponent.SetMaxDistance(maxDistance);
-        ImGui::NextColumn();
     }
 
     template <> void ComponentEditorWidget<MonoScriptComponent>(Entity e)
