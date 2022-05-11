@@ -323,6 +323,47 @@ namespace Crowny
             return modified;
         }
 
+        static bool PropertySlider(const char* label, int& value, int min, int max)
+        {
+            Pre();
+            bool modified = ImGui::SliderInt(GenerateID(), &value, min, max);
+            Post();
+
+            return modified;
+        }
+
+        static bool PropertySlider(const char* label, float& value, float min, float max)
+        {
+            Pre(label);
+            bool modified = ImGui::SliderFloat(GenerateID(), &value, min, max);
+            Post();
+            return modified;
+        }
+
+        static bool PropertySlider(const char* label, glm::vec2& value, float min, float max)
+        {
+            Pre(label);
+            bool modified = ImGui::SliderFloat2(GenerateID(), glm::value_ptr(value), min, max);
+            Post();
+            return modified;
+        }
+
+        static bool PropertySlider(const char* label, glm::vec3& value, float min, float max)
+        {
+            Pre(label);
+            bool modified = ImGui::SliderFloat3(GenerateID(), glm::value_ptr(value), min, max);
+            Post();
+            return modified;
+        }
+
+        static bool PropertySlider(const char* label, glm::vec4& value, float min, float max)
+        {
+            Pre(label);
+            bool modified = ImGui::SliderFloat4(GenerateID(), glm::value_ptr(value), min, max);
+            Post();
+            return modified;
+        }
+
         static bool PropertyFilepath(const char* label, String& value)
         {
             ShiftCursor(10.0f, 9.0f);

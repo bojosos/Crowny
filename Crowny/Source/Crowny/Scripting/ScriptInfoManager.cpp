@@ -34,9 +34,9 @@
         CW_ENGINE_ERROR("Cannot find {0}." #CLASS_NAME " attribute.", CROWNY_NS);
 
 #define LOAD_SYSTEM_CLASS(CLASS_NAME)                                                                                  \
-    m_Builtin.##System##CLASS_NAME##Class = crownyAssembly->GetClass("System", #CLASS_NAME);                           \
+    m_Builtin.##System##CLASS_NAME##Class = corlib->GetClass("System", #CLASS_NAME);                                   \
     if (m_Builtin.##System##CLASS_NAME##Class == nullptr)                                                              \
-        CW_ENGINE_ERROR("Cannot find {0}." #CLASS_NAME " attribute.", "System");
+        CW_ENGINE_ERROR("Cannot find {0}." #CLASS_NAME " class.", "System");
 
 namespace Crowny
 {

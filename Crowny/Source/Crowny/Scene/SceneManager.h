@@ -11,6 +11,7 @@ namespace Crowny
         static void AddScene(const Ref<Scene>& scene);
         static void SetActiveScene(const Ref<Scene>& scene);
         static void Shutdown();
+        static uint32_t GetSceneCount() { return s_Scenes.size(); }
         /*
         static Scene& LoadScene(uint32_t buildIndex);
         static Scene& LoadScene(const String& name);

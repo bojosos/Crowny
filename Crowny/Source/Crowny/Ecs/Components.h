@@ -253,12 +253,19 @@ namespace Crowny
         void EndRefresh(const ScriptObjectBackupData& data);
 
         const String& GetTypeName() const { return m_TypeName; }
-        // void SetTypeName(const String & typeName) { m_TypeName = typeName; }
 
         void OnInitialize(Entity entity);
         void OnStart();
         void OnUpdate();
         void OnDestroy();
+
+        void OnCollisionEnter2D(const Collision2D& collision);
+        void OnCollisionStay2D(const Collision2D& collision);
+        void OnCollisionExit2D(const Collision2D& collision);
+
+        void OnTriggerEnter2D(Entity other);
+        void OnTriggerStay2D(Entity other);
+        void OnTriggerExit2D(Entity other);
 
         uint64_t InstanceId; // These also require one for scripting
 
@@ -276,6 +283,13 @@ namespace Crowny
         OnCollisionStayThunkDef m_OnCollisionStayThunk = nullptr;
         typedef void(CW_THUNKCALL* OnCollisionExitThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
         OnCollisionExitThunkDef m_OnCollisionExitThunk = nullptr;
+
+        typedef void(CW_THUNKCALL* OnTriggerEnterThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
+        OnTriggerEnterThunkDef m_OnTriggerEnterThunk = nullptr;
+        typedef void(CW_THUNKCALL* OnTriggerStayThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
+        OnTriggerStayThunkDef m_OnTriggerStayThunk = nullptr;
+        typedef void(CW_THUNKCALL* OnTriggerExitThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
+        OnTriggerExitThunkDef m_OnTriggerExitThunk = nullptr;
 
         String m_TypeName;
         String m_Namespace;
@@ -393,45 +407,51 @@ namespace Crowny
     struct Collider2D : ComponentBase
     {
         Collider2D() : ComponentBase() {}
+        Collider2D(const Collider2D& collider) = default;
 
-        glm::vec2 Offset = { 0.0f, 0.0f };
-        PhysicsMaterial2D Material;
-        bool IsTrigger = false;
+        const glm::vec2& GetOffset() const { return m_Offset; }
+        bool IsTrigger() const { return m_IsTrigger; }
+        const AssetHandle<PhysicsMaterial2D>& GetMaterial() const { return m_Material; }
 
-        void OnCollisionBegin(const Collision2D& col)
-        {
-            if (CallbackEnter)
-                CallbackEnter(col);
-        }
-
-        void OnCollisionEnd(const Collision2D& col)
-        {
-            if (CallbackExit)
-                CallbackExit(col);
-        }
+        void SetIsTrigger(bool trigger);
+        // virtual void SetOffset(const glm::vec2& offset, Entity entity) = 0;
+        void SetMaterial(const AssetHandle<PhysicsMaterial2D>& material);
 
         b2Fixture* RuntimeFixture = nullptr;
 
-        std::function<void(const Collision2D&)> CallbackEnter;
-        std::function<void(const Collision2D&)> CallbackExit;
+        glm::vec2 m_Offset = { 0.0f, 0.0f };
+        AssetHandle<PhysicsMaterial2D> m_Material;
+        bool m_IsTrigger = false;
     };
 
     struct BoxCollider2DComponent : public Collider2D
     {
-        glm::vec2 Size = { 0.5f, 0.5f };
-
-        BoxCollider2DComponent() : Collider2D() {}
+        BoxCollider2DComponent();
         BoxCollider2DComponent(const BoxCollider2DComponent& collider) = default;
+
+        const glm::vec2& GetSize() const { return m_Size; }
+        void SetSize(const glm::vec2& size, Entity entity);
+
+        void SetOffset(const glm::vec2& size, Entity entity);
+
+    private:
+        glm::vec2 m_Size = { 0.5f, 0.5f };
     };
 
     template <> void ComponentEditorWidget<BoxCollider2DComponent>(Entity e);
 
     struct CircleCollider2DComponent : public Collider2D
     {
-        float Radius = 0.5f;
-
-        CircleCollider2DComponent() : Collider2D() {}
+        CircleCollider2DComponent();
         CircleCollider2DComponent(const CircleCollider2DComponent& collider) = default;
+
+        float GetRadius() const { return m_Radius; }
+        void SetRadius(float radius, Entity entity);
+
+        void SetOffset(const glm::vec2& size, Entity entity);
+
+    private:
+        float m_Radius = 0.5f;
     };
 
     template <> void ComponentEditorWidget<CircleCollider2DComponent>(Entity e);

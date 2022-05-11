@@ -2,10 +2,12 @@
 
 #include "Crowny/Serialization/SceneSerializer.h"
 
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/Uuid.h"
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Common/Yaml.h"
+#include "Crowny/Physics/Physics2D.h"
 
 #include "Crowny/Scripting/ScriptInfoManager.h"
 
@@ -54,7 +56,7 @@ namespace Crowny
             out << YAML::BeginMap;
             const auto& asc = entity.GetComponent<AudioSourceComponent>();
 
-            out << YAML::Key << "AudioClip" << YAML::Value << 111; // Some uuid here
+            out << YAML::Key << "AudioClip" << YAML::Value << asc.GetClip().GetUUID();
             out << YAML::Key << "Volume" << YAML::Value << asc.GetVolume();
             out << YAML::Key << "Pitch" << YAML::Value << asc.GetPitch();
             out << YAML::Key << "Loop" << YAML::Value << asc.GetLooping();
@@ -151,11 +153,12 @@ namespace Crowny
             out << YAML::Key << "BoxCollider2D";
             out << YAML::BeginMap;
             const auto& bc2d = entity.GetComponent<BoxCollider2DComponent>();
-            out << YAML::Key << "Offset" << YAML::Value << bc2d.Offset;
-            out << YAML::Key << "Size" << YAML::Value << bc2d.Size;
-            out << YAML::Key << "IsTrigger" << YAML::Value << bc2d.IsTrigger;
+            out << YAML::Key << "Offset" << YAML::Value << bc2d.GetOffset();
+            out << YAML::Key << "Size" << YAML::Value << bc2d.GetSize();
+            out << YAML::Key << "IsTrigger" << YAML::Value << bc2d.IsTrigger();
+            if (bc2d.GetMaterial().GetUUID() != Physics2D::Get().GetDefaultMaterial().GetUUID())
+                out << YAML::Key << "Material" << YAML::Value << bc2d.GetMaterial().GetUUID();
             out << YAML::EndMap;
-            // out << YAML::Key << "Material" << YAML::Value << bc2d.Material;
         }
 
         if (entity.HasComponent<CircleCollider2DComponent>())
@@ -163,11 +166,12 @@ namespace Crowny
             out << YAML::Key << "CircleCollider2D";
             out << YAML::BeginMap;
             const auto& cc2d = entity.GetComponent<CircleCollider2DComponent>();
-            out << YAML::Key << "Offset" << YAML::Value << cc2d.Offset;
-            out << YAML::Key << "Size" << YAML::Value << cc2d.Radius;
-            out << YAML::Key << "IsTrigger" << YAML::Value << cc2d.IsTrigger;
+            out << YAML::Key << "Offset" << YAML::Value << cc2d.GetOffset();
+            out << YAML::Key << "Size" << YAML::Value << cc2d.GetRadius();
+            out << YAML::Key << "IsTrigger" << YAML::Value << cc2d.IsTrigger();
+            if (cc2d.GetMaterial().GetUUID() != Physics2D::Get().GetDefaultMaterial().GetUUID())
+                out << YAML::Key << "Material" << YAML::Value << cc2d.GetMaterial().GetUUID();
             out << YAML::EndMap;
-            // out << YAML::Key << "Material" << YAML::Value << cc2d.Material;
         }
 
         if (entity.HasComponent<RelationshipComponent>())
@@ -323,8 +327,22 @@ namespace Crowny
                     if (source)
                     {
                         auto& asc = deserialized.AddComponent<AudioSourceComponent>();
+
+                        UUID uuid = source["AudioClip"].as<UUID>();
+                        if (uuid != UUID::EMPTY)
+                        {
+                            TAssetHandleBase<false> handle;
+                            handle.m_Data = CreateRef<AssetHandleData>();
+                            handle.m_Data->m_RefCount.fetch_add(1, std::memory_order_relaxed);
+                            handle.m_Data->m_UUID = uuid;
+                            AssetHandle<Asset> loadedAsset = AssetManager::Get().LoadFromUUID(handle.m_Data->m_UUID);
+                            handle.Release();
+                            handle.m_Data = loadedAsset.m_Data;
+                            handle.AddRef();
+                            asc.SetClip(static_asset_cast<AudioClip>(loadedAsset));
+                        }
+
                         asc.SetPlayOnAwake(source["PlayOnAwake"].as<bool>());
-                        // asc.SetAudioClip(source["AudioClip"].as<UUID>());
                         asc.SetVolume(source["Volume"].as<float>());
                         asc.SetPitch(source["Pitch"].as<float>());
                         asc.SetMinDistance(source["MinDistance"].as<float>());
@@ -333,22 +351,40 @@ namespace Crowny
                         asc.SetIsMuted(source["Muted"].as<bool>(false));
                     }
 
+                    auto loadPhysicsMaterial = [&](const YAML::Node& node) {
+                        const auto& material = node["Material"];
+                        if (!material)
+                            return Physics2D::Get().GetDefaultMaterial();
+                        UUID uuid = material.as<UUID>();
+                        TAssetHandleBase<false> handle;
+                        handle.m_Data = CreateRef<AssetHandleData>();
+                        handle.m_Data->m_RefCount.fetch_add(1, std::memory_order_relaxed);
+                        handle.m_Data->m_UUID = uuid;
+                        AssetHandle<Asset> loadedAsset = AssetManager::Get().LoadFromUUID(handle.m_Data->m_UUID);
+                        handle.Release();
+                        handle.m_Data = loadedAsset.m_Data;
+                        handle.AddRef();
+                        return static_asset_cast<PhysicsMaterial2D>(loadedAsset);
+                    };
+
                     const YAML::Node& bc2d = entity["BoxCollider2D"];
                     if (bc2d)
                     {
                         auto& bc2dc = deserialized.AddComponent<BoxCollider2DComponent>();
-                        bc2dc.Offset = bc2d["Offset"].as<glm::vec2>();
-                        bc2dc.Size = bc2d["Size"].as<glm::vec2>();
-                        bc2dc.IsTrigger = bc2d["IsTrigger"].as<bool>();
+                        bc2dc.SetOffset(bc2d["Offset"].as<glm::vec2>(), deserialized);
+                        bc2dc.SetSize(bc2d["Size"].as<glm::vec2>(), deserialized);
+                        bc2dc.SetIsTrigger(bc2d["IsTrigger"].as<bool>());
+                        bc2dc.SetMaterial(loadPhysicsMaterial(bc2d));
                     }
 
                     const YAML::Node& cc2d = entity["CircleCollider2D"];
                     if (cc2d)
                     {
                         auto& cc2dc = deserialized.AddComponent<CircleCollider2DComponent>();
-                        cc2dc.Offset = cc2d["Offset"].as<glm::vec2>();
-                        cc2dc.Radius = cc2d["Size"].as<float>();
-                        cc2dc.IsTrigger = cc2d["IsTrigger"].as<bool>();
+                        cc2dc.SetOffset(cc2d["Offset"].as<glm::vec2>(), deserialized);
+                        cc2dc.SetRadius(cc2d["Size"].as<float>(), deserialized);
+                        cc2dc.SetIsTrigger(cc2d["IsTrigger"].as<bool>());
+                        cc2dc.SetMaterial(loadPhysicsMaterial(cc2d));
                     }
 
                     const YAML::Node& rb2d = entity["Rigidbody2D"];
