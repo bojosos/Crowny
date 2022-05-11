@@ -1,7 +1,10 @@
 #include "cwpch.h"
 
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Physics/Physics2D.h"
+
+#include <imgui.h>
 
 #include <box2d/box2d.h>
 
@@ -39,52 +42,112 @@ namespace Crowny
 
     void ContactListener::BeginContact(b2Contact* contact)
     {
-        b2WorldManifold manifold;
-        contact->GetWorldManifold(&manifold);
-        Collision2D col;
-        col.Points.push_back(glm::vec2(manifold.points[0].x, manifold.points[0].y));
-        col.Points.push_back(glm::vec2(manifold.points[1].x, manifold.points[1].y));
         Entity e1 = Entity((entt::entity)contact->GetFixtureA()->GetBody()->GetUserData().pointer, m_Scene);
         Entity e2 = Entity((entt::entity)contact->GetFixtureB()->GetBody()->GetUserData().pointer, m_Scene);
-        col.Colliders.push_back(e1);
-        col.Colliders.push_back(e2);
-        if (e1.HasComponent<BoxCollider2DComponent>())
-            e1.GetComponent<BoxCollider2DComponent>().OnCollisionBegin(col);
-        if (e1.HasComponent<CircleCollider2DComponent>())
-            e1.GetComponent<CircleCollider2DComponent>().OnCollisionBegin(col);
-        if (e2.HasComponent<BoxCollider2DComponent>())
-            e2.GetComponent<BoxCollider2DComponent>().OnCollisionBegin(col);
-        if (e2.HasComponent<CircleCollider2DComponent>())
-            e2.GetComponent<CircleCollider2DComponent>().OnCollisionBegin(col);
+
+        auto callbacks = [&](Entity e1, Entity e2) {
+            if (e1.HasComponent<MonoScriptComponent>())
+            {
+                auto& monoScript = e1.GetComponent<MonoScriptComponent>();
+                bool sendTriggerCallback = contact->GetFixtureA()->IsSensor();
+                if (!sendTriggerCallback)
+                {
+                    b2WorldManifold manifold;
+                    contact->GetWorldManifold(&manifold);
+                    Collision2D collision;
+                    collision.Points.push_back(glm::vec2(manifold.points[0].x, manifold.points[0].y));
+                    collision.Points.push_back(glm::vec2(manifold.points[1].x, manifold.points[1].y));
+                    collision.Colliders.push_back(e1);
+                    collision.Colliders.push_back(e2);
+
+                    for (auto& script : monoScript.Scripts)
+                        script.OnCollisionEnter2D(collision);
+                }
+                else
+                {
+                    for (auto& script : monoScript.Scripts)
+                        script.OnTriggerEnter2D(e2);
+                }
+            }
+        };
+        callbacks(e1, e2);
+        callbacks(e2, e1);
     }
 
     void ContactListener::EndContact(b2Contact* contact)
     {
-        b2WorldManifold manifold;
-        contact->GetWorldManifold(&manifold);
-        Collision2D col;
-        col.Points.push_back(glm::vec2(manifold.points[0].x, manifold.points[0].y));
-        col.Points.push_back(glm::vec2(manifold.points[1].x, manifold.points[1].y));
         Entity e1 = Entity((entt::entity)contact->GetFixtureA()->GetBody()->GetUserData().pointer, m_Scene);
-        Entity e2 = Entity((entt::entity)contact->GetFixtureA()->GetBody()->GetUserData().pointer, m_Scene);
-        col.Colliders.push_back(e1);
-        col.Colliders.push_back(e2);
-        if (e1.HasComponent<BoxCollider2DComponent>())
-            e1.GetComponent<BoxCollider2DComponent>().OnCollisionEnd(col);
-        if (e1.HasComponent<CircleCollider2DComponent>())
-            e1.GetComponent<CircleCollider2DComponent>().OnCollisionEnd(col);
-        if (e2.HasComponent<BoxCollider2DComponent>())
-            e2.GetComponent<BoxCollider2DComponent>().OnCollisionEnd(col);
-        if (e2.HasComponent<CircleCollider2DComponent>())
-            e2.GetComponent<CircleCollider2DComponent>().OnCollisionEnd(col);
+        Entity e2 = Entity((entt::entity)contact->GetFixtureB()->GetBody()->GetUserData().pointer, m_Scene);
+
+        auto callbacks = [&](Entity e1, Entity e2, bool sendTriggerCallback) {
+            if (e1.HasComponent<MonoScriptComponent>())
+            {
+                auto& monoScript = e1.GetComponent<MonoScriptComponent>();
+                if (!sendTriggerCallback)
+                {
+                    b2WorldManifold manifold;
+                    contact->GetWorldManifold(&manifold);
+                    Collision2D collision;
+                    collision.Points.push_back(glm::vec2(manifold.points[0].x, manifold.points[0].y));
+                    collision.Points.push_back(glm::vec2(manifold.points[1].x, manifold.points[1].y));
+                    collision.Colliders.push_back(e1);
+                    collision.Colliders.push_back(e2);
+
+                    for (auto& script : monoScript.Scripts)
+                        script.OnCollisionExit2D(collision);
+                }
+                else
+                {
+                    for (auto& script : monoScript.Scripts)
+                        script.OnTriggerExit2D(e2);
+                }
+            }
+        };
+        callbacks(e1, e2, contact->GetFixtureB()->IsSensor());
+        callbacks(e2, e1, contact->GetFixtureA()->IsSensor());
     }
 
     Physics2D::Physics2D()
     {
         m_Settings = CreateRef<Physics2DSettings>();
+        m_Settings->DefaultMaterial =
+          static_asset_cast<PhysicsMaterial2D>(AssetManager::Get().CreateAssetHandle(CreateRef<PhysicsMaterial2D>()));
         for (uint32_t i = 0; i < m_Settings->MaskBits.size(); i++)
             m_Settings->MaskBits[i] = 0xFFFFFFFF;
         m_TemporaryWorld2D = new b2World({ m_Settings->Gravity.x, m_Settings->Gravity.y });
+    }
+
+    void Physics2D::UIStats()
+    {
+        ImGui::Begin("Physics2D Stats");
+        if (m_PhysicsWorld2D == nullptr)
+        {
+            ImGui::End();
+            return;
+        }
+        ImGui::Columns(2);
+        ImGui::Text("Body count");
+        ImGui::NextColumn();
+        ImGui::Text("%d", m_PhysicsWorld2D->GetBodyCount());
+        ImGui::NextColumn();
+        uint32_t i = 0;
+        for (b2Body* body = m_PhysicsWorld2D->GetBodyList(); body; body = body->GetNext())
+        {
+            ImGui::Text("%d", i);
+            ImGui::NextColumn();
+            ImGui::Text("%d%f%f", body->GetType(), body->GetPosition().x, body->GetPosition().y);
+            ImGui::NextColumn();
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 20.0f);
+            uint32_t idx = 0;
+            for (b2Fixture* f = body->GetFixtureList(); f != nullptr; f = f->GetNext())
+            {
+                ImGui::Text("%d", idx++);
+                ImGui::NextColumn();
+                ImGui::NextColumn();
+            }
+        }
+        ImGui::Columns(1);
+        ImGui::End();
     }
 
     void Physics2D::SetGravity(const glm::vec2& gravity)
@@ -100,6 +163,8 @@ namespace Crowny
     void Physics2D::SetCategoryMask(uint32_t idx, uint32_t mask)
     {
         m_Settings->MaskBits[idx] = mask;
+        if (SceneManager::GetSceneCount() == 0)
+            return;
         Scene* scene = SceneManager::GetActiveScene().get();
         auto view = scene->GetAllEntitiesWith<Rigidbody2DComponent>();
         for (auto e : view)
@@ -178,8 +243,8 @@ namespace Crowny
         auto& b2d = entity.GetComponent<BoxCollider2DComponent>();
 
         b2PolygonShape boxShape;
-        boxShape.SetAsBox(b2d.Size.x * transform.Scale.x, b2d.Size.y * transform.Scale.y,
-                          { b2d.Offset.x, b2d.Offset.y }, 0.0f);
+        boxShape.SetAsBox(b2d.GetSize().x * transform.Scale.x, b2d.GetSize().y * transform.Scale.y,
+                          { b2d.GetOffset().x, b2d.GetOffset().y }, 0.0f);
 
         b2FixtureDef fixtureDef;
         fixtureDef.shape = &boxShape;
@@ -189,11 +254,14 @@ namespace Crowny
         fixtureDef.filter.maskBits = 1 << layerMask;
         fixtureDef.filter.categoryBits = Physics2D::Get().GetCategoryMask(layerMask);
 
-        fixtureDef.density = b2d.Material.m_Density;
-        fixtureDef.friction = b2d.Material.m_Friction;
-        fixtureDef.restitution = b2d.Material.m_Restitution;
-        fixtureDef.isSensor = b2d.IsTrigger;
-        fixtureDef.restitutionThreshold = b2d.Material.m_RestitutionThreshold;
+        fixtureDef.isSensor = b2d.IsTrigger();
+
+        // TODO: Move to apply material function
+        fixtureDef.density = b2d.GetMaterial()->m_Density;
+        fixtureDef.friction = b2d.GetMaterial()->m_Friction;
+        fixtureDef.restitution = b2d.GetMaterial()->m_Restitution;
+        fixtureDef.restitutionThreshold = b2d.GetMaterial()->m_RestitutionThreshold;
+
         if (entity.HasComponent<Rigidbody2DComponent>())
             b2d.RuntimeFixture = entity.GetComponent<Rigidbody2DComponent>().RuntimeBody->CreateFixture(&fixtureDef);
     }
@@ -204,8 +272,8 @@ namespace Crowny
         auto& cc2d = entity.GetComponent<CircleCollider2DComponent>();
 
         b2CircleShape circleShape;
-        circleShape.m_p.Set(cc2d.Offset.y, cc2d.Offset.y);
-        circleShape.m_radius = (transform.Scale.x + transform.Scale.y) * 0.5f * cc2d.Radius;
+        circleShape.m_p.Set(cc2d.GetOffset().x, cc2d.GetOffset().y);
+        circleShape.m_radius = (transform.Scale.x + transform.Scale.y) * 0.5f * cc2d.GetRadius();
 
         b2FixtureDef fixtureDef;
         fixtureDef.shape = &circleShape;
@@ -215,11 +283,12 @@ namespace Crowny
         fixtureDef.filter.maskBits = 1 << layerMask;
         fixtureDef.filter.categoryBits = Physics2D::Get().GetCategoryMask(layerMask);
 
-        fixtureDef.isSensor = cc2d.IsTrigger;
-        fixtureDef.density = cc2d.Material.m_Density;
-        fixtureDef.friction = cc2d.Material.m_Friction;
-        fixtureDef.restitution = cc2d.Material.m_Restitution;
-        fixtureDef.restitutionThreshold = cc2d.Material.m_RestitutionThreshold;
+        fixtureDef.isSensor = cc2d.IsTrigger();
+
+        fixtureDef.density = cc2d.GetMaterial()->m_Density;
+        fixtureDef.friction = cc2d.GetMaterial()->m_Friction;
+        fixtureDef.restitution = cc2d.GetMaterial()->m_Restitution;
+        fixtureDef.restitutionThreshold = cc2d.GetMaterial()->m_RestitutionThreshold;
 
         if (entity.HasComponent<Rigidbody2DComponent>())
             cc2d.RuntimeFixture = entity.GetComponent<Rigidbody2DComponent>().RuntimeBody->CreateFixture(&fixtureDef);
@@ -245,16 +314,6 @@ namespace Crowny
             Entity entity = { e, scene };
             auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
             auto& transform = entity.GetComponent<TransformComponent>();
-            if (rb2d.RuntimeBody == nullptr)
-            {
-                b2BodyDef bodyDef;
-                bodyDef.type = GetBox2DType(rb2d.GetBodyType());
-                bodyDef.position.Set(transform.Position.x, transform.Position.y);
-                bodyDef.angle = transform.Rotation.z;
-                b2Body* body = m_PhysicsWorld2D->CreateBody(&bodyDef);
-                body->SetFixedRotation(rb2d.GetConstraints().IsSet(Rigidbody2DConstraintsBits::FreezeRotation));
-                rb2d.RuntimeBody = body;
-            }
             Rigidbody2DConstraints constraints = rb2d.GetConstraints();
             b2Vec2 linVelocty = rb2d.RuntimeBody->GetLinearVelocity();
             if (constraints.IsSet(Rigidbody2DConstraintsBits::FreezePositionX))
@@ -299,6 +358,8 @@ namespace Crowny
     {
         if (!entity.HasComponent<Rigidbody2DComponent>())
             return 0.0f;
+        if (m_PhysicsWorld2D != nullptr)
+            return entity.GetComponent<Rigidbody2DComponent>().RuntimeBody->GetMass();
         b2World* tempWorld = m_PhysicsWorld2D;
         m_PhysicsWorld2D = m_TemporaryWorld2D;
 

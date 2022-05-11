@@ -840,7 +840,8 @@ namespace Crowny
         DeleteEntry(assetPath);
         asset->SetName(path.filename().string());
 
-        Path absPath = fs::absolute(assetPath);
+        // Path absPath = fs::absolute(assetPath);
+        Path absPath = assetPath;
         AssetManager::Get().Save(asset, absPath);
 
         Path parentDirPath = absPath.parent_path();

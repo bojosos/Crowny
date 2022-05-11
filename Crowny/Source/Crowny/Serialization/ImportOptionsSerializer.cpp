@@ -55,7 +55,7 @@ namespace Crowny
         case ImportOptionsType::Script: {
             Ref<CSharpScriptImportOptions> scriptImportOptions =
               std::static_pointer_cast<CSharpScriptImportOptions>(importOptions);
-            out << YAML::Key << "ScriptImporter";
+            out << YAML::Key << "ScriptImporter" << YAML::Value;
             out << YAML::BeginMap;
             out << YAML::Key << "IsEditorScript" << YAML::Value << scriptImportOptions->IsEditorScript;
             out << YAML::EndMap;

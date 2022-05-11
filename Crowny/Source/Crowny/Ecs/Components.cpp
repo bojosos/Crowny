@@ -269,6 +269,75 @@ namespace Crowny
         m_CenterOfMass = center;
     }
 
+    void Collider2D::SetIsTrigger(bool trigger)
+    {
+        if (RuntimeFixture != nullptr)
+            RuntimeFixture->SetSensor(trigger);
+        m_IsTrigger = trigger;
+    }
+
+    void Collider2D::SetMaterial(const AssetHandle<PhysicsMaterial2D>& material)
+    {
+        if (RuntimeFixture != nullptr)
+        {
+            RuntimeFixture->SetDensity(material->GetDensity());
+            RuntimeFixture->SetFriction(material->GetFriction());
+            RuntimeFixture->SetRestitution(material->GetRestitution());
+            RuntimeFixture->SetRestitutionThreshold(material->GetRestitutionThreshold());
+        }
+        m_Material = material;
+    }
+
+    BoxCollider2DComponent::BoxCollider2DComponent() : Collider2D()
+    {
+        m_Material = Physics2D::Get().GetDefaultMaterial();
+    }
+
+    void BoxCollider2DComponent::SetOffset(const glm::vec2& offset, Entity entity)
+    {
+        m_Offset = offset;
+        if (RuntimeFixture != nullptr)
+        {
+            Physics2D::Get().DestroyFixture(entity, *this);
+            Physics2D::Get().CreateBoxCollider(entity);
+        }
+    }
+
+    void BoxCollider2DComponent::SetSize(const glm::vec2& size, Entity entity)
+    {
+        m_Size = size;
+        if (RuntimeFixture != nullptr)
+        {
+            Physics2D::Get().DestroyFixture(entity, *this);
+            Physics2D::Get().CreateBoxCollider(entity);
+        }
+    }
+
+    CircleCollider2DComponent::CircleCollider2DComponent() : Collider2D()
+    {
+        m_Material = Physics2D::Get().GetDefaultMaterial();
+    }
+
+    void CircleCollider2DComponent::SetRadius(float radius, Entity entity)
+    {
+        m_Radius = radius;
+        if (RuntimeFixture != nullptr)
+        {
+            Physics2D::Get().DestroyFixture(entity, *this);
+            Physics2D::Get().CreateCircleCollider(entity);
+        }
+    }
+
+    void CircleCollider2DComponent::SetOffset(const glm::vec2& offset, Entity entity)
+    {
+        m_Offset = offset;
+        if (RuntimeFixture != nullptr)
+        {
+            Physics2D::Get().DestroyFixture(entity, *this);
+            Physics2D::Get().CreateCircleCollider(entity);
+        }
+    }
+
     MonoScript::MonoScript() : InstanceId(s_NextAvailableId++) {}
 
     MonoScript::MonoScript(const String& name) : m_TypeName(name), InstanceId(s_NextAvailableId++)
@@ -359,37 +428,7 @@ namespace Crowny
             m_SerializedObjectData = nullptr;
         }
 
-        struct CollisionDataInterop
-        {
-            MonoArray* Colliders;
-            MonoArray* ContactPoints;
-        };
-
-        auto collisionDataToManaged = [&](const Collision2D& collision) {
-            CollisionDataInterop output;
-            MonoArray* colliders = mono_array_new(MonoManager::Get().GetDomain(),
-                                                  ScriptEntity::GetMetaData()->ScriptClass->GetInternalPtr(), 2);
-
-            ScriptEntity* col1 = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(collision.Colliders[0]);
-            if (col1 != nullptr)
-                mono_array_setref(colliders, 0, col1->GetManagedInstance());
-            ScriptEntity* col2 = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(collision.Colliders[1]);
-            if (col2 != nullptr)
-                mono_array_setref(colliders, 1, col2->GetManagedInstance());
-
-            output.Colliders = colliders;
-
-            ::MonoClass* vecClass = MonoManager::Get().FindClass("Crowny", "Vector2")->GetInternalPtr();
-            MonoArray* points = mono_array_new(MonoManager::Get().GetDomain(), vecClass, collision.Points.size());
-            for (uint32_t i = 0; i < collision.Points.size(); i++)
-                mono_array_setref(points, i, MonoUtils::Box(vecClass, (void*)&collision.Points[i]));
-            output.ContactPoints = points;
-            return output;
-        };
-
-        MonoMethod* onCollisionEnter = GetManagedClass()->GetMethod(
-          "OnCollisionEnter2D",
-          "Collision2D"); // Maybe replace these with the other Collider, since Box2D works that way
+        MonoMethod* onCollisionEnter = GetManagedClass()->GetMethod("OnCollisionEnter2D", "Collision2D");
         if (onCollisionEnter != nullptr)
             m_OnCollisionEnterThunk = (OnCollisionEnterThunkDef)onCollisionEnter->GetThunk();
         MonoMethod* onCollisionStay = GetManagedClass()->GetMethod("OnCollisionStay2D", "Collision2D");
@@ -399,46 +438,15 @@ namespace Crowny
         if (onCollisionExit != nullptr)
             m_OnCollisionExitThunk = (OnCollisionExitThunkDef)onCollisionExit->GetThunk();
 
-        auto onCollisionEnterCallback = [=](const Collision2D& collision) {
-            if (m_OnCollisionEnterThunk != nullptr)
-            {
-                CollisionDataInterop data = collisionDataToManaged(collision);
-                MonoObject* managedCollision =
-                  MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
-                MonoUtils::InvokeThunk(m_OnCollisionEnterThunk, GetManagedInstance(), managedCollision);
-            }
-        };
-
-        auto onCollisionStayCallback = [=](const Collision2D& collision) {
-            if (m_OnCollisionStayThunk != nullptr)
-            {
-                CollisionDataInterop data = collisionDataToManaged(collision);
-                MonoObject* managedCollision =
-                  MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
-                MonoUtils::InvokeThunk(m_OnCollisionStayThunk, GetManagedInstance(), managedCollision);
-            }
-        };
-
-        auto onCollisionExitCallback = [=](const Collision2D& collision) {
-            if (m_OnCollisionExitThunk != nullptr)
-            {
-                CollisionDataInterop data = collisionDataToManaged(collision);
-                MonoObject* managedCollision =
-                  MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
-                MonoUtils::InvokeThunk(m_OnCollisionExitThunk, GetManagedInstance(), managedCollision);
-            }
-        };
-
-        if (entity.HasComponent<BoxCollider2DComponent>())
-        {
-            entity.GetComponent<BoxCollider2DComponent>().CallbackEnter = onCollisionEnterCallback;
-            entity.GetComponent<BoxCollider2DComponent>().CallbackExit = onCollisionExitCallback;
-        }
-        if (entity.HasComponent<CircleCollider2DComponent>())
-        {
-            entity.GetComponent<CircleCollider2DComponent>().CallbackEnter = onCollisionEnterCallback;
-            entity.GetComponent<CircleCollider2DComponent>().CallbackExit = onCollisionExitCallback;
-        }
+        MonoMethod* onTriggerEnter = GetManagedClass()->GetMethod("OnTriggerEnter2D", "Entity");
+        if (onTriggerEnter != nullptr)
+            m_OnTriggerEnterThunk = (OnTriggerEnterThunkDef)onTriggerEnter->GetThunk();
+        MonoMethod* onTriggerStay = GetManagedClass()->GetMethod("OnTriggerStay2D", "Entity");
+        if (onTriggerStay != nullptr)
+            m_OnTriggerStayThunk = (OnTriggerStayThunkDef)onTriggerStay->GetThunk();
+        MonoMethod* onTriggerExit = GetManagedClass()->GetMethod("OnTriggerExit2D", "Entity");
+        if (onTriggerExit != nullptr)
+            m_OnTriggerExitThunk = (OnTriggerExitThunkDef)onTriggerExit->GetThunk();
 
         // Could add and call an OnAwake method like in Unity here
     }
@@ -472,12 +480,18 @@ namespace Crowny
     {
         m_Class = MonoManager::Get().GetAssembly(GAME_ASSEMBLY)->GetClass("Sandbox", m_TypeName);
         m_TypeName = className;
+
         m_OnStartThunk = nullptr;
         m_OnUpdateThunk = nullptr;
         m_OnDestroyThunk = nullptr;
+
         m_OnCollisionEnterThunk = nullptr;
         m_OnCollisionStayThunk = nullptr;
         m_OnCollisionExitThunk = nullptr;
+
+        m_OnTriggerEnterThunk = nullptr;
+        m_OnTriggerStayThunk = nullptr;
+        m_OnTriggerExitThunk = nullptr;
     }
 
     void MonoScript::OnStart()
@@ -504,6 +518,104 @@ namespace Crowny
         {
             MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
             MonoUtils::InvokeThunk(m_OnDestroyThunk, instance);
+        }
+    }
+
+    struct CollisionDataInterop
+    {
+        MonoArray* Colliders;
+        MonoArray* ContactPoints;
+    };
+
+    static CollisionDataInterop CollisionDataToManaged(const Collision2D& collision)
+    {
+        CollisionDataInterop output;
+        MonoArray* colliders =
+          mono_array_new(MonoManager::Get().GetDomain(), ScriptEntity::GetMetaData()->ScriptClass->GetInternalPtr(), 2);
+
+        ScriptEntity* col1 = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(collision.Colliders[0]);
+        if (col1 != nullptr)
+            mono_array_setref(colliders, 0, col1->GetManagedInstance());
+        ScriptEntity* col2 = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(collision.Colliders[1]);
+        if (col2 != nullptr)
+            mono_array_setref(colliders, 1, col2->GetManagedInstance());
+
+        output.Colliders = colliders;
+
+        ::MonoClass* vecClass = MonoManager::Get().FindClass("Crowny", "Vector2")->GetInternalPtr();
+        MonoArray* points = mono_array_new(MonoManager::Get().GetDomain(), vecClass, collision.Points.size());
+        for (uint32_t i = 0; i < collision.Points.size(); i++)
+            mono_array_setref(points, i, MonoUtils::Box(vecClass, (void*)&collision.Points[i]));
+        output.ContactPoints = points;
+        return output;
+    };
+
+    void MonoScript::OnCollisionEnter2D(const Collision2D& collision)
+    {
+        if (m_OnCollisionEnterThunk != nullptr)
+        {
+            CollisionDataInterop data = CollisionDataToManaged(collision);
+            MonoObject* managedCollision =
+              MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
+            MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
+            MonoUtils::InvokeThunk(m_OnCollisionEnterThunk, instance, managedCollision);
+        }
+    }
+
+    void MonoScript::OnCollisionStay2D(const Collision2D& collision)
+    {
+        if (m_OnCollisionStayThunk != nullptr)
+        {
+            CollisionDataInterop data = CollisionDataToManaged(collision);
+            MonoObject* managedCollision =
+              MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
+            MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
+            MonoUtils::InvokeThunk(m_OnCollisionStayThunk, instance, managedCollision);
+        }
+    }
+
+    void MonoScript::OnCollisionExit2D(const Collision2D& collision)
+    {
+        if (m_OnCollisionExitThunk != nullptr)
+        {
+            CollisionDataInterop data = CollisionDataToManaged(collision);
+            MonoObject* managedCollision =
+              MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
+            MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
+            MonoUtils::InvokeThunk(m_OnCollisionExitThunk, instance, managedCollision);
+        }
+    }
+
+    void MonoScript::OnTriggerEnter2D(Entity other)
+    {
+        if (m_OnTriggerEnterThunk != nullptr)
+        {
+            MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
+            MonoUtils::InvokeThunk(
+              m_OnTriggerEnterThunk, instance,
+              ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(other)->GetManagedInstance());
+        }
+    }
+
+    void MonoScript::OnTriggerStay2D(Entity other)
+    {
+        if (m_OnTriggerStayThunk != nullptr)
+        {
+            MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
+            MonoUtils::InvokeThunk(
+              m_OnTriggerStayThunk, instance,
+              ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(other)->GetManagedInstance());
+        }
+    }
+
+    void MonoScript::OnTriggerExit2D(Entity other)
+    {
+        if (m_OnTriggerExitThunk != nullptr)
+        {
+            MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
+            MonoUtils::InvokeThunk(
+              m_OnTriggerExitThunk, instance,
+              ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(other)->GetManagedInstance());
         }
     }
 } // namespace Crowny

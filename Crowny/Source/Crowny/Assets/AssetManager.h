@@ -35,11 +35,17 @@ namespace Crowny
 
         AssetHandle<Asset> LoadFromUUID(const UUID& uuid, bool keepInternalRef = true, bool keepSourceData = false);
 
+        AssetHandle<Asset> GetAssetHandle(const UUID& uuid);
+
         void Save(const Ref<Asset>& resource); // TODO: Compression
         void Save(const Ref<Asset>& resource, const Path& filepath);
 
         void RegisterAssetManifest(const Ref<AssetManifest>& manifest);
         void UnregisterAssetManifest(const Ref<AssetManifest>& manifest);
+
+        AssetHandle<Asset> CreateAssetHandle(const Ref<Asset>& asset);
+        AssetHandle<Asset> CreateAssetHandle(const Ref<Asset>& asset, const UUID& uuid);
+        void Release(AssetHandleBase& handle);
 
     private:
         AssetHandle<Asset> Load(const UUID& uuid, const Path& filepath, bool keepInternalRef, bool keepSourceData);

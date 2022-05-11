@@ -6,7 +6,7 @@
 
 namespace Crowny
 {
-    // An base class for scene objects. Scene objects are Entities and Components
+    // A base class for scene objects. Scene objects are Entities and Components
     class ScriptSceneObjectBase : public PersistentScriptObjectBase
     {
     public:

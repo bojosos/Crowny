@@ -6,6 +6,7 @@
 #include "Crowny/Common/FileSystem.h"
 
 #include "Crowny/Audio/AudioSource.h"
+#include "Crowny/Physics/PhysicsMaterial.h"
 #include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/RenderAPI/Texture.h"
 
@@ -131,6 +132,16 @@ namespace Crowny
         archive(desc.Uniforms, desc.Samplers, desc.Textures, desc.LoadStoreTextures);
     }
 
+    void Save(BinaryDataStreamOutputArchive& archive, const PhysicsMaterial2D& material)
+    {
+        archive(material.m_Density, material.m_Friction, material.m_Restitution, material.m_RestitutionThreshold);
+    }
+
+    void Load(BinaryDataStreamInputArchive& archive, PhysicsMaterial2D& material)
+    {
+        archive(material.m_Density, material.m_Friction, material.m_Restitution, material.m_RestitutionThreshold);
+    }
+
     void Save(BinaryDataStreamOutputArchive& archive, const Shader& shader)
     {
         // TODO: Fix this for engine shaders
@@ -217,6 +228,16 @@ namespace Crowny
         return output;
     }
 
+    AssetHandle<Asset> AssetManager::GetAssetHandle(const UUID& uuid)
+    {
+        auto iterFind = m_Handles.find(uuid);
+        if (iterFind != m_Handles.end())
+            return iterFind->second.Lock();
+        AssetHandle<Asset> handle(uuid);
+        m_Handles[uuid] = handle.GetWeak();
+        return handle;
+    }
+
     void AssetManager::Save(const Ref<Asset>& resource, const Path& filepath)
     {
         if (!fs::is_directory(filepath.parent_path()))
@@ -235,7 +256,6 @@ namespace Crowny
         //      Ref<DataStream> stream = FileSystem::CreateAndOpenFile(filepath);
         // stream->Write(result.data(), result.size());
         //      stream->Close();
-
         Ref<DataStream> stream = FileSystem::CreateAndOpenFile(filepath);
         BinaryDataStreamOutputArchive archive(stream);
         archive(resource);
@@ -266,6 +286,7 @@ namespace Crowny
                 return;
         }
     }
+
     bool AssetManager::GetUUIDFromFilepath(const Path& filepath, UUID& outUUID)
     {
         // broken
@@ -277,14 +298,52 @@ namespace Crowny
         return false;
     }
 
+    AssetHandle<Asset> AssetManager::CreateAssetHandle(const Ref<Asset>& asset)
+    {
+        UUID uuid = UuidGenerator::Generate();
+        return CreateAssetHandle(asset, uuid);
+    }
+
+    AssetHandle<Asset> AssetManager::CreateAssetHandle(const Ref<Asset>& asset, const UUID& UUID)
+    {
+        AssetHandle<Asset> newHandle(asset, UUID);
+
+        if (asset)
+        {
+            // LoadedResourceData& resData = m_LoadedResources[UUID];
+            // resData.resource = newHandle.GetWeak();
+        }
+
+        m_Handles[UUID] = newHandle.GetWeak();
+        return newHandle;
+    }
+
+    void AssetManager::Release(AssetHandleBase& handle)
+    {
+        auto iterFind = m_LoadedAssets.find(handle.GetUUID());
+        if (iterFind != m_LoadedAssets.end())
+        {
+            // LoadedResourceData& resData = iterFind->second;
+
+            // assert(resData.numInternalRefs > 0);
+            // resData.numInternalRefs--;
+            // resource.removeInternalRef();
+
+            // std::uint32_t refCount = resource.getHandleData()->mRefCount.load(std::memory_order_relaxed);
+            // lostLastRef = refCount == 0;
+        }
+    }
+
 } // namespace Crowny
 
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::AudioClip, "AudioClip")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Texture, "Texture")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::ScriptCode, "ScriptCode")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Shader, "Shader")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::PhysicsMaterial2D, "PhysicsMaterial2D")
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Shader)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::AudioClip)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Texture)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::ScriptCode)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::PhysicsMaterial2D)
 CEREAL_REGISTER_DYNAMIC_INIT(AssetManager)
