@@ -52,7 +52,7 @@ namespace Crowny
             }
 
             uint32_t bufferSize = info.NumSamples * info.BitDepth / 8;
-            CW_ENGINE_INFO("Buffer size: ", bufferSize);
+            CW_ENGINE_INFO("Buffer size: {0}", bufferSize);
             uint8_t* sampleBuffer = new uint8_t[bufferSize];
             if (m_Desc.Format == AudioFormat::VORBIS)
             {
@@ -69,8 +69,8 @@ namespace Crowny
             }
             alGenBuffers(1, &m_BufferID);
             gAudio().WriteToOpenALBuffer(m_BufferID, sampleBuffer, info);
-            m_StreamData = nullptr;
-            m_StreamOffset = 0;
+            // TODO: Uncomment this m_StreamData = nullptr;
+            // m_StreamOffset = 0;
             m_StreamSize = 0;
             delete[] sampleBuffer;
         }
@@ -99,6 +99,24 @@ namespace Crowny
                 if (!m_VorbisReader.Open(m_StreamData, info, m_StreamOffset))
                     CW_ENGINE_ERROR("Audio file stream failed.");
             }
+        }
+    }
+
+    void AudioClip::GetBuffer(uint8_t* samples, uint32_t offset, uint32_t count) const
+    {
+        if (m_Desc.Format == AudioFormat::VORBIS)
+        {
+            AudioDataInfo info;
+            info.BitDepth = m_Desc.BitDepth;
+            info.NumChannels = m_Desc.NumChannels;
+            info.NumSamples = m_NumSamples;
+            info.SampleRate = m_Desc.Frequency;
+
+            OggVorbisDecoder reader;
+            if (reader.Open(m_SourceStreamData, info, offset))
+                reader.Read(samples, info.NumSamples);
+            else
+                CW_ENGINE_ERROR("Audio file decompression failed.");
         }
     }
 

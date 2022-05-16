@@ -13,6 +13,9 @@
 #include "Editor/EditorUtils.h"
 #include "Editor/ProjectLibrary.h"
 
+#include "Crowny/RenderAPI/RenderAPI.h"
+#include "Crowny/RenderAPI/RenderTexture.h"
+
 #include "UI/UIUtils.h"
 
 #include <backends/imgui_impl_vulkan.h>
@@ -72,14 +75,52 @@ namespace Crowny
                 m_CurrentDirectoryEntry = static_cast<DirectoryEntry*>(entry);
         }
         RecalculateDirectoryEntries();
-        for (auto child : m_CurrentDirectoryEntry->Children)
+
+        TextureParameters soundWaveParams;
+        soundWaveParams.Width = 256;
+        soundWaveParams.Height = 256;
+        soundWaveParams.Usage = TextureUsage::TEXTURE_STATIC;
+        soundWaveParams.Format = TextureFormat::RGBA8;
+
+        Ref<Texture> soundWave = Texture::Create(soundWaveParams);
+
+        for (auto child : m_CurrentDirectoryEntry->Children) // Also this is not recursive, and do audio wave on import
         {
             const auto& path = child->Filepath;
+            Renderer2D::Begin(glm::ortho(-256.0f, 256.0f, -256.0f, 256.0f), glm::mat4(1.0f));
             String ext = path.extension().string();
             if (ext == ".png") // TODO: Replace the .png
             {
                 Ref<Texture> result = Importer::Get().Import<Texture>(path);
-                m_Textures[child->ElementNameHash] = result;
+                m_Icons[child->ElementNameHash] = result;
+            }
+            else if (ext == ".ogg")
+            {
+                AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(path));
+                Vector<uint8_t> samples;
+                samples.resize(clip->GetNumSamples() * 2);
+                clip->GetBuffer(samples.data(), 0, samples.size());
+                struct icol
+                {
+                    uint8_t r, g, b, a;
+                };
+                icol data[256][256];
+                std::memset(data, 0, 256 * 256 * 4);
+                for (uint32_t c = 0; c < clip->GetNumChannels(); c++)
+                {
+                    float x = 0, xAdv = 256.0f / samples.size() * 2;
+                    for (uint32_t i = 0; i < samples.size(); i += 2)
+                    {
+                        int16_t sample = (((int(samples[i]))) | (int(samples[i + 1]) << 8));
+                        data[256 - int((float)sample / 65535 * 256) - 256 / 2]
+                            [int(x) /* clip->GetNumChannels() * (c + 1))*/] = { 39, 185, 242, 255 };
+                        x += xAdv;
+                    }
+                }
+                PixelData src(256, 256, 1, TextureFormat::RGBA8);
+                src.SetBuffer((uint8_t*)data);
+                soundWave->WriteData(src);
+                m_Icons[child->ElementNameHash] = soundWave;
             }
         }
     }
@@ -113,7 +154,9 @@ namespace Crowny
 
     void AssetBrowserPanel::DrawHeader()
     {
-        UI::ScopedStyle itemSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 3));
+        // UI::ScopedStyle itemSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 3));
+        UI::ScopedStyle style2(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 8.0f));
+        UI::ScopedStyle style3(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 4.0f));
         ImGui::BeginVertical("##assetBrowserV", { ImGui::GetContentRegionAvailWidth(), 0 }, 0.5f);
         ImGui::Spring();
         ImGui::BeginHorizontal("##assetBrowserH", { ImGui::GetContentRegionAvailWidth(), 0 });
@@ -169,7 +212,6 @@ namespace Crowny
 
         ImGui::Spring();
         UI::ScopedStyle style(ImGuiStyleVar_LayoutAlign, 1);
-
         ImGui::SetNextItemWidth(150.0f);
         if (UIUtils::SearchWidget(m_SearchString) && !m_SearchString.empty())
             m_DisplayList = ProjectLibrary::Get().Search(m_SearchString);
@@ -430,8 +472,8 @@ namespace Crowny
                 tid = m_FolderIcon;
             else
             {
-                auto iter = m_Textures.find(entry->ElementNameHash);
-                if (iter != m_Textures.end())
+                auto iter = m_Icons.find(entry->ElementNameHash);
+                if (iter != m_Icons.end())
                     tid = ImGui_ImplVulkan_AddTexture(iter->second);
                 else
                     tid = m_FileIcon;
