@@ -146,6 +146,8 @@ namespace Crowny
          */
         static void Begin(const Camera& camera, const glm::mat4& viewMatrix);
 
+        static void Begin(const glm::mat4& projection, const glm::mat4& view);
+
         /**
          * @brief Ends a batch.
          * Flushes the batched quads and draws them on the screen.

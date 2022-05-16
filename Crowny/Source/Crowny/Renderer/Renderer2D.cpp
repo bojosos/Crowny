@@ -116,7 +116,7 @@ namespace Crowny
               vertex->GetUniformDesc()->Uniforms.at("VP").BlockSize, BufferUsage::DYNAMIC_DRAW);
             s_Data->QuadUniforms = UniformParams::Create(s_Data->QuadPipeline);
             s_Data->QuadUniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "VP", s_Data->QuadProjectionView);
-            s_Data->QuadBuffer = s_Data->QuadTmpBuffer = new VertexData[RENDERER_SPRITE_SIZE];
+            s_Data->QuadBuffer = s_Data->QuadTmpBuffer = new VertexData[RENDERER_MAX_SPRITES * 4];
             delete[] indices;
         }
         {
@@ -159,6 +159,14 @@ namespace Crowny
         s_Data->QuadProjectionView->Write(0, glm::value_ptr(viewMatrix), sizeof(glm::mat4));
         s_Data->QuadProjectionView->Write(sizeof(glm::mat4), glm::value_ptr(camera.GetProjection()), sizeof(glm::mat4));
         glm::mat4 vp = camera.GetProjection() * viewMatrix;
+        s_Data->CircleProjectionView->Write(0, glm::value_ptr(vp), sizeof(glm::mat4));
+    }
+
+    void Renderer2D::Begin(const glm::mat4& projection, const glm::mat4& view)
+    {
+        s_Data->QuadProjectionView->Write(0, glm::value_ptr(view), sizeof(glm::mat4));
+        s_Data->QuadProjectionView->Write(sizeof(glm::mat4), glm::value_ptr(projection), sizeof(glm::mat4));
+        glm::mat4 vp = projection * view;
         s_Data->CircleProjectionView->Write(0, glm::value_ptr(vp), sizeof(glm::mat4));
     }
 
@@ -205,6 +213,7 @@ namespace Crowny
                               uint32_t entityId)
     {
         float ts = FindTexture(texture);
+
         for (uint32_t i = 0; i < 4; i++)
         {
             s_Data->QuadBuffer->Position = transform * QuadVertices[i];
@@ -464,6 +473,7 @@ namespace Crowny
 
         for (uint32_t i = 0; i < 8; i++)
             s_Data->Textures[i] = nullptr;
+        delete[] s_Data->QuadTmpBuffer;
         delete s_Data;
     }
 } // namespace Crowny

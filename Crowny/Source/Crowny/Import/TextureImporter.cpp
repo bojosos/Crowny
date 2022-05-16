@@ -53,7 +53,7 @@ namespace Crowny
             return nullptr;
         }
 
-        TextureFormat format;
+        TextureFormat format = TextureFormat::RGBA8;
         if (channels == 1)
             format = TextureFormat::R8;
         else if (channels == 3)

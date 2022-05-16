@@ -62,7 +62,8 @@ namespace Crowny
         ImTextureID m_FolderIcon;
         ImTextureID m_FileIcon;
 
-        UnorderedMap<size_t, Ref<Texture>> m_Textures; // For showing the textures in the asset browser.
+        UnorderedMap<size_t, Ref<Texture>> m_Icons; // For showing the textures in the asset browser.
+
         String m_CsDefaultText;
 
         Vector<Path> m_OrderedSelection;

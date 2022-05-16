@@ -325,7 +325,7 @@ namespace Crowny
 
         static bool PropertySlider(const char* label, int& value, int min, int max)
         {
-            Pre();
+            Pre(label);
             bool modified = ImGui::SliderInt(GenerateID(), &value, min, max);
             Post();
 
@@ -380,7 +380,8 @@ namespace Crowny
             const ImColor c_ButtonTint = IM_COL32(192, 192, 192, 255);
             const bool clicked = ImGui::InvisibleButton(UI::GenerateID(), { 24, 24 });
             DrawButtonImage(EditorAssets::Get().FolderIcon, c_ButtonTint, c_ButtonTint, c_ButtonTint,
-                            { ImGui::GetCursorPos(), { 24, 24 } });
+                            // UI::RectE(UI::GetItemRect(), 24.0f, 24.0f));
+                            UI::GetItemRect());
             if (clicked)
             {
                 Vector<Path> outPaths;
