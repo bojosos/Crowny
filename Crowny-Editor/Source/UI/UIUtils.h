@@ -211,14 +211,14 @@ namespace Crowny
         {
             auto* drawList = ImGui::GetWindowDrawList();
             if (ImGui::IsItemActive())
-                drawList->AddImage(ImGui_ImplVulkan_AddTexture(imagePressed), rectMin, rectMax, ImVec2(0, 0),
-                                   ImVec2(1, 1), tintPressed);
+                drawList->AddImage(ImGui_ImplVulkan_AddTexture(imagePressed), rectMin, rectMax, ImVec2(0, 1),
+                                   ImVec2(1, 0), tintPressed);
             else if (ImGui::IsItemHovered())
-                drawList->AddImage(ImGui_ImplVulkan_AddTexture(imageHovered), rectMin, rectMax, ImVec2(0, 0),
-                                   ImVec2(1, 1), tintHovered);
+                drawList->AddImage(ImGui_ImplVulkan_AddTexture(imageHovered), rectMin, rectMax, ImVec2(0, 1),
+                                   ImVec2(1, 0), tintHovered);
             else
-                drawList->AddImage(ImGui_ImplVulkan_AddTexture(imageNormal), rectMin, rectMax, ImVec2(0, 0),
-                                   ImVec2(1, 1), tintNormal);
+                drawList->AddImage(ImGui_ImplVulkan_AddTexture(imageNormal), rectMin, rectMax, ImVec2(0, 1),
+                                   ImVec2(1, 0), tintNormal);
         }
 
         static void DrawButtonImage(const Ref<Texture>& image, ImU32 tintNormal, ImU32 tintHovered, ImU32 tintPressed,

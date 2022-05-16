@@ -74,6 +74,7 @@ namespace Crowny
         uint32_t GetNumSamples() const { return m_NumSamples; }
         const AudioClipDesc& GetDesc() const { return m_Desc; }
         void GetSamples(uint8_t* samples, uint32_t offset, uint32_t count) const;
+        void GetBuffer(uint8_t* samples, uint32_t offset, uint32_t count) const;
         Ref<DataStream> GetSourceStream(uint32_t& size) const;
         uint32_t GetOpenALBuffer() const { return m_BufferID; }
         bool Is3D() const { return m_Desc.Is3D; }

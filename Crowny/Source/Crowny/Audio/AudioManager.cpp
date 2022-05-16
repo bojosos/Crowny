@@ -224,6 +224,11 @@ namespace Crowny
             else
             {
                 ALenum format = AudioUtils::GetOpenALFormat(info.NumChannels, info.BitDepth);
+
+                std::ofstream out("Test.pcm", std::ios_base::binary);
+                out.write((const char*)samples, info.NumSamples * (info.BitDepth / 8));
+                out.close();
+
                 alBufferData(bufferId, format, samples, info.NumSamples * (info.BitDepth / 8), info.SampleRate);
             }
         }
