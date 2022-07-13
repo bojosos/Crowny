@@ -93,7 +93,6 @@ namespace Crowny
         ::MonoClass* GetMonoClass() const override;
         virtual SerializableType GetType() override { return SerializableType::Entity; }
 
-        ScriptPrimitiveType m_UnderlyingType;
         String m_TypeNamespace;
         String m_TypeName;
     };
@@ -157,7 +156,6 @@ namespace Crowny
         virtual SerializableType GetType() override { return SerializableType::Object; }
         MonoObject* GetAttribute(MonoClass* monoClass);
 
-        ScriptPrimitiveType m_UnderlyingType;
         bool m_ValueType;
         uint32_t m_TypeId;
         ScriptFieldFlags m_Flags;

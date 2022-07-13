@@ -40,9 +40,16 @@ namespace Crowny
             if (msc.Scripts.size() > 0)
             {
                 out << YAML::Key << "MonoScriptComponent";
-                out << YAML::Value << YAML::BeginSeq;
+                out << YAML::BeginSeq;
+                    
                 for (const auto& script : msc.Scripts)
-                    out << script.GetTypeName();
+				{
+                    out << YAML::BeginSeq;
+                    Ref<SerializableObject> serializableObject = SerializableObject::CreateFromMonoObject(script.GetManagedInstance());
+                    serializableObject->SerializeYAML(out);
+                    
+                    out << YAML::EndSeq;
+                }
                 out << YAML::EndSeq;
             }
         }
@@ -289,16 +296,10 @@ namespace Crowny
                         auto& msc = deserialized.AddComponent<MonoScriptComponent>();
                         for (const auto& scriptNode : script)
                         {
-                            String scriptName = scriptNode.as<String>();
-                            const auto& entityBehavirous = ScriptInfoManager::Get().GetEntityBehaviours();
-                            auto iterFind = entityBehavirous.find(scriptName);
-                            if (iterFind == entityBehavirous.end())
-                            {
-                                CW_ENGINE_WARN("Script {0} does not exist in this assembly.");
-                                continue;
-                            }
-                            msc.Scripts.push_back(MonoScript(scriptName));
-                            // msc.Scripts.back().OnInitialize(deserialized);
+                            Ref<SerializableObject> obj = SerializableObject::DeserializeYAML(scriptNode);
+                            msc.Scripts.push_back(MonoScript("TestSerialization"));
+                            msc.Scripts.back().OnInitialize(deserialized);
+                            obj->Deserialize(msc.Scripts.back().GetManagedInstance(), msc.Scripts.back().GetObjectInfo());
                         }
                     }
 

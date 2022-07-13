@@ -58,10 +58,13 @@ namespace Crowny
         void Serialize();
         MonoObject* Deserialize();
         void Deserialize(MonoObject* instance, const Ref<SerializableObjectInfo>& objInfo);
+        MonoObject* GetManagedInstance() const;
 
         ~SerializableObject();
         SerializableObject(Ref<SerializableObjectInfo> objInfo, MonoObject* instance);
-        SerializableObject();
+
+        void SerializeYAML(YAML::Emitter& out) const;
+        static Ref<SerializableObject> DeserializeYAML(const YAML::Node& node);
 
     private:
         CW_SERIALIZABLE(SerializableObject)
