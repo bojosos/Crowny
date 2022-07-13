@@ -6,14 +6,15 @@ namespace Crowny
 
 	public class Component : ScriptObject
 	{
-
 		/// <summary>
 		/// Returns the parent entity of this component.
 		/// </summary>
 		/// <returns>The entity.</returns>
+		[DontSerializeField]
 		public Entity entity { get { return Internal_GetEntity(m_InternalPtr); } }
 
 		/// <value>The transform of the object</value>
+		[DontSerializeField]
 		public Transform transform { get { return GetComponent<Transform>(); } }
 
 		/// <summary>

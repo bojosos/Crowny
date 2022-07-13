@@ -392,7 +392,7 @@ namespace Crowny
             SceneManager::SetActiveScene(m_Temp);
             Editor::Get().GetProjectSettings()->LastOpenScenePath = m_Temp->GetFilepath().string();
             m_Temp = nullptr;
-            ScriptRuntime::Init();
+            // ScriptRuntime::Init();
         }
 
         Ref<Scene> scene = SceneManager::GetActiveScene();

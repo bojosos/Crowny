@@ -248,6 +248,7 @@ namespace Crowny
         MonoObject* GetManagedInstance() const;
 
         Ref<SerializableObjectInfo> GetObjectInfo() const { return m_ObjectInfo; }
+        Ref<SerializableObject> GetSerializableObject() const { return m_SerializedObjectData; }
 
         ScriptObjectBackupData BeginRefresh();
         void EndRefresh(const ScriptObjectBackupData& data);
