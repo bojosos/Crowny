@@ -102,15 +102,26 @@ namespace Crowny
                             ImGui::PushItemWidth(-1);
                             if (ImGui::Button(ci.name.c_str()))
                             {
-                                ci.create(entity);
-                                ImGui::CloseCurrentPopup();
+								if (tid == entt::type_info<MonoScriptComponent>::id())
+								{
+									ci.create(entity);
+                                    entity.GetComponent<MonoScriptComponent>().Scripts.push_back({});
+									ImGui::CloseCurrentPopup();
+								}
+                                else
+                                {
+                                    ci.create(entity);
+                                    ImGui::CloseCurrentPopup();
+                                }
                             }
                         }
                     }
 
                     const auto& entityBehaviours = ScriptInfoManager::Get().GetEntityBehaviours();
                     for (auto [name, klass] : entityBehaviours)
-                    {
+					{
+						if (klass->GetFullName() == ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetFullName())
+							continue;
                         bool exists = false;
                         if (entity.HasComponent<MonoScriptComponent>())
                         {
@@ -216,7 +227,15 @@ namespace Crowny
                                 {
                                     ImGui::PushID(cId);
                                     if (ImGui::Selectable(cInfo.name.c_str()))
-                                        cInfo.create(entity);
+									{
+										if (cId == entt::type_info<MonoScriptComponent>::id())
+										{
+											cInfo.create(entity);
+                                            entity.GetComponent<MonoScriptComponent>().Scripts.push_back({});
+										}
+										else
+                                            cInfo.create(entity);
+                                    }
 
                                     ImGui::PopID();
                                 }
@@ -232,7 +251,15 @@ namespace Crowny
                         {
                             ImGui::PushID(tid);
                             if (ImGui::Selectable(ci.name.c_str()))
-                                ci.create(entity);
+							{
+								if (tid == entt::type_info<MonoScriptComponent>::id())
+								{
+									ci.create(entity);
+									entity.GetComponent<MonoScriptComponent>().Scripts.push_back({});
+								}
+								else
+                                    ci.create(entity);
+                            }
 
                             ImGui::PopID();
                         }

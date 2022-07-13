@@ -503,6 +503,8 @@ namespace Crowny
                         const auto& classes = ScriptInfoManager::Get().GetEntityBehaviours();
                         for (auto [name, klass] : classes)
                         {
+                            if (klass->GetFullName() == ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetFullName())
+                                continue;
                             if (!searchString.empty() && !StringUtils::IsSearchMathing(name, searchString))
                                 continue;
 
