@@ -364,7 +364,7 @@ namespace Crowny
             return modified;
         }
 
-        static bool PropertyFilepath(const char* label, String& value)
+        static bool PropertyFilepath(const char* label, FileDialogType type, String& value)
         {
             ShiftCursor(10.0f, 9.0f);
             ImGui::Text(label);
@@ -385,7 +385,7 @@ namespace Crowny
             if (clicked)
             {
                 Vector<Path> outPaths;
-                if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, value, {}, outPaths) && outPaths.size() > 0)
+                if (FileSystem::OpenFileDialog(type, value, {}, outPaths) && outPaths.size() > 0)
                 {
                     value = outPaths[0].string();
                     modified = true;

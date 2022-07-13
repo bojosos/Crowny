@@ -209,19 +209,32 @@ namespace Crowny
         if (primitive->m_Type == ScriptPrimitiveType::String)
         {
             MonoString* value = (MonoString*)getter();
-            String stringValue = MonoUtils::FromMonoString(value);
             if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Filepath))
             {
-                if (UI::PropertyFilepath(label, stringValue))
+				MonoClass* filepathClass = ScriptInfoManager::Get().GetBuiltinClasses().FilepathAttribute;
+				MonoObject* filepathAttr = memberInfo->GetAttribute(filepathClass);
+                FileDialogType dialogType = FileDialogType::OpenFile;
+				filepathClass->GetField("type")->Get(filepathAttr, &dialogType);
+                if (MonoUtils::GetClass((MonoObject*)value) != MonoUtils::GetStringClass() && (dialogType == FileDialogType::Multiselect))
+                {
+                    CW_ENGINE_ERROR("Filedialog attribute with multiselect can only be used on a vector of strings");
+                    return false;
+                }
+                String stringValue = MonoUtils::FromMonoString(value);
+                if (UI::PropertyFilepath(label, dialogType, stringValue))
                 {
                     setter(MonoUtils::ToMonoString(stringValue));
                     return true;
                 }
             }
-            else if (UI::Property(label, stringValue))
+            else
             {
-                setter(MonoUtils::ToMonoString(stringValue));
-                return true;
+                String stringValue = MonoUtils::FromMonoString(value);
+                if (UI::Property(label, stringValue))
+                {
+                    setter(MonoUtils::ToMonoString(stringValue));
+                    return true;
+                }
             }
             return false;
         }

@@ -5,7 +5,7 @@ GridScaleSnap: 0.100000001
 LastOpenProject: C:\dev\Projects\Project1
 AutoLoadLastProject: true
 ShowImGuiDemo: false
-ShowPhysicsColliders2D: true
+ShowPhysicsColliders2D: false
 ShowScriptDebugInfo: false
 ShowAssetInfo: false
 ShowEmptyMetadataAssetInfo: false
@@ -17,7 +17,7 @@ CollapseConsole: true
 ScrollToBottom: true
 RecentProjects:
   - Path: C:\dev\Projects\Project1
-    Timestamp: 1652684147
+    Timestamp: 1657724208
   - Path: C:\dev\Projects\New Project
     Timestamp: 1648668832
   - Path: C:/dev/Projects\Project4
