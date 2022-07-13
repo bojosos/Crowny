@@ -69,7 +69,7 @@ namespace Crowny
         {
             if (m_Data != nullptr)
             {
-                uint32_t refCount = m_Data->m_RefCount.fetch_sub(1, std::memory_order_relaxed);
+                uint32_t refCount = m_Data->m_RefCount.fetch_sub(1, std::memory_order_release);
                 if (refCount == 1)
                 {
                     std::atomic_thread_fence(std::memory_order_acquire);

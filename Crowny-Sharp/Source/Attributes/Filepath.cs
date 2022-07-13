@@ -8,6 +8,11 @@ namespace Crowny
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public class Filepath : Attribute
     {
+        FileDialogType type;
 
+        public Filepath(FileDialogType type = FileDialogType.OpenFile)
+        {
+            this.type = type;
+        }
     }
 }

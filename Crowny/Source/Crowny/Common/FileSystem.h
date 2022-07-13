@@ -5,12 +5,12 @@
 namespace Crowny
 {
 
-    enum class FileDialogType // TODO: Make this enum better
+    enum class FileDialogType
     {
-        OpenFile,
-        OpenFolder,
-        SaveFile,
-        Multiselect
+        OpenFile = 0,
+        OpenFolder = 1,
+        SaveFile = 2,
+        Multiselect = 3
     };
 
     struct DialogFilter

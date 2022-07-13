@@ -113,14 +113,16 @@ namespace Crowny
             res += buffer.data();
 
         if (res.empty())
+        {
             return false;
+            pclose(f);
+        }
 
         res = res.erase(res.find_last_not_of(" \n\r\t") + 1);
         for (const String& str : StringUtils::SplitString(res, "|"))
-        {
-            outPaths.push_back(Path(std::move(str))); // TODO: Can i std::move
-        }
+            outPaths.push_back(Path(std::move(str)));
 
+        pclose(p);
         return true;
     }
 
