@@ -16,7 +16,7 @@ namespace Crowny
         Map<ScriptObjectBase*, ScriptObjectBackupData> backupData;
         // OnRefreshStarted();
 
-        // GameObjectManager::Get().DestroyQueuedObjects();
+        // GameObjectManager::Get().DestroyQueuedObjects(); // Wat, why commented
         ProcessFinalizedObjects(false);
 
         for (auto& scriptObject : m_ScriptObjects)
