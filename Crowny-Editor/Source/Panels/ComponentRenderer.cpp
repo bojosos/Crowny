@@ -505,7 +505,7 @@ namespace Crowny
                 if (UIUtils::PropertyScript("Class name", typeName))
                 {
                     script.SetClassName(typeName);
-                    script.OnInitialize(e);
+                    // FIXME script.OnInitialize(e);
                 }
 
                 if (script.GetManagedClass() == nullptr)

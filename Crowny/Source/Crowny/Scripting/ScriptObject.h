@@ -62,7 +62,7 @@ namespace Crowny
 
         virtual ~ScriptObject() = default;
 
-        void RestoreManagedInstance()
+        virtual void RestoreManagedInstance() override
         {
             MonoObject* instance = CreateManagedInstance(true);
             Type* param = (Type*)(Base*)this;

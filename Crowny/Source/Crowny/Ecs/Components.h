@@ -255,7 +255,8 @@ namespace Crowny
 
         const String& GetTypeName() const { return m_TypeName; }
 
-        void OnInitialize(Entity entity);
+        void OnInitialize(ScriptEntityBehaviour* entityBehaviour);
+        void Create(Entity entity);
         void OnStart();
         void OnUpdate();
         void OnDestroy();
@@ -269,6 +270,9 @@ namespace Crowny
         void OnTriggerExit2D(Entity other);
 
         uint64_t InstanceId; // These also require one for scripting
+
+		ScriptObjectBackupData Backup();
+		void Restore(const ScriptObjectBackupData& backupData, bool missingType);
 
     private:
         typedef void(CW_THUNKCALL* OnStartThunkDef)(MonoObject*, MonoException**);
@@ -295,7 +299,9 @@ namespace Crowny
         String m_TypeName;
         String m_Namespace;
         bool m_MissingType = false;
+    public:
         Ref<SerializableObject> m_SerializedObjectData;
+    private:
         Ref<SerializableObjectInfo> m_ObjectInfo;
         MonoClass* m_Class = nullptr;
         uint32_t m_Handle = 0;
@@ -312,6 +318,9 @@ namespace Crowny
 
         MonoScriptComponent(const String& name) : ComponentBase() { Scripts.push_back(MonoScript(name)); }
         MonoScriptComponent(const MonoScriptComponent&) = default;
+
+        ScriptObjectBackupData Backup(bool clearExisting = true);
+        void Restore(const ScriptObjectBackupData& data, bool missingType);
 
         Vector<MonoScript> Scripts;
     };

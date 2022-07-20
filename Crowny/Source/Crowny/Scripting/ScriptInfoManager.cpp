@@ -43,8 +43,8 @@ namespace Crowny
 
     ScriptInfoManager::ScriptInfoManager()
     {
-        RegisterComponents();
-        RegisterAssets();
+        // RegisterComponents();
+        // RegisterAssets();
     }
 
     void ScriptInfoManager::InitializeTypes()
@@ -94,6 +94,8 @@ namespace Crowny
 
         RegisterComponents();
         RegisterAssets();
+        
+        m_BaseTypesInitialized = true;
     }
 
     bool ScriptInfoManager::IsBasicType(MonoClass* klass)
@@ -106,9 +108,14 @@ namespace Crowny
 
     void ScriptInfoManager::LoadAssemblyInfo(const String& assemblyName)
     {
+        if (!m_BaseTypesInitialized && assemblyName == "CrownySharp")
+            InitializeTypes();
+
         MonoAssembly* curAssembly = MonoManager::Get().GetAssembly(assemblyName);
         if (curAssembly == nullptr)
-            return;
+			return;
+
+		uint32_t m_UniqueTypeId = 1;
         Ref<SerializableAssemblyInfo> assemblyInfo = CreateRef<SerializableAssemblyInfo>();
         assemblyInfo->m_Name = assemblyName;
 
@@ -582,6 +589,7 @@ namespace Crowny
         m_ComponentInfos.clear();
         m_AssetInfos.clear();
         m_AssemblyInfos.clear();
+        m_EntityBehaviourClasses.clear();
     }
 
     ScriptTypeInfo* ScriptInfoManager::GetSerializableTypeInfo(MonoReflectionType* type)

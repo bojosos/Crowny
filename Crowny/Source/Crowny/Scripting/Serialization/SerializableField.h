@@ -21,7 +21,6 @@ namespace Crowny
         
         uint32_t m_TypeId;
         uint32_t m_FieldIdx;
-        SerializableType m_Type;
     };
 
     class SerializableFieldData

@@ -17,7 +17,7 @@
 
 namespace Crowny
 {
-
+    // Wtf is this
     RelationshipComponent& RelationshipComponent::operator=(const RelationshipComponent& other)
     {
         Parent = other.Parent;
@@ -348,8 +348,56 @@ namespace Crowny
     MonoClass* MonoScript::GetManagedClass() const { return m_Class; }
     MonoObject* MonoScript::GetManagedInstance() const { return m_ScriptEntityBehaviour->GetManagedInstance(); }
 
-    void MonoScript::OnInitialize(Entity entity)
+    void MonoScript::Create(Entity entity)
     {
+        m_ObjectInfo = nullptr;
+        MonoObject* instance = nullptr;
+        if (!ScriptInfoManager::Get().GetSerializableObjectInfo("Sandbox", m_TypeName, m_ObjectInfo))
+        {
+            instance = ScriptInfoManager::Get().GetBuiltinClasses().MissingEntityBehaviour->CreateInstance(true);
+            m_MissingType = true;
+        }
+        else
+        {
+            instance = m_ObjectInfo->m_MonoClass->CreateInstance(true);
+            m_MissingType = false;
+        }
+
+        ScriptSceneObjectManager::Get().CreateManagedScriptComponent(instance, entity, *this);
+
+        if (m_SerializedObjectData != nullptr && !m_MissingType)
+        {
+            m_SerializedObjectData->Deserialize(instance, m_ObjectInfo);
+            m_SerializedObjectData = nullptr;
+        }
+    }
+
+    void MonoScript::OnInitialize(ScriptEntityBehaviour* entityBehaviour)
+    {
+		m_ScriptEntityBehaviour = entityBehaviour;
+		// mFullTypeName = mNamespace + "." + mTypeName;
+
+		MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
+		m_Class = nullptr;
+		if (instance != nullptr)
+		{
+			::MonoClass* monoClass = MonoUtils::GetClass(instance);
+			// mRuntimeType = MonoUtil::getType(monoClass);
+
+			m_Class = MonoManager::Get().FindClass(monoClass);
+		}
+
+		m_OnStartThunk = nullptr;
+		m_OnUpdateThunk = nullptr;
+		m_OnDestroyThunk = nullptr;
+		m_OnCollisionEnterThunk = nullptr;
+		m_OnCollisionStayThunk = nullptr;
+		m_OnCollisionExitThunk = nullptr;
+		m_OnTriggerEnterThunk = nullptr;
+		m_OnTriggerStayThunk = nullptr;
+		m_OnTriggerExitThunk = nullptr;
+        /*
+        m_ScriptEntityBehaviour = entityBehaviour;
         MonoObject* managedInstance = nullptr;
         if (m_Class == nullptr)
             return;
@@ -449,31 +497,81 @@ namespace Crowny
             m_OnTriggerExitThunk = (OnTriggerExitThunkDef)onTriggerExit->GetThunk();
 
         // Could add and call an OnAwake method like in Unity here
+        */
     }
 
-    ScriptObjectBackupData MonoScript::BeginRefresh()
+    ScriptObjectBackupData MonoScript::Backup()
     {
-        MonoObject* instance = GetManagedInstance();
-        Ref<SerializableObject> serializableObject = SerializableObject::CreateFromMonoObject(instance);
-        if (serializableObject == nullptr)
-            return { nullptr, 0 };
-        Ref<MemoryDataStream> stream = CreateRef<MemoryDataStream>();
-        BinaryDataStreamOutputArchive archive(stream);
-        archive(serializableObject);
-        ScriptObjectBackupData backupData;
-        backupData.Size = (uint32_t)stream->Size();
-        backupData.Data = stream->TakeMemory();
-        return backupData;
+        ScriptObjectBackupData data;
+        if (!m_MissingType)
+        {
+            MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
+            Ref<SerializableObject> serializableObject = SerializableObject::CreateFromMonoObject(instance);
+            if (serializableObject != nullptr)
+            {
+                Ref<MemoryDataStream> memoryStream = CreateRef<MemoryDataStream>();
+				BinaryDataStreamOutputArchive archive(memoryStream);
+				archive(serializableObject);
+                data.Size = (uint32_t)memoryStream->Size();
+                data.Data = memoryStream->TakeMemory();
+            }
+            else
+            {
+                data.Size = 0;
+                data.Data = nullptr;
+            }
+        }
+        else
+        {
+            Ref<MemoryDataStream> memoryStream = CreateRef<MemoryDataStream>();
+            if (m_SerializedObjectData != nullptr)
+            {
+				BinaryDataStreamOutputArchive archive(memoryStream);
+				archive(m_SerializedObjectData);
+            }
+
+            data.Size = (uint32_t)memoryStream->Size();
+            data.Data = memoryStream->TakeMemory();
+        }
+
+        m_OnStartThunk = nullptr;
+        m_OnUpdateThunk = nullptr;
+        m_OnDestroyThunk = nullptr;
+        m_OnCollisionEnterThunk = nullptr;
+        m_OnCollisionStayThunk = nullptr;
+        m_OnCollisionExitThunk = nullptr;
+        m_OnTriggerEnterThunk = nullptr;
+        m_OnTriggerStayThunk = nullptr;
+        m_OnTriggerExitThunk = nullptr;
+
+        return data;
     }
 
-    void MonoScript::EndRefresh(const ScriptObjectBackupData& data)
+    void MonoScript::Restore(const ScriptObjectBackupData& data, bool missingType)
     {
+        // OnInitialize(entity);
+        m_ObjectInfo = nullptr;
+
         MonoObject* instance = GetManagedInstance();
         if (instance != nullptr && data.Data != nullptr)
         {
-            // Deserialize
-            // ScriptInfoManager::Get().GetSerializableObjectInfo(namespace, typename, objInfo);
+            Ref<SerializableObject> serializableObject;
+            Ref<MemoryDataStream> memoryStream = CreateRef<MemoryDataStream>(data.Data, data.Size);
+			BinaryDataStreamInputArchive archive(memoryStream);
+			archive(serializableObject);
+
+            if (!missingType)
+            {
+                ScriptInfoManager::Get().GetSerializableObjectInfo("Sandbox", m_TypeName, m_ObjectInfo);
+                serializableObject->Deserialize(instance, m_ObjectInfo);
+            }
+            else
+                m_SerializedObjectData = serializableObject; // Save serialized data for later
         }
+
+        if (!missingType)
+            m_SerializedObjectData = nullptr;
+        m_MissingType = missingType;
     }
 
     void MonoScript::SetClassName(const String& className)
@@ -519,6 +617,18 @@ namespace Crowny
             MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
             MonoUtils::InvokeThunk(m_OnDestroyThunk, instance);
         }
+    }
+
+	ScriptObjectBackupData MonoScriptComponent::Backup(bool clearExisting)
+    {
+        for (auto& script : Scripts)
+            return script.Backup();
+    }
+
+	void MonoScriptComponent::Restore(const ScriptObjectBackupData& data, bool missingType)
+    {
+		for (auto& script : Scripts)
+            script.Restore(data, false);
     }
 
     struct CollisionDataInterop

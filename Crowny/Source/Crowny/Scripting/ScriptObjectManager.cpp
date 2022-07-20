@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Scripting/ScriptObjectManager.h"
+#include "Crowny/Scripting/ScriptInfoManager.h"
 
 namespace Crowny
 {
@@ -16,7 +17,9 @@ namespace Crowny
         Map<ScriptObjectBase*, ScriptObjectBackupData> backupData;
         // OnRefreshStarted();
 
+        // TODO: Call scene destroy queued objects
         // GameObjectManager::Get().DestroyQueuedObjects(); // Wat, why commented
+        
         ProcessFinalizedObjects(false);
 
         for (auto& scriptObject : m_ScriptObjects)
@@ -29,32 +32,37 @@ namespace Crowny
 
         ProcessFinalizedObjects(true);
         for (auto& scriptObject : m_ScriptObjects)
-            CW_ENGINE_ERROR(scriptObject->IsPersistent());
+            CW_ENGINE_ASSERT(scriptObject->IsPersistent());
 
-        // ScriptAssemblyManager::Get().ClearAssemblyInfo();
+        ScriptInfoManager::Get().ClearAssemblyInfo();
 
         for (auto& entry : assemblies)
         {
             MonoManager::Get().LoadAssembly(*entry.Filepath, entry.Name);
-            // ScriptAssemblyManager::Get().LoadAssemblyInfo(entry.Name, *entry.TypeMappings);
-
-            Vector<ScriptObjectBase*> scriptObjCopy(m_ScriptObjects.size());
-            uint32_t idx = 0;
-            for (auto& scriptObject : m_ScriptObjects)
-                scriptObjCopy[idx++] = scriptObject;
-
-            // OnRefreshDomainLoaded();
-
-            for (auto& scriptObject : scriptObjCopy)
-                scriptObject->EndRefresh(backupData[scriptObject]);
-
-            // OnRefreshComplete();
+            ScriptInfoManager::Get().LoadAssemblyInfo(entry.Name);
         }
+
+        Vector<ScriptObjectBase*> scriptObjCopy(m_ScriptObjects.size());
+        uint32_t idx = 0;
+        for (auto& scriptObject : m_ScriptObjects)
+            scriptObjCopy[idx++] = scriptObject;
+
+        // OnRefreshDomainLoaded();
+
+		for (auto& scriptObject : scriptObjCopy)
+			scriptObject->RestoreManagedInstance();
+
+        for (auto& scriptObject : scriptObjCopy)
+            scriptObject->EndRefresh(backupData[scriptObject]);
+
+        // OnRefreshComplete();
     }
 
     void ScriptObjectManager::NotifyObjectFinalized(ScriptObjectBase* instance)
     {
         CW_ENGINE_ASSERT(instance != nullptr);
+        if (instance == nullptr)
+            return;
         m_FinalizedObjects[m_FinalizedQueueIdx].push_back(instance);
     }
 

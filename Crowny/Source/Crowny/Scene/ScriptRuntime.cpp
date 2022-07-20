@@ -16,8 +16,8 @@ namespace Crowny
         Ref<Scene> scene = SceneManager::GetActiveScene();
 
         scene->GetAllEntitiesWith<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent& sc) {
-            for (auto& script : sc.Scripts)
-                script.OnInitialize({ entity, scene.get() });
+            // for (auto& script : sc.Scripts)
+                // script.OnInitialize({ entity, scene.get() });
         });
     }
 

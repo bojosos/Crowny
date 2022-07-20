@@ -118,7 +118,7 @@ namespace Crowny
                             AssetHandle<ScriptCode> scriptCode =
                               static_asset_cast<ScriptCode>(ProjectLibrary::Get().Load(
                                 payloadPath)); // TODO: Analyze the code to extract the name of the MonoBehaviour class
-                            msc.Scripts[0].OnInitialize(selectedEntity);
+                            // FIXME msc.Scripts[0].OnInitialize(selectedEntity);
                         }
                         else
                         {
@@ -129,7 +129,7 @@ namespace Crowny
                                     exists = true;
                             if (!exists)
                                 scripts.push_back(MonoScript(className));
-                            scripts.back().OnInitialize(selectedEntity);
+                            // FIXME scripts.back().OnInitialize(selectedEntity);
                         }
                     }
                 }

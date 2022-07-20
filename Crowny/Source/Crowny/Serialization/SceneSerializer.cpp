@@ -298,8 +298,10 @@ namespace Crowny
                         {
                             Ref<SerializableObject> obj = SerializableObject::DeserializeYAML(scriptNode);
                             msc.Scripts.push_back(MonoScript("TestSerialization"));
-                            msc.Scripts.back().OnInitialize(deserialized);
-                            obj->Deserialize(msc.Scripts.back().GetManagedInstance(), msc.Scripts.back().GetObjectInfo());
+                            msc.Scripts.back().m_SerializedObjectData = obj;
+                            msc.Scripts.back().Create(deserialized);
+                            // obj->Deserialize(msc.Scripts.back().GetManagedInstance(), msc.Scripts.back().GetObjectInfo());
+
                         }
                     }
 
