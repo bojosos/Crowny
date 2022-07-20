@@ -7,44 +7,6 @@
 namespace Crowny
 {
 
-    class SerializableMember
-    {
-    public:
-        SerializableMember() = default;
-        virtual void* GetValue(MonoObject* instance) = 0;
-        virtual void SetValue(MonoObject* instance, void* data) = 0;
-    };
-
-    class SerializableField : public SerializableMember
-    {
-    public:
-        SerializableField() = default;
-        virtual void* GetValue(MonoObject* instance) override
-        {
-            void* value = nullptr;
-            m_Field->Get(instance, value);
-            return value;
-        }
-
-        virtual void SetValue(MonoObject* instance, void* data) override { m_Field->Set(instance, data); }
-
-    private:
-        MonoField* m_Field;
-    };
-
-    class SerializableProperty : public SerializableMember
-    {
-    public:
-        SerializableProperty() = default;
-
-        virtual void* GetValue(MonoObject* instance) override { return m_Property->Get(instance); }
-
-        virtual void SetValue(MonoObject* instance, void* data) override { m_Property->Set(instance, data); }
-
-    private:
-        MonoProperty* m_Property;
-    };
-
     class SerializableObject
     {
     public:
@@ -60,6 +22,8 @@ namespace Crowny
         void Deserialize(MonoObject* instance, const Ref<SerializableObjectInfo>& objInfo);
         MonoObject* GetManagedInstance() const;
 
+        SerializableObject() = default;
+        SerializableObject(const Ref<SerializableObjectInfo>& objInfo);
         ~SerializableObject();
         SerializableObject(Ref<SerializableObjectInfo> objInfo, MonoObject* instance);
 
