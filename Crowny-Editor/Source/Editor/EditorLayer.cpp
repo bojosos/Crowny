@@ -266,12 +266,12 @@ namespace Crowny
         CW_ENGINE_INFO("{0}, {1}", gameAssemblyPath, Editor::Get().GetProjectPath());
         refreshInfos.emplace_back(CROWNY_ASSEMBLY, &engineAssemblyPath);
         refreshInfos.emplace_back(GAME_ASSEMBLY, &gameAssemblyPath);
-        // ScriptObjectManager::Get().RefreshAssemblies(refreshInfos);
+        ScriptObjectManager::Get().RefreshAssemblies(refreshInfos);
 
-        ScriptInfoManager::Get().InitializeTypes();
-        ScriptInfoManager::Get().LoadAssemblyInfo(GAME_ASSEMBLY);
-        ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
-
+        // ScriptInfoManager::Get().InitializeTypes();
+        // ScriptInfoManager::Get().LoadAssemblyInfo(GAME_ASSEMBLY);
+        // ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
+        /*
         auto view = SceneManager::GetActiveScene()->GetAllEntitiesWith<MonoScriptComponent>();
         for (auto e : view)
         {
@@ -280,9 +280,9 @@ namespace Crowny
             for (auto& script : msc.Scripts)
             {
                 script.SetClassName(script.GetTypeName());
-                script.OnInitialize(entity);
+                // FIXME script.OnInitialize(entity);
             }
-        }
+        }*/
     }
 
     bool EditorLayer::OnViewportEvent(Event& event)

@@ -28,6 +28,7 @@ namespace Crowny
         MonoClass* Component = nullptr;
         MonoClass* Entity = nullptr;
         MonoClass* EntityBehaviour = nullptr;
+        MonoClass* MissingEntityBehaviour = nullptr;
         MonoClass* AssetClass = nullptr;
 
         MonoClass* SerializeFieldAttribute = nullptr;
@@ -157,7 +158,6 @@ namespace Crowny
 
     private:
         bool m_BaseTypesInitialized;
-        uint32_t m_UniqueTypeId = 1;
         BuiltinScriptClasses m_Builtin;
         UnorderedMap<MonoReflectionType*, ComponentInfo> m_ComponentInfos;
         UnorderedMap<MonoReflectionType*, AssetInfo> m_AssetInfos;

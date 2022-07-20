@@ -12,6 +12,8 @@
 #include <rpc.h>
 #include <shellapi.h>
 #include <windows.h>
+#include <ShlObj_core.h>
+#include <tchar.h>
 
 namespace Crowny
 {
@@ -38,7 +40,23 @@ namespace Crowny
         {
         };
         delete[] cmdStr;*/
-        ShellExecuteW(NULL, L"open", filepath.c_str(), NULL, NULL, SW_SHOWNORMAL);
+        
+        if (fs::is_directory(filepath))
+            ShellExecuteW(NULL, L"open", filepath.c_str(), NULL, NULL, SW_SHOWNORMAL);
+        else
+        {
+            Path copy = filepath;
+            copy.remove_filename();
+		    ITEMIDLIST* dir = ILCreateFromPath(_T(copy.string().c_str()));
+
+			ITEMIDLIST* item1 = ILCreateFromPath(_T(filepath.string().c_str()));
+			const ITEMIDLIST* selection[] = { item1 };
+
+			uint32_t count = sizeof(selection) / sizeof(ITEMIDLIST*);
+            SHOpenFolderAndSelectItems(dir, count, selection, 0);
+			ILFree(dir);
+			ILFree(item1);
+        }
     }
 
     void PlatformUtils::OpenExternally(const Path& filepath)

@@ -139,13 +139,13 @@ namespace Crowny
                                 if (!entity.HasComponent<MonoScriptComponent>())
                                 {
                                     MonoScriptComponent& msc = entity.AddComponent<MonoScriptComponent>(name);
-                                    msc.Scripts[0].OnInitialize(entity);
+                                    // FIXME msc.Scripts[0].OnInitialize(entity);
                                 }
                                 else
                                 {
                                     auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
                                     scripts.push_back(MonoScript(name));
-                                    scripts.back().OnInitialize(entity);
+                                    // FIXME scripts.back().OnInitialize(entity);
                                 }
                                 ImGui::CloseCurrentPopup();
                             }
@@ -180,7 +180,7 @@ namespace Crowny
                                 if (!entity.HasComponent<MonoScriptComponent>())
                                 {
                                     MonoScriptComponent& msc = entity.AddComponent<MonoScriptComponent>(s_SearchString);
-                                    msc.Scripts[0].OnInitialize(entity);
+                                    // FIXME msc.Scripts[0].OnInitialize(entity);
                                 }
                                 else
                                 {
@@ -191,7 +191,7 @@ namespace Crowny
                                             exists = true;
                                     if (!exists)
                                         scripts.push_back(MonoScript(s_SearchString));
-                                    scripts.back().OnInitialize(entity);
+                                    // FIXME scripts.back().OnInitialize(entity);
                                 }
                             }
                         }

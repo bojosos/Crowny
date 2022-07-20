@@ -142,7 +142,7 @@ namespace Crowny
                 String ns, ts;
                 MonoUtils::GetClassName(componentClass, ns, ts);
                 auto& msc = entity.AddComponent<MonoScriptComponent>(ts);
-                msc.Scripts.back().OnInitialize(entity);
+                // FIXME msc.Scripts.back().OnInitialize(entity);
                 return msc.Scripts.back().GetManagedInstance();
             }
             else
@@ -160,7 +160,7 @@ namespace Crowny
                     }
                 }
                 msc.Scripts.push_back(MonoScript(ts));
-                msc.Scripts.back().OnInitialize(entity);
+                // FIXME msc.Scripts.back().OnInitialize(entity);
                 return msc.Scripts.back().GetManagedInstance();
             }
         }

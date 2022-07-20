@@ -14,6 +14,11 @@ namespace Crowny
         m_GCHandle = MonoUtils::NewGCHandle(managedInstance, false);
     }
 
+    SerializableObject::SerializableObject(const Ref<SerializableObjectInfo>& objInfo) : m_ObjectInfo(objInfo)
+    {
+
+    }
+
     SerializableObject::~SerializableObject()
     {
         if (m_GCHandle != 0)
@@ -173,7 +178,12 @@ namespace Crowny
             typeInfo->m_TypeId = objectInfo["TypeId"].as<uint32_t>();
             typeInfo->m_ValueType = objectInfo["ValueType"].as<bool>();
 
-			Ref<SerializableObject> obj = SerializableObject::CreateNew(typeInfo);
+			// Ref<SerializableObject> obj = SerializableObject::CreateNew(typeInfo);
+			Ref<SerializableObjectInfo> objInfo = nullptr;
+			if (!ScriptInfoManager::Get().GetSerializableObjectInfo(typeInfo->m_TypeNamespace, typeInfo->m_TypeName, objInfo))
+				return nullptr;
+            Ref<SerializableObject> obj = CreateRef<SerializableObject>(objInfo);
+
             for (const YAML::Node& field : fields)
             {
                 const YAML::Node& typeInfoNode = field["TypeInfo"];
@@ -232,7 +242,7 @@ namespace Crowny
             return;
         for (auto& fieldEntry : m_CachedData)
             fieldEntry.second->Deserialize();
-        uint32_t i = 0;
+        
         Ref<SerializableObjectInfo> type = m_ObjectInfo;
         while (type != nullptr)
         {
@@ -252,7 +262,6 @@ namespace Crowny
                         // CW_ENGINE_INFO(*(int*)m_CachedData[key]->GetValue());
                         // CW_ENGINE_INFO(*(int*)MonoUtils::Unbox(fieldInfo->GetValue(instance)));
                     }
-                    i++;
                 }
             }
             type = type->m_BaseClass;
@@ -280,6 +289,8 @@ namespace Crowny
     void SerializableObject::SetFieldData(const Ref<SerializableMemberInfo>& fieldInfo,
                                           const Ref<SerializableFieldData>& val)
     {
+        if (val == nullptr)
+            CW_ENGINE_INFO("Here");
         if (m_GCHandle != 0)
         {
             MonoObject* managedInstance = MonoUtils::GetObjectFromGCHandle(m_GCHandle);

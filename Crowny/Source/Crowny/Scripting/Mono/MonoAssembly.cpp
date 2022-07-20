@@ -243,7 +243,6 @@ namespace Crowny
                             break;
                         if (cclass)
                         {
-                            String nestedType = nested->GetName() + "+" + mono_class_get_name(cclass);
                             MonoClass* nestedClass = new MonoClass(cclass); // name might be wrong? not the nested one
                             if (nestedClass->HasAttribute(compilerGeneratedAttrib))
                                 continue;
