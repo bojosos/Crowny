@@ -135,7 +135,7 @@ namespace Crowny
             if (iter->UseCount == 0)
             {
                 vkDestroyBufferView(GetDevice().GetLogicalDevice(), iter->View, gVulkanAllocator);
-                iter - m_Views.erase(iter);
+                iter = m_Views.erase(iter);
             }
             else
                 iter++;
