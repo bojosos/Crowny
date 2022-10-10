@@ -27,6 +27,7 @@ namespace Crowny
 
         template <class T> static ScriptArray Create(uint32_t size);
         ::MonoClass* GetElementClass();
+        static ::MonoClass* GetElementClassGlobal(::MonoClass* arrayClass);
 
         static uint8_t* GetArrayAddr(MonoArray* array, uint32_t size, uint32_t idx);
         static void SetArrayVal(MonoArray* array, uint32_t idx, const uint8_t* value, uint32_t size,

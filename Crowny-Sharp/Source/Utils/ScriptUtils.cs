@@ -56,6 +56,7 @@ namespace Crowny
                 for (int i = 0; i < references.Length - 1; i++)
                     argBuilder.Append(references[i] + ",");
                 argBuilder.Append(references[references.Length - 1]);
+                argBuilder.Append(",System");
             }
 
             foreach (string file in files)
@@ -67,6 +68,7 @@ namespace Crowny
                 Directory.CreateDirectory(outputDirectory);
 
             psi.Arguments = argBuilder.ToString();
+            Debug.Log(psi.Arguments);
             psi.CreateNoWindow = true;
             psi.FileName = "C:\\Program Files\\Mono\\bin\\mcs.bat";
             psi.RedirectStandardError = true;
