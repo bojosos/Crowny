@@ -180,6 +180,7 @@ namespace Crowny
 
 			// Ref<SerializableObject> obj = SerializableObject::CreateNew(typeInfo);
 			Ref<SerializableObjectInfo> objInfo = nullptr;
+            // This is wrong, obj info should be deserialized, not loaded like this
 			if (!ScriptInfoManager::Get().GetSerializableObjectInfo(typeInfo->m_TypeNamespace, typeInfo->m_TypeName, objInfo))
 				return nullptr;
             Ref<SerializableObject> obj = CreateRef<SerializableObject>(objInfo);
@@ -226,6 +227,13 @@ namespace Crowny
                     data = CreateRef<SerializableFieldObject>();
                     break;
                 }
+                case (SerializableType::Entity):
+                {
+					auto obj = std::static_pointer_cast<SerializableTypeInfoEntity>(typeInfo);
+					data = CreateRef<SerializableFieldEntity>();
+					break;
+                }
+
                 }
                 data->DeserializeYAML(field["Value"]);
                 obj->m_CachedData[key] = data;

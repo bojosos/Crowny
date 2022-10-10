@@ -6,7 +6,7 @@
 
 namespace Crowny
 {
-    template <class Mutex> class ImGuiConsoleSink : public spdlog::sinks::base_sink<std::mutex>
+    template <class Mutex> class ImGuiConsoleSink : public spdlog::sinks::base_sink<Mutex>
     {
     public:
         explicit ImGuiConsoleSink(bool forceFlush = false, uint8_t capacity = 10)

@@ -115,6 +115,8 @@ namespace Crowny
             return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
         case (BlendFactor::InvSourceAlpha):
             return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        default:
+            return VK_BLEND_FACTOR_ZERO;
         }
     }
 

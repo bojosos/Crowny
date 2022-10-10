@@ -19,6 +19,7 @@ project "Crowny-Editor"
 	includedirs
 	{
 		"%{wks.location}/Crowny/Dependencies/spdlog/include",
+		"%{wks.location}/Crowny/Dependencies/rapidjson/include",
 		"%{wks.location}/Crowny/Source",
 		"Source",
 		"Crowny-Editor/Source",
