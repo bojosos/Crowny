@@ -8,7 +8,9 @@ namespace Crowny
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public class Filepath : Attribute
     {
+#pragma warning disable 0414
         FileDialogType type;
+#pragma warning restore 0414
 
         public Filepath(FileDialogType type = FileDialogType.OpenFile)
         {

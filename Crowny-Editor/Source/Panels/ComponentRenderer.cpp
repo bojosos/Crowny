@@ -480,9 +480,9 @@ namespace Crowny
             sourceComponent.SetMaxDistance(maxDistance);
     }
 
-    template <> void ComponentEditorWidget<MonoScriptComponent>(Entity e)
+    template <> void ComponentEditorWidget<MonoScriptComponent>(Entity entity)
     {
-        MonoScriptComponent& scriptComponent = e.GetComponent<MonoScriptComponent>();
+        MonoScriptComponent& scriptComponent = entity.GetComponent<MonoScriptComponent>();
         for (uint32_t i = 0; i < scriptComponent.Scripts.size(); i++)
         {
             auto& script = scriptComponent.Scripts[i];
@@ -504,8 +504,8 @@ namespace Crowny
                 String typeName = script.GetTypeName();
                 if (UIUtils::PropertyScript("Class name", typeName))
                 {
-                    script.SetClassName(typeName);
-                    // FIXME script.OnInitialize(e);
+					script.SetClassName(typeName);
+					script.Create(entity);
                 }
 
                 if (script.GetManagedClass() == nullptr)

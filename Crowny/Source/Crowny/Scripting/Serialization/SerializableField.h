@@ -4,6 +4,7 @@
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntity.h"
 #include "Crowny/Scripting/Mono/Mono.h"
 #include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
+#include "Crowny/Scene/SceneManager.h"
 
 #include "Crowny/Assets/Asset.h"
 #include "Crowny/Ecs/Entity.h"
@@ -124,7 +125,7 @@ namespace Crowny
 
 
 		virtual void SerializeYAML(YAML::Emitter& out) const { out << Value; }
-		virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<uint16_t>(); }
+		virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<int32_t>(); }
 
         int32_t Value = 0;
     };
@@ -208,8 +209,8 @@ namespace Crowny
         virtual void* GetValue() override { return &Value; }
         virtual MonoObject* GetValueBoxed() override { return (MonoObject*)GetValue(); }
 
-		// virtual void SerializeYAML(YAML::Emitter& out) const { out << Value; }
-		// virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<bool>(); }
+		virtual void SerializeYAML(YAML::Emitter& out) const override { out << Value.GetUuid(); }
+		virtual void DeserializeYAML(const YAML::Node& node) override { SceneManager::GetActiveScene()->GetEntityFromUuid(node.as<UUID>()); }
 
         Entity Value;
     };
