@@ -13,11 +13,11 @@ ShowEntityDebugInfo: false
 EnableConsoleInfoMessages: true
 EnableConsoleWarningMessages: true
 EnableConsoleErrorMessages: true
-CollapseConsole: true
+CollapseConsole: false
 ScrollToBottom: true
 RecentProjects:
   - Path: C:\dev\Projects\Project1
-    Timestamp: 1658265971
+    Timestamp: 1665435254
   - Path: C:\dev\Projects\New Project
     Timestamp: 1648668832
   - Path: C:/dev/Projects\Project4

@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Serialization/ScriptSerializer.h"
+#include "Crowny/Ecs/Components.h"
 
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
 
@@ -18,6 +19,8 @@ CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldU64, "U64")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldFloat, "Float")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldDouble, "Double")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldString, "String")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldEntity, "String")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldAsset, "String")
 
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldBool)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldChar)
@@ -32,6 +35,8 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::Seri
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldFloat)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldDouble)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldString)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldEntity)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldAsset)
 
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableTypeInfoPrimitive, "TypeInfoPrimitive")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableTypeInfoEnum, "TypeInfoEnum")
@@ -159,6 +164,18 @@ namespace Crowny
 		archive(data.Value, data.Null);
 	}
 
+	template <typename Archive>
+	void Serialize(Archive& archive, SerializableFieldEntity& data)
+	{
+		archive(data.Value.GetComponent<IDComponent>().Uuid);
+	}
+
+	template <typename Archive>
+	void Serialize(Archive& archive, SerializableFieldAsset& data)
+	{
+		// this bad
+	}
+
     /*
     template <typename Archive>
     void Serialize(Archive& archive, SerializableFieldInfo& memberInfo)
@@ -207,6 +224,7 @@ namespace Crowny
 	template <typename Archive>
 	void Serialize(Archive& archive, SerializableTypeInfoEntity& entityInfo)
 	{
+		
 	}
 
 	template <typename Archive>

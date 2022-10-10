@@ -47,9 +47,9 @@ namespace Crowny
         {
             Path copy = filepath;
             copy.remove_filename();
-		    ITEMIDLIST* dir = ILCreateFromPath(_T(copy.string().c_str()));
+		    PIDLIST_ABSOLUTE dir = ILCreateFromPath(_T(copy.string().c_str()));
 
-			ITEMIDLIST* item1 = ILCreateFromPath(_T(filepath.string().c_str()));
+			PIDLIST_ABSOLUTE item1 = ILCreateFromPath(_T(filepath.string().c_str()));
 			const ITEMIDLIST* selection[] = { item1 };
 
 			uint32_t count = sizeof(selection) / sizeof(ITEMIDLIST*);

@@ -353,8 +353,28 @@ namespace Crowny
 
     class UIUtils
     {
-    public:
-        static bool ShowYesNoMessageBox(const String& title, const String& message);
+	public:
+		enum class MessageBoxButtons {
+            None = -1, // Utility value used the check if MessageBox should be drawn.
+			OK = 0,
+			OKCancel = 1,
+			AbortRetryIgnore = 2,
+			YesNoCancel = 3,
+			YesNo = 4,
+			RetryCancel = 5
+		};
+
+		enum class DialogResult {
+			OK = 0,
+			Cancel = 1,
+			Abort = 2,
+			Retry = 3,
+			Ignore = 4,
+			Yes = 5,
+			No = 6,
+		};
+
+        static DialogResult ShowYesNoMessageBox(const String& title, const String& message, MessageBoxButtons buttons);
 
         static bool BeginPopup(const char* str_id, ImGuiWindowFlags flags = 0)
         {

@@ -2,6 +2,7 @@
 
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Scene/ScriptRuntime.h"
+#include "Crowny/Application/Application.h"
 
 namespace Crowny
 {
@@ -14,6 +15,7 @@ namespace Crowny
     {
         s_Scenes.push_back(scene);
         s_ActiveIndex = (uint32_t)s_Scenes.size() - 1;
+        Application::Get().GetWindow().SetTitle("Crowny Editor - " + scene->GetName());
         // ScriptRuntime::Init();
     }
 

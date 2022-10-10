@@ -215,6 +215,7 @@ namespace Crowny
 				MonoObject* filepathAttr = memberInfo->GetAttribute(filepathClass);
                 FileDialogType dialogType = FileDialogType::OpenFile;
 				filepathClass->GetField("type")->Get(filepathAttr, &dialogType);
+                // TODO: wtf is this
                 if (MonoUtils::GetClass((MonoObject*)value) != MonoUtils::GetStringClass() && (dialogType == FileDialogType::Multiselect))
                 {
                     CW_ENGINE_ERROR("Filedialog attribute with multiselect can only be used on a vector of strings");

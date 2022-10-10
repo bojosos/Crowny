@@ -101,10 +101,15 @@ namespace Crowny
         }
     }
 
+    ::MonoClass* ScriptArray::GetElementClassGlobal(::MonoClass* arrayClass)
+    {
+        return mono_class_get_element_class(arrayClass);
+    }
+
     ::MonoClass* ScriptArray::GetElementClass()
     {
-        ::MonoClass* ar = mono_object_get_class((MonoObject*)m_Array);
-        return mono_class_get_element_class(ar);
+		::MonoClass* ar = mono_object_get_class((MonoObject*)m_Array);
+		return mono_class_get_element_class(ar);
     }
 
     uint8_t* ScriptArray::GetArrayAddr(MonoArray* array, uint32_t size, uint32_t idx)

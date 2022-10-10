@@ -184,6 +184,11 @@ namespace Crowny
             glfwSetCursor(m_Window, m_Cursor);
     }
 
+	void LinuxWindow::SetTitle(const String& title) {
+		glfwSetWindowTitle(m_Window, title.c_str());
+		m_Data.Title = title;
+	}
+
     void LinuxWindow::Shutdown()
     {
         glfwDestroyWindow(m_Window);

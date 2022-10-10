@@ -10,6 +10,7 @@ namespace Crowny
     {
 		MonoUtils::GetClassName(instance, m_Namespace, m_TypeName);
 		m_GCHandle = MonoUtils::NewGCHandle(instance, false);
+        // Wtf is this?
         entity.GetComponent<MonoScriptComponent>().Scripts[0].OnInitialize(this);
     }
 
@@ -55,7 +56,9 @@ namespace Crowny
     {
         m_GCHandle = 0;
 
-        if (!assemblyRefresh) // Check if my component is destroyed
+        // TODO: Fix this. The GetNativeEntity check will probably leak stuff. Need to find a way to delete the managed instance anyways.
+        // However might be impossible with the current setup.
+        if (!assemblyRefresh && GetNativeEntity()) // Check if my component is destroyed
             ScriptSceneObjectManager::Get().DestroyScriptComponent(this, GetNativeEntity().GetComponent<MonoScriptComponent>().InstanceId);
     }
 
