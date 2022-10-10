@@ -67,7 +67,6 @@ group "Dependencies"
 	include "Crowny/Dependencies/box2d"
 	include "Crowny/Dependencies/vorbis"
 	include "Crowny/Dependencies/libogg"
-  --- include "Crowny/Dependencies/openal-soft"
 group ""
 
 include "Crowny"
