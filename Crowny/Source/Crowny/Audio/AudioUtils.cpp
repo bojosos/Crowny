@@ -107,7 +107,7 @@ namespace Crowny
             output[i] = (int8_t)(input[i] >> 24);
     }
 
-    void Convert32To16Bits(const int32_t* input, uint8_t* output, uint32_t numSamples)
+    void Convert32To16Bits(const int32_t* input, int16_t* output, uint32_t numSamples)
     {
         for (uint32_t i = 0; i < numSamples; i++)
             output[i] = (int16_t)(input[i] >> 16);
@@ -165,7 +165,7 @@ namespace Crowny
             Convert32To8Bits(src, output, numSamples);
             break;
         case 16:
-            Convert32To16Bits(src, output, numSamples);
+            Convert32To16Bits(src, (int16_t*)output, numSamples);
             break;
         case 24:
             Convert32To24Bits(src, output, numSamples);
@@ -286,7 +286,7 @@ namespace Crowny
                 sum += *input;
                 input++;
             }
-            *output = sum / numChannels;
+            *output = (int32_t)(sum / numChannels);
             output++;
         }
     }

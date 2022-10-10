@@ -20,7 +20,9 @@ namespace Crowny
         virtual uint32_t GetWidth() const override { return m_Data.Width; }
         virtual uint32_t GetHeight() const override { return m_Data.Height; }
         virtual bool GetVSync() const override { return m_Data.VSync; };
+
         virtual const String& GetTitle() const override { return m_Data.Title; }
+        virtual void SetTitle(const String& title) override;
 
         virtual void SetCursor(Cursor cursor) override;
 

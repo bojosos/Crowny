@@ -2,6 +2,7 @@
 
 #include "Crowny/Scripting/ScriptInfoManager.h"
 
+#include "Crowny/Scripting/Mono/MonoArray.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
 
 #include "Crowny/Scripting/Bindings/Scene/ScriptCamera.h"
@@ -538,9 +539,10 @@ namespace Crowny
                     return typeInfo;
                 return nullptr;
             }
+            break;
         case MonoPrimitiveType::Array: {
             Ref<SerializableTypeInfoArray> typeInfo = CreateRef<SerializableTypeInfoArray>();
-            /*::MonoClass* elementClass = ScriptArray::GetElementClass(monoClass->GetInternalPtr());
+            ::MonoClass* elementClass = ScriptArray::GetElementClassGlobal(monoClass->GetInternalPtr());
             if (elementClass != nullptr)
             {
                 MonoClass* monoElementClass = MonoManager::Get().FindClass(elementClass);
@@ -548,7 +550,7 @@ namespace Crowny
                     typeInfo->m_ElementType = GetTypeInfo(monoElementClass);
             }
             if (typeInfo->m_ElementType == nullptr)
-                return nullptr;*/
+                return nullptr;
             // typeInfo->m_Rank = ScriptArray::GetRank(monoClass->GetInternalPtr());
             return typeInfo;
         }

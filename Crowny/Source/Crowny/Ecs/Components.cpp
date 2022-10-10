@@ -396,8 +396,7 @@ namespace Crowny
 		m_OnTriggerEnterThunk = nullptr;
 		m_OnTriggerStayThunk = nullptr;
 		m_OnTriggerExitThunk = nullptr;
-        /*
-        m_ScriptEntityBehaviour = entityBehaviour;
+        
         MonoObject* managedInstance = nullptr;
         if (m_Class == nullptr)
             return;
@@ -427,8 +426,8 @@ namespace Crowny
                         ComponentInfo* componentInfo = ScriptInfoManager::Get().GetComponentInfo(reflType);
                         if (componentInfo != nullptr)
                         {
-                            if (!componentInfo->HasCallback(entity))
-                                componentInfo->AddCallback(entity);
+                            if (!componentInfo->HasCallback(entityBehaviour->GetNativeEntity()))
+                                componentInfo->AddCallback(entityBehaviour->GetNativeEntity());
                         }
                         else
                             CW_ENGINE_WARN(
@@ -445,8 +444,8 @@ namespace Crowny
             CW_ENGINE_WARN("Missing type");
         }
 
-        m_ScriptEntityBehaviour =
-          ScriptSceneObjectManager::Get().CreateManagedScriptComponent(managedInstance, entity, *this);
+        // m_ScriptEntityBehaviour =
+          // ScriptSceneObjectManager::Get().CreateManagedScriptComponent(managedInstance, entityBehaviour->GetNativeEntity(), *this);
 
         if (m_OnStartThunk == nullptr)
         {
@@ -469,7 +468,6 @@ namespace Crowny
                 m_OnDestroyThunk = (OnDestroyThunkDef)onDestroyMethod->GetThunk();
         }
 
-        MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
         if (m_SerializedObjectData != nullptr && !m_MissingType)
         {
             m_SerializedObjectData->Deserialize(instance, m_ObjectInfo);
@@ -497,7 +495,6 @@ namespace Crowny
             m_OnTriggerExitThunk = (OnTriggerExitThunkDef)onTriggerExit->GetThunk();
 
         // Could add and call an OnAwake method like in Unity here
-        */
     }
 
     ScriptObjectBackupData MonoScript::Backup()

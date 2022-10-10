@@ -33,6 +33,7 @@ project "Crowny"
 	{
 		"Source",
 		"Dependencies/spdlog/include",
+		"Dependencies/rapidjson/include",
 		"%{IncludeDir.glfw}",
 		"%{IncludeDir.freetypegl}",
 		"%{IncludeDir.glad}",

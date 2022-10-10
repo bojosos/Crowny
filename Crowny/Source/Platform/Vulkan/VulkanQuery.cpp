@@ -209,7 +209,7 @@ namespace Crowny
         if (cb != nullptr)
             vulkanCB = static_cast<VulkanCommandBuffer*>(cb.get());
         else
-            vulkanCB - static_cast<VulkanCommandBuffer*>(gVulkanRenderAPI().GetMainCommandBuffer());
+            vulkanCB = static_cast<VulkanCommandBuffer*>(gVulkanRenderAPI().GetMainCommandBuffer());
 
         VulkanCmdBuffer* internalBuffer = vulkanCB->GetInternal();
         VulkanQuery* begin = queryPool.BeginTimerQuery(internalBuffer);
@@ -232,7 +232,7 @@ namespace Crowny
         if (cb != nullptr)
             vulkanCB = static_cast<VulkanCommandBuffer*>(cb.get());
         else
-            vulkanCB - static_cast<VulkanCommandBuffer*>(gVulkanRenderAPI().GetMainCommandBuffer());
+            vulkanCB = static_cast<VulkanCommandBuffer*>(gVulkanRenderAPI().GetMainCommandBuffer());
 
         VulkanCmdBuffer* internalBuffer = vulkanCB->GetInternal();
         VulkanQueryPool& queryPool = gVulkanRenderAPI().GetPresentDevice()->GetQueryPool();

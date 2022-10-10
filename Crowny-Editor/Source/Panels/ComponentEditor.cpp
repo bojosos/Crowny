@@ -138,14 +138,14 @@ namespace Crowny
                             {
                                 if (!entity.HasComponent<MonoScriptComponent>())
                                 {
-                                    MonoScriptComponent& msc = entity.AddComponent<MonoScriptComponent>(name);
-                                    // FIXME msc.Scripts[0].OnInitialize(entity);
+									MonoScriptComponent& msc = entity.AddComponent<MonoScriptComponent>(name);
+									msc.Scripts.back().Create(entity);
                                 }
                                 else
                                 {
                                     auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
-                                    scripts.push_back(MonoScript(name));
-                                    // FIXME scripts.back().OnInitialize(entity);
+									scripts.push_back(MonoScript(name));
+									scripts.back().Create(entity);
                                 }
                                 ImGui::CloseCurrentPopup();
                             }
@@ -156,7 +156,7 @@ namespace Crowny
                         std::regex validClassName = std::regex(
                           "[A-Za-z_][A-Za-z0-9_]*"); // This is not technically correct, but it should work just fine
                                                      // First this allows for keyword classes (which can be used using @
-                                                     // in front of class names) Also not all unicode stuff, but who is
+                                                     // in front of class names) Also not all Unicode stuff, but who is
                                                      // going to use Unicode in class names
                         if (std::regex_match(s_SearchString, validClassName))
                         {
@@ -168,6 +168,7 @@ namespace Crowny
                                                                                                            // Don't load
                                                                                                            // this every
                                                                                                            // time
+                                // This should create a script object and maybe call a serialize on it?
                                 String script = StringUtils::Replace(
                                   defaultContents, "#NAMESPACE#", Editor::Get().GetProjectPath().filename().string());
                                 script = StringUtils::Replace(script, "#CLASSNAME#", s_SearchString);
@@ -179,8 +180,8 @@ namespace Crowny
 
                                 if (!entity.HasComponent<MonoScriptComponent>())
                                 {
-                                    MonoScriptComponent& msc = entity.AddComponent<MonoScriptComponent>(s_SearchString);
-                                    // FIXME msc.Scripts[0].OnInitialize(entity);
+									MonoScriptComponent& msc = entity.AddComponent<MonoScriptComponent>(s_SearchString);
+									msc.Scripts.back().Create(entity);
                                 }
                                 else
                                 {
@@ -190,8 +191,8 @@ namespace Crowny
                                         if (script.GetTypeName() == s_SearchString)
                                             exists = true;
                                     if (!exists)
-                                        scripts.push_back(MonoScript(s_SearchString));
-                                    // FIXME scripts.back().OnInitialize(entity);
+										scripts.push_back(MonoScript(s_SearchString));
+									scripts.back().Create(entity);
                                 }
                             }
                         }
