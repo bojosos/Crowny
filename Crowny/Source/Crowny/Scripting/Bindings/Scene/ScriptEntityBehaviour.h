@@ -20,7 +20,7 @@ namespace Crowny
         String m_Namespace;
         String m_TypeName;
         bool m_TypeMissing = false;
-        Entity m_Entity;
+        // Entity m_Entity;
 
     public:
         ScriptEntityBehaviour(MonoObject* instance, Entity entity);

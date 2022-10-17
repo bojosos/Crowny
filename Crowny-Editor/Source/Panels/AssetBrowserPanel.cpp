@@ -397,7 +397,7 @@ namespace Crowny
                     size_t lastIdx = m_CurrentDirectoryEntry->Children.size() - 1;
                     m_SelectionSet.insert(
                       m_CurrentDirectoryEntry->Children[lastIdx]->ElementNameHash); // Select the last entry
-                    m_SelectionStartIndex = lastIdx;
+                    m_SelectionStartIndex = (uint32_t)lastIdx;
                 }
             }
         }
@@ -459,7 +459,8 @@ namespace Crowny
         {
             const auto& entry = displayList[entryIdx];
             const auto& path = entry->Filepath;
-            ImGui::PushID(entry->ElementNameHash);
+            // TODO: Fix this. Simply casting to int is wrong since half precision is lost. Prob XOR
+            ImGui::PushID((int)entry->ElementNameHash);
 
             auto iterFind = m_SelectionSet.find(entry->ElementNameHash); // Show selected files
             bool selected = iterFind != m_SelectionSet.end();

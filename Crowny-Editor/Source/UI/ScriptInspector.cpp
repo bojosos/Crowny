@@ -311,8 +311,8 @@ namespace Crowny
         }
         case ScriptPrimitiveType::I8: {
             int8_t value = *(int8_t*)fieldValue;
-            int8_t minValue8 = glm::clamp(minValueInt, -128LL, 127LL);
-            int8_t maxValue8 = glm::clamp(maxValueInt, -128LL, 127LL);
+            int8_t minValue8 = (int8_t)glm::clamp(minValueInt, -128LL, 127LL);
+            int8_t maxValue8 = (int8_t)glm::clamp(maxValueInt, -128LL, 127LL);
             bool change = false;
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue8, maxValue8);
@@ -323,15 +323,15 @@ namespace Crowny
             if (change)
             {
                 modified = true;
-                value = glm::clamp((int32_t)value, (int32_t)minValue8, (int32_t)maxValue8);
+                value = (int8_t)glm::clamp((int32_t)value, (int32_t)minValue8, (int32_t)maxValue8);
                 setter(&value);
             }
             break;
         }
         case ScriptPrimitiveType::U8: {
             uint8_t value = *(uint8_t*)fieldValue;
-            uint8_t minValue8 = glm::clamp(minValueInt, 0LL, 255LL);
-            uint8_t maxValue8 = glm::clamp(maxValueInt, 0LL, 255LL);
+            uint8_t minValue8 = (uint8_t)glm::clamp(minValueInt, 0LL, 255LL);
+            uint8_t maxValue8 = (uint8_t)glm::clamp(maxValueInt, 0LL, 255LL);
             bool change = false;
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue8, maxValue8);
@@ -342,15 +342,15 @@ namespace Crowny
             if (change)
             {
                 modified = true;
-                value = glm::clamp((int32_t)value, (int32_t)minValue8, (int32_t)maxValue8);
+                value = (uint8_t)glm::clamp((int32_t)value, (int32_t)minValue8, (int32_t)maxValue8);
                 setter(&value);
             }
             break;
         }
         case ScriptPrimitiveType::I16: {
             int16_t value = *(int16_t*)fieldValue;
-            int16_t minValue16 = glm::clamp(minValueInt, -32768LL, 32767LL);
-            int16_t maxValue16 = glm::clamp(maxValueInt, -32768LL, 32767LL);
+            int16_t minValue16 = (int16_t)glm::clamp(minValueInt, -32768LL, 32767LL);
+			int16_t maxValue16 = (int16_t)glm::clamp(maxValueInt, -32768LL, 32767LL);
             bool change = false;
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue16, maxValue16);
@@ -358,7 +358,7 @@ namespace Crowny
                 change =
                   ImGui::SliderScalar("##sliderInt16", ImGuiDataType_S16, &value, &minValue16, &maxValue16, "%d");
             else
-                value = glm::clamp((int32_t)value, (int32_t)minValue16, (int32_t)maxValue16);
+                value = (int16_t)glm::clamp((int32_t)value, (int32_t)minValue16, (int32_t)maxValue16);
             if (change)
             {
                 modified = true;
@@ -388,8 +388,8 @@ namespace Crowny
         }
         case ScriptPrimitiveType::I32: {
             int32_t value = *(int32_t*)fieldValue;
-            int32_t minValue32 = glm::clamp(minValueInt, -2147483648LL, 2147483647LL);
-            int32_t maxValue32 = glm::clamp(maxValueInt, -2147483648LL, 2147483647LL);
+            int32_t minValue32 = (int32_t)glm::clamp(minValueInt, -2147483648LL, 2147483647LL);
+            int32_t maxValue32 = (int32_t)glm::clamp(maxValueInt, -2147483648LL, 2147483647LL);
             bool change = false;
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue32, maxValue32);
@@ -401,15 +401,15 @@ namespace Crowny
             if (change)
             {
                 modified = true;
-                value = glm::clamp((int64_t)value, (int64_t)minValue32, (int64_t)maxValue32);
+                value = (int32_t)glm::clamp((int64_t)value, (int64_t)minValue32, (int64_t)maxValue32);
                 setter(&value);
             }
             break;
         }
         case ScriptPrimitiveType::U32: {
             uint32_t value = *(uint32_t*)fieldValue;
-            uint32_t minValue32 = glm::clamp(minValueInt, 0LL, 4294967295LL);
-            uint32_t maxValue32 = glm::clamp(maxValueInt, 0LL, 4294967295LL);
+            uint32_t minValue32 = (uint32_t)glm::clamp(minValueInt, 0LL, 4294967295LL);
+            uint32_t maxValue32 = (uint32_t)glm::clamp(maxValueInt, 0LL, 4294967295LL);
             bool change = false;
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue32, maxValue32);
@@ -421,7 +421,7 @@ namespace Crowny
             if (change)
             {
                 modified = true;
-                value = glm::clamp((int64_t)value, (int64_t)minValue32, (int64_t)maxValue32);
+                value = (uint32_t)glm::clamp((int64_t)value, (int64_t)minValue32, (int64_t)maxValue32);
                 setter(&value);
             }
             break;
@@ -562,6 +562,7 @@ namespace Crowny
             setter(&value);
             return true;
         }
+        return false;
     }
 
     bool ScriptInspector::DrawFieldInspector(const Ref<SerializableMemberInfo>& memberInfo, const char* label,
@@ -656,6 +657,7 @@ namespace Crowny
             }
             // ImGui::NextColumn();
         }
+        return false;
     }
 
     // This here does all the work. DrawObjectInspector is called with the MonoObject of the current class instance and
@@ -671,7 +673,7 @@ namespace Crowny
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Inspectable))
                 continue;
 
-            UI::ShiftCursorX(depth * 25);
+            UI::ShiftCursorX(depth * 25.0f);
             auto iterFind = objectInfo->m_Headers.find(kv.first);
             if (iterFind != objectInfo->m_Headers.end())
             {
