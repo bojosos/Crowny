@@ -99,7 +99,7 @@ namespace Crowny
                 AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(path));
                 Vector<uint8_t> samples;
                 samples.resize(clip->GetNumSamples() * 2);
-                clip->GetBuffer(samples.data(), 0, samples.size());
+                clip->GetBuffer(samples.data(), 0, (uint32_t)samples.size());
                 struct icol
                 {
                     uint8_t r, g, b, a;
@@ -482,7 +482,7 @@ namespace Crowny
 
             // Thumbnail
             ImGui::BeginGroup();
-            ImGui::ImageButton(tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 }, 0.0f);
+            ImGui::ImageButton(tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 }, 0);
             ImGui::SetNextItemWidth(m_ThumbnailSize);
             if (m_RenamingPath.empty() || m_RenamingPath != path) // File icon
             {
@@ -524,7 +524,7 @@ namespace Crowny
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) // Allow dragging
             {
                 UIUtils::SetAssetPayload(path);
-                ImGui::ImageButton(tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 }, 0.0f);
+                ImGui::ImageButton(tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 }, 0);
                 ImGui::SetNextItemWidth(m_ThumbnailSize);
                 float textWidth = ImGui::CalcTextSize(entry->ElementName.c_str()).x;
                 if (m_ThumbnailSize >= textWidth)
@@ -629,8 +629,8 @@ namespace Crowny
                     flags |= ImGuiTreeNodeFlags_Selected;
                     foundCurrent = true;
                 }
-                if (!foundCurrent) // This is wrong. It will open all entries above the one needed.
-                    ImGui::SetNextItemOpen(ImGuiCond_Once);
+                // if (!foundCurrent) // This is wrong. It will open all entries above the one needed.
+                   // ImGui::SetNextItemOpen(ImGuiCond_Once); // This is also wrong, needs bool as first arg
                 if (ImGui::TreeNodeEx(cur->ElementName.c_str(), flags))
                 {
                     if (ImGui::BeginDragDropTarget())

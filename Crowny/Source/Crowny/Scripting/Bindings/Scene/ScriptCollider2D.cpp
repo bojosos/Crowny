@@ -2,8 +2,8 @@
 
 #include "Crowny/Scripting/Bindings/Scene/ScriptCollider2D.h"
 
-#include "Crowny/Scripting/ScriptSceneObjectManager.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
+#include "Crowny/Scripting/ScriptSceneObjectManager.h"
 
 #include <mono/metadata/object.h>
 
@@ -22,10 +22,7 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_SetOffset", (void*)&Internal_SetOffset);
     }
 
-    bool ScriptCollider2D::Internal_IsTrigger(ScriptCollider2D* thisPtr)
-    {
-        return thisPtr->GetComponent().IsTrigger();
-    }
+    bool ScriptCollider2D::Internal_IsTrigger(ScriptCollider2D* thisPtr) { return thisPtr->GetComponent().IsTrigger(); }
 
     void ScriptCollider2D::Internal_SetTrigger(ScriptCollider2D* thisPtr, bool trigger)
     {
