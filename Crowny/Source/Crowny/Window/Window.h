@@ -29,7 +29,7 @@ namespace Crowny
         virtual uint32_t GetHeight() const = 0;
         virtual bool GetVSync() const = 0;
 
-        virtual void SetTitle(const String &title) = 0;
+        virtual void SetTitle(const String& title) = 0;
         virtual const String& GetTitle() const = 0;
 
         virtual void SetCursor(Cursor cursor) = 0;

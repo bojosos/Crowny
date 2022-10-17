@@ -271,8 +271,8 @@ namespace Crowny
 
         uint64_t InstanceId; // These also require one for scripting
 
-		ScriptObjectBackupData Backup();
-		void Restore(const ScriptObjectBackupData& backupData, bool missingType);
+        ScriptObjectBackupData Backup();
+        void Restore(const ScriptObjectBackupData& backupData, bool missingType);
 
     private:
         typedef void(CW_THUNKCALL* OnStartThunkDef)(MonoObject*, MonoException**);
@@ -299,8 +299,10 @@ namespace Crowny
         String m_TypeName;
         String m_Namespace;
         bool m_MissingType = false;
+
     public:
         Ref<SerializableObject> m_SerializedObjectData;
+
     private:
         Ref<SerializableObjectInfo> m_ObjectInfo;
         MonoClass* m_Class = nullptr;

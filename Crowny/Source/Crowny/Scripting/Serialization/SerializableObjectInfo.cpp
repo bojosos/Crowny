@@ -120,7 +120,8 @@ namespace Crowny
     {
         if (typeInfo->GetType() == SerializableType::Enum)
         {
-            // Maybe worth saving the enum names, so that if I add another in the middle of the enum, I know to change the saved value
+            // Maybe worth saving the enum names, so that if I add another in the middle of the enum, I know to change
+            // the saved value
             const auto* enumTypeInfo = static_cast<SerializableTypeInfoEnum*>(typeInfo.get());
             return enumTypeInfo->m_TypeNamespace == m_TypeNamespace && enumTypeInfo->m_TypeName == m_TypeName &&
                    enumTypeInfo->m_UnderlyingType == m_UnderlyingType;

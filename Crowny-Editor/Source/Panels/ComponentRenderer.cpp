@@ -51,7 +51,7 @@ namespace Crowny
 
                 ImGui::BeginChild(
                   ImGui::GetID((label + "fr").c_str()),
-                  ImVec2(ImGui::GetContentRegionAvail().x - spacingX, ImGui::GetFrameHeightWithSpacing() + 8.0f),
+                  ImVec2(ImGui::GetContentRegionAvail().x - spacingX, ImGui::GetFrameHeightWithSpacing() + 8.0f), false,
                   ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
             }
             const float framePadding = 2.0f;
@@ -504,8 +504,8 @@ namespace Crowny
                 String typeName = script.GetTypeName();
                 if (UIUtils::PropertyScript("Class name", typeName))
                 {
-					script.SetClassName(typeName);
-					script.Create(entity);
+                    script.SetClassName(typeName);
+                    script.Create(entity);
                 }
 
                 if (script.GetManagedClass() == nullptr)

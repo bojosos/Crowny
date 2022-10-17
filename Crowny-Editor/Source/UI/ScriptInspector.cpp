@@ -211,12 +211,13 @@ namespace Crowny
             MonoString* value = (MonoString*)getter();
             if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Filepath))
             {
-				MonoClass* filepathClass = ScriptInfoManager::Get().GetBuiltinClasses().FilepathAttribute;
-				MonoObject* filepathAttr = memberInfo->GetAttribute(filepathClass);
+                MonoClass* filepathClass = ScriptInfoManager::Get().GetBuiltinClasses().FilepathAttribute;
+                MonoObject* filepathAttr = memberInfo->GetAttribute(filepathClass);
                 FileDialogType dialogType = FileDialogType::OpenFile;
-				filepathClass->GetField("type")->Get(filepathAttr, &dialogType);
+                filepathClass->GetField("type")->Get(filepathAttr, &dialogType);
                 // TODO: wtf is this
-                if (MonoUtils::GetClass((MonoObject*)value) != MonoUtils::GetStringClass() && (dialogType == FileDialogType::Multiselect))
+                if (MonoUtils::GetClass((MonoObject*)value) != MonoUtils::GetStringClass() &&
+                    (dialogType == FileDialogType::Multiselect))
                 {
                     CW_ENGINE_ERROR("Filedialog attribute with multiselect can only be used on a vector of strings");
                     return false;
@@ -350,7 +351,7 @@ namespace Crowny
         case ScriptPrimitiveType::I16: {
             int16_t value = *(int16_t*)fieldValue;
             int16_t minValue16 = (int16_t)glm::clamp(minValueInt, -32768LL, 32767LL);
-			int16_t maxValue16 = (int16_t)glm::clamp(maxValueInt, -32768LL, 32767LL);
+            int16_t maxValue16 = (int16_t)glm::clamp(maxValueInt, -32768LL, 32767LL);
             bool change = false;
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue16, maxValue16);

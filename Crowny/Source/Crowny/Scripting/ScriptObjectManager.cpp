@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
-#include "Crowny/Scripting/ScriptObjectManager.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
+#include "Crowny/Scripting/ScriptObjectManager.h"
 
 namespace Crowny
 {
@@ -19,7 +19,7 @@ namespace Crowny
 
         // TODO: Call scene destroy queued objects
         // GameObjectManager::Get().DestroyQueuedObjects(); // Wat, why commented
-        
+
         ProcessFinalizedObjects(false);
 
         for (auto& scriptObject : m_ScriptObjects)
@@ -49,8 +49,8 @@ namespace Crowny
 
         // OnRefreshDomainLoaded();
 
-		for (auto& scriptObject : scriptObjCopy)
-			scriptObject->RestoreManagedInstance();
+        for (auto& scriptObject : scriptObjCopy)
+            scriptObject->RestoreManagedInstance();
 
         for (auto& scriptObject : scriptObjCopy)
             scriptObject->EndRefresh(backupData[scriptObject]);

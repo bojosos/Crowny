@@ -1,10 +1,9 @@
 #include "cwpch.h"
 
-#include "Crowny/Serialization/ScriptSerializer.h"
 #include "Crowny/Ecs/Components.h"
+#include "Crowny/Serialization/ScriptSerializer.h"
 
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
-
 
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldBool, "Bool")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldChar, "Char")
@@ -64,203 +63,126 @@ CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializablePropertyInfo, "Property")
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableMemberInfo, Crowny::SerializableFieldInfo)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableMemberInfo, Crowny::SerializablePropertyInfo)
 
-
 namespace Crowny
 {
 
-	struct FieldEntry
-	{
-		Ref<SerializableFieldKey> Key;
-		Ref<SerializableFieldData> Data;
-	};
+    struct FieldEntry
+    {
+        Ref<SerializableFieldKey> Key;
+        Ref<SerializableFieldData> Data;
+    };
 
-    template <typename Archive>
-    void Serialize(Archive& archive, SerializableFieldKey& key)
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldKey& key)
     {
         archive(key.m_FieldIdx, key.m_TypeId);
     }
 
-    template <typename Archive>
-    void Serialize(Archive& archive, FieldEntry& entry)
+    template <typename Archive> void Serialize(Archive& archive, FieldEntry& entry) { archive(entry.Key, entry.Data); }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldBool& data) { archive(data.Value); }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldChar& data) { archive(data.Value); }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldI8& data) { archive(data.Value); }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldU8& data) { archive(data.Value); }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldI16& data) { archive(data.Value); }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldU16& data) { archive(data.Value); }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldI32& data) { archive(data.Value); }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldU32& data) { archive(data.Value); }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldI64& data) { archive(data.Value); }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldU64& data) { archive(data.Value); }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldFloat& data) { archive(data.Value); }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldDouble& data) { archive(data.Value); }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldString& data)
     {
-        archive(entry.Key, entry.Data);
+        archive(data.Value, data.Null);
     }
 
-    template <typename Archive>
-    void Serialize(Archive& archive, SerializableFieldBool& data)
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldEntity& data)
     {
-        archive(data.Value);
+        archive(data.Value.GetComponent<IDComponent>().Uuid);
     }
 
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableFieldChar& data)
-	{
-		archive(data.Value);
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableFieldI8& data)
-	{
-		archive(data.Value);
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableFieldU8& data)
-	{
-		archive(data.Value);
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableFieldI16& data)
-	{
-		archive(data.Value);
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableFieldU16& data)
-	{
-		archive(data.Value);
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableFieldI32& data)
-	{
-		archive(data.Value);
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableFieldU32& data)
-	{
-		archive(data.Value);
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableFieldI64& data)
-	{
-		archive(data.Value);
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableFieldU64& data)
-	{
-		archive(data.Value);
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableFieldFloat& data)
-	{
-		archive(data.Value);
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableFieldDouble& data)
-	{
-		archive(data.Value);
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableFieldString& data)
-	{
-		archive(data.Value, data.Null);
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableFieldEntity& data)
-	{
-		archive(data.Value.GetComponent<IDComponent>().Uuid);
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableFieldAsset& data)
-	{
-		// this bad
-	}
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldAsset& data)
+    {
+        // this bad
+    }
 
     /*
     template <typename Archive>
     void Serialize(Archive& archive, SerializableFieldInfo& memberInfo)
     {
         archive(cereal::base_class<SerializableMemberInfo>(&memberInfo));
-        archive(memberInfo.m_Name, memberInfo.m_TypeInfo, memberInfo.m_FieldId, memberInfo.m_Flags, memberInfo.m_ParentTypeId);
+        archive(memberInfo.m_Name, memberInfo.m_TypeInfo, memberInfo.m_FieldId, memberInfo.m_Flags,
+    memberInfo.m_ParentTypeId);
     }
 
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializablePropertyInfo& memberInfo)
-	{
-		archive(cereal::base_class<SerializableMemberInfo>(&memberInfo));
-        archive(memberInfo.m_Name, memberInfo.m_TypeInfo, memberInfo.m_FieldId, memberInfo.m_Flags, memberInfo.m_ParentTypeId);
-	}*/
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableObjectInfo& objectInfo)
-	{
-		archive(objectInfo.m_TypeInfo, objectInfo.m_BaseClass, objectInfo.m_Fields);
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableTypeInfoPrimitive& primitiveInfo)
-	{
-		archive(primitiveInfo.m_Type);
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableTypeInfoEnum& enumInfo)
-	{
-		archive(enumInfo.m_UnderlyingType, enumInfo.m_TypeNamespace, enumInfo.m_TypeName);
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableTypeInfoArray& arrayInfo)
-	{
-		archive(arrayInfo.m_ElementType);
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableTypeInfoObject& objectInfo)
-	{
-		archive(objectInfo.m_TypeName, objectInfo.m_TypeNamespace, objectInfo.m_ValueType, objectInfo.m_TypeId, objectInfo.m_Flags);
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableTypeInfoEntity& entityInfo)
-	{
-		
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableTypeInfoDictionary& entityInfo)
-	{
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableTypeInfoList& entityInfo)
-	{
-	}
-
-	template <typename Archive>
-	void Serialize(Archive& archive, SerializableTypeInfoAsset& entityInfo)
-	{
-	}
-
-	template <typename Archive>
-	void Save(Archive& archive, const ScriptFieldFlags& flags)
-	{
-		archive((uint32_t)flags);
-	}
-
-	template <typename Archive>
-	void Load(Archive& archive, ScriptFieldFlags& flags)
-	{
-        uint32_t val = 0;
-		archive(val);
-        flags = (ScriptFieldFlags)val;
-	}
-
     template <typename Archive>
-	void Serialize(Archive& archive, SerializableMemberInfo& memberInfo)
-	{
- 		archive(memberInfo.m_Name, memberInfo.m_TypeInfo, memberInfo.m_FieldId, memberInfo.m_Flags, memberInfo.m_ParentTypeId);
-	}
+    void Serialize(Archive& archive, SerializablePropertyInfo& memberInfo)
+    {
+        archive(cereal::base_class<SerializableMemberInfo>(&memberInfo));
+        archive(memberInfo.m_Name, memberInfo.m_TypeInfo, memberInfo.m_FieldId, memberInfo.m_Flags,
+    memberInfo.m_ParentTypeId);
+    }*/
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableObjectInfo& objectInfo)
+    {
+        archive(objectInfo.m_TypeInfo, objectInfo.m_BaseClass, objectInfo.m_Fields);
+    }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoPrimitive& primitiveInfo)
+    {
+        archive(primitiveInfo.m_Type);
+    }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoEnum& enumInfo)
+    {
+        archive(enumInfo.m_UnderlyingType, enumInfo.m_TypeNamespace, enumInfo.m_TypeName);
+    }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoArray& arrayInfo)
+    {
+        archive(arrayInfo.m_ElementType);
+    }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoObject& objectInfo)
+    {
+        archive(objectInfo.m_TypeName, objectInfo.m_TypeNamespace, objectInfo.m_ValueType, objectInfo.m_TypeId,
+                objectInfo.m_Flags);
+    }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoEntity& entityInfo) {}
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoDictionary& entityInfo) {}
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoList& entityInfo) {}
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoAsset& entityInfo) {}
+
+    template <typename Archive> void Save(Archive& archive, const ScriptFieldFlags& flags) { archive((uint32_t)flags); }
+
+    template <typename Archive> void Load(Archive& archive, ScriptFieldFlags& flags)
+    {
+        uint32_t val = 0;
+        archive(val);
+        flags = (ScriptFieldFlags)val;
+    }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableMemberInfo& memberInfo)
+    {
+        archive(memberInfo.m_Name, memberInfo.m_TypeInfo, memberInfo.m_FieldId, memberInfo.m_Flags,
+                memberInfo.m_ParentTypeId);
+    }
 
     void ScriptSerializer::Serialize(SerializableObject* object)
     {
@@ -280,39 +202,40 @@ namespace Crowny
         m_Scene->m_Filepath = filepath;*/
     }
 
-	void Save(BinaryDataStreamOutputArchive& archive, const SerializableObject& object)
-	{
-		archive(object.m_ObjectInfo);
-		Ref<SerializableObjectInfo> curType = object.m_ObjectInfo;
+    void Save(BinaryDataStreamOutputArchive& archive, const SerializableObject& object)
+    {
+        archive(object.m_ObjectInfo);
+        Ref<SerializableObjectInfo> curType = object.m_ObjectInfo;
 
-		Vector<FieldEntry> entries;
-		while (curType != nullptr)
-		{
-			for (auto [id, field] : curType->m_Fields)
-			{
-				if (field->IsSerializable())
-				{
-					Ref<SerializableFieldKey> key = CreateRef<SerializableFieldKey>(field->m_ParentTypeId, field->m_FieldId);
-					Ref<SerializableFieldData> data = object.GetFieldData(field);
-					entries.push_back({});
-					FieldEntry& entry = entries.back();
-					entry.Key = key;
-					entry.Data = data;
-				}
-			}
-			curType = curType->m_BaseClass;
-		}
-		archive(entries);
-	}
+        Vector<FieldEntry> entries;
+        while (curType != nullptr)
+        {
+            for (auto [id, field] : curType->m_Fields)
+            {
+                if (field->IsSerializable())
+                {
+                    Ref<SerializableFieldKey> key =
+                      CreateRef<SerializableFieldKey>(field->m_ParentTypeId, field->m_FieldId);
+                    Ref<SerializableFieldData> data = object.GetFieldData(field);
+                    entries.push_back({});
+                    FieldEntry& entry = entries.back();
+                    entry.Key = key;
+                    entry.Data = data;
+                }
+            }
+            curType = curType->m_BaseClass;
+        }
+        archive(entries);
+    }
 
-	void Load(BinaryDataStreamInputArchive& archive, SerializableObject& object)
-	{
-		archive(object.m_ObjectInfo);
-		Vector<FieldEntry> entries;
-		archive(entries);
-		for (const auto& fieldEntry : entries)
-			object.m_CachedData[*fieldEntry.Key] = fieldEntry.Data;
-	}
+    void Load(BinaryDataStreamInputArchive& archive, SerializableObject& object)
+    {
+        archive(object.m_ObjectInfo);
+        Vector<FieldEntry> entries;
+        archive(entries);
+        for (const auto& fieldEntry : entries)
+            object.m_CachedData[*fieldEntry.Key] = fieldEntry.Data;
+    }
 
     // Ref<SerializableScriptObject> ScriptSerializer::Deserialize(Ref<MemoryDataStream>& stream)
     // {

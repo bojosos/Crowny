@@ -43,7 +43,7 @@ namespace Crowny
 
         int32_t monitorCount = 0;
         GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
-        for (uint32_t i = 0; i < monitorCount; i++)
+        for (int32_t i = 0; i < monitorCount; i++)
             CW_ENGINE_INFO("Monitor: {0}, {1}", i, glfwGetMonitorName(monitors[i]));
 
         /*int xpos, ypos;
@@ -184,10 +184,11 @@ namespace Crowny
             glfwSetCursor(m_Window, m_Cursor);
     }
 
-	void LinuxWindow::SetTitle(const String& title) {
-		glfwSetWindowTitle(m_Window, title.c_str());
-		m_Data.Title = title;
-	}
+    void LinuxWindow::SetTitle(const String& title)
+    {
+        glfwSetWindowTitle(m_Window, title.c_str());
+        m_Data.Title = title;
+    }
 
     void LinuxWindow::Shutdown()
     {

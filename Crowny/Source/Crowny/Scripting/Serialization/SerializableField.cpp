@@ -158,39 +158,42 @@ namespace Crowny
             if (value != nullptr)
                 fieldData->Value = SerializableObject::CreateFromMonoObject(value);
             else if (!allowNull)
-                fieldData->Value = SerializableObject::CreateNew(std::static_pointer_cast<SerializableTypeInfoObject>(typeInfo));
+                fieldData->Value =
+                  SerializableObject::CreateNew(std::static_pointer_cast<SerializableTypeInfoObject>(typeInfo));
             return fieldData;
         }
         return nullptr;
     }
 
-	void* SerializableFieldObject::GetValue()
-	{
-		// TODO: Do more checks and take in object info
-		return Value->GetManagedInstance();
-	}
-
-	void SerializableFieldObject::Serialize()
+    void* SerializableFieldObject::GetValue()
     {
-        if (Value != nullptr) Value->Serialize();
+        // TODO: Do more checks and take in object info
+        return Value->GetManagedInstance();
     }
 
-	void SerializableFieldObject::Deserialize()
-	{
-		if (Value != nullptr)
-		{
-			MonoObject* managedInstance = Value->Deserialize();
-			Value = SerializableObject::CreateFromMonoObject(managedInstance);
-		}
-	}
+    void SerializableFieldObject::Serialize()
+    {
+        if (Value != nullptr)
+            Value->Serialize();
+    }
 
-	void SerializableFieldObject::SerializeYAML(YAML::Emitter& out) const{ Value->SerializeYAML(out); }
-    void SerializableFieldObject::DeserializeYAML(const YAML::Node& node) {} // Need type info from somewhere for the create call { Value = SerializableObject::CreateNew(m_); Value->DeserializeYAML(node); }
+    void SerializableFieldObject::Deserialize()
+    {
+        if (Value != nullptr)
+        {
+            MonoObject* managedInstance = Value->Deserialize();
+            Value = SerializableObject::CreateFromMonoObject(managedInstance);
+        }
+    }
 
+    void SerializableFieldObject::SerializeYAML(YAML::Emitter& out) const { Value->SerializeYAML(out); }
+    void SerializableFieldObject::DeserializeYAML(const YAML::Node& node) {
+    } // Need type info from somewhere for the create call { Value = SerializableObject::CreateNew(m_);
+      // Value->DeserializeYAML(node); }
 
     SerializableFieldKey::SerializableFieldKey(uint32_t typeId, uint32_t fieldId)
-		: m_TypeId(typeId), m_FieldIdx(fieldId)
-	{
-	}
+      : m_TypeId(typeId), m_FieldIdx(fieldId)
+    {
+    }
 
 } // namespace Crowny

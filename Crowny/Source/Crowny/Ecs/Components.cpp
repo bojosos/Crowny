@@ -374,29 +374,29 @@ namespace Crowny
 
     void MonoScript::OnInitialize(ScriptEntityBehaviour* entityBehaviour)
     {
-		m_ScriptEntityBehaviour = entityBehaviour;
-		// mFullTypeName = mNamespace + "." + mTypeName;
+        m_ScriptEntityBehaviour = entityBehaviour;
+        // mFullTypeName = mNamespace + "." + mTypeName;
 
-		MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
-		m_Class = nullptr;
-		if (instance != nullptr)
-		{
-			::MonoClass* monoClass = MonoUtils::GetClass(instance);
-			// mRuntimeType = MonoUtil::getType(monoClass);
+        MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
+        m_Class = nullptr;
+        if (instance != nullptr)
+        {
+            ::MonoClass* monoClass = MonoUtils::GetClass(instance);
+            // mRuntimeType = MonoUtil::getType(monoClass);
 
-			m_Class = MonoManager::Get().FindClass(monoClass);
-		}
+            m_Class = MonoManager::Get().FindClass(monoClass);
+        }
 
-		m_OnStartThunk = nullptr;
-		m_OnUpdateThunk = nullptr;
-		m_OnDestroyThunk = nullptr;
-		m_OnCollisionEnterThunk = nullptr;
-		m_OnCollisionStayThunk = nullptr;
-		m_OnCollisionExitThunk = nullptr;
-		m_OnTriggerEnterThunk = nullptr;
-		m_OnTriggerStayThunk = nullptr;
-		m_OnTriggerExitThunk = nullptr;
-        
+        m_OnStartThunk = nullptr;
+        m_OnUpdateThunk = nullptr;
+        m_OnDestroyThunk = nullptr;
+        m_OnCollisionEnterThunk = nullptr;
+        m_OnCollisionStayThunk = nullptr;
+        m_OnCollisionExitThunk = nullptr;
+        m_OnTriggerEnterThunk = nullptr;
+        m_OnTriggerStayThunk = nullptr;
+        m_OnTriggerExitThunk = nullptr;
+
         MonoObject* managedInstance = nullptr;
         if (m_Class == nullptr)
             return;
@@ -430,9 +430,8 @@ namespace Crowny
                                 componentInfo->AddCallback(entityBehaviour->GetNativeEntity());
                         }
                         else
-                            CW_ENGINE_WARN(
-                              "Could not find component class {0} used in RequireComponent for class {1}",
-                              MonoUtils::GetReflTypeName(reflType), m_Class->GetFullName());
+                            CW_ENGINE_WARN("Could not find component class {0} used in RequireComponent for class {1}",
+                                           MonoUtils::GetReflTypeName(reflType), m_Class->GetFullName());
                     }
                 }
             }
@@ -445,7 +444,8 @@ namespace Crowny
         }
 
         // m_ScriptEntityBehaviour =
-          // ScriptSceneObjectManager::Get().CreateManagedScriptComponent(managedInstance, entityBehaviour->GetNativeEntity(), *this);
+        // ScriptSceneObjectManager::Get().CreateManagedScriptComponent(managedInstance,
+        // entityBehaviour->GetNativeEntity(), *this);
 
         if (m_OnStartThunk == nullptr)
         {
@@ -507,8 +507,8 @@ namespace Crowny
             if (serializableObject != nullptr)
             {
                 Ref<MemoryDataStream> memoryStream = CreateRef<MemoryDataStream>();
-				BinaryDataStreamOutputArchive archive(memoryStream);
-				archive(serializableObject);
+                BinaryDataStreamOutputArchive archive(memoryStream);
+                archive(serializableObject);
                 data.Size = (uint32_t)memoryStream->Size();
                 data.Data = memoryStream->TakeMemory();
             }
@@ -523,8 +523,8 @@ namespace Crowny
             Ref<MemoryDataStream> memoryStream = CreateRef<MemoryDataStream>();
             if (m_SerializedObjectData != nullptr)
             {
-				BinaryDataStreamOutputArchive archive(memoryStream);
-				archive(m_SerializedObjectData);
+                BinaryDataStreamOutputArchive archive(memoryStream);
+                archive(m_SerializedObjectData);
             }
 
             data.Size = (uint32_t)memoryStream->Size();
@@ -554,8 +554,8 @@ namespace Crowny
         {
             Ref<SerializableObject> serializableObject;
             Ref<MemoryDataStream> memoryStream = CreateRef<MemoryDataStream>(data.Data, data.Size);
-			BinaryDataStreamInputArchive archive(memoryStream);
-			archive(serializableObject);
+            BinaryDataStreamInputArchive archive(memoryStream);
+            archive(serializableObject);
 
             if (!missingType)
             {
@@ -616,16 +616,16 @@ namespace Crowny
         }
     }
 
-	ScriptObjectBackupData MonoScriptComponent::Backup(bool clearExisting)
+    ScriptObjectBackupData MonoScriptComponent::Backup(bool clearExisting)
     {
         for (auto& script : Scripts)
             return script.Backup();
         return {};
     }
 
-	void MonoScriptComponent::Restore(const ScriptObjectBackupData& data, bool missingType)
+    void MonoScriptComponent::Restore(const ScriptObjectBackupData& data, bool missingType)
     {
-		for (auto& script : Scripts)
+        for (auto& script : Scripts)
             script.Restore(data, false);
     }
 

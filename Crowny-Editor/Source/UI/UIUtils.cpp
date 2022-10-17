@@ -12,65 +12,79 @@
 namespace Crowny
 {
 
-    UIUtils::DialogResult UIUtils::ShowYesNoMessageBox(const String& title, const String& message, MessageBoxButtons buttons)
+    UIUtils::DialogResult UIUtils::ShowYesNoMessageBox(const String& title, const String& message,
+                                                       MessageBoxButtons buttons)
     {
         if (ImGui::BeginPopupModal(title.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
         {
             ImGui::TextWrapped("%s", message.c_str());
-            
+
             switch (buttons)
             {
             case Crowny::UIUtils::MessageBoxButtons::OK:
-                if (ImGui::Button("OK")) {
+                if (ImGui::Button("OK"))
+                {
                     return DialogResult::OK;
                 }
                 break;
             case Crowny::UIUtils::MessageBoxButtons::OKCancel:
-				if (ImGui::Button("OK")) {
-					return DialogResult::OK;
-				}
-				if (ImGui::Button("Cancel")) {
-					return DialogResult::Cancel;
-				}
+                if (ImGui::Button("OK"))
+                {
+                    return DialogResult::OK;
+                }
+                if (ImGui::Button("Cancel"))
+                {
+                    return DialogResult::Cancel;
+                }
                 break;
             case Crowny::UIUtils::MessageBoxButtons::AbortRetryIgnore:
-				if (ImGui::Button("Abort")) {
-					return DialogResult::Abort;
-				}
-				if (ImGui::Button("Retry")) {
-					return DialogResult::Retry;
-				}
-				if (ImGui::Button("Ignore")) {
-					return DialogResult::Ignore;
-				}
-				break;
+                if (ImGui::Button("Abort"))
+                {
+                    return DialogResult::Abort;
+                }
+                if (ImGui::Button("Retry"))
+                {
+                    return DialogResult::Retry;
+                }
+                if (ImGui::Button("Ignore"))
+                {
+                    return DialogResult::Ignore;
+                }
+                break;
             case Crowny::UIUtils::MessageBoxButtons::YesNoCancel:
-				if (ImGui::Button("Yes")) {
-					return DialogResult::Yes;
-				}
-				if (ImGui::Button("No")) {
-					return DialogResult::No;
-				}
-				if (ImGui::Button("Cancel")) {
-					return DialogResult::Cancel;
-				}
-				break;
+                if (ImGui::Button("Yes"))
+                {
+                    return DialogResult::Yes;
+                }
+                if (ImGui::Button("No"))
+                {
+                    return DialogResult::No;
+                }
+                if (ImGui::Button("Cancel"))
+                {
+                    return DialogResult::Cancel;
+                }
+                break;
             case Crowny::UIUtils::MessageBoxButtons::YesNo:
-				if (ImGui::Button("Yes")) {
-					return DialogResult::Yes;
-				}
-				if (ImGui::Button("No")) {
-					return DialogResult::No;
-				}
+                if (ImGui::Button("Yes"))
+                {
+                    return DialogResult::Yes;
+                }
+                if (ImGui::Button("No"))
+                {
+                    return DialogResult::No;
+                }
                 break;
             case Crowny::UIUtils::MessageBoxButtons::RetryCancel:
-				if (ImGui::Button("Retry")) {
-					return DialogResult::Retry;
-				}
-				if (ImGui::Button("Cancel")) {
-					return DialogResult::Cancel;
-				}
-				break;
+                if (ImGui::Button("Retry"))
+                {
+                    return DialogResult::Retry;
+                }
+                if (ImGui::Button("Cancel"))
+                {
+                    return DialogResult::Cancel;
+                }
+                break;
             }
 
             ImGui::EndPopup();
