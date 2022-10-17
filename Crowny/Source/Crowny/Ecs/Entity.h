@@ -32,10 +32,13 @@ namespace Crowny
         }
 
         template <typename T> T& GetComponent() const { return m_Scene->m_Registry.get<T>(m_EntityHandle); }
-
-        template <typename T> bool HasComponent() const { return m_Scene->m_Registry.has<T>(m_EntityHandle); }
-
+        template <typename T> T& AddOrGetComponent() const { return m_Scene->m_Registry.get<T>(m_EntityHandle); }
+        template <typename T> bool HasComponent() const { return m_Scene->m_Registry.all_of<T>(m_EntityHandle); }
+        bool HasAnyComponents() const { return !m_Scene->m_Registry.orphan(m_EntityHandle); }
+        template <typename ...T> bool HasAnyComponents() const { return m_Scene->m_Registry.any_of<T>(m_EntityHandle); }
+        template <typename ...T> bool HasComponents() const { return m_Scene->m_Registry.all_of<T>(m_EntityHandle); }
         template <typename T> void RemoveComponent() { m_Scene->m_Registry.remove<T>(m_EntityHandle); }
+
 
         entt::entity GetHandle() { return m_EntityHandle; }
 

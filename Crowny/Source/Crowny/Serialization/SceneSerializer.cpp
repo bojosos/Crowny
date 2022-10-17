@@ -40,17 +40,17 @@ namespace Crowny
             if (msc.Scripts.size() > 0)
             {
                 out << YAML::Key << "MonoScriptComponent";
-                out << YAML::BeginSeq;
-                    
+                out << YAML::BeginMap;
                 for (const auto& script : msc.Scripts)
 				{
+                    out << YAML::Key << script.GetTypeName() << YAML::Value;
                     out << YAML::BeginSeq;
                     Ref<SerializableObject> serializableObject = SerializableObject::CreateFromMonoObject(script.GetManagedInstance());
                     serializableObject->SerializeYAML(out);
                     
                     out << YAML::EndSeq;
                 }
-                out << YAML::EndSeq;
+                out << YAML::EndMap;
             }
         }
 
@@ -296,8 +296,8 @@ namespace Crowny
                         auto& msc = deserialized.AddComponent<MonoScriptComponent>();
                         for (const auto& scriptNode : script)
                         {
-                            Ref<SerializableObject> obj = SerializableObject::DeserializeYAML(scriptNode);
-                            msc.Scripts.push_back(MonoScript("TestSerialization"));
+                            Ref<SerializableObject> obj = SerializableObject::DeserializeYAML(scriptNode.second);
+							msc.Scripts.push_back(MonoScript(scriptNode.first.as<String>()));
                             msc.Scripts.back().m_SerializedObjectData = obj;
                             msc.Scripts.back().Create(deserialized);
                             // obj->Deserialize(msc.Scripts.back().GetManagedInstance(), msc.Scripts.back().GetObjectInfo());
@@ -310,7 +310,7 @@ namespace Crowny
                     {
                         auto& tc = deserialized.AddComponent<TextComponent>();
                         tc.Text = text["Text"].as<String>();
-                        tc.Font = CreateRef<Font>(text["Font"].as<String>(), "Deserialized font", 16);
+                        tc.Font = CreateRef<Font>(text["Font"].as<String>(), "Deserialized font", 16.0f);
                         tc.Color = text["Color"].as<glm::vec4>();
                     }
 

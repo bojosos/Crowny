@@ -431,7 +431,7 @@ namespace Crowny
                         }
                         else
                             CW_ENGINE_WARN(
-                              "Could not find component class {0} used in RequireComponent for class {1}: ",
+                              "Could not find component class {0} used in RequireComponent for class {1}",
                               MonoUtils::GetReflTypeName(reflType), m_Class->GetFullName());
                     }
                 }
