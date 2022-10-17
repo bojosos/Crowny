@@ -10,16 +10,18 @@ namespace Crowny
         switch (method)
         {
         case CompressionMethod::FastLZ: {
+            // Do not compress if the source is too small.
             if (size < 32)
             {
                 std::memcpy(dest, src, size);
                 return size;
             }
-            return fastlz_compress(src, size, dest);
+            return fastlz_compress(src, (int)size, dest);
         }
         default:
             CW_ENGINE_ERROR("Unsupported compression method.");
         }
+        return 0;
     }
 
     uint64_t Compression::Decompress(uint8_t* dest, int maxDestSize, const uint8_t* src, int srcSize,

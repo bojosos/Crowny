@@ -42,7 +42,6 @@ IncludeDir["ImGuizmo"] = "%{wks.location}/Crowny/Dependencies/ImGuizmo"
 IncludeDir["openal"] = "%{wks.location}/Crowny/Dependencies/openal-soft/include" -- this one is also somewhat installable
 IncludeDir["libvorbis"] = "%{wks.location}/Crowny/Dependencies/vorbis/include"
 IncludeDir["libogg"] = "%{wks.location}/Crowny/Dependencies/libogg/include"
-IncludeDir["vkalloc"] = "%{wks.location}/Crowny/Dependencies/vulkan/include"
 
 -- installed/platform
 filter "system:linux"
@@ -52,7 +51,7 @@ filter "system:linux"
 	IncludeDir["mono"] = "/usr/include/mono-2.0"
 filter "system:windows"
 	IncludeDir["mono"] = "C:/Program Files/Mono/include/mono-2.0"
-	IncludeDir['vulkan'] = "C:/VulkanSDK/1.3.204.1/Include"
+	IncludeDir['vulkan'] = "C:/VulkanSDK/1.3.224.1/Include"
 	
 group "Dependencies"
 	include "3rdparty/premake"

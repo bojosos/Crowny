@@ -620,6 +620,7 @@ namespace Crowny
     {
         for (auto& script : Scripts)
             return script.Backup();
+        return {};
     }
 
 	void MonoScriptComponent::Restore(const ScriptObjectBackupData& data, bool missingType)

@@ -19,8 +19,8 @@ namespace Crowny
         float accAmps = 0;
         for (int i = 0; i < ops.Octaves; i++)
         {
-            float freq = glm::pow(2.0f, i);
-            float amp = glm::pow(ops.Roughness, i);
+            float freq = (float)glm::pow(2.0f, i);
+            float amp = (float)glm::pow(ops.Roughness, i);
 
             float x = xPos * freq / ops.Smoothness;
             float y = yPos * freq / ops.Smoothness;
