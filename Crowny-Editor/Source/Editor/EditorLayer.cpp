@@ -25,7 +25,7 @@
 #include "UI/UIUtils.h"
 
 #include "Crowny/Scripting/Bindings/Logging/ScriptDebug.h"
-#include "Crowny/Scripting/Bindings/Utils/ScriptJSON.h"
+#include "Crowny/Scripting/Bindings/Utils/ScriptJson.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptMath.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptNoise.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptTime.h"
@@ -71,7 +71,7 @@ namespace Crowny
         ScriptNoise tempNoise = ScriptNoise();
         ScriptRandom tempRandom = ScriptRandom();
         ScriptLayerMask tempLayerMask = ScriptLayerMask();
-        ScriptJSON tempJson = ScriptJSON();
+        ScriptJson tempJson = ScriptJson();
         // ScriptCompression tempCompression = ScriptCompression();
 
         EditorAssets::Load();

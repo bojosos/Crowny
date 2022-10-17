@@ -16,7 +16,7 @@ namespace Crowny
     class ComponentEditor
     {
     public:
-        using ComponentTypeID = ENTT_ID_TYPE;
+        using ComponentTypeID = entt::id_type;
 
         struct ComponentInfo
         {
@@ -28,10 +28,10 @@ namespace Crowny
     public:
         template <class Component> ComponentInfo& RegisterComponent(const ComponentInfo& componentInfo)
         {
-            auto index = entt::type_info<Component>::id();
-            auto [it, res] = m_ComponentInfos[m_CurrentComponentGroup].insert_or_assign(index, componentInfo);
+            auto hash = entt::type_hash<Component>::value();
+            auto [it, res] = m_ComponentInfos[m_CurrentComponentGroup].insert_or_assign(hash, componentInfo);
             CW_ENGINE_ASSERT(res);
-            m_OrderedComponentInfos.push_back(std::make_pair(index, componentInfo));
+            m_OrderedComponentInfos.push_back(std::make_pair(hash, componentInfo));
             return std::get<ComponentInfo>(*it);
         }
 
@@ -58,10 +58,10 @@ namespace Crowny
         void Render();
 
     private:
-        bool EntityHasComponent(const entt::registry& registry, Entity entity, ComponentTypeID tid)
+        bool EntityHasComponent(const entt::registry& registry, Entity entity, const ComponentTypeID tid)
         {
-            ComponentTypeID type[] = { tid };
-            return registry.runtime_view(std::cbegin(type), std::cend(type)).contains(entity.GetHandle());
+            const auto itStorage = registry.storage(tid);
+            return itStorage != registry.storage().end() && itStorage->second.contains(entity.GetHandle());
         }
 
     private:

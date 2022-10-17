@@ -47,7 +47,7 @@ namespace Crowny
             {
                 if (EntityHasComponent(registry, entity, tid))
                 {
-                    if (tid == entt::type_info<MonoScriptComponent>::id())
+                    if (tid == entt::type_hash<MonoScriptComponent>::value())
                     {
                         // Draw the collapsing headers in the widget itself, since one component can have multiple
                         // scripts
@@ -102,7 +102,7 @@ namespace Crowny
                             ImGui::PushItemWidth(-1);
                             if (ImGui::Button(ci.name.c_str()))
                             {
-								if (tid == entt::type_info<MonoScriptComponent>::id())
+								if (tid == entt::type_hash<MonoScriptComponent>::value())
 								{
 									ci.create(entity);
                                     entity.GetComponent<MonoScriptComponent>().Scripts.push_back({});
@@ -229,7 +229,7 @@ namespace Crowny
                                     ImGui::PushID(cId);
                                     if (ImGui::Selectable(cInfo.name.c_str()))
 									{
-										if (cId == entt::type_info<MonoScriptComponent>::id())
+										if (cId == entt::type_hash<MonoScriptComponent>::value())
 										{
 											cInfo.create(entity);
                                             entity.GetComponent<MonoScriptComponent>().Scripts.push_back({});
@@ -253,7 +253,7 @@ namespace Crowny
                             ImGui::PushID(tid);
                             if (ImGui::Selectable(ci.name.c_str()))
 							{
-								if (tid == entt::type_info<MonoScriptComponent>::id())
+								if (tid == entt::type_hash<MonoScriptComponent>::value())
 								{
 									ci.create(entity);
 									entity.GetComponent<MonoScriptComponent>().Scripts.push_back({});
