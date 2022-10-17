@@ -95,7 +95,7 @@ namespace Crowny
 
         RegisterComponents();
         RegisterAssets();
-        
+
         m_BaseTypesInitialized = true;
     }
 
@@ -114,9 +114,9 @@ namespace Crowny
 
         MonoAssembly* curAssembly = MonoManager::Get().GetAssembly(assemblyName);
         if (curAssembly == nullptr)
-			return;
+            return;
 
-		uint32_t m_UniqueTypeId = 1;
+        uint32_t m_UniqueTypeId = 1;
         Ref<SerializableAssemblyInfo> assemblyInfo = CreateRef<SerializableAssemblyInfo>();
         assemblyInfo->m_Name = assemblyName;
 

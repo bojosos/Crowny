@@ -177,7 +177,8 @@ namespace Crowny
             glfwSetCursor(m_Window, m_Cursor);
     }
 
-    void WindowsWindow::SetTitle(const String& title) {
+    void WindowsWindow::SetTitle(const String& title)
+    {
         glfwSetWindowTitle(m_Window, title.c_str());
         m_Data.Title = title;
     }
@@ -200,7 +201,6 @@ namespace Crowny
 
         m_Data.VSync = enabled;
     }
-
 
     bool WindowsWindow::IsVSync() const { return m_Data.VSync; }
 

@@ -42,12 +42,13 @@ namespace Crowny
                 out << YAML::Key << "MonoScriptComponent";
                 out << YAML::BeginMap;
                 for (const auto& script : msc.Scripts)
-				{
+                {
                     out << YAML::Key << script.GetTypeName() << YAML::Value;
                     out << YAML::BeginSeq;
-                    Ref<SerializableObject> serializableObject = SerializableObject::CreateFromMonoObject(script.GetManagedInstance());
+                    Ref<SerializableObject> serializableObject =
+                      SerializableObject::CreateFromMonoObject(script.GetManagedInstance());
                     serializableObject->SerializeYAML(out);
-                    
+
                     out << YAML::EndSeq;
                 }
                 out << YAML::EndMap;
@@ -297,11 +298,11 @@ namespace Crowny
                         for (const auto& scriptNode : script)
                         {
                             Ref<SerializableObject> obj = SerializableObject::DeserializeYAML(scriptNode.second);
-							msc.Scripts.push_back(MonoScript(scriptNode.first.as<String>()));
+                            msc.Scripts.push_back(MonoScript(scriptNode.first.as<String>()));
                             msc.Scripts.back().m_SerializedObjectData = obj;
                             msc.Scripts.back().Create(deserialized);
-                            // obj->Deserialize(msc.Scripts.back().GetManagedInstance(), msc.Scripts.back().GetObjectInfo());
-
+                            // obj->Deserialize(msc.Scripts.back().GetManagedInstance(),
+                            // msc.Scripts.back().GetObjectInfo());
                         }
                     }
 

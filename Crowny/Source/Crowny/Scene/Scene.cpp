@@ -7,7 +7,6 @@
 
 #include "Crowny/Physics/Physics2D.h"
 
-#include <bit>
 #include <box2d/box2d.h>
 #include <entt/entt.hpp>
 
@@ -334,7 +333,8 @@ namespace Crowny
     {
         m_ViewportWidth = width;
         m_ViewportHeight = height;
-        m_Registry.view<CameraComponent>().each([&](CameraComponent& cameraComponent) { cameraComponent.Camera.SetViewportSize(width, height); });
+        m_Registry.view<CameraComponent>().each(
+          [&](CameraComponent& cameraComponent) { cameraComponent.Camera.SetViewportSize(width, height); });
     }
 
 } // namespace Crowny

@@ -22,7 +22,7 @@ namespace Crowny
 
         virtual void SetCursor(Cursor cursor) override;
 
-		virtual void SetTitle(const String& title) override;
+        virtual void SetTitle(const String& title) override;
         virtual const String& GetTitle() const override { return m_Data.Title; }
 
         virtual void SetEventCallback(const EventCallbackFn& callback) override { m_Data.EventCallback = callback; };

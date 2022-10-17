@@ -7,14 +7,14 @@
 #include <GLFW/glfw3.h>
 
 // TODO: Remove some of these. A lot of includes for 60 lines.
+#include <ShlObj_core.h>
 #include <VersionHelpers.h>
 #include <intrin.h>
 #include <iphlpapi.h>
 #include <rpc.h>
 #include <shellapi.h>
-#include <windows.h>
-#include <ShlObj_core.h>
 #include <tchar.h>
+#include <windows.h>
 
 namespace Crowny
 {
@@ -32,22 +32,22 @@ namespace Crowny
     }
 
     void PlatformUtils::ShowInExplorer(const Path& filepath)
-    {   
+    {
         if (fs::is_directory(filepath))
             ShellExecuteW(NULL, L"open", filepath.c_str(), NULL, NULL, SW_SHOWNORMAL);
         else
         {
             Path copy = filepath;
             copy.remove_filename();
-		    PIDLIST_ABSOLUTE dir = ILCreateFromPath(_T(copy.string().c_str()));
+            PIDLIST_ABSOLUTE dir = ILCreateFromPath(_T(copy.string().c_str()));
 
-			PIDLIST_ABSOLUTE item1 = ILCreateFromPath(_T(filepath.string().c_str()));
-			LPCITEMIDLIST selection[] = { item1 };
+            PIDLIST_ABSOLUTE item1 = ILCreateFromPath(_T(filepath.string().c_str()));
+            LPCITEMIDLIST selection[] = { item1 };
 
-			uint32_t count = sizeof(selection) / sizeof(ITEMIDLIST*);
+            uint32_t count = sizeof(selection) / sizeof(ITEMIDLIST*);
             SHOpenFolderAndSelectItems(dir, count, selection, 0);
-			ILFree(dir);
-			ILFree(item1);
+            ILFree(dir);
+            ILFree(item1);
         }
     }
 

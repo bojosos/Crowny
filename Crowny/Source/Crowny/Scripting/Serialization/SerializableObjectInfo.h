@@ -131,7 +131,10 @@ namespace Crowny
     {
     public:
         virtual bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override;
-        virtual ::MonoClass* GetMonoClass() const override { return nullptr; } // Need to do some fancy shit here (and build mono)
+        virtual ::MonoClass* GetMonoClass() const override
+        {
+            return nullptr;
+        } // Need to do some fancy shit here (and build mono)
         virtual SerializableType GetType() override { return SerializableType::Array; }
 
         Ref<SerializableTypeInfo> m_ElementType;
