@@ -24,7 +24,7 @@ namespace Crowny
         bool IsLoaded() const { return true; }
         bool BlockUntilLoaded() const;
         void Release();
-        const UUID& GetUUID() const { return m_Data != nullptr ? m_Data->m_UUID : UUID(); }
+        const UUID& GetUUID() const { return m_Data != nullptr ? m_Data->m_UUID : UUID::EMPTY; }
 
         const Ref<AssetHandleData>& GetHandleData() const { return m_Data; }
 

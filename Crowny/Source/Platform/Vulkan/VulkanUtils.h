@@ -24,7 +24,7 @@
 #undef Button8
 #undef Button9
 
-#include <vulkan/vk_mem_alloc.h>
+#include <vma/vk_mem_alloc.h>
 
 #define MAX_UNIQUE_QUEUES MAX_QUEUES_PER_TYPE* QUEUE_COUNT
 

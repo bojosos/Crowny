@@ -35,8 +35,7 @@ project "Crowny-Editor"
 		"%{IncludeDir.yamlcpp}",
 		"%{IncludeDir.libvorbis}",
 		"%{IncludeDir.libogg}",
-		"%{IncludeDir.Box2D}",
-		"%{IncludeDir.vkalloc}"
+		"%{IncludeDir.Box2D}"
 	}
 
 	links 
@@ -69,22 +68,17 @@ project "Crowny-Editor"
 
 		libdirs
 		{
-			"%{wks.location}/Crowny/Dependencies/vorbis/bin/Debug-windows-x86_64/libvorbis",
 			"C:/Program Files/Mono/lib",
-			"C:/VulkanSDK/1.3.204.1/Lib",
-			"C:/Program Files (x86)/OpenAL 1.1 SDK/libs/Win64",
-			"C:/dev/Crowny/Crowny/Dependencies/libogg/bin/Debug-windows-x86_64/libogg"
+			"C:/VulkanSDK/1.3.224.1/Lib",
+			"C:/Program Files (x86)/OpenAL 1.1 SDK/libs/Win64"
 		}
 
 		links
 		{
 			"OpenAL32.lib",
 
-			"vorbisenc.lib",
-			"libvorbisfile_static.lib",
-			"libvorbis.lib",
-			"libvorbis_static.lib",
-			"libogg.lib",
+			"libvorbis",
+			"libogg",
 
 			"mono-2.0-sgen.lib",
 

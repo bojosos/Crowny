@@ -466,8 +466,8 @@ namespace Crowny
         if (m_ScissorRequiresBind || force)
         {
             VkRect2D scissors;
-            scissors.offset.x = m_Viewport.X;
-            scissors.offset.y = m_Viewport.Y;
+            scissors.offset.x = (int32_t)m_Viewport.X;
+            scissors.offset.y = (int32_t)m_Viewport.Y;
             scissors.extent.width = m_Framebuffer->GetWidth();
             scissors.extent.height = m_Framebuffer->GetHeight();
             vkCmdSetScissor(m_CmdBuffer, 0, 1, &scissors);

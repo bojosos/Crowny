@@ -120,6 +120,7 @@ namespace Crowny
             objInfo->m_TypeId = obj["TypeId"].as<uint32_t>();
             objInfo->m_Flags = (ScriptFieldFlags)obj["Flags"].as<uint32_t>();
         }
+        return nullptr;
     }
 
     void SerializableObject::SerializeYAML(YAML::Emitter& out) const
@@ -241,7 +242,7 @@ namespace Crowny
             return obj;
             // MonoObject* instance = obj->Deserialize();
         }
-        
+        return nullptr;
     }
 
     void SerializableObject::Deserialize(MonoObject* instance, const Ref<SerializableObjectInfo>& objInfo)

@@ -14,7 +14,7 @@
 //       printf(format, __VA_ARGS__); \
 //       printf("\n"); \
 //   } while(false)
-#include <vulkan/vk_mem_alloc.h>
+#include <vma/vk_mem_alloc.h>
 
 // #define CW_DEBUG 0
 // #undef CW_DEBUG

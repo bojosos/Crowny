@@ -420,6 +420,7 @@ namespace Crowny
         Collider2D(const Collider2D& collider) = default;
 
         const glm::vec2& GetOffset() const { return m_Offset; }
+        void SetOffset(const glm::vec2& offset) { m_Offset = offset; }
         bool IsTrigger() const { return m_IsTrigger; }
         const AssetHandle<PhysicsMaterial2D>& GetMaterial() const { return m_Material; }
 

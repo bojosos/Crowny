@@ -6,6 +6,7 @@
 
 #include <GLFW/glfw3.h>
 
+// TODO: Remove some of these. A lot of includes for 60 lines.
 #include <VersionHelpers.h>
 #include <intrin.h>
 #include <iphlpapi.h>
@@ -31,16 +32,7 @@ namespace Crowny
     }
 
     void PlatformUtils::ShowInExplorer(const Path& filepath)
-    {
-        /*const char* cmdPatter = "explorer '%s'";
-        char* cmdStr = new char[filepath.string().size() + std::strlen(cmdPatter) + 1];
-        std::sprintf(cmdStr, cmdPatter, filepath.c_str());
-
-        if (system(cmdStr))
-        {
-        };
-        delete[] cmdStr;*/
-        
+    {   
         if (fs::is_directory(filepath))
             ShellExecuteW(NULL, L"open", filepath.c_str(), NULL, NULL, SW_SHOWNORMAL);
         else
@@ -50,7 +42,7 @@ namespace Crowny
 		    PIDLIST_ABSOLUTE dir = ILCreateFromPath(_T(copy.string().c_str()));
 
 			PIDLIST_ABSOLUTE item1 = ILCreateFromPath(_T(filepath.string().c_str()));
-			const ITEMIDLIST* selection[] = { item1 };
+			LPCITEMIDLIST selection[] = { item1 };
 
 			uint32_t count = sizeof(selection) / sizeof(ITEMIDLIST*);
             SHOpenFolderAndSelectItems(dir, count, selection, 0);
@@ -62,14 +54,6 @@ namespace Crowny
     void PlatformUtils::OpenExternally(const Path& filepath)
     {
         ShellExecuteW(NULL, L"open", filepath.c_str(), NULL, NULL, SW_SHOW);
-        /*	const char* cmdPatter = "xdg-open '%s'";
-            char* cmdStr = new char[filepath.string().size() + std::strlen(cmdPatter) + 1];
-            std::sprintf(cmdStr, cmdPatter, filepath.c_str());
-
-            if (system(cmdStr))
-            {
-            };
-            delete[] cmdStr;*/
     }
 
     void PlatformUtils::CopyToClipboard(const String& string)

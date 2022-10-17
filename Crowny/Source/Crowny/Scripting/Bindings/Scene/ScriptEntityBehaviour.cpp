@@ -6,8 +6,9 @@
 namespace Crowny
 {
     ScriptEntityBehaviour::ScriptEntityBehaviour(MonoObject* instance, Entity entity)
-      : ScriptObject(instance), m_TypeMissing(false), m_Entity(entity)
+      : ScriptObject(instance), m_TypeMissing(false)
     {
+        m_Entity = entity;
 		MonoUtils::GetClassName(instance, m_Namespace, m_TypeName);
 		m_GCHandle = MonoUtils::NewGCHandle(instance, false);
         // Wtf is this?
