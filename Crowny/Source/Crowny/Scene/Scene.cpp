@@ -334,7 +334,7 @@ namespace Crowny
     {
         m_ViewportWidth = width;
         m_ViewportHeight = height;
-        m_Registry.view<CameraComponent>().each([&](auto& e, auto& cc) { cc.Camera.SetViewportSize(width, height); });
+        m_Registry.view<CameraComponent>().each([&](CameraComponent& cameraComponent) { cameraComponent.Camera.SetViewportSize(width, height); });
     }
 
 } // namespace Crowny
