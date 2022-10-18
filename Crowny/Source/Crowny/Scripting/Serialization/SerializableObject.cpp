@@ -291,8 +291,6 @@ namespace Crowny
                     {
                         // CW_ENGINE_INFO(fieldInfo->GetValue(instance));
                         fieldInfo->SetValue(instance, m_CachedData[key]->GetValue(/*fieldInfo->m_TypeInfo*/));
-                        // CW_ENGINE_INFO(*(int*)m_CachedData[key]->GetValue());
-                        // CW_ENGINE_INFO(*(int*)MonoUtils::Unbox(fieldInfo->GetValue(instance)));
                     }
                 }
             }

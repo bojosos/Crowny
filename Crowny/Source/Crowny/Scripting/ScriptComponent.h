@@ -4,9 +4,7 @@
 #include "Crowny/Scripting/ScriptSceneObject.h"
 #include "Crowny/Scripting/ScriptSceneObjectManager.h"
 
-#include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
-#include "Crowny/Scripting/Mono/MonoUtils.h"
 
 namespace Crowny
 {

@@ -2,7 +2,6 @@
 
 #include "Crowny/Assets/AssetHandle.h"
 #include "Crowny/Common/Module.h"
-#include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/Physics/PhysicsMaterial.h"
 

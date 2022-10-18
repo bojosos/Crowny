@@ -1,10 +1,5 @@
 #pragma once
 
-#include "Crowny/RenderAPI/Shader.h"
-#include "Crowny/Renderer/Camera.h"
-#include "Crowny/Renderer/Mesh.h"
-#include "Crowny/Renderer/Model.h"
-
 namespace Crowny
 {
     class ForwardRenderer

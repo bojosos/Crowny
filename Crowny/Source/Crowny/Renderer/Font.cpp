@@ -1,5 +1,7 @@
 #include "cwpch.h"
 
+#include "Crowny/RenderAPI/Texture.h"
+
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Renderer/Font.h"
 

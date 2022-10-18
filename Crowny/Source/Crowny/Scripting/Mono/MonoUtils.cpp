@@ -63,6 +63,8 @@ namespace Crowny
         }
     }
 
+    bool MonoUtils::IsEnum(MonoClass* monoClass) { return IsEnum(monoClass->GetInternalPtr()); }
+
     bool MonoUtils::IsEnum(::MonoClass* monoClass) { return mono_class_is_enum(monoClass) != 0; }
 
     bool MonoUtils::IsValueType(::MonoClass* monoClass) { return mono_class_is_valuetype(monoClass) != 0; }

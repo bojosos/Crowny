@@ -7,6 +7,7 @@
 
 namespace Crowny
 {
+    class VulkanCmdBuffer;
 
     class VulkanUniformParams : public UniformParams
     {

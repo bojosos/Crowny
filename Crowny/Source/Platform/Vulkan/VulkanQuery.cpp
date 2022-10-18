@@ -1,5 +1,6 @@
 #include "cwpch.h"
 
+#include "Platform/Vulkan/VulkanDevice.h"
 #include "Platform/Vulkan/VulkanQuery.h"
 #include "Platform/Vulkan/VulkanRenderAPI.h"
 

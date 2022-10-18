@@ -2,15 +2,13 @@
 
 #include "Platform/Vulkan/VulkanUtils.h"
 
-#include "Crowny/RenderAPI/CommandBuffer.h"
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/RenderAPI/RenderCapabilities.h"
-#include "Platform/Vulkan/VulkanCommandBuffer.h"
-#include "Platform/Vulkan/VulkanDevice.h"
-#include "Platform/Vulkan/VulkanSwapChain.h"
 
 namespace Crowny
 {
+    class VulkanCmdBuffer;
+
     class VulkanRenderAPI : public RenderAPI
     {
     public:

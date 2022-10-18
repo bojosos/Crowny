@@ -1,7 +1,11 @@
 #include "cwpch.h"
 
 #include "Crowny/Common/Timer.h"
+#include "Platform/Vulkan/VulkanCommandBuffer.h"
+#include "Platform/Vulkan/VulkanDevice.h"
+#include "Platform/Vulkan/VulkanQueue.h"
 #include "Platform/Vulkan/VulkanRenderWindow.h"
+#include "Platform/Vulkan/VulkanSwapChain.h"
 
 #include "Crowny/Application/Application.h"
 
@@ -94,6 +98,8 @@ namespace Crowny
             RebuildSwapChain();
         m_RequiresNewBackBuffer = true;
     }
+
+    VulkanFramebuffer* VulkanRenderWindow::GetFramebuffer() const { return m_SwapChain->GetBackBuffer().Framebuffer; }
 
     void VulkanRenderWindow::RebuildSwapChain()
     {

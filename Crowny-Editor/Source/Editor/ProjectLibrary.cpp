@@ -4,6 +4,7 @@
 
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Import/Importer.h"
+#include "Crowny/Serialization/FileEncoder.h"
 #include "Crowny/Serialization/ImportOptionsSerializer.h"
 
 #include "Editor/Editor.h"
@@ -339,18 +340,14 @@ namespace Crowny
     {
         if (!fs::is_directory(libEntriesPath.parent_path()))
             fs::create_directories(libEntriesPath.parent_path());
-        Ref<DataStream> stream = FileSystem::CreateAndOpenFile(libEntriesPath);
-        BinaryDataStreamOutputArchive archive(stream);
-        archive(m_RootEntry);
-        stream->Close();
+        FileEncoder<DirectoryEntry, SerializerType::Binary> encoder(libEntriesPath);
+        encoder.Encode(m_RootEntry);
     }
 
     Ref<DirectoryEntry> ProjectLibrary::DeserializeLibraryEntries(const Path& libEntriesPath)
     {
-        Ref<DataStream> stream = FileSystem::OpenFile(libEntriesPath);
-        BinaryDataStreamInputArchive archive(stream);
-        archive(m_RootEntry);
-        return m_RootEntry;
+        FileDecoder<DirectoryEntry, SerializerType::Binary> decoder(libEntriesPath);
+        return decoder.Decode();
     }
 
     void ProjectLibrary::DeleteDirectoryInternal(Ref<DirectoryEntry> directory)

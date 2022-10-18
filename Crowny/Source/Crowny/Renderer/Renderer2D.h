@@ -1,10 +1,6 @@
 #pragma once
 
 #include "Crowny/Common/Color.h"
-#include "Crowny/RenderAPI/Texture.h"
-#include "Crowny/RenderAPI/VertexArray.h"
-#include "Crowny/Renderer/Camera.h"
-#include "Crowny/Renderer/Font.h"
 
 namespace Crowny
 {

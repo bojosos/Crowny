@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Crowny/RenderAPI/Texture.h"
-
 namespace ftgl
 {
     struct texture_font_t;

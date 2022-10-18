@@ -1,17 +1,9 @@
 #pragma once
 
-#include "Platform/Vulkan/VulkanUtils.h"
-
-#include "Platform/Vulkan/VulkanDevice.h"
-#include "Platform/Vulkan/VulkanFramebuffer.h"
-#include "Platform/Vulkan/VulkanPipeline.h"
-
 #include "Crowny/Common/Module.h"
 #include "Crowny/RenderAPI/CommandBuffer.h"
-#include "Crowny/RenderAPI/IndexBuffer.h"
-#include "Crowny/RenderAPI/RenderTarget.h"
-#include "Crowny/RenderAPI/UniformParams.h"
-#include "Crowny/RenderAPI/VertexBuffer.h"
+#include "Platform/Vulkan/VulkanResource.h"
+#include "Platform/Vulkan/VulkanUtils.h"
 
 namespace Crowny
 {
@@ -27,8 +19,6 @@ namespace Crowny
     class VulkanVertexBuffer;
     class VulkanIndexBuffer;
     class VulkanUniformParams;
-    class VulkanResource;
-    class VulkanResourceManager;
     class VulkanImage;
     class VulkanTimerQuery;
     class VulkanPipelineQuery;

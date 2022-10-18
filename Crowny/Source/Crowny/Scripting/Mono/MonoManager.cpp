@@ -1,5 +1,6 @@
 #include "cwpch.h"
 
+#include "Crowny/Scripting/Mono/MonoAssembly.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
 
 #include "Crowny/Common/FileSystem.h"

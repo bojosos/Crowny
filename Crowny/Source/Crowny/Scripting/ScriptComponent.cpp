@@ -1,7 +1,6 @@
 #include "cwpch.h"
 
 #include "Crowny/Scripting/ScriptComponent.h"
-#include "Crowny/Scripting/ScriptInfoManager.h"
 
 namespace Crowny
 {

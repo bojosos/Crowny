@@ -5,13 +5,6 @@
 
 namespace Crowny
 {
-
-    struct ScriptObjectBackupData
-    {
-        uint8_t* Data = nullptr;
-        uint32_t Size = 0;
-    };
-
     class ScriptObjectBase
     {
     public:

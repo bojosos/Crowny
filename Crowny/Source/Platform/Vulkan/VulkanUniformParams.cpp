@@ -2,11 +2,13 @@
 
 #include "Platform/Vulkan/VulkanUniformParams.h"
 
+#include "Platform/Vulkan/VulkanCommandBuffer.h"
 #include "Platform/Vulkan/VulkanDescriptorPool.h"
 #include "Platform/Vulkan/VulkanGpuBuffer.h"
 #include "Platform/Vulkan/VulkanGpuBufferManager.h"
 #include "Platform/Vulkan/VulkanRenderAPI.h"
 #include "Platform/Vulkan/VulkanSamplerState.h"
+#include "Platform/Vulkan/VulkanTexture.h"
 #include "Platform/Vulkan/VulkanUniformBufferBlock.h"
 #include "Platform/Vulkan/VulkanUniformParamInfo.h"
 #include "Platform/Vulkan/VulkanUtils.h"

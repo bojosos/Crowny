@@ -5,8 +5,13 @@
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Import/Importer.h"
 #include "Crowny/RenderAPI/RenderCommand.h"
+#include "Crowny/RenderAPI/Texture.h"
+#include "Crowny/RenderAPI/VertexArray.h"
 #include "Crowny/RenderAPI/VertexBuffer.h"
+#include "Crowny/Renderer/Camera.h"
+#include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
+#include "Crowny/Renderer/Model.h"
 #include "Crowny/Renderer/Skybox.h"
 #include "Crowny/Utils/ShaderCompiler.h"
 

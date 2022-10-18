@@ -2,15 +2,8 @@
 
 #include "Crowny/Scripting/Mono/Mono.h"
 
-#include "Crowny/Scripting/Mono/MonoField.h"
-#include "Crowny/Scripting/Mono/MonoMethod.h"
-#include "Crowny/Scripting/Mono/MonoProperty.h"
-
 namespace Crowny
 {
-
-    class MonoRuntime;
-
     class MonoClass
     {
         struct MethodId
@@ -60,8 +53,6 @@ namespace Crowny
         MonoProperty* GetProperty(const String& name) const;
 
         ::MonoClass* GetInternalPtr() const { return m_Class; }
-
-        friend class MonoRuntime;
 
     private:
         ::MonoClass* m_Class;

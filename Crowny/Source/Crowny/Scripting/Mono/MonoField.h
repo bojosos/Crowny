@@ -18,7 +18,6 @@ namespace Crowny
         MonoClass* GetType() const { return m_Type; };
         CrownyMonoVisibility GetVisibility() const;
         bool IsStatic() const;
-        MonoPrimitiveType GetPrimitiveType() const;
 
         bool IsValueType() const;
         bool HasAttribute(MonoClass* monoClass) const;
