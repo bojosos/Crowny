@@ -1,9 +1,24 @@
 #pragma once
 
+#include "Crowny/Scripting/Mono/Mono.h"
 #include <glm/glm.hpp>
+
+#ifdef CW_PLATFORM_WIN32
+#define CW_THUNKCALL CW_STDCALL
+#else
+#define CW_THUNKCALL
+#endif
 
 namespace Crowny
 {
+    class MonoManager;
+    class MonoAssembly;
+    class MonoClass;
+    class MonoMethod;
+    class MonoField;
+    class MonoProperty;
+
+    class MonoScript;
     class MonoScriptComponent;
     class AudioListenerComponent;
 
@@ -18,52 +33,36 @@ namespace Crowny
     class TextureImportOptions;
     class ShaderImportOptions;
     class ScriptImportOptions;
-    // Poor man's rtti
-    enum TypeId
+    class ScriptEntityBehaviour;
+    class Font;
+    class Texture;
+    class Mesh;
+    class SerializableObjectInfo;
+    class SerializableObject;
+    class AudioSource;
+    class AudioListener;
+    class AudioClip;
+    class Scene;
+    class PhysicsMaterial2D;
+    struct Collider2D;
+    class Camera;
+    class Model;
+    class EditorCamera;
+
+    class CommandBuffer;
+    class GraphicsPipeline;
+    class RenderTarget;
+    class UniformParams;
+    class VertexArray;
+    class VertexBuffer;
+    class ComputePipeline;
+    class IndexBuffer;
+
+    struct ScriptObjectBackupData
     {
-        TID_Component = 1,
-        TID_TransformComponent = 2,
-        TID_CameraComponent = 3,
-        TID_MonoScriptComponent = 4,
-        TID_AudioSourceComponent = 5,
-        TID_AudioListenerComponent = 6,
-        TID_IDComponent = 7,
-        TID_TagComponent = 8,
-
-        TID_ImportOptions = 20,
-        TID_AudioClipImportOptions = 21,
-        TID_TextureImportOptions = 22,
-        TID_ShaderImportOptions = 23,
-        TID_ScriptImportOptions = 24
+        uint8_t* Data = nullptr;
+        uint32_t Size = 0;
     };
-
-    template <typename T> inline uint32_t GetRuntimeId();
-
-    template <> inline uint32_t GetRuntimeId<Component>() { return TID_Component; }
-
-    template <> inline uint32_t GetRuntimeId<TransformComponent>() { return TID_TransformComponent; }
-
-    template <> inline uint32_t GetRuntimeId<CameraComponent>() { return TID_CameraComponent; }
-
-    template <> inline uint32_t GetRuntimeId<MonoScriptComponent>() { return TID_MonoScriptComponent; }
-
-    template <> inline uint32_t GetRuntimeId<AudioSourceComponent>() { return TID_AudioSourceComponent; }
-
-    template <> inline uint32_t GetRuntimeId<AudioListenerComponent>() { return TID_AudioListenerComponent; }
-
-    template <> inline uint32_t GetRuntimeId<TagComponent>() { return TID_TagComponent; }
-
-    template <> inline uint32_t GetRuntimeId<IDComponent>() { return TID_IDComponent; }
-
-    template <> inline uint32_t GetRuntimeId<ImportOptions>() { return TID_ImportOptions; }
-
-    template <> inline uint32_t GetRuntimeId<AudioClipImportOptions>() { return TID_AudioClipImportOptions; }
-
-    template <> inline uint32_t GetRuntimeId<TextureImportOptions>() { return TID_TextureImportOptions; }
-
-    template <> inline uint32_t GetRuntimeId<ShaderImportOptions>() { return TID_ShaderImportOptions; }
-
-    template <> inline uint32_t GetRuntimeId<ScriptImportOptions>() { return TID_ScriptImportOptions; }
 
     using byte = uint8_t;
 
@@ -406,6 +405,13 @@ namespace Crowny
         BF_32X2U, // 2D 32-bit unsigned int
         BF_32X3U, // 3D 32-bit unsigned int
         BF_32X4U, // 4D 32-bit unsigned int
+    };
+
+    enum class AudioSourceState
+    {
+        Playing,
+        Paused,
+        Stopped
     };
 
 } // namespace Crowny

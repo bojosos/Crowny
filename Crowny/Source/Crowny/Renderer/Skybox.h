@@ -1,10 +1,5 @@
 #pragma once
 
-#include "Crowny/RenderAPI/GraphicsPipeline.h"
-#include "Crowny/RenderAPI/IndexBuffer.h"
-#include "Crowny/RenderAPI/Texture.h"
-#include "Crowny/RenderAPI/VertexBuffer.h"
-
 namespace Crowny
 {
 

@@ -3,7 +3,12 @@
 #include "Crowny/Scripting/ScriptInfoManager.h"
 
 #include "Crowny/Scripting/Mono/MonoArray.h"
+#include "Crowny/Scripting/Mono/MonoAssembly.h"
+#include "Crowny/Scripting/Mono/MonoField.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
+#include "Crowny/Scripting/Mono/MonoMethod.h"
+#include "Crowny/Scripting/Mono/MonoProperty.h"
+#include "Crowny/Scripting/ScriptComponent.h"
 
 #include "Crowny/Scripting/Bindings/Scene/ScriptCamera.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntityBehaviour.h"
@@ -16,8 +21,6 @@
 
 #include "Crowny/Scripting/Bindings/Assets/ScriptAudioClip.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptMesh.h"
-// #include "Crowny/Scripting/Bindings/Assets/ScriptTexture.h"
-// #include "Crowny/Scripting/Bindings/Assets/ScriptShader.h"
 
 #include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
 
@@ -350,7 +353,7 @@ namespace Crowny
     {
         CW_ENGINE_ASSERT(m_BaseTypesInitialized);
         MonoPrimitiveType primitiveType = MonoUtils::GetPrimitiveType(monoClass->GetInternalPtr());
-        bool isEnum = MonoUtils::IsEnum(monoClass->GetInternalPtr());
+        bool isEnum = MonoUtils::IsEnum(monoClass);
         if (isEnum)
             primitiveType = MonoUtils::GetEnumPrimitiveType(monoClass->GetInternalPtr());
         ScriptPrimitiveType scriptPrimitiveType = ScriptPrimitiveType::U32;

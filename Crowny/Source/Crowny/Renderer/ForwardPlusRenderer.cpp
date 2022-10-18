@@ -2,6 +2,11 @@
 
 #include "Crowny/Renderer/ForwardPlusRenderer.h"
 
+#include "Crowny/RenderAPI/Texture.h"
+#include "Crowny/Renderer/Camera.h"
+#include "Crowny/Renderer/EditorCamera.h"
+#include "Crowny/Renderer/Model.h"
+
 #include <glad/glad.h>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>

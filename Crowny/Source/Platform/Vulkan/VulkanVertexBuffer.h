@@ -1,10 +1,10 @@
 #pragma once
 
+#include "Crowny/RenderAPI/VertexBuffer.h"
 #include "Platform/Vulkan/VulkanGpuBuffer.h"
 
 namespace Crowny
 {
-
     class VulkanVertexBuffer : public VertexBuffer
     {
     public:

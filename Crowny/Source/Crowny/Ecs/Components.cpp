@@ -5,13 +5,21 @@
 #include "Crowny/Ecs/Components.h"
 
 #include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Audio/AudioListener.h"
+#include "Crowny/Audio/AudioManager.h"
 #include "Crowny/Import/Importer.h"
 #include "Crowny/Physics/Physics2D.h"
+#include "Crowny/Renderer/Font.h"
+#include "Crowny/Renderer/MeshFactory.h"
+
 #include "Crowny/Serialization/FileEncoder.h"
 
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntityBehaviour.h"
+#include "Crowny/Scripting/Mono/MonoAssembly.h"
+#include "Crowny/Scripting/Mono/MonoMethod.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/Serialization/SerializableObject.h"
+#include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
 
 #include <box2d/box2d.h>
 
@@ -23,6 +31,8 @@ namespace Crowny
         Parent = other.Parent;
         return *this;
     }
+
+    void AudioListenerComponent::Initialize() { m_Internal = gAudio().CreateListener(); }
 
     void AudioSourceComponent::OnInitialize()
     {
@@ -138,6 +148,8 @@ namespace Crowny
         if (m_Internal != nullptr)
             m_Internal->Stop();
     }
+
+    TextComponent::TextComponent() : ComponentBase() { Font = FontManager::Get("default"); }
 
     float Rigidbody2DComponent::GetMass() const
     {

@@ -2,6 +2,8 @@
 
 #include <mono/metadata/object.h> // TODO: Implement array class
 
+#include "Vendor/filewatch/filewatch.h"
+
 #include "EditorLayer.h"
 
 #include "Crowny/Assets/AssetManager.h"
@@ -10,13 +12,24 @@
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Events/ImGuiEvent.h"
+#include "Crowny/ImGui/ImGuiMenu.h"
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/Renderer/Skybox.h"
 #include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Scene/ScriptRuntime.h"
+#include "Crowny/Scripting/Mono/MonoAssembly.h"
+#include "Crowny/Scripting/Mono/MonoMethod.h"
+#include "Crowny/Scripting/Mono/MonoProperty.h"
 #include "Crowny/Serialization/SceneSerializer.h"
+
+#include "Panels/AssetBrowserPanel.h"
+#include "Panels/ComponentEditor.h"
+#include "Panels/ConsolePanel.h"
+#include "Panels/HierarchyPanel.h"
+#include "Panels/InspectorPanel.h"
+#include "Panels/ViewportPanel.h"
 
 #include "Editor/Editor.h"
 #include "Editor/EditorAssets.h"
@@ -46,7 +59,6 @@
 
 namespace Crowny
 {
-
     float EditorLayer::s_DeltaTime = 0.0f;
     float EditorLayer::s_SmoothDeltaTime = 0.0f;
     float EditorLayer::s_RealtimeSinceStartup = 0.0f;
@@ -77,6 +89,13 @@ namespace Crowny
         EditorAssets::Load();
 
         Editor::StartUp();
+
+        m_Watch = CreateScope<filewatch::FileWatch<Path>>(L"C:\\dev\\Projects\\Project1\\Assets",
+                                                          [](const Path& path, const filewatch::Event changeType) {
+                                                              // So that I don't refresh twice with the same path
+                                                              // if (changeType != filewatch::Event::renamed_old)
+                                                              // ProjectLibrary::Get().Refresh(path);
+                                                          });
 
         m_MenuBar = new ImGuiMenuBar();
 

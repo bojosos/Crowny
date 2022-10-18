@@ -7,8 +7,6 @@
 
 #include "Crowny/ImGui/ImGuiLayer.h"
 
-#include <glm/glm.hpp>
-
 int main(int argc, char** argv);
 
 namespace Crowny

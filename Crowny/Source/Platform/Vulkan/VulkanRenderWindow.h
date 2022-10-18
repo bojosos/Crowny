@@ -41,7 +41,7 @@ namespace Crowny
         VulkanSwapChain* GetSwapChain() const { return m_SwapChain; }
         VkFormat GetColorFormat() const { return m_ColorFormat; }
         VkFormat GetDepthFormat() const { return m_DepthFormat; }
-        VulkanFramebuffer* GetFramebuffer() const { return m_SwapChain->GetBackBuffer().Framebuffer; }
+        VulkanFramebuffer* GetFramebuffer() const;
 
     private:
         void RebuildSwapChain();
@@ -54,7 +54,7 @@ namespace Crowny
         VkFormat m_DepthFormat;
         uint32_t m_PresentQueueFamily;
         VulkanSwapChain* m_SwapChain = nullptr;
-        VulkanSemaphore* m_SemaphoresTemp[MAX_UNIQUE_QUEUES + 1];
+        VulkanSemaphore* m_SemaphoresTemp[MAX_UNIQUE_QUEUES + 1] = {};
         bool m_RequiresNewBackBuffer;
     };
 } // namespace Crowny

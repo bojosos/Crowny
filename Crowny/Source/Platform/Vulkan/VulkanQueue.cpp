@@ -2,6 +2,10 @@
 
 #include "Platform/Vulkan/VulkanCommandBuffer.h"
 #include "Platform/Vulkan/VulkanQueue.h"
+#include "Platform/Vulkan/VulkanSwapChain.h"
+
+#include "Platform/Vulkan/VulkanDevice.h"
+#include "Platform/Vulkan/VulkanUtils.h"
 
 namespace Crowny
 {

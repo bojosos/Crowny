@@ -1,36 +1,14 @@
 #pragma once
 
-#include "Crowny/Audio/AudioClip.h"
-#include "Crowny/Audio/AudioListener.h"
-#include "Crowny/Audio/AudioManager.h"
-#include "Crowny/Audio/AudioSource.h"
-
 #include "Crowny/Common/Color.h"
-#include "Crowny/Common/Uuid.h"
-
-#include "Crowny/Physics/PhysicsMaterial.h"
-
-#include "Crowny/RenderAPI/Texture.h"
-#include "Crowny/Renderer/Font.h"
-#include "Crowny/Renderer/Material.h"
-#include "Crowny/Renderer/Mesh.h"
-#include "Crowny/Renderer/MeshFactory.h"
-#include "Crowny/Renderer/Model.h"
-
 #include "Crowny/Scene/SceneCamera.h"
-#include "Crowny/Scene/SceneManager.h"
-
-#include "Crowny/Scripting/Mono/MonoClass.h"
-#include "Crowny/Scripting/Mono/MonoManager.h"
-#include "Crowny/Scripting/ScriptObject.h"
-
-#include "Crowny/Scripting/Serialization/SerializableObject.h"
-#include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
 
 #include "Crowny/Ecs/Entity.h"
 
+#include "Crowny/Audio/AudioSource.h"
+#include "Crowny/Physics/PhysicsMaterial.h"
+
 #define GLM_ENABLE_EXPERIMENTAL
-#include <entt/entt.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 
@@ -39,7 +17,6 @@ class b2Fixture;
 
 namespace Crowny
 {
-    class ScriptEntityBehaviour;
 
     enum class TransformChangedFlags
     {
@@ -119,7 +96,7 @@ namespace Crowny
         glm::vec4 Color{ 0.0f, 0.3f, 0.3f, 1.0f };
         // Crowny::Material Material;
 
-        TextComponent() : ComponentBase() { Font = FontManager::Get("default"); };
+        TextComponent();
         TextComponent(const TextComponent&) = default;
         TextComponent(const String& text) : Text(text) {}
     };
@@ -227,7 +204,7 @@ namespace Crowny
         AudioListenerComponent() = default;
         AudioListenerComponent(const AudioListenerComponent&) = default;
 
-        void Initialize() { m_Internal = gAudio().CreateListener(); }
+        void Initialize();
 
     private:
         Ref<AudioListener> m_Internal;

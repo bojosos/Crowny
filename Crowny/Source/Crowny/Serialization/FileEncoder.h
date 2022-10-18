@@ -90,7 +90,7 @@ namespace Crowny
         Ref<T> Decode()
         {
             Ref<DataStream> stream = FileSystem::OpenFile(m_InputPath);
-            BinaryDataStreamOutputArchive archive(stream);
+            BinaryDataStreamInputArchive archive(stream);
             Ref<T> result;
             archive(result);
             stream->Close();

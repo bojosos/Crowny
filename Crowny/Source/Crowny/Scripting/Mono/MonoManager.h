@@ -1,11 +1,9 @@
 #pragma once
 
 #include "Crowny/Scripting/Mono/Mono.h"
+#include "Crowny/Scripting/ScriptMeta.h"
 
 #include "Crowny/Common/Module.h"
-
-#include "Crowny/Scripting/Mono/MonoAssembly.h"
-#include "Crowny/Scripting/ScriptMeta.h"
 
 namespace Crowny
 {

@@ -630,7 +630,7 @@ namespace Crowny
                     foundCurrent = true;
                 }
                 // if (!foundCurrent) // This is wrong. It will open all entries above the one needed.
-                   // ImGui::SetNextItemOpen(ImGuiCond_Once); // This is also wrong, needs bool as first arg
+                // ImGui::SetNextItemOpen(ImGuiCond_Once); // This is also wrong, needs bool as first arg
                 if (ImGui::TreeNodeEx(cur->ElementName.c_str(), flags))
                 {
                     if (ImGui::BeginDragDropTarget())

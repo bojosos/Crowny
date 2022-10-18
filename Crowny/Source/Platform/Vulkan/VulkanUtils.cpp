@@ -3,6 +3,8 @@
 #include "Platform/Vulkan/VulkanDevice.h"
 #include "Platform/Vulkan/VulkanUtils.h"
 
+#include "Crowny/Utils/PixelUtils.h"
+
 namespace Crowny
 {
 

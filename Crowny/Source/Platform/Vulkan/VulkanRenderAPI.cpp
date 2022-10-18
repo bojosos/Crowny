@@ -2,6 +2,13 @@
 
 #include "Platform/Vulkan/VulkanRenderAPI.h"
 
+#include "Platform/Vulkan/VulkanCommandBuffer.h"
+#include "Platform/Vulkan/VulkanDevice.h"
+#include "Platform/Vulkan/VulkanGpuBufferManager.h"
+#include "Platform/Vulkan/VulkanRenderPass.h"
+
+#include "Platform/Vulkan/VulkanUniformParams.h"
+
 #include "Crowny/Application/Application.h"
 #include "Crowny/RenderAPI/RenderCapabilities.h"
 

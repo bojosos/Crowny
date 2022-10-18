@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Crowny/Audio/AudioListener.h"
-#include "Crowny/Audio/AudioSource.h"
 #include "Crowny/Common/Module.h"
+
+#include "Crowny/Audio/AudioSource.h"
 
 #include <AL/alc.h>
 

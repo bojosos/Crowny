@@ -1,12 +1,17 @@
 #include "cwpch.h"
 
 #include "Platform/Vulkan/VulkanCommandBuffer.h"
+#include "Platform/Vulkan/VulkanDevice.h"
+#include "Platform/Vulkan/VulkanFramebuffer.h"
 #include "Platform/Vulkan/VulkanIndexBuffer.h"
+#include "Platform/Vulkan/VulkanPipeline.h"
 #include "Platform/Vulkan/VulkanQuery.h"
+#include "Platform/Vulkan/VulkanQueue.h"
 #include "Platform/Vulkan/VulkanRenderAPI.h"
 #include "Platform/Vulkan/VulkanRenderPass.h"
 #include "Platform/Vulkan/VulkanRenderTexture.h"
 #include "Platform/Vulkan/VulkanRenderWindow.h"
+#include "Platform/Vulkan/VulkanSwapChain.h"
 #include "Platform/Vulkan/VulkanUniformParams.h"
 #include "Platform/Vulkan/VulkanVertexBuffer.h"
 
