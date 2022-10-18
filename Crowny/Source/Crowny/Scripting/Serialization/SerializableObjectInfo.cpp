@@ -1,5 +1,6 @@
 #include "cwpch.h"
 
+#include "Crowny/Scripting/Mono/MonoProperty.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/Serialization/SerializableField.h"
 #include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"

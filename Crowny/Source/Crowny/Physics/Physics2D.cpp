@@ -3,6 +3,7 @@
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Physics/Physics2D.h"
+#include "Crowny/Scene/SceneManager.h"
 
 #include <imgui.h>
 

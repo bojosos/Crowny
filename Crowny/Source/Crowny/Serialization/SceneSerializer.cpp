@@ -8,8 +8,10 @@
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Common/Yaml.h"
 #include "Crowny/Physics/Physics2D.h"
+#include "Crowny/Renderer/Font.h"
 
 #include "Crowny/Scripting/ScriptInfoManager.h"
+#include "Crowny/Scripting/Serialization/SerializableObject.h"
 
 #include "Crowny/Ecs/Components.h"
 

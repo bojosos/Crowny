@@ -1,5 +1,8 @@
 #include "cwepch.h"
 
+// Has to be first due to UUID already being defined in Win32 headers
+#include "Vendor/filewatch/filewatch.h"
+
 #include "Editor/Editor.h"
 
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
@@ -12,7 +15,6 @@
 
 namespace Crowny
 {
-
     void Editor::OnStartUp()
     {
         LoadEditorSettings();
@@ -22,9 +24,9 @@ namespace Crowny
 
     void Editor::CreateProject(const Path& projectParentPath, const String& projectName)
     {
-        Path projectPath = projectParentPath / projectName;
-        Path assetDirectory = projectPath / ProjectLibrary::ASSET_DIR;
-        Path assetCache = projectPath / ProjectLibrary::INTERNAL_ASSET_DIR;
+        const Path& projectPath = projectParentPath / projectName;
+        const Path& assetDirectory = ProjectLibrary::Get().GetAssetFolder();
+        const Path& assetCache = projectPath / ProjectLibrary::INTERNAL_ASSET_DIR;
 
         if (!fs::exists(projectPath))
             fs::create_directories(projectPath);

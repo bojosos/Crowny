@@ -43,6 +43,7 @@ namespace Crowny
     class VulkanUniformBuffer;
     class VulkanSemaphore;
     class VulkanQueue;
+    class VulkanPipeline;
 
     extern VkAllocationCallbacks* gVulkanAllocator;
 

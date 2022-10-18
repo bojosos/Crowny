@@ -1,5 +1,10 @@
 #include "cwpch.h"
 
+#include "Platform/Vulkan/VulkanCommandBuffer.h"
+#include "Platform/Vulkan/VulkanGpuBufferManager.h"
+#include "Platform/Vulkan/VulkanQueue.h"
+#include "Platform/Vulkan/VulkanResource.h"
+
 #include "Platform/Vulkan/VulkanDescriptorPool.h"
 #include "Platform/Vulkan/VulkanDevice.h"
 #include "Platform/Vulkan/VulkanQuery.h"

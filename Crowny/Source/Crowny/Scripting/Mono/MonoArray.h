@@ -3,6 +3,7 @@
 #include "Crowny/Scripting/Mono/Mono.h"
 
 #include "Crowny/Scripting/Mono/MonoClass.h"
+#include "Crowny/Scripting/Mono/MonoUtils.h"
 
 namespace Crowny
 {

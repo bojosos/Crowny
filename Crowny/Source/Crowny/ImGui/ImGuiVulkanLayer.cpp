@@ -4,14 +4,13 @@
 #include "Crowny/ImGui/ImGuiVulkanLayer.h"
 
 #include "Crowny/RenderAPI/CommandBuffer.h"
-#include "Crowny/RenderAPI/RenderTarget.h"
-#include "Crowny/RenderAPI/RenderTexture.h"
 
 #include "Platform/Vulkan/VulkanCommandBuffer.h"
+#include "Platform/Vulkan/VulkanQueue.h"
 #include "Platform/Vulkan/VulkanRenderAPI.h"
 #include "Platform/Vulkan/VulkanRenderPass.h"
 #include "Platform/Vulkan/VulkanRenderWindow.h"
-#include "Platform/Vulkan/VulkanTexture.h"
+#include "Platform/Vulkan/VulkanSwapChain.h"
 
 #include <GLFW/glfw3.h>
 #include <backends/imgui_impl_glfw.h>

@@ -9,9 +9,14 @@
 
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Import/Importer.h"
+#include "Crowny/RenderAPI/GraphicsPipeline.h"
+#include "Crowny/RenderAPI/IndexBuffer.h"
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/RenderAPI/Texture.h"
+#include "Crowny/RenderAPI/UniformBufferBlock.h"
+#include "Crowny/RenderAPI/UniformParams.h"
+#include "Crowny/RenderAPI/VertexBuffer.h"
 #include "Crowny/Utils/ShaderCompiler.h"
 
 #include <glad/glad.h>

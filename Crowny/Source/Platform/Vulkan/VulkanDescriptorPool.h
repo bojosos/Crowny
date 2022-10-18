@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Platform/Vulkan/VulkanDevice.h"
-#include "Platform/Vulkan/VulkanUtils.h"
+#include "Platform/Vulkan/VulkanResource.h"
 
 namespace Crowny
 {

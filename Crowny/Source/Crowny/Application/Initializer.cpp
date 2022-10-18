@@ -12,6 +12,7 @@
 #include "Crowny/Import/Importer.h"
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/RenderAPI/RenderAPI.h"
+#include "Crowny/RenderAPI/SamplerState.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/ForwardPlusRenderer.h"
 #include "Crowny/Renderer/ForwardRenderer.h"

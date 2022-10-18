@@ -2,11 +2,6 @@
 
 #include "Platform/Vulkan/VulkanUtils.h"
 
-#include "Platform/Vulkan/VulkanCommandBuffer.h"
-#include "Platform/Vulkan/VulkanGpuBufferManager.h"
-#include "Platform/Vulkan/VulkanQueue.h"
-#include "Platform/Vulkan/VulkanResource.h"
-
 namespace Crowny
 {
 
@@ -19,6 +14,9 @@ namespace Crowny
         VkFormat DepthFormat;
         VkColorSpaceKHR ColorSpace;
     };
+
+    class VulkanDescriptorManager;
+    class VulkanResourceManager;
 
     class VulkanDevice
     {

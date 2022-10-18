@@ -13,6 +13,7 @@ namespace Crowny
         static void CheckException(MonoObject* exception);
 
         static bool IsEnum(MonoClass* monoClass);
+        static bool IsEnum(::MonoClass* monoClass);
         static String FromMonoString(MonoString* value);
         static std::wstring WFromMonoString(MonoString* value);
         static MonoString* ToMonoString(const String& value);
@@ -63,9 +64,3 @@ namespace Crowny
     };
 
 } // namespace Crowny
-
-#ifdef CW_PLATFORM_WIN32
-#define CW_THUNKCALL CW_STDCALL
-#else
-#define CW_THUNKCALL
-#endif

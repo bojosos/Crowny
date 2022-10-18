@@ -8,6 +8,10 @@
 #include "Crowny/RenderAPI/RenderCommand.h"
 #include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/RenderAPI/Texture.h"
+#include "Crowny/RenderAPI/UniformParams.h"
+#include "Crowny/RenderAPI/VertexArray.h"
+#include "Crowny/Renderer/Camera.h"
+#include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Utils/ShaderCompiler.h"
 

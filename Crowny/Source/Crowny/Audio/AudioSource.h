@@ -5,14 +5,6 @@
 
 namespace Crowny
 {
-
-    enum class AudioSourceState
-    {
-        Playing,
-        Paused,
-        Stopped
-    };
-
     class AudioSource
     {
     public:

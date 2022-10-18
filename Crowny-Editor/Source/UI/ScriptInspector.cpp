@@ -4,6 +4,8 @@
 #include "UI/ScriptInspector.h"
 
 #include "Crowny/Scripting/Mono/MonoArray.h"
+#include "Crowny/Scripting/Mono/MonoMethod.h"
+#include "Crowny/Scripting/Mono/MonoProperty.h"
 #include "Crowny/Scripting/ScriptAssetManager.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 

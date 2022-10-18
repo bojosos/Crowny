@@ -4,14 +4,12 @@
 #include "Crowny/Ecs/Entity.h"
 
 #include "Crowny/Scripting/Bindings/Assets/ScriptAsset.h"
-#include "Crowny/Scripting/Mono/MonoClass.h"
-#include "Crowny/Scripting/ScriptComponent.h"
 #include "Crowny/Scripting/ScriptSceneObjectManager.h"
 #include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
 
 namespace Crowny
 {
-
+    class ScriptComponentBase;
     struct BuiltinScriptClasses
     {
         MonoClass* SystemArrayClass = nullptr;

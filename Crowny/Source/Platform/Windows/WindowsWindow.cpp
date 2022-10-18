@@ -120,7 +120,7 @@ namespace Crowny
         // to use COM, IDropTarget
         // TODO:a
         glfwSetDropCallback(m_Window, [](GLFWwindow* window, int count, const char** paths) {
-            for (uint32_t i = 0; i < count; i++)
+            for (int32_t i = 0; i < count; i++)
             {
             }
         });

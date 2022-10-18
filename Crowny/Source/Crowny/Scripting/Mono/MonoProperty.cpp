@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Scripting/Mono/MonoClass.h"
+#include "Crowny/Scripting/Mono/MonoMethod.h"
 #include "Crowny/Scripting/Mono/MonoProperty.h"
 
 #include <mono/metadata/object.h>

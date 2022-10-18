@@ -1,32 +1,27 @@
 #pragma once
 
-#include "Platform/Vulkan/VulkanRenderAPI.h"
-
-#include "Crowny/ImGui/ImGuiMenu.h"
-
-#include "Panels/AssetBrowserPanel.h"
-#include "Panels/ComponentEditor.h"
-#include "Panels/ConsolePanel.h"
-#include "Panels/GLInfoPanel.h"
-#include "Panels/HierarchyPanel.h"
-#include "Panels/ImGuiPanel.h"
-#include "Panels/InspectorPanel.h"
-#include "Panels/ViewportPanel.h"
-
-#include "Crowny/RenderAPI/RenderTarget.h"
 #include "Crowny/Renderer/EditorCamera.h"
-#include "Crowny/Scene/Scene.h"
 
 #include "Crowny/Common/Time.h"
-#include "Crowny/Scripting/Mono/MonoClass.h"
 
-#include <Crowny.h>
-#include <entt/entt.hpp>
+namespace filewatch
+{
+    template <typename T> class FileWatch;
+}
 
 namespace Crowny
 {
     class TextureEditor;
-    class ImGuiViewportWindow;
+    class ViewportPanel;
+    class InspectorPanel;
+    class OpenGLInformationPanel;
+    class AssetBrowserPanel;
+    class HierarchyPanel;
+    class ConsolePanel;
+    class RenderTarget;
+    class ImGuiMenuBar;
+    class ImGuiPanel;
+    class Scene;
 
     class EditorLayer : public Layer
     {
@@ -102,6 +97,8 @@ namespace Crowny
         String m_NewProjectPath;
         String m_NewProjectName;
         glm::vec2 m_ViewportSize = { 1280.0f, 720.0f }; // and dis
+
+        Scope<filewatch::FileWatch<Path>> m_Watch;
 
         static float s_DeltaTime;
         static float s_SmoothDeltaTime;
