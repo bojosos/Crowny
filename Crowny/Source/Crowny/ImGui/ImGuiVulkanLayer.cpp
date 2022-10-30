@@ -2,6 +2,7 @@
 
 #include "Crowny/Application/Application.h"
 #include "Crowny/ImGui/ImGuiVulkanLayer.h"
+#include "Crowny/Window/Window.h"
 
 #include "Crowny/RenderAPI/CommandBuffer.h"
 

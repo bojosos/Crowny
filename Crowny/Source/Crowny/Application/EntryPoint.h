@@ -5,9 +5,7 @@ extern Crowny::Application* Crowny::CreateApplication();
 
 int main(int argc, char** argv)
 {
-    Crowny::Log::Init();
-
-    auto app = Crowny::CreateApplication();
+    Crowny::Application* app = Crowny::CreateApplication();
     app->Run();
     delete app;
 }

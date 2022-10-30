@@ -46,6 +46,7 @@ namespace Crowny
 
         LoadProjectSettings();
         ProjectLibrary::Get().LoadLibrary();
+        Log::RenameClientLogger(projectPath.filename().string());
     }
 
     void Editor::LoadProjectSettings()

@@ -4,16 +4,22 @@
 
 namespace Crowny
 {
-    struct WindowProperties
-    {
-        String Title;
-        uint32_t Width;
-        uint32_t Height;
 
-        WindowProperties(const String& title = "Crowny", uint32_t width = 1280, uint32_t height = 720)
-          : Title(title), Width(width), Height(height)
-        {
-        }
+    struct WindowDesc
+    {
+        bool ShowTitleBar = true;
+        bool ShowBorder = true;
+        bool AllowResize = true;
+        bool Fullscreen = false;
+        uint32_t Width = 0;
+        uint32_t Height = 0;
+        bool Hidden = false;
+        uint32_t Left = -1;
+        uint32_t Top = -1;
+        String Title;
+        bool Modal = false;
+        bool StartMaximized = false;
+        uint32_t MonitorIdx = 0;
     };
 
     enum class Cursor;
@@ -37,10 +43,14 @@ namespace Crowny
         virtual void SetEventCallback(const EventCallbackFn& callback) = 0;
         virtual void* GetNativeWindow() const = 0;
 
-        virtual void SetVSync(bool enabled) = 0;
-        virtual bool IsVSync() const = 0;
+        virtual void SetHidden(bool hidden) = 0;
+        virtual void Move(int32_t left, int top) = 0;
+        virtual void Resize(uint32_t width, uint32_t height) = 0;
+        virtual void Minimize() = 0;
+        virtual void Maximize() = 0;
+        virtual void Restore() = 0;
 
     public:
-        static Window* Create(const WindowProperties& props = WindowProperties());
+        static Window* Create(const WindowDesc& windowDesc);
     };
 } // namespace Crowny

@@ -58,6 +58,9 @@ namespace Crowny
     class ComputePipeline;
     class IndexBuffer;
 
+    struct RenderWindowDesc;
+    struct WindowDesc;
+
     struct ScriptObjectBackupData
     {
         uint8_t* Data = nullptr;

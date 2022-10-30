@@ -22,11 +22,9 @@
 
 #include <cstring>
 
-#include <iostream>
 #include <istream>
-
-#include <filesystem>
 #include <fstream>
+#include <filesystem>
 
 #include <atomic>
 #include <mutex>
@@ -74,6 +72,8 @@ namespace Crowny
     template <typename T> using Queue = std::queue<T>;
 
     using String = std::string;
+
+    using StringView = std::string_view;
 
     using U16String = std::u16string;
 

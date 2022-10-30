@@ -50,11 +50,19 @@ namespace Crowny
         void SaveActiveSceneAs();
 
     private:
+        void ExecuteProjectAssetRefresh();
+        void HandleMousePicking();
+        void CreateRenderTarget();
+        void HandleRenderTargetResize();
+        void HandleSceneState(Timestep ts);
+        void SetupImGuiRender();
+
         void RenderOverlay();
         void AddRecentEntry(const Path& path);
         void SetProjectSettings();
         void SaveProjectSettings();
 
+        void UI_ProjectManager();
         void UI_Header();
         void UI_GizmoSettings();
         void UI_Settings();
@@ -99,6 +107,8 @@ namespace Crowny
         glm::vec2 m_ViewportSize = { 1280.0f, 720.0f }; // and dis
 
         Scope<filewatch::FileWatch<Path>> m_Watch;
+        Mutex m_FileWatchMutex;
+        Vector<Path> m_FileWatchQueue;
 
         static float s_DeltaTime;
         static float s_SmoothDeltaTime;
