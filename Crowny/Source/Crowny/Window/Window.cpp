@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Events/ApplicationEvent.h"
+#include "Crowny/Application/Application.h"
 #include "Crowny/Events/KeyEvent.h"
 #include "Crowny/Events/MouseEvent.h"
 #include "Crowny/Input/Input.h"
@@ -17,13 +18,13 @@
 namespace Crowny
 {
 
-    Window* Window::Create(const WindowProperties& props)
+    Window* Window::Create(const WindowDesc& windowDesc)
     {
 #ifdef CW_WINDOWS
-        return new LinuxWindow(props);
+        return new LinuxWindow(windowDesc);
 #elif defined(CW_LINUX)
         // return CreateRef<LinuxWindow>(props);
-        return new LinuxWindow(props);
+        return new LinuxWindow(config);
 #else
         CW_ENGINE_ASSERT(false, "Platform not supported");
         return nullptr;

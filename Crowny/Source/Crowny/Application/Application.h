@@ -11,10 +11,28 @@ int main(int argc, char** argv);
 
 namespace Crowny
 {
+
+    class Window;
+
+    struct ScriptConfig
+    {
+        bool EnableDebugging = false;
+        bool EnableProfiling = false;
+    };
+
+    struct ApplicationDesc
+    {
+        RenderWindowDesc Window;
+        String WorkingDirectory = ".";
+        String Name;
+
+        ScriptConfig Script;
+    };
+
     class Application
     {
     public:
-        Application(const String& name);
+        Application(const ApplicationDesc& applicationDesc);
         ~Application();
 
         void OnEvent(Event& event);
@@ -22,7 +40,7 @@ namespace Crowny
         void PushLayer(Layer* layer);
         void PushOverlay(Layer* layer);
 
-        Window& GetWindow() const { return *m_Window->GetWindow(); }
+        Window& GetWindow() const;
         const Ref<RenderWindow>& GetRenderWindow() const { return m_Window; }
         ImGuiLayer* GetImGuiLayer() { return m_ImGuiLayer; }
         void Exit();
@@ -32,6 +50,7 @@ namespace Crowny
     private:
         bool OnWindowClose(WindowCloseEvent& e);
         bool OnWindowResize(WindowResizeEvent& e);
+        bool OnWindowMinimized(WindowMinimizeEvent& e);
         bool OnMouseScroll(MouseScrolledEvent& event);
 
         void Run();

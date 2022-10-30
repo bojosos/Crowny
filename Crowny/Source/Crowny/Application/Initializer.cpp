@@ -5,6 +5,7 @@
 // Has to be here due to ambiguous refs caused by Xlib(which is included by vulkan on linux) and my Input class
 #include "Platform/Vulkan/VulkanRenderAPI.h"
 
+#include "Crowny/Application/Application.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Audio/AudioManager.h"
 #include "Crowny/Common/Random.h"
@@ -40,8 +41,10 @@
 namespace Crowny
 {
 
-    void Initializer::Init()
+    void Initializer::Init(const ApplicationDesc& applicationDesc)
     {
+		Crowny::Log::Init(applicationDesc.Name);
+
         ImGuiConsoleBuffer::StartUp();
 
         Importer::StartUp();

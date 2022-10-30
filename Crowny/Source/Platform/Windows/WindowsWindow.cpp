@@ -1,5 +1,7 @@
 #include "cwpch.h"
 
+#if 0
+#include "Crowny/Application/Application.h"
 #include "Crowny/Events/ApplicationEvent.h"
 #include "Crowny/Events/KeyEvent.h"
 #include "Crowny/Events/MouseEvent.h"
@@ -13,7 +15,7 @@ namespace Crowny
 
     static void GLFWErrorCallback(int error, const char* desc) { CW_ENGINE_ERROR("GLFW Error ({0})", desc); }
 
-    WindowsWindow::WindowsWindow(const WindowProperties& props) { Init(props); }
+    WindowsWindow::WindowsWindow(const WindowConfig& config) { Init(config); }
 
     void WindowsWindow::OnUpdate()
     {
@@ -23,11 +25,11 @@ namespace Crowny
 
     WindowsWindow::~WindowsWindow() { Shutdown(); }
 
-    void WindowsWindow::Init(const WindowProperties& props)
+    void WindowsWindow::Init(const WindowConfig& config)
     {
-        m_Data.Title = props.Title;
-        m_Data.Width = props.Width;
-        m_Data.Height = props.Height;
+        m_Data.Title = config.Name;
+        m_Data.Width = config.Width;
+        m_Data.Height = config.Height;
 
 #ifdef CW_DEBUG
         CW_ENGINE_WARN("Creating Window: {0}", m_Data.Title);
@@ -44,7 +46,7 @@ namespace Crowny
         if (Renderer::GetAPI() == RenderAPI::API::OpenGL)
             glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 #endif
-        m_Window = glfwCreateWindow((int)props.Width, (int)props.Height, m_Data.Title.c_str(), nullptr, nullptr);
+        m_Window = glfwCreateWindow((int)config.Width, (int)config.Height, config.Name.c_str(), nullptr, nullptr);
         s_GLFWWindowCount++;
 
         m_Context = GraphicsContext::Create(m_Window);
@@ -192,16 +194,5 @@ namespace Crowny
             glfwTerminate();
     }
 
-    void WindowsWindow::SetVSync(bool enabled)
-    {
-        if (enabled)
-            glfwSwapInterval(1);
-        else
-            glfwSwapInterval(0);
-
-        m_Data.VSync = enabled;
-    }
-
-    bool WindowsWindow::IsVSync() const { return m_Data.VSync; }
-
 } // namespace Crowny
+#endif

@@ -1,5 +1,6 @@
 #pragma once
 
+#if 0
 #include "Crowny/RenderAPI/GraphicsContext.h"
 #include "Crowny/Window/Window.h"
 
@@ -8,10 +9,12 @@
 namespace Crowny
 {
 
+    struct WindowDesc;
+
     class WindowsWindow : public Window
     {
     public:
-        WindowsWindow(const WindowProperties& props);
+        WindowsWindow(const WindowDesc& windowDesc);
         ~WindowsWindow();
 
         virtual void OnUpdate() override;
@@ -27,12 +30,9 @@ namespace Crowny
 
         virtual void SetEventCallback(const EventCallbackFn& callback) override { m_Data.EventCallback = callback; };
         virtual void* GetNativeWindow() const override { return m_Window; }
-
-        virtual void SetVSync(bool enabled) override;
-        virtual bool IsVSync() const override;
-
+        virtual void SetHidden(bool hidden) { }
     private:
-        void Init(const WindowProperties& props);
+        void Init(const WindowDesc& windowDesc);
         void Shutdown();
 
     private:
@@ -51,3 +51,4 @@ namespace Crowny
         WindowData m_Data;
     };
 } // namespace Crowny
+#endif

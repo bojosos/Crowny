@@ -8,11 +8,12 @@
 
 namespace Crowny
 {
+    class WindowDescription;
 
     class LinuxWindow : public Window
     {
     public:
-        LinuxWindow(const WindowProperties& props);
+        LinuxWindow(const WindowDesc& windowDesc);
         ~LinuxWindow();
 
         virtual void OnUpdate() override;
@@ -29,11 +30,15 @@ namespace Crowny
         virtual void SetEventCallback(const EventCallbackFn& callback) override { m_Data.EventCallback = callback; };
         virtual void* GetNativeWindow() const override { return m_Window; }
 
-        virtual void SetVSync(bool enabled) override;
-        virtual bool IsVSync() const override;
+        virtual void Move(int32_t left, int32_t top) override;
+        virtual void Resize(uint32_t width, uint32_t height) override;
+        virtual void SetHidden(bool hidden) override;
+		virtual void Minimize() override;
+		virtual void Maximize() override;
+		virtual void Restore() override;
 
     private:
-        void Init(const WindowProperties& props);
+        void Init(const WindowDesc& windowDesc);
         void Shutdown();
 
     private:

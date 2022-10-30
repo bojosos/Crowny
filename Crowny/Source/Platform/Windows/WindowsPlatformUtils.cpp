@@ -3,6 +3,7 @@
 #include "Crowny/Application/Application.h"
 #include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Common/Uuid.h"
+#include "Crowny/Window/Window.h"
 
 #include <GLFW/glfw3.h>
 

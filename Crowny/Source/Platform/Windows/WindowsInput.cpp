@@ -2,6 +2,7 @@
 
 #include "Crowny/Application/Application.h"
 #include "Crowny/Input/Input.h"
+#include "Crowny/Window/Window.h"
 
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>

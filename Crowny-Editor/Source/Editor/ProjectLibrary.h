@@ -29,7 +29,7 @@ namespace Crowny
         LibraryEntry(const Path& path, const String& name, DirectoryEntry* parent, LibraryEntryType type);
         virtual ~LibraryEntry() = default;
 
-        LibraryEntryType Type;
+        LibraryEntryType Type = LibraryEntryType::File;
         Path Filepath;
         String ElementName;
         size_t ElementNameHash = 0; // Bug: Since I use ToLower on the name before calculating the hash, on Unix

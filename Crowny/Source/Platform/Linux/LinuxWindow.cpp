@@ -14,48 +14,99 @@ namespace Crowny
 
     static void GLFWErrorCallback(int error, const char* desc) { CW_ENGINE_ERROR("GLFW Error ({0})", desc); }
 
-    LinuxWindow::LinuxWindow(const WindowProperties& props) { Init(props); }
+    LinuxWindow::LinuxWindow(const WindowDesc& windowDesc) { Init(windowDesc); }
+
+    LinuxWindow::~LinuxWindow() { Shutdown(); }
 
     void LinuxWindow::OnUpdate()
     {
         glfwPollEvents();
-        // m_Context->SwapBuffers();
-
-        // auto& rapi = RenderAPI::Get();
-        // rapi.SwapBuffers();
     }
 
-    LinuxWindow::~LinuxWindow() { Shutdown(); }
-
-    void LinuxWindow::Init(const WindowProperties& props)
+    void LinuxWindow::Init(const WindowDesc& windowDesc)
     {
-        m_Data.Title = props.Title;
-        m_Data.Width = props.Width;
-        m_Data.Height = props.Height;
+        m_Data.Title = windowDesc.Title;
+        m_Data.Width = windowDesc.Width;
+        m_Data.Height = windowDesc.Height;
+        // m_Data.VSync = windowDesc.VSync;
 
 #ifdef CW_DEBUG
         CW_ENGINE_WARN("Creating Window: {0}", m_Data.Title);
 #endif
         glfwSetErrorCallback(GLFWErrorCallback);
 
+        glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_TRUE);
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_SAMPLES, 8);
+        
+        if (!windowDesc.ShowTitleBar)
+        {
+            glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+        }
 
-        int32_t monitorCount = 0;
-        GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
-        for (int32_t i = 0; i < monitorCount; i++)
-            CW_ENGINE_INFO("Monitor: {0}, {1}", i, glfwGetMonitorName(monitors[i]));
+		if (windowDesc.StartMaximized || windowDesc.Hidden) {
+            glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+		}
 
-        /*int xpos, ypos;
-        glfwGetMonitorPos(monitors[1], &xpos, &ypos);
-        CW_ENGINE_INFO("{}, {}", xpos, ypos);*/
-        // glfwWindowHint(GLFW_MAXIMIZED, true);
-        m_Window = glfwCreateWindow((int)props.Width, (int)props.Height, m_Data.Title.c_str(), nullptr, nullptr);
-        /*int xpos2, ypos2;
-        glfwGetWindowPos(m_Window, &xpos2, &ypos2);
-        CW_ENGINE_INFO("{}, {}", xpos2, ypos2);
-        glfwSetWindowPos(m_Window, xpos, ypos2)*/
-        ;
+        if (!windowDesc.AllowResize) {
+            glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+        }
+
+		int32_t monitorCount = 0;
+		GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
+		const uint32_t monitorIdx = windowDesc.MonitorIdx;
+		CW_ENGINE_ASSERT(monitorCount > (int32_t)monitorIdx);
+		int areaX, areaY, areaWidth, areaHeight;
+        GLFWmonitor* monitor = monitors[monitorIdx];
+		glfwGetMonitorWorkarea(monitor, &areaX, &areaY, &areaWidth, &areaHeight);
+
+        // Normal fullscreen
+        if (windowDesc.ShowBorder && windowDesc.Fullscreen) {
+            m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(), monitor, nullptr);
+        } else if (!windowDesc.ShowBorder && windowDesc.Fullscreen) {
+            const GLFWvidmode* videoMode = glfwGetVideoMode(monitor);
+			glfwWindowHint(GLFW_RED_BITS, videoMode->redBits);
+			glfwWindowHint(GLFW_GREEN_BITS, videoMode->greenBits);
+			glfwWindowHint(GLFW_BLUE_BITS, videoMode->blueBits);
+			glfwWindowHint(GLFW_REFRESH_RATE, videoMode->refreshRate);
+            m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(), monitor, nullptr);
+        }
+        else if (!windowDesc.ShowBorder) { // Borderless windowed
+            glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+			m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(), nullptr, nullptr);
+		}
+		else { // Normal windowed
+			m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(), nullptr, nullptr);
+        }
+
+		// TODO: Fix this with monitors
+		int32_t left = windowDesc.Left;
+		int32_t top = windowDesc.Top;
+		
+		{
+		    int outerWidth = std::clamp((int)windowDesc.Width, 0, areaWidth);
+		    int outerHeight = std::clamp((int)windowDesc.Height, 0, areaHeight);
+		    if (left == -1)
+		        left = areaX + (areaWidth - outerWidth) / 2;
+		    else
+		        left += areaX;
+		
+		    if (top == -1)
+			    top = areaY + (areaHeight - outerHeight) / 2;
+		    else
+			    top += areaY;
+		}
+
+		glfwSetWindowPos(m_Window, 0, 0);
+
+		if (windowDesc.StartMaximized) {
+			glfwSetWindowPos(m_Window,
+				areaX + areaWidth / 2 - windowDesc.Width / 2,
+				areaY + areaHeight / 2 - windowDesc.Height / 2);
+			glfwMaximizeWindow(m_Window);
+			if (!windowDesc.Hidden)
+			 	glfwShowWindow(m_Window);
+		}
+
 #ifdef CW_DEBUG
         if (Renderer::GetAPI() == RenderAPI::API::OpenGL)
             glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,
@@ -64,10 +115,7 @@ namespace Crowny
 #endif
         Application::s_GLFWWindowCount++;
 
-        // m_Context = GraphicsContext::Create(m_Window);
-        // m_Context->Init();
         glfwSetWindowUserPointer(m_Window, &m_Data);
-        SetVSync(true);
 
         glfwSetWindowSizeCallback(m_Window, [](GLFWwindow* window, int width, int height) {
             WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
@@ -81,6 +129,20 @@ namespace Crowny
         glfwSetWindowCloseCallback(m_Window, [](GLFWwindow* window) {
             WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
             WindowCloseEvent event;
+            data.EventCallback(event);
+        });
+
+		glfwSetWindowIconifyCallback(m_Window, [](GLFWwindow* window, int iconified) {
+			WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+
+			WindowMinimizeEvent event;
+            data.EventCallback(event);
+		});
+
+        glfwSetWindowPosCallback(m_Window, [](GLFWwindow* window, int x, int y) {
+            WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+
+            WindowMoveEvent event(x, y);
             data.EventCallback(event);
         });
 
@@ -104,6 +166,19 @@ namespace Crowny
                 data.EventCallback(event);
                 break;
             }
+            }
+        });
+
+        glfwSetWindowFocusCallback(m_Window, [](GLFWwindow* window, int focus) {
+            WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+            if (focus == GLFW_TRUE)
+            {
+                WindowFocusEvent event;
+                data.EventCallback(event);
+            }
+            else {
+				WindowLostFocusEvent event;
+				data.EventCallback(event);
             }
         });
 
@@ -145,6 +220,7 @@ namespace Crowny
             MouseMovedEvent event((float)xPos, (float)yPos);
             data.EventCallback(event);
         });
+
     }
 
     void LinuxWindow::SetCursor(Cursor cursor)
@@ -192,6 +268,7 @@ namespace Crowny
 
     void LinuxWindow::Shutdown()
     {
+        glfwDestroyCursor(m_Cursor);
         glfwDestroyWindow(m_Window);
         Application::s_GLFWWindowCount--;
 
@@ -199,16 +276,38 @@ namespace Crowny
             glfwTerminate();
     }
 
-    void LinuxWindow::SetVSync(bool enabled)
+    void LinuxWindow::SetHidden(bool hidden)
     {
-        // if (enabled)
-        // glfwSwapInterval(1);
-        // else
-        // glfwSwapInterval(0);
-        //
-        // m_Data.VSync = enabled;
+        if (hidden)
+            glfwHideWindow(m_Window);
+        else
+            glfwShowWindow(m_Window);
     }
 
-    bool LinuxWindow::IsVSync() const { return m_Data.VSync; }
+    void LinuxWindow::Move(int32_t left, int32_t top)
+    {
+        glfwSetWindowPos(m_Window, left, top);
+    }
+
+    void LinuxWindow::Resize(uint32_t width, uint32_t height)
+    {
+        glfwSetWindowSize(m_Window, width, height);
+    }
+
+    void LinuxWindow::Minimize()
+    {
+        glfwIconifyWindow(m_Window);
+    }
+
+    void LinuxWindow::Maximize()
+    {
+        glfwMaximizeWindow(m_Window);
+    }
+
+    void LinuxWindow::Restore()
+    {
+        glfwRestoreWindow(m_Window);
+    }
+
 } // namespace Crowny
   // #endif

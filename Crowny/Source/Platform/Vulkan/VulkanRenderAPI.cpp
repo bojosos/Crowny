@@ -11,6 +11,7 @@
 
 #include "Crowny/Application/Application.h"
 #include "Crowny/RenderAPI/RenderCapabilities.h"
+#include "Crowny/Window/RenderWindow.h"
 
 #include "Crowny/Common/Timer.h"
 
