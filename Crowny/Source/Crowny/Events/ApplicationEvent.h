@@ -26,6 +26,55 @@ namespace Crowny
         uint32_t m_Width, m_Height;
     };
 
+    class WindowMinimizeEvent : public Event
+    {
+    public:
+		WindowMinimizeEvent() = default;
+
+		EVENT_CLASS_TYPE(WindowMinimize)
+		EVENT_CLASS_CATEGORY(EventCategoryApplication)
+    };
+
+    class WindowMoveEvent : public Event
+    {
+	public:
+		WindowMoveEvent(uint32_t left, uint32_t top) : m_Left(left), m_Top(top) {}
+
+		uint32_t GetLeft() const { return m_Left; }
+		uint32_t GetTop() const { return m_Top; }
+
+		String ToString() const override
+		{
+			Stringstream ss;
+			ss << "WindowMoveEvent: " << m_Left << ", " << m_Top;
+			return ss.str();
+		}
+
+		EVENT_CLASS_TYPE(WindowMove)
+		EVENT_CLASS_CATEGORY(EventCategoryApplication)
+
+	private:
+		uint32_t m_Left, m_Top;
+    };
+
+    class WindowFocusEvent : public Event
+	{
+	public:
+		WindowFocusEvent() = default;
+
+		EVENT_CLASS_TYPE(WindowFocus)
+		EVENT_CLASS_CATEGORY(EventCategoryApplication)
+    };
+
+	class WindowLostFocusEvent : public Event
+	{
+	public:
+		WindowLostFocusEvent () = default;
+
+		EVENT_CLASS_TYPE(WindowLostFocus)
+		EVENT_CLASS_CATEGORY(EventCategoryApplication)
+	};
+
     class WindowCloseEvent : public Event
     {
     public:

@@ -4,7 +4,6 @@
 
 #pragma warning(push, 0)
 #include <spdlog/spdlog.h>
-
 #include <spdlog/fmt/ostr.h>
 #pragma warning(pop)
 #include <glm/gtx/string_cast.hpp>
@@ -14,14 +13,16 @@ namespace Crowny
     class Log
     {
     public:
-        static void Init();
+        static void Init(const String& clientLoggerName);
 
+        static void RenameClientLogger(const StringView loggerName);
         static Ref<spdlog::logger>& GetClientLogger() { return s_ClientLogger; }
         static Ref<spdlog::logger>& GetEngineLogger() { return s_EngineLogger; }
 
     private:
         static Ref<spdlog::logger> s_ClientLogger;
         static Ref<spdlog::logger> s_EngineLogger;
+		static Vector<spdlog::sink_ptr> s_LogSinks;
     };
 } // namespace Crowny
 

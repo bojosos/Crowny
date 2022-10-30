@@ -86,7 +86,7 @@ namespace Crowny
             return s_IDBuffer;
         }
 
-        static const char* GenerateLabelID(std::string_view label)
+        static const char* GenerateLabelID(const StringView label)
         {
             *fmt::format_to_n(s_LabelIDBuffer, std::size(s_LabelIDBuffer), "{}##{}", label, s_Counter++).out = 0;
             return s_LabelIDBuffer;
@@ -232,7 +232,7 @@ namespace Crowny
             return ImGui::IsItemHovered() && GImGui->HoveredIdTimer > delayInSeconds;
         }
 
-        static void SetTooltip(std::string_view text, float delayInSeconds = 0.02f, bool allowWhenDisabled = true,
+        static void SetTooltip(const StringView text, float delayInSeconds = 0.02f, bool allowWhenDisabled = true,
                                ImVec2 padding = ImVec2(5, 5))
         {
             if (IsItemHovered(delayInSeconds, allowWhenDisabled ? ImGuiHoveredFlags_AllowWhenDisabled : 0))

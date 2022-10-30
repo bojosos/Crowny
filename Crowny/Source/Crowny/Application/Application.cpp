@@ -3,6 +3,7 @@
 #include "Crowny/Application/Application.h"
 
 #include "Crowny/Application/Initializer.h"
+#include "Crowny/Window/RenderWindow.h"
 
 #include "Crowny/Common/Common.h"
 #include "Crowny/Common/Log.h"
@@ -37,26 +38,23 @@ namespace Crowny
 
     Application* Application::s_Instance = nullptr;
 
-    Application::Application(const String& name)
+    Application::Application(const ApplicationDesc& applicationDesc)
     {
         CW_ENGINE_ASSERT(!s_Instance, "Application already exists!");
         s_Instance = this;
 
         m_LayerStack = new LayerStack();
-        RenderWindowProperties props;
-        props.Title = name;
-        props.Width = 1920;
-        props.Height = 1080;
 
         if (s_GLFWWindowCount == 0)
         {
             int success = glfwInit();
             CW_ENGINE_ASSERT(success, "Could not initialize GLFW!");
         }
-        Initializer::Init();
+        Initializer::Init(applicationDesc);
 
-        m_Window = RenderWindow::Create(props);
+        m_Window = RenderWindow::Create(applicationDesc.Window);
         m_Window->GetWindow()->SetEventCallback(CW_BIND_EVENT_FN(Application::OnEvent));
+        
         switch (Renderer::GetAPI())
         {
         case RenderAPI::API::OpenGL:
@@ -99,6 +97,7 @@ namespace Crowny
     {
         EventDispatcher dispatcher(e);
         dispatcher.Dispatch<WindowCloseEvent>(CW_BIND_EVENT_FN(Application::OnWindowClose));
+        dispatcher.Dispatch<WindowMinimizeEvent>(CW_BIND_EVENT_FN(Application::OnWindowMinimized));
         dispatcher.Dispatch<WindowResizeEvent>(CW_BIND_EVENT_FN(Application::OnWindowResize));
         dispatcher.Dispatch<MouseScrolledEvent>(CW_BIND_EVENT_FN(Application::OnMouseScroll));
 
@@ -115,6 +114,8 @@ namespace Crowny
         Input::OnMouseScroll(event.GetXOffset(), event.GetYOffset());
         return false;
     }
+
+    Window& Application::GetWindow() const { return *m_Window->GetWindow(); }
 
     void Application::Run()
     {
@@ -173,5 +174,11 @@ namespace Crowny
         m_Minimized = false;
         Renderer::OnWindowResize(e.GetWidth(), e.GetHeight());
         return false;
+    }
+
+    bool Application::OnWindowMinimized(WindowMinimizeEvent& e)
+    {
+        m_Minimized = true;
+        return true;
     }
 } // namespace Crowny
