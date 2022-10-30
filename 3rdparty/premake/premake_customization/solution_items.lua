@@ -1,3 +1,4 @@
+-- Implement the solution_items command for solution-scope files
 require('vstudio')
 
 premake.api.register {
