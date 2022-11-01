@@ -18,12 +18,6 @@ namespace Crowny
         SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "Collider2D");
 
         ScriptCollider2D(MonoObject* instance, Entity entity);
-
-    private:
-        static bool Internal_IsTrigger(ScriptCollider2D* thisPtr);
-        static void Internal_SetTrigger(ScriptCollider2D* thisPtr, bool trigger);
-        static void Internal_GetOffset(ScriptCollider2D* thisPtr, glm::vec2* offset);
-        static void Internal_SetOffset(ScriptCollider2D* thisPtr, glm::vec2* offset);
     };
 
     class ScriptBoxCollider2D
@@ -35,7 +29,12 @@ namespace Crowny
 
     private:
         static void Internal_GetSize(ScriptBoxCollider2D* thisPtr, glm::vec2* offset);
-        static void Internal_SetSize(ScriptBoxCollider2D* thisPtr, glm::vec2* offset);
+		static void Internal_SetSize(ScriptBoxCollider2D* thisPtr, glm::vec2* offset);
+
+		static bool Internal_IsTrigger(ScriptBoxCollider2D* thisPtr);
+		static void Internal_SetTrigger(ScriptBoxCollider2D* thisPtr, bool trigger);
+		static void Internal_GetOffset(ScriptBoxCollider2D* thisPtr, glm::vec2* offset);
+		static void Internal_SetOffset(ScriptBoxCollider2D* thisPtr, glm::vec2* offset);
     };
 
     class ScriptCircleCollider2D
@@ -49,5 +48,10 @@ namespace Crowny
     private:
         static float Internal_GetRadius(ScriptCircleCollider2D* thisPtr);
         static void Internal_SetRadius(ScriptCircleCollider2D* thisPtr, float radius);
+
+		static bool Internal_IsTrigger(ScriptCircleCollider2D* thisPtr);
+		static void Internal_SetTrigger(ScriptCircleCollider2D* thisPtr, bool trigger);
+		static void Internal_GetOffset(ScriptCircleCollider2D* thisPtr, glm::vec2* offset);
+		static void Internal_SetOffset(ScriptCircleCollider2D* thisPtr, glm::vec2* offset);
     };
 } // namespace Crowny

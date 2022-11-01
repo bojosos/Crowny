@@ -1,1 +1,1 @@
-3rdparty/premake/premake5 gmake2
+3rdparty/premake/bin/premake5 gmake2
