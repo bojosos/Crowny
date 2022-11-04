@@ -19,7 +19,9 @@ namespace Crowny
 
         public float x;
         public float y;
-        
+
+        public const float kEpsilon = 0.000001F;
+
         /// <summary>
         /// Creates a new Vector2.
         /// </summary>
@@ -124,6 +126,19 @@ namespace Crowny
             y *= scale.y;
         }
 
+        /// <summary>
+        /// Linearly interpolates between two vector.
+        /// </summary>
+        /// <param name="a">Starting vector.</param>
+        /// <param name="b">Ending vector.</param>
+        /// <param name="t">Interpolation factor.</param>
+        /// <returns>Interpolated vector</returns>
+        public static Vector2 Lerp(Vector2 a, Vector2 b, float t)
+        {
+            t = Mathf.Clamp01(t);
+            return new Vector2(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t);
+        }
+
         public static Vector2 operator+(Vector2 a, Vector2 b)
         {
             return new Vector2(a.x + b.x, a.y + b.y);
@@ -160,7 +175,10 @@ namespace Crowny
 
         public static bool operator==(Vector2 l, Vector2 r)
         {
-            return l.x == r.x && l.y == r.y;
+            float dx = l.x - r.x;
+            float dy = l.y - r.y;
+            float sqrMag = dx * dx + dy * dy;
+            return sqrMag < kEpsilon * kEpsilon;
         }
 
         public static bool operator!=(Vector2 l, Vector2 r)
@@ -192,7 +210,7 @@ namespace Crowny
         }
 
         /// <summary>
-        /// Calculates the dinstance between two points.
+        /// Calculates the distance between two points.
         /// </summary>
         /// <param name="a">First two dimensional point.</param>
         /// <param name="b">First two dimensional point.</param>
@@ -215,11 +233,11 @@ namespace Crowny
         }
 
         /// <summary>
-        /// Returns the minumum of all the vector components as a new vector.
+        /// Returns the minimum of all the vector components as a new vector.
         /// </summary>
         /// <param name="a">First vector.</param>
         /// <param name="b">Second vector.</param>
-        /// <returns>Vector with the minumum components of the two vectors.</returns>
+        /// <returns>Vector with the minimum components of the two vectors.</returns>
         public static Vector2 Min(Vector2 a, Vector2 b)
         {
             return new Vector2(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y));
