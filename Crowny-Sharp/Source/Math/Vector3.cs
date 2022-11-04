@@ -23,6 +23,8 @@ namespace Crowny
         public float y;
         public float z;
 
+        public const float kEpsilon = 0.000001F;
+
         /// <summary>
         /// Access a component of the vector.
         /// </summary>
@@ -158,7 +160,11 @@ namespace Crowny
 
         public static bool operator==(Vector3 l, Vector3 r)
         {
-            return l.x == r.x && l.y == r.y && l.z == r.z;
+            float dx = l.x - r.x;
+            float dy = l.y - r.y;
+            float dz = l.z - r.z;
+            float sqrMag = dx * dx + dy * dy + dz * dz;
+            return sqrMag < kEpsilon * kEpsilon;
         }
 
         public static bool operator!=(Vector3 l, Vector3 r)
@@ -167,7 +173,7 @@ namespace Crowny
         }
 
         /// <summary>
-        /// Calculates the magniuted of a Vector3.
+        /// Calculates the magnitude of a Vector3.
         /// </summary>
         /// <param name="v">The Vector3 to calculate the magnited of.</param>
         /// <returns>The magnitude of the vector.</returns>
@@ -190,7 +196,7 @@ namespace Crowny
         }
 
         /// <summary>
-        /// Calculates the dinstance between two points.
+        /// Calculates the distance between two points.
         /// </summary>
         /// <param name="a">First two dimensional point.</param>
         /// <param name="b">First two dimensional point.</param>
@@ -213,11 +219,24 @@ namespace Crowny
         }
 
         /// <summary>
-        /// Returns the minumum of all the vector components as a new vector.
+        /// Linearly interpolates between two vector.
+        /// </summary>
+        /// <param name="a">Starting vector.</param>
+        /// <param name="b">Ending vector.</param>
+        /// <param name="t">Interpolation factor.</param>
+        /// <returns>Interpolated vector</returns>
+        public static Vector3 Lerp(Vector3 a, Vector3 b, float t)
+        {
+            t = Mathf.Clamp01(t);
+            return new Vector3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
+        }
+
+        /// <summary>
+        /// Returns the minimum of all the vector components as a new vector.
         /// </summary>
         /// <param name="a">First vector.</param>
         /// <param name="b">Second vector.</param>
-        /// <returns>Vector with the minumum components of the two vectors</returns>
+        /// <returns>Vector with the minimum components of the two vectors</returns>
         public static Vector3 Min(Vector3 a, Vector3 b)
         {
             return new Vector3(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Min(a.z, b.z));

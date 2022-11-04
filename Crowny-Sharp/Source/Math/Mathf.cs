@@ -242,7 +242,7 @@ namespace Crowny
         }
 
         /// <summary>
-        /// Liearly interpolates between two values.
+        /// Linearly interpolates between two values.
         /// </summary>
         /// <param name="a">Starting value.</param>
         /// <param name="b">Ending value.</param>
