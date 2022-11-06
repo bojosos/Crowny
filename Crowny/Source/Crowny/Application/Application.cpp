@@ -13,6 +13,7 @@
 #include "Crowny/ImGui/ImGuiOpenGLLayer.h"
 #include "Crowny/ImGui/ImGuiVulkanLayer.h"
 #include "Crowny/Input/Input.h"
+#include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/Renderer.h"
 
@@ -38,7 +39,7 @@ namespace Crowny
 
     Application* Application::s_Instance = nullptr;
 
-    Application::Application(const ApplicationDesc& applicationDesc)
+    Application::Application(const ApplicationDesc& applicationDesc) : m_Desc(applicationDesc)
     {
         CW_ENGINE_ASSERT(!s_Instance, "Application already exists!");
         s_Instance = this;
@@ -109,11 +110,8 @@ namespace Crowny
         }
     }
 
-    bool Application::OnMouseScroll(MouseScrolledEvent& event)
-    {
-        Input::OnMouseScroll(event.GetXOffset(), event.GetYOffset());
-        return false;
-    }
+	Ref<TimeSettings> Application::GetTimeSettings() const { return m_TimeSettings; }
+	void Application::SetTimeSettings(const Ref<TimeSettings>& timeSettings) { m_TimeSettings = timeSettings; }
 
     Window& Application::GetWindow() const { return *m_Window->GetWindow(); }
 
@@ -156,6 +154,12 @@ namespace Crowny
         }
 #endif
     }
+
+	bool Application::OnMouseScroll(MouseScrolledEvent& event)
+	{
+		Input::OnMouseScroll(event.GetXOffset(), event.GetYOffset());
+		return false;
+	}
 
     bool Application::OnWindowClose(WindowCloseEvent& e)
     {

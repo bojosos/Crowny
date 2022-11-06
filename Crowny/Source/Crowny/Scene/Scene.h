@@ -46,6 +46,8 @@ namespace Crowny
         void OnRuntimePause();
         void OnRuntimeStop();
 
+        void OnFixedUpdate(Timestep ts);
+
         void OnSimulationStart();
         void OnSimulationUpdate(Timestep ts);
         void OnSimulationEnd();

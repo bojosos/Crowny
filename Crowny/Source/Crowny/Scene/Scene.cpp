@@ -277,7 +277,12 @@ namespace Crowny
 
     void Scene::OnUpdateEditor(Timestep ts) {}
 
-    void Scene::OnUpdateRuntime(Timestep ts) { Physics2D::Get().Step(ts, this); }
+    void Scene::OnUpdateRuntime(Timestep ts) { }
+
+    void Scene::OnFixedUpdate(Timestep ts)
+    {
+        Physics2D::Get().Step(ts, this);
+    }
 
     Entity Scene::CreateEntity(const String& name)
     {
