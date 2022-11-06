@@ -67,6 +67,7 @@ namespace Crowny
         void UI_GizmoSettings();
         void UI_Settings();
         void UI_Physics2DSettings();
+        void UI_TimeSettings();
         void UI_ScriptInfo();
         void UI_AssetInfo();
         void UI_EntityDebugInfo();
@@ -87,6 +88,7 @@ namespace Crowny
         ConsolePanel* m_ConsolePanel = nullptr;
         AssetBrowserPanel* m_AssetBrowser = nullptr;
 
+        bool m_ShowTimeSettings = false;
         bool m_ShowDemoWindow = false;
         bool m_ShowColliders = false;
         bool m_AutoLoadLastProject = false;

@@ -2,6 +2,7 @@
 
 #include "Crowny/Serialization/SceneSerializer.h"
 
+#include "Crowny/Application/Application.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/Uuid.h"
@@ -12,6 +13,8 @@
 
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/Serialization/SerializableObject.h"
+
+#include "Crowny/Serialization/SettingsSerializer.h"
 
 #include "Crowny/Ecs/Components.h"
 
@@ -155,6 +158,7 @@ namespace Crowny
             out << YAML::Key << "AngularDrag" << YAML::Value << rb2d.GetAngularDrag();
             out << YAML::Key << "LayerMask" << YAML::Value << rb2d.GetLayerMask();
             out << YAML::Key << "AutoMass" << YAML::Value << rb2d.GetAutoMass();
+            out << YAML::Key << "Interpolation" << YAML::Value << (uint32_t)rb2d.GetInterpolationMode();
             out << YAML::EndMap;
         }
 
@@ -215,6 +219,10 @@ namespace Crowny
         });
 
         out << YAML::EndSeq << YAML::EndMap;
+
+        TimeSettingsSerializer::Serialize(Application::Get().GetTimeSettings(), out);
+        Physics2DSettingsSerializer::Serialize(Physics2D::Get().GetPhysicsSettings(), out);
+
         m_Scene->m_Filepath = filepath;
         Ref<DataStream> stream = FileSystem::CreateAndOpenFile(filepath);
         const char* str = out.c_str();
@@ -380,7 +388,7 @@ namespace Crowny
                         bc2dc.SetOffset(bc2d["Offset"].as<glm::vec2>(), deserialized);
                         bc2dc.SetSize(bc2d["Size"].as<glm::vec2>(), deserialized);
                         bc2dc.SetIsTrigger(bc2d["IsTrigger"].as<bool>());
-                        bc2dc.SetMaterial(loadPhysicsMaterial(bc2d));
+                        // bc2dc.SetMaterial(loadPhysicsMaterial(bc2d));
                     }
 
                     const YAML::Node& cc2d = entity["CircleCollider2D"];
@@ -390,7 +398,7 @@ namespace Crowny
                         cc2dc.SetOffset(cc2d["Offset"].as<glm::vec2>(), deserialized);
                         cc2dc.SetRadius(cc2d["Size"].as<float>(), deserialized);
                         cc2dc.SetIsTrigger(cc2d["IsTrigger"].as<bool>());
-                        cc2dc.SetMaterial(loadPhysicsMaterial(cc2d));
+                        // cc2dc.SetMaterial(loadPhysicsMaterial(cc2d));
                     }
 
                     const YAML::Node& rb2d = entity["Rigidbody2D"];
@@ -408,6 +416,7 @@ namespace Crowny
                         rb2dc.SetAngularDrag(rb2d["AngularDrag"].as<float>(0.05f));
                         rb2dc.SetConstraints((Rigidbody2DConstraints)rb2d["Constraints"].as<uint32_t>());
                         rb2dc.SetAutoMass(rb2d["AutoMass"].as<bool>(false), deserialized);
+                        rb2dc.SetInterpolationMode((RigidbodyInterpolation)rb2d["Interpolation"].as<uint32_t>());
                     }
 
                     const YAML::Node& rel = entity["RelationshipComponent"];
@@ -436,6 +445,11 @@ namespace Crowny
             }
             if (root)
                 m_Scene->m_RootEntity = new Entity(root.GetHandle(), m_Scene.get());
+
+            const Ref<TimeSettings>& timeSettings = TimeSettingsSerializer::Deserialize(data);
+            Application::Get().SetTimeSettings(timeSettings);
+            const Ref<Physics2DSettings>& physicsSettings = Physics2DSettingsSerializer::Deserialize(data);
+            Physics2D::Get().SetPhysicsSettings(physicsSettings);
         }
         catch (const std::exception& ex)
         {

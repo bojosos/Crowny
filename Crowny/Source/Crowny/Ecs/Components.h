@@ -344,6 +344,13 @@ namespace Crowny
         Continuous = 1
     };
 
+    enum class RigidbodyInterpolation
+    {
+        None = 0,
+        Interpolate = 1,
+        Extrapolate = 2
+    };
+
     struct Rigidbody2DComponent : public ComponentBase
     {
         Rigidbody2DComponent() : ComponentBase() {}
@@ -362,6 +369,7 @@ namespace Crowny
         void SetLinearDrag(float value);
         void SetAutoMass(bool autoMass, Entity entity);
         void SetCenterOfMass(const glm::vec2& center);
+        void SetInterpolationMode(RigidbodyInterpolation interpolation);
 
         float GetMass() const;
         float GetGravityScale() const { return m_GravityScale; }
@@ -373,6 +381,7 @@ namespace Crowny
         float GetLinearDrag() const { return m_LinearDrag; }
         bool GetAutoMass() const { return m_AutoMass; }
         glm::vec2 GetCenterOfMass() const;
+        RigidbodyInterpolation GetInterpolationMode() const { return m_InterpolationMode; }
 
         b2Body* RuntimeBody = nullptr;
 
@@ -387,8 +396,8 @@ namespace Crowny
         float m_AngularDrag = 0.05f;
         bool m_AutoMass = false;
         glm::vec2 m_CenterOfMass = { 0.0f, 0.0f };
-
         CollisionDetectionMode2D m_ContinuousCollisionDetection = CollisionDetectionMode2D::Discrete;
+        RigidbodyInterpolation m_InterpolationMode = RigidbodyInterpolation::None;
     };
 
     template <> void ComponentEditorWidget<Rigidbody2DComponent>(Entity e);
