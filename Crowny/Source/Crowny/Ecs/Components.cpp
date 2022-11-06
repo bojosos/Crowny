@@ -281,6 +281,11 @@ namespace Crowny
         m_CenterOfMass = center;
     }
 
+    void Rigidbody2DComponent::SetInterpolationMode(RigidbodyInterpolation interpolation)
+    {
+        m_InterpolationMode = interpolation;
+    }
+
     void Collider2D::SetIsTrigger(bool trigger)
     {
         if (RuntimeFixture != nullptr)

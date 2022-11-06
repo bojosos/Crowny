@@ -22,6 +22,7 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_SetName", (void*)&Internal_SetName);
         MetaData.ScriptClass->AddInternalCall("Internal_GetParent", (void*)&Internal_GetParent);
         MetaData.ScriptClass->AddInternalCall("Internal_SetParent", (void*)&Internal_SetParent);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetUUID", (void*)&Internal_GetUUID);
         MetaData.ScriptClass->AddInternalCall("Internal_FindByName", (void*)&Internal_FindEntityByName);
 
         MetaData.ScriptClass->AddInternalCall("Internal_GetComponent", (void*)&Internal_GetComponent);
@@ -39,6 +40,11 @@ namespace Crowny
     void ScriptEntity::Internal_SetName(ScriptEntity* thisPtr, MonoString* string)
     {
         thisPtr->GetNativeEntity().GetComponent<TagComponent>().Tag = MonoUtils::FromMonoString(string);
+    }
+
+    void ScriptEntity::Internal_GetUUID(ScriptEntity* thisPtr, UUID* uuid)
+    {
+        *uuid = thisPtr->GetNativeEntity().GetUuid();
     }
 
     MonoObject* ScriptEntity::Internal_GetParent(ScriptEntity* thisPtr)

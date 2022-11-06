@@ -655,6 +655,7 @@ namespace Crowny
         UI_GizmoSettings();
         UI_Settings();
         UI_Physics2DSettings();
+        UI_TimeSettings();
 
 #ifdef CW_DEBUG
         UI_ScriptInfo();
@@ -941,6 +942,7 @@ namespace Crowny
                 UI::EndPropertyGrid();
             }
 
+            // Varadrov cries here
             if (ImGui::CollapsingHeader("Collision Matrix"))
             {
                 UI::PushID();
@@ -997,6 +999,16 @@ namespace Crowny
                 UI::PopID();
             }
         }
+        ImGui::End();
+    }
+
+    void EditorLayer::UI_TimeSettings()
+    {
+        ImGui::Begin("Time Settings", &m_ShowTimeSettings);
+        const Ref<TimeSettings>& timeSettings = Application::Get().GetTimeSettings();
+        UI::Property("Time Scale", timeSettings->TimeScale);
+        UI::Property("Fixed Timestep", timeSettings->FixedTimestep);
+        UI::Property("Max Timestep", timeSettings->MaxTimestep);
         ImGui::End();
     }
 

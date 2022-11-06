@@ -13,6 +13,7 @@ namespace Crowny
 {
 
     class Window;
+    struct TimeSettings;
 
     struct ScriptConfig
     {
@@ -42,8 +43,11 @@ namespace Crowny
 
         Window& GetWindow() const;
         const Ref<RenderWindow>& GetRenderWindow() const { return m_Window; }
+        Ref<TimeSettings> GetTimeSettings() const;
+        void SetTimeSettings(const Ref<TimeSettings>& timeSettings);
         ImGuiLayer* GetImGuiLayer() { return m_ImGuiLayer; }
         void Exit();
+        const ApplicationDesc& GetApplicationDesc() const { return m_Desc; }
 
         static Application& Get() { return *s_Instance; }
 
@@ -57,12 +61,14 @@ namespace Crowny
 
     private:
         Ref<RenderWindow> m_Window;
+        Ref<TimeSettings> m_TimeSettings;
         bool m_Running = true;
         bool m_Minimized = false;
         float m_LastFrameTime = 0.0f;
 
         LayerStack* m_LayerStack;
         ImGuiLayer* m_ImGuiLayer;
+        ApplicationDesc m_Desc;
 
     private:
         static Application* s_Instance;
