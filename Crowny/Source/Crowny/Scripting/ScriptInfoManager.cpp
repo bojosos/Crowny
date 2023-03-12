@@ -113,6 +113,7 @@ namespace Crowny
         return klass->GetFullName() == m_Builtin.Vector2->GetFullName() ||
                klass->GetFullName() == m_Builtin.Vector3->GetFullName() ||
                klass->GetFullName() == m_Builtin.Vector4->GetFullName() ||
+               klass->GetFullName() == m_Builtin.Color->GetFullName()   ||
                klass->GetFullName() == m_Builtin.Matrix4->GetFullName();
     }
 
@@ -239,12 +240,12 @@ namespace Crowny
                     MonoField* showAlphaField = m_Builtin.ColorUsageAttribute->GetField("showAlpha");
                     MonoField* hdrField = m_Builtin.ColorUsageAttribute->GetField("hdr");
 
-                    bool noAlpha = false;
-                    showAlphaField->Get(colorUsage, &noAlpha);
+                    bool showAlpha = false;
+                    showAlphaField->Get(colorUsage, &showAlpha);
                     bool hdr = false;
                     hdrField->Get(colorUsage, &hdr);
 
-                    if (noAlpha)
+                    if (!showAlpha)
                         fieldInfo->m_Flags.Set(ScriptFieldFlagBits::NoAlpha);
                     if (hdr)
                         fieldInfo->m_Flags.Set(ScriptFieldFlagBits::HDR);
@@ -527,8 +528,8 @@ namespace Crowny
             if (monoClass->GetFullName() == m_Builtin.Entity->GetFullName()) // Entity
             {
                 Ref<SerializableTypeInfoEntity> typeInfo = CreateRef<SerializableTypeInfoEntity>();
-                typeInfo->m_TypeNamespace = monoClass->GetNamespace();
-                typeInfo->m_TypeName = monoClass->GetName();
+                // typeInfo->m_TypeNamespace = monoClass->GetNamespace();
+                // typeInfo->m_TypeName = monoClass->GetName();
                 return typeInfo;
             }
             else if (monoClass->IsSubClassOf(ScriptAsset::GetMetaData()->ScriptClass)) // Asset

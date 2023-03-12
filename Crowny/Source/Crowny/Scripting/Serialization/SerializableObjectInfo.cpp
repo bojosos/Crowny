@@ -73,6 +73,7 @@ namespace Crowny
 
     bool SerializableTypeInfoPrimitive::Matches(const Ref<SerializableTypeInfo>& typeInfo) const
     {
+        CW_ENGINE_INFO("Here");
         if (typeInfo->GetType() == SerializableType::Primitive)
         {
             auto primitiveTypeInfo = std::static_pointer_cast<SerializableTypeInfoPrimitive>(typeInfo);
@@ -140,12 +141,7 @@ namespace Crowny
 
     bool SerializableTypeInfoEntity::Matches(const Ref<SerializableTypeInfo>& typeInfo) const
     {
-        if (typeInfo->GetType() == SerializableType::Entity)
-        {
-            const auto* entityTypeInfo = static_cast<SerializableTypeInfoEntity*>(typeInfo.get());
-            return entityTypeInfo->m_TypeNamespace == m_TypeNamespace && entityTypeInfo->m_TypeName == m_TypeName;
-        }
-        return false;
+        return typeInfo->GetType() == SerializableType::Entity;
     }
 
     ::MonoClass* SerializableTypeInfoEntity::GetMonoClass() const
