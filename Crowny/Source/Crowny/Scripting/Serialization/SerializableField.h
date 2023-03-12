@@ -214,6 +214,7 @@ namespace Crowny
 
         glm::vec3 Value = glm::vec3(0.0f);
     };
+
     class SerializableFieldVector4 : public SerializableFieldData
     {
     public:
@@ -225,6 +226,19 @@ namespace Crowny
 
         glm::vec4 Value = glm::vec4(0.0f);
     };
+
+    class SerializableFieldColor : public SerializableFieldData
+    {
+    public:
+        virtual void* GetValue() override { return &Value; }
+        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
+
+        virtual void SerializeYAML(YAML::Emitter& out) const { out << Value; }
+        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<glm::vec4>(glm::vec4(0.0f)); }
+
+        glm::vec4 Value = glm::vec4(0.0f);
+    };
+
     class SerializableFieldMatrix4 : public SerializableFieldData
     {
     public:

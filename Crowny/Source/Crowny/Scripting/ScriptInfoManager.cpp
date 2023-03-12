@@ -233,6 +233,23 @@ namespace Crowny
                 if (field->HasAttribute(m_Builtin.MultilineAttribute))
                     fieldInfo->m_Flags.Set(ScriptFieldFlagBits::Multiline);
 
+                if (field->HasAttribute(m_Builtin.ColorUsageAttribute))
+                {
+                    MonoObject* colorUsage = field->GetAttribute(m_Builtin.ColorUsageAttribute);
+                    MonoField* showAlphaField = m_Builtin.ColorUsageAttribute->GetField("showAlpha");
+                    MonoField* hdrField = m_Builtin.ColorUsageAttribute->GetField("hdr");
+
+                    bool noAlpha = false;
+                    showAlphaField->Get(colorUsage, &noAlpha);
+                    bool hdr = false;
+                    hdrField->Get(colorUsage, &hdr);
+
+                    if (noAlpha)
+                        fieldInfo->m_Flags.Set(ScriptFieldFlagBits::NoAlpha);
+                    if (hdr)
+                        fieldInfo->m_Flags.Set(ScriptFieldFlagBits::HDR);
+                }
+
                 // TODO: Also do of something better here. This is really bad.
                 if (field->HasAttribute(m_Builtin.HeaderAttribute))
                 {
@@ -310,6 +327,23 @@ namespace Crowny
                     propertyInfo->m_Flags.Set(ScriptFieldFlagBits::ReadOnly);
                 if (property->HasAttribute(m_Builtin.MultilineAttribute))
                     propertyInfo->m_Flags.Set(ScriptFieldFlagBits::Multiline);
+
+                if (property->HasAttribute(m_Builtin.ColorUsageAttribute))
+                {
+                    MonoObject* colorUsage = property->GetAttribute(m_Builtin.ColorUsageAttribute);
+                    MonoField* showAlphaField = m_Builtin.ColorUsageAttribute->GetField("showAlpha");
+                    MonoField* hdrField = m_Builtin.ColorUsageAttribute->GetField("hdr");
+
+                    bool noAlpha = false;
+                    showAlphaField->Get(colorUsage, &noAlpha);
+                    bool hdr = false;
+                    hdrField->Get(colorUsage, &hdr);
+
+                    if (noAlpha)
+                        propertyInfo->m_Flags.Set(ScriptFieldFlagBits::NoAlpha);
+                    if (hdr)
+                        propertyInfo->m_Flags.Set(ScriptFieldFlagBits::HDR);
+                }
 
                 // TODO: Do this in a better way. Maybe add some sort of additional info dictionary in the
                 // fields/properties.
@@ -457,6 +491,7 @@ namespace Crowny
             }
             else
             {
+                // TODO: Do this in a better way. Comparing names is kinda stupid.
                 Ref<SerializableTypeInfoPrimitive> typeInfo = CreateRef<SerializableTypeInfoPrimitive>();
                 if (monoClass->GetFullName() == m_Builtin.Vector2->GetFullName())
                     scriptPrimitiveType = ScriptPrimitiveType::Vector2;
@@ -464,6 +499,8 @@ namespace Crowny
                     scriptPrimitiveType = ScriptPrimitiveType::Vector3;
                 else if (monoClass->GetFullName() == m_Builtin.Vector4->GetFullName())
                     scriptPrimitiveType = ScriptPrimitiveType::Vector4;
+                else if (monoClass->GetFullName() == m_Builtin.Color->GetFullName())
+                    scriptPrimitiveType = ScriptPrimitiveType::Color;
                 else if (monoClass->GetFullName() == m_Builtin.Matrix4->GetFullName())
                     scriptPrimitiveType = ScriptPrimitiveType::Matrix4;
                 typeInfo->m_Type = scriptPrimitiveType;

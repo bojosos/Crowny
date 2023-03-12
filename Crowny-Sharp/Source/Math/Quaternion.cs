@@ -153,6 +153,7 @@ namespace Crowny
             if (!(other is Quaternion))
                 return false;
             Quaternion quat = (Quaternion)other;
+            return x.Equals(quat.x) && y.Equals(quat.y) && z.Equals(quat.z) && w.Equals(quat.w);
         }
     }
 }

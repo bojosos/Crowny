@@ -85,6 +85,29 @@ namespace Crowny
         return foundAttr;
     }
 
+    Vector<MonoClass*> MonoField::GetAttributes() const
+    {
+        Vector<MonoClass*> result;
+
+        ::MonoClass* parent = mono_field_get_parent(m_Field);
+        MonoCustomAttrInfo* attrInfo = mono_custom_attrs_from_field(parent, m_Field);
+        if (attrInfo == nullptr)
+            return result;
+        result.reserve(attrInfo->num_attrs);
+        for (uint32_t i = 0; i < (uint32_t)attrInfo->num_attrs; i++)
+        {
+            ::MonoClass* attributeClass = mono_method_get_class(attrInfo->attrs[i].ctor);
+            MonoClass* monoClass = MonoManager::Get().FindClass(attributeClass);
+
+            if (monoClass != nullptr)
+                result.push_back(monoClass);
+        }
+
+        mono_custom_attrs_free(attrInfo);
+
+        return result;
+    }
+
     bool MonoField::IsValueType() const { return m_Type->IsValueType(); }
 
     bool MonoField::IsStatic() const { return (mono_field_get_flags(m_Field) & MONO_FIELD_ATTR_STATIC) != 0; }

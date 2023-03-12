@@ -489,6 +489,7 @@ namespace Crowny
 
         if (m_SerializedObjectData != nullptr && !m_MissingType)
         {
+            // This is called with the wrong object info. Here the deserialized object info should be used. Also store the object data after reload with missnig classes in case they come back.
             m_SerializedObjectData->Deserialize(instance, m_ObjectInfo);
             m_SerializedObjectData = nullptr;
         }
