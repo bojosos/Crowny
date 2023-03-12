@@ -91,10 +91,9 @@ namespace Crowny
 
     struct TextComponent : public ComponentBase
     {
-        String Text = "";
-        Ref<::Crowny::Font> Font = nullptr;
-        glm::vec4 Color{ 0.0f, 0.3f, 0.3f, 1.0f };
-        // Crowny::Material Material;
+        String Text;
+        AssetHandle<Crowny::Font> Font;
+        glm::vec4 Color{ 1.0f, 1.0f, 1.0f, 1.0f };
 
         TextComponent();
         TextComponent(const TextComponent&) = default;

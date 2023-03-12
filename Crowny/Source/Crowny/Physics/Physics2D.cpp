@@ -324,30 +324,30 @@ namespace Crowny
                 linVelocty.y = 0;
             rb2d.RuntimeBody->SetLinearVelocity(linVelocty);
         }
-        
+
         m_TimestepAcc += ts;
 
         const float fixedTimestep = Application::Get().GetTimeSettings()->FixedTimestep;
-		while (m_TimestepAcc >= fixedTimestep)
-		{
-			auto view2 = scene->GetAllEntitiesWith<Rigidbody2DComponent>();
-			for (auto e : view2)
-			{
-				Entity entity = { e, scene };
-				TransformComponent& transform = entity.GetTransform();
-				const Rigidbody2DComponent& rb2d = entity.GetComponent<Rigidbody2DComponent>();
-				const b2Vec2& position = rb2d.RuntimeBody->GetPosition();
-				const float angle = rb2d.RuntimeBody->GetAngle();
-				transform.Position.x = position.x;
-				transform.Position.y = position.y;
-				transform.Rotation.z = angle;
+        while (m_TimestepAcc >= fixedTimestep)
+        {
+            auto view2 = scene->GetAllEntitiesWith<Rigidbody2DComponent>();
+            for (auto e : view2)
+            {
+                Entity entity = { e, scene };
+                TransformComponent& transform = entity.GetTransform();
+                const Rigidbody2DComponent& rb2d = entity.GetComponent<Rigidbody2DComponent>();
+                const b2Vec2& position = rb2d.RuntimeBody->GetPosition();
+                const float angle = rb2d.RuntimeBody->GetAngle();
+                transform.Position.x = position.x;
+                transform.Position.y = position.y;
+                transform.Rotation.z = angle;
             }
 
-			m_PhysicsWorld2D->Step(fixedTimestep, m_Settings->VelocityIterations, m_Settings->PositionIterations);
-			m_TimestepAcc -= fixedTimestep;
-		}
+            m_PhysicsWorld2D->Step(fixedTimestep, m_Settings->VelocityIterations, m_Settings->PositionIterations);
+            m_TimestepAcc -= fixedTimestep;
+        }
 
-		const float alpha = m_TimestepAcc / fixedTimestep;
+        const float alpha = m_TimestepAcc / fixedTimestep;
 
         auto view2 = scene->GetAllEntitiesWith<Rigidbody2DComponent>();
         for (auto e : view2)
@@ -363,12 +363,13 @@ namespace Crowny
                 transform.Position.x = position.x;
                 transform.Position.y = position.y;
                 transform.Rotation.z = angle;
-            } else if (interpolation == RigidbodyInterpolation::Interpolate)
+            }
+            else if (interpolation == RigidbodyInterpolation::Interpolate)
             {
                 const float oneMinusAlpha = 1.0f - alpha;
                 transform.Position.x = position.x * alpha + transform.Position.x * oneMinusAlpha;
                 transform.Position.y = position.y * alpha + transform.Position.x * oneMinusAlpha;
-				transform.Rotation.z = angle * alpha + transform.Rotation.z * oneMinusAlpha;
+                transform.Rotation.z = angle * alpha + transform.Rotation.z * oneMinusAlpha;
             }
         }
     }

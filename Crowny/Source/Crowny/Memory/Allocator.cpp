@@ -99,6 +99,7 @@ namespace Crowny
         }
         else
         {
+            // TODO: Figure out why msdf is able to get in here. Maybe it uses some secret C++ allocator.
             CW_ENGINE_WARN("Memory: Memory block {0} not present in alloc map", memory);
         }
 

@@ -29,12 +29,12 @@ namespace Crowny
 
     private:
         static void Internal_GetSize(ScriptBoxCollider2D* thisPtr, glm::vec2* offset);
-		static void Internal_SetSize(ScriptBoxCollider2D* thisPtr, glm::vec2* offset);
+        static void Internal_SetSize(ScriptBoxCollider2D* thisPtr, glm::vec2* offset);
 
-		static bool Internal_IsTrigger(ScriptBoxCollider2D* thisPtr);
-		static void Internal_SetTrigger(ScriptBoxCollider2D* thisPtr, bool trigger);
-		static void Internal_GetOffset(ScriptBoxCollider2D* thisPtr, glm::vec2* offset);
-		static void Internal_SetOffset(ScriptBoxCollider2D* thisPtr, glm::vec2* offset);
+        static bool Internal_IsTrigger(ScriptBoxCollider2D* thisPtr);
+        static void Internal_SetTrigger(ScriptBoxCollider2D* thisPtr, bool trigger);
+        static void Internal_GetOffset(ScriptBoxCollider2D* thisPtr, glm::vec2* offset);
+        static void Internal_SetOffset(ScriptBoxCollider2D* thisPtr, glm::vec2* offset);
     };
 
     class ScriptCircleCollider2D
@@ -49,9 +49,9 @@ namespace Crowny
         static float Internal_GetRadius(ScriptCircleCollider2D* thisPtr);
         static void Internal_SetRadius(ScriptCircleCollider2D* thisPtr, float radius);
 
-		static bool Internal_IsTrigger(ScriptCircleCollider2D* thisPtr);
-		static void Internal_SetTrigger(ScriptCircleCollider2D* thisPtr, bool trigger);
-		static void Internal_GetOffset(ScriptCircleCollider2D* thisPtr, glm::vec2* offset);
-		static void Internal_SetOffset(ScriptCircleCollider2D* thisPtr, glm::vec2* offset);
+        static bool Internal_IsTrigger(ScriptCircleCollider2D* thisPtr);
+        static void Internal_SetTrigger(ScriptCircleCollider2D* thisPtr, bool trigger);
+        static void Internal_GetOffset(ScriptCircleCollider2D* thisPtr, glm::vec2* offset);
+        static void Internal_SetOffset(ScriptCircleCollider2D* thisPtr, glm::vec2* offset);
     };
 } // namespace Crowny

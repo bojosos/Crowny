@@ -247,9 +247,10 @@ namespace Crowny
         UI::Property("Text", textComponent.Text);
         UI::PropertyColor("Color", textComponent.Color);
 
-        String str = textComponent.Font->GetName();
-        UI::Property("Font", str);
+        // String str = textComponent.Font->GetName();
+        // UI::Property("Font", str);
         ImGui::Text("Font"); // Hook up drag drop here.
+        /*
 #ifdef CW_DEBUG
         ImGui::SameLine();
         if (ImGui::Button("Show Font Atlas"))
@@ -264,12 +265,13 @@ namespace Crowny
                            (float)textComponent.Font->GetTexture()->GetHeight() });
             ImGui::EndPopup();
         }
-#endif
+#endif*/
+
         ImGui::NextColumn();
 
-        float size = textComponent.Font->GetSize();
-        if (UI::Property("Font Size", size))
-            textComponent.Font = FontManager::Get(textComponent.Font->GetName(), size);
+        // float size = textComponent.Font->GetSize();
+        // if (UI::Property("Font Size", size))
+        // textComponent.Font = FontManager::Get(textComponent.Font->GetName(), size);
     }
 
     template <> void ComponentEditorWidget<SpriteRendererComponent>(Entity e)

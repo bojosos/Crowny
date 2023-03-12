@@ -72,13 +72,7 @@ namespace Crowny
         m_RootEntity->AddComponent<TagComponent>(m_Name);
         m_RootEntity->AddComponent<RelationshipComponent>();
 
-        m_Registry.on_construct<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentConstruct>(this);
-        m_Registry.on_destroy<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentDestroy>(this);
-        m_Registry.on_construct<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentConstruct>(this);
-        m_Registry.on_destroy<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentDestroy>(this);
-        m_Registry.on_construct<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentConstruct>(
-          this);
-        m_Registry.on_destroy<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentDestroy>(this);
+        RegisterEntityCallbacks();
     }
 
     Scene::Scene(Scene& other)
@@ -103,16 +97,7 @@ namespace Crowny
 
         CopyAllComponents(m_Registry, other.m_Registry, entityMap);
 
-        m_Registry.on_construct<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentConstruct>(this);
-        m_Registry.on_destroy<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentDestroy>(this);
-        m_Registry.on_construct<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentConstruct>(this);
-        m_Registry.on_destroy<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentDestroy>(this);
-        m_Registry.on_construct<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentConstruct>(
-          this);
-        m_Registry.on_destroy<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentDestroy>(this);
-
-        m_Registry.on_construct<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentomponentConstruct>(this);
-        m_Registry.on_destroy<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentComponentDestroy>(this);
+        RegisterEntityCallbacks();
     }
 
     Scene& Scene::operator=(Scene& other)
@@ -143,6 +128,20 @@ namespace Crowny
     }
 
     Scene::~Scene() { delete m_RootEntity; }
+
+    void Scene::RegisterEntityCallbacks()
+    {
+        m_Registry.on_construct<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentConstruct>(this);
+        m_Registry.on_destroy<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentDestroy>(this);
+        m_Registry.on_construct<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentConstruct>(this);
+        m_Registry.on_destroy<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentDestroy>(this);
+        m_Registry.on_construct<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentConstruct>(
+          this);
+        m_Registry.on_destroy<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentDestroy>(this);
+
+        m_Registry.on_construct<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentomponentConstruct>(this);
+        m_Registry.on_destroy<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentComponentDestroy>(this);
+    }
 
     Entity Scene::DuplicateEntity(Entity entity, bool includeChildren)
     {
@@ -227,7 +226,12 @@ namespace Crowny
             source.Play();
     }
 
-    void Scene::OnAudioSourceComponentComponentDestroy(entt::registry& registry, entt::entity entity) {}
+    void Scene::OnAudioSourceComponentComponentDestroy(entt::registry& registry, entt::entity entity)
+    {
+        Entity e = { entity, this };
+        auto& source = e.GetComponent<AudioSourceComponent>();
+        source.Stop();
+    }
 
     void Scene::OnRuntimeStart()
     {
@@ -277,12 +281,9 @@ namespace Crowny
 
     void Scene::OnUpdateEditor(Timestep ts) {}
 
-    void Scene::OnUpdateRuntime(Timestep ts) { }
+    void Scene::OnUpdateRuntime(Timestep ts) {}
 
-    void Scene::OnFixedUpdate(Timestep ts)
-    {
-        Physics2D::Get().Step(ts, this);
-    }
+    void Scene::OnFixedUpdate(Timestep ts) { Physics2D::Get().Step(ts, this); }
 
     Entity Scene::CreateEntity(const String& name)
     {

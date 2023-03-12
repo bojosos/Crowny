@@ -18,10 +18,7 @@ namespace Crowny
 
     LinuxWindow::~LinuxWindow() { Shutdown(); }
 
-    void LinuxWindow::OnUpdate()
-    {
-        glfwPollEvents();
-    }
+    void LinuxWindow::OnUpdate() { glfwPollEvents(); }
 
     void LinuxWindow::Init(const WindowDesc& windowDesc)
     {
@@ -37,75 +34,86 @@ namespace Crowny
 
         glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_TRUE);
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        
+
         if (!windowDesc.ShowTitleBar)
         {
             glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
         }
 
-		if (windowDesc.StartMaximized || windowDesc.Hidden) {
+        if (windowDesc.StartMaximized || windowDesc.Hidden)
+        {
             glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-		}
+        }
 
-        if (!windowDesc.AllowResize) {
+        if (!windowDesc.AllowResize)
+        {
             glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
         }
 
-		int32_t monitorCount = 0;
-		GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
-		const uint32_t monitorIdx = windowDesc.MonitorIdx;
-		CW_ENGINE_ASSERT(monitorCount > (int32_t)monitorIdx);
-		int areaX, areaY, areaWidth, areaHeight;
+        int32_t monitorCount = 0;
+        GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
+        const uint32_t monitorIdx = windowDesc.MonitorIdx;
+        CW_ENGINE_ASSERT(monitorCount > (int32_t)monitorIdx);
+        int areaX, areaY, areaWidth, areaHeight;
         GLFWmonitor* monitor = monitors[monitorIdx];
-		glfwGetMonitorWorkarea(monitor, &areaX, &areaY, &areaWidth, &areaHeight);
+        glfwGetMonitorWorkarea(monitor, &areaX, &areaY, &areaWidth, &areaHeight);
 
         // Normal fullscreen
-        if (windowDesc.ShowBorder && windowDesc.Fullscreen) {
-            m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(), monitor, nullptr);
-        } else if (!windowDesc.ShowBorder && windowDesc.Fullscreen) {
+        if (windowDesc.ShowBorder && windowDesc.Fullscreen)
+        {
+            m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(),
+                                        monitor, nullptr);
+        }
+        else if (!windowDesc.ShowBorder && windowDesc.Fullscreen)
+        {
             const GLFWvidmode* videoMode = glfwGetVideoMode(monitor);
-			glfwWindowHint(GLFW_RED_BITS, videoMode->redBits);
-			glfwWindowHint(GLFW_GREEN_BITS, videoMode->greenBits);
-			glfwWindowHint(GLFW_BLUE_BITS, videoMode->blueBits);
-			glfwWindowHint(GLFW_REFRESH_RATE, videoMode->refreshRate);
-            m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(), monitor, nullptr);
+            glfwWindowHint(GLFW_RED_BITS, videoMode->redBits);
+            glfwWindowHint(GLFW_GREEN_BITS, videoMode->greenBits);
+            glfwWindowHint(GLFW_BLUE_BITS, videoMode->blueBits);
+            glfwWindowHint(GLFW_REFRESH_RATE, videoMode->refreshRate);
+            m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(),
+                                        monitor, nullptr);
         }
-        else if (!windowDesc.ShowBorder) { // Borderless windowed
+        else if (!windowDesc.ShowBorder)
+        { // Borderless windowed
             glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
-			m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(), nullptr, nullptr);
-		}
-		else { // Normal windowed
-			m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(), nullptr, nullptr);
+            m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(),
+                                        nullptr, nullptr);
+        }
+        else
+        { // Normal windowed
+            m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(),
+                                        nullptr, nullptr);
         }
 
-		// TODO: Fix this with monitors
-		int32_t left = windowDesc.Left;
-		int32_t top = windowDesc.Top;
-		
-		{
-		    int outerWidth = std::clamp((int)windowDesc.Width, 0, areaWidth);
-		    int outerHeight = std::clamp((int)windowDesc.Height, 0, areaHeight);
-		    if (left == -1)
-		        left = areaX + (areaWidth - outerWidth) / 2;
-		    else
-		        left += areaX;
-		
-		    if (top == -1)
-			    top = areaY + (areaHeight - outerHeight) / 2;
-		    else
-			    top += areaY;
-		}
+        // TODO: Fix this with monitors
+        int32_t left = windowDesc.Left;
+        int32_t top = windowDesc.Top;
 
-		glfwSetWindowPos(m_Window, 0, 0);
+        {
+            int outerWidth = std::clamp((int)windowDesc.Width, 0, areaWidth);
+            int outerHeight = std::clamp((int)windowDesc.Height, 0, areaHeight);
+            if (left == -1)
+                left = areaX + (areaWidth - outerWidth) / 2;
+            else
+                left += areaX;
 
-		if (windowDesc.StartMaximized) {
-			glfwSetWindowPos(m_Window,
-				areaX + areaWidth / 2 - windowDesc.Width / 2,
-				areaY + areaHeight / 2 - windowDesc.Height / 2);
-			glfwMaximizeWindow(m_Window);
-			if (!windowDesc.Hidden)
-			 	glfwShowWindow(m_Window);
-		}
+            if (top == -1)
+                top = areaY + (areaHeight - outerHeight) / 2;
+            else
+                top += areaY;
+        }
+
+        glfwSetWindowPos(m_Window, 0, 0);
+
+        if (windowDesc.StartMaximized)
+        {
+            glfwSetWindowPos(m_Window, areaX + areaWidth / 2 - windowDesc.Width / 2,
+                             areaY + areaHeight / 2 - windowDesc.Height / 2);
+            glfwMaximizeWindow(m_Window);
+            if (!windowDesc.Hidden)
+                glfwShowWindow(m_Window);
+        }
 
 #ifdef CW_DEBUG
         if (Renderer::GetAPI() == RenderAPI::API::OpenGL)
@@ -132,12 +140,12 @@ namespace Crowny
             data.EventCallback(event);
         });
 
-		glfwSetWindowIconifyCallback(m_Window, [](GLFWwindow* window, int iconified) {
-			WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+        glfwSetWindowIconifyCallback(m_Window, [](GLFWwindow* window, int iconified) {
+            WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
 
-			WindowMinimizeEvent event;
+            WindowMinimizeEvent event;
             data.EventCallback(event);
-		});
+        });
 
         glfwSetWindowPosCallback(m_Window, [](GLFWwindow* window, int x, int y) {
             WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
@@ -176,9 +184,10 @@ namespace Crowny
                 WindowFocusEvent event;
                 data.EventCallback(event);
             }
-            else {
-				WindowLostFocusEvent event;
-				data.EventCallback(event);
+            else
+            {
+                WindowLostFocusEvent event;
+                data.EventCallback(event);
             }
         });
 
@@ -220,7 +229,6 @@ namespace Crowny
             MouseMovedEvent event((float)xPos, (float)yPos);
             data.EventCallback(event);
         });
-
     }
 
     void LinuxWindow::SetCursor(Cursor cursor)
@@ -284,30 +292,15 @@ namespace Crowny
             glfwShowWindow(m_Window);
     }
 
-    void LinuxWindow::Move(int32_t left, int32_t top)
-    {
-        glfwSetWindowPos(m_Window, left, top);
-    }
+    void LinuxWindow::Move(int32_t left, int32_t top) { glfwSetWindowPos(m_Window, left, top); }
 
-    void LinuxWindow::Resize(uint32_t width, uint32_t height)
-    {
-        glfwSetWindowSize(m_Window, width, height);
-    }
+    void LinuxWindow::Resize(uint32_t width, uint32_t height) { glfwSetWindowSize(m_Window, width, height); }
 
-    void LinuxWindow::Minimize()
-    {
-        glfwIconifyWindow(m_Window);
-    }
+    void LinuxWindow::Minimize() { glfwIconifyWindow(m_Window); }
 
-    void LinuxWindow::Maximize()
-    {
-        glfwMaximizeWindow(m_Window);
-    }
+    void LinuxWindow::Maximize() { glfwMaximizeWindow(m_Window); }
 
-    void LinuxWindow::Restore()
-    {
-        glfwRestoreWindow(m_Window);
-    }
+    void LinuxWindow::Restore() { glfwRestoreWindow(m_Window); }
 
 } // namespace Crowny
   // #endif

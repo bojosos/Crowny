@@ -27,181 +27,188 @@ namespace Crowny
         const UUID& uuid = entity.GetUuid();
         if (!entity)
             return;
-        out << YAML::BeginMap; // Entity
-        out << YAML::Key << "Entity" << YAML::Value << uuid;
+        BeginYAMLMap(out, "Entity");
 
         if (entity.HasComponent<TagComponent>())
         {
-            out << YAML::Key << "TagComponent";
-            out << YAML::BeginMap;
-            const String& tag = entity.GetComponent<TagComponent>().Tag;
-            out << YAML::Key << "Tag" << YAML::Value << tag;
-            out << YAML::EndMap;
+            BeginYAMLMap(out, "TagComponent");
+
+            SerializeValueYAML(out, "Tag", entity.GetName());
+
+            EndYAMLMap(out, "Entity");
         }
 
         if (entity.HasComponent<MonoScriptComponent>())
         {
-            auto msc = entity.GetComponent<MonoScriptComponent>();
+            const auto& msc = entity.GetComponent<MonoScriptComponent>();
             if (msc.Scripts.size() > 0)
             {
-                out << YAML::Key << "MonoScriptComponent";
-                out << YAML::BeginMap;
+                BeginYAMLMap(out, "MonoScriptComponent");
+
                 for (const auto& script : msc.Scripts)
                 {
-                    out << YAML::Key << script.GetTypeName() << YAML::Value;
-                    out << YAML::BeginSeq;
+                    SerializeValueYAML(out, script.GetTypeName().c_str(), YAML::BeginSeq);
+
                     Ref<SerializableObject> serializableObject =
                       SerializableObject::CreateFromMonoObject(script.GetManagedInstance());
                     serializableObject->SerializeYAML(out);
 
-                    out << YAML::EndSeq;
+                    EndYAMLSeq(out);
                 }
-                out << YAML::EndMap;
+                EndYAMLMap(out, "MonoScriptComponent");
             }
         }
 
         if (entity.HasComponent<AudioListenerComponent>())
-            out << YAML::Key << "AudioListenerComponent" << YAML::Value << "";
+            SerializeValueYAML(out, "AudioListenerComponent", YAML::Null);
 
         if (entity.HasComponent<AudioSourceComponent>())
         {
-            out << YAML::Key << "AudioSourceComponent";
-            out << YAML::BeginMap;
             const auto& asc = entity.GetComponent<AudioSourceComponent>();
+            BeginYAMLMap(out, "AudioSourceComponent");
 
-            out << YAML::Key << "AudioClip" << YAML::Value << asc.GetClip().GetUUID();
-            out << YAML::Key << "Volume" << YAML::Value << asc.GetVolume();
-            out << YAML::Key << "Pitch" << YAML::Value << asc.GetPitch();
-            out << YAML::Key << "Loop" << YAML::Value << asc.GetLooping();
-            out << YAML::Key << "MinDistance" << YAML::Value << asc.GetMinDistance();
-            out << YAML::Key << "MaxDistance" << YAML::Value << asc.GetMaxDistance();
-            out << YAML::Key << "PlayOnAwake" << YAML::Value << asc.GetPlayOnAwake();
-            out << YAML::Key << "Muted" << YAML::Value << asc.GetIsMuted();
-            out << YAML::EndMap;
+            SerializeValueYAML(out, "AudioClip", asc.GetClip().GetUUID());
+            SerializeValueYAML(out, "Volume", asc.GetVolume());
+            SerializeValueYAML(out, "Pitch", asc.GetPitch());
+            SerializeValueYAML(out, "Loop", asc.GetLooping());
+            SerializeValueYAML(out, "MinDistance", asc.GetMinDistance());
+            SerializeValueYAML(out, "MaxDistance", asc.GetMaxDistance());
+            SerializeValueYAML(out, "PlayOnAwake", asc.GetPlayOnAwake());
+            SerializeValueYAML(out, "Muted", asc.GetIsMuted());
+
+            EndYAMLMap(out, "AudioSourceComponent");
         }
 
         if (entity.HasComponent<TextComponent>())
         {
-            out << YAML::Key << "TextComponent";
-            out << YAML::BeginMap;
             const auto& tc = entity.GetComponent<TextComponent>();
-            out << YAML::Key << "Text" << YAML::Value << tc.Text;
-            out << YAML::Key << "Font" << YAML::Value << tc.Font->GetFilepath().string(); // TODO: Do this better
-            out << YAML::Key << "Color" << YAML::Value << tc.Color;
-            out << YAML::EndMap;
+            BeginYAMLMap(out, "TextComponent");
+
+            SerializeValueYAML(out, "Text", tc.Text);
+            SerializeValueYAML(out, "Color", tc.Color);
+            SerializeValueYAML(out, "Font", tc.Font.GetUUID());
+
+            EndYAMLMap(out, "TextComponent");
         }
 
         if (entity.HasComponent<TransformComponent>())
         {
-            out << YAML::Key << "TransformComponent";
-            out << YAML::BeginMap;
             const auto& tc = entity.GetComponent<TransformComponent>();
-            out << YAML::Key << "Position" << YAML::Value << tc.Position;
-            out << YAML::Key << "Rotation" << YAML::Value << tc.Rotation;
-            out << YAML::Key << "Scale" << YAML::Value << tc.Scale;
-            out << YAML::EndMap;
+            BeginYAMLMap(out, "TransformComponent");
+
+            SerializeValueYAML(out, "Position", tc.Position);
+            SerializeValueYAML(out, "Rotation", tc.Rotation);
+            SerializeValueYAML(out, "Scale", tc.Scale);
+
+            EndYAMLMap(out, "TransformComponent");
         }
 
         if (entity.HasComponent<CameraComponent>())
         {
-            out << YAML::Key << "CameraComponent";
-            out << YAML::BeginMap;
+            const auto& camera = entity.GetComponent<CameraComponent>().Camera;
+            BeginYAMLMap(out, "CameraComponent");
 
-            auto& camera = entity.GetComponent<CameraComponent>().Camera;
-            out << YAML::Key << "ProjectionType" << YAML::Value << (uint32_t)camera.GetProjectionType();
-            out << YAML::Key << "PerspectiveFOV" << YAML::Value << camera.GetPerspectiveVerticalFOV();
-            out << YAML::Key << "PerspectiveNear" << YAML::Value << camera.GetPerspectiveNearClip();
-            out << YAML::Key << "PerspectiveFar" << YAML::Value << camera.GetPerspectiveFarClip();
-            out << YAML::Key << "OrthographicSize" << YAML::Value << camera.GetOrthographicSize();
-            out << YAML::Key << "OrthographicNear" << YAML::Value << camera.GetOrthographicNearClip();
-            out << YAML::Key << "OrthographicFar" << YAML::Value << camera.GetOrthographicFarClip();
+            SerializeEnumYAML(out, "ProjectionType", camera.GetProjectionType());
+            SerializeValueYAML(out, "PerspectiveFOV", camera.GetPerspectiveVerticalFOV());
+            SerializeValueYAML(out, "PerspectiveNear", camera.GetPerspectiveNearClip());
+            SerializeValueYAML(out, "PerspectiveFar", camera.GetPerspectiveFarClip());
+            SerializeValueYAML(out, "OrthographicSize", camera.GetOrthographicSize());
+            SerializeValueYAML(out, "OrthographicNear", camera.GetOrthographicNearClip());
+            SerializeValueYAML(out, "OrthographicFar", camera.GetOrthographicFarClip());
+            SerializeValueYAML(out, "HDR", camera.GetHDR());
+            SerializeValueYAML(out, "MSAA", camera.GetMSAA());
+            SerializeValueYAML(out, "OcclusionCulling", camera.GetOcclusionCulling());
+            SerializeValueYAML(out, "BackgroundColor", camera.GetBackgroundColor());
+            SerializeValueYAML(out, "ViewportRect", camera.GetViewportRect());
 
-            out << YAML::Key << "HDR" << YAML::Value << camera.GetHDR();
-            out << YAML::Key << "MSAA" << YAML::Value << camera.GetMSAA();
-            out << YAML::Key << "OcclusionCulling" << camera.GetOcclusionCulling();
-            out << YAML::Key << "BackgroundColor" << YAML::Value << camera.GetBackgroundColor();
-            out << YAML::Key << "ViewportRect" << YAML::Value << camera.GetViewportRect();
-
-            out << YAML::EndMap;
+            EndYAMLMap(out, "CameraComponent");
         }
 
         if (entity.HasComponent<SpriteRendererComponent>())
         {
-            out << YAML::Key << "SpriteRendererComponent";
-            out << YAML::BeginMap;
             const auto& sprite = entity.GetComponent<SpriteRendererComponent>();
-            out << YAML::Key << "Color" << YAML::Value << sprite.Color; // TODO: Save textures
-            out << YAML::EndMap;
+            BeginYAMLMap(out, "SpriteRendererComponent");
+
+            SerializeValueYAML(out, "Color", sprite.Color); // TODO: Save textures
+
+            EndYAMLMap(out, "SpriteRendererComponent");
         }
 
         if (entity.HasComponent<MeshRendererComponent>())
         {
-            out << YAML::Key << "MeshRendererComponent";
-            out << YAML::BeginMap;
             const auto& mesh = entity.GetComponent<MeshRendererComponent>();
-            out << YAML::Key << "UUID" << YAML::Value << UuidGenerator::Generate();
-            out << YAML::EndMap;
+            BeginYAMLMap(out, "MeshRendererComponent");
+
+            SerializeValueYAML(out, "UUID", UuidGenerator::Generate());
+
+            EndYAMLMap(out, "MeshRendererComponent");
         }
 
         if (entity.HasComponent<Rigidbody2DComponent>())
         {
-            out << YAML::Key << "Rigidbody2D";
-            out << YAML::BeginMap;
             const auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
-            out << YAML::Key << "BodyType" << YAML::Value << (uint32_t)rb2d.GetBodyType();
-            out << YAML::Key << "Mass" << YAML::Value << rb2d.GetMass();
-            out << YAML::Key << "GravityScale" << YAML::Value << rb2d.GetGravityScale();
-            out << YAML::Key << "Constraints" << YAML::Value << (uint32_t)rb2d.GetConstraints();
-            out << YAML::Key << "CollisionDetectionMode" << YAML::Value << (uint32_t)rb2d.GetCollisionDetectionMode();
-            out << YAML::Key << "SleepMode" << YAML::Value << (uint32_t)rb2d.GetSleepMode();
-            out << YAML::Key << "LinearDrag" << YAML::Value << rb2d.GetLinearDrag();
-            out << YAML::Key << "AngularDrag" << YAML::Value << rb2d.GetAngularDrag();
-            out << YAML::Key << "LayerMask" << YAML::Value << rb2d.GetLayerMask();
-            out << YAML::Key << "AutoMass" << YAML::Value << rb2d.GetAutoMass();
-            out << YAML::Key << "Interpolation" << YAML::Value << (uint32_t)rb2d.GetInterpolationMode();
-            out << YAML::EndMap;
+            BeginYAMLMap(out, "Rigidbody2DComponent");
+
+            SerializeEnumYAML(out, "BodyType", rb2d.GetBodyType());
+            SerializeValueYAML(out, "Mass", rb2d.GetMass());
+            SerializeValueYAML(out, "GravityScale", rb2d.GetGravityScale());
+            SerializeFlagsYAML(out, "Constraints", rb2d.GetConstraints());
+            SerializeEnumYAML(out, "CollisionDetectionMode", rb2d.GetCollisionDetectionMode());
+            SerializeEnumYAML(out, "SleepMode", rb2d.GetSleepMode());
+            SerializeValueYAML(out, "LinearDrag", rb2d.GetLinearDrag());
+            SerializeValueYAML(out, "AngularDrag", rb2d.GetAngularDrag());
+            SerializeValueYAML(out, "LayerMask", rb2d.GetLayerMask());
+            SerializeValueYAML(out, "AutoMass", rb2d.GetAutoMass());
+            SerializeEnumYAML(out, "Interpolation", rb2d.GetInterpolationMode());
+
+            EndYAMLMap(out, "Rigidbody2DComponent");
         }
 
         if (entity.HasComponent<BoxCollider2DComponent>())
         {
-            out << YAML::Key << "BoxCollider2D";
-            out << YAML::BeginMap;
             const auto& bc2d = entity.GetComponent<BoxCollider2DComponent>();
-            out << YAML::Key << "Offset" << YAML::Value << bc2d.GetOffset();
-            out << YAML::Key << "Size" << YAML::Value << bc2d.GetSize();
-            out << YAML::Key << "IsTrigger" << YAML::Value << bc2d.IsTrigger();
-            if (bc2d.GetMaterial().GetUUID() != Physics2D::Get().GetDefaultMaterial().GetUUID())
-                out << YAML::Key << "Material" << YAML::Value << bc2d.GetMaterial().GetUUID();
-            out << YAML::EndMap;
+            BeginYAMLMap(out, "BoxCollider2DComponent");
+
+            SerializeValueYAML(out, "Offset", bc2d.GetOffset());
+            SerializeValueYAML(out, "Size", bc2d.GetSize());
+            SerializeValueYAML(out, "IsTrigger", bc2d.IsTrigger());
+            if (bc2d.GetMaterial().GetUUID() !=
+                Physics2D::Get().GetDefaultMaterial().GetUUID()) // TODO: fix this. shouldn't need to check anything
+                SerializeValueYAML(out, "Material", bc2d.GetMaterial().GetUUID());
+
+            EndYAMLMap(out, "BoxCollider2DComponent");
         }
 
         if (entity.HasComponent<CircleCollider2DComponent>())
         {
-            out << YAML::Key << "CircleCollider2D";
-            out << YAML::BeginMap;
             const auto& cc2d = entity.GetComponent<CircleCollider2DComponent>();
-            out << YAML::Key << "Offset" << YAML::Value << cc2d.GetOffset();
-            out << YAML::Key << "Size" << YAML::Value << cc2d.GetRadius();
-            out << YAML::Key << "IsTrigger" << YAML::Value << cc2d.IsTrigger();
+            BeginYAMLMap(out, "CircleCollider2DComponent");
+
+            SerializeValueYAML(out, "Offset", cc2d.GetOffset());
+            SerializeValueYAML(out, "Size", cc2d.GetRadius());
+            SerializeValueYAML(out, "IsTrigger", cc2d.IsTrigger());
             if (cc2d.GetMaterial().GetUUID() != Physics2D::Get().GetDefaultMaterial().GetUUID())
-                out << YAML::Key << "Material" << YAML::Value << cc2d.GetMaterial().GetUUID();
-            out << YAML::EndMap;
+                SerializeValueYAML(out, "Material", cc2d.GetMaterial().GetUUID());
+
+            EndYAMLMap(out, "CircleCollider2DComponent");
         }
 
         if (entity.HasComponent<RelationshipComponent>())
         {
-            out << YAML::Key << "RelationshipComponent";
-            out << YAML::BeginMap;
             const auto& rc = entity.GetComponent<RelationshipComponent>();
-            out << YAML::Key << "Children" << YAML::Value << YAML::BeginSeq;
+            BeginYAMLMap(out, "RelationshipComponent");
+
+            SerializeValueYAML(out, "Children", YAML::BeginSeq);
 
             for (Entity e : rc.Children)
                 out << e.GetUuid();
 
-            out << YAML::EndSeq << YAML::EndMap;
+            out << YAML::EndSeq;
+
+            EndYAMLMap(out, "RelationshipComponent");
         }
 
-        out << YAML::EndMap; // Entity
+        EndYAMLMap(out, "Entity");
     }
 
     void SceneSerializer::Serialize(const Path& filepath)
@@ -210,18 +217,20 @@ namespace Crowny
         out << YAML::Comment("Crowny Scene");
 
         out << YAML::BeginMap;
-        out << YAML::Key << "Scene" << YAML::Value << m_Scene->GetName();
-        out << YAML::Key << "Entities" << YAML::Value << YAML::BeginSeq;
 
+        SerializeValueYAML(out, "Scene", m_Scene->GetName());
+
+        SerializeValueYAML(out, "Entities", YAML::BeginSeq);
         m_Scene->m_Registry.each([&](auto entityID) {
             Entity entity = { entityID, m_Scene.get() };
             SerializeEntity(out, entity);
         });
-
-        out << YAML::EndSeq << YAML::EndMap;
+        out << YAML::EndSeq;
 
         TimeSettingsSerializer::Serialize(Application::Get().GetTimeSettings(), out);
         Physics2DSettingsSerializer::Serialize(Physics2D::Get().GetPhysicsSettings(), out);
+
+        out << YAML::EndMap;
 
         m_Scene->m_Filepath = filepath;
         Ref<DataStream> stream = FileSystem::CreateAndOpenFile(filepath);
@@ -235,12 +244,11 @@ namespace Crowny
     void SceneSerializer::Deserialize(const Path& filepath)
     {
         String text = FileSystem::OpenFile(filepath)->GetAsString();
-        YAML::Node data = YAML::Load(text);
-        if (!data["Scene"])
-            return;
-
         try
         {
+            YAML::Node data = YAML::Load(text);
+            if (!data["Scene"])
+                return;
             UnorderedMap<Entity, YAML::Node> serializedComponents;
             String sceneName = data["Scene"].as<String>();
             m_Scene->m_Name = sceneName;
@@ -321,7 +329,7 @@ namespace Crowny
                     {
                         auto& tc = deserialized.AddComponent<TextComponent>();
                         tc.Text = text["Text"].as<String>();
-                        tc.Font = CreateRef<Font>(text["Font"].as<String>(), "Deserialized font", 16.0f);
+                        // tc.Font = CreateRef<Font>(text["Font"].as<String>(), "Deserialized font", 16.0f);
                         tc.Color = text["Color"].as<glm::vec4>();
                     }
 

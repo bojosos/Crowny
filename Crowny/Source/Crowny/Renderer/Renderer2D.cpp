@@ -15,7 +15,6 @@
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Utils/ShaderCompiler.h"
 
-#include <freetype-gl.h>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -298,8 +297,8 @@ namespace Crowny
 
     void Renderer2D::DrawString(const String& text, float x, float y, const Ref<Font>& font, const glm::vec4& color)
     {
-        float ts = FindTexture(font->GetTexture());
-
+        // float ts = FindTexture(font->GetTexture());
+        /*
         texture_font_t* ftFont = font->GetFTGLFont();
 
         for (uint32_t i = 0; i < text.length(); i++)
@@ -354,7 +353,7 @@ namespace Crowny
 
                 x += glyph->advance_x;
             }
-        }
+        }*/
     }
 
     void Renderer2D::DrawString(const String& text, const glm::mat4& transform, const Ref<Font>& font,
@@ -362,8 +361,8 @@ namespace Crowny
     {
         float x = transform[3][0];
         float y = transform[3][1];
-        float ts = FindTexture(font->GetTexture());
-
+        // float ts = FindTexture(font->GetTexture());
+        /*
         texture_font_t* ftFont = font->GetFTGLFont();
 
         for (uint32_t i = 0; i < text.length(); i++)
@@ -418,7 +417,7 @@ namespace Crowny
 
                 x += glyph->advance_x;
             }
-        }
+        }*/
     }
 
     void Renderer2D::End()

@@ -35,7 +35,6 @@ project "Crowny"
 		"Dependencies/spdlog/include",
 		"Dependencies/rapidjson/include",
 		"%{IncludeDir.glfw}",
-		"%{IncludeDir.freetypegl}",
 		"%{IncludeDir.glad}",
 		"%{IncludeDir.entt}",
 		"%{IncludeDir.imgui}",
@@ -50,7 +49,10 @@ project "Crowny"
 		"%{IncludeDir.cereal}",
 		"%{IncludeDir.libvorbis}",
 		"%{IncludeDir.libogg}",
-		"%{IncludeDir.Box2D}"
+		"%{IncludeDir.Box2D}",
+		"%{IncludeDir.msdfgen}",
+		"%{IncludeDir.msdfatlasgen}"
+		
 	}
 
 	links 
@@ -60,8 +62,7 @@ project "Crowny"
 		"imgui",
 		"ImGuizmo",
 
-		"freetype-gl",
-		"freetype2",
+		"msdf-atlas-gen",
 
 		"glfw",
 		"glad",
@@ -106,7 +107,6 @@ project "Crowny"
         buildoptions { "/bigobj" }    -- gta3.std.data is a monster
 
 	filter { "platforms:Linux64"}
-		--links { "freetype2", "glfw", "glad" }
 
 		defines
 		{
@@ -116,8 +116,7 @@ project "Crowny"
 		system("linux")
 
 	filter { "platforms:MacOS64"}
-		--links { "freetype2", "glfw", "glad" }
-
+		
 		defines
 		{
 			"CW_MACOSX"
@@ -132,7 +131,7 @@ project "Crowny"
 			"GLFW_INCLUDE_ES31"
 		}
 
-		linkoptions { "-s USE_FREETYPE=1", "-s MAX_WEBGL_VERSION=2", "-s USE_GLFW=3", "-s TOTAL_MEMORY=512MB", "-s SAFE_HEAP=1" }
+		linkoptions { "-s MAX_WEBGL_VERSION=2", "-s USE_GLFW=3", "-s TOTAL_MEMORY=512MB", "-s SAFE_HEAP=1" }
 
 	filter "system:windows"
 		systemversion "latest"

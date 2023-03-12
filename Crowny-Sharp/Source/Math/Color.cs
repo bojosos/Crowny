@@ -6,7 +6,10 @@ namespace Crowny
     [StructLayout(LayoutKind.Sequential)]
     public struct Color
     {
-        public float r, g, b, a;
+        public float r;
+        public float g;
+        public float b;
+        public float a;
 
         /// <summary>
         /// Creates a new color from 4 components.

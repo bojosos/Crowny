@@ -12,6 +12,13 @@ namespace Crowny
 {
     namespace UI
     {
+        // struct UIScope
+        // {
+        //     std::function<void()> BeforeValueChangedCallback;
+        // };
+        //
+        // UIScope scope;
+
         static void Pre(const char* label)
         {
             ShiftCursor(10.0f, 9.0f);
@@ -43,6 +50,10 @@ namespace Crowny
 
         static void Post()
         {
+            // if (ImGui::IsItemDeactivatedAfterEdit() && scope.BeforeValueChangedCallback)
+            // {
+            //     scope.BeforeValueChangedCallback();
+            // }
             if (IsItemDisabled())
                 ImGui::PopStyleVar();
 
@@ -161,9 +172,7 @@ namespace Crowny
         {
             bool modified = false;
 
-            ImGui::Text(label);
-            ImGui::NextColumn();
-            ImGui::PushItemWidth(-1);
+            Pre(label);
 
             if (!s_MultilineBuffer)
             {

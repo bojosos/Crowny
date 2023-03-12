@@ -1,71 +1,84 @@
 #include "cwpch.h"
 
-#include "Crowny/Serialization/SettingsSerializer.h"
 #include "Crowny/Physics/Physics2D.h"
+#include "Crowny/Serialization/SettingsSerializer.h"
 
 namespace Crowny
 {
-	void TimeSettingsSerializer::Serialize(const Ref<TimeSettings>& settings, YAML::Emitter& out)
-	{
-		out << YAML::Comment("Crowny Time Settings");
-		out << YAML::BeginMap;
-		out << YAML::Key << "TimeScale" << YAML::Value << settings->TimeScale;
-		out << YAML::Key << "MaxTimestep" << YAML::Value << settings->MaxTimestep;
-		out << YAML::Key << "FixedTimestep" << YAML::Value << settings->FixedTimestep;
-		out << YAML::EndMap;
-	}
+    void TimeSettingsSerializer::Serialize(const Ref<TimeSettings>& settings, YAML::Emitter& out)
+    {
+        BeginYAMLMap(out, "TimeSettings");
 
-	Ref<TimeSettings> TimeSettingsSerializer::Deserialize(const YAML::Node& node)
-	{
-		Ref<TimeSettings> timeSettings = CreateRef<TimeSettings>();
-		timeSettings->TimeScale = node["TimeScale"].as<float>(1.0f);
-		timeSettings->MaxTimestep = node["MaxTimestep"].as<float>(1.0f / 3.0f);
-		timeSettings->FixedTimestep = node["FixedTimestep"].as<float>(0.02f);
-		return timeSettings;
-	}
+        SerializeValueYAML(out, "TimeScale", settings->TimeScale);
+        SerializeValueYAML(out, "MaxTimestep", settings->MaxTimestep);
+        SerializeValueYAML(out, "FixedTimestep", settings->FixedTimestep);
 
-	void Physics2DSettingsSerializer::Serialize(const Ref<Physics2DSettings>& settings, YAML::Emitter& out)
-	{
-		out << YAML::Comment("Crowny Physics Settings");
+        EndYAMLMap(out, "TimeSettings");
+    }
 
-		out << YAML::BeginMap;
-		out << YAML::Key << "LayerNames" << YAML::Value << YAML::BeginSeq;
-		for (uint32_t i = 0; i < 32; i++)
-			out << settings->LayerNames[i];
-		out << YAML::EndSeq;
-		out << YAML::Key << "Gravity2D" << YAML::Value << settings->Gravity;
-		// out << YAML::Key << "DefaultMaterial" << YAML::Value << Physics2D::Get().GetDefaultMaterial();
-		out << YAML::Key << "VelocityIterations" << YAML::Value << settings->VelocityIterations;
-		out << YAML::Key << "PositionIterations" << YAML::Value << settings->PositionIterations;
+    Ref<TimeSettings> TimeSettingsSerializer::Deserialize(const YAML::Node& node)
+    {
+        Ref<TimeSettings> timeSettings = CreateRef<TimeSettings>();
 
-		out << YAML::Key << "CollisionMatrix" << YAML::Value;
-		out << YAML::BeginSeq;
-		for (uint32_t i = 0; i < 32; i++)
-			out << settings->MaskBits[i];
-		out << YAML::EndSeq;
-		out << YAML::EndMap;
-	}
+        const YAML::Node& timeSettingsNode = node["TimeSettings"];
+        if (!timeSettingsNode)
+            return timeSettings;
 
-	Ref<Physics2DSettings> Physics2DSettingsSerializer::Deserialize(const YAML::Node& node)
-	{
-		Ref<Physics2DSettings> physicsSettings = CreateRef<Physics2DSettings>();
-		if (const auto& layerNames = node["LayerNames"])
-		{
-			uint32_t idx = 0;
-			for (const auto& layerName : layerNames)
-				physicsSettings->LayerNames[idx++] = layerName.as<String>();
-		}
-		physicsSettings->Gravity = node["Gravity2D"].as<glm::vec2>(glm::vec2(0.0f, -9.81f));
-		physicsSettings->VelocityIterations = node["VelocityIterations"].as<uint32_t>(8);
-		physicsSettings->PositionIterations = node["PositionIterations"].as<uint32_t>(3);
+        DeserializeValueYAML(timeSettingsNode, "TimeScale", timeSettings->TimeScale, 1.0f);
+        DeserializeValueYAML(timeSettingsNode, "MaxTimestep", timeSettings->MaxTimestep, 1.0f / 3.0f);
+        DeserializeValueYAML(timeSettingsNode, "FixedTimestep", timeSettings->FixedTimestep, 0.02f);
 
-		const auto& collisionMatrix = node["CollisionMatrix"];
-		if (collisionMatrix)
-		{
-			uint32_t i = 0;
-			for (const auto& entry : collisionMatrix)
-				physicsSettings->MaskBits[i++] = entry.as<uint32_t>();
-		}
-		return physicsSettings ;
-	}
-}
+        return timeSettings;
+    }
+
+    void Physics2DSettingsSerializer::Serialize(const Ref<Physics2DSettings>& settings, YAML::Emitter& out)
+    {
+        out << YAML::Comment("Crowny Physics Settings");
+
+        BeginYAMLMap(out, "PhysicsSettings");
+
+        SerializeValueYAML(out, "LayerNames", YAML::BeginSeq);
+        for (uint32_t i = 0; i < 32; i++)
+            SerializeValueYAML(out, settings->LayerNames[i]);
+        EndYAMLSeq(out);
+
+        SerializeValueYAML(out, "Gravity2D", settings->Gravity);
+        // out << YAML::Key << "DefaultMaterial" << YAML::Value << Physics2D::Get().GetDefaultMaterial();
+        SerializeValueYAML(out, "VelocityIterations", settings->VelocityIterations);
+        SerializeValueYAML(out, "PositionIterations", settings->PositionIterations);
+
+        SerializeValueYAML(out, "CollisionMatrix", YAML::BeginSeq);
+        for (uint32_t i = 0; i < 32; i++)
+            SerializeValueYAML(out, settings->MaskBits[i]);
+        EndYAMLSeq(out);
+
+        EndYAMLMap(out, "PhysicsSettings");
+    }
+
+    Ref<Physics2DSettings> Physics2DSettingsSerializer::Deserialize(const YAML::Node& node)
+    {
+        Ref<Physics2DSettings> physicsSettings = CreateRef<Physics2DSettings>();
+
+        const YAML::Node& physicsSettingsNode = node["PhysicsSettings"];
+        if (!physicsSettings)
+            return physicsSettings;
+
+        if (const auto& layerNames = node["LayerNames"])
+        {
+            uint32_t idx = 0;
+            for (const auto& layerName : layerNames)
+                physicsSettings->LayerNames[idx++] = layerName.as<String>();
+        }
+        DeserializeValueYAML(node, "Gravity2D", physicsSettings->Gravity, glm::vec2(0.0f, -9.81f));
+        DeserializeValueYAML(node, "VelocityIterations", physicsSettings->VelocityIterations, 8U);
+        DeserializeValueYAML(node, "PositionIterations", physicsSettings->PositionIterations, 3U);
+
+        if (const auto& collisionMatrix = node["CollisionMatrix"])
+        {
+            uint32_t i = 0;
+            for (const auto& entry : collisionMatrix)
+                physicsSettings->MaskBits[i++] = entry.as<uint32_t>();
+        }
+        return physicsSettings;
+    }
+} // namespace Crowny

@@ -27,7 +27,8 @@ namespace Crowny
         static ::MonoClass* GetClass(MonoReflectionType* reflType);
         static String GetReflTypeName(MonoReflectionType* type);
 
-        static void GetClassName(MonoObject* obj, String& ns, String& typeName);
+        static void GetClassName(MonoObject* object, String& ns, String& typeName);
+        static String GetClassName(MonoObject* object);
         static void GetClassName(::MonoClass* obj, String& ns, String& typeName);
         static void GetClassName(MonoReflectionType* reflType, String& ns, String& typeName);
 

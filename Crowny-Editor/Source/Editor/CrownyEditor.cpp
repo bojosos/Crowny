@@ -10,7 +10,10 @@ namespace Crowny
     class CrownyEditor : public Application
     {
     public:
-        CrownyEditor(const Crowny::ApplicationDesc& applicationDesc) : Application(applicationDesc) { PushLayer(new EditorLayer()); }
+        CrownyEditor(const Crowny::ApplicationDesc& applicationDesc) : Application(applicationDesc)
+        {
+            PushLayer(new EditorLayer());
+        }
     };
 
     Application* CreateApplication()

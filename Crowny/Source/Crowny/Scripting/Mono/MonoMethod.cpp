@@ -19,9 +19,6 @@ namespace Crowny
         m_CachedNumParams(0)
     {
         m_Name = mono_method_get_name(m_Method);
-
-        m_FullDeclName = CrownyMonoVisibilityToString(GetVisibility()) + (IsStatic() ? " static " : " ") +
-                         mono_method_full_name(m_Method, true);
     }
 
     MonoClass* MonoMethod::GetParameterType(uint32_t idx) const
@@ -78,6 +75,13 @@ namespace Crowny
         return m_IsStatic;
     }
 
+    const String& MonoMethod::GetFullDeclName() const
+    {
+        if (!m_HasCachedSignature)
+            CacheSignature();
+        return m_FullDeclName;
+    }
+
     MonoClass* MonoMethod::GetReturnType() const
     {
         if (!m_HasCachedSignature)
@@ -116,6 +120,10 @@ namespace Crowny
         }
 
         m_IsStatic = !mono_signature_is_instance(signature);
+
+        m_FullDeclName = CrownyMonoVisibilityToString(GetVisibility()) + (IsStatic() ? " static " : " ") +
+                         mono_method_full_name(m_Method, true);
+
         m_HasCachedSignature = true;
     }
 
@@ -126,7 +134,7 @@ namespace Crowny
         return m_CachedNumParams;
     }
 
-    CrownyMonoVisibility MonoMethod::GetVisibility()
+    CrownyMonoVisibility MonoMethod::GetVisibility() const
     {
         uint32_t flags = mono_method_get_flags(m_Method, nullptr) & MONO_METHOD_ATTR_ACCESS_MASK;
 
@@ -142,6 +150,8 @@ namespace Crowny
             return CrownyMonoVisibility::Protected;
         case (MONO_METHOD_ATTR_PUBLIC):
             return CrownyMonoVisibility::Public;
+        case (MONO_METHOD_ATTR_COMPILER_CONTROLLED):
+            return CrownyMonoVisibility::Internal;
         }
 
         CW_ENGINE_ASSERT(false, "Unknown visibility.");
