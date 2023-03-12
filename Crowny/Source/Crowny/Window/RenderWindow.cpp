@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
-#include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Application/Application.h"
+#include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Window/RenderWindow.h"
 
 #include "Platform/Vulkan/VulkanRenderWindow.h"

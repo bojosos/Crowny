@@ -61,7 +61,7 @@ namespace Crowny
     {
         ::MonoClass* parent = mono_field_get_parent(m_Field);
         MonoCustomAttrInfo* attrInfo = mono_custom_attrs_from_field(parent, m_Field);
-        if (attrInfo == nullptr)
+        if (attrInfo == nullptr || monoClass == nullptr)
             return false;
 
         bool hasAttr = mono_custom_attrs_has_attr(attrInfo, monoClass->GetInternalPtr()) != 0;
@@ -74,7 +74,7 @@ namespace Crowny
     {
         ::MonoClass* parent = mono_field_get_parent(m_Field);
         MonoCustomAttrInfo* attrInfo = mono_custom_attrs_from_field(parent, m_Field);
-        if (attrInfo == nullptr)
+        if (attrInfo == nullptr || monoClass == nullptr)
             return nullptr;
 
         MonoObject* foundAttr = nullptr;

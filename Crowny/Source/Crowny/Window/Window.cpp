@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
-#include "Crowny/Events/ApplicationEvent.h"
 #include "Crowny/Application/Application.h"
+#include "Crowny/Events/ApplicationEvent.h"
 #include "Crowny/Events/KeyEvent.h"
 #include "Crowny/Events/MouseEvent.h"
 #include "Crowny/Input/Input.h"

@@ -22,11 +22,11 @@ namespace Crowny
         out << YAML::Key << "GizmoLocalMode" << YAML::Value << settings->GizmoLocalMode;
         out << YAML::Key << "LastAssetBrowserEntry" << YAML::Value << settings->LastAssetBrowserSelectedEntry.string();
         out << YAML::Key << "LastSelectedEntity" << YAML::Value << settings->LastSelectedEntityID;
-		
+
         out << YAML::Key << "Hierarchy" << YAML::Value << YAML::BeginSeq;
-		for (const UUID& uuid : settings->ExpandedEntities)
-			out << uuid;
-		out << YAML::EndSeq;
+        for (const UUID& uuid : settings->ExpandedEntities)
+            out << uuid;
+        out << YAML::EndSeq;
 
         out << YAML::EndMap;
     }
@@ -42,7 +42,7 @@ namespace Crowny
         projectSettings->LastAssetBrowserSelectedEntry = node["LastAssetBrowserEntry"].as<String>();
         projectSettings->LastOpenScenePath = node["LastOpenScene"].as<String>();
         projectSettings->LastSelectedEntityID = node["LastSelectedEntity"].as<UUID>(UUID::EMPTY);
-        
+
         if (const auto& hierarchy = node["Hierarchy"])
         {
             for (const auto& uuid : hierarchy)

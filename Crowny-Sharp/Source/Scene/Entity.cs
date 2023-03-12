@@ -15,10 +15,10 @@ namespace Crowny
 			set { Internal_SetName(m_InternalPtr, value); }
 		}
 
-        //public UUID Uuid
-        //{
-        //
-        //}
+        /// <summary>
+        /// The UUID of the entity.
+        /// </summary>
+        public UUID uuid { get { Internal_GetUUID(m_InternalPtr, out UUID uuid); return uuid; } }
 
         /// <summary>
         /// The parent of the entity.
@@ -51,7 +51,7 @@ namespace Crowny
 
         /// <summary>
         /// Retrieves a component. It can also be used to retrieve script components.
-        /// For example lets say you have an entity behaviour called "PlayerController".
+        /// For example lets say you have an entity behavior called "PlayerController".
         /// You can do GetComponent<PlayerController>() on its entity and it will just work.
         /// </summary>
         /// <typeparam name="T">Type of the compoenent.</typeparam>
@@ -98,6 +98,8 @@ namespace Crowny
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern Component Internal_RemoveComponent(IntPtr parent, Type type);
 
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern Component Internal_GetUUID(IntPtr parent, out UUID uuid);
         [MethodImpl(MethodImplOptions.InternalCall)]
 		private static extern string Internal_GetName(IntPtr internalPtr);
 		[MethodImpl(MethodImplOptions.InternalCall)]

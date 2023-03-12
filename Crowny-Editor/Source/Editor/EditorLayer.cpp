@@ -4,7 +4,7 @@
 
 #include "Vendor/filewatch/filewatch.h"
 
-#include "EditorLayer.h"
+#include "Editor/EditorLayer.h"
 
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Import/Importer.h"
@@ -49,6 +49,8 @@
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptObjectManager.h"
 
+#include "Crowny/Renderer/Font.h"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <spdlog/fmt/fmt.h>
@@ -75,6 +77,7 @@ namespace Crowny
 
     void EditorLayer::OnAttach()
     {
+        const Ref<Font> defaultFont = Font::GetDefault();
         // Well constructors get discarded and the static data is gone, so construct a few empty objects
         ScriptTime tempTime = ScriptTime();
         ScriptMath tempMath = ScriptMath();
@@ -91,11 +94,10 @@ namespace Crowny
         Editor::StartUp();
 
         m_Watch = CreateScope<filewatch::FileWatch<Path>>(
-            L"C:\\dev\\Projects\\Project1\\Assets",
-			[this](const Path& path, const filewatch::Event changeType) {
-				Lock lock(m_FileWatchMutex);
-				m_FileWatchQueue.push_back(L"C:\\dev\\Projects\\Project1\\Assets" / path);
-			});
+          L"C:\\dev\\Projects\\Project1\\Assets", [this](const Path& path, const filewatch::Event changeType) {
+              Lock lock(m_FileWatchMutex);
+              m_FileWatchQueue.push_back(L"C:\\dev\\Projects\\Project1\\Assets" / path);
+          });
 
         m_MenuBar = new ImGuiMenuBar();
 
@@ -186,6 +188,8 @@ namespace Crowny
         // ForwardRenderer::Init(); // Why here?
         CreateRenderTarget();
 
+        UndoRedo::StartUp();
+
         if (m_Temp == nullptr) // No scene was auto-loaded
             m_Temp = CreateRef<Scene>("Scene");
     }
@@ -193,34 +197,34 @@ namespace Crowny
     void EditorLayer::CreateRenderTarget()
     {
 
-		TextureParameters colorParams;
-		colorParams.Width = 1337;
-		colorParams.Height = 509;
-		colorParams.Usage = TextureUsage::TEXTURE_RENDERTARGET;
+        TextureParameters colorParams;
+        colorParams.Width = 1337;
+        colorParams.Height = 509;
+        colorParams.Usage = TextureUsage::TEXTURE_RENDERTARGET;
 
-		TextureParameters objectId;
-		objectId.Width = 1337;
-		objectId.Height = 509;
-		objectId.Format = TextureFormat::R32I;
-		objectId.Usage = TextureUsage(TextureUsage::TEXTURE_RENDERTARGET | TextureUsage::TEXTURE_DYNAMIC);
+        TextureParameters objectId;
+        objectId.Width = 1337;
+        objectId.Height = 509;
+        objectId.Format = TextureFormat::R32I;
+        objectId.Usage = TextureUsage(TextureUsage::TEXTURE_RENDERTARGET | TextureUsage::TEXTURE_DYNAMIC);
 
-		TextureParameters depthParams;
-		depthParams.Width = 1337;
-		depthParams.Height = 509;
-		depthParams.Usage = TextureUsage::TEXTURE_DEPTHSTENCIL;
-		depthParams.Format = TextureFormat::DEPTH24STENCIL8;
+        TextureParameters depthParams;
+        depthParams.Width = 1337;
+        depthParams.Height = 509;
+        depthParams.Usage = TextureUsage::TEXTURE_DEPTHSTENCIL;
+        depthParams.Format = TextureFormat::DEPTH24STENCIL8;
 
-		Ref<Texture> color1 = Texture::Create(colorParams);
-		Ref<Texture> color2 = Texture::Create(objectId);
-		Ref<Texture> depth = Texture::Create(depthParams);
-		RenderTextureProperties rtProps;
-		rtProps.ColorSurfaces[0] = { color1 };
-		rtProps.ColorSurfaces[1] = { color2 };
-		rtProps.DepthSurface = { depth };
-		rtProps.Width = 1337;
-		rtProps.Height = 509;
+        Ref<Texture> color1 = Texture::Create(colorParams);
+        Ref<Texture> color2 = Texture::Create(objectId);
+        Ref<Texture> depth = Texture::Create(depthParams);
+        RenderTextureProperties rtProps;
+        rtProps.ColorSurfaces[0] = { color1 };
+        rtProps.ColorSurfaces[1] = { color2 };
+        rtProps.DepthSurface = { depth };
+        rtProps.Width = 1337;
+        rtProps.Height = 509;
 
-		m_RenderTarget = RenderTexture::Create(rtProps);
+        m_RenderTarget = RenderTexture::Create(rtProps);
     }
 
     void EditorLayer::SetProjectSettings()
@@ -419,6 +423,8 @@ namespace Crowny
             Lock lock(m_FileWatchMutex);
             m_FileWatchQueue.swap(queueCopy);
         }
+
+        // This is detecting the .meta? yikes
         for (const Path& path : queueCopy)
             ProjectLibrary::Get().Refresh(path);
     }
@@ -426,117 +432,117 @@ namespace Crowny
     void EditorLayer::HandleMousePicking()
     {
         const Ref<Scene> scene = SceneManager::GetActiveScene();
-		const glm::vec4& bounds = m_ViewportPanel->GetViewportBounds();
-		ImVec2 mouseCoords = ImGui::GetMousePos();
-		glm::vec2 coords = { mouseCoords.x - bounds.x, mouseCoords.y - bounds.y };
-		coords.y = m_ViewportSize.y - coords.y;
-		if (m_ViewportPanel->IsHovered())
-		{
-			RenderTexture* rt = static_cast<RenderTexture*>(m_RenderTarget.get());
-			Ref<PixelData> outPixelData =
-				PixelData::Create(rt->GetColorTexture(1)->GetWidth(), rt->GetColorTexture(1)->GetHeight(),
-					rt->GetColorTexture(1)->GetFormat());
-			rt->GetColorTexture(1)->ReadData(*outPixelData);
-			if (outPixelData->GetSize() > coords.x * coords.y)
-			{
-				glm::vec4 col = outPixelData->GetColorAt(coords.x, coords.y);
-				if (col.x == 0.0f)
-					m_HoveredEntity = Entity(entt::null, scene.get());
-				else
-				{
-					m_HoveredEntity = Entity((entt::entity)(col.x - 1), scene.get());
-					if (Input::IsMouseButtonDown(Mouse::ButtonLeft) && !Input::IsKeyPressed(Key::LeftAlt) &&
-						!Input::IsKeyPressed(Key::RightAlt) && !m_ViewportPanel->IsMouseOverGizmo())
-						m_HierarchyPanel->SetSelectedEntity(m_HoveredEntity);
-				}
-			}
-		}
+        const glm::vec4& bounds = m_ViewportPanel->GetViewportBounds();
+        ImVec2 mouseCoords = ImGui::GetMousePos();
+        glm::vec2 coords = { mouseCoords.x - bounds.x, mouseCoords.y - bounds.y };
+        coords.y = m_ViewportSize.y - coords.y;
+        if (m_ViewportPanel->IsHovered())
+        {
+            RenderTexture* rt = static_cast<RenderTexture*>(m_RenderTarget.get());
+            Ref<PixelData> outPixelData =
+              PixelData::Create(rt->GetColorTexture(1)->GetWidth(), rt->GetColorTexture(1)->GetHeight(),
+                                rt->GetColorTexture(1)->GetFormat());
+            rt->GetColorTexture(1)->ReadData(*outPixelData);
+            if (outPixelData->GetSize() > coords.x * coords.y)
+            {
+                glm::vec4 col = outPixelData->GetColorAt(coords.x, coords.y);
+                if (col.x == 0.0f)
+                    m_HoveredEntity = Entity(entt::null, scene.get());
+                else
+                {
+                    m_HoveredEntity = Entity((entt::entity)(col.x - 1), scene.get());
+                    if (Input::IsMouseButtonDown(Mouse::ButtonLeft) && !Input::IsKeyPressed(Key::LeftAlt) &&
+                        !Input::IsKeyPressed(Key::RightAlt) && !m_ViewportPanel->IsMouseOverGizmo())
+                        m_HierarchyPanel->SetSelectedEntity(m_HoveredEntity);
+                }
+            }
+        }
     }
 
     void EditorLayer::HandleRenderTargetResize()
     {
-		Ref<Scene> scene = SceneManager::GetActiveScene();
-		auto& rapi = RenderAPI::Get();
-		if (m_ViewportPanel->IsShown() && (m_ViewportSize.x != m_ViewportPanel->GetViewportSize().x ||
-			m_ViewportSize.y != m_ViewportPanel->GetViewportSize().y)) // TODO: Move out
-		{
-			scene->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
-			TextureParameters colorParams;
-			colorParams.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
-			colorParams.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
-			colorParams.Usage = TextureUsage::TEXTURE_RENDERTARGET;
+        Ref<Scene> scene = SceneManager::GetActiveScene();
+        auto& rapi = RenderAPI::Get();
+        if (m_ViewportPanel->IsShown() && (m_ViewportSize.x != m_ViewportPanel->GetViewportSize().x ||
+                                           m_ViewportSize.y != m_ViewportPanel->GetViewportSize().y)) // TODO: Move out
+        {
+            scene->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
+            TextureParameters colorParams;
+            colorParams.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
+            colorParams.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
+            colorParams.Usage = TextureUsage::TEXTURE_RENDERTARGET;
 
-			TextureParameters objectId;
-			objectId.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
-			objectId.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
-			objectId.Format = TextureFormat::R32I;
-			objectId.Usage = TextureUsage(TextureUsage::TEXTURE_RENDERTARGET | TextureUsage::TEXTURE_DYNAMIC);
+            TextureParameters objectId;
+            objectId.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
+            objectId.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
+            objectId.Format = TextureFormat::R32I;
+            objectId.Usage = TextureUsage(TextureUsage::TEXTURE_RENDERTARGET | TextureUsage::TEXTURE_DYNAMIC);
 
-			TextureParameters depthParams;
-			depthParams.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
-			depthParams.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
-			depthParams.Usage = TextureUsage::TEXTURE_DEPTHSTENCIL;
-			depthParams.Format = TextureFormat::DEPTH24STENCIL8;
+            TextureParameters depthParams;
+            depthParams.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
+            depthParams.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
+            depthParams.Usage = TextureUsage::TEXTURE_DEPTHSTENCIL;
+            depthParams.Format = TextureFormat::DEPTH24STENCIL8;
 
-			Ref<Texture> color1 = Texture::Create(colorParams);
-			Ref<Texture> color2 = Texture::Create(objectId);
-			Ref<Texture> depth = Texture::Create(depthParams);
-			RenderTextureProperties rtProps;
-			rtProps.ColorSurfaces[0] = { color1 };
-			rtProps.ColorSurfaces[1] = { color2 };
-			rtProps.DepthSurface = { depth };
-			rtProps.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
-			rtProps.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
-			m_RenderTarget = RenderTexture::Create(rtProps);
-		}
-		m_ViewportSize = m_ViewportPanel->GetViewportSize();
-		SceneRenderer::SetViewportSize(m_RenderTarget->GetProperties().Width,
-			m_RenderTarget->GetProperties().Height);
+            Ref<Texture> color1 = Texture::Create(colorParams);
+            Ref<Texture> color2 = Texture::Create(objectId);
+            Ref<Texture> depth = Texture::Create(depthParams);
+            RenderTextureProperties rtProps;
+            rtProps.ColorSurfaces[0] = { color1 };
+            rtProps.ColorSurfaces[1] = { color2 };
+            rtProps.DepthSurface = { depth };
+            rtProps.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
+            rtProps.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
+            m_RenderTarget = RenderTexture::Create(rtProps);
+        }
+        m_ViewportSize = m_ViewportPanel->GetViewportSize();
+        SceneRenderer::SetViewportSize(m_RenderTarget->GetProperties().Width, m_RenderTarget->GetProperties().Height);
 
-		rapi.SetRenderTarget(m_RenderTarget);
-		rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
-		rapi.ClearRenderTarget(FBT_COLOR | FBT_DEPTH);
+        rapi.SetRenderTarget(m_RenderTarget);
+        rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
+        rapi.ClearRenderTarget(FBT_COLOR | FBT_DEPTH);
     }
 
     void EditorLayer::HandleSceneState(Timestep ts)
     {
 
-		switch (m_SceneState)
-		{
-		case SceneState::Edit: {
-			s_EditorCamera.SetViewportSize(m_RenderTarget->GetProperties().Width,
-				m_RenderTarget->GetProperties().Height);
-			s_EditorCamera.OnUpdate(ts);
+        switch (m_SceneState)
+        {
+        case SceneState::Edit: {
+            s_EditorCamera.SetViewportSize(m_RenderTarget->GetProperties().Width,
+                                           m_RenderTarget->GetProperties().Height);
+            s_EditorCamera.OnUpdate(ts);
 
-			SceneManager::GetActiveScene()->OnUpdateEditor(ts);
-			SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
-			break;
-		}
-		case SceneState::Play: {
-			SceneManager().GetActiveScene()->OnUpdateRuntime(ts);
-			ScriptRuntime::OnUpdate();
-			SceneRenderer::OnRuntimeUpdate(ts);
-			s_FrameCount += 1;
-			s_DeltaTime = ts;
-			s_Time += ts;
-			s_RealtimeSinceStartup += ts;
-			s_SmoothDeltaTime = s_DeltaTime + s_Time / (s_FrameCount + 1);
-			break;
-		}
-		case SceneState::Simulate: {
-			s_EditorCamera.SetViewportSize(m_RenderTarget->GetProperties().Width,
-				m_RenderTarget->GetProperties().Height);
-			s_EditorCamera.OnUpdate(ts);
-			SceneManager().GetActiveScene()->OnSimulationUpdate(ts);
-			SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
-			break;
-		}
-		}
+            SceneManager::GetActiveScene()->OnUpdateEditor(ts);
+            SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
+            break;
+        }
+        case SceneState::Play: {
+            SceneManager().GetActiveScene()->OnUpdateRuntime(ts);
+            ScriptRuntime::OnUpdate();
+            SceneRenderer::OnRuntimeUpdate(ts);
+            s_FrameCount += 1;
+            s_DeltaTime = ts;
+            s_Time += ts;
+            s_RealtimeSinceStartup += ts;
+            s_SmoothDeltaTime = s_DeltaTime + s_Time / (s_FrameCount + 1);
+            break;
+        }
+        case SceneState::Simulate: {
+            s_EditorCamera.SetViewportSize(m_RenderTarget->GetProperties().Width,
+                                           m_RenderTarget->GetProperties().Height);
+            s_EditorCamera.OnUpdate(ts);
+            SceneManager().GetActiveScene()->OnSimulationUpdate(ts);
+            SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
+            break;
+        }
+        }
     }
 
     void EditorLayer::OnUpdate(Timestep ts)
     {
-        ExecuteProjectAssetRefresh();
+        // TODO: Think of away to get around refreshing everything when creating the .meta file
+        // ExecuteProjectAssetRefresh();
         if (m_Temp) // Delay scene reload
         {
             SceneManager::SetActiveScene(m_Temp);
@@ -605,42 +611,42 @@ namespace Crowny
     void EditorLayer::SetupImGuiRender()
     {
 
-		static bool dockspaceOpen = true;
-		static bool opt_fullscreen_persistant = true;
-		bool opt_fullscreen = opt_fullscreen_persistant;
-		static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
+        static bool dockspaceOpen = true;
+        static bool opt_fullscreen_persistant = true;
+        bool opt_fullscreen = opt_fullscreen_persistant;
+        static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 
-		ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
-		if (opt_fullscreen)
-		{
-			ImGuiViewport* viewport = ImGui::GetMainViewport();
-			ImGui::SetNextWindowPos(viewport->Pos);
-			ImGui::SetNextWindowSize(viewport->Size);
-			ImGui::SetNextWindowViewport(viewport->ID);
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-			window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
-				ImGuiWindowFlags_NoMove;
-			window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-		}
+        ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+        if (opt_fullscreen)
+        {
+            ImGuiViewport* viewport = ImGui::GetMainViewport();
+            ImGui::SetNextWindowPos(viewport->Pos);
+            ImGui::SetNextWindowSize(viewport->Size);
+            ImGui::SetNextWindowViewport(viewport->ID);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+            window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+                            ImGuiWindowFlags_NoMove;
+            window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+        }
 
-		if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
-			window_flags |= ImGuiWindowFlags_NoBackground;
+        if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
+            window_flags |= ImGuiWindowFlags_NoBackground;
 
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-		ImGui::Begin("Crowny Editor", &dockspaceOpen, window_flags);
-		ImGui::PopStyleVar();
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGui::Begin("Crowny Editor", &dockspaceOpen, window_flags);
+        ImGui::PopStyleVar();
 
-		if (opt_fullscreen)
-			ImGui::PopStyleVar(2);
+        if (opt_fullscreen)
+            ImGui::PopStyleVar(2);
 
-		// DockSpace
-		ImGuiIO& io = ImGui::GetIO();
-		if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
-		{
-			ImGuiID dockspace_id = ImGui::GetID("Crowny Editor");
-			ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-		}
+        // DockSpace
+        ImGuiIO& io = ImGui::GetIO();
+        if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
+        {
+            ImGuiID dockspace_id = ImGui::GetID("Crowny Editor");
+            ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+        }
     }
 
     void EditorLayer::OnImGuiRender()
@@ -676,134 +682,134 @@ namespace Crowny
 
     void EditorLayer::UI_ProjectManager()
     {
-		if (!Editor::Get().IsProjectLoaded() && !ImGui::IsPopupOpen(EDITOR_PROJECT_MANAGER_ID) || m_OpenProject)
-		{
-			ImGui::OpenPopup(EDITOR_PROJECT_MANAGER_ID);
-			m_OpenProject = false;
-		}
+        if (!Editor::Get().IsProjectLoaded() && !ImGui::IsPopupOpen(EDITOR_PROJECT_MANAGER_ID) || m_OpenProject)
+        {
+            ImGui::OpenPopup(EDITOR_PROJECT_MANAGER_ID);
+            m_OpenProject = false;
+        }
 
-		if (UIUtils::BeginPopup(EDITOR_PROJECT_MANAGER_ID))
-		{
-			if (ImGui::Button("Open"))
-			{
-				Vector<Path> outPaths;
-				if (FileSystem::OpenFileDialog(FileDialogType::OpenFolder, Editor::Get().GetDefaultProjectPath(), {},
-					outPaths))
-				{
-					if (outPaths.size() > 0)
-					{
-						if (Editor::Get().IsProjectLoaded())
-							SaveProjectSettings();
-						Editor::Get().LoadProject(outPaths[0]);
-						Editor::Get().GetEditorSettings()->LastOpenProject = outPaths[0];
-						SetProjectSettings();
-						m_AssetBrowser->Initialize();
-					}
-				}
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("New"))
-			{
-				ImGui::CloseCurrentPopup();
-				m_NewProject = true;
-				// return;
-			}
+        if (UIUtils::BeginPopup(EDITOR_PROJECT_MANAGER_ID))
+        {
+            if (ImGui::Button("Open"))
+            {
+                Vector<Path> outPaths;
+                if (FileSystem::OpenFileDialog(FileDialogType::OpenFolder, Editor::Get().GetDefaultProjectPath(), {},
+                                               outPaths))
+                {
+                    if (outPaths.size() > 0)
+                    {
+                        if (Editor::Get().IsProjectLoaded())
+                            SaveProjectSettings();
+                        Editor::Get().LoadProject(outPaths[0]);
+                        Editor::Get().GetEditorSettings()->LastOpenProject = outPaths[0];
+                        SetProjectSettings();
+                        m_AssetBrowser->Initialize();
+                    }
+                }
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("New"))
+            {
+                ImGui::CloseCurrentPopup();
+                m_NewProject = true;
+                // return;
+            }
 
-			ImGui::Text("Recent Projects");
+            ImGui::Text("Recent Projects");
 
-			ImGui::BeginTable("##projectTable", 4);
-			ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort,
-				0.15f);
-			ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort,
-				0.35f);
-			ImGui::TableSetupColumn("Modified", ImGuiTableColumnFlags_WidthStretch, 0.3f);
-			ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch, 0.1f);
-			ImGui::TableHeadersRow();
-			Ref<EditorSettings> settings = Editor::Get().GetEditorSettings();
-			for (uint32_t i = 0; i < settings->RecentProjects.size(); i++)
-			{
-				const RecentProject& project = settings->RecentProjects[i];
-				if (project.ProjectPath.empty())
-					continue;
-				ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-				char res[30];
-				tm* timeinfo;
-				timeinfo = localtime(&project.Timestamp);
-				strftime(res, 30, "%c", timeinfo);
-				const Path& projectPath = project.ProjectPath;
-				if (ImGui::Selectable(projectPath.filename().string().c_str(), false,
-					ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap))
-				{
-					if (Editor::Get().IsProjectLoaded())
-						SaveProjectSettings();
-					Editor::Get().LoadProject(project.ProjectPath);
-					Editor::Get().GetEditorSettings()->LastOpenProject = project.ProjectPath;
-					SetProjectSettings();
-					m_AssetBrowser->Initialize();
-				}
-				ImGui::TableNextColumn();
-				ImGui::Text(projectPath.string().c_str());
-				ImGui::TableNextColumn();
-				ImGui::Text(res);
-				ImGui::TableNextColumn();
-				if (ImGui::Button("-", ImVec2(20.0f, 20.0f)))
-				{
-					for (uint32_t j = i; j < settings->RecentProjects.size() - 1; j++)
-						settings->RecentProjects[j] = settings->RecentProjects[j + 1];
-					settings->RecentProjects[settings->RecentProjects.size() - 1].ProjectPath.clear();
-					settings->RecentProjects[settings->RecentProjects.size() - 1].Timestamp = 0;
-				}
-				ImGui::SameLine();
-				if (ImGui::ImageButton(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FolderIcon),
-					ImVec2(20.0f, 20.0f), { 0, 1 }, { 1, 0 }, 0.0f))
-					PlatformUtils::ShowInExplorer(project.ProjectPath);
-			}
-			ImGui::EndTable();
-			UIUtils::EndPopup();
-			if (!Editor::Get().IsProjectLoaded())
-				return;
-		}
-		if (m_NewProject)
-		{
-			ImGui::OpenPopup(EDITOR_NEW_PROJECT_ID);
-			m_NewProject = false;
-		}
-		if (UIUtils::BeginPopup(EDITOR_NEW_PROJECT_ID))
-		{
-			ImGui::Text("Path: ");
-			ImGui::SameLine();
-			if (m_NewProjectPath.empty())
-			{
-				m_NewProjectPath = Editor::Get().GetDefaultProjectPath().string();
-				m_NewProjectName = "New Project";
-			}
-			ImGui::InputText("##newProjectPath", &m_NewProjectPath);
-			ImGui::Text("ProjectName: ");
-			ImGui::InputText("##newProjectName", &m_NewProjectName);
-			if (!fs::exists(m_NewProjectPath))
-				ImGui::Text("* Path does not exist");
-			else if (fs::exists(Path(m_NewProjectPath) / m_NewProjectName))
-				ImGui::Text("* A folder with the name of the project already exists there.");
+            ImGui::BeginTable("##projectTable", 4);
+            ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort,
+                                    0.15f);
+            ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort,
+                                    0.35f);
+            ImGui::TableSetupColumn("Modified", ImGuiTableColumnFlags_WidthStretch, 0.3f);
+            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch, 0.1f);
+            ImGui::TableHeadersRow();
+            Ref<EditorSettings> settings = Editor::Get().GetEditorSettings();
+            for (uint32_t i = 0; i < settings->RecentProjects.size(); i++)
+            {
+                const RecentProject& project = settings->RecentProjects[i];
+                if (project.ProjectPath.empty())
+                    continue;
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                char res[30];
+                tm* timeinfo;
+                timeinfo = localtime(&project.Timestamp);
+                strftime(res, 30, "%c", timeinfo);
+                const Path& projectPath = project.ProjectPath;
+                if (ImGui::Selectable(projectPath.filename().string().c_str(), false,
+                                      ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap))
+                {
+                    if (Editor::Get().IsProjectLoaded())
+                        SaveProjectSettings();
+                    Editor::Get().LoadProject(project.ProjectPath);
+                    Editor::Get().GetEditorSettings()->LastOpenProject = project.ProjectPath;
+                    SetProjectSettings();
+                    m_AssetBrowser->Initialize();
+                }
+                ImGui::TableNextColumn();
+                ImGui::Text(projectPath.string().c_str());
+                ImGui::TableNextColumn();
+                ImGui::Text(res);
+                ImGui::TableNextColumn();
+                if (ImGui::Button("-", ImVec2(20.0f, 20.0f)))
+                {
+                    for (uint32_t j = i; j < settings->RecentProjects.size() - 1; j++)
+                        settings->RecentProjects[j] = settings->RecentProjects[j + 1];
+                    settings->RecentProjects[settings->RecentProjects.size() - 1].ProjectPath.clear();
+                    settings->RecentProjects[settings->RecentProjects.size() - 1].Timestamp = 0;
+                }
+                ImGui::SameLine();
+                if (ImGui::ImageButton(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FolderIcon),
+                                       ImVec2(20.0f, 20.0f), { 0, 1 }, { 1, 0 }, 0.0f))
+                    PlatformUtils::ShowInExplorer(project.ProjectPath);
+            }
+            ImGui::EndTable();
+            UIUtils::EndPopup();
+            if (!Editor::Get().IsProjectLoaded())
+                return;
+        }
+        if (m_NewProject)
+        {
+            ImGui::OpenPopup(EDITOR_NEW_PROJECT_ID);
+            m_NewProject = false;
+        }
+        if (UIUtils::BeginPopup(EDITOR_NEW_PROJECT_ID))
+        {
+            ImGui::Text("Path: ");
+            ImGui::SameLine();
+            if (m_NewProjectPath.empty())
+            {
+                m_NewProjectPath = Editor::Get().GetDefaultProjectPath().string();
+                m_NewProjectName = "New Project";
+            }
+            ImGui::InputText("##newProjectPath", &m_NewProjectPath);
+            ImGui::Text("ProjectName: ");
+            ImGui::InputText("##newProjectName", &m_NewProjectName);
+            if (!fs::exists(m_NewProjectPath))
+                ImGui::Text("* Path does not exist");
+            else if (fs::exists(Path(m_NewProjectPath) / m_NewProjectName))
+                ImGui::Text("* A folder with the name of the project already exists there.");
 
-			if (ImGui::Button("Create"))
-			{
-				Editor::Get().CreateProject(m_NewProjectPath, m_NewProjectName);
-				Path newProjectPath = Path(m_NewProjectPath) / m_NewProjectName;
-				if (Editor::Get().IsProjectLoaded())
-					SaveProjectSettings();
-				Editor::Get().LoadProject(newProjectPath);
-				Editor::Get().GetEditorSettings()->LastOpenProject = newProjectPath;
-				SetProjectSettings();
-				m_NewProjectPath.clear();
-				ImGui::CloseCurrentPopup();
-				m_AssetBrowser->Initialize();
-			}
-			UIUtils::EndPopup();
-			if (!Editor::Get()
-				.IsProjectLoaded()) // TODO: Consider changing this (fixing panels) as it would look better
-				return;
-		}
+            if (ImGui::Button("Create"))
+            {
+                Editor::Get().CreateProject(m_NewProjectPath, m_NewProjectName);
+                Path newProjectPath = Path(m_NewProjectPath) / m_NewProjectName;
+                if (Editor::Get().IsProjectLoaded())
+                    SaveProjectSettings();
+                Editor::Get().LoadProject(newProjectPath);
+                Editor::Get().GetEditorSettings()->LastOpenProject = newProjectPath;
+                SetProjectSettings();
+                m_NewProjectPath.clear();
+                ImGui::CloseCurrentPopup();
+                m_AssetBrowser->Initialize();
+            }
+            UIUtils::EndPopup();
+            if (!Editor::Get()
+                   .IsProjectLoaded()) // TODO: Consider changing this (fixing panels) as it would look better
+                return;
+        }
     }
 
     void EditorLayer::UI_EntityDebugInfo()
@@ -1310,6 +1316,14 @@ namespace Crowny
 
             if (ctrl && shift)
                 SaveActiveSceneAs();
+            break;
+        }
+        case Key::Z: {
+            UndoRedo::Get().Undo();
+            break;
+        }
+        case Key::Y: {
+            UndoRedo::Get().Redo();
             break;
         }
         }

@@ -23,6 +23,98 @@ namespace Crowny
     class ImGuiPanel;
     class Scene;
 
+    class UndoAction
+    {
+    public:
+        virtual void Commit() {}
+        virtual void Revert() {}
+    };
+
+    class UndoRedo : public Module<UndoRedo>
+    {
+    public:
+        void RegisterAction(const Ref<UndoAction>& action) { m_UndoStack.push_back(action); }
+        void Undo()
+        {
+            if (m_UndoStack.empty())
+                return;
+            m_UndoStack.back()->Revert();
+            m_RedoStack.push_back(m_UndoStack.back());
+            m_UndoStack.pop_back();
+        }
+
+        void Redo()
+        {
+            if (m_RedoStack.empty())
+                return;
+            m_RedoStack.back()->Commit();
+            m_UndoStack.push_back(m_RedoStack.back());
+            m_RedoStack.pop_back();
+        }
+
+    private:
+        Vector<Ref<UndoAction>> m_UndoStack;
+        Vector<Ref<UndoAction>> m_RedoStack;
+    };
+
+    template <typename T> class AddComponentAction : public UndoAction
+    {
+    public:
+        AddComponentAction(Entity entity) : m_Entity(entity) {}
+
+        virtual void Commit() override { m_Entity.AddComponent<T>(); }
+
+        virtual void Revert() override { m_Entity.RemoveComponent<T>(); }
+
+    private:
+        Entity m_Entity;
+    };
+
+    template <typename T> class RemoveComponentAction : public UndoAction
+    {
+    public:
+        RemoveComponentAction(Entity entity, const T& component) : m_Entity(entity), m_Component(component) {}
+
+        virtual void Commit() override { m_Entity.RemoveComponent<T>(); }
+
+        virtual void Revert() override { m_Entity.AddComponent<T>(m_Component); }
+
+    private:
+        Entity m_Entity;
+        T m_Component;
+    };
+
+    template <typename T> class ChangeComponentAction : public UndoAction
+    {
+        ChangeComponentAction(Entity entity, const T& oldComponent) : m_Entity(entity), m_OldComponent(oldComponent) {}
+
+        virtual void Commit() override { m_Entity.AddOrReplaceComponent<T>(m_NewComponent); }
+
+        virtual void Revert() override
+        {
+            m_NewComponent = m_Entity.GetComponent()<T>();
+            m_Entity.AddOrReplaceComponent<T>(m_OldComponent);
+        }
+
+    private:
+        Entity m_Entity;
+        T m_OldComponent;
+        T m_NewComponent;
+    };
+
+    class EntityCreatedAction : public UndoAction
+    {
+    };
+
+    class EntityDeletedAction : public UndoAction
+    {
+    public:
+        EntityDeletedAction(Entity e) {}
+
+    private:
+        entt::registry m_ComponentRegistry;
+    };
+
     class EditorLayer : public Layer
     {
     public:
@@ -111,6 +203,8 @@ namespace Crowny
         Scope<filewatch::FileWatch<Path>> m_Watch;
         Mutex m_FileWatchMutex;
         Vector<Path> m_FileWatchQueue;
+
+        Stack<UndoAction> m_UndoStack;
 
         static float s_DeltaTime;
         static float s_SmoothDeltaTime;

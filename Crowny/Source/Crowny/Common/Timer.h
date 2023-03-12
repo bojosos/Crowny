@@ -21,7 +21,9 @@ namespace Crowny
 
         float ElapsedMillis() { return ElapsedMicros() / 1000.0f; }
 
-        float ElapsedSeconds() { return ElapsedMillis() / 1000.0f; }
+        float ElapsedSeconds() { return ElapsedMicros() / 1000000.0f; }
+
+        void Reset() { m_StartTime = std::chrono::steady_clock::now(); }
 
     private:
         std::chrono::time_point<std::chrono::steady_clock> m_StartTime;

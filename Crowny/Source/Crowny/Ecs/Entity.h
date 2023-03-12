@@ -31,13 +31,32 @@ namespace Crowny
             return m_Scene->m_Registry.emplace_or_replace<T>(m_EntityHandle, std::forward<Args>(args)...);
         }
 
-        template <typename T> T& GetComponent() const { return m_Scene->m_Registry.get<T>(m_EntityHandle); }
-        template <typename T> T& AddOrGetComponent() const { return m_Scene->m_Registry.get<T>(m_EntityHandle); }
+        template <typename T, typename... Args> T& ReplaceComponent()
+        {
+            CW_ENGINE_ASSERT(HasComponent<T>());
+            return m_Scene->m_Registry.replace<T>(m_EntityHandle, std::forward<Args>(args)...);
+        }
+
+        template <typename T> T& GetComponent() const
+        {
+            CW_ENGINE_ASSERT(HasComponent<T>());
+            return m_Scene->m_Registry.get<T>(m_EntityHandle);
+        }
+        template <typename T> T& AddOrGetComponent() const
+        {
+            if (!HasComponent())
+                return m_Scene->emplace<T>(m_EntityHandle);
+            return m_Scene->m_Registry.get<T>(m_EntityHandle);
+        }
+
         template <typename T> bool HasComponent() const { return m_Scene->m_Registry.all_of<T>(m_EntityHandle); }
-        bool HasAnyComponents() const { return !m_Scene->m_Registry.orphan(m_EntityHandle); }
         template <typename... T> bool HasAnyComponents() const { return m_Scene->m_Registry.any_of<T>(m_EntityHandle); }
         template <typename... T> bool HasComponents() const { return m_Scene->m_Registry.all_of<T>(m_EntityHandle); }
-        template <typename T> void RemoveComponent() { m_Scene->m_Registry.remove<T>(m_EntityHandle); }
+        template <typename T, typename... Others> void RemoveComponent()
+        {
+            m_Scene->m_Registry.remove<T, Others...>(m_EntityHandle);
+        }
+        bool HasAnyComponents() const { return !m_Scene->m_Registry.orphan(m_EntityHandle); }
 
         entt::entity GetHandle() { return m_EntityHandle; }
 

@@ -60,6 +60,8 @@ namespace Crowny
         template <typename... Components> auto GetAllEntitiesWith() { return m_Registry.view<Components...>(); }
 
     private:
+        void RegisterEntityCallbacks();
+
         void OnRigidbody2DComponentConstruct(entt::registry& registry, entt::entity entity);
         void OnRigidbody2DComponentDestroy(entt::registry& registry, entt::entity entity);
         void OnBoxCollider2DComponentConstruct(entt::registry& registry, entt::entity entity);

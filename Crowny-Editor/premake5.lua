@@ -45,9 +45,6 @@ project "Crowny-Editor"
 		"imgui",
 		"ImGuizmo",
 
-		"freetype-gl",
-		"freetype2",
-
 		"glfw",
 		"glad",
 		

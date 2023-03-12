@@ -9,7 +9,7 @@ ap = path.abspath(__file__)
 chdir(path.dirname(ap))
 
 dirs = ["../Crowny/Source", "../Crowny/Resources/Shaders", "../Crowny-Editor/Source", "../Crowny-Sharp/Source", "../Crowny-Editor/Resources/Shaders", "../Crowny-Sandbox/Source"]
-files = ["countlines.py", "../README.md", "../premake5.lua", "genprojects.bat", "../Crowny/Dependencies/freetype-gl/premake5.lua", "../Crowny/Dependencies/freetype2/premake5.lua", "../Crowny/Dependencies/glfw/premake5.lua", "../Crowny/Dependencies/glad/premake5.lua", "../.gitignore"]
+files = ["countlines.py", "../README.md", "../premake5.lua", "genprojects.bat", "../Crowny/Dependencies/glfw/premake5.lua", "../Crowny/Dependencies/glad/premake5.lua", "../.gitignore"]
 
 linecount = 0
 filecount = 0

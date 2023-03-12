@@ -235,13 +235,13 @@ namespace Crowny
         }
 
         /// <summary>
-        /// Linearly interpolates between two vector3s.
+        /// Linearly interpolates between two vector4s.
         /// </summary>
         /// <param name="a">Starting vector.</param>
         /// <param name="b">Ending vector.</param>
         /// <param name="t">Interpolation factor.</param>
         /// <returns>Interpolated vector</returns>
-        public static Vector4 Lerp(Vector3 a, Vector3 b, float t)
+        public static Vector4 Lerp(Vector4 a, Vector4 b, float t)
         {
             t = Mathf.Clamp01(t);
             return new Vector4(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t, a.w + (b.w - a.w) * t);
