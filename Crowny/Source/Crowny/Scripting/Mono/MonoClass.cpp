@@ -135,25 +135,24 @@ namespace Crowny
 
     Vector<MonoClass*> MonoClass::GetAttributes() const
     {
-        Vector<MonoClass*> res;
+        Vector<MonoClass*> result;
 
-        MonoCustomAttrInfo* info = mono_custom_attrs_from_class(m_Class);
-        if (info == nullptr)
-            return res;
-        for (uint32_t i = 0; i < (uint32_t)info->num_attrs; i++)
+        MonoCustomAttrInfo* attrInfo = mono_custom_attrs_from_class(m_Class);
+        if (attrInfo == nullptr)
+            return result;
+        result.reserve(attrInfo->num_attrs);
+        for (uint32_t i = 0; i < (uint32_t)attrInfo->num_attrs; i++)
         {
-            ::MonoClass* monoClass = mono_method_get_class(info->attrs[i].ctor);
+            ::MonoClass* attributeClass = mono_method_get_class(attrInfo->attrs[i].ctor);
+            MonoClass* monoClass = MonoManager::Get().FindClass(attributeClass);
 
             if (monoClass != nullptr)
-            {
-                MonoClass* resultClass = new MonoClass(monoClass);
-                res.push_back(resultClass);
-            }
+                result.push_back(monoClass);
         }
 
-        mono_custom_attrs_free(info);
+        mono_custom_attrs_free(attrInfo);
 
-        return res;
+        return result;
     }
 
     bool MonoClass::HasAttribute(MonoClass* monoClass) const

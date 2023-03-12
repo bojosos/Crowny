@@ -68,6 +68,28 @@ namespace Crowny
         return attrs;
     }
 
+    Vector<MonoClass*> MonoMethod::GetAttributes() const
+    {
+        Vector<MonoClass*> result;
+        
+        MonoCustomAttrInfo* attrInfo = mono_custom_attrs_from_method(m_Method);
+        if (attrInfo == nullptr)
+            return result;
+        result.reserve(attrInfo->num_attrs);
+        for (uint32_t i = 0; i < (uint32_t)attrInfo->num_attrs; i++)
+        {
+            ::MonoClass* attributeClass = mono_method_get_class(attrInfo->attrs[i].ctor);
+            MonoClass* monoClass = MonoManager::Get().FindClass(attributeClass);
+
+            if (monoClass != nullptr)
+                result.push_back(monoClass);
+        }
+
+        mono_custom_attrs_free(attrInfo);
+
+        return result;
+    }
+
     bool MonoMethod::IsStatic() const
     {
         if (!m_HasCachedSignature)

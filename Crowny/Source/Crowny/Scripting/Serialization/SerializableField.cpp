@@ -111,6 +111,12 @@ namespace Crowny
                     std::memcpy(&fieldData->Value, MonoUtils::Unbox(value), sizeof(fieldData->Value));
                 return fieldData;
             }
+            case ScriptPrimitiveType::Color: {
+                auto fieldData = CreateRef<SerializableFieldColor>();
+                if (value != nullptr)
+                    std::memcpy(&fieldData->Value, MonoUtils::Unbox(value), sizeof(fieldData->Value));
+                return fieldData;
+            }
             case ScriptPrimitiveType::Matrix4: {
                 auto fieldData = CreateRef<SerializableFieldMatrix4>();
                 if (value != nullptr)

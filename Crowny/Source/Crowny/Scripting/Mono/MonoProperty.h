@@ -15,9 +15,10 @@ namespace Crowny
         MonoProperty(::MonoProperty* property);
 
         const String& GetName() const { return m_Name; }
-        MonoObject* GetAttribute(MonoClass* monoClass) const;
         MonoClass* GetReturnType() const;
         bool HasAttribute(MonoClass* monoClass) const;
+        MonoObject* GetAttribute(MonoClass* monoClass) const;
+        Vector<MonoClass*> GetAttributes() const;
         bool IsIndexed() const;
         MonoObject* GetIndexed(MonoObject* instance, uint32_t index) const;
         void SetIndexed(MonoObject* instance, uint32_t index, void* value) const;
