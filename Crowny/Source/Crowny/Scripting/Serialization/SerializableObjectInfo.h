@@ -57,7 +57,7 @@ namespace Crowny
         Multiline = 1 << 8,
         EnumQuickTabs = 1 << 9,
         HDR = 1 << 10,
-        NoAlpha = 1 << 1,
+        NoAlpha = 1 << 11,
     };
     typedef Flags<ScriptFieldFlagBits> ScriptFieldFlags;
     CW_FLAGS_OPERATORS(ScriptFieldFlagBits);
@@ -100,9 +100,6 @@ namespace Crowny
         bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override;
         ::MonoClass* GetMonoClass() const override;
         virtual SerializableType GetType() override { return SerializableType::Entity; }
-
-        String m_TypeNamespace;
-        String m_TypeName;
     };
 
     class SerializableTypeInfoAsset : public SerializableTypeInfo
