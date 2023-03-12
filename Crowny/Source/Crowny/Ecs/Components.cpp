@@ -149,7 +149,9 @@ namespace Crowny
             m_Internal->Stop();
     }
 
-    TextComponent::TextComponent() : ComponentBase() { Font = FontManager::Get("default"); }
+    TextComponent::TextComponent() : ComponentBase()
+    { /* Font = FontManager::Get("default"); */
+    }
 
     float Rigidbody2DComponent::GetMass() const
     {

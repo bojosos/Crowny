@@ -21,28 +21,28 @@ namespace Crowny
         bool VSync = true;
     };
 
-	struct RenderWindowDesc
-	{
-		String Title = "Crowny Application";
-		uint32_t Width = 1280;
-		uint32_t Height = 720;
-		bool Fullscreen = false;
-		bool StartMaximized = false;
-		bool VSync = true;
-		bool AllowResize = true;
-		bool ShowTitleBar = true;
-		bool Hidden = false;
-		uint32_t MonitorIdx = 0;
+    struct RenderWindowDesc
+    {
+        String Title = "Crowny Application";
+        uint32_t Width = 1280;
+        uint32_t Height = 720;
+        bool Fullscreen = false;
+        bool StartMaximized = false;
+        bool VSync = true;
+        bool AllowResize = true;
+        bool ShowTitleBar = true;
+        bool Hidden = false;
+        uint32_t MonitorIdx = 0;
 
-		uint32_t VsyncInterval = 1; // not supported
-		bool DepthBuffer = true;    // not supported
-		uint32_t Samples = 0;       // not supported
-		bool ShowBorder = true;     // not supported
-		bool HideUntilSwap = false;
-		int32_t Left = -1;
-		int32_t Top = -1;
-		bool Modal = false;
-	};
+        uint32_t VsyncInterval = 1; // not supported
+        bool DepthBuffer = true;    // not supported
+        uint32_t Samples = 0;       // not supported
+        bool ShowBorder = true;     // not supported
+        bool HideUntilSwap = false;
+        int32_t Left = -1;
+        int32_t Top = -1;
+        bool Modal = false;
+    };
 
     class RenderWindow : public RenderTarget
     {

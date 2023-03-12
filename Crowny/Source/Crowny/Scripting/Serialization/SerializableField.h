@@ -4,6 +4,7 @@
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntity.h"
 #include "Crowny/Scripting/Mono/Mono.h"
+#include "Crowny/Scripting/ScriptSceneObjectManager.h"
 #include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
 
 #include "Crowny/Assets/Asset.h"
@@ -52,7 +53,7 @@ namespace Crowny
         virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetBoolClass(), &Value); }
 
         virtual void SerializeYAML(YAML::Emitter& out) const { out << Value; }
-        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<bool>(); }
+        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<bool>(false); }
 
         bool Value = false;
     };
@@ -65,7 +66,7 @@ namespace Crowny
         virtual void Serialize() override {}
 
         virtual void SerializeYAML(YAML::Emitter& out) const { out << Value; }
-        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<char>(); }
+        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<char>(0); }
 
         char Value = 0; // Maybe consider wchar here
     };
@@ -77,7 +78,7 @@ namespace Crowny
         virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
 
         virtual void SerializeYAML(YAML::Emitter& out) const { out << Value; }
-        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<int8_t>(); }
+        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<int8_t>(0); }
 
         int8_t Value = 0;
     };
@@ -89,7 +90,7 @@ namespace Crowny
         virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
 
         virtual void SerializeYAML(YAML::Emitter& out) const { out << Value; }
-        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<uint8_t>(); }
+        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<uint8_t>(0U); }
 
         uint8_t Value = 0U;
     };
@@ -101,7 +102,7 @@ namespace Crowny
         virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
 
         virtual void SerializeYAML(YAML::Emitter& out) const { out << Value; }
-        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<int16_t>(); }
+        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<int16_t>(0); }
 
         int16_t Value = 0;
     };
@@ -113,7 +114,7 @@ namespace Crowny
         virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
 
         virtual void SerializeYAML(YAML::Emitter& out) const { out << Value; }
-        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<uint16_t>(); }
+        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<uint16_t>(0U); }
 
         uint16_t Value = 0U;
     };
@@ -125,7 +126,7 @@ namespace Crowny
         virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
 
         virtual void SerializeYAML(YAML::Emitter& out) const { out << Value; }
-        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<int32_t>(); }
+        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<int32_t>(0); }
 
         int32_t Value = 0;
     };
@@ -137,7 +138,7 @@ namespace Crowny
         virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
 
         virtual void SerializeYAML(YAML::Emitter& out) const { out << Value; }
-        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<uint32_t>(); }
+        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<uint32_t>(0U); }
 
         uint32_t Value = 0U;
     };
@@ -161,9 +162,9 @@ namespace Crowny
         virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
 
         virtual void SerializeYAML(YAML::Emitter& out) const { out << Value; }
-        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<uint64_t>(); }
+        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<uint64_t>(0UL); }
 
-        uint64_t Value = 0U;
+        uint64_t Value = 0UL;
     };
 
     class SerializableFieldFloat : public SerializableFieldData
@@ -173,7 +174,7 @@ namespace Crowny
         virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
 
         virtual void SerializeYAML(YAML::Emitter& out) const { out << Value; }
-        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<float>(); }
+        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<float>(0.0f); }
 
         float Value = 0.0f;
     };
@@ -185,9 +186,55 @@ namespace Crowny
         virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
 
         virtual void SerializeYAML(YAML::Emitter& out) const { out << Value; }
-        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<double>(); }
+        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<double>(0.0); }
 
         double Value = 0.0;
+    };
+
+    class SerializableFieldVector2 : public SerializableFieldData
+    {
+    public:
+        virtual void* GetValue() override { return &Value; }
+        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
+
+        virtual void SerializeYAML(YAML::Emitter& out) const { out << Value; }
+        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<glm::vec2>(glm::vec2(0.0f)); }
+
+        glm::vec2 Value = glm::vec2(0.0f);
+    };
+
+    class SerializableFieldVector3 : public SerializableFieldData
+    {
+    public:
+        virtual void* GetValue() override { return &Value; }
+        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
+
+        virtual void SerializeYAML(YAML::Emitter& out) const { out << Value; }
+        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<glm::vec3>(glm::vec3(0.0f)); }
+
+        glm::vec3 Value = glm::vec3(0.0f);
+    };
+    class SerializableFieldVector4 : public SerializableFieldData
+    {
+    public:
+        virtual void* GetValue() override { return &Value; }
+        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
+
+        virtual void SerializeYAML(YAML::Emitter& out) const { out << Value; }
+        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<glm::vec4>(glm::vec4(0.0f)); }
+
+        glm::vec4 Value = glm::vec4(0.0f);
+    };
+    class SerializableFieldMatrix4 : public SerializableFieldData
+    {
+    public:
+        virtual void* GetValue() override { return &Value; }
+        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(MonoUtils::GetCharClass(), &Value); }
+
+        virtual void SerializeYAML(YAML::Emitter& out) const { out << Value; }
+        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<glm::mat4>(glm::mat4(1.0f)); }
+
+        glm::mat4 Value = glm::mat4(1.0f);
     };
 
     class SerializableFieldString : public SerializableFieldData
@@ -200,7 +247,13 @@ namespace Crowny
         virtual MonoObject* GetValueBoxed() override { return (MonoObject*)GetValue(); }
 
         virtual void SerializeYAML(YAML::Emitter& out) const { out << Value; }
-        virtual void DeserializeYAML(const YAML::Node& node) { Value = node.as<String>(); }
+        virtual void DeserializeYAML(const YAML::Node& node)
+        {
+            if (node.IsNull())
+                Null = true;
+            else
+                Value = node.as<String>(String());
+        }
 
         String Value;
         bool Null = false;
@@ -209,13 +262,33 @@ namespace Crowny
     class SerializableFieldEntity : public SerializableFieldData
     {
     public:
-        virtual void* GetValue() override { return &Value; }
+        virtual void* GetValue() override
+        {
+            ScriptEntity* scriptEntity = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(Value);
+            if (scriptEntity == nullptr)
+                return nullptr;
+            return scriptEntity->GetManagedInstance();
+        }
+
         virtual MonoObject* GetValueBoxed() override { return (MonoObject*)GetValue(); }
 
-        virtual void SerializeYAML(YAML::Emitter& out) const override { out << Value.GetUuid(); }
+        virtual void SerializeYAML(YAML::Emitter& out) const override
+        {
+            if (Value)
+            {
+                out << Value.GetUuid();
+            }
+            else
+            {
+                out << UUID();
+            }
+        }
+
         virtual void DeserializeYAML(const YAML::Node& node) override
         {
-            SceneManager::GetActiveScene()->GetEntityFromUuid(node.as<UUID>());
+            // Wat? TODO: Fix this
+            if (Value)
+                SceneManager::GetActiveScene()->GetEntityFromUuid(node.as<UUID>());
         }
 
         Entity Value;

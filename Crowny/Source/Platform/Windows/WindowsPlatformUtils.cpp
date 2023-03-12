@@ -22,7 +22,12 @@ namespace Crowny
     UUID PlatformUtils::GenerateUUID()
     {
         ::UUID uuid;
-        UuidCreate(&uuid);
+        RPC_STATUS status = UuidCreate(&uuid);
+        // This donsn't really mattter
+        if (status != RPC_S_OK)
+        {
+            CW_ENGINE_CRITICAL("Couldn't create uuid");
+        }
 
         uint32_t data1 = uuid.Data1;
         uint32_t data2 = uuid.Data2 | (uuid.Data3 << 16);
@@ -40,9 +45,9 @@ namespace Crowny
         {
             Path copy = filepath;
             copy.remove_filename();
-            PIDLIST_ABSOLUTE dir = ILCreateFromPath(_T(copy.string().c_str()));
+            PIDLIST_ABSOLUTE dir = ILCreateFromPathW(copy.wstring().c_str());
 
-            PIDLIST_ABSOLUTE item1 = ILCreateFromPath(_T(filepath.string().c_str()));
+            PIDLIST_ABSOLUTE item1 = ILCreateFromPathW(filepath.wstring().c_str());
             LPCITEMIDLIST selection[] = { item1 };
 
             uint32_t count = sizeof(selection) / sizeof(ITEMIDLIST*);

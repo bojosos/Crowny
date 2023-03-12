@@ -1,7 +1,9 @@
 #include "cwpch.h"
 
+#include "Crowny/Application/Application.h"
 #include "Crowny/Scripting/Mono/MonoAssembly.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
+#include "Crowny/Scripting/Mono/MonoMethod.h"
 
 #include "Crowny/Common/FileSystem.h"
 
@@ -10,6 +12,7 @@
 #include <mono/metadata/mono-config.h>
 #include <mono/metadata/mono-debug.h>
 #include <mono/metadata/mono-gc.h>
+#include <mono/metadata/profiler.h>
 #include <mono/metadata/threads.h>
 #include <mono/utils/mono-logger.h>
 
@@ -62,19 +65,78 @@ namespace Crowny
     void MonoPrintCallback(const char* string, mono_bool isStdout) { CW_ENGINE_ERROR("Mono: {0}", string); }
 
     void MonoPrintErrorCallback(const char* string, mono_bool isStdout) { CW_ENGINE_ERROR("Mono: {0}", string); }
+    /*
 
+     struct _MonoProfiler
+    {
+            const char* type_name;
+            Crowny::Vector<Crowny::String> gchandles;
+            Crowny::Vector<Crowny::String> stacktraces;
+            Crowny::Mutex mutex; // used to ensure only one thread accesses the arrays
+    };
+
+
+    static void MethodEnterCallback(MonoProfiler* profiler, ::MonoMethod* method, MonoProfilerCallContext* context)
+    {
+        // CW_ENGINE_INFO("Method {0} enter", MonoMethod(method).GetName());
+    }
+
+    static void MethodLeaveCallback(MonoProfiler* profiler, ::MonoMethod* method, MonoProfilerCallContext* context)
+    {
+        // CW_ENGINE_INFO("Method {0} leave", MonoMethod(method).GetName());
+    }
+
+    static void GCHandleCreated(MonoProfiler* profiler, uint32_t handle, MonoGCHandleType type, MonoObject* object)
+    {
+        if (type == MONO_GC_HANDLE_NORMAL)
+        {
+            // CW_ENGINE_INFO("Created handle of type: {0}", MonoUtils::GetClassName(object));
+        }
+    }
+
+    static MonoProfilerCallInstrumentationFlags InstrumentationFilter(MonoProfiler* prof, ::MonoMethod* method)
+    {
+        return (MonoProfilerCallInstrumentationFlags)(
+          MONO_PROFILER_CALL_INSTRUMENTATION_ENTER | MONO_PROFILER_CALL_INSTRUMENTATION_LEAVE |
+          MONO_PROFILER_CALL_INSTRUMENTATION_TAIL_CALL | MONO_PROFILER_CALL_INSTRUMENTATION_EXCEPTION_LEAVE);
+    }
+
+    static void GCHandleDestroyed(MonoProfiler* profiler, uint32_t handle, MonoGCHandleType type)
+    {
+        if (type == MONO_GC_HANDLE_NORMAL)
+        {
+            CW_ENGINE_INFO("Deleted handle of type: {0}",
+                           MonoUtils::GetClassName(MonoUtils::GetObjectFromGCHandle(handle)));
+        }
+    }
+
+    static MonoProfiler profiler;
+    */
     MonoManager::MonoManager() : m_ScriptDomain(nullptr), m_RootDomain(nullptr), m_CorlibAssembly(nullptr)
     {
+        /*
+        if (Application::Get().GetApplicationDesc().Script.EnableProfiling)
+        {
+            MonoProfilerHandle profilerHandle = mono_profiler_create(&profiler);
+            mono_profiler_set_method_enter_callback(profilerHandle, MethodEnterCallback);
+            mono_profiler_set_method_leave_callback(profilerHandle, MethodLeaveCallback);
+            mono_profiler_set_call_instrumentation_filter_callback(profilerHandle, InstrumentationFilter);
+            mono_profiler_set_gc_handle_created_callback(profilerHandle, GCHandleCreated);
+            mono_profiler_set_gc_handle_deleted_callback(profilerHandle, GCHandleDestroyed);
+        }
+        */
         Path libDir = MONO_LIB_DIR;
         Path etcDir = GetMonoEtcFolder();
         Path assembliesDir = GetFrameworkAssembliesFolder();
 
         // mono_set_dirs(libDir.c_str(), etcDir.c_str());
         // mono_set_assemblies_path(assembliesDir.c_str());
+        // TODO: Fix these dirs
         mono_set_dirs("C:\\Program Files\\Mono\\lib", "C:\\Program Files\\Mono\\etc");
 
         // #if CW_DEBUG
         mono_debug_init(MONO_DEBUG_FORMAT_MONO);
+        // TODO: Add port settings
         const char* options[] = {
             "--soft-breakpoints",
             "--debugger-agent=transport=dt_socket,address=127.0.0.1:17615,embedding=1,server=y,suspend=n",

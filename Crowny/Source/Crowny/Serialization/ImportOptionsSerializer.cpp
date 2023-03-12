@@ -19,46 +19,72 @@ namespace Crowny
         case ImportOptionsType::AudioClip: {
             Ref<AudioClipImportOptions> audioImportOptions =
               std::static_pointer_cast<AudioClipImportOptions>(importOptions);
-            out << YAML::Key << "AudioImporter" << YAML::Value;
-            out << YAML::BeginMap;
-            out << YAML::Key << "Format" << YAML::Value << (uint32_t)audioImportOptions->Format;
-            out << YAML::Key << "ReadMode" << YAML::Value << (uint32_t)audioImportOptions->ReadMode;
-            out << YAML::Key << "Is3D" << YAML::Value << audioImportOptions->Is3D;
-            out << YAML::Key << "BitDepth" << YAML::Value << audioImportOptions->BitDepth;
-            out << YAML::Key << "Quality" << YAML::Value << audioImportOptions->Quality;
-            out << YAML::EndMap;
+            BeginYAMLMap(out, "AudioImporter");
+
+            SerializeEnumYAML(out, "Format", audioImportOptions->Format);
+            SerializeEnumYAML(out, "ReadMode", audioImportOptions->ReadMode);
+            SerializeValueYAML(out, "Is3D", audioImportOptions->Is3D);
+            SerializeValueYAML(out, "BitDepth", audioImportOptions->BitDepth);
+            SerializeValueYAML(out, "Quality", audioImportOptions->Quality);
+
+            EndYAMLMap(out, "AudioImporter");
             break;
         }
         case ImportOptionsType::Shader: {
             Ref<ShaderImportOptions> shaderImportOptions = std::static_pointer_cast<ShaderImportOptions>(importOptions);
-            out << YAML::Key << "ShaderImporter" << YAML::Value;
-            out << YAML::BeginMap;
-            // out << YAML::Key << shaderImportOptions->GetDefines();
-            out << YAML::EndMap;
+            BeginYAMLMap(out, "ShaderImporter");
+
+            EndYAMLMap(out, "ShaderImporter");
             break;
         }
         case ImportOptionsType::Texture: {
             Ref<TextureImportOptions> textureImportOptions =
               std::static_pointer_cast<TextureImportOptions>(importOptions);
-            out << YAML::Key << "TextureImporter" << YAML::Value;
-            out << YAML::BeginMap;
-            out << YAML::Key << "AutoFormat" << YAML::Value << textureImportOptions->AutomaticFormat;
-            out << YAML::Key << "CpuCached" << YAML::Value << textureImportOptions->CpuCached;
-            out << YAML::Key << "Format" << YAML::Value << (uint32_t)textureImportOptions->Format;
-            out << YAML::Key << "GenerateMips" << YAML::Value << textureImportOptions->GenerateMips;
-            out << YAML::Key << "MaxMip" << YAML::Value << textureImportOptions->MaxMip;
-            out << YAML::Key << "Shape" << YAML::Value << (uint32_t)textureImportOptions->Shape;
-            out << YAML::Key << "sRGB" << YAML::Value << textureImportOptions->SRGB;
-            out << YAML::EndMap;
+            BeginYAMLMap(out, "TextureImporter");
+
+            SerializeEnumYAML(out, "Format", textureImportOptions->Format);
+            SerializeEnumYAML(out, "Shape", textureImportOptions->Shape);
+
+            SerializeValueYAML(out, "AutoFormat", textureImportOptions->AutomaticFormat);
+            SerializeValueYAML(out, "CpuCached", textureImportOptions->CpuCached);
+            SerializeValueYAML(out, "GenerateMips", textureImportOptions->GenerateMips);
+            SerializeValueYAML(out, "MaxMip", textureImportOptions->MaxMip);
+            SerializeValueYAML(out, "sRGB", textureImportOptions->SRGB);
+
+            EndYAMLMap(out, "TextureImporter");
             break;
         }
         case ImportOptionsType::Script: {
             Ref<CSharpScriptImportOptions> scriptImportOptions =
               std::static_pointer_cast<CSharpScriptImportOptions>(importOptions);
-            out << YAML::Key << "ScriptImporter" << YAML::Value;
-            out << YAML::BeginMap;
-            out << YAML::Key << "IsEditorScript" << YAML::Value << scriptImportOptions->IsEditorScript;
-            out << YAML::EndMap;
+            BeginYAMLMap(out, "ScriptImporter");
+
+            SerializeValueYAML(out, "IsEditorScript", scriptImportOptions->IsEditorScript);
+
+            EndYAMLMap(out, "ScriptImporter");
+            break;
+        }
+        case ImportOptionsType::Font: {
+            Ref<FontImportOptions> fontImportOptions = std::static_pointer_cast<FontImportOptions>(importOptions);
+            BeginYAMLMap(out, "FontImporter");
+
+            SerializeEnumYAML(out, "AtlasDimensionsConstraint", fontImportOptions->AtlasDimensionsConstraint);
+            SerializeValueYAML(out, "GetKerningData", fontImportOptions->GetKerningData);
+            SerializeValueYAML(out, "AutomaticFontSampling", fontImportOptions->AutomaticFontSampling);
+            SerializeValueYAML(out, "SampingFontSize", fontImportOptions->SampingFontSize);
+            SerializeValueYAML(out, "AutoSizeAtlas", fontImportOptions->AutoSizeAtlas);
+            SerializeValueYAML(out, "AtlasWidth", fontImportOptions->AtlasWidth);
+            SerializeValueYAML(out, "AtlasHeight", fontImportOptions->AtlasHeight);
+            SerializeEnumYAML(out, "Range", fontImportOptions->Range);
+            SerializeValueYAML(out, "CustomCharset", fontImportOptions->CustomCharset);
+            SerializeValueYAML(out, "Padding", fontImportOptions->Padding);
+            SerializeValueYAML(out, "DynamicFontAtlas", fontImportOptions->DynamicFontAtlas);
+            SerializeValueYAML(out, "BoldWeight", fontImportOptions->BoldWeight);
+            SerializeValueYAML(out, "BoldSpacing", fontImportOptions->BoldSpacing);
+            SerializeValueYAML(out, "TabMultiple", fontImportOptions->TabMultiple);
+            SerializeValueYAML(out, "ItalicStyle", fontImportOptions->ItalicStyle);
+
+            EndYAMLMap(out, "FontImporter");
             break;
         }
         }
@@ -66,122 +92,88 @@ namespace Crowny
 
     Ref<ImportOptions> ImportOptionsSerializer::Deserialize(const YAML::Node& data)
     {
-        if (const YAML::Node& audioIo = data["AudioImporter"])
+        if (const YAML::Node& audioImportOptionsNode = data["AudioImporter"])
         {
-            Ref<AudioClipImportOptions> importOptions = CreateRef<AudioClipImportOptions>();
-            if (const auto& format = audioIo["Format"])
-            {
-                uint32_t formatIdx = format.as<uint32_t>();
-                if (formatIdx >= 2)
-                    CW_ENGINE_WARN("Audio format \'{0}\' in metadata file is invalid.", formatIdx);
-                else
-                    importOptions->Format = (AudioFormat)formatIdx;
-            }
-            if (const auto& readMode = audioIo["ReadMode"])
-            {
-                uint32_t readModeIdx = readMode.as<uint32_t>();
-                if (readModeIdx >= 3)
-                    CW_ENGINE_WARN("Audio read mode \'{0}\' in metadata file is invalid.", readModeIdx);
-                else
-                    importOptions->ReadMode = (AudioReadMode)readModeIdx;
-            }
-            if (const auto& is3D = audioIo["Is3D"])
-            {
-                bool is3Dval = is3D.as<bool>();
-                importOptions->Is3D = is3Dval;
-            }
-            if (const auto& bitDepth = audioIo["BitDepth"])
-            {
-                uint32_t bitDepthVal = bitDepth.as<uint32_t>();
-                if (bitDepthVal != 8 && bitDepthVal != 16 && bitDepthVal != 24 && bitDepthVal != 32)
-                    CW_ENGINE_WARN("Bit depth \'{0}\' in metadata file is invalid.", bitDepthVal);
-                importOptions->BitDepth = bitDepthVal;
-            }
-            if (const auto& quality = audioIo["Quality"])
-            {
-                float qualityVal = quality.as<float>();
-                if (qualityVal < 0 || qualityVal > 1)
-                    CW_ENGINE_WARN("Quality  \'{0}\' in metadata file is invalid.", qualityVal);
-                importOptions->Quality = qualityVal;
-            }
-            return importOptions;
+            Ref<AudioClipImportOptions> audioImportOptions = CreateRef<AudioClipImportOptions>();
+
+            DeserializeEnumYAML(audioImportOptionsNode, "ReadMode", audioImportOptions->Format, AudioFormat::VORBIS,
+                                "Audio format \'{0}\' in metadata file is invalid.", 0, 2);
+            DeserializeEnumYAML(audioImportOptionsNode, "ReadMode", audioImportOptions->ReadMode,
+                                AudioReadMode::LoadCompressed, "Audio read mode \'{0}\' in metadata file is invalid.",
+                                0, 3);
+            DeserializeValueYAML(audioImportOptionsNode, "Is3D", audioImportOptions->Is3D, true);
+            DeserializeValueYAML(audioImportOptionsNode, "Quality", audioImportOptions->Quality, 1.0f,
+                                 "Audio quality  \'{0}\' in metadata file is invalid.", 0.0f, 1.0f);
+
+            uint32_t bitDepth = audioImportOptionsNode["BitDepth"].as<uint32_t>(8);
+            if (bitDepth != 8 && bitDepth != 16 && bitDepth != 24 && bitDepth != 32)
+                CW_ENGINE_WARN("Bit depth \'{0}\' in metadata file is invalid.", bitDepth);
+            audioImportOptions->BitDepth = bitDepth;
+
+            return audioImportOptions;
         }
-        else if (const YAML::Node& textureIo = data["TextureImporter"])
+        else if (const YAML::Node& textureImportOptionsNode = data["TextureImporter"])
         {
-            bool AutomaticFormat = true;
-            TextureFormat Format = TextureFormat::RGBA8;
-            TextureShape Shape = TextureShape::TEXTURE_2D;
-            bool GenerateMips = false;
-            uint32_t MaxMip = 0;
-            bool CpuCached = false;
-            bool SRGB = false;
-            Ref<TextureImportOptions> importOptions = CreateRef<TextureImportOptions>();
-            if (const auto& format = textureIo["Format"])
-            {
-                uint32_t formatIdx = format.as<uint32_t>();
-                if (formatIdx >= (uint32_t)TextureFormat::FormatCount)
-                    CW_ENGINE_WARN("Texture format \'{0}\' in metadata file is invalid.", formatIdx);
-                else
-                    importOptions->Format = (TextureFormat)formatIdx;
-            }
-            if (const auto& autoFormat = audioIo["AutoFormat"])
-            {
-                bool autoFormatVal = autoFormat.as<bool>();
-                importOptions->AutomaticFormat = autoFormatVal;
-            }
-            if (const auto& generateMips = audioIo["GenerateMips"])
-            {
-                bool generateMipsVal = generateMips.as<bool>();
-                importOptions->GenerateMips = generateMipsVal;
-            }
-            if (const auto& shape = audioIo["Shape"])
-            {
-                uint32_t shapeIdx = shape.as<uint32_t>();
-                if (shapeIdx >= 4)
-                    CW_ENGINE_WARN("Texture shape \'{0}\' in metadata file is invalid.", shapeIdx);
-                importOptions->Shape = (TextureShape)shapeIdx;
-            }
-            if (const auto& cpuCached = audioIo["CpuCached"])
-            {
-                bool cpuCachedVal = cpuCached.as<bool>();
-                importOptions->CpuCached = cpuCachedVal;
-            }
-            if (const auto& sRgb = audioIo["sRGB"])
-            {
-                bool sRgbVal = sRgb.as<bool>();
-                importOptions->SRGB = sRgbVal;
-            }
-            if (const auto& maxMip = audioIo["MaxMip"])
-            {
-                uint32_t maxMipVal = maxMip.as<uint32_t>();
-                importOptions->MaxMip = maxMipVal;
-            }
-            return importOptions;
+            Ref<TextureImportOptions> textureImportOptions = CreateRef<TextureImportOptions>();
+
+            DeserializeEnumYAML(textureImportOptionsNode, "Format", textureImportOptions->Format, TextureFormat::RGBA8,
+                                "Texture format \'{}\' in metadata file is invalid.", 0,
+                                (int32_t)TextureFormat::FormatCount);
+            DeserializeEnumYAML(textureImportOptionsNode, "Shape", textureImportOptions->Shape,
+                                TextureShape::TEXTURE_2D, "Texture shape \'{}\' in metadata file is invalid.", 0, 4);
+            DeserializeValueYAML(textureImportOptionsNode, "AutoFormat", textureImportOptions->AutomaticFormat, true);
+            DeserializeValueYAML(textureImportOptionsNode, "GenerateMips", textureImportOptions->GenerateMips, false);
+            DeserializeValueYAML(textureImportOptionsNode, "CpuCached", textureImportOptions->CpuCached, false);
+            DeserializeValueYAML(textureImportOptionsNode, "sRGB", textureImportOptions->SRGB, false);
+            DeserializeValueYAML(textureImportOptionsNode, "MaxMip", textureImportOptions->MaxMip, 0U);
+
+            return textureImportOptions;
         }
-        else if (const auto& shaderIo = data["ShaderImporter"])
+        else if (const auto& shaderImportOptionsNode = data["ShaderImporter"])
         {
             Ref<ShaderImportOptions> importOptions = CreateRef<ShaderImportOptions>();
-            if (const auto& mapNode = shaderIo["Defines"])
-            {
-                // const auto& map = mapNode.as<UnorderedMap<String, String>>();
-                // for (const auto& kvp : map)
-                // importOptions->SetDefine(kvp.first, kvp.second);
-            }
+            // TODO: Deserialize defines
             return importOptions;
         }
-        else if (const auto& scriptIo = data["ScriptImporter"])
+        else if (const auto& scriptImportOptionsNode = data["ScriptImporter"])
         {
-            Ref<CSharpScriptImportOptions> importOptions = CreateRef<CSharpScriptImportOptions>();
-            if (const auto& isEditorScript = scriptIo["IsEditorScript"])
-            {
-                importOptions->IsEditorScript = isEditorScript.as<bool>();
-            }
-            return importOptions;
+            Ref<CSharpScriptImportOptions> scriptImportOptions = CreateRef<CSharpScriptImportOptions>();
+            DeserializeValueYAML(scriptImportOptionsNode, "IsEditorScript", scriptImportOptions->IsEditorScript, false);
+            return scriptImportOptions;
+        }
+        else if (const auto& fontImportOptionsNode = data["FontImporter"])
+        {
+            Ref<FontImportOptions> fontImportOptions = CreateRef<FontImportOptions>();
+
+            DeserializeEnumYAML(fontImportOptionsNode, "AtlasDimensionsConstraint",
+                                fontImportOptions->AtlasDimensionsConstraint,
+                                Font::AtlasDimensionsConstraint::POWER_OF_TWO_SQUARE,
+                                "Atlas dimension constraints \'{}\' in metadata file is invalid.", 0,
+                                Font::AtlasDimensionsConstraint::COUNT);
+            DeserializeValueYAML(fontImportOptionsNode, "GetKerningData", fontImportOptions->GetKerningData, true);
+            DeserializeValueYAML(fontImportOptionsNode, "AutomaticFontSampling",
+                                 fontImportOptions->AutomaticFontSampling, true);
+            DeserializeValueYAML(fontImportOptionsNode, "SampingFontSize", fontImportOptions->SampingFontSize, 64U);
+            DeserializeValueYAML(fontImportOptionsNode, "AutoSizeAtlas", fontImportOptions->AutoSizeAtlas, false);
+            DeserializeValueYAML(fontImportOptionsNode, "AtlasWidth", fontImportOptions->AtlasWidth, 1024U);
+            DeserializeValueYAML(fontImportOptionsNode, "AtlasHeight", fontImportOptions->AtlasHeight, 1024U);
+            DeserializeEnumYAML(fontImportOptionsNode, "Range", fontImportOptions->Range, CharsetRange::ASCII,
+                                "Charset range \'{}\' in metadata file is invalid.", 0, CharsetRange::Count);
+            DeserializeValueYAML(fontImportOptionsNode, "CustomCharset", fontImportOptions->CustomCharset, String());
+            DeserializeValueYAML(fontImportOptionsNode, "Padding", fontImportOptions->Padding, 0U);
+            DeserializeValueYAML(fontImportOptionsNode, "DynamicFontAtlas", fontImportOptions->DynamicFontAtlas, false);
+            DeserializeValueYAML(fontImportOptionsNode, "BoldWeight", fontImportOptions->BoldWeight, 0.75f);
+            DeserializeValueYAML(fontImportOptionsNode, "BoldSpacing", fontImportOptions->BoldSpacing, 7.0f);
+            DeserializeValueYAML(fontImportOptionsNode, "TabMultiple", fontImportOptions->TabMultiple, 10U);
+            DeserializeValueYAML(fontImportOptionsNode, "ItalicStyle", fontImportOptions->ItalicStyle, 35U);
+
+            return fontImportOptions;
         }
         else
         {
             CW_ENGINE_WARN("Metadata file does not have valid import options. Correspnding asset may be broken.");
             return CreateRef<ImportOptions>();
         }
+        return nullptr;
     }
 } // namespace Crowny

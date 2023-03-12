@@ -14,6 +14,7 @@
 
 #include "Editor/EditorAssets.h"
 #include "Editor/ProjectLibrary.h"
+#include "UI/Properties.h"
 #include "UI/UIUtils.h"
 
 #include <glm/gtc/type_ptr.hpp>
@@ -295,88 +296,22 @@ namespace Crowny
     {
         if (m_ImportOptions)
         {
-            Ref<AudioClipImportOptions> audioClipImport =
+            Ref<AudioClipImportOptions> audioClipImportOptions =
               std::static_pointer_cast<AudioClipImportOptions>(m_ImportOptions);
-            ImGui::Columns(2);
-            ImGui::Text("Format");
-            ImGui::NextColumn();
-            const char* formatTexts[2] = { "PCM", "Vorbis" };
-            uint32_t formatIndex = (uint32_t)audioClipImport->Format;
-            ImGui::SetNextItemWidth(-1);
-            if (ImGui::BeginCombo("##AudioFormat", formatTexts[formatIndex]))
-            {
-                for (uint32_t i = 0; i < 2; i++)
-                {
-                    const bool is_selected = (formatIndex == i);
-                    if (ImGui::Selectable(formatTexts[i], is_selected))
-                    {
-                        if (audioClipImport->Format != (AudioFormat)i)
-                            m_HasPropertyChanged = true;
-                        audioClipImport->Format = (AudioFormat)i;
-                    }
+            UI::BeginPropertyGrid();
 
-                    if (is_selected)
-                        ImGui::SetItemDefaultFocus();
-                }
-                ImGui::EndCombo();
-            }
-            ImGui::NextColumn();
-            ImGui::Text("Load Mode");
-            ImGui::NextColumn();
-            const char* loadModeTexts[3] = { "Load Decompressed", "Load Compressed", "Stream" };
-            uint32_t loadModeIndex = (uint32_t)audioClipImport->ReadMode;
-            ImGui::SetNextItemWidth(-1);
-            if (ImGui::BeginCombo("##AudioLoadMode", loadModeTexts[loadModeIndex]))
-            {
-                for (uint32_t i = 0; i < 3; i++)
-                {
-                    const bool is_selected = (loadModeIndex == i);
-                    if (ImGui::Selectable(loadModeTexts[i], is_selected))
-                    {
-                        if (audioClipImport->ReadMode != (AudioReadMode)i)
-                            m_HasPropertyChanged = true;
-                        audioClipImport->ReadMode = (AudioReadMode)i;
-                    }
+            m_HasPropertyChanged |= UI::PropertyDropdown("Format", { "PCM", "Vorbis" }, audioClipImportOptions->Format);
+            m_HasPropertyChanged |= UI::PropertyDropdown(
+              "Load Mode", { "Load Decompressed", "Load Compressed", "Stream" }, audioClipImportOptions->ReadMode);
 
-                    if (is_selected)
-                        ImGui::SetItemDefaultFocus();
-                }
-                ImGui::EndCombo();
-            }
-            ImGui::NextColumn();
-            ImGui::Text("Bit Depth");
-            ImGui::NextColumn();
-            const char* bitDepthTexts[4] = { "8", "16", "24", "32" };
-            uint32_t bitDepthIndex = (uint32_t)audioClipImport->BitDepth / 8 - 1;
-            ImGui::SetNextItemWidth(-1);
-            if (ImGui::BeginCombo("##AudioBitDepth", bitDepthTexts[bitDepthIndex]))
-            {
-                for (uint32_t i = 0; i < 4; i++)
-                {
-                    const bool is_selected = (bitDepthIndex == i);
-                    if (ImGui::Selectable(bitDepthTexts[i], is_selected))
-                    {
-                        if (audioClipImport->BitDepth != (i + 1) * 8)
-                            m_HasPropertyChanged = true;
-                        audioClipImport->BitDepth = (i + 1) * 8;
-                    }
+            uint32_t bitDepth = audioClipImportOptions->BitDepth / 8 - 1;
+            if (UI::PropertyDropdown("Audio Bit Depth", { "8", "16", "24", "32" }, bitDepth))
+                audioClipImportOptions->BitDepth = (bitDepth + 1) * 8;
 
-                    if (is_selected)
-                        ImGui::SetItemDefaultFocus();
-                }
-                ImGui::EndCombo();
-            }
-            ImGui::NextColumn();
-            ImGui::Text("3D");
-            ImGui::NextColumn();
-            float x = ImGui::GetCursorPosX();
-            float width = ImGui::GetColumnWidth();
-            if (ImGui::Checkbox("##IsClip3D", &audioClipImport->Is3D))
-                m_HasPropertyChanged = true;
-            ImGui::NextColumn();
-            ImGui::NextColumn();
-            ImGui::Columns(1);
-            DrawApplyRevert(x, width);
+            m_HasPropertyChanged |= UI::Property("3D", audioClipImportOptions->Is3D);
+            UI::EndPropertyGrid();
+
+            DrawApplyRevert(0, ImGui::GetColumnWidth());
 
             // Footer
             float yPos = ImGui::GetContentRegionAvail().y - ImGui::GetFrameHeightWithSpacing();
@@ -399,7 +334,96 @@ namespace Crowny
         }
     }
 
-    void InspectorPanel::RenderFontImportInspector() {}
+    void InspectorPanel::RenderFontImportInspector()
+    {
+        if (m_ImportOptions)
+        {
+            Ref<FontImportOptions> fontImportOptions = std::static_pointer_cast<FontImportOptions>(m_ImportOptions);
+            UI::BeginPropertyGrid();
+
+            int dropdownIdx = fontImportOptions->AutomaticFontSampling ? 0 : 1;
+            if (UI::PropertyDropdown("Sampling Point Size", { "Automatic", "Custom Size" }, dropdownIdx))
+            {
+                m_HasPropertyChanged = true;
+                fontImportOptions->AutomaticFontSampling = dropdownIdx == 1 ? false : true;
+            }
+            if (fontImportOptions->AutomaticFontSampling)
+                m_HasPropertyChanged |= UI::Property("Sampling Size", fontImportOptions->SampingFontSize);
+
+            UI::SetTooltip(
+              "Static atlases use a predefined charset range. On the other hand Dynamic atlases are populated \
+                dynamically during runtime. Static atlases use more memory but are more efficient during execution.");
+
+            dropdownIdx = fontImportOptions->DynamicFontAtlas ? 1 : 0;
+            if (UI::PropertyDropdown("Atlas Mode", { "Static", "Dynamic" }, dropdownIdx))
+            {
+                m_HasPropertyChanged = true;
+                fontImportOptions->DynamicFontAtlas = dropdownIdx == 1 ? true : false;
+            }
+
+            // Only static fonts will need these options.
+            if (!fontImportOptions->DynamicFontAtlas)
+            {
+
+                UI::Property("Auto size atlas", fontImportOptions->AutoSizeAtlas);
+
+                if (fontImportOptions->AutoSizeAtlas)
+                {
+                    m_HasPropertyChanged |= UI::PropertyDropdown(
+                      "Dimension Constraints",
+                      { "Power of Two Square", "Power of Two Rectangle", "Multiple of Four Square", "Even Square" },
+                      fontImportOptions->AtlasDimensionsConstraint);
+                }
+                else
+                {
+                    Vector<String> atlasSizeUIValues = { "4",   "8",   "16",   "32",   "64",   "128",
+                                                         "256", "512", "1024", "2048", "4096", "8192" };
+                    auto findSizeIdx = [](uint32_t size) -> uint32_t {
+                        uint32_t idx = 0;
+                        while (size > 0)
+                        {
+                            idx++;
+                            size /= 2;
+                        }
+                        return idx - 2;
+                    };
+
+                    uint32_t widthIdx = findSizeIdx(fontImportOptions->AtlasWidth);
+                    if (UI::PropertyDropdown("Atlas Width", atlasSizeUIValues, widthIdx))
+                    {
+                        fontImportOptions->AtlasWidth = glm::pow(2, widthIdx);
+                        m_HasPropertyChanged = true;
+                    }
+
+                    uint32_t heightIdx = findSizeIdx(fontImportOptions->AtlasHeight);
+                    if (UI::PropertyDropdown("Atlas Height", atlasSizeUIValues, heightIdx))
+                    {
+                        fontImportOptions->AtlasHeight = StringUtils::ParseInt(atlasSizeUIValues[heightIdx]);
+                        m_HasPropertyChanged = true;
+                    }
+                }
+                m_HasPropertyChanged |=
+                  UI::PropertyDropdown("Charset Range",
+                                       { "ASCII", "Extended ASCII", "Lower ASCII", "Upper ASCII", "Numbers and Symbols",
+                                         "Symbol Range", "Decimal Range", "Hex Range" },
+                                       fontImportOptions->Range);
+                if (fontImportOptions->Range == CharsetRange::DecimalRange ||
+                    fontImportOptions->Range == CharsetRange::HexRange ||
+                    fontImportOptions->Range == CharsetRange::SymbolRange)
+                    m_HasPropertyChanged |= UI::PropertyMultiline(
+                      "Symbols", fontImportOptions->CustomCharset); // TODO: Replace this with multiline input
+            }
+            m_HasPropertyChanged |= UI::Property("Padding", fontImportOptions->Padding);
+            m_HasPropertyChanged |= UI::Property("Get Kerning Data", fontImportOptions->GetKerningData);
+            UI::EndPropertyGrid();
+            DrawApplyRevert(0, ImGui::GetColumnWidth());
+
+            // Make sure the font is imported
+            ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions);
+
+            AssetHandle<Font> clip = static_asset_cast<Font>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
+        }
+    }
 
     void InspectorPanel::RenderScriptImportInspector()
     {
@@ -597,6 +621,7 @@ namespace Crowny
         if (ext.empty())
             return;
         ext = ext.substr(1, ext.size() - 1);
+        // TODO: Make these use the importer IsExtensionSupported
         if (ext == "ogg" || ext == "wav" || ext == "flac")
             m_InspectorMode = InspectorMode::AudioClipImport;
         else if (ext == "png" || ext == "jpeg" || ext == "psd" || ext == "gif" || ext == "tga" || ext == "bmp" ||
@@ -608,6 +633,8 @@ namespace Crowny
             m_InspectorMode = InspectorMode::TextImport;
         else if (ext == "glsl" || ext == "vksl" || ext == "cwsl" || ext == "hlsl")
             m_InspectorMode = InspectorMode::ShaderImport;
+        else if (ext == "ttf" || ext == "ttc" || ext == "otf" || ext == "otc" || ext == "fnt")
+            m_InspectorMode = InspectorMode::FontImport;
         else
             m_InspectorMode = InspectorMode::Default;
         Ref<LibraryEntry> entry = ProjectLibrary::Get().FindEntry(filepath);

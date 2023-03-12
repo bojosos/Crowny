@@ -134,5 +134,25 @@ namespace Crowny
         {
             return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
         }
+
+        /// <inheritdoc/>
+        public override string ToString()
+        {
+            return "(" + x + ", " + y + ", " + z + ", " + w + ")";
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode()
+        {
+            return x.GetHashCode() ^ y.GetHashCode() << 2 ^ z.GetHashCode() >> 2 ^ w.GetHashCode() >> 1;
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object other)
+        {
+            if (!(other is Quaternion))
+                return false;
+            Quaternion quat = (Quaternion)other;
+        }
     }
 }

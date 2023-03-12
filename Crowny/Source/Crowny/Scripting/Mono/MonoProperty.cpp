@@ -103,25 +103,25 @@ namespace Crowny
     MonoObject* MonoProperty::GetAttribute(MonoClass* monoClass) const
     {
         ::MonoClass* parent = mono_property_get_parent(m_Property);
-        MonoCustomAttrInfo* info = mono_custom_attrs_from_property(parent, m_Property);
-        if (info == nullptr)
+        MonoCustomAttrInfo* attrInfo = mono_custom_attrs_from_property(parent, m_Property);
+        if (attrInfo == nullptr || monoClass == nullptr)
             return nullptr;
         MonoObject* attr = nullptr;
-        if (mono_custom_attrs_has_attr(info, monoClass->GetInternalPtr()))
-            attr = mono_custom_attrs_get_attr(info, monoClass->GetInternalPtr());
+        if (mono_custom_attrs_has_attr(attrInfo, monoClass->GetInternalPtr()))
+            attr = mono_custom_attrs_get_attr(attrInfo, monoClass->GetInternalPtr());
 
-        mono_custom_attrs_free(info);
+        mono_custom_attrs_free(attrInfo);
         return attr;
     }
 
     bool MonoProperty::HasAttribute(MonoClass* monoClass) const
     {
         ::MonoClass* parent = mono_property_get_parent(m_Property);
-        MonoCustomAttrInfo* info = mono_custom_attrs_from_property(parent, m_Property);
-        if (info == nullptr)
+        MonoCustomAttrInfo* attrInfo = mono_custom_attrs_from_property(parent, m_Property);
+        if (attrInfo == nullptr || monoClass == nullptr)
             return false;
-        bool hasAttr = mono_custom_attrs_has_attr(info, monoClass->GetInternalPtr()) != 0;
-        mono_custom_attrs_free(info);
+        bool hasAttr = mono_custom_attrs_has_attr(attrInfo, monoClass->GetInternalPtr()) != 0;
+        mono_custom_attrs_free(attrInfo);
 
         return hasAttr;
     }

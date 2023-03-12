@@ -74,6 +74,7 @@ namespace Crowny
         LOAD_CW_CLASS(Vector3);
         LOAD_CW_CLASS(Vector4);
         LOAD_CW_CLASS(Matrix4);
+        LOAD_CW_CLASS(Color);
         LOAD_CW_CLASS(Component);
         LOAD_CW_CLASS(Entity);
         LOAD_CW_CLASS(EntityBehaviour);
@@ -91,8 +92,13 @@ namespace Crowny
         LOAD_CW_ATTR(Label);
         LOAD_CW_ATTR(Filepath);
         LOAD_CW_ATTR(ReadOnly);
+        LOAD_CW_ATTR(Multiline);
+        LOAD_CW_ATTR(ColorUsage);
+        LOAD_CW_ATTR(ColorPalette);
+        LOAD_CW_ATTR(EnumQuickTabs);
 
         LOAD_CW_ATTR(Header);
+
         LOAD_CW_CLASS(ScriptUtils);
         LOAD_CW_CLASS(ScriptCompiler);
 
@@ -213,17 +219,21 @@ namespace Crowny
 
                 // TODO: #ifdef these
                 if (field->HasAttribute(m_Builtin.RangeAttribute))
-                    fieldInfo->m_Flags |= ScriptFieldFlagBits::Range;
+                    fieldInfo->m_Flags.Set(ScriptFieldFlagBits::Range);
                 /*if (field->HasAttribute(m_Builtin.StepAttribute))
-                    fieldInfo->m_Flags |= ScriptFieldFlagBits::Step;*/
+                    fieldInfo->m_Flags.Set(ScriptFieldFlagBits::Step);*/
                 if (field->HasAttribute(m_Builtin.NotNullAttribute))
-                    fieldInfo->m_Flags |= ScriptFieldFlagBits::NotNull;
+                    fieldInfo->m_Flags.Set(ScriptFieldFlagBits::NotNull);
                 if (field->HasAttribute(m_Builtin.DropdownAttribute))
-                    fieldInfo->m_Flags |= ScriptFieldFlagBits::Dropdown;
+                    fieldInfo->m_Flags.Set(ScriptFieldFlagBits::Dropdown);
                 if (field->HasAttribute(m_Builtin.FilepathAttribute))
-                    fieldInfo->m_Flags |= ScriptFieldFlagBits::Filepath;
+                    fieldInfo->m_Flags.Set(ScriptFieldFlagBits::Filepath);
                 if (field->HasAttribute(m_Builtin.ReadOnlyAttribute))
-                    fieldInfo->m_Flags |= ScriptFieldFlagBits::ReadOnly;
+                    fieldInfo->m_Flags.Set(ScriptFieldFlagBits::ReadOnly);
+                if (field->HasAttribute(m_Builtin.MultilineAttribute))
+                    fieldInfo->m_Flags.Set(ScriptFieldFlagBits::Multiline);
+
+                // TODO: Also do of something better here. This is really bad.
                 if (field->HasAttribute(m_Builtin.HeaderAttribute))
                 {
                     MonoObject* label = field->GetAttribute(m_Builtin.HeaderAttribute);
@@ -235,6 +245,8 @@ namespace Crowny
                     collapsableField->Get(label, &collapsable);
                     objInfo->m_Headers[fieldInfo->m_FieldId] = { headerLabel, collapsable };
                 }
+                // TODO: Do this in a better way. Maybe add some sort of additional info dictionary in the
+                // fields/properties.
                 if (field->HasAttribute(m_Builtin.LabelAttribute))
                 {
                     MonoObject* label = field->GetAttribute(m_Builtin.LabelAttribute);
@@ -285,17 +297,22 @@ namespace Crowny
                 }
 
                 if (property->HasAttribute(m_Builtin.RangeAttribute))
-                    propertyInfo->m_Flags |= ScriptFieldFlagBits::Range;
+                    propertyInfo->m_Flags.Set(ScriptFieldFlagBits::Range);
                 /*if (property->HasAttribute(m_Builtin.StepAttribute))
-                    propertyInfo->m_Flags |= ScriptFieldFlagBits::Step;*/
+                    propertyInfo->m_Flags.Set(ScriptFieldFlagBits::Step);*/
                 if (property->HasAttribute(m_Builtin.NotNullAttribute))
-                    propertyInfo->m_Flags |= ScriptFieldFlagBits::NotNull;
+                    propertyInfo->m_Flags.Set(ScriptFieldFlagBits::NotNull);
                 if (property->HasAttribute(m_Builtin.DropdownAttribute))
-                    propertyInfo->m_Flags |= ScriptFieldFlagBits::Dropdown;
+                    propertyInfo->m_Flags.Set(ScriptFieldFlagBits::Dropdown);
                 if (property->HasAttribute(m_Builtin.FilepathAttribute))
-                    propertyInfo->m_Flags |= ScriptFieldFlagBits::Filepath;
+                    propertyInfo->m_Flags.Set(ScriptFieldFlagBits::Filepath);
                 if (property->HasAttribute(m_Builtin.ReadOnlyAttribute))
-                    propertyInfo->m_Flags |= ScriptFieldFlagBits::ReadOnly;
+                    propertyInfo->m_Flags.Set(ScriptFieldFlagBits::ReadOnly);
+                if (property->HasAttribute(m_Builtin.MultilineAttribute))
+                    propertyInfo->m_Flags.Set(ScriptFieldFlagBits::Multiline);
+
+                // TODO: Do this in a better way. Maybe add some sort of additional info dictionary in the
+                // fields/properties.
                 if (property->HasAttribute(m_Builtin.LabelAttribute))
                 {
                     MonoObject* label = property->GetAttribute(m_Builtin.LabelAttribute);

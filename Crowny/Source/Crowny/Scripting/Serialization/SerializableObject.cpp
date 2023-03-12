@@ -67,57 +67,81 @@ namespace Crowny
     void SerializeTypeInfo(const Ref<SerializableMemberInfo>& field, YAML::Emitter& out)
     {
         out << YAML::BeginMap;
+
         if (field->m_TypeInfo->GetType() == SerializableType::Primitive)
-            out << YAML::Key << "PrimitiveInfo" << YAML::Value
-                << (uint32_t)std::static_pointer_cast<SerializableTypeInfoPrimitive>(field->m_TypeInfo)->m_Type;
+        {
+            ScriptPrimitiveType primitiveType =
+              std::static_pointer_cast<SerializableTypeInfoPrimitive>(field->m_TypeInfo)->m_Type;
+
+            SerializeEnumYAML(out, "PrimitiveInfo", primitiveType);
+        }
         else if (field->m_TypeInfo->GetType() == SerializableType::Enum)
         {
-            out << YAML::Key << "EnumInfo" << YAML::Value << YAML::BeginMap;
-            auto enumInfo = std::static_pointer_cast<SerializableTypeInfoEnum>(field->m_TypeInfo);
-            out << YAML::Key << "TypeName" << YAML::Value << enumInfo->m_TypeName;
-            out << YAML::Key << "TypeNamespace" << YAML::Value << enumInfo->m_TypeNamespace;
-            out << YAML::Key << "UnderlyingType" << YAML::Value << (uint32_t)enumInfo->m_UnderlyingType;
+            BeginYAMLMap(out, "EnumInfo");
 
-            out << YAML::EndMap;
+            auto enumInfo = std::static_pointer_cast<SerializableTypeInfoEnum>(field->m_TypeInfo);
+            SerializeValueYAML(out, "TypeName", enumInfo->m_TypeName);
+            SerializeValueYAML(out, "TypeNamespace", enumInfo->m_TypeNamespace);
+            SerializeEnumYAML(out, "UnderlyingType", enumInfo->m_UnderlyingType);
+
+            EndYAMLMap(out, "EnumInfo");
         }
         else if (field->m_TypeInfo->GetType() == SerializableType::Object)
         {
-            out << YAML::Key << "ObjectInfo" << YAML::Value << YAML::BeginMap;
+            BeginYAMLMap(out, "ObjectInfo");
+
             auto objTypeInfo = std::static_pointer_cast<SerializableTypeInfoObject>(field->m_TypeInfo);
-            out << YAML::Key << "TypeName" << YAML::Value << objTypeInfo->m_TypeName;
-            out << YAML::Key << "TypeNamespace" << YAML::Value << objTypeInfo->m_TypeNamespace;
-            out << YAML::Key << "ValueType" << YAML::Value << objTypeInfo->m_ValueType;
-            out << YAML::Key << "TypeId" << YAML::Value << objTypeInfo->m_TypeId;
-            out << YAML::Key << "Flags" << YAML::Value << (uint32_t)objTypeInfo->m_Flags;
+            SerializeValueYAML(out, "TypeName", objTypeInfo->m_TypeName);
+            SerializeValueYAML(out, "TypeNamespace", objTypeInfo->m_TypeNamespace);
+            SerializeValueYAML(out, "ValueType", objTypeInfo->m_ValueType);
+            SerializeValueYAML(out, "TypeId", objTypeInfo->m_TypeId);
+            SerializeFlagsYAML(out, "Flags", objTypeInfo->m_Flags);
             // Maybe need another id here
-            out << YAML::EndMap;
+
+            EndYAMLMap(out, "ObjectInfo");
         }
+        else if (field->m_TypeInfo->GetType() == SerializableType::Entity)
+            SerializeValueYAML(out, "EntityInfo", YAML::Null);
+
         out << YAML::EndMap;
     }
 
     Ref<SerializableTypeInfo> DeserializeTypeInfo(const YAML::Node& node)
     {
-        if (const YAML::Node& prim = node["PrimitiveInfo"])
+        if (const YAML::Node& primitiveInfoNode = node["PrimitiveInfo"])
         {
-            Ref<SerializableTypeInfoPrimitive> primInfo = CreateRef<SerializableTypeInfoPrimitive>();
-            primInfo->m_Type = (ScriptPrimitiveType)prim.as<uint32_t>();
-            return primInfo;
+            Ref<SerializableTypeInfoPrimitive> primitiveInfo = CreateRef<SerializableTypeInfoPrimitive>();
+            primitiveInfo->m_Type =
+              (ScriptPrimitiveType)primitiveInfoNode.as<int32_t>((int32_t)ScriptPrimitiveType::I32);
+            if ((int32_t)primitiveInfo->m_Type < 0 || primitiveInfo->m_Type >= ScriptPrimitiveType::Count)
+            {
+                CW_ENGINE_WARN("Script primitive type is invalid");
+                primitiveInfo->m_Type = ScriptPrimitiveType::I8;
+            }
+            return primitiveInfo;
         }
-        else if (const YAML::Node& enumNode = node["EnumInfo"])
+        else if (const YAML::Node& enumInfoNode = node["EnumInfo"])
         {
             Ref<SerializableTypeInfoEnum> enumInfo = CreateRef<SerializableTypeInfoEnum>();
-            enumInfo->m_UnderlyingType = (ScriptPrimitiveType)enumNode["UnderlyingType"].as<uint32_t>();
-            enumInfo->m_TypeNamespace = enumNode["TypeNamespace"].as<String>();
-            enumInfo->m_TypeName = enumNode["TypeName"].as<String>();
+            DeserializeEnumYAML(enumInfoNode, "UnderlyingType", enumInfo->m_UnderlyingType, ScriptPrimitiveType::I32);
+            DeserializeValueYAML(enumInfoNode, "TypeNamespace", enumInfo->m_TypeNamespace, String());
+            DeserializeValueYAML(enumInfoNode, "TypeName", enumInfo->m_TypeName, String());
+            return enumInfo;
         }
-        else if (const YAML::Node& obj = node["ObjectInfo"])
+        else if (const YAML::Node& objectInfoNode = node["ObjectInfo"])
         {
-            Ref<SerializableTypeInfoObject> objInfo = CreateRef<SerializableTypeInfoObject>();
-            objInfo->m_TypeName = obj["TypeName"].as<String>();
-            objInfo->m_TypeNamespace = obj["TypeNamespace"].as<String>();
-            objInfo->m_ValueType = obj["ValueType"].as<bool>();
-            objInfo->m_TypeId = obj["TypeId"].as<uint32_t>();
-            objInfo->m_Flags = (ScriptFieldFlags)obj["Flags"].as<uint32_t>();
+            Ref<SerializableTypeInfoObject> objectInfo = CreateRef<SerializableTypeInfoObject>();
+            DeserializeValueYAML(objectInfoNode, "TypeName", objectInfo->m_TypeName, String());
+            DeserializeValueYAML(objectInfoNode, "TypeNamespace", objectInfo->m_TypeNamespace, String());
+            DeserializeValueYAML(objectInfoNode, "ValueType", objectInfo->m_ValueType, false);
+            DeserializeValueYAML(objectInfoNode, "TypeId", objectInfo->m_TypeId, 0U);
+            DeserializeFlagsYAML(objectInfoNode, "Flags", objectInfo->m_Flags, ScriptFieldFlagBits::None);
+            return objectInfo;
+        }
+        else if (const YAML::Node& entityInfoNode = node["EntityInfo"])
+        {
+            Ref<SerializableTypeInfoEntity> entityInfo = CreateRef<SerializableTypeInfoEntity>();
+            return entityInfo;
         }
         return nullptr;
     }
@@ -130,36 +154,40 @@ namespace Crowny
         {
             auto& objTypeInfo = curType->m_TypeInfo;
             out << YAML::BeginMap;
-            out << YAML::Key << "ObjectInfo" << YAML::Value << YAML::BeginMap;
-            out << YAML::Key << "TypeName" << YAML::Value << objTypeInfo->m_TypeName;
-            out << YAML::Key << "TypeNamespace" << YAML::Value << objTypeInfo->m_TypeNamespace;
-            out << YAML::Key << "ValueType" << YAML::Value << objTypeInfo->m_ValueType;
-            out << YAML::Key << "TypeId" << YAML::Value << objTypeInfo->m_TypeId;
-            out << YAML::Key << "Flags" << YAML::Value << (uint32_t)objTypeInfo->m_Flags;
+
+            BeginYAMLMap(out, "ObjectInfo");
+
+            SerializeValueYAML(out, "TypeName", objTypeInfo->m_TypeName);
+            SerializeValueYAML(out, "TypeNamespace", objTypeInfo->m_TypeNamespace);
+            SerializeValueYAML(out, "ValueType", objTypeInfo->m_ValueType);
+            SerializeValueYAML(out, "TypeId", objTypeInfo->m_TypeId);
+            SerializeFlagsYAML(out, "Flags", objTypeInfo->m_Flags);
             // Maybe need another id here
-            out << YAML::EndMap;
-            // out << YAML::EndMap;
+
+            EndYAMLMap(out, "ObjectInfo");
 
             // out << YAML::BeginMap;
-            out << YAML::Key << "Fields" << YAML::Value << YAML::BeginSeq;
+            SerializeValueYAML(out, "Fields", YAML::BeginSeq);
             for (auto [id, field] : curType->m_Fields)
             {
                 if (field->IsSerializable())
                 {
                     out << YAML::BeginMap;
-                    out << YAML::Key << "ParentTypeId" << YAML::Value << field->m_ParentTypeId;
-                    out << YAML::Key << "FieldId" << YAML::Value << field->m_FieldId;
-                    out << YAML::Key << "Flags" << YAML::Value << (uint32_t)field->m_Flags;
+
+                    SerializeValueYAML(out, "ParentTypeId", field->m_ParentTypeId);
+                    SerializeValueYAML(out, "FieldId", field->m_FieldId);
+                    SerializeFlagsYAML(out, "Flags", field->m_Flags);
                     out << YAML::Key << "TypeInfo" << YAML::Value;
                     SerializeTypeInfo(field, out);
-                    out << YAML::Key << "Name" << YAML::Value << field->m_Name;
+                    SerializeValueYAML(out, "Name", field->m_Name);
                     out << YAML::Key << "Value" << YAML::Value;
                     Ref<SerializableFieldData> fieldData = GetFieldData(field);
                     fieldData->SerializeYAML(out);
+
                     out << YAML::EndMap;
                 }
             }
-            out << YAML::EndSeq;
+            EndYAMLSeq(out);
             out << YAML::EndMap;
             curType = curType->m_BaseClass;
         }
@@ -186,24 +214,27 @@ namespace Crowny
                 return nullptr;
             Ref<SerializableObject> obj = CreateRef<SerializableObject>(objInfo);
 
+            uint32_t fieldId = 0; // Try to save broken scene files without field ids
             for (const YAML::Node& field : fields)
             {
                 const YAML::Node& typeInfoNode = field["TypeInfo"];
                 Ref<SerializableTypeInfo> typeInfo = DeserializeTypeInfo(typeInfoNode);
                 Ref<SerializableMemberInfo> memberInfo = CreateRef<SerializableFieldInfo>();
                 memberInfo->m_TypeInfo = typeInfo;
-                memberInfo->m_FieldId = field["FieldId"].as<uint32_t>();
-                memberInfo->m_Flags = (ScriptFieldFlags)field["Flags"].as<uint32_t>();
-                memberInfo->m_ParentTypeId = field["ParentTypeId"].as<uint32_t>();
-                memberInfo->m_Name = field["Name"].as<String>();
+
+                DeserializeValueYAML(field, "FieldId", memberInfo->m_FieldId, fieldId++);
+                DeserializeFlagsYAML(field, "Flags", memberInfo->m_Flags, ScriptFieldFlagBits::None);
+                DeserializeValueYAML(field, "ParentTypeId", memberInfo->m_ParentTypeId, 0U);
+                DeserializeValueYAML(field, "Name", memberInfo->m_Name, String());
+
                 SerializableFieldKey key(memberInfo->m_ParentTypeId, memberInfo->m_FieldId);
                 Ref<SerializableFieldData> data;
 
                 switch (typeInfo->GetType())
                 {
                 case (SerializableType::Primitive): {
-                    auto prim = std::static_pointer_cast<SerializableTypeInfoPrimitive>(typeInfo);
-                    switch (prim->m_Type)
+                    auto primitiveTypeInfo = std::static_pointer_cast<SerializableTypeInfoPrimitive>(typeInfo);
+                    switch (primitiveTypeInfo->m_Type)
                     {
                     case (ScriptPrimitiveType::Bool):
                         data = CreateRef<SerializableFieldBool>();
@@ -244,6 +275,18 @@ namespace Crowny
                     case (ScriptPrimitiveType::String):
                         data = CreateRef<SerializableFieldString>();
                         break;
+                    case (ScriptPrimitiveType::Vector2):
+                        data = CreateRef<SerializableFieldVector2>();
+                        break;
+                    case (ScriptPrimitiveType::Vector3):
+                        data = CreateRef<SerializableFieldVector3>();
+                        break;
+                    case (ScriptPrimitiveType::Vector4):
+                        data = CreateRef<SerializableFieldVector4>();
+                        break;
+                    case (ScriptPrimitiveType::Matrix4):
+                        data = CreateRef<SerializableFieldMatrix4>();
+                        break;
                     }
                     break;
                 }
@@ -258,11 +301,15 @@ namespace Crowny
                     break;
                 }
                 }
+                CW_ENGINE_ASSERT(data);
+                if (data == nullptr)
+                {
+                    return nullptr;
+                }
                 data->DeserializeYAML(field["Value"]);
                 obj->m_CachedData[key] = data;
             }
             return obj;
-            // MonoObject* instance = obj->Deserialize();
         }
         return nullptr;
     }
@@ -277,6 +324,7 @@ namespace Crowny
         Ref<SerializableObjectInfo> type = m_ObjectInfo;
         while (type != nullptr)
         {
+            // TODO: These fields have to be loaded from the serialized file and then reset?
             for (auto& field : type->m_Fields)
             {
                 if (field.second->IsSerializable())
@@ -289,7 +337,9 @@ namespace Crowny
                                      nullptr); // TODO: Remove this, it will cause crashes when recompiling C#
                     if (fieldInfo != nullptr)
                     {
-                        // CW_ENGINE_INFO(fieldInfo->GetValue(instance));
+                        // This line kinda requires that the file format is valid. If we have the field info in the
+                        // object info then we need to have the value. Since it's a text file, maybe consider doing some
+                        // checks.
                         fieldInfo->SetValue(instance, m_CachedData[key]->GetValue(/*fieldInfo->m_TypeInfo*/));
                     }
                 }

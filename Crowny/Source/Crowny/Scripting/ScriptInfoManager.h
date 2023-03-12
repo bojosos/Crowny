@@ -22,6 +22,7 @@ namespace Crowny
         MonoClass* Vector3 = nullptr;
         MonoClass* Vector4 = nullptr;
         MonoClass* Matrix4 = nullptr;
+        MonoClass* Color = nullptr;
 
         MonoClass* Component = nullptr;
         MonoClass* Entity = nullptr;
@@ -38,6 +39,10 @@ namespace Crowny
         MonoClass* NotNullAttribute = nullptr;
         MonoClass* DontSerializeFieldAttribute = nullptr;
         MonoClass* RequireComponentAttribute = nullptr;
+        MonoClass* MultilineAttribute = nullptr;
+        MonoClass* ColorPaletteAttribute = nullptr;
+        MonoClass* ColorUsageAttribute = nullptr;
+        MonoClass* EnumQuickTabsAttribute = nullptr;
 
         MonoClass* DropdownAttribute = nullptr;
         MonoClass* LabelAttribute = nullptr;

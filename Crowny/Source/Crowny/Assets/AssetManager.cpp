@@ -48,6 +48,10 @@ namespace Crowny
         archive(cereal::binary_data(samples.data(), size));
     }
 
+    void Load(BinaryDataStreamInputArchive& archive, Font& font) { archive(cereal::base_class<Asset>(&font)); }
+
+    void Save(BinaryDataStreamOutputArchive& archive, const Font& font) { archive(cereal::base_class<Asset>(&font)); }
+
     void Load(BinaryDataStreamInputArchive& archive, Texture& texture)
     {
         archive(cereal::base_class<Asset>(&texture));
@@ -337,12 +341,14 @@ namespace Crowny
 } // namespace Crowny
 
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::AudioClip, "AudioClip")
-CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Texture, "Texture")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Font, "Font")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::ScriptCode, "ScriptCode")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Shader, "Shader")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Texture, "Texture")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::PhysicsMaterial2D, "PhysicsMaterial2D")
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Shader)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::AudioClip)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Font)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Texture)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::ScriptCode)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::PhysicsMaterial2D)

@@ -33,9 +33,9 @@ namespace Crowny
         virtual void Move(int32_t left, int32_t top) override;
         virtual void Resize(uint32_t width, uint32_t height) override;
         virtual void SetHidden(bool hidden) override;
-		virtual void Minimize() override;
-		virtual void Maximize() override;
-		virtual void Restore() override;
+        virtual void Minimize() override;
+        virtual void Maximize() override;
+        virtual void Restore() override;
 
     private:
         void Init(const WindowDesc& windowDesc);

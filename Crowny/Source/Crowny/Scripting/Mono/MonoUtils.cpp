@@ -105,6 +105,13 @@ namespace Crowny
         GetClassName(monoClass, ns, typeName);
     }
 
+    String MonoUtils::GetClassName(MonoObject* object)
+    {
+        String name, ns;
+        GetClassName(object, name, ns);
+        return name + "::" + ns;
+    }
+
     void MonoUtils::GetClassName(MonoReflectionType* monoReflType, String& ns, String& typeName)
     {
         MonoType* monoType = mono_reflection_type_get_type(monoReflType);

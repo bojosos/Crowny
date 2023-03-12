@@ -44,3 +44,5 @@ typedef struct _MonoArray MonoArray;
 typedef struct _MonoReflectionType MonoReflectionType;
 typedef struct _MonoException MonoException;
 typedef struct _MonoClassField MonoClassField;
+typedef struct _MonoProfiler MonoProfiler;
+typedef struct _MonoProfilerDesc* MonoProfilerHandle;

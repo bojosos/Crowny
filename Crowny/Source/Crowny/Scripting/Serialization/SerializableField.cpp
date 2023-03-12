@@ -93,6 +93,30 @@ namespace Crowny
                     std::memcpy(&fieldData->Value, MonoUtils::Unbox(value), sizeof(fieldData->Value));
                 return fieldData;
             }
+            case ScriptPrimitiveType::Vector2: {
+                auto fieldData = CreateRef<SerializableFieldVector2>();
+                if (value != nullptr)
+                    std::memcpy(&fieldData->Value, MonoUtils::Unbox(value), sizeof(fieldData->Value));
+                return fieldData;
+            }
+            case ScriptPrimitiveType::Vector3: {
+                auto fieldData = CreateRef<SerializableFieldVector3>();
+                if (value != nullptr)
+                    std::memcpy(&fieldData->Value, MonoUtils::Unbox(value), sizeof(fieldData->Value));
+                return fieldData;
+            }
+            case ScriptPrimitiveType::Vector4: {
+                auto fieldData = CreateRef<SerializableFieldVector4>();
+                if (value != nullptr)
+                    std::memcpy(&fieldData->Value, MonoUtils::Unbox(value), sizeof(fieldData->Value));
+                return fieldData;
+            }
+            case ScriptPrimitiveType::Matrix4: {
+                auto fieldData = CreateRef<SerializableFieldMatrix4>();
+                if (value != nullptr)
+                    std::memcpy(&fieldData->Value, MonoUtils::Unbox(value), sizeof(fieldData->Value));
+                return fieldData;
+            }
             case ScriptPrimitiveType::String: {
                 MonoString* str = (MonoString*)value;
                 auto fieldData = CreateRef<SerializableFieldString>();

@@ -1,51 +1,56 @@
 #pragma once
 
-namespace ftgl
-{
-    struct texture_font_t;
-    struct texture_atlas_t;
-} // namespace ftgl
+#include "Crowny/Assets/Asset.h"
 
 namespace Crowny
 {
+    struct MSDFData;
 
-    class Font
+    enum class CharsetRange
+    {
+        ASCII,
+        ExtendedASCII,
+        LowerASCII,
+        UpperASCII,
+        NumbersAndSymbols,
+        SymbolRange,
+        DecimalRange,
+        HexRange,
+        Count
+    };
+
+    struct FontDesc
+    {
+    };
+
+    class Font : public Asset
     {
     public:
-        Font(const Path& filepath, const String& name, float size);
+        Font() = default;
+        Font(MSDFData* msdfData, const Ref<Texture>& atlasTexture);
         ~Font();
 
-        const String& GetName() const { return m_Name; }
-        float GetSize() const { return m_Size; }
-        const Path& GetFilepath() const { return m_Filepath; }
+        enum class AtlasDimensionsConstraint
+        {
+            POWER_OF_TWO_SQUARE,
+            POWER_OF_TWO_RECTANGLE,
+            MULTIPLE_OF_FOUR_SQUARE,
+            EVEN_SQUARE,
+            SQUARE,
+            COUNT
+        };
 
-        ftgl::texture_font_t* GetFTGLFont() const { return m_Font; }
-        ftgl::texture_atlas_t* GetFTGLAtlas() const { return m_Atlas; }
+        const MSDFData* GetMSDFData() const { return m_MSDFData; }
+        Ref<Texture> GetAtlasTexture() const { return m_AtlasTexture; }
 
-        const Ref<Texture> GetTexture() const { return m_Texture; };
-
-        static float GetWidth(const String& font, const String& text);
-        static float GetHeight(const String& font, const String& text);
-        static float GetWidth(const Ref<Font>& font, const String& text);
-        static float GetHeight(const Ref<Font>& font, const String& text);
-
-    private:
-        ftgl::texture_atlas_t* m_Atlas = nullptr;
-        ftgl::texture_font_t* m_Font = nullptr;
-        float m_Size;
-        String m_Name;
-        Path m_Filepath;
-        Ref<Texture> m_Texture;
-    };
-
-    class FontManager
-    {
-    public:
-        static void Add(const Ref<Font>& font);
-        static Ref<Font> Get(const String& name);
-        static Ref<Font> Get(const String& name, float size);
+        static Ref<Font> GetDefault();
 
     private:
-        static Vector<Ref<Font>> s_Fonts;
+        CW_SERIALIZABLE(Font);
+
+    private:
+        MSDFData* m_MSDFData;
+        Ref<Texture> m_AtlasTexture;
     };
+
 } // namespace Crowny

@@ -17,7 +17,7 @@ namespace Crowny
         Map<ScriptObjectBase*, ScriptObjectBackupData> backupData;
         // OnRefreshStarted();
 
-        // TODO: Call scene destroy queued objects
+        // TODO: Call scene destroy queued objects, when proper entity deletion is a thing, deleting will be delayed
         // GameObjectManager::Get().DestroyQueuedObjects(); // Wat, why commented
 
         ProcessFinalizedObjects(false);
@@ -60,6 +60,7 @@ namespace Crowny
 
     void ScriptObjectManager::NotifyObjectFinalized(ScriptObjectBase* instance)
     {
+        // TODO: Fix this
         CW_ENGINE_ASSERT(instance != nullptr);
         if (instance == nullptr)
             return;

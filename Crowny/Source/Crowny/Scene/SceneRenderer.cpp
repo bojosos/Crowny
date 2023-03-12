@@ -84,7 +84,7 @@ namespace Crowny
         for (auto ee : texts)
         {
             auto [transform, text] = scene->m_Registry.get<TransformComponent, TextComponent>(ee);
-            Renderer2D::DrawString(text.Text, transform.GetTransform(), text.Font, text.Color);
+            // Renderer2D::DrawString(text.Text, transform.GetTransform(), text.Font, text.Color);
             s_Stats.Vertices += (uint32_t)text.Text.size() * 6;
             s_Stats.Triangles += (uint32_t)text.Text.size() * 2;
         }
@@ -147,7 +147,7 @@ namespace Crowny
             for (auto ee : texts)
             {
                 auto [transform, text] = scene->m_Registry.get<TransformComponent, TextComponent>(ee);
-                Renderer2D::DrawString(text.Text, transform.GetTransform(), text.Font, text.Color);
+                // Renderer2D::DrawString(text.Text, transform.GetTransform(), text.Font, text.Color);
                 s_Stats.Vertices += (uint32_t)text.Text.size() * 4;
                 s_Stats.Triangles += (uint32_t)text.Text.size() * 2;
             }

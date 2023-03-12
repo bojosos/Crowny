@@ -755,7 +755,12 @@ namespace Crowny
 
         ImGui::Separator();
         if (ImGui::MenuItem("Refresh", "Ctrl+R"))
-            ProjectLibrary::Get().Refresh(m_CurrentDirectoryEntry->Filepath);
+        {
+            if (entry != nullptr)
+                ProjectLibrary::Get().Refresh(entry->Filepath);
+            else
+                ProjectLibrary::Get().Refresh(m_CurrentDirectoryEntry->Filepath);
+        }
     }
 
     void AssetBrowserPanel::CreateNew(AssetBrowserItem itemType)

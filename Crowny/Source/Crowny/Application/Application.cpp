@@ -55,7 +55,7 @@ namespace Crowny
 
         m_Window = RenderWindow::Create(applicationDesc.Window);
         m_Window->GetWindow()->SetEventCallback(CW_BIND_EVENT_FN(Application::OnEvent));
-        
+
         switch (Renderer::GetAPI())
         {
         case RenderAPI::API::OpenGL:
@@ -110,8 +110,8 @@ namespace Crowny
         }
     }
 
-	Ref<TimeSettings> Application::GetTimeSettings() const { return m_TimeSettings; }
-	void Application::SetTimeSettings(const Ref<TimeSettings>& timeSettings) { m_TimeSettings = timeSettings; }
+    Ref<TimeSettings> Application::GetTimeSettings() const { return m_TimeSettings; }
+    void Application::SetTimeSettings(const Ref<TimeSettings>& timeSettings) { m_TimeSettings = timeSettings; }
 
     Window& Application::GetWindow() const { return *m_Window->GetWindow(); }
 
@@ -155,11 +155,11 @@ namespace Crowny
 #endif
     }
 
-	bool Application::OnMouseScroll(MouseScrolledEvent& event)
-	{
-		Input::OnMouseScroll(event.GetXOffset(), event.GetYOffset());
-		return false;
-	}
+    bool Application::OnMouseScroll(MouseScrolledEvent& event)
+    {
+        Input::OnMouseScroll(event.GetXOffset(), event.GetYOffset());
+        return false;
+    }
 
     bool Application::OnWindowClose(WindowCloseEvent& e)
     {

@@ -13,29 +13,29 @@ namespace Crowny
 {
     class ContactListener;
 
-	class TimeSettingsSerializer;
-	struct TimeSettings
-	{
-		float TimeScale = 1.0f;
-		float MaxTimestep = 1.0f / 3.0f;
-		float FixedTimestep = 0.02f;
+    class TimeSettingsSerializer;
+    struct TimeSettings
+    {
+        float TimeScale = 1.0f;
+        float MaxTimestep = 1.0f / 3.0f;
+        float FixedTimestep = 0.02f;
 
-		using Serializer = TimeSettingsSerializer;
-	};
+        using Serializer = TimeSettingsSerializer;
+    };
 
-	class PhysicsSettingsSerializer;
-	// These are the ones exposed from Box2D by default. It looks like it wouldn't be hard to expose some more of their
-	// #define-s
-	struct Physics2DSettings
-	{
-		AssetHandle<PhysicsMaterial2D> DefaultMaterial;
-		glm::vec2 Gravity = { 0.0f, -9.81f };
-		uint32_t VelocityIterations = 8;
-		uint32_t PositionIterations = 3;
+    class PhysicsSettingsSerializer;
+    // These are the ones exposed from Box2D by default. It looks like it wouldn't be hard to expose some more of their
+    // #define-s
+    struct Physics2DSettings
+    {
+        AssetHandle<PhysicsMaterial2D> DefaultMaterial;
+        glm::vec2 Gravity = { 0.0f, -9.81f };
+        uint32_t VelocityIterations = 8;
+        uint32_t PositionIterations = 3;
 
-		Array<String, 32> LayerNames = { "Default" };
-		Array<uint32_t, 32> MaskBits;
-	};
+        Array<String, 32> LayerNames = { "Default" };
+        Array<uint32_t, 32> MaskBits = {};
+    };
 
     class Physics2D : public Module<Physics2D>
     {

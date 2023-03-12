@@ -23,7 +23,8 @@ namespace Crowny
     }
 
     VulkanRenderWindow::VulkanRenderWindow(const RenderWindowDesc& renderWindowDesc)
-      : RenderWindow(renderWindowDesc), m_RequiresNewBackBuffer(true), m_ShowOnSwap(false), m_Properties(renderWindowDesc)
+      : RenderWindow(renderWindowDesc), m_RequiresNewBackBuffer(true), m_ShowOnSwap(false),
+        m_Properties(renderWindowDesc)
     {
         WindowDesc windowDesc;
         windowDesc.ShowTitleBar = renderWindowDesc.ShowTitleBar;
@@ -45,7 +46,7 @@ namespace Crowny
         m_Properties.IsHidden = renderWindowDesc.HideUntilSwap || renderWindowDesc.Hidden;
 
         m_Window = Window::Create(windowDesc);
-        
+
         const VkResult result = glfwCreateWindowSurface(
           gVulkanRenderAPI().GetInstance(), (GLFWwindow*)m_Window->GetNativeWindow(), gVulkanAllocator, &m_Surface);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
@@ -65,9 +66,9 @@ namespace Crowny
         m_DepthFormat = format.DepthFormat;
         m_ColorSpace = format.ColorSpace;
         m_Desc.DepthBuffer = false;
-        m_SwapChain = device->GetResourceManager().Create<VulkanSwapChain>(
-          m_Surface, m_Desc.Width, m_Desc.Height, m_Desc.VSync, m_ColorFormat, m_ColorSpace,
-          m_Desc.DepthBuffer, m_DepthFormat);
+        m_SwapChain = device->GetResourceManager().Create<VulkanSwapChain>(m_Surface, m_Desc.Width, m_Desc.Height,
+                                                                           m_Desc.VSync, m_ColorFormat, m_ColorSpace,
+                                                                           m_Desc.DepthBuffer, m_DepthFormat);
     }
 
     void VulkanRenderWindow::SetHidden(bool hidden)
@@ -99,7 +100,7 @@ namespace Crowny
     void VulkanRenderWindow::SwapBuffers(uint32_t syncMask)
     {
         if (m_ShowOnSwap)
-           SetHidden(false);
+            SetHidden(false);
 
         Ref<VulkanDevice> device = gVulkanRenderAPI().GetPresentDevice();
         VulkanQueue* queue = device->GetQueue(GRAPHICS_QUEUE, 0);
@@ -145,20 +146,11 @@ namespace Crowny
         }
     }
 
-    void VulkanRenderWindow::Maximize()
-    {
-        m_Window->Maximize();
-    }
+    void VulkanRenderWindow::Maximize() { m_Window->Maximize(); }
 
-    void VulkanRenderWindow::Minimize()
-    {
-        m_Window->Minimize();
-    }
+    void VulkanRenderWindow::Minimize() { m_Window->Minimize(); }
 
-    void VulkanRenderWindow::Restore()
-    {
-        m_Window->Restore();
-    }
+    void VulkanRenderWindow::Restore() { m_Window->Restore(); }
 
     void VulkanRenderWindow::RebuildSwapChain()
     {

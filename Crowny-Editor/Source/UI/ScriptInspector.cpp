@@ -221,11 +221,20 @@ namespace Crowny
                 if (MonoUtils::GetClass((MonoObject*)value) != MonoUtils::GetStringClass() &&
                     (dialogType == FileDialogType::Multiselect))
                 {
-                    CW_ENGINE_ERROR("Filedialog attribute with multiselect can only be used on a vector of strings");
+                    CW_ENGINE_ERROR("Filedialog attribute with multiselect can only be used on a list of strings");
                     return false;
                 }
                 String stringValue = MonoUtils::FromMonoString(value);
                 if (UI::PropertyFilepath(label, dialogType, stringValue))
+                {
+                    setter(MonoUtils::ToMonoString(stringValue));
+                    return true;
+                }
+            }
+            else if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Multiline))
+            {
+                String stringValue = MonoUtils::FromMonoString(value);
+                if (UI::PropertyMultiline(label, stringValue))
                 {
                     setter(MonoUtils::ToMonoString(stringValue));
                     return true;

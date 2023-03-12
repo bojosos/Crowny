@@ -31,6 +31,7 @@
 
 // Importers
 #include "Crowny/Import/AudioClipImporter.h"
+#include "Crowny/Import/FontImporter.h"
 #include "Crowny/Import/ScriptImporter.h"
 #include "Crowny/Import/ShaderImporter.h"
 #include "Crowny/Import/TextFileImporter.h"
@@ -43,16 +44,17 @@ namespace Crowny
 
     void Initializer::Init(const ApplicationDesc& applicationDesc)
     {
-		Crowny::Log::Init(applicationDesc.Name);
+        Crowny::Log::Init(applicationDesc.Name);
 
         ImGuiConsoleBuffer::StartUp();
 
         Importer::StartUp();
         Importer::Get().RegisterImporter(new AudioClipImporter());
-        Importer::Get().RegisterImporter(new ShaderImporter());
-        Importer::Get().RegisterImporter(new TextureImporter());
+        Importer::Get().RegisterImporter(new FontImporter());
         Importer::Get().RegisterImporter(new ScriptImporter());
+        Importer::Get().RegisterImporter(new ShaderImporter());
         Importer::Get().RegisterImporter(new TextFileImporter());
+        Importer::Get().RegisterImporter(new TextureImporter());
 
         AssetManager::StartUp();
         // Most of these should be in the editor
@@ -97,7 +99,8 @@ namespace Crowny
         Renderer2D::Init();
         // ForwardRenderer::Init();
 
-        FontManager::Add(CreateRef<Font>(Path("Resources/Fonts/Roboto") / DEFAULT_FONT_FILENAME, "Roboto Thin", 64.0f));
+        // FontManager::Add(CreateRef<Font>(Path("Resources/Fonts/Roboto") / DEFAULT_FONT_FILENAME, "Roboto
+        // Thin", 64.0f));
 
         // Scripting
         MonoManager::StartUp();

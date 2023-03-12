@@ -178,7 +178,7 @@ namespace Crowny
                                 FileSystem::WriteTextFile(path, script);
                                 ProjectLibrary::Get().Refresh(path);
                                 ImGui::CloseCurrentPopup();
-
+                                // TODO: Need to trigger assembly refresh here and add the script after.
                                 if (!entity.HasComponent<MonoScriptComponent>())
                                 {
                                     MonoScriptComponent& msc = entity.AddComponent<MonoScriptComponent>(s_SearchString);

@@ -37,11 +37,14 @@ namespace Crowny
         Vector2,
         Vector3,
         Vector4,
-        Matrix4
+        Matrix4,
+
+        Count
     };
 
     enum class ScriptFieldFlagBits
     {
+        None = 0 << 0,
         Serializable = 1 << 0,
         Inspectable = 1 << 1,
         Range = 1 << 2,
@@ -49,7 +52,9 @@ namespace Crowny
         NotNull = 1 << 4,
         ReadOnly = 1 << 5,
         Dropdown = 1 << 6,
-        Filepath = 1 << 7
+        Filepath = 1 << 7,
+        Multiline = 1 << 8,
+        EnumQuickTabs = 1 << 9,
     };
     typedef Flags<ScriptFieldFlagBits> ScriptFieldFlags;
     CW_FLAGS_OPERATORS(ScriptFieldFlagBits);

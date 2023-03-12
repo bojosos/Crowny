@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Crowny/Audio/AudioClip.h"
+#include "Crowny/Renderer/Font.h"
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
-
 #include "Crowny/Utils/ShaderCompiler.h"
 
 namespace Crowny
@@ -14,7 +14,8 @@ namespace Crowny
         Texture,
         Shader,
         AudioClip,
-        Script
+        Script,
+        Font
     };
 
     class ImportOptions
@@ -53,7 +54,7 @@ namespace Crowny
     {
     public:
         AudioFormat Format = AudioFormat::VORBIS;
-        AudioReadMode ReadMode;
+        AudioReadMode ReadMode = AudioReadMode::LoadCompressed;
         bool Is3D = true;
         uint32_t BitDepth = 16;
 
@@ -127,6 +128,41 @@ namespace Crowny
             *clone = *this;
             return clone;
         }
+    };
+
+    class FontImportOptions : public ImportOptions
+    {
+    public:
+        // Somehow integrate the ImageType stuff from msdfgen.
+        // The first two modes are rasterized fonts I think, the others are fancy sdf stuff.
+        bool GetKerningData = true;
+        bool AutomaticFontSampling = true;
+        uint32_t SampingFontSize = 64;
+        bool AutoSizeAtlas = false;
+        Font::AtlasDimensionsConstraint AtlasDimensionsConstraint =
+          Font::AtlasDimensionsConstraint::POWER_OF_TWO_SQUARE;
+        uint32_t AtlasWidth = 1024;
+        uint32_t AtlasHeight = 1024;
+        CharsetRange Range = CharsetRange::ASCII;
+        String CustomCharset;
+        uint32_t Padding = 0;
+        bool DynamicFontAtlas = false;
+        float BoldWeight = 0.75f;
+        float BoldSpacing = 7.0f;
+        uint32_t TabMultiple = 10;
+        uint32_t ItalicStyle = 35;
+
+        virtual ImportOptionsType GetImportOptionsType() const override { return ImportOptionsType::Font; }
+
+        virtual Ref<ImportOptions> Clone() const override
+        {
+            Ref<FontImportOptions> clone = CreateRef<FontImportOptions>();
+            *clone = *this;
+            return clone;
+        }
+
+    private:
+        CW_SERIALIZABLE(FontImportOptions);
     };
 
 } // namespace Crowny

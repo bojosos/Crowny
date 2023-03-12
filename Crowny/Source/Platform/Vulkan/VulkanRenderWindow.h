@@ -40,6 +40,7 @@ namespace Crowny
         VkFormat GetColorFormat() const { return m_ColorFormat; }
         VkFormat GetDepthFormat() const { return m_DepthFormat; }
         VulkanFramebuffer* GetFramebuffer() const;
+
     private:
         void RebuildSwapChain();
 
