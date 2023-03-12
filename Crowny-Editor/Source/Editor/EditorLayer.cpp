@@ -1018,6 +1018,64 @@ namespace Crowny
         ImGui::End();
     }
 
+    static void DrawClass(MonoClass* klass)
+    {
+        if (ImGui::TreeNode(klass->GetName().c_str()))
+        {
+            if (ImGui::TreeNode("Methods"))
+            {
+                for (MonoMethod* method : klass->GetMethods())
+                {
+                    if (ImGui::TreeNode(method->GetName().c_str()))
+                    {
+                        for (MonoClass* attribute : method->GetAttributes())
+                            DrawClass(attribute);
+                        ImGui::TreePop();
+                    }
+                }
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("Fields"))
+            {
+                for (MonoField* field : klass->GetFields())
+                {
+                    bool expanded = ImGui::TreeNode(field->GetFullDeclName().c_str());
+                    ImGui::SameLine();
+                    ImGui::Text(field->GetType()->GetFullName().c_str());
+                    ImGui::SameLine();
+                    ImGui::Text(field->GetName().c_str());
+                    if (expanded)
+                    {
+                        for (MonoClass* attribute : field->GetAttributes())
+                            DrawClass(attribute);
+                        ImGui::TreePop();
+                    }
+                }
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("Properties"))
+            {
+                for (MonoProperty* prop : klass->GetProperties())
+                {
+                    if (ImGui::TreeNode(prop->GetName().c_str()))
+                    {
+                        for (MonoClass* attribute : prop->GetAttributes())
+                            DrawClass(attribute);
+                        ImGui::TreePop();
+                    }
+                }
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("Attributes"))
+            {
+                for (MonoClass* attribute : klass->GetAttributes())
+                    DrawClass(attribute);
+                ImGui::TreePop();
+            }
+            ImGui::TreePop();
+        }
+    }
+
     void EditorLayer::UI_ScriptInfo()
     {
         if (m_ShowScriptDebugInfo)
@@ -1030,34 +1088,7 @@ namespace Crowny
             MonoAssembly* gameAssembly = MonoManager::Get().GetAssembly(GAME_ASSEMBLY);
             for (MonoClass* klass : gameAssembly->GetClasses())
             {
-                if (ImGui::TreeNode(klass->GetName().c_str()))
-                {
-                    if (ImGui::TreeNode("Methods"))
-                    {
-                        for (MonoMethod* method : klass->GetMethods())
-                            ImGui::Text(method->GetName().c_str());
-                        ImGui::TreePop();
-                    }
-                    if (ImGui::TreeNode("Fields"))
-                    {
-                        for (MonoField* field : klass->GetFields())
-                        {
-                            ImGui::Text(field->GetFullDeclName().c_str());
-                            ImGui::SameLine();
-                            ImGui::Text(field->GetType()->GetFullName().c_str());
-                            ImGui::SameLine();
-                            ImGui::Text(field->GetName().c_str());
-                        }
-                        ImGui::TreePop();
-                    }
-                    if (ImGui::TreeNode("Properties"))
-                    {
-                        for (MonoProperty* prop : klass->GetProperties())
-                            ImGui::Text(prop->GetName().c_str());
-                        ImGui::TreePop();
-                    }
-                    ImGui::TreePop();
-                }
+                DrawClass(klass);
             }
             ImGui::End();
         }

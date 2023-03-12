@@ -68,9 +68,13 @@ namespace Crowny
     static inline void EndYAMLMap(YAML::Emitter& out, const String& mapEnd)
     {
 #ifdef CW_DEBUG
-        const String& stackTop = mapKeys.top();
-        CW_ENGINE_ASSERT(stackTop == mapEnd);
-        mapKeys.pop();
+        if (!mapKeys.empty())
+        {
+            const String& stackTop = mapKeys.top();
+            CW_ENGINE_ASSERT(stackTop == mapEnd,
+                             "Unmatched YAML serialization map begin/end: expected: " + stackTop + " got: " + mapEnd);
+            mapKeys.pop();
+        }
 #endif
 
         out << YAML::EndMap;

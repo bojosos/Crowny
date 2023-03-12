@@ -6,7 +6,7 @@ LastOpenProject: C:\dev\Projects\Project1
 AutoLoadLastProject: true
 ShowImGuiDemo: false
 ShowPhysicsColliders2D: false
-ShowScriptDebugInfo: false
+ShowScriptDebugInfo: true
 ShowAssetInfo: false
 ShowEmptyMetadataAssetInfo: false
 ShowEntityDebugInfo: false
@@ -17,7 +17,7 @@ CollapseConsole: false
 ScrollToBottom: true
 RecentProjects:
   - Path: C:\dev\Projects\Project1
-    Timestamp: 1678360502
+    Timestamp: 1678636924
   - Path: C:\dev\Projects\New Project
     Timestamp: 1648668832
   - Path: C:/dev/Projects\Project4

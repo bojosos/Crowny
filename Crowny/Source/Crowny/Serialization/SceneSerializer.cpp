@@ -27,7 +27,8 @@ namespace Crowny
         const UUID& uuid = entity.GetUuid();
         if (!entity)
             return;
-        BeginYAMLMap(out, "Entity");
+        out << YAML::BeginMap;
+        SerializeValueYAML(out, "Entity", uuid);
 
         if (entity.HasComponent<TagComponent>())
         {
@@ -35,7 +36,7 @@ namespace Crowny
 
             SerializeValueYAML(out, "Tag", entity.GetName());
 
-            EndYAMLMap(out, "Entity");
+            EndYAMLMap(out, "TagComponent");
         }
 
         if (entity.HasComponent<MonoScriptComponent>())
@@ -221,6 +222,9 @@ namespace Crowny
         SerializeValueYAML(out, "Scene", m_Scene->GetName());
 
         SerializeValueYAML(out, "Entities", YAML::BeginSeq);
+        m_Scene->m_Registry.sort<IDComponent>([](const IDComponent& lhs, const IDComponent& rhs) {
+            return lhs.Uuid < rhs.Uuid;
+        });
         m_Scene->m_Registry.each([&](auto entityID) {
             Entity entity = { entityID, m_Scene.get() };
             SerializeEntity(out, entity);

@@ -505,6 +505,34 @@ namespace Crowny
             }
             break;
         }
+        case ScriptPrimitiveType::Color: { 
+            glm::vec4 value = *(glm::vec4*)fieldValue;
+            ImGuiColorEditFlags flags = ImGuiColorEditFlags_AlphaPreview;
+            if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::HDR))
+                flags |= ImGuiColorEditFlags_HDR;
+            if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::NoAlpha))
+            {
+                glm::vec3 value3(value);
+                if (UI::PropertyColor(label, value3, flags))
+                {
+                    // TODO: Check if this is needed
+                    // This might not be necessary but just in case it is.
+                    value.x = value3.x;
+                    value.y = value3.y;
+                    value.z = value3.z;
+                    setter(&value);
+                    modified = true;
+                }
+            }
+            else
+            {
+                if (UI::PropertyColor(label, value, flags))
+                {
+                    setter(&value);
+                    modified = true;
+                }
+            }
+        }
         case ScriptPrimitiveType::Matrix4: {
             glm::mat4 value = *(glm::mat4*)fieldValue;
             glm::vec4 r0 = { value[0][0], value[1][0], value[2][0], value[3][0] };

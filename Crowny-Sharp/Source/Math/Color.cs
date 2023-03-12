@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Crowny
 {
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Sequential), SerializeObject]
     public struct Color
     {
         public float r;

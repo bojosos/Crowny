@@ -110,7 +110,8 @@ namespace Crowny
 
     template <typename Archive> void Serialize(Archive& archive, SerializableFieldEntity& data)
     {
-        archive(data.Value.GetComponent<IDComponent>().Uuid);
+        if (data.Value)
+            archive(data.Value.GetComponent<IDComponent>().Uuid);
     }
 
     template <typename Archive> void Serialize(Archive& archive, SerializableFieldAsset& data)

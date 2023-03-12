@@ -37,6 +37,7 @@ namespace Crowny
         Vector2,
         Vector3,
         Vector4,
+        Color,
         Matrix4,
 
         Count
@@ -55,6 +56,8 @@ namespace Crowny
         Filepath = 1 << 7,
         Multiline = 1 << 8,
         EnumQuickTabs = 1 << 9,
+        HDR = 1 << 10,
+        NoAlpha = 1 << 1,
     };
     typedef Flags<ScriptFieldFlagBits> ScriptFieldFlags;
     CW_FLAGS_OPERATORS(ScriptFieldFlagBits);

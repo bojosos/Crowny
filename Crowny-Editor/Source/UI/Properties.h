@@ -200,18 +200,18 @@ namespace Crowny
             return modified;
         }
 
-        static bool PropertyColor(const char* label, glm::vec3& value)
+        static bool PropertyColor(const char* label, glm::vec3& value, ImGuiColorEditFlags flags = 0)
         {
             Pre(label);
-            bool modified = ImGui::ColorEdit3(GenerateID(), glm::value_ptr(value));
+            bool modified = ImGui::ColorEdit3(GenerateID(), glm::value_ptr(value), flags);
             Post();
             return modified;
         }
 
-        static bool PropertyColor(const char* label, glm::vec4& value)
+        static bool PropertyColor(const char* label, glm::vec4& value, ImGuiColorEditFlags flags = 0)
         {
             Pre(label);
-            bool modified = ImGui::ColorEdit4(GenerateID(), glm::value_ptr(value));
+            bool modified = ImGui::ColorEdit4(GenerateID(), glm::value_ptr(value), flags);
             Post();
             return modified;
         }

@@ -335,6 +335,15 @@ namespace Crowny
                 vec.AddMember(rapidjson::Value("w"), rapidjson::Value(value.w), doc.GetAllocator());
                 break;
             }
+            case ScriptPrimitiveType::Color: {
+                rapidjson::Value &color = cur.SetObject();
+                glm::vec4 value = *(glm::vec4*)MonoUtils::Unbox((MonoObject*)data);
+                color.AddMember(rapidjson::Value("r"), rapidjson::Value(value.r), doc.GetAllocator());
+                color.AddMember(rapidjson::Value("g"), rapidjson::Value(value.g), doc.GetAllocator());
+                color.AddMember(rapidjson::Value("b"), rapidjson::Value(value.b), doc.GetAllocator());
+                color.AddMember(rapidjson::Value("a"), rapidjson::Value(value.a), doc.GetAllocator());
+                break;
+            }
             case ScriptPrimitiveType::Matrix4: {
                 rapidjson::Value& vec = cur.SetArray();
                 glm::mat4 value = *(glm::mat4*)MonoUtils::Unbox((MonoObject*)data);

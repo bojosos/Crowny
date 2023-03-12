@@ -22,6 +22,7 @@ namespace Crowny
         bool IsValueType() const;
         bool HasAttribute(MonoClass* monoClass) const;
         MonoObject* GetAttribute(MonoClass* monoClass) const;
+        Vector<MonoClass*> GetAttributes() const;
         void Set(MonoObject* obj, void* value);
         MonoObject* GetBoxed(MonoObject* instance);
         void Get(MonoObject* obj, void* outval);

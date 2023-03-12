@@ -21,6 +21,7 @@ namespace Crowny
         CrownyMonoVisibility GetVisibility() const;
         bool HasAttribute(MonoClass* monoClass) const;
         MonoObject* GetAttribute(MonoClass* monoClass) const;
+        Vector<MonoClass*> GetAttributes() const;
         void* GetThunk() const;
         MonoObject* Invoke(MonoObject* instance, void** params);
 

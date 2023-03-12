@@ -209,6 +209,8 @@ namespace Crowny
             // Ref<SerializableObject> obj = SerializableObject::CreateNew(typeInfo);
             Ref<SerializableObjectInfo> objInfo = nullptr;
             // This is wrong, obj info should be deserialized, not loaded like this
+
+
             if (!ScriptInfoManager::Get().GetSerializableObjectInfo(typeInfo->m_TypeNamespace, typeInfo->m_TypeName,
                                                                     objInfo))
                 return nullptr;
@@ -283,6 +285,9 @@ namespace Crowny
                         break;
                     case (ScriptPrimitiveType::Vector4):
                         data = CreateRef<SerializableFieldVector4>();
+                        break;
+                    case (ScriptPrimitiveType::Color):
+                        data = CreateRef<SerializableFieldColor>();
                         break;
                     case (ScriptPrimitiveType::Matrix4):
                         data = CreateRef<SerializableFieldMatrix4>();
