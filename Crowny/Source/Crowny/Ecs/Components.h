@@ -89,11 +89,58 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<CameraComponent>(Entity e);
 
+    enum class TextOverflow
+    {
+        Overflow,
+        Ellipses,
+        Truncate
+    };
+
+    enum class TextHorizontalAlignment
+    {
+        Left,
+        Center,
+        Right,
+        Justified,
+        Flush
+    };
+
+    enum class TextVerticalAlignment
+    {
+        Top,
+        Middle,
+        Bottom,
+        Baseline,
+        Midline
+    };
+
+    enum class TextFontStyle
+    {
+        Bold,
+        Italic,
+        Underline,
+        Strikethrough
+    };
+
     struct TextComponent : public ComponentBase
     {
         String Text;
         AssetHandle<Crowny::Font> Font;
         glm::vec4 Color{ 1.0f, 1.0f, 1.0f, 1.0f };
+
+        bool Wrapping = true;
+        TextOverflow Overflow;
+
+        TextHorizontalAlignment HorizontalAlignment;
+        TextVerticalAlignment VerticalAlignment;
+        TextFontStyle FontStyle;
+
+        glm::vec4 OutlineColor{ 0.0f, 0.0f, 0.0f, 0.0f };
+        float thickess = 0.8f;
+
+        float CharacterSpacing = 0.0f;
+        float WordSpacing = 0.0f;
+        float Linespacing = 0.0f;
 
         TextComponent();
         TextComponent(const TextComponent&) = default;

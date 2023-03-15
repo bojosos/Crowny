@@ -247,25 +247,27 @@ namespace Crowny
         UI::Property("Text", textComponent.Text);
         UI::PropertyColor("Color", textComponent.Color);
 
+        UI::QuickTabs("Test tabs", { "Test1", "Test2", "Test3", "Test4" });
+
         // String str = textComponent.Font->GetName();
         // UI::Property("Font", str);
         ImGui::Text("Font"); // Hook up drag drop here.
-        /*
+        
 #ifdef CW_DEBUG
         ImGui::SameLine();
         if (ImGui::Button("Show Font Atlas"))
-            ImGui::OpenPopup(textComponent.Font->GetName().c_str());
+            // ImGui::OpenPopup(textComponent.Font->GetName().c_str());
+            ImGui::OpenPopup("Tomatoes");
 
-        if (ImGui::BeginPopup(textComponent.Font->GetName().c_str()))
+        if (ImGui::BeginPopup("Tomatoes"))
         {
-            ImGui::Text("%s", textComponent.Font->GetName().c_str());
+            ImGui::Text("%s", "Tomatoes");
             ImGui::Separator();
-            ImGui::Image(ImGui_ImplVulkan_AddTexture(textComponent.Font->GetTexture()),
-                         { (float)textComponent.Font->GetTexture()->GetWidth(),
-                           (float)textComponent.Font->GetTexture()->GetHeight() });
+            ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().Test),
+                         { 1024.0f, 1024.0f });
             ImGui::EndPopup();
         }
-#endif*/
+#endif
 
         ImGui::NextColumn();
 

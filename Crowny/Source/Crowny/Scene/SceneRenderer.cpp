@@ -9,6 +9,9 @@
 #include "Crowny/Renderer/ForwardRenderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
 
+#include "Crowny/Import/Importer.h"
+#include "Crowny/Assets/AssetManager.h"
+
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/glm.hpp>
 
@@ -23,6 +26,8 @@ namespace Crowny
         Ref<TimerQuery> Timer3DGeometry = nullptr;
 
         Ref<PipelineQuery> PipelineQuery = nullptr;
+
+        AssetHandle<Font> GlobalFont;
     };
 
     struct SceneRendererStats
@@ -43,6 +48,8 @@ namespace Crowny
         s_Data.Timer3DGeometry = TimerQuery::Create();
 
         s_Data.PipelineQuery = PipelineQuery::Create();
+        // Ref<Asset> font = Importer::Get().Import("Resources/Fonts/Roboto/roboto-thin.ttf");
+        // s_Data.GlobalFont = static_asset_cast<Font>(AssetManager::Get().CreateAssetHandle(font));
     }
 
     void SceneRenderer::OnEditorUpdate(Timestep ts, const EditorCamera& camera)
@@ -76,7 +83,7 @@ namespace Crowny
         for (auto ee : group)
         {
             auto [transform, sprite] = scene->m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
-            Renderer2D::FillRect(transform.GetTransform(), sprite.Texture, sprite.Color, ((uint32_t)ee) + 1);
+            Renderer2D::FillRect(transform.GetTransform(), sprite.Texture, sprite.Color, ((int32_t)ee) + 1);
             s_Stats.Vertices += 6;
             s_Stats.Triangles += 2;
         }
@@ -84,7 +91,7 @@ namespace Crowny
         for (auto ee : texts)
         {
             auto [transform, text] = scene->m_Registry.get<TransformComponent, TextComponent>(ee);
-            // Renderer2D::DrawString(text.Text, transform.GetTransform(), text.Font, text.Color);
+            // Renderer2D::DrawString(text.Text, transform.GetTransform(), s_Data.GlobalFont, text.Color, (int32_t)ee+1);
             s_Stats.Vertices += (uint32_t)text.Text.size() * 6;
             s_Stats.Triangles += (uint32_t)text.Text.size() * 2;
         }

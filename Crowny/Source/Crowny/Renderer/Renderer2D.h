@@ -1,10 +1,11 @@
 #pragma once
 
 #include "Crowny/Common/Color.h"
+#include "Crowny/Assets/AssetHandle.h"
 
 namespace Crowny
 {
-
+    class Font;
     /**
      * @brief General purpose renderer for rendering 2D objects (text, quads).
      *
@@ -115,23 +116,12 @@ namespace Crowny
          * @brief Draws a string on the screen.
          *
          * @param text Text to draw.
-         * @param x X-coord of the text.
-         * @param y Y-coord of the text.
-         * @param font Font to use.
-         * @param color Color draw with.
-         */
-        static void DrawString(const String& text, float x, float y, const Ref<Font>& font, const glm::vec4& color);
-
-        /**
-         * @brief Draws a string on the screen.
-         *
-         * @param text Text to draw.
          * @param transform Transform component.
          * @param font Font to use.
          * @param color Color to draw with.
          */
-        static void DrawString(const String& text, const glm::mat4& transform, const Ref<Font>& font,
-                               const glm::vec4& color);
+        static void DrawString(const String& text, const glm::mat4& transform, const AssetHandle<Font>& font,
+                               const glm::vec4& color, int32_t entityId);
 
         /**
          * @brief Begin a batch.
