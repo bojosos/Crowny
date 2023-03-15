@@ -15,7 +15,9 @@
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Utils/ShaderCompiler.h"
 
-#include <glm/ext/matrix_transform.hpp>
+#include "MSDFData.h"
+
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 namespace Crowny
@@ -47,12 +49,28 @@ namespace Crowny
         int32_t ObjectID;
     };
 
+    struct TextVertex
+    {
+        glm::vec3 Position;
+        glm::vec4 Color;
+        glm::vec2 TexCoords;
+
+        glm::vec4 UnderlayColor;
+        float UnderlayOffset;
+
+        glm::vec4 OutlineColor;
+        float OutlineThickness;
+
+        int32_t ObjectId;
+    };
+
     struct Renderer2DData
     {
         static const uint32_t MaxLines = 20000;
         static const uint32_t MaxLineVertices = MaxLines * 4;
         static const uint32_t MaxLineIndices = MaxLines * 6;
 
+        // Quads
         Ref<VertexBuffer> QuadVertexBuffer;
         Ref<GraphicsPipeline> QuadPipeline;
         Ref<IndexBuffer> QuadIndexBuffer;
@@ -63,6 +81,7 @@ namespace Crowny
         VertexData* QuadBuffer = nullptr;
         VertexData* QuadTmpBuffer = nullptr;
 
+        // Circles
         Ref<VertexBuffer> CircleVertexBuffer;
         Ref<GraphicsPipeline> CirclePipeline;
         uint32_t CircleIndexCount = 0;
@@ -72,89 +91,136 @@ namespace Crowny
         Ref<UniformBufferBlock> CircleProjectionView;
         Ref<UniformParams> CircleUniforms;
 
+        // Text
+        Ref<VertexBuffer> TextVertexBuffer;
+        Ref<GraphicsPipeline> TextPipeline;
+        uint32_t TextIndexCount = 0;
+        uint32_t TextVertexCount = 0;
+        TextVertex* TextBuffer = nullptr;
+        TextVertex* TextTmpBuffer = nullptr;
+        Ref<UniformBufferBlock> TextProjectionView;
+        Ref<UniformParams> TextUniforms;
+
+        // Font atlas only texture
+        Ref<Texture> FontAtlasTexture;
+
+        // Global texture buffer
         std::array<Ref<Texture>, 32> Textures;
         uint32_t TextureIndex = 0;
     };
 
     static Renderer2DData* s_Data;
 
+    static void SetupQuadBuffers()
+    {
+        uint16_t* indices = new uint16_t[RENDERER_INDICES_SIZE];
+        int offset = 0;
+        for (int i = 0; i < RENDERER_INDICES_SIZE; i += 6)
+        {
+            indices[i + 0] = offset + 0;
+            indices[i + 1] = offset + 1;
+            indices[i + 2] = offset + 2;
+
+            indices[i + 3] = offset + 2;
+            indices[i + 4] = offset + 3;
+            indices[i + 5] = offset + 0;
+
+            offset += 4;
+        }
+
+        s_Data->QuadIndexBuffer = IndexBuffer::Create(indices, RENDERER_INDICES_SIZE);
+        AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(RENDERER2D_SHADER_PATH);
+        // Ref<Shader> shader = Importer::Get().Import<Shader>(RENDERER2D_SHADER_PATH);
+        Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
+        Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
+        s_Data->QuadVertexBuffer = VertexBuffer::Create(RENDERER_BUFFER_SIZE, BufferUsage::DYNAMIC_DRAW);
+        BufferLayout layout = { { ShaderDataType::Float4, "a_Coordinates" },
+                                { ShaderDataType::Float4, "a_Color" },
+                                { ShaderDataType::Float2, "a_Uvs" },
+                                { ShaderDataType::Float, "a_Tid" },
+                                { ShaderDataType::Int, "a_ObjectID" } };
+        s_Data->QuadVertexBuffer->SetLayout(layout);
+
+        PipelineStateDesc desc;
+        desc.FragmentShader = fragment;
+        desc.VertexShader = vertex;
+
+        s_Data->QuadPipeline = GraphicsPipeline::Create(desc, s_Data->QuadVertexBuffer->GetLayout());
+        s_Data->QuadProjectionView =
+          UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("VP").BlockSize, BufferUsage::DYNAMIC_DRAW);
+        s_Data->QuadUniforms = UniformParams::Create(s_Data->QuadPipeline);
+        s_Data->QuadUniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "VP", s_Data->QuadProjectionView);
+        s_Data->QuadBuffer = s_Data->QuadTmpBuffer = new VertexData[RENDERER_MAX_SPRITES * 4];
+        delete[] indices;
+    }
+
+    static void SetupCircleBuffers()
+    {
+        s_Data->CircleVertexBuffer =
+          VertexBuffer::Create(s_Data->MaxLineVertices * sizeof(CircleVertex), BufferUsage::DYNAMIC_DRAW);
+        BufferLayout layout = {
+            { ShaderDataType::Float3, "a_WorldPosition" }, { ShaderDataType::Float3, "a_LocalPosition" },
+            { ShaderDataType::Float4, "a_Color" },         { ShaderDataType::Float, "a_Thickness" },
+            { ShaderDataType::Float, "a_Fade" },           { ShaderDataType::Int, "a_Id" }
+        };
+        s_Data->CircleVertexBuffer->SetLayout(layout);
+
+        AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>("Resources/Shaders/Circle.asset");
+        // Ref<Shader> shader = Importer::Get().Import<Shader>("Resources/Shaders/Circle.glsl");
+        Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
+        Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
+        PipelineStateDesc desc;
+        desc.FragmentShader = fragment;
+        desc.VertexShader = vertex;
+
+        s_Data->CirclePipeline = GraphicsPipeline::Create(desc, layout);
+        s_Data->CircleBuffer = s_Data->CircleTmpBuffer = new CircleVertex[s_Data->MaxLineVertices];
+        s_Data->CircleProjectionView = UniformBufferBlock::Create(
+          vertex->GetUniformDesc()->Uniforms.at("Camera").BlockSize, BufferUsage::DYNAMIC_DRAW);
+        s_Data->CircleUniforms = UniformParams::Create(s_Data->CirclePipeline);
+        s_Data->CircleUniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "Camera",
+                                                      s_Data->CircleProjectionView);
+    }
+
+    static void SetupTextBuffers()
+    {
+        s_Data->TextVertexBuffer =
+          VertexBuffer::Create(RENDERER_MAX_SPRITES * sizeof(TextVertex), BufferUsage::DYNAMIC_DRAW);
+
+        BufferLayout layout = {
+            { ShaderDataType::Float3, "a_Position" },        { ShaderDataType::Float4, "a_Color" },
+            { ShaderDataType::Float2, "a_TexCoords" },       { ShaderDataType::Float4, "a_UnderlayColor" },
+            { ShaderDataType::Float, "a_UnderlayOffset" },   { ShaderDataType::Float4, "a_OutlineColor" },
+            { ShaderDataType::Float, "a_OutlineThickness" }, { ShaderDataType::Int, "a_ObjectId" }
+        };
+        s_Data->TextVertexBuffer->SetLayout(layout);
+
+        // Does this work?
+        // AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>("Resources/Shaders/Text.asset");
+        Ref<Shader> shader = Importer::Get().Import<Shader>("Resources/Shaders/Text.glsl");
+        Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
+        Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
+        PipelineStateDesc desc;
+        desc.FragmentShader = fragment;
+        desc.VertexShader = vertex;
+
+        s_Data->TextPipeline = GraphicsPipeline::Create(desc, layout);
+        s_Data->TextBuffer = s_Data->TextTmpBuffer = new TextVertex[s_Data->MaxLineVertices];
+        // Is this necessary? And when did I write it
+        s_Data->TextProjectionView = UniformBufferBlock::Create(
+          vertex->GetUniformDesc()->Uniforms.at("Camera").BlockSize, BufferUsage::DYNAMIC_DRAW);
+        s_Data->TextUniforms = UniformParams::Create(s_Data->TextPipeline);
+        s_Data->TextUniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "Camera",
+                                                      s_Data->TextProjectionView);
+    }
+
     void Renderer2D::Init()
     {
         s_Data = new Renderer2DData();
-        {
-            uint16_t* indices = new uint16_t[RENDERER_INDICES_SIZE];
-            int offset = 0;
-            for (int i = 0; i < RENDERER_INDICES_SIZE; i += 6)
-            {
-                indices[i + 0] = offset + 0;
-                indices[i + 1] = offset + 1;
-                indices[i + 2] = offset + 2;
-
-                indices[i + 3] = offset + 2;
-                indices[i + 4] = offset + 3;
-                indices[i + 5] = offset + 0;
-
-                offset += 4;
-            }
-
-            s_Data->QuadIndexBuffer = IndexBuffer::Create(indices, RENDERER_INDICES_SIZE);
-            AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(RENDERER2D_SHADER_PATH);
-            // Ref<Shader> shader = Importer::Get().Import<Shader>(RENDERER2D_SHADER_PATH);
-            Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
-            Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
-            s_Data->QuadVertexBuffer = VertexBuffer::Create(RENDERER_BUFFER_SIZE, BufferUsage::DYNAMIC_DRAW);
-            BufferLayout layout = { { ShaderDataType::Float4, "a_Coordinates" },
-                                    { ShaderDataType::Float4, "a_Color" },
-                                    { ShaderDataType::Float2, "a_Uvs" },
-                                    { ShaderDataType::Float, "a_Tid" },
-                                    { ShaderDataType::Int, "a_ObjectID" } };
-            s_Data->QuadVertexBuffer->SetLayout(layout);
-
-            PipelineStateDesc desc;
-            desc.FragmentShader = fragment;
-            desc.VertexShader = vertex;
-
-            s_Data->QuadPipeline = GraphicsPipeline::Create(desc, s_Data->QuadVertexBuffer->GetLayout());
-            s_Data->QuadProjectionView = UniformBufferBlock::Create(
-              vertex->GetUniformDesc()->Uniforms.at("VP").BlockSize, BufferUsage::DYNAMIC_DRAW);
-            s_Data->QuadUniforms = UniformParams::Create(s_Data->QuadPipeline);
-            s_Data->QuadUniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "VP", s_Data->QuadProjectionView);
-            s_Data->QuadBuffer = s_Data->QuadTmpBuffer = new VertexData[RENDERER_MAX_SPRITES * 4];
-            delete[] indices;
-        }
-        {
-            s_Data->CircleVertexBuffer =
-              VertexBuffer::Create(s_Data->MaxLineVertices * sizeof(CircleVertex), BufferUsage::DYNAMIC_DRAW);
-            BufferLayout layout = {
-                { ShaderDataType::Float3, "a_WorldPosition" }, { ShaderDataType::Float3, "a_LocalPosition" },
-                { ShaderDataType::Float4, "a_Color" },         { ShaderDataType::Float, "a_Thickness" },
-                { ShaderDataType::Float, "a_Fade" },           { ShaderDataType::Int, "a_Id" }
-            };
-            s_Data->CircleVertexBuffer->SetLayout(layout);
-
-            AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>("Resources/Shaders/Circle.asset");
-            // Ref<Shader> shader = Importer::Get().Import<Shader>("Resources/Shaders/Circle.glsl");
-            Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
-            Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
-            PipelineStateDesc desc;
-            desc.FragmentShader = fragment;
-            desc.VertexShader = vertex;
-
-            s_Data->CirclePipeline = GraphicsPipeline::Create(desc, layout);
-            s_Data->CircleBuffer = s_Data->CircleTmpBuffer = new CircleVertex[s_Data->MaxLineVertices];
-            s_Data->CircleProjectionView = UniformBufferBlock::Create(
-              vertex->GetUniformDesc()->Uniforms.at("Camera").BlockSize, BufferUsage::DYNAMIC_DRAW);
-            s_Data->CircleUniforms = UniformParams::Create(s_Data->CirclePipeline);
-            s_Data->CircleUniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "Camera",
-                                                          s_Data->CircleProjectionView);
-        }
-        TextureParameters params;
-        params.Width = 1;
-        params.Height = 1;
-        params.Shape = TextureShape::TEXTURE_2D;
-        params.Format = TextureFormat::RGBA8;
-
         s_Data->Textures[0] = Texture::WHITE;
+        SetupQuadBuffers();
+        SetupCircleBuffers();
+        SetupTextBuffers();
     }
 
     void Renderer2D::Begin(const Camera& camera, const glm::mat4& viewMatrix)
@@ -163,6 +229,7 @@ namespace Crowny
         s_Data->QuadProjectionView->Write(sizeof(glm::mat4), glm::value_ptr(camera.GetProjection()), sizeof(glm::mat4));
         glm::mat4 vp = camera.GetProjection() * viewMatrix;
         s_Data->CircleProjectionView->Write(0, glm::value_ptr(vp), sizeof(glm::mat4));
+        s_Data->TextProjectionView->Write(0, glm::value_ptr(vp), sizeof(glm::mat4));
     }
 
     void Renderer2D::Begin(const glm::mat4& projection, const glm::mat4& view)
@@ -171,6 +238,7 @@ namespace Crowny
         s_Data->QuadProjectionView->Write(sizeof(glm::mat4), glm::value_ptr(projection), sizeof(glm::mat4));
         glm::mat4 vp = projection * view;
         s_Data->CircleProjectionView->Write(0, glm::value_ptr(vp), sizeof(glm::mat4));
+        s_Data->TextProjectionView->Write(0, glm::value_ptr(vp), sizeof(glm::mat4));
     }
 
     float Renderer2D::FindTexture(const Ref<Texture>& texture)
@@ -196,7 +264,7 @@ namespace Crowny
                 End();
                 s_Data->QuadBuffer = (VertexData*)s_Data->QuadVertexBuffer->Map(
                   0, RENDERER_MAX_SPRITES * 4,
-                  GpuLockOptions::WRITE_DISCARD); // TODO: Begin or semething instead of this
+                  GpuLockOptions::WRITE_DISCARD); // TODO: Begin or something instead of this
             }
             s_Data->Textures[++s_Data->TextureIndex] = texture;
             ts = (float)s_Data->TextureIndex;
@@ -295,129 +363,117 @@ namespace Crowny
         DrawLine(lineVertices[3], lineVertices[0], color, thickness);
     }
 
-    void Renderer2D::DrawString(const String& text, float x, float y, const Ref<Font>& font, const glm::vec4& color)
+    void Renderer2D::DrawString(const String& text, const glm::mat4& transform, const AssetHandle<Font>& font, const glm::vec4& color, int32_t entityId)
     {
-        // float ts = FindTexture(font->GetTexture());
-        /*
-        texture_font_t* ftFont = font->GetFTGLFont();
+        const auto& fontGeometry = font->GetMSDFData()->FontGeometry;
+        const auto& fontMetrics = fontGeometry.getMetrics();
+        
+        Ref<Texture> fontAtlasTexture = font->GetAtlasTexture();
+        s_Data->FontAtlasTexture = fontAtlasTexture;
 
-        for (uint32_t i = 0; i < text.length(); i++)
+        double x = 0.0;
+        double fsScale = 1.0 / (fontMetrics.ascenderY - fontMetrics.descenderY);
+        double y = 0;
+
+        const float spaceGlyphAdvance = fontGeometry.getGlyph(' ')->getAdvance();
+
+        for (uint32_t i = 0; i < (uint32_t)text.size(); i++)
         {
-            char c = text[i];
-            texture_glyph_t* glyph = texture_font_get_glyph(ftFont, &c);
+            char character = text[i];
+            if (character == '\r')
+                continue;
 
-            if (glyph)
+            if (character == '\n')
             {
-                if (i > 0)
-                {
-                    float kerning = texture_glyph_get_kerning(glyph, &text[i - 1]);
-                    x += kerning;
-                }
-
-                float x0 = x + glyph->offset_x;
-                float y0 = y + glyph->offset_y;
-                float x1 = x0 + glyph->width;
-                float y1 = y0 - glyph->height;
-
-                float u0 = glyph->s0;
-                float v0 = glyph->t0;
-                float u1 = glyph->s1;
-                float v1 = glyph->t1;
-
-                s_Data->QuadBuffer->Position = glm::vec4(x0, y0, 0, 1.0f);
-                s_Data->QuadBuffer->Uv = glm::vec2(u0, v0);
-                s_Data->QuadBuffer->Tid = ts;
-                s_Data->QuadBuffer->Color = color;
-                s_Data->QuadBuffer++;
-
-                s_Data->QuadBuffer->Position = glm::vec4(x0, y1, 0, 1.0f);
-                s_Data->QuadBuffer->Uv = glm::vec2(u0, v1);
-                s_Data->QuadBuffer->Tid = ts;
-                s_Data->QuadBuffer->Color = color;
-                s_Data->QuadBuffer++;
-
-                s_Data->QuadBuffer->Position = glm::vec4(x1, y1, 0, 1.0f);
-                s_Data->QuadBuffer->Uv = glm::vec2(u1, v1);
-                s_Data->QuadBuffer->Tid = ts;
-                s_Data->QuadBuffer->Color = color;
-                s_Data->QuadBuffer++;
-
-                s_Data->QuadBuffer->Position = glm::vec4(x1, y0, 0, 1.0f);
-                s_Data->QuadBuffer->Uv = glm::vec2(u1, v0);
-                s_Data->QuadBuffer->Tid = ts;
-                s_Data->QuadBuffer->Color = color;
-                s_Data->QuadBuffer++;
-
-                s_Data->QuadVertexCount += 4;
-                s_Data->QuadIndexCount += 6;
-
-                x += glyph->advance_x;
+                x = 0;
+                // TODO: Add line spacing
+                y -= fsScale * fontMetrics.lineHeight; // +LineSpacing;
+                continue;
             }
-        }*/
-    }
 
-    void Renderer2D::DrawString(const String& text, const glm::mat4& transform, const Ref<Font>& font,
-                                const glm::vec4& color)
-    {
-        float x = transform[3][0];
-        float y = transform[3][1];
-        // float ts = FindTexture(font->GetTexture());
-        /*
-        texture_font_t* ftFont = font->GetFTGLFont();
-
-        for (uint32_t i = 0; i < text.length(); i++)
-        {
-            char c = text[i];
-            texture_glyph_t* glyph = texture_font_get_glyph(ftFont, &c);
-
-            if (glyph)
+            if (character == ' ')
             {
-                if (i > 0)
+                float advance = spaceGlyphAdvance;
+                if (i < text.size() - 1)
                 {
-                    float kerning = texture_glyph_get_kerning(glyph, &text[i - 1]);
-                    x += kerning;
+                    char nextCharacter = text[i + 1];
+                    double dAdvance;
+                    fontGeometry.getAdvance(dAdvance, character, nextCharacter);
+                    advance = (float)dAdvance;
                 }
-
-                float x0 = x + glyph->offset_x;
-                float y0 = y + glyph->offset_y;
-                float x1 = x0 + glyph->width;
-                float y1 = y0 - glyph->height;
-
-                float u0 = glyph->s0;
-                float v0 = glyph->t0;
-                float u1 = glyph->s1;
-                float v1 = glyph->t1;
-
-                s_Data->QuadBuffer->Position = transform * glm::vec4(x0, y0, 0, 1.0f);
-                s_Data->QuadBuffer->Uv = glm::vec2(u0, v0);
-                s_Data->QuadBuffer->Tid = ts;
-                s_Data->QuadBuffer->Color = color;
-                s_Data->QuadBuffer++;
-
-                s_Data->QuadBuffer->Position = transform * glm::vec4(x0, y1, 0, 1.0f);
-                s_Data->QuadBuffer->Uv = glm::vec2(u0, v1);
-                s_Data->QuadBuffer->Tid = ts;
-                s_Data->QuadBuffer->Color = color;
-                s_Data->QuadBuffer++;
-
-                s_Data->QuadBuffer->Position = transform * glm::vec4(x1, y1, 0, 1.0f);
-                s_Data->QuadBuffer->Uv = glm::vec2(u1, v1);
-                s_Data->QuadBuffer->Tid = ts;
-                s_Data->QuadBuffer->Color = color;
-                s_Data->QuadBuffer++;
-
-                s_Data->QuadBuffer->Position = transform * glm::vec4(x1, y0, 0, 1.0f);
-                s_Data->QuadBuffer->Uv = glm::vec2(u1, v0);
-                s_Data->QuadBuffer->Tid = ts;
-                s_Data->QuadBuffer->Color = color;
-                s_Data->QuadBuffer++;
-
-                s_Data->QuadVertexCount += 4;
-                s_Data->QuadIndexCount += 6;
-
-                x += glyph->advance_x;
             }
-        }*/
+
+            if (character == '\t')
+            {
+                // TODO: Add spacing
+                x += 4.0f * (fsScale * spaceGlyphAdvance + 0.0f);
+            }
+
+            const msdf_atlas::GlyphGeometry *glyphGeometry = fontGeometry.getGlyph(character);
+            if (!glyphGeometry)
+                glyphGeometry = fontGeometry.getGlyph('?'); // TODO: Add missing symbol setting
+            if (!glyphGeometry)
+                return;
+
+            double al, ab, ar, at;
+            glyphGeometry->getQuadAtlasBounds(al, ab, ar, at);
+            glm::vec2 texCoordMin((float)al, (float)ab);
+            glm::vec2 texCoordMax((float)ar, (float)at);
+
+            double pl, pb, pr, pt;
+            glyphGeometry->getQuadPlaneBounds(pl, pb, pr, pt);
+            glm::vec2 quadMin((float)pl, (float)pb);
+            glm::vec2 quadMax((float)pr, (float)pt);
+
+            quadMin *= fsScale;
+            quadMax *= fsScale;
+            quadMin += glm::vec2(x, y);
+            quadMax += glm::vec2(x, y);
+
+            float texelWidth = 1.0f / fontAtlasTexture->GetWidth();
+            float texelHeight = 1.0f / fontAtlasTexture->GetHeight();
+            texCoordMin *= glm::vec2(texelWidth, texelHeight);
+            texCoordMax *= glm::vec2(texelWidth, texelHeight);
+
+            // Add kerning
+            // TODO: Check if get kerning data is enabled in the font asset.
+            if (i < text.size() - 1)
+            {
+                double advance = glyphGeometry->getAdvance();
+                char nextCharacter = text[i + 1];
+                fontGeometry.getAdvance(advance, character, nextCharacter);
+
+                // TODO: Add kerning here
+                x += fsScale * advance;
+            }
+
+            s_Data->TextBuffer->Position = transform * glm::vec4(quadMin, 0.0f, 1.0f);
+            s_Data->TextBuffer->Color = color;
+            s_Data->TextBuffer->TexCoords = texCoordMin;
+            s_Data->TextBuffer->ObjectId = entityId;
+            s_Data->TextBuffer++;
+
+            s_Data->TextBuffer->Position = transform * glm::vec4(quadMin.x, quadMax.y, 0.0f, 1.0f);
+            s_Data->TextBuffer->Color = color;
+            s_Data->TextBuffer->TexCoords = { texCoordMin.x, texCoordMax.y };
+            s_Data->TextBuffer->ObjectId = entityId;
+            s_Data->TextBuffer++;
+
+            s_Data->TextBuffer->Position = transform * glm::vec4(quadMax, 0.0f, 1.0f);
+            s_Data->TextBuffer->Color = color;
+            s_Data->TextBuffer->TexCoords = texCoordMax;
+            s_Data->TextBuffer->ObjectId = entityId;
+            s_Data->TextBuffer++;
+
+            s_Data->TextBuffer->Position = transform * glm::vec4(quadMax.x, quadMin.y, 0.0f, 1.0f);
+            s_Data->TextBuffer->Color = color;
+            s_Data->TextBuffer->TexCoords = { texCoordMax.x, texCoordMin.y };
+            s_Data->TextBuffer->ObjectId = entityId;
+            s_Data->TextBuffer++;
+
+            s_Data->TextIndexCount += 6;
+            s_Data->TextVertexCount += 4;
+        }
     }
 
     void Renderer2D::End()
@@ -427,13 +483,17 @@ namespace Crowny
         s_Data->QuadIndexCount = 0;
         s_Data->QuadVertexCount = 0;
         s_Data->TextureIndex = 0;
+
         s_Data->CircleBuffer = s_Data->CircleTmpBuffer;
         s_Data->CircleIndexCount = 0;
         s_Data->CircleVertexCount = 0;
+
+        s_Data->TextBuffer = s_Data->TextTmpBuffer;
+        s_Data->TextIndexCount = 0;
+        s_Data->TextVertexCount = 0;
     }
 
-    void Renderer2D::Flush()
-    {
+    static void FlushQuads() {
         if (s_Data->QuadIndexCount > 0)
         {
             RenderAPI::Get().SetGraphicsPipeline(s_Data->QuadPipeline);
@@ -451,11 +511,14 @@ namespace Crowny
             RenderAPI::Get().SetUniforms(s_Data->QuadUniforms);
             RenderAPI::Get().DrawIndexed(0, s_Data->QuadIndexCount, 0, s_Data->QuadVertexCount);
         }
+    }
+
+    static void FlushCircles()
+    {
         if (s_Data->CircleIndexCount > 0)
         {
             RenderAPI::Get().SetGraphicsPipeline(s_Data->CirclePipeline);
             RenderAPI::Get().SetVertexBuffers(0, &s_Data->CircleVertexBuffer, 1);
-            RenderAPI::Get().SetIndexBuffer(s_Data->QuadIndexBuffer);
             void* data = s_Data->CircleVertexBuffer->Map(0, s_Data->CircleVertexCount * sizeof(CircleVertex),
                                                          GpuLockOptions::WRITE_DISCARD);
             std::memcpy(data, s_Data->CircleTmpBuffer, s_Data->CircleVertexCount * sizeof(CircleVertex));
@@ -463,6 +526,30 @@ namespace Crowny
             RenderAPI::Get().SetUniforms(s_Data->CircleUniforms);
             RenderAPI::Get().DrawIndexed(0, s_Data->CircleIndexCount, 0, s_Data->CircleVertexCount);
         }
+    }
+
+    static void FlushText()
+    {
+        if (s_Data->TextIndexCount > 0)
+        {
+            RenderAPI::Get().SetGraphicsPipeline(s_Data->TextPipeline);
+            RenderAPI::Get().SetVertexBuffers(0, &s_Data->TextVertexBuffer, 1);
+            RenderAPI::Get().SetIndexBuffer(s_Data->QuadIndexBuffer);
+            void* data = s_Data->TextVertexBuffer->Map(0, s_Data->TextVertexCount * sizeof(TextVertex),
+                                                         GpuLockOptions::WRITE_DISCARD);
+            std::memcpy(data, s_Data->TextTmpBuffer, s_Data->TextVertexCount * sizeof(TextVertex));
+            s_Data->TextVertexBuffer->Unmap();
+            s_Data->TextUniforms->SetTexture(0, 1, s_Data->FontAtlasTexture);
+            RenderAPI::Get().SetUniforms(s_Data->TextUniforms);
+            RenderAPI::Get().DrawIndexed(0, s_Data->TextIndexCount, 0, s_Data->TextVertexCount);
+        }
+    }
+
+    void Renderer2D::Flush()
+    {
+        FlushQuads();
+        FlushCircles();
+        FlushText();
     }
 
     void Renderer2D::Shutdown()
@@ -473,6 +560,9 @@ namespace Crowny
         s_Data->QuadUniforms = nullptr;
         s_Data->CircleVertexBuffer = nullptr;
         s_Data->CirclePipeline = nullptr;
+        s_Data->TextVertexBuffer = nullptr;
+        s_Data->TextPipeline = nullptr;
+        s_Data->FontAtlasTexture = nullptr;
 
         for (uint32_t i = 0; i < 8; i++)
             s_Data->Textures[i] = nullptr;

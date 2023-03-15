@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Crowny
 {
-    
+
     public class Random
     {
         /// <summary>
@@ -11,7 +11,7 @@ namespace Crowny
         /// </summary>
         /// <value>A random Vector3 with a length of (0, 1).</value>
         public static Vector3 insideUnitSphere
-        { 
+        {
             get { Internal_UnitSphere(out Vector3 tmp); return tmp; }
         }
 
@@ -19,8 +19,8 @@ namespace Crowny
         /// Returns a random point inside a unit circle.
         /// </summary>
         /// <value>A random Vector2 with a length of (0, 1).</value>
-        public static Vector2 insideUnitCircle 
-        { 
+        public static Vector2 insideUnitCircle
+        {
             get { Internal_UnitCircle(out Vector2 tmp); return tmp; }
         }
 
@@ -45,7 +45,7 @@ namespace Crowny
         /// <returns>A random value in the range.</returns>
         [MethodImpl(MethodImplOptions.InternalCall)]
         public extern static float Range(float min, float max);
-        
+
         [MethodImpl(MethodImplOptions.InternalCall)]
         private extern static void Internal_UnitSphere(out Vector3 value);
 

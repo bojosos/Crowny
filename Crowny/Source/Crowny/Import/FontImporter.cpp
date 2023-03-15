@@ -164,6 +164,9 @@ namespace Crowny
                 CW_ENGINE_INFO("Loaded {} glyphs from font", glyphsLoaded);
 
             msdf_atlas::TightAtlasPacker tightAtlasPacker;
+            tightAtlasPacker.setMiterLimit(1.0);
+            tightAtlasPacker.setPixelRange(2.0);
+
             tightAtlasPacker.setPadding(fontImportOptions->Padding);
             if (!fontImportOptions->AutoSizeAtlas)
                 tightAtlasPacker.setDimensions(fontImportOptions->AtlasWidth, fontImportOptions->AtlasHeight);
@@ -171,7 +174,7 @@ namespace Crowny
                 tightAtlasPacker.setDimensionsConstraint(
                   msdf_atlas::TightAtlasPacker::DimensionsConstraint::MULTIPLE_OF_FOUR_SQUARE);
 
-            if (fontImportOptions->AutomaticFontSampling)
+            if (!fontImportOptions->AutomaticFontSampling)
                 tightAtlasPacker.setScale(fontImportOptions->SampingFontSize);
 
             Timer msdfTimer;
@@ -188,7 +191,7 @@ namespace Crowny
             CW_ENGINE_INFO("Final atlas font scale: {}", scale);
 
             uint64_t coloringSeed = 0;
-            bool expensiveColoring = false;
+            bool expensiveColoring = true;
             msdfTimer.Reset();
             if (expensiveColoring)
             {

@@ -61,6 +61,9 @@ namespace Crowny
         s_Library.AlignLeft = Importer::Get().Import<Texture>(AlignLeft);
         s_Library.AlignCenter = Importer::Get().Import<Texture>(AlignCenter);
         s_Library.AlignRight = Importer::Get().Import<Texture>(AlignRight);
+
+        // Ref<Asset> font = Importer::Get().Import("Resources/Fonts/Roboto/roboto-thin.ttf");
+        // s_Library.Test = std::static_pointer_cast<Font>(font)->GetAtlasTexture();
     }
 
     void EditorAssets::Unload()
