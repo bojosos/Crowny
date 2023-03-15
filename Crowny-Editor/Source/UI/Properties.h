@@ -65,6 +65,23 @@ namespace Crowny
             Underline();
         }
 
+        static int32_t QuickTabs(const char* label, const Vector<const char*> &buttons)
+        {
+            Pre(label);
+
+            int buttonClicked = -1;
+            UI::ScopedStyle noSpacingStyle(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
+            float columnWidth = ImGui::GetContentRegionAvail().x;
+            for (uint32_t i = 0; i < (uint32_t)buttons.size(); i++) {
+                const String id = String(buttons[i]) + "##" + std::string(label) + std::to_string(i);
+                if (ImGui::Button(id.c_str(), ImVec2(columnWidth / 4.0f, 0.0f)))
+                    buttonClicked = i;
+                ImGui::SameLine();
+            }
+            Post();
+            return buttonClicked;
+        }
+
         static bool PropertyInput(const char* label, int8_t& value, int8_t step = 1, int8_t stepFast = 1)
         {
             Pre(label);

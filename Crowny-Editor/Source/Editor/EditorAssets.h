@@ -25,6 +25,7 @@ namespace Crowny
         Ref<Texture> AlignLeft;
         Ref<Texture> AlignCenter;
         Ref<Texture> AlignRight;
+        Ref<Texture> Test;
     };
 
     class EditorAssets
