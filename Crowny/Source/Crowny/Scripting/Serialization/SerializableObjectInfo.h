@@ -92,6 +92,7 @@ namespace Crowny
         String m_TypeNamespace;
         String m_TypeName;
         Vector<String> m_EnumNames;
+        Vector<int32_t> m_EnumValues;
     };
 
     class SerializableTypeInfoEntity : public SerializableTypeInfo

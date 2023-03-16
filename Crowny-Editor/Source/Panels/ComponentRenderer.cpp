@@ -247,8 +247,6 @@ namespace Crowny
         UI::Property("Text", textComponent.Text);
         UI::PropertyColor("Color", textComponent.Color);
 
-        UI::QuickTabs("Test tabs", { "Test1", "Test2", "Test3", "Test4" });
-
         // String str = textComponent.Font->GetName();
         // UI::Property("Font", str);
         ImGui::Text("Font"); // Hook up drag drop here.
