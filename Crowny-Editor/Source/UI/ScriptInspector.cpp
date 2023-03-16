@@ -276,8 +276,7 @@ namespace Crowny
             bool value = *(bool*)fieldValue;
             if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Dropdown))
             {
-                static Vector<const char*> options = { "False", "True" };
-                if (UI::PropertyDropdown(label, options, value))
+                if (UI::PropertyDropdown(label, { "False", "True" }, value))
                 {
                     modified = true;
                     setter(&value);
@@ -577,17 +576,28 @@ namespace Crowny
                                             const Ref<SerializableTypeInfoEnum>& enumInfo,
                                             std::function<MonoObject*()> getter, std::function<void(void*)> setter)
     {
-        uint32_t value =
-          *(uint32_t*)MonoUtils::Unbox(getter());  // maybe here I would have to check the underlying type.....
+        int32_t value =
+          *(int32_t*)MonoUtils::Unbox(getter());  // maybe here I would have to check the underlying type.....
         if (value >= enumInfo->m_EnumNames.size()) // Maybe clamp the value here?
         {
             ImGui::NextColumn();
             return false;
         }
-        if (UI::PropertyDropdown(memberInfo->m_Name.c_str(), enumInfo->m_EnumNames, value))
+        if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::EnumQuickTabs))
         {
-            setter(&value);
-            return true;
+            if (UI::QuickTabs(memberInfo->m_Name.c_str(), enumInfo->m_EnumNames, enumInfo->m_EnumValues, value))
+            {
+                setter(&value);
+                return true;
+            }
+        }
+        else
+        {
+           if (value < enumInfo->m_EnumNames.size() && UI::PropertyDropdown(memberInfo->m_Name.c_str(), enumInfo->m_EnumNames, value))
+           {
+               setter(&value);
+               return true;
+           }
         }
         return false;
     }
