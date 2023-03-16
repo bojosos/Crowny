@@ -15,6 +15,11 @@ namespace Crowny
         {
             return Enum.GetNames(type);
         }
+
+        public static int[] GetEnumValuesInt32(Type type)
+        {
+            return Enum.GetValues(type) as int[];
+        }
     }
 
     public static class ScriptCompiler

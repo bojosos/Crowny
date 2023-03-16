@@ -478,16 +478,24 @@ namespace Crowny
                 typeInfo->m_TypeNamespace = monoClass->GetNamespace();
                 typeInfo->m_TypeName = monoClass->GetName();
 
-                void* enumType = (void*)MonoUtils::GetType(monoClass->GetInternalPtr());
-                MonoArray* ar = (MonoArray*)ScriptInfoManager::Get()
+                void* enumType = MonoUtils::GetType(monoClass->GetInternalPtr());
+                MonoArray* enumNames = (MonoArray*)ScriptInfoManager::Get()
                                   .GetBuiltinClasses()
                                   .ScriptUtils->GetMethod("GetEnumNames", 1)
-                                  ->Invoke(nullptr, &enumType);
-                size_t size = mono_array_length(ar);
-                typeInfo->m_EnumNames.resize(size);
-                for (uint32_t i = 0; i < size; i++)
-                    typeInfo->m_EnumNames[i] = MonoUtils::FromMonoString(mono_array_get(ar, MonoString*, i));
+                                         ->Invoke(nullptr, &enumType);
+                ScriptArray managedNamesArray(enumNames);
+                typeInfo->m_EnumNames.resize(managedNamesArray.Size());
+                for (uint32_t i = 0; i < managedNamesArray.Size(); i++)
+                    typeInfo->m_EnumNames[i] = managedNamesArray.Get<String>(i);
 
+                MonoArray* enumValues = (MonoArray*)ScriptInfoManager::Get()
+                                          .GetBuiltinClasses()
+                                          .ScriptUtils->GetMethod("GetEnumValuesInt32", 1)
+                                          ->Invoke(nullptr, &enumType);
+                ScriptArray managedValuesArray(enumValues);
+                typeInfo->m_EnumValues.resize(managedValuesArray.Size());
+                for (uint32_t i = 0; i < managedValuesArray.Size(); i++)
+                    typeInfo->m_EnumValues[i] = managedValuesArray.Get<int32_t>(i);
                 return typeInfo;
             }
             else

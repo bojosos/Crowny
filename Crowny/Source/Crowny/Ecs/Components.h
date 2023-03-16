@@ -114,13 +114,17 @@ namespace Crowny
         Midline
     };
 
-    enum class TextFontStyle
+
+    enum class TextFontStyleBits
     {
+        None,
         Bold,
         Italic,
         Underline,
         Strikethrough
     };
+    typedef Flags<TextFontStyleBits> TextFontStyle;
+    CW_FLAGS_OPERATORS(TextFontStyleBits);
 
     struct TextComponent : public ComponentBase
     {
@@ -131,9 +135,9 @@ namespace Crowny
         bool Wrapping = true;
         TextOverflow Overflow;
 
-        TextHorizontalAlignment HorizontalAlignment;
-        TextVerticalAlignment VerticalAlignment;
-        TextFontStyle FontStyle;
+        TextHorizontalAlignment HorizontalAlignment = TextHorizontalAlignment::Left;
+        TextVerticalAlignment VerticalAlignment = TextVerticalAlignment::Top;
+        TextFontStyle FontStyle=TextFontStyleBits::None;
 
         glm::vec4 OutlineColor{ 0.0f, 0.0f, 0.0f, 0.0f };
         float thickess = 0.8f;

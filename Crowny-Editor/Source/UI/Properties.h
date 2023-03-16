@@ -65,18 +65,70 @@ namespace Crowny
             Underline();
         }
 
-        static int32_t QuickTabs(const char* label, const Vector<const char*> &buttons)
+        template <typename TUnderlying = int32_t>
+        static bool QuickTabs(const char* label, std::initializer_list<const char*> buttonNameList,
+                              const Vector<TUnderlying>& enumValues, TUnderlying& value)
         {
             Pre(label);
-
-            int buttonClicked = -1;
+            Vector<const char*> buttons(buttonNameList);
+            bool buttonClicked = false;
             UI::ScopedStyle noSpacingStyle(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
             float columnWidth = ImGui::GetContentRegionAvail().x;
             for (uint32_t i = 0; i < (uint32_t)buttons.size(); i++) {
                 const String id = String(buttons[i]) + "##" + std::string(label) + std::to_string(i);
-                if (ImGui::Button(id.c_str(), ImVec2(columnWidth / 4.0f, 0.0f)))
-                    buttonClicked = i;
+                
+                
+                if (value & enumValues[i])
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetColorU32(ImGuiCol_ButtonHovered));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
+                                          ImGui::ColorConvertU32ToFloat4(IM_COL32(84, 84, 84, 255)));
+                }
+                else
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetColorU32(ImGuiCol_Button));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetColorU32(ImGuiCol_ButtonActive));
+                }
+                
+                if (ImGui::Button(id.c_str(), ImVec2(columnWidth / buttons.size(), 0.0f)))
+                {
+                    value ^= enumValues[i];
+                    buttonClicked = true;
+                }
                 ImGui::SameLine();
+
+                ImGui::PopStyleColor(2);
+            }
+            Post();
+            return buttonClicked;
+        }
+
+        template <typename TUnderlying = int32_t>
+        static bool QuickTabs(const char* label, const Vector<String>& buttons, const Vector<TUnderlying>& enumValues,
+                              TUnderlying& value)
+        {
+            Pre(label);
+
+            bool buttonClicked = false;
+            UI::ScopedStyle noSpacingStyle(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
+            float columnWidth = ImGui::GetContentRegionAvail().x;
+            for (uint32_t i = 0; i < (uint32_t)buttons.size(); i++)
+            {
+                const String id = buttons[i] + "##" + std::string(label) + std::to_string(i);
+
+                if (value & enumValues[i])
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImGuiCol_ButtonActive);
+                else
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImGuiCol_Button);
+
+                if (ImGui::Button(id.c_str(), ImVec2(columnWidth / buttons.size(), 0.0f)))
+                {
+                    value ^= enumValues[i];
+                    buttonClicked = true;
+                }
+                ImGui::SameLine();
+
+                ImGui::PopStyleColor();
             }
             Post();
             return buttonClicked;
@@ -458,8 +510,9 @@ namespace Crowny
         }
 
         template <typename TEnum, typename TUnderlying = int32_t>
-        static bool PropertyDropdown(const char* label, Vector<const char*>& options, TEnum& selected)
+        static bool PropertyDropdown(const char* label, std::initializer_list<const char*> optionsList, TEnum& selected)
         {
+            Vector<const char*> options(optionsList);
             TUnderlying selectedIndex = (TUnderlying)selected;
 
             const char* current = options[selectedIndex];
