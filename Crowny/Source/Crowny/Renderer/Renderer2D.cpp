@@ -3,6 +3,7 @@
 #include "Crowny/Renderer/Renderer2D.h"
 
 #include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Ecs/Components.h"
 #include "Crowny/Import/Importer.h"
 #include "Crowny/RenderAPI/GraphicsPipeline.h"
 #include "Crowny/RenderAPI/RenderCommand.h"
@@ -363,20 +364,24 @@ namespace Crowny
         DrawLine(lineVertices[3], lineVertices[0], color, thickness);
     }
 
-    void Renderer2D::DrawString(const String& text, const glm::mat4& transform, const AssetHandle<Font>& font, const glm::vec4& color, int32_t entityId)
+    void Renderer2D::DrawString(const TextComponent& textComponent, const glm::mat4& transform, int32_t entityId)
     {
-        const auto& fontGeometry = font->GetMSDFData()->FontGeometry;
+        if (!textComponent.Font)
+            return;
+
+        const auto& fontGeometry = textComponent.Font->GetMSDFData()->FontGeometry;
         const auto& fontMetrics = fontGeometry.getMetrics();
         
-        Ref<Texture> fontAtlasTexture = font->GetAtlasTexture();
+        Ref<Texture> fontAtlasTexture = textComponent.Font->GetAtlasTexture();
         s_Data->FontAtlasTexture = fontAtlasTexture;
 
         double x = 0.0;
         double fsScale = 1.0 / (fontMetrics.ascenderY - fontMetrics.descenderY);
         double y = 0;
 
-        const float spaceGlyphAdvance = fontGeometry.getGlyph(' ')->getAdvance();
+        const float spaceGlyphAdvance = (float)fontGeometry.getGlyph(' ')->getAdvance();
 
+        const String& text = textComponent.Text;
         for (uint32_t i = 0; i < (uint32_t)text.size(); i++)
         {
             char character = text[i];
@@ -386,8 +391,7 @@ namespace Crowny
             if (character == '\n')
             {
                 x = 0;
-                // TODO: Add line spacing
-                y -= fsScale * fontMetrics.lineHeight; // +LineSpacing;
+                y -= fsScale * fontMetrics.lineHeight + textComponent.LineSpacing;
                 continue;
             }
 
@@ -397,17 +401,18 @@ namespace Crowny
                 if (i < text.size() - 1)
                 {
                     char nextCharacter = text[i + 1];
-                    double dAdvance;
-                    fontGeometry.getAdvance(dAdvance, character, nextCharacter);
-                    advance = (float)dAdvance;
+                    double advance = 0.0;
+                    if (textComponent.UseKerning)
+                        fontGeometry.getAdvance(advance, character, nextCharacter);
+                    advance = (float)advance + textComponent.WordSpacing;
                 }
+
+                x += fsScale * advance;
+                continue;
             }
 
             if (character == '\t')
-            {
-                // TODO: Add spacing
-                x += 4.0f * (fsScale * spaceGlyphAdvance + 0.0f);
-            }
+                x += 4.0f * (fsScale * spaceGlyphAdvance + textComponent.CharacterSpacing);
 
             const msdf_atlas::GlyphGeometry *glyphGeometry = fontGeometry.getGlyph(character);
             if (!glyphGeometry)
@@ -435,38 +440,35 @@ namespace Crowny
             texCoordMin *= glm::vec2(texelWidth, texelHeight);
             texCoordMax *= glm::vec2(texelWidth, texelHeight);
 
-            // Add kerning
             // TODO: Check if get kerning data is enabled in the font asset.
-            if (i < text.size() - 1)
+            double advance = glyphGeometry->getAdvance();
+            if (textComponent.UseKerning && i < text.size() - 1)
             {
-                double advance = glyphGeometry->getAdvance();
-                char nextCharacter = text[i + 1];
+                char nextCharacter = text[i + 1];    
                 fontGeometry.getAdvance(advance, character, nextCharacter);
-
-                // TODO: Add kerning here
-                x += fsScale * advance;
             }
+            x += fsScale * advance + textComponent.CharacterSpacing;
 
             s_Data->TextBuffer->Position = transform * glm::vec4(quadMin, 0.0f, 1.0f);
-            s_Data->TextBuffer->Color = color;
+            s_Data->TextBuffer->Color = textComponent.Color;
             s_Data->TextBuffer->TexCoords = texCoordMin;
             s_Data->TextBuffer->ObjectId = entityId;
             s_Data->TextBuffer++;
 
             s_Data->TextBuffer->Position = transform * glm::vec4(quadMin.x, quadMax.y, 0.0f, 1.0f);
-            s_Data->TextBuffer->Color = color;
+            s_Data->TextBuffer->Color = textComponent.Color;
             s_Data->TextBuffer->TexCoords = { texCoordMin.x, texCoordMax.y };
             s_Data->TextBuffer->ObjectId = entityId;
             s_Data->TextBuffer++;
 
             s_Data->TextBuffer->Position = transform * glm::vec4(quadMax, 0.0f, 1.0f);
-            s_Data->TextBuffer->Color = color;
+            s_Data->TextBuffer->Color = textComponent.Color;
             s_Data->TextBuffer->TexCoords = texCoordMax;
             s_Data->TextBuffer->ObjectId = entityId;
             s_Data->TextBuffer++;
 
             s_Data->TextBuffer->Position = transform * glm::vec4(quadMax.x, quadMin.y, 0.0f, 1.0f);
-            s_Data->TextBuffer->Color = color;
+            s_Data->TextBuffer->Color = textComponent.Color;
             s_Data->TextBuffer->TexCoords = { texCoordMax.x, texCoordMin.y };
             s_Data->TextBuffer->ObjectId = entityId;
             s_Data->TextBuffer++;

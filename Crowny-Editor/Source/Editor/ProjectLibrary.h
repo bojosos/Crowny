@@ -35,7 +35,7 @@ namespace Crowny
         size_t ElementNameHash = 0; // Bug: Since I use ToLower on the name before calculating the hash, on Unix
                                     // platforms files with same names will both get highlighted.
 
-        std::time_t LastUpdateTime = 0;
+        std::time_t LastUpdateTime = 0; // TODO: Consider removing this as it is a bit hard to keep track of
         DirectoryEntry* Parent = nullptr;
     };
 
@@ -68,7 +68,7 @@ namespace Crowny
         const Ref<DirectoryEntry>& GetRoot() const { return m_RootEntry; }
         Ref<LibraryEntry> FindEntry(const Path& path) const;
 
-        Vector<Ref<LibraryEntry>> Search(const String& pattern);
+        Vector<Ref<LibraryEntry>> Search(const String& pattern, DirectoryEntry* rootEntry = nullptr);
 
         void MoveEntry(const Path& oldPath, const Path& newPath, bool overwrite = false);
         void CopyEntry(const Path& oldPath, const Path& newPath, bool overwrite = false);

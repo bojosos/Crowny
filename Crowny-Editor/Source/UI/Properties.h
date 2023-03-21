@@ -65,39 +65,76 @@ namespace Crowny
             Underline();
         }
 
+        template <typename TEnum, typename TUnderlying = int32_t>
+        static bool QuickTabsP(const char* label, std::initializer_list<const char*> buttonNameList,
+                               Flags<TEnum, TUnderlying>& value)
+        {
+            Vector<TUnderlying> values;
+            values.resize(buttonNameList.size());
+            uint32_t pow = 1;
+            for (uint32_t i = 0; i < (uint32_t)buttonNameList.size(); i++)
+            {
+                values[i] = pow;
+                pow *= 2;
+            }
+            TUnderlying underlying = (TUnderlying)value;
+            bool modified = QuickTabs(label, buttonNameList, values, underlying);
+            value = Flags<TEnum, TUnderlying>(underlying);
+            return modified;
+        }
+
+        template <typename TUnderlying = int32_t>
+        static bool QuickTabsP(const char* label, std::initializer_list<const char*> buttonNameList, TUnderlying& value)
+        {
+            Vector<TUnderlying> values;
+            values.resize(buttonNameList.size());
+            uint32_t pow = 1;
+            for (uint32_t i = 0; i < (uint32_t)buttonNameList.size(); i++)
+            {
+                values[i] = pow;
+                pow *= 2;
+            }
+            return QuickTabs(label, buttonNameList, values, value);
+        }
+
         template <typename TUnderlying = int32_t>
         static bool QuickTabs(const char* label, std::initializer_list<const char*> buttonNameList,
                               const Vector<TUnderlying>& enumValues, TUnderlying& value)
         {
             Pre(label);
-            Vector<const char*> buttons(buttonNameList);
-            bool buttonClicked = false;
-            UI::ScopedStyle noSpacingStyle(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
-            float columnWidth = ImGui::GetContentRegionAvail().x;
-            for (uint32_t i = 0; i < (uint32_t)buttons.size(); i++) {
-                const String id = String(buttons[i]) + "##" + std::string(label) + std::to_string(i);
-                
-                
-                if (value & enumValues[i])
-                {
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetColorU32(ImGuiCol_ButtonHovered));
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
-                                          ImGui::ColorConvertU32ToFloat4(IM_COL32(84, 84, 84, 255)));
-                }
-                else
-                {
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetColorU32(ImGuiCol_Button));
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetColorU32(ImGuiCol_ButtonActive));
-                }
-                
-                if (ImGui::Button(id.c_str(), ImVec2(columnWidth / buttons.size(), 0.0f)))
-                {
-                    value ^= enumValues[i];
-                    buttonClicked = true;
-                }
-                ImGui::SameLine();
 
-                ImGui::PopStyleColor(2);
+            bool buttonClicked = false;
+            {
+                Vector<const char*> buttons(buttonNameList);
+                UI::ScopedStyle noSpacingStyle(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
+                float columnWidth = ImGui::GetContentRegionAvail().x;
+                float minButtonSize = columnWidth / buttons.size();
+                for (uint32_t i = 0; i < (uint32_t)buttons.size(); i++)
+                {
+                    const String id = String(buttons[i]) + "##" + std::string(label) + std::to_string(i);
+
+                    if (value & enumValues[i])
+                    {
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetColorU32(ImGuiCol_ButtonHovered));
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
+                                              ImGui::ColorConvertU32ToFloat4(IM_COL32(84, 84, 84, 255)));
+                    }
+                    else
+                    {
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetColorU32(ImGuiCol_Button));
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetColorU32(ImGuiCol_ButtonActive));
+                    }
+
+                    if (ImGui::Button(id.c_str(),
+                                      ImVec2(std::max(minButtonSize, ImGui::CalcTextSize(buttons[i]).x), 0.0f)))
+                    {
+                        value ^= enumValues[i];
+                        buttonClicked = true;
+                    }
+                    ImGui::SameLine();
+
+                    ImGui::PopStyleColor(2);
+                }
             }
             Post();
             return buttonClicked;
@@ -110,27 +147,32 @@ namespace Crowny
             Pre(label);
 
             bool buttonClicked = false;
-            UI::ScopedStyle noSpacingStyle(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
-            float columnWidth = ImGui::GetContentRegionAvail().x;
-            for (uint32_t i = 0; i < (uint32_t)buttons.size(); i++)
             {
-                const String id = buttons[i] + "##" + std::string(label) + std::to_string(i);
-
-                if (value & enumValues[i])
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImGuiCol_ButtonActive);
-                else
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImGuiCol_Button);
-
-                if (ImGui::Button(id.c_str(), ImVec2(columnWidth / buttons.size(), 0.0f)))
+                UI::ScopedStyle noSpacingStyle(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
+                float columnWidth = ImGui::GetContentRegionAvail().x;
+                float minButtonSize = columnWidth / buttons.size();
+                for (uint32_t i = 0; i < (uint32_t)buttons.size(); i++)
                 {
-                    value ^= enumValues[i];
-                    buttonClicked = true;
-                }
-                ImGui::SameLine();
+                    const String id = buttons[i] + "##" + std::string(label) + std::to_string(i);
 
-                ImGui::PopStyleColor();
+                    if (value & enumValues[i])
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImGuiCol_ButtonActive);
+                    else
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImGuiCol_Button);
+
+                    if (ImGui::Button(id.c_str(),
+                                      ImVec2(std::max(minButtonSize, ImGui::CalcTextSize(buttons[i].c_str()).x), 0.0f)))
+                    {
+                        value ^= enumValues[i];
+                        buttonClicked = true;
+                    }
+                    ImGui::SameLine();
+
+                    ImGui::PopStyleColor();
+                }
             }
             Post();
+
             return buttonClicked;
         }
 

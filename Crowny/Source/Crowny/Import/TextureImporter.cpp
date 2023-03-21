@@ -18,7 +18,7 @@ namespace Crowny
         String lower = ext;
         StringUtils::ToLower(lower);
         return lower == "png" || lower == "jpeg" || lower == "psd" || lower == "gif" || lower == "tga" ||
-               lower == "bmp" || lower == "hdr";
+               lower == "bmp" || lower == "hdr" || lower == "pic" || lower == "ppm" || lower == "pgm";
     }
 
     bool TextureImporter::IsMagicNumSupported(uint8_t* num, uint32_t numSize) const { return true; }

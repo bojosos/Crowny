@@ -501,6 +501,9 @@ namespace Crowny
 
     void InspectorPanel::DrawHeader()
     {
+        if (m_InspectedAssetPath.empty())
+            return;
+
         // Consider drawing an icon too
         auto drawHeader = [&](const String& head) {
             float maxx = ImGui::GetContentRegionAvail().x;
@@ -610,6 +613,13 @@ namespace Crowny
 
     void InspectorPanel::SetSelectedAssetPath(const Path& filepath)
     {
+        if (filepath.empty())
+        {
+            SetInspectorMode(InspectorMode::Default);
+            m_InspectedAssetPath.clear();
+            return;
+        }
+
         m_InspectedAssetPath = filepath;
         m_TemporaryImGuiString.clear();
         if (fs::is_directory(filepath))

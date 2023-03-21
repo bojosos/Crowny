@@ -61,7 +61,7 @@ namespace Crowny
     void ScriptObjectManager::NotifyObjectFinalized(ScriptObjectBase* instance)
     {
         // TODO: Fix this
-        CW_ENGINE_ASSERT(instance != nullptr);
+        // CW_ENGINE_ASSERT(instance != nullptr);
         if (instance == nullptr)
             return;
         m_FinalizedObjects[m_FinalizedQueueIdx].push_back(instance);

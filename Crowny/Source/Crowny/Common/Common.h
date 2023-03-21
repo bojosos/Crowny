@@ -21,6 +21,10 @@
 #define CW_STDCALL __stdcall
 #endif
 
+#ifndef WIN32
+#define stricmp strcasecmp
+#endif
+
 #define BIT(x) (1 << x)
 #define M_PI 3.14159265358979323846
 

@@ -546,17 +546,30 @@ namespace Crowny
         // CW_ENGINE_INFO(layout);
     }
 
+    VulkanTexture::VulkanTexture()
+      : m_Image(nullptr), m_InternalFormat(), m_StagingBuffer(nullptr), m_MappedGlobalQueueIdx((uint32_t)-1),
+        m_MappedMip(0), m_MappedFace(0), m_MappedRowPitch(0), m_MappedSlicePitch(0),
+        m_MappedLockOptions(GpuLockOptions::WRITE_ONLY), m_DirectlyMappable(false), m_SupportsGpuWrites(false),
+        m_IsMapped(false), m_ImageCreateInfo()
+    {
+    }
+
     VulkanTexture::VulkanTexture(const TextureParameters& params)
       : Texture(params), m_Image(nullptr), m_InternalFormat(), m_StagingBuffer(nullptr),
         m_MappedGlobalQueueIdx((uint32_t)-1), m_MappedMip(0), m_MappedFace(0), m_MappedRowPitch(0),
         m_MappedSlicePitch(0), m_MappedLockOptions(GpuLockOptions::WRITE_ONLY), m_DirectlyMappable(false),
         m_SupportsGpuWrites(false), m_IsMapped(false), m_ImageCreateInfo()
     {
+        Init();
+    }
+
+    void VulkanTexture::Init()
+    {
         m_ImageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         m_ImageCreateInfo.pNext = nullptr;
         m_ImageCreateInfo.flags = 0;
 
-        switch (params.Shape)
+        switch (m_Params.Shape)
         {
         case TextureShape::TEXTURE_1D:
             m_ImageCreateInfo.imageType = VK_IMAGE_TYPE_1D;
@@ -575,7 +588,7 @@ namespace Crowny
         m_ImageCreateInfo.usage =
           VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-        int32_t usage = (int32_t)params.Usage;
+        int32_t usage = (int32_t)m_Params.Usage;
         if ((usage & TEXTURE_RENDERTARGET) != 0)
         {
             m_ImageCreateInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -598,8 +611,8 @@ namespace Crowny
 
         if ((usage & TEXTURE_DYNAMIC) != 0)
         {
-            if (params.Shape == TextureShape::TEXTURE_2D && params.Samples <= 1 && params.MipLevels == 0 &&
-                params.Faces == 1 && (m_ImageCreateInfo.usage & VK_IMAGE_USAGE_SAMPLED_BIT) != 0)
+            if (m_Params.Shape == TextureShape::TEXTURE_2D && m_Params.Samples <= 1 && m_Params.MipLevels == 0 &&
+                m_Params.Faces == 1 && (m_ImageCreateInfo.usage & VK_IMAGE_USAGE_SAMPLED_BIT) != 0)
             {
                 if (!m_SupportsGpuWrites)
                 {
@@ -615,9 +628,9 @@ namespace Crowny
         uint32_t depth = std::max(m_Params.Depth, 1U);
 
         m_ImageCreateInfo.extent = { width, height, depth };
-        m_ImageCreateInfo.mipLevels = params.MipLevels + 1;
-        m_ImageCreateInfo.arrayLayers = params.Faces;
-        m_ImageCreateInfo.samples = VulkanUtils::GetSampleFlags(params.Samples);
+        m_ImageCreateInfo.mipLevels = m_Params.MipLevels + 1;
+        m_ImageCreateInfo.arrayLayers = m_Params.Faces;
+        m_ImageCreateInfo.samples = VulkanUtils::GetSampleFlags(m_Params.Samples);
         m_ImageCreateInfo.tiling = tiling;
         m_ImageCreateInfo.initialLayout = layout;
         m_ImageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -627,10 +640,11 @@ namespace Crowny
         VulkanDevice& device = *gVulkanRenderAPI().GetPresentDevice().get();
 
         bool optimalTiling = tiling == VK_IMAGE_TILING_OPTIMAL;
-        m_InternalFormat = VulkanUtils::GetClosestSupportedTextureFormat(device, params.Format, params.Shape,
-                                                                         params.Usage, optimalTiling);
+        m_InternalFormat = VulkanUtils::GetClosestSupportedTextureFormat(device, m_Params.Format, m_Params.Shape,
+                                                                         m_Params.Usage, optimalTiling);
         m_Image = CreateImage(device, m_InternalFormat);
     }
+
     VulkanTexture::~VulkanTexture()
     {
         m_Image->Destroy();

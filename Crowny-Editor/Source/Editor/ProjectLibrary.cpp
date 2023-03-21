@@ -110,7 +110,7 @@ namespace Crowny
 
                     if (!fs::is_regular_file(sourceFilePath))
                     {
-                        CW_ENGINE_ERROR("Found a dangling metadata file. Deleting.");
+                        CW_ENGINE_WARN("Found a dangling metadata file. Deleting.");
                         fs::remove(pathToSearch);
                     }
                 }
@@ -431,12 +431,16 @@ namespace Crowny
         return false;
     }
 
-    Vector<Ref<LibraryEntry>> ProjectLibrary::Search(const String& pattern)
+    Vector<Ref<LibraryEntry>> ProjectLibrary::Search(const String& pattern, DirectoryEntry* rootEntry)
     {
         // TODO: t: for types and search directory
         Vector<Ref<LibraryEntry>> result;
         Stack<DirectoryEntry*> stack;
-        stack.push(m_RootEntry.get());
+        if (rootEntry == nullptr)
+            stack.push(m_RootEntry.get());
+        else
+            stack.push(rootEntry);
+
         while (!stack.empty())
         {
             DirectoryEntry* cur = stack.top();
