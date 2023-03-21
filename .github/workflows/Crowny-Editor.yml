@@ -19,7 +19,7 @@ jobs:
           wget -P Crowny/Dependencies/vulkan/include/vulkan https://raw.githubusercontent.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/master/include/vk_mem_alloc.h
       - name: Generate projects
         run: |
-          chmod +x 3rdparty/premake/premake5
+          chmod +x 3rdparty/premake/bin/premake5
           bash Scripts/genprojects.sh
       - name: Build
         run: make Crowny-Editor -j2 config=release_linux64 CXX=clang++-12
