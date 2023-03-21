@@ -117,11 +117,11 @@ namespace Crowny
 
     enum class TextFontStyleBits
     {
-        None,
-        Bold,
-        Italic,
-        Underline,
-        Strikethrough
+        None = 0,
+        Bold = 1 << 0,
+        Italic = 1 << 1,
+        Underline = 1 << 2,
+        Strikethrough = 1 << 3
     };
     typedef Flags<TextFontStyleBits> TextFontStyle;
     CW_FLAGS_OPERATORS(TextFontStyleBits);
@@ -132,19 +132,24 @@ namespace Crowny
         AssetHandle<Crowny::Font> Font;
         glm::vec4 Color{ 1.0f, 1.0f, 1.0f, 1.0f };
 
+        float Size = 36.0f;
+        bool AutoSize = false;
+
         bool Wrapping = true;
-        TextOverflow Overflow;
+        TextOverflow Overflow = TextOverflow::Overflow;
 
         TextHorizontalAlignment HorizontalAlignment = TextHorizontalAlignment::Left;
         TextVerticalAlignment VerticalAlignment = TextVerticalAlignment::Top;
         TextFontStyle FontStyle=TextFontStyleBits::None;
 
         glm::vec4 OutlineColor{ 0.0f, 0.0f, 0.0f, 0.0f };
-        float thickess = 0.8f;
+        float Thickess = 0.8f;
 
         float CharacterSpacing = 0.0f;
         float WordSpacing = 0.0f;
-        float Linespacing = 0.0f;
+        float LineSpacing = 0.0f;
+
+        bool UseKerning = true;
 
         TextComponent();
         TextComponent(const TextComponent&) = default;

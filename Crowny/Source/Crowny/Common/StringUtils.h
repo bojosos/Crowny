@@ -21,5 +21,6 @@ namespace Crowny
 
         static bool IsSearchMathing(const String& item, const String& searchQuery, bool caseSensitive = false,
                                     bool stripWhiteSpaces = false, bool stripUnderscores = false);
+        static bool CaseInsensitiveCompare(const String& l, const String& r);
     };
 } // namespace Crowny

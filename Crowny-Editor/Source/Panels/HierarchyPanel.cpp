@@ -187,6 +187,8 @@ namespace Crowny
 
         ImGuiTreeNodeFlags selected =
           (m_SelectedItems.find(e) != m_SelectedItems.end()) ? ImGuiTreeNodeFlags_Selected : 0;
+
+        // Is this what's breaking renames?
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth |
                                    ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap |
                                    ImGuiTreeNodeFlags_Leaf;

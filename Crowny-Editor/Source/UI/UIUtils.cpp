@@ -103,7 +103,7 @@ namespace Crowny
     bool UIUtils::SearchWidget(String& searchString, const char* hint, bool* grabFocus)
     {
         UI::PushID();
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 1.0f);
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 1.0f);
         const bool layoutSuspended = [] {
             ImGuiWindow* window = ImGui::GetCurrentWindow();
             if (window->DC.CurrentLayout)
@@ -155,7 +155,7 @@ namespace Crowny
 
         // Search icon
         {
-            const float iconYOffset = framePaddingY - 1.0f;
+            const float iconYOffset = framePaddingY - 3.0f;
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + iconYOffset);
             // ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
             // ImGui::Button(ICON_FA_MAGNIFYING_GLASS, iconSize);

@@ -242,15 +242,21 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<TextComponent>(Entity e)
     {
-        auto& textComponent = e.GetComponent<TextComponent>();
+        TextComponent& textComponent = e.GetComponent<TextComponent>();
 
-        UI::Property("Text", textComponent.Text);
+        UI::PropertyMultiline("Text", textComponent.Text);
+        UIUtils::AssetReference<Font>("Font", textComponent.Font);
+        UI::QuickTabsP("Style", { "Bold", "Italic", "Underline", "Strikethrough" }, textComponent.FontStyle);
+        {
+            UI::ScopedDisable scopedDisable(textComponent.AutoSize);
+            UI::Property("Size", textComponent.Size);
+        }
+        UI::Property("Auto Size", textComponent.AutoSize);
         UI::PropertyColor("Color", textComponent.Color);
+        UI::Property("Wrapping", textComponent.Wrapping);
+        if (textComponent.Wrapping)
+            UI::PropertyDropdown("Overflow", { "Overflow", "Ellipses", "Truncate" }, textComponent.Overflow);
 
-        // String str = textComponent.Font->GetName();
-        // UI::Property("Font", str);
-        ImGui::Text("Font"); // Hook up drag drop here.
-        
 #ifdef CW_DEBUG
         ImGui::SameLine();
         if (ImGui::Button("Show Font Atlas"))
