@@ -64,6 +64,8 @@ namespace Crowny
         UnorderedMap<TextureViewDesc, Ref<TextureView>, TextureView::HashFunction, TextureView::EqualFunction>
           m_TextureViews;
         Texture(const TextureParameters& params);
+        Texture() = default; // For serialization only
+
         TextureParameters m_Params;
     };
 

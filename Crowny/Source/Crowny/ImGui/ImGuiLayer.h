@@ -2,8 +2,6 @@
 
 #include "Crowny/Layers/Layer.h"
 
-struct ImFont;
-
 namespace Crowny
 {
     class ImGuiLayer : public Layer

@@ -577,14 +577,14 @@ namespace Crowny
                 float itemHeight = 28.0f;
 
                 String buttonText = Physics2D::Get().GetLayerName(selectedLayer);
-                String entitySearchPopupId = UI::GenerateLabelID("EntitySearch");
+                String layerSearchPopupId = UI::GenerateLabelID("EntitySearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
-                    ImGui::OpenPopup(entitySearchPopupId.c_str());
+                    ImGui::OpenPopup(layerSearchPopupId.c_str());
                 ImGui::PopStyleColor();
                 ImGui::GetStyle().ButtonTextAlign = originalButtonTextAlign;
 
-                if (LayerSearchPopup(entitySearchPopupId, selectedLayer))
+                if (LayerSearchPopup(layerSearchPopupId, selectedLayer))
                     modified = true;
             }
 
@@ -700,8 +700,8 @@ namespace Crowny
 
             bool modified = false;
 
-            String preview;
-            float itemHeight = size.y / 20.0f;
+            // String preview;
+            // float itemHeight = size.y / 20.0f;
 
             const auto view = SceneManager::GetActiveScene()->GetAllEntitiesWith<TagComponent>();
             Entity current = selectedEntity;

@@ -6,6 +6,7 @@
 namespace Crowny
 {
     class Font;
+    struct TextComponent;
     /**
      * @brief General purpose renderer for rendering 2D objects (text, quads).
      *
@@ -120,8 +121,7 @@ namespace Crowny
          * @param font Font to use.
          * @param color Color to draw with.
          */
-        static void DrawString(const String& text, const glm::mat4& transform, const AssetHandle<Font>& font,
-                               const glm::vec4& color, int32_t entityId);
+        static void DrawString(const TextComponent& textComponent, const glm::mat4& transform, int32_t entityId);
 
         /**
          * @brief Begin a batch.

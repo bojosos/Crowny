@@ -69,13 +69,13 @@ namespace Crowny
                     ImGui::SetNextItemOpen(true, ImGuiCond_Once);
                     if (ImGui::CollapsingHeader(ci.name.c_str()))
                     {
-                        ImGui::Indent(30.f);
+                        ImGui::Indent(10.f);
                         ImGui::PushID("Widget");
                         UI::BeginPropertyGrid();
                         ci.widget(entity);
                         UI::EndPropertyGrid();
                         ImGui::PopID();
-                        ImGui::Unindent(30.f);
+                        ImGui::Unindent(10.f);
                     }
                     ImGui::PopID();
                 }

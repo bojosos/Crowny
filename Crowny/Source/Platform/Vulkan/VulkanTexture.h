@@ -115,6 +115,11 @@ namespace Crowny
         VulkanImage* GetImage() const { return m_Image; }
 
     private:
+        friend class cereal::access;
+
+        VulkanTexture(); // For serialization only
+        void Init();
+
         VulkanImage* CreateImage(VulkanDevice& device, TextureFormat format);
         VulkanBuffer* CreateStagingBuffer(VulkanDevice& device, const PixelData& src, bool needsRead);
         void CopyImage(VulkanTransferBuffer* cb, VulkanImage* srcImage, VulkanImage* dstImage,

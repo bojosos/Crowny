@@ -123,6 +123,7 @@ namespace Crowny
                 m_Icons[child->ElementNameHash] = soundWave;
             }
         }
+        UpdateDisplayList();
     }
 
     void AssetBrowserPanel::Render()
@@ -152,6 +153,54 @@ namespace Crowny
         DrawTreeView();
     }
 
+    void AssetBrowserPanel::SetCurrentDirectory(DirectoryEntry* entry)
+    {
+        m_ForwardHistory = {};
+        m_BackwardHistory.push(m_CurrentDirectoryEntry);
+
+        m_CurrentDirectoryEntry = entry;
+        RecalculateDirectoryEntries();
+        m_SelectionSet.clear();
+        m_SelectionStartIndex = (uint32_t)-1;
+
+        m_RenamingPath.clear();
+        m_RenamingText.clear();
+        m_RequiresSort = true;
+        UpdateDisplayList();
+    }
+
+    void AssetBrowserPanel::GoBackward()
+    {
+        if (m_BackwardHistory.empty())
+            return;
+
+        m_ForwardHistory.push(m_CurrentDirectoryEntry);
+        m_CurrentDirectoryEntry = m_BackwardHistory.top();
+        RecalculateDirectoryEntries();
+        m_BackwardHistory.pop();
+
+        m_RenamingPath.clear();
+        m_RenamingText.clear();
+        m_RequiresSort = true;
+        UpdateDisplayList();
+    }
+
+    void AssetBrowserPanel::GoForward()
+    {
+        if (m_ForwardHistory.empty())
+            return;
+
+        m_BackwardHistory.push(m_CurrentDirectoryEntry);
+        m_CurrentDirectoryEntry = m_ForwardHistory.top();
+        RecalculateDirectoryEntries();
+        m_ForwardHistory.pop();
+
+        m_RenamingPath.clear();
+        m_RenamingText.clear();
+        m_RequiresSort = true;
+        UpdateDisplayList();
+    }
+
     void AssetBrowserPanel::DrawHeader()
     {
         // UI::ScopedStyle itemSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 3));
@@ -164,12 +213,7 @@ namespace Crowny
         if (!m_BackwardHistory.empty())
         {
             if (ImGui::ArrowButton("<-", ImGuiDir_Left))
-            {
-                m_ForwardHistory.push(m_CurrentDirectoryEntry);
-                m_CurrentDirectoryEntry = m_BackwardHistory.top();
-                RecalculateDirectoryEntries();
-                m_BackwardHistory.pop();
-            }
+                GoBackward();
         }
         else
         {
@@ -181,12 +225,7 @@ namespace Crowny
         if (!m_ForwardHistory.empty())
         {
             if (ImGui::ArrowButton("->", ImGuiDir_Right))
-            {
-                m_BackwardHistory.push(m_CurrentDirectoryEntry);
-                m_CurrentDirectoryEntry = m_ForwardHistory.top();
-                RecalculateDirectoryEntries();
-                m_ForwardHistory.pop();
-            }
+                GoForward();
         }
         else
         {
@@ -196,25 +235,31 @@ namespace Crowny
         }
 
         if (ImGui::Button("Refresh"))
-            ProjectLibrary::Get().Refresh(m_CurrentDirectoryEntry->Filepath);
-
-        for (auto* tmp : m_DirectoryPathEntries)
         {
-            if (ImGui::Selectable(tmp->ElementName.c_str(), false, 0,
-                                  ImVec2(ImGui::CalcTextSize(tmp->ElementName.c_str()).x, 0.0f)))
+            ProjectLibrary::Get().Refresh(m_CurrentDirectoryEntry->Filepath);
+            UpdateDisplayList();
+        }
+
+        for (DirectoryEntry* dirEntry : m_DirectoryPathEntries)
+        {
+            if (ImGui::Selectable(dirEntry->ElementName.c_str(), false, 0,
+                                  ImVec2(ImGui::CalcTextSize(dirEntry->ElementName.c_str()).x, 0.0f)))
             {
-                m_CurrentDirectoryEntry = tmp;
-                RecalculateDirectoryEntries();
+                SetCurrentDirectory(dirEntry);
                 break;
             }
             ImGui::Text("/");
         }
 
         ImGui::Spring();
-        UI::ScopedStyle style(ImGuiStyleVar_LayoutAlign, 1);
         ImGui::SetNextItemWidth(150.0f);
-        if (UIUtils::SearchWidget(m_SearchString) && !m_SearchString.empty())
-            m_DisplayList = ProjectLibrary::Get().Search(m_SearchString);
+        if (UIUtils::SearchWidget(m_SearchString))
+        {
+            if (!m_SearchString.empty())
+                m_DisplayList = ProjectLibrary::Get().Search(m_SearchString);
+            UpdateDisplayList();
+        }
+        UI::ScopedStyle style(ImGuiStyleVar_LayoutAlign, 1);
 
         const float maxWidth = 150.0f * 1.1f;
         const float spacing = ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(" ").x;
@@ -224,7 +269,7 @@ namespace Crowny
         float thumbnailChange = m_ThumbnailSize;
         if (ImGui::SliderFloat("##iconsize", &thumbnailChange, MIN_ASSET_THUMBNAIL_SIZE, MAX_ASSET_THUMBNAIL_SIZE))
         {
-            m_Padding *= thumbnailChange / m_ThumbnailSize;
+            // m_Padding *= thumbnailChange / m_ThumbnailSize;
             m_ThumbnailSize = thumbnailChange;
             float cellSize = m_ThumbnailSize + m_Padding;
             float panelWidth = ImGui::GetContentRegionAvail().x;
@@ -242,41 +287,14 @@ namespace Crowny
             {
                 FileSortingMode mode = (FileSortingMode)i;
                 if (ImGui::Selectable(sortingStr[i], i == currentMode))
+                {
                     m_FileSortingMode = mode;
+                    m_RequiresSort = true;
+                }
             }
             ImGui::EndCombo();
         }
 
-        if ((FileSortingMode)currentMode != m_FileSortingMode)
-        {
-            std::function<void(DirectoryEntry*)> sortChildren = [&](DirectoryEntry* dirEntry) {
-                std::sort(dirEntry->Children.begin(), dirEntry->Children.end(), [&](const auto& l, const auto& r) {
-                    if (m_FileSortingMode == FileSortingMode::SortByName)
-                    {
-                        if (l->Type == r->Type)
-                            return l->ElementName < r->ElementName;
-                        return l->Type == LibraryEntryType::File;
-                    }
-                    else if (m_FileSortingMode == FileSortingMode::SortByDate)
-                        return l->LastUpdateTime < r->LastUpdateTime;
-                    else if (m_FileSortingMode == FileSortingMode::SortBySize)
-                    {
-                        if (l->Type == r->Type && l->Type == LibraryEntryType::File)
-                            return static_cast<FileEntry*>(l.get())->Filesize >
-                                   static_cast<FileEntry*>(r.get())->Filesize;
-                        return l->Type == LibraryEntryType::File;
-                    }
-                    return false;
-                });
-                for (auto& child : dirEntry->Children)
-                {
-                    if (child->Type == LibraryEntryType::Directory)
-                        sortChildren(static_cast<DirectoryEntry*>(child.get()));
-                }
-            };
-
-            sortChildren(ProjectLibrary::Get().GetRoot().get());
-        }
         ImGui::EndHorizontal();
         ImGui::Spring();
         ImGui::EndVertical();
@@ -284,12 +302,20 @@ namespace Crowny
 
     void AssetBrowserPanel::HandleKeyboardNavigation()
     {
-        if (Input::IsKeyUp(Key::Delete)) // Delete selected items
+        // Disable keyboard stuff if ImGui wants to use the keyboard (for example in InputText widgets)
+        if (ImGui::GetIO().WantCaptureKeyboard)
+            return;
+
+        const DisplayList& displayList = GetDisplayList();
+
+        if (Input::IsKeyDown(Key::Delete)) // Delete selected items
         {
             while (!m_SelectionSet.empty())
             {
-                for (const auto& entry : m_CurrentDirectoryEntry->Children)
+                const DisplayList& displayList = GetDisplayList();
+                for (const auto& entry : displayList)
                 {
+                    // This is not enough
                     auto iterFind = m_SelectionSet.find(entry->ElementNameHash);
                     if (iterFind != m_SelectionSet.end())
                     {
@@ -299,64 +325,42 @@ namespace Crowny
                     }
                 }
             }
-            m_SelectionStartIndex = 0;
-            m_SelectionSet.clear();
+            UpdateDisplayList();
+            ClearSelection();
         }
 
-        if (Input::IsKeyUp(Key::F2)) // Rename the first selected item
+        if (Input::IsKeyDown(Key::F2)) // Rename the first selected item
         {
-            if (m_SelectionStartIndex >= m_CurrentDirectoryEntry->Children.size())
+            if (m_SelectionStartIndex >= displayList.size())
                 return;
-            const Ref<LibraryEntry>& entry = m_CurrentDirectoryEntry->Children[m_SelectionStartIndex];
+            const Ref<LibraryEntry>& entry = displayList[m_SelectionStartIndex];
             if (!entry)
                 return;
             m_RenamingPath = entry->Filepath; // TODO: Use hash instead of path
             m_RenamingText = m_RenamingPath.filename().string();
         }
 
-        if (Input::IsKeyUp(Key::Enter)) // Enter a directory using the keyboard
+        if (Input::IsKeyDown(Key::Enter) && !m_SelectionSet.empty()) // Enter a directory using the keyboard
         {
-            LibraryEntry* entry = m_CurrentDirectoryEntry->Children[m_SelectionStartIndex].get();
+            LibraryEntry* entry = displayList[m_SelectionStartIndex].get();
             if (entry->Type == LibraryEntryType::Directory)
-            {
-                m_BackwardHistory.push(m_CurrentDirectoryEntry);
-                while (!m_ForwardHistory.empty())
-                    m_ForwardHistory.pop();
-                m_CurrentDirectoryEntry = static_cast<DirectoryEntry*>(entry);
-                RecalculateDirectoryEntries();
-            }
+                SetCurrentDirectory(static_cast<DirectoryEntry*>(entry));
             else
                 PlatformUtils::OpenExternally(entry->Filepath);
         }
 
-        if (Input::IsKeyUp(Key::Backspace) || Input::IsMouseButtonDown(Mouse::Button3)) // Go back
-        {
-            if (!m_BackwardHistory.empty())
-            {
-                m_ForwardHistory.push(m_CurrentDirectoryEntry);
-                m_CurrentDirectoryEntry = m_BackwardHistory.top();
-                RecalculateDirectoryEntries();
-                m_BackwardHistory.pop();
-            }
-        }
+        if (Input::IsKeyDown(Key::Backspace) || Input::IsMouseButtonDown(Mouse::Button3)) // Go back
+            GoBackward();
 
         if (Input::IsMouseButtonDown(Mouse::Button4)) // Go forward
-        {
-            if (!m_ForwardHistory.empty())
-            {
-                m_BackwardHistory.push(m_CurrentDirectoryEntry);
-                m_CurrentDirectoryEntry = m_ForwardHistory.top();
-                RecalculateDirectoryEntries();
-                m_ForwardHistory.pop();
-            }
-        }
+            GoForward();
 
         if (Input::IsKeyPressed(Key::LeftControl))
         {
-            if (Input::IsKeyUp(Key::C)) // Copy (Ctrl+C)
+            if (Input::IsKeyDown(Key::C)) // Copy (Ctrl+C)
             {
                 String clipboardString;
-                for (const auto& entry : m_CurrentDirectoryEntry->Children)
+                for (const auto& entry : displayList)
                 {
                     if (m_SelectionSet.find(entry->ElementNameHash) != m_SelectionSet.end())
                         clipboardString += entry->Filepath.string() + '\n';
@@ -365,71 +369,210 @@ namespace Crowny
                 PlatformUtils::CopyToClipboard(clipboardString);
             }
 
-            if (Input::IsKeyUp(Key::V)) // Paste (Ctrl+V)
+            if (Input::IsKeyDown(Key::V) && m_SearchString.empty()) // Paste (Ctrl+V), only paste if we aren't searching
             {
+                // TODO: Is this really a path?
                 String clipboard = PlatformUtils::CopyFromClipboard();
                 Vector<String> paths = StringUtils::SplitString(clipboard, "\n");
                 for (auto& path : paths) // Maybe here I would need to remove the last char
                     ProjectLibrary::Get().CopyEntry(
                       path, EditorUtils::GetUniquePath(m_CurrentDirectoryEntry->Filepath / Path(path).filename()));
+                UpdateDisplayList();
             }
 
-            if (Input::IsKeyUp(Key::R)) // Refresh (Ctrl+R)
+            if (Input::IsKeyDown(Key::R)) // Refresh (Ctrl+R)
+            {
                 ProjectLibrary::Get().Refresh(m_CurrentDirectoryEntry->Filepath);
+                UpdateDisplayList();
+            }
+
+            if (Input::IsKeyDown(Key::A)) // Select all (Ctrl+A)
+            {
+                m_SelectionStartIndex = 0;
+                m_SelectionEndIndex = displayList.size() - 1;
+                for (uint32_t i = m_SelectionStartIndex; i <= m_SelectionEndIndex; i++)
+                    m_SelectionSet.insert(displayList[i]->ElementNameHash);
+            }
         }
 
         // Keyboard navigation
         if (m_SelectionSet.empty()) // Select from unselected state
         {
-            if (Input::IsKeyDown(Key::Left) || Input::IsKeyUp(Key::Up)) // Note: I can/should use imgui keys here.
+            if (Input::IsKeyUp(Key::Left) || Input::IsKeyUp(Key::Up))
             {
-                if (m_CurrentDirectoryEntry->Children.size() > 0)
+                if (displayList.size() > 0)
                 {
-                    m_SelectionSet.insert(
-                      m_CurrentDirectoryEntry->Children[0]->ElementNameHash); // Select the first entry
-                    m_SelectionStartIndex = 0;
+                    m_SelectionSet.insert(displayList[0]->ElementNameHash); // Select the first entry
+                    m_SelectionEndIndex = m_SelectionStartIndex = 0;
                 }
             }
             if (Input::IsKeyUp(Key::Right) || Input::IsKeyUp(Key::Down))
             {
-                if (m_CurrentDirectoryEntry->Children.size() > 0)
+                if (displayList.size() > 0)
                 {
-                    size_t lastIdx = m_CurrentDirectoryEntry->Children.size() - 1;
-                    m_SelectionSet.insert(
-                      m_CurrentDirectoryEntry->Children[lastIdx]->ElementNameHash); // Select the last entry
-                    m_SelectionStartIndex = (uint32_t)lastIdx;
+                    size_t lastIdx = displayList.size() - 1;
+                    m_SelectionSet.insert(displayList[lastIdx]->ElementNameHash); // Select the last entry
+                    m_SelectionEndIndex = m_SelectionStartIndex = (uint32_t)lastIdx;
                 }
             }
         }
         else
         {
+            bool shiftSelectionChanged = false;
             if (Input::IsKeyDown(Key::Left))
             {
-                m_SelectionSet.clear();
-                m_SelectionStartIndex = std::max(0, (int32_t)m_SelectionStartIndex - 1);
-                m_SelectionSet.insert(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex]->ElementNameHash);
+                if (!Input::IsKeyPressed(Key::LeftShift))
+                {
+                    m_SelectionSet.clear();
+                    m_SelectionEndIndex = m_SelectionStartIndex = std::max(0, (int32_t)m_SelectionStartIndex - 1);
+                    const Ref<LibraryEntry>& entry = displayList[m_SelectionStartIndex];
+                    m_SelectionSet.insert(entry->ElementNameHash);
+                    m_SetSelectedPathCallback(entry->Filepath);
+                }
+                else
+                {
+                    m_SelectionEndIndex = std::max(0, (int32_t)m_SelectionEndIndex - 1);
+                    const Ref<LibraryEntry>& entry = displayList[m_SelectionEndIndex];
+                    m_SetSelectedPathCallback(entry->Filepath);
+                    shiftSelectionChanged = true;
+                }
             }
             if (Input::IsKeyDown(Key::Right))
             {
-                m_SelectionSet.clear();
-                m_SelectionStartIndex =
-                  std::min(m_SelectionStartIndex + 1, (uint32_t)m_CurrentDirectoryEntry->Children.size() - 1);
-                m_SelectionSet.insert(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex]->ElementNameHash);
+                if (!Input::IsKeyPressed(Key::LeftShift))
+                {
+                    m_SelectionSet.clear();
+                    m_SelectionEndIndex = m_SelectionStartIndex =
+                      std::min((int32_t)m_SelectionStartIndex + 1, (int32_t)displayList.size() - 1);
+                    const Ref<LibraryEntry>& entry = displayList[m_SelectionStartIndex];
+                    m_SelectionSet.insert(entry->ElementNameHash);
+                    m_SetSelectedPathCallback(entry->Filepath);
+                }
+                else
+                {
+                    m_SelectionEndIndex = std::min((int32_t)m_SelectionEndIndex + 1, (int32_t)displayList.size() - 1);
+                    const Ref<LibraryEntry>& entry = displayList[m_SelectionEndIndex];
+                    m_SetSelectedPathCallback(entry->Filepath);
+                    shiftSelectionChanged = true;
+                }
             }
-            if (Input::IsKeyUp(Key::Up))
+            if (Input::IsKeyDown(Key::Up))
+            {
+                if (!Input::IsKeyPressed(Key::LeftShift))
+                {
+                    m_SelectionSet.clear();
+                    m_SelectionEndIndex = m_SelectionStartIndex =
+                      std::max(0, (int32_t)(m_SelectionStartIndex - m_ColumnCount));
+                    const Ref<LibraryEntry>& entry = displayList[m_SelectionStartIndex];
+                    m_SelectionSet.insert(entry->ElementNameHash);
+                    m_SetSelectedPathCallback(entry->Filepath);
+                }
+                else
+                {
+                    m_SelectionEndIndex = std::max(0, (int32_t)(m_SelectionEndIndex - m_ColumnCount));
+                    const Ref<LibraryEntry>& entry = displayList[m_SelectionEndIndex];
+                    m_SetSelectedPathCallback(entry->Filepath);
+                    shiftSelectionChanged = true;
+                }
+            }
+            if (Input::IsKeyDown(Key::Down))
+            {
+                if (!Input::IsKeyPressed(Key::LeftShift))
+                {
+                    m_SelectionSet.clear();
+                    m_SelectionEndIndex = m_SelectionStartIndex =
+                      std::min(m_SelectionStartIndex + m_ColumnCount, (uint32_t)displayList.size() - 1);
+                    const Ref<LibraryEntry>& entry = displayList[m_SelectionStartIndex];
+                    m_SelectionSet.insert(entry->ElementNameHash);
+                    m_SetSelectedPathCallback(entry->Filepath);
+                }
+                else
+                {
+                    m_SelectionEndIndex =
+                      std::min(m_SelectionEndIndex + m_ColumnCount, (uint32_t)displayList.size() - 1);
+
+                    const Ref<LibraryEntry>& entry = displayList[m_SelectionEndIndex];
+                    m_SetSelectedPathCallback(entry->Filepath);
+                    shiftSelectionChanged = true;
+                }
+            }
+            if (shiftSelectionChanged)
             {
                 m_SelectionSet.clear();
-                m_SelectionStartIndex = std::max(0U, m_SelectionStartIndex - m_ColumnCount);
-                m_SelectionSet.insert(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex]->ElementNameHash);
-            }
-            if (Input::IsKeyUp(Key::Down))
-            {
-                m_SelectionSet.clear();
-                m_SelectionStartIndex = std::min(m_SelectionStartIndex + m_ColumnCount,
-                                                 (uint32_t)m_CurrentDirectoryEntry->Children.size() - 1);
-                m_SelectionSet.insert(m_CurrentDirectoryEntry->Children[m_SelectionStartIndex]->ElementNameHash);
+                uint32_t startIdx = std::min(m_SelectionStartIndex, m_SelectionEndIndex);
+                uint32_t endIdx = std::max(m_SelectionStartIndex, m_SelectionEndIndex);
+                for (uint32_t i = startIdx; i <= endIdx; i++)
+                    m_SelectionSet.insert(displayList[i]->ElementNameHash);
             }
         }
+    }
+
+    void AssetBrowserPanel::ClearSelection()
+    {
+        m_SelectionSet.clear();
+        m_SelectionStartIndex = (uint32_t)-1;
+
+        m_SetSelectedPathCallback({});
+    }
+
+    void AssetBrowserPanel::SortDisplayList(DisplayList& displayList) const
+    {
+        std::sort(
+          displayList.begin(), displayList.end(), [this](const Ref<LibraryEntry>& l, const Ref<LibraryEntry>& r) {
+              if (m_FileSortingMode == FileSortingMode::SortByName)
+              {
+                  if (l->Type == r->Type)
+                      return StringUtils::CaseInsensitiveCompare(l->ElementName, r->ElementName);
+                  return (int32_t)l->Type < (int32_t)r->Type;
+              }
+              else if (m_FileSortingMode == FileSortingMode::SortByDate)
+                  return l->LastUpdateTime < r->LastUpdateTime;
+              else if (m_FileSortingMode == FileSortingMode::SortBySize)
+              {
+                  if (l->Type == r->Type && l->Type == LibraryEntryType::File)
+                      return static_cast<FileEntry*>(l.get())->Filesize < static_cast<FileEntry*>(r.get())->Filesize;
+                  return (int32_t)l->Type < (int32_t)r->Type;
+              }
+              return false;
+          });
+    }
+
+    const AssetBrowserPanel::DisplayList& AssetBrowserPanel::GetDisplayList()
+    {
+        DisplayList& displayList = m_DisplayList;
+        if (m_RequiresSort)
+        {
+            // Store the selection start idx hash so it can be restored after the entries move around.
+            size_t selectionStartHash = 0;
+            if (m_SelectionStartIndex < displayList.size())
+                selectionStartHash = displayList[m_SelectionStartIndex]->ElementNameHash;
+            SortDisplayList(displayList);
+            m_RequiresSort = false;
+            if (m_SelectionStartIndex < displayList.size())
+            {
+                for (uint32_t i = 0; i < displayList.size(); i++)
+                {
+                    if (displayList[i]->ElementNameHash == selectionStartHash)
+                        m_SelectionStartIndex = m_SelectionEndIndex = i;
+                }
+            }
+        }
+        return displayList;
+    }
+
+    // Currently the search is performed again. Since we kinda know the changes this might not be necessary.
+    void AssetBrowserPanel::UpdateDisplayList()
+    {
+        if (!m_SearchString.empty())
+            m_DisplayList = ProjectLibrary::Get().Search(m_SearchString);
+        else
+        {
+            m_DisplayList.clear();
+            m_DisplayList.reserve(m_CurrentDirectoryEntry->Children.size());
+            for (const Ref<LibraryEntry>& entry : m_CurrentDirectoryEntry->Children)
+                m_DisplayList.push_back(entry);
+        }
+        m_RequiresSort = true;
     }
 
     void AssetBrowserPanel::DrawFiles()
@@ -442,6 +585,7 @@ namespace Crowny
         ImGui::Columns(m_ColumnCount, 0, false);
 
         bool dropping = false;
+        bool hovered = false;
 
         if (m_CurrentDirectoryEntry == nullptr)
         {
@@ -453,14 +597,15 @@ namespace Crowny
             HandleKeyboardNavigation();
 
         // Files
-        const Vector<Ref<LibraryEntry>>& displayList =
-          m_SearchString.empty() ? m_CurrentDirectoryEntry->Children : m_DisplayList;
+        const DisplayList& displayList = GetDisplayList();
         for (uint32_t entryIdx = 0; entryIdx < displayList.size(); entryIdx++)
         {
             const auto& entry = displayList[entryIdx];
             const auto& path = entry->Filepath;
-            // TODO: Fix this. Simply casting to int is wrong since half precision is lost. Prob XOR
-            ImGui::PushID((int)entry->ElementNameHash);
+
+            uint32_t upperBits = static_cast<uint32_t>(entry->ElementNameHash >> 32);
+            uint32_t lowerBits = static_cast<uint32_t>(entry->ElementNameHash & 0xffffffff);
+            ImGui::PushID(upperBits ^ lowerBits);
 
             auto iterFind = m_SelectionSet.find(entry->ElementNameHash); // Show selected files
             bool selected = iterFind != m_SelectionSet.end();
@@ -497,9 +642,26 @@ namespace Crowny
             else // This file is being renamed
             {
                 auto completeRename = [&]() {
-                    CW_ENGINE_INFO("Rename: {0}, {1}", m_RenamingPath, m_RenamingPath.parent_path() / m_RenamingText);
-                    ProjectLibrary::Get().MoveEntry(m_RenamingPath, m_RenamingPath.parent_path() / m_RenamingText);
+                    if (m_RenamingPath.filename() == m_RenamingText)
+                    {
+                        m_RenamingPath.clear();
+                        m_RenamingText.clear();
+                        return;
+                    }
+                    Path newPath = EditorUtils::GetUniquePath(m_RenamingPath.parent_path() / m_RenamingText);
+
+                    ProjectLibrary::Get().MoveEntry(m_RenamingPath, newPath);
+                    UpdateDisplayList();
+                    // TODO: This is inefficient
+                    const Ref<LibraryEntry>& entry = ProjectLibrary::Get().FindEntry(newPath);
+                    CW_ENGINE_ASSERT(entry);
+                    if (entry) // Select the folder after it is renamed
+                        m_SelectionSet.insert(entry->ElementNameHash);
+                    // This doesn't work well with sort as the entries move around
+                    m_SelectionEndIndex = m_SelectionStartIndex = entryIdx;
+
                     m_RenamingPath.clear();
+                    m_RenamingText.clear();
                 };
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 5));
 
@@ -510,17 +672,19 @@ namespace Crowny
                     completeRename();
                 ImGui::PopStyleVar();
 
-                if ((ImGui::IsMouseClicked(ImGuiMouseButton_Left) || ImGui::IsMouseClicked(ImGuiMouseButton_Right)) &&
+                if ((Input::IsMouseButtonDown(Mouse::ButtonLeft) || Input::IsMouseButtonDown(Mouse::ButtonRight)) &&
                     !ImGui::IsItemClicked())
                     completeRename();
-                if (ImGui::IsWindowFocused() && Input::IsKeyPressed(Key::Escape))
-                    completeRename();
 
-                ImGui::NextColumn();
+                if (Input::IsKeyPressed(Key::Escape))
+                    completeRename();
             }
 
             ImGui::EndGroup();
-
+            if (entryIdx == m_SelectionEndIndex)
+                ImGui::ScrollToItem(ImGuiScrollFlags_KeepVisibleEdgeY);
+            hovered |= ImGui::IsItemHovered();
+            UI::SetTooltip(path.string().c_str());
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) // Allow dragging
             {
                 UIUtils::SetAssetPayload(path);
@@ -546,7 +710,10 @@ namespace Crowny
                     {
                         Path payloadPath = UIUtils::GetPathFromPayload(payload);
                         Path filename = payloadPath.filename();
-                        ProjectLibrary::Get().MoveEntry(payloadPath, path / filename);
+                        ProjectLibrary::Get().MoveEntry(
+                          payloadPath,
+                          path / filename); // Perhaps I need to end here? Or rather I should change the display list
+                        UpdateDisplayList();
                     }
                     ImGui::EndDragDropTarget();
                 }
@@ -556,17 +723,13 @@ namespace Crowny
                 ImGui::PopStyleColor();
             ImGui::PopStyleColor();
 
-            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) // Enter directory
+            // Only enter the directory if we click on the image/text but not if we double click in the InputText for
+            // renaming
+            if (ImGui::IsItemHovered() && m_RenamingText.empty() &&
+                ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) // Enter directory
             {
                 if (entry->Type == LibraryEntryType::Directory)
-                {
-                    m_BackwardHistory.push(m_CurrentDirectoryEntry);
-                    while (!m_ForwardHistory.empty())
-                        m_ForwardHistory.pop();
-                    m_CurrentDirectoryEntry = static_cast<DirectoryEntry*>(entry.get());
-                    RecalculateDirectoryEntries();
-                    m_SelectionSet.clear();
-                }
+                    SetCurrentDirectory(static_cast<DirectoryEntry*>(entry.get()));
                 else // Open the file
                 {
                     // Note: Could directly open the file in the editor,
@@ -576,29 +739,48 @@ namespace Crowny
                 }
             }
 
-            if (ImGui::IsItemHovered() && !dropping &&
-                (ImGui::IsMouseReleased(ImGuiMouseButton_Left) || ImGui::IsMouseReleased(ImGuiMouseButton_Right)))
+            if (Input::IsMouseButtonDown(Mouse::ButtonLeft) || Input::IsMouseButtonDown(Mouse::ButtonRight))
             {
-                if (Input::IsKeyPressed(Key::LeftControl)) // Multi-select
+                if (ImGui::IsItemHovered() && !dropping) // TODO: Check if this is even necessary
                 {
-                    if (selected)
-                        m_SelectionSet.erase(entry->ElementNameHash);
+                    if (Input::IsKeyPressed(Key::LeftControl)) // Multi-select
+                    {
+                        if (selected)
+                            m_SelectionSet.erase(entry->ElementNameHash);
+                        else
+                        {
+                            if (m_SelectionSet.empty())
+                                m_SelectionStartIndex = entryIdx;
+                            m_SelectionSet.insert(entry->ElementNameHash);
+                            m_SelectionEndIndex = entryIdx;
+                        }
+                    }
+                    else if (Input::IsKeyPressed(Key::LeftShift) && m_SelectionStartIndex != (uint32_t)-1)
+                    {
+                        m_SelectionSet.clear();
+                        if (entryIdx < m_SelectionStartIndex) // Select from right to left
+                        {
+                            for (uint32_t i = entryIdx; i <= m_SelectionStartIndex; i++)
+                                m_SelectionSet.insert(displayList[i]->ElementNameHash);
+                        }
+                        else
+                        {
+                            for (uint32_t i = m_SelectionStartIndex; i <= entryIdx; i++)
+                                m_SelectionSet.insert(displayList[i]->ElementNameHash);
+                        }
+                        m_SelectionEndIndex = entryIdx;
+                    }
                     else
                     {
-                        if (m_SelectionSet.size() == 0)
-                            m_SelectionStartIndex = entryIdx;
+                        m_SelectionSet.clear();
                         m_SelectionSet.insert(entry->ElementNameHash);
+                        m_SelectionEndIndex = m_SelectionStartIndex = entryIdx;
+                        m_SetSelectedPathCallback(path);
                     }
                 }
-                else // TODO: Shift select. Note: Need the first selected, if we have multiple files selected
-                {
-                    m_SelectionSet.clear();
-                    m_SelectionSet.insert(entry->ElementNameHash);
-                    m_SelectionStartIndex = entryIdx;
-                    m_SetSelectedPathCallback(path);
-                }
             }
-            if (ImGui::BeginPopupContextItem(entry->Filepath.string().c_str())) // Right click on a file
+            // TODO: Fix this with drag and drop. It will crash due to the MoveEntry call
+            if (!dropping && ImGui::BeginPopupContextItem(entry->Filepath.string().c_str())) // Right click on a file
             {
                 ShowContextMenuContents(entry.get());
                 ImGui::EndPopup();
@@ -607,80 +789,89 @@ namespace Crowny
             ImGui::NextColumn();
         }
 
+        if (Input::IsMouseButtonDown(Mouse::ButtonLeft) && !hovered && !ImGui::IsItemHovered() &&
+            ImGui::IsWindowHovered())
+            ClearSelection();
+
         ImGui::Columns(1);
     }
 
     void AssetBrowserPanel::DrawTreeView()
     {
         ImGui::Begin("Tree view");
-        bool foundCurrent = false;
-        std::function<void(const Ref<LibraryEntry>&)> display = [&](const Ref<LibraryEntry>& cur) {
+
+        std::function<void(const Ref<LibraryEntry>&, int32_t)> display = [&](const Ref<LibraryEntry>& cur,
+                                                                             int32_t dirEntryIdx = -1) {
             if (cur->Type == LibraryEntryType::Directory)
             {
                 DirectoryEntry* dirEntry = static_cast<DirectoryEntry*>(cur.get());
+
+                // Need to check all children since we are only looking for directories and not files.
                 bool hasChildren = false;
                 for (const auto& child : dirEntry->Children)
                     if (child->Type == LibraryEntryType::Directory)
                         hasChildren = true;
                 ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | (hasChildren ? 0 : ImGuiTreeNodeFlags_Leaf);
+
                 if (m_CurrentDirectoryEntry->ElementNameHash == cur->ElementNameHash &&
                     m_CurrentDirectoryEntry->Filepath == cur->Filepath)
-                {
                     flags |= ImGuiTreeNodeFlags_Selected;
-                    foundCurrent = true;
-                }
-                // if (!foundCurrent) // This is wrong. It will open all entries above the one needed.
-                // ImGui::SetNextItemOpen(ImGuiCond_Once); // This is also wrong, needs bool as first arg
-                if (ImGui::TreeNodeEx(cur->ElementName.c_str(), flags))
+
+                if (dirEntryIdx != -1 && dirEntryIdx < m_DirectoryPathEntries.size() &&
+                    cur->ElementNameHash == m_DirectoryPathEntries[dirEntryIdx]->ElementNameHash)
                 {
-                    if (ImGui::BeginDragDropTarget())
-                    {
-                        if (const ImGuiPayload* payload = UIUtils::AcceptAssetPayload())
-                        {
-                            Path payloadPath = UIUtils::GetPathFromPayload(payload);
-                            ProjectLibrary::Get().MoveEntry(payloadPath, cur->Filepath / payloadPath.filename());
-                        }
-                        ImGui::EndDragDropTarget();
-                    }
-                    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) // Allow dragging
-                    {
-                        UIUtils::SetAssetPayload(cur->Filepath);
-                        ImGui::EndDragDropSource();
-                    }
+                    ImGui::SetNextItemOpen(true);
+                    dirEntryIdx++;
+                }
+                else
+                    dirEntryIdx = -1;
 
-                    // if (ImGui::BeginPopupContextItem(cur->Filepath.string().c_str())) // Right click on a file
-                    //{
-                    //	ShowContextMenuContents(cur.get(), true);
-                    //                   ImGui::EndPopup();
-                    //               }
+                bool isOpen = ImGui::TreeNodeEx(cur->ElementName.c_str(), flags);
 
-                    if (Input::IsMouseButtonUp(Mouse::ButtonLeft) && ImGui::IsItemHovered())
+                if (!ImGui::IsItemToggledOpen() && ImGui::IsItemClicked())
+                    SetCurrentDirectory(dirEntry);
+
+                if (ImGui::BeginDragDropTarget())
+                {
+                    if (const ImGuiPayload* payload = UIUtils::AcceptAssetPayload())
                     {
-                        while (!m_ForwardHistory.empty())
-                            m_ForwardHistory.pop();
-                        while (!m_BackwardHistory.empty())
-                            m_BackwardHistory.pop();
-                        if (hasChildren)
-                        {
-                            if (!m_BackwardHistory.empty())
-                            {
-                                if (m_BackwardHistory.top()->ElementNameHash != dirEntry->ElementNameHash)
-                                    m_BackwardHistory.push(dirEntry);
-                            }
-                            else
-                                m_BackwardHistory.push(dirEntry);
-                        }
-                        m_CurrentDirectoryEntry = dirEntry;
-                        RecalculateDirectoryEntries();
+                        Path payloadPath = UIUtils::GetPathFromPayload(payload);
+                        ProjectLibrary::Get().MoveEntry(payloadPath, cur->Filepath / payloadPath.filename());
+                        UpdateDisplayList();
                     }
+                    ImGui::EndDragDropTarget();
+                }
+                if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) // Allow dragging
+                {
+                    UIUtils::SetAssetPayload(cur->Filepath);
+                    ImGui::EndDragDropSource();
+                }
+
+                if (ImGui::BeginPopupContextItem(cur->Filepath.string().c_str())) // Right click on a file
+                {
+                    ShowContextMenuContents(cur.get(), true);
+                    ImGui::EndPopup();
+                }
+
+                if (Input::IsKeyUp(Key::Delete))
+                {
+                    // TODO: Need second selection set for the tree view
+                }
+
+                if (isOpen)
+                {
                     for (const auto& child : dirEntry->Children)
-                        display(child);
+                        display(child, dirEntryIdx);
                     ImGui::TreePop();
                 }
             }
         };
+
         const Ref<DirectoryEntry>& root = ProjectLibrary::Get().GetRoot();
-        display(root);
+        // The m_LastCurrentDirectoryCheck is done for the ImGui::SetNextItemOpen later, without it it will try and open
+        // every frame and we lose the ability to close the tree node.
+        display(root, m_LastCurrentDirectory != m_CurrentDirectoryEntry->ElementNameHash ? 0 : -1);
+        m_LastCurrentDirectory = m_CurrentDirectoryEntry->ElementNameHash;
         ImGui::End();
     }
 
@@ -688,12 +879,14 @@ namespace Crowny
     {
         if (ImGui::BeginMenu("Create"))
         {
+            m_SearchString
+              .clear(); // Clear the search so we can go back to the original directory and finish creation there
             if (ImGui::MenuItem("Folder"))
             {
                 if (isTreeView)
                 {
-                    m_CurrentDirectoryEntry = m_CurrentDirectoryEntry->Parent;
-                    RecalculateDirectoryEntries();
+                    CW_ENGINE_ASSERT(entry->Type == LibraryEntryType::Directory);
+                    SetCurrentDirectory(static_cast<DirectoryEntry*>(entry));
                 }
                 CreateNew(AssetBrowserItem::Folder);
             }
@@ -734,11 +927,16 @@ namespace Crowny
             PlatformUtils::OpenExternally(entry->Filepath);
 
         if (ImGui::MenuItem("Delete"))
+        {
             ProjectLibrary::Get().DeleteEntry(entry->Filepath);
+            UpdateDisplayList();
+        }
 
         if (ImGui::MenuItem("Rename"))
         {
-            m_RenamingPath = entry->Filepath;
+            CW_ENGINE_ASSERT(entry != nullptr);
+            if (entry)
+                m_RenamingPath = entry->Filepath;
             m_RenamingText = m_RenamingPath.filename().string();
         }
 
@@ -759,7 +957,10 @@ namespace Crowny
             if (entry != nullptr)
                 ProjectLibrary::Get().Refresh(entry->Filepath);
             else
+            {
                 ProjectLibrary::Get().Refresh(m_CurrentDirectoryEntry->Filepath);
+                UpdateDisplayList();
+            }
         }
     }
 
@@ -796,6 +997,7 @@ namespace Crowny
         ProjectLibrary::Get().Refresh(newEntryPath);
         m_RenamingPath = ProjectLibrary::Get().FindEntry(newEntryPath)->Filepath;
         m_RenamingText = newEntryPath.filename().string();
+        UpdateDisplayList();
     }
 
     void AssetBrowserPanel::RecalculateDirectoryEntries()
@@ -819,7 +1021,7 @@ namespace Crowny
         case AssetBrowserItem::Material:
             return "# Crowny Material\\nShader: Default"; // Replace with uuid
         case AssetBrowserItem::CScript:
-            return m_CsDefaultText; // TODO: Replace file name and namespace
+            return m_CsDefaultText;
         case AssetBrowserItem::Shader:
         case AssetBrowserItem::ComputeShader:
             return "# Crowny Shader"; // Need to decide on shader format

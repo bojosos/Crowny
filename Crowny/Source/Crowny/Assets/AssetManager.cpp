@@ -10,6 +10,8 @@
 #include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/RenderAPI/Texture.h"
 
+#include "Platform/Vulkan/VulkanTexture.h"
+
 #include "Crowny/Utils/Compression.h"
 
 namespace Crowny
@@ -48,9 +50,17 @@ namespace Crowny
         archive(cereal::binary_data(samples.data(), size));
     }
 
-    void Load(BinaryDataStreamInputArchive& archive, Font& font) { archive(cereal::base_class<Asset>(&font)); }
+    void Load(BinaryDataStreamInputArchive& archive, Font& font)
+    {
+        archive(cereal::base_class<Asset>(&font));
+        archive(font.m_AtlasTexture);
+    }
 
-    void Save(BinaryDataStreamOutputArchive& archive, const Font& font) { archive(cereal::base_class<Asset>(&font)); }
+    void Save(BinaryDataStreamOutputArchive& archive, const Font& font)
+    {
+        archive(cereal::base_class<Asset>(&font));
+        archive(font.m_AtlasTexture);
+    }
 
     void Load(BinaryDataStreamInputArchive& archive, Texture& texture)
     {
@@ -58,6 +68,8 @@ namespace Crowny
         TextureParameters& params = texture.m_Params;
         archive(params.Width, params.Height, params.Depth, params.MipLevels, params.Samples, params.Type, params.Shape,
                 params.Format);
+        texture.Init();
+
         for (uint32_t mip = 0; mip < params.MipLevels; mip++)
         {
             for (uint32_t face = 0; face < params.Faces; face++)
@@ -72,24 +84,35 @@ namespace Crowny
         }
     }
 
-    void Save(BinaryDataStreamOutputArchive& archive, Texture& texture)
+    void Save(BinaryDataStreamOutputArchive& archive, const Texture& texture)
     {
-        archive(cereal::base_class<Asset>(&texture));
-        const TextureParameters& params = texture.GetProperties();
+        Texture& texture2 = const_cast<Texture&>(texture);
+
+        archive(cereal::base_class<Asset>(&texture2));
+        const TextureParameters& params = texture2.GetProperties();
         archive(params.Width, params.Height, params.Depth, params.MipLevels, params.Samples, params.Type, params.Shape,
                 params.Format);
-        texture.Init();
         for (uint32_t mip = 0; mip < params.MipLevels + 1; mip++) // Save all texture data
         {
             for (uint32_t face = 0; face < params.Faces; face++)
             {
-                Ref<PixelData> pixelData = texture.AllocatePixelData(face, mip);
-                texture.ReadData(*pixelData, face, mip);
+                Ref<PixelData> pixelData = texture2.AllocatePixelData(face, mip);
+                texture2.ReadData(*pixelData, face, mip);
                 archive(cereal::binary_data((uint8_t*)pixelData->GetData(),
                                             pixelData->GetSize())); // TODO: Save more pixel data (wat does this mean,
                                                                     // maybe pixel data serializer?)?
             }
         }
+    }
+
+    void Save(BinaryDataStreamOutputArchive& archive, const VulkanTexture& texture)
+    {
+        archive(cereal::base_class<Texture>(&texture));
+    }
+
+    void Load(BinaryDataStreamInputArchive& archive, VulkanTexture& texture)
+    {
+        archive(cereal::base_class<Texture>(&texture));
     }
 
     void Save(BinaryDataStreamOutputArchive& archive, const ScriptCode& code)
@@ -345,6 +368,7 @@ CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Font, "Font")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::ScriptCode, "ScriptCode")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Shader, "Shader")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Texture, "Texture")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::VulkanTexture, "VulkanTexture")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::PhysicsMaterial2D, "PhysicsMaterial2D")
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Shader)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::AudioClip)

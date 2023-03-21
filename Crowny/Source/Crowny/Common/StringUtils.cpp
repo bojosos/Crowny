@@ -135,4 +135,13 @@ namespace Crowny
         std::transform(string.begin(), string.end(), string.begin(), [](unsigned char c) { return std::toupper(c); });
     }
 
+    bool StringUtils::CaseInsensitiveCompare(const String& lhs, const String& rhs)
+    {
+        const auto result =
+          std::mismatch(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(),
+                        [](const unsigned char l, const unsigned char r) { return std::tolower(l) == tolower(r); });
+        return result.second != rhs.cend() &&
+               (result.first == lhs.cend() || tolower(*result.first) < tolower(*result.second));
+    }
+
 } // namespace Crowny

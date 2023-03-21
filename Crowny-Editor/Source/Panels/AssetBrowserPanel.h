@@ -45,6 +45,10 @@ namespace Crowny
         const Path& GetCurrentEntryPath() const { return m_CurrentDirectoryEntry->Filepath; }
 
     private:
+        using DisplayList = Vector<Ref<LibraryEntry>>;
+
+        void SetCurrentDirectory(DirectoryEntry* entry);
+
         void ShowContextMenuContents(LibraryEntry* entry = nullptr, bool isTreeView = false);
         void DrawHeader();
         void DrawFiles();
@@ -53,6 +57,13 @@ namespace Crowny
         String GetDefaultContents(AssetBrowserItem itemType);
         void HandleKeyboardNavigation();
         void RecalculateDirectoryEntries();
+        void ClearSelection();
+        const DisplayList& GetDisplayList();
+        void UpdateDisplayList();
+
+        void GoForward();
+        void GoBackward();
+        void SortDisplayList(DisplayList& displayList) const;
 
     private:
         Vector<DirectoryEntry*> m_DirectoryPathEntries;
@@ -68,14 +79,17 @@ namespace Crowny
 
         Vector<Path> m_OrderedSelection;
         UnorderedSet<size_t> m_SelectionSet;
-        uint32_t m_SelectionStartIndex = 0;
+        uint32_t m_SelectionStartIndex = (uint32_t)-1;
+        uint32_t m_SelectionEndIndex = 0;
+        size_t m_LastCurrentDirectory = 0;
 
         DirectoryEntry* m_CurrentDirectoryEntry = nullptr;
 
         Stack<DirectoryEntry*> m_BackwardHistory;
         Stack<DirectoryEntry*> m_ForwardHistory;
+        bool m_RequiresSort = true;
 
-        FileSortingMode m_FileSortingMode = FileSortingMode::SortBySize;
+        FileSortingMode m_FileSortingMode = FileSortingMode::SortByName;
 
         float m_Padding = 12.0f;
         float m_ThumbnailSize = DEFAULT_ASSET_THUMBNAIL_SIZE;
