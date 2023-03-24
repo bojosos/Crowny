@@ -1,5 +1,6 @@
-**/bin/
-!3rdparty
+bin/
+!3rdparty/
+!3rdparty/premake/bin/
 bin-int/
 
 .vs/

@@ -14,7 +14,7 @@ namespace Crowny
 
         String ToString() const override
         {
-            Stringstream ss;
+            StringStream ss;
             ss << "WindowResizeEvent: " << m_Width << ", " << m_Height;
             return ss.str();
         }
@@ -45,7 +45,7 @@ namespace Crowny
 
         String ToString() const override
         {
-            Stringstream ss;
+            StringStream ss;
             ss << "WindowMoveEvent: " << m_Left << ", " << m_Top;
             return ss.str();
         }

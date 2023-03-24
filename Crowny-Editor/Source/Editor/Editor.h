@@ -23,6 +23,7 @@ namespace Crowny
     public:
         ~Editor() = default;
         const Path& GetProjectPath() const { return m_ProjectPath; }
+        const String& GetProjectName() const { return m_ProjectName; }
         bool IsProjectLoaded() const { return !m_ProjectPath.empty(); }
 
         void CreateProject(const Path& path, const String& projectName);

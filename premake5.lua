@@ -43,6 +43,7 @@ IncludeDir["libvorbis"] = "%{wks.location}/Crowny/Dependencies/vorbis/include"
 IncludeDir["libogg"] = "%{wks.location}/Crowny/Dependencies/libogg/include"
 IncludeDir["msdfgen"] = "%{wks.location}/Crowny/Dependencies/msdf-atlas-gen/msdfgen"
 IncludeDir["msdfatlasgen"] = "%{wks.location}/Crowny/Dependencies/msdf-atlas-gen/msdf-atlas-gen"
+IncludeDir["mbedtls"] = "%{wks.location}/Crowny/Dependencies/mbedtls/include"
 
 -- installed/platform
 filter "system:linux"
@@ -66,6 +67,7 @@ group "Dependencies"
 	include "Crowny/Dependencies/vorbis"
 	include "Crowny/Dependencies/libogg"
 	include "Crowny/Dependencies/msdf-atlas-gen"
+	include "Crowny/Dependencies/mbedtls"
 group ""
 
 include "Crowny"
