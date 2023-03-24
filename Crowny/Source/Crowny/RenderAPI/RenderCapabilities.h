@@ -49,7 +49,7 @@ namespace Crowny
 
         String ToString() const
         {
-            Stringstream str;
+            StringStream str;
             str << major << "." << minor << "." << release << "." << build;
             return str.str();
         }

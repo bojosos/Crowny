@@ -29,7 +29,7 @@ namespace Crowny
 
         String ToString() const override
         {
-            Stringstream ss;
+            StringStream ss;
             ss << "KeyPressedEvent: " << m_KeyCode << "(" << m_RepeatCount << "repeats)";
             return ss.str();
         }
@@ -47,7 +47,7 @@ namespace Crowny
 
         String ToString() const override
         {
-            Stringstream ss;
+            StringStream ss;
             ss << "KeyReleasedEvent: " << m_KeyCode;
             return ss.str();
         }
@@ -62,7 +62,7 @@ namespace Crowny
 
         String ToString() const override
         {
-            Stringstream ss;
+            StringStream ss;
             ss << "KeyTypedEvent: " << m_KeyCode;
             return ss.str();
         }

@@ -2,7 +2,7 @@
 
 #include "Crowny/Common/StringUtils.h"
 
-#include <algorithm>
+#include <spdlog/fmt/fmt.h>
 
 namespace Crowny
 {

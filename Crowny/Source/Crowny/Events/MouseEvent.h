@@ -16,7 +16,7 @@ namespace Crowny
 
         String ToString() const override
         {
-            Stringstream ss;
+            StringStream ss;
             ss << "MouseMovedEvent: " << m_MouseX << ", " << m_MouseY;
             return ss.str();
         }
@@ -38,7 +38,7 @@ namespace Crowny
 
         String ToString() const override
         {
-            Stringstream ss;
+            StringStream ss;
             ss << "MouseScrolledEvent: " << GetXOffset() << ", " << GetYOffset();
             return ss.str();
         }
@@ -70,7 +70,7 @@ namespace Crowny
 
         String ToString() const override
         {
-            Stringstream ss;
+            StringStream ss;
             ss << "MouseButtonPressedEvent: " << m_Button;
             return ss.str();
         }
@@ -85,7 +85,7 @@ namespace Crowny
 
         String ToString() const override
         {
-            Stringstream ss;
+            StringStream ss;
             ss << "MouseButtonReleasedEvent: " << m_Button;
             return ss.str();
         }

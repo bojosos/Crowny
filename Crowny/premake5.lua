@@ -51,7 +51,8 @@ project "Crowny"
 		"%{IncludeDir.libogg}",
 		"%{IncludeDir.Box2D}",
 		"%{IncludeDir.msdfgen}",
-		"%{IncludeDir.msdfatlasgen}"
+		"%{IncludeDir.msdfatlasgen}",
+		"%{IncludeDir.mbedtls}"
 		
 	}
 
@@ -68,6 +69,7 @@ project "Crowny"
 		"glad",
 		
 		"yaml-cpp",
+		"mbedtls"
 	}
 
 	filter "system:windows"

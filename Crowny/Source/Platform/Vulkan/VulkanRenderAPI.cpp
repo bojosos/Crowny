@@ -49,7 +49,7 @@ namespace Crowny
                                                  const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
                                                  void* pUserData)
     {
-        Stringstream debugMessage;
+        StringStream debugMessage;
         debugMessage << "[" << pCallbackData->messageIdNumber << "][" << pCallbackData->pMessageIdName
                      << "] : " << pCallbackData->pMessage;
         if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)

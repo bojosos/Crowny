@@ -79,7 +79,7 @@ namespace Crowny
 
     using U32String = std::u32string;
 
-    using Stringstream = std::stringstream;
+    using StringStream = std::stringstream;
 
     using Thread = std::thread;
 

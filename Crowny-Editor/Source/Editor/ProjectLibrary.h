@@ -68,7 +68,8 @@ namespace Crowny
         const Ref<DirectoryEntry>& GetRoot() const { return m_RootEntry; }
         Ref<LibraryEntry> FindEntry(const Path& path) const;
 
-        Vector<Ref<LibraryEntry>> Search(const String& pattern, DirectoryEntry* rootEntry = nullptr);
+        Vector<Ref<LibraryEntry>> Search(const String& pattern, const Vector<AssetType>& assetTypes = {},
+                                         const Ref<DirectoryEntry>& rootEntry = nullptr);
 
         void MoveEntry(const Path& oldPath, const Path& newPath, bool overwrite = false);
         void CopyEntry(const Path& oldPath, const Path& newPath, bool overwrite = false);

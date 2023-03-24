@@ -8,6 +8,8 @@
 #include "Crowny/Common/Types.h"
 #include "Crowny/Memory/Memory.h"
 
+#include <spdlog/fmt/fmt.h>
+
 #ifdef CW_WINDOWS
 //	#include <Windows.h>
 #endif

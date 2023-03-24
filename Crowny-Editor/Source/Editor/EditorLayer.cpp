@@ -51,6 +51,10 @@
 
 #include "Crowny/Renderer/Font.h"
 
+#include "Editor/Script/ScriptProjectGenerator.h"
+#include "Build/BuildManager.h"
+#include "Editor/Script/CodeEditor.h"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <spdlog/fmt/fmt.h>
@@ -189,6 +193,12 @@ namespace Crowny
         CreateRenderTarget();
 
         UndoRedo::StartUp();
+
+        CodeEditorManager::StartUp();
+        BuildManager::StartUp();
+        Path engineAssemblyPath = "C:/dev/Crowny/Crowny-Sharp/CrownySharp.dll";
+        CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY,
+                                              { ScriptProjectReference{ CROWNY_ASSEMBLY, engineAssemblyPath } });
 
         if (m_Temp == nullptr) // No scene was auto-loaded
             m_Temp = CreateRef<Scene>("Scene");

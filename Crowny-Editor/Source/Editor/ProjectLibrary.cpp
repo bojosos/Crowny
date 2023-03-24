@@ -12,6 +12,8 @@
 
 #include "Crowny/Common/Yaml.h"
 
+#include <regex>
+
 CEREAL_REGISTER_TYPE(DirectoryEntry);
 CEREAL_REGISTER_TYPE(FileEntry);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(LibraryEntry, DirectoryEntry)
@@ -431,30 +433,64 @@ namespace Crowny
         return false;
     }
 
-    Vector<Ref<LibraryEntry>> ProjectLibrary::Search(const String& pattern, DirectoryEntry* rootEntry)
+    Vector<Ref<LibraryEntry>> ProjectLibrary::Search(const String& pattern, const Vector<AssetType>& assetTypes,
+                                                     const Ref<DirectoryEntry>& rootEntry)
     {
-        // TODO: t: for types and search directory
-        Vector<Ref<LibraryEntry>> result;
-        Stack<DirectoryEntry*> stack;
+        Vector<Ref<LibraryEntry>> entries;
+        const std::regex escape("[.^$|()\\[\\]{}*+?\\\\]");
+        const String replace("\\\\&");
+        const String escapedPattern = std::regex_replace(
+          pattern, escape, replace, std::regex_constants::match_default | std::regex_constants::format_sed);
+
+#ifdef WIN32
+        const std::regex wildcard("\\\\\\*");
+#else
+        const std::regex wildcard("\\\\\\\\\\*");
+#endif
+        const String wildcardReplace(".*");
+        const String searchPattern = std::regex_replace(escapedPattern, wildcard, ".*");
+
+        const std::regex searchRegex(searchPattern, std::regex_constants::ECMAScript | std::regex_constants::icase);
+
+        Stack<DirectoryEntry*> todos;
         if (rootEntry == nullptr)
-            stack.push(m_RootEntry.get());
+            todos.push(m_RootEntry.get());
         else
-            stack.push(rootEntry);
-
-        while (!stack.empty())
+            todos.push(rootEntry.get());
+        while (!todos.empty())
         {
-            DirectoryEntry* cur = stack.top();
-            stack.pop();
-            for (auto& entry : cur->Children)
-            {
-                if (StringUtils::IsSearchMathing(entry->ElementName, pattern))
-                    result.push_back(entry);
+            DirectoryEntry* dirEntry = todos.top();
+            todos.pop();
 
-                if (entry->Type == LibraryEntryType::Directory)
-                    stack.push(static_cast<DirectoryEntry*>(entry.get()));
+            for (const Ref<LibraryEntry>& child : dirEntry->Children)
+            {
+                if (std::regex_match(child->ElementName, searchRegex))
+                {
+                    if (assetTypes.empty())
+                        entries.push_back(child);
+                    else
+                    {
+                        if (child->Type == LibraryEntryType::File)
+                        {
+                            FileEntry* fileEntry = static_cast<FileEntry*>(child.get());
+                            if (fileEntry->Metadata != nullptr)
+                            {
+                                const bool found = std::find(assetTypes.begin(), assetTypes.end(), fileEntry->Metadata->Type) != assetTypes.end();
+                                if (found)
+                                    entries.push_back(child);
+                            }
+                        }
+                    }
+                }
+                if (child->Type == LibraryEntryType::Directory)
+                {
+                    DirectoryEntry* directoryEntry = static_cast<DirectoryEntry*>(child.get());
+                    todos.push(directoryEntry);
+                }
             }
         }
-        return result;
+
+        return entries;
     }
 
     void ProjectLibrary::MoveEntry(const Path& oldPath, const Path& newPath, bool overwrite)
