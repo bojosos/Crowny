@@ -46,3 +46,6 @@
 [submodule "Crowny/Dependencies/msdf-atlas-gen"]
 	path = Crowny/Dependencies/msdf-atlas-gen
 	url = https://github.com/bojosos/msdf-atlas-gen
+[submodule "Crowny/Dependencies/mbedtls"]
+	path = Crowny/Dependencies/mbedtls
+	url = https://github.com/bojosos/mbedtls
