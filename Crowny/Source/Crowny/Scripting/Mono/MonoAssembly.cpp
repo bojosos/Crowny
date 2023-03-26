@@ -78,8 +78,9 @@ namespace Crowny
         assemblyStream->Read(assemblyData, assemblySize);
         String imageName = m_Path.filename().string();
         MonoImageOpenStatus status = MONO_IMAGE_OK;
-        MonoImage* image =
-          mono_image_open_from_data_with_name(assemblyData, assemblySize, true, &status, false, imageName.c_str());
+        // MonoImage* image =
+        //   mono_image_open_from_data_with_name(assemblyData, assemblySize, true, &status, false, imageName.c_str());
+        MonoImage* image = mono_image_open_from_data_full(assemblyData, assemblySize, 1, &status, 0);
         delete[] assemblyData;
 
         CheckImageOpenStatus(status);
@@ -87,9 +88,10 @@ namespace Crowny
             CW_ENGINE_ERROR("Could not open assembly image.");
 
         // #ifdef CW_DEBUG
-        Path mdbPath = m_Path.replace_extension(m_Path.extension().string() + ".mdb");
+        Path mdbPath = m_Path.replace_extension("pdb");
         if (fs::exists(mdbPath))
         {
+            CW_ENGINE_INFO("Here");
             Ref<DataStream> mdbStream = FileSystem::OpenFile(mdbPath);
             if (mdbStream != nullptr)
             {

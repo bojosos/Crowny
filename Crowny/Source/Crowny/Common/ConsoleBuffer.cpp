@@ -1,12 +1,12 @@
 #include "cwpch.h"
 
 #include "Crowny/Common/Time.h"
-#include "Crowny/ImGui/ImGuiConsoleBuffer.h"
+#include "Crowny/Common/ConsoleBuffer.h"
 
 namespace Crowny
 {
 
-    void ImGuiConsoleBuffer::AddMessage(const Message& message) // Binary search here
+    void ConsoleBuffer::AddMessage(const Message& message) // Binary search here
     {
         auto findIter = m_HashToIndex.find(message.Hash);
         if (findIter != m_HashToIndex.end())
@@ -20,19 +20,19 @@ namespace Crowny
         m_HasNewMessages = true;
     }
 
-    void ImGuiConsoleBuffer::Clear()
+    void ConsoleBuffer::Clear()
     {
         m_NormalMessageBuffer.clear();
         m_HashToIndex.clear();
         m_CollapsedMessageBuffer.clear();
     }
 
-    void ImGuiConsoleBuffer::Sort(uint32_t sortIdx, bool ascending)
+    void ConsoleBuffer::Sort(uint32_t sortIdx, bool ascending)
     {
         if (m_Collapsed)
         {
             std::sort(m_CollapsedMessageBuffer.begin(), m_CollapsedMessageBuffer.end(),
-                      [ascending, sortIdx](const ImGuiConsoleBuffer::Message& a, const ImGuiConsoleBuffer::Message& b) {
+                      [ascending, sortIdx](const ConsoleBuffer::Message& a, const ConsoleBuffer::Message& b) {
                           if (sortIdx == 1)
                               return ascending ? a.MessageText < b.MessageText : a.MessageText > b.MessageText;
                           else if (sortIdx == 0)
@@ -43,7 +43,7 @@ namespace Crowny
         else
         {
             std::sort(m_NormalMessageBuffer.begin(), m_NormalMessageBuffer.end(),
-                      [ascending, sortIdx](const ImGuiConsoleBuffer::Message& a, const ImGuiConsoleBuffer::Message& b) {
+                      [ascending, sortIdx](const ConsoleBuffer::Message& a, const ConsoleBuffer::Message& b) {
                           if (sortIdx == 0)
                               return ascending ? a.Timestamp < b.Timestamp : a.Timestamp > b.Timestamp;
                           else if (sortIdx == 1)
@@ -53,13 +53,13 @@ namespace Crowny
         }
     }
 
-    ImGuiConsoleBuffer::Message::Message(const String& message, Level level) : MessageText(message), LogLevel(level)
+    ConsoleBuffer::Message::Message(const String& message, Level level) : MessageText(message), LogLevel(level)
     {
         Hash = Crowny::Hash(message);
         Timestamp = std::time(nullptr);
     }
 
-    const Vector<ImGuiConsoleBuffer::Message>& ImGuiConsoleBuffer::GetBuffer()
+    const Vector<ConsoleBuffer::Message>& ConsoleBuffer::GetBuffer()
     {
         m_HasNewMessages = false;
         if (m_Collapsed)
@@ -67,21 +67,21 @@ namespace Crowny
         return m_NormalMessageBuffer;
     }
 
-    void ImGuiConsoleBuffer::Collapse() { m_Collapsed = true; }
+    void ConsoleBuffer::Collapse() { m_Collapsed = true; }
 
-    void ImGuiConsoleBuffer::Uncollapse() { m_Collapsed = false; }
+    void ConsoleBuffer::Uncollapse() { m_Collapsed = false; }
 
-    const char* ImGuiConsoleBuffer::Message::GetLevelName(Level level)
+    const char* ConsoleBuffer::Message::GetLevelName(Level level)
     {
         switch (level)
         {
-        case ImGuiConsoleBuffer::Message::Level::Critical:
+        case ConsoleBuffer::Message::Level::Critical:
             return "Critical";
-        case ImGuiConsoleBuffer::Message::Level::Error:
+        case ConsoleBuffer::Message::Level::Error:
             return "Error";
-        case ImGuiConsoleBuffer::Message::Level::Warn:
+        case ConsoleBuffer::Message::Level::Warn:
             return "Warn";
-        case ImGuiConsoleBuffer::Message::Level::Info:
+        case ConsoleBuffer::Message::Level::Info:
             return "Info";
         }
 

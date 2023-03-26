@@ -72,4 +72,17 @@ namespace Crowny
         return glfwGetClipboardString((GLFWwindow*)Application::Get().GetWindow().GetNativeWindow());
     }
 
+    String PlatformUtils::Exec(const String& command)
+    {
+        std::array<char, 128> buffer;
+        std::string result;
+        std::unique_ptr<FILE, decltype(&_pclose)> pipe(_popen(command.c_str(), "r"), _pclose);
+        if (!pipe)
+            return String();
+
+        while (fgets(buffer.data(), (int)buffer.size(), pipe.get()) != nullptr)
+            result += buffer.data();
+        return result;
+    }
+
 } // namespace Crowny

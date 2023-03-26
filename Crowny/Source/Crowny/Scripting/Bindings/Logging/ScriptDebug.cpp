@@ -18,6 +18,7 @@ namespace Crowny
 
     void ScriptDebug::Internal_Log(MonoString* message)
     {
+        MonoUtils::WalkStack();
         const char* cstr = mono_string_to_utf8(message);
         CW_INFO(cstr);
     }

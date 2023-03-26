@@ -185,6 +185,7 @@ namespace Crowny
                     // Find object serialize info
                     if (ScriptInfoManager::Get().GetSerializableObjectInfo(objTypeInfo->m_TypeNamespace,
                                                                            objTypeInfo->m_TypeName, objInfo))
+                        // TODO: This won't work for normals arrays that don't have objects inside
                         for (const auto& val : arr)
                             monoArray.Set(idx++, ObjectFromJson(val, objInfo));
                     memberInfo->SetValue(newInstance, monoArray.GetInternal());
