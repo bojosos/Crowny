@@ -5,11 +5,16 @@
 
 #include "Crowny/Common/UTF8.h"
 
+#include "Crowny/Common/ConsoleBuffer.h"
+
 #include <mono/metadata/appdomain.h>
 #include <mono/metadata/class.h>
 #include <mono/metadata/metadata.h>
 #include <mono/metadata/object.h>
 #include <mono/metadata/reflection.h>
+#include <mono/metadata/mono-debug.h>
+
+#include "Crowny/Scripting/Mono/MonoMethod.h"
 
 namespace Crowny
 {
@@ -56,10 +61,19 @@ namespace Crowny
             ::MonoMethod* exceptionStackGetter = mono_property_get_get_method(exceptionStackProp);
             MonoString* exceptionStackTrace =
               (MonoString*)mono_runtime_invoke(exceptionStackGetter, exception, nullptr, nullptr);
-
+#ifdef CW_EDITOR // TODO: Fix these ifdefs
             CW_ENGINE_CRITICAL("Managed exception: {0}:  {1} ---- {2}", exceptionClassName,
                                mono_string_to_utf8(exceptionMsg),
                                mono_string_to_utf8(exceptionStackTrace)); // does this work?
+#else
+            // ConsoleBuffer::Message message;
+            
+
+            // ConsoleBuffer::Get().AddMessage(message);
+            CW_ENGINE_CRITICAL("Managed exception: {0}:  {1} ---- {2}", exceptionClassName,
+                               mono_string_to_utf8(exceptionMsg),
+                               mono_string_to_utf8(exceptionStackTrace)); // does this work?
+#endif
         }
     }
 
@@ -225,6 +239,33 @@ namespace Crowny
         }
 
         return MonoPrimitiveType::Unknown;
+    }
+
+    static mono_bool Callback(::MonoMethod* method, int32_t native_offset, int32_t il_offset, mono_bool managed, void* data){
+        if (managed)
+        {
+            String& result = *((String*)data);
+            MonoMethod temp(method);
+            // result += temp.GetFullDeclName() + " " + std::to_string(native_offset) + " " + std::to_string(il_offset) + "\n";
+            MonoDebugMethodInfo* methodInfo = mono_debug_lookup_method(method);
+            if (methodInfo)
+            {
+
+                MonoDebugSourceLocation* sourceLocation = mono_debug_method_lookup_location(methodInfo, il_offset);
+                result += fmt::format("Method: {} (at {}:{})", temp.GetFullDeclName(), sourceLocation->source_file,
+                                      sourceLocation->row, sourceLocation->column);
+                mono_debug_free_source_location(sourceLocation);
+            }
+        }
+        return false;
+    }
+
+    String MonoUtils::WalkStack()
+    {
+        String result;
+        mono_stack_walk((MonoStackWalk)Callback, &result);
+        CW_ENGINE_INFO(result);
+        return result;
     }
 
     ::MonoClass* MonoUtils::GetObjectClass() { return mono_get_object_class(); }

@@ -22,7 +22,8 @@ namespace Crowny
         PhysicsMaterial,
         MeshSource,
         PhysicsMesh,
-        PlainText
+        PlainText,
+        Font
     };
 
     class Asset

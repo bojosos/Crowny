@@ -37,7 +37,7 @@
 #include "Crowny/Import/TextFileImporter.h"
 #include "Crowny/Import/TextureImporter.h"
 
-#include "Crowny/ImGui/ImGuiConsoleBuffer.h"
+#include "Crowny/Common/ConsoleBuffer.h"
 
 namespace Crowny
 {
@@ -46,7 +46,7 @@ namespace Crowny
     {
         Crowny::Log::Init(applicationDesc.Name);
 
-        ImGuiConsoleBuffer::StartUp();
+        ConsoleBuffer::StartUp();
 
         Importer::StartUp();
         Importer::Get().RegisterImporter(new AudioClipImporter());

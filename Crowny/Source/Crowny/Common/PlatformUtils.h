@@ -13,6 +13,7 @@ namespace Crowny
         static void OpenExternally(const Path& filepath);
         static void CopyToClipboard(const String& string);
         static String CopyFromClipboard();
+        static String Exec(const String& command);
     };
 
 } // namespace Crowny

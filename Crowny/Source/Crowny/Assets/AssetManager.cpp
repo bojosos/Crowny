@@ -27,7 +27,7 @@ namespace Crowny
         AudioClipDesc& desc = clip.m_Desc;         // Save clip desc
         archive(desc.ReadMode, desc.Format, desc.Frequency, desc.BitDepth, desc.NumChannels, desc.Is3D);
         archive(clip.m_Length, clip.m_NumSamples);
-        CW_ENGINE_INFO("Loaded: {0}", clip.m_NumSamples);
+        // CW_ENGINE_INFO("Loaded: {0}", clip.m_NumSamples);
 
         archive(clip.m_StreamSize); // Load the size of audio data
         clip.m_StreamData = archive.GetStream()->Clone();

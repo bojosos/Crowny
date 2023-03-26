@@ -240,6 +240,57 @@ namespace Crowny
             camera.SetMSAA(msaa);
     }
 
+    static void Markup(const char* orig_text, int ttbegin, int ttend)
+    {
+        const char* orig_end = orig_text + strlen(orig_text);
+        const char* text = orig_text;
+        const char* tt_begin = orig_text + ttbegin;
+        const char* tt_end = orig_text + ttend;
+
+        while (text < orig_end)
+        {
+            const char* text_end = ImGui::GetFont()->CalcWordWrapPositionA(1.0f, text, text + strlen(text),
+                                                                           ImGui::GetContentRegionAvail().x);
+            if (tt_begin > text_end || tt_end < text)
+            {
+                ImGui::TextUnformatted(text, text_end);
+            }
+            else if (tt_begin >= text && tt_end <= text_end)
+            {
+                if (text < tt_begin - 1)
+                {
+                    ImGui::TextUnformatted(text, tt_begin - 1);
+                    ImGui::SameLine();
+                }
+                ImGui::PushStyleColor(ImGuiCol_Text, { 1, 0, 0, 1 });
+                ImGui::TextUnformatted(tt_begin, tt_end);
+                UI::SetTooltip("Salatka");
+                ImGui::PopStyleColor();
+                ImGui::SameLine();
+                ImGui::TextUnformatted(tt_end + 1, text_end);
+            }
+            else if (tt_begin >= text)
+            {
+                ImGui::TextUnformatted(text, tt_begin - 1);
+                ImGui::SameLine();
+                ImGui::PushStyleColor(ImGuiCol_Text, { 1, 0, 0, 1 });
+                ImGui::TextUnformatted(tt_begin, text_end);
+                UI::SetTooltip("Salatka");
+                ImGui::PopStyleColor();
+            }
+            else
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, { 1, 0, 0, 1 });
+                ImGui::TextUnformatted(text, tt_end);
+                UI::SetTooltip("Salatka");
+                ImGui::PopStyleColor();
+                ImGui::SameLine();
+                ImGui::TextUnformatted(tt_end + 1, text_end);
+            }
+            text = text_end + 1;
+        }
+    }
+
     template <> void ComponentEditorWidget<TextComponent>(Entity e)
     {
         TextComponent& textComponent = e.GetComponent<TextComponent>();
@@ -256,6 +307,8 @@ namespace Crowny
         UI::Property("Wrapping", textComponent.Wrapping);
         if (textComponent.Wrapping)
             UI::PropertyDropdown("Overflow", { "Overflow", "Ellipses", "Truncate" }, textComponent.Overflow);
+
+        Markup("Obicham da hapvam salatka", 19, 25);
 
 #ifdef CW_DEBUG
         ImGui::SameLine();

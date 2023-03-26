@@ -43,6 +43,9 @@ namespace Crowny
         const MSDFData* GetMSDFData() const { return m_MSDFData; }
         Ref<Texture> GetAtlasTexture() const { return m_AtlasTexture; }
 
+        virtual AssetType GetAssetType() const override { return AssetType::Font; }
+        static AssetType GetStaticType() { return AssetType::Font; }
+
         static Ref<Font> GetDefault();
 
     private:

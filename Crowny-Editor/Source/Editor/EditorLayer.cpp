@@ -54,6 +54,7 @@
 #include "Editor/Script/ScriptProjectGenerator.h"
 #include "Build/BuildManager.h"
 #include "Editor/Script/CodeEditor.h"
+#include "Editor/Script/VisualStudioCodeEditor.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -81,6 +82,7 @@ namespace Crowny
 
     void EditorLayer::OnAttach()
     {
+        VisualStudioCodeEditor::GetAvailableVersions();
         const Ref<Font> defaultFont = Font::GetDefault();
         // Well constructors get discarded and the static data is gone, so construct a few empty objects
         ScriptTime tempTime = ScriptTime();
@@ -150,11 +152,11 @@ namespace Crowny
         m_ShowScriptDebugInfo = editorSettings->ShowScriptDebugInfo;
         m_ShowEntityDebugInfo = editorSettings->ShowEntityDebugInfo;
 
-        m_ConsolePanel->SetMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Info,
+        m_ConsolePanel->SetMessageLevelEnabled(ConsoleBuffer::Message::Level::Info,
                                                editorSettings->EnableConsoleInfoMessages);
-        m_ConsolePanel->SetMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Warn,
+        m_ConsolePanel->SetMessageLevelEnabled(ConsoleBuffer::Message::Level::Warn,
                                                editorSettings->EnableConsoleWarningMessages);
-        m_ConsolePanel->SetMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Error,
+        m_ConsolePanel->SetMessageLevelEnabled(ConsoleBuffer::Message::Level::Error,
                                                editorSettings->EnableConsoleErrorMessages);
 
         m_ConsolePanel->SetCollapseEnabled(editorSettings->CollapseConsole);
@@ -402,11 +404,11 @@ namespace Crowny
         settings->ShowAssetInfo = m_ShowAssetInfo;
         settings->ShowScriptDebugInfo = m_ShowScriptDebugInfo;
         settings->EnableConsoleInfoMessages =
-          m_ConsolePanel->IsMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Info);
+          m_ConsolePanel->IsMessageLevelEnabled(ConsoleBuffer::Message::Level::Info);
         settings->EnableConsoleWarningMessages =
-          m_ConsolePanel->IsMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Warn);
+          m_ConsolePanel->IsMessageLevelEnabled(ConsoleBuffer::Message::Level::Warn);
         settings->EnableConsoleErrorMessages =
-          m_ConsolePanel->IsMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level::Error);
+          m_ConsolePanel->IsMessageLevelEnabled(ConsoleBuffer::Message::Level::Error);
 
         settings->CollapseConsole = m_ConsolePanel->IsCollapseEnabled();
         settings->ScrollToBottom = m_ConsolePanel->IsScrollToBottomEnabled();
@@ -853,13 +855,29 @@ namespace Crowny
         if (m_ShowAssetInfo)
         {
             ImGui::Begin("Asset Info", &m_ShowAssetInfo);
-            ImGui::Columns(2);
+            ImGui::Columns(3);
             ImGui::Text("Project Library");
             ImGui::NextColumn();
             ImGui::Text("Show empty metadata entries");
             ImGui::SameLine();
             ImGui::Checkbox("##showEmptyMetadata", &m_ShowEmptyMetadataAssetInfo);
             ImGui::NextColumn();
+            ImGui::NextColumn();
+
+            static const Map<AssetType, const char*> assetTypes = { { AssetType::None, "None" },
+                                                                    { AssetType::AudioClip, "Audio Clip" },
+                                                                    { AssetType::Material, "Material" },
+                                                                    { AssetType::Mesh, "Mesh" },
+                                                                    { AssetType::MeshSource, "Mesh Source" },
+                                                                    { AssetType::PhysicsMaterial, "Physics Material" },
+                                                                    { AssetType::PhysicsMaterial2D,
+                                                                      "Physics Material 2D" },
+                                                                    { AssetType::PhysicsMesh, "Physics Mesh" },
+                                                                    { AssetType::PlainText, "Plain Text" },
+                                                                    { AssetType::ScriptCode, "Script Code" },
+                                                                    { AssetType::Shader, "Shader" },
+                                                                    { AssetType::Texture, "Texture" },
+                                                                    { AssetType::Font, "Font" } };
 
             std::function<void(const Ref<LibraryEntry>&)> traverse = [&](const Ref<LibraryEntry>& entry) {
                 if (entry->Type == LibraryEntryType::Directory)
@@ -877,6 +895,9 @@ namespace Crowny
                     ImGui::NextColumn();
                     if (file->Metadata != nullptr)
                         ImGui::Text(file->Metadata->Uuid.ToString().c_str());
+                    ImGui::NextColumn();
+                    if (file->Metadata != nullptr && assetTypes.count(file->Metadata->Type))
+                        ImGui::Text(assetTypes.at(file->Metadata->Type));
                     ImGui::NextColumn();
                 }
             };

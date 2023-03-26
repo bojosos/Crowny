@@ -25,7 +25,7 @@ namespace Crowny
     {
         UI::ScopedStyle windowPadding(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, 2.0f));
         BeginPanel();
-        m_RequestScrollToBottom = m_AllowScrollingToBottom && ImGuiConsoleBuffer::Get().HasNewMessages();
+        m_RequestScrollToBottom = m_AllowScrollingToBottom && ConsoleBuffer::Get().HasNewMessages();
         RenderHeader();
         ImGui::Separator();
         RenderMessages();
@@ -49,22 +49,22 @@ namespace Crowny
         ImGui::BeginVertical("##consolePanelV", { ImGui::GetContentRegionAvailWidth(), 0.0f });
         ImGui::Spring();
         ImGui::BeginHorizontal("##consolePanelH", { ImGui::GetContentRegionAvailWidth(), 0.0f });
-        ImColor tint = m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Info]
+        ImColor tint = m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Info]
                          ? IM_COL32(236, 158, 36, 255)
                          : IM_COL32(192, 192, 192, 255);
         if (drawButton(EditorAssets::Get().ConsoleInfo, tint))
-            m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Info] =
-              !m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Info];
-        tint = m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Warn] ? IM_COL32(236, 158, 36, 255)
+            m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Info] =
+              !m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Info];
+        tint = m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Warn] ? IM_COL32(236, 158, 36, 255)
                                                                                    : IM_COL32(192, 192, 192, 255);
         if (drawButton(EditorAssets::Get().ConsoleWarn, tint))
-            m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Warn] =
-              !m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Warn];
-        tint = m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Error] ? IM_COL32(236, 158, 36, 255)
+            m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Warn] =
+              !m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Warn];
+        tint = m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Error] ? IM_COL32(236, 158, 36, 255)
                                                                                     : IM_COL32(192, 192, 192, 255);
         if (drawButton(EditorAssets::Get().ConsoleError, tint))
-            m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Error] =
-              !m_EnabledLevels[(uint32_t)ImGuiConsoleBuffer::Message::Level::Error];
+            m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Error] =
+              !m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Error];
 
         UI::ScopedStyle layoutRight(ImGuiStyleVar_LayoutAlign, 1.0f);
         ImGui::Spring();
@@ -84,12 +84,12 @@ namespace Crowny
         if (ImGui::Checkbox("##Collapse", &m_Collapse))
         {
             if (m_Collapse)
-                ImGuiConsoleBuffer::Get().Collapse();
+                ConsoleBuffer::Get().Collapse();
             else
-                ImGuiConsoleBuffer::Get().Uncollapse();
+                ConsoleBuffer::Get().Uncollapse();
         }
         if (ImGui::Button("Clear console"))
-            ImGuiConsoleBuffer::Get().Clear();
+            ConsoleBuffer::Get().Clear();
     }
 
     void ConsolePanel::RenderMessages()
@@ -108,7 +108,7 @@ namespace Crowny
             ImGui::TableSetupColumn("Message", ImGuiTableColumnFlags_WidthStretch, 0.97f);
             ImGui::TableHeadersRow();
 
-            const auto& buffer = ImGuiConsoleBuffer::Get().GetBuffer();
+            const auto& buffer = ConsoleBuffer::Get().GetBuffer();
 
             m_MessageIndices.clear();
             m_MessageIndices.resize(buffer.size());
@@ -134,7 +134,7 @@ namespace Crowny
                 needSort = true;
             if (sortSpec && needSort)
             {
-                ImGuiConsoleBuffer::Get().Sort(sortSpec->Specs[0].ColumnIndex,
+                ConsoleBuffer::Get().Sort(sortSpec->Specs[0].ColumnIndex,
                                                sortSpec->Specs[0].SortDirection == ImGuiSortDirection_Ascending);
                 sortSpec->SpecsDirty = false;
             }
@@ -148,9 +148,9 @@ namespace Crowny
         }
     }
 
-    void ConsolePanel::RenderMessage(const ImGuiConsoleBuffer::Message& message)
+    void ConsolePanel::RenderMessage(const ConsoleBuffer::Message& message)
     {
-        ImGuiConsoleBuffer::Message::Level level = message.LogLevel;
+        ConsoleBuffer::Message::Level level = message.LogLevel;
         if (m_EnabledLevels[(uint8_t)level])
         {
             glm::vec4 color = GetRenderColor(level);

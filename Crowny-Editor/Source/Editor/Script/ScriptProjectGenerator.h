@@ -11,6 +11,7 @@ namespace Crowny
         VS2015,
         VS2017,
         VS2019,
+        VS2022,
         MonoDevelop
 	};
 
