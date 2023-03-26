@@ -142,8 +142,7 @@ namespace Crowny
         }
 
         m_IsStatic = !mono_signature_is_instance(signature);
-
-        m_FullDeclName = CrownyMonoVisibilityToString(GetVisibility()) + (IsStatic() ? " static " : " ") +
+        m_FullDeclName = CrownyMonoVisibilityToString(GetVisibility()) + (m_IsStatic ? " static " : " ") +
                          mono_method_full_name(m_Method, true);
 
         m_HasCachedSignature = true;

@@ -33,7 +33,7 @@ namespace Crowny
         if (m_ActiveEditor == nullptr)
         {
             // return;
-            m_ActiveEditor = CreateRef<VisualStudioCodeEditor>();
+            m_ActiveEditor = CreateRef<VisualStudioCodeEditor>(VisualStudioVersion::VS2022, "", L"");
         }
 
         CodeSolutionData solutionData;

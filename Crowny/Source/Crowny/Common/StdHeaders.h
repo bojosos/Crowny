@@ -73,6 +73,8 @@ namespace Crowny
 
     using String = std::string;
 
+    using WString = std::wstring;
+
     using StringView = std::string_view;
 
     using U16String = std::u16string;

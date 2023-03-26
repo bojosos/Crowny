@@ -62,6 +62,8 @@ namespace Crowny
             thunk(std::forward<Args>(args)..., &exception);
             CheckException(exception);
         }
+
+        static String WalkStack();
     };
 
 } // namespace Crowny

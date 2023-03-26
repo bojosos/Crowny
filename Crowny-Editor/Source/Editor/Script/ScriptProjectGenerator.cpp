@@ -124,10 +124,11 @@ EndProject)";
     String CSProject::GenerateSolution(CSProjectVersion version, const CodeSolutionData& data)
     {
         Map<CSProjectVersion, String> fileFormatData = {
-            { CSProjectVersion::VS2008, "10.0" }, { CSProjectVersion::VS2010, "11.0" },
-            { CSProjectVersion::VS2012, "12.0" }, { CSProjectVersion::VS2013, "12.0" },
-            { CSProjectVersion::VS2015, "12.0" }, { CSProjectVersion::VS2017, "12.0" },
-            { CSProjectVersion::VS2019, "12.0" }, { CSProjectVersion::MonoDevelop, "12.0" },
+            { CSProjectVersion::VS2008, "10.0" },      { CSProjectVersion::VS2010, "11.0" },
+            { CSProjectVersion::VS2012, "12.0" },      { CSProjectVersion::VS2013, "12.0" },
+            { CSProjectVersion::VS2015, "12.0" },      { CSProjectVersion::VS2017, "12.0" },
+            { CSProjectVersion::VS2019, "12.0" },      { CSProjectVersion::VS2022, "12.0" },
+            { CSProjectVersion::MonoDevelop, "12.0" },
         };
 
         StringStream projectEntriesStream;
@@ -164,7 +165,7 @@ EndProject)";
             tempStream << fmt::format(NonScriptEntryTemplate, nonScriptEntry.string());
 
         const String nonScriptEntries = tempStream.str();
-        tempStream.str();
+        tempStream.str("");
         tempStream.clear();
 
         for (const ScriptProjectReference& assemblyRef : projectData.AssemblyReferences)
@@ -188,7 +189,7 @@ EndProject)";
         }
 
         const String projectRefEntries = tempStream.str();
-        tempStream.str();
+        tempStream.str("");
         tempStream.clear();
 
         tempStream << projectData.Defines;

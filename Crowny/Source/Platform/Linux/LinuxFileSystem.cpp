@@ -4,9 +4,9 @@
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/StringUtils.h"
 #include "Crowny/Common/VirtualFileSystem.h"
+#include "Crowny/Common/PlatformUtils.h"
 
 #include <GLFW/glfw3.h>
-#include <fstream>
 
 namespace Crowny
 {
@@ -102,27 +102,11 @@ namespace Crowny
             break;
         }
 
-        String cmd = "zenity --file-selection --filename=\"" + initialDir.string() + "\"" + add;
-        FILE* f = popen(cmd.c_str(), "r");
-        if (!f)
-            return false;
-
-        std::array<char, 128> buffer;
-        String res = "";
-        while (fgets(buffer.data(), 128, f))
-            res += buffer.data();
-
-        if (res.empty())
-        {
-            return false;
-            pclose(f);
-        }
-
-        res = res.erase(res.find_last_not_of(" \n\r\t") + 1);
-        for (const String& str : StringUtils::SplitString(res, "|"))
+        String execResult = PlatformUtils::Exec("zenity --file-selection --filename=\"" + initialDir.string() + "\"" + add);
+        execResult = execResult.erase(res.find_last_not_of(" \n\r\t") + 1);
+        for (const String& str : StringUtils::SplitString(execResult, "|"))
             outPaths.push_back(Path(std::move(str)));
 
-        pclose(p);
         return true;
     }
 

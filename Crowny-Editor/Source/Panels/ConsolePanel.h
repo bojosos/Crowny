@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Crowny/ImGui/ImGuiConsoleBuffer.h"
+#include "Crowny/Common/ConsoleBuffer.h"
 #include "Panels/ImGuiPanel.h"
 
 namespace Crowny
@@ -15,19 +15,19 @@ namespace Crowny
         void RenderMessages();
         void RenderHeader();
         void RenderSettings();
-        void RenderMessage(const ImGuiConsoleBuffer::Message& message);
+        void RenderMessage(const ConsoleBuffer::Message& message);
 
-        static glm::vec4 GetRenderColor(ImGuiConsoleBuffer::Message::Level level)
+        static glm::vec4 GetRenderColor(ConsoleBuffer::Message::Level level)
         {
             switch (level)
             {
-            case ImGuiConsoleBuffer::Message::Level::Info:
+            case ConsoleBuffer::Message::Level::Info:
                 return { 0.00f, 0.50f, 0.00f, 1.00f }; // Green
-            case ImGuiConsoleBuffer::Message::Level::Warn:
+            case ConsoleBuffer::Message::Level::Warn:
                 return { 1.00f, 1.00f, 0.00f, 1.00f }; // Yellow
-            case ImGuiConsoleBuffer::Message::Level::Error:
+            case ConsoleBuffer::Message::Level::Error:
                 return { 1.00f, 0.00f, 0.00f, 1.00f }; // Red
-            case ImGuiConsoleBuffer::Message::Level::Critical:
+            case ConsoleBuffer::Message::Level::Critical:
                 return { 1.00f, 0.00f, 0.00f, 1.00f }; // White-white
             default:
                 return { 0.00f, 0.00f, 0.00f, 1.00f }; // Stupid warnings
@@ -35,11 +35,11 @@ namespace Crowny
             return { 1.0f, 1.0f, 1.0f, 1.0f };
         }
 
-        void SetMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level level, bool enabled)
+        void SetMessageLevelEnabled(ConsoleBuffer::Message::Level level, bool enabled)
         {
             m_EnabledLevels[(uint32_t)level] = enabled;
         }
-        bool IsMessageLevelEnabled(ImGuiConsoleBuffer::Message::Level level) const
+        bool IsMessageLevelEnabled(ConsoleBuffer::Message::Level level) const
         {
             return m_EnabledLevels[(uint32_t)level];
         }

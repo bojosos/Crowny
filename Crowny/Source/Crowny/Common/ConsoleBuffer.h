@@ -4,7 +4,7 @@
 
 namespace Crowny
 {
-    class ImGuiConsoleBuffer : public Module<ImGuiConsoleBuffer>
+    class ConsoleBuffer : public Module<ConsoleBuffer>
     {
     public:
         struct Message
@@ -32,13 +32,21 @@ namespace Crowny
             Level LogLevel;
             size_t Hash; // for collapse
             std::time_t Timestamp;
-            String Source;
             uint32_t RepeatCount = 1;
+
+            struct FunctionCall
+            {
+                String FunctionSignature;
+                Path SourceFilePath;
+                uint32_t Line;
+            };
+
+            Vector<FunctionCall> Callstack;
         };
 
     public:
-        ImGuiConsoleBuffer() = default;
-        ~ImGuiConsoleBuffer() = default;
+        ConsoleBuffer() = default;
+        ~ConsoleBuffer() = default;
         void AddMessage(const Message& message);
 
         void Sort(uint32_t sortIdx, bool ascending);

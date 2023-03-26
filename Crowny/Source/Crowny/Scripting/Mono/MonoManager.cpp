@@ -30,7 +30,7 @@ namespace Crowny
         String Version;
     };
 
-    static const MonoVersionData MONO_VERSION_DATA[1] = { { MONO_LIB_DIR + "mono/4.5", "v4.0.30319" } };
+    static const MonoVersionData MONO_VERSION_DATA[1] = { { MONO_LIB_DIR + "mono/4.8", "v4.0.30319" } };
 
     void MonoLogCallback(const char* logDomain, const char* logLevel, const char* message, mono_bool fatal,
                          void* userData)
@@ -130,12 +130,14 @@ namespace Crowny
         Path assembliesDir = GetFrameworkAssembliesFolder();
 
         // mono_set_dirs(libDir.c_str(), etcDir.c_str());
-        // mono_set_assemblies_path(assembliesDir.c_str());
+        mono_set_assemblies_path("C:\\Program Files\\Mono\\lib");
         // TODO: Fix these dirs
         mono_set_dirs("C:\\Program Files\\Mono\\lib", "C:\\Program Files\\Mono\\etc");
 
         // #if CW_DEBUG
         mono_debug_init(MONO_DEBUG_FORMAT_MONO);
+        mono_trace_set_level_string("debug");
+        mono_trace_set_print_handler(MonoPrintCallback);
         // TODO: Add port settings
         const char* options[] = {
             "--soft-breakpoints",
@@ -143,21 +145,22 @@ namespace Crowny
             "--debug-domain-unload", "--gc-debug=check-remset-consistency,verify-before-collections,xdomain-checks"
         };
         mono_jit_parse_options(4, (char**)options);
-        mono_trace_set_level_string("warning"); // maybe do debug
+        // mono_trace_set_level_string("warning"); // maybe do debug
                                                 // #else
-        mono_trace_set_level_string("warning");
+        mono_trace_set_level_string("debug");
         // #endif
         mono_trace_set_log_handler(MonoLogCallback, this);
         mono_trace_set_print_handler(MonoPrintCallback);
         mono_trace_set_printerr_handler(MonoPrintErrorCallback);
         mono_config_parse(nullptr);
-        m_RootDomain = mono_jit_init_version("CrownyMono", MONO_VERSION_DATA[(int)MONO_VERSION].Version.c_str());
+        // m_RootDomain = mono_jit_init_version("CrownyMono", MONO_VERSION_DATA[(int)MONO_VERSION].Version.c_str());
+        m_RootDomain = mono_jit_init("CrownyMono");
         if (m_RootDomain == nullptr)
         {
             CW_ENGINE_ERROR("Cannot initialize mono runtime");
             return;
         }
-
+        mono_debug_domain_create(m_RootDomain);
         mono_thread_set_main(mono_thread_current());
         m_CorlibAssembly = new MonoAssembly("", "corlib");
         m_CorlibAssembly->LoadFromImage(mono_get_corlib());

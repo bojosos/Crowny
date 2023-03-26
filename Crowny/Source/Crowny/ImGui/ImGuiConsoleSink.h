@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Crowny/ImGui/ImGuiConsoleBuffer.h"
+#include "Crowny/Common/ConsoleBuffer.h"
 
 #include <spdlog/sinks/base_sink.h>
 
@@ -24,7 +24,7 @@ namespace Crowny
             spdlog::memory_buf_t formatted;
             base_sink<Mutex>::formatter_->format(message, formatted);
             *(m_MessageBuffer.begin() + m_MessagesBuffered) =
-              ImGuiConsoleBuffer::Message(fmt::to_string(formatted), GetMessageLevel(message.level));
+              ConsoleBuffer::Message(fmt::to_string(formatted), GetMessageLevel(message.level));
             if (++m_MessagesBuffered == m_MessageBufferCapacity)
                 flush_();
         }
@@ -32,34 +32,34 @@ namespace Crowny
         void flush_() override
         {
             for (int i = 0; i < m_MessagesBuffered; i++)
-                ImGuiConsoleBuffer::Get().AddMessage(m_MessageBuffer[i]);
+                ConsoleBuffer::Get().AddMessage(m_MessageBuffer[i]);
             m_MessagesBuffered = 0;
         }
 
     private:
-        static ImGuiConsoleBuffer::Message::Level GetMessageLevel(const spdlog::level::level_enum level)
+        static ConsoleBuffer::Message::Level GetMessageLevel(const spdlog::level::level_enum level)
         {
             switch (level)
             {
             case spdlog::level::level_enum::info:
-                return ImGuiConsoleBuffer::Message::Level::Info;
+                return ConsoleBuffer::Message::Level::Info;
             case spdlog::level::level_enum::warn:
-                return ImGuiConsoleBuffer::Message::Level::Warn;
+                return ConsoleBuffer::Message::Level::Warn;
             case spdlog::level::level_enum::err:
-                return ImGuiConsoleBuffer::Message::Level::Error;
+                return ConsoleBuffer::Message::Level::Error;
             case spdlog::level::level_enum::critical:
-                return ImGuiConsoleBuffer::Message::Level::Critical;
+                return ConsoleBuffer::Message::Level::Critical;
             default:
-                return ImGuiConsoleBuffer::Message::Level::Info; // trace info and off
+                return ConsoleBuffer::Message::Level::Info; // trace info and off
             }
 
-            return ImGuiConsoleBuffer::Message::Level::Info;
+            return ConsoleBuffer::Message::Level::Info;
         }
 
     private:
         uint8_t m_MessagesBuffered = 0;
         uint8_t m_MessageBufferCapacity;
-        Vector<ImGuiConsoleBuffer::Message> m_MessageBuffer;
+        Vector<ConsoleBuffer::Message> m_MessageBuffer;
     };
 } // namespace Crowny
 
