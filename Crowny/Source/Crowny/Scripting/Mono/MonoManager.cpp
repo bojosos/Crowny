@@ -146,7 +146,7 @@ namespace Crowny
         };
         mono_jit_parse_options(4, (char**)options);
         // mono_trace_set_level_string("warning"); // maybe do debug
-                                                // #else
+        // #else
         mono_trace_set_level_string("debug");
         // #endif
         mono_trace_set_log_handler(MonoLogCallback, this);

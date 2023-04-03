@@ -213,9 +213,10 @@ namespace Crowny
 
             Ref<SerializableObjectInfo> deserializedObjectInfo = CreateRef<SerializableObjectInfo>();
             deserializedObjectInfo->m_TypeInfo = typeInfo;
-            if (result->m_ObjectInfo == nullptr) // Set the object info of the SerializableObject to the first one created.
+            if (result->m_ObjectInfo ==
+                nullptr) // Set the object info of the SerializableObject to the first one created.
                 result->m_ObjectInfo = deserializedObjectInfo;
-            
+
             uint32_t fieldId = 0;
             for (const YAML::Node& field : fields)
             {

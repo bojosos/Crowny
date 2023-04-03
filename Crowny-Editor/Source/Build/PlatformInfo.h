@@ -1,25 +1,25 @@
 #pragma once
 
-#include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/Assets/AssetHandle.h"
+#include "Crowny/RenderAPI/Texture.h"
 
 namespace Crowny
 {
-	enum class PlatformType
-	{
-		Windows,
-		Linux,
-		Mac,
-		MacM1,
-		Count
-	};
+    enum class PlatformType
+    {
+        Windows,
+        Linux,
+        Mac,
+        MacM1,
+        Count
+    };
 
-	struct PlatformInfo
-	{
+    struct PlatformInfo
+    {
         PlatformType Type;
         String Defines;
         UUID MainScene;
         bool Debug;
         AssetHandle<Texture> Icon;
-	};
-}
+    };
+} // namespace Crowny

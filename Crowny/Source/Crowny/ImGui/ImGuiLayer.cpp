@@ -41,7 +41,7 @@ namespace Crowny
                                      io.Fonts->GetGlyphRangesCyrillic());
 
         io.KeyMap[ImGuiKey_Tab] = Key::Tab; // Keyboard mapping. ImGui will use those indices to peek into the
-                                          // io.KeyDown[] array that we will update during the application lifetime.
+                                            // io.KeyDown[] array that we will update during the application lifetime.
         io.KeyMap[ImGuiKey_LeftArrow] = Key::Left;
         io.KeyMap[ImGuiKey_RightArrow] = Key::Right;
         io.KeyMap[ImGuiKey_UpArrow] = Key::Up;

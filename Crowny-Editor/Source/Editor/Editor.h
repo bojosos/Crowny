@@ -13,7 +13,7 @@ namespace Crowny
     static constexpr const char* SCRIPT_EDITOR_ASSEMBLY = "CrownyEditorScript";
     static constexpr const char* EDITOR_NS = "Crowny.Editor";
     static const Path PROJECT_INTERNAL_DIR = u8"Internal";
-    static const Path INTERNAL_ASSEMBLY_PATH = PROJECT_INTERNAL_DIR / "Assemblies";
+    static const Path INTERNAL_ASSEMBLY_PATH = PROJECT_INTERNAL_DIR / "Assemblies/Debug";
     static const DialogFilter SCENE_FILTER = { "CrownyScene", "*.cwscene" };
     static const Path DEFAULT_PROJECT_PATH_WIN32 = "C:/dev/Projects";
     static const Path DEFAULT_PROJECT_PATH_LINUX = "/home/life/Desktop/dev";

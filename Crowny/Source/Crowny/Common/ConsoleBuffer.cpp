@@ -1,13 +1,25 @@
 #include "cwpch.h"
 
-#include "Crowny/Common/Time.h"
 #include "Crowny/Common/ConsoleBuffer.h"
+#include "Crowny/Common/Time.h"
 
 namespace Crowny
 {
 
-    void ConsoleBuffer::AddMessage(const Message& message) // Binary search here
+    void ConsoleBuffer::AddMessage(Message::Level logLevel, const String& messageText,
+                                   const Vector<Message::FunctionCall>& callstack) // Binary search here
     {
+        Message message;
+        message.MessageText = messageText;
+        message.Timestamp = std::time(nullptr);
+        message.Callstack = callstack;
+        size_t hash = Hash(message.MessageText);
+        HashCombine(hash, message.Timestamp, (int32_t)message.LogLevel);
+        for (const Message::FunctionCall& call : message.Callstack)
+            HashCombine(hash, call.FunctionSignature, call.Line, call.SourceFilePath);
+        message.Hash = hash;
+        message.LogLevel = logLevel;
+
         auto findIter = m_HashToIndex.find(message.Hash);
         if (findIter != m_HashToIndex.end())
             m_CollapsedMessageBuffer[findIter->second].RepeatCount++;
@@ -16,7 +28,7 @@ namespace Crowny
             m_CollapsedMessageBuffer.push_back(message);
             m_HashToIndex[message.Hash] = (uint32_t)m_CollapsedMessageBuffer.size() - 1;
         }
-        m_NormalMessageBuffer.push_back(message);
+        m_NormalMessageBuffer.push_back(std::move(message));
         m_HasNewMessages = true;
     }
 
@@ -45,19 +57,15 @@ namespace Crowny
             std::sort(m_NormalMessageBuffer.begin(), m_NormalMessageBuffer.end(),
                       [ascending, sortIdx](const ConsoleBuffer::Message& a, const ConsoleBuffer::Message& b) {
                           if (sortIdx == 0)
-                              return ascending ? a.Timestamp < b.Timestamp : a.Timestamp > b.Timestamp;
+                              return ascending ? (a.Timestamp < b.Timestamp) : (a.Timestamp > b.Timestamp);
                           else if (sortIdx == 1)
-                              return ascending ? a.MessageText < b.MessageText : a.MessageText > b.MessageText;
+                              return ascending ? (a.MessageText < b.MessageText) : (a.MessageText > b.MessageText);
                           return false;
                       });
         }
     }
 
-    ConsoleBuffer::Message::Message(const String& message, Level level) : MessageText(message), LogLevel(level)
-    {
-        Hash = Crowny::Hash(message);
-        Timestamp = std::time(nullptr);
-    }
+    ConsoleBuffer::Message::Message(const String& message, Level level) : MessageText(message), LogLevel(level) {}
 
     const Vector<ConsoleBuffer::Message>& ConsoleBuffer::GetBuffer()
     {

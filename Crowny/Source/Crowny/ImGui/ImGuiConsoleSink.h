@@ -32,8 +32,9 @@ namespace Crowny
         void flush_() override
         {
             for (int i = 0; i < m_MessagesBuffered; i++)
-                ConsoleBuffer::Get().AddMessage(m_MessageBuffer[i]);
+                ConsoleBuffer::Get().AddMessage(m_MessageBuffer[i].LogLevel, m_MessageBuffer[i].MessageText);
             m_MessagesBuffered = 0;
+            // m_MessageBuffer.clear();
         }
 
     private:

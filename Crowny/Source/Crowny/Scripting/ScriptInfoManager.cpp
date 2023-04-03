@@ -113,7 +113,7 @@ namespace Crowny
         return klass->GetFullName() == m_Builtin.Vector2->GetFullName() ||
                klass->GetFullName() == m_Builtin.Vector3->GetFullName() ||
                klass->GetFullName() == m_Builtin.Vector4->GetFullName() ||
-               klass->GetFullName() == m_Builtin.Color->GetFullName()   ||
+               klass->GetFullName() == m_Builtin.Color->GetFullName() ||
                klass->GetFullName() == m_Builtin.Matrix4->GetFullName();
     }
 
@@ -480,8 +480,8 @@ namespace Crowny
 
                 void* enumType = MonoUtils::GetType(monoClass->GetInternalPtr());
                 MonoArray* enumNames = (MonoArray*)ScriptInfoManager::Get()
-                                  .GetBuiltinClasses()
-                                  .ScriptUtils->GetMethod("GetEnumNames", 1)
+                                         .GetBuiltinClasses()
+                                         .ScriptUtils->GetMethod("GetEnumNames", 1)
                                          ->Invoke(nullptr, &enumType);
                 ScriptArray managedNamesArray(enumNames);
                 typeInfo->m_EnumNames.resize(managedNamesArray.Size());

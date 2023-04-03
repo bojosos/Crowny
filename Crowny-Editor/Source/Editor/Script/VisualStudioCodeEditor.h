@@ -16,6 +16,13 @@ namespace Crowny
         VS2022
     };
 
+    struct VisualStudioInstall
+    {
+        Path ExecutablePath;
+        bool Prerelease;
+        String Name;
+    };
+
     class VisualStudioCodeEditor : public CodeEditor
     {
     public:
@@ -24,11 +31,12 @@ namespace Crowny
 
         virtual void OpenFile(const Path& solitionPath, const Path& filePath, uint32_t line) const override;
         virtual void Sync(const CodeSolutionData& data, const Path& solutionPath) const override;
+        virtual void SetEditorExecutablePath(const Path& path) override;
 
-        static void GetAvailableVersions();
+        static Vector<VisualStudioInstall> GetAvailableVersions();
+
     private:
-        WString m_ClsID;
         Path m_ExecPath;
         VisualStudioVersion m_Version;
     };
-}
+} // namespace Crowny

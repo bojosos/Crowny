@@ -114,7 +114,6 @@ namespace Crowny
         Midline
     };
 
-
     enum class TextFontStyleBits
     {
         None = 0,
@@ -140,7 +139,7 @@ namespace Crowny
 
         TextHorizontalAlignment HorizontalAlignment = TextHorizontalAlignment::Left;
         TextVerticalAlignment VerticalAlignment = TextVerticalAlignment::Top;
-        TextFontStyle FontStyle=TextFontStyleBits::None;
+        TextFontStyle FontStyle = TextFontStyleBits::None;
 
         glm::vec4 OutlineColor{ 0.0f, 0.0f, 0.0f, 0.0f };
         float Thickess = 0.8f;

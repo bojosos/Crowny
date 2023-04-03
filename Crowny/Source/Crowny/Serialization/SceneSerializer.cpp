@@ -222,9 +222,8 @@ namespace Crowny
         SerializeValueYAML(out, "Scene", m_Scene->GetName());
 
         SerializeValueYAML(out, "Entities", YAML::BeginSeq);
-        m_Scene->m_Registry.sort<IDComponent>([](const IDComponent& lhs, const IDComponent& rhs) {
-            return lhs.Uuid < rhs.Uuid;
-        });
+        m_Scene->m_Registry.sort<IDComponent>(
+          [](const IDComponent& lhs, const IDComponent& rhs) { return lhs.Uuid < rhs.Uuid; });
         m_Scene->m_Registry.each([&](auto entityID) {
             Entity entity = { entityID, m_Scene.get() };
             SerializeEntity(out, entity);

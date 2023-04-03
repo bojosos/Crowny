@@ -71,7 +71,7 @@ namespace Crowny
     Vector<MonoClass*> MonoMethod::GetAttributes() const
     {
         Vector<MonoClass*> result;
-        
+
         MonoCustomAttrInfo* attrInfo = mono_custom_attrs_from_method(m_Method);
         if (attrInfo == nullptr)
             return result;

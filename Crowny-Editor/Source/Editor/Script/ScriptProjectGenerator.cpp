@@ -58,16 +58,16 @@ EndProject)";
   </PropertyGroup>
   <PropertyGroup Condition = " '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
 	<DebugSymbols>true</DebugSymbols>
-	<DebugType>full</DebugType>
+	<DebugType>portable</DebugType>
 	<Optimize>false</Optimize>
 	<OutputPath>Internal\\Assemblies\\Debug\\</OutputPath>
 	<BaseIntermediateOutputPath>Internal\\Assemblies\\</BaseIntermediateOutputPath>
 	<DefineConstants>DEBUG;TRACE;{4}</DefineConstants>
 	<ErrorReport>prompt</ErrorReport>
-	<WarningLevel>4</WarningLevel >
+	<WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition = " '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-	<DebugType>pdbonly</DebugType>
+	<DebugType>portable</DebugType>
 	<Optimize>true</Optimize>
 	<OutputPath>Internal\\Assemblies\\Release\\</OutputPath>
 	<BaseIntermediateOutputPath>Internal\\Assemblies\\</BaseIntermediateOutputPath>
@@ -116,7 +116,7 @@ EndProject)";
         static const String guidTemplate = "{0}-{1}-{2}-{3}-{4}";
         String hash = Cryptography::MD5(projectName);
         String result = fmt::format(guidTemplate, hash.substr(0, 8), hash.substr(8, 4), hash.substr(12, 4),
-                                            hash.substr(16, 4), hash.substr(20, 12));
+                                    hash.substr(16, 4), hash.substr(20, 12));
         StringUtils::ToUpper(result);
         return result;
     }
@@ -141,14 +141,14 @@ EndProject)";
         }
 
         return fmt::format(SolutionTemplate, fileFormatData[version], projectEntriesStream.str(),
-                                   projectPlatformsStream.str());
+                           projectPlatformsStream.str());
     }
 
     String CSProject::GenerateProject(CSProjectVersion projectVersion, const CodeProjectData& projectData)
     {
         Map<CSProjectVersion, String> versionData = {
-            { CSProjectVersion::VS2008, "3.5" }, { CSProjectVersion::VS2010, "4.0" },
-            { CSProjectVersion::VS2012, "4.0" }, { CSProjectVersion::VS2013, "12.0" },
+            { CSProjectVersion::VS2008, "3.5" },  { CSProjectVersion::VS2010, "4.0" },
+            { CSProjectVersion::VS2012, "4.0" },  { CSProjectVersion::VS2013, "12.0" },
             { CSProjectVersion::VS2015, "13.0" }, { CSProjectVersion::VS2017, "15.0" },
             { CSProjectVersion::VS2019, "16.0" }, { CSProjectVersion::MonoDevelop, "14.0" }
         };
@@ -198,8 +198,7 @@ EndProject)";
         const String projectGUID = GetProjectGUID(projectData.Name);
 
         String langVersion = "9.0";
-        return fmt::format(ProjectTemplate, versionData[projectVersion], langVersion, projectGUID,
-                                   projectData.Name, defines, refEntries, projectRefEntries, scriptEntries,
-                                   nonScriptEntries);
+        return fmt::format(ProjectTemplate, versionData[projectVersion], langVersion, projectGUID, projectData.Name,
+                           defines, refEntries, projectRefEntries, scriptEntries, nonScriptEntries);
     }
 } // namespace Crowny

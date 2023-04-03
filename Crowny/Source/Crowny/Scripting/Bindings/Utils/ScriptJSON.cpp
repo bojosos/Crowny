@@ -337,7 +337,7 @@ namespace Crowny
                 break;
             }
             case ScriptPrimitiveType::Color: {
-                rapidjson::Value &color = cur.SetObject();
+                rapidjson::Value& color = cur.SetObject();
                 glm::vec4 value = *(glm::vec4*)MonoUtils::Unbox((MonoObject*)data);
                 color.AddMember(rapidjson::Value("r"), rapidjson::Value(value.r), doc.GetAllocator());
                 color.AddMember(rapidjson::Value("g"), rapidjson::Value(value.g), doc.GetAllocator());

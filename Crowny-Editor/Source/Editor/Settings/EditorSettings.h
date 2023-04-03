@@ -37,6 +37,7 @@ namespace Crowny
         bool EnableConsoleErrorMessages = true;
         bool CollapseConsole = false;
         bool ScrollToBottom = true;
+        uint32_t MaxCallstackLength = 10;
 
         using Serializer = EditorSettingsSerializer;
     };

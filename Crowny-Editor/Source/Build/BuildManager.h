@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Crowny/Common/Module.h"
 #include "Build/PlatformInfo.h"
+#include "Crowny/Common/Module.h"
 
 namespace Crowny
 {
@@ -14,8 +14,8 @@ namespace Crowny
         Vector<Ref<PlatformInfo>> PlatformData;
     };
 
-	class BuildManager : public Module<BuildManager>
-	{
+    class BuildManager : public Module<BuildManager>
+    {
     public:
         BuildManager();
 
@@ -30,5 +30,5 @@ namespace Crowny
 
     private:
         Ref<BuildData> m_BuildData;
-	};
-}
+    };
+} // namespace Crowny

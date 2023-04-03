@@ -51,9 +51,9 @@
 
 #include "Crowny/Renderer/Font.h"
 
-#include "Editor/Script/ScriptProjectGenerator.h"
 #include "Build/BuildManager.h"
 #include "Editor/Script/CodeEditor.h"
+#include "Editor/Script/ScriptProjectGenerator.h"
 #include "Editor/Script/VisualStudioCodeEditor.h"
 
 #include <glm/glm.hpp>
@@ -204,6 +204,9 @@ namespace Crowny
 
         if (m_Temp == nullptr) // No scene was auto-loaded
             m_Temp = CreateRef<Scene>("Scene");
+
+        m_VisualStudioVersions = VisualStudioCodeEditor::GetAvailableVersions();
+        m_VisualStudioVersionId = 0;
     }
 
     void EditorLayer::CreateRenderTarget()
@@ -1334,6 +1337,33 @@ namespace Crowny
         ImGui::Checkbox("Show C# debug info", &m_ShowScriptDebugInfo);
         ImGui::Checkbox("Show asset info", &m_ShowAssetInfo);
         ImGui::Checkbox("Show entity debug info", &m_ShowEntityDebugInfo);
+
+        static const Vector<String> editors = { "VisualStudio", "MonoDevelop" };
+        if (UI::PropertyDropdown("Editor", editors, m_CodeEditor))
+        {
+            if (m_CodeEditor == CodeEditorType::VisualStudio)
+                CodeEditorManager::Get().SetEditorExecutablePath(
+                  m_VisualStudioVersions[m_VisualStudioVersionId].ExecutablePath);
+        }
+
+        if (m_CodeEditor == CodeEditorType::VisualStudio)
+        {
+            Vector<String> names;
+            names.reserve(m_VisualStudioVersions.size());
+            for (const VisualStudioInstall& install : m_VisualStudioVersions)
+                names.push_back(install.Name);
+            if (UI::PropertyDropdown("Visual Studio Version", names, m_VisualStudioVersionId))
+                CodeEditorManager::Get().SetEditorExecutablePath(
+                  m_VisualStudioVersions[m_VisualStudioVersionId].ExecutablePath);
+            const VisualStudioInstall& install = m_VisualStudioVersions[m_VisualStudioVersionId];
+            ImGui::Text(install.ExecutablePath.string().c_str());
+            if (install.Prerelease)
+                ImGui::Text("Prerelease");
+        }
+        else
+        {
+            CW_ENGINE_WARN("Unsupported code editor");
+        }
         ImGui::End();
     }
 
