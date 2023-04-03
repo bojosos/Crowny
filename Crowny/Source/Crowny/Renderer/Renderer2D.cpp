@@ -211,8 +211,7 @@ namespace Crowny
         s_Data->TextProjectionView = UniformBufferBlock::Create(
           vertex->GetUniformDesc()->Uniforms.at("Camera").BlockSize, BufferUsage::DYNAMIC_DRAW);
         s_Data->TextUniforms = UniformParams::Create(s_Data->TextPipeline);
-        s_Data->TextUniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "Camera",
-                                                      s_Data->TextProjectionView);
+        s_Data->TextUniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "Camera", s_Data->TextProjectionView);
     }
 
     void Renderer2D::Init()
@@ -371,7 +370,7 @@ namespace Crowny
 
         const auto& fontGeometry = textComponent.Font->GetMSDFData()->FontGeometry;
         const auto& fontMetrics = fontGeometry.getMetrics();
-        
+
         Ref<Texture> fontAtlasTexture = textComponent.Font->GetAtlasTexture();
         s_Data->FontAtlasTexture = fontAtlasTexture;
 
@@ -414,7 +413,7 @@ namespace Crowny
             if (character == '\t')
                 x += 4.0f * (fsScale * spaceGlyphAdvance + textComponent.CharacterSpacing);
 
-            const msdf_atlas::GlyphGeometry *glyphGeometry = fontGeometry.getGlyph(character);
+            const msdf_atlas::GlyphGeometry* glyphGeometry = fontGeometry.getGlyph(character);
             if (!glyphGeometry)
                 glyphGeometry = fontGeometry.getGlyph('?'); // TODO: Add missing symbol setting
             if (!glyphGeometry)
@@ -444,7 +443,7 @@ namespace Crowny
             double advance = glyphGeometry->getAdvance();
             if (textComponent.UseKerning && i < text.size() - 1)
             {
-                char nextCharacter = text[i + 1];    
+                char nextCharacter = text[i + 1];
                 fontGeometry.getAdvance(advance, character, nextCharacter);
             }
             x += fsScale * advance + textComponent.CharacterSpacing;
@@ -495,7 +494,8 @@ namespace Crowny
         s_Data->TextVertexCount = 0;
     }
 
-    static void FlushQuads() {
+    static void FlushQuads()
+    {
         if (s_Data->QuadIndexCount > 0)
         {
             RenderAPI::Get().SetGraphicsPipeline(s_Data->QuadPipeline);
@@ -538,7 +538,7 @@ namespace Crowny
             RenderAPI::Get().SetVertexBuffers(0, &s_Data->TextVertexBuffer, 1);
             RenderAPI::Get().SetIndexBuffer(s_Data->QuadIndexBuffer);
             void* data = s_Data->TextVertexBuffer->Map(0, s_Data->TextVertexCount * sizeof(TextVertex),
-                                                         GpuLockOptions::WRITE_DISCARD);
+                                                       GpuLockOptions::WRITE_DISCARD);
             std::memcpy(data, s_Data->TextTmpBuffer, s_Data->TextVertexCount * sizeof(TextVertex));
             s_Data->TextVertexBuffer->Unmap();
             s_Data->TextUniforms->SetTexture(0, 1, s_Data->FontAtlasTexture);

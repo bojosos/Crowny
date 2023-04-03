@@ -41,13 +41,16 @@ namespace Crowny
                 uint32_t Line;
             };
 
-            Vector<FunctionCall> Callstack;
+            Vector<Message::FunctionCall> Callstack;
         };
+
+        using CallstackBuffer = Vector<Message::FunctionCall>;
 
     public:
         ConsoleBuffer() = default;
         ~ConsoleBuffer() = default;
-        void AddMessage(const Message& message);
+        void AddMessage(Message::Level logLevel, const String& messageText,
+                        const Vector<Message::FunctionCall>& callstack = {});
 
         void Sort(uint32_t sortIdx, bool ascending);
         void Clear();
