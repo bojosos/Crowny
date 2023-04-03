@@ -2,8 +2,8 @@
 
 namespace Crowny
 {
-	class Cryptography
-	{
+    class Cryptography
+    {
     public:
         static String EncodeBase64(const String& src);
         static String EncodeBase64(const uint8_t* src, size_t length);
@@ -19,6 +19,6 @@ namespace Crowny
         static String SHA1(const String& src);
         static int SHA256(const uint8_t* src, size_t length, unsigned char hash[32]);
         static String SHA256(const String& src);
-	};
+    };
 
-}
+} // namespace Crowny

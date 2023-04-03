@@ -1,11 +1,11 @@
 #include "cwepch.h"
 
-#include "Editor/Script/VisualStudioCodeEditor.h"
 #include "Editor/Script/ScriptProjectGenerator.h"
+#include "Editor/Script/VisualStudioCodeEditor.h"
 
-#include "Crowny/Common/StringUtils.h"
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/PlatformUtils.h"
+#include "Crowny/Common/StringUtils.h"
 
 // #pragma warning(disable: 4278)
 // #import "libid:80cc9f66-e7d8-4ddd-85b6-d9e6cd0e93e2" version("8.0") lcid("0") raw_interfaces_only named_guids
@@ -19,17 +19,10 @@
 
 namespace Crowny
 {
-    static long GetRegistryStringValue(HKEY hKey, const WString& name, WString& value, const WString& defaultValue)
-    {
-        value = defaultValue;
+    constexpr uint32_t RETRY_INTERVAL_MS = 100; // Wait 100ms between retry
+    constexpr uint32_t TIMEOUT_MS = 10000;      // Wait for 10s
 
-        wchar_t strBuffer[1024];
-        DWORD strBufferSize = sizeof(strBuffer);
-        ULONG result = RegQueryValueExW(hKey, name.c_str(), 0, nullptr, (LPBYTE)strBuffer, &strBufferSize);
-        if (result == ERROR_SUCCESS)
-            value = strBuffer;
-        return result;
-    }
+    inline static WString QuoteString(const WString& str) { return L"\"" + str + L"\""; }
 
     struct VSProjectInfo
     {
@@ -37,6 +30,21 @@ namespace Crowny
         WString Name;
         Path path;
     };
+
+    static String ErrorCodeToMsg(DWORD error)
+    {
+        CW_ENGINE_ASSERT(error != 0);
+        LPSTR messageBuffer = nullptr;
+
+        size_t size =
+          FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                         NULL, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
+
+        std::string message(messageBuffer, size);
+
+        LocalFree(messageBuffer);
+        return message;
+    }
 
     class VSMessageFilter : public IMessageFilter
     {
@@ -48,6 +56,10 @@ namespace Crowny
 
         DWORD __stdcall RetryRejectedCall(HTASK htaskCallee, DWORD dwTickCount, DWORD dwRejectType) override
         {
+            if ((dwRejectType == SERVERCALL_RETRYLATER || dwRejectType == SERVERCALL_REJECTED) &&
+                dwTickCount < TIMEOUT_MS)
+                return RETRY_INTERVAL_MS;
+
             if (dwRejectType == SERVERCALL_RETRYLATER)
                 return 99;
             return -1;
@@ -94,7 +106,7 @@ namespace Crowny
     class VisualStudio
     {
     public:
-        static CComPtr<EnvDTE::_DTE> FindRunningInstance(const CLSID& clsID, const Path& solutionPath)
+        static CComPtr<EnvDTE::_DTE> FindRunningInstance(const Path& solutionPath, const Path& vsExePath)
         {
             CComPtr<IRunningObjectTable> runningObjectTable = nullptr;
             if (FAILED(GetRunningObjectTable(0, &runningObjectTable)))
@@ -104,41 +116,52 @@ namespace Crowny
             if (FAILED(runningObjectTable->EnumRunning(&enumMoniker)))
                 return nullptr;
 
-            CComPtr<IMoniker> dteMoniker = nullptr;
-            if (FAILED(CreateClassMoniker(clsID, &dteMoniker)))
-                return nullptr;
-
             WString widePath = solutionPath.wstring();
             CComBSTR bstrSolution(widePath.c_str());
-            CComPtr<IMoniker> moniker;
+            CComPtr<IMoniker> moniker = nullptr;
             ULONG count = 0;
-            while (enumMoniker->Next(1, &moniker, &count) == S_OK)
+            while (enumMoniker->Next(1, &moniker, &count) == S_OK && count)
             {
-                if (moniker->IsEqual(dteMoniker))
+                CComPtr<IUnknown> curObject = nullptr;
+                HRESULT result = runningObjectTable->GetObject(moniker, &curObject);
+                moniker = nullptr; // Reset moniker object so that it doesn't trigger the assert in Next from &CComPtr
+
+                if (result != S_OK)
+                    continue;
+
+                CComPtr<EnvDTE::_DTE> dte;
+                curObject->QueryInterface(__uuidof(EnvDTE::_DTE), (void**)&dte);
+
+                if (dte == nullptr)
+                    continue;
+
+                CComPtr<EnvDTE::_Solution> solution;
+                if (FAILED(dte->get_Solution(&solution)))
+                    continue;
+
+                CComBSTR vsFullName;
+                if (FAILED(dte->get_FullName(&vsFullName)))
+                    continue;
+                Path curPath = WString(vsFullName);
+                CComBSTR solutionName;
+                if (FAILED(solution->get_FullName(&solutionName)))
+                    continue;
+                Path curSolPath = WString(solutionName);
+                if (curSolPath.empty())
+                    continue;
+
+                if (fs::equivalent(curSolPath, solutionPath))
                 {
-                    CComPtr<IUnknown> curObject = nullptr;
-                    HRESULT result = runningObjectTable->GetObject(moniker, &curObject);
-                    moniker = nullptr;
+                    if (!vsExePath.empty())
+                    {
+                        if (fs::equivalent(curPath, vsExePath))
+                            CW_ENGINE_WARN("The running Visual studio instance does not seem to be the version "
+                                           "requested in the user prefs.");
+                    }
+                    else
+                        CW_ENGINE_WARN("Visual Studio version not selected in user prefs. Using the running version");
 
-                    if (result != S_OK)
-                        continue;
-
-                    CComPtr<EnvDTE::_DTE> dte;
-                    curObject->QueryInterface(__uuidof(EnvDTE::_DTE), (void**)&dte);
-
-                    if (dte == nullptr)
-                        continue;
-
-                    CComPtr<EnvDTE::_Solution> solution;
-                    if (FAILED(dte->get_Solution(&solution)))
-                        continue;
-
-                    CComBSTR fullName;
-                    if (FAILED(solution->get_FullName(&fullName)))
-                        continue;
-
-                    if (fullName == bstrSolution)
-                        return dte;
+                    return dte;
                 }
             }
             return nullptr;
@@ -168,13 +191,13 @@ namespace Crowny
                 return nullptr;
 
             uint32_t elapsed = 0;
-            while (elapsed < 20000)
+            while (elapsed < TIMEOUT_MS)
             {
                 EnvDTE::Window* window = nullptr;
                 if (SUCCEEDED(dte->get_MainWindow(&window)))
                     return dte;
-                Sleep(100);
-                elapsed += 100;
+                Sleep(RETRY_INTERVAL_MS);
+                elapsed += RETRY_INTERVAL_MS;
             }
 
             return nullptr;
@@ -194,7 +217,7 @@ namespace Crowny
             if (FAILED(itemOperations->OpenFile(bstrFilePath, bstrKind, &window)))
                 return false;
             CComPtr<EnvDTE::Document> activeDocument;
-            if (SUCCEEDED(dte->get_ActiveDocument(&activeDocument)))
+            if (line > 0 && SUCCEEDED(dte->get_ActiveDocument(&activeDocument)))
             {
                 CComPtr<IDispatch> selection;
                 if (SUCCEEDED(activeDocument->get_Selection(&selection)))
@@ -203,6 +226,7 @@ namespace Crowny
                     if (selection != nullptr && SUCCEEDED(selection->QueryInterface(&textSelection)))
                     {
                         textSelection->GotoLine(line, VARIANT_TRUE);
+                        textSelection->EndOfLine(false);
                     }
                 }
             }
@@ -218,11 +242,40 @@ namespace Crowny
             }
             return true;
         }
+
+        static bool StartVisualStudioProcess(const Path& vsExePath, const Path& solutionPath, DWORD& processId)
+        {
+            STARTUPINFOW si;
+            PROCESS_INFORMATION pi;
+            BOOL result;
+            ZeroMemory(&si, sizeof(si));
+            si.cb = sizeof(si);
+            ZeroMemory(&pi, sizeof(pi));
+
+            std::wstring startingDirectory = vsExePath.parent_path();
+            std::wstringstream commandLineStream;
+            commandLineStream << QuoteString(vsExePath) << L" ";
+            commandLineStream << QuoteString(solutionPath);
+
+            WString commandLine = commandLineStream.str();
+            result = CreateProcessW(vsExePath.c_str(), commandLine.data(), nullptr, nullptr, false, 0, nullptr,
+                                    startingDirectory.c_str(), &si, &pi);
+            if (!result)
+            {
+                DWORD error = GetLastError();
+                CW_ENGINE_ERROR("Starting Visual Studio process failed: {}", ErrorCodeToMsg(error));
+                return false;
+            }
+            processId = pi.dwProcessId;
+            CloseHandle(pi.hProcess);
+            CloseHandle(pi.hThread);
+            return true;
+        }
     };
 
     VisualStudioCodeEditor::VisualStudioCodeEditor(VisualStudioVersion version, const Path& execPath,
                                                    const WString& clsID)
-      : m_Version(version), m_ExecPath(execPath), m_ClsID(clsID)
+      : m_Version(version), m_ExecPath(execPath)
     {
     }
 
@@ -230,16 +283,23 @@ namespace Crowny
     {
         CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
-        CLSID clsID;
-        if (FAILED(CLSIDFromString(m_ClsID.c_str(), &clsID)))
-        {
-            CoUninitialize();
-            return;
-        }
-
-        CComPtr<EnvDTE::_DTE> dte = VisualStudio::FindRunningInstance(clsID, solutionPath);
+        CComPtr<EnvDTE::_DTE> dte = VisualStudio::FindRunningInstance(solutionPath, m_ExecPath);
         if (dte == nullptr)
-            dte = VisualStudio::CreateInstance(clsID, solutionPath);
+        {
+            DWORD processId = 0;
+            if (!VisualStudio::StartVisualStudioProcess(m_ExecPath, solutionPath, processId))
+                return;
+            int timeWaited = 0;
+            int TIMEOUT_MS = 90;
+            while (timeWaited < TIMEOUT_MS)
+            {
+                dte = VisualStudio::FindRunningInstance(solutionPath, m_ExecPath);
+                if (dte != nullptr)
+                    break;
+                Sleep(RETRY_INTERVAL_MS);
+                timeWaited += RETRY_INTERVAL_MS;
+            }
+        }
 
         if (dte == nullptr)
         {
@@ -314,11 +374,13 @@ namespace Crowny
         solutionStream->Close();
     }
 
-    void VisualStudioCodeEditor::GetAvailableVersions()
+    Vector<VisualStudioInstall> VisualStudioCodeEditor::GetAvailableVersions()
     {
+        Vector<VisualStudioInstall> versions;
         using namespace rapidjson;
 
-        String jsonResult = PlatformUtils::Exec("C:\\dev\\Crowny\\3rdparty\\vswhere\\vswhere.exe -prerelease -format json -utf8");
+        String jsonResult =
+          PlatformUtils::Exec("C:\\dev\\Crowny\\3rdparty\\vswhere\\vswhere.exe -prerelease -format json -utf8");
         Document document;
         document.Parse(jsonResult);
         CW_ENGINE_ASSERT(document.IsArray());
@@ -329,8 +391,12 @@ namespace Crowny
             const String displayName = val.FindMember("displayName")->value.GetString();
             const String displayVersion =
               val.FindMember("catalog")->value.FindMember("productDisplayVersion")->value.GetString();
-            const String name = displayName + "[" + displayVersion + "]";
-            CW_ENGINE_INFO("Prerelease: {}, path: {}, name: {}", isPrerelease, productPath, name);
+            const String name = displayName + " [" + displayVersion + "]";
+            versions.push_back({ productPath, isPrerelease, name });
         }
+        return versions;
     }
+
+    void VisualStudioCodeEditor::SetEditorExecutablePath(const Path& path) { m_ExecPath = path; }
+
 } // namespace Crowny

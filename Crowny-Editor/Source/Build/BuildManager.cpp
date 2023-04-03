@@ -15,10 +15,7 @@ namespace Crowny
           "CROWNY_EDITOR;CROWNY_EDITOR_WIN;CROWNY_WIN;CROWNY_64;CROWNY_0_0_1;CROWNY_MONO";
     }
 
-    BuildManager::BuildManager()
-    {
-        m_BuildData = CreateRef<BuildData>();
-    }
+    BuildManager::BuildManager() { m_BuildData = CreateRef<BuildData>(); }
 
     const Vector<PlatformType>& BuildManager::GetAvailablePlatforms() const
     {

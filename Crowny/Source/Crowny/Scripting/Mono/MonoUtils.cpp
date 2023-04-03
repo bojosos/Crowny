@@ -3,18 +3,16 @@
 #include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/Mono/MonoUtils.h"
 
-#include "Crowny/Common/UTF8.h"
-
 #include "Crowny/Common/ConsoleBuffer.h"
+#include "Crowny/Common/StringUtils.h"
+#include "Crowny/Common/UTF8.h"
 
 #include <mono/metadata/appdomain.h>
 #include <mono/metadata/class.h>
 #include <mono/metadata/metadata.h>
+#include <mono/metadata/mono-debug.h>
 #include <mono/metadata/object.h>
 #include <mono/metadata/reflection.h>
-#include <mono/metadata/mono-debug.h>
-
-#include "Crowny/Scripting/Mono/MonoMethod.h"
 
 namespace Crowny
 {
@@ -61,18 +59,30 @@ namespace Crowny
             ::MonoMethod* exceptionStackGetter = mono_property_get_get_method(exceptionStackProp);
             MonoString* exceptionStackTrace =
               (MonoString*)mono_runtime_invoke(exceptionStackGetter, exception, nullptr, nullptr);
-#ifdef CW_EDITOR // TODO: Fix these ifdefs
-            CW_ENGINE_CRITICAL("Managed exception: {0}:  {1} ---- {2}", exceptionClassName,
-                               mono_string_to_utf8(exceptionMsg),
-                               mono_string_to_utf8(exceptionStackTrace)); // does this work?
-#else
-            // ConsoleBuffer::Message message;
-            
 
-            // ConsoleBuffer::Get().AddMessage(message);
-            CW_ENGINE_CRITICAL("Managed exception: {0}:  {1} ---- {2}", exceptionClassName,
-                               mono_string_to_utf8(exceptionMsg),
-                               mono_string_to_utf8(exceptionStackTrace)); // does this work?
+            const String exceptionString = mono_string_to_utf8(exceptionMsg);
+            const String nativeExceptionStackTrace = mono_string_to_utf8(exceptionStackTrace);
+#ifndef CW_EDITOR // TODO: Fix this
+            Vector<String> lines = StringUtils::SplitString(nativeExceptionStackTrace, "\n");
+            lines.pop_back(); // Last line if the stack trace is the native-to-managed wrapper
+
+            ConsoleBuffer::CallstackBuffer callstack;
+            for (const String& line : lines)
+            {
+                const String trace = line.substr(5);
+                const Vector<String> split = StringUtils::SplitString(trace, " ");
+                const String method = split[0] + split[1];
+                const Vector<String> fileInfo = StringUtils::SplitString(split[4], ":");
+                const String pathString = fileInfo[0] + ":" + fileInfo[1];
+                const Path filepath = pathString;
+                const uint32_t line = StringUtils::ParseInt(fileInfo[2]);
+
+                callstack.push_back({ method, filepath, line });
+            }
+            ConsoleBuffer::Get().AddMessage(ConsoleBuffer::Message::Level::Error, exceptionString, callstack);
+#else
+            CW_ENGINE_CRITICAL("Managed exception: {0}:  {1} ---- {2}", exceptionClassName, exceptionString,
+                               nativeExceptionStackTrace);
 #endif
         }
     }
@@ -241,31 +251,9 @@ namespace Crowny
         return MonoPrimitiveType::Unknown;
     }
 
-    static mono_bool Callback(::MonoMethod* method, int32_t native_offset, int32_t il_offset, mono_bool managed, void* data){
-        if (managed)
-        {
-            String& result = *((String*)data);
-            MonoMethod temp(method);
-            // result += temp.GetFullDeclName() + " " + std::to_string(native_offset) + " " + std::to_string(il_offset) + "\n";
-            MonoDebugMethodInfo* methodInfo = mono_debug_lookup_method(method);
-            if (methodInfo)
-            {
-
-                MonoDebugSourceLocation* sourceLocation = mono_debug_method_lookup_location(methodInfo, il_offset);
-                result += fmt::format("Method: {} (at {}:{})", temp.GetFullDeclName(), sourceLocation->source_file,
-                                      sourceLocation->row, sourceLocation->column);
-                mono_debug_free_source_location(sourceLocation);
-            }
-        }
-        return false;
-    }
-
-    String MonoUtils::WalkStack()
+    void MonoUtils::WalkStack(MonoStackWalk walkCallback, void* userData)
     {
-        String result;
-        mono_stack_walk((MonoStackWalk)Callback, &result);
-        CW_ENGINE_INFO(result);
-        return result;
+        mono_stack_walk((::MonoStackWalk)walkCallback, userData);
     }
 
     ::MonoClass* MonoUtils::GetObjectClass() { return mono_get_object_class(); }

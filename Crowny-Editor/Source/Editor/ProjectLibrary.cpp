@@ -475,7 +475,8 @@ namespace Crowny
                             FileEntry* fileEntry = static_cast<FileEntry*>(child.get());
                             if (fileEntry->Metadata != nullptr)
                             {
-                                const bool found = std::find(assetTypes.begin(), assetTypes.end(), fileEntry->Metadata->Type) != assetTypes.end();
+                                const bool found = std::find(assetTypes.begin(), assetTypes.end(),
+                                                             fileEntry->Metadata->Type) != assetTypes.end();
                                 if (found)
                                     entries.push_back(child);
                             }

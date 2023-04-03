@@ -16,6 +16,7 @@ namespace Crowny
         void RenderHeader();
         void RenderSettings();
         void RenderMessage(const ConsoleBuffer::Message& message);
+        void RenderFooter();
 
         static glm::vec4 GetRenderColor(ConsoleBuffer::Message::Level level)
         {
@@ -59,6 +60,8 @@ namespace Crowny
         bool m_Collapse = false;
         bool m_AllowScrollingToBottom = true;
         bool m_RequestScrollToBottom = false;
+        float m_MessageHeight = 0.0f;
+        ConsoleBuffer::Message m_SelectedMessage;
     };
 
 } // namespace Crowny

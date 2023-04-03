@@ -504,7 +504,7 @@ namespace Crowny
             }
             break;
         }
-        case ScriptPrimitiveType::Color: { 
+        case ScriptPrimitiveType::Color: {
             glm::vec4 value = *(glm::vec4*)fieldValue;
             ImGuiColorEditFlags flags = ImGuiColorEditFlags_AlphaPreview;
             if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::HDR))
@@ -577,7 +577,7 @@ namespace Crowny
                                             std::function<MonoObject*()> getter, std::function<void(void*)> setter)
     {
         int32_t value =
-          *(int32_t*)MonoUtils::Unbox(getter());  // maybe here I would have to check the underlying type.....
+          *(int32_t*)MonoUtils::Unbox(getter());   // maybe here I would have to check the underlying type.....
         if (value >= enumInfo->m_EnumNames.size()) // Maybe clamp the value here?
         {
             ImGui::NextColumn();
@@ -593,11 +593,12 @@ namespace Crowny
         }
         else
         {
-           if (value < enumInfo->m_EnumNames.size() && UI::PropertyDropdown(memberInfo->m_Name.c_str(), enumInfo->m_EnumNames, value))
-           {
-               setter(&value);
-               return true;
-           }
+            if (value < enumInfo->m_EnumNames.size() &&
+                UI::PropertyDropdown(memberInfo->m_Name.c_str(), enumInfo->m_EnumNames, value))
+            {
+                setter(&value);
+                return true;
+            }
         }
         return false;
     }
