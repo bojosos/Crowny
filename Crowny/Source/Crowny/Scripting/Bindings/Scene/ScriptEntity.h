@@ -17,7 +17,7 @@ namespace Crowny
         static void Internal_SetName(ScriptEntity* thisPtr, MonoString* string);
         static MonoObject* Internal_GetParent(ScriptEntity* thisPtr);
         static void Internal_SetParent(ScriptEntity* thisPtr, MonoObject* parent);
-        static void Internal_GetUUID(ScriptEntity* thisPtr, UUID* uuid);
+        static void Internal_GetUUID(ScriptEntity* thisPtr, UUID42* uuid);
         static MonoObject* Internal_FindEntityByName(MonoString* name);
 
         static MonoObject* Internal_AddComponent(ScriptEntity* thisPtr, MonoReflectionType* type);

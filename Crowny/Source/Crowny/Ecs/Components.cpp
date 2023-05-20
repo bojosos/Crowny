@@ -357,11 +357,12 @@ namespace Crowny
         }
     }
 
-    MonoScript::MonoScript() : InstanceId(s_NextAvailableId++) {}
+    MonoScript::MonoScript() : m_RuntimeType(nullptr), InstanceId(s_NextAvailableId++) {}
 
-    MonoScript::MonoScript(const String& name) : m_TypeName(name), InstanceId(s_NextAvailableId++)
+    MonoScript::MonoScript(MonoReflectionType* runtimeType)
+      : m_RuntimeType(runtimeType), InstanceId(s_NextAvailableId++)
     {
-        SetClassName(name);
+        MonoUtils::GetClassName(runtimeType, m_Namespace, m_TypeName);
     }
 
     MonoClass* MonoScript::GetManagedClass() const { return m_Class; }
@@ -394,15 +395,14 @@ namespace Crowny
     void MonoScript::OnInitialize(ScriptEntityBehaviour* entityBehaviour)
     {
         m_ScriptEntityBehaviour = entityBehaviour;
-        // mFullTypeName = mNamespace + "." + mTypeName;
+        m_FullTypeName = m_Namespace + "." + m_TypeName;
 
         MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
         m_Class = nullptr;
         if (instance != nullptr)
         {
             ::MonoClass* monoClass = MonoUtils::GetClass(instance);
-            // mRuntimeType = MonoUtil::getType(monoClass);
-
+            m_RuntimeType = MonoUtils::GetType(monoClass);
             m_Class = MonoManager::Get().FindClass(monoClass);
         }
 
@@ -416,106 +416,94 @@ namespace Crowny
         m_OnTriggerStayThunk = nullptr;
         m_OnTriggerExitThunk = nullptr;
 
-        MonoObject* managedInstance = nullptr;
-        if (m_Class == nullptr)
-            return;
-        m_ObjectInfo = nullptr;
-        if (ScriptInfoManager::Get().GetSerializableObjectInfo(m_Class->GetNamespace(), m_Class->GetName(),
-                                                               m_ObjectInfo))
+        while (m_Class != nullptr)
         {
-            m_MissingType = false;
-            managedInstance = m_ObjectInfo->m_MonoClass->CreateInstance();
-            MonoClass* requireClass = ScriptInfoManager::Get().GetBuiltinClasses().RequireComponentAttribute;
-            MonoObject* requireComponent = m_ObjectInfo->m_TypeInfo->GetAttribute(requireClass);
-            if (requireComponent != nullptr)
+            if (m_OnStartThunk == nullptr)
             {
-                MonoField* field = requireClass->GetField("components");
-                MonoObject* components = nullptr;
-                components = field->GetBoxed(requireComponent);
-                if (components != nullptr)
+                MonoMethod* onStartMethod = m_Class->GetMethod("Start", 0);
+                if (onStartMethod != nullptr)
+                    m_OnStartThunk = (OnStartThunkDef)onStartMethod->GetThunk();
+            }
+
+            if (m_OnUpdateThunk == nullptr)
+            {
+                MonoMethod* onUpdateMethod = m_Class->GetMethod("Update", 0);
+                if (onUpdateMethod != nullptr)
+                    m_OnUpdateThunk = (OnUpdateThunkDef)onUpdateMethod->GetThunk();
+            }
+
+            if (m_OnDestroyThunk == nullptr)
+            {
+                MonoMethod* onDestroyMethod = m_Class->GetMethod("Destroy", 0);
+                if (onDestroyMethod != nullptr)
+                    m_OnDestroyThunk = (OnDestroyThunkDef)onDestroyMethod->GetThunk();
+            }
+
+            MonoMethod* onCollisionEnter = m_Class->GetMethod("OnCollisionEnter2D", "Collision2D");
+            if (onCollisionEnter != nullptr)
+                m_OnCollisionEnterThunk = (OnCollisionEnterThunkDef)onCollisionEnter->GetThunk();
+            MonoMethod* onCollisionStay = m_Class->GetMethod("OnCollisionStay2D", "Collision2D");
+            if (onCollisionStay != nullptr)
+                m_OnCollisionStayThunk = (OnCollisionStayThunkDef)onCollisionStay->GetThunk();
+            MonoMethod* onCollisionExit = m_Class->GetMethod("OnCollisionExit2D", "Collision2D");
+            if (onCollisionExit != nullptr)
+                m_OnCollisionExitThunk = (OnCollisionExitThunkDef)onCollisionExit->GetThunk();
+
+            MonoMethod* onTriggerEnter = m_Class->GetMethod("OnTriggerEnter2D", "Entity");
+            if (onTriggerEnter != nullptr)
+                m_OnTriggerEnterThunk = (OnTriggerEnterThunkDef)onTriggerEnter->GetThunk();
+            MonoMethod* onTriggerStay = m_Class->GetMethod("OnTriggerStay2D", "Entity");
+            if (onTriggerStay != nullptr)
+                m_OnTriggerStayThunk = (OnTriggerStayThunkDef)onTriggerStay->GetThunk();
+            MonoMethod* onTriggerExit = m_Class->GetMethod("OnTriggerExit2D", "Entity");
+            if (onTriggerExit != nullptr)
+                m_OnTriggerExitThunk = (OnTriggerExitThunkDef)onTriggerExit->GetThunk();
+
+            MonoClass* baseClass = m_Class->GetBaseClass();
+            if (baseClass == ScriptEntityBehaviour::GetMetaData()->ScriptClass)
+                break;
+            m_Class = baseClass;
+        }
+        // Could add and call an OnAwake method like in Unity here
+
+        MonoClass* requireClass = ScriptInfoManager::Get().GetBuiltinClasses().RequireComponentAttribute;
+        MonoObject* requireComponent = m_ObjectInfo->m_TypeInfo->GetAttribute(requireClass);
+        if (requireComponent != nullptr)
+        {
+            MonoField* field = requireClass->GetField("components");
+            MonoObject* components = nullptr;
+            components = field->GetBoxed(requireComponent);
+            if (components != nullptr)
+            {
+                MonoClass* listClass = field->GetType();
+                MonoProperty* countProp = listClass->GetProperty("Count");
+                MonoObject* lengthObj = countProp->Get(components);
+                uint32_t length = *(int32_t*)MonoUtils::Unbox(lengthObj);
+                MonoProperty* itemProp = listClass->GetProperty("Item");
+                for (uint32_t i = 0; i < length; i++)
                 {
-                    MonoClass* listClass = field->GetType();
-                    MonoProperty* countProp = listClass->GetProperty("Count");
-                    MonoObject* lengthObj = countProp->Get(components);
-                    uint32_t length = *(int32_t*)MonoUtils::Unbox(lengthObj);
-                    MonoProperty* itemProp = listClass->GetProperty("Item");
-                    for (uint32_t i = 0; i < length; i++)
+                    MonoReflectionType* reflType = (MonoReflectionType*)itemProp->GetIndexed(components, i);
+                    ComponentInfo* componentInfo = ScriptInfoManager::Get().GetComponentInfo(reflType);
+                    if (componentInfo != nullptr)
                     {
-                        MonoReflectionType* reflType = (MonoReflectionType*)itemProp->GetIndexed(components, i);
-                        ComponentInfo* componentInfo = ScriptInfoManager::Get().GetComponentInfo(reflType);
-                        if (componentInfo != nullptr)
-                        {
-                            if (!componentInfo->HasCallback(entityBehaviour->GetNativeEntity()))
-                                componentInfo->AddCallback(entityBehaviour->GetNativeEntity());
-                        }
-                        else
-                            CW_ENGINE_WARN("Could not find component class {0} used in RequireComponent for class {1}",
-                                           MonoUtils::GetReflTypeName(reflType), m_Class->GetFullName());
+                        if (!componentInfo->HasCallback(entityBehaviour->GetNativeEntity()))
+                            componentInfo->AddCallback(entityBehaviour->GetNativeEntity());
                     }
+                    else
+                        CW_ENGINE_WARN("Could not find component class {0} used in RequireComponent for class {1}",
+                                       MonoUtils::GetReflTypeName(reflType), m_Class->GetFullName());
                 }
             }
-        }
-        else
-        {
-            managedInstance = nullptr;
-            m_MissingType = true;
-            CW_ENGINE_WARN("Missing type");
-        }
-
-        // m_ScriptEntityBehaviour =
-        // ScriptSceneObjectManager::Get().CreateManagedScriptComponent(managedInstance,
-        // entityBehaviour->GetNativeEntity(), *this);
-
-        if (m_OnStartThunk == nullptr)
-        {
-            MonoMethod* onStartMethod = m_Class->GetMethod("Start", 0);
-            if (onStartMethod != nullptr)
-                m_OnStartThunk = (OnStartThunkDef)onStartMethod->GetThunk();
-        }
-
-        if (m_OnUpdateThunk == nullptr)
-        {
-            MonoMethod* onUpdateMethod = m_Class->GetMethod("Update", 0);
-            if (onUpdateMethod != nullptr)
-                m_OnUpdateThunk = (OnUpdateThunkDef)onUpdateMethod->GetThunk();
-        }
-
-        if (m_OnDestroyThunk == nullptr)
-        {
-            MonoMethod* onDestroyMethod = m_Class->GetMethod("Destroy", 0);
-            if (onDestroyMethod != nullptr)
-                m_OnDestroyThunk = (OnDestroyThunkDef)onDestroyMethod->GetThunk();
         }
 
         if (m_SerializedObjectData != nullptr && !m_MissingType)
         {
+            // TODO: Check this.
             // This is called with the wrong object info. Here the deserialized object info should be used. Also store
-            // the object data after reload with missnig classes in case they come back.
+            // the object data after reload with missing classes in case they come back.
             m_SerializedObjectData->Deserialize(instance, m_ObjectInfo);
             m_SerializedObjectData = nullptr;
         }
-
-        MonoMethod* onCollisionEnter = GetManagedClass()->GetMethod("OnCollisionEnter2D", "Collision2D");
-        if (onCollisionEnter != nullptr)
-            m_OnCollisionEnterThunk = (OnCollisionEnterThunkDef)onCollisionEnter->GetThunk();
-        MonoMethod* onCollisionStay = GetManagedClass()->GetMethod("OnCollisionStay2D", "Collision2D");
-        if (onCollisionStay != nullptr)
-            m_OnCollisionStayThunk = (OnCollisionStayThunkDef)onCollisionStay->GetThunk();
-        MonoMethod* onCollisionExit = GetManagedClass()->GetMethod("OnCollisionExit2D", "Collision2D");
-        if (onCollisionExit != nullptr)
-            m_OnCollisionExitThunk = (OnCollisionExitThunkDef)onCollisionExit->GetThunk();
-
-        MonoMethod* onTriggerEnter = GetManagedClass()->GetMethod("OnTriggerEnter2D", "Entity");
-        if (onTriggerEnter != nullptr)
-            m_OnTriggerEnterThunk = (OnTriggerEnterThunkDef)onTriggerEnter->GetThunk();
-        MonoMethod* onTriggerStay = GetManagedClass()->GetMethod("OnTriggerStay2D", "Entity");
-        if (onTriggerStay != nullptr)
-            m_OnTriggerStayThunk = (OnTriggerStayThunkDef)onTriggerStay->GetThunk();
-        MonoMethod* onTriggerExit = GetManagedClass()->GetMethod("OnTriggerExit2D", "Entity");
-        if (onTriggerExit != nullptr)
-            m_OnTriggerExitThunk = (OnTriggerExitThunkDef)onTriggerExit->GetThunk();
-
-        // Could add and call an OnAwake method like in Unity here
     }
 
     ScriptObjectBackupData MonoScript::Backup()
@@ -567,7 +555,7 @@ namespace Crowny
 
     void MonoScript::Restore(const ScriptObjectBackupData& data, bool missingType)
     {
-        // OnInitialize(entity);
+        OnInitialize(m_ScriptEntityBehaviour);
         m_ObjectInfo = nullptr;
 
         MonoObject* instance = GetManagedInstance();

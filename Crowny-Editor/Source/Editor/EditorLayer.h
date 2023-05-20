@@ -115,14 +115,6 @@ namespace Crowny
         entt::registry m_ComponentRegistry;
     };
 
-    struct VisualStudioInstall;
-
-    enum CodeEditorType
-    {
-        VisualStudio,
-        MonoDevelop
-    };
-
     class EditorLayer : public Layer
     {
     public:
@@ -161,6 +153,7 @@ namespace Crowny
         void AddRecentEntry(const Path& path);
         void SetProjectSettings();
         void SaveProjectSettings();
+        void ApplyEditorSettings();
 
         void UI_ProjectManager();
         void UI_Header();
@@ -214,9 +207,7 @@ namespace Crowny
 
         Stack<UndoAction> m_UndoStack;
 
-        Vector<VisualStudioInstall> m_VisualStudioVersions;
-        uint32_t m_VisualStudioVersionId;
-        CodeEditorType m_CodeEditor = CodeEditorType::VisualStudio;
+        int32_t m_VisualStudioVersionId = 0;
 
         static float s_DeltaTime;
         static float s_SmoothDeltaTime;

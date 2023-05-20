@@ -17,7 +17,8 @@ namespace Crowny
     void ComponentEditor::Render()
     {
         Entity entity = HierarchyPanel::GetSelectedEntity();
-        entt::registry& registry = SceneManager::GetActiveScene()->m_Registry;
+        Ref<Scene> scene = SceneManager::GetActiveScene();
+        entt::registry& registry = scene->m_Registry;
 
         ImGui::Separator();
 
@@ -52,7 +53,6 @@ namespace Crowny
                         // Draw the collapsing headers in the widget itself, since one component can have multiple
                         // scripts
                         ci.widget(entity);
-                        // ImGui::PopID();
                         continue;
                     }
                     ImGui::PushID(tid);
@@ -104,8 +104,7 @@ namespace Crowny
                             {
                                 if (tid == entt::type_hash<MonoScriptComponent>::value())
                                 {
-                                    ci.create(entity);
-                                    entity.GetComponent<MonoScriptComponent>().Scripts.push_back({});
+                                    scene->AddScriptComponent(entity, "", "", false);
                                     ImGui::CloseCurrentPopup();
                                 }
                                 else
@@ -137,17 +136,7 @@ namespace Crowny
                             ImGui::PushItemWidth(-1);
                             if (ImGui::Button(name.c_str()))
                             {
-                                if (!entity.HasComponent<MonoScriptComponent>())
-                                {
-                                    MonoScriptComponent& msc = entity.AddComponent<MonoScriptComponent>(name);
-                                    msc.Scripts.back().Create(entity);
-                                }
-                                else
-                                {
-                                    auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
-                                    scripts.push_back(MonoScript(name));
-                                    scripts.back().Create(entity);
-                                }
+                                scene->AddScriptComponent(entity, "Sandbox", name);
                                 ImGui::CloseCurrentPopup();
                             }
                         }
@@ -179,22 +168,7 @@ namespace Crowny
                                 ProjectLibrary::Get().Refresh(path);
                                 ImGui::CloseCurrentPopup();
                                 // TODO: Need to trigger assembly refresh here and add the script after.
-                                if (!entity.HasComponent<MonoScriptComponent>())
-                                {
-                                    MonoScriptComponent& msc = entity.AddComponent<MonoScriptComponent>(s_SearchString);
-                                    msc.Scripts.back().Create(entity);
-                                }
-                                else
-                                {
-                                    auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
-                                    bool exists = false;
-                                    for (auto& script : scripts)
-                                        if (script.GetTypeName() == s_SearchString)
-                                            exists = true;
-                                    if (!exists)
-                                        scripts.push_back(MonoScript(s_SearchString));
-                                    scripts.back().Create(entity);
-                                }
+                                scene->AddScriptComponent(entity, "Sandbox", s_SearchString);
                             }
                         }
                     }
@@ -231,10 +205,7 @@ namespace Crowny
                                     if (ImGui::Selectable(cInfo.name.c_str()))
                                     {
                                         if (cId == entt::type_hash<MonoScriptComponent>::value())
-                                        {
-                                            cInfo.create(entity);
-                                            entity.GetComponent<MonoScriptComponent>().Scripts.push_back({});
-                                        }
+                                            scene->AddScriptComponent(entity, "", "", false);
                                         else
                                             cInfo.create(entity);
                                     }
@@ -255,10 +226,7 @@ namespace Crowny
                             if (ImGui::Selectable(ci.name.c_str()))
                             {
                                 if (tid == entt::type_hash<MonoScriptComponent>::value())
-                                {
-                                    ci.create(entity);
-                                    entity.GetComponent<MonoScriptComponent>().Scripts.push_back({});
-                                }
+                                    scene->AddScriptComponent(entity, "", "", false);
                                 else
                                     ci.create(entity);
                             }

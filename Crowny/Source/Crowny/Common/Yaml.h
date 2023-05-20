@@ -44,7 +44,7 @@ namespace Crowny
         return out;
     }
 
-    inline YAML::Emitter& operator<<(YAML::Emitter& out, const Crowny::UUID& uuid)
+    inline YAML::Emitter& operator<<(YAML::Emitter& out, const Crowny::UUID42& uuid)
     {
         out << uuid.ToString();
         return out;
@@ -167,20 +167,20 @@ namespace Crowny
 namespace YAML
 {
 
-    template <> struct convert<Crowny::UUID>
+    template <> struct convert<Crowny::UUID42>
     {
-        static Node encode(const Crowny::UUID& uuid)
+        static Node encode(const Crowny::UUID42& uuid)
         {
             Node node;
             node = uuid.ToString();
             return node;
         }
 
-        static bool decode(const Node& node, Crowny::UUID& rhs)
+        static bool decode(const Node& node, Crowny::UUID42& rhs)
         {
             if (!node.IsScalar())
                 return false;
-            rhs = Crowny::UUID(node.as<std::string>());
+            rhs = Crowny::UUID42(node.as<std::string>());
 
             return true;
         }

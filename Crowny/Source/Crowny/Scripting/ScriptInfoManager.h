@@ -35,6 +35,8 @@ namespace Crowny
         MonoClass* StepAttribute = nullptr;
         MonoClass* ShowInInspectorAttribute = nullptr;
         MonoClass* HideInInspectorAttribute = nullptr;
+        MonoClass* RunInEditorAttribute = nullptr;
+        MonoClass* ButtonAttribute = nullptr;
         MonoClass* SerializeObjectAttribute = nullptr;
         MonoClass* NotNullAttribute = nullptr;
         MonoClass* DontSerializeFieldAttribute = nullptr;
@@ -47,6 +49,7 @@ namespace Crowny
         MonoClass* DropdownAttribute = nullptr;
         MonoClass* LabelAttribute = nullptr;
         MonoClass* FilepathAttribute = nullptr;
+        MonoClass* FolderPathAttribute = nullptr;
         MonoClass* ReadOnlyAttribute = nullptr;
         MonoClass* HeaderAttribute = nullptr;
 

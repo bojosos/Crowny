@@ -11,16 +11,16 @@ namespace Crowny
         UUIDDirectory() = default;
         UUIDDirectory(const Path& path);
 
-        Path GetPath(const UUID& uuid) const;
-        void OnFileWrite(const UUID& uuid);
+        Path GetPath(const UUID42& uuid) const;
+        void OnFileWrite(const UUID42& uuid);
 
         void Refresh();
-        void RemovePath(const UUID& uuid);
+        void RemovePath(const UUID42& uuid);
         void RemovePath(const Path& path);
 
     private:
         Path m_Path;
-        UnorderedMap<UUID, Path> m_Uuids;
+        UnorderedMap<UUID42, Path> m_Uuids;
     };
 
 } // namespace Crowny

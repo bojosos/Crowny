@@ -7,6 +7,8 @@
 
 #include "Crowny/Physics/Physics2D.h"
 
+#include "Crowny/Scripting/ScriptInfoManager.h"
+
 #include <box2d/box2d.h>
 #include <entt/entt.hpp>
 
@@ -15,7 +17,7 @@ namespace Crowny
 
     template <typename... Component>
     static void CopyComponent(entt::registry& dst, entt::registry& src,
-                              const UnorderedMap<UUID, entt::entity>& entityMap)
+                              const UnorderedMap<UUID42, entt::entity>& entityMap)
     {
         (
           [&]() {
@@ -32,7 +34,7 @@ namespace Crowny
 
     template <typename... Component>
     static void CopyComponent(ComponentGroup<Component...>, entt::registry& dst, entt::registry& src,
-                              const UnorderedMap<UUID, entt::entity>& entityMap)
+                              const UnorderedMap<UUID42, entt::entity>& entityMap)
     {
         CopyComponent<Component...>(dst, src, entityMap);
     }
@@ -54,7 +56,7 @@ namespace Crowny
     }
 
     static void CopyAllComponents(entt::registry& dstRegistry, entt::registry& srcRegistry,
-                                  const UnorderedMap<UUID, entt::entity>& entityMap)
+                                  const UnorderedMap<UUID42, entt::entity>& entityMap)
     {
         CopyComponent(AllComponents{}, dstRegistry, srcRegistry, entityMap);
     }
@@ -84,12 +86,12 @@ namespace Crowny
 
         m_RootEntity = new Entity(m_Registry.create(), this);
 
-        UnorderedMap<UUID, entt::entity> entityMap;
+        UnorderedMap<UUID42, entt::entity> entityMap;
 
         auto idView = m_Registry.view<IDComponent>();
         for (auto e : idView)
         {
-            const UUID& uuid = other.m_Registry.get<IDComponent>(e).Uuid;
+            const UUID42& uuid = other.m_Registry.get<IDComponent>(e).Uuid;
             const String& name = other.m_Registry.get<TagComponent>(e).Tag;
             Entity newEntity = CreateEntityWithUuid(uuid, name);
             entityMap[uuid] = e;
@@ -112,12 +114,12 @@ namespace Crowny
 
         m_RootEntity = new Entity(m_Registry.create(), this);
 
-        UnorderedMap<UUID, entt::entity> entityMap;
+        UnorderedMap<UUID42, entt::entity> entityMap;
 
         auto idView = m_Registry.view<IDComponent>();
         for (auto e : idView)
         {
-            const UUID& uuid = other.m_Registry.get<IDComponent>(e).Uuid;
+            const UUID42& uuid = other.m_Registry.get<IDComponent>(e).Uuid;
             const String& name = other.m_Registry.get<TagComponent>(e).Tag;
             Entity newEntity = CreateEntityWithUuid(uuid, name);
             entityMap[uuid] = e;
@@ -233,6 +235,77 @@ namespace Crowny
         source.Stop();
     }
 
+    bool Scene::HasScriptComponent(Entity entity, const String& namespaceName, const String& typeName)
+    {
+        if (entity.HasComponent<MonoScriptComponent>())
+        {
+            const MonoScriptComponent& monoScriptComponent = entity.GetComponent<MonoScriptComponent>();
+            for (const MonoScript& script : monoScriptComponent.Scripts)
+            {
+                if (script.GetNamespace() == namespaceName && script.GetTypeName() == typeName)
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    void Scene::AddScriptComponent(Entity entity, const String& namespaceName, const String& typeName, bool initialize)
+    {
+        MonoClass* monoClass = MonoManager::Get().FindClass(namespaceName, typeName);
+        CW_ENGINE_ASSERT(monoClass != nullptr);
+        ::MonoClass* rawClass = monoClass->GetInternalPtr();
+        MonoReflectionType* runtimeType = MonoUtils::GetType(rawClass);
+        if (entity.HasComponent<MonoScriptComponent>())
+        {
+            MonoScriptComponent& monoScriptComponent = entity.GetComponent<MonoScriptComponent>();
+
+#ifdef CW_DEBUG
+            for (const MonoScript& script : monoScriptComponent.Scripts)
+            {
+                if (script.GetNamespace() == namespaceName && script.GetTypeName() == typeName)
+                {
+                    CW_ENGINE_ASSERT(false, "Entity already has that managed component");
+                    return;
+                }
+            }
+#endif
+            monoScriptComponent.Scripts.push_back(MonoScript(runtimeType));
+            if (initialize)
+            {
+                monoScriptComponent.Scripts.back().Create(entity);
+                MonoClass* runInEditor = ScriptInfoManager::Get().GetBuiltinClasses().RunInEditorAttribute;
+                if (!m_IsEditorScene || monoClass->HasAttribute(runInEditor))
+                    monoScriptComponent.Scripts.back().OnStart();
+            }
+        }
+        else
+        {
+            MonoScriptComponent& monoScriptComponent = entity.AddComponent<MonoScriptComponent>();
+#ifdef CW_DEBUG
+            for (const MonoScript& script : monoScriptComponent.Scripts)
+            {
+                if (script.GetNamespace() == namespaceName && script.GetTypeName() == typeName)
+                {
+                    CW_ENGINE_ASSERT(false, "Entity already has that managed component");
+                    return;
+                }
+            }
+#endif
+            monoScriptComponent.Scripts.push_back(MonoScript(runtimeType));
+            if (initialize)
+            {
+                monoScriptComponent.Scripts.back().Create(entity);
+                monoScriptComponent.Scripts.back().Create(entity);
+                MonoClass* runInEditor = ScriptInfoManager::Get().GetBuiltinClasses().RunInEditorAttribute;
+                if (!m_IsEditorScene || monoClass->HasAttribute(runInEditor))
+                    monoScriptComponent.Scripts.back().OnStart();
+            }
+        }
+    }
+
+    void Scene::RemoveScriptComponent(Entity entity, const String& namespaceName, const String& typeName)
+        {}
+
     void Scene::OnRuntimeStart()
     {
         Physics2D::Get().BeginSimulation(this);
@@ -296,7 +369,7 @@ namespace Crowny
         return entity;
     }
 
-    Entity Scene::CreateEntityWithUuid(const UUID& uuid, const String& name)
+    Entity Scene::CreateEntityWithUuid(const UUID42& uuid, const String& name)
     {
         Entity entity(m_Registry.create(), this);
 
@@ -308,7 +381,7 @@ namespace Crowny
         return entity;
     }
 
-    Entity Scene::GetEntityFromUuid(const UUID& uuid)
+    Entity Scene::GetEntityFromUuid(const UUID42& uuid)
     {
         Entity result;
         m_Registry.each([&](auto entityID) {

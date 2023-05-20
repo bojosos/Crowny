@@ -218,8 +218,7 @@ namespace Crowny
                     Ref<SerializableFieldKey> key =
                       CreateRef<SerializableFieldKey>(field->m_ParentTypeId, field->m_FieldId);
                     Ref<SerializableFieldData> data = object.GetFieldData(field);
-                    entries.push_back({});
-                    FieldEntry& entry = entries.back();
+                    FieldEntry& entry = entries.emplace_back();
                     entry.Key = key;
                     entry.Data = data;
                 }

@@ -2,19 +2,6 @@
 
 namespace Crowny
 {
-    enum class CSProjectVersion
-    {
-        VS2008,
-        VS2010,
-        VS2012,
-        VS2013,
-        VS2015,
-        VS2017,
-        VS2019,
-        VS2022,
-        MonoDevelop
-    };
-
     struct ScriptProjectReference
     {
         String Name;
@@ -37,6 +24,20 @@ namespace Crowny
         Vector<CodeProjectData> Projects;
     };
 
+    enum class CSProjectVersion
+    {
+        VS2008,
+        VS2010,
+        VS2012,
+        VS2013,
+        VS2015,
+        VS2017,
+        VS2019,
+        VS2022,
+        None,
+        MonoDevelop
+    };
+
     class CSProject
     {
     public:
@@ -53,12 +54,6 @@ namespace Crowny
         static const String ReferencePathEntryTemplate;
         static const String ScriptEntryTemplate;
         static const String NonScriptEntryTemplate;
-    };
-
-    class ScriptProjectGenerator
-    {
-    public:
-        static void Sync();
     };
 
 } // namespace Crowny

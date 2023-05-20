@@ -115,7 +115,7 @@ namespace Crowny
         m_Settings->DefaultMaterial =
           static_asset_cast<PhysicsMaterial2D>(AssetManager::Get().CreateAssetHandle(CreateRef<PhysicsMaterial2D>()));
         for (uint32_t i = 0; i < m_Settings->MaskBits.size(); i++)
-            m_Settings->MaskBits[i] = 0xFFFFFFFF;
+            m_Settings->MaskBits[i] = 0xffffffff;
         m_TemporaryWorld2D = new b2World({ m_Settings->Gravity.x, m_Settings->Gravity.y });
     }
 

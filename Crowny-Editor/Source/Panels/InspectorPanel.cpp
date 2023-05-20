@@ -115,23 +115,19 @@ namespace Crowny
                         String className = payloadPath.filename().replace_extension("").string();
                         if (!selectedEntity.HasComponent<MonoScriptComponent>())
                         {
-                            MonoScriptComponent& msc = selectedEntity.AddComponent<MonoScriptComponent>(
-                              payloadPath.filename().replace_extension("").string());
-                            AssetHandle<ScriptCode> scriptCode =
-                              static_asset_cast<ScriptCode>(ProjectLibrary::Get().Load(
-                                payloadPath)); // TODO: Analyze the code to extract the name of the MonoBehaviour class
-                            // FIXME msc.Scripts[0].OnInitialize(selectedEntity);
-                        }
-                        else
-                        {
-                            auto& scripts = selectedEntity.GetComponent<MonoScriptComponent>().Scripts;
+                            Ref<Scene> activeScene = SceneManager::GetActiveScene();
                             bool exists = false;
-                            for (auto& script : scripts)
-                                if (script.GetTypeName() == className)
-                                    exists = true;
+                            if (selectedEntity.HasComponent<MonoScriptComponent>())
+                            {
+                                auto& scripts = selectedEntity.GetComponent<MonoScriptComponent>().Scripts;
+                                for (auto& script : scripts)
+                                {
+                                    if (script.GetTypeName() == className)
+                                        exists = true;
+                                }
+                            }
                             if (!exists)
-                                scripts.push_back(MonoScript(className));
-                            // FIXME scripts.back().OnInitialize(selectedEntity);
+                                activeScene->AddScriptComponent(selectedEntity, "Sandbox", className);
                         }
                     }
                 }
@@ -159,13 +155,13 @@ namespace Crowny
 
                 if (ImGui::IsItemClicked())
                 {
-                    Vector<Path> outPaths;
-                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
-                    {
-                        Ref<Texture> albedo;
-                        // LoadTexture(outPaths[0], albedo);
-                        s_SelectedMaterial->SetAlbedoMap(albedo);
-                    }
+                    // Vector<Path> outPaths;
+                    // if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
+                    // {
+                    //     Ref<Texture> albedo;
+                    //     // LoadTexture(outPaths[0], albedo);
+                    //     s_SelectedMaterial->SetAlbedoMap(albedo);
+                    // }
                 }
 
                 static glm::vec4 color = glm::vec4(1.0f);
@@ -190,13 +186,13 @@ namespace Crowny
 
                 if (ImGui::IsItemClicked())
                 {
-                    Vector<Path> outPaths;
-                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
-                    {
-                        Ref<Texture> metalness;
-                        //  LoadTexture(outPaths[0], metalness);
-                        s_SelectedMaterial->SetMetalnessMap(metalness);
-                    }
+                    // Vector<Path> outPaths;
+                    // if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
+                    // {
+                    //     Ref<Texture> metalness;
+                    //     //  LoadTexture(outPaths[0], metalness);
+                    //     s_SelectedMaterial->SetMetalnessMap(metalness);
+                    // }
                 }
 
                 static float metalnessVal = 0.8f;
@@ -223,13 +219,13 @@ namespace Crowny
 
                 if (ImGui::IsItemClicked())
                 {
-                    Vector<Path> outPaths;
-                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
-                    {
-                        Ref<Texture> normal;
-                        // LoadTexture(outPaths[0], normal);
-                        s_SelectedMaterial->SetNormalMap(normal);
-                    }
+                    // Vector<Path> outPaths;
+                    // if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
+                    // {
+                    //     Ref<Texture> normal;
+                    //     // LoadTexture(outPaths[0], normal);
+                    //     s_SelectedMaterial->SetNormalMap(normal);
+                    // }
                 }
                 if (ImGui::Button("Reset##resetNormal"))
                 {
@@ -247,13 +243,13 @@ namespace Crowny
 
                 if (ImGui::IsItemClicked())
                 {
-                    Vector<Path> outPaths;
-                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
-                    {
-                        Ref<Texture> roughness;
-                        // LoadTexture(outPaths[0], roughness);
-                        s_SelectedMaterial->SetRoughnessMap(roughness);
-                    }
+                    // Vector<Path> outPaths;
+                    // if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
+                    // {
+                    //     Ref<Texture> roughness;
+                    //     // LoadTexture(outPaths[0], roughness);
+                    //     s_SelectedMaterial->SetRoughnessMap(roughness);
+                    // }
                 }
 
                 static float roughnessValue = 0.2f;
@@ -278,13 +274,13 @@ namespace Crowny
 
                 if (ImGui::IsItemClicked())
                 {
-                    Vector<Path> outPaths;
-                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
-                    {
-                        Ref<Texture> ao;
-                        // LoadTexture(outPaths[0], ao);
-                        s_SelectedMaterial->SetAoMap(ao);
-                    }
+                    // Vector<Path> outPaths;
+                    // if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
+                    // {
+                    //     Ref<Texture> ao;
+                    //     // LoadTexture(outPaths[0], ao);
+                    //     s_SelectedMaterial->SetAoMap(ao);
+                    // }
                 }
             }
         }

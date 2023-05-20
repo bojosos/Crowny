@@ -18,7 +18,7 @@ namespace Crowny
     {
         PlatformType Type;
         String Defines;
-        UUID MainScene;
+        UUID42 MainScene;
         bool Debug;
         AssetHandle<Texture> Icon;
     };

@@ -54,7 +54,7 @@ namespace Crowny
         return MonoUtils::ToMonoString(thisPtr->GetGenericHandle()->GetName());
     }
 
-    void ScriptAsset::Internal_GetUUID(ScriptAssetBase* thisPtr, UUID* outUuid)
+    void ScriptAsset::Internal_GetUUID(ScriptAssetBase* thisPtr, UUID42* outUuid)
     {
         *outUuid = thisPtr->GetGenericHandle().GetUUID();
     }

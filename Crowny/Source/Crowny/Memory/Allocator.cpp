@@ -87,21 +87,23 @@ namespace Crowny
         if (memory == nullptr)
             return;
 
-        if (s_Data->m_AllocationMap.find(memory) != s_Data->m_AllocationMap.end())
+        bool found = false;
         {
             std::scoped_lock<std::mutex> lock(s_Data->m_Mutex);
-            const Allocation& alloc = s_Data->m_AllocationMap.at(memory);
-            s_GlobalStats.TotalFreed += alloc.Size;
-            if (alloc.Category)
-                s_Data->m_AllocationStatsMap[alloc.Category].TotalFreed += alloc.Size;
+            auto iterFind = s_Data->m_AllocationMap.find(memory);
+            found = iterFind != s_Data->m_AllocationMap.end();
+            if (found)
+            {
+                const Allocation& alloc = iterFind->second;
+                s_GlobalStats.TotalFreed += alloc.Size;
+                if (alloc.Category)
+                    s_Data->m_AllocationStatsMap[alloc.Category].TotalFreed += alloc.Size;
 
-            s_Data->m_AllocationMap.erase(memory);
+                s_Data->m_AllocationMap.erase(memory);
+            }
         }
-        else
-        {
-            // TODO: Figure out why msdf is able to get in here. Maybe it uses some secret C++ allocator.
+        if (!found)
             CW_ENGINE_WARN("Memory: Memory block {0} not present in alloc map", memory);
-        }
 
         free(memory);
     }

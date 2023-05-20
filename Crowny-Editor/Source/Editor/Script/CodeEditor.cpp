@@ -3,12 +3,33 @@
 #include "Build/BuildManager.h"
 #include "Editor/Editor.h"
 #include "Editor/ProjectLibrary.h"
-#include "Editor/Script/CodeEditor.h"
 #include "Editor/Script/ScriptProjectGenerator.h"
 #include "Editor/Script/VisualStudioCodeEditor.h"
 
 namespace Crowny
 {
+    CodeEditorManager::CodeEditorManager() : m_ActiveEditor(nullptr)
+    {
+#ifdef CW_WINDOWS
+        VisualStudioCodeEditorFactory* vsCodeEditorFactory = new VisualStudioCodeEditorFactory();
+        Vector<CodeEditorInstallation> vsEditors = vsCodeEditorFactory->GetAvailableEditors();
+        for (CodeEditorInstallation& editor : vsEditors)
+        {
+            m_FactoryPerEditor[editor.ExecutablePath] = vsCodeEditorFactory;
+            m_Editors.push_back(editor);
+        }
+        m_Factories.push_back(vsCodeEditorFactory);
+#endif
+    }
+
+    CodeEditorManager::~CodeEditorManager()
+    {
+        for (auto* factory : m_Factories)
+            delete factory;
+        if (m_ActiveEditor != nullptr)
+            delete m_ActiveEditor;
+    }
+
     Path CodeEditorManager::GetSolutionPath() const
     {
         Path path = Editor::Get().GetProjectPath();
@@ -27,15 +48,28 @@ namespace Crowny
         m_ActiveEditor->OpenFile(GetSolutionPath(), filepath, lineNumber);
     }
 
+    void CodeEditorManager::SetActive(const Path& path)
+    {
+        if (m_ActiveEditor != nullptr)
+        {
+            delete m_ActiveEditor;
+            m_ActiveEditor = nullptr;
+        }
+        for (const CodeEditorInstallation& install : m_Editors)
+        {
+            if (install.ExecutablePath == path)
+            {
+                m_ActiveEditor = m_FactoryPerEditor[path]->Create(path);
+                m_ActiveEditorPath = path;
+            }
+        }
+    }
+
     void CodeEditorManager::SyncSolution(const String& projectName,
                                          const ScriptProjectReference& engineAssemblyRef) const
     {
         if (m_ActiveEditor == nullptr)
-        {
-            // return;
-            m_ActiveEditor = CreateRef<VisualStudioCodeEditor>(VisualStudioVersion::VS2022, "", L"");
-        }
-
+            return;
         CodeSolutionData solutionData;
         solutionData.Name = Editor::Get().GetProjectName();
 
@@ -74,11 +108,14 @@ namespace Crowny
         }
 
         m_ActiveEditor->Sync(solutionData, Editor::Get().GetProjectPath());
+        m_ActiveEditor->ReloadSolution(solutionData, Editor::Get().GetProjectPath());
     }
 
     void CodeEditorManager::SetEditorExecutablePath(const Path& path)
     {
-        CW_ENGINE_ASSERT(m_ActiveEditor != nullptr);
+        if (m_ActiveEditor == nullptr)
+            return;
+
         m_ActiveEditor->SetEditorExecutablePath(path);
     }
 

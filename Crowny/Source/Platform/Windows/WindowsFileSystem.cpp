@@ -15,17 +15,9 @@
 
 namespace Crowny
 {
-    bool FileSystem::FileExists(const Path& path)
-    {
-        std::ifstream f(path);
-        return f.good();
-    }
+    bool FileSystem::FileExists(const Path& path) { return fs::exists(path); }
 
-    int64_t FileSystem::GetFileSize(const Path& path)
-    {
-        std::ifstream in(path, std::ifstream::ate | std::ifstream::binary);
-        return in.tellg();
-    }
+    uintmax_t FileSystem::GetFileSize(const Path& path) { return fs::file_size(path); }
 
     std::tuple<uint8_t*, uint64_t> FileSystem::ReadFile(const Path& path)
     {
@@ -90,7 +82,7 @@ namespace Crowny
         if (filters.size() == 0)
             return;
 
-        COMDLG_FILTERSPEC* specList = new COMDLG_FILTERSPEC[filters.size()];
+        COMDLG_FILTERSPEC* specList = new COMDLG_FILTERSPEC[(uint32_t)filters.size()];
         for (uint32_t i = 0; i < (uint32_t)filters.size(); i++)
         {
             std::wstring str1 = UTF8::ToWide(filters[i].Name);
@@ -105,6 +97,11 @@ namespace Crowny
             specList[i].pszSpec = spec;
         }
         fileDialog->SetFileTypes((uint32_t)filters.size(), specList);
+        for (uint32_t i = 0; i < (uint32_t)filters.size(); i++)
+        {
+            delete[] specList[i].pszName;
+            delete[] specList[i].pszSpec;
+        }
         delete[] specList;
     }
 
@@ -141,8 +138,9 @@ namespace Crowny
         }
     }
 
-    bool FileSystem::OpenFileDialog(FileDialogType type, const Path& initialDir, const Vector<DialogFilter>& filter,
-                                    Vector<Path>& outPaths)
+    bool FileSystem::OpenFileDialog(FileDialogType type, Vector<Path>& outPaths, const String& title,
+                                    const Path& initialDir, const Vector<DialogFilter>& filter,
+                                    const String& filename)
     {
         CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
         IFileDialog* fileDialog = nullptr;
@@ -153,8 +151,25 @@ namespace Crowny
 
         AddFilters(fileDialog, filter);
         SetInitialDir(fileDialog, initialDir);
+        String titleString = title;
+        if (titleString.empty())
+        {
+            switch (type) {
+            case FileDialogType::OpenFile:
+                titleString = "Open File";
+                break;
+            case FileDialogType::OpenFolder:
+                titleString = "Open Folder";
+                break;
+            case FileDialogType::SaveFile:
+                titleString = "Save File";
+                break;
+            }
+        }
+        fileDialog->SetTitle(UTF8::ToWide(title).c_str());
+        fileDialog->SetFileName(UTF8::ToWide(filename).c_str());
 
-        bool isMultiselected = type == FileDialogType::Multiselect;
+        const bool isMultiselected = type == FileDialogType::Multiselect;
         if (isOpenDialog)
         {
             if (type == FileDialogType::OpenFolder)
@@ -200,95 +215,5 @@ namespace Crowny
         CoUninitialize();
         return finalResult;
     }
-
-    // bool FileSystem::OpenFileDialog(FileDialogType type, const Path& initialDir, const String& filter, Vector<Path>&
-    // outPaths)
-    //{
-    //	OPENFILENAME ofn = { 0 };
-    //	TCHAR szFile[260] = { 0 };
-    //
-    //	char* title = nullptr;
-    //	switch (type)
-    //	{
-    //	case FileDialogType::OpenFile:
-    //		title = "Open file";
-    //		break;
-    //	case FileDialogType::SaveFile:
-    //		title = "Save file";
-    //		break;
-    //	case FileDialogType::Multiselect:
-    //		title = "Open files";
-    //		break;
-    //	case FileDialogType::OpenFolder:
-    //		title = "Open folder";
-    //		break;
-    //	}
-
-    //	ofn.lStructSize = sizeof(ofn);
-    //	ofn.hwndOwner = glfwGetWin32Window((GLFWwindow*)Application::Get().GetWindow().GetNativeWindow());
-    //	ofn.lpstrFile = szFile;
-    //	ofn.nMaxFile = sizeof(szFile);
-    //	ofn.lpstrTitle = title;
-    //	ofn.lpstrFilter = filter.c_str();
-    //	ofn.nFilterIndex = 1;
-    //	ofn.lpstrFileTitle = NULL;
-    //	ofn.nMaxFileTitle = 0; // TODO: maybe use cur dir here if empty?
-    //	ofn.lpstrInitialDir = initialDir.empty() ? NULL : initialDir.string().c_str();
-    //	ofn.Flags = /*OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | */ OFN_EXPLORER | OFN_ENABLESIZING;
-
-    //	if (type == FileDialogType::OpenFile)
-    //	{
-    //		if (GetOpenFileName(&ofn) == TRUE)
-    //		{
-    //			outPaths.push_back(Path(ofn.lpstrFile));
-    //			return true;
-    //		}
-    //	}
-
-    //	if (type == FileDialogType::SaveFile)
-    //	{
-    //		if (GetSaveFileName(&ofn) == TRUE)
-    //		{
-    //			outPaths.push_back(Path(ofn.lpstrFile));
-    //			return true;
-    //		}
-    //	}
-
-    //	if (type == FileDialogType::Multiselect)
-    //	{
-    //		ofn.Flags |= OFN_ALLOWMULTISELECT;
-    //		if (GetOpenFileName(&ofn) == TRUE)
-    //		{
-    //			// TODO: fix this
-    //			// outPaths.push_back(Path(ofn.lpstrFile)); null separated and another null after?
-    //			CW_ENGINE_INFO(ofn.lpstrFile);
-    //			return true;
-    //		}
-    //	}
-
-    //	if (type == FileDialogType::OpenFolder)
-    //	{
-    //		std::string path;
-    //		path.resize(256);
-    //		BROWSEINFO browseinfo = { 0 };
-    //		browseinfo.hwndOwner = glfwGetWin32Window((GLFWwindow*)Application::Get().GetWindow().GetNativeWindow());;
-    //		browseinfo.lpszTitle = title;
-    //		browseinfo.ulFlags = BIF_NEWDIALOGSTYLE /* | BIF_RETURNONLYFSDIRS 0*/ ;
-    //		LPITEMIDLIST pidl = SHBrowseForFolder(&browseinfo);
-    //		if (pidl != nullptr)
-    //		{
-    //			SHGetPathFromIDList(pidl, path.data());
-    //			IMalloc* imalloc = nullptr;
-    //			if (SUCCEEDED(SHGetMalloc(&imalloc)))
-    //			{
-    //				imalloc->Free(pidl);
-    //				imalloc->Release();
-    //			}
-    //		}
-    //		outPaths.push_back(path);
-    //	}
-
-    //	return false;
-    //}
 
 } // namespace Crowny

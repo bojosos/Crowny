@@ -8,7 +8,7 @@ namespace Crowny
     class PlatformUtils
     {
     public:
-        static UUID GenerateUUID();
+        static UUID42 GenerateUUID();
         static void ShowInExplorer(const Path& filepath);
         static void OpenExternally(const Path& filepath);
         static void CopyToClipboard(const String& string);

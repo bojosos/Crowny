@@ -222,14 +222,14 @@ namespace Crowny
             return nullptr;
         }
 
-        UUID uuid;
+        UUID42 uuid;
         bool exists = GetUUIDFromFilepath(filepath, uuid);
         if (!exists)
             uuid = UuidGenerator::Generate();
         return Load(uuid, filepath, keepInternalRef, keepSourceData);
     }
 
-    AssetHandle<Asset> AssetManager::LoadFromUUID(const UUID& uuid, bool keepInternalRef, bool keepSourceData)
+    AssetHandle<Asset> AssetManager::LoadFromUUID(const UUID42& uuid, bool keepInternalRef, bool keepSourceData)
     {
         auto iterFind = m_Handles.find(uuid);
         if (iterFind != m_Handles.end())
@@ -239,7 +239,7 @@ namespace Crowny
         return Load(uuid, filepath, keepInternalRef, keepSourceData);
     }
 
-    AssetHandle<Asset> AssetManager::Load(const UUID& uuid, const Path& filepath, bool keepInternalRef,
+    AssetHandle<Asset> AssetManager::Load(const UUID42& uuid, const Path& filepath, bool keepInternalRef,
                                           bool keepSourceData)
     {
         auto iterFind = m_Handles.find(uuid);
@@ -255,7 +255,7 @@ namespace Crowny
         return output;
     }
 
-    AssetHandle<Asset> AssetManager::GetAssetHandle(const UUID& uuid)
+    AssetHandle<Asset> AssetManager::GetAssetHandle(const UUID42& uuid)
     {
         auto iterFind = m_Handles.find(uuid);
         if (iterFind != m_Handles.end())
@@ -305,7 +305,7 @@ namespace Crowny
             m_Manifests.erase(iterFind);
     }
 
-    void AssetManager::GetFilepathFromUUID(const UUID& uuid, Path& outFilepath)
+    void AssetManager::GetFilepathFromUUID(const UUID42& uuid, Path& outFilepath)
     {
         for (auto& manifest : m_Manifests)
         {
@@ -314,7 +314,7 @@ namespace Crowny
         }
     }
 
-    bool AssetManager::GetUUIDFromFilepath(const Path& filepath, UUID& outUUID)
+    bool AssetManager::GetUUIDFromFilepath(const Path& filepath, UUID42& outUUID)
     {
         // broken
         for (auto& manifest : m_Manifests)
@@ -327,21 +327,21 @@ namespace Crowny
 
     AssetHandle<Asset> AssetManager::CreateAssetHandle(const Ref<Asset>& asset)
     {
-        UUID uuid = UuidGenerator::Generate();
+        UUID42 uuid = UuidGenerator::Generate();
         return CreateAssetHandle(asset, uuid);
     }
 
-    AssetHandle<Asset> AssetManager::CreateAssetHandle(const Ref<Asset>& asset, const UUID& UUID)
+    AssetHandle<Asset> AssetManager::CreateAssetHandle(const Ref<Asset>& asset, const UUID42& uuid)
     {
-        AssetHandle<Asset> newHandle(asset, UUID);
+        AssetHandle<Asset> newHandle(asset, uuid);
 
         if (asset)
         {
-            // LoadedResourceData& resData = m_LoadedResources[UUID];
+            // LoadedResourceData& resData = m_LoadedResources[uuid];
             // resData.resource = newHandle.GetWeak();
         }
 
-        m_Handles[UUID] = newHandle.GetWeak();
+        m_Handles[uuid] = newHandle.GetWeak();
         return newHandle;
     }
 

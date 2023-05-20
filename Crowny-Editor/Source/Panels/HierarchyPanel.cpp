@@ -266,7 +266,7 @@ namespace Crowny
         });
     }
 
-    const UnorderedSet<Crowny::UUID>& HierarchyPanel::GetSerializableHierarchy() { return m_Hierarchy; }
+    const UnorderedSet<Crowny::UUID42>& HierarchyPanel::GetSerializableHierarchy() { return m_Hierarchy; }
 
     void HierarchyPanel::Update()
     {

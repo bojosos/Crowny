@@ -79,7 +79,7 @@ namespace Crowny
         void Reimport(const Path& path, const Ref<ImportOptions>& importOptions = nullptr, bool forceReimport = false);
 
         Ref<AssetMetadata> FindAssetMetadata(const Path& path) const;
-        Path UuidToPath(const UUID& uuid) const;
+        Path UuidToPath(const UUID42& uuid) const;
 
         void SaveEntry(const Ref<Asset>& asset);
         void SetIncludeInBuild(const Path& path, bool force);
@@ -95,9 +95,9 @@ namespace Crowny
         void SaveLibrary();
 
         AssetType GetAssetType(const Path& path) const;
-        AssetType GetAssetType(const UUID& uuid) const;
+        AssetType GetAssetType(const UUID42& uuid) const;
 
-        Vector<UUID> GetAllAssets(AssetType type) const;
+        Vector<UUID42> GetAllAssets(AssetType type) const;
 
     private:
         void SerializeMetadata(const Path& path, const Ref<AssetMetadata>& metadata);
@@ -136,7 +136,7 @@ namespace Crowny
         Ref<ProjectSettings> m_ProjectSettings;
         UUIDDirectory m_UuidDirectory;
 
-        UnorderedMap<UUID, Path> m_UuidToPath;
+        UnorderedMap<UUID42, Path> m_UuidToPath;
     };
 
 } // namespace Crowny

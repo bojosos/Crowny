@@ -40,16 +40,16 @@ namespace Crowny
 
     struct IDComponent : public ComponentBase
     {
-        UUID Uuid;
+        UUID42 Uuid;
 
         IDComponent() : ComponentBase(){};
         IDComponent(const IDComponent&) = default;
-        IDComponent(const UUID& uuid) : Uuid(uuid) {}
+        IDComponent(const UUID42& uuid) : Uuid(uuid) {}
     };
 
     struct TagComponent : public ComponentBase
     {
-        String Tag = "";
+        String Tag;
 
         TagComponent() : ComponentBase() {}
         TagComponent(const TagComponent&) = default;
@@ -159,8 +159,8 @@ namespace Crowny
 
     struct SpriteRendererComponent : public ComponentBase
     {
-        Ref<Crowny::Texture> Texture = nullptr;
-        glm::vec4 Color = glm::vec4(1.0f);
+        Ref<Crowny::Texture> Texture;
+        glm::vec4 Color{ 1.0f };
 
         SpriteRendererComponent() : ComponentBase() {}
         SpriteRendererComponent(const SpriteRendererComponent&) = default;
@@ -174,8 +174,8 @@ namespace Crowny
 
     struct MeshRendererComponent : public ComponentBase
     {
-        Ref<::Crowny::Mesh> Mesh = nullptr;
-        // Ref<::Crowny::Model> Model = nullptr;
+        Ref<::Crowny::Mesh> Mesh;
+        // Ref<::Crowny::Model> Model;
 
         MeshRendererComponent()
           : ComponentBase(){
@@ -268,14 +268,14 @@ namespace Crowny
 
     class MonoScript
     {
-
     public:
         MonoScript();
-        MonoScript(const String& name);
+        MonoScript(MonoReflectionType* runtimeType);
         MonoScript(const MonoScript&) = default;
 
         void SetClassName(const String& className);
         MonoClass* GetManagedClass() const;
+        MonoReflectionType* GetRuntimeType() const { return m_RuntimeType; }
         MonoObject* GetManagedInstance() const;
 
         Ref<SerializableObjectInfo> GetObjectInfo() const { return m_ObjectInfo; }
@@ -285,6 +285,7 @@ namespace Crowny
         void EndRefresh(const ScriptObjectBackupData& data);
 
         const String& GetTypeName() const { return m_TypeName; }
+        const String& GetNamespace() const { return m_Namespace; }
 
         void OnInitialize(ScriptEntityBehaviour* entityBehaviour);
         void Create(Entity entity);
@@ -307,49 +308,46 @@ namespace Crowny
 
     private:
         typedef void(CW_THUNKCALL* OnStartThunkDef)(MonoObject*, MonoException**);
-        OnStartThunkDef m_OnStartThunk = nullptr;
         typedef void(CW_THUNKCALL* OnUpdateThunkDef)(MonoObject*, MonoException**);
-        OnUpdateThunkDef m_OnUpdateThunk = nullptr;
         typedef void(CW_THUNKCALL* OnDestroyThunkDef)(MonoObject*, MonoException**);
-        OnDestroyThunkDef m_OnDestroyThunk = nullptr;
 
         typedef void(CW_THUNKCALL* OnCollisionEnterThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
-        OnCollisionEnterThunkDef m_OnCollisionEnterThunk = nullptr;
         typedef void(CW_THUNKCALL* OnCollisionStayThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
-        OnCollisionStayThunkDef m_OnCollisionStayThunk = nullptr;
         typedef void(CW_THUNKCALL* OnCollisionExitThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
-        OnCollisionExitThunkDef m_OnCollisionExitThunk = nullptr;
-
         typedef void(CW_THUNKCALL* OnTriggerEnterThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
-        OnTriggerEnterThunkDef m_OnTriggerEnterThunk = nullptr;
         typedef void(CW_THUNKCALL* OnTriggerStayThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
-        OnTriggerStayThunkDef m_OnTriggerStayThunk = nullptr;
         typedef void(CW_THUNKCALL* OnTriggerExitThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
+
+        OnStartThunkDef m_OnStartThunk = nullptr;
+        OnUpdateThunkDef m_OnUpdateThunk = nullptr;
+        OnDestroyThunkDef m_OnDestroyThunk = nullptr;
+
+        OnCollisionEnterThunkDef m_OnCollisionEnterThunk = nullptr;
+        OnCollisionStayThunkDef m_OnCollisionStayThunk = nullptr;
+        OnCollisionExitThunkDef m_OnCollisionExitThunk = nullptr;
+        OnTriggerEnterThunkDef m_OnTriggerEnterThunk = nullptr;
+        OnTriggerStayThunkDef m_OnTriggerStayThunk = nullptr;
         OnTriggerExitThunkDef m_OnTriggerExitThunk = nullptr;
 
-        String m_TypeName;
         String m_Namespace;
+        String m_TypeName;
+        String m_FullTypeName;
         bool m_MissingType = false;
 
-    public:
+    public: // TODO: Do something about this
         Ref<SerializableObject> m_SerializedObjectData;
 
     private:
         Ref<SerializableObjectInfo> m_ObjectInfo;
+        MonoReflectionType* m_RuntimeType;
         MonoClass* m_Class = nullptr;
-        uint32_t m_Handle = 0;
         ScriptEntityBehaviour* m_ScriptEntityBehaviour = nullptr;
     };
 
     class MonoScriptComponent : public ComponentBase
     {
     public:
-        MonoScriptComponent() : ComponentBase()
-        {
-            // Scripts.push_back({ });
-        }
-
-        MonoScriptComponent(const String& name) : ComponentBase() { Scripts.push_back(MonoScript(name)); }
+        MonoScriptComponent() : ComponentBase() {}
         MonoScriptComponent(const MonoScriptComponent&) = default;
 
         ScriptObjectBackupData Backup(bool clearExisting = true);
@@ -462,12 +460,10 @@ namespace Crowny
         Collider2D(const Collider2D& collider) = default;
 
         const glm::vec2& GetOffset() const { return m_Offset; }
-        void SetOffset(const glm::vec2& offset) { m_Offset = offset; }
         bool IsTrigger() const { return m_IsTrigger; }
         const AssetHandle<PhysicsMaterial2D>& GetMaterial() const { return m_Material; }
 
         void SetIsTrigger(bool trigger);
-        // virtual void SetOffset(const glm::vec2& offset, Entity entity) = 0;
         void SetMaterial(const AssetHandle<PhysicsMaterial2D>& material);
 
         b2Fixture* RuntimeFixture = nullptr;

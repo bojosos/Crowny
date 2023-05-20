@@ -283,7 +283,7 @@ namespace Crowny
         if (asset->Metadata != nullptr)
         {
             auto& assetMetadata = asset->Metadata;
-            const UUID& uuid = assetMetadata->Uuid;
+            const UUID42& uuid = assetMetadata->Uuid;
             Path outPath;
             if (m_AssetManifest->UuidToFilepath(uuid, outPath))
             {
@@ -321,7 +321,7 @@ namespace Crowny
         String metadataText = FileSystem::OpenFile(path)->GetAsString();
         YAML::Node data = YAML::Load(metadataText);
         if (const auto& uuid = data["Uuid"])
-            metadata->Uuid = uuid.as<UUID>();
+            metadata->Uuid = uuid.as<UUID42>();
         else
         {
             CW_ENGINE_WARN(
@@ -672,9 +672,9 @@ namespace Crowny
         return fileEntry->Metadata;
     }
 
-    Vector<UUID> ProjectLibrary::GetAllAssets(AssetType type) const
+    Vector<UUID42> ProjectLibrary::GetAllAssets(AssetType type) const
     {
-        Vector<UUID> result;
+        Vector<UUID42> result;
         for (auto [path, uuid] : m_AssetManifest->m_FilepathToUuid)
         {
             if (GetAssetType(uuid) == type)
@@ -695,7 +695,7 @@ namespace Crowny
         return AssetType::None;
     }
 
-    AssetType ProjectLibrary::GetAssetType(const UUID& uuid) const
+    AssetType ProjectLibrary::GetAssetType(const UUID42& uuid) const
     {
         Path outPath;
         if (m_AssetManifest->UuidToFilepath(uuid, outPath))
@@ -709,7 +709,7 @@ namespace Crowny
         if (meta == nullptr)
             return AssetHandle<Asset>();
 
-        const UUID& uuid = meta->Uuid;
+        const UUID42& uuid = meta->Uuid;
         return AssetManager::Get().LoadFromUUID(uuid, true, true);
     }
 
@@ -1144,7 +1144,7 @@ namespace Crowny
         {
             Vector<Path> toDelete;
             auto processFile = [&](const Path& path) {
-                UUID uuid = UUID(path.filename().replace_extension("").string());
+                UUID42 uuid = UUID42(path.filename().replace_extension("").string());
                 if (m_UuidToPath.find(uuid) != m_UuidToPath.end())
                 {
                     m_AssetManifest->UnregisterAsset(uuid);

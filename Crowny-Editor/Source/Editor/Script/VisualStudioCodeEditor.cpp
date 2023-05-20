@@ -2,6 +2,7 @@
 
 #include "Editor/Script/ScriptProjectGenerator.h"
 #include "Editor/Script/VisualStudioCodeEditor.h"
+#include "Editor/Script/CodeEditor.h"
 
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/PlatformUtils.h"
@@ -271,17 +272,36 @@ namespace Crowny
             CloseHandle(pi.hThread);
             return true;
         }
+
+        static void ReloadSolution(const Path& solutionPath, const Path& editorPath)
+        {
+            CComPtr<EnvDTE::_DTE> dte = VisualStudio::FindRunningInstance(solutionPath, editorPath);
+            // Only try and reload the solution if we have a running visual studio instance.
+            if (dte == nullptr) {
+                return;
+            }
+            CComPtr<EnvDTE::_Solution> solution = nullptr;
+            if (FAILED(dte->get_Solution(&solution)))
+                return;
+            
+            if (!SUCCEEDED(solution->Close(false)))
+                return;
+            if (!SUCCEEDED(solution->Open(CComBSTR(solutionPath.c_str()))))
+                CW_ENGINE_WARN("Couldn't reopen solution.");
+        }
     };
 
-    VisualStudioCodeEditor::VisualStudioCodeEditor(VisualStudioVersion version, const Path& execPath,
-                                                   const WString& clsID)
+    VisualStudioCodeEditor::VisualStudioCodeEditor(VisualStudioVersion version, const Path& execPath)
       : m_Version(version), m_ExecPath(execPath)
     {
     }
 
     void VisualStudioCodeEditor::OpenFile(const Path& solutionPath, const Path& filePath, uint32_t line) const
     {
-        CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+        if (!SUCCEEDED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE))) {
+            CW_ENGINE_WARN("Couldn't initialize COM");
+            return;
+        }
 
         CComPtr<EnvDTE::_DTE> dte = VisualStudio::FindRunningInstance(solutionPath, m_ExecPath);
         if (dte == nullptr)
@@ -374,9 +394,23 @@ namespace Crowny
         solutionStream->Close();
     }
 
-    Vector<VisualStudioInstall> VisualStudioCodeEditor::GetAvailableVersions()
+    void VisualStudioCodeEditor::ReloadSolution(const CodeSolutionData& data, const Path& solutionPath) const
     {
-        Vector<VisualStudioInstall> versions;
+        Path solutionPathCopy = solutionPath;
+        solutionPathCopy = solutionPath / (data.Name + ".sln");
+        VisualStudio::ReloadSolution(solutionPathCopy, m_ExecPath);
+    }
+
+    void VisualStudioCodeEditor::SetEditorExecutablePath(const Path& path) { m_ExecPath = path; }
+
+    VisualStudioCodeEditorFactory::VisualStudioCodeEditorFactory()
+    {
+        Map<String, CodeEditorVersion> vsVersions = {
+            { "2008", CodeEditorVersion::VS2008 }, { "2010", CodeEditorVersion::VS2010 },
+            { "2012", CodeEditorVersion::VS2012 }, { "2013", CodeEditorVersion::VS2013 },
+            { "2015", CodeEditorVersion::VS2015 }, { "2017", CodeEditorVersion::VS2017 },
+            { "2019", CodeEditorVersion::VS2019 }, { "2022", CodeEditorVersion::VS2022 },
+        };
         using namespace rapidjson;
 
         String jsonResult =
@@ -389,14 +423,34 @@ namespace Crowny
             bool isPrerelease = val.FindMember("isPrerelease")->value.GetBool();
             Path productPath = val.FindMember("productPath")->value.GetString();
             const String displayName = val.FindMember("displayName")->value.GetString();
-            const String displayVersion =
-              val.FindMember("catalog")->value.FindMember("productDisplayVersion")->value.GetString();
+            const auto& catalog =
+              val.FindMember("catalog")->value;
+            const String displayVersion = catalog.FindMember("productDisplayVersion")->value.GetString();
             const String name = displayName + " [" + displayVersion + "]";
-            versions.push_back({ productPath, isPrerelease, name });
+            const String versionString = catalog.FindMember("productLineVersion")->value.GetString();
+            CodeEditorVersion version = vsVersions[versionString]; // TODO: get this
+            m_SupportedEditors.push_back({ productPath, isPrerelease, name, version });
         }
-        return versions;
     }
 
-    void VisualStudioCodeEditor::SetEditorExecutablePath(const Path& path) { m_ExecPath = path; }
+    CodeEditor* VisualStudioCodeEditorFactory::Create(const Path& executablePath) const
+    {
+        Map<CodeEditorVersion, VisualStudioVersion> versionData = {
+            { CodeEditorVersion::VS2008, VisualStudioVersion::VS2008 },
+            { CodeEditorVersion::VS2010, VisualStudioVersion::VS2010 },
+            { CodeEditorVersion::VS2012, VisualStudioVersion::VS2012 },
+            { CodeEditorVersion::VS2013, VisualStudioVersion::VS2013 },
+            { CodeEditorVersion::VS2015, VisualStudioVersion::VS2015 },
+            { CodeEditorVersion::VS2017, VisualStudioVersion::VS2017 },
+            { CodeEditorVersion::VS2019, VisualStudioVersion::VS2019 },
+            { CodeEditorVersion::VS2022, VisualStudioVersion::VS2022 },
+        };
+        for (const CodeEditorInstallation& install : m_SupportedEditors)
+        {
+            if (install.ExecutablePath == executablePath)
+                return new VisualStudioCodeEditor(versionData[install.Version], executablePath);
+        }
+        return nullptr;
+    }
 
 } // namespace Crowny

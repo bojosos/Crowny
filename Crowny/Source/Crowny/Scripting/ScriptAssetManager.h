@@ -13,13 +13,13 @@ namespace Crowny
         ~ScriptAssetManager();
 
         ScriptAssetBase* CreateScriptAsset(const AssetHandle<Asset>& asset, MonoObject* instance);
-        ScriptAssetBase* GetScriptAsset(const UUID& uuid);
+        ScriptAssetBase* GetScriptAsset(const UUID42& uuid);
         ScriptAssetBase* GetScriptAsset(const AssetHandle<Asset>& asset, bool create = false);
 
         void DestroyScriptAsset(ScriptAssetBase* asset);
 
     private:
-        UnorderedMap<UUID, ScriptAssetBase*> m_ScriptAssets;
+        UnorderedMap<UUID42, ScriptAssetBase*> m_ScriptAssets;
     };
 
 } // namespace Crowny

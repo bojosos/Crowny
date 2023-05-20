@@ -5,13 +5,13 @@ using System.Runtime.InteropServices;
 namespace Crowny
 {
     [StructLayout(LayoutKind.Sequential)]
-    public struct UUID
+    public struct UUID42
     {
         public readonly uint d0, d1, d2, d3;
 
-        public static UUID Empty = new UUID(0, 0, 0, 0);
+        public static UUID42 Empty = new UUID42(0, 0, 0, 0);
 
-        public UUID(uint d0, uint d1, uint d2, uint d3)
+        public UUID42(uint d0, uint d1, uint d2, uint d3)
         {
             this.d0 = d0;
             this.d1 = d1;
@@ -19,12 +19,12 @@ namespace Crowny
             this.d3 = d3;
         }
 
-        public static bool operator==(UUID lhs, UUID rhs)
+        public static bool operator==(UUID42 lhs, UUID42 rhs)
         {
             return lhs.d0 == rhs.d0 && lhs.d1 == rhs.d1 && lhs.d2 == rhs.d2 && lhs.d3 == rhs.d3;
         }
 
-        public static bool operator!=(UUID lhs, UUID rhs)
+        public static bool operator!=(UUID42 lhs, UUID42 rhs)
         {
             return !(lhs == rhs);
         }
@@ -36,9 +36,9 @@ namespace Crowny
 
         public override bool Equals(object obj)
         {
-            if (!(obj is UUID))
+            if (!(obj is UUID42))
                 return false;
-            UUID uuid = (UUID)obj;
+            UUID42 uuid = (UUID42)obj;
             if (d0.Equals(uuid.d0) && d1.Equals(uuid.d1) && d2.Equals(uuid.d2) && d3.Equals(uuid.d3))
                 return true;
             return false;
@@ -107,11 +107,11 @@ namespace Crowny
     public class Asset : ScriptObject
     {
         public string name => Internal_GetName(m_InternalPtr);
-        public UUID uuid { get { Internal_GetUUID(m_InternalPtr, out UUID uuid); return uuid; } }
+        public UUID42 uuid { get { Internal_GetUUID(m_InternalPtr, out UUID42 uuid); return uuid; } }
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern string Internal_GetName(IntPtr asset);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_GetUUID(IntPtr asset, out UUID uuid);
+        private static extern void Internal_GetUUID(IntPtr asset, out UUID42 uuid);
     }
 }
