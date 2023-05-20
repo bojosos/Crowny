@@ -217,14 +217,14 @@ namespace Crowny
                 MonoObject* filepathAttr = memberInfo->GetAttribute(filepathClass);
                 FileDialogType dialogType = FileDialogType::OpenFile;
                 filepathClass->GetField("type")->Get(filepathAttr, &dialogType);
-                // TODO: wtf is this
-                if (MonoUtils::GetClass((MonoObject*)value) != MonoUtils::GetStringClass() &&
+                
+                if (value != nullptr && MonoUtils::GetClass((MonoObject*)value) != MonoUtils::GetStringClass() &&
                     (dialogType == FileDialogType::Multiselect))
                 {
                     CW_ENGINE_ERROR("Filedialog attribute with multiselect can only be used on a list of strings");
                     return false;
                 }
-                String stringValue = MonoUtils::FromMonoString(value);
+                String stringValue = value != nullptr ? MonoUtils::FromMonoString(value) : "";
                 if (UI::PropertyFilepath(label, dialogType, stringValue))
                 {
                     setter(MonoUtils::ToMonoString(stringValue));
@@ -233,7 +233,7 @@ namespace Crowny
             }
             else if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Multiline))
             {
-                String stringValue = MonoUtils::FromMonoString(value);
+                String stringValue = value != nullptr ? MonoUtils::FromMonoString(value) : "";
                 if (UI::PropertyMultiline(label, stringValue))
                 {
                     setter(MonoUtils::ToMonoString(stringValue));
@@ -242,7 +242,7 @@ namespace Crowny
             }
             else
             {
-                String stringValue = MonoUtils::FromMonoString(value);
+                String stringValue = value != nullptr ? MonoUtils::FromMonoString(value) : "";
                 if (UI::Property(label, stringValue))
                 {
                     setter(MonoUtils::ToMonoString(stringValue));

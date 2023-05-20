@@ -39,7 +39,7 @@ namespace Crowny
 
     struct HashPath
     {
-        std::size_t operator()(const Path& path) const { return std::hash<std::string>()(path.string()); }
+        std::size_t operator()(const Path& path) const { return std::hash<Path>()(path); }
     };
 
     template <typename T> using HashType = std::hash<T>;

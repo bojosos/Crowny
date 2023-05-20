@@ -85,12 +85,14 @@ namespace Crowny
         // LOAD_CW_ATTR(Step);
         LOAD_CW_ATTR(ShowInInspector);
         LOAD_CW_ATTR(HideInInspector);
+        LOAD_CW_ATTR(RunInEditor);
         LOAD_CW_ATTR(SerializeObject);
         LOAD_CW_ATTR(DontSerializeField);
         LOAD_CW_ATTR(RequireComponent);
         LOAD_CW_ATTR(Dropdown);
         LOAD_CW_ATTR(Label);
         LOAD_CW_ATTR(Filepath);
+        LOAD_CW_ATTR(FolderPath);
         LOAD_CW_ATTR(ReadOnly);
         LOAD_CW_ATTR(Multiline);
         LOAD_CW_ATTR(ColorUsage);

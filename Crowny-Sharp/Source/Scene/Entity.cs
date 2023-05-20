@@ -18,7 +18,7 @@ namespace Crowny
         /// <summary>
         /// The UUID of the entity.
         /// </summary>
-        public UUID uuid { get { Internal_GetUUID(m_InternalPtr, out UUID uuid); return uuid; } }
+        public UUID42 uuid { get { Internal_GetUUID(m_InternalPtr, out UUID42 uuid); return uuid; } }
 
         /// <summary>
         /// The parent of the entity.
@@ -99,7 +99,7 @@ namespace Crowny
         private static extern Component Internal_RemoveComponent(IntPtr parent, Type type);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern Component Internal_GetUUID(IntPtr parent, out UUID uuid);
+        private static extern Component Internal_GetUUID(IntPtr parent, out UUID42 uuid);
         [MethodImpl(MethodImplOptions.InternalCall)]
 		private static extern string Internal_GetName(IntPtr internalPtr);
 		[MethodImpl(MethodImplOptions.InternalCall)]

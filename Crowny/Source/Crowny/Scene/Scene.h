@@ -34,10 +34,10 @@ namespace Crowny
         void OnViewportResize(uint32_t width, uint32_t height);
 
         Entity CreateEntity(const String& name = "");
-        Entity CreateEntityWithUuid(const UUID& uuid, const String& name);
+        Entity CreateEntityWithUuid(const UUID42& uuid, const String& name);
         Entity FindEntityByName(const String& name);
         Entity GetRootEntity();
-        Entity GetEntityFromUuid(const UUID& uuid);
+        Entity GetEntityFromUuid(const UUID42& uuid);
 
         const String& GetName() const { return m_Name; }
         const Path& GetFilepath() const { return m_Filepath; }
@@ -57,7 +57,15 @@ namespace Crowny
 
         Entity GetPrimaryCameraEntity();
 
-        template <typename... Components> auto GetAllEntitiesWith() { return m_Registry.view<Components...>(); }
+        bool HasScriptComponent(Entity entity, const String& namespaceName, const String& typeName);
+        void AddScriptComponent(Entity entity, const String& namespaceName, const String& typeName,
+                                bool initialize = true);
+        void RemoveScriptComponent(Entity entity, const String& namespaceName, const String& typeName);
+
+        template <typename... Components> auto GetAllEntitiesWith()
+        {
+            return m_Registry.view<Components...>();
+        }
 
     private:
         void RegisterEntityCallbacks();

@@ -294,7 +294,7 @@ namespace Crowny
             }
             else
             {
-                out << UUID();
+                out << UUID42();
             }
         }
 
@@ -302,7 +302,7 @@ namespace Crowny
         {
             // Wat? TODO: Fix this
             if (Value)
-                SceneManager::GetActiveScene()->GetEntityFromUuid(node.as<UUID>());
+                SceneManager::GetActiveScene()->GetEntityFromUuid(node.as<UUID42>());
         }
 
         Entity Value;

@@ -9,6 +9,19 @@
 
 namespace Crowny
 {
+    enum class CodeEditorVersion
+    {
+        VS2008,
+        VS2010,
+        VS2012,
+        VS2013,
+        VS2015,
+        VS2017,
+        VS2019,
+        VS2022,
+        MonoDevelop,
+        None
+    };
 
     static constexpr const char* SCRIPT_EDITOR_ASSEMBLY = "CrownyEditorScript";
     static constexpr const char* EDITOR_NS = "Crowny.Editor";

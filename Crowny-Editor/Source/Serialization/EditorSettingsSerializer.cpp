@@ -26,6 +26,7 @@ namespace Crowny
         out << YAML::Key << "EnableConsoleErrorMessages" << YAML::Value << settings->EnableConsoleErrorMessages;
         out << YAML::Key << "CollapseConsole" << YAML::Value << settings->CollapseConsole;
         out << YAML::Key << "ScrollToBottom" << YAML::Value << settings->ScrollToBottom;
+        out << YAML::Key << "CodeEditorPath" << YAML::Value << settings->CodeEditorPath.string();
 
         out << YAML::Key << "RecentProjects" << YAML::Value << YAML::BeginSeq;
         for (RecentProject& proj : settings->RecentProjects)
@@ -61,16 +62,16 @@ namespace Crowny
             editorSettings->ShowEntityDebugInfo = info.as<bool>();
 
         if (const YAML::Node& infos = node["EnableConsoleInfoMessages"])
-            editorSettings->EnableConsoleInfoMessages = infos.as<bool>();
+            editorSettings->EnableConsoleInfoMessages = infos.as<bool>(true);
         if (const YAML::Node& infos = node["EnableConsoleWarningMessages"])
-            editorSettings->EnableConsoleWarningMessages = infos.as<bool>();
+            editorSettings->EnableConsoleWarningMessages = infos.as<bool>(true);
         if (const YAML::Node& infos = node["EnableConsoleErrorMessages"])
-            editorSettings->EnableConsoleErrorMessages = infos.as<bool>();
+            editorSettings->EnableConsoleErrorMessages = infos.as<bool>(true);
         if (const YAML::Node& infos = node["CollapseConsole"])
-            editorSettings->CollapseConsole = infos.as<bool>();
+            editorSettings->CollapseConsole = infos.as<bool>(false);
         if (const YAML::Node& infos = node["ScrollToBottom"])
-            editorSettings->ScrollToBottom = infos.as<bool>();
-
+            editorSettings->ScrollToBottom = infos.as<bool>(true);
+        editorSettings->CodeEditorPath = node["CodeEditorPath"].as<String>(String());
         editorSettings->ShowPhysicsColliders2D = node["ShowPhysicsColliders2D"].as<bool>();
 
         uint32_t idx = 0;

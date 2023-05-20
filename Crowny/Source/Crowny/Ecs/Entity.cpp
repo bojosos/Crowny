@@ -52,7 +52,7 @@ namespace Crowny
 
     Entity Entity::GetParent() const { return GetComponent<RelationshipComponent>().Parent; }
 
-    const UUID& Entity::GetUuid() const { return GetComponent<IDComponent>().Uuid; }
+    const UUID42& Entity::GetUuid() const { return GetComponent<IDComponent>().Uuid; }
     const TransformComponent& Entity::GetTransform() const { return GetComponent<TransformComponent>(); }
     TransformComponent& Entity::GetTransform() { return GetComponent<TransformComponent>(); }
     const String& Entity::GetName() const { return GetComponent<TagComponent>().Tag; }

@@ -484,7 +484,7 @@ namespace Crowny
             return modified;
         }
 
-        static bool PropertyFilepath(const char* label, FileDialogType type, String& value)
+        static bool PropertyFilepath(const char* label, FileDialogType type, String& value, const String& title = {}, const Path& initialDir = {})
         {
             ShiftCursor(10.0f, 9.0f);
             ImGui::Text(label);
@@ -505,7 +505,9 @@ namespace Crowny
             if (clicked)
             {
                 Vector<Path> outPaths;
-                if (FileSystem::OpenFileDialog(type, value, {}, outPaths) && outPaths.size() > 0)
+                const Path& initialDirToUse = initialDir.empty() ? ProjectLibrary::Get().GetAssetFolder() : initialDir;
+                const String& titleToUse = title.empty() ? label : title;
+                if (FileSystem::OpenFileDialog(type, outPaths, titleToUse, initialDirToUse) && outPaths.size() > 0)
                 {
                     value = outPaths[0].string();
                     modified = true;
@@ -573,6 +575,41 @@ namespace Crowny
                     {
                         current = options[i];
                         selected = (TEnum)i;
+                        modified = true;
+                    }
+                    if (is_selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            Post();
+
+            return modified;
+        }
+
+        template <typename Type, typename TUnderlying = int32_t>
+        static bool PropertyDropdown(const char* label, const Vector<Type>& options, TUnderlying& selected,
+                                     std::function<String(const Type&)> selector)
+        {
+            TUnderlying selectedIndex = (TUnderlying)selected;
+            String& current = selector(options[selectedIndex]);
+            Pre(label);
+            bool modified = false;
+            if ((GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0)
+                current = "---";
+
+            const String id = "##" + std::string(label);
+            // ImGui::SetNextItemWidth(150);
+            if (ImGui::BeginCombo(id.c_str(), current.c_str()))
+            {
+                for (int i = 0; i < options.size(); i++)
+                {
+                    const bool is_selected = (i == selectedIndex);
+                    const String& selectable = selector(options[i]);
+                    if (ImGui::Selectable(selectable.c_str(), is_selected))
+                    {
+                        current = selectable[i];
+                        selected = (TUnderlying)i;
                         modified = true;
                     }
                     if (is_selected)

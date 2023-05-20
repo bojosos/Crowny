@@ -292,7 +292,7 @@ namespace Crowny
         if (ImGui::IsItemClicked())
         {
             Vector<Path> outPaths;
-            if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths) && outPaths.size() >= 1)
+            if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, outPaths, "Open Texture") && outPaths.size() >= 1)
                 t.Texture = Importer::Get().Import<Texture>(outPaths[0]);
         }
 

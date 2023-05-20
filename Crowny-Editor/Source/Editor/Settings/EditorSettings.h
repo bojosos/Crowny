@@ -39,6 +39,9 @@ namespace Crowny
         bool ScrollToBottom = true;
         uint32_t MaxCallstackLength = 10;
 
+        // Code Editor
+        Path CodeEditorPath;
+
         using Serializer = EditorSettingsSerializer;
     };
 
