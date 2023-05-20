@@ -26,11 +26,11 @@ namespace Crowny
         0xFF, 0xFF, 0xFF, 0xFF
     };
 
-    UUID UUID::EMPTY = { 0, 0, 0, 0 };
+    UUID42 UUID42::EMPTY = { 0, 0, 0, 0 };
 
-    UUID::UUID(uint32_t data1, uint32_t data2, uint32_t data3, uint32_t data4) : m_Data{ data1, data2, data3, data4 } {}
+    UUID42::UUID42(uint32_t data1, uint32_t data2, uint32_t data3, uint32_t data4) : m_Data{ data1, data2, data3, data4 } {}
 
-    UUID::UUID(const String& uuid)
+    UUID42::UUID42(const String& uuid)
     {
         CW_ENGINE_ASSERT(uuid.size() == 36);
         uint32_t idx = 0;
@@ -76,7 +76,7 @@ namespace Crowny
         }
     }
 
-    String UUID::ToString() const
+    String UUID42::ToString() const
     {
         uint8_t out[36];
         uint32_t idx = 0;
@@ -124,6 +124,6 @@ namespace Crowny
         return String((const char*)out, 36);
     }
 
-    UUID UuidGenerator::Generate() { return PlatformUtils::GenerateUUID(); }
+    UUID42 UuidGenerator::Generate() { return PlatformUtils::GenerateUUID(); }
 
 } // namespace Crowny

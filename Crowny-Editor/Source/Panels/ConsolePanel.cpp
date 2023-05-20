@@ -194,9 +194,12 @@ namespace Crowny
                 m_SelectedMessageHash = message.Hash;
                 m_SelectedMessage = message;
             }
-            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) &&
-                !message.Callstack.empty())
-                CodeEditorManager::Get().OpenFile(message.Callstack[0].SourceFilePath, message.Callstack[0].Line);
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+                if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && !message.Callstack.empty())
+                    CodeEditorManager::Get().OpenFile(message.Callstack[0].SourceFilePath, message.Callstack[0].Line);
+            }
 
             ImGui::PopStyleVar();
             ImGui::PopStyleColor(1);
@@ -215,6 +218,8 @@ namespace Crowny
             ImGui::SameLine();
             UI::ScopedColor color(ImGuiCol_Text, ImVec4(0.0f, 0.8f, 1.0f, 1.0f));
             ImGui::Text(" (at %s:%d)", call.SourceFilePath.string().c_str(), call.Line);
+            if (ImGui::IsItemHovered())
+                ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
             if (ImGui::IsItemClicked())
                 CodeEditorManager::Get().OpenFile(call.SourceFilePath, call.Line);
         }

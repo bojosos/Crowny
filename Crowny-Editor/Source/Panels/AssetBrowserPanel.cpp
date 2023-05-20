@@ -12,6 +12,7 @@
 #include "Editor/EditorAssets.h"
 #include "Editor/EditorUtils.h"
 #include "Editor/ProjectLibrary.h"
+#include "Editor/Script/CodeEditor.h"
 
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
@@ -732,9 +733,14 @@ namespace Crowny
                     SetCurrentDirectory(static_cast<DirectoryEntry*>(entry.get()));
                 else // Open the file
                 {
-                    // Note: Could directly open the file in the editor,
-                    // Now I need to associate the file type with Crowny and also have some "only one app instance" rule
-                    // and IPC
+                    FileEntry* fileEntry = static_cast<FileEntry*>(entry.get());
+                    if (fileEntry->Metadata != nullptr)
+                    {
+                        if (fileEntry->Metadata != nullptr && fileEntry->Metadata->Type == AssetType::ScriptCode)
+                            CodeEditorManager::Get().OpenFile(fileEntry->Filepath);
+
+                        return;
+                    }
                     PlatformUtils::OpenExternally(path);
                 }
             }

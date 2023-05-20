@@ -16,27 +16,33 @@ namespace Crowny
         VS2022
     };
 
-    struct VisualStudioInstall
-    {
-        Path ExecutablePath;
-        bool Prerelease;
-        String Name;
-    };
-
     class VisualStudioCodeEditor : public CodeEditor
     {
     public:
-        VisualStudioCodeEditor(VisualStudioVersion version, const Path& execPath, const WString& clsID);
+        VisualStudioCodeEditor(VisualStudioVersion version, const Path& execPath);
         virtual ~VisualStudioCodeEditor() = default;
 
         virtual void OpenFile(const Path& solitionPath, const Path& filePath, uint32_t line) const override;
         virtual void Sync(const CodeSolutionData& data, const Path& solutionPath) const override;
         virtual void SetEditorExecutablePath(const Path& path) override;
-
-        static Vector<VisualStudioInstall> GetAvailableVersions();
+        virtual void ReloadSolution(const CodeSolutionData& data, const Path& solutionPath) const override;
 
     private:
         Path m_ExecPath;
         VisualStudioVersion m_Version;
+    };
+
+    class VisualStudioCodeEditorFactory : public CodeEditorFactory
+    {
+    public:
+        VisualStudioCodeEditorFactory();
+        virtual const Vector<CodeEditorInstallation>& GetAvailableEditors() const override
+        {
+            return m_SupportedEditors;
+        }
+        virtual CodeEditor* Create(const Path& path) const override;
+
+    private:
+        Vector<CodeEditorInstallation> m_SupportedEditors;
     };
 } // namespace Crowny

@@ -29,8 +29,8 @@ namespace Crowny
             });
         }
         void CreateEmptyEntity(Entity parent);
-        const UnorderedSet<UUID>& GetSerializableHierarchy();
-        void SetHierarchy(const UnorderedSet<UUID>& hierarchy) { m_Hierarchy = hierarchy; }
+        const UnorderedSet<UUID42>& GetSerializableHierarchy();
+        void SetHierarchy(const UnorderedSet<UUID42>& hierarchy) { m_Hierarchy = hierarchy; }
 
     public:
         void SetSelectedEntity(Entity entity)
@@ -65,6 +65,6 @@ namespace Crowny
         Entity m_Renaming = {};
         String m_RenamingString;
         UnorderedSet<Entity> m_SelectedItems;
-        UnorderedSet<UUID> m_Hierarchy;
+        UnorderedSet<UUID42> m_Hierarchy;
     };
 } // namespace Crowny

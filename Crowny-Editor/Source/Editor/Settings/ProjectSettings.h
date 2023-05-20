@@ -19,8 +19,8 @@ namespace Crowny
         // Scene
         String LastOpenScenePath; // This will probably be replaced by the UUID of a scene, and a scene will most likely
                                   // be a prefab.
-        UUID LastSelectedEntityID;
-        UnorderedSet<UUID> ExpandedEntities;
+        UUID42 LastSelectedEntityID;
+        UnorderedSet<UUID42> ExpandedEntities;
 
         // Cameras
         GizmoEditMode GizmoMode = GizmoEditMode::Translate;

@@ -900,7 +900,7 @@ namespace Crowny
                             }
                         }
 
-                        Vector<UUID> assets = ProjectLibrary::Get().GetAllAssets(assetType);
+                        Vector<UUID42> assets = ProjectLibrary::Get().GetAllAssets(assetType);
                         for (const auto& uuid : assets)
                         {
                             AssetHandle<Asset> handle = AssetManager::Get().LoadFromUUID(uuid);

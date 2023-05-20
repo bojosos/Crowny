@@ -147,10 +147,11 @@ EndProject)";
     String CSProject::GenerateProject(CSProjectVersion projectVersion, const CodeProjectData& projectData)
     {
         Map<CSProjectVersion, String> versionData = {
-            { CSProjectVersion::VS2008, "3.5" },  { CSProjectVersion::VS2010, "4.0" },
-            { CSProjectVersion::VS2012, "4.0" },  { CSProjectVersion::VS2013, "12.0" },
-            { CSProjectVersion::VS2015, "13.0" }, { CSProjectVersion::VS2017, "15.0" },
-            { CSProjectVersion::VS2019, "16.0" }, { CSProjectVersion::MonoDevelop, "14.0" }
+            { CSProjectVersion::VS2008, "3.5" },      { CSProjectVersion::VS2010, "4.0" },
+            { CSProjectVersion::VS2012, "4.0" },      { CSProjectVersion::VS2013, "12.0" },
+            { CSProjectVersion::VS2015, "13.0" },     { CSProjectVersion::VS2017, "15.0" },
+            { CSProjectVersion::VS2019, "16.0" },     { CSProjectVersion::VS2022, "17.0" },
+            { CSProjectVersion::MonoDevelop, "14.0" }
         };
 
         StringStream tempStream;

@@ -82,7 +82,6 @@ namespace Crowny
 
     void EditorLayer::OnAttach()
     {
-        VisualStudioCodeEditor::GetAvailableVersions();
         const Ref<Font> defaultFont = Font::GetDefault();
         // Well constructors get discarded and the static data is gone, so construct a few empty objects
         ScriptTime tempTime = ScriptTime();
@@ -145,58 +144,18 @@ namespace Crowny
         m_MenuBar->AddMenu(buildMenu);
         m_MenuBar->AddMenu(viewMenu);
 
-        Ref<EditorSettings> editorSettings = Editor::Get().GetEditorSettings();
-        m_ShowDemoWindow = editorSettings->ShowImGuiDemoWindow;
-        m_ShowColliders = editorSettings->ShowPhysicsColliders2D;
-        m_AutoLoadLastProject = editorSettings->AutoLoadLastProject;
-        m_ShowScriptDebugInfo = editorSettings->ShowScriptDebugInfo;
-        m_ShowEntityDebugInfo = editorSettings->ShowEntityDebugInfo;
-
-        m_ConsolePanel->SetMessageLevelEnabled(ConsoleBuffer::Message::Level::Info,
-                                               editorSettings->EnableConsoleInfoMessages);
-        m_ConsolePanel->SetMessageLevelEnabled(ConsoleBuffer::Message::Level::Warn,
-                                               editorSettings->EnableConsoleWarningMessages);
-        m_ConsolePanel->SetMessageLevelEnabled(ConsoleBuffer::Message::Level::Error,
-                                               editorSettings->EnableConsoleErrorMessages);
-
-        m_ConsolePanel->SetCollapseEnabled(editorSettings->CollapseConsole);
-        m_ConsolePanel->SetScrollToBottomEnabled(editorSettings->ScrollToBottom);
-
-        if (m_AutoLoadLastProject && !editorSettings->LastOpenProject.empty())
-        {
-            Editor::Get().LoadProject(editorSettings->LastOpenProject);
-            SetProjectSettings();
-            m_AssetBrowser->Initialize();
-        }
 
         VirtualFileSystem::Get()->Mount("Icons", "Resources/Icons");
         SceneRenderer::Init();
 
-        // Ref<Shader> shader = Importer::Get().Import<Shader>("Resources/Shaders/Pbribl.glsl");
-        AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>("Resources/Shaders/Pbribl.asset");
-        Ref<PBRMaterial> mat = CreateRef<PBRMaterial>(shader);
-
-        // Ref<Texture> albedo, metallic, roughness, normal;
-        // albedo = Importer::Get().Import<Texture>("Resources/Textures/rustediron2_basecolor.png");
-        // metallic = Importer::Get().Import<Texture>("Resources/Textures/rustediron2_metallic.png");
-        // roughness = Importer::Get().Import<Texture>("Resources/Textures/rustediron2_roughness.png");
-        // normal = Importer::Get().Import<Texture>("Resources/Textures/rustediron2_normal.png");
-
-        Ref<Texture> ao = Texture::WHITE;
-
-        // mat->SetAlbedoMap(albedo);
-        // mat->SetNormalMap(normal);
-        // mat->SetMetalnessMap(metallic);
-        // mat->SetRoughnessMap(roughness);
-        // mat->SetAoMap(ao);
-
-        InspectorPanel::SetSelectedMaterial(mat);
-        // ForwardRenderer::Init(); // Why here?
         CreateRenderTarget();
 
         UndoRedo::StartUp();
 
         CodeEditorManager::StartUp();
+        // This sets the active code editor so it should happen after the initialization of the manager.
+        ApplyEditorSettings();
+
         BuildManager::StartUp();
         Path engineAssemblyPath = "C:/dev/Crowny/Crowny-Sharp/CrownySharp.dll";
         CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY,
@@ -204,9 +163,6 @@ namespace Crowny
 
         if (m_Temp == nullptr) // No scene was auto-loaded
             m_Temp = CreateRef<Scene>("Scene");
-
-        m_VisualStudioVersions = VisualStudioCodeEditor::GetAvailableVersions();
-        m_VisualStudioVersionId = 0;
     }
 
     void EditorLayer::CreateRenderTarget()
@@ -287,6 +243,41 @@ namespace Crowny
         projSettings->ExpandedEntities = m_HierarchyPanel->GetSerializableHierarchy();
     }
 
+    void EditorLayer::ApplyEditorSettings()
+    {
+        Ref<EditorSettings> editorSettings = Editor::Get().GetEditorSettings();
+        m_ShowDemoWindow = editorSettings->ShowImGuiDemoWindow;
+        m_ShowColliders = editorSettings->ShowPhysicsColliders2D;
+        m_AutoLoadLastProject = editorSettings->AutoLoadLastProject;
+        m_ShowScriptDebugInfo = editorSettings->ShowScriptDebugInfo;
+        m_ShowEntityDebugInfo = editorSettings->ShowEntityDebugInfo;
+
+        m_ConsolePanel->SetMessageLevelEnabled(ConsoleBuffer::Message::Level::Info,
+                                               editorSettings->EnableConsoleInfoMessages);
+        m_ConsolePanel->SetMessageLevelEnabled(ConsoleBuffer::Message::Level::Warn,
+                                               editorSettings->EnableConsoleWarningMessages);
+        m_ConsolePanel->SetMessageLevelEnabled(ConsoleBuffer::Message::Level::Error,
+                                               editorSettings->EnableConsoleErrorMessages);
+
+        m_ConsolePanel->SetCollapseEnabled(editorSettings->CollapseConsole);
+        m_ConsolePanel->SetScrollToBottomEnabled(editorSettings->ScrollToBottom);
+
+        if (m_AutoLoadLastProject && !editorSettings->LastOpenProject.empty())
+        {
+            Editor::Get().LoadProject(editorSettings->LastOpenProject);
+            SetProjectSettings();
+            m_AssetBrowser->Initialize();
+        }
+        if (editorSettings->CodeEditorPath.extension() == ".exe" && fs::exists(editorSettings->CodeEditorPath))
+            CodeEditorManager::Get().SetActive(editorSettings->CodeEditorPath);
+        else
+        {
+            // Use the first available editor.
+            const Vector<CodeEditorInstallation>& installations = CodeEditorManager::Get().GetAvailableEditors();
+            CodeEditorManager::Get().SetActive(installations[0].ExecutablePath);
+        }
+    }
+
     void EditorLayer::BuildGame(Event& event) {}
 
     void EditorLayer::RebuildAssemblies(Event& event)
@@ -346,8 +337,8 @@ namespace Crowny
     void EditorLayer::OpenScene()
     {
         Vector<Path> outPaths;
-        if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, ProjectLibrary::Get().GetAssetFolder(),
-                                       { Editor::GetSceneDialogFilter() }, outPaths))
+        if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, outPaths, "Open Scene", ProjectLibrary::Get().GetAssetFolder(),
+                                       { Editor::GetSceneDialogFilter() }))
             OpenScene(outPaths[0].replace_extension(".cwscene"));
     }
 
@@ -361,8 +352,8 @@ namespace Crowny
     void EditorLayer::SaveActiveSceneAs()
     {
         Vector<Path> outPaths;
-        if (FileSystem::OpenFileDialog(FileDialogType::SaveFile, ProjectLibrary::Get().GetAssetFolder(),
-                                       { Editor::GetSceneDialogFilter() }, outPaths))
+        if (FileSystem::OpenFileDialog(FileDialogType::SaveFile, outPaths, "Save scene", ProjectLibrary::Get().GetAssetFolder(),
+                                       { Editor::GetSceneDialogFilter() }))
         {
             SceneSerializer serializer(SceneManager::GetActiveScene());
             serializer.Serialize(outPaths[0].replace_extension(".cwscene"));
@@ -415,6 +406,7 @@ namespace Crowny
 
         settings->CollapseConsole = m_ConsolePanel->IsCollapseEnabled();
         settings->ScrollToBottom = m_ConsolePanel->IsScrollToBottomEnabled();
+        settings->CodeEditorPath = CodeEditorManager::Get().GetActiveEditorPath();
 
         EditorAssets::Unload();
         Editor::Get().SaveProject();
@@ -708,8 +700,8 @@ namespace Crowny
             if (ImGui::Button("Open"))
             {
                 Vector<Path> outPaths;
-                if (FileSystem::OpenFileDialog(FileDialogType::OpenFolder, Editor::Get().GetDefaultProjectPath(), {},
-                                               outPaths))
+                if (FileSystem::OpenFileDialog(FileDialogType::OpenFolder, outPaths,
+                                               "Open Project", Editor::Get().GetDefaultProjectPath()))
                 {
                     if (outPaths.size() > 0)
                     {
@@ -1337,33 +1329,17 @@ namespace Crowny
         ImGui::Checkbox("Show C# debug info", &m_ShowScriptDebugInfo);
         ImGui::Checkbox("Show asset info", &m_ShowAssetInfo);
         ImGui::Checkbox("Show entity debug info", &m_ShowEntityDebugInfo);
-
-        static const Vector<String> editors = { "VisualStudio", "MonoDevelop" };
-        if (UI::PropertyDropdown("Editor", editors, m_CodeEditor))
+        
+        const Vector<CodeEditorInstallation>& editors =
+          CodeEditorManager::Get().GetAvailableEditors();
+        std::function<String(const CodeEditorInstallation&)> selector =
+          [](const CodeEditorInstallation& install) -> String { return install.Name; };
+        if (UI::PropertyDropdown("Visual Studio Version", editors, m_VisualStudioVersionId, selector))
         {
-            if (m_CodeEditor == CodeEditorType::VisualStudio)
-                CodeEditorManager::Get().SetEditorExecutablePath(
-                  m_VisualStudioVersions[m_VisualStudioVersionId].ExecutablePath);
+            const CodeEditorInstallation& selectedEditor = editors[m_VisualStudioVersionId];
+            CodeEditorManager::Get().SetActive(selectedEditor.ExecutablePath);
         }
-
-        if (m_CodeEditor == CodeEditorType::VisualStudio)
-        {
-            Vector<String> names;
-            names.reserve(m_VisualStudioVersions.size());
-            for (const VisualStudioInstall& install : m_VisualStudioVersions)
-                names.push_back(install.Name);
-            if (UI::PropertyDropdown("Visual Studio Version", names, m_VisualStudioVersionId))
-                CodeEditorManager::Get().SetEditorExecutablePath(
-                  m_VisualStudioVersions[m_VisualStudioVersionId].ExecutablePath);
-            const VisualStudioInstall& install = m_VisualStudioVersions[m_VisualStudioVersionId];
-            ImGui::Text(install.ExecutablePath.string().c_str());
-            if (install.Prerelease)
-                ImGui::Text("Prerelease");
-        }
-        else
-        {
-            CW_ENGINE_WARN("Unsupported code editor");
-        }
+        
         ImGui::End();
     }
 

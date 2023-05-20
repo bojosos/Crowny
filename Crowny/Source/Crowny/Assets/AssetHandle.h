@@ -13,7 +13,7 @@ namespace Crowny
     struct AssetHandleData
     {
         Ref<Asset> m_Ptr;
-        UUID m_UUID;
+        UUID42 m_UUID;
         bool m_IsCreated = false;
         std::atomic<uint32_t> m_RefCount{ 0 };
     };
@@ -24,13 +24,13 @@ namespace Crowny
         bool IsLoaded() const { return true; }
         bool BlockUntilLoaded() const;
         void Release();
-        const UUID& GetUUID() const { return m_Data != nullptr ? m_Data->m_UUID : UUID::EMPTY; }
+        const UUID42& GetUUID() const { return m_Data != nullptr ? m_Data->m_UUID : UUID42::EMPTY; }
 
         const Ref<AssetHandleData>& GetHandleData() const { return m_Data; }
 
     protected:
         void Destroy();
-        void SetHandleData(const Ref<Asset>& ptr, const UUID& uuid);
+        void SetHandleData(const Ref<Asset>& ptr, const UUID42& uuid);
         void ClearHandleData();
         void AddInternalRef();
         void RemoveInternalRef();
@@ -160,7 +160,7 @@ namespace Crowny
         template <class _Ty1, class _Ty2, bool _Weak2>
         friend TAssetHandle<_Ty1, false> static_asset_cast(const TAssetHandle<_Ty2, _Weak2>& other);
 
-        explicit TAssetHandle(T* ptr, const UUID& uuid) : TAssetHandleBase<Weak>()
+        explicit TAssetHandle(T* ptr, const UUID42& uuid) : TAssetHandleBase<Weak>()
         {
             this->m_Data = CreateRef<AssetHandleData>();
             this->AddRef();
@@ -168,14 +168,14 @@ namespace Crowny
             this->m_IsCreated = true;
         }
 
-        TAssetHandle(const UUID& uuid)
+        TAssetHandle(const UUID42& uuid)
         {
             this->m_Data = CreateRef<AssetHandleData>();
             this->m_Data->m_UUID = uuid;
             this->AddRef();
         }
 
-        TAssetHandle(const Ref<T> ptr, const UUID& uuid)
+        TAssetHandle(const Ref<T> ptr, const UUID42& uuid)
         {
             this->m_Data = CreateRef<AssetHandleData>();
             this->AddRef();

@@ -24,7 +24,7 @@ namespace Crowny
 
     void SceneSerializer::SerializeEntity(YAML::Emitter& out, Entity entity)
     {
-        const UUID& uuid = entity.GetUuid();
+        const UUID42& uuid = entity.GetUuid();
         if (!entity)
             return;
         out << YAML::BeginMap;
@@ -263,7 +263,7 @@ namespace Crowny
             {
                 for (const YAML::Node& entity : entities)
                 {
-                    UUID id = entity["Entity"].as<UUID>();
+                    UUID42 id = entity["Entity"].as<UUID42>();
 
                     String tag;
                     const YAML::Node& tc = entity["TagComponent"];
@@ -319,11 +319,16 @@ namespace Crowny
                         for (const auto& scriptNode : script)
                         {
                             Ref<SerializableObject> obj = SerializableObject::DeserializeYAML(scriptNode.second);
-                            msc.Scripts.push_back(MonoScript(scriptNode.first.as<String>()));
+
+                            MonoClass* monoClass =
+                              MonoManager::Get().FindClass("Sandbox", scriptNode.first.as<String>());
+                            CW_ENGINE_ASSERT(monoClass != nullptr);
+                            ::MonoClass* rawClass = monoClass->GetInternalPtr();
+                            MonoReflectionType* runtimeType = MonoUtils::GetType(rawClass);
+
+                            msc.Scripts.push_back(MonoScript(runtimeType));
                             msc.Scripts.back().m_SerializedObjectData = obj;
                             msc.Scripts.back().Create(deserialized);
-                            // obj->Deserialize(msc.Scripts.back().GetManagedInstance(),
-                            // msc.Scripts.back().GetObjectInfo());
                         }
                     }
 
@@ -353,8 +358,8 @@ namespace Crowny
                     {
                         auto& asc = deserialized.AddComponent<AudioSourceComponent>();
 
-                        UUID uuid = source["AudioClip"].as<UUID>();
-                        if (uuid != UUID::EMPTY)
+                        UUID42 uuid = source["AudioClip"].as<UUID42>();
+                        if (uuid != UUID42::EMPTY)
                         {
                             TAssetHandleBase<false> handle;
                             handle.m_Data = CreateRef<AssetHandleData>();
@@ -380,7 +385,7 @@ namespace Crowny
                         const auto& material = node["Material"];
                         if (!material)
                             return Physics2D::Get().GetDefaultMaterial();
-                        UUID uuid = material.as<UUID>();
+                        UUID42 uuid = material.as<UUID42>();
                         TAssetHandleBase<false> handle;
                         handle.m_Data = CreateRef<AssetHandleData>();
                         handle.m_Data->m_RefCount.fetch_add(1, std::memory_order_relaxed);
@@ -441,7 +446,7 @@ namespace Crowny
                     const YAML::Node& children = node["Children"];
                     for (const auto& child : children)
                     {
-                        Entity e = m_Scene->GetEntityFromUuid(child.as<UUID>());
+                        Entity e = m_Scene->GetEntityFromUuid(child.as<UUID42>());
                         e.SetParent(entity);
                     }
                 }
