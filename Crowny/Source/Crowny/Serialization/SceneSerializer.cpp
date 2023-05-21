@@ -312,26 +312,6 @@ namespace Crowny
                         tc.Color = sprite["Color"].as<glm::vec4>();
                     }
 
-                    const YAML::Node& script = entity["MonoScriptComponent"];
-                    if (script)
-                    {
-                        auto& msc = deserialized.AddComponent<MonoScriptComponent>();
-                        for (const auto& scriptNode : script)
-                        {
-                            Ref<SerializableObject> obj = SerializableObject::DeserializeYAML(scriptNode.second);
-
-                            MonoClass* monoClass =
-                              MonoManager::Get().FindClass("Sandbox", scriptNode.first.as<String>());
-                            CW_ENGINE_ASSERT(monoClass != nullptr);
-                            ::MonoClass* rawClass = monoClass->GetInternalPtr();
-                            MonoReflectionType* runtimeType = MonoUtils::GetType(rawClass);
-
-                            msc.Scripts.push_back(MonoScript(runtimeType));
-                            msc.Scripts.back().m_SerializedObjectData = obj;
-                            msc.Scripts.back().Create(deserialized);
-                        }
-                    }
-
                     const YAML::Node& text = entity["TextComponent"];
                     if (text)
                     {
@@ -433,6 +413,27 @@ namespace Crowny
                         rb2dc.SetConstraints((Rigidbody2DConstraints)rb2d["Constraints"].as<uint32_t>());
                         rb2dc.SetAutoMass(rb2d["AutoMass"].as<bool>(false), deserialized);
                         rb2dc.SetInterpolationMode((RigidbodyInterpolation)rb2d["Interpolation"].as<uint32_t>());
+                    }
+
+                    // Keep last because of all of the RequireComponent magic.
+                    const YAML::Node& script = entity["MonoScriptComponent"];
+                    if (script)
+                    {
+                        auto& msc = deserialized.AddComponent<MonoScriptComponent>();
+                        for (const auto& scriptNode : script)
+                        {
+                            Ref<SerializableObject> obj = SerializableObject::DeserializeYAML(scriptNode.second);
+
+                            MonoClass* monoClass =
+                              MonoManager::Get().FindClass("Sandbox", scriptNode.first.as<String>());
+                            CW_ENGINE_ASSERT(monoClass != nullptr);
+                            ::MonoClass* rawClass = monoClass->GetInternalPtr();
+                            MonoReflectionType* runtimeType = MonoUtils::GetType(rawClass);
+
+                            msc.Scripts.push_back(MonoScript(runtimeType));
+                            msc.Scripts.back().m_SerializedObjectData = obj;
+                            msc.Scripts.back().Create(deserialized);
+                        }
                     }
 
                     const YAML::Node& rel = entity["RelationshipComponent"];
