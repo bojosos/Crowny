@@ -745,7 +745,7 @@ namespace Crowny
                 }
             }
 
-            if (Input::IsMouseButtonDown(Mouse::ButtonLeft) || Input::IsMouseButtonDown(Mouse::ButtonRight))
+            if (Input::IsMouseButtonUp(Mouse::ButtonLeft) || Input::IsMouseButtonUp(Mouse::ButtonRight))
             {
                 if (ImGui::IsItemHovered() && !dropping) // TODO: Check if this is even necessary
                 {
