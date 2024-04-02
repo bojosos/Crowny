@@ -4,9 +4,6 @@
 [submodule "Crowny/Dependencies/spdlog"]
 	path = Crowny/Dependencies/spdlog
 	url = https://github.com/bojosos/spdlog
-[submodule "Crowny/Dependencies/assimp"]
-	path = Crowny/Dependencies/assimp
-	url = https://github.com/bojosos/assimp-1
 [submodule "Crowny/Dependencies/entt"]
 	path = Crowny/Dependencies/entt
 	url = https://github.com/bojosos/entt
@@ -49,3 +46,6 @@
 [submodule "Crowny/Dependencies/mbedtls"]
 	path = Crowny/Dependencies/mbedtls
 	url = https://github.com/bojosos/mbedtls
+[submodule "Crowny/Dependencies/assimp"]
+	path = Crowny/Dependencies/assimp
+	url = https://github.com/bojosos/assimp/
