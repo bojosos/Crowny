@@ -36,9 +36,9 @@ namespace Crowny
         const Vector<const char*> FilterModes = { "Point", "Bilinear", "Trilinear" };
         uint32_t SelectedFilterMode = 0;
 
-        uint32_t AnsioLevel;
+        // uint32_t AnsioLevel;
 
-        uint32_t MaxSize;
+        // uint32_t MaxSize;
 
         const Vector<const char*> ResizeAlgorithms = { "Mitchell", "Bilinear" };
         uint32_t SelectedResizeAlgorithm = 0;

@@ -10,6 +10,8 @@ namespace Crowny
     public:
         AudioSource();
         ~AudioSource();
+        void OnTransformChanged(const Transform& transform);
+
         void SetClip(const AssetHandle<AudioClip>& clip);
         AssetHandle<AudioClip> GetAudioClip() const { return m_AudioClip; }
         void SetVolume(float volume);
@@ -34,10 +36,10 @@ namespace Crowny
         void SetGlobalPause(bool paused);
         void SetTime(float time);
         float GetTime() const;
+        bool Is3D() const;
 
     private:
         bool RequiresStreaming() const;
-        bool Is3D() const;
         void Stream();
         void StartStreaming();
         void StopStreaming();

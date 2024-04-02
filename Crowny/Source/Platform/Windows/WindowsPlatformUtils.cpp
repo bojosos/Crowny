@@ -19,7 +19,7 @@
 
 namespace Crowny
 {
-    UUID42 PlatformUtils::GenerateUUID()
+    UUID PlatformUtils::GenerateUUID()
     {
         ::UUID uuid;
         RPC_STATUS status = UuidCreate(&uuid);
@@ -32,7 +32,7 @@ namespace Crowny
         uint32_t data3 = uuid.Data3 | (uuid.Data4[0] << 16) | (uuid.Data4[1] << 24);
         uint32_t data4 = uuid.Data4[2] | (uuid.Data4[3] << 8) | (uuid.Data4[4] << 16) | (uuid.Data4[5] << 24);
 
-        return UUID42(data1, data2, data3, data4);
+        return UUID(data1, data2, data3, data4);
     }
 
     void PlatformUtils::ShowInExplorer(const Path& filepath)

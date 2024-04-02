@@ -33,6 +33,7 @@ namespace Crowny
         void SetActive(const Path& editorPath);
         const Vector<CodeEditorInstallation>& GetAvailableEditors() const { return m_Editors; }
         const Path& GetActiveEditorPath() const { return m_ActiveEditorPath; }
+
     private:
         Vector<CodeEditorInstallation> m_Editors;
         CodeEditor* m_ActiveEditor;

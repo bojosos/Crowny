@@ -28,6 +28,7 @@ namespace Crowny
     static const Path PROJECT_INTERNAL_DIR = u8"Internal";
     static const Path INTERNAL_ASSEMBLY_PATH = PROJECT_INTERNAL_DIR / "Assemblies/Debug";
     static const DialogFilter SCENE_FILTER = { "CrownyScene", "*.cwscene" };
+    // Molq?
     static const Path DEFAULT_PROJECT_PATH_WIN32 = "C:/dev/Projects";
     static const Path DEFAULT_PROJECT_PATH_LINUX = "/home/life/Desktop/dev";
 

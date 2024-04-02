@@ -31,6 +31,6 @@
 #define CW_ASSERT(...) CW_EXPAND_MACRO(CW_INTERNAL_ASSERT_GET_MACRO(__VA_ARGS__)(_, __VA_ARGS__))
 #define CW_ENGINE_ASSERT(...) CW_EXPAND_MACRO(CW_INTERNAL_ASSERT_GET_MACRO(__VA_ARGS__)(_ENGINE_, __VA_ARGS__))
 #else
-#define CW_ASSERT(...)
-#define CW_ENGINE_ASSERT(...)
+#define CW_ASSERT(...) void()
+#define CW_ENGINE_ASSERT(...) void()
 #endif

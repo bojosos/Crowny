@@ -48,7 +48,7 @@ namespace Crowny
 
             {
                 UI::ScopedColor padding(ImGuiCol_Border, IM_COL32(0, 0, 0, 0));
-                UI::ScopedStyle frame(ImGuiCol_FrameBg, IM_COL32(0, 0, 0, 0));
+                UI::ScopedColor frame(ImGuiCol_FrameBg, IM_COL32(0, 0, 0, 0));
 
                 ImGui::BeginChild(
                   ImGui::GetID((label + "fr").c_str()),
@@ -64,12 +64,12 @@ namespace Crowny
             const ImGuiIO& io = ImGui::GetIO();
             auto boldFont = io.Fonts->Fonts[1];
 
-            auto drawControl = [&](const std::string& label, float& value, const ImVec4& colourN, const ImVec4& colorH,
+            auto drawControl = [&](const std::string& label, float& value, const ImVec4& colorN, const ImVec4& colorH,
                                    const ImVec4& colorP) {
                 {
                     UI::ScopedStyle buttonFrame(ImGuiStyleVar_FramePadding, ImVec2(framePadding, 0.0f));
                     UI::ScopedStyle buttonRounding(ImGuiStyleVar_FrameRounding, 1.0f);
-                    UI::ScopedColor buttonColor(ImGuiCol_Button, colourN);
+                    UI::ScopedColor buttonColor(ImGuiCol_Button, colorN);
                     UI::ScopedColor buttonHover(ImGuiCol_ButtonHovered, colorH);
                     UI::ScopedColor buttonActive(ImGuiCol_ButtonActive, colorP);
 
@@ -91,7 +91,7 @@ namespace Crowny
                 bool wasTempInputActive = ImGui::TempInputIsActive(ImGui::GetID(("##" + label).c_str()));
                 modified |= UI::DragFloat(("##" + label).c_str(), &value, 0.1f, 0.0f, 0.0f, "%.2f", 0);
 
-                // NOTE(Peter): Ugly hack to make tabbing behave the same as Enter (e.g marking it as manually modified)
+                // NOTE: Ugly hack to make tabbing behave the same as Enter (e.g marking it as manually modified)
                 /*if (modified && Input::IsKeyPressed(KeyCode::Tab))
                     manuallyEdited = true;
 
@@ -125,9 +125,9 @@ namespace Crowny
         return modified;
     }
 
-    template <> void ComponentEditorWidget<TransformComponent>(Entity e)
+    template <> void ComponentEditorWidget<TransformComponent>(Entity entity)
     {
-        auto& transform = e.GetComponent<TransformComponent>();
+        TransformComponent& transform = entity.GetComponent<TransformComponent>();
         bool changed = false;
         ImGui::Columns(1);
         UI::ScopedStyle spacing(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 8.0f));
@@ -140,15 +140,24 @@ namespace Crowny
                                 ImGui::GetContentRegionAvail().x - 100.0f);
 
         ImGui::TableNextRow();
-        DrawVec3Control("Transform", transform.Position);
+        const Transform& localTransform = transform.GetLocalTransform();
+        glm::vec3 position = localTransform.GetPosition();
+        if (DrawVec3Control("Transform", position))
+            transform.SetPosition(position);
 
-        glm::vec3 deg = glm::degrees(transform.Rotation);
+        const glm::vec3& eulerAngles = glm::eulerAngles(localTransform.GetRotation());
+        glm::vec3 eulerDegrees = glm::degrees(eulerAngles);
         ImGui::TableNextRow();
-        DrawVec3Control("Rotation", deg);
-        transform.Rotation = glm::radians(deg);
+        if (DrawVec3Control("Rotation", eulerDegrees))
+        {
+            const glm::vec3& eulerRadians = glm::radians(eulerDegrees);
+            transform.SetRotation(glm::eulerAngleXYZ(eulerRadians.x, eulerRadians.y, eulerRadians.z));
+        }
 
         ImGui::TableNextRow();
-        DrawVec3Control("Scale", transform.Scale, 1.0f);
+        glm::vec3 scale = localTransform.GetScale();
+        if (DrawVec3Control("Scale", scale, 1.0f))
+            transform.SetScale(scale);
 
         ImGui::EndTable();
     }
@@ -250,34 +259,32 @@ namespace Crowny
         UI::QuickTabsP("Style", { "Bold", "Italic", "Underline", "Strikethrough" }, textComponent.FontStyle);
         {
             UI::ScopedDisable scopedDisable(textComponent.AutoSize);
-            UI::Property("Size", textComponent.Size);
+            UI::Property("Size", textComponent.Size); // TODO: Set min 0
         }
         UI::Property("Auto Size", textComponent.AutoSize);
         UI::PropertyColor("Color", textComponent.Color);
         UI::Property("Wrapping", textComponent.Wrapping);
         if (textComponent.Wrapping)
             UI::PropertyDropdown("Overflow", { "Overflow", "Ellipses", "Truncate" }, textComponent.Overflow);
+        UI::PropertyColor("Outline", textComponent.OutlineColor);
+        UI::Property("Thickness", textComponent.Thickess); // TODO: Set min 0
+        UI::Property("Use Kerning", textComponent.UseKerning);
+        UI::Property("Character Spacing", textComponent.CharacterSpacing);
+        UI::Property("Word Spacing", textComponent.WordSpacing);
+        UI::Property("Line Spacing", textComponent.LineSpacing);
 
 #ifdef CW_DEBUG
-        ImGui::SameLine();
         if (ImGui::Button("Show Font Atlas"))
-            // ImGui::OpenPopup(textComponent.Font->GetName().c_str());
-            ImGui::OpenPopup("Tomatoes");
+            ImGui::OpenPopup("Font Atlas Debug");
 
-        if (ImGui::BeginPopup("Tomatoes"))
+        if (ImGui::BeginPopup("Font Atlas Debug"))
         {
-            ImGui::Text("%s", "Tomatoes");
+            ImGui::Text("Font Atlas");
             ImGui::Separator();
-            ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().Test), { 1024.0f, 1024.0f });
+            ImGui::Image(ImGui_ImplVulkan_AddTexture(textComponent.Font->GetAtlasTexture()), { 512.0f, 512.0f });
             ImGui::EndPopup();
         }
 #endif
-
-        ImGui::NextColumn();
-
-        // float size = textComponent.Font->GetSize();
-        // if (UI::Property("Font Size", size))
-        // textComponent.Font = FontManager::Get(textComponent.Font->GetName(), size);
     }
 
     template <> void ComponentEditorWidget<SpriteRendererComponent>(Entity e)
@@ -301,8 +308,8 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<MeshRendererComponent>(Entity e)
     {
-        auto& mesh = e.GetComponent<MeshRendererComponent>().Mesh;
-        ImGui::Text("Path");
+        MeshRendererComponent& mesh = e.GetComponent<MeshRendererComponent>();
+        UIUtils::AssetReference<Mesh>("Mesh", mesh.MeshHandle);
     }
 
     template <> void ComponentEditorWidget<Rigidbody2DComponent>(Entity entity)
@@ -456,7 +463,7 @@ namespace Crowny
         AudioSourceComponent& sourceComponent = entity.GetComponent<AudioSourceComponent>();
 
         AssetHandle<AudioClip> handle = sourceComponent.GetClip();
-        if (UIUtils::AssetReference<AudioClip>("Audio Clip", handle) && handle)
+        if (UIUtils::AssetReference<AudioClip>("Audio Clip", handle))
             sourceComponent.SetClip(handle);
 
         float volume = sourceComponent.GetVolume();

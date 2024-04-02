@@ -87,6 +87,8 @@ namespace Crowny
 
     using Mutex = std::mutex;
 
+    using RecursiveMutex = std::recursive_mutex;
+
     using Signal = std::condition_variable;
 
     using Lock = std::unique_lock<Mutex>;

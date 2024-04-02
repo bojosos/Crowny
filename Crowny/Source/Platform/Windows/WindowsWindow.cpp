@@ -173,6 +173,9 @@ namespace Crowny
         case Cursor::VRESIZE:
             m_Cursor = glfwCreateStandardCursor(GLFW_VRESIZE_CURSOR);
             break;
+        case Cursor::STOPSIGN:
+            m_Cursor = glfwCreateStandardCursor(GLFW_NOT_ALLOWED_CURSOR);
+            break;
         }
 
         if (cursor != Cursor::NO_CURSOR)
