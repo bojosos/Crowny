@@ -41,6 +41,8 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_AddForce", (void*)&Internal_AddForce);
         MetaData.ScriptClass->AddInternalCall("Internal_AddForceAt", (void*)&Internal_AddForceAt);
         MetaData.ScriptClass->AddInternalCall("Internal_AddTorque", (void*)&Internal_AddTorque);
+        MetaData.ScriptClass->AddInternalCall("Internal_Getinertia", (void*)&Internal_GetInertia);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetInertia", (void*)&Internal_SetInertia);
     }
 
     bool ScriptRigidbody2D::Internal_IsAwake(ScriptRigidbody2D* thisPtr)
@@ -202,7 +204,18 @@ namespace Crowny
 
     void ScriptRigidbody2D::Internal_GetPosition(ScriptRigidbody2D* thisPtr, glm::vec2* outPosition)
     {
-        outPosition->x = thisPtr->GetComponent().RuntimeBody->GetPosition().x;
-        outPosition->y = thisPtr->GetComponent().RuntimeBody->GetPosition().y;
+        const b2Vec2& position = thisPtr->GetComponent().RuntimeBody->GetPosition();
+        outPosition->x = position.x;
+        outPosition->y = position.y;
+    }
+
+    float ScriptRigidbody2D::Internal_GetInertia(ScriptRigidbody2D* thisPtr)
+    {
+        return thisPtr->GetComponent().GetInertia();
+    }
+
+    void ScriptRigidbody2D::Internal_SetInertia(ScriptRigidbody2D* thisPtr, float inertia)
+    {
+        return thisPtr->GetComponent().SetInertia(inertia);
     }
 } // namespace Crowny

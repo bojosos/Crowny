@@ -53,7 +53,7 @@ filter "system:linux"
 	IncludeDir["mono"] = "/usr/include/mono-2.0"
 filter "system:windows"
 	IncludeDir["mono"] = "C:/Program Files/Mono/include/mono-2.0"
-	IncludeDir['vulkan'] = "C:/VulkanSDK/1.3.224.1/Include"
+	IncludeDir['vulkan'] = "C:/VulkanSDK/1.3.280.0/Include"
 	
 group "Dependencies"
 	include "3rdparty/premake"

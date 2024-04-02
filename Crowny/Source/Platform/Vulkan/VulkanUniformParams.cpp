@@ -16,6 +16,102 @@
 namespace Crowny
 {
 
+    struct DummyTexFormat
+    {
+        TextureShape Type;
+        int ArraySize;
+        int Width;
+        int Height;
+        int Depth;
+    };
+
+    const static DummyTexFormat DummyTexTypes[] = {
+        { TextureShape::TEXTURE_1D, 1, 2, 1, 1 },   { TextureShape::TEXTURE_1D, 2, 2, 1, 1 },
+        { TextureShape::TEXTURE_2D, 1, 2, 2, 1 },   { TextureShape::TEXTURE_2D, 2, 2, 2, 1 },
+        { TextureShape::TEXTURE_3D, 1, 2, 2, 2 },   { TextureShape::TEXTURE_CUBE, 6, 2, 2, 1 },
+        { TextureShape::TEXTURE_CUBE, 12, 2, 2, 1 }
+    };
+
+    void VulkanTextureManager::OnStartUp()
+    {
+        int idx = 0;
+        for (auto& entry : DummyTexTypes)
+        {
+            Ref<PixelData> pixelData = PixelData::Create(entry.Width, entry.Height, entry.Depth, TextureFormat::RGBA8);
+            for (int i = 0; i < entry.Depth; i++)
+                for (int j = 0; j < entry.Height; j++)
+                    for (int k = 0; k < entry.Width; k++)
+                        pixelData->SetColorAt(k, j, i, glm::vec4(1.0f));
+            TextureParameters params;
+            params.Shape = entry.Type;
+            params.Width = entry.Width;
+            params.Height = entry.Height;
+            params.Depth = entry.Depth;
+            params.Faces = entry.ArraySize;
+            params.Format = TextureFormat::RGBA8;
+            params.Usage = TextureUsage::TEXTURE_STATIC;
+
+            m_DummyReadTextures[idx] = std::static_pointer_cast<VulkanTexture>(Texture::Create(params));
+            m_DummyReadTextures[idx]->WriteData(*pixelData);
+            params.Usage = TextureUsage::TEXTURE_LOADSTORE;
+            m_DummyStorageTextures[idx] = std::static_pointer_cast<VulkanTexture>(Texture::Create(params));
+            idx++;
+        }
+    }
+
+    void VulkanTextureManager::OnShutdown()
+    {
+        for (int i = 0; i < 7; i++)
+        {
+            m_DummyStorageTextures[i] = nullptr;
+            m_DummyReadTextures[i] = nullptr;
+        }
+    }
+
+    VulkanTexture* VulkanTextureManager::GetDummyTexture(UniformResourceType type)
+    {
+        Ref<VulkanTexture> texture;
+        switch (type)
+        {
+        case SAMPLER1D:
+        case TEXTURE1D:
+            return m_DummyReadTextures[0].get();
+        case SAMPLER2D:
+        case TEXTURE2D:
+            return m_DummyReadTextures[2].get();
+        case SAMPLER3D:
+        case TEXTURE3D:
+            return m_DummyReadTextures[4].get();
+        case SAMPLERCUBE:
+        case TEXTURECUBE:
+            return m_DummyReadTextures[5].get();
+        default:
+            break;
+        }
+        return nullptr;
+    }
+
+    VkFormat VulkanTextureManager::GetDummyViewFormat(GpuBufferFormat format)
+    {
+        return VK_FORMAT_R8G8B8A8_UNORM; // TODO: Fix this.
+        switch (format)
+        {
+        case BF_16X2F:
+        case BF_16X1U:
+        case BF_32X1U:
+            return VK_FORMAT_R32_UINT;
+        case BF_16X2U:
+        case BF_32X2U:
+            return VK_FORMAT_R16G16_UINT;
+        case BF_32X3U:
+        case BF_32X4U:
+        case BF_16X4U:
+            return VK_FORMAT_R8G8B8A8_UINT;
+        default:
+            return VK_FORMAT_UNDEFINED;
+        }
+    }
+
     VulkanUniformParams::VulkanUniformParams(const Ref<UniformParamInfo>& params) : UniformParams(params)
     {
         VulkanUniformParamInfo& paramInfo = static_cast<VulkanUniformParamInfo&>(*m_ParamInfo.get());
@@ -94,8 +190,8 @@ namespace Crowny
 
                     if (isImage)
                     {
-                        // VulkanImage* res = vkTexManager.GetDummy(types[j]);
-                        // VkFormat format = VulkanTextureManager::GetDummyViewFormat(types[j]);
+                        VulkanImage* res = VulkanTextureManager::Get().GetDummyTexture(types[j])->GetImage();
+                        VkFormat format = VulkanTextureManager::GetDummyViewFormat(formats[j]);
 
                         VkDescriptorImageInfo& imageInfo = setData.WriteInfos[j].Image;
 
@@ -103,11 +199,11 @@ namespace Crowny
                         if (isLoadStore)
                         {
                             imageInfo.sampler = VK_NULL_HANDLE;
-                            // imageInfo.imageView = res->GetView(format, false);
+                            imageInfo.imageView = res->GetView(format, false);
                             imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
                             uint32_t seqIdx =
                               paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::LoadStoreTexture, i, slot);
-                            // m_StorageImages[seqIdx] = res->GetHandle();
+                            m_StorageImages[seqIdx] = res->GetHandle();
                         }
                         else
                         {
@@ -117,11 +213,11 @@ namespace Crowny
                                 imageInfo.sampler = vkDefaultSampler->GetHandle();
                             else
                                 imageInfo.sampler = VK_NULL_HANDLE;
-                            // imageInfo.imageView = image->GetView(format, false);
+                            imageInfo.imageView = res->GetView(format, false);
                             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                             uint32_t seqIdx =
                               paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::Texture, i, slot);
-                            // m_SampledImages[seqIdx] = res->GetHandle();
+                            m_SampledImages[seqIdx] = res->GetHandle();
                         }
                         writeSetInfo.pImageInfo = &imageInfo;
                         writeSetInfo.pBufferInfo = nullptr;
@@ -217,7 +313,7 @@ namespace Crowny
             result = block->GetBuffer();
 
         PerSetData& data = m_PerSetData[set];
-        if (buffer != nullptr)
+        if (buffer != nullptr && result)
         {
             VkBuffer vkBuffer = result->GetHandle();
             data.WriteInfos[bindingIdx].Buffer.buffer = vkBuffer;
@@ -266,7 +362,12 @@ namespace Crowny
         }
         else
         {
-            CW_ENGINE_ASSERT(false, "Not implemented");
+            UniformResourceType* types = paramInfo.GetLayoutTypes(set);
+            GpuBufferFormat* elementTypes = paramInfo.GetLayoutElementTypes(set);
+            image = VulkanTextureManager::Get().GetDummyTexture(types[bindingIdx])->GetImage();
+            const VkFormat format = VulkanTextureManager::GetDummyViewFormat(elementTypes[bindingIdx]);
+            data.WriteInfos[bindingIdx].Image.imageView = image->GetView(format, false);
+            m_SampledImages[seqIdx] = image->GetHandle();
         }
 
         m_SetsDirty[set] = true;
@@ -396,7 +497,11 @@ namespace Crowny
 
             if (image == nullptr)
             {
-                CW_ENGINE_ASSERT(false, "Broken");
+                UniformResourceType* types = paramInfo.GetLayoutTypes(set);
+                image = VulkanTextureManager::Get().GetDummyTexture(types[bindingIdx])->GetImage();
+                layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                if (image == nullptr)
+                    continue;
             }
 
             const TextureSurface& surface = m_SampledTextureData[i].Surface;
@@ -418,8 +523,8 @@ namespace Crowny
                 else
                 {
                     CW_ENGINE_ASSERT(false, "Why here?");
-                    // GpuBufferFormat* elementTypes = paramInfo.GetLayoutElementTypes(set);
-                    // view = image->GetView(VulkanTextureManager::GetDummyViewFormat(elementTypes[bindingIdx]));
+                    GpuBufferFormat* elementTypes = paramInfo.GetLayoutElementTypes(set);
+                    view = image->GetView(VulkanTextureManager::GetDummyViewFormat(elementTypes[bindingIdx]));
                 }
 
                 imgInfo.imageView = view;

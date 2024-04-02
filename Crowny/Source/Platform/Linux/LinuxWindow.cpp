@@ -236,6 +236,7 @@ namespace Crowny
         if (!m_Cursor)
             glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
+        // TODO: Cache these maybe if glfw doesn't?
         glfwDestroyCursor(m_Cursor);
 
         switch (cursor)
@@ -261,6 +262,9 @@ namespace Crowny
             break;
         case Cursor::VRESIZE:
             m_Cursor = glfwCreateStandardCursor(GLFW_VRESIZE_CURSOR);
+            break;
+        case Cursor::STOPSIGN:
+            m_Cursor = glfwCreateStandardCursor(GLFW_NOT_ALLOWED_CURSOR);
             break;
         }
 

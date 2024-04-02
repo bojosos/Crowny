@@ -217,7 +217,7 @@ namespace Crowny
                 MonoObject* filepathAttr = memberInfo->GetAttribute(filepathClass);
                 FileDialogType dialogType = FileDialogType::OpenFile;
                 filepathClass->GetField("type")->Get(filepathAttr, &dialogType);
-                
+
                 if (value != nullptr && MonoUtils::GetClass((MonoObject*)value) != MonoUtils::GetStringClass() &&
                     (dialogType == FileDialogType::Multiselect))
                 {
@@ -379,8 +379,8 @@ namespace Crowny
         }
         case ScriptPrimitiveType::U16: {
             uint16_t value = *(uint16_t*)fieldValue;
-            uint16_t minValue16 = glm::clamp(minValueInt, 0LL, 65535LL);
-            uint16_t maxValue16 = glm::clamp(maxValueInt, 0LL, 65535LL);
+            uint16_t minValue16 = (uint16_t)glm::clamp(minValueInt, 0LL, 65535LL);
+            uint16_t maxValue16 = (uint16_t)glm::clamp(maxValueInt, 0LL, 65535LL);
             bool change = false;
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue16, maxValue16);

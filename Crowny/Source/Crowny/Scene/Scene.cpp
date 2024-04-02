@@ -17,7 +17,7 @@ namespace Crowny
 
     template <typename... Component>
     static void CopyComponent(entt::registry& dst, entt::registry& src,
-                              const UnorderedMap<UUID42, entt::entity>& entityMap)
+                              const UnorderedMap<UUID, entt::entity>& entityMap)
     {
         (
           [&]() {
@@ -34,7 +34,7 @@ namespace Crowny
 
     template <typename... Component>
     static void CopyComponent(ComponentGroup<Component...>, entt::registry& dst, entt::registry& src,
-                              const UnorderedMap<UUID42, entt::entity>& entityMap)
+                              const UnorderedMap<UUID, entt::entity>& entityMap)
     {
         CopyComponent<Component...>(dst, src, entityMap);
     }
@@ -56,24 +56,23 @@ namespace Crowny
     }
 
     static void CopyAllComponents(entt::registry& dstRegistry, entt::registry& srcRegistry,
-                                  const UnorderedMap<UUID42, entt::entity>& entityMap)
+                                  const UnorderedMap<UUID, entt::entity>& entityMap)
     {
         CopyComponent(AllComponents{}, dstRegistry, srcRegistry, entityMap);
     }
 
     static void CopyAllExistingComponents(Entity dst, Entity src) { CopyComponentIfExists(AllComponents{}, dst, src); }
 
-    Scene::Scene() {}
-
-    Scene::Scene(const String& name) : m_Name(name)
+    Scene::Scene(bool createRoot) : m_RootEntity(nullptr)
     {
-        m_RootEntity = new Entity(m_Registry.create(), this);
+        if (createRoot)
+            CreateRootEntity();
+    }
 
-        m_RootEntity->AddComponent<TransformComponent>();
-        m_RootEntity->AddComponent<IDComponent>(UuidGenerator::Generate());
-        m_RootEntity->AddComponent<TagComponent>(m_Name);
-        m_RootEntity->AddComponent<RelationshipComponent>();
-
+    Scene::Scene(const String& name, bool createRoot) : m_Name(name), m_RootEntity(nullptr)
+    {
+        if (createRoot)
+            CreateRootEntity();
         RegisterEntityCallbacks();
     }
 
@@ -83,15 +82,17 @@ namespace Crowny
         m_ViewportHeight = other.m_ViewportHeight;
         m_Filepath = other.m_Filepath;
         m_Name = other.m_Name;
+        m_RootEntity = nullptr;
 
-        m_RootEntity = new Entity(m_Registry.create(), this);
+        if (other.m_RootEntity)
+            CreateRootEntity();
 
-        UnorderedMap<UUID42, entt::entity> entityMap;
+        UnorderedMap<UUID, entt::entity> entityMap;
 
         auto idView = m_Registry.view<IDComponent>();
         for (auto e : idView)
         {
-            const UUID42& uuid = other.m_Registry.get<IDComponent>(e).Uuid;
+            const UUID& uuid = other.m_Registry.get<IDComponent>(e).Uuid;
             const String& name = other.m_Registry.get<TagComponent>(e).Tag;
             Entity newEntity = CreateEntityWithUuid(uuid, name);
             entityMap[uuid] = e;
@@ -114,12 +115,12 @@ namespace Crowny
 
         m_RootEntity = new Entity(m_Registry.create(), this);
 
-        UnorderedMap<UUID42, entt::entity> entityMap;
+        UnorderedMap<UUID, entt::entity> entityMap;
 
         auto idView = m_Registry.view<IDComponent>();
         for (auto e : idView)
         {
-            const UUID42& uuid = other.m_Registry.get<IDComponent>(e).Uuid;
+            const UUID& uuid = other.m_Registry.get<IDComponent>(e).Uuid;
             const String& name = other.m_Registry.get<TagComponent>(e).Tag;
             Entity newEntity = CreateEntityWithUuid(uuid, name);
             entityMap[uuid] = e;
@@ -130,6 +131,16 @@ namespace Crowny
     }
 
     Scene::~Scene() { delete m_RootEntity; }
+
+    void Scene::CreateRootEntity()
+    {
+        m_RootEntity = new Entity(m_Registry.create(), this);
+
+        m_RootEntity->AddComponent<TransformComponent>();
+        m_RootEntity->AddComponent<IDComponent>(UuidGenerator::Generate());
+        m_RootEntity->AddComponent<TagComponent>(m_Name);
+        m_RootEntity->AddComponent<RelationshipComponent>();
+    }
 
     void Scene::RegisterEntityCallbacks()
     {
@@ -303,8 +314,7 @@ namespace Crowny
         }
     }
 
-    void Scene::RemoveScriptComponent(Entity entity, const String& namespaceName, const String& typeName)
-        {}
+    void Scene::RemoveScriptComponent(Entity entity, const String& namespaceName, const String& typeName) {}
 
     void Scene::OnRuntimeStart()
     {
@@ -364,12 +374,14 @@ namespace Crowny
         entity.AddComponent<IDComponent>(UuidGenerator::Generate());
         entity.AddComponent<TagComponent>(name);
         entity.AddComponent<TransformComponent>();
-        entity.AddComponent<RelationshipComponent>(*m_RootEntity);
+        entity.AddComponent<RelationshipComponent>();
+        if (m_RootEntity)
+            entity.SetParent(*m_RootEntity);
 
         return entity;
     }
 
-    Entity Scene::CreateEntityWithUuid(const UUID42& uuid, const String& name)
+    Entity Scene::CreateEntityWithUuid(const UUID& uuid, const String& name)
     {
         Entity entity(m_Registry.create(), this);
 
@@ -377,11 +389,13 @@ namespace Crowny
         entity.AddComponent<TagComponent>(name);
         entity.AddComponent<RelationshipComponent>();
         entity.AddComponent<TransformComponent>();
+        if (m_RootEntity)
+            entity.SetParent(*m_RootEntity);
 
         return entity;
     }
 
-    Entity Scene::GetEntityFromUuid(const UUID42& uuid)
+    Entity Scene::GetEntityFromUuid(const UUID& uuid)
     {
         Entity result;
         m_Registry.each([&](auto entityID) {

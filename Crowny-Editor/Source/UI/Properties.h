@@ -291,7 +291,7 @@ namespace Crowny
                 memset(s_MultilineBuffer, 0, 1024 * 1024);
             }
 
-            strcpy(s_MultilineBuffer, value.c_str());
+            std::strncpy(s_MultilineBuffer, value.c_str(), value.size());
 
             if (IsItemDisabled())
                 ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
@@ -484,7 +484,8 @@ namespace Crowny
             return modified;
         }
 
-        static bool PropertyFilepath(const char* label, FileDialogType type, String& value, const String& title = {}, const Path& initialDir = {})
+        static bool PropertyFilepath(const char* label, FileDialogType type, String& value, const String& title = {},
+                                     const Path& initialDir = {})
         {
             ShiftCursor(10.0f, 9.0f);
             ImGui::Text(label);

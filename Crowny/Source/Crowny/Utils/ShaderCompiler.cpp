@@ -175,7 +175,7 @@ namespace Crowny
         return dataResult;
     }
 
-    ShaderDesc ShaderCompiler::Compile(const String& source, ShaderLanguageFlags shaderLanguage,
+    ShaderDesc ShaderCompiler::Compile(const Path& path, const String& source, ShaderLanguageFlags shaderLanguage,
                                        const UnorderedMap<String, String>& defines)
     {
         const char* langToken = "#lang";
@@ -195,7 +195,7 @@ namespace Crowny
             }
         }
         else
-            CW_ENGINE_WARN("#lang directive not found, assuming shader is in GLSL.");
+            CW_ENGINE_WARN("#lang directive not found in {0}, assuming shader is in GLSL.", path.string());
 
         ShaderDesc shaderDesc;
 
@@ -285,6 +285,8 @@ namespace Crowny
             resource.Type = SPIRTypeToResourceType(bufferType);
             resource.Slot = binding;
             resource.Set = set;
+            // TODO: Fix this
+            // resource.ElementType = MapSamplerBasicType(sampler);
 
             uniformDesc->Samplers[resource.Name] = resource;
         }

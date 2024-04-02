@@ -91,7 +91,6 @@ namespace Crowny
         Path mdbPath = m_Path.replace_extension("pdb");
         if (fs::exists(mdbPath))
         {
-            CW_ENGINE_INFO("Here");
             Ref<DataStream> mdbStream = FileSystem::OpenFile(mdbPath);
             if (mdbStream != nullptr)
             {

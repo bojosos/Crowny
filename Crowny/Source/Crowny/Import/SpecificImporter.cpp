@@ -14,4 +14,9 @@ namespace Crowny
         return m_DefaultImportOptions;
     }
 
+    Vector<Ref<Asset>> SpecificImporter::ImportAll(const Path& path, Ref<const ImportOptions> importOptions)
+    {
+        return { Import(path, importOptions) };
+    }
+
 } // namespace Crowny

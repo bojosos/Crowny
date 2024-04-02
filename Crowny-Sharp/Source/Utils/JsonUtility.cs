@@ -11,8 +11,8 @@ namespace Crowny
         /// Generate a JSON representation of the public fields of the object.
         /// </summary>
         /// <param name="obj">The object to convert to JSON.</param>
-        /// <param name="prettyPrint">If true, format the output for readibility. If false, format the output for minumum size. Default is false.</param>
-        /// <returns></returns>
+        /// <param name="prettyPrint">If true, format the output for readibility. If false, format the output for minumum size. Default is true.</param>
+        /// <returns>The resulting JSON string.</returns>
         public static string ToJson(object obj, bool prettyPrint=true)
         {
             if (obj == null)
@@ -29,7 +29,7 @@ namespace Crowny
             if (string.IsNullOrEmpty(json))
                 return null;
             if (type == null)
-                throw new ArgumentNullException("type");
+                throw new ArgumentNullException("JSON type cannot be null");
             if (type.IsAbstract || type.IsSubclassOf(typeof(Crowny.ScriptObject)))
                 throw new ArgumentException("Cannot deserialize JSON to new instance of type '" + type.Name + "'.");
             return Internal_FromJson(json, type);

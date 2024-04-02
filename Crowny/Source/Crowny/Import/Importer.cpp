@@ -24,6 +24,17 @@ namespace Crowny
         return false;
     }
 
+    bool Importer::SupportsFileType(uint8_t* magic, uint32_t numSize) const
+    {
+        for (auto iter = m_Importers.begin(); iter != m_Importers.end(); iter++)
+        {
+            if (*iter != nullptr && (*iter)->IsMagicNumSupported(magic, numSize))
+                return true;
+        }
+
+        return false;
+    }
+
     SpecificImporter* Importer::GetImporterForFile(const Path& path) const
     {
         String ext = path.extension().string();
@@ -88,6 +99,7 @@ namespace Crowny
 
     Ref<Asset> Importer::Import(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
+        CW_ENGINE_INFO("Importing asset: {0}", filepath);
         SpecificImporter* importer = PrepareForImport(filepath, importOptions);
         if (importer == nullptr)
             return nullptr;
