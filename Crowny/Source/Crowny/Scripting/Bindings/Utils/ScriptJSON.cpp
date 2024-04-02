@@ -139,6 +139,7 @@ namespace Crowny
         case ScriptPrimitiveType::Double:
             SetValue<double>(value, instance, memberInfo);
             break;
+        // TODO: Support for vectors/matrices
         default:
             CW_ERROR("Mismatched JSON structure");
         }
@@ -177,6 +178,7 @@ namespace Crowny
                     Ref<SerializableTypeInfoArray> arrayTypeInfo =
                       std::static_pointer_cast<SerializableTypeInfoArray>(typeInfo);
                     rapidjson::Value::ConstArray arr = iterFind->value.GetArray();
+                    // This initialization doesn't seem very safe. The whole ScriptArray doesn't feel safe.
                     ScriptArray monoArray = ScriptArray(arrayTypeInfo->m_ElementType->GetMonoClass(), arr.Size());
                     int idx = 0;
                     Ref<SerializableObjectInfo> objInfo = nullptr;

@@ -38,7 +38,7 @@ project "Crowny-Editor"
 		"%{IncludeDir.Box2D}"
 	}
 
-	links 
+	links
 	{
 		"assimp",
 		"Box2D",
@@ -47,9 +47,9 @@ project "Crowny-Editor"
 
 		"glfw",
 		"glad",
-		
+
 		"yaml-cpp",
-		
+
 		"Crowny"
 	}
 
@@ -60,13 +60,14 @@ project "Crowny-Editor"
 		{
 			"CW",
 			"CW_WINDOWS",
-			"GLFW_INCLUDE_NONE"
+			"GLFW_INCLUDE_NONE",
+			"_CRT_SECURE_NO_WARNINGS"
 		}
 
 		libdirs
 		{
 			"C:/Program Files/Mono/lib",
-			"C:/VulkanSDK/1.3.224.1/Lib",
+			"C:/VulkanSDK/1.3.280.0/Lib",
 			"C:/Program Files (x86)/OpenAL 1.1 SDK/libs/Win64"
 		}
 
@@ -80,8 +81,6 @@ project "Crowny-Editor"
 			"mono-2.0-sgen.lib",
 
 			"vulkan-1.lib",
-			"shaderc_sharedd.lib",
-			"spirv-cross-cored.lib",
 
 			"Rpcrt4.lib"
 		}
@@ -114,12 +113,30 @@ project "Crowny-Editor"
 		runtime "Debug"
 		symbols "on"
 
+		links
+		{
+			"shaderc_sharedd.lib",
+			"spirv-cross-cored.lib",
+		}
+
 	filter "configurations:Release"
 		defines "CW_RELEASE"
 		runtime "Release"
 		optimize "on"
 
+		links
+		{
+			"shaderc_shared.lib",
+			"spirv-cross-core.lib",
+		}
+
 	filter "configurations:Dist"
 		defines "CW_DIST"
 		runtime "Release"
 		optimize "on"
+
+		links
+		{
+			"shaderc_shared.lib",
+			"spirv-cross-core.lib",
+		}

@@ -18,13 +18,13 @@ namespace Crowny
         AssetManifest() = default;
         AssetManifest(const String& name);
 
-        bool UuidToFilepath(const UUID42& uuid, Path& outPath) const;
-        bool FilepathToUuid(const Path& path, UUID42& outUuid) const;
-        bool UuidExists(const UUID42& uuid) const;
+        bool UuidToFilepath(const UUID& uuid, Path& outPath) const;
+        bool FilepathToUuid(const Path& path, UUID& outUuid) const;
+        bool UuidExists(const UUID& uuid) const;
         bool FilepathExists(const Path& path) const;
 
-        void RegisterAsset(const UUID42& uuid, const Path& path);
-        void UnregisterAsset(const UUID42& uuid);
+        void RegisterAsset(const UUID& uuid, const Path& path);
+        void UnregisterAsset(const UUID& uuid);
 
         static void Serialize(const Ref<AssetManifest>& manifest, const Path& filepath, const Path& relativeTo);
         static Ref<AssetManifest> Deserialize(const Path& filepath, const Path& relativeTo);
@@ -39,8 +39,8 @@ namespace Crowny
         friend class ProjectLibrary;
 
         String m_Name;
-        UnorderedMap<UUID42, Path> m_UuidToFilepath;
-        UnorderedMap<Path, UUID42, HashPath> m_FilepathToUuid;
+        UnorderedMap<UUID, Path> m_UuidToFilepath;
+        UnorderedMap<Path, UUID, HashPath> m_FilepathToUuid;
     };
 
 } // namespace Crowny

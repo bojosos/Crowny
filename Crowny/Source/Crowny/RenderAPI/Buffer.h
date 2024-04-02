@@ -58,25 +58,52 @@ namespace Crowny
             return 4 * 4;
         // case ShaderDataType::Bool:     return 1;
         case ShaderDataType::None: {
-            CW_ENGINE_ASSERT(false, "Unknown ShaderDataType!") return 0;
+            CW_ENGINE_ASSERT(false, "Unknown ShaderDataType!");
+            return 0;
         };
         }
 
         return 0;
     }
 
+    enum class VertexAttribute
+    {
+        Position,
+        Normal,
+        Tangent,
+        Bitangent,
+        Color,
+        TexCoord0,
+        TexCoord1,
+        TexCoord2,
+        TexCoord3,
+        TexCoord4,
+        TexCoord5,
+        TexCoord6,
+        TexCoord7,
+        BlendWeights,
+        BlendIndices
+    };
+
     struct BufferElement
     {
         String Name;
+        VertexAttribute Attribute;
         ShaderDataType Type;
         uint32_t Size;
-        size_t Offset;
+        uint32_t Offset;
         bool Normalized;
 
         BufferElement() = default;
 
+        BufferElement(ShaderDataType type, VertexAttribute attribute, bool normalized = false)
+          : Type(type), Size(ShaderDataTypeSize(type)), Offset(0), Normalized(normalized), Attribute(attribute)
+        {
+        }
+
         BufferElement(ShaderDataType type, const String& name, bool normalized = false)
-          : Name(name), Type(type), Size(ShaderDataTypeSize(type)), Offset(0), Normalized(normalized)
+          : Name(name), Type(type), Size(ShaderDataTypeSize(type)), Offset(0), Normalized(normalized),
+            Attribute(VertexAttribute::Position)
         {
         }
 
@@ -116,12 +143,14 @@ namespace Crowny
                 return 4;
             // case ShaderDataType::Bool:    return 1;
             case ShaderDataType::None: {
-                CW_ENGINE_ASSERT(false, "Unknown ShaderDataType!") return 0;
+                CW_ENGINE_ASSERT(false, "Unknown ShaderDataType!");
+                return 0;
             };
             }
 
             return 0;
         }
+        CW_SIMPLESERIALZABLE(BufferElement);
     };
 
     class BufferLayout
@@ -141,6 +170,12 @@ namespace Crowny
             return *this;
         }
 
+        void AddBufferElement(const BufferElement& element)
+        {
+            m_Elements.push_back(element);
+            CalculateOffsetsAndStride();
+        }
+
         uint32_t GetStride() const { return m_Stride; }
         const Vector<BufferElement>& GetElements() const { return m_Elements; }
 
@@ -149,10 +184,30 @@ namespace Crowny
         Vector<BufferElement>::const_iterator begin() const { return m_Elements.begin(); }
         Vector<BufferElement>::const_iterator end() const { return m_Elements.end(); }
 
+        uint32_t GetOffset(VertexAttribute attribute) const
+        {
+            for (const auto& element : m_Elements)
+                if (element.Attribute == attribute)
+                    return element.Offset;
+            return 0;
+        }
+
+        uint32_t GetElementSize(VertexAttribute attribute) const
+        {
+            for (const auto& element : m_Elements)
+            {
+                if (element.Attribute == attribute)
+                    return element.Size;
+            }
+            CW_ENGINE_ASSERT(false);
+            return 0;
+        }
+
     private:
+        CW_SERIALIZABLE(BufferLayout);
         void CalculateOffsetsAndStride()
         {
-            size_t offset = 0;
+            uint32_t offset = 0;
             m_Stride = 0;
             for (auto& element : m_Elements)
             {

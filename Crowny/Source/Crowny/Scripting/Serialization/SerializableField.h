@@ -294,7 +294,7 @@ namespace Crowny
             }
             else
             {
-                out << UUID42();
+                out << UUID();
             }
         }
 
@@ -302,7 +302,7 @@ namespace Crowny
         {
             // Wat? TODO: Fix this
             if (Value)
-                SceneManager::GetActiveScene()->GetEntityFromUuid(node.as<UUID42>());
+                SceneManager::GetActiveScene()->GetEntityFromUuid(node.as<UUID>());
         }
 
         Entity Value;
@@ -315,6 +315,7 @@ namespace Crowny
         virtual void Serialize() override
         { /* out << Value->; */
         }
+        virtual MonoObject* GetValueBoxed() override { return nullptr; }
         Ref<Asset> Value = nullptr;
     };
 

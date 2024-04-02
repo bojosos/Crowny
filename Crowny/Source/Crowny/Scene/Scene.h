@@ -8,6 +8,7 @@
 namespace Crowny
 {
     class Entity;
+    class EnttEntity;
     class ComponentEditor;
     class SceneSerializer;
     class SceneRenderer;
@@ -23,21 +24,22 @@ namespace Crowny
     class Scene
     {
     public:
-        Scene();
-        Scene(const String& name);
+        Scene(bool createRootEntity = true);
+        Scene(const String& name, bool createRootEntity = true);
         Scene(Scene& other);
         Scene& operator=(Scene& other);
         ~Scene();
 
+        void CreateRootEntity();
         Entity DuplicateEntity(Entity entity, bool includeChildren = true);
 
         void OnViewportResize(uint32_t width, uint32_t height);
 
         Entity CreateEntity(const String& name = "");
-        Entity CreateEntityWithUuid(const UUID42& uuid, const String& name);
+        Entity CreateEntityWithUuid(const UUID& uuid, const String& name);
         Entity FindEntityByName(const String& name);
         Entity GetRootEntity();
-        Entity GetEntityFromUuid(const UUID42& uuid);
+        Entity GetEntityFromUuid(const UUID& uuid);
 
         const String& GetName() const { return m_Name; }
         const Path& GetFilepath() const { return m_Filepath; }
@@ -62,10 +64,7 @@ namespace Crowny
                                 bool initialize = true);
         void RemoveScriptComponent(Entity entity, const String& namespaceName, const String& typeName);
 
-        template <typename... Components> auto GetAllEntitiesWith()
-        {
-            return m_Registry.view<Components...>();
-        }
+        template <typename... Components> auto GetAllEntitiesWith() { return m_Registry.view<Components...>(); }
 
     private:
         void RegisterEntityCallbacks();
@@ -85,6 +84,7 @@ namespace Crowny
         friend class SceneRenderer;
         friend class SceneSerializer;
         friend class Entity;
+        friend class EnttEntity;
 
         bool m_IsEditorScene = false;
 

@@ -46,7 +46,7 @@ namespace Crowny
         Ref<Texture> texture = Texture::Create(params);
         pixelData.SetBuffer((uint8_t*)bitmap.pixels);
         texture->WriteData(pixelData);
-        texture->SetName("Some good old font");
+        texture->SetName("Font Atlas");
 
         return texture;
     }
@@ -191,7 +191,7 @@ namespace Crowny
             CW_ENGINE_INFO("Final atlas font scale: {}", scale);
 
             uint64_t coloringSeed = 0;
-            bool expensiveColoring = true;
+            bool expensiveColoring = false;
             msdfTimer.Reset();
             if (expensiveColoring)
             {
@@ -224,7 +224,9 @@ namespace Crowny
             msdfgen::destroyFont(fontHandle);
             msdfgen::deinitializeFreetype(freetypeHandle);
 
-            return CreateRef<Font>(fontData, atlasTexture);
+            Ref<Font> font = CreateRef<Font>(fontData, atlasTexture);
+            font->SetName(path.filename().string());
+            return font;
         }
         // TODO: Implement for non-dynamic fonts.
 
