@@ -47,7 +47,7 @@ namespace Crowny
     {
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
         BeginPanel();
-        Application::Get().GetImGuiLayer()->BlockEvents(!m_Focused && !m_Hovered);
+        Application::Get().GetImGuiLayer()->BlockEvents(!m_Hovered);
 
         if (GImGui->ActiveId == 0)
         {
@@ -68,7 +68,7 @@ namespace Crowny
                 if (Input::IsKeyDown(Key::F))
                 {
                     Entity selectedEntity = HierarchyPanel::GetSelectedEntity();
-                    EditorLayer::GetEditorCamera().Focus(selectedEntity.GetTransform().Position);
+                    EditorLayer::GetEditorCamera().Focus(selectedEntity.GetWorldPosition());
                 }
             }
         }
@@ -115,17 +115,17 @@ namespace Crowny
         glm::mat4 id(1.0f);
         ImGuizmo::SetRect(bounds[0].x, bounds[0].y, bounds[1].x - bounds[0].x, bounds[1].y - bounds[0].y);
         // ImGuizmo::DrawGrid(glm::value_ptr(view), glm::value_ptr(proj), glm::value_ptr(id),
-        //                 100.0f); // A 1x1m grid, TODO: depth test
+        //                    100.0f); // A 1x1m grid, TODO: depth test
 
         if (selected && m_GizmoMode != GizmoEditMode::None)
         {
             ImGuizmo::SetOrthographic(false);
             ImGuizmo::SetDrawlist();
 
-            float width = (float)ImGui::GetWindowWidth();
-            float height = (float)ImGui::GetWindowHeight();
-            auto& tc = selected.GetComponent<TransformComponent>();
-            glm::mat4 transform = tc.GetTransform();
+            const float width = (float)ImGui::GetWindowWidth();
+            const float height = (float)ImGui::GetWindowHeight();
+            TransformComponent& tc = selected.GetComponent<TransformComponent>();
+            glm::mat4 transform = selected.GetWorldMatrix();
 
             bool snap = Input::IsKeyPressed(Key::LeftControl);
             float snapValue = 0.1f; // TODO: These snaps should be loaded from the editor settings
@@ -138,23 +138,18 @@ namespace Crowny
                                                                                            : ImGuizmo::LOCAL,
                                  glm::value_ptr(transform), nullptr,
                                  snap ? snapValues : nullptr); // TODO: Bounds, does rotation work?
-            ImGuizmo::ViewManipulate(glm::value_ptr(view), camera.GetDistance(),
-                                     { m_ViewportBounds.z - 136.0f, m_ViewportBounds.y }, ImVec2(128, 128), 0x10101010);
-            glm::vec3 t, r, s;
-            Math::DecomposeMatrix(view, t, r, s);
-            // ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(view), glm::value_ptr(t), glm::value_ptr(r),
-            // glm::value_ptr(s)); r = glm::radians(r); camera.SetPosition(t); camera.SetYaw(r.z); glm::vec3 deltaRot =
-            // r - rot; camera.SetPitch(r.x);
 
             if (ImGuizmo::IsUsing())
             {
                 glm::vec3 position, rotation, scale;
                 if (Math::DecomposeMatrix(transform, position, rotation, scale))
                 {
-                    glm::vec3 deltaRot = rotation - tc.Rotation;
-                    tc.Position = position;
-                    tc.Rotation += deltaRot;
-                    tc.Scale = scale;
+                    glm::vec3 transformRotation = glm::eulerAngles(selected.GetWorldRotation());
+                    const glm::vec3 deltaRot = rotation - transformRotation;
+                    selected.SetWorldPosition(position);
+                    transformRotation += deltaRot;
+                    selected.SetWorldRotation(transformRotation + deltaRot);
+                    selected.SetWorldScale(scale);
                 }
             }
         }

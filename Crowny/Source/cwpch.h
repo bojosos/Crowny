@@ -5,6 +5,7 @@
 #include "Crowny/Common/Constants.h"
 #include "Crowny/Common/Flags.h"
 #include "Crowny/Common/Log.h"
+#include "Crowny/Common/Math.h"
 #include "Crowny/Common/Types.h"
 #include "Crowny/Memory/Memory.h"
 

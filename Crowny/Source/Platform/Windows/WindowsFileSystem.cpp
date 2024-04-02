@@ -139,8 +139,7 @@ namespace Crowny
     }
 
     bool FileSystem::OpenFileDialog(FileDialogType type, Vector<Path>& outPaths, const String& title,
-                                    const Path& initialDir, const Vector<DialogFilter>& filter,
-                                    const String& filename)
+                                    const Path& initialDir, const Vector<DialogFilter>& filter, const String& filename)
     {
         CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
         IFileDialog* fileDialog = nullptr;
@@ -154,7 +153,8 @@ namespace Crowny
         String titleString = title;
         if (titleString.empty())
         {
-            switch (type) {
+            switch (type)
+            {
             case FileDialogType::OpenFile:
                 titleString = "Open File";
                 break;

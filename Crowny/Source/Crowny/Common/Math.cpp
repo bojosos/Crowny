@@ -2,7 +2,9 @@
 
 #include "Crowny/Common/Math.h"
 #define GLM_ENABLE_EXPERIMENTAL
+#include <glm/ext/matrix_transform.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 namespace Crowny
 {
@@ -90,5 +92,89 @@ namespace Crowny
         }
 
         return true;
+    }
+
+    glm::mat4 Math::ComposeMatrix(const glm::vec3& position, const glm::quat& rotation, const glm::vec3& scale)
+    {
+        glm::mat4 rotationMatrix = glm::toMat4(glm::quat(rotation));
+        return glm::translate(glm::mat4(1.0f), position) * rotationMatrix * glm::scale(glm::mat4(1.0f), scale);
+    }
+
+    Transform::Transform() : m_Position(0.0f), m_Rotation(1.0f, 0.0f, 0.0f, 0.0f), m_Scale(1.0f) {}
+
+    Transform::Transform(const glm::vec3& position, const glm::quat& rotation, const glm::vec3& scale)
+      : m_Position(position), m_Rotation(rotation), m_Scale(scale)
+    {
+    }
+
+    glm::mat4 Transform::GetMatrix() const { return Math::ComposeMatrix(m_Position, m_Rotation, m_Scale); }
+
+    // TODO: There should be a way faster way of doing this.
+    glm::mat4 Transform::GetInvMatrix() const
+    {
+        return glm::inverse(Math::ComposeMatrix(m_Position, m_Rotation, m_Scale));
+    }
+
+    void Transform::MakeLocal(const Transform& parentTransform)
+    {
+        SetWorldPosition(m_Position, parentTransform);
+        SetWorldRotation(m_Rotation, parentTransform);
+        SetWorldPosition(m_Scale, parentTransform);
+    }
+
+    void Transform::MakeWorld(const Transform& parentTransform)
+    {
+        const glm::quat parentRotation = parentTransform.GetRotation();
+        m_Rotation = parentRotation * m_Rotation;
+        const glm::vec3 parentScale = parentTransform.GetScale();
+        m_Scale = parentScale * m_Scale;
+        m_Position = glm::rotate(parentRotation, parentScale * m_Position);
+        m_Position += parentTransform.GetPosition();
+    }
+
+    void Transform::SetWorldPosition(const glm::vec3& position, const Transform& parentTransform)
+    {
+        glm::vec3 invScale = parentTransform.GetScale();
+        if (invScale.x != 0.0f)
+            invScale.x = 1.0f / invScale.x;
+        if (invScale.y != 0.0f)
+            invScale.y = 1.0f / invScale.y;
+        if (invScale.z != 0.0f)
+            invScale.z = 1.0f / invScale.z;
+        glm::quat invRotation = glm::inverse(parentTransform.GetRotation());
+        m_Position = glm::rotate(invRotation, position - parentTransform.GetPosition()) * invScale;
+    }
+
+    void Transform::SetWorldRotation(const glm::quat& rotation, const Transform& parentTransform)
+    {
+        // Is this the right order of operations?
+        glm::quat invRotation = glm::inverse(parentTransform.GetRotation());
+        m_Rotation = invRotation * rotation;
+    }
+
+    void Transform::SetWorldScale(const glm::vec3& scale, const Transform& parentTransform)
+    {
+        /*
+        const glm::mat4& parentMatrix = parentTransform.GetMatrix();
+        glm::mat3 rotationScale = parentMatrix;
+        rotationScale = glm::inverse(rotationScale);
+
+        glm::mat3 identity(1.0f);
+        glm::mat3 scaleMatrix;
+        scaleMatrix[0] = identity[0] * scale[0];
+        scaleMatrix[1] = identity[1] * scale[1];
+        scaleMatrix[2] = identity[2] * scale[2];
+        glm::quat rotation;
+        glm::vec3 scale;
+        glm::decompose(scaleMatrix, scale, rotation)
+        */
+        const glm::mat4& parentMatrix = parentTransform.GetMatrix();
+        glm::vec3 parentScale;
+        parentScale.x = glm::length(glm::vec3(parentMatrix[0]));
+        parentScale.y = glm::length(glm::vec3(parentMatrix[1]));
+        parentScale.z = glm::length(glm::vec3(parentMatrix[2]));
+
+        if (parentScale.x != 0.0f && parentScale.y != 0.0f && parentScale.z != 0.0f)
+            m_Scale = scale / parentScale;
     }
 } // namespace Crowny

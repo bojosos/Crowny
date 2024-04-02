@@ -23,11 +23,12 @@ namespace Crowny
 
 #endif
 
-	void MonoDevelopCodeEditor::OpenFile(const Path& solutionPath, const Path& filePath, uint32_t line) const {
+    void MonoDevelopCodeEditor::OpenFile(const Path& solutionPath, const Path& filePath, uint32_t line) const
+    {
         String args =
           "--no-splash \"" + solutionPath.string() + "\" \"" + filePath.string() + ";" + std::to_string(line) + "\"";
-        PlatformUtils::Exec(m_ExecPath + " " + args); // Will this close the pipe?
-	}
+        PlatformUtils::Exec(m_ExecPath.string() + " " + args); // Will this close the pipe?
+    }
 
     MonoDevelopCodeEditorFactory::MonoDevelopCodeEditorFactory()
     {
@@ -46,10 +47,10 @@ namespace Crowny
             return;
 
         WString installPath;
-        GetRegistryStringValue(regKey, L"Path", installPath, "");
+        GetRegistryStringValue(regKey, L"Path", installPath, L"");
         if (installPath.empty())
             return;
 #elif CW_LINUX
 #endif
     }
-}
+} // namespace Crowny

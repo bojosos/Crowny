@@ -39,15 +39,16 @@ namespace Crowny
         float Frames;
     };
 
-    static SceneRendererData s_Data;
+    static SceneRendererData* s_Data;
     static SceneRendererStats s_Stats;
 
     void SceneRenderer::Init()
     {
-        s_Data.Timer2DGeometry = TimerQuery::Create();
-        s_Data.Timer3DGeometry = TimerQuery::Create();
+        s_Data = new SceneRendererData();
+        s_Data->Timer2DGeometry = TimerQuery::Create();
+        s_Data->Timer3DGeometry = TimerQuery::Create();
 
-        s_Data.PipelineQuery = PipelineQuery::Create();
+        s_Data->PipelineQuery = PipelineQuery::Create();
         // Ref<Asset> font = Importer::Get().Import("Resources/Fonts/Roboto/roboto-thin.ttf");
         // s_Data.GlobalFont = static_asset_cast<Font>(AssetManager::Get().CreateAssetHandle(font));
     }
@@ -58,40 +59,48 @@ namespace Crowny
 
         // s_Data.PipelineQuery->Begin();
         // s_Data.Timer3DGeometry->Begin();
-
-        /*
-        ForwardRenderer::Begin();
-        ForwardRenderer::BeginScene(camera, camera.GetViewMatrix());
-        auto objs = scene->m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
-        for (auto obj : objs)
-        {
-            auto [transform, mesh] = scene->m_Registry.get<TransformComponent, MeshRendererComponent>(obj);
-            //if (mesh.Model)
-            //{
-            //    ForwardRenderer::Submit(mesh.Model, transform.GetTransform());
-            //    // TODO: Update stats... triangle count has to take into account the draw mode
-            //}
-        }
-        ForwardRenderer::Flush();
-        ForwardRenderer::EndScene();
-        ForwardRenderer::End();*/
         // s_Data.Timer3DGeometry->End();
 
         // s_Data.Timer2DGeometry->Begin();
+
+        ForwardRenderer::Begin();
+        ForwardRenderer::BeginScene(camera, camera.GetViewMatrix());
+        auto objs = scene->m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
+        for (const entt::entity ee : objs)
+        {
+            auto [transform, mesh] = scene->m_Registry.get<TransformComponent, MeshRendererComponent>(ee);
+
+            if (mesh.MeshHandle)
+            {
+                Entity entity(ee, scene.get());
+                ForwardRenderer::Submit(mesh.MeshHandle, entity.GetWorldMatrix());
+                // TODO: Update stats... triangle count has to take into account the draw mode
+            }
+        }
+        ForwardRenderer::Flush();
+        ForwardRenderer::EndScene();
+        ForwardRenderer::End();
+
         Renderer2D::Begin(camera, camera.GetViewMatrix());
-        auto group = scene->m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
-        for (auto ee : group)
+        const auto sprineRendererComponents =
+          scene->m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
+        for (const entt::entity ee : sprineRendererComponents)
         {
             auto [transform, sprite] = scene->m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
-            Renderer2D::FillRect(transform.GetTransform(), sprite.Texture, sprite.Color, ((int32_t)ee) + 1);
+            Entity entity(ee, scene.get());
+            CW_ENGINE_ASSERT(entity.IsValid());
+            Renderer2D::FillRect(entity.GetWorldMatrix(), sprite.Texture, sprite.Color, ((int32_t)ee) + 1);
+            // Renderer2D::FillRect(glm::mat4(1.0f), sprite.Texture, sprite.Color, ((int32_t)ee) + 1);
             s_Stats.Vertices += 6;
             s_Stats.Triangles += 2;
         }
-        auto texts = scene->m_Registry.group<TextComponent>(entt::get<TransformComponent>);
-        for (auto ee : texts)
+        const auto textComponents = scene->m_Registry.group<TextComponent>(entt::get<TransformComponent>);
+        for (const entt::entity ee : textComponents)
         {
             auto [transform, text] = scene->m_Registry.get<TransformComponent, TextComponent>(ee);
-            Renderer2D::DrawString(text, transform.GetTransform(), (int32_t)ee + 1);
+            Entity entity(ee, scene.get());
+            CW_ENGINE_ASSERT(entity.IsValid());
+            Renderer2D::DrawString(text, entity.GetWorldMatrix(), (int32_t)ee + 1);
             s_Stats.Vertices += (uint32_t)text.Text.size() * 6;
             s_Stats.Triangles += (uint32_t)text.Text.size() * 2;
         }
@@ -112,49 +121,53 @@ namespace Crowny
         // Get the main camera to render from
         Camera* mainCamera = nullptr;
         glm::mat4 cameraTransform;
-        auto view = scene->m_Registry.view<TransformComponent, CameraComponent>();
-        for (auto entity : view)
+        const auto cameraView = scene->m_Registry.view<TransformComponent, CameraComponent>();
+        for (const entt::entity ee : cameraView)
         {
-            auto [transform, camera] = view.get<TransformComponent, CameraComponent>(entity);
+            auto [transform, camera] = cameraView.get<TransformComponent, CameraComponent>(ee);
             mainCamera = &camera.Camera;
-            cameraTransform = transform.GetTransform();
+            Entity entity(ee, scene.get());
+            cameraTransform = entity.GetWorldMatrix();
             break;
         }
 
         // Render the scene
         if (mainCamera)
         {
-            /*
             ForwardRenderer::Begin();
             ForwardRenderer::BeginScene(*mainCamera, glm::inverse(cameraTransform));
             auto objs = scene->m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
-            for (auto obj : objs)
+            for (const entt::entity ee : objs)
             {
-                auto [transform, mesh] = scene->m_Registry.get<TransformComponent, MeshRendererComponent>(obj);
-                //if (mesh.Model)
-                //{
-                //    ForwardRenderer::Submit(mesh.Model, transform.GetTransform());
-                //    // TODO: Update stats... triangle count has to take into account the draw mode
-                //}
+                auto [transform, mesh] = scene->m_Registry.get<TransformComponent, MeshRendererComponent>(ee);
+
+                if (mesh.MeshHandle)
+                {
+                    Entity entity(ee, scene.get());
+                    ForwardRenderer::Submit(mesh.MeshHandle, entity.GetWorldMatrix());
+                    // TODO: Update stats... triangle count has to take into account the draw mode
+                }
             }
             ForwardRenderer::Flush();
             ForwardRenderer::EndScene();
-            ForwardRenderer::End();*/
+            ForwardRenderer::End();
 
             Renderer2D::Begin(*mainCamera, glm::inverse(cameraTransform));
-            auto group = scene->m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
-            for (auto ee : group)
+            const auto group = scene->m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
+            for (const entt::entity ee : group)
             {
-                auto [transform, sprite] = scene->m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
-                Renderer2D::FillRect(transform.GetTransform(), sprite.Texture, sprite.Color, (uint32_t)ee);
+                const auto [transform, sprite] = scene->m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
+                Entity entity(ee, scene.get());
+                Renderer2D::FillRect(entity.GetWorldMatrix(), sprite.Texture, sprite.Color, (uint32_t)ee);
                 s_Stats.Vertices += 4;
                 s_Stats.Triangles += 2;
             }
-            auto texts = scene->m_Registry.group<TextComponent>(entt::get<TransformComponent>);
-            for (auto ee : texts)
+            const auto texts = scene->m_Registry.group<TextComponent>(entt::get<TransformComponent>);
+            for (const auto ee : texts)
             {
-                auto [transform, text] = scene->m_Registry.get<TransformComponent, TextComponent>(ee);
-                Renderer2D::DrawString(text, transform.GetTransform(), (int32_t)ee + 1);
+                const auto [transform, text] = scene->m_Registry.get<TransformComponent, TextComponent>(ee);
+                Entity entity(ee, scene.get());
+                Renderer2D::DrawString(text, entity.GetWorldMatrix(), (int32_t)ee + 1);
                 s_Stats.Vertices += (uint32_t)text.Text.size() * 4;
                 s_Stats.Triangles += (uint32_t)text.Text.size() * 2;
             }
@@ -164,15 +177,16 @@ namespace Crowny
 
     void SceneRenderer::SetViewportSize(float width, float height)
     {
-        s_Data.ViewportWidth = (uint32_t)width;
-        s_Data.ViewportHeight = (uint32_t)height;
+        s_Data->ViewportWidth = (uint32_t)width;
+        s_Data->ViewportHeight = (uint32_t)height;
     }
 
     void SceneRenderer::Shutdown()
     {
-        s_Data.PipelineQuery = nullptr;
-        s_Data.Timer2DGeometry = nullptr;
-        s_Data.Timer3DGeometry = nullptr;
+        s_Data->PipelineQuery = nullptr;
+        s_Data->Timer2DGeometry = nullptr;
+        s_Data->Timer3DGeometry = nullptr;
+        delete s_Data;
     }
 
 } // namespace Crowny

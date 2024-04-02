@@ -25,7 +25,7 @@
 
 namespace Crowny
 {
-    // Wtf is this
+    // Wtf is this, TODO: investigate
     RelationshipComponent& RelationshipComponent::operator=(const RelationshipComponent& other)
     {
         Parent = other.Parent;
@@ -33,6 +33,11 @@ namespace Crowny
     }
 
     void AudioListenerComponent::Initialize() { m_Internal = gAudio().CreateListener(); }
+
+    void AudioListenerComponent::OnTransformChanged(const Transform& transform)
+    {
+        m_Internal->OnTransformChanged(transform);
+    }
 
     void AudioSourceComponent::OnInitialize()
     {
@@ -45,9 +50,14 @@ namespace Crowny
         m_Internal->SetMinDistance(m_MinDistance);
         m_Internal->SetMaxDistance(m_MaxDistance);
         m_Internal->SetTime(m_Time);
-        m_PlayOnAwake = true;
         if (m_PlayOnAwake)
             m_Internal->Play();
+    }
+
+    void AudioSourceComponent::OnTransformChanged(const Transform& transform)
+    {
+        if (m_Internal && m_Internal->Is3D())
+            m_Internal->OnTransformChanged(transform);
     }
 
     void AudioSourceComponent::SetVolume(float volume)
@@ -186,6 +196,15 @@ namespace Crowny
         m_LayerMask = layerMask;
     }
 
+    float Rigidbody2DComponent::GetInertia() const
+    {
+        if (RuntimeBody != nullptr)
+        {
+            return RuntimeBody->GetInertia();
+        }
+        return 0.0f;
+    }
+
     void Rigidbody2DComponent::SetBodyType(RigidbodyBodyType bodyType)
     {
         if (RuntimeBody != nullptr)
@@ -286,6 +305,17 @@ namespace Crowny
     void Rigidbody2DComponent::SetInterpolationMode(RigidbodyInterpolation interpolation)
     {
         m_InterpolationMode = interpolation;
+    }
+
+    void Rigidbody2DComponent::SetInertia(float inertia)
+    {
+        if (RuntimeBody != nullptr)
+        {
+            b2MassData massData;
+            RuntimeBody->GetMassData(&massData);
+            massData.I = inertia;
+            RuntimeBody->SetMassData(&massData);
+        }
     }
 
     void Collider2D::SetIsTrigger(bool trigger)

@@ -68,7 +68,7 @@ void main()
 	o_EntityID = v_EntityID;
 
 	vec4 texColor = Input.Color * texture(u_FontAtlas, Input.TexCoord);
-	
+
 	vec3 msd = texture(u_FontAtlas, Input.TexCoord).rgb;
     float sd = median(msd.r, msd.g, msd.b);
     float screenPxDistance = screenPxRange()*(sd - 0.5);
@@ -76,8 +76,7 @@ void main()
 	if (opacity == 0.0)
 		discard;
 
-	vec4 bgColor = vec4(0.0);
-    o_Color = mix(bgColor, Input.Color, opacity);
+    o_Color = mix(a_OutlineColor, Input.Color, opacity);
 	if (o_Color.a == 0.0)
 		discard;
 }

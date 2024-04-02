@@ -144,7 +144,6 @@ namespace Crowny
         m_MenuBar->AddMenu(buildMenu);
         m_MenuBar->AddMenu(viewMenu);
 
-
         VirtualFileSystem::Get()->Mount("Icons", "Resources/Icons");
         SceneRenderer::Init();
 
@@ -208,7 +207,7 @@ namespace Crowny
         s_EditorCamera.SetDistance(projSettings->EditorCameraDistance);
         if (fs::is_regular_file(projSettings->LastOpenScenePath))
         {
-            Ref<Scene> scene = CreateRef<Scene>();
+            Ref<Scene> scene = CreateRef<Scene>(projSettings->LastOpenScenePath, false);
             SceneSerializer serializer(scene);
             serializer.Deserialize(projSettings->LastOpenScenePath);
             m_Temp = scene;
@@ -324,6 +323,7 @@ namespace Crowny
 
     bool EditorLayer::OnViewportEvent(Event& event)
     {
+        // TODO: Check if this is an actual scene!
         EventDispatcher dispatcher(event);
         dispatcher.Dispatch<ImGuiViewportSceneDraggedEvent>([this](ImGuiViewportSceneDraggedEvent& event) {
             OpenScene(event.GetSceneFilepath());
@@ -337,14 +337,14 @@ namespace Crowny
     void EditorLayer::OpenScene()
     {
         Vector<Path> outPaths;
-        if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, outPaths, "Open Scene", ProjectLibrary::Get().GetAssetFolder(),
-                                       { Editor::GetSceneDialogFilter() }))
+        if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, outPaths, "Open Scene",
+                                       ProjectLibrary::Get().GetAssetFolder(), { Editor::GetSceneDialogFilter() }))
             OpenScene(outPaths[0].replace_extension(".cwscene"));
     }
 
     void EditorLayer::OpenScene(const Path& filepath)
     {
-        m_Temp = CreateRef<Scene>();
+        m_Temp = CreateRef<Scene>(filepath.string(), false);
         SceneSerializer serializer(m_Temp);
         serializer.Deserialize(filepath);
     }
@@ -352,8 +352,8 @@ namespace Crowny
     void EditorLayer::SaveActiveSceneAs()
     {
         Vector<Path> outPaths;
-        if (FileSystem::OpenFileDialog(FileDialogType::SaveFile, outPaths, "Save scene", ProjectLibrary::Get().GetAssetFolder(),
-                                       { Editor::GetSceneDialogFilter() }))
+        if (FileSystem::OpenFileDialog(FileDialogType::SaveFile, outPaths, "Save scene",
+                                       ProjectLibrary::Get().GetAssetFolder(), { Editor::GetSceneDialogFilter() }))
         {
             SceneSerializer serializer(SceneManager::GetActiveScene());
             serializer.Serialize(outPaths[0].replace_extension(".cwscene"));
@@ -363,17 +363,20 @@ namespace Crowny
     void EditorLayer::SaveActiveScene()
     {
         const auto& scene = SceneManager::GetActiveScene();
-        SceneSerializer serializer(scene);
         if (scene->GetFilepath().empty())
             SaveActiveSceneAs();
         else
+        {
+            SceneSerializer serializer(scene);
             serializer.Serialize(scene->GetFilepath());
+        }
     }
 
     void EditorLayer::AddRecentEntry(const Path& path)
     {
+        // TODO: Don't write code like this...
         Ref<EditorSettings> settings = Editor::Get().GetEditorSettings();
-        int recentIdx = settings->RecentProjects.size() - 1;
+        uint32_t recentIdx = settings->RecentProjects.size() > 0 ? (uint32_t)(settings->RecentProjects.size() - 1) : 0;
         for (uint32_t i = 0; i < settings->RecentProjects.size(); i++)
         {
             if (settings->RecentProjects[i].ProjectPath == Editor::Get().GetProjectPath())
@@ -442,17 +445,18 @@ namespace Crowny
         const glm::vec4& bounds = m_ViewportPanel->GetViewportBounds();
         ImVec2 mouseCoords = ImGui::GetMousePos();
         glm::vec2 coords = { mouseCoords.x - bounds.x, mouseCoords.y - bounds.y };
-        coords.y = m_ViewportSize.y - coords.y;
+        coords.y = m_ViewportSize.y - coords.y - 1;
         if (m_ViewportPanel->IsHovered())
         {
             RenderTexture* rt = static_cast<RenderTexture*>(m_RenderTarget.get());
+            // TODO: This is bad: allocates every frame a full image.
             Ref<PixelData> outPixelData =
               PixelData::Create(rt->GetColorTexture(1)->GetWidth(), rt->GetColorTexture(1)->GetHeight(),
                                 rt->GetColorTexture(1)->GetFormat());
             rt->GetColorTexture(1)->ReadData(*outPixelData);
             if (outPixelData->GetSize() > coords.x * coords.y)
             {
-                glm::vec4 col = outPixelData->GetColorAt(coords.x, coords.y);
+                glm::vec4 col = outPixelData->GetColorAt((uint32_t)coords.x, (uint32_t)coords.y);
                 if (col.x == 0.0f)
                     m_HoveredEntity = Entity(entt::null, scene.get());
                 else
@@ -503,7 +507,8 @@ namespace Crowny
             m_RenderTarget = RenderTexture::Create(rtProps);
         }
         m_ViewportSize = m_ViewportPanel->GetViewportSize();
-        SceneRenderer::SetViewportSize(m_RenderTarget->GetProperties().Width, m_RenderTarget->GetProperties().Height);
+        SceneRenderer::SetViewportSize((float)m_RenderTarget->GetProperties().Width,
+                                       (float)m_RenderTarget->GetProperties().Height);
 
         rapi.SetRenderTarget(m_RenderTarget);
         rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
@@ -516,8 +521,8 @@ namespace Crowny
         switch (m_SceneState)
         {
         case SceneState::Edit: {
-            s_EditorCamera.SetViewportSize(m_RenderTarget->GetProperties().Width,
-                                           m_RenderTarget->GetProperties().Height);
+            s_EditorCamera.SetViewportSize((float)m_RenderTarget->GetProperties().Width,
+                                           (float)m_RenderTarget->GetProperties().Height);
             s_EditorCamera.OnUpdate(ts);
 
             SceneManager::GetActiveScene()->OnUpdateEditor(ts);
@@ -536,8 +541,8 @@ namespace Crowny
             break;
         }
         case SceneState::Simulate: {
-            s_EditorCamera.SetViewportSize(m_RenderTarget->GetProperties().Width,
-                                           m_RenderTarget->GetProperties().Height);
+            s_EditorCamera.SetViewportSize((float)m_RenderTarget->GetProperties().Width,
+                                           (float)m_RenderTarget->GetProperties().Height);
             s_EditorCamera.OnUpdate(ts);
             SceneManager().GetActiveScene()->OnSimulationUpdate(ts);
             SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
@@ -564,6 +569,7 @@ namespace Crowny
         RenderOverlay();
 
         HandleMousePicking();
+
         m_HierarchyPanel->Update();
         ScriptObjectManager::Get().Update();
     }
@@ -576,14 +582,14 @@ namespace Crowny
             Entity camera = scene->GetPrimaryCameraEntity();
             if (!camera)
                 return;
-            Renderer2D::Begin(camera.GetComponent<CameraComponent>().Camera,
-                              camera.GetComponent<TransformComponent>().GetTransform());
+            Renderer2D::Begin(camera.GetComponent<CameraComponent>().Camera, camera.GetWorldMatrix());
         }
         else
             Renderer2D::Begin(s_EditorCamera, s_EditorCamera.GetViewMatrix());
 
         if (m_ShowColliders)
         {
+            /*
             float zOffset = s_EditorCamera.GetPosition().z > 0 ? 0.001f : -0.001f;
             {
                 auto view = scene->GetAllEntitiesWith<TransformComponent, BoxCollider2DComponent>();
@@ -611,6 +617,7 @@ namespace Crowny
                     Renderer2D::DrawCircle(transform, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.01f);
                 }
             }
+            */
         }
         Renderer2D::End();
     }
@@ -700,8 +707,8 @@ namespace Crowny
             if (ImGui::Button("Open"))
             {
                 Vector<Path> outPaths;
-                if (FileSystem::OpenFileDialog(FileDialogType::OpenFolder, outPaths,
-                                               "Open Project", Editor::Get().GetDefaultProjectPath()))
+                if (FileSystem::OpenFileDialog(FileDialogType::OpenFolder, outPaths, "Open Project",
+                                               Editor::Get().GetDefaultProjectPath()))
                 {
                     if (outPaths.size() > 0)
                     {
@@ -769,7 +776,7 @@ namespace Crowny
                 }
                 ImGui::SameLine();
                 if (ImGui::ImageButton(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FolderIcon),
-                                       ImVec2(20.0f, 20.0f), { 0, 1 }, { 1, 0 }, 0.0f))
+                                       ImVec2(20.0f, 20.0f), { 0, 1 }, { 1, 0 }, 0))
                     PlatformUtils::ShowInExplorer(project.ProjectPath);
             }
             ImGui::EndTable();
@@ -974,17 +981,17 @@ namespace Crowny
                 UI::EndPropertyGrid();
             }
 
-            // Varadrov cries here
+            // How not to pass code review 101
             if (ImGui::CollapsingHeader("Collision Matrix"))
             {
                 UI::PushID();
                 uint32_t id = 0;
                 uint32_t nonEmpty = 0;
-                uint32_t maxTextLength = 0;
+                float maxTextLength = 0;
                 for (uint32_t i = 0; i < 32; i++)
                 {
-                    maxTextLength = std::max(maxTextLength,
-                                             (uint32_t)ImGui::CalcTextSize(Physics2D::Get().GetLayerName(i).c_str()).x);
+                    maxTextLength =
+                      std::max(maxTextLength, ImGui::CalcTextSize(Physics2D::Get().GetLayerName(i).c_str()).x);
                     nonEmpty += !Physics2D::Get().GetLayerName(i).empty();
                 }
                 nonEmpty--;
@@ -1329,9 +1336,8 @@ namespace Crowny
         ImGui::Checkbox("Show C# debug info", &m_ShowScriptDebugInfo);
         ImGui::Checkbox("Show asset info", &m_ShowAssetInfo);
         ImGui::Checkbox("Show entity debug info", &m_ShowEntityDebugInfo);
-        
-        const Vector<CodeEditorInstallation>& editors =
-          CodeEditorManager::Get().GetAvailableEditors();
+
+        const Vector<CodeEditorInstallation>& editors = CodeEditorManager::Get().GetAvailableEditors();
         std::function<String(const CodeEditorInstallation&)> selector =
           [](const CodeEditorInstallation& install) -> String { return install.Name; };
         if (UI::PropertyDropdown("Visual Studio Version", editors, m_VisualStudioVersionId, selector))
@@ -1339,7 +1345,7 @@ namespace Crowny
             const CodeEditorInstallation& selectedEditor = editors[m_VisualStudioVersionId];
             CodeEditorManager::Get().SetActive(selectedEditor.ExecutablePath);
         }
-        
+
         ImGui::End();
     }
 

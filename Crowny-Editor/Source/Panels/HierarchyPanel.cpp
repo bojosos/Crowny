@@ -96,17 +96,34 @@ namespace Crowny
         ImGui::SetKeyboardFocusHere();
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
+        ImGui::GetCursorPosX();
+        ImVec2 framePadding = ImGui::GetStyle().FramePadding;
+        framePadding.x += ImGui::GetCursorPosX() + 4.0f;
+        UI::ScopedStyle style(ImGuiStyleVar_FramePadding, framePadding);
         if (ImGui::InputText("##renaming", &m_RenamingString,
                              ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
         {
             m_Renaming.GetComponent<TagComponent>().Tag = m_RenamingString;
-            m_Renaming = {};
+            m_Renaming.Clear();
         }
+        ImGui::SetItemAllowOverlap();
 
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Left | ImGuiMouseButton_Right) && !ImGui::IsItemClicked())
         {
             m_Renaming.GetComponent<TagComponent>().Tag = m_RenamingString;
-            m_Renaming = {};
+            m_Renaming.Clear();
+        }
+        if ((Input::IsMouseButtonDown(Mouse::ButtonLeft) || Input::IsMouseButtonDown(Mouse::ButtonRight)) &&
+            !ImGui::IsItemClicked())
+        {
+            m_Renaming.Clear();
+            m_RenamingString.clear();
+        }
+
+        if (Input::IsKeyPressed(Key::Escape))
+        {
+            m_Renaming.Clear();
+            m_RenamingString.clear();
         }
     }
 
@@ -124,17 +141,23 @@ namespace Crowny
 
         bool open = true;
         if (entity == m_Renaming)
+        // {
         {
+            ImGui::PushID(name.c_str());
+            ImVec2 framePadding = ImGui::GetStyle().FramePadding;
+            framePadding.x = ImGui::GetCursorPosX();
+            UI::ScopedStyle style(ImGuiStyleVar_FramePadding, framePadding);
             Rename(entity);
             for (auto& c : rc.Children)
                 DisplayTree(c);
+            ImGui::PopID();
         }
         else
         {
             if (m_NewOpenEntity == entity)
             {
                 ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-                m_NewOpenEntity = {};
+                m_NewOpenEntity.Clear();
             }
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
@@ -153,8 +176,9 @@ namespace Crowny
             {
                 if (const ImGuiPayload* payload = UIUtils::AcceptEntityPayload())
                 {
-                    Entity entity = UIUtils::GetEntityFromPayload(payload);
-                    entity.SetParent(entity);
+                    Entity payloadEntity = UIUtils::GetEntityFromPayload(payload);
+                    payloadEntity.SetParent(entity);
+                    m_NewOpenEntity = payloadEntity;
                 }
                 ImGui::EndDragDropTarget();
             }
@@ -193,13 +217,15 @@ namespace Crowny
                                    ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap |
                                    ImGuiTreeNodeFlags_Leaf;
 
-        if (e == m_Renaming)
-            Rename(e);
-        else
+        // else
         {
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
-            ImGui::TreeNodeEx(name.c_str(), flags | selected);
+
+            if (e == m_Renaming)
+                Rename(e);
+            else
+                ImGui::TreeNodeEx(name.c_str(), flags | selected);
 
             if (ImGui::BeginDragDropSource())
             {
@@ -266,17 +292,18 @@ namespace Crowny
         });
     }
 
-    const UnorderedSet<Crowny::UUID42>& HierarchyPanel::GetSerializableHierarchy() { return m_Hierarchy; }
+    const UnorderedSet<Crowny::UUID>& HierarchyPanel::GetSerializableHierarchy() { return m_Hierarchy; }
 
     void HierarchyPanel::Update()
     {
         for (auto action : m_DeferedActions)
             action();
         m_DeferedActions.clear();
+        // PrintDebugHierarchy();
 
         Scene& activeScene = *SceneManager::GetActiveScene().get(); // Oh god
 
-        if (m_Focused && s_SelectedEntity)
+        if (m_Focused && s_SelectedEntity && !ImGui::GetIO().WantCaptureKeyboard)
         {
             bool ctrl = Input::IsKeyPressed(Key::LeftControl);
             if (ctrl && Input::IsKeyDown(Key::D)) // Duplicate entities
@@ -380,7 +407,7 @@ namespace Crowny
             tabs = tabs.substr(0, tabs.size() - 1);
         };
 
-        traverse(s_SelectedEntity);
+        traverse(SceneManager::GetActiveScene()->GetRootEntity());
     }
 #endif
 

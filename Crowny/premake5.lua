@@ -53,10 +53,10 @@ project "Crowny"
 		"%{IncludeDir.msdfgen}",
 		"%{IncludeDir.msdfatlasgen}",
 		"%{IncludeDir.mbedtls}"
-		
+
 	}
 
-	links 
+	links
 	{
 		"assimp",
 		"Box2D",
@@ -67,7 +67,7 @@ project "Crowny"
 
 		"glfw",
 		"glad",
-		
+
 		"yaml-cpp",
 		"mbedtls"
 	}
@@ -85,7 +85,7 @@ project "Crowny"
 		libdirs
 		{
 			"C:/Program Files/Mono/lib",
-			"C:/VulkanSDK/1.3.224.1/Lib",
+			"C:/VulkanSDK/1.3.280.0/Lib",
 			"C:/Program Files (x86)/OpenAL 1.1 SDK/libs/Win64"
 		}
 
@@ -99,8 +99,6 @@ project "Crowny"
 			"mono-2.0-sgen.lib",
 
 			"vulkan-1.lib",
-			"shaderc_sharedd.lib",
-			"spirv-cross-cored.lib",
 
 			"Rpcrt4.lib"
 		}
@@ -118,7 +116,7 @@ project "Crowny"
 		system("linux")
 
 	filter { "platforms:MacOS64"}
-		
+
 		defines
 		{
 			"CW_MACOSX"
@@ -127,7 +125,7 @@ project "Crowny"
 		system("macosx")
 
 	filter { "platforms:Web" }
-		defines 
+		defines
 		{
 			"CW_EMSCRIPTEN",
 			"GLFW_INCLUDE_ES31"
@@ -157,7 +155,30 @@ project "Crowny"
 		runtime "Debug"
 		symbols "on"
 
+		links
+		{
+			"shaderc_sharedd.lib",
+			"spirv-cross-cored.lib",
+		}
+
 	filter "configurations:Release"
 		defines "CW_RELEASE"
 		runtime "Release"
 		optimize "on"
+
+		links
+		{
+			"shaderc_shared.lib",
+			"spirv-cross-core.lib",
+		}
+
+	filter "configurations:Dist"
+		defines "CW_DIST"
+		runtime "Release"
+		optimize "on"
+
+		links
+		{
+			"shaderc_shared.lib",
+			"spirv-cross-core.lib",
+		}

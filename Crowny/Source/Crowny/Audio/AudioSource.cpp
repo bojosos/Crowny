@@ -3,6 +3,7 @@
 #include "Crowny/Audio/AudioManager.h"
 #include "Crowny/Audio/AudioSource.h"
 #include "Crowny/Audio/AudioUtils.h"
+#include "Crowny/Ecs/Components.h"
 
 #include <AL/al.h>
 
@@ -24,10 +25,7 @@ namespace Crowny
 
         if (Is3D())
         {
-            // glm::vec3 position = m_Transform.GetPosition();
             alSourcei(m_SourceID, AL_SOURCE_RELATIVE, false);
-            // alSource3f(m_SourceID, AL_POSITION, position.x, position.y, position.z);
-            // alSource3f(m_SourceID, AL_VELOCITY, m_Velocity.x, m_Velocity.y, m_Velocity.z);
             alSource3f(m_SourceID, AL_POSITION, 0.0f, 0.0f, 0.0f);
             alSource3f(m_SourceID, AL_VELOCITY, 0.0f, 0.0f, 0.0f);
         }
@@ -61,6 +59,20 @@ namespace Crowny
         Stop();
         alSourcei(m_SourceID, AL_BUFFER, 0);
         alDeleteSources(1, &m_SourceID);
+    }
+
+    void AudioSource::OnTransformChanged(const Transform& transform)
+    {
+        if (Is3D())
+        {
+            const glm::vec3& position = transform.GetPosition();
+            alSource3f(m_SourceID, AL_POSITION, position.x, position.y, position.z);
+        }
+        else
+        {
+            alSource3f(m_SourceID, AL_POSITION, 0.0f, 0.0f, 0.0f);
+        }
+        // alSource3f(m_SourceID, AL_VELOCITY, m_Velocity.x, m_Velocity.y, m_Velocity.z);
     }
 
     void AudioSource::SetGlobalPause(bool paused)

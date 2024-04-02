@@ -64,6 +64,23 @@ namespace Crowny
             EndYAMLMap(out, "ScriptImporter");
             break;
         }
+        case ImportOptionsType::Mesh: {
+            Ref<MeshImportOptions> meshImportOptions = std::static_pointer_cast<MeshImportOptions>(importOptions);
+            BeginYAMLMap(out, "MeshImporter");
+
+            SerializeValueYAML(out, "Optimize", meshImportOptions->Optimize);
+            SerializeValueYAML(out, "Compress", meshImportOptions->Compress);
+            SerializeValueYAML(out, "KeepQuads", meshImportOptions->KeepQuads);
+            SerializeValueYAML(out, "ScaleFactor", meshImportOptions->ScaleFactor);
+            SerializeValueYAML(out, "SmoothNormals", meshImportOptions->SmoothNormals);
+            SerializeValueYAML(out, "SmoothingAngle", meshImportOptions->SmoothingAngle);
+            SerializeEnumYAML(out, "Normals", meshImportOptions->NormalsMode);
+            SerializeEnumYAML(out, "Tangents", meshImportOptions->TangentsMode);
+            SerializeEnumYAML(out, "IndexFormat", meshImportOptions->IndexFormat);
+
+            EndYAMLMap(out, "MeshImporter");
+            break;
+        }
         case ImportOptionsType::Font: {
             Ref<FontImportOptions> fontImportOptions = std::static_pointer_cast<FontImportOptions>(importOptions);
             BeginYAMLMap(out, "FontImporter");
@@ -168,6 +185,28 @@ namespace Crowny
             DeserializeValueYAML(fontImportOptionsNode, "ItalicStyle", fontImportOptions->ItalicStyle, 35U);
 
             return fontImportOptions;
+        }
+        else if (const YAML::Node& meshImportOptionsNode = data["MeshImporter"])
+        {
+            Ref<MeshImportOptions> meshImportOptions = CreateRef<MeshImportOptions>();
+
+            DeserializeEnumYAML(meshImportOptionsNode, "Normals", meshImportOptions->NormalsMode,
+                                NormalsImportMode::Import, "Normals import mode \'{}\' in metadata file is invalid.", 0,
+                                (int32_t)NormalsImportMode::Count);
+            DeserializeEnumYAML(meshImportOptionsNode, "Tangents", meshImportOptions->TangentsMode,
+                                NormalsImportMode::Import, "Normals import mode \'{}\' in metadata file is invalid.", 0,
+                                (int32_t)NormalsImportMode::Count);
+            DeserializeEnumYAML(meshImportOptionsNode, "IndexFormat", meshImportOptions->IndexFormat,
+                                MeshIndexFormat::Auto, "Index type \'{}\' in metadata file is invalid.", 0,
+                                (int32_t)MeshIndexFormat::Count);
+            DeserializeValueYAML(meshImportOptionsNode, "Compress", meshImportOptions->Compress, false);
+            DeserializeValueYAML(meshImportOptionsNode, "Optimize", meshImportOptions->Optimize, false);
+            DeserializeValueYAML(meshImportOptionsNode, "KeepQuads", meshImportOptions->KeepQuads, false);
+            DeserializeValueYAML(meshImportOptionsNode, "ScaleFactor", meshImportOptions->ScaleFactor, 1.0f);
+            DeserializeValueYAML(meshImportOptionsNode, "SmoothNormals", meshImportOptions->SmoothNormals, true);
+            DeserializeValueYAML(meshImportOptionsNode, "SmoothingAngle", meshImportOptions->SmoothingAngle, 60.0f);
+
+            return meshImportOptions;
         }
         else
         {

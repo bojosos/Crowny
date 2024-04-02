@@ -32,7 +32,7 @@ namespace Crowny
     {
         if ((uint32_t)type < (uint32_t)m_BuildData->PlatformData.size())
             return m_BuildData->PlatformData[(uint32_t)type]->Defines;
-        return String();
+        return m_BuildData->PlatformData[0]->Defines;
     }
 
     Ref<PlatformInfo> BuildManager::GetActivePlatformInfo() const

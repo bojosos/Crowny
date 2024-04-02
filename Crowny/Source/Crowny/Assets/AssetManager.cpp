@@ -9,10 +9,45 @@
 #include "Crowny/Physics/PhysicsMaterial.h"
 #include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/RenderAPI/Texture.h"
+#include "Crowny/Renderer/MSDFdata.h"
+#include "Crowny/Renderer/Mesh.h"
 
 #include "Platform/Vulkan/VulkanTexture.h"
 
 #include "Crowny/Utils/Compression.h"
+
+#include <cereal/types/utility.hpp>
+
+// These have to be outside of our namespace....
+template <typename Archive> void Serialize(Archive& archive, msdf_atlas::GlyphGeometry& glyph)
+{
+    archive(glyph.advance, glyph.geometryScale, glyph.box.rect.x, glyph.box.rect.y, glyph.box.rect.w, glyph.box.rect.h,
+            glyph.box.range, glyph.box.scale, glyph.box.translate.x, glyph.box.translate.y);
+}
+
+template <typename Archive> void Serialize(Archive& archive, msdfgen::FontMetrics& fontMetrics)
+{
+    archive(fontMetrics.ascenderY, fontMetrics.descenderY, fontMetrics.lineHeight);
+}
+
+void Save(BinaryDataStreamOutputArchive& archive, const msdf_atlas::FontGeometry& fontGeometry)
+{
+    archive(fontGeometry.glyphsByIndex);
+    archive(*fontGeometry.glyphs);
+    archive(fontGeometry.kerning);
+    archive(fontGeometry.glyphsByCodepoint);
+    archive(fontGeometry.metrics);
+}
+
+void Load(BinaryDataStreamInputArchive& archive, msdf_atlas::FontGeometry& fontGeometry)
+{
+    archive(fontGeometry.glyphsByIndex);
+    archive(fontGeometry.ownGlyphs);
+    archive(fontGeometry.kerning);
+    archive(fontGeometry.glyphsByCodepoint);
+    archive(fontGeometry.metrics);
+    fontGeometry.glyphs = &fontGeometry.ownGlyphs;
+}
 
 namespace Crowny
 {
@@ -50,15 +85,21 @@ namespace Crowny
         archive(cereal::binary_data(samples.data(), size));
     }
 
-    void Load(BinaryDataStreamInputArchive& archive, Font& font)
-    {
-        archive(cereal::base_class<Asset>(&font));
-        archive(font.m_AtlasTexture);
-    }
-
     void Save(BinaryDataStreamOutputArchive& archive, const Font& font)
     {
         archive(cereal::base_class<Asset>(&font));
+        const MSDFData* const data = font.GetMSDFData();
+        archive(data->FontGeometry);
+        archive(data->Glyphs);
+        archive(font.m_AtlasTexture);
+    }
+
+    void Load(BinaryDataStreamInputArchive& archive, Font& font)
+    {
+        archive(cereal::base_class<Asset>(&font));
+        font.m_MSDFData = new MSDFData();
+        archive(font.m_MSDFData->FontGeometry);
+        archive(font.m_MSDFData->Glyphs);
         archive(font.m_AtlasTexture);
     }
 
@@ -66,19 +107,18 @@ namespace Crowny
     {
         archive(cereal::base_class<Asset>(&texture));
         TextureParameters& params = texture.m_Params;
-        archive(params.Width, params.Height, params.Depth, params.MipLevels, params.Samples, params.Type, params.Shape,
-                params.Format);
+        archive(params.Type, params.Shape, params.sRGB, params.ReadWrite, params.GenerateMipmaps, params.MipLevels,
+                params.Samples, params.Faces, params.Width, params.Height, params.Depth, params.Usage, params.Format);
         texture.Init();
 
-        for (uint32_t mip = 0; mip < params.MipLevels; mip++)
+        for (uint32_t mip = 0; mip < params.MipLevels + 1; mip++)
         {
             for (uint32_t face = 0; face < params.Faces; face++)
             {
-                uint32_t size = 0;
-                archive(size);
                 Ref<PixelData> pixelData = CreateRef<PixelData>(texture.GetWidth(), texture.GetHeight(),
                                                                 texture.GetDepth(), texture.GetFormat());
-                archive.GetStream()->Read(pixelData->GetData(), size);
+                pixelData->AllocateInternalBuffer();
+                archive(cereal::binary_data((uint8_t*)pixelData->GetData(), pixelData->GetSize()));
                 texture.WriteData(*pixelData, mip, face);
             }
         }
@@ -90,8 +130,8 @@ namespace Crowny
 
         archive(cereal::base_class<Asset>(&texture2));
         const TextureParameters& params = texture2.GetProperties();
-        archive(params.Width, params.Height, params.Depth, params.MipLevels, params.Samples, params.Type, params.Shape,
-                params.Format);
+        archive(params.Type, params.Shape, params.sRGB, params.ReadWrite, params.GenerateMipmaps, params.MipLevels,
+                params.Samples, params.Faces, params.Width, params.Height, params.Depth, params.Usage, params.Format);
         for (uint32_t mip = 0; mip < params.MipLevels + 1; mip++) // Save all texture data
         {
             for (uint32_t face = 0; face < params.Faces; face++)
@@ -113,6 +153,76 @@ namespace Crowny
     void Load(BinaryDataStreamInputArchive& archive, VulkanTexture& texture)
     {
         archive(cereal::base_class<Texture>(&texture));
+    }
+
+    void Load(BinaryDataStreamInputArchive& archive, Mesh& mesh)
+    {
+        archive(cereal::base_class<Asset>(&mesh));
+        archive(mesh.m_Layout);
+        archive(mesh.m_IndexType);
+        archive(mesh.m_DrawMode);
+        archive(mesh.m_NumIndices);
+        archive(mesh.m_NumVertices);
+        archive(mesh.m_DrawMode);
+        uint32_t usage = 0;
+        archive(usage);
+        mesh.m_Usage = MeshUsageFlags(usage);
+        archive(mesh.m_CPUMeshData);
+        mesh.Init();
+        if (!mesh.m_Usage.IsSet(MeshUsage::CpuCached))
+            mesh.m_CPUMeshData = nullptr;
+    }
+
+    void Save(BinaryDataStreamOutputArchive& archive, const Mesh& constMesh)
+    {
+        Mesh& mesh = const_cast<Mesh&>(constMesh);
+        archive(cereal::base_class<Asset>(&mesh));
+        archive(mesh.m_Layout);
+        archive(mesh.m_IndexType);
+        archive(mesh.m_DrawMode);
+        archive(mesh.m_NumIndices);
+        archive(mesh.m_NumVertices);
+        archive(mesh.m_DrawMode);
+        archive((uint32_t)mesh.m_Usage);
+        Ref<MeshData> meshData = mesh.AllocBuffer();
+        mesh.ReadData(meshData);
+        archive(meshData);
+    }
+
+    void Load(BinaryDataStreamInputArchive& archive, MeshData& meshData)
+    {
+        archive(meshData.m_IndexType);
+        archive(meshData.m_NumVertices);
+        archive(meshData.m_NumIndices);
+        archive(meshData.m_Layout);
+        meshData.AllocateBuffer();
+        archive(cereal::binary_data(meshData.m_Data, meshData.GetIndexBufferSize() + meshData.GetVertexBufferSize()));
+    }
+
+    void Save(BinaryDataStreamOutputArchive& archive, const MeshData& meshData)
+    {
+        archive(meshData.m_IndexType);
+        archive(meshData.m_NumVertices);
+        archive(meshData.m_NumIndices);
+        archive(meshData.m_Layout);
+        archive(cereal::binary_data(meshData.m_Data, meshData.GetIndexBufferSize() + meshData.GetVertexBufferSize()));
+    }
+
+    void Load(BinaryDataStreamInputArchive& archive, BufferLayout& layout)
+    {
+        archive(layout.m_Elements);
+        layout.CalculateOffsetsAndStride();
+    }
+    void Save(BinaryDataStreamOutputArchive& archive, const BufferLayout& layout) { archive(layout.m_Elements); }
+
+    template <typename Archive> void Serialize(Archive& archive, BufferElement& element)
+    {
+        archive(element.Attribute);
+        archive(element.Name);
+        archive(element.Normalized);
+        archive(element.Offset);
+        archive(element.Size);
+        archive(element.Type);
     }
 
     void Save(BinaryDataStreamOutputArchive& archive, const ScriptCode& code)
@@ -222,24 +332,28 @@ namespace Crowny
             return nullptr;
         }
 
-        UUID42 uuid;
+        UUID uuid;
         bool exists = GetUUIDFromFilepath(filepath, uuid);
         if (!exists)
             uuid = UuidGenerator::Generate();
         return Load(uuid, filepath, keepInternalRef, keepSourceData);
     }
 
-    AssetHandle<Asset> AssetManager::LoadFromUUID(const UUID42& uuid, bool keepInternalRef, bool keepSourceData)
+    AssetHandle<Asset> AssetManager::LoadFromUUID(const UUID& uuid, bool keepInternalRef, bool keepSourceData)
     {
         auto iterFind = m_Handles.find(uuid);
         if (iterFind != m_Handles.end())
             return iterFind->second.Lock();
         Path filepath;
         GetFilepathFromUUID(uuid, filepath);
+        if (filepath.empty() || !fs::exists(filepath))
+        {
+            return AssetHandle<Asset>();
+        }
         return Load(uuid, filepath, keepInternalRef, keepSourceData);
     }
 
-    AssetHandle<Asset> AssetManager::Load(const UUID42& uuid, const Path& filepath, bool keepInternalRef,
+    AssetHandle<Asset> AssetManager::Load(const UUID& uuid, const Path& filepath, bool keepInternalRef,
                                           bool keepSourceData)
     {
         auto iterFind = m_Handles.find(uuid);
@@ -255,7 +369,7 @@ namespace Crowny
         return output;
     }
 
-    AssetHandle<Asset> AssetManager::GetAssetHandle(const UUID42& uuid)
+    AssetHandle<Asset> AssetManager::GetAssetHandle(const UUID& uuid)
     {
         auto iterFind = m_Handles.find(uuid);
         if (iterFind != m_Handles.end())
@@ -305,7 +419,7 @@ namespace Crowny
             m_Manifests.erase(iterFind);
     }
 
-    void AssetManager::GetFilepathFromUUID(const UUID42& uuid, Path& outFilepath)
+    void AssetManager::GetFilepathFromUUID(const UUID& uuid, Path& outFilepath)
     {
         for (auto& manifest : m_Manifests)
         {
@@ -314,7 +428,7 @@ namespace Crowny
         }
     }
 
-    bool AssetManager::GetUUIDFromFilepath(const Path& filepath, UUID42& outUUID)
+    bool AssetManager::GetUUIDFromFilepath(const Path& filepath, UUID& outUUID)
     {
         // broken
         for (auto& manifest : m_Manifests)
@@ -327,11 +441,11 @@ namespace Crowny
 
     AssetHandle<Asset> AssetManager::CreateAssetHandle(const Ref<Asset>& asset)
     {
-        UUID42 uuid = UuidGenerator::Generate();
+        UUID uuid = UuidGenerator::Generate();
         return CreateAssetHandle(asset, uuid);
     }
 
-    AssetHandle<Asset> AssetManager::CreateAssetHandle(const Ref<Asset>& asset, const UUID42& uuid)
+    AssetHandle<Asset> AssetManager::CreateAssetHandle(const Ref<Asset>& asset, const UUID& uuid)
     {
         AssetHandle<Asset> newHandle(asset, uuid);
 
@@ -370,10 +484,12 @@ CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Shader, "Shader")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Texture, "Texture")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::VulkanTexture, "VulkanTexture")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::PhysicsMaterial2D, "PhysicsMaterial2D")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Mesh, "Mesh")
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Shader)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::AudioClip)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Font)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Texture)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::ScriptCode)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::PhysicsMaterial2D)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Mesh)
 CEREAL_REGISTER_DYNAMIC_INIT(AssetManager)

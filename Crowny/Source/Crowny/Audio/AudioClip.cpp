@@ -52,7 +52,7 @@ namespace Crowny
             }
 
             uint32_t bufferSize = info.NumSamples * info.BitDepth / 8;
-            CW_ENGINE_INFO("Buffer size: {0}", bufferSize);
+            // CW_ENGINE_INFO("Buffer size: {0}", bufferSize);
             uint8_t* sampleBuffer = new uint8_t[bufferSize];
             if (m_Desc.Format == AudioFormat::VORBIS)
             {
@@ -142,7 +142,7 @@ namespace Crowny
 
         if (m_SourceStreamData != nullptr)
         {
-            CW_ENGINE_ASSERT(!m_NeedsDecompression)
+            CW_ENGINE_ASSERT(!m_NeedsDecompression);
             uint32_t bytesPerSample = m_Desc.BitDepth / 8;
             uint32_t size = count * bytesPerSample;
             uint32_t streamOffset = offset * bytesPerSample;

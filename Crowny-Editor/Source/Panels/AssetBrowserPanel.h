@@ -49,6 +49,7 @@ namespace Crowny
 
         void SetCurrentDirectory(DirectoryEntry* entry);
 
+        void HandleOpen(LibraryEntry* entry);
         void ShowContextMenuContents(LibraryEntry* entry = nullptr, bool isTreeView = false);
         void DrawHeader();
         void DrawFiles();

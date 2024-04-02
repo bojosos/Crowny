@@ -6,6 +6,7 @@
 #include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Common/StringUtils.h"
 #include "Crowny/Import/Importer.h"
+#include "Crowny/Import/TextureImporter.h"
 #include "Crowny/Input/Input.h"
 
 #include "Editor/Editor.h"
@@ -77,26 +78,24 @@ namespace Crowny
         }
         RecalculateDirectoryEntries();
 
-        TextureParameters soundWaveParams;
-        soundWaveParams.Width = 256;
-        soundWaveParams.Height = 256;
-        soundWaveParams.Usage = TextureUsage::TEXTURE_STATIC;
-        soundWaveParams.Format = TextureFormat::RGBA8;
-
-        Ref<Texture> soundWave = Texture::Create(soundWaveParams);
-
         for (auto child : m_CurrentDirectoryEntry->Children) // Also this is not recursive, and do audio wave on import
         {
             const auto& path = child->Filepath;
-            Renderer2D::Begin(glm::ortho(-256.0f, 256.0f, -256.0f, 256.0f), glm::mat4(1.0f));
             String ext = path.extension().string();
-            if (ext == ".png") // TODO: Replace the .png
+            if (ext.size() > 0 && TextureImporter::IsExtensionSupportedStatic(ext.substr(1)))
             {
                 Ref<Texture> result = Importer::Get().Import<Texture>(path);
                 m_Icons[child->ElementNameHash] = result;
             }
             else if (ext == ".ogg")
             {
+                TextureParameters soundWaveParams;
+                soundWaveParams.Width = 256;
+                soundWaveParams.Height = 256;
+                soundWaveParams.Usage = TextureUsage::TEXTURE_STATIC;
+                soundWaveParams.Format = TextureFormat::RGBA8;
+
+                Ref<Texture> soundWave = Texture::Create(soundWaveParams);
                 AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(path));
                 Vector<uint8_t> samples;
                 samples.resize(clip->GetNumSamples() * 2);
@@ -159,6 +158,17 @@ namespace Crowny
         m_ForwardHistory = {};
         m_BackwardHistory.push(m_CurrentDirectoryEntry);
 
+        for (auto child : m_CurrentDirectoryEntry->Children) // Also this is not recursive, and do audio wave on import
+        {
+            const auto& path = child->Filepath;
+            String ext = path.extension().string();
+            if (m_Icons.count(child->ElementNameHash) == 0 && ext.size() > 0 &&
+                TextureImporter::IsExtensionSupportedStatic(ext.substr(1)))
+            {
+                Ref<Texture> result = Importer::Get().Import<Texture>(path);
+                m_Icons[child->ElementNameHash] = result;
+            }
+        }
         m_CurrentDirectoryEntry = entry;
         RecalculateDirectoryEntries();
         m_SelectionSet.clear();
@@ -249,7 +259,8 @@ namespace Crowny
                 SetCurrentDirectory(dirEntry);
                 break;
             }
-            ImGui::Text("/");
+            if (dirEntry != m_DirectoryPathEntries.back())
+                ImGui::Text("/");
         }
 
         ImGui::Spring();
@@ -260,7 +271,7 @@ namespace Crowny
                 m_DisplayList = ProjectLibrary::Get().Search(m_SearchString);
             UpdateDisplayList();
         }
-        UI::ScopedStyle style(ImGuiStyleVar_LayoutAlign, 1);
+        UI::ScopedStyle style(ImGuiStyleVar_LayoutAlign, 1.0f);
 
         const float maxWidth = 150.0f * 1.1f;
         const float spacing = ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(" ").x;
@@ -344,10 +355,7 @@ namespace Crowny
         if (Input::IsKeyDown(Key::Enter) && !m_SelectionSet.empty()) // Enter a directory using the keyboard
         {
             LibraryEntry* entry = displayList[m_SelectionStartIndex].get();
-            if (entry->Type == LibraryEntryType::Directory)
-                SetCurrentDirectory(static_cast<DirectoryEntry*>(entry));
-            else
-                PlatformUtils::OpenExternally(entry->Filepath);
+            HandleOpen(entry);
         }
 
         if (Input::IsKeyDown(Key::Backspace) || Input::IsMouseButtonDown(Mouse::Button3)) // Go back
@@ -390,7 +398,7 @@ namespace Crowny
             if (Input::IsKeyDown(Key::A)) // Select all (Ctrl+A)
             {
                 m_SelectionStartIndex = 0;
-                m_SelectionEndIndex = displayList.size() - 1;
+                m_SelectionEndIndex = displayList.size() > 0 ? (uint32_t)(displayList.size() - 1) : 0;
                 for (uint32_t i = m_SelectionStartIndex; i <= m_SelectionEndIndex; i++)
                     m_SelectionSet.insert(displayList[i]->ElementNameHash);
             }
@@ -576,6 +584,22 @@ namespace Crowny
         m_RequiresSort = true;
     }
 
+    void AssetBrowserPanel::HandleOpen(LibraryEntry* entry)
+    {
+        if (entry->Type == LibraryEntryType::Directory)
+            SetCurrentDirectory(static_cast<DirectoryEntry*>(entry));
+        else // Open the file
+        {
+            FileEntry* fileEntry = static_cast<FileEntry*>(entry);
+            const AssetType assetType = fileEntry->Metadata->Type;
+            if (fileEntry->Metadata != nullptr &&
+                (assetType == AssetType::ScriptCode || assetType == AssetType::Shader))
+                CodeEditorManager::Get().OpenFile(fileEntry->Filepath);
+            else
+                PlatformUtils::OpenExternally(entry->Filepath);
+        }
+    }
+
     void AssetBrowserPanel::DrawFiles()
     {
         float cellSize = m_ThumbnailSize + m_Padding;
@@ -601,7 +625,7 @@ namespace Crowny
         const DisplayList& displayList = GetDisplayList();
         for (uint32_t entryIdx = 0; entryIdx < displayList.size(); entryIdx++)
         {
-            const auto& entry = displayList[entryIdx];
+            const auto entry = displayList[entryIdx];
             const auto& path = entry->Filepath;
 
             uint32_t upperBits = static_cast<uint32_t>(entry->ElementNameHash >> 32);
@@ -727,23 +751,8 @@ namespace Crowny
             // Only enter the directory if we click on the image/text but not if we double click in the InputText for
             // renaming
             if (ImGui::IsItemHovered() && m_RenamingText.empty() &&
-                ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) // Enter directory
-            {
-                if (entry->Type == LibraryEntryType::Directory)
-                    SetCurrentDirectory(static_cast<DirectoryEntry*>(entry.get()));
-                else // Open the file
-                {
-                    FileEntry* fileEntry = static_cast<FileEntry*>(entry.get());
-                    if (fileEntry->Metadata != nullptr)
-                    {
-                        if (fileEntry->Metadata != nullptr && fileEntry->Metadata->Type == AssetType::ScriptCode)
-                            CodeEditorManager::Get().OpenFile(fileEntry->Filepath);
-
-                        return;
-                    }
-                    PlatformUtils::OpenExternally(path);
-                }
-            }
+                ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) // Enter directory or open file
+                HandleOpen(entry.get());
 
             if (Input::IsMouseButtonUp(Mouse::ButtonLeft) || Input::IsMouseButtonUp(Mouse::ButtonRight))
             {
@@ -930,7 +939,7 @@ namespace Crowny
         if (entry == nullptr)
             ImGui::BeginDisabled();
         if (ImGui::MenuItem("Open"))
-            PlatformUtils::OpenExternally(entry->Filepath);
+            HandleOpen(entry);
 
         if (ImGui::MenuItem("Delete"))
         {

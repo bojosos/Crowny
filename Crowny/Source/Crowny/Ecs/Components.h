@@ -3,13 +3,11 @@
 #include "Crowny/Common/Color.h"
 #include "Crowny/Scene/SceneCamera.h"
 
-#include "Crowny/Ecs/Entity.h"
-
 #include "Crowny/Audio/AudioSource.h"
+#include "Crowny/Common/Math.h"
+#include "Crowny/Ecs/Entity.h"
 #include "Crowny/Physics/PhysicsMaterial.h"
 
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/ext/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 
 class b2Body;
@@ -17,13 +15,6 @@ class b2Fixture;
 
 namespace Crowny
 {
-
-    enum class TransformChangedFlags
-    {
-        None,
-        Transform,
-        Parent
-    };
 
     static uint64_t s_NextAvailableId = 1;
 
@@ -35,16 +26,17 @@ namespace Crowny
             InstanceId = s_NextAvailableId;
             s_NextAvailableId++;
         }
+
         uint64_t InstanceId;
     };
 
     struct IDComponent : public ComponentBase
     {
-        UUID42 Uuid;
+        UUID Uuid;
 
         IDComponent() : ComponentBase(){};
         IDComponent(const IDComponent&) = default;
-        IDComponent(const UUID42& uuid) : Uuid(uuid) {}
+        IDComponent(const UUID& uuid) : Uuid(uuid) {}
     };
 
     struct TagComponent : public ComponentBase
@@ -59,21 +51,132 @@ namespace Crowny
         operator const String&() const { return Tag; }
     };
 
-    struct TransformComponent : public ComponentBase
+    class TransformComponent : public ComponentBase
     {
-        glm::vec3 Position = { 0.0f, 0.0f, 0.0f };
-        glm::vec3 Rotation = { 0.0f, 0.0f, 0.0f };
-        glm::vec3 Scale = { 1.0f, 1.0f, 1.0f };
+    public:
+        enum
+        {
+            DIRTY_LOCAL,
+            DIRTY_WORLD
+        };
 
+    private:
+        friend class Scene;
+        // Kept at the top since it is the most likely one to be used during runtime.
+        mutable glm::mat4 WorldTransformCache = glm::mat4(1.0f);
+        mutable glm::mat4 LocalTransformCache = glm::mat4(1.0f);
+
+        mutable Transform WorldTransform;
+        mutable Transform LocalTransform;
+
+        mutable uint32_t TransformDirtyFlags = 0xffffff;
+
+    public:
         TransformComponent() : ComponentBase() {}
         TransformComponent(const TransformComponent&) = default;
-        TransformComponent(const glm::vec3& position) : Position(position) {}
+        // TransformComponent(const glm::vec3& position) : Position(position), WorldTransformDirty(true) {}
 
-        glm::mat4 GetTransform() const
+        bool IsCachedWorldTransformValid() const { return (TransformDirtyFlags & DIRTY_WORLD) == 0; }
+        bool IsCachedLocalTransformValid() const { return (TransformDirtyFlags & DIRTY_LOCAL) == 0; }
+
+        // const glm::vec3& GetPosition() const { return GetWorld.GetPosition(); }
+        // const glm::quat& GetRotation() const { return LocalTransform.GetRotation(); }
+        // const glm::vec3& GetScale() const { return LocalTransform.GetScale(); }
+
+        void SetPosition(const glm::vec3& position)
         {
-            glm::mat4 rotation = glm::toMat4(glm::quat(Rotation));
+            LocalTransform.SetPosition(position);
+            TransformDirtyFlags = DIRTY_LOCAL | DIRTY_WORLD;
+        }
 
-            return glm::translate(glm::mat4(1.0f), Position) * rotation * glm::scale(glm::mat4(1.0f), Scale);
+        void SetRotation(const glm::quat& rotation)
+        {
+            LocalTransform.SetRotation(rotation);
+            TransformDirtyFlags = DIRTY_LOCAL | DIRTY_WORLD;
+        }
+
+        void SetScale(const glm::vec3& scale)
+        {
+            LocalTransform.SetScale(scale);
+            TransformDirtyFlags = DIRTY_LOCAL | DIRTY_WORLD;
+        }
+
+        void SetWorldPosition(const glm::vec3& position, const Entity& parent)
+        {
+            if (parent)
+                LocalTransform.SetWorldPosition(position, parent.GetTransform().GetWorldTransform(parent.GetParent()));
+            else
+                LocalTransform.SetPosition(position);
+            TransformDirtyFlags = DIRTY_LOCAL | DIRTY_WORLD;
+        }
+
+        void SetWorldRotation(const glm::quat& rotation, const Entity& parent)
+        {
+            if (parent)
+                LocalTransform.SetWorldRotation(rotation, parent.GetTransform().GetWorldTransform(parent.GetParent()));
+            else
+                LocalTransform.SetRotation(rotation);
+            TransformDirtyFlags = DIRTY_LOCAL | DIRTY_WORLD;
+        }
+
+        void SetWorldScale(const glm::vec3& scale, const Entity& parent)
+        {
+            if (parent)
+                LocalTransform.SetWorldScale(scale, parent.GetTransform().GetWorldTransform(parent.GetParent()));
+            else
+                LocalTransform.SetScale(scale);
+            TransformDirtyFlags = DIRTY_LOCAL | DIRTY_WORLD;
+        }
+
+        const Transform& GetLocalTransform() const
+        {
+            if (!IsCachedLocalTransformValid())
+                UpdateLocalTransform();
+
+            return LocalTransform;
+        }
+
+        const Transform& GetWorldTransform(Entity parent) const
+        {
+            if (!IsCachedWorldTransformValid())
+                UpdateWorldTransform(parent);
+
+            return WorldTransform;
+        }
+
+        const glm::mat4& GetLocalMatrix() const
+        {
+            if (!IsCachedLocalTransformValid())
+                UpdateLocalTransform();
+
+            return LocalTransformCache;
+        }
+
+        const glm::mat4& GetWorldMatrix(Entity parent) const
+        {
+            if (!IsCachedWorldTransformValid())
+                UpdateWorldTransform(parent);
+
+            return WorldTransformCache;
+        }
+
+        void UpdateLocalTransform() const
+        {
+            LocalTransformCache = LocalTransform.GetMatrix();
+            TransformDirtyFlags &= ~DIRTY_LOCAL;
+        }
+
+        void UpdateWorldTransform(const Entity& parent) const
+        {
+            WorldTransform = LocalTransform;
+            if (parent)
+            {
+                WorldTransform.MakeWorld(parent.GetTransform().GetWorldTransform(parent.GetParent()));
+                WorldTransformCache = WorldTransform.GetMatrix();
+            }
+            else
+                WorldTransformCache = GetLocalMatrix();
+            TransformDirtyFlags &= ~DIRTY_WORLD;
         }
     };
 
@@ -174,13 +277,10 @@ namespace Crowny
 
     struct MeshRendererComponent : public ComponentBase
     {
-        Ref<::Crowny::Mesh> Mesh;
+        AssetHandle<Mesh> MeshHandle;
         // Ref<::Crowny::Model> Model;
 
-        MeshRendererComponent()
-          : ComponentBase(){
-                //    Model = CreateRef<::Crowny::Model>("Resources/Models/sphere.gltf");
-            };
+        MeshRendererComponent() : ComponentBase() {}
         MeshRendererComponent(const MeshRendererComponent&) = default;
     };
 
@@ -198,6 +298,21 @@ namespace Crowny
         RelationshipComponent& operator=(const RelationshipComponent& other);
     };
 
+    class AudioListenerComponent : public ComponentBase
+    {
+    public:
+        AudioListenerComponent() = default;
+        AudioListenerComponent(const AudioListenerComponent&) = default;
+
+        void Initialize();
+        void OnTransformChanged(const Transform& transform);
+
+    private:
+        Ref<AudioListener> m_Internal;
+    };
+
+    template <> void ComponentEditorWidget<AudioListenerComponent>(Entity e);
+
     struct AudioSourceComponent : public ComponentBase
     {
     public:
@@ -208,7 +323,7 @@ namespace Crowny
         void OnEnabled();
         void OnDisabled();
         void OnDestroyed();
-        void OnTransformChanged(TransformChangedFlags flags);
+        void OnTransformChanged(const Transform& transform);
 
         void SetVolume(float volume);
         void SetPitch(float pitch);
@@ -251,20 +366,6 @@ namespace Crowny
     };
 
     template <> void ComponentEditorWidget<AudioSourceComponent>(Entity e);
-
-    class AudioListenerComponent : public ComponentBase
-    {
-    public:
-        AudioListenerComponent() = default;
-        AudioListenerComponent(const AudioListenerComponent&) = default;
-
-        void Initialize();
-
-    private:
-        Ref<AudioListener> m_Internal;
-    };
-
-    template <> void ComponentEditorWidget<AudioListenerComponent>(Entity e);
 
     class MonoScript
     {
@@ -422,6 +523,7 @@ namespace Crowny
         void SetAutoMass(bool autoMass, Entity entity);
         void SetCenterOfMass(const glm::vec2& center);
         void SetInterpolationMode(RigidbodyInterpolation interpolation);
+        void SetInertia(float inertia);
 
         float GetMass() const;
         float GetGravityScale() const { return m_GravityScale; }
@@ -434,6 +536,7 @@ namespace Crowny
         bool GetAutoMass() const { return m_AutoMass; }
         glm::vec2 GetCenterOfMass() const;
         RigidbodyInterpolation GetInterpolationMode() const { return m_InterpolationMode; }
+        float GetInertia() const;
 
         b2Body* RuntimeBody = nullptr;
 
@@ -447,6 +550,7 @@ namespace Crowny
         float m_LinearDrag = 0.0f;
         float m_AngularDrag = 0.05f;
         bool m_AutoMass = false;
+        float m_Inertia = 1.0f;
         glm::vec2 m_CenterOfMass = { 0.0f, 0.0f };
         CollisionDetectionMode2D m_ContinuousCollisionDetection = CollisionDetectionMode2D::Discrete;
         RigidbodyInterpolation m_InterpolationMode = RigidbodyInterpolation::None;
@@ -505,11 +609,10 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<CircleCollider2DComponent>(Entity e);
 
-    template <typename... Component> struct ComponentGroup
-    {
-    };
     using AllComponents =
       ComponentGroup<TransformComponent, CameraComponent, TextComponent, SpriteRendererComponent, MeshRendererComponent,
                      AudioSourceComponent, AudioListenerComponent, RelationshipComponent, MonoScriptComponent,
                      Rigidbody2DComponent, BoxCollider2DComponent, CircleCollider2DComponent>;
+
+    using TransformChangedNotifyComponents = ComponentGroup<AudioListenerComponent, AudioSourceComponent>;
 } // namespace Crowny
