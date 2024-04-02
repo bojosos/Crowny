@@ -80,7 +80,7 @@ namespace Crowny
 
     private:
         static MonoString* Internal_GetName(ScriptAssetBase* nativeInstance);
-        static void Internal_GetUUID(ScriptAssetBase* nativeInstance, UUID42* uuid);
+        static void Internal_GetUUID(ScriptAssetBase* nativeInstance, UUID* uuid);
     };
 
 } // namespace Crowny

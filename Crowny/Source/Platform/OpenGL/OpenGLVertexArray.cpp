@@ -120,7 +120,7 @@ namespace Crowny
                 glEnableVertexAttribArray(m_VertexBufferIndex);
                 glVertexAttribIPointer(m_VertexBufferIndex, element.GetComponentCount(),
                                        ShaderDataTypeToOpenGLBaseType(element.Type), layout.GetStride(),
-                                       (const void*)element.Offset);
+                                       (const void*)(uint64_t)element.Offset);
                 m_VertexBufferIndex++;
                 break;
             default:

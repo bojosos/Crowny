@@ -49,6 +49,7 @@ namespace Crowny
                                                  const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
                                                  void* pUserData)
     {
+        // TODO: Re-enable these when I get to fixing the Vulkan queue errors with imgui.
         StringStream debugMessage;
         debugMessage << "[" << pCallbackData->messageIdNumber << "][" << pCallbackData->pMessageIdName
                      << "] : " << pCallbackData->pMessage;
@@ -218,6 +219,7 @@ namespace Crowny
 
         VulkanRenderPasses::StartUp();
         VulkanTransferManager::StartUp();
+        VulkanTextureManager::StartUp();
         m_CommandBuffer = std::static_pointer_cast<VulkanCommandBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
     }
 
@@ -353,6 +355,7 @@ namespace Crowny
     {
         VulkanTransferManager::Shutdown();
         VulkanRenderPasses::Shutdown();
+        VulkanTextureManager::Shutdown();
         VulkanGpuBufferManager::Shutdown();
         m_CommandBuffer = nullptr;
         for (uint32_t i = 0; i < (uint32_t)m_Devices.size(); i++)

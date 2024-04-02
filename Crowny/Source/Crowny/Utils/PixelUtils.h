@@ -45,8 +45,8 @@ namespace Crowny
         void SetBuffer(uint8_t* data);
         void SetRowPitch(uint32_t rowPitch) { m_RowPitch = rowPitch; }
         void SetSlicePitch(uint32_t slicePitch) { m_SlicePitch = slicePitch; }
-        uint32_t GetRowSkip() const { return 0; }
-        uint32_t GetSliceSkip() const { return 0; }
+        uint32_t GetRowSkip() const;
+        uint32_t GetSliceSkip() const;
 
         void AllocateInternalBuffer();
         void SetColorAt(uint32_t x, uint32_t y, const glm::vec4& color);

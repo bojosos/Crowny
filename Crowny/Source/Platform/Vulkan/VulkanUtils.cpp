@@ -282,6 +282,7 @@ namespace Crowny
             }
             else
             {
+                // TODO: Make this a bit better;
                 int bitDepths[4];
                 PixelUtils::GetBitDepths(format, bitDepths);
                 if (bitDepths[0] == 16)

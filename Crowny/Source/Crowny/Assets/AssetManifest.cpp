@@ -12,7 +12,7 @@ namespace Crowny
 
     AssetManifest::AssetManifest(const String& name) : m_Name(name) {}
 
-    bool AssetManifest::UuidToFilepath(const UUID42& uuid, Path& outPath) const
+    bool AssetManifest::UuidToFilepath(const UUID& uuid, Path& outPath) const
     {
         auto findIter = m_UuidToFilepath.find(uuid);
         if (findIter != m_UuidToFilepath.end())
@@ -24,7 +24,7 @@ namespace Crowny
         return false;
     }
 
-    bool AssetManifest::FilepathToUuid(const Path& path, UUID42& outUuid) const
+    bool AssetManifest::FilepathToUuid(const Path& path, UUID& outUuid) const
     {
         auto findIter = m_FilepathToUuid.find(path);
         if (findIter != m_FilepathToUuid.end())
@@ -32,7 +32,7 @@ namespace Crowny
             outUuid = findIter->second;
             return true;
         }
-        outUuid = UUID42();
+        outUuid = UUID();
         return false;
     }
 
@@ -42,13 +42,13 @@ namespace Crowny
         return findIter == m_FilepathToUuid.end();
     }
 
-    bool AssetManifest::UuidExists(const UUID42& uuid) const
+    bool AssetManifest::UuidExists(const UUID& uuid) const
     {
         auto findIter = m_UuidToFilepath.find(uuid);
         return findIter != m_UuidToFilepath.end();
     }
 
-    void AssetManifest::RegisterAsset(const UUID42& uuid, const Path& path)
+    void AssetManifest::RegisterAsset(const UUID& uuid, const Path& path)
     {
         auto findIter = m_UuidToFilepath.find(uuid);
         if (findIter != m_UuidToFilepath.end())
@@ -71,7 +71,7 @@ namespace Crowny
         }
     }
 
-    void AssetManifest::UnregisterAsset(const UUID42& uuid)
+    void AssetManifest::UnregisterAsset(const UUID& uuid)
     {
         CW_ENGINE_INFO("Unregister");
         auto findIter = m_UuidToFilepath.find(uuid);
@@ -125,7 +125,7 @@ namespace Crowny
         {
             for (const auto& kv : asset)
             {
-                UUID42 id = kv.first.as<UUID42>();
+                UUID id = kv.first.as<UUID>();
                 String path = kv.second.as<String>();
                 result->m_FilepathToUuid[path] = id;
                 result->m_UuidToFilepath[id] = path;

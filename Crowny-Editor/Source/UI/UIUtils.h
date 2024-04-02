@@ -44,6 +44,7 @@ namespace Crowny
             ScopedColor operator=(const ScopedColor&) = delete;
             template <typename T> ScopedColor(ImGuiCol colorVar, const T& color)
             {
+                static_assert(!std::is_floating_point<T>::value);
                 ImGui::PushStyleColor(colorVar, color);
             }
             ~ScopedColor() { ImGui::PopStyleColor(); }
@@ -82,7 +83,7 @@ namespace Crowny
 
         static const char* GenerateID()
         {
-            itoa(s_Counter++, s_IDBuffer + 2, 16);
+            _itoa(s_Counter++, s_IDBuffer + 2, 16);
             return s_IDBuffer;
         }
 
@@ -441,7 +442,7 @@ namespace Crowny
                                       const char* hint = "Search Entities",
                                       const ImVec2& size = ImVec2{ 250.0f, 350.0f })
         {
-            UI::ScopedColor popupBG(ImGuiCol_PopupBg, (IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255), 1.6f));
+            UI::ScopedColor popupBG(ImGuiCol_PopupBg, IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255));
 
             bool modified = false;
 
@@ -601,7 +602,7 @@ namespace Crowny
         static bool LayerSearchPopup(const String& id, uint32_t& selectedLayerMask, const char* hint = "Layer",
                                      const ImVec2& size = ImVec2{ 250.0f, 350.0f })
         {
-            UI::ScopedColor popupBG(ImGuiCol_PopupBg, (IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255), 1.6f));
+            UI::ScopedColor popupBG(ImGuiCol_PopupBg, IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255));
 
             bool modified = false;
 
@@ -696,7 +697,7 @@ namespace Crowny
                                       const char* hint = "Search Entities",
                                       const ImVec2& size = ImVec2{ 250.0f, 350.0f })
         {
-            UI::ScopedColor popupBG(ImGuiCol_PopupBg, (IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255), 1.6f));
+            UI::ScopedColor popupBG(ImGuiCol_PopupBg, IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255));
 
             bool modified = false;
 
@@ -820,7 +821,7 @@ namespace Crowny
                                      bool* cleared = nullptr, const char* hint = "Search Entities",
                                      const ImVec2& size = ImVec2{ 250.0f, 350.0f })
         {
-            UI::ScopedColor popupBG(ImGuiCol_PopupBg, (IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255), 1.6f));
+            UI::ScopedColor popupBG(ImGuiCol_PopupBg, IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255));
 
             bool modified = false;
 
@@ -900,15 +901,16 @@ namespace Crowny
                             }
                         }
 
-                        Vector<UUID42> assets = ProjectLibrary::Get().GetAllAssets(assetType);
+                        Vector<UUID> assets = ProjectLibrary::Get().GetAllAssets(assetType);
                         for (const auto& uuid : assets)
                         {
+                            // TODO: This shouldn't load
                             AssetHandle<Asset> handle = AssetManager::Get().LoadFromUUID(uuid);
                             const String& assetName = handle->GetName();
                             if (!searchString.empty() && !StringUtils::IsSearchMathing(assetName, searchString))
                                 continue;
 
-                            bool isSelected = (current->GetName() == handle->GetName());
+                            bool isSelected = current && (current->GetName() == handle->GetName());
                             if (ImGui::Selectable(assetName.c_str(), isSelected))
                             {
                                 current = handle;
@@ -1013,7 +1015,7 @@ namespace Crowny
                 String buttonText = "Null";
                 if (assetHandle)
                     buttonText = assetHandle->GetName();
-                String entitySearchPopupId = UI::GenerateLabelID("EntitySearch");
+                String entitySearchPopupId = UI::GenerateLabelID("AssetSearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
                     ImGui::OpenPopup(entitySearchPopupId.c_str());
@@ -1021,11 +1023,13 @@ namespace Crowny
                 ImGui::GetStyle().ButtonTextAlign = originalButtonTextAlign;
 
                 bool clear = false;
-                if (AssetSearchPopup(entitySearchPopupId, AssetType::GetStaticType(),
-                                     static_asset_cast<Asset>(assetHandle), &clear))
+                AssetHandle<Asset> asset = static_asset_cast<Asset>(assetHandle);
+                if (AssetSearchPopup(entitySearchPopupId, AssetType::GetStaticType(), asset, &clear))
                 {
-                    // if (clear)
-                    // assetHandle. = { entt::null, nullptr };
+                    if (clear)
+                        assetHandle = AssetHandle<AssetType>();
+                    else
+                        assetHandle = static_asset_cast<AssetType>(asset);
                     modified = true;
                 }
             }
@@ -1071,7 +1075,7 @@ namespace Crowny
                 String buttonText = "Null";
                 if (assetHandle)
                     buttonText = assetHandle->GetName();
-                String entitySearchPopupId = UI::GenerateLabelID("EntitySearch");
+                String entitySearchPopupId = UI::GenerateLabelID("AssetSearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
                     ImGui::OpenPopup(entitySearchPopupId.c_str());
@@ -1079,10 +1083,10 @@ namespace Crowny
                 ImGui::GetStyle().ButtonTextAlign = originalButtonTextAlign;
 
                 bool clear = false;
-                if (AssetSearchPopup(entitySearchPopupId, assetType, static_asset_cast<Asset>(assetHandle), &clear))
+                if (AssetSearchPopup(entitySearchPopupId, assetType, assetHandle, &clear))
                 {
-                    // if (clear)
-                    // assetHandle. = { entt::null, nullptr };
+                    if (clear)
+                        assetHandle = AssetHandle<Asset>();
                     modified = true;
                 }
             }
@@ -1193,7 +1197,7 @@ namespace Crowny
         static void SetAssetPayload(const Path& path)
         {
             String str = path.string();
-            const char* itemPath = str.c_str();
+            const char* itemPath = str.c_str(); // Safe since imgui does a memcpy here.
             ImGui::SetDragDropPayload("ASSET_ITEM", itemPath, str.size() * sizeof(char));
         }
 

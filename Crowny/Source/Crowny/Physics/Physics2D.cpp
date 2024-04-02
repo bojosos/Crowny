@@ -217,10 +217,10 @@ namespace Crowny
     void Physics2D::CreateRigidbody(Entity entity)
     {
         auto& rigidBody2D = entity.GetComponent<Rigidbody2DComponent>();
-        const auto& transform = entity.GetComponent<TransformComponent>();
+        const Transform& transform = entity.GetWorldTransform();
         b2BodyDef bodyDef;
-        bodyDef.position.Set(transform.Position.x, transform.Position.y);
-        bodyDef.angle = transform.Rotation.z;
+        bodyDef.position.Set(transform.GetPosition().x, transform.GetPosition().y);
+        bodyDef.angle = transform.GetRotation().z;
 
         bodyDef.type = GetBox2DType(rigidBody2D.GetBodyType());
         bodyDef.allowSleep = rigidBody2D.GetSleepMode() != RigidbodySleepMode::NeverSleep;
@@ -241,11 +241,11 @@ namespace Crowny
 
     void Physics2D::CreateBoxCollider(Entity entity)
     {
-        auto& transform = entity.GetTransform();
+        const Transform& transform = entity.GetWorldTransform();
         auto& b2d = entity.GetComponent<BoxCollider2DComponent>();
 
         b2PolygonShape boxShape;
-        boxShape.SetAsBox(b2d.GetSize().x * transform.Scale.x, b2d.GetSize().y * transform.Scale.y,
+        boxShape.SetAsBox(b2d.GetSize().x * transform.GetScale().x, b2d.GetSize().y * transform.GetScale().y,
                           { b2d.GetOffset().x, b2d.GetOffset().y }, 0.0f);
 
         b2FixtureDef fixtureDef;
@@ -270,12 +270,12 @@ namespace Crowny
 
     void Physics2D::CreateCircleCollider(Entity entity)
     {
-        auto& transform = entity.GetTransform();
+        const Transform& transform = entity.GetWorldTransform();
         auto& cc2d = entity.GetComponent<CircleCollider2DComponent>();
 
         b2CircleShape circleShape;
         circleShape.m_p.Set(cc2d.GetOffset().x, cc2d.GetOffset().y);
-        circleShape.m_radius = (transform.Scale.x + transform.Scale.y) * 0.5f * cc2d.GetRadius();
+        circleShape.m_radius = (transform.GetScale().x + transform.GetScale().y) * 0.5f * cc2d.GetRadius();
 
         b2FixtureDef fixtureDef;
         fixtureDef.shape = &circleShape;
@@ -334,13 +334,14 @@ namespace Crowny
             for (auto e : view2)
             {
                 Entity entity = { e, scene };
-                TransformComponent& transform = entity.GetTransform();
                 const Rigidbody2DComponent& rb2d = entity.GetComponent<Rigidbody2DComponent>();
+                const TransformComponent& transform = entity.GetTransform();
                 const b2Vec2& position = rb2d.RuntimeBody->GetPosition();
                 const float angle = rb2d.RuntimeBody->GetAngle();
-                transform.Position.x = position.x;
-                transform.Position.y = position.y;
-                transform.Rotation.z = angle;
+                entity.SetWorldPosition(glm::vec3(position.x, position.y, entity.GetWorldPosition().z));
+                const glm::quat& zRotationQuat = glm::angleAxis(angle, glm::vec3(0.0f, 0.0f, 1.0f));
+                const glm::quat& result = zRotationQuat * entity.GetWorldRotation();
+                entity.SetWorldRotation(result);
             }
 
             m_PhysicsWorld2D->Step(fixedTimestep, m_Settings->VelocityIterations, m_Settings->PositionIterations);
@@ -358,18 +359,26 @@ namespace Crowny
             const b2Vec2& position = rb2d.RuntimeBody->GetPosition();
             const float angle = rb2d.RuntimeBody->GetAngle();
             const RigidbodyInterpolation interpolation = rb2d.GetInterpolationMode();
+            const glm::vec3& entityPosition = entity.GetWorldPosition();
             if (interpolation == RigidbodyInterpolation::None)
             {
-                transform.Position.x = position.x;
-                transform.Position.y = position.y;
-                transform.Rotation.z = angle;
+                entity.SetWorldPosition(glm::vec3(position.x, position.y, entityPosition.z));
+                const glm::quat& zRotationQuat = glm::angleAxis(angle, glm::vec3(0.0f, 0.0f, 1.0f));
+                const glm::quat& result = zRotationQuat * entity.GetWorldRotation();
+                entity.SetWorldRotation(result);
             }
             else if (interpolation == RigidbodyInterpolation::Interpolate)
             {
                 const float oneMinusAlpha = 1.0f - alpha;
-                transform.Position.x = position.x * alpha + transform.Position.x * oneMinusAlpha;
-                transform.Position.y = position.y * alpha + transform.Position.x * oneMinusAlpha;
-                transform.Rotation.z = angle * alpha + transform.Rotation.z * oneMinusAlpha;
+                glm::vec3 newPosition;
+                newPosition.x = position.x * alpha + entityPosition.x * oneMinusAlpha;
+                newPosition.y = position.y * alpha + entityPosition.y * oneMinusAlpha;
+                newPosition.z = entityPosition.z;
+                const float newAngle = angle * alpha + entity.GetWorldRotation().z * oneMinusAlpha;
+                entity.SetWorldPosition(newPosition);
+                const glm::quat& zRotationQuat = glm::angleAxis(angle, glm::vec3(0.0f, 0.0f, 1.0f));
+                const glm::quat& result = zRotationQuat * entity.GetWorldRotation();
+                entity.SetWorldRotation(result);
             }
         }
     }

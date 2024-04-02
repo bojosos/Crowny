@@ -1,11 +1,12 @@
 #pragma once
 
 #include "Crowny/RenderAPI/Buffer.h"
+#include "Crowny/RenderAPI/GpuBuffer.h"
 
 namespace Crowny
 {
 
-    class IndexBuffer
+    class IndexBuffer : public GpuBuffer
     {
     public:
         virtual ~IndexBuffer() = default;
@@ -19,6 +20,7 @@ namespace Crowny
         virtual void Unmap() = 0;
 
         virtual IndexType GetIndexType() const = 0;
+        virtual uint32_t GetBufferSize() const = 0;
 
         // TODO: make this take size, not count
         static Ref<IndexBuffer> Create(uint32_t count, IndexType indexType = IndexType::Index_32,

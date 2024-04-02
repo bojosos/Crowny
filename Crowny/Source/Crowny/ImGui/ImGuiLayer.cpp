@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Application/Application.h"
+#include "Crowny/Common/FileSystem.h"
 #include "Crowny/ImGui/ImGuiLayer.h"
 #include "Crowny/Window/Window.h"
 
@@ -34,11 +35,16 @@ namespace Crowny
             style.WindowRounding = 0.0f;
             style.Colors[ImGuiCol_WindowBg].w = 1.0f;
         }
-
-        io.FontDefault = io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto/Roboto-Regular.ttf", 17.0f, nullptr,
-                                                      io.Fonts->GetGlyphRangesCyrillic());
-        io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto/Roboto-Bold.ttf", 17.0f, nullptr,
-                                     io.Fonts->GetGlyphRangesCyrillic());
+        if (FileSystem::FileExists("Resources/Fonts/Roboto/Roboto-Regular.ttf"))
+        {
+            io.FontDefault = io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto/Roboto-Regular.ttf", 17.0f, nullptr,
+                                                          io.Fonts->GetGlyphRangesCyrillic());
+        }
+        if (FileSystem::FileExists("Resources/Fonts/Roboto/Roboto-Regular.ttf"))
+        {
+            io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto/Roboto-Bold.ttf", 17.0f, nullptr,
+                                         io.Fonts->GetGlyphRangesCyrillic());
+        }
 
         io.KeyMap[ImGuiKey_Tab] = Key::Tab; // Keyboard mapping. ImGui will use those indices to peek into the
                                             // io.KeyDown[] array that we will update during the application lifetime.

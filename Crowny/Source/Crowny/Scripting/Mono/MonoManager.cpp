@@ -48,8 +48,7 @@ namespace Crowny
                     break;
                 }
             }
-        }
-        // CW_ENGINE_INFO("Here");
+        };
         if (logDomain == nullptr)
             logDomain = "Null";
         if (errorLevel == 0)
@@ -145,14 +144,15 @@ namespace Crowny
             "--debug-domain-unload", "--gc-debug=check-remset-consistency,verify-before-collections,xdomain-checks"
         };
         mono_jit_parse_options(4, (char**)options);
-        // mono_trace_set_level_string("warning"); // maybe do debug
+        mono_trace_set_level_string("warning"); // maybe do debug
         // #else
-        mono_trace_set_level_string("debug");
+        // mono_trace_set_level_string("debug");
         // #endif
         mono_trace_set_log_handler(MonoLogCallback, this);
         mono_trace_set_print_handler(MonoPrintCallback);
         mono_trace_set_printerr_handler(MonoPrintErrorCallback);
         mono_config_parse(nullptr);
+        // TODO: Fix this to use the proper Mono version.
         // m_RootDomain = mono_jit_init_version("CrownyMono", MONO_VERSION_DATA[(int)MONO_VERSION].Version.c_str());
         m_RootDomain = mono_jit_init("CrownyMono");
         if (m_RootDomain == nullptr)
@@ -267,6 +267,7 @@ namespace Crowny
 
     void MonoManager::RegisterScriptType(ScriptMeta* metaData, const ScriptMeta& localMetaData)
     {
+        // Dont write code like this.
         GetScriptMetaData()[localMetaData.Assembly].push_back({ metaData, localMetaData });
     }
 

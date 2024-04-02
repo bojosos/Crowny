@@ -51,7 +51,7 @@ namespace Crowny
     struct AssetMetadata
     {
         // TODO: Preview icons, with different sizes (256....16)
-        UUID42 Uuid;                        // Asset UUID
+        UUID Uuid;                        // Asset UUID
         Ref<ImportOptions> ImportOptions; // Asset import options
         bool IncludeInBuild;
         AssetType Type;

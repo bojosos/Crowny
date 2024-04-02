@@ -12,7 +12,7 @@ namespace Crowny
         // AssetManager::Get().Destroy();
     }
 
-    void AssetHandleBase::SetHandleData(const Ref<Asset>& ptr, const UUID42& uuid)
+    void AssetHandleBase::SetHandleData(const Ref<Asset>& ptr, const UUID& uuid)
     {
         m_Data->m_Ptr = ptr;
         if (m_Data->m_Ptr != nullptr)

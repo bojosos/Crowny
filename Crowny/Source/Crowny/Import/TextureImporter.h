@@ -11,6 +11,7 @@ namespace Crowny
         virtual ~TextureImporter() = default;
 
         virtual bool IsExtensionSupported(const String& ext) const override;
+        static bool IsExtensionSupportedStatic(const String& ext);
         virtual bool IsMagicNumSupported(uint8_t* num, uint32_t numSize) const override;
 
         virtual Ref<Asset> Import(const Path& path, Ref<const ImportOptions> importOptions) override;

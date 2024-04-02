@@ -21,14 +21,13 @@ namespace Crowny
 
     Ref<Asset> ShaderImporter::Import(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
-        Ref<DataStream> stream = FileSystem::OpenFile(filepath);
         Ref<const ShaderImportOptions> shaderImportOptions =
           std::static_pointer_cast<const ShaderImportOptions>(importOptions);
 
         String ext = filepath.extension().string();
         String source = FileSystem::OpenFile(filepath)->GetAsString();
         return Shader::Create(
-          ShaderCompiler::Compile(source, shaderImportOptions->Language, shaderImportOptions->GetDefines()));
+          ShaderCompiler::Compile(filepath, source, shaderImportOptions->Language, shaderImportOptions->GetDefines()));
     }
 
     Ref<ImportOptions> ShaderImporter::CreateImportOptions() const { return CreateRef<ShaderImportOptions>(); }

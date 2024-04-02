@@ -18,11 +18,11 @@ namespace Crowny
         {
             String filename = entry.path().filename().string();
             if (filename.size() == 36)
-                m_Uuids[UUID42(filename)] = entry.path();
+                m_Uuids[UUID(filename)] = entry.path();
         }
     }
 
-    Path UUIDDirectory::GetPath(const UUID42& uuid) const
+    Path UUIDDirectory::GetPath(const UUID& uuid) const
     {
         auto iterFind = m_Uuids.find(uuid);
         if (iterFind != m_Uuids.end())
@@ -35,7 +35,7 @@ namespace Crowny
         return path;
     }
 
-    void UUIDDirectory::RemovePath(const UUID42& uuid)
+    void UUIDDirectory::RemovePath(const UUID& uuid)
     {
         auto iterFind = m_Uuids.find(uuid);
         if (iterFind != m_Uuids.end())
@@ -47,12 +47,12 @@ namespace Crowny
         String filename = path.filename().string();
         if (filename.size() == 36)
         {
-            UUID42 uuid(filename);
+            UUID uuid(filename);
             RemovePath(uuid);
         }
     }
 
-    void UUIDDirectory::OnFileWrite(const UUID42& uuid)
+    void UUIDDirectory::OnFileWrite(const UUID& uuid)
     {
         if (m_Uuids.find(uuid) != m_Uuids.end())
             return;

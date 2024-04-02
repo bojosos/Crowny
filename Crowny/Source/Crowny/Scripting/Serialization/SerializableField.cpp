@@ -1,5 +1,6 @@
 #include "cwpch.h"
 
+#include "Crowny/Scripting/Bindings/Assets/ScriptAsset.h"
 #include "Crowny/Scripting/Serialization/SerializableField.h"
 #include "Crowny/Scripting/Serialization/SerializableObject.h"
 
@@ -191,6 +192,15 @@ namespace Crowny
                 fieldData->Value =
                   SerializableObject::CreateNew(std::static_pointer_cast<SerializableTypeInfoObject>(typeInfo));
             return fieldData;
+        }
+        else if (typeInfo->GetType() == SerializableType::Asset)
+        {
+            auto fieldData = CreateRef<SerializableFieldAsset>();
+            if (value != nullptr)
+            {
+                ScriptAssetBase* scriptAssetBase = ScriptAsset::ToNative(value);
+                // fieldData->Value = scriptAssetBase->GetGenericHandle();
+            }
         }
         return nullptr;
     }

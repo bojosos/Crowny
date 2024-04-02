@@ -36,7 +36,8 @@ namespace Crowny
     class ShaderCompiler
     {
     public:
-        static ShaderDesc Compile(const String& source, ShaderLanguageFlags language = ShaderLanguage::VKSL,
+        static ShaderDesc Compile(const Path& path, const String& source,
+                                  ShaderLanguageFlags language = ShaderLanguage::VKSL,
                                   const UnorderedMap<String, String>& defines = {});
         static Ref<BinaryShaderData> CompileStage(const String& source, ShaderType shaderType, ShaderLanguage language,
                                                   ShaderLanguageFlags flags,

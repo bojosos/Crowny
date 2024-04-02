@@ -2,12 +2,26 @@
 
 #include "Platform/Vulkan/VulkanDescriptorPool.h"
 
+#include "Crowny/Common/Module.h"
 #include "Crowny/RenderAPI/UniformParamInfo.h"
 #include "Crowny/RenderAPI/UniformParams.h"
 
 namespace Crowny
 {
     class VulkanCmdBuffer;
+
+    class VulkanTextureManager : public Module<VulkanTextureManager>
+    {
+    public:
+        virtual void OnStartUp() override;
+        virtual void OnShutdown() override;
+        VulkanTexture* GetDummyTexture(UniformResourceType type);
+        static VkFormat GetDummyViewFormat(GpuBufferFormat format);
+
+    private:
+        Ref<VulkanTexture> m_DummyReadTextures[7];
+        Ref<VulkanTexture> m_DummyStorageTextures[7];
+    };
 
     class VulkanUniformParams : public UniformParams
     {

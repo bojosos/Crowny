@@ -93,6 +93,7 @@ namespace Crowny
         {
             m_Buffer->Submit(m_Queue, m_QueueIdx, syncMask);
             m_Device.Refresh(false);
+            // Enable for debugging this will sync everything.
             // m_Device.Refresh(true);
         }
     }

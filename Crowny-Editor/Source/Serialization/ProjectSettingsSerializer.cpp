@@ -24,7 +24,7 @@ namespace Crowny
         out << YAML::Key << "LastSelectedEntity" << YAML::Value << settings->LastSelectedEntityID;
 
         out << YAML::Key << "Hierarchy" << YAML::Value << YAML::BeginSeq;
-        for (const UUID42& uuid : settings->ExpandedEntities)
+        for (const UUID& uuid : settings->ExpandedEntities)
             out << uuid;
         out << YAML::EndSeq;
 
@@ -41,12 +41,12 @@ namespace Crowny
         projectSettings->GizmoMode = (GizmoEditMode)node["GizmoMode"].as<uint32_t>();
         projectSettings->LastAssetBrowserSelectedEntry = node["LastAssetBrowserEntry"].as<String>();
         projectSettings->LastOpenScenePath = node["LastOpenScene"].as<String>();
-        projectSettings->LastSelectedEntityID = node["LastSelectedEntity"].as<UUID42>(UUID42::EMPTY);
+        projectSettings->LastSelectedEntityID = node["LastSelectedEntity"].as<UUID>(UUID::EMPTY);
 
         if (const auto& hierarchy = node["Hierarchy"])
         {
             for (const auto& uuid : hierarchy)
-                projectSettings->ExpandedEntities.insert(uuid.as<UUID42>());
+                projectSettings->ExpandedEntities.insert(uuid.as<UUID>());
         }
 
         return projectSettings;

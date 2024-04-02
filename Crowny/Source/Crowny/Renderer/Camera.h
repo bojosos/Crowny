@@ -13,6 +13,7 @@ namespace Crowny
 
         virtual ~Camera() = default;
 
+        virtual glm::vec3 GetPosition() const { return glm::vec3(0.0f); }
         const glm::mat4& GetProjection() const { return m_Projection; }
 
     protected:

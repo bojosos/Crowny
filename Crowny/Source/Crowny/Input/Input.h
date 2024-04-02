@@ -14,13 +14,15 @@ namespace Crowny
         CROSSHAIR,
         HAND,
         HRESIZE,
-        VRESIZE
+        VRESIZE,
+        STOPSIGN
     };
 
     class Application;
     class LinuxWindow;
     class WindowsWindow;
 
+    // TODO: Make this a module!
     class Input
     {
     public:

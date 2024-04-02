@@ -36,7 +36,7 @@ for dir in dirs:
     dirchars = 0
     for (dirpath, dirname, filename) in walk(dir):
         for fff in filename:
-            if fff.endswith(".spv") or fff.endswith(".asset"):
+            if fff.endswith(".spv") or fff.endswith(".asset") or fff=="dte80a.tlh":
               continue
             fcc = 0
             path = join(dirpath, fff)

@@ -13,15 +13,17 @@
 namespace Crowny
 {
 
-    bool TextureImporter::IsExtensionSupported(const String& ext) const
+    bool TextureImporter::IsExtensionSupportedStatic(const String& ext)
     {
         String lower = ext;
         StringUtils::ToLower(lower);
         return lower == "png" || lower == "jpeg" || lower == "psd" || lower == "gif" || lower == "tga" ||
-               lower == "bmp" || lower == "hdr" || lower == "pic" || lower == "ppm" || lower == "pgm";
+               lower == "bmp" || lower == "hdr" || lower == "pic" || lower == "ppm" || lower == "pgm" || lower == "jpg";
     }
 
-    bool TextureImporter::IsMagicNumSupported(uint8_t* num, uint32_t numSize) const { return true; }
+    bool TextureImporter::IsExtensionSupported(const String& ext) const { return IsExtensionSupportedStatic(ext); }
+
+    bool TextureImporter::IsMagicNumSupported(uint8_t* num, uint32_t numSize) const { return false; }
 
     // Importer currently only supports 32-bit 1,3,4-channel images
     // Going to switch to FreeImage soon

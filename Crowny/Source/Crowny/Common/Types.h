@@ -23,7 +23,7 @@ namespace Crowny
     class AudioListenerComponent;
 
     struct Component;
-    struct TransformComponent;
+    class TransformComponent;
     struct CameraComponent;
     struct AudioSourceComponent;
     struct TagComponent;
@@ -48,6 +48,7 @@ namespace Crowny
     class Camera;
     class Model;
     class EditorCamera;
+    class Transform;
 
     class CommandBuffer;
     class GraphicsPipeline;
@@ -284,12 +285,6 @@ namespace Crowny
         SHADER_COUNT
     };
 
-    enum GpuBufferUsage
-    {
-        STATIC_DRAW,
-        DYNAMIC_DRAW
-    };
-
     enum GpuQueueType
     {
         GRAPHICS_QUEUE,
@@ -415,6 +410,10 @@ namespace Crowny
         Playing,
         Paused,
         Stopped
+    };
+
+    template <typename... Component> struct ComponentGroup
+    {
     };
 
 } // namespace Crowny

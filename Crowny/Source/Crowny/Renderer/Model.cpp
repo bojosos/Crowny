@@ -29,11 +29,11 @@ namespace Crowny
 
     void Model::Draw()
     {
-        for (uint32_t i = 0; i < m_Meshes.size(); i++)
-        {
-            if (m_Meshes[i])
-                m_Meshes[i]->Draw();
-        }
+        // for (uint32_t i = 0; i < m_Meshes.size(); i++)
+        // {
+        //     if (m_Meshes[i])
+        //         m_Meshes[i]->Draw();
+        // }
     }
 #if 0
     void Model::ProcessNode(aiNode* node, const aiScene* scene)

@@ -115,12 +115,18 @@ namespace Crowny
                     PackPixel(r, g, b, a, dst.GetFormat(), dstptr);
                     srcptr += srcPixelSize;
                     dstptr += dstPixelSize;
+                    CW_ENGINE_ASSERT(srcptr <= src.GetData() + src.GetSize());
+                    CW_ENGINE_ASSERT(dstptr <= dst.GetData() + dst.GetSize());
                 }
                 srcptr += srcRowSkip;
                 dstptr += dstRowSkip;
+                CW_ENGINE_ASSERT(srcptr <= src.GetData() + src.GetSize());
+                CW_ENGINE_ASSERT(dstptr <= dst.GetData() + dst.GetSize());
             }
             srcptr += srcSliceSkip;
             dstptr += dstSliceSkip;
+            CW_ENGINE_ASSERT(srcptr <= src.GetData() + src.GetSize());
+            CW_ENGINE_ASSERT(dstptr <= dst.GetData() + dst.GetSize());
         }
     }
 
@@ -175,6 +181,7 @@ namespace Crowny
 
     void PixelUtils::PackPixel(float r, float g, float b, float a, TextureFormat format, uint8_t* dst)
     {
+
         const PixelFormatDesc desc = GetFormatDesc(format);
         float inputs[] = { r, g, b, a };
         uint8_t bits[] = { desc.Rbits, desc.Gbits, desc.Bbits, desc.Abits };
@@ -320,6 +327,20 @@ namespace Crowny
             delete[] m_Buffer;
         m_Buffer = data;
         m_OwnsData = false;
+    }
+
+    uint32_t PixelData::GetSliceSkip() const
+    {
+        uint32_t optimalRowPitch, optimalSlicePitch;
+        PixelUtils::GetPitch(GetWidth(), GetHeight(), GetDepth(), m_Format, optimalRowPitch, optimalSlicePitch);
+        return m_SlicePitch - optimalSlicePitch;
+    }
+
+    uint32_t PixelData::GetRowSkip() const
+    {
+        uint32_t optimalRowPitch, optimalSlicePitch;
+        PixelUtils::GetPitch(GetWidth(), GetHeight(), GetDepth(), m_Format, optimalRowPitch, optimalSlicePitch);
+        return m_RowPitch - optimalRowPitch;
     }
 
     Ref<PixelData> PixelData::Create(uint32_t width, uint32_t height, TextureFormat format)

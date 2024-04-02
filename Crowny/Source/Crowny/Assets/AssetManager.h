@@ -33,9 +33,9 @@ namespace Crowny
             return static_asset_cast<T>(Load(filepath, keepSourceData));
         }
 
-        AssetHandle<Asset> LoadFromUUID(const UUID42& uuid, bool keepInternalRef = true, bool keepSourceData = false);
+        AssetHandle<Asset> LoadFromUUID(const UUID& uuid, bool keepInternalRef = true, bool keepSourceData = false);
 
-        AssetHandle<Asset> GetAssetHandle(const UUID42& uuid);
+        AssetHandle<Asset> GetAssetHandle(const UUID& uuid);
 
         void Save(const Ref<Asset>& resource); // TODO: Compression
         void Save(const Ref<Asset>& resource, const Path& filepath);
@@ -44,20 +44,20 @@ namespace Crowny
         void UnregisterAssetManifest(const Ref<AssetManifest>& manifest);
 
         AssetHandle<Asset> CreateAssetHandle(const Ref<Asset>& asset);
-        AssetHandle<Asset> CreateAssetHandle(const Ref<Asset>& asset, const UUID42& uuid);
+        AssetHandle<Asset> CreateAssetHandle(const Ref<Asset>& asset, const UUID& uuid);
         void Release(AssetHandleBase& handle);
 
     private:
-        AssetHandle<Asset> Load(const UUID42& uuid, const Path& filepath, bool keepInternalRef, bool keepSourceData);
-        void GetFilepathFromUUID(const UUID42& uuid, Path& outFilepath);
-        bool GetUUIDFromFilepath(const Path& filepath, UUID42& outUUID);
+        AssetHandle<Asset> Load(const UUID& uuid, const Path& filepath, bool keepInternalRef, bool keepSourceData);
+        void GetFilepathFromUUID(const UUID& uuid, Path& outFilepath);
+        bool GetUUIDFromFilepath(const Path& filepath, UUID& outUUID);
 
-        const UnorderedMap<UUID42, WeakAssetHandle<Asset>>& GetLoadedAssets() const { return m_Handles; }
+        const UnorderedMap<UUID, WeakAssetHandle<Asset>>& GetLoadedAssets() const { return m_Handles; }
         friend class UIUtils;
 
     private:
-        UnorderedMap<UUID42, Ref<Asset>> m_LoadedAssets;
-        UnorderedMap<UUID42, WeakAssetHandle<Asset>> m_Handles;
+        UnorderedMap<UUID, Ref<Asset>> m_LoadedAssets;
+        UnorderedMap<UUID, WeakAssetHandle<Asset>> m_Handles;
         Vector<Ref<AssetManifest>> m_Manifests;
     };
 } // namespace Crowny

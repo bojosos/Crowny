@@ -44,6 +44,8 @@ namespace Crowny
         static void Internal_AddForceAt(ScriptRigidbody2D* thisPtr, glm::vec2* position, glm::vec2* force,
                                         ForceMode forceType);
         static void Internal_AddTorque(ScriptRigidbody2D* thisPtr, float torque, ForceMode forceMode);
+        static float Internal_GetInertia(ScriptRigidbody2D* thisPtr);
+        static void Internal_SetInertia(ScriptRigidbody2D* thisPtr, float inertia);
     };
 
 } // namespace Crowny

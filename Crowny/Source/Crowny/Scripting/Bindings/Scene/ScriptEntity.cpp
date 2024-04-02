@@ -45,7 +45,7 @@ namespace Crowny
         tagComponent.Tag = MonoUtils::FromMonoString(string);
     }
 
-    void ScriptEntity::Internal_GetUUID(ScriptEntity* thisPtr, UUID42* uuid)
+    void ScriptEntity::Internal_GetUUID(ScriptEntity* thisPtr, UUID* uuid)
     {
         const Entity entity = thisPtr->GetNativeEntity();
         *uuid = entity.GetUuid();

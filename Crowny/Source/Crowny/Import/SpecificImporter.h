@@ -17,6 +17,7 @@ namespace Crowny
         virtual bool IsMagicNumSupported(uint8_t* num, uint32_t numSize) const = 0;
 
         virtual Ref<Asset> Import(const Path& path, Ref<const ImportOptions> importOptions) = 0;
+        virtual Vector<Ref<Asset>> ImportAll(const Path& path, Ref<const ImportOptions> importOptions);
         virtual Ref<ImportOptions> CreateImportOptions() const;
 
         Ref<const ImportOptions> GetDefaultImportOptions() const;

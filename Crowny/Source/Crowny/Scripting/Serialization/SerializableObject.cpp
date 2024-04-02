@@ -378,7 +378,7 @@ namespace Crowny
                                           const Ref<SerializableFieldData>& val)
     {
         if (val == nullptr)
-            CW_ENGINE_INFO("Here");
+            CW_ENGINE_INFO("Here SetFieldData");
         if (m_GCHandle != 0)
         {
             MonoObject* managedInstance = MonoUtils::GetObjectFromGCHandle(m_GCHandle);

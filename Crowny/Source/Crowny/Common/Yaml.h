@@ -29,6 +29,13 @@ namespace Crowny
         return out;
     }
 
+    inline YAML::Emitter& operator<<(YAML::Emitter& out, const glm::quat& v)
+    {
+        out << YAML::Flow;
+        out << YAML::BeginSeq << v.x << v.y << v.z << v.w << YAML::EndSeq;
+        return out;
+    }
+
     inline YAML::Emitter& operator<<(YAML::Emitter& out, const glm::mat4& mat)
     {
         out << YAML::Flow;
@@ -44,7 +51,7 @@ namespace Crowny
         return out;
     }
 
-    inline YAML::Emitter& operator<<(YAML::Emitter& out, const Crowny::UUID42& uuid)
+    inline YAML::Emitter& operator<<(YAML::Emitter& out, const Crowny::UUID& uuid)
     {
         out << uuid.ToString();
         return out;
@@ -167,20 +174,20 @@ namespace Crowny
 namespace YAML
 {
 
-    template <> struct convert<Crowny::UUID42>
+    template <> struct convert<Crowny::UUID>
     {
-        static Node encode(const Crowny::UUID42& uuid)
+        static Node encode(const Crowny::UUID& uuid)
         {
             Node node;
             node = uuid.ToString();
             return node;
         }
 
-        static bool decode(const Node& node, Crowny::UUID42& rhs)
+        static bool decode(const Node& node, Crowny::UUID& rhs)
         {
             if (!node.IsScalar())
                 return false;
-            rhs = Crowny::UUID42(node.as<std::string>());
+            rhs = Crowny::UUID(node.as<std::string>());
 
             return true;
         }
@@ -246,6 +253,32 @@ namespace YAML
         }
 
         static bool decode(const Node& node, glm::vec4& rhs)
+        {
+            if (!node.IsSequence() || node.size() != 4)
+                return false;
+            rhs.x = node[0].as<float>();
+            rhs.y = node[1].as<float>();
+            rhs.z = node[2].as<float>();
+            rhs.w = node[3].as<float>();
+
+            return true;
+        }
+    };
+
+    template <> struct convert<glm::quat>
+    {
+        static Node encode(const glm::quat& rhs)
+        {
+            Node node;
+            node.push_back(rhs.x);
+            node.push_back(rhs.y);
+            node.push_back(rhs.z);
+            node.push_back(rhs.w);
+            node.SetStyle(YAML::EmitterStyle::Flow);
+            return node;
+        }
+
+        static bool decode(const Node& node, glm::quat& rhs)
         {
             if (!node.IsSequence() || node.size() != 4)
                 return false;

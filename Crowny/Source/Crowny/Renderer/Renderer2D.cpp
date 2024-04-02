@@ -135,11 +135,11 @@ namespace Crowny
         Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
         Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
         s_Data->QuadVertexBuffer = VertexBuffer::Create(RENDERER_BUFFER_SIZE, BufferUsage::DYNAMIC_DRAW);
-        BufferLayout layout = { { ShaderDataType::Float4, "a_Coordinates" },
-                                { ShaderDataType::Float4, "a_Color" },
-                                { ShaderDataType::Float2, "a_Uvs" },
-                                { ShaderDataType::Float, "a_Tid" },
-                                { ShaderDataType::Int, "a_ObjectID" } };
+        BufferLayout layout = { BufferElement(ShaderDataType::Float4, "a_Coordinates"),
+                                BufferElement(ShaderDataType::Float4, "a_Color"),
+                                BufferElement(ShaderDataType::Float2, "a_Uvs"),
+                                BufferElement(ShaderDataType::Float, "a_Tid"),
+                                BufferElement(ShaderDataType::Int, "a_ObjectID") };
         s_Data->QuadVertexBuffer->SetLayout(layout);
 
         PipelineStateDesc desc;
@@ -196,9 +196,9 @@ namespace Crowny
         };
         s_Data->TextVertexBuffer->SetLayout(layout);
 
-        // Does this work?
-        // AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>("Resources/Shaders/Text.asset");
-        Ref<Shader> shader = Importer::Get().Import<Shader>("Resources/Shaders/Text.glsl");
+        AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>("Resources/Shaders/Text.asset");
+        // Ref<Shader> shader = Importer::Get().Import<Shader>("Resources/Shaders/Text.glsl");
+        // AssetManager::Get().Save(shader, "Resources/Shaders/Text.asset");
         Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
         Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
         PipelineStateDesc desc;
@@ -365,11 +365,11 @@ namespace Crowny
 
     void Renderer2D::DrawString(const TextComponent& textComponent, const glm::mat4& transform, int32_t entityId)
     {
-        if (!textComponent.Font)
+        if (!textComponent.Font) // TODO: Use default font here.
             return;
 
-        const auto& fontGeometry = textComponent.Font->GetMSDFData()->FontGeometry;
-        const auto& fontMetrics = fontGeometry.getMetrics();
+        const msdf_atlas::FontGeometry& fontGeometry = textComponent.Font->GetMSDFData()->FontGeometry;
+        const msdfgen::FontMetrics& fontMetrics = fontGeometry.getMetrics();
 
         Ref<Texture> fontAtlasTexture = textComponent.Font->GetAtlasTexture();
         s_Data->FontAtlasTexture = fontAtlasTexture;
@@ -400,10 +400,10 @@ namespace Crowny
                 if (i < text.size() - 1)
                 {
                     char nextCharacter = text[i + 1];
-                    double advance = 0.0;
+                    double fontKerningAdvance = 0.0;
                     if (textComponent.UseKerning)
-                        fontGeometry.getAdvance(advance, character, nextCharacter);
-                    advance = (float)advance + textComponent.WordSpacing;
+                        fontGeometry.getAdvance(fontKerningAdvance, character, nextCharacter);
+                    advance = (float)fontKerningAdvance + textComponent.WordSpacing;
                 }
 
                 x += fsScale * advance;

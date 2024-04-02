@@ -4,16 +4,37 @@ using System.Runtime.CompilerServices;
 namespace Crowny
 {
 
+    /// <summary>
+    /// The force mode to use when apply force to a 2D rigidbody.
+    /// </summary>
     public enum ForceMode2D
     {
+        /// <summary>
+        /// Adds a continuous force to the rigidbody using its mass.
+        /// </summary>
         Force,
+        /// <summary>
+        /// Adds an instance force impulse to the rigidbody using its mass.
+        /// </summary>
         Impulse
     }
 
+    /// <summary>
+    /// Represents the type of the rigidbody.
+    /// </summary>
     public enum BodyType
     {
+        /// <summary>
+        /// The rigidbody will be static.
+        /// </summary>
         Static,
+        /// <summary>
+        /// The rigidbody will be dynamic.
+        /// </summary>
         Dynamic,
+        /// <summary>
+        /// The rigidbody will be kinematic.
+        /// </summary>
         Kinematic
     }
 
@@ -52,6 +73,7 @@ namespace Crowny
         public float linearDrag { get { return Internal_GetLinearDrag(m_InternalPtr); } set { Internal_SetLinearDrag(m_InternalPtr, value); } }
         public float angularDrag { get { return Internal_GetAngularDrag(m_InternalPtr); } set { Internal_SetAngularDrag(m_InternalPtr, value); } }
         public Vector2 centerOfMass { get { Internal_GetCenterOfMass(m_InternalPtr, out Vector2 center); return center; } set { Internal_SetCenterOfMass(m_InternalPtr, ref value); } }
+        public float inertia { get { return Internal_GetInertia(m_InternalPtr); } set { Internal_SetInertia(m_InternalPtr, value); } }
 
         public Rigidbody2DConstraints constraints { get { return Internal_GetConstraints(m_InternalPtr, m_InternalPtr); } set { Internal_SetConstraints(m_InternalPtr, value);  } }
 
@@ -157,5 +179,11 @@ namespace Crowny
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern float Internal_GetRotation(IntPtr parent);
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern float Internal_GetInertia(IntPtr parent);
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern void Internal_SetInertia(IntPtr parent, float inertia);
     }
 }

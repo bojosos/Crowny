@@ -12,10 +12,10 @@ namespace Crowny
 
     ScriptAssetBase* ScriptAssetManager::CreateScriptAsset(const AssetHandle<Asset>& asset, MonoObject* instance)
     {
-        const UUID42 uuid =
+        const UUID uuid =
           asset.GetUUID(); // Hmmm something weird happens if I don't copy here (maybe some corruption magic?)
         if (!asset.IsLoaded() ||
-            uuid == UUID42::EMPTY) // The == EMPTY check is only done since .IsLoaded is not fully implemented yet
+            uuid == UUID::EMPTY) // The == EMPTY check is only done since .IsLoaded is not fully implemented yet
             return nullptr;
         AssetInfo* assetInfo = ScriptInfoManager::Get().GetAssetInfo(asset->GetAssetType());
         if (assetInfo == nullptr)
@@ -25,7 +25,7 @@ namespace Crowny
         return scriptAsset;
     }
 
-    ScriptAssetBase* ScriptAssetManager::GetScriptAsset(const UUID42& uuid)
+    ScriptAssetBase* ScriptAssetManager::GetScriptAsset(const UUID& uuid)
     {
         auto it = m_ScriptAssets.find(uuid);
         if (it == m_ScriptAssets.end())
@@ -35,7 +35,7 @@ namespace Crowny
 
     ScriptAssetBase* ScriptAssetManager::GetScriptAsset(const AssetHandle<Asset>& asset, bool create)
     {
-        const UUID42& uuid = asset.GetUUID();
+        const UUID& uuid = asset.GetUUID();
         ScriptAssetBase* output = GetScriptAsset(uuid);
         if (output == nullptr && create)
             return CreateScriptAsset(asset, nullptr); // TODO: make nullptr default arg
@@ -45,7 +45,7 @@ namespace Crowny
     void ScriptAssetManager::DestroyScriptAsset(ScriptAssetBase* asset)
     {
         AssetHandle<Asset> handle = asset->GetGenericHandle();
-        const UUID42& uuid = handle.GetUUID();
+        const UUID& uuid = handle.GetUUID();
         delete asset;
         m_ScriptAssets.erase(uuid);
     }
