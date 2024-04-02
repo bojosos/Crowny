@@ -24,7 +24,7 @@ namespace Crowny
 
     void SceneSerializer::SerializeEntity(YAML::Emitter& out, Entity entity)
     {
-        const UUID42& uuid = entity.GetUuid();
+        const UUID& uuid = entity.GetUuid();
         if (!entity)
             return;
         out << YAML::BeginMap;
@@ -86,20 +86,32 @@ namespace Crowny
             BeginYAMLMap(out, "TextComponent");
 
             SerializeValueYAML(out, "Text", tc.Text);
-            SerializeValueYAML(out, "Color", tc.Color);
             SerializeValueYAML(out, "Font", tc.Font.GetUUID());
+            SerializeValueYAML(out, "Color", tc.Color);
+            SerializeValueYAML(out, "Size", tc.Size);
+            SerializeValueYAML(out, "AutoSize", tc.AutoSize);
+            SerializeValueYAML(out, "Wrapping", tc.Wrapping);
+            SerializeValueYAML(out, "OutlineColor", tc.OutlineColor);
+            SerializeValueYAML(out, "Thickess", tc.Thickess);
+            SerializeValueYAML(out, "CharacterSpacing", tc.CharacterSpacing);
+            SerializeValueYAML(out, "WordSpacing", tc.WordSpacing);
+            SerializeValueYAML(out, "LineSpacing", tc.LineSpacing);
+            SerializeValueYAML(out, "UseKerning", tc.UseKerning);
+            SerializeValueYAML(out, "FontStyle", (uint32_t)tc.FontStyle);
+            SerializeEnumYAML(out, "Overflow", tc.Overflow);
+            SerializeEnumYAML(out, "HorizontalAlignment", tc.HorizontalAlignment);
+            SerializeEnumYAML(out, "VerticalAlignment", tc.VerticalAlignment);
 
             EndYAMLMap(out, "TextComponent");
         }
 
         if (entity.HasComponent<TransformComponent>())
         {
-            const auto& tc = entity.GetComponent<TransformComponent>();
             BeginYAMLMap(out, "TransformComponent");
 
-            SerializeValueYAML(out, "Position", tc.Position);
-            SerializeValueYAML(out, "Rotation", tc.Rotation);
-            SerializeValueYAML(out, "Scale", tc.Scale);
+            SerializeValueYAML(out, "Position", entity.GetLocalPosition());
+            SerializeValueYAML(out, "Rotation", entity.GetLocalRotation());
+            SerializeValueYAML(out, "Scale", entity.GetLocalScale());
 
             EndYAMLMap(out, "TransformComponent");
         }
@@ -137,10 +149,10 @@ namespace Crowny
 
         if (entity.HasComponent<MeshRendererComponent>())
         {
-            const auto& mesh = entity.GetComponent<MeshRendererComponent>();
+            const MeshRendererComponent& mesh = entity.GetComponent<MeshRendererComponent>();
             BeginYAMLMap(out, "MeshRendererComponent");
 
-            SerializeValueYAML(out, "UUID", UuidGenerator::Generate());
+            SerializeValueYAML(out, "Mesh", mesh.MeshHandle.GetUUID());
 
             EndYAMLMap(out, "MeshRendererComponent");
         }
@@ -263,7 +275,7 @@ namespace Crowny
             {
                 for (const YAML::Node& entity : entities)
                 {
-                    UUID42 id = entity["Entity"].as<UUID42>();
+                    UUID id = entity["Entity"].as<UUID>();
 
                     String tag;
                     const YAML::Node& tc = entity["TagComponent"];
@@ -276,11 +288,9 @@ namespace Crowny
                     const YAML::Node& transform = entity["TransformComponent"];
                     if (transform)
                     {
-                        auto& tc = deserialized.GetComponent<TransformComponent>();
-                        // tc.ComponentParent = deserialized;
-                        tc.Position = transform["Position"].as<glm::vec3>();
-                        tc.Rotation = transform["Rotation"].as<glm::vec3>();
-                        tc.Scale = transform["Scale"].as<glm::vec3>();
+                        deserialized.SetPosition(transform["Position"].as<glm::vec3>(glm::vec3()));
+                        deserialized.SetRotation(transform["Rotation"].as<glm::quat>(glm::quat()));
+                        deserialized.SetScale(transform["Scale"].as<glm::vec3>(glm::vec3()));
                     }
 
                     const YAML::Node& camera = entity["CameraComponent"];
@@ -315,42 +325,42 @@ namespace Crowny
                     const YAML::Node& text = entity["TextComponent"];
                     if (text)
                     {
-                        auto& tc = deserialized.AddComponent<TextComponent>();
+                        TextComponent& tc = deserialized.AddComponent<TextComponent>();
                         tc.Text = text["Text"].as<String>();
-                        // tc.Font = CreateRef<Font>(text["Font"].as<String>(), "Deserialized font", 16.0f);
-                        tc.Color = text["Color"].as<glm::vec4>();
+                        tc.Font = LoadAssetHandle<Font>(text["Font"].as<UUID>(UUID::EMPTY));
+                        tc.Color = text["Color"].as<glm::vec4>(glm::vec4(1.0f));
+                        tc.Size = text["Size"].as<float>(0.0f);
+                        tc.AutoSize = text["Size"].as<bool>(false);
+                        tc.Wrapping = text["Wrapping"].as<bool>(false);
+                        tc.FontStyle = (TextFontStyleBits)text["FontStyle"].as<uint32_t>(0);
+                        tc.OutlineColor = text["OutlineColor"].as<glm::vec4>(glm::vec4(0.0f));
+                        tc.Thickess = text["Thickess"].as<float>(0.8f);
+                        tc.CharacterSpacing = text["CharacterSpacing"].as<float>(0.0f);
+                        tc.WordSpacing = text["WordSpacing"].as<float>(0.0f);
+                        tc.LineSpacing = text["LineSpacing"].as<float>(0.0f);
+                        tc.UseKerning = text["UseKerning"].as<bool>(true);
+                        DeserializeEnumYAML(text, "Overflow", tc.Overflow, TextOverflow::Overflow);
+                        DeserializeEnumYAML(text, "HorizontalAlignment", tc.HorizontalAlignment,
+                                            TextHorizontalAlignment::Left);
+                        DeserializeEnumYAML(text, "VerticalAlignment", tc.VerticalAlignment,
+                                            TextVerticalAlignment::Top);
                     }
 
                     const YAML::Node& mesh = entity["MeshRendererComponent"];
                     if (mesh)
                     {
-                        // auto& mc = deserialized.AddComponent<MeshRendererComponent>();
+                        MeshRendererComponent& mc = deserialized.AddComponent<MeshRendererComponent>();
+                        mc.MeshHandle = LoadAssetHandle<Mesh>(mesh["Mesh"].as<UUID>(UUID::EMPTY));
                     }
 
                     const YAML::Node& alc = entity["AudioListenerComponent"];
                     if (alc)
-                    {
                         deserialized.AddComponent<AudioListenerComponent>();
-                    }
 
                     const YAML::Node& source = entity["AudioSourceComponent"];
                     if (source)
                     {
                         auto& asc = deserialized.AddComponent<AudioSourceComponent>();
-
-                        UUID42 uuid = source["AudioClip"].as<UUID42>();
-                        if (uuid != UUID42::EMPTY)
-                        {
-                            TAssetHandleBase<false> handle;
-                            handle.m_Data = CreateRef<AssetHandleData>();
-                            handle.m_Data->m_RefCount.fetch_add(1, std::memory_order_relaxed);
-                            handle.m_Data->m_UUID = uuid;
-                            AssetHandle<Asset> loadedAsset = AssetManager::Get().LoadFromUUID(handle.m_Data->m_UUID);
-                            handle.Release();
-                            handle.m_Data = loadedAsset.m_Data;
-                            handle.AddRef();
-                            asc.SetClip(static_asset_cast<AudioClip>(loadedAsset));
-                        }
 
                         asc.SetPlayOnAwake(source["PlayOnAwake"].as<bool>());
                         asc.SetVolume(source["Volume"].as<float>());
@@ -359,22 +369,14 @@ namespace Crowny
                         asc.SetMaxDistance(source["MaxDistance"].as<float>());
                         asc.SetLooping(source["Loop"].as<bool>());
                         asc.SetIsMuted(source["Muted"].as<bool>(false));
+                        asc.SetClip(LoadAssetHandle<AudioClip>(source["AudioClip"].as<UUID>(UUID::EMPTY)));
                     }
 
                     auto loadPhysicsMaterial = [&](const YAML::Node& node) {
-                        const auto& material = node["Material"];
+                        const YAML::Node& material = node["Material"];
                         if (!material)
                             return Physics2D::Get().GetDefaultMaterial();
-                        UUID42 uuid = material.as<UUID42>();
-                        TAssetHandleBase<false> handle;
-                        handle.m_Data = CreateRef<AssetHandleData>();
-                        handle.m_Data->m_RefCount.fetch_add(1, std::memory_order_relaxed);
-                        handle.m_Data->m_UUID = uuid;
-                        AssetHandle<Asset> loadedAsset = AssetManager::Get().LoadFromUUID(handle.m_Data->m_UUID);
-                        handle.Release();
-                        handle.m_Data = loadedAsset.m_Data;
-                        handle.AddRef();
-                        return static_asset_cast<PhysicsMaterial2D>(loadedAsset);
+                        return LoadAssetHandle<PhysicsMaterial2D>(material.as<UUID>(UUID::EMPTY));
                     };
 
                     const YAML::Node& bc2d = entity["BoxCollider2D"];
@@ -384,7 +386,7 @@ namespace Crowny
                         bc2dc.SetOffset(bc2d["Offset"].as<glm::vec2>(), deserialized);
                         bc2dc.SetSize(bc2d["Size"].as<glm::vec2>(), deserialized);
                         bc2dc.SetIsTrigger(bc2d["IsTrigger"].as<bool>());
-                        // bc2dc.SetMaterial(loadPhysicsMaterial(bc2d));
+                        bc2dc.SetMaterial(loadPhysicsMaterial(bc2d));
                     }
 
                     const YAML::Node& cc2d = entity["CircleCollider2D"];
@@ -394,7 +396,7 @@ namespace Crowny
                         cc2dc.SetOffset(cc2d["Offset"].as<glm::vec2>(), deserialized);
                         cc2dc.SetRadius(cc2d["Size"].as<float>(), deserialized);
                         cc2dc.SetIsTrigger(cc2d["IsTrigger"].as<bool>());
-                        // cc2dc.SetMaterial(loadPhysicsMaterial(cc2d));
+                        cc2dc.SetMaterial(loadPhysicsMaterial(cc2d));
                     }
 
                     const YAML::Node& rb2d = entity["Rigidbody2D"];
@@ -447,7 +449,7 @@ namespace Crowny
                     const YAML::Node& children = node["Children"];
                     for (const auto& child : children)
                     {
-                        Entity e = m_Scene->GetEntityFromUuid(child.as<UUID42>());
+                        Entity e = m_Scene->GetEntityFromUuid(child.as<UUID>());
                         e.SetParent(entity);
                     }
                 }

@@ -15,23 +15,25 @@ namespace Crowny
     AudioListener::AudioListener()
     {
         gAudio().RegisterListener(this);
-        float globalVolume = gAudio().GetVolume();
+        const float globalVolume = gAudio().GetVolume();
         alListenerf(AL_GAIN, globalVolume);
         alListener3f(AL_POSITION, 0.0f, 0.0f, 0.0f);
         alListener3f(AL_VELOCITY, 0.0f, 0.0f, 0.0f);
-        std::array<float, 6> orientation = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+        const std::array<float, 6> orientation = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
         alListenerfv(AL_ORIENTATION, orientation.data());
     }
 
     AudioListener::~AudioListener() { gAudio().UnregisterListener(this); }
 
-    void AudioListener::SetTransform(const TransformComponent& transform)
+    void AudioListener::OnTransformChanged(const Transform& transform)
     {
-        alListener3f(AL_POSITION, transform.Position.x, transform.Position.y, transform.Position.z);
-        glm::mat4 tran = transform.GetTransform();
+        const glm::vec3& position = transform.GetPosition();
+        alListener3f(AL_POSITION, position.x, position.y, position.z);
+        const glm::mat4& worldTransform = transform.GetMatrix();
         std::array<float, 6> orientation = {
-            -tran[2].x, -tran[2].y, -tran[2].z, tran[1].x, tran[1].y, tran[1].z
-        }; // TODO: is this math correct?
+            -worldTransform[2].x, -worldTransform[2].y, -worldTransform[2].z,
+            worldTransform[1].x,  worldTransform[1].y,  worldTransform[1].z
+        }; // TODO: is this math correct? It's wrong surprise surprise
         alListenerfv(AL_ORIENTATION, orientation.data());
     }
 

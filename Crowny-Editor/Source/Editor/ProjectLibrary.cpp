@@ -283,7 +283,7 @@ namespace Crowny
         if (asset->Metadata != nullptr)
         {
             auto& assetMetadata = asset->Metadata;
-            const UUID42& uuid = assetMetadata->Uuid;
+            const UUID& uuid = assetMetadata->Uuid;
             Path outPath;
             if (m_AssetManifest->UuidToFilepath(uuid, outPath))
             {
@@ -321,7 +321,7 @@ namespace Crowny
         String metadataText = FileSystem::OpenFile(path)->GetAsString();
         YAML::Node data = YAML::Load(metadataText);
         if (const auto& uuid = data["Uuid"])
-            metadata->Uuid = uuid.as<UUID42>();
+            metadata->Uuid = uuid.as<UUID>();
         else
         {
             CW_ENGINE_WARN(
@@ -672,12 +672,12 @@ namespace Crowny
         return fileEntry->Metadata;
     }
 
-    Vector<UUID42> ProjectLibrary::GetAllAssets(AssetType type) const
+    Vector<UUID> ProjectLibrary::GetAllAssets(AssetType type) const
     {
-        Vector<UUID42> result;
-        for (auto [path, uuid] : m_AssetManifest->m_FilepathToUuid)
+        Vector<UUID> result;
+        for (auto [uuid, path] : m_UuidToPath)
         {
-            if (GetAssetType(uuid) == type)
+            if (m_AssetManifest->UuidExists(uuid) && GetAssetType(uuid) == type)
                 result.push_back(uuid);
         }
         return result;
@@ -686,6 +686,8 @@ namespace Crowny
     AssetType ProjectLibrary::GetAssetType(const Path& path) const
     {
         LibraryEntry* entry = FindEntry(path).get();
+        if (!entry)
+            return AssetType::None;
         if (entry->Type == LibraryEntryType::File)
         {
             FileEntry* fileEntry = static_cast<FileEntry*>(entry);
@@ -695,11 +697,12 @@ namespace Crowny
         return AssetType::None;
     }
 
-    AssetType ProjectLibrary::GetAssetType(const UUID42& uuid) const
+    AssetType ProjectLibrary::GetAssetType(const UUID& uuid) const
     {
         Path outPath;
-        if (m_AssetManifest->UuidToFilepath(uuid, outPath))
-            return GetAssetType(outPath);
+        const auto& iter = m_UuidToPath.find(uuid);
+        if (iter != m_UuidToPath.end())
+            return GetAssetType(iter->second);
         return AssetType::None;
     }
 
@@ -709,7 +712,7 @@ namespace Crowny
         if (meta == nullptr)
             return AssetHandle<Asset>();
 
-        const UUID42& uuid = meta->Uuid;
+        const UUID& uuid = meta->Uuid;
         return AssetManager::Get().LoadFromUUID(uuid, true, true);
     }
 
@@ -1144,7 +1147,7 @@ namespace Crowny
         {
             Vector<Path> toDelete;
             auto processFile = [&](const Path& path) {
-                UUID42 uuid = UUID42(path.filename().replace_extension("").string());
+                UUID uuid = UUID(path.filename().replace_extension("").string());
                 if (m_UuidToPath.find(uuid) != m_UuidToPath.end())
                 {
                     m_AssetManifest->UnregisterAsset(uuid);

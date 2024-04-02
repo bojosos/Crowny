@@ -32,6 +32,7 @@
 // Importers
 #include "Crowny/Import/AudioClipImporter.h"
 #include "Crowny/Import/FontImporter.h"
+#include "Crowny/Import/MeshImporter.h"
 #include "Crowny/Import/ScriptImporter.h"
 #include "Crowny/Import/ShaderImporter.h"
 #include "Crowny/Import/TextFileImporter.h"
@@ -55,6 +56,7 @@ namespace Crowny
         Importer::Get().RegisterImporter(new ShaderImporter());
         Importer::Get().RegisterImporter(new TextFileImporter());
         Importer::Get().RegisterImporter(new TextureImporter());
+        Importer::Get().RegisterImporter(new MeshImporter());
 
         AssetManager::StartUp();
         // Most of these should be in the editor
@@ -97,7 +99,7 @@ namespace Crowny
         Texture::BLACK->WriteData(*blackData);
 
         Renderer2D::Init();
-        // ForwardRenderer::Init();
+        ForwardRenderer::Init();
 
         // FontManager::Add(CreateRef<Font>(Path("Resources/Fonts/Roboto") / DEFAULT_FONT_FILENAME, "Roboto
         // Thin", 64.0f));
@@ -111,7 +113,7 @@ namespace Crowny
             ScriptInfoManager::StartUp();
             ScriptInfoManager::Get().InitializeTypes();
             ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
-            CW_ENGINE_INFO("Loaded engine assembly");
+            CW_ENGINE_INFO("Loaded engine assembly {0}", engineAssemblyPath.string());
         }
 
         Path gameAssmeblyPath =
@@ -120,7 +122,7 @@ namespace Crowny
         {
             MonoManager::Get().LoadAssembly(gameAssmeblyPath, GAME_ASSEMBLY);
             ScriptInfoManager::Get().LoadAssemblyInfo(GAME_ASSEMBLY);
-            CW_ENGINE_INFO("Loaded game assembly");
+            CW_ENGINE_INFO("Loaded game assembly {0}", gameAssmeblyPath.string());
         }
         ScriptSceneObjectManager::StartUp();
         ScriptAssetManager::StartUp();

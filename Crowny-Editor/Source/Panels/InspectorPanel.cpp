@@ -126,6 +126,7 @@ namespace Crowny
                                         exists = true;
                                 }
                             }
+                            // TODO: Parse the namespace and class name
                             if (!exists)
                                 activeScene->AddScriptComponent(selectedEntity, "Sandbox", className);
                         }
@@ -301,8 +302,8 @@ namespace Crowny
               "Load Mode", { "Load Decompressed", "Load Compressed", "Stream" }, audioClipImportOptions->ReadMode);
 
             uint32_t bitDepth = audioClipImportOptions->BitDepth / 8 - 1;
-            if (UI::PropertyDropdown("Audio Bit Depth", { "8", "16", "24", "32" }, bitDepth))
-                audioClipImportOptions->BitDepth = (bitDepth + 1) * 8;
+            m_HasPropertyChanged |= UI::PropertyDropdown("Audio Bit Depth", { "8", "16", "24", "32" }, bitDepth);
+            audioClipImportOptions->BitDepth = (bitDepth + 1) * 8;
 
             m_HasPropertyChanged |= UI::Property("3D", audioClipImportOptions->Is3D);
             UI::EndPropertyGrid();
@@ -387,7 +388,7 @@ namespace Crowny
                     uint32_t widthIdx = findSizeIdx(fontImportOptions->AtlasWidth);
                     if (UI::PropertyDropdown("Atlas Width", atlasSizeUIValues, widthIdx))
                     {
-                        fontImportOptions->AtlasWidth = glm::pow(2, widthIdx);
+                        fontImportOptions->AtlasWidth = (uint32_t)glm::pow(2, widthIdx);
                         m_HasPropertyChanged = true;
                     }
 
@@ -417,18 +418,22 @@ namespace Crowny
             // Make sure the font is imported
             ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions);
 
-            AssetHandle<Font> clip = static_asset_cast<Font>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
+            AssetHandle<Font> font = static_asset_cast<Font>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
         }
     }
 
     void InspectorPanel::RenderScriptImportInspector()
     {
-        auto iterFind = m_CachedScriptText.find(m_InspectedAssetPath);
+        // The import options aren't really used here. Only the cache is accessed. Perhaps storing the cache in the
+        // import options could be the proper way to do it.
+        auto iterFind =
+          m_CachedScriptText.find(m_InspectedAssetPath); // This list should refresh when the asset browser refreshes.
+                                                         // Or we should store this cache there.
         if (iterFind == m_CachedScriptText.end())
         {
             AssetHandle<ScriptCode> scriptCode =
               static_asset_cast<ScriptCode>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
-            CW_ENGINE_INFO(scriptCode->GetSource());
+            // CW_ENGINE_INFO(scriptCode->GetSource());
             m_CachedScriptText[m_InspectedAssetPath] = scriptCode->GetSource();
         }
         ImGui::Text(m_CachedScriptText[m_InspectedAssetPath].c_str());
@@ -491,7 +496,37 @@ namespace Crowny
         }
     }
 
-    void InspectorPanel::RenderMeshImportInspector() {}
+    void InspectorPanel::RenderMeshImportInspector()
+    {
+        if (m_ImportOptions)
+        {
+            Ref<MeshImportOptions> meshImportOptions = std::static_pointer_cast<MeshImportOptions>(m_ImportOptions);
+            UI::BeginPropertyGrid();
+
+            m_HasPropertyChanged |= UI::Property("Scale factor", meshImportOptions->ScaleFactor);
+            m_HasPropertyChanged |=
+              UI::PropertyDropdown("Index Format", { "Auto", "16 bit", "32 bit" }, meshImportOptions->IndexFormat);
+            m_HasPropertyChanged |=
+              UI::PropertyDropdown("Normals", { "Import", "Calculate", "None" }, meshImportOptions->NormalsMode);
+            m_HasPropertyChanged |=
+              UI::PropertyDropdown("Tangents", { "Import", "Calculate", "None" }, meshImportOptions->TangentsMode);
+            if (meshImportOptions->NormalsMode == NormalsImportMode::Calculate)
+            {
+                m_HasPropertyChanged |= UI::Property("Smooth Normals", meshImportOptions->SmoothNormals);
+                if (meshImportOptions->SmoothNormals)
+                    m_HasPropertyChanged |=
+                      UI::Property("Smoothing Angle", meshImportOptions->SmoothingAngle, 0.1f, 0.0f, 175.0f);
+            }
+            m_HasPropertyChanged |= UI::Property("Optimize", meshImportOptions->Optimize);
+            m_HasPropertyChanged |= UI::Property("Compress", meshImportOptions->Compress);
+            m_HasPropertyChanged |= UI::Property("Keep Quads", meshImportOptions->KeepQuads);
+            // m_HasPropertyChanged |= UI::Property("Enable Read/Write", meshImportOptions->EnableReadWrite);
+
+            UI::EndPropertyGrid();
+
+            DrawApplyRevert(0, ImGui::GetColumnWidth());
+        }
+    }
 
     void InspectorPanel::RenderPrefabInspector() {}
 
@@ -596,7 +631,10 @@ namespace Crowny
         if (!changed)
             ImGui::BeginDisabled();
         if (ImGui::Button("Apply", ImVec2(width * 0.5f - padding * 4, 0)))
+        {
             ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions, true);
+            m_HasPropertyChanged = false;
+        }
         ImGui::SameLine(xOffset + width * 0.5f);
         if (ImGui::Button("Revert", ImVec2(width * 0.5f - padding * 4, 0)))
         {
@@ -631,7 +669,7 @@ namespace Crowny
         if (ext == "ogg" || ext == "wav" || ext == "flac")
             m_InspectorMode = InspectorMode::AudioClipImport;
         else if (ext == "png" || ext == "jpeg" || ext == "psd" || ext == "gif" || ext == "tga" || ext == "bmp" ||
-                 ext == "hdr")
+                 ext == "hdr" || ext == "")
             m_InspectorMode = InspectorMode::TextureImport;
         else if (ext == "cs")
             m_InspectorMode = InspectorMode::ScriptImport;
@@ -641,6 +679,8 @@ namespace Crowny
             m_InspectorMode = InspectorMode::ShaderImport;
         else if (ext == "ttf" || ext == "ttc" || ext == "otf" || ext == "otc" || ext == "fnt")
             m_InspectorMode = InspectorMode::FontImport;
+        else if (ext == "gltf" || ext == "obj" || ext == "fbx")
+            m_InspectorMode = InspectorMode::MeshImport;
         else
             m_InspectorMode = InspectorMode::Default;
         Ref<LibraryEntry> entry = ProjectLibrary::Get().FindEntry(filepath);

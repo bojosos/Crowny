@@ -63,7 +63,7 @@ namespace Crowny
         InspectorMode m_InspectorMode = InspectorMode::GameObject;
 
         // For import options inspection
-        bool m_HasPropertyChanged = false;
+        bool m_HasPropertyChanged = false; // This should not be so "stateful".
         Ref<ImportOptions> m_ImportOptions;
         Ref<ImportOptions> m_OldImportOptions;
         Path m_InspectedAssetPath;

@@ -15,7 +15,8 @@ namespace Crowny
         Shader,
         AudioClip,
         Script,
-        Font
+        Font,
+        Mesh
     };
 
     class ImportOptions
@@ -133,7 +134,7 @@ namespace Crowny
     class FontImportOptions : public ImportOptions
     {
     public:
-        // Somehow integrate the ImageType stuff from msdfgen.
+        // TODO: Somehow integrate the ImageType stuff from msdfgen.
         // The first two modes are rasterized fonts I think, the others are fancy sdf stuff.
         bool GetKerningData = true;
         bool AutomaticFontSampling = true;
@@ -163,6 +164,49 @@ namespace Crowny
 
     private:
         CW_SERIALIZABLE(FontImportOptions);
+    };
+
+    enum class NormalsImportMode
+    {
+        Import,
+        Calculate,
+        None,
+        Count
+    };
+
+    enum class MeshIndexFormat
+    {
+        Auto,
+        Index16,
+        Index32,
+        Count
+    };
+
+    class MeshImportOptions : public ImportOptions
+    {
+    public:
+        float ScaleFactor = 1.0f;
+        bool CpuCached = false;
+        bool Compress = false;
+        bool Optimize = false;
+        bool KeepQuads = false;
+        bool SmoothNormals = false;
+        float SmoothingAngle = 175.0f;
+        NormalsImportMode NormalsMode = NormalsImportMode::Import;
+        NormalsImportMode TangentsMode = NormalsImportMode::Import;
+        MeshIndexFormat IndexFormat = MeshIndexFormat::Auto;
+
+        virtual ImportOptionsType GetImportOptionsType() const override { return ImportOptionsType::Mesh; }
+
+        virtual Ref<ImportOptions> Clone() const override
+        {
+            Ref<MeshImportOptions> clone = CreateRef<MeshImportOptions>();
+            *clone = *this;
+            return clone;
+        }
+
+    private:
+        CW_SERIALIZABLE(MeshImportOptions)
     };
 
 } // namespace Crowny

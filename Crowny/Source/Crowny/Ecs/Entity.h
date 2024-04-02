@@ -8,18 +8,19 @@
 
 namespace Crowny
 {
+    class Entity;
     class ComponentEditor;
     class HierarchyPanelchyWindow;
     class ScriptableEntity;
 
-    struct TransformComponent;
+    class TransformComponent;
 
-    class Entity
+    class EnttEntity
     {
     public:
-        Entity() = default;
-        Entity(entt::entity entity, Scene* scene);
-        Entity(const Entity& other) = default;
+        EnttEntity() = default;
+        EnttEntity(entt::entity entity, Scene* scene);
+        EnttEntity(const EnttEntity& other) = default;
 
         template <typename T, typename... Args> T& AddComponent(Args&&... args) const
         {
@@ -87,38 +88,100 @@ namespace Crowny
 
         entt::entity GetHandle() { return m_EntityHandle; }
 
-        bool IsValid() const;
+        void Clear()
+        {
+            m_EntityHandle = entt::null;
+            m_Scene = nullptr;
+        }
+
+        bool IsValid() const
+        {
+            return m_Scene && m_EntityHandle != entt::null && m_Scene->m_Registry.valid(m_EntityHandle);
+        }
+
+    protected:
+        friend class Entity;
+        entt::entity m_EntityHandle = entt::null;
+        Scene* m_Scene = nullptr;
+    };
+
+    class Entity : public EnttEntity
+    {
+    public:
+        Entity() = default;
+        Entity(entt::entity entity, Scene* scene);
+        Entity(const Entity& other) = default;
+
+        void SetPosition(const glm::vec3& position);
+        void SetRotation(const glm::quat& rotation);
+        void SetScale(const glm::vec3& scale);
+
+        void SetWorldPosition(const glm::vec3& position);
+        void SetWorldRotation(const glm::quat& rotation);
+        void SetWorldScale(const glm::vec3& scale);
+
+        glm::vec3 GetWorldPosition() const;
+        glm::quat GetWorldRotation() const;
+        glm::vec3 GetWorldScale() const;
+        glm::vec3 GetLocalPosition() const;
+        glm::quat GetLocalRotation() const;
+        glm::vec3 GetLocalScale() const;
+
+        const Transform& GetWorldTransform() const;
+        const Transform& GetLocalTransform() const;
+        const glm::mat4& GetWorldMatrix() const;
 
         void AddChild(Entity entity);
         Entity GetChild(uint32_t index) const;
-        bool IsChildOf(Entity other);
+        bool IsChildOf(Entity other, bool directOnly = false);
         const Vector<Entity>& GetChildren() const;
+        Vector<Entity>& GetChildren();
         uint32_t GetChildCount() const;
         Entity GetParent() const;
+
+        // TODO: Set parent should take care of the transforms too.
         void SetParent(Entity entity);
 
-        void Destroy();
-
-        bool operator==(const Entity& other) const
-        {
-            return m_EntityHandle == other.m_EntityHandle; //&& m_Scene == other.m_Scene;
-        }
+        void Destroy(bool destroyChildren = true);
 
         // Helpers
-        const UUID42& GetUuid() const;
+        const UUID& GetUuid() const;
         const TransformComponent& GetTransform() const;
         TransformComponent& GetTransform();
         const String& GetName() const;
         operator bool() const { return IsValid(); }
+        bool operator==(const EnttEntity& other) const
+        {
+            // CW_ASSERT(IsValid());
+            // TODO: Why is the scene compare commented out?
+            return m_EntityHandle == other.m_EntityHandle; //&& m_Scene == other.m_Scene;
+        }
 
+    private:
+        template <typename Component> void NotifyTransformChangedComponent(const Transform& transform)
+        {
+            static_assert(std::is_base_of<ComponentBase, Component>::value, "T must be a Component");
+            if (HasComponent<Component>())
+                GetComponent<Component>().OnTransformChanged(transform);
+            // Better safe than sorry.
+            Vector<Entity> children = GetChildren();
+            for (Entity& child : children)
+                child.NotifyTransformChanged(transform);
+        }
+
+        template <typename... Component>
+        void NotifyTransformChangedComponentWrapper(ComponentGroup<Component...> group, const Transform& transform)
+        {
+            ([&]() { NotifyTransformChangedComponent<Component>(transform); }(), ...);
+        }
+
+        void NotifyTransformChanged(const Transform& transform);
+
+    private:
         friend class ComponentEditor;
         friend class HierarchyPanelchyWindow;
         friend class ScriptableEntity;
         friend struct std::hash<Entity>;
-
-    private:
-        entt::entity m_EntityHandle{ entt::null };
-        Scene* m_Scene = nullptr;
     };
 } // namespace Crowny
 

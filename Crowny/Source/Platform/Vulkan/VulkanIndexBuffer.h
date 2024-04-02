@@ -23,11 +23,28 @@ namespace Crowny
         virtual void Unbind() const override {}
 
         virtual uint32_t GetCount() const override { return m_Count; }
+        virtual IndexType GetIndexType() const override { return m_IndexType; }
+        virtual uint32_t GetBufferSize() const override
+        {
+            CW_ENGINE_ASSERT(m_Count * (m_IndexType == IndexType::Index_16 ? sizeof(uint16_t) : sizeof(uint32_t)) ==
+                             m_Buffer->GetSize());
+            return m_Count * (m_IndexType == IndexType::Index_16 ? sizeof(uint16_t) : sizeof(uint32_t));
+        }
+
+        virtual void WriteData(uint32_t offset, uint32_t length, const void* src,
+                               BufferWriteOptions writeOptions /* = BWT_NORMAL */) override
+        {
+            m_Buffer->WriteData(offset, length, src, writeOptions);
+        }
+
+        virtual void ReadData(uint32_t offset, uint32_t length, void* dest) override
+        {
+            m_Buffer->ReadData(offset, length, dest);
+        }
 
         virtual void* Map(uint32_t offset, uint32_t size, GpuLockOptions options) override;
         virtual void Unmap() override;
 
-        virtual IndexType GetIndexType() const override { return m_IndexType; }
         VulkanBuffer* GetBuffer() const { return m_Buffer->GetBuffer(); }
 
     private:

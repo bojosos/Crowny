@@ -1,20 +1,23 @@
 #include "cwepch.h"
 
-#include "Editor/Script/ScriptProjectGenerator.h"
-#include "Editor/Script/VisualStudioCodeEditor.h"
-#include "Editor/Script/CodeEditor.h"
-
-#include "Crowny/Common/FileSystem.h"
-#include "Crowny/Common/PlatformUtils.h"
-#include "Crowny/Common/StringUtils.h"
-
+// Uncomment to generate the dte80a.tlh file
 // #pragma warning(disable: 4278)
 // #import "libid:80cc9f66-e7d8-4ddd-85b6-d9e6cd0e93e2" version("8.0") lcid("0") raw_interfaces_only named_guids
 // #pragma warning(default: 4278)
 #include "dte80a.tlh"
 
+// Keep at top because of ambiguous UUID
 #include <Windows.h>
 #include <atlbase.h>
+#undef UUID
+
+#include "Editor/Script/CodeEditor.h"
+#include "Editor/Script/ScriptProjectGenerator.h"
+#include "Editor/Script/VisualStudioCodeEditor.h"
+
+#include "Crowny/Common/FileSystem.h"
+#include "Crowny/Common/PlatformUtils.h"
+#include "Crowny/Common/StringUtils.h"
 
 #include <rapidjson/document.h>
 
@@ -277,13 +280,14 @@ namespace Crowny
         {
             CComPtr<EnvDTE::_DTE> dte = VisualStudio::FindRunningInstance(solutionPath, editorPath);
             // Only try and reload the solution if we have a running visual studio instance.
-            if (dte == nullptr) {
+            if (dte == nullptr)
+            {
                 return;
             }
             CComPtr<EnvDTE::_Solution> solution = nullptr;
             if (FAILED(dte->get_Solution(&solution)))
                 return;
-            
+
             if (!SUCCEEDED(solution->Close(false)))
                 return;
             if (!SUCCEEDED(solution->Open(CComBSTR(solutionPath.c_str()))))
@@ -298,7 +302,8 @@ namespace Crowny
 
     void VisualStudioCodeEditor::OpenFile(const Path& solutionPath, const Path& filePath, uint32_t line) const
     {
-        if (!SUCCEEDED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE))) {
+        if (!SUCCEEDED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE)))
+        {
             CW_ENGINE_WARN("Couldn't initialize COM");
             return;
         }
@@ -423,8 +428,7 @@ namespace Crowny
             bool isPrerelease = val.FindMember("isPrerelease")->value.GetBool();
             Path productPath = val.FindMember("productPath")->value.GetString();
             const String displayName = val.FindMember("displayName")->value.GetString();
-            const auto& catalog =
-              val.FindMember("catalog")->value;
+            const auto& catalog = val.FindMember("catalog")->value;
             const String displayVersion = catalog.FindMember("productDisplayVersion")->value.GetString();
             const String name = displayName + " [" + displayVersion + "]";
             const String versionString = catalog.FindMember("productLineVersion")->value.GetString();
