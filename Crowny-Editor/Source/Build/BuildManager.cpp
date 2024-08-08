@@ -55,11 +55,14 @@ namespace Crowny
 
     Vector<String> BuildManager::GetBaseAssemblies(PlatformType type) const
     {
+        // TODO: These should ideally be paths or the project generation should change
+        // since this will link the Microsoft ones.
         switch (type)
         {
         case PlatformType::Windows:
         default:
-            return { u8"mscorlib", u8"System", u8"System.Core" };
+            return { u8"mscorlib", u8"System",           u8"System.Core",       "System.Collections",
+                     "System.IO",  "System.Compression", "System.IO.Filesystem" };
         }
     }
 

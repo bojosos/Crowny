@@ -35,7 +35,7 @@ namespace Crowny
          * @param texture Texture we are looking for
          * @return float The texture id
          */
-        static float FindTexture(const Ref<Texture>& texture);
+        static float FindTexture(const AssetHandle<Texture>& texture);
 
         /**
          * @brief Draws the triangles on the screen.
@@ -51,7 +51,7 @@ namespace Crowny
          * @param texture Texture to use.
          * @param color Color to draw with.
          */
-        static void FillRect(const glm::mat4& transform, const Ref<Texture>& texture, const glm::vec4& color,
+        static void FillRect(const glm::mat4& transform, const AssetHandle<Texture>& texture, const glm::vec4& color,
                              uint32_t entityId);
 
         /**
@@ -69,7 +69,7 @@ namespace Crowny
          * @param texture Texture to use.
          * @param color Color to draw with.
          */
-        static void FillRect(const Rect2F& bounds, const Ref<Texture>& texture, const glm::vec4& color,
+        static void FillRect(const Rect2F& bounds, const AssetHandle<Texture>& texture, const glm::vec4& color,
                              uint32_t entityId);
 
         /**

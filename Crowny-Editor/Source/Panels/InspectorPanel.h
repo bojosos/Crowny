@@ -54,6 +54,8 @@ namespace Crowny
         void RenderMeshImportInspector();
         void RenderPrefabInspector();
 
+        void HandleInspectorDragDrop(Entity selectedEntity);
+
         void DrawApplyRevert(float xOffset, float width);
         void DrawHeader();
 

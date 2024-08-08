@@ -19,6 +19,8 @@
 
 namespace Crowny
 {
+    constexpr char* ID_ASSET_ITEM_PAYLOAD = "ASSET_ITEM";
+
     namespace UI
     {
         extern uint32_t s_Id;
@@ -135,17 +137,11 @@ namespace Crowny
             auto* drawList = ImGui::GetWindowDrawList();
             const ImRect rect = RectExpanded(GetItemRect(), 1.0f, 1.0f);
             if (ImGui::IsItemHovered() && !ImGui::IsItemActive())
-            {
                 drawList->AddRect(rect.Min, rect.Max, ImColor(60, 60, 60), rounding, 0, 1.5f);
-            }
-            if (ImGui::IsItemActive())
-            {
+            else if (ImGui::IsItemActive())
                 drawList->AddRect(rect.Min, rect.Max, colourWhenActive, rounding, 0, 1.0f);
-            }
             else if (!ImGui::IsItemHovered() && drawWhenInactive)
-            {
                 drawList->AddRect(rect.Min, rect.Max, ImColor(50, 50, 50), rounding, 0, 1.0f);
-            }
         }
 
         static void ShiftCursor(float x, float y)
@@ -1036,11 +1032,9 @@ namespace Crowny
 
             if (ImGui::BeginDragDropTarget())
             {
-                if (const ImGuiPayload* data = AcceptAssetPayload())
+                if (const FileEntry* fileEntry = AcceptAssetPayload(AssetType::GetStaticType()))
                 {
-                    Path path = GetPathFromPayload(data);
-                    if (ProjectLibrary::Get().GetAssetType(path) == AssetType::GetStaticType())
-                        assetHandle = static_asset_cast<AssetType>(ProjectLibrary::Get().Load(path));
+                    assetHandle = static_asset_cast<AssetType>(ProjectLibrary::Get().Load(fileEntry));
                     modified = true;
                 }
                 ImGui::EndDragDropTarget();
@@ -1093,13 +1087,12 @@ namespace Crowny
 
             if (ImGui::BeginDragDropTarget())
             {
-                if (const ImGuiPayload* data = AcceptAssetPayload())
+                if (const FileEntry* fileEntry = AcceptAssetPayload(assetType))
                 {
-                    Path path = GetPathFromPayload(data);
-                    if (ProjectLibrary::Get().GetAssetType(path) == assetType)
-                        assetHandle = static_asset_cast<AssetType>(ProjectLibrary::Get().Load(path));
+                    assetHandle = static_asset_cast<AssetType>(ProjectLibrary::Get().Load(fileEntry));
                     modified = true;
                 }
+
                 ImGui::EndDragDropTarget();
             }
 
@@ -1150,11 +1143,10 @@ namespace Crowny
 
             if (ImGui::BeginDragDropTarget())
             {
-                if (const ImGuiPayload* data = AcceptAssetPayload())
+                if (const FileEntry* fileEntry = AcceptAssetPayload(AssetType::ScriptCode))
                 {
-                    uint32_t id =
-                      *(const uint32_t*)data->Data; // Here I would need to get the class name from the script
-                    // entity = { (entt::entity)id, SceneManager::GetActiveScene().get() };
+                    // wat?
+                    // TODO: Fix this
                     modified = true;
                 }
                 ImGui::EndDragDropTarget();
@@ -1178,15 +1170,73 @@ namespace Crowny
             return result;
         }
 
-        static Path GetPathFromPayload(const ImGuiPayload* payload)
+        static const ImGuiPayload* AcceptEntityPayload()
         {
-            String path((const char*)payload->Data, payload->DataSize);
-            return Path(path);
+            const ImGuiPayload* payload = ImGui::GetDragDropPayload();
+            if (!payload->IsDataType("Entity_ID"))
+            {
+                UI::ScopedColor scope(ImGuiCol_DragDropTarget, IM_COL32(250, 20, 35, 255));
+                // Application::Get().GetWindow().SetCursor(Cursor::STOPSIGN);
+                ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
+                return ImGui::AcceptDragDropPayload("Entity_ID");
+            }
+
+            return ImGui::AcceptDragDropPayload("Entity_ID");
         }
 
-        static const ImGuiPayload* AcceptEntityPayload() { return ImGui::AcceptDragDropPayload("Entity_ID"); }
+        static const FileEntry* AcceptAssetPayload(AssetType assetType)
+        {
+            const ImGuiPayload* payload = ImGui::GetDragDropPayload();
+            if (payload->IsDataType(ID_ASSET_ITEM_PAYLOAD))
+            {
+                const LibraryEntry* entry = *static_cast<LibraryEntry**>(payload->Data);
+                if (entry->Type == LibraryEntryType::File)
+                {
+                    const FileEntry* fileEntry=static_cast<const FileEntry*>(entry);
+                    if (fileEntry->Metadata && fileEntry->Metadata->Type == assetType)
+                    {
+                        ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+                        if (ImGui::AcceptDragDropPayload(ID_ASSET_ITEM_PAYLOAD))
+                            return fileEntry;
+                        else
+                            return nullptr;
+                    }
+                }
+            }
+            // Draw red outline for invalid assets. Note that for the proper outline to appear has to be called.
+            UI::ScopedColor scope(ImGuiCol_DragDropTarget, IM_COL32(250, 20, 35, 255));
+            // Application::Get().GetWindow().SetCursor(Cursor::STOPSIGN);
+            ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
+            ImGui::AcceptDragDropPayload(ID_ASSET_ITEM_PAYLOAD);
+            return nullptr;
+        }
 
-        static const ImGuiPayload* AcceptAssetPayload() { return ImGui::AcceptDragDropPayload("ASSET_ITEM"); }
+        static const FileEntry* AcceptAssetPayload(std::function<bool(const FileEntry*)>&& assetPayloadCallback = nullptr)
+        {
+            const ImGuiPayload* payload = ImGui::GetDragDropPayload();
+            if (payload->IsDataType(ID_ASSET_ITEM_PAYLOAD))
+            {
+                const LibraryEntry* entry = *static_cast<LibraryEntry**>(payload->Data);
+                if (entry->Type == LibraryEntryType::File)
+                {
+                    const FileEntry* fileEntry = static_cast<const FileEntry*>(entry);
+                    if (fileEntry->Metadata && (!assetPayloadCallback || assetPayloadCallback(fileEntry)))
+                    {
+                        ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+                        if (ImGui::AcceptDragDropPayload(ID_ASSET_ITEM_PAYLOAD))
+                            return fileEntry;
+                        else
+                            return nullptr;
+                    }
+                }
+            }
+            // Draw red outline for invalid assets. Note that for the proper outline to appear has to be called.
+            UI::ScopedColor scope(ImGuiCol_DragDropTarget, IM_COL32(250, 20, 35, 255));
+            // Application::Get().GetWindow().SetCursor(Cursor::STOPSIGN);
+            ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
+            ImGui::AcceptDragDropPayload(ID_ASSET_ITEM_PAYLOAD);
+            return nullptr;
+        }
 
         static void SetEntityPayload(Entity entity)
         {
@@ -1194,11 +1244,9 @@ namespace Crowny
             ImGui::SetDragDropPayload("Entity_ID", &tmp, sizeof(uint32_t));
         }
 
-        static void SetAssetPayload(const Path& path)
+        static void SetAssetPayload(const LibraryEntry* entry)
         {
-            String str = path.string();
-            const char* itemPath = str.c_str(); // Safe since imgui does a memcpy here.
-            ImGui::SetDragDropPayload("ASSET_ITEM", itemPath, str.size() * sizeof(char));
+            ImGui::SetDragDropPayload(ID_ASSET_ITEM_PAYLOAD, &entry, sizeof(LibraryEntry*));
         }
 
         static bool DrawFloatControl(const char* label, float& value, float minValue = 0.0f, float maxValue = 1.0f,

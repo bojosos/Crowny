@@ -33,7 +33,7 @@ namespace Crowny
             get { return Internal_GetPitch(m_InternalPtr); }
             set { Internal_SetPitch(m_InternalPtr, value); }
         }
-        
+
         /// <summary>
         /// Min distance the source can be heard from.
         /// </summary>
@@ -78,7 +78,7 @@ namespace Crowny
             get { return Internal_GetPlayOnAwake(m_InternalPtr); }
             set { Internal_SetPlayOnAwake(m_InternalPtr, value); }
         }
-        
+
         /// <summary>
         /// The current position in the source.
         /// </summary>

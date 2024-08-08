@@ -15,7 +15,10 @@
 #include <rpc.h>
 #include <shellapi.h>
 #include <tchar.h>
-#include <windows.h>
+#include <Windows.h>
+#include <initguid.h>
+#include <KnownFolders.h>
+#include <ShlObj.h>
 
 namespace Crowny
 {
@@ -81,6 +84,32 @@ namespace Crowny
         while (fgets(buffer.data(), (int)buffer.size(), pipe.get()) != nullptr)
             result += buffer.data();
         return result;
+    }
+
+    Path PlatformUtils::GetRoamingDirectory()
+    {
+        PWSTR path = nullptr;
+        HRESULT hr = SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &path);
+        if (SUCCEEDED(hr) && path)
+        {
+            Path goodPath(path);
+            CoTaskMemFree(path);
+            return goodPath;
+        }
+        return Path();
+    }
+
+    const Path& PlatformUtils::GetOurRoamingDirectory()
+    {
+        static bool first = true;
+        static const Path ourRoamingDirectory = GetRoamingDirectory() / "Crowny";
+        if (first)
+        {
+            if (!fs::exists(ourRoamingDirectory))
+                fs::create_directory(ourRoamingDirectory);
+            first = false;
+        }
+        return ourRoamingDirectory;
     }
 
 } // namespace Crowny

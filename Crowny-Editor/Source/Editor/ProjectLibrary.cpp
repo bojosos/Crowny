@@ -685,6 +685,7 @@ namespace Crowny
 
     AssetType ProjectLibrary::GetAssetType(const Path& path) const
     {
+        // yikes... called a lot
         LibraryEntry* entry = FindEntry(path).get();
         if (!entry)
             return AssetType::None;
@@ -709,6 +710,16 @@ namespace Crowny
     AssetHandle<Asset> ProjectLibrary::Load(const Path& path)
     {
         Ref<AssetMetadata> meta = FindAssetMetadata(path);
+        if (meta == nullptr)
+            return AssetHandle<Asset>();
+
+        const UUID& uuid = meta->Uuid;
+        return AssetManager::Get().LoadFromUUID(uuid, true, true);
+    }
+
+    AssetHandle<Asset> ProjectLibrary::Load(const FileEntry* entry)
+    {
+        const Ref<AssetMetadata> &meta = entry->Metadata;
         if (meta == nullptr)
             return AssetHandle<Asset>();
 
