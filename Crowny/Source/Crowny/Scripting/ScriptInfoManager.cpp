@@ -9,6 +9,7 @@
 #include "Crowny/Scripting/Mono/MonoMethod.h"
 #include "Crowny/Scripting/Mono/MonoProperty.h"
 #include "Crowny/Scripting/ScriptComponent.h"
+#include "Crowny/Utils/SmallVector.h"
 
 #include "Crowny/Scripting/Bindings/Scene/ScriptCamera.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntityBehaviour.h"
@@ -18,8 +19,10 @@
 #include "Crowny/Scripting/Bindings/Scene/ScriptAudioSource.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptCollider2D.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptRigidbody.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptText.h"
 
 #include "Crowny/Scripting/Bindings/Assets/ScriptAudioClip.h"
+#include "Crowny/Scripting/Bindings/Assets/ScriptFont.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptMesh.h"
 
 #include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
@@ -49,6 +52,7 @@ namespace Crowny
     {
         // RegisterComponents();
         // RegisterAssets();
+        SmallVector<int, 4> vec;
     }
 
     void ScriptInfoManager::InitializeTypes()
@@ -98,6 +102,7 @@ namespace Crowny
         LOAD_CW_ATTR(ColorUsage);
         LOAD_CW_ATTR(ColorPalette);
         LOAD_CW_ATTR(EnumQuickTabs);
+        LOAD_CW_ATTR(Tooltip);
 
         LOAD_CW_ATTR(Header);
 
@@ -235,6 +240,8 @@ namespace Crowny
                     fieldInfo->m_Flags.Set(ScriptFieldFlagBits::ReadOnly);
                 if (field->HasAttribute(m_Builtin.MultilineAttribute))
                     fieldInfo->m_Flags.Set(ScriptFieldFlagBits::Multiline);
+                if (field->HasAttribute(m_Builtin.EnumQuickTabsAttribute))
+                    fieldInfo->m_Flags.Set(ScriptFieldFlagBits::EnumQuickTabs);
 
                 if (field->HasAttribute(m_Builtin.ColorUsageAttribute))
                 {
@@ -272,8 +279,19 @@ namespace Crowny
                     MonoObject* label = field->GetAttribute(m_Builtin.LabelAttribute);
                     MonoField* labelField = m_Builtin.LabelAttribute->GetField("label");
                     MonoString* stringValue = (MonoString*)labelField->GetBoxed(label);
-                    fieldInfo->m_Name = MonoUtils::FromMonoString(stringValue);
+                    fieldInfo->m_Label = MonoUtils::FromMonoString(stringValue);
                 }
+                else
+                    fieldInfo->m_Label = fieldInfo->m_Name;
+                if (field->HasAttribute(m_Builtin.TooltipAttribute))
+                {
+                    MonoObject* tooltipObject = field->GetAttribute(m_Builtin.TooltipAttribute);
+                    MonoField* tooltipField = m_Builtin.TooltipAttribute->GetField("tooltip");
+                    MonoString* tooltipValue = (MonoString*)tooltipField->GetBoxed(tooltipObject);
+                    String tooltip = MonoUtils::FromMonoString(tooltipValue);
+                    fieldInfo->m_Tooltip = std::move(tooltip);
+                }
+
                 objInfo->m_FieldNameToId[fieldInfo->m_Name] = fieldInfo->m_FieldId;
                 objInfo->m_Fields[fieldInfo->m_FieldId] = fieldInfo;
             }
@@ -330,6 +348,8 @@ namespace Crowny
                     propertyInfo->m_Flags.Set(ScriptFieldFlagBits::ReadOnly);
                 if (property->HasAttribute(m_Builtin.MultilineAttribute))
                     propertyInfo->m_Flags.Set(ScriptFieldFlagBits::Multiline);
+                if (property->HasAttribute(m_Builtin.EnumQuickTabsAttribute))
+                    propertyInfo->m_Flags.Set(ScriptFieldFlagBits::EnumQuickTabs);
 
                 if (property->HasAttribute(m_Builtin.ColorUsageAttribute))
                 {
@@ -356,7 +376,17 @@ namespace Crowny
                     MonoField* labelField = m_Builtin.LabelAttribute->GetField("label");
                     MonoString* stringValue = nullptr;
                     labelField->Get(label, stringValue);
-                    propertyInfo->m_Name = MonoUtils::FromMonoString(stringValue);
+                    propertyInfo->m_Label = MonoUtils::FromMonoString(stringValue);
+                }
+                else
+                    propertyInfo->m_Label = propertyInfo->m_Name;
+                if (property->HasAttribute(m_Builtin.TooltipAttribute))
+                {
+                    MonoObject* tooltipObject = property->GetAttribute(m_Builtin.TooltipAttribute);
+                    MonoField* tooltipField = m_Builtin.TooltipAttribute->GetField("tooltip");
+                    MonoString* tooltipValue = (MonoString*)tooltipField->GetBoxed(tooltipObject);
+                    String tooltip = MonoUtils::FromMonoString(tooltipValue);
+                    propertyInfo->m_Tooltip = std::move(tooltip);
                 }
                 objInfo->m_FieldNameToId[propertyInfo->m_Name] = propertyInfo->m_FieldId;
                 objInfo->m_Fields[propertyInfo->m_FieldId] = propertyInfo;
@@ -384,7 +414,7 @@ namespace Crowny
     {
         RegisterAsset<AudioClip, ScriptAudioClip>();
         RegisterAsset<Mesh, ScriptMesh>();
-        // RegisterAsset<Texture, ScriptTexture>();
+        RegisterAsset<Font, ScriptFont>();
         // RegisterAsset<Shader, ScriptShader>();
     }
 
@@ -401,6 +431,7 @@ namespace Crowny
         RegisterComponent<Collider2D, ScriptCollider2D>();
         RegisterComponent<CircleCollider2DComponent, ScriptCircleCollider2D>();
         RegisterComponent<BoxCollider2DComponent, ScriptBoxCollider2D>();
+        RegisterComponent<TextComponent, ScriptText>();
     }
 
     Ref<SerializableTypeInfo> ScriptInfoManager::GetTypeInfo(MonoClass* monoClass)

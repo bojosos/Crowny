@@ -184,6 +184,8 @@ namespace Crowny
         virtual MonoObject* GetAttribute(MonoClass* monoClass) = 0;
 
         String m_Name;
+        String m_Label;
+        String m_Tooltip;
         uint32_t m_FieldId;
         uint32_t m_ParentTypeId;
 

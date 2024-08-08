@@ -25,6 +25,30 @@ namespace Crowny
         PFF_NORMALIZED = 0x40
     };
 
+    float LinearToSRGB(float x)
+    {
+        if (x <= 0.0f)
+            return 0.0f;
+        else if (x >= 1.0f)
+            return 1.0f;
+        else if (x < 0.0031308f)
+            return x * 12.92f;
+        else
+            return std::pow(x, 1.0f / 2.4f) * 1.055f - 0.055f;
+    }
+
+    float SRGBToLinear(float x)
+    {
+        if (x <= 0.0f)
+            return 0.0f;
+        else if (x >= 1.0f)
+            return 1.0f;
+        else if (x < 0.04045f)
+            return x / 12.92f;
+        else
+            return std::pow((x + 0.055f) / 1.055f, 2.4f);
+    }
+
     // TODO: Copy constructor, copy-assignment operator
     class PixelData
     {

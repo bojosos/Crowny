@@ -76,6 +76,12 @@ namespace Crowny
             auto setter = [itemProp, i, listObject](void* value) { return itemProp->SetIndexed(listObject, i, value); };
             modified |= DrawFieldInspector(memberInfo, std::to_string(i).c_str(), getter, setter,
                                            listInfo->m_ElementType, depth + 1);
+            if (!memberInfo->m_Tooltip.empty())
+            {
+                ImGui::BeginTooltip();
+                ImGui::Text(memberInfo->m_Tooltip.c_str());
+                ImGui::EndTooltip();
+            }
         }
         return modified;
     }
@@ -147,6 +153,12 @@ namespace Crowny
                 keyString = keys.Get<String>(i);
                 modified |= DrawFieldInspector(memberInfo, keyString.c_str(), getterValue, setterValue,
                                                dictInfo->m_ValueType, depth + 1);
+                if (!memberInfo->m_Tooltip.empty())
+                {
+                    ImGui::BeginTooltip();
+                    ImGui::Text(memberInfo->m_Tooltip.c_str());
+                    ImGui::EndTooltip();
+                }
                 UI::Underline(true);
                 params[0] = MonoUtils::ToMonoString(keyString);
             }
@@ -155,6 +167,13 @@ namespace Crowny
                 keyInt = keys.Get<uint32_t>(i);
                 modified |= DrawFieldInspector(memberInfo, std::to_string(keyInt).c_str(), getterValue, setterValue,
                                                dictInfo->m_ValueType, depth + 1);
+                if (!memberInfo->m_Tooltip.empty())
+                {
+                    ImGui::BeginTooltip();
+                    ImGui::Text(memberInfo->m_Tooltip.c_str());
+                    ImGui::EndTooltip();
+                }
+
                 UI::Underline(true);
                 params[0] = &keyInt;
             }
@@ -744,6 +763,12 @@ namespace Crowny
                 auto valueSetter = [&](void* value) { memberInfo->SetValue(instance, value); };
                 auto objectSetter = [=](void* obj) { setter((MonoObject*)obj); };
                 bool modified = DrawFieldInspector(memberInfo, memberInfo->m_Name.c_str(), valueGetter, valueSetter);
+                if (!memberInfo->m_Tooltip.empty())
+                {
+                    ImGui::BeginTooltip();
+                    ImGui::Text(memberInfo->m_Tooltip.c_str());
+                    ImGui::EndTooltip();
+                }
                 totalModified |= modified;
                 if (modified && objectInfo->m_TypeInfo->m_ValueType)
                 {

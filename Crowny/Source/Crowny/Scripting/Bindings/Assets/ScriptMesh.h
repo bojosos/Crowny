@@ -14,6 +14,7 @@ namespace Crowny
         ScriptMesh(MonoObject* instance, const AssetHandle<Mesh>& mesh);
 
     private:
+        // static
     };
 
 } // namespace Crowny

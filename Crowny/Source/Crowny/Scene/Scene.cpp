@@ -263,7 +263,8 @@ namespace Crowny
     void Scene::AddScriptComponent(Entity entity, const String& namespaceName, const String& typeName, bool initialize)
     {
         MonoClass* monoClass = MonoManager::Get().FindClass(namespaceName, typeName);
-        CW_ENGINE_ASSERT(monoClass != nullptr);
+        if (!monoClass)
+            return;
         ::MonoClass* rawClass = monoClass->GetInternalPtr();
         MonoReflectionType* runtimeType = MonoUtils::GetType(rawClass);
         if (entity.HasComponent<MonoScriptComponent>())

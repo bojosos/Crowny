@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Common/Uuid.h"
+#include "Crowny/Common/StdHeaders.h"
 
 namespace Crowny
 {
@@ -14,6 +15,8 @@ namespace Crowny
         static void CopyToClipboard(const String& string);
         static String CopyFromClipboard();
         static String Exec(const String& command);
+        static Path GetRoamingDirectory();
+        static const Path& GetOurRoamingDirectory();
     };
 
 } // namespace Crowny

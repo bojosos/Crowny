@@ -48,25 +48,13 @@ namespace Crowny
                 tokens.push_back(result);
                 continue;
             }
-
-            switch (text[idx])
-            {
-            case '+': tokens.emplace_back(TokenType::Plus); idx++; continue;
-            case '-': tokens.emplace_back(TokenType::Minus); idx++; continue;
-            case '*': tokens.emplace_back(TokenType::Mul); idx++; continue;
-            case '/': tokens.emplace_back(TokenType::FloatDiv); idx++; continue;
-            case '%': tokens.emplace_back(TokenType::Modulus); idx++; continue;
-            case '^': tokens.emplace_back(TokenType::Pow); idx++; continue;
-            case '(': tokens.emplace_back(TokenType::LParen); idx++; continue;
-            case ')': tokens.emplace_back(TokenType::RParen); idx++; continue;
-            }
-
+            1
             ExpressionToken token;
             token.Type = TokenType::Unknown;
             if (matches(idx, "floor")) // Consider changing this to token.Type = TokenType::Function and in the union have a function pointer
                 token.Type = TokenType::Ceil;
             else if (matches(idx, "ceil"))
-                token.Type = TokenType::Ceil;
+                token.Type = TokenType::Round;
             else if (matches(idx, "round"))
                 token.Type = TokenType::Round;
             else if (matches(idx, "sqrt"))

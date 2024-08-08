@@ -18,7 +18,14 @@ namespace Crowny
 
     LinuxWindow::~LinuxWindow() { Shutdown(); }
 
-    void LinuxWindow::OnUpdate() { glfwPollEvents(); }
+    void LinuxWindow::OnUpdate()
+    {
+        glfwPollEvents();
+        if (m_CursorType != m_OldCursorType) {
+            SetCursorInternal(m_CursorType);
+            m_OldCursorType = m_CursorType;
+        }
+    }
 
     void LinuxWindow::Init(const WindowDesc& windowDesc)
     {
@@ -231,7 +238,7 @@ namespace Crowny
         });
     }
 
-    void LinuxWindow::SetCursor(Cursor cursor)
+    void LinuxWindow::SetCursorInternal(Cursor cursor)
     {
         if (!m_Cursor)
             glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -264,7 +271,7 @@ namespace Crowny
             m_Cursor = glfwCreateStandardCursor(GLFW_VRESIZE_CURSOR);
             break;
         case Cursor::STOPSIGN:
-            m_Cursor = glfwCreateStandardCursor(GLFW_NOT_ALLOWED_CURSOR);
+            m_Cursor = glfwCreateStandardCursor(GLFW_IBEAM_CURSOR);
             break;
         }
 

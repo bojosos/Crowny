@@ -106,7 +106,7 @@ namespace Crowny
         Ref<Texture> FontAtlasTexture;
 
         // Global texture buffer
-        std::array<Ref<Texture>, 32> Textures;
+        std::array<AssetHandle<Texture>, 32> Textures;
         uint32_t TextureIndex = 0;
     };
 
@@ -217,7 +217,7 @@ namespace Crowny
     void Renderer2D::Init()
     {
         s_Data = new Renderer2DData();
-        s_Data->Textures[0] = Texture::WHITE;
+        // s_Data->Textures[0] = Texture::WHITE;
         SetupQuadBuffers();
         SetupCircleBuffers();
         SetupTextBuffers();
@@ -241,7 +241,7 @@ namespace Crowny
         s_Data->TextProjectionView->Write(0, glm::value_ptr(vp), sizeof(glm::mat4));
     }
 
-    float Renderer2D::FindTexture(const Ref<Texture>& texture)
+    float Renderer2D::FindTexture(const AssetHandle<Texture>& texture)
     {
         if (!texture)
             return 0;
@@ -280,7 +280,7 @@ namespace Crowny
         FillRect(transform, nullptr, color, entityId);
     }
 
-    void Renderer2D::FillRect(const glm::mat4& transform, const Ref<Texture>& texture, const glm::vec4& color,
+    void Renderer2D::FillRect(const glm::mat4& transform, const AssetHandle<Texture>& texture, const glm::vec4& color,
                               uint32_t entityId)
     {
         float ts = FindTexture(texture);
@@ -299,7 +299,7 @@ namespace Crowny
         s_Data->QuadIndexCount += 6;
     }
 
-    void Renderer2D::FillRect(const Rect2F& bounds, const Ref<Texture>& texture, const glm::vec4& color,
+    void Renderer2D::FillRect(const Rect2F& bounds, const AssetHandle<Texture>& texture, const glm::vec4& color,
                               uint32_t entityId)
     {
         glm::mat4 transform = glm::translate(glm::mat4(1.0f), { bounds.X, bounds.Y, 1.0f }) *
@@ -371,6 +371,7 @@ namespace Crowny
         const msdf_atlas::FontGeometry& fontGeometry = textComponent.Font->GetMSDFData()->FontGeometry;
         const msdfgen::FontMetrics& fontMetrics = fontGeometry.getMetrics();
 
+        // TODO: Make this use an array for font textures or reset when the texture is different.
         Ref<Texture> fontAtlasTexture = textComponent.Font->GetAtlasTexture();
         s_Data->FontAtlasTexture = fontAtlasTexture;
 
@@ -507,9 +508,9 @@ namespace Crowny
             s_Data->QuadVertexBuffer->Unmap();
             for (uint32_t i = 0; i < 8; i++)
                 if (s_Data->Textures[i])
-                    s_Data->QuadUniforms->SetTexture(0, 1 + i, s_Data->Textures[i]);
+                    s_Data->QuadUniforms->SetTexture(0, 1 + i, s_Data->Textures[i].GetInternalPtr());
                 else
-                    s_Data->QuadUniforms->SetTexture(0, 1 + i, s_Data->Textures[0]);
+                    s_Data->QuadUniforms->SetTexture(0, 1 + i, s_Data->Textures[0].GetInternalPtr());
             RenderAPI::Get().SetUniforms(s_Data->QuadUniforms);
             RenderAPI::Get().DrawIndexed(0, s_Data->QuadIndexCount, 0, s_Data->QuadVertexCount);
         }
