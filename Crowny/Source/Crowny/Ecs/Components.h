@@ -262,15 +262,11 @@ namespace Crowny
 
     struct SpriteRendererComponent : public ComponentBase
     {
-        Ref<Crowny::Texture> Texture;
+        AssetHandle<Crowny::Texture> Texture;
         glm::vec4 Color{ 1.0f };
 
         SpriteRendererComponent() : ComponentBase() {}
         SpriteRendererComponent(const SpriteRendererComponent&) = default;
-        SpriteRendererComponent(const Ref<Crowny::Texture>& texture, Crowny::Color color)
-          : Texture(texture), Color(color)
-        {
-        }
     };
 
     template <> void ComponentEditorWidget<SpriteRendererComponent>(Entity e);

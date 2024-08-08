@@ -3,10 +3,8 @@ using System.Runtime.CompilerServices;
 
 namespace Crowny
 {
-    
-    public class Mesh : Component
+
+    public class Mesh : Asset
     {
-
     }
-
 }

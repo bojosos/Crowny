@@ -36,9 +36,9 @@ namespace Crowny
 
         public override bool Equals(object obj)
         {
-            if (!(obj is UUID42))
+            if (!(obj is UUID))
                 return false;
-            UUID42 uuid = (UUID42)obj;
+            UUID uuid = (UUID)obj;
             if (d0.Equals(uuid.d0) && d1.Equals(uuid.d1) && d2.Equals(uuid.d2) && d3.Equals(uuid.d3))
                 return true;
             return false;
@@ -103,7 +103,7 @@ namespace Crowny
             return new string(output);
         }
     }
-    
+
     public class Asset : ScriptObject
     {
         public string name => Internal_GetName(m_InternalPtr);

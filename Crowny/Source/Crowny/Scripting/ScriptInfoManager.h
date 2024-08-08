@@ -52,6 +52,7 @@ namespace Crowny
         MonoClass* FolderPathAttribute = nullptr;
         MonoClass* ReadOnlyAttribute = nullptr;
         MonoClass* HeaderAttribute = nullptr;
+        MonoClass* TooltipAttribute = nullptr;
 
         MonoClass* ScriptUtils = nullptr;
         MonoClass* ScriptCompiler = nullptr;

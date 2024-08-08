@@ -85,6 +85,7 @@ namespace Crowny
         void SetIncludeInBuild(const Path& path, bool force);
         Vector<Ref<FileEntry>> GetAssetsForBuild() const;
         AssetHandle<Asset> Load(const Path& path);
+        AssetHandle<Asset> Load(const FileEntry* entry);
         const Path& GetAssetFolder() const { return m_AssetFolder; }
 
         static const Path ASSET_DIR;

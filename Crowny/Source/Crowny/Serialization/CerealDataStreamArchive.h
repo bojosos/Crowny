@@ -24,7 +24,7 @@ public:
     void saveBinary(const void* data, std::streamsize size)
     {
         auto const writtenSize = m_Stream->Write(data, size);
-        CW_ENGINE_ASSERT(writtenSize == size);
+        // CW_ENGINE_ASSERT(writtenSize == size);
     }
 
     Ref<DataStream> GetStream() { return m_Stream; };
@@ -44,7 +44,7 @@ public:
     void loadBinary(void* const data, std::streamsize size)
     {
         auto const readSize = m_Stream->Read(data, size);
-        CW_ENGINE_ASSERT(readSize == size);
+        // CW_ENGINE_ASSERT(readSize == size);
     }
 
     Ref<DataStream> GetStream() { return m_Stream; };

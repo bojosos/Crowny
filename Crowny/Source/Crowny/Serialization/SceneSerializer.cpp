@@ -20,6 +20,8 @@
 
 namespace Crowny
 {
+    static constexpr uint32_t SceneVersion = 0;
+
     SceneSerializer::SceneSerializer(const Ref<Scene>& scene) : m_Scene(scene) {}
 
     void SceneSerializer::SerializeEntity(YAML::Emitter& out, Entity entity)
@@ -228,6 +230,9 @@ namespace Crowny
     {
         YAML::Emitter out;
         out << YAML::Comment("Crowny Scene");
+        out << YAML::BeginMap;
+        out << YAML::Key << "Version" << YAML::Value << SceneVersion;
+        out << YAML::EndMap;
 
         out << YAML::BeginMap;
 
@@ -262,10 +267,18 @@ namespace Crowny
         try
         {
             YAML::Node data = YAML::Load(text);
-            if (!data["Scene"])
+            const YAML::Node versionNode = data["Version"];
+            if (!versionNode && SceneVersion != 0)
+                CW_ENGINE_INFO("Missing scene version! Assuming version 0");
+            const uint32_t version = versionNode ? versionNode.as<uint32_t>() : 0;
+            if (version != SceneVersion) {
+                CW_ENGINE_INFO("Loading scene with version: {0}, current: {1}", version, SceneVersion);
+            }
+            const YAML::Node sceneNode = data["Scene"];
+            if (!sceneNode)
                 return;
             UnorderedMap<Entity, YAML::Node> serializedComponents;
-            String sceneName = data["Scene"].as<String>();
+            const String sceneName = sceneNode.as<String>();
             m_Scene->m_Name = sceneName;
             m_Scene->m_Filepath = filepath;
             // m_Scene->GetRootEntity().GetComponent<TagComponent>().Tag = sceneName;

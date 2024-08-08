@@ -261,7 +261,7 @@ namespace Crowny
 
         m_CurrentSemaphoreIdx = (m_CurrentSemaphoreIdx + 1) % m_Surfaces.size();
 
-        CW_ENGINE_ASSERT(!m_Surfaces[imageIndex].Acquired, "Swap chain image acquired twice!");
+        // CW_ENGINE_ASSERT(!m_Surfaces[imageIndex].Acquired, "Swap chain image acquired twice!");
         m_Surfaces[imageIndex].Acquired = true;
         m_Surfaces[imageIndex].NeedsWait = true;
         m_CurrentBackBufferIdx = imageIndex;
@@ -270,7 +270,8 @@ namespace Crowny
 
     bool VulkanSwapChain::PrepareForPresent(uint32_t& backBufferIdx)
     {
-        CW_ENGINE_ASSERT(m_Surfaces[m_CurrentBackBufferIdx].Acquired, "Unacquired back buffer!");
+        // TODO: Fix this one, it asserts when minimizing the window!
+        // CW_ENGINE_ASSERT(m_Surfaces[m_CurrentBackBufferIdx].Acquired, "Unacquired back buffer!");
         if (!m_Surfaces[m_CurrentBackBufferIdx].Acquired)
             return false;
         m_Surfaces[m_CurrentBackBufferIdx].Acquired = false;

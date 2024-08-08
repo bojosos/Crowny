@@ -19,6 +19,10 @@ namespace Crowny
         Count
     };
 
+    struct CharacterInfo {
+
+    };
+
     struct FontDesc
     {
     };

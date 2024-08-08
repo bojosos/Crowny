@@ -35,11 +35,12 @@ namespace Crowny
         {
             const aiFace& face = mesh->mFaces[j];
             // TODO: Add winding order control.
+            CW_ENGINE_ASSERT(face.mNumIndices == 3);
             indices.push_back((IndexType)face.mIndices[0]);
             indices.push_back((IndexType)face.mIndices[1]);
             indices.push_back((IndexType)face.mIndices[2]);
-            meshData->SetIndexData<IndexType>(indices.data(), mesh->mNumFaces);
         }
+        meshData->SetIndexData<IndexType>(indices.data(), mesh->mNumFaces * 3);
     }
 
     Ref<Asset> MeshImporter::MeshImporter::Import(const Path& path, Ref<const ImportOptions> importOptions)
@@ -98,8 +99,8 @@ namespace Crowny
         for (uint32_t i = 0; i < scene->mNumMeshes; i++)
         {
             const aiMesh* mesh = scene->mMeshes[i];
-            const uint32_t vertexCount = mesh->mNumVertices;
-            const uint32_t indexCount = mesh->mNumFaces;
+            const uint32_t vertexCount = mesh->mNumVertices / 3;
+            const uint32_t indexCount = mesh->mNumFaces * 3;
             CW_ENGINE_ASSERT(mesh->HasPositions() && mesh->HasFaces());
 
             BufferLayout bufferLayout = { BufferElement(ShaderDataType::Float3, VertexAttribute::Position) };
@@ -144,11 +145,11 @@ namespace Crowny
                 SetIndexData<uint16_t>(mesh, meshData);
             else
                 SetIndexData<uint32_t>(mesh, meshData);
-
-            for (uint32_t i = 0; i < vertexCount; i++)
-                mesh->mNormals[i] = -mesh->mNormals[i];
             if (hasNormals)
                 meshData->SetVertexData(VertexAttribute::Normal, mesh->mNormals, vertexCount * sizeof(glm::vec3));
+            for (uint32_t i = 0; i < vertexCount; i++) {
+                CW_ENGINE_INFO("X: {0}, Y: {1}, Z: {2}", mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z);
+            }
             if (hasVertexColors)
                 meshData->SetVertexData(VertexAttribute::Color, mesh->mColors, vertexCount * sizeof(glm::vec3));
             if (hasTangents)
@@ -165,7 +166,7 @@ namespace Crowny
                 Vector<glm::vec2> uvList;
                 uvList.reserve(vertexCount);
                 for (uint32_t i = 0; i < vertexCount; i++)
-                    uvList.push_back(glm::vec2(mesh->mTextureCoords[uv][i].x, mesh->mTextureCoords[uv][i].y));
+                    uvList.push_back(glm::vec2(mesh->mTextureCoords[uv][i].x, 1-mesh->mTextureCoords[uv][i].y));
                 meshData->SetVertexData(uvAttr, uvList.data(), vertexCount * sizeof(glm::vec2));
             }
             meshes.push_back(meshData);

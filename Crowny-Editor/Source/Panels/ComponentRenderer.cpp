@@ -289,10 +289,11 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<SpriteRendererComponent>(Entity e)
     {
-        auto& t = e.GetComponent<SpriteRendererComponent>();
+        auto& spriteRendererComponent = e.GetComponent<SpriteRendererComponent>();
 
-        if (t.Texture)
-            ImGui::Image(ImGui_ImplVulkan_AddTexture(t.Texture), { 50.0f, 50.0f }, { 0, 1 }, { 1, 0 });
+        if (spriteRendererComponent.Texture)
+            ImGui::Image(ImGui_ImplVulkan_AddTexture(spriteRendererComponent.Texture.GetInternalPtr()),
+                         { 50.0f, 50.0f }, { 0, 1 }, { 1, 0 });
         else
             ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), { 50.0f, 50.0f }, { 0, 1 },
                          { 1, 0 });
@@ -300,10 +301,13 @@ namespace Crowny
         {
             Vector<Path> outPaths;
             if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, outPaths, "Open Texture") && outPaths.size() >= 1)
-                t.Texture = Importer::Get().Import<Texture>(outPaths[0]);
+            {
+                Ref<Texture> importedTexture=Importer::Get().Import<Texture>(outPaths[0]);
+                spriteRendererComponent.Texture = static_asset_cast<Texture>(AssetManager::Get().CreateAssetHandle(importedTexture));
+            }
         }
 
-        UI::PropertyColor("Sprite Color", t.Color);
+        UI::PropertyColor("Sprite Color", spriteRendererComponent.Color);
     }
 
     template <> void ComponentEditorWidget<MeshRendererComponent>(Entity e)

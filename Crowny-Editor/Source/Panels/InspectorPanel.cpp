@@ -58,11 +58,104 @@ namespace Crowny
         m_ComponentEditor.RegisterComponent<MonoScriptComponent>("C# Script");
     }
 
+    void InspectorPanel::HandleInspectorDragDrop(Entity selectedEntity)
+    {
+        if (ImGui::BeginDragDropTarget()) // Add components when files are dropped on entities in the inspector (C#
+                                          // script, AudioSource, etc...)
+        {
+            auto hasComponentCallback = [selectedEntity](const FileEntry* entry) {
+                switch (entry->Metadata->Type)
+                {
+                case AssetType::AudioClip:
+                    return !selectedEntity.HasComponent<AudioSourceComponent>();
+                case AssetType::Mesh:
+                    return !selectedEntity.HasComponent<MeshRendererComponent>();
+                case AssetType::ScriptCode:
+                    return true; // You can always add more scripts!!!
+                case AssetType::Texture:
+                    return !selectedEntity.HasComponent<SpriteRendererComponent>();
+                case AssetType::Font:
+                    return !selectedEntity.HasComponent<TextComponent>();
+                default:
+                    return false;
+                }
+            };
+            if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload(hasComponentCallback))
+            {
+                if (fileEntry->Metadata)
+                {
+                    switch (fileEntry->Metadata->Type)
+                    {
+                    case AssetType::AudioClip: {
+                        if (!selectedEntity.HasComponent<AudioSourceComponent>())
+                        {
+                            AudioSourceComponent& audioSource = selectedEntity.AddComponent<AudioSourceComponent>();
+                            AssetHandle<AudioClip> clip =
+                              static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(fileEntry));
+                            audioSource.SetClip(clip);
+                        }
+                        break;
+                    }
+                    case AssetType::ScriptCode: {
+                        const String className = fileEntry->Filepath.filename().replace_extension("").string();
+                        if (!selectedEntity.HasComponent<MonoScriptComponent>())
+                        {
+                            Ref<Scene> activeScene = SceneManager::GetActiveScene();
+                            bool exists = false;
+                            if (selectedEntity.HasComponent<MonoScriptComponent>())
+                            {
+                                auto& scripts = selectedEntity.GetComponent<MonoScriptComponent>().Scripts;
+                                for (auto& script : scripts)
+                                {
+                                    if (script.GetTypeName() == className)
+                                        exists = true;
+                                }
+                            }
+                            // TODO: Parse the namespace and class name
+                            if (!exists)
+                                activeScene->AddScriptComponent(selectedEntity, "Sandbox", className);
+                        }
+                        break;
+                    }
+                    case AssetType::Font:
+                        if (!selectedEntity.HasComponent<TextComponent>())
+                        {
+                            TextComponent& textComponent = selectedEntity.AddComponent<TextComponent>();
+                            AssetHandle<Font> font = static_asset_cast<Font>(ProjectLibrary::Get().Load(fileEntry));
+                            textComponent.Font = font;
+                        }
+                        break;
+                    case AssetType::Mesh:
+                        if (!selectedEntity.HasComponent<MeshRendererComponent>())
+                        {
+                            MeshRendererComponent& meshComponent = selectedEntity.AddComponent<MeshRendererComponent>();
+                            AssetHandle<Mesh> mesh = static_asset_cast<Mesh>(ProjectLibrary::Get().Load(fileEntry));
+                            meshComponent.MeshHandle = mesh;
+                        }
+                        break;
+                    case AssetType::Texture:
+                        if (!selectedEntity.HasComponent<SpriteRendererComponent>())
+                        {
+                            SpriteRendererComponent& spriteComponent =
+                              selectedEntity.AddComponent<SpriteRendererComponent>();
+                            AssetHandle<Texture> texture =
+                              static_asset_cast<Texture>(ProjectLibrary::Get().Load(fileEntry));
+                            spriteComponent.Texture = texture;
+                        }
+                        break;
+                    }
+                }
+            }
+            ImGui::EndDragDropTarget();
+        }
+    }
+
     void InspectorPanel::Render()
     {
         BeginPanel();
         ImGui::BeginChild("InspectorChild");
-
+        static constexpr int ImGuiMouseCursor_Dummy = 6969696969;
+        ImGui::SetMouseCursor(ImGuiMouseCursor_Dummy);
         DrawHeader();
         if (m_InspectorMode == InspectorMode::GameObject)
             m_ComponentEditor.Render();
@@ -86,56 +179,14 @@ namespace Crowny
         //     CW_ENGINE_ASSERT(false, "Invalid inspector mode");
 
         ImGui::EndChild();
-
+        const ImGuiMouseCursor cursor=ImGui::GetMouseCursor();
         Entity selectedEntity = HierarchyPanel::GetSelectedEntity();
         if (m_InspectorMode == InspectorMode::GameObject && selectedEntity)
-        {
-            if (ImGui::BeginDragDropTarget()) // Add components when files are dropped on entities in the inspector (C#
-                                              // script, AudioSource)
-            {
-                if (const ImGuiPayload* payload = UIUtils::AcceptAssetPayload())
-                {
-                    Path payloadPath = UIUtils::GetPathFromPayload(payload);
-                    String ext = payloadPath.extension().string();
-                    if (ext.empty())
-                        return;
-                    ext = ext.substr(1, ext.size() - 1);
-                    if (ext == "ogg" || ext == "wav" || ext == "flac")
-                    {
-                        if (!selectedEntity.HasComponent<AudioSourceComponent>())
-                        {
-                            AudioSourceComponent& audioSource = selectedEntity.AddComponent<AudioSourceComponent>();
-                            AssetHandle<AudioClip> clip =
-                              static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(payloadPath));
-                            audioSource.SetClip(clip);
-                        }
-                    }
-                    else if (ext == "cs")
-                    {
-                        String className = payloadPath.filename().replace_extension("").string();
-                        if (!selectedEntity.HasComponent<MonoScriptComponent>())
-                        {
-                            Ref<Scene> activeScene = SceneManager::GetActiveScene();
-                            bool exists = false;
-                            if (selectedEntity.HasComponent<MonoScriptComponent>())
-                            {
-                                auto& scripts = selectedEntity.GetComponent<MonoScriptComponent>().Scripts;
-                                for (auto& script : scripts)
-                                {
-                                    if (script.GetTypeName() == className)
-                                        exists = true;
-                                }
-                            }
-                            // TODO: Parse the namespace and class name
-                            if (!exists)
-                                activeScene->AddScriptComponent(selectedEntity, "Sandbox", className);
-                        }
-                    }
-                }
-                ImGui::EndDragDropTarget();
-            }
-        }
-
+            HandleInspectorDragDrop(selectedEntity);
+        if (cursor == ImGuiMouseCursor_Arrow ||
+            ImGui::GetMouseCursor() == ImGuiMouseCursor_Dummy) // Need to reset the cursor here. The one from the HandleInspectorDragDrop
+                                              // will override it.
+            ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
         EndPanel();
         // ImGui::Begin("Material");
         // RenderMaterialInspector();

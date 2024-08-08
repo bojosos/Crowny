@@ -25,7 +25,8 @@ namespace Crowny
         virtual const String& GetTitle() const override { return m_Data.Title; }
         virtual void SetTitle(const String& title) override;
 
-        virtual void SetCursor(Cursor cursor) override;
+        void SetCursorInternal(Cursor cursor);
+        virtual void SetCursor(Cursor cursor) override { m_CursorType = cursor; }
 
         virtual void SetEventCallback(const EventCallbackFn& callback) override { m_Data.EventCallback = callback; };
         virtual void* GetNativeWindow() const override { return m_Window; }
@@ -43,6 +44,8 @@ namespace Crowny
 
     private:
         GLFWwindow* m_Window;
+        Cursor m_CursorType = Cursor::POINTER;
+        Cursor m_OldCursorType = Cursor::POINTER;
         GLFWcursor* m_Cursor = nullptr;
         Scope<GraphicsContext> m_Context;
 

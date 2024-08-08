@@ -712,7 +712,7 @@ namespace Crowny
             UI::SetTooltip(path.string().c_str());
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) // Allow dragging
             {
-                UIUtils::SetAssetPayload(path);
+                UIUtils::SetAssetPayload(entry.get());
                 ImGui::ImageButton(tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 }, 0);
                 ImGui::SetNextItemWidth(m_ThumbnailSize);
                 float textWidth = ImGui::CalcTextSize(entry->ElementName.c_str()).x;
@@ -731,10 +731,10 @@ namespace Crowny
                 if (ImGui::BeginDragDropTarget())
                 {
                     dropping = true;
-                    if (const ImGuiPayload* payload = UIUtils::AcceptAssetPayload())
+                    if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload())
                     {
-                        Path payloadPath = UIUtils::GetPathFromPayload(payload);
-                        Path filename = payloadPath.filename();
+                        const Path &payloadPath = fileEntry->Filepath;
+                        const Path filename = payloadPath.filename();
                         ProjectLibrary::Get().MoveEntry(
                           payloadPath,
                           path / filename); // Perhaps I need to end here? Or rather I should change the display list
@@ -848,17 +848,17 @@ namespace Crowny
 
                 if (ImGui::BeginDragDropTarget())
                 {
-                    if (const ImGuiPayload* payload = UIUtils::AcceptAssetPayload())
+                    if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload())
                     {
-                        Path payloadPath = UIUtils::GetPathFromPayload(payload);
-                        ProjectLibrary::Get().MoveEntry(payloadPath, cur->Filepath / payloadPath.filename());
+                        // TODO: Make variant that takes in file entry too. Should be a bit faster.
+                        ProjectLibrary::Get().MoveEntry(fileEntry->Filepath, cur->Filepath / fileEntry->Filepath.filename());
                         UpdateDisplayList();
                     }
                     ImGui::EndDragDropTarget();
                 }
                 if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) // Allow dragging
                 {
-                    UIUtils::SetAssetPayload(cur->Filepath);
+                    UIUtils::SetAssetPayload(cur.get());
                     ImGui::EndDragDropSource();
                 }
 

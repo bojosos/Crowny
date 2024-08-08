@@ -14,10 +14,10 @@ namespace Crowny
             Mul,         // *
             Modulus,     // % -> fmod
             Pow,         // ^
-  
+
             Int,         // integer number
             Float,       // float number
-  
+
             Sqrt,        // sqrt
             Floor,       // floor
             Ceil,        // ceil
@@ -25,7 +25,7 @@ namespace Crowny
             Sin,         // sin
             Cos,         // cos
             Tan,         // tan
- 
+
             LParen,      // (
             RParen,      // )
 

@@ -85,12 +85,12 @@ namespace Crowny
         ImGui::Image(textureID, ImVec2(m_ViewportSize.x, m_ViewportSize.y), ImVec2{ 0, 1 },
                      ImVec2{ 1, 0 }); // The viewport itself
 
-        if (ImGui::BeginDragDropTarget()) // Drag drop scenes and meshes
+        if (ImGui::BeginDragDropTarget()) // Drag drop scenes and meshes, TODO: Fix for meshes
         {
-            if (const ImGuiPayload* payload = UIUtils::AcceptAssetPayload())
+            if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload())
             {
-                Path assetPath = UIUtils::GetPathFromPayload(payload);
-                ImGuiViewportSceneDraggedEvent event(assetPath);
+                // TODO: Change to take file entry.
+                ImGuiViewportSceneDraggedEvent event(fileEntry->Filepath);
                 OnEvent(event);
             }
             ImGui::EndDragDropTarget();

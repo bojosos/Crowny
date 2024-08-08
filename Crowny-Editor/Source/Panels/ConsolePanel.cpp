@@ -211,7 +211,8 @@ namespace Crowny
     void ConsolePanel::RenderFooter()
     {
         UI::ScopedStyle style(ImGuiStyleVar_WindowPadding, ImVec2(0, 2));
-        ImGui::Text(m_SelectedMessage.MessageText.c_str());
+        ImGui::TextWrapped(m_SelectedMessage.MessageText.c_str());
+        // ImGui::Text(m_SelectedMessage.MessageText.c_str());
         for (const ConsoleBuffer::Message::FunctionCall& call : m_SelectedMessage.Callstack)
         {
             ImGui::Text("  %s", call.FunctionSignature.c_str());

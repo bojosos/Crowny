@@ -106,11 +106,11 @@ namespace Crowny
 
         // Scripting
         MonoManager::StartUp();
+        ScriptInfoManager::StartUp();
         Path engineAssemblyPath = Path("C:/dev/Crowny/Crowny-Sharp") / (std::string(CROWNY_ASSEMBLY) + ".dll");
         if (fs::exists(engineAssemblyPath))
         {
             MonoManager::Get().LoadAssembly(engineAssemblyPath, CROWNY_ASSEMBLY);
-            ScriptInfoManager::StartUp();
             ScriptInfoManager::Get().InitializeTypes();
             ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
             CW_ENGINE_INFO("Loaded engine assembly {0}", engineAssemblyPath.string());
