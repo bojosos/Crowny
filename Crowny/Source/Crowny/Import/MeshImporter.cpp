@@ -147,7 +147,8 @@ namespace Crowny
                 SetIndexData<uint32_t>(mesh, meshData);
             if (hasNormals)
                 meshData->SetVertexData(VertexAttribute::Normal, mesh->mNormals, vertexCount * sizeof(glm::vec3));
-            for (uint32_t i = 0; i < vertexCount; i++) {
+            for (uint32_t i = 0; i < vertexCount; i++)
+            {
                 CW_ENGINE_INFO("X: {0}, Y: {1}, Z: {2}", mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z);
             }
             if (hasVertexColors)
@@ -166,7 +167,7 @@ namespace Crowny
                 Vector<glm::vec2> uvList;
                 uvList.reserve(vertexCount);
                 for (uint32_t i = 0; i < vertexCount; i++)
-                    uvList.push_back(glm::vec2(mesh->mTextureCoords[uv][i].x, 1-mesh->mTextureCoords[uv][i].y));
+                    uvList.push_back(glm::vec2(mesh->mTextureCoords[uv][i].x, 1 - mesh->mTextureCoords[uv][i].y));
                 meshData->SetVertexData(uvAttr, uvList.data(), vertexCount * sizeof(glm::vec2));
             }
             meshes.push_back(meshData);

@@ -1192,7 +1192,7 @@ namespace Crowny
                 const LibraryEntry* entry = *static_cast<LibraryEntry**>(payload->Data);
                 if (entry->Type == LibraryEntryType::File)
                 {
-                    const FileEntry* fileEntry=static_cast<const FileEntry*>(entry);
+                    const FileEntry* fileEntry = static_cast<const FileEntry*>(entry);
                     if (fileEntry->Metadata && fileEntry->Metadata->Type == assetType)
                     {
                         ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
@@ -1211,7 +1211,8 @@ namespace Crowny
             return nullptr;
         }
 
-        static const FileEntry* AcceptAssetPayload(std::function<bool(const FileEntry*)>&& assetPayloadCallback = nullptr)
+        static const FileEntry* AcceptAssetPayload(
+          std::function<bool(const FileEntry*)>&& assetPayloadCallback = nullptr)
         {
             const ImGuiPayload* payload = ImGui::GetDragDropPayload();
             if (payload->IsDataType(ID_ASSET_ITEM_PAYLOAD))

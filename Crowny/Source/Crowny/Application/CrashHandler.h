@@ -12,7 +12,5 @@ namespace Crowny
         ~CrashHandler();
 
         int ReportCrash(void* data);
-
-
     };
 } // namespace Crowny

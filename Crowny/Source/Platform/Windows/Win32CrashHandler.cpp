@@ -33,7 +33,7 @@ namespace Crowny
         HANDLE hProcess = GetCurrentProcess();
         uint32_t options = SymGetOptions();
         options |=
-            SYMOPT_LOAD_LINES | SYMOPT_EXACT_SYMBOLS | SYMOPT_UNDNAME | SYMOPT_FAIL_CRITICAL_ERRORS | SYMOPT_NO_PROMPTS;
+          SYMOPT_LOAD_LINES | SYMOPT_EXACT_SYMBOLS | SYMOPT_UNDNAME | SYMOPT_FAIL_CRITICAL_ERRORS | SYMOPT_NO_PROMPTS;
         SymSetOptions(options);
         if (!SymInitialize(hProcess, nullptr, false))
         {
@@ -118,13 +118,13 @@ namespace Crowny
             {
                 // TODO: Format message for record->ExceptionInformation[0][2](NTSTATUS)
                 if (record->ExceptionInformation[0] == 0)
-                    format = fmt::format(
-                      "Unhandeled exception at {0:p}, page fault reading {0:p} with code {0:p}",
-                      record->ExceptionAddress, record->ExceptionInformation[1], record->ExceptionInformation[2]);
+                    format = fmt::format("Unhandeled exception at {0:p}, page fault reading {0:p} with code {0:p}",
+                                         record->ExceptionAddress, record->ExceptionInformation[1],
+                                         record->ExceptionInformation[2]);
                 else if (record->ExceptionInformation[0] == 1)
-                    format = fmt::format(
-                      "Unhandeled exception at {0:p}, page fault writing {0:p} with code {0:p}",
-                      record->ExceptionAddress, record->ExceptionInformation[1], record->ExceptionInformation[2]);
+                    format = fmt::format("Unhandeled exception at {0:p}, page fault writing {0:p} with code {0:p}",
+                                         record->ExceptionAddress, record->ExceptionInformation[1],
+                                         record->ExceptionInformation[2]);
                 else if (record->ExceptionInformation[0] == 8)
                     format = fmt::format("Unhandeled exception at {0:p}, page fault DEP {0:p} with code {0:p}",
                                          record->ExceptionAddress, record->ExceptionInformation[1],
@@ -154,14 +154,15 @@ namespace Crowny
             format = fmt::format("Unhandeled exception at 0x{0:x}, float underflow", record->ExceptionAddress);
             break;
         case EXCEPTION_FLT_STACK_CHECK:
-            format = fmt::format("Unhandeled exception at 0x{0:x}, float stack overflow/underflow", record->ExceptionAddress);
+            format =
+              fmt::format("Unhandeled exception at 0x{0:x}, float stack overflow/underflow", record->ExceptionAddress);
             break;
         case EXCEPTION_ILLEGAL_INSTRUCTION:
-            format =
-              fmt::format("Unhandeled exception at 0x{0:x}, illegal instruction", record->ExceptionAddress);
+            format = fmt::format("Unhandeled exception at 0x{0:x}, illegal instruction", record->ExceptionAddress);
             break;
         case EXCEPTION_PRIV_INSTRUCTION:
-            format = fmt::format("Unhandeled exception at 0x{0:x}, executing prviate instruction", record->ExceptionAddress);
+            format =
+              fmt::format("Unhandeled exception at 0x{0:x}, executing prviate instruction", record->ExceptionAddress);
             break;
         case EXCEPTION_INT_DIVIDE_BY_ZERO:
             format = fmt::format("Unhandeled exception at 0x{0:x}, float divide by zero", record->ExceptionAddress);
@@ -176,8 +177,8 @@ namespace Crowny
             format = fmt::format("Unhandeled exception at 0x{0:x}, guard page", record->ExceptionAddress);
             break;
         default:
-            format =
-              fmt::format("Unhandeled exception at {0:p}. Code: 0x{1:x}", record->ExceptionAddress, record->ExceptionCode);
+            format = fmt::format("Unhandeled exception at {0:p}. Code: 0x{1:x}", record->ExceptionAddress,
+                                 record->ExceptionCode);
             break;
         }
         return format;
@@ -225,8 +226,8 @@ namespace Crowny
     DWORD CALLBACK WriteMiniDumpUtil(void* data)
     {
         MiniDumpData* params = (MiniDumpData*)data;
-        HANDLE hFile =
-          CreateFileW(params->FilePath.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+        HANDLE hFile = CreateFileW(params->FilePath.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
+                                   FILE_ATTRIBUTE_NORMAL, nullptr);
         if (hFile != INVALID_HANDLE_VALUE)
         {
             MINIDUMP_EXCEPTION_INFORMATION mei;
@@ -321,7 +322,8 @@ namespace Crowny
             if (SymGetLineFromAddr64(hProcess, funcAddr, &col, &lineData))
             {
                 Path filePath = lineData.FileName;
-                outputStream << fmt::format("0x{0:x}, File[{1}:{2} ({3})]", funcAddr, filePath, (uint32_t)lineData.LineNumber, (uint32_t)col);
+                outputStream << fmt::format("0x{0:x}, File[{1}:{2} ({3})]", funcAddr, filePath,
+                                            (uint32_t)lineData.LineNumber, (uint32_t)col);
             }
             else
                 outputStream << fmt::format("0x{0:x}", funcAddr);

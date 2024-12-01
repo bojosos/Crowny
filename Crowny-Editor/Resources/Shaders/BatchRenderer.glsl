@@ -1,3 +1,4 @@
+#lang glsl
 #type vertex
 
 #version 460 core
@@ -71,7 +72,7 @@ void main() {
     case 6: texColor = fs_in.color * texture(u_Texture7, fs_in.uv); break;
     case 7: texColor = fs_in.color * texture(u_Texture8, fs_in.uv); break;
     }
-    
+
     color1 = texColor;
     color2 = int(fs_in.objectId);
 }

@@ -158,7 +158,7 @@ namespace Crowny
         m_ForwardHistory = {};
         m_BackwardHistory.push(m_CurrentDirectoryEntry);
 
-        for (auto child : m_CurrentDirectoryEntry->Children) // Also this is not recursive, and do audio wave on import
+        for (auto child : m_CurrentDirectoryEntry->Children) // TODO: do audio wave on import
         {
             const auto& path = child->Filepath;
             String ext = path.extension().string();
@@ -733,7 +733,7 @@ namespace Crowny
                     dropping = true;
                     if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload())
                     {
-                        const Path &payloadPath = fileEntry->Filepath;
+                        const Path& payloadPath = fileEntry->Filepath;
                         const Path filename = payloadPath.filename();
                         ProjectLibrary::Get().MoveEntry(
                           payloadPath,
@@ -851,7 +851,8 @@ namespace Crowny
                     if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload())
                     {
                         // TODO: Make variant that takes in file entry too. Should be a bit faster.
-                        ProjectLibrary::Get().MoveEntry(fileEntry->Filepath, cur->Filepath / fileEntry->Filepath.filename());
+                        ProjectLibrary::Get().MoveEntry(fileEntry->Filepath,
+                                                        cur->Filepath / fileEntry->Filepath.filename());
                         UpdateDisplayList();
                     }
                     ImGui::EndDragDropTarget();
