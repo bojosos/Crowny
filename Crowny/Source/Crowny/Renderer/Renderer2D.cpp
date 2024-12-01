@@ -35,7 +35,7 @@ namespace Crowny
         glm::vec4 Position;
         glm::vec4 Color;
         glm::vec2 Uv;
-        float Tid;
+        float Tid; // Why float?
         int32_t ObjectID;
     };
 
@@ -246,30 +246,31 @@ namespace Crowny
         if (!texture)
             return 0;
 
-        float ts = 0.0f;
+        float textureSlot = 0.0f;
 
         for (uint8_t i = 1; i <= s_Data->TextureIndex; i++)
         {
             if (s_Data->Textures[i] == texture)
             {
-                ts = (float)(i + 1);
+                textureSlot = (float)(i + 1);
                 break;
             }
         }
 
-        if (ts == 0)
+        if (textureSlot == 0)
         {
-            if (s_Data->TextureIndex == 32) // TODO: not 32 please
+            if (s_Data->TextureIndex == 32) // TODO: not 32, use the system properties.
             {
                 End();
                 s_Data->QuadBuffer = (VertexData*)s_Data->QuadVertexBuffer->Map(
                   0, RENDERER_MAX_SPRITES * 4,
                   GpuLockOptions::WRITE_DISCARD); // TODO: Begin or something instead of this
             }
-            s_Data->Textures[++s_Data->TextureIndex] = texture;
-            ts = (float)s_Data->TextureIndex;
+            s_Data->TextureIndex = (s_Data->TextureIndex + 1) % 32;
+            s_Data->Textures[s_Data->TextureIndex] = texture;
+            textureSlot = (float)s_Data->TextureIndex;
         }
-        return ts;
+        return textureSlot;
     }
 
     void Renderer2D::FillRect(const Rect2F& bounds, const glm::vec4& color, uint32_t entityId)

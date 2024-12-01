@@ -168,7 +168,8 @@ namespace Crowny
             m_Elements[m_Size].~Type();
         }
 
-        void append(ConstIterator start, ConstIterator end) {
+        void append(ConstIterator start, ConstIterator end)
+        {
             const uint32_t count = std::distance(start, end);
             if (m_Size + count > m_Capacity)
                 grow(m_Size + count);

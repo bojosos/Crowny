@@ -39,7 +39,7 @@ namespace Crowny
             return os << ms.ToString();
         }
 
-        static UUID EMPTY;
+        static const UUID EMPTY;
 
         friend struct std::hash<UUID>;
         CW_SIMPLESERIALZABLE(UUID);

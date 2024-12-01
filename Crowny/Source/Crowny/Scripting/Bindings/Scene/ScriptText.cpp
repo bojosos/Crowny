@@ -1,13 +1,13 @@
 #include "cwpch.h"
 
-#include "Crowny/Scripting/Bindings/Scene/ScriptText.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptFont.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptText.h"
 #include "Crowny/Scripting/ScriptAssetManager.h"
 
 namespace Crowny
 {
 
-    ScriptText::ScriptText(MonoObject* instance, Entity entity) : TScriptComponent(instance, entity) { }
+    ScriptText::ScriptText(MonoObject* instance, Entity entity) : TScriptComponent(instance, entity) {}
 
     void ScriptText::InitRuntimeData()
     {

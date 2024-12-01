@@ -8,17 +8,17 @@
 #include <GLFW/glfw3.h>
 
 // TODO: Remove some of these. A lot of includes for 60 lines.
+#include <KnownFolders.h>
+#include <ShlObj.h>
 #include <ShlObj_core.h>
 #include <VersionHelpers.h>
+#include <Windows.h>
+#include <initguid.h>
 #include <intrin.h>
 #include <iphlpapi.h>
 #include <rpc.h>
 #include <shellapi.h>
 #include <tchar.h>
-#include <Windows.h>
-#include <initguid.h>
-#include <KnownFolders.h>
-#include <ShlObj.h>
 
 namespace Crowny
 {

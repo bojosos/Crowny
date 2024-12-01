@@ -302,8 +302,9 @@ namespace Crowny
             Vector<Path> outPaths;
             if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, outPaths, "Open Texture") && outPaths.size() >= 1)
             {
-                Ref<Texture> importedTexture=Importer::Get().Import<Texture>(outPaths[0]);
-                spriteRendererComponent.Texture = static_asset_cast<Texture>(AssetManager::Get().CreateAssetHandle(importedTexture));
+                Ref<Texture> importedTexture = Importer::Get().Import<Texture>(outPaths[0]);
+                spriteRendererComponent.Texture =
+                  static_asset_cast<Texture>(AssetManager::Get().CreateAssetHandle(importedTexture));
             }
         }
 

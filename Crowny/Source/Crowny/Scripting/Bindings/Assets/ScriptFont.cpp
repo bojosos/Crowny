@@ -4,9 +4,7 @@
 
 namespace Crowny
 {
-    ScriptFont::ScriptFont(MonoObject* instance, const AssetHandle<Font>& font) : TScriptAsset(instance, font)
-    {
-    }
+    ScriptFont::ScriptFont(MonoObject* instance, const AssetHandle<Font>& font) : TScriptAsset(instance, font) {}
 
     void ScriptFont::InitRuntimeData()
     {
