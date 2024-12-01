@@ -719,7 +719,7 @@ namespace Crowny
 
     AssetHandle<Asset> ProjectLibrary::Load(const FileEntry* entry)
     {
-        const Ref<AssetMetadata> &meta = entry->Metadata;
+        const Ref<AssetMetadata>& meta = entry->Metadata;
         if (meta == nullptr)
             return AssetHandle<Asset>();
 

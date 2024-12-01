@@ -179,13 +179,13 @@ namespace Crowny
         //     CW_ENGINE_ASSERT(false, "Invalid inspector mode");
 
         ImGui::EndChild();
-        const ImGuiMouseCursor cursor=ImGui::GetMouseCursor();
+        const ImGuiMouseCursor cursor = ImGui::GetMouseCursor();
         Entity selectedEntity = HierarchyPanel::GetSelectedEntity();
         if (m_InspectorMode == InspectorMode::GameObject && selectedEntity)
             HandleInspectorDragDrop(selectedEntity);
         if (cursor == ImGuiMouseCursor_Arrow ||
-            ImGui::GetMouseCursor() == ImGuiMouseCursor_Dummy) // Need to reset the cursor here. The one from the HandleInspectorDragDrop
-                                              // will override it.
+            ImGui::GetMouseCursor() == ImGuiMouseCursor_Dummy) // Need to reset the cursor here. The one from the
+                                                               // HandleInspectorDragDrop will override it.
             ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
         EndPanel();
         // ImGui::Begin("Material");

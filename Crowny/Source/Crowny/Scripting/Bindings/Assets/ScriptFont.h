@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Crowny/Assets/AssetHandle.h"
-#include "Crowny/Renderer/Font.h"
 #include "Crowny/Ecs/Components.h"
+#include "Crowny/Renderer/Font.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptAsset.h"
 
 #include "Crowny/Scripting/Mono/MonoArray.h"

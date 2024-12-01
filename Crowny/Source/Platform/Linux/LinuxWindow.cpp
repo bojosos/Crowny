@@ -21,7 +21,8 @@ namespace Crowny
     void LinuxWindow::OnUpdate()
     {
         glfwPollEvents();
-        if (m_CursorType != m_OldCursorType) {
+        if (m_CursorType != m_OldCursorType)
+        {
             SetCursorInternal(m_CursorType);
             m_OldCursorType = m_CursorType;
         }
