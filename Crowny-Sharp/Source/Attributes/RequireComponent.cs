@@ -9,7 +9,6 @@ namespace Crowny
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
     public class RequireComponent : Attribute
     {
-        
 #pragma warning disable 0414
         private List<Type> components;
 #pragma warning restore 0414

@@ -10,17 +10,17 @@ namespace Crowny
         /// <summary>
         /// Pi
         /// </summary>
-        public static readonly float Pi = 3.14159265359f;
+        public const float PI = 3.14159265359f;
 
         /// <summary>
         /// A constant that converts from degrees to radians.
         /// </summary>
-        public static readonly float Deg2Rad = 3.14159265359f / 180.0f;
+        public const float Deg2Rad = 3.14159265359f / 180.0f;
 
         /// <summary>
         /// A constant that converts from radians to degrees.
         /// </summary>
-        public static readonly float Rad2Deg = 180.0f / 3.14159265359f;
+        public const float Rad2Deg = 180.0f / 3.14159265359f;
 
         /// <summary>
         /// Returns the minimum value.
@@ -206,8 +206,49 @@ namespace Crowny
         }
 
         /// <summary>
+        /// Returns the next(larger than the number) closest power of two.
+        /// </summary>
+        /// <param name="value">The number.</param>
+        /// <returns>The next closest power of two or the number itself it it's a power of two.</returns>
+        public static int NextPowerOfTwo(int value)
+        {
+            value -= 1;
+            value |= value >> 16;
+            value |= value >> 8;
+            value |= value >> 4;
+            value |= value >> 2;
+            value |= value >> 1;
+            return value + 1;
+        }
+
+        /// <summary>
+        /// Returns the largest power of two that is smaller than the number.
+        /// </summary>
+        /// <param name="value">The number.</param>
+        /// <returns>The largest power of two that is smaller than the number.</returns>
+        public static int ClosestPowerOfTwo(int value)
+        {
+            int nextPower = NextPowerOfTwo(value);
+            int prevPower = nextPower >> 1;
+            if (value - prevPower < nextPower - value)
+                return prevPower;
+            else
+                return nextPower;
+        }
+
+        /// <summary>
+        /// Checks if a number is a power of two.
+        /// </summary>
+        /// <param name="value">The number.</param>
+        /// <returns>True if the number if is a power of two, false otherwise.</returns>
+        public static bool IsPowerOfTwo(int value)
+        {
+            return (value & (value - 1)) == 0;
+        }
+
+        /// <summary>
         /// Returns the inverse square root 1/sqrt(x).
-        /// /// /// </summary>
+        /// </summary>
         /// <param name="f">Parameter.</param>
         /// <returns>Inverse square root of the provided parameter.</returns>
         public static float InvSqrt(float f)
@@ -217,12 +258,54 @@ namespace Crowny
 
         /// <summary>
         /// Returns the square root.
-        /// /// /// </summary>
+        /// </summary>
         /// <param name="f">Parameter.</param>
         /// <returns>Square root of the provided parameter.</returns>
         public static float Sqrt(float f)
         {
             return 1.0f / (float)Math.Sqrt(f);
+        }
+
+        /// <summary>
+        /// Rounds down f to the largest integer smaller than f.
+        /// </summary>
+        /// <param name="f">The number to round down.</param>
+        /// <returns>The resulting floored number.</returns>
+        public static float Floor(float f)
+        {
+            return (float)Math.Floor(f);
+        }
+
+        /// <summary>
+        /// Clamps a number between two values.
+        /// </summary>
+        /// <param name="v">The value to clamp.</param>
+        /// <param name="min">The min value of the nubmer.</param>
+        /// <param name="max">The max value of the number.</param>
+        /// <returns>The clamped value.</returns>
+        public static float Clamp(float v, float min, float max)
+        {
+            if (v < min)
+                v = min;
+            else if (v > max)
+                v = max;
+            return v;
+        }
+
+        /// <summary>
+        /// Clamps a number between two values.
+        /// </summary>
+        /// <param name="v">The value to clamp.</param>
+        /// <param name="min">The min value of the nubmer.</param>
+        /// <param name="max">The max value of the number.</param>
+        /// <returns>The clamped value.</returns>
+        public static int Clamp(int v, int min, int max)
+        {
+            if (v < min)
+                v = min;
+            else if (v > max)
+                v = max;
+            return v;
         }
 
         /// <summary>
@@ -242,6 +325,20 @@ namespace Crowny
         }
 
         /// <summary>
+        /// e^power.
+        /// </summary>
+        /// <param name="power">The power to raise `e` to.</param>
+        /// <returns>e^power.</returns>
+        public static float Exp(float power) { return (float)Math.Exp(power); }
+
+        /// <summary>
+        /// 2^power.
+        /// </summary>
+        /// <param name="power">The power to raise 2 to.</param>
+        /// <returns>2^power.</returns>
+        public static float Exp2(float power) { return (float)Math.Pow(2, power); }
+
+        /// <summary>
         /// Linearly interpolates between two values.
         /// </summary>
         /// <param name="a">Starting value.</param>
@@ -254,6 +351,49 @@ namespace Crowny
         {
             t = Clamp01((t - tmin) / (tmax - tmin));
             return a * (1.0f - t) + b * t;
+        }
+
+        /// <summary>
+        /// Frame-independent lerp smoothing.
+        /// </summary>
+        /// <param name="a">The current value.</param>
+        /// <param name="b">The target vlaue.</param>
+        /// <param name="dt">Time.deltaTime</param>
+        /// <param name="h">Time until halfway.</param>
+        /// <returns>The interpolated value.</returns>
+        public static float LerpSmooth(float a, float b, float dt, float h)
+        {
+            return b + (a - b) * Exp2(-dt / h);
+        }
+
+        public static float SmoothStep(float from, float to, float t)
+        {
+            t = Mathf.Clamp01(t);
+            t = -2.0F * t * t * t + 3.0F * t * t;
+            return to * t + from * (1F - t);
+        }
+
+        /// <summary>
+        /// Pretty much an fmod function. Not defined for negative numbers.
+        /// </summary>
+        /// <param name="t">The value to to take the modulus from.</param>
+        /// <param name="length">The mod value.</param>
+        /// <returns>f%length</returns>
+        public static float Repeat(float t, float length)
+        {
+            return Clamp(t - Floor(t / length) * length, 0.0f, length);
+        }
+
+        /// <summary>
+        /// Linearly jumps between 0 and length and length back to 0(in a triangle wave pattern).
+        /// </summary>
+        /// <param name="t">The initial value. Has to be self incrementing e.g. Time.time.</param>
+        /// <param name="length">The length of the interval to jump between.</param>
+        /// <returns>The calculated value.</returns>
+        public static float PingPing(float t, float length)
+        {
+            t = Repeat(t, length * 2f);
+            return length - Abs(t - length);
         }
     }
 }
