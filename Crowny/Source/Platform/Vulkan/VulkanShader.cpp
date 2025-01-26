@@ -21,7 +21,7 @@ namespace Crowny
 
     VulkanShader::VulkanShader(const Ref<BinaryShaderData>& data) : ShaderStage(data)
     {
-        VulkanDevice& device = *gVulkanRenderAPI().GetPresentDevice().get();
+        VulkanDevice& device = *gVulkanRenderAPI().GetPresentDevice();
         m_ShaderStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         m_ShaderStage.pNext = nullptr;
         m_ShaderStage.flags = 0;
@@ -29,6 +29,7 @@ namespace Crowny
         // m_ShaderStage.pName = data.EntryPoint.c_str();
         m_ShaderStage.pName = "main";
         m_ShaderStage.pSpecializationInfo = nullptr;
+        m_ShaderStage.module = VK_NULL_HANDLE;
 
         VkShaderModuleCreateInfo moduleCreateInfo{};
         moduleCreateInfo.pNext = nullptr;
@@ -37,7 +38,10 @@ namespace Crowny
         moduleCreateInfo.codeSize = m_ShaderData->Data.size();
         moduleCreateInfo.pCode = (uint32_t*)m_ShaderData->Data.data();
         vkCreateShaderModule(device.GetLogicalDevice(), &moduleCreateInfo, gVulkanAllocator, &m_ShaderStage.module);
-        m_Module = device.GetResourceManager().Create<VulkanShaderModule>(m_ShaderStage.module);
+        m_Module = device.GetResourceManager().Create<VulkanShaderModule>(m_ShaderStage.module
+
+        if (m_ShaderData->Type==ShaderType::VERTEX_SHADER)
+            m_BufferLayout = std::move(m_ShaderData->VertexLayout);
     }
 
     VulkanShader::~VulkanShader() { m_Module->Destroy(); }

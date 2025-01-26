@@ -8,6 +8,8 @@
 namespace Crowny
 {
 
+    const GpuDataParameterInfos UniformParams::ParameterInfo;
+
     UniformParams::UniformParams(const Ref<UniformParamInfo>& paramInfo) : m_ParamInfo(paramInfo)
     {
         uint32_t numParamBlocks = m_ParamInfo->GetNumElements(UniformParamInfo::ParamType::ParamBlock);

@@ -5,6 +5,7 @@
 #include "Platform/Vulkan/VulkanQueue.h"
 #include "Platform/Vulkan/VulkanResource.h"
 
+#include "Crowny/Common/FileSystem.h"
 #include "Platform/Vulkan/VulkanDescriptorPool.h"
 #include "Platform/Vulkan/VulkanDevice.h"
 #include "Platform/Vulkan/VulkanQuery.h"
@@ -12,6 +13,8 @@
 
 namespace Crowny
 {
+    static const char* PIPELINE_CACHE_FILE = "vk_pipeline_cache.blob";
+
     VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, uint32_t idx) : m_PhysicalDevice(physicalDevice)
     {
         vkGetPhysicalDeviceProperties(physicalDevice, &m_DeviceProperties);
@@ -124,6 +127,30 @@ namespace Crowny
             m_DescriptorManager = new VulkanDescriptorManager(*this);
             m_ResourceManager = new VulkanResourceManager(*this);
         }
+
+        VkPipelineCacheCreateInfo pipelineCacheCI;
+        pipelineCacheCI.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+        pipelineCacheCI.pNext = nullptr;
+        // TODO: File cache with a proper file, not a hard-coded one! Probably in the assets internal folder
+        // for editor and some common cache directory for runtime.
+        if (fs::exists(PIPELINE_CACHE_FILE))
+        {
+            auto [data, size] = FileSystem::ReadFile(PIPELINE_CACHE_FILE);
+            if (size > 0 && data)
+            {
+                pipelineCacheCI.initialDataSize = size;
+                pipelineCacheCI.pInitialData = data;
+            }
+            delete[] data;
+        }
+        else
+        {
+            pipelineCacheCI.initialDataSize = 0;
+            pipelineCacheCI.pInitialData = nullptr;
+        }
+        const VkResult result =
+          vkCreatePipelineCache(m_LogicalDevice, &pipelineCacheCI, gVulkanAllocator, &m_PipelineCache);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
     }
 
     VulkanDevice::~VulkanDevice()
@@ -149,6 +176,20 @@ namespace Crowny
         delete m_ResourceManager;
         vmaDestroyAllocator(m_Allocator);
         vkDestroyDevice(m_LogicalDevice, gVulkanAllocator);
+
+        // Store the pipeline data in a file.
+        size_t dataSize = 0;
+        result = vkGetPipelineCacheData(m_LogicalDevice, m_PipelineCache, &dataSize, nullptr);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        if (dataSize > 0)
+        {
+            Vector<uint8_t> data;
+            data.resize(dataSize);
+            result = vkGetPipelineCacheData(m_LogicalDevice, m_PipelineCache, &dataSize, data.data());
+            CW_ENGINE_ASSERT(result == VK_SUCCESS);
+            FileSystem::WriteFile(PIPELINE_CACHE_FILE, data.data(), dataSize);
+        }
+        vkDestroyPipelineCache(m_LogicalDevice, m_PipelineCache, gVulkanAllocator);
     }
 
     uint32_t VulkanDevice::GetQueueMask(GpuQueueType type, uint32_t queueIdx) const

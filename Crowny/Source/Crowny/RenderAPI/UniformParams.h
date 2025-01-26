@@ -46,6 +46,8 @@ namespace Crowny
         }
         static Ref<UniformParams> Create(const Ref<GraphicsPipeline>& pipeline);
 
+        const static GpuDataParameterInfos ParameterInfo;
+
     protected:
         struct TextureData
         {

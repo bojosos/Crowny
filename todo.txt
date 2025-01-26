@@ -1,0 +1,28 @@
+Make C# math classes visible in inspector. Has to be done manually :/.
+Shaders are a big memory leak. Clean up all stages after. This means though that I have to save the shader object in renderers.
+Better shader/pipeline/vertex buffer workflow for renderers.
+Camera projection saving is wrong.
+Saving a scene adds another empty entity.
+Convert map iterations to structured bindings.
+Stop audio if entity is destroyed.
+Mono: For value types:
+	For normal fields: I can just use the MonoObject without unboxing, however, I need to set it to the value type.
+	For properties: I need to unbox the value of the field, since I am essentially calling a method and Mono requries that I provide a raw pointer to the object.
+	Also for lists of value types I need to call the Item property with the raw pointer of the new value. Should be simple if above 2 are done.
+Looks like I need a way to know what type an Inspectable Member is (field, property).
+Compile ogg, vorbis and OpenAL myself.
+For OpenAL I could just install it, but need to change the premake include directory to point to the install directory.
+Add support(in the asset browser) for the special mouse buttons I can use to go back and forward in a browser.
+
+Look at the FastLZ examples for compressing a file and do something similar with my stream API, since I cannot obtain a raw pointer.
+Implement Decompression.
+Change ScriptRuntime ->m_Registry to GetAllEntitiesWith<> and remove it from scene friends.
+Scene pause button should not pause rendering, it should only pause the simulations.
+Better error checking when serializing/deserializing (consider some automatic system?).
+
+
+Render a depth pre pass.
+Then send that depth info to the subsequent draw calls.
+Draw everything using forward plus rendering.
+Then do shadwos.
+Then do compositing (SSAO, MSAA)

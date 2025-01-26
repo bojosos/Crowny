@@ -38,6 +38,8 @@ namespace Crowny
                                     const Ref<CommandBuffer>& commandBuffer = nullptr) override;
         virtual void SetVertexBuffers(uint32_t idx, Ref<VertexBuffer>* buffers, uint32_t bufferCount,
                                       const Ref<CommandBuffer>& commandBuffer = nullptr) override;
+        virtual void SetVertexLayout(const Ref<BufferLayout>& vertexLayout,
+                                     const Ref<CommandBuffer>& commandBuffer = nullptr) override;
         virtual void Draw(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount = 0,
                           const Ref<CommandBuffer>& commandBuffer = nullptr) override;
         virtual void DrawIndexed(uint32_t startIndex, uint32_t indexCount, uint32_t vertexOffset, uint32_t vertexCount,

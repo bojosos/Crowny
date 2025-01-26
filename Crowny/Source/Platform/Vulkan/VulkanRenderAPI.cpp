@@ -8,6 +8,7 @@
 #include "Platform/Vulkan/VulkanRenderPass.h"
 
 #include "Platform/Vulkan/VulkanUniformParams.h"
+#include "Platform/Vulkan/VulkanVertexBuffer.h"
 
 #include "Crowny/Application/Application.h"
 #include "Crowny/RenderAPI/RenderCapabilities.h"
@@ -220,6 +221,7 @@ namespace Crowny
         VulkanRenderPasses::StartUp();
         VulkanTransferManager::StartUp();
         VulkanTextureManager::StartUp();
+        VulkanBufferLayoutManager::StartUp();
         m_CommandBuffer = std::static_pointer_cast<VulkanCommandBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
     }
 
@@ -250,6 +252,13 @@ namespace Crowny
     {
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
         vkCB->SetVertexBuffers(idx, buffers, numBuffers);
+    }
+
+    void VulkanRenderAPI::SetVertexLayout(const Ref<BufferLayout>& vertexLayout,
+                                          const Ref<CommandBuffer>& commandBuffer)
+    {
+        VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
+        vkCB->SetVertexLayout(vertexLayout);
     }
 
     void VulkanRenderAPI::SetViewport(float x, float y, float width, float height,
@@ -315,7 +324,8 @@ namespace Crowny
 
     void VulkanRenderAPI::DispatchCompute(uint32_t x, uint32_t y, uint32_t z, const Ref<CommandBuffer>& commandBuffer)
     {
-        // m_CommandBuffer->Dispatch(x, y, z); //TODO: Compute calls
+        VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
+        vkCB->Dispatch(x, y, z);
     }
 
     void VulkanRenderAPI::SetUniforms(const Ref<UniformParams>& params, const Ref<CommandBuffer>& commandBuffer)
@@ -357,6 +367,7 @@ namespace Crowny
         VulkanRenderPasses::Shutdown();
         VulkanTextureManager::Shutdown();
         VulkanGpuBufferManager::Shutdown();
+        VulkanBufferLayoutManager::Shutdown();
         m_CommandBuffer = nullptr;
         for (uint32_t i = 0; i < (uint32_t)m_Devices.size(); i++)
             m_Devices[i]->WaitIdle();
@@ -483,5 +494,4 @@ namespace Crowny
     }
 
     VulkanRenderAPI& gVulkanRenderAPI() { return static_cast<VulkanRenderAPI&>(RenderAPI::Get()); }
-} // namespace Crowny
-#undef CW_DEBUG
+} // namespace

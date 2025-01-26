@@ -6,7 +6,8 @@
 
 namespace Crowny
 {
-
+    class Shader;
+    class ShaderStage;
     class VulkanRenderPass;
 
     struct DepthStencilStateDesc
@@ -14,12 +15,30 @@ namespace Crowny
         bool EnableDepthRead = true;
         bool EnableDepthWrite = true;
         CompareFunction DepthCompareFunction = CompareFunction::LESS;
+
         bool EnableStencil = false;
+        uint8_t StencilReadMask = 0xff;
+        uint8_t StencilWriteMask = 0xff;
+
+        CompareFunction StencilFrontCompare = CompareFunction::ALWAYS_PASS;
+        StencilOperation StencilFrontFailOp = StencilOperation::Keep;
+        StencilOperation StencilFrontDepthFailOp = StencilOperation::Keep;
+        StencilOperation StencilFrontPassOp = StencilOperation::Keep;
+
+        CompareFunction StencilBackCompare = CompareFunction::ALWAYS_PASS;
+        StencilOperation StencilBackFailOp = StencilOperation::Keep;
+        StencilOperation StencilBackDepthFailOp = StencilOperation::Keep;
+        StencilOperation StencilBackPassOp = StencilOperation::Keep;
+
+        static Ref<DepthStencilStateDesc> GetDefault();
     };
 
+    // TODO: This should not be reused in the PipelineStateDesc. There I should be using completely different structures
+    // that cannot be changed.
     struct BlendStateDesc
     {
         bool EnableBlending = false;
+        bool AlphaToCoverage = false;
 
         BlendFactor SrcBlend = BlendFactor::One;
         BlendFactor DstBlend = BlendFactor::Zero;
@@ -28,10 +47,21 @@ namespace Crowny
         BlendFactor SrcBlendAlpha = BlendFactor::One;
         BlendFactor DstBlendAlpha = BlendFactor::Zero;
         BlendFunction BlendOpAlpha = BlendFunction::ADD;
+
+        static Ref<BlendStateDesc> GetDefault();
     };
 
     struct RasterizerStateDesc
     {
+        CullingMode CullMode = CullingMode::CULL_COUNTERCLOCKWISE;
+        float DepthBias = 0.0f;
+        float DepthBiasSlope = 0.0f;
+        float DepthBiasClamp = 0.0f;
+        PolygonMode PolygonDrawMode = PolygonMode::Solid;
+        bool DepthClipEnable = false;
+        bool ScissorsEnabled = false;
+
+        static Ref<RasterizerStateDesc> GetDefault();
     };
 
     struct PipelineStateDesc
@@ -42,9 +72,9 @@ namespace Crowny
         Ref<ShaderStage> HullShader;
         Ref<ShaderStage> DomainShader;
 
-        RasterizerStateDesc RasterizerState;
-        DepthStencilStateDesc DepthStencilState;
-        BlendStateDesc BlendState;
+        Ref<RasterizerStateDesc> RasterizerState;
+        Ref<DepthStencilStateDesc> DepthStencilState;
+        Ref<BlendStateDesc> BlendState;
     };
 
     // TODO: Change the name of the file
@@ -57,7 +87,7 @@ namespace Crowny
         const Ref<UniformParamInfo>& GetParamInfo() const { return m_ParamInfo; }
 
     public:
-        static Ref<GraphicsPipeline> Create(const PipelineStateDesc& props, const BufferLayout& layout);
+        static Ref<GraphicsPipeline> Create(const PipelineStateDesc& props);
 
     protected:
         PipelineStateDesc m_Data;
@@ -67,13 +97,13 @@ namespace Crowny
     class ComputePipeline
     {
     public:
-        ComputePipeline(const Ref<Shader>& computeShader);
+        ComputePipeline(const Ref<ShaderStage>& computeShader);
         virtual ~ComputePipeline() = default;
 
         const Ref<UniformParamInfo>& GetParamInfo() const { return m_ParamInfo; }
 
     public:
-        static Ref<ComputePipeline> Create(const Ref<Shader>& computeShader);
+        static Ref<ComputePipeline> Create(const Ref<ShaderStage>& computeShader);
 
     protected:
         Ref<ShaderStage> m_Shader;

@@ -13,7 +13,7 @@
 #include "Crowny/RenderAPI/VertexArray.h"
 #include "Crowny/Renderer/Camera.h"
 #include "Crowny/Renderer/Font.h"
-#include "Crowny/Renderer/Renderer.h"
+#include "Crowny/Renderer/Material.h"
 #include "Crowny/Utils/ShaderCompiler.h"
 
 #include "MSDFData.h"
@@ -84,12 +84,12 @@ namespace Crowny
 
         // Circles
         Ref<VertexBuffer> CircleVertexBuffer;
-        Ref<GraphicsPipeline> CirclePipeline;
         uint32_t CircleIndexCount = 0;
         uint32_t CircleVertexCount = 0;
-        CircleVertex* CircleBuffer = nullptr;
-        CircleVertex* CircleTmpBuffer = nullptr;
-        Ref<UniformBufferBlock> CircleProjectionView;
+        CircleVertex* CircleBuffer = nullptr;    // TODO: Better naming for these like base and current
+        CircleVertex* CircleTmpBuffer = nullptr; // TODO: Better naming for these like base and current
+
+        Ref<Material> CircleMaterial;
         Ref<UniformParams> CircleUniforms;
 
         // Text
@@ -132,59 +132,50 @@ namespace Crowny
         s_Data->QuadIndexBuffer = IndexBuffer::Create(indices, RENDERER_INDICES_SIZE);
         AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(RENDERER2D_SHADER_PATH);
         // Ref<Shader> shader = Importer::Get().Import<Shader>(RENDERER2D_SHADER_PATH);
-        Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
-        Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
-        s_Data->QuadVertexBuffer = VertexBuffer::Create(RENDERER_BUFFER_SIZE, BufferUsage::DYNAMIC_DRAW);
-        BufferLayout layout = { BufferElement(ShaderDataType::Float4, "a_Coordinates"),
-                                BufferElement(ShaderDataType::Float4, "a_Color"),
-                                BufferElement(ShaderDataType::Float2, "a_Uvs"),
-                                BufferElement(ShaderDataType::Float, "a_Tid"),
-                                BufferElement(ShaderDataType::Int, "a_ObjectID") };
-        s_Data->QuadVertexBuffer->SetLayout(layout);
+        // Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
+        // Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
+        // s_Data->QuadVertexBuffer = VertexBuffer::Create(RENDERER_BUFFER_SIZE, BufferUsage::DYNAMIC_DRAW);
+        // BufferLayout layout = { BufferElement(ShaderDataType::Float4, "a_Coordinates"),
+        //                         BufferElement(ShaderDataType::Float4, "a_Color"),
+        //                         BufferElement(ShaderDataType::Float2, "a_Uvs"),
+        //                         BufferElement(ShaderDataType::Float, "a_Tid"),
+        //                         BufferElement(ShaderDataType::Int, "a_ObjectID") };
+        // s_Data->QuadVertexBuffer->SetLayout(layout);
 
-        PipelineStateDesc desc;
-        desc.FragmentShader = fragment;
-        desc.VertexShader = vertex;
+        // PipelineStateDesc desc;
+        // desc.FragmentShader = fragment;
+        // desc.VertexShader = vertex;
 
-        s_Data->QuadPipeline = GraphicsPipeline::Create(desc, s_Data->QuadVertexBuffer->GetLayout());
-        s_Data->QuadProjectionView =
-          UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("VP").BlockSize, BufferUsage::DYNAMIC_DRAW);
-        s_Data->QuadUniforms = UniformParams::Create(s_Data->QuadPipeline);
-        s_Data->QuadUniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "VP", s_Data->QuadProjectionView);
-        s_Data->QuadBuffer = s_Data->QuadTmpBuffer = new VertexData[RENDERER_MAX_SPRITES * 4];
-        delete[] indices;
+        // s_Data->QuadPipeline = GraphicsPipeline::Create(desc, s_Data->QuadVertexBuffer->GetLayout());
+        // s_Data->QuadProjectionView =
+        //   UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("VP").BlockSize, BufferUsage::DYNAMIC_DRAW);
+        // s_Data->QuadUniforms = UniformParams::Create(s_Data->QuadPipeline);
+        // s_Data->QuadUniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "VP", s_Data->QuadProjectionView);
+        // s_Data->QuadBuffer = s_Data->QuadTmpBuffer = new VertexData[RENDERER_MAX_SPRITES * 4];
+        // delete[] indices;
     }
 
     static void SetupCircleBuffers()
     {
-        s_Data->CircleVertexBuffer =
-          VertexBuffer::Create(s_Data->MaxLineVertices * sizeof(CircleVertex), BufferUsage::DYNAMIC_DRAW);
-        BufferLayout layout = {
+        s_Data->CircleBuffer = s_Data->CircleTmpBuffer = new CircleVertex[s_Data->MaxLineVertices];
+        s_Data->CircleVertexBuffer = VertexBuffer::Create(s_Data->MaxLineVertices * sizeof(CircleVertex), BufferUsage::DYNAMIC_DRAW);
+        const Ref<BufferLayout> layout = CreateRef<BufferLayout>(BufferLayout{
             { ShaderDataType::Float3, "a_WorldPosition" }, { ShaderDataType::Float3, "a_LocalPosition" },
             { ShaderDataType::Float4, "a_Color" },         { ShaderDataType::Float, "a_Thickness" },
             { ShaderDataType::Float, "a_Fade" },           { ShaderDataType::Int, "a_Id" }
-        };
+        });
         s_Data->CircleVertexBuffer->SetLayout(layout);
 
-        AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>("Resources/Shaders/Circle.asset");
-        // Ref<Shader> shader = Importer::Get().Import<Shader>("Resources/Shaders/Circle.glsl");
-        Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
-        Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
-        PipelineStateDesc desc;
-        desc.FragmentShader = fragment;
-        desc.VertexShader = vertex;
-
-        s_Data->CirclePipeline = GraphicsPipeline::Create(desc, layout);
-        s_Data->CircleBuffer = s_Data->CircleTmpBuffer = new CircleVertex[s_Data->MaxLineVertices];
-        s_Data->CircleProjectionView = UniformBufferBlock::Create(
-          vertex->GetUniformDesc()->Uniforms.at("Camera").BlockSize, BufferUsage::DYNAMIC_DRAW);
-        s_Data->CircleUniforms = UniformParams::Create(s_Data->CirclePipeline);
-        s_Data->CircleUniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "Camera",
-                                                      s_Data->CircleProjectionView);
+        // AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>("Resources/Shaders/Circle.asset");
+        const Ref<Shader> circleShader = Importer::Get().Import<Shader>("Resources/Shaders/Circle.glsl");
+        const Ref<Material> circleMaterial = Material::Create(circleShader);
+        s_Data->CircleMaterial = circleMaterial;
+        s_Data->CircleUniforms = circleMaterial->CreateUniformBuffer();
     }
 
     static void SetupTextBuffers()
     {
+        /*
         s_Data->TextVertexBuffer =
           VertexBuffer::Create(RENDERER_MAX_SPRITES * sizeof(TextVertex), BufferUsage::DYNAMIC_DRAW);
 
@@ -212,6 +203,7 @@ namespace Crowny
           vertex->GetUniformDesc()->Uniforms.at("Camera").BlockSize, BufferUsage::DYNAMIC_DRAW);
         s_Data->TextUniforms = UniformParams::Create(s_Data->TextPipeline);
         s_Data->TextUniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "Camera", s_Data->TextProjectionView);
+        */
     }
 
     void Renderer2D::Init()
@@ -225,20 +217,13 @@ namespace Crowny
 
     void Renderer2D::Begin(const Camera& camera, const glm::mat4& viewMatrix)
     {
-        s_Data->QuadProjectionView->Write(0, glm::value_ptr(viewMatrix), sizeof(glm::mat4));
-        s_Data->QuadProjectionView->Write(sizeof(glm::mat4), glm::value_ptr(camera.GetProjection()), sizeof(glm::mat4));
-        glm::mat4 vp = camera.GetProjection() * viewMatrix;
-        s_Data->CircleProjectionView->Write(0, glm::value_ptr(vp), sizeof(glm::mat4));
-        s_Data->TextProjectionView->Write(0, glm::value_ptr(vp), sizeof(glm::mat4));
+        CW_ENGINE_ASSERT(false);
+        const glm::mat4 viewProjection = camera.GetProjection() * viewMatrix;
     }
 
     void Renderer2D::Begin(const glm::mat4& projection, const glm::mat4& view)
     {
-        s_Data->QuadProjectionView->Write(0, glm::value_ptr(view), sizeof(glm::mat4));
-        s_Data->QuadProjectionView->Write(sizeof(glm::mat4), glm::value_ptr(projection), sizeof(glm::mat4));
-        glm::mat4 vp = projection * view;
-        s_Data->CircleProjectionView->Write(0, glm::value_ptr(vp), sizeof(glm::mat4));
-        s_Data->TextProjectionView->Write(0, glm::value_ptr(vp), sizeof(glm::mat4));
+        CW_ENGINE_ASSERT(false);
     }
 
     float Renderer2D::FindTexture(const AssetHandle<Texture>& texture)
@@ -503,15 +488,16 @@ namespace Crowny
             RenderAPI::Get().SetGraphicsPipeline(s_Data->QuadPipeline);
             RenderAPI::Get().SetVertexBuffers(0, &s_Data->QuadVertexBuffer, 1);
             RenderAPI::Get().SetIndexBuffer(s_Data->QuadIndexBuffer);
-            void* data = s_Data->QuadVertexBuffer->Map(0, s_Data->QuadVertexCount * sizeof(VertexData),
-                                                       GpuLockOptions::WRITE_DISCARD);
+            void* data = s_Data->QuadVertexBuffer->Map(0, s_Data->QuadVertexCount * sizeof(VertexData), GpuLockOptions::WRITE_DISCARD);
             std::memcpy(data, s_Data->QuadTmpBuffer, s_Data->QuadVertexCount * sizeof(VertexData));
             s_Data->QuadVertexBuffer->Unmap();
             for (uint32_t i = 0; i < 8; i++)
+            {
                 if (s_Data->Textures[i])
                     s_Data->QuadUniforms->SetTexture(0, 1 + i, s_Data->Textures[i].GetInternalPtr());
                 else
                     s_Data->QuadUniforms->SetTexture(0, 1 + i, s_Data->Textures[0].GetInternalPtr());
+            }
             RenderAPI::Get().SetUniforms(s_Data->QuadUniforms);
             RenderAPI::Get().DrawIndexed(0, s_Data->QuadIndexCount, 0, s_Data->QuadVertexCount);
         }
@@ -521,10 +507,10 @@ namespace Crowny
     {
         if (s_Data->CircleIndexCount > 0)
         {
-            RenderAPI::Get().SetGraphicsPipeline(s_Data->CirclePipeline);
+            RenderAPI::Get().SetGraphicsPipeline(s_Data->CircleMaterial->GetPass()->GetGraphicsPipeline());
             RenderAPI::Get().SetVertexBuffers(0, &s_Data->CircleVertexBuffer, 1);
-            void* data = s_Data->CircleVertexBuffer->Map(0, s_Data->CircleVertexCount * sizeof(CircleVertex),
-                                                         GpuLockOptions::WRITE_DISCARD);
+            // TODO: Replace with WriteData.
+            void* data = s_Data->CircleVertexBuffer->Map(0, s_Data->CircleVertexCount * sizeof(CircleVertex), GpuLockOptions::WRITE_DISCARD);
             std::memcpy(data, s_Data->CircleTmpBuffer, s_Data->CircleVertexCount * sizeof(CircleVertex));
             s_Data->CircleVertexBuffer->Unmap();
             RenderAPI::Get().SetUniforms(s_Data->CircleUniforms);
@@ -539,8 +525,7 @@ namespace Crowny
             RenderAPI::Get().SetGraphicsPipeline(s_Data->TextPipeline);
             RenderAPI::Get().SetVertexBuffers(0, &s_Data->TextVertexBuffer, 1);
             RenderAPI::Get().SetIndexBuffer(s_Data->QuadIndexBuffer);
-            void* data = s_Data->TextVertexBuffer->Map(0, s_Data->TextVertexCount * sizeof(TextVertex),
-                                                       GpuLockOptions::WRITE_DISCARD);
+            void* data = s_Data->TextVertexBuffer->Map(0, s_Data->TextVertexCount * sizeof(TextVertex), GpuLockOptions::WRITE_DISCARD);
             std::memcpy(data, s_Data->TextTmpBuffer, s_Data->TextVertexCount * sizeof(TextVertex));
             s_Data->TextVertexBuffer->Unmap();
             s_Data->TextUniforms->SetTexture(0, 1, s_Data->FontAtlasTexture);
@@ -551,9 +536,9 @@ namespace Crowny
 
     void Renderer2D::Flush()
     {
-        FlushQuads();
+        // FlushQuads();
         FlushCircles();
-        FlushText();
+        // FlushText();
     }
 
     void Renderer2D::Shutdown()
@@ -563,7 +548,7 @@ namespace Crowny
         s_Data->QuadPipeline = nullptr;
         s_Data->QuadUniforms = nullptr;
         s_Data->CircleVertexBuffer = nullptr;
-        s_Data->CirclePipeline = nullptr;
+        s_Data->CircleMaterial = nullptr;
         s_Data->TextVertexBuffer = nullptr;
         s_Data->TextPipeline = nullptr;
         s_Data->FontAtlasTexture = nullptr;
