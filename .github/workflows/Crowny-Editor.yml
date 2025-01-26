@@ -8,7 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2.3.4
         with:
-          submodules: true
+          submodules: recursive
       - name: Download deps
         run: |
           sudo apt update
@@ -22,4 +22,4 @@ jobs:
           chmod +x 3rdparty/premake/bin/premake5
           bash Scripts/genprojects.sh
       - name: Build
-        run: make Crowny-Editor -j2 config=release_linux64 CXX=clang++-12
+        run: make Crowny-Editor -j16 config=release_linux64 CXX=clang++
