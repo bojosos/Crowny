@@ -18,21 +18,6 @@ namespace Crowny
     typedef Flags<ShaderLanguage> ShaderLanguageFlags;
     CW_FLAGS_OPERATORS(ShaderLanguageFlags);
 
-    struct BinaryShaderData
-    {
-        Vector<uint8_t> Data;
-        String EntryPoint;
-        ShaderType Type = ShaderType::VERTEX_SHADER;
-        Ref<UniformDesc> Description;
-
-        BinaryShaderData() = default;
-        BinaryShaderData(const Vector<uint8_t>& data, const String& entryPoint, ShaderType type,
-                         const Ref<UniformDesc>& uniformDesc)
-          : Data(data), EntryPoint(entryPoint), Type(type), Description(uniformDesc)
-        {
-        }
-    };
-
     class ShaderCompiler
     {
     public:
@@ -44,7 +29,7 @@ namespace Crowny
                                                   const UnorderedMap<String, String>& defines);
 
     private:
-        static Ref<UniformDesc> GetUniformDesc(const Vector<uint8_t>& binaryShaderData);
+        static void Reflect(const Vector<uint8_t>& binaryShaderData, Ref<BinaryShaderData>& outData);
         static UnorderedMap<ShaderType, String> Parse(const String& streamData);
     };
 

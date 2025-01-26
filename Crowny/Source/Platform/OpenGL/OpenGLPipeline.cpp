@@ -9,7 +9,7 @@ namespace Crowny
 
     OpenGLGraphicsPipeline::~OpenGLGraphicsPipeline() {}
 
-    OpenGLComputePipeline::OpenGLComputePipeline(const Ref<Shader>& shader) : ComputePipeline(shader) {}
+    OpenGLComputePipeline::OpenGLComputePipeline(const Ref<ShaderStage>& shader) : ComputePipeline(shader) {}
 
     OpenGLComputePipeline::~OpenGLComputePipeline() {}
 

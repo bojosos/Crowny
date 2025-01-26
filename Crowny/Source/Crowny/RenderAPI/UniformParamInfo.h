@@ -1,9 +1,8 @@
 #pragma once
 
-#include "Crowny/RenderAPI/Shader.h"
-
 namespace Crowny
 {
+    class UniformDesc;
 
     struct UniformParamDesc
     {

@@ -28,12 +28,11 @@ namespace Crowny
 
         VulkanCommandBufferPool& GetCmdBufferPool() const { return *m_CommandBufferPool; }
         VulkanQueryPool& GetQueryPool() const { return *m_QueryPool; }
-
-        uint32_t GetMemoryType(uint32_t typeBits, VkMemoryPropertyFlags properties, VkBool32* found = nullptr);
         VkDevice GetLogicalDevice() const { return m_LogicalDevice; }
-        VkPhysicalDeviceProperties GetDeviceProperties() const { return m_DeviceProperties; }
+        const VkPhysicalDeviceProperties &GetDeviceProperties() const { return m_DeviceProperties; }
         VkPhysicalDevice GetPhysicalDevice() const { return m_PhysicalDevice; }
-        VkPhysicalDeviceFeatures GetDeviceFeatures() const { return m_DeviceFeatures; }
+        const VkPhysicalDeviceFeatures &GetDeviceFeatures() const { return m_DeviceFeatures; }
+        VkPipelineCache GetPipelineCache() const { return m_PipelineCache; }
         void SetPrimary();
         void SetIndex(uint32_t idx);
         uint32_t GetIndex() const { return 0; }
@@ -72,6 +71,7 @@ namespace Crowny
         VulkanDescriptorManager* m_DescriptorManager;
         VulkanResourceManager* m_ResourceManager;
 
+        VkPipelineCache m_PipelineCache;
         VkPhysicalDeviceProperties m_DeviceProperties;
         VkPhysicalDeviceFeatures m_DeviceFeatures;
         VkPhysicalDeviceFeatures m_EnabledFeatures;

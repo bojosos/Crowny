@@ -15,8 +15,8 @@ namespace Crowny
         virtual void Bind() const override;
         virtual void Unbind() const override;
 
-        virtual const BufferLayout& GetLayout() const override { return m_Layout; };
-        virtual void SetLayout(const BufferLayout& layout) override { m_Layout = layout; }
+        virtual const Ref<BufferLayout>& GetLayout() const override { return m_Layout; };
+        virtual void SetLayout(const Ref<BufferLayout>& layout) override { m_Layout = layout; }
 
         virtual void WriteData(uint32_t offset, uint32_t length, const void* src,
                                BufferWriteOptions writeOptions /* = BWT_NORMAL */) override
@@ -35,6 +35,6 @@ namespace Crowny
 
     private:
         uint32_t m_RendererID, m_Size;
-        BufferLayout m_Layout;
+        Ref<BufferLayout> m_Layout;
     };
 } // namespace Crowny

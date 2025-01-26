@@ -24,6 +24,7 @@
 #undef Button8
 #undef Button9
 
+#include "Crowny/RenderAPI/Buffer.h"
 #include <vma/vk_mem_alloc.h>
 
 #define MAX_UNIQUE_QUEUES MAX_QUEUES_PER_TYPE* QUEUE_COUNT
@@ -74,10 +75,12 @@ namespace Crowny
     class VulkanUtils
     {
     public:
-        static VkFilter GetFilter(TextureFilter MagFilter);
-        static VkSamplerMipmapMode GetMipFilter(TextureFilter MipFilter);
+        static VkFilter GetFilter(TextureFilter magFilter);
+        static VkSamplerMipmapMode GetMipFilter(TextureFilter mipFilter);
         static VkSamplerAddressMode GetAddressingMode(TextureWrap mode);
         static VkCompareOp GetCompareOp(CompareFunction compareFunc);
+        static VkStencilOp GetStencilOp(StencilOperation op);
+        static VkPolygonMode GetPolygonMode(PolygonMode mode);
         static VkCullModeFlagBits GetCullMode(CullingMode mode);
         static VkBlendOp GetBlendOp(BlendFunction blendFunc);
         static VkBlendFactor GetBlendFactor(BlendFactor factor);
@@ -88,6 +91,7 @@ namespace Crowny
         static VkPrimitiveTopology GetDrawFlags(DrawMode drawMode);
         static VkShaderStageFlagBits GetShaderFlags(ShaderType shaderType);
         static VkIndexType GetIndexType(IndexType indexType);
+        static VkFormat VulkanUtils::GetVertexFormat(ShaderDataType shaderDataType);
         static VkPipelineStageFlags ShaderToPipelineStage(VkShaderStageFlags shaderStageFlags);
         static bool RangeOverlaps(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b);
         static VkFormat GetDummyViewFormat(GpuBufferFormat format);

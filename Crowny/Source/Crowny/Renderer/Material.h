@@ -1,16 +1,17 @@
 #pragma once
 
 #include "Crowny/Assets/Asset.h"
-#include "Crowny/Assets/AssetListener.h"
 #include "Crowny/Assets/AssetHandle.h"
+#include "Crowny/Assets/AssetListener.h"
 
-#include "Crowny/RenderAPI/Shader.h"
-#include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/RenderAPI/GpuBuffer.h"
 #include "Crowny/RenderAPI/SamplerState.h"
+#include "Crowny/RenderAPI/Shader.h"
+#include "Crowny/RenderAPI/Texture.h"
 
 namespace Crowny
 {
+
     class MaterialParamStructData
     {
     public:
@@ -28,20 +29,81 @@ namespace Crowny
     class MaterialParams
     {
     public:
-        enum class ParamType {
+        enum class ParamType
+        {
             Data,
             Texture,
             Sampler,
             Buffer
         };
-        struct ParamData {
+        struct ParamData
+        {
             ParamType Type;
-            ParamDataType DataType;
-
+            ShaderDataType DataType;
+            uint32_t Index;
+            uint32_t ArraySize;
+            mutable uint64_t dirty;
         };
 
+        struct BlockBinding
+        {
+            uint32_t Set;
+            uint32_t Set;
+        };
+
+        struct PassBindings
+        {
+            BlockBinding Bindings[SHADER_COUNT];
+        };
+
+        struct BlockInfo
+        {
+            String Name;
+            uint32_t Set;
+            uint32_t Slot;
+            UniformBufferBlock Buffer;
+            bool Shared;
+            bool AllowUpdate;
+            Bool Used;
+            PassBindings* Bindings;
+        };
+
+        struct DataParameterInfo
+        {
+            uint32_t ParamIdx;
+            uint32_t BlockIdx;
+            uint32_t Offset;
+            uint32_t ArrayStride;
+        };
+
+        struct ObjectParameterInfo
+        {
+            uint32_t ParamIdx;
+            uint32_t SlotIdx;
+            uint32_t SetIdx;
+        };
+
+        struct StageParameterInfo
+        {
+            ObjectParameterInfo* Textures;
+            uint32_t TextureCount;
+            ObjectParameterInfo* LoadStoreTextures;
+            uint32_t LoadStoreTextureCount;
+            ObjectParameterInfo* Buffers;
+            uint32_t BufferCount;
+            ObjectParameterInfo* SamplerStates;
+            uint32_t SamplerStateCount;
+        };
+
+        struct PassParameterInfo
+        {
+            StageParameterInfo Stages[SHADER_COUNT];
+        };
+        MaterialParams() = default;
+        ~MaterialParams();
         MaterialParams(const AssetHandle<Shader>& shader, uint64_t initialVersion = 0);
         uint32_t m_LastSync = 0;
+
     private:
         MaterialParamStructData* m_StructParams = nullptr;
         MaterialParamTextureData* m_TextureParams = nullptr;
@@ -50,15 +112,14 @@ namespace Crowny
         Ref<SamplerState> m_DefaultSamplers = nullptr;
     };
 
-    template<int DataType>
-    class MaterialData
+    template <int DataType> class MaterialData
     {
     public:
-        MaterialData() = default;`
-        MaterialData(const String& name, const Material* material)
-            : m_Index(0), m_ArraySize(0), m_Material(nullptr)
+        MaterialData() = default;
+        MaterialData(const String& name, const Material* material) : m_Index(0), m_ArraySize(0), m_Material(nullptr)
         {
-            if (material != nullptr) {
+            if (material != nullptr)
+            {
                 const Ref<MaterialParameters> params = material->GetParameters();
                 uint32_t paramIndex = 0;
                 auto result = params->GetParamIndex(name, MaterialParams::ParamType::Data, (GpuParamDataType)DataType,
@@ -74,7 +135,8 @@ namespace Crowny
                     params->OnGetParamError(result, name, 0);
             }
         }
-        bool operator==(const std::nullptr_t& null) const { return m_Material== null; }
+        bool operator==(const std::nullptr_t& null) const { return m_Material == null; }
+
     protected:
         uint32_t m_Index;
         uint32_t m_ArraySize;
@@ -85,7 +147,6 @@ namespace Crowny
     public:
         MaterialBase() = default;
         virtual ~MaterialBase() = default;
-        AssetHandle<Shader> GetShader() const { return m_Shader; }
         void SetFloat(const String& name, float value, uint32_t arrayIdx = 0)
         {
             return GetParamFloat(name).Set(value, arrayIdx);
@@ -107,15 +168,14 @@ namespace Crowny
     {
     public:
         Material(const AssetHandle<Shader>& shader);
-        ~Material() = default;
-
-        // void Bind(uint32_t startslot);
+        virtual ~Material() override = default;
 
         void SetShader(const AssetHandle<Shader>& shader);
         AssetHandle<Shader> GetShader() { return m_Shader; }
 
+
+
     protected:
-        Vector<Ref<Texture>> m_Textures;
         AssetHandle<Shader> m_Shader;
 
     private:

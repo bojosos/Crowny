@@ -14,7 +14,8 @@
 
 namespace Crowny
 {
-
+    // TODO: Switch to pragma shader_stage!!!! Although given how I write the shader in a single file we
+    // will still have to split the file in two.
     static shaderc_shader_kind ShaderTypeToShaderC(ShaderType shaderType)
     {
         switch (shaderType)
@@ -96,6 +97,81 @@ namespace Crowny
         return TEXTURE_UNKNOWN;
     }
 
+    static VertexAttribute GetSpecialVertexAttribute(const StringView& attributeName)
+    {
+        if (attributeName == "cw_Position")
+            return VertexAttribute::Position;
+        if (attributeName == "cw_Normal")
+            return VertexAttribute::Normal;
+        if (attributeName == "cw_Tangent")
+            return VertexAttribute::Tangent;
+        if (attributeName == "cw_Bitangent")
+            return VertexAttribute::Bitangent;
+        if (attributeName == "cw_Color")
+            return VertexAttribute::Color;
+        if (attributeName == "cw_TexCoord0")
+            return VertexAttribute::TexCoord0;
+        if (attributeName == "cw_TexCoord1")
+            return VertexAttribute::TexCoord1;
+        if (attributeName == "cw_TexCoord2")
+            return VertexAttribute::TexCoord2;
+        if (attributeName == "cw_TexCoord3")
+            return VertexAttribute::TexCoord3;
+        if (attributeName == "cw_TexCoord4")
+            return VertexAttribute::TexCoord4;
+        if (attributeName == "cw_TexCoord5")
+            return VertexAttribute::TexCoord5;
+        if (attributeName == "cw_TexCoord6")
+            return VertexAttribute::TexCoord6;
+        if (attributeName == "cw_TexCoord7")
+            return VertexAttribute::TexCoord7;
+        if (attributeName == "cw_BlendWeights")
+            return VertexAttribute::BlendWeights;
+        if (attributeName == "cw_BlendIndices")
+            return VertexAttribute::BlendIndices;
+        CW_ENGINE_ASSERT(false);
+        return VertexAttribute::None;
+    }
+
+    static ShaderDataType SprivTypeToShaderType(const spirv_cross::SPIRType& type)
+    {
+        switch (type.basetype)
+        {
+        case spirv_cross::SPIRType::Boolean:
+            return ShaderDataType::Bool;
+        case spirv_cross::SPIRType::Int: // TODO: Width, vecsize, columns?
+            switch (type.vecsize)
+            {
+            case 1:
+                return ShaderDataType::Int;
+            case 2:
+                return ShaderDataType::Int2;
+            case 3:
+                return ShaderDataType::Int3;
+            case 4:
+                return ShaderDataType::Int4;
+            default:
+                CW_ENGINE_ASSERT(false);
+                return ShaderDataType::Int;
+            }
+        case spirv_cross::SPIRType::Float: // TODO: Width, vecsize, columns?
+            switch (type.vecsize)
+            {
+            case 1:
+                return ShaderDataType::Float;
+            case 2:
+                return ShaderDataType::Float2;
+            case 3:
+                return ShaderDataType::Float3;
+            case 4:
+                return ShaderDataType::Float4;
+            default:
+                CW_ENGINE_ASSERT(false);
+                return ShaderDataType::Float;
+            }
+        }
+    }
+
     static bool GetShaderTypeFromString(const String& type, ShaderType& outShaderType)
     {
         if (type == "vertex")
@@ -148,13 +224,16 @@ namespace Crowny
         }
 
         options.SetSourceLanguage(shaderc_source_language_glsl);
-        options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
-        // options.SetOptimizationLevel(shaderc_optimization_level_performance); // if set, can't use uniform names, so
-        // maybe compile twice?
+        options.SetTargetEnvironment(shaderc_target_env_vulkan,
+                                     shaderc_env_version_vulkan_1_2); // TODO: Better versioning
+        // options.SetOptimizationLevel(shaderc_optimization_level_performance); // TODO: if set, can't use uniform
+        // names, so maybe compile twice?
 
+        const char* entryPoints[SHADER_COUNT] = { "vsmain", "fsmain", "gsmain", "dsmain", "hsmain", "csmain" };
+        const char* entryPoint = entryPoints[shaderType];
         shaderc::SpvCompilationResult module =
           compiler.CompileGlslToSpv(source.c_str(), source.size(), ShaderTypeToShaderC(shaderType),
-                                    ShaderTypeToString(shaderType).c_str(), options);
+                                    ShaderTypeToString(shaderType).c_str(), entryPoint, options);
         if (module.GetCompilationStatus() != shaderc_compilation_status_success)
         {
             String shaderTypeString = ShaderTypeToString(shaderType);
@@ -164,14 +243,18 @@ namespace Crowny
         else
             shaderBinaryData = Vector<uint8_t>((uint8_t*)module.cbegin(), (uint8_t*)module.cend());
 
+        // Something went wrong, still thought we need to return a valid shader
         if (shaderBinaryData.empty())
-            return CreateRef<BinaryShaderData>(shaderBinaryData, "main", shaderType, nullptr);
+            return CreateRef<BinaryShaderData>(shaderBinaryData, entryPoint, shaderType, nullptr);
 
         Ref<BinaryShaderData> dataResult = CreateRef<BinaryShaderData>();
         dataResult->Data = shaderBinaryData;
         dataResult->Type = shaderType;
-        dataResult->EntryPoint = "main"; // compiler.get_entry_points_and_stages().front().name;
-        dataResult->Description = GetUniformDesc(shaderBinaryData);
+        dataResult->EntryPoint = entryPoint;
+
+        // Initializes the VertexLayout and UniformDesc.
+        Reflect(shaderBinaryData, dataResult);
+
         return dataResult;
     }
 
@@ -179,16 +262,16 @@ namespace Crowny
                                        const UnorderedMap<String, String>& defines)
     {
         const char* langToken = "#lang";
-        size_t langTokenLength = strlen(langToken);
-        size_t pos = source.find(langToken, 0);
+        const size_t langTokenLength = strlen(langToken);
+        const size_t pos = source.find(langToken, 0);
         ShaderLanguage inputLanguage = ShaderLanguage::GLSL;
         if (pos != String::npos)
         {
-            size_t eol = source.find_first_of("\n\r", pos);
+            const size_t eol = source.find_first_of("\n\r", pos);
             if (eol != String::npos)
             {
-                size_t begin = pos + langTokenLength + 1;
-                String langString = source.substr(begin, eol - begin);
+                const size_t begin = pos + langTokenLength + 1;
+                const String langString = source.substr(begin, eol - begin);
                 if (!GetShaderLanguage(langString, inputLanguage))
                     CW_ENGINE_ERROR("Shader language string {0} not recognized. Assuming shader is in GLSL.",
                                     langString);
@@ -197,43 +280,47 @@ namespace Crowny
         else
             CW_ENGINE_WARN("#lang directive not found in {0}, assuming shader is in GLSL.", path.string());
 
-        ShaderDesc shaderDesc;
-
-        auto sourceShaders = Parse(source);
-        for (auto entry : sourceShaders)
+        // This will have to turn into one big loop that will create variants.
+        ShaderRenderPassDesc passDesc;
+        // TODO: blend states, raster, depth stencil
+        const auto sourceShaders = Parse(source);
+        for (const auto& [type, source] : sourceShaders)
         {
-            Ref<BinaryShaderData> shaderData =
-              CompileStage(entry.second, entry.first, inputLanguage, shaderLanguage, defines);
-            if (entry.first == VERTEX_SHADER)
-                shaderDesc.VertexShader = shaderData;
-            else if (entry.first == FRAGMENT_SHADER)
-                shaderDesc.FragmentShader = shaderData;
-            else if (entry.first == GEOMETRY_SHADER)
-                shaderDesc.GeometryShader = shaderData;
-            else if (entry.first == HULL_SHADER)
-                shaderDesc.DomainShader = shaderData;
-            else if (entry.first == DOMAIN_SHADER)
-                shaderDesc.DomainShader = shaderData;
-            else if (entry.first == COMPUTE_SHADER)
-                shaderDesc.ComputeShader = shaderData;
+            const Ref<BinaryShaderData> shaderData = CompileStage(source, type, inputLanguage, shaderLanguage, defines);
+            if (type == VERTEX_SHADER)
+                passDesc.VertexShader = shaderData;
+            else if (type == FRAGMENT_SHADER)
+                passDesc.FragmentShader = shaderData;
+            else if (type == GEOMETRY_SHADER)
+                passDesc.GeometryShader = shaderData;
+            else if (type == HULL_SHADER)
+                passDesc.DomainShader = shaderData;
+            else if (type == DOMAIN_SHADER)
+                passDesc.DomainShader = shaderData;
+            else if (type == COMPUTE_SHADER)
+                passDesc.ComputeShader = shaderData;
         }
-
+        Ref<ShaderRenderPass> renderPass = ShaderRenderPass::Create(passDesc);
+        Ref<ShaderTechnique> technique = ShaderTechnique::Create({}, ShaderVariation(), { renderPass }); // TODO: tags and variations
+        ShaderDesc shaderDesc;
+        shaderDesc.Techniques = { technique };
         return shaderDesc;
     }
 
-    Ref<UniformDesc> ShaderCompiler::GetUniformDesc(const Vector<uint8_t>& shaderBinaryData)
+    void ShaderCompiler::Reflect(const Vector<uint8_t>& shaderBinaryData, Ref<BinaryShaderData>& outData)
     {
-        spirv_cross::Compiler compiler((uint32_t*)shaderBinaryData.data(), shaderBinaryData.size() / sizeof(uint32_t));
-        spirv_cross::ShaderResources resources = compiler.get_shader_resources();
-
+        const spirv_cross::Compiler compiler((uint32_t*)shaderBinaryData.data(),
+                                             shaderBinaryData.size() / sizeof(uint32_t));
+        const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
         Ref<UniformDesc> uniformDesc = CreateRef<UniformDesc>();
+        // Read all uniform buffers in the current stage.
         for (const auto& uniform : resources.uniform_buffers)
         {
             const auto& bufferType = compiler.get_type(uniform.base_type_id);
-            uint32_t bufferSize = (uint32_t)compiler.get_declared_struct_size(bufferType);
-            uint32_t binding = compiler.get_decoration(uniform.id, spv::DecorationBinding);
-            uint32_t set = compiler.get_decoration(uniform.id, spv::DecorationDescriptorSet);
-            uint32_t memberCount = (uint32_t)bufferType.member_types.size();
+            const uint32_t bufferSize = (uint32_t)compiler.get_declared_struct_size(bufferType);
+            const uint32_t binding = compiler.get_decoration(uniform.id, spv::DecorationBinding);
+            const uint32_t set = compiler.get_decoration(uniform.id, spv::DecorationDescriptorSet);
+            const uint32_t memberCount = (uint32_t)bufferType.member_types.size();
 
             UniformBufferBlockDesc buffer;
             buffer.Name = uniform.name;
@@ -246,8 +333,8 @@ namespace Crowny
         for (const auto& sampler : resources.sampled_images)
         {
             const auto& bufferType = compiler.get_type(sampler.base_type_id);
-            uint32_t binding = compiler.get_decoration(sampler.id, spv::DecorationBinding);
-            uint32_t set = compiler.get_decoration(sampler.id, spv::DecorationDescriptorSet);
+            const uint32_t binding = compiler.get_decoration(sampler.id, spv::DecorationBinding);
+            const uint32_t set = compiler.get_decoration(sampler.id, spv::DecorationDescriptorSet);
 
             UniformResourceDesc resource;
             resource.Name = sampler.name;
@@ -262,8 +349,8 @@ namespace Crowny
         for (const auto& texture : resources.separate_images)
         {
             const auto& bufferType = compiler.get_type(texture.base_type_id);
-            uint32_t binding = compiler.get_decoration(texture.id, spv::DecorationBinding);
-            uint32_t set = compiler.get_decoration(texture.id, spv::DecorationDescriptorSet);
+            const const uint32_t binding = compiler.get_decoration(texture.id, spv::DecorationBinding);
+            const const uint32_t set = compiler.get_decoration(texture.id, spv::DecorationDescriptorSet);
 
             UniformResourceDesc resource;
             resource.Name = texture.name;
@@ -277,8 +364,8 @@ namespace Crowny
         for (const auto& sampler : resources.separate_samplers)
         {
             const auto& bufferType = compiler.get_type(sampler.base_type_id);
-            uint32_t binding = compiler.get_decoration(sampler.id, spv::DecorationBinding);
-            uint32_t set = compiler.get_decoration(sampler.id, spv::DecorationDescriptorSet);
+            const uint32_t binding = compiler.get_decoration(sampler.id, spv::DecorationBinding);
+            const uint32_t set = compiler.get_decoration(sampler.id, spv::DecorationDescriptorSet);
 
             UniformResourceDesc resource;
             resource.Name = sampler.name;
@@ -290,8 +377,23 @@ namespace Crowny
 
             uniformDesc->Samplers[resource.Name] = resource;
         }
+        outData->Description = uniformDesc;
 
-        return uniformDesc;
+        // Retrieve the vertex shader input layout
+        if (outData->Type == ShaderType::VERTEX_SHADER)
+        {
+            BufferLayout layout;
+            for (const auto& vertInput : resources.stage_inputs)
+            {
+                const auto& bufferType = compiler.get_type(vertInput.base_type_id);
+                const uint32_t location = compiler.get_decoration(vertInput.id, spv::DecorationLocation);
+                const VertexAttribute attrSemantic = GetSpecialVertexAttribute(vertInput.name);
+                BufferElement element(SprivTypeToShaderType(bufferType), attrSemantic, false);
+                element.Name = vertInput.name;
+                layout.AddBufferElement(element);
+            }
+            outData->VertexLayout = std::move(layout);
+        }
     }
 
     UnorderedMap<ShaderType, String> ShaderCompiler::Parse(const String& source)
@@ -299,7 +401,7 @@ namespace Crowny
         UnorderedMap<ShaderType, String> shaderSources;
 
         const char* typeToken = "#type";
-        size_t typeTokenLength = strlen(typeToken);
+        const size_t typeTokenLength = strlen(typeToken);
         size_t pos = source.find(typeToken, 0);
         while (pos != String::npos)
         {

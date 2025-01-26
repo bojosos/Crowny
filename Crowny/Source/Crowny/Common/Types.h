@@ -72,6 +72,7 @@ namespace Crowny
 
     struct Rect2F
     {
+        // TODO: glm
         float X, Y, Width, Height;
 
         Rect2F() : X(0), Y(0), Width(0), Height(0) {}
@@ -91,11 +92,16 @@ namespace Crowny
 
     struct Rect2I
     {
+        // TODO: glm
         int32_t X, Y, Width, Height;
 
         Rect2I() : X(0), Y(0), Width(0), Height(0) {}
         Rect2I(int32_t x, int32_t y) : X(x), Y(y), Width(0), Height(0) {}
         Rect2I(int32_t x, int32_t y, int32_t width, int32_t height) : X(x), Y(y), Width(width), Height(height) {}
+        bool operator==(const Rect2I& other)
+        {
+            return X == other.X && Y == other.Y && Width == other.Width && Height == other.Height;
+        }
     };
 
     struct Padding
@@ -160,6 +166,25 @@ namespace Crowny
         NOT_EQUAL,
         GREATER,
         GREATER_EQUAL
+    };
+
+    enum class StencilOperation
+    {
+        Keep,
+        Zero,
+        Replace,
+        Increment,
+        Decrement,
+        IncrementWrap,
+        DecrementWrap,
+        Invert
+    };
+
+    enum class PolygonMode
+    {
+        Wireframe,
+        Solid,
+        Points
     };
 
     enum class CullingMode
@@ -410,6 +435,55 @@ namespace Crowny
         Playing,
         Paused,
         Stopped
+    };
+
+    enum class GpuParameterDataType
+    {
+        Float1,
+        Float2,
+        Float3,
+        Float4,
+        Color,
+        Matrix3x3,
+        Matrix4x4,
+        Int1,
+        Int2,
+        Int3,
+        Int4,
+        Bool,
+        Struct,
+        Count
+    };
+
+    struct GpuParameterDataTypeInfo
+    {
+        uint32_t BaseTypeSize;
+        uint32_t Size;
+        uint32_t Alignment;
+        uint32_t RowCount;
+        uint32_t ColoumnCount;
+    };
+
+    struct GpuDataParameterInfos
+    {
+        GpuDataParameterInfos()
+        {
+            std::memset(infos, 0, sizeof(infos));
+            infos[(uint32_t)GpuParameterDataType::Float1] = { 4, 4, 4, 1, 1 };
+            infos[(uint32_t)GpuParameterDataType::Float2] = { 4, 8, 8, 1, 2 };
+            infos[(uint32_t)GpuParameterDataType::Float3] = { 4, 16, 16, 1, 3 };
+            infos[(uint32_t)GpuParameterDataType::Float4] = { 4, 16, 16, 1, 4 };
+            infos[(uint32_t)GpuParameterDataType::Color] = { 4, 16, 16, 1, 4 };
+            infos[(uint32_t)GpuParameterDataType::Matrix3x3] = { 4, 48, 16, 3, 3 };
+            infos[(uint32_t)GpuParameterDataType::Matrix4x4] = { 4, 64, 16, 4, 4 };
+            infos[(uint32_t)GpuParameterDataType::Int1] = { 4, 4, 4, 1, 1 };
+            infos[(uint32_t)GpuParameterDataType::Int2] = { 4, 8, 8, 1, 2 };
+            infos[(uint32_t)GpuParameterDataType::Int3] = { 4, 12, 16, 1, 3 };
+            infos[(uint32_t)GpuParameterDataType::Int4] = { 4, 16, 16, 1, 4 };
+            infos[(uint32_t)GpuParameterDataType::Bool] = { 4, 4, 4, 1, 1 };
+            infos[(uint32_t)GpuParameterDataType::Struct] = { 4, 0, 16, 1, 1 };
+        }
+        GpuParameterDataTypeInfo infos[(uint32_t)GpuParameterDataType::Count];
     };
 
     template <typename... Component> struct ComponentGroup
