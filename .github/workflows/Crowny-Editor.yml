@@ -12,7 +12,7 @@ jobs:
       - name: Download deps
         run: |
           sudo apt update
-          sudo apt-get -y install xorg-dev libgl1-mesa-dev libx11-dev libxcursor-dev uuid-dev clang-13 libvorbis-dev
+          sudo apt-get -y install xorg-dev libgl1-mesa-dev libx11-dev libxcursor-dev uuid-dev clang libvorbis-dev
           sudo apt-get install libvulkan-dev
           sudo apt-get install vulkan-validationlayers-dev spirv-tools
           mkdir -p Crowny/Crowny/Dependencies/vulkan/include/vulkan
