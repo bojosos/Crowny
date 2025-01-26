@@ -8,13 +8,13 @@ jobs:
     steps:
       - uses: actions/checkout@v2.3.4
         with:
-          submodules: true
+          submodules: recursive
       - name: Download deps
         run: |
           sudo apt update
-          sudo apt-get -y install xorg-dev libgl1-mesa-dev libx11-dev libxcursor-dev uuid-dev clang-12 libvorbis-dev
+          sudo apt-get -y install xorg-dev libgl1-mesa-dev libx11-dev libxcursor-dev uuid-dev clang libvorbis-dev
           sudo apt-get install libvulkan-dev
-          sudo apt-get install vulkan-validationlayers-dev spirv-tools
+          sudo apt-get install vulkan-utility-libraries-dev spirv-tools
           mkdir -p Crowny/Crowny/Dependencies/vulkan/include/vulkan
           wget -P Crowny/Dependencies/vulkan/include/vulkan https://raw.githubusercontent.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/master/include/vk_mem_alloc.h
       - name: Generate projects
@@ -22,4 +22,4 @@ jobs:
           chmod +x 3rdparty/premake/bin/premake5
           bash Scripts/genprojects.sh
       - name: Build
-        run: make Crowny-Editor -j2 config=release_linux64 CXX=clang++-12
+        run: make Crowny-Editor -j16 config=release_linux64 CXX=clang++
