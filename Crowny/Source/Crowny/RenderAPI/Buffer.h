@@ -5,10 +5,11 @@ namespace Crowny
     enum class ShaderDataType
     {
         None = 0,
-        Byte,
-        Byte2,
-        Byte3,
-        Byte4,
+        Bool,
+        SByte,
+        SByte2,
+        SByte3,
+        SByte4,
         UByte4,
         Float,
         Float2,
@@ -26,13 +27,15 @@ namespace Crowny
     {
         switch (type)
         {
-        case ShaderDataType::Byte:
+        case ShaderDataType::Bool:
             return 1 * 1;
-        case ShaderDataType::Byte2:
+        case ShaderDataType::SByte:
+            return 1 * 1;
+        case ShaderDataType::SByte2:
             return 2 * 1;
-        case ShaderDataType::Byte3:
+        case ShaderDataType::SByte3:
             return 3 * 1;
-        case ShaderDataType::Byte4:
+        case ShaderDataType::SByte4:
             return 4 * 1;
         case ShaderDataType::UByte4:
             return 4 * 1;
@@ -56,7 +59,6 @@ namespace Crowny
             return 4 * 3;
         case ShaderDataType::Int4:
             return 4 * 4;
-        // case ShaderDataType::Bool:     return 1;
         case ShaderDataType::None: {
             CW_ENGINE_ASSERT(false, "Unknown ShaderDataType!");
             return 0;
@@ -68,6 +70,7 @@ namespace Crowny
 
     enum class VertexAttribute
     {
+        None,
         Position,
         Normal,
         Tangent,
@@ -92,18 +95,25 @@ namespace Crowny
         ShaderDataType Type;
         uint32_t Size;
         uint32_t Offset;
+        uint32_t StreamIdx;
+        uint32_t InstanceRate;
         bool Normalized;
 
-        BufferElement() = default;
+        BufferElement()
+          : StreamIdx(0), Size(0), Offset(0), Normalized(false), Attribute(VertexAttribute::None),
+            Type(ShaderDataType::Float), InstanceRate(0)
+        {
+        }
 
         BufferElement(ShaderDataType type, VertexAttribute attribute, bool normalized = false)
-          : Type(type), Size(ShaderDataTypeSize(type)), Offset(0), Normalized(normalized), Attribute(attribute)
+          : Type(type), Size(ShaderDataTypeSize(type)), Offset(0), Normalized(normalized), Attribute(attribute),
+            StreamIdx(0), InstanceRate(0)
         {
         }
 
         BufferElement(ShaderDataType type, const String& name, bool normalized = false)
           : Name(name), Type(type), Size(ShaderDataTypeSize(type)), Offset(0), Normalized(normalized),
-            Attribute(VertexAttribute::Position)
+            Attribute(VertexAttribute::Position), StreamIdx(0), InstanceRate(0)
         {
         }
 
@@ -111,13 +121,15 @@ namespace Crowny
         {
             switch (Type)
             {
-            case ShaderDataType::Byte:
+            case ShaderDataType::Bool:
                 return 1;
-            case ShaderDataType::Byte2:
+            case ShaderDataType::SByte:
+                return 1;
+            case ShaderDataType::SByte2:
                 return 2;
-            case ShaderDataType::Byte3:
+            case ShaderDataType::SByte3:
                 return 3;
-            case ShaderDataType::Byte4:
+            case ShaderDataType::SByte4:
                 return 4;
             case ShaderDataType::UByte4:
                 return 4;
@@ -141,7 +153,6 @@ namespace Crowny
                 return 3;
             case ShaderDataType::Int4:
                 return 4;
-            // case ShaderDataType::Bool:    return 1;
             case ShaderDataType::None: {
                 CW_ENGINE_ASSERT(false, "Unknown ShaderDataType!");
                 return 0;
@@ -156,9 +167,9 @@ namespace Crowny
     class BufferLayout
     {
     public:
-        BufferLayout() {}
+        BufferLayout() : m_Id(s_NextFreeId++) {}
 
-        BufferLayout(std::initializer_list<BufferElement> elements) : m_Elements(elements)
+        BufferLayout(std::initializer_list<BufferElement> elements) : m_Elements(elements), m_Id(s_NextFreeId++)
         {
             CalculateOffsetsAndStride();
         }
@@ -203,6 +214,8 @@ namespace Crowny
             return 0;
         }
 
+        uint32_t GetId() const { return m_Id; }
+
     private:
         CW_SERIALIZABLE(BufferLayout);
         void CalculateOffsetsAndStride()
@@ -218,6 +231,8 @@ namespace Crowny
         }
 
     private:
+        /* const */ uint32_t m_Id;
+        static uint32_t s_NextFreeId;
         Vector<BufferElement> m_Elements;
         uint32_t m_Stride = 0;
     };

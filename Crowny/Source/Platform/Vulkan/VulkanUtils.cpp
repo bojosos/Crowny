@@ -78,6 +78,43 @@ namespace Crowny
         }
     }
 
+    VkStencilOp VulkanUtils::GetStencilOp(StencilOperation op)
+    {
+        switch (op)
+        {
+        case StencilOperation::Keep:
+            return VK_STENCIL_OP_KEEP;
+        case StencilOperation::Zero:
+            return VK_STENCIL_OP_ZERO;
+        case StencilOperation::Replace:
+            return VK_STENCIL_OP_REPLACE;
+        case StencilOperation::Increment:
+            return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
+        case StencilOperation::Decrement:
+            return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
+        case StencilOperation::IncrementWrap:
+            return VK_STENCIL_OP_INCREMENT_AND_WRAP;
+        case StencilOperation::DecrementWrap:
+            return VK_STENCIL_OP_DECREMENT_AND_WRAP;
+        case StencilOperation::Invert:
+            return VK_STENCIL_OP_INVERT;
+        }
+        return VK_STENCIL_OP_KEEP;
+    }
+
+    VkPolygonMode VulkanUtils::GetPolygonMode(PolygonMode mode)
+    {
+        switch (mode)
+        {
+        case PolygonMode::Wireframe:
+            return VK_POLYGON_MODE_LINE;
+        case PolygonMode::Solid:
+            return VK_POLYGON_MODE_FILL;
+        case PolygonMode::Points:
+            return VK_POLYGON_MODE_POINT;
+        }
+    }
+
     VkCullModeFlagBits VulkanUtils::GetCullMode(CullingMode mode)
     {
         switch (mode)
@@ -205,6 +242,47 @@ namespace Crowny
         default:
             return VK_SHADER_STAGE_VERTEX_BIT;
         }
+    }
+
+    VkFormat VulkanUtils::GetVertexFormat(ShaderDataType shaderDataType) {
+        switch (shaderDataType) {
+        case ShaderDataType::Bool:
+            return VK_FORMAT_R8_SINT;
+        case ShaderDataType::SByte:
+            return VK_FORMAT_R8_SINT;
+        case ShaderDataType::SByte2:
+            return VK_FORMAT_R8G8_SINT;
+        case ShaderDataType::SByte3:
+            return VK_FORMAT_R8G8B8_SINT;
+        case ShaderDataType::SByte4:
+            return VK_FORMAT_R8G8B8A8_SINT;
+        case ShaderDataType::UByte4:
+            return VK_FORMAT_R8G8B8A8_UINT;
+        case ShaderDataType::Float:
+            return VK_FORMAT_R32_SFLOAT;
+        case ShaderDataType::Float2:
+            return VK_FORMAT_R32G32_SFLOAT;
+        case ShaderDataType::Float3:
+            return VK_FORMAT_R32G32B32_SFLOAT;
+        case ShaderDataType::Float4:
+            return VK_FORMAT_R32G32B32A32_SFLOAT;
+        case ShaderDataType::Mat3:
+            CW_ENGINE_ASSERT(false);
+            return VK_FORMAT_R32G32B32A32_SFLOAT;
+        case ShaderDataType::Mat4:
+            CW_ENGINE_ASSERT(false);
+            return VK_FORMAT_R32G32B32A32_SFLOAT;
+        case ShaderDataType::Int:
+            return VK_FORMAT_R32_SINT;
+        case ShaderDataType::Int2:
+            return VK_FORMAT_R32G32_SINT;
+        case ShaderDataType::Int3:
+            return VK_FORMAT_R32G32B32_SINT;
+        case ShaderDataType::Int4:
+            return VK_FORMAT_R32G32B32A32_SINT;
+        }
+        CW_ENGINE_ASSERT(false);
+        return VK_FORMAT_R32G32B32A32_SFLOAT;
     }
 
     VkPipelineStageFlags VulkanUtils::ShaderToPipelineStage(VkShaderStageFlags shaderStageFlags)

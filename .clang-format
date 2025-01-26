@@ -9,6 +9,7 @@ Cpp11BracedListStyle: 'false'
 IndentCaseLabels: 'false'
 IndentWidth: '4'
 Language: Cpp
+ColumnLimit: 150
 NamespaceIndentation: All
 ObjCBlockIndentWidth: '2'
 PointerAlignment: Left

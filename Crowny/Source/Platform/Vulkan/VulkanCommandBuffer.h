@@ -262,6 +262,7 @@ namespace Crowny
         void SetStencilRef(uint32_t value);
         void SetDrawMode(DrawMode drawMode);
         void SetVertexBuffers(uint32_t idx, Ref<VertexBuffer>* bufffers, uint32_t numBuffers);
+        void SetVertexLayout(const Ref<BufferLayout>& bufferLayout);
         void SetIndexBuffer(const Ref<IndexBuffer>& buffer);
         void Draw(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount);
         void DrawIndexed(uint32_t startIdx, uint32_t idxCount, uint32_t vertexOffset, uint32_t instanceCount);
@@ -311,6 +312,8 @@ namespace Crowny
         bool m_ComputePipelineRequiresBind : 1;
         bool m_VertexInputsRequriesBind : 1;
         bool m_BoundUniformsDirty : 1;
+        bool m_StencilRequriesBind : 1;
+        bool m_BufferLayoutDirty : 1;
 
         mutable uint32_t m_NumUsedInterQueueSemaphores = 0;
         std::array<VkClearValue, MAX_FRAMEBUFFER_COLOR_ATTACHMENTS + 1> m_ClearValues{};
@@ -326,7 +329,7 @@ namespace Crowny
         Set<uint32_t> m_ShaderBoundSubresourceInfos;
         uint32_t m_GlobalQueueIdx = -1;
 
-        uint32_t m_RenderTargetReadOnlyFlags = 0;
+        uint32_t m_RenderTargetReadOnlyFlags = 0; // TODO Use the flags class
         RenderSurfaceMask m_RenderTargetLoadMask = RT_NONE;
 
         Rect2I m_ClearArea;
@@ -337,8 +340,11 @@ namespace Crowny
         Ref<VulkanUniformParams> m_BoundUniforms;
         bool m_RenderTargetModified = false;
         VkFence m_Fence;
+
         Rect2F m_Viewport = { 0.0f, 0.0f, 1.0f, 1.0f };
-        Rect2I m_Scissor;
+        Rect2I m_Scissor = { 0, 0, 0, 0 };
+        uint32_t m_StencilRef = 0;
+
         DrawMode m_DrawMode = DrawMode::TRIANGLE_LIST;
         VkDescriptorSet* m_DescriptorSetsTemp;
         DescriptorSetBindFlags m_DescriptorSetsBindState;
@@ -359,6 +365,7 @@ namespace Crowny
         Ref<VulkanComputePipeline> m_ComputePipeline;
         VulkanDevice& m_Device;
         Set<VulkanSwapChain*> m_ActiveSwapChains;
+        Ref<BufferLayout> m_VertexLayout;
 
         VulkanSemaphore* m_IntraQueueSemaphore = nullptr;
         VulkanSemaphore* m_InterQueueSemaphores[MAX_VULKAN_CB_DEPENDENCIES]{};

@@ -1,0 +1,39 @@
+I want:
+	Drag drop
+	Backwards, forwads history
+	Thumbnails
+	Search (with modes - current dir, assets dir, regex)
+	We want shift select, ctrl select
+	Renaming
+	Arrow select and shift + arrows to select items around us
+	Context menus (for items, directories and in editor only)
+	Deselect only editor click
+	Creation of items (scripts, folders, materials)
+	Open directory, in default editor
+	Open C# projects when clicking on scripts
+
+	* Opening treeview entries using the arrow changes the current dir
+	* Add drag drop stuff to single function for treeview and normal view
+	* Tree view create folder and enter opens C# script in vs code
+	* When creating a folder the treeview collapses weirdly
+	* Folders with same names get selected together
+	* Add common key interface for treeview and normal view
+	Maybe the selected item I save in the project is not getting selected when loading the asset browser
+	* Select folder after rename
+	* Unique names in asset browser please
+	* Renaming(also creating new stuff) can create same name entries
+	Maybe rename the Hash function to perhaps include the method
+	* Convert to ImGui key presses
+	Add second selection set for treeview
+	* Normal view to tree view sync
+	Multiple item drag drops
+	Shift move around select
+	* Enter still does weird stuff
+	Rework image stuff to be like in Big Hazel
+	* Possible to use backward/forward mouse buttons when renaming
+	Scroll the asset browser when using arrow keys
+	* Maybe remove the padding scaling
+	Fix same name folders getting selected together when using search
+	Add span width to treeview
+	Replace memcpy with CW_Copy
+	* Need a proper display list, not just the children, so copy the refs

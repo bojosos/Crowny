@@ -346,7 +346,8 @@ namespace Crowny
                                      bool secondary)
       : m_ScissorRequiresBind(true), m_ViewportRequiresBind(true), m_VertexInputsRequriesBind(true),
         m_GraphicsPipelineRequiresBind(true), m_Id(id), m_QueueFamily(queueFamily), m_Device(device), m_Pool(pool),
-        m_ComputePipelineRequiresBind(true), m_NeedsRawMemoryBarrier(false), m_NeedsWarMemoryBarrier(false)
+        m_ComputePipelineRequiresBind(true), m_NeedsRawMemoryBarrier(false), m_NeedsWarMemoryBarrier(false),
+        m_StencilRequriesBind(true), m_BufferLayoutDirty(false)
     {
         uint32_t maxBoundDescriptorSets = device.GetDeviceProperties().limits.maxBoundDescriptorSets;
         m_DescriptorSetsTemp = new VkDescriptorSet[maxBoundDescriptorSets];
@@ -434,10 +435,31 @@ namespace Crowny
 
     bool VulkanCmdBuffer::BindGraphicsPipeline()
     {
+        const Ref<BufferLayout> pipelineLayout = m_GraphicsPipeline->GetBufferLayout();
+        const Ref<VulkanBufferLayout> currentLayout =
+          VulkanBufferLayoutManager::Get().GetBufferLayout(m_VertexLayout, pipelineLayout);
         VulkanRenderPass* renderPass = m_Framebuffer->GetRenderPass();
-        VulkanPipeline* pipeline = m_GraphicsPipeline->GetPipeline(renderPass, m_DrawMode);
-        // get pipeline using the vertex layout and renderpass here, make sure that the flags are correct... not just
-        // this
+        VulkanPipeline* pipeline = m_GraphicsPipeline->GetPipeline(renderPass, m_RenderTargetReadOnlyFlags, m_DrawMode, pipelineLayout);
+        if (pipeline == nullptr)
+            return false;
+
+        const uint32_t numColors = renderPass->GetNumColorAttachments();
+        for (uint32_t i = 0; i < numColors; i++)
+        {
+            const VulkanFramebufferAttachment fbAtt=m_Framebuffer->GetColorAttachment(i);
+            ImageSubresourceInfo& subresourceInfo =
+              FindSubresourceInfo(fbAtt.Image, fbAtt.Surface.Face, fbAtt.Surface.MipLevel);
+            if (subresourceInfo.UseFlags.IsSet(ImageUseFlagBits::Shader) && !pipeline->IsColorReadOnly(i))
+                CW_ENGINE_ERROR("Framebuffer color attachment {0} is used a shader input with enabled writing", i);
+        }
+
+        if (renderPass->HasDepthAttachment())
+        {
+            const VulkanFramebufferAttachment fbDepth = m_Framebuffer->GetDepthStencilAttachment();
+            ImageSubresourceInfo& subresourceInfo = FindSubresourceInfo(fbDepth.Image, fbDepth.Surface.Face, fbDepth.Surface.NumMipLevels);
+            if (subresourceInfo.UseFlags.IsSet(ImageUseFlagBits::Shader) && !pipeline->IsDepthReadOnly())
+                CW_ENGINE_ERROR("Framebuffer depth attachment is used a shader input with enabled writing");
+        }
         m_GraphicsPipeline->RegisterPipelineResources(this);
         RegisterResource(pipeline, VulkanAccessFlagBits::Read);
         vkCmdBindPipeline(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetHandle());
@@ -452,6 +474,23 @@ namespace Crowny
             return;
         m_Viewport = rect;
         m_ViewportRequiresBind = true;
+    }
+
+    void VulkanCmdBuffer::SetScrissorRect(const Rect2I& area)
+    {
+        if (m_Scissor == area)
+            return;
+        m_Scissor = area;
+        m_ScissorRequiresBind = true;
+    }
+
+    void VulkanCmdBuffer::SetStencilRef(uint32_t value)
+    {
+        if (m_StencilRef == value)
+            return;
+
+        m_StencilRef = value;
+        m_StencilRequriesBind = true;
     }
 
     void VulkanCmdBuffer::BindDynamicStates(bool force)
@@ -469,14 +508,30 @@ namespace Crowny
             m_ViewportRequiresBind = false;
         }
 
+        if (m_StencilRequriesBind || force)
+        {
+            vkCmdSetStencilReference(m_CmdBuffer, VK_STENCIL_FRONT_AND_BACK, m_StencilRef);
+            m_StencilRequriesBind = false;
+        }
+
         if (m_ScissorRequiresBind || force)
         {
-            VkRect2D scissors;
-            scissors.offset.x = (int32_t)m_Viewport.X;
-            scissors.offset.y = (int32_t)m_Viewport.Y;
-            scissors.extent.width = m_Framebuffer->GetWidth();
-            scissors.extent.height = m_Framebuffer->GetHeight();
-            vkCmdSetScissor(m_CmdBuffer, 0, 1, &scissors);
+            VkRect2D vkScissors;
+            if (m_GraphicsPipeline->IsScissorsEnabled())
+            {
+                vkScissors.offset.x = m_Scissor.X;
+                vkScissors.offset.y = m_Scissor.Y;
+                vkScissors.extent.width = m_Scissor.Width;
+                vkScissors.extent.height = m_Scissor.Height;
+            }
+            else
+            {
+                vkScissors.offset.x = (int32_t)m_Viewport.X;
+                vkScissors.offset.y = (int32_t)m_Viewport.Y;
+                vkScissors.extent.width = m_Framebuffer->GetWidth();
+                vkScissors.extent.height = m_Framebuffer->GetHeight();
+            }
+            vkCmdSetScissor(m_CmdBuffer, 0, 1, &vkScissors);
             m_ScissorRequiresBind = false;
         }
     }
@@ -1511,7 +1566,7 @@ namespace Crowny
         renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassBeginInfo.pNext = nullptr;
         renderPassBeginInfo.framebuffer = m_Framebuffer->GetHandle();
-        renderPassBeginInfo.renderPass = renderPass->GetHandle();
+        renderPassBeginInfo.renderPass = renderPass->GetVkRenderPass(m_RenderTargetLoadMask, RT_NONE, m_ClearMask);
         renderPassBeginInfo.renderArea.offset.x = m_ClearArea.X;
         renderPassBeginInfo.renderArea.offset.y = m_ClearArea.Y;
         renderPassBeginInfo.renderArea.extent.width = m_ClearArea.Width;
@@ -1990,7 +2045,7 @@ namespace Crowny
         if (m_GraphicsPipeline == nullptr)
             return false;
 
-        return m_RenderTarget != nullptr;
+        return m_RenderTarget != nullptr && m_VertexLayout != nullptr;
     }
 
     void VulkanCmdBuffer::SetDrawMode(DrawMode drawMode)
@@ -2013,6 +2068,14 @@ namespace Crowny
             m_VertexBuffers[i] = std::static_pointer_cast<VulkanVertexBuffer>(buffers[i]);
         }
         m_VertexInputsRequriesBind = true;
+    }
+
+    void VulkanCmdBuffer::SetVertexLayout(const Ref<BufferLayout>& vertexLayout)
+    {
+        if (m_VertexLayout == vertexLayout)
+            return;
+        m_VertexLayout = vertexLayout;
+        m_GraphicsPipelineRequiresBind = true;
     }
 
     void VulkanCmdBuffer::SetIndexBuffer(const Ref<IndexBuffer>& indexBuffer)
@@ -2128,6 +2191,54 @@ namespace Crowny
         if (instanceCount <= 0)
             instanceCount = 1;
         vkCmdDrawIndexed(m_CmdBuffer, idxCount, instanceCount, startIdx, vertexOffset, 0);
+    }
+
+    void VulkanCmdBuffer::Dispatch(uint32_t numGroupsX, uint32_t numGroupsY, uint32_t numGroupsZ)
+    {
+        if (m_ComputePipeline == nullptr)
+        {
+            CW_ENGINE_ASSERT(false);
+            return;
+        }
+        if (IsInRenderPass())
+            EndRenderPass();
+        SetRenderTarget(nullptr, 0, RT_ALL);
+
+        // This will ensure layout transitions are collected
+        BindUniforms();
+        ExecuteWriteHazardBarrier();
+        ExecuteLayoutTransitions();
+
+        if (m_ComputePipelineRequiresBind)
+        {
+            VulkanPipeline* pipeline = m_ComputePipeline->GetPipeline();
+            RegisterResource(pipeline, VulkanAccessFlagBits::Read);
+            m_ComputePipeline->RegisterPipelineResources(this);
+
+            vkCmdBindPipeline(m_CmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->GetHandle());
+            m_ComputePipelineRequiresBind=false;
+        }
+
+        if (m_DescriptorSetsBindState.IsSet(DescriptorSetBindFlagBits::Compute))
+        {
+            if (m_NumBoundDescriptorSets > 0)
+            {
+                VkPipelineLayout pipelineLayout = m_ComputePipeline->GetLayout();
+                vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout, 0,
+                                        m_NumBoundDescriptorSets, m_DescriptorSetsTemp, 0, nullptr);
+            }
+            m_DescriptorSetsBindState.Unset(DescriptorSetBindFlagBits::Compute);
+        }
+
+        vkCmdDispatch(m_CmdBuffer, numGroupsX, numGroupsY, numGroupsZ);
+        for (auto& entry : m_ShaderBoundSubresourceInfos)
+        {
+            ImageSubresourceInfo& info = m_SubresourceInfoStorage[entry];
+            info.UseFlags.Unset(ImageUseFlagBits::Shader);
+            info.ShaderUse.AccessFlags = VulkanAccessFlagBits::None;
+            info.ShaderUse.Stages = 0;
+        }
+        m_ShaderBoundSubresourceInfos.clear();
     }
 
     void VulkanCmdBuffer::AllocateSemaphores(VkSemaphore* semaphores)

@@ -14,6 +14,7 @@ namespace Crowny
 {
     class VulkanRenderPass;
     class VulkanCmdBuffer;
+    class VulkanBufferLayout;
 
     class VulkanPipeline : public VulkanResource
     {
@@ -24,7 +25,8 @@ namespace Crowny
         VkPipeline GetHandle() const { return m_Pipeline; }
 
     private:
-        VkDevice m_Device;
+        std::array<bool, MAX_FRAMEBUFFER_COLOR_ATTACHMENTS> m_ReadOnlyColors;
+        bool m_DepthReadOnly = false;
         VkPipeline m_Pipeline;
     };
 
@@ -34,21 +36,24 @@ namespace Crowny
         VulkanGraphicsPipeline(const PipelineStateDesc& desc, const BufferLayout& layout);
         ~VulkanGraphicsPipeline();
 
-        VulkanPipeline* GetPipeline(VulkanRenderPass* renderPass, DrawMode drawMode);
-        VulkanPipeline* CreatePipeline(VulkanRenderPass* renderPass, DrawMode drawMode);
+        VulkanPipeline* GetPipeline(VulkanRenderPass* renderPass, uint32_t readOnlyFlags, DrawMode drawMode, const Ref<VulkanBufferLayout>& vulkanBufferLayout);
+        VulkanPipeline* CreatePipeline(VulkanRenderPass* renderPass, uint32_t readOnlyFlags, DrawMode drawMode,
+                                       const Ref<VulkanBufferLayout>& vulkanBufferLayout);
         VkPipelineLayout GetLayout() const { return m_PipelineLayout; }
+        const Ref<BufferLayout> &GetBufferLayout() const { return m_BufferLayout; }
         void RegisterPipelineResources(VulkanCmdBuffer* cmdBuffer);
+        bool IsScissorsEnabled() const { return m_ScissorsEnabled; }
 
     private:
+        bool m_ScissorsEnabled = false;
         VkPipelineLayout m_PipelineLayout;
-
+        Ref<BufferLayout> m_BufferLayout;
         VkPipelineShaderStageCreateInfo m_ShaderStageInfos[5];
-        VkVertexInputBindingDescription m_VertexInput = {};
-        Vector<VkVertexInputAttributeDescription> m_Attrs;
         VkPipelineRasterizationStateCreateInfo m_RasterizationInfo = {};
         VkPipelineColorBlendAttachmentState m_BlendAttachmentStates[MAX_FRAMEBUFFER_COLOR_ATTACHMENTS];
         VkPipelineColorBlendStateCreateInfo m_ColorBlendStateInfo = {};
         VkPipelineInputAssemblyStateCreateInfo m_InputAssemblyInfo = {};
+        VkPipelineTessellationStateCreateInfo m_TesselationInfo = {};
         VkPipelineViewportStateCreateInfo m_ViewportInfo = {};
         VkPipelineMultisampleStateCreateInfo m_MultiSampleInfo = {};
         VkPipelineDepthStencilStateCreateInfo m_DepthStencilInfo = {};
@@ -59,7 +64,7 @@ namespace Crowny
     public:
         struct GpuPipelineKey
         {
-            GpuPipelineKey(uint32_t renderpass, DrawMode drawMode);
+            GpuPipelineKey(uint32_t renderPass, uint32_t vertId, uint32_t readOnlyFlags, DrawMode drawMode);
 
             struct HashFunction
             {
@@ -72,6 +77,8 @@ namespace Crowny
             };
 
             uint32_t FramebufferId;
+            uint32_t VertexId;
+            uint32_t ReadOnlyFlags;
             DrawMode DrawOp;
         };
 
@@ -82,16 +89,16 @@ namespace Crowny
     class VulkanComputePipeline : public ComputePipeline
     {
     public:
-        VulkanComputePipeline(const Ref<Shader>& shader);
+        VulkanComputePipeline(const Ref<ShaderStage>& shader);
         ~VulkanComputePipeline();
 
-        VkPipeline GetHandle() const { return m_Pipeline; };
+        VulkanPipeline *GetPipeline() const { return m_Pipeline; };
         VkPipelineLayout GetLayout() const { return m_PipelineLayout; }
         void RegisterPipelineResources(VulkanCmdBuffer* cmdBuffer);
 
     private:
         Ref<VulkanShader> m_Shader;
-        VkPipeline m_Pipeline;
+        VulkanPipeline* m_Pipeline;
         VkPipelineLayout m_PipelineLayout;
     };
 

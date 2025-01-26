@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Common/Module.h"
+#include "Crowny/RenderAPI/Buffer.h"
 
 #include <glm/glm.hpp>
 
@@ -39,6 +40,8 @@ namespace Crowny
                                     const Ref<CommandBuffer>& commandBuffer = nullptr) = 0;
         virtual void SetVertexBuffers(uint32_t idx, Ref<VertexBuffer>* buffers, uint32_t bufferCount,
                                       const Ref<CommandBuffer>& commandBuffer = nullptr) = 0;
+        virtual void SetVertexLayout(const Ref<BufferLayout>& vertexLayout,
+                                     const Ref<CommandBuffer>& commandBuffer = nullptr) = 0;
         virtual void ClearViewport(uint32_t buffers, const glm::vec4& color = glm::vec4(0.0f), float depth = 1.0f,
                                    uint16_t stencil = 0, uint8_t targetMask = 0xFF,
                                    const Ref<CommandBuffer>& commandBuffer = nullptr) = 0;
