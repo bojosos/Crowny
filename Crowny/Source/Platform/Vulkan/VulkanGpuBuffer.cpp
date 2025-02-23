@@ -10,8 +10,12 @@ namespace Crowny
 {
 
     VulkanBuffer::VulkanBuffer(VulkanResourceManager* owner, VkBuffer buffer, VmaAllocation allocation, uint32_t rowPitch, uint32_t slicePitch)
-      : VulkanResource(owner, false), m_Buffer(buffer), m_Allocation(allocation), m_RowPitch(rowPitch), m_SliceHeight(slicePitch)
+      : VulkanResource(owner, false), m_Buffer(buffer), m_Allocation(allocation), m_RowPitch(rowPitch)
     {
+        if (rowPitch != 0)
+            m_SliceHeight = slicePitch / rowPitch;
+        else
+            m_SliceHeight = 0;
     }
 
     VulkanBuffer::~VulkanBuffer()

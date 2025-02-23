@@ -62,7 +62,8 @@ project "Crowny-Editor"
 			"CW",
 			"CW_WINDOWS",
 			"GLFW_INCLUDE_NONE",
-			"_CRT_SECURE_NO_WARNINGS"
+			"_CRT_SECURE_NO_WARNINGS",
+			"CW_PLATFORM_WIN32",
 		}
 
 		libdirs

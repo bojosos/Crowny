@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Assets/Asset.h"
+#include "Crowny/Assets/AssetHandle.h"
 
 namespace Crowny
 {
@@ -50,12 +51,14 @@ namespace Crowny
         virtual AssetType GetAssetType() const override { return AssetType::Font; }
         static AssetType GetStaticType() { return AssetType::Font; }
 
-        static Ref<Font> GetDefault();
+        static AssetHandle<Font> GetDefaultFont();
+        static void SetDefaultFont(const AssetHandle<Font>& font);
 
     private:
         CW_SERIALIZABLE(Font);
 
     private:
+        static AssetHandle<Font> s_DefaultFont;
         MSDFData* m_MSDFData;
         Ref<Texture> m_AtlasTexture;
     };

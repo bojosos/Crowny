@@ -169,7 +169,7 @@ namespace Crowny
                 tightAtlasPacker.setDimensionsConstraint(msdf_atlas::TightAtlasPacker::DimensionsConstraint::MULTIPLE_OF_FOUR_SQUARE);
 
             if (!fontImportOptions->AutomaticFontSampling)
-                tightAtlasPacker.setScale(fontImportOptions->SampingFontSize);
+                tightAtlasPacker.setScale(fontImportOptions->SamplingFontSize);
 
             Timer msdfTimer;
             int remainigGlyphs = tightAtlasPacker.pack(fontData->Glyphs.data(), (int)fontData->Glyphs.size());

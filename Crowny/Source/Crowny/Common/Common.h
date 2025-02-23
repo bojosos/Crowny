@@ -17,7 +17,7 @@
 #define CW_STDCALL __attribute__((stdcall))
 #elif defined(__INTEL_COMPILER)
 #define CW_STDCALL __stdcall
-#elif defined(_MSV_VER)
+#elif defined(_MSC_VER)
 #define CW_STDCALL __stdcall
 #endif
 

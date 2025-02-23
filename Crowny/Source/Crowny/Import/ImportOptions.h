@@ -134,11 +134,11 @@ namespace Crowny
     class FontImportOptions : public ImportOptions
     {
     public:
-        // TODO: Somehow integrate the ImageType stuff from msdfgen.
+        // TODO: Somehow integrate the ImageType font type stuff from msdfgen.
         // The first two modes are rasterized fonts I think, the others are fancy sdf stuff.
         bool GetKerningData = true;
         bool AutomaticFontSampling = true;
-        uint32_t SampingFontSize = 64;
+        uint32_t SamplingFontSize = 64;
         bool AutoSizeAtlas = false;
         Font::AtlasDimensionsConstraint AtlasDimensionsConstraint = Font::AtlasDimensionsConstraint::POWER_OF_TWO_SQUARE;
         uint32_t AtlasWidth = 1024;

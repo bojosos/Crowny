@@ -121,6 +121,7 @@ namespace Crowny
             bool layerFound = false;
             for (const auto& layerProps : availableLayers)
             {
+                CW_ENGINE_INFO("Validation layer: {}, {}", layerProps.layerName, layerProps.description);
                 if (std::strcmp(layerName, layerProps.layerName) == 0)
                 {
                     layerFound = true;
