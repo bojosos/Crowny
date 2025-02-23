@@ -306,6 +306,16 @@ namespace Crowny
                     data = CreateRef<SerializableFieldEntity>();
                     break;
                 }
+                case (SerializableType::Enum): {
+                    auto obj = std::static_pointer_cast<SerializableTypeInfoEnum>(typeInfo);
+                    // data = CreateRef<SerializableFieldEnum>();
+                    // break;
+                }
+                case (SerializableType::Asset): {
+                    auto obj = std::static_pointer_cast<SerializableTypeInfoAsset>(typeInfo);
+                    data = CreateRef<SerializableFieldAsset>();
+                    break;
+                }
                 }
 
                 data->DeserializeYAML(field["Value"]);

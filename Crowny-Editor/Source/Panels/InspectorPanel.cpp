@@ -472,6 +472,7 @@ namespace Crowny
             // CW_ENGINE_INFO(scriptCode->GetSource());
             m_CachedScriptText[m_InspectedAssetPath] = scriptCode->GetSource();
         }
+        // TODO: This should not be the whole text
         ImGui::Text("%s", m_CachedScriptText[m_InspectedAssetPath].c_str());
     }
 
@@ -485,7 +486,7 @@ namespace Crowny
             CW_ENGINE_INFO(scriptCode->GetSource());
             m_CachedScriptText[m_InspectedAssetPath] = scriptCode->GetSource();
         }
-        ImGui::Text(m_CachedScriptText[m_InspectedAssetPath].c_str());*/
+        ImGui::Text("%s", m_CachedScriptText[m_InspectedAssetPath].c_str());*/
     }
 
     void InspectorPanel::RenderTextureImportInspector() {}
