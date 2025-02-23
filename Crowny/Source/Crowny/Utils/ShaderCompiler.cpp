@@ -325,7 +325,7 @@ namespace Crowny
             buffer.BlockSize = bufferSize;
             buffer.Slot = binding;
             buffer.Set = set;
-            CW_ENGINE_INFO(uniform.name);
+
             Vector<UniformBufferBlockMember> members;
             for (uint32_t i = 0; i < bufferType.member_types.size(); i++)
             {

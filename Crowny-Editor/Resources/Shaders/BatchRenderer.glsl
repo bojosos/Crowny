@@ -5,14 +5,13 @@
 
 layout(location = 0) in vec4 a_Position;
 layout(location = 1) in vec4 a_Color;
-layout(location = 2) in vec2 a_UV;
+layout(location = 2) in vec2 a_Uvs;
 layout(location = 3) in float a_Tid;
 layout(location = 4) in int a_ObjectId;
 
 layout(binding = 0) uniform VP
 {
-  mat4 view;
-  mat4 proj;
+  mat4 u_ViewProjection;
 } vp;
 
 layout(location = 0) out DATA
@@ -25,8 +24,8 @@ layout(location = 0) out DATA
 
 void main()
 {
-	gl_Position = vp.proj * vp.view * a_Position;
-	vs_out.uv = a_UV;
+	gl_Position = vp.u_ViewProjection * a_Position;
+	vs_out.uv = a_Uvs;
 	vs_out.tid = a_Tid;
 	vs_out.color = a_Color;
 	vs_out.objectId = a_ObjectId;

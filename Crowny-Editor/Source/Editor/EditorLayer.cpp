@@ -85,8 +85,7 @@ namespace Crowny
 
     void EditorLayer::OnAttach()
     {
-        const Ref<Font> defaultFont = Font::GetDefault();
-        // Well constructors get discarded and the static data is gone, so construct a few empty objects
+        // Well constructors get discarded by the compiler and the static data is gone, so construct a few dummy objects
         ScriptTime tempTime = ScriptTime();
         ScriptMath tempMath = ScriptMath();
         ScriptInput tempInput = ScriptInput();

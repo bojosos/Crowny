@@ -2,7 +2,7 @@
 
 #include "Crowny/Application/Initializer.h"
 
-// Has to be here due to ambiguous refs caused by Xlib(which is included by vulkan on linux) and my Input class
+// Has to be here due to ambiguous refs caused by Xlib(which is included by vulkan on linux) and Input.cpp
 #include "Platform/Vulkan/VulkanRenderAPI.h"
 
 #include "Crowny/Application/Application.h"
@@ -102,9 +102,30 @@ namespace Crowny
         Renderer2D::Init();
         ForwardRenderer::Init();
 
-        // FontManager::Add(CreateRef<Font>(Path("Resources/Fonts/Roboto") / DEFAULT_FONT_FILENAME, "Roboto
-        // Thin", 64.0f));
-
+        const Path defaultFontPath = "Resources/Fonts/Roboto/roboto-thin.ttf.asset";
+        if (fs::exists(defaultFontPath)) {
+            const AssetHandle<Font> defaultFont=AssetManager::Get().Load<Font>(defaultFontPath);
+            if (defaultFont)
+                Font::SetDefaultFont(defaultFont);
+            else
+                CW_ENGINE_ERROR("Default font cache not found... Regenerating...");
+        }
+        else
+        {
+            const Ref<FontImportOptions> fontImportOptions = CreateRef<FontImportOptions>();
+            fontImportOptions->AutomaticFontSampling = true;
+            fontImportOptions->AutoSizeAtlas = true;
+            const Ref<Asset> importedDefaultFont = Importer::Get().Import("Resources/Fonts/Roboto/roboto-thin.ttf");
+            if (importedDefaultFont)
+            {
+                // Save the font cache for next time.
+                AssetManager::Get().Save(importedDefaultFont, defaultFontPath);
+                const AssetHandle<Font> fontHandle = static_asset_cast<Font>(AssetManager::Get().CreateAssetHandle(importedDefaultFont));
+                Font::SetDefaultFont(fontHandle);
+            }
+            else
+                CW_ENGINE_ERROR("Default font not found...");
+        }
         // Scripting
         MonoManager::StartUp();
         ScriptInfoManager::StartUp();
@@ -117,12 +138,12 @@ namespace Crowny
             CW_ENGINE_INFO("Loaded engine assembly {0}", engineAssemblyPath.string());
         }
 
-        Path gameAssmeblyPath = Path("C:/dev/Projects/Project1/Internal/Assemblies/Debug/") / (std::string(GAME_ASSEMBLY) + ".dll");
-        if (fs::exists(gameAssmeblyPath))
+        Path gameAssemblyPath = Path("C:/dev/Projects/Project1/Internal/Assemblies/Debug/") / (std::string(GAME_ASSEMBLY) + ".dll");
+        if (fs::exists(gameAssemblyPath))
         {
-            MonoManager::Get().LoadAssembly(gameAssmeblyPath, GAME_ASSEMBLY);
+            MonoManager::Get().LoadAssembly(gameAssemblyPath, GAME_ASSEMBLY);
             ScriptInfoManager::Get().LoadAssemblyInfo(GAME_ASSEMBLY);
-            CW_ENGINE_INFO("Loaded game assembly {0}", gameAssmeblyPath.string());
+            CW_ENGINE_INFO("Loaded game assembly {0}", gameAssemblyPath.string());
         }
         ScriptSceneObjectManager::StartUp();
         ScriptAssetManager::StartUp();
@@ -133,6 +154,7 @@ namespace Crowny
     {
         Physics2D::Shutdown();
         Texture::WHITE = Texture::BLACK = nullptr;
+        ConsoleBuffer::Shutdown();
         ScriptSceneObjectManager::Get().Del();
         ScriptRuntime::UnloadAssemblies();
         Renderer2D::Shutdown();

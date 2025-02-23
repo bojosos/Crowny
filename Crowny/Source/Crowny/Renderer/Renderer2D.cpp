@@ -72,14 +72,12 @@ namespace Crowny
 
         // Quads
         Ref<VertexBuffer> QuadVertexBuffer;
-        Ref<GraphicsPipeline> QuadPipeline;
         Ref<IndexBuffer> QuadIndexBuffer;
-        Ref<UniformBufferBlock> QuadProjectionView;
-        Ref<UniformParams> QuadUniforms;
         uint32_t QuadIndexCount = 0;
         uint32_t QuadVertexCount = 0;
         VertexData* QuadBuffer = nullptr;
         VertexData* QuadTmpBuffer = nullptr;
+        Ref<Material> QuadMaterial;
 
         // Circles
         Ref<VertexBuffer> CircleVertexBuffer;
@@ -87,7 +85,7 @@ namespace Crowny
         uint32_t CircleVertexCount = 0;
         CircleVertex* CircleBuffer = nullptr;    // TODO: Better naming for these like base and current
         CircleVertex* CircleTmpBuffer = nullptr; // TODO: Better naming for these like base and current
-        Ref<Material> CircleMaterial = nullptr;
+        Ref<Material> CircleMaterial;
 
         // Text
         Ref<VertexBuffer> TextVertexBuffer;
@@ -95,13 +93,13 @@ namespace Crowny
         uint32_t TextVertexCount = 0;
         TextVertex* TextBuffer = nullptr;
         TextVertex* TextTmpBuffer = nullptr;
-        Ref<Material> TextMaterial = nullptr;
+        Ref<Material> TextMaterial;
 
         // Font atlas only texture
         Ref<Texture> FontAtlasTexture;
 
         // Global texture buffer
-        std::array<AssetHandle<Texture>, 32> Textures;
+        std::array<Ref<Texture>, 32> Textures;
         uint32_t TextureIndex = 0;
     };
 
@@ -125,29 +123,20 @@ namespace Crowny
         }
 
         s_Data->QuadIndexBuffer = IndexBuffer::Create(indices, RENDERER_INDICES_SIZE);
+        s_Data->QuadVertexBuffer = VertexBuffer::Create(RENDERER_BUFFER_SIZE, BufferUsage::DYNAMIC_DRAW);
+        Ref<BufferLayout> layout = CreateRef<BufferLayout>(BufferLayout{ BufferElement(ShaderDataType::Float4, "a_Position"),
+                                BufferElement(ShaderDataType::Float4, "a_Color"),
+                                BufferElement(ShaderDataType::Float2, "a_Uvs"),
+                                BufferElement(ShaderDataType::Float, "a_Tid"),
+                                BufferElement(ShaderDataType::Int, "a_ObjectId") });
+        s_Data->QuadVertexBuffer->SetLayout(layout);
+
         // AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(RENDERER2D_SHADER_PATH);
-        // Ref<Shader> shader = Importer::Get().Import<Shader>(RENDERER2D_SHADER_PATH);
-        // Ref<ShaderStage> vertex = shader->GetStage(VERTEX_SHADER);
-        // Ref<ShaderStage> fragment = shader->GetStage(FRAGMENT_SHADER);
-        // s_Data->QuadVertexBuffer = VertexBuffer::Create(RENDERER_BUFFER_SIZE, BufferUsage::DYNAMIC_DRAW);
-        // BufferLayout layout = { BufferElement(ShaderDataType::Float4, "a_Coordinates"),
-        //                         BufferElement(ShaderDataType::Float4, "a_Color"),
-        //                         BufferElement(ShaderDataType::Float2, "a_Uvs"),
-        //                         BufferElement(ShaderDataType::Float, "a_Tid"),
-        //                         BufferElement(ShaderDataType::Int, "a_ObjectID") };
-        // s_Data->QuadVertexBuffer->SetLayout(layout);
-
-        // PipelineStateDesc desc;
-        // desc.FragmentShader = fragment;
-        // desc.VertexShader = vertex;
-
-        // s_Data->QuadPipeline = GraphicsPipeline::Create(desc, s_Data->QuadVertexBuffer->GetLayout());
-        // s_Data->QuadProjectionView =
-        //   UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("VP").BlockSize, BufferUsage::DYNAMIC_DRAW);
-        // s_Data->QuadUniforms = UniformParams::Create(s_Data->QuadPipeline);
-        // s_Data->QuadUniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "VP", s_Data->QuadProjectionView);
-        // s_Data->QuadBuffer = s_Data->QuadTmpBuffer = new VertexData[RENDERER_MAX_SPRITES * 4];
-        // delete[] indices;
+        Ref<Shader> spriteShader = Importer::Get().Import<Shader>("Resources/Shaders/BatchRenderer.glsl");
+        const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(spriteShader));
+        s_Data->QuadMaterial = Material::Create(shaderHandle);
+        s_Data->QuadBuffer = s_Data->QuadTmpBuffer = new VertexData[RENDERER_MAX_SPRITES * 4];
+        delete[] indices;
     }
 
     static void SetupCircleBuffers()
@@ -192,7 +181,7 @@ namespace Crowny
     void Renderer2D::Init()
     {
         s_Data = new Renderer2DData();
-        // s_Data->Textures[0] = Texture::WHITE;
+        s_Data->Textures[0] = Texture::WHITE;
         SetupQuadBuffers();
         SetupCircleBuffers();
         SetupTextBuffers();
@@ -203,11 +192,12 @@ namespace Crowny
         const glm::mat4 viewProjection = camera.GetProjection() * viewMatrix;
         s_Data->CircleMaterial->SetMatrix("u_ViewProjection", viewProjection);
         s_Data->TextMaterial->SetMatrix("u_ViewProjection", viewProjection);
+        s_Data->QuadMaterial->SetMatrix("u_ViewProjection", viewProjection);
     }
 
     void Renderer2D::Begin(const glm::mat4& projection, const glm::mat4& view) { CW_ENGINE_ASSERT(false); }
 
-    float Renderer2D::FindTexture(const AssetHandle<Texture>& texture)
+    float Renderer2D::FindTexture(const Ref<Texture>& texture)
     {
         if (!texture)
             return 0;
@@ -247,7 +237,7 @@ namespace Crowny
         FillRect(transform, nullptr, color, entityId);
     }
 
-    void Renderer2D::FillRect(const glm::mat4& transform, const AssetHandle<Texture>& texture, const glm::vec4& color, uint32_t entityId)
+    void Renderer2D::FillRect(const glm::mat4& transform, const Ref<Texture>& texture, const glm::vec4& color, uint32_t entityId)
     {
         const float ts = FindTexture(texture);
 
@@ -265,7 +255,7 @@ namespace Crowny
         s_Data->QuadIndexCount += 6;
     }
 
-    void Renderer2D::FillRect(const Rect2F& bounds, const AssetHandle<Texture>& texture, const glm::vec4& color, uint32_t entityId)
+    void Renderer2D::FillRect(const Rect2F& bounds, const Ref<Texture>& texture, const glm::vec4& color, uint32_t entityId)
     {
         glm::mat4 transform =
           glm::translate(glm::mat4(1.0f), { bounds.X, bounds.Y, 1.0f }) * glm::scale(glm::mat4(1.0f), { bounds.Width, bounds.Height, 1.0f });
@@ -329,14 +319,20 @@ namespace Crowny
 
     void Renderer2D::DrawString(const TextComponent& textComponent, const glm::mat4& transform, int32_t entityId)
     {
-        if (!textComponent.Font) // TODO: Use default font here.
+        AssetHandle<Font> font = textComponent.Font;
+        if (!font)
+            font = Font::GetDefaultFont();
+        if (!font)
+        {
+            CW_ENGINE_WARN("No font for text component and no default.");
             return;
+        }
 
-        const msdf_atlas::FontGeometry& fontGeometry = textComponent.Font->GetMSDFData()->FontGeometry;
+        const msdf_atlas::FontGeometry& fontGeometry = font->GetMSDFData()->FontGeometry;
         const msdfgen::FontMetrics& fontMetrics = fontGeometry.getMetrics();
 
         // TODO: Make this use an array for font textures or reset when the texture is different.
-        Ref<Texture> fontAtlasTexture = textComponent.Font->GetAtlasTexture();
+        Ref<Texture> fontAtlasTexture = font->GetAtlasTexture();
         s_Data->FontAtlasTexture = fontAtlasTexture;
 
         double x = 0.0;
@@ -467,23 +463,21 @@ namespace Crowny
     {
         if (s_Data->QuadIndexCount > 0)
         {
-            /*
-            RenderAPI::Get().SetGraphicsPipeline(s_Data->QuadPipeline);
-            RenderAPI::Get().SetVertexBuffers(0, &s_Data->QuadVertexBuffer, 1);
-            RenderAPI::Get().SetIndexBuffer(s_Data->QuadIndexBuffer);
-            void* data = s_Data->QuadVertexBuffer->Map(0, s_Data->QuadVertexCount * sizeof(VertexData), GpuLockOptions::WRITE_DISCARD);
-            std::memcpy(data, s_Data->QuadTmpBuffer, s_Data->QuadVertexCount * sizeof(VertexData));
-            s_Data->QuadVertexBuffer->Unmap();
+            RenderAPI::Get().SetGraphicsPipeline(s_Data->QuadMaterial->GetGraphicsPipeline());
+            RenderAPI::Get().SetVertexLayout(s_Data->QuadVertexBuffer->GetLayout());
             for (uint32_t i = 0; i < 8; i++)
             {
                 if (s_Data->Textures[i])
-                    s_Data->QuadUniforms->SetTexture(0, 1 + i, s_Data->Textures[i].GetInternalPtr());
+                    s_Data->QuadMaterial->SetTexture("u_Texture" + std::to_string(i+1), s_Data->Textures[i]);
                 else
-                    s_Data->QuadUniforms->SetTexture(0, 1 + i, s_Data->Textures[0].GetInternalPtr());
+                    s_Data->QuadMaterial->SetTexture("u_Texture" + std::to_string(i+1), s_Data->Textures[0]);
             }
-            RenderAPI::Get().SetUniforms(s_Data->QuadUniforms);
+            RenderAPI::Get().SetUniforms(s_Data->QuadMaterial->GetUniformParams());
+
+            RenderAPI::Get().SetVertexBuffers(0, &s_Data->QuadVertexBuffer, 1);
+            RenderAPI::Get().SetIndexBuffer(s_Data->QuadIndexBuffer);
+            s_Data->QuadVertexBuffer->WriteData(0, s_Data->QuadVertexCount * sizeof(VertexData) , s_Data->QuadTmpBuffer, BWT_DISCARD);
             RenderAPI::Get().DrawIndexed(0, s_Data->QuadIndexCount, 0, s_Data->QuadVertexCount);
-            */
         }
     }
 
@@ -493,15 +487,11 @@ namespace Crowny
         {
             // This will flush buffers
             RenderAPI::Get().SetGraphicsPipeline(s_Data->CircleMaterial->GetGraphicsPipeline());
+            RenderAPI::Get().SetVertexLayout(s_Data->CircleVertexBuffer->GetLayout());
             RenderAPI::Get().SetUniforms(s_Data->CircleMaterial->GetUniformParams());
 
             RenderAPI::Get().SetVertexBuffers(0, &s_Data->CircleVertexBuffer, 1);
-            // TODO: Replace with WriteData.
-            // s_Data->CircleVertexBuffer->WriteData(0, s_Data->CircleVertexCount * sizeof(CircleVertex), s_Data->CircleTmpBuffer, BWT_DISCARD);
-            void* data = s_Data->CircleVertexBuffer->Map(0, s_Data->CircleVertexCount * sizeof(CircleVertex), GpuLockOptions::WRITE_DISCARD);
-            std::memcpy(data, s_Data->CircleTmpBuffer, s_Data->CircleVertexCount * sizeof(CircleVertex));
-            s_Data->CircleVertexBuffer->Unmap();
-
+            s_Data->CircleVertexBuffer->WriteData(0, s_Data->CircleVertexCount * sizeof(CircleVertex), s_Data->CircleTmpBuffer, BWT_DISCARD);
             RenderAPI::Get().DrawIndexed(0, s_Data->CircleIndexCount, 0, s_Data->CircleVertexCount);
         }
     }
@@ -513,30 +503,21 @@ namespace Crowny
             s_Data->TextMaterial->SetTexture("u_FontAtlas", s_Data->FontAtlasTexture);
 
             RenderAPI::Get().SetGraphicsPipeline(s_Data->TextMaterial->GetGraphicsPipeline());
-            Ref<BufferLayout> layout = CreateRef<BufferLayout>(BufferLayout{ { ShaderDataType::Float3, "a_Position" },
-                                                                             { ShaderDataType::Float4, "a_Color" },
-                                                                             { ShaderDataType::Float2, "a_TexCoords" },
-                                                                             { ShaderDataType::Float4, "a_UnderlayColor" },
-                                                                             { ShaderDataType::Float, "a_UnderlayOffset" },
-                                                                             { ShaderDataType::Float4, "a_OutlineColor" },
-                                                                             { ShaderDataType::Float, "a_OutlineThickness" },
-                                                                             { ShaderDataType::Int, "a_ObjectId" } });
-            RenderAPI::Get().SetVertexLayout(layout);
+            RenderAPI::Get().SetVertexLayout(s_Data->TextVertexBuffer->GetLayout());
             RenderAPI::Get().SetUniforms(s_Data->TextMaterial->GetUniformParams());
 
             RenderAPI::Get().SetVertexBuffers(0, &s_Data->TextVertexBuffer, 1);
             RenderAPI::Get().SetIndexBuffer(s_Data->QuadIndexBuffer);
-            void* data = s_Data->TextVertexBuffer->Map(0, s_Data->TextVertexCount * sizeof(TextVertex), GpuLockOptions::WRITE_DISCARD);
-            std::memcpy(data, s_Data->TextTmpBuffer, s_Data->TextVertexCount * sizeof(TextVertex));
-            s_Data->TextVertexBuffer->Unmap();
+            s_Data->TextVertexBuffer->WriteData(0, s_Data->TextVertexCount * sizeof(TextVertex), s_Data->TextTmpBuffer, BWT_DISCARD);
+
             RenderAPI::Get().DrawIndexed(0, s_Data->TextIndexCount, 0, s_Data->TextVertexCount);
         }
     }
 
     void Renderer2D::Flush()
     {
-        // FlushQuads();
-        // FlushCircles();
+        FlushQuads();
+        FlushCircles();
         FlushText();
     }
 

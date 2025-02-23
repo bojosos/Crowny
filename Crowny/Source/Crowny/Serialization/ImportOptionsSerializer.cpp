@@ -85,7 +85,7 @@ namespace Crowny
             SerializeEnumYAML(out, "AtlasDimensionsConstraint", fontImportOptions->AtlasDimensionsConstraint);
             SerializeValueYAML(out, "GetKerningData", fontImportOptions->GetKerningData);
             SerializeValueYAML(out, "AutomaticFontSampling", fontImportOptions->AutomaticFontSampling);
-            SerializeValueYAML(out, "SampingFontSize", fontImportOptions->SampingFontSize);
+            SerializeValueYAML(out, "SampingFontSize", fontImportOptions->SamplingFontSize);
             SerializeValueYAML(out, "AutoSizeAtlas", fontImportOptions->AutoSizeAtlas);
             SerializeValueYAML(out, "AtlasWidth", fontImportOptions->AtlasWidth);
             SerializeValueYAML(out, "AtlasHeight", fontImportOptions->AtlasHeight);
@@ -162,7 +162,7 @@ namespace Crowny
                                 "Atlas dimension constraints \'{}\' in metadata file is invalid.", 0, Font::AtlasDimensionsConstraint::COUNT);
             DeserializeValueYAML(fontImportOptionsNode, "GetKerningData", fontImportOptions->GetKerningData, true);
             DeserializeValueYAML(fontImportOptionsNode, "AutomaticFontSampling", fontImportOptions->AutomaticFontSampling, true);
-            DeserializeValueYAML(fontImportOptionsNode, "SampingFontSize", fontImportOptions->SampingFontSize, 64U);
+            DeserializeValueYAML(fontImportOptionsNode, "SampingFontSize", fontImportOptions->SamplingFontSize, 64U);
             DeserializeValueYAML(fontImportOptionsNode, "AutoSizeAtlas", fontImportOptions->AutoSizeAtlas, false);
             DeserializeValueYAML(fontImportOptionsNode, "AtlasWidth", fontImportOptions->AtlasWidth, 1024U);
             DeserializeValueYAML(fontImportOptionsNode, "AtlasHeight", fontImportOptions->AtlasHeight, 1024U);

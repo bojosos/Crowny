@@ -388,7 +388,7 @@ namespace Crowny
                 fontImportOptions->AutomaticFontSampling = dropdownIdx == 1 ? false : true;
             }
             if (fontImportOptions->AutomaticFontSampling)
-                m_HasPropertyChanged |= UI::Property("Sampling Size", fontImportOptions->SampingFontSize);
+                m_HasPropertyChanged |= UI::Property("Sampling Size", fontImportOptions->SamplingFontSize);
 
             UI::SetTooltip("Static atlases use a predefined charset range. On the other hand Dynamic atlases are populated \
                 dynamically during runtime. Static atlases use more memory but are more efficient during execution.");

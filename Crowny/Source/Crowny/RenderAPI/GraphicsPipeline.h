@@ -53,7 +53,8 @@ namespace Crowny
 
     struct RasterizerStateDesc
     {
-        CullingMode CullMode = CullingMode::CULL_COUNTERCLOCKWISE;
+        CullingMode CullMode = CullingMode::CULL_NONE;
+        // CullingMode CullMode = CullingMode::CULL_COUNTERCLOCKWISE;
         float DepthBias = 0.0f;
         float DepthBiasSlope = 0.0f;
         float DepthBiasClamp = 0.0f;

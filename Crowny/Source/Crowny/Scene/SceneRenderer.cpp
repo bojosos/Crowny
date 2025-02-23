@@ -82,7 +82,6 @@ namespace Crowny
         ForwardRenderer::End();
 
         Renderer2D::Begin(camera, camera.GetViewMatrix());
-        /*
         const auto spriteRendererComponents =
           scene->m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
         for (const entt::entity ee : spriteRendererComponents)
@@ -90,12 +89,11 @@ namespace Crowny
             auto [transform, sprite] = scene->m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
             Entity entity(ee, scene.get());
             CW_ENGINE_ASSERT(entity.IsValid());
-            Renderer2D::FillRect(entity.GetWorldMatrix(), sprite.Texture, sprite.Color, ((int32_t)ee) + 1);
+            Renderer2D::FillRect(entity.GetWorldMatrix(), sprite.Texture ? sprite.Texture.GetInternalPtr() : nullptr, sprite.Color, ((int32_t)ee) + 1);
             // Renderer2D::FillRect(glm::mat4(1.0f), sprite.Texture, sprite.Color, ((int32_t)ee) + 1);
             s_Stats.Vertices += 6;
             s_Stats.Triangles += 2;
         }
-        */
         const auto textComponents = scene->m_Registry.group<TextComponent>(entt::get<TransformComponent>);
         for (const entt::entity ee : textComponents)
         {
@@ -160,7 +158,7 @@ namespace Crowny
             {
                 const auto [transform, sprite] = scene->m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
                 Entity entity(ee, scene.get());
-                Renderer2D::FillRect(entity.GetWorldMatrix(), sprite.Texture, sprite.Color, (uint32_t)ee);
+                Renderer2D::FillRect(entity.GetWorldMatrix(), sprite.Texture ? sprite.Texture.GetInternalPtr() : nullptr, sprite.Color, (uint32_t)ee);
                 s_Stats.Vertices += 4;
                 s_Stats.Triangles += 2;
             }
