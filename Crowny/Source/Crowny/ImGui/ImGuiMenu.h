@@ -17,7 +17,7 @@ namespace Crowny
 
     private:
         bool* m_Shown = nullptr;
-        EventCallbackFn OnClicked;
+        EventCallbackFn m_OnClicked;
         String m_Combination;
         String m_Title;
     };

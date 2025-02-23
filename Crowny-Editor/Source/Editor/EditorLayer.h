@@ -143,7 +143,8 @@ namespace Crowny
 
     private:
         void ExecuteProjectAssetRefresh();
-        void HandleMousePicking();
+        Entity PickEntity();
+        Entity PickEntity(const glm::vec2& coords);
         void CreateRenderTarget();
         void HandleRenderTargetResize();
         void HandleSceneState(Timestep ts);
@@ -192,7 +193,6 @@ namespace Crowny
 
         Vector<ImGuiPanel*> m_ImGuiWindows;
         static EditorCamera s_EditorCamera;
-        Entity m_HoveredEntity;
         bool m_CreatingNewProject = false;
         bool m_GameMode = false;
         bool m_OpenProject = false;

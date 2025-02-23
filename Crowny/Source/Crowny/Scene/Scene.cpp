@@ -16,8 +16,7 @@ namespace Crowny
 {
 
     template <typename... Component>
-    static void CopyComponent(entt::registry& dst, entt::registry& src,
-                              const UnorderedMap<UUID, entt::entity>& entityMap)
+    static void CopyComponent(entt::registry& dst, entt::registry& src, const UnorderedMap<UUID, entt::entity>& entityMap)
     {
         (
           [&]() {
@@ -49,14 +48,12 @@ namespace Crowny
           ...);
     }
 
-    template <typename... Component>
-    static void CopyComponentIfExists(ComponentGroup<Component...>, Entity dst, Entity src)
+    template <typename... Component> static void CopyComponentIfExists(ComponentGroup<Component...>, Entity dst, Entity src)
     {
         CopyComponentIfExists<Component...>(dst, src);
     }
 
-    static void CopyAllComponents(entt::registry& dstRegistry, entt::registry& srcRegistry,
-                                  const UnorderedMap<UUID, entt::entity>& entityMap)
+    static void CopyAllComponents(entt::registry& dstRegistry, entt::registry& srcRegistry, const UnorderedMap<UUID, entt::entity>& entityMap)
     {
         CopyComponent(AllComponents{}, dstRegistry, srcRegistry, entityMap);
     }
@@ -148,12 +145,11 @@ namespace Crowny
         m_Registry.on_destroy<Rigidbody2DComponent>().connect<&Scene::OnRigidbody2DComponentDestroy>(this);
         m_Registry.on_construct<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentConstruct>(this);
         m_Registry.on_destroy<BoxCollider2DComponent>().connect<&Scene::OnBoxCollider2DComponentDestroy>(this);
-        m_Registry.on_construct<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentConstruct>(
-          this);
+        m_Registry.on_construct<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentConstruct>(this);
         m_Registry.on_destroy<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentDestroy>(this);
 
-        m_Registry.on_construct<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentomponentConstruct>(this);
-        m_Registry.on_destroy<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentComponentDestroy>(this);
+        m_Registry.on_construct<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentConstruct>(this);
+        m_Registry.on_destroy<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentDestroy>(this);
     }
 
     Entity Scene::DuplicateEntity(Entity entity, bool includeChildren)
@@ -229,20 +225,20 @@ namespace Crowny
         Physics2D::Get().DestroyFixture(e, e.GetComponent<CircleCollider2DComponent>());
     }
 
-    void Scene::OnAudioSourceComponentomponentConstruct(entt::registry& registry, entt::entity entity)
+    void Scene::OnAudioSourceComponentConstruct(entt::registry& registry, entt::entity entity)
     {
         if (m_IsEditorScene)
             return;
         Entity e = { entity, this };
-        auto& source = e.GetComponent<AudioSourceComponent>();
+        AudioSourceComponent& source = e.GetComponent<AudioSourceComponent>();
         if (source.GetPlayOnAwake())
             source.Play();
     }
 
-    void Scene::OnAudioSourceComponentComponentDestroy(entt::registry& registry, entt::entity entity)
+    void Scene::OnAudioSourceComponentDestroy(entt::registry& registry, entt::entity entity)
     {
         Entity e = { entity, this };
-        auto& source = e.GetComponent<AudioSourceComponent>();
+        AudioSourceComponent& source = e.GetComponent<AudioSourceComponent>();
         source.Stop();
     }
 
@@ -332,8 +328,7 @@ namespace Crowny
                 break; // Maybe not necessary
             }
         }
-        m_Registry.view<AudioSourceComponent>().each(
-          [&](entt::entity entity, AudioSourceComponent& sc) { sc.OnInitialize(); });
+        m_Registry.view<AudioSourceComponent>().each([&](entt::entity entity, AudioSourceComponent& sc) { sc.OnInitialize(); });
     }
 
     void Scene::OnSimulationStart() { Physics2D::Get().BeginSimulation(this); }
@@ -427,8 +422,7 @@ namespace Crowny
     {
         m_ViewportWidth = width;
         m_ViewportHeight = height;
-        m_Registry.view<CameraComponent>().each(
-          [&](CameraComponent& cameraComponent) { cameraComponent.Camera.SetViewportSize(width, height); });
+        m_Registry.view<CameraComponent>().each([&](CameraComponent& cameraComponent) { cameraComponent.Camera.SetViewportSize(width, height); });
     }
 
 } // namespace Crowny

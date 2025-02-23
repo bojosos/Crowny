@@ -26,9 +26,6 @@
 
 namespace Crowny
 {
-
-    Ref<PBRMaterial> InspectorPanel::s_SelectedMaterial = nullptr;
-
     InspectorPanel::InspectorPanel(const String& name) : ImGuiPanel(name)
     {
         m_ComponentEditor.RegisterComponent<TransformComponent>("Transform");
@@ -154,7 +151,7 @@ namespace Crowny
     {
         BeginPanel();
         ImGui::BeginChild("InspectorChild");
-        static constexpr int ImGuiMouseCursor_Dummy = 6969696969;
+        static constexpr int ImGuiMouseCursor_Dummy = 69696969;
         ImGui::SetMouseCursor(ImGuiMouseCursor_Dummy);
         DrawHeader();
         if (m_InspectorMode == InspectorMode::GameObject)
@@ -195,6 +192,7 @@ namespace Crowny
 
     void InspectorPanel::RenderMaterialInspector()
     {
+        /*
         if (s_SelectedMaterial != nullptr)
         {
             if (ImGui::CollapsingHeader("Albedo", ImGuiTreeNodeFlags_DefaultOpen))
@@ -334,8 +332,8 @@ namespace Crowny
                     //     s_SelectedMaterial->SetAoMap(ao);
                     // }
                 }
-            }
         }
+            }*/
     }
 
     void InspectorPanel::RenderPhysicsMaterialInspector() {}

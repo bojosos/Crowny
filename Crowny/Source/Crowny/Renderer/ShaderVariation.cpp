@@ -4,7 +4,7 @@
 
 namespace Crowny
 {
-    ShaderVariation::ShaderVariation(const Vector<ShaderVariation::Specifier>& parameters) : m_Parameters(parameters) {}
+    // ShaderVariation::ShaderVariation(const Vector<ShaderVariation::Specifier>& parameters) : m_Parameters(parameters) {}
 
     ShaderDefines ShaderVariation::GetDefines() const
     {

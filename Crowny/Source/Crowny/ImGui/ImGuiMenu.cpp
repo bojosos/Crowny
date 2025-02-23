@@ -70,9 +70,9 @@ namespace Crowny
         m_Menus.push_back(menu);
     }
 
-    ImGuiMenuItem::ImGuiMenuItem(const String& title, const String& combination, const EventCallbackFn& onclicked,
+    ImGuiMenuItem::ImGuiMenuItem(const String& title, const String& combination, const EventCallbackFn& onClicked,
                                  bool* shown)
-      : m_Title(title), m_Combination(combination), OnClicked(onclicked), m_Shown(shown)
+      : m_Title(title), m_Combination(combination), m_OnClicked(onClicked), m_Shown(shown)
     {
     }
 
@@ -96,7 +96,8 @@ namespace Crowny
         if (clicked)
         {
             auto e = ImGuiMenuItemClickedEvent(m_Title);
-            OnClicked(e);
+            if (m_OnClicked)
+                m_OnClicked(e);
         }
     }
 

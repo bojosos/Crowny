@@ -52,6 +52,7 @@ namespace Crowny
 
     private:
         // TODO: Replace with StringId
+        // Vector<ShaderVariation::Specifier> m_Parameters;
         UnorderedMap<String, Specifier> m_Parameters;
     };
 } // namespace Crowny

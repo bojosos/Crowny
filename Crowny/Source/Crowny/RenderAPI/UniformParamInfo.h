@@ -2,7 +2,7 @@
 
 namespace Crowny
 {
-    class UniformDesc;
+    struct UniformDesc;
 
     struct UniformParamDesc
     {

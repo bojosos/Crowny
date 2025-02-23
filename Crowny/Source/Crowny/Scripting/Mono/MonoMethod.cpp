@@ -16,7 +16,7 @@ namespace Crowny
 
     MonoMethod::MonoMethod(::MonoMethod* method)
       : m_Method(method), m_CachedParams(nullptr), m_CachedReturnType(nullptr), m_HasCachedSignature(false),
-        m_CachedNumParams(0)
+        m_CachedNumParams(0), m_IsStatic(false)
     {
         m_Name = mono_method_get_name(m_Method);
     }

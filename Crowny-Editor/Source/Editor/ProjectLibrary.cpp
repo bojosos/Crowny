@@ -700,7 +700,6 @@ namespace Crowny
 
     AssetType ProjectLibrary::GetAssetType(const UUID& uuid) const
     {
-        Path outPath;
         const auto& iter = m_UuidToPath.find(uuid);
         if (iter != m_UuidToPath.end())
             return GetAssetType(iter->second);

@@ -96,17 +96,17 @@ namespace Crowny
         {
         case EXCEPTION_ACCESS_VIOLATION: {
             DWORD_PTR address = 0;
-            format = fmt::format("Unhandeled exception at 0x{0:p}", record->ExceptionAddress);
+            format = fmt::format("Unhandled exception at 0x{0:p}", record->ExceptionAddress);
             if (record->NumberParameters == 2)
             {
                 if (record->ExceptionInformation[0] == 0)
-                    format = fmt::format("Unhandeled exception at {0:p}, access violation reading 0x{1:x}.",
+                    format = fmt::format("Unhandled exception at {0:p}, access violation reading 0x{1:x}.",
                                          record->ExceptionAddress, record->ExceptionInformation[1]);
                 else if (record->ExceptionInformation[0] == 1)
-                    format = fmt::format("Unhandeled exception at {0:p}, access violation writing 0x{1:x}.",
+                    format = fmt::format("Unhandled exception at {0:p}, access violation writing 0x{1:x}.",
                                          record->ExceptionAddress, record->ExceptionInformation[1]);
                 else if (record->ExceptionInformation[0] == 8)
-                    format = fmt::format("Unhandeled exception at {0:p}, access violation DEP 0x{1:x}.",
+                    format = fmt::format("Unhandled exception at {0:p}, access violation DEP 0x{1:x}.",
                                          record->ExceptionAddress, record->ExceptionInformation[1]);
             }
             break;
@@ -118,66 +118,66 @@ namespace Crowny
             {
                 // TODO: Format message for record->ExceptionInformation[0][2](NTSTATUS)
                 if (record->ExceptionInformation[0] == 0)
-                    format = fmt::format("Unhandeled exception at {0:p}, page fault reading {0:p} with code {0:p}",
+                    format = fmt::format("Unhandled exception at {0:p}, page fault reading {0:p} with code {0:p}",
                                          record->ExceptionAddress, record->ExceptionInformation[1],
                                          record->ExceptionInformation[2]);
                 else if (record->ExceptionInformation[0] == 1)
-                    format = fmt::format("Unhandeled exception at {0:p}, page fault writing {0:p} with code {0:p}",
+                    format = fmt::format("Unhandled exception at {0:p}, page fault writing {0:p} with code {0:p}",
                                          record->ExceptionAddress, record->ExceptionInformation[1],
                                          record->ExceptionInformation[2]);
                 else if (record->ExceptionInformation[0] == 8)
-                    format = fmt::format("Unhandeled exception at {0:p}, page fault DEP {0:p} with code {0:p}",
+                    format = fmt::format("Unhandled exception at {0:p}, page fault DEP {0:p} with code {0:p}",
                                          record->ExceptionAddress, record->ExceptionInformation[1],
                                          record->ExceptionInformation[2]);
             }
             break;
         }
         case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
-            format = fmt::format("Unhandeled exception at 0x{0:x}, array out of bounds", record->ExceptionAddress);
+            format = fmt::format("Unhandled exception at 0x{0:x}, array out of bounds", record->ExceptionAddress);
             break;
         case EXCEPTION_DATATYPE_MISALIGNMENT:
-            format = fmt::format("Unhandeled exception at 0x{0:x}, misaligned data", record->ExceptionAddress);
+            format = fmt::format("Unhandled exception at 0x{0:x}, misaligned data", record->ExceptionAddress);
             break;
         case EXCEPTION_FLT_DENORMAL_OPERAND:
-            format = fmt::format("Unhandeled exception at 0x{0:x}, float denormal operand", record->ExceptionAddress);
+            format = fmt::format("Unhandled exception at 0x{0:x}, float denormal operand", record->ExceptionAddress);
             break;
         case EXCEPTION_FLT_DIVIDE_BY_ZERO:
-            format = fmt::format("Unhandeled exception at 0x{0:x}, float divide by zero", record->ExceptionAddress);
+            format = fmt::format("Unhandled exception at 0x{0:x}, float divide by zero", record->ExceptionAddress);
             break;
         case EXCEPTION_FLT_INVALID_OPERATION:
-            format = fmt::format("Unhandeled exception at 0x{0:x}, float invalid oepration", record->ExceptionAddress);
+            format = fmt::format("Unhandled exception at 0x{0:x}, float invalid operation", record->ExceptionAddress);
             break;
         case EXCEPTION_FLT_OVERFLOW:
-            format = fmt::format("Unhandeled exception at 0x{0:x}, float overflow", record->ExceptionAddress);
+            format = fmt::format("Unhandled exception at 0x{0:x}, float overflow", record->ExceptionAddress);
             break;
         case EXCEPTION_FLT_UNDERFLOW:
-            format = fmt::format("Unhandeled exception at 0x{0:x}, float underflow", record->ExceptionAddress);
+            format = fmt::format("Unhandled exception at 0x{0:x}, float underflow", record->ExceptionAddress);
             break;
         case EXCEPTION_FLT_STACK_CHECK:
             format =
-              fmt::format("Unhandeled exception at 0x{0:x}, float stack overflow/underflow", record->ExceptionAddress);
+              fmt::format("Unhandled exception at 0x{0:x}, float stack overflow/underflow", record->ExceptionAddress);
             break;
         case EXCEPTION_ILLEGAL_INSTRUCTION:
-            format = fmt::format("Unhandeled exception at 0x{0:x}, illegal instruction", record->ExceptionAddress);
+            format = fmt::format("Unhandled exception at 0x{0:x}, illegal instruction", record->ExceptionAddress);
             break;
         case EXCEPTION_PRIV_INSTRUCTION:
             format =
-              fmt::format("Unhandeled exception at 0x{0:x}, executing prviate instruction", record->ExceptionAddress);
+              fmt::format("Unhandled exception at 0x{0:x}, executing prviate instruction", record->ExceptionAddress);
             break;
         case EXCEPTION_INT_DIVIDE_BY_ZERO:
-            format = fmt::format("Unhandeled exception at 0x{0:x}, float divide by zero", record->ExceptionAddress);
+            format = fmt::format("Unhandled exception at 0x{0:x}, float divide by zero", record->ExceptionAddress);
             break;
         case EXCEPTION_INT_OVERFLOW:
-            format = fmt::format("Unhandeled exception at 0x{0:x}, float overflow", record->ExceptionAddress);
+            format = fmt::format("Unhandled exception at 0x{0:x}, float overflow", record->ExceptionAddress);
             break;
         case EXCEPTION_STACK_OVERFLOW:
-            format = fmt::format("Unhandeled exception at 0x{0:x}, stack overflow go brrrr", record->ExceptionAddress);
+            format = fmt::format("Unhandled exception at 0x{0:x}, stack overflow go brrrr", record->ExceptionAddress);
             break;
         case EXCEPTION_GUARD_PAGE:
-            format = fmt::format("Unhandeled exception at 0x{0:x}, guard page", record->ExceptionAddress);
+            format = fmt::format("Unhandled exception at 0x{0:x}, guard page", record->ExceptionAddress);
             break;
         default:
-            format = fmt::format("Unhandeled exception at {0:p}. Code: 0x{1:x}", record->ExceptionAddress,
+            format = fmt::format("Unhandled exception at {0:p}. Code: 0x{1:x}", record->ExceptionAddress,
                                  record->ExceptionCode);
             break;
         }
@@ -358,9 +358,9 @@ namespace Crowny
         return crashPath;
     }
 
-    int CrashHandler::ReportCrash(void* rawExcpetionData)
+    int CrashHandler::ReportCrash(void* rawExceptionData)
     {
-        EXCEPTION_POINTERS* exceptionData = static_cast<EXCEPTION_POINTERS*>(rawExcpetionData);
+        EXCEPTION_POINTERS* exceptionData = static_cast<EXCEPTION_POINTERS*>(rawExceptionData);
         Lock lock(s_Data->Mutex);
         Win32LoadSymbols();
         CW_ENGINE_WARN(Win32GetExceptionMessage(exceptionData->ExceptionRecord));

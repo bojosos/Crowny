@@ -33,7 +33,7 @@ namespace Crowny
 
         if (ImGui::MenuItem("Delete"))
         {
-            m_DeferedActions.push_back([e]() mutable { e.Destroy(); }); // not sure if neccessary
+            m_DeferredActions.push_back([e]() mutable { e.Destroy(); }); // not sure if neccessary
             HierarchyPanel::s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
             m_SelectionChanged(s_SelectedEntity);
         }
@@ -279,7 +279,7 @@ namespace Crowny
 
     void HierarchyPanel::CreateEmptyEntity(Entity parent)
     {
-        m_DeferedActions.push_back([this, parent]() mutable {
+        m_DeferredActions.push_back([this, parent]() mutable {
             auto activeScene = SceneManager::GetActiveScene();
             Entity newEntity = activeScene->CreateEntity("New Entity");
             parent.AddChild(newEntity);
@@ -296,9 +296,9 @@ namespace Crowny
 
     void HierarchyPanel::Update()
     {
-        for (auto action : m_DeferedActions)
+        for (auto action : m_DeferredActions)
             action();
-        m_DeferedActions.clear();
+        m_DeferredActions.clear();
         // PrintDebugHierarchy();
 
         Scene& activeScene = *SceneManager::GetActiveScene().get(); // Oh god

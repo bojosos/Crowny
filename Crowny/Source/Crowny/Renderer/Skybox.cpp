@@ -43,7 +43,9 @@ namespace Crowny
 
     Skybox::Skybox(const Path& filepath)
     {
+        /*
         // Load equirectangular map
+        // TODO: CW API
         stbi_set_flip_vertically_on_load(true);
         Ref<DataStream> stream = FileSystem::OpenFile(filepath);
         std::vector<uint8_t> buf;
@@ -143,11 +145,11 @@ namespace Crowny
 
         GenerateBRDFLUT();
         GeneratePrefilteredCube();
-        GenerateIrradianceCube();
+        GenerateIrradianceCube();*/
     }
 
     void Skybox::GenerateBRDFLUT()
-    {
+    { /*
         Timer t;
         auto& rapi = RenderAPI::Get();
         TextureParameters tProps;
@@ -178,11 +180,11 @@ namespace Crowny
         rapi.SetGraphicsPipeline(pipeline);
         rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
         rapi.SetUniforms(uniforms);
-        rapi.Draw(0, 3, 1);
+        rapi.Draw(0, 3, 1);*/
     }
 
     void Skybox::GenerateIrradianceCube()
-    {
+    { /*
         Timer timer;
         auto& rapi = RenderAPI::Get();
         const uint32_t numMips = static_cast<uint32_t>(std::floor(std::log2(64)));
@@ -245,11 +247,12 @@ namespace Crowny
                 rapi.SetIndexBuffer(m_SkyboxIbo);
                 rapi.DrawIndexed(0, 36, 0, 72);
             }
-        }
+        }*/
     }
 
     void Skybox::GeneratePrefilteredCube()
     {
+        /*
         Timer timer;
 
         struct PrefilterParams
@@ -324,7 +327,7 @@ namespace Crowny
                 rapi.SetIndexBuffer(m_SkyboxIbo);
                 rapi.DrawIndexed(0, 36, 0, 72);
             }
-        }
+        }*/
     }
 
 } // namespace Crowny

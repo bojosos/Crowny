@@ -113,6 +113,7 @@ namespace Crowny
         case PolygonMode::Points:
             return VK_POLYGON_MODE_POINT;
         }
+        return VK_POLYGON_MODE_FILL;
     }
 
     VkCullModeFlagBits VulkanUtils::GetCullMode(CullingMode mode)

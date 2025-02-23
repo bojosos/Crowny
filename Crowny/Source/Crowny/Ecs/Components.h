@@ -7,6 +7,7 @@
 #include "Crowny/Common/Math.h"
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/Physics/PhysicsMaterial.h"
+#include "Crowny/Renderer/Material.h"
 
 #include <glm/gtx/quaternion.hpp>
 
@@ -274,7 +275,7 @@ namespace Crowny
     struct MeshRendererComponent : public ComponentBase
     {
         AssetHandle<Mesh> MeshHandle;
-        // Ref<::Crowny::Model> Model;
+        AssetHandle<Material> BaseMaterial;
 
         MeshRendererComponent() : ComponentBase() {}
         MeshRendererComponent(const MeshRendererComponent&) = default;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Assets/AssetHandle.h"
+
 #include "Crowny/RenderAPI/GraphicsPipeline.h"
 #include "Crowny/RenderAPI/SamplerState.h"
 #include "Crowny/RenderAPI/Shader.h"

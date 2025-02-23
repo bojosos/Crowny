@@ -100,7 +100,8 @@ project "Crowny"
 
 			"vulkan-1.lib",
 
-			"Rpcrt4.lib"
+			"Rpcrt4.lib",
+			"dbghelp.lib"
 		}
 
 	filter "action:vs*"
@@ -132,15 +133,6 @@ project "Crowny"
 		}
 
 		linkoptions { "-s MAX_WEBGL_VERSION=2", "-s USE_GLFW=3", "-s TOTAL_MEMORY=512MB", "-s SAFE_HEAP=1" }
-
-	filter "system:windows"
-		systemversion "latest"
-
-		defines
-		{
-			"CW_WINDOWS",
-			"GLFW_INCLUDE_NONE"
-		}
 
 	filter "system:linux"
 		systemversion "latest"

@@ -59,6 +59,7 @@ namespace Crowny
         Importer::Get().RegisterImporter(new MeshImporter());
 
         AssetManager::StartUp();
+        AssetListenerManager::StartUp();
         // Most of these should be in the editor
         VirtualFileSystem::Init();
         VirtualFileSystem::Get()->Mount("Shaders", "Resources/Shaders");

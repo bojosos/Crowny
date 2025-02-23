@@ -97,7 +97,7 @@ namespace Crowny
         deviceInfo.enabledLayerCount = 0;
         deviceInfo.ppEnabledLayerNames = nullptr;
 
-        if (m_DeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+        if (true /* m_DeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU */)
         {
             VkResult result = vkCreateDevice(m_PhysicalDevice, &deviceInfo, gVulkanAllocator, &m_LogicalDevice);
             CW_ENGINE_ASSERT(result == VK_SUCCESS);
@@ -131,17 +131,17 @@ namespace Crowny
         VkPipelineCacheCreateInfo pipelineCacheCI;
         pipelineCacheCI.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
         pipelineCacheCI.pNext = nullptr;
+        pipelineCacheCI.flags = 0;
         // TODO: File cache with a proper file, not a hard-coded one! Probably in the assets internal folder
         // for editor and some common cache directory for runtime.
         if (fs::exists(PIPELINE_CACHE_FILE))
         {
-            auto [data, size] = FileSystem::ReadFile(PIPELINE_CACHE_FILE);
-            if (size > 0 && data)
-            {
-                pipelineCacheCI.initialDataSize = size;
-                pipelineCacheCI.pInitialData = data;
-            }
-            delete[] data;
+            Vector<uint8_t> data;
+            FileDataStream dataStream = FileDataStream(PIPELINE_CACHE_FILE);
+            data.resize(dataStream.Size());
+            dataStream.Read(data.data(), data.size());
+            pipelineCacheCI.initialDataSize = data.size();
+            pipelineCacheCI.pInitialData = data.data();
         }
         else
         {
@@ -174,8 +174,6 @@ namespace Crowny
         delete m_QueryPool;
         delete m_CommandBufferPool;
         delete m_ResourceManager;
-        vmaDestroyAllocator(m_Allocator);
-        vkDestroyDevice(m_LogicalDevice, gVulkanAllocator);
 
         // Store the pipeline data in a file.
         size_t dataSize = 0;
@@ -190,6 +188,10 @@ namespace Crowny
             FileSystem::WriteFile(PIPELINE_CACHE_FILE, data.data(), dataSize);
         }
         vkDestroyPipelineCache(m_LogicalDevice, m_PipelineCache, gVulkanAllocator);
+
+        vmaDestroyAllocator(m_Allocator);
+        vkDestroyDevice(m_LogicalDevice, gVulkanAllocator);
+
     }
 
     uint32_t VulkanDevice::GetQueueMask(GpuQueueType type, uint32_t queueIdx) const

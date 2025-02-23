@@ -67,7 +67,7 @@ namespace Crowny
         VulkanRenderPassDesc passDesc;
         passDesc.Samples = 1;
         passDesc.Offscreen = false;
-        passDesc.Color[0].Format = VK_FORMAT_B8G8R8A8_UNORM;
+        passDesc.Color[0].Format = VK_FORMAT_R8G8B8A8_UNORM;
         passDesc.Color[0].Enabled = true;
         passDesc.Depth.Enabled = false;
 

@@ -4,7 +4,6 @@
 #include "ImGuiPanel.h"
 
 #include "Crowny/Import/ImportOptions.h"
-#include "Crowny/Renderer/PBRMaterial.h"
 
 namespace Crowny
 {
@@ -35,9 +34,6 @@ namespace Crowny
 
         virtual void Render() override;
 
-        static const Ref<PBRMaterial>& GetSelectedMaterial() { return s_SelectedMaterial; };
-        static void SetSelectedMaterial(const Ref<PBRMaterial>& material) { s_SelectedMaterial = material; }
-
         void SetInspectorMode(InspectorMode mode);
         void SetSelectedAssetPath(const Path& filepath);
         void SetSelectedEntity(Entity e);
@@ -60,7 +56,6 @@ namespace Crowny
         void DrawHeader();
 
     private:
-        static Ref<PBRMaterial> s_SelectedMaterial;
 
         InspectorMode m_InspectorMode = InspectorMode::GameObject;
 

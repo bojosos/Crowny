@@ -13,10 +13,7 @@ namespace Crowny
 
     ShaderRenderPass::ShaderRenderPass(const ShaderRenderPassDesc& passDesc) : m_ShaderDesc(passDesc) {}
 
-    Ref<ShaderRenderPass> ShaderRenderPass::Create(const ShaderRenderPassDesc& passDesc)
-    {
-        return CreateRef<ShaderRenderPass>(passDesc);
-    }
+    Ref<ShaderRenderPass> ShaderRenderPass::Create(const ShaderRenderPassDesc& passDesc) { return CreateRef<ShaderRenderPass>(passDesc); }
 
     bool ShaderRenderPass::HasBlending() const
     {
@@ -24,10 +21,8 @@ namespace Crowny
         for (uint32_t i = 0; i < MAX_FRAMEBUFFER_COLOR_ATTACHMENTS; i++)
         {
             // TODO: Figure this out(the indices from the for loop, this has to have multiple blend states one for each color)
-            if (m_ShaderDesc.BlendState->DstBlend != BlendFactor::Zero ||
-                m_ShaderDesc.BlendState->SrcBlend == BlendFactor::DestColor ||
-                m_ShaderDesc.BlendState->SrcBlend == BlendFactor::InvDestColor ||
-                m_ShaderDesc.BlendState->SrcBlend == BlendFactor::DestAlpha ||
+            if (m_ShaderDesc.BlendState->DstBlend != BlendFactor::Zero || m_ShaderDesc.BlendState->SrcBlend == BlendFactor::DestColor ||
+                m_ShaderDesc.BlendState->SrcBlend == BlendFactor::InvDestColor || m_ShaderDesc.BlendState->SrcBlend == BlendFactor::DestAlpha ||
                 m_ShaderDesc.BlendState->SrcBlend == BlendFactor::InvDestAlpha)
             {
                 transparent = true;
@@ -62,8 +57,9 @@ namespace Crowny
         }
     }
 
-    ShaderTechnique::ShaderTechnique(const Vector<String>& tags, const ShaderVariation& variation, const Vector<Ref<ShaderRenderPass>>& renderPasses) : m_Tags(tags), m_Variation(variation), m_Passes(renderPasses) {
-
+    ShaderTechnique::ShaderTechnique(const Vector<String>& tags, const ShaderVariation& variation, const Vector<Ref<ShaderRenderPass>>& renderPasses)
+      : m_Tags(tags), m_Variation(variation), m_Passes(renderPasses)
+    {
     }
 
     Ref<ShaderTechnique> ShaderTechnique::Create(const Vector<String>& tags, const ShaderVariation& variation,
@@ -141,22 +137,8 @@ namespace Crowny
         return nullptr;
     }
 
-    Ref<Shader> Shader::Create(const ShaderDesc& shaderDesc)
-    {
-        Ref<Shader> result = CreateRef<Shader>(); /*
-        if (shaderDesc.VertexShader != nullptr)
-            result->m_ShaderStages[VERTEX_SHADER] = ShaderStage::Create(shaderDesc.VertexShader);
-        if (shaderDesc.FragmentShader != nullptr)
-            result->m_ShaderStages[FRAGMENT_SHADER] = ShaderStage::Create(shaderDesc.FragmentShader);
-        if (shaderDesc.DomainShader != nullptr)
-            result->m_ShaderStages[DOMAIN_SHADER] = ShaderStage::Create(shaderDesc.DomainShader);
-        if (shaderDesc.HullShader != nullptr)
-            result->m_ShaderStages[HULL_SHADER] = ShaderStage::Create(shaderDesc.HullShader);
-        if (shaderDesc.GeometryShader != nullptr)
-            result->m_ShaderStages[GEOMETRY_SHADER] = ShaderStage::Create(shaderDesc.GeometryShader);
-        if (shaderDesc.ComputeShader != nullptr)
-            result->m_ShaderStages[COMPUTE_SHADER] = ShaderStage::Create(shaderDesc.ComputeShader);*/
-        return result;
-    }
+    Shader::Shader(const ShaderDesc& shaderDesc) : m_Techniques(shaderDesc.Techniques) {}
+
+    Ref<Shader> Shader::Create(const ShaderDesc& shaderDesc) { return CreateRef<Shader>(shaderDesc); }
 
 } // namespace Crowny

@@ -23,6 +23,8 @@ namespace Crowny
         ~VulkanPipeline();
 
         VkPipeline GetHandle() const { return m_Pipeline; }
+        bool IsColorReadOnly(uint32_t idx) const { return m_ReadOnlyColors[idx]; }
+        bool IsDepthReadOnly() const { return m_DepthReadOnly; }
 
     private:
         std::array<bool, MAX_FRAMEBUFFER_COLOR_ATTACHMENTS> m_ReadOnlyColors;
@@ -33,7 +35,7 @@ namespace Crowny
     class VulkanGraphicsPipeline : public GraphicsPipeline
     {
     public:
-        VulkanGraphicsPipeline(const PipelineStateDesc& desc, const BufferLayout& layout);
+        VulkanGraphicsPipeline(const PipelineStateDesc& desc);
         ~VulkanGraphicsPipeline();
 
         VulkanPipeline* GetPipeline(VulkanRenderPass* renderPass, uint32_t readOnlyFlags, DrawMode drawMode, const Ref<VulkanBufferLayout>& vulkanBufferLayout);

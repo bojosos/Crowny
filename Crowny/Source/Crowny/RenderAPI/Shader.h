@@ -25,10 +25,10 @@ namespace Crowny
         Shader shader(static_variants, dynamic_variants, shaderDesc);
     */
 
-    class UniformDesc;
-    class BlendStateDesc;
-    class RasterizerStateDesc;
-    class DepthStencilStateDesc;
+    struct UniformDesc;
+    struct BlendStateDesc;
+    struct RasterizerStateDesc;
+    struct DepthStencilStateDesc;
 
     enum class QueuePriority
     {
@@ -88,6 +88,9 @@ namespace Crowny
     class ShaderRenderPass
     {
     public:
+        ShaderRenderPass(const ShaderRenderPassDesc& shaderDescription);
+        static Ref<ShaderRenderPass> Create(const ShaderRenderPassDesc& shaderDesc);
+
         void Compile();
         bool IsCompute() { return m_ShaderDesc.ComputeShader != nullptr; }
         bool HasBlending() const;
@@ -95,9 +98,7 @@ namespace Crowny
         const Ref<GraphicsPipeline>& GetGraphicsPipeline() const { return m_GraphicsPipeline; }
         const Ref<ComputePipeline>& GetComputePipeline() const { return m_ComputePipeline; }
 
-        static Ref<ShaderRenderPass> Create(const ShaderRenderPassDesc& shaderDesc);
-
-        ShaderRenderPass(const ShaderRenderPassDesc& shaderDescription);
+        const ShaderRenderPassDesc& GetPassDesc() const { return m_ShaderDesc; }
     private:
 
         ShaderRenderPassDesc m_ShaderDesc;
@@ -116,6 +117,7 @@ namespace Crowny
         static Ref<ShaderTechnique> Create(const Vector<String>& tags, const ShaderVariation& variation,
                                     const Vector<Ref<ShaderRenderPass>>& renderPasses);
         void Compile();
+        const Vector<Ref<ShaderRenderPass>>& GetRenderPasses() const { return m_Passes; }
 
     private:
         Vector<String> m_Tags;
@@ -125,14 +127,24 @@ namespace Crowny
 
     struct BinaryShaderData;
 
+    struct UniformBufferBlockMember
+    {
+        uint32_t Offset;
+        ShaderDataType DataType;
+        String Name;
+
+        template <typename Archive> void Serialize(Archive& archive) { archive(Offset, DataType, Name); }
+    };
+
     struct UniformBufferBlockDesc
     {
-        String Name;
         uint32_t Slot;
         uint32_t Set;
         uint32_t BlockSize;
+        String Name;
+        Vector<UniformBufferBlockMember> Members;
 
-        template <typename Archive> void Serialize(Archive& archive) { archive(Name, Slot, Set, BlockSize); }
+        template <typename Archive> void Serialize(Archive& archive) { archive(Name, Slot, Set, BlockSize, Members); }
     };
 
     struct UniformResourceDesc
@@ -173,10 +185,12 @@ namespace Crowny
     {
     public:
         Shader() = default;
+        Shader(const ShaderDesc& shaderDesc);
 
         static Ref<Shader> Create(const ShaderDesc& stateDesc);
         virtual AssetType GetAssetType() const override { return AssetType::Shader; }
         static AssetType GetStaticType() { return AssetType::Shader; }
+        Vector<Ref<ShaderTechnique>> GetTechniques() const { return m_Techniques; }
 
     private:
         CW_SERIALIZABLE(Shader);

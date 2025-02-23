@@ -130,6 +130,8 @@ namespace Crowny
     {
         UI::ScopedStyle windowPadding(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, 2.0f));
         BeginPanel(ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        if (!IsShown())
+            return;
 
         DrawHeader();
         ImGui::Separator();

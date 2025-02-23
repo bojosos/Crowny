@@ -17,7 +17,7 @@ namespace Crowny
 
         template <class T> void CreateEntityWith(Entity parent, const String& entityName)
         {
-            m_DeferedActions.push_back([parent, entityName, this]() mutable {
+            m_DeferredActions.push_back([parent, entityName, this]() mutable {
                 auto activeScene = SceneManager::GetActiveScene();
                 Entity newEntity = activeScene->CreateEntity(entityName);
                 newEntity.AddComponent<T>();
@@ -59,7 +59,7 @@ namespace Crowny
     private:
         bool m_PreserveHierarchy = true;
         Entity m_NewOpenEntity;
-        Vector<std::function<void()>> m_DeferedActions;
+        Vector<std::function<void()>> m_DeferredActions;
         std::function<void(Entity)> m_SelectionChanged;
         bool m_Deleted = false;
         Entity m_Renaming = {};
