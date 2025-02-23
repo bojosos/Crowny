@@ -135,9 +135,9 @@ namespace Crowny
         if (fs::exists(PIPELINE_CACHE_FILE))
         {
             Vector<uint8_t> data;
-            FileDataStream dataStream = FileDataStream(PIPELINE_CACHE_FILE);
-            data.resize(dataStream.Size());
-            dataStream.Read(data.data(), data.size());
+            Ref<DataStream> dataStream = FileSystem::OpenFile(PIPELINE_CACHE_FILE);
+            data.resize(dataStream->Size());
+            dataStream->Read(data.data(), data.size());
             pipelineCacheCI.initialDataSize = data.size();
             pipelineCacheCI.pInitialData = data.data();
         }

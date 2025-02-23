@@ -15,10 +15,10 @@ EnableConsoleWarningMessages: true
 EnableConsoleErrorMessages: true
 CollapseConsole: false
 ScrollToBottom: true
-CodeEditorPath: C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\devenv.exe
+CodeEditorPath: C:\Program Files\Microsoft Visual Studio\2022\Preview\Common7\IDE\devenv.exe
 RecentProjects:
   - Path: C:\dev\Projects\Project1
-    Timestamp: 1711922260
+    Timestamp: 1740279398
   - Path: C:\dev\Projects\New Project
     Timestamp: 1648668832
   - Path: C:/dev/Projects\Project4

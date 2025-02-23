@@ -27,6 +27,7 @@ namespace Crowny
         AssetHandle<Shader> GetShader() { return m_Shader; }
         virtual void GetAssets(Vector<AssetHandle<Asset>>& assets) override { assets.push_back(m_Shader); }
 
+
         void Bind();
         // void SetShader(const AssetHandle<Shader>& shader);
         void SetFloat(const String& name, float value);
