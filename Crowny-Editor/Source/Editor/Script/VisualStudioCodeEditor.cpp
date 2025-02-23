@@ -1,5 +1,7 @@
 #include "cwepch.h"
 
+#ifdef CW_PLATFORM_WIN32
+
 // Uncomment to generate the dte80a.tlh file
 // #pragma warning(disable: 4278)
 // #import "libid:80cc9f66-e7d8-4ddd-85b6-d9e6cd0e93e2" version("8.0") lcid("0") raw_interfaces_only named_guids
@@ -458,3 +460,4 @@ namespace Crowny
     }
 
 } // namespace Crowny
+#endif

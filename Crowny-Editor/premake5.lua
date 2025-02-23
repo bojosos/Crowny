@@ -35,7 +35,8 @@ project "Crowny-Editor"
 		"%{IncludeDir.yamlcpp}",
 		"%{IncludeDir.libvorbis}",
 		"%{IncludeDir.libogg}",
-		"%{IncludeDir.Box2D}"
+		"%{IncludeDir.Box2D}",
+		"%{IncludeDir.vulkanvma}",
 	}
 
 	links
@@ -79,6 +80,8 @@ project "Crowny-Editor"
 			"libogg",
 
 			"mono-2.0-sgen.lib",
+			"mbedtls",
+			"msdf-atlas-gen",
 
 			"vulkan-1.lib",
 
@@ -99,7 +102,22 @@ project "Crowny-Editor"
 			"dl",
 			"uuid",
 			"vulkan",
-			"mono-2.0"
+			"mono-2.0",
+			"mbedtls",
+			"msdf-atlas-gen",
+			"msdfgen",
+			"freetype",
+			"libvorbis",
+			"libogg",
+		}
+
+		libdirs
+		{
+			"C:/Program Files/Mono/lib",
+			"C:/VulkanSDK/1.3.280.0/Lib",
+			"C:/Program Files (x86)/OpenAL 1.1 SDK/libs/Win64",
+			"/usr/local/lib",
+			"/usr/local/lib"
 		}
 
 		defines
@@ -116,8 +134,8 @@ project "Crowny-Editor"
 
 		links
 		{
-			"shaderc_sharedd.lib",
-			"spirv-cross-cored.lib",
+			"shaderc_sharedd",
+			"spirv-cross-cored",
 		}
 
 	filter "configurations:Release"
@@ -127,8 +145,8 @@ project "Crowny-Editor"
 
 		links
 		{
-			"shaderc_shared.lib",
-			"spirv-cross-core.lib",
+			"shaderc_shared",
+			"spirv-cross-core",
 		}
 
 	filter "configurations:Dist"
@@ -138,6 +156,6 @@ project "Crowny-Editor"
 
 		links
 		{
-			"shaderc_shared.lib",
-			"spirv-cross-core.lib",
+			"shaderc_shared",
+			"spirv-cross-core",
 		}

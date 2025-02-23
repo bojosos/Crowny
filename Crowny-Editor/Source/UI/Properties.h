@@ -22,7 +22,7 @@ namespace Crowny
         static void Pre(const char* label)
         {
             ShiftCursor(10.0f, 9.0f);
-            ImGui::Text(label);
+            ImGui::Text("%s", label);
             ImGui::NextColumn();
             ShiftCursorY(4.0f);
             ImGui::PushItemWidth(-1);
@@ -34,7 +34,7 @@ namespace Crowny
         static void Pre(const char* label, const char* helpText)
         {
             ShiftCursor(10.0f, 9.0f);
-            ImGui::Text(label);
+            ImGui::Text("%s", label);
             if (std::strlen(helpText) != 0)
             {
                 ImGui::SameLine();
@@ -63,38 +63,6 @@ namespace Crowny
             ImGui::PopItemWidth();
             ImGui::NextColumn();
             Underline();
-        }
-
-        template <typename TEnum, typename TUnderlying = int32_t>
-        static bool QuickTabsP(const char* label, std::initializer_list<const char*> buttonNameList,
-                               Flags<TEnum, TUnderlying>& value)
-        {
-            Vector<TUnderlying> values;
-            values.resize(buttonNameList.size());
-            uint32_t pow = 1;
-            for (uint32_t i = 0; i < (uint32_t)buttonNameList.size(); i++)
-            {
-                values[i] = pow;
-                pow *= 2;
-            }
-            TUnderlying underlying = (TUnderlying)value;
-            bool modified = QuickTabs(label, buttonNameList, values, underlying);
-            value = Flags<TEnum, TUnderlying>(underlying);
-            return modified;
-        }
-
-        template <typename TUnderlying = int32_t>
-        static bool QuickTabsP(const char* label, std::initializer_list<const char*> buttonNameList, TUnderlying& value)
-        {
-            Vector<TUnderlying> values;
-            values.resize(buttonNameList.size());
-            uint32_t pow = 1;
-            for (uint32_t i = 0; i < (uint32_t)buttonNameList.size(); i++)
-            {
-                values[i] = pow;
-                pow *= 2;
-            }
-            return QuickTabs(label, buttonNameList, values, value);
         }
 
         template <typename TUnderlying = int32_t>
@@ -176,6 +144,38 @@ namespace Crowny
             return buttonClicked;
         }
 
+        template <typename TEnum, typename TUnderlying = int32_t>
+        static bool QuickTabsP(const char* label, std::initializer_list<const char*> buttonNameList,
+                               Flags<TEnum, TUnderlying>& value)
+        {
+            Vector<TUnderlying> values;
+            values.resize(buttonNameList.size());
+            uint32_t pow = 1;
+            for (uint32_t i = 0; i < (uint32_t)buttonNameList.size(); i++)
+            {
+                values[i] = pow;
+                pow *= 2;
+            }
+            TUnderlying underlying = (TUnderlying)value;
+            bool modified = QuickTabs(label, buttonNameList, values, underlying);
+            value = Flags<TEnum, TUnderlying>(underlying);
+            return modified;
+        }
+
+        template <typename TUnderlying = int32_t>
+        static bool QuickTabsP(const char* label, std::initializer_list<const char*> buttonNameList, TUnderlying& value)
+        {
+            Vector<TUnderlying> values;
+            values.resize(buttonNameList.size());
+            uint32_t pow = 1;
+            for (uint32_t i = 0; i < (uint32_t)buttonNameList.size(); i++)
+            {
+                values[i] = pow;
+                pow *= 2;
+            }
+            return QuickTabs(label, buttonNameList, values, value);
+        }
+
         static bool PropertyInput(const char* label, int8_t& value, int8_t step = 1, int8_t stepFast = 1)
         {
             Pre(label);
@@ -244,7 +244,7 @@ namespace Crowny
         static void Property(const char* label)
         {
             ShiftCursor(10.0f, 9.0f);
-            ImGui::Text(label);
+            ImGui::Text("%s", label);
             ImGui::NextColumn();
             ImGui::NextColumn();
             Underline();
@@ -488,7 +488,7 @@ namespace Crowny
                                      const Path& initialDir = {})
         {
             ShiftCursor(10.0f, 9.0f);
-            ImGui::Text(label);
+            ImGui::Text("%s", label);
             ImGui::NextColumn();
             ShiftCursorY(4.0f);
             const auto& style = ImGui::GetStyle();
@@ -590,10 +590,10 @@ namespace Crowny
 
         template <typename Type, typename TUnderlying = int32_t>
         static bool PropertyDropdown(const char* label, const Vector<Type>& options, TUnderlying& selected,
-                                     std::function<String(const Type&)> selector)
+                                     std::function<const String&(const Type&)> selector)
         {
             TUnderlying selectedIndex = (TUnderlying)selected;
-            String& current = selector(options[selectedIndex]);
+            String current = selector(options[selectedIndex]);
             Pre(label);
             bool modified = false;
             if ((GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0)
@@ -609,7 +609,6 @@ namespace Crowny
                     const String& selectable = selector(options[i]);
                     if (ImGui::Selectable(selectable.c_str(), is_selected))
                     {
-                        current = selectable[i];
                         selected = (TUnderlying)i;
                         modified = true;
                     }

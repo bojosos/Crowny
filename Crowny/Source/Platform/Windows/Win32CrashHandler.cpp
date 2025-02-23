@@ -1,5 +1,6 @@
 #include "cwpch.h"
 
+#ifdef CW_PLATFORM_WIN32
 #include "Crowny/Application/CrashHandler.h"
 #include "Crowny/Common/PlatformUtils.h"
 
@@ -372,3 +373,4 @@ namespace Crowny
         return EXCEPTION_EXECUTE_HANDLER;
     }
 } // namespace Crowny
+#endif

@@ -22,7 +22,7 @@ namespace Crowny
         void sink_it_(const spdlog::details::log_msg& message) override
         {
             spdlog::memory_buf_t formatted;
-            base_sink<Mutex>::formatter_->format(message, formatted);
+            spdlog::sinks::base_sink<Mutex>::formatter_->format(message, formatted);
             *(m_MessageBuffer.begin() + m_MessagesBuffered) =
               ConsoleBuffer::Message(fmt::to_string(formatted), GetMessageLevel(message.level));
             if (++m_MessagesBuffered == m_MessageBufferCapacity)

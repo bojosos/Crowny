@@ -35,7 +35,7 @@ namespace Crowny
         ImGui::TableSetColumnIndex(0);
         UI::ShiftCursor(17.0f, 7.0f);
 
-        ImGui::Text(label.c_str());
+        ImGui::Text("%s", label.c_str());
         UI::Underline(false, 0.0f, 2.0f);
 
         ImGui::TableSetColumnIndex(1);

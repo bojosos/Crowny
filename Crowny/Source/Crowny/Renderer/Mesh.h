@@ -26,7 +26,7 @@ namespace Crowny
     struct SubMesh
     {
         SubMesh(uint32_t indexOffset, uint32_t indexCount, DrawMode drawMode)
-          : IndexOffset(IndexOffset), IndexCount(indexCount), MeshDrawMode(drawMode)
+          : IndexOffset(indexOffset), IndexCount(indexCount), MeshDrawMode(drawMode)
         {
         }
         uint32_t IndexOffset = 0;

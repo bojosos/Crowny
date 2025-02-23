@@ -8,11 +8,10 @@
 
 namespace Crowny
 {
+    struct ComponentBase;
     class Entity;
     class ComponentEditor;
-    class HierarchyPanelchyWindow;
     class ScriptableEntity;
-
     class TransformComponent;
 
     class EnttEntity
@@ -48,12 +47,11 @@ namespace Crowny
             CW_ENGINE_ASSERT(HasComponent<T>());
             return m_Scene->m_Registry.get<T>(m_EntityHandle);
         }
-        template <typename T> T& AddOrGetComponent() const
+
+        template <typename T, typename... Args> T& AddOrGetComponent(Args&&... args) const
         {
             static_assert(std::is_base_of<ComponentBase, T>::value, "T must be a Component");
-            if (!HasComponent())
-                return m_Scene->emplace<T>(m_EntityHandle);
-            return m_Scene->m_Registry.get<T>(m_EntityHandle);
+            return m_Scene->m_Registry.get_or_emplace<T>(m_EntityHandle, std::forward<Args>(args)...);
         }
 
         template <typename T> bool HasComponent() const
@@ -61,15 +59,17 @@ namespace Crowny
             static_assert(std::is_base_of<ComponentBase, T>::value, "T must be a Component");
             return m_Scene->m_Registry.all_of<T>(m_EntityHandle);
         }
+
         template <typename... T> bool HasAnyComponents() const
         {
-            static_assert(std::is_base_of<ComponentBase, T>::value, "T must be a Component");
-            return m_Scene->m_Registry.any_of<T>(m_EntityHandle);
+            static_assert(std::is_base_of<ComponentBase, T...>::value, "T must be a Component");
+            return m_Scene->m_Registry.any_of<T...>(m_EntityHandle);
         }
+
         template <typename... T> bool HasComponents() const
         {
             static_assert(std::is_base_of<ComponentBase, T...>::value, "T must be a Component");
-            return m_Scene->m_Registry.all_of<T>(m_EntityHandle);
+            return m_Scene->m_Registry.all_of<T...>(m_EntityHandle);
         }
 
         template <typename T, typename... Others> void RemoveComponent()
@@ -81,7 +81,7 @@ namespace Crowny
         template <typename T> void RemoveComponentIfExists()
         {
             static_assert(std::is_base_of<ComponentBase, T>::value, "T must be a Component");
-            m_Scene->m_Registry.remove_if_exists<T>(m_EntityHandle);
+            // m_Scene->m_Registry.remove_if_exists<T>(m_EntityHandle);
         }
 
         bool HasAnyComponents() const { return !m_Scene->m_Registry.orphan(m_EntityHandle); }
@@ -179,7 +179,6 @@ namespace Crowny
 
     private:
         friend class ComponentEditor;
-        friend class HierarchyPanelchyWindow;
         friend class ScriptableEntity;
         friend struct std::hash<Entity>;
     };

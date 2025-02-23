@@ -92,7 +92,7 @@ namespace Crowny
 
         virtual void Revert() override
         {
-            m_NewComponent = m_Entity.GetComponent()<T>();
+            m_NewComponent = m_Entity.GetComponent<T>();
             m_Entity.AddOrReplaceComponent<T>(m_OldComponent);
         }
 

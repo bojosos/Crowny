@@ -10,7 +10,7 @@ namespace Crowny
 
     void ScriptCompression::InitRuntimeData()
     {
-        MetaData.ScriptClass->AddInternalCall("Internal_Compress", &ScriptCompression::Internal_Compress);
+        MetaData.ScriptClass->AddInternalCall("Internal_Compress", (void*)&ScriptCompression::Internal_Compress);
     }
 
     uint64_t ScriptCompression::Internal_Compress(MonoArray* dst, MonoArray* src, CompressionMethod method)

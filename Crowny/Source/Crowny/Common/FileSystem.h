@@ -23,7 +23,7 @@ namespace Crowny
     {
     public:
         static bool FileExists(const Path& path);
-        static uintmax_t GetFileSize(const Path& path);
+        static uint64_t GetFileSize(const Path& path);
 
         static std::tuple<byte*, uint64_t> ReadFile(const Path& path);
         static bool ReadFile(const Path& path, void* buffer, int64_t size = -1);

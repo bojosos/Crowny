@@ -44,7 +44,7 @@
 #include "Crowny/Scripting/Bindings/ScriptInput.h"
 #include "Crowny/Scripting/Bindings/ScriptRandom.h"
 #include "Crowny/Scripting/Bindings/Utils/ScriptCompression.h"
-#include "Crowny/Scripting/Bindings/Utils/ScriptJson.h"
+#include "Crowny/Scripting/Bindings/Utils/ScriptJSON.h"
 #include "Crowny/Scripting/Bindings/Utils/ScriptLayerMask.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptObjectManager.h"
@@ -54,7 +54,10 @@
 #include "Build/BuildManager.h"
 #include "Editor/Script/CodeEditor.h"
 #include "Editor/Script/ScriptProjectGenerator.h"
+
+#ifdef CW_PLATFORM_WIN32
 #include "Editor/Script/VisualStudioCodeEditor.h"
+#endif
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -797,9 +800,9 @@ namespace Crowny
                     m_AssetBrowser->Initialize();
                 }
                 ImGui::TableNextColumn();
-                ImGui::Text(projectPath.string().c_str());
+                ImGui::Text("%s", projectPath.string().c_str());
                 ImGui::TableNextColumn();
-                ImGui::Text(res);
+                ImGui::Text("%s", res);
                 ImGui::TableNextColumn();
                 if (ImGui::Button("-", ImVec2(20.0f, 20.0f)))
                 {
@@ -877,7 +880,7 @@ namespace Crowny
                     {
                         const String parentLabel =
                           entity.GetParent().GetName() + ": " + entity.GetParent().GetUuid().ToString();
-                        ImGui::Text(parentLabel.c_str());
+                        ImGui::Text("%s", parentLabel.c_str());
                     }
                     ImGui::TreePop();
                 }
@@ -929,13 +932,13 @@ namespace Crowny
 
                     if (!m_ShowEmptyMetadataAssetInfo && file->Metadata == nullptr)
                         return;
-                    ImGui::Text(file->Filepath.string().c_str());
+                    ImGui::Text("%s", file->Filepath.string().c_str());
                     ImGui::NextColumn();
                     if (file->Metadata != nullptr)
-                        ImGui::Text(file->Metadata->Uuid.ToString().c_str());
+                        ImGui::Text("%s", file->Metadata->Uuid.ToString().c_str());
                     ImGui::NextColumn();
                     if (file->Metadata != nullptr && assetTypes.count(file->Metadata->Type))
-                        ImGui::Text(assetTypes.at(file->Metadata->Type));
+                        ImGui::Text("%s", assetTypes.at(file->Metadata->Type));
                     ImGui::NextColumn();
                 }
             };
@@ -1042,7 +1045,7 @@ namespace Crowny
                         continue;
                     ii++;
                     UI::ShiftCursorX(10);
-                    ImGui::Text(Physics2D::Get().GetLayerName(i).c_str());
+                    ImGui::Text("%s", Physics2D::Get().GetLayerName(i).c_str());
                     ImGui::SameLine();
                     ImGui::SetCursorPosX(maxTextLength + ImGui::GetStyle().WindowPadding.x + 2 + 10);
                     uint32_t jj = 0;
@@ -1110,9 +1113,9 @@ namespace Crowny
                 {
                     bool expanded = ImGui::TreeNode(field->GetFullDeclName().c_str());
                     ImGui::SameLine();
-                    ImGui::Text(field->GetType()->GetFullName().c_str());
+                    ImGui::Text("%s", field->GetType()->GetFullName().c_str());
                     ImGui::SameLine();
-                    ImGui::Text(field->GetName().c_str());
+                    ImGui::Text("%s", field->GetName().c_str());
                     if (expanded)
                     {
                         for (MonoClass* attribute : field->GetAttributes())
@@ -1374,8 +1377,8 @@ namespace Crowny
         ImGui::Checkbox("Show entity debug info", &m_ShowEntityDebugInfo);
 
         const Vector<CodeEditorInstallation>& editors = CodeEditorManager::Get().GetAvailableEditors();
-        std::function<String(const CodeEditorInstallation&)> selector =
-          [](const CodeEditorInstallation& install) -> String { return install.Name; };
+        std::function<const String&(const CodeEditorInstallation&)> selector =
+          [](const CodeEditorInstallation& install) -> const String& { return install.Name; };
         if (UI::PropertyDropdown("Visual Studio Version", editors, m_VisualStudioVersionId, selector))
         {
             const CodeEditorInstallation& selectedEditor = editors[m_VisualStudioVersionId];

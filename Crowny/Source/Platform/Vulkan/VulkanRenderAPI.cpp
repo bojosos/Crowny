@@ -25,7 +25,11 @@
        printf("\n"); \
    } while(false)
 #endif
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnullability-completeness"
 #include <vma/vk_mem_alloc.h>
+#pragma clang diagnostic pop
 
 // #define CW_DEBUG 0
 // #undef CW_DEBUG

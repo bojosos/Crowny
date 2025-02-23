@@ -75,9 +75,9 @@ namespace Crowny
                 const Vector<String> fileInfo = StringUtils::SplitString(split[4], ":");
                 const String pathString = fileInfo[0] + ":" + fileInfo[1];
                 const Path filepath = pathString;
-                const uint32_t line = StringUtils::ParseInt(fileInfo[2]);
+                const uint32_t lineNum = StringUtils::ParseInt(fileInfo[2]);
 
-                callstack.push_back({ method, filepath, line });
+                callstack.push_back({ method, filepath, lineNum });
             }
             ConsoleBuffer::Get().AddMessage(ConsoleBuffer::Message::Level::Error, exceptionString, callstack);
 #else

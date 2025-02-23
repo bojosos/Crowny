@@ -1,5 +1,6 @@
 #pragma once
 
+#ifdef CW_PLATFORM_WIN32
 namespace Crowny
 {
     template <typename Type, int N> class SmallVector
@@ -26,7 +27,7 @@ namespace Crowny
         {
             if (size <= N)
                 return;
-            m_Elements = operator new()
+            m_Elements static_cast<T*>(::operator new(capacity * sizeof(Type)));
         }
 
         SmallVector(std::initializer_list<Type> list) { append(list); }
@@ -158,7 +159,7 @@ namespace Crowny
         {
             if (m_Size == m_Capacity)
                 grow(m_Capacity * 2);
-            new (&mElements[mSize++]) Type(std::move(element));
+            new (&m_Elements[m_Size++]) Type(std::move(element));
         }
 
         void pop_back()
@@ -183,7 +184,7 @@ namespace Crowny
                 grow(m_Size + count);
 
             std::uninitialized_fill_n(end(), count, element);
-            mSize += count;
+            m_Size += count;
         }
 
         void append(std::initializer_list<Type> list) { append(list.begin(), list.end()); }
@@ -192,9 +193,9 @@ namespace Crowny
 
         void pop()
         {
-            assert(mSize > 0 && "Popping an empty array.");
-            mSize--;
-            mElements[mSize].~Type();
+            CW_ENGINE_ASSERT(m_Size > 0 && "Popping an empty array.");
+            m_Size--;
+            m_Elements[m_Size].~Type();
         }
 
         Iterator erase(ConstIterator iter)
@@ -224,7 +225,7 @@ namespace Crowny
             grow(capacity);
         }
 
-        void resize(UINT32 size, const Type& value = Type())
+        void resize(uint32_t size, const Type& value = Type())
         {
             if (size > m_Capacity)
                 grow(size);
@@ -278,3 +279,4 @@ namespace Crowny
         uint32_t m_Size = 0;
     };
 } // namespace Crowny
+#endif

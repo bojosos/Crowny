@@ -118,7 +118,7 @@ namespace Crowny
         friend class cereal::access;
 
         VulkanTexture(); // For serialization only
-        void Init();
+        virtual void Init() override;
 
         VulkanImage* CreateImage(VulkanDevice& device, TextureFormat format);
         VulkanBuffer* CreateStagingBuffer(VulkanDevice& device, const PixelData& src, bool needsRead);

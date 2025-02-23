@@ -79,7 +79,7 @@ namespace Crowny
             if (!memberInfo->m_Tooltip.empty())
             {
                 ImGui::BeginTooltip();
-                ImGui::Text(memberInfo->m_Tooltip.c_str());
+                ImGui::Text("%s", memberInfo->m_Tooltip.c_str());
                 ImGui::EndTooltip();
             }
         }
@@ -156,7 +156,7 @@ namespace Crowny
                 if (!memberInfo->m_Tooltip.empty())
                 {
                     ImGui::BeginTooltip();
-                    ImGui::Text(memberInfo->m_Tooltip.c_str());
+                    ImGui::Text("%s", memberInfo->m_Tooltip.c_str());
                     ImGui::EndTooltip();
                 }
                 UI::Underline(true);
@@ -170,7 +170,7 @@ namespace Crowny
                 if (!memberInfo->m_Tooltip.empty())
                 {
                     ImGui::BeginTooltip();
-                    ImGui::Text(memberInfo->m_Tooltip.c_str());
+                    ImGui::Text("%s", memberInfo->m_Tooltip.c_str());
                     ImGui::EndTooltip();
                 }
 
@@ -341,8 +341,8 @@ namespace Crowny
         }
         case ScriptPrimitiveType::I8: {
             int8_t value = *(int8_t*)fieldValue;
-            int8_t minValue8 = (int8_t)glm::clamp(minValueInt, -128LL, 127LL);
-            int8_t maxValue8 = (int8_t)glm::clamp(maxValueInt, -128LL, 127LL);
+            int8_t minValue8 = (int8_t)glm::clamp((long long)minValueInt, -128LL, 127LL);
+            int8_t maxValue8 = (int8_t)glm::clamp((long long)maxValueInt, -128LL, 127LL);
             bool change = false;
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue8, maxValue8);
@@ -360,8 +360,8 @@ namespace Crowny
         }
         case ScriptPrimitiveType::U8: {
             uint8_t value = *(uint8_t*)fieldValue;
-            uint8_t minValue8 = (uint8_t)glm::clamp(minValueInt, 0LL, 255LL);
-            uint8_t maxValue8 = (uint8_t)glm::clamp(maxValueInt, 0LL, 255LL);
+            uint8_t minValue8 = (uint8_t)glm::clamp((long long)minValueInt, 0LL, 255LL);
+            uint8_t maxValue8 = (uint8_t)glm::clamp((long long)maxValueInt, 0LL, 255LL);
             bool change = false;
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue8, maxValue8);
@@ -379,8 +379,8 @@ namespace Crowny
         }
         case ScriptPrimitiveType::I16: {
             int16_t value = *(int16_t*)fieldValue;
-            int16_t minValue16 = (int16_t)glm::clamp(minValueInt, -32768LL, 32767LL);
-            int16_t maxValue16 = (int16_t)glm::clamp(maxValueInt, -32768LL, 32767LL);
+            int16_t minValue16 = (int16_t)glm::clamp((long long)minValueInt, -32768LL, 32767LL);
+            int16_t maxValue16 = (int16_t)glm::clamp((long long)maxValueInt, -32768LL, 32767LL);
             bool change = false;
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue16, maxValue16);
@@ -398,8 +398,8 @@ namespace Crowny
         }
         case ScriptPrimitiveType::U16: {
             uint16_t value = *(uint16_t*)fieldValue;
-            uint16_t minValue16 = (uint16_t)glm::clamp(minValueInt, 0LL, 65535LL);
-            uint16_t maxValue16 = (uint16_t)glm::clamp(maxValueInt, 0LL, 65535LL);
+            uint16_t minValue16 = (uint16_t)glm::clamp((long long)minValueInt, 0LL, 65535LL);
+            uint16_t maxValue16 = (uint16_t)glm::clamp((long long)maxValueInt, 0LL, 65535LL);
             bool change = false;
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue16, maxValue16);
@@ -418,8 +418,8 @@ namespace Crowny
         }
         case ScriptPrimitiveType::I32: {
             int32_t value = *(int32_t*)fieldValue;
-            int32_t minValue32 = (int32_t)glm::clamp(minValueInt, -2147483648LL, 2147483647LL);
-            int32_t maxValue32 = (int32_t)glm::clamp(maxValueInt, -2147483648LL, 2147483647LL);
+            int32_t minValue32 = (int32_t)glm::clamp((long long)minValueInt, -2147483648LL, 2147483647LL);
+            int32_t maxValue32 = (int32_t)glm::clamp((long long)maxValueInt, -2147483648LL, 2147483647LL);
             bool change = false;
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue32, maxValue32);
@@ -438,8 +438,8 @@ namespace Crowny
         }
         case ScriptPrimitiveType::U32: {
             uint32_t value = *(uint32_t*)fieldValue;
-            uint32_t minValue32 = (uint32_t)glm::clamp(minValueInt, 0LL, 4294967295LL);
-            uint32_t maxValue32 = (uint32_t)glm::clamp(maxValueInt, 0LL, 4294967295LL);
+            uint32_t minValue32 = (uint32_t)glm::clamp((long long)minValueInt, 0LL, 4294967295LL);
+            uint32_t maxValue32 = (uint32_t)glm::clamp((long long)maxValueInt, 0LL, 4294967295LL);
             bool change = false;
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue32, maxValue32);
@@ -478,8 +478,8 @@ namespace Crowny
         }
         case ScriptPrimitiveType::U64: {
             uint64_t value = *(uint64_t*)fieldValue;
-            uint64_t minValue64 = glm::clamp(minValueInt, 0LL, 4294967295LL);
-            uint64_t maxValue64 = glm::clamp(maxValueInt, 0LL, 4294967295LL);
+            uint64_t minValue64 = glm::clamp((long long)minValueInt, 0LL, 4294967295LL);
+            uint64_t maxValue64 = glm::clamp((long long)maxValueInt, 0LL, 4294967295LL);
             bool change = false;
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue64, maxValue64);
@@ -766,7 +766,7 @@ namespace Crowny
                 if (!memberInfo->m_Tooltip.empty())
                 {
                     ImGui::BeginTooltip();
-                    ImGui::Text(memberInfo->m_Tooltip.c_str());
+                    ImGui::Text("%s", memberInfo->m_Tooltip.c_str());
                     ImGui::EndTooltip();
                 }
                 totalModified |= modified;

@@ -181,7 +181,7 @@ namespace Crowny
                 tm* timeinfo;
                 timeinfo = localtime(&message.Timestamp);
                 strftime(res, 9, "%T", timeinfo);
-                ImGui::Text(res);
+                ImGui::Text("%s", res);
             }
             else // repeats
             {
@@ -211,7 +211,7 @@ namespace Crowny
     void ConsolePanel::RenderFooter()
     {
         UI::ScopedStyle style(ImGuiStyleVar_WindowPadding, ImVec2(0, 2));
-        ImGui::TextWrapped(m_SelectedMessage.MessageText.c_str());
+        ImGui::TextWrapped("%s", m_SelectedMessage.MessageText.c_str());
         // ImGui::Text(m_SelectedMessage.MessageText.c_str());
         for (const ConsoleBuffer::Message::FunctionCall& call : m_SelectedMessage.Callstack)
         {

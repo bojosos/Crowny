@@ -16,7 +16,7 @@
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Utils/ShaderCompiler.h"
 
-#include "MSDFData.h"
+#include "Crowny/Renderer/MSDFdata.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>

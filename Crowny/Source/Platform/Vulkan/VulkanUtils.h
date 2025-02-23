@@ -91,7 +91,7 @@ namespace Crowny
         static VkPrimitiveTopology GetDrawFlags(DrawMode drawMode);
         static VkShaderStageFlagBits GetShaderFlags(ShaderType shaderType);
         static VkIndexType GetIndexType(IndexType indexType);
-        static VkFormat VulkanUtils::GetVertexFormat(ShaderDataType shaderDataType);
+        static VkFormat GetVertexFormat(ShaderDataType shaderDataType);
         static VkPipelineStageFlags ShaderToPipelineStage(VkShaderStageFlags shaderStageFlags);
         static bool RangeOverlaps(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b);
         static VkFormat GetDummyViewFormat(GpuBufferFormat format);

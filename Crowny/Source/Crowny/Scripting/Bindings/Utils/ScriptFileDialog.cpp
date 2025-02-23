@@ -9,12 +9,12 @@ namespace Crowny
 {
     void ScriptFileDialog::InitRuntimeData()
     {
-        MetaData.ScriptClass->AddInternalCall("Internal_OpenFileDialog", &ScriptFileDialog::Internal_OpenFileDialog);
+        MetaData.ScriptClass->AddInternalCall("Internal_OpenFileDialog", (void*)&ScriptFileDialog::Internal_OpenFileDialog);
         MetaData.ScriptClass->AddInternalCall("Internal_OpenFolderDialog",
-                                              &ScriptFileDialog::Internal_OpenFolderDialog);
-        MetaData.ScriptClass->AddInternalCall("Internal_SaveFileDialog", &ScriptFileDialog::Internal_SaveFileDialog);
+                                              (void*)&ScriptFileDialog::Internal_OpenFolderDialog);
+        MetaData.ScriptClass->AddInternalCall("Internal_SaveFileDialog", (void*)&ScriptFileDialog::Internal_SaveFileDialog);
         MetaData.ScriptClass->AddInternalCall("Internal_SaveFolderDialog",
-                                              &ScriptFileDialog::Internal_SaveFolderDialog);
+                                              (void*)&ScriptFileDialog::Internal_SaveFolderDialog);
     }
 
     static MonoString* CreateFileDialog(FileDialogType type, MonoString* title, MonoString* directory,
