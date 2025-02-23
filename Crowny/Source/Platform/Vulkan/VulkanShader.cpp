@@ -38,10 +38,10 @@ namespace Crowny
         moduleCreateInfo.codeSize = m_ShaderData->Data.size();
         moduleCreateInfo.pCode = (uint32_t*)m_ShaderData->Data.data();
         vkCreateShaderModule(device.GetLogicalDevice(), &moduleCreateInfo, gVulkanAllocator, &m_ShaderStage.module);
-        m_Module = device.GetResourceManager().Create<VulkanShaderModule>(m_ShaderStage.module
+        m_Module = device.GetResourceManager().Create<VulkanShaderModule>(m_ShaderStage.module);
 
         if (m_ShaderData->Type==ShaderType::VERTEX_SHADER)
-            m_BufferLayout = std::move(m_ShaderData->VertexLayout);
+            m_BufferLayout = CreateRef<BufferLayout>(std::move(m_ShaderData->VertexLayout));
     }
 
     VulkanShader::~VulkanShader() { m_Module->Destroy(); }

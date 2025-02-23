@@ -34,7 +34,6 @@
 #include "Crowny/Renderer/Mesh.h"
 #include "Crowny/Renderer/MeshFactory.h"
 #include "Crowny/Renderer/Model.h"
-#include "Crowny/Renderer/PBRMaterial.h"
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Renderer/TextureManager.h"

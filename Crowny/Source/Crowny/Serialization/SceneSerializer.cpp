@@ -230,12 +230,10 @@ namespace Crowny
     {
         YAML::Emitter out;
         out << YAML::Comment("Crowny Scene");
-        out << YAML::BeginMap;
-        out << YAML::Key << "Version" << YAML::Value << SceneVersion;
-        out << YAML::EndMap;
 
         out << YAML::BeginMap;
 
+        SerializeValueYAML(out, "Version", SceneVersion);
         SerializeValueYAML(out, "Scene", m_Scene->GetName());
 
         SerializeValueYAML(out, "Entities", YAML::BeginSeq);

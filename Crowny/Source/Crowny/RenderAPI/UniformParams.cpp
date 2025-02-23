@@ -39,8 +39,7 @@ namespace Crowny
         m_BufferBlocks[globalSlot] = uniformBlock;
     }
 
-    void UniformParams::SetUniformBlockBuffer(ShaderType type, const String& name,
-                                              const Ref<UniformBufferBlock>& uniformBuffer)
+    void UniformParams::SetUniformBlockBuffer(ShaderType type, const String& name, const Ref<UniformBufferBlock>& uniformBuffer)
     {
         const Ref<UniformDesc>& paramDesc = m_ParamInfo->GetUniformDesc(type);
         if (paramDesc == nullptr)
@@ -61,7 +60,7 @@ namespace Crowny
 
     void UniformParams::SetUniformBlockBuffer(const String& name, const Ref<UniformBufferBlock>& uniformBuffer)
     {
-        for (uint32_t i = 0; i < 6; i++)
+        for (uint32_t i = 0; i < SHADER_COUNT; i++)
         {
             const Ref<UniformDesc>& paramDesc = m_ParamInfo->GetUniformDesc((ShaderType)i);
             if (paramDesc == nullptr)
@@ -82,21 +81,18 @@ namespace Crowny
         return m_BufferBlocks[globalSlot];
     }
 
-    void UniformParams::SetTexture(ShaderType type, const String& name, const Ref<Texture>& texture,
-                                   const TextureSurface& surface)
+    void UniformParams::SetTexture(ShaderType type, const String& name, const Ref<Texture>& texture, const TextureSurface& surface)
     {
-        /*const Ref<UniformParamDesc>& paramDescs = m_ParamInfo->GetParamDescs(type);
-        CW_ENGINE_ASSERT(paramDescs != nullptr);
-
-        auto iter = paramDescs->Textures.find(name)
-        CW_ENGINE_ASSERT(iter != paramDescs->Textures.end());
-
-        GetTextureParam(type, name, param);
-        param.Set(texture, surface);*/
+        // TODO: Do not hardcode fragment shader for textures
+        const UnorderedMap<String, UniformResourceDesc>& textures = m_ParamInfo->GetUniformDesc(type)->Textures;
+        const auto iterFind = textures.find(name);
+        if (iterFind != textures.cend())
+            SetTexture(iterFind->second.Set, iterFind->second.Slot, texture, surface);
+        else
+            CW_ENGINE_WARN("Texture with name {} does not exist in the fragment shader", name);
     }
 
-    void UniformParams::SetTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture,
-                                   const TextureSurface& surface)
+    void UniformParams::SetTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture, const TextureSurface& surface)
     {
         uint32_t globalSlot = m_ParamInfo->GetSequentialSlot(UniformParamInfo::ParamType::Texture, set, slot);
         if (globalSlot == (uint32_t)-1)

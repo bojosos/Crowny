@@ -10,16 +10,18 @@ namespace Crowny
 
     void ImGuiPanel::BeginPanel(ImGuiWindowFlags flags)
     {
+        m_BeginCalled = false;
         if (m_Shown)
         {
             ImGui::Begin(m_Name.c_str(), &m_Shown, flags);
+            m_BeginCalled = true;
             UpdateState();
         }
     }
 
     void ImGuiPanel::EndPanel()
     {
-        if (m_Shown)
+        if (m_BeginCalled)
             ImGui::End();
     }
 
@@ -29,9 +31,10 @@ namespace Crowny
         m_Focused = ImGui::IsWindowFocused();
     }
 
+
     void ImGuiPanel::RegisterInMenu(ImGuiMenu* menu)
     {
-        menu->AddItem(new ImGuiMenuItem(
-          m_Name, "", [&](auto& event) { /*m_Shown = !m_Shown;*/ }, &m_Shown));
+        CW_ENGINE_ERROR("{}: {}", m_Name, (void*) this);
+        menu->AddItem(new ImGuiMenuItem(m_Name, "", nullptr, &m_Shown));
     }
 } // namespace Crowny

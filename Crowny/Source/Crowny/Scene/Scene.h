@@ -76,8 +76,8 @@ namespace Crowny
         void OnCircleCollider2DComponentConstruct(entt::registry& registry, entt::entity entity);
         void OnCircleCollider2DComponentDestroy(entt::registry& registry, entt::entity entity);
 
-        void OnAudioSourceComponentomponentConstruct(entt::registry& registry, entt::entity entity);
-        void OnAudioSourceComponentComponentDestroy(entt::registry& registry, entt::entity entity);
+        void OnAudioSourceComponentConstruct(entt::registry& registry, entt::entity entity);
+        void OnAudioSourceComponentDestroy(entt::registry& registry, entt::entity entity);
 
     private:
         friend class ComponentEditor;

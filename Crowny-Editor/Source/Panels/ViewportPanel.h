@@ -11,6 +11,7 @@
 
 namespace Crowny
 {
+    struct FileEntry;
 
     enum class GizmoEditMode
     {
@@ -19,6 +20,23 @@ namespace Crowny
         Rotate = 2,
         Scale = 3,
         Bounds = 4
+    };
+
+    
+    class ImGuiViewportSceneDraggedEvent : public Event
+    {
+    public:
+        const FileEntry* GetFileEntry() const { return m_FileEntry; }
+        const glm::vec2 &GetRelativePosition() const { return m_Coords; }
+
+        EVENT_CLASS_CATEGORY(EventCategoryImGui);
+        EVENT_CLASS_TYPE(ImGuiViewportSceneDragged);
+
+        ImGuiViewportSceneDraggedEvent(const FileEntry* fileEntry, const glm::vec2& coords) : m_FileEntry(fileEntry), m_Coords(coords) {}
+
+    private:
+        glm::vec2 m_Coords; // The coordinates relative to the window.
+        const FileEntry* m_FileEntry;
     };
 
     class ViewportPanel : public ImGuiPanel

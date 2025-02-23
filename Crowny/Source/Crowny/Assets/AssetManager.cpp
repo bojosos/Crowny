@@ -284,15 +284,15 @@ namespace Crowny
         // TODO: Fix this for engine shaders
         // archive(cereal::base_class<Asset>(&shader));
         // TODO: Fix these for all stages
-        archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->Data);
-        archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->EntryPoint);
-        archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->Type);
-        archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->Description);
+        // archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->Data);
+        // archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->EntryPoint);
+        // archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->Type);
+        // archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->Description);
 
-        archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->Data);
-        archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->EntryPoint);
-        archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->Type);
-        archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->Description);
+        // archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->Data);
+        // archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->EntryPoint);
+        // archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->Type);
+        // archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->Description);
         // archive(shader.m_ShaderStages[FRAGMENT_SHADER]);
         // archive(shader.m_ShaderStages);
         // for (uint32_t i = 0; i < SHADER_COUNT; i++)
@@ -311,14 +311,14 @@ namespace Crowny
         archive(data->EntryPoint);
         archive(data->Type);
         archive(data->Description);
-        shader.m_ShaderStages[VERTEX_SHADER] = ShaderStage::Create(data);
+        // shader.m_ShaderStages[VERTEX_SHADER] = ShaderStage::Create(data);
 
         data = CreateRef<BinaryShaderData>();
         archive(data->Data);
         archive(data->EntryPoint);
         archive(data->Type);
         archive(data->Description);
-        shader.m_ShaderStages[FRAGMENT_SHADER] = ShaderStage::Create(data);
+        // shader.m_ShaderStages[FRAGMENT_SHADER] = ShaderStage::Create(data);
         // archive(shader.m_ShaderStages);
         /*for (uint32_t i = 0; i < SHADER_COUNT; i++)
             archive(shader.m_ShaderStages[i]);*/

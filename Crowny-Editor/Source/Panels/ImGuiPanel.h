@@ -16,7 +16,9 @@ namespace Crowny
         virtual void Show() { m_Shown = true; };
         virtual void Hide() { m_Shown = false; };
 
+        // TODO: Fix this whole Render/manual begin calls
         virtual void Render() = 0;
+
         virtual const String& GetName() const { return m_Name; }
         virtual bool IsFocused() { return m_Focused; }
         virtual bool IsHovered() { return m_Hovered; }
@@ -34,5 +36,6 @@ namespace Crowny
         bool m_Focused = false, m_Hovered = false;
         String m_Name;
         bool m_Shown = true;
+        bool m_BeginCalled = false;
     };
 } // namespace Crowny

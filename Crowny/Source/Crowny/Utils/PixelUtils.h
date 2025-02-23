@@ -4,6 +4,7 @@
 
 namespace Crowny
 {
+
     enum PixelComponentType
     {
         PCT_BYTE = 0,
@@ -25,7 +26,7 @@ namespace Crowny
         PFF_NORMALIZED = 0x40
     };
 
-    float LinearToSRGB(float x)
+    inline float LinearToSRGB(float x)
     {
         if (x <= 0.0f)
             return 0.0f;
@@ -37,7 +38,7 @@ namespace Crowny
             return std::pow(x, 1.0f / 2.4f) * 1.055f - 0.055f;
     }
 
-    float SRGBToLinear(float x)
+   inline float SRGBToLinear(float x)
     {
         if (x <= 0.0f)
             return 0.0f;

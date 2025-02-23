@@ -85,13 +85,17 @@ namespace Crowny
         ImGui::Image(textureID, ImVec2(m_ViewportSize.x, m_ViewportSize.y), ImVec2{ 0, 1 },
                      ImVec2{ 1, 0 }); // The viewport itself
 
-        if (ImGui::BeginDragDropTarget()) // Drag drop scenes and meshes, TODO: Fix for meshes
+        if (ImGui::BeginDragDropTarget())
         {
             if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload())
             {
-                // TODO: Change to take file entry.
-                ImGuiViewportSceneDraggedEvent event(fileEntry->Filepath);
-                OnEvent(event);
+                const glm::vec4& bounds = GetViewportBounds();
+                ImVec2 mouseCoords = ImGui::GetMousePos();
+                glm::vec2 coords = { mouseCoords.x - bounds.x, mouseCoords.y - bounds.y };
+                coords.y = m_ViewportSize.y - coords.y - 1;
+
+                ImGuiViewportSceneDraggedEvent fileDragEvent(fileEntry, coords);
+                OnEvent(fileDragEvent);
             }
             ImGui::EndDragDropTarget();
         }

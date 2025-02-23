@@ -52,7 +52,7 @@ namespace Crowny
         return true;
     }
 
-    VulkanGraphicsPipeline::VulkanGraphicsPipeline(const PipelineStateDesc& desc, const BufferLayout& layout)
+    VulkanGraphicsPipeline::VulkanGraphicsPipeline(const PipelineStateDesc& desc)
       : GraphicsPipeline(desc)
     {
         static Vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_STENCIL_REFERENCE };

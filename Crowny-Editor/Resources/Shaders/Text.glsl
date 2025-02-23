@@ -5,11 +5,11 @@
 layout(location = 0) in vec3 a_Position;
 layout(location = 1) in vec4 a_Color;
 layout(location = 2) in vec2 a_TexCoords;
-layout(location = 3) in vec4 a_UnderlyingColor;
+layout(location = 3) in vec4 a_UnderlayColor;
 layout(location = 4) in float a_UnderlayOffset;
 layout(location = 5) in vec4 a_OutlineColor;
 layout(location = 6) in float a_OutlineThickness;
-layout(location = 7) in int a_EntityID;
+layout(location = 7) in int a_ObjectId;
 
 layout(std140, binding = 0) uniform Camera
 {
@@ -19,18 +19,22 @@ layout(std140, binding = 0) uniform Camera
 struct VertexOutput
 {
 	vec4 Color;
+	vec4 OutlineColor;
 	vec2 TexCoord;
+	float OutlineThickness;
 };
 
 layout (location = 0) out VertexOutput Output;
-layout (location = 2) out flat int v_EntityID;
+layout (location = 4) out flat int v_EntityID;
 
 void main()
 {
 	Output.Color = a_Color;
 	Output.TexCoord = a_TexCoords;
+	Output.OutlineColor = a_OutlineColor;
+	Output.OutlineThickness = a_OutlineThickness;
 
-	v_EntityID = a_EntityID;
+	v_EntityID = a_ObjectId;
 
 	gl_Position = camera.u_ViewProjection * vec4(a_Position, 1.0);
 }
@@ -44,11 +48,13 @@ layout(location = 1) out int o_EntityID;
 struct VertexOutput
 {
 	vec4 Color;
+	vec4 OutlineColor;
 	vec2 TexCoord;
+	float OutlineThickness;
 };
 
 layout (location = 0) in VertexOutput Input;
-layout (location = 2) in flat int v_EntityID;
+layout (location = 4) in flat int v_EntityID;
 
 layout (binding = 1) uniform sampler2D u_FontAtlas;
 
@@ -67,8 +73,6 @@ void main()
 {
 	o_EntityID = v_EntityID;
 
-	vec4 texColor = Input.Color * texture(u_FontAtlas, Input.TexCoord);
-
 	vec3 msd = texture(u_FontAtlas, Input.TexCoord).rgb;
     float sd = median(msd.r, msd.g, msd.b);
     float screenPxDistance = screenPxRange()*(sd - 0.5);
@@ -76,7 +80,7 @@ void main()
 	if (opacity == 0.0)
 		discard;
 
-    o_Color = mix(a_OutlineColor, Input.Color, opacity);
+    o_Color = mix(Input.OutlineColor, Input.Color, opacity);
 	if (o_Color.a == 0.0)
-		discard;
+	 	discard;
 }

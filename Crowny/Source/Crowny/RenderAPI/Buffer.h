@@ -23,6 +23,50 @@ namespace Crowny
         Int4
     };
 
+    static String ShaderDataTypeToString(ShaderDataType type)
+    {
+        switch (type)
+        {
+        case ShaderDataType::Bool:
+            return "Bool";
+        case ShaderDataType::SByte:
+            return "SByte";
+        case ShaderDataType::SByte2:
+            return "SByte2";
+        case ShaderDataType::SByte3:
+            return "SByte3";
+        case ShaderDataType::SByte4:
+            return "SByte4";
+        case ShaderDataType::UByte4:
+            return "UByte4";
+        case ShaderDataType::Float:
+            return "Float";
+        case ShaderDataType::Float2:
+            return "Float2";
+        case ShaderDataType::Float3:
+            return "Float3";
+        case ShaderDataType::Float4:
+            return "Float4";
+        case ShaderDataType::Mat3:
+            return "Mat3";
+        case ShaderDataType::Mat4:
+            return "Mat4";
+        case ShaderDataType::Int:
+            return "Int";
+        case ShaderDataType::Int2:
+            return "Int2";
+        case ShaderDataType::Int3:
+            return "Int3";
+        case ShaderDataType::Int4:
+            return "Int4";
+        case ShaderDataType::None: {
+            CW_ENGINE_ASSERT(false, "Unknown ShaderDataType!");
+            return "yep";
+        };
+        }
+        return "yep";
+    }
+
     static uint32_t ShaderDataTypeSize(ShaderDataType type)
     {
         switch (type)

@@ -57,7 +57,7 @@ namespace Crowny
     };
 
     void ForwardRenderer::Init()
-    {
+    { /*
         s_Data = new ForwardRendererData();
         // Ref<UniformParams>& uniforms = InspectorPanel::GetSelectedMaterial()->GetUniformParams();
 
@@ -117,13 +117,14 @@ namespace Crowny
                                                        BufferUsage::DYNAMIC_DRAW);
         s_Data->SkyboxUniforms->SetUniformBlockBuffer(0, 0, s_Data->SkyboxMvp);
         s_Data->SkyboxUniforms->SetUniformBlockBuffer(0, 1, s_Data->GlobalFragmentParams);
-        s_Data->SkyboxUniforms->SetTexture(0, 2, s_Data->Skybox->m_EnvironmentMap);
+        s_Data->SkyboxUniforms->SetTexture(0, 2, s_Data->Skybox->m_EnvironmentMap);*/
     }
 
     void ForwardRenderer::Begin() {}
 
     void ForwardRenderer::BeginScene(const Camera& camera, const glm::mat4& viewMatrix)
     {
+        /*
         auto& rapi = RenderAPI::Get();
         rapi.SetGraphicsPipeline(s_Data->Pipeline);
         rapi.ClearViewport(FBT_COLOR | FBT_DEPTH);
@@ -156,13 +157,14 @@ namespace Crowny
         rapi.SetIndexBuffer(s_Data->SkyboxIbo);
 
         rapi.SetUniforms(s_Data->SkyboxUniforms);
-        rapi.DrawIndexed(0, s_Data->SkyboxIbo->GetCount(), 0, 1);
+        rapi.DrawIndexed(0, s_Data->SkyboxIbo->GetCount(), 0, 1);*/
     }
 
     void ForwardRenderer::SubmitLightSetup() {}
 
     void ForwardRenderer::Submit(const AssetHandle<Mesh>& mesh, const glm::mat4& transform)
     {
+        /*
         // const glm::mat4 transform(1.0f);
         RenderAPI& rapi = RenderAPI::Get();
 
@@ -195,7 +197,7 @@ namespace Crowny
         rapi.SetIndexBuffer(mesh->GetIndexBuffer());
         rapi.SetDrawMode(mesh->GetDrawMode());
         // rapi.DrawIndexed(0, mesh->GetIndexCount(), 0, mesh->GetVertexCount());
-        rapi.Draw(0, mesh->GetVertexCount());
+        rapi.Draw(0, mesh->GetVertexCount());*/
     }
 
     void ForwardRenderer::SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform)

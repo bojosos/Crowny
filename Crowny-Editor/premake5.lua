@@ -82,7 +82,8 @@ project "Crowny-Editor"
 
 			"vulkan-1.lib",
 
-			"Rpcrt4.lib"
+			"Rpcrt4.lib",
+			"dbghelp.lib",
 		}
 
 	filter "system:linux"
@@ -98,7 +99,7 @@ project "Crowny-Editor"
 			"dl",
 			"uuid",
 			"vulkan",
-			"mono-2.0",
+			"mono-2.0"
 		}
 
 		defines

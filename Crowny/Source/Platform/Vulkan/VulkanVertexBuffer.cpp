@@ -69,7 +69,7 @@ namespace Crowny
             bool semantic = false;
             for (const BufferElement& shaderElement : shaderElements)
             {
-                if (shaderElement.Attribute == meshElement.Attribute)
+                if (shaderElement.Attribute == meshElement.Attribute || (shaderElement.Name==meshElement.Name && shaderElement.Type==meshElement.Type))
                 {
                     semantic = true;
                     break;
@@ -79,19 +79,19 @@ namespace Crowny
                 continue;
 
             numAttrs++;
-            numBindings = std::max(numBindings, meshElement.StreamIdx); // For now always 1, weee neeeed stream idx.
+            numBindings = std::max(numBindings, meshElement.StreamIdx+1); // For now always 1, weee neeeed stream idx.
         }
 
         BufferLayoutEntry newEntry;
         newEntry.Attributes = new VkVertexInputAttributeDescription[numAttrs];
         newEntry.Bindings = new VkVertexInputBindingDescription[numBindings];
-        CW_ENGINE_ASSERT(numBindings == 1, "Not supproted currently");
+        CW_ENGINE_ASSERT(numBindings == 1, "Not supported currently");
         for (uint32_t i = 0; i < numBindings; i++)
         {
             VkVertexInputBindingDescription& binding = newEntry.Bindings[i];
             binding.binding = i;
             binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-            binding.stride = meshElements[i].Size;
+            binding.stride = meshLayout->GetStride();
         }
 
         uint32_t attrIdx = 0;
@@ -102,10 +102,12 @@ namespace Crowny
             bool semantic = false;
             for (const auto& shaderElement : shaderElements)
             {
-                if (meshElement.Attribute == shaderElement.Attribute)
+                if (meshElement.Attribute == shaderElement.Attribute ||
+                    (shaderElement.Name == meshElement.Name && shaderElement.Type == meshElement.Type))
                 {
                     semantic = true;
-                    attr.location = meshElement.Offset;
+                    attr.location = attrIdx;
+                    // attr.location = meshElement.Offset;
                     break;
                 }
             }
@@ -125,8 +127,8 @@ namespace Crowny
             }
             else
             {
-                if (binding.inputRate == VK_VERTEX_INPUT_RATE_VERTEX && !isPerVertex ||
-                    binding.inputRate == VK_VERTEX_INPUT_RATE_INSTANCE && isPerVertex)
+                if ((binding.inputRate == VK_VERTEX_INPUT_RATE_VERTEX && !isPerVertex) ||
+                    (binding.inputRate == VK_VERTEX_INPUT_RATE_INSTANCE && isPerVertex))
                 {
                     CW_ENGINE_WARN("This here bad");
                     CW_ENGINE_ASSERT(false);

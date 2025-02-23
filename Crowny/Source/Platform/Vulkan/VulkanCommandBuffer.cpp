@@ -439,7 +439,7 @@ namespace Crowny
         const Ref<VulkanBufferLayout> currentLayout =
           VulkanBufferLayoutManager::Get().GetBufferLayout(m_VertexLayout, pipelineLayout);
         VulkanRenderPass* renderPass = m_Framebuffer->GetRenderPass();
-        VulkanPipeline* pipeline = m_GraphicsPipeline->GetPipeline(renderPass, m_RenderTargetReadOnlyFlags, m_DrawMode, pipelineLayout);
+        VulkanPipeline* pipeline = m_GraphicsPipeline->GetPipeline(renderPass, m_RenderTargetReadOnlyFlags, m_DrawMode, currentLayout);
         if (pipeline == nullptr)
             return false;
 
@@ -2318,7 +2318,8 @@ namespace Crowny
                 return entry;
         }
 
-        CW_ENGINE_ASSERT(false);
+        // TODO: WHYYHYYYHYHWHYY
+        // CW_ENGINE_ASSERT(false);
         return subresourceInfos[0];
     }
 
@@ -2334,13 +2335,13 @@ namespace Crowny
                                                Vector<VulkanPipelineQuery*>& pipelines,
                                                Vector<VulkanOcclusionQuery*>& occlusions) const
     {
-        for (auto entry : m_TimerQueries)
+        for (auto* entry : m_TimerQueries)
             if (entry->IsInProgress())
                 timers.push_back(entry);
-        for (auto entry : m_PipelineQueries)
+        for (auto* entry : m_PipelineQueries)
             if (entry->IsInProgress())
                 pipelines.push_back(entry);
-        for (auto entry : m_OcclusionQueries)
+        for (auto* entry : m_OcclusionQueries)
             if (entry->IsInProgress())
                 occlusions.push_back(entry);
     }

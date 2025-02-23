@@ -48,7 +48,7 @@
 namespace Crowny
 {
 
-    ScriptInfoManager::ScriptInfoManager()
+    ScriptInfoManager::ScriptInfoManager() : m_BaseTypesInitialized(false)
     {
         // RegisterComponents();
         // RegisterAssets();
@@ -260,7 +260,7 @@ namespace Crowny
                         fieldInfo->m_Flags.Set(ScriptFieldFlagBits::HDR);
                 }
 
-                // TODO: Also do of something better here. This is really bad.
+                // TODO: Also do something better here. This is really bad.
                 if (field->HasAttribute(m_Builtin.HeaderAttribute))
                 {
                     MonoObject* label = field->GetAttribute(m_Builtin.HeaderAttribute);

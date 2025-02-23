@@ -19,10 +19,12 @@
 #include <GLFW/glfw3.h>
 
 #define VMA_IMPLEMENTATION
-//#define VMA_DEBUG_LOG(format, ...) do { \
-//       printf(format, __VA_ARGS__); \
-//       printf("\n"); \
-//   } while(false)
+#ifdef VMA_DEBUG
+#define VMA_DEBUG_LOG_FORMAT(format, ...) do { \
+       printf(format, __VA_ARGS__); \
+       printf("\n"); \
+   } while(false)
+#endif
 #include <vma/vk_mem_alloc.h>
 
 // #define CW_DEBUG 0
@@ -91,7 +93,7 @@ namespace Crowny
         Vector<VkExtensionProperties> exts(count);
         vkEnumerateInstanceExtensionProperties(nullptr, &count, exts.data());
 #ifdef CW_DEBUG
-        Vector<const char*> layers = { "VK_LAYER_KHRONOS_validation", "VK_LAYER_NV_optimus" };
+        Vector<const char*> layers = { "VK_LAYER_KHRONOS_validation" };
         uint32_t numExtensions;
         const char** glfwExts = glfwGetRequiredInstanceExtensions(&numExtensions);
         Vector<const char*> extensions(glfwExts, glfwExts + numExtensions);
@@ -165,10 +167,28 @@ namespace Crowny
         Vector<VkPhysicalDevice> physicalDevices(m_NumDevices);
         result = vkEnumeratePhysicalDevices(m_Instance, &m_NumDevices, physicalDevices.data());
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        m_Devices.resize(m_NumDevices);
+        int discreteIdx = -1;
         for (uint32_t i = 0; i < m_NumDevices; i++)
-            m_Devices[i] = CreateRef<VulkanDevice>(physicalDevices[i], i);
+        {
+            VkPhysicalDeviceProperties props;
+            vkGetPhysicalDeviceProperties(physicalDevices[i], &props);
+            if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+            {
+                discreteIdx = i;
+                break;
+            }
+        }
 
+        if (discreteIdx != -1)
+        {
+            m_Devices.push_back(CreateRef<VulkanDevice>(physicalDevices[discreteIdx], discreteIdx));
+        }
+        else
+        {
+            m_Devices.push_back(CreateRef<VulkanDevice>(physicalDevices[0], 0));
+        }
+        m_PrimaryDevices.push_back(m_Devices[0]);
+        /*
         for (uint32_t i = 0; i < m_NumDevices; i++)
         {
             bool isPrimary = m_Devices[i]->GetDeviceProperties().deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
@@ -186,7 +206,7 @@ namespace Crowny
 
                 break;
             }
-        }
+        }*/
 
         if (m_PrimaryDevices.size() == 0)
         {

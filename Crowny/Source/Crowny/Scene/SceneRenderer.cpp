@@ -82,9 +82,10 @@ namespace Crowny
         ForwardRenderer::End();
 
         Renderer2D::Begin(camera, camera.GetViewMatrix());
-        const auto sprineRendererComponents =
+        /*
+        const auto spriteRendererComponents =
           scene->m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
-        for (const entt::entity ee : sprineRendererComponents)
+        for (const entt::entity ee : spriteRendererComponents)
         {
             auto [transform, sprite] = scene->m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
             Entity entity(ee, scene.get());
@@ -94,6 +95,7 @@ namespace Crowny
             s_Stats.Vertices += 6;
             s_Stats.Triangles += 2;
         }
+        */
         const auto textComponents = scene->m_Registry.group<TextComponent>(entt::get<TransformComponent>);
         for (const entt::entity ee : textComponents)
         {

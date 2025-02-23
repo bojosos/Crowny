@@ -8,8 +8,7 @@
 
 namespace Crowny
 {
-    Ref<Mesh> MeshFactory::CreatePlane(float width, float height, const glm::vec3& normal,
-                                       const Ref<MaterialInstance>& material)
+    Ref<Mesh> MeshFactory::CreatePlane(float width, float height, const glm::vec3& normal)
     {
         return nullptr;
         /*
@@ -61,7 +60,7 @@ namespace Crowny
          return CreateRef<Mesh>(vbo, ibo, material);*/
     }
 
-    Ref<Mesh> MeshFactory::CreateCube(float size, const Ref<MaterialInstance>& material) { return nullptr; }
+    Ref<Mesh> MeshFactory::CreateCube(float size) { return nullptr; }
 
     Ref<Mesh> MeshFactory::CreateSphere(float xSegments, float ySegments)
     {

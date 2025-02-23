@@ -166,7 +166,6 @@ namespace Crowny
 
     void EditorLayer::CreateRenderTarget()
     {
-
         TextureParameters colorParams;
         colorParams.Width = 1337;
         colorParams.Height = 509;
@@ -271,7 +270,7 @@ namespace Crowny
             CodeEditorManager::Get().SetActive(editorSettings->CodeEditorPath);
         else
         {
-            // Use the first available editor.
+            // Use the first available code editor.
             const Vector<CodeEditorInstallation>& installations = CodeEditorManager::Get().GetAvailableEditors();
             CodeEditorManager::Get().SetActive(installations[0].ExecutablePath);
         }
@@ -323,10 +322,39 @@ namespace Crowny
 
     bool EditorLayer::OnViewportEvent(Event& event)
     {
-        // TODO: Check if this is an actual scene!
         EventDispatcher dispatcher(event);
-        dispatcher.Dispatch<ImGuiViewportSceneDraggedEvent>([this](ImGuiViewportSceneDraggedEvent& event) {
-            OpenScene(event.GetSceneFilepath());
+        dispatcher.Dispatch<ImGuiViewportSceneDraggedEvent>([this](ImGuiViewportSceneDraggedEvent& fileDragEvent) {
+            const FileEntry* fileEntry = fileDragEvent.GetFileEntry();
+            if (fileEntry->Metadata == nullptr)
+                return true;
+            const AssetType assetType = fileEntry->Metadata->Type;
+            if (assetType==AssetType::Scene)
+                OpenScene(fileEntry->Filepath);
+            else if (assetType == AssetType::Material)
+            {
+                const Entity entity = PickEntity(fileDragEvent.GetRelativePosition());
+                if (entity)
+                {
+                    const AssetHandle<Asset> assetHandle = ProjectLibrary::Get().Load(fileEntry);
+                    entity.GetComponent<MeshRendererComponent>().BaseMaterial = static_asset_cast<Material>(assetHandle);
+                }
+            }
+            else if (assetType == AssetType::Mesh)
+            {
+                Ref<Scene> activeScene = SceneManager::GetActiveScene();
+                Entity entity = activeScene->CreateEntity(fileEntry->Filepath.filename().string());
+                MeshRendererComponent &meshRenderer=entity.AddComponent<MeshRendererComponent>();
+                const AssetHandle<Asset> assetHandle = ProjectLibrary::Get().Load(fileEntry);
+                meshRenderer.MeshHandle = static_asset_cast<Mesh>(assetHandle);
+            }
+            else if (assetType == AssetType::AudioClip)
+            {
+                Ref<Scene> activeScene = SceneManager::GetActiveScene();
+                Entity entity = activeScene->CreateEntity(fileEntry->Filepath.filename().string());
+                AudioSourceComponent& audioSourceComponent = entity.AddComponent<AudioSourceComponent>();
+                const AssetHandle<Asset> assetHandle = ProjectLibrary::Get().Load(fileEntry);
+                audioSourceComponent.SetClip(static_asset_cast<AudioClip>(assetHandle));
+            }
             return true;
         });
         return true;
@@ -392,7 +420,6 @@ namespace Crowny
     void EditorLayer::OnDetach()
     {
         SceneRenderer::Shutdown();
-        InspectorPanel::SetSelectedMaterial(nullptr);
         Ref<EditorSettings> settings = Editor::Get().GetEditorSettings();
         settings->ShowImGuiDemoWindow = m_ShowDemoWindow;
         settings->ShowPhysicsColliders2D = m_ShowColliders;
@@ -439,35 +466,34 @@ namespace Crowny
             ProjectLibrary::Get().Refresh(path);
     }
 
-    void EditorLayer::HandleMousePicking()
+    Entity EditorLayer::PickEntity()
     {
         const Ref<Scene> scene = SceneManager::GetActiveScene();
         const glm::vec4& bounds = m_ViewportPanel->GetViewportBounds();
         ImVec2 mouseCoords = ImGui::GetMousePos();
         glm::vec2 coords = { mouseCoords.x - bounds.x, mouseCoords.y - bounds.y };
         coords.y = m_ViewportSize.y - coords.y - 1;
-        if (m_ViewportPanel->IsHovered())
+        return PickEntity(coords);
+    }
+
+    Entity EditorLayer::PickEntity(const glm::vec2& coords)
+    {
+        RenderTexture* rt = static_cast<RenderTexture*>(m_RenderTarget.get());
+        // TODO: This is bad: allocates every frame a full image.
+        Ref<PixelData> outPixelData =
+            PixelData::Create(rt->GetColorTexture(1)->GetWidth(), rt->GetColorTexture(1)->GetHeight(),
+                            rt->GetColorTexture(1)->GetFormat());
+        rt->GetColorTexture(1)->ReadData(*outPixelData);
+        if (outPixelData->GetSize() > coords.x * coords.y)
         {
-            RenderTexture* rt = static_cast<RenderTexture*>(m_RenderTarget.get());
-            // TODO: This is bad: allocates every frame a full image.
-            Ref<PixelData> outPixelData =
-              PixelData::Create(rt->GetColorTexture(1)->GetWidth(), rt->GetColorTexture(1)->GetHeight(),
-                                rt->GetColorTexture(1)->GetFormat());
-            rt->GetColorTexture(1)->ReadData(*outPixelData);
-            if (outPixelData->GetSize() > coords.x * coords.y)
-            {
-                glm::vec4 col = outPixelData->GetColorAt((uint32_t)coords.x, (uint32_t)coords.y);
-                if (col.x == 0.0f)
-                    m_HoveredEntity = Entity(entt::null, scene.get());
-                else
-                {
-                    m_HoveredEntity = Entity((entt::entity)(col.x - 1), scene.get());
-                    if (Input::IsMouseButtonDown(Mouse::ButtonLeft) && !Input::IsKeyPressed(Key::LeftAlt) &&
-                        !Input::IsKeyPressed(Key::RightAlt) && !m_ViewportPanel->IsMouseOverGizmo())
-                        m_HierarchyPanel->SetSelectedEntity(m_HoveredEntity);
-                }
-            }
+            glm::vec4 col = outPixelData->GetColorAt((uint32_t)coords.x, (uint32_t)coords.y);
+            Ref<Scene> scene = SceneManager::GetActiveScene();
+            if (col.x == 0.0f)
+                return Entity(entt::null, scene.get());
+            else
+                return Entity((entt::entity)(col.x - 1), scene.get());
         }
+        return Entity(entt::null, nullptr);
     }
 
     void EditorLayer::HandleRenderTargetResize()
@@ -568,7 +594,15 @@ namespace Crowny
         HandleSceneState(ts);
         RenderOverlay();
 
-        HandleMousePicking();
+        if (m_ViewportPanel->IsHovered())
+        {
+            if (Input::IsMouseButtonDown(Mouse::ButtonLeft) && !Input::IsKeyPressed(Key::LeftAlt) && !Input::IsKeyPressed(Key::RightAlt) &&
+                !m_ViewportPanel->IsMouseOverGizmo())
+            {
+                const Entity pickedEntity = PickEntity();
+                m_HierarchyPanel->SetSelectedEntity(pickedEntity);
+            }
+        }
 
         m_HierarchyPanel->Update();
         ScriptObjectManager::Get().Update();
@@ -866,20 +900,22 @@ namespace Crowny
             ImGui::NextColumn();
             ImGui::NextColumn();
 
-            static const Map<AssetType, const char*> assetTypes = { { AssetType::None, "None" },
-                                                                    { AssetType::AudioClip, "Audio Clip" },
-                                                                    { AssetType::Material, "Material" },
-                                                                    { AssetType::Mesh, "Mesh" },
-                                                                    { AssetType::MeshSource, "Mesh Source" },
-                                                                    { AssetType::PhysicsMaterial, "Physics Material" },
-                                                                    { AssetType::PhysicsMaterial2D,
-                                                                      "Physics Material 2D" },
-                                                                    { AssetType::PhysicsMesh, "Physics Mesh" },
-                                                                    { AssetType::PlainText, "Plain Text" },
-                                                                    { AssetType::ScriptCode, "Script Code" },
-                                                                    { AssetType::Shader, "Shader" },
-                                                                    { AssetType::Texture, "Texture" },
-                                                                    { AssetType::Font, "Font" } };
+            static const Map<AssetType, const char*> assetTypes = {
+                { AssetType::None, "None" },
+                { AssetType::AudioClip, "Audio Clip" },
+                { AssetType::Material, "Material" },
+                { AssetType::Mesh, "Mesh" },
+                { AssetType::MeshSource, "Mesh Source" },
+                { AssetType::PhysicsMaterial, "Physics Material" },
+                { AssetType::PhysicsMaterial2D, "Physics Material 2D" },
+                { AssetType::PhysicsMesh, "Physics Mesh" },
+                { AssetType::PlainText, "Plain Text" },
+                { AssetType::ScriptCode, "Script Code" },
+                { AssetType::Shader, "Shader" },
+                { AssetType::Texture, "Texture" },
+                { AssetType::Font, "Font" },
+                { AssetType::Scene, "Scene" },
+            };
 
             std::function<void(const Ref<LibraryEntry>&)> traverse = [&](const Ref<LibraryEntry>& entry) {
                 if (entry->Type == LibraryEntryType::Directory)

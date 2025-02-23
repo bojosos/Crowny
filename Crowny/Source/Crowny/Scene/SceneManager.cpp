@@ -20,7 +20,7 @@ namespace Crowny
         // ScriptRuntime::Init();
     }
 
-    void SceneManager::Shutdown() {}
+    void SceneManager::Shutdown() { s_Scenes.clear(); }
 
     void SceneManager::AddScene(const Ref<Scene>& scene) { s_Scenes.push_back(scene); }
 } // namespace Crowny

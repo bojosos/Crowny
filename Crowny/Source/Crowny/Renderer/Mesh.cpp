@@ -192,7 +192,7 @@ namespace Crowny
             }
 
             uint32_t vertexCountToCopy = data->GetVertexCount();
-            uint32_t bufferSize = m_VertexBuffer->GetLayout().GetStride() * vertexCountToCopy;
+            uint32_t bufferSize = m_VertexBuffer->GetLayout()->GetStride() * vertexCountToCopy;
             if (bufferSize > m_VertexBuffer->GetBufferSize()) // TODO: Remove the 0 check when buffers are good
             {
                 CW_ENGINE_ERROR("Not enough buffer");

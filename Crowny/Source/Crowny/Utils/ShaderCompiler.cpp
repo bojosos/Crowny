@@ -129,7 +129,7 @@ namespace Crowny
             return VertexAttribute::BlendWeights;
         if (attributeName == "cw_BlendIndices")
             return VertexAttribute::BlendIndices;
-        CW_ENGINE_ASSERT(false);
+        // CW_ENGINE_ASSERT(false);
         return VertexAttribute::None;
     }
 
@@ -162,14 +162,18 @@ namespace Crowny
             case 2:
                 return ShaderDataType::Float2;
             case 3:
-                return ShaderDataType::Float3;
+                CW_ENGINE_ASSERT(type.columns == type.vecsize || type.columns == 1);
+                return type.columns == 3 ? ShaderDataType::Mat3 : ShaderDataType::Float3;
             case 4:
-                return ShaderDataType::Float4;
+                CW_ENGINE_ASSERT(type.columns == type.vecsize || type.columns == 1);
+                return type.columns == 4 ? ShaderDataType::Mat4 : ShaderDataType::Float4;
             default:
                 CW_ENGINE_ASSERT(false);
                 return ShaderDataType::Float;
             }
         }
+
+        return ShaderDataType::None;
     }
 
     static bool GetShaderTypeFromString(const String& type, ShaderType& outShaderType)
@@ -316,17 +320,28 @@ namespace Crowny
         // Read all uniform buffers in the current stage.
         for (const auto& uniform : resources.uniform_buffers)
         {
-            const auto& bufferType = compiler.get_type(uniform.base_type_id);
+            const spirv_cross::SPIRType bufferType = compiler.get_type(uniform.base_type_id);
             const uint32_t bufferSize = (uint32_t)compiler.get_declared_struct_size(bufferType);
             const uint32_t binding = compiler.get_decoration(uniform.id, spv::DecorationBinding);
             const uint32_t set = compiler.get_decoration(uniform.id, spv::DecorationDescriptorSet);
-            const uint32_t memberCount = (uint32_t)bufferType.member_types.size();
 
             UniformBufferBlockDesc buffer;
             buffer.Name = uniform.name;
             buffer.BlockSize = bufferSize;
             buffer.Slot = binding;
             buffer.Set = set;
+            CW_ENGINE_INFO(uniform.name);
+            Vector<UniformBufferBlockMember> members;
+            for (uint32_t i = 0; i < bufferType.member_types.size(); i++)
+            {
+                UniformBufferBlockMember& newMember = members.emplace_back();
+                const spirv_cross::TypeID member = bufferType.member_types[i];
+                const spirv_cross::SPIRType memberType = compiler.get_type(member);
+                newMember.Name = compiler.get_member_name(bufferType.self, i);
+                newMember.Offset = compiler.type_struct_member_offset(bufferType, i);
+                newMember.DataType = SprivTypeToShaderType(memberType);
+            }
+            buffer.Members = std::move(members);
             uniformDesc->Uniforms[uniform.name] = buffer;
         }
 
@@ -349,8 +364,8 @@ namespace Crowny
         for (const auto& texture : resources.separate_images)
         {
             const auto& bufferType = compiler.get_type(texture.base_type_id);
-            const const uint32_t binding = compiler.get_decoration(texture.id, spv::DecorationBinding);
-            const const uint32_t set = compiler.get_decoration(texture.id, spv::DecorationDescriptorSet);
+            const uint32_t binding = compiler.get_decoration(texture.id, spv::DecorationBinding);
+            const uint32_t set = compiler.get_decoration(texture.id, spv::DecorationDescriptorSet);
 
             UniformResourceDesc resource;
             resource.Name = texture.name;

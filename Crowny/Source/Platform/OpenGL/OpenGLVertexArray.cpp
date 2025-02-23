@@ -11,13 +11,13 @@ namespace Crowny
     {
         switch (type)
         {
-        case ShaderDataType::Byte:
+        case ShaderDataType::SByte:
             return GL_BYTE;
-        case ShaderDataType::Byte2:
+        case ShaderDataType::SByte2:
             return GL_BYTE;
-        case ShaderDataType::Byte3:
+        case ShaderDataType::SByte3:
             return GL_BYTE;
-        case ShaderDataType::Byte4:
+        case ShaderDataType::SByte4:
             return GL_BYTE;
         case ShaderDataType::UByte4:
             return GL_UNSIGNED_BYTE;
@@ -73,12 +73,12 @@ namespace Crowny
 
     void OpenGLVertexArray::AddVertexBuffer(const Ref<VertexBuffer>& vertexBuffer)
     {
-        CW_ENGINE_ASSERT(vertexBuffer->GetLayout().GetElements().size(), "Vertex Buffer has no layout!");
+        CW_ENGINE_ASSERT(vertexBuffer->GetLayout()->GetElements().size(), "Vertex Buffer has no layout!");
 
         glBindVertexArray(m_RendererID);
         vertexBuffer->Bind();
 
-        const auto& layout = vertexBuffer->GetLayout();
+        const auto& layout = *vertexBuffer->GetLayout();
         for (const auto& element : layout)
         {
             switch (element.Type)
