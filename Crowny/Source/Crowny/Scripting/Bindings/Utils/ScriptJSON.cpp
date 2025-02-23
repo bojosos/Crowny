@@ -20,8 +20,8 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_ToJson", (void*)&Internal_ToJson);
     }
 
-    static void MarshalAs(MonoObject* object, ScriptPrimitiveType primitiveType,
-                          const Ref<SerializableMemberInfo>& field, const rapidjson::Value& jsonValue)
+    static void MarshalAs(MonoObject* object, ScriptPrimitiveType primitiveType, const Ref<SerializableMemberInfo>& field,
+                          const rapidjson::Value& jsonValue)
     {
         if (primitiveType == ScriptPrimitiveType::Float)
         {
@@ -80,15 +80,12 @@ namespace Crowny
         }
         else if (primitiveType == ScriptPrimitiveType::String && jsonValue.IsString())
         {
-            MonoString* monoString =
-              MonoUtils::ToMonoString(String(jsonValue.GetString(), jsonValue.GetStringLength()));
+            MonoString* monoString = MonoUtils::ToMonoString(String(jsonValue.GetString(), jsonValue.GetStringLength()));
             field->SetValue(object, monoString);
         }
     }
 
-    template <typename T>
-    static void SetValue(const rapidjson::Value& value, MonoObject* instance,
-                         const Ref<SerializableMemberInfo>& memberInfo)
+    template <typename T> static void SetValue(const rapidjson::Value& value, MonoObject* instance, const Ref<SerializableMemberInfo>& memberInfo)
     {
         if (value.IsDouble())
         {
@@ -102,11 +99,9 @@ namespace Crowny
         }
     }
 
-    static void NumericFromJson(const rapidjson::Value& value, MonoObject* instance,
-                                const Ref<SerializableMemberInfo>& memberInfo)
+    static void NumericFromJson(const rapidjson::Value& value, MonoObject* instance, const Ref<SerializableMemberInfo>& memberInfo)
     {
-        const Ref<SerializableTypeInfoPrimitive> primTypeInfo =
-          std::static_pointer_cast<SerializableTypeInfoPrimitive>(memberInfo->m_TypeInfo);
+        const Ref<SerializableTypeInfoPrimitive> primTypeInfo = std::static_pointer_cast<SerializableTypeInfoPrimitive>(memberInfo->m_TypeInfo);
         switch (primTypeInfo->m_Type)
         {
         case ScriptPrimitiveType::I8:
@@ -163,11 +158,9 @@ namespace Crowny
                 if (typeInfo->GetType() == SerializableType::Object)
                 {
                     Ref<SerializableObjectInfo> objInfo = nullptr;
-                    Ref<SerializableTypeInfoObject> objTypeInfo =
-                      std::static_pointer_cast<SerializableTypeInfoObject>(typeInfo);
+                    Ref<SerializableTypeInfoObject> objTypeInfo = std::static_pointer_cast<SerializableTypeInfoObject>(typeInfo);
                     // Find object serialize info
-                    if (ScriptInfoManager::Get().GetSerializableObjectInfo(objTypeInfo->m_TypeNamespace,
-                                                                           objTypeInfo->m_TypeName, objInfo))
+                    if (ScriptInfoManager::Get().GetSerializableObjectInfo(objTypeInfo->m_TypeNamespace, objTypeInfo->m_TypeName, objInfo))
                         memberInfo->SetValue(newInstance, ObjectFromJson(iterFind->value, objInfo));
                     return newInstance;
                 }
@@ -175,18 +168,15 @@ namespace Crowny
                 {
                     CW_ENGINE_ASSERT(iterFind->value.IsArray());
                     // Do I create these when loading?
-                    Ref<SerializableTypeInfoArray> arrayTypeInfo =
-                      std::static_pointer_cast<SerializableTypeInfoArray>(typeInfo);
+                    Ref<SerializableTypeInfoArray> arrayTypeInfo = std::static_pointer_cast<SerializableTypeInfoArray>(typeInfo);
                     rapidjson::Value::ConstArray arr = iterFind->value.GetArray();
                     // This initialization doesn't seem very safe. The whole ScriptArray doesn't feel safe.
                     ScriptArray monoArray = ScriptArray(arrayTypeInfo->m_ElementType->GetMonoClass(), arr.Size());
                     int idx = 0;
                     Ref<SerializableObjectInfo> objInfo = nullptr;
-                    Ref<SerializableTypeInfoObject> objTypeInfo =
-                      std::static_pointer_cast<SerializableTypeInfoObject>(arrayTypeInfo->m_ElementType);
+                    Ref<SerializableTypeInfoObject> objTypeInfo = std::static_pointer_cast<SerializableTypeInfoObject>(arrayTypeInfo->m_ElementType);
                     // Find object serialize info
-                    if (ScriptInfoManager::Get().GetSerializableObjectInfo(objTypeInfo->m_TypeNamespace,
-                                                                           objTypeInfo->m_TypeName, objInfo))
+                    if (ScriptInfoManager::Get().GetSerializableObjectInfo(objTypeInfo->m_TypeNamespace, objTypeInfo->m_TypeName, objInfo))
                         // TODO: This won't work for normals arrays that don't have objects inside
                         for (const auto& val : arr)
                             monoArray.Set(idx++, ObjectFromJson(val, objInfo));
@@ -194,8 +184,7 @@ namespace Crowny
                 }
                 else if (typeInfo->GetType() == SerializableType::Primitive)
                 {
-                    Ref<SerializableTypeInfoPrimitive> primTypeInfo =
-                      std::static_pointer_cast<SerializableTypeInfoPrimitive>(typeInfo);
+                    Ref<SerializableTypeInfoPrimitive> primTypeInfo = std::static_pointer_cast<SerializableTypeInfoPrimitive>(typeInfo);
                     if (iterFind->value.IsNumber())
                         NumericFromJson(iterFind->value, newInstance, memberInfo);
                     else if (iterFind->value.IsBool())
@@ -222,8 +211,7 @@ namespace Crowny
                         }
                         else
                         {
-                            MonoString* monoString = MonoUtils::ToMonoString(
-                              String(iterFind->value.GetString(), iterFind->value.GetStringLength()));
+                            MonoString* monoString = MonoUtils::ToMonoString(String(iterFind->value.GetString(), iterFind->value.GetStringLength()));
                             memberInfo->SetValue(newInstance, monoString);
                         }
                     }
@@ -238,8 +226,7 @@ namespace Crowny
         return nullptr;
     }
 
-    static void ObjectToJson(rapidjson::Value& cur, Ref<SerializableObjectInfo>& objectInfo, MonoObject* instance,
-                             rapidjson::Document& doc);
+    static void ObjectToJson(rapidjson::Value& cur, Ref<SerializableObjectInfo>& objectInfo, MonoObject* instance, rapidjson::Document& doc);
 
     MonoObject* ScriptJson::Internal_FromJson(MonoString* json, MonoReflectionType* type)
     {
@@ -259,13 +246,11 @@ namespace Crowny
         return ObjectFromJson(document, objectInfo);
     }
 
-    static void FieldToJson(rapidjson::Value& cur, const Ref<SerializableTypeInfo>& typeInfo, void* data,
-                            rapidjson::Document& doc)
+    static void FieldToJson(rapidjson::Value& cur, const Ref<SerializableTypeInfo>& typeInfo, void* data, rapidjson::Document& doc)
     {
         if (typeInfo->GetType() == SerializableType::Primitive)
         {
-            const ScriptPrimitiveType primitiveType =
-              std::static_pointer_cast<SerializableTypeInfoPrimitive>(typeInfo)->m_Type;
+            const ScriptPrimitiveType primitiveType = std::static_pointer_cast<SerializableTypeInfoPrimitive>(typeInfo)->m_Type;
             switch (primitiveType)
             {
             case ScriptPrimitiveType::Char:
@@ -358,8 +343,7 @@ namespace Crowny
         }
         else if (typeInfo->GetType() == SerializableType::Array)
         {
-            Ref<SerializableTypeInfoArray> serializableArrayTypeInfo =
-              std::static_pointer_cast<SerializableTypeInfoArray>(typeInfo);
+            Ref<SerializableTypeInfoArray> serializableArrayTypeInfo = std::static_pointer_cast<SerializableTypeInfoArray>(typeInfo);
             cur.SetArray();
             ScriptArray arr((MonoArray*)data);
             for (uint32_t i = 0; i < arr.Size(); i++)
@@ -373,18 +357,16 @@ namespace Crowny
         }
         else if (typeInfo->GetType() == SerializableType::Object)
         {
-            Ref<SerializableTypeInfoObject> serializableObjectInfo =
-              std::static_pointer_cast<SerializableTypeInfoObject>(typeInfo);
+            Ref<SerializableTypeInfoObject> serializableObjectInfo = std::static_pointer_cast<SerializableTypeInfoObject>(typeInfo);
             // TODO: Fix this
             Ref<SerializableObjectInfo> objectInfo;
-            if (ScriptInfoManager::Get().GetSerializableObjectInfo(serializableObjectInfo->m_TypeNamespace,
-                                                                   serializableObjectInfo->m_TypeName, objectInfo))
+            if (ScriptInfoManager::Get().GetSerializableObjectInfo(serializableObjectInfo->m_TypeNamespace, serializableObjectInfo->m_TypeName,
+                                                                   objectInfo))
                 ObjectToJson(cur.SetObject(), objectInfo, (MonoObject*)data, doc);
         }
     }
 
-    static void ObjectToJson(rapidjson::Value& cur, Ref<SerializableObjectInfo>& objectInfo, MonoObject* instance,
-                             rapidjson::Document& doc)
+    static void ObjectToJson(rapidjson::Value& cur, Ref<SerializableObjectInfo>& objectInfo, MonoObject* instance, rapidjson::Document& doc)
     {
         // This is wrong
         for (auto [id, field] : objectInfo->m_Fields)

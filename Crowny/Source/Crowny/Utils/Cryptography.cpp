@@ -9,10 +9,7 @@
 
 namespace Crowny
 {
-    String Cryptography::EncodeBase64(const String& src)
-    {
-        return EncodeBase64((const uint8_t*)src.c_str(), src.size());
-    }
+    String Cryptography::EncodeBase64(const String& src) { return EncodeBase64((const uint8_t*)src.c_str(), src.size()); }
 
     String Cryptography::EncodeBase64(const uint8_t* src, size_t length)
     {
@@ -25,10 +22,7 @@ namespace Crowny
         return ret ? String() : (const char*)buff.data();
     }
 
-    String Cryptography::DecodeBase64(const String& src)
-    {
-        return DecodeBase64((const uint8_t*)src.c_str(), src.size());
-    }
+    String Cryptography::DecodeBase64(const String& src) { return DecodeBase64((const uint8_t*)src.c_str(), src.size()); }
 
     String Cryptography::DecodeBase64(const uint8_t* src, size_t length)
     {
@@ -52,10 +46,7 @@ namespace Crowny
         return result;
     }
 
-    int Cryptography::MD5(const uint8_t* src, size_t length, unsigned char hash[16])
-    {
-        return mbedtls_md5(src, length, hash);
-    }
+    int Cryptography::MD5(const uint8_t* src, size_t length, unsigned char hash[16]) { return mbedtls_md5(src, length, hash); }
 
     String Cryptography::MD5(const String& src)
     {
@@ -64,10 +55,7 @@ namespace Crowny
         return ret ? String() : HashBytesToString(hash, 16);
     }
 
-    int Cryptography::SHA1(const uint8_t* src, size_t length, unsigned char hash[20])
-    {
-        return mbedtls_sha1(src, length, hash);
-    }
+    int Cryptography::SHA1(const uint8_t* src, size_t length, unsigned char hash[20]) { return mbedtls_sha1(src, length, hash); }
 
     String Cryptography::SHA1(const String& src)
     {
@@ -76,10 +64,7 @@ namespace Crowny
         return ret ? String() : HashBytesToString(hash, 20);
     }
 
-    int Cryptography::SHA256(const uint8_t* src, size_t length, unsigned char hash[32])
-    {
-        return mbedtls_sha256(src, length, hash, false);
-    }
+    int Cryptography::SHA256(const uint8_t* src, size_t length, unsigned char hash[32]) { return mbedtls_sha256(src, length, hash, false); }
 
     String Cryptography::SHA256(const String& src)
     {

@@ -27,8 +27,7 @@ namespace Crowny
     {
         std::ifstream input(path, std::ios::binary);
 
-        Vector<uint8_t>* uint8_ts =
-          new Vector<uint8_t>((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
+        Vector<uint8_t>* uint8_ts = new Vector<uint8_t>((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
 
         input.close();
         return std::make_tuple(uint8_ts->data(), uint8_ts->size());
@@ -76,13 +75,10 @@ namespace Crowny
         return CreateRef<FileDataStream>(filepath, accessMode, true);
     }
 
-    Ref<DataStream> FileSystem::CreateAndOpenFile(const Path& filepath)
-    {
-        return CreateRef<FileDataStream>(filepath, DataStream::WRITE, true);
-    }
+    Ref<DataStream> FileSystem::CreateAndOpenFile(const Path& filepath) { return CreateRef<FileDataStream>(filepath, DataStream::WRITE, true); }
 
-    bool FileSystem::OpenFileDialog(FileDialogType type, Vector<Path>& outPaths, const String& title,
-                                        const Path& initialDir, const Vector<DialogFilter>& filter, const String& filename)
+    bool FileSystem::OpenFileDialog(FileDialogType type, Vector<Path>& outPaths, const String& title, const Path& initialDir,
+                                    const Vector<DialogFilter>& filter, const String& filename)
     {
         String add;
         // TODO: Check if all of these work, make it more configurable

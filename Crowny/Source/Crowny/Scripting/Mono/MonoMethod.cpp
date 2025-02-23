@@ -15,8 +15,7 @@ namespace Crowny
 {
 
     MonoMethod::MonoMethod(::MonoMethod* method)
-      : m_Method(method), m_CachedParams(nullptr), m_CachedReturnType(nullptr), m_HasCachedSignature(false),
-        m_CachedNumParams(0), m_IsStatic(false)
+      : m_Method(method), m_CachedParams(nullptr), m_CachedReturnType(nullptr), m_HasCachedSignature(false), m_CachedNumParams(0), m_IsStatic(false)
     {
         m_Name = mono_method_get_name(m_Method);
     }
@@ -142,8 +141,7 @@ namespace Crowny
         }
 
         m_IsStatic = !mono_signature_is_instance(signature);
-        m_FullDeclName = CrownyMonoVisibilityToString(GetVisibility()) + (m_IsStatic ? " static " : " ") +
-                         mono_method_full_name(m_Method, true);
+        m_FullDeclName = CrownyMonoVisibilityToString(GetVisibility()) + (m_IsStatic ? " static " : " ") + mono_method_full_name(m_Method, true);
 
         m_HasCachedSignature = true;
     }

@@ -206,10 +206,8 @@ namespace Crowny
         return true;
     }
 
-    Ref<BinaryShaderData> ShaderCompiler::CompileStage(const String& source, ShaderType shaderType,
-                                                       ShaderLanguage inputLanguage,
-                                                       ShaderLanguageFlags outputLanguages,
-                                                       const UnorderedMap<String, String>& defines)
+    Ref<BinaryShaderData> ShaderCompiler::CompileStage(const String& source, ShaderType shaderType, ShaderLanguage inputLanguage,
+                                                       ShaderLanguageFlags outputLanguages, const UnorderedMap<String, String>& defines)
     {
         Vector<uint8_t> shaderBinaryData;
 
@@ -235,9 +233,8 @@ namespace Crowny
 
         const char* entryPoints[SHADER_COUNT] = { "vsmain", "fsmain", "gsmain", "dsmain", "hsmain", "csmain" };
         const char* entryPoint = entryPoints[shaderType];
-        shaderc::SpvCompilationResult module =
-          compiler.CompileGlslToSpv(source.c_str(), source.size(), ShaderTypeToShaderC(shaderType),
-                                    ShaderTypeToString(shaderType).c_str(), entryPoint, options);
+        shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(source.c_str(), source.size(), ShaderTypeToShaderC(shaderType),
+                                                                         ShaderTypeToString(shaderType).c_str(), entryPoint, options);
         if (module.GetCompilationStatus() != shaderc_compilation_status_success)
         {
             String shaderTypeString = ShaderTypeToString(shaderType);
@@ -277,8 +274,7 @@ namespace Crowny
                 const size_t begin = pos + langTokenLength + 1;
                 const String langString = source.substr(begin, eol - begin);
                 if (!GetShaderLanguage(langString, inputLanguage))
-                    CW_ENGINE_ERROR("Shader language string {0} not recognized. Assuming shader is in GLSL.",
-                                    langString);
+                    CW_ENGINE_ERROR("Shader language string {0} not recognized. Assuming shader is in GLSL.", langString);
             }
         }
         else
@@ -313,8 +309,7 @@ namespace Crowny
 
     void ShaderCompiler::Reflect(const Vector<uint8_t>& shaderBinaryData, Ref<BinaryShaderData>& outData)
     {
-        const spirv_cross::Compiler compiler((uint32_t*)shaderBinaryData.data(),
-                                             shaderBinaryData.size() / sizeof(uint32_t));
+        const spirv_cross::Compiler compiler((uint32_t*)shaderBinaryData.data(), shaderBinaryData.size() / sizeof(uint32_t));
         const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
         Ref<UniformDesc> uniformDesc = CreateRef<UniformDesc>();
         // Read all uniform buffers in the current stage.
@@ -442,8 +437,7 @@ namespace Crowny
             CW_ENGINE_ASSERT(nextLinePos != String::npos, "Syntax error");
             pos = source.find(typeToken, nextLinePos);
 
-            shaderSources[shaderType] =
-              (pos == String::npos) ? source.substr(nextLinePos) : source.substr(nextLinePos, pos - nextLinePos);
+            shaderSources[shaderType] = (pos == String::npos) ? source.substr(nextLinePos) : source.substr(nextLinePos, pos - nextLinePos);
         }
         if (shaderSources.size() < 2)
             CW_ENGINE_ERROR("You are required to provide at least a vertex and a fragment shader.");

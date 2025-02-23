@@ -20,10 +20,12 @@
 
 #define VMA_IMPLEMENTATION
 #ifdef VMA_DEBUG
-#define VMA_DEBUG_LOG_FORMAT(format, ...) do { \
-       printf(format, __VA_ARGS__); \
-       printf("\n"); \
-   } while(false)
+#define VMA_DEBUG_LOG_FORMAT(format, ...)                                                                                                            \
+    do                                                                                                                                               \
+    {                                                                                                                                                \
+        printf(format, __VA_ARGS__);                                                                                                                 \
+        printf("\n");                                                                                                                                \
+    } while (false)
 #endif
 
 #pragma clang diagnostic push
@@ -51,15 +53,12 @@ namespace Crowny
     PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR = nullptr;
     PFN_vkQueuePresentKHR vkQueuePresentKHR = nullptr;
 
-    VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-                                                 VkDebugUtilsMessageTypeFlagsEXT messageType,
-                                                 const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-                                                 void* pUserData)
+    VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
+                                                 const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
     {
         // TODO: Re-enable these when I get to fixing the Vulkan queue errors with imgui.
         StringStream debugMessage;
-        debugMessage << "[" << pCallbackData->messageIdNumber << "][" << pCallbackData->pMessageIdName
-                     << "] : " << pCallbackData->pMessage;
+        debugMessage << "[" << pCallbackData->messageIdNumber << "][" << pCallbackData->pMessageIdName << "] : " << pCallbackData->pMessage;
         if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
         {
             CW_ENGINE_INFO(debugMessage.str());
@@ -153,15 +152,12 @@ namespace Crowny
 
         VkDebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCI{};
         debugUtilsMessengerCI.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-        debugUtilsMessengerCI.messageSeverity =
-          VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-        debugUtilsMessengerCI.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-                                            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+        debugUtilsMessengerCI.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+        debugUtilsMessengerCI.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                                             VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
         debugUtilsMessengerCI.pfnUserCallback = &DebugCallback;
 
-        result =
-          vkCreateDebugUtilsMessengerEXT(m_Instance, &debugUtilsMessengerCI, gVulkanAllocator, &m_DebugUtilsMessenger);
+        result = vkCreateDebugUtilsMessengerEXT(m_Instance, &debugUtilsMessengerCI, gVulkanAllocator, &m_DebugUtilsMessenger);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
 #endif
 
@@ -264,29 +260,26 @@ namespace Crowny
         GetPresentDevice()->Refresh();
     }
 
-    void VulkanRenderAPI::SetRenderTarget(const Ref<RenderTarget>& renderTarget, uint32_t readOnlyFlags,
-                                          RenderSurfaceMask loadMask, const Ref<CommandBuffer>& commandBuffer)
+    void VulkanRenderAPI::SetRenderTarget(const Ref<RenderTarget>& renderTarget, uint32_t readOnlyFlags, RenderSurfaceMask loadMask,
+                                          const Ref<CommandBuffer>& commandBuffer)
     {
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
         vkCB->SetRenderTarget(renderTarget, readOnlyFlags, loadMask);
     }
 
-    void VulkanRenderAPI::SetVertexBuffers(uint32_t idx, Ref<VertexBuffer>* buffers, uint32_t numBuffers,
-                                           const Ref<CommandBuffer>& commandBuffer)
+    void VulkanRenderAPI::SetVertexBuffers(uint32_t idx, Ref<VertexBuffer>* buffers, uint32_t numBuffers, const Ref<CommandBuffer>& commandBuffer)
     {
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
         vkCB->SetVertexBuffers(idx, buffers, numBuffers);
     }
 
-    void VulkanRenderAPI::SetVertexLayout(const Ref<BufferLayout>& vertexLayout,
-                                          const Ref<CommandBuffer>& commandBuffer)
+    void VulkanRenderAPI::SetVertexLayout(const Ref<BufferLayout>& vertexLayout, const Ref<CommandBuffer>& commandBuffer)
     {
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
         vkCB->SetVertexLayout(vertexLayout);
     }
 
-    void VulkanRenderAPI::SetViewport(float x, float y, float width, float height,
-                                      const Ref<CommandBuffer>& commandBuffer)
+    void VulkanRenderAPI::SetViewport(float x, float y, float width, float height, const Ref<CommandBuffer>& commandBuffer)
     {
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
         vkCB->SetViewport({ x, y, width, height });
@@ -314,30 +307,28 @@ namespace Crowny
         vkCB->SetDrawMode(drawMode);
     }
 
-    void VulkanRenderAPI::ClearViewport(uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil,
-                                        uint8_t targetMask, const Ref<CommandBuffer>& commandBuffer)
+    void VulkanRenderAPI::ClearViewport(uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil, uint8_t targetMask,
+                                        const Ref<CommandBuffer>& commandBuffer)
     {
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
         vkCB->ClearViewport(buffers, color, depth, stencil, targetMask);
     }
 
-    void VulkanRenderAPI::ClearRenderTarget(uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil,
-                                            uint8_t targetMask, const Ref<CommandBuffer>& commandBuffer)
+    void VulkanRenderAPI::ClearRenderTarget(uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil, uint8_t targetMask,
+                                            const Ref<CommandBuffer>& commandBuffer)
     {
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
         vkCB->ClearRenderTarget(buffers, color, depth, stencil, targetMask);
     }
 
-    void VulkanRenderAPI::Draw(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount,
-                               const Ref<CommandBuffer>& commandBuffer)
+    void VulkanRenderAPI::Draw(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount, const Ref<CommandBuffer>& commandBuffer)
     {
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
         vkCB->Draw(vertexOffset, vertexCount, instanceCount);
         // TODO: Render stats: draw call, verts, prims
     }
 
-    void VulkanRenderAPI::DrawIndexed(uint32_t startIndex, uint32_t indexCount, uint32_t vertexOffset,
-                                      uint32_t vertexCount, uint32_t instanceCount,
+    void VulkanRenderAPI::DrawIndexed(uint32_t startIndex, uint32_t indexCount, uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount,
                                       const Ref<CommandBuffer>& commandBuffer)
     {
         uint32_t primCount = 0;
@@ -371,15 +362,13 @@ namespace Crowny
         vkCB->SetUniforms(params);
     }
 
-    void VulkanRenderAPI::SetGraphicsPipeline(const Ref<GraphicsPipeline>& pipeline,
-                                              const Ref<CommandBuffer>& commandBuffer)
+    void VulkanRenderAPI::SetGraphicsPipeline(const Ref<GraphicsPipeline>& pipeline, const Ref<CommandBuffer>& commandBuffer)
     {
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
         vkCB->SetPipeline(pipeline); // TODO: stats for pipeline change
     }
 
-    void VulkanRenderAPI::SetComputePipeline(const Ref<ComputePipeline>& pipeline,
-                                             const Ref<CommandBuffer>& commandBuffer)
+    void VulkanRenderAPI::SetComputePipeline(const Ref<ComputePipeline>& pipeline, const Ref<CommandBuffer>& commandBuffer)
     {
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
         vkCB->SetPipeline(pipeline); // TODO: stats
@@ -497,20 +486,17 @@ namespace Crowny
                 caps.NumGpuParamBlockBuffersPerStage[DOMAIN_SHADER] = devLimits.maxPerStageDescriptorUniformBuffers;
             }
 
-            caps.NumCombinedTextureUnits =
-              caps.NumTextureUnitsPerStage[FRAGMENT_SHADER] + caps.NumTextureUnitsPerStage[VERTEX_SHADER] +
-              caps.NumTextureUnitsPerStage[GEOMETRY_SHADER] + caps.NumTextureUnitsPerStage[HULL_SHADER] +
-              caps.NumTextureUnitsPerStage[DOMAIN_SHADER] + caps.NumTextureUnitsPerStage[COMPUTE_SHADER];
+            caps.NumCombinedTextureUnits = caps.NumTextureUnitsPerStage[FRAGMENT_SHADER] + caps.NumTextureUnitsPerStage[VERTEX_SHADER] +
+                                           caps.NumTextureUnitsPerStage[GEOMETRY_SHADER] + caps.NumTextureUnitsPerStage[HULL_SHADER] +
+                                           caps.NumTextureUnitsPerStage[DOMAIN_SHADER] + caps.NumTextureUnitsPerStage[COMPUTE_SHADER];
 
-            caps.NumCombinedParamBlockBuffers = caps.NumGpuParamBlockBuffersPerStage[FRAGMENT_SHADER] +
-                                                caps.NumGpuParamBlockBuffersPerStage[VERTEX_SHADER] +
-                                                caps.NumGpuParamBlockBuffersPerStage[GEOMETRY_SHADER] +
-                                                caps.NumGpuParamBlockBuffersPerStage[HULL_SHADER] +
-                                                caps.NumGpuParamBlockBuffersPerStage[DOMAIN_SHADER] +
-                                                caps.NumGpuParamBlockBuffersPerStage[COMPUTE_SHADER];
+            caps.NumCombinedParamBlockBuffers =
+              caps.NumGpuParamBlockBuffersPerStage[FRAGMENT_SHADER] + caps.NumGpuParamBlockBuffersPerStage[VERTEX_SHADER] +
+              caps.NumGpuParamBlockBuffersPerStage[GEOMETRY_SHADER] + caps.NumGpuParamBlockBuffersPerStage[HULL_SHADER] +
+              caps.NumGpuParamBlockBuffersPerStage[DOMAIN_SHADER] + caps.NumGpuParamBlockBuffersPerStage[COMPUTE_SHADER];
 
-            caps.NumCombinedLoadStoreTextureUnits = caps.NumLoadStoreTextureUnitsPerStage[FRAGMENT_SHADER] +
-                                                    caps.NumLoadStoreTextureUnitsPerStage[COMPUTE_SHADER];
+            caps.NumCombinedLoadStoreTextureUnits =
+              caps.NumLoadStoreTextureUnitsPerStage[FRAGMENT_SHADER] + caps.NumLoadStoreTextureUnitsPerStage[COMPUTE_SHADER];
 
             caps.AddShaderProfile("glsl");
             deviceIdx++;
@@ -518,4 +504,4 @@ namespace Crowny
     }
 
     VulkanRenderAPI& gVulkanRenderAPI() { return static_cast<VulkanRenderAPI&>(RenderAPI::Get()); }
-} // namespace
+} // namespace Crowny

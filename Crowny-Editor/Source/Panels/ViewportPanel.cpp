@@ -82,8 +82,7 @@ namespace Crowny
         Ref<Texture> texture = rt->GetColorTexture(0);
 
         ImTextureID textureID = ImGui_ImplVulkan_AddTexture(texture);
-        ImGui::Image(textureID, ImVec2(m_ViewportSize.x, m_ViewportSize.y), ImVec2{ 0, 1 },
-                     ImVec2{ 1, 0 }); // The viewport itself
+        ImGui::Image(textureID, ImVec2(m_ViewportSize.x, m_ViewportSize.y), ImVec2{ 0, 1 }, ImVec2{ 1, 0 }); // The viewport itself
 
         if (ImGui::BeginDragDropTarget())
         {
@@ -138,8 +137,7 @@ namespace Crowny
             ImGuizmo::AllowAxisFlip(false);
             float snapValues[3] = { snapValue, snapValue, snapValue };
             ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj), GetImGuizmoMode(m_GizmoMode),
-                                 (!m_LocalMode && m_GizmoMode == GizmoEditMode::Translate) ? ImGuizmo::WORLD
-                                                                                           : ImGuizmo::LOCAL,
+                                 (!m_LocalMode && m_GizmoMode == GizmoEditMode::Translate) ? ImGuizmo::WORLD : ImGuizmo::LOCAL,
                                  glm::value_ptr(transform), nullptr,
                                  snap ? snapValues : nullptr); // TODO: Bounds, does rotation work?
 

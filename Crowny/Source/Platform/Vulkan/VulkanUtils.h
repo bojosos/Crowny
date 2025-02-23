@@ -85,8 +85,8 @@ namespace Crowny
         static VkBlendOp GetBlendOp(BlendFunction blendFunc);
         static VkBlendFactor GetBlendFactor(BlendFactor factor);
         static VkFormat GetTextureFormat(TextureFormat format, bool sRGB);
-        static TextureFormat GetClosestSupportedTextureFormat(const VulkanDevice& device, TextureFormat format,
-                                                              TextureShape shape, int usage, bool optimapTiling);
+        static TextureFormat GetClosestSupportedTextureFormat(const VulkanDevice& device, TextureFormat format, TextureShape shape, int usage,
+                                                              bool optimapTiling);
         static VkSampleCountFlagBits GetSampleFlags(uint32_t numSamples);
         static VkPrimitiveTopology GetDrawFlags(DrawMode drawMode);
         static VkShaderStageFlagBits GetShaderFlags(ShaderType shaderType);
@@ -96,17 +96,15 @@ namespace Crowny
         static bool RangeOverlaps(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b);
         static VkFormat GetDummyViewFormat(GpuBufferFormat format);
 
-        static void CutRange(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b,
-                             std::array<VkImageSubresourceRange, 5>& output, uint32_t& numAreas);
-        static void CutVertical(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith,
-                                VkImageSubresourceRange* output, uint32_t& numAreas);
-        static void CutHorizontal(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith,
-                                  VkImageSubresourceRange* output, uint32_t& numAreas);
+        static void CutRange(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b, std::array<VkImageSubresourceRange, 5>& output,
+                             uint32_t& numAreas);
+        static void CutVertical(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith, VkImageSubresourceRange* output,
+                                uint32_t& numAreas);
+        static void CutHorizontal(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith, VkImageSubresourceRange* output,
+                                  uint32_t& numAreas);
     };
 } // namespace Crowny
 
-#define GET_INSTANCE_PROC_ADDR(instance, name)                                                                         \
-    vk##name = reinterpret_cast<PFN_vk##name>(vkGetInstanceProcAddr(instance, "vk" #name));
+#define GET_INSTANCE_PROC_ADDR(instance, name) vk##name = reinterpret_cast<PFN_vk##name>(vkGetInstanceProcAddr(instance, "vk" #name));
 
-#define GET_DEVICE_PROC_ADDR(device, name)                                                                             \
-    vk##name = reinterpret_cast<PFN_vk##name>(vkGetDeviceProcAddr(device, "vk" #name));
+#define GET_DEVICE_PROC_ADDR(device, name) vk##name = reinterpret_cast<PFN_vk##name>(vkGetDeviceProcAddr(device, "vk" #name));

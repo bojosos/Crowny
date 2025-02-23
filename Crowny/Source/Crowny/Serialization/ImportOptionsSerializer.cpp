@@ -17,8 +17,7 @@ namespace Crowny
         case ImportOptionsType::None:
             break;
         case ImportOptionsType::AudioClip: {
-            Ref<AudioClipImportOptions> audioImportOptions =
-              std::static_pointer_cast<AudioClipImportOptions>(importOptions);
+            Ref<AudioClipImportOptions> audioImportOptions = std::static_pointer_cast<AudioClipImportOptions>(importOptions);
             BeginYAMLMap(out, "AudioImporter");
 
             SerializeEnumYAML(out, "Format", audioImportOptions->Format);
@@ -38,8 +37,7 @@ namespace Crowny
             break;
         }
         case ImportOptionsType::Texture: {
-            Ref<TextureImportOptions> textureImportOptions =
-              std::static_pointer_cast<TextureImportOptions>(importOptions);
+            Ref<TextureImportOptions> textureImportOptions = std::static_pointer_cast<TextureImportOptions>(importOptions);
             BeginYAMLMap(out, "TextureImporter");
 
             SerializeEnumYAML(out, "Format", textureImportOptions->Format);
@@ -55,8 +53,7 @@ namespace Crowny
             break;
         }
         case ImportOptionsType::Script: {
-            Ref<CSharpScriptImportOptions> scriptImportOptions =
-              std::static_pointer_cast<CSharpScriptImportOptions>(importOptions);
+            Ref<CSharpScriptImportOptions> scriptImportOptions = std::static_pointer_cast<CSharpScriptImportOptions>(importOptions);
             BeginYAMLMap(out, "ScriptImporter");
 
             SerializeValueYAML(out, "IsEditorScript", scriptImportOptions->IsEditorScript);
@@ -115,9 +112,8 @@ namespace Crowny
 
             DeserializeEnumYAML(audioImportOptionsNode, "ReadMode", audioImportOptions->Format, AudioFormat::VORBIS,
                                 "Audio format \'{0}\' in metadata file is invalid.", 0, 2);
-            DeserializeEnumYAML(audioImportOptionsNode, "ReadMode", audioImportOptions->ReadMode,
-                                AudioReadMode::LoadCompressed, "Audio read mode \'{0}\' in metadata file is invalid.",
-                                0, 3);
+            DeserializeEnumYAML(audioImportOptionsNode, "ReadMode", audioImportOptions->ReadMode, AudioReadMode::LoadCompressed,
+                                "Audio read mode \'{0}\' in metadata file is invalid.", 0, 3);
             DeserializeValueYAML(audioImportOptionsNode, "Is3D", audioImportOptions->Is3D, true);
             DeserializeValueYAML(audioImportOptionsNode, "Quality", audioImportOptions->Quality, 1.0f,
                                  "Audio quality  \'{0}\' in metadata file is invalid.", 0.0f, 1.0f);
@@ -134,10 +130,9 @@ namespace Crowny
             Ref<TextureImportOptions> textureImportOptions = CreateRef<TextureImportOptions>();
 
             DeserializeEnumYAML(textureImportOptionsNode, "Format", textureImportOptions->Format, TextureFormat::RGBA8,
-                                "Texture format \'{}\' in metadata file is invalid.", 0,
-                                (int32_t)TextureFormat::FormatCount);
-            DeserializeEnumYAML(textureImportOptionsNode, "Shape", textureImportOptions->Shape,
-                                TextureShape::TEXTURE_2D, "Texture shape \'{}\' in metadata file is invalid.", 0, 4);
+                                "Texture format \'{}\' in metadata file is invalid.", 0, (int32_t)TextureFormat::FormatCount);
+            DeserializeEnumYAML(textureImportOptionsNode, "Shape", textureImportOptions->Shape, TextureShape::TEXTURE_2D,
+                                "Texture shape \'{}\' in metadata file is invalid.", 0, 4);
             DeserializeValueYAML(textureImportOptionsNode, "AutoFormat", textureImportOptions->AutomaticFormat, true);
             DeserializeValueYAML(textureImportOptionsNode, "GenerateMips", textureImportOptions->GenerateMips, false);
             DeserializeValueYAML(textureImportOptionsNode, "CpuCached", textureImportOptions->CpuCached, false);
@@ -162,14 +157,11 @@ namespace Crowny
         {
             Ref<FontImportOptions> fontImportOptions = CreateRef<FontImportOptions>();
 
-            DeserializeEnumYAML(fontImportOptionsNode, "AtlasDimensionsConstraint",
-                                fontImportOptions->AtlasDimensionsConstraint,
+            DeserializeEnumYAML(fontImportOptionsNode, "AtlasDimensionsConstraint", fontImportOptions->AtlasDimensionsConstraint,
                                 Font::AtlasDimensionsConstraint::POWER_OF_TWO_SQUARE,
-                                "Atlas dimension constraints \'{}\' in metadata file is invalid.", 0,
-                                Font::AtlasDimensionsConstraint::COUNT);
+                                "Atlas dimension constraints \'{}\' in metadata file is invalid.", 0, Font::AtlasDimensionsConstraint::COUNT);
             DeserializeValueYAML(fontImportOptionsNode, "GetKerningData", fontImportOptions->GetKerningData, true);
-            DeserializeValueYAML(fontImportOptionsNode, "AutomaticFontSampling",
-                                 fontImportOptions->AutomaticFontSampling, true);
+            DeserializeValueYAML(fontImportOptionsNode, "AutomaticFontSampling", fontImportOptions->AutomaticFontSampling, true);
             DeserializeValueYAML(fontImportOptionsNode, "SampingFontSize", fontImportOptions->SampingFontSize, 64U);
             DeserializeValueYAML(fontImportOptionsNode, "AutoSizeAtlas", fontImportOptions->AutoSizeAtlas, false);
             DeserializeValueYAML(fontImportOptionsNode, "AtlasWidth", fontImportOptions->AtlasWidth, 1024U);
@@ -190,15 +182,12 @@ namespace Crowny
         {
             Ref<MeshImportOptions> meshImportOptions = CreateRef<MeshImportOptions>();
 
-            DeserializeEnumYAML(meshImportOptionsNode, "Normals", meshImportOptions->NormalsMode,
-                                NormalsImportMode::Import, "Normals import mode \'{}\' in metadata file is invalid.", 0,
-                                (int32_t)NormalsImportMode::Count);
-            DeserializeEnumYAML(meshImportOptionsNode, "Tangents", meshImportOptions->TangentsMode,
-                                NormalsImportMode::Import, "Normals import mode \'{}\' in metadata file is invalid.", 0,
-                                (int32_t)NormalsImportMode::Count);
-            DeserializeEnumYAML(meshImportOptionsNode, "IndexFormat", meshImportOptions->IndexFormat,
-                                MeshIndexFormat::Auto, "Index type \'{}\' in metadata file is invalid.", 0,
-                                (int32_t)MeshIndexFormat::Count);
+            DeserializeEnumYAML(meshImportOptionsNode, "Normals", meshImportOptions->NormalsMode, NormalsImportMode::Import,
+                                "Normals import mode \'{}\' in metadata file is invalid.", 0, (int32_t)NormalsImportMode::Count);
+            DeserializeEnumYAML(meshImportOptionsNode, "Tangents", meshImportOptions->TangentsMode, NormalsImportMode::Import,
+                                "Normals import mode \'{}\' in metadata file is invalid.", 0, (int32_t)NormalsImportMode::Count);
+            DeserializeEnumYAML(meshImportOptionsNode, "IndexFormat", meshImportOptions->IndexFormat, MeshIndexFormat::Auto,
+                                "Index type \'{}\' in metadata file is invalid.", 0, (int32_t)MeshIndexFormat::Count);
             DeserializeValueYAML(meshImportOptionsNode, "Compress", meshImportOptions->Compress, false);
             DeserializeValueYAML(meshImportOptionsNode, "Optimize", meshImportOptions->Optimize, false);
             DeserializeValueYAML(meshImportOptionsNode, "KeepQuads", meshImportOptions->KeepQuads, false);

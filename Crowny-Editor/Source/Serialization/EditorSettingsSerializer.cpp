@@ -14,8 +14,7 @@ namespace Crowny
         out << YAML::Key << "GridScaleSnap" << YAML::Value << settings->GridScaleSnap;
         out << YAML::Key << "LastOpenProject" << YAML::Value << settings->LastOpenProject.string();
         out << YAML::Key << "AutoLoadLastProject" << YAML::Value << settings->AutoLoadLastProject;
-        out << YAML::Key << "ShowImGuiDemo" << YAML::Value
-            << settings->ShowImGuiDemoWindow; // TODO: Maybe move to project settings
+        out << YAML::Key << "ShowImGuiDemo" << YAML::Value << settings->ShowImGuiDemoWindow; // TODO: Maybe move to project settings
         out << YAML::Key << "ShowPhysicsColliders2D" << YAML::Value << settings->ShowPhysicsColliders2D;
         out << YAML::Key << "ShowScriptDebugInfo" << YAML::Value << settings->ShowScriptDebugInfo;
         out << YAML::Key << "ShowAssetInfo" << YAML::Value << settings->ShowAssetInfo;

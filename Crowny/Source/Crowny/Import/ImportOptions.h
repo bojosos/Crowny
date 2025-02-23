@@ -140,8 +140,7 @@ namespace Crowny
         bool AutomaticFontSampling = true;
         uint32_t SampingFontSize = 64;
         bool AutoSizeAtlas = false;
-        Font::AtlasDimensionsConstraint AtlasDimensionsConstraint =
-          Font::AtlasDimensionsConstraint::POWER_OF_TWO_SQUARE;
+        Font::AtlasDimensionsConstraint AtlasDimensionsConstraint = Font::AtlasDimensionsConstraint::POWER_OF_TWO_SQUARE;
         uint32_t AtlasWidth = 1024;
         uint32_t AtlasHeight = 1024;
         CharsetRange Range = CharsetRange::ASCII;

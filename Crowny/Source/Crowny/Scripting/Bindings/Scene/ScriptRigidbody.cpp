@@ -18,8 +18,7 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_GetSleepMode", (void*)&Internal_GetSleepMode);
         MetaData.ScriptClass->AddInternalCall("Internal_GetAngularDrag", (void*)&Internal_GetAngularDrag);
         MetaData.ScriptClass->AddInternalCall("Internal_GetLinearDrag", (void*)&Internal_GetLinearDrag);
-        MetaData.ScriptClass->AddInternalCall("Internal_GetCollisionDetectionMode",
-                                              (void*)&Internal_GetCollisionDetectionMode);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetCollisionDetectionMode", (void*)&Internal_GetCollisionDetectionMode);
         MetaData.ScriptClass->AddInternalCall("Internal_GetLayer", (void*)&Internal_GetLayer);
         MetaData.ScriptClass->AddInternalCall("Internal_GetAutoMass", (void*)&Internal_GetAutoMass);
         MetaData.ScriptClass->AddInternalCall("Internal_GetCenterOfMass", (void*)&Internal_GetCenterOfMass);
@@ -30,8 +29,7 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_SetSleepMode", (void*)&Internal_SetSleepMode);
         MetaData.ScriptClass->AddInternalCall("Internal_SetAngularDrag", (void*)&Internal_SetAngularDrag);
         MetaData.ScriptClass->AddInternalCall("Internal_SetLinearDrag", (void*)&Internal_SetLinearDrag);
-        MetaData.ScriptClass->AddInternalCall("Internal_SetCollisionDetectionMode",
-                                              (void*)&Internal_SetCollisionDetectionMode);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetCollisionDetectionMode", (void*)&Internal_SetCollisionDetectionMode);
         MetaData.ScriptClass->AddInternalCall("Internal_SetLayer", (void*)&Internal_SetLayer);
         MetaData.ScriptClass->AddInternalCall("Internal_SetAutoMass", (void*)&Internal_SetAutoMass);
         MetaData.ScriptClass->AddInternalCall("Internal_SetCenterOfMass", (void*)&Internal_SetCenterOfMass);
@@ -51,10 +49,7 @@ namespace Crowny
         return thisPtr->GetComponent().RuntimeBody->IsAwake();
     }
 
-    RigidbodyBodyType ScriptRigidbody2D::Internal_GetBodyType(ScriptRigidbody2D* thisPtr)
-    {
-        return thisPtr->GetComponent().GetBodyType();
-    }
+    RigidbodyBodyType ScriptRigidbody2D::Internal_GetBodyType(ScriptRigidbody2D* thisPtr) { return thisPtr->GetComponent().GetBodyType(); }
 
     void ScriptRigidbody2D::Internal_SetBodyType(ScriptRigidbody2D* thisPtr, RigidbodyBodyType bodyType)
     {
@@ -62,51 +57,32 @@ namespace Crowny
     }
 
     float ScriptRigidbody2D::Internal_GetMass(ScriptRigidbody2D* thisPtr) { return thisPtr->GetComponent().GetMass(); }
-    bool ScriptRigidbody2D::Internal_GetAutoMass(ScriptRigidbody2D* thisPtr)
-    {
-        return thisPtr->GetComponent().GetAutoMass();
-    }
+    bool ScriptRigidbody2D::Internal_GetAutoMass(ScriptRigidbody2D* thisPtr) { return thisPtr->GetComponent().GetAutoMass(); }
     void ScriptRigidbody2D::Internal_GetCenterOfMass(ScriptRigidbody2D* thisPtr, glm::vec2* outCenterOfMass)
     {
         *outCenterOfMass = thisPtr->GetComponent().GetCenterOfMass();
     }
 
-    Rigidbody2DConstraints ScriptRigidbody2D::Internal_GetConstraints(ScriptRigidbody2D* thisPtr,
-                                                                      ScriptRigidbody2D* thisPtr2)
+    Rigidbody2DConstraints ScriptRigidbody2D::Internal_GetConstraints(ScriptRigidbody2D* thisPtr, ScriptRigidbody2D* thisPtr2)
     {
         CW_ENGINE_INFO("Ptr: {0}, {1}", (void*)thisPtr, (void*)thisPtr2);
         return thisPtr->GetComponent().GetConstraints();
     }
 
-    float ScriptRigidbody2D::Internal_GetAngularDrag(ScriptRigidbody2D* thisPtr)
-    {
-        return thisPtr->GetComponent().GetAngularDrag();
-    }
+    float ScriptRigidbody2D::Internal_GetAngularDrag(ScriptRigidbody2D* thisPtr) { return thisPtr->GetComponent().GetAngularDrag(); }
 
-    float ScriptRigidbody2D::Internal_GetLinearDrag(ScriptRigidbody2D* thisPtr)
-    {
-        return thisPtr->GetComponent().GetLinearDrag();
-    }
+    float ScriptRigidbody2D::Internal_GetLinearDrag(ScriptRigidbody2D* thisPtr) { return thisPtr->GetComponent().GetLinearDrag(); }
 
     CollisionDetectionMode2D ScriptRigidbody2D::Internal_GetCollisionDetectionMode(ScriptRigidbody2D* thisPtr)
     {
         return thisPtr->GetComponent().GetCollisionDetectionMode();
     }
 
-    int ScriptRigidbody2D::Internal_GetLayer(ScriptRigidbody2D* thisPtr)
-    {
-        return thisPtr->GetComponent().GetLayerMask();
-    }
+    int ScriptRigidbody2D::Internal_GetLayer(ScriptRigidbody2D* thisPtr) { return thisPtr->GetComponent().GetLayerMask(); }
 
-    RigidbodySleepMode ScriptRigidbody2D::Internal_GetSleepMode(ScriptRigidbody2D* thisPtr)
-    {
-        return thisPtr->GetComponent().GetSleepMode();
-    }
+    RigidbodySleepMode ScriptRigidbody2D::Internal_GetSleepMode(ScriptRigidbody2D* thisPtr) { return thisPtr->GetComponent().GetSleepMode(); }
 
-    void ScriptRigidbody2D::Internal_SetGravityScale(ScriptRigidbody2D* thisPtr, float scale)
-    {
-        thisPtr->GetComponent().SetGravityScale(scale);
-    }
+    void ScriptRigidbody2D::Internal_SetGravityScale(ScriptRigidbody2D* thisPtr, float scale) { thisPtr->GetComponent().SetGravityScale(scale); }
 
     void ScriptRigidbody2D::Internal_SetAngularDrag(ScriptRigidbody2D* thisPtr, float angularDrag)
     {
@@ -118,8 +94,7 @@ namespace Crowny
         thisPtr->GetComponent().SetLinearDrag(linearDrag);
     }
 
-    void ScriptRigidbody2D::Internal_SetCollisionDetectionMode(ScriptRigidbody2D* thisPtr,
-                                                               CollisionDetectionMode2D mode)
+    void ScriptRigidbody2D::Internal_SetCollisionDetectionMode(ScriptRigidbody2D* thisPtr, CollisionDetectionMode2D mode)
     {
         thisPtr->GetComponent().SetCollisionDetectionMode(mode);
     }
@@ -159,10 +134,7 @@ namespace Crowny
         thisPtr->GetComponent().SetCenterOfMass(*centerOfMass);
     }
 
-    float ScriptRigidbody2D::Internal_GetGravityScale(ScriptRigidbody2D* thisPtr)
-    {
-        return thisPtr->GetComponent().GetGravityScale();
-    }
+    float ScriptRigidbody2D::Internal_GetGravityScale(ScriptRigidbody2D* thisPtr) { return thisPtr->GetComponent().GetGravityScale(); }
 
     void ScriptRigidbody2D::Internal_AddForce(ScriptRigidbody2D* thisPtr, glm::vec2* force, ForceMode forceMode)
     {
@@ -174,17 +146,14 @@ namespace Crowny
             thisPtr->GetComponent().RuntimeBody->ApplyForceToCenter(b2Vec2(force->x, force->y), true);
     }
 
-    void ScriptRigidbody2D::Internal_AddForceAt(ScriptRigidbody2D* thisPtr, glm::vec2* offset, glm::vec2* force,
-                                                ForceMode forceMode)
+    void ScriptRigidbody2D::Internal_AddForceAt(ScriptRigidbody2D* thisPtr, glm::vec2* offset, glm::vec2* force, ForceMode forceMode)
     {
         if (force->x == 0 && force->y == 0)
             return;
         if (forceMode == ForceMode::Impulse)
-            thisPtr->GetComponent().RuntimeBody->ApplyLinearImpulse(b2Vec2(force->x, force->y),
-                                                                    b2Vec2(offset->x, offset->y), true);
+            thisPtr->GetComponent().RuntimeBody->ApplyLinearImpulse(b2Vec2(force->x, force->y), b2Vec2(offset->x, offset->y), true);
         else if (forceMode == ForceMode::Force)
-            thisPtr->GetComponent().RuntimeBody->ApplyForce(b2Vec2(force->x, force->y), b2Vec2(offset->x, offset->y),
-                                                            true);
+            thisPtr->GetComponent().RuntimeBody->ApplyForce(b2Vec2(force->x, force->y), b2Vec2(offset->x, offset->y), true);
     }
 
     void ScriptRigidbody2D::Internal_AddTorque(ScriptRigidbody2D* thisPtr, float torque, ForceMode forceMode)
@@ -197,10 +166,7 @@ namespace Crowny
             thisPtr->GetComponent().RuntimeBody->ApplyTorque(torque, true);
     }
 
-    float ScriptRigidbody2D::Internal_GetRotation(ScriptRigidbody2D* thisPtr)
-    {
-        return thisPtr->GetComponent().RuntimeBody->GetAngle();
-    }
+    float ScriptRigidbody2D::Internal_GetRotation(ScriptRigidbody2D* thisPtr) { return thisPtr->GetComponent().RuntimeBody->GetAngle(); }
 
     void ScriptRigidbody2D::Internal_GetPosition(ScriptRigidbody2D* thisPtr, glm::vec2* outPosition)
     {
@@ -209,13 +175,7 @@ namespace Crowny
         outPosition->y = position.y;
     }
 
-    float ScriptRigidbody2D::Internal_GetInertia(ScriptRigidbody2D* thisPtr)
-    {
-        return thisPtr->GetComponent().GetInertia();
-    }
+    float ScriptRigidbody2D::Internal_GetInertia(ScriptRigidbody2D* thisPtr) { return thisPtr->GetComponent().GetInertia(); }
 
-    void ScriptRigidbody2D::Internal_SetInertia(ScriptRigidbody2D* thisPtr, float inertia)
-    {
-        return thisPtr->GetComponent().SetInertia(inertia);
-    }
+    void ScriptRigidbody2D::Internal_SetInertia(ScriptRigidbody2D* thisPtr, float inertia) { return thisPtr->GetComponent().SetInertia(inertia); }
 } // namespace Crowny

@@ -13,9 +13,7 @@ namespace Crowny
 
     void TextureEditor::Render()
     {
-        const Vector<const char*> TextureTypes = {
-            "Default", "Normal", "Sprite", "Cursor", "Lightmap", "Single channel"
-        };
+        const Vector<const char*> TextureTypes = { "Default", "Normal", "Sprite", "Cursor", "Lightmap", "Single channel" };
         uint32_t SelectedTextureType = 0;
 
         const Vector<const char*> TextureShapes = { "2D", "Cube" };

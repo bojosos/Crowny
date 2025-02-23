@@ -7,8 +7,7 @@
 namespace Crowny
 {
 
-    void OpenGLMessageCallback(unsigned source, unsigned type, unsigned id, unsigned severity, int length,
-                               const char* message, const void* userParam)
+    void OpenGLMessageCallback(unsigned source, unsigned type, unsigned id, unsigned severity, int length, const char* message, const void* userParam)
     {
         CW_ENGINE_ASSERT(false); // temporary
         switch (severity)

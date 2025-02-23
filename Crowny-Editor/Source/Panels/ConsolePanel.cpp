@@ -67,21 +67,15 @@ namespace Crowny
         ImGui::BeginVertical("##consolePanelV", { ImGui::GetContentRegionAvailWidth(), 0.0f });
         ImGui::Spring();
         ImGui::BeginHorizontal("##consolePanelH", { ImGui::GetContentRegionAvailWidth(), 0.0f });
-        ImColor tint = m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Info] ? IM_COL32(236, 158, 36, 255)
-                                                                                      : IM_COL32(192, 192, 192, 255);
+        ImColor tint = m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Info] ? IM_COL32(236, 158, 36, 255) : IM_COL32(192, 192, 192, 255);
         if (drawButton(EditorAssets::Get().ConsoleInfo, tint))
-            m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Info] =
-              !m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Info];
-        tint = m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Warn] ? IM_COL32(236, 158, 36, 255)
-                                                                              : IM_COL32(192, 192, 192, 255);
+            m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Info] = !m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Info];
+        tint = m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Warn] ? IM_COL32(236, 158, 36, 255) : IM_COL32(192, 192, 192, 255);
         if (drawButton(EditorAssets::Get().ConsoleWarn, tint))
-            m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Warn] =
-              !m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Warn];
-        tint = m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Error] ? IM_COL32(236, 158, 36, 255)
-                                                                               : IM_COL32(192, 192, 192, 255);
+            m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Warn] = !m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Warn];
+        tint = m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Error] ? IM_COL32(236, 158, 36, 255) : IM_COL32(192, 192, 192, 255);
         if (drawButton(EditorAssets::Get().ConsoleError, tint))
-            m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Error] =
-              !m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Error];
+            m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Error] = !m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Error];
 
         UI::ScopedStyle layoutRight(ImGuiStyleVar_LayoutAlign, 1.0f);
         ImGui::Spring();
@@ -112,16 +106,14 @@ namespace Crowny
     void ConsolePanel::RenderMessages()
     {
         ImGui::SetWindowFontScale(m_DisplayScale);
-        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_SortMulti | ImGuiTableFlags_Sortable |
-                                ImGuiTableFlags_Resizable | ImGuiTableFlags_Hideable | ImGuiTableFlags_ScrollY;
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_SortMulti | ImGuiTableFlags_Sortable | ImGuiTableFlags_Resizable |
+                                ImGuiTableFlags_Hideable | ImGuiTableFlags_ScrollY;
         if (ImGui::BeginTable("##consoleTable", 2, flags))
         {
             if (!m_Collapse)
-                ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort,
-                                        0.03f);
+                ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort, 0.03f);
             if (m_Collapse)
-                ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort,
-                                        0.03f);
+                ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort, 0.03f);
             ImGui::TableSetupColumn("Message", ImGuiTableColumnFlags_WidthStretch, 0.97f);
             ImGui::TableHeadersRow();
 
@@ -151,8 +143,7 @@ namespace Crowny
                 needSort = true;
             if (sortSpec && needSort)
             {
-                ConsoleBuffer::Get().Sort(sortSpec->Specs[0].ColumnIndex,
-                                          sortSpec->Specs[0].SortDirection == ImGuiSortDirection_Ascending);
+                ConsoleBuffer::Get().Sort(sortSpec->Specs[0].ColumnIndex, sortSpec->Specs[0].SortDirection == ImGuiSortDirection_Ascending);
                 sortSpec->SpecsDirty = false;
             }
 

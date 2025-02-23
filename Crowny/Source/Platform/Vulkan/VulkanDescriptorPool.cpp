@@ -8,10 +8,7 @@
 namespace Crowny
 {
 
-    VulkanLayoutKey::VulkanLayoutKey(VkDescriptorSetLayoutBinding* bindings, uint32_t numBindings)
-      : NumBindings(numBindings), Bindings(bindings)
-    {
-    }
+    VulkanLayoutKey::VulkanLayoutKey(VkDescriptorSetLayoutBinding* bindings, uint32_t numBindings) : NumBindings(numBindings), Bindings(bindings) {}
 
     size_t VulkanLayoutKey::HashFunction::operator()(const VulkanLayoutKey& key) const
     {
@@ -19,8 +16,7 @@ namespace Crowny
         for (uint32_t i = 0; i < key.NumBindings; i++)
         {
             size_t hashC = 0;
-            HashCombine(hash, key.Bindings[i].binding, key.Bindings[i].descriptorCount, key.Bindings[i].descriptorType,
-                        key.Bindings[i].stageFlags);
+            HashCombine(hash, key.Bindings[i].binding, key.Bindings[i].descriptorCount, key.Bindings[i].descriptorType, key.Bindings[i].stageFlags);
         }
 
         return hash;
@@ -47,13 +43,11 @@ namespace Crowny
         return true;
     }
 
-    VulkanPipelineLayoutKey::VulkanPipelineLayoutKey(VulkanDescriptorLayout** layouts, uint32_t numLayouts)
-      : NumLayouts(numLayouts), Layouts(layouts)
+    VulkanPipelineLayoutKey::VulkanPipelineLayoutKey(VulkanDescriptorLayout** layouts, uint32_t numLayouts) : NumLayouts(numLayouts), Layouts(layouts)
     {
     }
 
-    bool VulkanPipelineLayoutKey::EqualsFunction::operator()(const VulkanPipelineLayoutKey& lhs,
-                                                             const VulkanPipelineLayoutKey& rhs) const
+    bool VulkanPipelineLayoutKey::EqualsFunction::operator()(const VulkanPipelineLayoutKey& lhs, const VulkanPipelineLayoutKey& rhs) const
     {
         if (lhs.NumLayouts != rhs.NumLayouts)
             return false;
@@ -73,10 +67,7 @@ namespace Crowny
         return hash;
     }
 
-    VulkanDescriptorManager::VulkanDescriptorManager(VulkanDevice& device) : m_Device(device)
-    {
-        m_Pools.push_back(new VulkanDescriptorPool(device));
-    }
+    VulkanDescriptorManager::VulkanDescriptorManager(VulkanDevice& device) : m_Device(device) { m_Pools.push_back(new VulkanDescriptorPool(device)); }
 
     VulkanDescriptorManager::~VulkanDescriptorManager()
     {
@@ -96,8 +87,7 @@ namespace Crowny
             delete entry;
     }
 
-    VulkanDescriptorLayout* VulkanDescriptorManager::GetLayout(VkDescriptorSetLayoutBinding* bindings,
-                                                               uint32_t numBindings)
+    VulkanDescriptorLayout* VulkanDescriptorManager::GetLayout(VkDescriptorSetLayoutBinding* bindings, uint32_t numBindings)
     {
         VulkanLayoutKey key(bindings, numBindings);
 
@@ -201,15 +191,11 @@ namespace Crowny
         poolCreateInfo.poolSizeCount = sizeof(poolSizes) / sizeof(poolSizes[0]);
         poolCreateInfo.pPoolSizes = poolSizes;
 
-        VkResult result =
-          vkCreateDescriptorPool(m_Device.GetLogicalDevice(), &poolCreateInfo, gVulkanAllocator, &m_Pool);
+        VkResult result = vkCreateDescriptorPool(m_Device.GetLogicalDevice(), &poolCreateInfo, gVulkanAllocator, &m_Pool);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
     }
 
-    VulkanDescriptorPool::~VulkanDescriptorPool()
-    {
-        vkDestroyDescriptorPool(m_Device.GetLogicalDevice(), m_Pool, gVulkanAllocator);
-    }
+    VulkanDescriptorPool::~VulkanDescriptorPool() { vkDestroyDescriptorPool(m_Device.GetLogicalDevice(), m_Pool, gVulkanAllocator); }
 
     VulkanDescriptorSet::VulkanDescriptorSet(VulkanResourceManager* owner, VkDescriptorSet set, VkDescriptorPool pool)
       : VulkanResource(owner, true), m_Set(set), m_Pool(pool)
@@ -230,14 +216,12 @@ namespace Crowny
         vkUpdateDescriptorSets(m_Device, count, entries, 0, nullptr);
     }
 
-    VulkanDescriptorLayout::VulkanDescriptorLayout(VulkanDevice& device, VkDescriptorSetLayoutBinding* bindings,
-                                                   uint32_t numBindings)
+    VulkanDescriptorLayout::VulkanDescriptorLayout(VulkanDevice& device, VkDescriptorSetLayoutBinding* bindings, uint32_t numBindings)
       : m_Device(device)
     {
         m_Hash = 0;
         for (uint32_t i = 0; i < numBindings; i++)
-            HashCombine(m_Hash, bindings[i].binding, bindings[i].descriptorCount, bindings[i].descriptorType,
-                        bindings[i].stageFlags);
+            HashCombine(m_Hash, bindings[i].binding, bindings[i].descriptorCount, bindings[i].descriptorType, bindings[i].stageFlags);
 
         VkDescriptorSetLayoutCreateInfo layoutCI;
         layoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -246,14 +230,10 @@ namespace Crowny
         layoutCI.pBindings = bindings;
         layoutCI.bindingCount = numBindings;
 
-        VkResult result =
-          vkCreateDescriptorSetLayout(device.GetLogicalDevice(), &layoutCI, gVulkanAllocator, &m_Layout);
+        VkResult result = vkCreateDescriptorSetLayout(device.GetLogicalDevice(), &layoutCI, gVulkanAllocator, &m_Layout);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
     }
 
-    VulkanDescriptorLayout::~VulkanDescriptorLayout()
-    {
-        vkDestroyDescriptorSetLayout(m_Device.GetLogicalDevice(), m_Layout, gVulkanAllocator);
-    }
+    VulkanDescriptorLayout::~VulkanDescriptorLayout() { vkDestroyDescriptorSetLayout(m_Device.GetLogicalDevice(), m_Layout, gVulkanAllocator); }
 
 } // namespace Crowny

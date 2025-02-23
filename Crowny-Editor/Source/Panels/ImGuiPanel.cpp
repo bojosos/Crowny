@@ -31,10 +31,9 @@ namespace Crowny
         m_Focused = ImGui::IsWindowFocused();
     }
 
-
     void ImGuiPanel::RegisterInMenu(ImGuiMenu* menu)
     {
-        CW_ENGINE_ERROR("{}: {}", m_Name, (void*) this);
+        CW_ENGINE_ERROR("{}: {}", m_Name, (void*)this);
         menu->AddItem(new ImGuiMenuItem(m_Name, "", nullptr, &m_Shown));
     }
 } // namespace Crowny

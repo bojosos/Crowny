@@ -69,8 +69,7 @@ namespace Crowny
         // Normal fullscreen
         if (windowDesc.ShowBorder && windowDesc.Fullscreen)
         {
-            m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(),
-                                        monitor, nullptr);
+            m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(), monitor, nullptr);
         }
         else if (!windowDesc.ShowBorder && windowDesc.Fullscreen)
         {
@@ -79,19 +78,16 @@ namespace Crowny
             glfwWindowHint(GLFW_GREEN_BITS, videoMode->greenBits);
             glfwWindowHint(GLFW_BLUE_BITS, videoMode->blueBits);
             glfwWindowHint(GLFW_REFRESH_RATE, videoMode->refreshRate);
-            m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(),
-                                        monitor, nullptr);
+            m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(), monitor, nullptr);
         }
         else if (!windowDesc.ShowBorder)
         { // Borderless windowed
             glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
-            m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(),
-                                        nullptr, nullptr);
+            m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(), nullptr, nullptr);
         }
         else
         { // Normal windowed
-            m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(),
-                                        nullptr, nullptr);
+            m_Window = glfwCreateWindow((int)windowDesc.Width, (int)windowDesc.Height, windowDesc.Title.c_str(), nullptr, nullptr);
         }
 
         // TODO: Fix this with monitors
@@ -116,8 +112,7 @@ namespace Crowny
 
         if (windowDesc.StartMaximized)
         {
-            glfwSetWindowPos(m_Window, areaX + areaWidth / 2 - windowDesc.Width / 2,
-                             areaY + areaHeight / 2 - windowDesc.Height / 2);
+            glfwSetWindowPos(m_Window, areaX + areaWidth / 2 - windowDesc.Width / 2, areaY + areaHeight / 2 - windowDesc.Height / 2);
             glfwMaximizeWindow(m_Window);
             if (!windowDesc.Hidden)
                 glfwShowWindow(m_Window);

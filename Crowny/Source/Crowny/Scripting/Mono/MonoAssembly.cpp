@@ -48,14 +48,11 @@ namespace Crowny
         return a.NamespaceName == b.NamespaceName && a.Name == b.Name;
     }
 
-    MonoAssembly::ClassId::ClassId(const String& namespaceName, const String& name)
-      : Name(name), NamespaceName(namespaceName)
-    {
-    }
+    MonoAssembly::ClassId::ClassId(const String& namespaceName, const String& name) : Name(name), NamespaceName(namespaceName) {}
 
     MonoAssembly::MonoAssembly(const Path& filepath, const String& name)
-      : m_IsLoaded(false), m_AllClassesCached(false), m_Image(nullptr), m_Name(name), m_Path(filepath),
-        m_Assembly(nullptr), m_IsDependency(false), m_DebugData(nullptr)
+      : m_IsLoaded(false), m_AllClassesCached(false), m_Image(nullptr), m_Name(name), m_Path(filepath), m_Assembly(nullptr), m_IsDependency(false),
+        m_DebugData(nullptr)
     {
     }
 
@@ -215,8 +212,7 @@ namespace Crowny
         std::stack<MonoClass*> todo;
 
         MonoAssembly* corlib = MonoManager::Get().GetAssembly("corlib");
-        MonoClass* compilerGeneratedAttrib =
-          corlib->GetClass("System.Runtime.CompilerServices", "CompilerGeneratedAttribute");
+        MonoClass* compilerGeneratedAttrib = corlib->GetClass("System.Runtime.CompilerServices", "CompilerGeneratedAttribute");
 
         int numRows = mono_image_get_table_rows(m_Image, MONO_TABLE_TYPEDEF);
 

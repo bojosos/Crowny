@@ -87,8 +87,7 @@ namespace Crowny
                         if (!selectedEntity.HasComponent<AudioSourceComponent>())
                         {
                             AudioSourceComponent& audioSource = selectedEntity.AddComponent<AudioSourceComponent>();
-                            AssetHandle<AudioClip> clip =
-                              static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(fileEntry));
+                            AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(fileEntry));
                             audioSource.SetClip(clip);
                         }
                         break;
@@ -133,10 +132,8 @@ namespace Crowny
                     case AssetType::Texture:
                         if (!selectedEntity.HasComponent<SpriteRendererComponent>())
                         {
-                            SpriteRendererComponent& spriteComponent =
-                              selectedEntity.AddComponent<SpriteRendererComponent>();
-                            AssetHandle<Texture> texture =
-                              static_asset_cast<Texture>(ProjectLibrary::Get().Load(fileEntry));
+                            SpriteRendererComponent& spriteComponent = selectedEntity.AddComponent<SpriteRendererComponent>();
+                            AssetHandle<Texture> texture = static_asset_cast<Texture>(ProjectLibrary::Get().Load(fileEntry));
                             spriteComponent.Texture = texture;
                         }
                         break;
@@ -180,9 +177,8 @@ namespace Crowny
         Entity selectedEntity = HierarchyPanel::GetSelectedEntity();
         if (m_InspectorMode == InspectorMode::GameObject && selectedEntity)
             HandleInspectorDragDrop(selectedEntity);
-        if (cursor == ImGuiMouseCursor_Arrow ||
-            ImGui::GetMouseCursor() == ImGuiMouseCursor_Dummy) // Need to reset the cursor here. The one from the
-                                                               // HandleInspectorDragDrop will override it.
+        if (cursor == ImGuiMouseCursor_Arrow || ImGui::GetMouseCursor() == ImGuiMouseCursor_Dummy) // Need to reset the cursor here. The one from the
+                                                                                                   // HandleInspectorDragDrop will override it.
             ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
         EndPanel();
         // ImGui::Begin("Material");
@@ -342,13 +338,12 @@ namespace Crowny
     {
         if (m_ImportOptions)
         {
-            Ref<AudioClipImportOptions> audioClipImportOptions =
-              std::static_pointer_cast<AudioClipImportOptions>(m_ImportOptions);
+            Ref<AudioClipImportOptions> audioClipImportOptions = std::static_pointer_cast<AudioClipImportOptions>(m_ImportOptions);
             UI::BeginPropertyGrid();
 
             m_HasPropertyChanged |= UI::PropertyDropdown("Format", { "PCM", "Vorbis" }, audioClipImportOptions->Format);
-            m_HasPropertyChanged |= UI::PropertyDropdown(
-              "Load Mode", { "Load Decompressed", "Load Compressed", "Stream" }, audioClipImportOptions->ReadMode);
+            m_HasPropertyChanged |=
+              UI::PropertyDropdown("Load Mode", { "Load Decompressed", "Load Compressed", "Stream" }, audioClipImportOptions->ReadMode);
 
             uint32_t bitDepth = audioClipImportOptions->BitDepth / 8 - 1;
             m_HasPropertyChanged |= UI::PropertyDropdown("Audio Bit Depth", { "8", "16", "24", "32" }, bitDepth);
@@ -366,8 +361,7 @@ namespace Crowny
             {
                 if (m_HasPropertyChanged) // Why did I do this?
                     ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions, true);
-                AssetHandle<AudioClip> clip =
-                  static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
+                AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
                 AudioManager::Get().StopManualSources();
                 AudioManager::Get().Play("Inspector", clip);
             }
@@ -396,8 +390,7 @@ namespace Crowny
             if (fontImportOptions->AutomaticFontSampling)
                 m_HasPropertyChanged |= UI::Property("Sampling Size", fontImportOptions->SampingFontSize);
 
-            UI::SetTooltip(
-              "Static atlases use a predefined charset range. On the other hand Dynamic atlases are populated \
+            UI::SetTooltip("Static atlases use a predefined charset range. On the other hand Dynamic atlases are populated \
                 dynamically during runtime. Static atlases use more memory but are more efficient during execution.");
 
             dropdownIdx = fontImportOptions->DynamicFontAtlas ? 1 : 0;
@@ -416,14 +409,12 @@ namespace Crowny
                 if (fontImportOptions->AutoSizeAtlas)
                 {
                     m_HasPropertyChanged |= UI::PropertyDropdown(
-                      "Dimension Constraints",
-                      { "Power of Two Square", "Power of Two Rectangle", "Multiple of Four Square", "Even Square" },
+                      "Dimension Constraints", { "Power of Two Square", "Power of Two Rectangle", "Multiple of Four Square", "Even Square" },
                       fontImportOptions->AtlasDimensionsConstraint);
                 }
                 else
                 {
-                    Vector<String> atlasSizeUIValues = { "4",   "8",   "16",   "32",   "64",   "128",
-                                                         "256", "512", "1024", "2048", "4096", "8192" };
+                    Vector<String> atlasSizeUIValues = { "4", "8", "16", "32", "64", "128", "256", "512", "1024", "2048", "4096", "8192" };
                     auto findSizeIdx = [](uint32_t size) -> uint32_t {
                         uint32_t idx = 0;
                         while (size > 0)
@@ -448,16 +439,14 @@ namespace Crowny
                         m_HasPropertyChanged = true;
                     }
                 }
-                m_HasPropertyChanged |=
-                  UI::PropertyDropdown("Charset Range",
-                                       { "ASCII", "Extended ASCII", "Lower ASCII", "Upper ASCII", "Numbers and Symbols",
-                                         "Symbol Range", "Decimal Range", "Hex Range" },
-                                       fontImportOptions->Range);
-                if (fontImportOptions->Range == CharsetRange::DecimalRange ||
-                    fontImportOptions->Range == CharsetRange::HexRange ||
+                m_HasPropertyChanged |= UI::PropertyDropdown(
+                  "Charset Range",
+                  { "ASCII", "Extended ASCII", "Lower ASCII", "Upper ASCII", "Numbers and Symbols", "Symbol Range", "Decimal Range", "Hex Range" },
+                  fontImportOptions->Range);
+                if (fontImportOptions->Range == CharsetRange::DecimalRange || fontImportOptions->Range == CharsetRange::HexRange ||
                     fontImportOptions->Range == CharsetRange::SymbolRange)
-                    m_HasPropertyChanged |= UI::PropertyMultiline(
-                      "Symbols", fontImportOptions->CustomCharset); // TODO: Replace this with multiline input
+                    m_HasPropertyChanged |=
+                      UI::PropertyMultiline("Symbols", fontImportOptions->CustomCharset); // TODO: Replace this with multiline input
             }
             m_HasPropertyChanged |= UI::Property("Padding", fontImportOptions->Padding);
             m_HasPropertyChanged |= UI::Property("Get Kerning Data", fontImportOptions->GetKerningData);
@@ -475,13 +464,11 @@ namespace Crowny
     {
         // The import options aren't really used here. Only the cache is accessed. Perhaps storing the cache in the
         // import options could be the proper way to do it.
-        auto iterFind =
-          m_CachedScriptText.find(m_InspectedAssetPath); // This list should refresh when the asset browser refreshes.
-                                                         // Or we should store this cache there.
+        auto iterFind = m_CachedScriptText.find(m_InspectedAssetPath); // This list should refresh when the asset browser refreshes.
+                                                                       // Or we should store this cache there.
         if (iterFind == m_CachedScriptText.end())
         {
-            AssetHandle<ScriptCode> scriptCode =
-              static_asset_cast<ScriptCode>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
+            AssetHandle<ScriptCode> scriptCode = static_asset_cast<ScriptCode>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
             // CW_ENGINE_INFO(scriptCode->GetSource());
             m_CachedScriptText[m_InspectedAssetPath] = scriptCode->GetSource();
         }
@@ -512,15 +499,13 @@ namespace Crowny
             ImGui::Text("Defines");
             ImGui::NextColumn();
             ImGui::NextColumn();
-            UnorderedMap<String, String>& defines =
-              shaderImport->GetDefines(); // this needs a bit more work, unordered map bad
+            UnorderedMap<String, String>& defines = shaderImport->GetDefines(); // this needs a bit more work, unordered map bad
             uint32_t id = 0;
             for (auto kv : defines)
             {
                 ImGui::PushID(id++);
                 std::string key = kv.first;
-                if (ImGui::InputText("##defineKey", &key,
-                                     ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
+                if (ImGui::InputText("##defineKey", &key, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
                     defines[key] = kv.second;
                 ImGui::NextColumn();
                 ImGui::InputText("##defineValue", &kv.second, ImGuiInputTextFlags_AutoSelectAll);
@@ -553,18 +538,14 @@ namespace Crowny
             UI::BeginPropertyGrid();
 
             m_HasPropertyChanged |= UI::Property("Scale factor", meshImportOptions->ScaleFactor);
-            m_HasPropertyChanged |=
-              UI::PropertyDropdown("Index Format", { "Auto", "16 bit", "32 bit" }, meshImportOptions->IndexFormat);
-            m_HasPropertyChanged |=
-              UI::PropertyDropdown("Normals", { "Import", "Calculate", "None" }, meshImportOptions->NormalsMode);
-            m_HasPropertyChanged |=
-              UI::PropertyDropdown("Tangents", { "Import", "Calculate", "None" }, meshImportOptions->TangentsMode);
+            m_HasPropertyChanged |= UI::PropertyDropdown("Index Format", { "Auto", "16 bit", "32 bit" }, meshImportOptions->IndexFormat);
+            m_HasPropertyChanged |= UI::PropertyDropdown("Normals", { "Import", "Calculate", "None" }, meshImportOptions->NormalsMode);
+            m_HasPropertyChanged |= UI::PropertyDropdown("Tangents", { "Import", "Calculate", "None" }, meshImportOptions->TangentsMode);
             if (meshImportOptions->NormalsMode == NormalsImportMode::Calculate)
             {
                 m_HasPropertyChanged |= UI::Property("Smooth Normals", meshImportOptions->SmoothNormals);
                 if (meshImportOptions->SmoothNormals)
-                    m_HasPropertyChanged |=
-                      UI::Property("Smoothing Angle", meshImportOptions->SmoothingAngle, 0.1f, 0.0f, 175.0f);
+                    m_HasPropertyChanged |= UI::Property("Smoothing Angle", meshImportOptions->SmoothingAngle, 0.1f, 0.0f, 175.0f);
             }
             m_HasPropertyChanged |= UI::Property("Optimize", meshImportOptions->Optimize);
             m_HasPropertyChanged |= UI::Property("Compress", meshImportOptions->Compress);
@@ -717,8 +698,7 @@ namespace Crowny
         // TODO: Make these use the importer IsExtensionSupported
         if (ext == "ogg" || ext == "wav" || ext == "flac")
             m_InspectorMode = InspectorMode::AudioClipImport;
-        else if (ext == "png" || ext == "jpeg" || ext == "psd" || ext == "gif" || ext == "tga" || ext == "bmp" ||
-                 ext == "hdr" || ext == "")
+        else if (ext == "png" || ext == "jpeg" || ext == "psd" || ext == "gif" || ext == "tga" || ext == "bmp" || ext == "hdr" || ext == "")
             m_InspectorMode = InspectorMode::TextureImport;
         else if (ext == "cs")
             m_InspectorMode = InspectorMode::ScriptImport;

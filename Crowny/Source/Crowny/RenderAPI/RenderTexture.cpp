@@ -5,7 +5,7 @@
 #include "Crowny/Renderer/Renderer.h"
 
 #include "Platform/Vulkan/VulkanRenderTexture.h"
-//#include "Platform/OpenGL/OpenGLRenderTexture.h"
+// #include "Platform/OpenGL/OpenGLRenderTexture.h"
 
 namespace Crowny
 {
@@ -20,8 +20,7 @@ namespace Crowny
                     CW_ENGINE_ASSERT(false, "Texture is not render target.");
 
                 m_ColorSurfaces[i] = m_Props.ColorSurfaces[i].Texture->RequestView(
-                  m_Props.ColorSurfaces[i].MipLevel, 1, m_Props.ColorSurfaces[i].Face,
-                  m_Props.ColorSurfaces[i].NumFaces, GVU_RENDERTARGET);
+                  m_Props.ColorSurfaces[i].MipLevel, 1, m_Props.ColorSurfaces[i].Face, m_Props.ColorSurfaces[i].NumFaces, GVU_RENDERTARGET);
             }
         }
 
@@ -30,9 +29,8 @@ namespace Crowny
             if ((m_Props.DepthSurface.Texture->GetProperties().Usage & TEXTURE_DEPTHSTENCIL) == 0)
                 CW_ENGINE_ASSERT(false, "Texture is not depth stencil.");
 
-            m_DepthStencilSurface =
-              m_Props.DepthSurface.Texture->RequestView(m_Props.DepthSurface.MipLevel, 1, m_Props.DepthSurface.Face,
-                                                        m_Props.DepthSurface.NumFaces, GVU_RENDERTARGET);
+            m_DepthStencilSurface = m_Props.DepthSurface.Texture->RequestView(m_Props.DepthSurface.MipLevel, 1, m_Props.DepthSurface.Face,
+                                                                              m_Props.DepthSurface.NumFaces, GVU_RENDERTARGET);
         }
     }
 

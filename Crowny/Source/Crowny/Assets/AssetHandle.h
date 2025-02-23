@@ -135,10 +135,7 @@ namespace Crowny
             int _Member;
         };
 
-        operator int Bool_struct<T>::*() const
-        {
-            return ((this->m_Data != nullptr && !this->m_Data->m_UUID.Empty()) ? &Bool_struct<T>::_Member : 0);
-        }
+        operator int Bool_struct<T>::*() const { return ((this->m_Data != nullptr && !this->m_Data->m_UUID.Empty()) ? &Bool_struct<T>::_Member : 0); }
 
         T* Get() const { return reinterpret_cast<T*>(this->m_Data->m_Ptr.get()); }
 
@@ -157,8 +154,7 @@ namespace Crowny
         template <class _Ty, bool _Weak> friend class TAssetHandle;
         template <class _Ty1, class _Ty2, bool _Weak2, bool _Weak1>
         friend TAssetHandle<_Ty1, _Weak1> static_asset_cast(const TAssetHandle<_Ty2, _Weak2>& other);
-        template <class _Ty1, class _Ty2, bool _Weak2>
-        friend TAssetHandle<_Ty1, false> static_asset_cast(const TAssetHandle<_Ty2, _Weak2>& other);
+        template <class _Ty1, class _Ty2, bool _Weak2> friend TAssetHandle<_Ty1, false> static_asset_cast(const TAssetHandle<_Ty2, _Weak2>& other);
 
         explicit TAssetHandle(T* ptr, const UUID& uuid) : TAssetHandleBase<Weak>()
         {
@@ -205,16 +201,14 @@ namespace Crowny
 
     template <typename T> using WeakAssetHandle = TAssetHandle<T, true>;
 
-    template <class _Ty1, class _Ty2, bool _Weak2, bool _Weak1>
-    TAssetHandle<_Ty1, _Weak1> static_asset_cast(const TAssetHandle<_Ty2, _Weak2>& other)
+    template <class _Ty1, class _Ty2, bool _Weak2, bool _Weak1> TAssetHandle<_Ty1, _Weak1> static_asset_cast(const TAssetHandle<_Ty2, _Weak2>& other)
     {
         TAssetHandle<_Ty1, _Weak1> handle;
         handle.SetHandleData(other.GetHandleData());
         return handle;
     }
 
-    template <class _Ty1, class _Ty2, bool _Weak2>
-    TAssetHandle<_Ty1, false> static_asset_cast(const TAssetHandle<_Ty2, _Weak2>& other)
+    template <class _Ty1, class _Ty2, bool _Weak2> TAssetHandle<_Ty1, false> static_asset_cast(const TAssetHandle<_Ty2, _Weak2>& other)
     {
         TAssetHandle<_Ty1, false> handle;
         handle.SetHandleData(other.GetHandleData());

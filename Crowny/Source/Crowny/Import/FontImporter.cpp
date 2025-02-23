@@ -19,17 +19,14 @@
 namespace Crowny
 {
     template <typename T, typename S, int N, msdf_atlas::GeneratorFunction<S, N> GenFunc>
-    const Ref<Texture> CreateAndCacheAtlas(const String& fontName, float fontSize,
-                                           const Vector<msdf_atlas::GlyphGeometry>& glyphs,
-                                           const msdf_atlas::FontGeometry& fontGeometry, uint32_t width,
-                                           uint32_t height)
+    const Ref<Texture> CreateAndCacheAtlas(const String& fontName, float fontSize, const Vector<msdf_atlas::GlyphGeometry>& glyphs,
+                                           const msdf_atlas::FontGeometry& fontGeometry, uint32_t width, uint32_t height)
     {
         msdf_atlas::GeneratorAttributes generatorAttributes;
         generatorAttributes.config.overlapSupport = true;
         generatorAttributes.scanlinePass = true;
 
-        msdf_atlas::ImmediateAtlasGenerator<S, N, GenFunc, msdf_atlas::BitmapAtlasStorage<T, N>> generator(width,
-                                                                                                           height);
+        msdf_atlas::ImmediateAtlasGenerator<S, N, GenFunc, msdf_atlas::BitmapAtlasStorage<T, N>> generator(width, height);
         generator.setAttributes(generatorAttributes);
         generator.setThreadCount(std::thread::hardware_concurrency() - 2);
         generator.generate(glyphs.data(), (int)glyphs.size());
@@ -55,8 +52,7 @@ namespace Crowny
     {
         String lower = extension;
         StringUtils::ToLower(lower);
-        return extension == "ttf" || extension == "ttc" || extension == "otf" || extension == "otc" ||
-               extension == "fnt";
+        return extension == "ttf" || extension == "ttc" || extension == "otf" || extension == "otc" || extension == "fnt";
     }
 
     bool FontImporter::IsMagicNumSupported(uint8_t* num, uint32_t numSize) const { return true; }
@@ -70,8 +66,7 @@ namespace Crowny
             return nullptr;
         }
 
-        Ref<const FontImportOptions> fontImportOptions =
-          std::static_pointer_cast<const FontImportOptions>(importOptions);
+        Ref<const FontImportOptions> fontImportOptions = std::static_pointer_cast<const FontImportOptions>(importOptions);
         std::vector<uint8_t> data;
         Ref<DataStream> dataStream = FileSystem::OpenFile(path);
         data.resize(dataStream->Size());
@@ -86,8 +81,8 @@ namespace Crowny
         msdfgen::getFontMetrics(fontMetrics, fontHandle);
         CW_ENGINE_INFO("Font emSize: {}, AscenderY: {}, DescenderY {}, Line Height: {}, StrikethroughtY: {}, "
                        "UnderlineU: {}, UnderlineThickness: {}",
-                       fontMetrics.emSize, fontMetrics.ascenderY, fontMetrics.descenderY, fontMetrics.lineHeight,
-                       fontMetrics.strikethroughY, fontMetrics.underlineY, fontMetrics.underlineThickness);
+                       fontMetrics.emSize, fontMetrics.ascenderY, fontMetrics.descenderY, fontMetrics.lineHeight, fontMetrics.strikethroughY,
+                       fontMetrics.underlineY, fontMetrics.underlineThickness);
 
         if (fontHandle == nullptr)
         {
@@ -171,8 +166,7 @@ namespace Crowny
             if (!fontImportOptions->AutoSizeAtlas)
                 tightAtlasPacker.setDimensions(fontImportOptions->AtlasWidth, fontImportOptions->AtlasHeight);
             else
-                tightAtlasPacker.setDimensionsConstraint(
-                  msdf_atlas::TightAtlasPacker::DimensionsConstraint::MULTIPLE_OF_FOUR_SQUARE);
+                tightAtlasPacker.setDimensionsConstraint(msdf_atlas::TightAtlasPacker::DimensionsConstraint::MULTIPLE_OF_FOUR_SQUARE);
 
             if (!fontImportOptions->AutomaticFontSampling)
                 tightAtlasPacker.setScale(fontImportOptions->SampingFontSize);

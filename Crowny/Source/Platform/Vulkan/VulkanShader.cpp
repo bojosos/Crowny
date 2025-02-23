@@ -9,15 +9,9 @@
 namespace Crowny
 {
 
-    VulkanShaderModule::VulkanShaderModule(VulkanResourceManager* owner, VkShaderModule module)
-      : VulkanResource(owner, true), m_Module(module)
-    {
-    }
+    VulkanShaderModule::VulkanShaderModule(VulkanResourceManager* owner, VkShaderModule module) : VulkanResource(owner, true), m_Module(module) {}
 
-    VulkanShaderModule::~VulkanShaderModule()
-    {
-        vkDestroyShaderModule(m_Owner->GetDevice().GetLogicalDevice(), m_Module, gVulkanAllocator);
-    }
+    VulkanShaderModule::~VulkanShaderModule() { vkDestroyShaderModule(m_Owner->GetDevice().GetLogicalDevice(), m_Module, gVulkanAllocator); }
 
     VulkanShader::VulkanShader(const Ref<BinaryShaderData>& data) : ShaderStage(data)
     {
@@ -40,7 +34,7 @@ namespace Crowny
         vkCreateShaderModule(device.GetLogicalDevice(), &moduleCreateInfo, gVulkanAllocator, &m_ShaderStage.module);
         m_Module = device.GetResourceManager().Create<VulkanShaderModule>(m_ShaderStage.module);
 
-        if (m_ShaderData->Type==ShaderType::VERTEX_SHADER)
+        if (m_ShaderData->Type == ShaderType::VERTEX_SHADER)
             m_BufferLayout = CreateRef<BufferLayout>(std::move(m_ShaderData->VertexLayout));
     }
 

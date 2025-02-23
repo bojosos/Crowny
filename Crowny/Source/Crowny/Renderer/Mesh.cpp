@@ -22,8 +22,7 @@ namespace Crowny
         m_Data = new uint8_t[bufferSize];
     }
 
-    void MeshData::SetVertexData(VertexAttribute attribute, const void* data, uint32_t size, uint32_t semanticIdx,
-                                 uint32_t streamIdx)
+    void MeshData::SetVertexData(VertexAttribute attribute, const void* data, uint32_t size, uint32_t semanticIdx, uint32_t streamIdx)
     {
         const uint32_t offset = m_Layout.GetOffset(attribute);
         const uint32_t elementSize = m_Layout.GetElementSize(attribute);
@@ -47,17 +46,13 @@ namespace Crowny
         }
     }
 
-    uint8_t* MeshData::GetElementData(const BufferElement& bufferElement) const
-    {
-        return m_Data + GetIndexBufferSize() + bufferElement.Offset;
-    }
+    uint8_t* MeshData::GetElementData(const BufferElement& bufferElement) const { return m_Data + GetIndexBufferSize() + bufferElement.Offset; }
 
     void MeshData::CalculateBounds(AABox& outAABox, SphereBounds& outSphereBounds) const
     {
         for (const auto& element : m_Layout.GetElements())
         {
-            if (element.Attribute != VertexAttribute::Position || element.Type != ShaderDataType::Float3 ||
-                element.Type != ShaderDataType::Float4)
+            if (element.Attribute != VertexAttribute::Position || element.Type != ShaderDataType::Float3 || element.Type != ShaderDataType::Float4)
                 continue;
             uint8_t* data = GetElementData(element);
             uint32_t stride = m_Layout.GetStride();
@@ -89,24 +84,23 @@ namespace Crowny
         }
     }
 
-    Ref<MeshData> MeshData::Create(uint32_t vertexCount, uint32_t indexCount, const BufferLayout& bufferLayout,
-                                   IndexType indexType)
+    Ref<MeshData> MeshData::Create(uint32_t vertexCount, uint32_t indexCount, const BufferLayout& bufferLayout, IndexType indexType)
     {
         return CreateRef<MeshData>(vertexCount, indexCount, bufferLayout, indexType);
     }
 
     Mesh::Mesh(const Ref<MeshData>& meshData, const Vector<SubMesh>& subMeshes, MeshUsageFlags usage, DrawMode drawMode)
       : m_SubMeshes(subMeshes), m_IndexType(meshData->GetIndexType()), m_NumVertices(meshData->GetVertexCount()),
-        m_Layout(meshData->GetBufferLayout()), m_NumIndices(meshData->GetIndexCount()), m_CPUMeshData(meshData),
-        m_DrawMode(drawMode), m_Usage(usage), m_InitialData(meshData)
+        m_Layout(meshData->GetBufferLayout()), m_NumIndices(meshData->GetIndexCount()), m_CPUMeshData(meshData), m_DrawMode(drawMode), m_Usage(usage),
+        m_InitialData(meshData)
     {
         Init();
     }
 
-    Mesh::Mesh(const Vector<SubMesh>& subMeshes, uint32_t vertexCount, uint32_t indexCount, const BufferLayout& layout,
-               MeshUsageFlags usage, DrawMode drawMode, IndexType indexType)
-      : m_SubMeshes(subMeshes), m_NumVertices(vertexCount), m_NumIndices(indexCount), m_Layout(layout), m_Usage(usage),
-        m_DrawMode(drawMode), m_IndexType(indexType), m_InitialData(nullptr)
+    Mesh::Mesh(const Vector<SubMesh>& subMeshes, uint32_t vertexCount, uint32_t indexCount, const BufferLayout& layout, MeshUsageFlags usage,
+               DrawMode drawMode, IndexType indexType)
+      : m_SubMeshes(subMeshes), m_NumVertices(vertexCount), m_NumIndices(indexCount), m_Layout(layout), m_Usage(usage), m_DrawMode(drawMode),
+        m_IndexType(indexType), m_InitialData(nullptr)
     {
         Init();
     }
@@ -133,8 +127,7 @@ namespace Crowny
 
         if (meshData->GetIndexCount() > m_IndexBuffer->GetCount())
         {
-            CW_ENGINE_WARN("Provided index buffer is out of range: {0} > {1}", meshData->GetIndexCount(),
-                           m_IndexBuffer->GetCount());
+            CW_ENGINE_WARN("Provided index buffer is out of range: {0} > {1}", meshData->GetIndexCount(), m_IndexBuffer->GetCount());
             return;
         }
 
@@ -145,8 +138,7 @@ namespace Crowny
             CW_ENGINE_WARN("Provided index buffer has more data");
         }
         m_IndexBuffer->WriteData(0, indexBufferSize, meshData->GetIndexData(),
-                                 discard ? BufferWriteOptions::BWT_DISCARD
-                                         : BufferWriteOptions::BWT_NORMAL /*,  queue */);
+                                 discard ? BufferWriteOptions::BWT_DISCARD : BufferWriteOptions::BWT_NORMAL /*,  queue */);
         m_VertexBuffer->WriteData(0, meshData->GetVertexBufferSize(), meshData->GetVerexBufferData(),
                                   discard ? BufferWriteOptions::BWT_DISCARD : BufferWriteOptions::BWT_NORMAL);
         if (updateBounds)
@@ -167,8 +159,7 @@ namespace Crowny
                 return;
             }
 
-            uint32_t idxSize =
-              m_IndexBuffer->GetIndexType() == IndexType::Index_16 ? sizeof(uint16_t) : sizeof(uint32_t);
+            uint32_t idxSize = m_IndexBuffer->GetIndexType() == IndexType::Index_16 ? sizeof(uint16_t) : sizeof(uint32_t);
             uint8_t* indicies = data->GetIndexData<uint8_t>();
             uint32_t indexCountToCopy = std::min(m_NumIndices, data->GetIndexCount());
             uint32_t indiciesSize = indexCountToCopy * idxSize;
@@ -208,8 +199,8 @@ namespace Crowny
     {
         if (!m_Usage.IsSet(MeshUsage::CpuCached))
             return;
-        if (meshData.GetIndexCount() != m_NumIndices || meshData.GetVertexCount() != m_NumVertices ||
-            meshData.GetIndexType() != m_IndexType || meshData.GetBufferLayout().GetStride() != m_Layout.GetStride())
+        if (meshData.GetIndexCount() != m_NumIndices || meshData.GetVertexCount() != m_NumVertices || meshData.GetIndexType() != m_IndexType ||
+            meshData.GetBufferLayout().GetStride() != m_Layout.GetStride())
         {
             CW_ENGINE_ERROR("CPU buffer layout mismatch");
             return;
@@ -222,12 +213,10 @@ namespace Crowny
             return;
         }
 
-        std::memcpy(m_CPUMeshData->GetIndexData(), meshData.GetIndexData(),
-                    meshData.GetVertexBufferSize() + meshData.GetIndexBufferSize());
+        std::memcpy(m_CPUMeshData->GetIndexData(), meshData.GetIndexData(), meshData.GetVertexBufferSize() + meshData.GetIndexBufferSize());
     }
 
-    Ref<MeshData> MeshData::Combine(const Vector<Ref<MeshData>>& meshes, const Vector<Vector<SubMesh>>& subMeshes,
-                                    Vector<SubMesh>& outSubMeshes)
+    Ref<MeshData> MeshData::Combine(const Vector<Ref<MeshData>>& meshes, const Vector<Vector<SubMesh>>& subMeshes, Vector<SubMesh>& outSubMeshes)
     {
         if (meshes.size() == 0)
         {
@@ -250,8 +239,7 @@ namespace Crowny
                 // if ()
             }
         }
-        Ref<MeshData> combinedMeshData =
-          MeshData::Create(totalVertexCount, totalIndexCount, meshes[0]->GetBufferLayout(), meshes[0]->GetIndexType());
+        Ref<MeshData> combinedMeshData = MeshData::Create(totalVertexCount, totalIndexCount, meshes[0]->GetBufferLayout(), meshes[0]->GetIndexType());
         uint32_t vertexOffset = 0;
         uint32_t indexOffset = 0;
         uint32_t* idxPtr = combinedMeshData->GetIndexData<uint32_t>();
@@ -351,14 +339,13 @@ namespace Crowny
         return meshData;
     }
 
-    Ref<Mesh> Mesh::Create(const Ref<MeshData>& meshData, const Vector<SubMesh>& subMeshes, MeshUsageFlags usage,
-                           DrawMode drawMode)
+    Ref<Mesh> Mesh::Create(const Ref<MeshData>& meshData, const Vector<SubMesh>& subMeshes, MeshUsageFlags usage, DrawMode drawMode)
     {
         return CreateRef<Mesh>(meshData, subMeshes, usage, drawMode);
     }
 
-    Ref<Mesh> Mesh::Create(uint32_t vertexCount, uint32_t indexCount, const BufferLayout& layout, MeshUsageFlags usage,
-                           DrawMode drawMode, IndexType indexType)
+    Ref<Mesh> Mesh::Create(uint32_t vertexCount, uint32_t indexCount, const BufferLayout& layout, MeshUsageFlags usage, DrawMode drawMode,
+                           IndexType indexType)
     {
         const Vector<SubMesh> subMeshes = { SubMesh(0, indexCount, drawMode) };
         return CreateRef<Mesh>(subMeshes, vertexCount, indexCount, layout, usage, drawMode, indexType);

@@ -7,7 +7,7 @@
 #if defined(_MSC_VER)
 #define CW_DEBUGBREAK() __debugbreak()
 #elif defined(CW_PLATFORM_LINUX)
-//#define CW_DEBUGBREAK() __builtin_trap()
+// #define CW_DEBUGBREAK() __builtin_trap()
 #define CW_DEBUGBREAK() asm("int $3")
 #endif
 
@@ -28,8 +28,7 @@
 #define BIT(x) (1 << x)
 #define M_PI 3.14159265358979323846
 
-#define CW_BIND_EVENT_FN(fn)                                                                                           \
-    [this](auto&&... args) -> decltype(auto) { return this->fn(std::forward<decltype(args)>(args)...); }
+#define CW_BIND_EVENT_FN(fn) [this](auto&&... args) -> decltype(auto) { return this->fn(std::forward<decltype(args)>(args)...); }
 
 class BinaryDataStreamInputArchive;
 class BinaryDataStreamOutputArchive;
@@ -37,11 +36,10 @@ class BinaryDataStreamOutputArchive;
 namespace Crowny
 {
 
-#define CW_SIMPLESERIALZABLE(...)                                                                                      \
-    template <typename Archive> friend void Serialize(Archive& archive, __VA_ARGS__& type);
+#define CW_SIMPLESERIALZABLE(...) template <typename Archive> friend void Serialize(Archive& archive, __VA_ARGS__& type);
 
-#define CW_SERIALIZABLE(...)                                                                                           \
-    friend void Save(BinaryDataStreamOutputArchive& ar, const __VA_ARGS__& type);                                      \
+#define CW_SERIALIZABLE(...)                                                                                                                         \
+    friend void Save(BinaryDataStreamOutputArchive& ar, const __VA_ARGS__& type);                                                                    \
     friend void Load(BinaryDataStreamInputArchive& ar, __VA_ARGS__& type);
 
     constexpr void HashCombine(std::size_t& seed) {}
@@ -55,8 +53,7 @@ namespace Crowny
      * @param value First value to hash.
      * @param rest The rest of the values to hash.
      */
-    template <typename T, typename... Rest>
-    constexpr void HashCombine(std::size_t& outSeed, const T& value, Rest... rest)
+    template <typename T, typename... Rest> constexpr void HashCombine(std::size_t& outSeed, const T& value, Rest... rest)
     {
         std::hash<T> hasher;
         outSeed ^= hasher(value) + 0x9e3779b9 + (outSeed << 6) + (outSeed >> 2);
@@ -84,10 +81,7 @@ namespace Crowny
 
     template <class T> void Cw_Copy(T* dst, T* src, size_t count) { std::memcpy(dst, src, sizeof(T) * count); }
 
-    template <class T, size_t N> void Cw_Copy(T (&dst)[N], T (&src)[N], size_t count)
-    {
-        std::memcpy(dst, src, sizeof(T) * count);
-    }
+    template <class T, size_t N> void Cw_Copy(T (&dst)[N], T (&src)[N], size_t count) { std::memcpy(dst, src, sizeof(T) * count); }
 
     template <class T, size_t N> constexpr size_t Cw_Size(const T (&array)[N]) { return N; }
 

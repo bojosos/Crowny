@@ -32,9 +32,8 @@ namespace Crowny
         static bool WriteFile(const Path& path, byte* buffer, uint64_t size);
 
         static bool WriteTextFile(const Path& path, const String& text);
-        static bool OpenFileDialog(FileDialogType type, Vector<Path>& outpaths, const String& title = {},
-                                   const Path& initialDir = {}, const Vector<DialogFilter>& filters = {},
-                                   const String& filename = {});
+        static bool OpenFileDialog(FileDialogType type, Vector<Path>& outpaths, const String& title = {}, const Path& initialDir = {},
+                                   const Vector<DialogFilter>& filters = {}, const String& filename = {});
 
         static Ref<DataStream> OpenFile(const Path& filepath, bool readOnly = true);
         static Ref<DataStream> CreateAndOpenFile(const Path& filepath);

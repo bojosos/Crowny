@@ -66,8 +66,8 @@ namespace Crowny
         }
 
         template <typename TUnderlying = int32_t>
-        static bool QuickTabs(const char* label, std::initializer_list<const char*> buttonNameList,
-                              const Vector<TUnderlying>& enumValues, TUnderlying& value)
+        static bool QuickTabs(const char* label, std::initializer_list<const char*> buttonNameList, const Vector<TUnderlying>& enumValues,
+                              TUnderlying& value)
         {
             Pre(label);
 
@@ -84,8 +84,7 @@ namespace Crowny
                     if (value & enumValues[i])
                     {
                         ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetColorU32(ImGuiCol_ButtonHovered));
-                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
-                                              ImGui::ColorConvertU32ToFloat4(IM_COL32(84, 84, 84, 255)));
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::ColorConvertU32ToFloat4(IM_COL32(84, 84, 84, 255)));
                     }
                     else
                     {
@@ -93,8 +92,7 @@ namespace Crowny
                         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetColorU32(ImGuiCol_ButtonActive));
                     }
 
-                    if (ImGui::Button(id.c_str(),
-                                      ImVec2(std::max(minButtonSize, ImGui::CalcTextSize(buttons[i]).x), 0.0f)))
+                    if (ImGui::Button(id.c_str(), ImVec2(std::max(minButtonSize, ImGui::CalcTextSize(buttons[i]).x), 0.0f)))
                     {
                         value ^= enumValues[i];
                         buttonClicked = true;
@@ -109,8 +107,7 @@ namespace Crowny
         }
 
         template <typename TUnderlying = int32_t>
-        static bool QuickTabs(const char* label, const Vector<String>& buttons, const Vector<TUnderlying>& enumValues,
-                              TUnderlying& value)
+        static bool QuickTabs(const char* label, const Vector<String>& buttons, const Vector<TUnderlying>& enumValues, TUnderlying& value)
         {
             Pre(label);
 
@@ -128,8 +125,7 @@ namespace Crowny
                     else
                         ImGui::PushStyleColor(ImGuiCol_Button, ImGuiCol_Button);
 
-                    if (ImGui::Button(id.c_str(),
-                                      ImVec2(std::max(minButtonSize, ImGui::CalcTextSize(buttons[i].c_str()).x), 0.0f)))
+                    if (ImGui::Button(id.c_str(), ImVec2(std::max(minButtonSize, ImGui::CalcTextSize(buttons[i].c_str()).x), 0.0f)))
                     {
                         value ^= enumValues[i];
                         buttonClicked = true;
@@ -145,8 +141,7 @@ namespace Crowny
         }
 
         template <typename TEnum, typename TUnderlying = int32_t>
-        static bool QuickTabsP(const char* label, std::initializer_list<const char*> buttonNameList,
-                               Flags<TEnum, TUnderlying>& value)
+        static bool QuickTabsP(const char* label, std::initializer_list<const char*> buttonNameList, Flags<TEnum, TUnderlying>& value)
         {
             Vector<TUnderlying> values;
             values.resize(buttonNameList.size());
@@ -327,8 +322,7 @@ namespace Crowny
             return modified;
         }
 
-        static bool Property(const char* label, float& value, float delta = 0.1f, float min = 0.0f, float max = 0.0f,
-                             const char* helpText = "")
+        static bool Property(const char* label, float& value, float delta = 0.1f, float min = 0.0f, float max = 0.0f, const char* helpText = "")
         {
             Pre(label, helpText);
             bool modified = UI::DragFloat(GenerateID(), &value, delta, min, max);
@@ -413,8 +407,7 @@ namespace Crowny
             return modified;
         }
 
-        static bool Property(const char* label, glm::vec2& value, float delta = 0.1f, float min = 0.0f,
-                             float max = 0.0f)
+        static bool Property(const char* label, glm::vec2& value, float delta = 0.1f, float min = 0.0f, float max = 0.0f)
         {
             Pre(label);
             bool modified = ImGui::DragFloat2(GenerateID(), glm::value_ptr(value), delta, min, max);
@@ -423,8 +416,7 @@ namespace Crowny
             return modified;
         }
 
-        static bool Property(const char* label, glm::vec3& value, float delta = 0.1f, float min = 0.0f,
-                             float max = 0.0f)
+        static bool Property(const char* label, glm::vec3& value, float delta = 0.1f, float min = 0.0f, float max = 0.0f)
         {
             Pre(label);
             bool modified = ImGui::DragFloat3(GenerateID(), glm::value_ptr(value), delta, min, max);
@@ -433,8 +425,7 @@ namespace Crowny
             return modified;
         }
 
-        static bool Property(const char* label, glm::vec4& value, float delta = 0.1f, float min = 0.0f,
-                             float max = 0.0f)
+        static bool Property(const char* label, glm::vec4& value, float delta = 0.1f, float min = 0.0f, float max = 0.0f)
         {
             Pre(label);
             bool modified = ImGui::DragFloat4(GenerateID(), glm::value_ptr(value), delta, min, max);
@@ -484,8 +475,7 @@ namespace Crowny
             return modified;
         }
 
-        static bool PropertyFilepath(const char* label, FileDialogType type, String& value, const String& title = {},
-                                     const Path& initialDir = {})
+        static bool PropertyFilepath(const char* label, FileDialogType type, String& value, const String& title = {}, const Path& initialDir = {})
         {
             ShiftCursor(10.0f, 9.0f);
             ImGui::Text("%s", label);

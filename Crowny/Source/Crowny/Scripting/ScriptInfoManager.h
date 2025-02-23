@@ -117,12 +117,10 @@ namespace Crowny
             MonoReflectionType* reflType = MonoUtils::GetType(ScriptType::GetMetaData()->ScriptClass->GetInternalPtr());
             ComponentInfo componentInfo;
             componentInfo.AddCallback = [reflType](Entity entity) {
-                return ScriptSceneObjectManager::Get().GetScriptComponent(entity, entity.AddComponent<Component>(),
-                                                                          reflType);
+                return ScriptSceneObjectManager::Get().GetScriptComponent(entity, entity.AddComponent<Component>(), reflType);
             };
             componentInfo.GetCallback = [reflType](Entity entity) {
-                return ScriptSceneObjectManager::Get().GetScriptComponent(entity, entity.GetComponent<Component>(),
-                                                                          reflType);
+                return ScriptSceneObjectManager::Get().GetScriptComponent(entity, entity.GetComponent<Component>(), reflType);
             };
             componentInfo.HasCallback = [](Entity entity) { return entity.HasComponent<Component>(); };
             componentInfo.RemoveCallback = [](Entity entity) { entity.RemoveComponent<Component>(); };

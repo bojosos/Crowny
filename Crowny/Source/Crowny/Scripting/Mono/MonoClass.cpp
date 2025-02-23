@@ -57,10 +57,7 @@ namespace Crowny
         return obj;
     }
 
-    void MonoClass::AddInternalCall(const String& managed, const void* func)
-    {
-        mono_add_internal_call((m_FullName + "::" + managed).c_str(), func);
-    }
+    void MonoClass::AddInternalCall(const String& managed, const void* func) { mono_add_internal_call((m_FullName + "::" + managed).c_str(), func); }
 
     const Vector<MonoMethod*>& MonoClass::GetMethods() const
     {

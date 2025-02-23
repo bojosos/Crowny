@@ -144,20 +144,18 @@ namespace Crowny
         bool Normalized;
 
         BufferElement()
-          : StreamIdx(0), Size(0), Offset(0), Normalized(false), Attribute(VertexAttribute::None),
-            Type(ShaderDataType::Float), InstanceRate(0)
+          : StreamIdx(0), Size(0), Offset(0), Normalized(false), Attribute(VertexAttribute::None), Type(ShaderDataType::Float), InstanceRate(0)
         {
         }
 
         BufferElement(ShaderDataType type, VertexAttribute attribute, bool normalized = false)
-          : Type(type), Size(ShaderDataTypeSize(type)), Offset(0), Normalized(normalized), Attribute(attribute),
-            StreamIdx(0), InstanceRate(0)
+          : Type(type), Size(ShaderDataTypeSize(type)), Offset(0), Normalized(normalized), Attribute(attribute), StreamIdx(0), InstanceRate(0)
         {
         }
 
         BufferElement(ShaderDataType type, const String& name, bool normalized = false)
-          : Name(name), Type(type), Size(ShaderDataTypeSize(type)), Offset(0), Normalized(normalized),
-            Attribute(VertexAttribute::Position), StreamIdx(0), InstanceRate(0)
+          : Name(name), Type(type), Size(ShaderDataTypeSize(type)), Offset(0), Normalized(normalized), Attribute(VertexAttribute::Position),
+            StreamIdx(0), InstanceRate(0)
         {
         }
 
@@ -213,10 +211,7 @@ namespace Crowny
     public:
         BufferLayout() : m_Id(s_NextFreeId++) {}
 
-        BufferLayout(std::initializer_list<BufferElement> elements) : m_Elements(elements), m_Id(s_NextFreeId++)
-        {
-            CalculateOffsetsAndStride();
-        }
+        BufferLayout(std::initializer_list<BufferElement> elements) : m_Elements(elements), m_Id(s_NextFreeId++) { CalculateOffsetsAndStride(); }
 
         BufferLayout& operator=(std::initializer_list<BufferElement> elements)
         {

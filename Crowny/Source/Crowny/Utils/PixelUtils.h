@@ -38,7 +38,7 @@ namespace Crowny
             return std::pow(x, 1.0f / 2.4f) * 1.055f - 0.055f;
     }
 
-   inline float SRGBToLinear(float x)
+    inline float SRGBToLinear(float x)
     {
         if (x <= 0.0f)
             return 0.0f;
@@ -97,10 +97,9 @@ namespace Crowny
         static uint32_t GetBlockSize(TextureFormat format);
         static glm::ivec2 GetBlockDimensions(TextureFormat format);
         static uint32_t GetNumBytes(TextureFormat format);
-        static void GetPitch(uint32_t width, uint32_t height, uint32_t depth, TextureFormat format, uint32_t& rowPitch,
-                             uint32_t& depthPitch);
-        static void GetMipSizeForLevel(uint32_t width, uint32_t height, uint32_t depth, uint32_t mipLevel,
-                                       uint32_t& mipWidth, uint32_t& mipHeight, uint32_t& mipDepth);
+        static void GetPitch(uint32_t width, uint32_t height, uint32_t depth, TextureFormat format, uint32_t& rowPitch, uint32_t& depthPitch);
+        static void GetMipSizeForLevel(uint32_t width, uint32_t height, uint32_t depth, uint32_t mipLevel, uint32_t& mipWidth, uint32_t& mipHeight,
+                                       uint32_t& mipDepth);
 
         static void ConvertPixels(const PixelData& src, PixelData& dst);
         static void PackPixel(float r, float g, float b, float a, TextureFormat format, uint8_t* dst);

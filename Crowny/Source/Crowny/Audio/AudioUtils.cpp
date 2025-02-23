@@ -130,8 +130,7 @@ namespace Crowny
         }
     }
 
-    void AudioUtils::ConvertBitDepth(const uint8_t* samples, uint32_t inBitDepth, uint8_t* output, uint32_t outBitDepth,
-                                     uint32_t numSamples)
+    void AudioUtils::ConvertBitDepth(const uint8_t* samples, uint32_t inBitDepth, uint8_t* output, uint32_t outBitDepth, uint32_t numSamples)
     {
         int32_t* src = nullptr;
         const bool needNewBuffer = inBitDepth != 32;
@@ -227,8 +226,7 @@ namespace Crowny
             CW_ENGINE_ASSERT(false);
     }
 
-    void ConvertToMono8(const int8_t* input, uint8_t* output, uint32_t bitDepth, uint32_t numSamples,
-                        uint32_t numChannels)
+    void ConvertToMono8(const int8_t* input, uint8_t* output, uint32_t bitDepth, uint32_t numSamples, uint32_t numChannels)
     {
         for (uint32_t i = 0; i < numSamples; i++)
         {
@@ -243,8 +241,7 @@ namespace Crowny
         }
     }
 
-    void ConvertToMono16(const int16_t* input, int16_t* output, uint32_t bitDepth, uint32_t numSamples,
-                         uint32_t numChannels)
+    void ConvertToMono16(const int16_t* input, int16_t* output, uint32_t bitDepth, uint32_t numSamples, uint32_t numChannels)
     {
         for (uint32_t i = 0; i < numSamples; i++)
         {
@@ -259,8 +256,7 @@ namespace Crowny
         }
     }
 
-    void ConvertToMono24(const uint8_t* input, uint8_t* output, uint32_t bitDepth, uint32_t numSamples,
-                         uint32_t numChannels)
+    void ConvertToMono24(const uint8_t* input, uint8_t* output, uint32_t bitDepth, uint32_t numSamples, uint32_t numChannels)
     {
         for (uint32_t i = 0; i < numSamples; i++)
         {
@@ -275,8 +271,7 @@ namespace Crowny
         }
     }
 
-    void ConvertToMono32(const int32_t* input, int32_t* output, uint32_t bitDepth, uint32_t numSamples,
-                         uint32_t numChannels)
+    void ConvertToMono32(const int32_t* input, int32_t* output, uint32_t bitDepth, uint32_t numSamples, uint32_t numChannels)
     {
         for (uint32_t i = 0; i < numSamples; i++)
         {
@@ -291,8 +286,7 @@ namespace Crowny
         }
     }
 
-    void AudioUtils::ConvertToMono(const uint8_t* input, uint8_t* output, uint32_t bitDepth, uint32_t numSamples,
-                                   uint32_t numChannels)
+    void AudioUtils::ConvertToMono(const uint8_t* input, uint8_t* output, uint32_t bitDepth, uint32_t numSamples, uint32_t numChannels)
     {
         switch (bitDepth)
         {

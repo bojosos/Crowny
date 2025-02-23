@@ -109,8 +109,7 @@ namespace Crowny
         };
 
     private:
-        mutable UnorderedMap<PassVariant, VulkanRenderPass*, PassVariant::HashFunction, PassVariant::EqualFunction>
-          m_Passes;
+        mutable UnorderedMap<PassVariant, VulkanRenderPass*, PassVariant::HashFunction, PassVariant::EqualFunction> m_Passes;
     };
 
 } // namespace Crowny

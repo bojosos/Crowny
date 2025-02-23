@@ -5,8 +5,7 @@
 namespace Crowny
 {
 
-    VulkanBufferLayout::VulkanBufferLayout(uint32_t id, const VkPipelineVertexInputStateCreateInfo& createInfo)
-      : m_Id(id), m_CreateInfo(createInfo)
+    VulkanBufferLayout::VulkanBufferLayout(uint32_t id, const VkPipelineVertexInputStateCreateInfo& createInfo) : m_Id(id), m_CreateInfo(createInfo)
     {
     }
 
@@ -56,8 +55,8 @@ namespace Crowny
         return iterFind->second.BufferLayout;
     }
 
-    VulkanBufferLayoutManager::BufferLayoutMap::iterator VulkanBufferLayoutManager::AddNew(
-      const Ref<BufferLayout>& meshLayout, const Ref<BufferLayout>& shaderLayout)
+    VulkanBufferLayoutManager::BufferLayoutMap::iterator VulkanBufferLayoutManager::AddNew(const Ref<BufferLayout>& meshLayout,
+                                                                                           const Ref<BufferLayout>& shaderLayout)
     {
         const Vector<BufferElement>& meshElements = meshLayout->GetElements();
         const Vector<BufferElement>& shaderElements = shaderLayout->GetElements();
@@ -69,7 +68,8 @@ namespace Crowny
             bool semantic = false;
             for (const BufferElement& shaderElement : shaderElements)
             {
-                if (shaderElement.Attribute == meshElement.Attribute || (shaderElement.Name==meshElement.Name && shaderElement.Type==meshElement.Type))
+                if (shaderElement.Attribute == meshElement.Attribute ||
+                    (shaderElement.Name == meshElement.Name && shaderElement.Type == meshElement.Type))
                 {
                     semantic = true;
                     break;
@@ -79,7 +79,7 @@ namespace Crowny
                 continue;
 
             numAttrs++;
-            numBindings = std::max(numBindings, meshElement.StreamIdx+1); // For now always 1, weee neeeed stream idx.
+            numBindings = std::max(numBindings, meshElement.StreamIdx + 1); // For now always 1, weee neeeed stream idx.
         }
 
         BufferLayoutEntry newEntry;
@@ -158,7 +158,8 @@ namespace Crowny
 
     void VulkanBufferLayoutManager::RemoveLeastUsed()
     {
-        if (!m_WarningShown) {
+        if (!m_WarningShown)
+        {
             CW_ENGINE_WARN("Pruning: {0}", NUM_MAX_PRUNE);
             m_WarningShown = true;
         }
@@ -176,7 +177,6 @@ namespace Crowny
         }
     }
 
-
     VulkanVertexBuffer::VulkanVertexBuffer(uint32_t size, BufferUsage usage) : m_Usage(usage)
     {
         m_Buffer = new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_VERTEX, usage, size);
@@ -192,10 +192,7 @@ namespace Crowny
 
     VulkanVertexBuffer::~VulkanVertexBuffer() { delete m_Buffer; }
 
-    void* VulkanVertexBuffer::Map(uint32_t offset, uint32_t size, GpuLockOptions options)
-    {
-        return m_Buffer->Map(offset, size, options);
-    }
+    void* VulkanVertexBuffer::Map(uint32_t offset, uint32_t size, GpuLockOptions options) { return m_Buffer->Map(offset, size, options); }
 
     void VulkanVertexBuffer::Unmap() { m_Buffer->Unmap(); }
 

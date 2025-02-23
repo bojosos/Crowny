@@ -10,11 +10,9 @@ namespace Crowny
     {
     public:
         static ALenum GetOpenALFormat(uint32_t numChannels, uint32_t bitDepth);
-        static void ConvertBitDepth(const uint8_t* samples, uint32_t inBitDepth, uint8_t* output, uint32_t outBitDepth,
-                                    uint32_t numSamples);
+        static void ConvertBitDepth(const uint8_t* samples, uint32_t inBitDepth, uint8_t* output, uint32_t outBitDepth, uint32_t numSamples);
         static void ConvertToFloat(const uint8_t* samples, uint32_t inBitDepth, float* output, uint32_t numSamples);
-        static void ConvertToMono(const uint8_t* samples, uint8_t* output, uint32_t bitDepth, uint32_t numSamples,
-                                  uint32_t numChannels);
+        static void ConvertToMono(const uint8_t* samples, uint8_t* output, uint32_t bitDepth, uint32_t numSamples, uint32_t numChannels);
         static bool CheckOpenALErrors(const String& filename, uint32_t line);
         static bool CheckOpenALCErrors(const String& filename, uint32_t line, ALCdevice* device);
 

@@ -89,8 +89,7 @@ namespace filewatch
         typedef std::basic_regex<C, std::regex_traits<C>> UnderpinningRegex;
 
     public:
-        FileWatch(T path, UnderpinningRegex pattern,
-                  std::function<void(const T& file, const Event event_type)> callback)
+        FileWatch(T path, UnderpinningRegex pattern, std::function<void(const T& file, const Event event_type)> callback)
           : _path(path), _pattern(pattern), _callback(callback), _directory(get_directory(path))
         {
             init();
@@ -160,9 +159,8 @@ namespace filewatch
         HANDLE _directory = { nullptr };
         HANDLE _close_event = { nullptr };
 
-        const DWORD _listen_filters = FILE_NOTIFY_CHANGE_SECURITY | FILE_NOTIFY_CHANGE_CREATION |
-                                      FILE_NOTIFY_CHANGE_LAST_ACCESS | FILE_NOTIFY_CHANGE_LAST_WRITE |
-                                      FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_ATTRIBUTES |
+        const DWORD _listen_filters = FILE_NOTIFY_CHANGE_SECURITY | FILE_NOTIFY_CHANGE_CREATION | FILE_NOTIFY_CHANGE_LAST_ACCESS |
+                                      FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_ATTRIBUTES |
                                       FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_FILE_NAME;
 
         const std::map<DWORD, Event> _event_type_mapping = { { FILE_ACTION_ADDED, Event::added },
@@ -285,23 +283,14 @@ namespace filewatch
         }
 
 #ifdef _WIN32
-        template <typename... Args> DWORD GetFileAttributesX(const char* lpFileName, Args... args)
-        {
-            return GetFileAttributesA(lpFileName, args...);
-        }
+        template <typename... Args> DWORD GetFileAttributesX(const char* lpFileName, Args... args) { return GetFileAttributesA(lpFileName, args...); }
         template <typename... Args> DWORD GetFileAttributesX(const wchar_t* lpFileName, Args... args)
         {
             return GetFileAttributesW(lpFileName, args...);
         }
 
-        template <typename... Args> HANDLE CreateFileX(const char* lpFileName, Args... args)
-        {
-            return CreateFileA(lpFileName, args...);
-        }
-        template <typename... Args> HANDLE CreateFileX(const wchar_t* lpFileName, Args... args)
-        {
-            return CreateFileW(lpFileName, args...);
-        }
+        template <typename... Args> HANDLE CreateFileX(const char* lpFileName, Args... args) { return CreateFileA(lpFileName, args...); }
+        template <typename... Args> HANDLE CreateFileX(const wchar_t* lpFileName, Args... args) { return CreateFileW(lpFileName, args...); }
 
         HANDLE get_directory(const T& path)
         {
@@ -326,13 +315,13 @@ namespace filewatch
                 }
             }();
 
-            HANDLE directory = CreateFileX(watch_path.c_str(),  // pointer to the file name
-                                           FILE_LIST_DIRECTORY, // access (read/write) mode
+            HANDLE directory = CreateFileX(watch_path.c_str(),                                     // pointer to the file name
+                                           FILE_LIST_DIRECTORY,                                    // access (read/write) mode
                                            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, // share mode
-                                           nullptr,                                           // security descriptor
-                                           OPEN_EXISTING,                                     // how to create
-                                           FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, // file attributes
-                                           HANDLE(0)); // file with attributes to copy
+                                           nullptr,                                                // security descriptor
+                                           OPEN_EXISTING,                                          // how to create
+                                           FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,      // file attributes
+                                           HANDLE(0));                                             // file with attributes to copy
 
             if (directory == INVALID_HANDLE_VALUE)
             {
@@ -369,8 +358,8 @@ namespace filewatch
             do
             {
                 std::vector<std::pair<T, Event>> parsed_information;
-                ReadDirectoryChangesW(_directory, buffer.data(), static_cast<DWORD>(buffer.size()), TRUE,
-                                      _listen_filters, &bytes_returned, &overlapped_buffer, NULL);
+                ReadDirectoryChangesW(_directory, buffer.data(), static_cast<DWORD>(buffer.size()), TRUE, _listen_filters, &bytes_returned,
+                                      &overlapped_buffer, NULL);
 
                 async_pending = true;
 
@@ -392,14 +381,12 @@ namespace filewatch
                     do
                     {
                         std::wstring changed_file_w{ file_information->FileName,
-                                                     file_information->FileNameLength /
-                                                       sizeof(file_information->FileName[0]) };
+                                                     file_information->FileNameLength / sizeof(file_information->FileName[0]) };
                         UnderpinningString changed_file;
                         convert_wstring(changed_file_w, changed_file);
                         if (pass_filter(changed_file))
                         {
-                            parsed_information.emplace_back(T{ changed_file },
-                                                            _event_type_mapping.at(file_information->Action));
+                            parsed_information.emplace_back(T{ changed_file }, _event_type_mapping.at(file_information->Action));
                         }
 
                         if (file_information->NextEntryOffset == 0)
@@ -407,8 +394,8 @@ namespace filewatch
                             break;
                         }
 
-                        file_information = reinterpret_cast<FILE_NOTIFY_INFORMATION*>(
-                          reinterpret_cast<BYTE*>(file_information) + file_information->NextEntryOffset);
+                        file_information =
+                          reinterpret_cast<FILE_NOTIFY_INFORMATION*>(reinterpret_cast<BYTE*>(file_information) + file_information->NextEntryOffset);
                     } while (true);
                     break;
                 }
@@ -421,8 +408,7 @@ namespace filewatch
                 // dispatch callbacks
                 {
                     std::lock_guard<std::mutex> lock(_callback_mutex);
-                    _callback_information.insert(_callback_information.end(), parsed_information.begin(),
-                                                 parsed_information.end());
+                    _callback_information.insert(_callback_information.end(), parsed_information.begin(), parsed_information.end());
                 }
                 _cv.notify_all();
             } while (_destory == false);
@@ -519,8 +505,7 @@ namespace filewatch
                     // dispatch callbacks
                     {
                         std::lock_guard<std::mutex> lock(_callback_mutex);
-                        _callback_information.insert(_callback_information.end(), parsed_information.begin(),
-                                                     parsed_information.end());
+                        _callback_information.insert(_callback_information.end(), parsed_information.begin(), parsed_information.end());
                     }
                     _cv.notify_all();
                 }

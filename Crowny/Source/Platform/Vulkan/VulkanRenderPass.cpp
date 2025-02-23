@@ -7,8 +7,7 @@
 namespace Crowny
 {
 
-    VulkanRenderPass::VariantKey::VariantKey(RenderSurfaceMask loadMask, RenderSurfaceMask readMask,
-                                             Crowny::ClearMask clearMask)
+    VulkanRenderPass::VariantKey::VariantKey(RenderSurfaceMask loadMask, RenderSurfaceMask readMask, Crowny::ClearMask clearMask)
       : LoadMask(loadMask), ReadMask(readMask), ClearMask(clearMask)
     {
     }
@@ -110,19 +109,16 @@ namespace Crowny
         m_Dependencies[0].dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
         m_Dependencies[0].srcAccessMask = 0; // wiki says not necessary
         m_Dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-                                          VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
-                                          VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+                                          VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
                                           VK_ACCESS_SHADER_READ_BIT; // make these available for renderpass?
         m_Dependencies[0].dependencyFlags = 0;
 
         m_Dependencies[1].srcSubpass = 0;
         m_Dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-        m_Dependencies[1].srcStageMask =
-          VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT; // for this stage flush the ones in srcAccessMask
+        m_Dependencies[1].srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT; // for this stage flush the ones in srcAccessMask
         m_Dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
         m_Dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-                                          VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
-                                          VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+                                          VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
                                           VK_ACCESS_SHADER_READ_BIT; // flush these from cache?
         m_Dependencies[1].dstAccessMask = 0;
         m_Dependencies[1].dependencyFlags = 0;
@@ -147,8 +143,7 @@ namespace Crowny
         vkDestroyRenderPass(m_Device, m_DefaultRenderPass, gVulkanAllocator);
     }
 
-    VkRenderPass VulkanRenderPass::CreateVariant(RenderSurfaceMask loadMask, RenderSurfaceMask readMask,
-                                                 ClearMask clearMask) const
+    VkRenderPass VulkanRenderPass::CreateVariant(RenderSurfaceMask loadMask, RenderSurfaceMask readMask, ClearMask clearMask) const
     {
         for (uint32_t i = 0; i < m_NumColorAttachments; i++)
         {
@@ -219,8 +214,7 @@ namespace Crowny
         return output;
     }
 
-    VkRenderPass VulkanRenderPass::GetVkRenderPass(RenderSurfaceMask loadMask, RenderSurfaceMask readMask,
-                                                   ClearMask clearMask) const
+    VkRenderPass VulkanRenderPass::GetVkRenderPass(RenderSurfaceMask loadMask, RenderSurfaceMask readMask, ClearMask clearMask) const
     {
         if (loadMask == RT_NONE && readMask == RT_NONE && clearMask == CLEAR_NONE)
             return m_DefaultRenderPass;
@@ -290,17 +284,15 @@ namespace Crowny
         return hash;
     }
 
-    bool VulkanRenderPasses::PassVariant::EqualFunction::operator()(const PassVariant& lhs,
-                                                                    const PassVariant& rhs) const
+    bool VulkanRenderPasses::PassVariant::EqualFunction::operator()(const PassVariant& lhs, const PassVariant& rhs) const
     {
-        if (lhs.Desc.Offscreen != rhs.Desc.Offscreen || lhs.Desc.Samples != rhs.Desc.Samples ||
-            lhs.Desc.Depth.Enabled != rhs.Desc.Depth.Enabled || lhs.Desc.Depth.Format != rhs.Desc.Depth.Format)
+        if (lhs.Desc.Offscreen != rhs.Desc.Offscreen || lhs.Desc.Samples != rhs.Desc.Samples || lhs.Desc.Depth.Enabled != rhs.Desc.Depth.Enabled ||
+            lhs.Desc.Depth.Format != rhs.Desc.Depth.Format)
             return false;
 
         for (uint32_t i = 0; i < MAX_FRAMEBUFFER_COLOR_ATTACHMENTS; i++)
         {
-            if (lhs.Desc.Color[i].Enabled != rhs.Desc.Color[i].Enabled ||
-                lhs.Desc.Color[i].Format != rhs.Desc.Color[i].Format)
+            if (lhs.Desc.Color[i].Enabled != rhs.Desc.Color[i].Enabled || lhs.Desc.Color[i].Format != rhs.Desc.Color[i].Format)
                 return false;
         }
 

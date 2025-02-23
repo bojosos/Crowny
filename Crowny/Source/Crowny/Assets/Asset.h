@@ -32,7 +32,7 @@ namespace Crowny
     public:
         Asset() = default;
         virtual ~Asset() = default;
-        virtual void Init(){};
+        virtual void Init() {};
         const String& GetName() const { return m_Name; }
         void SetName(const String& name) { m_Name = name; }
 

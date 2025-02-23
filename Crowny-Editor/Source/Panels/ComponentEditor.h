@@ -35,8 +35,7 @@ namespace Crowny
             return std::get<ComponentInfo>(*it);
         }
 
-        template <class Component>
-        ComponentInfo& RegisterComponent(const String& name, typename ComponentInfo::Callback widget)
+        template <class Component> ComponentInfo& RegisterComponent(const String& name, typename ComponentInfo::Callback widget)
         {
             return RegisterComponent<Component>(ComponentInfo{
               name,

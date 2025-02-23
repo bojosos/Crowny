@@ -22,9 +22,8 @@ namespace Crowny
     class VulkanSwapChain : public VulkanResource
     {
     public:
-        VulkanSwapChain(VulkanResourceManager* owner, VkSurfaceKHR surface, uint32_t width, uint32_t height, bool vsync,
-                        VkFormat colorFormat, VkColorSpaceKHR colorSpace, bool createDepth, VkFormat depthFormat,
-                        VulkanSwapChain* oldChain = nullptr);
+        VulkanSwapChain(VulkanResourceManager* owner, VkSurfaceKHR surface, uint32_t width, uint32_t height, bool vsync, VkFormat colorFormat,
+                        VkColorSpaceKHR colorSpace, bool createDepth, VkFormat depthFormat, VulkanSwapChain* oldChain = nullptr);
         ~VulkanSwapChain();
 
         bool PrepareForPresent(uint32_t& backBufferIdx);

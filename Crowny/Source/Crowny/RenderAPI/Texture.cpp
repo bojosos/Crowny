@@ -11,13 +11,9 @@ namespace Crowny
 
     const TextureSurface TextureSurface::COMPLETE = TextureSurface(0, 0, 0, 0);
 
-    Ref<TextureView> Texture::CreateView(const TextureViewDesc& desc)
-    {
-        return CreateRef<TextureView>(TextureViewDesc(desc));
-    }
+    Ref<TextureView> Texture::CreateView(const TextureViewDesc& desc) { return CreateRef<TextureView>(TextureViewDesc(desc)); }
 
-    Ref<TextureView> Texture::RequestView(uint32_t mip, uint32_t numMips, uint32_t firstFace, uint32_t numFaces,
-                                          GpuViewUsage usage)
+    Ref<TextureView> Texture::RequestView(uint32_t mip, uint32_t numMips, uint32_t firstFace, uint32_t numFaces, GpuViewUsage usage)
     {
         const TextureParameters& props = GetProperties();
         TextureViewDesc desc;

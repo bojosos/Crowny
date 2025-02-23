@@ -13,33 +13,21 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_SetCameraNearPlane", (void*)&Internal_SetCameraNearPlane);
         MetaData.ScriptClass->AddInternalCall("Internal_GetCameraFarPlane", (void*)&Internal_GetCameraFarPlane);
         MetaData.ScriptClass->AddInternalCall("Internal_SetCameraFarPlane", (void*)&Internal_SetCameraFarPlane);
-        MetaData.ScriptClass->AddInternalCall("Internal_GetCameraOrthographicSize",
-                                              (void*)&Internal_GetCameraOrthographicSize);
-        MetaData.ScriptClass->AddInternalCall("Internal_SetCameraOrthographicSize",
-                                              (void*)&Internal_SetCameraOrthographicSize);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetCameraOrthographicSize", (void*)&Internal_GetCameraOrthographicSize);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetCameraOrthographicSize", (void*)&Internal_SetCameraOrthographicSize);
         MetaData.ScriptClass->AddInternalCall("Internal_GetCameraAspectRatio", (void*)&Internal_GetCameraAspectRatio);
         MetaData.ScriptClass->AddInternalCall("Internal_SetCameraAspectRatio", (void*)&Internal_SetCameraAspectRatio);
-        MetaData.ScriptClass->AddInternalCall("Internal_GetCameraBackgroundColor",
-                                              (void*)&Internal_GetCameraBackgroundColor);
-        MetaData.ScriptClass->AddInternalCall("Internal_SetCameraBackgroundColor",
-                                              (void*)&Internal_SetCameraBackgroundColor);
-        MetaData.ScriptClass->AddInternalCall("Internal_GetCameraViewportRectangle",
-                                              (void*)&Internal_GetCameraViewportRectangle);
-        MetaData.ScriptClass->AddInternalCall("Internal_SetCameraViewportRectangle",
-                                              (void*)&Internal_SetCameraViewportRectangle);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetCameraBackgroundColor", (void*)&Internal_GetCameraBackgroundColor);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetCameraBackgroundColor", (void*)&Internal_SetCameraBackgroundColor);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetCameraViewportRectangle", (void*)&Internal_GetCameraViewportRectangle);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetCameraViewportRectangle", (void*)&Internal_SetCameraViewportRectangle);
     }
 
     ScriptCamera::ScriptCamera(MonoObject* instance, Entity entity) : TScriptComponent(instance, entity) {}
 
-    float ScriptCamera::Internal_GetCameraFov(ScriptCamera* thisPtr)
-    {
-        return thisPtr->GetComponent().Camera.GetPerspectiveVerticalFOV();
-    }
+    float ScriptCamera::Internal_GetCameraFov(ScriptCamera* thisPtr) { return thisPtr->GetComponent().Camera.GetPerspectiveVerticalFOV(); }
 
-    void ScriptCamera::Internal_SetCameraFov(ScriptCamera* thisPtr, float value)
-    {
-        thisPtr->GetComponent().Camera.SetPerspectiveVerticalFOV(value);
-    }
+    void ScriptCamera::Internal_SetCameraFov(ScriptCamera* thisPtr, float value) { thisPtr->GetComponent().Camera.SetPerspectiveVerticalFOV(value); }
 
     float ScriptCamera::Internal_GetCameraNearPlane(ScriptCamera* thisPtr)
     {

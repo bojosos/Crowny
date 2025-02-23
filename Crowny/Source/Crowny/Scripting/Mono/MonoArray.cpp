@@ -42,10 +42,7 @@ namespace Crowny
 
     ScriptArray::ScriptArray(::MonoArray* array) : m_Array(array) {}
 
-    ScriptArray::ScriptArray(::MonoClass* klass, uint32_t size)
-    {
-        m_Array = mono_array_new(MonoManager::Get().GetDomain(), klass, size);
-    }
+    ScriptArray::ScriptArray(::MonoClass* klass, uint32_t size) { m_Array = mono_array_new(MonoManager::Get().GetDomain(), klass, size); }
 
     uint32_t ScriptArray::Size() const { return (uint32_t)mono_array_length(m_Array); }
 
@@ -56,10 +53,7 @@ namespace Crowny
         return (uint32_t)mono_class_array_element_size(el);
     }
 
-    uint8_t* ScriptArray::GetRaw(uint32_t idx, uint32_t size)
-    {
-        return (uint8_t*)mono_array_addr_with_size(m_Array, size, idx);
-    }
+    uint8_t* ScriptArray::GetRaw(uint32_t idx, uint32_t size) { return (uint8_t*)mono_array_addr_with_size(m_Array, size, idx); }
 
     void ScriptArray::Resize(uint32_t newLength)
     {
@@ -101,10 +95,7 @@ namespace Crowny
         }
     }
 
-    ::MonoClass* ScriptArray::GetElementClassGlobal(::MonoClass* arrayClass)
-    {
-        return mono_class_get_element_class(arrayClass);
-    }
+    ::MonoClass* ScriptArray::GetElementClassGlobal(::MonoClass* arrayClass) { return mono_class_get_element_class(arrayClass); }
 
     ::MonoClass* ScriptArray::GetElementClass()
     {

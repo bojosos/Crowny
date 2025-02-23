@@ -6,10 +6,7 @@ namespace Crowny
 {
 
     AABox::AABox() : m_MinBounds(0.5f), m_MaxBounds(0.5f) {}
-    AABox::AABox(const glm::vec3& minBounds, const glm::vec3& maxBounds)
-      : m_MinBounds(minBounds), m_MaxBounds(maxBounds)
-    {
-    }
+    AABox::AABox(const glm::vec3& minBounds, const glm::vec3& maxBounds) : m_MinBounds(minBounds), m_MaxBounds(maxBounds) {}
 
     void AABox::Merge(const AABox& other)
     {
@@ -27,7 +24,7 @@ namespace Crowny
 
     bool AABox::Contains(const glm::vec3& point) const
     {
-        return m_MinBounds.x <= point.x && point.x <= m_MaxBounds.x && m_MinBounds.y <= point.y &&
-               point.y <= m_MaxBounds.y && m_MinBounds.z <= point.z && point.z <= m_MaxBounds.z;
+        return m_MinBounds.x <= point.x && point.x <= m_MaxBounds.x && m_MinBounds.y <= point.y && point.y <= m_MaxBounds.y &&
+               m_MinBounds.z <= point.z && point.z <= m_MaxBounds.z;
     }
 } // namespace Crowny

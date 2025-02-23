@@ -78,12 +78,11 @@ namespace Crowny
         void AppendMask(uint32_t syncMask) { m_SyncMask |= syncMask; }
         void ClearMask() { m_SyncMask = 0; }
 
-        void MemoryBarrier(VkBuffer buffer, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags,
-                           VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage);
-        void SetLayout(VkImage image, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags,
-                       VkImageLayout oldLayout, VkImageLayout newLayout, const VkImageSubresourceRange& range);
-        void SetLayout(VulkanImage* image, const VkImageSubresourceRange& range, VkAccessFlags newAccessMask,
-                       VkImageLayout newLayout);
+        void MemoryBarrier(VkBuffer buffer, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags, VkPipelineStageFlags srcStage,
+                           VkPipelineStageFlags dstStage);
+        void SetLayout(VkImage image, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags, VkImageLayout oldLayout, VkImageLayout newLayout,
+                       const VkImageSubresourceRange& range);
+        void SetLayout(VulkanImage* image, const VkImageSubresourceRange& range, VkAccessFlags newAccessMask, VkImageLayout newLayout);
 
         void Flush(bool wait);
         VulkanCmdBuffer* GetCB() const { return m_CommandBuffer; }
@@ -215,31 +214,26 @@ namespace Crowny
         void RegisterResource(VulkanResource* resource, VulkanAccessFlags flags);
         void RegisterResource(VulkanFramebuffer* framebuffer, RenderSurfaceMask loadMask, uint32_t readMask);
         void RegisterResource(VulkanSwapChain* swapChain);
-        void RegisterResource(VulkanImage* image, const VkImageSubresourceRange& range, ImageUseFlagBits use,
-                              VkImageLayout layout, VkImageLayout finalLayout, VulkanAccessFlags access,
-                              VkPipelineStageFlags stages);
-        void RegisterBuffer(VulkanBuffer* buffer, BufferUseFlagBits useFlags, VulkanAccessFlags accessFlags,
-                            VkPipelineStageFlags stages = 0);
-        void RegisterImageShader(VulkanImage* image, const VkImageSubresourceRange& range, VkImageLayout layout,
-                                 VulkanAccessFlags access, VkPipelineStageFlags stages);
-        void RegisterImageFramebuffer(VulkanImage* image, const VkImageSubresourceRange& range, VkImageLayout layout,
-                                      VkImageLayout finalLayout, VulkanAccessFlags access, VkPipelineStageFlags stages);
-        void RegisterImageTransfer(VulkanImage* image, const VkImageSubresourceRange& range, VkImageLayout layout,
-                                   VulkanAccessFlags access);
+        void RegisterResource(VulkanImage* image, const VkImageSubresourceRange& range, ImageUseFlagBits use, VkImageLayout layout,
+                              VkImageLayout finalLayout, VulkanAccessFlags access, VkPipelineStageFlags stages);
+        void RegisterBuffer(VulkanBuffer* buffer, BufferUseFlagBits useFlags, VulkanAccessFlags accessFlags, VkPipelineStageFlags stages = 0);
+        void RegisterImageShader(VulkanImage* image, const VkImageSubresourceRange& range, VkImageLayout layout, VulkanAccessFlags access,
+                                 VkPipelineStageFlags stages);
+        void RegisterImageFramebuffer(VulkanImage* image, const VkImageSubresourceRange& range, VkImageLayout layout, VkImageLayout finalLayout,
+                                      VulkanAccessFlags access, VkPipelineStageFlags stages);
+        void RegisterImageTransfer(VulkanImage* image, const VkImageSubresourceRange& range, VkImageLayout layout, VulkanAccessFlags access);
 
         void RegisterQuery(VulkanTimerQuery* query) { m_TimerQueries.insert(query); }
         void RegisterQuery(VulkanPipelineQuery* query) { m_PipelineQueries.insert(query); }
         void RegisterQuery(VulkanOcclusionQuery* query) { m_OcclusionQueries.insert(query); }
 
         void UpdateFinalLayouts();
-        void UpdateShaderSubresource(VulkanImage* image, uint32_t imageInfoIdx, ImageSubresourceInfo& subresourceInfo,
-                                     VkImageLayout layout, VulkanAccessFlags access, VkPipelineStageFlags stages);
-        void UpdateFramebufferSubresource(VulkanImage* image, uint32_t imageInfoIdx,
-                                          ImageSubresourceInfo& subresourceInfo, VkImageLayout layout,
-                                          VkImageLayout finalLayout, VulkanAccessFlags access,
-                                          VkPipelineStageFlags stages);
-        void UpdateTransferSubresource(VulkanImage* image, uint32_t imageInfoIdx, ImageSubresourceInfo& subresourceInfo,
-                                       VkImageLayout layout, VulkanAccessFlags access, VkPipelineStageFlags stages);
+        void UpdateShaderSubresource(VulkanImage* image, uint32_t imageInfoIdx, ImageSubresourceInfo& subresourceInfo, VkImageLayout layout,
+                                     VulkanAccessFlags access, VkPipelineStageFlags stages);
+        void UpdateFramebufferSubresource(VulkanImage* image, uint32_t imageInfoIdx, ImageSubresourceInfo& subresourceInfo, VkImageLayout layout,
+                                          VkImageLayout finalLayout, VulkanAccessFlags access, VkPipelineStageFlags stages);
+        void UpdateTransferSubresource(VulkanImage* image, uint32_t imageInfoIdx, ImageSubresourceInfo& subresourceInfo, VkImageLayout layout,
+                                       VulkanAccessFlags access, VkPipelineStageFlags stages);
         ImageSubresourceInfo& FindSubresourceInfo(VulkanImage* image, uint32_t face, uint32_t mip);
 
         void ResetQuery(VulkanQuery* query);
@@ -268,13 +262,12 @@ namespace Crowny
         void DrawIndexed(uint32_t startIdx, uint32_t idxCount, uint32_t vertexOffset, uint32_t instanceCount);
         void Dispatch(uint32_t groupsX, uint32_t groupsY, uint32_t groupsZ);
 
-        void MemoryBarrier(VkBuffer buffer, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags,
-                           VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage);
-        void SetLayout(VkImage image, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags,
-                       VkImageLayout oldLayout, VkImageLayout newLayout, const VkImageSubresourceRange& range);
+        void MemoryBarrier(VkBuffer buffer, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags, VkPipelineStageFlags srcStage,
+                           VkPipelineStageFlags dstStage);
+        void SetLayout(VkImage image, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags, VkImageLayout oldLayout, VkImageLayout newLayout,
+                       const VkImageSubresourceRange& range);
         VkImageLayout GetCurrentLayout(VulkanImage* image, const VkImageSubresourceRange& range, bool isInRenderPass);
-        void ClearRenderTarget(uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil,
-                               uint8_t targetMask);
+        void ClearRenderTarget(uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil, uint8_t targetMask);
         void ClearViewport(uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil, uint8_t targetMask);
 
         void BindVertexInputs();
@@ -286,8 +279,7 @@ namespace Crowny
         bool BindGraphicsPipeline();
         bool IsReadyForRender() const;
         void BindDynamicStates(bool force);
-        void ClearViewport(const Rect2I& area, uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil,
-                           uint8_t targetMask);
+        void ClearViewport(const Rect2I& area, uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil, uint8_t targetMask);
         void ExecuteClearPass();
         void ExecuteWriteHazardBarrier();
         void ExecuteLayoutTransitions();

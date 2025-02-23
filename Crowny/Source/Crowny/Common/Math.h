@@ -12,8 +12,7 @@ namespace Crowny
         static float Mod(float value, int modulus);
         static glm::vec3 GetForwardDirection(const glm::vec3& rotation);
         static glm::vec3 GetRightDirection(const glm::vec3& rotation);
-        static bool DecomposeMatrix(const glm::mat4& transform, glm::vec3& outTransform, glm::vec3& outRotation,
-                                    glm::vec3& outScale);
+        static bool DecomposeMatrix(const glm::mat4& transform, glm::vec3& outTransform, glm::vec3& outRotation, glm::vec3& outScale);
         static glm::mat4 ComposeMatrix(const glm::vec3& position, const glm::quat& rotation, const glm::vec3& scale);
     };
 

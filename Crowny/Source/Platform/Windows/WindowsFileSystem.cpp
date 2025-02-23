@@ -24,8 +24,7 @@ namespace Crowny
     {
         std::ifstream input(path, std::ios::binary);
 
-        Vector<uint8_t>* uint8_ts =
-          new Vector<uint8_t>((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
+        Vector<uint8_t>* uint8_ts = new Vector<uint8_t>((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
 
         input.close();
         return std::make_tuple(uint8_ts->data(), uint8_ts->size());
@@ -73,10 +72,7 @@ namespace Crowny
         return CreateRef<FileDataStream>(filepath, accessMode, true);
     }
 
-    Ref<DataStream> FileSystem::CreateAndOpenFile(const Path& filepath)
-    {
-        return CreateRef<FileDataStream>(filepath, DataStream::WRITE, true);
-    }
+    Ref<DataStream> FileSystem::CreateAndOpenFile(const Path& filepath) { return CreateRef<FileDataStream>(filepath, DataStream::WRITE, true); }
 
     void AddFilters(IFileDialog* fileDialog, const Vector<DialogFilter>& filters)
     {
@@ -139,13 +135,12 @@ namespace Crowny
         }
     }
 
-    bool FileSystem::OpenFileDialog(FileDialogType type, Vector<Path>& outPaths, const String& title,
-                                    const Path& initialDir, const Vector<DialogFilter>& filter, const String& filename)
+    bool FileSystem::OpenFileDialog(FileDialogType type, Vector<Path>& outPaths, const String& title, const Path& initialDir,
+                                    const Vector<DialogFilter>& filter, const String& filename)
     {
         CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
         IFileDialog* fileDialog = nullptr;
-        bool isOpenDialog =
-          type == FileDialogType::OpenFile || type == FileDialogType::OpenFolder || type == FileDialogType::Multiselect;
+        bool isOpenDialog = type == FileDialogType::OpenFile || type == FileDialogType::OpenFolder || type == FileDialogType::Multiselect;
         IID classId = isOpenDialog ? CLSID_FileOpenDialog : CLSID_FileSaveDialog;
         CoCreateInstance(classId, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&fileDialog));
 

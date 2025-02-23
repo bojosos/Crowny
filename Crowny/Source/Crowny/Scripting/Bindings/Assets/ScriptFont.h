@@ -18,10 +18,7 @@ namespace Crowny
 
     private:
         static ScriptArray Internal_GetCharacterInfos(ScriptFont* thisptr) { return ScriptArray::Create<int>(1); }
-        static bool Internal_GetCharacterInfo(char c, CharacterInfo* characterInfo, int size, TextFontStyle style)
-        {
-            return false;
-        }
+        static bool Internal_GetCharacterInfo(char c, CharacterInfo* characterInfo, int size, TextFontStyle style) { return false; }
     };
 
 } // namespace Crowny

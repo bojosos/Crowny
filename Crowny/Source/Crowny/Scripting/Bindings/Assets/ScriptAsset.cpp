@@ -9,10 +9,7 @@ namespace Crowny
 
     ScriptAssetBase::ScriptAssetBase(MonoObject* instance) : PersistentScriptObjectBase(instance) {}
 
-    ScriptAssetBase::~ScriptAssetBase()
-    {
-        CW_ENGINE_ASSERT(m_GCHandle == 0, "ScriptAssetBase was not properly disposed of!");
-    }
+    ScriptAssetBase::~ScriptAssetBase() { CW_ENGINE_ASSERT(m_GCHandle == 0, "ScriptAssetBase was not properly disposed of!"); }
 
     MonoObject* ScriptAssetBase::GetManagedInstance() const { return MonoUtils::GetObjectFromGCHandle(m_GCHandle); }
 
@@ -49,13 +46,7 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_GetUUID", (void*)&Internal_GetUUID);
     }
 
-    MonoString* ScriptAsset::Internal_GetName(ScriptAssetBase* thisPtr)
-    {
-        return MonoUtils::ToMonoString(thisPtr->GetGenericHandle()->GetName());
-    }
+    MonoString* ScriptAsset::Internal_GetName(ScriptAssetBase* thisPtr) { return MonoUtils::ToMonoString(thisPtr->GetGenericHandle()->GetName()); }
 
-    void ScriptAsset::Internal_GetUUID(ScriptAssetBase* thisPtr, UUID* outUuid)
-    {
-        *outUuid = thisPtr->GetGenericHandle().GetUUID();
-    }
+    void ScriptAsset::Internal_GetUUID(ScriptAssetBase* thisPtr, UUID* outUuid) { *outUuid = thisPtr->GetGenericHandle().GetUUID(); }
 } // namespace Crowny

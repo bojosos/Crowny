@@ -17,7 +17,7 @@ namespace Crowny
         virtual void OnDetach() {}
 
         virtual void OnUpdate(Timestep ts) {}
-        virtual void OnImGuiRender(){};
+        virtual void OnImGuiRender() {};
 
         virtual void OnEvent(Event& event) {}
 

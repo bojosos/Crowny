@@ -28,8 +28,7 @@ namespace Crowny
         PrepareSemaphores(waitSemaphores, m_SemaphoresTemp.data(), semaphoreCount);
 
         VkSubmitInfo submitInfo;
-        GetSubmitInfo(&vkCmdBuffer, signalSemaphores, MAX_VULKAN_CB_DEPENDENCIES + 1, m_SemaphoresTemp.data(),
-                      semaphoreCount, submitInfo);
+        GetSubmitInfo(&vkCmdBuffer, signalSemaphores, MAX_VULKAN_CB_DEPENDENCIES + 1, m_SemaphoresTemp.data(), semaphoreCount, submitInfo);
         VkResult result = vkQueueSubmit(m_Queue, 1, &submitInfo, cmdBuffer->GetFence());
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         cmdBuffer->SetIsSubmitted();
@@ -46,9 +45,8 @@ namespace Crowny
         return m_LastCommandBuffer->IsSubmitted();
     }
 
-    void VulkanQueue::GetSubmitInfo(VkCommandBuffer* cmdBuffer, VkSemaphore* signalSemaphores,
-                                    uint32_t numSignalSemaphores, VkSemaphore* waitSemaphores,
-                                    uint32_t numWaitSemaphores, VkSubmitInfo& submitInfo)
+    void VulkanQueue::GetSubmitInfo(VkCommandBuffer* cmdBuffer, VkSemaphore* signalSemaphores, uint32_t numSignalSemaphores,
+                                    VkSemaphore* waitSemaphores, uint32_t numWaitSemaphores, VkSubmitInfo& submitInfo)
     {
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submitInfo.pNext = nullptr;
@@ -99,8 +97,7 @@ namespace Crowny
             presentInfo.waitSemaphoreCount = 0;
         }
         VkResult result = vkQueuePresentKHR(m_Queue, &presentInfo);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR ||
-                         result == VK_ERROR_OUT_OF_DATE_KHR); // maybe shouldn't do this here
+        CW_ENGINE_ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR); // maybe shouldn't do this here
         m_ActiveSubmissions.push_back(SubmitInfo(nullptr, m_NextSubmitIdx++, numSemaphores, 0));
         return result;
     }
@@ -111,8 +108,7 @@ namespace Crowny
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
     }
 
-    void VulkanQueue::PrepareSemaphores(VulkanSemaphore** inSemaphores, VkSemaphore* outSemaphores,
-                                        uint32_t& semaphoreCount)
+    void VulkanQueue::PrepareSemaphores(VulkanSemaphore** inSemaphores, VkSemaphore* outSemaphores, uint32_t& semaphoreCount)
     {
         uint32_t semaphoreIdx = 0;
         for (uint32_t i = 0; i < semaphoreCount; i++)
@@ -152,8 +148,7 @@ namespace Crowny
         uint32_t totalNumWaitSemaphores = (uint32_t)m_QueuedSemaphores.size() + numCbs;
         uint32_t signalSemaphoresPerCB = MAX_VULKAN_CB_DEPENDENCIES + 1;
 
-        uint8_t* data = new uint8_t[(sizeof(VkSubmitInfo) + sizeof(VkCommandBuffer)) * numCbs +
-                                    sizeof(VkSemaphore) * signalSemaphoresPerCB * numCbs +
+        uint8_t* data = new uint8_t[(sizeof(VkSubmitInfo) + sizeof(VkCommandBuffer)) * numCbs + sizeof(VkSemaphore) * signalSemaphoresPerCB * numCbs +
                                     sizeof(VkSemaphore) * totalNumWaitSemaphores];
         uint8_t* dataPtr = data;
 
@@ -180,10 +175,9 @@ namespace Crowny
 
             entry.CmdBuffer->AllocateSemaphores(&signalSemaphores[signalSemaphoreIdx]);
             uint32_t semaphoresCount = entry.NumSemaphores;
-            PrepareSemaphores(m_QueuedSemaphores.data() + readSemaphoreIdx, &waitSemaphores[writeSemaphoreIdx],
-                              semaphoresCount);
-            GetSubmitInfo(&commandBuffers[i], &signalSemaphores[signalSemaphoreIdx], signalSemaphoresPerCB,
-                          &waitSemaphores[writeSemaphoreIdx], semaphoresCount, submitInfos[i]);
+            PrepareSemaphores(m_QueuedSemaphores.data() + readSemaphoreIdx, &waitSemaphores[writeSemaphoreIdx], semaphoresCount);
+            GetSubmitInfo(&commandBuffers[i], &signalSemaphores[signalSemaphoreIdx], signalSemaphoresPerCB, &waitSemaphores[writeSemaphoreIdx],
+                          semaphoresCount, submitInfos[i]);
             entry.CmdBuffer->SetIsSubmitted();
             m_LastCommandBuffer = entry.CmdBuffer;
             m_LastCBSemaphoreUsed = false;

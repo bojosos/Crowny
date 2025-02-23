@@ -20,22 +20,22 @@ namespace Crowny
         }
     }
 
-#define WRITE_TO_BUFFER(data, length)                                                                                  \
-    if ((m_BufferOffset + length) > BUFFER_SIZE)                                                                       \
-        Flush();                                                                                                       \
-                                                                                                                       \
-    if (length > BUFFER_SIZE)                                                                                          \
-        m_WriteCallback(data, length);                                                                                 \
-    else                                                                                                               \
-    {                                                                                                                  \
-        memcpy(m_Buffer + m_BufferOffset, data, length);                                                               \
-        m_BufferOffset += length;                                                                                      \
+#define WRITE_TO_BUFFER(data, length)                                                                                                                \
+    if ((m_BufferOffset + length) > BUFFER_SIZE)                                                                                                     \
+        Flush();                                                                                                                                     \
+                                                                                                                                                     \
+    if (length > BUFFER_SIZE)                                                                                                                        \
+        m_WriteCallback(data, length);                                                                                                               \
+    else                                                                                                                                             \
+    {                                                                                                                                                \
+        memcpy(m_Buffer + m_BufferOffset, data, length);                                                                                             \
+        m_BufferOffset += length;                                                                                                                    \
     }
 
     OggVorbisEncoder::~OggVorbisEncoder() { Close(); }
 
-    bool OggVorbisEncoder::Open(std::function<void(uint8_t*, uint32_t)> writeCallback, uint32_t sampleRate,
-                                uint32_t bitDepth, uint32_t numChannels, float quality)
+    bool OggVorbisEncoder::Open(std::function<void(uint8_t*, uint32_t)> writeCallback, uint32_t sampleRate, uint32_t bitDepth, uint32_t numChannels,
+                                float quality)
     {
         m_NumChannels = numChannels;
         m_BitDepth = bitDepth;
@@ -216,8 +216,7 @@ namespace Crowny
         m_Closed = true;
     }
 
-    Ref<MemoryDataStream> OggVorbisEncoder::PCMToOggVorbis(uint8_t* samples, const AudioDataInfo& info, uint32_t& size,
-                                                           float quality)
+    Ref<MemoryDataStream> OggVorbisEncoder::PCMToOggVorbis(uint8_t* samples, const AudioDataInfo& info, uint32_t& size, float quality)
     {
         struct EncodedBlock
         {

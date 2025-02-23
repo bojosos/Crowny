@@ -65,8 +65,7 @@ namespace Crowny
         }
     }
 
-    void CodeEditorManager::SyncSolution(const String& projectName,
-                                         const ScriptProjectReference& engineAssemblyRef) const
+    void CodeEditorManager::SyncSolution(const String& projectName, const ScriptProjectReference& engineAssemblyRef) const
     {
         if (m_ActiveEditor == nullptr)
             return;

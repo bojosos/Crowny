@@ -60,8 +60,7 @@ namespace Crowny
          */
         template <class SubType, class... Args> static void StartUp(Args&&... args)
         {
-            static_assert(std::is_base_of<T, SubType>::value,
-                          "Provided type is not derived from the initialization type.");
+            static_assert(std::is_base_of<T, SubType>::value, "Provided type is not derived from the initialization type.");
 
             if (IsStartedUp())
                 CW_ENGINE_ASSERT(false);

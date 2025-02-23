@@ -43,10 +43,7 @@ namespace Crowny
         Physics2D();
         ~Physics2D();
 
-        void SetDefaultMaterial(const AssetHandle<PhysicsMaterial2D>& material)
-        {
-            m_Settings->DefaultMaterial = material;
-        }
+        void SetDefaultMaterial(const AssetHandle<PhysicsMaterial2D>& material) { m_Settings->DefaultMaterial = material; }
         void SetGravity(const glm::vec2& gravity);
         void SetVelocityIterations(uint32_t iterations);
         void SetPositionIterations(uint32_t iterations);

@@ -59,20 +59,14 @@ namespace Crowny
         }
     }
 
-    void PlatformUtils::OpenExternally(const Path& filepath)
-    {
-        ShellExecuteW(NULL, L"open", filepath.c_str(), NULL, NULL, SW_SHOW);
-    }
+    void PlatformUtils::OpenExternally(const Path& filepath) { ShellExecuteW(NULL, L"open", filepath.c_str(), NULL, NULL, SW_SHOW); }
 
     void PlatformUtils::CopyToClipboard(const String& string)
     {
         glfwSetClipboardString((GLFWwindow*)Application::Get().GetWindow().GetNativeWindow(), string.c_str());
     }
 
-    String PlatformUtils::CopyFromClipboard()
-    {
-        return glfwGetClipboardString((GLFWwindow*)Application::Get().GetWindow().GetNativeWindow());
-    }
+    String PlatformUtils::CopyFromClipboard() { return glfwGetClipboardString((GLFWwindow*)Application::Get().GetWindow().GetNativeWindow()); }
 
     String PlatformUtils::Exec(const String& command)
     {

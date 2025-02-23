@@ -55,13 +55,13 @@
 #endif
 
 #if defined(FASTLZ_SAFE)
-#define FASTLZ_BOUND_CHECK(cond)                                                                                       \
-    if (FASTLZ_UNLIKELY(!(cond)))                                                                                      \
+#define FASTLZ_BOUND_CHECK(cond)                                                                                                                     \
+    if (FASTLZ_UNLIKELY(!(cond)))                                                                                                                    \
         return 0;
 #else
-#define FASTLZ_BOUND_CHECK(cond)                                                                                       \
-    do                                                                                                                 \
-    {                                                                                                                  \
+#define FASTLZ_BOUND_CHECK(cond)                                                                                                                     \
+    do                                                                                                                                               \
+    {                                                                                                                                                \
     } while (0)
 #endif
 
@@ -75,10 +75,7 @@ static void fastlz_memmove(uint8_t* dest, const uint8_t* src, uint32_t count)
     } while (--count);
 }
 
-static void fastlz_memcpy(uint8_t* dest, const uint8_t* src, uint32_t count)
-{
-    return fastlz_memmove(dest, src, count);
-}
+static void fastlz_memcpy(uint8_t* dest, const uint8_t* src, uint32_t count) { return fastlz_memmove(dest, src, count); }
 
 #else
 

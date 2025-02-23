@@ -80,11 +80,10 @@ namespace Crowny
     {
         Entity entity = thisPtr->GetNativeEntity();
         ::MonoClass* componentClass = MonoUtils::GetClass(type);
-        if (MonoUtils::IsSubClassOf(componentClass,
-                                    ScriptInfoManager::Get()
-                                      .GetBuiltinClasses()
-                                      .EntityBehaviour->GetInternalPtr())) // We are trying to retrieve a behavior, so
-                                                                           // loop the MonoScriptBehaviour.Scripts
+        if (MonoUtils::IsSubClassOf(
+              componentClass,
+              ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetInternalPtr())) // We are trying to retrieve a behavior, so
+                                                                                               // loop the MonoScriptBehaviour.Scripts
         {
             if (!entity.HasComponent<MonoScriptComponent>())
                 return nullptr;
@@ -109,11 +108,10 @@ namespace Crowny
     {
         Entity entity = thisPtr->GetNativeEntity();
         ::MonoClass* componentClass = MonoUtils::GetClass(type);
-        if (MonoUtils::IsSubClassOf(componentClass,
-                                    ScriptInfoManager::Get()
-                                      .GetBuiltinClasses()
-                                      .EntityBehaviour->GetInternalPtr())) // We are trying to check for a behavior, so
-                                                                           // loop the MonoScriptBehaviour.Scripts
+        if (MonoUtils::IsSubClassOf(
+              componentClass,
+              ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetInternalPtr())) // We are trying to check for a behavior, so
+                                                                                               // loop the MonoScriptBehaviour.Scripts
         {
             if (!entity.HasComponent<MonoScriptComponent>())
                 return false;
@@ -139,11 +137,10 @@ namespace Crowny
     {
         Entity entity = thisPtr->GetNativeEntity();
         ::MonoClass* componentClass = MonoUtils::GetClass(type);
-        if (MonoUtils::IsSubClassOf(componentClass,
-                                    ScriptInfoManager::Get()
-                                      .GetBuiltinClasses()
-                                      .EntityBehaviour->GetInternalPtr())) // We are trying to add a behavior, so loop
-                                                                           // the MonoScriptBehaviour.Scripts
+        if (MonoUtils::IsSubClassOf(
+              componentClass,
+              ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetInternalPtr())) // We are trying to add a behavior, so loop
+                                                                                               // the MonoScriptBehaviour.Scripts
         {
             // TODO: Replace these with the scene API
             if (!entity.HasComponent<MonoScriptComponent>())
@@ -185,11 +182,10 @@ namespace Crowny
         Entity entity = thisPtr->GetNativeEntity();
 
         ::MonoClass* componentClass = MonoUtils::GetClass(type);
-        if (MonoUtils::IsSubClassOf(componentClass,
-                                    ScriptInfoManager::Get()
-                                      .GetBuiltinClasses()
-                                      .EntityBehaviour->GetInternalPtr())) // We are trying to remove a behavior, so
-                                                                           // loop the MonoScriptBehaviour.Scripts
+        if (MonoUtils::IsSubClassOf(
+              componentClass,
+              ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetInternalPtr())) // We are trying to remove a behavior, so
+                                                                                               // loop the MonoScriptBehaviour.Scripts
         {
             if (!entity.HasComponent<MonoScriptComponent>())
                 CW_ERROR("Entity doesn't have that component");
@@ -198,12 +194,11 @@ namespace Crowny
                 String ns, ts;
                 MonoUtils::GetClassName(componentClass, ns, ts);
                 MonoScriptComponent& scriptComponent = entity.GetComponent<MonoScriptComponent>();
-                auto findIter = std::find_if(scriptComponent.Scripts.begin(), scriptComponent.Scripts.end(),
-                                             [&](const MonoScript& script) {
-                                                 MonoReflectionType* runtimeType = script.GetRuntimeType();
-                                                 ::MonoClass* monoClass = MonoUtils::GetClass(runtimeType);
-                                                 return MonoUtils::IsSubClassOf(monoClass, componentClass);
-                                             });
+                auto findIter = std::find_if(scriptComponent.Scripts.begin(), scriptComponent.Scripts.end(), [&](const MonoScript& script) {
+                    MonoReflectionType* runtimeType = script.GetRuntimeType();
+                    ::MonoClass* monoClass = MonoUtils::GetClass(runtimeType);
+                    return MonoUtils::IsSubClassOf(monoClass, componentClass);
+                });
                 if (findIter == scriptComponent.Scripts.end())
                     CW_ERROR("Entity doesn't have that component");
                 else

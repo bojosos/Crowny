@@ -23,15 +23,13 @@ namespace Crowny
         ScriptEntity* GetScriptEntity(uint32_t id) const;
         ScriptEntity* GetScriptEntity(Entity entity) const;
 
-        ScriptComponentBase* CreateScriptComponent(Entity entity, const ComponentBase& component,
-                                                   MonoReflectionType* reflType);
+        ScriptComponentBase* CreateScriptComponent(Entity entity, const ComponentBase& component, MonoReflectionType* reflType);
 
         ScriptEntityBehaviour* CreateManagedScriptComponent(MonoObject* instance, Entity entity, MonoScript& script);
 
         ScriptEntityBehaviour* CreateScriptComponent(MonoObject* instance, Entity entity,
                                                      const ComponentBase& component); // TODO: Remove this
-        ScriptComponentBase* GetScriptComponent(Entity entity, const ComponentBase& component,
-                                                MonoReflectionType* reflType, bool create = true);
+        ScriptComponentBase* GetScriptComponent(Entity entity, const ComponentBase& component, MonoReflectionType* reflType, bool create = true);
         ScriptComponentBase* GetScriptComponent(uint64_t instanceId);
 
         void DestroyScriptEntity(ScriptEntity* entity);

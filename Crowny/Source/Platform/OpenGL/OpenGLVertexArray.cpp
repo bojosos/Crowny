@@ -50,10 +50,7 @@ namespace Crowny
         return 0;
     }
 
-    OpenGLVertexArray::OpenGLVertexArray(DrawMode drawMode) : m_DrawMode(drawMode)
-    {
-        glGenVertexArrays(1, &m_RendererID);
-    }
+    OpenGLVertexArray::OpenGLVertexArray(DrawMode drawMode) : m_DrawMode(drawMode) { glGenVertexArrays(1, &m_RendererID); }
 
     OpenGLVertexArray::~OpenGLVertexArray() { glDeleteVertexArrays(1, &m_RendererID); }
 
@@ -118,9 +115,8 @@ namespace Crowny
             case ShaderDataType::Int3:
             case ShaderDataType::Int4:
                 glEnableVertexAttribArray(m_VertexBufferIndex);
-                glVertexAttribIPointer(m_VertexBufferIndex, element.GetComponentCount(),
-                                       ShaderDataTypeToOpenGLBaseType(element.Type), layout.GetStride(),
-                                       (const void*)(uint64_t)element.Offset);
+                glVertexAttribIPointer(m_VertexBufferIndex, element.GetComponentCount(), ShaderDataTypeToOpenGLBaseType(element.Type),
+                                       layout.GetStride(), (const void*)(uint64_t)element.Offset);
                 m_VertexBufferIndex++;
                 break;
             default:

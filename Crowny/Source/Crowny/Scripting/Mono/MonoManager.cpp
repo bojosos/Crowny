@@ -32,8 +32,7 @@ namespace Crowny
 
     static const MonoVersionData MONO_VERSION_DATA[1] = { { MONO_LIB_DIR + "mono/4.8", "v4.0.30319" } };
 
-    void MonoLogCallback(const char* logDomain, const char* logLevel, const char* message, mono_bool fatal,
-                         void* userData)
+    void MonoLogCallback(const char* logDomain, const char* logLevel, const char* message, mono_bool fatal, void* userData)
     {
         static const char* monoErrorLevels[] = { nullptr, "error", "critical", "warning", "message", "info", "debug" };
 
@@ -138,11 +137,8 @@ namespace Crowny
         mono_trace_set_level_string("debug");
         mono_trace_set_print_handler(MonoPrintCallback);
         // TODO: Add port settings
-        const char* options[] = {
-            "--soft-breakpoints",
-            "--debugger-agent=transport=dt_socket,address=127.0.0.1:17615,embedding=1,server=y,suspend=n",
-            "--debug-domain-unload", "--gc-debug=check-remset-consistency,verify-before-collections,xdomain-checks"
-        };
+        const char* options[] = { "--soft-breakpoints", "--debugger-agent=transport=dt_socket,address=127.0.0.1:17615,embedding=1,server=y,suspend=n",
+                                  "--debug-domain-unload", "--gc-debug=check-remset-consistency,verify-before-collections,xdomain-checks" };
         mono_jit_parse_options(4, (char**)options);
         mono_trace_set_level_string("warning"); // maybe do debug
         // #else

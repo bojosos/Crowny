@@ -54,16 +54,14 @@ private:
 };
 
 template <class T>
-inline typename std::enable_if<std::is_arithmetic<T>::value, void>::type CEREAL_SAVE_FUNCTION_NAME(
-  BinaryDataStreamOutputArchive& ar, T const& t)
+inline typename std::enable_if<std::is_arithmetic<T>::value, void>::type CEREAL_SAVE_FUNCTION_NAME(BinaryDataStreamOutputArchive& ar, T const& t)
 {
     ar.saveBinary(std::addressof(t), sizeof(t));
 }
 
 //! Loading for POD types from binary
 template <class T>
-inline typename std::enable_if<std::is_arithmetic<T>::value, void>::type CEREAL_LOAD_FUNCTION_NAME(
-  BinaryDataStreamInputArchive& ar, T& t)
+inline typename std::enable_if<std::is_arithmetic<T>::value, void>::type CEREAL_LOAD_FUNCTION_NAME(BinaryDataStreamInputArchive& ar, T& t)
 {
     ar.loadBinary(std::addressof(t), sizeof(t));
 }
@@ -78,8 +76,7 @@ inline CEREAL_ARCHIVE_RESTRICT(BinaryDataStreamInputArchive, BinaryDataStreamOut
 
 //! Serializing SizeTags to binary
 template <class Archive, class T>
-inline CEREAL_ARCHIVE_RESTRICT(BinaryDataStreamInputArchive, BinaryDataStreamOutputArchive)
-  CEREAL_SERIALIZE_FUNCTION_NAME(Archive& ar, SizeTag<T>& t)
+inline CEREAL_ARCHIVE_RESTRICT(BinaryDataStreamInputArchive, BinaryDataStreamOutputArchive) CEREAL_SERIALIZE_FUNCTION_NAME(Archive& ar, SizeTag<T>& t)
 {
     ar(t.size);
 }

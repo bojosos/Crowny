@@ -108,8 +108,7 @@ namespace Crowny
     private:
         VulkanDevice& m_Device;
         UnorderedSet<VulkanLayoutKey, VulkanLayoutKey::HashFunction, VulkanLayoutKey::EqualsFunction> m_Layouts;
-        UnorderedMap<VulkanPipelineLayoutKey, VkPipelineLayout, VulkanPipelineLayoutKey::HashFunction,
-                     VulkanPipelineLayoutKey::EqualsFunction>
+        UnorderedMap<VulkanPipelineLayoutKey, VkPipelineLayout, VulkanPipelineLayoutKey::HashFunction, VulkanPipelineLayoutKey::EqualsFunction>
           m_PipelineLayouts;
         Vector<VulkanDescriptorPool*> m_Pools;
     };

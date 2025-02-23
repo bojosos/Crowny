@@ -15,10 +15,7 @@ namespace Crowny
 {
     Entity HierarchyPanel::s_SelectedEntity;
 
-    HierarchyPanel::HierarchyPanel(const String& name, std::function<void(Entity)> callback)
-      : ImGuiPanel(name), m_SelectionChanged(callback)
-    {
-    }
+    HierarchyPanel::HierarchyPanel(const String& name, std::function<void(Entity)> callback) : ImGuiPanel(name), m_SelectionChanged(callback) {}
 
     void HierarchyPanel::DisplayPopup(Entity e)
     {
@@ -100,8 +97,7 @@ namespace Crowny
         ImVec2 framePadding = ImGui::GetStyle().FramePadding;
         framePadding.x += ImGui::GetCursorPosX() + 4.0f;
         UI::ScopedStyle style(ImGuiStyleVar_FramePadding, framePadding);
-        if (ImGui::InputText("##renaming", &m_RenamingString,
-                             ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
+        if (ImGui::InputText("##renaming", &m_RenamingString, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
         {
             m_Renaming.GetComponent<TagComponent>().Tag = m_RenamingString;
             m_Renaming.Clear();
@@ -113,8 +109,7 @@ namespace Crowny
             m_Renaming.GetComponent<TagComponent>().Tag = m_RenamingString;
             m_Renaming.Clear();
         }
-        if ((Input::IsMouseButtonDown(Mouse::ButtonLeft) || Input::IsMouseButtonDown(Mouse::ButtonRight)) &&
-            !ImGui::IsItemClicked())
+        if ((Input::IsMouseButtonDown(Mouse::ButtonLeft) || Input::IsMouseButtonDown(Mouse::ButtonRight)) && !ImGui::IsItemClicked())
         {
             m_Renaming.Clear();
             m_RenamingString.clear();
@@ -133,11 +128,9 @@ namespace Crowny
         auto& rc = entity.GetComponent<RelationshipComponent>();
         String name = tc.Tag.empty() ? "Entity" : tc.Tag.c_str();
 
-        ImGuiTreeNodeFlags selected =
-          (m_SelectedItems.find(entity) != m_SelectedItems.end()) ? ImGuiTreeNodeFlags_Selected : 0;
-        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth |
-                                   ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap |
-                                   ImGuiTreeNodeFlags_OpenOnDoubleClick;
+        ImGuiTreeNodeFlags selected = (m_SelectedItems.find(entity) != m_SelectedItems.end()) ? ImGuiTreeNodeFlags_Selected : 0;
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding |
+                                   ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_OpenOnDoubleClick;
 
         bool open = true;
         if (entity == m_Renaming)
@@ -209,13 +202,11 @@ namespace Crowny
 
         String name = tc.Tag.empty() ? "Entity" : tc.Tag.c_str();
 
-        ImGuiTreeNodeFlags selected =
-          (m_SelectedItems.find(e) != m_SelectedItems.end()) ? ImGuiTreeNodeFlags_Selected : 0;
+        ImGuiTreeNodeFlags selected = (m_SelectedItems.find(e) != m_SelectedItems.end()) ? ImGuiTreeNodeFlags_Selected : 0;
 
         // Is this what's breaking renames?
-        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth |
-                                   ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap |
-                                   ImGuiTreeNodeFlags_Leaf;
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding |
+                                   ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_Leaf;
 
         // else
         {
@@ -343,8 +334,7 @@ namespace Crowny
         if (!m_PreserveHierarchy)
             m_Hierarchy.clear();
         Ref<Scene> activeScene = SceneManager::GetActiveScene();
-        if (ImGui::BeginPopupContextWindow(nullptr,
-                                           ImGuiPopupFlags_NoOpenOverExistingPopup | ImGuiPopupFlags_MouseButtonRight))
+        if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_NoOpenOverExistingPopup | ImGuiPopupFlags_MouseButtonRight))
         {
             if (ImGui::MenuItem("New Entity"))
                 CreateEmptyEntity(activeScene->GetRootEntity());
@@ -377,8 +367,8 @@ namespace Crowny
             UI::ScopedStyle framePadding(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 2.0f));
             UI::ScopedStyle cellPadding(ImGuiStyleVar_CellPadding, ImVec2(0.0f, 0.0f));
 
-            static ImGuiTableFlags flags = ImGuiTableFlags_NoPadInnerX | ImGuiTableFlags_Resizable |
-                                           ImGuiTableFlags_Reorderable | ImGuiTableFlags_ScrollY;
+            static ImGuiTableFlags flags =
+              ImGuiTableFlags_NoPadInnerX | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_ScrollY;
 
             if (ImGui::BeginTable("3ways", 1, flags))
             {
@@ -399,8 +389,7 @@ namespace Crowny
         std::function<void(Entity)> traverse = [&](Entity entity) {
             if (!entity)
                 return;
-            CW_ENGINE_INFO("{0}{1}: {2}", tabs, entity.GetName(),
-                           entity.GetParent() ? entity.GetParent().GetName() : "");
+            CW_ENGINE_INFO("{0}{1}: {2}", tabs, entity.GetName(), entity.GetParent() ? entity.GetParent().GetName() : "");
             tabs += "\t";
             for (auto child : entity.GetComponent<RelationshipComponent>().Children)
                 traverse(child);

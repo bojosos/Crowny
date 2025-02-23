@@ -25,8 +25,7 @@ namespace Crowny
 
     void MonoDevelopCodeEditor::OpenFile(const Path& solutionPath, const Path& filePath, uint32_t line) const
     {
-        String args =
-          "--no-splash \"" + solutionPath.string() + "\" \"" + filePath.string() + ";" + std::to_string(line) + "\"";
+        String args = "--no-splash \"" + solutionPath.string() + "\" \"" + filePath.string() + ";" + std::to_string(line) + "\"";
         PlatformUtils::Exec(m_ExecPath.string() + " " + args); // Will this close the pipe?
     }
 

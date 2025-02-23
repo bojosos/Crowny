@@ -115,8 +115,7 @@ EndProject)";
     {
         static const String guidTemplate = "{0}-{1}-{2}-{3}-{4}";
         String hash = Cryptography::MD5(projectName);
-        String result = fmt::format(guidTemplate, hash.substr(0, 8), hash.substr(8, 4), hash.substr(12, 4),
-                                    hash.substr(16, 4), hash.substr(20, 12));
+        String result = fmt::format(guidTemplate, hash.substr(0, 8), hash.substr(8, 4), hash.substr(12, 4), hash.substr(16, 4), hash.substr(20, 12));
         StringUtils::ToUpper(result);
         return result;
     }
@@ -124,11 +123,9 @@ EndProject)";
     String CSProject::GenerateSolution(CSProjectVersion version, const CodeSolutionData& data)
     {
         Map<CSProjectVersion, String> fileFormatData = {
-            { CSProjectVersion::VS2008, "10.0" },      { CSProjectVersion::VS2010, "11.0" },
-            { CSProjectVersion::VS2012, "12.0" },      { CSProjectVersion::VS2013, "12.0" },
-            { CSProjectVersion::VS2015, "12.0" },      { CSProjectVersion::VS2017, "12.0" },
-            { CSProjectVersion::VS2019, "12.0" },      { CSProjectVersion::VS2022, "12.0" },
-            { CSProjectVersion::MonoDevelop, "12.0" },
+            { CSProjectVersion::VS2008, "10.0" }, { CSProjectVersion::VS2010, "11.0" }, { CSProjectVersion::VS2012, "12.0" },
+            { CSProjectVersion::VS2013, "12.0" }, { CSProjectVersion::VS2015, "12.0" }, { CSProjectVersion::VS2017, "12.0" },
+            { CSProjectVersion::VS2019, "12.0" }, { CSProjectVersion::VS2022, "12.0" }, { CSProjectVersion::MonoDevelop, "12.0" },
         };
 
         StringStream projectEntriesStream;
@@ -140,19 +137,16 @@ EndProject)";
             projectPlatformsStream << fmt::format(ProjectPlatformTemplate, guid);
         }
 
-        return fmt::format(SolutionTemplate, fileFormatData[version], projectEntriesStream.str(),
-                           projectPlatformsStream.str());
+        return fmt::format(SolutionTemplate, fileFormatData[version], projectEntriesStream.str(), projectPlatformsStream.str());
     }
 
     String CSProject::GenerateProject(CSProjectVersion projectVersion, const CodeProjectData& projectData)
     {
-        Map<CSProjectVersion, String> versionData = {
-            { CSProjectVersion::VS2008, "3.5" },      { CSProjectVersion::VS2010, "4.0" },
-            { CSProjectVersion::VS2012, "4.0" },      { CSProjectVersion::VS2013, "12.0" },
-            { CSProjectVersion::VS2015, "13.0" },     { CSProjectVersion::VS2017, "15.0" },
-            { CSProjectVersion::VS2019, "16.0" },     { CSProjectVersion::VS2022, "17.0" },
-            { CSProjectVersion::MonoDevelop, "14.0" }
-        };
+        Map<CSProjectVersion, String> versionData = { { CSProjectVersion::VS2008, "3.5" },      { CSProjectVersion::VS2010, "4.0" },
+                                                      { CSProjectVersion::VS2012, "4.0" },      { CSProjectVersion::VS2013, "12.0" },
+                                                      { CSProjectVersion::VS2015, "13.0" },     { CSProjectVersion::VS2017, "15.0" },
+                                                      { CSProjectVersion::VS2019, "16.0" },     { CSProjectVersion::VS2022, "17.0" },
+                                                      { CSProjectVersion::MonoDevelop, "14.0" } };
 
         StringStream tempStream;
         for (const auto& scriptEntry : projectData.ScriptFiles)
@@ -199,7 +193,7 @@ EndProject)";
         const String projectGUID = GetProjectGUID(projectData.Name);
 
         String langVersion = "9.0";
-        return fmt::format(ProjectTemplate, versionData[projectVersion], langVersion, projectGUID, projectData.Name,
-                           defines, refEntries, projectRefEntries, scriptEntries, nonScriptEntries);
+        return fmt::format(ProjectTemplate, versionData[projectVersion], langVersion, projectGUID, projectData.Name, defines, refEntries,
+                           projectRefEntries, scriptEntries, nonScriptEntries);
     }
 } // namespace Crowny

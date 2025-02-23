@@ -20,10 +20,7 @@
 
 namespace Crowny
 {
-    Font::Font(MSDFData* msdfData, const Ref<Texture>& atlasTexture)
-      : m_MSDFData(msdfData), m_AtlasTexture(atlasTexture)
-    {
-    }
+    Font::Font(MSDFData* msdfData, const Ref<Texture>& atlasTexture) : m_MSDFData(msdfData), m_AtlasTexture(atlasTexture) {}
 
     Font::~Font() { delete m_MSDFData; }
 

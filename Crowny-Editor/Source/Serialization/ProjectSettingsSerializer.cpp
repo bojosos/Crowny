@@ -17,8 +17,7 @@ namespace Crowny
         out << YAML::Key << "EditorCameraPosition" << YAML::Value << settings->EditorCameraPosition;
         out << YAML::Key << "EditorCameraRotation" << YAML::Value << settings->EditorCameraRotation;
         out << YAML::Key << "LastOpenScene" << YAML::Value << settings->LastOpenScenePath;
-        out << YAML::Key << "GizmoMode" << YAML::Value
-            << (uint32_t)settings->GizmoMode; // TODO: Maybe move to project settings
+        out << YAML::Key << "GizmoMode" << YAML::Value << (uint32_t)settings->GizmoMode; // TODO: Maybe move to project settings
         out << YAML::Key << "GizmoLocalMode" << YAML::Value << settings->GizmoLocalMode;
         out << YAML::Key << "LastAssetBrowserEntry" << YAML::Value << settings->LastAssetBrowserSelectedEntry.string();
         out << YAML::Key << "LastSelectedEntity" << YAML::Value << settings->LastSelectedEntityID;

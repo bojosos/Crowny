@@ -65,10 +65,7 @@ namespace Crowny
         }
     }
 
-    ConsoleBuffer::Message::Message(const String& message, Level level)
-      : MessageText(message), LogLevel(level), Hash(0), Timestamp(0)
-    {
-    }
+    ConsoleBuffer::Message::Message(const String& message, Level level) : MessageText(message), LogLevel(level), Hash(0), Timestamp(0) {}
 
     const Vector<ConsoleBuffer::Message>& ConsoleBuffer::GetBuffer()
     {

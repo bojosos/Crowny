@@ -34,10 +34,7 @@ namespace Crowny
 
     void AudioListenerComponent::Initialize() { m_Internal = gAudio().CreateListener(); }
 
-    void AudioListenerComponent::OnTransformChanged(const Transform& transform)
-    {
-        m_Internal->OnTransformChanged(transform);
-    }
+    void AudioListenerComponent::OnTransformChanged(const Transform& transform) { m_Internal->OnTransformChanged(transform); }
 
     void AudioSourceComponent::OnInitialize()
     {
@@ -159,9 +156,7 @@ namespace Crowny
             m_Internal->Stop();
     }
 
-    TextComponent::TextComponent() : ComponentBase()
-    { /* Font = FontManager::Get("default"); */
-    }
+    TextComponent::TextComponent() : ComponentBase() { /* Font = FontManager::Get("default"); */ }
 
     float Rigidbody2DComponent::GetMass() const
     {
@@ -302,10 +297,7 @@ namespace Crowny
         m_CenterOfMass = center;
     }
 
-    void Rigidbody2DComponent::SetInterpolationMode(RigidbodyInterpolation interpolation)
-    {
-        m_InterpolationMode = interpolation;
-    }
+    void Rigidbody2DComponent::SetInterpolationMode(RigidbodyInterpolation interpolation) { m_InterpolationMode = interpolation; }
 
     void Rigidbody2DComponent::SetInertia(float inertia)
     {
@@ -337,10 +329,7 @@ namespace Crowny
         m_Material = material;
     }
 
-    BoxCollider2DComponent::BoxCollider2DComponent() : Collider2D()
-    {
-        m_Material = Physics2D::Get().GetDefaultMaterial();
-    }
+    BoxCollider2DComponent::BoxCollider2DComponent() : Collider2D() { m_Material = Physics2D::Get().GetDefaultMaterial(); }
 
     void BoxCollider2DComponent::SetOffset(const glm::vec2& offset, Entity entity)
     {
@@ -362,10 +351,7 @@ namespace Crowny
         }
     }
 
-    CircleCollider2DComponent::CircleCollider2DComponent() : Collider2D()
-    {
-        m_Material = Physics2D::Get().GetDefaultMaterial();
-    }
+    CircleCollider2DComponent::CircleCollider2DComponent() : Collider2D() { m_Material = Physics2D::Get().GetDefaultMaterial(); }
 
     void CircleCollider2DComponent::SetRadius(float radius, Entity entity)
     {
@@ -389,8 +375,7 @@ namespace Crowny
 
     MonoScript::MonoScript() : m_RuntimeType(nullptr), InstanceId(s_NextAvailableId++) {}
 
-    MonoScript::MonoScript(MonoReflectionType* runtimeType)
-      : m_RuntimeType(runtimeType), InstanceId(s_NextAvailableId++)
+    MonoScript::MonoScript(MonoReflectionType* runtimeType) : m_RuntimeType(runtimeType), InstanceId(s_NextAvailableId++)
     {
         MonoUtils::GetClassName(runtimeType, m_Namespace, m_TypeName);
     }
@@ -677,8 +662,7 @@ namespace Crowny
     static CollisionDataInterop CollisionDataToManaged(const Collision2D& collision)
     {
         CollisionDataInterop output;
-        MonoArray* colliders =
-          mono_array_new(MonoManager::Get().GetDomain(), ScriptEntity::GetMetaData()->ScriptClass->GetInternalPtr(), 2);
+        MonoArray* colliders = mono_array_new(MonoManager::Get().GetDomain(), ScriptEntity::GetMetaData()->ScriptClass->GetInternalPtr(), 2);
 
         ScriptEntity* col1 = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(collision.Colliders[0]);
         if (col1 != nullptr)
@@ -702,8 +686,7 @@ namespace Crowny
         if (m_OnCollisionEnterThunk != nullptr)
         {
             CollisionDataInterop data = CollisionDataToManaged(collision);
-            MonoObject* managedCollision =
-              MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
+            MonoObject* managedCollision = MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
             MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
             MonoUtils::InvokeThunk(m_OnCollisionEnterThunk, instance, managedCollision);
         }
@@ -714,8 +697,7 @@ namespace Crowny
         if (m_OnCollisionStayThunk != nullptr)
         {
             CollisionDataInterop data = CollisionDataToManaged(collision);
-            MonoObject* managedCollision =
-              MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
+            MonoObject* managedCollision = MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
             MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
             MonoUtils::InvokeThunk(m_OnCollisionStayThunk, instance, managedCollision);
         }
@@ -726,8 +708,7 @@ namespace Crowny
         if (m_OnCollisionExitThunk != nullptr)
         {
             CollisionDataInterop data = CollisionDataToManaged(collision);
-            MonoObject* managedCollision =
-              MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
+            MonoObject* managedCollision = MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
             MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
             MonoUtils::InvokeThunk(m_OnCollisionExitThunk, instance, managedCollision);
         }
@@ -738,9 +719,8 @@ namespace Crowny
         if (m_OnTriggerEnterThunk != nullptr)
         {
             MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
-            MonoUtils::InvokeThunk(
-              m_OnTriggerEnterThunk, instance,
-              ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(other)->GetManagedInstance());
+            MonoUtils::InvokeThunk(m_OnTriggerEnterThunk, instance,
+                                   ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(other)->GetManagedInstance());
         }
     }
 
@@ -749,9 +729,8 @@ namespace Crowny
         if (m_OnTriggerStayThunk != nullptr)
         {
             MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
-            MonoUtils::InvokeThunk(
-              m_OnTriggerStayThunk, instance,
-              ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(other)->GetManagedInstance());
+            MonoUtils::InvokeThunk(m_OnTriggerStayThunk, instance,
+                                   ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(other)->GetManagedInstance());
         }
     }
 
@@ -760,9 +739,8 @@ namespace Crowny
         if (m_OnTriggerExitThunk != nullptr)
         {
             MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
-            MonoUtils::InvokeThunk(
-              m_OnTriggerExitThunk, instance,
-              ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(other)->GetManagedInstance());
+            MonoUtils::InvokeThunk(m_OnTriggerExitThunk, instance,
+                                   ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(other)->GetManagedInstance());
         }
     }
 } // namespace Crowny

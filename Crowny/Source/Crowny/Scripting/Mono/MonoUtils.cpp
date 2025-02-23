@@ -39,10 +39,7 @@ namespace Crowny
         return UTF8::FromWide(wideString);
     }
 
-    void MonoUtils::CheckException(MonoException* exception)
-    {
-        CheckException(reinterpret_cast<MonoObject*>(exception));
-    }
+    void MonoUtils::CheckException(MonoException* exception) { CheckException(reinterpret_cast<MonoObject*>(exception)); }
 
     void MonoUtils::CheckException(MonoObject* exception)
     {
@@ -52,13 +49,11 @@ namespace Crowny
             const char* exceptionClassName = mono_class_get_name(exceptionClass);
             ::MonoProperty* exceptionProp = mono_class_get_property_from_name(exceptionClass, "Message");
             ::MonoMethod* exceptionMsgGetter = mono_property_get_get_method(exceptionProp);
-            MonoString* exceptionMsg =
-              (MonoString*)mono_runtime_invoke(exceptionMsgGetter, exception, nullptr, nullptr);
+            MonoString* exceptionMsg = (MonoString*)mono_runtime_invoke(exceptionMsgGetter, exception, nullptr, nullptr);
 
             ::MonoProperty* exceptionStackProp = mono_class_get_property_from_name(exceptionClass, "StackTrace");
             ::MonoMethod* exceptionStackGetter = mono_property_get_get_method(exceptionStackProp);
-            MonoString* exceptionStackTrace =
-              (MonoString*)mono_runtime_invoke(exceptionStackGetter, exception, nullptr, nullptr);
+            MonoString* exceptionStackTrace = (MonoString*)mono_runtime_invoke(exceptionStackGetter, exception, nullptr, nullptr);
 
             const String exceptionString = mono_string_to_utf8(exceptionMsg);
             const String nativeExceptionStackTrace = mono_string_to_utf8(exceptionStackTrace);
@@ -81,8 +76,7 @@ namespace Crowny
             }
             ConsoleBuffer::Get().AddMessage(ConsoleBuffer::Message::Level::Error, exceptionString, callstack);
 #else
-            CW_ENGINE_CRITICAL("Managed exception: {0}:  {1} ---- {2}", exceptionClassName, exceptionString,
-                               nativeExceptionStackTrace);
+            CW_ENGINE_CRITICAL("Managed exception: {0}:  {1} ---- {2}", exceptionClassName, exceptionString, nativeExceptionStackTrace);
 #endif
         }
     }
@@ -93,10 +87,7 @@ namespace Crowny
 
     bool MonoUtils::IsValueType(::MonoClass* monoClass) { return mono_class_is_valuetype(monoClass) != 0; }
 
-    bool MonoUtils::IsSubClassOf(::MonoClass* subClass, ::MonoClass* parent)
-    {
-        return mono_class_is_subclass_of(subClass, parent, true) != 0;
-    }
+    bool MonoUtils::IsSubClassOf(::MonoClass* subClass, ::MonoClass* parent) { return mono_class_is_subclass_of(subClass, parent, true) != 0; }
 
     ::MonoClass* MonoUtils::GetClass(MonoObject* object) { return mono_object_get_class(object); }
 
@@ -176,10 +167,7 @@ namespace Crowny
         }
     }
 
-    MonoObject* MonoUtils::Box(::MonoClass* klass, void* value)
-    {
-        return mono_value_box(MonoManager::Get().GetDomain(), klass, value);
-    }
+    MonoObject* MonoUtils::Box(::MonoClass* klass, void* value) { return mono_value_box(MonoManager::Get().GetDomain(), klass, value); }
 
     void* MonoUtils::Unbox(MonoObject* value) { return mono_object_unbox(value); }
 
@@ -251,10 +239,7 @@ namespace Crowny
         return MonoPrimitiveType::Unknown;
     }
 
-    void MonoUtils::WalkStack(MonoStackWalk walkCallback, void* userData)
-    {
-        mono_stack_walk((::MonoStackWalk)walkCallback, userData);
-    }
+    void MonoUtils::WalkStack(MonoStackWalk walkCallback, void* userData) { mono_stack_walk((::MonoStackWalk)walkCallback, userData); }
 
     ::MonoClass* MonoUtils::GetObjectClass() { return mono_get_object_class(); }
 

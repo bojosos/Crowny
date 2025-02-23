@@ -9,10 +9,8 @@
 namespace Crowny
 {
 
-    VulkanBuffer::VulkanBuffer(VulkanResourceManager* owner, VkBuffer buffer, VmaAllocation allocation,
-                               uint32_t rowPitch, uint32_t slicePitch)
-      : VulkanResource(owner, false), m_Buffer(buffer), m_Allocation(allocation), m_RowPitch(rowPitch),
-        m_SliceHeight(slicePitch)
+    VulkanBuffer::VulkanBuffer(VulkanResourceManager* owner, VkBuffer buffer, VmaAllocation allocation, uint32_t rowPitch, uint32_t slicePitch)
+      : VulkanResource(owner, false), m_Buffer(buffer), m_Allocation(allocation), m_RowPitch(rowPitch), m_SliceHeight(slicePitch)
     {
     }
 
@@ -33,8 +31,7 @@ namespace Crowny
         VkDeviceSize memoryOffset;
         device.GetAllocationInfo(m_Allocation, memory, memoryOffset);
         uint8_t* data;
-        VkResult result =
-          vkMapMemory(device.GetLogicalDevice(), memory, memoryOffset + offset, length, 0, (void**)&data);
+        VkResult result = vkMapMemory(device.GetLogicalDevice(), memory, memoryOffset + offset, length, 0, (void**)&data);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
         return data;
@@ -50,8 +47,7 @@ namespace Crowny
         vkUnmapMemory(device.GetLogicalDevice(), memory);
     }
 
-    void VulkanBuffer::Copy(VulkanCmdBuffer* cmdBuffer, VulkanBuffer* dest, VkDeviceSize srcOffset,
-                            VkDeviceSize dstOffset, VkDeviceSize length)
+    void VulkanBuffer::Copy(VulkanCmdBuffer* cmdBuffer, VulkanBuffer* dest, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize length)
     {
         VkBufferCopy region;
         region.size = length;
@@ -60,8 +56,8 @@ namespace Crowny
         vkCmdCopyBuffer(cmdBuffer->GetHandle(), m_Buffer, dest->GetHandle(), 1, &region);
     }
 
-    void VulkanBuffer::Copy(VulkanCmdBuffer* cmdBuffer, VulkanImage* dest, const VkExtent3D& extent,
-                            const VkImageSubresourceLayers& range, VkImageLayout layout)
+    void VulkanBuffer::Copy(VulkanCmdBuffer* cmdBuffer, VulkanImage* dest, const VkExtent3D& extent, const VkImageSubresourceLayers& range,
+                            VkImageLayout layout)
     {
         VkBufferImageCopy region;
         region.bufferRowLength = m_RowPitch;
@@ -91,8 +87,7 @@ namespace Crowny
 
     VkBufferView VulkanBuffer::GetView(VkFormat format)
     {
-        const auto iter =
-          std::find_if(m_Views.begin(), m_Views.end(), [format](const ViewInfo& x) { return x.Format == format; });
+        const auto iter = std::find_if(m_Views.begin(), m_Views.end(), [format](const ViewInfo& x) { return x.Format == format; });
         if (iter != m_Views.end())
         {
             iter->UseCount++;
@@ -117,8 +112,7 @@ namespace Crowny
 
     void VulkanBuffer::FreeView(VkBufferView view)
     {
-        const auto iter =
-          std::find_if(m_Views.begin(), m_Views.end(), [view](const ViewInfo& x) { return x.View == view; });
+        const auto iter = std::find_if(m_Views.begin(), m_Views.end(), [view](const ViewInfo& x) { return x.View == view; });
         if (iter != m_Views.end())
         {
             CW_ENGINE_ASSERT(iter->UseCount > 0);
@@ -151,9 +145,9 @@ namespace Crowny
     }
 
     VulkanGpuBuffer::VulkanGpuBuffer(BufferType type, BufferUsage usage, uint32_t size)
-      : GpuBuffer(size, usage), m_Buffer(nullptr), m_StagingBuffer(nullptr), m_StagingMemory(nullptr),
-        m_MappedOffset(0), m_MappedSize(0), m_MappedLockOptions(GpuLockOptions::WRITE_ONLY),
-        m_DirectlyMappable(usage == BufferUsage::DYNAMIC_DRAW), m_IsMapped(false), m_SupportsGpuWrites(false)
+      : GpuBuffer(size, usage), m_Buffer(nullptr), m_StagingBuffer(nullptr), m_StagingMemory(nullptr), m_MappedOffset(0), m_MappedSize(0),
+        m_MappedLockOptions(GpuLockOptions::WRITE_ONLY), m_DirectlyMappable(usage == BufferUsage::DYNAMIC_DRAW), m_IsMapped(false),
+        m_SupportsGpuWrites(false)
     {
         auto& device = gVulkanRenderAPI().GetPresentDevice();
 
@@ -255,8 +249,7 @@ namespace Crowny
             {
                 if (m_Buffer->IsBound())
                 {
-                    VulkanBuffer* newBuffer =
-                      CreateBuffer(*gVulkanRenderAPI().GetPresentDevice().get(), m_Size, false, true);
+                    VulkanBuffer* newBuffer = CreateBuffer(*gVulkanRenderAPI().GetPresentDevice().get(), m_Size, false, true);
 
                     if (options != GpuLockOptions::WRITE_DISCARD)
                     {
@@ -295,16 +288,14 @@ namespace Crowny
                 if (m_SupportsGpuWrites)
                 {
                     transferCB->MemoryBarrier(m_Buffer->GetHandle(), VK_ACCESS_SHADER_WRITE_BIT, accessFlags,
-                                              VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-                                                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                                              VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                                               VK_PIPELINE_STAGE_HOST_BIT);
                 }
 
                 transferCB->Flush(true);
                 if (options == GpuLockOptions::READ_WRITE && m_Buffer->IsBound())
                 {
-                    VulkanBuffer* newBuffer =
-                      CreateBuffer(*gVulkanRenderAPI().GetPresentDevice().get(), m_Size, false, true);
+                    VulkanBuffer* newBuffer = CreateBuffer(*gVulkanRenderAPI().GetPresentDevice().get(), m_Size, false, true);
 
                     uint8_t* src = m_Buffer->Map(offset, length);
                     uint8_t* dst = newBuffer->Map(offset, length);
@@ -339,8 +330,8 @@ namespace Crowny
 
             m_Buffer->Copy(transferCB->GetCB(), m_StagingBuffer, offset, 0, length);
 
-            transferCB->MemoryBarrier(m_StagingBuffer->GetHandle(), VK_ACCESS_TRANSFER_WRITE_BIT, accessFlags,
-                                      VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT);
+            transferCB->MemoryBarrier(m_StagingBuffer->GetHandle(), VK_ACCESS_TRANSFER_WRITE_BIT, accessFlags, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                      VK_PIPELINE_STAGE_HOST_BIT);
 
             transferCB->Flush(true);
             CW_ENGINE_ASSERT(!m_Buffer->IsUsed());
@@ -406,8 +397,7 @@ namespace Crowny
                         if (m_MappedOffset > 0 || m_MappedSize != m_Size)
                         {
                             m_Buffer->Copy(transferCB->GetCB(), newBuffer, 0, 0, m_Size);
-                            transferCB->GetCB()->RegisterBuffer(m_Buffer, BufferUseFlagBits::Transfer,
-                                                                VulkanAccessFlagBits::Read);
+                            transferCB->GetCB()->RegisterBuffer(m_Buffer, BufferUseFlagBits::Transfer, VulkanAccessFlagBits::Read);
                         }
 
                         m_Buffer->Destroy();
@@ -418,8 +408,7 @@ namespace Crowny
                 if (m_StagingBuffer != nullptr)
                 {
                     m_StagingBuffer->Copy(transferCB->GetCB(), m_Buffer, 0, m_MappedOffset, m_MappedSize);
-                    transferCB->GetCB()->RegisterBuffer(m_StagingBuffer, BufferUseFlagBits::Transfer,
-                                                        VulkanAccessFlagBits::Read);
+                    transferCB->GetCB()->RegisterBuffer(m_StagingBuffer, BufferUseFlagBits::Transfer, VulkanAccessFlagBits::Read);
                 }
                 else
                     m_Buffer->Update(transferCB->GetCB(), m_StagingMemory, m_MappedOffset, m_MappedSize);
@@ -444,8 +433,8 @@ namespace Crowny
         m_IsMapped = false;
     }
 
-    void VulkanGpuBuffer::CopyData(GpuBuffer& srcBuffer, uint32_t srcOffset, uint32_t dstOffset, uint32_t length,
-                                   bool discard, const Ref<CommandBuffer>& commandBuffer)
+    void VulkanGpuBuffer::CopyData(GpuBuffer& srcBuffer, uint32_t srcOffset, uint32_t dstOffset, uint32_t length, bool discard,
+                                   const Ref<CommandBuffer>& commandBuffer)
     {
         CW_ENGINE_ASSERT(dstOffset + length <= m_Size);
         CW_ENGINE_ASSERT(srcOffset + length <= srcBuffer.GetSize());

@@ -154,19 +154,19 @@ namespace Crowny
         Storage m_Bits{ 0 };
     };
 
-#define CW_FLAGS_OPERATORS(Enum)                                                                                       \
-    inline Flags<Enum, uint32_t> operator|(Enum a, Enum b)                                                             \
-    {                                                                                                                  \
-        Flags<Enum, uint32_t> r(a);                                                                                    \
-        r |= b;                                                                                                        \
-        return r;                                                                                                      \
-    }                                                                                                                  \
-    inline Flags<Enum, uint32_t> operator&(Enum a, Enum b)                                                             \
-    {                                                                                                                  \
-        Flags<Enum, uint32_t> r(a);                                                                                    \
-        r &= b;                                                                                                        \
-        return r;                                                                                                      \
-    }                                                                                                                  \
+#define CW_FLAGS_OPERATORS(Enum)                                                                                                                     \
+    inline Flags<Enum, uint32_t> operator|(Enum a, Enum b)                                                                                           \
+    {                                                                                                                                                \
+        Flags<Enum, uint32_t> r(a);                                                                                                                  \
+        r |= b;                                                                                                                                      \
+        return r;                                                                                                                                    \
+    }                                                                                                                                                \
+    inline Flags<Enum, uint32_t> operator&(Enum a, Enum b)                                                                                           \
+    {                                                                                                                                                \
+        Flags<Enum, uint32_t> r(a);                                                                                                                  \
+        r &= b;                                                                                                                                      \
+        return r;                                                                                                                                    \
+    }                                                                                                                                                \
     inline Flags<Enum, uint32_t> operator~(Enum a) { return ~Flags<Enum, uint32_t>(a); }
 
 } // namespace Crowny

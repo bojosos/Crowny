@@ -108,15 +108,13 @@ namespace Crowny
         Ref<DirectoryEntry> DeserializeLibraryEntries(const Path& libEntriesPath);
 
         bool IsUpToDate(FileEntry* entry) const;
-        Ref<FileEntry> AddAssetInternal(DirectoryEntry* entry, const Path& path,
-                                        const Ref<ImportOptions>& importOptions = nullptr, bool forceReimport = false);
+        Ref<FileEntry> AddAssetInternal(DirectoryEntry* entry, const Path& path, const Ref<ImportOptions>& importOptions = nullptr,
+                                        bool forceReimport = false);
         Ref<DirectoryEntry> AddDirectoryInternal(DirectoryEntry* parent, const Path& path);
         void DeleteAssetInternal(Ref<FileEntry> asset);
         void DeleteDirectoryInternal(Ref<DirectoryEntry> directory);
-        bool ReimportAssetInternal(FileEntry* entry, const Ref<ImportOptions>& importOptions = nullptr,
-                                   bool forceReimport = false);
-        void CreateInternalParentHierarchy(const Path& fullPath, DirectoryEntry** newHierarchyRoot,
-                                           DirectoryEntry** newHierarchyLeaf);
+        bool ReimportAssetInternal(FileEntry* entry, const Ref<ImportOptions>& importOptions = nullptr, bool forceReimport = false);
+        void CreateInternalParentHierarchy(const Path& fullPath, DirectoryEntry** newHierarchyRoot, DirectoryEntry** newHierarchyLeaf);
 
         Path GetMetadataPath(const Path& path) const;
         bool IsMetadata(const Path& path) const;

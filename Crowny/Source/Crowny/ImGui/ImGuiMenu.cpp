@@ -70,8 +70,7 @@ namespace Crowny
         m_Menus.push_back(menu);
     }
 
-    ImGuiMenuItem::ImGuiMenuItem(const String& title, const String& combination, const EventCallbackFn& onClicked,
-                                 bool* shown)
+    ImGuiMenuItem::ImGuiMenuItem(const String& title, const String& combination, const EventCallbackFn& onClicked, bool* shown)
       : m_Title(title), m_Combination(combination), m_OnClicked(onClicked), m_Shown(shown)
     {
     }
@@ -86,8 +85,7 @@ namespace Crowny
         bool clicked = ImGui::MenuItem(m_Title.c_str(), nullptr, m_Shown);
 
         ImGui::SameLine();
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + maxWidth - ImGui::CalcTextSize(m_Combination.c_str()).x -
-                             2 * ImGui::GetStyle().ItemSpacing.x);
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + maxWidth - ImGui::CalcTextSize(m_Combination.c_str()).x - 2 * ImGui::GetStyle().ItemSpacing.x);
         ImGuiStyle& style = ImGui::GetStyle();
         ImGui::PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]);
         ImGui::Text("%s", m_Combination.c_str());

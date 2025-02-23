@@ -72,10 +72,7 @@ namespace Crowny
         Ref<SerializableFieldData> Data;
     };
 
-    template <typename Archive> void Serialize(Archive& archive, SerializableFieldKey& key)
-    {
-        archive(key.m_FieldIdx, key.m_TypeId);
-    }
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldKey& key) { archive(key.m_FieldIdx, key.m_TypeId); }
 
     template <typename Archive> void Serialize(Archive& archive, FieldEntry& entry) { archive(entry.Key, entry.Data); }
 
@@ -103,10 +100,7 @@ namespace Crowny
 
     template <typename Archive> void Serialize(Archive& archive, SerializableFieldDouble& data) { archive(data.Value); }
 
-    template <typename Archive> void Serialize(Archive& archive, SerializableFieldString& data)
-    {
-        archive(data.Value, data.Null);
-    }
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldString& data) { archive(data.Value, data.Null); }
 
     template <typename Archive> void Serialize(Archive& archive, SerializableFieldEntity& data)
     {
@@ -141,25 +135,18 @@ namespace Crowny
         archive(objectInfo.m_TypeInfo, objectInfo.m_BaseClass, objectInfo.m_Fields);
     }
 
-    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoPrimitive& primitiveInfo)
-    {
-        archive(primitiveInfo.m_Type);
-    }
+    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoPrimitive& primitiveInfo) { archive(primitiveInfo.m_Type); }
 
     template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoEnum& enumInfo)
     {
         archive(enumInfo.m_UnderlyingType, enumInfo.m_TypeNamespace, enumInfo.m_TypeName);
     }
 
-    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoArray& arrayInfo)
-    {
-        archive(arrayInfo.m_ElementType);
-    }
+    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoArray& arrayInfo) { archive(arrayInfo.m_ElementType); }
 
     template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoObject& objectInfo)
     {
-        archive(objectInfo.m_TypeName, objectInfo.m_TypeNamespace, objectInfo.m_ValueType, objectInfo.m_TypeId,
-                objectInfo.m_Flags);
+        archive(objectInfo.m_TypeName, objectInfo.m_TypeNamespace, objectInfo.m_ValueType, objectInfo.m_TypeId, objectInfo.m_Flags);
     }
 
     template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoEntity& entityInfo) {}
@@ -181,8 +168,7 @@ namespace Crowny
 
     template <typename Archive> void Serialize(Archive& archive, SerializableMemberInfo& memberInfo)
     {
-        archive(memberInfo.m_Name, memberInfo.m_TypeInfo, memberInfo.m_FieldId, memberInfo.m_Flags,
-                memberInfo.m_ParentTypeId);
+        archive(memberInfo.m_Name, memberInfo.m_TypeInfo, memberInfo.m_FieldId, memberInfo.m_Flags, memberInfo.m_ParentTypeId);
     }
 
     void ScriptSerializer::Serialize(SerializableObject* object)
@@ -215,8 +201,7 @@ namespace Crowny
             {
                 if (field->IsSerializable())
                 {
-                    Ref<SerializableFieldKey> key =
-                      CreateRef<SerializableFieldKey>(field->m_ParentTypeId, field->m_FieldId);
+                    Ref<SerializableFieldKey> key = CreateRef<SerializableFieldKey>(field->m_ParentTypeId, field->m_FieldId);
                     Ref<SerializableFieldData> data = object.GetFieldData(field);
                     FieldEntry& entry = entries.emplace_back();
                     entry.Key = key;

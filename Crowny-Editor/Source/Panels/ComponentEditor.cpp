@@ -119,17 +119,15 @@ namespace Crowny
                     const auto& entityBehaviours = ScriptInfoManager::Get().GetEntityBehaviours();
                     for (const auto& [name, klass] : entityBehaviours)
                     {
-                        if (klass->GetFullName() ==
-                            ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetFullName())
+                        if (klass->GetFullName() == ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetFullName())
                             continue;
                         bool exists = false;
                         if (entity.HasComponent<MonoScriptComponent>())
                         {
                             const auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
-                            const String captureName=name;
-                            if (std::find_if(scripts.begin(), scripts.end(), [&](const auto& script) {
-                                    return script.GetTypeName() == captureName;
-                                }) != scripts.end())
+                            const String captureName = name;
+                            if (std::find_if(scripts.begin(), scripts.end(),
+                                             [&](const auto& script) { return script.GetTypeName() == captureName; }) != scripts.end())
                                 exists = true;
                         }
                         if (!exists && StringUtils::IsSearchMathing(name, s_SearchString))
@@ -144,27 +142,25 @@ namespace Crowny
                     }
                     if (entityBehaviours.find(s_SearchString) == entityBehaviours.end())
                     {
-                        std::regex validClassName = std::regex(
-                          "[A-Za-z_][A-Za-z0-9_]*"); // This is not technically correct, but it should work just fine
-                                                     // First this allows for keyword classes (which can be used using @
-                                                     // in front of class names) Also not all Unicode stuff, but who is
-                                                     // going to use Unicode in class names
+                        std::regex validClassName =
+                          std::regex("[A-Za-z_][A-Za-z0-9_]*"); // This is not technically correct, but it should work just fine
+                                                                // First this allows for keyword classes (which can be used using @
+                                                                // in front of class names) Also not all Unicode stuff, but who is
+                                                                // going to use Unicode in class names
                         if (std::regex_match(s_SearchString, validClassName))
                         {
-                            if (ImGui::Button("Create new script") ||
-                                Input::IsKeyPressed(Key::Enter)) // Create a new script with the search string
+                            if (ImGui::Button("Create new script") || Input::IsKeyPressed(Key::Enter)) // Create a new script with the search string
                             {
-                                String defaultContents = FileSystem::ReadTextFile(
-                                  "C:\\dev\\Crowny\\Crowny-Editor\\Resources\\Default\\DefaultScript.cs"); // TODO:
-                                                                                                           // Don't load
-                                                                                                           // this every
-                                                                                                           // time
+                                String defaultContents =
+                                  FileSystem::ReadTextFile("C:\\dev\\Crowny\\Crowny-Editor\\Resources\\Default\\DefaultScript.cs"); // TODO:
+                                                                                                                                    // Don't load
+                                                                                                                                    // this every
+                                                                                                                                    // time
                                 // This should create a script object and maybe call a serialize on it?
-                                String script = StringUtils::Replace(
-                                  defaultContents, "#NAMESPACE#", Editor::Get().GetProjectPath().filename().string());
+                                String script =
+                                  StringUtils::Replace(defaultContents, "#NAMESPACE#", Editor::Get().GetProjectPath().filename().string());
                                 script = StringUtils::Replace(script, "#CLASSNAME#", s_SearchString);
-                                Path path = EditorUtils::GetUniquePath(ProjectLibrary::Get().GetAssetFolder() /
-                                                                       (s_SearchString + ".cs"));
+                                Path path = EditorUtils::GetUniquePath(ProjectLibrary::Get().GetAssetFolder() / (s_SearchString + ".cs"));
                                 FileSystem::WriteTextFile(path, script);
                                 ProjectLibrary::Get().Refresh(path);
                                 ImGui::CloseCurrentPopup();

@@ -61,10 +61,7 @@ namespace Crowny
         VulkanResourceManager(VulkanDevice& device);
         ~VulkanResourceManager();
 
-        template <class Type, class... Args> Type* Create(Args... args)
-        {
-            return new Type(this, std::forward<Args>(args)...);
-        }
+        template <class Type, class... Args> Type* Create(Args... args) { return new Type(this, std::forward<Args>(args)...); }
 
         VulkanDevice& GetDevice() const { return m_Device; }
 

@@ -32,20 +32,15 @@ namespace Crowny
         void SetUniformBlockBuffer(const String& name, const Ref<UniformBufferBlock>& uniformBuffer);
         virtual void SetUniformBlockBuffer(uint32_t set, uint32_t slot, const Ref<UniformBufferBlock>& uniformBuffer);
 
-        virtual void SetTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture,
-                                const TextureSurface& surface = TextureSurface::COMPLETE);
-        void SetTexture(ShaderType type, const String& name, const Ref<Texture>& texture,
-                        const TextureSurface& surface = TextureSurface::COMPLETE);
+        virtual void SetTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture, const TextureSurface& surface = TextureSurface::COMPLETE);
+        void SetTexture(ShaderType type, const String& name, const Ref<Texture>& texture, const TextureSurface& surface = TextureSurface::COMPLETE);
 
         // virtual void SetLoadStoreTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture);
         // virtual void SetBuffer(uint32_t set, uint32_t slot, const Ref<GpuBuffer>& buffer);
         virtual void SetSamplerState(uint32_t set, uint32_t slot, const Ref<SamplerState>& sampler);
 
         const Ref<UniformBufferBlock>& GetUniformBlockBuffer(uint32_t slot, uint32_t set) const;
-        const Ref<UniformDesc>& GetUniformDesc(ShaderType shaderType) const
-        {
-            return m_ParamInfo->GetUniformDesc(shaderType);
-        }
+        const Ref<UniformDesc>& GetUniformDesc(ShaderType shaderType) const { return m_ParamInfo->GetUniformDesc(shaderType); }
         static Ref<UniformParams> Create(const Ref<GraphicsPipeline>& pipeline);
 
         const static GpuDataParameterInfos ParameterInfo;

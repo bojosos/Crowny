@@ -33,10 +33,7 @@ namespace Crowny
         {
             ScopedStyle(const ScopedStyle&) = delete;
             ScopedStyle operator=(const ScopedStyle&) = delete;
-            template <typename T> ScopedStyle(ImGuiStyleVar styleVar, const T& value)
-            {
-                ImGui::PushStyleVar(styleVar, value);
-            }
+            template <typename T> ScopedStyle(ImGuiStyleVar styleVar, const T& value) { ImGui::PushStyleVar(styleVar, value); }
             ~ScopedStyle() { ImGui::PopStyleVar(); }
         };
 
@@ -131,8 +128,7 @@ namespace Crowny
 
         static inline ImRect RectOffset(const ImRect& rect, ImVec2 xy) { return RectOffset(rect, xy.x, xy.y); }
 
-        static void DrawItemActivityOutline(float rounding = 0.0f, bool drawWhenInactive = false,
-                                            ImColor colourWhenActive = ImColor(80, 80, 80))
+        static void DrawItemActivityOutline(float rounding = 0.0f, bool drawWhenInactive = false, ImColor colourWhenActive = ImColor(80, 80, 80))
         {
             auto* drawList = ImGui::GetWindowDrawList();
             const ImRect rect = RectExpanded(GetItemRect(), 1.0f, 1.0f);
@@ -189,9 +185,8 @@ namespace Crowny
 
             const float width = fullWidth ? ImGui::GetWindowWidth() : ImGui::GetContentRegionAvail().x;
             const ImVec2 cursor = ImGui::GetCursorScreenPos();
-            ImGui::GetWindowDrawList()->AddLine(ImVec2(cursor.x + offsetX, cursor.y + offsetY),
-                                                ImVec2(cursor.x + width, cursor.y + offsetY), IM_COL32(26, 26, 26, 255),
-                                                1.0f);
+            ImGui::GetWindowDrawList()->AddLine(ImVec2(cursor.x + offsetX, cursor.y + offsetY), ImVec2(cursor.x + width, cursor.y + offsetY),
+                                                IM_COL32(26, 26, 26, 255), 1.0f);
 
             if (fullWidth)
             {
@@ -202,24 +197,19 @@ namespace Crowny
             }
         }
 
-        static void DrawButtonImage(const Ref<Texture>& imageNormal, const Ref<Texture>& imageHovered,
-                                    const Ref<Texture>& imagePressed, ImU32 tintNormal, ImU32 tintHovered,
-                                    ImU32 tintPressed, ImVec2 rectMin, ImVec2 rectMax)
+        static void DrawButtonImage(const Ref<Texture>& imageNormal, const Ref<Texture>& imageHovered, const Ref<Texture>& imagePressed,
+                                    ImU32 tintNormal, ImU32 tintHovered, ImU32 tintPressed, ImVec2 rectMin, ImVec2 rectMax)
         {
             auto* drawList = ImGui::GetWindowDrawList();
             if (ImGui::IsItemActive())
-                drawList->AddImage(ImGui_ImplVulkan_AddTexture(imagePressed), rectMin, rectMax, ImVec2(0, 1),
-                                   ImVec2(1, 0), tintPressed);
+                drawList->AddImage(ImGui_ImplVulkan_AddTexture(imagePressed), rectMin, rectMax, ImVec2(0, 1), ImVec2(1, 0), tintPressed);
             else if (ImGui::IsItemHovered())
-                drawList->AddImage(ImGui_ImplVulkan_AddTexture(imageHovered), rectMin, rectMax, ImVec2(0, 1),
-                                   ImVec2(1, 0), tintHovered);
+                drawList->AddImage(ImGui_ImplVulkan_AddTexture(imageHovered), rectMin, rectMax, ImVec2(0, 1), ImVec2(1, 0), tintHovered);
             else
-                drawList->AddImage(ImGui_ImplVulkan_AddTexture(imageNormal), rectMin, rectMax, ImVec2(0, 1),
-                                   ImVec2(1, 0), tintNormal);
+                drawList->AddImage(ImGui_ImplVulkan_AddTexture(imageNormal), rectMin, rectMax, ImVec2(0, 1), ImVec2(1, 0), tintNormal);
         }
 
-        static void DrawButtonImage(const Ref<Texture>& image, ImU32 tintNormal, ImU32 tintHovered, ImU32 tintPressed,
-                                    ImRect rectangle)
+        static void DrawButtonImage(const Ref<Texture>& image, ImU32 tintNormal, ImU32 tintHovered, ImU32 tintPressed, ImRect rectangle)
         {
             DrawButtonImage(image, image, image, tintNormal, tintHovered, tintPressed, rectangle.Min, rectangle.Max);
         }
@@ -229,8 +219,7 @@ namespace Crowny
             return ImGui::IsItemHovered() && GImGui->HoveredIdTimer > delayInSeconds;
         }
 
-        static void SetTooltip(const StringView text, float delayInSeconds = 0.02f, bool allowWhenDisabled = true,
-                               ImVec2 padding = ImVec2(5, 5))
+        static void SetTooltip(const StringView text, float delayInSeconds = 0.02f, bool allowWhenDisabled = true, ImVec2 padding = ImVec2(5, 5))
         {
             if (IsItemHovered(delayInSeconds, allowWhenDisabled ? ImGuiHoveredFlags_AllowWhenDisabled : 0))
             {
@@ -257,92 +246,87 @@ namespace Crowny
             PopID();
         }
 
-        static bool InputUInt32(const char* label, uint32_t* v, uint32_t step = 1, uint32_t step_fast = 100,
-                                ImGuiInputTextFlags flags = 0)
+        static bool InputUInt32(const char* label, uint32_t* v, uint32_t step = 1, uint32_t step_fast = 100, ImGuiInputTextFlags flags = 0)
         {
             return ImGui::InputScalar(label, ImGuiDataType_U32, v, &step, &step_fast, "%d", flags);
         }
 
-        static bool DragFloat(const char* label, float* v, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f,
-                              const char* format = "%.3f", ImGuiSliderFlags flags = 0)
+        static bool DragFloat(const char* label, float* v, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f",
+                              ImGuiSliderFlags flags = 0)
         {
             return ImGui::DragScalar(label, ImGuiDataType_Float, v, v_speed, &v_min, &v_max, format, flags);
         }
 
-        static bool DragDouble(const char* label, double* v, float v_speed = 1.0f, double v_min = 0.0,
-                               double v_max = 0.0, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
+        static bool DragDouble(const char* label, double* v, float v_speed = 1.0f, double v_min = 0.0, double v_max = 0.0,
+                               const char* format = "%.3f", ImGuiSliderFlags flags = 0)
         {
             return ImGui::DragScalar(label, ImGuiDataType_Double, v, v_speed, &v_min, &v_max, format, flags);
         }
 
-        static bool DragInt8(const char* label, int8_t* v, float v_speed = 1.0f, int8_t v_min = 0, int8_t v_max = 0,
-                             const char* format = "%d", ImGuiSliderFlags flags = 0)
+        static bool DragInt8(const char* label, int8_t* v, float v_speed = 1.0f, int8_t v_min = 0, int8_t v_max = 0, const char* format = "%d",
+                             ImGuiSliderFlags flags = 0)
         {
             return ImGui::DragScalar(label, ImGuiDataType_S8, v, v_speed, &v_min, &v_max, format, flags);
         }
 
-        static bool DragInt16(const char* label, int16_t* v, float v_speed = 1.0f, int16_t v_min = 0, int16_t v_max = 0,
-                              const char* format = "%d", ImGuiSliderFlags flags = 0)
+        static bool DragInt16(const char* label, int16_t* v, float v_speed = 1.0f, int16_t v_min = 0, int16_t v_max = 0, const char* format = "%d",
+                              ImGuiSliderFlags flags = 0)
         {
             return ImGui::DragScalar(label, ImGuiDataType_S16, v, v_speed, &v_min, &v_max, format, flags);
         }
 
-        static bool DragInt32(const char* label, int32_t* v, float v_speed = 1.0f, int32_t v_min = 0, int32_t v_max = 0,
-                              const char* format = "%d", ImGuiSliderFlags flags = 0)
+        static bool DragInt32(const char* label, int32_t* v, float v_speed = 1.0f, int32_t v_min = 0, int32_t v_max = 0, const char* format = "%d",
+                              ImGuiSliderFlags flags = 0)
         {
             return ImGui::DragScalar(label, ImGuiDataType_S32, v, v_speed, &v_min, &v_max, format, flags);
         }
 
-        static bool DragInt64(const char* label, int64_t* v, float v_speed = 1.0f, int64_t v_min = 0, int64_t v_max = 0,
-                              const char* format = "%d", ImGuiSliderFlags flags = 0)
+        static bool DragInt64(const char* label, int64_t* v, float v_speed = 1.0f, int64_t v_min = 0, int64_t v_max = 0, const char* format = "%d",
+                              ImGuiSliderFlags flags = 0)
         {
             return ImGui::DragScalar(label, ImGuiDataType_S64, v, v_speed, &v_min, &v_max, format, flags);
         }
 
-        static bool DragUInt8(const char* label, uint8_t* v, float v_speed = 1.0f, uint8_t v_min = 0, uint8_t v_max = 0,
-                              const char* format = "%d", ImGuiSliderFlags flags = 0)
+        static bool DragUInt8(const char* label, uint8_t* v, float v_speed = 1.0f, uint8_t v_min = 0, uint8_t v_max = 0, const char* format = "%d",
+                              ImGuiSliderFlags flags = 0)
         {
             return ImGui::DragScalar(label, ImGuiDataType_U8, v, v_speed, &v_min, &v_max, format, flags);
         }
 
-        static bool DragUInt16(const char* label, uint16_t* v, float v_speed = 1.0f, uint16_t v_min = 0,
-                               uint16_t v_max = 0, const char* format = "%d", ImGuiSliderFlags flags = 0)
+        static bool DragUInt16(const char* label, uint16_t* v, float v_speed = 1.0f, uint16_t v_min = 0, uint16_t v_max = 0,
+                               const char* format = "%d", ImGuiSliderFlags flags = 0)
         {
             return ImGui::DragScalar(label, ImGuiDataType_U16, v, v_speed, &v_min, &v_max, format, flags);
         }
 
-        static bool DragUInt32(const char* label, uint32_t* v, float v_speed = 1.0f, uint32_t v_min = 0,
-                               uint32_t v_max = 0, const char* format = "%d", ImGuiSliderFlags flags = 0)
+        static bool DragUInt32(const char* label, uint32_t* v, float v_speed = 1.0f, uint32_t v_min = 0, uint32_t v_max = 0,
+                               const char* format = "%d", ImGuiSliderFlags flags = 0)
         {
             return ImGui::DragScalar(label, ImGuiDataType_U32, v, v_speed, &v_min, &v_max, format, flags);
         }
 
-        static bool DragUInt64(const char* label, uint64_t* v, float v_speed = 1.0f, uint64_t v_min = 0,
-                               uint64_t v_max = 0, const char* format = "%d", ImGuiSliderFlags flags = 0)
+        static bool DragUInt64(const char* label, uint64_t* v, float v_speed = 1.0f, uint64_t v_min = 0, uint64_t v_max = 0,
+                               const char* format = "%d", ImGuiSliderFlags flags = 0)
         {
             return ImGui::DragScalar(label, ImGuiDataType_U64, v, v_speed, &v_min, &v_max, format, flags);
         }
 
-        static bool InputInt8(const char* label, int8_t* v, int8_t step = 1, int8_t step_fast = 1,
-                              ImGuiInputTextFlags flags = 0)
+        static bool InputInt8(const char* label, int8_t* v, int8_t step = 1, int8_t step_fast = 1, ImGuiInputTextFlags flags = 0)
         {
             return ImGui::InputScalar(label, ImGuiDataType_S8, v, &step, &step_fast, "%d", flags);
         }
 
-        static bool InputInt16(const char* label, int16_t* v, int16_t step = 1, int16_t step_fast = 10,
-                               ImGuiInputTextFlags flags = 0)
+        static bool InputInt16(const char* label, int16_t* v, int16_t step = 1, int16_t step_fast = 10, ImGuiInputTextFlags flags = 0)
         {
             return ImGui::InputScalar(label, ImGuiDataType_S16, v, &step, &step_fast, "%d", flags);
         }
 
-        static bool InputInt32(const char* label, int32_t* v, int32_t step = 1, int32_t step_fast = 100,
-                               ImGuiInputTextFlags flags = 0)
+        static bool InputInt32(const char* label, int32_t* v, int32_t step = 1, int32_t step_fast = 100, ImGuiInputTextFlags flags = 0)
         {
             return ImGui::InputScalar(label, ImGuiDataType_S32, v, &step, &step_fast, "%d", flags);
         }
 
-        static bool InputInt64(const char* label, int64_t* v, int64_t step = 1, int64_t step_fast = 1000,
-                               ImGuiInputTextFlags flags = 0)
+        static bool InputInt64(const char* label, int64_t* v, int64_t step = 1, int64_t step_fast = 1000, ImGuiInputTextFlags flags = 0)
         {
             return ImGui::InputScalar(label, ImGuiDataType_S64, v, &step, &step_fast, "%d", flags);
         }
@@ -387,10 +371,8 @@ namespace Crowny
                 ImGui::PushClipRect(windowRect.Min, windowRect.Max, false);
                 const ImColor col1 = ImGui::GetStyleColorVec4(ImGuiCol_PopupBg); // Colours::Theme::backgroundPopup;
                 const ImColor col2 = UI::ColourWithMultipliedValue(col1, 0.8f);
-                ImGui::GetWindowDrawList()->AddRectFilledMultiColor(windowRect.Min, windowRect.Max, col1, col1, col2,
-                                                                    col2);
-                ImGui::GetWindowDrawList()->AddRect(windowRect.Min, windowRect.Max,
-                                                    UI::ColourWithMultipliedValue(col1, 1.1f));
+                ImGui::GetWindowDrawList()->AddRectFilledMultiColor(windowRect.Min, windowRect.Max, col1, col1, col2, col2);
+                ImGui::GetWindowDrawList()->AddRect(windowRect.Min, windowRect.Max, UI::ColourWithMultipliedValue(col1, 1.1f));
                 ImGui::PopClipRect();
 
                 // Popped in EndPopup()
@@ -412,10 +394,8 @@ namespace Crowny
                 ImGui::PushClipRect(windowRect.Min, windowRect.Max, false);
                 const ImColor col1 = ImGui::GetStyleColorVec4(ImGuiCol_PopupBg);
                 const ImColor col2 = UI::ColourWithMultipliedValue(col1, 0.8f);
-                ImGui::GetWindowDrawList()->AddRectFilledMultiColor(windowRect.Min, windowRect.Max, col1, col1, col2,
-                                                                    col2);
-                ImGui::GetWindowDrawList()->AddRect(windowRect.Min, windowRect.Max,
-                                                    UI::ColourWithMultipliedValue(col1, 1.1f));
+                ImGui::GetWindowDrawList()->AddRectFilledMultiColor(windowRect.Min, windowRect.Max, col1, col1, col2, col2);
+                ImGui::GetWindowDrawList()->AddRect(windowRect.Min, windowRect.Max, UI::ColourWithMultipliedValue(col1, 1.1f));
                 ImGui::PopClipRect();
 
                 // Popped in EndPopup()
@@ -434,8 +414,7 @@ namespace Crowny
 
         static bool SearchWidget(String& searchString, const char* hint = "Search...", bool* grabFocus = nullptr);
 
-        static bool ScriptSearchPopup(const String& id, String& selectedScript, bool* cleared = nullptr,
-                                      const char* hint = "Search Entities",
+        static bool ScriptSearchPopup(const String& id, String& selectedScript, bool* cleared = nullptr, const char* hint = "Search Entities",
                                       const ImVec2& size = ImVec2{ 250.0f, 350.0f })
         {
             UI::ScopedColor popupBG(ImGuiCol_PopupBg, IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255));
@@ -474,12 +453,9 @@ namespace Crowny
 
                 if (cleared != nullptr)
                 {
-                    UI::ScopedColor buttonColor1(ImGuiCol_Button,
-                                                 UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.0f));
-                    UI::ScopedColor buttonColor2(ImGuiCol_ButtonHovered,
-                                                 UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.2f));
-                    UI::ScopedColor buttonColor3(ImGuiCol_ButtonActive,
-                                                 UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 0.9f));
+                    UI::ScopedColor buttonColor1(ImGuiCol_Button, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.0f));
+                    UI::ScopedColor buttonColor2(ImGuiCol_ButtonHovered, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.2f));
+                    UI::ScopedColor buttonColor3(ImGuiCol_ButtonActive, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 0.9f));
 
                     UI::ScopedStyle border(ImGuiStyleVar_FrameBorderSize, 0.0f);
 
@@ -522,8 +498,7 @@ namespace Crowny
                         const auto& classes = ScriptInfoManager::Get().GetEntityBehaviours();
                         for (auto [name, klass] : classes)
                         {
-                            if (klass->GetFullName() ==
-                                ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetFullName())
+                            if (klass->GetFullName() == ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetFullName())
                                 continue;
                             if (!searchString.empty() && !StringUtils::IsSearchMathing(name, searchString))
                                 continue;
@@ -656,8 +631,7 @@ namespace Crowny
                         for (uint32_t i = 0; i < 32; i++)
                         {
                             const String& layerName = Physics2D::Get().GetLayerName(i);
-                            if (layerName.empty() ||
-                                !searchString.empty() && !StringUtils::IsSearchMathing(layerName, searchString))
+                            if (layerName.empty() || !searchString.empty() && !StringUtils::IsSearchMathing(layerName, searchString))
                                 continue;
 
                             bool isSelected = (current == i);
@@ -689,8 +663,7 @@ namespace Crowny
             return modified;
         }
 
-        static bool EntitySearchPopup(const String& id, Entity& selectedEntity, bool* cleared = nullptr,
-                                      const char* hint = "Search Entities",
+        static bool EntitySearchPopup(const String& id, Entity& selectedEntity, bool* cleared = nullptr, const char* hint = "Search Entities",
                                       const ImVec2& size = ImVec2{ 250.0f, 350.0f })
         {
             UI::ScopedColor popupBG(ImGuiCol_PopupBg, IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255));
@@ -729,12 +702,9 @@ namespace Crowny
 
                 if (cleared != nullptr)
                 {
-                    UI::ScopedColor buttonColor1(ImGuiCol_Button,
-                                                 UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.0f));
-                    UI::ScopedColor buttonColor2(ImGuiCol_ButtonHovered,
-                                                 UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.2f));
-                    UI::ScopedColor buttonColor3(ImGuiCol_ButtonActive,
-                                                 UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 0.9f));
+                    UI::ScopedColor buttonColor1(ImGuiCol_Button, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.0f));
+                    UI::ScopedColor buttonColor2(ImGuiCol_ButtonHovered, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.2f));
+                    UI::ScopedColor buttonColor3(ImGuiCol_ButtonActive, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 0.9f));
 
                     UI::ScopedStyle border(ImGuiStyleVar_FrameBorderSize, 0.0f);
 
@@ -813,9 +783,8 @@ namespace Crowny
             return modified;
         }
 
-        static bool AssetSearchPopup(const String& id, AssetType assetType, AssetHandle<Asset>& assetHandle,
-                                     bool* cleared = nullptr, const char* hint = "Search Entities",
-                                     const ImVec2& size = ImVec2{ 250.0f, 350.0f })
+        static bool AssetSearchPopup(const String& id, AssetType assetType, AssetHandle<Asset>& assetHandle, bool* cleared = nullptr,
+                                     const char* hint = "Search Entities", const ImVec2& size = ImVec2{ 250.0f, 350.0f })
         {
             UI::ScopedColor popupBG(ImGuiCol_PopupBg, IM_COL32(36 * 1.6f, 36 * 1.6f, 36 * 1.6f, 255));
 
@@ -853,12 +822,9 @@ namespace Crowny
 
                 if (cleared != nullptr)
                 {
-                    UI::ScopedColor buttonColor1(ImGuiCol_Button,
-                                                 UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.0f));
-                    UI::ScopedColor buttonColor2(ImGuiCol_ButtonHovered,
-                                                 UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.2f));
-                    UI::ScopedColor buttonColor3(ImGuiCol_ButtonActive,
-                                                 UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 0.9f));
+                    UI::ScopedColor buttonColor1(ImGuiCol_Button, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.0f));
+                    UI::ScopedColor buttonColor2(ImGuiCol_ButtonHovered, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 1.2f));
+                    UI::ScopedColor buttonColor3(ImGuiCol_ButtonActive, UI::ColourWithMultipliedValue(IM_COL32(36, 36, 36, 255), 0.9f));
 
                     UI::ScopedStyle border(ImGuiStyleVar_FrameBorderSize, 0.0f);
 
@@ -991,8 +957,7 @@ namespace Crowny
             return modified;
         }
 
-        template <typename AssetType>
-        static bool AssetReference(const String& label, AssetHandle<AssetType>& assetHandle)
+        template <typename AssetType> static bool AssetReference(const String& label, AssetHandle<AssetType>& assetHandle)
         {
             bool modified = false;
 
@@ -1211,8 +1176,7 @@ namespace Crowny
             return nullptr;
         }
 
-        static const FileEntry* AcceptAssetPayload(
-          std::function<bool(const FileEntry*)>&& assetPayloadCallback = nullptr)
+        static const FileEntry* AcceptAssetPayload(std::function<bool(const FileEntry*)>&& assetPayloadCallback = nullptr)
         {
             const ImGuiPayload* payload = ImGui::GetDragDropPayload();
             if (payload->IsDataType(ID_ASSET_ITEM_PAYLOAD))
@@ -1245,13 +1209,9 @@ namespace Crowny
             ImGui::SetDragDropPayload("Entity_ID", &tmp, sizeof(uint32_t));
         }
 
-        static void SetAssetPayload(const LibraryEntry* entry)
-        {
-            ImGui::SetDragDropPayload(ID_ASSET_ITEM_PAYLOAD, &entry, sizeof(LibraryEntry*));
-        }
+        static void SetAssetPayload(const LibraryEntry* entry) { ImGui::SetDragDropPayload(ID_ASSET_ITEM_PAYLOAD, &entry, sizeof(LibraryEntry*)); }
 
-        static bool DrawFloatControl(const char* label, float& value, float minValue = 0.0f, float maxValue = 1.0f,
-                                     bool asSlider = false);
+        static bool DrawFloatControl(const char* label, float& value, float minValue = 0.0f, float maxValue = 1.0f, bool asSlider = false);
 
     private:
     };

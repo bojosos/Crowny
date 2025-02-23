@@ -9,8 +9,7 @@
 namespace Crowny
 {
 
-    AudioClip::AudioClip(const Ref<DataStream>& stream, uint32_t streamSize, uint32_t numSamples,
-                         const AudioClipDesc& desc)
+    AudioClip::AudioClip(const Ref<DataStream>& stream, uint32_t streamSize, uint32_t numSamples, const AudioClipDesc& desc)
       : m_StreamSize(streamSize), m_StreamData(stream), m_NumSamples(numSamples), m_Desc(desc)
     {
         if (stream != nullptr)

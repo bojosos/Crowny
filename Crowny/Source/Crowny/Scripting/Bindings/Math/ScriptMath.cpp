@@ -22,10 +22,7 @@ namespace Crowny
 
     void ScriptMath::Internal_InverseAffine(glm::mat4* in, glm::mat4* out) { *out = glm::affineInverse(*in); }
 
-    void ScriptMath::Internal_LookAt(glm::vec3* from, glm::vec3* to, glm::vec3* up, glm::mat4* out)
-    {
-        *out = glm::lookAt(*from, *to, *up);
-    }
+    void ScriptMath::Internal_LookAt(glm::vec3* from, glm::vec3* to, glm::vec3* up, glm::mat4* out) { *out = glm::lookAt(*from, *to, *up); }
 
     float ScriptMath::Internal_Determinant(glm::mat4* in) { return glm::determinant(*in); }
 

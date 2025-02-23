@@ -52,8 +52,7 @@ namespace Crowny
                 {
                     SerializeValueYAML(out, script.GetTypeName().c_str(), YAML::BeginSeq);
 
-                    Ref<SerializableObject> serializableObject =
-                      SerializableObject::CreateFromMonoObject(script.GetManagedInstance());
+                    Ref<SerializableObject> serializableObject = SerializableObject::CreateFromMonoObject(script.GetManagedInstance());
                     serializableObject->SerializeYAML(out);
 
                     EndYAMLSeq(out);
@@ -187,8 +186,7 @@ namespace Crowny
             SerializeValueYAML(out, "Offset", bc2d.GetOffset());
             SerializeValueYAML(out, "Size", bc2d.GetSize());
             SerializeValueYAML(out, "IsTrigger", bc2d.IsTrigger());
-            if (bc2d.GetMaterial().GetUUID() !=
-                Physics2D::Get().GetDefaultMaterial().GetUUID()) // TODO: fix this. shouldn't need to check anything
+            if (bc2d.GetMaterial().GetUUID() != Physics2D::Get().GetDefaultMaterial().GetUUID()) // TODO: fix this. shouldn't need to check anything
                 SerializeValueYAML(out, "Material", bc2d.GetMaterial().GetUUID());
 
             EndYAMLMap(out, "BoxCollider2DComponent");
@@ -237,8 +235,7 @@ namespace Crowny
         SerializeValueYAML(out, "Scene", m_Scene->GetName());
 
         SerializeValueYAML(out, "Entities", YAML::BeginSeq);
-        m_Scene->m_Registry.sort<IDComponent>(
-          [](const IDComponent& lhs, const IDComponent& rhs) { return lhs.Uuid < rhs.Uuid; });
+        m_Scene->m_Registry.sort<IDComponent>([](const IDComponent& lhs, const IDComponent& rhs) { return lhs.Uuid < rhs.Uuid; });
         m_Scene->m_Registry.each([&](auto entityID) {
             Entity entity = { entityID, m_Scene.get() };
             SerializeEntity(out, entity);
@@ -309,8 +306,7 @@ namespace Crowny
                     if (camera)
                     {
                         auto& cc = deserialized.AddComponent<CameraComponent>();
-                        cc.Camera.SetProjectionType(
-                          (SceneCamera::CameraProjection)camera["ProjectionType"].as<uint32_t>());
+                        cc.Camera.SetProjectionType((SceneCamera::CameraProjection)camera["ProjectionType"].as<uint32_t>());
                         cc.Camera.SetPerspectiveVerticalFOV(camera["PerspectiveFOV"].as<float>());
                         cc.Camera.SetPerspectiveNearClip(camera["PerspectiveNear"].as<float>());
                         cc.Camera.SetPerspectiveFarClip(camera["PerspectiveFar"].as<float>());
@@ -352,10 +348,8 @@ namespace Crowny
                         tc.LineSpacing = text["LineSpacing"].as<float>(0.0f);
                         tc.UseKerning = text["UseKerning"].as<bool>(true);
                         DeserializeEnumYAML(text, "Overflow", tc.Overflow, TextOverflow::Overflow);
-                        DeserializeEnumYAML(text, "HorizontalAlignment", tc.HorizontalAlignment,
-                                            TextHorizontalAlignment::Left);
-                        DeserializeEnumYAML(text, "VerticalAlignment", tc.VerticalAlignment,
-                                            TextVerticalAlignment::Top);
+                        DeserializeEnumYAML(text, "HorizontalAlignment", tc.HorizontalAlignment, TextHorizontalAlignment::Left);
+                        DeserializeEnumYAML(text, "VerticalAlignment", tc.VerticalAlignment, TextVerticalAlignment::Top);
                     }
 
                     const YAML::Node& mesh = entity["MeshRendererComponent"];
@@ -419,8 +413,7 @@ namespace Crowny
                         rb2dc.SetMass(rb2d["Mass"].as<float>());
                         rb2dc.SetGravityScale(rb2d["GravityScale"].as<float>());
                         rb2dc.SetLayerMask(rb2d["LayerMask"].as<uint32_t>(0), deserialized);
-                        rb2dc.SetCollisionDetectionMode(
-                          (CollisionDetectionMode2D)rb2d["CollisionDetectionMode"].as<uint32_t>(0));
+                        rb2dc.SetCollisionDetectionMode((CollisionDetectionMode2D)rb2d["CollisionDetectionMode"].as<uint32_t>(0));
                         rb2dc.SetSleepMode((RigidbodySleepMode)rb2d["SleepMode"].as<uint32_t>(1));
                         rb2dc.SetLinearDrag(rb2d["LinearDrag"].as<float>(0.0f));
                         rb2dc.SetAngularDrag(rb2d["AngularDrag"].as<float>(0.05f));
@@ -438,8 +431,7 @@ namespace Crowny
                         {
                             Ref<SerializableObject> obj = SerializableObject::DeserializeYAML(scriptNode.second);
 
-                            MonoClass* monoClass =
-                              MonoManager::Get().FindClass("Sandbox", scriptNode.first.as<String>());
+                            MonoClass* monoClass = MonoManager::Get().FindClass("Sandbox", scriptNode.first.as<String>());
                             CW_ENGINE_ASSERT(monoClass != nullptr);
                             ::MonoClass* rawClass = monoClass->GetInternalPtr();
                             MonoReflectionType* runtimeType = MonoUtils::GetType(rawClass);

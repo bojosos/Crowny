@@ -5,8 +5,7 @@
 
 namespace Crowny
 {
-    ScriptEntityBehaviour::ScriptEntityBehaviour(MonoObject* instance, Entity entity)
-      : ScriptObject(instance), m_TypeMissing(false)
+    ScriptEntityBehaviour::ScriptEntityBehaviour(MonoObject* instance, Entity entity) : ScriptObject(instance), m_TypeMissing(false)
     {
         m_Entity = entity;
         MonoUtils::GetClassName(instance, m_Namespace, m_TypeName);
@@ -62,8 +61,7 @@ namespace Crowny
         // TODO: Fix this. The GetNativeEntity check will probably leak stuff. Need to find a way to delete the managed
         // instance anyways. However might be impossible with the current setup.
         if (!assemblyRefresh && GetNativeEntity()) // Check if my component is destroyed
-            ScriptSceneObjectManager::Get().DestroyScriptComponent(
-              this, GetNativeEntity().GetComponent<MonoScriptComponent>().InstanceId);
+            ScriptSceneObjectManager::Get().DestroyScriptComponent(this, GetNativeEntity().GetComponent<MonoScriptComponent>().InstanceId);
     }
 
     void ScriptEntityBehaviour::NotifyDestroyed() { FreeManagedInstance(); }

@@ -24,8 +24,7 @@ namespace Crowny
         return 0;
     }
 
-    uint64_t Compression::Decompress(uint8_t* dest, int maxDestSize, const uint8_t* src, int srcSize,
-                                     CompressionMethod method)
+    uint64_t Compression::Decompress(uint8_t* dest, int maxDestSize, const uint8_t* src, int srcSize, CompressionMethod method)
     {
         switch (method)
         {

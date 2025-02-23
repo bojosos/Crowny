@@ -50,8 +50,7 @@ namespace Crowny
         Vector<String> dirs = StringUtils::SplitString(virtualPath, "/");
         const String& virtualDir = dirs.front();
 
-        if (m_MountedDirectories.find(virtualDir) == m_MountedDirectories.end() ||
-            m_MountedDirectories[virtualDir].empty())
+        if (m_MountedDirectories.find(virtualDir) == m_MountedDirectories.end() || m_MountedDirectories[virtualDir].empty())
         // return false;
         {
 #ifdef CW_PLATFORM_LINUX // on linux full paths start with /

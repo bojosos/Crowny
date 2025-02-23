@@ -23,8 +23,7 @@ namespace Crowny
         virtual uint32_t GetBufferSize() const = 0;
 
         // TODO: make this take size, not count
-        static Ref<IndexBuffer> Create(uint32_t count, IndexType indexType = IndexType::Index_32,
-                                       BufferUsage usage = BufferUsage::STATIC_DRAW);
+        static Ref<IndexBuffer> Create(uint32_t count, IndexType indexType = IndexType::Index_32, BufferUsage usage = BufferUsage::STATIC_DRAW);
         static Ref<IndexBuffer> Create(uint16_t* indices, uint32_t count, BufferUsage usage = BufferUsage::STATIC_DRAW);
         static Ref<IndexBuffer> Create(uint32_t* indices, uint32_t count, BufferUsage usage = BufferUsage::STATIC_DRAW);
     };

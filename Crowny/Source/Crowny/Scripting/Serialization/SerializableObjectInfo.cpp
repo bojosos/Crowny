@@ -8,8 +8,8 @@
 namespace Crowny
 {
 
-    Ref<SerializableMemberInfo> SerializableObjectInfo::FindMatchingField(
-      const Ref<SerializableMemberInfo>& fieldInfo, const Ref<SerializableTypeInfo>& fieldTypeInfo) const
+    Ref<SerializableMemberInfo> SerializableObjectInfo::FindMatchingField(const Ref<SerializableMemberInfo>& fieldInfo,
+                                                                          const Ref<SerializableTypeInfo>& fieldTypeInfo) const
     {
         const SerializableObjectInfo* objInfo = this;
         while (objInfo != nullptr)
@@ -59,17 +59,11 @@ namespace Crowny
 
     void SerializableFieldInfo::SetValue(MonoObject* instance, void* value) const { m_Field->Set(instance, value); }
 
-    MonoObject* SerializablePropertyInfo::GetAttribute(MonoClass* monoClass)
-    {
-        return m_Property->GetAttribute(monoClass);
-    }
+    MonoObject* SerializablePropertyInfo::GetAttribute(MonoClass* monoClass) { return m_Property->GetAttribute(monoClass); }
 
     MonoObject* SerializablePropertyInfo::GetValue(MonoObject* instance) const { return m_Property->Get(instance); }
 
-    void SerializablePropertyInfo::SetValue(MonoObject* instance, void* value) const
-    {
-        m_Property->Set(instance, value);
-    }
+    void SerializablePropertyInfo::SetValue(MonoObject* instance, void* value) const { m_Property->Set(instance, value); }
 
     bool SerializableTypeInfoPrimitive::Matches(const Ref<SerializableTypeInfo>& typeInfo) const
     {
@@ -144,10 +138,7 @@ namespace Crowny
         return typeInfo->GetType() == SerializableType::Entity;
     }
 
-    ::MonoClass* SerializableTypeInfoEntity::GetMonoClass() const
-    {
-        return ScriptEntity::GetMetaData()->ScriptClass->GetInternalPtr();
-    }
+    ::MonoClass* SerializableTypeInfoEntity::GetMonoClass() const { return ScriptEntity::GetMetaData()->ScriptClass->GetInternalPtr(); }
 
     bool SerializableTypeInfoObject::Matches(const Ref<SerializableTypeInfo>& typeInfo) const
     {

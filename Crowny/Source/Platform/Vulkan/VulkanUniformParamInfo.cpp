@@ -14,8 +14,7 @@
 namespace Crowny
 {
 
-    VulkanUniformParamInfo::VulkanUniformParamInfo(const UniformParamDesc& desc)
-      : UniformParamInfo(desc), m_Layouts(), m_LayoutInfos()
+    VulkanUniformParamInfo::VulkanUniformParamInfo(const UniformParamDesc& desc) : UniformParamInfo(desc), m_Layouts(), m_LayoutInfos()
     {
         VulkanDevice& device = *gVulkanRenderAPI().GetPresentDevice().get();
 

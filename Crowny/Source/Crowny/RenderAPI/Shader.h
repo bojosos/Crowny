@@ -54,8 +54,7 @@ namespace Crowny
         BufferLayout VertexLayout;
 
         BinaryShaderData() = default;
-        BinaryShaderData(const Vector<uint8_t>& data, const String& entryPoint, ShaderType type,
-                         const Ref<UniformDesc>& uniformDesc)
+        BinaryShaderData(const Vector<uint8_t>& data, const String& entryPoint, ShaderType type, const Ref<UniformDesc>& uniformDesc)
           : Data(data), EntryPoint(entryPoint), Type(type), Description(uniformDesc)
         {
         }
@@ -99,8 +98,8 @@ namespace Crowny
         const Ref<ComputePipeline>& GetComputePipeline() const { return m_ComputePipeline; }
 
         const ShaderRenderPassDesc& GetPassDesc() const { return m_ShaderDesc; }
-    private:
 
+    private:
         ShaderRenderPassDesc m_ShaderDesc;
         Ref<GraphicsPipeline> m_GraphicsPipeline;
         Ref<ComputePipeline> m_ComputePipeline;
@@ -111,11 +110,10 @@ namespace Crowny
     public:
         ShaderTechnique() = default;
 
-        ShaderTechnique(const Vector<String>& tags, const ShaderVariation& variation,
-                        const Vector<Ref<ShaderRenderPass>>& renderPasses);
+        ShaderTechnique(const Vector<String>& tags, const ShaderVariation& variation, const Vector<Ref<ShaderRenderPass>>& renderPasses);
 
         static Ref<ShaderTechnique> Create(const Vector<String>& tags, const ShaderVariation& variation,
-                                    const Vector<Ref<ShaderRenderPass>>& renderPasses);
+                                           const Vector<Ref<ShaderRenderPass>>& renderPasses);
         void Compile();
         const Vector<Ref<ShaderRenderPass>>& GetRenderPasses() const { return m_Passes; }
 
@@ -175,6 +173,7 @@ namespace Crowny
         const Ref<UniformDesc>& GetUniformDesc() const;
         static Ref<ShaderStage> Create(const Ref<BinaryShaderData>& shaderData);
         Ref<BufferLayout> GetBufferLayout() const { return m_BufferLayout; }
+
     protected:
         CW_SERIALIZABLE(ShaderStage);
         Ref<BufferLayout> m_BufferLayout;

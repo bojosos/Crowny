@@ -36,18 +36,15 @@ namespace Crowny
         uint32_t GetDepth() const { return m_Params.Depth; }
         TextureFormat GetFormat() const { return m_Params.Format; }
 
-        virtual PixelData Lock(GpuLockOptions options, uint32_t mipLevel = 0, uint32_t face = 0,
-                               uint32_t queueIdx = 0) = 0;
+        virtual PixelData Lock(GpuLockOptions options, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) = 0;
         virtual void Unlock() = 0;
         // virtual void Copy(const Ref<Texture>& target, )
         virtual void ReadData(PixelData& dest, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) = 0;
-        virtual void WriteData(const PixelData& src, uint32_t mipLevel = 0, uint32_t face = 0,
-                               uint32_t queueIdx = 0) = 0;
+        virtual void WriteData(const PixelData& src, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) = 0;
 
         const TextureParameters& GetProperties() const { return m_Params; }
         Ref<TextureView> CreateView(const TextureViewDesc& desc);
-        Ref<TextureView> RequestView(uint32_t mip, uint32_t numMips, uint32_t firstFace, uint32_t numFaces,
-                                     GpuViewUsage usage);
+        Ref<TextureView> RequestView(uint32_t mip, uint32_t numMips, uint32_t firstFace, uint32_t numFaces, GpuViewUsage usage);
 
         Ref<PixelData> AllocatePixelData(uint32_t face, uint32_t mipLevel) const;
 
@@ -61,8 +58,7 @@ namespace Crowny
         static Ref<Texture> BLACK;
 
     protected:
-        UnorderedMap<TextureViewDesc, Ref<TextureView>, TextureView::HashFunction, TextureView::EqualFunction>
-          m_TextureViews;
+        UnorderedMap<TextureViewDesc, Ref<TextureView>, TextureView::HashFunction, TextureView::EqualFunction> m_TextureViews;
         Texture(const TextureParameters& params);
         Texture() = default; // For serialization only
 

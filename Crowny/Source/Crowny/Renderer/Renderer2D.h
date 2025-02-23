@@ -51,8 +51,7 @@ namespace Crowny
          * @param texture Texture to use.
          * @param color Color to draw with.
          */
-        static void FillRect(const glm::mat4& transform, const AssetHandle<Texture>& texture, const glm::vec4& color,
-                             uint32_t entityId);
+        static void FillRect(const glm::mat4& transform, const AssetHandle<Texture>& texture, const glm::vec4& color, uint32_t entityId);
 
         /**
          * @brief Draws a filled Rectangle.
@@ -69,8 +68,7 @@ namespace Crowny
          * @param texture Texture to use.
          * @param color Color to draw with.
          */
-        static void FillRect(const Rect2F& bounds, const AssetHandle<Texture>& texture, const glm::vec4& color,
-                             uint32_t entityId);
+        static void FillRect(const Rect2F& bounds, const AssetHandle<Texture>& texture, const glm::vec4& color, uint32_t entityId);
 
         /**
          * @brief Draws a circle. Thickness controls how 'filled' the circle is. 1.0 means it is full and 0.0 no circle
@@ -83,8 +81,8 @@ namespace Crowny
          * @param fade Fade.
          * @param entityId Id of the object for mouse picking.
          */
-        static void DrawCircle(const glm::mat4& transform, const glm::vec4& color, float thickness = 1.0f,
-                               float fade = 0.005f, int32_t entityId = -1);
+        static void DrawCircle(const glm::mat4& transform, const glm::vec4& color, float thickness = 1.0f, float fade = 0.005f,
+                               int32_t entityId = -1);
 
         /**
          * @brief Draws a line.
@@ -96,8 +94,7 @@ namespace Crowny
          */
         static void DrawLine(const glm::vec3& p1, const glm::vec3& p2, const glm::vec4& color, float thickness = 0.02f);
 
-        static void DrawRect(const glm::vec3& position, const glm::vec2& size, const glm::vec4& color,
-                             float thickness = 0.02f);
+        static void DrawRect(const glm::vec3& position, const glm::vec2& size, const glm::vec4& color, float thickness = 0.02f);
 
         static void DrawRect(const glm::mat4& transform, const glm::vec4& color, float thickness = 0.02f);
 

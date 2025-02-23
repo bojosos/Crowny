@@ -38,12 +38,9 @@ namespace Crowny
     {
     public:
         MeshData() = default;
-        MeshData(uint32_t numVertices, uint32_t numIndices, const BufferLayout& layout,
-                 IndexType indexType = IndexType::Index_32);
-        void SetVertexData(VertexAttribute attribute, const void* data, uint32_t size, uint32_t semanticIdx = 0,
-                           uint32_t streamIdx = 0);
-        void GetVertexData(VertexAttribute attribute, void* data, uint32_t size, uint32_t semanticIdx = 0,
-                           uint32_t streamIdx = 0);
+        MeshData(uint32_t numVertices, uint32_t numIndices, const BufferLayout& layout, IndexType indexType = IndexType::Index_32);
+        void SetVertexData(VertexAttribute attribute, const void* data, uint32_t size, uint32_t semanticIdx = 0, uint32_t streamIdx = 0);
+        void GetVertexData(VertexAttribute attribute, void* data, uint32_t size, uint32_t semanticIdx = 0, uint32_t streamIdx = 0);
         template <typename IndexType> void SetIndexData(void* data, uint32_t indexCount)
         {
             CW_ENGINE_ASSERT(sizeof(IndexType) == GetIndexSize());
@@ -57,18 +54,14 @@ namespace Crowny
         uint32_t GetIndexCount() const { return m_NumIndices; }
         const BufferLayout& GetBufferLayout() const { return m_Layout; }
         IndexType GetIndexType() const { return m_IndexType; }
-        uint32_t GetIndexSize() const
-        {
-            return m_IndexType == IndexType::Index_16 ? sizeof(uint16_t) : sizeof(uint32_t);
-        }
+        uint32_t GetIndexSize() const { return m_IndexType == IndexType::Index_16 ? sizeof(uint16_t) : sizeof(uint32_t); }
         uint32_t GetIndexBufferSize() const { return m_NumIndices * GetIndexSize(); }
         uint32_t GetVertexBufferSize() const { return m_Layout.GetStride() * m_NumVertices; }
         uint8_t* GetVerexBufferData() const { return m_Data + GetIndexBufferSize(); }
 
         uint8_t* GetElementData(const BufferElement& bufferElement) const;
         void CalculateBounds(AABox& outAABox, SphereBounds& outSphereBounds) const;
-        static Ref<MeshData> Combine(const Vector<Ref<MeshData>>& meshes, const Vector<Vector<SubMesh>>& subMeshes,
-                                     Vector<SubMesh>& outSubMeshes);
+        static Ref<MeshData> Combine(const Vector<Ref<MeshData>>& meshes, const Vector<Vector<SubMesh>>& subMeshes, Vector<SubMesh>& outSubMeshes);
 
         static Ref<MeshData> Create(uint32_t vertexCount, uint32_t indexCount, const BufferLayout& bufferLayout,
                                     IndexType indexType = IndexType::Index_32);
@@ -103,15 +96,15 @@ namespace Crowny
         void ReadData(Ref<MeshData>& data, uint32_t queueIdx = 0);
         DrawMode GetDrawMode() { return m_DrawMode; }
 
-        static Ref<Mesh> Create(const Ref<MeshData>& meshData, const Vector<SubMesh>& subMeshes = {},
-                                MeshUsageFlags usage = MeshUsage::Static, DrawMode drawMode = DrawMode::TRIANGLE_LIST);
-        static Ref<Mesh> Create(uint32_t vertexCount, uint32_t indexCount, const BufferLayout& layout,
-                                MeshUsageFlags usage, DrawMode drawMode, IndexType indexType);
+        static Ref<Mesh> Create(const Ref<MeshData>& meshData, const Vector<SubMesh>& subMeshes = {}, MeshUsageFlags usage = MeshUsage::Static,
+                                DrawMode drawMode = DrawMode::TRIANGLE_LIST);
+        static Ref<Mesh> Create(uint32_t vertexCount, uint32_t indexCount, const BufferLayout& layout, MeshUsageFlags usage, DrawMode drawMode,
+                                IndexType indexType);
 
         // protected:
         Mesh(const Ref<MeshData>& meshData, const Vector<SubMesh>& subMeshes, MeshUsageFlags usage, DrawMode drawMode);
-        Mesh(const Vector<SubMesh>& subMeshes, uint32_t vertexCount, uint32_t indexCount, const BufferLayout& layout,
-             MeshUsageFlags usage, DrawMode drawMode, IndexType indexType);
+        Mesh(const Vector<SubMesh>& subMeshes, uint32_t vertexCount, uint32_t indexCount, const BufferLayout& layout, MeshUsageFlags usage,
+             DrawMode drawMode, IndexType indexType);
 
         Mesh() = default; // For serialization
     private:

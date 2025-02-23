@@ -49,8 +49,7 @@ namespace Crowny
     public:
         ConsoleBuffer() = default;
         ~ConsoleBuffer() = default;
-        void AddMessage(Message::Level logLevel, const String& messageText,
-                        const Vector<Message::FunctionCall>& callstack = {});
+        void AddMessage(Message::Level logLevel, const String& messageText, const Vector<Message::FunctionCall>& callstack = {});
 
         void Sort(uint32_t sortIdx, bool ascending);
         void Clear();

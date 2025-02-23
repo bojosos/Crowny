@@ -42,8 +42,7 @@ namespace Crowny
         virtual void SerializeYAML(YAML::Emitter& out) const {}
         virtual void DeserializeYAML(const YAML::Node& node) {}
 
-        static Ref<SerializableFieldData> Create(const Ref<SerializableTypeInfo>& typeInfo, MonoObject* value,
-                                                 bool allowNull);
+        static Ref<SerializableFieldData> Create(const Ref<SerializableTypeInfo>& typeInfo, MonoObject* value, bool allowNull);
     };
 
     class SerializableFieldBool : public SerializableFieldData
@@ -254,10 +253,7 @@ namespace Crowny
     class SerializableFieldString : public SerializableFieldData
     {
     public:
-        virtual void* GetValue() override
-        {
-            return MonoUtils::ToMonoString(Value);
-        } // Need to do something more fancy here
+        virtual void* GetValue() override { return MonoUtils::ToMonoString(Value); } // Need to do something more fancy here
         virtual MonoObject* GetValueBoxed() override { return (MonoObject*)GetValue(); }
 
         virtual void SerializeYAML(YAML::Emitter& out) const override { out << Value; }
@@ -312,9 +308,7 @@ namespace Crowny
     {
     public:
         void* GetValue() override { return &Value; }
-        virtual void Serialize() override
-        { /* out << Value->; */
-        }
+        virtual void Serialize() override { /* out << Value->; */ }
         virtual MonoObject* GetValueBoxed() override { return nullptr; }
         Ref<Asset> Value = nullptr;
     };

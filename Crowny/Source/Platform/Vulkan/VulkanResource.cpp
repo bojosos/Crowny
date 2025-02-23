@@ -6,8 +6,7 @@ namespace Crowny
 {
 
     VulkanResource::VulkanResource(VulkanResourceManager* owner, bool concurrent)
-      : m_Owner(owner), m_QueueFamily(-1), m_State(concurrent ? State::Shared : State::Normal), m_NumUsedHandles(0),
-        m_NumBoundHandles(0)
+      : m_Owner(owner), m_QueueFamily(-1), m_State(concurrent ? State::Shared : State::Normal), m_NumUsedHandles(0), m_NumBoundHandles(0)
     {
         Cw_ZeroOut(m_ReadUses);
         Cw_ZeroOut(m_WriteUses);
