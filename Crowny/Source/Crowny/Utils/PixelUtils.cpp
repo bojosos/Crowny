@@ -23,21 +23,17 @@ namespace Crowny
         { "None", 0, 0, PCT_BYTE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
         { "R8", 1, PFF_INTEGER | PFF_NORMALIZED, PCT_BYTE, 1, 8, 0, 0, 0, 0x000000FF, 0, 0, 0, 0, 0, 0, 0 },
         { "RG8", 2, PFF_INTEGER | PFF_NORMALIZED, PCT_BYTE, 2, 8, 8, 0, 0, 0x000000FF, 0x0000FF00, 0, 0, 0, 8, 0, 0 },
-        { "RGB8", 4, PFF_INTEGER | PFF_NORMALIZED, PCT_BYTE, 3, 8, 8, 8, 0, 0x000000FF, 0x0000FF00, 0x00FF0000, 0, 0, 8,
-          16, 0 },
-        { "RGBA8", 4, PFF_INTEGER | PFF_NORMALIZED | PFF_HASALPHA, PCT_BYTE, 4, 8, 8, 8, 8, 0x000000FF, 0x0000FF00,
-          0x00FF0000, 0xFF000000, 0, 8, 16, 24 },
-        { "RGBA16F", 8, PFF_FLOAT | PFF_HASALPHA, PCT_FLOAT16, 4, 16, 16, 16, 16, 0x0000FFFF, 0xFFFF0000, 0x0000FFFF,
-          0xFFFF0000, 0, 16, 0, 16 },
+        { "RGB8", 4, PFF_INTEGER | PFF_NORMALIZED, PCT_BYTE, 3, 8, 8, 8, 0, 0x000000FF, 0x0000FF00, 0x00FF0000, 0, 0, 8, 16, 0 },
+        { "RGBA8", 4, PFF_INTEGER | PFF_NORMALIZED | PFF_HASALPHA, PCT_BYTE, 4, 8, 8, 8, 8, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000, 0, 8, 16,
+          24 },
+        { "RGBA16F", 8, PFF_FLOAT | PFF_HASALPHA, PCT_FLOAT16, 4, 16, 16, 16, 16, 0x0000FFFF, 0xFFFF0000, 0x0000FFFF, 0xFFFF0000, 0, 16, 0, 16 },
         { "RGB32F", 12, PFF_FLOAT, PCT_FLOAT32, 3, 32, 32, 32, 32, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0, 0, 0, 0, 0 },
-        { "RGBA32F", 16, PFF_FLOAT | PFF_HASALPHA, PCT_FLOAT32, 4, 32, 32, 32, 32, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
-          0xFFFFFFFF, 0, 16, 0, 16 },
+        { "RGBA32F", 16, PFF_FLOAT | PFF_HASALPHA, PCT_FLOAT32, 4, 32, 32, 32, 32, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0, 16, 0, 16 },
         { "RG16F", 4, PFF_FLOAT, PCT_FLOAT16, 2, 16, 16, 0, 0, 0x0000FFFF, 0xFFFF0000, 0, 0, 0, 16, 0, 0 },
         { "RG32F", 8, PFF_FLOAT, PCT_FLOAT32, 2, 32, 32, 0, 0, 0xFFFFFFFF, 0xFFFFFFFF, 0, 0, 0, 0, 0, 0 },
         { "R32I", 4, PFF_INTEGER, PCT_INT, 1, 32, 0, 0, 0, 0xFFFFFFFF, 0, 0, 0, 0, 0, 0, 0 },
         { "D32", 4, PFF_DEPTH | PFF_FLOAT, PCT_FLOAT32, 1, 32, 0, 0, 0, 0xFFFFFFFF, 0, 0, 0, 0, 0, 0, 0 },
-        { "D24S8", 4, PFF_INTEGER | PFF_DEPTH | PFF_NORMALIZED, PCT_INT, 2, 24, 8, 0, 0, 0x00FFFFFF, 0x0FF0000, 0, 0, 0,
-          24, 0, 0 }
+        { "D24S8", 4, PFF_INTEGER | PFF_DEPTH | PFF_NORMALIZED, PCT_INT, 2, 24, 8, 0, 0, 0x00FFFFFF, 0x0FF0000, 0, 0, 0, 24, 0, 0 }
     };
 
     static inline const PixelFormatDesc& GetFormatDesc(const TextureFormat fmt)
@@ -51,16 +47,15 @@ namespace Crowny
 
     uint32_t PixelUtils::GetBlockSize(TextureFormat format) { return GetNumBytes(format); }
 
-    void PixelUtils::GetPitch(uint32_t width, uint32_t height, uint32_t depth, TextureFormat format, uint32_t& rowPitch,
-                              uint32_t& depthPitch)
+    void PixelUtils::GetPitch(uint32_t width, uint32_t height, uint32_t depth, TextureFormat format, uint32_t& rowPitch, uint32_t& depthPitch)
     {
         uint32_t blockSize = GetBlockSize(format);
         rowPitch = width * blockSize;
         depthPitch = width * height * blockSize;
     }
 
-    void PixelUtils::GetMipSizeForLevel(uint32_t width, uint32_t height, uint32_t depth, uint32_t mipLevel,
-                                        uint32_t& mipWidth, uint32_t& mipHeight, uint32_t& mipDepth)
+    void PixelUtils::GetMipSizeForLevel(uint32_t width, uint32_t height, uint32_t depth, uint32_t mipLevel, uint32_t& mipWidth, uint32_t& mipHeight,
+                                        uint32_t& mipDepth)
     {
         mipWidth = width;
         mipHeight = height;

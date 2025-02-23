@@ -37,15 +37,9 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_Stop", (void*)&Internal_Stop);
     }
 
-    void ScriptAudioSource::Internal_SetVolume(ScriptAudioSource* thisPtr, float volume)
-    {
-        thisPtr->GetComponent().SetVolume(volume);
-    }
+    void ScriptAudioSource::Internal_SetVolume(ScriptAudioSource* thisPtr, float volume) { thisPtr->GetComponent().SetVolume(volume); }
 
-    void ScriptAudioSource::Internal_SetPitch(ScriptAudioSource* thisPtr, float pitch)
-    {
-        thisPtr->GetComponent().SetPitch(pitch);
-    }
+    void ScriptAudioSource::Internal_SetPitch(ScriptAudioSource* thisPtr, float pitch) { thisPtr->GetComponent().SetPitch(pitch); }
 
     void ScriptAudioSource::Internal_SetClip(ScriptAudioSource* thisPtr, MonoObject* clip)
     {
@@ -71,35 +65,17 @@ namespace Crowny
         thisPtr->GetComponent().SetMaxDistance(maxDistance);
     }
 
-    void ScriptAudioSource::Internal_SetLooping(ScriptAudioSource* thisPtr, bool loop)
-    {
-        thisPtr->GetComponent().SetLooping(loop);
-    }
+    void ScriptAudioSource::Internal_SetLooping(ScriptAudioSource* thisPtr, bool loop) { thisPtr->GetComponent().SetLooping(loop); }
 
-    void ScriptAudioSource::Internal_SetIsMuted(ScriptAudioSource* thisPtr, bool muted)
-    {
-        thisPtr->GetComponent().SetIsMuted(muted);
-    }
+    void ScriptAudioSource::Internal_SetIsMuted(ScriptAudioSource* thisPtr, bool muted) { thisPtr->GetComponent().SetIsMuted(muted); }
 
-    void ScriptAudioSource::Internal_SetTime(ScriptAudioSource* thisPtr, float time)
-    {
-        thisPtr->GetComponent().SetTime(time);
-    }
+    void ScriptAudioSource::Internal_SetTime(ScriptAudioSource* thisPtr, float time) { thisPtr->GetComponent().SetTime(time); }
 
-    AudioSourceState ScriptAudioSource::Internal_GetState(ScriptAudioSource* thisPtr)
-    {
-        return thisPtr->GetComponent().GetState();
-    }
+    AudioSourceState ScriptAudioSource::Internal_GetState(ScriptAudioSource* thisPtr) { return thisPtr->GetComponent().GetState(); }
 
-    float ScriptAudioSource::Internal_GetVolume(ScriptAudioSource* thisPtr)
-    {
-        return thisPtr->GetComponent().GetVolume();
-    }
+    float ScriptAudioSource::Internal_GetVolume(ScriptAudioSource* thisPtr) { return thisPtr->GetComponent().GetVolume(); }
 
-    float ScriptAudioSource::Internal_GetPitch(ScriptAudioSource* thisPtr)
-    {
-        return thisPtr->GetComponent().GetPitch();
-    }
+    float ScriptAudioSource::Internal_GetPitch(ScriptAudioSource* thisPtr) { return thisPtr->GetComponent().GetPitch(); }
 
     MonoObject* ScriptAudioSource::Internal_GetClip(ScriptAudioSource* thisPtr)
     {
@@ -109,30 +85,15 @@ namespace Crowny
         return nullptr;
     }
 
-    bool ScriptAudioSource::Internal_GetPlayOnAwake(ScriptAudioSource* thisPtr)
-    {
-        return thisPtr->GetComponent().GetPlayOnAwake();
-    }
+    bool ScriptAudioSource::Internal_GetPlayOnAwake(ScriptAudioSource* thisPtr) { return thisPtr->GetComponent().GetPlayOnAwake(); }
 
-    float ScriptAudioSource::Internal_GetMinDistance(ScriptAudioSource* thisPtr)
-    {
-        return thisPtr->GetComponent().GetMinDistance();
-    }
+    float ScriptAudioSource::Internal_GetMinDistance(ScriptAudioSource* thisPtr) { return thisPtr->GetComponent().GetMinDistance(); }
 
-    float ScriptAudioSource::Internal_GetMaxDistance(ScriptAudioSource* thisPtr)
-    {
-        return thisPtr->GetComponent().GetMaxDistance();
-    }
+    float ScriptAudioSource::Internal_GetMaxDistance(ScriptAudioSource* thisPtr) { return thisPtr->GetComponent().GetMaxDistance(); }
 
-    bool ScriptAudioSource::Internal_GetLooping(ScriptAudioSource* thisPtr)
-    {
-        return thisPtr->GetComponent().GetLooping();
-    }
+    bool ScriptAudioSource::Internal_GetLooping(ScriptAudioSource* thisPtr) { return thisPtr->GetComponent().GetLooping(); }
 
-    bool ScriptAudioSource::Internal_GetIsMuted(ScriptAudioSource* thisPtr)
-    {
-        return thisPtr->GetComponent().GetIsMuted();
-    }
+    bool ScriptAudioSource::Internal_GetIsMuted(ScriptAudioSource* thisPtr) { return thisPtr->GetComponent().GetIsMuted(); }
 
     float ScriptAudioSource::Internal_GetTime(ScriptAudioSource* thisPtr) { return thisPtr->GetComponent().GetTime(); }
 

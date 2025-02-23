@@ -57,8 +57,7 @@ namespace Crowny
         virtual void Minimize() = 0;
         virtual void Maximize() = 0;
         virtual void Restore() = 0;
-        virtual void SetFullScreen(uint32_t width, uint32_t height, float refreshRate = 60.0f,
-                                   uint32_t monitorIdx = 0) = 0;
+        virtual void SetFullScreen(uint32_t width, uint32_t height, float refreshRate = 60.0f, uint32_t monitorIdx = 0) = 0;
         virtual void SetWindowed(uint32_t width, uint32_t height) = 0;
         virtual Window* GetWindow() const = 0;
 

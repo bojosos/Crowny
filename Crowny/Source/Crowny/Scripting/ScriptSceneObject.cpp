@@ -9,10 +9,7 @@ namespace Crowny
 
     ScriptSceneObjectBase::~ScriptSceneObjectBase() { CW_ENGINE_ASSERT(m_GCHandle == 0); }
 
-    MonoObject* ScriptSceneObjectBase::GetManagedInstance() const
-    {
-        return MonoUtils::GetObjectFromGCHandle(m_GCHandle);
-    }
+    MonoObject* ScriptSceneObjectBase::GetManagedInstance() const { return MonoUtils::GetObjectFromGCHandle(m_GCHandle); }
 
     void ScriptSceneObjectBase::SetManagedInstance(MonoObject* instance)
     {

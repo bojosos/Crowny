@@ -23,8 +23,8 @@ namespace Crowny
         VkResult Present(VulkanSwapChain* swapChain, VulkanSemaphore** waitSemaphores, uint32_t semaphoreLength);
         void WaitIdle() const;
 
-        void GetSubmitInfo(VkCommandBuffer* cmdBuffer, VkSemaphore* signalSemaphores, uint32_t numSemaphores,
-                           VkSemaphore* waitSemaphores, uint32_t numWaitSemaphores, VkSubmitInfo& submitInfo);
+        void GetSubmitInfo(VkCommandBuffer* cmdBuffer, VkSemaphore* signalSemaphores, uint32_t numSemaphores, VkSemaphore* waitSemaphores,
+                           uint32_t numWaitSemaphores, VkSubmitInfo& submitInfo);
         void Refresh(bool wait, bool queueEmpty);
 
     private:

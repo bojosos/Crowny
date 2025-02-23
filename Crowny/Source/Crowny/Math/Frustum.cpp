@@ -15,10 +15,7 @@ namespace Crowny
         Bottom,
     };
 
-    float ViewFrustum::Plane::DistanceToPoint(const glm::vec3& point) const
-    {
-        return glm::dot(point, normal) + distanceToOrigin;
-    }
+    float ViewFrustum::Plane::DistanceToPoint(const glm::vec3& point) const { return glm::dot(point, normal) + distanceToOrigin; }
 
     void ViewFrustum::Update(const glm::mat4& mat)
     {

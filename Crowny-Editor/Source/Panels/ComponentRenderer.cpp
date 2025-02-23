@@ -26,8 +26,7 @@
 namespace Crowny
 {
 
-    static bool DrawVec3Control(const std::string& label, glm::vec3& values, float resetValue = 0.0f,
-                                float columnWidth = 100.0f)
+    static bool DrawVec3Control(const std::string& label, glm::vec3& values, float resetValue = 0.0f, float columnWidth = 100.0f)
     {
         bool modified = false;
 
@@ -50,10 +49,9 @@ namespace Crowny
                 UI::ScopedColor padding(ImGuiCol_Border, IM_COL32(0, 0, 0, 0));
                 UI::ScopedColor frame(ImGuiCol_FrameBg, IM_COL32(0, 0, 0, 0));
 
-                ImGui::BeginChild(
-                  ImGui::GetID((label + "fr").c_str()),
-                  ImVec2(ImGui::GetContentRegionAvail().x - spacingX, ImGui::GetFrameHeightWithSpacing() + 8.0f), false,
-                  ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+                ImGui::BeginChild(ImGui::GetID((label + "fr").c_str()),
+                                  ImVec2(ImGui::GetContentRegionAvail().x - spacingX, ImGui::GetFrameHeightWithSpacing() + 8.0f), false,
+                                  ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
             }
             const float framePadding = 2.0f;
             const float outlineSpacing = 1.0f;
@@ -64,8 +62,7 @@ namespace Crowny
             const ImGuiIO& io = ImGui::GetIO();
             auto boldFont = io.Fonts->Fonts[1];
 
-            auto drawControl = [&](const std::string& label, float& value, const ImVec4& colorN, const ImVec4& colorH,
-                                   const ImVec4& colorP) {
+            auto drawControl = [&](const std::string& label, float& value, const ImVec4& colorN, const ImVec4& colorH, const ImVec4& colorP) {
                 {
                     UI::ScopedStyle buttonFrame(ImGuiStyleVar_FramePadding, ImVec2(framePadding, 0.0f));
                     UI::ScopedStyle buttonRounding(ImGuiStyleVar_FrameRounding, 1.0f);
@@ -107,16 +104,13 @@ namespace Crowny
                     manuallyEdited |= ImGui::IsItemDeactivatedAfterEdit();*/
             };
 
-            drawControl("X", values.x, ImVec4{ 0.8f, 0.1f, 0.15f, 1.0f }, ImVec4{ 0.9f, 0.2f, 0.2f, 1.0f },
-                        ImVec4{ 0.8f, 0.1f, 0.15f, 1.0f });
+            drawControl("X", values.x, ImVec4{ 0.8f, 0.1f, 0.15f, 1.0f }, ImVec4{ 0.9f, 0.2f, 0.2f, 1.0f }, ImVec4{ 0.8f, 0.1f, 0.15f, 1.0f });
 
             ImGui::SameLine(0.0f, outlineSpacing);
-            drawControl("Y", values.y, ImVec4{ 0.2f, 0.7f, 0.2f, 1.0f }, ImVec4{ 0.3f, 0.8f, 0.3f, 1.0f },
-                        ImVec4{ 0.2f, 0.7f, 0.2f, 1.0f });
+            drawControl("Y", values.y, ImVec4{ 0.2f, 0.7f, 0.2f, 1.0f }, ImVec4{ 0.3f, 0.8f, 0.3f, 1.0f }, ImVec4{ 0.2f, 0.7f, 0.2f, 1.0f });
 
             ImGui::SameLine(0.0f, outlineSpacing);
-            drawControl("Z", values.z, ImVec4{ 0.1f, 0.25f, 0.8f, 1.0f }, ImVec4{ 0.2f, 0.35f, 0.9f, 1.0f },
-                        ImVec4{ 0.1f, 0.25f, 0.8f, 1.0f });
+            drawControl("Z", values.z, ImVec4{ 0.1f, 0.25f, 0.8f, 1.0f }, ImVec4{ 0.2f, 0.35f, 0.9f, 1.0f }, ImVec4{ 0.1f, 0.25f, 0.8f, 1.0f });
 
             ImGui::EndChild();
         }
@@ -133,8 +127,7 @@ namespace Crowny
         UI::ScopedStyle spacing(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 8.0f));
         UI::ScopedStyle padding(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 4.0f));
 
-        ImGui::BeginTable("transformComponent", 2,
-                          ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_NoClip);
+        ImGui::BeginTable("transformComponent", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_NoClip);
         ImGui::TableSetupColumn("label_column", 0, 100.0f);
         ImGui::TableSetupColumn("value_column", ImGuiTableColumnFlags_IndentEnable | ImGuiTableColumnFlags_NoClip,
                                 ImGui::GetContentRegionAvail().x - 100.0f);
@@ -292,19 +285,16 @@ namespace Crowny
         auto& spriteRendererComponent = e.GetComponent<SpriteRendererComponent>();
 
         if (spriteRendererComponent.Texture)
-            ImGui::Image(ImGui_ImplVulkan_AddTexture(spriteRendererComponent.Texture.GetInternalPtr()),
-                         { 50.0f, 50.0f }, { 0, 1 }, { 1, 0 });
+            ImGui::Image(ImGui_ImplVulkan_AddTexture(spriteRendererComponent.Texture.GetInternalPtr()), { 50.0f, 50.0f }, { 0, 1 }, { 1, 0 });
         else
-            ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), { 50.0f, 50.0f }, { 0, 1 },
-                         { 1, 0 });
+            ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), { 50.0f, 50.0f }, { 0, 1 }, { 1, 0 });
         if (ImGui::IsItemClicked())
         {
             Vector<Path> outPaths;
             if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, outPaths, "Open Texture") && outPaths.size() >= 1)
             {
                 Ref<Texture> importedTexture = Importer::Get().Import<Texture>(outPaths[0]);
-                spriteRendererComponent.Texture =
-                  static_asset_cast<Texture>(AssetManager::Get().CreateAssetHandle(importedTexture));
+                spriteRendererComponent.Texture = static_asset_cast<Texture>(AssetManager::Get().CreateAssetHandle(importedTexture));
             }
         }
 

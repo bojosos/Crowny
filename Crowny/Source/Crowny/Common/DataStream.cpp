@@ -8,15 +8,9 @@ namespace Crowny
 
     const uint32_t DataStream::StreamTempSize = 128;
 
-    static bool IsUTF32LE(const uint8_t* buffer)
-    {
-        return buffer[0] == 0xFF && buffer[1] == 0xFE && buffer[2] == 0x00 && buffer[3] == 0x00;
-    }
+    static bool IsUTF32LE(const uint8_t* buffer) { return buffer[0] == 0xFF && buffer[1] == 0xFE && buffer[2] == 0x00 && buffer[3] == 0x00; }
 
-    static bool IsUTF32BE(const uint8_t* buffer)
-    {
-        return buffer[0] == 0x00 && buffer[1] == 0x00 && buffer[2] == 0xFE && buffer[3] == 0xFF;
-    }
+    static bool IsUTF32BE(const uint8_t* buffer) { return buffer[0] == 0x00 && buffer[1] == 0x00 && buffer[2] == 0xFE && buffer[3] == 0xFF; }
 
     static bool IsUTF16LE(const uint8_t* buffer) { return buffer[0] == 0xFF && buffer[1] == 0xFE; }
 
@@ -375,8 +369,5 @@ namespace Crowny
         }
     }
 
-    Ref<DataStream> FileDataStream::Clone(bool copyData) const
-    {
-        return CreateRef<FileDataStream>(m_Path, (AccessMode)GetAccessMode(), true);
-    }
+    Ref<DataStream> FileDataStream::Clone(bool copyData) const { return CreateRef<FileDataStream>(m_Path, (AccessMode)GetAccessMode(), true); }
 } // namespace Crowny

@@ -101,11 +101,11 @@ namespace Crowny
 
         Editor::StartUp();
 
-        m_Watch = CreateScope<filewatch::FileWatch<Path>>(
-          L"C:\\dev\\Projects\\Project1\\Assets", [this](const Path& path, const filewatch::Event changeType) {
-              Lock lock(m_FileWatchMutex);
-              m_FileWatchQueue.push_back(L"C:\\dev\\Projects\\Project1\\Assets" / path);
-          });
+        m_Watch = CreateScope<filewatch::FileWatch<Path>>(L"C:\\dev\\Projects\\Project1\\Assets",
+                                                          [this](const Path& path, const filewatch::Event changeType) {
+                                                              Lock lock(m_FileWatchMutex);
+                                                              m_FileWatchQueue.push_back(L"C:\\dev\\Projects\\Project1\\Assets" / path);
+                                                          });
 
         m_MenuBar = new ImGuiMenuBar();
 
@@ -117,8 +117,7 @@ namespace Crowny
         fileMenu->AddItem(new ImGuiMenuItem("New Scene", "Ctrl+Shift+N", [&](auto& event) { CreateNewScene(); }));
         fileMenu->AddItem(new ImGuiMenuItem("Open Scene", "Ctrl+Shift+O", [&](auto& event) { OpenScene(); }));
         fileMenu->AddItem(new ImGuiMenuItem("Save Scene", "Ctrl+S", [&](auto& event) { SaveActiveScene(); }));
-        fileMenu->AddItem(
-          new ImGuiMenuItem("Save Scene as", "Ctrl+Shift+S", [&](auto& event) { SaveActiveSceneAs(); }));
+        fileMenu->AddItem(new ImGuiMenuItem("Save Scene as", "Ctrl+Shift+S", [&](auto& event) { SaveActiveSceneAs(); }));
         fileMenu->AddItem(new ImGuiMenuItem("Exit", "Alt+F4", [&](auto& event) { Application::Get().Exit(); }));
         m_MenuBar->AddMenu(fileMenu);
 
@@ -130,8 +129,7 @@ namespace Crowny
         m_ViewportPanel = new ViewportPanel("Viewport");
         m_ViewportPanel->SetEventCallback(CW_BIND_EVENT_FN(OnViewportEvent));
         m_ConsolePanel = new ConsolePanel("Console");
-        m_AssetBrowser = new AssetBrowserPanel("Asset browser",
-                                               [&](const Path& path) { m_InspectorPanel->SetSelectedAssetPath(path); });
+        m_AssetBrowser = new AssetBrowserPanel("Asset browser", [&](const Path& path) { m_InspectorPanel->SetSelectedAssetPath(path); });
 
         m_ViewportPanel->RegisterInMenu(viewMenu);
         m_InspectorPanel->RegisterInMenu(viewMenu);
@@ -140,8 +138,7 @@ namespace Crowny
         m_AssetBrowser->RegisterInMenu(viewMenu);
 
         ImGuiMenu* buildMenu = new ImGuiMenu("Build");
-        buildMenu->AddItem(
-          new ImGuiMenuItem("Rebuild game assembly", "Ctrl+Shift+B", CW_BIND_EVENT_FN(RebuildAssemblies)));
+        buildMenu->AddItem(new ImGuiMenuItem("Rebuild game assembly", "Ctrl+Shift+B", CW_BIND_EVENT_FN(RebuildAssemblies)));
         buildMenu->AddItem(new ImGuiMenuItem("Build game", "Ctrl+B", CW_BIND_EVENT_FN(BuildGame)));
 
         m_MenuBar->AddMenu(buildMenu);
@@ -160,8 +157,7 @@ namespace Crowny
 
         BuildManager::StartUp();
         Path engineAssemblyPath = "C:/dev/Crowny/Crowny-Sharp/CrownySharp.dll";
-        CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY,
-                                              { ScriptProjectReference{ CROWNY_ASSEMBLY, engineAssemblyPath } });
+        CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY, { ScriptProjectReference{ CROWNY_ASSEMBLY, engineAssemblyPath } });
 
         if (m_Temp == nullptr) // No scene was auto-loaded
             m_Temp = CreateRef<Scene>("Scene");
@@ -253,12 +249,9 @@ namespace Crowny
         m_ShowScriptDebugInfo = editorSettings->ShowScriptDebugInfo;
         m_ShowEntityDebugInfo = editorSettings->ShowEntityDebugInfo;
 
-        m_ConsolePanel->SetMessageLevelEnabled(ConsoleBuffer::Message::Level::Info,
-                                               editorSettings->EnableConsoleInfoMessages);
-        m_ConsolePanel->SetMessageLevelEnabled(ConsoleBuffer::Message::Level::Warn,
-                                               editorSettings->EnableConsoleWarningMessages);
-        m_ConsolePanel->SetMessageLevelEnabled(ConsoleBuffer::Message::Level::Error,
-                                               editorSettings->EnableConsoleErrorMessages);
+        m_ConsolePanel->SetMessageLevelEnabled(ConsoleBuffer::Message::Level::Info, editorSettings->EnableConsoleInfoMessages);
+        m_ConsolePanel->SetMessageLevelEnabled(ConsoleBuffer::Message::Level::Warn, editorSettings->EnableConsoleWarningMessages);
+        m_ConsolePanel->SetMessageLevelEnabled(ConsoleBuffer::Message::Level::Error, editorSettings->EnableConsoleErrorMessages);
 
         m_ConsolePanel->SetCollapseEnabled(editorSettings->CollapseConsole);
         m_ConsolePanel->SetScrollToBottomEnabled(editorSettings->ScrollToBottom);
@@ -331,7 +324,7 @@ namespace Crowny
             if (fileEntry->Metadata == nullptr)
                 return true;
             const AssetType assetType = fileEntry->Metadata->Type;
-            if (assetType==AssetType::Scene)
+            if (assetType == AssetType::Scene)
                 OpenScene(fileEntry->Filepath);
             else if (assetType == AssetType::Material)
             {
@@ -346,7 +339,7 @@ namespace Crowny
             {
                 Ref<Scene> activeScene = SceneManager::GetActiveScene();
                 Entity entity = activeScene->CreateEntity(fileEntry->Filepath.filename().string());
-                MeshRendererComponent &meshRenderer=entity.AddComponent<MeshRendererComponent>();
+                MeshRendererComponent& meshRenderer = entity.AddComponent<MeshRendererComponent>();
                 const AssetHandle<Asset> assetHandle = ProjectLibrary::Get().Load(fileEntry);
                 meshRenderer.MeshHandle = static_asset_cast<Mesh>(assetHandle);
             }
@@ -368,8 +361,8 @@ namespace Crowny
     void EditorLayer::OpenScene()
     {
         Vector<Path> outPaths;
-        if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, outPaths, "Open Scene",
-                                       ProjectLibrary::Get().GetAssetFolder(), { Editor::GetSceneDialogFilter() }))
+        if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, outPaths, "Open Scene", ProjectLibrary::Get().GetAssetFolder(),
+                                       { Editor::GetSceneDialogFilter() }))
             OpenScene(outPaths[0].replace_extension(".cwscene"));
     }
 
@@ -383,8 +376,8 @@ namespace Crowny
     void EditorLayer::SaveActiveSceneAs()
     {
         Vector<Path> outPaths;
-        if (FileSystem::OpenFileDialog(FileDialogType::SaveFile, outPaths, "Save scene",
-                                       ProjectLibrary::Get().GetAssetFolder(), { Editor::GetSceneDialogFilter() }))
+        if (FileSystem::OpenFileDialog(FileDialogType::SaveFile, outPaths, "Save scene", ProjectLibrary::Get().GetAssetFolder(),
+                                       { Editor::GetSceneDialogFilter() }))
         {
             SceneSerializer serializer(SceneManager::GetActiveScene());
             serializer.Serialize(outPaths[0].replace_extension(".cwscene"));
@@ -430,12 +423,9 @@ namespace Crowny
         settings->ShowEntityDebugInfo = m_ShowEntityDebugInfo;
         settings->ShowAssetInfo = m_ShowAssetInfo;
         settings->ShowScriptDebugInfo = m_ShowScriptDebugInfo;
-        settings->EnableConsoleInfoMessages =
-          m_ConsolePanel->IsMessageLevelEnabled(ConsoleBuffer::Message::Level::Info);
-        settings->EnableConsoleWarningMessages =
-          m_ConsolePanel->IsMessageLevelEnabled(ConsoleBuffer::Message::Level::Warn);
-        settings->EnableConsoleErrorMessages =
-          m_ConsolePanel->IsMessageLevelEnabled(ConsoleBuffer::Message::Level::Error);
+        settings->EnableConsoleInfoMessages = m_ConsolePanel->IsMessageLevelEnabled(ConsoleBuffer::Message::Level::Info);
+        settings->EnableConsoleWarningMessages = m_ConsolePanel->IsMessageLevelEnabled(ConsoleBuffer::Message::Level::Warn);
+        settings->EnableConsoleErrorMessages = m_ConsolePanel->IsMessageLevelEnabled(ConsoleBuffer::Message::Level::Error);
 
         settings->CollapseConsole = m_ConsolePanel->IsCollapseEnabled();
         settings->ScrollToBottom = m_ConsolePanel->IsScrollToBottomEnabled();
@@ -484,8 +474,7 @@ namespace Crowny
         RenderTexture* rt = static_cast<RenderTexture*>(m_RenderTarget.get());
         // TODO: This is bad: allocates every frame a full image.
         Ref<PixelData> outPixelData =
-            PixelData::Create(rt->GetColorTexture(1)->GetWidth(), rt->GetColorTexture(1)->GetHeight(),
-                            rt->GetColorTexture(1)->GetFormat());
+          PixelData::Create(rt->GetColorTexture(1)->GetWidth(), rt->GetColorTexture(1)->GetHeight(), rt->GetColorTexture(1)->GetFormat());
         rt->GetColorTexture(1)->ReadData(*outPixelData);
         if (outPixelData->GetSize() > coords.x * coords.y)
         {
@@ -503,8 +492,8 @@ namespace Crowny
     {
         Ref<Scene> scene = SceneManager::GetActiveScene();
         auto& rapi = RenderAPI::Get();
-        if (m_ViewportPanel->IsShown() && (m_ViewportSize.x != m_ViewportPanel->GetViewportSize().x ||
-                                           m_ViewportSize.y != m_ViewportPanel->GetViewportSize().y)) // TODO: Move out
+        if (m_ViewportPanel->IsShown() &&
+            (m_ViewportSize.x != m_ViewportPanel->GetViewportSize().x || m_ViewportSize.y != m_ViewportPanel->GetViewportSize().y)) // TODO: Move out
         {
             scene->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
             TextureParameters colorParams;
@@ -536,8 +525,7 @@ namespace Crowny
             m_RenderTarget = RenderTexture::Create(rtProps);
         }
         m_ViewportSize = m_ViewportPanel->GetViewportSize();
-        SceneRenderer::SetViewportSize((float)m_RenderTarget->GetProperties().Width,
-                                       (float)m_RenderTarget->GetProperties().Height);
+        SceneRenderer::SetViewportSize((float)m_RenderTarget->GetProperties().Width, (float)m_RenderTarget->GetProperties().Height);
 
         rapi.SetRenderTarget(m_RenderTarget);
         rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
@@ -550,8 +538,7 @@ namespace Crowny
         switch (m_SceneState)
         {
         case SceneState::Edit: {
-            s_EditorCamera.SetViewportSize((float)m_RenderTarget->GetProperties().Width,
-                                           (float)m_RenderTarget->GetProperties().Height);
+            s_EditorCamera.SetViewportSize((float)m_RenderTarget->GetProperties().Width, (float)m_RenderTarget->GetProperties().Height);
             s_EditorCamera.OnUpdate(ts);
 
             SceneManager::GetActiveScene()->OnUpdateEditor(ts);
@@ -570,8 +557,7 @@ namespace Crowny
             break;
         }
         case SceneState::Simulate: {
-            s_EditorCamera.SetViewportSize((float)m_RenderTarget->GetProperties().Width,
-                                           (float)m_RenderTarget->GetProperties().Height);
+            s_EditorCamera.SetViewportSize((float)m_RenderTarget->GetProperties().Width, (float)m_RenderTarget->GetProperties().Height);
             s_EditorCamera.OnUpdate(ts);
             SceneManager().GetActiveScene()->OnSimulationUpdate(ts);
             SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
@@ -676,8 +662,7 @@ namespace Crowny
             ImGui::SetNextWindowViewport(viewport->ID);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-            window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
-                            ImGuiWindowFlags_NoMove;
+            window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
             window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
         }
 
@@ -744,8 +729,7 @@ namespace Crowny
             if (ImGui::Button("Open"))
             {
                 Vector<Path> outPaths;
-                if (FileSystem::OpenFileDialog(FileDialogType::OpenFolder, outPaths, "Open Project",
-                                               Editor::Get().GetDefaultProjectPath()))
+                if (FileSystem::OpenFileDialog(FileDialogType::OpenFolder, outPaths, "Open Project", Editor::Get().GetDefaultProjectPath()))
                 {
                     if (outPaths.size() > 0)
                     {
@@ -769,10 +753,8 @@ namespace Crowny
             ImGui::Text("Recent Projects");
 
             ImGui::BeginTable("##projectTable", 4);
-            ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort,
-                                    0.15f);
-            ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort,
-                                    0.35f);
+            ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort, 0.15f);
+            ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort, 0.35f);
             ImGui::TableSetupColumn("Modified", ImGuiTableColumnFlags_WidthStretch, 0.3f);
             ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch, 0.1f);
             ImGui::TableHeadersRow();
@@ -812,8 +794,7 @@ namespace Crowny
                     settings->RecentProjects[settings->RecentProjects.size() - 1].Timestamp = 0;
                 }
                 ImGui::SameLine();
-                if (ImGui::ImageButton(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FolderIcon),
-                                       ImVec2(20.0f, 20.0f), { 0, 1 }, { 1, 0 }, 0))
+                if (ImGui::ImageButton(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FolderIcon), ImVec2(20.0f, 20.0f), { 0, 1 }, { 1, 0 }, 0))
                     PlatformUtils::ShowInExplorer(project.ProjectPath);
             }
             ImGui::EndTable();
@@ -857,8 +838,7 @@ namespace Crowny
                 m_AssetBrowser->Initialize();
             }
             UIUtils::EndPopup();
-            if (!Editor::Get()
-                   .IsProjectLoaded()) // TODO: Consider changing this (fixing panels) as it would look better
+            if (!Editor::Get().IsProjectLoaded()) // TODO: Consider changing this (fixing panels) as it would look better
                 return;
         }
     }
@@ -878,8 +858,7 @@ namespace Crowny
                 {
                     if (entity.GetParent())
                     {
-                        const String parentLabel =
-                          entity.GetParent().GetName() + ": " + entity.GetParent().GetUuid().ToString();
+                        const String parentLabel = entity.GetParent().GetName() + ": " + entity.GetParent().GetUuid().ToString();
                         ImGui::Text("%s", parentLabel.c_str());
                     }
                     ImGui::TreePop();
@@ -964,11 +943,11 @@ namespace Crowny
                 continue;
 
             DrawList->PrimReserve(6, 4);
-            DrawList->PrimQuadUV(pos + ImVec2(glyph->Y0, -glyph->X0), pos + ImVec2(glyph->Y0, -glyph->X1),
-                                 pos + ImVec2(glyph->Y1, -glyph->X1), pos + ImVec2(glyph->Y1, -glyph->X0),
+            DrawList->PrimQuadUV(pos + ImVec2(glyph->Y0, -glyph->X0), pos + ImVec2(glyph->Y0, -glyph->X1), pos + ImVec2(glyph->Y1, -glyph->X1),
+                                 pos + ImVec2(glyph->Y1, -glyph->X0),
 
-                                 ImVec2(glyph->U0, glyph->V0), ImVec2(glyph->U1, glyph->V0),
-                                 ImVec2(glyph->U1, glyph->V1), ImVec2(glyph->U0, glyph->V1), text_color);
+                                 ImVec2(glyph->U0, glyph->V0), ImVec2(glyph->U1, glyph->V0), ImVec2(glyph->U1, glyph->V1),
+                                 ImVec2(glyph->U0, glyph->V1), text_color);
             pos.y -= glyph->AdvanceX;
         }
     }
@@ -1008,8 +987,7 @@ namespace Crowny
                 }
                 for (uint32_t i = 0; i < 32; i++)
                 {
-                    if (i > lastNonEmptyIdx + 1 &&
-                        !UI::IsItemDisabled()) // Give the user exactly one non-disabled layer field
+                    if (i > lastNonEmptyIdx + 1 && !UI::IsItemDisabled()) // Give the user exactly one non-disabled layer field
                         ImGui::BeginDisabled(true);
                     String layerName = Physics2D::Get().GetLayerName(i);
                     if (UI::Property(fmt::format("Layer {0}", i).c_str(), layerName))
@@ -1029,14 +1007,12 @@ namespace Crowny
                 float maxTextLength = 0;
                 for (uint32_t i = 0; i < 32; i++)
                 {
-                    maxTextLength =
-                      std::max(maxTextLength, ImGui::CalcTextSize(Physics2D::Get().GetLayerName(i).c_str()).x);
+                    maxTextLength = std::max(maxTextLength, ImGui::CalcTextSize(Physics2D::Get().GetLayerName(i).c_str()).x);
                     nonEmpty += !Physics2D::Get().GetLayerName(i).empty();
                 }
                 nonEmpty--;
                 UI::ShiftCursorY(maxTextLength);
-                const ImVec2 text_pos(ImGui::GetCurrentWindow()->DC.CursorPos.x,
-                                      ImGui::GetCurrentWindow()->DC.CursorPos.y - 2.0f);
+                const ImVec2 text_pos(ImGui::GetCurrentWindow()->DC.CursorPos.x, ImGui::GetCurrentWindow()->DC.CursorPos.y - 2.0f);
                 uint32_t ii = 0;
                 for (uint32_t i = 0; i < 32; i++) // rows
                 {
@@ -1057,8 +1033,7 @@ namespace Crowny
                         if (ii == 1)
                         {
                             AddTextVertical(ImGui::GetWindowDrawList(), Physics2D::Get().GetLayerName(j).c_str(),
-                                            text_pos + ImVec2(ImGui::GetCursorPosX() - 6.0f, 0),
-                                            IM_COL32(192, 192, 192, 255));
+                                            text_pos + ImVec2(ImGui::GetCursorPosX() - 6.0f, 0), IM_COL32(192, 192, 192, 255));
                         }
                         bool value = (categoryMask & (1 << j)) != 0;
                         ImGui::PushID(id++);
@@ -1179,19 +1154,16 @@ namespace Crowny
         const float edgeOffset = 4.0f;
         const float windowHeight = 32.0f;
         const float numberOfButtons = 3.0f;
-        const float backgroundWidth =
-          edgeOffset * 6.0f + buttonSize * numberOfButtons + edgeOffset * (numberOfButtons - 1.0f) * 2.0f;
+        const float backgroundWidth = edgeOffset * 6.0f + buttonSize * numberOfButtons + edgeOffset * (numberOfButtons - 1.0f) * 2.0f;
 
         float toolbarX = (m_ViewportPanel->GetViewportBounds().x + m_ViewportPanel->GetViewportBounds().z) / 2.0f;
-        ImGui::SetNextWindowPos(
-          ImVec2(toolbarX - (backgroundWidth / 2.0f), m_ViewportPanel->GetViewportBounds().y + edgeOffset));
+        ImGui::SetNextWindowPos(ImVec2(toolbarX - (backgroundWidth / 2.0f), m_ViewportPanel->GetViewportBounds().y + edgeOffset));
         ImGui::SetNextWindowSize(ImVec2(backgroundWidth, windowHeight));
         ImGui::SetNextWindowBgAlpha(0.0f);
         ImGui::Begin("##viewport_central_toolbar", 0, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking);
 
         const float desiredHeight = 26.0f + 5.0f;
-        ImRect background =
-          UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), 0.0f, -(windowHeight - desiredHeight) * 0.5f);
+        ImRect background = UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), 0.0f, -(windowHeight - desiredHeight) * 0.5f);
         ImGui::GetWindowDrawList()->AddRectFilled(background.Min, background.Max, IM_COL32(15, 15, 15, 127), 4.0f);
 
         ImGui::BeginVertical("##viewport_central_toolbarV", { backgroundWidth, ImGui::GetContentRegionAvail().y });
@@ -1201,8 +1173,7 @@ namespace Crowny
         {
             UI::ScopedStyle enableSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(edgeOffset * 2.0f, 0));
             const ImColor c_ButtonTint = IM_COL32(192, 192, 192, 255);
-            const ImColor c_SimulateButtonTint =
-              m_SceneState == SceneState::Simulate ? ImColor(39, 185, 242, 255) : c_ButtonTint;
+            const ImColor c_SimulateButtonTint = m_SceneState == SceneState::Simulate ? ImColor(39, 185, 242, 255) : c_ButtonTint;
 
             auto drawButton = [buttonSize](const Ref<Texture>& icon, const ImColor& tint, float paddingY = 0.0f) {
                 const float height = std::min((float)icon->GetHeight(), buttonSize) - paddingY * 2.0f;
@@ -1213,8 +1184,7 @@ namespace Crowny
                 return clicked;
             };
 
-            Ref<Texture> buttonTex =
-              m_SceneState == SceneState::Play ? EditorAssets::Get().StopIcon : EditorAssets::Get().PlayIcon;
+            Ref<Texture> buttonTex = m_SceneState == SceneState::Play ? EditorAssets::Get().StopIcon : EditorAssets::Get().PlayIcon;
             if (drawButton(buttonTex, c_ButtonTint))
             {
                 if (m_SceneState == SceneState::Edit)
@@ -1295,8 +1265,7 @@ namespace Crowny
         const float edgeOffset = 4.0f;
         const float windowHeight = 32.0f;
         const float numberOfButtons = 5.0f;
-        const float backgroundWidth =
-          edgeOffset * 6.0f + buttonSize * numberOfButtons + edgeOffset * (numberOfButtons - 1.0f) * 2.0f;
+        const float backgroundWidth = edgeOffset * 6.0f + buttonSize * numberOfButtons + edgeOffset * (numberOfButtons - 1.0f) * 2.0f;
 
         float toolbarX = (m_ViewportPanel->GetViewportBounds().x + edgeOffset);
         ImGui::SetNextWindowPos(ImVec2(toolbarX, m_ViewportPanel->GetViewportBounds().y + edgeOffset));
@@ -1305,8 +1274,7 @@ namespace Crowny
         ImGui::Begin("##viewport_central_toolbar2", 0, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking);
 
         const float desiredHeight = 26.0f + 5.0f;
-        ImRect background =
-          UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), 0.0f, -(windowHeight - desiredHeight) * 0.5f);
+        ImRect background = UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), 0.0f, -(windowHeight - desiredHeight) * 0.5f);
         ImGui::GetWindowDrawList()->AddRectFilled(background.Min, background.Max, IM_COL32(15, 15, 15, 127), 4.0f);
 
         ImGui::BeginVertical("##viewport_central_toolbarV", { backgroundWidth, ImGui::GetContentRegionAvail().y });
@@ -1316,8 +1284,7 @@ namespace Crowny
         {
             UI::ScopedStyle enableSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(edgeOffset * 2.0f, 0));
             const ImColor c_ButtonTint = IM_COL32(192, 192, 192, 255);
-            const ImColor c_SimulateButtonTint =
-              m_SceneState == SceneState::Simulate ? ImColor(1.0f, 0.25f, 0.75f, 1.0f) : c_ButtonTint;
+            const ImColor c_SimulateButtonTint = m_SceneState == SceneState::Simulate ? ImColor(1.0f, 0.25f, 0.75f, 1.0f) : c_ButtonTint;
 
             auto drawButton = [buttonSize](const Ref<Texture>& icon, const ImColor& tint, float paddingY = 0.0f) {
                 const float height = std::min((float)icon->GetHeight(), buttonSize) - paddingY * 2.0f;
@@ -1377,8 +1344,9 @@ namespace Crowny
         ImGui::Checkbox("Show entity debug info", &m_ShowEntityDebugInfo);
 
         const Vector<CodeEditorInstallation>& editors = CodeEditorManager::Get().GetAvailableEditors();
-        std::function<const String&(const CodeEditorInstallation&)> selector =
-          [](const CodeEditorInstallation& install) -> const String& { return install.Name; };
+        std::function<const String&(const CodeEditorInstallation&)> selector = [](const CodeEditorInstallation& install) -> const String& {
+            return install.Name;
+        };
         if (UI::PropertyDropdown("Visual Studio Version", editors, m_VisualStudioVersionId, selector))
         {
             const CodeEditorInstallation& selectedEditor = editors[m_VisualStudioVersionId];

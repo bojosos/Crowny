@@ -23,5 +23,5 @@ namespace Crowny
             ButtonRight = Button1,
             ButtonMiddle = Button2
         };
-    }
+    } // namespace Mouse
 } // namespace Crowny

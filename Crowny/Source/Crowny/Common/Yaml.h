@@ -78,8 +78,7 @@ namespace Crowny
         if (!mapKeys.empty())
         {
             const String& stackTop = mapKeys.top();
-            CW_ENGINE_ASSERT(stackTop == mapEnd,
-                             "Unmatched YAML serialization map begin/end: expected: " + stackTop + " got: " + mapEnd);
+            CW_ENGINE_ASSERT(stackTop == mapEnd, "Unmatched YAML serialization map begin/end: expected: " + stackTop + " got: " + mapEnd);
             mapKeys.pop();
         }
 #endif
@@ -89,16 +88,12 @@ namespace Crowny
 
     static inline void EndYAMLSeq(YAML::Emitter& out) { out << YAML::EndSeq; }
 
-    template <typename Type>
-    static inline void SerializeValueYAML(YAML::Emitter& out, const char* key, const Type& value)
+    template <typename Type> static inline void SerializeValueYAML(YAML::Emitter& out, const char* key, const Type& value)
     {
         out << YAML::Key << key << YAML::Value << value;
     }
 
-    template <typename Type> static inline void SerializeValueYAML(YAML::Emitter& out, const Type& value)
-    {
-        out << value;
-    }
+    template <typename Type> static inline void SerializeValueYAML(YAML::Emitter& out, const Type& value) { out << value; }
 
     template <typename TEnum, typename TUnderlying = std::underlying_type_t<TEnum>>
     static inline void SerializeEnumYAML(YAML::Emitter& out, const char* key, const TEnum& value)
@@ -106,8 +101,7 @@ namespace Crowny
         out << YAML::Key << key << YAML::Value << (TUnderlying)value;
     }
 
-    template <typename Enum, typename Storage>
-    static inline void SerializeFlagsYAML(YAML::Emitter& out, const char* key, Flags<Enum, Storage> flags)
+    template <typename Enum, typename Storage> static inline void SerializeFlagsYAML(YAML::Emitter& out, const char* key, Flags<Enum, Storage> flags)
     {
         out << YAML::Key << key << YAML::Value << (Storage)flags;
     }
@@ -116,8 +110,8 @@ namespace Crowny
     /// if it falls within the [min-max) bounds. The print using the errorMessageFormat will also get the
     /// underlying value as parameter so you can use {0} in the format.
     template <typename TEnum, typename TUnderlying = std::underlying_type_t<TEnum>>
-    static void DeserializeEnumYAML(const YAML::Node& node, const char* key, TEnum& value, const TEnum& defaultValue,
-                                    const char* errorMessageFormat, TUnderlying minValue, TUnderlying maxValue)
+    static void DeserializeEnumYAML(const YAML::Node& node, const char* key, TEnum& value, const TEnum& defaultValue, const char* errorMessageFormat,
+                                    TUnderlying minValue, TUnderlying maxValue)
     {
         value = (TEnum)node[key].as<TUnderlying>((TUnderlying)defaultValue);
         TUnderlying underlyingValue = (TUnderlying)value;
@@ -135,24 +129,20 @@ namespace Crowny
     }
 
     template <typename TEnum, typename TUnderlying = std::underlying_type_t<TEnum>>
-    static inline void DeserializeEnumYAML(const YAML::Node& node, const char* key, TEnum& value,
-                                           const TEnum& defaultValue, const char* errorMessageFormat,
-                                           TUnderlying minValue, TEnum maxValue)
+    static inline void DeserializeEnumYAML(const YAML::Node& node, const char* key, TEnum& value, const TEnum& defaultValue,
+                                           const char* errorMessageFormat, TUnderlying minValue, TEnum maxValue)
     {
         DeserializeEnumYAML(node, key, value, defaultValue, errorMessageFormat, minValue, (TUnderlying)maxValue);
     }
 
-    template <typename Type>
-    static inline void DeserializeValueYAML(const YAML::Node& node, const char* key, Type& value,
-                                            const Type& defaultValue)
+    template <typename Type> static inline void DeserializeValueYAML(const YAML::Node& node, const char* key, Type& value, const Type& defaultValue)
     {
         value = node[key].as<Type>(defaultValue);
     }
 
     template <typename Type>
-    static inline void DeserializeValueYAML(const YAML::Node& node, const char* key, Type& value,
-                                            const Type& defaultValue, const char* errorMessageFormat,
-                                            const Type& minValue, const Type& maxValue)
+    static inline void DeserializeValueYAML(const YAML::Node& node, const char* key, Type& value, const Type& defaultValue,
+                                            const char* errorMessageFormat, const Type& minValue, const Type& maxValue)
     {
         value = node[key].as<Type>(defaultValue);
         if (errorMessageFormat && value < minValue || value > maxValue)
@@ -163,8 +153,7 @@ namespace Crowny
     }
 
     template <typename Enum, typename Storage>
-    static inline void DeserializeFlagsYAML(const YAML::Node& node, const char* key, Flags<Enum, Storage>& flags,
-                                            Enum defaultValue)
+    static inline void DeserializeFlagsYAML(const YAML::Node& node, const char* key, Flags<Enum, Storage>& flags, Enum defaultValue)
     {
         flags = Flags<Enum, Storage>(node[key].as<Storage>((Storage)defaultValue));
     }

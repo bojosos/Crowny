@@ -44,80 +44,76 @@ namespace Crowny
 
     static ForwardRendererData* s_Data;
 
-    float verts[] = { -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,
-                      -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f,
-                      -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  -1.0f,
-                      -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,
-                      1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,
-                      -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f };
+    float verts[] = { -1.0f, -1.0f, 1.0f,  1.0f, -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f,
+                      1.0f,  1.0f,  -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  1.0f, -1.0f,
+                      -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  1.0f, -1.0f,
+                      1.0f,  1.0f,  1.0f,  1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f, -1.0f };
 
     uint32_t inds[] = {
-        0,  1,  2,  0,  2,  3,  4,  5,  6,  4,  6,  7,  8,  9,  10, 8,  10, 11,
-        12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23,
+        0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23,
     };
 
-    void ForwardRenderer::Init()
-    { /*
-        s_Data = new ForwardRendererData();
-        // Ref<UniformParams>& uniforms = InspectorPanel::GetSelectedMaterial()->GetUniformParams();
+    void ForwardRenderer::Init() { /*
+                                     s_Data = new ForwardRendererData();
+                                     // Ref<UniformParams>& uniforms = InspectorPanel::GetSelectedMaterial()->GetUniformParams();
 
-        AssetHandle<Shader> shader1 = AssetManager::Get().Load<Shader>(PBRIBL_SHADER_PATH);
-        // Ref<Shader> shader1 = Importer::Get().Import<Shader>("Resources/Shaders/Pbribl.glsl");
-        // AssetManager::Get().Save(shader1, PBRIBL_SHADER_PATH);
+                                     AssetHandle<Shader> shader1 = AssetManager::Get().Load<Shader>(PBRIBL_SHADER_PATH);
+                                     // Ref<Shader> shader1 = Importer::Get().Import<Shader>("Resources/Shaders/Pbribl.glsl");
+                                     // AssetManager::Get().Save(shader1, PBRIBL_SHADER_PATH);
 
-        Ref<ShaderStage> vertex = shader1->GetStage(VERTEX_SHADER);
-        Ref<ShaderStage> fragment = shader1->GetStage(FRAGMENT_SHADER);
+                                     Ref<ShaderStage> vertex = shader1->GetStage(VERTEX_SHADER);
+                                     Ref<ShaderStage> fragment = shader1->GetStage(FRAGMENT_SHADER);
 
-        s_Data->Mvp =
-          UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("MVP").BlockSize, BufferUsage::DYNAMIC_DRAW);
+                                     s_Data->Mvp =
+                                       UniformBufferBlock::Create(vertex->GetUniformDesc()->Uniforms.at("MVP").BlockSize, BufferUsage::DYNAMIC_DRAW);
 
-        BufferLayout layout = { { ShaderDataType::Float3, "a_Position" },
-                                { ShaderDataType::Float3, "a_Normal" },
-                                { ShaderDataType::Float3, "a_Tangent" },
-                                { ShaderDataType::Float3, "a_Bitangent" },
-                                { ShaderDataType::Float2, "a_Uv" } };
+                                     BufferLayout layout = { { ShaderDataType::Float3, "a_Position" },
+                                                             { ShaderDataType::Float3, "a_Normal" },
+                                                             { ShaderDataType::Float3, "a_Tangent" },
+                                                             { ShaderDataType::Float3, "a_Bitangent" },
+                                                             { ShaderDataType::Float2, "a_Uv" } };
 
-        PipelineStateDesc desc;
-        desc.VertexShader = vertex;
-        desc.FragmentShader = fragment;
+                                     PipelineStateDesc desc;
+                                     desc.VertexShader = vertex;
+                                     desc.FragmentShader = fragment;
 
-        s_Data->MeshPipeline = GraphicsPipeline::Create(desc, layout);
-        s_Data->MeshUniforms = UniformParams::Create(s_Data->MeshPipeline);
+                                     s_Data->MeshPipeline = GraphicsPipeline::Create(desc, layout);
+                                     s_Data->MeshUniforms = UniformParams::Create(s_Data->MeshPipeline);
 
-        s_Data->MaterialParams = UniformBufferBlock::Create(
-          fragment->GetUniformDesc()->Uniforms.at("Parameters").BlockSize, BufferUsage::DYNAMIC_DRAW);
-        s_Data->MeshUniforms->SetUniformBlockBuffer(0, 11, s_Data->MaterialParams);
-        s_Data->MeshTextures.resize(5);
+                                     s_Data->MaterialParams = UniformBufferBlock::Create(
+                                       fragment->GetUniformDesc()->Uniforms.at("Parameters").BlockSize, BufferUsage::DYNAMIC_DRAW);
+                                     s_Data->MeshUniforms->SetUniformBlockBuffer(0, 11, s_Data->MaterialParams);
+                                     s_Data->MeshTextures.resize(5);
 
-        s_Data->MeshUniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "MVP", s_Data->Mvp);
+                                     s_Data->MeshUniforms->SetUniformBlockBuffer(ShaderType::VERTEX_SHADER, "MVP", s_Data->Mvp);
 
-        s_Data->GlobalFragmentParams = UniformBufferBlock::Create(
-          fragment->GetUniformDesc()->Uniforms.at("UBOParams").BlockSize, BufferUsage::DYNAMIC_DRAW);
-        s_Data->MeshUniforms->SetUniformBlockBuffer(0, 2, s_Data->GlobalFragmentParams);
+                                     s_Data->GlobalFragmentParams = UniformBufferBlock::Create(
+                                       fragment->GetUniformDesc()->Uniforms.at("UBOParams").BlockSize, BufferUsage::DYNAMIC_DRAW);
+                                     s_Data->MeshUniforms->SetUniformBlockBuffer(0, 2, s_Data->GlobalFragmentParams);
 
-        s_Data->Skybox = CreateRef<Skybox>("Resources/Textures/envmap.hdr");
-        s_Data->SkyboxVbo = VertexBuffer::Create(verts, sizeof(verts));
-        s_Data->SkyboxVbo->SetLayout({ { ShaderDataType::Float3, "a_Pos" } });
-        s_Data->SkyboxIbo = IndexBuffer::Create(inds, sizeof(inds) / sizeof(uint32_t));
+                                     s_Data->Skybox = CreateRef<Skybox>("Resources/Textures/envmap.hdr");
+                                     s_Data->SkyboxVbo = VertexBuffer::Create(verts, sizeof(verts));
+                                     s_Data->SkyboxVbo->SetLayout({ { ShaderDataType::Float3, "a_Pos" } });
+                                     s_Data->SkyboxIbo = IndexBuffer::Create(inds, sizeof(inds) / sizeof(uint32_t));
 
-        AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(SKYBOX_SHADER_PATH);
-        // shader = Importer::Get().Import<Shader>(SKYBOX_SHADER_PATH);
-        Ref<ShaderStage> skyboxVertex = shader->GetStage(VERTEX_SHADER);
-        Ref<ShaderStage> skyboxFragment = shader->GetStage(FRAGMENT_SHADER);
+                                     AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(SKYBOX_SHADER_PATH);
+                                     // shader = Importer::Get().Import<Shader>(SKYBOX_SHADER_PATH);
+                                     Ref<ShaderStage> skyboxVertex = shader->GetStage(VERTEX_SHADER);
+                                     Ref<ShaderStage> skyboxFragment = shader->GetStage(FRAGMENT_SHADER);
 
-        PipelineStateDesc skyboxDesc;
-        skyboxDesc.VertexShader = skyboxVertex;
-        skyboxDesc.FragmentShader = skyboxFragment;
-        skyboxDesc.DepthStencilState.EnableDepthRead = false;
-        skyboxDesc.DepthStencilState.EnableDepthWrite = false;
-        s_Data->SkyboxPipeline = GraphicsPipeline::Create(skyboxDesc, s_Data->SkyboxVbo->GetLayout());
-        s_Data->SkyboxUniforms = UniformParams::Create(s_Data->SkyboxPipeline);
+                                     PipelineStateDesc skyboxDesc;
+                                     skyboxDesc.VertexShader = skyboxVertex;
+                                     skyboxDesc.FragmentShader = skyboxFragment;
+                                     skyboxDesc.DepthStencilState.EnableDepthRead = false;
+                                     skyboxDesc.DepthStencilState.EnableDepthWrite = false;
+                                     s_Data->SkyboxPipeline = GraphicsPipeline::Create(skyboxDesc, s_Data->SkyboxVbo->GetLayout());
+                                     s_Data->SkyboxUniforms = UniformParams::Create(s_Data->SkyboxPipeline);
 
-        s_Data->SkyboxMvp = UniformBufferBlock::Create(skyboxVertex->GetUniformDesc()->Uniforms.at("MVP").BlockSize,
-                                                       BufferUsage::DYNAMIC_DRAW);
-        s_Data->SkyboxUniforms->SetUniformBlockBuffer(0, 0, s_Data->SkyboxMvp);
-        s_Data->SkyboxUniforms->SetUniformBlockBuffer(0, 1, s_Data->GlobalFragmentParams);
-        s_Data->SkyboxUniforms->SetTexture(0, 2, s_Data->Skybox->m_EnvironmentMap);*/
+                                     s_Data->SkyboxMvp = UniformBufferBlock::Create(skyboxVertex->GetUniformDesc()->Uniforms.at("MVP").BlockSize,
+                                                                                    BufferUsage::DYNAMIC_DRAW);
+                                     s_Data->SkyboxUniforms->SetUniformBlockBuffer(0, 0, s_Data->SkyboxMvp);
+                                     s_Data->SkyboxUniforms->SetUniformBlockBuffer(0, 1, s_Data->GlobalFragmentParams);
+                                     s_Data->SkyboxUniforms->SetTexture(0, 2, s_Data->Skybox->m_EnvironmentMap);*/
     }
 
     void ForwardRenderer::Begin() {}

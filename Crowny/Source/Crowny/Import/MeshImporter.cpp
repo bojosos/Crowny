@@ -45,14 +45,12 @@ namespace Crowny
 
     Ref<Asset> MeshImporter::MeshImporter::Import(const Path& path, Ref<const ImportOptions> importOptions)
     {
-        Ref<const MeshImportOptions> meshImportOptions =
-          std::static_pointer_cast<const MeshImportOptions>(importOptions);
+        Ref<const MeshImportOptions> meshImportOptions = std::static_pointer_cast<const MeshImportOptions>(importOptions);
 
         int flags = 0;
 
         if (meshImportOptions->Optimize)
-            flags |= aiProcess_OptimizeGraph | aiProcess_OptimizeMeshes | aiProcess_ImproveCacheLocality |
-                     aiProcess_RemoveRedundantMaterials;
+            flags |= aiProcess_OptimizeGraph | aiProcess_OptimizeMeshes | aiProcess_ImproveCacheLocality | aiProcess_RemoveRedundantMaterials;
 
         if (meshImportOptions->NormalsMode == NormalsImportMode::Calculate)
             flags |= meshImportOptions->SmoothNormals ? aiProcess_GenSmoothNormals : aiProcess_GenNormals;
@@ -118,8 +116,7 @@ namespace Crowny
             {
                 if (!mesh->HasTextureCoords(i))
                     break;
-                bufferLayout.AddBufferElement(
-                  BufferElement(ShaderDataType::Float2, (VertexAttribute)((int)VertexAttribute::TexCoord0 + i)));
+                bufferLayout.AddBufferElement(BufferElement(ShaderDataType::Float2, (VertexAttribute)((int)VertexAttribute::TexCoord0 + i)));
             }
 
             const bool hasVertexColors = mesh->HasVertexColors(0);
@@ -128,11 +125,9 @@ namespace Crowny
 
             IndexType indexType;
             if (meshImportOptions->IndexFormat == MeshIndexFormat::Auto)
-                indexType = (mesh->mNumFaces < (uint32_t)std::numeric_limits<short>::max()) ? IndexType::Index_16
-                                                                                            : IndexType::Index_32;
+                indexType = (mesh->mNumFaces < (uint32_t)std::numeric_limits<short>::max()) ? IndexType::Index_16 : IndexType::Index_32;
             else
-                indexType = meshImportOptions->IndexFormat == MeshIndexFormat::Index16 ? IndexType::Index_16
-                                                                                       : IndexType::Index_32;
+                indexType = meshImportOptions->IndexFormat == MeshIndexFormat::Index16 ? IndexType::Index_16 : IndexType::Index_32;
             Ref<MeshData> meshData = MeshData::Create(vertexCount, indexCount, bufferLayout, indexType);
             meshData->SetVertexData(VertexAttribute::Position, mesh->mVertices, vertexCount * sizeof(glm::vec3));
             // For now only triangles are supported even though we don't always specify the Triangulate flag. In the
@@ -174,8 +169,7 @@ namespace Crowny
         }
         if (meshes.size() == 0)
         {
-            Ref<Mesh> mesh =
-              Mesh::Create(0, 0, BufferLayout(), MeshUsage::Static, DrawMode::TRIANGLE_LIST, IndexType::Index_32);
+            Ref<Mesh> mesh = Mesh::Create(0, 0, BufferLayout(), MeshUsage::Static, DrawMode::TRIANGLE_LIST, IndexType::Index_32);
             mesh->SetName(path.filename().string());
             return mesh;
         }
@@ -183,14 +177,12 @@ namespace Crowny
         Vector<SubMesh> outSubMeshes;
         if (meshes.size() == 1)
         {
-            Ref<Mesh> mesh =
-              Mesh::Create(meshes[0], {}, meshImportOptions->CpuCached ? MeshUsage::CpuCached : MeshUsage::Static);
+            Ref<Mesh> mesh = Mesh::Create(meshes[0], {}, meshImportOptions->CpuCached ? MeshUsage::CpuCached : MeshUsage::Static);
             mesh->SetName(path.filename().string());
             return mesh;
         }
         const Ref<MeshData> combinedMeshData = MeshData::Combine(meshes, subMeshes, outSubMeshes);
-        Ref<Mesh> mesh = Mesh::Create(combinedMeshData, outSubMeshes,
-                                      meshImportOptions->CpuCached ? MeshUsage::CpuCached : MeshUsage::Static);
+        Ref<Mesh> mesh = Mesh::Create(combinedMeshData, outSubMeshes, meshImportOptions->CpuCached ? MeshUsage::CpuCached : MeshUsage::Static);
         mesh->SetName(path.filename().string());
         return mesh;
     }

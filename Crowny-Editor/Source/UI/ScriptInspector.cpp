@@ -14,11 +14,10 @@
 namespace Crowny
 {
     // Note: setter is needed for null lists, since they are created only if a new element is added
-    bool ScriptInspector::DrawListInspector(MonoObject* listObject, const Ref<SerializableMemberInfo>& memberInfo,
-                                            std::function<void(void*)> setter, int depth)
+    bool ScriptInspector::DrawListInspector(MonoObject* listObject, const Ref<SerializableMemberInfo>& memberInfo, std::function<void(void*)> setter,
+                                            int depth)
     {
-        const Ref<SerializableTypeInfoList>& listInfo =
-          std::static_pointer_cast<SerializableTypeInfoList>(memberInfo->m_TypeInfo);
+        const Ref<SerializableTypeInfoList>& listInfo = std::static_pointer_cast<SerializableTypeInfoList>(memberInfo->m_TypeInfo);
         bool modified = false;
         MonoClass* listClass = MonoManager::Get().FindClass(listInfo->GetMonoClass());
         MonoProperty* countProp = listClass->GetProperty("Count");
@@ -37,8 +36,8 @@ namespace Crowny
         {
             if (listObject == nullptr && newLength != 0) // If not user initialized, initialize ourself
             {
-                MonoClass* klass = MonoManager::Get().FindClass(
-                  memberInfo->m_TypeInfo->GetMonoClass()); // So this somehow works without having to bind parameters
+                MonoClass* klass =
+                  MonoManager::Get().FindClass(memberInfo->m_TypeInfo->GetMonoClass()); // So this somehow works without having to bind parameters
                 // MonoClass* klass = ScriptInfoManager::Get().GetBuiltinClasses().SystemGenericListClass;
                 listObject = klass->CreateInstance(true);
                 setter(listObject);
@@ -74,8 +73,7 @@ namespace Crowny
             ImGui::SetCursorPosX(ImGui::GetCursorPos().x + (depth + 1) * 25);
             auto getter = [itemProp, i, listObject]() { return itemProp->GetIndexed(listObject, i); };
             auto setter = [itemProp, i, listObject](void* value) { return itemProp->SetIndexed(listObject, i, value); };
-            modified |= DrawFieldInspector(memberInfo, std::to_string(i).c_str(), getter, setter,
-                                           listInfo->m_ElementType, depth + 1);
+            modified |= DrawFieldInspector(memberInfo, std::to_string(i).c_str(), getter, setter, listInfo->m_ElementType, depth + 1);
             if (!memberInfo->m_Tooltip.empty())
             {
                 ImGui::BeginTooltip();
@@ -90,8 +88,7 @@ namespace Crowny
                                                   std::function<void(void*)> setter, int depth)
     {
         ImGui::PushID(depth);
-        const Ref<SerializableTypeInfoDictionary>& dictInfo =
-          std::static_pointer_cast<SerializableTypeInfoDictionary>(memberInfo->m_TypeInfo);
+        const Ref<SerializableTypeInfoDictionary>& dictInfo = std::static_pointer_cast<SerializableTypeInfoDictionary>(memberInfo->m_TypeInfo);
         bool modified = false;
         MonoClass* dictClass = MonoManager::Get().FindClass(dictInfo->GetMonoClass());
         MonoProperty* countProp = dictClass->GetProperty("Count");
@@ -131,8 +128,7 @@ namespace Crowny
                     return MonoUtils::Box(values.GetElementClass(), values.GetRaw(i, values.ElementSize()));
                 return values.Get<MonoObject*>(i);
             };
-            auto setterValue = [isKeyString, i, dictObject, addMethod, removeMethod, dictInfo, keys,
-                                params](void* value) mutable {
+            auto setterValue = [isKeyString, i, dictObject, addMethod, removeMethod, dictInfo, keys, params](void* value) mutable {
                 params[1] = value;
                 if (isKeyString)
                 {
@@ -151,8 +147,7 @@ namespace Crowny
             if (isKeyString)
             {
                 keyString = keys.Get<String>(i);
-                modified |= DrawFieldInspector(memberInfo, keyString.c_str(), getterValue, setterValue,
-                                               dictInfo->m_ValueType, depth + 1);
+                modified |= DrawFieldInspector(memberInfo, keyString.c_str(), getterValue, setterValue, dictInfo->m_ValueType, depth + 1);
                 if (!memberInfo->m_Tooltip.empty())
                 {
                     ImGui::BeginTooltip();
@@ -165,8 +160,8 @@ namespace Crowny
             else if (isKeyInt)
             {
                 keyInt = keys.Get<uint32_t>(i);
-                modified |= DrawFieldInspector(memberInfo, std::to_string(keyInt).c_str(), getterValue, setterValue,
-                                               dictInfo->m_ValueType, depth + 1);
+                modified |=
+                  DrawFieldInspector(memberInfo, std::to_string(keyInt).c_str(), getterValue, setterValue, dictInfo->m_ValueType, depth + 1);
                 if (!memberInfo->m_Tooltip.empty())
                 {
                     ImGui::BeginTooltip();
@@ -225,8 +220,7 @@ namespace Crowny
                                                  const Ref<SerializableTypeInfo>& listInfo)
     {
         const Ref<SerializableTypeInfo>& typeInfo = listInfo == nullptr ? memberInfo->m_TypeInfo : listInfo;
-        const Ref<SerializableTypeInfoPrimitive>& primitive =
-          std::static_pointer_cast<SerializableTypeInfoPrimitive>(typeInfo);
+        const Ref<SerializableTypeInfoPrimitive>& primitive = std::static_pointer_cast<SerializableTypeInfoPrimitive>(typeInfo);
         if (primitive->m_Type == ScriptPrimitiveType::String)
         {
             MonoString* value = (MonoString*)getter();
@@ -385,8 +379,7 @@ namespace Crowny
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue16, maxValue16);
             else if (displayAsSlider)
-                change =
-                  ImGui::SliderScalar("##sliderInt16", ImGuiDataType_S16, &value, &minValue16, &maxValue16, "%d");
+                change = ImGui::SliderScalar("##sliderInt16", ImGuiDataType_S16, &value, &minValue16, &maxValue16, "%d");
             else
                 value = (int16_t)glm::clamp((int32_t)value, (int32_t)minValue16, (int32_t)maxValue16);
             if (change)
@@ -404,8 +397,7 @@ namespace Crowny
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue16, maxValue16);
             else if (displayAsSlider)
-                change =
-                  ImGui::SliderScalar("##sliderUInt16", ImGuiDataType_U16, &value, &minValue16, &maxValue16, "%d");
+                change = ImGui::SliderScalar("##sliderUInt16", ImGuiDataType_U16, &value, &minValue16, &maxValue16, "%d");
             else
                 change = UI::Property(label, value, minValue16, maxValue16);
             if (change)
@@ -424,8 +416,7 @@ namespace Crowny
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue32, maxValue32);
             else if (displayAsSlider)
-                change =
-                  ImGui::SliderScalar("##sliderInt32", ImGuiDataType_S32, &value, &minValue32, &maxValue32, "%d");
+                change = ImGui::SliderScalar("##sliderInt32", ImGuiDataType_S32, &value, &minValue32, &maxValue32, "%d");
             else
                 change = UI::Property(label, value, minValue32, maxValue32);
             if (change)
@@ -444,8 +435,7 @@ namespace Crowny
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue32, maxValue32);
             else if (displayAsSlider)
-                change =
-                  ImGui::SliderScalar("##sliderUInt32", ImGuiDataType_U32, &value, &minValue32, &maxValue32, "%d");
+                change = ImGui::SliderScalar("##sliderUInt32", ImGuiDataType_U32, &value, &minValue32, &maxValue32, "%d");
             else
                 change = UI::Property(label, value, minValue32, maxValue32);
             if (change)
@@ -464,8 +454,7 @@ namespace Crowny
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue64, maxValue64);
             else if (displayAsSlider)
-                change =
-                  ImGui::SliderScalar("##sliderInt64", ImGuiDataType_S64, &value, &minValue64, &maxValue64, "%d");
+                change = ImGui::SliderScalar("##sliderInt64", ImGuiDataType_S64, &value, &minValue64, &maxValue64, "%d");
             else
                 change = UI::Property(label, value, minValue64, maxValue64);
             if (change)
@@ -484,8 +473,7 @@ namespace Crowny
             if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
                 change = UI::Property(label, value, minValue64, maxValue64);
             else if (displayAsSlider)
-                change =
-                  ImGui::SliderScalar("##sliderUInt64", ImGuiDataType_U64, &value, &minValue64, &maxValue64, "%d");
+                change = ImGui::SliderScalar("##sliderUInt64", ImGuiDataType_U64, &value, &minValue64, &maxValue64, "%d");
             else
                 change = UI::Property(label, value, minValue64, maxValue64);
             if (change)
@@ -591,13 +579,11 @@ namespace Crowny
         return modified;
     }
 
-    bool ScriptInspector::DrawEnumInspector(const Ref<SerializableMemberInfo>& memberInfo,
-                                            const Ref<SerializableTypeInfoEnum>& enumInfo,
+    bool ScriptInspector::DrawEnumInspector(const Ref<SerializableMemberInfo>& memberInfo, const Ref<SerializableTypeInfoEnum>& enumInfo,
                                             std::function<MonoObject*()> getter, std::function<void(void*)> setter)
     {
-        int32_t value =
-          *(int32_t*)MonoUtils::Unbox(getter());   // maybe here I would have to check the underlying type.....
-        if (value >= enumInfo->m_EnumNames.size()) // Maybe clamp the value here?
+        int32_t value = *(int32_t*)MonoUtils::Unbox(getter()); // maybe here I would have to check the underlying type.....
+        if (value >= enumInfo->m_EnumNames.size())             // Maybe clamp the value here?
         {
             ImGui::NextColumn();
             return false;
@@ -612,8 +598,7 @@ namespace Crowny
         }
         else
         {
-            if (value < enumInfo->m_EnumNames.size() &&
-                UI::PropertyDropdown(memberInfo->m_Name.c_str(), enumInfo->m_EnumNames, value))
+            if (value < enumInfo->m_EnumNames.size() && UI::PropertyDropdown(memberInfo->m_Name.c_str(), enumInfo->m_EnumNames, value))
             {
                 setter(&value);
                 return true;
@@ -622,9 +607,8 @@ namespace Crowny
         return false;
     }
 
-    bool ScriptInspector::DrawFieldInspector(const Ref<SerializableMemberInfo>& memberInfo, const char* label,
-                                             std::function<MonoObject*()> getter, std::function<void(void*)> setter,
-                                             const Ref<SerializableTypeInfo>& listType, int depth)
+    bool ScriptInspector::DrawFieldInspector(const Ref<SerializableMemberInfo>& memberInfo, const char* label, std::function<MonoObject*()> getter,
+                                             std::function<void(void*)> setter, const Ref<SerializableTypeInfo>& listType, int depth)
     {
         UI::ScopedDisable disabled(memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::ReadOnly));
         const Ref<SerializableTypeInfo>& typeInfo = listType == nullptr ? memberInfo->m_TypeInfo : listType;
@@ -681,8 +665,7 @@ namespace Crowny
             {
                 if (entity)
                 {
-                    MonoObject* value =
-                      ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(entity)->GetManagedInstance();
+                    MonoObject* value = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(entity)->GetManagedInstance();
                     setter(value);
                 }
                 else
@@ -694,13 +677,11 @@ namespace Crowny
         else if (typeInfo->GetType() == SerializableType::Object)
         {
             Ref<SerializableObjectInfo> objInfo = nullptr;
-            Ref<SerializableTypeInfoObject> objTypeInfo =
-              std::static_pointer_cast<SerializableTypeInfoObject>(typeInfo);
+            Ref<SerializableTypeInfoObject> objTypeInfo = std::static_pointer_cast<SerializableTypeInfoObject>(typeInfo);
             if (listType == nullptr)
                 UI::Property(memberInfo->m_Name.c_str());
             bool modified = false;
-            if (ScriptInfoManager::Get().GetSerializableObjectInfo(objTypeInfo->m_TypeNamespace,
-                                                                   objTypeInfo->m_TypeName, objInfo))
+            if (ScriptInfoManager::Get().GetSerializableObjectInfo(objTypeInfo->m_TypeNamespace, objTypeInfo->m_TypeName, objInfo))
             {
                 const Ref<Scene>& scene = SceneManager::GetActiveScene();
                 if (getter() == nullptr)
@@ -719,8 +700,8 @@ namespace Crowny
 
     // This here does all the work. DrawObjectInspector is called with the MonoObject of the current class instance and
     // draws it all.
-    bool ScriptInspector::DrawObjectInspector(const Ref<SerializableObjectInfo>& objectInfo, MonoObject* instance,
-                                              std::function<void(void*)> setter, int depth)
+    bool ScriptInspector::DrawObjectInspector(const Ref<SerializableObjectInfo>& objectInfo, MonoObject* instance, std::function<void(void*)> setter,
+                                              int depth)
     {
         bool totalModified = false;
         bool closed = false;

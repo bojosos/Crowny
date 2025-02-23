@@ -38,11 +38,12 @@ namespace Crowny
         VulkanGraphicsPipeline(const PipelineStateDesc& desc);
         ~VulkanGraphicsPipeline();
 
-        VulkanPipeline* GetPipeline(VulkanRenderPass* renderPass, uint32_t readOnlyFlags, DrawMode drawMode, const Ref<VulkanBufferLayout>& vulkanBufferLayout);
+        VulkanPipeline* GetPipeline(VulkanRenderPass* renderPass, uint32_t readOnlyFlags, DrawMode drawMode,
+                                    const Ref<VulkanBufferLayout>& vulkanBufferLayout);
         VulkanPipeline* CreatePipeline(VulkanRenderPass* renderPass, uint32_t readOnlyFlags, DrawMode drawMode,
                                        const Ref<VulkanBufferLayout>& vulkanBufferLayout);
         VkPipelineLayout GetLayout() const { return m_PipelineLayout; }
-        const Ref<BufferLayout> &GetBufferLayout() const { return m_BufferLayout; }
+        const Ref<BufferLayout>& GetBufferLayout() const { return m_BufferLayout; }
         void RegisterPipelineResources(VulkanCmdBuffer* cmdBuffer);
         bool IsScissorsEnabled() const { return m_ScissorsEnabled; }
 
@@ -84,8 +85,7 @@ namespace Crowny
             DrawMode DrawOp;
         };
 
-        UnorderedMap<GpuPipelineKey, VulkanPipeline*, GpuPipelineKey::HashFunction, GpuPipelineKey::EqualFunction>
-          m_Pipelines;
+        UnorderedMap<GpuPipelineKey, VulkanPipeline*, GpuPipelineKey::HashFunction, GpuPipelineKey::EqualFunction> m_Pipelines;
     };
 
     class VulkanComputePipeline : public ComputePipeline
@@ -94,7 +94,7 @@ namespace Crowny
         VulkanComputePipeline(const Ref<ShaderStage>& shader);
         ~VulkanComputePipeline();
 
-        VulkanPipeline *GetPipeline() const { return m_Pipeline; };
+        VulkanPipeline* GetPipeline() const { return m_Pipeline; };
         VkPipelineLayout GetLayout() const { return m_PipelineLayout; }
         void RegisterPipelineResources(VulkanCmdBuffer* cmdBuffer);
 

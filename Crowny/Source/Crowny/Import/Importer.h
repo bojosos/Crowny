@@ -24,10 +24,7 @@ namespace Crowny
 
         Ref<ImportOptions> CreateImportOptions(const Path& path);
 
-        template <class T> Ref<T> CreateImportOptions(const Path& path)
-        {
-            return std::static_pointer_cast<T>(CreateImportOptions(path));
-        }
+        template <class T> Ref<T> CreateImportOptions(const Path& path) { return std::static_pointer_cast<T>(CreateImportOptions(path)); }
 
         bool SupportsFileType(const String& ext) const;
         bool SupportsFileType(uint8_t* num, uint32_t numSize) const;

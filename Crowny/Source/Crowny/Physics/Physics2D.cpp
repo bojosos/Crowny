@@ -112,8 +112,7 @@ namespace Crowny
     Physics2D::Physics2D()
     {
         m_Settings = CreateRef<Physics2DSettings>();
-        m_Settings->DefaultMaterial =
-          static_asset_cast<PhysicsMaterial2D>(AssetManager::Get().CreateAssetHandle(CreateRef<PhysicsMaterial2D>()));
+        m_Settings->DefaultMaterial = static_asset_cast<PhysicsMaterial2D>(AssetManager::Get().CreateAssetHandle(CreateRef<PhysicsMaterial2D>()));
         for (uint32_t i = 0; i < m_Settings->MaskBits.size(); i++)
             m_Settings->MaskBits[i] = 0xffffffff;
         m_TemporaryWorld2D = new b2World({ m_Settings->Gravity.x, m_Settings->Gravity.y });
@@ -224,8 +223,7 @@ namespace Crowny
 
         bodyDef.type = GetBox2DType(rigidBody2D.GetBodyType());
         bodyDef.allowSleep = rigidBody2D.GetSleepMode() != RigidbodySleepMode::NeverSleep;
-        bodyDef.awake = rigidBody2D.GetSleepMode() == RigidbodySleepMode::StartAwake ||
-                        rigidBody2D.GetSleepMode() == RigidbodySleepMode::NeverSleep;
+        bodyDef.awake = rigidBody2D.GetSleepMode() == RigidbodySleepMode::StartAwake || rigidBody2D.GetSleepMode() == RigidbodySleepMode::NeverSleep;
         bodyDef.fixedRotation = rigidBody2D.GetConstraints().IsSet(Rigidbody2DConstraintsBits::FreezeRotation);
         bodyDef.userData.pointer = (uintptr_t)entity.GetHandle();
         bodyDef.bullet = rigidBody2D.GetCollisionDetectionMode() == CollisionDetectionMode2D::Continuous;
@@ -251,8 +249,7 @@ namespace Crowny
         b2FixtureDef fixtureDef;
         fixtureDef.shape = &boxShape;
 
-        uint32_t layerMask =
-          entity.HasComponent<Rigidbody2DComponent>() ? entity.GetComponent<Rigidbody2DComponent>().GetLayerMask() : 0;
+        uint32_t layerMask = entity.HasComponent<Rigidbody2DComponent>() ? entity.GetComponent<Rigidbody2DComponent>().GetLayerMask() : 0;
         fixtureDef.filter.maskBits = 1 << layerMask;
         fixtureDef.filter.categoryBits = Physics2D::Get().GetCategoryMask(layerMask);
 
@@ -280,8 +277,7 @@ namespace Crowny
         b2FixtureDef fixtureDef;
         fixtureDef.shape = &circleShape;
 
-        uint32_t layerMask =
-          entity.HasComponent<Rigidbody2DComponent>() ? entity.GetComponent<Rigidbody2DComponent>().GetLayerMask() : 0;
+        uint32_t layerMask = entity.HasComponent<Rigidbody2DComponent>() ? entity.GetComponent<Rigidbody2DComponent>().GetLayerMask() : 0;
         fixtureDef.filter.maskBits = 1 << layerMask;
         fixtureDef.filter.categoryBits = Physics2D::Get().GetCategoryMask(layerMask);
 

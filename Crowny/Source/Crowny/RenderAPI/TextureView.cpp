@@ -17,8 +17,8 @@ namespace Crowny
 
     bool TextureView::EqualFunction::operator()(const TextureViewDesc& lhs, const TextureViewDesc& rhs) const
     {
-        return lhs.MostDetailedMip == rhs.MostDetailedMip && lhs.NumMips == rhs.NumMips &&
-               lhs.FirstFace == rhs.FirstFace && lhs.NumFaces == rhs.NumFaces && lhs.Usage == rhs.Usage;
+        return lhs.MostDetailedMip == rhs.MostDetailedMip && lhs.NumMips == rhs.NumMips && lhs.FirstFace == rhs.FirstFace &&
+               lhs.NumFaces == rhs.NumFaces && lhs.Usage == rhs.Usage;
     }
 
 } // namespace Crowny

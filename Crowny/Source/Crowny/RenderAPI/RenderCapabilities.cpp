@@ -4,8 +4,7 @@
 
 namespace Crowny
 {
-    char const* const RenderCapabilities::GPU_VENDOR_STRINGS[GPU_VENDOR_COUNT] = { "unknown", "nvidia", "amd",
-                                                                                   "intel" };
+    char const* const RenderCapabilities::GPU_VENDOR_STRINGS[GPU_VENDOR_COUNT] = { "unknown", "nvidia", "amd", "intel" };
 
     GPUVendor RenderCapabilities::VendorFromString(const String& vendorString)
     {

@@ -36,10 +36,7 @@ namespace Crowny
     {
     public:
         VisualStudioCodeEditorFactory();
-        virtual const Vector<CodeEditorInstallation>& GetAvailableEditors() const override
-        {
-            return m_SupportedEditors;
-        }
+        virtual const Vector<CodeEditorInstallation>& GetAvailableEditors() const override { return m_SupportedEditors; }
         virtual CodeEditor* Create(const Path& path) const override;
 
     private:

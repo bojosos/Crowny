@@ -36,8 +36,7 @@ namespace Crowny
             createInfo.pNext = nullptr;
             createInfo.flags = 0;
             createInfo.queueFamilyIndex = familyIdx;
-            createInfo.queueCount =
-              std::min(queueFamilyProperties[familyIdx].queueCount, (uint32_t)MAX_QUEUES_PER_TYPE);
+            createInfo.queueCount = std::min(queueFamilyProperties[familyIdx].queueCount, (uint32_t)MAX_QUEUES_PER_TYPE);
             createInfo.pQueuePriorities = defaultQueuePrios;
             m_QueueInfos[type].FamilyIdx = familyIdx;
             m_QueueInfos[type].Queues.resize(createInfo.queueCount, nullptr);
@@ -45,8 +44,7 @@ namespace Crowny
 
         for (uint32_t i = 0; i < (uint32_t)queueFamilyProperties.size(); i++)
         {
-            if ((queueFamilyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) &&
-                (queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0)
+            if ((queueFamilyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) && (queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0)
             {
                 populateQueueInfo(COMPUTE_QUEUE, i);
                 break;
@@ -148,8 +146,7 @@ namespace Crowny
             pipelineCacheCI.initialDataSize = 0;
             pipelineCacheCI.pInitialData = nullptr;
         }
-        const VkResult result =
-          vkCreatePipelineCache(m_LogicalDevice, &pipelineCacheCI, gVulkanAllocator, &m_PipelineCache);
+        const VkResult result = vkCreatePipelineCache(m_LogicalDevice, &pipelineCacheCI, gVulkanAllocator, &m_PipelineCache);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
     }
 
@@ -191,7 +188,6 @@ namespace Crowny
 
         vmaDestroyAllocator(m_Allocator);
         vkDestroyDevice(m_LogicalDevice, gVulkanAllocator);
-
     }
 
     uint32_t VulkanDevice::GetQueueMask(GpuQueueType type, uint32_t queueIdx) const
@@ -260,9 +256,8 @@ namespace Crowny
             }
         }
 
-        Vector<VkFormat> depthFormats = { VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT,
-                                          VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D16_UNORM_S8_UINT,
-                                          VK_FORMAT_D16_UNORM };
+        Vector<VkFormat> depthFormats = { VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT, VK_FORMAT_D24_UNORM_S8_UINT,
+                                          VK_FORMAT_D16_UNORM_S8_UINT, VK_FORMAT_D16_UNORM };
         VkBool32 validDepthFormat = false;
         for (auto& format : depthFormats)
         {

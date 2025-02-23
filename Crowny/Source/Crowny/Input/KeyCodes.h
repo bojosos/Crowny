@@ -139,5 +139,5 @@ namespace Crowny
             RightSuper = 347,
             Menu = 348
         };
-    }
+    } // namespace Key
 } // namespace Crowny

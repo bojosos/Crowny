@@ -13,8 +13,7 @@
 namespace Crowny
 {
 
-    VulkanImageDesc CreateDesc(VkImage image, VmaAllocation allocation, VkImageLayout layout, VkFormat actualFormat,
-                               const TextureParameters& params)
+    VulkanImageDesc CreateDesc(VkImage image, VmaAllocation allocation, VkImageLayout layout, VkFormat actualFormat, const TextureParameters& params)
     {
         VulkanImageDesc desc;
         desc.Image = image;
@@ -29,24 +28,22 @@ namespace Crowny
         return desc;
     }
 
-    VulkanImage::VulkanImage(VulkanResourceManager* owner, VkImage image, VmaAllocation allocation,
-                             VkImageLayout layout, VkFormat format, const TextureParameters& params, bool ownsImage)
+    VulkanImage::VulkanImage(VulkanResourceManager* owner, VkImage image, VmaAllocation allocation, VkImageLayout layout, VkFormat format,
+                             const TextureParameters& params, bool ownsImage)
       : VulkanImage(owner, CreateDesc(image, allocation, layout, format, params), ownsImage)
     {
     }
 
     VulkanImage::VulkanImage(VulkanResourceManager* owner, const VulkanImageDesc& desc, bool ownsImage)
-      : VulkanResource(owner, false), m_FramebufferMainView(VK_NULL_HANDLE), m_Image(desc.Image),
-        m_Allocation(desc.Allocation), m_Usage(desc.Usage), m_OwnsImage(ownsImage), m_NumFaces(desc.Faces),
-        m_NumMipLevels(desc.NumMips)
+      : VulkanResource(owner, false), m_FramebufferMainView(VK_NULL_HANDLE), m_Image(desc.Image), m_Allocation(desc.Allocation), m_Usage(desc.Usage),
+        m_OwnsImage(ownsImage), m_NumFaces(desc.Faces), m_NumMipLevels(desc.NumMips)
     {
         m_ImageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         m_ImageViewCreateInfo.pNext = nullptr;
         m_ImageViewCreateInfo.flags = 0;
         m_ImageViewCreateInfo.image = desc.Image;
         m_ImageViewCreateInfo.format = desc.Format;
-        m_ImageViewCreateInfo.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B,
-                                             VK_COMPONENT_SWIZZLE_A };
+        m_ImageViewCreateInfo.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
 
         switch (desc.Shape)
         {
@@ -142,8 +139,7 @@ namespace Crowny
         for (auto& entry : m_ImageInfos)
         {
             if (surface.MipLevel == entry.Surface.MipLevel && surface.NumMipLevels == entry.Surface.NumMipLevels &&
-                surface.Face == entry.Surface.Face && surface.NumFaces == entry.Surface.NumFaces &&
-                format == entry.Format)
+                surface.Face == entry.Surface.Face && surface.NumFaces == entry.Surface.NumFaces && format == entry.Format)
             {
                 if ((m_Usage & TextureUsage::TEXTURE_DEPTHSTENCIL) == 0)
                     return entry.View;
@@ -170,8 +166,7 @@ namespace Crowny
         return viewInfo.View;
     }
 
-    VkImageView VulkanImage::CreateView(const TextureSurface& surface, VkFormat format,
-                                        VkImageAspectFlags aspectFlags) const
+    VkImageView VulkanImage::CreateView(const TextureSurface& surface, VkFormat format, VkImageAspectFlags aspectFlags) const
     {
         VkImageViewType oldViewType = m_ImageViewCreateInfo.viewType;
         VkFormat oldFormat = m_ImageViewCreateInfo.format;
@@ -205,16 +200,13 @@ namespace Crowny
 
         m_ImageViewCreateInfo.subresourceRange.aspectMask = aspectFlags;
         m_ImageViewCreateInfo.subresourceRange.baseMipLevel = surface.MipLevel;
-        m_ImageViewCreateInfo.subresourceRange.levelCount =
-          surface.NumMipLevels == 0 ? VK_REMAINING_MIP_LEVELS : surface.NumMipLevels;
+        m_ImageViewCreateInfo.subresourceRange.levelCount = surface.NumMipLevels == 0 ? VK_REMAINING_MIP_LEVELS : surface.NumMipLevels;
         m_ImageViewCreateInfo.subresourceRange.baseArrayLayer = surface.Face;
-        m_ImageViewCreateInfo.subresourceRange.layerCount =
-          surface.NumFaces == 0 ? VK_REMAINING_ARRAY_LAYERS : surface.NumFaces;
+        m_ImageViewCreateInfo.subresourceRange.layerCount = surface.NumFaces == 0 ? VK_REMAINING_ARRAY_LAYERS : surface.NumFaces;
         m_ImageViewCreateInfo.format = format;
 
         VkImageView view;
-        VkResult result =
-          vkCreateImageView(m_Owner->GetDevice().GetLogicalDevice(), &m_ImageViewCreateInfo, gVulkanAllocator, &view);
+        VkResult result = vkCreateImageView(m_Owner->GetDevice().GetLogicalDevice(), &m_ImageViewCreateInfo, gVulkanAllocator, &view);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         m_ImageViewCreateInfo.viewType = oldViewType;
         m_ImageViewCreateInfo.format = oldFormat;
@@ -288,8 +280,7 @@ namespace Crowny
         device.GetAllocationInfo(m_Allocation, memory, memoryOffset);
 
         uint8_t* data;
-        VkResult result =
-          vkMapMemory(device.GetLogicalDevice(), memory, memoryOffset + layout.offset, layout.size, 0, (void**)&data);
+        VkResult result = vkMapMemory(device.GetLogicalDevice(), memory, memoryOffset + layout.offset, layout.size, 0, (void**)&data);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
         output.SetBuffer(data);
@@ -317,8 +308,8 @@ namespace Crowny
         vkUnmapMemory(device.GetLogicalDevice(), memory);
     }
 
-    void VulkanImage::Copy(VulkanTransferBuffer* cb, VulkanBuffer* dest, const VkExtent3D& extent,
-                           const VkImageSubresourceLayers& range, VkImageLayout layout)
+    void VulkanImage::Copy(VulkanTransferBuffer* cb, VulkanBuffer* dest, const VkExtent3D& extent, const VkImageSubresourceLayers& range,
+                           VkImageLayout layout)
     {
         VkBufferImageCopy region;
         region.bufferRowLength = dest->GetRowPitch();
@@ -547,17 +538,15 @@ namespace Crowny
     }
 
     VulkanTexture::VulkanTexture()
-      : m_Image(nullptr), m_InternalFormat(), m_StagingBuffer(nullptr), m_MappedGlobalQueueIdx((uint32_t)-1),
-        m_MappedMip(0), m_MappedFace(0), m_MappedRowPitch(0), m_MappedSlicePitch(0),
-        m_MappedLockOptions(GpuLockOptions::WRITE_ONLY), m_DirectlyMappable(false), m_SupportsGpuWrites(false),
-        m_IsMapped(false), m_ImageCreateInfo()
+      : m_Image(nullptr), m_InternalFormat(), m_StagingBuffer(nullptr), m_MappedGlobalQueueIdx((uint32_t)-1), m_MappedMip(0), m_MappedFace(0),
+        m_MappedRowPitch(0), m_MappedSlicePitch(0), m_MappedLockOptions(GpuLockOptions::WRITE_ONLY), m_DirectlyMappable(false),
+        m_SupportsGpuWrites(false), m_IsMapped(false), m_ImageCreateInfo()
     {
     }
 
     VulkanTexture::VulkanTexture(const TextureParameters& params)
-      : Texture(params), m_Image(nullptr), m_InternalFormat(), m_StagingBuffer(nullptr),
-        m_MappedGlobalQueueIdx((uint32_t)-1), m_MappedMip(0), m_MappedFace(0), m_MappedRowPitch(0),
-        m_MappedSlicePitch(0), m_MappedLockOptions(GpuLockOptions::WRITE_ONLY), m_DirectlyMappable(false),
+      : Texture(params), m_Image(nullptr), m_InternalFormat(), m_StagingBuffer(nullptr), m_MappedGlobalQueueIdx((uint32_t)-1), m_MappedMip(0),
+        m_MappedFace(0), m_MappedRowPitch(0), m_MappedSlicePitch(0), m_MappedLockOptions(GpuLockOptions::WRITE_ONLY), m_DirectlyMappable(false),
         m_SupportsGpuWrites(false), m_IsMapped(false), m_ImageCreateInfo()
     {
         Init();
@@ -585,8 +574,7 @@ namespace Crowny
             m_ImageCreateInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
             break;
         }
-        m_ImageCreateInfo.usage =
-          VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        m_ImageCreateInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
         int32_t usage = (int32_t)m_Params.Usage;
         if ((usage & TEXTURE_RENDERTARGET) != 0)
@@ -611,8 +599,8 @@ namespace Crowny
 
         if ((usage & TEXTURE_DYNAMIC) != 0)
         {
-            if (m_Params.Shape == TextureShape::TEXTURE_2D && m_Params.Samples <= 1 && m_Params.MipLevels == 0 &&
-                m_Params.Faces == 1 && (m_ImageCreateInfo.usage & VK_IMAGE_USAGE_SAMPLED_BIT) != 0)
+            if (m_Params.Shape == TextureShape::TEXTURE_2D && m_Params.Samples <= 1 && m_Params.MipLevels == 0 && m_Params.Faces == 1 &&
+                (m_ImageCreateInfo.usage & VK_IMAGE_USAGE_SAMPLED_BIT) != 0)
             {
                 if (!m_SupportsGpuWrites)
                 {
@@ -640,8 +628,7 @@ namespace Crowny
         VulkanDevice& device = *gVulkanRenderAPI().GetPresentDevice().get();
 
         bool optimalTiling = tiling == VK_IMAGE_TILING_OPTIMAL;
-        m_InternalFormat = VulkanUtils::GetClosestSupportedTextureFormat(device, m_Params.Format, m_Params.Shape,
-                                                                         m_Params.Usage, optimalTiling);
+        m_InternalFormat = VulkanUtils::GetClosestSupportedTextureFormat(device, m_Params.Format, m_Params.Shape, m_Params.Usage, optimalTiling);
         m_Image = CreateImage(device, m_InternalFormat);
     }
 
@@ -666,8 +653,8 @@ namespace Crowny
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
         VmaAllocation allocation = device.AllocateMemory(image, memoryFlags);
-        return device.GetResourceManager().Create<VulkanImage>(image, allocation, m_ImageCreateInfo.initialLayout,
-                                                               m_ImageCreateInfo.format, m_Params);
+        return device.GetResourceManager().Create<VulkanImage>(image, allocation, m_ImageCreateInfo.initialLayout, m_ImageCreateInfo.format,
+                                                               m_Params);
     }
 
     VulkanBuffer* VulkanTexture::CreateStagingBuffer(VulkanDevice& device, const PixelData& data, bool readable)
@@ -696,12 +683,11 @@ namespace Crowny
         uint32_t slicePitchInPixels = data.GetSlicePitch() / blockSize;
         // TODO: Texture compression.
 
-        return device.GetResourceManager().Create<VulkanBuffer>(buffer, allocation, rowPitchInPixels,
-                                                                slicePitchInPixels);
+        return device.GetResourceManager().Create<VulkanBuffer>(buffer, allocation, rowPitchInPixels, slicePitchInPixels);
     }
 
-    void VulkanTexture::CopyImage(VulkanTransferBuffer* cb, VulkanImage* srcImage, VulkanImage* dstImage,
-                                  VkImageLayout srcFinalLayout, VkImageLayout dstFinalLayout)
+    void VulkanTexture::CopyImage(VulkanTransferBuffer* cb, VulkanImage* srcImage, VulkanImage* dstImage, VkImageLayout srcFinalLayout,
+                                  VkImageLayout dstFinalLayout)
     {
         uint32_t numFaces = m_Params.Faces;
         uint32_t numMips = m_Params.MipLevels;
@@ -755,16 +741,14 @@ namespace Crowny
 
         cb->SetLayout(srcImage, range, VK_ACCESS_TRANSFER_READ_BIT, transferSrcLayout);
         cb->SetLayout(dstImage, range, VK_ACCESS_TRANSFER_WRITE_BIT, transferDstLayout);
-        vkCmdCopyImage(cb->GetCB()->GetHandle(), srcImage->GetHandle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                       dstImage->GetHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, numMips, imageRegions);
+        vkCmdCopyImage(cb->GetCB()->GetHandle(), srcImage->GetHandle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage->GetHandle(),
+                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, numMips, imageRegions);
 
         VkAccessFlags srcAccessMask = srcImage->GetAccessFlags(srcFinalLayout);
-        cb->SetLayout(srcImage->GetHandle(), VK_ACCESS_TRANSFER_READ_BIT, srcAccessMask, transferSrcLayout,
-                      srcFinalLayout, range);
+        cb->SetLayout(srcImage->GetHandle(), VK_ACCESS_TRANSFER_READ_BIT, srcAccessMask, transferSrcLayout, srcFinalLayout, range);
 
         VkAccessFlags dstAccessMask = dstImage->GetAccessFlags(dstFinalLayout);
-        cb->SetLayout(dstImage->GetHandle(), VK_ACCESS_TRANSFER_WRITE_BIT, dstAccessMask, transferDstLayout,
-                      dstFinalLayout, range);
+        cb->SetLayout(dstImage->GetHandle(), VK_ACCESS_TRANSFER_WRITE_BIT, dstAccessMask, transferDstLayout, dstFinalLayout, range);
         cb->GetCB()->RegisterImageTransfer(srcImage, range, srcFinalLayout, VulkanAccessFlagBits::Read);
         cb->GetCB()->RegisterImageTransfer(dstImage, range, dstFinalLayout, VulkanAccessFlagBits::Write);
         delete[] imageRegions;
@@ -800,8 +784,7 @@ namespace Crowny
 
         if (m_DirectlyMappable)
         {
-            CW_ENGINE_ASSERT(subresource->GetLayout() == VK_IMAGE_LAYOUT_PREINITIALIZED ||
-                             subresource->GetLayout() == VK_IMAGE_LAYOUT_GENERAL);
+            CW_ENGINE_ASSERT(subresource->GetLayout() == VK_IMAGE_LAYOUT_PREINITIALIZED || subresource->GetLayout() == VK_IMAGE_LAYOUT_GENERAL);
             CW_ENGINE_ASSERT(!m_SupportsGpuWrites);
 
             uint32_t useMask = subresource->GetUseInfo(VulkanAccessFlagBits::Read);
@@ -904,19 +887,18 @@ namespace Crowny
             rangeLayers.mipLevel = range.baseMipLevel;
 
             VkExtent3D extent;
-            PixelUtils::GetMipSizeForLevel(m_Params.Width, m_Params.Height, m_Params.Depth, m_MappedMip, extent.width,
-                                           extent.height, extent.depth);
+            PixelUtils::GetMipSizeForLevel(m_Params.Width, m_Params.Height, m_Params.Depth, m_MappedMip, extent.width, extent.height, extent.depth);
 
             VkAccessFlags currentAccessMask = m_Image->GetAccessFlags(subresource->GetLayout());
-            transferCB->SetLayout(m_Image->GetHandle(), currentAccessMask, VK_ACCESS_TRANSFER_READ_BIT,
-                                  subresource->GetLayout(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, range);
+            transferCB->SetLayout(m_Image->GetHandle(), currentAccessMask, VK_ACCESS_TRANSFER_READ_BIT, subresource->GetLayout(),
+                                  VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, range);
 
             m_Image->Copy(transferCB, m_StagingBuffer, extent, rangeLayers, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
             VkImageLayout dstLayout = m_Image->GetOptimalLayout();
             currentAccessMask = m_Image->GetAccessFlags(dstLayout);
 
-            transferCB->SetLayout(m_Image->GetHandle(), VK_ACCESS_TRANSFER_READ_BIT, currentAccessMask,
-                                  VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstLayout, range);
+            transferCB->SetLayout(m_Image->GetHandle(), VK_ACCESS_TRANSFER_READ_BIT, currentAccessMask, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                  dstLayout, range);
             transferCB->GetCB()->RegisterImageTransfer(m_Image, range, dstLayout, VulkanAccessFlagBits::Read);
 
             VkAccessFlags stagingAccessFlags;
@@ -925,8 +907,8 @@ namespace Crowny
             else
                 stagingAccessFlags = VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT;
 
-            transferCB->MemoryBarrier(m_StagingBuffer->GetHandle(), VK_ACCESS_TRANSFER_WRITE_BIT, stagingAccessFlags,
-                                      VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT);
+            transferCB->MemoryBarrier(m_StagingBuffer->GetHandle(), VK_ACCESS_TRANSFER_WRITE_BIT, stagingAccessFlags, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                      VK_PIPELINE_STAGE_HOST_BIT);
 
             transferCB->Flush(true);
         }
@@ -1015,8 +997,8 @@ namespace Crowny
                 rangeLayers.mipLevel = range.baseMipLevel;
 
                 VkExtent3D extent;
-                PixelUtils::GetMipSizeForLevel(m_Params.Width, m_Params.Height, m_Params.Depth, m_MappedMip,
-                                               extent.width, extent.height, extent.depth);
+                PixelUtils::GetMipSizeForLevel(m_Params.Width, m_Params.Height, m_Params.Depth, m_MappedMip, extent.width, extent.height,
+                                               extent.depth);
 
                 VkImageLayout transferLayout;
                 if (m_DirectlyMappable)
@@ -1025,17 +1007,14 @@ namespace Crowny
                     transferLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
                 VkAccessFlags currentAccessMask = image->GetAccessFlags(curLayout);
-                transferCB->SetLayout(image->GetHandle(), currentAccessMask, VK_ACCESS_TRANSFER_WRITE_BIT, curLayout,
-                                      transferLayout, range);
+                transferCB->SetLayout(image->GetHandle(), currentAccessMask, VK_ACCESS_TRANSFER_WRITE_BIT, curLayout, transferLayout, range);
 
                 m_StagingBuffer->Copy(transferCB->GetCB(), image, extent, rangeLayers, transferLayout);
                 VkImageLayout dstLayout = image->GetOptimalLayout();
                 currentAccessMask = image->GetAccessFlags(dstLayout);
-                transferCB->SetLayout(image->GetHandle(), VK_ACCESS_TRANSFER_WRITE_BIT, currentAccessMask,
-                                      transferLayout, dstLayout, range);
+                transferCB->SetLayout(image->GetHandle(), VK_ACCESS_TRANSFER_WRITE_BIT, currentAccessMask, transferLayout, dstLayout, range);
 
-                transferCB->GetCB()->RegisterBuffer(m_StagingBuffer, BufferUseFlagBits::Transfer,
-                                                    VulkanAccessFlagBits::Read);
+                transferCB->GetCB()->RegisterBuffer(m_StagingBuffer, BufferUseFlagBits::Transfer, VulkanAccessFlagBits::Read);
                 transferCB->GetCB()->RegisterImageTransfer(image, range, dstLayout, VulkanAccessFlagBits::Write);
             }
             m_StagingBuffer->Destroy();
@@ -1071,8 +1050,7 @@ namespace Crowny
         }
 
         PixelData data =
-          Lock(/*discardWholeBuffer ? */ GpuLockOptions::WRITE_DISCARD /* : GpuLockOptions::WRITE_DISCARD_RANGE*/,
-               mipLevel, face, queueIdx);
+          Lock(/*discardWholeBuffer ? */ GpuLockOptions::WRITE_DISCARD /* : GpuLockOptions::WRITE_DISCARD_RANGE*/, mipLevel, face, queueIdx);
         PixelUtils::ConvertPixels(src, data);
         Unlock();
     }

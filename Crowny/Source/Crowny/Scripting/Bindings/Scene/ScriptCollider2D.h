@@ -20,8 +20,7 @@ namespace Crowny
         ScriptCollider2D(MonoObject* instance, Entity entity);
     };
 
-    class ScriptBoxCollider2D
-      : public TScriptComponent<ScriptBoxCollider2D, BoxCollider2DComponent, ScriptCollider2DBase>
+    class ScriptBoxCollider2D : public TScriptComponent<ScriptBoxCollider2D, BoxCollider2DComponent, ScriptCollider2DBase>
     {
     public:
         SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "BoxCollider2D");
@@ -37,8 +36,7 @@ namespace Crowny
         static void Internal_SetOffset(ScriptBoxCollider2D* thisPtr, glm::vec2* offset);
     };
 
-    class ScriptCircleCollider2D
-      : public TScriptComponent<ScriptCircleCollider2D, CircleCollider2DComponent, ScriptCollider2DBase>
+    class ScriptCircleCollider2D : public TScriptComponent<ScriptCircleCollider2D, CircleCollider2DComponent, ScriptCollider2DBase>
     {
     public:
         SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "CircleCollider2D");

@@ -24,8 +24,7 @@ namespace Crowny
 
     Ref<Asset> AudioClipImporter::Import(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
-        Ref<const AudioClipImportOptions> audioImportOptions =
-          std::static_pointer_cast<const AudioClipImportOptions>(importOptions);
+        Ref<const AudioClipImportOptions> audioImportOptions = std::static_pointer_cast<const AudioClipImportOptions>(importOptions);
         AudioDataInfo info;
         uint32_t bytesPerSample;
         uint32_t bufferSize;
@@ -56,8 +55,7 @@ namespace Crowny
             uint32_t monoBufferSize = numSamplesPerChannel * bytesPerSample;
             Ref<MemoryDataStream> monoStream = CreateRef<MemoryDataStream>(monoBufferSize);
 
-            AudioUtils::ConvertToMono(sampleStream->Data(), monoStream->Data(), info.BitDepth, numSamplesPerChannel,
-                                      info.NumChannels);
+            AudioUtils::ConvertToMono(sampleStream->Data(), monoStream->Data(), info.BitDepth, numSamplesPerChannel, info.NumChannels);
 
             info.NumSamples = numSamplesPerChannel;
             info.NumChannels = 1;
@@ -69,15 +67,13 @@ namespace Crowny
         {
             uint32_t outBufferSize = info.NumSamples * (audioImportOptions->BitDepth / 8);
             auto outStream = CreateRef<MemoryDataStream>(outBufferSize);
-            AudioUtils::ConvertBitDepth(sampleStream->Data(), info.BitDepth, outStream->Data(),
-                                        audioImportOptions->BitDepth, info.NumSamples);
+            AudioUtils::ConvertBitDepth(sampleStream->Data(), info.BitDepth, outStream->Data(), audioImportOptions->BitDepth, info.NumSamples);
             info.BitDepth = audioImportOptions->BitDepth;
             sampleStream = outStream;
             bufferSize = outBufferSize;
         }
         if (audioImportOptions->Format == AudioFormat::VORBIS)
-            sampleStream =
-              OggVorbisEncoder::PCMToOggVorbis(sampleStream->Data(), info, bufferSize, audioImportOptions->Quality);
+            sampleStream = OggVorbisEncoder::PCMToOggVorbis(sampleStream->Data(), info, bufferSize, audioImportOptions->Quality);
 
         AudioClipDesc clipDesc;
         clipDesc.BitDepth = info.BitDepth;

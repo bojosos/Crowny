@@ -4,9 +4,7 @@
 
 namespace Crowny
 {
-    ScriptAudioListener::ScriptAudioListener(MonoObject* instance, Entity entity) : TScriptComponent(instance, entity)
-    {
-    }
+    ScriptAudioListener::ScriptAudioListener(MonoObject* instance, Entity entity) : TScriptComponent(instance, entity) {}
 
     void ScriptAudioListener::InitRuntimeData() {}
 } // namespace Crowny

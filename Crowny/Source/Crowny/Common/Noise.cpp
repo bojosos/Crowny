@@ -39,10 +39,7 @@ namespace Crowny
         return val / accAmps;
     }
 
-    float Noise::Noise2D(const NoiseOptions& ops, const glm::vec2& position)
-    {
-        return Noise2D(ops, position.x, position.y);
-    }
+    float Noise::Noise2D(const NoiseOptions& ops, const glm::vec2& position) { return Noise2D(ops, position.x, position.y); }
 
     float Noise::Noise3D(const NoiseOptions& ops, const glm::vec3& position)
     {

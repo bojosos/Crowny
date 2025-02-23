@@ -23,8 +23,7 @@ namespace Crowny
     }
 
     VulkanRenderWindow::VulkanRenderWindow(const RenderWindowDesc& renderWindowDesc)
-      : RenderWindow(renderWindowDesc), m_RequiresNewBackBuffer(true), m_ShowOnSwap(false),
-        m_Properties(renderWindowDesc)
+      : RenderWindow(renderWindowDesc), m_RequiresNewBackBuffer(true), m_ShowOnSwap(false), m_Properties(renderWindowDesc)
     {
         WindowDesc windowDesc;
         windowDesc.ShowTitleBar = renderWindowDesc.ShowTitleBar;
@@ -47,8 +46,8 @@ namespace Crowny
 
         m_Window = Window::Create(windowDesc);
 
-        const VkResult result = glfwCreateWindowSurface(
-          gVulkanRenderAPI().GetInstance(), (GLFWwindow*)m_Window->GetNativeWindow(), gVulkanAllocator, &m_Surface);
+        const VkResult result =
+          glfwCreateWindowSurface(gVulkanRenderAPI().GetInstance(), (GLFWwindow*)m_Window->GetNativeWindow(), gVulkanAllocator, &m_Surface);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
         Ref<VulkanDevice> device = gVulkanRenderAPI().GetPresentDevice();
@@ -66,9 +65,8 @@ namespace Crowny
         m_DepthFormat = format.DepthFormat;
         m_ColorSpace = format.ColorSpace;
         m_Desc.DepthBuffer = false;
-        m_SwapChain = device->GetResourceManager().Create<VulkanSwapChain>(m_Surface, m_Desc.Width, m_Desc.Height,
-                                                                           m_Desc.VSync, m_ColorFormat, m_ColorSpace,
-                                                                           m_Desc.DepthBuffer, m_DepthFormat);
+        m_SwapChain = device->GetResourceManager().Create<VulkanSwapChain>(m_Surface, m_Desc.Width, m_Desc.Height, m_Desc.VSync, m_ColorFormat,
+                                                                           m_ColorSpace, m_Desc.DepthBuffer, m_DepthFormat);
     }
 
     void VulkanRenderWindow::SetHidden(bool hidden)
@@ -158,9 +156,9 @@ namespace Crowny
         gVulkanRenderAPI().SetRenderTarget(nullptr);
         device->WaitIdle();
         VulkanSwapChain* oldSwapChain = m_SwapChain;
-        m_SwapChain = device->GetResourceManager().Create<VulkanSwapChain>(
-          m_Surface, m_Properties.Width, m_Properties.Height, m_Desc.VSync, m_ColorFormat, m_ColorSpace,
-          m_Desc.DepthBuffer, m_DepthFormat, oldSwapChain);
+        m_SwapChain =
+          device->GetResourceManager().Create<VulkanSwapChain>(m_Surface, m_Properties.Width, m_Properties.Height, m_Desc.VSync, m_ColorFormat,
+                                                               m_ColorSpace, m_Desc.DepthBuffer, m_DepthFormat, oldSwapChain);
         oldSwapChain->Destroy();
     }
 

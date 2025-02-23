@@ -33,10 +33,7 @@ namespace Crowny
             CW_ENGINE_ASSERT(m_Layout != 96);
             return m_Layout;
         }
-        void SetLayout(VkImageLayout layout)
-        { /*CW_ENGINE_INFO(layout);*/
-            m_Layout = layout;
-        }
+        void SetLayout(VkImageLayout layout) { /*CW_ENGINE_INFO(layout);*/ m_Layout = layout; }
 
     private:
         VkImageLayout m_Layout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -45,8 +42,8 @@ namespace Crowny
     class VulkanImage : public VulkanResource
     {
     public:
-        VulkanImage(VulkanResourceManager* owner, VkImage image, VmaAllocation allocation, VkImageLayout layout,
-                    VkFormat format, const TextureParameters& params, bool ownsImage = true);
+        VulkanImage(VulkanResourceManager* owner, VkImage image, VmaAllocation allocation, VkImageLayout layout, VkFormat format,
+                    const TextureParameters& params, bool ownsImage = true);
         VulkanImage(VulkanResourceManager* owner, const VulkanImageDesc& desc, bool ownsImage = true);
         ~VulkanImage();
 
@@ -66,8 +63,8 @@ namespace Crowny
         void Map(uint32_t face, uint32_t mipLevel, PixelData& output) const;
         uint8_t* Map(uint32_t offset, uint32_t size) const;
         void Unmap();
-        void Copy(VulkanTransferBuffer* cb, VulkanBuffer* dest, const VkExtent3D& extent,
-                  const VkImageSubresourceLayers& range, VkImageLayout layout);
+        void Copy(VulkanTransferBuffer* cb, VulkanBuffer* dest, const VkExtent3D& extent, const VkImageSubresourceLayers& range,
+                  VkImageLayout layout);
 
         VkAccessFlags GetAccessFlags(VkImageLayout layout, bool readonly = false);
         void GetBarriers(const VkImageSubresourceRange& range, Vector<VkImageMemoryBarrier>& barriers);
@@ -103,14 +100,11 @@ namespace Crowny
         VulkanTexture(const TextureParameters& parameters);
         ~VulkanTexture();
 
-        virtual PixelData Lock(GpuLockOptions options, uint32_t mipLevel = 0, uint32_t face = 0,
-                               uint32_t queueIdx = 0) override;
+        virtual PixelData Lock(GpuLockOptions options, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) override;
         virtual void Unlock() override;
         // virtual void Copy(const Ref<Texture>& target, )
-        virtual void ReadData(PixelData& dest, uint32_t mipLevel = 0, uint32_t face = 0,
-                              uint32_t queueIdx = 0) override;
-        virtual void WriteData(const PixelData& src, uint32_t mipLevel = 0, uint32_t face = 0,
-                               uint32_t queueIdx = 0) override;
+        virtual void ReadData(PixelData& dest, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) override;
+        virtual void WriteData(const PixelData& src, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) override;
 
         VulkanImage* GetImage() const { return m_Image; }
 
@@ -122,8 +116,8 @@ namespace Crowny
 
         VulkanImage* CreateImage(VulkanDevice& device, TextureFormat format);
         VulkanBuffer* CreateStagingBuffer(VulkanDevice& device, const PixelData& src, bool needsRead);
-        void CopyImage(VulkanTransferBuffer* cb, VulkanImage* srcImage, VulkanImage* dstImage,
-                       VkImageLayout srcFinalLayout, VkImageLayout dstFinalLayout);
+        void CopyImage(VulkanTransferBuffer* cb, VulkanImage* srcImage, VulkanImage* dstImage, VkImageLayout srcFinalLayout,
+                       VkImageLayout dstFinalLayout);
 
         VulkanImage* m_Image;
         TextureFormat m_InternalFormat;

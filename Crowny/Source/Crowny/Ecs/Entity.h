@@ -94,10 +94,7 @@ namespace Crowny
             m_Scene = nullptr;
         }
 
-        bool IsValid() const
-        {
-            return m_Scene && m_EntityHandle != entt::null && m_Scene->m_Registry.valid(m_EntityHandle);
-        }
+        bool IsValid() const { return m_Scene && m_EntityHandle != entt::null && m_Scene->m_Registry.valid(m_EntityHandle); }
 
     protected:
         friend class Entity;
@@ -169,8 +166,7 @@ namespace Crowny
                 child.NotifyTransformChanged(transform);
         }
 
-        template <typename... Component>
-        void NotifyTransformChangedComponentWrapper(ComponentGroup<Component...> group, const Transform& transform)
+        template <typename... Component> void NotifyTransformChangedComponentWrapper(ComponentGroup<Component...> group, const Transform& transform)
         {
             ([&]() { NotifyTransformChangedComponent<Component>(transform); }(), ...);
         }

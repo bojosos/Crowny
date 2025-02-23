@@ -60,8 +60,7 @@ namespace Crowny
         Entity GetPrimaryCameraEntity();
 
         bool HasScriptComponent(Entity entity, const String& namespaceName, const String& typeName);
-        void AddScriptComponent(Entity entity, const String& namespaceName, const String& typeName,
-                                bool initialize = true);
+        void AddScriptComponent(Entity entity, const String& namespaceName, const String& typeName, bool initialize = true);
         void RemoveScriptComponent(Entity entity, const String& namespaceName, const String& typeName);
 
         template <typename... Components> auto GetAllEntitiesWith() { return m_Registry.view<Components...>(); }

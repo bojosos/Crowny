@@ -9,8 +9,7 @@
 namespace Crowny
 {
 
-    UniformParamInfo::UniformParamInfo(const UniformParamDesc& desc)
-      : m_NumSets(0), m_NumElements(0), m_SetInfos(nullptr), m_ResourceInfos()
+    UniformParamInfo::UniformParamInfo(const UniformParamDesc& desc) : m_NumSets(0), m_NumElements(0), m_SetInfos(nullptr), m_ResourceInfos()
     {
         Cw_ZeroOut(m_NumElementsPerType);
         m_ParamDescs[FRAGMENT_SHADER] = desc.FragmentParams;
@@ -59,16 +58,13 @@ namespace Crowny
                 continue;
 
             for (auto& paramBlock : paramDesc->Uniforms)
-                numSlotsPerSet[paramBlock.second.Set] =
-                  std::max(numSlotsPerSet[paramBlock.second.Set], paramBlock.second.Slot + 1);
+                numSlotsPerSet[paramBlock.second.Set] = std::max(numSlotsPerSet[paramBlock.second.Set], paramBlock.second.Slot + 1);
 
             for (auto& texture : paramDesc->Textures)
-                numSlotsPerSet[texture.second.Set] =
-                  std::max(numSlotsPerSet[texture.second.Set], texture.second.Slot + 1);
+                numSlotsPerSet[texture.second.Set] = std::max(numSlotsPerSet[texture.second.Set], texture.second.Slot + 1);
 
             for (auto& sampler : paramDesc->Samplers)
-                numSlotsPerSet[sampler.second.Set] =
-                  std::max(numSlotsPerSet[sampler.second.Set], sampler.second.Slot + 1);
+                numSlotsPerSet[sampler.second.Set] = std::max(numSlotsPerSet[sampler.second.Set], sampler.second.Slot + 1);
         }
 
         uint32_t totalNumSlots = 0;
@@ -166,8 +162,7 @@ namespace Crowny
                 if (m_SetInfos[set].SlotSamplers[set] != (uint32_t)-1)
                     return m_SetInfos[set].SlotSamplers[slot];
             }
-            CW_ENGINE_ERROR("Parameters are of the wrong type. Requested: {0}, actual: {1}", (uint32_t)paramType,
-                            (uint32_t)type);
+            CW_ENGINE_ERROR("Parameters are of the wrong type. Requested: {0}, actual: {1}", (uint32_t)paramType, (uint32_t)type);
             return -1;
         }
 

@@ -7,8 +7,7 @@
 namespace Crowny
 {
 
-    bool StringUtils::IsSearchMathing(const String& item, const String& searchQuery, bool caseSensitive,
-                                      bool stripWhiteSpaces, bool stripUnderscores)
+    bool StringUtils::IsSearchMathing(const String& item, const String& searchQuery, bool caseSensitive, bool stripWhiteSpaces, bool stripUnderscores)
     {
         if (searchQuery.empty())
             return true;
@@ -137,11 +136,9 @@ namespace Crowny
 
     bool StringUtils::CaseInsensitiveCompare(const String& lhs, const String& rhs)
     {
-        const auto result =
-          std::mismatch(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(),
-                        [](const unsigned char l, const unsigned char r) { return std::tolower(l) == tolower(r); });
-        return result.second != rhs.cend() &&
-               (result.first == lhs.cend() || tolower(*result.first) < tolower(*result.second));
+        const auto result = std::mismatch(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(),
+                                          [](const unsigned char l, const unsigned char r) { return std::tolower(l) == tolower(r); });
+        return result.second != rhs.cend() && (result.first == lhs.cend() || tolower(*result.first) < tolower(*result.second));
     }
 
 } // namespace Crowny

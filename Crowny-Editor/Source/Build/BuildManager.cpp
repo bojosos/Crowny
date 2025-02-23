@@ -9,10 +9,8 @@ namespace Crowny
     BuildData::BuildData() : ActivePlatform(PlatformType::Windows)
     {
         PlatformData.resize((uint32_t)PlatformType::Count);
-        PlatformData[(uint32_t)PlatformType::Windows] =
-          CreateRef<PlatformInfo>(); // TODO: Create platform specific infos and add them here.
-        PlatformData[(uint32_t)PlatformType::Windows]->Defines =
-          "CROWNY_EDITOR;CROWNY_EDITOR_WIN;CROWNY_WIN;CROWNY_64;CROWNY_0_0_1;CROWNY_MONO";
+        PlatformData[(uint32_t)PlatformType::Windows] = CreateRef<PlatformInfo>(); // TODO: Create platform specific infos and add them here.
+        PlatformData[(uint32_t)PlatformType::Windows]->Defines = "CROWNY_EDITOR;CROWNY_EDITOR_WIN;CROWNY_WIN;CROWNY_64;CROWNY_0_0_1;CROWNY_MONO";
     }
 
     BuildManager::BuildManager() { m_BuildData = CreateRef<BuildData>(); }
@@ -35,10 +33,7 @@ namespace Crowny
         return m_BuildData->PlatformData[0]->Defines;
     }
 
-    Ref<PlatformInfo> BuildManager::GetActivePlatformInfo() const
-    {
-        return m_BuildData->PlatformData[(uint32_t)m_BuildData->ActivePlatform];
-    }
+    Ref<PlatformInfo> BuildManager::GetActivePlatformInfo() const { return m_BuildData->PlatformData[(uint32_t)m_BuildData->ActivePlatform]; }
 
     void BuildManager::SetActivePlatformInfo(PlatformType type)
     {
@@ -61,8 +56,7 @@ namespace Crowny
         {
         case PlatformType::Windows:
         default:
-            return { u8"mscorlib", u8"System",           u8"System.Core",       "System.Collections",
-                     "System.IO",  "System.Compression", "System.IO.Filesystem" };
+            return { u8"mscorlib", u8"System", u8"System.Core", "System.Collections", "System.IO", "System.Compression", "System.IO.Filesystem" };
         }
     }
 

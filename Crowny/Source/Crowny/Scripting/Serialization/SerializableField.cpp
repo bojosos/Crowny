@@ -9,8 +9,7 @@
 namespace Crowny
 {
 
-    Ref<SerializableFieldData> SerializableFieldData::Create(const Ref<SerializableTypeInfo>& typeInfo,
-                                                             MonoObject* value, bool allowNull)
+    Ref<SerializableFieldData> SerializableFieldData::Create(const Ref<SerializableTypeInfo>& typeInfo, MonoObject* value, bool allowNull)
     {
         if (typeInfo->GetType() == SerializableType::Primitive || typeInfo->GetType() == SerializableType::Enum)
         {
@@ -189,8 +188,7 @@ namespace Crowny
             if (value != nullptr)
                 fieldData->Value = SerializableObject::CreateFromMonoObject(value);
             else if (!allowNull)
-                fieldData->Value =
-                  SerializableObject::CreateNew(std::static_pointer_cast<SerializableTypeInfoObject>(typeInfo));
+                fieldData->Value = SerializableObject::CreateNew(std::static_pointer_cast<SerializableTypeInfoObject>(typeInfo));
             return fieldData;
         }
         else if (typeInfo->GetType() == SerializableType::Asset)
@@ -227,13 +225,9 @@ namespace Crowny
     }
 
     void SerializableFieldObject::SerializeYAML(YAML::Emitter& out) const { Value->SerializeYAML(out); }
-    void SerializableFieldObject::DeserializeYAML(const YAML::Node& node) {
-    } // Need type info from somewhere for the create call { Value = SerializableObject::CreateNew(m_);
-      // Value->DeserializeYAML(node); }
+    void SerializableFieldObject::DeserializeYAML(const YAML::Node& node) {} // Need type info from somewhere for the create call { Value =
+                                                                             // SerializableObject::CreateNew(m_); Value->DeserializeYAML(node); }
 
-    SerializableFieldKey::SerializableFieldKey(uint32_t typeId, uint32_t fieldId)
-      : m_TypeId(typeId), m_FieldIdx(fieldId)
-    {
-    }
+    SerializableFieldKey::SerializableFieldKey(uint32_t typeId, uint32_t fieldId) : m_TypeId(typeId), m_FieldIdx(fieldId) {}
 
 } // namespace Crowny

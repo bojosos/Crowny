@@ -23,8 +23,7 @@ namespace Crowny
         {
             spdlog::memory_buf_t formatted;
             spdlog::sinks::base_sink<Mutex>::formatter_->format(message, formatted);
-            *(m_MessageBuffer.begin() + m_MessagesBuffered) =
-              ConsoleBuffer::Message(fmt::to_string(formatted), GetMessageLevel(message.level));
+            *(m_MessageBuffer.begin() + m_MessagesBuffered) = ConsoleBuffer::Message(fmt::to_string(formatted), GetMessageLevel(message.level));
             if (++m_MessagesBuffered == m_MessageBufferCapacity)
                 flush_();
         }

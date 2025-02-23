@@ -92,7 +92,7 @@ namespace Crowny
 
         virtual bool IsReady() const override { return false; }
         virtual void Begin(const Ref<CommandBuffer>& cb = nullptr) override {}
-        virtual void End(const Ref<CommandBuffer>& cb = nullptr) override{};
+        virtual void End(const Ref<CommandBuffer>& cb = nullptr) override {};
     };
 
     class VulkanOcclusionQuery : public OcclusionQuery

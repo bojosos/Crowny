@@ -1,6 +1,6 @@
 #!/bin/bash
 
-declare -a dirs=("/mnt/c/dev/Crowny/Crowny/Source" "/mnt/c/dev/Crowny/Crowny-Editor/Source")
+declare -a dirs=("Crowny/Source" "Crowny-Editor/Source")
 
 for dir in "${dirs[@]}"; do
   echo $dir
@@ -11,4 +11,5 @@ for dir in "${dirs[@]}"; do
   echo -n "Running clang-format "
   find . -name "*\.h" -o -name "*\.cpp"|xargs -I {} sh -c "clang-format -i {}; echo -n '.'"
   echo
+  cd .. && cd ..
 done

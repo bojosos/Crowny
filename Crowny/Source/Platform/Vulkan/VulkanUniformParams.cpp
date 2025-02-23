@@ -25,12 +25,10 @@ namespace Crowny
         int Depth;
     };
 
-    const static DummyTexFormat DummyTexTypes[] = {
-        { TextureShape::TEXTURE_1D, 1, 2, 1, 1 },   { TextureShape::TEXTURE_1D, 2, 2, 1, 1 },
-        { TextureShape::TEXTURE_2D, 1, 2, 2, 1 },   { TextureShape::TEXTURE_2D, 2, 2, 2, 1 },
-        { TextureShape::TEXTURE_3D, 1, 2, 2, 2 },   { TextureShape::TEXTURE_CUBE, 6, 2, 2, 1 },
-        { TextureShape::TEXTURE_CUBE, 12, 2, 2, 1 }
-    };
+    const static DummyTexFormat DummyTexTypes[] = { { TextureShape::TEXTURE_1D, 1, 2, 1, 1 },   { TextureShape::TEXTURE_1D, 2, 2, 1, 1 },
+                                                    { TextureShape::TEXTURE_2D, 1, 2, 2, 1 },   { TextureShape::TEXTURE_2D, 2, 2, 2, 1 },
+                                                    { TextureShape::TEXTURE_3D, 1, 2, 2, 2 },   { TextureShape::TEXTURE_CUBE, 6, 2, 2, 1 },
+                                                    { TextureShape::TEXTURE_CUBE, 12, 2, 2, 1 } };
 
     void VulkanTextureManager::OnStartUp()
     {
@@ -201,22 +199,19 @@ namespace Crowny
                             imageInfo.sampler = VK_NULL_HANDLE;
                             imageInfo.imageView = res->GetView(format, false);
                             imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-                            uint32_t seqIdx =
-                              paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::LoadStoreTexture, i, slot);
+                            uint32_t seqIdx = paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::LoadStoreTexture, i, slot);
                             m_StorageImages[seqIdx] = res->GetHandle();
                         }
                         else
                         {
-                            bool isCombinedImageSampler =
-                              writeSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                            bool isCombinedImageSampler = writeSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                             if (isCombinedImageSampler)
                                 imageInfo.sampler = vkDefaultSampler->GetHandle();
                             else
                                 imageInfo.sampler = VK_NULL_HANDLE;
                             imageInfo.imageView = res->GetView(format, false);
                             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                            uint32_t seqIdx =
-                              paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::Texture, i, slot);
+                            uint32_t seqIdx = paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::Texture, i, slot);
                             m_SampledImages[seqIdx] = res->GetHandle();
                         }
                         writeSetInfo.pImageInfo = &imageInfo;
@@ -237,16 +232,14 @@ namespace Crowny
                             {
                                 VulkanGpuBuffer* buffer = bufferManager.GetDummyUniformBuffer();
                                 bufferInfo.buffer = buffer->GetHandle();
-                                uint32_t seqIdx =
-                                  paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::ParamBlock, i, slot);
+                                uint32_t seqIdx = paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::ParamBlock, i, slot);
                                 m_UniformBuffers[seqIdx] = bufferInfo.buffer;
                             }
                             else
                             {
                                 VulkanGpuBuffer* buffer = bufferManager.GetDummyUniformBuffer();
                                 bufferInfo.buffer = buffer->GetHandle();
-                                uint32_t seqIdx =
-                                  paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::Buffer, i, slot);
+                                uint32_t seqIdx = paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::Buffer, i, slot);
                                 m_Buffers[seqIdx] = bufferInfo.buffer;
                             }
                             writeSetInfo.pBufferInfo = &bufferInfo;
@@ -327,8 +320,7 @@ namespace Crowny
         m_SetsDirty[set] = true;
     }
 
-    void VulkanUniformParams::SetTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture,
-                                         const TextureSurface& surface)
+    void VulkanUniformParams::SetTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture, const TextureSurface& surface)
     {
         UniformParams::SetTexture(set, slot, texture, surface);
 

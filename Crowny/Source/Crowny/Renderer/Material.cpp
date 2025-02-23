@@ -1,7 +1,7 @@
 #include "cwpch.h"
 
-#include "Crowny/Renderer/Material.h"
 #include "Crowny/RenderAPI/UniformParams.h"
+#include "Crowny/Renderer/Material.h"
 
 namespace Crowny
 {
@@ -30,11 +30,12 @@ namespace Crowny
             {
                 // m_Bindings[name] = UniformBinding{ uniformBuffer.Set, uniformBuffer.Slot };
                 for (uint32_t i = 0; i < uniformBuffer.Members.size(); i++)
-                    m_Bindings[uniformBuffer.Members[i].Name] = UniformMember{ uniformBuffer.Members[i].Offset, uniformBuffer.Members[i].DataType, name };
+                    m_Bindings[uniformBuffer.Members[i].Name] =
+                      UniformMember{ uniformBuffer.Members[i].Offset, uniformBuffer.Members[i].DataType, name };
 
                 m_UniformBlocks[name] =
                   UniformBufferBlock::Create(uniformBuffer.BlockSize, BufferUsage::DYNAMIC_DRAW); // TODO: To dynamic or not dynamic?
-                m_Uniforms->SetUniformBlockBuffer(name, m_UniformBlocks[name]); // TODO: Avoid the double lookup
+                m_Uniforms->SetUniformBlockBuffer(name, m_UniformBlocks[name]);                   // TODO: Avoid the double lookup
             }
         }
     }
@@ -87,7 +88,8 @@ namespace Crowny
         }
         if (iterFind->second.DataType != ShaderDataType::Mat4)
         {
-            CW_ENGINE_WARN("Trying to write the wrong data type {}, expected {}, got matrix", name, ShaderDataTypeToString(iterFind->second.DataType));
+            CW_ENGINE_WARN("Trying to write the wrong data type {}, expected {}, got matrix", name,
+                           ShaderDataTypeToString(iterFind->second.DataType));
             return;
         }
         m_UniformBlocks[iterFind->second.BufferName]->Write(iterFind->second.Offset, &value, sizeof(value));

@@ -606,10 +606,9 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<CircleCollider2DComponent>(Entity e);
 
-    using AllComponents =
-      ComponentGroup<TransformComponent, CameraComponent, TextComponent, SpriteRendererComponent, MeshRendererComponent,
-                     AudioSourceComponent, AudioListenerComponent, RelationshipComponent, MonoScriptComponent,
-                     Rigidbody2DComponent, BoxCollider2DComponent, CircleCollider2DComponent>;
+    using AllComponents = ComponentGroup<TransformComponent, CameraComponent, TextComponent, SpriteRendererComponent, MeshRendererComponent,
+                                         AudioSourceComponent, AudioListenerComponent, RelationshipComponent, MonoScriptComponent,
+                                         Rigidbody2DComponent, BoxCollider2DComponent, CircleCollider2DComponent>;
 
     using TransformChangedNotifyComponents = ComponentGroup<AudioListenerComponent, AudioSourceComponent>;
 } // namespace Crowny

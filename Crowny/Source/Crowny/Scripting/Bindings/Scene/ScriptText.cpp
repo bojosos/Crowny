@@ -21,15 +21,9 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_SetOutlineColor", (void*)&Internal_SetOutlineColor);
     }
 
-    MonoString* ScriptText::Internal_GetText(ScriptText* thisPtr)
-    {
-        return MonoUtils::ToMonoString(thisPtr->GetComponent().Text);
-    }
+    MonoString* ScriptText::Internal_GetText(ScriptText* thisPtr) { return MonoUtils::ToMonoString(thisPtr->GetComponent().Text); }
 
-    void ScriptText::Internal_SetText(ScriptText* thisPtr, MonoString* text)
-    {
-        thisPtr->GetComponent().Text = MonoUtils::FromMonoString(text);
-    }
+    void ScriptText::Internal_SetText(ScriptText* thisPtr, MonoString* text) { thisPtr->GetComponent().Text = MonoUtils::FromMonoString(text); }
 
     MonoObject* ScriptText::Internal_GetFont(ScriptText* thisPtr)
     {
@@ -48,24 +42,12 @@ namespace Crowny
             thisPtr->GetComponent().Font = AssetHandle<Font>();
     }
 
-    void ScriptText::Internal_GetColor(ScriptText* thisPtr, glm::vec4* color)
-    {
-        *color = thisPtr->GetComponent().Color;
-    }
+    void ScriptText::Internal_GetColor(ScriptText* thisPtr, glm::vec4* color) { *color = thisPtr->GetComponent().Color; }
 
-    void ScriptText::Internal_SetColor(ScriptText* thisPtr, glm::vec4* color)
-    {
-        thisPtr->GetComponent().Color = *color;
-    }
+    void ScriptText::Internal_SetColor(ScriptText* thisPtr, glm::vec4* color) { thisPtr->GetComponent().Color = *color; }
 
-    void ScriptText::Internal_GetOutlineColor(ScriptText* thisPtr, glm::vec4* color)
-    {
-        *color = thisPtr->GetComponent().Color;
-    }
+    void ScriptText::Internal_GetOutlineColor(ScriptText* thisPtr, glm::vec4* color) { *color = thisPtr->GetComponent().Color; }
 
-    void ScriptText::Internal_SetOutlineColor(ScriptText* thisPtr, glm::vec4* color)
-    {
-        thisPtr->GetComponent().Color = *color;
-    }
+    void ScriptText::Internal_SetOutlineColor(ScriptText* thisPtr, glm::vec4* color) { thisPtr->GetComponent().Color = *color; }
 
 } // namespace Crowny

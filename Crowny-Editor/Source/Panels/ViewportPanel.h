@@ -22,12 +22,11 @@ namespace Crowny
         Bounds = 4
     };
 
-    
     class ImGuiViewportSceneDraggedEvent : public Event
     {
     public:
         const FileEntry* GetFileEntry() const { return m_FileEntry; }
-        const glm::vec2 &GetRelativePosition() const { return m_Coords; }
+        const glm::vec2& GetRelativePosition() const { return m_Coords; }
 
         EVENT_CLASS_CATEGORY(EventCategoryImGui);
         EVENT_CLASS_TYPE(ImGuiViewportSceneDragged);

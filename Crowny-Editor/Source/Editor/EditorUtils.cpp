@@ -26,8 +26,7 @@ namespace Crowny
 
         if (sepIdx != String::npos)
         {
-            String numStr =
-              cleanPath.substr(sepIdx + 1, cleanPath.size() - sepIdx - (scheme == FileNamingScheme::BracesIdx ? 2 : 1));
+            String numStr = cleanPath.substr(sepIdx + 1, cleanPath.size() - sepIdx - (scheme == FileNamingScheme::BracesIdx ? 2 : 1));
             uint32_t idx = StringUtils::ParseInt(numStr);
             cleanPath = cleanPath.substr(0, sepIdx);
             idx++;

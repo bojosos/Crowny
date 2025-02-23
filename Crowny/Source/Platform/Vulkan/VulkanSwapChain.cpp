@@ -21,9 +21,9 @@
 namespace Crowny
 {
 
-    VulkanSwapChain::VulkanSwapChain(VulkanResourceManager* owner, VkSurfaceKHR surface, uint32_t width,
-                                     uint32_t height, bool vsync, VkFormat colorFormat, VkColorSpaceKHR colorSpace,
-                                     bool createDepth, VkFormat depthFormat, VulkanSwapChain* oldChain)
+    VulkanSwapChain::VulkanSwapChain(VulkanResourceManager* owner, VkSurfaceKHR surface, uint32_t width, uint32_t height, bool vsync,
+                                     VkFormat colorFormat, VkColorSpaceKHR colorSpace, bool createDepth, VkFormat depthFormat,
+                                     VulkanSwapChain* oldChain)
       : VulkanResource(owner, false)
     {
         VulkanDevice& device = owner->GetDevice();
@@ -38,8 +38,7 @@ namespace Crowny
         CW_ENGINE_ASSERT(result == VK_SUCCESS && presentModeCount > 0);
 
         Vector<VkPresentModeKHR> presentModes(presentModeCount);
-        result =
-          vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes.data());
+        result = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes.data());
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
         VkExtent2D swapChainExtent{};
@@ -94,10 +93,8 @@ namespace Crowny
             preTransform = surfCaps.currentTransform;
 
         VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        Vector<VkCompositeAlphaFlagBitsKHR> compositeAlphaFlags = { VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-                                                                    VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
-                                                                    VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
-                                                                    VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR };
+        Vector<VkCompositeAlphaFlagBitsKHR> compositeAlphaFlags = { VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+                                                                    VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR, VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR };
 
         for (auto& flag : compositeAlphaFlags)
         {
@@ -255,9 +252,8 @@ namespace Crowny
     VkResult VulkanSwapChain::AcquireBackBuffer()
     {
         uint32_t imageIndex;
-        VkResult result =
-          vkAcquireNextImageKHR(m_Device, m_SwapChain, std::numeric_limits<uint64_t>::max(),
-                                m_Surfaces[m_CurrentSemaphoreIdx].Sync->GetHandle(), VK_NULL_HANDLE, &imageIndex);
+        VkResult result = vkAcquireNextImageKHR(m_Device, m_SwapChain, std::numeric_limits<uint64_t>::max(),
+                                                m_Surfaces[m_CurrentSemaphoreIdx].Sync->GetHandle(), VK_NULL_HANDLE, &imageIndex);
         if (result != VK_SUCCESS)
             return result;
 

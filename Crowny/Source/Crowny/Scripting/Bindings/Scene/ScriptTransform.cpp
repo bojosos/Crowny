@@ -28,8 +28,7 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_GetLocalScale", (void*)&Internal_LocalScaleGet);
         MetaData.ScriptClass->AddInternalCall("Internal_SetLocalScale", (void*)&Internal_LocalScaleSet);
 
-        MetaData.ScriptClass->AddInternalCall("Internal_GetWorldToLocalTransform",
-                                              (void*)&Internal_GetWorldToLocalTransform);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetWorldToLocalTransform", (void*)&Internal_GetWorldToLocalTransform);
         MetaData.ScriptClass->AddInternalCall("Internal_GetLocalToWorldMatrix", (void*)&Internal_GetLocalToWorldMatrix);
     }
 

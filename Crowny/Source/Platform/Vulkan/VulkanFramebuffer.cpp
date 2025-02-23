@@ -7,10 +7,8 @@
 namespace Crowny
 {
 
-    VulkanFramebuffer::VulkanFramebuffer(VulkanResourceManager* owner, VulkanRenderPass* renderPass,
-                                         const VulkanFramebufferDesc& desc)
-      : VulkanResource(owner, false), m_RenderPass(renderPass), m_NumLayers(desc.LayerCount), m_Width(desc.Width),
-        m_Height(desc.Height)
+    VulkanFramebuffer::VulkanFramebuffer(VulkanResourceManager* owner, VulkanRenderPass* renderPass, const VulkanFramebufferDesc& desc)
+      : VulkanResource(owner, false), m_RenderPass(renderPass), m_NumLayers(desc.LayerCount), m_Width(desc.Width), m_Height(desc.Height)
     {
         VkImageView attachmentViews[MAX_FRAMEBUFFER_COLOR_ATTACHMENTS + 1];
         VkFramebufferCreateInfo framebufferCI;
@@ -58,8 +56,7 @@ namespace Crowny
         framebufferCI.renderPass = m_RenderPass->GetVkRenderPass(RT_NONE, RT_NONE, CLEAR_NONE);
 
         VulkanDevice& device = m_Owner->GetDevice();
-        VkResult result =
-          vkCreateFramebuffer(device.GetLogicalDevice(), &framebufferCI, gVulkanAllocator, &m_Framebuffer);
+        VkResult result = vkCreateFramebuffer(device.GetLogicalDevice(), &framebufferCI, gVulkanAllocator, &m_Framebuffer);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
     }
 

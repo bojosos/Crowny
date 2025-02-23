@@ -11,9 +11,7 @@ namespace Crowny
     {
         AssemblyRefreshInfo() = default;
         AssemblyRefreshInfo(const char* name, const Path* path /*, const BuiltinTypeMappings* typeMappings*/)
-          : Name(name), Filepath(path)
-        {
-        } //, TypeMappings(typeMappings) { }
+          : Name(name), Filepath(path) {} //, TypeMappings(typeMappings) { }
 
         const char* Name = nullptr;
         const Path* Filepath = nullptr;

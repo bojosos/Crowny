@@ -27,8 +27,7 @@ namespace Crowny
     public:
         AssetHandle<Asset> Load(const Path& path, bool keepinternalRef = true, bool keepSourceData = false);
 
-        template <class T>
-        AssetHandle<T> Load(const Path& filepath, bool keepInternalRef = true, bool keepSourceData = false)
+        template <class T> AssetHandle<T> Load(const Path& filepath, bool keepInternalRef = true, bool keepSourceData = false)
         {
             return static_asset_cast<T>(Load(filepath, keepSourceData));
         }

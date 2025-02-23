@@ -22,8 +22,7 @@ namespace Crowny
 
         m_Type = MonoManager::Get().FindClass(classType);
         m_Name = mono_field_get_name(m_Field);
-        m_FullDeclName = CrownyMonoVisibilityToString(GetVisibility()) + (IsStatic() ? " static " : " ") +
-                         mono_field_full_name(m_Field);
+        m_FullDeclName = CrownyMonoVisibilityToString(GetVisibility()) + (IsStatic() ? " static " : " ") + mono_field_full_name(m_Field);
     }
 
     CrownyMonoVisibility MonoField::GetVisibility() const
@@ -52,10 +51,7 @@ namespace Crowny
 
     void MonoField::Get(MonoObject* obj, void* outval) { mono_field_get_value(obj, m_Field, outval); }
 
-    MonoObject* MonoField::GetBoxed(MonoObject* instance)
-    {
-        return mono_field_get_value_object(MonoManager::Get().GetDomain(), m_Field, instance);
-    }
+    MonoObject* MonoField::GetBoxed(MonoObject* instance) { return mono_field_get_value_object(MonoManager::Get().GetDomain(), m_Field, instance); }
 
     bool MonoField::HasAttribute(MonoClass* monoClass) const
     {

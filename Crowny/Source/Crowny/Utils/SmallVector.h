@@ -90,10 +90,7 @@ namespace Crowny
         }
 
         bool operator!=(const SmallVector<Type, N>& other) const { return !(*this == other); }
-        bool operator<(const SmallVector<Type, N>& other) const
-        {
-            return std::lexicographical_compare(begin(), end(), other.begin(), other.end());
-        }
+        bool operator<(const SmallVector<Type, N>& other) const { return std::lexicographical_compare(begin(), end(), other.begin(), other.end()); }
         bool operator>(const SmallVector<Type, N>& other) const { return other < *this; }
         bool operator<=(const SmallVector& other) const { return !(this > other); }
         bool operator>=(const SmallVector& other) const { return !(this < other); }

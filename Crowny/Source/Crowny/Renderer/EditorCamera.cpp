@@ -17,8 +17,7 @@ namespace Crowny
 
     void EditorCamera::OnUpdate(Timestep ts)
     {
-        if (Input::IsKeyPressed(Key::LeftAlt) ||
-            Input::IsKeyPressed(Key::RightAlt)) // need right alt cuz keyboard not working
+        if (Input::IsKeyPressed(Key::LeftAlt) || Input::IsKeyPressed(Key::RightAlt)) // need right alt cuz keyboard not working
         {
             glm::vec2 mouse = Input::GetMousePosition();
             glm::vec2 delta = (mouse - m_InitialMousePosition) * 0.003f;
@@ -124,20 +123,11 @@ namespace Crowny
         UpdateView();
     }
 
-    glm::vec3 EditorCamera::GetUpDirection() const
-    {
-        return glm::rotate(GetOrientation(), glm::vec3(0.0f, 1.0f, 0.0f));
-    }
+    glm::vec3 EditorCamera::GetUpDirection() const { return glm::rotate(GetOrientation(), glm::vec3(0.0f, 1.0f, 0.0f)); }
 
-    glm::vec3 EditorCamera::GetRightDirection() const
-    {
-        return glm::rotate(GetOrientation(), glm::vec3(1.0f, 0.0f, 0.0f));
-    }
+    glm::vec3 EditorCamera::GetRightDirection() const { return glm::rotate(GetOrientation(), glm::vec3(1.0f, 0.0f, 0.0f)); }
 
-    glm::vec3 EditorCamera::GetForwardDirection() const
-    {
-        return glm::rotate(GetOrientation(), glm::vec3(0.0f, 0.0f, -1.0f));
-    }
+    glm::vec3 EditorCamera::GetForwardDirection() const { return glm::rotate(GetOrientation(), glm::vec3(0.0f, 0.0f, -1.0f)); }
 
     glm::quat EditorCamera::GetOrientation() const { return glm::quat(glm::vec3(-m_Pitch, -m_Yaw, 0.0f)); }
 

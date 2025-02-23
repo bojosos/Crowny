@@ -69,8 +69,7 @@ namespace Crowny
             m_CurrentDirectoryEntry = ProjectLibrary::Get().GetRoot().get();
         else
         {
-            LibraryEntry* entry =
-              ProjectLibrary::Get().FindEntry(Editor::Get().GetProjectSettings()->LastAssetBrowserSelectedEntry).get();
+            LibraryEntry* entry = ProjectLibrary::Get().FindEntry(Editor::Get().GetProjectSettings()->LastAssetBrowserSelectedEntry).get();
             if (entry == nullptr || entry->Type == LibraryEntryType::File)
                 m_CurrentDirectoryEntry = ProjectLibrary::Get().GetRoot().get();
             else
@@ -112,8 +111,7 @@ namespace Crowny
                     for (uint32_t i = 0; i < samples.size(); i += 2)
                     {
                         int16_t sample = (((int(samples[i]))) | (int(samples[i + 1]) << 8));
-                        data[256 - int((float)sample / 65535 * 256) - 256 / 2]
-                            [int(x) /* clip->GetNumChannels() * (c + 1))*/] = { 39, 185, 242, 255 };
+                        data[256 - int((float)sample / 65535 * 256) - 256 / 2][int(x) /* clip->GetNumChannels() * (c + 1))*/] = { 39, 185, 242, 255 };
                         x += xAdv;
                     }
                 }
@@ -136,12 +134,10 @@ namespace Crowny
         DrawHeader();
         ImGui::Separator();
 
-        ImGui::BeginChild("AssetBrowser", ImVec2(0, 0), false,
-                          ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoNav);
+        ImGui::BeginChild("AssetBrowser", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoNav);
 
         // Right click not on a file
-        if (ImGui::BeginPopupContextWindow(nullptr,
-                                           ImGuiPopupFlags_NoOpenOverExistingPopup | ImGuiPopupFlags_MouseButtonRight))
+        if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_NoOpenOverExistingPopup | ImGuiPopupFlags_MouseButtonRight))
         {
             ShowContextMenuContents();
             ImGui::EndPopup();
@@ -164,8 +160,7 @@ namespace Crowny
         {
             const auto& path = child->Filepath;
             String ext = path.extension().string();
-            if (m_Icons.count(child->ElementNameHash) == 0 && ext.size() > 0 &&
-                TextureImporter::IsExtensionSupportedStatic(ext.substr(1)))
+            if (m_Icons.count(child->ElementNameHash) == 0 && ext.size() > 0 && TextureImporter::IsExtensionSupportedStatic(ext.substr(1)))
             {
                 Ref<Texture> result = Importer::Get().Import<Texture>(path);
                 m_Icons[child->ElementNameHash] = result;
@@ -255,8 +250,7 @@ namespace Crowny
 
         for (DirectoryEntry* dirEntry : m_DirectoryPathEntries)
         {
-            if (ImGui::Selectable(dirEntry->ElementName.c_str(), false, 0,
-                                  ImVec2(ImGui::CalcTextSize(dirEntry->ElementName.c_str()).x, 0.0f)))
+            if (ImGui::Selectable(dirEntry->ElementName.c_str(), false, 0, ImVec2(ImGui::CalcTextSize(dirEntry->ElementName.c_str()).x, 0.0f)))
             {
                 SetCurrentDirectory(dirEntry);
                 break;
@@ -386,8 +380,7 @@ namespace Crowny
                 String clipboard = PlatformUtils::CopyFromClipboard();
                 Vector<String> paths = StringUtils::SplitString(clipboard, "\n");
                 for (auto& path : paths) // Maybe here I would need to remove the last char
-                    ProjectLibrary::Get().CopyEntry(
-                      path, EditorUtils::GetUniquePath(m_CurrentDirectoryEntry->Filepath / Path(path).filename()));
+                    ProjectLibrary::Get().CopyEntry(path, EditorUtils::GetUniquePath(m_CurrentDirectoryEntry->Filepath / Path(path).filename()));
                 UpdateDisplayList();
             }
 
@@ -453,8 +446,7 @@ namespace Crowny
                 if (!Input::IsKeyPressed(Key::LeftShift))
                 {
                     m_SelectionSet.clear();
-                    m_SelectionEndIndex = m_SelectionStartIndex =
-                      std::min((int32_t)m_SelectionStartIndex + 1, (int32_t)displayList.size() - 1);
+                    m_SelectionEndIndex = m_SelectionStartIndex = std::min((int32_t)m_SelectionStartIndex + 1, (int32_t)displayList.size() - 1);
                     const Ref<LibraryEntry>& entry = displayList[m_SelectionStartIndex];
                     m_SelectionSet.insert(entry->ElementNameHash);
                     m_SetSelectedPathCallback(entry->Filepath);
@@ -472,8 +464,7 @@ namespace Crowny
                 if (!Input::IsKeyPressed(Key::LeftShift))
                 {
                     m_SelectionSet.clear();
-                    m_SelectionEndIndex = m_SelectionStartIndex =
-                      std::max(0, (int32_t)(m_SelectionStartIndex - m_ColumnCount));
+                    m_SelectionEndIndex = m_SelectionStartIndex = std::max(0, (int32_t)(m_SelectionStartIndex - m_ColumnCount));
                     const Ref<LibraryEntry>& entry = displayList[m_SelectionStartIndex];
                     m_SelectionSet.insert(entry->ElementNameHash);
                     m_SetSelectedPathCallback(entry->Filepath);
@@ -491,16 +482,14 @@ namespace Crowny
                 if (!Input::IsKeyPressed(Key::LeftShift))
                 {
                     m_SelectionSet.clear();
-                    m_SelectionEndIndex = m_SelectionStartIndex =
-                      std::min(m_SelectionStartIndex + m_ColumnCount, (uint32_t)displayList.size() - 1);
+                    m_SelectionEndIndex = m_SelectionStartIndex = std::min(m_SelectionStartIndex + m_ColumnCount, (uint32_t)displayList.size() - 1);
                     const Ref<LibraryEntry>& entry = displayList[m_SelectionStartIndex];
                     m_SelectionSet.insert(entry->ElementNameHash);
                     m_SetSelectedPathCallback(entry->Filepath);
                 }
                 else
                 {
-                    m_SelectionEndIndex =
-                      std::min(m_SelectionEndIndex + m_ColumnCount, (uint32_t)displayList.size() - 1);
+                    m_SelectionEndIndex = std::min(m_SelectionEndIndex + m_ColumnCount, (uint32_t)displayList.size() - 1);
 
                     const Ref<LibraryEntry>& entry = displayList[m_SelectionEndIndex];
                     m_SetSelectedPathCallback(entry->Filepath);
@@ -528,24 +517,23 @@ namespace Crowny
 
     void AssetBrowserPanel::SortDisplayList(DisplayList& displayList) const
     {
-        std::sort(
-          displayList.begin(), displayList.end(), [this](const Ref<LibraryEntry>& l, const Ref<LibraryEntry>& r) {
-              if (m_FileSortingMode == FileSortingMode::SortByName)
-              {
-                  if (l->Type == r->Type)
-                      return StringUtils::CaseInsensitiveCompare(l->ElementName, r->ElementName);
-                  return (int32_t)l->Type < (int32_t)r->Type;
-              }
-              else if (m_FileSortingMode == FileSortingMode::SortByDate)
-                  return l->LastUpdateTime < r->LastUpdateTime;
-              else if (m_FileSortingMode == FileSortingMode::SortBySize)
-              {
-                  if (l->Type == r->Type && l->Type == LibraryEntryType::File)
-                      return static_cast<FileEntry*>(l.get())->Filesize < static_cast<FileEntry*>(r.get())->Filesize;
-                  return (int32_t)l->Type < (int32_t)r->Type;
-              }
-              return false;
-          });
+        std::sort(displayList.begin(), displayList.end(), [this](const Ref<LibraryEntry>& l, const Ref<LibraryEntry>& r) {
+            if (m_FileSortingMode == FileSortingMode::SortByName)
+            {
+                if (l->Type == r->Type)
+                    return StringUtils::CaseInsensitiveCompare(l->ElementName, r->ElementName);
+                return (int32_t)l->Type < (int32_t)r->Type;
+            }
+            else if (m_FileSortingMode == FileSortingMode::SortByDate)
+                return l->LastUpdateTime < r->LastUpdateTime;
+            else if (m_FileSortingMode == FileSortingMode::SortBySize)
+            {
+                if (l->Type == r->Type && l->Type == LibraryEntryType::File)
+                    return static_cast<FileEntry*>(l.get())->Filesize < static_cast<FileEntry*>(r.get())->Filesize;
+                return (int32_t)l->Type < (int32_t)r->Type;
+            }
+            return false;
+        });
     }
 
     const AssetBrowserPanel::DisplayList& AssetBrowserPanel::GetDisplayList()
@@ -594,8 +582,7 @@ namespace Crowny
         {
             FileEntry* fileEntry = static_cast<FileEntry*>(entry);
             const AssetType assetType = fileEntry->Metadata->Type;
-            if (fileEntry->Metadata != nullptr &&
-                (assetType == AssetType::ScriptCode || assetType == AssetType::Shader))
+            if (fileEntry->Metadata != nullptr && (assetType == AssetType::ScriptCode || assetType == AssetType::Shader))
                 CodeEditorManager::Get().OpenFile(fileEntry->Filepath);
             else
                 PlatformUtils::OpenExternally(entry->Filepath);
@@ -694,13 +681,11 @@ namespace Crowny
 
                 ImGui::SetKeyboardFocusHere();
                 if (ImGui::InputText("##RenameFile", &m_RenamingText,
-                                     ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue |
-                                       ImGuiInputTextFlags_CodeSelectNoExt))
+                                     ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CodeSelectNoExt))
                     completeRename();
                 ImGui::PopStyleVar();
 
-                if ((Input::IsMouseButtonDown(Mouse::ButtonLeft) || Input::IsMouseButtonDown(Mouse::ButtonRight)) &&
-                    !ImGui::IsItemClicked())
+                if ((Input::IsMouseButtonDown(Mouse::ButtonLeft) || Input::IsMouseButtonDown(Mouse::ButtonRight)) && !ImGui::IsItemClicked())
                     completeRename();
 
                 if (Input::IsKeyPressed(Key::Escape))
@@ -737,9 +722,8 @@ namespace Crowny
                     {
                         const Path& payloadPath = fileEntry->Filepath;
                         const Path filename = payloadPath.filename();
-                        ProjectLibrary::Get().MoveEntry(
-                          payloadPath,
-                          path / filename); // Perhaps I need to end here? Or rather I should change the display list
+                        ProjectLibrary::Get().MoveEntry(payloadPath,
+                                                        path / filename); // Perhaps I need to end here? Or rather I should change the display list
                         UpdateDisplayList();
                     }
                     ImGui::EndDragDropTarget();
@@ -806,8 +790,7 @@ namespace Crowny
             ImGui::NextColumn();
         }
 
-        if (Input::IsMouseButtonDown(Mouse::ButtonLeft) && !hovered && !ImGui::IsItemHovered() &&
-            ImGui::IsWindowHovered())
+        if (Input::IsMouseButtonDown(Mouse::ButtonLeft) && !hovered && !ImGui::IsItemHovered() && ImGui::IsWindowHovered())
             ClearSelection();
 
         ImGui::Columns(1);
@@ -817,8 +800,7 @@ namespace Crowny
     {
         ImGui::Begin("Tree view");
 
-        std::function<void(const Ref<LibraryEntry>&, int32_t)> display = [&](const Ref<LibraryEntry>& cur,
-                                                                             int32_t dirEntryIdx = -1) {
+        std::function<void(const Ref<LibraryEntry>&, int32_t)> display = [&](const Ref<LibraryEntry>& cur, int32_t dirEntryIdx = -1) {
             if (cur->Type == LibraryEntryType::Directory)
             {
                 DirectoryEntry* dirEntry = static_cast<DirectoryEntry*>(cur.get());
@@ -830,8 +812,7 @@ namespace Crowny
                         hasChildren = true;
                 ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | (hasChildren ? 0 : ImGuiTreeNodeFlags_Leaf);
 
-                if (m_CurrentDirectoryEntry->ElementNameHash == cur->ElementNameHash &&
-                    m_CurrentDirectoryEntry->Filepath == cur->Filepath)
+                if (m_CurrentDirectoryEntry->ElementNameHash == cur->ElementNameHash && m_CurrentDirectoryEntry->Filepath == cur->Filepath)
                     flags |= ImGuiTreeNodeFlags_Selected;
 
                 if (dirEntryIdx != -1 && dirEntryIdx < m_DirectoryPathEntries.size() &&
@@ -853,8 +834,7 @@ namespace Crowny
                     if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload())
                     {
                         // TODO: Make variant that takes in file entry too. Should be a bit faster.
-                        ProjectLibrary::Get().MoveEntry(fileEntry->Filepath,
-                                                        cur->Filepath / fileEntry->Filepath.filename());
+                        ProjectLibrary::Get().MoveEntry(fileEntry->Filepath, cur->Filepath / fileEntry->Filepath.filename());
                         UpdateDisplayList();
                     }
                     ImGui::EndDragDropTarget();
@@ -897,8 +877,7 @@ namespace Crowny
     {
         if (ImGui::BeginMenu("Create"))
         {
-            m_SearchString
-              .clear(); // Clear the search so we can go back to the original directory and finish creation there
+            m_SearchString.clear(); // Clear the search so we can go back to the original directory and finish creation there
             if (ImGui::MenuItem("Folder"))
             {
                 if (isTreeView)
@@ -995,8 +974,7 @@ namespace Crowny
             String text = GetDefaultContents(itemType);
             String className = newEntryPath.filename().replace_extension("").string();
             className = StringUtils::Replace(className, " ", "_");
-            String script =
-              StringUtils::Replace(text, "#NAMESPACE#", Editor::Get().GetProjectPath().filename().string());
+            String script = StringUtils::Replace(text, "#NAMESPACE#", Editor::Get().GetProjectPath().filename().string());
             script = StringUtils::Replace(script, "#CLASSNAME#",
                                           className); // This has to be done after rename, since the file is saved first
                                                       // as NewScript and then as the user name.

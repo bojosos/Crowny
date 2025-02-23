@@ -38,8 +38,7 @@ namespace Crowny
     class VulkanFramebuffer : public VulkanResource
     {
     public:
-        VulkanFramebuffer(VulkanResourceManager* owner, VulkanRenderPass* renderPass,
-                          const VulkanFramebufferDesc& desc);
+        VulkanFramebuffer(VulkanResourceManager* owner, VulkanRenderPass* renderPass, const VulkanFramebufferDesc& desc);
         ~VulkanFramebuffer();
 
         VulkanRenderPass* GetRenderPass() const { return m_RenderPass; }
@@ -47,10 +46,7 @@ namespace Crowny
         uint32_t GetWidth() const { return m_Width; }
         uint32_t GetHeight() const { return m_Height; }
 
-        const VulkanFramebufferAttachment& GetColorAttachment(uint32_t colorIdx) const
-        {
-            return m_ColorAttachments[colorIdx];
-        }
+        const VulkanFramebufferAttachment& GetColorAttachment(uint32_t colorIdx) const { return m_ColorAttachments[colorIdx]; }
         const VulkanFramebufferAttachment& GetDepthStencilAttachment() const { return m_DepthStencilAttachment; }
         uint32_t GetNumLayers() const { return m_NumLayers; }
 

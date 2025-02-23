@@ -59,8 +59,8 @@ namespace Crowny
         delete scriptEntity;
     }
 
-    ScriptComponentBase* ScriptSceneObjectManager::GetScriptComponent(Entity entity, const ComponentBase& component,
-                                                                      MonoReflectionType* reflType, bool create)
+    ScriptComponentBase* ScriptSceneObjectManager::GetScriptComponent(Entity entity, const ComponentBase& component, MonoReflectionType* reflType,
+                                                                      bool create)
     {
         ScriptComponentBase* scriptComponent = GetScriptComponent(component.InstanceId);
         if (scriptComponent != nullptr)
@@ -78,8 +78,7 @@ namespace Crowny
         return nullptr;
     }
 
-    ScriptComponentBase* ScriptSceneObjectManager::CreateScriptComponent(Entity entity, const ComponentBase& component,
-                                                                         MonoReflectionType* reflType)
+    ScriptComponentBase* ScriptSceneObjectManager::CreateScriptComponent(Entity entity, const ComponentBase& component, MonoReflectionType* reflType)
     {
         ComponentInfo* info = ScriptInfoManager::Get().GetComponentInfo(reflType);
         if (info == nullptr)
@@ -92,8 +91,7 @@ namespace Crowny
         return nativeInstance;
     }
 
-    ScriptEntityBehaviour* ScriptSceneObjectManager::CreateManagedScriptComponent(MonoObject* instance, Entity entity,
-                                                                                  MonoScript& script)
+    ScriptEntityBehaviour* ScriptSceneObjectManager::CreateManagedScriptComponent(MonoObject* instance, Entity entity, MonoScript& script)
     {
         ScriptEntityBehaviour* nativeInstance = new ScriptEntityBehaviour(instance, entity);
         m_ScriptComponents[script.InstanceId] = nativeInstance;

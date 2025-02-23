@@ -11,8 +11,7 @@
 namespace Crowny
 {
 
-    MonoProperty::MonoProperty(::MonoProperty* prop)
-      : m_Property(prop), m_IsIndexed(false), m_IsFullyInitialized(false), m_ReturnType(nullptr)
+    MonoProperty::MonoProperty(::MonoProperty* prop) : m_Property(prop), m_IsIndexed(false), m_IsFullyInitialized(false), m_ReturnType(nullptr)
     {
         m_GetMethod = mono_property_get_get_method(m_Property);
         m_SetMethod = mono_property_get_set_method(m_Property);

@@ -31,16 +31,12 @@ namespace Crowny
         alListener3f(AL_POSITION, position.x, position.y, position.z);
         const glm::mat4& worldTransform = transform.GetMatrix();
         std::array<float, 6> orientation = {
-            -worldTransform[2].x, -worldTransform[2].y, -worldTransform[2].z,
-            worldTransform[1].x,  worldTransform[1].y,  worldTransform[1].z
+            -worldTransform[2].x, -worldTransform[2].y, -worldTransform[2].z, worldTransform[1].x, worldTransform[1].y, worldTransform[1].z
         }; // TODO: is this math correct? It's wrong surprise surprise
         alListenerfv(AL_ORIENTATION, orientation.data());
     }
 
-    void AudioListener::SetVelocity(const glm::vec3& velocity)
-    {
-        alListener3f(AL_VELOCITY, velocity.x, velocity.y, velocity.z);
-    }
+    void AudioListener::SetVelocity(const glm::vec3& velocity) { alListener3f(AL_VELOCITY, velocity.x, velocity.y, velocity.z); }
 
     void AudioListener::SetVolume(float volume) { alListenerf(AL_GAIN, volume); }
 

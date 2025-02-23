@@ -245,8 +245,10 @@ namespace Crowny
         }
     }
 
-    VkFormat VulkanUtils::GetVertexFormat(ShaderDataType shaderDataType) {
-        switch (shaderDataType) {
+    VkFormat VulkanUtils::GetVertexFormat(ShaderDataType shaderDataType)
+    {
+        switch (shaderDataType)
+        {
         case ShaderDataType::Bool:
             return VK_FORMAT_R8_SINT;
         case ShaderDataType::SByte:
@@ -323,8 +325,8 @@ namespace Crowny
         return VK_INDEX_TYPE_UINT32;
     }
 
-    TextureFormat VulkanUtils::GetClosestSupportedTextureFormat(const VulkanDevice& device, TextureFormat format,
-                                                                TextureShape shape, int usage, bool optimalTiling)
+    TextureFormat VulkanUtils::GetClosestSupportedTextureFormat(const VulkanDevice& device, TextureFormat format, TextureShape shape, int usage,
+                                                                bool optimalTiling)
     {
         VkFormatFeatureFlags wantedFeatureFlags = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
         if ((usage & TEXTURE_RENDERTARGET) != 0)
@@ -337,8 +339,7 @@ namespace Crowny
         VkFormatProperties props;
         auto isSupported = [&](VkFormat format) {
             vkGetPhysicalDeviceFormatProperties(device.GetPhysicalDevice(), format, &props);
-            VkFormatFeatureFlags featureFlags =
-              optimalTiling ? props.optimalTilingFeatures : props.linearTilingFeatures;
+            VkFormatFeatureFlags featureFlags = optimalTiling ? props.optimalTilingFeatures : props.linearTilingFeatures;
             return (featureFlags & wantedFeatureFlags) != 0;
         };
 
@@ -424,21 +425,19 @@ namespace Crowny
         int32_t aBottom = a.baseMipLevel + (int32_t)a.levelCount;
         int32_t bBottom = b.baseMipLevel + (int32_t)b.levelCount;
 
-        if ((int32_t)a.baseArrayLayer < bRight && aRight > (int32_t)b.baseArrayLayer &&
-            (int32_t)a.baseMipLevel < bBottom && aBottom > (int32_t)b.baseMipLevel)
+        if ((int32_t)a.baseArrayLayer < bRight && aRight > (int32_t)b.baseArrayLayer && (int32_t)a.baseMipLevel < bBottom &&
+            aBottom > (int32_t)b.baseMipLevel)
             return true;
         return false;
     }
 
-    void VulkanUtils::CutHorizontal(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith,
-                                    VkImageSubresourceRange* output, uint32_t& numAreas)
+    void VulkanUtils::CutHorizontal(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith, VkImageSubresourceRange* output,
+                                    uint32_t& numAreas)
     {
         numAreas = 0;
-        int32_t leftCut =
-          glm::clamp((int32_t)cutWith.baseArrayLayer - (int32_t)toCut.baseArrayLayer, 0, (int32_t)toCut.layerCount);
+        int32_t leftCut = glm::clamp((int32_t)cutWith.baseArrayLayer - (int32_t)toCut.baseArrayLayer, 0, (int32_t)toCut.layerCount);
         int32_t rightCut =
-          glm::clamp((int32_t)(cutWith.baseArrayLayer + cutWith.layerCount) - (int32_t)toCut.baseArrayLayer, 0,
-                     (int32_t)toCut.layerCount);
+          glm::clamp((int32_t)(cutWith.baseArrayLayer + cutWith.layerCount) - (int32_t)toCut.baseArrayLayer, 0, (int32_t)toCut.layerCount);
         if (leftCut > 0 && leftCut < (int32_t)toCut.layerCount)
         {
             output[numAreas] = toCut;
@@ -473,16 +472,14 @@ namespace Crowny
         }
     }
 
-    void VulkanUtils::CutVertical(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith,
-                                  VkImageSubresourceRange* output, uint32_t& numAreas)
+    void VulkanUtils::CutVertical(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith, VkImageSubresourceRange* output,
+                                  uint32_t& numAreas)
     {
 
         numAreas = 0;
-        int32_t topCut =
-          glm::clamp((int32_t)cutWith.baseMipLevel - (int32_t)toCut.baseMipLevel, 0, (int32_t)toCut.levelCount);
+        int32_t topCut = glm::clamp((int32_t)cutWith.baseMipLevel - (int32_t)toCut.baseMipLevel, 0, (int32_t)toCut.levelCount);
         int32_t bottomCut =
-          glm::clamp((int32_t)(cutWith.baseMipLevel + cutWith.levelCount) - (int32_t)toCut.baseMipLevel, 0,
-                     (int32_t)toCut.levelCount);
+          glm::clamp((int32_t)(cutWith.baseMipLevel + cutWith.levelCount) - (int32_t)toCut.baseMipLevel, 0, (int32_t)toCut.levelCount);
         if (topCut > 0 && topCut < (int32_t)toCut.levelCount)
         {
             output[numAreas] = toCut;

@@ -14,8 +14,7 @@ namespace Crowny
 
         bool operator==(const UUID& rhs) const
         {
-            return m_Data[0] == rhs.m_Data[0] && m_Data[1] == rhs.m_Data[1] && m_Data[2] == rhs.m_Data[2] &&
-                   m_Data[3] == rhs.m_Data[3];
+            return m_Data[0] == rhs.m_Data[0] && m_Data[1] == rhs.m_Data[1] && m_Data[2] == rhs.m_Data[2] && m_Data[3] == rhs.m_Data[3];
         }
 
         bool operator!=(const UUID& rhs) const { return !(*this == rhs); }
@@ -34,10 +33,7 @@ namespace Crowny
 
         bool Empty() const { return m_Data[0] == 0 && m_Data[1] == 0 && m_Data[2] == 0 && m_Data[3] == 0; }
 
-        template <typename OStream> friend OStream& operator<<(OStream& os, const UUID& ms)
-        {
-            return os << ms.ToString();
-        }
+        template <typename OStream> friend OStream& operator<<(OStream& os, const UUID& ms) { return os << ms.ToString(); }
 
         static const UUID EMPTY;
 

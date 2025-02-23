@@ -63,10 +63,7 @@ namespace Crowny
                 MetaData.CachedPtrField->Set(instance, &param);
         }
 
-        virtual MonoObject* CreateManagedInstance(bool construct)
-        {
-            return MetaData.ScriptClass->CreateInstance(construct);
-        }
+        virtual MonoObject* CreateManagedInstance(bool construct) { return MetaData.ScriptClass->CreateInstance(construct); }
 
         static Type* ToNative(MonoObject* managedInstance)
         {
@@ -81,8 +78,7 @@ namespace Crowny
 
         static void InitMetaData()
         {
-            ScriptMeta localMetaData =
-              ScriptMeta(Type::GetAssemblyName(), Type::GetNamespace(), Type::GetTypeName(), &Type::InitRuntimeData);
+            ScriptMeta localMetaData = ScriptMeta(Type::GetAssemblyName(), Type::GetNamespace(), Type::GetTypeName(), &Type::InitRuntimeData);
             MonoManager::RegisterScriptType(&MetaData, localMetaData);
         }
 
@@ -97,10 +93,10 @@ namespace Crowny
 
     template <typename Type, typename Base> ScriptMeta ScriptObject<Type, Base>::MetaData;
 
-#define SCRIPT_WRAPPER(assembly, ns, name)                                                                             \
-    static String GetAssemblyName() { return assembly; }                                                               \
-    static String GetNamespace() { return ns; }                                                                        \
-    static String GetTypeName() { return name; }                                                                       \
+#define SCRIPT_WRAPPER(assembly, ns, name)                                                                                                           \
+    static String GetAssemblyName() { return assembly; }                                                                                             \
+    static String GetNamespace() { return ns; }                                                                                                      \
+    static String GetTypeName() { return name; }                                                                                                     \
     static void InitRuntimeData();
 
     class ScriptObjectWrapper : public ScriptObject<ScriptObjectWrapper>

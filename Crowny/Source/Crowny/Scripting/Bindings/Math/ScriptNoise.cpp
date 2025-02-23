@@ -7,10 +7,7 @@ namespace Crowny
 {
     ScriptNoise::ScriptNoise() : ScriptObject() {}
 
-    void ScriptNoise::InitRuntimeData()
-    {
-        MetaData.ScriptClass->AddInternalCall("PerlinNoise", (void*)&Internal_PerlinNoise);
-    }
+    void ScriptNoise::InitRuntimeData() { MetaData.ScriptClass->AddInternalCall("PerlinNoise", (void*)&Internal_PerlinNoise); }
 
     float ScriptNoise::Internal_PerlinNoise(float x, float y)
     {

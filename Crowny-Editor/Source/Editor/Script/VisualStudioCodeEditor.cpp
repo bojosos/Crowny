@@ -42,9 +42,8 @@ namespace Crowny
         CW_ENGINE_ASSERT(error != 0);
         LPSTR messageBuffer = nullptr;
 
-        size_t size =
-          FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                         NULL, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
+        size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, error,
+                                     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
 
         std::string message(messageBuffer, size);
 
@@ -54,16 +53,14 @@ namespace Crowny
 
     class VSMessageFilter : public IMessageFilter
     {
-        DWORD __stdcall HandleInComingCall(DWORD dwCallType, HTASK htaskCaller, DWORD dwTickCount,
-                                           LPINTERFACEINFO lpInterfaceInfo) override
+        DWORD __stdcall HandleInComingCall(DWORD dwCallType, HTASK htaskCaller, DWORD dwTickCount, LPINTERFACEINFO lpInterfaceInfo) override
         {
             return SERVERCALL_ISHANDLED;
         }
 
         DWORD __stdcall RetryRejectedCall(HTASK htaskCallee, DWORD dwTickCount, DWORD dwRejectType) override
         {
-            if ((dwRejectType == SERVERCALL_RETRYLATER || dwRejectType == SERVERCALL_REJECTED) &&
-                dwTickCount < TIMEOUT_MS)
+            if ((dwRejectType == SERVERCALL_RETRYLATER || dwRejectType == SERVERCALL_REJECTED) && dwTickCount < TIMEOUT_MS)
                 return RETRY_INTERVAL_MS;
 
             if (dwRejectType == SERVERCALL_RETRYLATER)
@@ -71,10 +68,7 @@ namespace Crowny
             return -1;
         }
 
-        DWORD __stdcall MessagePending(HTASK htaskCallee, DWORD dwTickCount, DWORD dwPendingType) override
-        {
-            return PENDINGMSG_WAITDEFPROCESS;
-        }
+        DWORD __stdcall MessagePending(HTASK htaskCallee, DWORD dwTickCount, DWORD dwPendingType) override { return PENDINGMSG_WAITDEFPROCESS; }
 
         HRESULT __stdcall QueryInterface(REFIID riid, void** ppvObject) override
         {
@@ -176,8 +170,7 @@ namespace Crowny
         static CComPtr<EnvDTE::_DTE> CreateInstance(const CLSID& clsID, const Path& solutionPath)
         {
             CComPtr<IUnknown> newInstance = nullptr;
-            if (FAILED(
-                  ::CoCreateInstance(clsID, nullptr, CLSCTX_LOCAL_SERVER, EnvDTE::IID__DTE, (LPVOID*)&newInstance)))
+            if (FAILED(::CoCreateInstance(clsID, nullptr, CLSCTX_LOCAL_SERVER, EnvDTE::IID__DTE, (LPVOID*)&newInstance)))
                 return nullptr;
             CComPtr<EnvDTE::_DTE> dte;
             newInstance->QueryInterface(__uuidof(EnvDTE::_DTE), (void**)&dte);
@@ -264,8 +257,7 @@ namespace Crowny
             commandLineStream << QuoteString(solutionPath);
 
             WString commandLine = commandLineStream.str();
-            result = CreateProcessW(vsExePath.c_str(), commandLine.data(), nullptr, nullptr, false, 0, nullptr,
-                                    startingDirectory.c_str(), &si, &pi);
+            result = CreateProcessW(vsExePath.c_str(), commandLine.data(), nullptr, nullptr, false, 0, nullptr, startingDirectory.c_str(), &si, &pi);
             if (!result)
             {
                 DWORD error = GetLastError();
@@ -297,10 +289,7 @@ namespace Crowny
         }
     };
 
-    VisualStudioCodeEditor::VisualStudioCodeEditor(VisualStudioVersion version, const Path& execPath)
-      : m_Version(version), m_ExecPath(execPath)
-    {
-    }
+    VisualStudioCodeEditor::VisualStudioCodeEditor(VisualStudioVersion version, const Path& execPath) : m_Version(version), m_ExecPath(execPath) {}
 
     void VisualStudioCodeEditor::OpenFile(const Path& solutionPath, const Path& filePath, uint32_t line) const
     {
@@ -413,15 +402,13 @@ namespace Crowny
     VisualStudioCodeEditorFactory::VisualStudioCodeEditorFactory()
     {
         Map<String, CodeEditorVersion> vsVersions = {
-            { "2008", CodeEditorVersion::VS2008 }, { "2010", CodeEditorVersion::VS2010 },
-            { "2012", CodeEditorVersion::VS2012 }, { "2013", CodeEditorVersion::VS2013 },
-            { "2015", CodeEditorVersion::VS2015 }, { "2017", CodeEditorVersion::VS2017 },
+            { "2008", CodeEditorVersion::VS2008 }, { "2010", CodeEditorVersion::VS2010 }, { "2012", CodeEditorVersion::VS2012 },
+            { "2013", CodeEditorVersion::VS2013 }, { "2015", CodeEditorVersion::VS2015 }, { "2017", CodeEditorVersion::VS2017 },
             { "2019", CodeEditorVersion::VS2019 }, { "2022", CodeEditorVersion::VS2022 },
         };
         using namespace rapidjson;
 
-        String jsonResult =
-          PlatformUtils::Exec("C:\\dev\\Crowny\\3rdparty\\vswhere\\vswhere.exe -prerelease -format json -utf8");
+        String jsonResult = PlatformUtils::Exec("C:\\dev\\Crowny\\3rdparty\\vswhere\\vswhere.exe -prerelease -format json -utf8");
         Document document;
         document.Parse(jsonResult);
         CW_ENGINE_ASSERT(document.IsArray());
@@ -442,14 +429,10 @@ namespace Crowny
     CodeEditor* VisualStudioCodeEditorFactory::Create(const Path& executablePath) const
     {
         Map<CodeEditorVersion, VisualStudioVersion> versionData = {
-            { CodeEditorVersion::VS2008, VisualStudioVersion::VS2008 },
-            { CodeEditorVersion::VS2010, VisualStudioVersion::VS2010 },
-            { CodeEditorVersion::VS2012, VisualStudioVersion::VS2012 },
-            { CodeEditorVersion::VS2013, VisualStudioVersion::VS2013 },
-            { CodeEditorVersion::VS2015, VisualStudioVersion::VS2015 },
-            { CodeEditorVersion::VS2017, VisualStudioVersion::VS2017 },
-            { CodeEditorVersion::VS2019, VisualStudioVersion::VS2019 },
-            { CodeEditorVersion::VS2022, VisualStudioVersion::VS2022 },
+            { CodeEditorVersion::VS2008, VisualStudioVersion::VS2008 }, { CodeEditorVersion::VS2010, VisualStudioVersion::VS2010 },
+            { CodeEditorVersion::VS2012, VisualStudioVersion::VS2012 }, { CodeEditorVersion::VS2013, VisualStudioVersion::VS2013 },
+            { CodeEditorVersion::VS2015, VisualStudioVersion::VS2015 }, { CodeEditorVersion::VS2017, VisualStudioVersion::VS2017 },
+            { CodeEditorVersion::VS2019, VisualStudioVersion::VS2019 }, { CodeEditorVersion::VS2022, VisualStudioVersion::VS2022 },
         };
         for (const CodeEditorInstallation& install : m_SupportedEditors)
         {

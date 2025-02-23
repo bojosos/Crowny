@@ -21,8 +21,8 @@
 // These have to be outside of our namespace....
 template <typename Archive> void Serialize(Archive& archive, msdf_atlas::GlyphGeometry& glyph)
 {
-    archive(glyph.advance, glyph.geometryScale, glyph.box.rect.x, glyph.box.rect.y, glyph.box.rect.w, glyph.box.rect.h,
-            glyph.box.range, glyph.box.scale, glyph.box.translate.x, glyph.box.translate.y);
+    archive(glyph.advance, glyph.geometryScale, glyph.box.rect.x, glyph.box.rect.y, glyph.box.rect.w, glyph.box.rect.h, glyph.box.range,
+            glyph.box.scale, glyph.box.translate.x, glyph.box.translate.y);
 }
 
 template <typename Archive> void Serialize(Archive& archive, msdfgen::FontMetrics& fontMetrics)
@@ -107,16 +107,15 @@ namespace Crowny
     {
         archive(cereal::base_class<Asset>(&texture));
         TextureParameters& params = texture.m_Params;
-        archive(params.Type, params.Shape, params.sRGB, params.ReadWrite, params.GenerateMipmaps, params.MipLevels,
-                params.Samples, params.Faces, params.Width, params.Height, params.Depth, params.Usage, params.Format);
+        archive(params.Type, params.Shape, params.sRGB, params.ReadWrite, params.GenerateMipmaps, params.MipLevels, params.Samples, params.Faces,
+                params.Width, params.Height, params.Depth, params.Usage, params.Format);
         texture.Init();
 
         for (uint32_t mip = 0; mip < params.MipLevels + 1; mip++)
         {
             for (uint32_t face = 0; face < params.Faces; face++)
             {
-                Ref<PixelData> pixelData = CreateRef<PixelData>(texture.GetWidth(), texture.GetHeight(),
-                                                                texture.GetDepth(), texture.GetFormat());
+                Ref<PixelData> pixelData = CreateRef<PixelData>(texture.GetWidth(), texture.GetHeight(), texture.GetDepth(), texture.GetFormat());
                 pixelData->AllocateInternalBuffer();
                 archive(cereal::binary_data((uint8_t*)pixelData->GetData(), pixelData->GetSize()));
                 texture.WriteData(*pixelData, mip, face);
@@ -130,8 +129,8 @@ namespace Crowny
 
         archive(cereal::base_class<Asset>(&texture2));
         const TextureParameters& params = texture2.GetProperties();
-        archive(params.Type, params.Shape, params.sRGB, params.ReadWrite, params.GenerateMipmaps, params.MipLevels,
-                params.Samples, params.Faces, params.Width, params.Height, params.Depth, params.Usage, params.Format);
+        archive(params.Type, params.Shape, params.sRGB, params.ReadWrite, params.GenerateMipmaps, params.MipLevels, params.Samples, params.Faces,
+                params.Width, params.Height, params.Depth, params.Usage, params.Format);
         for (uint32_t mip = 0; mip < params.MipLevels + 1; mip++) // Save all texture data
         {
             for (uint32_t face = 0; face < params.Faces; face++)
@@ -145,15 +144,9 @@ namespace Crowny
         }
     }
 
-    void Save(BinaryDataStreamOutputArchive& archive, const VulkanTexture& texture)
-    {
-        archive(cereal::base_class<Texture>(&texture));
-    }
+    void Save(BinaryDataStreamOutputArchive& archive, const VulkanTexture& texture) { archive(cereal::base_class<Texture>(&texture)); }
 
-    void Load(BinaryDataStreamInputArchive& archive, VulkanTexture& texture)
-    {
-        archive(cereal::base_class<Texture>(&texture));
-    }
+    void Load(BinaryDataStreamInputArchive& archive, VulkanTexture& texture) { archive(cereal::base_class<Texture>(&texture)); }
 
     void Load(BinaryDataStreamInputArchive& archive, Mesh& mesh)
     {
@@ -239,14 +232,13 @@ namespace Crowny
 
     template <typename Archive> void Serialize(Archive& archive, TextureImportOptions& importOptions)
     {
-        archive(importOptions.AutomaticFormat, importOptions.CpuCached, importOptions.Format,
-                importOptions.GenerateMips, importOptions.MaxMip, importOptions.Shape, importOptions.SRGB);
+        archive(importOptions.AutomaticFormat, importOptions.CpuCached, importOptions.Format, importOptions.GenerateMips, importOptions.MaxMip,
+                importOptions.Shape, importOptions.SRGB);
     }
 
     template <typename Archive> void Serialize(Archive& archive, AudioClipImportOptions& importOptions)
     {
-        archive(importOptions.Format, importOptions.Quality, importOptions.ReadMode, importOptions.BitDepth,
-                importOptions.Is3D);
+        archive(importOptions.Format, importOptions.Quality, importOptions.ReadMode, importOptions.BitDepth, importOptions.Is3D);
     }
 
     void Save(BinaryDataStreamOutputArchive& archive, const ShaderImportOptions& importOptions)
@@ -254,15 +246,9 @@ namespace Crowny
         archive(importOptions.Language, importOptions.m_Defines);
     }
 
-    void Load(BinaryDataStreamInputArchive& archive, ShaderImportOptions& importOptions)
-    {
-        archive(importOptions.Language, importOptions.m_Defines);
-    }
+    void Load(BinaryDataStreamInputArchive& archive, ShaderImportOptions& importOptions) { archive(importOptions.Language, importOptions.m_Defines); }
 
-    template <typename Archive> void Serialize(Archive& archive, CSharpScriptImportOptions& importOptions)
-    {
-        archive(importOptions.IsEditorScript);
-    }
+    template <typename Archive> void Serialize(Archive& archive, CSharpScriptImportOptions& importOptions) { archive(importOptions.IsEditorScript); }
 
     template <class Archive> void Serialize(Archive& archive, UniformDesc& desc)
     {
@@ -353,8 +339,7 @@ namespace Crowny
         return Load(uuid, filepath, keepInternalRef, keepSourceData);
     }
 
-    AssetHandle<Asset> AssetManager::Load(const UUID& uuid, const Path& filepath, bool keepInternalRef,
-                                          bool keepSourceData)
+    AssetHandle<Asset> AssetManager::Load(const UUID& uuid, const Path& filepath, bool keepInternalRef, bool keepSourceData)
     {
         auto iterFind = m_Handles.find(uuid);
         if (iterFind != m_Handles.end())

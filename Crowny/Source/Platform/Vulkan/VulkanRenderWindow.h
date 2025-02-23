@@ -27,9 +27,8 @@ namespace Crowny
         virtual void Minimize() override;
         virtual void Maximize() override;
         virtual void Restore() override;
-        virtual void SetFullScreen(uint32_t width, uint32_t height, float refreshRate = 60.0f,
-                                   uint32_t monitorIdx = 0) override{};
-        virtual void SetWindowed(uint32_t width, uint32_t height) override{};
+        virtual void SetFullScreen(uint32_t width, uint32_t height, float refreshRate = 60.0f, uint32_t monitorIdx = 0) override {};
+        virtual void SetWindowed(uint32_t width, uint32_t height) override {};
         // Wat?
         virtual Window* GetWindow() const override { return m_Window; }
         virtual void SetHidden(bool hidden) override;

@@ -59,11 +59,9 @@ namespace Crowny
 
     template <typename K, typename V, typename P = std::less<K>> using Multimap = std::multimap<K, V, P>;
 
-    template <typename K, typename V, typename H = HashType<K>, typename C = std::equal_to<K>>
-    using UnorderedMap = std::unordered_map<K, V, H, C>;
+    template <typename K, typename V, typename H = HashType<K>, typename C = std::equal_to<K>> using UnorderedMap = std::unordered_map<K, V, H, C>;
 
-    template <typename T, typename H = HashType<T>, typename C = std::equal_to<T>>
-    using UnorderedSet = std::unordered_set<T, H, C>;
+    template <typename T, typename H = HashType<T>, typename C = std::equal_to<T>> using UnorderedSet = std::unordered_set<T, H, C>;
 
     template <typename K, typename V, typename H = HashType<K>, typename C = std::equal_to<K>>
     using UnorderedMultimap = std::unordered_multimap<K, V, H, C>;
@@ -113,9 +111,6 @@ namespace Crowny
      *
      * @tparam Smart pointer type.
      */
-    template <typename T, typename... Args> constexpr Ref<T> CreateRef(Args&&... args)
-    {
-        return std::make_shared<T>(std::forward<Args>(args)...);
-    }
+    template <typename T, typename... Args> constexpr Ref<T> CreateRef(Args&&... args) { return std::make_shared<T>(std::forward<Args>(args)...); }
 
 } // namespace Crowny

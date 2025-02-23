@@ -8,8 +8,7 @@
 namespace Crowny
 {
 
-    SerializableObject::SerializableObject(Ref<SerializableObjectInfo> objInfo, MonoObject* managedInstance)
-      : m_ObjectInfo(objInfo)
+    SerializableObject::SerializableObject(Ref<SerializableObjectInfo> objInfo, MonoObject* managedInstance) : m_ObjectInfo(objInfo)
     {
         m_GCHandle = MonoUtils::NewGCHandle(managedInstance, false);
     }
@@ -56,8 +55,8 @@ namespace Crowny
     MonoObject* SerializableObject::Deserialize()
     {
         Ref<SerializableObjectInfo> objInfo = nullptr;
-        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(m_ObjectInfo->m_TypeInfo->m_TypeNamespace,
-                                                                m_ObjectInfo->m_TypeInfo->m_TypeName, objInfo))
+        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(m_ObjectInfo->m_TypeInfo->m_TypeNamespace, m_ObjectInfo->m_TypeInfo->m_TypeName,
+                                                                objInfo))
             return nullptr;
         MonoObject* managedInstance = CreateManagedInstance(objInfo->m_TypeInfo);
         Deserialize(managedInstance, objInfo);
@@ -70,8 +69,7 @@ namespace Crowny
 
         if (field->m_TypeInfo->GetType() == SerializableType::Primitive)
         {
-            ScriptPrimitiveType primitiveType =
-              std::static_pointer_cast<SerializableTypeInfoPrimitive>(field->m_TypeInfo)->m_Type;
+            ScriptPrimitiveType primitiveType = std::static_pointer_cast<SerializableTypeInfoPrimitive>(field->m_TypeInfo)->m_Type;
 
             SerializeEnumYAML(out, "PrimitiveInfo", primitiveType);
         }
@@ -111,8 +109,7 @@ namespace Crowny
         if (const YAML::Node& primitiveInfoNode = node["PrimitiveInfo"])
         {
             Ref<SerializableTypeInfoPrimitive> primitiveInfo = CreateRef<SerializableTypeInfoPrimitive>();
-            primitiveInfo->m_Type =
-              (ScriptPrimitiveType)primitiveInfoNode.as<int32_t>((int32_t)ScriptPrimitiveType::I32);
+            primitiveInfo->m_Type = (ScriptPrimitiveType)primitiveInfoNode.as<int32_t>((int32_t)ScriptPrimitiveType::I32);
             if ((int32_t)primitiveInfo->m_Type < 0 || primitiveInfo->m_Type >= ScriptPrimitiveType::Count)
             {
                 CW_ENGINE_WARN("Script primitive type is invalid");
@@ -213,8 +210,7 @@ namespace Crowny
 
             Ref<SerializableObjectInfo> deserializedObjectInfo = CreateRef<SerializableObjectInfo>();
             deserializedObjectInfo->m_TypeInfo = typeInfo;
-            if (result->m_ObjectInfo ==
-                nullptr) // Set the object info of the SerializableObject to the first one created.
+            if (result->m_ObjectInfo == nullptr) // Set the object info of the SerializableObject to the first one created.
                 result->m_ObjectInfo = deserializedObjectInfo;
 
             uint32_t fieldId = 0;
@@ -341,8 +337,7 @@ namespace Crowny
                     uint32_t typeId = field.second->m_ParentTypeId;
                     SerializableFieldKey key(typeId, fieldId);
                     Ref<SerializableMemberInfo> fieldInfo = objInfo->FindMatchingField(field.second, type->m_TypeInfo);
-                    CW_ENGINE_ASSERT(fieldInfo !=
-                                     nullptr); // TODO: Remove this, it will cause crashes when recompiling C#
+                    CW_ENGINE_ASSERT(fieldInfo != nullptr); // TODO: Remove this, it will cause crashes when recompiling C#
                     if (fieldInfo != nullptr)
                     {
                         // This line kinda requires that the file format is valid. If we have the field info in the
@@ -374,8 +369,7 @@ namespace Crowny
         }
     }
 
-    void SerializableObject::SetFieldData(const Ref<SerializableMemberInfo>& fieldInfo,
-                                          const Ref<SerializableFieldData>& val)
+    void SerializableObject::SetFieldData(const Ref<SerializableMemberInfo>& fieldInfo, const Ref<SerializableFieldData>& val)
     {
         if (val == nullptr)
             CW_ENGINE_INFO("Here SetFieldData");

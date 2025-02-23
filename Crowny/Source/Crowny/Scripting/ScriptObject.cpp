@@ -22,8 +22,7 @@ namespace Crowny
 
     void ScriptObjectWrapper::InitRuntimeData()
     {
-        MetaData.ScriptClass->AddInternalCall("Internal_ManagedInstanceDeleted",
-                                              (void*)&ScriptObjectWrapper::Internal_ManagedInstanceDeleted);
+        MetaData.ScriptClass->AddInternalCall("Internal_ManagedInstanceDeleted", (void*)&ScriptObjectWrapper::Internal_ManagedInstanceDeleted);
     }
 
     void ScriptObjectWrapper::Internal_ManagedInstanceDeleted(ScriptObjectBase* instance)

@@ -36,14 +36,8 @@ namespace Crowny
             return { 1.0f, 1.0f, 1.0f, 1.0f };
         }
 
-        void SetMessageLevelEnabled(ConsoleBuffer::Message::Level level, bool enabled)
-        {
-            m_EnabledLevels[(uint32_t)level] = enabled;
-        }
-        bool IsMessageLevelEnabled(ConsoleBuffer::Message::Level level) const
-        {
-            return m_EnabledLevels[(uint32_t)level];
-        }
+        void SetMessageLevelEnabled(ConsoleBuffer::Message::Level level, bool enabled) { m_EnabledLevels[(uint32_t)level] = enabled; }
+        bool IsMessageLevelEnabled(ConsoleBuffer::Message::Level level) const { return m_EnabledLevels[(uint32_t)level]; }
 
         void SetCollapseEnabled(bool collapse) { m_Collapse = collapse; }
         void SetScrollToBottomEnabled(bool scroll) { m_AllowScrollingToBottom = scroll; }

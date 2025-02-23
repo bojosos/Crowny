@@ -25,10 +25,9 @@ namespace Crowny
 {
 
     constexpr glm::vec2 QuadUv[] = { { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 1.0f } };
-    constexpr glm::vec4 QuadVertices[] = { { -0.5f, -0.5f, 0.0f, 1.0f },
-                                           { 0.5f, -0.5f, 0.0f, 1.0f },
-                                           { 0.5f, 0.5f, 0.0f, 1.0f },
-                                           { -0.5f, 0.5f, 0.0f, 1.0f } };
+    constexpr glm::vec4 QuadVertices[] = {
+        { -0.5f, -0.5f, 0.0f, 1.0f }, { 0.5f, -0.5f, 0.0f, 1.0f }, { 0.5f, 0.5f, 0.0f, 1.0f }, { -0.5f, 0.5f, 0.0f, 1.0f }
+    };
 
     struct VertexData
     {
@@ -155,11 +154,12 @@ namespace Crowny
     {
         s_Data->CircleBuffer = s_Data->CircleTmpBuffer = new CircleVertex[s_Data->MaxLineVertices];
         s_Data->CircleVertexBuffer = VertexBuffer::Create(s_Data->MaxLineVertices * sizeof(CircleVertex), BufferUsage::DYNAMIC_DRAW);
-        const Ref<BufferLayout> layout = CreateRef<BufferLayout>(BufferLayout{
-            { ShaderDataType::Float3, "a_WorldPosition" }, { ShaderDataType::Float3, "a_LocalPosition" },
-            { ShaderDataType::Float4, "a_Color" },         { ShaderDataType::Float, "a_Thickness" },
-            { ShaderDataType::Float, "a_Fade" },           { ShaderDataType::Int, "a_Id" }
-        });
+        const Ref<BufferLayout> layout = CreateRef<BufferLayout>(BufferLayout{ { ShaderDataType::Float3, "a_WorldPosition" },
+                                                                               { ShaderDataType::Float3, "a_LocalPosition" },
+                                                                               { ShaderDataType::Float4, "a_Color" },
+                                                                               { ShaderDataType::Float, "a_Thickness" },
+                                                                               { ShaderDataType::Float, "a_Fade" },
+                                                                               { ShaderDataType::Int, "a_Id" } });
         s_Data->CircleVertexBuffer->SetLayout(layout);
 
         const Ref<Shader> circleShader = Importer::Get().Import<Shader>("Resources/Shaders/Circle.glsl");
@@ -171,15 +171,16 @@ namespace Crowny
     static void SetupTextBuffers()
     {
         s_Data->TextBuffer = s_Data->TextTmpBuffer = new TextVertex[s_Data->MaxLineVertices];
-        s_Data->TextVertexBuffer =
-          VertexBuffer::Create(RENDERER_MAX_SPRITES * sizeof(TextVertex), BufferUsage::DYNAMIC_DRAW);
+        s_Data->TextVertexBuffer = VertexBuffer::Create(RENDERER_MAX_SPRITES * sizeof(TextVertex), BufferUsage::DYNAMIC_DRAW);
 
-        Ref<BufferLayout> layout = CreateRef<BufferLayout>(BufferLayout{
-            { ShaderDataType::Float3, "a_Position" },        { ShaderDataType::Float4, "a_Color" },
-            { ShaderDataType::Float2, "a_TexCoords" },       { ShaderDataType::Float4, "a_UnderlayColor" },
-            { ShaderDataType::Float, "a_UnderlayOffset" },   { ShaderDataType::Float4, "a_OutlineColor" },
-            { ShaderDataType::Float, "a_OutlineThickness" }, { ShaderDataType::Int, "a_ObjectId" }
-        });
+        Ref<BufferLayout> layout = CreateRef<BufferLayout>(BufferLayout{ { ShaderDataType::Float3, "a_Position" },
+                                                                         { ShaderDataType::Float4, "a_Color" },
+                                                                         { ShaderDataType::Float2, "a_TexCoords" },
+                                                                         { ShaderDataType::Float4, "a_UnderlayColor" },
+                                                                         { ShaderDataType::Float, "a_UnderlayOffset" },
+                                                                         { ShaderDataType::Float4, "a_OutlineColor" },
+                                                                         { ShaderDataType::Float, "a_OutlineThickness" },
+                                                                         { ShaderDataType::Int, "a_ObjectId" } });
         s_Data->TextVertexBuffer->SetLayout(layout);
 
         // AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>("Resources/Shaders/Text.asset");
@@ -204,10 +205,7 @@ namespace Crowny
         s_Data->TextMaterial->SetMatrix("u_ViewProjection", viewProjection);
     }
 
-    void Renderer2D::Begin(const glm::mat4& projection, const glm::mat4& view)
-    {
-        CW_ENGINE_ASSERT(false);
-    }
+    void Renderer2D::Begin(const glm::mat4& projection, const glm::mat4& view) { CW_ENGINE_ASSERT(false); }
 
     float Renderer2D::FindTexture(const AssetHandle<Texture>& texture)
     {
@@ -230,9 +228,9 @@ namespace Crowny
             if (s_Data->TextureIndex == 32) // TODO: not 32, use the system properties.
             {
                 End();
-                s_Data->QuadBuffer = (VertexData*)s_Data->QuadVertexBuffer->Map(
-                  0, RENDERER_MAX_SPRITES * 4,
-                  GpuLockOptions::WRITE_DISCARD); // TODO: Begin or something instead of this
+                s_Data->QuadBuffer =
+                  (VertexData*)s_Data->QuadVertexBuffer->Map(0, RENDERER_MAX_SPRITES * 4,
+                                                             GpuLockOptions::WRITE_DISCARD); // TODO: Begin or something instead of this
             }
             s_Data->TextureIndex = (s_Data->TextureIndex + 1) % 32;
             s_Data->Textures[s_Data->TextureIndex] = texture;
@@ -244,14 +242,12 @@ namespace Crowny
     void Renderer2D::FillRect(const Rect2F& bounds, const glm::vec4& color, uint32_t entityId)
     {
         const glm::mat4 transform =
-          glm::translate(glm::mat4(1.0f), { bounds.X, bounds.Y, 1.0f }) *
-                              glm::scale(glm::mat4(1.0f), { bounds.Width, bounds.Height, 1.0f });
+          glm::translate(glm::mat4(1.0f), { bounds.X, bounds.Y, 1.0f }) * glm::scale(glm::mat4(1.0f), { bounds.Width, bounds.Height, 1.0f });
 
         FillRect(transform, nullptr, color, entityId);
     }
 
-    void Renderer2D::FillRect(const glm::mat4& transform, const AssetHandle<Texture>& texture, const glm::vec4& color,
-                              uint32_t entityId)
+    void Renderer2D::FillRect(const glm::mat4& transform, const AssetHandle<Texture>& texture, const glm::vec4& color, uint32_t entityId)
     {
         const float ts = FindTexture(texture);
 
@@ -269,17 +265,15 @@ namespace Crowny
         s_Data->QuadIndexCount += 6;
     }
 
-    void Renderer2D::FillRect(const Rect2F& bounds, const AssetHandle<Texture>& texture, const glm::vec4& color,
-                              uint32_t entityId)
+    void Renderer2D::FillRect(const Rect2F& bounds, const AssetHandle<Texture>& texture, const glm::vec4& color, uint32_t entityId)
     {
-        glm::mat4 transform = glm::translate(glm::mat4(1.0f), { bounds.X, bounds.Y, 1.0f }) *
-                              glm::scale(glm::mat4(1.0f), { bounds.Width, bounds.Height, 1.0f });
+        glm::mat4 transform =
+          glm::translate(glm::mat4(1.0f), { bounds.X, bounds.Y, 1.0f }) * glm::scale(glm::mat4(1.0f), { bounds.Width, bounds.Height, 1.0f });
 
         FillRect(transform, texture, color, entityId);
     }
 
-    void Renderer2D::DrawCircle(const glm::mat4& transform, const glm::vec4& color, float thickness, float fade,
-                                int32_t entityId)
+    void Renderer2D::DrawCircle(const glm::mat4& transform, const glm::vec4& color, float thickness, float fade, int32_t entityId)
     {
         for (uint32_t i = 0; i < 4; i++)
         {
@@ -301,9 +295,8 @@ namespace Crowny
         const glm::vec3 center = (p1 + p2) * 0.5f;
         // TODO: This atan math is wrong for some angles.
         float angle = glm::atan(glm::abs(p1.y - p2.y) / glm::abs(p1.x - p2.x));
-        const glm::mat4 transform = glm::translate(glm::mat4(1.0f), center) *
-                              glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.0f, 0.0f, 1.0f)) *
-                              glm::scale(glm::mat4(1.0f), glm::vec3(length, thickness, 1.0f));
+        const glm::mat4 transform = glm::translate(glm::mat4(1.0f), center) * glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.0f, 0.0f, 1.0f)) *
+                                    glm::scale(glm::mat4(1.0f), glm::vec3(length, thickness, 1.0f));
         FillRect(transform, nullptr, color, 0);
     }
 
@@ -508,7 +501,7 @@ namespace Crowny
             void* data = s_Data->CircleVertexBuffer->Map(0, s_Data->CircleVertexCount * sizeof(CircleVertex), GpuLockOptions::WRITE_DISCARD);
             std::memcpy(data, s_Data->CircleTmpBuffer, s_Data->CircleVertexCount * sizeof(CircleVertex));
             s_Data->CircleVertexBuffer->Unmap();
-            
+
             RenderAPI::Get().DrawIndexed(0, s_Data->CircleIndexCount, 0, s_Data->CircleVertexCount);
         }
     }

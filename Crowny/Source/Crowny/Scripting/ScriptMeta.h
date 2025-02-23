@@ -10,8 +10,7 @@ namespace Crowny
     {
         ScriptMeta() : ScriptClass(nullptr), CachedPtrField(nullptr){};
         ScriptMeta(const String& assembly, const String& ns, const String& name, std::function<void()> initCallback)
-          : Assembly(assembly), Namespace(ns), InitCallback(initCallback), Name(name), ScriptClass(nullptr),
-            CachedPtrField(nullptr)
+          : Assembly(assembly), Namespace(ns), InitCallback(initCallback), Name(name), ScriptClass(nullptr), CachedPtrField(nullptr)
         {
         }
 

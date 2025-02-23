@@ -17,8 +17,7 @@ namespace Crowny
         template <typename OStream> friend OStream& operator<<(OStream& os, const MemoryStats& ms)
         {
             return os << "Allocated: " << ms.TotalAllocated << " bytes\nFreed: " << ms.TotalFreed
-                      << " bytes\nCurrently Allocated: " << ms.CurrentAllcoated
-                      << " bytes\nTotal Allocations: " << ms.Allocations << " bytes";
+                      << " bytes\nCurrently Allocated: " << ms.CurrentAllcoated << " bytes\nTotal Allocations: " << ms.Allocations << " bytes";
         }
     };
 
@@ -33,8 +32,7 @@ namespace Crowny
         template <typename OStream> friend OStream& operator<<(OStream& os, const SystemMemoryInfo& smi)
         {
             return os << "Avaliable Physical Memory: " << smi.AvaliablePhysicalMemory << "/" << smi.TotalPhysicalMemory
-                      << " bytes\nAvaliable Virtual Memory: " << smi.AvailableVirtualMemory << "/"
-                      << smi.TotalVirtualMemory << " bytes";
+                      << " bytes\nAvaliable Virtual Memory: " << smi.AvailableVirtualMemory << "/" << smi.TotalVirtualMemory << " bytes";
         }
     };
 

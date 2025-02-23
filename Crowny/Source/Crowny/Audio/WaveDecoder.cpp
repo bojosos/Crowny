@@ -15,8 +15,8 @@ namespace Crowny
         int8_t header[MAIN_HEADER_SIZE];
         if (stream->Read(header, sizeof(header)) < sizeof(header))
             return false;
-        return (header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F' && header[8] == 'W' &&
-                header[9] == 'A' && header[10] == 'V' && header[11] == 'E');
+        return (header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F' && header[8] == 'W' && header[9] == 'A' &&
+                header[10] == 'V' && header[11] == 'E');
     }
 
     bool WaveDecoder::Open(const Ref<DataStream>& stream, AudioDataInfo& info, uint32_t offset)

@@ -17,8 +17,8 @@ namespace Crowny
     {
         String lower = ext;
         StringUtils::ToLower(lower);
-        return lower == "png" || lower == "jpeg" || lower == "psd" || lower == "gif" || lower == "tga" ||
-               lower == "bmp" || lower == "hdr" || lower == "pic" || lower == "ppm" || lower == "pgm" || lower == "jpg";
+        return lower == "png" || lower == "jpeg" || lower == "psd" || lower == "gif" || lower == "tga" || lower == "bmp" || lower == "hdr" ||
+               lower == "pic" || lower == "ppm" || lower == "pgm" || lower == "jpg";
     }
 
     bool TextureImporter::IsExtensionSupported(const String& ext) const { return IsExtensionSupportedStatic(ext); }
@@ -29,8 +29,7 @@ namespace Crowny
     // Going to switch to FreeImage soon
     Ref<Asset> TextureImporter::Import(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
-        Ref<const TextureImportOptions> textureImportOptions =
-          std::static_pointer_cast<const TextureImportOptions>(importOptions);
+        Ref<const TextureImportOptions> textureImportOptions = std::static_pointer_cast<const TextureImportOptions>(importOptions);
         int width, height, channels;
         stbi_set_flip_vertically_on_load(1);
 
@@ -44,8 +43,7 @@ namespace Crowny
         uint8_t* rawPixelData;
 
         if (is16)
-            rawPixelData =
-              (uint8_t*)stbi_load_16_from_memory(data.data(), (int)data.size(), &width, &height, &channels, 0);
+            rawPixelData = (uint8_t*)stbi_load_16_from_memory(data.data(), (int)data.size(), &width, &height, &channels, 0);
         else
             rawPixelData = stbi_load_from_memory(data.data(), (int)data.size(), &width, &height, &channels, 0);
 

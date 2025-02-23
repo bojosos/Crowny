@@ -16,18 +16,16 @@ namespace Crowny
     class VulkanBuffer : public VulkanResource
     {
     public:
-        VulkanBuffer(VulkanResourceManager* owner, VkBuffer buffer, VmaAllocation allocation, uint32_t rowPitch = 0,
-                     uint32_t slicePitch = 0);
+        VulkanBuffer(VulkanResourceManager* owner, VkBuffer buffer, VmaAllocation allocation, uint32_t rowPitch = 0, uint32_t slicePitch = 0);
         ~VulkanBuffer();
         VkBuffer GetHandle() const { return m_Buffer; }
         uint8_t* Map(VkDeviceSize offset, VkDeviceSize length) const;
         uint32_t GetRowPitch() const { return m_RowPitch; }
         uint32_t GetSliceHeight() const { return m_SliceHeight; }
         void Unmap();
-        void Copy(VulkanCmdBuffer* cb, VulkanBuffer* dest, VkDeviceSize srcOffset, VkDeviceSize dstOffset,
-                  VkDeviceSize length);
-        void Copy(VulkanCmdBuffer* cmdBuffer, VulkanImage* dest, const VkExtent3D& extent,
-                  const VkImageSubresourceLayers& range, VkImageLayout layout);
+        void Copy(VulkanCmdBuffer* cb, VulkanBuffer* dest, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize length);
+        void Copy(VulkanCmdBuffer* cmdBuffer, VulkanImage* dest, const VkExtent3D& extent, const VkImageSubresourceLayers& range,
+                  VkImageLayout layout);
         void Update(VulkanCmdBuffer* buffer, uint8_t* data, VkDeviceSize offset, VkDeviceSize length);
         virtual void NotifyDone(uint32_t globalQueue, VulkanAccessFlags useFlags) override;
         virtual void NotifyUnbound() override;
@@ -68,11 +66,10 @@ namespace Crowny
         ~VulkanGpuBuffer();
 
     public:
-        virtual void WriteData(uint32_t offset, uint32_t length, const void* src,
-                               BufferWriteOptions writeOpts = BWT_NORMAL) override;
+        virtual void WriteData(uint32_t offset, uint32_t length, const void* src, BufferWriteOptions writeOpts = BWT_NORMAL) override;
         virtual void ReadData(uint32_t offset, uint32_t length, void* dest) override;
-        virtual void CopyData(GpuBuffer& src, uint32_t srcOffset, uint32_t dstOffset, uint32_t length,
-                              bool discard = false, const Ref<CommandBuffer>& cmdBuffer = nullptr) override;
+        virtual void CopyData(GpuBuffer& src, uint32_t srcOffset, uint32_t dstOffset, uint32_t length, bool discard = false,
+                              const Ref<CommandBuffer>& cmdBuffer = nullptr) override;
         virtual void* Map(uint32_t offset, uint32_t length, GpuLockOptions options, uint32_t queueIdx = 0) override;
         virtual void Unmap() override;
 

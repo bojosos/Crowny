@@ -37,8 +37,5 @@ namespace std
 
 namespace Crowny
 {
-    template <class Archive> void Serialize(Archive& archive, UUID& uuid)
-    {
-        archive(uuid.m_Data[0], uuid.m_Data[1], uuid.m_Data[2], uuid.m_Data[3]);
-    }
+    template <class Archive> void Serialize(Archive& archive, UUID& uuid) { archive(uuid.m_Data[0], uuid.m_Data[1], uuid.m_Data[2], uuid.m_Data[3]); }
 } // namespace Crowny

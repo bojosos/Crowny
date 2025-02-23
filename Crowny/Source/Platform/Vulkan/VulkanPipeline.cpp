@@ -14,18 +14,11 @@
 namespace Crowny
 {
 
-    VulkanPipeline::VulkanPipeline(VulkanResourceManager* owner, VkPipeline pipeline)
-      : VulkanResource(owner, true), m_Pipeline(pipeline)
-    {
-    }
+    VulkanPipeline::VulkanPipeline(VulkanResourceManager* owner, VkPipeline pipeline) : VulkanResource(owner, true), m_Pipeline(pipeline) {}
 
-    VulkanPipeline::~VulkanPipeline()
-    {
-        vkDestroyPipeline(m_Owner->GetDevice().GetLogicalDevice(), m_Pipeline, gVulkanAllocator);
-    }
+    VulkanPipeline::~VulkanPipeline() { vkDestroyPipeline(m_Owner->GetDevice().GetLogicalDevice(), m_Pipeline, gVulkanAllocator); }
 
-    VulkanGraphicsPipeline::GpuPipelineKey::GpuPipelineKey(uint32_t renderPass, uint32_t vertexId,
-                                                           uint32_t readOnlyFlags, DrawMode drawMode)
+    VulkanGraphicsPipeline::GpuPipelineKey::GpuPipelineKey(uint32_t renderPass, uint32_t vertexId, uint32_t readOnlyFlags, DrawMode drawMode)
       : FramebufferId(renderPass), VertexId(vertexId), ReadOnlyFlags(readOnlyFlags), DrawOp(drawMode)
     {
     }
@@ -37,8 +30,7 @@ namespace Crowny
         return hash;
     }
 
-    bool VulkanGraphicsPipeline::GpuPipelineKey::EqualFunction::operator()(const GpuPipelineKey& lhs,
-                                                                           const GpuPipelineKey& rhs) const
+    bool VulkanGraphicsPipeline::GpuPipelineKey::EqualFunction::operator()(const GpuPipelineKey& lhs, const GpuPipelineKey& rhs) const
     {
         if (lhs.FramebufferId != rhs.FramebufferId)
             return false;
@@ -52,8 +44,7 @@ namespace Crowny
         return true;
     }
 
-    VulkanGraphicsPipeline::VulkanGraphicsPipeline(const PipelineStateDesc& desc)
-      : GraphicsPipeline(desc)
+    VulkanGraphicsPipeline::VulkanGraphicsPipeline(const PipelineStateDesc& desc) : GraphicsPipeline(desc)
     {
         static Vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_STENCIL_REFERENCE };
 
@@ -120,8 +111,7 @@ namespace Crowny
         m_RasterizationInfo.depthBiasEnable = rasterizerState->DepthBias != 0.0f;
         m_RasterizationInfo.depthBiasConstantFactor = rasterizerState->DepthBias;
         m_RasterizationInfo.depthBiasSlopeFactor = rasterizerState->DepthBiasSlope;
-        m_RasterizationInfo.depthBiasClamp =
-          m_RasterizationInfo.depthClampEnable ? rasterizerState->DepthBiasClamp : 0.0f;
+        m_RasterizationInfo.depthBiasClamp = m_RasterizationInfo.depthClampEnable ? rasterizerState->DepthBiasClamp : 0.0f;
         m_RasterizationInfo.lineWidth = 1.0f;
 
         VkStencilOpState stencilFront = {};
@@ -186,7 +176,7 @@ namespace Crowny
         m_MultiSampleInfo.pNext = nullptr;
         m_MultiSampleInfo.flags = 0;
         m_MultiSampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT; // runtime
-        m_MultiSampleInfo.sampleShadingEnable = VK_FALSE; // FSAA
+        m_MultiSampleInfo.sampleShadingEnable = VK_FALSE;               // FSAA
         m_MultiSampleInfo.minSampleShading = 1.0f;
         m_MultiSampleInfo.pSampleMask = nullptr;
         m_MultiSampleInfo.alphaToOneEnable = VK_FALSE;
@@ -204,7 +194,7 @@ namespace Crowny
         m_PipelineInfo.pRasterizationState = &m_RasterizationInfo;
         m_PipelineInfo.pMultisampleState = &m_MultiSampleInfo;
         m_PipelineInfo.pDepthStencilState = nullptr; // &m_DepthStencilInfo;  // runtime
-        m_PipelineInfo.pColorBlendState = nullptr; // &m_ColorBlendStateInfo; // runtime
+        m_PipelineInfo.pColorBlendState = nullptr;   // &m_ColorBlendStateInfo; // runtime
         m_PipelineInfo.pDynamicState = &m_DynamicStateCreateInfo;
         m_PipelineInfo.renderPass = VK_NULL_HANDLE;
         m_PipelineInfo.layout = VK_NULL_HANDLE; // m_PipelineLayout;
@@ -227,15 +217,14 @@ namespace Crowny
         delete[] layouts;
     }
 
-
     VulkanGraphicsPipeline::~VulkanGraphicsPipeline()
     {
         for (auto& entry : m_Pipelines)
             entry.second->Destroy();
     }
 
-    VulkanPipeline* VulkanGraphicsPipeline::GetPipeline(VulkanRenderPass* renderPass, uint32_t readOnlyFlags,
-                                                        DrawMode drawMode, const Ref<VulkanBufferLayout>& layout)
+    VulkanPipeline* VulkanGraphicsPipeline::GetPipeline(VulkanRenderPass* renderPass, uint32_t readOnlyFlags, DrawMode drawMode,
+                                                        const Ref<VulkanBufferLayout>& layout)
     {
         readOnlyFlags &= ~FBT_COLOR;
         GpuPipelineKey key(renderPass->GetId(), layout->GetId(), readOnlyFlags, drawMode);
@@ -251,10 +240,8 @@ namespace Crowny
     void VulkanGraphicsPipeline::RegisterPipelineResources(VulkanCmdBuffer* buffer)
     {
         std::array<VulkanShader*, 5> shaders = {
-            static_cast<VulkanShader*>(m_Data.VertexShader.get()),
-            static_cast<VulkanShader*>(m_Data.HullShader.get()),
-            static_cast<VulkanShader*>(m_Data.DomainShader.get()),
-            static_cast<VulkanShader*>(m_Data.GeometryShader.get()),
+            static_cast<VulkanShader*>(m_Data.VertexShader.get()),   static_cast<VulkanShader*>(m_Data.HullShader.get()),
+            static_cast<VulkanShader*>(m_Data.DomainShader.get()),   static_cast<VulkanShader*>(m_Data.GeometryShader.get()),
             static_cast<VulkanShader*>(m_Data.FragmentShader.get()),
         };
 
@@ -269,7 +256,8 @@ namespace Crowny
         }
     }
 
-    VulkanPipeline* VulkanGraphicsPipeline::CreatePipeline(VulkanRenderPass* renderPass, uint32_t readOnlyFlags, DrawMode drawMode, const Ref<VulkanBufferLayout> &bufferLayout)
+    VulkanPipeline* VulkanGraphicsPipeline::CreatePipeline(VulkanRenderPass* renderPass, uint32_t readOnlyFlags, DrawMode drawMode,
+                                                           const Ref<VulkanBufferLayout>& bufferLayout)
     {
         VulkanDevice& device = *gVulkanRenderAPI().GetPresentDevice().get();
         m_InputAssemblyInfo.topology = VulkanUtils::GetDrawFlags(drawMode);
@@ -280,7 +268,7 @@ namespace Crowny
         Ref<DepthStencilStateDesc> depthState = m_Data.DepthStencilState;
         if (depthState == nullptr)
             depthState = DepthStencilStateDesc::GetDefault();
-        const bool enableDepthWrite = depthState->EnableDepthWrite && (readOnlyFlags&FBT_DEPTH) == 0;
+        const bool enableDepthWrite = depthState->EnableDepthWrite && (readOnlyFlags & FBT_DEPTH) == 0;
         m_DepthStencilInfo.depthWriteEnable = enableDepthWrite;
 
         VkStencilOp oldFrontPassOp = m_DepthStencilInfo.front.passOp;
@@ -332,13 +320,11 @@ namespace Crowny
                 colorReadOnly[i] = true;
         }
 
-        const std::pair<VkShaderStageFlagBits, ShaderStage*> stages[] = {
-            { VK_SHADER_STAGE_VERTEX_BIT, m_Data.VertexShader.get() },
-            { VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, m_Data.HullShader.get() },
-            { VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, m_Data.DomainShader.get() },
-            { VK_SHADER_STAGE_GEOMETRY_BIT, m_Data.GeometryShader.get() },
-            { VK_SHADER_STAGE_FRAGMENT_BIT, m_Data.FragmentShader.get() }
-        };
+        const std::pair<VkShaderStageFlagBits, ShaderStage*> stages[] = { { VK_SHADER_STAGE_VERTEX_BIT, m_Data.VertexShader.get() },
+                                                                          { VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, m_Data.HullShader.get() },
+                                                                          { VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, m_Data.DomainShader.get() },
+                                                                          { VK_SHADER_STAGE_GEOMETRY_BIT, m_Data.GeometryShader.get() },
+                                                                          { VK_SHADER_STAGE_FRAGMENT_BIT, m_Data.FragmentShader.get() } };
         uint32_t outputIdx = 0;
         const uint32_t numStages = sizeof(stages) / sizeof(stages[0]);
         for (uint32_t i = 0; i < numStages; i++)
@@ -356,8 +342,8 @@ namespace Crowny
 
         m_PipelineInfo.layout = m_PipelineLayout;
         VkPipeline pipeline;
-        const VkResult result = vkCreateGraphicsPipelines(device.GetLogicalDevice(), device.GetPipelineCache(), 1,
-                                                          &m_PipelineInfo, gVulkanAllocator, &pipeline);
+        const VkResult result =
+          vkCreateGraphicsPipelines(device.GetLogicalDevice(), device.GetPipelineCache(), 1, &m_PipelineInfo, gVulkanAllocator, &pipeline);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         m_DepthStencilInfo.front.passOp = oldFrontPassOp;
         m_DepthStencilInfo.front.failOp = oldFrontFailOp;
@@ -409,8 +395,8 @@ namespace Crowny
             pipelineCI.stage.module = VK_NULL_HANDLE;
         pipelineCI.layout = descriptorManager.GetPipelineLayout(layouts, numLayouts);
         VkPipeline pipeline;
-        const VkResult result = vkCreateComputePipelines(device.GetLogicalDevice(), device.GetPipelineCache(), 1,
-                                                         &pipelineCI, gVulkanAllocator, &pipeline);
+        const VkResult result =
+          vkCreateComputePipelines(device.GetLogicalDevice(), device.GetPipelineCache(), 1, &pipelineCI, gVulkanAllocator, &pipeline);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         m_Pipeline = resourceManager.Create<VulkanPipeline>(pipeline);
         m_PipelineLayout = pipelineCI.layout;

@@ -14,14 +14,12 @@ namespace Crowny
         OggVorbisEncoder() = default;
         ~OggVorbisEncoder();
 
-        bool Open(std::function<void(uint8_t*, uint32_t)> writeCallback, uint32_t sampleRate, uint32_t bitDepth,
-                  uint32_t numChannels, float quality);
+        bool Open(std::function<void(uint8_t*, uint32_t)> writeCallback, uint32_t sampleRate, uint32_t bitDepth, uint32_t numChannels, float quality);
 
         void Write(uint8_t* samples, uint32_t numSamples);
         void Flush();
         void Close();
-        static Ref<MemoryDataStream> PCMToOggVorbis(uint8_t* samples, const AudioDataInfo& info, uint32_t& size,
-                                                    float quality = 1.0f);
+        static Ref<MemoryDataStream> PCMToOggVorbis(uint8_t* samples, const AudioDataInfo& info, uint32_t& size, float quality = 1.0f);
 
     private:
         void WriteBlocks();

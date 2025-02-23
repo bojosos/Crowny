@@ -29,9 +29,9 @@ namespace Crowny
         VulkanCommandBufferPool& GetCmdBufferPool() const { return *m_CommandBufferPool; }
         VulkanQueryPool& GetQueryPool() const { return *m_QueryPool; }
         VkDevice GetLogicalDevice() const { return m_LogicalDevice; }
-        const VkPhysicalDeviceProperties &GetDeviceProperties() const { return m_DeviceProperties; }
+        const VkPhysicalDeviceProperties& GetDeviceProperties() const { return m_DeviceProperties; }
         VkPhysicalDevice GetPhysicalDevice() const { return m_PhysicalDevice; }
-        const VkPhysicalDeviceFeatures &GetDeviceFeatures() const { return m_DeviceFeatures; }
+        const VkPhysicalDeviceFeatures& GetDeviceFeatures() const { return m_DeviceFeatures; }
         VkPipelineCache GetPipelineCache() const { return m_PipelineCache; }
         void SetPrimary();
         void SetIndex(uint32_t idx);

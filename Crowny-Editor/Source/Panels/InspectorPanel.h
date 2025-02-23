@@ -56,7 +56,6 @@ namespace Crowny
         void DrawHeader();
 
     private:
-
         InspectorMode m_InspectorMode = InspectorMode::GameObject;
 
         // For import options inspection

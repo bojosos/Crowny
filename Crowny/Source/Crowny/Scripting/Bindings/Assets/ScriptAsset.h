@@ -32,8 +32,7 @@ namespace Crowny
         uint32_t m_GCHandle = 0;
     };
 
-    template <class ScriptClass, class AssetType, class BaseType = ScriptAssetBase>
-    class TScriptAsset : public ScriptObject<ScriptClass, BaseType>
+    template <class ScriptClass, class AssetType, class BaseType = ScriptAssetBase> class TScriptAsset : public ScriptObject<ScriptClass, BaseType>
     {
     public:
         AssetHandle<Asset> GetGenericHandle() const override { return m_Asset; }
@@ -41,8 +40,7 @@ namespace Crowny
         const AssetHandle<AssetType>& GetHandle() const { return m_Asset; }
 
     protected:
-        TScriptAsset(MonoObject* instance, const AssetHandle<AssetType>& asset)
-          : ScriptObject<ScriptClass, BaseType>(instance), m_Asset(asset)
+        TScriptAsset(MonoObject* instance, const AssetHandle<AssetType>& asset) : ScriptObject<ScriptClass, BaseType>(instance), m_Asset(asset)
         {
             this->SetManagedInstance(instance);
         }

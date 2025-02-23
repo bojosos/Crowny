@@ -30,19 +30,19 @@
 #include <mono/metadata/object.h>
 #include <mono/metadata/reflection.h>
 
-#define LOAD_CW_CLASS(CLASS_NAME)                                                                                      \
-    m_Builtin.CLASS_NAME = crownyAssembly->GetClass(CROWNY_NS, #CLASS_NAME);                                           \
-    if (m_Builtin.CLASS_NAME == nullptr)                                                                               \
+#define LOAD_CW_CLASS(CLASS_NAME)                                                                                                                    \
+    m_Builtin.CLASS_NAME = crownyAssembly->GetClass(CROWNY_NS, #CLASS_NAME);                                                                         \
+    if (m_Builtin.CLASS_NAME == nullptr)                                                                                                             \
         CW_ENGINE_ERROR("Cannot find {0}." #CLASS_NAME " class.", CROWNY_NS);
 
-#define LOAD_CW_ATTR(CLASS_NAME)                                                                                       \
-    m_Builtin.CLASS_NAME##Attribute = crownyAssembly->GetClass(CROWNY_NS, #CLASS_NAME);                                \
-    if (m_Builtin.CLASS_NAME##Attribute == nullptr)                                                                   \
+#define LOAD_CW_ATTR(CLASS_NAME)                                                                                                                     \
+    m_Builtin.CLASS_NAME##Attribute = crownyAssembly->GetClass(CROWNY_NS, #CLASS_NAME);                                                              \
+    if (m_Builtin.CLASS_NAME##Attribute == nullptr)                                                                                                  \
         CW_ENGINE_ERROR("Cannot find {0}." #CLASS_NAME " attribute.", CROWNY_NS);
 
-#define LOAD_SYSTEM_CLASS(CLASS_NAME)                                                                                 \
-    m_Builtin.System##CLASS_NAME##Class = corlib->GetClass("System", #CLASS_NAME);                                    \
-    if (m_Builtin.System##CLASS_NAME##Class == nullptr)                                                              \
+#define LOAD_SYSTEM_CLASS(CLASS_NAME)                                                                                                                \
+    m_Builtin.System##CLASS_NAME##Class = corlib->GetClass("System", #CLASS_NAME);                                                                   \
+    if (m_Builtin.System##CLASS_NAME##Class == nullptr)                                                                                              \
         CW_ENGINE_ERROR("Cannot find {0}." #CLASS_NAME " class.", "System");
 
 namespace Crowny
@@ -112,10 +112,8 @@ namespace Crowny
 
     bool ScriptInfoManager::IsBasicType(MonoClass* klass)
     {
-        return klass->GetFullName() == m_Builtin.Vector2->GetFullName() ||
-               klass->GetFullName() == m_Builtin.Vector3->GetFullName() ||
-               klass->GetFullName() == m_Builtin.Vector4->GetFullName() ||
-               klass->GetFullName() == m_Builtin.Color->GetFullName() ||
+        return klass->GetFullName() == m_Builtin.Vector2->GetFullName() || klass->GetFullName() == m_Builtin.Vector3->GetFullName() ||
+               klass->GetFullName() == m_Builtin.Vector4->GetFullName() || klass->GetFullName() == m_Builtin.Color->GetFullName() ||
                klass->GetFullName() == m_Builtin.Matrix4->GetFullName();
     }
 
@@ -140,8 +138,8 @@ namespace Crowny
         {
             if (IsBasicType(klass))
                 continue;
-            const bool isSerializable = klass->IsSubClassOf(m_Builtin.Component) || klass->IsSubClassOf(assetClass) ||
-                                        klass->HasAttribute(m_Builtin.SerializeObjectAttribute);
+            const bool isSerializable =
+              klass->IsSubClassOf(m_Builtin.Component) || klass->IsSubClassOf(assetClass) || klass->HasAttribute(m_Builtin.SerializeObjectAttribute);
             if (klass->IsSubClassOf(m_Builtin.EntityBehaviour))
                 m_EntityBehaviourClasses[klass->GetName()] = klass;
             const bool isInspectable = klass->HasAttribute(m_Builtin.ShowInInspectorAttribute);
@@ -500,17 +498,14 @@ namespace Crowny
         {
             if (isEnum)
             {
-                Ref<SerializableTypeInfoEnum> typeInfo =
-                  CreateRef<SerializableTypeInfoEnum>(); // TODO: Retrieve enum names using the C# helper
+                Ref<SerializableTypeInfoEnum> typeInfo = CreateRef<SerializableTypeInfoEnum>(); // TODO: Retrieve enum names using the C# helper
                 typeInfo->m_UnderlyingType = scriptPrimitiveType;
                 typeInfo->m_TypeNamespace = monoClass->GetNamespace();
                 typeInfo->m_TypeName = monoClass->GetName();
 
                 void* enumType = MonoUtils::GetType(monoClass->GetInternalPtr());
-                MonoArray* enumNames = (MonoArray*)ScriptInfoManager::Get()
-                                         .GetBuiltinClasses()
-                                         .ScriptUtils->GetMethod("GetEnumNames", 1)
-                                         ->Invoke(nullptr, &enumType);
+                MonoArray* enumNames =
+                  (MonoArray*)ScriptInfoManager::Get().GetBuiltinClasses().ScriptUtils->GetMethod("GetEnumNames", 1)->Invoke(nullptr, &enumType);
                 ScriptArray managedNamesArray(enumNames);
                 typeInfo->m_EnumNames.resize(managedNamesArray.Size());
                 for (uint32_t i = 0; i < managedNamesArray.Size(); i++)
@@ -654,8 +649,7 @@ namespace Crowny
         return nullptr;
     }
 
-    bool ScriptInfoManager::GetSerializableObjectInfo(const String& ns, const String& name,
-                                                      Ref<SerializableObjectInfo>& outInfo)
+    bool ScriptInfoManager::GetSerializableObjectInfo(const String& ns, const String& name, Ref<SerializableObjectInfo>& outInfo)
     {
 
         String fullName = ns + "." + name;

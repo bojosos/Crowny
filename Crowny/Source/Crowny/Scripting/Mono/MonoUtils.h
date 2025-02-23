@@ -6,8 +6,7 @@
 
 namespace Crowny
 {
-    typedef bool (*MonoStackWalk)(::MonoMethod* method, int32_t native_offset, int32_t il_offset, bool managed,
-                                  void* data);
+    typedef bool (*MonoStackWalk)(::MonoMethod* method, int32_t native_offset, int32_t il_offset, bool managed, void* data);
 
     class MonoUtils
     {

@@ -7,20 +7,13 @@
 namespace Crowny
 {
 
-    VulkanSampler::VulkanSampler(VulkanResourceManager* owner, VkSampler sampler)
-      : VulkanResource(owner, true), m_Sampler(sampler)
-    {
-    }
+    VulkanSampler::VulkanSampler(VulkanResourceManager* owner, VkSampler sampler) : VulkanResource(owner, true), m_Sampler(sampler) {}
 
-    VulkanSampler::~VulkanSampler()
-    {
-        vkDestroySampler(m_Owner->GetDevice().GetLogicalDevice(), m_Sampler, gVulkanAllocator);
-    }
+    VulkanSampler::~VulkanSampler() { vkDestroySampler(m_Owner->GetDevice().GetLogicalDevice(), m_Sampler, gVulkanAllocator); }
 
     VulkanSamplerState::VulkanSamplerState(const SamplerStateDesc& desc) : SamplerState(desc)
     {
-        bool anisotropyEnable = desc.MinFilter == TextureFilter::ANISOTROPIC ||
-                                desc.MagFilter == TextureFilter::ANISOTROPIC ||
+        bool anisotropyEnable = desc.MinFilter == TextureFilter::ANISOTROPIC || desc.MagFilter == TextureFilter::ANISOTROPIC ||
                                 desc.MipFilter == TextureFilter::ANISOTROPIC;
 
         VkSamplerCreateInfo samplerCreateInfo;

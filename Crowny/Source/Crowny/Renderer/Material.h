@@ -10,8 +10,8 @@
 #include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/RenderAPI/UniformBufferBlock.h"
 
-#include "Crowny/Common/Types.h"
 #include "Crowny/Common/StdHeaders.h"
+#include "Crowny/Common/Types.h"
 
 namespace Crowny
 {
@@ -22,11 +22,10 @@ namespace Crowny
         Material(const AssetHandle<Shader>& shader);
         virtual ~Material() override = default;
 
-        static Ref<Material> Create(const AssetHandle<Shader> &shader);
+        static Ref<Material> Create(const AssetHandle<Shader>& shader);
 
         AssetHandle<Shader> GetShader() { return m_Shader; }
         virtual void GetAssets(Vector<AssetHandle<Asset>>& assets) override { assets.push_back(m_Shader); }
-
 
         void Bind();
         // void SetShader(const AssetHandle<Shader>& shader);
@@ -37,6 +36,7 @@ namespace Crowny
         void SetTexture(const String& name, const Ref<Texture>& texture);
         const Ref<UniformParams>& GetUniformParams() const { return m_Uniforms; }
         const Ref<GraphicsPipeline>& GetGraphicsPipeline() const { return m_GraphicsPipeline; }
+
     private:
         void CreateAndAppendUniforms();
 

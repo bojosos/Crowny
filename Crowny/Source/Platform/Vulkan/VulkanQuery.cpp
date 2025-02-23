@@ -21,8 +21,8 @@ namespace Crowny
             count += 2; // tessellation invokes and primitives generated
 
         result.resize(count);
-        VkResult vkResult = vkGetQueryPoolResults(vkDevice, m_Pool, m_QueryIdx, 1, result.size() * sizeof(uint64_t),
-                                                  result.data(), sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
+        VkResult vkResult = vkGetQueryPoolResults(vkDevice, m_Pool, m_QueryIdx, 1, result.size() * sizeof(uint64_t), result.data(), sizeof(uint64_t),
+                                                  VK_QUERY_RESULT_64_BIT);
         CW_ENGINE_ASSERT(vkResult == VK_SUCCESS || vkResult == VK_NOT_READY);
         return vkResult == VK_SUCCESS;
     }
@@ -30,8 +30,7 @@ namespace Crowny
     bool VulkanQuery::GetResult(uint64_t& result)
     {
         VkDevice vkDevice = m_Owner->GetDevice().GetLogicalDevice();
-        VkResult vkResult = vkGetQueryPoolResults(vkDevice, m_Pool, m_QueryIdx, 1, sizeof(result), &result,
-                                                  sizeof(result), VK_QUERY_RESULT_64_BIT);
+        VkResult vkResult = vkGetQueryPoolResults(vkDevice, m_Pool, m_QueryIdx, 1, sizeof(result), &result, sizeof(result), VK_QUERY_RESULT_64_BIT);
         CW_ENGINE_ASSERT(vkResult == VK_SUCCESS || vkResult == VK_NOT_READY);
         return vkResult == VK_SUCCESS;
     }
@@ -73,18 +72,14 @@ namespace Crowny
         uint32_t queryCount = 1;
         if (type == VK_QUERY_TYPE_PIPELINE_STATISTICS)
         {
-            flags = VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_VERTICES_BIT |
-                    VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_PRIMITIVES_BIT |
-                    VK_QUERY_PIPELINE_STATISTIC_VERTEX_SHADER_INVOCATIONS_BIT |
-                    VK_QUERY_PIPELINE_STATISTIC_CLIPPING_INVOCATIONS_BIT |
-                    VK_QUERY_PIPELINE_STATISTIC_CLIPPING_PRIMITIVES_BIT |
-                    VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_VERTICES_BIT |
+            flags = VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_VERTICES_BIT | VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_PRIMITIVES_BIT |
+                    VK_QUERY_PIPELINE_STATISTIC_VERTEX_SHADER_INVOCATIONS_BIT | VK_QUERY_PIPELINE_STATISTIC_CLIPPING_INVOCATIONS_BIT |
+                    VK_QUERY_PIPELINE_STATISTIC_CLIPPING_PRIMITIVES_BIT | VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_VERTICES_BIT |
                     VK_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT;
             queryCount = 7;
             if (gVulkanRenderAPI().GetPresentDevice()->GetDeviceFeatures().geometryShader)
             {
-                flags |= VK_QUERY_PIPELINE_STATISTIC_GEOMETRY_SHADER_INVOCATIONS_BIT |
-                         VK_QUERY_PIPELINE_STATISTIC_GEOMETRY_SHADER_PRIMITIVES_BIT;
+                flags |= VK_QUERY_PIPELINE_STATISTIC_GEOMETRY_SHADER_INVOCATIONS_BIT | VK_QUERY_PIPELINE_STATISTIC_GEOMETRY_SHADER_PRIMITIVES_BIT;
                 queryCount += 2;
             }
             if (gVulkanRenderAPI().GetPresentDevice()->GetDeviceFeatures().tessellationShader)
@@ -104,16 +99,12 @@ namespace Crowny
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
         Vector<PoolInfo>& poolInfos =
-          type == VK_QUERY_TYPE_TIMESTAMP
-            ? m_TimerPools
-            : (type == VK_QUERY_TYPE_PIPELINE_STATISTICS ? m_PipelinePools : m_OcclusionPools);
+          type == VK_QUERY_TYPE_TIMESTAMP ? m_TimerPools : (type == VK_QUERY_TYPE_PIPELINE_STATISTICS ? m_PipelinePools : m_OcclusionPools);
         poolInfo.StartIdx = (uint32_t)poolInfos.size() * queryCount;
 
         poolInfos.push_back(poolInfo);
         Vector<VulkanQuery*>& queries =
-          type == VK_QUERY_TYPE_TIMESTAMP
-            ? m_TimerQueries
-            : (type == VK_QUERY_TYPE_PIPELINE_STATISTICS ? m_PipelineQueries : m_OcclusionQueries);
+          type == VK_QUERY_TYPE_TIMESTAMP ? m_TimerQueries : (type == VK_QUERY_TYPE_PIPELINE_STATISTICS ? m_PipelineQueries : m_OcclusionQueries);
         for (uint32_t i = 0; i < queryCount; i++)
             queries.push_back(nullptr);
         return poolInfos.back();
@@ -122,13 +113,9 @@ namespace Crowny
     VulkanQuery* VulkanQueryPool::GetQuery(VkQueryType type)
     {
         Vector<VulkanQuery*>& queries =
-          type == VK_QUERY_TYPE_TIMESTAMP
-            ? m_TimerQueries
-            : (type == VK_QUERY_TYPE_PIPELINE_STATISTICS ? m_PipelineQueries : m_OcclusionQueries);
+          type == VK_QUERY_TYPE_TIMESTAMP ? m_TimerQueries : (type == VK_QUERY_TYPE_PIPELINE_STATISTICS ? m_PipelineQueries : m_OcclusionQueries);
         Vector<PoolInfo>& poolInfos =
-          type == VK_QUERY_TYPE_TIMESTAMP
-            ? m_TimerPools
-            : (type == VK_QUERY_TYPE_PIPELINE_STATISTICS ? m_PipelinePools : m_OcclusionPools);
+          type == VK_QUERY_TYPE_TIMESTAMP ? m_TimerPools : (type == VK_QUERY_TYPE_PIPELINE_STATISTICS ? m_PipelinePools : m_OcclusionPools);
 
         for (uint32_t i = 0; i < (uint32_t)queries.size(); i++)
         {
@@ -279,8 +266,7 @@ namespace Crowny
             {
                 m_QueryFinalized = true;
 
-                double timestampToMs =
-                  (double)gVulkanRenderAPI().GetPresentDevice()->GetDeviceProperties().limits.timestampPeriod / 1e6;
+                double timestampToMs = (double)gVulkanRenderAPI().GetPresentDevice()->GetDeviceProperties().limits.timestampPeriod / 1e6;
                 m_TimeDelta = (float)((double)totalTimeDiff * timestampToMs);
 
                 VulkanQueryPool& queryPool = gVulkanRenderAPI().GetPresentDevice()->GetQueryPool();

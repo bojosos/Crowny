@@ -40,10 +40,7 @@ namespace Crowny
         archive(entry.Filesize);
     }
 
-    void Save(BinaryDataStreamOutputArchive& archive, const FileEntry& entry)
-    {
-        archive(cereal::base_class<LibraryEntry>(&entry), entry.Filesize);
-    }
+    void Save(BinaryDataStreamOutputArchive& archive, const FileEntry& entry) { archive(cereal::base_class<LibraryEntry>(&entry), entry.Filesize); }
 
     void Save(BinaryDataStreamOutputArchive& archive, const DirectoryEntry& entry)
     {
@@ -262,8 +259,8 @@ namespace Crowny
         return metaPath;
     }
 
-    Ref<FileEntry> ProjectLibrary::AddAssetInternal(DirectoryEntry* parent, const Path& filepath,
-                                                    const Ref<ImportOptions>& importOptions, bool forceReimport)
+    Ref<FileEntry> ProjectLibrary::AddAssetInternal(DirectoryEntry* parent, const Path& filepath, const Ref<ImportOptions>& importOptions,
+                                                    bool forceReimport)
     {
         Ref<FileEntry> newAsset = CreateRef<FileEntry>(filepath, filepath.filename().string(), parent);
         parent->Children.push_back(newAsset);
@@ -295,8 +292,8 @@ namespace Crowny
         }
 
         DirectoryEntry* parent = asset->Parent;
-        auto iterFind = std::find_if(parent->Children.begin(), parent->Children.end(),
-                                     [&](const Ref<LibraryEntry>& entry) { return entry == asset; });
+        auto iterFind =
+          std::find_if(parent->Children.begin(), parent->Children.end(), [&](const Ref<LibraryEntry>& entry) { return entry == asset; });
         parent->Children.erase(iterFind);
         *asset = FileEntry();
     }
@@ -324,8 +321,7 @@ namespace Crowny
             metadata->Uuid = uuid.as<UUID>();
         else
         {
-            CW_ENGINE_WARN(
-              "Metadata {0} does not have a uuid. Generating a random one. Correspnding asset may be broken.", path);
+            CW_ENGINE_WARN("Metadata {0} does not have a uuid. Generating a random one. Correspnding asset may be broken.", path);
             metadata->Uuid = UuidGenerator::Generate();
         }
 
@@ -368,15 +364,14 @@ namespace Crowny
         DirectoryEntry* parent = directory->Parent;
         if (parent != nullptr)
         {
-            auto iterFind = std::find_if(parent->Children.begin(), parent->Children.end(),
-                                         [&](const Ref<LibraryEntry>& entry) { return entry == directory; });
+            auto iterFind =
+              std::find_if(parent->Children.begin(), parent->Children.end(), [&](const Ref<LibraryEntry>& entry) { return entry == directory; });
             parent->Children.erase(iterFind);
         }
         *directory = DirectoryEntry();
     }
 
-    bool ProjectLibrary::ReimportAssetInternal(FileEntry* entry, const Ref<ImportOptions>& importOptions,
-                                               bool forceReimport)
+    bool ProjectLibrary::ReimportAssetInternal(FileEntry* entry, const Ref<ImportOptions>& importOptions, bool forceReimport)
     {
         Path metaPath = entry->Filepath;
         metaPath = metaPath.replace_filename(metaPath.filename().string() + ".meta");
@@ -413,8 +408,7 @@ namespace Crowny
             if (entry->Metadata == nullptr)
             {
                 entry->Metadata = CreateRef<AssetMetadata>();
-                entry->Metadata->Type =
-                  asset->GetAssetType(); // Maybe do this every time so even if id gets messed up it works
+                entry->Metadata->Type = asset->GetAssetType(); // Maybe do this every time so even if id gets messed up it works
             }
 
             entry->Metadata->ImportOptions = curImportOptions;
@@ -433,14 +427,13 @@ namespace Crowny
         return false;
     }
 
-    Vector<Ref<LibraryEntry>> ProjectLibrary::Search(const String& pattern, const Vector<AssetType>& assetTypes,
-                                                     const Ref<DirectoryEntry>& rootEntry)
+    Vector<Ref<LibraryEntry>> ProjectLibrary::Search(const String& pattern, const Vector<AssetType>& assetTypes, const Ref<DirectoryEntry>& rootEntry)
     {
         Vector<Ref<LibraryEntry>> entries;
         const std::regex escape("[.^$|()\\[\\]{}*+?\\\\]");
         const String replace("\\\\&");
-        const String escapedPattern = std::regex_replace(
-          pattern, escape, replace, std::regex_constants::match_default | std::regex_constants::format_sed);
+        const String escapedPattern =
+          std::regex_replace(pattern, escape, replace, std::regex_constants::match_default | std::regex_constants::format_sed);
 
 #ifdef WIN32
         const std::regex wildcard("\\\\\\*");
@@ -475,8 +468,7 @@ namespace Crowny
                             FileEntry* fileEntry = static_cast<FileEntry*>(child.get());
                             if (fileEntry->Metadata != nullptr)
                             {
-                                const bool found = std::find(assetTypes.begin(), assetTypes.end(),
-                                                             fileEntry->Metadata->Type) != assetTypes.end();
+                                const bool found = std::find(assetTypes.begin(), assetTypes.end(), fileEntry->Metadata->Type) != assetTypes.end();
                                 if (found)
                                     entries.push_back(child);
                             }
@@ -544,8 +536,7 @@ namespace Crowny
         if (oldEntry != nullptr)
         {
             CW_ENGINE_INFO("We have old entry");
-            if (std::search(newFullPath.begin(), newFullPath.end(), m_AssetFolder.begin(), m_AssetFolder.end()) ==
-                newFullPath.end())
+            if (std::search(newFullPath.begin(), newFullPath.end(), m_AssetFolder.begin(), m_AssetFolder.end()) == newFullPath.end())
             {
                 CW_ENGINE_INFO("Search");
                 if (oldEntry->Type == LibraryEntryType::File)
@@ -768,8 +759,7 @@ namespace Crowny
 
         fs::copy(oldPath, newPath, overwrite ? fs::copy_options::overwrite_existing : fs::copy_options::none);
 
-        if (std::search(newFullPath.begin(), newFullPath.end(), m_AssetFolder.begin(), m_AssetFolder.end()) ==
-            newFullPath.end())
+        if (std::search(newFullPath.begin(), newFullPath.end(), m_AssetFolder.begin(), m_AssetFolder.end()) == newFullPath.end())
             return;
 
         Path parentPath = newFullPath.parent_path();
@@ -882,8 +872,7 @@ namespace Crowny
         Path assetPath = path;
         if (path.is_absolute())
         {
-            if (std::search(assetPath.begin(), assetPath.end(), m_AssetFolder.begin(), m_AssetFolder.end()) ==
-                assetPath.end())
+            if (std::search(assetPath.begin(), assetPath.end(), m_AssetFolder.begin(), m_AssetFolder.end()) == assetPath.end())
                 return;
             assetPath = path.relative_path(); // c++ ppl are stupid
         }
@@ -947,9 +936,7 @@ namespace Crowny
             if (idx == paths.size())
                 return *current;
 
-            String cur = (fs::is_regular_file(*searchPath) && idx == (paths.size() - 1))
-                           ? searchPath->filename().string()
-                           : paths[idx].string();
+            String cur = (fs::is_regular_file(*searchPath) && idx == (paths.size() - 1)) ? searchPath->filename().string() : paths[idx].string();
             if ((*current)->Type == LibraryEntryType::Directory)
             {
                 DirectoryEntry* dirEntry = static_cast<DirectoryEntry*>(current->get());
@@ -981,8 +968,7 @@ namespace Crowny
         return nullptr;
     }
 
-    void ProjectLibrary::CreateInternalParentHierarchy(const Path& path, DirectoryEntry** newHierarchyRoot,
-                                                       DirectoryEntry** newHierarchyLeaf)
+    void ProjectLibrary::CreateInternalParentHierarchy(const Path& path, DirectoryEntry** newHierarchyRoot, DirectoryEntry** newHierarchyLeaf)
     {
         Path parentPath = path;
         DirectoryEntry* newEntryParent = nullptr;

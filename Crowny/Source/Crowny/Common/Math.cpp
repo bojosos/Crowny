@@ -46,8 +46,7 @@ namespace Crowny
         return { x, y, z };
     }
 
-    bool Math::DecomposeMatrix(const glm::mat4& transform, glm::vec3& translation, glm::vec3& rotation,
-                               glm::vec3& scale)
+    bool Math::DecomposeMatrix(const glm::mat4& transform, glm::vec3& translation, glm::vec3& rotation, glm::vec3& scale)
     {
         using namespace glm;
 
@@ -56,8 +55,7 @@ namespace Crowny
         if (epsilonEqual(LocalMatrix[3][3], 0.0f, epsilon<float>()))
             return false;
 
-        if (epsilonNotEqual(LocalMatrix[0][3], 0.0f, epsilon<float>()) ||
-            epsilonNotEqual(LocalMatrix[1][3], 0.0f, epsilon<float>()) ||
+        if (epsilonNotEqual(LocalMatrix[0][3], 0.0f, epsilon<float>()) || epsilonNotEqual(LocalMatrix[1][3], 0.0f, epsilon<float>()) ||
             epsilonNotEqual(LocalMatrix[2][3], 0.0f, epsilon<float>()))
         {
             LocalMatrix[0][3] = LocalMatrix[1][3] = LocalMatrix[2][3] = 0.0f;
@@ -110,10 +108,7 @@ namespace Crowny
     glm::mat4 Transform::GetMatrix() const { return Math::ComposeMatrix(m_Position, m_Rotation, m_Scale); }
 
     // TODO: There should be a way faster way of doing this.
-    glm::mat4 Transform::GetInvMatrix() const
-    {
-        return glm::inverse(Math::ComposeMatrix(m_Position, m_Rotation, m_Scale));
-    }
+    glm::mat4 Transform::GetInvMatrix() const { return glm::inverse(Math::ComposeMatrix(m_Position, m_Rotation, m_Scale)); }
 
     void Transform::MakeLocal(const Transform& parentTransform)
     {
