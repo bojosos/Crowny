@@ -54,7 +54,7 @@ namespace Crowny
         template <> Path ScriptArray_Get(MonoArray*, uint32_t idx);
         template <> void ScriptArray_Set<String>(MonoArray* ar, uint32_t idx, const String& string);
         template <> void ScriptArray_Set<Path>(MonoArray* ar, uint32_t idx, const Path& path);
-        template <> void ScriptArray_Set<std::nullptr_t>(MonoArray* ar, uint32_t idx, const nullptr_t& null);
+        template <> void ScriptArray_Set<std::nullptr_t>(MonoArray* ar, uint32_t idx, const std::nullptr_t& null);
 
         template <class T> inline ScriptArray ScriptArray_Create(uint32_t size)
         {

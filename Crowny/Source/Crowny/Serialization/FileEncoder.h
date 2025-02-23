@@ -2,6 +2,7 @@
 
 #include "Crowny/Serialization/AssetManifestSerializer.h"
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
+#include "Crowny/Common/FileSystem.h"
 
 namespace Crowny
 {
@@ -120,7 +121,7 @@ namespace Crowny
     template <typename T> class FileDecoder<T, SerializerType::Auto>
     {
     public:
-        FileDecoder(const Path& path) : m_OutputPath(path) {}
+        FileDecoder(const Path& path) : m_InputPath(path) {}
 
         Ref<T> Decode()
         {

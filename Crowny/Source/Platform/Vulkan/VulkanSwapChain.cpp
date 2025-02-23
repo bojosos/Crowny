@@ -8,7 +8,12 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+
+#ifdef CW_PLATFORM_WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
+#elif defined(CW_PLATFORM_LINUX)
+#define GLFW_EXPOSE_NATIVE_X11
+#endif
 #include <GLFW/glfw3native.h>
 
 #include <glm/glm.hpp>

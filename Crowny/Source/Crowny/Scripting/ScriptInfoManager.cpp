@@ -31,29 +31,24 @@
 #include <mono/metadata/reflection.h>
 
 #define LOAD_CW_CLASS(CLASS_NAME)                                                                                      \
-    m_Builtin.##CLASS_NAME = crownyAssembly->GetClass(CROWNY_NS, #CLASS_NAME);                                         \
-    if (m_Builtin.##CLASS_NAME == nullptr)                                                                             \
+    m_Builtin.CLASS_NAME = crownyAssembly->GetClass(CROWNY_NS, #CLASS_NAME);                                           \
+    if (m_Builtin.CLASS_NAME == nullptr)                                                                               \
         CW_ENGINE_ERROR("Cannot find {0}." #CLASS_NAME " class.", CROWNY_NS);
 
 #define LOAD_CW_ATTR(CLASS_NAME)                                                                                       \
-    m_Builtin.##CLASS_NAME##Attribute = crownyAssembly->GetClass(CROWNY_NS, #CLASS_NAME);                              \
-    if (m_Builtin.CLASS_NAME##Attribute == nullptr)                                                                    \
+    m_Builtin.CLASS_NAME##Attribute = crownyAssembly->GetClass(CROWNY_NS, #CLASS_NAME);                                \
+    if (m_Builtin.CLASS_NAME##Attribute == nullptr)                                                                   \
         CW_ENGINE_ERROR("Cannot find {0}." #CLASS_NAME " attribute.", CROWNY_NS);
 
-#define LOAD_SYSTEM_CLASS(CLASS_NAME)                                                                                  \
-    m_Builtin.##System##CLASS_NAME##Class = corlib->GetClass("System", #CLASS_NAME);                                   \
-    if (m_Builtin.##System##CLASS_NAME##Class == nullptr)                                                              \
+#define LOAD_SYSTEM_CLASS(CLASS_NAME)                                                                                 \
+    m_Builtin.System##CLASS_NAME##Class = corlib->GetClass("System", #CLASS_NAME);                                    \
+    if (m_Builtin.System##CLASS_NAME##Class == nullptr)                                                              \
         CW_ENGINE_ERROR("Cannot find {0}." #CLASS_NAME " class.", "System");
 
 namespace Crowny
 {
 
-    ScriptInfoManager::ScriptInfoManager() : m_BaseTypesInitialized(false)
-    {
-        // RegisterComponents();
-        // RegisterAssets();
-        SmallVector<int, 4> vec;
-    }
+    ScriptInfoManager::ScriptInfoManager() : m_BaseTypesInitialized(false) {}
 
     void ScriptInfoManager::InitializeTypes()
     {

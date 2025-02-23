@@ -33,7 +33,7 @@ namespace Crowny
             mono_array_setref(ar, idx, monoString);
         }
 
-        template <> void ScriptArray_Set<std::nullptr_t>(MonoArray* ar, UINT32 idx, const std::nullptr_t& value)
+        template <> void ScriptArray_Set<std::nullptr_t>(MonoArray* ar, uint32_t idx, const std::nullptr_t& value)
         {
             void** item = (void**)mono_array_addr_with_size(ar, sizeof(void*), idx);
             *item = nullptr;

@@ -153,12 +153,14 @@ namespace Crowny
 
         template <typename SerializableType, class ScriptType> void RegisterSerializableType()
         {
+            /*
             MonoReflectionType* reflType = MonoUtils::GetType(ScriptType::GetMetaData()->ScriptClass->GetInternalPtr());
             ScriptTypeInfo scriptTypeInfo;
             scriptTypeInfo.Metadata = ScriptType::GetMetaData();
             scriptTypeInfo.ScriptClass = nullptr;
             scriptTypeInfo.TypeId = GetRuntimeId<SerializableType>();
             m_ScriptTypeInfos[reflType] = scriptTypeInfo;
+            */
         }
 
         void ClearScriptObjects();

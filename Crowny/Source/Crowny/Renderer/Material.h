@@ -25,7 +25,7 @@ namespace Crowny
         static Ref<Material> Create(const AssetHandle<Shader> &shader);
 
         AssetHandle<Shader> GetShader() { return m_Shader; }
-        virtual void GetAssets(Vector<AssetHandle<Asset>>& assets) { assets.push_back(m_Shader); }
+        virtual void GetAssets(Vector<AssetHandle<Asset>>& assets) override { assets.push_back(m_Shader); }
 
 
         void Bind();

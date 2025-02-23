@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Assets/AssetHandle.h"
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/Scene/Scene.h"
 

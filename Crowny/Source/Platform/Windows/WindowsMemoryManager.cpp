@@ -1,5 +1,6 @@
 #include "cwpch.h"
 
+#ifdef CW_PLATFORM_WIN32
 #include "Crowny/Memory/MemoryManager.h"
 
 #include "Windows.h"
@@ -16,3 +17,4 @@ namespace Crowny
         return res;
     }
 } // namespace Crowny
+#endif

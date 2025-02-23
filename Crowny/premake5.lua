@@ -32,6 +32,7 @@ project "Crowny"
 	includedirs
 	{
 		"Source",
+		"%{wks.location}/Crowny/Source",
 		"Dependencies/spdlog/include",
 		"Dependencies/rapidjson/include",
 		"%{IncludeDir.glfw}",
@@ -52,8 +53,8 @@ project "Crowny"
 		"%{IncludeDir.Box2D}",
 		"%{IncludeDir.msdfgen}",
 		"%{IncludeDir.msdfatlasgen}",
-		"%{IncludeDir.mbedtls}"
-
+		"%{IncludeDir.mbedtls}",
+		"%{IncludeDir.vulkanvma}",
 	}
 
 	links
@@ -69,7 +70,11 @@ project "Crowny"
 		"glad",
 
 		"yaml-cpp",
-		"mbedtls"
+		"mbedtls",
+		"freetype",
+		"msdfgen",
+		"libvorbis",
+		"libogg",
 	}
 
 	filter "system:windows"
@@ -79,7 +84,8 @@ project "Crowny"
 		{
 			"CW",
 			"CW_WINDOWS",
-			"GLFW_INCLUDE_NONE"
+			"GLFW_INCLUDE_NONE",
+			"CW_PLATFORM_WIN32",
 		}
 
 		libdirs
@@ -92,12 +98,7 @@ project "Crowny"
 		links
 		{
 			"OpenAL32.lib",
-
-			"libvorbis",
-			"libogg",
-
 			"mono-2.0-sgen.lib",
-
 			"vulkan-1.lib",
 
 			"Rpcrt4.lib",
@@ -108,22 +109,20 @@ project "Crowny"
         buildoptions { "/bigobj" }    -- gta3.std.data is a monster
 
 	filter { "platforms:Linux64"}
-
 		defines
 		{
 			"CW_PLATFORM_LINUX",
 		}
-
-		system("linux")
+		includedirs
+		{
+			"%{IncludeDir.spirv}",
+		}
 
 	filter { "platforms:MacOS64"}
-
 		defines
 		{
 			"CW_MACOSX"
 		}
-
-		system("macosx")
 
 	filter { "platforms:Web" }
 		defines
@@ -149,8 +148,8 @@ project "Crowny"
 
 		links
 		{
-			"shaderc_sharedd.lib",
-			"spirv-cross-cored.lib",
+			"shaderc_sharedd",
+			"spirv-cross-cored",
 		}
 
 	filter "configurations:Release"
@@ -160,8 +159,8 @@ project "Crowny"
 
 		links
 		{
-			"shaderc_shared.lib",
-			"spirv-cross-core.lib",
+			"shaderc_shared",
+			"spirv-cross-core",
 		}
 
 	filter "configurations:Dist"
@@ -171,6 +170,6 @@ project "Crowny"
 
 		links
 		{
-			"shaderc_shared.lib",
-			"spirv-cross-core.lib",
+			"shaderc_shared",
+			"spirv-cross-core",
 		}

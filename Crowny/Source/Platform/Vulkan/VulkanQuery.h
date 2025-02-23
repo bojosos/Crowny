@@ -26,11 +26,11 @@ namespace Crowny
         struct PoolInfo
         {
             VkQueryPool Pool = VK_NULL_HANDLE;
-            UINT32 StartIdx;
+            uint32_t StartIdx;
         };
 
         VulkanQuery* GetQuery(VkQueryType type);
-        PoolInfo& VulkanQueryPool::AllocatePool(VkQueryType type);
+        PoolInfo& AllocatePool(VkQueryType type);
 
         static const uint32_t NUM_QUERIES_PER_POOL = 32;
         VulkanDevice& m_Device;

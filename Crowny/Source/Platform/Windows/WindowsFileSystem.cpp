@@ -1,5 +1,6 @@
 #include "cwpch.h"
 
+#ifdef CW_PLATFORM_WIN32
 #include "Crowny/Application/Application.h"
 #include "Crowny/Common//StringUtils.h"
 #include "Crowny/Common/FileSystem.h"
@@ -17,7 +18,7 @@ namespace Crowny
 {
     bool FileSystem::FileExists(const Path& path) { return fs::exists(path); }
 
-    uintmax_t FileSystem::GetFileSize(const Path& path) { return fs::file_size(path); }
+    uint64_t FileSystem::GetFileSize(const Path& path) { return fs::file_size(path); }
 
     std::tuple<uint8_t*, uint64_t> FileSystem::ReadFile(const Path& path)
     {
@@ -217,3 +218,4 @@ namespace Crowny
     }
 
 } // namespace Crowny
+#endif

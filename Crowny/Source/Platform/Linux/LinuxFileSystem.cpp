@@ -1,5 +1,5 @@
 #include "cwpch.h"
-#if 0
+#ifdef CW_PLATFORM_LINUX
 #include "Crowny/Application/Application.h"
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/PlatformUtils.h"
@@ -17,7 +17,7 @@ namespace Crowny
         return f.good();
     }
 
-    int64_t FileSystem::GetFileSize(const Path& path)
+    uint64_t FileSystem::GetFileSize(const Path& path)
     {
         std::ifstream in(path, std::ifstream::ate | std::ifstream::binary);
         return in.tellg();
@@ -81,8 +81,8 @@ namespace Crowny
         return CreateRef<FileDataStream>(filepath, DataStream::WRITE, true);
     }
 
-    bool FileSystem::OpenFileDialog(FileDialogType type, const Path& initialDir, const String& filter,
-                                    Vector<Path>& outPaths)
+    bool FileSystem::OpenFileDialog(FileDialogType type, Vector<Path>& outPaths, const String& title,
+                                        const Path& initialDir, const Vector<DialogFilter>& filter, const String& filename)
     {
         String add;
         // TODO: Check if all of these work, make it more configurable
@@ -103,7 +103,7 @@ namespace Crowny
         }
 
         String execResult = PlatformUtils::Exec("zenity --file-selection --filename=\"" + initialDir.string() + "\"" + add);
-        execResult = execResult.erase(res.find_last_not_of(" \n\r\t") + 1);
+        execResult = execResult.erase(execResult.find_last_not_of(" \n\r\t") + 1);
         for (const String& str : StringUtils::SplitString(execResult, "|"))
             outPaths.push_back(Path(std::move(str)));
 

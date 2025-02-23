@@ -46,14 +46,18 @@ IncludeDir["msdfatlasgen"] = "%{wks.location}/Crowny/Dependencies/msdf-atlas-gen
 IncludeDir["mbedtls"] = "%{wks.location}/Crowny/Dependencies/mbedtls/include"
 
 -- installed/platform
-filter "system:linux"
+if os.host() == "linux" then
 	IncludeDir["gtk"] = "/usr/include/gtk-3.0/" --- fix for windows
 	IncludeDir["glib"] = "/usr/include/glib-2.0"
 	IncludeDir['vulkan'] = "/usr/include/vulkan"
+	IncludeDir['vulkanvma'] = "%{wks.location}/Crowny/Dependencies/vulkan/include"
 	IncludeDir["mono"] = "/usr/include/mono-2.0"
-filter "system:windows"
+	IncludeDir["spriv"] = "/usr/local/include"
+end
+if os.host() == "windows" then
 	IncludeDir["mono"] = "C:/Program Files/Mono/include/mono-2.0"
 	IncludeDir['vulkan'] = "C:/VulkanSDK/1.3.280.0/Include"
+end
 	
 group "Dependencies"
 	include "3rdparty/premake"

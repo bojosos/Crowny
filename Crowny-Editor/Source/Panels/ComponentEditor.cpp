@@ -117,7 +117,7 @@ namespace Crowny
                     }
 
                     const auto& entityBehaviours = ScriptInfoManager::Get().GetEntityBehaviours();
-                    for (auto [name, klass] : entityBehaviours)
+                    for (const auto& [name, klass] : entityBehaviours)
                     {
                         if (klass->GetFullName() ==
                             ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetFullName())
@@ -126,8 +126,9 @@ namespace Crowny
                         if (entity.HasComponent<MonoScriptComponent>())
                         {
                             const auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
+                            const String captureName=name;
                             if (std::find_if(scripts.begin(), scripts.end(), [&](const auto& script) {
-                                    return script.GetTypeName() == name;
+                                    return script.GetTypeName() == captureName;
                                 }) != scripts.end())
                                 exists = true;
                         }

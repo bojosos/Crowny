@@ -82,32 +82,32 @@ namespace Crowny
         switch (numBytes)
         {
         case 6:
-            output += (UINT8)(*begin);
+            output += (uint8_t)(*begin);
             ++begin;
             output <<= 6;
             [[fallthrough]];
         case 5:
-            output += (UINT8)(*begin);
+            output += (uint8_t)(*begin);
             ++begin;
             output <<= 6;
             [[fallthrough]];
         case 4:
-            output += (UINT8)(*begin);
+            output += (uint8_t)(*begin);
             ++begin;
             output <<= 6;
             [[fallthrough]];
         case 3:
-            output += (UINT8)(*begin);
+            output += (uint8_t)(*begin);
             ++begin;
             output <<= 6;
             [[fallthrough]];
         case 2:
-            output += (UINT8)(*begin);
+            output += (uint8_t)(*begin);
             ++begin;
             output <<= 6;
             [[fallthrough]];
         case 1:
-            output += (UINT8)(*begin);
+            output += (uint8_t)(*begin);
             ++begin;
         default:
             break;
@@ -150,18 +150,6 @@ namespace Crowny
         return begin;
     }
 
-    template <typename T> T UTF32ToWide(char32_t input, T output, uint32_t maxElems, wchar_t invalidChar = 0)
-    {
-        if (sizeof(wchar_t) == 4)
-        {
-            *output = (wchar_t)input;
-            ++output;
-            return output;
-        }
-        else
-            return UTF32To16(input, output, maxElems, invalidChar);
-    }
-
     template <typename T> T UTF32To16(char32_t input, T output, uint32_t maxElems, char16_t invalidChar = 0)
     {
         if (maxElems == 0)
@@ -200,6 +188,18 @@ namespace Crowny
             ++output;
         }
         return output;
+    }
+
+    template <typename T> T UTF32ToWide(char32_t input, T output, uint32_t maxElems, wchar_t invalidChar = 0)
+    {
+        if (sizeof(wchar_t) == 4)
+        {
+            *output = (wchar_t)input;
+            ++output;
+            return output;
+        }
+        else
+            return UTF32To16(input, output, maxElems, invalidChar);
     }
 
     template <typename T> T WideToUTF32(T begin, T end, char32_t& output, char32_t invalid = 0)

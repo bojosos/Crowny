@@ -1,5 +1,6 @@
 #include "cwpch.h"
 
+#ifdef CW_PLATFORM_WIN32
 #include "Crowny/Application/Application.h"
 #include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Common/Uuid.h"
@@ -113,3 +114,4 @@ namespace Crowny
     }
 
 } // namespace Crowny
+#endif

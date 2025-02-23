@@ -19,7 +19,7 @@
 
 namespace Crowny
 {
-    constexpr char* ID_ASSET_ITEM_PAYLOAD = "ASSET_ITEM";
+    constexpr char ID_ASSET_ITEM_PAYLOAD[] = "ASSET_ITEM";
 
     namespace UI
     {
@@ -85,7 +85,7 @@ namespace Crowny
 
         static const char* GenerateID()
         {
-            _itoa(s_Counter++, s_IDBuffer + 2, 16);
+            sprintf(s_IDBuffer + 2, "%X", s_Counter++);
             return s_IDBuffer;
         }
 
@@ -236,7 +236,7 @@ namespace Crowny
             {
                 ScopedStyle tooltipPadding(ImGuiStyleVar_WindowPadding, padding);
                 ScopedColor textCol(ImGuiCol_Text, IM_COL32(210, 210, 210, 255));
-                ImGui::SetTooltip(text.data());
+                ImGui::SetTooltip("%s", text.data());
             }
         }
 
@@ -562,7 +562,7 @@ namespace Crowny
             bool modified = false;
 
             ImGui::SetCursorPos({ ImGui::GetCursorPosX() + 10.0f, ImGui::GetCursorPosY() + 9.0f });
-            ImGui::Text(label.c_str());
+            ImGui::Text("%s", label.c_str());
             ImGui::NextColumn();
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
             ImGui::PushItemWidth(-1);
@@ -941,7 +941,7 @@ namespace Crowny
             bool modified = false;
 
             ImGui::SetCursorPos({ ImGui::GetCursorPosX() + 10.0f, ImGui::GetCursorPosY() + 9.0f });
-            ImGui::Text(label.c_str());
+            ImGui::Text("%s", label.c_str());
             ImGui::NextColumn();
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
             ImGui::PushItemWidth(-1);
@@ -997,7 +997,7 @@ namespace Crowny
             bool modified = false;
 
             ImGui::SetCursorPos({ ImGui::GetCursorPosX() + 10.0f, ImGui::GetCursorPosY() + 9.0f });
-            ImGui::Text(label.c_str());
+            ImGui::Text("%s", label.c_str());
             ImGui::NextColumn();
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
             ImGui::PushItemWidth(-1);
@@ -1055,7 +1055,7 @@ namespace Crowny
             bool modified = false;
 
             ImGui::SetCursorPos({ ImGui::GetCursorPosX() + 10.0f, ImGui::GetCursorPosY() + 9.0f });
-            ImGui::Text(label.c_str());
+            ImGui::Text("%s", label.c_str());
             ImGui::NextColumn();
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
             ImGui::PushItemWidth(-1);
@@ -1111,7 +1111,7 @@ namespace Crowny
             bool modified = false;
 
             ImGui::SetCursorPos({ ImGui::GetCursorPosX() + 10.0f, ImGui::GetCursorPosY() + 9.0f });
-            ImGui::Text(label.c_str());
+            ImGui::Text("%s", label.c_str());
             ImGui::NextColumn();
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
             ImGui::PushItemWidth(-1);
