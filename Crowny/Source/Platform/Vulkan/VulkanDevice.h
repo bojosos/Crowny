@@ -71,7 +71,13 @@ namespace Crowny
         VulkanDescriptorManager* m_DescriptorManager;
         VulkanResourceManager* m_ResourceManager;
 
-        VkPipelineCache m_PipelineCache;
+        VkPhysicalDeviceRayTracingPipelinePropertiesKHR rayTracingPipelineProperties{};
+        VkPhysicalDeviceAccelerationStructureFeaturesKHR rayTracingAccelerationStructureFeatures{};
+        VkPhysicalDeviceBufferDeviceAddressFeatures enabledBufferDeviceAddressFeatures{};
+        VkPhysicalDeviceRayTracingPipelineFeaturesKHR enabledRayTracingPipelineFeatures{};
+        VkPhysicalDeviceAccelerationStructureFeaturesKHR enabledAccelerationPipelineFeatures;
+
+        VkPipelineCache m_PipelineCache=VK_NULL_HANDLE;
         VkPhysicalDeviceProperties m_DeviceProperties;
         VkPhysicalDeviceFeatures m_DeviceFeatures;
         VkPhysicalDeviceFeatures m_EnabledFeatures;

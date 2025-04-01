@@ -17,8 +17,20 @@ namespace Crowny
 
     VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, uint32_t idx) : m_PhysicalDevice(physicalDevice)
     {
-        vkGetPhysicalDeviceProperties(physicalDevice, &m_DeviceProperties);
-        vkGetPhysicalDeviceFeatures(physicalDevice, &m_DeviceFeatures);
+        rayTracingPipelineProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
+        VkPhysicalDeviceProperties2 deviceProperties2;
+        deviceProperties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+        deviceProperties2.pNext = &rayTracingPipelineProperties;
+        vkGetPhysicalDeviceProperties2(physicalDevice, &deviceProperties2);
+        m_DeviceProperties = deviceProperties2.properties;
+
+        rayTracingAccelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+        VkPhysicalDeviceFeatures2 deviceFeatures2;
+        deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+        deviceFeatures2.pNext = &rayTracingAccelerationStructureFeatures;
+        vkGetPhysicalDeviceFeatures2(physicalDevice, &deviceFeatures2);
+        m_DeviceFeatures = deviceFeatures2.features;
+
         vkGetPhysicalDeviceMemoryProperties(physicalDevice, &m_MemoryProperties);
 
         uint32_t numQueueFamilies;
@@ -130,6 +142,8 @@ namespace Crowny
         pipelineCacheCI.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
         pipelineCacheCI.pNext = nullptr;
         pipelineCacheCI.flags = 0;
+        pipelineCacheCI.initialDataSize = 0;
+        pipelineCacheCI.pInitialData = nullptr;
         // TODO: File cache with a proper file, not a hard-coded one! Probably in the assets internal folder
         // for editor and some common cache directory for runtime.
         if (fs::exists(PIPELINE_CACHE_FILE))
@@ -141,13 +155,8 @@ namespace Crowny
             pipelineCacheCI.initialDataSize = data.size();
             pipelineCacheCI.pInitialData = data.data();
         }
-        else
-        {
-            pipelineCacheCI.initialDataSize = 0;
-            pipelineCacheCI.pInitialData = nullptr;
-        }
-        const VkResult result = vkCreatePipelineCache(m_LogicalDevice, &pipelineCacheCI, gVulkanAllocator, &m_PipelineCache);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        // const VkResult result = vkCreatePipelineCache(m_LogicalDevice, &pipelineCacheCI, gVulkanAllocator, &m_PipelineCache);
+        // CW_ENGINE_ASSERT(result == VK_SUCCESS);
     }
 
     VulkanDevice::~VulkanDevice()
@@ -174,17 +183,22 @@ namespace Crowny
 
         // Store the pipeline data in a file.
         size_t dataSize = 0;
-        result = vkGetPipelineCacheData(m_LogicalDevice, m_PipelineCache, &dataSize, nullptr);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        if (dataSize > 0)
+        // 143452
+        if (m_PipelineCache != VK_NULL_HANDLE)
         {
-            Vector<uint8_t> data;
-            data.resize(dataSize);
-            result = vkGetPipelineCacheData(m_LogicalDevice, m_PipelineCache, &dataSize, data.data());
+
+            result = vkGetPipelineCacheData(m_LogicalDevice, m_PipelineCache, &dataSize, nullptr);
             CW_ENGINE_ASSERT(result == VK_SUCCESS);
-            FileSystem::WriteFile(PIPELINE_CACHE_FILE, data.data(), dataSize);
+            if (dataSize > 0)
+            {
+                Vector<uint8_t> data;
+                data.resize(dataSize);
+                result = vkGetPipelineCacheData(m_LogicalDevice, m_PipelineCache, &dataSize, data.data());
+                CW_ENGINE_ASSERT(result == VK_SUCCESS);
+                FileSystem::WriteFile(PIPELINE_CACHE_FILE, data.data(), dataSize);
+            }
+            vkDestroyPipelineCache(m_LogicalDevice, m_PipelineCache, gVulkanAllocator);
         }
-        vkDestroyPipelineCache(m_LogicalDevice, m_PipelineCache, gVulkanAllocator);
 
         vmaDestroyAllocator(m_Allocator);
         vkDestroyDevice(m_LogicalDevice, gVulkanAllocator);
@@ -317,9 +331,11 @@ namespace Crowny
         VmaAllocation memory;
         VkResult result = vmaAllocateMemoryForBuffer(m_Allocator, buffer, &allocCreateInfo, &memory, &allocInfo);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-
-        result = vkBindBufferMemory(m_LogicalDevice, buffer, allocInfo.deviceMemory, allocInfo.offset);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        if (result == VK_SUCCESS)
+        {
+            result = vkBindBufferMemory(m_LogicalDevice, buffer, allocInfo.deviceMemory, allocInfo.offset);
+            CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        }
         return memory;
     }
 

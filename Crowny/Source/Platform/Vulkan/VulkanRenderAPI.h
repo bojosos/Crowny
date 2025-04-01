@@ -57,6 +57,7 @@ namespace Crowny
         void InitCaps();
 
     private:
+
         VkDebugUtilsMessengerEXT m_DebugUtilsMessenger;
         VkInstance m_Instance = nullptr;
         Vector<Ref<VulkanDevice>> m_Devices;
