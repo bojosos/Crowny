@@ -267,9 +267,7 @@ namespace Crowny
                 CW_ENGINE_INFO("Missing scene version! Assuming version 0");
             const uint32_t version = versionNode ? versionNode.as<uint32_t>() : 0;
             if (version != SceneVersion)
-            {
                 CW_ENGINE_INFO("Loading scene with version: {0}, current: {1}", version, SceneVersion);
-            }
             const YAML::Node sceneNode = data["Scene"];
             if (!sceneNode)
                 return;

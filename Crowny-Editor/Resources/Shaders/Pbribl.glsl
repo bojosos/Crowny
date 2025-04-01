@@ -1,16 +1,18 @@
 #type vertex
 #version 450
 
-layout (location = 0) in vec3 inPos;
-layout (location = 1) in vec3 inNormal;
-layout (location = 2) in vec3 inTangent;
-layout (location = 3) in vec3 inBitangent;
-layout (location = 4) in vec2 inUV;
+#pragma cull false
+
+layout (location = 0) in vec3 cw_Position;
+layout (location = 1) in vec3 cw_Normal;
+layout (location = 2) in vec3 cw_Tangent;
+layout (location = 3) in vec3 cw_Bitangent;
+layout (location = 4) in vec2 cw_TexCoord0;
+layout (location = 5) in vec4 cw_Color;
 
 layout (binding = 0) uniform MVP
 {
-    mat4 projection;
-    mat4 view;
+    mat4 viewProjection;
     mat4 model;
 } mvp;
 
@@ -20,16 +22,18 @@ layout(location = 0) out DATA
     vec3 normal;
     vec3 tangent;
     vec2 uv;
+	vec4 color;
 } vs_out;
 
 void main()
 {
-    vec3 locPos = vec3(mvp.model * vec4(inPos, 1.0));
+    vec3 locPos = vec3(mvp.model * vec4(cw_Position, 1.0));
     vs_out.worldPos = locPos;
-    vs_out.normal = mat3(mvp.model) * inNormal;
-    vs_out.uv = inUV;
-    vs_out.tangent = mat3(mvp.model) * inTangent.xyz;
-    gl_Position =  mvp.projection * mvp.view * vec4(locPos, 1.0);
+    vs_out.normal = mat3(mvp.model) * cw_Normal;
+    vs_out.uv = cw_TexCoord0;
+	vs_out.color = cw_Color;
+    vs_out.tangent = mat3(mvp.model) * cw_Tangent.xyz;
+    gl_Position =  mvp.viewProjection * vec4(locPos, 1.0);
 }
 
 #type fragment
@@ -41,6 +45,7 @@ layout(location = 0) in DATA
     vec3 normal;
     vec3 tangent;
     vec2 uv;
+	vec4 color;
 } fs_in;
 
 layout (binding = 2) uniform UBOParams {
@@ -67,9 +72,10 @@ layout (binding = 11) uniform Parameters {
 } parameters;
 
 layout (location = 0) out vec4 outColor;
+layout (location = 1) out int outEntity;
 
 #define PI 3.1415926535897932384626433832795
-#define ALBEDO pow(texture(albedoMap, fs_in.uv).rgb * parameters.albedo.rgb, vec3(2.2))
+#define ALBEDO pow(texture(albedoMap, fs_in.uv).rgb * parameters.albedo.rgb * fs_in.color.rgb, vec3(2.2))
 
 // From http://filmicgames.com/archives/75
 vec3 Uncharted2Tonemap(vec3 x)
@@ -164,10 +170,16 @@ vec3 calculateNormal()
 
 void main()
 {
+	outEntity=0;
+	vec3 lightDir = normalize(vec3(0.0, -0.5, -0.5));
+	float diff = max(dot(fs_in.normal, -lightDir), 0.0);
+
+	outColor=vec4(texture(albedoMap, fs_in.uv).rgb * diff, 1.0);
+	return;
     // outColor = vec4(calculateNormal(), 1.0);
     // return;
-	// vec3 N = calculateNormal();
-    vec3 N = fs_in.normal;
+    // vec3 N = fs_in.normal;
+	vec3 N = calculateNormal();
 	vec3 V = normalize(uboParams.camPos - fs_in.worldPos);
 	vec3 R = reflect(-V, N);
 

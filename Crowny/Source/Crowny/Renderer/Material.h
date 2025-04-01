@@ -28,10 +28,12 @@ namespace Crowny
         virtual void GetAssets(Vector<AssetHandle<Asset>>& assets) override { assets.push_back(m_Shader); }
 
 
-        void Bind();
+        void FlushUniformBuffers();
         // void SetShader(const AssetHandle<Shader>& shader);
         void SetFloat(const String& name, float value);
+        void SetInt(const String& name, int value);
         void SetColor(const String& name, const glm::vec4& color);
+        void SetVector3(const String& name, const glm::vec3& value);
         void SetMatrix(const String& name, const glm::mat4& matrix);
         void SetTexture(const String& name, const AssetHandle<Texture>& texture);
         void SetTexture(const String& name, const Ref<Texture>& texture);

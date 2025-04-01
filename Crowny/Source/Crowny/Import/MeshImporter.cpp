@@ -2,9 +2,12 @@
 
 #include "Crowny/Import/MeshImporter.h"
 
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common//FileSystem.h"
 #include "Crowny/Common/StringUtils.h"
 #include "Crowny/Common/VirtualFileSystem.h"
+#include "Crowny/Import/Importer.h"
+#include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/Renderer/Mesh.h"
 
 #include <assimp/Importer.hpp>
@@ -14,6 +17,8 @@
 
 static_assert(sizeof(aiVector2D) == sizeof(glm::vec2));
 static_assert(sizeof(aiVector3D) == sizeof(glm::vec3));
+static_assert(sizeof(aiColor3D) == sizeof(glm::vec3));
+static_assert(sizeof(aiColor4D) == sizeof(glm::vec4));
 static_assert(sizeof(ai_real) == sizeof(float));
 
 namespace Crowny
@@ -36,6 +41,9 @@ namespace Crowny
             const aiFace& face = mesh->mFaces[j];
             // TODO: Add winding order control.
             CW_ENGINE_ASSERT(face.mNumIndices == 3);
+            // CW_ENGINE_INFO("Face: {}, {}, {}", face.mIndices[0], face.mIndices[1], face.mIndices[2]);
+            // CW_ENGINE_INFO("First vertex: X: {}, Y: {}, Z: {}", mesh->mVertices[face.mIndices[0]].x, mesh->mVertices[face.mIndices[0]].y,
+            // mesh->mVertices[face.mIndices[0]].z);
             indices.push_back((IndexType)face.mIndices[0]);
             indices.push_back((IndexType)face.mIndices[1]);
             indices.push_back((IndexType)face.mIndices[2]);
@@ -43,61 +51,16 @@ namespace Crowny
         meshData->SetIndexData<IndexType>(indices.data(), mesh->mNumFaces * 3);
     }
 
-    Ref<Asset> MeshImporter::MeshImporter::Import(const Path& path, Ref<const ImportOptions> importOptions)
+    static Ref<Mesh> ReadMeshData(const String& meshName, const aiScene* scene, const Ref<const MeshImportOptions>& meshImportOptions)
     {
-        Ref<const MeshImportOptions> meshImportOptions = std::static_pointer_cast<const MeshImportOptions>(importOptions);
-
-        int flags = 0;
-
-        if (meshImportOptions->Optimize)
-            flags |= aiProcess_OptimizeGraph | aiProcess_OptimizeMeshes | aiProcess_ImproveCacheLocality | aiProcess_RemoveRedundantMaterials;
-
-        if (meshImportOptions->NormalsMode == NormalsImportMode::Calculate)
-            flags |= meshImportOptions->SmoothNormals ? aiProcess_GenSmoothNormals : aiProcess_GenNormals;
-
-        int removeComponentFlags = 0;
-        if (meshImportOptions->NormalsMode != NormalsImportMode::Import)
-            removeComponentFlags |= aiComponent_NORMALS;
-
-        if (meshImportOptions->TangentsMode == NormalsImportMode::Calculate)
-            flags |= aiProcess_CalcTangentSpace;
-        if (meshImportOptions->TangentsMode != NormalsImportMode::Import)
-            removeComponentFlags |= aiComponent_TANGENTS_AND_BITANGENTS;
-
-        if (!meshImportOptions->KeepQuads)
-            flags |= aiProcess_Triangulate;
-
-#ifdef CW_DEBUG
-            // This option will do a bunch of optional validation for meshes but is very strict.
-            // flags |= aiProcess_ValidateDataStructure;
-#endif
-        Assimp::Importer importer;
-        if (meshImportOptions->NormalsMode == NormalsImportMode::Calculate && meshImportOptions->SmoothNormals)
-        {
-            importer.SetPropertyFloat(AI_CONFIG_PP_GSN_MAX_SMOOTHING_ANGLE, meshImportOptions->SmoothingAngle);
-            importer.SetPropertyInteger(AI_CONFIG_PP_RVC_FLAGS, removeComponentFlags);
-        }
-
-        // std::vector<uint8_t> data;
-        // Ref<DataStream> stream = FileSystem::OpenFile(path);
-        // data.resize(stream->Size());
-        // stream->Read(data.data(), data.size());
-        // stream->Close();
-
-        // const aiScene* scene = importer.ReadFileFromMemory(data.data(), data.size(), flags);
-        const aiScene* scene = importer.ReadFile(path.string(), flags);
-        if (!scene || (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) != 0 || !scene->mRootNode)
-        {
-            CW_ENGINE_WARN("Failed mesh asset loading: Mesh: {0}, Error: {1}", path, importer.GetErrorString());
-            return nullptr;
-        }
-
         Vector<Ref<MeshData>> meshes;
         Vector<Vector<SubMesh>> subMeshes;
         for (uint32_t i = 0; i < scene->mNumMeshes; i++)
         {
+            if (i==0)
+                continue;
             const aiMesh* mesh = scene->mMeshes[i];
-            const uint32_t vertexCount = mesh->mNumVertices / 3;
+            const uint32_t vertexCount = mesh->mNumVertices;
             const uint32_t indexCount = mesh->mNumFaces * 3;
             CW_ENGINE_ASSERT(mesh->HasPositions() && mesh->HasFaces());
 
@@ -106,22 +69,22 @@ namespace Crowny
             if (hasNormals)
                 bufferLayout.AddBufferElement(BufferElement(ShaderDataType::Float3, VertexAttribute::Normal));
             const bool hasTangents = mesh->HasTangentsAndBitangents();
+            CW_ENGINE_INFO("Normals: {}, tangents: {}, uvs0: {}", hasNormals, hasTangents, mesh->HasTextureCoords(0));
             if (hasTangents)
             {
                 bufferLayout.AddBufferElement(BufferElement(ShaderDataType::Float3, VertexAttribute::Tangent));
                 bufferLayout.AddBufferElement(BufferElement(ShaderDataType::Float3, VertexAttribute::Bitangent));
             }
             static_assert(AI_MAX_NUMBER_OF_TEXTURECOORDS == 8);
-            for (uint32_t uv = 0; uv < AI_MAX_NUMBER_OF_TEXTURECOORDS; i++)
+            for (uint32_t uv = 0; uv < AI_MAX_NUMBER_OF_TEXTURECOORDS; uv++)
             {
-                if (!mesh->HasTextureCoords(i))
+                if (!mesh->HasTextureCoords(uv))
                     break;
-                bufferLayout.AddBufferElement(BufferElement(ShaderDataType::Float2, (VertexAttribute)((int)VertexAttribute::TexCoord0 + i)));
+                bufferLayout.AddBufferElement(BufferElement(ShaderDataType::Float2, (VertexAttribute)((int)VertexAttribute::TexCoord0 + uv)));
             }
-
             const bool hasVertexColors = mesh->HasVertexColors(0);
-            if (hasVertexColors)
-                bufferLayout.AddBufferElement(BufferElement(ShaderDataType::Float3, VertexAttribute::Color));
+            // if (hasVertexColors)
+                bufferLayout.AddBufferElement(BufferElement(ShaderDataType::Float4, VertexAttribute::Color));
 
             IndexType indexType;
             if (meshImportOptions->IndexFormat == MeshIndexFormat::Auto)
@@ -142,49 +105,202 @@ namespace Crowny
                 SetIndexData<uint32_t>(mesh, meshData);
             if (hasNormals)
                 meshData->SetVertexData(VertexAttribute::Normal, mesh->mNormals, vertexCount * sizeof(glm::vec3));
-            for (uint32_t i = 0; i < vertexCount; i++)
-            {
-                CW_ENGINE_INFO("X: {0}, Y: {1}, Z: {2}", mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z);
-            }
+            // for (uint32_t i = 0; i < vertexCount; i++)
+            //     CW_ENGINE_INFO("X: {0}, Y: {1}, Z: {2}", mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z);
+            // TODO: This is a color 4 in assimp!!!
             if (hasVertexColors)
-                meshData->SetVertexData(VertexAttribute::Color, mesh->mColors, vertexCount * sizeof(glm::vec3));
+                meshData->SetVertexData(VertexAttribute::Color, mesh->mColors[0], vertexCount * sizeof(glm::vec4));
             if (hasTangents)
             {
                 meshData->SetVertexData(VertexAttribute::Tangent, mesh->mTangents, vertexCount * sizeof(glm::vec3));
                 meshData->SetVertexData(VertexAttribute::Bitangent, mesh->mBitangents, vertexCount * sizeof(glm::vec3));
             }
 
-            for (uint32_t uv = 0; uv < AI_MAX_NUMBER_OF_TEXTURECOORDS; i++)
+            for (uint32_t uv = 0; uv < AI_MAX_NUMBER_OF_TEXTURECOORDS; uv++)
             {
-                if (!mesh->HasTextureCoords(i))
+                if (!mesh->HasTextureCoords(uv))
                     break;
-                const VertexAttribute uvAttr = VertexAttribute((int)VertexAttribute::TexCoord0 + i);
+                const VertexAttribute uvAttr = VertexAttribute((int)VertexAttribute::TexCoord0 + uv);
                 Vector<glm::vec2> uvList;
                 uvList.reserve(vertexCount);
-                for (uint32_t i = 0; i < vertexCount; i++)
-                    uvList.push_back(glm::vec2(mesh->mTextureCoords[uv][i].x, 1 - mesh->mTextureCoords[uv][i].y));
+                for (uint32_t j = 0; j < vertexCount; j++)
+                    uvList.push_back(glm::vec2(mesh->mTextureCoords[uv][j].x, mesh->mTextureCoords[uv][j].y));
                 meshData->SetVertexData(uvAttr, uvList.data(), vertexCount * sizeof(glm::vec2));
             }
             meshes.push_back(meshData);
+            break;
         }
         if (meshes.size() == 0)
         {
             Ref<Mesh> mesh = Mesh::Create(0, 0, BufferLayout(), MeshUsage::Static, DrawMode::TRIANGLE_LIST, IndexType::Index_32);
-            mesh->SetName(path.filename().string());
+            mesh->SetName(meshName);
             return mesh;
         }
         CW_ENGINE_INFO("Mesh: {0} vertices, {1} indices", meshes[0]->GetVertexCount(), meshes[0]->GetIndexCount());
         Vector<SubMesh> outSubMeshes;
+        CW_ENGINE_INFO("Meshes: {0}", meshes.size());
         if (meshes.size() == 1)
         {
             Ref<Mesh> mesh = Mesh::Create(meshes[0], {}, meshImportOptions->CpuCached ? MeshUsage::CpuCached : MeshUsage::Static);
-            mesh->SetName(path.filename().string());
+            mesh->SetName(meshName);
             return mesh;
         }
         const Ref<MeshData> combinedMeshData = MeshData::Combine(meshes, subMeshes, outSubMeshes);
         Ref<Mesh> mesh = Mesh::Create(combinedMeshData, outSubMeshes, meshImportOptions->CpuCached ? MeshUsage::CpuCached : MeshUsage::Static);
-        mesh->SetName(path.filename().string());
+        mesh->SetName(meshName);
         return mesh;
+    }
+
+    static const aiScene* ReadAssimpScene(const Path& path, const Ref<const MeshImportOptions>& meshImportOptions)
+    {
+        int flags = 0;
+
+        if (meshImportOptions->Optimize)
+            flags |= aiProcess_OptimizeGraph | aiProcess_OptimizeMeshes | aiProcess_ImproveCacheLocality | aiProcess_RemoveRedundantMaterials;
+
+        if (meshImportOptions->NormalsMode == NormalsImportMode::Calculate)
+            flags |= meshImportOptions->SmoothNormals ? aiProcess_GenSmoothNormals : aiProcess_GenNormals;
+
+        int removeComponentFlags = 0;
+        if (meshImportOptions->NormalsMode == NormalsImportMode::None)
+            removeComponentFlags |= aiComponent_NORMALS;
+
+        if (meshImportOptions->TangentsMode != NormalsImportMode::None)
+            flags |= aiProcess_CalcTangentSpace;
+        else
+            removeComponentFlags |= aiComponent_TANGENTS_AND_BITANGENTS;
+
+        if (!meshImportOptions->KeepQuads)
+            flags |= aiProcess_Triangulate;
+
+#ifdef CW_DEBUG
+            // This option will do a bunch of optional validation for meshes but is very strict.
+            // flags |= aiProcess_ValidateDataStructure;
+#endif
+        static Assimp::Importer importer;
+        if (meshImportOptions->NormalsMode == NormalsImportMode::Calculate && meshImportOptions->SmoothNormals)
+        {
+            importer.SetPropertyFloat(AI_CONFIG_PP_GSN_MAX_SMOOTHING_ANGLE, meshImportOptions->SmoothingAngle);
+            importer.SetPropertyInteger(AI_CONFIG_PP_RVC_FLAGS, removeComponentFlags);
+        }
+
+        // std::vector<uint8_t> data;
+        // Ref<DataStream> stream = FileSystem::OpenFile(path);
+        // data.resize(stream->Size());
+        // stream->Read(data.data(), data.size());
+        // stream->Close();
+
+        // const aiScene* scene = importer.ReadFileFromMemory(data.data(), data.size(), flags);
+        const aiScene* scene = importer.ReadFile(path.string(), flags);
+        if (!scene || (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) != 0 || !scene->mRootNode)
+        {
+            CW_ENGINE_WARN("Failed mesh asset loading: Mesh: {0}, Error: {1}", path, importer.GetErrorString());
+            return nullptr;
+        }
+        return scene;
+    }
+
+    static UnorderedMap<String, Ref<Texture>> textureCache;
+
+    static Ref<Texture> ImportTexture(const aiMaterial* meshMaterial, const Ref<Material>& material, Vector<Ref<Asset>>& assets, aiTextureType textureType,
+                                      const String& shaderParameter)
+    {
+        aiString texturePath;
+        if (meshMaterial->GetTexture(textureType, 0, &texturePath) == aiReturn_SUCCESS)
+        {
+            if (textureCache.count(texturePath.C_Str()) != 0)
+                return textureCache[texturePath.C_Str()];
+            else
+            {
+                Ref<Texture> texture = Importer::Get().Import<Texture>(texturePath.C_Str());
+                textureCache[texturePath.C_Str()] = texture;
+                material->SetTexture(shaderParameter, texture);
+                assets.push_back(texture);
+                return texture;
+            }
+        }
+
+        return nullptr;
+    }
+
+    Ref<Asset> MeshImporter::Import(const Path& path, Ref<const ImportOptions> importOptions)
+    {
+        return ImportAll(path, importOptions)[0];
+        Ref<const MeshImportOptions> meshImportOptions = std::static_pointer_cast<const MeshImportOptions>(importOptions);
+        Ref<Asset> asset;
+        const aiScene* scene = ReadAssimpScene(path, meshImportOptions);
+        if (scene)
+           return ReadMeshData(path.filename().string(), scene, meshImportOptions);
+        return nullptr;
+    }
+
+    Vector<Ref<Asset>> MeshImporter::ImportAll(const Path& path, Ref<const ImportOptions> importOptions)
+    {
+        Ref<const MeshImportOptions> meshImportOptions = std::static_pointer_cast<const MeshImportOptions>(importOptions);
+
+        const aiScene* scene = ReadAssimpScene(path, meshImportOptions);
+        if (!scene)
+            return {};
+
+        Vector<Ref<Asset>> assets;
+        Ref<Mesh> mesh = ReadMeshData(path.filename().string(), scene, meshImportOptions);
+        if (!mesh)
+            return {};
+        assets.push_back(mesh);
+
+        static Ref<Shader> pbriblShader = Importer::Get().Import<Shader>("Resources/Shaders/Pbribl.glsl");
+        static const AssetHandle<Shader> pbriblHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(pbriblShader));
+        for (uint32_t i = 0; i < scene->mNumMeshes; i++)
+        {
+            const aiMesh* mesh = scene->mMeshes[i];
+            CW_ENGINE_INFO("Mesh idx: {}, {}", i, mesh->mName.C_Str());
+
+            const aiMaterial* meshMaterial = scene->mMaterials[mesh->mMaterialIndex];
+            CW_ENGINE_INFO(meshMaterial->GetName().C_Str());
+            Ref<Material> material = Material::Create(pbriblHandle);
+            ImportTexture(meshMaterial, material, assets, aiTextureType_DIFFUSE, "albedoMap");
+            ImportTexture(meshMaterial, material, assets, aiTextureType_METALNESS, "metallicMap");
+            ImportTexture(meshMaterial, material, assets, aiTextureType_DIFFUSE_ROUGHNESS, "roughnessMap");
+            ImportTexture(meshMaterial, material, assets, aiTextureType_NORMALS, "normalMap");
+            ImportTexture(meshMaterial, material, assets, aiTextureType_AMBIENT_OCCLUSION, "aoMap");
+
+            aiColor3D color;
+            aiReturn res = meshMaterial->Get(AI_MATKEY_BASE_COLOR, color);
+            if (res == aiReturn_SUCCESS)
+                CW_ENGINE_INFO("Diffuse color: {}, {}, {}", color.r, color.g, color.b);
+            aiString diffuseTex;
+            res = meshMaterial->GetTexture(AI_MATKEY_BASE_COLOR_TEXTURE, &diffuseTex);
+            if (res == aiReturn_SUCCESS)
+                CW_ENGINE_INFO("Diffuse texture: {}", diffuseTex.C_Str());
+            bool useMetalness=false;
+            res = meshMaterial->Get(AI_MATKEY_USE_METALLIC_MAP, useMetalness);
+            if (res == aiReturn_SUCCESS)
+                CW_ENGINE_INFO("Use metalness: {}", useMetalness);
+            float metalness = 0.0f;
+            res = meshMaterial->Get(AI_MATKEY_METALLIC_FACTOR, metalness);
+            if (res == aiReturn_SUCCESS)
+                CW_ENGINE_INFO("Metallnes: {}", metalness);
+            aiString metalnessTex;
+            res = meshMaterial->GetTexture(AI_MATKEY_METALLIC_TEXTURE, &metalnessTex);
+            if (res == aiReturn_SUCCESS)
+                CW_ENGINE_INFO("Metallnes map: {}", metalnessTex.C_Str());
+            float roughness = 0.0f;
+            res = meshMaterial->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
+            if (res == aiReturn_SUCCESS)
+                CW_ENGINE_INFO("Roughness: {}", roughness);
+            aiString roughnessTex;
+            res = meshMaterial->GetTexture(AI_MATKEY_ROUGHNESS_TEXTURE, &roughnessTex);
+            if (res == aiReturn_SUCCESS)
+                CW_ENGINE_INFO("Roughness map: {}", roughnessTex.C_Str());
+
+            for (uint32_t j = 0; j < AI_TEXTURE_TYPE_MAX; j++)
+            {
+                aiString outPath;
+                if (meshMaterial->GetTexture((aiTextureType)j, 0, &outPath) == aiReturn_SUCCESS)
+                    CW_ENGINE_INFO("Material {} texture: {} -> {}", meshMaterial->GetName().C_Str(), aiTextureTypeToString((aiTextureType)j), outPath.C_Str());
+            }
+        }
+        return assets;
     }
 
     Ref<ImportOptions> MeshImporter::CreateImportOptions() const { return CreateRef<MeshImportOptions>(); }

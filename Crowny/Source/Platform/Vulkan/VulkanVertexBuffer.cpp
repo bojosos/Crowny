@@ -85,7 +85,8 @@ namespace Crowny
         BufferLayoutEntry newEntry;
         newEntry.Attributes = new VkVertexInputAttributeDescription[numAttrs];
         newEntry.Bindings = new VkVertexInputBindingDescription[numBindings];
-        CW_ENGINE_ASSERT(numBindings == 1, "Not supported currently");
+        // CW_ENGINE_ASSERT(numBindings == 1, "Not supported currently");
+        // CW_ENGINE_ASSERT(numAttrs == shaderElements.size() && numAttrs == meshElements.size());
         for (uint32_t i = 0; i < numBindings; i++)
         {
             VkVertexInputBindingDescription& binding = newEntry.Bindings[i];
@@ -144,6 +145,12 @@ namespace Crowny
         vertexInputCI.flags = 0;
         vertexInputCI.pVertexBindingDescriptions = newEntry.Bindings;
         vertexInputCI.vertexBindingDescriptionCount = numBindings;
+#if 0
+        for (uint32_t i = 0; i < numAttrs; i++)
+        {
+            CW_ENGINE_INFO("{}: offset: {}, format: {}", newEntry.Attributes[i].location, newEntry.Attributes[i].offset, newEntry.Attributes[i].format);
+        }
+#endif
         vertexInputCI.pVertexAttributeDescriptions = newEntry.Attributes;
         vertexInputCI.vertexAttributeDescriptionCount = numAttrs;
 

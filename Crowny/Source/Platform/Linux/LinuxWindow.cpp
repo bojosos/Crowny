@@ -35,9 +35,8 @@ namespace Crowny
         m_Data.Height = windowDesc.Height;
         // m_Data.VSync = windowDesc.VSync;
 
-#ifdef CW_DEBUG
         CW_ENGINE_WARN("Creating Window: {0}", m_Data.Title);
-#endif
+
         glfwSetErrorCallback(GLFWErrorCallback);
 
         glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_TRUE);
@@ -112,7 +111,7 @@ namespace Crowny
 
         if (windowDesc.StartMaximized)
         {
-            glfwSetWindowPos(m_Window, areaX + areaWidth / 2 - windowDesc.Width / 2, areaY + areaHeight / 2 - windowDesc.Height / 2);
+            // glfwSetWindowPos(m_Window, areaX + areaWidth / 2 - windowDesc.Width / 2, areaY + areaHeight / 2 - windowDesc.Height / 2);
             glfwMaximizeWindow(m_Window);
             if (!windowDesc.Hidden)
                 glfwShowWindow(m_Window);

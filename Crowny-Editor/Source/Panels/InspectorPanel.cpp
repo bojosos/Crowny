@@ -693,13 +693,14 @@ namespace Crowny
             return;
         }
         String ext = filepath.extension().string();
+        StringUtils::ToLower(ext);
         if (ext.empty())
             return;
         ext = ext.substr(1, ext.size() - 1);
         // TODO: Make these use the importer IsExtensionSupported
         if (ext == "ogg" || ext == "wav" || ext == "flac")
             m_InspectorMode = InspectorMode::AudioClipImport;
-        else if (ext == "png" || ext == "jpeg" || ext == "psd" || ext == "gif" || ext == "tga" || ext == "bmp" || ext == "hdr" || ext == "")
+        else if (ext == "png" || ext == "jpeg" || ext == "psd" || ext == "gif" || ext == "tga" || ext == "bmp" || ext == "hdr")
             m_InspectorMode = InspectorMode::TextureImport;
         else if (ext == "cs")
             m_InspectorMode = InspectorMode::ScriptImport;

@@ -39,11 +39,13 @@ namespace Crowny
         void SetPosition(const glm::vec3& position) { m_Position = position; }
         void SetFocalPoint(const glm::vec3& focalPoint) { m_FocalPoint = focalPoint; }
         void SetYaw(float yaw) { m_Yaw = yaw; }
+        void SetRoll(float roll) { m_Roll = roll; }
         void SetPitch(float pitch) { m_Pitch = pitch; }
         void SetDistance(float dist) { m_Distance = dist; }
 
         float GetPitch() const { return m_Pitch; }
         float GetYaw() const { return m_Yaw; }
+        float GetRoll() const { return m_Roll; }
 
         const glm::vec3& GetFocalPoint() const { return m_FocalPoint; }
 
@@ -51,14 +53,15 @@ namespace Crowny
 
     private:
         void UpdateProjection();
+        // TODO: Dirty flag for this.
         void UpdateView();
 
         bool OnMouseScroll(MouseScrolledEvent& e);
         void MousePan(const glm::vec2& delta);
-        void MouseRoate(const glm::vec2& delta);
+        void MouseRotate(const glm::vec2& delta);
         void MouseZoom(float delta);
 
-        glm::vec3 CalcualtePosition() const;
+        glm::vec3 CalculatePosition() const;
 
         std::pair<float, float> PanSpeed() const;
         float RotationSpeed() const;
@@ -75,6 +78,7 @@ namespace Crowny
 
         float m_Distance = 10.0f;
         float m_Pitch = 0.0f, m_Yaw = 0.0f;
+        float m_Roll = 0.0f;
 
         float m_ViewportWidth = 1280.0f, m_ViewportHeight = 720.0f;
     };

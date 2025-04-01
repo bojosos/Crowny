@@ -49,14 +49,14 @@ namespace Crowny
 
     private:
         bool m_ScissorsEnabled = false;
-        VkPipelineLayout m_PipelineLayout;
+        VkPipelineLayout m_PipelineLayout = VK_NULL_HANDLE;
         Ref<BufferLayout> m_BufferLayout;
-        VkPipelineShaderStageCreateInfo m_ShaderStageInfos[5];
+        VkPipelineShaderStageCreateInfo m_ShaderStageInfos[5] = {};
         VkPipelineRasterizationStateCreateInfo m_RasterizationInfo = {};
-        VkPipelineColorBlendAttachmentState m_BlendAttachmentStates[MAX_FRAMEBUFFER_COLOR_ATTACHMENTS];
+        VkPipelineColorBlendAttachmentState m_BlendAttachmentStates[MAX_FRAMEBUFFER_COLOR_ATTACHMENTS] = {};
         VkPipelineColorBlendStateCreateInfo m_ColorBlendStateInfo = {};
         VkPipelineInputAssemblyStateCreateInfo m_InputAssemblyInfo = {};
-        VkPipelineTessellationStateCreateInfo m_TesselationInfo = {};
+        VkPipelineTessellationStateCreateInfo m_TessellationInfo = {};
         VkPipelineViewportStateCreateInfo m_ViewportInfo = {};
         VkPipelineMultisampleStateCreateInfo m_MultiSampleInfo = {};
         VkPipelineDepthStencilStateCreateInfo m_DepthStencilInfo = {};

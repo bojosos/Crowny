@@ -26,7 +26,7 @@ namespace Crowny
             if (Input::IsMouseButtonPressed(Mouse::ButtonMiddle))
                 MousePan(delta);
             else if (Input::IsMouseButtonPressed(Mouse::ButtonLeft))
-                MouseRoate(delta);
+                MouseRotate(delta);
             else if (Input::IsMouseButtonPressed(Mouse::ButtonRight))
                 MouseZoom(delta.y);
         }
@@ -48,16 +48,16 @@ namespace Crowny
 
     void EditorCamera::UpdateView()
     {
-        m_Position = CalcualtePosition();
+        m_Position = CalculatePosition();
 
-        glm::quat orietantion = GetOrientation();
-        m_ViewMatrix = glm::translate(glm::mat4(1.0f), m_Position) * glm::toMat4(orietantion);
+        const glm::quat orientation = GetOrientation();
+        m_ViewMatrix = glm::translate(glm::mat4(1.0f), m_Position) * glm::toMat4(orientation);
         m_ViewMatrix = glm::inverse(m_ViewMatrix);
     }
 
     bool EditorCamera::OnMouseScroll(MouseScrolledEvent& e)
     {
-        float delta = e.GetYOffset() * 0.1f;
+        const float delta = e.GetYOffset() * 0.1f;
         MouseZoom(delta);
         UpdateView();
         return true;
@@ -70,7 +70,7 @@ namespace Crowny
         m_FocalPoint += GetUpDirection() * delta.y * ySpeed * m_Distance;
     }
 
-    void EditorCamera::MouseRoate(const glm::vec2& delta)
+    void EditorCamera::MouseRotate(const glm::vec2& delta)
     {
         float yawSign = GetUpDirection().y < 0 ? -1.0f : 1.0f;
         m_Yaw += yawSign * delta.x * RotationSpeed();
@@ -87,7 +87,7 @@ namespace Crowny
         }
     }
 
-    glm::vec3 EditorCamera::CalcualtePosition() const { return m_FocalPoint - GetForwardDirection() * m_Distance; }
+    glm::vec3 EditorCamera::CalculatePosition() const { return m_FocalPoint - GetForwardDirection() * m_Distance; }
 
     std::pair<float, float> EditorCamera::PanSpeed() const
     {
@@ -129,6 +129,6 @@ namespace Crowny
 
     glm::vec3 EditorCamera::GetForwardDirection() const { return glm::rotate(GetOrientation(), glm::vec3(0.0f, 0.0f, -1.0f)); }
 
-    glm::quat EditorCamera::GetOrientation() const { return glm::quat(glm::vec3(-m_Pitch, -m_Yaw, 0.0f)); }
+    glm::quat EditorCamera::GetOrientation() const { return glm::quat(glm::vec3(-m_Pitch, -m_Yaw, m_Roll)); }
 
 } // namespace Crowny

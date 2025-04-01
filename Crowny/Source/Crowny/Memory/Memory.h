@@ -2,7 +2,7 @@
 
 #include "Crowny/Memory/Allocator.h"
 
-#define CW_TRACK_MEMORY CW_PLATFORM_WIN32
+// #define CW_TRACK_MEMORY CW_PLATFORM_WIN32
 #if CW_TRACK_MEMORY
 
 _NODISCARD _Ret_notnull_ _Post_writable_byte_size_(size)

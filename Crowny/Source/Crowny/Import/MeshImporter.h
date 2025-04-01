@@ -5,6 +5,8 @@
 namespace Crowny
 {
 
+    class Material;
+
     class MeshImporter : public SpecificImporter
     {
     public:
@@ -14,6 +16,7 @@ namespace Crowny
         virtual bool IsMagicNumSupported(uint8_t* num, uint32_t numSize) const override;
 
         virtual Ref<Asset> Import(const Path& path, Ref<const ImportOptions> importOptions) override;
+        virtual Vector<Ref<Asset>> ImportAll(const Path& path, Ref<const ImportOptions> importOptions) override;
 
         virtual Ref<ImportOptions> CreateImportOptions() const override;
     };

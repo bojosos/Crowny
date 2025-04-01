@@ -2,6 +2,7 @@
 #type vertex
 
 #version 460 core
+#pragma cull false
 
 layout(location = 0) in vec4 a_Position;
 layout(location = 1) in vec4 a_Color;

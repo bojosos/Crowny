@@ -27,7 +27,7 @@ layout (location = 0) out vec4 outColor;
 
 layout (binding = 1) uniform samplerCube samplerEnv;
 layout (binding = 2) uniform Params {
-	uint samples;
+	int samples;
 	float roughness;
 } params;
 
@@ -92,8 +92,7 @@ vec3 prefilterEnvMap(vec3 R, float roughness)
 	float totalWeight = 0.0;
 	float envMapDim = float(textureSize(samplerEnv, 0).s);
 
-	/*
-	for(uint i = 0u; i < params.samples; i++) {
+	for(int i = 0; i < params.samples; i++) {
 		vec2 Xi = hammersley2d(i, params.samples);
 		vec3 H = importanceSample_GGX(Xi, roughness, N);
 		vec3 L = 2.0 * dot(V, H) * H - V;
@@ -108,31 +107,6 @@ vec3 prefilterEnvMap(vec3 R, float roughness)
 			float pdf = D_GGX(dotNH, roughness) * dotNH / (4.0 * dotVH) + 0.0001;
 			// Slid angle of current smple
 			float omegaS = 1.0 / (float(params.samples) * pdf);
-			// Solid angle of 1 pixel across all cube faces
-			float omegaP = 4.0 * PI / (6.0 * envMapDim * envMapDim);
-			// Biased (+1.0) mip level for better result
-			float mipLevel = roughness == 0.0 ? 0.0 : max(0.5 * log2(omegaS / omegaP) + 1.0, 0.0f);
-			color += textureLod(samplerEnv, L, mipLevel).rgb * dotNL;
-			totalWeight += dotNL;
-
-		}
-	}*/
-	uint samples = 128;
-	for(uint i = 0u; i < samples; i++) {
-		vec2 Xi = hammersley2d(i, samples);
-		vec3 H = importanceSample_GGX(Xi, roughness, N);
-		vec3 L = 2.0 * dot(V, H) * H - V;
-		float dotNL = clamp(dot(N, L), 0.0, 1.0);
-		if(dotNL > 0.0) {
-			// Filtering based on https://placeholderart.wordpress.com/2015/07/28/implementation-notes-runtime-environment-map-filtering-for-image-based-lighting/
-
-			float dotNH = clamp(dot(N, H), 0.0, 1.0);
-			float dotVH = clamp(dot(V, H), 0.0, 1.0);
-
-			// Probability Distribution Function
-			float pdf = D_GGX(dotNH, roughness) * dotNH / (4.0 * dotVH) + 0.0001;
-			// Slid angle of current smple
-			float omegaS = 1.0 / (float(samples) * pdf);
 			// Solid angle of 1 pixel across all cube faces
 			float omegaP = 4.0 * PI / (6.0 * envMapDim * envMapDim);
 			// Biased (+1.0) mip level for better result

@@ -75,7 +75,7 @@ namespace Crowny
         }
 
         const uint32_t usedStages = outputIdx;
-        const bool tesselation = m_Data.HullShader != nullptr && m_Data.DomainShader != nullptr;
+        const bool tessellation = m_Data.HullShader != nullptr && m_Data.DomainShader != nullptr;
 
         m_InputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
         m_InputAssemblyInfo.pNext = nullptr;
@@ -83,10 +83,10 @@ namespace Crowny
         m_InputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; // runtime
         m_InputAssemblyInfo.primitiveRestartEnable = false;
 
-        m_TesselationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-        m_TesselationInfo.pNext = nullptr;
-        m_TesselationInfo.flags = 0;
-        m_TesselationInfo.patchControlPoints = 3; // runtime
+        m_TessellationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+        m_TessellationInfo.pNext = nullptr;
+        m_TessellationInfo.flags = 0;
+        m_TessellationInfo.patchControlPoints = 3; // runtime
 
         m_ViewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
         m_ViewportInfo.pNext = nullptr;
@@ -189,7 +189,7 @@ namespace Crowny
         m_PipelineInfo.pStages = m_ShaderStageInfos;
         m_PipelineInfo.pVertexInputState = nullptr; // &m_VertexInputStateCreateInfo; // runtime
         m_PipelineInfo.pInputAssemblyState = &m_InputAssemblyInfo;
-        m_PipelineInfo.pTessellationState = tesselation ? &m_TesselationInfo : nullptr;
+        m_PipelineInfo.pTessellationState = tessellation ? &m_TessellationInfo : nullptr;
         m_PipelineInfo.pViewportState = &m_ViewportInfo;
         m_PipelineInfo.pRasterizationState = &m_RasterizationInfo;
         m_PipelineInfo.pMultisampleState = &m_MultiSampleInfo;
@@ -261,7 +261,7 @@ namespace Crowny
     {
         VulkanDevice& device = *gVulkanRenderAPI().GetPresentDevice().get();
         m_InputAssemblyInfo.topology = VulkanUtils::GetDrawFlags(drawMode);
-        m_TesselationInfo.patchControlPoints = 3;
+        m_TessellationInfo.patchControlPoints = 3;
         m_MultiSampleInfo.rasterizationSamples = renderPass->GetSampleFlags();
         m_ColorBlendStateInfo.attachmentCount = renderPass->GetNumColorAttachments();
 

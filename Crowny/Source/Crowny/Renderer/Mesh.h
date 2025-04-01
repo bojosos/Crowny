@@ -57,7 +57,7 @@ namespace Crowny
         uint32_t GetIndexSize() const { return m_IndexType == IndexType::Index_16 ? sizeof(uint16_t) : sizeof(uint32_t); }
         uint32_t GetIndexBufferSize() const { return m_NumIndices * GetIndexSize(); }
         uint32_t GetVertexBufferSize() const { return m_Layout.GetStride() * m_NumVertices; }
-        uint8_t* GetVerexBufferData() const { return m_Data + GetIndexBufferSize(); }
+        uint8_t* GetVertexBufferData() const { return m_Data + GetIndexBufferSize(); }
 
         uint8_t* GetElementData(const BufferElement& bufferElement) const;
         void CalculateBounds(AABox& outAABox, SphereBounds& outSphereBounds) const;
