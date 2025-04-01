@@ -211,6 +211,9 @@ namespace Crowny
 
         void SetIsSubmitted() { m_State = State::Submitted; }
 
+        void CreateTopLevelAccelerationStructure();
+        void CreateBottomLevelAccelerationStructure();
+
         void RegisterResource(VulkanResource* resource, VulkanAccessFlags flags);
         void RegisterResource(VulkanFramebuffer* framebuffer, RenderSurfaceMask loadMask, uint32_t readMask);
         void RegisterResource(VulkanSwapChain* swapChain);
@@ -252,7 +255,7 @@ namespace Crowny
         void SetPipeline(const Ref<ComputePipeline>& pipeline);
         void SetUniforms(const Ref<UniformParams>& uniforms);
         void SetViewport(const Rect2F& area);
-        void SetScrissorRect(const Rect2I& area);
+        void SetScissorRect(const Rect2I& area);
         void SetStencilRef(uint32_t value);
         void SetDrawMode(DrawMode drawMode);
         void SetVertexBuffers(uint32_t idx, Ref<VertexBuffer>* bufffers, uint32_t numBuffers);
@@ -287,6 +290,15 @@ namespace Crowny
         void GetInProgressQueries(Vector<VulkanTimerQuery*>& timers, Vector<VulkanPipelineQuery*>& pipelines,
                                   Vector<VulkanOcclusionQuery*>& occlusions) const;
 
+        // TODO: Resource
+        struct AccelerationStructure
+        {
+            VkAccelerationStructureKHR Handle;
+            uint64_t DeviceAddress = 0;
+            VkDeviceMemory Memory;
+            VkBuffer Buffer;
+        };
+
     private:
         friend class VulkanCommandBufferPool;
 
@@ -306,6 +318,9 @@ namespace Crowny
         bool m_BoundUniformsDirty : 1;
         bool m_StencilRequriesBind : 1;
         bool m_BufferLayoutDirty : 1;
+
+        AccelerationStructure m_Tlas;
+        AccelerationStructure m_Blas;
 
         mutable uint32_t m_NumUsedInterQueueSemaphores = 0;
         std::array<VkClearValue, MAX_FRAMEBUFFER_COLOR_ATTACHMENTS + 1> m_ClearValues{};

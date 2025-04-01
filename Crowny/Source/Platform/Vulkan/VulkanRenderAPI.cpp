@@ -53,6 +53,16 @@ namespace Crowny
     PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR = nullptr;
     PFN_vkQueuePresentKHR vkQueuePresentKHR = nullptr;
 
+    PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddressKHR = nullptr;
+    PFN_vkCreateAccelerationStructureKHR vkCreateAccelerationStructureKHR = nullptr;
+    PFN_vkDestroyAccelerationStructureKHR vkDestroyAccelerationStructureKHR = nullptr;
+    PFN_vkGetAccelerationStructureBuildSizesKHR vkGetAccelerationStructureBuildSizesKHR = nullptr;
+    PFN_vkGetAccelerationStructureDeviceAddressKHR vkGetAccelerationStructureDeviceAddressKHR = nullptr;
+    PFN_vkCmdBuildAccelerationStructuresKHR vkCmdBuildAccelerationStructuresKHR = nullptr;
+    PFN_vkCmdTraceRaysKHR vkCmdTraceRaysKHR = nullptr;
+    PFN_vkGetRayTracingShaderGroupHandlesKHR vkGetRayTracingShaderGroupHandlesKHR = nullptr;
+    PFN_vkCreateRayTracingPipelinesKHR vkCreateRayTracingPipelinesKHR = nullptr;
+
     VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
                                                  const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
     {
@@ -110,6 +120,15 @@ namespace Crowny
         Vector<const char*> extensions(glfwExts, glfwExts + numExtensions);
         uint32_t numLayers = (uint32_t)layers.size();
 #endif
+        extensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
+        extensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+        extensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+
+        extensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+        extensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+        extensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+        extensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+
         numExtensions = (uint32_t)extensions.size();
         uint32_t layerCount;
         vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -236,6 +255,15 @@ namespace Crowny
         GET_DEVICE_PROC_ADDR(presentDevice, GetSwapchainImagesKHR);
         GET_DEVICE_PROC_ADDR(presentDevice, AcquireNextImageKHR);
         GET_DEVICE_PROC_ADDR(presentDevice, QueuePresentKHR);
+        GET_DEVICE_PROC_ADDR(presentDevice, GetBufferDeviceAddressKHR);
+        GET_DEVICE_PROC_ADDR(presentDevice, CreateAccelerationStructureKHR);
+        GET_DEVICE_PROC_ADDR(presentDevice, DestroyAccelerationStructureKHR);
+        GET_DEVICE_PROC_ADDR(presentDevice, GetAccelerationStructureBuildSizesKHR);
+        GET_DEVICE_PROC_ADDR(presentDevice, GetAccelerationStructureDeviceAddressKHR);
+        GET_DEVICE_PROC_ADDR(presentDevice, CmdBuildAccelerationStructuresKHR);
+        GET_DEVICE_PROC_ADDR(presentDevice, CmdTraceRaysKHR);
+        GET_DEVICE_PROC_ADDR(presentDevice, GetRayTracingShaderGroupHandlesKHR);
+        GET_DEVICE_PROC_ADDR(presentDevice, CreateRayTracingPipelinesKHR);
 
         InitCaps();
 
