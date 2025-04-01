@@ -40,7 +40,7 @@ namespace Crowny
         }
     }
 
-    void Material::Bind()
+    void Material::FlushUniformBuffers()
     {
         for (const auto& [_, block] : m_UniformBlocks)
             block->FlushToGpu();
@@ -62,7 +62,40 @@ namespace Crowny
         m_UniformBlocks[iterFind->second.BufferName]->Write(iterFind->second.Offset, &value, sizeof(value));
     }
 
+    void Material::SetInt(const String& name, int value)
+    {
+        const auto iterFind = m_Bindings.find(name);
+        if (iterFind == m_Bindings.cend())
+        {
+            CW_ENGINE_WARN("Could not find uniform {}", name);
+            return;
+        }
+        if (iterFind->second.DataType != ShaderDataType::Int)
+        {
+            CW_ENGINE_WARN("Trying to write the wrong data type {}, expected {}, got int", value,
+                           ShaderDataTypeToString(iterFind->second.DataType));
+            return;
+        }
+        m_UniformBlocks[iterFind->second.BufferName]->Write(iterFind->second.Offset, &value, sizeof(value));
+    }
+
     void Material::SetColor(const String& name, const glm::vec4& value)
+    {
+        const auto iterFind = m_Bindings.find(name);
+        if (iterFind == m_Bindings.cend())
+        {
+            CW_ENGINE_WARN("Could not find uniform {}", name);
+            return;
+        }
+        if (iterFind->second.DataType != ShaderDataType::Float4)
+        {
+            CW_ENGINE_WARN("Trying to write the wrong data type {}, expected {}, got color", name, ShaderDataTypeToString(iterFind->second.DataType));
+            return;
+        }
+        m_UniformBlocks[iterFind->second.BufferName]->Write(iterFind->second.Offset, &value, sizeof(value));
+    }
+
+    void Material::SetVector3(const String& name, const glm::vec3& value)
     {
         const auto iterFind = m_Bindings.find(name);
         if (iterFind == m_Bindings.cend())
@@ -72,7 +105,8 @@ namespace Crowny
         }
         if (iterFind->second.DataType != ShaderDataType::Float3)
         {
-            CW_ENGINE_WARN("Trying to write the wrong data type {}, expected {}, got color", name, ShaderDataTypeToString(iterFind->second.DataType));
+            CW_ENGINE_WARN("Trying to write the wrong data type {}, expected {}, got vector", name,
+                           ShaderDataTypeToString(iterFind->second.DataType));
             return;
         }
         m_UniformBlocks[iterFind->second.BufferName]->Write(iterFind->second.Offset, &value, sizeof(value));

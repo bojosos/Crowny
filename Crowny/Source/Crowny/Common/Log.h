@@ -5,7 +5,9 @@
 #pragma warning(push, 0)
 #include <spdlog/spdlog.h>
 
+// Do not put this over the other include
 #include <spdlog/fmt/ostr.h>
+
 #pragma warning(pop)
 #include <glm/gtx/string_cast.hpp>
 

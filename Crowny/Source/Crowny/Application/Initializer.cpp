@@ -154,7 +154,6 @@ namespace Crowny
     {
         Physics2D::Shutdown();
         Texture::WHITE = Texture::BLACK = nullptr;
-        ConsoleBuffer::Shutdown();
         ScriptSceneObjectManager::Get().Del();
         ScriptRuntime::UnloadAssemblies();
         Renderer2D::Shutdown();
@@ -172,6 +171,7 @@ namespace Crowny
         RenderAPI::Get().Shutdown();
 
         ScriptInfoManager::Shutdown();
+        ConsoleBuffer::Shutdown();
         // ScriptSceneObjectManager::Shutdown();
         // ScriptSceneObjectManager::Shutdown();
         // ScriptObjectManager::Shutdown();

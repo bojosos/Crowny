@@ -79,7 +79,7 @@ namespace Crowny
     static const char* EDITOR_NEW_PROJECT_ID = "New Project";
     static const char* EDITOR_PROJECT_MANAGER_ID = "Project Manager";
 
-    EditorCamera EditorLayer::s_EditorCamera = EditorCamera(30.0f, 1280.0f / 720.0f, 0.001f, 1000.0f);
+    EditorCamera EditorLayer::s_EditorCamera = EditorCamera(30.0f, 1280.0f / 720.0f, 0.001f, 30000.0f);
 
     EditorLayer::EditorLayer() : Layer("EditorLayer") {}
 
@@ -1332,6 +1332,10 @@ namespace Crowny
         UI::PopID();
     }
 
+    float metalness;
+    float roughness;
+    glm::vec4 albedo;
+
     void EditorLayer::UI_Settings()
     {
         ImGui::Begin("Settings");
@@ -1351,6 +1355,10 @@ namespace Crowny
             const CodeEditorInstallation& selectedEditor = editors[m_VisualStudioVersionId];
             CodeEditorManager::Get().SetActive(selectedEditor.ExecutablePath);
         }
+
+        UI::PropertyColor("Albedo", albedo);
+        UI::Property("Metalness", metalness);
+        UI::Property("Roughness", roughness);
 
         ImGui::End();
     }

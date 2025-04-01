@@ -28,6 +28,7 @@ namespace Crowny
 
     private:
         static void Reflect(const Vector<uint8_t>& binaryShaderData, Ref<BinaryShaderData>& outData);
+        static void EvaluatePragmaDirectives(const String& source, ShaderRenderPassDesc& shaderPassDesc);
         static UnorderedMap<ShaderType, String> Parse(const String& streamData);
     };
 

@@ -10,7 +10,7 @@
 
 #include <shaderc/shaderc.hpp>
 
-#include <filesystem>
+#include <regex>
 
 namespace Crowny
 {
@@ -300,6 +300,7 @@ namespace Crowny
             else if (type == COMPUTE_SHADER)
                 passDesc.ComputeShader = shaderData;
         }
+        EvaluatePragmaDirectives(source, passDesc);
         Ref<ShaderRenderPass> renderPass = ShaderRenderPass::Create(passDesc);
         Ref<ShaderTechnique> technique = ShaderTechnique::Create({}, ShaderVariation(), { renderPass }); // TODO: tags and variations
         ShaderDesc shaderDesc;
@@ -403,6 +404,43 @@ namespace Crowny
                 layout.AddBufferElement(element);
             }
             outData->VertexLayout = std::move(layout);
+        }
+    }
+
+    void ShaderCompiler::EvaluatePragmaDirectives(const String& source, ShaderRenderPassDesc& shaderPassDesc)
+    {
+        std::regex pragma_regex(R"(#pragma\s+(\w+)\s+(\w+))");
+        std::vector<std::string> pragma_names;
+        std::vector<std::string> pragma_values;
+        std::sregex_iterator iter(source.begin(), source.end(), pragma_regex);
+        std::sregex_iterator end;
+        while (iter != end)
+        {
+            std::smatch match = *iter;
+            const String name = match[1].str();
+            const String value = match[2].str();
+            CW_ENGINE_INFO("#pragma directive: {} = {}", name, value);
+            if (name == "depth_read")
+            {
+                if (!shaderPassDesc.DepthStencilState)
+                    shaderPassDesc.DepthStencilState = CreateRef<DepthStencilStateDesc>();
+                shaderPassDesc.DepthStencilState->EnableDepthRead = (value == "false" ? false : true);
+            }
+            else if (name == "depth_write")
+            {
+                if (!shaderPassDesc.DepthStencilState)
+                    shaderPassDesc.DepthStencilState = CreateRef<DepthStencilStateDesc>();
+                shaderPassDesc.DepthStencilState->EnableDepthWrite = (value == "false" ? false : true);
+            }
+            else if (name == "cull")
+            {
+                if (!shaderPassDesc.RasterizationState)
+                    shaderPassDesc.RasterizationState = CreateRef<RasterizerStateDesc>();
+                shaderPassDesc.RasterizationState->CullMode = (value == "false" ? CullingMode::CULL_NONE : CullingMode::CULL_COUNTERCLOCKWISE);
+            }
+            else
+                CW_ENGINE_WARN("Unrecognized #pragma {}={}", name, value);
+            iter++;
         }
     }
 

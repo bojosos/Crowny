@@ -322,7 +322,7 @@ namespace Crowny
             return modified;
         }
 
-        static bool Property(const char* label, float& value, float delta = 0.1f, float min = 0.0f, float max = 0.0f, const char* helpText = "")
+        static bool Property(const char* label, float& value, float delta = 0.1f, float min = 0.0f, float max = 1.0f, const char* helpText = "")
         {
             Pre(label, helpText);
             bool modified = UI::DragFloat(GenerateID(), &value, delta, min, max);

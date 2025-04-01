@@ -52,7 +52,9 @@ namespace Crowny
             if (m_ShaderDesc.DomainShader != nullptr)
                 pipelineDesc.DomainShader = ShaderStage::Create(m_ShaderDesc.DomainShader);
             // TODO: Requires both extending the shader lang adding the objects themselves.
-            // pipelineDesc.BlendState = BlendState::Create(m_ShaderDesc.BlendState);
+            pipelineDesc.DepthStencilState = m_ShaderDesc.DepthStencilState;
+            pipelineDesc.BlendState= m_ShaderDesc.BlendState;
+            pipelineDesc.RasterizerState= m_ShaderDesc.RasterizationState;
             m_GraphicsPipeline = GraphicsPipeline::Create(pipelineDesc);
         }
     }

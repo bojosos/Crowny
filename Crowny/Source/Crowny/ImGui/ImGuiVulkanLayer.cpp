@@ -60,6 +60,8 @@ namespace Crowny
         init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
         init_info.Allocator = gVulkanAllocator;
         init_info.QueueFamily = gVulkanRenderAPI().GetPresentDevice()->GetQueueFamily(GRAPHICS_QUEUE);
+        init_info.PipelineCache = gVulkanRenderAPI().GetPresentDevice()->GetPipelineCache();
+        init_info.CheckVkResultFn = [](VkResult result) { CW_ENGINE_ASSERT(result == VK_SUCCESS); };
 
         VulkanRenderPassDesc passDesc;
         passDesc.Samples = 1;

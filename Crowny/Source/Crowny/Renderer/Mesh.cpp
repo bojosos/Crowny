@@ -39,7 +39,7 @@ namespace Crowny
 
         for (uint32_t i = 0; i < m_NumVertices; i++)
         {
-            CW_ENGINE_ASSERT(dst < m_Data + indexBufferOffset + GetVertexBufferSize());
+            // CW_ENGINE_ASSERT(dst < m_Data + indexBufferOffset + GetVertexBufferSize());
             std::memcpy(dst, src, elementSize);
             dst += stride;
             src += elementSize;
@@ -120,7 +120,7 @@ namespace Crowny
         {
             if (m_Usage.IsSet(MeshUsage::Dynamic))
             {
-                CW_ENGINE_WARN("Buffer dicard not enabled for dynamic mesh");
+                CW_ENGINE_WARN("Buffer discard not enabled for dynamic mesh");
                 discard = true;
             }
         }
@@ -139,7 +139,8 @@ namespace Crowny
         }
         m_IndexBuffer->WriteData(0, indexBufferSize, meshData->GetIndexData(),
                                  discard ? BufferWriteOptions::BWT_DISCARD : BufferWriteOptions::BWT_NORMAL /*,  queue */);
-        m_VertexBuffer->WriteData(0, meshData->GetVertexBufferSize(), meshData->GetVerexBufferData(),
+        CW_ENGINE_INFO("Writing... verts: {}, ids: {}", indexBufferSize, meshData->GetVertexBufferSize());
+        m_VertexBuffer->WriteData(0, meshData->GetVertexBufferSize(), meshData->GetVertexBufferData(),
                                   discard ? BufferWriteOptions::BWT_DISCARD : BufferWriteOptions::BWT_NORMAL);
         if (updateBounds)
             meshData->CalculateBounds(m_AABox, m_SphereBounds);
@@ -190,7 +191,7 @@ namespace Crowny
                 return;
             }
 
-            uint8_t* dst = data->GetVerexBufferData();
+            uint8_t* dst = data->GetVertexBufferData();
             m_VertexBuffer->ReadData(0, m_VertexBuffer->GetBufferSize(), dst);
         }
     }
@@ -219,9 +220,8 @@ namespace Crowny
     Ref<MeshData> MeshData::Combine(const Vector<Ref<MeshData>>& meshes, const Vector<Vector<SubMesh>>& subMeshes, Vector<SubMesh>& outSubMeshes)
     {
         if (meshes.size() == 0)
-        {
             return nullptr;
-        }
+
         uint32_t totalVertexCount = 0;
         uint32_t totalIndexCount = 0;
         for (const auto& meshData : meshes)
@@ -260,15 +260,14 @@ namespace Crowny
         for (const auto& meshData : meshes)
         {
             uint32_t indexCount = meshData->GetIndexCount();
-            const Vector<SubMesh> &curSubMeshes = subMeshes[meshIdx];
+            const Vector<SubMesh>& curSubMeshes = subMeshes[meshIdx];
             for (const auto& subMesh : curSubMeshes)
-                outSubMeshes.push_back(SubMesh(subMesh.IndexOffset + indexOffset, subMesh.IndexCount,
-        subMesh.MeshDrawMode));
+                outSubMeshes.push_back(SubMesh(subMesh.IndexOffset + indexOffset, subMesh.IndexCount, subMesh.MeshDrawMode));
 
             indexOffset += indexCount;
             meshIdx++;
-        } */
-
+        }
+        */
         vertexOffset = 0;
         for (const auto& meshData : meshes)
         {
@@ -322,6 +321,7 @@ namespace Crowny
 
         m_IndexBuffer = IndexBuffer::Create(m_NumIndices, m_IndexType, bufferUsage);
         m_VertexBuffer = VertexBuffer::Create(m_NumVertices * m_Layout.GetStride(), bufferUsage);
+        m_VertexBuffer->SetLayout(CreateRef<BufferLayout>(m_Layout));
         if (!meshData)
             return;
         WriteData(meshData, isDynamic);

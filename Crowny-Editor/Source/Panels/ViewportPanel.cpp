@@ -136,12 +136,10 @@ namespace Crowny
                 snapValue = 15.0f;
             ImGuizmo::AllowAxisFlip(false);
             float snapValues[3] = { snapValue, snapValue, snapValue };
-            ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj), GetImGuizmoMode(m_GizmoMode),
-                                 (!m_LocalMode && m_GizmoMode == GizmoEditMode::Translate) ? ImGuizmo::WORLD : ImGuizmo::LOCAL,
-                                 glm::value_ptr(transform), nullptr,
-                                 snap ? snapValues : nullptr); // TODO: Bounds, does rotation work?
-
-            if (ImGuizmo::IsUsing())
+            if (ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj), GetImGuizmoMode(m_GizmoMode),
+                                     (!m_LocalMode && m_GizmoMode == GizmoEditMode::Translate) ? ImGuizmo::WORLD : ImGuizmo::LOCAL,
+                                     glm::value_ptr(transform), nullptr,
+                                     snap ? snapValues : nullptr)) // TODO: Bounds, does rotation work?
             {
                 glm::vec3 position, rotation, scale;
                 if (Math::DecomposeMatrix(transform, position, rotation, scale))
@@ -149,11 +147,20 @@ namespace Crowny
                     glm::vec3 transformRotation = glm::eulerAngles(selected.GetWorldRotation());
                     const glm::vec3 deltaRot = rotation - transformRotation;
                     selected.SetWorldPosition(position);
-                    transformRotation += deltaRot;
                     selected.SetWorldRotation(transformRotation + deltaRot);
                     selected.SetWorldScale(scale);
                 }
             }
+        }
+        if (ImGuizmo::ViewManipulate(glm::value_ptr(view), camera.GetDistance(), { m_ViewportBounds.z - 136.0f, m_ViewportBounds.y },
+                                     ImVec2(128, 128), 0x10101010))
+        {
+            glm::vec3 t, r, s;
+            Math::DecomposeMatrix(view, t, r, s);
+            camera.SetPitch(camera.GetPitch() + (camera.GetPitch() - r.x));
+            camera.SetYaw(camera.GetYaw() + (camera.GetYaw() - r.y));
+            camera.SetRoll(camera.GetRoll() + (camera.GetRoll() - r.z));
+            CW_ENGINE_INFO("T: {}, R: {}, S: {}", glm::to_string(t), glm::to_string(glm::degrees(r)), glm::to_string(s));
         }
 
         EndPanel();
