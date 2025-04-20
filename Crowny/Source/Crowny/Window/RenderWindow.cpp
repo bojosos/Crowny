@@ -11,7 +11,7 @@ namespace Crowny
     RenderWindowProperties::RenderWindowProperties(const RenderWindowDesc& renderWindowDesc)
     {
         Width = renderWindowDesc.Width;
-        Width = renderWindowDesc.Height;
+        Height = renderWindowDesc.Height;
         VSync = renderWindowDesc.VSync;
         Left = renderWindowDesc.Left;
         Top = renderWindowDesc.Top;
@@ -25,13 +25,13 @@ namespace Crowny
 
     Ref<RenderWindow> RenderWindow::Create(const RenderWindowDesc& renderWindowDesc)
     {
-        switch (Renderer::GetAPI())
+        switch (RenderAPI::Get().GetAPI())
         {
         // case RenderAPI::API::OpenGL: return CreateRef<OpenGLShader>(m_Filepath);
         case RenderAPI::API::Vulkan:
             return CreateRef<VulkanRenderWindow>(renderWindowDesc);
         default:
-            CW_ENGINE_ASSERT(false, "Renderer API not supporter");
+            CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
         }
 

@@ -11,9 +11,6 @@ namespace Crowny
     public:
         virtual ~VertexBuffer() = default;
 
-        virtual void Bind() const = 0;
-        virtual void Unbind() const = 0;
-
         virtual void SetLayout(const Ref<BufferLayout>& layout) = 0;
         virtual const Ref<BufferLayout>& GetLayout() const = 0;
 

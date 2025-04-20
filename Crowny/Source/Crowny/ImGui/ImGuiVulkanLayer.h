@@ -2,11 +2,11 @@
 
 #include "Crowny/ImGui/ImGuiLayer.h"
 
-// TODO: Remove this
-#include <vulkan/vulkan.hpp>
+typedef struct VkDescriptorPool_T* VkDescriptorPool;
 
 namespace Crowny
 {
+    class VulkanRenderPass;
 
     class ImGuiVulkanLayer : public ImGuiLayer
     {
@@ -21,6 +21,7 @@ namespace Crowny
         virtual void End() override;
 
     private:
+        VulkanRenderPass* m_RenderPass;
         VkDescriptorPool m_ImguiPool;
     };
 } // namespace Crowny

@@ -12,9 +12,6 @@ namespace Crowny
         OpenGLIndexBuffer(uint32_t* indices, uint32_t count, BufferUsage usage);
         virtual ~OpenGLIndexBuffer();
 
-        virtual void Bind() const override;
-        virtual void Unbind() const override;
-
         virtual void* Map(uint32_t offset, uint32_t size, GpuLockOptions options) override;
         virtual void Unmap() override;
         virtual void WriteData(uint32_t offset, uint32_t length, const void* src, BufferWriteOptions writeOptions /* = BWT_NORMAL */) override

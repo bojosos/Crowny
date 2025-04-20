@@ -94,6 +94,29 @@ namespace Crowny
         Ref<UniformParamInfo> m_ParamInfo;
     };
 
+    struct RayTracingPipelineDesc
+    {
+        Ref<ShaderStage> HitShader;
+        Ref<ShaderStage> MissShader;
+        Ref<ShaderStage> RaygenShader;
+    };
+
+    class RayTracingPipeline
+    {
+    public:
+        RayTracingPipeline(const RayTracingPipelineDesc& desc);
+        virtual ~RayTracingPipeline() = default;
+
+        const Ref<UniformParamInfo> GetParamInfo() const { return m_ParamInfo; }
+
+    public:
+        static Ref<RayTracingPipeline> Create(const RayTracingPipelineDesc& desc);
+
+    protected:
+        RayTracingPipelineDesc m_Data;
+        Ref<UniformParamInfo> m_ParamInfo;
+    };
+
     class ComputePipeline
     {
     public:

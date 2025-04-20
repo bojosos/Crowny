@@ -57,15 +57,15 @@ namespace Crowny
     void OpenGLVertexArray::Bind() const
     {
         glBindVertexArray(m_RendererID);
-        if (m_IndexBuffer)
-            m_IndexBuffer->Bind();
+        // if (m_IndexBuffer)
+        // m_IndexBuffer->Bind();
     }
 
     void OpenGLVertexArray::Unbind() const
     {
         glBindVertexArray(0);
-        if (m_IndexBuffer)
-            m_IndexBuffer->Unbind();
+        // if (m_IndexBuffer)
+        // m_IndexBuffer->Unbind();
     }
 
     void OpenGLVertexArray::AddVertexBuffer(const Ref<VertexBuffer>& vertexBuffer)
@@ -73,7 +73,7 @@ namespace Crowny
         CW_ENGINE_ASSERT(vertexBuffer->GetLayout()->GetElements().size(), "Vertex Buffer has no layout!");
 
         glBindVertexArray(m_RendererID);
-        vertexBuffer->Bind();
+        // vertexBuffer->Bind();
 
         const auto& layout = *vertexBuffer->GetLayout();
         for (const auto& element : layout)
@@ -130,7 +130,7 @@ namespace Crowny
     void OpenGLVertexArray::SetIndexBuffer(const Ref<IndexBuffer>& indexBuffer)
     {
         glBindVertexArray(m_RendererID);
-        indexBuffer->Bind();
+        // indexBuffer->Bind();
 
         m_IndexBuffer = indexBuffer;
     }

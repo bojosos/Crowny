@@ -49,3 +49,6 @@
 [submodule "Crowny/Dependencies/assimp"]
 	path = Crowny/Dependencies/assimp
 	url = https://github.com/bojosos/assimp/
+[submodule "Crowny/Dependencies/tracy"]
+	path = Crowny/Dependencies/tracy
+	url = https://github.com/bojosos/tracy

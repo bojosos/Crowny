@@ -72,8 +72,7 @@ namespace Crowny
         }
         if (iterFind->second.DataType != ShaderDataType::Int)
         {
-            CW_ENGINE_WARN("Trying to write the wrong data type {}, expected {}, got int", value,
-                           ShaderDataTypeToString(iterFind->second.DataType));
+            CW_ENGINE_WARN("Trying to write the wrong data type {}, expected {}, got int", value, ShaderDataTypeToString(iterFind->second.DataType));
             return;
         }
         m_UniformBlocks[iterFind->second.BufferName]->Write(iterFind->second.Offset, &value, sizeof(value));

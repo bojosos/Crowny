@@ -477,7 +477,7 @@ namespace Crowny
         rt->GetColorTexture(1)->ReadData(*outPixelData);
         if (outPixelData->GetSize() > coords.x * coords.y)
         {
-            glm::vec4 col = outPixelData->GetColorAt((uint32_t)coords.x, (uint32_t)coords.y);
+            const glm::vec4 col = outPixelData->GetColorAt((uint32_t)coords.x, (uint32_t)coords.y);
             Ref<Scene> scene = SceneManager::GetActiveScene();
             if (col.x == 0.0f)
                 return Entity(entt::null, scene.get());
@@ -563,6 +563,9 @@ namespace Crowny
             break;
         }
         }
+
+        RenderAPI::Get().SetRenderTarget(nullptr);
+        RenderAPI::Get().SubmitCommandBuffer(nullptr);
     }
 
     void EditorLayer::OnUpdate(Timestep ts)

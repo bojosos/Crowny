@@ -15,6 +15,7 @@
 #include "Crowny/Window/RenderWindow.h"
 
 #include "Crowny/Common/Timer.h"
+#include "Crowny/Common/Version.h"
 
 #include <GLFW/glfw3.h>
 
@@ -95,42 +96,34 @@ namespace Crowny
         VkApplicationInfo appInfo;
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         appInfo.pNext = nullptr;
-        appInfo.pApplicationName = "Crowny app";
-        appInfo.applicationVersion = VK_VERSION_1_2;
         appInfo.pEngineName = "Crowny";
-        appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0); // TODO: Engine version
+        appInfo.pApplicationName = "Crowny Game"; // Note that this is the game of the name and should not hard coded.
+        const uint32_t version = VK_MAKE_VERSION(CROWNY_VERSION_MAJOR, CROWNY_VERSION_MINOR, CROWNY_VERSION_MINEST);
+        appInfo.engineVersion = version;
+        appInfo.applicationVersion = version;    // Note that this is game version, not engine
+        appInfo.apiVersion = VK_API_VERSION_1_2; // Note that this is the highest version I want to use.
 
-        appInfo.apiVersion = VK_API_VERSION_1_2;
-        uint32_t count;
-        vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
-        Vector<VkExtensionProperties> exts(count);
-        vkEnumerateInstanceExtensionProperties(nullptr, &count, exts.data());
+        uint32_t availableExtensionsCount = 0;
+        vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionsCount, nullptr);
+        Vector<VkExtensionProperties> availableExtensions(availableExtensionsCount);
+        vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionsCount, availableExtensions.data());
 #ifdef CW_DEBUG
         Vector<const char*> layers = { "VK_LAYER_KHRONOS_validation" };
-        uint32_t numExtensions;
-        const char** glfwExts = glfwGetRequiredInstanceExtensions(&numExtensions);
-        Vector<const char*> extensions(glfwExts, glfwExts + numExtensions);
+        uint32_t numGLFWExtensions = 0;
+        const char** glfwExts = glfwGetRequiredInstanceExtensions(&numGLFWExtensions);
+        Vector<const char*> extensions(glfwExts, glfwExts + numGLFWExtensions);
 
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         uint32_t numLayers = (uint32_t)layers.size();
 #else
         Vector<const char*> layers;
-        uint32_t numExtensions;
-        const char** glfwExts = glfwGetRequiredInstanceExtensions(&numExtensions);
-        Vector<const char*> extensions(glfwExts, glfwExts + numExtensions);
+        uint32_t numGLFWExtensions = 0;
+        const char** glfwExts = glfwGetRequiredInstanceExtensions(&numGLFWExtensions);
+        Vector<const char*> extensions(glfwExts, glfwExts + numGLFWExtensions);
         uint32_t numLayers = (uint32_t)layers.size();
 #endif
-        extensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
-        extensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
-        extensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
 
-        extensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
-        extensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
-        extensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
-        extensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
-
-        numExtensions = (uint32_t)extensions.size();
-        uint32_t layerCount;
+        uint32_t layerCount = 0;
         vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
         Vector<VkLayerProperties> availableLayers(layerCount);
         vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
@@ -158,10 +151,16 @@ namespace Crowny
         instanceInfo.pApplicationInfo = &appInfo;
         instanceInfo.enabledLayerCount = numLayers;
         instanceInfo.ppEnabledLayerNames = layers.data();
-        instanceInfo.enabledExtensionCount = numExtensions;
+        instanceInfo.enabledExtensionCount = (uint32_t)extensions.size();
         instanceInfo.ppEnabledExtensionNames = extensions.data();
 
         VkResult result = vkCreateInstance(&instanceInfo, gVulkanAllocator, &m_Instance);
+        if (!m_Instance)
+        {
+
+            CW_ENGINE_ERROR("Could not create vulkan instance.");
+            return;
+        }
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
 #if CW_DEBUG
@@ -323,8 +322,7 @@ namespace Crowny
     void VulkanRenderAPI::SubmitCommandBuffer(const Ref<CommandBuffer>& commandBuffer, uint32_t syncMask)
     {
         VulkanCommandBuffer* cmdBuffer = GetCB(commandBuffer);
-        VulkanTransferManager& cbm = VulkanTransferManager::Get();
-        cbm.FlushTransferBuffers();
+        VulkanTransferManager::Get().FlushTransferBuffers();
         cmdBuffer->Submit(syncMask);
         if (cmdBuffer == m_CommandBuffer.get())
             m_CommandBuffer = std::static_pointer_cast<VulkanCommandBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
@@ -366,6 +364,13 @@ namespace Crowny
         // TODO: Render stats: draw call, verts, prims
     }
 
+    void VulkanRenderAPI::TraceRays(uint32_t width, uint32_t height, const Ref<CommandBuffer>& commandBuffer)
+    {
+        VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
+        vkCB->TraceRays(width, height);
+        // TODO: Render stats: draw call, verts, prims
+    }
+
     void VulkanRenderAPI::DispatchCompute(uint32_t x, uint32_t y, uint32_t z, const Ref<CommandBuffer>& commandBuffer)
     {
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
@@ -392,6 +397,12 @@ namespace Crowny
     }
 
     void VulkanRenderAPI::SetGraphicsPipeline(const Ref<GraphicsPipeline>& pipeline, const Ref<CommandBuffer>& commandBuffer)
+    {
+        VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
+        vkCB->SetPipeline(pipeline); // TODO: stats for pipeline change
+    }
+
+    void VulkanRenderAPI::SetRayTracingPipeline(const Ref<RayTracingPipeline>& pipeline, const Ref<CommandBuffer>& commandBuffer)
     {
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
         vkCB->SetPipeline(pipeline); // TODO: stats for pipeline change

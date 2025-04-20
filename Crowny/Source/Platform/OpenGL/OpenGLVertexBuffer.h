@@ -12,9 +12,6 @@ namespace Crowny
         OpenGLVertexBuffer(uint32_t size, BufferUsage usage);
         ~OpenGLVertexBuffer();
 
-        virtual void Bind() const override;
-        virtual void Unbind() const override;
-
         virtual const Ref<BufferLayout>& GetLayout() const override { return m_Layout; };
         virtual void SetLayout(const Ref<BufferLayout>& layout) override { m_Layout = layout; }
 

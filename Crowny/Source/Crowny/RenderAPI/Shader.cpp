@@ -38,6 +38,17 @@ namespace Crowny
             const Ref<ShaderStage> shaderStage = ShaderStage::Create(m_ShaderDesc.ComputeShader);
             m_ComputePipeline = ComputePipeline::Create(shaderStage);
         }
+        else if (IsRayTrace())
+        {
+            RayTracingPipelineDesc pipelineDesc;
+            if (m_ShaderDesc.RaygenShader != nullptr)
+                pipelineDesc.RaygenShader = ShaderStage::Create(m_ShaderDesc.RaygenShader);
+            if (m_ShaderDesc.HitShader != nullptr)
+                pipelineDesc.HitShader = ShaderStage::Create(m_ShaderDesc.HitShader);
+            if (m_ShaderDesc.MissShader != nullptr)
+                pipelineDesc.MissShader = ShaderStage::Create(m_ShaderDesc.MissShader);
+            m_RayTracingPipeline = RayTracingPipeline::Create(pipelineDesc);
+        }
         else
         {
             PipelineStateDesc pipelineDesc;
@@ -53,8 +64,8 @@ namespace Crowny
                 pipelineDesc.DomainShader = ShaderStage::Create(m_ShaderDesc.DomainShader);
             // TODO: Requires both extending the shader lang adding the objects themselves.
             pipelineDesc.DepthStencilState = m_ShaderDesc.DepthStencilState;
-            pipelineDesc.BlendState= m_ShaderDesc.BlendState;
-            pipelineDesc.RasterizerState= m_ShaderDesc.RasterizationState;
+            pipelineDesc.BlendState = m_ShaderDesc.BlendState;
+            pipelineDesc.RasterizerState = m_ShaderDesc.RasterizationState;
             m_GraphicsPipeline = GraphicsPipeline::Create(pipelineDesc);
         }
     }
@@ -125,14 +136,14 @@ namespace Crowny
 
     Ref<ShaderStage> ShaderStage::Create(const Ref<BinaryShaderData>& data)
     {
-        switch (Renderer::GetAPI())
+        switch (RenderAPI::Get().GetAPI())
         {
         // TODO: Add support for binary OpenGL shaders
         // case RenderAPI::API::OpenGL: return CreateRef<OpenGLShader>(m_Filepath);
         case RenderAPI::API::Vulkan:
             return CreateRef<VulkanShader>(data);
         default:
-            CW_ENGINE_ASSERT(false, "Renderer API not supporter");
+            CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
         }
 

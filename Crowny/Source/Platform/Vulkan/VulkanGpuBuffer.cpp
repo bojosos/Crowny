@@ -28,6 +28,14 @@ namespace Crowny
         device.FreeMemory(m_Allocation);
     }
 
+    VkDeviceAddress VulkanBuffer::GetDeviceAddress() const
+    {
+        VkBufferDeviceAddressInfo bufferDeviceAddressInfo = {};
+        bufferDeviceAddressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+        bufferDeviceAddressInfo.buffer = m_Buffer;
+        return vkGetBufferDeviceAddress(m_Owner->GetDevice().GetLogicalDevice(), &bufferDeviceAddressInfo);
+    }
+
     uint8_t* VulkanBuffer::Map(VkDeviceSize offset, VkDeviceSize length) const
     {
         VulkanDevice& device = m_Owner->GetDevice();
@@ -151,21 +159,41 @@ namespace Crowny
     VulkanGpuBuffer::VulkanGpuBuffer(BufferType type, BufferUsage usage, uint32_t size)
       : GpuBuffer(size, usage), m_Buffer(nullptr), m_StagingBuffer(nullptr), m_StagingMemory(nullptr), m_MappedOffset(0), m_MappedSize(0),
         m_MappedLockOptions(GpuLockOptions::WRITE_ONLY), m_DirectlyMappable(usage == BufferUsage::DYNAMIC_DRAW), m_IsMapped(false),
-        m_SupportsGpuWrites(false)
+        m_SupportsGpuWrites(type == BufferType::BUFFER_STRUCTURED || ((usage & BufferUsage::LOADSTORE) == BufferUsage::LOADSTORE))
     {
-        auto& device = gVulkanRenderAPI().GetPresentDevice();
+        const Ref<VulkanDevice>& device = gVulkanRenderAPI().GetPresentDevice();
 
         VkBufferUsageFlags usageFlags = 0;
         switch (type)
         {
         case BUFFER_VERTEX:
             usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+            if ((usage & BufferUsage::LOADSTORE) == BufferUsage::LOADSTORE)
+                usageFlags |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
             break;
         case BUFFER_INDEX:
             usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+
+            if ((usage & BufferUsage::LOADSTORE) == BufferUsage::LOADSTORE)
+                usageFlags |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
             break;
         case BUFFER_UNIFORM:
             usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+            break;
+        case BUFFER_GENERIC:
+            usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
+
+            if ((usage & BufferUsage::LOADSTORE) == BufferUsage::LOADSTORE)
+                usageFlags |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
+            break;
+        case BUFFER_STRUCTURED:
+            usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+            break;
+        case BUFFER_RAYTRACING:
+            usageFlags = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
+            break;
+        case BUFFER_SHADER_TABLE:
+            usageFlags = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
             break;
         }
 
@@ -177,7 +205,7 @@ namespace Crowny
         m_BufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         m_BufferCreateInfo.queueFamilyIndexCount = 0;
         m_BufferCreateInfo.pQueueFamilyIndices = nullptr;
-        m_Buffer = CreateBuffer(*device.get(), size, false, true);
+        m_Buffer = CreateBuffer(*device, size, false, true);
     }
 
     VulkanGpuBuffer::~VulkanGpuBuffer() { m_Buffer->Destroy(); }
@@ -314,7 +342,7 @@ namespace Crowny
             }
         }
 
-        bool needRead = options != GpuLockOptions::WRITE_DISCARD && options != GpuLockOptions::WRITE_DISCARD_RANGE;
+        const bool needRead = options != GpuLockOptions::WRITE_DISCARD && options != GpuLockOptions::WRITE_DISCARD_RANGE;
 
         if (!needRead && offset % 4 == 0 && length % 4 == 0 && length <= 65536)
         {
@@ -328,7 +356,7 @@ namespace Crowny
         {
             VulkanTransferBuffer* transferCB = vtm.GetTransferBuffer(queueType, localQueueIdx);
 
-            uint32_t writeUseMask = m_Buffer->GetUseInfo(VulkanAccessFlagBits::Write);
+            const uint32_t writeUseMask = m_Buffer->GetUseInfo(VulkanAccessFlagBits::Write);
             if (m_SupportsGpuWrites || writeUseMask != 0)
                 transferCB->AppendMask(writeUseMask);
 
@@ -363,11 +391,11 @@ namespace Crowny
             {
                 VulkanTransferManager& vtm = VulkanTransferManager::Get();
                 GpuQueueType queueType;
-                uint32_t localQueueIdx = CommandSyncMask::GetQueueIdxAndType(m_MappedGlobalQueueIdx, queueType);
+                const uint32_t localQueueIdx = CommandSyncMask::GetQueueIdxAndType(m_MappedGlobalQueueIdx, queueType);
 
                 VulkanTransferBuffer* transferCB = vtm.GetTransferBuffer(queueType, localQueueIdx);
 
-                uint32_t useMask = m_Buffer->GetUseInfo(VulkanAccessFlagBits::Read | VulkanAccessFlagBits::Write);
+                const uint32_t useMask = m_Buffer->GetUseInfo(VulkanAccessFlagBits::Read | VulkanAccessFlagBits::Write);
 
                 bool isNormalWrite = false;
                 if (useMask != 0)
@@ -418,7 +446,7 @@ namespace Crowny
                     m_Buffer->Update(transferCB->GetCB(), m_StagingMemory, m_MappedOffset, m_MappedSize);
 
                 transferCB->GetCB()->RegisterBuffer(m_Buffer, BufferUseFlagBits::Transfer, VulkanAccessFlagBits::Write);
-                // flush done before automatically before command buffer sumbission
+                // flush done before automatically before command buffer submission
             }
 
             if (m_StagingBuffer != nullptr)

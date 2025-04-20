@@ -2,6 +2,8 @@
 
 #include "Crowny/Assets/AssetHandle.h"
 
+#include "Crowny/RenderAPI/AccelerationStructure.h"
+#include "Crowny/RenderAPI/GenericGpuBuffer.h"
 #include "Crowny/RenderAPI/GraphicsPipeline.h"
 #include "Crowny/RenderAPI/SamplerState.h"
 #include "Crowny/RenderAPI/Shader.h"
@@ -15,16 +17,6 @@ namespace Crowny
     class UniformParams
     {
     public:
-        enum class ParamType
-        {
-            ParamBlock,
-            Texture,
-            LoadStoreTexture,
-            Buffer,
-            SamplerState,
-            Count
-        };
-
         UniformParams(const Ref<UniformParamInfo>& desc);
         virtual ~UniformParams();
 
@@ -34,10 +26,12 @@ namespace Crowny
 
         virtual void SetTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture, const TextureSurface& surface = TextureSurface::COMPLETE);
         void SetTexture(ShaderType type, const String& name, const Ref<Texture>& texture, const TextureSurface& surface = TextureSurface::COMPLETE);
-
-        // virtual void SetLoadStoreTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture);
-        // virtual void SetBuffer(uint32_t set, uint32_t slot, const Ref<GpuBuffer>& buffer);
         virtual void SetSamplerState(uint32_t set, uint32_t slot, const Ref<SamplerState>& sampler);
+
+        virtual void SetLoadStoreTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture,
+                                         const TextureSurface& surface = TextureSurface::COMPLETE);
+        virtual void SetBuffer(uint32_t set, uint32_t slot, const Ref<GenericGpuBuffer>& buffer);
+        virtual void SetAccelerationStructure(uint32_t set, uint32_t slot, const Ref<AccelerationStructure>& accelerationStructure);
 
         const Ref<UniformBufferBlock>& GetUniformBlockBuffer(uint32_t slot, uint32_t set) const;
         const Ref<UniformDesc>& GetUniformDesc(ShaderType shaderType) const { return m_ParamInfo->GetUniformDesc(shaderType); }
@@ -55,9 +49,10 @@ namespace Crowny
         Ref<UniformParamInfo> m_ParamInfo;
         Ref<UniformBufferBlock>* m_BufferBlocks = nullptr;
         TextureData* m_SampledTextureData = nullptr;
-        // Ref<Texture> m_LoadStoreTextures = nullptr;
-        // Ref<GpuBuffer> m_Buffers = nullptr;
+        TextureData* m_LoadStoreTextures = nullptr;
+        Ref<GenericGpuBuffer>* m_Buffers = nullptr;
         Ref<SamplerState>* m_SamplerStates = nullptr;
+        Ref<AccelerationStructure>* m_AccelStructs = nullptr;
     };
 
 } // namespace Crowny

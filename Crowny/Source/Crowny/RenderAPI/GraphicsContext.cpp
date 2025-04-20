@@ -10,13 +10,13 @@ namespace Crowny
 
     Scope<GraphicsContext> GraphicsContext::Create(void* window)
     {
-        switch (Renderer::GetAPI())
+        switch (RenderAPI::Get().GetAPI())
         {
         // TODO: Do not tie OpenGL and GLFW
         case RenderAPI::API::OpenGL:
             return CreateScope<OpenGLContext>(window);
         default:
-            CW_ENGINE_ASSERT(false, "Renderer API not supporter");
+            CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
         }
 

@@ -31,7 +31,7 @@ namespace Crowny
         VkDevice GetLogicalDevice() const { return m_LogicalDevice; }
         const VkPhysicalDeviceProperties& GetDeviceProperties() const { return m_DeviceProperties; }
         VkPhysicalDevice GetPhysicalDevice() const { return m_PhysicalDevice; }
-        const VkPhysicalDeviceFeatures& GetDeviceFeatures() const { return m_DeviceFeatures; }
+        const VkPhysicalDeviceFeatures& GetDeviceFeatures() const { return m_DeviceFeatures.features; }
         VkPipelineCache GetPipelineCache() const { return m_PipelineCache; }
         void SetPrimary();
         void SetIndex(uint32_t idx);
@@ -48,14 +48,16 @@ namespace Crowny
         void GetAllocationInfo(VmaAllocation allocation, VkDeviceMemory& memory, VkDeviceSize& offset);
         void FreeMemory(VmaAllocation allocation);
 
+        const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& GetRayTracingDeviceProperties() const { return m_RayTracingPipelineProperties; }
+
         VulkanDescriptorManager& GetDescriptorManager() const { return *m_DescriptorManager; }
         VulkanResourceManager& GetResourceManager() const { return *m_ResourceManager; }
 
         void WaitIdle();
 
     private:
-        VulkanCommandBufferPool* m_CommandBufferPool;
-        VulkanQueryPool* m_QueryPool;
+        VulkanCommandBufferPool* m_CommandBufferPool = nullptr;
+        VulkanQueryPool* m_QueryPool = nullptr;
 
         struct QueueInfo
         {
@@ -66,22 +68,23 @@ namespace Crowny
 
         VkPhysicalDevice m_PhysicalDevice;
         VkDevice m_LogicalDevice = nullptr;
-        VmaAllocator m_Allocator;
+        VmaAllocator m_Allocator = VK_NULL_HANDLE;
 
-        VulkanDescriptorManager* m_DescriptorManager;
-        VulkanResourceManager* m_ResourceManager;
+        VulkanDescriptorManager* m_DescriptorManager = nullptr;
+        VulkanResourceManager* m_ResourceManager = nullptr;
 
-        VkPhysicalDeviceRayTracingPipelinePropertiesKHR rayTracingPipelineProperties{};
+        // Prefixes?
+        VkPhysicalDeviceRayTracingPipelinePropertiesKHR m_RayTracingPipelineProperties{};
         VkPhysicalDeviceAccelerationStructureFeaturesKHR rayTracingAccelerationStructureFeatures{};
         VkPhysicalDeviceBufferDeviceAddressFeatures enabledBufferDeviceAddressFeatures{};
         VkPhysicalDeviceRayTracingPipelineFeaturesKHR enabledRayTracingPipelineFeatures{};
-        VkPhysicalDeviceAccelerationStructureFeaturesKHR enabledAccelerationPipelineFeatures;
+        VkPhysicalDeviceAccelerationStructureFeaturesKHR enabledAccelerationPipelineFeatures{};
 
-        VkPipelineCache m_PipelineCache=VK_NULL_HANDLE;
-        VkPhysicalDeviceProperties m_DeviceProperties;
-        VkPhysicalDeviceFeatures m_DeviceFeatures;
-        VkPhysicalDeviceFeatures m_EnabledFeatures;
-        VkPhysicalDeviceMemoryProperties m_MemoryProperties;
+        VkPipelineCache m_PipelineCache = VK_NULL_HANDLE;
+        VkPhysicalDeviceProperties m_DeviceProperties{};
+        VkPhysicalDeviceFeatures2 m_DeviceFeatures{};
+        VkPhysicalDeviceFeatures2 m_EnabledFeatures{};
+        VkPhysicalDeviceMemoryProperties m_MemoryProperties{};
         Vector<String> m_SupportedExtensions;
     };
 } // namespace Crowny

@@ -21,13 +21,12 @@ namespace Crowny
         virtual void SubmitCommandBuffer(const Ref<CommandBuffer>& commandBuffer, uint32_t syncMask = 0xFFFFFFFF) override;
 
         virtual void SetGraphicsPipeline(const Ref<GraphicsPipeline>& pipeline, const Ref<CommandBuffer>& commandBuffer = nullptr) override;
+        virtual void SetRayTracingPipeline(const Ref<RayTracingPipeline>& pipeline, const Ref<CommandBuffer>& commandBuffer = nullptr) override;
         virtual void SetComputePipeline(const Ref<ComputePipeline>& pipeline, const Ref<CommandBuffer>& commandBuffer = nullptr) override;
         virtual void ClearViewport(uint32_t buffers, const glm::vec4& color = glm::vec4(0.0f), float depth = 1.0f, uint16_t stencil = 0,
                                    uint8_t targetMask = 0xFF, const Ref<CommandBuffer>& commandBuffer = nullptr) override;
         virtual void ClearRenderTarget(uint32_t buffers, const glm::vec4& color = glm::vec4(0.0f), float depth = 1.0f, uint16_t stencil = 0,
                                        uint8_t targetMask = 0xFF, const Ref<CommandBuffer>& commandBuffer = nullptr) override;
-        virtual void DispatchCompute(uint32_t groupsX, uint32_t groupsY = 1, uint32_t groupsZ = 1,
-                                     const Ref<CommandBuffer>& commandBuffer = nullptr) override;
         virtual void SetIndexBuffer(const Ref<IndexBuffer>& buffer, const Ref<CommandBuffer>& commandBuffer = nullptr) override;
         virtual void SetVertexBuffers(uint32_t idx, Ref<VertexBuffer>* buffers, uint32_t bufferCount,
                                       const Ref<CommandBuffer>& commandBuffer = nullptr) override;
@@ -36,6 +35,9 @@ namespace Crowny
                           const Ref<CommandBuffer>& commandBuffer = nullptr) override;
         virtual void DrawIndexed(uint32_t startIndex, uint32_t indexCount, uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount = 0,
                                  const Ref<CommandBuffer>& commandBuffer = nullptr) override;
+        virtual void TraceRays(uint32_t width, uint32_t height, const Ref<CommandBuffer>& commandBuffer = nullptr) override;
+        virtual void DispatchCompute(uint32_t groupsX, uint32_t groupsY = 1, uint32_t groupsZ = 1,
+                                     const Ref<CommandBuffer>& commandBuffer = nullptr) override;
         virtual void SetRenderTarget(const Ref<RenderTarget>& target, uint32_t readOnlyFlags = 0, RenderSurfaceMask loadMask = RT_NONE,
                                      const Ref<CommandBuffer>& commandBuffer = nullptr) override;
         virtual void SetDrawMode(DrawMode drawMode, const Ref<CommandBuffer>& commandBuffer = nullptr) override;
@@ -49,15 +51,14 @@ namespace Crowny
         const Ref<VulkanDevice>& GetPresentDevice() const { return m_PrimaryDevices[0]; }
         uint32_t GetDeviceCount() const { return (uint32_t)m_Devices.size(); }
         Ref<VulkanDevice> GetDevice(uint32_t idx) const { return m_Devices[idx]; }
-        bool IsReadyForRender() const;
+        bool IsReadyForRender() const; // TODO:
 
     private:
         VulkanCommandBuffer* GetCB(const Ref<CommandBuffer>& buffer);
-        void RebuildSwapChain();
+        void RebuildSwapChain(); // TODO:
         void InitCaps();
 
     private:
-
         VkDebugUtilsMessengerEXT m_DebugUtilsMessenger;
         VkInstance m_Instance = nullptr;
         Vector<Ref<VulkanDevice>> m_Devices;
@@ -86,4 +87,15 @@ namespace Crowny
     extern PFN_vkGetSwapchainImagesKHR vkGetSwapchainImagesKHR;
     extern PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR;
     extern PFN_vkQueuePresentKHR vkQueuePresentKHR;
+
+    // The ray tracing.
+    extern PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddressKHR;
+    extern PFN_vkCreateAccelerationStructureKHR vkCreateAccelerationStructureKHR;
+    extern PFN_vkDestroyAccelerationStructureKHR vkDestroyAccelerationStructureKHR;
+    extern PFN_vkGetAccelerationStructureBuildSizesKHR vkGetAccelerationStructureBuildSizesKHR;
+    extern PFN_vkGetAccelerationStructureDeviceAddressKHR vkGetAccelerationStructureDeviceAddressKHR;
+    extern PFN_vkCmdBuildAccelerationStructuresKHR vkCmdBuildAccelerationStructuresKHR;
+    extern PFN_vkCmdTraceRaysKHR vkCmdTraceRaysKHR;
+    extern PFN_vkGetRayTracingShaderGroupHandlesKHR vkGetRayTracingShaderGroupHandlesKHR;
+    extern PFN_vkCreateRayTracingPipelinesKHR vkCreateRayTracingPipelinesKHR;
 } // namespace Crowny

@@ -3,6 +3,7 @@
 #include "Platform/Vulkan/VulkanCommandBuffer.h"
 #include "Platform/Vulkan/VulkanDevice.h"
 #include "Platform/Vulkan/VulkanFramebuffer.h"
+#include "Platform/Vulkan/VulkanGpuBuffer.h"
 #include "Platform/Vulkan/VulkanIndexBuffer.h"
 #include "Platform/Vulkan/VulkanPipeline.h"
 #include "Platform/Vulkan/VulkanQuery.h"
@@ -78,11 +79,11 @@ namespace Crowny
             CW_ENGINE_WARN("Submitting a command buffer with {0} timer queries, {1} pipeline queries and {2} occlusion "
                            "queries in progress. They will be closed automatically.",
                            timerQueries.size(), pipelineQueries.size(), occlusionQueries.size());
-            for (auto entry : timerQueries)
+            for (VulkanTimerQuery* entry : timerQueries)
                 entry->Interrupt(m_Buffer);
-            for (auto entry : pipelineQueries)
+            for (VulkanPipelineQuery* entry : pipelineQueries)
                 entry->Interrupt(m_Buffer);
-            for (auto entry : occlusionQueries)
+            for (VulkanOcclusionQuery* entry : occlusionQueries)
                 entry->Interrupt(m_Buffer);
         }
 
@@ -103,7 +104,7 @@ namespace Crowny
         semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
         semaphoreCreateInfo.pNext = nullptr;
         semaphoreCreateInfo.flags = 0;
-        VkResult result = vkCreateSemaphore(m_Owner->GetDevice().GetLogicalDevice(), &semaphoreCreateInfo, gVulkanAllocator, &m_Semaphore);
+        const VkResult result = vkCreateSemaphore(m_Owner->GetDevice().GetLogicalDevice(), &semaphoreCreateInfo, gVulkanAllocator, &m_Semaphore);
 
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
     }
@@ -120,7 +121,7 @@ namespace Crowny
             numQueues = device->GetNumQueues(m_Type);
         }
 
-        uint32_t physicalQueueIdx = queueIdx % numQueues;
+        const uint32_t physicalQueueIdx = queueIdx % numQueues;
         m_Queue = device->GetQueue(m_Type, physicalQueueIdx);
         m_QueueMask = device->GetQueueMask(m_Type, queueIdx);
     }
@@ -190,7 +191,7 @@ namespace Crowny
     {
         if (m_CommandBuffer == nullptr)
             return;
-        uint32_t syncMask = m_SyncMask & ~m_QueueMask;
+        const uint32_t syncMask = m_SyncMask & ~m_QueueMask;
 
         m_CommandBuffer->End();
         m_CommandBuffer->Submit(m_Queue, m_QueueIdx, syncMask);
@@ -221,15 +222,15 @@ namespace Crowny
         uint32_t semaphoreIdx = 0;
         for (uint32_t i = 0; i < QUEUE_COUNT; i++)
         {
-            GpuQueueType queueType = (GpuQueueType)i;
-            uint32_t numQueues = device->GetNumQueues(queueType);
+            const GpuQueueType queueType = (GpuQueueType)i;
+            const uint32_t numQueues = device->GetNumQueues(queueType);
             for (uint32_t j = 0; j < numQueues; j++)
             {
-                VulkanQueue* queue = device->GetQueue(queueType, j);
-                VulkanCmdBuffer* lastCb = queue->GetLastCommandBuffer();
+                const VulkanQueue* queue = device->GetQueue(queueType, j);
+                const VulkanCmdBuffer* lastCb = queue->GetLastCommandBuffer();
                 if (lastCb == nullptr || !lastCb->IsSubmitted())
                     continue;
-                uint32_t queueMask = device->GetQueueMask(queueType, j);
+                const uint32_t queueMask = device->GetQueueMask(queueType, j);
                 if ((syncMask & queueMask) == 0)
                     continue;
                 VulkanSemaphore* semaphore = lastCb->RequestInterQueueSemaphore();
@@ -268,7 +269,7 @@ namespace Crowny
     {
         for (uint32_t i = 0; i < QUEUE_COUNT; i++)
         {
-            uint32_t familyIdx = device.GetQueueFamily((GpuQueueType)i);
+            const uint32_t familyIdx = device.GetQueueFamily((GpuQueueType)i);
             if (familyIdx == (uint32_t)-1)
                 continue;
             VkCommandPoolCreateInfo poolCreateInfo;
@@ -301,7 +302,7 @@ namespace Crowny
 
     VulkanCmdBuffer* VulkanCommandBufferPool::GetBuffer(uint32_t queueFamily, bool secondary)
     {
-        auto iter = m_Pools.find(queueFamily);
+        const auto iter = m_Pools.find(queueFamily);
         if (iter == m_Pools.end())
             return nullptr;
         VulkanCmdBuffer** buffers = iter->second.Buffers;
@@ -328,7 +329,7 @@ namespace Crowny
 
     VulkanCmdBuffer* VulkanCommandBufferPool::CreateBuffer(uint32_t queueFamily, bool secondary)
     {
-        auto iter = m_Pools.find(queueFamily);
+        const auto iter = m_Pools.find(queueFamily);
         if (iter == m_Pools.end())
             return nullptr;
         const PoolInfo& poolInfo = iter->second;
@@ -336,9 +337,9 @@ namespace Crowny
     }
 
     VulkanCmdBuffer::VulkanCmdBuffer(VulkanDevice& device, uint32_t id, VkCommandPool pool, uint32_t queueFamily, bool secondary)
-      : m_ScissorRequiresBind(true), m_ViewportRequiresBind(true), m_VertexInputsRequriesBind(true), m_GraphicsPipelineRequiresBind(true), m_Id(id),
+      : m_ScissorRequiresBind(true), m_ViewportRequiresBind(true), m_VertexInputsRequiresBind(true), m_GraphicsPipelineRequiresBind(true), m_Id(id),
         m_QueueFamily(queueFamily), m_Device(device), m_Pool(pool), m_ComputePipelineRequiresBind(true), m_NeedsRawMemoryBarrier(false),
-        m_NeedsWarMemoryBarrier(false), m_StencilRequriesBind(true), m_BufferLayoutDirty(false)
+        m_NeedsWarMemoryBarrier(false), m_StencilRequiresBind(true), m_BufferLayoutDirty(false), m_RayTracingPipelineRequiresBind(false)
     {
         uint32_t maxBoundDescriptorSets = device.GetDeviceProperties().limits.maxBoundDescriptorSets;
         m_DescriptorSetsTemp = new VkDescriptorSet[maxBoundDescriptorSets];
@@ -476,10 +477,14 @@ namespace Crowny
         accelerationInstance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR; // TODO:
         accelerationInstance.accelerationStructureReference = m_Blas.DeviceAddress;
 
-        VulkanBuffer buffer; // TODO:
+        // TODO: Figure out host coherent?
+        // Leaked the buff for now
+        VulkanGpuBuffer* buffer =
+          new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_RAYTRACING, BufferUsage::STATIC_DRAW, sizeof(VkAccelerationStructureInstanceKHR)); // TODO:
+        buffer->WriteData(0, sizeof(VkAccelerationStructureInstanceKHR), &accelerationInstance, BWT_DISCARD);
 
         VkDeviceOrHostAddressConstKHR instanceDataDeviceAddress;
-        instanceDataDeviceAddress.deviceAddress = buffer;
+        instanceDataDeviceAddress.deviceAddress = buffer->GetBuffer()->GetDeviceAddress();
 
         VkAccelerationStructureGeometryKHR accelerationStructureGeometry;
         accelerationStructureGeometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
@@ -489,27 +494,27 @@ namespace Crowny
         accelerationStructureGeometry.geometry.instances.arrayOfPointers = VK_FALSE;
         accelerationStructureGeometry.geometry.instances.data = instanceDataDeviceAddress;
 
-        VkAccelerationStructureBuildGeometryInfoKHR accelerationStructureBuildGeometryInfo{};
-        accelerationStructureBuildGeometryInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-        accelerationStructureBuildGeometryInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-        accelerationStructureBuildGeometryInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-        accelerationStructureBuildGeometryInfo.geometryCount = 1;
-        accelerationStructureBuildGeometryInfo.pGeometries = &accelerationStructureGeometry;
+        VkAccelerationStructureBuildGeometryInfoKHR accelerationBuildGeometryInfo{};
+        accelerationBuildGeometryInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+        accelerationBuildGeometryInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+        accelerationBuildGeometryInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+        accelerationBuildGeometryInfo.geometryCount = 1;
+        accelerationBuildGeometryInfo.pGeometries = &accelerationStructureGeometry;
 
         const uint32_t prims = 1;
         VkAccelerationStructureBuildSizesInfoKHR accelerationStructureSizesInfo{};
         accelerationStructureSizesInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
         vkGetAccelerationStructureBuildSizesKHR(m_Device.GetLogicalDevice(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
-                                                &accelerationStructureBuildGeometryInfo, &prims, &accelerationStructureSizesInfo);
-        CreateAccelerationStructureBuffer();
-        CreateScratchBuffer();
+                                                &accelerationBuildGeometryInfo, &prims, &accelerationStructureSizesInfo);
+
+        AccelerationStructureScratchBuffer scratchBuffer = CreateScratchBuffer(accelerationStructureSizesInfo.buildScratchSize);
 
         VkAccelerationStructureCreateInfoKHR accelerationStructureCI{};
         accelerationStructureCI.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
         accelerationStructureCI.buffer = m_Tlas.Buffer;
         accelerationStructureCI.size = accelerationStructureSizesInfo.accelerationStructureSize;
         accelerationStructureCI.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-        VkResult result=vkCreateAccelerationStructureKHR(m_Device.GetLogicalDevice(), &accelerationStructureCI, nullptr, &m_Tlas.Handle);
+        VkResult result = vkCreateAccelerationStructureKHR(m_Device.GetLogicalDevice(), &accelerationStructureCI, nullptr, &m_Tlas.Handle);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
         VkAccelerationStructureBuildGeometryInfoKHR accelerationStructureBuildGeometryInfo{};
@@ -520,7 +525,12 @@ namespace Crowny
         accelerationStructureBuildGeometryInfo.dstAccelerationStructure = m_Tlas.Handle;
         accelerationStructureBuildGeometryInfo.geometryCount = prims;
         accelerationStructureBuildGeometryInfo.pGeometries = &accelerationStructureGeometry;
-        accelerationStructureBuildGeometryInfo.scratchData.deviceAddress = m_ScratchBuffer.DeviceAddress;
+
+        VkBufferDeviceAddressInfo bufferDeviceAddressInfo = {};
+        bufferDeviceAddressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+        bufferDeviceAddressInfo.buffer = scratchBuffer.Handle;
+        const VkDeviceAddress address = vkGetBufferDeviceAddress(m_Device.GetLogicalDevice(), &bufferDeviceAddressInfo);
+        accelerationStructureBuildGeometryInfo.scratchData.deviceAddress = address;
 
         VkAccelerationStructureBuildRangeInfoKHR accelerationStructureBuildRangeInfo{};
         accelerationStructureBuildRangeInfo.primitiveCount = prims;
@@ -529,18 +539,23 @@ namespace Crowny
         accelerationStructureBuildRangeInfo.transformOffset = 0;
         Vector<VkAccelerationStructureBuildRangeInfoKHR*> accelerationBuildStructureRangeInfos = { &accelerationStructureBuildRangeInfo };
 
-        VulkanTransferBuffer *transferBuffer=VulkanTransferManager::Get().GetTransferBuffer(GpuQueueType::UPLOAD_QUEUE, 0);
+        VulkanTransferBuffer* transferBuffer = VulkanTransferManager::Get().GetTransferBuffer(GpuQueueType::UPLOAD_QUEUE, 0);
         vkCmdBuildAccelerationStructuresKHR(transferBuffer->GetCB()->GetHandle(), 1, &accelerationStructureBuildGeometryInfo,
                                             accelerationBuildStructureRangeInfos.data());
+        // RegisterResource(accel, VulkanAccessFlagBits::Write);
         transferBuffer->Flush(true); // TODO: To wait or not to wait? Needs some sync after if not
 
         VkAccelerationStructureDeviceAddressInfoKHR accelerationDeviceAddressInfo;
         accelerationDeviceAddressInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
         accelerationDeviceAddressInfo.accelerationStructure = m_Tlas.Handle;
-        m_Tlas.DeviceAddress = vkGetAccelerationStructureDeviceAddressKHR(device, &accelerationDeviceAddressInfo);
+        m_Tlas.DeviceAddress = vkGetAccelerationStructureDeviceAddressKHR(m_Device.GetLogicalDevice(), &accelerationDeviceAddressInfo);
 
-        DeleteScratchBuffer();
-        instancesBuffer.Destroy();
+        if (scratchBuffer.Handle != VK_NULL_HANDLE)
+            vkDestroyBuffer(m_Device.GetLogicalDevice(), scratchBuffer.Handle, nullptr);
+        if (scratchBuffer.Allocation != VK_NULL_HANDLE)
+            m_Device.FreeMemory(scratchBuffer.Allocation);
+        // DeleteScratchBuffer();
+        // instancesBuffer.Destroy();
     }
 
     void VulkanCmdBuffer::CreateBottomLevelAccelerationStructure()
@@ -550,14 +565,27 @@ namespace Crowny
             float pos[3];
         };
         const Vector<Vertex> vertices = { { { 1.0f, 1.0f, 0.0f } }, { { -1.0f, 1.0f, 0.0f } }, { { 0.0f, -1.0f, 0.0f } } };
-        const Vector<uint32_t> idxs = { 0, 1, 2 };
+        const Vector<uint32_t> indices = { 0, 1, 2 };
         const VkTransformMatrixKHR transformMatrix = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f };
         // So here we need 3 buffers....
 
+        VulkanGpuBuffer* vertexBuffer =
+          new VulkanGpuBuffer(VulkanGpuBuffer::BufferType::BUFFER_VERTEX, BufferUsage::STATIC_DRAW, (uint32_t)vertices.size() * sizeof(Vertex));
+        vertexBuffer->WriteData(0, (uint32_t)vertices.size() * sizeof(Vertex), vertices.data(), BWT_DISCARD);
+        VulkanGpuBuffer* indexBuffer =
+          new VulkanGpuBuffer(VulkanGpuBuffer::BufferType::BUFFER_VERTEX, BufferUsage::STATIC_DRAW, (uint32_t)indices.size() * sizeof(uint32_t));
+        indexBuffer->WriteData(0, (uint32_t)indices.size() * sizeof(uint32_t), indices.data(), BWT_DISCARD);
+        VulkanGpuBuffer* transformBuffer =
+          new VulkanGpuBuffer(VulkanGpuBuffer::BufferType::BUFFER_VERTEX, BufferUsage::STATIC_DRAW, 1 * sizeof(VkTransformMatrixKHR));
+        transformBuffer->WriteData(0, 1 * sizeof(VkTransformMatrixKHR), transformBuffer, BWT_DISCARD);
+
         VkDeviceOrHostAddressConstKHR vertexBufferDeviceAddress{};
+        vertexBufferDeviceAddress.deviceAddress = vertexBuffer->GetBuffer()->GetDeviceAddress();
         VkDeviceOrHostAddressConstKHR indexBufferDeviceAddress{};
+        indexBufferDeviceAddress.deviceAddress = indexBuffer->GetBuffer()->GetDeviceAddress();
         VkDeviceOrHostAddressConstKHR transformBufferDeviceAddress{};
-        // TODO: Init addr
+        transformBufferDeviceAddress.deviceAddress = transformBuffer->GetBuffer()->GetDeviceAddress();
+
         VkAccelerationStructureGeometryKHR accelerationStructureGeometry{};
         accelerationStructureGeometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
         accelerationStructureGeometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
@@ -569,8 +597,6 @@ namespace Crowny
         accelerationStructureGeometry.geometry.triangles.vertexStride = sizeof(Vertex);
         accelerationStructureGeometry.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
         accelerationStructureGeometry.geometry.triangles.indexData = indexBufferDeviceAddress;
-        accelerationStructureGeometry.geometry.triangles.transformData.deviceAddress = 0;
-        accelerationStructureGeometry.geometry.triangles.transformData.hostAddress = nullptr;
         accelerationStructureGeometry.geometry.triangles.transformData = transformBufferDeviceAddress;
 
         VkAccelerationStructureBuildGeometryInfoKHR accelerationStructureBuildGeometryInfo{};
@@ -585,7 +611,7 @@ namespace Crowny
         accelerationStructureBuildSizesInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         vkGetAccelerationStructureBuildSizesKHR(m_Device.GetLogicalDevice(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
                                                 &accelerationStructureBuildGeometryInfo, &numTris, &accelerationStructureBuildSizesInfo);
-        CreateAccelerationStructureBuffer(m_Blas, accelerationStructureBuildSizesInfo);
+        AccelerationStructureScratchBuffer scratchBuffer = CreateScratchBuffer(accelerationStructureBuildSizesInfo.buildScratchSize);
 
         VkAccelerationStructureCreateInfoKHR accelerationStructureCreateInfo{};
         accelerationStructureCreateInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
@@ -605,7 +631,13 @@ namespace Crowny
         accelerationBuildGeometryInfo.dstAccelerationStructure = m_Blas.Handle;
         accelerationBuildGeometryInfo.geometryCount = 1;
         accelerationBuildGeometryInfo.pGeometries = &accelerationStructureGeometry;
-        accelerationBuildGeometryInfo.scratchData.deviceAddress = scratchBuffer.DeviceAddress;
+
+        // TODO: Is this right?
+        VkBufferDeviceAddressInfo bufferDeviceAddressInfo = {};
+        bufferDeviceAddressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+        bufferDeviceAddressInfo.buffer = scratchBuffer.Handle;
+        const VkDeviceAddress address = vkGetBufferDeviceAddress(m_Device.GetLogicalDevice(), &bufferDeviceAddressInfo);
+        accelerationBuildGeometryInfo.scratchData.deviceAddress = address;
 
         VkAccelerationStructureBuildRangeInfoKHR accelerationStructureBuildRangeInfo{};
         accelerationStructureBuildRangeInfo.primitiveCount = numTris;
@@ -623,7 +655,21 @@ namespace Crowny
         accelerationDeviceAddressInfo.accelerationStructure = m_Blas.Handle;
         m_Blas.DeviceAddress = vkGetAccelerationStructureDeviceAddressKHR(m_Device.GetLogicalDevice(), &accelerationDeviceAddressInfo);
 
-        DeleteScratchBuffer();
+        // DeleteScratchBuffer();
+    }
+
+    VulkanCmdBuffer::AccelerationStructureScratchBuffer VulkanCmdBuffer::CreateScratchBuffer(uint64_t size)
+    {
+        // TODO: CW API for this
+        AccelerationStructureScratchBuffer scratchBuffer;
+        VkBufferCreateInfo bufferCreateInfo{};
+        bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferCreateInfo.size = size;
+        bufferCreateInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+        const VkResult result = vkCreateBuffer(m_Device.GetLogicalDevice(), &bufferCreateInfo, nullptr, &scratchBuffer.Handle);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        scratchBuffer.Allocation = m_Device.AllocateMemory(scratchBuffer.Handle, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        return scratchBuffer;
     }
 
     void VulkanCmdBuffer::SetScissorRect(const Rect2I& area)
@@ -640,7 +686,7 @@ namespace Crowny
             return;
 
         m_StencilRef = value;
-        m_StencilRequriesBind = true;
+        m_StencilRequiresBind = true;
     }
 
     void VulkanCmdBuffer::BindDynamicStates(bool force)
@@ -658,10 +704,10 @@ namespace Crowny
             m_ViewportRequiresBind = false;
         }
 
-        if (m_StencilRequriesBind || force)
+        if (m_StencilRequiresBind || force)
         {
             vkCmdSetStencilReference(m_CmdBuffer, VK_STENCIL_FRONT_AND_BACK, m_StencilRef);
-            m_StencilRequriesBind = false;
+            m_StencilRequiresBind = false;
         }
 
         if (m_ScissorRequiresBind || force)
@@ -692,6 +738,14 @@ namespace Crowny
             return;
         m_GraphicsPipeline = std::static_pointer_cast<VulkanGraphicsPipeline>(pipeline);
         m_GraphicsPipelineRequiresBind = true;
+    }
+
+    void VulkanCmdBuffer::SetPipeline(const Ref<RayTracingPipeline>& pipeline)
+    {
+        if (m_RayTracingPipeline == pipeline)
+            return;
+        m_RayTracingPipeline = std::static_pointer_cast<VulkanRayTracingPipeline>(pipeline);
+        m_RayTracingPipelineRequiresBind = true;
     }
 
     void VulkanCmdBuffer::SetPipeline(const Ref<ComputePipeline>& pipeline)
@@ -739,6 +793,9 @@ namespace Crowny
         if ((accessFlags & (VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT)) != 0)
             flags |= VK_PIPELINE_STAGE_HOST_BIT;
 
+        if ((accessFlags & (VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR)) != 0)
+            flags |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+
         if (flags == 0)
             flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
@@ -747,7 +804,7 @@ namespace Crowny
 
     template <class T> void GetPipelineStageFlags(const Vector<T>& barriers, VkPipelineStageFlags& src, VkPipelineStageFlags& dst)
     {
-        for (auto& entry : barriers)
+        for (const T& entry : barriers)
         {
             src |= GetPipelineStageFlags(entry.srcAccessMask);
             dst |= GetPipelineStageFlags(entry.dstAccessMask);
@@ -760,7 +817,7 @@ namespace Crowny
 
     void VulkanCmdBuffer::RegisterBuffer(VulkanBuffer* buffer, BufferUseFlagBits useFlags, VulkanAccessFlags accessFlags, VkPipelineStageFlags stages)
     {
-        auto res = m_Buffers.insert(std::make_pair(buffer, BufferInfo()));
+        const auto res = m_Buffers.insert(std::make_pair(buffer, BufferInfo()));
         if (res.second)
         {
             BufferInfo& bufferInfo = res.first->second;
@@ -800,7 +857,6 @@ namespace Crowny
                             if (accessFlags == VulkanAccessFlagBits::Write)
                                 m_MemoryBarrierDstAccess |= VK_ACCESS_SHADER_WRITE_BIT;
                             break;
-
                         case (BufferUseFlagBits::Index):
                             m_MemoryBarrierDstAccess |= VK_ACCESS_INDEX_READ_BIT;
                             break;
@@ -810,6 +866,11 @@ namespace Crowny
                         case (BufferUseFlagBits::Uniform):
                             m_MemoryBarrierDstAccess |= VK_ACCESS_UNIFORM_READ_BIT;
                             break;
+                        case (BufferUseFlagBits::Acceleration):
+                            if (accessFlags == VulkanAccessFlagBits::Read)
+                                m_MemoryBarrierDstAccess |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+                            if (accessFlags == VulkanAccessFlagBits::Write)
+                                m_MemoryBarrierDstAccess |= VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
                         case (BufferUseFlagBits::Transfer):
                             if (accessFlags == VulkanAccessFlagBits::Read)
                                 m_MemoryBarrierDstAccess |= VK_ACCESS_TRANSFER_READ_BIT;
@@ -1285,13 +1346,11 @@ namespace Crowny
             barrier.pNext = nullptr;
             barrier.srcAccessMask = m_MemoryBarrierSrcAccess;
             barrier.dstAccessMask = m_MemoryBarrierDstAccess;
-
+            CW_ENGINE_INFO("Big slow barrier");
             vkCmdPipelineBarrier(m_CmdBuffer, m_MemoryBarrierSrcStages, m_MemoryBarrierDstStages, 0, 1, &barrier, 0, nullptr, 0, nullptr);
         }
         else
-        {
             vkCmdPipelineBarrier(m_CmdBuffer, m_MemoryBarrierSrcStages, m_MemoryBarrierDstStages, 0, 0, nullptr, 0, nullptr, 0, nullptr);
-        }
 
         m_NeedsRawMemoryBarrier = false;
         m_NeedsWarMemoryBarrier = false;
@@ -1773,7 +1832,7 @@ namespace Crowny
         {
             VulkanCmdBuffer* cmdBuffer = device.GetCmdBufferPool().GetBuffer(m_QueueFamily, false);
             VkCommandBuffer vkCmdBuffer = cmdBuffer->GetHandle();
-            for (auto entry : m_QueuedQueryResets)
+            for (VulkanQuery* entry : m_QueuedQueryResets)
                 entry->Reset(vkCmdBuffer);
             cmdBuffer->End();
             queue->QueueSubmit(cmdBuffer, nullptr, 0);
@@ -1785,7 +1844,7 @@ namespace Crowny
             VulkanBuffer* buffer = static_cast<VulkanBuffer*>(entry.first);
             if (!buffer->IsExclusive())
                 continue;
-            uint32_t currentQueueFamily = buffer->GetQueueFamily();
+            const uint32_t currentQueueFamily = buffer->GetQueueFamily();
             if (currentQueueFamily != (uint32_t)-1 && currentQueueFamily != m_QueueFamily)
             {
                 Vector<VkBufferMemoryBarrier>& barriers = m_TransitionInfoTemp[currentQueueFamily].BufferBarriers;
@@ -1810,7 +1869,7 @@ namespace Crowny
             VulkanImage* image = static_cast<VulkanImage*>(entry.first);
             ImageInfo& imageInfo = m_ImageInfos[entry.second];
             uint32_t currentQueueFamily = image->GetQueueFamily();
-            bool queueMismatch = image->IsExclusive() && currentQueueFamily != (uint32_t)-1 && currentQueueFamily != m_QueueFamily;
+            const bool queueMismatch = image->IsExclusive() && currentQueueFamily != (uint32_t)-1 && currentQueueFamily != m_QueueFamily;
             ImageSubresourceInfo* subresourceInfos = &m_SubresourceInfoStorage[imageInfo.SubresourceInfoIdx];
             if (queueMismatch)
             {
@@ -1893,10 +1952,10 @@ namespace Crowny
                 continue;
 
             VulkanCmdBuffer* cmdBuffer = device.GetCmdBufferPool().GetBuffer(entryQueueFamily, false);
-            VkCommandBuffer vkCmdBuffer = cmdBuffer->GetHandle();
-            TransitionInfo& barriers = entry.second;
-            uint32_t numImgBarriers = (uint32_t)barriers.ImageBarriers.size();
-            uint32_t numBufferBarriers = (uint32_t)barriers.BufferBarriers.size();
+            const VkCommandBuffer vkCmdBuffer = cmdBuffer->GetHandle();
+            const TransitionInfo& barriers = entry.second;
+            const uint32_t numImgBarriers = (uint32_t)barriers.ImageBarriers.size();
+            const uint32_t numBufferBarriers = (uint32_t)barriers.BufferBarriers.size();
 
             VkPipelineStageFlags srcStage = 0;
             VkPipelineStageFlags dstStage = 0;
@@ -1937,12 +1996,11 @@ namespace Crowny
             otherQueue->Submit(cmdBuffer, nullptr, 0);
         }
 
-        uint32_t deviceIdx = device.GetIndex();
         VulkanTransferManager& cbm = VulkanTransferManager::Get();
 
         uint32_t numSemaphores;
         cbm.GetSyncSemaphores(syncMask, m_SemaphoresTemp.data(), numSemaphores);
-        for (auto& entry : m_ActiveSwapChains)
+        for (VulkanSwapChain* entry : m_ActiveSwapChains)
         {
             const SwapChainSurface& surface = entry->GetBackBuffer();
             if (surface.NeedsWait)
@@ -1958,25 +2016,24 @@ namespace Crowny
             }
         }
 
-        for (auto& entry : m_TransitionInfoTemp)
+        for (const auto& [_, transitionInfo] : m_TransitionInfoTemp)
         {
-            bool empty = entry.second.ImageBarriers.size() == 0 && entry.second.BufferBarriers.size() == 0;
+            const bool empty = transitionInfo.ImageBarriers.size() == 0 && transitionInfo.BufferBarriers.size() == 0;
             if (empty)
                 continue;
 
             VulkanCmdBuffer* cmdBuffer = device.GetCmdBufferPool().GetBuffer(m_QueueFamily, false);
             VkCommandBuffer vkCmdBuffer = cmdBuffer->GetHandle();
 
-            TransitionInfo& barriers = entry.second;
-            uint32_t numImageBarriers = (uint32_t)barriers.ImageBarriers.size();
-            uint32_t numBufferBarriers = (uint32_t)barriers.BufferBarriers.size();
+            const uint32_t numImageBarriers = (uint32_t)transitionInfo.ImageBarriers.size();
+            const uint32_t numBufferBarriers = (uint32_t)transitionInfo.BufferBarriers.size();
 
             VkPipelineStageFlags srcStage = 0;
             VkPipelineStageFlags dstStage = 0;
-            GetPipelineStageFlags(barriers.ImageBarriers, srcStage, dstStage);
+            GetPipelineStageFlags(transitionInfo.ImageBarriers, srcStage, dstStage);
 
-            vkCmdPipelineBarrier(vkCmdBuffer, srcStage, dstStage, 0, 0, nullptr, numBufferBarriers, barriers.BufferBarriers.data(), numImageBarriers,
-                                 barriers.ImageBarriers.data());
+            vkCmdPipelineBarrier(vkCmdBuffer, srcStage, dstStage, 0, 0, nullptr, numBufferBarriers, transitionInfo.BufferBarriers.data(),
+                                 numImageBarriers, transitionInfo.ImageBarriers.data());
 
             cmdBuffer->End();
             queue->QueueSubmit(cmdBuffer, m_SemaphoresTemp.data(), numSemaphores);
@@ -2037,7 +2094,7 @@ namespace Crowny
         m_BoundUniforms = nullptr;
         m_IndexBuffer = nullptr;
         m_VertexBuffers.clear();
-        m_VertexInputsRequriesBind = true;
+        m_VertexInputsRequiresBind = true;
         m_ActiveSwapChains.clear();
     }
 
@@ -2179,7 +2236,7 @@ namespace Crowny
         {
             m_VertexBuffers[i] = std::static_pointer_cast<VulkanVertexBuffer>(buffers[i]);
         }
-        m_VertexInputsRequriesBind = true;
+        m_VertexInputsRequiresBind = true;
     }
 
     void VulkanCmdBuffer::SetVertexLayout(const Ref<BufferLayout>& vertexLayout)
@@ -2193,7 +2250,7 @@ namespace Crowny
     void VulkanCmdBuffer::SetIndexBuffer(const Ref<IndexBuffer>& indexBuffer)
     {
         m_IndexBuffer = std::static_pointer_cast<VulkanIndexBuffer>(indexBuffer);
-        m_VertexInputsRequriesBind = true;
+        m_VertexInputsRequiresBind = true;
     }
 
     void VulkanCmdBuffer::SetUniforms(const Ref<UniformParams>& uniforms)
@@ -2236,10 +2293,10 @@ namespace Crowny
         if (!IsInRenderPass())
             BeginRenderPass();
 
-        if (m_VertexInputsRequriesBind)
+        if (m_VertexInputsRequiresBind)
         {
             BindVertexInputs();
-            m_VertexInputsRequriesBind = false;
+            m_VertexInputsRequiresBind = false;
         }
 
         if (m_GraphicsPipelineRequiresBind)
@@ -2274,10 +2331,10 @@ namespace Crowny
         if (!IsInRenderPass())
             BeginRenderPass();
 
-        if (m_VertexInputsRequriesBind)
+        if (m_VertexInputsRequiresBind)
         {
             BindVertexInputs();
-            m_VertexInputsRequriesBind = false;
+            m_VertexInputsRequiresBind = false;
         }
 
         if (m_GraphicsPipelineRequiresBind)
@@ -2302,6 +2359,86 @@ namespace Crowny
         if (instanceCount <= 0)
             instanceCount = 1;
         vkCmdDrawIndexed(m_CmdBuffer, idxCount, instanceCount, startIdx, vertexOffset, 0);
+    }
+
+    static uint32_t vkAlignedSize(uint32_t value, uint32_t alignment) { return (value + alignment - 1) & ~(alignment - 1); }
+
+    void VulkanCmdBuffer::CreateShaderBindingTable()
+    {
+        const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& rayTracingPipelineProperties = m_Device.GetRayTracingDeviceProperties();
+        const uint32_t pipelineSize = rayTracingPipelineProperties.shaderGroupHandleSize;
+        const uint32_t handleSizeAligned = vkAlignedSize(pipelineSize, rayTracingPipelineProperties.shaderGroupHandleAlignment);
+        // const uint32_t groupCount = (uint32_t)shaderGroups.size();
+        const uint32_t groupCount = 3;
+        const uint32_t sbtSize = groupCount * handleSizeAligned;
+
+        const VkPipeline pipeline = m_RayTracingPipeline->GetPipeline()->GetHandle();
+        std::vector<uint8_t> shaderHandles(sbtSize);
+        // const VkResult result =
+        //   vkGetRayTracingCaptureReplayShaderGroupHandlesKHR(m_Device.GetLogicalDevice(), pipeline, 0, groupCount, sbtSize, shaderHandles.data());
+        // CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        // Another host coherent situation
+        m_RaygenShadingTable = new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_SHADER_TABLE, BufferUsage::STATIC_DRAW, pipelineSize);
+        m_MissShadingTable = new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_SHADER_TABLE, BufferUsage::STATIC_DRAW, pipelineSize);
+        m_HitShadingTable = new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_SHADER_TABLE, BufferUsage::STATIC_DRAW, pipelineSize);
+        m_RaygenShadingTable->WriteData(0, pipelineSize, shaderHandles.data(), BWT_DISCARD);
+        m_MissShadingTable->WriteData(0, pipelineSize, shaderHandles.data() + pipelineSize, BWT_DISCARD);
+        m_HitShadingTable->WriteData(0, pipelineSize, shaderHandles.data() + 2 * pipelineSize, BWT_DISCARD);
+    }
+
+    void VulkanCmdBuffer::TraceRays(uint32_t width, uint32_t height)
+    {
+        if (!IsReadyForRender())
+            return;
+
+        BindUniforms();
+        if (!IsInRenderPass())
+            BeginRenderPass();
+
+        if (m_RayTracingPipelineRequiresBind)
+        {
+            VulkanPipeline* pipeline = m_RayTracingPipeline->GetPipeline();
+            RegisterResource(pipeline, VulkanAccessFlagBits::Read);
+            m_RayTracingPipeline->RegisterPipelineResources(this);
+
+            vkCmdBindPipeline(m_CmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline->GetHandle());
+            m_RayTracingPipelineRequiresBind = false;
+        }
+        else
+            BindDynamicStates(false);
+
+        if (m_DescriptorSetsBindState.IsSet(DescriptorSetBindFlagBits::RayTracing))
+        {
+            if (m_NumBoundDescriptorSets > 0)
+            {
+                VkPipelineLayout pipelineLayout = m_RayTracingPipeline->GetLayout();
+                vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipelineLayout, 0, m_NumBoundDescriptorSets,
+                                        m_DescriptorSetsTemp, 0, nullptr);
+            }
+            m_DescriptorSetsBindState.Unset(DescriptorSetBindFlagBits::RayTracing);
+        }
+
+        const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& rayTracingPipelineProperties = m_Device.GetRayTracingDeviceProperties();
+        const uint32_t handleSizeAligned =
+          vkAlignedSize(rayTracingPipelineProperties.shaderGroupHandleSize, rayTracingPipelineProperties.shaderGroupHandleAlignment);
+        VkStridedDeviceAddressRegionKHR raygenShaderSbtEntry{};
+        raygenShaderSbtEntry.deviceAddress = m_RaygenShadingTable->GetBuffer()->GetDeviceAddress();
+        raygenShaderSbtEntry.stride = handleSizeAligned;
+        raygenShaderSbtEntry.size = handleSizeAligned;
+
+        VkStridedDeviceAddressRegionKHR missShaderSbtEntry{};
+        missShaderSbtEntry.deviceAddress = m_MissShadingTable->GetBuffer()->GetDeviceAddress();
+        missShaderSbtEntry.stride = handleSizeAligned;
+        missShaderSbtEntry.size = handleSizeAligned;
+
+        VkStridedDeviceAddressRegionKHR hitShaderSbtEntry{};
+        hitShaderSbtEntry.deviceAddress = m_HitShadingTable->GetBuffer()->GetDeviceAddress();
+        hitShaderSbtEntry.stride = handleSizeAligned;
+        hitShaderSbtEntry.size = handleSizeAligned;
+
+        VkStridedDeviceAddressRegionKHR callableShaderSbtEntry{};
+
+        vkCmdTraceRaysKHR(m_CmdBuffer, &raygenShaderSbtEntry, &missShaderSbtEntry, &hitShaderSbtEntry, &callableShaderSbtEntry, width, height, 1);
     }
 
     void VulkanCmdBuffer::Dispatch(uint32_t numGroupsX, uint32_t numGroupsY, uint32_t numGroupsZ)
@@ -2342,9 +2479,9 @@ namespace Crowny
         }
 
         vkCmdDispatch(m_CmdBuffer, numGroupsX, numGroupsY, numGroupsZ);
-        for (auto& entry : m_ShaderBoundSubresourceInfos)
+        for (uint32_t entryIdx : m_ShaderBoundSubresourceInfos)
         {
-            ImageSubresourceInfo& info = m_SubresourceInfoStorage[entry];
+            ImageSubresourceInfo& info = m_SubresourceInfoStorage[entryIdx];
             info.UseFlags.Unset(ImageUseFlagBits::Shader);
             info.ShaderUse.AccessFlags = VulkanAccessFlagBits::None;
             info.ShaderUse.Stages = 0;
@@ -2392,8 +2529,8 @@ namespace Crowny
         barrier.newLayout = newLayout;
         barrier.image = image;
         barrier.subresourceRange = range;
-        VkPipelineStageFlags srcStage = GetPipelineStageFlags(srcAccessFlags);
-        VkPipelineStageFlags dstStage = GetPipelineStageFlags(dstAccessFlags);
+        const VkPipelineStageFlags srcStage = GetPipelineStageFlags(srcAccessFlags);
+        const VkPipelineStageFlags dstStage = GetPipelineStageFlags(dstAccessFlags);
         vkCmdPipelineBarrier(m_CmdBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
     }
 
@@ -2443,13 +2580,13 @@ namespace Crowny
     void VulkanCmdBuffer::GetInProgressQueries(Vector<VulkanTimerQuery*>& timers, Vector<VulkanPipelineQuery*>& pipelines,
                                                Vector<VulkanOcclusionQuery*>& occlusions) const
     {
-        for (auto* entry : m_TimerQueries)
+        for (VulkanTimerQuery* entry : m_TimerQueries)
             if (entry->IsInProgress())
                 timers.push_back(entry);
-        for (auto* entry : m_PipelineQueries)
+        for (VulkanPipelineQuery* entry : m_PipelineQueries)
             if (entry->IsInProgress())
                 pipelines.push_back(entry);
-        for (auto* entry : m_OcclusionQueries)
+        for (VulkanOcclusionQuery* entry : m_OcclusionQueries)
             if (entry->IsInProgress())
                 occlusions.push_back(entry);
     }

@@ -3,7 +3,6 @@
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Serialization/AssetManifestSerializer.h"
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
-#include "Crowny/Common/FileSystem.h"
 
 namespace Crowny
 {

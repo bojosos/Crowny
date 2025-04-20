@@ -40,13 +40,13 @@ namespace Crowny
 
     Ref<Texture> Texture::Create(const TextureParameters& params)
     {
-        switch (Renderer::GetAPI())
+        switch (RenderAPI::Get().GetAPI())
         {
         // case RenderAPI::API::OpenGL: return CreateRef<VulkanTexture>(m_Filepath);
         case RenderAPI::API::Vulkan:
             return CreateRef<VulkanTexture>(params);
         default:
-            CW_ENGINE_ASSERT(false, "Renderer API not supporter");
+            CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
         }
 

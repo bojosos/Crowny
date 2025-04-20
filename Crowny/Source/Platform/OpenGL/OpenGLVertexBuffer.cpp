@@ -31,10 +31,6 @@ namespace Crowny
 
     OpenGLVertexBuffer::~OpenGLVertexBuffer() { glDeleteBuffers(1, &m_RendererID); }
 
-    void OpenGLVertexBuffer::Bind() const { glBindBuffer(GL_ARRAY_BUFFER, m_RendererID); }
-
-    void OpenGLVertexBuffer::Unbind() const { glBindBuffer(GL_ARRAY_BUFFER, 0); }
-
     void* OpenGLVertexBuffer::Map(uint32_t offset, uint32_t size, GpuLockOptions options)
     {
         glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);

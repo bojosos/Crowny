@@ -32,6 +32,12 @@ namespace Crowny
             return shaderc_glsl_tess_evaluation_shader;
         case COMPUTE_SHADER:
             return shaderc_glsl_compute_shader;
+        case RAYGEN_SHADER:
+            return shaderc_glsl_raygen_shader;
+        case HIT_SHADER:
+            return shaderc_glsl_closesthit_shader;
+        case MISS_SHADER:
+            return shaderc_glsl_miss_shader;
         default:
             return shaderc_glsl_vertex_shader;
         }
@@ -53,6 +59,12 @@ namespace Crowny
             return "domain";
         case COMPUTE_SHADER:
             return "compute";
+        case RAYGEN_SHADER:
+            return "raygen";
+        case MISS_SHADER:
+            return "miss";
+        case HIT_SHADER:
+            return "hit";
         default:
             return String();
         }
@@ -190,6 +202,12 @@ namespace Crowny
             outShaderType = HULL_SHADER;
         else if (type == "compute")
             outShaderType = COMPUTE_SHADER;
+        else if (type == "raygen")
+            outShaderType = RAYGEN_SHADER;
+        else if (type == "raymiss")
+            outShaderType = MISS_SHADER;
+        else if (type == "rayhit")
+            outShaderType = HIT_SHADER;
         else
             return false;
         return true;
@@ -231,7 +249,7 @@ namespace Crowny
         // options.SetOptimizationLevel(shaderc_optimization_level_performance); // TODO: if set, can't use uniform
         // names, so maybe compile twice?
 
-        const char* entryPoints[SHADER_COUNT] = { "vsmain", "fsmain", "gsmain", "dsmain", "hsmain", "csmain" };
+        const char* entryPoints[SHADER_COUNT] = { "vsmain", "fsmain", "gsmain", "dsmain", "hsmain", "csmain", "raygen", "hit", "miss" };
         const char* entryPoint = entryPoints[shaderType];
         shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(source.c_str(), source.size(), ShaderTypeToShaderC(shaderType),
                                                                          ShaderTypeToString(shaderType).c_str(), entryPoint, options);
@@ -299,6 +317,14 @@ namespace Crowny
                 passDesc.DomainShader = shaderData;
             else if (type == COMPUTE_SHADER)
                 passDesc.ComputeShader = shaderData;
+            else if (type == RAYGEN_SHADER)
+                passDesc.RaygenShader = shaderData;
+            else if (type == HIT_SHADER)
+                passDesc.HitShader = shaderData;
+            else if (type == MISS_SHADER)
+                passDesc.MissShader = shaderData;
+            else
+                CW_ENGINE_ASSERT(false);
         }
         EvaluatePragmaDirectives(source, passDesc);
         Ref<ShaderRenderPass> renderPass = ShaderRenderPass::Create(passDesc);
@@ -314,7 +340,7 @@ namespace Crowny
         const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
         Ref<UniformDesc> uniformDesc = CreateRef<UniformDesc>();
         // Read all uniform buffers in the current stage.
-        for (const auto& uniform : resources.uniform_buffers)
+        for (const spirv_cross::Resource& uniform : resources.uniform_buffers)
         {
             const spirv_cross::SPIRType bufferType = compiler.get_type(uniform.base_type_id);
             const uint32_t bufferSize = (uint32_t)compiler.get_declared_struct_size(bufferType);
@@ -341,9 +367,9 @@ namespace Crowny
             uniformDesc->Uniforms[uniform.name] = buffer;
         }
 
-        for (const auto& sampler : resources.sampled_images)
+        for (const spirv_cross::Resource& sampler : resources.sampled_images)
         {
-            const auto& bufferType = compiler.get_type(sampler.base_type_id);
+            const spirv_cross::SPIRType& bufferType = compiler.get_type(sampler.base_type_id);
             const uint32_t binding = compiler.get_decoration(sampler.id, spv::DecorationBinding);
             const uint32_t set = compiler.get_decoration(sampler.id, spv::DecorationDescriptorSet);
 
@@ -357,9 +383,9 @@ namespace Crowny
             uniformDesc->Textures[resource.Name] = resource;
         }
 
-        for (const auto& texture : resources.separate_images)
+        for (const spirv_cross::Resource& texture : resources.separate_images)
         {
-            const auto& bufferType = compiler.get_type(texture.base_type_id);
+            const spirv_cross::SPIRType& bufferType = compiler.get_type(texture.base_type_id);
             const uint32_t binding = compiler.get_decoration(texture.id, spv::DecorationBinding);
             const uint32_t set = compiler.get_decoration(texture.id, spv::DecorationDescriptorSet);
 
@@ -372,9 +398,9 @@ namespace Crowny
             uniformDesc->Textures[resource.Name] = resource;
         }
 
-        for (const auto& sampler : resources.separate_samplers)
+        for (const spirv_cross::Resource& sampler : resources.separate_samplers)
         {
-            const auto& bufferType = compiler.get_type(sampler.base_type_id);
+            const spirv_cross::SPIRType& bufferType = compiler.get_type(sampler.base_type_id);
             const uint32_t binding = compiler.get_decoration(sampler.id, spv::DecorationBinding);
             const uint32_t set = compiler.get_decoration(sampler.id, spv::DecorationDescriptorSet);
 
@@ -388,6 +414,21 @@ namespace Crowny
 
             uniformDesc->Samplers[resource.Name] = resource;
         }
+        // TODO: Buffers and loadstore textures
+
+        for (const spirv_cross::Resource& accelStruct : resources.acceleration_structures)
+        {
+            const uint32_t binding = compiler.get_decoration(accelStruct.id, spv::DecorationBinding);
+            const uint32_t set = compiler.get_decoration(accelStruct.id, spv::DecorationDescriptorSet);
+
+            AccelerationStructDesc resource;
+            resource.Name = accelStruct.name;
+            resource.Slot = binding;
+            resource.Set = set;
+
+            uniformDesc->AccelerationStructures[resource.Name] = resource;
+        }
+
         outData->Description = uniformDesc;
 
         // Retrieve the vertex shader input layout

@@ -20,7 +20,7 @@ namespace Crowny
         m_ShaderStage.pNext = nullptr;
         m_ShaderStage.flags = 0;
         m_ShaderStage.stage = VulkanUtils::GetShaderFlags(m_ShaderData->Type);
-        // m_ShaderStage.pName = data.EntryPoint.c_str();
+        // m_ShaderStage.pName = data.EntryPoint.c_str(); TODO:
         m_ShaderStage.pName = "main";
         m_ShaderStage.pSpecializationInfo = nullptr;
         m_ShaderStage.module = VK_NULL_HANDLE;

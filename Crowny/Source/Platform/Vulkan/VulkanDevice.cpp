@@ -11,25 +11,77 @@
 #include "Platform/Vulkan/VulkanQuery.h"
 #include "Platform/Vulkan/VulkanRenderAPI.h"
 
+#define LOG_EXTENSIONS false
+#define raytracing false
+
 namespace Crowny
 {
     static const char* PIPELINE_CACHE_FILE = "vk_pipeline_cache.blob";
 
     VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, uint32_t idx) : m_PhysicalDevice(physicalDevice)
     {
-        rayTracingPipelineProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
-        VkPhysicalDeviceProperties2 deviceProperties2;
-        deviceProperties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-        deviceProperties2.pNext = &rayTracingPipelineProperties;
-        vkGetPhysicalDeviceProperties2(physicalDevice, &deviceProperties2);
-        m_DeviceProperties = deviceProperties2.properties;
+        if (raytracing)
+        {
+            m_RayTracingPipelineProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
 
-        rayTracingAccelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
-        VkPhysicalDeviceFeatures2 deviceFeatures2;
-        deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-        deviceFeatures2.pNext = &rayTracingAccelerationStructureFeatures;
-        vkGetPhysicalDeviceFeatures2(physicalDevice, &deviceFeatures2);
-        m_DeviceFeatures = deviceFeatures2.features;
+            VkPhysicalDeviceRayTracingInvocationReorderPropertiesNV reorderProperties;
+            reorderProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_PROPERTIES_NV;
+
+            VkPhysicalDeviceAccelerationStructurePropertiesKHR accelerationProperties;
+            accelerationProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
+
+            VkPhysicalDeviceProperties2 deviceProperties2;
+            deviceProperties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+
+            deviceProperties2.pNext = &m_RayTracingPipelineProperties;
+            m_RayTracingPipelineProperties.pNext = &reorderProperties;
+            reorderProperties.pNext = &accelerationProperties;
+            accelerationProperties.pNext = nullptr;
+
+            vkGetPhysicalDeviceProperties2(physicalDevice, &deviceProperties2);
+
+            CW_ENGINE_INFO("Max recursion depth: {}", m_RayTracingPipelineProperties.maxRayRecursionDepth);
+            CW_ENGINE_INFO("Handles sizes: {}", m_RayTracingPipelineProperties.shaderGroupHandleSize);
+            CW_ENGINE_INFO("Handles align: {}", m_RayTracingPipelineProperties.shaderGroupHandleAlignment);
+            CW_ENGINE_INFO("Max recursion depth: {}", m_RayTracingPipelineProperties.maxRayRecursionDepth);
+            CW_ENGINE_INFO("Shader execution reordering: {}", reorderProperties.rayTracingInvocationReorderReorderingHint);
+            CW_ENGINE_INFO("Max geometries: {}", accelerationProperties.maxGeometryCount);
+            CW_ENGINE_INFO("Max instances: {}", accelerationProperties.maxInstanceCount);
+            CW_ENGINE_INFO("Max primitives: {}", accelerationProperties.maxPrimitiveCount);
+
+            m_DeviceProperties = deviceProperties2.properties;
+
+            VkPhysicalDeviceDescriptorIndexingFeatures descriptionIndexingFeatures{};
+            descriptionIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+
+            VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures{};
+            bufferDeviceAddressFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+            bufferDeviceAddressFeatures.pNext = &descriptionIndexingFeatures;
+
+            enabledRayTracingPipelineFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+            enabledRayTracingPipelineFeatures.pNext = &bufferDeviceAddressFeatures;
+
+            rayTracingAccelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+            rayTracingAccelerationStructureFeatures.pNext = &enabledRayTracingPipelineFeatures;
+            m_DeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+            m_DeviceFeatures.pNext = &rayTracingAccelerationStructureFeatures;
+
+            vkGetPhysicalDeviceFeatures2(physicalDevice, &m_DeviceFeatures);
+
+            if (!bufferDeviceAddressFeatures.bufferDeviceAddress)
+                CW_ENGINE_ERROR("Missing Vulkan device address feature");
+
+            if (!enabledRayTracingPipelineFeatures.rayTracingPipeline)
+                CW_ENGINE_ERROR("Missing Vulkan device ray tracing pipeline feature");
+
+            if (!rayTracingAccelerationStructureFeatures.accelerationStructure)
+                CW_ENGINE_ERROR("Missing Vulkan device ray tracing acceleration structure feature");
+        }
+        else
+        {
+            vkGetPhysicalDeviceProperties(physicalDevice, &m_DeviceProperties);
+            vkGetPhysicalDeviceFeatures(physicalDevice, &m_DeviceFeatures.features);
+        }
 
         vkGetPhysicalDeviceMemoryProperties(physicalDevice, &m_MemoryProperties);
 
@@ -91,21 +143,75 @@ namespace Crowny
              }*/
         }
 
-        const char* extensions[1];
+        uint32_t availableExtensionsCount = 0;
+        vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &availableExtensionsCount, nullptr);
+        Vector<VkExtensionProperties> availableExtensions(availableExtensionsCount);
+        vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &availableExtensionsCount, availableExtensions.data());
+
+        const void* pNext = nullptr;
+        Vector<const char*> extensions;
         uint32_t numExts = 0;
-        extensions[0] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+        extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+        if (raytracing)
+        {
+            VkPhysicalDeviceBufferDeviceAddressFeatures enabledBufferDeviceAddressFeatures{};
+            enabledBufferDeviceAddressFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+            enabledBufferDeviceAddressFeatures.bufferDeviceAddress = VK_TRUE;
+            enabledBufferDeviceAddressFeatures.pNext = nullptr;
+
+            VkPhysicalDeviceRayTracingPipelineFeaturesKHR enabledRayTracingPipelineFeatures{};
+            enabledRayTracingPipelineFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+            enabledRayTracingPipelineFeatures.rayTracingPipeline = VK_TRUE;
+            enabledRayTracingPipelineFeatures.pNext = &enabledBufferDeviceAddressFeatures;
+
+            VkPhysicalDeviceAccelerationStructureFeaturesKHR enabledAccelerationStructureFeatures{};
+            enabledAccelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+            enabledAccelerationStructureFeatures.accelerationStructure = VK_TRUE;
+            enabledAccelerationStructureFeatures.pNext = &enabledRayTracingPipelineFeatures;
+
+            pNext = &enabledAccelerationStructureFeatures;
+
+            Vector<const char*> rayTracingExts;
+            rayTracingExts.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
+            rayTracingExts.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+            rayTracingExts.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+
+            rayTracingExts.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+            rayTracingExts.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+            rayTracingExts.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+            rayTracingExts.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+
+            bool rtSupported = true;
+            for (const char* rtExt : rayTracingExts)
+            {
+                const bool isExtSupported =
+                  std::any_of(availableExtensions.begin(), availableExtensions.end(), [rtExt](const VkExtensionProperties& ext) {
+                      return std::strncmp(rtExt, ext.extensionName, VK_MAX_EXTENSION_NAME_SIZE) == 0;
+                  });
+                if (!isExtSupported)
+                {
+                    CW_ENGINE_ERROR("Vulkan extension {} is not supported on this GPU", rtExt);
+                    rtSupported = false;
+                }
+            }
+            if (rtSupported)
+                extensions.insert(extensions.end(), rayTracingExts.begin(), rayTracingExts.end());
+            else
+                CW_ENGINE_WARN("Crowny RT is requested but disabled, buy better GPU");
+        }
 
         VkDeviceCreateInfo deviceInfo;
         deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-        deviceInfo.pNext = nullptr;
         deviceInfo.flags = 0;
+        deviceInfo.pNext = pNext;
         deviceInfo.queueCreateInfoCount = (uint32_t)queueCreateInfos.size();
         deviceInfo.pQueueCreateInfos = queueCreateInfos.data();
-        deviceInfo.pEnabledFeatures = &m_DeviceFeatures;
-        deviceInfo.enabledExtensionCount = 1;
-        deviceInfo.ppEnabledExtensionNames = extensions;
+        deviceInfo.enabledExtensionCount = (uint32_t)extensions.size();
+        deviceInfo.ppEnabledExtensionNames = extensions.data();
         deviceInfo.enabledLayerCount = 0;
         deviceInfo.ppEnabledLayerNames = nullptr;
+        if (!pNext)
+            deviceInfo.pEnabledFeatures = &m_DeviceFeatures.features;
 
         if (true /* m_DeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU */)
         {
@@ -126,9 +232,12 @@ namespace Crowny
             allocatorCI.physicalDevice = m_PhysicalDevice;
             allocatorCI.device = m_LogicalDevice;
             allocatorCI.pAllocationCallbacks = gVulkanAllocator;
-            allocatorCI.flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
+            if (raytracing)
+                allocatorCI.flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT | VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+            else
+                allocatorCI.flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
             allocatorCI.instance = gVulkanRenderAPI().GetInstance();
-            allocatorCI.vulkanApiVersion = VK_API_VERSION_1_1; // maybe change to 1.3
+            allocatorCI.vulkanApiVersion = VK_API_VERSION_1_2; // maybe change to 1.3
 
             vmaCreateAllocator(&allocatorCI, &m_Allocator);
 

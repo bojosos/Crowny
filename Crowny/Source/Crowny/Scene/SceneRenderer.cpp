@@ -4,8 +4,11 @@
 #include "Crowny/Scene/SceneRenderer.h"
 
 #include "Crowny/Ecs/Components.h"
+#include "Crowny/RenderAPI/AccelerationStructure.h"
+#include "Crowny/RenderAPI/IndexBuffer.h"
 #include "Crowny/RenderAPI/Query.h"
 #include "Crowny/RenderAPI/RenderCommand.h"
+#include "Crowny/RenderAPI/VertexBuffer.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
 
@@ -14,6 +17,9 @@
 
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/glm.hpp>
+
+#define TRACY_ENABLE
+#include <tracy/Tracy.hpp>
 
 namespace Crowny
 {
@@ -26,6 +32,9 @@ namespace Crowny
         Ref<TimerQuery> Timer3DGeometry = nullptr;
 
         Ref<PipelineQuery> PipelineQuery = nullptr;
+
+        Ref<RayTracingPipeline> RayPipeline = nullptr;
+        Ref<AccelerationStructure> Accel = nullptr;
 
         AssetHandle<Font> GlobalFont;
     };
@@ -49,12 +58,49 @@ namespace Crowny
         s_Data->Timer3DGeometry = TimerQuery::Create();
 
         s_Data->PipelineQuery = PipelineQuery::Create();
+
+        static Ref<Shader> rayTraceShader = Importer::Get().Import<Shader>("Resources/Shaders/RayTrace.glsl");
+        static const AssetHandle<Shader> rayTraceHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(rayTraceShader));
+        rayTraceShader->GetTechniques()[0]->GetRenderPasses()[0]->Compile();
+
+        float vertices[] = { 1.0f, 1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, -1.0f, 0.0f };
+        uint32_t indices[] = { 0, 1, 2 };
+        const glm::mat3x4 transformMatrix(1.0f);
+        Ref<VertexBuffer> vertexBuffer = VertexBuffer::Create(vertices, sizeof(vertices));
+        Ref<IndexBuffer> indexBuffer = IndexBuffer::Create(indices, 3);
+
+        s_Data->RayPipeline = rayTraceShader->GetTechniques()[0]->GetRenderPasses()[0]->GetRayTracingPipeline();
+        AccelerationGeometry geom;
+        geom.Transform = transformMatrix;
+        geom.UseTransform = true;
+        geom.Type = GeometryType::Triangles;
+        GeometryTriangles tris;
+        tris.VertexBuffer = vertexBuffer;
+        tris.IndexBuffer = indexBuffer;
+        tris.IndexCount = 3;
+        tris.VertexCount = 9;
+        tris.IndexFormat = IndexType::Index_32;
+        tris.VertexStride = 12;
+        geom.GeometryData.Triangles = tris;
+
+        static Ref<AccelerationStructure> blas = AccelerationStructure::Create({ geom }, false, 1, AccelerationStructBuildBits::PreferFastTrace);
+        AccelerationInstance instance;
+        instance.BottomLevelAccel = blas.get();
+        instance.Transform = transformMatrix;
+        s_Data->Accel = AccelerationStructure::Create({}, true, 1, AccelerationStructBuildBits::PreferFastTrace);
+
+        Ref<CommandBuffer> cmdBuf = CommandBuffer::Create(GpuQueueType::COMPUTE_QUEUE);
+        blas->BuildBottomLevel(cmdBuf, &geom, 1, AccelerationStructBuildBits::PreferFastTrace);
+        s_Data->Accel->BuildTopLevel(cmdBuf, &instance, 1, AccelerationStructBuildBits::PreferFastTrace);
+        RenderAPI::Get().SubmitCommandBuffer(cmdBuf, 0);
+
         // Ref<Asset> font = Importer::Get().Import("Resources/Fonts/Roboto/roboto-thin.ttf");
         // s_Data.GlobalFont = static_asset_cast<Font>(AssetManager::Get().CreateAssetHandle(font));
     }
 
     void SceneRenderer::OnEditorUpdate(Timestep ts, const EditorCamera& camera)
     {
+        FrameMarkStart("Editor update");
         Ref<Scene> scene = SceneManager::GetActiveScene();
 
         // s_Data.PipelineQuery->Begin();
@@ -62,49 +108,67 @@ namespace Crowny
         // s_Data.Timer3DGeometry->End();
 
         // s_Data.Timer2DGeometry->Begin();
+        RenderAPI& rapi = RenderAPI::Get();
+        rapi.SetRayTracingPipeline(s_Data->RayPipeline);
+        rapi.TraceRays(s_Data->ViewportWidth, s_Data->ViewportHeight);
 
-        ForwardRenderer::Begin();
-        ForwardRenderer::BeginScene(camera, camera.GetViewMatrix());
-        auto objs = scene->m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
-        for (const entt::entity ee : objs)
+        return;
+
         {
-            auto [transform, mesh] = scene->m_Registry.get<TransformComponent, MeshRendererComponent>(ee);
-
-            if (mesh.MeshHandle)
+            ZoneScopedN("Forward begin");
+            // TODO: Combine these, or name them better
+            ForwardRenderer::Begin();
+            ForwardRenderer::BeginScene(camera, camera.GetViewMatrix());
+        }
+        {
+            ZoneScopedN("Forward render");
+            auto objs = scene->m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
+            for (const entt::entity ee : objs)
             {
-                Entity entity(ee, scene.get());
-                ForwardRenderer::Submit(mesh.MeshHandle, entity.GetWorldMatrix());
-                // TODO: Update stats... triangle count has to take into account the draw mode
+                auto [transform, mesh] = scene->m_Registry.get<TransformComponent, MeshRendererComponent>(ee);
+
+                if (mesh.MeshHandle)
+                {
+                    Entity entity(ee, scene.get());
+                    ForwardRenderer::Submit(mesh.MeshHandle, entity.GetWorldMatrix());
+                    // TODO: Update stats... triangle count has to take into account the draw mode
+                }
             }
         }
-        ForwardRenderer::Flush();
-        ForwardRenderer::EndScene();
-        ForwardRenderer::End();
+        {
+            ZoneScopedN("Forward end");
+            ForwardRenderer::Flush();
+            ForwardRenderer::EndScene();
+            ForwardRenderer::End();
+        }
 
-        Renderer2D::Begin(camera, camera.GetViewMatrix());
-        const auto spriteRendererComponents =
-          scene->m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
-        for (const entt::entity ee : spriteRendererComponents)
         {
-            auto [transform, sprite] = scene->m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
-            Entity entity(ee, scene.get());
-            CW_ENGINE_ASSERT(entity.IsValid());
-            Renderer2D::FillRect(entity.GetWorldMatrix(), sprite.Texture ? sprite.Texture.GetInternalPtr() : nullptr, sprite.Color, ((int32_t)ee) + 1);
-            // Renderer2D::FillRect(glm::mat4(1.0f), sprite.Texture, sprite.Color, ((int32_t)ee) + 1);
-            s_Stats.Vertices += 6;
-            s_Stats.Triangles += 2;
+            ZoneScopedN("2D render");
+            Renderer2D::Begin(camera, camera.GetViewMatrix());
+            const auto spriteRendererComponents = scene->m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
+            for (const entt::entity ee : spriteRendererComponents)
+            {
+                auto [transform, sprite] = scene->m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
+                Entity entity(ee, scene.get());
+                CW_ENGINE_ASSERT(entity.IsValid());
+                Renderer2D::FillRect(entity.GetWorldMatrix(), sprite.Texture ? sprite.Texture.GetInternalPtr() : nullptr, sprite.Color,
+                                     ((int32_t)ee) + 1);
+                // Renderer2D::FillRect(glm::mat4(1.0f), sprite.Texture, sprite.Color, ((int32_t)ee) + 1);
+                s_Stats.Vertices += 6;
+                s_Stats.Triangles += 2;
+            }
+            const auto textComponents = scene->m_Registry.group<TextComponent>(entt::get<TransformComponent>);
+            for (const entt::entity ee : textComponents)
+            {
+                auto [transform, text] = scene->m_Registry.get<TransformComponent, TextComponent>(ee);
+                Entity entity(ee, scene.get());
+                CW_ENGINE_ASSERT(entity.IsValid());
+                Renderer2D::DrawString(text, entity.GetWorldMatrix(), (int32_t)ee + 1);
+                s_Stats.Vertices += (uint32_t)text.Text.size() * 6;
+                s_Stats.Triangles += (uint32_t)text.Text.size() * 2;
+            }
+            Renderer2D::End();
         }
-        const auto textComponents = scene->m_Registry.group<TextComponent>(entt::get<TransformComponent>);
-        for (const entt::entity ee : textComponents)
-        {
-            auto [transform, text] = scene->m_Registry.get<TransformComponent, TextComponent>(ee);
-            Entity entity(ee, scene.get());
-            CW_ENGINE_ASSERT(entity.IsValid());
-            Renderer2D::DrawString(text, entity.GetWorldMatrix(), (int32_t)ee + 1);
-            s_Stats.Vertices += (uint32_t)text.Text.size() * 6;
-            s_Stats.Triangles += (uint32_t)text.Text.size() * 2;
-        }
-        Renderer2D::End();
         // s_Data.Timer2DGeometry->End();
         // s_Data.PipelineQuery->End();
 
@@ -112,6 +176,7 @@ namespace Crowny
 
         s_Stats.Frames += 1;
         s_Stats.FrameTime = ts;
+        FrameMarkEnd("Editor update");
     }
 
     void SceneRenderer::OnRuntimeUpdate(Timestep ts)

@@ -44,20 +44,48 @@ namespace Crowny
         m_ParamInfo = UniformParamInfo::Create(uniformDesc);
     }
 
-    Ref<GraphicsPipeline> GraphicsPipeline::Create(const PipelineStateDesc& props)
+    Ref<GraphicsPipeline> GraphicsPipeline::Create(const PipelineStateDesc& desc)
     {
-        switch (Renderer::GetAPI())
+        switch (RenderAPI::Get().GetAPI())
         {
         case RenderAPI::API::OpenGL:
-            return CreateRef<OpenGLGraphicsPipeline>(props);
+            return CreateRef<OpenGLGraphicsPipeline>(desc);
         case RenderAPI::API::Vulkan:
-            return CreateRef<VulkanGraphicsPipeline>(props);
+            return CreateRef<VulkanGraphicsPipeline>(desc);
         default:
-            CW_ENGINE_ASSERT(false, "Renderer API not supporter");
+            CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
         }
 
         return nullptr;
+    }
+
+    RayTracingPipeline::RayTracingPipeline(const RayTracingPipelineDesc& desc) : m_Data(desc)
+    {
+        UniformParamDesc uniformDesc;
+        if (desc.RaygenShader != nullptr)
+            uniformDesc.RaygenParams = desc.RaygenShader->GetUniformDesc();
+        if (desc.HitShader != nullptr)
+            uniformDesc.HitParams = desc.HitShader->GetUniformDesc();
+        if (desc.MissShader != nullptr)
+            uniformDesc.MissParams = desc.MissShader->GetUniformDesc();
+
+        m_ParamInfo = UniformParamInfo::Create(uniformDesc);
+    }
+
+    Ref<RayTracingPipeline> RayTracingPipeline::Create(const RayTracingPipelineDesc& desc)
+    {
+        switch (RenderAPI::Get().GetAPI())
+        {
+        case RenderAPI::API::OpenGL:
+            CW_ENGINE_ERROR("OpenGL backend does not support ray tracing");
+            return nullptr;
+        case RenderAPI::API::Vulkan:
+            return CreateRef<VulkanRayTracingPipeline>(desc);
+        default:
+            CW_ENGINE_ASSERT(false, "Renderer API not supported");
+            return nullptr;
+        }
     }
 
     ComputePipeline::ComputePipeline(const Ref<ShaderStage>& shader) : m_Shader(shader)
@@ -70,14 +98,14 @@ namespace Crowny
 
     Ref<ComputePipeline> ComputePipeline::Create(const Ref<ShaderStage>& shader)
     {
-        switch (Renderer::GetAPI())
+        switch (RenderAPI::Get().GetAPI())
         {
         case RenderAPI::API::OpenGL:
             return CreateRef<OpenGLComputePipeline>(shader);
         case RenderAPI::API::Vulkan:
             return CreateRef<VulkanComputePipeline>(shader);
         default:
-            CW_ENGINE_ASSERT(false, "Renderer API not supporter");
+            CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
         }
 

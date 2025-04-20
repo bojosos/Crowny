@@ -27,7 +27,6 @@ namespace Crowny
         VulkanShader(const Ref<BinaryShaderData>& shaderData);
         ~VulkanShader();
 
-        const VkPipelineShaderStageCreateInfo& GetShaderStage() const { return m_ShaderStage; }
         VulkanShaderModule* GetShaderModule() const { return m_Module; }
 
     private:

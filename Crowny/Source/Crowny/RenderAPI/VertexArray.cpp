@@ -9,12 +9,12 @@ namespace Crowny
 {
     Ref<VertexArray> VertexArray::Create(DrawMode drawMode)
     {
-        switch (Renderer::GetAPI())
+        switch (RenderAPI::Get().GetAPI())
         {
         case RenderAPI::API::OpenGL:
             return CreateRef<OpenGLVertexArray>(drawMode);
         default:
-            CW_ENGINE_ASSERT(false, "Renderer API not supporter");
+            CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
         }
 

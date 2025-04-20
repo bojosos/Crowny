@@ -35,8 +35,7 @@ project "Crowny-Editor"
 		"%{IncludeDir.yamlcpp}",
 		"%{IncludeDir.libvorbis}",
 		"%{IncludeDir.libogg}",
-		"%{IncludeDir.Box2D}",
-		"%{IncludeDir.vulkanvma}",
+		"%{IncludeDir.Box2D}"
 	}
 
 	links
@@ -50,7 +49,7 @@ project "Crowny-Editor"
 		"glad",
 
 		"yaml-cpp",
-
+		"tracy",
 		"Crowny"
 	}
 
