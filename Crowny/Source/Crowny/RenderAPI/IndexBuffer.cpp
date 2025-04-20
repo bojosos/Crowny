@@ -11,14 +11,14 @@ namespace Crowny
 
     Ref<IndexBuffer> IndexBuffer::Create(uint32_t count, IndexType indexType, BufferUsage usage)
     {
-        switch (Renderer::GetAPI())
+        switch (RenderAPI::Get().GetAPI())
         {
         case RenderAPI::API::OpenGL:
             return CreateRef<OpenGLIndexBuffer>(count, indexType, usage);
         case RenderAPI::API::Vulkan:
             return CreateRef<VulkanIndexBuffer>(count, indexType, usage);
         default:
-            CW_ENGINE_ASSERT(false, "Renderer API not supporter");
+            CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
         }
 
@@ -27,14 +27,14 @@ namespace Crowny
 
     Ref<IndexBuffer> IndexBuffer::Create(uint16_t* indices, uint32_t count, BufferUsage usage)
     {
-        switch (Renderer::GetAPI())
+        switch (RenderAPI::Get().GetAPI())
         {
         case RenderAPI::API::OpenGL:
             return CreateRef<OpenGLIndexBuffer>(indices, count, usage);
         case RenderAPI::API::Vulkan:
             return CreateRef<VulkanIndexBuffer>(indices, count, usage);
         default:
-            CW_ENGINE_ASSERT(false, "Renderer API not supporter");
+            CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
         }
 
@@ -43,14 +43,14 @@ namespace Crowny
 
     Ref<IndexBuffer> IndexBuffer::Create(uint32_t* indices, uint32_t count, BufferUsage usage)
     {
-        switch (Renderer::GetAPI())
+        switch (RenderAPI::Get().GetAPI())
         {
         case RenderAPI::API::OpenGL:
             return CreateRef<OpenGLIndexBuffer>(indices, count, usage);
         case RenderAPI::API::Vulkan:
             return CreateRef<VulkanIndexBuffer>(indices, count, usage);
         default:
-            CW_ENGINE_ASSERT(false, "Renderer API not supporter");
+            CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
         }
 

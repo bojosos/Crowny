@@ -55,6 +55,7 @@ project "Crowny"
 		"%{IncludeDir.msdfatlasgen}",
 		"%{IncludeDir.mbedtls}",
 		"%{IncludeDir.vulkanvma}",
+		"%{IncludeDir.tracy}",
 	}
 
 	links
@@ -75,6 +76,7 @@ project "Crowny"
 		"msdfgen",
 		"libvorbis",
 		"libogg",
+		"tracy",
 	}
 
 	filter "system:windows"

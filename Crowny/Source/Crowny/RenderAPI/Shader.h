@@ -73,6 +73,10 @@ namespace Crowny
         Ref<BinaryShaderData> HullShader;
         Ref<BinaryShaderData> DomainShader;
         Ref<BinaryShaderData> ComputeShader;
+
+        Ref<BinaryShaderData> RaygenShader;
+        Ref<BinaryShaderData> MissShader;
+        Ref<BinaryShaderData> HitShader;
     };
 
     class ShaderTechnique;
@@ -91,10 +95,12 @@ namespace Crowny
         static Ref<ShaderRenderPass> Create(const ShaderRenderPassDesc& shaderDesc);
 
         void Compile();
-        bool IsCompute() { return m_ShaderDesc.ComputeShader != nullptr; }
+        bool IsCompute() const { return m_ShaderDesc.ComputeShader != nullptr; }
+        bool IsRayTrace() const { return m_ShaderDesc.RaygenShader != nullptr; }
         bool HasBlending() const;
 
         const Ref<GraphicsPipeline>& GetGraphicsPipeline() const { return m_GraphicsPipeline; }
+        const Ref<RayTracingPipeline>& GetRayTracingPipeline() const { return m_RayTracingPipeline; }
         const Ref<ComputePipeline>& GetComputePipeline() const { return m_ComputePipeline; }
 
         const ShaderRenderPassDesc& GetPassDesc() const { return m_ShaderDesc; }
@@ -102,6 +108,7 @@ namespace Crowny
     private:
         ShaderRenderPassDesc m_ShaderDesc;
         Ref<GraphicsPipeline> m_GraphicsPipeline;
+        Ref<RayTracingPipeline> m_RayTracingPipeline;
         Ref<ComputePipeline> m_ComputePipeline;
     };
 
@@ -127,27 +134,27 @@ namespace Crowny
 
     struct UniformBufferBlockMember
     {
+        String Name; // Maybe remove the names? It's already a map with key name?
         uint32_t Offset;
         ShaderDataType DataType;
-        String Name;
 
         template <typename Archive> void Serialize(Archive& archive) { archive(Offset, DataType, Name); }
     };
 
     struct UniformBufferBlockDesc
     {
+        String Name; // Maybe remove the names? It's already a map with key name?
+        Vector<UniformBufferBlockMember> Members;
         uint32_t Slot;
         uint32_t Set;
         uint32_t BlockSize;
-        String Name;
-        Vector<UniformBufferBlockMember> Members;
 
         template <typename Archive> void Serialize(Archive& archive) { archive(Name, Slot, Set, BlockSize, Members); }
     };
 
     struct UniformResourceDesc
     {
-        String Name;
+        String Name; // Maybe remove the names? It's already a map with key name?
         UniformResourceType Type;
         uint32_t Slot;
         uint32_t Set;
@@ -156,13 +163,24 @@ namespace Crowny
         template <typename Archive> void Serialize(Archive& archive) { archive(Name, Type, Slot, Set, ElementType); }
     };
 
+    struct AccelerationStructDesc
+    {
+        String Name; // Maybe remove the names? It's already a map with key name?
+        uint32_t Slot;
+        uint32_t Set;
+
+        template <typename Archive> void Serialize(Archive& archive) { archive(Name, Slot, Set); }
+    };
+
     struct UniformDesc
     {
         UnorderedMap<String, UniformBufferBlockDesc> Uniforms;
 
         UnorderedMap<String, UniformResourceDesc> Samplers;
         UnorderedMap<String, UniformResourceDesc> Textures;
+        UnorderedMap<String, UniformResourceDesc> Buffers;
         UnorderedMap<String, UniformResourceDesc> LoadStoreTextures;
+        UnorderedMap<String, AccelerationStructDesc> AccelerationStructures;
     };
 
     class ShaderStage

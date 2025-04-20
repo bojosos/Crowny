@@ -611,9 +611,9 @@ namespace Crowny
             }
         }
 
-        uint32_t width = std::max(m_Params.Width, 1U);
-        uint32_t height = std::max(m_Params.Height, 1U);
-        uint32_t depth = std::max(m_Params.Depth, 1U);
+        const uint32_t width = std::max(m_Params.Width, 1U);
+        const uint32_t height = std::max(m_Params.Height, 1U);
+        const uint32_t depth = std::max(m_Params.Depth, 1U);
 
         m_ImageCreateInfo.extent = { width, height, depth };
         m_ImageCreateInfo.mipLevels = m_Params.MipLevels + 1;
@@ -627,7 +627,7 @@ namespace Crowny
 
         VulkanDevice& device = *gVulkanRenderAPI().GetPresentDevice().get();
 
-        bool optimalTiling = tiling == VK_IMAGE_TILING_OPTIMAL;
+        const bool optimalTiling = tiling == VK_IMAGE_TILING_OPTIMAL;
         m_InternalFormat = VulkanUtils::GetClosestSupportedTextureFormat(device, m_Params.Format, m_Params.Shape, m_Params.Usage, optimalTiling);
         m_Image = CreateImage(device, m_InternalFormat);
     }

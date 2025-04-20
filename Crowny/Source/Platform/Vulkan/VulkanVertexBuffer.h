@@ -78,9 +78,6 @@ namespace Crowny
         VulkanVertexBuffer(void* vertices, uint32_t size, BufferUsage usage);
         ~VulkanVertexBuffer();
 
-        virtual void Bind() const override {};
-        virtual void Unbind() const override {};
-
         virtual const Ref<BufferLayout>& GetLayout() const override { return m_Layout; };
         virtual void SetLayout(const Ref<BufferLayout>& layout) override { m_Layout = layout; }
 
@@ -100,7 +97,7 @@ namespace Crowny
         VulkanBuffer* GetBuffer() const { return m_Buffer->GetBuffer(); }
 
     private:
-        VulkanGpuBuffer* m_Buffer;
+        VulkanGpuBuffer* m_Buffer; // TODO: Move this buffer and its usage into the base gpu buffer class. It's used heavily in all ancestors.
         BufferUsage m_Usage;
         Ref<BufferLayout> m_Layout;
     };

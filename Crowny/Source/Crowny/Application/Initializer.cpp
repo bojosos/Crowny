@@ -103,8 +103,9 @@ namespace Crowny
         ForwardRenderer::Init();
 
         const Path defaultFontPath = "Resources/Fonts/Roboto/roboto-thin.ttf.asset";
-        if (fs::exists(defaultFontPath)) {
-            const AssetHandle<Font> defaultFont=AssetManager::Get().Load<Font>(defaultFontPath);
+        if (fs::exists(defaultFontPath))
+        {
+            const AssetHandle<Font> defaultFont = AssetManager::Get().Load<Font>(defaultFontPath);
             if (defaultFont)
                 Font::SetDefaultFont(defaultFont);
             else

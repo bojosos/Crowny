@@ -56,7 +56,7 @@ namespace Crowny
         m_Window = RenderWindow::Create(applicationDesc.Window);
         m_Window->GetWindow()->SetEventCallback(CW_BIND_EVENT_FN(Application::OnEvent));
 
-        switch (Renderer::GetAPI())
+        switch (RenderAPI::Get().GetAPI())
         {
         case RenderAPI::API::OpenGL:
             m_ImGuiLayer = new ImGuiOpenGLLayer();
@@ -65,7 +65,7 @@ namespace Crowny
             m_ImGuiLayer = new ImGuiVulkanLayer();
             break;
         default:
-            CW_ENGINE_ASSERT(false, "Renderer API not supporter");
+            CW_ENGINE_ASSERT(false, "Renderer API not supported");
             m_ImGuiLayer = nullptr;
         }
         if (m_ImGuiLayer)

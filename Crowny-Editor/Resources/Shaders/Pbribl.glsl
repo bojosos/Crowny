@@ -170,7 +170,7 @@ vec3 calculateNormal()
 
 void main()
 {
-	outEntity=0;
+	outEntity=int(fs_in.normal*10);
 	vec3 lightDir = normalize(vec3(0.0, -0.5, -0.5));
 	float diff = max(dot(fs_in.normal, -lightDir), 0.0);
 

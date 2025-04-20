@@ -27,7 +27,7 @@ namespace Crowny
         bool IsDepthReadOnly() const { return m_DepthReadOnly; }
 
     private:
-        std::array<bool, MAX_FRAMEBUFFER_COLOR_ATTACHMENTS> m_ReadOnlyColors;
+        std::array<bool, MAX_FRAMEBUFFER_COLOR_ATTACHMENTS> m_ReadOnlyColors = { false };
         bool m_DepthReadOnly = false;
         VkPipeline m_Pipeline;
     };
@@ -51,7 +51,7 @@ namespace Crowny
         bool m_ScissorsEnabled = false;
         VkPipelineLayout m_PipelineLayout = VK_NULL_HANDLE;
         Ref<BufferLayout> m_BufferLayout;
-        VkPipelineShaderStageCreateInfo m_ShaderStageInfos[5] = {};
+        VkPipelineShaderStageCreateInfo m_ShaderStageInfos[GRAPHICS_SHADER_COUNT] = {};
         VkPipelineRasterizationStateCreateInfo m_RasterizationInfo = {};
         VkPipelineColorBlendAttachmentState m_BlendAttachmentStates[MAX_FRAMEBUFFER_COLOR_ATTACHMENTS] = {};
         VkPipelineColorBlendStateCreateInfo m_ColorBlendStateInfo = {};
@@ -86,6 +86,23 @@ namespace Crowny
         };
 
         UnorderedMap<GpuPipelineKey, VulkanPipeline*, GpuPipelineKey::HashFunction, GpuPipelineKey::EqualFunction> m_Pipelines;
+    };
+
+    class VulkanRayTracingPipeline : public RayTracingPipeline
+    {
+    public:
+        VulkanRayTracingPipeline(const RayTracingPipelineDesc& desc);
+        ~VulkanRayTracingPipeline();
+
+        VulkanPipeline* GetPipeline() const { return m_Pipeline; }
+        VkPipelineLayout GetLayout() const { return m_PipelineLayout; }
+        void RegisterPipelineResources(VulkanCmdBuffer* buffer);
+
+    private:
+        std::array<VkPipelineShaderStageCreateInfo, RAYTRACING_SHADER_COUNT> m_ShaderStageInfos = {};
+        std::array<VkRayTracingShaderGroupCreateInfoKHR, RAYTRACING_SHADER_COUNT> m_ShaderGroups = {};
+        VulkanPipeline* m_Pipeline;
+        VkPipelineLayout m_PipelineLayout;
     };
 
     class VulkanComputePipeline : public ComputePipeline

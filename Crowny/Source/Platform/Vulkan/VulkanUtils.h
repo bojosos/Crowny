@@ -95,6 +95,7 @@ namespace Crowny
         static VkPipelineStageFlags ShaderToPipelineStage(VkShaderStageFlags shaderStageFlags);
         static bool RangeOverlaps(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b);
         static VkFormat GetDummyViewFormat(GpuBufferFormat format);
+        static VkFormat GetBufferFormat(GpuBufferFormat format);
 
         static void CutRange(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b, std::array<VkImageSubresourceRange, 5>& output,
                              uint32_t& numAreas);

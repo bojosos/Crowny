@@ -35,10 +35,11 @@ namespace Crowny
 
     static ForwardRendererData* s_Data;
 
-    float skyboxVertices2[] = { -1.0f, -1.0f, 1.0f,  1.0f, -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f,
-                      1.0f,  1.0f,  -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  1.0f, -1.0f,
-                      -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  1.0f, -1.0f,
-                      1.0f,  1.0f,  1.0f,  1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f, -1.0f };
+    float skyboxVertices2[] = { -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f, -1.0f,
+                                -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,
+                                1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,
+                                -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,
+                                -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f };
 
     uint32_t skyboxIndices2[] = {
         0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23,
@@ -46,6 +47,7 @@ namespace Crowny
 
     void ForwardRenderer::Init()
     {
+        return;
         s_Data = new ForwardRendererData();
         // Ref<UniformParams>& uniforms = InspectorPanel::GetSelectedMaterial()->GetUniformParams();
 
@@ -69,10 +71,10 @@ namespace Crowny
         // Ref<Texture> albedo = Importer::Import()
         // Ref<Texture> diffuse = Importer::Get().Import<Texture>("C:\\dev\\Projects\\Project1\\Assets\\Models\\Achates\\textures\\mn_rpat_00_d.png");
         // Ref<Texture> normals = Importer::Get().Import<Texture>("C:\\dev\\Projects\\Project1\\Assets\\Models\\Achates\\textures\\mn_rpat_00_n.png");
-        Ref<Texture> diffuse =
-          Importer::Get().Import<Texture>("C:\\dev\\Projects\\Project1\\Assets\\Models\\b33-pollinator-robot\\textures\\Bee_low_03_-_Default_BaseColor.png");
-        Ref<Texture> normals =
-          Importer::Get().Import<Texture>("C:\\dev\\Projects\\Project1\\Assets\\Models\\b33-pollinator-robot\\textures\\Bee_low_03_-_Default_BaseColor.png");
+        Ref<Texture> diffuse = Importer::Get().Import<Texture>(
+          "C:\\dev\\Projects\\Project1\\Assets\\Models\\b33-pollinator-robot\\textures\\Bee_low_03_-_Default_BaseColor.png");
+        Ref<Texture> normals = Importer::Get().Import<Texture>(
+          "C:\\dev\\Projects\\Project1\\Assets\\Models\\b33-pollinator-robot\\textures\\Bee_low_03_-_Default_BaseColor.png");
         s_Data->PbrMaterial->SetTexture("albedoMap", diffuse);
         s_Data->PbrMaterial->SetTexture("metallicMap", Texture::WHITE);
         s_Data->PbrMaterial->SetTexture("roughnessMap", Texture::WHITE);
@@ -106,7 +108,7 @@ namespace Crowny
         const glm::vec3 camPos = camera.GetPosition();
         s_Data->PbrMaterial->SetVector3("camPos", camPos);
         s_Data->PbrMaterial->SetMatrix("viewProjection", camera.GetProjection() * viewMatrix);
-        
+
         rapi.SetGraphicsPipeline(s_Data->SkyboxMaterial->GetGraphicsPipeline());
         rapi.SetVertexBuffers(0, &s_Data->SkyboxVbo, 1);
         rapi.SetVertexLayout(s_Data->SkyboxVbo->GetLayout());
@@ -149,9 +151,6 @@ namespace Crowny
 
     void ForwardRenderer::Flush() {}
 
-    void ForwardRenderer::Shutdown()
-    {
-        delete s_Data;
-    }
+    void ForwardRenderer::Shutdown() { delete s_Data; }
 
 } // namespace Crowny

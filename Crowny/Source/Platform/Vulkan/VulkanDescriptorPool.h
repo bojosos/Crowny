@@ -89,6 +89,7 @@ namespace Crowny
         static const uint32_t s_MaxSampledBuffers = 512;
         static const uint32_t s_MaxBuffers = 512;
         static const uint32_t s_MaxUniformBuffers = 512;
+        static const uint32_t s_MaxAccelerationStructures = 256;
 
         VulkanDevice& m_Device;
         VkDescriptorPool m_Pool;

@@ -242,6 +242,18 @@ namespace Crowny
             ImGui::EndDisabled();
         }
 
+        if (m_CurrentDirectoryEntry == ProjectLibrary::Get().GetRoot().get())
+        {
+            ImGui::BeginDisabled();
+            ImGui::ArrowButton("^", ImGuiDir_Up);
+            ImGui::EndDisabled();
+        }
+        else
+        {
+            if (ImGui::ArrowButton("^", ImGuiDir_Up))
+                SetCurrentDirectory(m_CurrentDirectoryEntry->Parent);
+        }
+
         if (ImGui::Button("Refresh"))
         {
             ProjectLibrary::Get().Refresh(m_CurrentDirectoryEntry->Filepath);

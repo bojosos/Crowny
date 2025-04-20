@@ -223,13 +223,13 @@ namespace Crowny
 
     Ref<UniformParamInfo> UniformParamInfo::Create(const UniformParamDesc& desc)
     {
-        switch (Renderer::GetAPI())
+        switch (RenderAPI::Get().GetAPI())
         {
         // case RenderAPI::API::OpenGL: return CreateRef<OpenGLShader>(m_Filepath);
         case RenderAPI::API::Vulkan:
             return CreateRef<VulkanUniformParamInfo>(desc);
         default:
-            CW_ENGINE_ASSERT(false, "Renderer API not supporter");
+            CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
         }
 

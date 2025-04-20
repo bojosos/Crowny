@@ -124,11 +124,10 @@ namespace Crowny
 
         s_Data->QuadIndexBuffer = IndexBuffer::Create(indices, RENDERER_INDICES_SIZE);
         s_Data->QuadVertexBuffer = VertexBuffer::Create(RENDERER_BUFFER_SIZE, BufferUsage::DYNAMIC_DRAW);
-        Ref<BufferLayout> layout = CreateRef<BufferLayout>(BufferLayout{ BufferElement(ShaderDataType::Float4, "a_Position"),
-                                BufferElement(ShaderDataType::Float4, "a_Color"),
-                                BufferElement(ShaderDataType::Float2, "a_Uvs"),
-                                BufferElement(ShaderDataType::Float, "a_Tid"),
-                                BufferElement(ShaderDataType::Int, "a_ObjectId") });
+        Ref<BufferLayout> layout =
+          CreateRef<BufferLayout>(BufferLayout{ BufferElement(ShaderDataType::Float4, "a_Position"), BufferElement(ShaderDataType::Float4, "a_Color"),
+                                                BufferElement(ShaderDataType::Float2, "a_Uvs"), BufferElement(ShaderDataType::Float, "a_Tid"),
+                                                BufferElement(ShaderDataType::Int, "a_ObjectId") });
         s_Data->QuadVertexBuffer->SetLayout(layout);
 
         // AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(RENDERER2D_SHADER_PATH);
@@ -468,15 +467,15 @@ namespace Crowny
             for (uint32_t i = 0; i < 8; i++)
             {
                 if (s_Data->Textures[i])
-                    s_Data->QuadMaterial->SetTexture("u_Texture" + std::to_string(i+1), s_Data->Textures[i]);
+                    s_Data->QuadMaterial->SetTexture("u_Texture" + std::to_string(i + 1), s_Data->Textures[i]);
                 else
-                    s_Data->QuadMaterial->SetTexture("u_Texture" + std::to_string(i+1), s_Data->Textures[0]);
+                    s_Data->QuadMaterial->SetTexture("u_Texture" + std::to_string(i + 1), s_Data->Textures[0]);
             }
             RenderAPI::Get().SetUniforms(s_Data->QuadMaterial->GetUniformParams());
 
             RenderAPI::Get().SetVertexBuffers(0, &s_Data->QuadVertexBuffer, 1);
             RenderAPI::Get().SetIndexBuffer(s_Data->QuadIndexBuffer);
-            s_Data->QuadVertexBuffer->WriteData(0, s_Data->QuadVertexCount * sizeof(VertexData) , s_Data->QuadTmpBuffer, BWT_DISCARD);
+            s_Data->QuadVertexBuffer->WriteData(0, s_Data->QuadVertexCount * sizeof(VertexData), s_Data->QuadTmpBuffer, BWT_DISCARD);
             RenderAPI::Get().DrawIndexed(0, s_Data->QuadIndexCount, 0, s_Data->QuadVertexCount);
         }
     }

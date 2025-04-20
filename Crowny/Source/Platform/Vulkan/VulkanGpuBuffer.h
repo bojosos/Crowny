@@ -18,10 +18,15 @@ namespace Crowny
     public:
         VulkanBuffer(VulkanResourceManager* owner, VkBuffer buffer, VmaAllocation allocation, uint32_t rowPitch = 0, uint32_t slicePitch = 0);
         ~VulkanBuffer();
+
         VkBuffer GetHandle() const { return m_Buffer; }
-        uint8_t* Map(VkDeviceSize offset, VkDeviceSize length) const;
         uint32_t GetRowPitch() const { return m_RowPitch; }
         uint32_t GetSliceHeight() const { return m_SliceHeight; }
+        VkDeviceAddress GetDeviceAddress() const;
+        VkBufferView GetView(VkFormat format);
+        void FreeView(VkBufferView view);
+
+        uint8_t* Map(VkDeviceSize offset, VkDeviceSize length) const;
         void Unmap();
         void Copy(VulkanCmdBuffer* cb, VulkanBuffer* dest, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize length);
         void Copy(VulkanCmdBuffer* cmdBuffer, VulkanImage* dest, const VkExtent3D& extent, const VkImageSubresourceLayers& range,
@@ -29,8 +34,6 @@ namespace Crowny
         void Update(VulkanCmdBuffer* buffer, uint8_t* data, VkDeviceSize offset, VkDeviceSize length);
         virtual void NotifyDone(uint32_t globalQueue, VulkanAccessFlags useFlags) override;
         virtual void NotifyUnbound() override;
-        VkBufferView GetView(VkFormat format);
-        void FreeView(VkBufferView view);
 
     private:
         struct ViewInfo
@@ -59,7 +62,11 @@ namespace Crowny
         {
             BUFFER_VERTEX,
             BUFFER_INDEX,
-            BUFFER_UNIFORM
+            BUFFER_UNIFORM,
+            BUFFER_GENERIC,
+            BUFFER_STRUCTURED,
+            BUFFER_RAYTRACING, // Maybe move to usage?
+            BUFFER_SHADER_TABLE
         };
 
         VulkanGpuBuffer(BufferType type, BufferUsage usage, uint32_t size);

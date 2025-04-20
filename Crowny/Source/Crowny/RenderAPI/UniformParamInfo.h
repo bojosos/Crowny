@@ -4,6 +4,7 @@ namespace Crowny
 {
     struct UniformDesc;
 
+    // TODO: Inherit? Or just different constructors for UniformParamInfo?
     struct UniformParamDesc
     {
         Ref<UniformDesc> FragmentParams;
@@ -11,7 +12,12 @@ namespace Crowny
         Ref<UniformDesc> GeometryParams;
         Ref<UniformDesc> HullParams;
         Ref<UniformDesc> DomainParams;
+
         Ref<UniformDesc> ComputeParams;
+
+        Ref<UniformDesc> HitParams;
+        Ref<UniformDesc> MissParams;
+        Ref<UniformDesc> RaygenParams;
     };
 
     struct UniformBinding
@@ -30,6 +36,7 @@ namespace Crowny
             LoadStoreTexture,
             Buffer,
             SamplerState,
+            AccelStruct,
             Count
         };
 
@@ -40,7 +47,7 @@ namespace Crowny
 
         uint32_t GetNumElements() const { return m_NumElements; }
 
-        uint32_t GetNumElements(ParamType type) { return m_NumElementsPerType[(int)type]; }
+        uint32_t GetNumElements(ParamType type) const { return m_NumElementsPerType[(int)type]; }
 
         uint32_t GetSequentialSlot(ParamType type, uint32_t set, uint32_t slot) const;
 
@@ -68,7 +75,7 @@ namespace Crowny
             uint32_t Slot;
         };
 
-        std::array<Ref<UniformDesc>, 6> m_ParamDescs;
+        std::array<Ref<UniformDesc>, SHADER_COUNT> m_ParamDescs;
 
         uint32_t m_NumSets;
         uint32_t m_NumElements;

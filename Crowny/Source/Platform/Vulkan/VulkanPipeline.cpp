@@ -44,15 +44,22 @@ namespace Crowny
         return true;
     }
 
-    VulkanGraphicsPipeline::VulkanGraphicsPipeline(const PipelineStateDesc& desc) : GraphicsPipeline(desc)
+    static VkPipelineDynamicStateCreateInfo GetDynamicStateCreateInfo()
     {
         static Vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_STENCIL_REFERENCE };
 
-        m_DynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-        m_DynamicStateCreateInfo.pNext = nullptr;
-        m_DynamicStateCreateInfo.flags = 0;
-        m_DynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
-        m_DynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+        VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo;
+        dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dynamicStateCreateInfo.pNext = nullptr;
+        dynamicStateCreateInfo.flags = 0;
+        dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
+        dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+        return dynamicStateCreateInfo;
+    }
+
+    VulkanGraphicsPipeline::VulkanGraphicsPipeline(const PipelineStateDesc& desc) : GraphicsPipeline(desc)
+    {
+        m_DynamicStateCreateInfo = GetDynamicStateCreateInfo();
 
         std::pair<VkShaderStageFlagBits, ShaderStage*> stages[] = {
             { VK_SHADER_STAGE_VERTEX_BIT, m_Data.VertexShader.get() },
@@ -70,7 +77,15 @@ namespace Crowny
             if (shader == nullptr)
                 continue;
 
-            m_ShaderStageInfos[outputIdx] = shader->GetShaderStage();
+            VkPipelineShaderStageCreateInfo& stageCI = m_ShaderStageInfos[outputIdx];
+            stageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            stageCI.pNext = nullptr;
+            stageCI.flags = 0;
+            stageCI.stage = stages[i].first;
+            stageCI.module = VK_NULL_HANDLE;
+            stageCI.pName = "main"; // TODO: Entry points
+            stageCI.pSpecializationInfo = nullptr;
+
             outputIdx++;
         }
 
@@ -185,7 +200,7 @@ namespace Crowny
         m_PipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
         m_PipelineInfo.pNext = nullptr;
         m_PipelineInfo.flags = 0;
-        m_PipelineInfo.stageCount = outputIdx;
+        m_PipelineInfo.stageCount = usedStages;
         m_PipelineInfo.pStages = m_ShaderStageInfos;
         m_PipelineInfo.pVertexInputState = nullptr; // &m_VertexInputStateCreateInfo; // runtime
         m_PipelineInfo.pInputAssemblyState = &m_InputAssemblyInfo;
@@ -214,7 +229,7 @@ namespace Crowny
         for (uint32_t i = 0; i < numLayouts; i++)
             layouts[i] = paramInfo.GetLayout(i);
         m_PipelineLayout = descManager.GetPipelineLayout(layouts, numLayouts);
-        delete[] layouts;
+        // delete[] layouts;
     }
 
     VulkanGraphicsPipeline::~VulkanGraphicsPipeline()
@@ -334,9 +349,9 @@ namespace Crowny
                 continue;
             VulkanShaderModule* module = shader->GetShaderModule();
             if (module != nullptr)
-                m_ShaderStageInfos[i].module = module->GetHandle();
+                m_ShaderStageInfos[outputIdx].module = module->GetHandle();
             else
-                m_ShaderStageInfos[i].module = VK_NULL_HANDLE;
+                m_ShaderStageInfos[outputIdx].module = VK_NULL_HANDLE;
             outputIdx++;
         }
 
@@ -356,6 +371,94 @@ namespace Crowny
         return device.GetResourceManager().Create<VulkanPipeline>(pipeline);
     }
 
+    VulkanRayTracingPipeline::VulkanRayTracingPipeline(const RayTracingPipelineDesc& desc) : RayTracingPipeline(desc)
+    {
+        std::pair<VkShaderStageFlagBits, ShaderStage*> stages[] = { { VK_SHADER_STAGE_RAYGEN_BIT_KHR, m_Data.RaygenShader.get() },
+                                                                    { VK_SHADER_STAGE_MISS_BIT_KHR, m_Data.MissShader.get() },
+                                                                    { VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, m_Data.HitShader.get() } };
+
+        uint32_t outputIdx = 0;
+        const uint32_t numStages = sizeof(stages) / sizeof(stages[0]);
+        for (uint32_t i = 0; i < numStages; i++)
+        {
+            VulkanShader* shader = static_cast<VulkanShader*>(stages[i].second);
+            if (shader == nullptr)
+                continue;
+
+            VkPipelineShaderStageCreateInfo& stageCI = m_ShaderStageInfos[outputIdx];
+            stageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            stageCI.pNext = nullptr;
+            stageCI.flags = 0;
+            stageCI.stage = stages[i].first;
+            stageCI.module = shader->GetShaderModule()->GetHandle();
+            stageCI.pName = "main"; // TODO: Entry points
+            stageCI.pSpecializationInfo = nullptr;
+
+            VkRayTracingShaderGroupCreateInfoKHR& shaderGroupCI = m_ShaderGroups[i];
+            shaderGroupCI.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+            const bool closestHit = stages[i].first != VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+            shaderGroupCI.type = closestHit ? VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR : VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+            shaderGroupCI.generalShader = closestHit ? VK_SHADER_UNUSED_KHR : i;
+            shaderGroupCI.closestHitShader = closestHit ? i : VK_SHADER_UNUSED_KHR;
+            shaderGroupCI.anyHitShader = VK_SHADER_UNUSED_KHR;
+            shaderGroupCI.intersectionShader = VK_SHADER_UNUSED_KHR;
+
+            outputIdx++;
+        }
+
+        VulkanRenderAPI& rapi = gVulkanRenderAPI();
+        const VulkanDevice& device = *rapi.GetPresentDevice();
+        VulkanDescriptorManager& descriptorManager = device.GetDescriptorManager();
+        VulkanResourceManager& resourceManager = device.GetResourceManager();
+        VulkanUniformParamInfo* vkParams = static_cast<VulkanUniformParamInfo*>(m_ParamInfo.get());
+
+        uint32_t numLayouts = vkParams->GetNumSets();
+        VulkanDescriptorLayout** layouts = new VulkanDescriptorLayout*[numLayouts];
+        for (uint32_t i = 0; i < numLayouts; i++)
+            layouts[i] = vkParams->GetLayout(i);
+
+        // VkPipelineDynamicStateCreateInfo dynamicState = GetDynamicStateCreateInfo();
+        VkRayTracingPipelineCreateInfoKHR rayTracingPipelineCI{};
+        rayTracingPipelineCI.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
+        rayTracingPipelineCI.pNext = nullptr;
+        rayTracingPipelineCI.stageCount = outputIdx;
+        rayTracingPipelineCI.pStages = m_ShaderStageInfos.data();
+        rayTracingPipelineCI.groupCount = outputIdx;
+        rayTracingPipelineCI.pGroups = m_ShaderGroups.data();
+        rayTracingPipelineCI.maxPipelineRayRecursionDepth = 1;
+        rayTracingPipelineCI.layout = descriptorManager.GetPipelineLayout(layouts, numLayouts);
+        rayTracingPipelineCI.pDynamicState = nullptr; //&dynamicState;
+        // delete[] layouts;
+
+        VkPipeline pipeline = VK_NULL_HANDLE;
+        const VkResult result = vkCreateRayTracingPipelinesKHR(device.GetLogicalDevice(), VK_NULL_HANDLE, device.GetPipelineCache(), 1,
+                                                               &rayTracingPipelineCI, gVulkanAllocator, &pipeline);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        m_Pipeline = resourceManager.Create<VulkanPipeline>(pipeline);
+        m_PipelineLayout = rayTracingPipelineCI.layout;
+    }
+
+    VulkanRayTracingPipeline::~VulkanRayTracingPipeline() { m_Pipeline->Destroy(); }
+
+    void VulkanRayTracingPipeline::RegisterPipelineResources(VulkanCmdBuffer* buffer)
+    {
+        std::array<VulkanShader*, 5> shaders = {
+            static_cast<VulkanShader*>(m_Data.RaygenShader.get()),
+            static_cast<VulkanShader*>(m_Data.MissShader.get()),
+            static_cast<VulkanShader*>(m_Data.HitShader.get()),
+        };
+
+        for (const VulkanShader* shader : shaders)
+        {
+            if (shader != nullptr)
+            {
+                VulkanShaderModule* shaderModule = shader->GetShaderModule();
+                if (shaderModule != nullptr)
+                    buffer->RegisterResource(shaderModule, VulkanAccessFlagBits::Read);
+            }
+        }
+    }
+
     VulkanComputePipeline::VulkanComputePipeline(const Ref<ShaderStage>& shader) : ComputePipeline(shader)
     {
         const VulkanShader* vulkanShader = static_cast<VulkanShader*>(m_Shader.get());
@@ -367,7 +470,6 @@ namespace Crowny
         // stageCI.pName = vulkanShader->entry;
         stageCI.pName = "main";
         stageCI.pSpecializationInfo = nullptr;
-        stageCI.module = VK_NULL_HANDLE;
 
         VkComputePipelineCreateInfo pipelineCI;
         pipelineCI.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
@@ -394,13 +496,17 @@ namespace Crowny
         else
             pipelineCI.stage.module = VK_NULL_HANDLE;
         pipelineCI.layout = descriptorManager.GetPipelineLayout(layouts, numLayouts);
-        VkPipeline pipeline;
+        // delete[] layouts;
+
+        VkPipeline pipeline = VK_NULL_HANDLE;
         const VkResult result =
           vkCreateComputePipelines(device.GetLogicalDevice(), device.GetPipelineCache(), 1, &pipelineCI, gVulkanAllocator, &pipeline);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         m_Pipeline = resourceManager.Create<VulkanPipeline>(pipeline);
         m_PipelineLayout = pipelineCI.layout;
     }
+
+    VulkanComputePipeline::~VulkanComputePipeline() { m_Pipeline->Destroy(); }
 
     void VulkanComputePipeline::RegisterPipelineResources(VulkanCmdBuffer* cmdBuffer)
     {
@@ -412,7 +518,5 @@ namespace Crowny
                 cmdBuffer->RegisterResource(module, VulkanAccessFlagBits::Read);
         }
     }
-
-    VulkanComputePipeline::~VulkanComputePipeline() {}
 
 } // namespace Crowny

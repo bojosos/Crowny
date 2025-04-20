@@ -25,6 +25,7 @@ void main ()
 
 layout (location = 0) in vec3 inUVW;
 layout (location = 0) out vec4 outColor;
+layout (location = 1) out int outEntity;
 
 layout (binding = 1) uniform Params
 {
@@ -49,6 +50,7 @@ vec3 Uncharted2Tonemap(vec3 color)
 
 void main()
 {
+    outEntity = 0;
     vec3 color = texture(samplerEnv, inUVW).rgb;
 
     color = Uncharted2Tonemap(color * params.exposure);

@@ -57,7 +57,7 @@ namespace Crowny
         Vector<Vector<SubMesh>> subMeshes;
         for (uint32_t i = 0; i < scene->mNumMeshes; i++)
         {
-            if (i==0)
+            if (i == 0)
                 continue;
             const aiMesh* mesh = scene->mMeshes[i];
             const uint32_t vertexCount = mesh->mNumVertices;
@@ -84,7 +84,7 @@ namespace Crowny
             }
             const bool hasVertexColors = mesh->HasVertexColors(0);
             // if (hasVertexColors)
-                bufferLayout.AddBufferElement(BufferElement(ShaderDataType::Float4, VertexAttribute::Color));
+            bufferLayout.AddBufferElement(BufferElement(ShaderDataType::Float4, VertexAttribute::Color));
 
             IndexType indexType;
             if (meshImportOptions->IndexFormat == MeshIndexFormat::Auto)
@@ -202,8 +202,8 @@ namespace Crowny
 
     static UnorderedMap<String, Ref<Texture>> textureCache;
 
-    static Ref<Texture> ImportTexture(const aiMaterial* meshMaterial, const Ref<Material>& material, Vector<Ref<Asset>>& assets, aiTextureType textureType,
-                                      const String& shaderParameter)
+    static Ref<Texture> ImportTexture(const aiMaterial* meshMaterial, const Ref<Material>& material, Vector<Ref<Asset>>& assets,
+                                      aiTextureType textureType, const String& shaderParameter)
     {
         aiString texturePath;
         if (meshMaterial->GetTexture(textureType, 0, &texturePath) == aiReturn_SUCCESS)
@@ -230,7 +230,7 @@ namespace Crowny
         Ref<Asset> asset;
         const aiScene* scene = ReadAssimpScene(path, meshImportOptions);
         if (scene)
-           return ReadMeshData(path.filename().string(), scene, meshImportOptions);
+            return ReadMeshData(path.filename().string(), scene, meshImportOptions);
         return nullptr;
     }
 
@@ -272,7 +272,7 @@ namespace Crowny
             res = meshMaterial->GetTexture(AI_MATKEY_BASE_COLOR_TEXTURE, &diffuseTex);
             if (res == aiReturn_SUCCESS)
                 CW_ENGINE_INFO("Diffuse texture: {}", diffuseTex.C_Str());
-            bool useMetalness=false;
+            bool useMetalness = false;
             res = meshMaterial->Get(AI_MATKEY_USE_METALLIC_MAP, useMetalness);
             if (res == aiReturn_SUCCESS)
                 CW_ENGINE_INFO("Use metalness: {}", useMetalness);
@@ -297,7 +297,8 @@ namespace Crowny
             {
                 aiString outPath;
                 if (meshMaterial->GetTexture((aiTextureType)j, 0, &outPath) == aiReturn_SUCCESS)
-                    CW_ENGINE_INFO("Material {} texture: {} -> {}", meshMaterial->GetName().C_Str(), aiTextureTypeToString((aiTextureType)j), outPath.C_Str());
+                    CW_ENGINE_INFO("Material {} texture: {} -> {}", meshMaterial->GetName().C_Str(), aiTextureTypeToString((aiTextureType)j),
+                                   outPath.C_Str());
             }
         }
         return assets;

@@ -2,8 +2,10 @@
 
 #include "Platform/Vulkan/VulkanUniformParams.h"
 
+#include "Platform/Vulkan/VulkanAccelerationStructure.h"
 #include "Platform/Vulkan/VulkanCommandBuffer.h"
 #include "Platform/Vulkan/VulkanDescriptorPool.h"
+#include "Platform/Vulkan/VulkanGenericGpuBuffer.h"
 #include "Platform/Vulkan/VulkanGpuBuffer.h"
 #include "Platform/Vulkan/VulkanGpuBufferManager.h"
 #include "Platform/Vulkan/VulkanRenderAPI.h"
@@ -112,23 +114,30 @@ namespace Crowny
 
     VulkanUniformParams::VulkanUniformParams(const Ref<UniformParamInfo>& params) : UniformParams(params)
     {
-        VulkanUniformParamInfo& paramInfo = static_cast<VulkanUniformParamInfo&>(*m_ParamInfo.get());
+        const VulkanUniformParamInfo& paramInfo = static_cast<VulkanUniformParamInfo&>(*m_ParamInfo.get());
 
-        uint32_t numParamBlocks = paramInfo.GetNumElements(UniformParamInfo::ParamType::ParamBlock);
-        uint32_t numTextures = paramInfo.GetNumElements(UniformParamInfo::ParamType::Texture);
-        uint32_t numStorageTextures = paramInfo.GetNumElements(UniformParamInfo::ParamType::LoadStoreTexture);
-        uint32_t numBuffers = paramInfo.GetNumElements(UniformParamInfo::ParamType::Buffer);
-        uint32_t numSamplers = paramInfo.GetNumElements(UniformParamInfo::ParamType::SamplerState);
-        uint32_t numSets = paramInfo.GetNumSets();
-        uint32_t numBindings = paramInfo.GetNumElements();
+        const uint32_t numTextures = paramInfo.GetNumElements(UniformParamInfo::ParamType::Texture);
+        const uint32_t numStorageTextures = paramInfo.GetNumElements(UniformParamInfo::ParamType::LoadStoreTexture);
+        const uint32_t numParamBlocks = paramInfo.GetNumElements(UniformParamInfo::ParamType::ParamBlock);
+        const uint32_t numBuffers = paramInfo.GetNumElements(UniformParamInfo::ParamType::Buffer);
+        const uint32_t numSamplers = paramInfo.GetNumElements(UniformParamInfo::ParamType::SamplerState);
+        const uint32_t numAccelStructs = paramInfo.GetNumElements(UniformParamInfo::ParamType::AccelStruct);
+        const uint32_t numSets = paramInfo.GetNumSets();
+        const uint32_t numBindings = paramInfo.GetNumElements();
 
         if (numSets == 0)
             return;
+
         m_SetsDirty = new bool[numSets];
-        m_UniformBuffers = new VkBuffer[numParamBlocks];
-        m_SampledImages = new VkImage[numTextures];
-        m_Samplers = new VkSampler[numSamplers];
+
         m_PerSetData = new PerSetData[numSets];
+        m_SampledImages = new VkImage[numTextures];
+        m_StorageImages = new VkImage[numStorageTextures];
+        m_UniformBuffers = new VkBuffer[numParamBlocks];
+        m_Buffers = new VkBuffer[numBuffers];
+        m_Samplers = new VkSampler[numSamplers];
+        m_AccelerationStructs = new VkAccelerationStructureKHR[numAccelStructs];
+
         const Ref<VulkanDevice>& device = gVulkanRenderAPI().GetPresentDevice();
         VulkanGpuBufferManager& bufferManager = VulkanGpuBufferManager::Get();
         VulkanDescriptorManager& descManager = device->GetDescriptorManager();
@@ -137,7 +146,7 @@ namespace Crowny
 
         for (uint32_t i = 0; i < numSets; i++)
         {
-            uint32_t numBindingsPerSet = paramInfo.GetNumBindings(i);
+            const uint32_t numBindingsPerSet = paramInfo.GetNumBindings(i);
             PerSetData& setData = m_PerSetData[i];
             new (&setData.Sets) Vector<VulkanDescriptorSet*>();
 
@@ -151,10 +160,10 @@ namespace Crowny
             setData.Count = numBindingsPerSet;
             setData.LatestSet = descManager.CreateSet(layout);
             setData.Sets.push_back(setData.LatestSet);
-            VkDescriptorSetLayoutBinding* setBindings = paramInfo.GetBindings(i);
+            const VkDescriptorSetLayoutBinding* setBindings = paramInfo.GetBindings(i);
 
-            UniformResourceType* types = paramInfo.GetLayoutTypes(i);
-            GpuBufferFormat* formats = paramInfo.GetLayoutElementTypes(i);
+            const UniformResourceType* types = paramInfo.GetLayoutTypes(i);
+            const GpuBufferFormat* formats = paramInfo.GetLayoutElementTypes(i);
 
             for (uint32_t j = 0; j < numBindingsPerSet; j++)
             {
@@ -167,7 +176,7 @@ namespace Crowny
                 writeSetInfo.descriptorCount = setBindings[j].descriptorCount;
                 writeSetInfo.descriptorType = setBindings[j].descriptorType;
 
-                uint32_t slot = setBindings[j].binding;
+                const uint32_t slot = setBindings[j].binding;
 
                 if (writeSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER)
                 {
@@ -180,16 +189,16 @@ namespace Crowny
                     writeSetInfo.pBufferInfo = nullptr;
                     writeSetInfo.pTexelBufferView = nullptr;
                 }
-                else
+                else if (writeSetInfo.descriptorType != VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR)
                 {
-                    bool isImage = writeSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
-                                   writeSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
-                                   writeSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+                    const bool isImage = writeSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
+                                         writeSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
+                                         writeSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 
                     if (isImage)
                     {
-                        VulkanImage* res = VulkanTextureManager::Get().GetDummyTexture(types[j])->GetImage();
-                        VkFormat format = VulkanTextureManager::GetDummyViewFormat(formats[j]);
+                        const VulkanImage* res = VulkanTextureManager::Get().GetDummyTexture(types[j])->GetImage();
+                        const VkFormat format = VulkanTextureManager::GetDummyViewFormat(formats[j]);
 
                         VkDescriptorImageInfo& imageInfo = setData.WriteInfos[j].Image;
 
@@ -204,14 +213,14 @@ namespace Crowny
                         }
                         else
                         {
-                            bool isCombinedImageSampler = writeSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                            const bool isCombinedImageSampler = writeSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                             if (isCombinedImageSampler)
                                 imageInfo.sampler = vkDefaultSampler->GetHandle();
                             else
                                 imageInfo.sampler = VK_NULL_HANDLE;
                             imageInfo.imageView = res->GetView(format, false);
                             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                            uint32_t seqIdx = paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::Texture, i, slot);
+                            const uint32_t seqIdx = paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::Texture, i, slot);
                             m_SampledImages[seqIdx] = res->GetHandle();
                         }
                         writeSetInfo.pImageInfo = &imageInfo;
@@ -247,27 +256,40 @@ namespace Crowny
                             writeSetInfo.pImageInfo = nullptr;
                         }
                         else
-                        { /*
-                             writeSetInfo.pBufferInfo = nullptr;
-                             bool isLoadStore = writeSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-                             VulkanBuffer* buffer;
-                             if (isLoadStore)
-                                 buffer = bufferManager.GetDummyStorageBuffer()->GetBuffer();
-                             else
-                                 buffer = bufferManager.GetDummyReadBuffer()->GetBuffer();
+                        {
+                            writeSetInfo.pBufferInfo = nullptr;
+                            const bool isLoadStore = writeSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+                            VulkanBuffer* buffer;
+                            if (isLoadStore)
+                                buffer = bufferManager.GetDummyStorageBuffer()->GetBuffer();
+                            else
+                                buffer = bufferManager.GetDummyReadBuffer()->GetBuffer();
 
-                             VkFormat format = VulkanUtils::GetBufferFormat(types[j]);
-                             VkBufferView bufferView = buffer->GetView(format);
-                             setData.WriteInfos[j].BufferView = bufferView;
-                             writeSetInfo.pBufferInfo = nullptr;
-                             writeSetInfo.pTexelBufferView = &setData.WriteInfos[j].BufferView;
+                            const VkFormat format = VulkanUtils::GetBufferFormat(formats[j]);
+                            const VkBufferView bufferView = buffer->GetView(format);
+                            setData.WriteInfos[j].BufferView = bufferView;
+                            writeSetInfo.pBufferInfo = nullptr;
+                            writeSetInfo.pTexelBufferView = &setData.WriteInfos[j].BufferView;
 
-                             uint32_t seqIdx = paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::Buffer, j,
-                             slot); m_Buffers[seqIdx] = buffer->GetHandle();*/
+                            const uint32_t seqIdx = paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::Buffer, j, slot);
+                            m_Buffers[seqIdx] = buffer->GetHandle();
                         }
 
                         writeSetInfo.pImageInfo = nullptr;
                     }
+                }
+                else
+                {
+                    // TODO: Default stuffs
+                    VkWriteDescriptorSetAccelerationStructureKHR& accelStructInfo = setData.WriteInfos[j].AccelStruct.AccelStructDesc;
+                    accelStructInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+                    accelStructInfo.pNext = nullptr;
+                    accelStructInfo.accelerationStructureCount = 1;
+                    accelStructInfo.pAccelerationStructures = &setData.WriteInfos[j].AccelStruct.AccelStruct;
+                    writeSetInfo.pNext = &accelStructInfo;
+                    writeSetInfo.pImageInfo = nullptr;
+                    writeSetInfo.pBufferInfo = nullptr;
+                    writeSetInfo.pTexelBufferView = nullptr;
                 }
             }
         }
@@ -281,8 +303,15 @@ namespace Crowny
             for (auto& entry : m_PerSetData[i].Sets)
                 entry->Destroy();
 
-            m_PerSetData[i].Sets.~vector<VulkanDescriptorSet*>();
+            m_PerSetData[i].Sets.~Vector<VulkanDescriptorSet*>();
         }
+        delete[] m_BufferBlocks;
+        delete[] m_Buffers;
+        delete[] m_SampledImages;
+        delete[] m_Samplers;
+        delete[] m_PerSetData;
+        delete[] m_StorageImages;
+        delete[] m_AccelerationStructs;
     }
 
     void VulkanUniformParams::SetUniformBlockBuffer(uint32_t set, uint32_t slot, const Ref<UniformBufferBlock>& buffer)
@@ -290,7 +319,6 @@ namespace Crowny
         UniformParams::SetUniformBlockBuffer(set, slot, buffer);
 
         VulkanUniformParamInfo& paramInfo = static_cast<VulkanUniformParamInfo&>(*m_ParamInfo.get());
-        VulkanUniformBufferBlock* block = static_cast<VulkanUniformBufferBlock*>(buffer.get());
         uint32_t bindingIdx = paramInfo.GetBindingIdx(set, slot);
         if (bindingIdx == (uint32_t)-1)
         {
@@ -298,23 +326,23 @@ namespace Crowny
             return;
         }
         uint32_t seqIdx = paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::ParamBlock, set, slot);
-
         VulkanUniformBufferBlock* blockBuffer = static_cast<VulkanUniformBufferBlock*>(buffer.get());
-
         VulkanBuffer* result = nullptr;
-        if (block != nullptr)
-            result = block->GetBuffer();
+        if (blockBuffer != nullptr)
+            result = blockBuffer->GetBuffer();
 
         PerSetData& data = m_PerSetData[set];
         if (buffer != nullptr && result)
         {
-            VkBuffer vkBuffer = result->GetHandle();
+            const VkBuffer vkBuffer = result->GetHandle();
             data.WriteInfos[bindingIdx].Buffer.buffer = vkBuffer;
             m_UniformBuffers[seqIdx] = vkBuffer;
         }
         else
         {
-            CW_ENGINE_ASSERT(false);
+            const VkBuffer vkBuffer = VulkanGpuBufferManager::Get().GetDummyUniformBuffer()->GetHandle();
+            data.WriteInfos[bindingIdx].Buffer.buffer = vkBuffer;
+            m_UniformBuffers[seqIdx] = vkBuffer;
         }
 
         m_SetsDirty[set] = true;
@@ -403,14 +431,143 @@ namespace Crowny
         m_SetsDirty[set] = true;
     }
 
+    void VulkanUniformParams::SetLoadStoreTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture, const TextureSurface& surface)
+    {
+        UniformParams::SetLoadStoreTexture(set, slot, texture, surface);
+
+        const VulkanUniformParamInfo& paramInfo = static_cast<VulkanUniformParamInfo&>(*m_ParamInfo);
+        const uint32_t bindingIdx = paramInfo.GetBindingIdx(set, slot);
+        if (bindingIdx == -1)
+        {
+            CW_ENGINE_ERROR("Set {}, slot {} not used by shader", set, slot);
+            return;
+        }
+
+        const uint32_t sequentialIdx = paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::LoadStoreTexture, set, slot);
+        const VulkanTexture* vulkanTexture = static_cast<VulkanTexture*>(texture.get());
+        const VulkanImage* image = texture != nullptr ? vulkanTexture->GetImage() : nullptr;
+        if (image != nullptr)
+        {
+            m_PerSetData[set].WriteInfos[bindingIdx].Image.imageView = image->GetView(surface, false);
+            m_StorageImages[sequentialIdx] = image->GetHandle();
+        }
+        else
+        {
+            const UniformResourceType* types = paramInfo.GetLayoutTypes(set);
+            const GpuBufferFormat* elementTypes = paramInfo.GetLayoutElementTypes(set);
+
+            image = VulkanTextureManager::Get().GetDummyTexture(types[bindingIdx])->GetImage();
+            const VkFormat format = VulkanTextureManager::GetDummyViewFormat(elementTypes[bindingIdx]);
+            m_PerSetData[set].WriteInfos[bindingIdx].Image.imageView = image->GetView(format, false);
+            m_StorageImages[sequentialIdx] = image->GetHandle();
+        }
+
+        m_SetsDirty[set] = true;
+    }
+
+    void VulkanUniformParams::SetBuffer(uint32_t set, uint32_t slot, const Ref<GenericGpuBuffer>& genericBuffer)
+    {
+        UniformParams::SetBuffer(set, slot, genericBuffer);
+
+        const VulkanUniformParamInfo& paramInfo = static_cast<VulkanUniformParamInfo&>(*m_ParamInfo);
+        const uint32_t bindingIdx = paramInfo.GetBindingIdx(set, slot);
+        if (bindingIdx == -1)
+        {
+            CW_ENGINE_ERROR("Set {}, slot {} not used by shader", set, slot);
+            return;
+        }
+        const uint32_t sequentialIdx = paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::Buffer, set, slot);
+
+        VulkanGenericGpuBuffer* vulkanBuffer = static_cast<VulkanGenericGpuBuffer*>(genericBuffer.get());
+        VulkanBuffer* buffer = vulkanBuffer != nullptr ? vulkanBuffer->GetBuffer() : nullptr;
+        VkWriteDescriptorSet& writeSetInfo = m_PerSetData[set].WriteSetInfos[bindingIdx];
+        const bool useView = writeSetInfo.descriptorType != VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        if (useView)
+        {
+            VkBufferView bufferView;
+            if (buffer != nullptr)
+            {
+                bufferView = vulkanBuffer->GetView();
+                m_Buffers[sequentialIdx] = buffer->GetHandle();
+            }
+            else
+            {
+                const bool isLoadStore = writeSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+                VulkanBuffer* buffer;
+                if (isLoadStore)
+                    buffer = VulkanGpuBufferManager::Get().GetDummyStorageBuffer()->GetBuffer();
+                else
+                    buffer = VulkanGpuBufferManager::Get().GetDummyReadBuffer()->GetBuffer();
+                const GpuBufferFormat* formats = paramInfo.GetLayoutElementTypes(set);
+                const VkFormat format = VulkanUtils::GetBufferFormat(formats[bindingIdx]);
+                bufferView = buffer->GetView(format);
+
+                m_Buffers[sequentialIdx] = buffer->GetHandle();
+            }
+
+            m_PerSetData[set].WriteInfos[bindingIdx].BufferView = bufferView;
+            writeSetInfo.pTexelBufferView = &m_PerSetData[set].WriteInfos[bindingIdx].BufferView;
+        }
+        else
+        {
+            if (buffer != nullptr)
+            {
+                const VkBuffer bufferHandle = buffer->GetHandle();
+                m_PerSetData[set].WriteInfos[bindingIdx].Buffer.buffer = bufferHandle;
+                m_Buffers[sequentialIdx] = bufferHandle;
+            }
+            else
+            {
+                const VkBuffer buffer = VulkanGpuBufferManager::Get().GetDummyStructuredBuffer()->GetBuffer()->GetHandle();
+                m_PerSetData[set].WriteInfos[bindingIdx].Buffer.buffer = buffer;
+                m_Buffers[sequentialIdx] = buffer;
+            }
+            writeSetInfo.pTexelBufferView = nullptr;
+        }
+        m_SetsDirty[set] = true;
+    }
+
+    void VulkanUniformParams::SetAccelerationStructure(uint32_t set, uint32_t slot, const Ref<AccelerationStructure>& accelStruct)
+    {
+        UniformParams::SetAccelerationStructure(set, slot, accelStruct);
+
+        VulkanUniformParamInfo& paramInfo = static_cast<VulkanUniformParamInfo&>(*m_ParamInfo.get());
+        const uint32_t bindingIdx = paramInfo.GetBindingIdx(set, slot);
+        if (bindingIdx == (uint32_t)-1)
+        {
+            CW_ENGINE_ERROR("Set/Slot is not used by the shader.");
+            return;
+        }
+        const uint32_t seqIdx = paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::ParamBlock, set, slot);
+        const VulkanAccelerationStructure* vulkanAccelStruct = static_cast<VulkanAccelerationStructure*>(accelStruct.get());
+        VulkanAccelStruct* result = nullptr;
+        if (accelStruct != nullptr)
+            result = vulkanAccelStruct->GetAccelStruct();
+        // TODO: Check?
+        PerSetData& data = m_PerSetData[set];
+        if (accelStruct != nullptr && result)
+        {
+            const VkAccelerationStructureKHR vkAccelStrut = result->GetHandle();
+            data.WriteInfos[bindingIdx].AccelStruct.AccelStruct = vkAccelStrut;
+            m_AccelerationStructs[seqIdx] = vkAccelStrut;
+        }
+        else
+            CW_ENGINE_ASSERT(false);
+
+        m_SetsDirty[set] = true;
+    }
+
     void VulkanUniformParams::Prepare(VulkanCmdBuffer& buffer, VkDescriptorSet* sets)
     {
-        VulkanUniformParamInfo& paramInfo = static_cast<VulkanUniformParamInfo&>(*m_ParamInfo.get());
+        VulkanUniformParamInfo& paramInfo = static_cast<VulkanUniformParamInfo&>(*m_ParamInfo);
 
-        uint32_t numParamBlocks = paramInfo.GetNumElements(UniformParamInfo::ParamType::ParamBlock);
-        uint32_t numTextures = paramInfo.GetNumElements(UniformParamInfo::ParamType::Texture);
-        uint32_t numSamplers = paramInfo.GetNumElements(UniformParamInfo::ParamType::SamplerState);
-        uint32_t numSets = paramInfo.GetNumSets();
+        const uint32_t numParamBlocks = paramInfo.GetNumElements(UniformParamInfo::ParamType::ParamBlock);
+        const uint32_t numTextures = paramInfo.GetNumElements(UniformParamInfo::ParamType::Texture);
+        const uint32_t numSamplers = paramInfo.GetNumElements(UniformParamInfo::ParamType::SamplerState);
+        const uint32_t numStorageTextures = paramInfo.GetNumElements(UniformParamInfo::ParamType::LoadStoreTexture);
+        const uint32_t numBuffers = paramInfo.GetNumElements(UniformParamInfo::ParamType::Buffer);
+        const uint32_t numAccelStructs = paramInfo.GetNumElements(UniformParamInfo::ParamType::AccelStruct);
+        const uint32_t numSets = paramInfo.GetNumSets();
 
         for (uint32_t i = 0; i < numParamBlocks; i++)
         {
@@ -437,6 +594,134 @@ namespace Crowny
             {
                 m_UniformBuffers[i] = vkBuffer;
                 m_PerSetData[set].WriteInfos[bindIdx].Buffer.buffer = vkBuffer;
+                m_SetsDirty[set] = true;
+            }
+        }
+
+        for (uint32_t i = 0; i < numBuffers; i++)
+        {
+            uint32_t set, slot;
+            m_ParamInfo->GetBinding(UniformParamInfo::ParamType::Buffer, i, set, slot);
+            const uint32_t bindingIdx = paramInfo.GetBindingIdx(set, slot);
+
+            UniformResourceType* types = paramInfo.GetLayoutTypes(set);
+            UniformResourceType type = types[bindingIdx];
+
+            VulkanAccessFlags useFlags = VulkanAccessFlagBits::Read;
+            VulkanBuffer* vkBuffer = nullptr;
+            if (m_Buffers[i] != nullptr)
+            {
+                VulkanGenericGpuBuffer* vulkanBuffer = static_cast<VulkanGenericGpuBuffer*>(UniformParams::m_Buffers[i].get());
+                vkBuffer = vulkanBuffer->GetBuffer();
+
+                if ((vulkanBuffer->GetUsage() & BufferUsage::LOADSTORE) == BufferUsage::LOADSTORE)
+                    useFlags |= VulkanAccessFlagBits::Write;
+            }
+
+            if (vkBuffer == nullptr)
+            {
+                switch (type)
+                {
+                case UniformResourceType::BYTE_BUFFER:
+                    vkBuffer = VulkanGpuBufferManager::Get().GetDummyReadBuffer()->GetBuffer();
+                    break;
+                case UniformResourceType::RWBYTE_BUFFER:
+                    vkBuffer = VulkanGpuBufferManager::Get().GetDummyStorageBuffer()->GetBuffer();
+                    useFlags |= VulkanAccessFlagBits::Write;
+                    break;
+                case UniformResourceType::STRUCTURED_BUFFER:
+                case UniformResourceType::RWSTRUCTURED_BUFFER:
+                    vkBuffer = VulkanGpuBufferManager::Get().GetDummyStructuredBuffer()->GetBuffer();
+                    useFlags |= VulkanAccessFlagBits::Write;
+                    break;
+                }
+            }
+            if (vkBuffer == nullptr)
+                continue;
+
+            const VkDescriptorSetLayoutBinding* bindings = paramInfo.GetBindings(set);
+            const VkPipelineStageFlags stages = VulkanUtils::ShaderToPipelineStage(bindings[bindingIdx].stageFlags);
+            buffer.RegisterBuffer(vkBuffer, BufferUseFlagBits::Generic, useFlags, stages);
+
+            CW_ENGINE_ASSERT(m_Buffers[i] != VK_NULL_HANDLE);
+
+            const VkBuffer buf = vkBuffer->GetHandle();
+            if (m_Buffers[i] != buf)
+            {
+                m_Buffers[i] = buf;
+
+                VkBufferView view = VK_NULL_HANDLE;
+                if (type != STRUCTURED_BUFFER && type != RWSTRUCTURED_BUFFER)
+                {
+                    if (UniformParams::m_Buffers[i] != nullptr)
+                    {
+                        VulkanGenericGpuBuffer* elem = static_cast<VulkanGenericGpuBuffer*>(UniformParams::m_Buffers[i].get());
+                        view = elem->GetView();
+                    }
+                    else
+                    {
+                        const GpuBufferFormat* formats = paramInfo.GetLayoutElementTypes(set);
+                        view = vkBuffer->GetView(VulkanUtils::GetBufferFormat(formats[bindingIdx]));
+                    }
+                }
+
+                if (view != VK_NULL_HANDLE)
+                {
+                    m_PerSetData[set].WriteInfos[bindingIdx].BufferView = view;
+                    m_PerSetData[set].WriteSetInfos[bindingIdx].pTexelBufferView = &m_PerSetData[set].WriteInfos[bindingIdx].BufferView;
+                }
+                else
+                {
+                    m_PerSetData[set].WriteInfos[bindingIdx].Buffer.buffer = buf;
+                    m_PerSetData[set].WriteSetInfos[bindingIdx].pTexelBufferView = nullptr;
+                }
+                m_SetsDirty[set] = true;
+            }
+        }
+
+        for (uint32_t i = 0; i < numStorageTextures; i++)
+        {
+            uint32_t set, slot;
+            m_ParamInfo->GetBinding(UniformParamInfo::ParamType::LoadStoreTexture, i, set, slot);
+            const uint32_t bindingIdx = paramInfo.GetBindingIdx(set, slot);
+
+            VulkanImage* image = nullptr;
+            if (m_LoadStoreTextures[i].Texture != nullptr)
+            {
+                VulkanTexture* texture = static_cast<VulkanTexture*>(m_LoadStoreTextures[i].Texture.get());
+                image = texture->GetImage();
+            }
+
+            if (image == nullptr)
+            {
+                const UniformResourceType* types = paramInfo.GetLayoutTypes(set);
+                image = VulkanTextureManager::Get().GetDummyTexture(types[bindingIdx])->GetImage();
+            }
+            if (image == nullptr)
+                continue;
+
+            const TextureSurface& surface = m_LoadStoreTextures[i].Surface;
+            const VkImageSubresourceRange range = image->GetRange(surface);
+            const VkDescriptorSetLayoutBinding* bindings = paramInfo.GetBindings(set);
+            const VkPipelineStageFlags stages = VulkanUtils::ShaderToPipelineStage(bindings[bindingIdx].stageFlags);
+            const VulkanAccessFlags useFlags = VulkanAccessFlagBits::Read | VulkanAccessFlagBits::Write;
+            buffer.RegisterImageShader(image, range, VK_IMAGE_LAYOUT_GENERAL, useFlags, stages);
+
+            CW_ENGINE_ASSERT(m_StorageImages[i] != VK_NULL_HANDLE);
+            const VkImage vkImage = image->GetHandle();
+            if (m_StorageImages[i] != vkImage)
+            {
+                m_StorageImages[i] = vkImage;
+
+                VkImageView view;
+                if (m_LoadStoreTextures[i].Texture != nullptr)
+                    view = image->GetView(surface, false);
+                else
+                {
+                    const GpuBufferFormat* formats = paramInfo.GetLayoutElementTypes(set);
+                    view = image->GetView(VulkanTextureManager::GetDummyViewFormat(formats[bindingIdx]));
+                }
+                m_PerSetData[set].WriteInfos[bindingIdx].Image.imageView = view;
                 m_SetsDirty[set] = true;
             }
         }
@@ -497,15 +782,15 @@ namespace Crowny
             }
 
             const TextureSurface& surface = m_SampledTextureData[i].Surface;
-            VkImageSubresourceRange range = image->GetRange(surface);
-            VkDescriptorSetLayoutBinding* perSetBindings = paramInfo.GetBindings(set);
-            VkPipelineStageFlags stages = VulkanUtils::ShaderToPipelineStage(perSetBindings[bindingIdx].stageFlags);
+            const VkImageSubresourceRange range = image->GetRange(surface);
+            const VkDescriptorSetLayoutBinding* perSetBindings = paramInfo.GetBindings(set);
+            const VkPipelineStageFlags stages = VulkanUtils::ShaderToPipelineStage(perSetBindings[bindingIdx].stageFlags);
             buffer.RegisterImageShader(image, range, layout, VulkanAccessFlagBits::Read, stages);
             layout = buffer.GetCurrentLayout(image, range, true);
             CW_ENGINE_ASSERT(m_SampledImages[i] != VK_NULL_HANDLE);
             VkDescriptorImageInfo& imgInfo = m_PerSetData[set].WriteInfos[bindingIdx].Image;
 
-            VkImage vkImage = image->GetHandle();
+            const VkImage vkImage = image->GetHandle();
             if (m_SampledImages[i] != vkImage)
             {
                 m_SampledImages[i] = vkImage;
@@ -514,7 +799,6 @@ namespace Crowny
                     view = image->GetView(surface, false);
                 else
                 {
-                    CW_ENGINE_ASSERT(false, "Why here?");
                     GpuBufferFormat* elementTypes = paramInfo.GetLayoutElementTypes(set);
                     view = image->GetView(VulkanTextureManager::GetDummyViewFormat(elementTypes[bindingIdx]));
                 }
@@ -530,6 +814,44 @@ namespace Crowny
             }
         }
 
+        for (uint32_t i = 0; i < numAccelStructs; i++)
+        {
+            VulkanAccelerationStructure* vulkanAccelStruct = static_cast<VulkanAccelerationStructure*>(m_AccelStructs[i].get());
+            VulkanAccelStruct* res = nullptr;
+            if (m_BufferBlocks[i] != nullptr)
+                res = vulkanAccelStruct->GetAccelStruct();
+
+            if (res == nullptr)
+            {
+                // res = VulkanGpuBufferManager::Get().GetDummyAccelStruct()->GetBuffer();
+                CW_ENGINE_ASSERT(false);
+                continue;
+            }
+
+            uint32_t slot, set;
+            m_ParamInfo->GetBinding(UniformParamInfo::ParamType::AccelStruct, i, set, slot);
+            const uint32_t bindIdx = paramInfo.GetBindingIdx(set, slot);
+            VkDescriptorSetLayoutBinding* bindingsPerSet = paramInfo.GetBindings(set);
+            VkPipelineStageFlags stages = VulkanUtils::ShaderToPipelineStage(bindingsPerSet[bindIdx].stageFlags);
+            buffer.RegisterBuffer(vulkanAccelStruct->GetBuffer()->GetBuffer(), BufferUseFlagBits::Acceleration, VulkanAccessFlagBits::Read, stages);
+            CW_ENGINE_ASSERT(m_UniformBuffers[i] != VK_NULL_HANDLE);
+            const VkAccelerationStructureKHR vkAccelStruct = res->GetHandle();
+            if (m_AccelerationStructs[i] != vkAccelStruct)
+            {
+                m_AccelerationStructs[i] = vkAccelStruct;
+                m_PerSetData[set].WriteInfos[bindIdx].AccelStruct.AccelStruct = vkAccelStruct;
+
+                VkWriteDescriptorSetAccelerationStructureKHR accelStructInfo{};
+                accelStructInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+                accelStructInfo.pNext = nullptr;
+                accelStructInfo.accelerationStructureCount = 0;
+                accelStructInfo.pAccelerationStructures = nullptr;
+                m_PerSetData[set].WriteSetInfos[bindIdx].pNext = &accelStructInfo;
+
+                m_SetsDirty[set] = true;
+            }
+        }
+
         for (uint32_t i = 0; i < numSets; i++)
         {
             PerSetData& data = m_PerSetData[i];
@@ -539,7 +861,7 @@ namespace Crowny
             if (data.LatestSet->IsBound())
             {
                 data.LatestSet = nullptr;
-                for (auto& entry : data.Sets)
+                for (VulkanDescriptorSet* entry : data.Sets)
                 {
                     if (!entry->IsBound())
                     {

@@ -12,27 +12,35 @@ namespace Crowny
 
     UniformParams::UniformParams(const Ref<UniformParamInfo>& paramInfo) : m_ParamInfo(paramInfo)
     {
-        uint32_t numParamBlocks = m_ParamInfo->GetNumElements(UniformParamInfo::ParamType::ParamBlock);
-        uint32_t numTextures = m_ParamInfo->GetNumElements(UniformParamInfo::ParamType::Texture);
-        uint32_t numStorageTextures = m_ParamInfo->GetNumElements(UniformParamInfo::ParamType::LoadStoreTexture);
-        uint32_t numBuffers = m_ParamInfo->GetNumElements(UniformParamInfo::ParamType::Buffer);
-        uint32_t numSamplers = m_ParamInfo->GetNumElements(UniformParamInfo::ParamType::SamplerState);
+        const uint32_t numParamBlocks = m_ParamInfo->GetNumElements(UniformParamInfo::ParamType::ParamBlock);
+        const uint32_t numTextures = m_ParamInfo->GetNumElements(UniformParamInfo::ParamType::Texture);
+        const uint32_t numStorageTextures = m_ParamInfo->GetNumElements(UniformParamInfo::ParamType::LoadStoreTexture);
+        const uint32_t numBuffers = m_ParamInfo->GetNumElements(UniformParamInfo::ParamType::Buffer);
+        const uint32_t numSamplers = m_ParamInfo->GetNumElements(UniformParamInfo::ParamType::SamplerState);
+        const uint32_t numAccelStructs = m_ParamInfo->GetNumElements(UniformParamInfo::ParamType::AccelStruct);
 
         m_BufferBlocks = new Ref<UniformBufferBlock>[numParamBlocks];
         m_SampledTextureData = new TextureData[numTextures];
         m_SamplerStates = new Ref<SamplerState>[numSamplers];
+        m_LoadStoreTextures = new TextureData[numStorageTextures];
+        m_Buffers = new Ref<GenericGpuBuffer>[numBuffers];
+        m_AccelStructs = new Ref<AccelerationStructure>[numAccelStructs];
     }
 
     UniformParams::~UniformParams()
     {
-        delete[] m_BufferBlocks;
-        delete[] m_SampledTextureData;
-        delete[] m_SamplerStates;
+        // TODO: Fix asap
+        // delete[] m_BufferBlocks;
+        // delete[] m_SampledTextureData;
+        // delete[] m_SamplerStates;
+        // delete[] m_Buffers;
+        // delete[] m_LoadStoreTextures;
+        // delete[] m_AccelStructs;
     }
 
     void UniformParams::SetUniformBlockBuffer(uint32_t set, uint32_t slot, const Ref<UniformBufferBlock>& uniformBlock)
     {
-        uint32_t globalSlot = m_ParamInfo->GetSequentialSlot(UniformParamInfo::ParamType::ParamBlock, set, slot);
+        const uint32_t globalSlot = m_ParamInfo->GetSequentialSlot(UniformParamInfo::ParamType::ParamBlock, set, slot);
         if (globalSlot == -1)
             return;
 
@@ -48,7 +56,7 @@ namespace Crowny
             return;
         }
 
-        auto iterFind = paramDesc->Uniforms.find(name);
+        const auto iterFind = paramDesc->Uniforms.find(name);
         if (iterFind == paramDesc->Uniforms.end())
         {
             CW_ENGINE_ASSERT(false, "Cannot find uniform block.");
@@ -66,7 +74,7 @@ namespace Crowny
             if (paramDesc == nullptr)
                 continue;
 
-            auto iterFind = paramDesc->Uniforms.find(name);
+            const auto iterFind = paramDesc->Uniforms.find(name);
             if (iterFind == paramDesc->Uniforms.end())
                 continue;
 
@@ -76,14 +84,13 @@ namespace Crowny
 
     const Ref<UniformBufferBlock>& UniformParams::GetUniformBlockBuffer(uint32_t slot, uint32_t set) const
     {
-        uint32_t globalSlot = m_ParamInfo->GetSequentialSlot(UniformParamInfo::ParamType::ParamBlock, slot, set);
+        const uint32_t globalSlot = m_ParamInfo->GetSequentialSlot(UniformParamInfo::ParamType::ParamBlock, slot, set);
 
         return m_BufferBlocks[globalSlot];
     }
 
     void UniformParams::SetTexture(ShaderType type, const String& name, const Ref<Texture>& texture, const TextureSurface& surface)
     {
-        // TODO: Do not hardcode fragment shader for textures
         const UnorderedMap<String, UniformResourceDesc>& textures = m_ParamInfo->GetUniformDesc(type)->Textures;
         const auto iterFind = textures.find(name);
         if (iterFind != textures.cend())
@@ -94,7 +101,7 @@ namespace Crowny
 
     void UniformParams::SetTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture, const TextureSurface& surface)
     {
-        uint32_t globalSlot = m_ParamInfo->GetSequentialSlot(UniformParamInfo::ParamType::Texture, set, slot);
+        const uint32_t globalSlot = m_ParamInfo->GetSequentialSlot(UniformParamInfo::ParamType::Texture, set, slot);
         if (globalSlot == (uint32_t)-1)
             return;
 
@@ -102,13 +109,42 @@ namespace Crowny
         m_SampledTextureData[globalSlot].Surface = surface;
     }
 
+    void UniformParams::SetBuffer(uint32_t set, uint32_t slot, const Ref<GenericGpuBuffer>& buffer)
+    {
+        const uint32_t globalSlot = m_ParamInfo->GetSequentialSlot(UniformParamInfo::ParamType::Buffer, set, slot);
+        if (globalSlot == (uint32_t)-1)
+            return;
+
+        m_Buffers[globalSlot] = buffer;
+    }
+
+    void UniformParams::SetLoadStoreTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture, const TextureSurface& surface)
+    {
+        const uint32_t globalSlot = m_ParamInfo->GetSequentialSlot(UniformParamInfo::ParamType::LoadStoreTexture, set, slot);
+        if (globalSlot == (uint32_t)-1)
+            return;
+
+        m_LoadStoreTextures[globalSlot].Texture = texture;
+        m_LoadStoreTextures[globalSlot].Surface = surface;
+    }
+
     void UniformParams::SetSamplerState(uint32_t set, uint32_t slot, const Ref<SamplerState>& sampler)
     {
-        uint32_t globalSlot = m_ParamInfo->GetSequentialSlot(UniformParamInfo::ParamType::SamplerState, set, slot);
+        const uint32_t globalSlot = m_ParamInfo->GetSequentialSlot(UniformParamInfo::ParamType::SamplerState, set, slot);
         if (globalSlot == (uint32_t)-1)
             return;
 
         m_SamplerStates[globalSlot] = sampler;
+    }
+
+    void UniformParams::SetAccelerationStructure(uint32_t set, uint32_t slot, const Ref<AccelerationStructure>& accelerationStructure)
+    {
+
+        const uint32_t globalSlot = m_ParamInfo->GetSequentialSlot(UniformParamInfo::ParamType::AccelStruct, set, slot);
+        if (globalSlot == (uint32_t)-1)
+            return;
+
+        m_AccelStructs[globalSlot] = accelerationStructure;
     }
 
     Ref<UniformParams> UniformParams::Create(const Ref<GraphicsPipeline>& pipeline)

@@ -240,7 +240,14 @@ namespace Crowny
             return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
         case COMPUTE_SHADER:
             return VK_SHADER_STAGE_COMPUTE_BIT;
+        case RAYGEN_SHADER:
+            return VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+        case MISS_SHADER:
+            return VK_SHADER_STAGE_MISS_BIT_KHR;
+        case HIT_SHADER:
+            return VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
         default:
+            CW_ENGINE_ASSERT(false);
             return VK_SHADER_STAGE_VERTEX_BIT;
         }
     }
@@ -309,6 +316,15 @@ namespace Crowny
         if ((shaderStageFlags & VK_SHADER_STAGE_COMPUTE_BIT) != 0)
             output |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 
+        if ((shaderStageFlags & VK_SHADER_STAGE_RAYGEN_BIT_KHR) != 0)
+            output |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+
+        if ((shaderStageFlags & VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR) != 0)
+            output |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+
+        if ((shaderStageFlags & VK_SHADER_STAGE_COMPUTE_BIT) != 0)
+            output |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+
         return output;
     }
 
@@ -336,6 +352,7 @@ namespace Crowny
         if ((usage & TEXTURE_LOADSTORE) != 0)
             wantedFeatureFlags |= VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
 
+        // TODO: Static
         VkFormatProperties props;
         auto isSupported = [&](VkFormat format) {
             vkGetPhysicalDeviceFormatProperties(device.GetPhysicalDevice(), format, &props);
@@ -348,7 +365,7 @@ namespace Crowny
         {
             if ((usage & TEXTURE_DEPTHSTENCIL) != 0)
             {
-                bool hasStencil = format == TextureFormat::DEPTH24STENCIL8;
+                const bool hasStencil = format == TextureFormat::DEPTH24STENCIL8;
                 if (hasStencil)
                 {
                     if (isSupported(VK_FORMAT_D24_UNORM_S8_UINT)) // spec guarantees that at least on depth-stencil
@@ -419,11 +436,11 @@ namespace Crowny
 
     bool VulkanUtils::RangeOverlaps(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b)
     {
-        int32_t aRight = a.baseArrayLayer + (int32_t)a.layerCount;
-        int32_t bRight = b.baseArrayLayer + (int32_t)b.layerCount;
+        const int32_t aRight = a.baseArrayLayer + (int32_t)a.layerCount;
+        const int32_t bRight = b.baseArrayLayer + (int32_t)b.layerCount;
 
-        int32_t aBottom = a.baseMipLevel + (int32_t)a.levelCount;
-        int32_t bBottom = b.baseMipLevel + (int32_t)b.levelCount;
+        const int32_t aBottom = a.baseMipLevel + (int32_t)a.levelCount;
+        const int32_t bBottom = b.baseMipLevel + (int32_t)b.levelCount;
 
         if ((int32_t)a.baseArrayLayer < bRight && aRight > (int32_t)b.baseArrayLayer && (int32_t)a.baseMipLevel < bBottom &&
             aBottom > (int32_t)b.baseMipLevel)
@@ -435,8 +452,8 @@ namespace Crowny
                                     uint32_t& numAreas)
     {
         numAreas = 0;
-        int32_t leftCut = glm::clamp((int32_t)cutWith.baseArrayLayer - (int32_t)toCut.baseArrayLayer, 0, (int32_t)toCut.layerCount);
-        int32_t rightCut =
+        const int32_t leftCut = glm::clamp((int32_t)cutWith.baseArrayLayer - (int32_t)toCut.baseArrayLayer, 0, (int32_t)toCut.layerCount);
+        const int32_t rightCut =
           glm::clamp((int32_t)(cutWith.baseArrayLayer + cutWith.layerCount) - (int32_t)toCut.baseArrayLayer, 0, (int32_t)toCut.layerCount);
         if (leftCut > 0 && leftCut < (int32_t)toCut.layerCount)
         {
@@ -475,10 +492,9 @@ namespace Crowny
     void VulkanUtils::CutVertical(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith, VkImageSubresourceRange* output,
                                   uint32_t& numAreas)
     {
-
         numAreas = 0;
-        int32_t topCut = glm::clamp((int32_t)cutWith.baseMipLevel - (int32_t)toCut.baseMipLevel, 0, (int32_t)toCut.levelCount);
-        int32_t bottomCut =
+        const int32_t topCut = glm::clamp((int32_t)cutWith.baseMipLevel - (int32_t)toCut.baseMipLevel, 0, (int32_t)toCut.levelCount);
+        const int32_t bottomCut =
           glm::clamp((int32_t)(cutWith.baseMipLevel + cutWith.levelCount) - (int32_t)toCut.baseMipLevel, 0, (int32_t)toCut.levelCount);
         if (topCut > 0 && topCut < (int32_t)toCut.levelCount)
         {
@@ -544,14 +560,15 @@ namespace Crowny
     {
         switch (format)
         {
-        case BF_16x1F:
-        case BF_32x1F:
+        case BF_16X1F:
+        case BF_32X1F:
             return VK_FORMAT_R32_SFLOAT;
         case BF_16X2F:
-        case BF_32x2F:
+        case BF_32X2F:
             return VK_FORMAT_R16G16_UNORM;
-        case BF_32x3F:
-        case BF_32x4F:
+        case BF_16X4F:
+        case BF_32X3F:
+        case BF_32X4F:
             return VK_FORMAT_R8G8B8A8_UNORM;
 
         case BF_16X1U:
@@ -569,6 +586,57 @@ namespace Crowny
         default:
             return VK_FORMAT_UNDEFINED;
         }
+    }
+
+    VkFormat VulkanUtils::GetBufferFormat(GpuBufferFormat format)
+    {
+        static bool lookupInit = false;
+        static VkFormat lookup[BF_COUNT];
+        if (!lookupInit)
+        {
+            lookup[BF_16X1F] = VK_FORMAT_R16_SFLOAT;
+            lookup[BF_16X2F] = VK_FORMAT_R16G16_SFLOAT;
+            lookup[BF_16X4F] = VK_FORMAT_R16G16B16A16_SFLOAT;
+            lookup[BF_32X1F] = VK_FORMAT_R32_SFLOAT;
+            lookup[BF_32X2F] = VK_FORMAT_R32G32_SFLOAT;
+            lookup[BF_32X3F] = VK_FORMAT_R32G32B32_SFLOAT;
+            lookup[BF_32X4F] = VK_FORMAT_R32G32B32A32_SFLOAT;
+            lookup[BF_8X1] = VK_FORMAT_R8_UNORM;
+            lookup[BF_8X2] = VK_FORMAT_R8G8_UNORM;
+            lookup[BF_8X4] = VK_FORMAT_R8G8B8A8_UNORM;
+            lookup[BF_16X1] = VK_FORMAT_R16_UNORM;
+            lookup[BF_16X2] = VK_FORMAT_R16G16_UNORM;
+            lookup[BF_16X4] = VK_FORMAT_R16G16B16A16_UNORM;
+            // lookup[BF_8X1S] = VK_FORMAT_R8_SINT;
+            // lookup[BF_8X2S] = VK_FORMAT_R8G8_SINT;
+            // lookup[BF_8X4S] = VK_FORMAT_R8G8B8A8_SINT;
+            // lookup[BF_16X1S] = VK_FORMAT_R16_SINT;
+            // lookup[BF_16X2S] = VK_FORMAT_R16G16_SINT;
+            // lookup[BF_16X4S] = VK_FORMAT_R16G16B16A16_SINT;
+            // lookup[BF_32X1S] = VK_FORMAT_R32_SINT;
+            // lookup[BF_32X2S] = VK_FORMAT_R32G32_SINT;
+            // lookup[BF_32X3S] = VK_FORMAT_R32G32B32_SINT;
+            // lookup[BF_32X4S] = VK_FORMAT_R32G32B32A32_SINT;
+            lookup[BF_8X1U] = VK_FORMAT_R8_UINT;
+            lookup[BF_8X2U] = VK_FORMAT_R8G8_UINT;
+            lookup[BF_8X4U] = VK_FORMAT_R8G8B8A8_UINT;
+            lookup[BF_16X1U] = VK_FORMAT_R16_UINT;
+            lookup[BF_16X2U] = VK_FORMAT_R16G16_UINT;
+            lookup[BF_16X4U] = VK_FORMAT_R16G16B16A16_UINT;
+            lookup[BF_32X1U] = VK_FORMAT_R32_UINT;
+            lookup[BF_32X2U] = VK_FORMAT_R32G32_UINT;
+            lookup[BF_32X3U] = VK_FORMAT_R32G32B32_UINT;
+            lookup[BF_32X4U] = VK_FORMAT_R32G32B32A32_UINT;
+
+            lookupInit = true;
+        }
+        if (format < 0 || format >= BF_COUNT)
+        {
+            CW_ENGINE_ASSERT(false);
+            return VK_FORMAT_UNDEFINED;
+        }
+
+        return lookup[(uint32_t)format];
     }
 
 } // namespace Crowny

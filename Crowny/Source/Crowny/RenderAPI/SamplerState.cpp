@@ -21,14 +21,14 @@ namespace Crowny
 
     Ref<SamplerState> SamplerState::Create(const SamplerStateDesc& desc)
     {
-        switch (Renderer::GetAPI())
+        switch (RenderAPI::Get().GetAPI())
         {
         // TODO: Add support for binary OpenGL shaders
         // case RenderAPI::API::OpenGL: return CreateRef<OpenGLShader>(m_Filepath);
         case RenderAPI::API::Vulkan:
             return CreateRef<VulkanSamplerState>(desc);
         default:
-            CW_ENGINE_ASSERT(false, "Renderer API not supporter");
+            CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
         }
 

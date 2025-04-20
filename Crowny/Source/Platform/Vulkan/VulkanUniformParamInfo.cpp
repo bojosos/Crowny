@@ -70,13 +70,17 @@ namespace Crowny
             offset += m_LayoutInfos[i].NumBindings;
         }
 
-        VkShaderStageFlags stageFlagsLookup[6];
+        VkShaderStageFlags stageFlagsLookup[SHADER_COUNT];
         stageFlagsLookup[VERTEX_SHADER] = VK_SHADER_STAGE_VERTEX_BIT;
         stageFlagsLookup[HULL_SHADER] = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
         stageFlagsLookup[DOMAIN_SHADER] = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
         stageFlagsLookup[GEOMETRY_SHADER] = VK_SHADER_STAGE_GEOMETRY_BIT;
         stageFlagsLookup[FRAGMENT_SHADER] = VK_SHADER_STAGE_FRAGMENT_BIT;
         stageFlagsLookup[COMPUTE_SHADER] = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        stageFlagsLookup[RAYGEN_SHADER] = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+        stageFlagsLookup[HIT_SHADER] = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+        stageFlagsLookup[MISS_SHADER] = VK_SHADER_STAGE_MISS_BIT_KHR;
 
         for (uint32_t i = 0; i < m_ParamDescs.size(); i++)
         {
@@ -87,22 +91,22 @@ namespace Crowny
             auto setupBlockBindings = [&](auto& params, VkDescriptorType descType) {
                 for (auto& entry : params)
                 {
-                    uint32_t bindingIdx = GetBindingIdx(entry.second.Set, entry.second.Slot);
+                    const uint32_t bindingIdx = GetBindingIdx(entry.second.Set, entry.second.Slot);
                     VkDescriptorSetLayoutBinding& binding = bindings[bindingIdx];
-                    binding.stageFlags |= stageFlagsLookup[i];
-                    binding.descriptorType = descType;
                     binding.descriptorCount = 1;
+                    binding.descriptorType = descType;
+                    binding.stageFlags |= stageFlagsLookup[i];
                 }
             };
 
             auto setupBindings = [&](auto& params, VkDescriptorType descType) {
                 for (auto& entry : params)
                 {
-                    uint32_t bindingIdx = GetBindingIdx(entry.second.Set, entry.second.Slot);
+                    const uint32_t bindingIdx = GetBindingIdx(entry.second.Set, entry.second.Slot);
                     VkDescriptorSetLayoutBinding& binding = bindings[bindingIdx];
                     binding.descriptorCount = 1;
-                    binding.stageFlags |= stageFlagsLookup[i];
                     binding.descriptorType = descType;
+                    binding.stageFlags |= stageFlagsLookup[i];
 
                     types[bindingIdx] = entry.second.Type;
                     elementTypes[bindingIdx] = entry.second.ElementType;
@@ -110,12 +114,13 @@ namespace Crowny
             };
 
             setupBlockBindings(paramDesc->Uniforms, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+            setupBlockBindings(paramDesc->AccelerationStructures, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR);
             setupBindings(paramDesc->Textures, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
             setupBindings(paramDesc->LoadStoreTextures, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
 
-            for (auto& entry : paramDesc->Samplers)
+            for (const auto& [_, desc] : paramDesc->Samplers)
             {
-                uint32_t bindingIdx = GetBindingIdx(entry.second.Set, entry.second.Slot);
+                const uint32_t bindingIdx = GetBindingIdx(desc.Set, desc.Slot);
                 VkDescriptorSetLayoutBinding& binding = bindings[bindingIdx];
 
                 if (binding.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
@@ -125,34 +130,34 @@ namespace Crowny
                     binding.descriptorCount = 1;
                     binding.stageFlags |= stageFlagsLookup[i];
                     binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-                    types[bindingIdx] = entry.second.Type;
-                    elementTypes[bindingIdx] = entry.second.ElementType;
+                    types[bindingIdx] = desc.Type;
+                    elementTypes[bindingIdx] = desc.ElementType;
                 }
             }
-            /*
+
             for (auto& entry : paramDesc->Buffers)
             {
-                uint32_t bindingidx = GetBindingIdx(entry.second.Set, entry.second.Slot);
+                const uint32_t bindingIdx = GetBindingIdx(entry.second.Set, entry.second.Slot);
                 VkDescriptorSetLayoutBinding& binding = bindings[bindingIdx];
                 binding.descriptorCount = 1;
                 binding.stageFlags |= stageFlagsLookup[i];
-                switch(entry.second.type)
+                switch (entry.second.Type)
                 {
-                case(BYTE_BUFFER):
+                case BYTE_BUFFER:
                     binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
                     break;
-                case(RWBYTE_BUFFER):
+                case RWBYTE_BUFFER:
                     binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
                     break;
-                case(STRUCTURED_BUFFER):
+                case STRUCTURED_BUFFER:
+                case RWSTRUCTURED_BUFFER:
                     binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
                     break;
                 }
 
                 types[bindingIdx] = entry.second.Type;
                 elementTypes[bindingIdx] = entry.second.ElementType;
-                binding.descriptorType
-            }*/
+            }
         }
         VulkanDescriptorManager& descManager = device.GetDescriptorManager();
         m_Layouts = new VulkanDescriptorLayout*[m_NumSets];

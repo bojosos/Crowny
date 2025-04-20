@@ -86,7 +86,7 @@ namespace Crowny
     {
         if (!m_RequiresNewBackBuffer)
             return;
-        VkResult result = m_SwapChain->AcquireBackBuffer();
+        const VkResult result = m_SwapChain->AcquireBackBuffer();
         if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
         {
             RebuildSwapChain();
@@ -116,9 +116,13 @@ namespace Crowny
             m_SwapChain->BackBufferWaitIssued();
         }
 
-        VkResult result = queue->Present(m_SwapChain, m_SemaphoresTemp, semaphores);
-        if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
-            RebuildSwapChain();
+        // TODO:
+        if (m_Properties.Width != 0 || m_Properties.Height != 0)
+        {
+            VkResult result = queue->Present(m_SwapChain, m_SemaphoresTemp, semaphores);
+            if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
+                RebuildSwapChain();
+        }
         m_RequiresNewBackBuffer = true;
     }
 

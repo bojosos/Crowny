@@ -44,6 +44,7 @@ IncludeDir["libogg"] = "%{wks.location}/Crowny/Dependencies/libogg/include"
 IncludeDir["msdfgen"] = "%{wks.location}/Crowny/Dependencies/msdf-atlas-gen/msdfgen"
 IncludeDir["msdfatlasgen"] = "%{wks.location}/Crowny/Dependencies/msdf-atlas-gen/msdf-atlas-gen"
 IncludeDir["mbedtls"] = "%{wks.location}/Crowny/Dependencies/mbedtls/include"
+IncludeDir["tracy"] = "%{wks.location}/Crowny/Dependencies/tracy/public"
 
 -- installed/platform
 if os.host() == "linux" then
@@ -72,6 +73,7 @@ group "Dependencies"
 	include "Crowny/Dependencies/libogg"
 	include "Crowny/Dependencies/msdf-atlas-gen"
 	include "Crowny/Dependencies/mbedtls"
+	include "Crowny/Dependencies/tracy"
 group ""
 
 include "Crowny"

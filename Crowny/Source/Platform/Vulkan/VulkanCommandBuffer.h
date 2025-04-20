@@ -13,9 +13,11 @@ namespace Crowny
 
     class VulkanBuffer;
     class VulkanCmdBuffer;
-    class VulkanCommandBufer;
+    class VulkanCommandBuffer;
     class VulkanGraphicsPipeline;
     class VulkanComputePipeline;
+    class VulkanRayTracingPipeline;
+    class VulkanGpuBuffer;
     class VulkanVertexBuffer;
     class VulkanIndexBuffer;
     class VulkanUniformParams;
@@ -31,7 +33,8 @@ namespace Crowny
         Index = 1 << 1,
         Vertex = 1 << 2,
         Uniform = 1 << 3,
-        Transfer = 1 << 4
+        Acceleration = 1 << 4,
+        Transfer = 1 << 5,
     };
     typedef Flags<BufferUseFlagBits> BufferUseFlags;
     CW_FLAGS_OPERATORS(BufferUseFlagBits);
@@ -40,7 +43,8 @@ namespace Crowny
     {
         None = 0 << 0,
         Graphics = 1 << 0,
-        Compute = 1 << 1
+        Compute = 1 << 1,
+        RayTracing = 1 << 2,
     };
     typedef Flags<DescriptorSetBindFlagBits> DescriptorSetBindFlags;
     CW_FLAGS_OPERATORS(DescriptorSetBindFlagBits);
@@ -213,6 +217,14 @@ namespace Crowny
 
         void CreateTopLevelAccelerationStructure();
         void CreateBottomLevelAccelerationStructure();
+        void CreateShaderBindingTable();
+
+        struct AccelerationStructureScratchBuffer
+        {
+            VmaAllocation Allocation = VK_NULL_HANDLE;
+            VkBuffer Handle = VK_NULL_HANDLE;
+        };
+        AccelerationStructureScratchBuffer CreateScratchBuffer(uint64_t size);
 
         void RegisterResource(VulkanResource* resource, VulkanAccessFlags flags);
         void RegisterResource(VulkanFramebuffer* framebuffer, RenderSurfaceMask loadMask, uint32_t readMask);
@@ -252,6 +264,7 @@ namespace Crowny
         void ClearRenderTarget(uint32_t buffers, const glm::vec4& color, float depth);
         void ClearViewport(uint32_t buffers, const glm::vec4& color, float depth);
         void SetPipeline(const Ref<GraphicsPipeline>& pipeline);
+        void SetPipeline(const Ref<RayTracingPipeline>& pipeline);
         void SetPipeline(const Ref<ComputePipeline>& pipeline);
         void SetUniforms(const Ref<UniformParams>& uniforms);
         void SetViewport(const Rect2F& area);
@@ -263,6 +276,7 @@ namespace Crowny
         void SetIndexBuffer(const Ref<IndexBuffer>& buffer);
         void Draw(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount);
         void DrawIndexed(uint32_t startIdx, uint32_t idxCount, uint32_t vertexOffset, uint32_t instanceCount);
+        void TraceRays(uint32_t width, uint32_t height);
         void Dispatch(uint32_t groupsX, uint32_t groupsY, uint32_t groupsZ);
 
         void MemoryBarrier(VkBuffer buffer, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags, VkPipelineStageFlags srcStage,
@@ -314,10 +328,11 @@ namespace Crowny
         bool m_ScissorRequiresBind : 1;
         bool m_GraphicsPipelineRequiresBind : 1;
         bool m_ComputePipelineRequiresBind : 1;
-        bool m_VertexInputsRequriesBind : 1;
+        bool m_VertexInputsRequiresBind : 1;
         bool m_BoundUniformsDirty : 1;
-        bool m_StencilRequriesBind : 1;
+        bool m_StencilRequiresBind : 1;
         bool m_BufferLayoutDirty : 1;
+        bool m_RayTracingPipelineRequiresBind : 1;
 
         AccelerationStructure m_Tlas;
         AccelerationStructure m_Blas;
@@ -370,9 +385,14 @@ namespace Crowny
         Ref<RenderTarget> m_RenderTarget;
         Ref<VulkanGraphicsPipeline> m_GraphicsPipeline;
         Ref<VulkanComputePipeline> m_ComputePipeline;
+        Ref<VulkanRayTracingPipeline> m_RayTracingPipeline;
         VulkanDevice& m_Device;
         Set<VulkanSwapChain*> m_ActiveSwapChains;
         Ref<BufferLayout> m_VertexLayout;
+
+        VulkanGpuBuffer* m_RaygenShadingTable = nullptr;
+        VulkanGpuBuffer* m_MissShadingTable = nullptr;
+        VulkanGpuBuffer* m_HitShadingTable = nullptr;
 
         VulkanSemaphore* m_IntraQueueSemaphore = nullptr;
         VulkanSemaphore* m_InterQueueSemaphores[MAX_VULKAN_CB_DEPENDENCIES]{};

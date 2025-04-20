@@ -118,7 +118,7 @@ namespace Crowny
         }
 
 #ifdef CW_DEBUG
-        if (Renderer::GetAPI() == RenderAPI::API::OpenGL)
+        if (RenderAPI::Get().GetAPI() == RenderAPI::API::OpenGL)
             glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,
                            GLFW_TRUE); // No idea what this does...
                                        // https://www.khronos.org/registry/OpenGL/extensions/KHR/KHR_debug.txt

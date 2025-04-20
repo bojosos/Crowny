@@ -24,7 +24,7 @@ namespace Crowny
 
     void GpuBuffer::CopyData(GpuBuffer& src, const Ref<CommandBuffer>& cmdBuffer)
     {
-        uint32_t size = std::min(m_Size, src.GetSize());
+        const uint32_t size = std::min(m_Size, src.GetSize());
         CopyData(src, 0, 0, size, true, cmdBuffer);
     }
 

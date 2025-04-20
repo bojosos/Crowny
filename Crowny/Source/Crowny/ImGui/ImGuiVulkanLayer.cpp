@@ -62,6 +62,7 @@ namespace Crowny
         init_info.QueueFamily = gVulkanRenderAPI().GetPresentDevice()->GetQueueFamily(GRAPHICS_QUEUE);
         init_info.PipelineCache = gVulkanRenderAPI().GetPresentDevice()->GetPipelineCache();
         init_info.CheckVkResultFn = [](VkResult result) { CW_ENGINE_ASSERT(result == VK_SUCCESS); };
+        init_info.Subpass = 0;
 
         VulkanRenderPassDesc passDesc;
         passDesc.Samples = 1;
@@ -70,8 +71,8 @@ namespace Crowny
         passDesc.Color[0].Enabled = true;
         passDesc.Depth.Enabled = false;
 
-        VulkanRenderPass* renderPass = VulkanRenderPasses::Get().GetRenderPass(passDesc);
-        ImGui_ImplVulkan_Init(&init_info, renderPass->GetVkRenderPass((RenderSurfaceMaskBits)0, (RenderSurfaceMaskBits)0, CLEAR_ALL));
+        m_RenderPass = VulkanRenderPasses::Get().GetRenderPass(passDesc);
+        ImGui_ImplVulkan_Init(&init_info, m_RenderPass->GetVkRenderPass((RenderSurfaceMaskBits)0, (RenderSurfaceMaskBits)0, CLEAR_ALL));
 
         Ref<VulkanCommandBuffer> cmdBuffer = std::static_pointer_cast<VulkanCommandBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
         ImGui_ImplVulkan_CreateFontsTexture(cmdBuffer->GetInternal()->GetHandle());
@@ -82,6 +83,7 @@ namespace Crowny
 
     void ImGuiVulkanLayer::OnDetach()
     {
+        delete m_RenderPass;
         gVulkanRenderAPI().GetPresentDevice()->WaitIdle();
         ImGui_ImplVulkan_Shutdown();
         ImGuiLayer::OnDetach();
@@ -104,12 +106,10 @@ namespace Crowny
 
         RenderAPI::Get().SetRenderTarget(Application::Get().GetRenderWindow());
         RenderAPI::Get().SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
-        gVulkanRenderAPI().ClearViewport(FBT_COLOR | FBT_DEPTH);
-        gVulkanRenderAPI().GetMainCommandBuffer()->GetInternal()->BeginRenderPass();
+        gVulkanRenderAPI().ClearRenderTarget(FBT_COLOR | FBT_DEPTH);
+        vkCmdBuffer->BeginRenderPass();
         ImGui_ImplVulkan_TransitionLayouts(vkCmdBuffer);
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkCmdBuffer->GetHandle());
-        // gVulkanRenderAPI().GetMainCommandBuffer()->GetInternal()->EndRenderPass();
-        // ImGui_ImplVulkan_ClearTextures();
 
         ImGuiIO& io = ImGui::GetIO();
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)

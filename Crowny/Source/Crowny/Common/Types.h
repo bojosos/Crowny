@@ -52,11 +52,12 @@ namespace Crowny
 
     class CommandBuffer;
     class GraphicsPipeline;
+    class RayTracingPipeline;
+    class ComputePipeline;
     class RenderTarget;
     class UniformParams;
     class VertexArray;
     class VertexBuffer;
-    class ComputePipeline;
     class IndexBuffer;
 
     struct RenderWindowDesc;
@@ -276,7 +277,7 @@ namespace Crowny
         TEXTURE_SINGLECHANNEL
     };
 
-    enum TextureUsage // should not be here?
+    enum TextureUsage
     {
         TEXTURE_STATIC = 1 << 0,
         TEXTURE_LOADSTORE = 1 << 1,
@@ -293,8 +294,16 @@ namespace Crowny
         GEOMETRY_SHADER,
         DOMAIN_SHADER,
         HULL_SHADER,
+
         COMPUTE_SHADER,
-        SHADER_COUNT
+
+        RAYGEN_SHADER,
+        HIT_SHADER,
+        MISS_SHADER,
+        RAYTRACING_SHADER_COUNT = 3,
+
+        GRAPHICS_SHADER_COUNT = HULL_SHADER + 1,
+        SHADER_COUNT = MISS_SHADER + 1,
     };
 
     enum GpuQueueType
@@ -307,14 +316,16 @@ namespace Crowny
 
     enum class IndexType
     {
+        // TODO: Add ext formats
         Index_16,
         Index_32
     };
 
-    enum class BufferUsage
+    enum BufferUsage // TODO: Make this flags or add prefix
     {
-        STATIC_DRAW,
-        DYNAMIC_DRAW
+        STATIC_DRAW = 1 << 0,
+        DYNAMIC_DRAW = 1 << 1,
+        LOADSTORE = STATIC_DRAW | 1 << 2
     };
 
     enum RenderSurfaceMaskBits
@@ -380,21 +391,33 @@ namespace Crowny
         TEXTURE2D = 6,
         TEXTURE3D = 7,
         TEXTURECUBE = 8,
-        // RWTEXTURE1D = 9,
-        // RWTEXTURE2D = 10,
-        // RWTEXTURE3D = 11,
+        RWTEXTURE1D = 9,
+        RWTEXTURE2D = 10,
+        RWTEXTURE3D = 11,
+        BYTE_BUFFER = 12,
+        RWBYTE_BUFFER = 13,
+        STRUCTURED_BUFFER = 14,
+        RWSTRUCTURED_BUFFER = 15,
         TEXTURE_UNKNOWN = 256
+    };
+
+    enum class GpuBufferType
+    {
+        Standard,
+        Structured,
+        IndirectDraw
     };
 
     enum GpuBufferFormat
     {
         BF_UNKNOWN,
-        BF_16x1F, // 1D 16-bit float
+        BF_16X1F, // 1D 16-bit float
         BF_16X2F, // 2D 16-bit float
-        BF_32x1F, // 1D 32-bit float
-        BF_32x2F, // 2D 32-bit float
-        BF_32x3F, // 3D 32-bit float
-        BF_32x4F, // 4D 32-bit float
+        BF_16X4F, // 4D 16-bit float
+        BF_32X1F, // 1D 32-bit float
+        BF_32X2F, // 2D 32-bit float
+        BF_32X3F, // 3D 32-bit float
+        BF_32X4F, // 4D 32-bit float
 
         BF_8X1,  // 1D 8-bit normalized
         BF_8X2,  // 2D 8-bit normalized
@@ -415,6 +438,8 @@ namespace Crowny
         BF_32X2U, // 2D 32-bit unsigned int
         BF_32X3U, // 3D 32-bit unsigned int
         BF_32X4U, // 4D 32-bit unsigned int
+
+        BF_COUNT
     };
 
     enum class AudioSourceState
@@ -448,29 +473,29 @@ namespace Crowny
         uint32_t Size;
         uint32_t Alignment;
         uint32_t RowCount;
-        uint32_t ColoumnCount;
+        uint32_t ColumnCount;
     };
 
     struct GpuDataParameterInfos
     {
         GpuDataParameterInfos()
         {
-            std::memset(infos, 0, sizeof(infos));
-            infos[(uint32_t)GpuParameterDataType::Float1] = { 4, 4, 4, 1, 1 };
-            infos[(uint32_t)GpuParameterDataType::Float2] = { 4, 8, 8, 1, 2 };
-            infos[(uint32_t)GpuParameterDataType::Float3] = { 4, 16, 16, 1, 3 };
-            infos[(uint32_t)GpuParameterDataType::Float4] = { 4, 16, 16, 1, 4 };
-            infos[(uint32_t)GpuParameterDataType::Color] = { 4, 16, 16, 1, 4 };
-            infos[(uint32_t)GpuParameterDataType::Matrix3x3] = { 4, 48, 16, 3, 3 };
-            infos[(uint32_t)GpuParameterDataType::Matrix4x4] = { 4, 64, 16, 4, 4 };
-            infos[(uint32_t)GpuParameterDataType::Int1] = { 4, 4, 4, 1, 1 };
-            infos[(uint32_t)GpuParameterDataType::Int2] = { 4, 8, 8, 1, 2 };
-            infos[(uint32_t)GpuParameterDataType::Int3] = { 4, 12, 16, 1, 3 };
-            infos[(uint32_t)GpuParameterDataType::Int4] = { 4, 16, 16, 1, 4 };
-            infos[(uint32_t)GpuParameterDataType::Bool] = { 4, 4, 4, 1, 1 };
-            infos[(uint32_t)GpuParameterDataType::Struct] = { 4, 0, 16, 1, 1 };
+            std::memset(Infos, 0, sizeof(Infos));
+            Infos[(uint32_t)GpuParameterDataType::Float1] = { 4, 4, 4, 1, 1 };
+            Infos[(uint32_t)GpuParameterDataType::Float2] = { 4, 8, 8, 1, 2 };
+            Infos[(uint32_t)GpuParameterDataType::Float3] = { 4, 16, 16, 1, 3 };
+            Infos[(uint32_t)GpuParameterDataType::Float4] = { 4, 16, 16, 1, 4 };
+            Infos[(uint32_t)GpuParameterDataType::Color] = { 4, 16, 16, 1, 4 };
+            Infos[(uint32_t)GpuParameterDataType::Matrix3x3] = { 4, 48, 16, 3, 3 };
+            Infos[(uint32_t)GpuParameterDataType::Matrix4x4] = { 4, 64, 16, 4, 4 };
+            Infos[(uint32_t)GpuParameterDataType::Int1] = { 4, 4, 4, 1, 1 };
+            Infos[(uint32_t)GpuParameterDataType::Int2] = { 4, 8, 8, 1, 2 };
+            Infos[(uint32_t)GpuParameterDataType::Int3] = { 4, 12, 16, 1, 3 };
+            Infos[(uint32_t)GpuParameterDataType::Int4] = { 4, 16, 16, 1, 4 };
+            Infos[(uint32_t)GpuParameterDataType::Bool] = { 4, 4, 4, 1, 1 };
+            Infos[(uint32_t)GpuParameterDataType::Struct] = { 4, 0, 16, 1, 1 };
         }
-        GpuParameterDataTypeInfo infos[(uint32_t)GpuParameterDataType::Count];
+        GpuParameterDataTypeInfo Infos[(uint32_t)GpuParameterDataType::Count];
     };
 
     template <typename... Component> struct ComponentGroup

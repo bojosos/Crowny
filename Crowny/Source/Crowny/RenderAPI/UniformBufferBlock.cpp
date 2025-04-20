@@ -11,13 +11,13 @@ namespace Crowny
 
     Ref<UniformBufferBlock> UniformBufferBlock::Create(uint32_t size, BufferUsage usage)
     {
-        switch (Renderer::GetAPI())
+        switch (RenderAPI::Get().GetAPI())
         {
             //			case RenderAPI::API::OpenGL: return CreateRef<OpenGLUniformBuffer>(size, usage);
         case RenderAPI::API::Vulkan:
             return CreateRef<VulkanUniformBufferBlock>(size, usage);
         default:
-            CW_ENGINE_ASSERT(false, "Renderer API not supporter");
+            CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
         }
 
