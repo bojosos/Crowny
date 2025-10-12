@@ -9,6 +9,7 @@ namespace Crowny
     public:
         virtual void Init() override;
         virtual void SetViewport(float x, float y, float width, float height, const Ref<CommandBuffer>& commandBuffer = nullptr) override {};
+        virtual void SetScissorRect(const Rect2I& rect, const Ref<CommandBuffer>& commandBuffer) override{};
 
         virtual void SetClearColor(const glm::vec4& color) override {};
         virtual void SwapBuffers(const Ref<RenderTarget>& renderTarget, uint32_t syncMask = 0xFFFFFFFF) override {};

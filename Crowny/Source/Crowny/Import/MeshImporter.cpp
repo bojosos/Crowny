@@ -84,6 +84,7 @@ namespace Crowny
             }
             const bool hasVertexColors = mesh->HasVertexColors(0);
             // if (hasVertexColors)
+            // TODO: Should this really be float4?
             bufferLayout.AddBufferElement(BufferElement(ShaderDataType::Float4, VertexAttribute::Color));
 
             IndexType indexType;

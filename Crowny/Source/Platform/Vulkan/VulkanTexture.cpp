@@ -640,7 +640,7 @@ namespace Crowny
 
     VulkanImage* VulkanTexture::CreateImage(VulkanDevice& device, TextureFormat format)
     {
-        bool directlyMappable = m_ImageCreateInfo.tiling == VK_IMAGE_TILING_LINEAR;
+        const bool directlyMappable = m_ImageCreateInfo.tiling == VK_IMAGE_TILING_LINEAR;
         VkMemoryPropertyFlags memoryFlags;
         if (directlyMappable)
             memoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -649,8 +649,15 @@ namespace Crowny
 
         m_ImageCreateInfo.format = VulkanUtils::GetTextureFormat(format, false); // TODO: Fix this somehow.
         VkImage image;
-        VkResult result = vkCreateImage(device.GetLogicalDevice(), &m_ImageCreateInfo, gVulkanAllocator, &image);
+        const VkResult result = vkCreateImage(device.GetLogicalDevice(), &m_ImageCreateInfo, gVulkanAllocator, &image);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
+
+        VkDebugUtilsObjectNameInfoEXT nameInfo{};
+        nameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        nameInfo.objectType = VK_OBJECT_TYPE_IMAGE;
+        nameInfo.objectHandle = (uint64_t)image;
+        nameInfo.pObjectName = m_Params.DebugName.c_str();
+        // vkSetDebugUtilsObjectNameEXT(device.GetLogicalDevice(), &nameInfo);
 
         VmaAllocation allocation = device.AllocateMemory(image, memoryFlags);
         return device.GetResourceManager().Create<VulkanImage>(image, allocation, m_ImageCreateInfo.initialLayout, m_ImageCreateInfo.format,

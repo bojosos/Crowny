@@ -215,17 +215,6 @@ namespace Crowny
 
         void SetIsSubmitted() { m_State = State::Submitted; }
 
-        void CreateTopLevelAccelerationStructure();
-        void CreateBottomLevelAccelerationStructure();
-        void CreateShaderBindingTable();
-
-        struct AccelerationStructureScratchBuffer
-        {
-            VmaAllocation Allocation = VK_NULL_HANDLE;
-            VkBuffer Handle = VK_NULL_HANDLE;
-        };
-        AccelerationStructureScratchBuffer CreateScratchBuffer(uint64_t size);
-
         void RegisterResource(VulkanResource* resource, VulkanAccessFlags flags);
         void RegisterResource(VulkanFramebuffer* framebuffer, RenderSurfaceMask loadMask, uint32_t readMask);
         void RegisterResource(VulkanSwapChain* swapChain);
@@ -304,15 +293,6 @@ namespace Crowny
         void GetInProgressQueries(Vector<VulkanTimerQuery*>& timers, Vector<VulkanPipelineQuery*>& pipelines,
                                   Vector<VulkanOcclusionQuery*>& occlusions) const;
 
-        // TODO: Resource
-        struct AccelerationStructure
-        {
-            VkAccelerationStructureKHR Handle;
-            uint64_t DeviceAddress = 0;
-            VkDeviceMemory Memory;
-            VkBuffer Buffer;
-        };
-
     private:
         friend class VulkanCommandBufferPool;
 
@@ -333,9 +313,6 @@ namespace Crowny
         bool m_StencilRequiresBind : 1;
         bool m_BufferLayoutDirty : 1;
         bool m_RayTracingPipelineRequiresBind : 1;
-
-        AccelerationStructure m_Tlas;
-        AccelerationStructure m_Blas;
 
         mutable uint32_t m_NumUsedInterQueueSemaphores = 0;
         std::array<VkClearValue, MAX_FRAMEBUFFER_COLOR_ATTACHMENTS + 1> m_ClearValues{};

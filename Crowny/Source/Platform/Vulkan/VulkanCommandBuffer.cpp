@@ -50,7 +50,7 @@ namespace Crowny
     {
         if (m_Buffer->IsSubmitted())
             return m_Buffer->CheckFenceStatus(false) ? CommandBufferState::Done : CommandBufferState::Executing;
-        bool recording = m_Buffer->IsRecording() || m_Buffer->IsReadyForSubmit() || m_Buffer->IsInRenderPass();
+        const bool recording = m_Buffer->IsRecording() || m_Buffer->IsReadyForSubmit() || m_Buffer->IsInRenderPass();
         return recording ? CommandBufferState::Recording : CommandBufferState::Empty;
     }
 
@@ -464,212 +464,6 @@ namespace Crowny
             return;
         m_Viewport = rect;
         m_ViewportRequiresBind = true;
-    }
-
-    void VulkanCmdBuffer::CreateTopLevelAccelerationStructure()
-    {
-        const VkTransformMatrixKHR transformMatrix = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f };
-        VkAccelerationStructureInstanceKHR accelerationInstance{};
-        accelerationInstance.transform = transformMatrix;
-        accelerationInstance.instanceCustomIndex = 0;
-        accelerationInstance.mask = 0xff;
-        accelerationInstance.instanceShaderBindingTableRecordOffset = 0;
-        accelerationInstance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR; // TODO:
-        accelerationInstance.accelerationStructureReference = m_Blas.DeviceAddress;
-
-        // TODO: Figure out host coherent?
-        // Leaked the buff for now
-        VulkanGpuBuffer* buffer =
-          new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_RAYTRACING, BufferUsage::STATIC_DRAW, sizeof(VkAccelerationStructureInstanceKHR)); // TODO:
-        buffer->WriteData(0, sizeof(VkAccelerationStructureInstanceKHR), &accelerationInstance, BWT_DISCARD);
-
-        VkDeviceOrHostAddressConstKHR instanceDataDeviceAddress;
-        instanceDataDeviceAddress.deviceAddress = buffer->GetBuffer()->GetDeviceAddress();
-
-        VkAccelerationStructureGeometryKHR accelerationStructureGeometry;
-        accelerationStructureGeometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-        accelerationStructureGeometry.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
-        accelerationStructureGeometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
-        accelerationStructureGeometry.geometry.instances.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
-        accelerationStructureGeometry.geometry.instances.arrayOfPointers = VK_FALSE;
-        accelerationStructureGeometry.geometry.instances.data = instanceDataDeviceAddress;
-
-        VkAccelerationStructureBuildGeometryInfoKHR accelerationBuildGeometryInfo{};
-        accelerationBuildGeometryInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-        accelerationBuildGeometryInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-        accelerationBuildGeometryInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-        accelerationBuildGeometryInfo.geometryCount = 1;
-        accelerationBuildGeometryInfo.pGeometries = &accelerationStructureGeometry;
-
-        const uint32_t prims = 1;
-        VkAccelerationStructureBuildSizesInfoKHR accelerationStructureSizesInfo{};
-        accelerationStructureSizesInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
-        vkGetAccelerationStructureBuildSizesKHR(m_Device.GetLogicalDevice(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
-                                                &accelerationBuildGeometryInfo, &prims, &accelerationStructureSizesInfo);
-
-        AccelerationStructureScratchBuffer scratchBuffer = CreateScratchBuffer(accelerationStructureSizesInfo.buildScratchSize);
-
-        VkAccelerationStructureCreateInfoKHR accelerationStructureCI{};
-        accelerationStructureCI.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
-        accelerationStructureCI.buffer = m_Tlas.Buffer;
-        accelerationStructureCI.size = accelerationStructureSizesInfo.accelerationStructureSize;
-        accelerationStructureCI.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-        VkResult result = vkCreateAccelerationStructureKHR(m_Device.GetLogicalDevice(), &accelerationStructureCI, nullptr, &m_Tlas.Handle);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS);
-
-        VkAccelerationStructureBuildGeometryInfoKHR accelerationStructureBuildGeometryInfo{};
-        accelerationStructureBuildGeometryInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-        accelerationStructureBuildGeometryInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-        accelerationStructureBuildGeometryInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-        accelerationStructureBuildGeometryInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-        accelerationStructureBuildGeometryInfo.dstAccelerationStructure = m_Tlas.Handle;
-        accelerationStructureBuildGeometryInfo.geometryCount = prims;
-        accelerationStructureBuildGeometryInfo.pGeometries = &accelerationStructureGeometry;
-
-        VkBufferDeviceAddressInfo bufferDeviceAddressInfo = {};
-        bufferDeviceAddressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
-        bufferDeviceAddressInfo.buffer = scratchBuffer.Handle;
-        const VkDeviceAddress address = vkGetBufferDeviceAddress(m_Device.GetLogicalDevice(), &bufferDeviceAddressInfo);
-        accelerationStructureBuildGeometryInfo.scratchData.deviceAddress = address;
-
-        VkAccelerationStructureBuildRangeInfoKHR accelerationStructureBuildRangeInfo{};
-        accelerationStructureBuildRangeInfo.primitiveCount = prims;
-        accelerationStructureBuildRangeInfo.primitiveOffset = 0;
-        accelerationStructureBuildRangeInfo.firstVertex = 0;
-        accelerationStructureBuildRangeInfo.transformOffset = 0;
-        Vector<VkAccelerationStructureBuildRangeInfoKHR*> accelerationBuildStructureRangeInfos = { &accelerationStructureBuildRangeInfo };
-
-        VulkanTransferBuffer* transferBuffer = VulkanTransferManager::Get().GetTransferBuffer(GpuQueueType::UPLOAD_QUEUE, 0);
-        vkCmdBuildAccelerationStructuresKHR(transferBuffer->GetCB()->GetHandle(), 1, &accelerationStructureBuildGeometryInfo,
-                                            accelerationBuildStructureRangeInfos.data());
-        // RegisterResource(accel, VulkanAccessFlagBits::Write);
-        transferBuffer->Flush(true); // TODO: To wait or not to wait? Needs some sync after if not
-
-        VkAccelerationStructureDeviceAddressInfoKHR accelerationDeviceAddressInfo;
-        accelerationDeviceAddressInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
-        accelerationDeviceAddressInfo.accelerationStructure = m_Tlas.Handle;
-        m_Tlas.DeviceAddress = vkGetAccelerationStructureDeviceAddressKHR(m_Device.GetLogicalDevice(), &accelerationDeviceAddressInfo);
-
-        if (scratchBuffer.Handle != VK_NULL_HANDLE)
-            vkDestroyBuffer(m_Device.GetLogicalDevice(), scratchBuffer.Handle, nullptr);
-        if (scratchBuffer.Allocation != VK_NULL_HANDLE)
-            m_Device.FreeMemory(scratchBuffer.Allocation);
-        // DeleteScratchBuffer();
-        // instancesBuffer.Destroy();
-    }
-
-    void VulkanCmdBuffer::CreateBottomLevelAccelerationStructure()
-    {
-        struct Vertex
-        {
-            float pos[3];
-        };
-        const Vector<Vertex> vertices = { { { 1.0f, 1.0f, 0.0f } }, { { -1.0f, 1.0f, 0.0f } }, { { 0.0f, -1.0f, 0.0f } } };
-        const Vector<uint32_t> indices = { 0, 1, 2 };
-        const VkTransformMatrixKHR transformMatrix = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f };
-        // So here we need 3 buffers....
-
-        VulkanGpuBuffer* vertexBuffer =
-          new VulkanGpuBuffer(VulkanGpuBuffer::BufferType::BUFFER_VERTEX, BufferUsage::STATIC_DRAW, (uint32_t)vertices.size() * sizeof(Vertex));
-        vertexBuffer->WriteData(0, (uint32_t)vertices.size() * sizeof(Vertex), vertices.data(), BWT_DISCARD);
-        VulkanGpuBuffer* indexBuffer =
-          new VulkanGpuBuffer(VulkanGpuBuffer::BufferType::BUFFER_VERTEX, BufferUsage::STATIC_DRAW, (uint32_t)indices.size() * sizeof(uint32_t));
-        indexBuffer->WriteData(0, (uint32_t)indices.size() * sizeof(uint32_t), indices.data(), BWT_DISCARD);
-        VulkanGpuBuffer* transformBuffer =
-          new VulkanGpuBuffer(VulkanGpuBuffer::BufferType::BUFFER_VERTEX, BufferUsage::STATIC_DRAW, 1 * sizeof(VkTransformMatrixKHR));
-        transformBuffer->WriteData(0, 1 * sizeof(VkTransformMatrixKHR), transformBuffer, BWT_DISCARD);
-
-        VkDeviceOrHostAddressConstKHR vertexBufferDeviceAddress{};
-        vertexBufferDeviceAddress.deviceAddress = vertexBuffer->GetBuffer()->GetDeviceAddress();
-        VkDeviceOrHostAddressConstKHR indexBufferDeviceAddress{};
-        indexBufferDeviceAddress.deviceAddress = indexBuffer->GetBuffer()->GetDeviceAddress();
-        VkDeviceOrHostAddressConstKHR transformBufferDeviceAddress{};
-        transformBufferDeviceAddress.deviceAddress = transformBuffer->GetBuffer()->GetDeviceAddress();
-
-        VkAccelerationStructureGeometryKHR accelerationStructureGeometry{};
-        accelerationStructureGeometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-        accelerationStructureGeometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
-        accelerationStructureGeometry.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-        accelerationStructureGeometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-        accelerationStructureGeometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
-        accelerationStructureGeometry.geometry.triangles.vertexData = vertexBufferDeviceAddress;
-        accelerationStructureGeometry.geometry.triangles.maxVertex = 2;
-        accelerationStructureGeometry.geometry.triangles.vertexStride = sizeof(Vertex);
-        accelerationStructureGeometry.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
-        accelerationStructureGeometry.geometry.triangles.indexData = indexBufferDeviceAddress;
-        accelerationStructureGeometry.geometry.triangles.transformData = transformBufferDeviceAddress;
-
-        VkAccelerationStructureBuildGeometryInfoKHR accelerationStructureBuildGeometryInfo{};
-        accelerationStructureBuildGeometryInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-        accelerationStructureBuildGeometryInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-        accelerationStructureBuildGeometryInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-        accelerationStructureBuildGeometryInfo.geometryCount = 1;
-        accelerationStructureBuildGeometryInfo.pGeometries = &accelerationStructureGeometry;
-
-        const uint32_t numTris = 1;
-        VkAccelerationStructureBuildSizesInfoKHR accelerationStructureBuildSizesInfo{};
-        accelerationStructureBuildSizesInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-        vkGetAccelerationStructureBuildSizesKHR(m_Device.GetLogicalDevice(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
-                                                &accelerationStructureBuildGeometryInfo, &numTris, &accelerationStructureBuildSizesInfo);
-        AccelerationStructureScratchBuffer scratchBuffer = CreateScratchBuffer(accelerationStructureBuildSizesInfo.buildScratchSize);
-
-        VkAccelerationStructureCreateInfoKHR accelerationStructureCreateInfo{};
-        accelerationStructureCreateInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
-        accelerationStructureCreateInfo.buffer = m_Blas.Buffer;
-        accelerationStructureCreateInfo.size = accelerationStructureBuildSizesInfo.accelerationStructureSize;
-        accelerationStructureCreateInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-        VkResult result = vkCreateAccelerationStructureKHR(m_Device.GetLogicalDevice(), &accelerationStructureCreateInfo, nullptr, &m_Blas.Handle);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS);
-
-        CreateScratchBuffer(accelerationStructureBuildSizesInfo.buildScratchSize);
-
-        VkAccelerationStructureBuildGeometryInfoKHR accelerationBuildGeometryInfo{};
-        accelerationBuildGeometryInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-        accelerationBuildGeometryInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-        accelerationBuildGeometryInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-        accelerationBuildGeometryInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-        accelerationBuildGeometryInfo.dstAccelerationStructure = m_Blas.Handle;
-        accelerationBuildGeometryInfo.geometryCount = 1;
-        accelerationBuildGeometryInfo.pGeometries = &accelerationStructureGeometry;
-
-        // TODO: Is this right?
-        VkBufferDeviceAddressInfo bufferDeviceAddressInfo = {};
-        bufferDeviceAddressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
-        bufferDeviceAddressInfo.buffer = scratchBuffer.Handle;
-        const VkDeviceAddress address = vkGetBufferDeviceAddress(m_Device.GetLogicalDevice(), &bufferDeviceAddressInfo);
-        accelerationBuildGeometryInfo.scratchData.deviceAddress = address;
-
-        VkAccelerationStructureBuildRangeInfoKHR accelerationStructureBuildRangeInfo{};
-        accelerationStructureBuildRangeInfo.primitiveCount = numTris;
-        accelerationStructureBuildRangeInfo.primitiveOffset = 0;
-        accelerationStructureBuildRangeInfo.firstVertex = 0;
-        accelerationStructureBuildRangeInfo.transformOffset = 0;
-        Vector<VkAccelerationStructureBuildRangeInfoKHR*> accel = { &accelerationStructureBuildRangeInfo };
-
-        VulkanTransferBuffer* transferBuffer = VulkanTransferManager::Get().GetTransferBuffer(GpuQueueType::UPLOAD_QUEUE, 0);
-        vkCmdBuildAccelerationStructuresKHR(transferBuffer->GetCB()->GetHandle(), 1, &accelerationBuildGeometryInfo, accel.data());
-        transferBuffer->Flush(true);
-
-        VkAccelerationStructureDeviceAddressInfoKHR accelerationDeviceAddressInfo{};
-        accelerationDeviceAddressInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
-        accelerationDeviceAddressInfo.accelerationStructure = m_Blas.Handle;
-        m_Blas.DeviceAddress = vkGetAccelerationStructureDeviceAddressKHR(m_Device.GetLogicalDevice(), &accelerationDeviceAddressInfo);
-
-        // DeleteScratchBuffer();
-    }
-
-    VulkanCmdBuffer::AccelerationStructureScratchBuffer VulkanCmdBuffer::CreateScratchBuffer(uint64_t size)
-    {
-        // TODO: CW API for this
-        AccelerationStructureScratchBuffer scratchBuffer;
-        VkBufferCreateInfo bufferCreateInfo{};
-        bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferCreateInfo.size = size;
-        bufferCreateInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-        const VkResult result = vkCreateBuffer(m_Device.GetLogicalDevice(), &bufferCreateInfo, nullptr, &scratchBuffer.Handle);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        scratchBuffer.Allocation = m_Device.AllocateMemory(scratchBuffer.Handle, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        return scratchBuffer;
     }
 
     void VulkanCmdBuffer::SetScissorRect(const Rect2I& area)
@@ -1735,6 +1529,9 @@ namespace Crowny
 
     void VulkanCmdBuffer::ExecuteClearPass()
     {
+        // TODO:
+        // if (!m_Framebuffer)
+        //     return;
         CW_ENGINE_ASSERT(m_State == State::Recording);
         VulkanRenderPass* renderPass = m_Framebuffer->GetRenderPass();
         VkRenderPassBeginInfo renderPassBeginInfo;
@@ -2089,7 +1886,7 @@ namespace Crowny
         m_GraphicsPipelineRequiresBind = true;
         m_ComputePipelineRequiresBind = true;
         m_Framebuffer = nullptr;
-        m_DescriptorSetsBindState = DescriptorSetBindFlagBits::Graphics | DescriptorSetBindFlagBits::Compute;
+        m_DescriptorSetsBindState = DescriptorSetBindFlags(7); // TODO:?
         m_QueuedLayoutTransitions.clear();
         m_BoundUniforms = nullptr;
         m_IndexBuffer = nullptr;
@@ -2264,7 +2061,8 @@ namespace Crowny
             m_BoundUniformsDirty = false;
         }
 
-        m_DescriptorSetsBindState = DescriptorSetBindFlagBits::Graphics | DescriptorSetBindFlagBits::Compute;
+        m_DescriptorSetsBindState = DescriptorSetBindFlags(7);
+          // (DescriptorSetBindFlags(DescriptorSetBindFlagBits::Graphics | DescriptorSetBindFlagBits::Compute)) | DescriptorSetBindFlagBits::RayTracing;
     }
 
     void VulkanCmdBuffer::BindUniforms()
@@ -2362,29 +2160,6 @@ namespace Crowny
     }
 
     static uint32_t vkAlignedSize(uint32_t value, uint32_t alignment) { return (value + alignment - 1) & ~(alignment - 1); }
-
-    void VulkanCmdBuffer::CreateShaderBindingTable()
-    {
-        const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& rayTracingPipelineProperties = m_Device.GetRayTracingDeviceProperties();
-        const uint32_t pipelineSize = rayTracingPipelineProperties.shaderGroupHandleSize;
-        const uint32_t handleSizeAligned = vkAlignedSize(pipelineSize, rayTracingPipelineProperties.shaderGroupHandleAlignment);
-        // const uint32_t groupCount = (uint32_t)shaderGroups.size();
-        const uint32_t groupCount = 3;
-        const uint32_t sbtSize = groupCount * handleSizeAligned;
-
-        const VkPipeline pipeline = m_RayTracingPipeline->GetPipeline()->GetHandle();
-        std::vector<uint8_t> shaderHandles(sbtSize);
-        // const VkResult result =
-        //   vkGetRayTracingCaptureReplayShaderGroupHandlesKHR(m_Device.GetLogicalDevice(), pipeline, 0, groupCount, sbtSize, shaderHandles.data());
-        // CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        // Another host coherent situation
-        m_RaygenShadingTable = new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_SHADER_TABLE, BufferUsage::STATIC_DRAW, pipelineSize);
-        m_MissShadingTable = new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_SHADER_TABLE, BufferUsage::STATIC_DRAW, pipelineSize);
-        m_HitShadingTable = new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_SHADER_TABLE, BufferUsage::STATIC_DRAW, pipelineSize);
-        m_RaygenShadingTable->WriteData(0, pipelineSize, shaderHandles.data(), BWT_DISCARD);
-        m_MissShadingTable->WriteData(0, pipelineSize, shaderHandles.data() + pipelineSize, BWT_DISCARD);
-        m_HitShadingTable->WriteData(0, pipelineSize, shaderHandles.data() + 2 * pipelineSize, BWT_DISCARD);
-    }
 
     void VulkanCmdBuffer::TraceRays(uint32_t width, uint32_t height)
     {
@@ -2552,8 +2327,8 @@ namespace Crowny
 
     VulkanCmdBuffer::ImageSubresourceInfo& VulkanCmdBuffer::FindSubresourceInfo(VulkanImage* image, uint32_t face, uint32_t mip)
     {
-        uint32_t imageInfoIdx = m_Images[image];
-        ImageInfo& imageInfo = m_ImageInfos[imageInfoIdx];
+        const uint32_t imageInfoIdx = m_Images[image];
+        const ImageInfo& imageInfo = m_ImageInfos[imageInfoIdx];
 
         ImageSubresourceInfo* subresourceInfos = &m_SubresourceInfoStorage[imageInfo.SubresourceInfoIdx];
         for (uint32_t i = 0; i < imageInfo.NumSubresourceInfos; i++)

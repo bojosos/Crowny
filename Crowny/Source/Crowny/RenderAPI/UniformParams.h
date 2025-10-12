@@ -24,6 +24,7 @@ namespace Crowny
         void SetUniformBlockBuffer(const String& name, const Ref<UniformBufferBlock>& uniformBuffer);
         virtual void SetUniformBlockBuffer(uint32_t set, uint32_t slot, const Ref<UniformBufferBlock>& uniformBuffer);
 
+        Ref<Texture> GetTexture(uint32_t set, uint32_t slot);
         virtual void SetTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture, const TextureSurface& surface = TextureSurface::COMPLETE);
         void SetTexture(ShaderType type, const String& name, const Ref<Texture>& texture, const TextureSurface& surface = TextureSurface::COMPLETE);
         virtual void SetSamplerState(uint32_t set, uint32_t slot, const Ref<SamplerState>& sampler);

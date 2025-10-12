@@ -188,148 +188,53 @@ namespace Crowny
 
     void InspectorPanel::RenderMaterialInspector()
     {
-        /*
-        if (s_SelectedMaterial != nullptr)
+        AssetHandle<Material> mat = AssetManager::Get().Load<Material>(m_InspectedAssetPath);
+        UI::BeginPropertyGrid();
+        UIUtils::AssetReference("shader", mat);
+        const auto& bindings = mat->GetBindings();
+        for (const auto& [name, member] : bindings)
         {
-            if (ImGui::CollapsingHeader("Albedo", ImGuiTreeNodeFlags_DefaultOpen))
+            if (member.DataType == ShaderDataType::Float)
             {
-                Ref<Texture> albedo = s_SelectedMaterial->GetAlbedoMap();
-                if (albedo)
-                    ImGui::Image(ImGui_ImplVulkan_AddTexture(albedo), ImVec2(100, 100));
-                else
-                    ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), ImVec2(100, 100));
-
-                if (ImGui::IsItemClicked())
-                {
-                    // Vector<Path> outPaths;
-                    // if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
-                    // {
-                    //     Ref<Texture> albedo;
-                    //     // LoadTexture(outPaths[0], albedo);
-                    //     s_SelectedMaterial->SetAlbedoMap(albedo);
-                    // }
-                }
-
-                static glm::vec4 color = glm::vec4(1.0f);
-                if (ImGui::ColorEdit4("Color", glm::value_ptr(color), ImGuiColorEditFlags_NoInputs))
-                    s_SelectedMaterial->SetAlbedo(color);
-
-                if (ImGui::Button("Reset##resetAlbedo"))
-                {
-                    s_SelectedMaterial->SetAlbedoMap(nullptr);
-                    s_SelectedMaterial->SetAlbedo(glm::vec4(1.0f));
-                    color = glm::vec4(1.0f);
-                }
+                float value = mat->GetDataParam<float>(name);
+                if (UI::Property(name.c_str(), value))
+                    mat->SetFloat(name, value);
             }
-
-            if (ImGui::CollapsingHeader("Metalness", ImGuiTreeNodeFlags_DefaultOpen))
+            else if (member.DataType == ShaderDataType::Int)
             {
-                Ref<Texture> metalness = s_SelectedMaterial->GetMetalnessMap();
-                if (metalness)
-                    ImGui::Image(ImGui_ImplVulkan_AddTexture(metalness), ImVec2(100, 100));
-                else
-                    ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), ImVec2(100, 100));
-
-                if (ImGui::IsItemClicked())
-                {
-                    // Vector<Path> outPaths;
-                    // if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
-                    // {
-                    //     Ref<Texture> metalness;
-                    //     //  LoadTexture(outPaths[0], metalness);
-                    //     s_SelectedMaterial->SetMetalnessMap(metalness);
-                    // }
-                }
-
-                static float metalnessVal = 0.8f;
-                if (ImGui::SliderFloat("Metalness##metalnessValue", &metalnessVal, 0.0f, 1.0f))
-                {
-                    s_SelectedMaterial->SetMetalness(metalnessVal);
-                }
-
-                if (ImGui::Button("Reset##resetMetalness"))
-                {
-                    metalnessVal = 0.8f;
-                    s_SelectedMaterial->SetMetalnessMap(nullptr);
-                    s_SelectedMaterial->SetMetalness(0.8f);
-                }
+                int value = mat->GetDataParam<int>(name);
+                if (UI::Property(name.c_str(), value))
+                    mat->SetInt(name, value);
             }
-
-            if (ImGui::CollapsingHeader("Normal", ImGuiTreeNodeFlags_DefaultOpen))
+            else if (member.DataType == ShaderDataType::Float3)
             {
-                Ref<Texture> normal = s_SelectedMaterial->GetNormalMap();
-                if (normal)
-                    ImGui::Image(ImGui_ImplVulkan_AddTexture(normal), ImVec2(100, 100));
-                else
-                    ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), ImVec2(100, 100));
-
-                if (ImGui::IsItemClicked())
-                {
-                    // Vector<Path> outPaths;
-                    // if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
-                    // {
-                    //     Ref<Texture> normal;
-                    //     // LoadTexture(outPaths[0], normal);
-                    //     s_SelectedMaterial->SetNormalMap(normal);
-                    // }
-                }
-                if (ImGui::Button("Reset##resetNormal"))
-                {
-                    s_SelectedMaterial->SetNormalMap(nullptr);
-                }
+                glm::vec3 value = mat->GetDataParam<glm::vec3>(name);
+                if (UI::Property(name.c_str(), value))
+                    mat->SetVector3(name, value);
             }
-
-            if (ImGui::CollapsingHeader("Roughness", ImGuiTreeNodeFlags_DefaultOpen))
+            else if (member.DataType == ShaderDataType::Float4)
             {
-                Ref<Texture> roughness = s_SelectedMaterial->GetRoughnessMap();
-                if (roughness)
-                    ImGui::Image(ImGui_ImplVulkan_AddTexture(roughness), ImVec2(100, 100));
-                else
-                    ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), ImVec2(100, 100));
-
-                if (ImGui::IsItemClicked())
-                {
-                    // Vector<Path> outPaths;
-                    // if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
-                    // {
-                    //     Ref<Texture> roughness;
-                    //     // LoadTexture(outPaths[0], roughness);
-                    //     s_SelectedMaterial->SetRoughnessMap(roughness);
-                    // }
-                }
-
-                static float roughnessValue = 0.2f;
-                if (ImGui::SliderFloat("rougnessValue##Roughness", &roughnessValue, 0.0f, 1.0f))
-                    s_SelectedMaterial->SetRoughness(roughnessValue);
-
-                if (ImGui::Button("Reset##resetRoughness"))
-                {
-                    roughnessValue = 0.2f;
-                    s_SelectedMaterial->SetRoughnessMap(nullptr);
-                    s_SelectedMaterial->SetRoughness(0.2f);
-                }
+               glm::vec4 value = mat->GetDataParam<glm::vec4>(name);
+                if (UI::Property(name.c_str(), value))
+                    mat->SetColor(name, value);
             }
-
-            if (ImGui::CollapsingHeader("Ao Map", ImGuiTreeNodeFlags_DefaultOpen))
-            {
-                Ref<Texture> ao = s_SelectedMaterial->GetAoMap();
-                if (ao)
-                    ImGui::Image(ImGui_ImplVulkan_AddTexture(ao), ImVec2(100, 100));
-                else
-                    ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), ImVec2(100, 100));
-
-                if (ImGui::IsItemClicked())
-                {
-                    // Vector<Path> outPaths;
-                    // if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, "", {}, outPaths))
-                    // {
-                    //     Ref<Texture> ao;
-                    //     // LoadTexture(outPaths[0], ao);
-                    //     s_SelectedMaterial->SetAoMap(ao);
-                    // }
-                }
         }
-            }*/
+
+        for (const auto& [name, descInfo] : mat->GetTextures())
+        {
+            Ref<Texture> texture = mat->GetTexture(descInfo.Set, descInfo.Slot);
+            // if (texture)
+            //     ImGui::Image(texture, ImVec2(100, 100));
+            // else
+            //     ImGui::Image(EditorAssets::Get().UnassignedTexture, ImVec2(100, 100));
+        }
+
+        UI::EndPropertyGrid();
+        // Ref<Texture> ao = s_SelectedMaterial->GetAoMap();
+        // if (ao)
+        //     ImGui::Image(ImGui_ImplVulkan_AddTexture(ao), ImVec2(100, 100));
+        // else
+        //     ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), ImVec2(100, 100));
     }
 
     void InspectorPanel::RenderPhysicsMaterialInspector() {}

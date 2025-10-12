@@ -143,9 +143,6 @@ namespace Crowny
         m_MenuBar->AddMenu(buildMenu);
         m_MenuBar->AddMenu(viewMenu);
 
-        VirtualFileSystem::Get()->Mount("Icons", "Resources/Icons");
-        SceneRenderer::Init();
-
         CreateRenderTarget();
 
         UndoRedo::StartUp();
@@ -160,6 +157,8 @@ namespace Crowny
 
         if (m_Temp == nullptr) // No scene was auto-loaded
             m_Temp = CreateRef<Scene>("Scene");
+
+        m_SceneRenderer = new SceneRenderer(nullptr, m_RenderTarget);
     }
 
     void EditorLayer::CreateRenderTarget()
@@ -414,7 +413,6 @@ namespace Crowny
 
     void EditorLayer::OnDetach()
     {
-        SceneRenderer::Shutdown();
         Ref<EditorSettings> settings = Editor::Get().GetEditorSettings();
         settings->ShowImGuiDemoWindow = m_ShowDemoWindow;
         settings->ShowPhysicsColliders2D = m_ShowColliders;
@@ -438,6 +436,7 @@ namespace Crowny
         SaveActiveScene();
         Editor::Shutdown();
 
+        delete m_SceneRenderer;
         delete m_InspectorPanel;
         delete m_HierarchyPanel;
         delete m_ViewportPanel;
@@ -475,7 +474,7 @@ namespace Crowny
         Ref<PixelData> outPixelData =
           PixelData::Create(rt->GetColorTexture(1)->GetWidth(), rt->GetColorTexture(1)->GetHeight(), rt->GetColorTexture(1)->GetFormat());
         rt->GetColorTexture(1)->ReadData(*outPixelData);
-        if (outPixelData->GetSize() > coords.x * coords.y)
+        if (outPixelData->GetWidth() > coords.x && outPixelData->GetHeight() > coords.y)
         {
             const glm::vec4 col = outPixelData->GetColorAt((uint32_t)coords.x, (uint32_t)coords.y);
             Ref<Scene> scene = SceneManager::GetActiveScene();
@@ -524,7 +523,7 @@ namespace Crowny
             m_RenderTarget = RenderTexture::Create(rtProps);
         }
         m_ViewportSize = m_ViewportPanel->GetViewportSize();
-        SceneRenderer::SetViewportSize((float)m_RenderTarget->GetProperties().Width, (float)m_RenderTarget->GetProperties().Height);
+        m_SceneRenderer->SetRenderTarget(m_RenderTarget);
 
         rapi.SetRenderTarget(m_RenderTarget);
         rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
@@ -533,7 +532,6 @@ namespace Crowny
 
     void EditorLayer::HandleSceneState(Timestep ts)
     {
-
         switch (m_SceneState)
         {
         case SceneState::Edit: {
@@ -541,13 +539,13 @@ namespace Crowny
             s_EditorCamera.OnUpdate(ts);
 
             SceneManager::GetActiveScene()->OnUpdateEditor(ts);
-            SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
+            m_SceneRenderer->RenderEditor(s_EditorCamera);
             break;
         }
         case SceneState::Play: {
             SceneManager().GetActiveScene()->OnUpdateRuntime(ts);
             ScriptRuntime::OnUpdate();
-            SceneRenderer::OnRuntimeUpdate(ts);
+            m_SceneRenderer->Render();
             s_FrameCount += 1;
             s_DeltaTime = ts;
             s_Time += ts;
@@ -559,13 +557,10 @@ namespace Crowny
             s_EditorCamera.SetViewportSize((float)m_RenderTarget->GetProperties().Width, (float)m_RenderTarget->GetProperties().Height);
             s_EditorCamera.OnUpdate(ts);
             SceneManager().GetActiveScene()->OnSimulationUpdate(ts);
-            SceneRenderer::OnEditorUpdate(ts, s_EditorCamera);
+            m_SceneRenderer->RenderEditor(s_EditorCamera);
             break;
         }
         }
-
-        RenderAPI::Get().SetRenderTarget(nullptr);
-        RenderAPI::Get().SubmitCommandBuffer(nullptr);
     }
 
     void EditorLayer::OnUpdate(Timestep ts)
@@ -574,6 +569,7 @@ namespace Crowny
         // ExecuteProjectAssetRefresh();
         if (m_Temp) // Delay scene reload
         {
+            m_SceneRenderer->SetScene(m_Temp);
             SceneManager::SetActiveScene(m_Temp);
             Editor::Get().GetProjectSettings()->LastOpenScenePath = m_Temp->GetFilepath().string();
             m_Temp = nullptr;

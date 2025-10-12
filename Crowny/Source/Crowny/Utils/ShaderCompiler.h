@@ -23,6 +23,7 @@ namespace Crowny
     public:
         static ShaderDesc Compile(const Path& path, const String& source, ShaderLanguageFlags language = ShaderLanguage::VKSL,
                                   const UnorderedMap<String, String>& defines = {});
+        static Ref<BlendStateDesc> PreparseBlendState(String& inOutShader);
         static Ref<BinaryShaderData> CompileStage(const String& source, ShaderType shaderType, ShaderLanguage language, ShaderLanguageFlags flags,
                                                   const UnorderedMap<String, String>& defines);
 

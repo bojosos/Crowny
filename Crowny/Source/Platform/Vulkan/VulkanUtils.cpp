@@ -256,6 +256,8 @@ namespace Crowny
     {
         switch (shaderDataType)
         {
+        case ShaderDataType::Color:
+            return VK_FORMAT_R8G8B8A8_UNORM;
         case ShaderDataType::Bool:
             return VK_FORMAT_R8_SINT;
         case ShaderDataType::SByte:

@@ -86,6 +86,9 @@ namespace Crowny
     {
         if (!m_RequiresNewBackBuffer)
             return;
+        int width, height;
+        glfwGetWindowSize(((GLFWwindow*)m_Window->GetNativeWindow()), &width, &height);
+        // CW_ENGINE_INFO("WINDOW ACQURIE: {}, {}", width, height);
         const VkResult result = m_SwapChain->AcquireBackBuffer();
         if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
         {
@@ -104,20 +107,22 @@ namespace Crowny
         VulkanQueue* queue = device->GetQueue(GRAPHICS_QUEUE, 0);
         uint32_t queueMask = device->GetQueueMask(GRAPHICS_QUEUE, 0);
         syncMask &= ~queueMask;
-        uint32_t deviceIdx = device->GetIndex();
         VulkanTransferManager& tbm = VulkanTransferManager::Get();
         uint32_t semaphores;
         tbm.GetSyncSemaphores(syncMask, m_SemaphoresTemp, semaphores);
         const SwapChainSurface& surface = m_SwapChain->GetBackBuffer();
         if (surface.NeedsWait)
         {
-            m_SemaphoresTemp[semaphores] = m_SwapChain->GetBackBuffer().Sync;
+            m_SemaphoresTemp[semaphores] = surface.Sync;
             semaphores++;
             m_SwapChain->BackBufferWaitIssued();
         }
 
         // TODO:
-        if (m_Properties.Width != 0 || m_Properties.Height != 0)
+        int width, height;
+        glfwGetWindowSize(((GLFWwindow*)m_Window->GetNativeWindow()), &width, &height);
+        // CW_ENGINE_INFO("WINDOW PRESENT: {}, {}", width, height);
+        if (width != 0 || height)
         {
             VkResult result = queue->Present(m_SwapChain, m_SemaphoresTemp, semaphores);
             if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
@@ -156,12 +161,15 @@ namespace Crowny
 
     void VulkanRenderWindow::RebuildSwapChain()
     {
+        // CW_ENGINE_INFO("REBUILD");
         const Ref<VulkanDevice> device = gVulkanRenderAPI().GetPresentDevice();
-        gVulkanRenderAPI().SetRenderTarget(nullptr);
         device->WaitIdle();
+        // gVulkanRenderAPI().SetRenderTarget(nullptr);
         VulkanSwapChain* oldSwapChain = m_SwapChain;
+        int width, height;
+        glfwGetWindowSize(((GLFWwindow*)m_Window->GetNativeWindow()), &width, &height);
         m_SwapChain =
-          device->GetResourceManager().Create<VulkanSwapChain>(m_Surface, m_Properties.Width, m_Properties.Height, m_Desc.VSync, m_ColorFormat,
+          device->GetResourceManager().Create<VulkanSwapChain>(m_Surface, width, height, false, m_ColorFormat,
                                                                m_ColorSpace, m_Desc.DepthBuffer, m_DepthFormat, oldSwapChain);
         oldSwapChain->Destroy();
     }

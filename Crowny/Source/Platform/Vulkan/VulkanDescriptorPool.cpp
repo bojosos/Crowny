@@ -158,7 +158,7 @@ namespace Crowny
 
     VulkanDescriptorPool::VulkanDescriptorPool(VulkanDevice& device) : m_Device(device)
     {
-        VkDescriptorPoolSize poolSizes[9];
+        VkDescriptorPoolSize poolSizes[8];
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
         poolSizes[0].descriptorCount = s_MaxSampledImages;
 
@@ -183,8 +183,8 @@ namespace Crowny
         poolSizes[7].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         poolSizes[7].descriptorCount = s_MaxBuffers;
 
-        poolSizes[8].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-        poolSizes[8].descriptorCount = s_MaxAccelerationStructures;
+        // poolSizes[8].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+        // poolSizes[8].descriptorCount = s_MaxAccelerationStructures;
 
         VkDescriptorPoolCreateInfo poolCreateInfo;
         poolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;

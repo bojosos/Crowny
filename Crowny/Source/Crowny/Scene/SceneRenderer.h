@@ -2,10 +2,7 @@
 
 #include "Crowny/Scene/Scene.h"
 
-// #include "Crowny/RenderAPI/Framebuffer.h"
 #include "Crowny/Renderer/EditorCamera.h"
-
-#include <glm/glm.hpp>
 
 namespace Crowny
 {
@@ -13,12 +10,20 @@ namespace Crowny
     class SceneRenderer
     {
     public:
-        static void Init();
-        static void OnEditorUpdate(Timestep ts, const EditorCamera& camera);
-        static void OnRuntimeUpdate(Timestep ts);
-        static void SetViewportSize(float width, float height);
-        static void Shutdown();
-        //      static Ref<Framebuffer> GetMainFramebuffer();
+        SceneRenderer(const Ref<Scene>& scene, const Ref<RenderTarget>& renderTarget);
+
+        void Init();
+        void RenderEditor(const EditorCamera& camera);
+        void Render();
+        void SetRenderTarget(const Ref<RenderTarget>& renderTarget);
+        void SetScene(const Ref<Scene>& scene);
+    private:
+        void Render(const Camera& camera, const glm::mat4& viewTransform);
+
+    private:
+        Ref<RenderTarget> m_RenderTarget;
+        Ref<Scene> m_Scene;
+        Ref<CommandBuffer> m_CommandBuffer;
     };
 
 } // namespace Crowny

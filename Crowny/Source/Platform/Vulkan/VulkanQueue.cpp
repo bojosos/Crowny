@@ -88,6 +88,7 @@ namespace Crowny
 
         if (numSemaphores > 0)
         {
+            // CW_ENGINE_INFO("PRESENTING: {}", (void*)m_SemaphoresTemp[0]);
             presentInfo.pWaitSemaphores = m_SemaphoresTemp.data();
             presentInfo.waitSemaphoreCount = numSemaphores;
         }

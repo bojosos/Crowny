@@ -17,9 +17,9 @@ namespace Crowny
     VulkanGpuBufferManager::~VulkanGpuBufferManager()
     {
         delete m_DummyUniformBuffer;
-        delete m_DummyReadBuffer;
-        delete m_DummyStorageBuffer;
-        delete m_DummyStructuredBuffer;
+        // delete m_DummyReadBuffer;
+        // delete m_DummyStorageBuffer;
+        // delete m_DummyStructuredBuffer;
     }
 
 } // namespace Crowny

@@ -21,6 +21,8 @@
 #define TRACY_ENABLE
 #include <tracy/Tracy.hpp>
 
+#define raytracing false
+
 namespace Crowny
 {
 
@@ -28,15 +30,15 @@ namespace Crowny
     {
         uint32_t ViewportWidth, ViewportHeight;
 
-        Ref<TimerQuery> Timer2DGeometry = nullptr;
-        Ref<TimerQuery> Timer3DGeometry = nullptr;
+        // Ref<TimerQuery> Timer2DGeometry = nullptr;
+        // Ref<TimerQuery> Timer3DGeometry = nullptr;
 
-        Ref<PipelineQuery> PipelineQuery = nullptr;
+        // Ref<PipelineQuery> PipelineQuery = nullptr;
 
-        Ref<RayTracingPipeline> RayPipeline = nullptr;
-        Ref<AccelerationStructure> Accel = nullptr;
+        // Ref<RayTracingPipeline> RayPipeline = nullptr;
+        // Ref<AccelerationStructure> Accel = nullptr;
 
-        AssetHandle<Font> GlobalFont;
+        // AssetHandle<Font> GlobalFont;
     };
 
     struct SceneRendererStats
@@ -51,14 +53,17 @@ namespace Crowny
     static SceneRendererData* s_Data;
     static SceneRendererStats s_Stats;
 
+    SceneRenderer::SceneRenderer(const Ref<Scene>& scene, const Ref<RenderTarget>& renderTarget) : m_Scene(scene), m_RenderTarget(renderTarget) {}
+
     void SceneRenderer::Init()
     {
         s_Data = new SceneRendererData();
-        s_Data->Timer2DGeometry = TimerQuery::Create();
-        s_Data->Timer3DGeometry = TimerQuery::Create();
+        // s_Data->Timer2DGeometry = TimerQuery::Create();
+        // s_Data->Timer3DGeometry = TimerQuery::Create();
 
-        s_Data->PipelineQuery = PipelineQuery::Create();
+        // s_Data->PipelineQuery = PipelineQuery::Create();
 
+#if raytracing
         static Ref<Shader> rayTraceShader = Importer::Get().Import<Shader>("Resources/Shaders/RayTrace.glsl");
         static const AssetHandle<Shader> rayTraceHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(rayTraceShader));
         rayTraceShader->GetTechniques()[0]->GetRenderPasses()[0]->Compile();
@@ -89,48 +94,68 @@ namespace Crowny
         instance.Transform = transformMatrix;
         s_Data->Accel = AccelerationStructure::Create({}, true, 1, AccelerationStructBuildBits::PreferFastTrace);
 
-        Ref<CommandBuffer> cmdBuf = CommandBuffer::Create(GpuQueueType::COMPUTE_QUEUE);
+        Ref<CommandBuffer> cmdBuf = CommandBuffer::Create(GpuQueueType::GRAPHICS_QUEUE);
         blas->BuildBottomLevel(cmdBuf, &geom, 1, AccelerationStructBuildBits::PreferFastTrace);
         s_Data->Accel->BuildTopLevel(cmdBuf, &instance, 1, AccelerationStructBuildBits::PreferFastTrace);
         RenderAPI::Get().SubmitCommandBuffer(cmdBuf, 0);
+#endif
 
         // Ref<Asset> font = Importer::Get().Import("Resources/Fonts/Roboto/roboto-thin.ttf");
         // s_Data.GlobalFont = static_asset_cast<Font>(AssetManager::Get().CreateAssetHandle(font));
     }
 
-    void SceneRenderer::OnEditorUpdate(Timestep ts, const EditorCamera& camera)
+    void SceneRenderer::RenderEditor(const EditorCamera& camera) { Render(camera, camera.GetViewMatrix()); }
+
+    void SceneRenderer::Render()
+    {
+        // Get the main camera to render from the scene
+        Camera* mainCamera = nullptr;
+        glm::mat4 cameraTransform;
+        const auto cameraView = m_Scene->m_Registry.view<TransformComponent, CameraComponent>();
+        for (const entt::entity ee : cameraView)
+        {
+            auto [transform, camera] = cameraView.get<TransformComponent, CameraComponent>(ee);
+            mainCamera = &camera.Camera;
+            Entity entity(ee, m_Scene.get());
+            cameraTransform = entity.GetWorldMatrix();
+            break;
+        }
+
+        // Render the scene
+        if (mainCamera)
+            Render(*mainCamera, glm::inverse(cameraTransform));
+    }
+
+    void SceneRenderer::Render(const Camera& camera, const glm::mat4& viewTransform)
     {
         FrameMarkStart("Editor update");
-        Ref<Scene> scene = SceneManager::GetActiveScene();
-
-        // s_Data.PipelineQuery->Begin();
-        // s_Data.Timer3DGeometry->Begin();
-        // s_Data.Timer3DGeometry->End();
-
-        // s_Data.Timer2DGeometry->Begin();
         RenderAPI& rapi = RenderAPI::Get();
+        rapi.SetRenderTarget(m_RenderTarget);
+        rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
+        rapi.ClearRenderTarget(FBT_COLOR | FBT_DEPTH);
+#if raytracing
         rapi.SetRayTracingPipeline(s_Data->RayPipeline);
         rapi.TraceRays(s_Data->ViewportWidth, s_Data->ViewportHeight);
 
         return;
-
+#endif
         {
             ZoneScopedN("Forward begin");
             // TODO: Combine these, or name them better
             ForwardRenderer::Begin();
-            ForwardRenderer::BeginScene(camera, camera.GetViewMatrix());
+            ForwardRenderer::BeginScene(camera, viewTransform);
         }
         {
             ZoneScopedN("Forward render");
-            auto objs = scene->m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
+            auto objs = m_Scene->m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
             for (const entt::entity ee : objs)
             {
-                auto [transform, mesh] = scene->m_Registry.get<TransformComponent, MeshRendererComponent>(ee);
+                auto [transform, mesh] = m_Scene->m_Registry.get<TransformComponent, MeshRendererComponent>(ee);
 
                 if (mesh.MeshHandle)
                 {
-                    Entity entity(ee, scene.get());
-                    ForwardRenderer::Submit(mesh.MeshHandle, entity.GetWorldMatrix());
+                    Entity entity(ee, m_Scene.get());
+                    ForwardRenderer::Submit(mesh.MeshHandle, mesh.BaseMaterial, entity.GetWorldMatrix());
                     // TODO: Update stats... triangle count has to take into account the draw mode
                 }
             }
@@ -144,12 +169,12 @@ namespace Crowny
 
         {
             ZoneScopedN("2D render");
-            Renderer2D::Begin(camera, camera.GetViewMatrix());
-            const auto spriteRendererComponents = scene->m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
+            Renderer2D::Begin(camera, viewTransform);
+            const auto spriteRendererComponents = m_Scene->m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
             for (const entt::entity ee : spriteRendererComponents)
             {
-                auto [transform, sprite] = scene->m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
-                Entity entity(ee, scene.get());
+                auto [transform, sprite] = m_Scene->m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
+                Entity entity(ee, m_Scene.get());
                 CW_ENGINE_ASSERT(entity.IsValid());
                 Renderer2D::FillRect(entity.GetWorldMatrix(), sprite.Texture ? sprite.Texture.GetInternalPtr() : nullptr, sprite.Color,
                                      ((int32_t)ee) + 1);
@@ -157,11 +182,11 @@ namespace Crowny
                 s_Stats.Vertices += 6;
                 s_Stats.Triangles += 2;
             }
-            const auto textComponents = scene->m_Registry.group<TextComponent>(entt::get<TransformComponent>);
+            const auto textComponents = m_Scene->m_Registry.group<TextComponent>(entt::get<TransformComponent>);
             for (const entt::entity ee : textComponents)
             {
-                auto [transform, text] = scene->m_Registry.get<TransformComponent, TextComponent>(ee);
-                Entity entity(ee, scene.get());
+                auto [transform, text] = m_Scene->m_Registry.get<TransformComponent, TextComponent>(ee);
+                Entity entity(ee, m_Scene.get());
                 CW_ENGINE_ASSERT(entity.IsValid());
                 Renderer2D::DrawString(text, entity.GetWorldMatrix(), (int32_t)ee + 1);
                 s_Stats.Vertices += (uint32_t)text.Text.size() * 6;
@@ -169,89 +194,14 @@ namespace Crowny
             }
             Renderer2D::End();
         }
-        // s_Data.Timer2DGeometry->End();
-        // s_Data.PipelineQuery->End();
-
-        // s_Stats.FrameTime = s_Data.Timer3DGeometry->GetTimeMs() + s_Data.Timer2DGeometry->GetTimeMs();
 
         s_Stats.Frames += 1;
-        s_Stats.FrameTime = ts;
+        // s_Stats.FrameTime = ts;
         FrameMarkEnd("Editor update");
     }
 
-    void SceneRenderer::OnRuntimeUpdate(Timestep ts)
-    {
-        Ref<Scene> scene = SceneManager::GetActiveScene();
+    void SceneRenderer::SetRenderTarget(const Ref<RenderTarget>& renderTarget) { m_RenderTarget = renderTarget; }
 
-        // Get the main camera to render from
-        Camera* mainCamera = nullptr;
-        glm::mat4 cameraTransform;
-        const auto cameraView = scene->m_Registry.view<TransformComponent, CameraComponent>();
-        for (const entt::entity ee : cameraView)
-        {
-            auto [transform, camera] = cameraView.get<TransformComponent, CameraComponent>(ee);
-            mainCamera = &camera.Camera;
-            Entity entity(ee, scene.get());
-            cameraTransform = entity.GetWorldMatrix();
-            break;
-        }
-
-        // Render the scene
-        if (mainCamera)
-        {
-            ForwardRenderer::Begin();
-            ForwardRenderer::BeginScene(*mainCamera, glm::inverse(cameraTransform));
-            auto objs = scene->m_Registry.group<MeshRendererComponent>(entt::get<TransformComponent>);
-            for (const entt::entity ee : objs)
-            {
-                auto [transform, mesh] = scene->m_Registry.get<TransformComponent, MeshRendererComponent>(ee);
-
-                if (mesh.MeshHandle)
-                {
-                    Entity entity(ee, scene.get());
-                    ForwardRenderer::Submit(mesh.MeshHandle, entity.GetWorldMatrix());
-                    // TODO: Update stats... triangle count has to take into account the draw mode
-                }
-            }
-            ForwardRenderer::Flush();
-            ForwardRenderer::EndScene();
-            ForwardRenderer::End();
-
-            Renderer2D::Begin(*mainCamera, glm::inverse(cameraTransform));
-            const auto group = scene->m_Registry.group<SpriteRendererComponent>(entt::get<TransformComponent>);
-            for (const entt::entity ee : group)
-            {
-                const auto [transform, sprite] = scene->m_Registry.get<TransformComponent, SpriteRendererComponent>(ee);
-                Entity entity(ee, scene.get());
-                Renderer2D::FillRect(entity.GetWorldMatrix(), sprite.Texture ? sprite.Texture.GetInternalPtr() : nullptr, sprite.Color, (uint32_t)ee);
-                s_Stats.Vertices += 4;
-                s_Stats.Triangles += 2;
-            }
-            const auto texts = scene->m_Registry.group<TextComponent>(entt::get<TransformComponent>);
-            for (const auto ee : texts)
-            {
-                const auto [transform, text] = scene->m_Registry.get<TransformComponent, TextComponent>(ee);
-                Entity entity(ee, scene.get());
-                Renderer2D::DrawString(text, entity.GetWorldMatrix(), (int32_t)ee + 1);
-                s_Stats.Vertices += (uint32_t)text.Text.size() * 4;
-                s_Stats.Triangles += (uint32_t)text.Text.size() * 2;
-            }
-            Renderer2D::End();
-        }
-    }
-
-    void SceneRenderer::SetViewportSize(float width, float height)
-    {
-        s_Data->ViewportWidth = (uint32_t)width;
-        s_Data->ViewportHeight = (uint32_t)height;
-    }
-
-    void SceneRenderer::Shutdown()
-    {
-        s_Data->PipelineQuery = nullptr;
-        s_Data->Timer2DGeometry = nullptr;
-        s_Data->Timer3DGeometry = nullptr;
-        delete s_Data;
-    }
+    void SceneRenderer::SetScene(const Ref<Scene>& scene) { m_Scene = scene; }
 
 } // namespace Crowny

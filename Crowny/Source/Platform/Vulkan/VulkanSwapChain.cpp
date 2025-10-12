@@ -57,6 +57,7 @@ namespace Crowny
 
         CW_ENGINE_ASSERT(width != 0 && height != 0);
 
+        // Guaranteed to be available
         VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
         if (!vsync)
         {
@@ -147,16 +148,18 @@ namespace Crowny
         imageDesc.NumMips = 1;
         imageDesc.Allocation = VK_NULL_HANDLE;
 
-        m_Surfaces.resize(imageCount);
+        m_Surfaces.resize(imageCount + 1);
         for (uint32_t i = 0; i < imageCount; i++)
         {
             imageDesc.Image = images[i];
             m_Surfaces[i].NeedsWait = false;
             m_Surfaces[i].Acquired = false;
             m_Surfaces[i].Sync = owner->Create<VulkanSemaphore>();
-            ;
             m_Surfaces[i].Image = owner->Create<VulkanImage>(imageDesc, false);
         }
+        m_Surfaces.back().Sync = owner->Create<VulkanSemaphore>();
+        m_Surfaces.back().NeedsWait = false;
+        m_Surfaces.back().Acquired = false;
 
         delete[] images;
         if (createDepth)
@@ -205,7 +208,7 @@ namespace Crowny
         }
 
         VulkanRenderPass* renderPass = VulkanRenderPasses::Get().GetRenderPass(passDesc);
-        uint32_t numFramebuffers = (uint32_t)m_Surfaces.size();
+        uint32_t numFramebuffers = (uint32_t)m_Surfaces.size() - 1;
         for (uint32_t i = 0; i < numFramebuffers; i++)
         {
             VulkanFramebufferDesc desc;
@@ -228,10 +231,17 @@ namespace Crowny
         {
             for (auto& surface : m_Surfaces)
             {
+                // Last surface is only for the semaphore(due to validation errors)
+                if (!surface.Framebuffer)
+                    continue;
                 surface.Framebuffer->Destroy();
                 surface.Framebuffer = nullptr;
-                surface.Image->Destroy();
-                surface.Image = nullptr;
+                if (surface.Image)
+                {
+                    surface.Image->Destroy();
+                    surface.Image = nullptr;
+                }
+                
                 surface.Sync->Destroy();
                 surface.Sync = nullptr;
             }
@@ -254,6 +264,7 @@ namespace Crowny
     VkResult VulkanSwapChain::AcquireBackBuffer()
     {
         uint32_t imageIndex;
+        // CW_ENGINE_INFO("ACQUIRING: {}", (void*)m_Surfaces[m_CurrentSemaphoreIdx].Sync->GetHandle());
         VkResult result = vkAcquireNextImageKHR(m_Device, m_SwapChain, std::numeric_limits<uint64_t>::max(),
                                                 m_Surfaces[m_CurrentSemaphoreIdx].Sync->GetHandle(), VK_NULL_HANDLE, &imageIndex);
         if (result != VK_SUCCESS)

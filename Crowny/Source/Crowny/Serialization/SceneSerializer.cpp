@@ -355,6 +355,7 @@ namespace Crowny
                     {
                         MeshRendererComponent& mc = deserialized.AddComponent<MeshRendererComponent>();
                         mc.MeshHandle = LoadAssetHandle<Mesh>(mesh["Mesh"].as<UUID>(UUID::EMPTY));
+                        mc.BaseMaterial = nullptr;
                     }
 
                     const YAML::Node& alc = entity["AudioListenerComponent"];
