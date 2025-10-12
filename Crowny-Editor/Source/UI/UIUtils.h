@@ -5,6 +5,7 @@
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/StringUtils.h"
 #include "Crowny/Ecs/Entity.h"
+#include "Crowny/ImGui/ImGuiBackend.h"
 #include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Editor/Editor.h"
@@ -12,7 +13,6 @@
 
 #include "Crowny/Physics/Physics2D.h"
 
-#include <backends/imgui_impl_vulkan.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <spdlog/fmt/fmt.h>
@@ -202,11 +202,11 @@ namespace Crowny
         {
             auto* drawList = ImGui::GetWindowDrawList();
             if (ImGui::IsItemActive())
-                drawList->AddImage(ImGui_ImplVulkan_AddTexture(imagePressed), rectMin, rectMax, ImVec2(0, 1), ImVec2(1, 0), tintPressed);
+                drawList->AddImage(Application::Get().GetImGuiBackend()->RegisterTexture(imagePressed), rectMin, rectMax, ImVec2(0, 1), ImVec2(1, 0), tintPressed);
             else if (ImGui::IsItemHovered())
-                drawList->AddImage(ImGui_ImplVulkan_AddTexture(imageHovered), rectMin, rectMax, ImVec2(0, 1), ImVec2(1, 0), tintHovered);
+                drawList->AddImage(Application::Get().GetImGuiBackend()->RegisterTexture(imageHovered), rectMin, rectMax, ImVec2(0, 1), ImVec2(1, 0), tintHovered);
             else
-                drawList->AddImage(ImGui_ImplVulkan_AddTexture(imageNormal), rectMin, rectMax, ImVec2(0, 1), ImVec2(1, 0), tintNormal);
+                drawList->AddImage(Application::Get().GetImGuiBackend()->RegisterTexture(imageNormal), rectMin, rectMax, ImVec2(0, 1), ImVec2(1, 0), tintNormal);
         }
 
         static void DrawButtonImage(const Ref<Texture>& image, ImU32 tintNormal, ImU32 tintHovered, ImU32 tintPressed, ImRect rectangle)
@@ -490,7 +490,7 @@ namespace Crowny
                             {
                                 forwardFocus = true;
                                 // ActivateItem moves keyboard navigation focus inside of the window
-                                ImGui::ActivateItem(listID);
+                                ImGui::ActivateItemByID(listID);
                                 ImGui::SetKeyboardFocusHere(1);
                             }
                         }
@@ -623,7 +623,7 @@ namespace Crowny
                             {
                                 forwardFocus = true;
                                 // ActivateItem moves keyboard navigation focus inside of the window
-                                ImGui::ActivateItem(listID);
+                                ImGui::ActivateItemByID(listID);
                                 ImGui::SetKeyboardFocusHere(1);
                             }
                         }
@@ -739,7 +739,7 @@ namespace Crowny
                             {
                                 forwardFocus = true;
                                 // ActivateItem moves keyboard navigation focus inside of the window
-                                ImGui::ActivateItem(listID);
+                                ImGui::ActivateItemByID(listID);
                                 ImGui::SetKeyboardFocusHere(1);
                             }
                         }
@@ -793,7 +793,6 @@ namespace Crowny
             String preview;
             float itemHeight = size.y / 20.0f;
 
-            const auto view = SceneManager::GetActiveScene()->GetAllEntitiesWith<TagComponent>();
             AssetHandle<Asset> current = assetHandle;
 
             if (ImGui::GetItemFlags() & ImGuiItemFlags_Disabled)
@@ -858,7 +857,7 @@ namespace Crowny
                             {
                                 forwardFocus = true;
                                 // ActivateItem moves keyboard navigation focus inside of the window
-                                ImGui::ActivateItem(listID);
+                                ImGui::ActivateItemByID(listID);
                                 ImGui::SetKeyboardFocusHere(1);
                             }
                         }

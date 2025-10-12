@@ -6,7 +6,7 @@
 
 #include <GLFW/glfw3.h>
 #include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_opengl3.cpp>
+// #include <backends/imgui_impl_opengl3.cpp>
 #include <imgui.h>
 
 namespace Crowny
@@ -20,25 +20,25 @@ namespace Crowny
         Application& app = Application::Get();
         GLFWwindow* window = static_cast<GLFWwindow*>(app.GetWindow().GetNativeWindow());
         ImGui_ImplGlfw_InitForOpenGL(window, true);
-        ImGui_ImplOpenGL3_Init("#version 410");
+        // ImGui_ImplOpenGL3_Init("#version 410");
     }
 
     void ImGuiOpenGLLayer::OnDetach()
     {
-        ImGui_ImplOpenGL3_Shutdown();
+        // ImGui_ImplOpenGL3_Shutdown();
         ImGuiLayer::OnDetach();
     }
 
     void ImGuiOpenGLLayer::Begin()
     {
-        ImGui_ImplOpenGL3_NewFrame();
+        // ImGui_ImplOpenGL3_NewFrame();
         ImGuiLayer::Begin();
     }
 
     void ImGuiOpenGLLayer::End()
     {
         ImGuiLayer::End();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        // ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         ImGuiIO& io = ImGui::GetIO();
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)

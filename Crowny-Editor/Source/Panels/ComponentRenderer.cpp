@@ -4,6 +4,7 @@
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/StringUtils.h"
 #include "Crowny/Ecs/Components.h"
+#include "Crowny/ImGui/ImGuiBackend.h"
 #include "Crowny/Import/Importer.h"
 #include "Crowny/RenderAPI/Texture.h"
 
@@ -14,7 +15,6 @@
 #include "UI/Properties.h"
 #include "UI/ScriptInspector.h"
 
-#include <backends/imgui_impl_vulkan.h>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 
@@ -55,7 +55,7 @@ namespace Crowny
             }
             const float framePadding = 2.0f;
             const float outlineSpacing = 1.0f;
-            const float lineHeight = GImGui->Font->FontSize + framePadding * 2.0f;
+            const float lineHeight = GImGui->FontBaked->Size + framePadding * 2.0f;
             const ImVec2 buttonSize = { lineHeight + 2.0f, lineHeight };
             const float inputItemWidth = (ImGui::GetContentRegionAvail().x - spacingX) / 3.0f - buttonSize.x;
 
@@ -274,7 +274,7 @@ namespace Crowny
         {
             ImGui::Text("Font Atlas");
             ImGui::Separator();
-            ImGui::Image(ImGui_ImplVulkan_AddTexture(textComponent.Font->GetAtlasTexture()), { 512.0f, 512.0f });
+            // ImGui::Image(textComponent.Font->GetAtlasTexture(), { 512.0f, 512.0f });
             ImGui::EndPopup();
         }
 #endif
@@ -285,9 +285,9 @@ namespace Crowny
         auto& spriteRendererComponent = e.GetComponent<SpriteRendererComponent>();
 
         if (spriteRendererComponent.Texture)
-            ImGui::Image(ImGui_ImplVulkan_AddTexture(spriteRendererComponent.Texture.GetInternalPtr()), { 50.0f, 50.0f }, { 0, 1 }, { 1, 0 });
+            ImGui::Image(Application::Get().GetImGuiBackend()->RegisterTexture(spriteRendererComponent.Texture.GetInternalPtr()), { 50.0f, 50.0f }, { 0, 1 }, { 1, 0 });
         else
-            ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), { 50.0f, 50.0f }, { 0, 1 }, { 1, 0 });
+            ImGui::Image(Application::Get().GetImGuiBackend()->RegisterTexture(EditorAssets::Get().UnassignedTexture), { 50.0f, 50.0f }, { 0, 1 }, { 1, 0 });
         if (ImGui::IsItemClicked())
         {
             Vector<Path> outPaths;
@@ -305,6 +305,7 @@ namespace Crowny
     {
         MeshRendererComponent& mesh = e.GetComponent<MeshRendererComponent>();
         UIUtils::AssetReference<Mesh>("Mesh", mesh.MeshHandle);
+        UIUtils::AssetReference<Material>("Material", mesh.BaseMaterial);
     }
 
     template <> void ComponentEditorWidget<Rigidbody2DComponent>(Entity entity)

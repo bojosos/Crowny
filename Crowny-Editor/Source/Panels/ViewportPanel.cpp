@@ -5,6 +5,7 @@
 
 #include "Crowny/Application/Application.h"
 #include "Crowny/Events/ImGuiEvent.h"
+#include "Crowny/ImGui/ImGuiBackend.h"
 #include "Crowny/Input/Input.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/Scene/SceneRenderer.h"
@@ -14,7 +15,6 @@
 #include "UI/UIUtils.h"
 
 #include <ImGuizmo.h>
-#include <backends/imgui_impl_vulkan.h>
 #include <glm/gtc/type_ptr.hpp>
 
 namespace Crowny
@@ -81,8 +81,7 @@ namespace Crowny
         RenderTexture* rt = static_cast<RenderTexture*>(m_RenderTarget.get());
         Ref<Texture> texture = rt->GetColorTexture(0);
 
-        ImTextureID textureID = ImGui_ImplVulkan_AddTexture(texture);
-        ImGui::Image(textureID, ImVec2(m_ViewportSize.x, m_ViewportSize.y), ImVec2{ 0, 1 }, ImVec2{ 1, 0 }); // The viewport itself
+        ImGui::Image(Application::Get().GetImGuiBackend()->RegisterTexture(texture), ImVec2(m_ViewportSize.x, m_ViewportSize.y), ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
 
         if (ImGui::BeginDragDropTarget())
         {

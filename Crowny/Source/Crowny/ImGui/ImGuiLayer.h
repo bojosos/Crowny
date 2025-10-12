@@ -4,6 +4,8 @@
 
 namespace Crowny
 {
+    class ImGuiBackend;
+
     class ImGuiLayer : public Layer
     {
     public:
@@ -15,6 +17,12 @@ namespace Crowny
 
         virtual void Begin();
         virtual void End();
+
+        virtual ImGuiBackend* GetBackend()
+        {
+            CW_ENGINE_ASSERT(false);
+            return nullptr;
+        }
 
         virtual void OnEvent(Event& event) override;
         void BlockEvents(bool block) { m_BlockEvents = block; }

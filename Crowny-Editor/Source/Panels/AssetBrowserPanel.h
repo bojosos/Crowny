@@ -7,7 +7,7 @@
 
 namespace Crowny
 {
-
+    class Texture;
     enum class AssetBrowserItem
     {
         Folder,
@@ -30,7 +30,7 @@ namespace Crowny
         SortCount = 3
     };
 
-    typedef void* ImTextureID;
+    // using ImTextureRef = Ref<Texture>;
 
     class AssetBrowserPanel : public ImGuiPanel
     {
@@ -48,7 +48,7 @@ namespace Crowny
         using DisplayList = Vector<Ref<LibraryEntry>>;
 
         void SetCurrentDirectory(DirectoryEntry* entry);
-
+        void PreviewImage(const Ref<LibraryEntry>& child);
         void HandleOpen(LibraryEntry* entry);
         void ShowContextMenuContents(LibraryEntry* entry = nullptr, bool isTreeView = false);
         void DrawHeader();
@@ -71,8 +71,8 @@ namespace Crowny
         Vector<Ref<LibraryEntry>> m_DisplayList;
         String m_SearchString;
         uint32_t m_ColumnCount = 5;
-        ImTextureID m_FolderIcon;
-        ImTextureID m_FileIcon;
+        Ref<Texture> m_FolderIcon;
+        Ref<Texture> m_FileIcon;
 
         UnorderedMap<size_t, Ref<Texture>> m_Icons; // For showing the textures in the asset browser.
 

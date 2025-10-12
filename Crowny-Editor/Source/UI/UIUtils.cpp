@@ -157,7 +157,7 @@ namespace Crowny
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + iconYOffset);
             // ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
             // ImGui::Button(ICON_FA_MAGNIFYING_GLASS, iconSize);
-            ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().SearchIcon), iconSize, { 0.0f, 1.0f }, { 1.0f, 0.0f });
+            ImGui::Image(Application::Get().GetImGuiBackend()->RegisterTexture(EditorAssets::Get().SearchIcon), iconSize, { 0.0f, 1.0f }, { 1.0f, 0.0f });
             // ImGui::PopFont();
             // UI::Image(s_SearchIcon, iconSize, ImVec2(0, 0), ImVec2(1, 1), ImVec4(1.0f, 1.0f, 1.0f, 0.2f));
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() - iconYOffset);

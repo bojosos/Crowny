@@ -792,7 +792,7 @@ namespace Crowny
                     settings->RecentProjects[settings->RecentProjects.size() - 1].Timestamp = 0;
                 }
                 ImGui::SameLine();
-                if (ImGui::ImageButton(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FolderIcon), ImVec2(20.0f, 20.0f), { 0, 1 }, { 1, 0 }, 0))
+                if (ImGui::ImageButton("Project manager", Application::Get().GetImGuiBackend()->RegisterTexture(EditorAssets::Get().FolderIcon), ImVec2(20.0f, 20.0f), { 0, 1 }, { 1, 0 }))
                     PlatformUtils::ShowInExplorer(project.ProjectPath);
             }
             ImGui::EndTable();
@@ -929,7 +929,7 @@ namespace Crowny
     {
         pos.x = IM_ROUND(pos.x);
         pos.y = IM_ROUND(pos.y);
-        ImFont* font = GImGui->Font;
+        ImFontBaked* font = GImGui->FontBaked;
         const ImFontGlyph* glyph;
         char c;
         ImGuiContext& g = *GImGui;
@@ -1425,6 +1425,10 @@ namespace Crowny
         EventDispatcher dispatcher(e);
         dispatcher.Dispatch<KeyPressedEvent>(CW_BIND_EVENT_FN(EditorLayer::OnKeyPressed));
         dispatcher.Dispatch<MouseButtonPressedEvent>(CW_BIND_EVENT_FN(EditorLayer::OnMouseButtonPressed));
+        dispatcher.Dispatch<WindowLostFocusEvent>([](WindowLostFocusEvent& ev) {
+            CW_ENGINE_INFO("LOST FOCUS");
+            return true;
+        });
     }
 
     float Time::GetTime() { return EditorLayer::s_Time; }

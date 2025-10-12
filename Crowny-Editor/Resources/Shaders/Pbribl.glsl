@@ -171,11 +171,11 @@ vec3 calculateNormal()
 void main()
 {
 	outEntity=int(fs_in.normal*10);
-	vec3 lightDir = normalize(vec3(0.0, -0.5, -0.5));
-	float diff = max(dot(fs_in.normal, -lightDir), 0.0);
+	// vec3 lightDir = normalize(vec3(0.0, -0.5, -0.5));
+	// float diff = max(dot(fs_in.normal, -lightDir), 0.0);
 
-	outColor=vec4(texture(albedoMap, fs_in.uv).rgb * diff, 1.0);
-	return;
+	// outColor=vec4(texture(albedoMap, fs_in.uv).rgb * diff, 1.0);
+	// return;
     // outColor = vec4(calculateNormal(), 1.0);
     // return;
     // vec3 N = fs_in.normal;

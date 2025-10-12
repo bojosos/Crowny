@@ -32,7 +32,7 @@ namespace Crowny
             if (ImGui::GetContentRegionAvail().x > uuidLen + 10.0f + nameLen)
             {
                 ImGui::SameLine();
-                ImGui::SetCursorPosX(ImGui::GetWindowContentRegionWidth() - uuidLen);
+                ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x - uuidLen);
                 ImGui::Text("%s", uuid.c_str());
             }
         }

@@ -5,6 +5,7 @@
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Common/StringUtils.h"
+#include "Crowny/ImGui/ImGuiBackend.h"
 #include "Crowny/Import/Importer.h"
 #include "Crowny/Import/TextureImporter.h"
 #include "Crowny/Input/Input.h"
@@ -12,12 +13,12 @@
 #include "Editor/Editor.h"
 #include "Editor/EditorAssets.h"
 #include "Editor/EditorUtils.h"
+#include "Editor/PreviewRenderer.h"
 #include "Editor/ProjectLibrary.h"
 #include "Editor/Script/CodeEditor.h"
 
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
-
 #include "UI/UIUtils.h"
 
 #include <backends/imgui_impl_vulkan.h>
@@ -662,21 +663,21 @@ namespace Crowny
             ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
             if (!selected)
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-            ImTextureID tid;
+            Ref<Texture> texture = nullptr;
             if (entry->Type == LibraryEntryType::Directory)
-                tid = m_FolderIcon;
+                texture = m_FolderIcon;
             else
             {
                 auto iter = m_Icons.find(entry->ElementNameHash);
                 if (iter != m_Icons.end())
-                    tid = ImGui_ImplVulkan_AddTexture(iter->second);
+                    texture = iter->second;
                 else
-                    tid = m_FileIcon;
+                    texture = m_FileIcon;
             }
-
+            ImTextureRef imTexture = Application::Get().GetImGuiBackend()->RegisterTexture(texture);
             // Thumbnail
             ImGui::BeginGroup();
-            ImGui::ImageButton(tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 }, 0);
+            ImGui::ImageButton(entry->ElementName.c_str(), imTexture, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 });
             ImGui::SetNextItemWidth(m_ThumbnailSize);
             if (m_RenamingPath.empty() || m_RenamingPath != path) // File icon
             {
@@ -735,7 +736,7 @@ namespace Crowny
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) // Allow dragging
             {
                 UIUtils::SetAssetPayload(entry.get());
-                ImGui::ImageButton(tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 }, 0);
+                ImGui::ImageButton(entry->ElementName.c_str(), imTexture, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 });
                 ImGui::SetNextItemWidth(m_ThumbnailSize);
                 float textWidth = ImGui::CalcTextSize(entry->ElementName.c_str()).x;
                 if (m_ThumbnailSize >= textWidth)
