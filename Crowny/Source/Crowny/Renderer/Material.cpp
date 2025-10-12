@@ -8,6 +8,19 @@ namespace Crowny
 
     Material::Material(const AssetHandle<Shader>& shader) : m_Shader(shader)
     {
+        ReloadParams();
+    }
+
+    Ref<Material> Material::Create(const AssetHandle<Shader>& shader) { return CreateRef<Material>(shader); }
+
+    void Material::SetShader(const AssetHandle<Shader>& shader)
+    {
+        m_Shader = shader;
+        ReloadParams();
+    }
+
+    void Material::ReloadParams()
+    {
         // TODO: Only cache the shader and remove this
         // TODO: Figure out when to compile.
         m_Shader->GetTechniques()[0]->GetRenderPasses()[0]->Compile();
@@ -15,12 +28,14 @@ namespace Crowny
         CreateAndAppendUniforms();
     }
 
-    Ref<Material> Material::Create(const AssetHandle<Shader>& shader) { return CreateRef<Material>(shader); }
-
     void Material::CreateAndAppendUniforms()
     {
+        m_Bindings.clear();
+        m_UniformBlocks.clear();
+
         const Ref<UniformParamInfo>& uniformParamInfo = m_GraphicsPipeline->GetParamInfo();
         m_Uniforms = UniformParams::Create(m_GraphicsPipeline);
+        
         for (uint32_t i = 0; i < SHADER_COUNT; i++)
         {
             const Ref<UniformDesc>& paramDesc = uniformParamInfo->GetUniformDesc((ShaderType)i);
@@ -55,6 +70,22 @@ namespace Crowny
             return;
         }
         if (iterFind->second.DataType != ShaderDataType::Float)
+        {
+            CW_ENGINE_WARN("Trying to write the wrong data type {}, expected {}, got float", name, ShaderDataTypeToString(iterFind->second.DataType));
+            return;
+        }
+        m_UniformBlocks[iterFind->second.BufferName]->Write(iterFind->second.Offset, &value, sizeof(value));
+    }
+
+    void Material::SetFloat2(const String& name, const glm::vec2& value)
+    {
+        const auto iterFind = m_Bindings.find(name);
+        if (iterFind == m_Bindings.cend())
+        {
+            CW_ENGINE_WARN("Could not find uniform {}", name);
+            return;
+        }
+        if (iterFind->second.DataType != ShaderDataType::Float2)
         {
             CW_ENGINE_WARN("Trying to write the wrong data type {}, expected {}, got float", name, ShaderDataTypeToString(iterFind->second.DataType));
             return;

@@ -67,15 +67,15 @@ namespace Crowny
                     m_LocalMode = !m_LocalMode;
                 if (Input::IsKeyDown(Key::F))
                 {
-                    Entity selectedEntity = HierarchyPanel::GetSelectedEntity();
+                    const Entity selectedEntity = HierarchyPanel::GetSelectedEntity();
                     EditorLayer::GetEditorCamera().Focus(selectedEntity.GetWorldPosition());
                 }
             }
         }
 
-        ImVec2 minBound = ImGui::GetWindowPos();
-        ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
-        ImVec2 viewportOffset = ImGui::GetCursorPos();
+        const ImVec2 minBound = ImGui::GetWindowPos();
+        const ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
+        const ImVec2 viewportOffset = ImGui::GetCursorPos();
 
         m_ViewportSize = { viewportPanelSize.x, viewportPanelSize.y };
         RenderTexture* rt = static_cast<RenderTexture*>(m_RenderTarget.get());

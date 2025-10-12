@@ -225,6 +225,7 @@ namespace Crowny
         };
 
         SceneState m_SceneState = SceneState::Edit;
+        SceneRenderer* m_SceneRenderer;
 
     public:
         static EditorCamera& GetEditorCamera() { return s_EditorCamera; }

@@ -64,9 +64,9 @@ namespace Crowny
             UI::DrawButtonImage(icon, tint, hover, active, UI::RectOffset(UI::GetItemRect(), 0.0f, paddingY));
             return clicked;
         };
-        ImGui::BeginVertical("##consolePanelV", { ImGui::GetContentRegionAvailWidth(), 0.0f });
+        ImGui::BeginVertical("##consolePanelV", { ImGui::GetContentRegionAvail().x, 0.0f });
         ImGui::Spring();
-        ImGui::BeginHorizontal("##consolePanelH", { ImGui::GetContentRegionAvailWidth(), 0.0f });
+        ImGui::BeginHorizontal("##consolePanelH", { ImGui::GetContentRegionAvail().x, 0.0f });
         ImColor tint = m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Info] ? IM_COL32(236, 158, 36, 255) : IM_COL32(192, 192, 192, 255);
         if (drawButton(EditorAssets::Get().ConsoleInfo, tint))
             m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Info] = !m_EnabledLevels[(uint32_t)ConsoleBuffer::Message::Level::Info];

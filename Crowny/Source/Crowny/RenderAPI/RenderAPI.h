@@ -27,6 +27,7 @@ namespace Crowny
         virtual void SubmitCommandBuffer(const Ref<CommandBuffer>& commandBuffer, uint32_t syncMask = 0xFFFFFFFF) = 0;
 
         virtual void SetViewport(float x, float y, float width, float height, const Ref<CommandBuffer>& commandBuffer = nullptr) = 0;
+        virtual void SetScissorRect(const Rect2I& rect, const Ref<CommandBuffer>& commandBuffer) = 0;
         virtual void SetClearColor(const glm::vec4& color) = 0; // TODO: Replace, const Ref<CommandBuffer>& commandBuffer = nullptr with color
         virtual void SetGraphicsPipeline(const Ref<GraphicsPipeline>& pipeline, const Ref<CommandBuffer>& commandBuffer = nullptr) = 0;
         virtual void SetRayTracingPipeline(const Ref<RayTracingPipeline>& pipeline, const Ref<CommandBuffer>& commandBuffer = nullptr) = 0;

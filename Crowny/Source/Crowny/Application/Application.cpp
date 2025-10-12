@@ -53,9 +53,9 @@ namespace Crowny
         }
         Initializer::Init(applicationDesc);
 
-        m_Window = RenderWindow::Create(applicationDesc.Window);
-        m_Window->GetWindow()->SetEventCallback(CW_BIND_EVENT_FN(Application::OnEvent));
-
+        Ref<RenderWindow> mainWindow = RenderWindow::Create(applicationDesc.Window);
+        mainWindow->GetWindow()->SetEventCallback(CW_BIND_EVENT_FN(Application::OnEvent));
+        m_Windows.push_back(mainWindow);
         switch (RenderAPI::Get().GetAPI())
         {
         case RenderAPI::API::OpenGL:
@@ -76,7 +76,7 @@ namespace Crowny
     {
         delete m_LayerStack;
         Renderer::Shutdown();
-        m_Window = nullptr;
+        m_Windows.clear();
         Initializer::Shutdown();
     }
 
@@ -114,7 +114,7 @@ namespace Crowny
     // TODO: Add default for this
     void Application::SetTimeSettings(const Ref<TimeSettings>& timeSettings) { m_TimeSettings = timeSettings; }
 
-    Window& Application::GetWindow() const { return *m_Window->GetWindow(); }
+    Window& Application::GetWindow() const { return *m_Windows[0]->GetWindow(); }
 
     void Application::Run()
     {
@@ -145,9 +145,12 @@ namespace Crowny
             }
 
             Input::OnUpdate();
-            m_Window->GetWindow()->OnUpdate();
             auto& rapi = RenderAPI::Get();
-            rapi.SwapBuffers(m_Window);
+            for (const Ref<RenderWindow>& window : m_Windows)
+            {
+                window->GetWindow()->OnUpdate();
+                rapi.SwapBuffers(window);
+            }
 #ifdef MC_WEB
         };
         emscripten_set_main_loop_arg(DispatchMain, &loop, 0, 1);

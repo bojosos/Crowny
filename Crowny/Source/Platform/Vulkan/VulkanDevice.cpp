@@ -20,6 +20,8 @@ namespace Crowny
 
     VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, uint32_t idx) : m_PhysicalDevice(physicalDevice)
     {
+        m_DeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+        m_DeviceFeatures.pNext = nullptr;
         if (raytracing)
         {
             m_RayTracingPipelineProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
@@ -63,10 +65,8 @@ namespace Crowny
 
             rayTracingAccelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
             rayTracingAccelerationStructureFeatures.pNext = &enabledRayTracingPipelineFeatures;
-            m_DeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
             m_DeviceFeatures.pNext = &rayTracingAccelerationStructureFeatures;
 
-            vkGetPhysicalDeviceFeatures2(physicalDevice, &m_DeviceFeatures);
 
             if (!bufferDeviceAddressFeatures.bufferDeviceAddress)
                 CW_ENGINE_ERROR("Missing Vulkan device address feature");
@@ -77,11 +77,7 @@ namespace Crowny
             if (!rayTracingAccelerationStructureFeatures.accelerationStructure)
                 CW_ENGINE_ERROR("Missing Vulkan device ray tracing acceleration structure feature");
         }
-        else
-        {
-            vkGetPhysicalDeviceProperties(physicalDevice, &m_DeviceProperties);
-            vkGetPhysicalDeviceFeatures(physicalDevice, &m_DeviceFeatures.features);
-        }
+        vkGetPhysicalDeviceFeatures2(physicalDevice, &m_DeviceFeatures);
 
         vkGetPhysicalDeviceMemoryProperties(physicalDevice, &m_MemoryProperties);
 
@@ -137,6 +133,7 @@ namespace Crowny
 
         for (uint32_t i = 0; i < (uint32_t)queueFamilyProperties.size(); i++)
         { /*
+            TODO:
              if (queueFamilyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT)
              {
                  populateQueueInfo(COMPUTE_QUEUE, i);
@@ -147,6 +144,11 @@ namespace Crowny
         vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &availableExtensionsCount, nullptr);
         Vector<VkExtensionProperties> availableExtensions(availableExtensionsCount);
         vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &availableExtensionsCount, availableExtensions.data());
+
+#if LOG_EXTENSIONS
+        for (const VkExtensionProperties& ext : availableExtensions)
+            CW_ENGINE_INFO("Extension: {}, version: {}", ext.extensionName, ext.specVersion);
+#endif
 
         const void* pNext = nullptr;
         Vector<const char*> extensions;
@@ -210,8 +212,7 @@ namespace Crowny
         deviceInfo.ppEnabledExtensionNames = extensions.data();
         deviceInfo.enabledLayerCount = 0;
         deviceInfo.ppEnabledLayerNames = nullptr;
-        if (!pNext)
-            deviceInfo.pEnabledFeatures = &m_DeviceFeatures.features;
+        deviceInfo.pEnabledFeatures = &m_DeviceFeatures.features; // TODO: More fine control
 
         if (true /* m_DeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU */)
         {
@@ -264,8 +265,8 @@ namespace Crowny
             pipelineCacheCI.initialDataSize = data.size();
             pipelineCacheCI.pInitialData = data.data();
         }
-        // const VkResult result = vkCreatePipelineCache(m_LogicalDevice, &pipelineCacheCI, gVulkanAllocator, &m_PipelineCache);
-        // CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        const VkResult result = vkCreatePipelineCache(m_LogicalDevice, &pipelineCacheCI, gVulkanAllocator, &m_PipelineCache);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
     }
 
     VulkanDevice::~VulkanDevice()

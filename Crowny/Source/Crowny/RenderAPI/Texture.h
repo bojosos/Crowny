@@ -21,6 +21,7 @@ namespace Crowny
         uint32_t Width = 1, Height = 1, Depth = 1;
         TextureUsage Usage = TextureUsage::TEXTURE_STATIC;
         TextureFormat Format = TextureFormat::RGBA8;
+        String DebugName;
     };
 
     class Texture : public Asset

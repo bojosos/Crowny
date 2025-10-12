@@ -34,7 +34,7 @@
 #include <vma/vk_mem_alloc.h>
 #pragma clang diagnostic pop
 
-// #define CW_DEBUG 0
+#define CW_DEBUG 1
 // #undef CW_DEBUG
 
 namespace Crowny
@@ -43,6 +43,7 @@ namespace Crowny
 
     PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = nullptr;
     PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT = nullptr;
+    PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT = nullptr;
 
     PFN_vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceSupportKHR = nullptr;
     PFN_vkGetPhysicalDeviceSurfaceFormatsKHR vkGetPhysicalDeviceSurfaceFormatsKHR = nullptr;
@@ -101,7 +102,7 @@ namespace Crowny
         const uint32_t version = VK_MAKE_VERSION(CROWNY_VERSION_MAJOR, CROWNY_VERSION_MINOR, CROWNY_VERSION_MINEST);
         appInfo.engineVersion = version;
         appInfo.applicationVersion = version;    // Note that this is game version, not engine
-        appInfo.apiVersion = VK_API_VERSION_1_2; // Note that this is the highest version I want to use.
+        appInfo.apiVersion = VK_API_VERSION_1_3; // Note that this is the highest version I want to use.
 
         uint32_t availableExtensionsCount = 0;
         vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionsCount, nullptr);
@@ -133,7 +134,9 @@ namespace Crowny
             bool layerFound = false;
             for (const auto& layerProps : availableLayers)
             {
+#if LOG_EXTENSIONS
                 CW_ENGINE_INFO("Validation layer: {}, {}", layerProps.layerName, layerProps.description);
+#endif
                 if (std::strcmp(layerName, layerProps.layerName) == 0)
                 {
                     layerFound = true;
@@ -178,6 +181,8 @@ namespace Crowny
 
         result = vkCreateDebugUtilsMessengerEXT(m_Instance, &debugUtilsMessengerCI, gVulkanAllocator, &m_DebugUtilsMessenger);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
+
+        GET_INSTANCE_PROC_ADDR(m_Instance, SetDebugUtilsObjectNameEXT);
 #endif
 
         // need molten vk
@@ -313,6 +318,12 @@ namespace Crowny
         vkCB->SetViewport({ x, y, width, height });
     }
 
+    void VulkanRenderAPI::SetScissorRect(const Rect2I& rect, const Ref<CommandBuffer>& commandBuffer)
+    {
+        VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
+        vkCB->SetScissorRect(rect);
+    }
+
     void VulkanRenderAPI::SetIndexBuffer(const Ref<IndexBuffer>& indexBuffer, const Ref<CommandBuffer>& commandBuffer)
     {
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
@@ -379,7 +390,7 @@ namespace Crowny
 
     void VulkanRenderAPI::SetUniforms(const Ref<UniformParams>& params, const Ref<CommandBuffer>& commandBuffer)
     {
-        for (uint32_t i = 0; i < 6; i++)
+        for (uint32_t i = 0; i < SHADER_COUNT; i++)
         {
             Ref<UniformDesc> desc = params->GetUniformDesc((ShaderType)i);
             if (desc == nullptr)

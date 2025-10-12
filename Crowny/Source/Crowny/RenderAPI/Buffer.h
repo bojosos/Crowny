@@ -11,6 +11,7 @@ namespace Crowny
         SByte3,
         SByte4,
         UByte4,
+        Color, // 8 bits per channel color
         Float,
         Float2,
         Float3,
@@ -39,6 +40,8 @@ namespace Crowny
             return "SByte4";
         case ShaderDataType::UByte4:
             return "UByte4";
+        case ShaderDataType::Color:
+            return "Color";
         case ShaderDataType::Float:
             return "Float";
         case ShaderDataType::Float2:
@@ -82,6 +85,8 @@ namespace Crowny
         case ShaderDataType::SByte4:
             return 4 * 1;
         case ShaderDataType::UByte4:
+            return 4 * 1;
+        case ShaderDataType::Color: // U32
             return 4 * 1;
         case ShaderDataType::Float:
             return 4;
@@ -175,6 +180,8 @@ namespace Crowny
                 return 4;
             case ShaderDataType::UByte4:
                 return 4;
+            case ShaderDataType::Color:
+                return 1;
             case ShaderDataType::Float:
                 return 1;
             case ShaderDataType::Float2:

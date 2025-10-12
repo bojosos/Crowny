@@ -59,8 +59,65 @@ namespace Crowny
       : ImGuiPanel(name), m_SetSelectedPathCallback(selectedPathCallback)
     {
         m_CsDefaultText = FileSystem::ReadTextFile(EditorAssets::DefaultScriptPath);
-        m_FolderIcon = ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FolderIcon);
-        m_FileIcon = ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FileIcon);
+        m_FolderIcon = EditorAssets::Get().FolderIcon;
+        m_FileIcon = EditorAssets::Get().FileIcon;
+    }
+
+    void AssetBrowserPanel::PreviewImage(const Ref<LibraryEntry>& child)
+    {
+        const Path& path = child->Filepath;
+        String ext = path.extension().string();
+        StringUtils::ToLower(ext);
+        if (ext.size() > 0 && TextureImporter::IsExtensionSupportedStatic(ext.substr(1)))
+        {
+            Ref<Texture> result = Importer::Get().Import<Texture>(path);
+            m_Icons[child->ElementNameHash] = result;
+        }
+        else if (ext == ".ogg")
+        {
+#if AUDIO_PREVIEW
+            TextureParameters soundWaveParams;
+            soundWaveParams.Width = 256;
+            soundWaveParams.Height = 256;
+            soundWaveParams.Usage = TextureUsage::TEXTURE_STATIC;
+            soundWaveParams.Format = TextureFormat::RGBA8;
+
+            Ref<Texture> soundWave = Texture::Create(soundWaveParams);
+            AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(path));
+            Vector<uint8_t> samples;
+            samples.resize(clip->GetNumSamples() * 2);
+            clip->GetBuffer(samples.data(), 0, (uint32_t)samples.size());
+            struct icol
+            {
+                uint8_t r, g, b, a;
+            };
+            icol data[256][256];
+            std::memset(data, 0, 256 * 256 * 4);
+            for (uint32_t c = 0; c < clip->GetNumChannels(); c++)
+            {
+                float x = 0, xAdv = 256.0f / samples.size() * 2;
+                for (uint32_t i = 0; i < samples.size(); i += 2)
+                {
+                    int16_t sample = (((int(samples[i]))) | (int(samples[i + 1]) << 8));
+                    data[256 - int((float)sample / 65535 * 256) - 256 / 2][int(x) /* clip->GetNumChannels() * (c + 1))*/] = { 39, 185, 242, 255 };
+                    x += xAdv;
+                }
+            }
+            PixelData src(256, 256, 1, TextureFormat::RGBA8);
+            src.SetBuffer((uint8_t*)data);
+            soundWave->WriteData(src);
+            m_Icons[child->ElementNameHash] = soundWave;
+#endif
+        }
+        else if (ext == ".obj" || ext == ".gltf" || ext == ".fbx")
+        {
+            // ProjectLibrary::Get().Reimport(path, static_cast<FileEntry*>(child.get())->Metadata->ImportOptions, true);
+            // AssetHandle<Mesh> mesh = static_asset_cast<Mesh>(ProjectLibrary::Get().Load(path));
+            // PreviewObjectRenderer previewRenderer(mesh);
+            // previewRenderer.Setup(256, 256);
+            // Ref<Texture> result = previewRenderer.RenderPreview();
+            // m_Icons[child->ElementNameHash] = result;
+        }
     }
 
     void AssetBrowserPanel::Initialize()
@@ -77,50 +134,16 @@ namespace Crowny
         }
         RecalculateDirectoryEntries();
 
-        for (auto child : m_CurrentDirectoryEntry->Children) // Also this is not recursive, and do audio wave on import
-        {
-            const auto& path = child->Filepath;
-            String ext = path.extension().string();
-            if (ext.size() > 0 && TextureImporter::IsExtensionSupportedStatic(ext.substr(1)))
+        std::function<void(const Ref<LibraryEntry>)> doPreview = [&](const Ref<LibraryEntry>& cur) {
+            if (cur->Type == LibraryEntryType::Directory)
             {
-                Ref<Texture> result = Importer::Get().Import<Texture>(path);
-                m_Icons[child->ElementNameHash] = result;
+                for (const Ref<LibraryEntry>& entry : static_cast<DirectoryEntry*>(cur.get())->Children)
+                    doPreview(entry);
             }
-            else if (ext == ".ogg")
-            {
-                TextureParameters soundWaveParams;
-                soundWaveParams.Width = 256;
-                soundWaveParams.Height = 256;
-                soundWaveParams.Usage = TextureUsage::TEXTURE_STATIC;
-                soundWaveParams.Format = TextureFormat::RGBA8;
-
-                Ref<Texture> soundWave = Texture::Create(soundWaveParams);
-                AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(path));
-                Vector<uint8_t> samples;
-                samples.resize(clip->GetNumSamples() * 2);
-                clip->GetBuffer(samples.data(), 0, (uint32_t)samples.size());
-                struct icol
-                {
-                    uint8_t r, g, b, a;
-                };
-                icol data[256][256];
-                std::memset(data, 0, 256 * 256 * 4);
-                for (uint32_t c = 0; c < clip->GetNumChannels(); c++)
-                {
-                    float x = 0, xAdv = 256.0f / samples.size() * 2;
-                    for (uint32_t i = 0; i < samples.size(); i += 2)
-                    {
-                        int16_t sample = (((int(samples[i]))) | (int(samples[i + 1]) << 8));
-                        data[256 - int((float)sample / 65535 * 256) - 256 / 2][int(x) /* clip->GetNumChannels() * (c + 1))*/] = { 39, 185, 242, 255 };
-                        x += xAdv;
-                    }
-                }
-                PixelData src(256, 256, 1, TextureFormat::RGBA8);
-                src.SetBuffer((uint8_t*)data);
-                soundWave->WriteData(src);
-                m_Icons[child->ElementNameHash] = soundWave;
-            }
-        }
+            else
+                PreviewImage(cur);
+        };
+        doPreview(ProjectLibrary::Get().GetRoot());
         UpdateDisplayList();
     }
 
@@ -214,9 +237,9 @@ namespace Crowny
         // UI::ScopedStyle itemSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 3));
         UI::ScopedStyle style2(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 8.0f));
         UI::ScopedStyle style3(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 4.0f));
-        ImGui::BeginVertical("##assetBrowserV", { ImGui::GetContentRegionAvailWidth(), 0 }, 0.5f);
+        ImGui::BeginVertical("##assetBrowserV", { ImGui::GetContentRegionAvail().x, 0 }, 0.5f);
         ImGui::Spring();
-        ImGui::BeginHorizontal("##assetBrowserH", { ImGui::GetContentRegionAvailWidth(), 0 });
+        ImGui::BeginHorizontal("##assetBrowserH", { ImGui::GetContentRegionAvail().x, 0 });
         const Ref<DirectoryEntry>& entry = ProjectLibrary::Get().GetRoot();
         if (!m_BackwardHistory.empty())
         {
@@ -333,7 +356,7 @@ namespace Crowny
             while (!m_SelectionSet.empty())
             {
                 const DisplayList& displayList = GetDisplayList();
-                for (const auto& entry : displayList)
+                for (const Ref<LibraryEntry>& entry : displayList)
                 {
                     // This is not enough
                     auto iterFind = m_SelectionSet.find(entry->ElementNameHash);
@@ -629,12 +652,12 @@ namespace Crowny
             const auto entry = displayList[entryIdx];
             const auto& path = entry->Filepath;
 
-            uint32_t upperBits = static_cast<uint32_t>(entry->ElementNameHash >> 32);
-            uint32_t lowerBits = static_cast<uint32_t>(entry->ElementNameHash & 0xffffffff);
+            const uint32_t upperBits = static_cast<uint32_t>(entry->ElementNameHash >> 32);
+            const uint32_t lowerBits = static_cast<uint32_t>(entry->ElementNameHash & 0xffffffff);
             ImGui::PushID(upperBits ^ lowerBits);
 
             auto iterFind = m_SelectionSet.find(entry->ElementNameHash); // Show selected files
-            bool selected = iterFind != m_SelectionSet.end();
+            const bool selected = iterFind != m_SelectionSet.end();
 
             ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
             if (!selected)
@@ -996,6 +1019,9 @@ namespace Crowny
         case AssetBrowserItem::PhysicsMaterial: {
             ProjectLibrary::Get().CreateEntry(CreateRef<PhysicsMaterial2D>(), newEntryPath);
             break;
+        }
+        case AssetBrowserItem::Material: {
+            // TODO:
         }
         default: {
             FileSystem::WriteTextFile(newEntryPath, GetDefaultContents(itemType));

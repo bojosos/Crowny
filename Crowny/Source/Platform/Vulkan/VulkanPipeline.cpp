@@ -246,7 +246,7 @@ namespace Crowny
         auto iter = m_Pipelines.find(key);
         if (iter != m_Pipelines.end())
             return iter->second;
-
+        CW_ENGINE_INFO("Creating pipeline...");
         VulkanPipeline* result = CreatePipeline(renderPass, readOnlyFlags, drawMode, layout);
         m_Pipelines[key] = result;
         return result;

@@ -89,6 +89,12 @@ namespace Crowny
         return m_BufferBlocks[globalSlot];
     }
 
+    Ref<Texture> UniformParams::GetTexture(uint32_t set, uint32_t slot)
+    {
+        const uint32_t globalSlot = m_ParamInfo->GetSequentialSlot(UniformParamInfo::ParamType::Texture, set, slot);
+        return m_SampledTextureData[globalSlot].Texture;
+    }
+
     void UniformParams::SetTexture(ShaderType type, const String& name, const Ref<Texture>& texture, const TextureSurface& surface)
     {
         const UnorderedMap<String, UniformResourceDesc>& textures = m_ParamInfo->GetUniformDesc(type)->Textures;

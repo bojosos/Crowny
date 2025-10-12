@@ -42,12 +42,13 @@ namespace Crowny
         void PushOverlay(Layer* layer);
 
         Window& GetWindow() const;
-        const Ref<RenderWindow>& GetRenderWindow() const { return m_Window; }
+        const Ref<RenderWindow>& GetRenderWindow() const { return m_Windows[0]; }
         Ref<TimeSettings> GetTimeSettings() const;
         void SetTimeSettings(const Ref<TimeSettings>& timeSettings);
         ImGuiLayer* GetImGuiLayer() { return m_ImGuiLayer; }
         void Exit();
         const ApplicationDesc& GetApplicationDesc() const { return m_Desc; }
+        ImGuiBackend* GetImGuiBackend() const { return m_ImGuiLayer->GetBackend(); }
 
         static Application& Get() { return *s_Instance; }
 
@@ -60,7 +61,7 @@ namespace Crowny
         void Run();
 
     private:
-        Ref<RenderWindow> m_Window;
+        Vector<Ref<RenderWindow>> m_Windows;
         Ref<TimeSettings> m_TimeSettings;
         bool m_Running = true;
         bool m_Minimized = false;

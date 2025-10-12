@@ -60,14 +60,6 @@ namespace Crowny
 
         AssetManager::StartUp();
         AssetListenerManager::StartUp();
-        // Most of these should be in the editor
-        VirtualFileSystem::Init();
-        VirtualFileSystem::Get()->Mount("Shaders", "Resources/Shaders");
-        VirtualFileSystem::Get()->Mount("Textures", "Resources/Textures");
-        VirtualFileSystem::Get()->Mount("Fonts", "Resources/Fonts");
-        VirtualFileSystem::Get()->Mount("Assemblies", "Resources/Assemblies");
-        VirtualFileSystem::Get()->Mount("Models", "Resources/Models");
-        VirtualFileSystem::Get()->Mount("Cache", "Resources/Cache");
 
         Physics2D::StartUp();
         Random::StartUp();
@@ -130,7 +122,7 @@ namespace Crowny
         // Scripting
         MonoManager::StartUp();
         ScriptInfoManager::StartUp();
-        Path engineAssemblyPath = Path("C:/dev/Crowny/Crowny-Sharp") / (std::string(CROWNY_ASSEMBLY) + ".dll");
+        const Path engineAssemblyPath = Path("C:/dev/Crowny/Crowny-Sharp") / (std::string(CROWNY_ASSEMBLY) + ".dll");
         if (fs::exists(engineAssemblyPath))
         {
             MonoManager::Get().LoadAssembly(engineAssemblyPath, CROWNY_ASSEMBLY);
@@ -139,7 +131,7 @@ namespace Crowny
             CW_ENGINE_INFO("Loaded engine assembly {0}", engineAssemblyPath.string());
         }
 
-        Path gameAssemblyPath = Path("C:/dev/Projects/Project1/Internal/Assemblies/Debug/") / (std::string(GAME_ASSEMBLY) + ".dll");
+        const Path gameAssemblyPath = Path("C:/dev/Projects/Project1/Internal/Assemblies/Debug/") / (std::string(GAME_ASSEMBLY) + ".dll");
         if (fs::exists(gameAssemblyPath))
         {
             MonoManager::Get().LoadAssembly(gameAssemblyPath, GAME_ASSEMBLY);

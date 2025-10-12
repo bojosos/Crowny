@@ -224,6 +224,138 @@ namespace Crowny
         return true;
     }
 
+    Ref<BlendStateDesc> ShaderCompiler::PreparseBlendState(String& shader)
+    {
+        Ref<BlendStateDesc> result;
+        auto strPosIter = shader.find("blend_state");
+        const auto strPos = strPosIter;
+
+        auto skipWhiteSpace = [&strPosIter, &shader]() {
+            while (strPosIter < shader.size() && std::isspace(shader[strPosIter]))
+                strPosIter++;
+        };
+        auto expect = [&strPosIter, &shader](char value) {
+            CW_ENGINE_ASSERT(shader[strPosIter] == value, "Bad programmer");
+                
+            strPosIter++;
+        };
+        auto isNext = [&strPosIter, &shader](const String& value) {
+            for (int i = 0; i < value.size(); i++)
+                if (std::tolower(shader[strPosIter + i]) != std::tolower(value[i]))
+                    return false;
+            strPosIter += value.size();
+            return true;
+        };
+        auto parseBool = [&]() {
+            if (isNext("true"))
+                return true;
+            else if (isNext("false"))
+                return false;
+            else
+                CW_ENGINE_ERROR("Bad");
+        };
+        auto parseBlendFactor = [&]() {
+            if (isNext("one"))
+                return BlendFactor::One;
+            else if (isNext("zero"))
+                return BlendFactor::Zero;
+            else if (isNext("dstrgb"))
+                return BlendFactor::DestColor;
+            else if (isNext("srcrgb"))
+                return BlendFactor::SourceColor;
+            else if (isNext("dstirgb"))
+                return BlendFactor::InvDestColor;
+            else if (isNext("srcirgb"))
+                return BlendFactor::InvSourceColor;
+            else if (isNext("dsta"))
+                return BlendFactor::DestAlpha;
+            else if (isNext("srca"))
+                return BlendFactor::SourceAlpha;
+            else if (isNext("dstia"))
+                return BlendFactor::InvDestAlpha;
+            else if (isNext("srcia"))
+                return BlendFactor::InvSourceAlpha;
+            CW_ENGINE_ASSERT(false);
+            return BlendFactor::One;
+        };
+        auto parseBlendOp = [&]() {
+            if (isNext("add"))
+                return BlendFunction::ADD;
+            else if (isNext("sub"))
+                return BlendFunction::SUBTRACT;
+            else if (isNext("rsub"))
+                return BlendFunction::REVERSE_SUBTRACT;
+            else if (isNext("min"))
+                return BlendFunction::MIN;
+            else if (isNext("max"))
+                return BlendFunction::MAX;
+            CW_ENGINE_ASSERT(false);
+            return BlendFunction::ADD;
+        };
+        auto parseColorBlendOp = [&](BlendFactor& srcBlend, BlendFactor& dstBlend, BlendFunction& blendOp) {
+            skipWhiteSpace();
+            expect('{');
+            skipWhiteSpace();
+            srcBlend = parseBlendFactor();
+            skipWhiteSpace();
+            expect(',');
+            skipWhiteSpace();
+            dstBlend = parseBlendFactor();
+            skipWhiteSpace();
+            expect(',');
+            skipWhiteSpace();
+            blendOp = parseBlendOp();
+            skipWhiteSpace();
+            expect('}');
+            skipWhiteSpace();
+            expect(';');
+        };
+        if (strPosIter != String::npos)
+        {
+            result = CreateRef<BlendStateDesc>();
+            strPosIter += strlen("blend_state");
+            skipWhiteSpace();
+            expect('{');
+            while (shader[strPosIter] != '}')
+            {
+                skipWhiteSpace();
+                if (isNext("enabled"))
+                {
+                    skipWhiteSpace();
+                    expect('=');
+                    skipWhiteSpace();
+                    result->EnableBlending = parseBool();
+                    skipWhiteSpace();
+                    expect(';');
+                }
+                else if (isNext("color"))
+                {
+                    skipWhiteSpace();
+                    expect('=');
+                    skipWhiteSpace();
+                    parseColorBlendOp(result->SrcBlend, result->DstBlend, result->BlendOp);
+                }
+                else if (isNext("alpha"))
+                {
+                    skipWhiteSpace();
+                    expect('=');
+                    skipWhiteSpace();
+                    parseColorBlendOp(result->SrcBlendAlpha, result->DstBlendAlpha, result->BlendOpAlpha);
+                }
+                else if (isNext("writemask"))
+                {
+                    CW_ENGINE_ASSERT(false);
+                }
+                skipWhiteSpace();
+            }
+            expect('}');
+            skipWhiteSpace();
+            expect(';');
+            shader = shader.substr(0, strPos) + shader.substr(strPosIter);
+        }
+        return result;
+    }
+
     Ref<BinaryShaderData> ShaderCompiler::CompileStage(const String& source, ShaderType shaderType, ShaderLanguage inputLanguage,
                                                        ShaderLanguageFlags outputLanguages, const UnorderedMap<String, String>& defines)
     {
@@ -245,7 +377,7 @@ namespace Crowny
 
         options.SetSourceLanguage(shaderc_source_language_glsl);
         options.SetTargetEnvironment(shaderc_target_env_vulkan,
-                                     shaderc_env_version_vulkan_1_2); // TODO: Better versioning
+                                     shaderc_env_version_vulkan_1_3); // TODO: Better versioning
         // options.SetOptimizationLevel(shaderc_optimization_level_performance); // TODO: if set, can't use uniform
         // names, so maybe compile twice?
 
@@ -277,20 +409,20 @@ namespace Crowny
         return dataResult;
     }
 
-    ShaderDesc ShaderCompiler::Compile(const Path& path, const String& source, ShaderLanguageFlags shaderLanguage,
+    ShaderDesc ShaderCompiler::Compile(const Path& path, const String& rawSource, ShaderLanguageFlags shaderLanguage,
                                        const UnorderedMap<String, String>& defines)
     {
         const char* langToken = "#lang";
         const size_t langTokenLength = strlen(langToken);
-        const size_t pos = source.find(langToken, 0);
+        const size_t pos = rawSource.find(langToken, 0);
         ShaderLanguage inputLanguage = ShaderLanguage::GLSL;
         if (pos != String::npos)
         {
-            const size_t eol = source.find_first_of("\n\r", pos);
+            const size_t eol = rawSource.find_first_of("\n\r", pos);
             if (eol != String::npos)
             {
                 const size_t begin = pos + langTokenLength + 1;
-                const String langString = source.substr(begin, eol - begin);
+                const String langString = rawSource.substr(begin, eol - begin);
                 if (!GetShaderLanguage(langString, inputLanguage))
                     CW_ENGINE_ERROR("Shader language string {0} not recognized. Assuming shader is in GLSL.", langString);
             }
@@ -298,6 +430,8 @@ namespace Crowny
         else
             CW_ENGINE_WARN("#lang directive not found in {0}, assuming shader is in GLSL.", path.string());
 
+        String source = rawSource;
+        auto blendState = PreparseBlendState(source);
         // This will have to turn into one big loop that will create variants.
         ShaderRenderPassDesc passDesc;
         // TODO: blend states, raster, depth stencil
@@ -327,6 +461,7 @@ namespace Crowny
                 CW_ENGINE_ASSERT(false);
         }
         EvaluatePragmaDirectives(source, passDesc);
+        passDesc.BlendState = blendState;
         Ref<ShaderRenderPass> renderPass = ShaderRenderPass::Create(passDesc);
         Ref<ShaderTechnique> technique = ShaderTechnique::Create({}, ShaderVariation(), { renderPass }); // TODO: tags and variations
         ShaderDesc shaderDesc;

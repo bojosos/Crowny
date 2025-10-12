@@ -43,19 +43,13 @@ namespace Crowny
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
         if (!windowDesc.ShowTitleBar)
-        {
             glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
-        }
 
         if (windowDesc.StartMaximized || windowDesc.Hidden)
-        {
             glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-        }
 
         if (!windowDesc.AllowResize)
-        {
             glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-        }
 
         int32_t monitorCount = 0;
         GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
@@ -120,8 +114,7 @@ namespace Crowny
 #ifdef CW_DEBUG
         if (RenderAPI::Get().GetAPI() == RenderAPI::API::OpenGL)
             glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,
-                           GLFW_TRUE); // No idea what this does...
-                                       // https://www.khronos.org/registry/OpenGL/extensions/KHR/KHR_debug.txt
+                           GLFW_TRUE);
 #endif
         Application::s_GLFWWindowCount++;
 

@@ -55,6 +55,7 @@ namespace Crowny
     class RayTracingPipeline;
     class ComputePipeline;
     class RenderTarget;
+    class RenderTexture;
     class UniformParams;
     class VertexArray;
     class VertexBuffer;

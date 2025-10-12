@@ -18,6 +18,8 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
+#define renderstuff true
+
 namespace Crowny
 {
     extern float metalness;
@@ -47,7 +49,9 @@ namespace Crowny
 
     void ForwardRenderer::Init()
     {
+#if !renderstuff
         return;
+#endif
         s_Data = new ForwardRendererData();
         // Ref<UniformParams>& uniforms = InspectorPanel::GetSelectedMaterial()->GetUniformParams();
 
@@ -119,24 +123,25 @@ namespace Crowny
 
     void ForwardRenderer::SubmitLightSetup() {}
 
-    void ForwardRenderer::Submit(const AssetHandle<Mesh>& mesh, const glm::mat4& transform)
+    void ForwardRenderer::Submit(const AssetHandle<Mesh>& mesh, const AssetHandle<Material>& material, const glm::mat4& transform)
     {
-        // Skybox b("Resources/Textures/envmap.hdr");
+        Ref<Material> renderMaterial = material ? material.GetInternalPtr() : nullptr;
+        if (!renderMaterial)
+            renderMaterial = s_Data->PbrMaterial;
         RenderAPI& rapi = RenderAPI::Get();
 
-        s_Data->PbrMaterial->SetColor("albedo", albedo);
-        s_Data->PbrMaterial->SetFloat("roughness", roughness);
-        s_Data->PbrMaterial->SetFloat("metalness", metalness);
-        s_Data->PbrMaterial->SetMatrix("model", transform);
+        renderMaterial->SetColor("albedo", albedo);
+        renderMaterial->SetFloat("roughness", roughness);
+        renderMaterial->SetFloat("metalness", metalness);
+        renderMaterial->SetMatrix("model", transform);
 
-        rapi.SetGraphicsPipeline(s_Data->PbrMaterial->GetGraphicsPipeline());
-        rapi.SetUniforms(s_Data->PbrMaterial->GetUniformParams());
+        rapi.SetGraphicsPipeline(renderMaterial->GetGraphicsPipeline());
+        rapi.SetUniforms(renderMaterial->GetUniformParams());
         rapi.SetVertexLayout(mesh->GetVertexBuffer()->GetLayout());
         rapi.SetVertexBuffers(0, &mesh->GetVertexBuffer(), 1);
         rapi.SetIndexBuffer(mesh->GetIndexBuffer());
         rapi.SetDrawMode(mesh->GetDrawMode());
         rapi.DrawIndexed(0, mesh->GetIndexCount(), 0, mesh->GetVertexCount());
-        // rapi.Draw(0, mesh->GetVertexCount());
     }
 
     void ForwardRenderer::SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform)
