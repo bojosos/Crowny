@@ -595,7 +595,7 @@ namespace Crowny
             std::smatch match = *iter;
             const String name = match[1].str();
             const String value = match[2].str();
-            CW_ENGINE_INFO("#pragma directive: {} = {}", name, value);
+            // CW_ENGINE_INFO("#pragma directive: {} = {}", name, value);
             if (name == "depth_read")
             {
                 if (!shaderPassDesc.DepthStencilState)

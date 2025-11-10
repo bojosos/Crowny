@@ -59,7 +59,7 @@ namespace Crowny
 
     private:
         static AssetHandle<Font> s_DefaultFont;
-        MSDFData* m_MSDFData;
+        MSDFData* m_MSDFData = nullptr;
         Ref<Texture> m_AtlasTexture;
     };
 

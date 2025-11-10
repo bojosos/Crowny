@@ -161,10 +161,9 @@ namespace Crowny
 
     void VulkanRenderWindow::RebuildSwapChain()
     {
-        // CW_ENGINE_INFO("REBUILD");
         const Ref<VulkanDevice> device = gVulkanRenderAPI().GetPresentDevice();
         device->WaitIdle();
-        // gVulkanRenderAPI().SetRenderTarget(nullptr);
+
         VulkanSwapChain* oldSwapChain = m_SwapChain;
         int width, height;
         glfwGetWindowSize(((GLFWwindow*)m_Window->GetNativeWindow()), &width, &height);

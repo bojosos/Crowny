@@ -48,7 +48,7 @@ namespace Crowny
         using DisplayList = Vector<Ref<LibraryEntry>>;
 
         void SetCurrentDirectory(DirectoryEntry* entry);
-
+        void PreviewImage(const Ref<LibraryEntry>& child);
         void HandleOpen(LibraryEntry* entry);
         void ShowContextMenuContents(LibraryEntry* entry = nullptr, bool isTreeView = false);
         void DrawHeader();

@@ -15,15 +15,24 @@ int main(int argc, char** argv)
     Crowny::CrashHandler::StartUp();
 
 #if CW_WINDOWS
-    __try
+    if (!IsDebuggerPresent())
+    {
+        __try
+        {
+            Crowny::Application* app = Crowny::CreateApplication();
+            app->Run();
+            delete app;
+        }
+        __except (Crowny::CrashHandler::Get().ReportCrash(GetExceptionInformation()))
+        {
+            TerminateProcess(GetCurrentProcess(), 0);
+        }
+    }
+    else
     {
         Crowny::Application* app = Crowny::CreateApplication();
         app->Run();
         delete app;
-    }
-    __except (Crowny::CrashHandler::Get().ReportCrash(GetExceptionInformation()))
-    {
-        TerminateProcess(GetCurrentProcess(), 0);
     }
 #else
     Crowny::Application* app = Crowny::CreateApplication();

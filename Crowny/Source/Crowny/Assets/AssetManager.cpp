@@ -201,13 +201,6 @@ namespace Crowny
         archive(cereal::binary_data(meshData.m_Data, meshData.GetIndexBufferSize() + meshData.GetVertexBufferSize()));
     }
 
-    void Load(BinaryDataStreamInputArchive& archive, BufferLayout& layout)
-    {
-        archive(layout.m_Elements);
-        layout.CalculateOffsetsAndStride();
-    }
-    void Save(BinaryDataStreamOutputArchive& archive, const BufferLayout& layout) { archive(layout.m_Elements); }
-
     template <typename Archive> void Serialize(Archive& archive, BufferElement& element)
     {
         archive(element.Attribute);
@@ -255,59 +248,90 @@ namespace Crowny
         archive(desc.Uniforms, desc.Samplers, desc.Textures, desc.LoadStoreTextures);
     }
 
-    void Save(BinaryDataStreamOutputArchive& archive, const PhysicsMaterial2D& material)
-    {
-        archive(material.m_Density, material.m_Friction, material.m_Restitution, material.m_RestitutionThreshold);
-    }
-
     void Load(BinaryDataStreamInputArchive& archive, PhysicsMaterial2D& material)
     {
         archive(material.m_Density, material.m_Friction, material.m_Restitution, material.m_RestitutionThreshold);
     }
 
-    void Save(BinaryDataStreamOutputArchive& archive, const Shader& shader)
+    void Save(BinaryDataStreamOutputArchive& archive, const PhysicsMaterial2D& material)
     {
-        // TODO: Fix this for engine shaders
-        // archive(cereal::base_class<Asset>(&shader));
-        // TODO: Fix these for all stages
-        // archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->Data);
-        // archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->EntryPoint);
-        // archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->Type);
-        // archive(shader.m_ShaderStages[VERTEX_SHADER]->m_ShaderData->Description);
+        archive(material.m_Density, material.m_Friction, material.m_Restitution, material.m_RestitutionThreshold);
+    }
 
-        // archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->Data);
-        // archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->EntryPoint);
-        // archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->Type);
-        // archive(shader.m_ShaderStages[FRAGMENT_SHADER]->m_ShaderData->Description);
-        // archive(shader.m_ShaderStages[FRAGMENT_SHADER]);
-        // archive(shader.m_ShaderStages);
-        // for (uint32_t i = 0; i < SHADER_COUNT; i++)
-        //{
-        //    // if (shader.m_ShaderStages[i])
-        //        archive(shader.m_ShaderStages[i]);
-        //}
+    void Load(BinaryDataStreamInputArchive& archive, BufferLayout& layout)
+    {
+        archive(layout.m_Id, layout.m_Elements);
+        layout.CalculateOffsetsAndStride();
+        BufferLayout::s_NextFreeId = std::max(BufferLayout::s_NextFreeId, layout.m_Id + 1);
+    }
+
+    void Save(BinaryDataStreamOutputArchive& archive, const BufferLayout& layout)
+    {
+        archive(layout.m_Id, layout.m_Elements);
+    }
+
+    template <typename Archive> void Serialize(Archive& archive, BinaryShaderData& binaryShaderData)
+    {
+        archive(binaryShaderData.Data, binaryShaderData.EntryPoint, binaryShaderData.Type, binaryShaderData.Description,
+                binaryShaderData.VertexLayout);
+    }
+
+    template <typename Archive> void Serialize(Archive& archive, BlendStateDesc& stateDesc)
+    {
+        archive(cereal::binary_data(&stateDesc, sizeof(BlendStateDesc)));
+    }
+    
+    template <typename Archive> void Serialize(Archive& archive, RasterizerStateDesc& stateDesc)
+    {
+        archive(cereal::binary_data(&stateDesc, sizeof(RasterizerStateDesc)));
+    }
+
+    template <typename Archive> void Serialize(Archive& archive, DepthStencilStateDesc& stateDesc)
+    {
+        archive(cereal::binary_data(&stateDesc, sizeof(DepthStencilStateDesc)));
+    }
+
+    template <typename Archive> void Serialize(Archive& archive, ShaderRenderPassDesc& renderPass)
+    {
+        archive(renderPass.BlendState);
+        archive(renderPass.RasterizationState);
+        archive(renderPass.DepthStencilState);
+        archive(renderPass.StencilValue);
+        archive(renderPass.VertexShader);
+        archive(renderPass.FragmentShader);
+        archive(renderPass.GeometryShader);
+        archive(renderPass.HullShader);
+        archive(renderPass.DomainShader);
+        archive(renderPass.ComputeShader);
+        archive(renderPass.RaygenShader);
+        archive(renderPass.MissShader);
+        archive(renderPass.HitShader);
+    }
+
+    template <typename Archive> void Serialize(Archive& archive, ShaderVariation::Specifier& specifier)
+    {
+        archive(specifier.Name, specifier.Type, specifier.I);
+    }
+
+    template <typename Archive> void Serialize(Archive& archive, ShaderVariation& shaderVariation) { archive(shaderVariation.m_Parameters); }
+    
+    template <typename Archive> void Serialize(Archive& archive, ShaderRenderPass& renderPass) { archive(renderPass.m_ShaderDesc); }
+
+    template <typename Archive> void Serialize(Archive& archive, ShaderTechnique& shaderTechnique)
+    {
+        archive(shaderTechnique.m_Passes, shaderTechnique.m_Tags, shaderTechnique.m_Variation);
     }
 
     void Load(BinaryDataStreamInputArchive& archive, Shader& shader)
     {
-        // TODO: Fix this for engine shaders
-        // archive(cereal::base_class<Asset>(&shader));
-        Ref<BinaryShaderData> data = CreateRef<BinaryShaderData>();
-        archive(data->Data);
-        archive(data->EntryPoint);
-        archive(data->Type);
-        archive(data->Description);
-        // shader.m_ShaderStages[VERTEX_SHADER] = ShaderStage::Create(data);
+        archive(cereal::base_class<Asset>(&shader));
+        archive(shader.m_Techniques);
+    }
 
-        data = CreateRef<BinaryShaderData>();
-        archive(data->Data);
-        archive(data->EntryPoint);
-        archive(data->Type);
-        archive(data->Description);
-        // shader.m_ShaderStages[FRAGMENT_SHADER] = ShaderStage::Create(data);
-        // archive(shader.m_ShaderStages);
-        /*for (uint32_t i = 0; i < SHADER_COUNT; i++)
-            archive(shader.m_ShaderStages[i]);*/
+    void Save(BinaryDataStreamOutputArchive& archive, const Shader& shader)
+    {
+        archive(cereal::base_class<Asset>(&shader));
+        archive(shader.m_Techniques);
     }
 
     AssetHandle<Asset> AssetManager::Load(const Path& filepath, bool keepInternalRef, bool keepSourceData)
@@ -470,8 +494,8 @@ CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Texture, "Texture")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::VulkanTexture, "VulkanTexture")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::PhysicsMaterial2D, "PhysicsMaterial2D")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Mesh, "Mesh")
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Shader)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::AudioClip)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Shader)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Font)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Texture)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::ScriptCode)

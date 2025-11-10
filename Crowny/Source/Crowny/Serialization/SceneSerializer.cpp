@@ -467,6 +467,8 @@ namespace Crowny
             }
             if (root)
                 m_Scene->m_RootEntity = new Entity(root.GetHandle(), m_Scene.get());
+            else
+                m_Scene->CreateRootEntity();
 
             const Ref<TimeSettings>& timeSettings = TimeSettingsSerializer::Deserialize(data);
             Application::Get().SetTimeSettings(timeSettings);
@@ -475,6 +477,7 @@ namespace Crowny
         }
         catch (const std::exception& ex)
         {
+            m_Scene->CreateRootEntity();
             CW_ENGINE_ERROR("Error deserializing scene \"{0}\". {1}.", filepath, std::string(ex.what()));
         }
     }

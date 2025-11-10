@@ -61,7 +61,7 @@ namespace Crowny
         init_info.Allocator = gVulkanAllocator;
         init_info.QueueFamily = gVulkanRenderAPI().GetPresentDevice()->GetQueueFamily(GRAPHICS_QUEUE);
         init_info.PipelineCache = gVulkanRenderAPI().GetPresentDevice()->GetPipelineCache();
-        init_info.CheckVkResultFn = [](VkResult result) { CW_ENGINE_ASSERT(result == VK_SUCCESS); };
+        // init_info.CheckVkResultFn = [](VkResult result) { CW_ENGINE_ASSERT(result == VK_SUCCESS); };
         init_info.Subpass = 0;
 
         VulkanRenderPassDesc passDesc;
@@ -83,7 +83,6 @@ namespace Crowny
 
     void ImGuiVulkanLayer::OnDetach()
     {
-        delete m_RenderPass;
         gVulkanRenderAPI().GetPresentDevice()->WaitIdle();
         ImGui_ImplVulkan_Shutdown();
         ImGuiLayer::OnDetach();
@@ -96,6 +95,7 @@ namespace Crowny
         ImGui_ImplGlfw_NewFrame();
 
         ImGuiLayer::Begin();
+        RenderAPI::Get().SetRenderTarget(Application::Get().GetRenderWindow());
     }
 
     void ImGuiVulkanLayer::End()
@@ -103,12 +103,14 @@ namespace Crowny
         ImGuiLayer::End();
 
         VulkanCmdBuffer* vkCmdBuffer = gVulkanRenderAPI().GetMainCommandBuffer()->GetInternal();
+        ImGui_ImplVulkan_TransitionLayouts(vkCmdBuffer);
+        gVulkanRenderAPI().SubmitCommandBuffer(nullptr);
 
+        vkCmdBuffer = gVulkanRenderAPI().GetMainCommandBuffer()->GetInternal();
         RenderAPI::Get().SetRenderTarget(Application::Get().GetRenderWindow());
         RenderAPI::Get().SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
         gVulkanRenderAPI().ClearRenderTarget(FBT_COLOR | FBT_DEPTH);
         vkCmdBuffer->BeginRenderPass();
-        ImGui_ImplVulkan_TransitionLayouts(vkCmdBuffer);
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkCmdBuffer->GetHandle());
 
         ImGuiIO& io = ImGui::GetIO();

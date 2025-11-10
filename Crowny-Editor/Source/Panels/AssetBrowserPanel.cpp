@@ -59,8 +59,8 @@ namespace Crowny
       : ImGuiPanel(name), m_SetSelectedPathCallback(selectedPathCallback)
     {
         m_CsDefaultText = FileSystem::ReadTextFile(EditorAssets::DefaultScriptPath);
-        m_FolderIcon = EditorAssets::Get().FolderIcon;
-        m_FileIcon = EditorAssets::Get().FileIcon;
+        m_FolderIcon = ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FolderIcon);
+        m_FileIcon = ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FileIcon);
     }
 
     void AssetBrowserPanel::PreviewImage(const Ref<LibraryEntry>& child)

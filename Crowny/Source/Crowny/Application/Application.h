@@ -48,7 +48,6 @@ namespace Crowny
         ImGuiLayer* GetImGuiLayer() { return m_ImGuiLayer; }
         void Exit();
         const ApplicationDesc& GetApplicationDesc() const { return m_Desc; }
-        ImGuiBackend* GetImGuiBackend() const { return m_ImGuiLayer->GetBackend(); }
 
         static Application& Get() { return *s_Instance; }
 

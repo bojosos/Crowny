@@ -110,8 +110,14 @@ namespace Crowny
         }
     }
 
-    Ref<TimeSettings> Application::GetTimeSettings() const { return m_TimeSettings; }
-    // TODO: Add default for this
+    Ref<TimeSettings> Application::GetTimeSettings() const {
+        if (!m_TimeSettings)
+        {
+            static Ref<TimeSettings> defaultTimeSettings = CreateRef<TimeSettings>();
+            return defaultTimeSettings;
+        }
+        return m_TimeSettings;
+    }
     void Application::SetTimeSettings(const Ref<TimeSettings>& timeSettings) { m_TimeSettings = timeSettings; }
 
     Window& Application::GetWindow() const { return *m_Windows[0]->GetWindow(); }

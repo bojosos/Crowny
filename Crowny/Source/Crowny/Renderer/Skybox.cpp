@@ -94,9 +94,10 @@ namespace Crowny
 
         // Convert HDR equirectangular environment map to cubemap
 
-        // AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(EQUIRECTTOCUBE_SHADER_PATH);
-        Ref<Shader> shader = Importer::Get().Import<Shader>("Resources/Shaders/EquirectToCube.glsl");
-        const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(shader));
+        AssetHandle<Shader> shaderHandle = AssetManager::Get().Load<Shader>(EQUIRECTTOCUBE_SHADER_PATH);
+        // Ref<Shader> shader = Importer::Get().Import<Shader>("Resources/Shaders/EquirectToCube.glsl");
+        // AssetManager::Get().Save(shader, EQUIRECTTOCUBE_SHADER_PATH);
+        // const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(shader));
         Ref<Material> equirectMaterial = Material::Create(shaderHandle);
         Ref<BufferLayout> layout = CreateRef<BufferLayout>(BufferLayout{ { ShaderDataType::Float3, "inPos" } });
         m_SkyboxVbo = VertexBuffer::Create(skyboxVertices, 72 * sizeof(float));
@@ -149,9 +150,10 @@ namespace Crowny
         rtProps.ColorSurfaces[0] = { m_Brdf };
         Ref<RenderTexture> target = RenderTexture::Create(rtProps);
 
-        // AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(BRDF_SHADER_PATH);
-        Ref<Shader> shader = Importer::Get().Import<Shader>("Resources/Shaders/Brdf.glsl");
-        const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(shader));
+        AssetHandle<Shader> shaderHandle = AssetManager::Get().Load<Shader>(BRDF_SHADER_PATH);
+        // Ref<Shader> shaderHandle = Importer::Get().Import<Shader>("Resources/Shaders/Brdf.glsl");
+        // AssetManager::Get().Save(shader, BRDF_SHADER_PATH);
+        // const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(shader));
         Ref<Material> brdfLUTMaterial = Material::Create(shaderHandle);
         rapi.SetRenderTarget(target);
         rapi.SetGraphicsPipeline(brdfLUTMaterial->GetGraphicsPipeline());
@@ -176,9 +178,10 @@ namespace Crowny
         tProps.Shape = TextureShape::TEXTURE_CUBE;
         m_IrradianceMap = Texture::Create(tProps);
 
-        // AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(FILTER_SHADER_PATH);
-        Ref<Shader> shader = Importer::Get().Import<Shader>("Resources/Shaders/Prefilter.glsl");
-        const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(shader));
+        AssetHandle<Shader> shaderHandle = AssetManager::Get().Load<Shader>(FILTER_SHADER_PATH);
+        // Ref<Shader> shader = Importer::Get().Import<Shader>("Resources/Shaders/Prefilter.glsl");
+        // AssetManager::Get().Save(shader, PREFILTER_SHADER_PATH);
+        // const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(shader));
         Ref<Material> filterMaterial = Material::Create(shaderHandle);
 
         Vector<glm::mat4> matrices = {
@@ -240,9 +243,10 @@ namespace Crowny
         tProps.Shape = TextureShape::TEXTURE_CUBE;
         m_PrefilteredMap = Texture::Create(tProps);
 
-        // AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(FILTER_SHADER_PATH);
-        Ref<Shader> shader = Importer::Get().Import<Shader>("Resources/Shaders/Filter.glsl");
-        const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(shader));
+        AssetHandle<Shader> shaderHandle = AssetManager::Get().Load<Shader>(FILTER_SHADER_PATH);
+        // Ref<Shader> shader = Importer::Get().Import<Shader>("Resources/Shaders/Filter.glsl");
+        // AssetManager::Get().Save(shader, FILTER_SHADER_PATH);
+        // const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(shader));
         Ref<Material> prefilterMaterial = Material::Create(shaderHandle);
 
         Vector<glm::mat4> matrices = {

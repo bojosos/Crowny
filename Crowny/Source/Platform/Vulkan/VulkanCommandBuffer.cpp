@@ -339,7 +339,8 @@ namespace Crowny
     VulkanCmdBuffer::VulkanCmdBuffer(VulkanDevice& device, uint32_t id, VkCommandPool pool, uint32_t queueFamily, bool secondary)
       : m_ScissorRequiresBind(true), m_ViewportRequiresBind(true), m_VertexInputsRequiresBind(true), m_GraphicsPipelineRequiresBind(true), m_Id(id),
         m_QueueFamily(queueFamily), m_Device(device), m_Pool(pool), m_ComputePipelineRequiresBind(true), m_NeedsRawMemoryBarrier(false),
-        m_NeedsWarMemoryBarrier(false), m_StencilRequiresBind(true), m_BufferLayoutDirty(false), m_RayTracingPipelineRequiresBind(false)
+        m_NeedsWarMemoryBarrier(false), m_StencilRequiresBind(true), m_BufferLayoutDirty(false), m_RayTracingPipelineRequiresBind(false),
+        m_NumBoundDescriptorSets(0)
     {
         uint32_t maxBoundDescriptorSets = device.GetDeviceProperties().limits.maxBoundDescriptorSets;
         m_DescriptorSetsTemp = new VkDescriptorSet[maxBoundDescriptorSets];

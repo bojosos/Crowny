@@ -33,6 +33,7 @@ namespace Crowny
                 Float,
                 Bool
             };
+            Specifier() : Type(SpecifierType::Int), I(0) {}
             Specifier(const String& name, int32_t value) : I(value), Name(name), Type(Int) {}
             Specifier(const String& name, bool value) : I(value), Name(name), Type(Bool) {}
             Specifier(const String& name, float value) : F(value), Name(name), Type(Float) {}
@@ -45,12 +46,13 @@ namespace Crowny
         };
 
         ShaderVariation() = default;
-        ShaderVariation(const Vector<Specifier>& specifiers);
+        // ShaderVariation(const Vector<Specifier>& specifiers);
 
         bool Matches(const ShaderVariation& other, bool exact = true) const;
         ShaderDefines GetDefines() const;
 
     private:
+        CW_SIMPLESERIALZABLE(ShaderVariation);
         // TODO: Replace with StringId
         // Vector<ShaderVariation::Specifier> m_Parameters;
         UnorderedMap<String, Specifier> m_Parameters;

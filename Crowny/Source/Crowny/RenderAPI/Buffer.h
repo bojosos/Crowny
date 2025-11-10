@@ -278,7 +278,7 @@ namespace Crowny
 
     private:
         /* const */ uint32_t m_Id;
-        static uint32_t s_NextFreeId;
+        static uint32_t s_NextFreeId; // TODO:
         Vector<BufferElement> m_Elements;
         uint32_t m_Stride = 0;
     };

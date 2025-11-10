@@ -658,7 +658,7 @@ namespace Crowny
         nameInfo.objectHandle = (uint64_t)image;
         nameInfo.pObjectName = m_Params.DebugName.c_str();
         // vkSetDebugUtilsObjectNameEXT(device.GetLogicalDevice(), &nameInfo);
-
+        // CW_ENGINE_INFO("Image: {}, {}", (void*)image, m_Params.DebugName);
         VmaAllocation allocation = device.AllocateMemory(image, memoryFlags);
         return device.GetResourceManager().Create<VulkanImage>(image, allocation, m_ImageCreateInfo.initialLayout, m_ImageCreateInfo.format,
                                                                m_Params);

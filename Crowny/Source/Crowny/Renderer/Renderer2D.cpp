@@ -130,9 +130,7 @@ namespace Crowny
                                                 BufferElement(ShaderDataType::Int, "a_ObjectId") });
         s_Data->QuadVertexBuffer->SetLayout(layout);
 
-        // AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(RENDERER2D_SHADER_PATH);
-        Ref<Shader> spriteShader = Importer::Get().Import<Shader>("Resources/Shaders/BatchRenderer.glsl");
-        const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(spriteShader));
+        AssetHandle<Shader> shaderHandle = AssetManager::Get().Load<Shader>(RENDERER2D_SHADER_PATH);
         s_Data->QuadMaterial = Material::Create(shaderHandle);
         s_Data->QuadBuffer = s_Data->QuadTmpBuffer = new VertexData[RENDERER_MAX_SPRITES * 4];
         delete[] indices;
@@ -150,9 +148,10 @@ namespace Crowny
                                                                                { ShaderDataType::Int, "a_Id" } });
         s_Data->CircleVertexBuffer->SetLayout(layout);
 
-        const Ref<Shader> circleShader = Importer::Get().Import<Shader>("Resources/Shaders/Circle.glsl");
-        // AssetManager::Get().Save(circleShader);
-        const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(circleShader));
+        const AssetHandle<Shader> shaderHandle = AssetManager::Get().Load<Shader>("Resources/Shaders/Circle.asset");
+        // const Ref<Shader> circleShader = Importer::Get().Import<Shader>("Resources/Shaders/Circle.glsl");
+        // AssetManager::Get().Save(circleShader, "Resources/Shaders/Circle.asset");
+        // const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(circleShader));
         s_Data->CircleMaterial = Material::Create(shaderHandle);
     }
 
@@ -171,9 +170,10 @@ namespace Crowny
                                                                          { ShaderDataType::Int, "a_ObjectId" } });
         s_Data->TextVertexBuffer->SetLayout(layout);
 
-        // AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>("Resources/Shaders/Text.asset");
-        Ref<Shader> textShader = Importer::Get().Import<Shader>("Resources/Shaders/Text.glsl");
-        const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(textShader));
+        AssetHandle<Shader> shaderHandle = AssetManager::Get().Load<Shader>("Resources/Shaders/Text.asset");
+        // Ref<Shader> textShader = Importer::Get().Import<Shader>("Resources/Shaders/Text.glsl");
+        // AssetManager::Get().Save(textShader, "Resources/Shaders/Text.asset");
+        // const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(textShader));
         s_Data->TextMaterial = Material::Create(shaderHandle);
     }
 

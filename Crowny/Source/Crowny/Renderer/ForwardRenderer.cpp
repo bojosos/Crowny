@@ -55,9 +55,10 @@ namespace Crowny
         s_Data = new ForwardRendererData();
         // Ref<UniformParams>& uniforms = InspectorPanel::GetSelectedMaterial()->GetUniformParams();
 
-        // AssetHandle<Shader> shader1 = AssetManager::Get().Load<Shader>(PBRIBL_SHADER_PATH);
-        Ref<Shader> pbriblShader = Importer::Get().Import<Shader>("Resources/Shaders/Pbribl.glsl");
-        const AssetHandle<Shader> pbriblHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(pbriblShader));
+        AssetHandle<Shader> pbriblHandle = AssetManager::Get().Load<Shader>(PBRIBL_SHADER_PATH);
+        // Ref<Shader> pbriblShader = Importer::Get().Import<Shader>("Resources/Shaders/Pbribl.glsl");
+        // AssetManager::Get().Save(pbriblShader, PBRIBL_SHADER_PATH);
+        // const AssetHandle<Shader> pbriblHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(pbriblShader));
         s_Data->PbrMaterial = Material::Create(pbriblHandle);
         s_Data->Skybox = CreateRef<Skybox>("Resources/Textures/envmap.hdr");
 
@@ -66,9 +67,10 @@ namespace Crowny
         s_Data->SkyboxVbo->SetLayout(CreateRef<BufferLayout>(BufferLayout{ { ShaderDataType::Float3, "inPos" } }));
         s_Data->SkyboxIbo = IndexBuffer::Create(skyboxIndices2, sizeof(skyboxIndices2) / sizeof(uint32_t));
 
-        // AssetHandle<Shader> shader = AssetManager::Get().Load<Shader>(SKYBOX_SHADER_PATH);
-        Ref<Shader> skyboxShader = Importer::Get().Import<Shader>("Resources/Shaders/Skybox.glsl");
-        const AssetHandle<Shader> skyboxHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(skyboxShader));
+        AssetHandle<Shader> skyboxHandle = AssetManager::Get().Load<Shader>(SKYBOX_SHADER_PATH);
+        // Ref<Shader> skyboxShader = Importer::Get().Import<Shader>("Resources/Shaders/Skybox.glsl");
+        // AssetManager::Get().Save(skyboxShader, SKYBOX_SHADER_PATH);
+        // const AssetHandle<Shader> skyboxHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(skyboxShader));
         s_Data->SkyboxMaterial = Material::Create(skyboxHandle);
         s_Data->SkyboxMaterial->SetTexture("samplerEnv", s_Data->Skybox->m_EnvironmentMap);
 
