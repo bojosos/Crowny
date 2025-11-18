@@ -12,7 +12,7 @@
 #include "Platform/Vulkan/VulkanRenderAPI.h"
 
 #define LOG_EXTENSIONS false
-#define raytracing false
+#define raytracing true
 
 namespace Crowny
 {
@@ -293,7 +293,6 @@ namespace Crowny
 
         // Store the pipeline data in a file.
         size_t dataSize = 0;
-        // 143452
         if (m_PipelineCache != VK_NULL_HANDLE)
         {
 

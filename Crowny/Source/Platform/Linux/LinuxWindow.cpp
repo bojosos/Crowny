@@ -101,7 +101,7 @@ namespace Crowny
                 top += areaY;
         }
 
-        glfwSetWindowPos(m_Window, 0, 0);
+        glfwSetWindowPos(m_Window, left, top);
 
         if (windowDesc.StartMaximized)
         {

@@ -24,6 +24,8 @@ workspace "Crowny"
 		"MultiProcessorCompile"
 	}
 
+debugformat "Zi"
+
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 IncludeDir = {}

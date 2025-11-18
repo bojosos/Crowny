@@ -226,7 +226,9 @@ namespace Crowny
 
     Ref<Asset> MeshImporter::Import(const Path& path, Ref<const ImportOptions> importOptions)
     {
-        return ImportAll(path, importOptions)[0];
+        const Ref<Asset> asset1 = ImportAll(path, importOptions)[0];
+        textureCache.clear();
+        return asset1;
         Ref<const MeshImportOptions> meshImportOptions = std::static_pointer_cast<const MeshImportOptions>(importOptions);
         Ref<Asset> asset;
         const aiScene* scene = ReadAssimpScene(path, meshImportOptions);
@@ -248,7 +250,7 @@ namespace Crowny
         if (!mesh)
             return {};
         assets.push_back(mesh);
-        static AssetHandle<Shader> pbriblHandle = AssetManager::Get().Load<Shader>(PBRIBL_SHADER_PATH);
+        AssetHandle<Shader> pbriblHandle = AssetManager::Get().Load<Shader>(PBRIBL_SHADER_PATH);
         // static Ref<Shader> pbriblShader = Importer::Get().Import<Shader>("Resources/Shaders/Pbribl.glsl");
         // static const AssetHandle<Shader> pbriblHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(pbriblShader));
         for (uint32_t i = 0; i < scene->mNumMeshes; i++)
@@ -302,6 +304,7 @@ namespace Crowny
                                    outPath.C_Str());
             }
         }
+        textureCache.clear();
         return assets;
     }
 

@@ -20,6 +20,7 @@
 #include <GLFW/glfw3.h>
 
 #define VMA_IMPLEMENTATION
+#define VMA_DEBUG
 #ifdef VMA_DEBUG
 #define VMA_DEBUG_LOG_FORMAT(format, ...)                                                                                                            \
     do                                                                                                                                               \

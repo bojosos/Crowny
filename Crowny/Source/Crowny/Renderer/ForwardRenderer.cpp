@@ -106,7 +106,8 @@ namespace Crowny
         //                               // glm::vec4(-10.0f, -10.0f, 10.0f, 1.0f), glm::vec4(10.0f, -10.0f, 10.0f, 1.0f) };
         // glm::vec3 lightColors[] = { glm::vec//3(300.0f, 300.0f, 300.0f), glm::vec3(300.0f, 300.0f, 300.0f),
         //                             glm::vec3(300.0f, 300.0f, 300.0f), glm::vec3(300.0f, 300.0f, 300.0f) };
-        float gamma = 2.2f, exposure = 4.5f;
+        const float gamma = 2.2f;
+        const float exposure = 4.5f;
         s_Data->SkyboxMaterial->SetFloat("gamma", gamma);
         s_Data->SkyboxMaterial->SetFloat("exposure", exposure);
         s_Data->PbrMaterial->SetFloat("gamma", gamma);
