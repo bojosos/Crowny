@@ -27,7 +27,7 @@ jobs:
       - name: Generate projects
         run: |
           chmod +x 3rdparty/premake/bin/premake5
-          ./3rdparty/premake/bin/premake5 gmake2
+          ./3rdparty/premake/bin/premake5 gmake2 --simd=sse4.1
 
       - name: Build Crowny
         run: make Crowny -j$(nproc) config=release_linux64 CXX=clang++
@@ -62,11 +62,15 @@ jobs:
         uses: microsoft/setup-msbuild@v1.1
 
       - name: Install Vulkan SDK
-        uses: humbletim/setup-vulkan-sdk@v1.2.0
-        with:
-          vulkan-query-version: 1.3.280.0
-          vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Cross, SPIRV-Headers, SPIRV-Tools, Glslang, shaderc
-          vulkan-use-cache: true
+        run: |
+          $ver = "1.3.280.0"
+          $installer = "VulkanSDK-$ver-Installer.exe"
+          Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/$ver/windows/$installer" -OutFile $installer
+          Start-Process -FilePath ".\$installer" -ArgumentList "--accept-licenses --default-answer --confirm-command install" -Wait
+          $sdkPath = "C:\VulkanSDK\$ver"
+          echo "VULKAN_SDK=$sdkPath" >> $env:GITHUB_ENV
+          echo "$sdkPath\Bin" >> $env:GITHUB_PATH
+        shell: powershell
 
       - name: Setup CI Environment
         run: |
@@ -82,7 +86,6 @@ jobs:
         shell: bash
         run: |
           echo "OPENAL_SDK=C:/OpenAL_SDK" >> $GITHUB_ENV
-          echo "VULKAN_SDK=$VULKAN_SDK" >> $GITHUB_ENV
 
       - name: Generate projects
         run: |

@@ -1,5 +1,16 @@
 include "./3rdparty/premake/premake_customization/solution_items.lua"
 
+newoption {
+	trigger = "simd",
+	value = "LEVEL",
+	description = "SIMD instruction set for Linux builds (default: avx2)",
+	default = "avx2",
+	allowed = {
+		{ "sse4.1", "SSE 4.1 (CI / older CPUs)" },
+		{ "avx2", "AVX2 (modern desktop CPUs)" }
+	}
+}
+
 workspace "Crowny"
 	architecture "x86_64"
 	startproject "Crowny-Editor"
