@@ -2,9 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [ master, main ]
   pull_request:
-    branches: [ master, main ]
   workflow_dispatch:
 
 jobs:
@@ -40,12 +38,12 @@ jobs:
       - name: Build Crowny-Sharp
         run: |
           cd Crowny-Sharp
-          find ./Source -type f -name "*.cs" -print0 | xargs -0 mcs -target:library -out:CrownySharp.dll
+          find ./Source -type f -name "*.cs" -print0 | xargs -0 csc -debug:portable -optimize- -target:library -out:CrownySharp.dll
 
       - name: Build Crowny-Sandbox
         run: |
           cd Crowny-Sandbox
-          find ./Source -type f -name "*.cs" -print0 | xargs -0 mcs -target:exe -out:CrownySandbox.exe -reference:../Crowny-Sharp/CrownySharp.dll
+          find ./Source -type f -name "*.cs" -print0 | xargs -0 csc -debug:portable -optimize- -lib:../Crowny-Sharp -reference:CrownySharp.dll -target:library -out:GameAssembly.dll
 
       - name: Build Crowny-Tests
         run: make Crowny-Tests -j$(nproc) config=release_linux64 CXX=clang++
