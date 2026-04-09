@@ -89,11 +89,22 @@ namespace Crowny
 
         Editor::StartUp();
 
-        // m_Watch = CreateScope<filewatch::FileWatch<Path>>(Editor::Get().GetProjectPath() / "Assets",
-        //                                                   [this](const Path& path, const filewatch::Event changeType) {
-        //                                                       Lock lock(m_FileWatchMutex);
-        //                                                       m_FileWatchQueue.push_back(Editor::Get().GetProjectPath() / "Assets" / path);
-        //                                                  });
+        Path assetsPath = Editor::Get().GetProjectPath() / "Assets";
+        if (fs::exists(assetsPath))
+        {
+            m_Watch = CreateScope<filewatch::FileWatch<Path>>(assetsPath,
+                [this](const Path& path, const filewatch::Event changeType) {
+                    if (path.extension() != ".cs")
+                        return;
+                    if (changeType != filewatch::Event::modified &&
+                        changeType != filewatch::Event::added &&
+                        changeType != filewatch::Event::renamed_new)
+                        return;
+                    Lock lock(m_FileWatchMutex);
+                    m_AssemblyReloadPending = true;
+                    m_LastCsChangeTime = std::chrono::steady_clock::now();
+                });
+        }
 
         m_MenuBar = new ImGuiMenuBar();
 
@@ -261,7 +272,7 @@ namespace Crowny
 
     void EditorLayer::BuildGame(Event& event) {}
 
-    void EditorLayer::RebuildAssemblies(Event& event)
+    void EditorLayer::RebuildAssemblies()
     {
         MonoClass* scriptCompiler = ScriptInfoManager::Get().GetBuiltinClasses().ScriptCompiler;
         uint32_t type = 0;
@@ -564,6 +575,22 @@ namespace Crowny
             Editor::Get().GetProjectSettings()->LastOpenScenePath = m_Temp->GetFilepath().string();
             m_Temp = nullptr;
             // ScriptRuntime::Init();
+        }
+
+        if (m_AssemblyReloadPending && m_SceneState == SceneState::Edit)
+        {
+            float elapsed;
+            {
+                Lock lock(m_FileWatchMutex);
+                elapsed = std::chrono::duration<float>(std::chrono::steady_clock::now() - m_LastCsChangeTime).count();
+            }
+            if (elapsed >= 1.0f)
+            {
+                // Clear flag before rebuild. If .cs files change during rebuild,
+                // a new debounce cycle starts (won't cause infinite loop).
+                m_AssemblyReloadPending = false;
+                RebuildAssemblies();
+            }
         }
 
         Ref<Scene> scene = SceneManager::GetActiveScene();

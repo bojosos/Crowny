@@ -67,6 +67,7 @@ namespace Crowny
         void Step(Timestep ts, Scene* scene);
         void StopSimulation(Scene* scene);
 
+        b2World* GetPhysicsWorld() const { return m_PhysicsWorld2D; }
         Ref<Physics2DSettings> GetPhysicsSettings() const { return m_Settings; }
         void SetPhysicsSettings(const Ref<Physics2DSettings>& settings) { m_Settings = settings; }
 

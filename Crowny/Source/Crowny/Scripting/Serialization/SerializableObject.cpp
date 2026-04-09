@@ -37,7 +37,6 @@ namespace Crowny
             {
                 if (memberInfo->IsSerializable())
                 {
-                    CW_ENGINE_INFO(memberInfo->m_Name);
                     SerializableFieldKey key(memberInfo->m_ParentTypeId, memberInfo->m_FieldId);
                     m_CachedData[key] = GetFieldData(memberInfo);
                 }
@@ -307,9 +306,20 @@ namespace Crowny
                     break;
                 }
                 case (SerializableType::Enum): {
-                    auto obj = std::static_pointer_cast<SerializableTypeInfoEnum>(typeInfo);
-                    // data = CreateRef<SerializableFieldEnum>();
-                    // break;
+                    auto enumInfo = std::static_pointer_cast<SerializableTypeInfoEnum>(typeInfo);
+                    switch (enumInfo->m_UnderlyingType)
+                    {
+                    case ScriptPrimitiveType::I8: data = CreateRef<SerializableFieldI8>(); break;
+                    case ScriptPrimitiveType::U8: data = CreateRef<SerializableFieldU8>(); break;
+                    case ScriptPrimitiveType::I16: data = CreateRef<SerializableFieldI16>(); break;
+                    case ScriptPrimitiveType::U16: data = CreateRef<SerializableFieldU16>(); break;
+                    case ScriptPrimitiveType::I32: data = CreateRef<SerializableFieldI32>(); break;
+                    case ScriptPrimitiveType::U32: data = CreateRef<SerializableFieldU32>(); break;
+                    case ScriptPrimitiveType::I64: data = CreateRef<SerializableFieldI64>(); break;
+                    case ScriptPrimitiveType::U64: data = CreateRef<SerializableFieldU64>(); break;
+                    default: data = CreateRef<SerializableFieldI32>(); break;
+                    }
+                    break;
                 }
                 case (SerializableType::Asset): {
                     auto obj = std::static_pointer_cast<SerializableTypeInfoAsset>(typeInfo);

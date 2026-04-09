@@ -606,8 +606,8 @@ namespace Crowny
 
     void MonoScript::SetClassName(const String& className)
     {
-        m_Class = MonoManager::Get().GetAssembly(GAME_ASSEMBLY)->GetClass("Sandbox", m_TypeName);
         m_TypeName = className;
+        m_Class = MonoManager::Get().GetAssembly(GAME_ASSEMBLY)->GetClass("Sandbox", m_TypeName);
 
         m_OnStartThunk = nullptr;
         m_OnUpdateThunk = nullptr;

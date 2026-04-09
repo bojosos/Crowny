@@ -50,7 +50,8 @@ project "Crowny-Editor"
 
 		"yaml-cpp",
 		"tracy",
-		"Crowny"
+		"Crowny",
+		"Crowny-Sharp"
 	}
 
 	filter "system:windows"

@@ -4,6 +4,8 @@
 
 #include "Crowny/Common/Time.h"
 
+#include <chrono>
+
 namespace filewatch
 {
     template <typename T> class FileWatch;
@@ -132,7 +134,8 @@ namespace Crowny
         bool OnMouseButtonPressed(MouseButtonPressedEvent& e);
         bool OnViewportEvent(Event& event);
 
-        void RebuildAssemblies(Event& event);
+        void RebuildAssemblies();
+        void RebuildAssemblies(Event& event) { RebuildAssemblies(); }
         void BuildGame(Event& event);
 
         void CreateNewScene();
@@ -204,6 +207,8 @@ namespace Crowny
         Scope<filewatch::FileWatch<Path>> m_Watch;
         Mutex m_FileWatchMutex;
         Vector<Path> m_FileWatchQueue;
+        bool m_AssemblyReloadPending = false;
+        std::chrono::steady_clock::time_point m_LastCsChangeTime;
 
         Stack<UndoAction> m_UndoStack;
 

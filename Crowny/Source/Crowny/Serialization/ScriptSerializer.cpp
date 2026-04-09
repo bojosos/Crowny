@@ -21,6 +21,12 @@ CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldDouble, "Double")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldString, "String")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldEntity, "Entity")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldAsset, "Asset")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldVector2, "Vector2")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldVector3, "Vector3")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldVector4, "Vector4")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldColor, "Color")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldMatrix4, "Matrix4")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldObject, "Object")
 
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldBool)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldChar)
@@ -37,6 +43,12 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::Seri
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldString)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldEntity)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldAsset)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldVector2)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldVector3)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldVector4)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldColor)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldMatrix4)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldObject)
 
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableTypeInfoPrimitive, "TypeInfoPrimitive")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableTypeInfoEnum, "TypeInfoEnum")
@@ -103,15 +115,49 @@ namespace Crowny
 
     template <typename Archive> void Serialize(Archive& archive, SerializableFieldString& data) { archive(data.Value, data.Null); }
 
-    template <typename Archive> void Serialize(Archive& archive, SerializableFieldEntity& data)
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldVector2& data) { archive(data.Value.x, data.Value.y); }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldVector3& data) { archive(data.Value.x, data.Value.y, data.Value.z); }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldVector4& data) { archive(data.Value.x, data.Value.y, data.Value.z, data.Value.w); }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldColor& data) { archive(data.Value.x, data.Value.y, data.Value.z, data.Value.w); }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldMatrix4& data)
     {
-        if (data.Value)
-            archive(data.Value.GetComponent<IDComponent>().Uuid);
+        for (int c = 0; c < 4; c++)
+            for (int r = 0; r < 4; r++)
+                archive(data.Value[c][r]);
     }
 
-    template <typename Archive> void Serialize(Archive& archive, SerializableFieldAsset& data)
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldObject& data) { archive(data.Value, data.AllowNull); }
+
+    template <typename Archive> void Save(Archive& archive, const SerializableFieldEntity& data)
     {
-        // this bad
+        UUID uuid = data.Value ? data.Value.GetComponent<IDComponent>().Uuid : UUID::EMPTY;
+        archive(uuid);
+    }
+
+    template <typename Archive> void Load(Archive& archive, SerializableFieldEntity& data)
+    {
+        UUID uuid;
+        archive(uuid);
+        if (uuid != UUID::EMPTY && SceneManager::GetActiveScene())
+            data.Value = SceneManager::GetActiveScene()->GetEntityFromUuid(uuid);
+    }
+
+    template <typename Archive> void Save(Archive& archive, const SerializableFieldAsset& data)
+    {
+        UUID uuid = data.Value ? data.Value.GetUUID() : UUID::EMPTY;
+        archive(uuid);
+    }
+
+    template <typename Archive> void Load(Archive& archive, SerializableFieldAsset& data)
+    {
+        UUID uuid;
+        archive(uuid);
+        if (uuid != UUID::EMPTY)
+            data.Value = AssetManager::Get().GetAssetHandle(uuid);
     }
 
     /*

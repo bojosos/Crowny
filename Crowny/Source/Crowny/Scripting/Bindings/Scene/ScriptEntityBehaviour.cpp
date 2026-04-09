@@ -21,14 +21,28 @@ namespace Crowny
 
     ScriptObjectBackupData ScriptEntityBehaviour::BeginRefresh()
     {
-        ScriptObjectBackupData backupData;
-        backupData = m_Entity.GetComponent<MonoScriptComponent>().Backup(true);
-        return backupData;
+        // Back up only the matching MonoScript for this behaviour (not the whole component)
+        MonoScriptComponent& msc = m_Entity.GetComponent<MonoScriptComponent>();
+        for (auto& script : msc.Scripts)
+        {
+            if (script.GetNamespace() == m_Namespace && script.GetTypeName() == m_TypeName)
+                return script.Backup();
+        }
+        return {};
     }
 
     void ScriptEntityBehaviour::EndRefresh(const ScriptObjectBackupData& data)
     {
-        m_Entity.GetComponent<MonoScriptComponent>().Restore(data, m_TypeMissing);
+        // Restore only the matching MonoScript for this behaviour
+        MonoScriptComponent& msc = m_Entity.GetComponent<MonoScriptComponent>();
+        for (auto& script : msc.Scripts)
+        {
+            if (script.GetNamespace() == m_Namespace && script.GetTypeName() == m_TypeName)
+            {
+                script.Restore(data, m_TypeMissing);
+                return;
+            }
+        }
     }
 
     MonoObject* ScriptEntityBehaviour::CreateManagedInstance(bool construct)
