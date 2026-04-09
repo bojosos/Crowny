@@ -19,16 +19,8 @@
 
 #include <GLFW/glfw3.h>
 
+#define VMA_DEBUG_LOG_FORMAT(format, ...) // Suppress VMA allocation logging
 #define VMA_IMPLEMENTATION
-#define VMA_DEBUG
-#ifdef VMA_DEBUG
-#define VMA_DEBUG_LOG_FORMAT(format, ...)                                                                                                            \
-    do                                                                                                                                               \
-    {                                                                                                                                                \
-        printf(format, __VA_ARGS__);                                                                                                                 \
-        printf("\n");                                                                                                                                \
-    } while (false)
-#endif
 
 #ifdef __clang__
 #pragma clang diagnostic push

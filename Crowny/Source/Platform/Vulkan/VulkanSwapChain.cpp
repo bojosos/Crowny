@@ -149,6 +149,11 @@ namespace Crowny
         imageDesc.Allocation = VK_NULL_HANDLE;
 
         m_Surfaces.resize(imageCount + 1);
+
+        VkFenceCreateInfo fenceCI{};
+        fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT; // Start signaled so first wait succeeds
+
         for (uint32_t i = 0; i < imageCount; i++)
         {
             imageDesc.Image = images[i];
@@ -156,10 +161,12 @@ namespace Crowny
             m_Surfaces[i].Acquired = false;
             m_Surfaces[i].Sync = owner->Create<VulkanSemaphore>();
             m_Surfaces[i].Image = owner->Create<VulkanImage>(imageDesc, false);
+            vkCreateFence(m_Device, &fenceCI, nullptr, &m_Surfaces[i].AcquireFence);
         }
         m_Surfaces.back().Sync = owner->Create<VulkanSemaphore>();
         m_Surfaces.back().NeedsWait = false;
         m_Surfaces.back().Acquired = false;
+        vkCreateFence(m_Device, &fenceCI, nullptr, &m_Surfaces.back().AcquireFence);
 
         delete[] images;
         if (createDepth)
@@ -231,6 +238,12 @@ namespace Crowny
         {
             for (auto& surface : m_Surfaces)
             {
+                if (surface.AcquireFence != VK_NULL_HANDLE)
+                {
+                    vkWaitForFences(m_Device, 1, &surface.AcquireFence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+                    vkDestroyFence(m_Device, surface.AcquireFence, nullptr);
+                    surface.AcquireFence = VK_NULL_HANDLE;
+                }
                 // Last surface is only for the semaphore(due to validation errors)
                 if (!surface.Framebuffer)
                     continue;
@@ -241,7 +254,7 @@ namespace Crowny
                     surface.Image->Destroy();
                     surface.Image = nullptr;
                 }
-                
+
                 surface.Sync->Destroy();
                 surface.Sync = nullptr;
             }
@@ -264,9 +277,14 @@ namespace Crowny
     VkResult VulkanSwapChain::AcquireBackBuffer()
     {
         uint32_t imageIndex;
-        // CW_ENGINE_INFO("ACQUIRING: {}", (void*)m_Surfaces[m_CurrentSemaphoreIdx].Sync->GetHandle());
+
+        // Wait for the previous acquire that used this semaphore slot to complete
+        VkFence fence = m_Surfaces[m_CurrentSemaphoreIdx].AcquireFence;
+        vkWaitForFences(m_Device, 1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+        vkResetFences(m_Device, 1, &fence);
+
         VkResult result = vkAcquireNextImageKHR(m_Device, m_SwapChain, std::numeric_limits<uint64_t>::max(),
-                                                m_Surfaces[m_CurrentSemaphoreIdx].Sync->GetHandle(), VK_NULL_HANDLE, &imageIndex);
+                                                m_Surfaces[m_CurrentSemaphoreIdx].Sync->GetHandle(), fence, &imageIndex);
         if (result != VK_SUCCESS)
             return result;
 

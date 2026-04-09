@@ -129,7 +129,7 @@ namespace Crowny
         Renderer2D::Init();
         ForwardRenderer::Init();
 
-        const Path defaultFontPath = applicationDesc.WorkingDirectory / "Resources/Fonts/Roboto/roboto-thin.ttf.asset";
+        const Path defaultFontPath = applicationDesc.WorkingDirectory / "Crowny-Editor/Resources/Fonts/Roboto/roboto-thin.ttf.asset";
         if (fs::exists(defaultFontPath))
         {
             const AssetHandle<Font> defaultFont = AssetManager::Get().Load<Font>(defaultFontPath);
@@ -140,7 +140,7 @@ namespace Crowny
         }
         else
         {
-            const Path rawFontPath = applicationDesc.WorkingDirectory / "Resources/Fonts/Roboto/roboto-thin.ttf";
+            const Path rawFontPath = applicationDesc.WorkingDirectory / "Crowny-Editor/Resources/Fonts/Roboto/roboto-thin.ttf";
             if (fs::exists(rawFontPath))
             {
                 const Ref<FontImportOptions> fontImportOptions = CreateRef<FontImportOptions>();

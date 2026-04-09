@@ -14,6 +14,7 @@ namespace Crowny
         VulkanFramebuffer* Framebuffer;
         VulkanImage* Image;
         VulkanSemaphore* Sync;
+        VkFence AcquireFence = VK_NULL_HANDLE;
         bool Acquired;
         bool NeedsWait;
     };

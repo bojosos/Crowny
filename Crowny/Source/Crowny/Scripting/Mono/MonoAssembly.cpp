@@ -92,10 +92,26 @@ namespace Crowny
             if (pdbStream != nullptr)
             {
                 uint32_t pdbSize = (uint32_t)pdbStream->Size();
-                m_DebugData = new uint8_t[pdbSize];
-                pdbStream->Read(m_DebugData, pdbSize);
-                mono_debug_open_image_from_memory(image, m_DebugData, pdbSize);
-                CW_ENGINE_INFO("Loaded debug symbols: {0}", pdbPath);
+                if (pdbSize >= 4)
+                {
+                    m_DebugData = new uint8_t[pdbSize];
+                    pdbStream->Read(m_DebugData, pdbSize);
+
+                    // Check for portable PDB magic: "BSJB" at offset 0
+                    bool isPortablePdb = (m_DebugData[0] == 'B' && m_DebugData[1] == 'S' &&
+                                          m_DebugData[2] == 'J' && m_DebugData[3] == 'B');
+                    if (isPortablePdb)
+                    {
+                        mono_debug_open_image_from_memory(image, m_DebugData, pdbSize);
+                        CW_ENGINE_INFO("Loaded debug symbols: {0}", pdbPath);
+                    }
+                    else
+                    {
+                        CW_ENGINE_WARN("Skipping non-portable PDB: {0}. Rebuild with -debug:portable.", pdbPath);
+                        delete[] m_DebugData;
+                        m_DebugData = nullptr;
+                    }
+                }
             }
         }
         // #endif
