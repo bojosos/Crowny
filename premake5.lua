@@ -81,7 +81,8 @@ if os.host() == "linux" then
 end
 if os.host() == "windows" then
 	IncludeDir["mono"] = os.getenv("MONO_SDK") or "C:/Program Files/Mono/include/mono-2.0"
-	
+	IncludeDir["vulkanvma"] = "%{wks.location}/Crowny/Dependencies/vulkan/include"
+
 	local vulkanSDK = os.getenv("VULKAN_SDK")
 	if vulkanSDK then
 		IncludeDir["vulkan"] = vulkanSDK .. "/Include"

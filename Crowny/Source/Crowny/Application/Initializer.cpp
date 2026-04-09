@@ -201,8 +201,7 @@ namespace Crowny
     void Initializer::Shutdown()
     {
         Physics2D::Shutdown();
-        Texture::WHITE = Texture::BLACK = nullptr;
-        
+
         if (ScriptSceneObjectManager::IsStartedUp())
         {
             ScriptSceneObjectManager::Get().Del();
@@ -216,18 +215,34 @@ namespace Crowny
 
         if (RenderAPI::IsStartedUp())
         {
-            Renderer2D::Shutdown();
+            // Release static GPU resources before shutting down subsystems.
+            // VulkanRenderAPI::OnShutdown() calls WaitIdle on all devices before destroying them.
+            Texture::WHITE = nullptr;
+            Texture::BLACK = nullptr;
+            Font::SetDefaultFont({});
             SamplerState::s_DefaultSamplerState = nullptr;
+
+            // Shut down renderers that hold GPU buffers, textures, and materials.
+            Renderer2D::Shutdown();
             ForwardRenderer::Shutdown();
+
+            // Shut down scene and asset managers so all loaded GPU resources are released.
+            SceneManager::Shutdown();
+            AssetManager::Shutdown();
+        }
+        else
+        {
+            SceneManager::Shutdown();
+            AssetManager::Shutdown();
         }
 
-        SceneManager::Shutdown();
         VirtualFileSystem::Shutdown();
-        AssetManager::Shutdown();
         AssetListenerManager::Shutdown();
         Importer::Shutdown();
         Random::Shutdown();
         AudioManager::Shutdown();
+
+        // Destroy the Vulkan device and VMA allocator last, after all GPU resources are freed.
         RenderAPI::Shutdown();
 
         ConsoleBuffer::Shutdown();

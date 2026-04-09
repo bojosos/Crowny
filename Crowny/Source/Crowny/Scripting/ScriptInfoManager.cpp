@@ -23,7 +23,9 @@
 
 #include "Crowny/Scripting/Bindings/Assets/ScriptAudioClip.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptFont.h"
+#include "Crowny/Scripting/Bindings/Assets/ScriptMaterial.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptMesh.h"
+#include "Crowny/Scripting/Bindings/Assets/ScriptTexture.h"
 
 #include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
 
@@ -408,7 +410,8 @@ namespace Crowny
         RegisterAsset<AudioClip, ScriptAudioClip>();
         RegisterAsset<Mesh, ScriptMesh>();
         RegisterAsset<Font, ScriptFont>();
-        // RegisterAsset<Shader, ScriptShader>();
+        RegisterAsset<Material, ScriptMaterial>();
+        RegisterAsset<Texture, ScriptTexture>();
     }
 
     void ScriptInfoManager::RegisterComponents()

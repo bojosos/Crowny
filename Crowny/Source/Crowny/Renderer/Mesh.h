@@ -49,6 +49,20 @@ namespace Crowny
         void SetIndexData(void* data, uint32_t indexCount);
         void AllocateBuffer();
 
+        // Typed attribute accessors
+        Vector<glm::vec3> GetPositions() const;
+        void SetPositions(const Vector<glm::vec3>& positions);
+        Vector<glm::vec3> GetNormals() const;
+        void SetNormals(const Vector<glm::vec3>& normals);
+        Vector<glm::vec3> GetTangents() const;
+        void SetTangents(const Vector<glm::vec3>& tangents);
+        Vector<glm::vec2> GetUVs(uint32_t channel = 0) const;
+        void SetUVs(uint32_t channel, const Vector<glm::vec2>& uvs);
+        Vector<glm::vec4> GetColors() const;
+        void SetColors(const Vector<glm::vec4>& colors);
+        Vector<uint32_t> GetIndices() const;
+        void SetIndices(const Vector<uint32_t>& indices);
+
         template <typename Type = uint8_t> Type* GetIndexData() const { return (Type*)m_Data; }
         uint32_t GetVertexCount() const { return m_NumVertices; }
         uint32_t GetIndexCount() const { return m_NumIndices; }
@@ -96,6 +110,14 @@ namespace Crowny
         void ReadData(Ref<MeshData>& data, uint32_t queueIdx = 0);
         DrawMode GetDrawMode() { return m_DrawMode; }
 
+        // Mesh modification API
+        void SetMeshData(const Ref<MeshData>& data);
+        Ref<MeshData> GetMeshData() const;
+        void UploadToGpu();
+        void RecalculateBounds();
+        void RecalculateNormals();
+        bool IsDirty() const { return m_Dirty; }
+
         static Ref<Mesh> Create(const Ref<MeshData>& meshData, const Vector<SubMesh>& subMeshes = {}, MeshUsageFlags usage = MeshUsage::Static,
                                 DrawMode drawMode = DrawMode::TRIANGLE_LIST);
         static Ref<Mesh> Create(uint32_t vertexCount, uint32_t indexCount, const BufferLayout& layout, MeshUsageFlags usage, DrawMode drawMode,
@@ -122,5 +144,6 @@ namespace Crowny
         BufferLayout m_Layout;
         AABox m_AABox;
         SphereBounds m_SphereBounds;
+        bool m_Dirty = false;
     };
 } // namespace Crowny

@@ -2,6 +2,8 @@
 
 #include "Editor/EditorUtils.h"
 #include "Editor/ProjectLibrary.h"
+#include "Editor/Script/CodeEditor.h"
+#include "Editor/Script/ScriptProjectGenerator.h"
 #include "Panels/ComponentEditor.h"
 #include "Panels/HierarchyPanel.h"
 
@@ -162,8 +164,16 @@ namespace Crowny
                                 Path path = EditorUtils::GetUniquePath(ProjectLibrary::Get().GetAssetFolder() / (s_SearchString + ".cs"));
                                 FileSystem::WriteTextFile(path, script);
                                 ProjectLibrary::Get().Refresh(path);
+
+                                // Regenerate VS solution so the new file appears in the IDE
+                                Path engineAssemblyPath = Application::GetApplicationDesc().EngineAssemblyPath;
+                                if (engineAssemblyPath.is_relative())
+                                    engineAssemblyPath = Application::GetWorkingDirectory() / engineAssemblyPath;
+                                CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY, { CROWNY_ASSEMBLY, engineAssemblyPath });
+
                                 ImGui::CloseCurrentPopup();
-                                // TODO: Need to trigger assembly refresh here and add the script after.
+                                // The script won't be usable until the assembly is rebuilt.
+                                // The file watch will trigger auto-rebuild after the debounce.
                                 scene->AddScriptComponent(entity, "Sandbox", s_SearchString);
                             }
                         }

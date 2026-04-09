@@ -301,10 +301,8 @@ namespace Crowny
 
             if (options == GpuLockOptions::WRITE_DISCARD)
             {
-                // Wait for GPU to finish using this buffer rather than allocating a new one each frame
-                VulkanTransferBuffer* transferCB = vtm.GetTransferBuffer(queueType, localQueueIdx);
-                transferCB->AppendMask(useMask);
-                transferCB->Flush(true);
+                m_Buffer->Destroy();
+                m_Buffer = CreateBuffer(*gVulkanRenderAPI().GetPresentDevice().get(), m_Size, false, true);
                 return m_Buffer->Map(offset, length);
             }
 

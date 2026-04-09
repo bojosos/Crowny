@@ -31,6 +31,7 @@ namespace Crowny
         String Name;
 
         bool Headless = false;
+        bool EnableRayTracing = false;
         RenderAPI::API PreferredAPI = RenderAPI::API::Vulkan;
 
         Path EngineAssemblyPath;

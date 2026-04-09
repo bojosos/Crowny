@@ -156,6 +156,8 @@ namespace Crowny
     {
         int flags = 0;
 
+        flags |= aiProcess_JoinIdenticalVertices; // Always deduplicate vertices
+
         if (meshImportOptions->Optimize)
             flags |= aiProcess_OptimizeGraph | aiProcess_OptimizeMeshes | aiProcess_ImproveCacheLocality | aiProcess_RemoveRedundantMaterials;
 
