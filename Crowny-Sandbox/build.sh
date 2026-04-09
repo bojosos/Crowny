@@ -1,1 +1,0 @@
-find ./Source -type f -name *.cs -print0 | xargs -r0 mcs -debug+ -o- -lib:../Crowny-Editor/Resources/Assemblies -reference:CrownySharp.dll -target:library -out:GameAssembly.dll && mv GameAssembly.dll ../Crowny-Editor/Resources/Assemblies && mv GameAssembly.dll.mdb ../Crowny-Editor/Resources/Assemblies

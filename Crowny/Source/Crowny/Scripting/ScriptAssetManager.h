@@ -12,7 +12,7 @@ namespace Crowny
         ScriptAssetManager();
         ~ScriptAssetManager();
 
-        ScriptAssetBase* CreateScriptAsset(const AssetHandle<Asset>& asset, MonoObject* instance);
+        ScriptAssetBase* CreateScriptAsset(const AssetHandle<Asset>& asset, MonoObject* instance = nullptr);
         ScriptAssetBase* GetScriptAsset(const UUID& uuid);
         ScriptAssetBase* GetScriptAsset(const AssetHandle<Asset>& asset, bool create = false);
 

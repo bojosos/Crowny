@@ -9,9 +9,9 @@ namespace Crowny
     {
         switch (usage)
         {
-        case (BufferUsage::STATIC_DRAW):
+        case (BufferUsage::BU_STATIC_DRAW):
             return GL_STATIC_DRAW;
-        case (BufferUsage::DYNAMIC_DRAW):
+        case (BufferUsage::BU_DYNAMIC_DRAW):
             return GL_DYNAMIC_DRAW;
         }
         CW_ENGINE_ASSERT(false, "Drawing mode not support");

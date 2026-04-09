@@ -1,4 +1,3 @@
-
 #include "cwpch.h"
 
 #include "Crowny/Import/TextureImporter.h"
@@ -7,6 +6,8 @@
 #include "Crowny/Common/StringUtils.h"
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/RenderAPI/Texture.h"
+
+#include "basis_universal/encoder/basisu_comp.h"
 
 #include <stb_image.h>
 
@@ -33,13 +34,12 @@ namespace Crowny
         int width, height, channels;
         stbi_set_flip_vertically_on_load(1);
 
-        // auto [loaded, size] = VirtualFileSystem::Get()->ReadFile(filepath);
         std::vector<uint8_t> data;
         Ref<DataStream> stream = FileSystem::OpenFile(filepath);
         data.resize(stream->Size());
         stream->Read(data.data(), data.size());
         stream->Close();
-        bool is16 = stbi_is_16_bit_from_memory(data.data(), (int)data.size());
+        const bool is16 = stbi_is_16_bit_from_memory(data.data(), (int)data.size());
         uint8_t* rawPixelData;
 
         if (is16)
@@ -63,21 +63,66 @@ namespace Crowny
         else
             CW_ENGINE_ASSERT("2-Channel textures are not supported");
 
-        TextureParameters params;
-        params.Width = width;
-        params.Height = height;
-        if (textureImportOptions->AutomaticFormat)
-            params.Format = format;
-        else
-            params.Format = textureImportOptions->Format;
+        if (textureImportOptions->DiskFormat != TextureDiskFormat::None && false)
+        {
+            static bool basisInitialied = false;
+            if (!basisInitialied)
+                basisu::basisu_encoder_init(false, false);
+            basisInitialied = true;
+            const basist::basis_tex_format basisFormat =
+              (textureImportOptions->DiskFormat == TextureDiskFormat::ETC1S) ? basist::basis_tex_format::cETC1S : basist::basis_tex_format::cUASTC4x4;
+            const uint32_t qualityLevel = 128;
+            const uint32_t flags =
+              basisu::cFlagGenMipsClamp | basisu::cFlagThreaded | basisu::cFlagDebug | basisu::cFlagPrintStats | basisu::cFlagPrintStatus;
+            basisu::vector<basisu::image> images;
+            images.push_back(basisu::image(rawPixelData, width, height, channels));
+            size_t size = 0;
+            void* ktx2Data = basisu::basis_compress(basisFormat, images, qualityLevel | flags, 0.0f, &size);
+            if (!ktx2Data)
+            {
+                CW_ENGINE_ERROR("Failed to compress texture to basis format: {0}", filepath);
+                stbi_image_free(rawPixelData);
+                return nullptr;
+            };
+            CW_ENGINE_INFO("Basis compression stats for texture {0}: ({1}, {2}) -> {3}", filepath, data.size(),
+                           width * height * channels * sizeof(float), size);
+            FileSystem::WriteFile("C:\\dev\\" + filepath.filename().replace_extension(".ktx2").string(), (uint8_t*)ktx2Data, size);
+            basisu::basis_free_data(ktx2Data);
+            Ref<DataStream> stream = FileSystem::OpenFile("C:\\dev\\" + filepath.filename().replace_extension(".ktx2").string());
+            Vector<uint8_t> ktxData = stream->ReadAll();
 
-        PixelData pixelData(width, height, 1, format);
-        Ref<Texture> texture = Texture::Create(params);
-        pixelData.SetBuffer(rawPixelData);
-        texture->WriteData(pixelData);
-        texture->SetName(filepath.filename().string());
-        stbi_image_free(rawPixelData);
-        return texture;
+            
+
+            TextureParameters params;
+            params.Format = TextureFormat::BC7;
+            params.Width = width;
+            params.Height = height;
+            Ref<Texture> texture = Texture::Create(params);
+            PixelData pixelData(width, height, 1, TextureFormat::BC7);
+            pixelData.SetBuffer(data.data());
+            texture->WriteData(pixelData);
+            texture->SetName(filepath.filename().string());
+            stbi_image_free(rawPixelData);
+            return texture;
+        }
+        else
+        {
+            TextureParameters params;
+            params.Width = width;
+            params.Height = height;
+            if (textureImportOptions->AutomaticFormat)
+                params.Format = format;
+            else
+                params.Format = textureImportOptions->Format;
+
+            PixelData pixelData(width, height, 1, format);
+            Ref<Texture> texture = Texture::Create(params);
+            pixelData.SetBuffer(rawPixelData);
+            texture->WriteData(pixelData);
+            texture->SetName(filepath.filename().string());
+            stbi_image_free(rawPixelData);
+            return texture;
+        }
     }
 
     Ref<ImportOptions> TextureImporter::CreateImportOptions() const { return CreateRef<TextureImportOptions>(); }

@@ -4,10 +4,12 @@
 
 // Has to be here due to ambiguous refs caused by Xlib(which is included by vulkan on linux) and Input.cpp
 #include "Platform/Vulkan/VulkanRenderAPI.h"
+#include "Platform/OpenGL/OpenGLRenderAPI.h"
 
 #include "Crowny/Application/Application.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Audio/AudioManager.h"
+#include "Crowny/Common/ConsoleBuffer.h"
 #include "Crowny/Common/Random.h"
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Import/Importer.h"
@@ -21,24 +23,13 @@
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Scene/SceneManager.h"
 
-// Script runtime
-#include "Crowny/Scene/ScriptRuntime.h"
+// Scripting
+#include "Crowny/Scripting/Bindings/ScriptBindings.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/ScriptAssetManager.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptObjectManager.h"
 #include "Crowny/Scripting/ScriptSceneObjectManager.h"
-
-// Importers
-#include "Crowny/Import/AudioClipImporter.h"
-#include "Crowny/Import/FontImporter.h"
-#include "Crowny/Import/MeshImporter.h"
-#include "Crowny/Import/ScriptImporter.h"
-#include "Crowny/Import/ShaderImporter.h"
-#include "Crowny/Import/TextFileImporter.h"
-#include "Crowny/Import/TextureImporter.h"
-
-#include "Crowny/Common/ConsoleBuffer.h"
 
 namespace Crowny
 {
@@ -47,24 +38,68 @@ namespace Crowny
     {
         Crowny::Log::Init(applicationDesc.Name);
 
-        ConsoleBuffer::StartUp();
+        if (!ConsoleBuffer::IsStartedUp())
+            ConsoleBuffer::StartUp();
 
         Importer::StartUp();
-        Importer::Get().RegisterImporter(new AudioClipImporter());
-        Importer::Get().RegisterImporter(new FontImporter());
-        Importer::Get().RegisterImporter(new ScriptImporter());
-        Importer::Get().RegisterImporter(new ShaderImporter());
-        Importer::Get().RegisterImporter(new TextFileImporter());
-        Importer::Get().RegisterImporter(new TextureImporter());
-        Importer::Get().RegisterImporter(new MeshImporter());
+        Importer::RegisterBuiltinImporters();
 
-        AssetManager::StartUp();
         AssetListenerManager::StartUp();
+        AssetManager::StartUp();
 
         Physics2D::StartUp();
         Random::StartUp();
         AudioManager::StartUp();
-        RenderAPI::StartUp<VulkanRenderAPI>();
+
+        if (applicationDesc.Headless)
+        {
+            if (!MonoManager::IsStartedUp())
+            {
+                String libDir = "C:\\\\Program Files\\\\Mono\\\\lib";
+                String etcDir = "C:\\\\Program Files\\\\Mono\\\\etc";
+                MonoManager::StartUp(libDir, etcDir);
+            }
+            ScriptBindings::Register();
+            ScriptInfoManager::StartUp();
+
+            Path engineAssemblyPath = applicationDesc.EngineAssemblyPath;
+            if (!engineAssemblyPath.empty())
+            {
+                if (engineAssemblyPath.is_relative())
+                    engineAssemblyPath = applicationDesc.WorkingDirectory / engineAssemblyPath;
+                if (fs::exists(engineAssemblyPath))
+                {
+                    MonoManager::Get().LoadAssembly(engineAssemblyPath, CROWNY_ASSEMBLY);
+                    ScriptInfoManager::Get().InitializeTypes();
+                    ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
+                }
+            }
+
+            Path gameAssemblyPath = applicationDesc.GameAssemblyPath;
+            if (!gameAssemblyPath.empty())
+            {
+                if (gameAssemblyPath.is_relative())
+                    gameAssemblyPath = applicationDesc.WorkingDirectory / gameAssemblyPath;
+                if (fs::exists(gameAssemblyPath))
+                {
+                    MonoManager::Get().LoadAssembly(gameAssemblyPath, GAME_ASSEMBLY);
+                    ScriptInfoManager::Get().LoadAssemblyInfo(GAME_ASSEMBLY);
+                }
+            }
+
+            ScriptSceneObjectManager::StartUp();
+            ScriptAssetManager::StartUp();
+            ScriptObjectManager::StartUp();
+            return;
+        }
+
+        if (applicationDesc.PreferredAPI == RenderAPI::API::Vulkan)
+            RenderAPI::StartUp<VulkanRenderAPI>();
+        else if (applicationDesc.PreferredAPI == RenderAPI::API::OpenGL)
+            RenderAPI::StartUp<OpenGLRenderAPI>();
+        else
+            CW_ENGINE_ASSERT(false, "Unknown render API");
+
         Renderer::Init();
 
         TextureParameters params;
@@ -94,7 +129,7 @@ namespace Crowny
         Renderer2D::Init();
         ForwardRenderer::Init();
 
-        const Path defaultFontPath = "Resources/Fonts/Roboto/roboto-thin.ttf.asset";
+        const Path defaultFontPath = applicationDesc.WorkingDirectory / "Resources/Fonts/Roboto/roboto-thin.ttf.asset";
         if (fs::exists(defaultFontPath))
         {
             const AssetHandle<Font> defaultFont = AssetManager::Get().Load<Font>(defaultFontPath);
@@ -105,24 +140,41 @@ namespace Crowny
         }
         else
         {
-            const Ref<FontImportOptions> fontImportOptions = CreateRef<FontImportOptions>();
-            fontImportOptions->AutomaticFontSampling = true;
-            fontImportOptions->AutoSizeAtlas = true;
-            const Ref<Asset> importedDefaultFont = Importer::Get().Import("Resources/Fonts/Roboto/roboto-thin.ttf");
-            if (importedDefaultFont)
+            const Path rawFontPath = applicationDesc.WorkingDirectory / "Resources/Fonts/Roboto/roboto-thin.ttf";
+            if (fs::exists(rawFontPath))
             {
-                // Save the font cache for next time.
-                AssetManager::Get().Save(importedDefaultFont, defaultFontPath);
-                const AssetHandle<Font> fontHandle = static_asset_cast<Font>(AssetManager::Get().CreateAssetHandle(importedDefaultFont));
-                Font::SetDefaultFont(fontHandle);
+                const Ref<FontImportOptions> fontImportOptions = CreateRef<FontImportOptions>();
+                fontImportOptions->AutomaticFontSampling = true;
+                fontImportOptions->AutoSizeAtlas = true;
+                const Ref<Asset> importedDefaultFont = Importer::Get().Import(rawFontPath, fontImportOptions);
+                if (importedDefaultFont)
+                {
+                    // Save the font cache for next time.
+                    AssetManager::Get().Save(importedDefaultFont, defaultFontPath);
+                    const AssetHandle<Font> fontHandle =
+                      static_asset_cast<Font>(AssetManager::Get().CreateAssetHandle(importedDefaultFont));
+                    Font::SetDefaultFont(fontHandle);
+                }
+                else
+                    CW_ENGINE_ERROR("Default font not found...");
             }
-            else
-                CW_ENGINE_ERROR("Default font not found...");
         }
         // Scripting
-        MonoManager::StartUp();
+        {
+            if (!MonoManager::IsStartedUp())
+            {
+                String libDir = "C:\\\\Program Files\\\\Mono\\\\lib";
+                String etcDir = "C:\\\\Program Files\\\\Mono\\\\etc";
+                MonoManager::StartUp(libDir, etcDir);
+            }
+        }
+        ScriptBindings::Register();
         ScriptInfoManager::StartUp();
-        const Path engineAssemblyPath = Path("C:/dev/Crowny/Crowny-Sharp") / (std::string(CROWNY_ASSEMBLY) + ".dll");
+
+        Path engineAssemblyPath = applicationDesc.EngineAssemblyPath;
+        if (engineAssemblyPath.is_relative())
+            engineAssemblyPath = applicationDesc.WorkingDirectory / engineAssemblyPath;
+
         if (fs::exists(engineAssemblyPath))
         {
             MonoManager::Get().LoadAssembly(engineAssemblyPath, CROWNY_ASSEMBLY);
@@ -131,7 +183,10 @@ namespace Crowny
             CW_ENGINE_INFO("Loaded engine assembly {0}", engineAssemblyPath.string());
         }
 
-        const Path gameAssemblyPath = Path("C:/dev/Projects/Project1/Internal/Assemblies/Debug/") / (std::string(GAME_ASSEMBLY) + ".dll");
+        Path gameAssemblyPath = applicationDesc.GameAssemblyPath;
+        if (gameAssemblyPath.is_relative())
+            gameAssemblyPath = applicationDesc.WorkingDirectory / gameAssemblyPath;
+
         if (fs::exists(gameAssemblyPath))
         {
             MonoManager::Get().LoadAssembly(gameAssemblyPath, GAME_ASSEMBLY);
@@ -147,27 +202,35 @@ namespace Crowny
     {
         Physics2D::Shutdown();
         Texture::WHITE = Texture::BLACK = nullptr;
-        ScriptSceneObjectManager::Get().Del();
-        ScriptRuntime::UnloadAssemblies();
-        Renderer2D::Shutdown();
-        SamplerState::s_DefaultSamplerState = nullptr;
-        /*
-        Renderer::Shutdown();
-        ForwardPlusRenderer::Shutdown();
-        */
+        
+        if (ScriptSceneObjectManager::IsStartedUp())
+        {
+            ScriptSceneObjectManager::Get().Del();
+            ScriptSceneObjectManager::Shutdown();
+        }
+
+        ScriptObjectManager::Shutdown();
+        ScriptAssetManager::Shutdown();
+        ScriptInfoManager::Shutdown();
+        MonoManager::Shutdown();
+
+        if (RenderAPI::IsStartedUp())
+        {
+            Renderer2D::Shutdown();
+            SamplerState::s_DefaultSamplerState = nullptr;
+            ForwardRenderer::Shutdown();
+        }
+
         SceneManager::Shutdown();
         VirtualFileSystem::Shutdown();
         AssetManager::Shutdown();
+        AssetListenerManager::Shutdown();
         Importer::Shutdown();
+        Random::Shutdown();
         AudioManager::Shutdown();
-        ForwardRenderer::Shutdown();
-        RenderAPI::Get().Shutdown();
+        RenderAPI::Shutdown();
 
-        ScriptInfoManager::Shutdown();
         ConsoleBuffer::Shutdown();
-        // ScriptSceneObjectManager::Shutdown();
-        // ScriptSceneObjectManager::Shutdown();
-        // ScriptObjectManager::Shutdown();
     }
 
 } // namespace Crowny

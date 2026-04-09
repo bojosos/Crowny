@@ -29,6 +29,7 @@ namespace Crowny
 
         public:
             String MessageText;
+            String TimestampText;
             Level LogLevel;
             size_t Hash; // for collapse
             std::time_t Timestamp;

@@ -52,3 +52,9 @@
 [submodule "Crowny/Dependencies/tracy"]
 	path = Crowny/Dependencies/tracy
 	url = https://github.com/bojosos/tracy
+[submodule "Crowny/Dependencies/basis_universal"]
+	path = Crowny/Dependencies/basis_universal
+	url = https://github.com/bojosos/basis_universal
+[submodule "Crowny/Dependencies/Catch2"]
+	path = Crowny/Dependencies/catch2
+	url = https://github.com/bojosos/Catch2

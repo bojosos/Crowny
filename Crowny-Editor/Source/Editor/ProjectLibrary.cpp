@@ -1057,8 +1057,12 @@ namespace Crowny
 
         m_ProjectFolder = Editor::Get().GetProjectPath();
         m_AssetFolder = m_ProjectFolder / ASSET_DIR;
+
         m_RootEntry = CreateRef<DirectoryEntry>(m_AssetFolder, m_AssetFolder.filename().string(), nullptr);
-        m_UuidDirectory = m_ProjectFolder / INTERNAL_ASSET_DIR;
+        const Path internalAssetPath = m_ProjectFolder / INTERNAL_ASSET_DIR;
+        m_UuidDirectory = UUIDDirectory(internalAssetPath);
+
+        Application::SetInternalDirectory(internalAssetPath);
 
         Path libEntriesPath = m_ProjectFolder / PROJECT_INTERNAL_DIR / LIBRARY_ENTRIES_FILENAME;
 

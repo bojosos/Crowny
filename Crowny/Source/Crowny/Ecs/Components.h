@@ -57,8 +57,8 @@ namespace Crowny
     public:
         enum
         {
-            DIRTY_LOCAL,
-            DIRTY_WORLD
+            DIRTY_LOCAL = 1 << 0,
+            DIRTY_WORLD = 1 << 1
         };
 
     private:
@@ -70,36 +70,31 @@ namespace Crowny
         mutable Transform WorldTransform;
         mutable Transform LocalTransform;
 
-        mutable uint32_t TransformDirtyFlags = 0xffffff;
+        mutable uint32_t TransformDirtyFlags = DIRTY_LOCAL | DIRTY_WORLD;
 
     public:
         TransformComponent() : ComponentBase() {}
         TransformComponent(const TransformComponent&) = default;
-        // TransformComponent(const glm::vec3& position) : Position(position), WorldTransformDirty(true) {}
 
         bool IsCachedWorldTransformValid() const { return (TransformDirtyFlags & DIRTY_WORLD) == 0; }
         bool IsCachedLocalTransformValid() const { return (TransformDirtyFlags & DIRTY_LOCAL) == 0; }
 
-        // const glm::vec3& GetPosition() const { return GetWorld.GetPosition(); }
-        // const glm::quat& GetRotation() const { return LocalTransform.GetRotation(); }
-        // const glm::vec3& GetScale() const { return LocalTransform.GetScale(); }
-
         void SetPosition(const glm::vec3& position)
         {
             LocalTransform.SetPosition(position);
-            TransformDirtyFlags = DIRTY_LOCAL | DIRTY_WORLD;
+            TransformDirtyFlags |= DIRTY_LOCAL | DIRTY_WORLD;
         }
 
         void SetRotation(const glm::quat& rotation)
         {
             LocalTransform.SetRotation(rotation);
-            TransformDirtyFlags = DIRTY_LOCAL | DIRTY_WORLD;
+            TransformDirtyFlags |= DIRTY_LOCAL | DIRTY_WORLD;
         }
 
         void SetScale(const glm::vec3& scale)
         {
             LocalTransform.SetScale(scale);
-            TransformDirtyFlags = DIRTY_LOCAL | DIRTY_WORLD;
+            TransformDirtyFlags |= DIRTY_LOCAL | DIRTY_WORLD;
         }
 
         void SetWorldPosition(const glm::vec3& position, const Entity& parent)
@@ -108,7 +103,7 @@ namespace Crowny
                 LocalTransform.SetWorldPosition(position, parent.GetTransform().GetWorldTransform(parent.GetParent()));
             else
                 LocalTransform.SetPosition(position);
-            TransformDirtyFlags = DIRTY_LOCAL | DIRTY_WORLD;
+            TransformDirtyFlags |= DIRTY_LOCAL | DIRTY_WORLD;
         }
 
         void SetWorldRotation(const glm::quat& rotation, const Entity& parent)
@@ -117,7 +112,7 @@ namespace Crowny
                 LocalTransform.SetWorldRotation(rotation, parent.GetTransform().GetWorldTransform(parent.GetParent()));
             else
                 LocalTransform.SetRotation(rotation);
-            TransformDirtyFlags = DIRTY_LOCAL | DIRTY_WORLD;
+            TransformDirtyFlags |= DIRTY_LOCAL | DIRTY_WORLD;
         }
 
         void SetWorldScale(const glm::vec3& scale, const Entity& parent)
@@ -126,8 +121,24 @@ namespace Crowny
                 LocalTransform.SetWorldScale(scale, parent.GetTransform().GetWorldTransform(parent.GetParent()));
             else
                 LocalTransform.SetScale(scale);
-            TransformDirtyFlags = DIRTY_LOCAL | DIRTY_WORLD;
+            TransformDirtyFlags |= DIRTY_LOCAL | DIRTY_WORLD;
         }
+
+        void SetWorldTransform(const Transform& worldTransform, const Entity& parent)
+        {
+            if (parent)
+            {
+                LocalTransform = worldTransform;
+                LocalTransform.MakeLocal(parent.GetTransform().GetWorldTransform(parent.GetParent()));
+            }
+            else
+            {
+                LocalTransform = worldTransform;
+            }
+            TransformDirtyFlags |= DIRTY_LOCAL | DIRTY_WORLD;
+        }
+
+        void InvalidateWorld() { TransformDirtyFlags |= DIRTY_WORLD; }
 
         const Transform& GetLocalTransform() const
         {
@@ -169,14 +180,16 @@ namespace Crowny
 
         void UpdateWorldTransform(const Entity& parent) const
         {
-            WorldTransform = LocalTransform;
             if (parent)
             {
-                WorldTransform.MakeWorld(parent.GetTransform().GetWorldTransform(parent.GetParent()));
-                WorldTransformCache = WorldTransform.GetMatrix();
+                WorldTransformCache = parent.GetWorldMatrix() * GetLocalMatrix();
+                Math::DecomposeMatrix(WorldTransformCache, WorldTransform.m_Position, WorldTransform.m_Rotation, WorldTransform.m_Scale);
             }
             else
+            {
                 WorldTransformCache = GetLocalMatrix();
+                WorldTransform = LocalTransform;
+            }
             TransformDirtyFlags &= ~DIRTY_WORLD;
         }
     };
@@ -246,7 +259,7 @@ namespace Crowny
         TextFontStyle FontStyle = TextFontStyleBits::None;
 
         glm::vec4 OutlineColor{ 0.0f, 0.0f, 0.0f, 0.0f };
-        float Thickess = 0.8f;
+        float Thickness = 0.8f;
 
         float CharacterSpacing = 0.0f;
         float WordSpacing = 0.0f;

@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Crowny/Common/Types.h"
+#include <functional>
+
 #include "Crowny/Scripting/Mono/MonoClass.h"
 #include "Crowny/Scripting/Mono/MonoField.h"
 

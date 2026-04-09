@@ -37,23 +37,32 @@ namespace Crowny
         (*func)();
     }
 
-    Application* Application::s_Instance = nullptr;
-
-    Application::Application(const ApplicationDesc& applicationDesc) : m_Desc(applicationDesc)
+    Application::Application(const ApplicationDesc& applicationDesc) : m_ApplicationDesc(applicationDesc)
     {
-        CW_ENGINE_ASSERT(!s_Instance, "Application already exists!");
-        s_Instance = this;
-
         m_LayerStack = new LayerStack();
+    }
+
+    Application::~Application()
+    {
+        delete m_LayerStack;
+    }
+
+    void Application::OnStartUp()
+    {
+        if (m_ApplicationDesc.Headless)
+        {
+            Initializer::Init(m_ApplicationDesc);
+            return;
+        }
 
         if (s_GLFWWindowCount == 0)
         {
             int success = glfwInit();
             CW_ENGINE_ASSERT(success, "Could not initialize GLFW!");
         }
-        Initializer::Init(applicationDesc);
+        Initializer::Init(m_ApplicationDesc);
 
-        Ref<RenderWindow> mainWindow = RenderWindow::Create(applicationDesc.Window);
+        Ref<RenderWindow> mainWindow = RenderWindow::Create(m_ApplicationDesc.Window);
         mainWindow->GetWindow()->SetEventCallback(CW_BIND_EVENT_FN(Application::OnEvent));
         m_Windows.push_back(mainWindow);
         switch (RenderAPI::Get().GetAPI())
@@ -72,11 +81,13 @@ namespace Crowny
             PushOverlay(m_ImGuiLayer);
     }
 
-    Application::~Application()
+    void Application::OnShutdown()
     {
-        delete m_LayerStack;
-        Renderer::Shutdown();
-        m_Windows.clear();
+        if (!m_ApplicationDesc.Headless)
+        {
+            Renderer::Shutdown();
+            m_Windows.clear();
+        }
         Initializer::Shutdown();
     }
 

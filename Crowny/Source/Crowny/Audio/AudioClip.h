@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/Common.h"
 #include "Crowny/Audio/OggVorbisDecoder.h"
 
 #include "Crowny/Assets/Asset.h"
@@ -63,7 +64,7 @@ namespace Crowny
     public:
         AudioClip() = default;
         AudioClip(const Ref<DataStream>& stream, uint32_t streamSize, uint32_t numSamples, const AudioClipDesc& desc);
-        ~AudioClip() = default;
+        ~AudioClip();
 
         virtual void Init() override;
 

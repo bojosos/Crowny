@@ -9,5 +9,8 @@ namespace Crowny
     public:
         SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "Input")
         ScriptInput();
+
+    private:
+        static void Internal_GetMousePosition(glm::vec2* out);
     };
 } // namespace Crowny

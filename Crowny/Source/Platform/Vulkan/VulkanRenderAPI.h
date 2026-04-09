@@ -44,7 +44,7 @@ namespace Crowny
         virtual void SetDrawMode(DrawMode drawMode, const Ref<CommandBuffer>& commandBuffer = nullptr) override;
         virtual void SetUniforms(const Ref<UniformParams>& params, const Ref<CommandBuffer>& commandBuffer = nullptr) override;
 
-        virtual void Shutdown() override;
+        virtual void OnShutdown() override;
 
         VkInstance GetInstance() const { return m_Instance; }
         VulkanCommandBuffer* GetMainCommandBuffer() const { return m_CommandBuffer.get(); }

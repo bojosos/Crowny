@@ -12,6 +12,17 @@ namespace Crowny
         Message message;
         message.MessageText = messageText;
         message.Timestamp = std::time(nullptr);
+
+        char res[9];
+        tm timeinfo;
+#ifdef CW_PLATFORM_WIN32
+        localtime_s(&timeinfo, &message.Timestamp);
+#else
+        localtime_r(&message.Timestamp, &timeinfo);
+#endif
+        strftime(res, 9, "%T", &timeinfo);
+        message.TimestampText = res;
+
         message.Callstack = callstack;
         size_t hash = Hash(message.MessageText);
         HashCombine(hash, message.Timestamp, (int32_t)message.LogLevel);

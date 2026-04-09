@@ -199,14 +199,15 @@ namespace Crowny
                 ScriptAssetBase* scriptAssetBase = ScriptAsset::ToNative(value);
                 // fieldData->Value = scriptAssetBase->GetGenericHandle();
             }
+            return fieldData;
         }
         return nullptr;
     }
 
     void* SerializableFieldObject::GetValue()
     {
-        // TODO: Do more checks and take in object info
-        return Value->GetManagedInstance();
+        m_ManagedInstance = Value != nullptr ? Value->GetManagedInstance() : nullptr;
+        return &m_ManagedInstance;
     }
 
     void SerializableFieldObject::Serialize()
@@ -224,10 +225,20 @@ namespace Crowny
         }
     }
 
-    void SerializableFieldObject::SerializeYAML(YAML::Emitter& out) const { Value->SerializeYAML(out); }
-    void SerializableFieldObject::DeserializeYAML(const YAML::Node& node) {} // Need type info from somewhere for the create call { Value =
-                                                                             // SerializableObject::CreateNew(m_); Value->DeserializeYAML(node); }
+    void SerializableFieldObject::SerializeYAML(YAML::Emitter& out) const
+    {
+        if (Value != nullptr)
+            Value->SerializeYAML(out);
+        else
+            out << YAML::Null;
+    }
 
-    SerializableFieldKey::SerializableFieldKey(uint32_t typeId, uint32_t fieldId) : m_TypeId(typeId), m_FieldIdx(fieldId) {}
+    void SerializableFieldObject::DeserializeYAML(const YAML::Node& node)
+    {
+        if (node.IsNull())
+            Value = nullptr;
+        else
+            Value = SerializableObject::DeserializeYAML(node);
+    }
 
 } // namespace Crowny

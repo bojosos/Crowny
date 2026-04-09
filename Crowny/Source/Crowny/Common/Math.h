@@ -1,6 +1,9 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
+
+#include "Crowny/Common/Common.h"
 
 namespace Crowny
 {
@@ -12,8 +15,9 @@ namespace Crowny
         static float Mod(float value, int modulus);
         static glm::vec3 GetForwardDirection(const glm::vec3& rotation);
         static glm::vec3 GetRightDirection(const glm::vec3& rotation);
-        static bool DecomposeMatrix(const glm::mat4& transform, glm::vec3& outTransform, glm::vec3& outRotation, glm::vec3& outScale);
+        static bool DecomposeMatrix(const glm::mat4& transform, glm::vec3& translation, glm::quat& rotation, glm::vec3& scale);
         static glm::mat4 ComposeMatrix(const glm::vec3& position, const glm::quat& rotation, const glm::vec3& scale);
+        template <class T> static constexpr T DivideAndRoundUp(T n, T d) { return (n + d - 1) / d; }
     };
 
     class Transform
@@ -38,6 +42,7 @@ namespace Crowny
         void MakeWorld(const Transform& parentTransform);
 
     private:
+        friend class TransformComponent;
         glm::vec3 m_Position;
         glm::quat m_Rotation;
         glm::vec3 m_Scale;

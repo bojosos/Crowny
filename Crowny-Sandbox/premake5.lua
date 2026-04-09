@@ -1,9 +1,9 @@
 project "Crowny-Sandbox"
-	kind "ConsoleApp"
+	kind "SharedLib"
 	language "C#"
-	staticruntime "on"
+	targetname "GameAssembly"
 
-	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
+	targetdir ("%{wks.location}/Crowny-Sandbox")
 	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
 
 	links

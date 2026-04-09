@@ -4,11 +4,11 @@
 
 namespace Crowny
 {
-    class ScriptJson : public ScriptObject<ScriptJson>
+    class ScriptJSON : public ScriptObject<ScriptJSON>
     {
     public:
         SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "JsonUtility")
-        ScriptJson();
+        ScriptJSON();
 
     private:
         static MonoString* Internal_ToJson(MonoObject* object, bool prettyPrint);

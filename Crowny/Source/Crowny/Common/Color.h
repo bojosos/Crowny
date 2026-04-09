@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/Types.h"
 #include <glm/glm.hpp>
 
 namespace Crowny
@@ -18,10 +19,10 @@ namespace Crowny
         /* Returns a RGBA representation of a 32bit color as glm::vec4 */
         operator glm::vec4() const
         {
-            byte a = (m_Color & 0xff000000) >> 24;
-            byte r = (m_Color & 0x00ff0000) >> 16;
-            byte g = (m_Color & 0x0000ff00) >> 8;
-            byte b = (m_Color & 0x000000ff);
+            uint8_t a = (m_Color & 0xff000000) >> 24;
+            uint8_t r = (m_Color & 0x00ff0000) >> 16;
+            uint8_t g = (m_Color & 0x0000ff00) >> 8;
+            uint8_t b = (m_Color & 0x000000ff);
             return glm::vec4(r, g, b, a) / 255.0f;
         }
 

@@ -614,7 +614,7 @@ namespace Crowny
                 VulkanGenericGpuBuffer* vulkanBuffer = static_cast<VulkanGenericGpuBuffer*>(UniformParams::m_Buffers[i].get());
                 vkBuffer = vulkanBuffer->GetBuffer();
 
-                if ((vulkanBuffer->GetUsage() & BufferUsage::LOADSTORE) == BufferUsage::LOADSTORE)
+                if ((vulkanBuffer->GetUsage() & BufferUsage::BU_LOADSTORE) == BufferUsage::BU_LOADSTORE)
                     useFlags |= VulkanAccessFlagBits::Write;
             }
 

@@ -5,7 +5,9 @@
 #include "Platform/Vulkan/VulkanQueue.h"
 #include "Platform/Vulkan/VulkanResource.h"
 
+#include "Crowny/Application/Application.h"
 #include "Crowny/Common/FileSystem.h"
+#include "Crowny/Common/Version.h"
 #include "Platform/Vulkan/VulkanDescriptorPool.h"
 #include "Platform/Vulkan/VulkanDevice.h"
 #include "Platform/Vulkan/VulkanQuery.h"
@@ -18,7 +20,9 @@ namespace Crowny
 {
     static const char* PIPELINE_CACHE_FILE = "vk_pipeline_cache.blob";
 
-    VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, uint32_t idx) : m_PhysicalDevice(physicalDevice)
+    static Path GetPipelinePath() { return Application::GetInternalDirectory() / "pcache" / CROWNY_VERSION_STRING / PIPELINE_CACHE_FILE; }
+
+    VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, uint32_t deviceIdx) : m_PhysicalDevice(physicalDevice)
     {
         m_DeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
         m_DeviceFeatures.pNext = nullptr;
@@ -214,13 +218,13 @@ namespace Crowny
         deviceInfo.ppEnabledLayerNames = nullptr;
         deviceInfo.pEnabledFeatures = &m_DeviceFeatures.features; // TODO: More fine control
 
-        if (true /* m_DeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU */)
+        if (m_DeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU || deviceIdx == -1)
         {
-            VkResult result = vkCreateDevice(m_PhysicalDevice, &deviceInfo, gVulkanAllocator, &m_LogicalDevice);
+            const VkResult result = vkCreateDevice(m_PhysicalDevice, &deviceInfo, gVulkanAllocator, &m_LogicalDevice);
             CW_ENGINE_ASSERT(result == VK_SUCCESS);
             for (uint32_t i = 0; i < QUEUE_COUNT; i++)
             {
-                uint32_t numQueues = (uint32_t)m_QueueInfos[i].Queues.size();
+                const uint32_t numQueues = (uint32_t)m_QueueInfos[i].Queues.size();
                 for (uint32_t j = 0; j < numQueues; j++)
                 {
                     VkQueue queue;
@@ -254,14 +258,12 @@ namespace Crowny
         pipelineCacheCI.flags = 0;
         pipelineCacheCI.initialDataSize = 0;
         pipelineCacheCI.pInitialData = nullptr;
-        // TODO: File cache with a proper file, not a hard-coded one! Probably in the assets internal folder
-        // for editor and some common cache directory for runtime.
-        if (fs::exists(PIPELINE_CACHE_FILE))
+
+        const Path pipelinePath = GetPipelinePath();
+        if (fs::exists(pipelinePath))
         {
-            Vector<uint8_t> data;
-            Ref<DataStream> dataStream = FileSystem::OpenFile(PIPELINE_CACHE_FILE);
-            data.resize(dataStream->Size());
-            dataStream->Read(data.data(), data.size());
+            Ref<DataStream> dataStream = FileSystem::OpenFile(pipelinePath);
+            const auto& data = dataStream->ReadAll();
             pipelineCacheCI.initialDataSize = data.size();
             pipelineCacheCI.pInitialData = data.data();
         }
@@ -304,7 +306,10 @@ namespace Crowny
                 data.resize(dataSize);
                 result = vkGetPipelineCacheData(m_LogicalDevice, m_PipelineCache, &dataSize, data.data());
                 CW_ENGINE_ASSERT(result == VK_SUCCESS);
-                FileSystem::WriteFile(PIPELINE_CACHE_FILE, data.data(), dataSize);
+                const Path pipelinePath = GetPipelinePath();
+                if (!fs::exists(pipelinePath))
+                    fs::create_directories(pipelinePath.parent_path());
+                FileSystem::WriteFile(pipelinePath, data.data(), dataSize);
             }
             vkDestroyPipelineCache(m_LogicalDevice, m_PipelineCache, gVulkanAllocator);
         }

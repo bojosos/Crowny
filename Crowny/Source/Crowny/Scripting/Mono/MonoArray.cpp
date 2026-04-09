@@ -35,8 +35,7 @@ namespace Crowny
 
         template <> void ScriptArray_Set<std::nullptr_t>(MonoArray* ar, uint32_t idx, const std::nullptr_t& value)
         {
-            void** item = (void**)mono_array_addr_with_size(ar, sizeof(void*), idx);
-            *item = nullptr;
+            mono_array_setref(ar, idx, nullptr);
         }
     } // namespace Detail
 
@@ -69,12 +68,17 @@ namespace Crowny
         MonoArray* temp = mono_array_new(MonoManager::Get().GetDomain(), GetElementClass(), newLength);
         if (temp == nullptr)
             return;
-        // This likely doesn't work for objects
-        uint32_t alignment = 0;
         uint32_t elementSize = ElementSize();
         char* src = mono_array_addr_with_size(m_Array, elementSize, 0);
         char* dst = mono_array_addr_with_size(temp, elementSize, 0);
-        std::memcpy(dst, src, lengthToCopy * elementSize);
+
+        ::MonoClass* arrayClass = mono_object_get_class((MonoObject*)(m_Array));
+        ::MonoClass* elementClass = mono_class_get_element_class(arrayClass);
+        if (mono_class_is_valuetype(elementClass))
+            std::memcpy(dst, src, lengthToCopy * elementSize);
+        else
+            mono_gc_wbarrier_arrayref_copy(dst, src, lengthToCopy);
+
         m_Array = temp;
     }
 

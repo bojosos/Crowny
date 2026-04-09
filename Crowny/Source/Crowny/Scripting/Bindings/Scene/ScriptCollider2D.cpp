@@ -10,11 +10,38 @@
 namespace Crowny
 {
 
+    // --- Base class ---
+
     ScriptCollider2DBase::ScriptCollider2DBase(MonoObject* instance) : ScriptComponentBase(instance) {}
+
+    bool ScriptCollider2DBase::Internal_IsTrigger(ScriptCollider2DBase* thisPtr) { return thisPtr->GetCollider2D().IsTrigger(); }
+
+    void ScriptCollider2DBase::Internal_SetTrigger(ScriptCollider2DBase* thisPtr, bool trigger) { thisPtr->GetCollider2D().SetIsTrigger(trigger); }
+
+    void ScriptCollider2DBase::Internal_GetOffset(ScriptCollider2DBase* thisPtr, glm::vec2* offset) { *offset = thisPtr->GetCollider2D().GetOffset(); }
+
+    void ScriptCollider2DBase::Internal_SetOffset(ScriptCollider2DBase* thisPtr, glm::vec2* offset)
+    {
+        // SetOffset is defined on the derived component types, not on Collider2D base.
+        // We store the offset directly on the base.
+        thisPtr->GetCollider2D().m_Offset = *offset;
+    }
+
+    // --- Collider2D (base wrapper) ---
 
     ScriptCollider2D::ScriptCollider2D(MonoObject* instance, Entity entity) : TScriptComponent(instance, entity) {}
 
-    void ScriptCollider2D::InitRuntimeData() {}
+    void ScriptCollider2D::InitRuntimeData()
+    {
+        // Register shared internal calls on the base Collider2D C# class.
+        // Derived C# classes (BoxCollider2D, CircleCollider2D) inherit these.
+        MetaData.ScriptClass->AddInternalCall("Internal_IsTrigger", (void*)&ScriptCollider2DBase::Internal_IsTrigger);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetTrigger", (void*)&ScriptCollider2DBase::Internal_SetTrigger);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetOffset", (void*)&ScriptCollider2DBase::Internal_GetOffset);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetOffset", (void*)&ScriptCollider2DBase::Internal_SetOffset);
+    }
+
+    // --- BoxCollider2D ---
 
     ScriptBoxCollider2D::ScriptBoxCollider2D(MonoObject* instance, Entity entity) : TScriptComponent(instance, entity) {}
 
@@ -22,11 +49,6 @@ namespace Crowny
     {
         MetaData.ScriptClass->AddInternalCall("Internal_GetSize", (void*)&Internal_GetSize);
         MetaData.ScriptClass->AddInternalCall("Internal_SetSize", (void*)&Internal_SetSize);
-
-        MetaData.ScriptClass->AddInternalCall("Internal_IsTrigger", (void*)&Internal_IsTrigger);
-        MetaData.ScriptClass->AddInternalCall("Internal_SetTrigger", (void*)&Internal_SetTrigger);
-        MetaData.ScriptClass->AddInternalCall("Internal_GetOffset", (void*)&Internal_GetOffset);
-        MetaData.ScriptClass->AddInternalCall("Internal_SetOffset", (void*)&Internal_SetOffset);
     }
 
     void ScriptBoxCollider2D::Internal_GetSize(ScriptBoxCollider2D* thisPtr, glm::vec2* size) { *size = thisPtr->GetComponent().GetSize(); }
@@ -36,16 +58,7 @@ namespace Crowny
         thisPtr->GetComponent().SetSize(*size, thisPtr->GetNativeEntity());
     }
 
-    bool ScriptBoxCollider2D::Internal_IsTrigger(ScriptBoxCollider2D* thisPtr) { return thisPtr->GetComponent().IsTrigger(); }
-
-    void ScriptBoxCollider2D::Internal_SetTrigger(ScriptBoxCollider2D* thisPtr, bool trigger) { thisPtr->GetComponent().SetIsTrigger(trigger); }
-
-    void ScriptBoxCollider2D::Internal_GetOffset(ScriptBoxCollider2D* thisPtr, glm::vec2* offset) { *offset = thisPtr->GetComponent().GetOffset(); }
-
-    void ScriptBoxCollider2D::Internal_SetOffset(ScriptBoxCollider2D* thisPtr, glm::vec2* offset)
-    {
-        thisPtr->GetComponent().SetOffset(*offset, thisPtr->GetNativeEntity());
-    }
+    // --- CircleCollider2D ---
 
     ScriptCircleCollider2D::ScriptCircleCollider2D(MonoObject* instance, Entity entity) : TScriptComponent(instance, entity) {}
 
@@ -53,11 +66,6 @@ namespace Crowny
     {
         MetaData.ScriptClass->AddInternalCall("Internal_GetRadius", (void*)&Internal_GetRadius);
         MetaData.ScriptClass->AddInternalCall("Internal_SetRadius", (void*)&Internal_SetRadius);
-
-        MetaData.ScriptClass->AddInternalCall("Internal_IsTrigger", (void*)&Internal_IsTrigger);
-        MetaData.ScriptClass->AddInternalCall("Internal_SetTrigger", (void*)&Internal_SetTrigger);
-        MetaData.ScriptClass->AddInternalCall("Internal_GetOffset", (void*)&Internal_GetOffset);
-        MetaData.ScriptClass->AddInternalCall("Internal_SetOffset", (void*)&Internal_SetOffset);
     }
 
     float ScriptCircleCollider2D::Internal_GetRadius(ScriptCircleCollider2D* thisPtr) { return thisPtr->GetComponent().GetRadius(); }
@@ -67,17 +75,4 @@ namespace Crowny
         thisPtr->GetComponent().SetRadius(radius, thisPtr->GetNativeEntity());
     }
 
-    bool ScriptCircleCollider2D::Internal_IsTrigger(ScriptCircleCollider2D* thisPtr) { return thisPtr->GetComponent().IsTrigger(); }
-
-    void ScriptCircleCollider2D::Internal_SetTrigger(ScriptCircleCollider2D* thisPtr, bool trigger) { thisPtr->GetComponent().SetIsTrigger(trigger); }
-
-    void ScriptCircleCollider2D::Internal_GetOffset(ScriptCircleCollider2D* thisPtr, glm::vec2* offset)
-    {
-        *offset = thisPtr->GetComponent().GetOffset();
-    }
-
-    void ScriptCircleCollider2D::Internal_SetOffset(ScriptCircleCollider2D* thisPtr, glm::vec2* offset)
-    {
-        thisPtr->GetComponent().SetOffset(*offset, thisPtr->GetNativeEntity());
-    }
 } // namespace Crowny

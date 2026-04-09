@@ -7,6 +7,10 @@
 namespace Crowny
 {
 
+    class SerializableMemberInfo;
+    class SerializableTypeInfoObject;
+    class SerializableObjectInfo;
+
     class SerializableObject
     {
     public:

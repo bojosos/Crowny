@@ -12,9 +12,9 @@
 
 namespace Crowny
 {
-    ScriptJson::ScriptJson() : ScriptObject() {}
+    ScriptJSON::ScriptJSON() : ScriptObject() {}
 
-    void ScriptJson::InitRuntimeData()
+    void ScriptJSON::InitRuntimeData()
     {
         MetaData.ScriptClass->AddInternalCall("Internal_FromJson", (void*)&Internal_FromJson);
         MetaData.ScriptClass->AddInternalCall("Internal_ToJson", (void*)&Internal_ToJson);
@@ -228,7 +228,7 @@ namespace Crowny
 
     static void ObjectToJson(rapidjson::Value& cur, Ref<SerializableObjectInfo>& objectInfo, MonoObject* instance, rapidjson::Document& doc);
 
-    MonoObject* ScriptJson::Internal_FromJson(MonoString* json, MonoReflectionType* type)
+    MonoObject* ScriptJSON::Internal_FromJson(MonoString* json, MonoReflectionType* type)
     {
         using namespace rapidjson;
 
@@ -378,7 +378,7 @@ namespace Crowny
         }
     }
 
-    MonoString* ScriptJson::Internal_ToJson(MonoObject* object, bool prettyPrint)
+    MonoString* ScriptJSON::Internal_ToJson(MonoObject* object, bool prettyPrint)
     {
         using namespace rapidjson;
 

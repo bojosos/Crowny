@@ -89,6 +89,11 @@ namespace Crowny
             Internal_RemoveComponent(m_InternalPtr, typeof(T));
         }
 
+        public void Destroy()
+        {
+            Internal_Destroy(m_InternalPtr);
+        }
+
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern Component Internal_GetComponent(IntPtr parent, Type type);
         [MethodImpl(MethodImplOptions.InternalCall)]
@@ -96,10 +101,10 @@ namespace Crowny
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern Component Internal_AddComponent(IntPtr parent, Type type);
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern Component Internal_RemoveComponent(IntPtr parent, Type type);
+        private static extern void Internal_RemoveComponent(IntPtr parent, Type type);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern Component Internal_GetUUID(IntPtr parent, out UUID uuid);
+        private static extern void Internal_GetUUID(IntPtr parent, out UUID uuid);
         [MethodImpl(MethodImplOptions.InternalCall)]
 		private static extern string Internal_GetName(IntPtr internalPtr);
 		[MethodImpl(MethodImplOptions.InternalCall)]
@@ -110,6 +115,8 @@ namespace Crowny
         private static extern Entity Internal_SetParent(IntPtr internalPtr, Entity entity);
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern Entity Internal_FindByName(string name);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern void Internal_Destroy(IntPtr internalPtr);
 	}
 
 }

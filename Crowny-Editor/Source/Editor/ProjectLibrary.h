@@ -46,7 +46,7 @@ namespace Crowny
         ~FileEntry() = default;
 
         Ref<AssetMetadata> Metadata;
-        uint32_t Filesize;
+        uint32_t Filesize = 0;
     };
 
     struct DirectoryEntry : public LibraryEntry

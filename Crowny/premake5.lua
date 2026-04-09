@@ -56,6 +56,7 @@ project "Crowny"
 		"%{IncludeDir.mbedtls}",
 		"%{IncludeDir.vulkanvma}",
 		"%{IncludeDir.tracy}",
+		"%{IncludeDir.basis_universal}",
 	}
 
 	links
@@ -77,10 +78,12 @@ project "Crowny"
 		"libvorbis",
 		"libogg",
 		"tracy",
+		"basis_universal",
 	}
 
 	filter "system:windows"
 		systemversion "latest"
+		buildoptions { "/utf-8" }
 
 		defines
 		{
@@ -92,9 +95,9 @@ project "Crowny"
 
 		libdirs
 		{
-			"C:/Program Files/Mono/lib",
-			"C:/VulkanSDK/1.3.280.0/Lib",
-			"C:/Program Files (x86)/OpenAL 1.1 SDK/libs/Win64"
+			(os.getenv("MONO_SDK") or "C:/Program Files/Mono") .. "/lib",
+			(os.getenv("VULKAN_SDK") or "C:/VulkanSDK/1.3.280.0") .. "/Lib",
+			(os.getenv("OPENAL_SDK") or "C:/Program Files (x86)/OpenAL 1.1 SDK") .. "/libs/Win64"
 		}
 
 		links

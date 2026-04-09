@@ -37,11 +37,13 @@ namespace Crowny
 
         Entity CreateEntity(const String& name = "");
         Entity CreateEntityWithUuid(const UUID& uuid, const String& name);
-        Entity FindEntityByName(const String& name);
-        Entity GetRootEntity();
-        Entity GetEntityFromUuid(const UUID& uuid);
+        void DestroyEntity(Entity entity);
+        Entity FindEntityByName(const String& name) const;
+        Entity GetRootEntity() const;
+        Entity GetEntityFromUuid(const UUID& uuid) const;
 
         const String& GetName() const { return m_Name; }
+        void SetName(const String& name) { m_Name = name; }
         const Path& GetFilepath() const { return m_Filepath; }
 
         void OnRuntimeStart();
@@ -57,13 +59,14 @@ namespace Crowny
         void OnUpdateRuntime(Timestep ts);
         void OnUpdateEditor(Timestep ts);
 
-        Entity GetPrimaryCameraEntity();
+        Entity GetPrimaryCameraEntity() const;
 
-        bool HasScriptComponent(Entity entity, const String& namespaceName, const String& typeName);
+        bool HasScriptComponent(Entity entity, const String& namespaceName, const String& typeName) const;
         void AddScriptComponent(Entity entity, const String& namespaceName, const String& typeName, bool initialize = true);
         void RemoveScriptComponent(Entity entity, const String& namespaceName, const String& typeName);
 
         template <typename... Components> auto GetAllEntitiesWith() { return m_Registry.view<Components...>(); }
+        template <typename... Components> auto GetAllEntitiesWith() const { return m_Registry.view<const Components...>(); }
 
     private:
         void RegisterEntityCallbacks();
@@ -77,6 +80,9 @@ namespace Crowny
 
         void OnAudioSourceComponentConstruct(entt::registry& registry, entt::entity entity);
         void OnAudioSourceComponentDestroy(entt::registry& registry, entt::entity entity);
+
+        void OnTransformComponentDestroy(entt::registry& registry, entt::entity entity);
+        void OnMonoScriptComponentDestroy(entt::registry& registry, entt::entity entity);
 
     private:
         friend class ComponentEditor;
@@ -93,5 +99,6 @@ namespace Crowny
         uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
 
         Entity* m_RootEntity = nullptr;
+        UnorderedMap<UUID, entt::entity> m_EntityMap;
     };
 } // namespace Crowny

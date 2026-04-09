@@ -106,31 +106,8 @@ namespace Crowny
 
     Ref<AssetManifest> AssetManifest::Deserialize(const Path& filepath, const Path& relativeTo)
     {
-        Ref<AssetManifest> result = CreateRef<AssetManifest>();
-
-        String text = FileSystem::OpenFile(filepath)->GetAsString();
-        YAML::Node data = YAML::Load(text);
-        auto manifestName = data["Manifest"];
-        if (!manifestName)
-            CW_ENGINE_WARN("Manifest {0} does not contain a manifest name.", filepath);
-        else
-            result->m_Name = manifestName.as<String>();
-        auto assets = data["Assets"];
-        if (!assets)
-        {
-            CW_ENGINE_WARN("Manifest {0} does not contain an asset key.", filepath);
-            return nullptr;
-        }
-        for (auto asset : assets)
-        {
-            for (const auto& kv : asset)
-            {
-                UUID id = kv.first.as<UUID>();
-                String path = kv.second.as<String>();
-                result->m_FilepathToUuid[path] = id;
-                result->m_UuidToFilepath[id] = path;
-            }
-        }
+        FileDecoder<AssetManifest, SerializerType::Yaml> decoder(filepath);
+        Ref<AssetManifest> result = decoder.Decode();
 
         if (relativeTo.empty())
             return result;

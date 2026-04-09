@@ -158,8 +158,8 @@ namespace Crowny
 
     VulkanGpuBuffer::VulkanGpuBuffer(BufferType type, BufferUsage usage, uint32_t size)
       : GpuBuffer(size, usage), m_Buffer(nullptr), m_StagingBuffer(nullptr), m_StagingMemory(nullptr), m_MappedOffset(0), m_MappedSize(0),
-        m_MappedLockOptions(GpuLockOptions::WRITE_ONLY), m_DirectlyMappable(usage == BufferUsage::DYNAMIC_DRAW), m_IsMapped(false),
-        m_SupportsGpuWrites(type == BufferType::BUFFER_STRUCTURED || ((usage & BufferUsage::LOADSTORE) == BufferUsage::LOADSTORE))
+        m_MappedLockOptions(GpuLockOptions::WRITE_ONLY), m_DirectlyMappable(usage == BufferUsage::BU_DYNAMIC_DRAW), m_IsMapped(false),
+        m_SupportsGpuWrites(type == BufferType::BUFFER_STRUCTURED || ((usage & BufferUsage::BU_LOADSTORE) == BufferUsage::BU_LOADSTORE))
     {
         const Ref<VulkanDevice>& device = gVulkanRenderAPI().GetPresentDevice();
 
@@ -168,13 +168,13 @@ namespace Crowny
         {
         case BUFFER_VERTEX:
             usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-            if ((usage & BufferUsage::LOADSTORE) == BufferUsage::LOADSTORE)
+            if ((usage & BufferUsage::BU_LOADSTORE) == BufferUsage::BU_LOADSTORE)
                 usageFlags |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
             break;
         case BUFFER_INDEX:
             usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 
-            if ((usage & BufferUsage::LOADSTORE) == BufferUsage::LOADSTORE)
+            if ((usage & BufferUsage::BU_LOADSTORE) == BufferUsage::BU_LOADSTORE)
                 usageFlags |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
             break;
         case BUFFER_UNIFORM:
@@ -183,7 +183,7 @@ namespace Crowny
         case BUFFER_GENERIC:
             usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
 
-            if ((usage & BufferUsage::LOADSTORE) == BufferUsage::LOADSTORE)
+            if ((usage & BufferUsage::BU_LOADSTORE) == BufferUsage::BU_LOADSTORE)
                 usageFlags |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
             break;
         case BUFFER_STRUCTURED:

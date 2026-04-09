@@ -19,7 +19,7 @@ namespace Crowny
 
         virtual uint32_t GetBufferSize() const = 0;
 
-        static Ref<VertexBuffer> Create(uint32_t size, BufferUsage usage = BufferUsage::STATIC_DRAW);
-        static Ref<VertexBuffer> Create(void* vertices, uint32_t size, BufferUsage usage = BufferUsage::STATIC_DRAW);
+        static Ref<VertexBuffer> Create(uint32_t size, BufferUsage usage = BufferUsage::BU_STATIC_DRAW);
+        static Ref<VertexBuffer> Create(void* vertices, uint32_t size, BufferUsage usage = BufferUsage::BU_STATIC_DRAW);
     };
 } // namespace Crowny

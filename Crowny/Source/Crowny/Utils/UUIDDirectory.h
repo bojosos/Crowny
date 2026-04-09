@@ -9,7 +9,7 @@ namespace Crowny
     {
     public:
         UUIDDirectory() = default;
-        UUIDDirectory(const Path& path);
+        explicit UUIDDirectory(const Path& path);
 
         Path GetPath(const UUID& uuid) const;
         void OnFileWrite(const UUID& uuid);

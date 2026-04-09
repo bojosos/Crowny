@@ -24,6 +24,14 @@ namespace Crowny
         return *this;
     }
 
+    Vector<uint8_t> DataStream::ReadAll()
+    {
+        Vector<uint8_t> data;
+        data.resize(Size());
+        Read(data.data(), Size());
+        return data;
+    }
+
     MemoryDataStream::MemoryDataStream() : DataStream(READ | WRITE) {}
 
     MemoryDataStream::MemoryDataStream(const Ref<DataStream>& stream) : DataStream(READ | WRITE)
@@ -346,7 +354,7 @@ namespace Crowny
             return m_InStream->tellg();
     }
 
-    bool FileDataStream::Eof() const { return m_InStream->eof(); }
+    bool FileDataStream::Eof() const { return Tell() >= Size(); }
 
     void FileDataStream::Close()
     {

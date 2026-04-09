@@ -17,6 +17,14 @@
 #include "UI/Properties.h"
 #include "UI/UIUtils.h"
 
+#include "Crowny/Import/TextureImporter.h"
+#include "Crowny/Import/AudioClipImporter.h"
+#include "Crowny/Import/FontImporter.h"
+#include "Crowny/Import/MeshImporter.h"
+#include "Crowny/Import/ScriptImporter.h"
+#include "Crowny/Import/ShaderImporter.h"
+#include "Crowny/Import/TextFileImporter.h"
+
 #include <glm/gtc/type_ptr.hpp>
 
 #include <backends/imgui_impl_vulkan.h>
@@ -151,26 +159,34 @@ namespace Crowny
         static constexpr int ImGuiMouseCursor_Dummy = 69696969;
         ImGui::SetMouseCursor(ImGuiMouseCursor_Dummy);
         DrawHeader();
+
         if (m_InspectorMode == InspectorMode::GameObject)
+        {
             m_ComponentEditor.Render();
-        else if (m_InspectorMode == InspectorMode::Material)
-            RenderMaterialInspector();
-        else if (m_InspectorMode == InspectorMode::PhysicsMaterial)
-            RenderPhysicsMaterialInspector();
-        else if (m_InspectorMode == InspectorMode::AudioClipImport)
-            RenderAudioClipImportInspector();
-        else if (m_InspectorMode == InspectorMode::FontImport)
-            RenderFontImportInspector();
-        else if (m_InspectorMode == InspectorMode::ScriptImport)
-            RenderScriptImportInspector();
-        else if (m_InspectorMode == InspectorMode::ShaderImport)
-            RenderShaderImportInspector();
-        else if (m_InspectorMode == InspectorMode::MeshImport)
-            RenderMeshImportInspector();
-        else if (m_InspectorMode == InspectorMode::Prefab)
-            RenderPrefabInspector();
-        // else
-        //     CW_ENGINE_ASSERT(false, "Invalid inspector mode");
+        }
+        else if (m_ImportOptions)
+        {
+            if (m_InspectorMode == InspectorMode::Material)
+                RenderMaterialInspector();
+            else if (m_InspectorMode == InspectorMode::PhysicsMaterial)
+                RenderPhysicsMaterialInspector();
+            else if (m_InspectorMode == InspectorMode::AudioClipImport)
+                RenderAudioClipImportInspector();
+            else if (m_InspectorMode == InspectorMode::FontImport)
+                RenderFontImportInspector();
+            else if (m_InspectorMode == InspectorMode::ScriptImport)
+                RenderScriptImportInspector();
+            else if (m_InspectorMode == InspectorMode::ShaderImport)
+                RenderShaderImportInspector();
+            else if (m_InspectorMode == InspectorMode::MeshImport)
+                RenderMeshImportInspector();
+            else if (m_InspectorMode == InspectorMode::Prefab)
+                RenderPrefabInspector();
+            else if (m_InspectorMode == InspectorMode::TextureImport)
+                RenderTextureImportInspector();
+            else if (m_InspectorMode == InspectorMode::TextImport)
+                RenderTextImportInspector();
+        }
 
         ImGui::EndChild();
         const ImGuiMouseCursor cursor = ImGui::GetMouseCursor();
@@ -181,9 +197,6 @@ namespace Crowny
                                                                                                    // HandleInspectorDragDrop will override it.
             ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
         EndPanel();
-        // ImGui::Begin("Material");
-        // RenderMaterialInspector();
-        // ImGui::End();
     }
 
     void InspectorPanel::RenderMaterialInspector()
@@ -241,128 +254,119 @@ namespace Crowny
 
     void InspectorPanel::RenderAudioClipImportInspector()
     {
-        if (m_ImportOptions)
+        Ref<AudioClipImportOptions> audioClipImportOptions = std::static_pointer_cast<AudioClipImportOptions>(m_ImportOptions);
+        UI::BeginPropertyGrid();
+
+        m_HasPropertyChanged |= UI::PropertyDropdown("Format", { "PCM", "Vorbis" }, audioClipImportOptions->Format);
+        m_HasPropertyChanged |=
+            UI::PropertyDropdown("Load Mode", { "Load Decompressed", "Load Compressed", "Stream" }, audioClipImportOptions->ReadMode);
+
+        uint32_t bitDepth = audioClipImportOptions->BitDepth / 8 - 1;
+        m_HasPropertyChanged |= UI::PropertyDropdown("Audio Bit Depth", { "8", "16", "24", "32" }, bitDepth);
+        audioClipImportOptions->BitDepth = (bitDepth + 1) * 8;
+
+        m_HasPropertyChanged |= UI::Property("3D", audioClipImportOptions->Is3D);
+        UI::EndPropertyGrid();
+
+        DrawApplyRevert(0, ImGui::GetColumnWidth());
+
+        // Footer
+        float yPos = ImGui::GetContentRegionAvail().y - ImGui::GetFrameHeightWithSpacing();
+        ImGui::SetCursorPosY(yPos);
+        if (ImGui::Button("Play"))
         {
-            Ref<AudioClipImportOptions> audioClipImportOptions = std::static_pointer_cast<AudioClipImportOptions>(m_ImportOptions);
-            UI::BeginPropertyGrid();
-
-            m_HasPropertyChanged |= UI::PropertyDropdown("Format", { "PCM", "Vorbis" }, audioClipImportOptions->Format);
-            m_HasPropertyChanged |=
-              UI::PropertyDropdown("Load Mode", { "Load Decompressed", "Load Compressed", "Stream" }, audioClipImportOptions->ReadMode);
-
-            uint32_t bitDepth = audioClipImportOptions->BitDepth / 8 - 1;
-            m_HasPropertyChanged |= UI::PropertyDropdown("Audio Bit Depth", { "8", "16", "24", "32" }, bitDepth);
-            audioClipImportOptions->BitDepth = (bitDepth + 1) * 8;
-
-            m_HasPropertyChanged |= UI::Property("3D", audioClipImportOptions->Is3D);
-            UI::EndPropertyGrid();
-
-            DrawApplyRevert(0, ImGui::GetColumnWidth());
-
-            // Footer
-            float yPos = ImGui::GetContentRegionAvail().y - ImGui::GetFrameHeightWithSpacing();
-            ImGui::SetCursorPosY(yPos);
-            if (ImGui::Button("Play"))
-            {
-                if (m_HasPropertyChanged) // Why did I do this?
-                    ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions, true);
-                AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
-                AudioManager::Get().StopManualSources();
-                AudioManager::Get().Play("Inspector", clip);
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Stop"))
-                AudioManager::Get().StopManualSources();
-            ImGui::SameLine();
-            float progress = AudioManager::Get().GetGlobalSourceProgress("Inspector");
-            ImGui::ProgressBar(progress);
+            if (m_HasPropertyChanged) // Why did I do this?
+                ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions, true);
+            AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
+            AudioManager::Get().StopManualSources();
+            AudioManager::Get().Play("Inspector", clip);
         }
+        ImGui::SameLine();
+        if (ImGui::Button("Stop"))
+            AudioManager::Get().StopManualSources();
+        ImGui::SameLine();
+        const float progress = AudioManager::Get().GetGlobalSourceProgress("Inspector");
+        ImGui::ProgressBar(progress);
     }
 
     void InspectorPanel::RenderFontImportInspector()
     {
-        if (m_ImportOptions)
+        Ref<FontImportOptions> fontImportOptions = std::static_pointer_cast<FontImportOptions>(m_ImportOptions);
+        UI::BeginPropertyGrid();
+
+        int dropdownIdx = fontImportOptions->AutomaticFontSampling ? 0 : 1;
+        if (UI::PropertyDropdown("Sampling Point Size", { "Automatic", "Custom Size" }, dropdownIdx))
         {
-            Ref<FontImportOptions> fontImportOptions = std::static_pointer_cast<FontImportOptions>(m_ImportOptions);
-            UI::BeginPropertyGrid();
+            m_HasPropertyChanged = true;
+            fontImportOptions->AutomaticFontSampling = dropdownIdx == 1 ? false : true;
+        }
+        if (fontImportOptions->AutomaticFontSampling)
+            m_HasPropertyChanged |= UI::Property("Sampling Size", fontImportOptions->SamplingFontSize);
 
-            int dropdownIdx = fontImportOptions->AutomaticFontSampling ? 0 : 1;
-            if (UI::PropertyDropdown("Sampling Point Size", { "Automatic", "Custom Size" }, dropdownIdx))
-            {
-                m_HasPropertyChanged = true;
-                fontImportOptions->AutomaticFontSampling = dropdownIdx == 1 ? false : true;
-            }
-            if (fontImportOptions->AutomaticFontSampling)
-                m_HasPropertyChanged |= UI::Property("Sampling Size", fontImportOptions->SamplingFontSize);
-
-            UI::SetTooltip("Static atlases use a predefined charset range. On the other hand Dynamic atlases are populated \
+        UI::SetTooltip("Static atlases use a predefined charset range. On the other hand Dynamic atlases are populated \
                 dynamically during runtime. Static atlases use more memory but are more efficient during execution.");
 
-            dropdownIdx = fontImportOptions->DynamicFontAtlas ? 1 : 0;
-            if (UI::PropertyDropdown("Atlas Mode", { "Static", "Dynamic" }, dropdownIdx))
-            {
-                m_HasPropertyChanged = true;
-                fontImportOptions->DynamicFontAtlas = dropdownIdx == 1 ? true : false;
-            }
-
-            // Only static fonts will need these options.
-            if (!fontImportOptions->DynamicFontAtlas)
-            {
-
-                UI::Property("Auto size atlas", fontImportOptions->AutoSizeAtlas);
-
-                if (fontImportOptions->AutoSizeAtlas)
-                {
-                    m_HasPropertyChanged |= UI::PropertyDropdown(
-                      "Dimension Constraints", { "Power of Two Square", "Power of Two Rectangle", "Multiple of Four Square", "Even Square" },
-                      fontImportOptions->AtlasDimensionsConstraint);
-                }
-                else
-                {
-                    Vector<String> atlasSizeUIValues = { "4", "8", "16", "32", "64", "128", "256", "512", "1024", "2048", "4096", "8192" };
-                    auto findSizeIdx = [](uint32_t size) -> uint32_t {
-                        uint32_t idx = 0;
-                        while (size > 0)
-                        {
-                            idx++;
-                            size /= 2;
-                        }
-                        return idx - 2;
-                    };
-
-                    uint32_t widthIdx = findSizeIdx(fontImportOptions->AtlasWidth);
-                    if (UI::PropertyDropdown("Atlas Width", atlasSizeUIValues, widthIdx))
-                    {
-                        fontImportOptions->AtlasWidth = (uint32_t)glm::pow(2, widthIdx);
-                        m_HasPropertyChanged = true;
-                    }
-
-                    uint32_t heightIdx = findSizeIdx(fontImportOptions->AtlasHeight);
-                    if (UI::PropertyDropdown("Atlas Height", atlasSizeUIValues, heightIdx))
-                    {
-                        fontImportOptions->AtlasHeight = StringUtils::ParseInt(atlasSizeUIValues[heightIdx]);
-                        m_HasPropertyChanged = true;
-                    }
-                }
-                m_HasPropertyChanged |= UI::PropertyDropdown(
-                  "Charset Range",
-                  { "ASCII", "Extended ASCII", "Lower ASCII", "Upper ASCII", "Numbers and Symbols", "Symbol Range", "Decimal Range", "Hex Range" },
-                  fontImportOptions->Range);
-                if (fontImportOptions->Range == CharsetRange::DecimalRange || fontImportOptions->Range == CharsetRange::HexRange ||
-                    fontImportOptions->Range == CharsetRange::SymbolRange)
-                    m_HasPropertyChanged |=
-                      UI::PropertyMultiline("Symbols", fontImportOptions->CustomCharset); // TODO: Replace this with multiline input
-            }
-            m_HasPropertyChanged |= UI::Property("Padding", fontImportOptions->Padding);
-            m_HasPropertyChanged |= UI::Property("Get Kerning Data", fontImportOptions->GetKerningData);
-            UI::EndPropertyGrid();
-            DrawApplyRevert(0, ImGui::GetColumnWidth());
-
-            // Make sure the font is imported
-            ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions);
-
-            AssetHandle<Font> font = static_asset_cast<Font>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
+        dropdownIdx = fontImportOptions->DynamicFontAtlas ? 1 : 0;
+        if (UI::PropertyDropdown("Atlas Mode", { "Static", "Dynamic" }, dropdownIdx))
+        {
+            m_HasPropertyChanged = true;
+            fontImportOptions->DynamicFontAtlas = dropdownIdx == 1 ? true : false;
         }
+
+        // Only static fonts will need these options.
+        if (!fontImportOptions->DynamicFontAtlas)
+        {
+
+            UI::Property("Auto size atlas", fontImportOptions->AutoSizeAtlas);
+
+            if (fontImportOptions->AutoSizeAtlas)
+            {
+                m_HasPropertyChanged |= UI::PropertyDropdown(
+                  "Dimension Constraints", { "Power of Two Square", "Power of Two Rectangle", "Multiple of Four Square", "Even Square" },
+                  fontImportOptions->AtlasDimensionsConstraint);
+            }
+            else
+            {
+                Vector<String> atlasSizeUIValues = { "4", "8", "16", "32", "64", "128", "256", "512", "1024", "2048", "4096", "8192" };
+                auto findSizeIdx = [](uint32_t size) -> uint32_t {
+                    uint32_t idx = 0;
+                    while (size > 0)
+                    {
+                        idx++;
+                        size /= 2;
+                    }
+                    return idx - 2;
+                };
+
+                uint32_t widthIdx = findSizeIdx(fontImportOptions->AtlasWidth);
+                if (UI::PropertyDropdown("Atlas Width", atlasSizeUIValues, widthIdx))
+                {
+                    fontImportOptions->AtlasWidth = (uint32_t)glm::pow(2, widthIdx);
+                    m_HasPropertyChanged = true;
+                }
+
+                uint32_t heightIdx = findSizeIdx(fontImportOptions->AtlasHeight);
+                if (UI::PropertyDropdown("Atlas Height", atlasSizeUIValues, heightIdx))
+                {
+                    fontImportOptions->AtlasHeight = StringUtils::ParseInt(atlasSizeUIValues[heightIdx]);
+                    m_HasPropertyChanged = true;
+                }
+            }
+            m_HasPropertyChanged |= UI::PropertyDropdown(
+              "Charset Range",
+              { "ASCII", "Extended ASCII", "Lower ASCII", "Upper ASCII", "Numbers and Symbols", "Symbol Range", "Decimal Range", "Hex Range" },
+              fontImportOptions->Range);
+            if (fontImportOptions->Range == CharsetRange::DecimalRange || fontImportOptions->Range == CharsetRange::HexRange ||
+                fontImportOptions->Range == CharsetRange::SymbolRange)
+                m_HasPropertyChanged |= UI::PropertyMultiline("Symbols", fontImportOptions->CustomCharset); // TODO: Replace this with multiline input
+        }
+        m_HasPropertyChanged |= UI::Property("Padding", fontImportOptions->Padding);
+        m_HasPropertyChanged |= UI::Property("Get Kerning Data", fontImportOptions->GetKerningData);
+        UI::EndPropertyGrid();
+        DrawApplyRevert(0, ImGui::GetColumnWidth());
+
+        // Make sure the font is imported
+        ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions);
     }
 
     void InspectorPanel::RenderScriptImportInspector()
@@ -394,74 +398,86 @@ namespace Crowny
         ImGui::Text("%s", m_CachedScriptText[m_InspectedAssetPath].c_str());*/
     }
 
-    void InspectorPanel::RenderTextureImportInspector() {}
+    void InspectorPanel::RenderTextureImportInspector()
+    {
+        Ref<TextureImportOptions> textureImportOptions = std::static_pointer_cast<TextureImportOptions>(m_ImportOptions);
+        UI::BeginPropertyGrid();
+
+        m_HasPropertyChanged |= UI::Property("Auto Format", textureImportOptions->AutomaticFormat);
+        m_HasPropertyChanged |= UI::PropertyDropdown("Texture Shape", { "1D", "2D", "3D", "Cubemap" }, textureImportOptions->Shape);
+        // m_HasPropertyChanged |= UI::PropertyDropdown("Texture Format", { "R" }, textureImportOptions->Format);
+        m_HasPropertyChanged |= UI::Property("Generate Mipmaps", textureImportOptions->GenerateMips);
+        m_HasPropertyChanged |= UI::Property("Max Mip Level", textureImportOptions->MaxMip);
+        m_HasPropertyChanged |= UI::Property("CPU Cached", textureImportOptions->CpuCached);
+        m_HasPropertyChanged |= UI::Property("sRGB", textureImportOptions->SRGB);
+        m_HasPropertyChanged |=
+          UI::PropertyDropdown("Compression Format", { "None", "ETC1S (lower quality)", "UASTC (higher quality)" }, textureImportOptions->DiskFormat);
+
+        UI::EndPropertyGrid();
+
+        DrawApplyRevert(0, ImGui::GetColumnWidth());
+    }
 
     void InspectorPanel::RenderShaderImportInspector()
     {
-        if (m_ImportOptions)
+        Ref<ShaderImportOptions> shaderImport = std::static_pointer_cast<ShaderImportOptions>(m_ImportOptions);
+        ImGui::Columns(2);
+        ImGui::Text("Defines");
+        ImGui::NextColumn();
+        ImGui::NextColumn();
+        UnorderedMap<String, String>& defines = shaderImport->GetDefines(); // this needs a bit more work, unordered map bad
+        uint32_t id = 0;
+        for (auto kv : defines)
         {
-            Ref<ShaderImportOptions> shaderImport = std::static_pointer_cast<ShaderImportOptions>(m_ImportOptions);
-            ImGui::Columns(2);
-            ImGui::Text("Defines");
+            ImGui::PushID(id++);
+            std::string key = kv.first;
+            if (ImGui::InputText("##defineKey", &key, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
+                defines[key] = kv.second;
             ImGui::NextColumn();
+            ImGui::InputText("##defineValue", &kv.second, ImGuiInputTextFlags_AutoSelectAll);
             ImGui::NextColumn();
-            UnorderedMap<String, String>& defines = shaderImport->GetDefines(); // this needs a bit more work, unordered map bad
-            uint32_t id = 0;
-            for (auto kv : defines)
-            {
-                ImGui::PushID(id++);
-                std::string key = kv.first;
-                if (ImGui::InputText("##defineKey", &key, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
-                    defines[key] = kv.second;
-                ImGui::NextColumn();
-                ImGui::InputText("##defineValue", &kv.second, ImGuiInputTextFlags_AutoSelectAll);
-                ImGui::NextColumn();
-                ImGui::PopID();
-            }
-            ImGui::NextColumn();
-            if (ImGui::Button("+"))
-                defines[""] = "";
-            ImGui::SameLine();
-            if (ImGui::Button("-"))
-                defines.erase(std::prev(defines.end()));
-            float x = ImGui::GetCursorPosX();
-            float width = ImGui::GetColumnWidth();
-            // ImGui::NextColumn();
-            ImGui::NextColumn();
-            ImGui::Columns(1);
-            DrawApplyRevert(x, width);
-            ImGui::NextColumn();
-            ImGui::NextColumn();
-            DrawApplyRevert(x, width);
+            ImGui::PopID();
         }
+        ImGui::NextColumn();
+        if (ImGui::Button("+"))
+            defines[""] = "";
+        ImGui::SameLine();
+        if (ImGui::Button("-"))
+            defines.erase(std::prev(defines.end()));
+        float x = ImGui::GetCursorPosX();
+        float width = ImGui::GetColumnWidth();
+        // ImGui::NextColumn();
+        ImGui::NextColumn();
+        ImGui::Columns(1);
+        DrawApplyRevert(x, width);
+        ImGui::NextColumn();
+        ImGui::NextColumn();
+        DrawApplyRevert(x, width);
     }
 
     void InspectorPanel::RenderMeshImportInspector()
     {
-        if (m_ImportOptions)
+        Ref<MeshImportOptions> meshImportOptions = std::static_pointer_cast<MeshImportOptions>(m_ImportOptions);
+        UI::BeginPropertyGrid();
+
+        m_HasPropertyChanged |= UI::Property("Scale factor", meshImportOptions->ScaleFactor);
+        m_HasPropertyChanged |= UI::PropertyDropdown("Index Format", { "Auto", "16 bit", "32 bit" }, meshImportOptions->IndexFormat);
+        m_HasPropertyChanged |= UI::PropertyDropdown("Normals", { "Import", "Calculate", "None" }, meshImportOptions->NormalsMode);
+        m_HasPropertyChanged |= UI::PropertyDropdown("Tangents", { "Import", "Calculate", "None" }, meshImportOptions->TangentsMode);
+        if (meshImportOptions->NormalsMode == NormalsImportMode::Calculate)
         {
-            Ref<MeshImportOptions> meshImportOptions = std::static_pointer_cast<MeshImportOptions>(m_ImportOptions);
-            UI::BeginPropertyGrid();
-
-            m_HasPropertyChanged |= UI::Property("Scale factor", meshImportOptions->ScaleFactor);
-            m_HasPropertyChanged |= UI::PropertyDropdown("Index Format", { "Auto", "16 bit", "32 bit" }, meshImportOptions->IndexFormat);
-            m_HasPropertyChanged |= UI::PropertyDropdown("Normals", { "Import", "Calculate", "None" }, meshImportOptions->NormalsMode);
-            m_HasPropertyChanged |= UI::PropertyDropdown("Tangents", { "Import", "Calculate", "None" }, meshImportOptions->TangentsMode);
-            if (meshImportOptions->NormalsMode == NormalsImportMode::Calculate)
-            {
-                m_HasPropertyChanged |= UI::Property("Smooth Normals", meshImportOptions->SmoothNormals);
-                if (meshImportOptions->SmoothNormals)
-                    m_HasPropertyChanged |= UI::Property("Smoothing Angle", meshImportOptions->SmoothingAngle, 0.1f, 0.0f, 175.0f);
-            }
-            m_HasPropertyChanged |= UI::Property("Optimize", meshImportOptions->Optimize);
-            m_HasPropertyChanged |= UI::Property("Compress", meshImportOptions->Compress);
-            m_HasPropertyChanged |= UI::Property("Keep Quads", meshImportOptions->KeepQuads);
-            // m_HasPropertyChanged |= UI::Property("Enable Read/Write", meshImportOptions->EnableReadWrite);
-
-            UI::EndPropertyGrid();
-
-            DrawApplyRevert(0, ImGui::GetColumnWidth());
+            m_HasPropertyChanged |= UI::Property("Smooth Normals", meshImportOptions->SmoothNormals);
+            if (meshImportOptions->SmoothNormals)
+                m_HasPropertyChanged |= UI::Property("Smoothing Angle", meshImportOptions->SmoothingAngle, 0.1f, 0.0f, 175.0f);
         }
+        m_HasPropertyChanged |= UI::Property("Optimize", meshImportOptions->Optimize);
+        m_HasPropertyChanged |= UI::Property("Compress", meshImportOptions->Compress);
+        m_HasPropertyChanged |= UI::Property("Keep Quads", meshImportOptions->KeepQuads);
+        // m_HasPropertyChanged |= UI::Property("Enable Read/Write", meshImportOptions->EnableReadWrite);
+
+        UI::EndPropertyGrid();
+
+        DrawApplyRevert(0, ImGui::GetColumnWidth());
     }
 
     void InspectorPanel::RenderPrefabInspector() {}
@@ -597,28 +613,38 @@ namespace Crowny
             m_InspectorMode = InspectorMode::Default;
             return;
         }
-        String ext = filepath.extension().string();
-        StringUtils::ToLower(ext);
-        if (ext.empty())
+
+        if (filepath.extension() == ".prefab")
+        {
+            m_InspectorMode = InspectorMode::Prefab;
             return;
-        ext = ext.substr(1, ext.size() - 1);
-        // TODO: Make these use the importer IsExtensionSupported
-        if (ext == "ogg" || ext == "wav" || ext == "flac")
-            m_InspectorMode = InspectorMode::AudioClipImport;
-        else if (ext == "png" || ext == "jpeg" || ext == "psd" || ext == "gif" || ext == "tga" || ext == "bmp" || ext == "hdr")
-            m_InspectorMode = InspectorMode::TextureImport;
-        else if (ext == "cs")
-            m_InspectorMode = InspectorMode::ScriptImport;
-        else if (ext == "txt" || ext == "json" || ext == "xml" || ext == "log")
-            m_InspectorMode = InspectorMode::TextImport;
-        else if (ext == "glsl" || ext == "vksl" || ext == "cwsl" || ext == "hlsl")
-            m_InspectorMode = InspectorMode::ShaderImport;
-        else if (ext == "ttf" || ext == "ttc" || ext == "otf" || ext == "otc" || ext == "fnt")
-            m_InspectorMode = InspectorMode::FontImport;
-        else if (ext == "gltf" || ext == "obj" || ext == "fbx")
-            m_InspectorMode = InspectorMode::MeshImport;
+        }
+
+        SpecificImporter* importer = Importer::Get().GetImporterForFile(filepath);
+        if (importer != nullptr)
+        {
+            if (dynamic_cast<AudioClipImporter*>(importer))
+                m_InspectorMode = InspectorMode::AudioClipImport;
+            else if (dynamic_cast<TextureImporter*>(importer))
+                m_InspectorMode = InspectorMode::TextureImport;
+            else if (dynamic_cast<ScriptImporter*>(importer))
+                m_InspectorMode = InspectorMode::ScriptImport;
+            else if (dynamic_cast<TextFileImporter*>(importer))
+                m_InspectorMode = InspectorMode::TextImport;
+            else if (dynamic_cast<ShaderImporter*>(importer))
+                m_InspectorMode = InspectorMode::ShaderImport;
+            else if (dynamic_cast<FontImporter*>(importer))
+                m_InspectorMode = InspectorMode::FontImport;
+            else if (dynamic_cast<MeshImporter*>(importer))
+                m_InspectorMode = InspectorMode::MeshImport;
+            else
+                m_InspectorMode = InspectorMode::Default;
+        }
         else
+        {
             m_InspectorMode = InspectorMode::Default;
+        }
+
         Ref<LibraryEntry> entry = ProjectLibrary::Get().FindEntry(filepath);
         if (entry != nullptr)
         {

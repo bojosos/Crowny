@@ -55,6 +55,7 @@ project "Crowny-Editor"
 
 	filter "system:windows"
 		systemversion "latest"
+		buildoptions { "/utf-8" }
 
 		defines
 		{
@@ -67,9 +68,9 @@ project "Crowny-Editor"
 
 		libdirs
 		{
-			"C:/Program Files/Mono/lib",
-			"C:/VulkanSDK/1.3.280.0/Lib",
-			"C:/Program Files (x86)/OpenAL 1.1 SDK/libs/Win64"
+			(os.getenv("MONO_SDK") or "C:/Program Files/Mono") .. "/lib",
+			(os.getenv("VULKAN_SDK") or "C:/VulkanSDK/1.3.280.0") .. "/Lib",
+			(os.getenv("OPENAL_SDK") or "C:/Program Files (x86)/OpenAL 1.1 SDK") .. "/libs/Win64"
 		}
 
 		links
@@ -103,6 +104,7 @@ project "Crowny-Editor"
 			"uuid",
 			"vulkan",
 			"mono-2.0",
+			"openal",
 			"mbedtls",
 			"msdf-atlas-gen",
 			"msdfgen",
@@ -113,10 +115,6 @@ project "Crowny-Editor"
 
 		libdirs
 		{
-			"C:/Program Files/Mono/lib",
-			"C:/VulkanSDK/1.3.280.0/Lib",
-			"C:/Program Files (x86)/OpenAL 1.1 SDK/libs/Win64",
-			"/usr/local/lib",
 			"/usr/local/lib"
 		}
 

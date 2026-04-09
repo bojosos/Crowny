@@ -126,12 +126,12 @@ namespace Crowny
         Ref<T> Decode()
         {
 #ifdef CW_EDITOR
-            String text = FileSystem::OpenFile(m_InputPath)->GetAsString();
+            String text = FileSystem::OpenFile(m_InputPath, true)->GetAsString();
             YAML::Node data = YAML::Load(text);
             return T::Serializer::Deserialize(data);
 #else
             Ref<DataStream> stream = FileSystem::OpenFile(m_InputPath, true);
-            BinaryDataStreamOutputArchive archive(stream);
+            BinaryDataStreamInputArchive archive(stream);
             Ref<T> result;
             archive(result);
             stream->Close();

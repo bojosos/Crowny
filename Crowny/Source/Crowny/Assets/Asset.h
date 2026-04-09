@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/Common.h"
 #include "Crowny/Common/Uuid.h"
 
 #include <cereal/types/polymorphic.hpp>

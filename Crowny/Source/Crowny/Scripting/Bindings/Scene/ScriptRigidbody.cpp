@@ -39,7 +39,7 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_AddForce", (void*)&Internal_AddForce);
         MetaData.ScriptClass->AddInternalCall("Internal_AddForceAt", (void*)&Internal_AddForceAt);
         MetaData.ScriptClass->AddInternalCall("Internal_AddTorque", (void*)&Internal_AddTorque);
-        MetaData.ScriptClass->AddInternalCall("Internal_Getinertia", (void*)&Internal_GetInertia);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetInertia", (void*)&Internal_GetInertia);
         MetaData.ScriptClass->AddInternalCall("Internal_SetInertia", (void*)&Internal_SetInertia);
     }
 

@@ -11,7 +11,7 @@ namespace Crowny
         int b = int(color.b * 255.0f);
         int a = int(color.a * 255.0f);
 
-        return Color(a << 24 | b << 16 | g << 8 | r);
+        return Color(a << 24 | r << 16 | g << 8 | b);
     }
 
     Color Color::FromRGB(const glm::vec3& color)
@@ -19,16 +19,15 @@ namespace Crowny
         int r = int(color.r * 255.0f);
         int g = int(color.g * 255.0f);
         int b = int(color.b * 255.0f);
-        int a = int(1.0f * 255.0f);
+        int a = 255;
 
-        return Color(a << 24 | b << 16 | g << 8 | r);
+        return Color(a << 24 | r << 16 | g << 8 | b);
     }
 
     Color Color::FromHex(uint32_t value) { return Color(value); }
 
     Color::Color(uint32_t color) : m_Color(color) {}
 
-    // TODO: Cyan is Yellow? maybe
     Color Color::Blue = Color(0xff0000ff);
     Color Color::Brown = Color(0xffa52a2a);
     Color Color::Cyan = Color(0xff00ffff);

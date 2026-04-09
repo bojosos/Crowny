@@ -24,5 +24,6 @@ namespace Crowny
         static bool Internal_HasComponent(ScriptEntity* thisPtr, MonoReflectionType* type);
         static MonoObject* Internal_GetComponent(ScriptEntity* thisPtr, MonoReflectionType* type);
         static void Internal_RemoveComponent(ScriptEntity* thisPtr, MonoReflectionType* type);
+        static void Internal_Destroy(ScriptEntity* thisPtr);
     };
 } // namespace Crowny

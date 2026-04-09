@@ -35,6 +35,11 @@ namespace Crowny
         void DestroyScriptEntity(ScriptEntity* entity);
         void DestroyScriptComponent(ScriptComponentBase* scriptComponent, uint64_t instanceId);
         void DestroyManagedScriptComponent(Entity entity, MonoScript* script);
+
+        void NotifyEntityDestroyed(Entity entity);
+        void NotifyComponentDestroyed(const ComponentBase& component);
+        void NotifyComponentDestroyed(uint64_t instanceId);
+
         void Del();
 
     private:

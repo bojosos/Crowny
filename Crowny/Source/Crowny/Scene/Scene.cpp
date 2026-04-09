@@ -6,6 +6,7 @@
 #include "Crowny/Ecs/Entity.h"
 
 #include "Crowny/Physics/Physics2D.h"
+#include "Crowny/Audio/AudioManager.h"
 
 #include "Crowny/Scripting/ScriptInfoManager.h"
 
@@ -81,21 +82,21 @@ namespace Crowny
         m_Name = other.m_Name;
         m_RootEntity = nullptr;
 
-        if (other.m_RootEntity)
-            CreateRootEntity();
+        UnorderedMap<UUID, entt::entity> copyEntityMap;
 
-        UnorderedMap<UUID, entt::entity> entityMap;
-
-        auto idView = m_Registry.view<IDComponent>();
+        auto idView = other.m_Registry.view<IDComponent>();
         for (auto e : idView)
         {
             const UUID& uuid = other.m_Registry.get<IDComponent>(e).Uuid;
             const String& name = other.m_Registry.get<TagComponent>(e).Tag;
             Entity newEntity = CreateEntityWithUuid(uuid, name);
-            entityMap[uuid] = e;
+            copyEntityMap[uuid] = newEntity.GetHandle();
         }
 
-        CopyAllComponents(m_Registry, other.m_Registry, entityMap);
+        CopyAllComponents(m_Registry, other.m_Registry, copyEntityMap);
+
+        if (other.m_RootEntity)
+            m_RootEntity = new Entity(m_EntityMap.at(other.m_RootEntity->GetUuid()), this);
 
         RegisterEntityCallbacks();
     }
@@ -105,29 +106,41 @@ namespace Crowny
         if (this == &other)
             return *this;
 
+        m_Registry.clear();
+        m_EntityMap.clear();
+        delete m_RootEntity;
+        m_RootEntity = nullptr;
+
         m_ViewportWidth = other.m_ViewportWidth;
         m_ViewportHeight = other.m_ViewportHeight;
         m_Filepath = other.m_Filepath;
         m_Name = other.m_Name;
 
-        m_RootEntity = new Entity(m_Registry.create(), this);
+        UnorderedMap<UUID, entt::entity> copyEntityMap;
 
-        UnorderedMap<UUID, entt::entity> entityMap;
-
-        auto idView = m_Registry.view<IDComponent>();
+        auto idView = other.m_Registry.view<IDComponent>();
         for (auto e : idView)
         {
             const UUID& uuid = other.m_Registry.get<IDComponent>(e).Uuid;
             const String& name = other.m_Registry.get<TagComponent>(e).Tag;
             Entity newEntity = CreateEntityWithUuid(uuid, name);
-            entityMap[uuid] = e;
+            copyEntityMap[uuid] = newEntity.GetHandle();
         }
 
-        CopyAllComponents(m_Registry, other.m_Registry, entityMap);
+        CopyAllComponents(m_Registry, other.m_Registry, copyEntityMap);
+
+        if (other.m_RootEntity)
+            m_RootEntity = new Entity(m_EntityMap.at(other.m_RootEntity->GetUuid()), this);
+
         return *this;
     }
 
-    Scene::~Scene() { delete m_RootEntity; }
+    Scene::~Scene()
+    {
+        if (m_RootEntity)
+            m_RootEntity->Destroy(true);
+        delete m_RootEntity;
+    }
 
     void Scene::CreateRootEntity()
     {
@@ -150,6 +163,9 @@ namespace Crowny
 
         m_Registry.on_construct<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentConstruct>(this);
         m_Registry.on_destroy<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentDestroy>(this);
+
+        m_Registry.on_destroy<TransformComponent>().connect<&Scene::OnTransformComponentDestroy>(this);
+        m_Registry.on_destroy<MonoScriptComponent>().connect<&Scene::OnMonoScriptComponentDestroy>(this);
     }
 
     Entity Scene::DuplicateEntity(Entity entity, bool includeChildren)
@@ -157,29 +173,32 @@ namespace Crowny
         Entity newEntity = CreateEntity(entity.GetName());
         CopyAllExistingComponents(newEntity, entity);
 
-        const auto& children = entity.GetChildren();
-        for (auto child : children)
+        if (includeChildren)
         {
-            Entity e = DuplicateEntity(child);
-            e.SetParent(newEntity);
+            const auto& children = entity.GetChildren();
+            for (auto child : children)
+            {
+                Entity e = DuplicateEntity(child, true);
+                e.SetParent(newEntity);
+            }
         }
         return newEntity;
     }
 
-    Entity Scene::GetPrimaryCameraEntity()
+    Entity Scene::GetPrimaryCameraEntity() const
     {
         auto view = m_Registry.view<CameraComponent>();
         for (auto entity : view)
         {
-            const auto& camera = view.get<CameraComponent>(entity);
-            return Entity{ entity, this };
+            const auto& camera = view.get(entity);
+            return Entity{ entity, const_cast<Scene*>(this) };
         }
         return {};
     }
 
     void Scene::OnRigidbody2DComponentConstruct(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene)
+        if (m_IsEditorScene || !Physics2D::IsStartedUp())
             return;
         Entity e = { entity, this };
         Physics2D::Get().CreateRigidbody(e);
@@ -187,7 +206,7 @@ namespace Crowny
 
     void Scene::OnRigidbody2DComponentDestroy(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene)
+        if (m_IsEditorScene || !Physics2D::IsStartedUp())
             return;
         Entity e = { entity, this };
         Physics2D::Get().DestroyRigidbody(e);
@@ -195,7 +214,7 @@ namespace Crowny
 
     void Scene::OnBoxCollider2DComponentConstruct(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene)
+        if (m_IsEditorScene || !Physics2D::IsStartedUp())
             return;
         Entity e = { entity, this };
         Physics2D::Get().CreateBoxCollider(e);
@@ -203,7 +222,7 @@ namespace Crowny
 
     void Scene::OnBoxCollider2DComponentDestroy(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene)
+        if (m_IsEditorScene || !Physics2D::IsStartedUp())
             return;
         Entity e = { entity, this };
         Physics2D::Get().DestroyFixture(e, e.GetComponent<BoxCollider2DComponent>());
@@ -211,7 +230,7 @@ namespace Crowny
 
     void Scene::OnCircleCollider2DComponentConstruct(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene)
+        if (m_IsEditorScene || !Physics2D::IsStartedUp())
             return;
         Entity e = { entity, this };
         Physics2D::Get().CreateCircleCollider(e);
@@ -219,7 +238,7 @@ namespace Crowny
 
     void Scene::OnCircleCollider2DComponentDestroy(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene)
+        if (m_IsEditorScene || !Physics2D::IsStartedUp())
             return;
         Entity e = { entity, this };
         Physics2D::Get().DestroyFixture(e, e.GetComponent<CircleCollider2DComponent>());
@@ -227,7 +246,7 @@ namespace Crowny
 
     void Scene::OnAudioSourceComponentConstruct(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene)
+        if (!AudioManager::IsStartedUp())
             return;
         Entity e = { entity, this };
         AudioSourceComponent& source = e.GetComponent<AudioSourceComponent>();
@@ -237,12 +256,15 @@ namespace Crowny
 
     void Scene::OnAudioSourceComponentDestroy(entt::registry& registry, entt::entity entity)
     {
+        if (!AudioManager::IsStartedUp())
+            return;
         Entity e = { entity, this };
         AudioSourceComponent& source = e.GetComponent<AudioSourceComponent>();
-        source.Stop();
+        if (source.GetState() == AudioSourceState::Playing)
+            source.Stop();
     }
 
-    bool Scene::HasScriptComponent(Entity entity, const String& namespaceName, const String& typeName)
+    bool Scene::HasScriptComponent(Entity entity, const String& namespaceName, const String& typeName) const
     {
         if (entity.HasComponent<MonoScriptComponent>())
         {
@@ -263,51 +285,30 @@ namespace Crowny
             return;
         ::MonoClass* rawClass = monoClass->GetInternalPtr();
         MonoReflectionType* runtimeType = MonoUtils::GetType(rawClass);
+
+        MonoScriptComponent* monoScriptComponent = nullptr;
         if (entity.HasComponent<MonoScriptComponent>())
-        {
-            MonoScriptComponent& monoScriptComponent = entity.GetComponent<MonoScriptComponent>();
+            monoScriptComponent = &entity.GetComponent<MonoScriptComponent>();
+        else
+            monoScriptComponent = &entity.AddComponent<MonoScriptComponent>();
 
 #ifdef CW_DEBUG
-            for (const MonoScript& script : monoScriptComponent.Scripts)
+        for (const MonoScript& script : monoScriptComponent->Scripts)
+        {
+            if (script.GetNamespace() == namespaceName && script.GetTypeName() == typeName)
             {
-                if (script.GetNamespace() == namespaceName && script.GetTypeName() == typeName)
-                {
-                    CW_ENGINE_ASSERT(false, "Entity already has that managed component");
-                    return;
-                }
-            }
-#endif
-            monoScriptComponent.Scripts.push_back(MonoScript(runtimeType));
-            if (initialize)
-            {
-                monoScriptComponent.Scripts.back().Create(entity);
-                MonoClass* runInEditor = ScriptInfoManager::Get().GetBuiltinClasses().RunInEditorAttribute;
-                if (!m_IsEditorScene || monoClass->HasAttribute(runInEditor))
-                    monoScriptComponent.Scripts.back().OnStart();
+                CW_ENGINE_ASSERT(false, "Entity already has that managed component");
+                return;
             }
         }
-        else
-        {
-            MonoScriptComponent& monoScriptComponent = entity.AddComponent<MonoScriptComponent>();
-#ifdef CW_DEBUG
-            for (const MonoScript& script : monoScriptComponent.Scripts)
-            {
-                if (script.GetNamespace() == namespaceName && script.GetTypeName() == typeName)
-                {
-                    CW_ENGINE_ASSERT(false, "Entity already has that managed component");
-                    return;
-                }
-            }
 #endif
-            monoScriptComponent.Scripts.push_back(MonoScript(runtimeType));
-            if (initialize)
-            {
-                monoScriptComponent.Scripts.back().Create(entity);
-                monoScriptComponent.Scripts.back().Create(entity);
-                MonoClass* runInEditor = ScriptInfoManager::Get().GetBuiltinClasses().RunInEditorAttribute;
-                if (!m_IsEditorScene || monoClass->HasAttribute(runInEditor))
-                    monoScriptComponent.Scripts.back().OnStart();
-            }
+        monoScriptComponent->Scripts.push_back(MonoScript(runtimeType));
+        if (initialize)
+        {
+            monoScriptComponent->Scripts.back().Create(entity);
+            MonoClass* runInEditor = ScriptInfoManager::Get().GetBuiltinClasses().RunInEditorAttribute;
+            if (!m_IsEditorScene || monoClass->HasAttribute(runInEditor))
+                monoScriptComponent->Scripts.back().OnStart();
         }
     }
 
@@ -367,7 +368,9 @@ namespace Crowny
     Entity Scene::CreateEntity(const String& name)
     {
         Entity entity = { m_Registry.create(), this };
-        entity.AddComponent<IDComponent>(UuidGenerator::Generate());
+        const UUID uuid = UuidGenerator::Generate();
+        entity.AddComponent<IDComponent>(uuid);
+        m_EntityMap[uuid] = entity.GetHandle();
         entity.AddComponent<TagComponent>(name);
         entity.AddComponent<TransformComponent>();
         entity.AddComponent<RelationshipComponent>();
@@ -382,6 +385,7 @@ namespace Crowny
         Entity entity(m_Registry.create(), this);
 
         entity.AddComponent<IDComponent>(uuid);
+        m_EntityMap[uuid] = entity.GetHandle();
         entity.AddComponent<TagComponent>(name);
         entity.AddComponent<RelationshipComponent>();
         entity.AddComponent<TransformComponent>();
@@ -391,29 +395,31 @@ namespace Crowny
         return entity;
     }
 
-    Entity Scene::GetEntityFromUuid(const UUID& uuid)
+    void Scene::DestroyEntity(Entity entity)
     {
-        Entity result;
-        m_Registry.each([&](auto entityID) {
-            Entity e = { entityID, this };
-            if (e.GetUuid() == uuid)
-                result = e;
-        });
-
-        if (!result)
-            CW_ENGINE_ERROR("Entity with uuid {0} not found.", uuid);
-        return result;
+        m_EntityMap.erase(entity.GetUuid());
+        entity.Destroy();
     }
 
-    Entity Scene::GetRootEntity() { return *m_RootEntity; }
+    Entity Scene::GetEntityFromUuid(const UUID& uuid) const
+    {
+        if (m_EntityMap.find(uuid) != m_EntityMap.end())
+            return { m_EntityMap.at(uuid), const_cast<Scene*>(this) };
 
-    Entity Scene::FindEntityByName(const String& name)
+        CW_ENGINE_ERROR("Entity with uuid {0} not found.", uuid);
+        return {};
+    }
+
+    Entity Scene::GetRootEntity() const { return *m_RootEntity; }
+
+    Entity Scene::FindEntityByName(const String& name) const
     {
         auto view = m_Registry.view<TagComponent>();
         for (auto entity : view)
         {
-            if (view.get<TagComponent>(entity).Tag == name)
-                return Entity(entity, this);
+            auto [tag] = view.get(entity);
+            if (tag.Tag == name)
+                return Entity(entity, const_cast<Scene*>(this));
         }
         return Entity{};
     }
@@ -423,6 +429,24 @@ namespace Crowny
         m_ViewportWidth = width;
         m_ViewportHeight = height;
         m_Registry.view<CameraComponent>().each([&](CameraComponent& cameraComponent) { cameraComponent.Camera.SetViewportSize(width, height); });
+    }
+
+    void Scene::OnTransformComponentDestroy(entt::registry& registry, entt::entity entity)
+    {
+        if (!ScriptSceneObjectManager::IsStartedUp())
+            return;
+        Entity e = { entity, this };
+        ScriptSceneObjectManager::Get().NotifyEntityDestroyed(e);
+    }
+
+    void Scene::OnMonoScriptComponentDestroy(entt::registry& registry, entt::entity entity)
+    {
+        if (!ScriptSceneObjectManager::IsStartedUp())
+            return;
+        Entity e = { entity, this };
+        auto& msc = e.GetComponent<MonoScriptComponent>();
+        for (auto& script : msc.Scripts)
+            ScriptSceneObjectManager::Get().NotifyComponentDestroyed(script.InstanceId);
     }
 
 } // namespace Crowny

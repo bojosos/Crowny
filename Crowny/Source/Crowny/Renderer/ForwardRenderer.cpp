@@ -22,9 +22,9 @@
 
 namespace Crowny
 {
-    extern float metalness;
-    extern float roughness;
-    extern glm::vec4 albedo;
+    float metalness = 0.0f;
+    float roughness = 0.5f;
+    glm::vec4 albedo = glm::vec4(1.0f);
 
     struct ForwardRendererData
     {

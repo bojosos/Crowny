@@ -21,6 +21,7 @@ namespace Crowny
         }
 
         void RegisterImporter(SpecificImporter* importer);
+        static void RegisterBuiltinImporters();
 
         Ref<ImportOptions> CreateImportOptions(const Path& path);
 
@@ -29,9 +30,10 @@ namespace Crowny
         bool SupportsFileType(const String& ext) const;
         bool SupportsFileType(uint8_t* num, uint32_t numSize) const;
 
+        SpecificImporter* GetImporterForFile(const Path& path) const;
+
     private:
         SpecificImporter* PrepareForImport(const Path& path, Ref<const ImportOptions>& impotyOptions) const;
-        SpecificImporter* GetImporterForFile(const Path& path) const;
 
     private:
         Vector<SpecificImporter*> m_Importers;

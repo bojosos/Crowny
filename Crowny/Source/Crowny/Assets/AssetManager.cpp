@@ -226,7 +226,7 @@ namespace Crowny
     template <typename Archive> void Serialize(Archive& archive, TextureImportOptions& importOptions)
     {
         archive(importOptions.AutomaticFormat, importOptions.CpuCached, importOptions.Format, importOptions.GenerateMips, importOptions.MaxMip,
-                importOptions.Shape, importOptions.SRGB);
+                importOptions.Shape, importOptions.SRGB, importOptions.DiskFormat);
     }
 
     template <typename Archive> void Serialize(Archive& archive, AudioClipImportOptions& importOptions)

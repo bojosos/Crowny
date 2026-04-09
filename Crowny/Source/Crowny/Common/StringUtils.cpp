@@ -136,9 +136,9 @@ namespace Crowny
 
     bool StringUtils::CaseInsensitiveCompare(const String& lhs, const String& rhs)
     {
-        const auto result = std::mismatch(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(),
-                                          [](const unsigned char l, const unsigned char r) { return std::tolower(l) == tolower(r); });
-        return result.second != rhs.cend() && (result.first == lhs.cend() || tolower(*result.first) < tolower(*result.second));
+        return lhs.size() == rhs.size() && std::equal(lhs.begin(), lhs.end(), rhs.begin(), [](unsigned char l, unsigned char r) {
+                   return std::tolower(l) == std::tolower(r);
+               });
     }
 
 } // namespace Crowny

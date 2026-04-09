@@ -11,21 +11,22 @@ namespace Crowny
     void ScriptCompression::InitRuntimeData()
     {
         MetaData.ScriptClass->AddInternalCall("Internal_Compress", (void*)&ScriptCompression::Internal_Compress);
+        MetaData.ScriptClass->AddInternalCall("Internal_Decompress", (void*)&ScriptCompression::Internal_Decompress);
     }
 
     uint64_t ScriptCompression::Internal_Compress(MonoArray* dst, MonoArray* src, CompressionMethod method)
     {
-        char* rawSrc = mono_array_addr(src, char, 0);
-        char* rawDest = mono_array_addr(dst, char, 0);
-        uint64_t length = mono_array_length(src);
-        if (length > mono_array_length(dst))
-            return -1;
-        ::MonoClass* arrayClass = mono_object_get_class((MonoObject*)src);
-        ::MonoClass* elementClass = mono_class_get_element_class(arrayClass);
-        // TODO: Make sure element class is a char.
-        CW_ENGINE_ASSERT(mono_class_array_element_size(elementClass));
-        uint64_t byteSize = length * mono_class_array_element_size(elementClass); // does this code even work?
-        return Compression::Compress((uint8_t*)rawSrc, (uint8_t*)rawDest, byteSize, method);
+        uint8_t* rawSrc = mono_array_addr(src, uint8_t, 0);
+        uint8_t* rawDst = mono_array_addr(dst, uint8_t, 0);
+        uint64_t srcSize = mono_array_length(src);
+        return Compression::Compress(rawDst, rawSrc, srcSize, method);
+    }
+
+    uint64_t ScriptCompression::Internal_Decompress(MonoArray* dst, int32_t maxDstSize, MonoArray* src, int32_t srcSize, CompressionMethod method)
+    {
+        uint8_t* rawSrc = mono_array_addr(src, uint8_t, 0);
+        uint8_t* rawDst = mono_array_addr(dst, uint8_t, 0);
+        return Compression::Decompress(rawDst, maxDstSize, rawSrc, srcSize, method);
     }
 
 } // namespace Crowny

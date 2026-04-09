@@ -347,13 +347,11 @@ namespace Crowny
                     uint32_t typeId = field.second->m_ParentTypeId;
                     SerializableFieldKey key(typeId, fieldId);
                     Ref<SerializableMemberInfo> fieldInfo = objInfo->FindMatchingField(field.second, type->m_TypeInfo);
-                    CW_ENGINE_ASSERT(fieldInfo != nullptr); // TODO: Remove this, it will cause crashes when recompiling C#
                     if (fieldInfo != nullptr)
                     {
-                        // This line kinda requires that the file format is valid. If we have the field info in the
-                        // object info then we need to have the value. Since it's a text file, maybe consider doing some
-                        // checks.
-                        fieldInfo->SetValue(instance, m_CachedData[key]->GetValue(/*fieldInfo->m_TypeInfo*/));
+                        auto iterFind = m_CachedData.find(key);
+                        if (iterFind != m_CachedData.end())
+                            fieldInfo->SetValue(instance, iterFind->second->GetValue());
                     }
                 }
             }
@@ -435,14 +433,14 @@ namespace Crowny
     size_t SerializableObject::Hash::operator()(const SerializableFieldKey& x) const
     {
         size_t seed = 0;
-        HashCombine(seed, (uint32_t)x.m_FieldIdx);
-        HashCombine(seed, (uint32_t)x.m_TypeId);
+        HashCombine(seed, (uint32_t)x.m_FieldId);
+        HashCombine(seed, (uint32_t)x.m_ParentTypeId);
         return seed;
     }
 
     bool SerializableObject::Equals::operator()(const SerializableFieldKey& l, const SerializableFieldKey& r) const
     {
-        return l.m_FieldIdx == r.m_FieldIdx && l.m_TypeId == r.m_TypeId;
+        return l.m_FieldId == r.m_FieldId && l.m_ParentTypeId == r.m_ParentTypeId;
     }
 
 } // namespace Crowny

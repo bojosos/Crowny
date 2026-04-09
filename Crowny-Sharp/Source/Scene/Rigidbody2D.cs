@@ -89,9 +89,9 @@ namespace Crowny
             Internal_AddForceAt(m_InternalPtr, ref force, ref offset, forceMode);
         }
 
-        public void AddTorque(Vector2 torque, ForceMode2D forceMode = ForceMode2D.Force)
+        public void AddTorque(float torque, ForceMode2D forceMode = ForceMode2D.Force)
         {
-            Internal_AddTorque(m_InternalPtr, ref torque, forceMode);
+            Internal_AddTorque(m_InternalPtr, torque, forceMode);
         }
 
         public bool IsAwake() => Internal_IsAwake(m_InternalPtr);
@@ -172,7 +172,7 @@ namespace Crowny
         private static extern void Internal_AddForceAt(IntPtr parent, ref Vector2 offset, ref Vector2 force, ForceMode2D forceMode);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void Internal_AddTorque(IntPtr parent, ref Vector2 troque, ForceMode2D forceMode);
+        private static extern void Internal_AddTorque(IntPtr parent, float torque, ForceMode2D forceMode);
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern void Internal_GetPosition(IntPtr parent, ref Vector2 position);

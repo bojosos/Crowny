@@ -107,7 +107,7 @@ namespace Crowny
         const ShaderRenderPassDesc& GetPassDesc() const { return m_ShaderDesc; }
 
     private:
-        CW_SIMPLESERIALZABLE(ShaderRenderPass);
+        CW_SIMPLESERIALIZABLE(ShaderRenderPass);
         ShaderRenderPassDesc m_ShaderDesc;
         Ref<GraphicsPipeline> m_GraphicsPipeline;
         Ref<RayTracingPipeline> m_RayTracingPipeline;
@@ -127,7 +127,7 @@ namespace Crowny
         const Vector<Ref<ShaderRenderPass>>& GetRenderPasses() const { return m_Passes; }
 
     private:
-        CW_SIMPLESERIALZABLE(ShaderTechnique);
+        CW_SIMPLESERIALIZABLE(ShaderTechnique);
         Vector<String> m_Tags;
         ShaderVariation m_Variation;
         Vector<Ref<ShaderRenderPass>> m_Passes;

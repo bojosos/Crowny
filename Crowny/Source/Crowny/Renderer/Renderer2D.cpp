@@ -123,7 +123,7 @@ namespace Crowny
         }
 
         s_Data->QuadIndexBuffer = IndexBuffer::Create(indices, RENDERER_INDICES_SIZE);
-        s_Data->QuadVertexBuffer = VertexBuffer::Create(RENDERER_BUFFER_SIZE, BufferUsage::DYNAMIC_DRAW);
+        s_Data->QuadVertexBuffer = VertexBuffer::Create(RENDERER_BUFFER_SIZE, BufferUsage::BU_DYNAMIC_DRAW);
         Ref<BufferLayout> layout =
           CreateRef<BufferLayout>(BufferLayout{ BufferElement(ShaderDataType::Float4, "a_Position"), BufferElement(ShaderDataType::Float4, "a_Color"),
                                                 BufferElement(ShaderDataType::Float2, "a_Uvs"), BufferElement(ShaderDataType::Float, "a_Tid"),
@@ -139,7 +139,7 @@ namespace Crowny
     static void SetupCircleBuffers()
     {
         s_Data->CircleBuffer = s_Data->CircleTmpBuffer = new CircleVertex[s_Data->MaxLineVertices];
-        s_Data->CircleVertexBuffer = VertexBuffer::Create(s_Data->MaxLineVertices * sizeof(CircleVertex), BufferUsage::DYNAMIC_DRAW);
+        s_Data->CircleVertexBuffer = VertexBuffer::Create(s_Data->MaxLineVertices * sizeof(CircleVertex), BufferUsage::BU_DYNAMIC_DRAW);
         const Ref<BufferLayout> layout = CreateRef<BufferLayout>(BufferLayout{ { ShaderDataType::Float3, "a_WorldPosition" },
                                                                                { ShaderDataType::Float3, "a_LocalPosition" },
                                                                                { ShaderDataType::Float4, "a_Color" },
@@ -158,7 +158,7 @@ namespace Crowny
     static void SetupTextBuffers()
     {
         s_Data->TextBuffer = s_Data->TextTmpBuffer = new TextVertex[s_Data->MaxLineVertices];
-        s_Data->TextVertexBuffer = VertexBuffer::Create(RENDERER_MAX_SPRITES * sizeof(TextVertex), BufferUsage::DYNAMIC_DRAW);
+        s_Data->TextVertexBuffer = VertexBuffer::Create(RENDERER_MAX_SPRITES * sizeof(TextVertex), BufferUsage::BU_DYNAMIC_DRAW);
 
         Ref<BufferLayout> layout = CreateRef<BufferLayout>(BufferLayout{ { ShaderDataType::Float3, "a_Position" },
                                                                          { ShaderDataType::Float4, "a_Color" },
@@ -522,6 +522,8 @@ namespace Crowny
 
     void Renderer2D::Shutdown()
     {
+        if (!s_Data)
+            return;
         delete[] s_Data->QuadTmpBuffer;
         delete[] s_Data->CircleTmpBuffer;
         delete[] s_Data->TextTmpBuffer;

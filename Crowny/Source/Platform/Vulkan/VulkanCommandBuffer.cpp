@@ -897,7 +897,7 @@ namespace Crowny
 
             if (!foundRange)
             {
-                std::array<VkImageSubresourceRange, 5> tempRanges;
+                std::array<VkImageSubresourceRange, 9> tempRanges;
                 uint32_t newSubresourceIdx = (uint32_t)m_SubresourceInfoStorage.size();
                 Vector<uint32_t> overlappingRanges;
                 for (uint32_t i = 0; i < imageInfo.NumSubresourceInfos; i++)

@@ -39,6 +39,7 @@ namespace Crowny
         uint32_t MaxMip = 0;
         bool CpuCached = false;
         bool SRGB = false;
+        TextureDiskFormat DiskFormat = TextureDiskFormat::UASTC; // TODO: Auto based on texture type.
         // CubemapSourceType CubemapSource = CubemapSourceType::Faces;
 
         virtual ImportOptionsType GetImportOptionsType() const override { return ImportOptionsType::Texture; }

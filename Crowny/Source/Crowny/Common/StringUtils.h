@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Common/StdHeaders.h"
+
 namespace Crowny
 {
     class StringUtils

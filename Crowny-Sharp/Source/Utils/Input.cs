@@ -212,6 +212,21 @@ namespace Crowny
         /// </summary>
         [MethodImpl(MethodImplOptions.InternalCall)]
         public extern static float GetMouseScrollY();
+
+        /// <summary>
+        /// The current mouse position.
+        /// </summary>
+        public static Vector2 mousePosition
+        {
+            get
+            {
+                Internal_GetMousePosition(out Vector2 pos);
+                return pos;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private extern static void Internal_GetMousePosition(out Vector2 pos);
         
     }
 }

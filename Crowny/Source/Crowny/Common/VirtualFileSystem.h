@@ -1,10 +1,11 @@
 #pragma once
 
+#include "Crowny/Common/Module.h"
+
 namespace Crowny
 {
 
-    // TODO: make this a module.
-    class VirtualFileSystem
+    class VirtualFileSystem : public Module<VirtualFileSystem>
     {
     public:
         /**
@@ -23,17 +24,10 @@ namespace Crowny
         bool WriteFile(const String& path, byte* buff, uint64_t size);
         bool WriteTextFile(const String& path, const String& text);
 
-        static VirtualFileSystem* Get() { return s_Instance; }
-
-    public:
-        static void Init();
-        static void Shutdown();
+        static VirtualFileSystem* Get() { return GetPtr(); }
 
     private:
         UnorderedMap<String, Vector<String>> m_MountedDirectories;
-
-    private:
-        static VirtualFileSystem* s_Instance;
     };
 
 } // namespace Crowny

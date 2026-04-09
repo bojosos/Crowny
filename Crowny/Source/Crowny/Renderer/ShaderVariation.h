@@ -52,7 +52,7 @@ namespace Crowny
         ShaderDefines GetDefines() const;
 
     private:
-        CW_SIMPLESERIALZABLE(ShaderVariation);
+        CW_SIMPLESERIALIZABLE(ShaderVariation);
         // TODO: Replace with StringId
         // Vector<ShaderVariation::Specifier> m_Parameters;
         UnorderedMap<String, Specifier> m_Parameters;

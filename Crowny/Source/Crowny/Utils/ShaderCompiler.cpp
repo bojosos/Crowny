@@ -253,6 +253,7 @@ namespace Crowny
                 return false;
             else
                 CW_ENGINE_ERROR("Bad");
+            return false;
         };
         auto parseBlendFactor = [&]() {
             if (isNext("one"))

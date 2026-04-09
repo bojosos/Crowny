@@ -41,9 +41,9 @@ namespace Crowny
             argBuilder.Append("-noconfig");
 
             if (debug)
-                argBuilder.Append(" -debug+ -o-");
+                argBuilder.Append(" -debug:portable -optimize-");
             else
-                argBuilder.Append(" -debug- -o+");
+                argBuilder.Append(" -debug- -optimize+");
 
             argBuilder.Append(" -target:library -out:" + "\"" + Path.Combine(outputDirectory, "GameAssembly.dll") + "\"");
 
@@ -75,7 +75,7 @@ namespace Crowny
             psi.Arguments = argBuilder.ToString();
             Debug.Log(psi.Arguments);
             psi.CreateNoWindow = true;
-            psi.FileName = "C:\\Program Files\\Mono\\bin\\mcs.bat";
+            psi.FileName = "C:\\Program Files\\Mono\\bin\\csc.bat";
             psi.RedirectStandardError = true;
             psi.RedirectStandardOutput = false;
             psi.UseShellExecute = false;

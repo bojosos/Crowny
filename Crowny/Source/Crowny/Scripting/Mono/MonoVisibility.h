@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Crowny/Common/Log.h"
+#include "Crowny/Common/Types.h"
+
 namespace Crowny
 {
 

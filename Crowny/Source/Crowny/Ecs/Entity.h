@@ -139,6 +139,8 @@ namespace Crowny
         // TODO: Set parent should take care of the transforms too.
         void SetParent(Entity entity);
 
+        void NotifyTransformChanged();
+
         void Destroy(bool destroyChildren = true);
 
         // Helpers
@@ -160,18 +162,12 @@ namespace Crowny
             static_assert(std::is_base_of<ComponentBase, Component>::value, "T must be a Component");
             if (HasComponent<Component>())
                 GetComponent<Component>().OnTransformChanged(transform);
-            // Better safe than sorry.
-            Vector<Entity> children = GetChildren();
-            for (Entity& child : children)
-                child.NotifyTransformChanged(transform);
         }
 
         template <typename... Component> void NotifyTransformChangedComponentWrapper(ComponentGroup<Component...> group, const Transform& transform)
         {
             ([&]() { NotifyTransformChangedComponent<Component>(transform); }(), ...);
         }
-
-        void NotifyTransformChanged(const Transform& transform);
 
     private:
         friend class ComponentEditor;

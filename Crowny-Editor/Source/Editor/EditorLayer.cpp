@@ -85,26 +85,15 @@ namespace Crowny
 
     void EditorLayer::OnAttach()
     {
-        // Well constructors get discarded by the compiler and the static data is gone, so construct a few dummy objects
-        ScriptTime tempTime = ScriptTime();
-        ScriptMath tempMath = ScriptMath();
-        ScriptInput tempInput = ScriptInput();
-        ScriptDebug tempDebug = ScriptDebug();
-        ScriptNoise tempNoise = ScriptNoise();
-        ScriptRandom tempRandom = ScriptRandom();
-        ScriptLayerMask tempLayerMask = ScriptLayerMask();
-        ScriptJson tempJson = ScriptJson();
-        // ScriptCompression tempCompression = ScriptCompression();
-
         EditorAssets::Load();
 
         Editor::StartUp();
 
-        m_Watch = CreateScope<filewatch::FileWatch<Path>>(L"C:\\dev\\Projects\\Project1\\Assets",
-                                                          [this](const Path& path, const filewatch::Event changeType) {
-                                                              Lock lock(m_FileWatchMutex);
-                                                              m_FileWatchQueue.push_back(L"C:\\dev\\Projects\\Project1\\Assets" / path);
-                                                          });
+        // m_Watch = CreateScope<filewatch::FileWatch<Path>>(Editor::Get().GetProjectPath() / "Assets",
+        //                                                   [this](const Path& path, const filewatch::Event changeType) {
+        //                                                       Lock lock(m_FileWatchMutex);
+        //                                                       m_FileWatchQueue.push_back(Editor::Get().GetProjectPath() / "Assets" / path);
+        //                                                  });
 
         m_MenuBar = new ImGuiMenuBar();
 
@@ -277,10 +266,12 @@ namespace Crowny
         MonoClass* scriptCompiler = ScriptInfoManager::Get().GetBuiltinClasses().ScriptCompiler;
         uint32_t type = 0;
         bool debug = true;
+        Path engineAssemblyPath = Application::GetApplicationDesc().EngineAssemblyPath;
+
         MonoArray* libDirs = mono_array_new(MonoManager::Get().GetDomain(), MonoUtils::GetStringClass(), 1);
-        mono_array_setref(libDirs, 0, MonoUtils::ToMonoString("C:/dev/Crowny/Crowny-Sharp/"));
+        mono_array_setref(libDirs, 0, MonoUtils::ToMonoString(engineAssemblyPath.parent_path().string().c_str()));
         MonoArray* refs = mono_array_new(MonoManager::Get().GetDomain(), MonoUtils::GetStringClass(), 1);
-        mono_array_setref(refs, 0, MonoUtils::ToMonoString("CrownySharp.dll"));
+        mono_array_setref(refs, 0, MonoUtils::ToMonoString(engineAssemblyPath.filename().string().c_str()));
 
         void* params[6] = { &type,
                             &debug,
@@ -290,7 +281,6 @@ namespace Crowny
                             refs };
         scriptCompiler->GetMethod("Compile", 6)->Invoke(nullptr, params);
         Vector<AssemblyRefreshInfo> refreshInfos;
-        Path engineAssemblyPath = "C:/dev/Crowny/Crowny-Sharp/CrownySharp.dll";
         Path gameAssemblyPath = Editor::Get().GetProjectPath() / INTERNAL_ASSEMBLY_PATH / "GameAssembly.dll";
         CW_ENGINE_INFO("{0}, {1}", gameAssemblyPath, Editor::Get().GetProjectPath());
         refreshInfos.emplace_back(CROWNY_ASSEMBLY, &engineAssemblyPath);
@@ -1331,9 +1321,9 @@ namespace Crowny
         UI::PopID();
     }
 
-    float metalness;
-    float roughness;
-    glm::vec4 albedo;
+    extern float metalness;
+    extern float roughness;
+    extern glm::vec4 albedo;
 
     void EditorLayer::UI_Settings()
     {

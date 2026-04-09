@@ -14,6 +14,11 @@ namespace Crowny
     {
         alGenSources(1, &m_SourceID);
 
+        m_Pitch = 1.0f;
+        m_MinDistace = 1.0f;
+        m_Attenuation = 1.0f;
+        m_Loop = false;
+
         alSourcef(m_SourceID, AL_PITCH, m_Pitch);
         alSourcef(m_SourceID, AL_REFERENCE_DISTANCE, m_MinDistace);
         alSourcef(m_SourceID, AL_ROLLOFF_FACTOR, m_Attenuation);
@@ -57,6 +62,7 @@ namespace Crowny
     AudioSource::~AudioSource()
     {
         Stop();
+        gAudio().UnregisterSource(this);
         alSourcei(m_SourceID, AL_BUFFER, 0);
         alDeleteSources(1, &m_SourceID);
     }

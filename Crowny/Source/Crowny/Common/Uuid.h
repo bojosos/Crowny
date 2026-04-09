@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Crowny/Common/Common.h"
+#include "Crowny/Common/Types.h"
+
 namespace Crowny
 {
 
@@ -38,7 +41,7 @@ namespace Crowny
         static const UUID EMPTY;
 
         friend struct std::hash<UUID>;
-        CW_SIMPLESERIALZABLE(UUID);
+        CW_SIMPLESERIALIZABLE(UUID);
 
     private:
         uint32_t m_Data[4] = { 0, 0, 0, 0 };

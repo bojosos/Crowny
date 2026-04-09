@@ -1,14 +1,15 @@
 #pragma once
 
-#include "Crowny/Scripting/ScriptComponent.h"
+#include "Crowny/Scripting/ScriptObject.h"
 
 namespace Crowny
 {
-    class ScriptCollider2DBase : public ComponentBase
+    class ScriptPhysics2D : public ScriptObject<ScriptPhysics2D>
     {
-    };
+    public:
+        SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "Physics2D");
 
-    class ScriptPhysics2D : public TScriptComponent < ScriptCollider2DBase, Collider2D,
-    {
-    }
+    private:
+        static void Internal_Raycast(glm::vec2* origin, glm::vec2* direction, float distance, uint32_t layerMask, MonoArray** outResults);
+    };
 } // namespace Crowny

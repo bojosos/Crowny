@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/Types.h"
 #include <glm/glm.hpp>
 
 namespace Crowny
@@ -50,6 +51,30 @@ namespace Crowny
             return std::pow((x + 0.055f) / 1.055f, 2.4f);
     }
 
+    class PixelData;
+
+    class PixelUtils
+    {
+    public:
+        static uint32_t GetBlockSize(TextureFormat format);
+        static glm::ivec2 GetBlockDimensions(TextureFormat format);
+        static uint32_t GetNumBytes(TextureFormat format);
+        static void GetPitch(uint32_t width, uint32_t height, uint32_t depth, TextureFormat format, uint32_t& rowPitch, uint32_t& depthPitch);
+        static void GetMipSizeForLevel(uint32_t width, uint32_t height, uint32_t depth, uint32_t mipLevel, uint32_t& mipWidth, uint32_t& mipHeight,
+                                       uint32_t& mipDepth);
+
+        static void ConvertPixels(const PixelData& src, PixelData& dst);
+        static void PackPixel(float r, float g, float b, float a, TextureFormat format, uint8_t* dst);
+        static void UnpackPixel(float* r, float* g, float* b, float* a, TextureFormat format, uint8_t* src);
+        static void GetBitDepths(TextureFormat format, int (&rgba)[4]);
+        static uint32_t GetMemSize(uint32_t width, uint32_t height, uint32_t depth, TextureFormat format);
+        static uint32_t GetFormatFlags(TextureFormat format);
+        static bool IsCompressedFormat(TextureFormat format)
+        {
+            return (PixelUtils::GetFormatFlags(format) & PixelFormatFlags::PFF_COMPRESSED) != 0;
+        }
+    };
+
     // TODO: Copy constructor, copy-assignment operator
     class PixelData
     {
@@ -77,6 +102,8 @@ namespace Crowny
         void SetColorAt(uint32_t x, uint32_t y, const glm::vec4& color);
         void SetColorAt(uint32_t x, uint32_t y, uint32_t z, const glm::vec4& color);
         glm::vec4 GetColorAt(uint32_t x, uint32_t y, uint32_t z = 0) const;
+        uint32_t GetConsequtiveSize() const { return PixelUtils::GetMemSize(m_Width, m_Height, m_Depth, m_Format); }
+        bool IsNice() const { return m_SlicePitch * m_Depth == GetConsequtiveSize(); }
 
     public:
         static Ref<PixelData> Create(uint32_t width, uint32_t height, TextureFormat format);
@@ -88,23 +115,6 @@ namespace Crowny
         uint32_t m_Width = 0, m_Height = 0, m_Depth = 0;
         uint32_t m_RowPitch = 0, m_SlicePitch = 0;
         uint8_t* m_Buffer = nullptr;
-    };
-
-    class PixelUtils
-    {
-    public:
-        // TODO: Texture compression.
-        static uint32_t GetBlockSize(TextureFormat format);
-        static glm::ivec2 GetBlockDimensions(TextureFormat format);
-        static uint32_t GetNumBytes(TextureFormat format);
-        static void GetPitch(uint32_t width, uint32_t height, uint32_t depth, TextureFormat format, uint32_t& rowPitch, uint32_t& depthPitch);
-        static void GetMipSizeForLevel(uint32_t width, uint32_t height, uint32_t depth, uint32_t mipLevel, uint32_t& mipWidth, uint32_t& mipHeight,
-                                       uint32_t& mipDepth);
-
-        static void ConvertPixels(const PixelData& src, PixelData& dst);
-        static void PackPixel(float r, float g, float b, float a, TextureFormat format, uint8_t* dst);
-        static void UnpackPixel(float* r, float* g, float* b, float* a, TextureFormat format, uint8_t* src);
-        static void GetBitDepths(TextureFormat format, int (&rgba)[4]);
     };
 
 } // namespace Crowny

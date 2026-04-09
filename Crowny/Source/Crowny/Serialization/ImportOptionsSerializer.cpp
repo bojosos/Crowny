@@ -42,6 +42,7 @@ namespace Crowny
 
             SerializeEnumYAML(out, "Format", textureImportOptions->Format);
             SerializeEnumYAML(out, "Shape", textureImportOptions->Shape);
+            SerializeEnumYAML(out, "DiskFormat", textureImportOptions->DiskFormat);
 
             SerializeValueYAML(out, "AutoFormat", textureImportOptions->AutomaticFormat);
             SerializeValueYAML(out, "CpuCached", textureImportOptions->CpuCached);
@@ -132,6 +133,8 @@ namespace Crowny
             DeserializeEnumYAML(textureImportOptionsNode, "Format", textureImportOptions->Format, TextureFormat::RGBA8,
                                 "Texture format \'{}\' in metadata file is invalid.", 0, (int32_t)TextureFormat::FormatCount);
             DeserializeEnumYAML(textureImportOptionsNode, "Shape", textureImportOptions->Shape, TextureShape::TEXTURE_2D,
+                                "Texture shape \'{}\' in metadata file is invalid.", 0, 4);
+            DeserializeEnumYAML(textureImportOptionsNode, "DiskFormat", textureImportOptions->DiskFormat, TextureDiskFormat::UASTC,
                                 "Texture shape \'{}\' in metadata file is invalid.", 0, 4);
             DeserializeValueYAML(textureImportOptionsNode, "AutoFormat", textureImportOptions->AutomaticFormat, true);
             DeserializeValueYAML(textureImportOptionsNode, "GenerateMips", textureImportOptions->GenerateMips, false);

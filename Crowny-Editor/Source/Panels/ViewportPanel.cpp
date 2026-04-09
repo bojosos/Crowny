@@ -141,11 +141,13 @@ namespace Crowny
                                      glm::value_ptr(transform), nullptr,
                                      snap ? snapValues : nullptr)) // TODO: Bounds, does rotation work?
             {
-                glm::vec3 position, rotation, scale;
+                glm::vec3 position, scale;
+                glm::quat rotation;
                 if (Math::DecomposeMatrix(transform, position, rotation, scale))
                 {
+                    glm::vec3 rotationEuler = glm::eulerAngles(rotation);
                     glm::vec3 transformRotation = glm::eulerAngles(selected.GetWorldRotation());
-                    const glm::vec3 deltaRot = rotation - transformRotation;
+                    const glm::vec3 deltaRot = rotationEuler - transformRotation;
                     selected.SetWorldPosition(position);
                     selected.SetWorldRotation(transformRotation + deltaRot);
                     selected.SetWorldScale(scale);
@@ -155,12 +157,14 @@ namespace Crowny
         if (ImGuizmo::ViewManipulate(glm::value_ptr(view), camera.GetDistance(), { m_ViewportBounds.z - 136.0f, m_ViewportBounds.y },
                                      ImVec2(128, 128), 0x10101010))
         {
-            glm::vec3 t, r, s;
+            glm::vec3 t, s;
+            glm::quat r;
             Math::DecomposeMatrix(view, t, r, s);
-            camera.SetPitch(camera.GetPitch() + (camera.GetPitch() - r.x));
-            camera.SetYaw(camera.GetYaw() + (camera.GetYaw() - r.y));
-            camera.SetRoll(camera.GetRoll() + (camera.GetRoll() - r.z));
-            CW_ENGINE_INFO("T: {}, R: {}, S: {}", glm::to_string(t), glm::to_string(glm::degrees(r)), glm::to_string(s));
+            glm::vec3 rotationEuler = glm::eulerAngles(r);
+            camera.SetPitch(camera.GetPitch() + (camera.GetPitch() - rotationEuler.x));
+            camera.SetYaw(camera.GetYaw() + (camera.GetYaw() - rotationEuler.y));
+            camera.SetRoll(camera.GetRoll() + (camera.GetRoll() - rotationEuler.z));
+            CW_ENGINE_INFO("T: {}, R: {}, S: {}", glm::to_string(t), glm::to_string(glm::degrees(rotationEuler)), glm::to_string(s));
         }
 
         EndPanel();

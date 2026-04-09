@@ -167,13 +167,7 @@ namespace Crowny
             bool selected = m_SelectedMessageHash == message.Hash;
             ImGui::TableNextColumn();
             if (!m_Collapse) // timestamp
-            {
-                char res[9];
-                tm* timeinfo;
-                timeinfo = localtime(&message.Timestamp);
-                strftime(res, 9, "%T", timeinfo);
-                ImGui::Text("%s", res);
-            }
+                ImGui::Text("%s", message.TimestampText.c_str());
             else // repeats
             {
                 ImGui::AlignTextToFramePadding();

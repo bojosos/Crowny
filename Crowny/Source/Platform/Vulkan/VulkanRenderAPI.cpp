@@ -30,10 +30,14 @@
     } while (false)
 #endif
 
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnullability-completeness"
+#endif
 #include <vma/vk_mem_alloc.h>
+#ifdef __clang__
 #pragma clang diagnostic pop
+#endif
 
 #define CW_DEBUG 1
 // #undef CW_DEBUG
@@ -210,7 +214,7 @@ namespace Crowny
         }
         else
         {
-            m_Devices.push_back(CreateRef<VulkanDevice>(physicalDevices[0], 0));
+            m_Devices.push_back(CreateRef<VulkanDevice>(physicalDevices[0], -1));
         }
         m_PrimaryDevices.push_back(m_Devices[0]);
         /*
@@ -426,7 +430,7 @@ namespace Crowny
         vkCB->SetPipeline(pipeline); // TODO: stats
     }
 
-    void VulkanRenderAPI::Shutdown()
+    void VulkanRenderAPI::OnShutdown()
     {
         VulkanTransferManager::Shutdown();
         VulkanRenderPasses::Shutdown();

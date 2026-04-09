@@ -1,9 +1,17 @@
 #pragma once
 
-#ifdef CW_PLATFORM_WIN32
+#include "Crowny/Common/Types.h"
+#include "Crowny/Common/Log.h"
+#include "Crowny/Common/Assert.h"
+
+#include <iterator>
+#include <algorithm>
+#include <memory>
+#include <initializer_list>
+
 namespace Crowny
 {
-    template <typename Type, int N> class SmallVector
+    template <typename Type, uint32_t N> class SmallVector
     {
     public:
         using Iterator = Type*;
@@ -11,89 +19,98 @@ namespace Crowny
         using ReverseIterator = std::reverse_iterator<Type*>;
         using ConstReverseIterator = std::reverse_iterator<const Type*>;
 
-        SmallVector() = default;
-        SmallVector(uint32_t size, const Type& value) { append(size, value); }
-        SmallVector(const SmallVector<Type, N>& other)
+        SmallVector() : m_Elements(reinterpret_cast<Type*>(&m_StaticStorage)), m_Capacity(N), m_Size(0) {}
+
+        SmallVector(uint32_t size, const Type& value) : SmallVector()
         {
-            if (!other.empty())
-                *this = other;
-        }
-        SmallVector(SmallVector&& other)
-        {
-            if (!other.empty())
-                *this = other;
-        }
-        explicit SmallVector(uint32_t size) : m_Size(size), m_Capacity(size)
-        {
-            if (size <= N)
-                return;
-            m_Elements static_cast<T*>(::operator new(capacity * sizeof(Type)));
+            assign(size, value);
         }
 
-        SmallVector(std::initializer_list<Type> list) { append(list); }
+        explicit SmallVector(uint32_t size) : SmallVector()
+        {
+            resize(size);
+        }
+
+        SmallVector(const SmallVector<Type, N>& other) : SmallVector()
+        {
+            assign(other.begin(), other.end());
+        }
+
+        SmallVector(SmallVector&& other) noexcept : SmallVector()
+        {
+            if (!other.isStatic())
+            {
+                m_Elements = other.m_Elements;
+                m_Capacity = other.m_Capacity;
+                m_Size = other.m_Size;
+                other.m_Elements = reinterpret_cast<Type*>(&other.m_StaticStorage);
+                other.m_Capacity = N;
+                other.m_Size = 0;
+            }
+            else
+            {
+                std::uninitialized_copy(std::make_move_iterator(other.begin()), std::make_move_iterator(other.end()), m_Elements);
+                m_Size = other.m_Size;
+                other.clear();
+            }
+        }
+
+        SmallVector(std::initializer_list<Type> list) : SmallVector()
+        {
+            assign(list.begin(), list.end());
+        }
 
         ~SmallVector()
         {
-            for (auto& entry : *this)
-                entry.~Type();
+            destroyElements(begin(), end());
             if (!isStatic())
-                delete[] m_Elements; // TODO: Not this!!!
+                ::operator delete(m_Elements);
         }
 
         SmallVector<Type, N>& operator=(const SmallVector<Type, N>& other)
         {
-            if (this == &other)
-                return *this;
-            if (m_Size > other.m_Size)
-            {
-                Iterator newEnd;
-                if (other.m_Size > 0)
-                    newEnd = std::copy(other.begin(), other.end(), begin());
-                else
-                    newEnd = begin();
-
-                for (; newEnd != end(); newEnd++)
-                {
-                    newEnd->~Type();
-                }
-            }
-            else
-            {
-                if (other.m_Size > m_Capacity)
-                {
-                    Clear();
-                    m_Size = 0;
-                    Grow(other.m_Size);
-                }
-                else if (m_Size > 0)
-                    std::copy(other.begin(), other.begin() + m_Size, begin());
-                std::uninitialized_copy(other.begin() + m_Size, other.end(), begin() + m_Size);
-            }
-            m_Size = other.m_Size;
+            if (this != &other)
+                assign(other.begin(), other.end());
             return *this;
         }
 
-        SmallVector<Type, N>& operator=(SmallVector<Type, N>&& other)
+        SmallVector<Type, N>& operator=(SmallVector<Type, N>&& other) noexcept
         {
             if (this == &other)
                 return *this;
+
+            clear();
+            if (!isStatic())
+                ::operator delete(m_Elements);
+
             if (!other.isStatic())
             {
+                m_Elements = other.m_Elements;
+                m_Capacity = other.m_Capacity;
+                m_Size = other.m_Size;
+                other.m_Elements = reinterpret_cast<Type*>(&other.m_StaticStorage);
+                other.m_Capacity = N;
+                other.m_Size = 0;
             }
+            else
+            {
+                m_Elements = reinterpret_cast<Type*>(&m_StaticStorage);
+                m_Capacity = N;
+                std::uninitialized_copy(std::make_move_iterator(other.begin()), std::make_move_iterator(other.end()), m_Elements);
+                m_Size = other.m_Size;
+                other.clear();
+            }
+            return *this;
         }
 
         bool operator==(const SmallVector<Type, N>& other) const
         {
-            if (this->m_Size != other.m_Size)
+            if (m_Size != other.m_Size)
                 return false;
             return std::equal(begin(), end(), other.begin());
         }
 
         bool operator!=(const SmallVector<Type, N>& other) const { return !(*this == other); }
-        bool operator<(const SmallVector<Type, N>& other) const { return std::lexicographical_compare(begin(), end(), other.begin(), other.end()); }
-        bool operator>(const SmallVector<Type, N>& other) const { return other < *this; }
-        bool operator<=(const SmallVector& other) const { return !(this > other); }
-        bool operator>=(const SmallVector& other) const { return !(this < other); }
 
         Type& operator[](uint32_t index)
         {
@@ -116,47 +133,38 @@ namespace Crowny
         ReverseIterator rend() { return ReverseIterator(begin()); }
         ConstReverseIterator rbegin() const { return ConstReverseIterator(end()); }
         ConstReverseIterator rend() const { return ConstReverseIterator(begin()); }
-        ConstReverseIterator crbegin() const { return rbegin(); }
-        ConstReverseIterator crend() const { return rend(); }
 
         uint32_t size() const { return m_Size; }
         uint32_t capacity() const { return m_Capacity; }
-        uint32_t empty() const { return m_Size == 0; }
+        bool empty() const { return m_Size == 0; }
         Type* data() { return m_Elements; }
         const Type* data() const { return m_Elements; }
-        Type& front()
-        {
-            CW_ENGINE_ASSERT(!empty());
-            return m_Elements[0];
-        }
-        const Type& front() const
-        {
-            CW_ENGINE_ASSERT(!empty());
-            return m_Elements[0];
-        }
-        Type& back()
-        {
-            CW_ENGINE_ASSERT(!empty());
-            return m_Elements[m_Size - 1];
-        }
-        const Type& back() const
-        {
-            CW_ENGINE_ASSERT(!empty());
-            return m_Elements[m_Size - 1];
-        }
+
+        Type& front() { CW_ENGINE_ASSERT(!empty()); return m_Elements[0]; }
+        const Type& front() const { CW_ENGINE_ASSERT(!empty()); return m_Elements[0]; }
+        Type& back() { CW_ENGINE_ASSERT(!empty()); return m_Elements[m_Size - 1]; }
+        const Type& back() const { CW_ENGINE_ASSERT(!empty()); return m_Elements[m_Size - 1]; }
 
         void push_back(const Type& element)
         {
             if (m_Size == m_Capacity)
                 grow(m_Capacity * 2);
-            new (&m_Elements[m_Size]) Type(element);
+            new (&m_Elements[m_Size++]) Type(element);
         }
 
-        void push_Back(Type&& element)
+        void push_back(Type&& element)
         {
             if (m_Size == m_Capacity)
                 grow(m_Capacity * 2);
             new (&m_Elements[m_Size++]) Type(std::move(element));
+        }
+
+        template <typename... Args>
+        void emplace_back(Args&&... args)
+        {
+            if (m_Size == m_Capacity)
+                grow(m_Capacity * 2);
+            new (&m_Elements[m_Size++]) Type(std::forward<Args>(args)...);
         }
 
         void pop_back()
@@ -166,114 +174,95 @@ namespace Crowny
             m_Elements[m_Size].~Type();
         }
 
-        void append(ConstIterator start, ConstIterator end)
-        {
-            const uint32_t count = std::distance(start, end);
-            if (m_Size + count > m_Capacity)
-                grow(m_Size + count);
-            std::uninitialized_copy(start, end, this->end());
-            m_Size += count;
-        }
-
-        void append(uint32_t count, const Type& element)
-        {
-            if (m_Size + count > m_Capacity)
-                grow(m_Size + count);
-
-            std::uninitialized_fill_n(end(), count, element);
-            m_Size += count;
-        }
-
-        void append(std::initializer_list<Type> list) { append(list.begin(), list.end()); }
-
-        void remove(uint32_t index) { erase(begin() + index); }
-
-        void pop()
-        {
-            CW_ENGINE_ASSERT(m_Size > 0 && "Popping an empty array.");
-            m_Size--;
-            m_Elements[m_Size].~Type();
-        }
-
-        Iterator erase(ConstIterator iter)
-        {
-            CW_ENGINE_ASSERT(iter >= begin());
-            CW_ENGINE_ASSERT(iter < end());
-
-            Iterator er = iter;
-            std::move(er + 1, end(), er);
-            pop();
-
-            return er;
-        }
-
         void clear()
         {
-            for (uint32_t i = 0; i < m_Size; i++)
-                m_Elements[i].~Type();
-
+            destroyElements(begin(), end());
             m_Size = 0;
-        }
-
-        void reserve(uint32_t capacity)
-        {
-            if (m_Capacity < capacity)
-                return;
-            grow(capacity);
         }
 
         void resize(uint32_t size, const Type& value = Type())
         {
-            if (size > m_Capacity)
-                grow(size);
-
-            if (size > m_Size)
+            if (size < m_Size)
             {
-                for (uint32_t i = m_Size; i < size; i++)
-                    new (&m_Elements[i]) Type(value);
+                destroyElements(begin() + size, end());
             }
-            else
+            else if (size > m_Size)
             {
-                for (uint32_t i = size; i < m_Size; i++)
-                    m_Elements[i].~Type();
+                if (size > m_Capacity)
+                    grow(size);
+                std::uninitialized_fill_n(end(), size - m_Size, value);
             }
-
             m_Size = size;
         }
 
-        bool contains() const
+        void reserve(uint32_t capacity)
         {
-            for (uint32_t i = 0; i < m_Size; i++)
-            {
-                if (m_Elements[i] == element)
-                    return true;
-            }
+            if (capacity > m_Capacity)
+                grow(capacity);
+        }
 
-            return false;
+        void assign(uint32_t size, const Type& value)
+        {
+            clear();
+            if (size > m_Capacity)
+                grow(size);
+            std::uninitialized_fill_n(m_Elements, size, value);
+            m_Size = size;
+        }
+
+        template <typename InputIt>
+        void assign(InputIt first, InputIt last)
+        {
+            clear();
+            uint32_t count = static_cast<uint32_t>(std::distance(first, last));
+            if (count > m_Capacity)
+                grow(count);
+            std::uninitialized_copy(first, last, m_Elements);
+            m_Size = count;
+        }
+
+        Iterator erase(ConstIterator iter)
+        {
+            CW_ENGINE_ASSERT(iter >= begin() && iter < end());
+            Iterator it = const_cast<Iterator>(iter);
+            destroyElements(it, it + 1);
+            std::move(it + 1, end(), it);
+            m_Size--;
+            return it;
         }
 
     private:
-        void grow(uint32_t capacity)
+        bool isStatic() const { return m_Elements == reinterpret_cast<const Type*>(&m_StaticStorage); }
+
+        void grow(uint32_t newCapacity)
         {
-            CW_ENGINE_ASSERT(m_Capacity > N);
-            Type* newData = static_cast<T*>(::operator new(capacity * sizeof(Type)));
-            std::uninitialized_copy(std::make_move_iterator(begin()), std::make_move_iterator(end()), newData);
-            for (auto& entry : *this)
-                entry.~Type();
+            if (newCapacity <= m_Capacity) return;
+            if (newCapacity < m_Capacity * 2) newCapacity = m_Capacity * 2;
+
+            Type* newData = static_cast<Type*>(::operator new(newCapacity * sizeof(Type)));
+            if (m_Size > 0)
+            {
+                std::uninitialized_copy(std::make_move_iterator(begin()), std::make_move_iterator(end()), newData);
+                destroyElements(begin(), end());
+            }
+
             if (!isStatic())
-                operator delete(m_Elements);
+                ::operator delete(m_Elements);
 
             m_Elements = newData;
-            m_Capacity = capacity;
+            m_Capacity = newCapacity;
         }
 
-        bool isStatic() const { return m_Elements == (Type*)m_StaticStorage; }
+        void destroyElements(Iterator first, Iterator last)
+        {
+            for (; first != last; ++first)
+                first->~Type();
+        }
 
     private:
         std::aligned_storage_t<sizeof(Type), alignof(Type)> m_StaticStorage[N];
-        Type* m_Elements = (Type*)m_StaticStorage;
-        uint32_t m_Capacity = 4;
-        uint32_t m_Size = 0;
+        Type* m_Elements;
+        uint32_t m_Capacity;
+        uint32_t m_Size;
     };
-} // namespace Crowny
-#endif
+}

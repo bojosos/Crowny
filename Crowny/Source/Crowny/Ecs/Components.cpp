@@ -228,6 +228,7 @@ namespace Crowny
     void Rigidbody2DComponent::SetGravityScale(float scale)
     {
         if (RuntimeBody != nullptr)
+            // m_PhysicsWorld2D->GetBodyList()->SetGravityScale(scale);
             RuntimeBody->SetGravityScale(scale);
         m_GravityScale = scale;
     }
@@ -329,7 +330,11 @@ namespace Crowny
         m_Material = material;
     }
 
-    BoxCollider2DComponent::BoxCollider2DComponent() : Collider2D() { m_Material = Physics2D::Get().GetDefaultMaterial(); }
+    BoxCollider2DComponent::BoxCollider2DComponent() : Collider2D()
+    {
+        if (Physics2D::IsStartedUp())
+            m_Material = Physics2D::Get().GetDefaultMaterial();
+    }
 
     void BoxCollider2DComponent::SetOffset(const glm::vec2& offset, Entity entity)
     {
@@ -351,7 +356,11 @@ namespace Crowny
         }
     }
 
-    CircleCollider2DComponent::CircleCollider2DComponent() : Collider2D() { m_Material = Physics2D::Get().GetDefaultMaterial(); }
+    CircleCollider2DComponent::CircleCollider2DComponent() : Collider2D()
+    {
+        if (Physics2D::IsStartedUp())
+            m_Material = Physics2D::Get().GetDefaultMaterial();
+    }
 
     void CircleCollider2DComponent::SetRadius(float radius, Entity entity)
     {

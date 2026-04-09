@@ -14,14 +14,14 @@ namespace Crowny
                 return 0;
             if (value >= 1.0f)
                 return (1 << bits) - 1;
-            return (int)glm::round(value * (1 << bits));
+            return (uint32_t)glm::round(value * (float)((1 << bits) - 1));
         }
 
         static uint32_t SnormToUint(float value, uint32_t bits) { return UnormToUint((value + 1.0f) * 0.5f, bits); }
 
         static float UintToUnorm(uint32_t value, uint32_t bits) { return (float)value / (float(1 << bits) - 1); }
 
-        static float UintToSnorm(uint32_t value, uint32_t bits) { return UintToUnorm(value, 8) * 2.0f - 1.0f; }
+        static float UintToSnorm(uint32_t value, uint32_t bits) { return UintToUnorm(value, bits) * 2.0f - 1.0f; }
 
         static void IntWrite(void* dst, const int32_t n, const uint32_t value)
         {

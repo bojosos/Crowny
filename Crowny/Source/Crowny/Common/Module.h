@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Common/Assert.h"
+
 namespace Crowny
 {
     template <class T> class Module
@@ -48,6 +50,7 @@ namespace Crowny
             InstanceInternal() = new T(std::forward<Args>(args)...);
 
             IsStartedUp() = true;
+            IsDestroyed() = false;
             ((Module*)InstanceInternal())->OnStartUp();
         }
 
@@ -67,6 +70,19 @@ namespace Crowny
 
             InstanceInternal() = new SubType(std::forward<Args>(args)...);
             IsStartedUp() = true;
+            IsDestroyed() = false;
+
+            ((Module*)InstanceInternal())->OnStartUp();
+        }
+
+        static void StartUp(T* instance)
+        {
+            if (IsStartedUp())
+                CW_ENGINE_ASSERT(false);
+
+            InstanceInternal() = instance;
+            IsStartedUp() = true;
+            IsDestroyed() = false;
 
             ((Module*)InstanceInternal())->OnStartUp();
         }
@@ -78,13 +94,20 @@ namespace Crowny
         static void Shutdown()
         {
             if (!IsStartedUp())
-                CW_ENGINE_ASSERT(false);
+                return;
             if (IsDestroyed())
-                CW_ENGINE_ASSERT(false);
+                return;
 
             ((Module*)InstanceInternal())->OnShutdown();
             delete InstanceInternal();
             IsDestroyed() = true;
+            IsStartedUp() = false;
+        }
+
+        static bool& IsStartedUp()
+        {
+            static bool s_StartedUp = false;
+            return s_StartedUp;
         }
 
     protected:
@@ -103,12 +126,6 @@ namespace Crowny
         {
             static bool s_Destroyed = false;
             return s_Destroyed;
-        }
-
-        static bool& IsStartedUp()
-        {
-            static bool s_StartedUp = false;
-            return s_StartedUp;
         }
 
     private:

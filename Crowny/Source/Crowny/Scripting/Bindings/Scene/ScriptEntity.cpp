@@ -29,6 +29,13 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_HasComponent", (void*)&Internal_HasComponent);
         MetaData.ScriptClass->AddInternalCall("Internal_AddComponent", (void*)&Internal_AddComponent);
         MetaData.ScriptClass->AddInternalCall("Internal_RemoveComponent", (void*)&Internal_RemoveComponent);
+        MetaData.ScriptClass->AddInternalCall("Internal_Destroy", (void*)&Internal_Destroy);
+    }
+
+    void ScriptEntity::Internal_Destroy(ScriptEntity* thisPtr)
+    {
+        Entity entity = thisPtr->GetNativeEntity();
+        SceneManager::GetActiveScene()->DestroyEntity(entity);
     }
 
     MonoString* ScriptEntity::Internal_GetName(ScriptEntity* thisPtr)

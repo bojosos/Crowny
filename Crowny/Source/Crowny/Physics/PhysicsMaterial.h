@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/Common.h"
 #include "Crowny/Assets/Asset.h"
 
 namespace Crowny

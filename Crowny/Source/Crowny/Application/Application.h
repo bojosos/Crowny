@@ -1,9 +1,11 @@
 #pragma once
 
+#include "Crowny/Common/Module.h"
 #include "Crowny/Events/ApplicationEvent.h"
 #include "Crowny/Events/MouseEvent.h"
 #include "Crowny/Layers/LayerStack.h"
 #include "Crowny/Window/RenderWindow.h"
+#include "Crowny/RenderAPI/RenderAPI.h"
 
 #include "Crowny/ImGui/ImGuiLayer.h"
 
@@ -24,13 +26,20 @@ namespace Crowny
     struct ApplicationDesc
     {
         RenderWindowDesc Window;
-        String WorkingDirectory = ".";
+        Path WorkingDirectory = ".";
+        Path InternalDirectory = "Internal";
         String Name;
+
+        bool Headless = false;
+        RenderAPI::API PreferredAPI = RenderAPI::API::Vulkan;
+
+        Path EngineAssemblyPath;
+        Path GameAssemblyPath;
 
         ScriptConfig Script;
     };
 
-    class Application
+    class Application : public Module<Application>
     {
     public:
         Application(const ApplicationDesc& applicationDesc);
@@ -47,9 +56,12 @@ namespace Crowny
         void SetTimeSettings(const Ref<TimeSettings>& timeSettings);
         ImGuiLayer* GetImGuiLayer() { return m_ImGuiLayer; }
         void Exit();
-        const ApplicationDesc& GetApplicationDesc() const { return m_Desc; }
+        static const ApplicationDesc& GetApplicationDesc() { return Get().m_ApplicationDesc; }
+        static const Path& GetWorkingDirectory() { return GetApplicationDesc().WorkingDirectory; }
+        static const Path& GetInternalDirectory() { return GetApplicationDesc().InternalDirectory; }
+        static void SetInternalDirectory(const Path& path) { Get().m_ApplicationDesc.InternalDirectory = path; }
 
-        static Application& Get() { return *s_Instance; }
+        void Run();
 
     private:
         bool OnWindowClose(WindowCloseEvent& e);
@@ -57,7 +69,9 @@ namespace Crowny
         bool OnWindowMinimized(WindowMinimizeEvent& e);
         bool OnMouseScroll(MouseScrolledEvent& event);
 
-        void Run();
+    protected:
+        virtual void OnStartUp() override;
+        virtual void OnShutdown() override;
 
     private:
         Vector<Ref<RenderWindow>> m_Windows;
@@ -68,15 +82,11 @@ namespace Crowny
 
         LayerStack* m_LayerStack;
         ImGuiLayer* m_ImGuiLayer;
-        ApplicationDesc m_Desc;
-
-    private:
-        static Application* s_Instance;
-        friend int ::main(int argc, char** argv);
+        ApplicationDesc m_ApplicationDesc;
 
     public:
         static uint8_t s_GLFWWindowCount;
     };
 
-    Application* CreateApplication();
+    void CreateApplication();
 } // namespace Crowny

@@ -35,7 +35,8 @@ namespace Crowny
     private:
         Set<ScriptObjectBase*> m_ScriptObjects;
         Vector<ScriptObjectBase*> m_FinalizedObjects[2];
-        uint32_t m_FinalizedQueueIdx;
+        uint32_t m_FinalizedQueueIdx = 0;
+        Mutex m_Mutex;
     };
 
 } // namespace Crowny

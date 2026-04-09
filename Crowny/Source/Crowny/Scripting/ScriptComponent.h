@@ -24,7 +24,7 @@ namespace Crowny
     {
     public:
         ComponentBase* GetNativeComponent() const { return &this->GetNativeEntity().template GetComponent<CompType>(); }
-        void SetNativeComponent() const { /* return m_Entity.GetComponent<CompType>();*/ } // TODO: Replace component
+        void SetNativeComponent(const CompType& component) const { this->GetNativeEntity().template AddOrReplaceComponent<CompType>(component); }
     protected:
         friend class ScriptGameObjectManager;
 

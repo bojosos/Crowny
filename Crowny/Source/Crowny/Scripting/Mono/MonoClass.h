@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Common/StdHeaders.h"
+#include "Crowny/Common/Types.h"
 #include "Crowny/Scripting/Mono/Mono.h"
 
 namespace Crowny

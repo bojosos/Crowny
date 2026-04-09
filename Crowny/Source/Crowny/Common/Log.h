@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Crowny/Common/Common.h"
+#include "Crowny/Common/StdHeaders.h"
 
 #pragma warning(push, 0)
 #include <spdlog/spdlog.h>

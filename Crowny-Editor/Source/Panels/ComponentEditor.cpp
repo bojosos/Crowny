@@ -13,6 +13,7 @@
 namespace Crowny
 {
     static String s_SearchString;
+    static String s_DefaultScriptContents;
 
     void ComponentEditor::Render()
     {
@@ -151,14 +152,12 @@ namespace Crowny
                         {
                             if (ImGui::Button("Create new script") || Input::IsKeyPressed(Key::Enter)) // Create a new script with the search string
                             {
-                                String defaultContents =
-                                  FileSystem::ReadTextFile("C:\\dev\\Crowny\\Crowny-Editor\\Resources\\Default\\DefaultScript.cs"); // TODO:
-                                                                                                                                    // Don't load
-                                                                                                                                    // this every
-                                                                                                                                    // time
+                                if (s_DefaultScriptContents.empty())
+                                    s_DefaultScriptContents = FileSystem::ReadTextFile(Application::GetWorkingDirectory() / "Resources/Default/DefaultScript.cs");
+
                                 // This should create a script object and maybe call a serialize on it?
                                 String script =
-                                  StringUtils::Replace(defaultContents, "#NAMESPACE#", Editor::Get().GetProjectPath().filename().string());
+                                  StringUtils::Replace(s_DefaultScriptContents, "#NAMESPACE#", Editor::Get().GetProjectPath().filename().string());
                                 script = StringUtils::Replace(script, "#CLASSNAME#", s_SearchString);
                                 Path path = EditorUtils::GetUniquePath(ProjectLibrary::Get().GetAssetFolder() / (s_SearchString + ".cs"));
                                 FileSystem::WriteTextFile(path, script);

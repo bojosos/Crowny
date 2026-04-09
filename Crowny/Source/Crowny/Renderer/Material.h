@@ -41,16 +41,16 @@ namespace Crowny
 
         static Ref<Material> Create(const AssetHandle<Shader>& shader);
 
-        AssetHandle<Shader> GetShader() { return m_Shader; }
+        AssetHandle<Shader> GetShader() const { return m_Shader; }
         virtual void GetAssets(Vector<AssetHandle<Asset>>& assets) override { assets.push_back(m_Shader); }
 
         void SetShader(const AssetHandle<Shader>& shader);
         void ReloadParams();
 
-        UnorderedMap<String, UniformMember> GetBindings() const { return m_Bindings; }
+        const UnorderedMap<String, UniformMember>& GetBindings() const { return m_Bindings; }
 
         template <typename T>
-        T GetDataParam(const String& name)
+        T GetDataParam(const String& name) const
         {
             const auto iterFind = m_Bindings.find(name);
             if (iterFind == m_Bindings.cend())
@@ -65,7 +65,7 @@ namespace Crowny
                 return T();
             }
             T value;
-            m_UniformBlocks[iterFind->second.BufferName]->Read(iterFind->second.Offset, &value, sizeof(value));
+            m_UniformBlocks.at(iterFind->second.BufferName)->Read(iterFind->second.Offset, &value, sizeof(value));
             return value;
         }
 

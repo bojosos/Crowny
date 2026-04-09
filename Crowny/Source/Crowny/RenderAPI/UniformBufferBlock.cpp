@@ -47,7 +47,7 @@ namespace Crowny
         m_BufferDirty = true;
     }
 
-    void UniformBufferBlock::Read(uint32_t offset, void* data, uint32_t size)
+    void UniformBufferBlock::Read(uint32_t offset, void* data, uint32_t size) const
     {
         CW_ENGINE_ASSERT(offset + size <= m_Size);
         std::memcpy(data, m_CachedData + offset, size);

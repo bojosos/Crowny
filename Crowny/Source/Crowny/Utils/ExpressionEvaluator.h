@@ -1,58 +1,33 @@
-#if 0
 #pragma once
+
+#include "Crowny/Common/Types.h"
 
 namespace Crowny
 {
 
     class ExpressionEvaluator
     {
-        enum class TokenType
-        {
-            Plus,        // +
-            Minus,       // -
-            FloatDiv,    // /
-            Mul,         // *
-            Modulus,     // % -> fmod
-            Pow,         // ^
-
-            Int,         // integer number
-            Float,       // float number
-
-            Sqrt,        // sqrt
-            Floor,       // floor
-            Ceil,        // ceil
-            Round,       // floor
-            Sin,         // sin
-            Cos,         // cos
-            Tan,         // tan
-
-            LParen,      // (
-            RParen,      // )
-
-            Unknown      // utility token
-        };
-        struct ExpressionToken
-        {
-            ExpressionToken() = default;
-            ExpressionToken(TokenType type) : Type(type) { }
-
-            TokenType Type;
-            union {
-                long ll;
-                double ff;
-                std::function<float(float)> func;
-
-            } Value;
-        };
     public:
         static float Evaluate(const String& text);
-        using TokenList = Vector<ExpressionToken>;
 
     private:
-        static float Interpret(const TokenList& tokens);
-        static float InterpretExpression(const TokenList& tokens, size_t idx);
-        static TokenList Parse(const String& text);
+        struct Context
+        {
+            const char* Ptr;
+            void SkipWhitespace()
+            {
+                while (*Ptr && std::isspace(*Ptr))
+                    ++Ptr;
+            }
+        };
+
+        static float ParseExpression(Context& ctx);
+        static float ParseTerm(Context& ctx);
+        static float ParseFactor(Context& ctx);
+        static float ParsePower(Context& ctx);
+        static float ParseUnary(Context& ctx);
+        static float ParsePrimary(Context& ctx);
+        static bool Matches(Context& ctx, const char* name);
     };
 
 }
-#endif

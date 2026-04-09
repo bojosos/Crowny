@@ -63,6 +63,18 @@ namespace Crowny
         }
     }
 
+    bool ViewFrustum::ChunkIsInFrustum(const glm::vec3& position) const
+    {
+        for (auto& plane : m_Planes)
+        {
+            if (plane.DistanceToPoint(position) < 0)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /*
     bool ViewFrustum::ChunkIsInFrustum(glm::vec3 box) const
     {

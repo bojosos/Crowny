@@ -55,8 +55,13 @@ namespace Crowny
             ::MonoMethod* exceptionStackGetter = mono_property_get_get_method(exceptionStackProp);
             MonoString* exceptionStackTrace = (MonoString*)mono_runtime_invoke(exceptionStackGetter, exception, nullptr, nullptr);
 
-            const String exceptionString = mono_string_to_utf8(exceptionMsg);
-            const String nativeExceptionStackTrace = mono_string_to_utf8(exceptionStackTrace);
+            char* exceptionMsgRaw = mono_string_to_utf8(exceptionMsg);
+            const String exceptionString = exceptionMsgRaw;
+            mono_free(exceptionMsgRaw);
+
+            char* exceptionStackTraceRaw = mono_string_to_utf8(exceptionStackTrace);
+            const String nativeExceptionStackTrace = exceptionStackTraceRaw;
+            mono_free(exceptionStackTraceRaw);
 #ifndef CW_EDITOR // TODO: Fix this
             Vector<String> lines = StringUtils::SplitString(nativeExceptionStackTrace, "\n");
             lines.pop_back(); // Last line if the stack trace is the native-to-managed wrapper

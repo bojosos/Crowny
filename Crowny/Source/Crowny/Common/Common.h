@@ -38,7 +38,7 @@ class BinaryDataStreamOutputArchive;
 namespace Crowny
 {
 
-#define CW_SIMPLESERIALZABLE(...) template <typename Archive> friend void Serialize(Archive& archive, __VA_ARGS__& type);
+#define CW_SIMPLESERIALIZABLE(...) template <typename Archive> friend void Serialize(Archive& archive, __VA_ARGS__& type);
 
 #define CW_SERIALIZABLE(...)                                                                                                                         \
     friend void Save(BinaryDataStreamOutputArchive& ar, const __VA_ARGS__& type);                                                                    \

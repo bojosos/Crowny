@@ -49,7 +49,7 @@ namespace Crowny
                       UniformMember{ uniformBuffer.Members[i].Offset, uniformBuffer.Members[i].DataType, name };
 
                 m_UniformBlocks[name] =
-                  UniformBufferBlock::Create(uniformBuffer.BlockSize, BufferUsage::DYNAMIC_DRAW); // TODO: To dynamic or not dynamic?
+                  UniformBufferBlock::Create(uniformBuffer.BlockSize, BufferUsage::BU_DYNAMIC_DRAW); // TODO: To dynamic or not dynamic?
                 m_Uniforms->SetUniformBlockBuffer(name, m_UniformBlocks[name]);                   // TODO: Avoid the double lookup
             }
         }
@@ -63,7 +63,7 @@ namespace Crowny
 
     void Material::SetFloat(const String& name, float value)
     {
-        const auto iterFind = m_Bindings.find(name);
+        const auto& iterFind = m_Bindings.find(name);
         if (iterFind == m_Bindings.cend())
         {
             CW_ENGINE_WARN("Could not find uniform {}", name);
@@ -79,7 +79,7 @@ namespace Crowny
 
     void Material::SetFloat2(const String& name, const glm::vec2& value)
     {
-        const auto iterFind = m_Bindings.find(name);
+        const auto& iterFind = m_Bindings.find(name);
         if (iterFind == m_Bindings.cend())
         {
             CW_ENGINE_WARN("Could not find uniform {}", name);
@@ -95,7 +95,7 @@ namespace Crowny
 
     void Material::SetInt(const String& name, int value)
     {
-        const auto iterFind = m_Bindings.find(name);
+        const auto& iterFind = m_Bindings.find(name);
         if (iterFind == m_Bindings.cend())
         {
             CW_ENGINE_WARN("Could not find uniform {}", name);
@@ -111,7 +111,7 @@ namespace Crowny
 
     void Material::SetColor(const String& name, const glm::vec4& value)
     {
-        const auto iterFind = m_Bindings.find(name);
+        const auto& iterFind = m_Bindings.find(name);
         if (iterFind == m_Bindings.cend())
         {
             CW_ENGINE_WARN("Could not find uniform {}", name);
@@ -127,7 +127,7 @@ namespace Crowny
 
     void Material::SetVector3(const String& name, const glm::vec3& value)
     {
-        const auto iterFind = m_Bindings.find(name);
+        const auto& iterFind = m_Bindings.find(name);
         if (iterFind == m_Bindings.cend())
         {
             CW_ENGINE_WARN("Could not find uniform {}", name);
@@ -144,7 +144,7 @@ namespace Crowny
 
     void Material::SetMatrix(const String& name, const glm::mat4& value)
     {
-        const auto iterFind = m_Bindings.find(name);
+        const auto& iterFind = m_Bindings.find(name);
         if (iterFind == m_Bindings.cend())
         {
             CW_ENGINE_WARN("Could not find uniform {}", name);

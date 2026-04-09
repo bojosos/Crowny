@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Common/StdHeaders.h"
+#include "Crowny/Common/Flags.h"
 #include "Crowny/Scripting/Mono/Mono.h"
 #include <glm/glm.hpp>
 
@@ -183,6 +185,14 @@ namespace Crowny
         CULL_COUNTERCLOCKWISE
     };
 
+    enum class TextureDiskFormat
+    {
+        None,
+
+        ETC1S,  // Lower quality
+        UASTC,  // Higher quality
+    };
+
     enum class TextureFormat
     {
         NONE = 0,
@@ -202,13 +212,16 @@ namespace Crowny
         DEPTH24STENCIL8 = 12,
 
         BC1 = 13,
-        BC1a = 13,
-        BC3 = 15,
-        BC6H = 16,
-        BC7 = 17,
+        BC1a = 14,
+        BC2 = 15,
+        BC3 = 16,
+        BC4 = 17,
+        BC5 = 18,
+        BC6H = 19,
+        BC7 = 20,
+        BGRA8 = 21,
 
-
-        FormatCount = 18
+        FormatCount = 22
     };
 
     enum class TextureChannel
@@ -331,9 +344,9 @@ namespace Crowny
 
     enum BufferUsage // TODO: Make this flags or add prefix
     {
-        STATIC_DRAW = 1 << 0,
-        DYNAMIC_DRAW = 1 << 1,
-        LOADSTORE = STATIC_DRAW | 1 << 2
+        BU_STATIC_DRAW = 1 << 0,
+        BU_DYNAMIC_DRAW = 1 << 1,
+        BU_LOADSTORE = BU_STATIC_DRAW | 1 << 2
     };
 
     enum RenderSurfaceMaskBits

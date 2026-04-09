@@ -1,1 +1,0 @@
-find ./Source -type f -name *.cs -print0 | xargs -r0 mcs -debug+ -o- -target:library -out:CrownySharp.dll && mv CrownySharp.dll ../Crowny-Editor/Resources/Assemblies && mv CrownySharp.dll.mdb ../Crowny-Editor/Resources/Assemblies

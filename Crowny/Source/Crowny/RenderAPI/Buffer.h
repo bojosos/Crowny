@@ -1,5 +1,10 @@
 #pragma once
 
+#include "Crowny/Common/StdHeaders.h"
+#include "Crowny/Common/Common.h"
+#include "Crowny/Common/Log.h"
+#include "Crowny/Common/Assert.h"
+
 namespace Crowny
 {
     enum class ShaderDataType
@@ -210,7 +215,7 @@ namespace Crowny
 
             return 0;
         }
-        CW_SIMPLESERIALZABLE(BufferElement);
+        CW_SIMPLESERIALIZABLE(BufferElement);
     };
 
     class BufferLayout

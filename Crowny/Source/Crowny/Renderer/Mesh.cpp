@@ -317,7 +317,7 @@ namespace Crowny
     {
         const Ref<MeshData>& meshData = m_CPUMeshData ? m_CPUMeshData : m_InitialData;
         const bool isDynamic = m_Usage == MeshUsage::Dynamic;
-        const BufferUsage bufferUsage = isDynamic ? BufferUsage::DYNAMIC_DRAW : BufferUsage::STATIC_DRAW;
+        const BufferUsage bufferUsage = isDynamic ? BufferUsage::BU_DYNAMIC_DRAW : BufferUsage::BU_STATIC_DRAW;
 
         m_IndexBuffer = IndexBuffer::Create(m_NumIndices, m_IndexType, bufferUsage);
         m_VertexBuffer = VertexBuffer::Create(m_NumVertices * m_Layout.GetStride(), bufferUsage);

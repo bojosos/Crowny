@@ -19,5 +19,11 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("GetMouseButtonUp", (void*)&Input::IsMouseButtonUp);
         MetaData.ScriptClass->AddInternalCall("GetMouseScrollX", (void*)&Input::GetMouseScrollX);
         MetaData.ScriptClass->AddInternalCall("GetMouseScrollY", (void*)&Input::GetMouseScrollY);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetMousePosition", (void*)&Internal_GetMousePosition);
+    }
+
+    void ScriptInput::Internal_GetMousePosition(glm::vec2* out)
+    {
+        *out = Input::GetMousePosition();
     }
 } // namespace Crowny

@@ -93,7 +93,7 @@ namespace Crowny
             SerializeValueYAML(out, "AutoSize", tc.AutoSize);
             SerializeValueYAML(out, "Wrapping", tc.Wrapping);
             SerializeValueYAML(out, "OutlineColor", tc.OutlineColor);
-            SerializeValueYAML(out, "Thickess", tc.Thickess);
+            SerializeValueYAML(out, "Thickness", tc.Thickness);
             SerializeValueYAML(out, "CharacterSpacing", tc.CharacterSpacing);
             SerializeValueYAML(out, "WordSpacing", tc.WordSpacing);
             SerializeValueYAML(out, "LineSpacing", tc.LineSpacing);
@@ -143,7 +143,8 @@ namespace Crowny
             const auto& sprite = entity.GetComponent<SpriteRendererComponent>();
             BeginYAMLMap(out, "SpriteRendererComponent");
 
-            SerializeValueYAML(out, "Color", sprite.Color); // TODO: Save textures
+            SerializeValueYAML(out, "Color", sprite.Color);
+            SerializeValueYAML(out, "Texture", sprite.Texture.GetUUID());
 
             EndYAMLMap(out, "SpriteRendererComponent");
         }
@@ -271,11 +272,16 @@ namespace Crowny
             const YAML::Node sceneNode = data["Scene"];
             if (!sceneNode)
                 return;
+
+            m_Scene->m_Registry.clear();
+            m_Scene->m_EntityMap.clear();
+            delete m_Scene->m_RootEntity;
+            m_Scene->m_RootEntity = nullptr;
+
             UnorderedMap<Entity, YAML::Node> serializedComponents;
             const String sceneName = sceneNode.as<String>();
             m_Scene->m_Name = sceneName;
             m_Scene->m_Filepath = filepath;
-            // m_Scene->GetRootEntity().GetComponent<TagComponent>().Tag = sceneName;
 
             const YAML::Node& entities = data["Entities"];
             if (entities)
@@ -290,14 +296,14 @@ namespace Crowny
                         tag = tc["Tag"].as<String>();
 
                     Entity deserialized = m_Scene->CreateEntityWithUuid(id, tag);
-                    // m_Scene->m_RootEntity->AddChild(deserialized);
 
                     const YAML::Node& transform = entity["TransformComponent"];
                     if (transform)
                     {
-                        deserialized.SetPosition(transform["Position"].as<glm::vec3>(glm::vec3()));
-                        deserialized.SetRotation(transform["Rotation"].as<glm::quat>(glm::quat()));
-                        deserialized.SetScale(transform["Scale"].as<glm::vec3>(glm::vec3()));
+                        auto& tc = deserialized.GetTransform();
+                        tc.SetPosition(transform["Position"].as<glm::vec3>(glm::vec3()));
+                        tc.SetRotation(transform["Rotation"].as<glm::quat>(glm::quat()));
+                        tc.SetScale(transform["Scale"].as<glm::vec3>(glm::vec3()));
                     }
 
                     const YAML::Node& camera = entity["CameraComponent"];
@@ -336,11 +342,11 @@ namespace Crowny
                         tc.Font = LoadAssetHandle<Font>(text["Font"].as<UUID>(UUID::EMPTY));
                         tc.Color = text["Color"].as<glm::vec4>(glm::vec4(1.0f));
                         tc.Size = text["Size"].as<float>(0.0f);
-                        tc.AutoSize = text["Size"].as<bool>(false);
+                        tc.AutoSize = text["AutoSize"].as<bool>(false);
                         tc.Wrapping = text["Wrapping"].as<bool>(false);
                         tc.FontStyle = (TextFontStyleBits)text["FontStyle"].as<uint32_t>(0);
                         tc.OutlineColor = text["OutlineColor"].as<glm::vec4>(glm::vec4(0.0f));
-                        tc.Thickess = text["Thickess"].as<float>(0.8f);
+                        tc.Thickness = text["Thickness"].as<float>(0.8f);
                         tc.CharacterSpacing = text["CharacterSpacing"].as<float>(0.0f);
                         tc.WordSpacing = text["WordSpacing"].as<float>(0.0f);
                         tc.LineSpacing = text["LineSpacing"].as<float>(0.0f);
@@ -453,7 +459,8 @@ namespace Crowny
                     for (const auto& child : children)
                     {
                         Entity e = m_Scene->GetEntityFromUuid(child.as<UUID>());
-                        e.SetParent(entity);
+                        e.GetComponent<RelationshipComponent>().Parent = entity;
+                        rl.Children.push_back(e);
                     }
                 }
             }
@@ -463,21 +470,27 @@ namespace Crowny
             {
                 Entity entity = { e, m_Scene.get() };
                 if (!entity.GetParent())
+                {
                     root = entity;
+                    break;
+                }
             }
             if (root)
                 m_Scene->m_RootEntity = new Entity(root.GetHandle(), m_Scene.get());
-            else
-                m_Scene->CreateRootEntity();
+
+            if (m_Scene->m_RootEntity)
+                m_Scene->m_RootEntity->NotifyTransformChanged();
 
             const Ref<TimeSettings>& timeSettings = TimeSettingsSerializer::Deserialize(data);
-            Application::Get().SetTimeSettings(timeSettings);
+            if (Application::IsStartedUp())
+                Application::Get().SetTimeSettings(timeSettings);
             const Ref<Physics2DSettings>& physicsSettings = Physics2DSettingsSerializer::Deserialize(data);
             Physics2D::Get().SetPhysicsSettings(physicsSettings);
         }
         catch (const std::exception& ex)
         {
-            m_Scene->CreateRootEntity();
+            if (!m_Scene->m_RootEntity)
+                m_Scene->CreateRootEntity();
             CW_ENGINE_ERROR("Error deserializing scene \"{0}\". {1}.", filepath, std::string(ex.what()));
         }
     }

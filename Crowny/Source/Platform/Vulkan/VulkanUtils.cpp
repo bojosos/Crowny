@@ -438,6 +438,9 @@ namespace Crowny
 
     bool VulkanUtils::RangeOverlaps(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b)
     {
+        if (a.aspectMask != b.aspectMask)
+            return false;
+
         const int32_t aRight = a.baseArrayLayer + (int32_t)a.layerCount;
         const int32_t bRight = b.baseArrayLayer + (int32_t)b.layerCount;
 
@@ -453,34 +456,30 @@ namespace Crowny
     void VulkanUtils::CutHorizontal(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith, VkImageSubresourceRange* output,
                                     uint32_t& numAreas)
     {
+        uint32_t leftCut = std::max(toCut.baseArrayLayer, cutWith.baseArrayLayer);
+        uint32_t rightCut = std::min(toCut.baseArrayLayer + toCut.layerCount, cutWith.baseArrayLayer + cutWith.layerCount);
+
         numAreas = 0;
-        const int32_t leftCut = glm::clamp((int32_t)cutWith.baseArrayLayer - (int32_t)toCut.baseArrayLayer, 0, (int32_t)toCut.layerCount);
-        const int32_t rightCut =
-          glm::clamp((int32_t)(cutWith.baseArrayLayer + cutWith.layerCount) - (int32_t)toCut.baseArrayLayer, 0, (int32_t)toCut.layerCount);
-        if (leftCut > 0 && leftCut < (int32_t)toCut.layerCount)
+        if (leftCut > toCut.baseArrayLayer && leftCut < toCut.baseArrayLayer + toCut.layerCount)
         {
             output[numAreas] = toCut;
-            VkImageSubresourceRange& range = output[numAreas];
-            range.baseArrayLayer = toCut.baseArrayLayer;
-            range.layerCount = leftCut;
+            output[numAreas].layerCount = leftCut - toCut.baseArrayLayer;
             numAreas++;
         }
 
-        if (rightCut > 0 && rightCut < (int32_t)toCut.layerCount)
+        if (rightCut < toCut.baseArrayLayer + toCut.layerCount && rightCut > toCut.baseArrayLayer)
         {
             output[numAreas] = toCut;
-            VkImageSubresourceRange& range = output[numAreas];
-            range.baseArrayLayer = toCut.baseArrayLayer + rightCut;
-            range.layerCount = toCut.layerCount - rightCut;
+            output[numAreas].baseArrayLayer = rightCut;
+            output[numAreas].layerCount = toCut.baseArrayLayer + toCut.layerCount - rightCut;
             numAreas++;
         }
 
         if (rightCut > leftCut)
         {
             output[numAreas] = toCut;
-            VkImageSubresourceRange& range = output[numAreas];
-            range.baseArrayLayer = toCut.baseArrayLayer + leftCut;
-            range.layerCount = toCut.layerCount - (toCut.layerCount - rightCut) - leftCut;
+            output[numAreas].baseArrayLayer = leftCut;
+            output[numAreas].layerCount = rightCut - leftCut;
             numAreas++;
         }
 
@@ -491,37 +490,33 @@ namespace Crowny
         }
     }
 
-    void VulkanUtils::CutVertical(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith, VkImageSubresourceRange* output,
-                                  uint32_t& numAreas)
+    void VulkanUtils::CutVertical(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith,
+                                  VkImageSubresourceRange* output, uint32_t& numAreas)
     {
+        uint32_t topCut = std::max(toCut.baseMipLevel, cutWith.baseMipLevel);
+        uint32_t bottomCut = std::min(toCut.baseMipLevel + toCut.levelCount, cutWith.baseMipLevel + cutWith.levelCount);
+
         numAreas = 0;
-        const int32_t topCut = glm::clamp((int32_t)cutWith.baseMipLevel - (int32_t)toCut.baseMipLevel, 0, (int32_t)toCut.levelCount);
-        const int32_t bottomCut =
-          glm::clamp((int32_t)(cutWith.baseMipLevel + cutWith.levelCount) - (int32_t)toCut.baseMipLevel, 0, (int32_t)toCut.levelCount);
-        if (topCut > 0 && topCut < (int32_t)toCut.levelCount)
+        if (topCut > toCut.baseMipLevel && topCut < toCut.baseMipLevel + toCut.levelCount)
         {
             output[numAreas] = toCut;
-            VkImageSubresourceRange& range = output[numAreas];
-            range.baseMipLevel = toCut.baseMipLevel;
-            range.levelCount = topCut;
+            output[numAreas].levelCount = topCut - toCut.baseMipLevel;
             numAreas++;
         }
 
-        if (bottomCut > 0 && bottomCut < (int32_t)toCut.levelCount)
+        if (bottomCut < toCut.baseMipLevel + toCut.levelCount && bottomCut > toCut.baseMipLevel)
         {
             output[numAreas] = toCut;
-            VkImageSubresourceRange& range = output[numAreas];
-            range.baseMipLevel = toCut.baseMipLevel + bottomCut;
-            range.levelCount = toCut.levelCount - bottomCut;
+            output[numAreas].baseMipLevel = bottomCut;
+            output[numAreas].levelCount = toCut.baseMipLevel + toCut.levelCount - bottomCut;
             numAreas++;
         }
 
         if (bottomCut > topCut)
         {
             output[numAreas] = toCut;
-            VkImageSubresourceRange& range = output[numAreas];
-            range.baseMipLevel = toCut.baseMipLevel + topCut;
-            range.levelCount = toCut.levelCount - (toCut.levelCount - bottomCut) - topCut;
+            output[numAreas].baseMipLevel = topCut;
+            output[numAreas].levelCount = bottomCut - topCut;
             numAreas++;
         }
 
@@ -533,29 +528,34 @@ namespace Crowny
     }
 
     void VulkanUtils::CutRange(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith,
-                               std::array<VkImageSubresourceRange, 5>& output, uint32_t& numAreas)
+                               std::array<VkImageSubresourceRange, 9>& output, uint32_t& numAreas)
     {
+        uint32_t horizontalNumAreas = 0;
+        VkImageSubresourceRange horizontalAreas[3];
+        CutHorizontal(toCut, cutWith, horizontalAreas, horizontalNumAreas);
+
         numAreas = 0;
-        uint32_t numHorizontalCuts = 0;
-        std::array<VkImageSubresourceRange, 3> horzCuts;
-        CutHorizontal(toCut, cutWith, horzCuts.data(), numHorizontalCuts);
-        for (uint32_t i = 0; i < numHorizontalCuts; i++)
+        for (uint32_t i = 0; i < horizontalNumAreas; i++)
         {
-            VkImageSubresourceRange& range = horzCuts[i];
-            if (range.baseArrayLayer >= cutWith.baseArrayLayer &&
-                (range.baseArrayLayer + range.layerCount) <= (cutWith.baseArrayLayer + cutWith.layerCount))
+            VkImageSubresourceRange verticalAreas[3];
+            uint32_t verticalNumAreas = 0;
+            CutVertical(horizontalAreas[i], cutWith, verticalAreas, verticalNumAreas);
+
+            for (uint32_t j = 0; j < verticalNumAreas; j++)
             {
-                uint32_t numVertCuts = 0;
-                CutVertical(range, cutWith, output.data() + numAreas, numVertCuts);
-                numAreas += numVertCuts;
-            }
-            else
-            {
-                output[numAreas] = range;
-                numAreas++;
+                if (!RangeOverlaps(verticalAreas[j], cutWith))
+                {
+                    output[numAreas] = verticalAreas[j];
+                    numAreas++;
+                }
             }
         }
-        CW_ENGINE_ASSERT(numAreas <= 5);
+
+        if (numAreas == 0 && !RangeOverlaps(toCut, cutWith))
+        {
+            output[numAreas] = toCut;
+            numAreas++;
+        }
     }
 
     VkFormat VulkanUtils::GetDummyViewFormat(GpuBufferFormat format)

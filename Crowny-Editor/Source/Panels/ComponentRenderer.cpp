@@ -252,7 +252,7 @@ namespace Crowny
         UI::QuickTabsP("Style", { "Bold", "Italic", "Underline", "Strikethrough" }, textComponent.FontStyle);
         {
             UI::ScopedDisable scopedDisable(textComponent.AutoSize);
-            UI::Property("Size", textComponent.Size); // TODO: Set min 0
+            UI::Property("Size", textComponent.Size, 1.0f, 0.0f, 0.0f);
         }
         UI::Property("Auto Size", textComponent.AutoSize);
         UI::PropertyColor("Color", textComponent.Color);
@@ -260,7 +260,7 @@ namespace Crowny
         if (textComponent.Wrapping)
             UI::PropertyDropdown("Overflow", { "Overflow", "Ellipses", "Truncate" }, textComponent.Overflow);
         UI::PropertyColor("Outline", textComponent.OutlineColor);
-        UI::Property("Thickness", textComponent.Thickess); // TODO: Set min 0
+        UI::Property("Thickness", textComponent.Thickness, 0.05f, 0.0f, 0.0f);
         UI::Property("Use Kerning", textComponent.UseKerning);
         UI::Property("Character Spacing", textComponent.CharacterSpacing);
         UI::Property("Word Spacing", textComponent.WordSpacing);

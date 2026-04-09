@@ -24,6 +24,7 @@
 #undef Button8
 #undef Button9
 
+#include "Crowny/Common/Types.h"
 #include "Crowny/RenderAPI/Buffer.h"
 #include <vma/vk_mem_alloc.h>
 
@@ -97,8 +98,9 @@ namespace Crowny
         static VkFormat GetDummyViewFormat(GpuBufferFormat format);
         static VkFormat GetBufferFormat(GpuBufferFormat format);
 
-        static void CutRange(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b, std::array<VkImageSubresourceRange, 5>& output,
-                             uint32_t& numAreas);
+        static void CutRange(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith,
+                             std::array<VkImageSubresourceRange, 9>& output, uint32_t& numAreas);
+
         static void CutVertical(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith, VkImageSubresourceRange* output,
                                 uint32_t& numAreas);
         static void CutHorizontal(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith, VkImageSubresourceRange* output,

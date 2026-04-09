@@ -30,7 +30,7 @@ namespace Crowny
         String Version;
     };
 
-    static const MonoVersionData MONO_VERSION_DATA[1] = { { MONO_LIB_DIR + "mono/4.8", "v4.0.30319" } };
+    static const MonoVersionData MONO_VERSION_DATA[1] = { { MONO_LIB_DIR + "/mono/4.5", "v4.0.30319" } };
 
     void MonoLogCallback(const char* logDomain, const char* logLevel, const char* message, mono_bool fatal, void* userData)
     {
@@ -110,7 +110,7 @@ namespace Crowny
 
     static MonoProfiler profiler;
     */
-    MonoManager::MonoManager() : m_ScriptDomain(nullptr), m_RootDomain(nullptr), m_CorlibAssembly(nullptr)
+    MonoManager::MonoManager(const Path& libDir, const Path& etcDir, uint32_t debugPort) : m_ScriptDomain(nullptr), m_RootDomain(nullptr), m_CorlibAssembly(nullptr)
     {
         /*
         if (Application::Get().GetApplicationDesc().Script.EnableProfiling)
@@ -123,23 +123,26 @@ namespace Crowny
             mono_profiler_set_gc_handle_deleted_callback(profilerHandle, GCHandleDestroyed);
         }
         */
-        Path libDir = MONO_LIB_DIR;
-        Path etcDir = GetMonoEtcFolder();
-        Path assembliesDir = GetFrameworkAssembliesFolder();
-
-        // mono_set_dirs(libDir.c_str(), etcDir.c_str());
-        mono_set_assemblies_path("C:\\Program Files\\Mono\\lib");
-        // TODO: Fix these dirs
-        mono_set_dirs("C:\\Program Files\\Mono\\lib", "C:\\Program Files\\Mono\\etc");
+        mono_set_dirs(libDir.string().c_str(), etcDir.string().c_str());
 
         // #if CW_DEBUG
-        mono_debug_init(MONO_DEBUG_FORMAT_MONO);
+        if (debugPort != 0)
+            mono_debug_init(MONO_DEBUG_FORMAT_MONO);
         mono_trace_set_level_string("debug");
         mono_trace_set_print_handler(MonoPrintCallback);
-        // TODO: Add port settings
-        const char* options[] = { "--soft-breakpoints", "--debugger-agent=transport=dt_socket,address=127.0.0.1:17615,embedding=1,server=y,suspend=n",
-                                  "--debug-domain-unload", "--gc-debug=check-remset-consistency,verify-before-collections,xdomain-checks" };
-        mono_jit_parse_options(4, (char**)options);
+        
+        if (debugPort != 0)
+        {
+            String debuggerAgentOptions = "--debugger-agent=transport=dt_socket,address=127.0.0.1:" + std::to_string(debugPort) + ",embedding=1,server=y,suspend=n";
+            const char* options[] = { "--soft-breakpoints", debuggerAgentOptions.c_str(),
+                                      "--debug-domain-unload", "--gc-debug=check-remset-consistency,verify-before-collections,xdomain-checks" };
+            mono_jit_parse_options(4, (char**)options);
+        }
+        else
+        {
+            const char* options[] = { "--debug-domain-unload", "--gc-debug=check-remset-consistency,verify-before-collections,xdomain-checks" };
+            mono_jit_parse_options(2, (char**)options);
+        }
         mono_trace_set_level_string("warning"); // maybe do debug
         // #else
         // mono_trace_set_level_string("debug");
@@ -156,6 +159,7 @@ namespace Crowny
             CW_ENGINE_ERROR("Cannot initialize mono runtime");
             return;
         }
+
         mono_debug_domain_create(m_RootDomain);
         mono_thread_set_main(mono_thread_current());
         m_CorlibAssembly = new MonoAssembly("", "corlib");
@@ -181,6 +185,7 @@ namespace Crowny
         auto findIter = m_Assemblies.find(name);
         if (findIter != m_Assemblies.end())
             assembly = findIter->second;
+        else
         {
             assembly = new MonoAssembly(path, name);
             m_Assemblies[name] = assembly;

@@ -2,6 +2,14 @@
 
 #include "Crowny/Import/Importer.h"
 
+#include "Crowny/Import/AudioClipImporter.h"
+#include "Crowny/Import/FontImporter.h"
+#include "Crowny/Import/MeshImporter.h"
+#include "Crowny/Import/ScriptImporter.h"
+#include "Crowny/Import/ShaderImporter.h"
+#include "Crowny/Import/TextFileImporter.h"
+#include "Crowny/Import/TextureImporter.h"
+
 namespace Crowny
 {
 
@@ -72,6 +80,17 @@ namespace Crowny
     }
 
     void Importer::RegisterImporter(SpecificImporter* importer) { m_Importers.push_back(importer); }
+
+    void Importer::RegisterBuiltinImporters()
+    {
+        Importer::Get().RegisterImporter(new AudioClipImporter());
+        Importer::Get().RegisterImporter(new FontImporter());
+        Importer::Get().RegisterImporter(new ScriptImporter());
+        Importer::Get().RegisterImporter(new ShaderImporter());
+        Importer::Get().RegisterImporter(new TextFileImporter());
+        Importer::Get().RegisterImporter(new TextureImporter());
+        Importer::Get().RegisterImporter(new MeshImporter());
+    }
 
     SpecificImporter* Importer::PrepareForImport(const Path& filepath, Ref<const ImportOptions>& importOptions) const
     {

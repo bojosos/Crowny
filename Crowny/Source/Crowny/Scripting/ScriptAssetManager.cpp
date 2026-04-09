@@ -36,7 +36,7 @@ namespace Crowny
         const UUID& uuid = asset.GetUUID();
         ScriptAssetBase* output = GetScriptAsset(uuid);
         if (output == nullptr && create)
-            return CreateScriptAsset(asset, nullptr); // TODO: make nullptr default arg
+            return CreateScriptAsset(asset);
         return output;
     }
 

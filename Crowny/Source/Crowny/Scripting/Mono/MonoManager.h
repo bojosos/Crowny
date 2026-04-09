@@ -16,14 +16,14 @@ namespace Crowny
     class MonoManager : public Module<MonoManager>
     {
     public:
-        MonoManager();
+        MonoManager(const Path& libDir, const Path& etcDir, uint32_t debugPort = 17615);
         ~MonoManager();
 
         MonoAssembly& LoadAssembly(const Path& path, const String& name);
         void UnloadAll();
         MonoClass* FindClass(const String& ns, const String& typeName);
         MonoClass* FindClass(::MonoClass* rawClass);
-        MonoDomain* GetDomain() const { return m_ScriptDomain; }
+        MonoDomain* GetDomain() const { return m_ScriptDomain ? m_ScriptDomain : m_RootDomain; }
         MonoAssembly* GetAssembly(const String& name) const;
 
         void UnloadDomain();

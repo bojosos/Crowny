@@ -17,7 +17,7 @@ namespace Crowny
     public:
         void Update(const glm::mat4& projViewMatrix);
 
-        bool ChunkIsInFrustum(glm::vec3 position) const;
+        bool ChunkIsInFrustum(const glm::vec3& position) const;
 
     private:
         std::array<Plane, 6> m_Planes;

@@ -1,13 +1,20 @@
 project "Crowny-Sharp"
 	kind "SharedLib"
 	language "C#"
+	targetname "CrownySharp"
 
-	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
+	targetdir ("%{wks.location}/Crowny-Sharp")
 	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
 
 	files
 	{
 		"Source/**.cs"
+	}
+
+	links
+	{
+		"System",
+		"System.Core"
 	}
 
 	filter "system:windows"

@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Crowny/Common/StdHeaders.h"
+#include "Crowny/Common/Types.h"
+
 namespace Crowny
 {
 
@@ -34,6 +37,8 @@ namespace Crowny
         virtual bool Eof() const = 0;
 
         virtual Ref<DataStream> Clone(bool copyData = true) const = 0;
+
+        Vector<uint8_t> ReadAll();
 
     protected:
         static const uint32_t StreamTempSize;

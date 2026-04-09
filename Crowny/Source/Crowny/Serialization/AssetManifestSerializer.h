@@ -11,6 +11,7 @@ namespace Crowny
     {
     public:
         static void Serialize(const Ref<AssetManifest>& manifest, YAML::Emitter& out);
+        static Ref<AssetManifest> Deserialize(const YAML::Node& node);
     };
 
 } // namespace Crowny

@@ -18,6 +18,12 @@ namespace Crowny
         Init();
     }
 
+    AudioClip::~AudioClip()
+    {
+        if (m_BufferID != (uint32_t)-1)
+            alDeleteBuffers(1, &m_BufferID);
+    }
+
     void AudioClip::Init()
     {
         AudioDataInfo info;

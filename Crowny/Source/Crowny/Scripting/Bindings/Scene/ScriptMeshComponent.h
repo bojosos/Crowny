@@ -7,7 +7,7 @@ namespace Crowny
     class ScriptMeshComponent : public TScriptComponent<ScriptMeshComponent, MeshRendererComponent>
     {
     public:
-        SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "MeshComponent")
+        SCRIPT_WRAPPER(CROWNY_ASSEMBLY, CROWNY_NS, "MeshRenderer")
 
         ScriptMeshComponent(MonoObject* instance, Entity entity);
     };

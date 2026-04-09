@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/Types.h"
 #include "Crowny/Common/Uuid.h"
 
 namespace Crowny

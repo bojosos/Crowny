@@ -104,17 +104,45 @@ namespace Crowny
         delete scriptComponent;
     }
 
+    void ScriptSceneObjectManager::NotifyEntityDestroyed(Entity entity)
+    {
+        auto findIter = m_ScriptEntities.find((uint32_t)entity.GetHandle());
+        if (findIter != m_ScriptEntities.end())
+        {
+            delete findIter->second;
+            m_ScriptEntities.erase(findIter);
+        }
+    }
+
+    void ScriptSceneObjectManager::NotifyComponentDestroyed(const ComponentBase& component)
+    {
+        NotifyComponentDestroyed(component.InstanceId);
+    }
+
+    void ScriptSceneObjectManager::NotifyComponentDestroyed(uint64_t instanceId)
+    {
+        auto iterFind = m_ScriptComponents.find(instanceId);
+        if (iterFind != m_ScriptComponents.end())
+        {
+            delete iterFind->second;
+            m_ScriptComponents.erase(iterFind);
+        }
+    }
+
     void ScriptSceneObjectManager::Del()
     {
         CW_ENGINE_INFO("Entities: {0}, components: {1}", m_ScriptEntities.size(), m_ScriptComponents.size());
         for (auto [id, base] : m_ScriptComponents)
         {
-            base->ClearManagedInstance();
+            delete base;
         }
+        m_ScriptComponents.clear();
+
         for (auto [id, base] : m_ScriptEntities)
         {
-            base->ClearManagedInstance();
+            delete base;
         }
+        m_ScriptEntities.clear();
     }
 
 } // namespace Crowny

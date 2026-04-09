@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Ecs/Components.h"
+#include "Crowny/Scripting/Serialization/SerializableField.h"
 #include "Crowny/Serialization/ScriptSerializer.h"
 
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
@@ -72,7 +73,7 @@ namespace Crowny
         Ref<SerializableFieldData> Data;
     };
 
-    template <typename Archive> void Serialize(Archive& archive, SerializableFieldKey& key) { archive(key.m_FieldIdx, key.m_TypeId); }
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldKey& key) { archive(key.m_FieldId, key.m_ParentTypeId); }
 
     template <typename Archive> void Serialize(Archive& archive, FieldEntry& entry) { archive(entry.Key, entry.Data); }
 

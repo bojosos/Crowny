@@ -10,10 +10,16 @@ namespace Crowny
     class CrownyEditor : public Application
     {
     public:
-        CrownyEditor(const Crowny::ApplicationDesc& applicationDesc) : Application(applicationDesc) { PushLayer(new EditorLayer()); }
+        CrownyEditor(const Crowny::ApplicationDesc& applicationDesc) : Application(applicationDesc) {}
+
+        virtual void OnStartUp() override
+        {
+            Application::OnStartUp();
+            PushLayer(new EditorLayer());
+        }
     };
 
-    Application* CreateApplication()
+    void CreateApplication()
     {
         ApplicationDesc applicationDesc;
         applicationDesc.Name = "Crowny Editor";
@@ -23,6 +29,10 @@ namespace Crowny
         applicationDesc.Script.EnableDebugging = true;
         applicationDesc.Script.EnableProfiling = true;
 
-        return new CrownyEditor(applicationDesc);
+        applicationDesc.WorkingDirectory = "C:\\\\dev\\\\Crowny";
+        applicationDesc.EngineAssemblyPath = "Crowny-Sharp/CrownySharp.dll";
+        applicationDesc.GameAssemblyPath = "Crowny-Sandbox/GameAssembly.dll";
+
+        Application::StartUp<CrownyEditor>(applicationDesc);
     }
 } // namespace Crowny

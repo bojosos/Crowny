@@ -36,8 +36,9 @@ namespace Crowny
         virtual void SetRenderTarget(const Ref<RenderTarget>& target, uint32_t readOnlyFlags = 0, RenderSurfaceMask loadMask = RT_NONE,
                                      const Ref<CommandBuffer>& commandBuffer = nullptr) override {};
         virtual void SetDrawMode(DrawMode drawMode, const Ref<CommandBuffer>& commandBuffer = nullptr) override {};
+        virtual void SetUniforms(const Ref<UniformParams>& params, const Ref<CommandBuffer>& commandBuffer = nullptr) override {};
 
-        virtual void Shutdown() override {};
+        virtual void OnShutdown() override {};
 
     private:
         uint32_t m_NumDevices;

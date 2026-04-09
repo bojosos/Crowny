@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Common/Types.h"
+
 namespace Crowny
 {
     class UTF8

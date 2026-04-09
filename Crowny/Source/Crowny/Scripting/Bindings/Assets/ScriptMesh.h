@@ -14,7 +14,8 @@ namespace Crowny
         ScriptMesh(MonoObject* instance, const AssetHandle<Mesh>& mesh);
 
     private:
-        // static
+        static uint32_t Internal_GetVertexCount(ScriptMesh* thisPtr);
+        static uint32_t Internal_GetIndexCount(ScriptMesh* thisPtr);
     };
 
 } // namespace Crowny

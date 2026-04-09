@@ -8,7 +8,7 @@
 #include <processthreadsapi.h>
 #endif
 
-extern Crowny::Application* Crowny::CreateApplication();
+extern void Crowny::CreateApplication();
 
 int main(int argc, char** argv)
 {
@@ -19,9 +19,9 @@ int main(int argc, char** argv)
     {
         __try
         {
-            Crowny::Application* app = Crowny::CreateApplication();
-            app->Run();
-            delete app;
+            Crowny::CreateApplication();
+            Crowny::Application::Get().Run();
+            Crowny::Application::Shutdown();
         }
         __except (Crowny::CrashHandler::Get().ReportCrash(GetExceptionInformation()))
         {
@@ -30,14 +30,14 @@ int main(int argc, char** argv)
     }
     else
     {
-        Crowny::Application* app = Crowny::CreateApplication();
-        app->Run();
-        delete app;
+        Crowny::CreateApplication();
+        Crowny::Application::Get().Run();
+        Crowny::Application::Shutdown();
     }
 #else
-    Crowny::Application* app = Crowny::CreateApplication();
-    app->Run();
-    delete app;
+    Crowny::CreateApplication();
+    Crowny::Application::Get().Run();
+    Crowny::Application::Shutdown();
 #endif
 
     Crowny::CrashHandler::Shutdown();

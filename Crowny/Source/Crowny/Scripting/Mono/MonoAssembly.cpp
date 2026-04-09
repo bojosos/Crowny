@@ -85,17 +85,17 @@ namespace Crowny
             CW_ENGINE_ERROR("Could not open assembly image.");
 
         // #ifdef CW_DEBUG
-        Path mdbPath = m_Path.replace_extension("pdb");
-        if (fs::exists(mdbPath))
+        Path pdbPath = Path(m_Path).replace_extension("pdb");
+        if (fs::exists(pdbPath))
         {
-            Ref<DataStream> mdbStream = FileSystem::OpenFile(mdbPath);
-            if (mdbStream != nullptr)
+            Ref<DataStream> pdbStream = FileSystem::OpenFile(pdbPath);
+            if (pdbStream != nullptr)
             {
-                uint32_t mdbSize = (uint32_t)mdbStream->Size();
-                m_DebugData = new uint8_t[mdbSize];
-                mdbStream->Read(m_DebugData, mdbSize);
-                mono_debug_open_image_from_memory(image, m_DebugData, mdbSize);
-                CW_ENGINE_INFO("Loaded {0} mdb", mdbPath);
+                uint32_t pdbSize = (uint32_t)pdbStream->Size();
+                m_DebugData = new uint8_t[pdbSize];
+                pdbStream->Read(m_DebugData, pdbSize);
+                mono_debug_open_image_from_memory(image, m_DebugData, pdbSize);
+                CW_ENGINE_INFO("Loaded debug symbols: {0}", pdbPath);
             }
         }
         // #endif
@@ -176,6 +176,7 @@ namespace Crowny
             return nullptr;
         MonoClass* result = new MonoClass(monoClass);
         m_Classes[id] = result;
+        m_ClassesByRaw[monoClass] = result;
         return result;
     }
 
@@ -220,9 +221,9 @@ namespace Crowny
         {
             ::MonoClass* cclass = mono_class_get(m_Image, (i + 1) | MONO_TOKEN_TYPE_DEF);
 
-            MonoClass* monoClass = new MonoClass(cclass);
             if (cclass)
             {
+                MonoClass* monoClass = GetClass(cclass);
                 if (monoClass->HasAttribute(compilerGeneratedAttrib))
                     continue;
 
@@ -240,7 +241,7 @@ namespace Crowny
                             break;
                         if (cclass)
                         {
-                            MonoClass* nestedClass = new MonoClass(cclass); // name might be wrong? not the nested one
+                            MonoClass* nestedClass = GetClass(cclass);
                             if (nestedClass->HasAttribute(compilerGeneratedAttrib))
                                 continue;
                             m_ClassList.push_back(nestedClass);

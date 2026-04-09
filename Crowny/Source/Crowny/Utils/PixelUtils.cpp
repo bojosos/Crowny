@@ -19,11 +19,11 @@ namespace Crowny
         uint8_t Rshift, Gshift, Bshift, Ashift;
     };
 
-    PixelFormatDesc pixelFormats_[13] = {
+    PixelFormatDesc g_PixelFormats[22] = {
         { "None", 0, 0, PCT_BYTE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
         { "R8", 1, PFF_INTEGER | PFF_NORMALIZED, PCT_BYTE, 1, 8, 0, 0, 0, 0x000000FF, 0, 0, 0, 0, 0, 0, 0 },
         { "RG8", 2, PFF_INTEGER | PFF_NORMALIZED, PCT_BYTE, 2, 8, 8, 0, 0, 0x000000FF, 0x0000FF00, 0, 0, 0, 8, 0, 0 },
-        { "RGB8", 4, PFF_INTEGER | PFF_NORMALIZED, PCT_BYTE, 3, 8, 8, 8, 0, 0x000000FF, 0x0000FF00, 0x00FF0000, 0, 0, 8, 16, 0 },
+        { "RGB8", 3, PFF_INTEGER | PFF_NORMALIZED, PCT_BYTE, 3, 8, 8, 8, 0, 0x000000FF, 0x0000FF00, 0x00FF0000, 0, 0, 8, 16, 0 },
         { "RGBA8", 4, PFF_INTEGER | PFF_NORMALIZED | PFF_HASALPHA, PCT_BYTE, 4, 8, 8, 8, 8, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000, 0, 8, 16,
           24 },
         { "RGBA16F", 8, PFF_FLOAT | PFF_HASALPHA, PCT_FLOAT16, 4, 16, 16, 16, 16, 0x0000FFFF, 0xFFFF0000, 0x0000FFFF, 0xFFFF0000, 0, 16, 0, 16 },
@@ -33,23 +33,91 @@ namespace Crowny
         { "RG32F", 8, PFF_FLOAT, PCT_FLOAT32, 2, 32, 32, 0, 0, 0xFFFFFFFF, 0xFFFFFFFF, 0, 0, 0, 0, 0, 0 },
         { "R32I", 4, PFF_INTEGER, PCT_INT, 1, 32, 0, 0, 0, 0xFFFFFFFF, 0, 0, 0, 0, 0, 0, 0 },
         { "D32", 4, PFF_DEPTH | PFF_FLOAT, PCT_FLOAT32, 1, 32, 0, 0, 0, 0xFFFFFFFF, 0, 0, 0, 0, 0, 0, 0 },
-        { "D24S8", 4, PFF_INTEGER | PFF_DEPTH | PFF_NORMALIZED, PCT_INT, 2, 24, 8, 0, 0, 0x00FFFFFF, 0x0FF0000, 0, 0, 0, 24, 0, 0 }
+        { "D24S8", 4, PFF_INTEGER | PFF_DEPTH | PFF_NORMALIZED, PCT_INT, 2, 24, 8, 0, 0, 0x00FFFFFF, 0x0FF0000, 0, 0, 0, 24, 0, 0 },
+        { "BC1", 0, PFF_COMPRESSED | PFF_HASALPHA, PCT_BYTE, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+        { "BC1a", 0, PFF_COMPRESSED | PFF_HASALPHA, PCT_BYTE, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+        { "BC2", 0, PFF_COMPRESSED | PFF_HASALPHA, PCT_BYTE, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+        { "BC3", 0, PFF_COMPRESSED | PFF_HASALPHA, PCT_BYTE, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+        { "BC4", 0, PFF_COMPRESSED, PCT_BYTE, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+        { "BC5", 0, PFF_COMPRESSED, PCT_BYTE, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+        { "BC6H", 0, PFF_COMPRESSED, PCT_FLOAT16, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+        { "BC7", 0, PFF_COMPRESSED | PFF_HASALPHA, PCT_BYTE, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+        { "BGRA8", 4, PFF_INTEGER | PFF_HASALPHA | PFF_NORMALIZED, PCT_BYTE, 4, 8, 8, 8, 8, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000, 16, 8, 0, 24 },
     };
+    static_assert(std::size(g_PixelFormats) == (int)TextureFormat::FormatCount);
 
     static inline const PixelFormatDesc& GetFormatDesc(const TextureFormat fmt)
     {
-        const int ord = (int)fmt;
-        CW_ENGINE_ASSERT(ord >= 0 && ord < 13);
-        return pixelFormats_[ord];
+        const int idx = (int)fmt;
+        CW_ENGINE_ASSERT(idx >= 0 && idx < (int)TextureFormat::FormatCount);
+        return g_PixelFormats[idx];
     }
 
-    glm::ivec2 PixelUtils::GetBlockDimensions(TextureFormat format) { return glm::ivec2(1, 1); }
+    uint32_t PixelUtils::GetFormatFlags(TextureFormat format)
+    {
+        const PixelFormatDesc& desc = GetFormatDesc(format);
+        return desc.Flags;
+    }
 
-    uint32_t PixelUtils::GetBlockSize(TextureFormat format) { return GetNumBytes(format); }
+    glm::ivec2 PixelUtils::GetBlockDimensions(TextureFormat format)
+    {
+        switch (format) {
+        case TextureFormat::BC1:
+        case TextureFormat::BC1a:
+        case TextureFormat::BC2:
+        case TextureFormat::BC3:
+        case TextureFormat::BC4:
+        case TextureFormat::BC5:
+        case TextureFormat::BC6H:
+        case TextureFormat::BC7:
+            return glm::ivec2(4, 4);
+        default:
+            return glm::ivec2(1, 1);
+        }
+    }
+
+    uint32_t PixelUtils::GetBlockSize(TextureFormat format)
+    {
+        switch (format)
+        {
+        case TextureFormat::BC1:
+        case TextureFormat::BC1a:
+        case TextureFormat::BC4:
+            return 8;
+        case TextureFormat::BC2:
+        case TextureFormat::BC3:
+        case TextureFormat::BC5:
+        case TextureFormat::BC6H:
+        case TextureFormat::BC7:
+            return 16;
+        default:
+            return GetNumBytes(format);
+        }
+    }
 
     void PixelUtils::GetPitch(uint32_t width, uint32_t height, uint32_t depth, TextureFormat format, uint32_t& rowPitch, uint32_t& depthPitch)
     {
-        uint32_t blockSize = GetBlockSize(format);
+        if (IsCompressedFormat(format))
+        {
+            switch (format)
+            {
+            // BC formats work by dividing the image into 4x4 blocks
+            case TextureFormat::BC1:
+            case TextureFormat::BC1a:
+            case TextureFormat::BC4:
+            case TextureFormat::BC2:
+            case TextureFormat::BC3:
+            case TextureFormat::BC5:
+            case TextureFormat::BC6H:
+            case TextureFormat::BC7:
+                width = Math::DivideAndRoundUp(width, 4U);
+                height = Math::DivideAndRoundUp(height, 4U);
+                break;
+            default:
+                break;
+            }
+        }
+        const uint32_t blockSize = GetBlockSize(format);
         rowPitch = width * blockSize;
         depthPitch = width * height * blockSize;
     }
@@ -72,6 +140,32 @@ namespace Crowny
         }
     }
 
+    uint32_t PixelUtils::GetMemSize(uint32_t width, uint32_t height, uint32_t depth, TextureFormat format)
+    {
+        if (IsCompressedFormat(format))
+        {
+            switch (format)
+            {
+            // BC formats work by dividing the image into 4x4 blocks
+            case TextureFormat::BC1:
+            case TextureFormat::BC1a:
+            case TextureFormat::BC4:
+            case TextureFormat::BC2:
+            case TextureFormat::BC3:
+            case TextureFormat::BC5:
+            case TextureFormat::BC6H:
+            case TextureFormat::BC7:
+                width = Math::DivideAndRoundUp(width, 4U);
+                height = Math::DivideAndRoundUp(height, 4U);
+                break;
+            default:
+                break;
+            }
+        }
+
+        return width * height * depth * GetBlockSize(format);
+    }
+
     void PixelUtils::ConvertPixels(const PixelData& src, PixelData& dst)
     {
         if (src.GetWidth() != dst.GetWidth() || src.GetHeight() != dst.GetHeight() || src.GetDepth() != dst.GetDepth())
@@ -82,16 +176,54 @@ namespace Crowny
 
         if (src.GetFormat() == dst.GetFormat())
         {
-            std::memcpy(dst.GetData(), src.GetData(), src.GetSize());
+            if (src.IsNice() && dst.IsNice())
+            {
+                std::memcpy(dst.GetData(), src.GetData(), src.GetSize());
+                return;
+            }
+
+            TextureFormat srcFormat = src.GetFormat();
+            const uint32_t pixelSize = GetNumBytes(srcFormat);
+            const glm::ivec2 dims = GetBlockDimensions(srcFormat);
+            uint8_t* srcPtr = static_cast<uint8_t*>(src.GetData());
+            uint8_t* dstPtr = static_cast<uint8_t*>(dst.GetData());
+            uint32_t srcRowSkip = src.GetRowSkip();
+            uint32_t srcSliceSkip = src.GetSliceSkip();
+            uint32_t dstRowSkip = dst.GetRowSkip();
+            uint32_t dstSliceSkip = dst.GetSliceSkip();
+            const UINT32 rowSize = src.GetWidth() * pixelSize;
+            for (UINT32 z = 0; z < src.GetDepth(); z++)
+            {
+                for (UINT32 y = 0; y < src.GetHeight(); y += dims.y)
+                {
+                    memcpy(dstPtr, srcPtr, rowSize);
+
+                    srcPtr += srcRowSkip;
+                    dstPtr += dstRowSkip;
+                }
+
+                srcPtr += srcSliceSkip;
+                dstPtr += dstSliceSkip;
+            }
             return;
         }
 
-        // TODO: Check compressed formats
+        if (IsCompressedFormat(src.GetFormat()) && src.GetFormat() != dst.GetFormat()) {
+            CW_ENGINE_ASSERT(false, "Cannot convert from compressed format");
+            return;
+        }
+
+        if (IsCompressedFormat(dst.GetFormat()) && src.GetFormat() != dst.GetFormat())
+        {
+            // TODO: Compress
+            CW_ENGINE_ASSERT(false, "Cannot convert to compressed format");
+            return;
+        }
 
         uint32_t srcPixelSize = GetNumBytes(src.GetFormat());
         uint32_t dstPixelSize = GetNumBytes(dst.GetFormat());
-        uint8_t* srcptr = static_cast<uint8_t*>(src.GetData());
-        uint8_t* dstptr = static_cast<uint8_t*>(dst.GetData());
+        uint8_t* srcPtr = static_cast<uint8_t*>(src.GetData());
+        uint8_t* dstPtr = static_cast<uint8_t*>(dst.GetData());
 
         uint32_t srcRowSkip = src.GetRowSkip();
         uint32_t srcSliceSkip = src.GetSliceSkip();
@@ -99,29 +231,28 @@ namespace Crowny
         uint32_t dstSliceSkip = dst.GetSliceSkip();
 
         float r, g, b, a;
-
         for (uint32_t z = 0; z < src.GetDepth(); z++)
         {
             for (uint32_t y = 0; y < src.GetHeight(); y++)
             {
                 for (uint32_t x = 0; x < src.GetWidth(); x++)
                 {
-                    UnpackPixel(&r, &g, &b, &a, src.GetFormat(), srcptr);
-                    PackPixel(r, g, b, a, dst.GetFormat(), dstptr);
-                    srcptr += srcPixelSize;
-                    dstptr += dstPixelSize;
-                    CW_ENGINE_ASSERT(srcptr <= src.GetData() + src.GetSize());
-                    CW_ENGINE_ASSERT(dstptr <= dst.GetData() + dst.GetSize());
+                    UnpackPixel(&r, &g, &b, &a, src.GetFormat(), srcPtr);
+                    PackPixel(r, g, b, a, dst.GetFormat(), dstPtr);
+                    srcPtr += srcPixelSize;
+                    dstPtr += dstPixelSize;
+                    CW_ENGINE_ASSERT(srcPtr <= (uint8_t*)src.GetData() + src.GetSize());
+                    CW_ENGINE_ASSERT(dstPtr <= (uint8_t*)dst.GetData() + dst.GetSize());
                 }
-                srcptr += srcRowSkip;
-                dstptr += dstRowSkip;
-                CW_ENGINE_ASSERT(srcptr <= src.GetData() + src.GetSize());
-                CW_ENGINE_ASSERT(dstptr <= dst.GetData() + dst.GetSize());
+                srcPtr += srcRowSkip;
+                dstPtr += dstRowSkip;
+                CW_ENGINE_ASSERT(srcPtr <= (uint8_t*)src.GetData() + src.GetSize());
+                CW_ENGINE_ASSERT(dstPtr <= (uint8_t*)dst.GetData() + dst.GetSize());
             }
-            srcptr += srcSliceSkip;
-            dstptr += dstSliceSkip;
-            CW_ENGINE_ASSERT(srcptr <= src.GetData() + src.GetSize());
-            CW_ENGINE_ASSERT(dstptr <= dst.GetData() + dst.GetSize());
+            srcPtr += srcSliceSkip;
+            dstPtr += dstSliceSkip;
+            CW_ENGINE_ASSERT(srcPtr <= (uint8_t*)src.GetData() + src.GetSize());
+            CW_ENGINE_ASSERT(dstPtr <= (uint8_t*)dst.GetData() + dst.GetSize());
         }
     }
 
@@ -244,6 +375,7 @@ namespace Crowny
         case TextureFormat::RGB8:
             return 3;
         case TextureFormat::RGBA8:
+        case TextureFormat::BGRA8:
             return 4;
         case TextureFormat::R32I:
             return 4;
@@ -313,6 +445,7 @@ namespace Crowny
             delete[] m_Buffer;
         m_Buffer = nullptr;
         m_Buffer = new uint8_t[GetSize()];
+        std::memset(m_Buffer, 0, GetSize());
         m_OwnsData = true;
     }
 

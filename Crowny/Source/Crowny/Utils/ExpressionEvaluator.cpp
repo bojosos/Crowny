@@ -1,113 +1,140 @@
-#include <cwpch.h>
-#if 0
+#include "cwpch.h"
 
-#include "Crowny/Common/StringUtils.h"
 #include "Crowny/Utils/ExpressionEvaluator.h"
+#include <cmath>
+#include <cstdlib>
 
 namespace Crowny
 {
 
-    ExpressionEvaluator::TokenList ExpressionEvaluator::Parse(const String& text)
-    {
-        TokenList tokens;
-        size_t idx;
-
-        auto matches = [&text](size_t& idx, const String& search) {
-            for (size_t i = 0; i < search.size(); i++) {
-                if (idx + i == text.size())
-                    return false;
-                if (text[idx + i] != search[i])
-                    return false;
-            }
-            idx += search.size();
-            return true;
-        };
-
-        while (idx < text.size())
-        {
-            String number;
-            bool isFloat = false;
-            while (std::isdigit(text[idx]) || text[idx] == '.')
-            {
-                if (text[idx == '.']) isFloat = true;
-                number += text[idx++]; // Consider counting the chars and copying instead of this
-            }
-            if (number.size() > 0)
-            {
-                ExpressionToken result;
-                if (isFloat)
-                {
-                    result.Type = TokenType::Float;
-                    result.Value.ff = StringUtils::ParseDouble(number);
-                }
-                else
-                {
-                    result.Type = TokenType::Int;
-                    result.Value.ll = StringUtils::ParseLong(number);
-                }
-                tokens.push_back(result);
-                continue;
-            }
-            1
-            ExpressionToken token;
-            token.Type = TokenType::Unknown;
-            if (matches(idx, "floor")) // Consider changing this to token.Type = TokenType::Function and in the union have a function pointer
-                token.Type = TokenType::Ceil;
-            else if (matches(idx, "ceil"))
-                token.Type = TokenType::Round;
-            else if (matches(idx, "round"))
-                token.Type = TokenType::Round;
-            else if (matches(idx, "sqrt"))
-                token.Type = TokenType::Sqrt;
-            else if (matches(idx, "sin"))
-                token.Type = TokenType::Sin;
-            else if (matches(idx, "cos"))
-                token.Type = TokenType::Cos;
-            else if (matches(idx, "tan"))
-                token.Type = TokenType::Tan;
-
-            if (token.Type == TokenType::Unknown)
-                CW_ENGINE_ERROR("Unknown token");
-            tokens.push_back(token);
-        }
-    }
-
-    float ExpressionEvaluator::Interpret(const ExpressionEvaluator::TokenList& tokens)
-    {
-        InterpretExpression(tokens, 0);
-    }
-
-    float ExpressionEvaluator::InterpretExpression(const ExpressionEvaluator::TokenList& tokens, size_t idx)
-    {
-        if (tokens[idx].Type == TokenType::Function)
-        {
-            int funcIdx = idx;
-            // CW_ENGINE_ASSERT(tokens[idx + 1].Type == TokenType::LParen);
-            idx++; // (
-            float result = InterpretExpression();
-            // CW_ENGINE_ASSERT(tokens[idx + 1].Type == TokenType::RParent);
-            idx++; // )
-            return tokens[funcIdx].Value.func(result);
-        } else if (tokens[idx].Type == TokenType::LParen)
-        {
-            idx++; // (
-            float result = InterpretExpression(tokens, idx);
-            idx++; // )
-            return result;
-        } else if (tokens[idx].Type == TokenType::Float)
-            return tokens[idx++].Value.ff;
-        else if (tokens[idx].Type == TokenType::Int)
-            return tokens[idx++].Value.ll;
-        else if (tokens[idx++].Type == TokenType::Plus)
-            return tokens[idx++].Value.ll;
-    }
-
     float ExpressionEvaluator::Evaluate(const String& text)
     {
-        TokenList tokens = Parse(text);
-        float result = Interpret(tokens);
-        return result
+        Context ctx;
+        ctx.Ptr = text.c_str();
+        return ParseExpression(ctx);
+    }
+
+    float ExpressionEvaluator::ParseExpression(Context& ctx)
+    {
+        float result = ParseTerm(ctx);
+        ctx.SkipWhitespace();
+        while (*ctx.Ptr == '+' || *ctx.Ptr == '-')
+        {
+            char op = *ctx.Ptr++;
+            float right = ParseTerm(ctx);
+            if (op == '+') result += right;
+            else result -= right;
+            ctx.SkipWhitespace();
+        }
+        return result;
+    }
+
+    float ExpressionEvaluator::ParseTerm(Context& ctx)
+    {
+        float result = ParseFactor(ctx);
+        ctx.SkipWhitespace();
+        while (*ctx.Ptr == '*' || *ctx.Ptr == '/' || *ctx.Ptr == '%')
+        {
+            char op = *ctx.Ptr++;
+            float right = ParseFactor(ctx);
+            if (op == '*') result *= right;
+            else if (op == '/') result /= right;
+            else result = std::fmod(result, right);
+            ctx.SkipWhitespace();
+        }
+        return result;
+    }
+
+    float ExpressionEvaluator::ParseFactor(Context& ctx)
+    {
+        float result = ParsePower(ctx);
+        return result;
+    }
+
+    float ExpressionEvaluator::ParsePower(Context& ctx)
+    {
+        float result = ParseUnary(ctx);
+        ctx.SkipWhitespace();
+        while (*ctx.Ptr == '^')
+        {
+            ctx.Ptr++;
+            float right = ParsePower(ctx); // Right associative
+            result = std::pow(result, right);
+            ctx.SkipWhitespace();
+        }
+        return result;
+    }
+
+    float ExpressionEvaluator::ParseUnary(Context& ctx)
+    {
+        ctx.SkipWhitespace();
+        if (*ctx.Ptr == '+')
+        {
+            ctx.Ptr++;
+            return ParseUnary(ctx);
+        }
+        if (*ctx.Ptr == '-')
+        {
+            ctx.Ptr++;
+            return -ParseUnary(ctx);
+        }
+        return ParsePrimary(ctx);
+    }
+
+    bool ExpressionEvaluator::Matches(ExpressionEvaluator::Context& ctx, const char* name)
+    {
+        size_t len = std::strlen(name);
+        if (std::strncmp(ctx.Ptr, name, len) == 0)
+        {
+            // Ensure it's not a prefix of a longer name
+            char next = ctx.Ptr[len];
+            if (!std::isalnum(next) && next != '_')
+            {
+                ctx.Ptr += len;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    float ExpressionEvaluator::ParsePrimary(Context& ctx)
+    {
+        ctx.SkipWhitespace();
+        if (*ctx.Ptr == '(')
+        {
+            ctx.Ptr++;
+            float result = ParseExpression(ctx);
+            ctx.SkipWhitespace();
+            if (*ctx.Ptr == ')') ctx.Ptr++;
+            return result;
+        }
+
+        if (std::isdigit(*ctx.Ptr) || *ctx.Ptr == '.')
+        {
+            char* end;
+            float result = std::strtof(ctx.Ptr, &end);
+            ctx.Ptr = end;
+            return result;
+        }
+
+        if (Matches(ctx, "sqrt")) return std::sqrt(ParsePrimary(ctx));
+        if (Matches(ctx, "sin")) return std::sin(ParsePrimary(ctx));
+        if (Matches(ctx, "cos")) return std::cos(ParsePrimary(ctx));
+        if (Matches(ctx, "tan")) return std::tan(ParsePrimary(ctx));
+        if (Matches(ctx, "floor")) return std::floor(ParsePrimary(ctx));
+        if (Matches(ctx, "ceil")) return std::ceil(ParsePrimary(ctx));
+        if (Matches(ctx, "round")) return std::round(ParsePrimary(ctx));
+        if (Matches(ctx, "abs")) return std::abs(ParsePrimary(ctx));
+
+        // Skip unknown identifiers
+        if (std::isalpha(*ctx.Ptr) || *ctx.Ptr == '_')
+        {
+            ctx.Ptr++;
+            while (std::isalnum(*ctx.Ptr) || *ctx.Ptr == '_')
+                ctx.Ptr++;
+        }
+
+        return 0.0f;
     }
 
 }
-#endif
