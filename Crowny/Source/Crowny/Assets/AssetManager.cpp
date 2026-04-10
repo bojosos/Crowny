@@ -9,6 +9,7 @@
 #include "Crowny/Physics/PhysicsMaterial.h"
 #include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/RenderAPI/Texture.h"
+#include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/MSDFdata.h"
 #include "Crowny/Renderer/Mesh.h"
 
@@ -334,6 +335,49 @@ namespace Crowny
         archive(shader.m_Techniques);
     }
 
+    void Save(BinaryDataStreamOutputArchive& archive, const Material& material)
+    {
+        archive(cereal::base_class<Asset>(&material));
+        // Shader reference
+        UUID shaderUuid = material.m_Shader ? material.m_Shader.GetUUID() : UUID::EMPTY;
+        archive(shaderUuid);
+        // Uniform block data
+        uint32_t blockCount = (uint32_t)material.m_UniformBlocks.size();
+        archive(blockCount);
+        for (const auto& [name, block] : material.m_UniformBlocks)
+        {
+            archive(name, block->m_Size);
+            archive(cereal::binary_data(block->m_CachedData, block->m_Size));
+        }
+    }
+
+    void Load(BinaryDataStreamInputArchive& archive, Material& material)
+    {
+        archive(cereal::base_class<Asset>(&material));
+        UUID shaderUuid;
+        archive(shaderUuid);
+        if (!shaderUuid.Empty())
+        {
+            material.m_Shader = AssetManager::Get().LoadFromUUID<Shader>(shaderUuid);
+            if (material.m_Shader)
+                material.ReloadParams();
+        }
+        // Restore uniform block data
+        uint32_t blockCount;
+        archive(blockCount);
+        for (uint32_t i = 0; i < blockCount; i++)
+        {
+            String name;
+            uint32_t size;
+            archive(name, size);
+            Vector<uint8_t> data(size);
+            archive(cereal::binary_data(data.data(), size));
+            auto it = material.m_UniformBlocks.find(name);
+            if (it != material.m_UniformBlocks.end() && it->second->m_Size == size)
+                it->second->Write(0, data.data(), size);
+        }
+    }
+
     AssetHandle<Asset> AssetManager::Load(const Path& filepath, bool keepInternalRef, bool keepSourceData)
     {
         if (!fs::exists(filepath))
@@ -494,6 +538,7 @@ CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Texture, "Texture")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::VulkanTexture, "VulkanTexture")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::PhysicsMaterial2D, "PhysicsMaterial2D")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Mesh, "Mesh")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::Material, "Material")
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::AudioClip)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Shader)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Font)
@@ -501,4 +546,5 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Texture)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::ScriptCode)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::PhysicsMaterial2D)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Mesh)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Material)
 CEREAL_REGISTER_DYNAMIC_INIT(AssetManager)

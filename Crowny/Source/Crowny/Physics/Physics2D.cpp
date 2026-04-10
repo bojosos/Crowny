@@ -42,6 +42,17 @@ namespace Crowny
 
     ContactListener::ContactListener(Scene* scene) : m_Scene(scene) {}
 
+    static void BuildCollision2D(b2Contact* contact, Entity e1, Entity e2, Collision2D& collision)
+    {
+        b2WorldManifold manifold;
+        contact->GetWorldManifold(&manifold);
+        int32_t pointCount = contact->GetManifold()->pointCount;
+        for (int32_t i = 0; i < pointCount; i++)
+            collision.Points.push_back(glm::vec2(manifold.points[i].x, manifold.points[i].y));
+        collision.Colliders.push_back(e1);
+        collision.Colliders.push_back(e2);
+    }
+
     void ContactListener::BeginContact(b2Contact* contact)
     {
         Entity e1 = Entity((entt::entity)contact->GetFixtureA()->GetBody()->GetUserData().pointer, m_Scene);
@@ -54,13 +65,8 @@ namespace Crowny
                 bool sendTriggerCallback = contact->GetFixtureA()->IsSensor();
                 if (!sendTriggerCallback)
                 {
-                    b2WorldManifold manifold;
-                    contact->GetWorldManifold(&manifold);
                     Collision2D collision;
-                    collision.Points.push_back(glm::vec2(manifold.points[0].x, manifold.points[0].y));
-                    collision.Points.push_back(glm::vec2(manifold.points[1].x, manifold.points[1].y));
-                    collision.Colliders.push_back(e1);
-                    collision.Colliders.push_back(e2);
+                    BuildCollision2D(contact, e1, e2, collision);
 
                     for (auto& script : monoScript.Scripts)
                         script.OnCollisionEnter2D(collision);
@@ -87,13 +93,8 @@ namespace Crowny
                 auto& monoScript = e1.GetComponent<MonoScriptComponent>();
                 if (!sendTriggerCallback)
                 {
-                    b2WorldManifold manifold;
-                    contact->GetWorldManifold(&manifold);
                     Collision2D collision;
-                    collision.Points.push_back(glm::vec2(manifold.points[0].x, manifold.points[0].y));
-                    collision.Points.push_back(glm::vec2(manifold.points[1].x, manifold.points[1].y));
-                    collision.Colliders.push_back(e1);
-                    collision.Colliders.push_back(e2);
+                    BuildCollision2D(contact, e1, e2, collision);
 
                     for (auto& script : monoScript.Scripts)
                         script.OnCollisionExit2D(collision);
@@ -227,7 +228,8 @@ namespace Crowny
         bodyDef.fixedRotation = rigidBody2D.GetConstraints().IsSet(Rigidbody2DConstraintsBits::FreezeRotation);
         bodyDef.userData.pointer = (uintptr_t)entity.GetHandle();
         bodyDef.bullet = rigidBody2D.GetCollisionDetectionMode() == CollisionDetectionMode2D::Continuous;
-        bodyDef.linearDamping = rigidBody2D.GetGravityScale();
+        bodyDef.gravityScale = rigidBody2D.GetGravityScale();
+        bodyDef.linearDamping = rigidBody2D.GetLinearDrag();
         bodyDef.angularDamping = rigidBody2D.GetAngularDrag();
 
         b2Body* body = m_PhysicsWorld2D->CreateBody(&bodyDef);
@@ -250,16 +252,18 @@ namespace Crowny
         fixtureDef.shape = &boxShape;
 
         uint32_t layerMask = entity.HasComponent<Rigidbody2DComponent>() ? entity.GetComponent<Rigidbody2DComponent>().GetLayerMask() : 0;
-        fixtureDef.filter.maskBits = 1 << layerMask;
-        fixtureDef.filter.categoryBits = Physics2D::Get().GetCategoryMask(layerMask);
+        fixtureDef.filter.categoryBits = 1 << layerMask;
+        fixtureDef.filter.maskBits = Physics2D::Get().GetCategoryMask(layerMask);
 
         fixtureDef.isSensor = b2d.IsTrigger();
 
-        // TODO: Move to apply material function
-        fixtureDef.density = b2d.GetMaterial()->m_Density;
-        fixtureDef.friction = b2d.GetMaterial()->m_Friction;
-        fixtureDef.restitution = b2d.GetMaterial()->m_Restitution;
-        fixtureDef.restitutionThreshold = b2d.GetMaterial()->m_RestitutionThreshold;
+        if (auto mat = b2d.GetMaterial())
+        {
+            fixtureDef.density = mat->m_Density;
+            fixtureDef.friction = mat->m_Friction;
+            fixtureDef.restitution = mat->m_Restitution;
+            fixtureDef.restitutionThreshold = mat->m_RestitutionThreshold;
+        }
 
         if (entity.HasComponent<Rigidbody2DComponent>())
             b2d.RuntimeFixture = entity.GetComponent<Rigidbody2DComponent>().RuntimeBody->CreateFixture(&fixtureDef);
@@ -278,15 +282,18 @@ namespace Crowny
         fixtureDef.shape = &circleShape;
 
         uint32_t layerMask = entity.HasComponent<Rigidbody2DComponent>() ? entity.GetComponent<Rigidbody2DComponent>().GetLayerMask() : 0;
-        fixtureDef.filter.maskBits = 1 << layerMask;
-        fixtureDef.filter.categoryBits = Physics2D::Get().GetCategoryMask(layerMask);
+        fixtureDef.filter.categoryBits = 1 << layerMask;
+        fixtureDef.filter.maskBits = Physics2D::Get().GetCategoryMask(layerMask);
 
         fixtureDef.isSensor = cc2d.IsTrigger();
 
-        fixtureDef.density = cc2d.GetMaterial()->m_Density;
-        fixtureDef.friction = cc2d.GetMaterial()->m_Friction;
-        fixtureDef.restitution = cc2d.GetMaterial()->m_Restitution;
-        fixtureDef.restitutionThreshold = cc2d.GetMaterial()->m_RestitutionThreshold;
+        if (auto mat = cc2d.GetMaterial())
+        {
+            fixtureDef.density = mat->m_Density;
+            fixtureDef.friction = mat->m_Friction;
+            fixtureDef.restitution = mat->m_Restitution;
+            fixtureDef.restitutionThreshold = mat->m_RestitutionThreshold;
+        }
 
         if (entity.HasComponent<Rigidbody2DComponent>())
             cc2d.RuntimeFixture = entity.GetComponent<Rigidbody2DComponent>().RuntimeBody->CreateFixture(&fixtureDef);
@@ -313,12 +320,12 @@ namespace Crowny
             auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
             auto& transform = entity.GetComponent<TransformComponent>();
             Rigidbody2DConstraints constraints = rb2d.GetConstraints();
-            b2Vec2 linVelocty = rb2d.RuntimeBody->GetLinearVelocity();
+            b2Vec2 linVelocity = rb2d.RuntimeBody->GetLinearVelocity();
             if (constraints.IsSet(Rigidbody2DConstraintsBits::FreezePositionX))
-                linVelocty.x = 0;
-            else if (constraints.IsSet(Rigidbody2DConstraintsBits::FreezePositionY))
-                linVelocty.y = 0;
-            rb2d.RuntimeBody->SetLinearVelocity(linVelocty);
+                linVelocity.x = 0;
+            if (constraints.IsSet(Rigidbody2DConstraintsBits::FreezePositionY))
+                linVelocity.y = 0;
+            rb2d.RuntimeBody->SetLinearVelocity(linVelocity);
         }
 
         m_TimestepAcc += ts;
@@ -370,11 +377,11 @@ namespace Crowny
                 newPosition.x = position.x * alpha + entityPosition.x * oneMinusAlpha;
                 newPosition.y = position.y * alpha + entityPosition.y * oneMinusAlpha;
                 newPosition.z = entityPosition.z;
-                const float newAngle = angle * alpha + entity.GetWorldRotation().z * oneMinusAlpha;
+                const float currentAngle = glm::eulerAngles(entity.GetWorldRotation()).z;
+                const float newAngle = angle * alpha + currentAngle * oneMinusAlpha;
                 entity.SetWorldPosition(newPosition);
-                const glm::quat& zRotationQuat = glm::angleAxis(angle, glm::vec3(0.0f, 0.0f, 1.0f));
-                const glm::quat& result = zRotationQuat * entity.GetWorldRotation();
-                entity.SetWorldRotation(result);
+                const glm::quat& zRotationQuat = glm::angleAxis(newAngle, glm::vec3(0.0f, 0.0f, 1.0f));
+                entity.SetWorldRotation(zRotationQuat);
             }
         }
     }

@@ -13,11 +13,152 @@
 
 namespace Crowny
 {
-    // Note: setter is needed for null lists, since they are created only if a new element is added
-    bool ScriptInspector::DrawListInspector(MonoObject* listObject, const Ref<SerializableMemberInfo>& memberInfo, std::function<void(void*)> setter,
-                                            int depth)
+    // -------------------------------------------------------------------------
+    // Numeric field template: handles I8, U8, I16, U16, I32, U32, I64, U64
+    // -------------------------------------------------------------------------
+    template <typename T, ImGuiDataType_ DataType>
+    static bool DrawNumericField(const char* label, const FieldContext& ctx, T typeMin, T typeMax)
     {
-        const Ref<SerializableTypeInfoList>& listInfo = std::static_pointer_cast<SerializableTypeInfoList>(memberInfo->m_TypeInfo);
+        void* fieldValue = MonoUtils::Unbox(ctx.Getter());
+        T value = *(T*)fieldValue;
+
+        // Determine range from attribute (if any)
+        T rangeMin = typeMin;
+        T rangeMax = typeMax;
+        bool displayAsSlider = false;
+        bool hasRange = ctx.MemberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range);
+
+        if (hasRange)
+        {
+            MonoClass* rangeClass = ScriptInfoManager::Get().GetBuiltinClasses().RangeAttribute;
+            MonoObject* rangeAttr = ctx.MemberInfo->GetAttribute(rangeClass);
+            float minF = 0.0f, maxF = 0.0f;
+            rangeClass->GetField("min")->Get(rangeAttr, &minF);
+            rangeClass->GetField("max")->Get(rangeAttr, &maxF);
+            rangeClass->GetField("slider")->Get(rangeAttr, &displayAsSlider);
+            displayAsSlider = false;
+
+            // Clamp float range to the representable range of this integer type
+            int64_t minInt = (int64_t)minF;
+            int64_t maxInt = (int64_t)maxF;
+            rangeMin = (T)glm::clamp((long long)minInt, (long long)typeMin, (long long)typeMax);
+            rangeMax = (T)glm::clamp((long long)maxInt, (long long)typeMin, (long long)typeMax);
+        }
+
+        bool change = false;
+        if (!hasRange)
+            change = UI::Property(label, value, rangeMin, rangeMax);
+        else if (displayAsSlider)
+            change = ImGui::SliderScalar("##slider", DataType, &value, &rangeMin, &rangeMax, "%d");
+        else
+            change = UI::Property(label, value, rangeMin, rangeMax);
+
+        if (change)
+        {
+            // Clamp using a wider type to avoid overflow during comparison
+            if constexpr (std::is_signed_v<T>)
+                value = (T)glm::clamp((int64_t)value, (int64_t)rangeMin, (int64_t)rangeMax);
+            else
+                value = (T)glm::clamp((uint64_t)value, (uint64_t)rangeMin, (uint64_t)rangeMax);
+            ctx.Setter(&value);
+            return true;
+        }
+        return false;
+    }
+
+    // -------------------------------------------------------------------------
+    // String field: filepath / multiline / normal variants
+    // -------------------------------------------------------------------------
+    bool ScriptInspector::DrawStringField(const char* label, const FieldContext& ctx)
+    {
+        MonoString* value = (MonoString*)ctx.Getter();
+        if (ctx.MemberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Filepath))
+        {
+            MonoClass* filepathClass = ScriptInfoManager::Get().GetBuiltinClasses().FilepathAttribute;
+            MonoObject* filepathAttr = ctx.MemberInfo->GetAttribute(filepathClass);
+            FileDialogType dialogType = FileDialogType::OpenFile;
+            filepathClass->GetField("type")->Get(filepathAttr, &dialogType);
+
+            if (value != nullptr && MonoUtils::GetClass((MonoObject*)value) != MonoUtils::GetStringClass() &&
+                (dialogType == FileDialogType::Multiselect))
+            {
+                CW_ENGINE_ERROR("Filedialog attribute with multiselect can only be used on a list of strings");
+                return false;
+            }
+            String stringValue = value != nullptr ? MonoUtils::FromMonoString(value) : "";
+            if (UI::PropertyFilepath(label, dialogType, stringValue))
+            {
+                ctx.Setter(MonoUtils::ToMonoString(stringValue));
+                return true;
+            }
+        }
+        else if (ctx.MemberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Multiline))
+        {
+            String stringValue = value != nullptr ? MonoUtils::FromMonoString(value) : "";
+            if (UI::PropertyMultiline(label, stringValue))
+            {
+                ctx.Setter(MonoUtils::ToMonoString(stringValue));
+                return true;
+            }
+        }
+        else
+        {
+            String stringValue = value != nullptr ? MonoUtils::FromMonoString(value) : "";
+            if (UI::Property(label, stringValue))
+            {
+                ctx.Setter(MonoUtils::ToMonoString(stringValue));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Matrix4 field: read matrix, edit 4 rows, call setter once
+    // -------------------------------------------------------------------------
+    bool ScriptInspector::DrawMatrix4Field(const char* label, const FieldContext& ctx)
+    {
+        void* fieldValue = MonoUtils::Unbox(ctx.Getter());
+        glm::mat4 value = *(glm::mat4*)fieldValue;
+        glm::vec4 rows[4] = {
+            { value[0][0], value[1][0], value[2][0], value[3][0] },
+            { value[0][1], value[1][1], value[2][1], value[3][1] },
+            { value[0][2], value[1][2], value[2][2], value[3][2] },
+            { value[0][3], value[1][3], value[2][3], value[3][3] },
+        };
+
+        static const char* rowLabels[4] = { "Row 1", "Row 2", "Row 3", "Row 4" };
+        bool modified = false;
+
+        UI::Property(ctx.MemberInfo->m_Name.c_str());
+        for (int r = 0; r < 4; r++)
+        {
+            UI::ShiftCursorX(25.0f);
+            if (UI::Property(rowLabels[r], rows[r]))
+                modified = true;
+        }
+
+        if (modified)
+        {
+            for (int r = 0; r < 4; r++)
+            {
+                value[0][r] = rows[r][0];
+                value[1][r] = rows[r][1];
+                value[2][r] = rows[r][2];
+                value[3][r] = rows[r][3];
+            }
+            ctx.Setter(&value);
+        }
+        return modified;
+    }
+
+    // -------------------------------------------------------------------------
+    // List inspector
+    // -------------------------------------------------------------------------
+    // Note: setter is needed for null lists, since they are created only if a new element is added
+    bool ScriptInspector::DrawListInspector(MonoObject* listObject, const FieldContext& ctx)
+    {
+        const Ref<SerializableTypeInfoList>& listInfo = std::static_pointer_cast<SerializableTypeInfoList>(ctx.MemberInfo->m_TypeInfo);
         bool modified = false;
         MonoClass* listClass = MonoManager::Get().FindClass(listInfo->GetMonoClass());
         MonoProperty* countProp = listClass->GetProperty("Count");
@@ -32,15 +173,14 @@ namespace Crowny
         MonoMethod* addRangeMethod = listClass->GetMethod("AddRange", 1);
         MonoMethod* clearMethod = listClass->GetMethod("Clear");
         uint32_t newLength = length;
-        if (UI::PropertyInput(memberInfo->m_Name.c_str(), newLength))
+        if (UI::PropertyInput(ctx.MemberInfo->m_Name.c_str(), newLength))
         {
             if (listObject == nullptr && newLength != 0) // If not user initialized, initialize ourself
             {
                 MonoClass* klass =
-                  MonoManager::Get().FindClass(memberInfo->m_TypeInfo->GetMonoClass()); // So this somehow works without having to bind parameters
-                // MonoClass* klass = ScriptInfoManager::Get().GetBuiltinClasses().SystemGenericListClass;
+                  MonoManager::Get().FindClass(ctx.MemberInfo->m_TypeInfo->GetMonoClass()); // So this somehow works without having to bind parameters
                 listObject = klass->CreateInstance(true);
-                setter(listObject);
+                ctx.Setter(listObject);
             }
             ScriptArray tempArray(itemProp->GetReturnType()->GetInternalPtr(), newLength);
             uint32_t minSize = std::min(length, newLength);
@@ -70,25 +210,33 @@ namespace Crowny
         }
         for (uint32_t i = 0; i < newLength; i++)
         {
-            ImGui::SetCursorPosX(ImGui::GetCursorPos().x + (depth + 1) * 25);
+            ImGui::SetCursorPosX(ImGui::GetCursorPos().x + (ctx.Depth + 1) * 25);
             auto getter = [itemProp, i, listObject]() { return itemProp->GetIndexed(listObject, i); };
             auto setter = [itemProp, i, listObject](void* value) { return itemProp->SetIndexed(listObject, i, value); };
-            modified |= DrawFieldInspector(memberInfo, std::to_string(i).c_str(), getter, setter, listInfo->m_ElementType, depth + 1);
-            if (!memberInfo->m_Tooltip.empty())
+            FieldContext elemCtx;
+            elemCtx.MemberInfo = ctx.MemberInfo;
+            elemCtx.Getter = getter;
+            elemCtx.Setter = setter;
+            elemCtx.OverrideTypeInfo = listInfo->m_ElementType;
+            elemCtx.Depth = ctx.Depth + 1;
+            modified |= DrawFieldInspector(std::to_string(i).c_str(), elemCtx);
+            if (!ctx.MemberInfo->m_Tooltip.empty())
             {
                 ImGui::BeginTooltip();
-                ImGui::Text("%s", memberInfo->m_Tooltip.c_str());
+                ImGui::Text("%s", ctx.MemberInfo->m_Tooltip.c_str());
                 ImGui::EndTooltip();
             }
         }
         return modified;
     }
 
-    bool ScriptInspector::DrawDictionaryInspector(MonoObject* dictObject, const Ref<SerializableMemberInfo>& memberInfo,
-                                                  std::function<void(void*)> setter, int depth)
+    // -------------------------------------------------------------------------
+    // Dictionary inspector (static state removed)
+    // -------------------------------------------------------------------------
+    bool ScriptInspector::DrawDictionaryInspector(MonoObject* dictObject, const FieldContext& ctx)
     {
-        ImGui::PushID(depth);
-        const Ref<SerializableTypeInfoDictionary>& dictInfo = std::static_pointer_cast<SerializableTypeInfoDictionary>(memberInfo->m_TypeInfo);
+        ImGui::PushID(ctx.Depth);
+        const Ref<SerializableTypeInfoDictionary>& dictInfo = std::static_pointer_cast<SerializableTypeInfoDictionary>(ctx.MemberInfo->m_TypeInfo);
         bool modified = false;
         MonoClass* dictClass = MonoManager::Get().FindClass(dictInfo->GetMonoClass());
         MonoProperty* countProp = dictClass->GetProperty("Count");
@@ -122,7 +270,7 @@ namespace Crowny
         bool isKeyInt = dictInfo->m_KeyType->GetMonoClass() == MonoUtils::GetI32Class();
         for (uint32_t i = 0; i < length; i++)
         {
-            ImGui::SetCursorPosX(ImGui::GetCursorPos().x + (depth + 1) * 25);
+            ImGui::SetCursorPosX(ImGui::GetCursorPos().x + (ctx.Depth + 1) * 25);
             auto getterValue = [&]() {
                 if (MonoManager::Get().FindClass(values.GetElementClass())->IsValueType())
                     return MonoUtils::Box(values.GetElementClass(), values.GetRaw(i, values.ElementSize()));
@@ -144,14 +292,22 @@ namespace Crowny
                     addMethod->Invoke(dictObject, params);
                 }
             };
+
+            FieldContext elemCtx;
+            elemCtx.MemberInfo = ctx.MemberInfo;
+            elemCtx.Getter = getterValue;
+            elemCtx.Setter = setterValue;
+            elemCtx.OverrideTypeInfo = dictInfo->m_ValueType;
+            elemCtx.Depth = ctx.Depth + 1;
+
             if (isKeyString)
             {
                 keyString = keys.Get<String>(i);
-                modified |= DrawFieldInspector(memberInfo, keyString.c_str(), getterValue, setterValue, dictInfo->m_ValueType, depth + 1);
-                if (!memberInfo->m_Tooltip.empty())
+                modified |= DrawFieldInspector(keyString.c_str(), elemCtx);
+                if (!ctx.MemberInfo->m_Tooltip.empty())
                 {
                     ImGui::BeginTooltip();
-                    ImGui::Text("%s", memberInfo->m_Tooltip.c_str());
+                    ImGui::Text("%s", ctx.MemberInfo->m_Tooltip.c_str());
                     ImGui::EndTooltip();
                 }
                 UI::Underline(true);
@@ -160,12 +316,11 @@ namespace Crowny
             else if (isKeyInt)
             {
                 keyInt = keys.Get<uint32_t>(i);
-                modified |=
-                  DrawFieldInspector(memberInfo, std::to_string(keyInt).c_str(), getterValue, setterValue, dictInfo->m_ValueType, depth + 1);
-                if (!memberInfo->m_Tooltip.empty())
+                modified |= DrawFieldInspector(std::to_string(keyInt).c_str(), elemCtx);
+                if (!ctx.MemberInfo->m_Tooltip.empty())
                 {
                     ImGui::BeginTooltip();
-                    ImGui::Text("%s", memberInfo->m_Tooltip.c_str());
+                    ImGui::Text("%s", ctx.MemberInfo->m_Tooltip.c_str());
                     ImGui::EndTooltip();
                 }
 
@@ -178,34 +333,34 @@ namespace Crowny
         }
         if (isKeyInt)
         {
-            static int32_t keyInt = 0;
-            static String valueString;
+            int32_t newKeyInt = 0;
+            String newValueString;
             ImGui::PushItemWidth(-1);
-            UI::PropertyDictionary(keyInt, valueString);
-            params[0] = &keyInt;
+            UI::PropertyDictionary(newKeyInt, newValueString);
+            params[0] = &newKeyInt;
             MonoObject* containsObject = containsKey->Invoke(dictObject, params);
             bool contains = *(bool*)MonoUtils::Unbox(containsObject);
             ImGui::BeginDisabled(contains);
             if (ImGui::Button(UI::GenerateLabelID("Add")))
             {
-                params[1] = MonoUtils::ToMonoString(valueString);
+                params[1] = MonoUtils::ToMonoString(newValueString);
                 addMethod->Invoke(dictObject, params);
             }
             ImGui::EndDisabled();
         }
         else if (isKeyString)
         {
-            static String keyString;
-            static int valueInt = 0;
+            String newKeyString;
+            int newValueInt = 0;
             ImGui::PushItemWidth(-1);
-            UI::PropertyDictionary(keyString, valueInt);
-            params[0] = MonoUtils::ToMonoString(keyString);
+            UI::PropertyDictionary(newKeyString, newValueInt);
+            params[0] = MonoUtils::ToMonoString(newKeyString);
             MonoObject* containsObject = containsKey->Invoke(dictObject, params);
             bool contains = *(bool*)MonoUtils::Unbox(containsObject);
             ImGui::BeginDisabled(contains);
             if (ImGui::Button(UI::GenerateLabelID("Add")))
             {
-                params[1] = &valueInt;
+                params[1] = &newValueInt;
                 addMethod->Invoke(dictObject, params);
             }
             ImGui::EndDisabled();
@@ -215,413 +370,194 @@ namespace Crowny
         return false;
     }
 
-    bool ScriptInspector::DrawPrimitiveInspector(const Ref<SerializableMemberInfo>& memberInfo, const char* label,
-                                                 std::function<MonoObject*()> getter, std::function<void(void*)> setter,
-                                                 const Ref<SerializableTypeInfo>& listInfo)
+    // -------------------------------------------------------------------------
+    // Primitive inspector (uses DrawNumericField template, DrawStringField, DrawMatrix4Field)
+    // -------------------------------------------------------------------------
+    bool ScriptInspector::DrawPrimitiveInspector(const char* label, const FieldContext& ctx)
     {
-        const Ref<SerializableTypeInfo>& typeInfo = listInfo == nullptr ? memberInfo->m_TypeInfo : listInfo;
+        const Ref<SerializableTypeInfo>& typeInfo = ctx.GetTypeInfo();
         const Ref<SerializableTypeInfoPrimitive>& primitive = std::static_pointer_cast<SerializableTypeInfoPrimitive>(typeInfo);
+
         if (primitive->m_Type == ScriptPrimitiveType::String)
-        {
-            MonoString* value = (MonoString*)getter();
-            if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Filepath))
-            {
-                MonoClass* filepathClass = ScriptInfoManager::Get().GetBuiltinClasses().FilepathAttribute;
-                MonoObject* filepathAttr = memberInfo->GetAttribute(filepathClass);
-                FileDialogType dialogType = FileDialogType::OpenFile;
-                filepathClass->GetField("type")->Get(filepathAttr, &dialogType);
+            return DrawStringField(label, ctx);
 
-                if (value != nullptr && MonoUtils::GetClass((MonoObject*)value) != MonoUtils::GetStringClass() &&
-                    (dialogType == FileDialogType::Multiselect))
-                {
-                    CW_ENGINE_ERROR("Filedialog attribute with multiselect can only be used on a list of strings");
-                    return false;
-                }
-                String stringValue = value != nullptr ? MonoUtils::FromMonoString(value) : "";
-                if (UI::PropertyFilepath(label, dialogType, stringValue))
-                {
-                    setter(MonoUtils::ToMonoString(stringValue));
-                    return true;
-                }
-            }
-            else if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Multiline))
-            {
-                String stringValue = value != nullptr ? MonoUtils::FromMonoString(value) : "";
-                if (UI::PropertyMultiline(label, stringValue))
-                {
-                    setter(MonoUtils::ToMonoString(stringValue));
-                    return true;
-                }
-            }
-            else
-            {
-                String stringValue = value != nullptr ? MonoUtils::FromMonoString(value) : "";
-                if (UI::Property(label, stringValue))
-                {
-                    setter(MonoUtils::ToMonoString(stringValue));
-                    return true;
-                }
-            }
-            return false;
-        }
-        float minValue = -FLT_MAX;
-        float maxValue = FLT_MAX;
-        int64_t minValueInt = -LONG_MAX;
-        int64_t maxValueInt = LONG_MAX;
-        bool displayAsSlider = false;
+        if (primitive->m_Type == ScriptPrimitiveType::Matrix4)
+            return DrawMatrix4Field(label, ctx);
 
-        void* fieldValue = MonoUtils::Unbox(getter());
-        if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
-        {
-            MonoClass* rangeClass = ScriptInfoManager::Get().GetBuiltinClasses().RangeAttribute;
-            MonoObject* rangeAttr = memberInfo->GetAttribute(rangeClass);
-            rangeClass->GetField("min")->Get(rangeAttr, &minValue);
-            rangeClass->GetField("max")->Get(rangeAttr, &maxValue);
-            rangeClass->GetField("slider")->Get(rangeAttr, &displayAsSlider);
-            displayAsSlider = false;
-            minValueInt = (int32_t)minValue;
-            maxValueInt = (int32_t)maxValue;
-        }
-        bool modified = false;
+        void* fieldValue = MonoUtils::Unbox(ctx.Getter());
+
         switch (primitive->m_Type)
         {
         case ScriptPrimitiveType::Bool: {
             bool value = *(bool*)fieldValue;
-            if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Dropdown))
+            if (ctx.MemberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Dropdown))
             {
                 if (UI::PropertyDropdown(label, { "False", "True" }, value))
                 {
-                    modified = true;
-                    setter(&value);
+                    ctx.Setter(&value);
                     return true;
                 }
             }
             else if (UI::Property(label, value))
             {
-                modified = true;
-                setter(&value);
+                ctx.Setter(&value);
                 return true;
             }
-            break;
+            return false;
         }
         case ScriptPrimitiveType::Double: {
+            float minValue = -FLT_MAX, maxValue = FLT_MAX;
+            bool displayAsSlider = false;
+            if (ctx.MemberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
+            {
+                MonoClass* rangeClass = ScriptInfoManager::Get().GetBuiltinClasses().RangeAttribute;
+                MonoObject* rangeAttr = ctx.MemberInfo->GetAttribute(rangeClass);
+                rangeClass->GetField("min")->Get(rangeAttr, &minValue);
+                rangeClass->GetField("max")->Get(rangeAttr, &maxValue);
+                rangeClass->GetField("slider")->Get(rangeAttr, &displayAsSlider);
+                displayAsSlider = false;
+            }
             float value = (float)*(double*)fieldValue;
             if (UIUtils::DrawFloatControl(label, value, minValue, maxValue, displayAsSlider))
             {
-                modified = true;
                 double val = value;
-                setter(&val);
+                ctx.Setter(&val);
+                return true;
             }
-            break;
+            return false;
         }
         case ScriptPrimitiveType::Float: {
+            float minValue = -FLT_MAX, maxValue = FLT_MAX;
+            bool displayAsSlider = false;
+            if (ctx.MemberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
+            {
+                MonoClass* rangeClass = ScriptInfoManager::Get().GetBuiltinClasses().RangeAttribute;
+                MonoObject* rangeAttr = ctx.MemberInfo->GetAttribute(rangeClass);
+                rangeClass->GetField("min")->Get(rangeAttr, &minValue);
+                rangeClass->GetField("max")->Get(rangeAttr, &maxValue);
+                rangeClass->GetField("slider")->Get(rangeAttr, &displayAsSlider);
+                displayAsSlider = false;
+            }
             float value = *(float*)fieldValue;
             if (UIUtils::DrawFloatControl(label, value, minValue, maxValue, displayAsSlider))
             {
-                modified = true;
-                setter(&value);
+                ctx.Setter(&value);
+                return true;
             }
-            break;
+            return false;
         }
         case ScriptPrimitiveType::Char: {
             char c = *(char*)fieldValue;
-            if (UI::Property(label, c)) // meh
+            if (UI::Property(label, c))
             {
-                modified = true;
-                // str.resize(1);
-                setter(&c);
+                ctx.Setter(&c);
+                return true;
             }
-            break;
+            return false;
         }
-        case ScriptPrimitiveType::I8: {
-            int8_t value = *(int8_t*)fieldValue;
-            int8_t minValue8 = (int8_t)glm::clamp((long long)minValueInt, -128LL, 127LL);
-            int8_t maxValue8 = (int8_t)glm::clamp((long long)maxValueInt, -128LL, 127LL);
-            bool change = false;
-            if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
-                change = UI::Property(label, value, minValue8, maxValue8);
-            else if (displayAsSlider)
-                change = ImGui::SliderScalar("##sliderInt8", ImGuiDataType_S8, &value, &minValue8, &maxValue8, "%d");
-            else
-                change = UI::Property(label, value, minValue8, maxValue8);
-            if (change)
-            {
-                modified = true;
-                value = (int8_t)glm::clamp((int32_t)value, (int32_t)minValue8, (int32_t)maxValue8);
-                setter(&value);
-            }
-            break;
-        }
-        case ScriptPrimitiveType::U8: {
-            uint8_t value = *(uint8_t*)fieldValue;
-            uint8_t minValue8 = (uint8_t)glm::clamp((long long)minValueInt, 0LL, 255LL);
-            uint8_t maxValue8 = (uint8_t)glm::clamp((long long)maxValueInt, 0LL, 255LL);
-            bool change = false;
-            if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
-                change = UI::Property(label, value, minValue8, maxValue8);
-            else if (displayAsSlider)
-                change = ImGui::SliderScalar("##sliderUInt8", ImGuiDataType_U8, &value, &minValue8, &maxValue8, "%d");
-            else
-                change = UI::Property(label, value, minValue8, maxValue8);
-            if (change)
-            {
-                modified = true;
-                value = (uint8_t)glm::clamp((int32_t)value, (int32_t)minValue8, (int32_t)maxValue8);
-                setter(&value);
-            }
-            break;
-        }
-        case ScriptPrimitiveType::I16: {
-            int16_t value = *(int16_t*)fieldValue;
-            int16_t minValue16 = (int16_t)glm::clamp((long long)minValueInt, -32768LL, 32767LL);
-            int16_t maxValue16 = (int16_t)glm::clamp((long long)maxValueInt, -32768LL, 32767LL);
-            bool change = false;
-            if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
-                change = UI::Property(label, value, minValue16, maxValue16);
-            else if (displayAsSlider)
-                change = ImGui::SliderScalar("##sliderInt16", ImGuiDataType_S16, &value, &minValue16, &maxValue16, "%d");
-            else
-                value = (int16_t)glm::clamp((int32_t)value, (int32_t)minValue16, (int32_t)maxValue16);
-            if (change)
-            {
-                modified = true;
-                setter(&value);
-            }
-            break;
-        }
-        case ScriptPrimitiveType::U16: {
-            uint16_t value = *(uint16_t*)fieldValue;
-            uint16_t minValue16 = (uint16_t)glm::clamp((long long)minValueInt, 0LL, 65535LL);
-            uint16_t maxValue16 = (uint16_t)glm::clamp((long long)maxValueInt, 0LL, 65535LL);
-            bool change = false;
-            if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
-                change = UI::Property(label, value, minValue16, maxValue16);
-            else if (displayAsSlider)
-                change = ImGui::SliderScalar("##sliderUInt16", ImGuiDataType_U16, &value, &minValue16, &maxValue16, "%d");
-            else
-                change = UI::Property(label, value, minValue16, maxValue16);
-            if (change)
-            {
-                modified = true;
-                value = glm::clamp((int32_t)value, (int32_t)minValue16, (int32_t)maxValue16);
-                setter(&value);
-            }
-            break;
-        }
-        case ScriptPrimitiveType::I32: {
-            int32_t value = *(int32_t*)fieldValue;
-            int32_t minValue32 = (int32_t)glm::clamp((long long)minValueInt, -2147483648LL, 2147483647LL);
-            int32_t maxValue32 = (int32_t)glm::clamp((long long)maxValueInt, -2147483648LL, 2147483647LL);
-            bool change = false;
-            if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
-                change = UI::Property(label, value, minValue32, maxValue32);
-            else if (displayAsSlider)
-                change = ImGui::SliderScalar("##sliderInt32", ImGuiDataType_S32, &value, &minValue32, &maxValue32, "%d");
-            else
-                change = UI::Property(label, value, minValue32, maxValue32);
-            if (change)
-            {
-                modified = true;
-                value = (int32_t)glm::clamp((int64_t)value, (int64_t)minValue32, (int64_t)maxValue32);
-                setter(&value);
-            }
-            break;
-        }
-        case ScriptPrimitiveType::U32: {
-            uint32_t value = *(uint32_t*)fieldValue;
-            uint32_t minValue32 = (uint32_t)glm::clamp((long long)minValueInt, 0LL, 4294967295LL);
-            uint32_t maxValue32 = (uint32_t)glm::clamp((long long)maxValueInt, 0LL, 4294967295LL);
-            bool change = false;
-            if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
-                change = UI::Property(label, value, minValue32, maxValue32);
-            else if (displayAsSlider)
-                change = ImGui::SliderScalar("##sliderUInt32", ImGuiDataType_U32, &value, &minValue32, &maxValue32, "%d");
-            else
-                change = UI::Property(label, value, minValue32, maxValue32);
-            if (change)
-            {
-                modified = true;
-                value = (uint32_t)glm::clamp((int64_t)value, (int64_t)minValue32, (int64_t)maxValue32);
-                setter(&value);
-            }
-            break;
-        }
-        case ScriptPrimitiveType::I64: {
-            int64_t value = *(int64_t*)fieldValue;
-            int64_t minValue64 = (int64_t)minValueInt;
-            int64_t maxValue64 = (int64_t)maxValueInt;
-            bool change = false;
-            if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
-                change = UI::Property(label, value, minValue64, maxValue64);
-            else if (displayAsSlider)
-                change = ImGui::SliderScalar("##sliderInt64", ImGuiDataType_S64, &value, &minValue64, &maxValue64, "%d");
-            else
-                change = UI::Property(label, value, minValue64, maxValue64);
-            if (change)
-            {
-                modified = true;
-                value = glm::clamp(value, minValue64, maxValue64);
-                setter(&value);
-            }
-            break;
-        }
-        case ScriptPrimitiveType::U64: {
-            uint64_t value = *(uint64_t*)fieldValue;
-            uint64_t minValue64 = glm::clamp((long long)minValueInt, 0LL, 4294967295LL);
-            uint64_t maxValue64 = glm::clamp((long long)maxValueInt, 0LL, 4294967295LL);
-            bool change = false;
-            if (!memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
-                change = UI::Property(label, value, minValue64, maxValue64);
-            else if (displayAsSlider)
-                change = ImGui::SliderScalar("##sliderUInt64", ImGuiDataType_U64, &value, &minValue64, &maxValue64, "%d");
-            else
-                change = UI::Property(label, value, minValue64, maxValue64);
-            if (change)
-            {
-                value = glm::clamp(value, minValue64, maxValue64);
-                modified = true;
-                setter(&value);
-            }
-            break;
-        }
+        case ScriptPrimitiveType::I8:  return DrawNumericField<int8_t,   ImGuiDataType_S8> (label, ctx, INT8_MIN,  INT8_MAX);
+        case ScriptPrimitiveType::U8:  return DrawNumericField<uint8_t,  ImGuiDataType_U8> (label, ctx, 0,         UINT8_MAX);
+        case ScriptPrimitiveType::I16: return DrawNumericField<int16_t,  ImGuiDataType_S16>(label, ctx, INT16_MIN, INT16_MAX);
+        case ScriptPrimitiveType::U16: return DrawNumericField<uint16_t, ImGuiDataType_U16>(label, ctx, 0,         UINT16_MAX);
+        case ScriptPrimitiveType::I32: return DrawNumericField<int32_t,  ImGuiDataType_S32>(label, ctx, INT32_MIN, INT32_MAX);
+        case ScriptPrimitiveType::U32: return DrawNumericField<uint32_t, ImGuiDataType_U32>(label, ctx, 0,         UINT32_MAX);
+        case ScriptPrimitiveType::I64: return DrawNumericField<int64_t,  ImGuiDataType_S64>(label, ctx, INT64_MIN, INT64_MAX);
+        case ScriptPrimitiveType::U64: return DrawNumericField<uint64_t, ImGuiDataType_U64>(label, ctx, 0,         UINT64_MAX);
         case ScriptPrimitiveType::Vector2: {
             glm::vec2 value = *(glm::vec2*)fieldValue;
             if (UI::Property(label, value))
             {
-                setter(&value);
-                modified = true;
+                ctx.Setter(&value);
+                return true;
             }
-            break;
+            return false;
         }
         case ScriptPrimitiveType::Vector3: {
             glm::vec3 value = *(glm::vec3*)fieldValue;
             if (UI::Property(label, value))
             {
-                setter(&value);
-                modified = true;
+                ctx.Setter(&value);
+                return true;
             }
-            break;
+            return false;
         }
         case ScriptPrimitiveType::Vector4: {
             glm::vec4 value = *(glm::vec4*)fieldValue;
             if (UI::Property(label, value))
             {
-                setter(&value);
-                modified = true;
+                ctx.Setter(&value);
+                return true;
             }
-            break;
+            return false;
         }
         case ScriptPrimitiveType::Color: {
             glm::vec4 value = *(glm::vec4*)fieldValue;
             ImGuiColorEditFlags flags = ImGuiColorEditFlags_AlphaPreview;
-            if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::HDR))
+            if (ctx.MemberInfo->m_Flags.IsSet(ScriptFieldFlagBits::HDR))
                 flags |= ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float;
-            if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::NoAlpha))
+            if (ctx.MemberInfo->m_Flags.IsSet(ScriptFieldFlagBits::NoAlpha))
                 flags |= ImGuiColorEditFlags_NoAlpha;
-
             if (UI::PropertyColor(label, value, flags))
             {
-                setter(&value);
-                modified = true;
+                ctx.Setter(&value);
+                return true;
             }
+            return false;
+        }
+        default:
             break;
         }
-        case ScriptPrimitiveType::Matrix4: {
-            glm::mat4 value = *(glm::mat4*)fieldValue;
-            glm::vec4 r0 = { value[0][0], value[1][0], value[2][0], value[3][0] };
-            glm::vec4 r1 = { value[0][1], value[1][1], value[2][1], value[3][1] };
-            glm::vec4 r2 = { value[0][2], value[1][2], value[2][2], value[3][2] };
-            glm::vec4 r3 = { value[0][3], value[1][3], value[2][3], value[3][3] };
-            UI::Property(memberInfo->m_Name.c_str());
-            UI::ShiftCursorX(25.0f);
-            if (UI::Property("Row 1", r0))
-            {
-                value[0][0] = r0[0];
-                value[1][0] = r0[1];
-                value[2][0] = r0[2];
-                value[3][0] = r0[3];
-                setter(&value);
-                modified = true;
-            }
-            UI::ShiftCursorX(25.0f);
-            if (UI::Property("Row 2", r1))
-            {
-                value[0][1] = r1[0];
-                value[1][1] = r1[1];
-                value[2][1] = r1[2];
-                value[3][1] = r1[3];
-                setter(&value);
-                modified = true;
-            }
-            UI::ShiftCursorX(25.0f);
-            if (UI::Property("Row 3", r2))
-            {
-                value[0][2] = r2[0];
-                value[1][2] = r2[1];
-                value[2][2] = r2[2];
-                value[3][2] = r2[3];
-                setter(&value);
-                modified = true;
-            }
-            UI::ShiftCursorX(25.0f);
-            if (UI::Property("Row 4", r3))
-            {
-                value[0][3] = r3[0];
-                value[1][3] = r3[1];
-                value[2][3] = r3[2];
-                value[3][3] = r3[3];
-                setter(&value);
-                modified = true;
-            }
-            break;
-        }
-        }
-        return modified;
+        return false;
     }
 
-    bool ScriptInspector::DrawEnumInspector(const Ref<SerializableMemberInfo>& memberInfo, const Ref<SerializableTypeInfoEnum>& enumInfo,
-                                            std::function<MonoObject*()> getter, std::function<void(void*)> setter)
+    // -------------------------------------------------------------------------
+    // Enum inspector
+    // -------------------------------------------------------------------------
+    bool ScriptInspector::DrawEnumInspector(const FieldContext& ctx)
     {
-        int32_t value = *(int32_t*)MonoUtils::Unbox(getter()); // maybe here I would have to check the underlying type.....
-        if (value >= enumInfo->m_EnumNames.size())             // Maybe clamp the value here?
+        const Ref<SerializableTypeInfo>& typeInfo = ctx.GetTypeInfo();
+        const Ref<SerializableTypeInfoEnum>& enumInfo = std::static_pointer_cast<SerializableTypeInfoEnum>(typeInfo);
+
+        int32_t value = *(int32_t*)MonoUtils::Unbox(ctx.Getter()); // maybe here I would have to check the underlying type.....
+        if (value >= enumInfo->m_EnumNames.size())                 // Maybe clamp the value here?
         {
             ImGui::NextColumn();
             return false;
         }
-        if (memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::EnumQuickTabs))
+        if (ctx.MemberInfo->m_Flags.IsSet(ScriptFieldFlagBits::EnumQuickTabs))
         {
-            if (UI::QuickTabs(memberInfo->m_Name.c_str(), enumInfo->m_EnumNames, enumInfo->m_EnumValues, value))
+            if (UI::QuickTabs(ctx.MemberInfo->m_Name.c_str(), enumInfo->m_EnumNames, enumInfo->m_EnumValues, value))
             {
-                setter(&value);
+                ctx.Setter(&value);
                 return true;
             }
         }
         else
         {
-            if (value < enumInfo->m_EnumNames.size() && UI::PropertyDropdown(memberInfo->m_Name.c_str(), enumInfo->m_EnumNames, value))
+            if (value < enumInfo->m_EnumNames.size() && UI::PropertyDropdown(ctx.MemberInfo->m_Name.c_str(), enumInfo->m_EnumNames, value))
             {
-                setter(&value);
+                ctx.Setter(&value);
                 return true;
             }
         }
         return false;
     }
 
-    bool ScriptInspector::DrawFieldInspector(const Ref<SerializableMemberInfo>& memberInfo, const char* label, std::function<MonoObject*()> getter,
-                                             std::function<void(void*)> setter, const Ref<SerializableTypeInfo>& listType, int depth)
+    // -------------------------------------------------------------------------
+    // Field inspector (dispatcher)
+    // -------------------------------------------------------------------------
+    bool ScriptInspector::DrawFieldInspector(const char* label, const FieldContext& ctx)
     {
-        UI::ScopedDisable disabled(memberInfo->m_Flags.IsSet(ScriptFieldFlagBits::ReadOnly));
-        const Ref<SerializableTypeInfo>& typeInfo = listType == nullptr ? memberInfo->m_TypeInfo : listType;
+        UI::ScopedDisable disabled(ctx.MemberInfo->m_Flags.IsSet(ScriptFieldFlagBits::ReadOnly));
+        const Ref<SerializableTypeInfo>& typeInfo = ctx.GetTypeInfo();
+
         if (typeInfo->GetType() == SerializableType::Enum)
-        {
-            Ref<SerializableTypeInfoEnum> enumInfo = std::static_pointer_cast<SerializableTypeInfoEnum>(typeInfo);
-            return DrawEnumInspector(memberInfo, enumInfo, getter, setter);
-        }
+            return DrawEnumInspector(ctx);
         else if (typeInfo->GetType() == SerializableType::Primitive)
-            return DrawPrimitiveInspector(memberInfo, label, getter, setter, listType);
+            return DrawPrimitiveInspector(label, ctx);
         else if (typeInfo->GetType() == SerializableType::Array)
         {
-            MonoArray* monoAr = (MonoArray*)getter();
+            MonoArray* monoAr = (MonoArray*)ctx.Getter();
             if (monoAr != nullptr)
             {
                 ScriptArray ar = ScriptArray(monoAr);
@@ -630,46 +566,46 @@ namespace Crowny
                 {
                     return true;
                     ar.Resize(size);
-                    setter(ar.GetInternal());
+                    ctx.Setter(ar.GetInternal());
                 }
             }
             return false;
         }
         else if (typeInfo->GetType() == SerializableType::List)
-            return DrawListInspector(getter(), memberInfo, setter, depth);
+            return DrawListInspector(ctx.Getter(), ctx);
         else if (typeInfo->GetType() == SerializableType::Dictionary)
-            return DrawDictionaryInspector(getter(), memberInfo, setter, depth);
+            return DrawDictionaryInspector(ctx.Getter(), ctx);
         else if (typeInfo->GetType() == SerializableType::Asset)
         {
             Ref<SerializableTypeInfoAsset> assetInfo = std::static_pointer_cast<SerializableTypeInfoAsset>(typeInfo);
-            ScriptAsset* scriptAsset = ScriptAsset::ToNative(getter());
+            ScriptAsset* scriptAsset = ScriptAsset::ToNative(ctx.Getter());
             AssetHandle<Asset> handle;
             if (scriptAsset != nullptr)
                 handle = scriptAsset->GetGenericHandle();
-            if (UIUtils::AssetReference(memberInfo->m_Name.c_str(), handle, assetInfo->Type) && handle)
+            if (UIUtils::AssetReference(ctx.MemberInfo->m_Name.c_str(), handle, assetInfo->Type) && handle)
             {
                 MonoObject* value = ScriptAssetManager::Get().GetScriptAsset(handle, true)->GetManagedInstance();
-                setter(value);
+                ctx.Setter(value);
                 return true;
             }
             return false;
         }
         else if (typeInfo->GetType() == SerializableType::Entity)
         {
-            ScriptEntity* scriptEntity = ScriptEntity::ToNative(getter());
+            ScriptEntity* scriptEntity = ScriptEntity::ToNative(ctx.Getter());
 
             Entity entity = { entt::null, nullptr };
             if (scriptEntity != nullptr)
                 entity = scriptEntity->GetNativeEntity();
-            if (UIUtils::EntityReference(memberInfo->m_Name, entity))
+            if (UIUtils::EntityReference(ctx.MemberInfo->m_Name, entity))
             {
                 if (entity)
                 {
                     MonoObject* value = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(entity)->GetManagedInstance();
-                    setter(value);
+                    ctx.Setter(value);
                 }
                 else
-                    setter(nullptr);
+                    ctx.Setter(nullptr);
                 return true;
             }
             return false;
@@ -678,26 +614,28 @@ namespace Crowny
         {
             Ref<SerializableObjectInfo> objInfo = nullptr;
             Ref<SerializableTypeInfoObject> objTypeInfo = std::static_pointer_cast<SerializableTypeInfoObject>(typeInfo);
-            if (listType == nullptr)
-                UI::Property(memberInfo->m_Name.c_str());
+            if (!ctx.OverrideTypeInfo)
+                UI::Property(ctx.MemberInfo->m_Name.c_str());
             bool modified = false;
             if (ScriptInfoManager::Get().GetSerializableObjectInfo(objTypeInfo->m_TypeNamespace, objTypeInfo->m_TypeName, objInfo))
             {
                 const Ref<Scene>& scene = SceneManager::GetActiveScene();
-                if (getter() == nullptr)
+                if (ctx.Getter() == nullptr)
                 {
                     bool construct = objInfo->m_MonoClass->GetMethod(".ctor", 0) != nullptr;
-                    setter(objInfo->m_MonoClass->CreateInstance(construct));
+                    ctx.Setter(objInfo->m_MonoClass->CreateInstance(construct));
                     modified = true;
                 }
                 if (objTypeInfo->m_Flags.IsSet(ScriptFieldFlagBits::Inspectable))
-                    return modified || DrawObjectInspector(objInfo, getter(), setter, depth + 1);
+                    return modified || DrawObjectInspector(objInfo, ctx.Getter(), ctx.Setter, ctx.Depth + 1);
             }
-            // ImGui::NextColumn();
         }
         return false;
     }
 
+    // -------------------------------------------------------------------------
+    // Object inspector (entry point)
+    // -------------------------------------------------------------------------
     // This here does all the work. DrawObjectInspector is called with the MonoObject of the current class instance and
     // draws it all.
     bool ScriptInspector::DrawObjectInspector(const Ref<SerializableObjectInfo>& objectInfo, MonoObject* instance, std::function<void(void*)> setter,
@@ -740,10 +678,14 @@ namespace Crowny
             if (!closed)
             {
                 MonoObject* val = memberInfo->GetValue(instance);
-                auto valueGetter = [&]() { return val; };
-                auto valueSetter = [&](void* value) { memberInfo->SetValue(instance, value); };
-                auto objectSetter = [=](void* obj) { setter((MonoObject*)obj); };
-                bool modified = DrawFieldInspector(memberInfo, memberInfo->m_Name.c_str(), valueGetter, valueSetter);
+
+                FieldContext ctx;
+                ctx.MemberInfo = memberInfo;
+                ctx.Getter = [&]() { return val; };
+                ctx.Setter = [&](void* value) { memberInfo->SetValue(instance, value); };
+                ctx.Depth = depth;
+
+                bool modified = DrawFieldInspector(memberInfo->m_Name.c_str(), ctx);
                 if (!memberInfo->m_Tooltip.empty())
                 {
                     ImGui::BeginTooltip();

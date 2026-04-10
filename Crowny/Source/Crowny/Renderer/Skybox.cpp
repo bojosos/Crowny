@@ -167,22 +167,18 @@ namespace Crowny
     {
         Timer timer;
         auto& rapi = RenderAPI::Get();
-        const uint32_t numMips = static_cast<uint32_t>(std::floor(std::log2(64)));
         TextureParameters tProps;
         tProps.Width = 64;
         tProps.Height = 64;
         tProps.Format = TextureFormat::RGBA32F;
         tProps.Usage = TextureUsage::TEXTURE_RENDERTARGET;
-        tProps.MipLevels = numMips;
+        tProps.MipLevels = 1;
         tProps.Faces = 6;
         tProps.Shape = TextureShape::TEXTURE_CUBE;
         m_IrradianceMap = Texture::Create(tProps);
 
-        AssetHandle<Shader> shaderHandle = AssetManager::Get().Load<Shader>(FILTER_SHADER_PATH);
-        // Ref<Shader> shader = Importer::Get().Import<Shader>("Resources/Shaders/Prefilter.glsl");
-        // AssetManager::Get().Save(shader, PREFILTER_SHADER_PATH);
-        // const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(shader));
-        Ref<Material> filterMaterial = Material::Create(shaderHandle);
+        AssetHandle<Shader> shaderHandle = AssetManager::Get().Load<Shader>(PREFILTER_SHADER_PATH);
+        Ref<Material> irradianceMaterial = Material::Create(shaderHandle);
 
         Vector<glm::mat4> matrices = {
             glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(180.0f),
@@ -194,30 +190,28 @@ namespace Crowny
             glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // POSITIVE_Z
             glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f)), // NEGATIVE_Z
         };
-        filterMaterial->SetTexture("samplerEnv", m_EnvironmentMap);
+        irradianceMaterial->SetTexture("samplerEnv", m_EnvironmentMap);
         for (uint32_t j = 0; j < 6; j++)
         {
             const glm::mat4 viewProjection = glm::perspective((float)(M_PI * 0.5f), 1.0f, 0.1f, 64.0f) * matrices[j];
-            filterMaterial->SetMatrix("mvp", viewProjection);
-            for (uint32_t i = 0; i < numMips; i++)
-            {
-                RenderTextureProperties rtProps;
-                rtProps.ColorSurfaces[0].Texture = m_IrradianceMap;
-                rtProps.ColorSurfaces[0].Face = j;
-                rtProps.ColorSurfaces[0].NumFaces = 1;
-                rtProps.ColorSurfaces[0].MipLevel = i;
-                rtProps.Width = tProps.Width / (int)std::pow(2, i);
-                rtProps.Height = tProps.Height / (int)std::pow(2, i);
-                Ref<RenderTexture> cubemap = RenderTexture::Create(rtProps);
-                rapi.SetRenderTarget(cubemap);
-                rapi.SetGraphicsPipeline(filterMaterial->GetGraphicsPipeline());
-                rapi.SetViewport(0.0f, 0.0f, (float)std::pow(0.5f, i), (float)std::pow(0.5f, i));
-                rapi.SetVertexLayout(m_SkyboxVbo->GetLayout());
-                rapi.SetUniforms(filterMaterial->GetUniformParams());
-                rapi.SetVertexBuffers(0, &m_SkyboxVbo, 1);
-                rapi.SetIndexBuffer(m_SkyboxIbo);
-                rapi.DrawIndexed(0, 36, 0, 72);
-            }
+            irradianceMaterial->SetMatrix("mvp", viewProjection);
+
+            RenderTextureProperties rtProps;
+            rtProps.ColorSurfaces[0].Texture = m_IrradianceMap;
+            rtProps.ColorSurfaces[0].Face = j;
+            rtProps.ColorSurfaces[0].NumFaces = 1;
+            rtProps.ColorSurfaces[0].MipLevel = 0;
+            rtProps.Width = tProps.Width;
+            rtProps.Height = tProps.Height;
+            Ref<RenderTexture> cubemap = RenderTexture::Create(rtProps);
+            rapi.SetRenderTarget(cubemap);
+            rapi.SetGraphicsPipeline(irradianceMaterial->GetGraphicsPipeline());
+            rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
+            rapi.SetVertexLayout(m_SkyboxVbo->GetLayout());
+            rapi.SetUniforms(irradianceMaterial->GetUniformParams());
+            rapi.SetVertexBuffers(0, &m_SkyboxVbo, 1);
+            rapi.SetIndexBuffer(m_SkyboxIbo);
+            rapi.DrawIndexed(0, 36, 0, 72);
         }
     }
 
@@ -225,14 +219,8 @@ namespace Crowny
     {
         Timer timer;
 
-        struct PrefilterParams
-        {
-            uint32_t samples = 32;
-            float roughness = 0.1f;
-        } params;
-
         auto& rapi = RenderAPI::Get();
-        const uint32_t numMips = static_cast<uint32_t>(std::floor(std::log2(64)));
+        const uint32_t numMips = static_cast<uint32_t>(std::floor(std::log2(512))) + 1;
         TextureParameters tProps;
         tProps.Width = 512;
         tProps.Height = 512;
@@ -244,9 +232,6 @@ namespace Crowny
         m_PrefilteredMap = Texture::Create(tProps);
 
         AssetHandle<Shader> shaderHandle = AssetManager::Get().Load<Shader>(FILTER_SHADER_PATH);
-        // Ref<Shader> shader = Importer::Get().Import<Shader>("Resources/Shaders/Filter.glsl");
-        // AssetManager::Get().Save(shader, FILTER_SHADER_PATH);
-        // const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(shader));
         Ref<Material> prefilterMaterial = Material::Create(shaderHandle);
 
         Vector<glm::mat4> matrices = {
@@ -260,29 +245,27 @@ namespace Crowny
             glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f)), // NEGATIVE_Z
         };
 
-        float roughness = 0.1f;
-        prefilterMaterial->SetInt("samples", 32);
+        prefilterMaterial->SetInt("samples", 1024);
         prefilterMaterial->SetTexture("samplerEnv", m_EnvironmentMap);
-        // TODO: Swap these fors around
         for (uint32_t j = 0; j < 6; j++)
         {
             const glm::mat4 viewProjection = glm::perspective((float)(M_PI * 0.5f), 1.0f, 0.1f, 512.0f) * matrices[j];
             prefilterMaterial->SetMatrix("mvp", viewProjection);
             for (uint32_t i = 0; i < numMips; i++)
             {
-                roughness = (float)i / (float)(numMips);
+                float roughness = (float)i / (float)(numMips - 1);
                 prefilterMaterial->SetFloat("roughness", roughness);
                 RenderTextureProperties rtProps;
                 rtProps.ColorSurfaces[0].Texture = m_PrefilteredMap;
                 rtProps.ColorSurfaces[0].Face = j;
                 rtProps.ColorSurfaces[0].NumFaces = 1;
                 rtProps.ColorSurfaces[0].MipLevel = i;
-                rtProps.Width = tProps.Width / (int)std::pow(2, i);
-                rtProps.Height = tProps.Height / (int)std::pow(2, i);
+                rtProps.Width = tProps.Width >> i;
+                rtProps.Height = tProps.Height >> i;
                 Ref<RenderTexture> cubemap = RenderTexture::Create(rtProps);
                 rapi.SetRenderTarget(cubemap);
                 rapi.SetGraphicsPipeline(prefilterMaterial->GetGraphicsPipeline());
-                rapi.SetViewport(0.0f, 0.0f, (float)std::pow(0.5f, i), (float)std::pow(0.5f, i));
+                rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
                 rapi.SetUniforms(prefilterMaterial->GetUniformParams());
                 rapi.SetVertexBuffers(0, &m_SkyboxVbo, 1);
                 rapi.SetIndexBuffer(m_SkyboxIbo);

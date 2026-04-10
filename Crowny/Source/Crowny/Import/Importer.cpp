@@ -7,6 +7,8 @@
 #include "Crowny/Import/MeshImporter.h"
 #include "Crowny/Import/ScriptImporter.h"
 #include "Crowny/Import/ShaderImporter.h"
+#include "Crowny/Import/MaterialImporter.h"
+#include "Crowny/Import/SceneImporter.h"
 #include "Crowny/Import/TextFileImporter.h"
 #include "Crowny/Import/TextureImporter.h"
 
@@ -89,7 +91,9 @@ namespace Crowny
         Importer::Get().RegisterImporter(new ShaderImporter());
         Importer::Get().RegisterImporter(new TextFileImporter());
         Importer::Get().RegisterImporter(new TextureImporter());
+        Importer::Get().RegisterImporter(new MaterialImporter());
         Importer::Get().RegisterImporter(new MeshImporter());
+        Importer::Get().RegisterImporter(new SceneImporter());
     }
 
     SpecificImporter* Importer::PrepareForImport(const Path& filepath, Ref<const ImportOptions>& importOptions) const
@@ -123,7 +127,34 @@ namespace Crowny
         if (importer == nullptr)
             return nullptr;
 
-        return importer->Import(filepath, importOptions);
+        Ref<Asset> asset = importer->Import(filepath, importOptions);
+        if (asset)
+            asset->Init(); // Initialize GPU resources immediately for synchronous callers
+        return asset;
+    }
+
+    Vector<Ref<Asset>> Importer::ImportAll(const Path& filepath, Ref<const ImportOptions> importOptions)
+    {
+        SpecificImporter* importer = PrepareForImport(filepath, importOptions);
+        if (importer == nullptr)
+            return {};
+
+        Vector<Ref<Asset>> assets = importer->ImportAll(filepath, importOptions);
+        for (auto& asset : assets)
+        {
+            if (asset)
+                asset->Init();
+        }
+        return assets;
+    }
+
+    Ref<Asset> Importer::ImportDeferred(const Path& filepath, Ref<const ImportOptions> importOptions)
+    {
+        SpecificImporter* importer = PrepareForImport(filepath, importOptions);
+        if (importer == nullptr)
+            return nullptr;
+
+        return importer->Import(filepath, importOptions); // No Init() — caller handles GPU init later
     }
 
 } // namespace Crowny

@@ -552,8 +552,17 @@ namespace Crowny
         Init();
     }
 
+    VulkanTexture::VulkanTexture(const TextureParameters& params, bool deferred)
+      : Texture(params, true), m_Image(nullptr), m_InternalFormat(), m_StagingBuffer(nullptr), m_MappedGlobalQueueIdx((uint32_t)-1), m_MappedMip(0),
+        m_MappedFace(0), m_MappedRowPitch(0), m_MappedSlicePitch(0), m_MappedLockOptions(GpuLockOptions::WRITE_ONLY), m_DirectlyMappable(false),
+        m_SupportsGpuWrites(false), m_IsMapped(false), m_ImageCreateInfo()
+    {
+        // Deferred: do NOT call Init() — GPU resources created later when Init() is explicitly called
+    }
+
     void VulkanTexture::Init()
     {
+        if (m_Image) return; // Already initialized
         m_ImageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         m_ImageCreateInfo.pNext = nullptr;
         m_ImageCreateInfo.flags = 0;
@@ -630,11 +639,19 @@ namespace Crowny
         const bool optimalTiling = tiling == VK_IMAGE_TILING_OPTIMAL;
         m_InternalFormat = VulkanUtils::GetClosestSupportedTextureFormat(device, m_Params.Format, m_Params.Shape, m_Params.Usage, optimalTiling);
         m_Image = CreateImage(device, m_InternalFormat);
+
+        // Upload pending pixel data from deferred import
+        if (m_PendingPixelData)
+        {
+            WriteData(*m_PendingPixelData);
+            m_PendingPixelData = nullptr;
+        }
     }
 
     VulkanTexture::~VulkanTexture()
     {
-        m_Image->Destroy();
+        if (m_Image)
+            m_Image->Destroy();
         CW_ENGINE_ASSERT(m_StagingBuffer == nullptr);
     }
 

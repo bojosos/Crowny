@@ -288,7 +288,25 @@ namespace Crowny
     struct MeshRendererComponent : public ComponentBase
     {
         AssetHandle<Mesh> MeshHandle;
-        AssetHandle<Material> BaseMaterial;
+        Vector<AssetHandle<Material>> Materials; // One per sub-mesh; index 0 is default/fallback
+
+        AssetHandle<Material> GetMaterial(uint32_t index = 0) const
+        {
+            if (index < Materials.size())
+                return Materials[index];
+            if (!Materials.empty())
+                return Materials[0];
+            return {};
+        }
+
+        void SetMaterial(uint32_t index, const AssetHandle<Material>& material)
+        {
+            if (index >= Materials.size())
+                Materials.resize(index + 1);
+            Materials[index] = material;
+        }
+
+        uint32_t GetMaterialCount() const { return (uint32_t)Materials.size(); }
 
         MeshRendererComponent() : ComponentBase() {}
         MeshRendererComponent(const MeshRendererComponent&) = default;

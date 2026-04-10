@@ -215,10 +215,14 @@ namespace Crowny
         VkBufferUsageFlags usage = m_BufferCreateInfo.usage;
         if (staging)
         {
-            m_BufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-            // TODO: readable
+            // Staging buffers need SRC for upload and DST for read-back
+            m_BufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
         }
-        // TODO: readable normal
+        else if (readable)
+        {
+            // GPU buffers that support read-back need TRANSFER_SRC in addition to their existing flags
+            m_BufferCreateInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        }
 
         m_BufferCreateInfo.size = size;
         VkMemoryPropertyFlags flags;

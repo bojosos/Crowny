@@ -159,6 +159,11 @@ namespace Crowny
 
             SerializeValueYAML(out, "Mesh", mesh.MeshHandle.GetUUID());
 
+            out << YAML::Key << "Materials" << YAML::Value << YAML::BeginSeq;
+            for (const auto& mat : mesh.Materials)
+                out << mat.GetUUID();
+            out << YAML::EndSeq;
+
             EndYAMLMap(out, "MeshRendererComponent");
         }
 
@@ -633,7 +638,12 @@ namespace Crowny
                     {
                         MeshRendererComponent& mc = deserialized.AddComponent<MeshRendererComponent>();
                         mc.MeshHandle = LoadAssetHandle<Mesh>(mesh["Mesh"].as<UUID>(UUID::EMPTY));
-                        mc.BaseMaterial = nullptr;
+                        const YAML::Node& materialsNode = mesh["Materials"];
+                        if (materialsNode && materialsNode.IsSequence())
+                        {
+                            for (const auto& matNode : materialsNode)
+                                mc.Materials.push_back(LoadAssetHandle<Material>(matNode.as<UUID>(UUID::EMPTY)));
+                        }
                     }
 
                     const YAML::Node& alc = entity["AudioListenerComponent"];
@@ -901,7 +911,6 @@ namespace Crowny
                         UUID meshUuid;
                         archive(meshUuid);
                         mc.MeshHandle = LoadAssetHandle<Mesh>(meshUuid);
-                        mc.BaseMaterial = nullptr;
                         break;
                     }
                     case BinaryComponentType::Text:

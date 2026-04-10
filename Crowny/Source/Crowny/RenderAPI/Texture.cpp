@@ -37,6 +37,7 @@ namespace Crowny
     Ref<Texture> Texture::BLACK;
 
     Texture::Texture(const TextureParameters& params) : m_Params(params) {}
+    Texture::Texture(const TextureParameters& params, bool deferred) : m_Params(params) {}
 
     Ref<Texture> Texture::Create(const TextureParameters& params)
     {
@@ -51,6 +52,22 @@ namespace Crowny
         }
 
         return nullptr;
+    }
+
+    Ref<Texture> Texture::CreateDeferred(const TextureParameters& params, const Ref<PixelData>& pixelData)
+    {
+        switch (RenderAPI::Get().GetAPI())
+        {
+        case RenderAPI::API::Vulkan:
+        {
+            auto tex = CreateRef<VulkanTexture>(params, true);
+            tex->m_PendingPixelData = pixelData;
+            return tex;
+        }
+        default:
+            CW_ENGINE_ASSERT(false, "Renderer API not supported");
+            return nullptr;
+        }
     }
 
     Ref<PixelData> Texture::AllocatePixelData(uint32_t face, uint32_t mipLevel) const

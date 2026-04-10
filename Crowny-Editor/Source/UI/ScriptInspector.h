@@ -2,6 +2,20 @@
 
 namespace Crowny
 {
+    struct FieldContext
+    {
+        Ref<SerializableMemberInfo> MemberInfo;
+        std::function<MonoObject*()> Getter;
+        std::function<void(void*)> Setter;
+        Ref<SerializableTypeInfo> OverrideTypeInfo; // for list/dictionary element types
+        int Depth = 0;
+
+        const Ref<SerializableTypeInfo>& GetTypeInfo() const
+        {
+            return OverrideTypeInfo ? OverrideTypeInfo : MemberInfo->m_TypeInfo;
+        }
+    };
+
     class ScriptInspector
     {
     public:
@@ -9,15 +23,13 @@ namespace Crowny
                                         int depth = 0);
 
     private:
-        static bool DrawPrimitiveInspector(const Ref<SerializableMemberInfo>& memberInfo, const char* label, std::function<MonoObject*()> getter,
-                                           std::function<void(void*)> setter, const Ref<SerializableTypeInfo>& listTypeInfo = nullptr);
-        static bool DrawFieldInspector(const Ref<SerializableMemberInfo>& memberInfo, const char* label, std::function<MonoObject*()> getter,
-                                       std::function<void(void*)> setter, const Ref<SerializableTypeInfo>& listTypeInfo = nullptr, int depth = 0);
-        static bool DrawListInspector(MonoObject* listObject, const Ref<SerializableMemberInfo>& memberInfo, std::function<void(void*)> setter,
-                                      int depth = 0);
-        static bool DrawDictionaryInspector(MonoObject* listObject, const Ref<SerializableMemberInfo>& memberInfo, std::function<void(void*)> setter,
-                                            int depth = 0);
-        static bool DrawEnumInspector(const Ref<SerializableMemberInfo>& memberInfo, const Ref<SerializableTypeInfoEnum>& enumInfo,
-                                      std::function<MonoObject*()> getter, std::function<void(void*)> setter);
+        static bool DrawPrimitiveInspector(const char* label, const FieldContext& ctx);
+        static bool DrawFieldInspector(const char* label, const FieldContext& ctx);
+        static bool DrawListInspector(MonoObject* listObject, const FieldContext& ctx);
+        static bool DrawDictionaryInspector(MonoObject* dictObject, const FieldContext& ctx);
+        static bool DrawEnumInspector(const FieldContext& ctx);
+
+        static bool DrawStringField(const char* label, const FieldContext& ctx);
+        static bool DrawMatrix4Field(const char* label, const FieldContext& ctx);
     };
 } // namespace Crowny

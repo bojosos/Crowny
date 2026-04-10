@@ -198,7 +198,7 @@ namespace Crowny
 
     void Scene::OnRigidbody2DComponentConstruct(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene || !Physics2D::IsStartedUp())
+        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !Physics2D::Get().GetPhysicsWorld())
             return;
         Entity e = { entity, this };
         Physics2D::Get().CreateRigidbody(e);
@@ -206,7 +206,7 @@ namespace Crowny
 
     void Scene::OnRigidbody2DComponentDestroy(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene || !Physics2D::IsStartedUp())
+        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !Physics2D::Get().GetPhysicsWorld())
             return;
         Entity e = { entity, this };
         Physics2D::Get().DestroyRigidbody(e);
@@ -214,7 +214,7 @@ namespace Crowny
 
     void Scene::OnBoxCollider2DComponentConstruct(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene || !Physics2D::IsStartedUp())
+        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !Physics2D::Get().GetPhysicsWorld())
             return;
         Entity e = { entity, this };
         Physics2D::Get().CreateBoxCollider(e);
@@ -222,7 +222,7 @@ namespace Crowny
 
     void Scene::OnBoxCollider2DComponentDestroy(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene || !Physics2D::IsStartedUp())
+        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !Physics2D::Get().GetPhysicsWorld())
             return;
         Entity e = { entity, this };
         Physics2D::Get().DestroyFixture(e, e.GetComponent<BoxCollider2DComponent>());
@@ -230,7 +230,7 @@ namespace Crowny
 
     void Scene::OnCircleCollider2DComponentConstruct(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene || !Physics2D::IsStartedUp())
+        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !Physics2D::Get().GetPhysicsWorld())
             return;
         Entity e = { entity, this };
         Physics2D::Get().CreateCircleCollider(e);
@@ -238,7 +238,7 @@ namespace Crowny
 
     void Scene::OnCircleCollider2DComponentDestroy(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene || !Physics2D::IsStartedUp())
+        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !Physics2D::Get().GetPhysicsWorld())
             return;
         Entity e = { entity, this };
         Physics2D::Get().DestroyFixture(e, e.GetComponent<CircleCollider2DComponent>());
@@ -312,7 +312,17 @@ namespace Crowny
         }
     }
 
-    void Scene::RemoveScriptComponent(Entity entity, const String& namespaceName, const String& typeName) {}
+    void Scene::RemoveScriptComponent(Entity entity, const String& namespaceName, const String& typeName)
+    {
+        if (!entity.HasComponent<MonoScriptComponent>())
+            return;
+        auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
+        scripts.erase(std::remove_if(scripts.begin(), scripts.end(),
+            [&](const MonoScript& s) { return s.GetNamespace() == namespaceName && s.GetTypeName() == typeName; }),
+            scripts.end());
+        if (scripts.empty())
+            entity.RemoveComponent<MonoScriptComponent>();
+    }
 
     void Scene::OnRuntimeStart()
     {
@@ -345,6 +355,18 @@ namespace Crowny
         {
             Entity entity = { e, this };
             entity.GetComponent<AudioSourceComponent>().Pause();
+        }
+    }
+
+    void Scene::OnRuntimeResume()
+    {
+        auto audioSourceView = m_Registry.view<AudioSourceComponent>();
+        for (auto e : audioSourceView)
+        {
+            Entity entity = { e, this };
+            auto& source = entity.GetComponent<AudioSourceComponent>();
+            if (source.GetState() == AudioSourceState::Paused)
+                source.Play();
         }
     }
 

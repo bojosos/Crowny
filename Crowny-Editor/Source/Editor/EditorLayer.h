@@ -174,6 +174,7 @@ namespace Crowny
 
         ImGuiMenuBar* m_MenuBar = nullptr;
         Ref<Scene> m_Temp;
+        Ref<Scene> m_EditorSceneBackup; // Snapshot of the editor scene before entering play/simulate
         Ref<RenderTarget> m_RenderTarget;
         Ref<RenderTarget> m_ResizedRenderTarget;
 
@@ -203,6 +204,11 @@ namespace Crowny
         String m_NewProjectPath;
         String m_NewProjectName;
         glm::vec2 m_ViewportSize = { 1280.0f, 720.0f }; // and dis
+
+        enum class HubPage { RecentProjects, NewProject };
+        HubPage m_HubPage = HubPage::RecentProjects;
+        int m_SelectedRecentIdx = -1;
+        String m_RecentSearchFilter;
 
         Scope<filewatch::FileWatch<Path>> m_Watch;
         Mutex m_FileWatchMutex;

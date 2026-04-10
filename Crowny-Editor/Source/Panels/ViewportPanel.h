@@ -56,7 +56,7 @@ namespace Crowny
         bool GetGizmoLocalMode() const { return m_LocalMode; }
         GizmoEditMode GetGizmoMode() const { return m_GizmoMode; }
 
-        void DisalbeGizmo() { m_GizmoMode = GizmoEditMode::None; }
+        void DisableGizmo() { m_GizmoMode = GizmoEditMode::None; }
         void EnableGizmo() { m_GizmoMode = GizmoEditMode::Translate; }
 
         bool IsMouseOverGizmo() const { return ImGuizmo::IsOver(); }

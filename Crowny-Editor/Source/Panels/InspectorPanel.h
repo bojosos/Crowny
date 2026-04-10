@@ -52,6 +52,10 @@ namespace Crowny
 
         void HandleInspectorDragDrop(Entity selectedEntity);
 
+        template<typename T>
+        T* BeginImportInspector();
+        void EndImportInspector(float xOffset, float width);
+
         void DrawApplyRevert(float xOffset, float width);
         void DrawHeader();
 
@@ -59,7 +63,7 @@ namespace Crowny
         InspectorMode m_InspectorMode = InspectorMode::GameObject;
 
         // For import options inspection
-        bool m_HasPropertyChanged = false; // This should not be so "stateful".
+        bool m_HasPropertyChanged = false; // Reset on mode/asset switch; set by import inspectors via |=
         Ref<ImportOptions> m_ImportOptions;
         Ref<ImportOptions> m_OldImportOptions;
         Path m_InspectedAssetPath;

@@ -155,7 +155,7 @@ namespace Crowny
                 if (mesh.MeshHandle)
                 {
                     Entity entity(ee, m_Scene.get());
-                    ForwardRenderer::Submit(mesh.MeshHandle, mesh.BaseMaterial, entity.GetWorldMatrix());
+                    ForwardRenderer::Submit(mesh.MeshHandle, mesh.Materials, entity.GetWorldMatrix());
                     // TODO: Update stats... triangle count has to take into account the draw mode
                 }
             }

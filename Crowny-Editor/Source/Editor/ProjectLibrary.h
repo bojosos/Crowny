@@ -12,6 +12,9 @@
 
 #include "Editor/Settings/ProjectSettings.h"
 
+#include <atomic>
+#include <thread>
+
 namespace Crowny
 {
     struct DirectoryEntry;
@@ -45,7 +48,8 @@ namespace Crowny
         FileEntry(const Path& path, const String& name, DirectoryEntry* parent);
         ~FileEntry() = default;
 
-        Ref<AssetMetadata> Metadata;
+        Ref<AssetMetadata> Metadata;                        // Primary asset metadata
+        Vector<Ref<AssetMetadata>> DependentMetadata;       // Sub-assets (materials, textures from mesh import)
         uint32_t Filesize = 0;
     };
 
@@ -58,6 +62,33 @@ namespace Crowny
         Vector<Ref<LibraryEntry>> Children;
     };
 
+    struct ImportTask
+    {
+        FileEntry* Entry = nullptr;
+        Ref<ImportOptions> Options;
+        bool ForceReimport = false;
+    };
+
+    struct ImportResult
+    {
+        ImportTask Task;
+        Ref<Asset> Asset;
+    };
+
+    struct ImportProgress
+    {
+        std::atomic<bool> Active{false};
+        std::atomic<uint32_t> TotalFiles{0};
+        std::atomic<uint32_t> CompletedFiles{0};
+        String CurrentAssetName;
+
+        float GetFraction() const
+        {
+            uint32_t total = TotalFiles.load();
+            return total > 0 ? (float)CompletedFiles.load() / (float)total : 0.0f;
+        }
+    };
+
     class ProjectLibrary : public Module<ProjectLibrary>
     {
     public:
@@ -65,6 +96,10 @@ namespace Crowny
         ~ProjectLibrary();
 
         void Refresh(const Path& path);
+        void RefreshAsync(const Path& path);
+        void ProcessCompletedImports();
+        bool IsImporting() const { return m_ImportProgress.Active.load(); }
+        const ImportProgress& GetImportProgress() const { return m_ImportProgress; }
         const Ref<DirectoryEntry>& GetRoot() const { return m_RootEntry; }
         Ref<LibraryEntry> FindEntry(const Path& path) const;
 
@@ -101,8 +136,8 @@ namespace Crowny
         Vector<UUID> GetAllAssets(AssetType type) const;
 
     private:
-        void SerializeMetadata(const Path& path, const Ref<AssetMetadata>& metadata);
-        Ref<AssetMetadata> DeserializeMetadata(const Path& path);
+        void SerializeMetadata(const Path& path, const Ref<AssetMetadata>& metadata, const Vector<Ref<AssetMetadata>>& dependents = {});
+        Ref<AssetMetadata> DeserializeMetadata(const Path& path, Vector<Ref<AssetMetadata>>* outDependents = nullptr);
 
         void SerializeLibraryEntries(const Path& path);
         Ref<DirectoryEntry> DeserializeLibraryEntries(const Path& libEntriesPath);
@@ -136,6 +171,18 @@ namespace Crowny
         UUIDDirectory m_UuidDirectory;
 
         UnorderedMap<UUID, Path> m_UuidToPath;
+
+        // Async import state
+        std::thread m_ImportThread;
+        Mutex m_ImportMutex;
+        Vector<ImportResult> m_CompletedImports;
+        ImportProgress m_ImportProgress;
+        bool m_RefreshPending = false;
+        Path m_PendingRefreshPath;
+
+        void RefreshScan(const Path& path);
+        void ImportWorker(Vector<ImportTask> tasks);
+        void FinalizeImport(const ImportResult& result);
     };
 
 } // namespace Crowny

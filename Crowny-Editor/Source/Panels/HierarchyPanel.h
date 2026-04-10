@@ -47,10 +47,13 @@ namespace Crowny
     private:
         void DisplayTree(Entity e);
         void Select(Entity e);
-        void DisplayLeafNode(Entity e);
-        void DisplayTreeNode(Entity e);
-        void DisplayPopup(Entity e);
+        void RenderEntityRow(Entity e, bool hasChildren);
+        void RenderContextMenu(Entity e);
         void Rename(Entity e);
+        void RenderSearchResults();
+        bool MatchesSearchFilter(Entity e) const;
+        void CollectMatchingEntities(Entity e, Vector<Entity>& results) const;
+        String BuildParentPath(Entity e) const;
 
 #ifdef CW_DEBUG
         void PrintDebugHierarchy();
@@ -61,9 +64,9 @@ namespace Crowny
         Entity m_NewOpenEntity;
         Vector<std::function<void()>> m_DeferredActions;
         std::function<void(Entity)> m_SelectionChanged;
-        bool m_Deleted = false;
         Entity m_Renaming = {};
         String m_RenamingString;
+        String m_SearchFilter;
         UnorderedSet<Entity> m_SelectedItems;
         UnorderedSet<UUID> m_Hierarchy;
     };

@@ -126,25 +126,53 @@ namespace Crowny
 
     void ForwardRenderer::SubmitLightSetup() {}
 
-    void ForwardRenderer::Submit(const AssetHandle<Mesh>& mesh, const AssetHandle<Material>& material, const glm::mat4& transform)
+    void ForwardRenderer::Submit(const AssetHandle<Mesh>& mesh, const Vector<AssetHandle<Material>>& materials, const glm::mat4& transform)
     {
-        Ref<Material> renderMaterial = material ? material.GetInternalPtr() : nullptr;
-        if (!renderMaterial)
-            renderMaterial = s_Data->PbrMaterial;
         RenderAPI& rapi = RenderAPI::Get();
+        const Vector<SubMesh>& subMeshes = mesh->GetSubMeshes();
 
-        renderMaterial->SetColor("albedo", albedo);
-        renderMaterial->SetFloat("roughness", roughness);
-        renderMaterial->SetFloat("metalness", metalness);
-        renderMaterial->SetMatrix("model", transform);
+        auto getMaterial = [&](uint32_t index) -> Ref<Material> {
+            if (index < materials.size() && materials[index])
+                return materials[index].GetInternalPtr();
+            if (!materials.empty() && materials[0])
+                return materials[0].GetInternalPtr();
+            return s_Data->PbrMaterial;
+        };
 
-        rapi.SetGraphicsPipeline(renderMaterial->GetGraphicsPipeline());
-        rapi.SetUniforms(renderMaterial->GetUniformParams());
         rapi.SetVertexLayout(mesh->GetVertexBuffer()->GetLayout());
         rapi.SetVertexBuffers(0, &mesh->GetVertexBuffer(), 1);
         rapi.SetIndexBuffer(mesh->GetIndexBuffer());
-        rapi.SetDrawMode(mesh->GetDrawMode());
-        rapi.DrawIndexed(0, mesh->GetIndexCount(), 0, mesh->GetVertexCount());
+
+        if (subMeshes.empty())
+        {
+            // Single mesh — no sub-meshes
+            Ref<Material> renderMaterial = getMaterial(0);
+            renderMaterial->SetColor("albedo", albedo);
+            renderMaterial->SetFloat("roughness", roughness);
+            renderMaterial->SetFloat("metalness", metalness);
+            renderMaterial->SetMatrix("model", transform);
+            rapi.SetGraphicsPipeline(renderMaterial->GetGraphicsPipeline());
+            rapi.SetUniforms(renderMaterial->GetUniformParams());
+            rapi.SetDrawMode(mesh->GetDrawMode());
+            rapi.DrawIndexed(0, mesh->GetIndexCount(), 0, mesh->GetVertexCount());
+        }
+        else
+        {
+            // Per sub-mesh rendering
+            for (uint32_t i = 0; i < (uint32_t)subMeshes.size(); i++)
+            {
+                const SubMesh& sub = subMeshes[i];
+                Ref<Material> renderMaterial = getMaterial(i);
+                renderMaterial->SetColor("albedo", albedo);
+                renderMaterial->SetFloat("roughness", roughness);
+                renderMaterial->SetFloat("metalness", metalness);
+                renderMaterial->SetMatrix("model", transform);
+                rapi.SetGraphicsPipeline(renderMaterial->GetGraphicsPipeline());
+                rapi.SetUniforms(renderMaterial->GetUniformParams());
+                rapi.SetDrawMode(sub.MeshDrawMode);
+                rapi.DrawIndexed(sub.IndexOffset, sub.IndexCount, 0, mesh->GetVertexCount());
+            }
+        }
     }
 
     void ForwardRenderer::SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform)

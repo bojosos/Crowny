@@ -12,8 +12,11 @@
 #include "Editor/Editor.h"
 #include "Editor/EditorAssets.h"
 #include "Editor/EditorUtils.h"
+#include "Editor/PreviewRenderer.h"
 #include "Editor/ProjectLibrary.h"
 #include "Editor/Script/CodeEditor.h"
+
+#include "Crowny/Assets/AssetManager.h"
 
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
@@ -68,14 +71,16 @@ namespace Crowny
         const Path& path = child->Filepath;
         String ext = path.extension().string();
         StringUtils::ToLower(ext);
+
+        // Texture thumbnails — downscale large textures for memory
         if (ext.size() > 0 && TextureImporter::IsExtensionSupportedStatic(ext.substr(1)))
         {
             Ref<Texture> result = Importer::Get().Import<Texture>(path);
-            m_Icons[child->ElementNameHash] = result;
+            m_Icons[child->ElementNameHash] = PreviewTextureRenderer::CreateThumbnail(result, 128);
         }
+#if AUDIO_PREVIEW
         else if (ext == ".ogg")
         {
-#if AUDIO_PREVIEW
             TextureParameters soundWaveParams;
             soundWaveParams.Width = 256;
             soundWaveParams.Height = 256;
@@ -107,16 +112,18 @@ namespace Crowny
             src.SetBuffer((uint8_t*)data);
             soundWave->WriteData(src);
             m_Icons[child->ElementNameHash] = soundWave;
-#endif
         }
+#endif
+        // Mesh/Material previews require render-to-texture which conflicts with
+        // the main render loop's command buffer state. Queue them for deferred rendering.
+        // TODO: Render previews in a separate frame or after the main render pass completes.
         else if (ext == ".obj" || ext == ".gltf" || ext == ".fbx")
         {
-            // ProjectLibrary::Get().Reimport(path, static_cast<FileEntry*>(child.get())->Metadata->ImportOptions, true);
-            // AssetHandle<Mesh> mesh = static_asset_cast<Mesh>(ProjectLibrary::Get().Load(path));
-            // PreviewObjectRenderer previewRenderer(mesh);
-            // previewRenderer.Setup(256, 256);
-            // Ref<Texture> result = previewRenderer.RenderPreview();
-            // m_Icons[child->ElementNameHash] = result;
+            // Mesh preview deferred — uses file icon for now
+        }
+        else if (ext == ".mat")
+        {
+            // Material preview deferred — uses file icon for now
         }
     }
 
@@ -178,18 +185,13 @@ namespace Crowny
     {
         m_ForwardHistory = {};
         m_BackwardHistory.push(m_CurrentDirectoryEntry);
-
-        for (auto child : m_CurrentDirectoryEntry->Children) // TODO: do audio wave on import
-        {
-            const auto& path = child->Filepath;
-            String ext = path.extension().string();
-            if (m_Icons.count(child->ElementNameHash) == 0 && ext.size() > 0 && TextureImporter::IsExtensionSupportedStatic(ext.substr(1)))
-            {
-                Ref<Texture> result = Importer::Get().Import<Texture>(path);
-                m_Icons[child->ElementNameHash] = result;
-            }
-        }
         m_CurrentDirectoryEntry = entry;
+
+        for (auto& child : m_CurrentDirectoryEntry->Children)
+        {
+            if (child->Type != LibraryEntryType::Directory && m_Icons.count(child->ElementNameHash) == 0)
+                PreviewImage(child);
+        }
         RecalculateDirectoryEntries();
         m_SelectionSet.clear();
         m_SelectionStartIndex = (uint32_t)-1;
@@ -277,11 +279,16 @@ namespace Crowny
                 SetCurrentDirectory(m_CurrentDirectoryEntry->Parent);
         }
 
+        bool importing = ProjectLibrary::Get().IsImporting();
+        if (importing) ImGui::BeginDisabled();
         if (ImGui::Button("Refresh"))
         {
-            ProjectLibrary::Get().Refresh(m_CurrentDirectoryEntry->Filepath);
-            UpdateDisplayList();
+            ProjectLibrary::Get().RefreshAsync(m_CurrentDirectoryEntry->Filepath);
         }
+        if (importing) ImGui::EndDisabled();
+
+        if (importing)
+            UpdateDisplayList(); // Show newly imported assets as they complete
 
         for (DirectoryEntry* dirEntry : m_DirectoryPathEntries)
         {

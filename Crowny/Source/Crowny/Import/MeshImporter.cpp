@@ -8,6 +8,7 @@
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Import/Importer.h"
 #include "Crowny/RenderAPI/Texture.h"
+#include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/Mesh.h"
 
 #include <assimp/Importer.hpp>
@@ -57,8 +58,6 @@ namespace Crowny
         Vector<Vector<SubMesh>> subMeshes;
         for (uint32_t i = 0; i < scene->mNumMeshes; i++)
         {
-            if (i == 0)
-                continue;
             const aiMesh* mesh = scene->mMeshes[i];
             const uint32_t vertexCount = mesh->mNumVertices;
             const uint32_t indexCount = mesh->mNumFaces * 3;
@@ -129,13 +128,11 @@ namespace Crowny
                 meshData->SetVertexData(uvAttr, uvList.data(), vertexCount * sizeof(glm::vec2));
             }
             meshes.push_back(meshData);
-            break;
         }
         if (meshes.size() == 0)
         {
-            Ref<Mesh> mesh = Mesh::Create(0, 0, BufferLayout(), MeshUsage::Static, DrawMode::TRIANGLE_LIST, IndexType::Index_32);
-            mesh->SetName(meshName);
-            return mesh;
+            CW_ENGINE_WARN("Mesh import produced no mesh data: {}", meshName);
+            return nullptr;
         }
         CW_ENGINE_INFO("Mesh: {0} vertices, {1} indices", meshes[0]->GetVertexCount(), meshes[0]->GetIndexCount());
         Vector<SubMesh> outSubMeshes;
@@ -228,15 +225,11 @@ namespace Crowny
 
     Ref<Asset> MeshImporter::Import(const Path& path, Ref<const ImportOptions> importOptions)
     {
-        const Ref<Asset> asset1 = ImportAll(path, importOptions)[0];
+        Vector<Ref<Asset>> assets = ImportAll(path, importOptions);
         textureCache.clear();
-        return asset1;
-        Ref<const MeshImportOptions> meshImportOptions = std::static_pointer_cast<const MeshImportOptions>(importOptions);
-        Ref<Asset> asset;
-        const aiScene* scene = ReadAssimpScene(path, meshImportOptions);
-        if (scene)
-            return ReadMeshData(path.filename().string(), scene, meshImportOptions);
-        return nullptr;
+        if (assets.empty())
+            return nullptr;
+        return assets[0];
     }
 
     Vector<Ref<Asset>> MeshImporter::ImportAll(const Path& path, Ref<const ImportOptions> importOptions)
@@ -257,54 +250,32 @@ namespace Crowny
         // static const AssetHandle<Shader> pbriblHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(pbriblShader));
         for (uint32_t i = 0; i < scene->mNumMeshes; i++)
         {
-            const aiMesh* mesh = scene->mMeshes[i];
-            CW_ENGINE_INFO("Mesh idx: {}, {}", i, mesh->mName.C_Str());
+            const aiMesh* aiMesh = scene->mMeshes[i];
+            const aiMaterial* meshMaterial = scene->mMaterials[aiMesh->mMaterialIndex];
 
-            const aiMaterial* meshMaterial = scene->mMaterials[mesh->mMaterialIndex];
-            CW_ENGINE_INFO(meshMaterial->GetName().C_Str());
             Ref<Material> material = Material::Create(pbriblHandle);
+            material->SetName(meshMaterial->GetName().C_Str());
+
             ImportTexture(meshMaterial, material, assets, aiTextureType_DIFFUSE, "albedoMap");
             ImportTexture(meshMaterial, material, assets, aiTextureType_METALNESS, "metallicMap");
             ImportTexture(meshMaterial, material, assets, aiTextureType_DIFFUSE_ROUGHNESS, "roughnessMap");
             ImportTexture(meshMaterial, material, assets, aiTextureType_NORMALS, "normalMap");
             ImportTexture(meshMaterial, material, assets, aiTextureType_AMBIENT_OCCLUSION, "aoMap");
 
-            aiColor3D color;
-            aiReturn res = meshMaterial->Get(AI_MATKEY_BASE_COLOR, color);
-            if (res == aiReturn_SUCCESS)
-                CW_ENGINE_INFO("Diffuse color: {}, {}, {}", color.r, color.g, color.b);
-            aiString diffuseTex;
-            res = meshMaterial->GetTexture(AI_MATKEY_BASE_COLOR_TEXTURE, &diffuseTex);
-            if (res == aiReturn_SUCCESS)
-                CW_ENGINE_INFO("Diffuse texture: {}", diffuseTex.C_Str());
-            bool useMetalness = false;
-            res = meshMaterial->Get(AI_MATKEY_USE_METALLIC_MAP, useMetalness);
-            if (res == aiReturn_SUCCESS)
-                CW_ENGINE_INFO("Use metalness: {}", useMetalness);
-            float metalness = 0.0f;
-            res = meshMaterial->Get(AI_MATKEY_METALLIC_FACTOR, metalness);
-            if (res == aiReturn_SUCCESS)
-                CW_ENGINE_INFO("Metallnes: {}", metalness);
-            aiString metalnessTex;
-            res = meshMaterial->GetTexture(AI_MATKEY_METALLIC_TEXTURE, &metalnessTex);
-            if (res == aiReturn_SUCCESS)
-                CW_ENGINE_INFO("Metallnes map: {}", metalnessTex.C_Str());
-            float roughness = 0.0f;
-            res = meshMaterial->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
-            if (res == aiReturn_SUCCESS)
-                CW_ENGINE_INFO("Roughness: {}", roughness);
-            aiString roughnessTex;
-            res = meshMaterial->GetTexture(AI_MATKEY_ROUGHNESS_TEXTURE, &roughnessTex);
-            if (res == aiReturn_SUCCESS)
-                CW_ENGINE_INFO("Roughness map: {}", roughnessTex.C_Str());
+            // Read PBR parameters from assimp
+            aiColor3D color(1.0f, 1.0f, 1.0f);
+            if (meshMaterial->Get(AI_MATKEY_BASE_COLOR, color) == aiReturn_SUCCESS)
+                material->SetColor("albedo", glm::vec4(color.r, color.g, color.b, 1.0f));
 
-            for (uint32_t j = 0; j < AI_TEXTURE_TYPE_MAX; j++)
-            {
-                aiString outPath;
-                if (meshMaterial->GetTexture((aiTextureType)j, 0, &outPath) == aiReturn_SUCCESS)
-                    CW_ENGINE_INFO("Material {} texture: {} -> {}", meshMaterial->GetName().C_Str(), aiTextureTypeToString((aiTextureType)j),
-                                   outPath.C_Str());
-            }
+            float metalness = 0.0f;
+            if (meshMaterial->Get(AI_MATKEY_METALLIC_FACTOR, metalness) == aiReturn_SUCCESS)
+                material->SetFloat("metalness", metalness);
+
+            float roughness = 1.0f;
+            if (meshMaterial->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness) == aiReturn_SUCCESS)
+                material->SetFloat("roughness", roughness);
+
+            assets.push_back(material);
         }
         textureCache.clear();
         return assets;

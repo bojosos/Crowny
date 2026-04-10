@@ -81,7 +81,7 @@ namespace Crowny
         template <typename T> void RemoveComponentIfExists()
         {
             static_assert(std::is_base_of<ComponentBase, T>::value, "T must be a Component");
-            // m_Scene->m_Registry.remove_if_exists<T>(m_EntityHandle);
+            m_Scene->m_Registry.remove_if_exists<T>(m_EntityHandle);
         }
 
         bool HasAnyComponents() const { return !m_Scene->m_Registry.orphan(m_EntityHandle); }
@@ -153,7 +153,7 @@ namespace Crowny
         {
             // CW_ASSERT(IsValid());
             // TODO: Why is the scene compare commented out?
-            return m_EntityHandle == other.m_EntityHandle; //&& m_Scene == other.m_Scene;
+            return m_EntityHandle == other.m_EntityHandle && m_Scene == other.m_Scene;
         }
 
     private:

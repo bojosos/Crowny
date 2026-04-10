@@ -28,7 +28,7 @@ namespace Crowny
     void ImGuiPanel::UpdateState()
     {
         m_Hovered = ImGui::IsWindowHovered();
-        m_Focused = ImGui::IsWindowFocused();
+        m_Focused = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
     }
 
     void ImGuiPanel::RegisterInMenu(ImGuiMenu* menu) { menu->AddItem(new ImGuiMenuItem(m_Name, "", nullptr, &m_Shown)); }

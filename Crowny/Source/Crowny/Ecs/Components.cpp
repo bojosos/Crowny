@@ -29,12 +29,17 @@ namespace Crowny
     RelationshipComponent& RelationshipComponent::operator=(const RelationshipComponent& other)
     {
         Parent = other.Parent;
+        Children = other.Children;
         return *this;
     }
 
     void AudioListenerComponent::Initialize() { m_Internal = gAudio().CreateListener(); }
 
-    void AudioListenerComponent::OnTransformChanged(const Transform& transform) { m_Internal->OnTransformChanged(transform); }
+    void AudioListenerComponent::OnTransformChanged(const Transform& transform)
+    {
+        if (m_Internal != nullptr)
+            m_Internal->OnTransformChanged(transform);
+    }
 
     void AudioSourceComponent::OnInitialize()
     {
@@ -122,7 +127,7 @@ namespace Crowny
 
     void AudioSourceComponent::SetTime(float time)
     {
-        if (m_Time != time)
+        if (m_Time == time)
             return;
         m_Time = time;
         if (m_Internal != nullptr)
@@ -275,7 +280,7 @@ namespace Crowny
     {
         if (RuntimeBody != nullptr)
             RuntimeBody->SetAngularDamping(angularDrag);
-        angularDrag = angularDrag;
+        m_AngularDrag = angularDrag;
     }
 
     void Rigidbody2DComponent::SetAutoMass(bool autoMass, Entity entity)

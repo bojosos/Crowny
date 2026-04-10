@@ -21,6 +21,7 @@ layout(location = 0) out DATA
     vec3 worldPos;
     vec3 normal;
     vec3 tangent;
+    vec3 bitangent;
     vec2 uv;
 	vec4 color;
 } vs_out;
@@ -28,11 +29,13 @@ layout(location = 0) out DATA
 void main()
 {
     vec3 locPos = vec3(mvp.model * vec4(cw_Position, 1.0));
+    mat3 normalMatrix = mat3(mvp.model);
     vs_out.worldPos = locPos;
-    vs_out.normal = mat3(mvp.model) * cw_Normal;
+    vs_out.normal = normalMatrix * cw_Normal;
     vs_out.uv = cw_TexCoord0;
 	vs_out.color = cw_Color;
-    vs_out.tangent = mat3(mvp.model) * cw_Tangent.xyz;
+    vs_out.tangent = normalMatrix * cw_Tangent.xyz;
+    vs_out.bitangent = normalMatrix * cw_Bitangent.xyz;
     gl_Position =  mvp.viewProjection * vec4(locPos, 1.0);
 }
 
@@ -44,6 +47,7 @@ layout(location = 0) in DATA
     vec3 worldPos;
     vec3 normal;
     vec3 tangent;
+    vec3 bitangent;
     vec2 uv;
 	vec4 color;
 } fs_in;
@@ -75,7 +79,6 @@ layout (location = 0) out vec4 outColor;
 layout (location = 1) out int outEntity;
 
 #define PI 3.1415926535897932384626433832795
-#define ALBEDO pow(texture(albedoMap, fs_in.uv).rgb * parameters.albedo.rgb * fs_in.color.rgb, vec3(2.2))
 
 // From http://filmicgames.com/archives/75
 vec3 Uncharted2Tonemap(vec3 x)
@@ -129,16 +132,14 @@ vec3 prefilteredReflection(vec3 R, float roughness)
 	return mix(a, b, lod - lodf);
 }
 
-vec3 specularContribution(vec3 L, vec3 V, vec3 N, vec3 F0, float metallic, float roughness)
+vec3 specularContribution(vec3 L, vec3 V, vec3 N, vec3 F0, float metallic, float roughness, vec3 albedo)
 {
 	// Precalculate vectors and dot products
 	vec3 H = normalize (V + L);
 	float dotNH = clamp(dot(N, H), 0.0, 1.0);
 	float dotNV = clamp(dot(N, V), 0.0, 1.0);
 	float dotNL = clamp(dot(N, L), 0.0, 1.0);
-
-	// Light color fixed
-	vec3 lightColor = vec3(1.0);
+	float dotVH = clamp(dot(V, H), 0.0, 1.0);
 
 	vec3 color = vec3(0.0);
 
@@ -148,10 +149,10 @@ vec3 specularContribution(vec3 L, vec3 V, vec3 N, vec3 F0, float metallic, float
 		// G = Geometric shadowing term (Microfacets shadowing)
 		float G = G_SchlicksmithGGX(dotNL, dotNV, roughness);
 		// F = Fresnel factor (Reflectance depending on angle of incidence)
-		vec3 F = F_Schlick(dotNV, F0);
+		vec3 F = F_Schlick(dotVH, F0);
 		vec3 spec = D * F * G / (4.0 * dotNL * dotNV + 0.001);
 		vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
-		color += (kD * ALBEDO / PI + spec) * dotNL;
+		color += (kD * albedo / PI + spec) * dotNL;
 	}
 
 	return color;
@@ -162,45 +163,41 @@ vec3 calculateNormal()
 	vec3 tangentNormal = texture(normalMap, fs_in.uv).xyz * 2.0 - 1.0;
 
 	vec3 N = normalize(fs_in.normal);
-	vec3 T = normalize(fs_in.tangent.xyz);
-	vec3 B = normalize(cross(N, T));
+	vec3 T = normalize(fs_in.tangent);
+	vec3 B = normalize(fs_in.bitangent);
 	mat3 TBN = mat3(T, B, N);
 	return normalize(TBN * tangentNormal);
 }
 
 void main()
 {
-	outEntity=int(fs_in.normal*10);
-	vec3 lightDir = normalize(vec3(0.0, -0.5, -0.5));
-	float diff = max(dot(fs_in.normal, -lightDir), 0.0);
+	outEntity = 0;
 
-	outColor=vec4(texture(albedoMap, fs_in.uv).rgb * diff, 1.0);
-	return;
-    // outColor = vec4(calculateNormal(), 1.0);
-    // return;
-    // vec3 N = fs_in.normal;
 	vec3 N = calculateNormal();
 	vec3 V = normalize(uboParams.camPos - fs_in.worldPos);
 	vec3 R = reflect(-V, N);
 
+	vec3 albedo = pow(texture(albedoMap, fs_in.uv).rgb * parameters.albedo.rgb * fs_in.color.rgb, vec3(2.2));
 	float metallic = texture(metallicMap, fs_in.uv).r * parameters.metalness;
 	float roughness = texture(roughnessMap, fs_in.uv).r * parameters.roughness;
 
 	vec3 F0 = vec3(0.04);
-	F0 = mix(F0, ALBEDO, metallic);
+	F0 = mix(F0, albedo, metallic);
 
+	// Direct lighting
 	vec3 Lo = vec3(0.0);
-	for(int i = 0; i < uboParams.lights[i].length(); i++) {
+	for(int i = 0; i < 4; i++) {
 		vec3 L = normalize(uboParams.lights[i].xyz - fs_in.worldPos);
-		Lo += specularContribution(L, V, N, F0, metallic, roughness);
+		Lo += specularContribution(L, V, N, F0, metallic, roughness, albedo);
 	}
 
+	// IBL
 	vec2 brdf = texture(samplerBRDFLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
 	vec3 reflection = prefilteredReflection(R, roughness).rgb;
 	vec3 irradiance = texture(samplerIrradiance, N).rgb;
 
 	// Diffuse based on irradiance
-	vec3 diffuse = irradiance * ALBEDO;
+	vec3 diffuse = irradiance * albedo;
 
 	vec3 F = F_SchlickR(max(dot(N, V), 0.0), F0, roughness);
 

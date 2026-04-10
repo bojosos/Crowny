@@ -535,6 +535,11 @@ namespace Crowny
 
     void Mesh::Init()
     {
+        if (m_IndexBuffer || m_VertexBuffer)
+            return; // Already initialized
+        if (m_NumVertices == 0 || m_NumIndices == 0)
+            return; // Can't create GPU buffers with 0 size
+
         const Ref<MeshData>& meshData = m_CPUMeshData ? m_CPUMeshData : m_InitialData;
         const bool isDynamic = m_Usage == MeshUsage::Dynamic;
         const BufferUsage bufferUsage = isDynamic ? BufferUsage::BU_DYNAMIC_DRAW : BufferUsage::BU_STATIC_DRAW;

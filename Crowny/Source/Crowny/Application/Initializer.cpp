@@ -216,8 +216,10 @@ namespace Crowny
 
         if (RenderAPI::IsStartedUp())
         {
-            Renderer2D::Shutdown();
+            Font::SetDefaultFont({});
             SamplerState::s_DefaultSamplerState = nullptr;
+
+            Renderer2D::Shutdown();
             ForwardRenderer::Shutdown();
         }
 
@@ -228,6 +230,7 @@ namespace Crowny
         Importer::Shutdown();
         Random::Shutdown();
         AudioManager::Shutdown();
+
         RenderAPI::Shutdown();
 
         ConsoleBuffer::Shutdown();

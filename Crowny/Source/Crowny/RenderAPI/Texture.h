@@ -53,6 +53,7 @@ namespace Crowny
 
     public:
         static Ref<Texture> Create(const TextureParameters& params);
+        static Ref<Texture> CreateDeferred(const TextureParameters& params, const Ref<PixelData>& pixelData = nullptr);
 
     public:
         static Ref<Texture> WHITE;
@@ -61,9 +62,11 @@ namespace Crowny
     protected:
         UnorderedMap<TextureViewDesc, Ref<TextureView>, TextureView::HashFunction, TextureView::EqualFunction> m_TextureViews;
         Texture(const TextureParameters& params);
+        Texture(const TextureParameters& params, bool deferred); // Deferred init — no GPU work
         Texture() = default; // For serialization only
 
         TextureParameters m_Params;
+        Ref<PixelData> m_PendingPixelData; // Stored during import, uploaded in Init()
     };
 
 } // namespace Crowny

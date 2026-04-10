@@ -76,9 +76,6 @@ namespace Crowny
     float EditorLayer::s_FixedDeltaTime = 0.0f;
     float EditorLayer::s_FrameCount = 0.0f;
 
-    static const char* EDITOR_NEW_PROJECT_ID = "New Project";
-    static const char* EDITOR_PROJECT_MANAGER_ID = "Project Manager";
-
     EditorCamera EditorLayer::s_EditorCamera = EditorCamera(30.0f, 1280.0f / 720.0f, 0.001f, 30000.0f);
 
     EditorLayer::EditorLayer() : Layer("EditorLayer") {}
@@ -331,7 +328,7 @@ namespace Crowny
                 if (entity)
                 {
                     const AssetHandle<Asset> assetHandle = ProjectLibrary::Get().Load(fileEntry);
-                    entity.GetComponent<MeshRendererComponent>().BaseMaterial = static_asset_cast<Material>(assetHandle);
+                    entity.GetComponent<MeshRendererComponent>().SetMaterial(0, static_asset_cast<Material>(assetHandle));
                 }
             }
             else if (assetType == AssetType::Mesh)
@@ -355,7 +352,11 @@ namespace Crowny
         return true;
     }
 
-    void EditorLayer::CreateNewScene() { m_Temp = CreateRef<Scene>("Scene"); }
+    void EditorLayer::CreateNewScene()
+    {
+        m_Temp = CreateRef<Scene>("Scene");
+        m_Temp->SetEditorScene(true);
+    }
 
     void EditorLayer::OpenScene()
     {
@@ -368,6 +369,7 @@ namespace Crowny
     void EditorLayer::OpenScene(const Path& filepath)
     {
         m_Temp = CreateRef<Scene>(filepath.string(), false);
+        m_Temp->SetEditorScene(true);
         SceneSerializer serializer(m_Temp);
         serializer.Deserialize(filepath);
     }
@@ -566,8 +568,10 @@ namespace Crowny
 
     void EditorLayer::OnUpdate(Timestep ts)
     {
-        // TODO: Think of away to get around refreshing everything when creating the .meta file
-        // ExecuteProjectAssetRefresh();
+        // Process completed async imports (GPU init on main thread)
+        if (ProjectLibrary::IsStartedUp() && ProjectLibrary::Get().IsImporting())
+            ProjectLibrary::Get().ProcessCompletedImports();
+
         if (m_Temp) // Delay scene reload
         {
             m_SceneRenderer->SetScene(m_Temp);
@@ -703,10 +707,20 @@ namespace Crowny
     void EditorLayer::OnImGuiRender()
     {
         SetupImGuiRender();
+
+        // When no project is loaded, show the project hub and skip the editor UI
+        if (!Editor::Get().IsProjectLoaded())
+        {
+            UI_ProjectManager();
+            ImGui::End();
+            return;
+        }
+
         m_MenuBar->Render();
         if (m_ShowDemoWindow)
             ImGui::ShowDemoWindow(&m_ShowDemoWindow);
 
+        // UI_ProjectManager handles menu-triggered open/new even when a project is loaded
         UI_ProjectManager();
         UI_Header();
         UI_GizmoSettings();
@@ -728,28 +742,50 @@ namespace Crowny
         m_ConsolePanel->Render();
         m_AssetBrowser->Render();
 
-        ImGui::End();
+        ImGui::End(); // End dockspace
+
+        // Status bar at the very bottom — rendered OUTSIDE the dockspace
+        if (ProjectLibrary::IsStartedUp() && ProjectLibrary::Get().IsImporting())
+        {
+            ImGuiViewport* viewport = ImGui::GetMainViewport();
+            const float statusBarHeight = ImGui::GetFrameHeight();
+            ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + viewport->Size.y - statusBarHeight));
+            ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, statusBarHeight));
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, 2.0f));
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+            ImGui::Begin("##StatusBar", nullptr,
+                         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking |
+                         ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav);
+
+            const auto& progress = ProjectLibrary::Get().GetImportProgress();
+            char text[128];
+            snprintf(text, sizeof(text), "Importing assets... %u / %u", progress.CompletedFiles.load(), progress.TotalFiles.load());
+            ImGui::Text("%s", text);
+            ImGui::SameLine();
+            ImGui::ProgressBar(progress.GetFraction(), ImVec2(200, ImGui::GetFrameHeight() - 4));
+
+            ImGui::End();
+            ImGui::PopStyleVar(3);
+        }
     }
 
     void EditorLayer::UI_ProjectManager()
     {
-        if (!Editor::Get().IsProjectLoaded() && !ImGui::IsPopupOpen(EDITOR_PROJECT_MANAGER_ID) || m_OpenProject)
+        // Handle menu-item flags when a project is already loaded:
+        // Use native dialogs directly rather than showing the hub.
+        if (Editor::Get().IsProjectLoaded())
         {
-            ImGui::OpenPopup(EDITOR_PROJECT_MANAGER_ID);
-            m_OpenProject = false;
-        }
-
-        if (UIUtils::BeginPopup(EDITOR_PROJECT_MANAGER_ID))
-        {
-            if (ImGui::Button("Open"))
+            if (m_OpenProject)
             {
+                m_OpenProject = false;
                 Vector<Path> outPaths;
                 if (FileSystem::OpenFileDialog(FileDialogType::OpenFolder, outPaths, "Open Project", Editor::Get().GetDefaultProjectPath()))
                 {
                     if (outPaths.size() > 0)
                     {
-                        if (Editor::Get().IsProjectLoaded())
-                            SaveProjectSettings();
+                        SaveProjectSettings();
                         Editor::Get().LoadProject(outPaths[0]);
                         Editor::Get().GetEditorSettings()->LastOpenProject = outPaths[0];
                         SetProjectSettings();
@@ -757,105 +793,314 @@ namespace Crowny
                     }
                 }
             }
-            ImGui::SameLine();
-            if (ImGui::Button("New"))
+            if (m_NewProject)
             {
-                ImGui::CloseCurrentPopup();
-                m_NewProject = true;
-                // return;
+                m_NewProject = false;
+                SaveProjectSettings();
+                Editor::Get().UnloadProject();
+                m_HubPage = HubPage::NewProject;
+                m_NewProjectPath = Editor::Get().GetDefaultProjectPath().string();
+                m_NewProjectName = "New Project";
+                // Will render hub on the next frame since project is now unloaded
             }
+            return;
+        }
 
-            ImGui::Text("Recent Projects");
+        // Below: no project is loaded -- render the fullscreen hub
 
-            ImGui::BeginTable("##projectTable", 4);
-            ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort, 0.15f);
-            ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort, 0.35f);
-            ImGui::TableSetupColumn("Modified", ImGuiTableColumnFlags_WidthStretch, 0.3f);
-            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch, 0.1f);
-            ImGui::TableHeadersRow();
-            Ref<EditorSettings> settings = Editor::Get().GetEditorSettings();
-            for (uint32_t i = 0; i < settings->RecentProjects.size(); i++)
+        // Fullscreen hub window covering the entire viewport
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowSize(viewport->Size);
+        ImGuiWindowFlags hubFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
+                                    ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                                    ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus |
+                                    ImGuiWindowFlags_NoDocking;
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+        ImGui::Begin("##ProjectHub", nullptr, hubFlags);
+        ImGui::PopStyleVar();
+
+        const float sidebarWidth = 200.0f;
+        const ImVec2 windowSize = ImGui::GetContentRegionAvail();
+
+        // ---- Left sidebar ----
+        {
+            ImGui::BeginChild("##HubSidebar", ImVec2(sidebarWidth, windowSize.y), true);
+
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 6));
+
+            // Title
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 16.0f);
+            ImGui::SetCursorPosX(16.0f);
+            ImGui::TextUnformatted("CROWNY");
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            // Navigation buttons
+            const float buttonWidth = sidebarWidth - ImGui::GetStyle().WindowPadding.x * 2.0f;
+            bool isRecent = (m_HubPage == HubPage::RecentProjects);
+            if (isRecent)
+                ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+            if (ImGui::Button("Projects", ImVec2(buttonWidth, 0)))
+                m_HubPage = HubPage::RecentProjects;
+            if (isRecent)
+                ImGui::PopStyleColor();
+
+            bool isNew = (m_HubPage == HubPage::NewProject);
+            if (isNew)
+                ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+            if (ImGui::Button("New Project", ImVec2(buttonWidth, 0)))
             {
-                const RecentProject& project = settings->RecentProjects[i];
-                if (project.ProjectPath.empty())
-                    continue;
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
-                char res[30];
-                tm* timeinfo;
-                timeinfo = localtime(&project.Timestamp);
-                strftime(res, 30, "%c", timeinfo);
-                const Path& projectPath = project.ProjectPath;
-                if (ImGui::Selectable(projectPath.filename().string().c_str(), false,
-                                      ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap))
+                m_HubPage = HubPage::NewProject;
+                if (m_NewProjectPath.empty())
                 {
-                    if (Editor::Get().IsProjectLoaded())
-                        SaveProjectSettings();
-                    Editor::Get().LoadProject(project.ProjectPath);
-                    Editor::Get().GetEditorSettings()->LastOpenProject = project.ProjectPath;
+                    m_NewProjectPath = Editor::Get().GetDefaultProjectPath().string();
+                    m_NewProjectName = "New Project";
+                }
+            }
+            if (isNew)
+                ImGui::PopStyleColor();
+
+            ImGui::Separator();
+
+            // Version info pushed to bottom
+            ImGui::SetCursorPosY(ImGui::GetWindowHeight() - ImGui::GetTextLineHeightWithSpacing() - ImGui::GetStyle().WindowPadding.y);
+            ImGui::SetCursorPosX(16.0f);
+            ImGui::TextDisabled("v0.1.0-dev");
+
+            ImGui::PopStyleVar();
+            ImGui::EndChild();
+        }
+
+        ImGui::SameLine();
+
+        // ---- Right content area ----
+        {
+            ImGui::BeginChild("##HubContent", ImVec2(0, windowSize.y), false);
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 6));
+            const float contentPadding = 16.0f;
+            ImGui::SetCursorPos(ImVec2(contentPadding, contentPadding));
+
+            if (m_HubPage == HubPage::RecentProjects)
+            {
+                // ---- Recent Projects page ----
+                ImGui::TextUnformatted("Recent Projects");
+                ImGui::Spacing();
+
+                // Search bar
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - contentPadding - 120.0f);
+                ImGui::InputTextWithHint("##projectSearch", "Search projects...", &m_RecentSearchFilter);
+                ImGui::SameLine();
+                if (ImGui::Button("Open Folder", ImVec2(110.0f, 0)))
+                {
+                    Vector<Path> outPaths;
+                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFolder, outPaths, "Open Project", Editor::Get().GetDefaultProjectPath()))
+                    {
+                        if (outPaths.size() > 0)
+                        {
+                            Editor::Get().LoadProject(outPaths[0]);
+                            Editor::Get().GetEditorSettings()->LastOpenProject = outPaths[0];
+                            SetProjectSettings();
+                            m_AssetBrowser->Initialize();
+                        }
+                    }
+                }
+
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                // Scrollable project list
+                ImGui::BeginChild("##RecentList", ImVec2(0, -ImGui::GetFrameHeightWithSpacing() - 8.0f), false);
+
+                Ref<EditorSettings> settings = Editor::Get().GetEditorSettings();
+                for (uint32_t i = 0; i < settings->RecentProjects.size(); i++)
+                {
+                    const RecentProject& project = settings->RecentProjects[i];
+                    if (project.ProjectPath.empty())
+                        continue;
+
+                    // Apply search filter
+                    String projectName = project.ProjectPath.filename().string();
+                    if (!m_RecentSearchFilter.empty())
+                    {
+                        String lowerName = projectName;
+                        String lowerFilter = m_RecentSearchFilter;
+                        std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+                        std::transform(lowerFilter.begin(), lowerFilter.end(), lowerFilter.begin(), ::tolower);
+                        if (lowerName.find(lowerFilter) == String::npos)
+                            continue;
+                    }
+
+                    // Format timestamp safely
+                    char timeStr[30] = "Unknown";
+                    if (project.Timestamp != 0)
+                    {
+                        tm timeinfo;
+#ifdef CW_PLATFORM_WIN32
+                        localtime_s(&timeinfo, &project.Timestamp);
+#else
+                        localtime_r(&project.Timestamp, &timeinfo);
+#endif
+                        strftime(timeStr, sizeof(timeStr), "%c", &timeinfo);
+                    }
+
+                    ImGui::PushID(static_cast<int>(i));
+
+                    bool isSelected = (m_SelectedRecentIdx == static_cast<int>(i));
+                    float itemHeight = ImGui::GetTextLineHeight() * 2.0f + ImGui::GetStyle().ItemSpacing.y + 8.0f;
+
+                    if (ImGui::Selectable("##recentEntry", isSelected, ImGuiSelectableFlags_AllowDoubleClick, ImVec2(0, itemHeight)))
+                    {
+                        m_SelectedRecentIdx = static_cast<int>(i);
+                        if (ImGui::IsMouseDoubleClicked(0))
+                        {
+                            Editor::Get().LoadProject(project.ProjectPath);
+                            Editor::Get().GetEditorSettings()->LastOpenProject = project.ProjectPath;
+                            SetProjectSettings();
+                            m_AssetBrowser->Initialize();
+                        }
+                    }
+
+                    // Draw project info on top of the selectable
+                    ImVec2 itemMin = ImGui::GetItemRectMin();
+                    ImGui::SetCursorScreenPos(ImVec2(itemMin.x + 8.0f, itemMin.y + 4.0f));
+                    ImGui::TextUnformatted(projectName.c_str());
+                    ImGui::SetCursorScreenPos(ImVec2(itemMin.x + 8.0f, itemMin.y + 4.0f + ImGui::GetTextLineHeightWithSpacing()));
+                    ImGui::TextDisabled("%s  |  %s", project.ProjectPath.string().c_str(), timeStr);
+
+                    ImGui::PopID();
+                }
+
+                ImGui::EndChild();
+
+                // Bottom action bar
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                bool hasSelection = m_SelectedRecentIdx >= 0 &&
+                                    m_SelectedRecentIdx < static_cast<int>(settings->RecentProjects.size()) &&
+                                    !settings->RecentProjects[m_SelectedRecentIdx].ProjectPath.empty();
+
+                if (!hasSelection)
+                    ImGui::BeginDisabled();
+
+                if (ImGui::Button("Open", ImVec2(80.0f, 0)))
+                {
+                    const RecentProject& sel = settings->RecentProjects[m_SelectedRecentIdx];
+                    Editor::Get().LoadProject(sel.ProjectPath);
+                    Editor::Get().GetEditorSettings()->LastOpenProject = sel.ProjectPath;
                     SetProjectSettings();
                     m_AssetBrowser->Initialize();
                 }
-                ImGui::TableNextColumn();
-                ImGui::Text("%s", projectPath.string().c_str());
-                ImGui::TableNextColumn();
-                ImGui::Text("%s", res);
-                ImGui::TableNextColumn();
-                if (ImGui::Button("-", ImVec2(20.0f, 20.0f)))
+                ImGui::SameLine();
+                if (ImGui::Button("-", ImVec2(30.0f, 0)))
                 {
-                    for (uint32_t j = i; j < settings->RecentProjects.size() - 1; j++)
+                    for (uint32_t j = m_SelectedRecentIdx; j < settings->RecentProjects.size() - 1; j++)
                         settings->RecentProjects[j] = settings->RecentProjects[j + 1];
                     settings->RecentProjects[settings->RecentProjects.size() - 1].ProjectPath.clear();
                     settings->RecentProjects[settings->RecentProjects.size() - 1].Timestamp = 0;
+                    m_SelectedRecentIdx = -1;
                 }
+                UI::SetTooltip("Remove from recents");
                 ImGui::SameLine();
-                if (ImGui::ImageButton(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FolderIcon), ImVec2(20.0f, 20.0f), { 0, 1 }, { 1, 0 }, 0))
-                    PlatformUtils::ShowInExplorer(project.ProjectPath);
-            }
-            ImGui::EndTable();
-            UIUtils::EndPopup();
-            if (!Editor::Get().IsProjectLoaded())
-                return;
-        }
-        if (m_NewProject)
-        {
-            ImGui::OpenPopup(EDITOR_NEW_PROJECT_ID);
-            m_NewProject = false;
-        }
-        if (UIUtils::BeginPopup(EDITOR_NEW_PROJECT_ID))
-        {
-            ImGui::Text("Path: ");
-            ImGui::SameLine();
-            if (m_NewProjectPath.empty())
-            {
-                m_NewProjectPath = Editor::Get().GetDefaultProjectPath().string();
-                m_NewProjectName = "New Project";
-            }
-            ImGui::InputText("##newProjectPath", &m_NewProjectPath);
-            ImGui::Text("ProjectName: ");
-            ImGui::InputText("##newProjectName", &m_NewProjectName);
-            if (!fs::exists(m_NewProjectPath))
-                ImGui::Text("* Path does not exist");
-            else if (fs::exists(Path(m_NewProjectPath) / m_NewProjectName))
-                ImGui::Text("* A folder with the name of the project already exists there.");
+                if (ImGui::ImageButton(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FolderIcon), ImVec2(18.0f, 18.0f), { 0, 1 }, { 1, 0 }, 0))
+                    PlatformUtils::ShowInExplorer(settings->RecentProjects[m_SelectedRecentIdx].ProjectPath);
+                UI::SetTooltip("Show in explorer");
 
-            if (ImGui::Button("Create"))
-            {
-                Editor::Get().CreateProject(m_NewProjectPath, m_NewProjectName);
-                Path newProjectPath = Path(m_NewProjectPath) / m_NewProjectName;
-                if (Editor::Get().IsProjectLoaded())
-                    SaveProjectSettings();
-                Editor::Get().LoadProject(newProjectPath);
-                Editor::Get().GetEditorSettings()->LastOpenProject = newProjectPath;
-                SetProjectSettings();
-                m_NewProjectPath.clear();
-                ImGui::CloseCurrentPopup();
-                m_AssetBrowser->Initialize();
+                if (!hasSelection)
+                    ImGui::EndDisabled();
             }
-            UIUtils::EndPopup();
-            if (!Editor::Get().IsProjectLoaded()) // TODO: Consider changing this (fixing panels) as it would look better
-                return;
+            else if (m_HubPage == HubPage::NewProject)
+            {
+                // ---- New Project page ----
+                ImGui::TextUnformatted("Create New Project");
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                ImGui::TextUnformatted("Project Name");
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - contentPadding);
+                ImGui::InputText("##newProjectName", &m_NewProjectName);
+
+                ImGui::Spacing();
+                ImGui::TextUnformatted("Location");
+                float browseButtonWidth = 40.0f;
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - contentPadding - browseButtonWidth - ImGui::GetStyle().ItemSpacing.x);
+                ImGui::InputText("##newProjectPath", &m_NewProjectPath);
+                ImGui::SameLine();
+                if (ImGui::Button("...", ImVec2(browseButtonWidth, 0)))
+                {
+                    Vector<Path> outPaths;
+                    if (FileSystem::OpenFileDialog(FileDialogType::OpenFolder, outPaths, "Select Location", Path(m_NewProjectPath)))
+                    {
+                        if (outPaths.size() > 0)
+                            m_NewProjectPath = outPaths[0].string();
+                    }
+                }
+
+                ImGui::Spacing();
+                ImGui::Spacing();
+
+                // Real-time validation
+                bool pathExists = fs::exists(m_NewProjectPath);
+                bool projectExists = pathExists && fs::exists(Path(m_NewProjectPath) / m_NewProjectName);
+                bool nameEmpty = m_NewProjectName.empty();
+                bool canCreate = pathExists && !projectExists && !nameEmpty;
+
+                if (nameEmpty)
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
+                    ImGui::TextUnformatted("Project name cannot be empty");
+                    ImGui::PopStyleColor();
+                }
+                else if (!pathExists)
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
+                    ImGui::TextUnformatted("Path does not exist");
+                    ImGui::PopStyleColor();
+                }
+                else if (projectExists)
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
+                    ImGui::TextUnformatted("A project with this name already exists");
+                    ImGui::PopStyleColor();
+                }
+                else
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 1.0f, 0.4f, 1.0f));
+                    ImGui::TextUnformatted("Ready to create");
+                    ImGui::PopStyleColor();
+                }
+
+                ImGui::Spacing();
+
+                if (!canCreate)
+                    ImGui::BeginDisabled();
+
+                if (ImGui::Button("Create", ImVec2(120.0f, 0)))
+                {
+                    Editor::Get().CreateProject(m_NewProjectPath, m_NewProjectName);
+                    Path newProjectPath = Path(m_NewProjectPath) / m_NewProjectName;
+                    Editor::Get().LoadProject(newProjectPath);
+                    Editor::Get().GetEditorSettings()->LastOpenProject = newProjectPath;
+                    SetProjectSettings();
+                    m_NewProjectPath.clear();
+                    m_NewProjectName.clear();
+                    m_AssetBrowser->Initialize();
+                }
+
+                if (!canCreate)
+                    ImGui::EndDisabled();
+            }
+
+            ImGui::PopStyleVar();
+            ImGui::EndChild();
         }
+
+        ImGui::End();
     }
 
     void EditorLayer::UI_EntityDebugInfo()
@@ -1204,16 +1449,30 @@ namespace Crowny
             {
                 if (m_SceneState == SceneState::Edit)
                 {
-                    SaveActiveScene(); // Save the scene in case the simulation crashes
-                    SceneManager::GetActiveScene()->OnRuntimeStart();
+                    SaveActiveScene(); // Save to disk in case the simulation crashes
+
+                    // Backup the editor scene and create a runtime copy
+                    m_EditorSceneBackup = SceneManager::GetActiveScene();
+                    Ref<Scene> runtimeScene = CreateRef<Scene>(*m_EditorSceneBackup);
+                    runtimeScene->SetEditorScene(false);
+                    SceneManager::SetActiveScene(runtimeScene);
+                    m_SceneRenderer->SetScene(runtimeScene);
+
+                    runtimeScene->OnRuntimeStart();
                     ScriptRuntime::OnStart();
                     m_SceneState = SceneState::Play;
-                    m_ViewportPanel->DisalbeGizmo();
+                    m_ViewportPanel->DisableGizmo();
                 }
                 else if (m_SceneState != SceneState::Simulate)
                 {
                     SceneManager::GetActiveScene()->OnRuntimeStop();
                     ScriptRuntime::OnShutdown();
+
+                    // Restore the editor scene
+                    SceneManager::SetActiveScene(m_EditorSceneBackup);
+                    m_SceneRenderer->SetScene(m_EditorSceneBackup);
+                    m_EditorSceneBackup = nullptr;
+
                     m_ViewportPanel->EnableGizmo();
                     m_SceneState = SceneState::Edit;
                     m_GameMode = false;
@@ -1231,13 +1490,26 @@ namespace Crowny
             {
                 if (m_SceneState == SceneState::Edit)
                 {
+                    // Backup the editor scene and create a simulation copy
+                    m_EditorSceneBackup = SceneManager::GetActiveScene();
+                    Ref<Scene> simScene = CreateRef<Scene>(*m_EditorSceneBackup);
+                    simScene->SetEditorScene(false);
+                    SceneManager::SetActiveScene(simScene);
+                    m_SceneRenderer->SetScene(simScene);
+
                     m_SceneState = SceneState::Simulate;
-                    SceneManager::GetActiveScene()->OnSimulationStart();
+                    simScene->OnSimulationStart();
                 }
                 else if (m_SceneState == SceneState::Simulate)
                 {
-                    m_SceneState = SceneState::Edit;
                     SceneManager::GetActiveScene()->OnSimulationEnd();
+
+                    // Restore the editor scene
+                    SceneManager::SetActiveScene(m_EditorSceneBackup);
+                    m_SceneRenderer->SetScene(m_EditorSceneBackup);
+                    m_EditorSceneBackup = nullptr;
+
+                    m_SceneState = SceneState::Edit;
                 }
             }
             UI::SetTooltip(m_SceneState == SceneState::Simulate ? "Stop" : "Simulate Physics");
@@ -1252,8 +1524,9 @@ namespace Crowny
                 }
                 else if (m_SceneState == SceneState::PausePlay)
                 {
+                    SceneManager::GetActiveScene()->OnRuntimeResume();
                     m_SceneState = SceneState::Play;
-                    m_ViewportPanel->DisalbeGizmo();
+                    m_ViewportPanel->DisableGizmo();
                 }
             }
             UI::SetTooltip(m_SceneState == SceneState::PausePlay ? "Resume" : "Pause");

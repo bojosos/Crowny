@@ -98,6 +98,7 @@ namespace Crowny
     {
     public:
         VulkanTexture(const TextureParameters& parameters);
+        VulkanTexture(const TextureParameters& parameters, bool deferred); // CPU-only, no GPU init
         ~VulkanTexture();
 
         virtual PixelData Lock(GpuLockOptions options, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) override;

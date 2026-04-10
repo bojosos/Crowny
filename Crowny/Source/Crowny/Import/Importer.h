@@ -14,6 +14,8 @@ namespace Crowny
     public:
         ~Importer();
         Ref<Asset> Import(const Path& filepath, Ref<const ImportOptions> importOptions = nullptr);
+        Vector<Ref<Asset>> ImportAll(const Path& filepath, Ref<const ImportOptions> importOptions = nullptr);
+        Ref<Asset> ImportDeferred(const Path& filepath, Ref<const ImportOptions> importOptions = nullptr);
 
         template <class T> Ref<T> Import(const Path& filepath, Ref<const ImportOptions> importOptions = nullptr)
         {

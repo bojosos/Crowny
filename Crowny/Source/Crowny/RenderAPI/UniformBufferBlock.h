@@ -2,6 +2,9 @@
 
 #include "Crowny/RenderAPI/GpuBuffer.h"
 
+class BinaryDataStreamOutputArchive;
+class BinaryDataStreamInputArchive;
+
 namespace Crowny
 {
 
@@ -20,6 +23,9 @@ namespace Crowny
         static Ref<UniformBufferBlock> Create(uint32_t size, BufferUsage usage = BufferUsage::BU_STATIC_DRAW);
 
     protected:
+        friend void Save(BinaryDataStreamOutputArchive&, const class Material&);
+        friend void Load(BinaryDataStreamInputArchive&, class Material&);
+
         BufferUsage m_Usage;
         GpuBuffer* m_Buffer;
         uint8_t* m_CachedData;

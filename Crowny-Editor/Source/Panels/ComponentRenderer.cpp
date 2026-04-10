@@ -303,8 +303,20 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<MeshRendererComponent>(Entity e)
     {
-        MeshRendererComponent& mesh = e.GetComponent<MeshRendererComponent>();
-        UIUtils::AssetReference<Mesh>("Mesh", mesh.MeshHandle);
+        MeshRendererComponent& meshComp = e.GetComponent<MeshRendererComponent>();
+        UIUtils::AssetReference<Mesh>("Mesh", meshComp.MeshHandle);
+
+        // Material slots — one per sub-mesh (or at least one default slot)
+        uint32_t subMeshCount = meshComp.MeshHandle ? (uint32_t)meshComp.MeshHandle->GetSubMeshes().size() : 0;
+        uint32_t slotCount = std::max(1u, std::max(subMeshCount, meshComp.GetMaterialCount()));
+
+        for (uint32_t i = 0; i < slotCount; i++)
+        {
+            String label = subMeshCount > 1 ? "Material " + std::to_string(i) : "Material";
+            AssetHandle<Material> mat = meshComp.GetMaterial(i);
+            if (UIUtils::AssetReference<Material>(label.c_str(), mat))
+                meshComp.SetMaterial(i, mat);
+        }
     }
 
     template <> void ComponentEditorWidget<Rigidbody2DComponent>(Entity entity)
@@ -409,6 +421,8 @@ namespace Crowny
 
     static void DrawPhysicsMaterial(const AssetHandle<PhysicsMaterial2D>& material)
     {
+        if (!material)
+            return;
         UI::Property("Density", material->GetDensity());
         UI::Property("Friction", material->GetFriction());
         UI::Property("Restitution", material->GetRestitution());
@@ -486,7 +500,7 @@ namespace Crowny
             sourceComponent.SetMinDistance(minDistance);
 
         float maxDistance = sourceComponent.GetMaxDistance();
-        if (UI::Property("Max Distance", minDistance))
+        if (UI::Property("Max Distance", maxDistance))
             sourceComponent.SetMaxDistance(maxDistance);
     }
 

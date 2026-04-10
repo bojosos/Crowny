@@ -8,6 +8,7 @@
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
 
 #include "Crowny/Serialization/FileEncoder.h"
+#include "Crowny/Serialization/SceneSerializer.h"
 #include "Serialization/EditorSettingsSerializer.h"
 #include "Serialization/ProjectSettingsSerializer.h"
 
@@ -25,8 +26,9 @@ namespace Crowny
     void Editor::CreateProject(const Path& projectParentPath, const String& projectName)
     {
         const Path& projectPath = projectParentPath / projectName;
-        const Path& assetDirectory = ProjectLibrary::Get().GetAssetFolder();
+        const Path& assetDirectory = projectPath / ProjectLibrary::ASSET_DIR;
         const Path& assetCache = projectPath / ProjectLibrary::INTERNAL_ASSET_DIR;
+        const Path& assembliesDir = projectPath / INTERNAL_ASSEMBLY_PATH;
 
         if (!fs::exists(projectPath))
             fs::create_directories(projectPath);
@@ -36,6 +38,18 @@ namespace Crowny
 
         if (!fs::exists(assetCache))
             fs::create_directories(assetCache);
+
+        if (!fs::exists(assembliesDir))
+            fs::create_directories(assembliesDir);
+
+        // Create a default empty scene
+        Path defaultScenePath = assetDirectory / "DefaultScene.cwscene";
+        if (!fs::exists(defaultScenePath))
+        {
+            Ref<Scene> defaultScene = CreateRef<Scene>("DefaultScene");
+            SceneSerializer serializer(defaultScene);
+            serializer.Serialize(defaultScenePath);
+        }
     }
 
     void Editor::LoadProject(const Path& projectPath)

@@ -152,7 +152,7 @@ namespace Crowny
 
         VkFenceCreateInfo fenceCI{};
         fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT; // Start signaled so first wait succeeds
+        fenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
         for (uint32_t i = 0; i < imageCount; i++)
         {
@@ -244,19 +244,21 @@ namespace Crowny
                     vkDestroyFence(m_Device, surface.AcquireFence, nullptr);
                     surface.AcquireFence = VK_NULL_HANDLE;
                 }
-                // Last surface is only for the semaphore(due to validation errors)
-                if (!surface.Framebuffer)
-                    continue;
-                surface.Framebuffer->Destroy();
-                surface.Framebuffer = nullptr;
+                if (surface.Framebuffer)
+                {
+                    surface.Framebuffer->Destroy();
+                    surface.Framebuffer = nullptr;
+                }
                 if (surface.Image)
                 {
                     surface.Image->Destroy();
                     surface.Image = nullptr;
                 }
-
-                surface.Sync->Destroy();
-                surface.Sync = nullptr;
+                if (surface.Sync)
+                {
+                    surface.Sync->Destroy();
+                    surface.Sync = nullptr;
+                }
             }
             vkDestroySwapchainKHR(m_Device, m_SwapChain, gVulkanAllocator);
         }
@@ -278,7 +280,6 @@ namespace Crowny
     {
         uint32_t imageIndex;
 
-        // Wait for the previous acquire that used this semaphore slot to complete
         VkFence fence = m_Surfaces[m_CurrentSemaphoreIdx].AcquireFence;
         vkWaitForFences(m_Device, 1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
         vkResetFences(m_Device, 1, &fence);

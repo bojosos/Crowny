@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Assets/Asset.h"
 #include "Crowny/Common/Timestep.h"
 #include "Crowny/Common/Uuid.h"
 
@@ -21,9 +22,12 @@ namespace Crowny
         Vector<Entity> Colliders;
     };
 
-    class Scene
+    class Scene : public Asset
     {
     public:
+        AssetType GetAssetType() const override { return AssetType::Scene; }
+        static AssetType GetStaticType() { return AssetType::Scene; }
+
         Scene(bool createRootEntity = true);
         Scene(const String& name, bool createRootEntity = true);
         Scene(Scene& other);
@@ -46,8 +50,12 @@ namespace Crowny
         void SetName(const String& name) { m_Name = name; }
         const Path& GetFilepath() const { return m_Filepath; }
 
+        bool IsEditorScene() const { return m_IsEditorScene; }
+        void SetEditorScene(bool isEditor) { m_IsEditorScene = isEditor; }
+
         void OnRuntimeStart();
         void OnRuntimePause();
+        void OnRuntimeResume();
         void OnRuntimeStop();
 
         void OnFixedUpdate(Timestep ts);
@@ -90,7 +98,6 @@ namespace Crowny
         friend class SceneSerializer;
         friend class Entity;
         friend class EnttEntity;
-
         bool m_IsEditorScene = false;
 
         String m_Name;

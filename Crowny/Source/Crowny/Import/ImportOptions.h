@@ -16,7 +16,8 @@ namespace Crowny
         AudioClip,
         Script,
         Font,
-        Mesh
+        Mesh,
+        Scene
     };
 
     class ImportOptions

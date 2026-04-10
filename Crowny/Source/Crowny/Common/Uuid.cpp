@@ -28,7 +28,9 @@ namespace Crowny
 
     UUID::UUID(const String& uuid)
     {
-        CW_ENGINE_ASSERT(uuid.size() == 36);
+        m_Data[0] = m_Data[1] = m_Data[2] = m_Data[3] = 0;
+        if (uuid.size() != 36)
+            return;
         uint32_t idx = 0;
 
         for (int32_t i = 7; i >= 0; i--)

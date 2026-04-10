@@ -11,7 +11,7 @@ namespace Crowny
         static void Init();
         static void Begin();
         static void BeginScene(const Camera& camera, const glm::mat4& transform);
-        static void Submit(const AssetHandle<Mesh>& mesh, const AssetHandle<Material>& material, const glm::mat4& transform);
+        static void Submit(const AssetHandle<Mesh>& mesh, const Vector<AssetHandle<Material>>& materials, const glm::mat4& transform);
         static void SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform);
         // static void SubmitLightSetup(const LightSetup& setup);
         static void SubmitLightSetup();

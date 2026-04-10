@@ -5,6 +5,9 @@
 #include "Panels/ConsolePanel.h"
 #include "UI/UIUtils.h"
 
+#include "Crowny/Common/PlatformUtils.h"
+#include "Crowny/Input/Input.h"
+
 #include <imgui.h>
 
 // TODO: Add binary search for placing new messages in the right place, for collapsed mode I would need to add the count
@@ -36,6 +39,16 @@ namespace Crowny
         RenderHeader();
         ImGui::Separator();
         RenderMessages();
+
+        // Ctrl+C copies the selected message text + callstack
+        if (m_Focused && m_SelectedMessageHash != 0 && Input::IsKeyPressed(Key::LeftControl) && Input::IsKeyDown(Key::C))
+        {
+            String clipText = m_SelectedMessage.MessageText;
+            for (const auto& call : m_SelectedMessage.Callstack)
+                clipText += "\n  " + call.FunctionSignature + " (at " + call.SourceFilePath.string() + ":" + std::to_string(call.Line) + ")";
+            ImGui::SetClipboardText(clipText.c_str());
+        }
+
         ImGui::EndChild();
         ImGui::InvisibleButton("hsplitter", ImVec2(-1, 8.0f));
         if (ImGui::IsItemHovered())

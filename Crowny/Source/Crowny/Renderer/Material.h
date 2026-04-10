@@ -39,6 +39,9 @@ namespace Crowny
         Material(const AssetHandle<Shader>& shader);
         virtual ~Material() override = default;
 
+        virtual AssetType GetAssetType() const override { return AssetType::Material; }
+        static AssetType GetStaticType() { return AssetType::Material; }
+
         static Ref<Material> Create(const AssetHandle<Shader>& shader);
 
         AssetHandle<Shader> GetShader() const { return m_Shader; }
@@ -85,9 +88,13 @@ namespace Crowny
         const Ref<GraphicsPipeline>& GetGraphicsPipeline() const { return m_GraphicsPipeline; }
 
     private:
+        friend class cereal::access;
+        Material() = default; // For serialization only
         void CreateAndAppendUniforms();
 
     private:
+        CW_SERIALIZABLE(Material);
+
         Ref<GraphicsPipeline> m_GraphicsPipeline;
         // TODO: render passes, each of these 3 should be per render pass
         UnorderedMap<String, Ref<UniformBufferBlock>> m_UniformBlocks;

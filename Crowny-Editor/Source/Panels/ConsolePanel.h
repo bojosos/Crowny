@@ -29,9 +29,9 @@ namespace Crowny
             case ConsoleBuffer::Message::Level::Error:
                 return { 1.00f, 0.00f, 0.00f, 1.00f }; // Red
             case ConsoleBuffer::Message::Level::Critical:
-                return { 1.00f, 0.00f, 0.00f, 1.00f }; // White-white
+                return { 1.00f, 0.00f, 0.00f, 1.00f }; // Red - critical
             default:
-                return { 0.00f, 0.00f, 0.00f, 1.00f }; // Stupid warnings
+                return { 0.00f, 0.00f, 0.00f, 1.00f }; // Black - default
             }
             return { 1.0f, 1.0f, 1.0f, 1.0f };
         }
