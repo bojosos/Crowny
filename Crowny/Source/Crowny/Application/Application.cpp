@@ -45,7 +45,6 @@ namespace Crowny
     Application::~Application()
     {
         delete m_LayerStack;
-        m_LayerStack = nullptr;
     }
 
     void Application::OnStartUp()
@@ -86,10 +85,6 @@ namespace Crowny
     {
         if (!m_ApplicationDesc.Headless)
         {
-            // Destroy layers first — they hold GPU resources (EditorAssets, viewports, etc.)
-            delete m_LayerStack;
-            m_LayerStack = nullptr;
-
             Renderer::Shutdown();
             m_Windows.clear();
         }

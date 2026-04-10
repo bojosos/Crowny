@@ -7,6 +7,8 @@ project "Crowny-Editor"
 	targetdir ("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
 	objdir ("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
 
+	applySanitizer()
+
 	pchheader "cwepch.h"
 	pchsource "Source/cwepch.cpp"
 

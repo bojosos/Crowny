@@ -11,6 +11,18 @@ newoption {
 	}
 }
 
+newoption {
+	trigger = "sanitizer",
+	value = "TYPE",
+	description = "Enable sanitizer (clang/gcc only)",
+	allowed = {
+		{ "address", "AddressSanitizer (memory errors, leaks)" },
+		{ "thread", "ThreadSanitizer (data races)" },
+		{ "undefined", "UndefinedBehaviorSanitizer" },
+		{ "memory", "MemorySanitizer (uninitialized reads, clang only)" }
+	}
+}
+
 workspace "Crowny"
 	architecture "x86_64"
 	startproject "Crowny-Editor"
@@ -34,6 +46,24 @@ workspace "Crowny"
 	{
 		"MultiProcessorCompile"
 	}
+
+-- Sanitizer helper — call from project premake files
+function applySanitizer()
+	if not _OPTIONS["sanitizer"] then return end
+	filter "toolset:msc*"
+		buildoptions { "/fsanitize=address", "/Zi" }
+		defines { "_DISABLE_VECTOR_ANNOTATION", "_DISABLE_STRING_ANNOTATION" }
+		flags { "NoIncrementalLink" }
+	filter { "toolset:msc*", "kind:ConsoleApp or WindowedApp" }
+		postbuildcommands {
+			'{COPYFILE} "$(VCToolsInstallDir)bin\\Hostx64\\x64\\clang_rt.asan_dynamic-x86_64.dll" "%{cfg.buildtarget.directory}"'
+		}
+	filter "toolset:not msc*"
+		local san = "-fsanitize=" .. _OPTIONS["sanitizer"]
+		buildoptions { san, "-fno-omit-frame-pointer" }
+		linkoptions { san }
+	filter {}
+end
 
 editandcontinue "Off"
 

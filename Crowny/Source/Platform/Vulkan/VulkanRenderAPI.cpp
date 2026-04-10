@@ -20,7 +20,6 @@
 #include <GLFW/glfw3.h>
 
 #define VMA_DEBUG_LOG_FORMAT(format, ...) // Suppress VMA allocation logging
-#define VMA_STATS_STRING_ENABLED 1
 #define VMA_IMPLEMENTATION
 
 #ifdef __clang__
@@ -201,14 +200,13 @@ namespace Crowny
             }
         }
 
-        const bool enableRT = Application::GetApplicationDesc().EnableRayTracing;
         if (discreteIdx != -1)
         {
-            m_Devices.push_back(CreateRef<VulkanDevice>(physicalDevices[discreteIdx], discreteIdx, enableRT));
+            m_Devices.push_back(CreateRef<VulkanDevice>(physicalDevices[discreteIdx], discreteIdx));
         }
         else
         {
-            m_Devices.push_back(CreateRef<VulkanDevice>(physicalDevices[0], -1, enableRT));
+            m_Devices.push_back(CreateRef<VulkanDevice>(physicalDevices[0], -1));
         }
         m_PrimaryDevices.push_back(m_Devices[0]);
         /*
@@ -426,16 +424,14 @@ namespace Crowny
 
     void VulkanRenderAPI::OnShutdown()
     {
-        // Ensure the GPU is completely idle before destroying any Vulkan objects.
-        for (uint32_t i = 0; i < (uint32_t)m_Devices.size(); i++)
-            m_Devices[i]->WaitIdle();
-
         VulkanTransferManager::Shutdown();
         VulkanRenderPasses::Shutdown();
         VulkanTextureManager::Shutdown();
         VulkanGpuBufferManager::Shutdown();
         VulkanBufferLayoutManager::Shutdown();
         m_CommandBuffer = nullptr;
+        for (uint32_t i = 0; i < (uint32_t)m_Devices.size(); i++)
+            m_Devices[i]->WaitIdle();
         m_Devices.clear();
         m_PrimaryDevices.clear();
 #ifdef CW_DEBUG

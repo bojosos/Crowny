@@ -21,7 +21,7 @@ namespace Crowny
     class VulkanDevice
     {
     public:
-        VulkanDevice(VkPhysicalDevice device, uint32_t deviceIdx, bool enableRayTracing = false);
+        VulkanDevice(VkPhysicalDevice device, uint32_t deviceIdx);
         ~VulkanDevice();
 
         SurfaceFormat GetSurfaceFormat(const VkSurfaceKHR& surface) const;

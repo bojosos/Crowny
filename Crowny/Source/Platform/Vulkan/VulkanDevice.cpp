@@ -14,6 +14,7 @@
 #include "Platform/Vulkan/VulkanRenderAPI.h"
 
 #define LOG_EXTENSIONS false
+#define raytracing false
 
 namespace Crowny
 {
@@ -21,21 +22,24 @@ namespace Crowny
 
     static Path GetPipelinePath() { return Application::GetInternalDirectory() / "pcache" / CROWNY_VERSION_STRING / PIPELINE_CACHE_FILE; }
 
-    VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, uint32_t deviceIdx, bool enableRayTracing) : m_PhysicalDevice(physicalDevice)
+    VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, uint32_t deviceIdx) : m_PhysicalDevice(physicalDevice)
     {
+        // Always populate device properties (needed for the discrete GPU check below)
+        vkGetPhysicalDeviceProperties(physicalDevice, &m_DeviceProperties);
+
         m_DeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
         m_DeviceFeatures.pNext = nullptr;
-        if (enableRayTracing)
+        if (raytracing)
         {
             m_RayTracingPipelineProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
 
-            VkPhysicalDeviceRayTracingInvocationReorderPropertiesNV reorderProperties;
+            VkPhysicalDeviceRayTracingInvocationReorderPropertiesNV reorderProperties{};
             reorderProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_PROPERTIES_NV;
 
-            VkPhysicalDeviceAccelerationStructurePropertiesKHR accelerationProperties;
+            VkPhysicalDeviceAccelerationStructurePropertiesKHR accelerationProperties{};
             accelerationProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
 
-            VkPhysicalDeviceProperties2 deviceProperties2;
+            VkPhysicalDeviceProperties2 deviceProperties2{};
             deviceProperties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 
             deviceProperties2.pNext = &m_RayTracingPipelineProperties;
@@ -45,12 +49,16 @@ namespace Crowny
 
             vkGetPhysicalDeviceProperties2(physicalDevice, &deviceProperties2);
 
-            CW_ENGINE_INFO("RT: max recursion={}, max geom={}, max inst={}, max prims={}",
-                m_RayTracingPipelineProperties.maxRayRecursionDepth,
-                accelerationProperties.maxGeometryCount,
-                accelerationProperties.maxInstanceCount,
-                accelerationProperties.maxPrimitiveCount);
+            CW_ENGINE_INFO("Max recursion depth: {}", m_RayTracingPipelineProperties.maxRayRecursionDepth);
+            CW_ENGINE_INFO("Handles sizes: {}", m_RayTracingPipelineProperties.shaderGroupHandleSize);
+            CW_ENGINE_INFO("Handles align: {}", m_RayTracingPipelineProperties.shaderGroupHandleAlignment);
+            CW_ENGINE_INFO("Max recursion depth: {}", m_RayTracingPipelineProperties.maxRayRecursionDepth);
+            CW_ENGINE_INFO("Shader execution reordering: {}", reorderProperties.rayTracingInvocationReorderReorderingHint);
+            CW_ENGINE_INFO("Max geometries: {}", accelerationProperties.maxGeometryCount);
+            CW_ENGINE_INFO("Max instances: {}", accelerationProperties.maxInstanceCount);
+            CW_ENGINE_INFO("Max primitives: {}", accelerationProperties.maxPrimitiveCount);
 
+            // Update m_DeviceProperties from the Properties2 query (same data, just also fills the pNext chain)
             m_DeviceProperties = deviceProperties2.properties;
 
             VkPhysicalDeviceDescriptorIndexingFeatures descriptionIndexingFeatures{};
@@ -154,7 +162,7 @@ namespace Crowny
         Vector<const char*> extensions;
         uint32_t numExts = 0;
         extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-        if (enableRayTracing)
+        if (raytracing)
         {
             VkPhysicalDeviceBufferDeviceAddressFeatures enabledBufferDeviceAddressFeatures{};
             enabledBufferDeviceAddressFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
@@ -233,7 +241,7 @@ namespace Crowny
             allocatorCI.physicalDevice = m_PhysicalDevice;
             allocatorCI.device = m_LogicalDevice;
             allocatorCI.pAllocationCallbacks = gVulkanAllocator;
-            if (enableRayTracing)
+            if (raytracing)
                 allocatorCI.flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT | VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
             else
                 allocatorCI.flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
@@ -308,19 +316,6 @@ namespace Crowny
                 FileSystem::WriteFile(pipelinePath, data.data(), dataSize);
             }
             vkDestroyPipelineCache(m_LogicalDevice, m_PipelineCache, gVulkanAllocator);
-        }
-
-        // Dump VMA leak info before destroying
-        {
-            VmaBudget budgets[VK_MAX_MEMORY_HEAPS];
-            vmaGetHeapBudgets(m_Allocator, budgets);
-            VkPhysicalDeviceMemoryProperties memProps;
-            vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &memProps);
-            for (uint32_t i = 0; i < memProps.memoryHeapCount; i++)
-            {
-                if (budgets[i].statistics.allocationCount > 0)
-                    CW_ENGINE_WARN("VMA heap {}: {} allocations, {} bytes still alive at shutdown", i, budgets[i].statistics.allocationCount, budgets[i].statistics.allocationBytes);
-            }
         }
 
         vmaDestroyAllocator(m_Allocator);
