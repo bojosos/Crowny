@@ -24,7 +24,7 @@
 	url = https://github.com/bojosos/cereal
 [submodule "Crowny/Dependencies/openal-soft"]
 	path = Crowny/Dependencies/openal-soft
-  	url = https://github.com/bojosos/openal-soft
+	url = https://github.com/bojosos/openal-soft
 [submodule "Crowny/Dependencies/box2d"]
 	path = Crowny/Dependencies/box2d
 	url = https://github.com/bojosos/box2d
@@ -37,9 +37,6 @@
 [submodule "Crowny/Dependencies/rapidjson"]
 	path = Crowny/Dependencies/rapidjson
 	url = https://github.com/bojosos/rapidjson
-[submodule "Dependencies/rapidjson"]
-	path = Dependencies/rapidjson
-	url = https://github.com/Tencent/rapidjson.git
 [submodule "Crowny/Dependencies/msdf-atlas-gen"]
 	path = Crowny/Dependencies/msdf-atlas-gen
 	url = https://github.com/bojosos/msdf-atlas-gen
@@ -60,7 +57,7 @@
 	url = https://github.com/bojosos/Catch2
 [submodule "Crowny/Dependencies/ImNodeFlow"]
 	path = Crowny/Dependencies/ImNodeFlow
-	url = https://github.com/Fattorino/ImNodeFlow.git
+	url = https://github.com/bojosos/ImNodeFlow
 [submodule "Crowny/Dependencies/imgui-node-editor"]
 	path = Crowny/Dependencies/imgui-node-editor
-	url = https://github.com/thedmd/imgui-node-editor
+	url = https://github.com/bojosos/imgui-node-editor
