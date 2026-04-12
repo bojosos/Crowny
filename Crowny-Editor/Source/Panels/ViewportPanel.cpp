@@ -47,7 +47,7 @@ namespace Crowny
     {
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
         BeginPanel();
-        Application::Get().GetImGuiLayer()->BlockEvents(!m_Hovered);
+        gApplication->GetImGuiLayer()->BlockEvents(!m_Hovered);
 
         if (GImGui->ActiveId == 0)
         {
@@ -86,7 +86,15 @@ namespace Crowny
 
         if (ImGui::BeginDragDropTarget())
         {
-            if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload())
+            auto validationCallback = [](const FileEntry* fileEntry) {
+                if (fileEntry->Metadata == nullptr)
+                    return false;
+                const AssetType assetType = fileEntry->Metadata->Type;
+                return assetType == AssetType::Scene || assetType == AssetType::Material || assetType == AssetType::Mesh ||
+                       assetType == AssetType::AudioClip || assetType == AssetType::Prefab;
+            };
+
+            if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload(validationCallback))
             {
                 const glm::vec4& bounds = GetViewportBounds();
                 ImVec2 mouseCoords = ImGui::GetMousePos();
@@ -115,15 +123,12 @@ namespace Crowny
         EditorCamera& camera = EditorLayer::GetEditorCamera();
         const glm::mat4& proj = camera.GetProjection();
         glm::mat4 view = camera.GetViewMatrix();
-        glm::mat4 id(1.0f);
         ImGuizmo::SetRect(bounds[0].x, bounds[0].y, bounds[1].x - bounds[0].x, bounds[1].y - bounds[0].y);
-        // ImGuizmo::DrawGrid(glm::value_ptr(view), glm::value_ptr(proj), glm::value_ptr(id),
-        //                    100.0f); // A 1x1m grid, TODO: depth test
+        ImGuizmo::SetOrthographic(false);
+        ImGuizmo::SetDrawlist();
 
         if (selected && m_GizmoMode != GizmoEditMode::None)
         {
-            ImGuizmo::SetOrthographic(false);
-            ImGuizmo::SetDrawlist();
 
             const float width = (float)ImGui::GetWindowWidth();
             const float height = (float)ImGui::GetWindowHeight();
@@ -157,14 +162,18 @@ namespace Crowny
         if (ImGuizmo::ViewManipulate(glm::value_ptr(view), camera.GetDistance(), { m_ViewportBounds.z - 136.0f, m_ViewportBounds.y },
                                      ImVec2(128, 128), 0x10101010))
         {
+            // ViewManipulate modifies the view matrix in-place. Invert it to get the
+            // camera transform (world-space position + orientation) before decomposing.
+            glm::mat4 cameraTransform = glm::inverse(view);
             glm::vec3 t, s;
-            glm::quat r;
-            Math::DecomposeMatrix(view, t, r, s);
-            glm::vec3 rotationEuler = glm::eulerAngles(r);
-            camera.SetPitch(camera.GetPitch() + (camera.GetPitch() - rotationEuler.x));
-            camera.SetYaw(camera.GetYaw() + (camera.GetYaw() - rotationEuler.y));
-            camera.SetRoll(camera.GetRoll() + (camera.GetRoll() - rotationEuler.z));
-            CW_ENGINE_INFO("T: {}, R: {}, S: {}", glm::to_string(t), glm::to_string(glm::degrees(rotationEuler)), glm::to_string(s));
+            glm::quat orientation;
+            Math::DecomposeMatrix(cameraTransform, t, orientation, s);
+            // The camera builds its orientation as quat(vec3(-pitch, -yaw, roll)),
+            // so recover pitch/yaw/roll from the extracted Euler angles.
+            glm::vec3 euler = glm::eulerAngles(orientation);
+            camera.SetPitch(-euler.x);
+            camera.SetYaw(-euler.y);
+            camera.SetRoll(euler.z);
         }
 
         EndPanel();

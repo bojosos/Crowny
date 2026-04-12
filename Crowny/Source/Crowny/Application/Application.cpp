@@ -17,6 +17,8 @@
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/Renderer.h"
 
+#include <tracy/Tracy.hpp>
+
 /*
 #ifdef MC_WEB
 #include <emscripten/emscripten.h>
@@ -30,6 +32,7 @@ namespace Crowny
 {
 
     uint8_t Application::s_GLFWWindowCount = 0;
+    Application* gApplication = nullptr;
 
     static void DispatchMain(void* fp)
     {
@@ -37,18 +40,13 @@ namespace Crowny
         (*func)();
     }
 
-    Application::Application(const ApplicationDesc& applicationDesc) : m_ApplicationDesc(applicationDesc)
-    {
-        m_LayerStack = new LayerStack();
-    }
+    Application::Application(const ApplicationDesc& applicationDesc) : m_ApplicationDesc(applicationDesc) { m_LayerStack = new LayerStack(); }
 
-    Application::~Application()
-    {
-        delete m_LayerStack;
-    }
+    Application::~Application() { delete m_LayerStack; }
 
     void Application::OnStartUp()
     {
+        gApplication = this;
         if (m_ApplicationDesc.Headless)
         {
             Initializer::Init(m_ApplicationDesc);
@@ -65,7 +63,7 @@ namespace Crowny
         Ref<RenderWindow> mainWindow = RenderWindow::Create(m_ApplicationDesc.Window);
         mainWindow->GetWindow()->SetEventCallback(CW_BIND_EVENT_FN(Application::OnEvent));
         m_Windows.push_back(mainWindow);
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::OpenGL:
             m_ImGuiLayer = new ImGuiOpenGLLayer();
@@ -79,16 +77,36 @@ namespace Crowny
         }
         if (m_ImGuiLayer)
             PushOverlay(m_ImGuiLayer);
-    }
 
+        // Create and start the render thread
+        m_RenderThread = CreateScope<RenderThread>();
+        m_RenderThread->Start();
+    }
     void Application::OnShutdown()
     {
+        if (m_RenderThread)
+        {
+            m_RenderThread->Stop();
+            m_RenderThread.reset();
+        }
+
         if (!m_ApplicationDesc.Headless)
         {
             Renderer::Shutdown();
+
+            // Destroy all layers (ImGui, EditorLayer, etc.) BEFORE shutting down the
+            // rendering subsystems. Layers hold GPU resources (render targets, materials,
+            // textures, command buffers) that must be released while the Vulkan device is
+            // still alive. Module::Shutdown() calls OnShutdown() then deletes the instance,
+            // so ~Application() runs after the device is gone — too late for GPU cleanup.
+            // Nulling the pointer prevents the double-free in ~Application().
+            delete m_LayerStack;
+            m_LayerStack = nullptr;
+
             m_Windows.clear();
         }
         Initializer::Shutdown();
+        gApplication = nullptr;
     }
 
     void Application::PushLayer(Layer* layer)
@@ -121,7 +139,8 @@ namespace Crowny
         }
     }
 
-    Ref<TimeSettings> Application::GetTimeSettings() const {
+    Ref<TimeSettings> Application::GetTimeSettings() const
+    {
         if (!m_TimeSettings)
         {
             static Ref<TimeSettings> defaultTimeSettings = CreateRef<TimeSettings>();
@@ -147,11 +166,15 @@ namespace Crowny
 
             if (!m_Minimized)
             {
-                for (Layer* layer : *m_LayerStack)
-                    layer->OnUpdate(timestep);
+                {
+                    ZoneScopedN("LayerUpdates");
+                    for (Layer* layer : *m_LayerStack)
+                        layer->OnUpdate(timestep);
+                }
 
                 if (m_ImGuiLayer)
                 {
+                    ZoneScopedN("ImGui");
                     m_ImGuiLayer->Begin();
                     {
                         for (Layer* layer : *m_LayerStack)
@@ -162,7 +185,7 @@ namespace Crowny
             }
 
             Input::OnUpdate();
-            auto& rapi = RenderAPI::Get();
+            auto& rapi = (*gRenderAPI);
             for (const Ref<RenderWindow>& window : m_Windows)
             {
                 window->GetWindow()->OnUpdate();
@@ -172,6 +195,7 @@ namespace Crowny
         };
         emscripten_set_main_loop_arg(DispatchMain, &loop, 0, 1);
 #else
+            FrameMark;
         }
 #endif
     }

@@ -10,7 +10,7 @@ namespace Crowny
     Ref<GenericGpuBuffer> GenericGpuBuffer::Create(uint32_t elementCount, uint32_t elementSize, GpuBufferType type, GpuBufferFormat format,
                                                    BufferUsage usage)
     {
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::OpenGL:
             return nullptr;

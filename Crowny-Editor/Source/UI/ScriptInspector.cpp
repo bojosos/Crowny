@@ -16,8 +16,7 @@ namespace Crowny
     // -------------------------------------------------------------------------
     // Numeric field template: handles I8, U8, I16, U16, I32, U32, I64, U64
     // -------------------------------------------------------------------------
-    template <typename T, ImGuiDataType_ DataType>
-    static bool DrawNumericField(const char* label, const FieldContext& ctx, T typeMin, T typeMax)
+    template <typename T, ImGuiDataType_ DataType> static bool DrawNumericField(const char* label, const FieldContext& ctx, T typeMin, T typeMax)
     {
         void* fieldValue = MonoUtils::Unbox(ctx.Getter());
         T value = *(T*)fieldValue;
@@ -455,14 +454,22 @@ namespace Crowny
             }
             return false;
         }
-        case ScriptPrimitiveType::I8:  return DrawNumericField<int8_t,   ImGuiDataType_S8> (label, ctx, INT8_MIN,  INT8_MAX);
-        case ScriptPrimitiveType::U8:  return DrawNumericField<uint8_t,  ImGuiDataType_U8> (label, ctx, 0,         UINT8_MAX);
-        case ScriptPrimitiveType::I16: return DrawNumericField<int16_t,  ImGuiDataType_S16>(label, ctx, INT16_MIN, INT16_MAX);
-        case ScriptPrimitiveType::U16: return DrawNumericField<uint16_t, ImGuiDataType_U16>(label, ctx, 0,         UINT16_MAX);
-        case ScriptPrimitiveType::I32: return DrawNumericField<int32_t,  ImGuiDataType_S32>(label, ctx, INT32_MIN, INT32_MAX);
-        case ScriptPrimitiveType::U32: return DrawNumericField<uint32_t, ImGuiDataType_U32>(label, ctx, 0,         UINT32_MAX);
-        case ScriptPrimitiveType::I64: return DrawNumericField<int64_t,  ImGuiDataType_S64>(label, ctx, INT64_MIN, INT64_MAX);
-        case ScriptPrimitiveType::U64: return DrawNumericField<uint64_t, ImGuiDataType_U64>(label, ctx, 0,         UINT64_MAX);
+        case ScriptPrimitiveType::I8:
+            return DrawNumericField<int8_t, ImGuiDataType_S8>(label, ctx, INT8_MIN, INT8_MAX);
+        case ScriptPrimitiveType::U8:
+            return DrawNumericField<uint8_t, ImGuiDataType_U8>(label, ctx, 0, UINT8_MAX);
+        case ScriptPrimitiveType::I16:
+            return DrawNumericField<int16_t, ImGuiDataType_S16>(label, ctx, INT16_MIN, INT16_MAX);
+        case ScriptPrimitiveType::U16:
+            return DrawNumericField<uint16_t, ImGuiDataType_U16>(label, ctx, 0, UINT16_MAX);
+        case ScriptPrimitiveType::I32:
+            return DrawNumericField<int32_t, ImGuiDataType_S32>(label, ctx, INT32_MIN, INT32_MAX);
+        case ScriptPrimitiveType::U32:
+            return DrawNumericField<uint32_t, ImGuiDataType_U32>(label, ctx, 0, UINT32_MAX);
+        case ScriptPrimitiveType::I64:
+            return DrawNumericField<int64_t, ImGuiDataType_S64>(label, ctx, INT64_MIN, INT64_MAX);
+        case ScriptPrimitiveType::U64:
+            return DrawNumericField<uint64_t, ImGuiDataType_U64>(label, ctx, 0, UINT64_MAX);
         case ScriptPrimitiveType::Vector2: {
             glm::vec2 value = *(glm::vec2*)fieldValue;
             if (UI::Property(label, value))
@@ -619,7 +626,7 @@ namespace Crowny
             bool modified = false;
             if (ScriptInfoManager::Get().GetSerializableObjectInfo(objTypeInfo->m_TypeNamespace, objTypeInfo->m_TypeName, objInfo))
             {
-                const Ref<Scene>& scene = SceneManager::GetActiveScene();
+                const Ref<Scene>& scene = gSceneManager->GetActiveScene();
                 if (ctx.Getter() == nullptr)
                 {
                     bool construct = objInfo->m_MonoClass->GetMethod(".ctor", 0) != nullptr;

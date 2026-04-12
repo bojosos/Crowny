@@ -46,7 +46,7 @@ namespace Crowny
 
     Ref<GraphicsPipeline> GraphicsPipeline::Create(const PipelineStateDesc& desc)
     {
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::OpenGL:
             return CreateRef<OpenGLGraphicsPipeline>(desc);
@@ -75,7 +75,7 @@ namespace Crowny
 
     Ref<RayTracingPipeline> RayTracingPipeline::Create(const RayTracingPipelineDesc& desc)
     {
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::OpenGL:
             CW_ENGINE_ERROR("OpenGL backend does not support ray tracing");
@@ -98,7 +98,7 @@ namespace Crowny
 
     Ref<ComputePipeline> ComputePipeline::Create(const Ref<ShaderStage>& shader)
     {
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::OpenGL:
             return CreateRef<OpenGLComputePipeline>(shader);

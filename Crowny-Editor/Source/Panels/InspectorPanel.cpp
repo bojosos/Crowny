@@ -17,13 +17,18 @@
 #include "UI/Properties.h"
 #include "UI/UIUtils.h"
 
-#include "Crowny/Import/TextureImporter.h"
 #include "Crowny/Import/AudioClipImporter.h"
 #include "Crowny/Import/FontImporter.h"
 #include "Crowny/Import/MeshImporter.h"
 #include "Crowny/Import/ScriptImporter.h"
 #include "Crowny/Import/ShaderImporter.h"
 #include "Crowny/Import/TextFileImporter.h"
+#include "Crowny/Import/TextureImporter.h"
+
+#include "Crowny/NodeGraph/NodeGraphAsset.h"
+#include "Crowny/NodeGraph/NodeRegistry.h"
+
+#include "Editor/EditorUtils.h"
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -34,8 +39,7 @@
 
 namespace Crowny
 {
-    template<typename T>
-    T* InspectorPanel::BeginImportInspector()
+    template <typename T> T* InspectorPanel::BeginImportInspector()
     {
         UI::BeginPropertyGrid();
         return static_cast<T*>(m_ImportOptions.get());
@@ -51,6 +55,140 @@ namespace Crowny
         m_ComponentEditor.RegisterComponent<MeshRendererComponent>("Mesh Filter");
         m_ComponentEditor.RegisterComponent<TextComponent>("Text");
         m_ComponentEditor.RegisterComponent<SpriteRendererComponent>("Sprite Renderer");
+        m_ComponentEditor.RegisterComponent<ProceduralMeshComponent>("Procedural Mesh", [this](Entity entity) {
+            auto& comp = entity.GetComponent<ProceduralMeshComponent>();
+
+            AssetHandle<Asset> graphAsset = static_asset_cast<Asset>(comp.Graph);
+            if (UIUtils::AssetReference("Graph", graphAsset, AssetType::NodeGraph))
+            {
+                comp.Graph = static_asset_cast<NodeGraphAsset>(graphAsset);
+                comp.NeedsEvaluation = true;
+            }
+
+            // Create a new graph on this component if it doesn't have one yet
+            if (!comp.Graph)
+            {
+                if (ImGui::Button("Create Node Graph"))
+                {
+                    Ref<NodeGraph> graph = CreateRef<NodeGraph>();
+                    graph->SetDomain(NodeGraph::Domain::Geometry);
+                    graph->SetName(entity.GetName() + " Graph");
+                    graph->AddNode(NodeRegistry::Get().Create("GeometryOutputNode"));
+
+                    Path path = EditorUtils::GetUniquePath(ProjectLibrary::Get().GetAssetFolder() / (entity.GetName() + " Graph.cwng"));
+                    Ref<NodeGraphAsset> asset = CreateRef<NodeGraphAsset>(graph);
+                    ProjectLibrary::Get().CreateEntry(asset, path);
+                    ProjectLibrary::Get().Refresh(path);
+                    
+                    auto libraryEntry = ProjectLibrary::Get().FindEntry(path);
+                    if (libraryEntry && libraryEntry->Type == LibraryEntryType::File)
+                    {
+                        FileEntry* fileEntry = (FileEntry*)libraryEntry.get();
+                        if (fileEntry->Metadata)
+                        {
+                            comp.Graph = static_asset_cast<NodeGraphAsset>(gAssetManager->LoadFromUUID(fileEntry->Metadata->Uuid));
+                            comp.NeedsEvaluation = true;
+                        }
+                    }
+                }
+                return;
+            }
+
+            // Show graph info
+            if (comp.Graph && comp.Graph.IsLoaded())
+            {
+                Ref<NodeGraph> graph = comp.Graph->GetGraph();
+                if (graph)
+                {
+                    ImGui::TextDisabled("Graph: %s", graph->GetName().c_str());
+                    if (comp.CpuMeshData)
+                        ImGui::TextDisabled("Verts: %u  Indices: %u", comp.CpuMeshData->GetVertexCount(), comp.CpuMeshData->GetIndexCount());
+                    else
+                        ImGui::TextDisabled("Not evaluated yet");
+
+                    // Open in node editor
+                    if (ImGui::Button("Open Node Editor") && m_OpenNodeEditorCallback)
+                        m_OpenNodeEditorCallback(comp.Graph);
+
+                    // Show graph inputs
+                    const auto& inputs = graph->GetInputs();
+                    if (!inputs.empty())
+                    {
+                        ImGui::Text("Graph Inputs:");
+                        for (const auto& input : inputs)
+                        {
+                            PinValue& val = comp.InputValues[input.ID];
+                            // If it's a new input, initialize with default
+                            if (comp.InputValues.find(input.ID) == comp.InputValues.end())
+                                val = input.DefaultValue;
+
+                            String label = input.Name + "##" + input.ID.ToString();
+
+                            switch (input.DataType)
+                            {
+                            case PinDataType::Float: {
+                                float v = std::holds_alternative<float>(val)
+                                            ? std::get<float>(val)
+                                            : (std::holds_alternative<float>(input.DefaultValue) ? std::get<float>(input.DefaultValue) : 0.0f);
+                                if (ImGui::DragFloat(label.c_str(), &v, 0.01f))
+                                {
+                                    val = v;
+                                    comp.NeedsEvaluation = true;
+                                }
+                                break;
+                            }
+                            case PinDataType::Int: {
+                                int32_t v = std::holds_alternative<int32_t>(val)
+                                              ? std::get<int32_t>(val)
+                                              : (std::holds_alternative<int32_t>(input.DefaultValue) ? std::get<int32_t>(input.DefaultValue) : 0);
+                                if (ImGui::DragInt(label.c_str(), &v))
+                                {
+                                    val = v;
+                                    comp.NeedsEvaluation = true;
+                                }
+                                break;
+                            }
+                            case PinDataType::Vec3: {
+                                glm::vec3 v =
+                                  std::holds_alternative<glm::vec3>(val)
+                                    ? std::get<glm::vec3>(val)
+                                    : (std::holds_alternative<glm::vec3>(input.DefaultValue) ? std::get<glm::vec3>(input.DefaultValue) : glm::vec3(0.0f));
+                                if (ImGui::DragFloat3(label.c_str(), &v.x, 0.01f))
+                                {
+                                    val = v;
+                                    comp.NeedsEvaluation = true;
+                                }
+                                break;
+                            }
+                            case PinDataType::Bool: {
+                                bool v = std::holds_alternative<bool>(val)
+                                           ? std::get<bool>(val)
+                                           : (std::holds_alternative<bool>(input.DefaultValue) ? std::get<bool>(input.DefaultValue) : false);
+                                if (ImGui::Checkbox(label.c_str(), &v))
+                                {
+                                    val = v;
+                                    comp.NeedsEvaluation = true;
+                                }
+                                break;
+                            }
+                            default:
+                                break;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    ImGui::TextDisabled("Graph asset loaded but graph is null.");
+                }
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Evaluate"))
+            {
+                comp.NeedsEvaluation = true;
+            }
+        });
         m_ComponentEditor.PopComponentGroup();
 
         // Physics
@@ -109,7 +247,7 @@ namespace Crowny
                     }
                     case AssetType::ScriptCode: {
                         const String className = fileEntry->Filepath.filename().replace_extension("").string();
-                        Ref<Scene> activeScene = SceneManager::GetActiveScene();
+                        Ref<Scene> activeScene = gSceneManager->GetActiveScene();
                         bool exists = false;
                         if (selectedEntity.HasComponent<MonoScriptComponent>())
                         {
@@ -159,6 +297,19 @@ namespace Crowny
     void InspectorPanel::Render()
     {
         BeginPanel();
+        if (!IsShown())
+        {
+            EndPanel();
+            return;
+        }
+
+        auto activeScene = gSceneManager->GetActiveScene();
+        if (!activeScene)
+        {
+            EndPanel();
+            return;
+        }
+
         ImGui::BeginChild("InspectorChild");
         DrawHeader();
 
@@ -168,34 +319,44 @@ namespace Crowny
             m_ComponentEditor.Render();
             break;
         case InspectorMode::Material:
-            if (m_ImportOptions) RenderMaterialInspector();
+            if (m_ImportOptions)
+                RenderMaterialInspector();
             break;
         case InspectorMode::PhysicsMaterial:
-            if (m_ImportOptions) RenderPhysicsMaterialInspector();
+            if (m_ImportOptions)
+                RenderPhysicsMaterialInspector();
             break;
         case InspectorMode::AudioClipImport:
-            if (m_ImportOptions) RenderAudioClipImportInspector();
+            if (m_ImportOptions)
+                RenderAudioClipImportInspector();
             break;
         case InspectorMode::FontImport:
-            if (m_ImportOptions) RenderFontImportInspector();
+            if (m_ImportOptions)
+                RenderFontImportInspector();
             break;
         case InspectorMode::ScriptImport:
-            if (m_ImportOptions) RenderScriptImportInspector();
+            if (m_ImportOptions)
+                RenderScriptImportInspector();
             break;
         case InspectorMode::ShaderImport:
-            if (m_ImportOptions) RenderShaderImportInspector();
+            if (m_ImportOptions)
+                RenderShaderImportInspector();
             break;
         case InspectorMode::MeshImport:
-            if (m_ImportOptions) RenderMeshImportInspector();
+            if (m_ImportOptions)
+                RenderMeshImportInspector();
             break;
         case InspectorMode::Prefab:
-            if (m_ImportOptions) RenderPrefabInspector();
+            if (m_ImportOptions)
+                RenderPrefabInspector();
             break;
         case InspectorMode::TextureImport:
-            if (m_ImportOptions) RenderTextureImportInspector();
+            if (m_ImportOptions)
+                RenderTextureImportInspector();
             break;
         case InspectorMode::TextImport:
-            if (m_ImportOptions) RenderTextImportInspector();
+            if (m_ImportOptions)
+                RenderTextImportInspector();
             break;
         case InspectorMode::Default:
             break;
@@ -210,7 +371,7 @@ namespace Crowny
 
     void InspectorPanel::RenderMaterialInspector()
     {
-        AssetHandle<Material> mat = AssetManager::Get().Load<Material>(m_InspectedAssetPath);
+        AssetHandle<Material> mat = gAssetManager->Load<Material>(m_InspectedAssetPath);
         UI::BeginPropertyGrid();
         UIUtils::AssetReference("shader", mat);
         const auto& bindings = mat->GetBindings();
@@ -236,7 +397,7 @@ namespace Crowny
             }
             else if (member.DataType == ShaderDataType::Float4)
             {
-               glm::vec4 value = mat->GetDataParam<glm::vec4>(name);
+                glm::vec4 value = mat->GetDataParam<glm::vec4>(name);
                 if (UI::Property(name.c_str(), value))
                     mat->SetColor(name, value);
             }
@@ -266,8 +427,7 @@ namespace Crowny
         auto* opts = BeginImportInspector<AudioClipImportOptions>();
 
         m_HasPropertyChanged |= UI::PropertyDropdown("Format", { "PCM", "Vorbis" }, opts->Format);
-        m_HasPropertyChanged |=
-            UI::PropertyDropdown("Load Mode", { "Load Decompressed", "Load Compressed", "Stream" }, opts->ReadMode);
+        m_HasPropertyChanged |= UI::PropertyDropdown("Load Mode", { "Load Decompressed", "Load Compressed", "Stream" }, opts->ReadMode);
 
         uint32_t bitDepth = opts->BitDepth / 8 - 1;
         m_HasPropertyChanged |= UI::PropertyDropdown("Audio Bit Depth", { "8", "16", "24", "32" }, bitDepth);
@@ -285,14 +445,14 @@ namespace Crowny
             if (m_HasPropertyChanged) // Why did I do this?
                 ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions, true);
             AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
-            AudioManager::Get().StopManualSources();
-            AudioManager::Get().Play("Inspector", clip);
+            gAudioManager->StopManualSources();
+            gAudioManager->Play("Inspector", clip);
         }
         ImGui::SameLine();
         if (ImGui::Button("Stop"))
-            AudioManager::Get().StopManualSources();
+            gAudioManager->StopManualSources();
         ImGui::SameLine();
-        const float progress = AudioManager::Get().GetGlobalSourceProgress("Inspector");
+        const float progress = gAudioManager->GetGlobalSourceProgress("Inspector");
         ImGui::ProgressBar(progress);
     }
 
@@ -362,8 +522,7 @@ namespace Crowny
               "Charset Range",
               { "ASCII", "Extended ASCII", "Lower ASCII", "Upper ASCII", "Numbers and Symbols", "Symbol Range", "Decimal Range", "Hex Range" },
               opts->Range);
-            if (opts->Range == CharsetRange::DecimalRange || opts->Range == CharsetRange::HexRange ||
-                opts->Range == CharsetRange::SymbolRange)
+            if (opts->Range == CharsetRange::DecimalRange || opts->Range == CharsetRange::HexRange || opts->Range == CharsetRange::SymbolRange)
                 m_HasPropertyChanged |= UI::PropertyMultiline("Symbols", opts->CustomCharset); // TODO: Replace this with multiline input
         }
         m_HasPropertyChanged |= UI::Property("Padding", opts->Padding);
@@ -480,7 +639,12 @@ namespace Crowny
         EndImportInspector(0, ImGui::GetColumnWidth());
     }
 
-    void InspectorPanel::RenderPrefabInspector() {}
+    void InspectorPanel::RenderPrefabInspector()
+    {
+        ImGui::TextColored(ImVec4(0.39f, 0.63f, 1.0f, 1.0f), "Prefab Asset");
+        ImGui::Separator();
+        ImGui::TextDisabled("Drag this prefab into the Hierarchy or Viewport to instantiate it.");
+    }
 
     void InspectorPanel::DrawHeader()
     {
@@ -536,14 +700,30 @@ namespace Crowny
 
         switch (m_InspectorMode)
         {
-        case InspectorMode::AudioClipImport:  drawAssetHeader("Audio Clip");       break;
-        case InspectorMode::TextureImport:    drawAssetHeader("Texture");           break;
-        case InspectorMode::FontImport:       drawAssetHeader("Font");              break;
-        case InspectorMode::PhysicsMaterial:  drawAssetHeader("Physics Material");  break;
-        case InspectorMode::ScriptImport:     drawAssetHeader("C# Script");         break;
-        case InspectorMode::ShaderImport:     drawAssetHeader("Shader");            break;
-        case InspectorMode::MeshImport:       drawAssetHeader("Mesh");              break;
-        case InspectorMode::Material:         drawAssetHeader("Material");           break;
+        case InspectorMode::AudioClipImport:
+            drawAssetHeader("Audio Clip");
+            break;
+        case InspectorMode::TextureImport:
+            drawAssetHeader("Texture");
+            break;
+        case InspectorMode::FontImport:
+            drawAssetHeader("Font");
+            break;
+        case InspectorMode::PhysicsMaterial:
+            drawAssetHeader("Physics Material");
+            break;
+        case InspectorMode::ScriptImport:
+            drawAssetHeader("C# Script");
+            break;
+        case InspectorMode::ShaderImport:
+            drawAssetHeader("Shader");
+            break;
+        case InspectorMode::MeshImport:
+            drawAssetHeader("Mesh");
+            break;
+        case InspectorMode::Material:
+            drawAssetHeader("Material");
+            break;
         default: {
             // Fallback for asset modes without a specific label (Prefab, TextImport, etc.)
             float maxx = ImGui::GetContentRegionAvail().x;
@@ -614,7 +794,7 @@ namespace Crowny
             return;
         }
 
-        if (filepath.extension() == ".prefab")
+        if (filepath.extension() == ".cwprefab")
         {
             m_InspectorMode = InspectorMode::Prefab;
             return;

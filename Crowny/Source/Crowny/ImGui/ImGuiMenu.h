@@ -25,13 +25,13 @@ namespace Crowny
     {
     public:
         ImGuiMenu(const String& title);
-        ~ImGuiMenu();
+        virtual ~ImGuiMenu();
 
-        void Render();
+        virtual void Render();
         void AddMenu(ImGuiMenu* menu);
         void AddItem(ImGuiMenuItem* item);
 
-    private:
+    protected:
         Vector<ImGuiMenuItem*> m_Items;
         Vector<ImGuiMenu*> m_Menus;
         Vector<bool> m_Order;

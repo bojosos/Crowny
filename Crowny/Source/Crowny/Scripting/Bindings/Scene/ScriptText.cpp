@@ -92,11 +92,17 @@ namespace Crowny
 
     TextHorizontalAlignment ScriptText::Internal_GetHorizontalAlignment(ScriptText* thisPtr) { return thisPtr->GetComponent().HorizontalAlignment; }
 
-    void ScriptText::Internal_SetHorizontalAlignment(ScriptText* thisPtr, TextHorizontalAlignment alignment) { thisPtr->GetComponent().HorizontalAlignment = alignment; }
+    void ScriptText::Internal_SetHorizontalAlignment(ScriptText* thisPtr, TextHorizontalAlignment alignment)
+    {
+        thisPtr->GetComponent().HorizontalAlignment = alignment;
+    }
 
     TextVerticalAlignment ScriptText::Internal_GetVerticalAlignment(ScriptText* thisPtr) { return thisPtr->GetComponent().VerticalAlignment; }
 
-    void ScriptText::Internal_SetVerticalAlignment(ScriptText* thisPtr, TextVerticalAlignment alignment) { thisPtr->GetComponent().VerticalAlignment = alignment; }
+    void ScriptText::Internal_SetVerticalAlignment(ScriptText* thisPtr, TextVerticalAlignment alignment)
+    {
+        thisPtr->GetComponent().VerticalAlignment = alignment;
+    }
 
     TextFontStyle ScriptText::Internal_GetFontStyle(ScriptText* thisPtr) { return thisPtr->GetComponent().FontStyle; }
 

@@ -439,6 +439,7 @@ namespace Crowny
 #endif
 
         vkDestroyInstance(m_Instance, gVulkanAllocator);
+        RenderAPI::OnShutdown();
     }
 
     void VulkanRenderAPI::InitCaps()
@@ -551,5 +552,5 @@ namespace Crowny
         }
     }
 
-    VulkanRenderAPI& gVulkanRenderAPI() { return static_cast<VulkanRenderAPI&>(RenderAPI::Get()); }
+    VulkanRenderAPI& gVulkanRenderAPI() { return static_cast<VulkanRenderAPI&>((*gRenderAPI)); }
 } // namespace Crowny

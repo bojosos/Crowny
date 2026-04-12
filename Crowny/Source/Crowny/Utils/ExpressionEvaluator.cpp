@@ -22,8 +22,10 @@ namespace Crowny
         {
             char op = *ctx.Ptr++;
             float right = ParseTerm(ctx);
-            if (op == '+') result += right;
-            else result -= right;
+            if (op == '+')
+                result += right;
+            else
+                result -= right;
             ctx.SkipWhitespace();
         }
         return result;
@@ -37,9 +39,12 @@ namespace Crowny
         {
             char op = *ctx.Ptr++;
             float right = ParseFactor(ctx);
-            if (op == '*') result *= right;
-            else if (op == '/') result /= right;
-            else result = std::fmod(result, right);
+            if (op == '*')
+                result *= right;
+            else if (op == '/')
+                result /= right;
+            else
+                result = std::fmod(result, right);
             ctx.SkipWhitespace();
         }
         return result;
@@ -105,7 +110,8 @@ namespace Crowny
             ctx.Ptr++;
             float result = ParseExpression(ctx);
             ctx.SkipWhitespace();
-            if (*ctx.Ptr == ')') ctx.Ptr++;
+            if (*ctx.Ptr == ')')
+                ctx.Ptr++;
             return result;
         }
 
@@ -117,14 +123,22 @@ namespace Crowny
             return result;
         }
 
-        if (Matches(ctx, "sqrt")) return std::sqrt(ParsePrimary(ctx));
-        if (Matches(ctx, "sin")) return std::sin(ParsePrimary(ctx));
-        if (Matches(ctx, "cos")) return std::cos(ParsePrimary(ctx));
-        if (Matches(ctx, "tan")) return std::tan(ParsePrimary(ctx));
-        if (Matches(ctx, "floor")) return std::floor(ParsePrimary(ctx));
-        if (Matches(ctx, "ceil")) return std::ceil(ParsePrimary(ctx));
-        if (Matches(ctx, "round")) return std::round(ParsePrimary(ctx));
-        if (Matches(ctx, "abs")) return std::abs(ParsePrimary(ctx));
+        if (Matches(ctx, "sqrt"))
+            return std::sqrt(ParsePrimary(ctx));
+        if (Matches(ctx, "sin"))
+            return std::sin(ParsePrimary(ctx));
+        if (Matches(ctx, "cos"))
+            return std::cos(ParsePrimary(ctx));
+        if (Matches(ctx, "tan"))
+            return std::tan(ParsePrimary(ctx));
+        if (Matches(ctx, "floor"))
+            return std::floor(ParsePrimary(ctx));
+        if (Matches(ctx, "ceil"))
+            return std::ceil(ParsePrimary(ctx));
+        if (Matches(ctx, "round"))
+            return std::round(ParsePrimary(ctx));
+        if (Matches(ctx, "abs"))
+            return std::abs(ParsePrimary(ctx));
 
         // Skip unknown identifiers
         if (std::isalpha(*ctx.Ptr) || *ctx.Ptr == '_')
@@ -137,4 +151,4 @@ namespace Crowny
         return 0.0f;
     }
 
-}
+} // namespace Crowny

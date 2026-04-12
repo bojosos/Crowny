@@ -69,10 +69,7 @@ namespace Crowny
         static void GetBitDepths(TextureFormat format, int (&rgba)[4]);
         static uint32_t GetMemSize(uint32_t width, uint32_t height, uint32_t depth, TextureFormat format);
         static uint32_t GetFormatFlags(TextureFormat format);
-        static bool IsCompressedFormat(TextureFormat format)
-        {
-            return (PixelUtils::GetFormatFlags(format) & PixelFormatFlags::PFF_COMPRESSED) != 0;
-        }
+        static bool IsCompressedFormat(TextureFormat format) { return (PixelUtils::GetFormatFlags(format) & PixelFormatFlags::PFF_COMPRESSED) != 0; }
     };
 
     // TODO: Copy constructor, copy-assignment operator

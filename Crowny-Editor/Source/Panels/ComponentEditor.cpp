@@ -7,6 +7,7 @@
 #include "Panels/ComponentEditor.h"
 #include "Panels/HierarchyPanel.h"
 
+#include "UI/Properties.h"
 #include "UI/UIUtils.h"
 
 #include <imgui.h>
@@ -21,41 +22,47 @@ namespace Crowny
     // Check whether the entity already has a component with the given type ID.
     // Mirrors ComponentEditor::EntityHasComponent but usable from free functions.
     // ---------------------------------------------------------------------------
-    static bool HasComponentByID(const entt::registry& registry, Entity entity, entt::id_type tid)
+    static bool HasComponentByID(const entt::registry& registry, const Entity& entity, entt::id_type tid)
     {
-        const auto itStorage = registry.storage(tid);
-        return itStorage != registry.storage().end() && itStorage->second.contains(entity.GetHandle());
+        for (auto [id, storage] : registry.storage())
+        {
+            if (id == tid)
+                return storage.contains(entity.GetHandle());
+        }
+        return false;
     }
 
     // ---------------------------------------------------------------------------
     // Helper: add a component or script to an entity, eliminating the five
     // duplicate AddScriptComponent call-sites that existed before.
     // ---------------------------------------------------------------------------
-    static void AddComponentToEntity(Ref<Scene>& scene, Entity entity, ComponentEditor::ComponentTypeID tid,
-                                     const ComponentEditor::ComponentInfo& ci, const String& scriptName = "")
+    static void AddComponentToEntity(const Ref<Scene>& scene, const Entity& entity, ComponentEditor::ComponentTypeID tid, const ComponentEditor::ComponentInfo& ci,
+                                     const String& scriptName = "")
     {
         if (tid == entt::type_hash<MonoScriptComponent>::value())
             scene->AddScriptComponent(entity, scriptName.empty() ? "" : "Sandbox", scriptName, !scriptName.empty());
         else
-            ci.create(entity);
+        {
+            auto action = ci.create(const_cast<Entity&>(entity));
+            UndoRedo::Get().RegisterAction(action);
+        }
     }
 
     // ---------------------------------------------------------------------------
     // Check whether a specific script is already attached to the entity.
     // ---------------------------------------------------------------------------
-    static bool EntityHasScript(Entity entity, const String& scriptName)
+    static bool EntityHasScript(const Entity& entity, const String& scriptName)
     {
         if (!entity.HasComponent<MonoScriptComponent>())
             return false;
         const auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
-        return std::find_if(scripts.begin(), scripts.end(),
-                            [&](const auto& s) { return s.GetTypeName() == scriptName; }) != scripts.end();
+        return std::find_if(scripts.begin(), scripts.end(), [&](const auto& s) { return s.GetTypeName() == scriptName; }) != scripts.end();
     }
 
     // ---------------------------------------------------------------------------
     // RenderEntityHeader -- entity name + UUID on the same line when space allows.
     // ---------------------------------------------------------------------------
-    static void RenderEntityHeader(Entity entity)
+    static void RenderEntityHeader(const Entity& entity)
     {
         if (entity)
         {
@@ -67,8 +74,19 @@ namespace Crowny
             if (ImGui::GetContentRegionAvail().x > uuidLen + 10.0f + nameLen)
             {
                 ImGui::SameLine();
-                ImGui::SetCursorPosX(ImGui::GetWindowContentRegionWidth() - uuidLen);
+                ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x - uuidLen);
                 ImGui::Text("%s", uuid.c_str());
+            }
+
+            if (entity.HasComponent<PrefabComponent>())
+            {
+                const auto& pc = entity.GetComponent<PrefabComponent>();
+                ImGui::TextColored(ImVec4(0.39f, 0.63f, 1.0f, 1.0f), "Prefab Instance");
+                if (!pc.Overrides.empty())
+                {
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("(%zu overrides)", pc.Overrides.size());
+                }
             }
         }
         else
@@ -80,18 +98,33 @@ namespace Crowny
     // ---------------------------------------------------------------------------
     // RenderComponents -- iterate all registered components and draw widgets.
     // ---------------------------------------------------------------------------
-    static void RenderComponents(Entity entity, entt::registry& registry,
+    static void RenderComponents(const Entity& entity, const entt::registry& registry,
                                  const Vector<std::pair<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& orderedInfos)
     {
+        // Set up prefab override context if this entity is a prefab instance
+        bool isPrefabInstance = entity.HasComponent<PrefabComponent>();
+        PrefabComponent* prefabComp = isPrefabInstance ? &const_cast<Entity&>(entity).GetComponent<PrefabComponent>() : nullptr;
+
         for (auto& [tid, ci] : orderedInfos)
         {
             if (!HasComponentByID(registry, entity, tid))
                 continue;
 
+            // Set the active component name for override tracking
+            if (isPrefabInstance)
+            {
+                PrefabOverrideContext::s_ActivePrefabComponent = prefabComp;
+                PrefabOverrideContext::s_ActiveComponentName = ci.name;
+            }
+            else
+            {
+                PrefabOverrideContext::s_ActivePrefabComponent = nullptr;
+            }
+
             if (tid == entt::type_hash<MonoScriptComponent>::value())
             {
                 // MonoScriptComponent draws its own collapsing headers (one per script).
-                ci.widget(entity);
+                ci.widget(const_cast<Entity&>(entity));
                 continue;
             }
 
@@ -101,7 +134,8 @@ namespace Crowny
             {
                 if (ImGui::Button("-"))
                 {
-                    ci.destroy(entity);
+                    auto action = ci.destroy(const_cast<Entity&>(entity));
+                    UndoRedo::Get().RegisterAction(action);
                     ImGui::PopID();
                     continue;
                 }
@@ -114,34 +148,37 @@ namespace Crowny
                 ImGui::Indent(10.f);
                 ImGui::PushID("Widget");
                 UI::BeginPropertyGrid();
-                ci.widget(entity);
+                ci.widget(const_cast<Entity&>(entity));
                 UI::EndPropertyGrid();
                 ImGui::PopID();
                 ImGui::Unindent(10.f);
             }
             ImGui::PopID();
         }
+
+        // Clear the override context
+        PrefabOverrideContext::s_ActivePrefabComponent = nullptr;
+        PrefabOverrideContext::s_ActiveComponentName.clear();
     }
 
     // ---------------------------------------------------------------------------
     // CreateNewScript -- "Create new script" flow with solution sync.
     // ---------------------------------------------------------------------------
-    static void CreateNewScript(Ref<Scene>& scene, Entity entity, const String& className)
+    static void CreateNewScript(const Ref<Scene>& scene, const Entity& entity, const String& className)
     {
         if (s_DefaultScriptContents.empty())
-            s_DefaultScriptContents = FileSystem::ReadTextFile(Application::GetWorkingDirectory() / "Resources/Default/DefaultScript.cs");
+            s_DefaultScriptContents = FileSystem::ReadTextFile(gApplication->GetWorkingDirectory() / "Resources/Default/DefaultScript.cs");
 
-        String script = StringUtils::Replace(s_DefaultScriptContents, "#NAMESPACE#",
-                                             Editor::Get().GetProjectPath().filename().string());
+        String script = StringUtils::Replace(s_DefaultScriptContents, "#NAMESPACE#", Editor::Get().GetProjectPath().filename().string());
         script = StringUtils::Replace(script, "#CLASSNAME#", className);
         Path path = EditorUtils::GetUniquePath(ProjectLibrary::Get().GetAssetFolder() / (className + ".cs"));
         FileSystem::WriteTextFile(path, script);
         ProjectLibrary::Get().Refresh(path);
 
         // Regenerate VS solution so the new file appears in the IDE.
-        Path engineAssemblyPath = Application::GetApplicationDesc().EngineAssemblyPath;
+        Path engineAssemblyPath = gApplication->GetApplicationDesc().EngineAssemblyPath;
         if (engineAssemblyPath.is_relative())
-            engineAssemblyPath = Application::GetWorkingDirectory() / engineAssemblyPath;
+            engineAssemblyPath = gApplication->GetWorkingDirectory() / engineAssemblyPath;
         CodeEditorManager::Get().SyncSolution(GAME_ASSEMBLY, { CROWNY_ASSEMBLY, engineAssemblyPath });
 
         // The script won't be usable until the assembly is rebuilt.
@@ -155,7 +192,7 @@ namespace Crowny
     // A "Create new script" button appears when the search string is a valid
     // C# class name that doesn't match any existing script.
     // ---------------------------------------------------------------------------
-    static void RenderSearchResults(Ref<Scene>& scene, Entity entity, entt::registry& registry,
+    static void RenderSearchResults(const Ref<Scene>& scene, const Entity& entity, const entt::registry& registry,
                                     const Map<String, Map<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& componentInfos)
     {
         // -- Built-in components --------------------------------------------------
@@ -185,7 +222,7 @@ namespace Crowny
                     ImGui::PushItemWidth(-1);
                     if (ImGui::Button(ci.name.c_str()))
                     {
-                        AddComponentToEntity(scene, entity, tid, ci);
+                        AddComponentToEntity(const_cast<Ref<Scene>&>(scene), entity, tid, ci);
                         ImGui::CloseCurrentPopup();
                     }
                     ImGui::PopItemWidth();
@@ -217,7 +254,7 @@ namespace Crowny
                 if (ImGui::Button(name.c_str()))
                 {
                     ComponentEditor::ComponentInfo dummy;
-                    AddComponentToEntity(scene, entity, entt::type_hash<MonoScriptComponent>::value(), dummy, name);
+                    AddComponentToEntity(const_cast<Ref<Scene>&>(scene), entity, entt::type_hash<MonoScriptComponent>::value(), dummy, name);
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::PopItemWidth();
@@ -245,7 +282,7 @@ namespace Crowny
     // RenderCategoryBrowser -- categorized tree view of all components + scripts.
     // Already-added items are shown greyed out with "(Added)" suffix.
     // ---------------------------------------------------------------------------
-    static void RenderCategoryBrowser(Ref<Scene>& scene, Entity entity, entt::registry& registry,
+    static void RenderCategoryBrowser(const Ref<Scene>& scene, const Entity& entity, const entt::registry& registry,
                                       const Map<String, Map<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& componentInfos)
     {
         for (auto& [group, members] : componentInfos)
@@ -271,7 +308,7 @@ namespace Crowny
                     {
                         if (ImGui::Selectable(ci.name.c_str()))
                         {
-                            AddComponentToEntity(scene, entity, tid, ci);
+                            AddComponentToEntity(const_cast<Ref<Scene>&>(scene), entity, tid, ci);
                             ImGui::CloseCurrentPopup();
                         }
                     }
@@ -301,7 +338,7 @@ namespace Crowny
                         {
                             if (ImGui::Selectable(ci.name.c_str()))
                             {
-                                AddComponentToEntity(scene, entity, tid, ci);
+                                AddComponentToEntity(const_cast<Ref<Scene>&>(scene), entity, tid, ci);
                                 ImGui::CloseCurrentPopup();
                             }
                         }
@@ -346,7 +383,7 @@ namespace Crowny
                         if (ImGui::Selectable(name.c_str()))
                         {
                             ComponentEditor::ComponentInfo dummy;
-                            AddComponentToEntity(scene, entity, entt::type_hash<MonoScriptComponent>::value(), dummy, name);
+                            AddComponentToEntity(const_cast<Ref<Scene>&>(scene), entity, entt::type_hash<MonoScriptComponent>::value(), dummy, name);
                             ImGui::CloseCurrentPopup();
                         }
                     }
@@ -360,7 +397,7 @@ namespace Crowny
     // ---------------------------------------------------------------------------
     // RenderAddComponentPopup -- the "+ Add Component" popup menu.
     // ---------------------------------------------------------------------------
-    static void RenderAddComponentPopup(Ref<Scene>& scene, Entity entity, entt::registry& registry,
+    static void RenderAddComponentPopup(const Ref<Scene>& scene, const Entity& entity, const entt::registry& registry,
                                         const Map<String, Map<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& componentInfos)
     {
         ImGui::SetNextWindowSizeConstraints(ImVec2(220, 0), ImVec2(400, 400));
@@ -402,8 +439,8 @@ namespace Crowny
     void ComponentEditor::Render()
     {
         Entity entity = HierarchyPanel::GetSelectedEntity();
-        Ref<Scene> scene = SceneManager::GetActiveScene();
-        entt::registry& registry = scene->m_Registry;
+        Ref<Scene> scene = gSceneManager->GetActiveScene();
+        const entt::registry& registry = scene->m_Registry;
 
         ImGui::Separator();
         RenderEntityHeader(entity);

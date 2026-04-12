@@ -1,24 +1,26 @@
 #pragma once
 
+#include "Crowny/Common/Module.h"
 #include "Crowny/Scene/Scene.h"
 
 namespace Crowny
 {
-    class SceneManager
+    class SceneManager : public Module<SceneManager>
     {
     public:
-        static Ref<Scene> GetActiveScene();
-        static void AddScene(const Ref<Scene>& scene);
-        static void SetActiveScene(const Ref<Scene>& scene);
-        static void Shutdown();
-        static uint32_t GetSceneCount() { return (uint32_t)s_Scenes.size(); }
-        /*
-        static Scene& LoadScene(uint32_t buildIndex);
-        static Scene& LoadScene(const String& name);
-        */
+        SceneManager() = default;
+        ~SceneManager() = default;
+
+        Ref<Scene> GetActiveScene() const;
+        void SetActiveScene(const Ref<Scene>& scene);
+
+    protected:
+        void OnStartUp() override;
+        void OnShutdown() override;
+
     private:
-        static uint32_t s_ActiveIndex;
-        static Vector<Ref<Scene>> s_Scenes;
-        friend class Scene;
+        Ref<Scene> m_ActiveScene;
     };
+
+    extern SceneManager* gSceneManager;
 } // namespace Crowny

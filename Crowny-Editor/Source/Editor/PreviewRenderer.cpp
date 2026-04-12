@@ -3,11 +3,11 @@
 #include "Editor/PreviewRenderer.h"
 #include "EditorLayer.h"
 
+#include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Import/Importer.h"
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/RenderAPI/Shader.h"
-#include "Crowny/Import/Importer.h"
-#include "Crowny/Assets/AssetManager.h"
 
 namespace Crowny
 {
@@ -20,9 +20,9 @@ namespace Crowny
     void PreviewObjectRenderer::Setup(uint32_t width, uint32_t height)
     {
         static Ref<Shader> directShader = Importer::Get().Import<Shader>("Resources/Shaders/Direct.glsl");
-        static const AssetHandle<Shader> directHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(directShader));
+        static const AssetHandle<Shader> directHandle = static_asset_cast<Shader>(gAssetManager->CreateAssetHandle(directShader));
         m_Material = Material::Create(directHandle);
-        static const AssetHandle<Material> materialHandle = static_asset_cast<Material>(AssetManager::Get().CreateAssetHandle(m_Material));
+        static const AssetHandle<Material> materialHandle = static_asset_cast<Material>(gAssetManager->CreateAssetHandle(m_Material));
         m_MatHandle = materialHandle;
         m_Scene = CreateRef<Scene>("Object Preview");
 
@@ -56,8 +56,8 @@ namespace Crowny
         camera.SetDistance(5);
         camera.Focus(glm::vec3(0.0f));
         m_SceneRenderer->RenderEditor(camera);
-        RenderAPI::Get().SubmitCommandBuffer(nullptr);
-        RenderAPI::Get().SetRenderTarget(nullptr);
+        gRenderAPI->SubmitCommandBuffer(nullptr);
+        gRenderAPI->SetRenderTarget(nullptr);
         return m_RenderTexture->GetColorTexture(0);
     }
 
@@ -66,7 +66,7 @@ namespace Crowny
     // =========================================================================
 
     PreviewMaterialRenderer::PreviewMaterialRenderer(const AssetHandle<Material>& material, const AssetHandle<Mesh>& previewMesh)
-        : m_Material(material), m_PreviewMesh(previewMesh), m_SceneRenderer(nullptr)
+      : m_Material(material), m_PreviewMesh(previewMesh), m_SceneRenderer(nullptr)
     {
     }
 
@@ -85,7 +85,7 @@ namespace Crowny
             {
                 Ref<Mesh> imported = Importer::Get().Import<Mesh>("Resources/Meshes/Sphere.fbx");
                 if (imported)
-                    sphereMesh = static_asset_cast<Mesh>(AssetManager::Get().CreateAssetHandle(imported));
+                    sphereMesh = static_asset_cast<Mesh>(gAssetManager->CreateAssetHandle(imported));
             }
             m_PreviewMesh = sphereMesh;
         }
@@ -121,8 +121,8 @@ namespace Crowny
         camera.SetDistance(3);
         camera.Focus(glm::vec3(0.0f));
         m_SceneRenderer->RenderEditor(camera);
-        RenderAPI::Get().SubmitCommandBuffer(nullptr);
-        RenderAPI::Get().SetRenderTarget(nullptr);
+        gRenderAPI->SubmitCommandBuffer(nullptr);
+        gRenderAPI->SetRenderTarget(nullptr);
         return m_RenderTexture->GetColorTexture(0);
     }
 
@@ -154,8 +154,10 @@ namespace Crowny
             dstH = maxSize;
             dstW = (uint32_t)(maxSize * aspect);
         }
-        if (dstW == 0) dstW = 1;
-        if (dstH == 0) dstH = 1;
+        if (dstW == 0)
+            dstW = 1;
+        if (dstH == 0)
+            dstH = 1;
 
         // Create a smaller texture — for now just return the source since
         // GPU-side downscale requires a blit pass. The ImGui texture display

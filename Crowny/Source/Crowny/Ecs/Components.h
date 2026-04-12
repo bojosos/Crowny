@@ -6,7 +6,7 @@
 #include "Crowny/Audio/AudioSource.h"
 #include "Crowny/Common/Math.h"
 #include "Crowny/Ecs/Entity.h"
-#include "Crowny/Physics/PhysicsMaterial.h"
+#include "Crowny/NodeGraph/NodeGraphAsset.h"
 #include "Crowny/Renderer/Material.h"
 
 #include <glm/gtx/quaternion.hpp>
@@ -313,6 +313,30 @@ namespace Crowny
     };
 
     template <> void ComponentEditorWidget<MeshRendererComponent>(Entity e);
+
+    struct ProceduralMeshComponent : public ComponentBase
+    {
+        AssetHandle<NodeGraphAsset> Graph;        // The node graph to evaluate
+        Vector<AssetHandle<Material>> Materials;  // Materials for rendering (same as MeshRendererComponent)
+        UnorderedMap<UUID, PinValue> InputValues; // Values for graph inputs
+
+        // Internal state managed by the procedural mesh system
+        Ref<MeshData> CpuMeshData;                  // Latest evaluation result (CPU side, sim thread)
+        Ref<Mesh> GpuMesh;                          // GPU-uploaded mesh (created on render thread)
+        bool NeedsEvaluation = true;                // Graph inputs changed, re-evaluate on sim thread
+        bool NeedsGpuUpload = false;                // New CpuMeshData ready, upload on render thread
+        uint32_t LastEvaluatedVersion = 0xFFFFFFFF; // Version of the graph when last evaluated
+
+        // Output slot written by the render thread lambda and read back by the sim thread
+        // at the start of the next UpdateProceduralMeshes call. Using shared_ptr ensures
+        // the slot stays alive independently of this component's lifetime.
+        std::shared_ptr<Ref<Mesh>> PendingGpuResult;
+
+        ProceduralMeshComponent() : ComponentBase() {}
+        ProceduralMeshComponent(const ProceduralMeshComponent&) = default;
+    };
+
+    template <> void ComponentEditorWidget<ProceduralMeshComponent>(Entity e);
 
     struct RelationshipComponent : public ComponentBase
     {
@@ -637,9 +661,28 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<CircleCollider2DComponent>(Entity e);
 
-    using AllComponents = ComponentGroup<TransformComponent, CameraComponent, TextComponent, SpriteRendererComponent, MeshRendererComponent,
-                                         AudioSourceComponent, AudioListenerComponent, RelationshipComponent, MonoScriptComponent,
-                                         Rigidbody2DComponent, BoxCollider2DComponent, CircleCollider2DComponent>;
+    struct PrefabComponent : public ComponentBase
+    {
+        UUID PrefabAssetUuid;
+        UUID PrefabEntityUuid;
+        UnorderedSet<String> Overrides;
+
+        PrefabComponent() : ComponentBase() {}
+        PrefabComponent(const PrefabComponent&) = default;
+        PrefabComponent(const UUID& prefabAssetUuid, const UUID& prefabEntityUuid)
+          : ComponentBase(), PrefabAssetUuid(prefabAssetUuid), PrefabEntityUuid(prefabEntityUuid)
+        {
+        }
+
+        bool IsPropertyOverridden(const String& path) const { return Overrides.find(path) != Overrides.end(); }
+        void MarkOverridden(const String& path) { Overrides.insert(path); }
+        void ClearOverride(const String& path) { Overrides.erase(path); }
+    };
+
+    using AllComponents =
+      ComponentGroup<TransformComponent, CameraComponent, TextComponent, SpriteRendererComponent, MeshRendererComponent, ProceduralMeshComponent,
+                     AudioSourceComponent, AudioListenerComponent, RelationshipComponent, MonoScriptComponent, Rigidbody2DComponent,
+                     BoxCollider2DComponent, CircleCollider2DComponent, PrefabComponent>;
 
     using TransformChangedNotifyComponents = ComponentGroup<AudioListenerComponent, AudioSourceComponent>;
 } // namespace Crowny

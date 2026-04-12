@@ -1,0 +1,129 @@
+# Crowny Scene
+Version: 0
+Scene: ComplexScene
+ImGuiLayout: ""
+Entities:
+  - Entity: 88b7e3cd-4e85-6280-418d-4e85257244d6
+    TagComponent:
+      Tag: GrandChild
+    TransformComponent:
+      Position: [0, 0, 5]
+      Rotation: [0, 0, 0, 1]
+      Scale: [1, 1, 1]
+    RelationshipComponent:
+      Children:
+        []
+  - Entity: e3297dea-475a-3942-01a6-475a03075012
+    TagComponent:
+      Tag: Child2
+    TransformComponent:
+      Position: [0, 10, 0]
+      Rotation: [0, 0, 0, 1]
+      Scale: [1, 1, 1]
+    RelationshipComponent:
+      Children:
+        - 88b7e3cd-4e85-6280-418d-4e85257244d6
+  - Entity: f857d3bc-4856-0003-3dbc-4856ca86d551
+    TagComponent:
+      Tag: Child1
+    AudioSourceComponent:
+      AudioClip: 00000000-0000-0000-0000-000000000000
+      Volume: 0.5
+      Pitch: 1.5
+      Loop: true
+      MinDistance: 1
+      MaxDistance: 500
+      PlayOnAwake: true
+      Muted: false
+    TransformComponent:
+      Position: [5, 0, 0]
+      Rotation: [0, 0, 0, 1]
+      Scale: [1, 1, 1]
+    RelationshipComponent:
+      Children:
+        []
+  - Entity: 3fd5564e-48f8-c6f3-cbb5-48f8c1a7eb26
+    TagComponent:
+      Tag: Parent
+    TransformComponent:
+      Position: [10, 0, 0]
+      Rotation: [0, 0, 0, 1]
+      Scale: [1, 1, 1]
+    RelationshipComponent:
+      Children:
+        - f857d3bc-4856-0003-3dbc-4856ca86d551
+        - e3297dea-475a-3942-01a6-475a03075012
+TimeSettings:
+  TimeScale: 1
+  MaxTimestep: 0.333333343
+  FixedTimestep: 0.0199999996  # Crowny Physics Settings
+PhysicsSettings:
+  LayerNames:
+    - Default
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+    - ""
+  Gravity2D: [0, -9.81000042]
+  VelocityIterations: 8
+  PositionIterations: 3
+  CollisionMatrix:
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295
+    - 4294967295

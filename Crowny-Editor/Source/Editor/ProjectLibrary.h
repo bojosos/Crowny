@@ -48,8 +48,8 @@ namespace Crowny
         FileEntry(const Path& path, const String& name, DirectoryEntry* parent);
         ~FileEntry() = default;
 
-        Ref<AssetMetadata> Metadata;                        // Primary asset metadata
-        Vector<Ref<AssetMetadata>> DependentMetadata;       // Sub-assets (materials, textures from mesh import)
+        Ref<AssetMetadata> Metadata;                  // Primary asset metadata
+        Vector<Ref<AssetMetadata>> DependentMetadata; // Sub-assets (materials, textures from mesh import)
         uint32_t Filesize = 0;
     };
 
@@ -77,9 +77,9 @@ namespace Crowny
 
     struct ImportProgress
     {
-        std::atomic<bool> Active{false};
-        std::atomic<uint32_t> TotalFiles{0};
-        std::atomic<uint32_t> CompletedFiles{0};
+        std::atomic<bool> Active{ false };
+        std::atomic<uint32_t> TotalFiles{ 0 };
+        std::atomic<uint32_t> CompletedFiles{ 0 };
         String CurrentAssetName;
 
         float GetFraction() const
@@ -134,6 +134,7 @@ namespace Crowny
         AssetType GetAssetType(const UUID& uuid) const;
 
         Vector<UUID> GetAllAssets(AssetType type) const;
+        String GetAssetName(const UUID& uuid) const;
 
     private:
         void SerializeMetadata(const Path& path, const Ref<AssetMetadata>& metadata, const Vector<Ref<AssetMetadata>>& dependents = {});

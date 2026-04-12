@@ -40,7 +40,11 @@ namespace Crowny
     void ScriptMesh::Internal_GetVertices(ScriptMesh* thisPtr, MonoArray** outArray)
     {
         Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
-        if (!data) { *outArray = nullptr; return; }
+        if (!data)
+        {
+            *outArray = nullptr;
+            return;
+        }
 
         Vector<glm::vec3> positions = data->GetPositions();
         ::MonoClass* vec3Class = ScriptInfoManager::Get().GetBuiltinClasses().Vector3->GetInternalPtr();
@@ -51,7 +55,8 @@ namespace Crowny
     void ScriptMesh::Internal_SetVertices(ScriptMesh* thisPtr, MonoArray* array)
     {
         Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
-        if (!data || !array) return;
+        if (!data || !array)
+            return;
 
         uint32_t count = (uint32_t)mono_array_length(array);
         Vector<glm::vec3> positions(count);
@@ -62,7 +67,11 @@ namespace Crowny
     void ScriptMesh::Internal_GetNormals(ScriptMesh* thisPtr, MonoArray** outArray)
     {
         Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
-        if (!data) { *outArray = nullptr; return; }
+        if (!data)
+        {
+            *outArray = nullptr;
+            return;
+        }
 
         Vector<glm::vec3> normals = data->GetNormals();
         ::MonoClass* vec3Class = ScriptInfoManager::Get().GetBuiltinClasses().Vector3->GetInternalPtr();
@@ -73,7 +82,8 @@ namespace Crowny
     void ScriptMesh::Internal_SetNormals(ScriptMesh* thisPtr, MonoArray* array)
     {
         Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
-        if (!data || !array) return;
+        if (!data || !array)
+            return;
 
         uint32_t count = (uint32_t)mono_array_length(array);
         Vector<glm::vec3> normals(count);
@@ -84,7 +94,11 @@ namespace Crowny
     void ScriptMesh::Internal_GetUVs(ScriptMesh* thisPtr, uint32_t channel, MonoArray** outArray)
     {
         Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
-        if (!data) { *outArray = nullptr; return; }
+        if (!data)
+        {
+            *outArray = nullptr;
+            return;
+        }
 
         Vector<glm::vec2> uvs = data->GetUVs(channel);
         ::MonoClass* vec2Class = ScriptInfoManager::Get().GetBuiltinClasses().Vector2->GetInternalPtr();
@@ -95,7 +109,8 @@ namespace Crowny
     void ScriptMesh::Internal_SetUVs(ScriptMesh* thisPtr, uint32_t channel, MonoArray* array)
     {
         Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
-        if (!data || !array) return;
+        if (!data || !array)
+            return;
 
         uint32_t count = (uint32_t)mono_array_length(array);
         Vector<glm::vec2> uvs(count);
@@ -106,7 +121,11 @@ namespace Crowny
     void ScriptMesh::Internal_GetColors(ScriptMesh* thisPtr, MonoArray** outArray)
     {
         Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
-        if (!data) { *outArray = nullptr; return; }
+        if (!data)
+        {
+            *outArray = nullptr;
+            return;
+        }
 
         Vector<glm::vec4> colors = data->GetColors();
         ::MonoClass* vec4Class = ScriptInfoManager::Get().GetBuiltinClasses().Vector4->GetInternalPtr();
@@ -117,7 +136,8 @@ namespace Crowny
     void ScriptMesh::Internal_SetColors(ScriptMesh* thisPtr, MonoArray* array)
     {
         Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
-        if (!data || !array) return;
+        if (!data || !array)
+            return;
 
         uint32_t count = (uint32_t)mono_array_length(array);
         Vector<glm::vec4> colors(count);
@@ -128,7 +148,11 @@ namespace Crowny
     void ScriptMesh::Internal_GetIndices(ScriptMesh* thisPtr, MonoArray** outArray)
     {
         Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
-        if (!data) { *outArray = nullptr; return; }
+        if (!data)
+        {
+            *outArray = nullptr;
+            return;
+        }
 
         Vector<uint32_t> indices = data->GetIndices();
         *outArray = mono_array_new(MonoManager::Get().GetDomain(), MonoUtils::GetI32Class(), (uintptr_t)indices.size());
@@ -138,7 +162,8 @@ namespace Crowny
     void ScriptMesh::Internal_SetIndices(ScriptMesh* thisPtr, MonoArray* array)
     {
         Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
-        if (!data || !array) return;
+        if (!data || !array)
+            return;
 
         uint32_t count = (uint32_t)mono_array_length(array);
         Vector<uint32_t> indices(count);

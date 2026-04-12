@@ -92,6 +92,8 @@ namespace Crowny
 
     using Lock = std::unique_lock<Mutex>;
 
+    using ScopedLock = std::lock_guard<Mutex>;
+
     template <typename T> using Scope = std::unique_ptr<T>;
 
     /**

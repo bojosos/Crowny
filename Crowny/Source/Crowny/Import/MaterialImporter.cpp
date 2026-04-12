@@ -1,7 +1,10 @@
 #include "cwpch.h"
 
-#include "Crowny/Import/MaterialImporter.h"
+#include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Common/Constants.h"
 #include "Crowny/Common/StringUtils.h"
+#include "Crowny/Import/MaterialImporter.h"
+#include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/Renderer/Material.h"
 
 namespace Crowny
@@ -17,10 +20,15 @@ namespace Crowny
 
     Ref<Asset> MaterialImporter::Import(const Path& path, Ref<const ImportOptions> importOptions)
     {
-        // .mat files are saved as binary assets by the asset pipeline.
-        // Direct import from .mat is not supported — materials are created
-        // during mesh import or programmatically. Return nullptr so the
-        // asset system falls back to loading from the cached .asset file.
-        return nullptr;
+        // Create a default Unlit material. The project library imports .mat files
+        // as new assets when they are first added; any saved parameters are stored
+        // in the UUID-keyed cache and loaded from there afterwards via LoadFromUUID.
+        AssetHandle<Shader> shader = gAssetManager->Load<Shader>(UNLIT_SHADER_PATH);
+        if (shader)
+            return Material::CreateUnlit(shader);
+
+        // Unlit shader not yet compiled — return a bare material with no shader.
+        // The user can assign a shader from the inspector.
+        return CreateRef<Material>(AssetHandle<Shader>{});
     }
 } // namespace Crowny

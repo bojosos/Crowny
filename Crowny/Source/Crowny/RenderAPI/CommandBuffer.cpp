@@ -73,7 +73,7 @@ namespace Crowny
 
     Ref<CommandBuffer> CommandBuffer::Create(GpuQueueType type, uint32_t queueIdx, bool secondary)
     {
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
         // case RenderAPI::API::OpenGL: return CreateRef<OpenGLFramebuffer>(props);
         case RenderAPI::API::Vulkan:

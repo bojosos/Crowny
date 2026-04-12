@@ -9,7 +9,7 @@ namespace Crowny
     void AssetHandleBase::Destroy()
     {
         // if (m_Data*->m_Ptr != nullptr)
-        // AssetManager::Get().Destroy();
+        // gAssetManager->Destroy();
     }
 
     void AssetHandleBase::SetHandleData(const Ref<Asset>& ptr, const UUID& uuid)
@@ -19,5 +19,5 @@ namespace Crowny
             m_Data->m_UUID = uuid;
     }
 
-    void AssetHandleBase::Release() { AssetManager::Get().Release(*this); }
+    void AssetHandleBase::Release() { gAssetManager->Release(*this); }
 } // namespace Crowny

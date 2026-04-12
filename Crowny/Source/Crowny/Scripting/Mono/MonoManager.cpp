@@ -110,10 +110,11 @@ namespace Crowny
 
     static MonoProfiler profiler;
     */
-    MonoManager::MonoManager(const Path& libDir, const Path& etcDir, uint32_t debugPort) : m_ScriptDomain(nullptr), m_RootDomain(nullptr), m_CorlibAssembly(nullptr)
+    MonoManager::MonoManager(const Path& libDir, const Path& etcDir, uint32_t debugPort)
+      : m_ScriptDomain(nullptr), m_RootDomain(nullptr), m_CorlibAssembly(nullptr)
     {
         /*
-        if (Application::Get().GetApplicationDesc().Script.EnableProfiling)
+        if (gApplication->GetApplicationDesc().Script.EnableProfiling)
         {
             MonoProfilerHandle profilerHandle = mono_profiler_create(&profiler);
             mono_profiler_set_method_enter_callback(profilerHandle, MethodEnterCallback);
@@ -130,12 +131,13 @@ namespace Crowny
             mono_debug_init(MONO_DEBUG_FORMAT_MONO);
         mono_trace_set_level_string("debug");
         mono_trace_set_print_handler(MonoPrintCallback);
-        
+
         if (debugPort != 0)
         {
-            String debuggerAgentOptions = "--debugger-agent=transport=dt_socket,address=127.0.0.1:" + std::to_string(debugPort) + ",embedding=1,server=y,suspend=n";
-            const char* options[] = { "--soft-breakpoints", debuggerAgentOptions.c_str(),
-                                      "--debug-domain-unload", "--gc-debug=check-remset-consistency,verify-before-collections,xdomain-checks" };
+            String debuggerAgentOptions =
+              "--debugger-agent=transport=dt_socket,address=127.0.0.1:" + std::to_string(debugPort) + ",embedding=1,server=y,suspend=n";
+            const char* options[] = { "--soft-breakpoints", debuggerAgentOptions.c_str(), "--debug-domain-unload",
+                                      "--gc-debug=check-remset-consistency,verify-before-collections,xdomain-checks" };
             mono_jit_parse_options(4, (char**)options);
         }
         else

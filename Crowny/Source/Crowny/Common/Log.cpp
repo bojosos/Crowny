@@ -25,15 +25,29 @@ namespace Crowny
         s_LogSinks[0]->set_pattern("%^[%T] %n: %v%$");
         s_LogSinks[1]->set_pattern("[%T] [%l] %n: %v");
         s_LogSinks[2]->set_pattern("%v");
-s_EngineLogger = CreateRef<spdlog::logger>("CROWNY", std::begin(s_LogSinks), std::end(s_LogSinks));
-try { spdlog::register_logger(s_EngineLogger); } catch (const spdlog::spdlog_ex& ex) { (void)ex; }
-s_EngineLogger->set_level(spdlog::level::trace);
-s_EngineLogger->flush_on(spdlog::level::trace);
+        s_EngineLogger = CreateRef<spdlog::logger>("CROWNY", std::begin(s_LogSinks), std::end(s_LogSinks));
+        try
+        {
+            spdlog::register_logger(s_EngineLogger);
+        }
+        catch (const spdlog::spdlog_ex& ex)
+        {
+            (void)ex;
+        }
+        s_EngineLogger->set_level(spdlog::level::trace);
+        s_EngineLogger->flush_on(spdlog::level::trace);
 
-s_ClientLogger = CreateRef<spdlog::logger>("APP", std::begin(s_LogSinks), std::end(s_LogSinks));
-try { spdlog::register_logger(s_ClientLogger); } catch (const spdlog::spdlog_ex& ex) { (void)ex; }
-s_ClientLogger->set_level(spdlog::level::trace);
-s_ClientLogger->flush_on(spdlog::level::trace);
+        s_ClientLogger = CreateRef<spdlog::logger>("APP", std::begin(s_LogSinks), std::end(s_LogSinks));
+        try
+        {
+            spdlog::register_logger(s_ClientLogger);
+        }
+        catch (const spdlog::spdlog_ex& ex)
+        {
+            (void)ex;
+        }
+        s_ClientLogger->set_level(spdlog::level::trace);
+        s_ClientLogger->flush_on(spdlog::level::trace);
     }
 
     void Log::RenameClientLogger(const StringView loggerName)

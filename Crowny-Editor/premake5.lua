@@ -40,6 +40,12 @@ project "Crowny-Editor"
 		"%{IncludeDir.Box2D}"
 	}
 
+	if _OPTIONS["with-nodes"] then
+		includedirs { "%{IncludeDir.ImNodeFlow}" }
+		includedirs { "%{IncludeDir.ImguiNodeEditor}" }
+		defines { "CW_WITH_NODES" }
+	end
+
 	links
 	{
 		"assimp",
@@ -56,6 +62,17 @@ project "Crowny-Editor"
 		"Crowny-Sharp"
 	}
 
+	dependson
+	{
+		"Crowny",
+		"Crowny-Sharp"
+	}
+
+	if _OPTIONS["with-nodes"] then
+		links { "ImNodeFlow" }
+		links { "imgui-node-editor" }
+	end
+
 	filter "system:windows"
 		systemversion "latest"
 		buildoptions { "/utf-8" }
@@ -63,6 +80,7 @@ project "Crowny-Editor"
 		defines
 		{
 			"CW",
+			"CW_EDITOR",
 			"CW_WINDOWS",
 			"GLFW_INCLUDE_NONE",
 			"_CRT_SECURE_NO_WARNINGS",
@@ -124,6 +142,7 @@ project "Crowny-Editor"
 		defines
 		{
 			"CW",
+			"CW_EDITOR",
 			"CW_PLATFORM_LINUX",
 			"GLFW_INCLUDE_NONE"
 		}

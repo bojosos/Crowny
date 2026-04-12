@@ -12,13 +12,7 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_GetHeight", (void*)&Internal_GetHeight);
     }
 
-    uint32_t ScriptTexture::Internal_GetWidth(ScriptTexture* thisPtr)
-    {
-        return thisPtr->GetHandle()->GetWidth();
-    }
+    uint32_t ScriptTexture::Internal_GetWidth(ScriptTexture* thisPtr) { return thisPtr->GetHandle()->GetWidth(); }
 
-    uint32_t ScriptTexture::Internal_GetHeight(ScriptTexture* thisPtr)
-    {
-        return thisPtr->GetHandle()->GetHeight();
-    }
+    uint32_t ScriptTexture::Internal_GetHeight(ScriptTexture* thisPtr) { return thisPtr->GetHandle()->GetHeight(); }
 } // namespace Crowny

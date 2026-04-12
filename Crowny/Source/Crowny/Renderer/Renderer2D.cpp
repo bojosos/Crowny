@@ -20,6 +20,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <tracy/Tracy.hpp>
 
 namespace Crowny
 {
@@ -130,7 +131,7 @@ namespace Crowny
                                                 BufferElement(ShaderDataType::Int, "a_ObjectId") });
         s_Data->QuadVertexBuffer->SetLayout(layout);
 
-        AssetHandle<Shader> shaderHandle = AssetManager::Get().Load<Shader>(RENDERER2D_SHADER_PATH);
+        AssetHandle<Shader> shaderHandle = gAssetManager->Load<Shader>(RENDERER2D_SHADER_PATH);
         s_Data->QuadMaterial = Material::Create(shaderHandle);
         s_Data->QuadBuffer = s_Data->QuadTmpBuffer = new VertexData[RENDERER_MAX_SPRITES * 4];
         delete[] indices;
@@ -148,10 +149,10 @@ namespace Crowny
                                                                                { ShaderDataType::Int, "a_Id" } });
         s_Data->CircleVertexBuffer->SetLayout(layout);
 
-        const AssetHandle<Shader> shaderHandle = AssetManager::Get().Load<Shader>("Resources/Shaders/Circle.asset");
+        const AssetHandle<Shader> shaderHandle = gAssetManager->Load<Shader>("Resources/Shaders/Circle.asset");
         // const Ref<Shader> circleShader = Importer::Get().Import<Shader>("Resources/Shaders/Circle.glsl");
-        // AssetManager::Get().Save(circleShader, "Resources/Shaders/Circle.asset");
-        // const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(circleShader));
+        // gAssetManager->Save(circleShader, "Resources/Shaders/Circle.asset");
+        // const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(gAssetManager->CreateAssetHandle(circleShader));
         s_Data->CircleMaterial = Material::Create(shaderHandle);
     }
 
@@ -170,10 +171,10 @@ namespace Crowny
                                                                          { ShaderDataType::Int, "a_ObjectId" } });
         s_Data->TextVertexBuffer->SetLayout(layout);
 
-        AssetHandle<Shader> shaderHandle = AssetManager::Get().Load<Shader>("Resources/Shaders/Text.asset");
+        AssetHandle<Shader> shaderHandle = gAssetManager->Load<Shader>("Resources/Shaders/Text.asset");
         // Ref<Shader> textShader = Importer::Get().Import<Shader>("Resources/Shaders/Text.glsl");
-        // AssetManager::Get().Save(textShader, "Resources/Shaders/Text.asset");
-        // const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(textShader));
+        // gAssetManager->Save(textShader, "Resources/Shaders/Text.asset");
+        // const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(gAssetManager->CreateAssetHandle(textShader));
         s_Data->TextMaterial = Material::Create(shaderHandle);
     }
 
@@ -194,7 +195,13 @@ namespace Crowny
         s_Data->QuadMaterial->SetMatrix("u_ViewProjection", viewProjection);
     }
 
-    void Renderer2D::Begin(const glm::mat4& projection, const glm::mat4& view) { CW_ENGINE_ASSERT(false); }
+    void Renderer2D::Begin(const glm::mat4& projection, const glm::mat4& view)
+    {
+        const glm::mat4 viewProjection = projection * view;
+        s_Data->CircleMaterial->SetMatrix("u_ViewProjection", viewProjection);
+        s_Data->TextMaterial->SetMatrix("u_ViewProjection", viewProjection);
+        s_Data->QuadMaterial->SetMatrix("u_ViewProjection", viewProjection);
+    }
 
     float Renderer2D::FindTexture(const Ref<Texture>& texture)
     {
@@ -460,10 +467,11 @@ namespace Crowny
 
     static void FlushQuads()
     {
+        ZoneScopedN("FlushQuads");
         if (s_Data->QuadIndexCount > 0)
         {
-            RenderAPI::Get().SetGraphicsPipeline(s_Data->QuadMaterial->GetGraphicsPipeline());
-            RenderAPI::Get().SetVertexLayout(s_Data->QuadVertexBuffer->GetLayout());
+            gRenderAPI->SetGraphicsPipeline(s_Data->QuadMaterial->GetGraphicsPipeline());
+            gRenderAPI->SetVertexLayout(s_Data->QuadVertexBuffer->GetLayout());
             for (uint32_t i = 0; i < 8; i++)
             {
                 if (s_Data->Textures[i])
@@ -471,12 +479,12 @@ namespace Crowny
                 else
                     s_Data->QuadMaterial->SetTexture("u_Texture" + std::to_string(i + 1), s_Data->Textures[0]);
             }
-            RenderAPI::Get().SetUniforms(s_Data->QuadMaterial->GetUniformParams());
+            gRenderAPI->SetUniforms(s_Data->QuadMaterial->GetUniformParams());
 
-            RenderAPI::Get().SetVertexBuffers(0, &s_Data->QuadVertexBuffer, 1);
-            RenderAPI::Get().SetIndexBuffer(s_Data->QuadIndexBuffer);
+            gRenderAPI->SetVertexBuffers(0, &s_Data->QuadVertexBuffer, 1);
+            gRenderAPI->SetIndexBuffer(s_Data->QuadIndexBuffer);
             s_Data->QuadVertexBuffer->WriteData(0, s_Data->QuadVertexCount * sizeof(VertexData), s_Data->QuadTmpBuffer, BWT_DISCARD);
-            RenderAPI::Get().DrawIndexed(0, s_Data->QuadIndexCount, 0, s_Data->QuadVertexCount);
+            gRenderAPI->DrawIndexed(0, s_Data->QuadIndexCount, 0, s_Data->QuadVertexCount);
         }
     }
 
@@ -485,36 +493,38 @@ namespace Crowny
         if (s_Data->CircleIndexCount > 0)
         {
             // This will flush buffers
-            RenderAPI::Get().SetGraphicsPipeline(s_Data->CircleMaterial->GetGraphicsPipeline());
-            RenderAPI::Get().SetVertexLayout(s_Data->CircleVertexBuffer->GetLayout());
-            RenderAPI::Get().SetUniforms(s_Data->CircleMaterial->GetUniformParams());
+            gRenderAPI->SetGraphicsPipeline(s_Data->CircleMaterial->GetGraphicsPipeline());
+            gRenderAPI->SetVertexLayout(s_Data->CircleVertexBuffer->GetLayout());
+            gRenderAPI->SetUniforms(s_Data->CircleMaterial->GetUniformParams());
 
-            RenderAPI::Get().SetVertexBuffers(0, &s_Data->CircleVertexBuffer, 1);
+            gRenderAPI->SetVertexBuffers(0, &s_Data->CircleVertexBuffer, 1);
             s_Data->CircleVertexBuffer->WriteData(0, s_Data->CircleVertexCount * sizeof(CircleVertex), s_Data->CircleTmpBuffer, BWT_DISCARD);
-            RenderAPI::Get().DrawIndexed(0, s_Data->CircleIndexCount, 0, s_Data->CircleVertexCount);
+            gRenderAPI->DrawIndexed(0, s_Data->CircleIndexCount, 0, s_Data->CircleVertexCount);
         }
     }
 
     static void FlushText()
     {
+        ZoneScopedN("FlushText");
         if (s_Data->TextIndexCount > 0)
         {
             s_Data->TextMaterial->SetTexture("u_FontAtlas", s_Data->FontAtlasTexture);
 
-            RenderAPI::Get().SetGraphicsPipeline(s_Data->TextMaterial->GetGraphicsPipeline());
-            RenderAPI::Get().SetVertexLayout(s_Data->TextVertexBuffer->GetLayout());
-            RenderAPI::Get().SetUniforms(s_Data->TextMaterial->GetUniformParams());
+            gRenderAPI->SetGraphicsPipeline(s_Data->TextMaterial->GetGraphicsPipeline());
+            gRenderAPI->SetVertexLayout(s_Data->TextVertexBuffer->GetLayout());
+            gRenderAPI->SetUniforms(s_Data->TextMaterial->GetUniformParams());
 
-            RenderAPI::Get().SetVertexBuffers(0, &s_Data->TextVertexBuffer, 1);
-            RenderAPI::Get().SetIndexBuffer(s_Data->QuadIndexBuffer);
+            gRenderAPI->SetVertexBuffers(0, &s_Data->TextVertexBuffer, 1);
+            gRenderAPI->SetIndexBuffer(s_Data->QuadIndexBuffer);
             s_Data->TextVertexBuffer->WriteData(0, s_Data->TextVertexCount * sizeof(TextVertex), s_Data->TextTmpBuffer, BWT_DISCARD);
 
-            RenderAPI::Get().DrawIndexed(0, s_Data->TextIndexCount, 0, s_Data->TextVertexCount);
+            gRenderAPI->DrawIndexed(0, s_Data->TextIndexCount, 0, s_Data->TextVertexCount);
         }
     }
 
     void Renderer2D::Flush()
     {
+        ZoneScopedN("Renderer2D::Flush");
         FlushQuads();
         FlushCircles();
         FlushText();

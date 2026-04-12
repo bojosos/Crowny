@@ -6,7 +6,12 @@
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/Input/Input.h"
+#include "Crowny/Scene/Prefab.h"
 #include "Crowny/Scene/SceneManager.h"
+
+#include "Editor/EditorLayer.h"
+#include "Editor/PrefabUtils.h"
+#include "Editor/ProjectLibrary.h"
 
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
@@ -24,7 +29,7 @@ namespace Crowny
             CreateEmptyEntity(e);
 
         // Rename is only meaningful when right-clicking a specific non-root entity
-        if (e != SceneManager::GetActiveScene()->GetRootEntity())
+        if (e != gSceneManager->GetActiveScene()->GetRootEntity())
         {
             if (ImGui::MenuItem("Rename"))
             {
@@ -35,8 +40,27 @@ namespace Crowny
             if (ImGui::MenuItem("Delete"))
             {
                 m_DeferredActions.push_back([e]() mutable { e.Destroy(); });
-                HierarchyPanel::s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
+                HierarchyPanel::s_SelectedEntity = gSceneManager->GetActiveScene()->GetRootEntity();
                 m_SelectionChanged(s_SelectedEntity);
+            }
+        }
+
+        if (e != gSceneManager->GetActiveScene()->GetRootEntity())
+        {
+            ImGui::Separator();
+            if (ImGui::MenuItem("Create Prefab"))
+            {
+                m_DeferredActions.push_back([e]() mutable { PrefabUtils::CreatePrefabFromEntity(e); });
+            }
+
+            if (e.HasComponent<PrefabComponent>())
+            {
+                if (ImGui::MenuItem("Apply to Prefab"))
+                    m_DeferredActions.push_back([e]() mutable { PrefabUtils::ApplyInstanceToPrefab(e); });
+                if (ImGui::MenuItem("Revert Prefab Instance"))
+                    m_DeferredActions.push_back([e]() mutable { PrefabUtils::RevertInstance(e); });
+                if (ImGui::MenuItem("Unlink Prefab"))
+                    m_DeferredActions.push_back([e]() mutable { PrefabUtils::UnlinkPrefab(e); });
             }
         }
 
@@ -114,7 +138,7 @@ namespace Crowny
         String name = tc.Tag.empty() ? "Entity" : tc.Tag.c_str();
 
         ImGuiTreeNodeFlags selected = (m_SelectedItems.find(entity) != m_SelectedItems.end()) ? ImGuiTreeNodeFlags_Selected : 0;
-        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap;
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowOverlap;
 
         if (hasChildren)
             flags |= ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
@@ -149,7 +173,14 @@ namespace Crowny
         if (hasChildren && m_PreserveHierarchy && m_Hierarchy.find(entity.GetUuid()) != m_Hierarchy.end())
             ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 
+        bool isPrefabInstance = entity.HasComponent<PrefabComponent>();
+        if (isPrefabInstance)
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(100, 160, 255, 255));
+
         bool open = ImGui::TreeNodeEx(name.c_str(), selected | flags);
+
+        if (isPrefabInstance)
+            ImGui::PopStyleColor();
 
         // Drag source
         if (ImGui::BeginDragDropSource())
@@ -168,6 +199,24 @@ namespace Crowny
                 payloadEntity.SetParent(entity);
                 m_NewOpenEntity = payloadEntity;
             }
+
+            if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload(AssetType::Prefab))
+            {
+                Entity dropTarget = entity;
+                m_DeferredActions.push_back([fileEntry, dropTarget, this]() mutable {
+                    AssetHandle<Asset> asset = ProjectLibrary::Get().Load(fileEntry);
+                    AssetHandle<Prefab> prefab = static_asset_cast<Prefab>(asset);
+                    Entity instance = PrefabUtils::InstantiatePrefab(prefab, dropTarget);
+                    if (instance)
+                    {
+                        s_SelectedEntity = instance;
+                        m_SelectionChanged(s_SelectedEntity);
+                        m_SelectedItems.clear();
+                        m_SelectedItems.insert(instance);
+                    }
+                });
+            }
+
             ImGui::EndDragDropTarget();
         }
 
@@ -212,7 +261,7 @@ namespace Crowny
     void HierarchyPanel::CreateEmptyEntity(Entity parent)
     {
         m_DeferredActions.push_back([this, parent]() mutable {
-            auto activeScene = SceneManager::GetActiveScene();
+            auto activeScene = gSceneManager->GetActiveScene();
             Entity newEntity = activeScene->CreateEntity("New Entity");
             parent.AddChild(newEntity);
             HierarchyPanel::s_SelectedEntity = newEntity;
@@ -247,7 +296,7 @@ namespace Crowny
 
         // Skip the root entity itself from results, but search its children
         auto& rc = e.GetComponent<RelationshipComponent>();
-        Entity root = SceneManager::GetActiveScene()->GetRootEntity();
+        Entity root = gSceneManager->GetActiveScene()->GetRootEntity();
         if (e != root && MatchesSearchFilter(e))
             results.push_back(e);
 
@@ -258,7 +307,7 @@ namespace Crowny
     String HierarchyPanel::BuildParentPath(Entity e) const
     {
         String path;
-        Entity root = SceneManager::GetActiveScene()->GetRootEntity();
+        Entity root = gSceneManager->GetActiveScene()->GetRootEntity();
         Entity parent = e.GetParent();
         while (parent && parent != root)
         {
@@ -274,7 +323,7 @@ namespace Crowny
     void HierarchyPanel::RenderSearchResults()
     {
         Vector<Entity> matches;
-        CollectMatchingEntities(SceneManager::GetActiveScene()->GetRootEntity(), matches);
+        CollectMatchingEntities(gSceneManager->GetActiveScene()->GetRootEntity(), matches);
 
         for (auto& entity : matches)
         {
@@ -287,8 +336,8 @@ namespace Crowny
             ImGui::PushID((int32_t)entity.GetHandle());
 
             ImGuiTreeNodeFlags selected = (m_SelectedItems.find(entity) != m_SelectedItems.end()) ? ImGuiTreeNodeFlags_Selected : 0;
-            ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth |
-                                       ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_Leaf;
+            ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding |
+                                       ImGuiTreeNodeFlags_AllowOverlap | ImGuiTreeNodeFlags_Leaf;
 
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
@@ -323,9 +372,29 @@ namespace Crowny
                 if (const ImGuiPayload* payload = UIUtils::AcceptEntityPayload())
                 {
                     Entity payloadEntity = UIUtils::GetEntityFromPayload(payload);
+                    Entity oldParent = payloadEntity.GetParent();
                     payloadEntity.SetParent(entity);
+                    UndoRedo::Get().RegisterAction(CreateRef<EntityReparentAction>(payloadEntity, oldParent, entity));
                     m_NewOpenEntity = payloadEntity;
                 }
+
+                if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload(AssetType::Prefab))
+                {
+                    Entity dropTarget = entity;
+                    m_DeferredActions.push_back([fileEntry, dropTarget, this]() mutable {
+                        AssetHandle<Asset> asset = ProjectLibrary::Get().Load(fileEntry);
+                        AssetHandle<Prefab> prefab = static_asset_cast<Prefab>(asset);
+                        Entity instance = PrefabUtils::InstantiatePrefab(prefab, dropTarget);
+                        if (instance)
+                        {
+                            s_SelectedEntity = instance;
+                            m_SelectionChanged(s_SelectedEntity);
+                            m_SelectedItems.clear();
+                            m_SelectedItems.insert(instance);
+                        }
+                    });
+                }
+
                 ImGui::EndDragDropTarget();
             }
 
@@ -352,7 +421,7 @@ namespace Crowny
             action();
         m_DeferredActions.clear();
 
-        Scene& activeScene = *SceneManager::GetActiveScene().get();
+        Scene& activeScene = *gSceneManager->GetActiveScene().get();
 
         if (m_Focused && s_SelectedEntity && !ImGui::GetIO().WantCaptureKeyboard)
         {
@@ -365,7 +434,7 @@ namespace Crowny
                     if (e.IsValid() && e.GetParent())
                     {
                         m_DeferredActions.push_back([e]() mutable {
-                            Scene& scene = *SceneManager::GetActiveScene().get();
+                            Scene& scene = *gSceneManager->GetActiveScene().get();
                             scene.DuplicateEntity(e).SetParent(e.GetParent());
                         });
                     }
@@ -400,7 +469,7 @@ namespace Crowny
                     }
                 }
                 m_SelectedItems.clear();
-                s_SelectedEntity = SceneManager::GetActiveScene()->GetRootEntity();
+                s_SelectedEntity = gSceneManager->GetActiveScene()->GetRootEntity();
                 m_SelectionChanged(s_SelectedEntity);
             }
         }
@@ -412,7 +481,12 @@ namespace Crowny
         BeginPanel();
         if (!m_PreserveHierarchy)
             m_Hierarchy.clear();
-        Ref<Scene> activeScene = SceneManager::GetActiveScene();
+        Ref<Scene> activeScene = gSceneManager->GetActiveScene();
+        if (!activeScene)
+        {
+            EndPanel();
+            return;
+        }
 
         // Search/filter bar
         {
@@ -473,6 +547,24 @@ namespace Crowny
                             Entity payloadEntity = UIUtils::GetEntityFromPayload(payload);
                             payloadEntity.SetParent(activeScene->GetRootEntity());
                         }
+
+                        if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload(AssetType::Prefab))
+                        {
+                            Entity root = activeScene->GetRootEntity();
+                            m_DeferredActions.push_back([fileEntry, root, this]() mutable {
+                                AssetHandle<Asset> asset = ProjectLibrary::Get().Load(fileEntry);
+                                AssetHandle<Prefab> prefab = static_asset_cast<Prefab>(asset);
+                                Entity instance = PrefabUtils::InstantiatePrefab(prefab, root);
+                                if (instance)
+                                {
+                                    s_SelectedEntity = instance;
+                                    m_SelectionChanged(s_SelectedEntity);
+                                    m_SelectedItems.clear();
+                                    m_SelectedItems.insert(instance);
+                                }
+                            });
+                        }
+
                         ImGui::EndDragDropTarget();
                     }
                 }
@@ -498,7 +590,7 @@ namespace Crowny
             tabs = tabs.substr(0, tabs.size() - 1);
         };
 
-        traverse(SceneManager::GetActiveScene()->GetRootEntity());
+        traverse(gSceneManager->GetActiveScene()->GetRootEntity());
     }
 #endif
 

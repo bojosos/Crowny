@@ -10,7 +10,7 @@ namespace Crowny
 
     Scope<GraphicsContext> GraphicsContext::Create(void* window)
     {
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
         // TODO: Do not tie OpenGL and GLFW
         case RenderAPI::API::OpenGL:

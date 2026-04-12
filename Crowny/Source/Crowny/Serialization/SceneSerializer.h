@@ -8,7 +8,8 @@
 namespace YAML
 {
     class Emitter;
-}
+    class Node;
+} // namespace YAML
 
 namespace Crowny
 {
@@ -25,19 +26,11 @@ namespace Crowny
         template <typename AssetType> AssetHandle<AssetType> LoadAssetHandle(const UUID& assetUUID)
         {
             if (assetUUID == UUID::EMPTY)
-                return AssetHandle<AssetType>();
-
-            TAssetHandleBase<false> handle;
-            handle.m_Data = CreateRef<AssetHandleData>();
-            handle.m_Data->m_RefCount.fetch_add(1, std::memory_order_relaxed);
-            handle.m_Data->m_UUID = assetUUID;
-            AssetHandle<Asset> loadedAsset = AssetManager::Get().LoadFromUUID(handle.m_Data->m_UUID);
-            handle.Release();
-            handle.m_Data = loadedAsset.m_Data;
-            handle.AddRef();
-            return static_asset_cast<AssetType>(loadedAsset);
+                return {};
+            return gAssetManager->LoadFromUUID<AssetType>(assetUUID);
         }
         void Deserialize(const Path& filepath);
+        void DeserializeEntities(const YAML::Node& entitiesNode);
         void DeserializeBinary(const Path& filepath);
 
     private:

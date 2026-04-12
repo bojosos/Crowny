@@ -195,7 +195,7 @@ namespace Crowny
             imageDesc.Image = depthStencilImage;
             imageDesc.Usage = TextureUsage::TEXTURE_DEPTHSTENCIL;
             imageDesc.Format = depthFormat;
-            imageDesc.Allocation = device.AllocateMemory(depthStencilImage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            imageDesc.Allocation = device.AllocateMemory(depthStencilImage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "SwapChain/DepthStencil");
 
             m_DepthStencilImage = owner->Create<VulkanImage>(imageDesc, true);
         }

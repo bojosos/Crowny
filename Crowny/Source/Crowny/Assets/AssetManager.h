@@ -29,15 +29,23 @@ namespace Crowny
 
         template <class T> AssetHandle<T> Load(const Path& filepath, bool keepInternalRef = true, bool keepSourceData = false)
         {
-            return static_asset_cast<T>(Load(filepath, keepSourceData));
+            return static_asset_cast<T>(Load(filepath, keepInternalRef, keepSourceData));
         }
 
         AssetHandle<Asset> LoadFromUUID(const UUID& uuid, bool keepInternalRef = true, bool keepSourceData = false);
 
+        template <class T> AssetHandle<T> LoadFromUUID(const UUID& uuid, bool keepInternalRef = true, bool keepSourceData = false)
+        {
+            return static_asset_cast<T>(LoadFromUUID(uuid, keepInternalRef, keepSourceData));
+        }
+
         AssetHandle<Asset> GetAssetHandle(const UUID& uuid);
 
-        void Save(const Ref<Asset>& resource); // TODO: Compression
-        void Save(const Ref<Asset>& resource, const Path& filepath);
+        void Save(const AssetHandle<Asset>& asset, const Path& path, bool overwrite = false);
+        void Save(const Ref<Asset>& asset); // TODO: Compression
+        void Save(const Ref<Asset>& asset, const Path& filepath);
+
+        bool GetAssetPath(const UUID& uuid, Path& outPath) const;
 
         void RegisterAssetManifest(const Ref<AssetManifest>& manifest);
         void UnregisterAssetManifest(const Ref<AssetManifest>& manifest);
@@ -54,9 +62,14 @@ namespace Crowny
         const UnorderedMap<UUID, WeakAssetHandle<Asset>>& GetLoadedAssets() const { return m_Handles; }
         friend class UIUtils;
 
+    protected:
+        void OnStartUp() override;
+        void OnShutdown() override;
+
     private:
-        UnorderedMap<UUID, Ref<Asset>> m_LoadedAssets;
         UnorderedMap<UUID, WeakAssetHandle<Asset>> m_Handles;
         Vector<Ref<AssetManifest>> m_Manifests;
     };
+
+    extern AssetManager* gAssetManager;
 } // namespace Crowny

@@ -4,10 +4,11 @@
 #include "Crowny/Events/ApplicationEvent.h"
 #include "Crowny/Events/MouseEvent.h"
 #include "Crowny/Layers/LayerStack.h"
-#include "Crowny/Window/RenderWindow.h"
 #include "Crowny/RenderAPI/RenderAPI.h"
+#include "Crowny/Window/RenderWindow.h"
 
 #include "Crowny/ImGui/ImGuiLayer.h"
+#include "Crowny/Renderer/RenderThread.h"
 
 int main(int argc, char** argv);
 
@@ -55,14 +56,18 @@ namespace Crowny
         const Ref<RenderWindow>& GetRenderWindow() const { return m_Windows[0]; }
         Ref<TimeSettings> GetTimeSettings() const;
         void SetTimeSettings(const Ref<TimeSettings>& timeSettings);
-        ImGuiLayer* GetImGuiLayer() { return m_ImGuiLayer; }
+        ImGuiLayer* GetImGuiLayer() const { return m_ImGuiLayer; }
+        RenderThread* GetRenderThread() const { return m_RenderThread.get(); }
+        bool IsMultiThreaded() const { return m_RenderThread != nullptr; }
         void Exit();
-        static const ApplicationDesc& GetApplicationDesc() { return Get().m_ApplicationDesc; }
-        static const Path& GetWorkingDirectory() { return GetApplicationDesc().WorkingDirectory; }
-        static const Path& GetInternalDirectory() { return GetApplicationDesc().InternalDirectory; }
-        static void SetInternalDirectory(const Path& path) { Get().m_ApplicationDesc.InternalDirectory = path; }
+        const ApplicationDesc& GetApplicationDesc() const { return m_ApplicationDesc; }
+        const Path& GetWorkingDirectory() const { return m_ApplicationDesc.WorkingDirectory; }
+        const Path& GetInternalDirectory() const { return m_ApplicationDesc.InternalDirectory; }
+        void SetInternalDirectory(const Path& path) { m_ApplicationDesc.InternalDirectory = path; }
 
         void Run();
+
+        virtual void OnPreRendererInit() {}
 
     private:
         bool OnWindowClose(WindowCloseEvent& e);
@@ -83,6 +88,7 @@ namespace Crowny
 
         LayerStack* m_LayerStack;
         ImGuiLayer* m_ImGuiLayer;
+        Scope<RenderThread> m_RenderThread;
         ApplicationDesc m_ApplicationDesc;
 
     public:
@@ -90,4 +96,6 @@ namespace Crowny
     };
 
     void CreateApplication();
+
+    extern Application* gApplication;
 } // namespace Crowny

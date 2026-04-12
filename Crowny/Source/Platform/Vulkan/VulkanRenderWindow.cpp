@@ -167,9 +167,8 @@ namespace Crowny
         VulkanSwapChain* oldSwapChain = m_SwapChain;
         int width, height;
         glfwGetWindowSize(((GLFWwindow*)m_Window->GetNativeWindow()), &width, &height);
-        m_SwapChain =
-          device->GetResourceManager().Create<VulkanSwapChain>(m_Surface, width, height, false, m_ColorFormat,
-                                                               m_ColorSpace, m_Desc.DepthBuffer, m_DepthFormat, oldSwapChain);
+        m_SwapChain = device->GetResourceManager().Create<VulkanSwapChain>(m_Surface, width, height, false, m_ColorFormat, m_ColorSpace,
+                                                                           m_Desc.DepthBuffer, m_DepthFormat, oldSwapChain);
         oldSwapChain->Destroy();
     }
 

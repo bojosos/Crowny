@@ -114,10 +114,7 @@ namespace Crowny
         }
     }
 
-    void ScriptSceneObjectManager::NotifyComponentDestroyed(const ComponentBase& component)
-    {
-        NotifyComponentDestroyed(component.InstanceId);
-    }
+    void ScriptSceneObjectManager::NotifyComponentDestroyed(const ComponentBase& component) { NotifyComponentDestroyed(component.InstanceId); }
 
     void ScriptSceneObjectManager::NotifyComponentDestroyed(uint64_t instanceId)
     {

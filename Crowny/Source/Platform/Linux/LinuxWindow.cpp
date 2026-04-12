@@ -112,9 +112,8 @@ namespace Crowny
         }
 
 #ifdef CW_DEBUG
-        if (RenderAPI::Get().GetAPI() == RenderAPI::API::OpenGL)
-            glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,
-                           GLFW_TRUE);
+        if (gRenderAPI->GetAPI() == RenderAPI::API::OpenGL)
+            glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 #endif
         Application::s_GLFWWindowCount++;
 

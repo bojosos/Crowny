@@ -147,7 +147,11 @@ namespace Crowny
             {
                 ImGui::TableNextRow();
                 for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
+                {
+                    ImGui::PushID(row);
                     RenderMessage(buffer[m_MessageIndices[row]]);
+                    ImGui::PopID();
+                }
             }
 
             bool needSort = false;

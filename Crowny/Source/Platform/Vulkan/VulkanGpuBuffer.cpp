@@ -236,7 +236,24 @@ namespace Crowny
         VkResult result = vkCreateBuffer(vkDevice, &m_BufferCreateInfo, gVulkanAllocator, &buffer);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
-        VmaAllocation allocation = device.AllocateMemory(buffer, flags);
+        const char* tag;
+        if (staging)
+            tag = "GpuBuffer/Staging";
+        else
+        {
+            VkBufferUsageFlags u = m_BufferCreateInfo.usage;
+            if (u & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)
+                tag = "GpuBuffer/Vertex";
+            else if (u & VK_BUFFER_USAGE_INDEX_BUFFER_BIT)
+                tag = "GpuBuffer/Index";
+            else if (u & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)
+                tag = "GpuBuffer/Uniform";
+            else if (u & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
+                tag = "GpuBuffer/Storage";
+            else
+                tag = "GpuBuffer";
+        }
+        VmaAllocation allocation = device.AllocateMemory(buffer, flags, tag);
 
         m_BufferCreateInfo.usage = usage;
         return device.GetResourceManager().Create<VulkanBuffer>(buffer, allocation);

@@ -56,13 +56,13 @@ namespace Crowny
             Play();
         if (m_SavedState == AudioSourceState::Paused)
             Pause();
-        gAudio().RegisterSource(this);
+        gAudioManager->RegisterSource(this);
     }
 
     AudioSource::~AudioSource()
     {
         Stop();
-        gAudio().UnregisterSource(this);
+        gAudioManager->UnregisterSource(this);
         alSourcei(m_SourceID, AL_BUFFER, 0);
         alDeleteSources(1, &m_SourceID);
     }
@@ -246,7 +246,7 @@ namespace Crowny
     {
         CW_ENGINE_ASSERT(!m_IsStreaming);
         alGenBuffers(StreamBufferCount, m_StreamBuffers);
-        // gAudio().StartStreaming(this);
+        // gAudioManager->StartStreaming(this);
         std::memset(&m_BusyBuffers, 0, sizeof(m_BusyBuffers));
         m_IsStreaming = true;
     }
@@ -255,7 +255,7 @@ namespace Crowny
     {
         CW_ENGINE_ASSERT(m_IsStreaming);
         m_IsStreaming = false;
-        // gAudio().StopStreaming(this);
+        // gAudioManager->StopStreaming(this);
 
         int32_t numQueuedBuffers;
         alGetSourcei(m_SourceID, AL_BUFFERS_QUEUED, &numQueuedBuffers);

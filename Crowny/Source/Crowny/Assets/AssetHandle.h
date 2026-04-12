@@ -9,7 +9,6 @@ namespace Crowny
 
     class AssetManager;
     class UIUtils; // This is an Editor class
-    class SceneSerializer;
 
     struct AssetHandleData
     {
@@ -22,7 +21,8 @@ namespace Crowny
     class AssetHandleBase
     {
     public:
-        bool IsLoaded() const { return true; }
+        bool IsLoaded(bool checkDependencies = false) const { return m_Data != nullptr && m_Data->m_Ptr != nullptr; }
+        bool HasUUID() const { return m_Data != nullptr && m_Data->m_UUID != UUID::EMPTY; }
         bool BlockUntilLoaded() const;
         void Release();
         const UUID& GetUUID() const { return m_Data != nullptr ? m_Data->m_UUID : UUID::EMPTY; }
@@ -78,8 +78,6 @@ namespace Crowny
                 }
             }
         }
-
-        friend class SceneSerializer;
     };
 
     template <typename T, bool Weak> class TAssetHandle : public TAssetHandleBase<Weak>

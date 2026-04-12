@@ -25,7 +25,7 @@ namespace Crowny
 
     Ref<RenderWindow> RenderWindow::Create(const RenderWindowDesc& renderWindowDesc)
     {
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
         // case RenderAPI::API::OpenGL: return CreateRef<OpenGLShader>(m_Filepath);
         case RenderAPI::API::Vulkan:

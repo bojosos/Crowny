@@ -30,4 +30,4 @@ namespace Crowny
         static bool Matches(Context& ctx, const char* name);
     };
 
-}
+} // namespace Crowny

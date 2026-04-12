@@ -305,8 +305,6 @@ namespace Crowny
 
             m_PerSetData[i].Sets.~Vector<VulkanDescriptorSet*>();
         }
-        delete[] m_BufferBlocks;
-        delete[] m_Buffers;
         delete[] m_SampledImages;
         delete[] m_Samplers;
         delete[] m_PerSetData;

@@ -35,7 +35,7 @@ namespace Crowny
                 triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
                 triangles.pNext = nullptr;
                 triangles.vertexFormat = VulkanUtils::GetBufferFormat(tris.VertexFormat);
-                
+
                 VulkanBuffer* vertGpuBuffer = static_cast<VulkanVertexBuffer*>(tris.VertexBuffer.get())->GetBuffer();
                 triangles.vertexData.deviceAddress = vertGpuBuffer->GetDeviceAddress();
                 triangles.vertexStride = tris.VertexStride;
@@ -66,15 +66,15 @@ namespace Crowny
         VkAccelerationStructureBuildSizesInfoKHR accelerationStructureSizesInfo{};
         accelerationStructureSizesInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
         accelerationStructureSizesInfo.pNext = nullptr;
-        
+
         uint32_t maxInstanceCount = maxTopLevelInstances;
         const uint32_t* pMaxPrims = isTopLevel ? &maxInstanceCount : maxPrims.data();
 
         vkGetAccelerationStructureBuildSizesKHR(device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &geometryBuildInfo, pMaxPrims,
                                                 &accelerationStructureSizesInfo);
 
-        m_Buffer =
-          new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_RAYTRACING, BufferUsage::BU_STATIC_DRAW, (uint32_t)accelerationStructureSizesInfo.accelerationStructureSize);
+        m_Buffer = new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_RAYTRACING, BufferUsage::BU_STATIC_DRAW,
+                                       (uint32_t)accelerationStructureSizesInfo.accelerationStructureSize);
         VkAccelerationStructureCreateInfoKHR accelStructCI{};
         accelStructCI.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
         accelStructCI.pNext = nullptr;
@@ -143,7 +143,7 @@ namespace Crowny
                 triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
                 triangles.pNext = nullptr;
                 triangles.vertexFormat = VulkanUtils::GetBufferFormat(tris.VertexFormat);
-                
+
                 VulkanBuffer* vertGpuBuffer = static_cast<VulkanVertexBuffer*>(tris.VertexBuffer.get())->GetBuffer();
                 triangles.vertexData.deviceAddress = vertGpuBuffer->GetDeviceAddress();
                 triangles.vertexStride = tris.VertexStride;
@@ -202,12 +202,14 @@ namespace Crowny
                                                 &buildSizeInfo);
         if (buildSizeInfo.accelerationStructureSize > m_Buffer->GetSize())
         {
-            CW_ENGINE_ERROR("Bad programmer: Bottom level accel: {} > {}", (uint32_t)buildSizeInfo.accelerationStructureSize, (uint32_t)m_Buffer->GetSize());
+            CW_ENGINE_ERROR("Bad programmer: Bottom level accel: {} > {}", (uint32_t)buildSizeInfo.accelerationStructureSize,
+                            (uint32_t)m_Buffer->GetSize());
             return;
         }
         const size_t scratchBufferSize = doUpdate ? buildSizeInfo.updateScratchSize : buildSizeInfo.buildScratchSize;
         // TODO: Better scratch stuff...
-        VulkanGpuBuffer* scratchBuffer = new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_RAYTRACING, BufferUsage::BU_STATIC_DRAW, (uint32_t)scratchBufferSize);
+        VulkanGpuBuffer* scratchBuffer =
+          new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_RAYTRACING, BufferUsage::BU_STATIC_DRAW, (uint32_t)scratchBufferSize);
         accelBuildInfo.scratchData.deviceAddress = scratchBuffer->GetBuffer()->GetDeviceAddress();
         const VkAccelerationStructureBuildRangeInfoKHR* pBuildRangeInfo = buildRanges.data();
         vkCmdBuildAccelerationStructuresKHR(buffer->GetHandle(), 1, &accelBuildInfo, &pBuildRangeInfo);
@@ -242,8 +244,7 @@ namespace Crowny
         }
 
         const uint32_t uploadSize = (uint32_t)(numInstances * sizeof(VkAccelerationStructureInstanceKHR));
-        VulkanGpuBuffer* uploadBufferInfo =
-          new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_GENERIC, BufferUsage::BU_STATIC_DRAW, uploadSize);
+        VulkanGpuBuffer* uploadBufferInfo = new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_GENERIC, BufferUsage::BU_STATIC_DRAW, uploadSize);
         uploadBufferInfo->WriteData(0, uploadSize, m_Instances.data(), BWT_DISCARD);
 
         const bool doUpdate = buildFlags.IsSet(AccelerationStructBuildBits::DoUpdate);
@@ -290,12 +291,14 @@ namespace Crowny
                                                 &buildSizeInfo);
         if (buildSizeInfo.accelerationStructureSize > m_Buffer->GetSize())
         {
-            CW_ENGINE_ERROR("Bad programmer: Top level accel: {} > {}", (uint32_t)buildSizeInfo.accelerationStructureSize, (uint32_t)m_Buffer->GetSize());
+            CW_ENGINE_ERROR("Bad programmer: Top level accel: {} > {}", (uint32_t)buildSizeInfo.accelerationStructureSize,
+                            (uint32_t)m_Buffer->GetSize());
             return;
         }
 
         const size_t scratchBufferSize = doUpdate ? buildSizeInfo.updateScratchSize : buildSizeInfo.buildScratchSize;
-        VulkanGpuBuffer* uploadBuffer = new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_RAYTRACING, BufferUsage::BU_STATIC_DRAW, (uint32_t)scratchBufferSize);
+        VulkanGpuBuffer* uploadBuffer =
+          new VulkanGpuBuffer(VulkanGpuBuffer::BUFFER_RAYTRACING, BufferUsage::BU_STATIC_DRAW, (uint32_t)scratchBufferSize);
         accelBuildInfo.scratchData.deviceAddress = uploadBuffer->GetBuffer()->GetDeviceAddress();
 
         const VkAccelerationStructureBuildRangeInfoKHR* pBuildRangeInfo = &buildRanges;

@@ -5,10 +5,11 @@
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
 
-#include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Audio/AudioManager.h"
+#include "Crowny/Physics/Physics2D.h"
 
 #include "Crowny/Scripting/ScriptInfoManager.h"
+#include "Crowny/Scripting/ScriptSceneObjectManager.h"
 
 #include <box2d/box2d.h>
 #include <entt/entt.hpp>
@@ -80,6 +81,7 @@ namespace Crowny
         m_ViewportHeight = other.m_ViewportHeight;
         m_Filepath = other.m_Filepath;
         m_Name = other.m_Name;
+        m_ImGuiLayout = other.m_ImGuiLayout;
         m_RootEntity = nullptr;
 
         UnorderedMap<UUID, entt::entity> copyEntityMap;
@@ -173,6 +175,11 @@ namespace Crowny
         Entity newEntity = CreateEntity(entity.GetName());
         CopyAllExistingComponents(newEntity, entity);
 
+        // CopyAllExistingComponents copies RelationshipComponent including children references
+        // from the original. Clear them — we'll re-add duplicated children below if requested.
+        auto& newRc = newEntity.GetComponent<RelationshipComponent>();
+        newRc.Children.clear();
+
         if (includeChildren)
         {
             const auto& children = entity.GetChildren();
@@ -185,63 +192,63 @@ namespace Crowny
         return newEntity;
     }
 
-    Entity Scene::GetPrimaryCameraEntity() const
+    Entity Scene::GetPrimaryCameraEntity()
     {
         auto view = m_Registry.view<CameraComponent>();
         for (auto entity : view)
         {
-            const auto& camera = view.get(entity);
-            return Entity{ entity, const_cast<Scene*>(this) };
+            const auto& camera = view.get<CameraComponent>(entity);
+            return Entity{ entity, this };
         }
         return {};
     }
 
     void Scene::OnRigidbody2DComponentConstruct(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !Physics2D::Get().GetPhysicsWorld())
+        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !gPhysics2D->GetPhysicsWorld())
             return;
         Entity e = { entity, this };
-        Physics2D::Get().CreateRigidbody(e);
+        gPhysics2D->CreateRigidbody(e);
     }
 
     void Scene::OnRigidbody2DComponentDestroy(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !Physics2D::Get().GetPhysicsWorld())
+        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !gPhysics2D->GetPhysicsWorld())
             return;
         Entity e = { entity, this };
-        Physics2D::Get().DestroyRigidbody(e);
+        gPhysics2D->DestroyRigidbody(e);
     }
 
     void Scene::OnBoxCollider2DComponentConstruct(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !Physics2D::Get().GetPhysicsWorld())
+        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !gPhysics2D->GetPhysicsWorld())
             return;
         Entity e = { entity, this };
-        Physics2D::Get().CreateBoxCollider(e);
+        gPhysics2D->CreateBoxCollider(e);
     }
 
     void Scene::OnBoxCollider2DComponentDestroy(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !Physics2D::Get().GetPhysicsWorld())
+        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !gPhysics2D->GetPhysicsWorld())
             return;
         Entity e = { entity, this };
-        Physics2D::Get().DestroyFixture(e, e.GetComponent<BoxCollider2DComponent>());
+        gPhysics2D->DestroyFixture(e, e.GetComponent<BoxCollider2DComponent>());
     }
 
     void Scene::OnCircleCollider2DComponentConstruct(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !Physics2D::Get().GetPhysicsWorld())
+        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !gPhysics2D->GetPhysicsWorld())
             return;
         Entity e = { entity, this };
-        Physics2D::Get().CreateCircleCollider(e);
+        gPhysics2D->CreateCircleCollider(e);
     }
 
     void Scene::OnCircleCollider2DComponentDestroy(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !Physics2D::Get().GetPhysicsWorld())
+        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !gPhysics2D->GetPhysicsWorld())
             return;
         Entity e = { entity, this };
-        Physics2D::Get().DestroyFixture(e, e.GetComponent<CircleCollider2DComponent>());
+        gPhysics2D->DestroyFixture(e, e.GetComponent<CircleCollider2DComponent>());
     }
 
     void Scene::OnAudioSourceComponentConstruct(entt::registry& registry, entt::entity entity)
@@ -318,15 +325,15 @@ namespace Crowny
             return;
         auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
         scripts.erase(std::remove_if(scripts.begin(), scripts.end(),
-            [&](const MonoScript& s) { return s.GetNamespace() == namespaceName && s.GetTypeName() == typeName; }),
-            scripts.end());
+                                     [&](const MonoScript& s) { return s.GetNamespace() == namespaceName && s.GetTypeName() == typeName; }),
+                      scripts.end());
         if (scripts.empty())
             entity.RemoveComponent<MonoScriptComponent>();
     }
 
     void Scene::OnRuntimeStart()
     {
-        Physics2D::Get().BeginSimulation(this);
+        gPhysics2D->BeginSimulation(this);
         auto listenerView = m_Registry.view<AudioListenerComponent>();
         if (listenerView.size() == 0)
             CW_ENGINE_WARN("No audio listener in scene");
@@ -342,11 +349,11 @@ namespace Crowny
         m_Registry.view<AudioSourceComponent>().each([&](entt::entity entity, AudioSourceComponent& sc) { sc.OnInitialize(); });
     }
 
-    void Scene::OnSimulationStart() { Physics2D::Get().BeginSimulation(this); }
+    void Scene::OnSimulationStart() { gPhysics2D->BeginSimulation(this); }
 
-    void Scene::OnSimulationUpdate(Timestep ts) { Physics2D::Get().Step(ts, this); }
+    void Scene::OnSimulationUpdate(Timestep ts) { gPhysics2D->Step(ts, this); }
 
-    void Scene::OnSimulationEnd() { Physics2D::Get().StopSimulation(this); }
+    void Scene::OnSimulationEnd() { gPhysics2D->StopSimulation(this); }
 
     void Scene::OnRuntimePause()
     {
@@ -372,7 +379,7 @@ namespace Crowny
 
     void Scene::OnRuntimeStop()
     {
-        Physics2D::Get().StopSimulation(this);
+        gPhysics2D->StopSimulation(this);
         auto audioSourceView = m_Registry.view<AudioSourceComponent>();
         for (auto e : audioSourceView)
         {
@@ -385,7 +392,7 @@ namespace Crowny
 
     void Scene::OnUpdateRuntime(Timestep ts) {}
 
-    void Scene::OnFixedUpdate(Timestep ts) { Physics2D::Get().Step(ts, this); }
+    void Scene::OnFixedUpdate(Timestep ts) { gPhysics2D->Step(ts, this); }
 
     Entity Scene::CreateEntity(const String& name)
     {
@@ -417,11 +424,7 @@ namespace Crowny
         return entity;
     }
 
-    void Scene::DestroyEntity(Entity entity)
-    {
-        m_EntityMap.erase(entity.GetUuid());
-        entity.Destroy();
-    }
+    void Scene::DestroyEntity(Entity entity) { entity.Destroy(); }
 
     Entity Scene::GetEntityFromUuid(const UUID& uuid) const
     {

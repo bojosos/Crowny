@@ -1,9 +1,11 @@
 #pragma once
 
+#include "Crowny/Common/StringID.h"
 #include "Crowny/Common/Uuid.h"
 #include "Crowny/Physics/PhysicsMaterial.h"
 
 #include <glm/glm.hpp>
+#include <type_traits>
 #include <yaml-cpp/yaml.h>
 
 namespace Crowny
@@ -57,6 +59,12 @@ namespace Crowny
         return out;
     }
 
+    inline YAML::Emitter& operator<<(YAML::Emitter& out, const Crowny::StringID& id)
+    {
+        out << id.c_str();
+        return out;
+    }
+
 #ifdef CW_DEBUG
     static Stack<String> mapKeys; // Used for debugging missing/mismatched YAML::BeginMap-YAML::EndMap
 #endif
@@ -90,20 +98,29 @@ namespace Crowny
 
     template <typename Type> static inline void SerializeValueYAML(YAML::Emitter& out, const char* key, const Type& value)
     {
-        out << YAML::Key << key << YAML::Value << value;
+        if constexpr (std::is_same_v<Type, uint8_t> || std::is_same_v<Type, int8_t>)
+            out << YAML::Key << key << YAML::Value << (int32_t)value;
+        else
+            out << YAML::Key << key << YAML::Value << value;
     }
 
-    template <typename Type> static inline void SerializeValueYAML(YAML::Emitter& out, const Type& value) { out << value; }
+    template <typename Type> static inline void SerializeValueYAML(YAML::Emitter& out, const Type& value)
+    {
+        if constexpr (std::is_same_v<Type, uint8_t> || std::is_same_v<Type, int8_t>)
+            out << (int32_t)value;
+        else
+            out << value;
+    }
 
     template <typename TEnum, typename TUnderlying = std::underlying_type_t<TEnum>>
     static inline void SerializeEnumYAML(YAML::Emitter& out, const char* key, const TEnum& value)
     {
-        out << YAML::Key << key << YAML::Value << (TUnderlying)value;
+        out << YAML::Key << key << YAML::Value << +(TUnderlying)value;
     }
 
     template <typename Enum, typename Storage> static inline void SerializeFlagsYAML(YAML::Emitter& out, const char* key, Flags<Enum, Storage> flags)
     {
-        out << YAML::Key << key << YAML::Value << (Storage)flags;
+        out << YAML::Key << key << YAML::Value << +(Storage)flags;
     }
 
     /// Deserialize an enum. If an errorMessageFormat is provided the underlying value of the enum is checked
@@ -113,9 +130,13 @@ namespace Crowny
     static void DeserializeEnumYAML(const YAML::Node& node, const char* key, TEnum& value, const TEnum& defaultValue, const char* errorMessageFormat,
                                     TUnderlying minValue, TUnderlying maxValue)
     {
-        value = (TEnum)node[key].as<TUnderlying>((TUnderlying)defaultValue);
+        if constexpr (sizeof(TUnderlying) == 1)
+            value = (TEnum)node[key].as<uint32_t>((uint32_t)defaultValue);
+        else
+            value = (TEnum)node[key].as<TUnderlying>((TUnderlying)defaultValue);
+
         TUnderlying underlyingValue = (TUnderlying)value;
-        if (errorMessageFormat && underlyingValue < minValue && underlyingValue >= maxValue)
+        if (errorMessageFormat && (underlyingValue < minValue || underlyingValue >= maxValue))
         {
             CW_ENGINE_WARN(errorMessageFormat, (TUnderlying)value);
             value = defaultValue;
@@ -125,7 +146,10 @@ namespace Crowny
     template <typename TEnum, typename TUnderlying = std::underlying_type_t<TEnum>>
     static void DeserializeEnumYAML(const YAML::Node& node, const char* key, TEnum& value, const TEnum& defaultValue)
     {
-        value = (TEnum)node[key].as<TUnderlying>((TUnderlying)defaultValue);
+        if constexpr (sizeof(TUnderlying) == 1)
+            value = (TEnum)node[key].as<uint32_t>((uint32_t)defaultValue);
+        else
+            value = (TEnum)node[key].as<TUnderlying>((TUnderlying)defaultValue);
     }
 
     template <typename TEnum, typename TUnderlying = std::underlying_type_t<TEnum>>
@@ -137,17 +161,24 @@ namespace Crowny
 
     template <typename Type> static inline void DeserializeValueYAML(const YAML::Node& node, const char* key, Type& value, const Type& defaultValue)
     {
-        value = node[key].as<Type>(defaultValue);
+        if constexpr (std::is_same_v<Type, uint8_t> || std::is_same_v<Type, int8_t>)
+            value = (Type)node[key].as<int32_t>((int32_t)defaultValue);
+        else
+            value = node[key].as<Type>(defaultValue);
     }
 
     template <typename Type>
     static inline void DeserializeValueYAML(const YAML::Node& node, const char* key, Type& value, const Type& defaultValue,
                                             const char* errorMessageFormat, const Type& minValue, const Type& maxValue)
     {
-        value = node[key].as<Type>(defaultValue);
-        if (errorMessageFormat && value < minValue || value > maxValue)
+        if constexpr (std::is_same_v<Type, uint8_t> || std::is_same_v<Type, int8_t>)
+            value = (Type)node[key].as<int32_t>((int32_t)defaultValue);
+        else
+            value = node[key].as<Type>(defaultValue);
+
+        if (errorMessageFormat && (value < minValue || value > maxValue))
         {
-            CW_ENGINE_WARN(errorMessageFormat, value);
+            CW_ENGINE_WARN(errorMessageFormat, (int32_t)value);
             value = defaultValue;
         }
     }
@@ -155,7 +186,10 @@ namespace Crowny
     template <typename Enum, typename Storage>
     static inline void DeserializeFlagsYAML(const YAML::Node& node, const char* key, Flags<Enum, Storage>& flags, Enum defaultValue)
     {
-        flags = Flags<Enum, Storage>(node[key].as<Storage>((Storage)defaultValue));
+        if constexpr (sizeof(Storage) == 1)
+            flags = Flags<Enum, Storage>((Storage)node[key].as<uint32_t>((uint32_t)defaultValue));
+        else
+            flags = Flags<Enum, Storage>(node[key].as<Storage>((Storage)defaultValue));
     }
 
 } // namespace Crowny
@@ -177,6 +211,25 @@ namespace YAML
             if (!node.IsScalar())
                 return false;
             rhs = Crowny::UUID(node.as<std::string>());
+
+            return true;
+        }
+    };
+
+    template <> struct convert<Crowny::StringID>
+    {
+        static Node encode(const Crowny::StringID& id)
+        {
+            Node node;
+            node = id.c_str();
+            return node;
+        }
+
+        static bool decode(const Node& node, Crowny::StringID& rhs)
+        {
+            if (!node.IsScalar())
+                return false;
+            rhs = Crowny::StringID(node.as<std::string>());
 
             return true;
         }

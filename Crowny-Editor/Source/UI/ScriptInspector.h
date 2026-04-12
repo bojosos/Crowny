@@ -10,10 +10,7 @@ namespace Crowny
         Ref<SerializableTypeInfo> OverrideTypeInfo; // for list/dictionary element types
         int Depth = 0;
 
-        const Ref<SerializableTypeInfo>& GetTypeInfo() const
-        {
-            return OverrideTypeInfo ? OverrideTypeInfo : MemberInfo->m_TypeInfo;
-        }
+        const Ref<SerializableTypeInfo>& GetTypeInfo() const { return OverrideTypeInfo ? OverrideTypeInfo : MemberInfo->m_TypeInfo; }
     };
 
     class ScriptInspector

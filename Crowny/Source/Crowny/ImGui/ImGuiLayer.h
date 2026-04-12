@@ -19,6 +19,9 @@ namespace Crowny
         virtual void OnEvent(Event& event) override;
         void BlockEvents(bool block) { m_BlockEvents = block; }
 
+        virtual String SaveLayout();
+        virtual void LoadLayout(const String& layout);
+
     private:
         bool m_BlockEvents = true;
         float m_Time = 0.0f;

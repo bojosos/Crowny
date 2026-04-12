@@ -1,8 +1,5 @@
 #include "cwepch.h"
 
-// Has to be first due to UUID already being defined in Win32 headers
-#include "Vendor/filewatch/filewatch.h"
-
 #include "Editor/Editor.h"
 
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
@@ -16,6 +13,11 @@
 
 namespace Crowny
 {
+    Editor::Editor(FileWatch::FileWatchCallback&& fileWatchCallback) : m_FileWatchCallback(fileWatchCallback)
+    {
+
+    }
+
     void Editor::OnStartUp()
     {
         LoadEditorSettings();
@@ -55,6 +57,11 @@ namespace Crowny
     void Editor::LoadProject(const Path& projectPath)
     {
         UnloadProject();
+
+        Path assetsPath = projectPath / "Assets";
+        if (fs::exists(assetsPath))
+            m_Watch = CreateScope<FileWatch>(assetsPath, m_FileWatchCallback);
+
         m_ProjectPath = projectPath;
         m_ProjectName = projectPath.filename().string();
 
@@ -92,6 +99,8 @@ namespace Crowny
 
     void Editor::UnloadProject()
     {
+        m_Watch.reset();
+
         if (!IsProjectLoaded())
             return;
         SaveProject();

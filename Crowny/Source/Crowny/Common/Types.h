@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Crowny/Common/StdHeaders.h"
 #include "Crowny/Common/Flags.h"
+#include "Crowny/Common/StdHeaders.h"
 #include "Crowny/Scripting/Mono/Mono.h"
 #include <glm/glm.hpp>
 
@@ -189,8 +189,8 @@ namespace Crowny
     {
         None,
 
-        ETC1S,  // Lower quality
-        UASTC,  // Higher quality
+        ETC1S, // Lower quality
+        UASTC, // Higher quality
     };
 
     enum class TextureFormat

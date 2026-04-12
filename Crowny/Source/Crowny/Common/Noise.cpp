@@ -43,7 +43,28 @@ namespace Crowny
 
     float Noise::Noise3D(const NoiseOptions& ops, const glm::vec3& position)
     {
-        CW_ENGINE_ASSERT(false);
-        return 0.0f;
+        float val = 0;
+        float accAmps = 0;
+        for (int i = 0; i < ops.Octaves; i++)
+        {
+            float freq = (float)glm::pow(2.0f, i);
+            float amp = (float)glm::pow(ops.Roughness, i);
+
+            float x = position.x * freq / ops.Smoothness;
+            float y = position.y * freq / ops.Smoothness;
+            float z = position.z * freq / ops.Smoothness;
+
+            float noise = 0.0f;
+            if (ops.NoiseFunc == NoiseFunc::Perlin)
+                noise = glm::perlin(glm::vec4(ops.Seed + x, ops.Seed + y, ops.Seed + z, (float)ops.Seed));
+            else
+                noise = glm::simplex(glm::vec4(ops.Seed + x, ops.Seed + y, ops.Seed + z, (float)ops.Seed));
+
+            noise = (noise + 1.0f) * 0.5f;
+            val += noise * amp;
+            accAmps += amp;
+        }
+
+        return val / accAmps;
     }
 } // namespace Crowny

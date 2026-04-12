@@ -58,3 +58,9 @@
 [submodule "Crowny/Dependencies/Catch2"]
 	path = Crowny/Dependencies/catch2
 	url = https://github.com/bojosos/Catch2
+[submodule "Crowny/Dependencies/ImNodeFlow"]
+	path = Crowny/Dependencies/ImNodeFlow
+	url = https://github.com/Fattorino/ImNodeFlow.git
+[submodule "Crowny/Dependencies/imgui-node-editor"]
+	path = Crowny/Dependencies/imgui-node-editor
+	url = https://github.com/thedmd/imgui-node-editor

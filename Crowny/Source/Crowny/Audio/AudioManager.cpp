@@ -11,6 +11,12 @@
 namespace Crowny
 {
 
+    AudioManager* gAudioManager = nullptr;
+
+    void AudioManager::OnStartUp() { gAudioManager = this; }
+
+    void AudioManager::OnShutdown() { gAudioManager = nullptr; }
+
     AudioManager::AudioManager()
     {
         bool enumerated;
@@ -56,11 +62,10 @@ namespace Crowny
         m_Context = alcCreateContext(m_Device, nullptr);
         if (m_Context)
             alcMakeContextCurrent(m_Context);
-        }
+    }
 
-    float AudioManager::GetGlobalSourceProgress(const String& name)
+    float AudioManager::GetGlobalSourceProgress(const String& name) const
     {
-
         auto iterFind = m_ManualSources.find(name);
         if (iterFind != m_ManualSources.end())
         {
@@ -258,7 +263,5 @@ namespace Crowny
             }
         }
     }
-
-    AudioManager& gAudio() { return AudioManager::Get(); }
 
 } // namespace Crowny

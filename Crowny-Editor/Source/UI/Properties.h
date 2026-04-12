@@ -3,6 +3,7 @@
 #include "UI/UIUtils.h"
 
 #include "Editor/EditorAssets.h"
+#include "Editor/EditorLayer.h"
 
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
@@ -10,6 +11,17 @@
 
 namespace Crowny
 {
+    struct PrefabComponent;
+
+    namespace PrefabOverrideContext
+    {
+        inline PrefabComponent* s_ActivePrefabComponent = nullptr;
+        inline String s_ActiveComponentName;
+
+        void MarkIfModified(bool modified, const char* propertyName);
+        bool IsOverridden(const char* propertyName);
+    } // namespace PrefabOverrideContext
+
     namespace UI
     {
         // struct UIScope
@@ -22,6 +34,15 @@ namespace Crowny
         static void Pre(const char* label)
         {
             ShiftCursor(10.0f, 9.0f);
+
+            // Draw override indicator: 3px orange vertical bar
+            if (PrefabOverrideContext::IsOverridden(label))
+            {
+                ImVec2 pos = ImGui::GetCursorScreenPos();
+                ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(pos.x - 8.0f, pos.y), ImVec2(pos.x - 5.0f, pos.y + ImGui::GetTextLineHeight()),
+                                                          IM_COL32(236, 158, 36, 255));
+            }
+
             ImGui::Text("%s", label);
             ImGui::NextColumn();
             ShiftCursorY(4.0f);
@@ -102,6 +123,7 @@ namespace Crowny
                     ImGui::PopStyleColor(2);
                 }
             }
+            UndoRedo::Get().OnItemInteract();
             Post();
             return buttonClicked;
         }
@@ -135,6 +157,7 @@ namespace Crowny
                     ImGui::PopStyleColor();
                 }
             }
+            UndoRedo::Get().OnItemInteract();
             Post();
 
             return buttonClicked;
@@ -177,6 +200,7 @@ namespace Crowny
             // ImGuiInputTextFlags flags = s_ReturnAfterDeactivation ? ImGuiInputTextFlags_EnterReturnsTrue : 0;
             ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
             bool modified = UI::InputInt8(GenerateID(), &value, step, stepFast, flags);
+            UndoRedo::Get().OnItemInteract();
             Post();
 
             return modified;
@@ -188,6 +212,7 @@ namespace Crowny
             // ImGuiInputTextFlags flags = s_ReturnAfterDeactivation ? ImGuiInputTextFlags_EnterReturnsTrue : 0;
             ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
             bool modified = UI::InputInt32(GenerateID(), &value, step, stepFast, flags);
+            UndoRedo::Get().OnItemInteract();
             Post();
 
             return modified;
@@ -204,6 +229,7 @@ namespace Crowny
             if (IsItemDisabled())
                 ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
             modified |= ImGui::InputText(GenerateID(), &value);
+            UndoRedo::Get().OnItemInteract();
             Post();
             return modified;
         }
@@ -219,6 +245,7 @@ namespace Crowny
             if (IsItemDisabled())
                 ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
             modified |= UI::InputInt32(GenerateID(), &value);
+            UndoRedo::Get().OnItemInteract();
             Post();
             return modified;
         }
@@ -229,6 +256,7 @@ namespace Crowny
             // ImGuiInputTextFlags flags = s_ReturnAfterDeactivation ? ImGuiInputTextFlags_EnterReturnsTrue : 0;
             ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
             bool modified = UI::InputUInt32(GenerateID(), &value, step, stepFast, flags);
+            UndoRedo::Get().OnItemInteract();
             Post();
 
             return modified;
@@ -251,6 +279,7 @@ namespace Crowny
             // if ((GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0)
             // strcpy(buffer, "---");
             bool modified = ImGui::InputText(GenerateID(), &value);
+            UndoRedo::Get().OnItemInteract();
             Post();
 
             return modified;
@@ -261,6 +290,7 @@ namespace Crowny
             char ar[2] = { c, '\0' };
             Pre(label);
             bool modified = ImGui::InputText(GenerateID(), ar, 2);
+            UndoRedo::Get().OnItemInteract();
             Post();
 
             return modified;
@@ -270,6 +300,7 @@ namespace Crowny
         {
             Pre(label, helpText);
             bool modified = ImGui::Checkbox(GenerateID(), &value);
+            UndoRedo::Get().OnItemInteract();
             Post();
             return modified;
         }
@@ -310,6 +341,7 @@ namespace Crowny
         {
             Pre(label);
             bool modified = ImGui::ColorEdit3(GenerateID(), glm::value_ptr(value), flags);
+            UndoRedo::Get().OnItemInteract();
             Post();
             return modified;
         }
@@ -318,6 +350,7 @@ namespace Crowny
         {
             Pre(label);
             bool modified = ImGui::ColorEdit4(GenerateID(), glm::value_ptr(value), flags);
+            UndoRedo::Get().OnItemInteract();
             Post();
             return modified;
         }
@@ -326,6 +359,7 @@ namespace Crowny
         {
             Pre(label, helpText);
             bool modified = UI::DragFloat(GenerateID(), &value, delta, min, max);
+            UndoRedo::Get().OnItemInteract();
             Post();
             return modified;
         }
@@ -334,6 +368,7 @@ namespace Crowny
         {
             Pre(label);
             bool modified = UI::DragInt8(GenerateID(), &value, 1.0f, min, max);
+            UndoRedo::Get().OnItemInteract();
             Post();
             return modified;
         }
@@ -342,6 +377,7 @@ namespace Crowny
         {
             Pre(label);
             bool modified = UI::DragInt16(GenerateID(), &value, 1.0f, min, max);
+            UndoRedo::Get().OnItemInteract();
             Post();
             return modified;
         }
@@ -350,6 +386,7 @@ namespace Crowny
         {
             Pre(label);
             bool modified = UI::DragInt32(GenerateID(), &value, 1.0f, min, max);
+            UndoRedo::Get().OnItemInteract();
             Post();
             return modified;
         }
@@ -358,6 +395,7 @@ namespace Crowny
         {
             Pre(label);
             bool modified = UI::DragInt64(GenerateID(), &value, 1.0f, min, max);
+            UndoRedo::Get().OnItemInteract();
             Post();
             return modified;
         }
@@ -366,6 +404,7 @@ namespace Crowny
         {
             Pre(label);
             bool modified = UI::DragUInt8(GenerateID(), &value, 1.0f, minValue, maxValue);
+            UndoRedo::Get().OnItemInteract();
             Post();
 
             return modified;
@@ -375,6 +414,7 @@ namespace Crowny
         {
             Pre(label);
             bool modified = UI::DragUInt16(GenerateID(), &value, 1.0f, minValue, maxValue);
+            UndoRedo::Get().OnItemInteract();
             Post();
 
             return modified;
@@ -384,6 +424,7 @@ namespace Crowny
         {
             Pre(label);
             bool modified = UI::DragUInt32(GenerateID(), &value, 1.0f, minValue, maxValue);
+            UndoRedo::Get().OnItemInteract();
             Post();
 
             return modified;
@@ -393,6 +434,7 @@ namespace Crowny
         {
             Pre(label);
             bool modified = UI::DragUInt64(GenerateID(), &value, 1.0f, minValue, maxValue);
+            UndoRedo::Get().OnItemInteract();
             Post();
 
             return modified;
@@ -402,6 +444,7 @@ namespace Crowny
         {
             Pre(label);
             bool modified = DragDouble(GenerateID(), &value, delta, min, max);
+            UndoRedo::Get().OnItemInteract();
             Post();
 
             return modified;
@@ -411,6 +454,7 @@ namespace Crowny
         {
             Pre(label);
             bool modified = ImGui::DragFloat2(GenerateID(), glm::value_ptr(value), delta, min, max);
+            UndoRedo::Get().OnItemInteract();
             Post();
 
             return modified;
@@ -420,6 +464,7 @@ namespace Crowny
         {
             Pre(label);
             bool modified = ImGui::DragFloat3(GenerateID(), glm::value_ptr(value), delta, min, max);
+            UndoRedo::Get().OnItemInteract();
             Post();
 
             return modified;
@@ -429,6 +474,7 @@ namespace Crowny
         {
             Pre(label);
             bool modified = ImGui::DragFloat4(GenerateID(), glm::value_ptr(value), delta, min, max);
+            UndoRedo::Get().OnItemInteract();
             Post();
 
             return modified;
@@ -438,6 +484,7 @@ namespace Crowny
         {
             Pre(label);
             bool modified = ImGui::SliderInt(GenerateID(), &value, min, max);
+            UndoRedo::Get().OnItemInteract();
             Post();
 
             return modified;
@@ -447,6 +494,7 @@ namespace Crowny
         {
             Pre(label);
             bool modified = ImGui::SliderFloat(GenerateID(), &value, min, max);
+            UndoRedo::Get().OnItemInteract();
             Post();
             return modified;
         }
@@ -455,6 +503,7 @@ namespace Crowny
         {
             Pre(label);
             bool modified = ImGui::SliderFloat2(GenerateID(), glm::value_ptr(value), min, max);
+            UndoRedo::Get().OnItemInteract();
             Post();
             return modified;
         }
@@ -463,6 +512,7 @@ namespace Crowny
         {
             Pre(label);
             bool modified = ImGui::SliderFloat3(GenerateID(), glm::value_ptr(value), min, max);
+            UndoRedo::Get().OnItemInteract();
             Post();
             return modified;
         }
@@ -471,6 +521,7 @@ namespace Crowny
         {
             Pre(label);
             bool modified = ImGui::SliderFloat4(GenerateID(), glm::value_ptr(value), min, max);
+            UndoRedo::Get().OnItemInteract();
             Post();
             return modified;
         }
@@ -505,6 +556,7 @@ namespace Crowny
                 }
             }
 
+            UndoRedo::Get().OnItemInteract();
             Post();
 
             return modified;
@@ -539,6 +591,7 @@ namespace Crowny
                 }
                 ImGui::EndCombo();
             }
+            UndoRedo::Get().OnItemInteract();
             Post();
 
             return modified;
@@ -573,6 +626,7 @@ namespace Crowny
                 }
                 ImGui::EndCombo();
             }
+            UndoRedo::Get().OnItemInteract();
             Post();
 
             return modified;
@@ -607,6 +661,7 @@ namespace Crowny
                 }
                 ImGui::EndCombo();
             }
+            UndoRedo::Get().OnItemInteract();
             Post();
 
             return modified;

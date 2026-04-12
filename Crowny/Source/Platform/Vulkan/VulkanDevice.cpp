@@ -20,7 +20,7 @@ namespace Crowny
 {
     static const char* PIPELINE_CACHE_FILE = "vk_pipeline_cache.blob";
 
-    static Path GetPipelinePath() { return Application::GetInternalDirectory() / "pcache" / CROWNY_VERSION_STRING / PIPELINE_CACHE_FILE; }
+    static Path GetPipelinePath() { return gApplication->GetInternalDirectory() / "pcache" / CROWNY_VERSION_STRING / PIPELINE_CACHE_FILE; }
 
     VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, uint32_t deviceIdx) : m_PhysicalDevice(physicalDevice)
     {
@@ -74,7 +74,6 @@ namespace Crowny
             rayTracingAccelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
             rayTracingAccelerationStructureFeatures.pNext = &enabledRayTracingPipelineFeatures;
             m_DeviceFeatures.pNext = &rayTracingAccelerationStructureFeatures;
-
 
             if (!bufferDeviceAddressFeatures.bufferDeviceAddress)
                 CW_ENGINE_ERROR("Missing Vulkan device address feature");
@@ -318,6 +317,18 @@ namespace Crowny
             vkDestroyPipelineCache(m_LogicalDevice, m_PipelineCache, gVulkanAllocator);
         }
 
+        if (!m_AllocationRecords.empty())
+        {
+            VkDeviceSize totalLeaked = 0;
+            for (const auto& [alloc, rec] : m_AllocationRecords)
+                totalLeaked += rec.size;
+
+            CW_ENGINE_ERROR("VMA LEAK: {} allocation(s) not freed, total ~{} bytes ({:.2f} MB)", m_AllocationRecords.size(), totalLeaked,
+                            totalLeaked / (1024.0 * 1024.0));
+            for (const auto& [alloc, rec] : m_AllocationRecords)
+                CW_ENGINE_ERROR("  LEAKED: {} — {} bytes", rec.name, rec.size);
+        }
+
         vmaDestroyAllocator(m_Allocator);
         vkDestroyDevice(m_LogicalDevice, gVulkanAllocator);
     }
@@ -415,20 +426,10 @@ namespace Crowny
         Refresh(true);
     }
 
-    static uint32_t allocIdx = 0;
-
-    VmaAllocation VulkanDevice::AllocateMemory(VkImage image, VkMemoryPropertyFlags flags)
+    VmaAllocation VulkanDevice::AllocateMemory(VkImage image, VkMemoryPropertyFlags flags, const char* tag)
     {
         VmaAllocationCreateInfo allocCreateInfo{};
         allocCreateInfo.requiredFlags = flags;
-
-        //      allocCreateInfo.pUserData = (void*)allocIdx;
-        // CW_ENGINE_INFO(allocIdx);
-        // if (allocIdx >= 8 && allocIdx <= 13)
-        //{
-        //	CW_ENGINE_INFO("Here");
-        //}
-        // allocIdx++;
 
         VmaAllocationInfo allocInfo;
         VmaAllocation memory;
@@ -437,10 +438,14 @@ namespace Crowny
 
         result = vkBindImageMemory(m_LogicalDevice, image, allocInfo.deviceMemory, allocInfo.offset);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
+
+        uint32_t id = m_AllocCounter++;
+        String name = tag ? fmt::format("Image #{} [{}]", id, tag) : fmt::format("Image #{}", id);
+        m_AllocationRecords[memory] = { name, allocInfo.size };
         return memory;
     }
 
-    VmaAllocation VulkanDevice::AllocateMemory(VkBuffer buffer, VkMemoryPropertyFlags flags)
+    VmaAllocation VulkanDevice::AllocateMemory(VkBuffer buffer, VkMemoryPropertyFlags flags, const char* tag)
     {
         VmaAllocationCreateInfo allocCreateInfo{};
         allocCreateInfo.requiredFlags = flags;
@@ -454,7 +459,18 @@ namespace Crowny
             result = vkBindBufferMemory(m_LogicalDevice, buffer, allocInfo.deviceMemory, allocInfo.offset);
             CW_ENGINE_ASSERT(result == VK_SUCCESS);
         }
+
+        uint32_t id = m_AllocCounter++;
+        String name = tag ? fmt::format("Buffer #{} [{}]", id, tag) : fmt::format("Buffer #{}", id);
+        m_AllocationRecords[memory] = { name, allocInfo.size };
         return memory;
+    }
+
+    void VulkanDevice::SetAllocationName(VmaAllocation allocation, const char* name)
+    {
+        auto it = m_AllocationRecords.find(allocation);
+        if (it != m_AllocationRecords.end())
+            it->second.name = name;
     }
 
     void VulkanDevice::GetAllocationInfo(VmaAllocation allocation, VkDeviceMemory& memory, VkDeviceSize& offset)
@@ -465,7 +481,11 @@ namespace Crowny
         offset = allocInfo.offset;
     }
 
-    void VulkanDevice::FreeMemory(VmaAllocation allocation) { vmaFreeMemory(m_Allocator, allocation); }
+    void VulkanDevice::FreeMemory(VmaAllocation allocation)
+    {
+        m_AllocationRecords.erase(allocation);
+        vmaFreeMemory(m_Allocator, allocation);
+    }
 
     uint32_t VulkanDevice::FindMemoryType(uint32_t requirement, VkMemoryPropertyFlags flags)
     {

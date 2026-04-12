@@ -10,7 +10,7 @@ namespace Crowny
 
     Ref<VertexBuffer> VertexBuffer::Create(uint32_t size, BufferUsage usage)
     {
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::OpenGL:
             return CreateRef<OpenGLVertexBuffer>(size, usage);
@@ -25,7 +25,7 @@ namespace Crowny
 
     Ref<VertexBuffer> VertexBuffer::Create(void* vertices, uint32_t size, BufferUsage usage)
     {
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::OpenGL:
             return CreateRef<OpenGLVertexBuffer>(vertices, size, usage);

@@ -1,15 +1,16 @@
 #pragma once
 
+#include "Crowny/Application/Application.h"
 #include "Crowny/Renderer/EditorCamera.h"
+#include "Crowny/Renderer/RenderSnapshot.h"
 
 #include "Crowny/Common/Time.h"
+#include "Crowny/Scene/SceneManager.h"
+#include "Crowny/Serialization/SceneSerializer.h"
+#include <imgui.h>
+#include <yaml-cpp/yaml.h>
 
 #include <chrono>
-
-namespace filewatch
-{
-    template <typename T> class FileWatch;
-}
 
 namespace Crowny
 {
@@ -20,6 +21,9 @@ namespace Crowny
     class AssetBrowserPanel;
     class HierarchyPanel;
     class ConsolePanel;
+#ifdef CW_WITH_NODES
+    class NodeEditorPanel;
+#endif
     class RenderTarget;
     class ImGuiMenuBar;
     class ImGuiPanel;
@@ -35,7 +39,11 @@ namespace Crowny
     class UndoRedo : public Module<UndoRedo>
     {
     public:
-        void RegisterAction(const Ref<UndoAction>& action) { m_UndoStack.push_back(action); }
+        void RegisterAction(const Ref<UndoAction>& action)
+        {
+            m_RedoStack.clear();
+            m_UndoStack.push_back(action);
+        }
         void Undo()
         {
             if (m_UndoStack.empty())
@@ -54,9 +62,35 @@ namespace Crowny
             m_RedoStack.pop_back();
         }
 
+        void BeginComponentScope(std::function<Ref<UndoAction>()> factory)
+        {
+            m_Factory = std::move(factory);
+            m_InInteraction = false;
+        }
+        void EndComponentScope()
+        {
+            m_Factory = nullptr;
+            m_InInteraction = false;
+        }
+
+        void OnItemInteract()
+        {
+            if (!m_Factory)
+                return;
+            if (ImGui::IsItemActivated())
+                m_InInteraction = true;
+            if (m_InInteraction && ImGui::IsItemDeactivatedAfterEdit())
+            {
+                RegisterAction(m_Factory());
+                m_InInteraction = false;
+            }
+        }
+
     private:
         Vector<Ref<UndoAction>> m_UndoStack;
         Vector<Ref<UndoAction>> m_RedoStack;
+        std::function<Ref<UndoAction>()> m_Factory;
+        bool m_InInteraction = false;
     };
 
     template <typename T> class AddComponentAction : public UndoAction
@@ -88,33 +122,101 @@ namespace Crowny
 
     template <typename T> class ChangeComponentAction : public UndoAction
     {
-        ChangeComponentAction(Entity entity, const T& oldComponent) : m_Entity(entity), m_OldComponent(oldComponent) {}
-
-        virtual void Commit() override { m_Entity.AddOrReplaceComponent<T>(m_NewComponent); }
-
-        virtual void Revert() override
+    public:
+        ChangeComponentAction(Entity entity, const T& oldComp, const T& newComp) : m_Entity(entity), m_OldComponent(oldComp), m_NewComponent(newComp)
         {
-            m_NewComponent = m_Entity.GetComponent<T>();
-            m_Entity.AddOrReplaceComponent<T>(m_OldComponent);
         }
+
+        void Commit() override { m_Entity.AddOrReplaceComponent<T>(m_NewComponent); }
+        void Revert() override { m_Entity.AddOrReplaceComponent<T>(m_OldComponent); }
 
     private:
         Entity m_Entity;
-        T m_OldComponent;
-        T m_NewComponent;
+        T m_OldComponent, m_NewComponent;
     };
 
     class EntityCreatedAction : public UndoAction
     {
+    public:
+        EntityCreatedAction(Entity e) : m_Uuid(e.GetUuid()), m_Name(e.GetName()), m_ParentUuid(e.GetParent().GetUuid()) {}
+
+        void Commit() override // redo: recreate
+        {
+            auto scene = gSceneManager->GetActiveScene();
+            Entity e = scene->CreateEntityWithUuid(m_Uuid, m_Name);
+            Entity parent = scene->GetEntityFromUuid(m_ParentUuid);
+            if (parent)
+                parent.AddChild(e);
+        }
+        void Revert() override // undo: destroy
+        {
+            auto scene = gSceneManager->GetActiveScene();
+            Entity e = scene->GetEntityFromUuid(m_Uuid);
+            if (e)
+                scene->DestroyEntity(e);
+        }
+
+    private:
+        UUID m_Uuid;
+        String m_Name;
+        UUID m_ParentUuid;
     };
 
+    // TODO: Try to copy in a temp registry.
     class EntityDeletedAction : public UndoAction
     {
     public:
-        EntityDeletedAction(Entity e) {}
+        EntityDeletedAction(Entity entity, const Ref<Scene>& scene)
+          : m_Scene(scene), m_Uuid(entity.GetUuid()), m_ParentUuid(entity.GetParent().GetUuid())
+        {
+            YAML::Emitter out;
+            out << YAML::BeginSeq;
+            SceneSerializer serializer(scene);
+            serializer.SerializeEntity(out, entity);
+            out << YAML::EndSeq;
+            m_Yaml = out.c_str();
+        }
+        void Commit() override // redo: destroy again
+        {
+            Entity e = m_Scene->GetEntityFromUuid(m_Uuid);
+            if (e)
+                m_Scene->DestroyEntity(e);
+        }
+        void Revert() override // undo: recreate from YAML
+        {
+            YAML::Node node = YAML::Load(m_Yaml);
+            SceneSerializer serializer(m_Scene);
+            serializer.DeserializeEntities(node);
+            Entity restored = m_Scene->GetEntityFromUuid(m_Uuid);
+            Entity parent = m_Scene->GetEntityFromUuid(m_ParentUuid);
+            if (restored && parent)
+                parent.AddChild(restored);
+        }
 
     private:
-        entt::registry m_ComponentRegistry;
+        Ref<Scene> m_Scene;
+        UUID m_Uuid, m_ParentUuid;
+        String m_Yaml;
+    };
+
+    class EntityReparentAction : public UndoAction
+    {
+    public:
+        EntityReparentAction(Entity e, Entity oldParent, Entity newParent)
+          : m_Entity(e.GetUuid()), m_OldParent(oldParent.GetUuid()), m_NewParent(newParent.GetUuid())
+        {
+        }
+
+        void Commit() override { Reparent(m_NewParent); }
+        void Revert() override { Reparent(m_OldParent); }
+
+    private:
+        void Reparent(UUID targetUuid)
+        {
+            auto scene = gSceneManager->GetActiveScene();
+            scene->GetEntityFromUuid(m_Entity).SetParent(scene->GetEntityFromUuid(targetUuid));
+        }
+        UUID m_Entity, m_OldParent, m_NewParent;
     };
 
     class EditorLayer : public Layer
@@ -143,6 +245,7 @@ namespace Crowny
         void OpenScene(const Path& filepath);
         void SaveActiveScene();
         void SaveActiveSceneAs();
+        void AddRecentScene(const Path& path);
 
     private:
         void ExecuteProjectAssetRefresh();
@@ -151,6 +254,7 @@ namespace Crowny
         void CreateRenderTarget();
         void HandleRenderTargetResize();
         void HandleSceneState(Timestep ts);
+        void SubmitSnapshot(RenderSnapshot&& snapshot);
         void SetupImGuiRender();
 
         void RenderOverlay();
@@ -185,6 +289,9 @@ namespace Crowny
         TextureEditor* m_TextureEditor = nullptr;
         ConsolePanel* m_ConsolePanel = nullptr;
         AssetBrowserPanel* m_AssetBrowser = nullptr;
+#ifdef CW_WITH_NODES
+        NodeEditorPanel* m_NodeEditorPanel = nullptr;
+#endif
 
         bool m_ShowTimeSettings = false;
         bool m_ShowDemoWindow = false;
@@ -205,12 +312,15 @@ namespace Crowny
         String m_NewProjectName;
         glm::vec2 m_ViewportSize = { 1280.0f, 720.0f }; // and dis
 
-        enum class HubPage { RecentProjects, NewProject };
+        enum class HubPage
+        {
+            RecentProjects,
+            NewProject
+        };
         HubPage m_HubPage = HubPage::RecentProjects;
         int m_SelectedRecentIdx = -1;
         String m_RecentSearchFilter;
 
-        Scope<filewatch::FileWatch<Path>> m_Watch;
         Mutex m_FileWatchMutex;
         Vector<Path> m_FileWatchQueue;
         bool m_AssemblyReloadPending = false;
@@ -219,13 +329,6 @@ namespace Crowny
         Stack<UndoAction> m_UndoStack;
 
         int32_t m_VisualStudioVersionId = 0;
-
-        static float s_DeltaTime;
-        static float s_SmoothDeltaTime;
-        static float s_RealtimeSinceStartup;
-        static float s_Time;
-        static float s_FixedDeltaTime;
-        static float s_FrameCount;
 
         enum class SceneState
         {

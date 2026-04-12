@@ -3,14 +3,15 @@
 #include "Crowny/Application/Initializer.h"
 
 // Has to be here due to ambiguous refs caused by Xlib(which is included by vulkan on linux) and Input.cpp
-#include "Platform/Vulkan/VulkanRenderAPI.h"
 #include "Platform/OpenGL/OpenGLRenderAPI.h"
+#include "Platform/Vulkan/VulkanRenderAPI.h"
 
 #include "Crowny/Application/Application.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Audio/AudioManager.h"
 #include "Crowny/Common/ConsoleBuffer.h"
 #include "Crowny/Common/Random.h"
+#include "Crowny/Common/StringID.h"
 #include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Import/Importer.h"
 #include "Crowny/Physics/Physics2D.h"
@@ -22,6 +23,7 @@
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
 #include "Crowny/Scene/SceneManager.h"
+#include "Crowny/Threading/TaskSystem.h"
 
 // Scripting
 #include "Crowny/Scripting/Bindings/ScriptBindings.h"
@@ -34,12 +36,18 @@
 namespace Crowny
 {
 
+    static TaskSystem* s_TaskSystem = nullptr;
+
     void Initializer::Init(const ApplicationDesc& applicationDesc)
     {
         Crowny::Log::Init(applicationDesc.Name);
 
         if (!ConsoleBuffer::IsStartedUp())
             ConsoleBuffer::StartUp();
+
+        StringIDTable::StartUp();
+
+        s_TaskSystem = new TaskSystem();
 
         Importer::StartUp();
         Importer::RegisterBuiltinImporters();
@@ -126,13 +134,14 @@ namespace Crowny
         Texture::BLACK = Texture::Create(params);
         Texture::BLACK->WriteData(*blackData);
 
+        gApplication->OnPreRendererInit();
         Renderer2D::Init();
         ForwardRenderer::Init();
 
         const Path defaultFontPath = applicationDesc.WorkingDirectory / "Crowny-Editor/Resources/Fonts/Roboto/roboto-thin.ttf.asset";
         if (fs::exists(defaultFontPath))
         {
-            const AssetHandle<Font> defaultFont = AssetManager::Get().Load<Font>(defaultFontPath);
+            const AssetHandle<Font> defaultFont = gAssetManager->Load<Font>(defaultFontPath);
             if (defaultFont)
                 Font::SetDefaultFont(defaultFont);
             else
@@ -150,9 +159,8 @@ namespace Crowny
                 if (importedDefaultFont)
                 {
                     // Save the font cache for next time.
-                    AssetManager::Get().Save(importedDefaultFont, defaultFontPath);
-                    const AssetHandle<Font> fontHandle =
-                      static_asset_cast<Font>(AssetManager::Get().CreateAssetHandle(importedDefaultFont));
+                    gAssetManager->Save(importedDefaultFont, defaultFontPath);
+                    const AssetHandle<Font> fontHandle = static_asset_cast<Font>(gAssetManager->CreateAssetHandle(importedDefaultFont));
                     Font::SetDefaultFont(fontHandle);
                 }
                 else
@@ -196,13 +204,18 @@ namespace Crowny
         ScriptSceneObjectManager::StartUp();
         ScriptAssetManager::StartUp();
         ScriptObjectManager::StartUp();
+
+        SceneManager::StartUp();
     }
 
     void Initializer::Shutdown()
     {
+        delete s_TaskSystem;
+        s_TaskSystem = nullptr;
+
         Physics2D::Shutdown();
         Texture::WHITE = Texture::BLACK = nullptr;
-        
+
         if (ScriptSceneObjectManager::IsStartedUp())
         {
             ScriptSceneObjectManager::Get().Del();
@@ -223,7 +236,9 @@ namespace Crowny
             ForwardRenderer::Shutdown();
         }
 
-        SceneManager::Shutdown();
+        if (SceneManager::IsStartedUp())
+            SceneManager::Shutdown();
+        StringIDTable::Shutdown();
         VirtualFileSystem::Shutdown();
         AssetManager::Shutdown();
         AssetListenerManager::Shutdown();

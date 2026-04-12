@@ -20,6 +20,8 @@ namespace Crowny
 
     void VulkanQueue::Submit(VulkanCmdBuffer* cmdBuffer, VulkanSemaphore** waitSemaphores, uint32_t semaphoreCount)
     {
+        Lock lock(m_SubmitMutex);
+
         VkSemaphore signalSemaphores[MAX_VULKAN_CB_DEPENDENCIES + 1];
         cmdBuffer->AllocateSemaphores(signalSemaphores);
         VkCommandBuffer vkCmdBuffer = cmdBuffer->GetHandle();
@@ -29,6 +31,7 @@ namespace Crowny
 
         VkSubmitInfo submitInfo;
         GetSubmitInfo(&vkCmdBuffer, signalSemaphores, MAX_VULKAN_CB_DEPENDENCIES + 1, m_SemaphoresTemp.data(), semaphoreCount, submitInfo);
+
         VkResult result = vkQueueSubmit(m_Queue, 1, &submitInfo, cmdBuffer->GetFence());
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         cmdBuffer->SetIsSubmitted();
@@ -40,6 +43,7 @@ namespace Crowny
 
     bool VulkanQueue::IsExecuting() const
     {
+        Lock lock(const_cast<Mutex&>(m_SubmitMutex));
         if (m_LastCommandBuffer == nullptr)
             return false;
         return m_LastCommandBuffer->IsSubmitted();
@@ -74,6 +78,8 @@ namespace Crowny
         if (!swapChain->PrepareForPresent(backIdx))
             return VK_SUCCESS;
 
+        Lock lock(m_SubmitMutex);
+
         m_SemaphoresTemp.resize(numSemaphores + 1);
         PrepareSemaphores(waitSemaphores, m_SemaphoresTemp.data(), numSemaphores);
 
@@ -88,7 +94,6 @@ namespace Crowny
 
         if (numSemaphores > 0)
         {
-            // CW_ENGINE_INFO("PRESENTING: {}", (void*)m_SemaphoresTemp[0]);
             presentInfo.pWaitSemaphores = m_SemaphoresTemp.data();
             presentInfo.waitSemaphoreCount = numSemaphores;
         }
@@ -98,14 +103,18 @@ namespace Crowny
             presentInfo.waitSemaphoreCount = 0;
         }
         VkResult result = vkQueuePresentKHR(m_Queue, &presentInfo);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR); // maybe shouldn't do this here
+        CW_ENGINE_ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR);
         m_ActiveSubmissions.push_back(SubmitInfo(nullptr, m_NextSubmitIdx++, numSemaphores, 0));
         return result;
     }
 
     void VulkanQueue::WaitIdle() const
     {
-        VkResult result = vkQueueWaitIdle(m_Queue);
+        VkResult result;
+        {
+            Lock lock(const_cast<Mutex&>(m_SubmitMutex));
+            result = vkQueueWaitIdle(m_Queue);
+        }
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
     }
 
@@ -145,6 +154,8 @@ namespace Crowny
         uint32_t numCbs = (uint32_t)m_QueuedBuffers.size();
         if (numCbs == 0)
             return;
+
+        Lock lock(m_SubmitMutex);
 
         uint32_t totalNumWaitSemaphores = (uint32_t)m_QueuedSemaphores.size() + numCbs;
         uint32_t signalSemaphoresPerCB = MAX_VULKAN_CB_DEPENDENCIES + 1;
@@ -201,49 +212,63 @@ namespace Crowny
 
     void VulkanQueue::Refresh(bool wait, bool empty)
     {
-        uint32_t lastFinished = 0;
-        auto iter = m_ActiveSubmissions.begin();
-        while (iter != m_ActiveSubmissions.end())
+        // Collect completed work under the lock, then do the expensive
+        // cleanup (Reset → vkFreeMemory) outside it. Holding the lock
+        // during driver calls can deadlock on Intel drivers (igvk64.dll).
+        Vector<VulkanSemaphore*> semaphoresToNotify;
+        Vector<VulkanCmdBuffer*> buffersToReset;
+
         {
-            VulkanCmdBuffer* cmdBuffer = iter->CmdBuffer;
-            if (cmdBuffer == nullptr)
+            Lock lock(m_SubmitMutex);
+            uint32_t lastFinished = 0;
+            auto iter = m_ActiveSubmissions.begin();
+            while (iter != m_ActiveSubmissions.end())
             {
+                VulkanCmdBuffer* cmdBuffer = iter->CmdBuffer;
+                if (cmdBuffer == nullptr)
+                {
+                    ++iter;
+                    continue;
+                }
+                if (!cmdBuffer->CheckFenceStatus(wait))
+                {
+                    CW_ENGINE_ASSERT(!wait);
+                    break;
+                }
+                lastFinished = iter->SubmitIdx;
                 ++iter;
-                continue;
             }
-            if (!cmdBuffer->CheckFenceStatus(wait))
+
+            if (empty)
+                lastFinished = m_NextSubmitIdx - 1;
+
+            iter = m_ActiveSubmissions.begin();
+            while (iter != m_ActiveSubmissions.end())
             {
-                CW_ENGINE_ASSERT(!wait);
-                break;
+                if (iter->SubmitIdx > lastFinished)
+                    break;
+
+                for (uint32_t i = 0; i < iter->NumSemaphores; i++)
+                {
+                    semaphoresToNotify.push_back(m_ActiveSemaphores.front());
+                    m_ActiveSemaphores.pop();
+                }
+
+                for (uint32_t i = 0; i < iter->NumCommandBuffers; i++)
+                {
+                    buffersToReset.push_back(m_ActiveBuffers.front());
+                    m_ActiveBuffers.pop();
+                }
+                iter = m_ActiveSubmissions.erase(iter);
             }
-            lastFinished = iter->SubmitIdx;
-            ++iter;
         }
 
-        if (empty)
-            lastFinished = m_NextSubmitIdx - 1;
+        // Heavy cleanup outside the lock — driver calls (vkFreeMemory etc.)
+        for (VulkanSemaphore* semaphore : semaphoresToNotify)
+            semaphore->NotifyDone(0, VulkanAccessFlagBits::Read | VulkanAccessFlagBits::Write);
 
-        iter = m_ActiveSubmissions.begin();
-        while (iter != m_ActiveSubmissions.end())
-        {
-            if (iter->SubmitIdx > lastFinished)
-                break;
-
-            for (uint32_t i = 0; i < iter->NumSemaphores; i++)
-            {
-                VulkanSemaphore* semaphore = m_ActiveSemaphores.front();
-                m_ActiveSemaphores.pop();
-                semaphore->NotifyDone(0, VulkanAccessFlagBits::Read | VulkanAccessFlagBits::Write);
-            }
-
-            for (uint32_t i = 0; i < iter->NumCommandBuffers; i++)
-            {
-                VulkanCmdBuffer* cmdBuffer = m_ActiveBuffers.front();
-                m_ActiveBuffers.pop();
-                cmdBuffer->Reset();
-            }
-            iter = m_ActiveSubmissions.erase(iter);
-        }
+        for (VulkanCmdBuffer* cmdBuffer : buffersToReset)
+            cmdBuffer->Reset();
     }
 
 } // namespace Crowny

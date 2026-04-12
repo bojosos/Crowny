@@ -24,10 +24,7 @@ namespace Crowny
         m_MountedDirectories[virtualPath].push_back(physicalPath);
     }
 
-    void VirtualFileSystem::Unmount(const String& path)
-    {
-        m_MountedDirectories[path].clear();
-    }
+    void VirtualFileSystem::Unmount(const String& path) { m_MountedDirectories[path].clear(); }
 
     bool VirtualFileSystem::ResolvePhyiscalPath(const String& inPath, String& outPath)
     {

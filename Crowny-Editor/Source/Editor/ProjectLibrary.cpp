@@ -5,6 +5,7 @@
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Import/Importer.h"
 #include "Crowny/Import/TextureImporter.h"
+#include "Crowny/Serialization/NodeGraphSerializer.h"
 #include "Crowny/Serialization/FileEncoder.h"
 #include "Crowny/Serialization/ImportOptionsSerializer.h"
 
@@ -602,10 +603,10 @@ namespace Crowny
         m_AssetManifest->RegisterAsset(uuid, outputPath);
         m_UuidToPath[uuid] = entry->Filepath;
 
-        if (asset->GetAssetType() == AssetType::Scene)
+        if (asset->GetAssetType() == AssetType::Scene || asset->GetAssetType() == AssetType::Prefab)
             fs::copy_file(entry->Filepath, outputPath, fs::copy_options::overwrite_existing);
         else
-            AssetManager::Get().Save(asset, outputPath);
+            gAssetManager->Save(asset, outputPath);
     }
 
     void ProjectLibrary::ClearEntries() {}
@@ -808,6 +809,8 @@ namespace Crowny
 
             // Primary asset (first in the list)
             Ref<Asset> primaryAsset = assets[0];
+            if (!primaryAsset)
+                return false;
             if (entry->Metadata == nullptr)
             {
                 entry->Metadata = CreateRef<AssetMetadata>();
@@ -826,10 +829,10 @@ namespace Crowny
                 m_AssetManifest->RegisterAsset(uuid, outputPath);
                 m_UuidToPath[uuid] = entry->Filepath;
 
-                if (asset->GetAssetType() == AssetType::Scene)
+                if (asset->GetAssetType() == AssetType::Scene || asset->GetAssetType() == AssetType::Prefab)
                     fs::copy_file(entry->Filepath, outputPath, fs::copy_options::overwrite_existing);
                 else
-                    AssetManager::Get().Save(asset, outputPath);
+                    gAssetManager->Save(asset, outputPath);
             };
 
             saveAsset(primaryAsset, entry->Metadata->Uuid);
@@ -852,7 +855,8 @@ namespace Crowny
             for (uint32_t i = 1; i < (uint32_t)assets.size(); i++)
             {
                 Ref<Asset>& depAsset = assets[i];
-                if (!depAsset) continue;
+                if (!depAsset)
+                    continue;
 
                 Ref<AssetMetadata> depMeta = CreateRef<AssetMetadata>();
                 depMeta->Type = depAsset->GetAssetType();
@@ -1094,6 +1098,14 @@ namespace Crowny
         }
     }
 
+    Path ProjectLibrary::UuidToPath(const UUID& uuid) const
+    {
+        const auto& iter = m_UuidToPath.find(uuid);
+        if (iter != m_UuidToPath.end())
+            return iter->second;
+        return {};
+    }
+
     Ref<AssetMetadata> ProjectLibrary::FindAssetMetadata(const Path& path) const
     {
         LibraryEntry* entry = FindEntry(path).get();
@@ -1115,6 +1127,18 @@ namespace Crowny
                 result.push_back(uuid);
         }
         return result;
+    }
+
+    String ProjectLibrary::GetAssetName(const UUID& uuid) const
+    {
+        auto it = m_UuidToPath.find(uuid);
+        if (it == m_UuidToPath.end())
+            return {};
+        // Use the library entry's ElementName (filename stem, same as shown in the asset browser)
+        Ref<LibraryEntry> entry = FindEntry(it->second);
+        if (entry)
+            return entry->ElementName;
+        return it->second.stem().string();
     }
 
     AssetType ProjectLibrary::GetAssetType(const Path& path) const
@@ -1147,7 +1171,7 @@ namespace Crowny
             return AssetHandle<Asset>();
 
         const UUID& uuid = meta->Uuid;
-        return AssetManager::Get().LoadFromUUID(uuid, true, true);
+        return gAssetManager->LoadFromUUID(uuid, true, true);
     }
 
     AssetHandle<Asset> ProjectLibrary::Load(const FileEntry* entry)
@@ -1157,7 +1181,7 @@ namespace Crowny
             return AssetHandle<Asset>();
 
         const UUID& uuid = meta->Uuid;
-        return AssetManager::Get().LoadFromUUID(uuid, true, true);
+        return gAssetManager->LoadFromUUID(uuid, true, true);
     }
 
     Vector<Ref<FileEntry>> ProjectLibrary::GetAssetsForBuild() const
@@ -1312,20 +1336,28 @@ namespace Crowny
         if (asset == nullptr)
             return;
 
-        Path assetPath = path;
-        if (path.is_absolute())
+        Path absPath = path;
+        if (!absPath.is_absolute())
+            absPath = fs::absolute(m_AssetFolder / path);
+
+        if (std::search(absPath.begin(), absPath.end(), m_AssetFolder.begin(), m_AssetFolder.end()) == absPath.end())
         {
-            if (std::search(assetPath.begin(), assetPath.end(), m_AssetFolder.begin(), m_AssetFolder.end()) == assetPath.end())
-                return;
-            assetPath = path.relative_path(); // c++ ppl are stupid
+            CW_ENGINE_WARN("Attempted to create entry outside of asset folder: {0}", absPath);
+            return;
         }
 
-        DeleteEntry(assetPath);
-        asset->SetName(path.filename().string());
+        DeleteEntry(absPath);
+        asset->SetName(path.filename().replace_extension("").string());
 
-        // Path absPath = fs::absolute(assetPath);
-        Path absPath = assetPath;
-        AssetManager::Get().Save(asset, absPath);
+        if (asset->GetAssetType() == AssetType::NodeGraph)
+        {
+            NodeGraphSerializer serializer(std::static_pointer_cast<NodeGraphAsset>(asset)->GetGraph());
+            serializer.Serialize(absPath);
+        }
+        else
+        {
+            gAssetManager->Save(asset, absPath);
+        }
 
         Path parentDirPath = absPath.parent_path();
         Ref<LibraryEntry> parentEntry = FindEntry(parentDirPath);
@@ -1505,7 +1537,7 @@ namespace Crowny
         const Path internalAssetPath = m_ProjectFolder / INTERNAL_ASSET_DIR;
         m_UuidDirectory = UUIDDirectory(internalAssetPath);
 
-        Application::SetInternalDirectory(internalAssetPath);
+        gApplication->SetInternalDirectory(internalAssetPath);
 
         Path libEntriesPath = m_ProjectFolder / PROJECT_INTERNAL_DIR / LIBRARY_ENTRIES_FILENAME;
 
@@ -1536,7 +1568,7 @@ namespace Crowny
         else
             m_AssetManifest = CreateRef<AssetManifest>("ProjectLibrary");
 
-        AssetManager::Get().RegisterAssetManifest(m_AssetManifest);
+        gAssetManager->RegisterAssetManifest(m_AssetManifest);
 
         Stack<DirectoryEntry*> todos; // Load meta files
         todos.push(m_RootEntry.get());
@@ -1619,7 +1651,7 @@ namespace Crowny
         m_ProjectFolder = Path();
         ClearEntries();
         m_RootEntry = CreateRef<DirectoryEntry>(m_AssetFolder, m_AssetFolder.filename().string(), nullptr);
-        AssetManager::Get().UnregisterAssetManifest(m_AssetManifest);
+        gAssetManager->UnregisterAssetManifest(m_AssetManifest);
         m_AssetManifest = nullptr;
         m_IsLoaded = false;
     }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Ecs/Entity.h"
+#include "Editor/EditorLayer.h"
 
 #include <entt/entt.hpp>
 
@@ -9,9 +10,18 @@ namespace Crowny
 
     template <class Component> void ComponentEditorWidget(Entity entity) {}
 
-    template <class Component> void ComponentAddAction(Entity entity) { entity.AddComponent<Component>(); }
+    template <class Component> Ref<UndoAction> ComponentAddAction(Entity entity)
+    {
+        entity.AddComponent<Component>();
+        return CreateRef<Crowny::AddComponentAction<Component>>(entity);
+    }
 
-    template <class Component> void ComponentRemoveAction(Entity entity) { entity.RemoveComponent<Component>(); }
+    template <class Component> Ref<UndoAction> ComponentRemoveAction(Entity entity)
+    {
+        auto comp = entity.GetComponent<Component>();
+        entity.RemoveComponent<Component>();
+        return CreateRef<Crowny::RemoveComponentAction<Component>>(entity, comp);
+    }
 
     class ComponentEditor
     {
@@ -21,8 +31,10 @@ namespace Crowny
         struct ComponentInfo
         {
             using Callback = std::function<void(Entity)>;
+            using ActionCallback = std::function<Ref<UndoAction>(Entity)>;
             String name;
-            Callback widget, create, destroy;
+            Callback widget;
+            ActionCallback create, destroy;
         };
 
     public:
@@ -37,9 +49,17 @@ namespace Crowny
 
         template <class Component> ComponentInfo& RegisterComponent(const String& name, typename ComponentInfo::Callback widget)
         {
+            auto wrappedWidget = [widget](Entity entity) {
+                Component snapshot = entity.GetComponent<Component>();
+                UndoRedo::Get().BeginComponentScope([entity, snapshot]() -> Ref<UndoAction> {
+                    return CreateRef<ChangeComponentAction<Component>>(entity, snapshot, entity.GetComponent<Component>());
+                });
+                widget(entity);
+                UndoRedo::Get().EndComponentScope();
+            };
             return RegisterComponent<Component>(ComponentInfo{
               name,
-              widget,
+              wrappedWidget,
               ComponentAddAction<Component>,
               ComponentRemoveAction<Component>,
             });
@@ -57,10 +77,14 @@ namespace Crowny
         void Render();
 
     private:
-        bool EntityHasComponent(const entt::registry& registry, Entity entity, const ComponentTypeID tid)
+        bool EntityHasComponent(const entt::registry& registry, const Entity& entity, const ComponentTypeID tid) const
         {
-            const auto itStorage = registry.storage(tid);
-            return itStorage != registry.storage().end() && itStorage->second.contains(entity.GetHandle());
+            for (auto [id, storage] : registry.storage())
+            {
+                if (id == tid)
+                    return storage.contains(entity.GetHandle());
+            }
+            return false;
         }
 
     private:

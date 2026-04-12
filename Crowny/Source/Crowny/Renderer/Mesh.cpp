@@ -72,15 +72,24 @@ namespace Crowny
     {
         switch (channel)
         {
-        case 0: return VertexAttribute::TexCoord0;
-        case 1: return VertexAttribute::TexCoord1;
-        case 2: return VertexAttribute::TexCoord2;
-        case 3: return VertexAttribute::TexCoord3;
-        case 4: return VertexAttribute::TexCoord4;
-        case 5: return VertexAttribute::TexCoord5;
-        case 6: return VertexAttribute::TexCoord6;
-        case 7: return VertexAttribute::TexCoord7;
-        default: return VertexAttribute::TexCoord0;
+        case 0:
+            return VertexAttribute::TexCoord0;
+        case 1:
+            return VertexAttribute::TexCoord1;
+        case 2:
+            return VertexAttribute::TexCoord2;
+        case 3:
+            return VertexAttribute::TexCoord3;
+        case 4:
+            return VertexAttribute::TexCoord4;
+        case 5:
+            return VertexAttribute::TexCoord5;
+        case 6:
+            return VertexAttribute::TexCoord6;
+        case 7:
+            return VertexAttribute::TexCoord7;
+        default:
+            return VertexAttribute::TexCoord0;
         }
     }
 
@@ -240,7 +249,7 @@ namespace Crowny
         UpdateCpuBuffer(*meshData);
         if (discard)
         {
-            if (m_Usage.IsSet(MeshUsage::Dynamic))
+            if (!m_Usage.IsSet(MeshUsage::Dynamic))
             {
                 CW_ENGINE_WARN("Buffer discard enabled for non dynamic buffer, disabling it.");
                 discard = false;
@@ -277,7 +286,7 @@ namespace Crowny
 
     void Mesh::ReadData(Ref<MeshData>& data, uint32_t queueIdx)
     {
-        RenderAPI::Get().SubmitCommandBuffer(nullptr);
+        gRenderAPI->SubmitCommandBuffer(nullptr);
         IndexType indexType = IndexType::Index_32;
         if (m_IndexBuffer)
             indexType = m_IndexBuffer->GetIndexType();
@@ -463,12 +472,12 @@ namespace Crowny
 
         if (sameSize)
         {
-            const bool isDynamic = m_Usage == MeshUsage::Dynamic;
+            const bool isDynamic = m_Usage.IsSet(MeshUsage::Dynamic);
             WriteData(m_CPUMeshData, isDynamic);
         }
         else
         {
-            const bool isDynamic = m_Usage == MeshUsage::Dynamic;
+            const bool isDynamic = m_Usage.IsSet(MeshUsage::Dynamic);
             const BufferUsage bufferUsage = isDynamic ? BufferUsage::BU_DYNAMIC_DRAW : BufferUsage::BU_STATIC_DRAW;
             m_IndexBuffer = IndexBuffer::Create(m_NumIndices, m_IndexType, bufferUsage);
             m_VertexBuffer = VertexBuffer::Create(m_NumVertices * m_Layout.GetStride(), bufferUsage);

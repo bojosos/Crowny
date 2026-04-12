@@ -17,6 +17,10 @@ namespace Crowny
         out << YAML::Key << "EditorCameraPosition" << YAML::Value << settings->EditorCameraPosition;
         out << YAML::Key << "EditorCameraRotation" << YAML::Value << settings->EditorCameraRotation;
         out << YAML::Key << "LastOpenScene" << YAML::Value << settings->LastOpenScenePath;
+        out << YAML::Key << "RecentScenes" << YAML::Value << YAML::BeginSeq;
+        for (const Path& path : settings->RecentScenes)
+            out << path.string();
+        out << YAML::EndSeq;
         out << YAML::Key << "GizmoMode" << YAML::Value << (uint32_t)settings->GizmoMode; // TODO: Maybe move to project settings
         out << YAML::Key << "GizmoLocalMode" << YAML::Value << settings->GizmoLocalMode;
         out << YAML::Key << "LastAssetBrowserEntry" << YAML::Value << settings->LastAssetBrowserSelectedEntry.string();
@@ -41,6 +45,12 @@ namespace Crowny
         projectSettings->LastAssetBrowserSelectedEntry = node["LastAssetBrowserEntry"].as<String>();
         projectSettings->LastOpenScenePath = node["LastOpenScene"].as<String>();
         projectSettings->LastSelectedEntityID = node["LastSelectedEntity"].as<UUID>(UUID::EMPTY);
+
+        if (const auto& recentScenes = node["RecentScenes"])
+        {
+            for (const auto& path : recentScenes)
+                projectSettings->RecentScenes.push_back(path.as<String>());
+        }
 
         if (const auto& hierarchy = node["Hierarchy"])
         {

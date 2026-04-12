@@ -28,14 +28,14 @@ namespace Crowny
         const Vector<AudioDevice>& GetAllDevices() const { return m_Devices; }
         void WriteToOpenALBuffer(uint32_t bufferId, uint8_t* samples, const AudioDataInfo& info);
 
-        ALCdevice* GetDevice() { return m_Device; }
+        ALCdevice* GetDevice() const { return m_Device; }
         void SetContext(ALCcontext* context) { m_Context = context; }
 
         Ref<AudioListener> CreateListener();
         Ref<AudioSource> CreateSource();
         Ref<AudioClip> CreateClip();
 
-        float GetGlobalSourceProgress(const String& name);
+        float GetGlobalSourceProgress(const String& name) const;
 
         void RegisterListener(AudioListener* listener);
         void UnregisterListener(AudioListener* listener);
@@ -45,6 +45,10 @@ namespace Crowny
         void Play(const String& name, const AssetHandle<AudioClip>& clip, const glm::vec3& position = glm::vec3(0.0f), float volume = 1.0f);
         void OnUpdate();
         void StopManualSources();
+
+    protected:
+        void OnStartUp() override;
+        void OnShutdown() override;
 
     private:
         bool IsExtSupported(const String& ext) const;
@@ -67,6 +71,6 @@ namespace Crowny
         UnorderedMap<String, Ref<AudioSource>> m_TempSources;
     };
 
-    AudioManager& gAudio();
+    extern AudioManager* gAudioManager;
 
 } // namespace Crowny

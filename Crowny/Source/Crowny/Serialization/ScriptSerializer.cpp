@@ -117,11 +117,20 @@ namespace Crowny
 
     template <typename Archive> void Serialize(Archive& archive, SerializableFieldVector2& data) { archive(data.Value.x, data.Value.y); }
 
-    template <typename Archive> void Serialize(Archive& archive, SerializableFieldVector3& data) { archive(data.Value.x, data.Value.y, data.Value.z); }
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldVector3& data)
+    {
+        archive(data.Value.x, data.Value.y, data.Value.z);
+    }
 
-    template <typename Archive> void Serialize(Archive& archive, SerializableFieldVector4& data) { archive(data.Value.x, data.Value.y, data.Value.z, data.Value.w); }
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldVector4& data)
+    {
+        archive(data.Value.x, data.Value.y, data.Value.z, data.Value.w);
+    }
 
-    template <typename Archive> void Serialize(Archive& archive, SerializableFieldColor& data) { archive(data.Value.x, data.Value.y, data.Value.z, data.Value.w); }
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldColor& data)
+    {
+        archive(data.Value.x, data.Value.y, data.Value.z, data.Value.w);
+    }
 
     template <typename Archive> void Serialize(Archive& archive, SerializableFieldMatrix4& data)
     {
@@ -142,8 +151,8 @@ namespace Crowny
     {
         UUID uuid;
         archive(uuid);
-        if (uuid != UUID::EMPTY && SceneManager::GetActiveScene())
-            data.Value = SceneManager::GetActiveScene()->GetEntityFromUuid(uuid);
+        if (uuid != UUID::EMPTY && gSceneManager->GetActiveScene())
+            data.Value = gSceneManager->GetActiveScene()->GetEntityFromUuid(uuid);
     }
 
     template <typename Archive> void Save(Archive& archive, const SerializableFieldAsset& data)
@@ -157,7 +166,7 @@ namespace Crowny
         UUID uuid;
         archive(uuid);
         if (uuid != UUID::EMPTY)
-            data.Value = AssetManager::Get().GetAssetHandle(uuid);
+            data.Value = gAssetManager->GetAssetHandle(uuid);
     }
 
     /*

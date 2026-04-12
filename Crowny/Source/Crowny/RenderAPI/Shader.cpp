@@ -136,7 +136,7 @@ namespace Crowny
 
     Ref<ShaderStage> ShaderStage::Create(const Ref<BinaryShaderData>& data)
     {
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
         // TODO: Add support for binary OpenGL shaders
         // case RenderAPI::API::OpenGL: return CreateRef<OpenGLShader>(m_Filepath);

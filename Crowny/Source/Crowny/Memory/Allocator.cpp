@@ -3,6 +3,8 @@
 #include "Crowny/Memory/Allocator.h"
 #include "Crowny/Memory/MemoryManager.h"
 
+#include <tracy/Tracy.hpp>
+
 namespace Crowny
 {
 
@@ -29,6 +31,7 @@ namespace Crowny
         if (!s_Data)
             Init();
         void* memory = malloc(size);
+        TracyAlloc(memory, size);
         {
             Lock lock(s_Data->m_Mutex);
             Allocation& alloc = s_Data->m_AllocationMap[memory];
@@ -45,6 +48,7 @@ namespace Crowny
             Init();
 
         void* memory = malloc(size);
+        TracyAlloc(memory, size);
 
         {
             std::scoped_lock<std::mutex> lock(s_Data->m_Mutex);
@@ -67,6 +71,7 @@ namespace Crowny
             Init();
 
         void* memory = malloc(size);
+        TracyAlloc(memory, size);
 
         {
             std::scoped_lock<std::mutex> lock(s_Data->m_Mutex);
@@ -105,6 +110,7 @@ namespace Crowny
         if (!found)
             CW_ENGINE_WARN("Memory: Memory block {0} not present in alloc map", memory);
 
+        TracyFree(memory);
         free(memory);
     }
 

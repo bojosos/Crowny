@@ -42,7 +42,8 @@ namespace Crowny
         { "BC5", 0, PFF_COMPRESSED, PCT_BYTE, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
         { "BC6H", 0, PFF_COMPRESSED, PCT_FLOAT16, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
         { "BC7", 0, PFF_COMPRESSED | PFF_HASALPHA, PCT_BYTE, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-        { "BGRA8", 4, PFF_INTEGER | PFF_HASALPHA | PFF_NORMALIZED, PCT_BYTE, 4, 8, 8, 8, 8, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000, 16, 8, 0, 24 },
+        { "BGRA8", 4, PFF_INTEGER | PFF_HASALPHA | PFF_NORMALIZED, PCT_BYTE, 4, 8, 8, 8, 8, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000, 16, 8, 0,
+          24 },
     };
     static_assert(std::size(g_PixelFormats) == (int)TextureFormat::FormatCount);
 
@@ -61,7 +62,8 @@ namespace Crowny
 
     glm::ivec2 PixelUtils::GetBlockDimensions(TextureFormat format)
     {
-        switch (format) {
+        switch (format)
+        {
         case TextureFormat::BC1:
         case TextureFormat::BC1a:
         case TextureFormat::BC2:
@@ -208,7 +210,8 @@ namespace Crowny
             return;
         }
 
-        if (IsCompressedFormat(src.GetFormat()) && src.GetFormat() != dst.GetFormat()) {
+        if (IsCompressedFormat(src.GetFormat()) && src.GetFormat() != dst.GetFormat())
+        {
             CW_ENGINE_ASSERT(false, "Cannot convert from compressed format");
             return;
         }

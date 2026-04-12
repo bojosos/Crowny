@@ -2,13 +2,17 @@
 
 #include "Crowny/Import/Importer.h"
 
+#include <tracy/Tracy.hpp>
+
 #include "Crowny/Import/AudioClipImporter.h"
 #include "Crowny/Import/FontImporter.h"
+#include "Crowny/Import/MaterialImporter.h"
 #include "Crowny/Import/MeshImporter.h"
+#include "Crowny/Import/NodeGraphImporter.h"
+#include "Crowny/Import/PrefabImporter.h"
+#include "Crowny/Import/SceneImporter.h"
 #include "Crowny/Import/ScriptImporter.h"
 #include "Crowny/Import/ShaderImporter.h"
-#include "Crowny/Import/MaterialImporter.h"
-#include "Crowny/Import/SceneImporter.h"
 #include "Crowny/Import/TextFileImporter.h"
 #include "Crowny/Import/TextureImporter.h"
 
@@ -94,6 +98,8 @@ namespace Crowny
         Importer::Get().RegisterImporter(new MaterialImporter());
         Importer::Get().RegisterImporter(new MeshImporter());
         Importer::Get().RegisterImporter(new SceneImporter());
+        Importer::Get().RegisterImporter(new PrefabImporter());
+        Importer::Get().RegisterImporter(new NodeGraphImporter());
     }
 
     SpecificImporter* Importer::PrepareForImport(const Path& filepath, Ref<const ImportOptions>& importOptions) const
@@ -122,6 +128,7 @@ namespace Crowny
 
     Ref<Asset> Importer::Import(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
+        ZoneScopedN("Importer::Import");
         CW_ENGINE_INFO("Importing asset: {0}", filepath);
         SpecificImporter* importer = PrepareForImport(filepath, importOptions);
         if (importer == nullptr)

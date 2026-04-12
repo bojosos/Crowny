@@ -126,9 +126,32 @@ namespace Crowny
         VulkanCommandBufferPool(VulkanDevice& device);
         ~VulkanCommandBufferPool();
 
+        // Gets a command buffer for the given queue family.
+        // Thread-safe: creates per-thread command pools lazily.
         VulkanCmdBuffer* GetBuffer(uint32_t queueFamily, bool secondary);
 
     private:
+        // Key: (queueFamily, threadId) — each thread gets its own VkCommandPool
+        struct PoolKey
+        {
+            uint32_t QueueFamily;
+            std::thread::id ThreadId;
+
+            bool operator==(const PoolKey& other) const { return QueueFamily == other.QueueFamily && ThreadId == other.ThreadId; }
+        };
+
+        struct PoolKeyHash
+        {
+            size_t operator()(const PoolKey& key) const
+            {
+                size_t h1 = std::hash<uint32_t>{}(key.QueueFamily);
+                size_t h2 = std::hash<std::thread::id>{}(key.ThreadId);
+                // boost::hash_combine style
+                h1 ^= h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2);
+                return h1;
+            }
+        };
+
         struct PoolInfo
         {
             VkCommandPool Pool = VK_NULL_HANDLE;
@@ -136,11 +159,13 @@ namespace Crowny
             uint32_t QueueFamily = -1;
         };
 
-        VulkanCmdBuffer* CreateBuffer(uint32_t queueFamily, bool secondary);
+        PoolInfo& GetOrCreatePool(uint32_t queueFamily, std::thread::id threadId);
+        VulkanCmdBuffer* CreateBuffer(uint32_t queueFamily, VkCommandPool pool);
 
         VulkanDevice& m_Device;
-        UnorderedMap<uint32_t, PoolInfo> m_Pools;
-        uint32_t m_NextId = 1;
+        UnorderedMap<PoolKey, PoolInfo, PoolKeyHash> m_Pools;
+        Mutex m_PoolMutex;
+        std::atomic<uint32_t> m_NextId{ 1 };
     };
 
     class VulkanCmdBuffer

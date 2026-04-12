@@ -76,6 +76,10 @@ namespace Crowny
 
         void UIStats();
 
+    protected:
+        void OnStartUp() override;
+        void OnShutdown() override;
+
     private:
         b2World* m_PhysicsWorld2D = nullptr;
         b2World* m_TemporaryWorld2D = nullptr; // A world used for calculating mass
@@ -83,4 +87,6 @@ namespace Crowny
         Ref<Physics2DSettings> m_Settings;
         float m_TimestepAcc = 0.0f;
     };
+
+    extern Physics2D* gPhysics2D;
 } // namespace Crowny

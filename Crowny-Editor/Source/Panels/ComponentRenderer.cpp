@@ -55,7 +55,7 @@ namespace Crowny
             }
             const float framePadding = 2.0f;
             const float outlineSpacing = 1.0f;
-            const float lineHeight = GImGui->Font->FontSize + framePadding * 2.0f;
+            const float lineHeight = GImGui->FontSize + framePadding * 2.0f;
             const ImVec2 buttonSize = { lineHeight + 2.0f, lineHeight };
             const float inputItemWidth = (ImGui::GetContentRegionAvail().x - spacingX) / 3.0f - buttonSize.x;
 
@@ -78,6 +78,7 @@ namespace Crowny
                         value = resetValue;
                         modified = true;
                     }
+                    UndoRedo::Get().OnItemInteract();
                     ImGui::PopFont();
                 }
 
@@ -87,6 +88,7 @@ namespace Crowny
                 // ImGui::PushItemFlag(ImGuiItemFlags_MixedValue, renderMultiSelect);
                 bool wasTempInputActive = ImGui::TempInputIsActive(ImGui::GetID(("##" + label).c_str()));
                 modified |= UI::DragFloat(("##" + label).c_str(), &value, 0.1f, 0.0f, 0.0f, "%.2f", 0);
+                UndoRedo::Get().OnItemInteract();
 
                 // NOTE: Ugly hack to make tabbing behave the same as Enter (e.g marking it as manually modified)
                 /*if (modified && Input::IsKeyPressed(KeyCode::Tab))
@@ -136,7 +138,10 @@ namespace Crowny
         const Transform& localTransform = transform.GetLocalTransform();
         glm::vec3 position = localTransform.GetPosition();
         if (DrawVec3Control("Transform", position))
+        {
             transform.SetPosition(position);
+            PrefabOverrideContext::MarkIfModified(true, "Position");
+        }
 
         const glm::vec3& eulerAngles = glm::eulerAngles(localTransform.GetRotation());
         glm::vec3 eulerDegrees = glm::degrees(eulerAngles);
@@ -145,12 +150,16 @@ namespace Crowny
         {
             const glm::vec3& eulerRadians = glm::radians(eulerDegrees);
             transform.SetRotation(glm::eulerAngleXYZ(eulerRadians.x, eulerRadians.y, eulerRadians.z));
+            PrefabOverrideContext::MarkIfModified(true, "Rotation");
         }
 
         ImGui::TableNextRow();
         glm::vec3 scale = localTransform.GetScale();
         if (DrawVec3Control("Scale", scale, 1.0f))
+        {
             transform.SetScale(scale);
+            PrefabOverrideContext::MarkIfModified(true, "Scale");
+        }
 
         ImGui::EndTable();
     }
@@ -294,7 +303,7 @@ namespace Crowny
             if (FileSystem::OpenFileDialog(FileDialogType::OpenFile, outPaths, "Open Texture") && outPaths.size() >= 1)
             {
                 Ref<Texture> importedTexture = Importer::Get().Import<Texture>(outPaths[0]);
-                spriteRendererComponent.Texture = static_asset_cast<Texture>(AssetManager::Get().CreateAssetHandle(importedTexture));
+                spriteRendererComponent.Texture = static_asset_cast<Texture>(gAssetManager->CreateAssetHandle(importedTexture));
             }
         }
 
@@ -338,7 +347,7 @@ namespace Crowny
                 rb2d.SetAutoMass(autoMass, entity);
 
             ImGui::BeginDisabled(autoMass);
-            float mass = autoMass ? Physics2D::Get().CalculateMass(entity) : rb2d.GetMass();
+            float mass = autoMass ? gPhysics2D->CalculateMass(entity) : rb2d.GetMass();
             if (UI::Property("Mass", mass))
                 rb2d.SetMass(mass);
             ImGui::EndDisabled();

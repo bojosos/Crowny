@@ -4,19 +4,21 @@
 #include "Crowny/Import/Importer.h"
 #include "Crowny/RenderAPI/GraphicsPipeline.h"
 #include "Crowny/RenderAPI/RenderCommand.h"
+#include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/RenderAPI/UniformBufferBlock.h"
 #include "Crowny/RenderAPI/UniformParams.h"
 #include "Crowny/RenderAPI/VertexArray.h"
 #include "Crowny/RenderAPI/VertexBuffer.h"
 #include "Crowny/Renderer/Camera.h"
+#include "Crowny/Renderer/EnvironmentMap.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
 #include "Crowny/Renderer/Mesh.h"
-#include "Crowny/Renderer/Skybox.h"
 #include "Crowny/Utils/ShaderCompiler.h"
 
 #include <glm/gtc/type_ptr.hpp>
+#include <tracy/Tracy.hpp>
 
 #define renderstuff true
 
@@ -26,26 +28,68 @@ namespace Crowny
     float roughness = 0.5f;
     glm::vec4 albedo = glm::vec4(1.0f);
 
+    static const float s_SkyboxVertices[] = { -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f, -1.0f,
+                                              -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,
+                                              1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,
+                                              -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,
+                                              -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f };
+
+    static const uint32_t s_SkyboxIndices[] = {
+        0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23,
+    };
+
     struct ForwardRendererData
     {
         Ref<Material> SkyboxMaterial;
         Ref<Material> PbrMaterial;
-        Ref<Skybox> Skybox;
         Ref<VertexBuffer> SkyboxVbo;
         Ref<IndexBuffer> SkyboxIbo;
+
+        // BRDF LUT — scene-independent, generated once
+        Ref<Texture> BrdfLUT;
+
+        // Default environment (fallback when scene has none)
+        Ref<EnvironmentMap> DefaultEnvironment;
+
+        // Per-frame state
+        glm::mat4 ViewProjection;
+        glm::vec3 CamPos;
+        float Gamma = 2.2f;
+        float Exposure = 4.5f;
+
+        // Active environment for current frame
+        Ref<Texture> ActiveIrradiance;
+        Ref<Texture> ActivePrefiltered;
+        Ref<Texture> ActiveCubemap;
     };
 
     static ForwardRendererData* s_Data;
 
-    float skyboxVertices2[] = { -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f, -1.0f,
-                                -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,
-                                1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,
-                                -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,
-                                -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f };
+    static void GenerateBRDFLUT()
+    {
+        auto& rapi = (*gRenderAPI);
+        TextureParameters tProps;
+        tProps.Width = 512;
+        tProps.Height = 512;
+        tProps.Format = TextureFormat::RG32F;
+        tProps.Usage = TextureUsage::TEXTURE_RENDERTARGET;
+        tProps.DebugName = "ForwardRenderer/BrdfLUT";
+        s_Data->BrdfLUT = Texture::Create(tProps);
 
-    uint32_t skyboxIndices2[] = {
-        0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23,
-    };
+        RenderTextureProperties rtProps;
+        rtProps.Width = tProps.Width;
+        rtProps.Height = tProps.Height;
+        rtProps.ColorSurfaces[0] = { s_Data->BrdfLUT };
+        Ref<RenderTexture> target = RenderTexture::Create(rtProps);
+
+        AssetHandle<Shader> shaderHandle = gAssetManager->Load<Shader>(BRDF_SHADER_PATH);
+        Ref<Material> brdfMaterial = Material::Create(shaderHandle);
+        rapi.SetRenderTarget(target);
+        rapi.SetGraphicsPipeline(brdfMaterial->GetGraphicsPipeline());
+        rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
+        rapi.SetUniforms(brdfMaterial->GetUniformParams());
+        rapi.Draw(0, 3, 1);
+    }
 
     void ForwardRenderer::Init()
     {
@@ -53,69 +97,71 @@ namespace Crowny
         return;
 #endif
         s_Data = new ForwardRendererData();
-        // Ref<UniformParams>& uniforms = InspectorPanel::GetSelectedMaterial()->GetUniformParams();
 
-        AssetHandle<Shader> pbriblHandle = AssetManager::Get().Load<Shader>(PBRIBL_SHADER_PATH);
-        // Ref<Shader> pbriblShader = Importer::Get().Import<Shader>("Resources/Shaders/Pbribl.glsl");
-        // AssetManager::Get().Save(pbriblShader, PBRIBL_SHADER_PATH);
-        // const AssetHandle<Shader> pbriblHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(pbriblShader));
-        s_Data->PbrMaterial = Material::Create(pbriblHandle);
-        s_Data->Skybox = CreateRef<Skybox>("Resources/Textures/envmap.hdr");
+        // Generate scene-independent BRDF LUT
+        GenerateBRDFLUT();
 
-        // TODO: Cube drawing code!!!!
-        s_Data->SkyboxVbo = VertexBuffer::Create(skyboxVertices2, sizeof(skyboxVertices2));
+        // Default PBR material
+        AssetHandle<Shader> pbriblHandle = gAssetManager->Load<Shader>(PBRIBL_SHADER_PATH);
+        s_Data->PbrMaterial = Material::CreatePBR(pbriblHandle);
+
+        // Default environment
+        s_Data->DefaultEnvironment = CreateRef<EnvironmentMap>("Resources/Textures/envmap.hdr");
+
+        // Skybox mesh (single copy)
+        s_Data->SkyboxVbo = VertexBuffer::Create((float*)s_SkyboxVertices, sizeof(s_SkyboxVertices));
         s_Data->SkyboxVbo->SetLayout(CreateRef<BufferLayout>(BufferLayout{ { ShaderDataType::Float3, "inPos" } }));
-        s_Data->SkyboxIbo = IndexBuffer::Create(skyboxIndices2, sizeof(skyboxIndices2) / sizeof(uint32_t));
+        s_Data->SkyboxIbo = IndexBuffer::Create((uint32_t*)s_SkyboxIndices, 36);
 
-        AssetHandle<Shader> skyboxHandle = AssetManager::Get().Load<Shader>(SKYBOX_SHADER_PATH);
-        // Ref<Shader> skyboxShader = Importer::Get().Import<Shader>("Resources/Shaders/Skybox.glsl");
-        // AssetManager::Get().Save(skyboxShader, SKYBOX_SHADER_PATH);
-        // const AssetHandle<Shader> skyboxHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(skyboxShader));
+        // Skybox material
+        AssetHandle<Shader> skyboxHandle = gAssetManager->Load<Shader>(SKYBOX_SHADER_PATH);
         s_Data->SkyboxMaterial = Material::Create(skyboxHandle);
-        s_Data->SkyboxMaterial->SetTexture("samplerEnv", s_Data->Skybox->m_EnvironmentMap);
-
-        // Ref<Texture> albedo = Importer::Import()
-        // Ref<Texture> diffuse = Importer::Get().Import<Texture>("C:\\dev\\Projects\\Project1\\Assets\\Models\\Achates\\textures\\mn_rpat_00_d.png");
-        // Ref<Texture> normals = Importer::Get().Import<Texture>("C:\\dev\\Projects\\Project1\\Assets\\Models\\Achates\\textures\\mn_rpat_00_n.png");
-        Ref<Texture> diffuse = Importer::Get().Import<Texture>(
-          "C:\\dev\\Projects\\Project1\\Assets\\Models\\b33-pollinator-robot\\textures\\Bee_low_03_-_Default_BaseColor.png");
-        Ref<Texture> normals = Importer::Get().Import<Texture>(
-          "C:\\dev\\Projects\\Project1\\Assets\\Models\\b33-pollinator-robot\\textures\\Bee_low_03_-_Default_BaseColor.png");
-        s_Data->PbrMaterial->SetTexture("albedoMap", diffuse);
-        s_Data->PbrMaterial->SetTexture("metallicMap", Texture::WHITE);
-        s_Data->PbrMaterial->SetTexture("roughnessMap", Texture::WHITE);
-        s_Data->PbrMaterial->SetTexture("normalMap", normals);
-        s_Data->PbrMaterial->SetTexture("aoMap", Texture::WHITE);
-
-        s_Data->PbrMaterial->SetTexture("samplerIrradiance", s_Data->Skybox->m_IrradianceMap);
-        s_Data->PbrMaterial->SetTexture("samplerBRDFLUT", s_Data->Skybox->m_Brdf);
-        s_Data->PbrMaterial->SetTexture("prefilteredMap", s_Data->Skybox->m_PrefilteredMap);
-        // s_Data->Test
     }
 
     void ForwardRenderer::Begin() {}
 
-    void ForwardRenderer::BeginScene(const Camera& camera, const glm::mat4& viewMatrix)
+    static void SetupSceneUniforms(const glm::mat4& projection, const glm::mat4& viewMatrix, const glm::vec3& cameraPosition)
     {
-        auto& rapi = RenderAPI::Get();
-        rapi.ClearViewport(FBT_COLOR | FBT_DEPTH);
+        s_Data->ViewProjection = projection * viewMatrix;
+        s_Data->CamPos = cameraPosition;
+
+        // Skybox
         glm::mat4 inv = glm::mat4(glm::mat3(viewMatrix));
-        s_Data->SkyboxMaterial->SetMatrix("mvp", camera.GetProjection() * inv);
+        s_Data->SkyboxMaterial->SetMatrix("mvp", projection * inv);
+        s_Data->SkyboxMaterial->SetFloat("gamma", s_Data->Gamma);
+        s_Data->SkyboxMaterial->SetFloat("exposure", s_Data->Exposure);
+    }
 
-        // glm::vec4 lightPositions[] = { glm::vec4(-10.0f, 10.0f, 10.0f, 1.0f), glm::vec4(10.0f, 10.0f, 10.0f, 1.0f),
-        //                               // glm::vec4(-10.0f, -10.0f, 10.0f, 1.0f), glm::vec4(10.0f, -10.0f, 10.0f, 1.0f) };
-        // glm::vec3 lightColors[] = { glm::vec//3(300.0f, 300.0f, 300.0f), glm::vec3(300.0f, 300.0f, 300.0f),
-        //                             glm::vec3(300.0f, 300.0f, 300.0f), glm::vec3(300.0f, 300.0f, 300.0f) };
-        const float gamma = 2.2f;
-        const float exposure = 4.5f;
-        s_Data->SkyboxMaterial->SetFloat("gamma", gamma);
-        s_Data->SkyboxMaterial->SetFloat("exposure", exposure);
-        s_Data->PbrMaterial->SetFloat("gamma", gamma);
-        s_Data->PbrMaterial->SetFloat("exposure", exposure);
-        const glm::vec3 camPos = camera.GetPosition();
-        s_Data->PbrMaterial->SetVector3("camPos", camPos);
-        s_Data->PbrMaterial->SetMatrix("viewProjection", camera.GetProjection() * viewMatrix);
+    static void BindEnvironment(const Ref<EnvironmentMap>& env)
+    {
+        if (env && env->IsValid())
+        {
+            s_Data->ActiveIrradiance = env->GetIrradianceMap();
+            s_Data->ActivePrefiltered = env->GetPrefilteredMap();
+            s_Data->ActiveCubemap = env->GetEnvironmentCubemap();
+        }
+        else if (s_Data->DefaultEnvironment && s_Data->DefaultEnvironment->IsValid())
+        {
+            s_Data->ActiveIrradiance = s_Data->DefaultEnvironment->GetIrradianceMap();
+            s_Data->ActivePrefiltered = s_Data->DefaultEnvironment->GetPrefilteredMap();
+            s_Data->ActiveCubemap = s_Data->DefaultEnvironment->GetEnvironmentCubemap();
+        }
+        else
+        {
+            s_Data->ActiveIrradiance = nullptr;
+            s_Data->ActivePrefiltered = nullptr;
+            s_Data->ActiveCubemap = nullptr;
+        }
 
+        // Bind cubemap to skybox material
+        if (s_Data->ActiveCubemap)
+            s_Data->SkyboxMaterial->SetTexture("samplerEnv", s_Data->ActiveCubemap);
+    }
+
+    static void DrawSkybox(RenderAPI& rapi)
+    {
+        if (!s_Data->ActiveCubemap)
+            return;
         rapi.SetGraphicsPipeline(s_Data->SkyboxMaterial->GetGraphicsPipeline());
         rapi.SetVertexBuffers(0, &s_Data->SkyboxVbo, 1);
         rapi.SetVertexLayout(s_Data->SkyboxVbo->GetLayout());
@@ -124,11 +170,62 @@ namespace Crowny
         rapi.DrawIndexed(0, s_Data->SkyboxIbo->GetCount(), 0, 1);
     }
 
+    static void ApplySceneUniforms(const Ref<Material>& material, const glm::mat4& model)
+    {
+        material->SetMatrix("viewProjection", s_Data->ViewProjection);
+        material->SetMatrix("model", model);
+        material->SetVector3("camPos", s_Data->CamPos);
+        material->SetFloat("gamma", s_Data->Gamma);
+        material->SetFloat("exposure", s_Data->Exposure);
+
+        // IBL textures
+        if (material->HasBinding("samplerIrradiance") && s_Data->ActiveIrradiance)
+        {
+            material->SetTexture("samplerIrradiance", s_Data->ActiveIrradiance);
+            material->SetTexture("samplerBRDFLUT", s_Data->BrdfLUT);
+            material->SetTexture("prefilteredMap", s_Data->ActivePrefiltered);
+        }
+    }
+
+    void ForwardRenderer::BeginScene(const Camera& camera, const glm::mat4& viewMatrix, const Ref<EnvironmentMap>& environment)
+    {
+        ZoneScopedN("ForwardRenderer::BeginScene");
+        auto& rapi = (*gRenderAPI);
+        rapi.ClearViewport(FBT_COLOR | FBT_DEPTH);
+        BindEnvironment(environment);
+        SetupSceneUniforms(camera.GetProjection(), viewMatrix, camera.GetPosition());
+        DrawSkybox(rapi);
+    }
+
+    void ForwardRenderer::BeginScene(const glm::mat4& projection, const glm::mat4& viewMatrix, const glm::vec3& cameraPosition,
+                                     const Ref<EnvironmentMap>& environment)
+    {
+        ZoneScopedN("ForwardRenderer::BeginScene");
+        auto& rapi = (*gRenderAPI);
+        rapi.ClearViewport(FBT_COLOR | FBT_DEPTH);
+        BindEnvironment(environment);
+        SetupSceneUniforms(projection, viewMatrix, cameraPosition);
+        DrawSkybox(rapi);
+    }
+
     void ForwardRenderer::SubmitLightSetup() {}
+
+    static void DrawMaterialPasses(RenderAPI& rapi, const Ref<Material>& material, DrawMode drawMode, uint32_t indexOffset, uint32_t indexCount,
+                                   uint32_t vertexCount)
+    {
+        for (uint32_t p = 0; p < material->GetPassCount(); p++)
+        {
+            rapi.SetGraphicsPipeline(material->GetGraphicsPipeline(p));
+            rapi.SetUniforms(material->GetUniformParams(p));
+            rapi.SetDrawMode(drawMode);
+            rapi.DrawIndexed(indexOffset, indexCount, 0, vertexCount);
+        }
+    }
 
     void ForwardRenderer::Submit(const AssetHandle<Mesh>& mesh, const Vector<AssetHandle<Material>>& materials, const glm::mat4& transform)
     {
-        RenderAPI& rapi = RenderAPI::Get();
+        ZoneScopedN("ForwardRenderer::Submit");
+        RenderAPI& rapi = (*gRenderAPI);
         const Vector<SubMesh>& subMeshes = mesh->GetSubMeshes();
 
         auto getMaterial = [&](uint32_t index) -> Ref<Material> {
@@ -145,41 +242,29 @@ namespace Crowny
 
         if (subMeshes.empty())
         {
-            // Single mesh — no sub-meshes
             Ref<Material> renderMaterial = getMaterial(0);
+            ApplySceneUniforms(renderMaterial, transform);
             renderMaterial->SetColor("albedo", albedo);
             renderMaterial->SetFloat("roughness", roughness);
             renderMaterial->SetFloat("metalness", metalness);
-            renderMaterial->SetMatrix("model", transform);
-            rapi.SetGraphicsPipeline(renderMaterial->GetGraphicsPipeline());
-            rapi.SetUniforms(renderMaterial->GetUniformParams());
-            rapi.SetDrawMode(mesh->GetDrawMode());
-            rapi.DrawIndexed(0, mesh->GetIndexCount(), 0, mesh->GetVertexCount());
+            DrawMaterialPasses(rapi, renderMaterial, mesh->GetDrawMode(), 0, mesh->GetIndexCount(), mesh->GetVertexCount());
         }
         else
         {
-            // Per sub-mesh rendering
             for (uint32_t i = 0; i < (uint32_t)subMeshes.size(); i++)
             {
                 const SubMesh& sub = subMeshes[i];
                 Ref<Material> renderMaterial = getMaterial(i);
+                ApplySceneUniforms(renderMaterial, transform);
                 renderMaterial->SetColor("albedo", albedo);
                 renderMaterial->SetFloat("roughness", roughness);
                 renderMaterial->SetFloat("metalness", metalness);
-                renderMaterial->SetMatrix("model", transform);
-                rapi.SetGraphicsPipeline(renderMaterial->GetGraphicsPipeline());
-                rapi.SetUniforms(renderMaterial->GetUniformParams());
-                rapi.SetDrawMode(sub.MeshDrawMode);
-                rapi.DrawIndexed(sub.IndexOffset, sub.IndexCount, 0, mesh->GetVertexCount());
+                DrawMaterialPasses(rapi, renderMaterial, sub.MeshDrawMode, sub.IndexOffset, sub.IndexCount, mesh->GetVertexCount());
             }
         }
     }
 
-    void ForwardRenderer::SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform)
-    {
-        // s_Data->Mvp->Write(sizeof(glm::mat4) * 2, glm::value_ptr(transform), sizeof(glm::mat4));
-        // mesh->Draw();
-    }
+    void ForwardRenderer::SubmitMesh(const Ref<Mesh>& mesh, const glm::mat4& transform) {}
 
     void ForwardRenderer::EndScene() {}
 

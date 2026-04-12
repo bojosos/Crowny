@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/StringID.h"
 #include "Crowny/Common/Uuid.h"
 
 #include <cereal/cereal.hpp>
@@ -38,4 +39,15 @@ namespace std
 namespace Crowny
 {
     template <class Archive> void Serialize(Archive& archive, UUID& uuid) { archive(uuid.m_Data[0], uuid.m_Data[1], uuid.m_Data[2], uuid.m_Data[3]); }
+    template <class Archive> void Save(Archive& archive, const StringID& id)
+    {
+        String str = id.c_str();
+        archive(str);
+    }
+    template <class Archive> void Load(Archive& archive, StringID& id)
+    {
+        String str;
+        archive(str);
+        id = StringID(str);
+    }
 } // namespace Crowny

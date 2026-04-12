@@ -12,6 +12,11 @@ newoption {
 }
 
 newoption {
+	trigger = "with-nodes",
+	description = "Enable node editor (requires ImGui 1.87+)"
+}
+
+newoption {
 	trigger = "sanitizer",
 	value = "TYPE",
 	description = "Enable sanitizer (clang/gcc only)",
@@ -91,6 +96,10 @@ IncludeDir["mbedtls"] = "%{wks.location}/Crowny/Dependencies/mbedtls/include"
 IncludeDir["tracy"] = "%{wks.location}/Crowny/Dependencies/tracy/public"
 IncludeDir["basis_universal"] = "%{wks.location}/Crowny/Dependencies/"
 IncludeDir["catch2"] = "%{wks.location}/Crowny/Dependencies/catch2/src"
+if _OPTIONS["with-nodes"] then
+	IncludeDir["ImNodeFlow"] = "%{wks.location}/Crowny/Dependencies/ImNodeFlow/include"
+	IncludeDir["ImguiNodeEditor"] = "%{wks.location}/Crowny/Dependencies/imgui-node-editor"
+end
 
 -- installed/platform
 if os.host() == "linux" then
@@ -137,6 +146,10 @@ group "Dependencies"
 	include "Crowny/Dependencies/tracy"
 	include "Crowny/Dependencies/basis_universal"
 	include "Crowny/Dependencies/catch2"
+	if _OPTIONS["with-nodes"] then
+		include "Crowny/Dependencies/ImNodeFlow"
+		include "Crowny/Dependencies/imgui-node-editor"
+	end
 group ""
 
 include "Crowny"

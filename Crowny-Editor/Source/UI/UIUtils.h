@@ -424,7 +424,7 @@ namespace Crowny
             String preview;
             float itemHeight = size.y / 20.0f;
 
-            const auto view = SceneManager::GetActiveScene()->GetAllEntitiesWith<TagComponent>();
+            const auto view = gSceneManager->GetActiveScene()->GetAllEntitiesWith<TagComponent>();
             String current = selectedScript;
 
             if (ImGui::GetItemFlags() & ImGuiItemFlags_Disabled)
@@ -490,7 +490,7 @@ namespace Crowny
                             {
                                 forwardFocus = true;
                                 // ActivateItem moves keyboard navigation focus inside of the window
-                                ImGui::ActivateItem(listID);
+                                ImGui::ActivateItemByID(listID);
                                 ImGui::SetKeyboardFocusHere(1);
                             }
                         }
@@ -548,7 +548,7 @@ namespace Crowny
                 float width = ImGui::GetContentRegionAvail().x;
                 float itemHeight = 28.0f;
 
-                String buttonText = Physics2D::Get().GetLayerName(selectedLayer);
+                String buttonText = gPhysics2D->GetLayerName(selectedLayer);
                 String layerSearchPopupId = UI::GenerateLabelID("EntitySearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
@@ -580,7 +580,7 @@ namespace Crowny
             String preview;
             float itemHeight = size.y / 20.0f;
 
-            const auto view = SceneManager::GetActiveScene()->GetAllEntitiesWith<TagComponent>();
+            const auto view = gSceneManager->GetActiveScene()->GetAllEntitiesWith<TagComponent>();
             uint32_t current = selectedLayerMask;
 
             if (ImGui::GetItemFlags() & ImGuiItemFlags_Disabled)
@@ -623,14 +623,14 @@ namespace Crowny
                             {
                                 forwardFocus = true;
                                 // ActivateItem moves keyboard navigation focus inside of the window
-                                ImGui::ActivateItem(listID);
+                                ImGui::ActivateItemByID(listID);
                                 ImGui::SetKeyboardFocusHere(1);
                             }
                         }
 
                         for (uint32_t i = 0; i < 32; i++)
                         {
-                            const String& layerName = Physics2D::Get().GetLayerName(i);
+                            const String& layerName = gPhysics2D->GetLayerName(i);
                             if (layerName.empty() || !searchString.empty() && !StringUtils::IsSearchMathing(layerName, searchString))
                                 continue;
 
@@ -673,7 +673,7 @@ namespace Crowny
             // String preview;
             // float itemHeight = size.y / 20.0f;
 
-            const auto view = SceneManager::GetActiveScene()->GetAllEntitiesWith<TagComponent>();
+            const auto view = gSceneManager->GetActiveScene()->GetAllEntitiesWith<TagComponent>();
             Entity current = selectedEntity;
 
             if (ImGui::GetItemFlags() & ImGuiItemFlags_Disabled)
@@ -739,12 +739,12 @@ namespace Crowny
                             {
                                 forwardFocus = true;
                                 // ActivateItem moves keyboard navigation focus inside of the window
-                                ImGui::ActivateItem(listID);
+                                ImGui::ActivateItemByID(listID);
                                 ImGui::SetKeyboardFocusHere(1);
                             }
                         }
 
-                        Scene* scene = SceneManager::GetActiveScene().get();
+                        Scene* scene = gSceneManager->GetActiveScene().get();
                         for (auto e : view)
                         {
                             Entity entity = { e, scene };
@@ -793,7 +793,7 @@ namespace Crowny
             String preview;
             float itemHeight = size.y / 20.0f;
 
-            const auto view = SceneManager::GetActiveScene()->GetAllEntitiesWith<TagComponent>();
+            const auto view = gSceneManager->GetActiveScene()->GetAllEntitiesWith<TagComponent>();
             AssetHandle<Asset> current = assetHandle;
 
             if (ImGui::GetItemFlags() & ImGuiItemFlags_Disabled)
@@ -858,7 +858,7 @@ namespace Crowny
                             {
                                 forwardFocus = true;
                                 // ActivateItem moves keyboard navigation focus inside of the window
-                                ImGui::ActivateItem(listID);
+                                ImGui::ActivateItemByID(listID);
                                 ImGui::SetKeyboardFocusHere(1);
                             }
                         }
@@ -866,17 +866,17 @@ namespace Crowny
                         Vector<UUID> assets = ProjectLibrary::Get().GetAllAssets(assetType);
                         for (const auto& uuid : assets)
                         {
-                            // TODO: This shouldn't load
-                            AssetHandle<Asset> handle = AssetManager::Get().LoadFromUUID(uuid);
-                            const String& assetName = handle->GetName();
+                            String assetName = ProjectLibrary::Get().GetAssetName(uuid);
+                            if (assetName.empty())
+                                continue;
                             if (!searchString.empty() && !StringUtils::IsSearchMathing(assetName, searchString))
                                 continue;
 
-                            bool isSelected = current && (current->GetName() == handle->GetName());
+                            bool isSelected = current && current.GetUUID() == uuid;
                             if (ImGui::Selectable(assetName.c_str(), isSelected))
                             {
-                                current = handle;
-                                assetHandle = handle;
+                                assetHandle = gAssetManager->LoadFromUUID(uuid);
+                                current = assetHandle;
                                 modified = true;
                             }
 
@@ -974,8 +974,10 @@ namespace Crowny
                 float itemHeight = 28.0f;
 
                 String buttonText = "Null";
-                if (assetHandle)
+                if (assetHandle.IsLoaded())
                     buttonText = assetHandle->GetName();
+                else if (assetHandle.HasUUID())
+                    buttonText = ProjectLibrary::Get().GetAssetName(assetHandle.GetUUID());
                 String entitySearchPopupId = UI::GenerateLabelID("AssetSearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
@@ -1015,6 +1017,17 @@ namespace Crowny
             return modified;
         }
 
+        template <typename T> static bool AssetSearch(const String& label, AssetHandle<T>& assetHandle)
+        {
+            AssetHandle<Asset> asset = static_asset_cast<Asset>(assetHandle);
+            if (AssetReference(label, asset, T::GetStaticType()))
+            {
+                assetHandle = static_asset_cast<T>(asset);
+                return true;
+            }
+            return false;
+        }
+
         static bool AssetReference(const String& label, AssetHandle<Asset>& assetHandle, AssetType assetType)
         {
             bool modified = false;
@@ -1032,8 +1045,10 @@ namespace Crowny
                 float itemHeight = 28.0f;
 
                 String buttonText = "Null";
-                if (assetHandle)
+                if (assetHandle.IsLoaded())
                     buttonText = assetHandle->GetName();
+                else if (assetHandle.HasUUID())
+                    buttonText = ProjectLibrary::Get().GetAssetName(assetHandle.GetUUID());
                 String entitySearchPopupId = UI::GenerateLabelID("AssetSearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
@@ -1131,7 +1146,7 @@ namespace Crowny
         {
             CW_ENGINE_ASSERT(payload->DataSize == sizeof(uint32_t));
             uint32_t id = *(const uint32_t*)payload->Data;
-            Entity result{ (entt::entity)id, SceneManager::GetActiveScene().get() };
+            Entity result{ (entt::entity)id, gSceneManager->GetActiveScene().get() };
             return result;
         }
 
@@ -1141,7 +1156,7 @@ namespace Crowny
             if (!payload->IsDataType("Entity_ID"))
             {
                 UI::ScopedColor scope(ImGuiCol_DragDropTarget, IM_COL32(250, 20, 35, 255));
-                // Application::Get().GetWindow().SetCursor(Cursor::STOPSIGN);
+                // gApplication->GetWindow().SetCursor(Cursor::STOPSIGN);
                 ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
                 return ImGui::AcceptDragDropPayload("Entity_ID");
             }
@@ -1170,7 +1185,7 @@ namespace Crowny
             }
             // Draw red outline for invalid assets. Note that for the proper outline to appear has to be called.
             UI::ScopedColor scope(ImGuiCol_DragDropTarget, IM_COL32(250, 20, 35, 255));
-            // Application::Get().GetWindow().SetCursor(Cursor::STOPSIGN);
+            // gApplication->GetWindow().SetCursor(Cursor::STOPSIGN);
             ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
             ImGui::AcceptDragDropPayload(ID_ASSET_ITEM_PAYLOAD);
             return nullptr;
@@ -1197,7 +1212,7 @@ namespace Crowny
             }
             // Draw red outline for invalid assets. Note that for the proper outline to appear has to be called.
             UI::ScopedColor scope(ImGuiCol_DragDropTarget, IM_COL32(250, 20, 35, 255));
-            // Application::Get().GetWindow().SetCursor(Cursor::STOPSIGN);
+            // gApplication->GetWindow().SetCursor(Cursor::STOPSIGN);
             ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
             ImGui::AcceptDragDropPayload(ID_ASSET_ITEM_PAYLOAD);
             return nullptr;

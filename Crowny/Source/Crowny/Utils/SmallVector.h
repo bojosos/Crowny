@@ -1,13 +1,13 @@
 #pragma once
 
-#include "Crowny/Common/Types.h"
-#include "Crowny/Common/Log.h"
 #include "Crowny/Common/Assert.h"
+#include "Crowny/Common/Log.h"
+#include "Crowny/Common/Types.h"
 
-#include <iterator>
 #include <algorithm>
-#include <memory>
 #include <initializer_list>
+#include <iterator>
+#include <memory>
 
 namespace Crowny
 {
@@ -21,20 +21,11 @@ namespace Crowny
 
         SmallVector() : m_Elements(reinterpret_cast<Type*>(&m_StaticStorage)), m_Capacity(N), m_Size(0) {}
 
-        SmallVector(uint32_t size, const Type& value) : SmallVector()
-        {
-            assign(size, value);
-        }
+        SmallVector(uint32_t size, const Type& value) : SmallVector() { assign(size, value); }
 
-        explicit SmallVector(uint32_t size) : SmallVector()
-        {
-            resize(size);
-        }
+        explicit SmallVector(uint32_t size) : SmallVector() { resize(size); }
 
-        SmallVector(const SmallVector<Type, N>& other) : SmallVector()
-        {
-            assign(other.begin(), other.end());
-        }
+        SmallVector(const SmallVector<Type, N>& other) : SmallVector() { assign(other.begin(), other.end()); }
 
         SmallVector(SmallVector&& other) noexcept : SmallVector()
         {
@@ -55,10 +46,7 @@ namespace Crowny
             }
         }
 
-        SmallVector(std::initializer_list<Type> list) : SmallVector()
-        {
-            assign(list.begin(), list.end());
-        }
+        SmallVector(std::initializer_list<Type> list) : SmallVector() { assign(list.begin(), list.end()); }
 
         ~SmallVector()
         {
@@ -140,10 +128,26 @@ namespace Crowny
         Type* data() { return m_Elements; }
         const Type* data() const { return m_Elements; }
 
-        Type& front() { CW_ENGINE_ASSERT(!empty()); return m_Elements[0]; }
-        const Type& front() const { CW_ENGINE_ASSERT(!empty()); return m_Elements[0]; }
-        Type& back() { CW_ENGINE_ASSERT(!empty()); return m_Elements[m_Size - 1]; }
-        const Type& back() const { CW_ENGINE_ASSERT(!empty()); return m_Elements[m_Size - 1]; }
+        Type& front()
+        {
+            CW_ENGINE_ASSERT(!empty());
+            return m_Elements[0];
+        }
+        const Type& front() const
+        {
+            CW_ENGINE_ASSERT(!empty());
+            return m_Elements[0];
+        }
+        Type& back()
+        {
+            CW_ENGINE_ASSERT(!empty());
+            return m_Elements[m_Size - 1];
+        }
+        const Type& back() const
+        {
+            CW_ENGINE_ASSERT(!empty());
+            return m_Elements[m_Size - 1];
+        }
 
         void push_back(const Type& element)
         {
@@ -159,8 +163,7 @@ namespace Crowny
             new (&m_Elements[m_Size++]) Type(std::move(element));
         }
 
-        template <typename... Args>
-        void emplace_back(Args&&... args)
+        template <typename... Args> void emplace_back(Args&&... args)
         {
             if (m_Size == m_Capacity)
                 grow(m_Capacity * 2);
@@ -210,8 +213,7 @@ namespace Crowny
             m_Size = size;
         }
 
-        template <typename InputIt>
-        void assign(InputIt first, InputIt last)
+        template <typename InputIt> void assign(InputIt first, InputIt last)
         {
             clear();
             uint32_t count = static_cast<uint32_t>(std::distance(first, last));
@@ -236,8 +238,10 @@ namespace Crowny
 
         void grow(uint32_t newCapacity)
         {
-            if (newCapacity <= m_Capacity) return;
-            if (newCapacity < m_Capacity * 2) newCapacity = m_Capacity * 2;
+            if (newCapacity <= m_Capacity)
+                return;
+            if (newCapacity < m_Capacity * 2)
+                newCapacity = m_Capacity * 2;
 
             Type* newData = static_cast<Type*>(::operator new(newCapacity * sizeof(Type)));
             if (m_Size > 0)
@@ -265,4 +269,4 @@ namespace Crowny
         uint32_t m_Capacity;
         uint32_t m_Size;
     };
-}
+} // namespace Crowny

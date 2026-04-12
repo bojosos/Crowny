@@ -43,7 +43,7 @@ namespace Crowny
         EndYAMLSeq(out);
 
         SerializeValueYAML(out, "Gravity2D", settings->Gravity);
-        // out << YAML::Key << "DefaultMaterial" << YAML::Value << Physics2D::Get().GetDefaultMaterial();
+        // out << YAML::Key << "DefaultMaterial" << YAML::Value << gPhysics2D->GetDefaultMaterial();
         SerializeValueYAML(out, "VelocityIterations", settings->VelocityIterations);
         SerializeValueYAML(out, "PositionIterations", settings->PositionIterations);
 

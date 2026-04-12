@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Assets/Asset.h"
+#include "Crowny/Assets/AssetHandle.h"
 #include "Crowny/Common/Timestep.h"
 #include "Crowny/Common/Uuid.h"
 
@@ -11,7 +12,9 @@ namespace Crowny
     class Entity;
     class EnttEntity;
     class ComponentEditor;
+    class EnvironmentMap;
     class SceneSerializer;
+    class PrefabSerializer;
     class SceneRenderer;
     class ScriptRuntime;
     struct CameraComponent;
@@ -50,8 +53,14 @@ namespace Crowny
         void SetName(const String& name) { m_Name = name; }
         const Path& GetFilepath() const { return m_Filepath; }
 
+        void SetEnvironment(const Ref<EnvironmentMap>& env) { m_Environment = env; }
+        const Ref<EnvironmentMap>& GetEnvironment() const { return m_Environment; }
+
         bool IsEditorScene() const { return m_IsEditorScene; }
         void SetEditorScene(bool isEditor) { m_IsEditorScene = isEditor; }
+
+        const String& GetImGuiLayout() const { return m_ImGuiLayout; }
+        void SetImGuiLayout(const String& layout) { m_ImGuiLayout = layout; }
 
         void OnRuntimeStart();
         void OnRuntimePause();
@@ -67,7 +76,7 @@ namespace Crowny
         void OnUpdateRuntime(Timestep ts);
         void OnUpdateEditor(Timestep ts);
 
-        Entity GetPrimaryCameraEntity() const;
+        Entity GetPrimaryCameraEntity();
 
         bool HasScriptComponent(Entity entity, const String& namespaceName, const String& typeName) const;
         void AddScriptComponent(Entity entity, const String& namespaceName, const String& typeName, bool initialize = true);
@@ -96,16 +105,19 @@ namespace Crowny
         friend class ComponentEditor;
         friend class SceneRenderer;
         friend class SceneSerializer;
+        friend class PrefabSerializer;
         friend class Entity;
         friend class EnttEntity;
         bool m_IsEditorScene = false;
 
         String m_Name;
         Path m_Filepath;
+        String m_ImGuiLayout;
         entt::registry m_Registry;
         uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
 
         Entity* m_RootEntity = nullptr;
         UnorderedMap<UUID, entt::entity> m_EntityMap;
+        Ref<EnvironmentMap> m_Environment;
     };
 } // namespace Crowny

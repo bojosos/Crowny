@@ -73,7 +73,7 @@ namespace Crowny
                 stream->Read(sampleBuffer, bufferSize);
             }
             alGenBuffers(1, &m_BufferID);
-            gAudio().WriteToOpenALBuffer(m_BufferID, sampleBuffer, info);
+            gAudioManager->WriteToOpenALBuffer(m_BufferID, sampleBuffer, info);
             // TODO: Uncomment this m_StreamData = nullptr;
             // m_StreamOffset = 0;
             m_StreamSize = 0;

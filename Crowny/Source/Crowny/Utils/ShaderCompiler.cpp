@@ -9,6 +9,7 @@
 #include <spirv_cross/spirv_glsl.hpp>
 
 #include <shaderc/shaderc.hpp>
+#include <tracy/Tracy.hpp>
 
 #include <regex>
 
@@ -236,7 +237,7 @@ namespace Crowny
         };
         auto expect = [&strPosIter, &shader](char value) {
             CW_ENGINE_ASSERT(shader[strPosIter] == value, "Bad programmer");
-                
+
             strPosIter++;
         };
         auto isNext = [&strPosIter, &shader](const String& value) {
@@ -360,6 +361,7 @@ namespace Crowny
     Ref<BinaryShaderData> ShaderCompiler::CompileStage(const String& source, ShaderType shaderType, ShaderLanguage inputLanguage,
                                                        ShaderLanguageFlags outputLanguages, const UnorderedMap<String, String>& defines)
     {
+        ZoneScopedN("ShaderCompiler::CompileStage");
         Vector<uint8_t> shaderBinaryData;
 
         shaderc::Compiler compiler;
@@ -413,6 +415,7 @@ namespace Crowny
     ShaderDesc ShaderCompiler::Compile(const Path& path, const String& rawSource, ShaderLanguageFlags shaderLanguage,
                                        const UnorderedMap<String, String>& defines)
     {
+        ZoneScopedN("ShaderCompiler::Compile");
         const char* langToken = "#lang";
         const size_t langTokenLength = strlen(langToken);
         const size_t pos = rawSource.find(langToken, 0);
@@ -433,38 +436,44 @@ namespace Crowny
 
         String source = rawSource;
         auto blendState = PreparseBlendState(source);
-        // This will have to turn into one big loop that will create variants.
-        ShaderRenderPassDesc passDesc;
-        // TODO: blend states, raster, depth stencil
-        const auto sourceShaders = Parse(source);
-        for (const auto& [type, source] : sourceShaders)
+        const auto parsedPasses = Parse(source);
+        Vector<Ref<ShaderRenderPass>> renderPasses;
+
+        for (const auto& sourceShaders : parsedPasses)
         {
-            const Ref<BinaryShaderData> shaderData = CompileStage(source, type, inputLanguage, shaderLanguage, defines);
-            if (type == VERTEX_SHADER)
-                passDesc.VertexShader = shaderData;
-            else if (type == FRAGMENT_SHADER)
-                passDesc.FragmentShader = shaderData;
-            else if (type == GEOMETRY_SHADER)
-                passDesc.GeometryShader = shaderData;
-            else if (type == HULL_SHADER)
-                passDesc.DomainShader = shaderData;
-            else if (type == DOMAIN_SHADER)
-                passDesc.DomainShader = shaderData;
-            else if (type == COMPUTE_SHADER)
-                passDesc.ComputeShader = shaderData;
-            else if (type == RAYGEN_SHADER)
-                passDesc.RaygenShader = shaderData;
-            else if (type == HIT_SHADER)
-                passDesc.HitShader = shaderData;
-            else if (type == MISS_SHADER)
-                passDesc.MissShader = shaderData;
-            else
-                CW_ENGINE_ASSERT(false);
+            ShaderRenderPassDesc passDesc;
+            String passSourceCombined;
+            for (const auto& [type, stageSource] : sourceShaders)
+            {
+                passSourceCombined += stageSource;
+                const Ref<BinaryShaderData> shaderData = CompileStage(stageSource, type, inputLanguage, shaderLanguage, defines);
+                if (type == VERTEX_SHADER)
+                    passDesc.VertexShader = shaderData;
+                else if (type == FRAGMENT_SHADER)
+                    passDesc.FragmentShader = shaderData;
+                else if (type == GEOMETRY_SHADER)
+                    passDesc.GeometryShader = shaderData;
+                else if (type == HULL_SHADER)
+                    passDesc.DomainShader = shaderData;
+                else if (type == DOMAIN_SHADER)
+                    passDesc.DomainShader = shaderData;
+                else if (type == COMPUTE_SHADER)
+                    passDesc.ComputeShader = shaderData;
+                else if (type == RAYGEN_SHADER)
+                    passDesc.RaygenShader = shaderData;
+                else if (type == HIT_SHADER)
+                    passDesc.HitShader = shaderData;
+                else if (type == MISS_SHADER)
+                    passDesc.MissShader = shaderData;
+                else
+                    CW_ENGINE_ASSERT(false);
+            }
+            EvaluatePragmaDirectives(passSourceCombined, passDesc);
+            passDesc.BlendState = blendState;
+            renderPasses.push_back(ShaderRenderPass::Create(passDesc));
         }
-        EvaluatePragmaDirectives(source, passDesc);
-        passDesc.BlendState = blendState;
-        Ref<ShaderRenderPass> renderPass = ShaderRenderPass::Create(passDesc);
-        Ref<ShaderTechnique> technique = ShaderTechnique::Create({}, ShaderVariation(), { renderPass }); // TODO: tags and variations
+
+        Ref<ShaderTechnique> technique = ShaderTechnique::Create({}, ShaderVariation(), renderPasses);
         ShaderDesc shaderDesc;
         shaderDesc.Techniques = { technique };
         return shaderDesc;
@@ -472,6 +481,7 @@ namespace Crowny
 
     void ShaderCompiler::Reflect(const Vector<uint8_t>& shaderBinaryData, Ref<BinaryShaderData>& outData)
     {
+        ZoneScopedN("ShaderCompiler::Reflect");
         const spirv_cross::Compiler compiler((uint32_t*)shaderBinaryData.data(), shaderBinaryData.size() / sizeof(uint32_t));
         const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
         Ref<UniformDesc> uniformDesc = CreateRef<UniformDesc>();
@@ -613,7 +623,12 @@ namespace Crowny
             {
                 if (!shaderPassDesc.RasterizationState)
                     shaderPassDesc.RasterizationState = CreateRef<RasterizerStateDesc>();
-                shaderPassDesc.RasterizationState->CullMode = (value == "false" ? CullingMode::CULL_NONE : CullingMode::CULL_COUNTERCLOCKWISE);
+                if (value == "false")
+                    shaderPassDesc.RasterizationState->CullMode = CullingMode::CULL_NONE;
+                else if (value == "front")
+                    shaderPassDesc.RasterizationState->CullMode = CullingMode::CULL_CLOCKWISE;
+                else
+                    shaderPassDesc.RasterizationState->CullMode = CullingMode::CULL_COUNTERCLOCKWISE;
             }
             else
                 CW_ENGINE_WARN("Unrecognized #pragma {}={}", name, value);
@@ -621,43 +636,79 @@ namespace Crowny
         }
     }
 
-    UnorderedMap<ShaderType, String> ShaderCompiler::Parse(const String& source)
+    Vector<UnorderedMap<ShaderType, String>> ShaderCompiler::Parse(const String& source)
     {
-        UnorderedMap<ShaderType, String> shaderSources;
+        Vector<UnorderedMap<ShaderType, String>> passes;
 
+        // Split source into passes by #pass directives
+        Vector<String> passSources;
+        const char* passToken = "#pass";
+        size_t passPos = source.find(passToken, 0);
+        if (passPos == String::npos)
+        {
+            // No #pass directive — single pass (backward compatible)
+            passSources.push_back(source);
+        }
+        else
+        {
+            while (passPos != String::npos)
+            {
+                // Skip past "#pass N" line
+                size_t eol = source.find_first_of("\r\n", passPos);
+                size_t contentStart = (eol != String::npos) ? source.find_first_not_of("\r\n", eol) : String::npos;
+                size_t nextPass = source.find(passToken, contentStart != String::npos ? contentStart : passPos + 1);
+                if (contentStart != String::npos)
+                {
+                    String passSource =
+                      (nextPass == String::npos) ? source.substr(contentStart) : source.substr(contentStart, nextPass - contentStart);
+                    passSources.push_back(passSource);
+                }
+                passPos = nextPass;
+            }
+        }
+
+        // Parse each pass for #type directives
         const char* typeToken = "#type";
         const size_t typeTokenLength = strlen(typeToken);
-        size_t pos = source.find(typeToken, 0);
-        while (pos != String::npos)
+
+        for (const String& passSource : passSources)
         {
-            size_t eol = source.find_first_of("\r\n", pos);
-            CW_ENGINE_ASSERT(eol != String::npos, "Syntax error");
-            size_t begin = pos + typeTokenLength + 1;
-            String typeString = source.substr(begin, eol - begin);
-            ShaderType shaderType;
-            if (!GetShaderTypeFromString(typeString, shaderType))
+            UnorderedMap<ShaderType, String> shaderSources;
+            size_t pos = passSource.find(typeToken, 0);
+            while (pos != String::npos)
             {
-                CW_ENGINE_ERROR("Shader type string {0} not recognized.", typeString);
-                break;
+                size_t eol = passSource.find_first_of("\r\n", pos);
+                CW_ENGINE_ASSERT(eol != String::npos, "Syntax error");
+                size_t begin = pos + typeTokenLength + 1;
+                String typeString = passSource.substr(begin, eol - begin);
+                ShaderType shaderType;
+                if (!GetShaderTypeFromString(typeString, shaderType))
+                {
+                    CW_ENGINE_ERROR("Shader type string {0} not recognized.", typeString);
+                    break;
+                }
+
+                if (typeString == "compute")
+                {
+                    shaderSources[shaderType] = passSource.substr(begin + typeString.size());
+                    CW_ENGINE_ASSERT(shaderSources.size() == 1);
+                    passes.push_back(shaderSources);
+                    return passes;
+                }
+
+                size_t nextLinePos = passSource.find_first_not_of("\r\n", eol);
+                CW_ENGINE_ASSERT(nextLinePos != String::npos, "Syntax error");
+                pos = passSource.find(typeToken, nextLinePos);
+
+                shaderSources[shaderType] =
+                  (pos == String::npos) ? passSource.substr(nextLinePos) : passSource.substr(nextLinePos, pos - nextLinePos);
             }
-
-            if (typeString == "compute")
-            {
-                shaderSources[shaderType] = source.substr(begin + typeString.size());
-                CW_ENGINE_ASSERT(shaderSources.size() == 1);
-                return shaderSources;
-            }
-
-            size_t nextLinePos = source.find_first_not_of("\r\n", eol);
-            CW_ENGINE_ASSERT(nextLinePos != String::npos, "Syntax error");
-            pos = source.find(typeToken, nextLinePos);
-
-            shaderSources[shaderType] = (pos == String::npos) ? source.substr(nextLinePos) : source.substr(nextLinePos, pos - nextLinePos);
+            if (shaderSources.size() < 2)
+                CW_ENGINE_ERROR("You are required to provide at least a vertex and a fragment shader.");
+            passes.push_back(shaderSources);
         }
-        if (shaderSources.size() < 2)
-            CW_ENGINE_ERROR("You are required to provide at least a vertex and a fragment shader.");
 
-        return shaderSources;
+        return passes;
     }
 
 } // namespace Crowny

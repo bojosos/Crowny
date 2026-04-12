@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Crowny/Common/StdHeaders.h"
+#include "Crowny/Common/Assert.h"
 #include "Crowny/Common/Common.h"
 #include "Crowny/Common/Log.h"
-#include "Crowny/Common/Assert.h"
+#include "Crowny/Common/StdHeaders.h"
 
 namespace Crowny
 {

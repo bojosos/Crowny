@@ -9,9 +9,16 @@
 #include <imgui.h>
 
 #include <box2d/box2d.h>
+#include <tracy/Tracy.hpp>
 
 namespace Crowny
 {
+
+    Physics2D* gPhysics2D = nullptr;
+
+    void Physics2D::OnStartUp() { gPhysics2D = this; }
+
+    void Physics2D::OnShutdown() { gPhysics2D = nullptr; }
 
     static b2BodyType GetBox2DType(RigidbodyBodyType type)
     {
@@ -113,7 +120,7 @@ namespace Crowny
     Physics2D::Physics2D()
     {
         m_Settings = CreateRef<Physics2DSettings>();
-        m_Settings->DefaultMaterial = static_asset_cast<PhysicsMaterial2D>(AssetManager::Get().CreateAssetHandle(CreateRef<PhysicsMaterial2D>()));
+        m_Settings->DefaultMaterial = static_asset_cast<PhysicsMaterial2D>(gAssetManager->CreateAssetHandle(CreateRef<PhysicsMaterial2D>()));
         for (uint32_t i = 0; i < m_Settings->MaskBits.size(); i++)
             m_Settings->MaskBits[i] = 0xffffffff;
         m_TemporaryWorld2D = new b2World({ m_Settings->Gravity.x, m_Settings->Gravity.y });
@@ -165,9 +172,9 @@ namespace Crowny
     void Physics2D::SetCategoryMask(uint32_t idx, uint32_t mask)
     {
         m_Settings->MaskBits[idx] = mask;
-        if (SceneManager::GetSceneCount() == 0)
+        if (!gSceneManager->GetActiveScene())
             return;
-        Scene* scene = SceneManager::GetActiveScene().get();
+        Scene* scene = gSceneManager->GetActiveScene().get();
         auto view = scene->GetAllEntitiesWith<Rigidbody2DComponent>();
         for (auto e : view)
         {
@@ -187,6 +194,7 @@ namespace Crowny
 
     void Physics2D::BeginSimulation(Scene* scene)
     {
+        ZoneScopedN("Physics2D::BeginSimulation");
         if (m_ContactListener2D == nullptr)
             m_ContactListener2D = new ContactListener(scene); // Perhaps don't do this every time simulation starts
         m_PhysicsWorld2D = new b2World({ m_Settings->Gravity.x, m_Settings->Gravity.y });
@@ -253,7 +261,7 @@ namespace Crowny
 
         uint32_t layerMask = entity.HasComponent<Rigidbody2DComponent>() ? entity.GetComponent<Rigidbody2DComponent>().GetLayerMask() : 0;
         fixtureDef.filter.categoryBits = 1 << layerMask;
-        fixtureDef.filter.maskBits = Physics2D::Get().GetCategoryMask(layerMask);
+        fixtureDef.filter.maskBits = gPhysics2D->GetCategoryMask(layerMask);
 
         fixtureDef.isSensor = b2d.IsTrigger();
 
@@ -283,7 +291,7 @@ namespace Crowny
 
         uint32_t layerMask = entity.HasComponent<Rigidbody2DComponent>() ? entity.GetComponent<Rigidbody2DComponent>().GetLayerMask() : 0;
         fixtureDef.filter.categoryBits = 1 << layerMask;
-        fixtureDef.filter.maskBits = Physics2D::Get().GetCategoryMask(layerMask);
+        fixtureDef.filter.maskBits = gPhysics2D->GetCategoryMask(layerMask);
 
         fixtureDef.isSensor = cc2d.IsTrigger();
 
@@ -313,6 +321,7 @@ namespace Crowny
 
     void Physics2D::Step(Timestep ts, Scene* scene)
     {
+        ZoneScopedN("Physics2D::Step");
         auto view1 = scene->GetAllEntitiesWith<Rigidbody2DComponent>();
         for (auto e : view1)
         {
@@ -330,7 +339,7 @@ namespace Crowny
 
         m_TimestepAcc += ts;
 
-        const float fixedTimestep = Application::Get().GetTimeSettings()->FixedTimestep;
+        const float fixedTimestep = gApplication->GetTimeSettings()->FixedTimestep;
         while (m_TimestepAcc >= fixedTimestep)
         {
             auto view2 = scene->GetAllEntitiesWith<Rigidbody2DComponent>();

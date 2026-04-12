@@ -17,6 +17,9 @@ namespace Crowny
 #define SKYBOX_SHADER_PATH "Resources/Shaders/Skybox.asset"
 #define PBRIBL_SHADER_PATH "Resources/Shaders/Pbribl.asset"
 #define EQUIRECTTOCUBE_SHADER_PATH "Resources/Shaders/EquirectToCube.asset"
+#define TOON_SHADER_PATH "Resources/Shaders/Toon.asset"
+#define UNLIT_SHADER_PATH "Resources/Shaders/Unlit.asset"
+#define GRID_SHADER_PATH "Resources/Shaders/Grid.asset"
 
     // ------------- Batch Renderer -------------
 #define RENDERER_MAX_SPRITES 60000

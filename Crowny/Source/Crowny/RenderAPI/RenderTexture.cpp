@@ -36,7 +36,7 @@ namespace Crowny
 
     Ref<RenderTexture> RenderTexture::Create(const RenderTextureProperties& props)
     {
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
         // case RenderAPI::API::OpenGL: return CreateRef<OpenGLRenderTexture>(props);
         case RenderAPI::API::Vulkan:

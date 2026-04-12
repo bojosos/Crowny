@@ -4,6 +4,9 @@
 #include "ImGuiPanel.h"
 
 #include "Crowny/Import/ImportOptions.h"
+#include "Crowny/NodeGraph/NodeGraph.h"
+
+#include <functional>
 
 namespace Crowny
 {
@@ -38,6 +41,10 @@ namespace Crowny
         void SetSelectedAssetPath(const Path& filepath);
         void SetSelectedEntity(Entity e);
 
+        // Called with the graph that should be opened in the node editor panel.
+        // Set by EditorLayer so the inspector widget can open the panel without a hard dependency.
+        void SetOpenNodeEditorCallback(std::function<void(AssetHandle<NodeGraphAsset>)> cb) { m_OpenNodeEditorCallback = std::move(cb); }
+
     private:
         void RenderMaterialInspector();
         void RenderPhysicsMaterialInspector();
@@ -52,8 +59,7 @@ namespace Crowny
 
         void HandleInspectorDragDrop(Entity selectedEntity);
 
-        template<typename T>
-        T* BeginImportInspector();
+        template <typename T> T* BeginImportInspector();
         void EndImportInspector(float xOffset, float width);
 
         void DrawApplyRevert(float xOffset, float width);
@@ -76,5 +82,7 @@ namespace Crowny
         Entity m_InspectedEntity;
 
         ComponentEditor m_ComponentEditor; // Helper object for rendering components of entities
+
+        std::function<void(AssetHandle<NodeGraphAsset>)> m_OpenNodeEditorCallback;
     };
 } // namespace Crowny

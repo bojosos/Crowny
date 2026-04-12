@@ -33,7 +33,7 @@ namespace Crowny
         return *this;
     }
 
-    void AudioListenerComponent::Initialize() { m_Internal = gAudio().CreateListener(); }
+    void AudioListenerComponent::Initialize() { m_Internal = gAudioManager->CreateListener(); }
 
     void AudioListenerComponent::OnTransformChanged(const Transform& transform)
     {
@@ -44,7 +44,7 @@ namespace Crowny
     void AudioSourceComponent::OnInitialize()
     {
         if (m_Internal == nullptr)
-            m_Internal = gAudio().CreateSource();
+            m_Internal = gAudioManager->CreateSource();
         m_Internal->SetClip(m_AudioClip);
         m_Internal->SetVolume(m_Volume);
         m_Internal->SetPitch(m_Pitch);
@@ -187,7 +187,7 @@ namespace Crowny
         {
             b2Filter newFilter;
             newFilter.maskBits = 1 << layerMask;
-            newFilter.categoryBits = Physics2D::Get().GetCategoryMask(layerMask);
+            newFilter.categoryBits = gPhysics2D->GetCategoryMask(layerMask);
             if (e.HasComponent<BoxCollider2DComponent>())
                 e.GetComponent<BoxCollider2DComponent>().RuntimeFixture->SetFilterData(newFilter);
             if (e.HasComponent<CircleCollider2DComponent>())
@@ -288,7 +288,7 @@ namespace Crowny
         if (RuntimeBody != nullptr)
             RuntimeBody->ResetMassData();
         m_AutoMass = autoMass;
-        m_Mass = Physics2D::Get().CalculateMass(entity);
+        m_Mass = gPhysics2D->CalculateMass(entity);
     }
 
     void Rigidbody2DComponent::SetCenterOfMass(const glm::vec2& center)
@@ -338,7 +338,7 @@ namespace Crowny
     BoxCollider2DComponent::BoxCollider2DComponent() : Collider2D()
     {
         if (Physics2D::IsStartedUp())
-            m_Material = Physics2D::Get().GetDefaultMaterial();
+            m_Material = gPhysics2D->GetDefaultMaterial();
     }
 
     void BoxCollider2DComponent::SetOffset(const glm::vec2& offset, Entity entity)
@@ -346,8 +346,8 @@ namespace Crowny
         m_Offset = offset;
         if (RuntimeFixture != nullptr)
         {
-            Physics2D::Get().DestroyFixture(entity, *this);
-            Physics2D::Get().CreateBoxCollider(entity);
+            gPhysics2D->DestroyFixture(entity, *this);
+            gPhysics2D->CreateBoxCollider(entity);
         }
     }
 
@@ -356,15 +356,15 @@ namespace Crowny
         m_Size = size;
         if (RuntimeFixture != nullptr)
         {
-            Physics2D::Get().DestroyFixture(entity, *this);
-            Physics2D::Get().CreateBoxCollider(entity);
+            gPhysics2D->DestroyFixture(entity, *this);
+            gPhysics2D->CreateBoxCollider(entity);
         }
     }
 
     CircleCollider2DComponent::CircleCollider2DComponent() : Collider2D()
     {
         if (Physics2D::IsStartedUp())
-            m_Material = Physics2D::Get().GetDefaultMaterial();
+            m_Material = gPhysics2D->GetDefaultMaterial();
     }
 
     void CircleCollider2DComponent::SetRadius(float radius, Entity entity)
@@ -372,8 +372,8 @@ namespace Crowny
         m_Radius = radius;
         if (RuntimeFixture != nullptr)
         {
-            Physics2D::Get().DestroyFixture(entity, *this);
-            Physics2D::Get().CreateCircleCollider(entity);
+            gPhysics2D->DestroyFixture(entity, *this);
+            gPhysics2D->CreateCircleCollider(entity);
         }
     }
 
@@ -382,8 +382,8 @@ namespace Crowny
         m_Offset = offset;
         if (RuntimeFixture != nullptr)
         {
-            Physics2D::Get().DestroyFixture(entity, *this);
-            Physics2D::Get().CreateCircleCollider(entity);
+            gPhysics2D->DestroyFixture(entity, *this);
+            gPhysics2D->CreateCircleCollider(entity);
         }
     }
 

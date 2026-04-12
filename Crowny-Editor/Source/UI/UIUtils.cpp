@@ -5,12 +5,28 @@
 #include "UI/Properties.h"
 #include "UI/UIUtils.h"
 
+#include "Crowny/Ecs/Components.h"
+
 #include <backends/imgui_impl_vulkan.h>
 #include <imgui.h>
+#include <imgui_stacklayout_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
 
 namespace Crowny
 {
+
+    void PrefabOverrideContext::MarkIfModified(bool modified, const char* propertyName)
+    {
+        if (modified && s_ActivePrefabComponent)
+            s_ActivePrefabComponent->MarkOverridden(s_ActiveComponentName + "." + propertyName);
+    }
+
+    bool PrefabOverrideContext::IsOverridden(const char* propertyName)
+    {
+        if (!s_ActivePrefabComponent)
+            return false;
+        return s_ActivePrefabComponent->IsPropertyOverridden(s_ActiveComponentName + "." + propertyName);
+    }
 
     UIUtils::DialogResult UIUtils::ShowYesNoMessageBox(const String& title, const String& message, MessageBoxButtons buttons)
     {
@@ -102,10 +118,10 @@ namespace Crowny
     bool UIUtils::SearchWidget(String& searchString, const char* hint, bool* grabFocus)
     {
         UI::PushID();
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 1.0f);
         const bool layoutSuspended = [] {
             ImGuiWindow* window = ImGui::GetCurrentWindow();
-            if (window->DC.CurrentLayout)
+            ImGuiLayoutType lt = ImGuiInternal::GetCurrentLayoutType(window->ID);
+            if (lt == ImGuiLayoutType_Horizontal)
             {
                 ImGui::SuspendLayout();
                 return true;
@@ -141,7 +157,7 @@ namespace Crowny
 
         UI::DrawItemActivityOutline(3.0f, true, IM_COL32(236, 158, 36, 255));
 
-        ImGui::SetItemAllowOverlap();
+        ImGui::SetNextItemAllowOverlap();
 
         ImGui::SameLine(areaPosX + 5.0f);
 

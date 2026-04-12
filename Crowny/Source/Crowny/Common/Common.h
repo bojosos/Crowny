@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 #ifdef CW_DEBUG
 #define CW_ENABLE_ASSERTS
 #endif
@@ -37,6 +39,8 @@ class BinaryDataStreamOutputArchive;
 
 namespace Crowny
 {
+
+#include <cstddef>
 
 #define CW_SIMPLESERIALIZABLE(...) template <typename Archive> friend void Serialize(Archive& archive, __VA_ARGS__& type);
 

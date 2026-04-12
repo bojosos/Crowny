@@ -11,7 +11,7 @@ namespace Crowny
 
     Ref<IndexBuffer> IndexBuffer::Create(uint32_t count, IndexType indexType, BufferUsage usage)
     {
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::OpenGL:
             return CreateRef<OpenGLIndexBuffer>(count, indexType, usage);
@@ -27,7 +27,7 @@ namespace Crowny
 
     Ref<IndexBuffer> IndexBuffer::Create(uint16_t* indices, uint32_t count, BufferUsage usage)
     {
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::OpenGL:
             return CreateRef<OpenGLIndexBuffer>(indices, count, usage);
@@ -43,7 +43,7 @@ namespace Crowny
 
     Ref<IndexBuffer> IndexBuffer::Create(uint32_t* indices, uint32_t count, BufferUsage usage)
     {
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::OpenGL:
             return CreateRef<OpenGLIndexBuffer>(indices, count, usage);

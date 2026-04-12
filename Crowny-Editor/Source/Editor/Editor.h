@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/FileWatch.h"
 #include "Crowny/Common/Module.h"
 
 #include "Crowny/Common/FileSystem.h"
@@ -35,7 +36,9 @@ namespace Crowny
     class Editor : public Module<Editor>
     {
     public:
+        Editor(FileWatch::FileWatchCallback&& fileCallback);
         ~Editor() = default;
+
         const Path& GetProjectPath() const { return m_ProjectPath; }
         const String& GetProjectName() const { return m_ProjectName; }
         bool IsProjectLoaded() const { return !m_ProjectPath.empty(); }
@@ -69,6 +72,9 @@ namespace Crowny
         virtual void OnShutdown() override;
 
     private:
+        Scope<FileWatch> m_Watch;
+        FileWatch::FileWatchCallback m_FileWatchCallback;
+
         Path m_ProjectPath;
         Ref<ProjectSettings> m_ProjectSettings;
         Ref<EditorSettings> m_EditorSettings;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Common/StdHeaders.h"
+
 namespace Crowny
 {
     class VulkanCmdBuffer;
@@ -48,6 +50,7 @@ namespace Crowny
         VulkanDevice& m_Device;
         GpuQueueType m_Type;
         uint32_t m_Index;
+        Mutex m_SubmitMutex; // Protects vkQueueSubmit/vkQueuePresentKHR (not thread-safe for same queue)
 
         VkPipelineStageFlags m_SubmitDstWaitMask[MAX_UNIQUE_QUEUES];
         Vector<SubmitInfo> m_QueuedBuffers;

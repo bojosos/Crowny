@@ -63,7 +63,7 @@ namespace Crowny
         UnorderedMap<TextureViewDesc, Ref<TextureView>, TextureView::HashFunction, TextureView::EqualFunction> m_TextureViews;
         Texture(const TextureParameters& params);
         Texture(const TextureParameters& params, bool deferred); // Deferred init — no GPU work
-        Texture() = default; // For serialization only
+        Texture() = default;                                     // For serialization only
 
         TextureParameters m_Params;
         Ref<PixelData> m_PendingPixelData; // Stored during import, uploaded in Init()

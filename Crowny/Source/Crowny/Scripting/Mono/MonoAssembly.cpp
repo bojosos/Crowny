@@ -98,8 +98,7 @@ namespace Crowny
                     pdbStream->Read(m_DebugData, pdbSize);
 
                     // Check for portable PDB magic: "BSJB" at offset 0
-                    bool isPortablePdb = (m_DebugData[0] == 'B' && m_DebugData[1] == 'S' &&
-                                          m_DebugData[2] == 'J' && m_DebugData[3] == 'B');
+                    bool isPortablePdb = (m_DebugData[0] == 'B' && m_DebugData[1] == 'S' && m_DebugData[2] == 'J' && m_DebugData[3] == 'B');
                     if (isPortablePdb)
                     {
                         mono_debug_open_image_from_memory(image, m_DebugData, pdbSize);

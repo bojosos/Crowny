@@ -562,7 +562,8 @@ namespace Crowny
 
     void VulkanTexture::Init()
     {
-        if (m_Image) return; // Already initialized
+        if (m_Image)
+            return; // Already initialized
         m_ImageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         m_ImageCreateInfo.pNext = nullptr;
         m_ImageCreateInfo.flags = 0;
@@ -676,7 +677,7 @@ namespace Crowny
         nameInfo.pObjectName = m_Params.DebugName.c_str();
         // vkSetDebugUtilsObjectNameEXT(device.GetLogicalDevice(), &nameInfo);
         // CW_ENGINE_INFO("Image: {}, {}", (void*)image, m_Params.DebugName);
-        VmaAllocation allocation = device.AllocateMemory(image, memoryFlags);
+        VmaAllocation allocation = device.AllocateMemory(image, memoryFlags, m_Params.DebugName.c_str());
         return device.GetResourceManager().Create<VulkanImage>(image, allocation, m_ImageCreateInfo.initialLayout, m_ImageCreateInfo.format,
                                                                m_Params);
     }
@@ -701,7 +702,7 @@ namespace Crowny
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
         VkMemoryPropertyFlags flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-        VmaAllocation allocation = device.AllocateMemory(buffer, flags);
+        VmaAllocation allocation = device.AllocateMemory(buffer, flags, "Texture/Staging");
 
         uint32_t rowPitchInPixels = data.GetRowPitch() / blockSize;
         uint32_t slicePitchInPixels = data.GetSlicePitch() / blockSize;

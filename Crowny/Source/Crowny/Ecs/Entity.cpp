@@ -53,10 +53,10 @@ namespace Crowny
             return std::find(rc.Children.begin(), rc.Children.end(), *this) != rc.Children.end();
         else
         {
-            Entity curParent = rc.Parent;
+            Entity curParent = GetParent();
             while (curParent)
             {
-                if (curParent == *this)
+                if (curParent == parent)
                     return true;
                 curParent = curParent.GetParent();
             }
@@ -66,24 +66,18 @@ namespace Crowny
 
     const Vector<Entity>& Entity::GetChildren() const { return GetComponent<RelationshipComponent>().Children; }
 
-    Vector<Entity>& Entity::GetChildren()
-    {
-        return GetComponent<RelationshipComponent>().Children;
-    }
+    Vector<Entity>& Entity::GetChildren() { return GetComponent<RelationshipComponent>().Children; }
 
     uint32_t Entity::GetChildCount() const { return (uint32_t)GetComponent<RelationshipComponent>().Children.size(); }
 
     Entity Entity::GetParent() const { return GetComponent<RelationshipComponent>().Parent; }
 
     const UUID& Entity::GetUuid() const { return GetComponent<IDComponent>().Uuid; }
-    
+
     const TransformComponent& Entity::GetTransform() const { return GetComponent<TransformComponent>(); }
-    
-    TransformComponent& Entity::GetTransform()
-    {
-        return GetComponent<TransformComponent>();
-    }
-    
+
+    TransformComponent& Entity::GetTransform() { return GetComponent<TransformComponent>(); }
+
     const String& Entity::GetName() const { return GetComponent<TagComponent>().Tag; }
 
     void Entity::Destroy(bool destroyChildren)
@@ -97,6 +91,8 @@ namespace Crowny
                 child.Destroy(true);
             }
         }
+
+        m_Scene->m_EntityMap.erase(GetUuid());
 
         Entity parent = GetParent();
         if (parent)

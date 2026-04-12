@@ -3,6 +3,7 @@
 #include "EditorLayer.h"
 
 #include <Crowny/Application/EntryPoint.h>
+#include <Crowny/Utils/BuiltInShaderCompiler.h>
 
 namespace Crowny
 {
@@ -11,6 +12,8 @@ namespace Crowny
     {
     public:
         CrownyEditor(const Crowny::ApplicationDesc& applicationDesc) : Application(applicationDesc) {}
+
+        virtual void OnPreRendererInit() override { BuiltInShaderCompiler::CompileAll(); }
 
         virtual void OnStartUp() override
         {

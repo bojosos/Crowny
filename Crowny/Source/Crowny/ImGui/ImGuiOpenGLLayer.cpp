@@ -17,7 +17,7 @@ namespace Crowny
     void ImGuiOpenGLLayer::OnAttach()
     {
         ImGuiLayer::OnAttach();
-        Application& app = Application::Get();
+        Application& app = (*gApplication);
         GLFWwindow* window = static_cast<GLFWwindow*>(app.GetWindow().GetNativeWindow());
         ImGui_ImplGlfw_InitForOpenGL(window, true);
         ImGui_ImplOpenGL3_Init("#version 410");

@@ -52,8 +52,11 @@ namespace Crowny
         virtual void SetDrawMode(DrawMode drawMode, const Ref<CommandBuffer>& commandBuffer = nullptr) = 0;
         virtual void SetUniforms(const Ref<UniformParams>& params, const Ref<CommandBuffer>& commandBuffer = nullptr) = 0;
 
-        virtual void OnShutdown() = 0;
+    protected:
+        void OnStartUp() override;
+        void OnShutdown() override;
 
+    public:
         static API GetAPI() { return s_API; }
         static Scope<RenderAPI> Create();
 
@@ -63,5 +66,7 @@ namespace Crowny
     private:
         static API s_API;
     };
+
+    extern RenderAPI* gRenderAPI;
 
 } // namespace Crowny

@@ -2,14 +2,14 @@
 
 #include "Crowny/Common/Yaml.h"
 #include "Crowny/Scene/SceneManager.h"
+#include "Crowny/Scripting/Bindings/Assets/ScriptAsset.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntity.h"
 #include "Crowny/Scripting/Mono/Mono.h"
 #include "Crowny/Scripting/Mono/MonoUtils.h"
+#include "Crowny/Scripting/ScriptAssetManager.h"
+#include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptSceneObjectManager.h"
 #include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
-#include "Crowny/Scripting/ScriptInfoManager.h"
-#include "Crowny/Scripting/ScriptAssetManager.h"
-#include "Crowny/Scripting/Bindings/Assets/ScriptAsset.h"
 
 #include "Crowny/Assets/Asset.h"
 #include "Crowny/Assets/AssetManager.h"
@@ -199,7 +199,10 @@ namespace Crowny
     {
     public:
         virtual void* GetValue() override { return &Value; }
-        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(ScriptInfoManager::Get().GetBuiltinClasses().Vector2->GetInternalPtr(), &Value); }
+        virtual MonoObject* GetValueBoxed() override
+        {
+            return MonoUtils::Box(ScriptInfoManager::Get().GetBuiltinClasses().Vector2->GetInternalPtr(), &Value);
+        }
 
         virtual void SerializeYAML(YAML::Emitter& out) const override { out << Value; }
         virtual void DeserializeYAML(const YAML::Node& node) override { Value = node.as<glm::vec2>(glm::vec2(0.0f)); }
@@ -211,7 +214,10 @@ namespace Crowny
     {
     public:
         virtual void* GetValue() override { return &Value; }
-        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(ScriptInfoManager::Get().GetBuiltinClasses().Vector3->GetInternalPtr(), &Value); }
+        virtual MonoObject* GetValueBoxed() override
+        {
+            return MonoUtils::Box(ScriptInfoManager::Get().GetBuiltinClasses().Vector3->GetInternalPtr(), &Value);
+        }
 
         virtual void SerializeYAML(YAML::Emitter& out) const override { out << Value; }
         virtual void DeserializeYAML(const YAML::Node& node) override { Value = node.as<glm::vec3>(glm::vec3(0.0f)); }
@@ -223,7 +229,10 @@ namespace Crowny
     {
     public:
         virtual void* GetValue() override { return &Value; }
-        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(ScriptInfoManager::Get().GetBuiltinClasses().Vector4->GetInternalPtr(), &Value); }
+        virtual MonoObject* GetValueBoxed() override
+        {
+            return MonoUtils::Box(ScriptInfoManager::Get().GetBuiltinClasses().Vector4->GetInternalPtr(), &Value);
+        }
 
         virtual void SerializeYAML(YAML::Emitter& out) const override { out << Value; }
         virtual void DeserializeYAML(const YAML::Node& node) override { Value = node.as<glm::vec4>(glm::vec4(0.0f)); }
@@ -235,7 +244,10 @@ namespace Crowny
     {
     public:
         virtual void* GetValue() override { return &Value; }
-        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(ScriptInfoManager::Get().GetBuiltinClasses().Color->GetInternalPtr(), &Value); }
+        virtual MonoObject* GetValueBoxed() override
+        {
+            return MonoUtils::Box(ScriptInfoManager::Get().GetBuiltinClasses().Color->GetInternalPtr(), &Value);
+        }
 
         virtual void SerializeYAML(YAML::Emitter& out) const override { out << Value; }
         virtual void DeserializeYAML(const YAML::Node& node) override { Value = node.as<glm::vec4>(glm::vec4(0.0f)); }
@@ -247,7 +259,10 @@ namespace Crowny
     {
     public:
         virtual void* GetValue() override { return &Value; }
-        virtual MonoObject* GetValueBoxed() override { return MonoUtils::Box(ScriptInfoManager::Get().GetBuiltinClasses().Matrix4->GetInternalPtr(), &Value); }
+        virtual MonoObject* GetValueBoxed() override
+        {
+            return MonoUtils::Box(ScriptInfoManager::Get().GetBuiltinClasses().Matrix4->GetInternalPtr(), &Value);
+        }
 
         virtual void SerializeYAML(YAML::Emitter& out) const override { out << Value; }
         virtual void DeserializeYAML(const YAML::Node& node) override { Value = node.as<glm::mat4>(glm::mat4(1.0f)); }
@@ -305,10 +320,7 @@ namespace Crowny
             }
         }
 
-        virtual void DeserializeYAML(const YAML::Node& node) override
-        {
-            Value = SceneManager::GetActiveScene()->GetEntityFromUuid(node.as<UUID>());
-        }
+        virtual void DeserializeYAML(const YAML::Node& node) override { Value = gSceneManager->GetActiveScene()->GetEntityFromUuid(node.as<UUID>()); }
 
         Entity Value;
 
@@ -321,6 +333,8 @@ namespace Crowny
     public:
         virtual void* GetValue() override
         {
+            if (Value.HasUUID() && !Value.IsLoaded())
+                Value = gAssetManager->LoadFromUUID(Value.GetUUID());
             ScriptAssetBase* scriptAsset = ScriptAssetManager::Get().GetScriptAsset(Value, true);
             m_ManagedInstance = scriptAsset == nullptr ? nullptr : scriptAsset->GetManagedInstance();
             return &m_ManagedInstance;
@@ -330,7 +344,7 @@ namespace Crowny
 
         virtual void SerializeYAML(YAML::Emitter& out) const override { out << (Value ? Value.GetUUID() : UUID::EMPTY); }
 
-        virtual void DeserializeYAML(const YAML::Node& node) override { Value = AssetManager::Get().GetAssetHandle(node.as<UUID>(UUID::EMPTY)); }
+        virtual void DeserializeYAML(const YAML::Node& node) override { Value = gAssetManager->GetAssetHandle(node.as<UUID>(UUID::EMPTY)); }
 
         AssetHandle<Asset> Value;
 

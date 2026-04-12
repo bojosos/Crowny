@@ -2,8 +2,6 @@
 
 #include <mono/metadata/object.h> // TODO: Implement array class
 
-#include "Vendor/filewatch/filewatch.h"
-
 #include "Editor/EditorLayer.h"
 
 #include "Crowny/Assets/AssetManager.h"
@@ -16,7 +14,8 @@
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/RenderAPI/Texture.h"
-#include "Crowny/Renderer/Skybox.h"
+#include "Crowny/Renderer/EnvironmentMap.h"
+#include "Crowny/Scene/Prefab.h"
 #include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Scene/ScriptRuntime.h"
 #include "Crowny/Scripting/Mono/MonoAssembly.h"
@@ -24,12 +23,19 @@
 #include "Crowny/Scripting/Mono/MonoProperty.h"
 #include "Crowny/Serialization/SceneSerializer.h"
 
+#include "Editor/PrefabUtils.h"
+
 #include "Panels/AssetBrowserPanel.h"
 #include "Panels/ComponentEditor.h"
 #include "Panels/ConsolePanel.h"
 #include "Panels/HierarchyPanel.h"
 #include "Panels/InspectorPanel.h"
 #include "Panels/ViewportPanel.h"
+#ifdef CW_WITH_NODES
+#include "Panels/NodeEditor/NodeEditorPanel.h"
+#endif
+
+#include "Crowny/NodeGraph/BuiltinNodeTypes.h"
 
 #include "Editor/Editor.h"
 #include "Editor/EditorAssets.h"
@@ -69,39 +75,57 @@
 
 namespace Crowny
 {
-    float EditorLayer::s_DeltaTime = 0.0f;
-    float EditorLayer::s_SmoothDeltaTime = 0.0f;
-    float EditorLayer::s_RealtimeSinceStartup = 0.0f;
-    float EditorLayer::s_Time = 0.0f;
-    float EditorLayer::s_FixedDeltaTime = 0.0f;
-    float EditorLayer::s_FrameCount = 0.0f;
-
     EditorCamera EditorLayer::s_EditorCamera = EditorCamera(30.0f, 1280.0f / 720.0f, 0.001f, 30000.0f);
 
-    EditorLayer::EditorLayer() : Layer("EditorLayer") {}
+    class RecentScenesMenu : public ImGuiMenu
+    {
+    public:
+        RecentScenesMenu(const String& title, EditorLayer* layer) : ImGuiMenu(title), m_Layer(layer) {}
+
+        virtual void Render() override
+        {
+            if (ImGui::BeginMenu(m_Title.c_str()))
+            {
+                Ref<ProjectSettings> settings = Editor::Get().GetProjectSettings();
+                if (settings->RecentScenes.empty())
+                {
+                    ImGui::BeginDisabled();
+                    ImGui::MenuItem("No recent scenes");
+                    ImGui::EndDisabled();
+                }
+                for (const Path& path : settings->RecentScenes)
+                {
+                    if (ImGui::MenuItem(path.filename().string().c_str()))
+                    {
+                        m_Layer->OpenScene(path);
+                    }
+                }
+                ImGui::EndMenu();
+            }
+        }
+
+    private:
+        EditorLayer* m_Layer;
+    };
+
+    EditorLayer::EditorLayer() : Layer("EditorLayer"), m_SceneRenderer(nullptr) {}
 
     void EditorLayer::OnAttach()
     {
+        RegisterBuiltinNodeTypes();
+
         EditorAssets::Load();
 
-        Editor::StartUp();
-
-        Path assetsPath = Editor::Get().GetProjectPath() / "Assets";
-        if (fs::exists(assetsPath))
-        {
-            m_Watch = CreateScope<filewatch::FileWatch<Path>>(assetsPath,
-                [this](const Path& path, const filewatch::Event changeType) {
-                    if (path.extension() != ".cs")
-                        return;
-                    if (changeType != filewatch::Event::modified &&
-                        changeType != filewatch::Event::added &&
-                        changeType != filewatch::Event::renamed_new)
-                        return;
-                    Lock lock(m_FileWatchMutex);
-                    m_AssemblyReloadPending = true;
-                    m_LastCsChangeTime = std::chrono::steady_clock::now();
-                });
-        }
+        Editor::StartUp([this](const Path& path, FileWatch::Change changeType) {
+            ProjectLibrary::Get().Refresh(path);
+            if (path.extension() == ".cs" && changeType == FileWatch::FileModified && changeType == FileWatch::FileAdded &&
+                changeType == FileWatch::FileNewRenamed)
+            {
+                Lock lock(m_FileWatchMutex);
+                m_AssemblyReloadPending = true;
+                m_LastCsChangeTime = std::chrono::steady_clock::now();
+            }
+        });  
 
         m_MenuBar = new ImGuiMenuBar();
 
@@ -112,9 +136,10 @@ namespace Crowny
 
         fileMenu->AddItem(new ImGuiMenuItem("New Scene", "Ctrl+Shift+N", [&](auto& event) { CreateNewScene(); }));
         fileMenu->AddItem(new ImGuiMenuItem("Open Scene", "Ctrl+Shift+O", [&](auto& event) { OpenScene(); }));
+        fileMenu->AddMenu(new RecentScenesMenu("Open Recent", this));
         fileMenu->AddItem(new ImGuiMenuItem("Save Scene", "Ctrl+S", [&](auto& event) { SaveActiveScene(); }));
         fileMenu->AddItem(new ImGuiMenuItem("Save Scene as", "Ctrl+Shift+S", [&](auto& event) { SaveActiveSceneAs(); }));
-        fileMenu->AddItem(new ImGuiMenuItem("Exit", "Alt+F4", [&](auto& event) { Application::Get().Exit(); }));
+        fileMenu->AddItem(new ImGuiMenuItem("Exit", "Alt+F4", [&](auto& event) { gApplication->Exit(); }));
         m_MenuBar->AddMenu(fileMenu);
 
         ImGuiMenu* viewMenu = new ImGuiMenu("View");
@@ -126,12 +151,24 @@ namespace Crowny
         m_ViewportPanel->SetEventCallback(CW_BIND_EVENT_FN(OnViewportEvent));
         m_ConsolePanel = new ConsolePanel("Console");
         m_AssetBrowser = new AssetBrowserPanel("Asset browser", [&](const Path& path) { m_InspectorPanel->SetSelectedAssetPath(path); });
+#ifdef CW_WITH_NODES
+        m_NodeEditorPanel = new NodeEditorPanel("Node Editor");
+        m_NodeEditorPanel->Hide();
+
+        m_InspectorPanel->SetOpenNodeEditorCallback([this](AssetHandle<NodeGraphAsset> graphAsset) {
+            m_NodeEditorPanel->SetGraph(graphAsset);
+            m_NodeEditorPanel->Show();
+        });
+#endif
 
         m_ViewportPanel->RegisterInMenu(viewMenu);
         m_InspectorPanel->RegisterInMenu(viewMenu);
         m_HierarchyPanel->RegisterInMenu(viewMenu);
         m_ConsolePanel->RegisterInMenu(viewMenu);
         m_AssetBrowser->RegisterInMenu(viewMenu);
+#ifdef CW_WITH_NODES
+        m_NodeEditorPanel->RegisterInMenu(viewMenu);
+#endif
 
         ImGuiMenu* buildMenu = new ImGuiMenu("Build");
         buildMenu->AddItem(new ImGuiMenuItem("Rebuild game assembly", "Ctrl+Shift+B", CW_BIND_EVENT_FN(RebuildAssemblies)));
@@ -164,18 +201,21 @@ namespace Crowny
         colorParams.Width = 1337;
         colorParams.Height = 509;
         colorParams.Usage = TextureUsage::TEXTURE_RENDERTARGET;
+        colorParams.DebugName = "EditorLayer/ViewportColor";
 
         TextureParameters objectId;
         objectId.Width = 1337;
         objectId.Height = 509;
         objectId.Format = TextureFormat::R32I;
         objectId.Usage = TextureUsage(TextureUsage::TEXTURE_RENDERTARGET | TextureUsage::TEXTURE_DYNAMIC);
+        objectId.DebugName = "EditorLayer/ViewportObjectId";
 
         TextureParameters depthParams;
         depthParams.Width = 1337;
         depthParams.Height = 509;
         depthParams.Usage = TextureUsage::TEXTURE_DEPTHSTENCIL;
         depthParams.Format = TextureFormat::DEPTH24STENCIL8;
+        depthParams.DebugName = "EditorLayer/ViewportDepth";
 
         Ref<Texture> color1 = Texture::Create(colorParams);
         Ref<Texture> color2 = Texture::Create(objectId);
@@ -222,7 +262,7 @@ namespace Crowny
         projSettings->EditorCameraFocalPoint = s_EditorCamera.GetFocalPoint();
         projSettings->EditorCameraRotation = { s_EditorCamera.GetPitch(), s_EditorCamera.GetYaw() };
         projSettings->EditorCameraDistance = s_EditorCamera.GetDistance();
-        const Ref<Scene>& activeScene = SceneManager::GetActiveScene();
+        const Ref<Scene>& activeScene = gSceneManager->GetActiveScene();
         if (fs::is_regular_file(activeScene->GetFilepath()))
             projSettings->LastOpenScenePath = activeScene->GetFilepath().string();
         projSettings->LastAssetBrowserSelectedEntry = m_AssetBrowser->GetCurrentEntryPath();
@@ -274,7 +314,7 @@ namespace Crowny
         MonoClass* scriptCompiler = ScriptInfoManager::Get().GetBuiltinClasses().ScriptCompiler;
         uint32_t type = 0;
         bool debug = true;
-        Path engineAssemblyPath = Application::GetApplicationDesc().EngineAssemblyPath;
+        Path engineAssemblyPath = gApplication->GetApplicationDesc().EngineAssemblyPath;
 
         MonoArray* libDirs = mono_array_new(MonoManager::Get().GetDomain(), MonoUtils::GetStringClass(), 1);
         mono_array_setref(libDirs, 0, MonoUtils::ToMonoString(engineAssemblyPath.parent_path().string().c_str()));
@@ -299,10 +339,10 @@ namespace Crowny
         // ScriptInfoManager::Get().LoadAssemblyInfo(GAME_ASSEMBLY);
         // ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
         /*
-        auto view = SceneManager::GetActiveScene()->GetAllEntitiesWith<MonoScriptComponent>();
+        auto view = gSceneManager->GetActiveScene()->GetAllEntitiesWith<MonoScriptComponent>();
         for (auto e : view)
         {
-            Entity entity = { e, SceneManager::GetActiveScene().get() };
+            Entity entity = { e, gSceneManager->GetActiveScene().get() };
             auto& msc = entity.GetComponent<MonoScriptComponent>();
             for (auto& script : msc.Scripts)
             {
@@ -324,7 +364,7 @@ namespace Crowny
                 OpenScene(fileEntry->Filepath);
             else if (assetType == AssetType::Material)
             {
-                const Entity entity = PickEntity(fileDragEvent.GetRelativePosition());
+                Entity entity = PickEntity(fileDragEvent.GetRelativePosition());
                 if (entity)
                 {
                     const AssetHandle<Asset> assetHandle = ProjectLibrary::Get().Load(fileEntry);
@@ -333,7 +373,7 @@ namespace Crowny
             }
             else if (assetType == AssetType::Mesh)
             {
-                Ref<Scene> activeScene = SceneManager::GetActiveScene();
+                Ref<Scene> activeScene = gSceneManager->GetActiveScene();
                 Entity entity = activeScene->CreateEntity(fileEntry->Filepath.filename().string());
                 MeshRendererComponent& meshRenderer = entity.AddComponent<MeshRendererComponent>();
                 const AssetHandle<Asset> assetHandle = ProjectLibrary::Get().Load(fileEntry);
@@ -341,11 +381,19 @@ namespace Crowny
             }
             else if (assetType == AssetType::AudioClip)
             {
-                Ref<Scene> activeScene = SceneManager::GetActiveScene();
+                Ref<Scene> activeScene = gSceneManager->GetActiveScene();
                 Entity entity = activeScene->CreateEntity(fileEntry->Filepath.filename().string());
                 AudioSourceComponent& audioSourceComponent = entity.AddComponent<AudioSourceComponent>();
                 const AssetHandle<Asset> assetHandle = ProjectLibrary::Get().Load(fileEntry);
                 audioSourceComponent.SetClip(static_asset_cast<AudioClip>(assetHandle));
+            }
+            else if (assetType == AssetType::Prefab)
+            {
+                Ref<Scene> activeScene = gSceneManager->GetActiveScene();
+                const AssetHandle<Asset> assetHandle = ProjectLibrary::Get().Load(fileEntry);
+                AssetHandle<Prefab> prefab = static_asset_cast<Prefab>(assetHandle);
+                Entity root = activeScene->GetRootEntity();
+                PrefabUtils::InstantiatePrefab(prefab, root);
             }
             return true;
         });
@@ -356,6 +404,8 @@ namespace Crowny
     {
         m_Temp = CreateRef<Scene>("Scene");
         m_Temp->SetEditorScene(true);
+        String title = "Crowny Editor - " + Editor::Get().GetProjectName() + " - " + m_Temp->GetName();
+        gApplication->GetWindow().SetTitle(title);
     }
 
     void EditorLayer::OpenScene()
@@ -372,6 +422,7 @@ namespace Crowny
         m_Temp->SetEditorScene(true);
         SceneSerializer serializer(m_Temp);
         serializer.Deserialize(filepath);
+        AddRecentScene(filepath);
     }
 
     void EditorLayer::SaveActiveSceneAs()
@@ -380,21 +431,46 @@ namespace Crowny
         if (FileSystem::OpenFileDialog(FileDialogType::SaveFile, outPaths, "Save scene", ProjectLibrary::Get().GetAssetFolder(),
                                        { Editor::GetSceneDialogFilter() }))
         {
-            SceneSerializer serializer(SceneManager::GetActiveScene());
-            serializer.Serialize(outPaths[0].replace_extension(".cwscene"));
+            const Path path = outPaths[0].replace_extension(".cwscene");
+            const auto& scene = gSceneManager->GetActiveScene();
+            scene->SetImGuiLayout(gApplication->GetImGuiLayer()->SaveLayout());
+            SceneSerializer serializer(scene);
+            serializer.Serialize(path);
+            AddRecentScene(path);
+            String title = "Crowny Editor - " + Editor::Get().GetProjectName() + " - " + gSceneManager->GetActiveScene()->GetName();
+            gApplication->GetWindow().SetTitle(title);
         }
     }
 
     void EditorLayer::SaveActiveScene()
     {
-        const auto& scene = SceneManager::GetActiveScene();
+        const auto& scene = gSceneManager->GetActiveScene();
         if (scene->GetFilepath().empty())
             SaveActiveSceneAs();
         else
         {
+            scene->SetImGuiLayout(gApplication->GetImGuiLayer()->SaveLayout());
             SceneSerializer serializer(scene);
             serializer.Serialize(scene->GetFilepath());
+            AddRecentScene(scene->GetFilepath());
+            String title = "Crowny Editor - " + Editor::Get().GetProjectName() + " - " + scene->GetName();
+            gApplication->GetWindow().SetTitle(title);
         }
+    }
+
+    void EditorLayer::AddRecentScene(const Path& path)
+    {
+        Ref<ProjectSettings> settings = Editor::Get().GetProjectSettings();
+        auto& recentScenes = settings->RecentScenes;
+
+        auto it = std::find(recentScenes.begin(), recentScenes.end(), path);
+        if (it != recentScenes.end())
+            recentScenes.erase(it);
+
+        recentScenes.insert(recentScenes.begin(), path);
+
+        if (recentScenes.size() > 5)
+            recentScenes.resize(5);
     }
 
     void EditorLayer::AddRecentEntry(const Path& path)
@@ -462,7 +538,7 @@ namespace Crowny
 
     Entity EditorLayer::PickEntity()
     {
-        const Ref<Scene> scene = SceneManager::GetActiveScene();
+        const Ref<Scene> scene = gSceneManager->GetActiveScene();
         const glm::vec4& bounds = m_ViewportPanel->GetViewportBounds();
         ImVec2 mouseCoords = ImGui::GetMousePos();
         glm::vec2 coords = { mouseCoords.x - bounds.x, mouseCoords.y - bounds.y };
@@ -480,7 +556,7 @@ namespace Crowny
         if (outPixelData->GetWidth() > coords.x && outPixelData->GetHeight() > coords.y)
         {
             const glm::vec4 col = outPixelData->GetColorAt((uint32_t)coords.x, (uint32_t)coords.y);
-            Ref<Scene> scene = SceneManager::GetActiveScene();
+            Ref<Scene> scene = gSceneManager->GetActiveScene();
             if (col.x == 0.0f)
                 return Entity(entt::null, scene.get());
             else
@@ -491,8 +567,8 @@ namespace Crowny
 
     void EditorLayer::HandleRenderTargetResize()
     {
-        Ref<Scene> scene = SceneManager::GetActiveScene();
-        auto& rapi = RenderAPI::Get();
+        Ref<Scene> scene = gSceneManager->GetActiveScene();
+        auto& rapi = *gRenderAPI;
         if (m_ViewportPanel->IsShown() &&
             (m_ViewportSize.x != m_ViewportPanel->GetViewportSize().x || m_ViewportSize.y != m_ViewportPanel->GetViewportSize().y)) // TODO: Move out
         {
@@ -501,18 +577,21 @@ namespace Crowny
             colorParams.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
             colorParams.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
             colorParams.Usage = TextureUsage::TEXTURE_RENDERTARGET;
+            colorParams.DebugName = "EditorLayer/ViewportColor";
 
             TextureParameters objectId;
             objectId.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
             objectId.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
             objectId.Format = TextureFormat::R32I;
             objectId.Usage = TextureUsage(TextureUsage::TEXTURE_RENDERTARGET | TextureUsage::TEXTURE_DYNAMIC);
+            objectId.DebugName = "EditorLayer/ViewportObjectId";
 
             TextureParameters depthParams;
             depthParams.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
             depthParams.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
             depthParams.Usage = TextureUsage::TEXTURE_DEPTHSTENCIL;
             depthParams.Format = TextureFormat::DEPTH24STENCIL8;
+            depthParams.DebugName = "EditorLayer/ViewportDepth";
 
             Ref<Texture> color1 = Texture::Create(colorParams);
             Ref<Texture> color2 = Texture::Create(objectId);
@@ -533,6 +612,20 @@ namespace Crowny
         rapi.ClearRenderTarget(FBT_COLOR | FBT_DEPTH);
     }
 
+    void EditorLayer::SubmitSnapshot(RenderSnapshot&& snapshot)
+    {
+        RenderThread* renderThread = gApplication->GetRenderThread();
+        if (renderThread && renderThread->IsRunning())
+        {
+            renderThread->SubmitFrame(std::move(snapshot));
+        }
+        else
+        {
+            // Fallback: single-threaded rendering
+            SceneRenderer::RenderFromSnapshot(snapshot);
+        }
+    }
+
     void EditorLayer::HandleSceneState(Timestep ts)
     {
         switch (m_SceneState)
@@ -541,26 +634,28 @@ namespace Crowny
             s_EditorCamera.SetViewportSize((float)m_RenderTarget->GetProperties().Width, (float)m_RenderTarget->GetProperties().Height);
             s_EditorCamera.OnUpdate(ts);
 
-            SceneManager::GetActiveScene()->OnUpdateEditor(ts);
-            m_SceneRenderer->RenderEditor(s_EditorCamera);
+            gSceneManager->GetActiveScene()->OnUpdateEditor(ts);
+            m_SceneRenderer->UpdateProceduralMeshes();
+            auto snapshot = m_SceneRenderer->ExtractSnapshot(s_EditorCamera, s_EditorCamera.GetViewMatrix());
+            SubmitSnapshot(std::move(snapshot));
             break;
         }
         case SceneState::Play: {
-            SceneManager().GetActiveScene()->OnUpdateRuntime(ts);
+            gSceneManager->GetActiveScene()->OnUpdateRuntime(ts);
             ScriptRuntime::OnUpdate();
-            m_SceneRenderer->Render();
-            s_FrameCount += 1;
-            s_DeltaTime = ts;
-            s_Time += ts;
-            s_RealtimeSinceStartup += ts;
-            s_SmoothDeltaTime = s_DeltaTime + s_Time / (s_FrameCount + 1);
+            m_SceneRenderer->UpdateProceduralMeshes();
+            auto snapshot = m_SceneRenderer->ExtractSnapshot();
+            SubmitSnapshot(std::move(snapshot));
+            Time::Update(ts, gApplication->GetTimeSettings()->FixedTimestep);
             break;
         }
         case SceneState::Simulate: {
             s_EditorCamera.SetViewportSize((float)m_RenderTarget->GetProperties().Width, (float)m_RenderTarget->GetProperties().Height);
             s_EditorCamera.OnUpdate(ts);
-            SceneManager().GetActiveScene()->OnSimulationUpdate(ts);
-            m_SceneRenderer->RenderEditor(s_EditorCamera);
+            gSceneManager->GetActiveScene()->OnSimulationUpdate(ts);
+            m_SceneRenderer->UpdateProceduralMeshes();
+            auto snapshot = m_SceneRenderer->ExtractSnapshot(s_EditorCamera, s_EditorCamera.GetViewMatrix());
+            SubmitSnapshot(std::move(snapshot));
             break;
         }
         }
@@ -574,11 +669,17 @@ namespace Crowny
 
         if (m_Temp) // Delay scene reload
         {
+            Ref<Scene> activeScene = gSceneManager->GetActiveScene();
+            if (activeScene)
+                activeScene->SetImGuiLayout(gApplication->GetImGuiLayer()->SaveLayout());
             m_SceneRenderer->SetScene(m_Temp);
-            SceneManager::SetActiveScene(m_Temp);
+            gSceneManager->SetActiveScene(m_Temp);
+            gApplication->GetImGuiLayer()->LoadLayout(m_Temp->GetImGuiLayout());
             Editor::Get().GetProjectSettings()->LastOpenScenePath = m_Temp->GetFilepath().string();
             m_Temp = nullptr;
             // ScriptRuntime::Init();
+            String title = "Crowny Editor - " + Editor::Get().GetProjectName() + " - " + gSceneManager->GetActiveScene()->GetName();
+            gApplication->GetWindow().SetTitle(title);
         }
 
         if (m_AssemblyReloadPending && m_SceneState == SceneState::Edit)
@@ -597,9 +698,17 @@ namespace Crowny
             }
         }
 
-        Ref<Scene> scene = SceneManager::GetActiveScene();
+        Ref<Scene> scene = gSceneManager->GetActiveScene();
         HandleRenderTargetResize();
         HandleSceneState(ts);
+
+        // Wait for render thread to finish scene recording before any main-thread
+        // rendering (RenderOverlay) or readback (PickEntity) that touches the same
+        // command buffer or render target.
+        RenderThread* rt = gApplication->GetRenderThread();
+        if (rt && rt->IsRunning())
+            rt->WaitForFrameDone();
+
         RenderOverlay();
 
         if (m_ViewportPanel->IsHovered())
@@ -618,7 +727,7 @@ namespace Crowny
 
     void EditorLayer::RenderOverlay()
     {
-        Ref<Scene> scene = SceneManager::GetActiveScene();
+        Ref<Scene> scene = gSceneManager->GetActiveScene();
         if (m_SceneState == SceneState::Play)
         {
             Entity camera = scene->GetPrimaryCameraEntity();
@@ -689,7 +798,15 @@ namespace Crowny
             window_flags |= ImGuiWindowFlags_NoBackground;
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-        ImGui::Begin("Crowny Editor", &dockspaceOpen, window_flags);
+        String title = "Crowny Editor";
+        if (Editor::Get().IsProjectLoaded())
+        {
+            title += " - " + Editor::Get().GetProjectName();
+            const auto& activeScene = gSceneManager->GetActiveScene();
+            if (activeScene)
+                title += " - " + activeScene->GetName();
+        }
+        ImGui::Begin(title.c_str(), &dockspaceOpen, window_flags);
         ImGui::PopStyleVar();
 
         if (opt_fullscreen)
@@ -732,7 +849,7 @@ namespace Crowny
         UI_ScriptInfo();
         UI_AssetInfo();
         UI_EntityDebugInfo();
-        Physics2D::Get().UIStats();
+        gPhysics2D->UIStats();
 #endif
 
         m_HierarchyPanel->Render();
@@ -741,6 +858,9 @@ namespace Crowny
         m_ViewportPanel->Render();
         m_ConsolePanel->Render();
         m_AssetBrowser->Render();
+#ifdef CW_WITH_NODES
+        m_NodeEditorPanel->Render();
+#endif
 
         ImGui::End(); // End dockspace
 
@@ -755,9 +875,9 @@ namespace Crowny
             ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
             ImGui::Begin("##StatusBar", nullptr,
-                         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-                         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking |
-                         ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav);
+                         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+                           ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoFocusOnAppearing |
+                           ImGuiWindowFlags_NoNav);
 
             const auto& progress = ProjectLibrary::Get().GetImportProgress();
             char text[128];
@@ -786,6 +906,7 @@ namespace Crowny
                     if (outPaths.size() > 0)
                     {
                         SaveProjectSettings();
+                        m_AssetBrowser->Unload();
                         Editor::Get().LoadProject(outPaths[0]);
                         Editor::Get().GetEditorSettings()->LastOpenProject = outPaths[0];
                         SetProjectSettings();
@@ -797,6 +918,7 @@ namespace Crowny
             {
                 m_NewProject = false;
                 SaveProjectSettings();
+                m_AssetBrowser->Unload();
                 Editor::Get().UnloadProject();
                 m_HubPage = HubPage::NewProject;
                 m_NewProjectPath = Editor::Get().GetDefaultProjectPath().string();
@@ -812,10 +934,8 @@ namespace Crowny
         ImGuiViewport* viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowSize(viewport->Size);
-        ImGuiWindowFlags hubFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
-                                    ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-                                    ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus |
-                                    ImGuiWindowFlags_NoDocking;
+        ImGuiWindowFlags hubFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                                    ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoDocking;
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
         ImGui::Begin("##ProjectHub", nullptr, hubFlags);
@@ -980,8 +1100,7 @@ namespace Crowny
                 ImGui::Separator();
                 ImGui::Spacing();
 
-                bool hasSelection = m_SelectedRecentIdx >= 0 &&
-                                    m_SelectedRecentIdx < static_cast<int>(settings->RecentProjects.size()) &&
+                bool hasSelection = m_SelectedRecentIdx >= 0 && m_SelectedRecentIdx < static_cast<int>(settings->RecentProjects.size()) &&
                                     !settings->RecentProjects[m_SelectedRecentIdx].ProjectPath.empty();
 
                 if (!hasSelection)
@@ -1006,7 +1125,8 @@ namespace Crowny
                 }
                 UI::SetTooltip("Remove from recents");
                 ImGui::SameLine();
-                if (ImGui::ImageButton(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FolderIcon), ImVec2(18.0f, 18.0f), { 0, 1 }, { 1, 0 }, 0))
+                if (ImGui::ImageButton("##ShowInExplorer", ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FolderIcon), ImVec2(18.0f, 18.0f),
+                                       { 0, 1 }, { 1, 0 }))
                     PlatformUtils::ShowInExplorer(settings->RecentProjects[m_SelectedRecentIdx].ProjectPath);
                 UI::SetTooltip("Show in explorer");
 
@@ -1108,7 +1228,7 @@ namespace Crowny
         if (m_ShowEntityDebugInfo)
         {
             ImGui::Begin("Entity Debug Info", &m_ShowEntityDebugInfo);
-            const Ref<Scene> scene = SceneManager::GetActiveScene();
+            const Ref<Scene> scene = gSceneManager->GetActiveScene();
             auto view = scene->GetAllEntitiesWith<TagComponent>();
             for (auto e : view)
             {
@@ -1198,7 +1318,7 @@ namespace Crowny
         ImVec2 text_size = ImGui::CalcTextSize(text);
         while ((c = *text++))
         {
-            glyph = font->FindGlyph(c);
+            glyph = GImGui->FontBaked->FindGlyph(c);
             if (!glyph)
                 continue;
 
@@ -1221,17 +1341,17 @@ namespace Crowny
             UI::ScopedStyle spacing(ImGuiStyleVar_ItemSpacing, ImVec2{ 2.0f, 2.0f });
 
             UI::BeginPropertyGrid();
-            glm::vec2 gravity = Physics2D::Get().GetGravity();
+            glm::vec2 gravity = gPhysics2D->GetGravity();
             if (UI::Property("Gravity", gravity))
-                Physics2D::Get().SetGravity(gravity);
+                gPhysics2D->SetGravity(gravity);
 
-            uint32_t velocityIterations = Physics2D::Get().GetVelocityIterations();
+            uint32_t velocityIterations = gPhysics2D->GetVelocityIterations();
             if (UI::Property("Velocity iterations", velocityIterations))
-                Physics2D::Get().SetVelocityIterations(velocityIterations);
+                gPhysics2D->SetVelocityIterations(velocityIterations);
 
-            uint32_t positionIterations = Physics2D::Get().GetPositionIterations();
+            uint32_t positionIterations = gPhysics2D->GetPositionIterations();
             if (UI::Property("Position iterations", positionIterations))
-                Physics2D::Get().SetPositionIterations(positionIterations);
+                gPhysics2D->SetPositionIterations(positionIterations);
             UI::EndPropertyGrid();
             if (ImGui::CollapsingHeader("Layer Names"))
             {
@@ -1239,7 +1359,7 @@ namespace Crowny
                 uint32_t lastNonEmptyIdx = 0;
                 for (int32_t i = 31; i >= 0; i--)
                 {
-                    if (!Physics2D::Get().GetLayerName(i).empty())
+                    if (!gPhysics2D->GetLayerName(i).empty())
                     {
                         lastNonEmptyIdx = i;
                         break;
@@ -1249,9 +1369,9 @@ namespace Crowny
                 {
                     if (i > lastNonEmptyIdx + 1 && !UI::IsItemDisabled()) // Give the user exactly one non-disabled layer field
                         ImGui::BeginDisabled(true);
-                    String layerName = Physics2D::Get().GetLayerName(i);
+                    String layerName = gPhysics2D->GetLayerName(i);
                     if (UI::Property(fmt::format("Layer {0}", i).c_str(), layerName))
-                        Physics2D::Get().SetLayerName(i, layerName);
+                        gPhysics2D->SetLayerName(i, layerName);
                 }
                 if (UI::IsItemDisabled())
                     ImGui::EndDisabled();
@@ -1267,8 +1387,8 @@ namespace Crowny
                 float maxTextLength = 0;
                 for (uint32_t i = 0; i < 32; i++)
                 {
-                    maxTextLength = std::max(maxTextLength, ImGui::CalcTextSize(Physics2D::Get().GetLayerName(i).c_str()).x);
-                    nonEmpty += !Physics2D::Get().GetLayerName(i).empty();
+                    maxTextLength = std::max(maxTextLength, ImGui::CalcTextSize(gPhysics2D->GetLayerName(i).c_str()).x);
+                    nonEmpty += !gPhysics2D->GetLayerName(i).empty();
                 }
                 nonEmpty--;
                 UI::ShiftCursorY(maxTextLength);
@@ -1276,23 +1396,23 @@ namespace Crowny
                 uint32_t ii = 0;
                 for (uint32_t i = 0; i < 32; i++) // rows
                 {
-                    uint32_t categoryMask = Physics2D::Get().GetCategoryMask(i);
-                    if (Physics2D::Get().GetLayerName(i).empty())
+                    uint32_t categoryMask = gPhysics2D->GetCategoryMask(i);
+                    if (gPhysics2D->GetLayerName(i).empty())
                         continue;
                     ii++;
                     UI::ShiftCursorX(10);
-                    ImGui::Text("%s", Physics2D::Get().GetLayerName(i).c_str());
+                    ImGui::Text("%s", gPhysics2D->GetLayerName(i).c_str());
                     ImGui::SameLine();
                     ImGui::SetCursorPosX(maxTextLength + ImGui::GetStyle().WindowPadding.x + 2 + 10);
                     uint32_t jj = 0;
                     for (uint32_t j = 0; j < 32; j++) // cols
                     {
-                        if (ii + jj > nonEmpty + 1 || Physics2D::Get().GetLayerName(j).empty())
+                        if (ii + jj > nonEmpty + 1 || gPhysics2D->GetLayerName(j).empty())
                             continue;
                         jj++;
                         if (ii == 1)
                         {
-                            AddTextVertical(ImGui::GetWindowDrawList(), Physics2D::Get().GetLayerName(j).c_str(),
+                            AddTextVertical(ImGui::GetWindowDrawList(), gPhysics2D->GetLayerName(j).c_str(),
                                             text_pos + ImVec2(ImGui::GetCursorPosX() - 6.0f, 0), IM_COL32(192, 192, 192, 255));
                         }
                         bool value = (categoryMask & (1 << j)) != 0;
@@ -1300,9 +1420,9 @@ namespace Crowny
                         if (ImGui::Checkbox("##checkbox", &value))
                         {
                             if (value)
-                                Physics2D::Get().SetCategoryMask(i, categoryMask | (1 << j));
+                                gPhysics2D->SetCategoryMask(i, categoryMask | (1 << j));
                             else
-                                Physics2D::Get().SetCategoryMask(i, categoryMask & (~(1 << j)));
+                                gPhysics2D->SetCategoryMask(i, categoryMask & (~(1 << j)));
                         }
                         if (ii + jj <= nonEmpty + 1)
                             ImGui::SameLine();
@@ -1318,7 +1438,7 @@ namespace Crowny
     void EditorLayer::UI_TimeSettings()
     {
         ImGui::Begin("Time Settings", &m_ShowTimeSettings);
-        const Ref<TimeSettings>& timeSettings = Application::Get().GetTimeSettings();
+        const Ref<TimeSettings>& timeSettings = gApplication->GetTimeSettings();
         UI::Property("Time Scale", timeSettings->TimeScale);
         UI::Property("Fixed Timestep", timeSettings->FixedTimestep);
         UI::Property("Max Timestep", timeSettings->MaxTimestep);
@@ -1452,10 +1572,10 @@ namespace Crowny
                     SaveActiveScene(); // Save to disk in case the simulation crashes
 
                     // Backup the editor scene and create a runtime copy
-                    m_EditorSceneBackup = SceneManager::GetActiveScene();
+                    m_EditorSceneBackup = gSceneManager->GetActiveScene();
                     Ref<Scene> runtimeScene = CreateRef<Scene>(*m_EditorSceneBackup);
                     runtimeScene->SetEditorScene(false);
-                    SceneManager::SetActiveScene(runtimeScene);
+                    gSceneManager->SetActiveScene(runtimeScene);
                     m_SceneRenderer->SetScene(runtimeScene);
 
                     runtimeScene->OnRuntimeStart();
@@ -1465,23 +1585,18 @@ namespace Crowny
                 }
                 else if (m_SceneState != SceneState::Simulate)
                 {
-                    SceneManager::GetActiveScene()->OnRuntimeStop();
+                    gSceneManager->GetActiveScene()->OnRuntimeStop();
                     ScriptRuntime::OnShutdown();
 
                     // Restore the editor scene
-                    SceneManager::SetActiveScene(m_EditorSceneBackup);
+                    gSceneManager->SetActiveScene(m_EditorSceneBackup);
                     m_SceneRenderer->SetScene(m_EditorSceneBackup);
                     m_EditorSceneBackup = nullptr;
 
                     m_ViewportPanel->EnableGizmo();
                     m_SceneState = SceneState::Edit;
                     m_GameMode = false;
-                    s_DeltaTime = 0.0f;
-                    s_SmoothDeltaTime = 0.0f;
-                    s_RealtimeSinceStartup = 0.0f;
-                    s_Time = 0.0f;
-                    s_FixedDeltaTime = 0.0f;
-                    s_FrameCount = 0.0f;
+                    Time::Reset();
                 }
             }
             UI::SetTooltip(m_SceneState == SceneState::Edit ? "Play" : "Stop");
@@ -1491,10 +1606,10 @@ namespace Crowny
                 if (m_SceneState == SceneState::Edit)
                 {
                     // Backup the editor scene and create a simulation copy
-                    m_EditorSceneBackup = SceneManager::GetActiveScene();
+                    m_EditorSceneBackup = gSceneManager->GetActiveScene();
                     Ref<Scene> simScene = CreateRef<Scene>(*m_EditorSceneBackup);
                     simScene->SetEditorScene(false);
-                    SceneManager::SetActiveScene(simScene);
+                    gSceneManager->SetActiveScene(simScene);
                     m_SceneRenderer->SetScene(simScene);
 
                     m_SceneState = SceneState::Simulate;
@@ -1502,10 +1617,10 @@ namespace Crowny
                 }
                 else if (m_SceneState == SceneState::Simulate)
                 {
-                    SceneManager::GetActiveScene()->OnSimulationEnd();
+                    gSceneManager->GetActiveScene()->OnSimulationEnd();
 
                     // Restore the editor scene
-                    SceneManager::SetActiveScene(m_EditorSceneBackup);
+                    gSceneManager->SetActiveScene(m_EditorSceneBackup);
                     m_SceneRenderer->SetScene(m_EditorSceneBackup);
                     m_EditorSceneBackup = nullptr;
 
@@ -1518,13 +1633,13 @@ namespace Crowny
             {
                 if (m_SceneState == SceneState::Play)
                 {
-                    SceneManager::GetActiveScene()->OnRuntimePause();
+                    gSceneManager->GetActiveScene()->OnRuntimePause();
                     m_SceneState = SceneState::PausePlay;
                     m_ViewportPanel->EnableGizmo();
                 }
                 else if (m_SceneState == SceneState::PausePlay)
                 {
-                    SceneManager::GetActiveScene()->OnRuntimeResume();
+                    gSceneManager->GetActiveScene()->OnRuntimeResume();
                     m_SceneState = SceneState::Play;
                     m_ViewportPanel->DisableGizmo();
                 }
@@ -1716,12 +1831,5 @@ namespace Crowny
         dispatcher.Dispatch<KeyPressedEvent>(CW_BIND_EVENT_FN(EditorLayer::OnKeyPressed));
         dispatcher.Dispatch<MouseButtonPressedEvent>(CW_BIND_EVENT_FN(EditorLayer::OnMouseButtonPressed));
     }
-
-    float Time::GetTime() { return EditorLayer::s_Time; }
-    float Time::GetDeltaTime() { return EditorLayer::s_DeltaTime; }
-    float Time::GetFrameCount() { return EditorLayer::s_FrameCount; }
-    float Time::GetFixedDeltaTime() { return EditorLayer::s_FixedDeltaTime; }
-    float Time::GetRealtimeSinceStartup() { return EditorLayer::s_RealtimeSinceStartup; }
-    float Time::GetSmoothDeltaTime() { return EditorLayer::s_SmoothDeltaTime; }
 
 } // namespace Crowny

@@ -490,8 +490,8 @@ namespace Crowny
         }
     }
 
-    void VulkanUtils::CutVertical(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith,
-                                  VkImageSubresourceRange* output, uint32_t& numAreas)
+    void VulkanUtils::CutVertical(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith, VkImageSubresourceRange* output,
+                                  uint32_t& numAreas)
     {
         uint32_t topCut = std::max(toCut.baseMipLevel, cutWith.baseMipLevel);
         uint32_t bottomCut = std::min(toCut.baseMipLevel + toCut.levelCount, cutWith.baseMipLevel + cutWith.levelCount);

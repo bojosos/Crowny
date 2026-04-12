@@ -1,15 +1,15 @@
 #include "cwpch.h"
 
+#include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptPhysics2D.h"
+#include "Crowny/Scripting/Mono/MonoAssembly.h"
 #include "Crowny/Scripting/Mono/MonoClass.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
-#include "Crowny/Scripting/Mono/MonoAssembly.h"
 #include "Crowny/Scripting/Mono/MonoUtils.h"
-#include "Crowny/Physics/Physics2D.h"
 
-#include <box2d/b2_world.h>
-#include <box2d/b2_fixture.h>
 #include <box2d/b2_body.h>
+#include <box2d/b2_fixture.h>
+#include <box2d/b2_world.h>
 
 #include <mono/metadata/object.h>
 
@@ -54,16 +54,13 @@ namespace Crowny
         uint32_t m_LayerMask;
     };
 
-    void ScriptPhysics2D::InitRuntimeData()
-    {
-        MetaData.ScriptClass->AddInternalCall("Internal_Raycast", (void*)&Internal_Raycast);
-    }
+    void ScriptPhysics2D::InitRuntimeData() { MetaData.ScriptClass->AddInternalCall("Internal_Raycast", (void*)&Internal_Raycast); }
 
     void ScriptPhysics2D::Internal_Raycast(glm::vec2* origin, glm::vec2* direction, float distance, uint32_t layerMask, MonoArray** outResults)
     {
         *outResults = nullptr;
 
-        b2World* world = Physics2D::Get().GetPhysicsWorld();
+        b2World* world = gPhysics2D->GetPhysicsWorld();
         if (!world)
             return;
 
@@ -78,7 +75,7 @@ namespace Crowny
             return;
 
         std::sort(callback.m_Hits.begin(), callback.m_Hits.end(),
-            [](const RaycastHit2DInterop& a, const RaycastHit2DInterop& b) { return a.Fraction < b.Fraction; });
+                  [](const RaycastHit2DInterop& a, const RaycastHit2DInterop& b) { return a.Fraction < b.Fraction; });
 
         MonoAssembly* assembly = MonoManager::Get().GetAssembly(CROWNY_ASSEMBLY);
         MonoClass* hitClass = assembly ? assembly->GetClass("Crowny", "RaycastHit2D") : nullptr;

@@ -25,68 +25,69 @@ namespace Crowny
         {
             static_assert(std::is_base_of<ComponentBase, T>::value, "T must be a Component");
             CW_ENGINE_ASSERT(!HasComponent<T>());
-            return m_Scene->m_Registry.emplace<T>(m_EntityHandle, std::forward<Args>(args)...);
+            return m_Scene->m_Registry.template emplace<T>(m_EntityHandle, std::forward<Args>(args)...);
         }
 
         template <typename T, typename... Args> T& AddOrReplaceComponent(Args&&... args) const
         {
             static_assert(std::is_base_of<ComponentBase, T>::value, "T must be a Component");
-            return m_Scene->m_Registry.emplace_or_replace<T>(m_EntityHandle, std::forward<Args>(args)...);
+            return m_Scene->m_Registry.template emplace_or_replace<T>(m_EntityHandle, std::forward<Args>(args)...);
         }
 
-        template <typename T, typename... Args> T& ReplaceComponent(Args&&... args)
+        template <typename T, typename... Args> T& ReplaceComponent(Args&&... args) const
         {
             static_assert(std::is_base_of<ComponentBase, T>::value, "T must be a Component");
             CW_ENGINE_ASSERT(HasComponent<T>());
-            return m_Scene->m_Registry.replace<T>(m_EntityHandle, std::forward<Args>(args)...);
+            return m_Scene->m_Registry.template replace<T>(m_EntityHandle, std::forward<Args>(args)...);
         }
 
         template <typename T> T& GetComponent() const
         {
             static_assert(std::is_base_of<ComponentBase, T>::value, "T must be a Component");
             CW_ENGINE_ASSERT(HasComponent<T>());
-            return m_Scene->m_Registry.get<T>(m_EntityHandle);
+            return m_Scene->m_Registry.template get<T>(m_EntityHandle);
         }
 
         template <typename T, typename... Args> T& AddOrGetComponent(Args&&... args) const
         {
             static_assert(std::is_base_of<ComponentBase, T>::value, "T must be a Component");
-            return m_Scene->m_Registry.get_or_emplace<T>(m_EntityHandle, std::forward<Args>(args)...);
+            return m_Scene->m_Registry.template get_or_emplace<T>(m_EntityHandle, std::forward<Args>(args)...);
         }
 
         template <typename T> bool HasComponent() const
         {
             static_assert(std::is_base_of<ComponentBase, T>::value, "T must be a Component");
-            return m_Scene->m_Registry.all_of<T>(m_EntityHandle);
+            return m_Scene->m_Registry.template all_of<T>(m_EntityHandle);
         }
 
         template <typename... T> bool HasAnyComponents() const
         {
             static_assert(std::is_base_of<ComponentBase, T...>::value, "T must be a Component");
-            return m_Scene->m_Registry.any_of<T...>(m_EntityHandle);
+            return m_Scene->m_Registry.template any_of<T...>(m_EntityHandle);
         }
 
         template <typename... T> bool HasComponents() const
         {
             static_assert(std::is_base_of<ComponentBase, T...>::value, "T must be a Component");
-            return m_Scene->m_Registry.all_of<T...>(m_EntityHandle);
+            return m_Scene->m_Registry.template all_of<T...>(m_EntityHandle);
         }
 
-        template <typename T, typename... Others> void RemoveComponent()
+        template <typename T, typename... Others> void RemoveComponent() const
         {
             static_assert(std::is_base_of<ComponentBase, T>::value, "T must be a Component");
-            // static_assert(std::is_base_of<ComponentBase, Others...>::value, "T must be a Component");
-            m_Scene->m_Registry.remove<T, Others...>(m_EntityHandle);
+            m_Scene->m_Registry.template remove<T, Others...>(m_EntityHandle);
         }
-        template <typename T> void RemoveComponentIfExists()
+
+        template <typename T> void RemoveComponentIfExists() const
         {
             static_assert(std::is_base_of<ComponentBase, T>::value, "T must be a Component");
-            m_Scene->m_Registry.remove_if_exists<T>(m_EntityHandle);
+            if (HasComponent<T>())
+                m_Scene->m_Registry.template remove<T>(m_EntityHandle);
         }
 
         bool HasAnyComponents() const { return !m_Scene->m_Registry.orphan(m_EntityHandle); }
 
-        entt::entity GetHandle() { return m_EntityHandle; }
+        entt::entity GetHandle() const { return m_EntityHandle; }
 
         void Clear()
         {
@@ -151,10 +152,10 @@ namespace Crowny
         operator bool() const { return IsValid(); }
         bool operator==(const EnttEntity& other) const
         {
-            // CW_ASSERT(IsValid());
-            // TODO: Why is the scene compare commented out?
             return m_EntityHandle == other.m_EntityHandle && m_Scene == other.m_Scene;
         }
+
+        bool operator!=(const EnttEntity& other) const { return !(*this == other); }
 
     private:
         template <typename Component> void NotifyTransformChangedComponent(const Transform& transform)
@@ -164,7 +165,8 @@ namespace Crowny
                 GetComponent<Component>().OnTransformChanged(transform);
         }
 
-        template <typename... Component> void NotifyTransformChangedComponentWrapper(ComponentGroup<Component...> group, const Transform& transform)
+        template <typename... Component>
+        void NotifyTransformChangedComponentWrapper(ComponentGroup<Component...> group, const Transform& transform)
         {
             ([&]() { NotifyTransformChangedComponent<Component>(transform); }(), ...);
         }
@@ -180,6 +182,6 @@ namespace std
 {
     template <> struct hash<Crowny::Entity>
     {
-        size_t operator()(const Crowny::Entity& e) const { return (size_t)e.m_EntityHandle; }
+        size_t operator()(const Crowny::Entity& e) const { return (size_t)e.GetHandle(); }
     };
 } // namespace std

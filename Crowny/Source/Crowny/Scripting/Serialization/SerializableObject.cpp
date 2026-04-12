@@ -309,15 +309,33 @@ namespace Crowny
                     auto enumInfo = std::static_pointer_cast<SerializableTypeInfoEnum>(typeInfo);
                     switch (enumInfo->m_UnderlyingType)
                     {
-                    case ScriptPrimitiveType::I8: data = CreateRef<SerializableFieldI8>(); break;
-                    case ScriptPrimitiveType::U8: data = CreateRef<SerializableFieldU8>(); break;
-                    case ScriptPrimitiveType::I16: data = CreateRef<SerializableFieldI16>(); break;
-                    case ScriptPrimitiveType::U16: data = CreateRef<SerializableFieldU16>(); break;
-                    case ScriptPrimitiveType::I32: data = CreateRef<SerializableFieldI32>(); break;
-                    case ScriptPrimitiveType::U32: data = CreateRef<SerializableFieldU32>(); break;
-                    case ScriptPrimitiveType::I64: data = CreateRef<SerializableFieldI64>(); break;
-                    case ScriptPrimitiveType::U64: data = CreateRef<SerializableFieldU64>(); break;
-                    default: data = CreateRef<SerializableFieldI32>(); break;
+                    case ScriptPrimitiveType::I8:
+                        data = CreateRef<SerializableFieldI8>();
+                        break;
+                    case ScriptPrimitiveType::U8:
+                        data = CreateRef<SerializableFieldU8>();
+                        break;
+                    case ScriptPrimitiveType::I16:
+                        data = CreateRef<SerializableFieldI16>();
+                        break;
+                    case ScriptPrimitiveType::U16:
+                        data = CreateRef<SerializableFieldU16>();
+                        break;
+                    case ScriptPrimitiveType::I32:
+                        data = CreateRef<SerializableFieldI32>();
+                        break;
+                    case ScriptPrimitiveType::U32:
+                        data = CreateRef<SerializableFieldU32>();
+                        break;
+                    case ScriptPrimitiveType::I64:
+                        data = CreateRef<SerializableFieldI64>();
+                        break;
+                    case ScriptPrimitiveType::U64:
+                        data = CreateRef<SerializableFieldU64>();
+                        break;
+                    default:
+                        data = CreateRef<SerializableFieldI32>();
+                        break;
                     }
                     break;
                 }

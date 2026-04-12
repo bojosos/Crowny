@@ -43,7 +43,7 @@ namespace Crowny
           vkCreateDescriptorPool(gVulkanRenderAPI().GetPresentDevice()->GetLogicalDevice(), &poolCreateInfo, gVulkanAllocator, &m_ImguiPool);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
-        Application& app = Application::Get();
+        Application& app = (*gApplication);
         GLFWwindow* window = static_cast<GLFWwindow*>(app.GetWindow().GetNativeWindow());
         ImGui_ImplGlfw_InitForVulkan(window, true);
 
@@ -55,8 +55,8 @@ namespace Crowny
         init_info.Queue = gVulkanRenderAPI().GetPresentDevice()->GetQueue(GRAPHICS_QUEUE, numQueues - 1)->GetHandle();
         init_info.DescriptorPool = m_ImguiPool;
         init_info.MinImageCount =
-          static_cast<VulkanRenderWindow*>(Application::Get().GetRenderWindow().get())->GetSwapChain()->GetColorSurfacesCount();
-        init_info.ImageCount = static_cast<VulkanRenderWindow*>(Application::Get().GetRenderWindow().get())->GetSwapChain()->GetColorSurfacesCount();
+          static_cast<VulkanRenderWindow*>(gApplication->GetRenderWindow().get())->GetSwapChain()->GetColorSurfacesCount();
+        init_info.ImageCount = static_cast<VulkanRenderWindow*>(gApplication->GetRenderWindow().get())->GetSwapChain()->GetColorSurfacesCount();
         init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
         init_info.Allocator = gVulkanAllocator;
         init_info.QueueFamily = gVulkanRenderAPI().GetPresentDevice()->GetQueueFamily(GRAPHICS_QUEUE);
@@ -95,7 +95,7 @@ namespace Crowny
         ImGui_ImplGlfw_NewFrame();
 
         ImGuiLayer::Begin();
-        RenderAPI::Get().SetRenderTarget(Application::Get().GetRenderWindow());
+        gRenderAPI->SetRenderTarget(gApplication->GetRenderWindow());
     }
 
     void ImGuiVulkanLayer::End()
@@ -107,8 +107,8 @@ namespace Crowny
         gVulkanRenderAPI().SubmitCommandBuffer(nullptr);
 
         vkCmdBuffer = gVulkanRenderAPI().GetMainCommandBuffer()->GetInternal();
-        RenderAPI::Get().SetRenderTarget(Application::Get().GetRenderWindow());
-        RenderAPI::Get().SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
+        gRenderAPI->SetRenderTarget(gApplication->GetRenderWindow());
+        gRenderAPI->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
         gVulkanRenderAPI().ClearRenderTarget(FBT_COLOR | FBT_DEPTH);
         vkCmdBuffer->BeginRenderPass();
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkCmdBuffer->GetHandle());

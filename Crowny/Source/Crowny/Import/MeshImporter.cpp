@@ -245,9 +245,9 @@ namespace Crowny
         if (!mesh)
             return {};
         assets.push_back(mesh);
-        AssetHandle<Shader> pbriblHandle = AssetManager::Get().Load<Shader>(PBRIBL_SHADER_PATH);
+        AssetHandle<Shader> pbriblHandle = gAssetManager->Load<Shader>(PBRIBL_SHADER_PATH);
         // static Ref<Shader> pbriblShader = Importer::Get().Import<Shader>("Resources/Shaders/Pbribl.glsl");
-        // static const AssetHandle<Shader> pbriblHandle = static_asset_cast<Shader>(AssetManager::Get().CreateAssetHandle(pbriblShader));
+        // static const AssetHandle<Shader> pbriblHandle = static_asset_cast<Shader>(gAssetManager->CreateAssetHandle(pbriblShader));
         for (uint32_t i = 0; i < scene->mNumMeshes; i++)
         {
             const aiMesh* aiMesh = scene->mMeshes[i];

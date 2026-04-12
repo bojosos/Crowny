@@ -18,7 +18,7 @@ namespace Crowny
     Ref<AccelerationStructure> AccelerationStructure::Create(const Vector<AccelerationGeometry>& topLevelInstances, bool isTopLevel,
                                                              uint32_t maxTopLevelInstances, AccelerationStructBuildFlags flags)
     {
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::Vulkan:
             return CreateRef<VulkanAccelerationStructure>(topLevelInstances, isTopLevel, maxTopLevelInstances, flags);

@@ -18,7 +18,10 @@ namespace Crowny
 
     void ScriptCollider2DBase::Internal_SetTrigger(ScriptCollider2DBase* thisPtr, bool trigger) { thisPtr->GetCollider2D().SetIsTrigger(trigger); }
 
-    void ScriptCollider2DBase::Internal_GetOffset(ScriptCollider2DBase* thisPtr, glm::vec2* offset) { *offset = thisPtr->GetCollider2D().GetOffset(); }
+    void ScriptCollider2DBase::Internal_GetOffset(ScriptCollider2DBase* thisPtr, glm::vec2* offset)
+    {
+        *offset = thisPtr->GetCollider2D().GetOffset();
+    }
 
     void ScriptCollider2DBase::Internal_SetOffset(ScriptCollider2DBase* thisPtr, glm::vec2* offset)
     {

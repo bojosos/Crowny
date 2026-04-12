@@ -223,7 +223,7 @@ namespace Crowny
 
     Ref<UniformParamInfo> UniformParamInfo::Create(const UniformParamDesc& desc)
     {
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
         // case RenderAPI::API::OpenGL: return CreateRef<OpenGLShader>(m_Filepath);
         case RenderAPI::API::Vulkan:

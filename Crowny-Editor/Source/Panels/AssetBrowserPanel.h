@@ -19,7 +19,8 @@ namespace Crowny
         RenderTexture,
         Shader,
         ComputeShader,
-        PhysicsMaterial
+        PhysicsMaterial,
+        NodeGraph
     };
 
     enum class FileSortingMode
@@ -30,8 +31,6 @@ namespace Crowny
         SortCount = 3
     };
 
-    typedef void* ImTextureID;
-
     class AssetBrowserPanel : public ImGuiPanel
     {
     public:
@@ -41,6 +40,7 @@ namespace Crowny
         virtual void Render() override;
 
         void Initialize();
+        void Unload();
 
         const Path& GetCurrentEntryPath() const { return m_CurrentDirectoryEntry->Filepath; }
 

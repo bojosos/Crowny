@@ -29,13 +29,12 @@ namespace Crowny
 
     UniformParams::~UniformParams()
     {
-        // TODO: Fix asap
-        // delete[] m_BufferBlocks;
-        // delete[] m_SampledTextureData;
-        // delete[] m_SamplerStates;
-        // delete[] m_Buffers;
-        // delete[] m_LoadStoreTextures;
-        // delete[] m_AccelStructs;
+        delete[] m_BufferBlocks;
+        delete[] m_SampledTextureData;
+        delete[] m_SamplerStates;
+        delete[] m_Buffers;
+        delete[] m_LoadStoreTextures;
+        delete[] m_AccelStructs;
     }
 
     void UniformParams::SetUniformBlockBuffer(uint32_t set, uint32_t slot, const Ref<UniformBufferBlock>& uniformBlock)

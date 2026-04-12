@@ -43,10 +43,11 @@ namespace Crowny
         void Refresh(bool wait = false);
 
         uint32_t FindMemoryType(uint32_t requirement, VkMemoryPropertyFlags flags);
-        VmaAllocation AllocateMemory(VkBuffer buffer, VkMemoryPropertyFlags flags);
-        VmaAllocation AllocateMemory(VkImage image, VkMemoryPropertyFlags flags);
+        VmaAllocation AllocateMemory(VkBuffer buffer, VkMemoryPropertyFlags flags, const char* tag = nullptr);
+        VmaAllocation AllocateMemory(VkImage image, VkMemoryPropertyFlags flags, const char* tag = nullptr);
         void GetAllocationInfo(VmaAllocation allocation, VkDeviceMemory& memory, VkDeviceSize& offset);
         void FreeMemory(VmaAllocation allocation);
+        void SetAllocationName(VmaAllocation allocation, const char* name);
 
         const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& GetRayTracingDeviceProperties() const { return m_RayTracingPipelineProperties; }
 
@@ -79,6 +80,14 @@ namespace Crowny
         VkPhysicalDeviceBufferDeviceAddressFeatures enabledBufferDeviceAddressFeatures{};
         VkPhysicalDeviceRayTracingPipelineFeaturesKHR enabledRayTracingPipelineFeatures{};
         VkPhysicalDeviceAccelerationStructureFeaturesKHR enabledAccelerationPipelineFeatures{};
+
+        struct AllocationRecord
+        {
+            String name;
+            VkDeviceSize size = 0;
+        };
+        UnorderedMap<VmaAllocation, AllocationRecord> m_AllocationRecords;
+        uint32_t m_AllocCounter = 0;
 
         VkPipelineCache m_PipelineCache = VK_NULL_HANDLE;
         VkPhysicalDeviceProperties m_DeviceProperties{};

@@ -141,14 +141,14 @@ namespace Crowny
 
     bool Input::GetKey(const KeyCode key)
     {
-        auto* window = static_cast<GLFWwindow*>(Application::Get().GetWindow().GetNativeWindow());
+        auto* window = static_cast<GLFWwindow*>(gApplication->GetWindow().GetNativeWindow());
         auto state = glfwGetKey(window, static_cast<int32_t>(key));
         return state == GLFW_PRESS;
     }
 
     bool Input::GetMouseButton(const MouseCode btn)
     {
-        auto* window = static_cast<GLFWwindow*>(Application::Get().GetWindow().GetNativeWindow());
+        auto* window = static_cast<GLFWwindow*>(gApplication->GetWindow().GetNativeWindow());
         auto state = glfwGetMouseButton(window, btn);
         return state == GLFW_PRESS;
     }
@@ -156,7 +156,7 @@ namespace Crowny
     // Returns if the key is pressed
     bool Input::IsKeyPressed(const KeyCode key)
     {
-        auto* window = static_cast<GLFWwindow*>(Application::Get().GetWindow().GetNativeWindow());
+        auto* window = static_cast<GLFWwindow*>(gApplication->GetWindow().GetNativeWindow());
         auto state = glfwGetKey(window, key);
         return state == GLFW_PRESS || state == GLFW_REPEAT;
     }
@@ -175,7 +175,7 @@ namespace Crowny
 
     glm::vec2 Input::GetMousePosition()
     {
-        auto window = static_cast<GLFWwindow*>(Application::Get().GetWindow().GetNativeWindow());
+        auto window = static_cast<GLFWwindow*>(gApplication->GetWindow().GetNativeWindow());
         double xpos, ypos;
         glfwGetCursorPos(window, &xpos, &ypos);
 
@@ -194,7 +194,7 @@ namespace Crowny
 
     void Input::SetMousePosition(const glm::vec2& pos)
     {
-        auto window = static_cast<GLFWwindow*>(Application::Get().GetWindow().GetNativeWindow());
+        auto window = static_cast<GLFWwindow*>(gApplication->GetWindow().GetNativeWindow());
         glfwSetCursorPos(window, pos.x, pos.y);
     }
 

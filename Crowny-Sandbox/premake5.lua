@@ -11,6 +11,11 @@ project "Crowny-Sandbox"
 		"Crowny-Sharp"
 	}
 
+	dependson
+	{
+		"Crowny-Sharp"
+	}
+
 	files
 	{
 		"Source/**.cs"

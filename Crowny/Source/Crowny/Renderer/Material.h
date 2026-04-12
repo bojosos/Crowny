@@ -16,8 +16,7 @@
 
 namespace Crowny
 {
-    template <typename T> 
-    struct MaterialDataParam
+    template <typename T> struct MaterialDataParam
     {
         MaterialDataParam() : Size(sizeof(T)) { Data = malloc(sizeof(T)); }
 
@@ -36,6 +35,13 @@ namespace Crowny
             String BufferName;
         };
 
+        struct PassData
+        {
+            Ref<GraphicsPipeline> Pipeline;
+            Ref<UniformParams> Uniforms;
+            UnorderedMap<String, Ref<UniformBufferBlock>> UniformBlocks;
+        };
+
         Material(const AssetHandle<Shader>& shader);
         virtual ~Material() override = default;
 
@@ -43,6 +49,9 @@ namespace Crowny
         static AssetType GetStaticType() { return AssetType::Material; }
 
         static Ref<Material> Create(const AssetHandle<Shader>& shader);
+        static Ref<Material> CreatePBR(const AssetHandle<Shader>& shader);
+        static Ref<Material> CreateToon(const AssetHandle<Shader>& shader);
+        static Ref<Material> CreateUnlit(const AssetHandle<Shader>& shader);
 
         AssetHandle<Shader> GetShader() const { return m_Shader; }
         virtual void GetAssets(Vector<AssetHandle<Asset>>& assets) override { assets.push_back(m_Shader); }
@@ -51,9 +60,9 @@ namespace Crowny
         void ReloadParams();
 
         const UnorderedMap<String, UniformMember>& GetBindings() const { return m_Bindings; }
+        bool HasBinding(const String& name) const { return m_Bindings.find(name) != m_Bindings.cend(); }
 
-        template <typename T>
-        T GetDataParam(const String& name) const
+        template <typename T> T GetDataParam(const String& name) const
         {
             const auto iterFind = m_Bindings.find(name);
             if (iterFind == m_Bindings.cend())
@@ -68,12 +77,24 @@ namespace Crowny
                 return T();
             }
             T value;
-            m_UniformBlocks.at(iterFind->second.BufferName)->Read(iterFind->second.Offset, &value, sizeof(value));
-            return value;
+            // Read from first pass that has it
+            for (const auto& pass : m_Passes)
+            {
+                const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
+                if (blockIt != pass.UniformBlocks.end())
+                {
+                    blockIt->second->Read(iterFind->second.Offset, &value, sizeof(value));
+                    return value;
+                }
+            }
+            return T();
         }
 
-        Ref<Texture> GetTexture(uint32_t set, uint32_t slot) const { return m_Uniforms->GetTexture(set, slot); }
-        UnorderedMap<String, UniformResourceDesc> GetTextures() const { return m_GraphicsPipeline->GetParamInfo()->GetUniformDesc(FRAGMENT_SHADER)->Textures; }
+        Ref<Texture> GetTexture(uint32_t set, uint32_t slot) const { return m_Passes[0].Uniforms->GetTexture(set, slot); }
+        UnorderedMap<String, UniformResourceDesc> GetTextures() const
+        {
+            return m_Passes[0].Pipeline->GetParamInfo()->GetUniformDesc(FRAGMENT_SHADER)->Textures;
+        }
 
         void FlushUniformBuffers();
         void SetFloat(const String& name, float value);
@@ -84,24 +105,22 @@ namespace Crowny
         void SetMatrix(const String& name, const glm::mat4& matrix);
         void SetTexture(const String& name, const AssetHandle<Texture>& texture);
         void SetTexture(const String& name, const Ref<Texture>& texture);
-        const Ref<UniformParams>& GetUniformParams() const { return m_Uniforms; }
-        const Ref<GraphicsPipeline>& GetGraphicsPipeline() const { return m_GraphicsPipeline; }
+
+        // Multi-pass accessors
+        uint32_t GetPassCount() const { return (uint32_t)m_Passes.size(); }
+        const Ref<UniformParams>& GetUniformParams(uint32_t pass = 0) const { return m_Passes[pass].Uniforms; }
+        const Ref<GraphicsPipeline>& GetGraphicsPipeline(uint32_t pass = 0) const { return m_Passes[pass].Pipeline; }
 
     private:
         friend class cereal::access;
         Material() = default; // For serialization only
-        void CreateAndAppendUniforms();
+        void CreateAndAppendUniforms(uint32_t passIndex);
 
     private:
         CW_SERIALIZABLE(Material);
 
-        Ref<GraphicsPipeline> m_GraphicsPipeline;
-        // TODO: render passes, each of these 3 should be per render pass
-        UnorderedMap<String, Ref<UniformBufferBlock>> m_UniformBlocks;
-        Ref<UniformParams> m_Uniforms;
-
+        Vector<PassData> m_Passes;
         UnorderedMap<String, UniformMember> m_Bindings;
-
         AssetHandle<Shader> m_Shader;
     };
 } // namespace Crowny

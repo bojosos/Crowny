@@ -7,6 +7,11 @@
 namespace Crowny
 {
     RenderAPI::API RenderAPI::s_API = RenderAPI::API::Vulkan;
+    RenderAPI* gRenderAPI = nullptr;
+
+    void RenderAPI::OnStartUp() { gRenderAPI = this; }
+
+    void RenderAPI::OnShutdown() { gRenderAPI = nullptr; }
 
     uint32_t RenderAPI::VertexCountToPrimitiveCount(DrawMode drawMode, uint32_t elementCount)
     {

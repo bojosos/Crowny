@@ -57,7 +57,7 @@ namespace Crowny
         virtual int GetCategoryFlags() const = 0;
         virtual String ToString() const { return GetName(); }
 
-        bool IsInCategory(EventCategory category) { return GetCategoryFlags() & category; }
+        bool IsInCategory(EventCategory category) const { return GetCategoryFlags() & category; }
     };
 
     using EventCallbackFn = std::function<void(Event&)>;

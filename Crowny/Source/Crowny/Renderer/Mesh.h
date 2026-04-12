@@ -108,7 +108,8 @@ namespace Crowny
 
         void WriteData(const Ref<MeshData>& meshData, bool discard, bool updateBounds = true, int32_t queue = 0);
         void ReadData(Ref<MeshData>& data, uint32_t queueIdx = 0);
-        DrawMode GetDrawMode() { return m_DrawMode; }
+        DrawMode GetDrawMode() const { return m_DrawMode; }
+        const Vector<SubMesh>& GetSubMeshes() const { return m_SubMeshes; }
 
         // Mesh modification API
         void SetMeshData(const Ref<MeshData>& data);

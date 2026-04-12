@@ -12,14 +12,13 @@ namespace Crowny
 
     ScriptAssetBase* ScriptAssetManager::CreateScriptAsset(const AssetHandle<Asset>& asset, MonoObject* instance)
     {
-        const UUID uuid = asset.GetUUID();            // Hmmm something weird happens if I don't copy here (maybe some corruption magic?)
-        if (!asset.IsLoaded() || uuid == UUID::EMPTY) // The == EMPTY check is only done since .IsLoaded is not fully implemented yet
+        if (!asset.IsLoaded() || !asset.HasUUID())
             return nullptr;
         AssetInfo* assetInfo = ScriptInfoManager::Get().GetAssetInfo(asset->GetAssetType());
         if (assetInfo == nullptr)
             return nullptr;
         ScriptAssetBase* scriptAsset = assetInfo->CreateCallback(asset, instance);
-        m_ScriptAssets[uuid] = scriptAsset;
+        m_ScriptAssets[asset.GetUUID()] = scriptAsset;
         return scriptAsset;
     }
 

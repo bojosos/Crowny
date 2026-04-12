@@ -20,7 +20,7 @@ int main(int argc, char** argv)
         __try
         {
             Crowny::CreateApplication();
-            Crowny::Application::Get().Run();
+            Crowny::gApplication->Run();
             Crowny::Application::Shutdown();
         }
         __except (Crowny::CrashHandler::Get().ReportCrash(GetExceptionInformation()))
@@ -31,12 +31,12 @@ int main(int argc, char** argv)
     else
     {
         Crowny::CreateApplication();
-        Crowny::Application::Get().Run();
+        Crowny::gApplication->Run();
         Crowny::Application::Shutdown();
     }
 #else
     Crowny::CreateApplication();
-    Crowny::Application::Get().Run();
+    Crowny::gApplication->Run();
     Crowny::Application::Shutdown();
 #endif
 

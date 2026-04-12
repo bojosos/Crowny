@@ -21,7 +21,7 @@ namespace Crowny
 
     Ref<SamplerState> SamplerState::Create(const SamplerStateDesc& desc)
     {
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
         // TODO: Add support for binary OpenGL shaders
         // case RenderAPI::API::OpenGL: return CreateRef<OpenGLShader>(m_Filepath);

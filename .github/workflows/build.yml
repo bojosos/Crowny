@@ -89,7 +89,7 @@ jobs:
 
       - name: Generate projects
         run: |
-          3rdparty/premake/bin/premake5.exe vs2022
+          3rdparty/premake/bin/premake5.exe vs2022 --with-nodes with-nodes
 
       - name: Build
         run: |

@@ -41,7 +41,7 @@ namespace Crowny
 
     Ref<Texture> Texture::Create(const TextureParameters& params)
     {
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
         // case RenderAPI::API::OpenGL: return CreateRef<VulkanTexture>(m_Filepath);
         case RenderAPI::API::Vulkan:
@@ -56,10 +56,9 @@ namespace Crowny
 
     Ref<Texture> Texture::CreateDeferred(const TextureParameters& params, const Ref<PixelData>& pixelData)
     {
-        switch (RenderAPI::Get().GetAPI())
+        switch (gRenderAPI->GetAPI())
         {
-        case RenderAPI::API::Vulkan:
-        {
+        case RenderAPI::API::Vulkan: {
             auto tex = CreateRef<VulkanTexture>(params, true);
             tex->m_PendingPixelData = pixelData;
             return tex;

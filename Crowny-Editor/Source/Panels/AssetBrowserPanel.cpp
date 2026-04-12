@@ -7,6 +7,10 @@
 #include "Crowny/Common/StringUtils.h"
 #include "Crowny/Import/Importer.h"
 #include "Crowny/Import/TextureImporter.h"
+
+#include "Crowny/NodeGraph/NodeGraphAsset.h"
+#include "Crowny/NodeGraph/NodeRegistry.h"
+
 #include "Crowny/Input/Input.h"
 
 #include "Editor/Editor.h"
@@ -18,8 +22,11 @@
 
 #include "Crowny/Assets/AssetManager.h"
 
+#include "Crowny/Common/Constants.h"
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
+#include "Crowny/RenderAPI/Shader.h"
+#include "Crowny/Renderer/Material.h"
 
 #include "UI/UIUtils.h"
 
@@ -42,7 +49,7 @@ namespace Crowny
         case AssetBrowserItem::Material:
             return "New Material.mat";
         case AssetBrowserItem::Prefab:
-            return "New Prefab.prefab";
+            return "New Prefab.cwprefab";
         case AssetBrowserItem::Shader:
             return "New Shader.shader";
         case AssetBrowserItem::ComputeShader:
@@ -53,6 +60,8 @@ namespace Crowny
             return "New RenderTexture.rt";
         case AssetBrowserItem::Scene:
             return "New Scene.cwscene";
+        case AssetBrowserItem::NodeGraph:
+            return "New NodeGraph.cwng";
         default:
             return "New File";
         }
@@ -154,12 +163,24 @@ namespace Crowny
         UpdateDisplayList();
     }
 
+    void AssetBrowserPanel::Unload()
+    {
+        m_CurrentDirectoryEntry = nullptr;
+        m_DirectoryPathEntries.clear();
+        m_DisplayList.clear();
+        m_BackwardHistory = Stack<DirectoryEntry*>();
+        m_ForwardHistory = Stack<DirectoryEntry*>();
+    }
+
     void AssetBrowserPanel::Render()
     {
         UI::ScopedStyle windowPadding(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, 2.0f));
         BeginPanel(ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
         if (!IsShown())
+        {
+            EndPanel();
             return;
+        }
 
         DrawHeader();
         ImGui::Separator();
@@ -239,9 +260,7 @@ namespace Crowny
         // UI::ScopedStyle itemSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 3));
         UI::ScopedStyle style2(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 8.0f));
         UI::ScopedStyle style3(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 4.0f));
-        ImGui::BeginVertical("##assetBrowserV", { ImGui::GetContentRegionAvail().x, 0 }, 0.5f);
-        ImGui::Spring();
-        ImGui::BeginHorizontal("##assetBrowserH", { ImGui::GetContentRegionAvail().x, 0 });
+        ImGui::BeginHorizontal("##assetBrowserH", { ImGui::GetContentRegionAvail().x, 0 }, 0.5f);
         const Ref<DirectoryEntry>& entry = ProjectLibrary::Get().GetRoot();
         if (!m_BackwardHistory.empty())
         {
@@ -279,13 +298,15 @@ namespace Crowny
                 SetCurrentDirectory(m_CurrentDirectoryEntry->Parent);
         }
 
-        bool importing = ProjectLibrary::Get().IsImporting();
-        if (importing) ImGui::BeginDisabled();
+        const bool importing = ProjectLibrary::Get().IsImporting();
+        if (importing)
+            ImGui::BeginDisabled();
         if (ImGui::Button("Refresh"))
         {
             ProjectLibrary::Get().RefreshAsync(m_CurrentDirectoryEntry->Filepath);
         }
-        if (importing) ImGui::EndDisabled();
+        if (importing)
+            ImGui::EndDisabled();
 
         if (importing)
             UpdateDisplayList(); // Show newly imported assets as they complete
@@ -309,8 +330,6 @@ namespace Crowny
                 m_DisplayList = ProjectLibrary::Get().Search(m_SearchString);
             UpdateDisplayList();
         }
-        UI::ScopedStyle style(ImGuiStyleVar_LayoutAlign, 1.0f);
-
         const float maxWidth = 150.0f * 1.1f;
         const float spacing = ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(" ").x;
         const float checkboxSize = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2;
@@ -346,8 +365,6 @@ namespace Crowny
         }
 
         ImGui::EndHorizontal();
-        ImGui::Spring();
-        ImGui::EndVertical();
     }
 
     void AssetBrowserPanel::HandleKeyboardNavigation()
@@ -683,7 +700,7 @@ namespace Crowny
 
             // Thumbnail
             ImGui::BeginGroup();
-            ImGui::ImageButton(tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 }, 0);
+            ImGui::ImageButton("##thumb", tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 });
             ImGui::SetNextItemWidth(m_ThumbnailSize);
             if (m_RenamingPath.empty() || m_RenamingPath != path) // File icon
             {
@@ -722,8 +739,7 @@ namespace Crowny
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 5));
 
                 ImGui::SetKeyboardFocusHere();
-                if (ImGui::InputText("##RenameFile", &m_RenamingText,
-                                     ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CodeSelectNoExt))
+                if (ImGui::InputText("##RenameFile", &m_RenamingText, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
                     completeRename();
                 ImGui::PopStyleVar();
 
@@ -742,7 +758,7 @@ namespace Crowny
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) // Allow dragging
             {
                 UIUtils::SetAssetPayload(entry.get());
-                ImGui::ImageButton(tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 }, 0);
+                ImGui::ImageButton("##thumb", tid, { m_ThumbnailSize, m_ThumbnailSize }, { 0, 1 }, { 1, 0 });
                 ImGui::SetNextItemWidth(m_ThumbnailSize);
                 float textWidth = ImGui::CalcTextSize(entry->ElementName.c_str()).x;
                 if (m_ThumbnailSize >= textWidth)
@@ -818,7 +834,8 @@ namespace Crowny
                         m_SelectionSet.clear();
                         m_SelectionSet.insert(entry->ElementNameHash);
                         m_SelectionEndIndex = m_SelectionStartIndex = entryIdx;
-                        m_SetSelectedPathCallback(path);
+                        if (entry->Type != LibraryEntryType::Directory)
+                            m_SetSelectedPathCallback(path);
                     }
                 }
             }
@@ -937,6 +954,8 @@ namespace Crowny
                 CreateNew(AssetBrowserItem::Scene);
             if (ImGui::MenuItem("Prefab"))
                 CreateNew(AssetBrowserItem::Prefab);
+            if (ImGui::MenuItem("Node Graph"))
+                CreateNew(AssetBrowserItem::NodeGraph);
             ImGui::Separator();
             if (ImGui::MenuItem("Material"))
                 CreateNew(AssetBrowserItem::Material);
@@ -1028,7 +1047,20 @@ namespace Crowny
             break;
         }
         case AssetBrowserItem::Material: {
-            // TODO:
+            AssetHandle<Shader> shader = gAssetManager->Load<Shader>(UNLIT_SHADER_PATH);
+            Ref<Material> material = Material::CreateUnlit(shader);
+            ProjectLibrary::Get().CreateEntry(material, newEntryPath);
+            break;
+        }
+        case AssetBrowserItem::NodeGraph: {
+            Ref<NodeGraph> graph = CreateRef<NodeGraph>();
+            graph->SetDomain(NodeGraph::Domain::Geometry);
+            graph->SetName(newEntryPath.filename().replace_extension("").string());
+            graph->AddNode(NodeRegistry::Get().Create("GeometryOutputNode"));
+            auto nodeGraphAsset = CreateRef<NodeGraphAsset>(graph);
+            nodeGraphAsset->SetName(graph->GetName());
+            ProjectLibrary::Get().CreateEntry(nodeGraphAsset, newEntryPath);
+            break;
         }
         default: {
             FileSystem::WriteTextFile(newEntryPath, GetDefaultContents(itemType));
@@ -1036,8 +1068,12 @@ namespace Crowny
         }
         }
         ProjectLibrary::Get().Refresh(newEntryPath);
-        m_RenamingPath = ProjectLibrary::Get().FindEntry(newEntryPath)->Filepath;
-        m_RenamingText = newEntryPath.filename().string();
+        Ref<LibraryEntry> newEntry = ProjectLibrary::Get().FindEntry(newEntryPath);
+        if (newEntry)
+        {
+            m_RenamingPath = newEntry->Filepath;
+            m_RenamingText = newEntryPath.filename().string();
+        }
         UpdateDisplayList();
     }
 

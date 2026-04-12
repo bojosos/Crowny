@@ -6,16 +6,26 @@
 #include "Crowny/Common/FileSystem.h"
 
 #include "Crowny/Audio/AudioSource.h"
+#include "Crowny/NodeGraph/Connection.h"
+#include "Crowny/NodeGraph/Node.h"
+#include "Crowny/NodeGraph/NodeGraphAsset.h"
+#include "Crowny/NodeGraph/NodeRegistry.h"
+#include "Crowny/NodeGraph/Pin.h"
 #include "Crowny/Physics/PhysicsMaterial.h"
+#include "Crowny/RenderAPI/Buffer.h"
 #include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/RenderAPI/Texture.h"
-#include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/MSDFdata.h"
+#include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/Mesh.h"
+
+#include "Crowny/Renderer/EnvironmentMap.h"
 
 #include "Platform/Vulkan/VulkanTexture.h"
 
 #include "Crowny/Utils/Compression.h"
+
+#include <tracy/Tracy.hpp>
 
 #include <cereal/types/utility.hpp>
 
@@ -53,14 +63,88 @@ void Load(BinaryDataStreamInputArchive& archive, msdf_atlas::FontGeometry& fontG
 namespace Crowny
 {
 
+    AssetManager* gAssetManager = nullptr;
+
+    void AssetManager::OnStartUp() { gAssetManager = this; }
+
+    void AssetManager::OnShutdown() { gAssetManager = nullptr; }
+
+    static int64_t GetCurrentTimestamp()
+    {
+        return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    }
+
+    static int64_t GetFileTimestamp(const Path& path)
+    {
+        if (!fs::exists(path))
+            return 0;
+        auto ftime = fs::last_write_time(path);
+        auto duration = ftime.time_since_epoch();
+        return std::chrono::duration_cast<std::chrono::seconds>(duration).count();
+    }
+
+    static void WriteAssetHeader(BinaryDataStreamOutputArchive& archive, AssetType type, uint32_t version, int64_t sourceTimestamp = 0,
+                                 uint64_t sourceContentHash = 0)
+    {
+        AssetFileHeader header;
+        header.Version = version;
+        header.Type = type;
+        header.SourceTimestamp = sourceTimestamp;
+        header.CompileTimestamp = GetCurrentTimestamp();
+        header.SourceContentHash = sourceContentHash;
+        // Write magic as raw bytes so ReadAssetHeader's raw peek matches exactly
+        archive.GetStream()->Write(&header.Magic, sizeof(header.Magic));
+        archive(header.Version, header.Type, header.SourceTimestamp, header.CompileTimestamp, header.SourceContentHash);
+    }
+
+    static AssetFileHeader ReadAssetHeader(BinaryDataStreamInputArchive& archive)
+    {
+        AssetFileHeader header;
+
+        // Peek the magic number first — old-format files won't have our header
+        auto& stream = archive.GetStream();
+        size_t startPos = stream->Tell();
+
+        uint32_t magic = 0;
+        stream->Read(&magic, sizeof(magic));
+
+        if (magic != ASSET_FILE_MAGIC)
+        {
+            // Old format — rewind and return a default header so the caller
+            // can proceed with legacy deserialization (no header in file)
+            stream->Seek(startPos);
+            CW_ENGINE_WARN("Asset file missing CWNY header — old format. Delete .asset files and restart to recompile.");
+            return header;
+        }
+
+        // Valid header — read the rest
+        archive(header.Version, header.Type, header.SourceTimestamp, header.CompileTimestamp, header.SourceContentHash);
+        header.Magic = magic;
+        return header;
+    }
+
+    // Reads only the header from an asset file without deserializing the full asset.
+    // Useful for staleness checks without loading the entire asset.
+    static bool PeekAssetHeader(const Path& assetPath, AssetFileHeader& outHeader)
+    {
+        Ref<DataStream> stream = FileSystem::OpenFile(assetPath);
+        if (!stream)
+            return false;
+        BinaryDataStreamInputArchive archive(stream);
+        outHeader = ReadAssetHeader(archive);
+        stream->Close();
+        return outHeader.Magic == ASSET_FILE_MAGIC;
+    }
+
     void Save(BinaryDataStreamOutputArchive& archive, const Asset& asset) { archive(asset.m_KeepData, asset.m_Name); }
 
     void Load(BinaryDataStreamInputArchive& archive, Asset& asset) { archive(asset.m_KeepData, asset.m_Name); }
 
     void Load(BinaryDataStreamInputArchive& archive, AudioClip& clip)
     {
-        archive(cereal::base_class<Asset>(&clip)); // Save asset base class
-        AudioClipDesc& desc = clip.m_Desc;         // Save clip desc
+        AssetFileHeader header = ReadAssetHeader(archive);
+        archive(cereal::base_class<Asset>(&clip));
+        AudioClipDesc& desc = clip.m_Desc; // Save clip desc
         archive(desc.ReadMode, desc.Format, desc.Frequency, desc.BitDepth, desc.NumChannels, desc.Is3D);
         archive(clip.m_Length, clip.m_NumSamples);
         // CW_ENGINE_INFO("Loaded: {0}", clip.m_NumSamples);
@@ -73,8 +157,9 @@ namespace Crowny
 
     void Save(BinaryDataStreamOutputArchive& archive, const AudioClip& clip)
     {
-        archive(cereal::base_class<Asset>(&clip)); // Save asset base class
-        const AudioClipDesc& desc = clip.m_Desc;   // Save clip desc
+        WriteAssetHeader(archive, AssetType::AudioClip, AUDIO_FORMAT_VERSION);
+        archive(cereal::base_class<Asset>(&clip));
+        const AudioClipDesc& desc = clip.m_Desc; // Save clip desc
         archive(desc.ReadMode, desc.Format, desc.Frequency, desc.BitDepth, desc.NumChannels, desc.Is3D);
         archive(clip.m_Length, clip.m_NumSamples);
 
@@ -88,6 +173,7 @@ namespace Crowny
 
     void Save(BinaryDataStreamOutputArchive& archive, const Font& font)
     {
+        WriteAssetHeader(archive, AssetType::Font, FONT_FORMAT_VERSION);
         archive(cereal::base_class<Asset>(&font));
         const MSDFData* const data = font.GetMSDFData();
         archive(data->FontGeometry);
@@ -97,6 +183,7 @@ namespace Crowny
 
     void Load(BinaryDataStreamInputArchive& archive, Font& font)
     {
+        AssetFileHeader header = ReadAssetHeader(archive);
         archive(cereal::base_class<Asset>(&font));
         font.m_MSDFData = new MSDFData();
         archive(font.m_MSDFData->FontGeometry);
@@ -106,6 +193,7 @@ namespace Crowny
 
     void Load(BinaryDataStreamInputArchive& archive, Texture& texture)
     {
+        AssetFileHeader header = ReadAssetHeader(archive);
         archive(cereal::base_class<Asset>(&texture));
         TextureParameters& params = texture.m_Params;
         archive(params.Type, params.Shape, params.sRGB, params.ReadWrite, params.GenerateMipmaps, params.MipLevels, params.Samples, params.Faces,
@@ -126,6 +214,7 @@ namespace Crowny
 
     void Save(BinaryDataStreamOutputArchive& archive, const Texture& texture)
     {
+        WriteAssetHeader(archive, AssetType::Texture, TEXTURE_FORMAT_VERSION);
         Texture& texture2 = const_cast<Texture&>(texture);
 
         archive(cereal::base_class<Asset>(&texture2));
@@ -151,6 +240,7 @@ namespace Crowny
 
     void Load(BinaryDataStreamInputArchive& archive, Mesh& mesh)
     {
+        AssetFileHeader header = ReadAssetHeader(archive);
         archive(cereal::base_class<Asset>(&mesh));
         archive(mesh.m_Layout);
         archive(mesh.m_IndexType);
@@ -169,6 +259,7 @@ namespace Crowny
 
     void Save(BinaryDataStreamOutputArchive& archive, const Mesh& constMesh)
     {
+        WriteAssetHeader(archive, AssetType::Mesh, MESH_FORMAT_VERSION);
         Mesh& mesh = const_cast<Mesh&>(constMesh);
         archive(cereal::base_class<Asset>(&mesh));
         archive(mesh.m_Layout);
@@ -214,12 +305,14 @@ namespace Crowny
 
     void Save(BinaryDataStreamOutputArchive& archive, const ScriptCode& code)
     {
+        WriteAssetHeader(archive, AssetType::ScriptCode, 1);
         archive(cereal::base_class<Asset>(&code));
         archive(code.m_Source);
     }
 
     void Load(BinaryDataStreamInputArchive& archive, ScriptCode& code)
     {
+        AssetFileHeader header = ReadAssetHeader(archive);
         archive(cereal::base_class<Asset>(&code));
         archive(code.m_Source);
     }
@@ -266,10 +359,7 @@ namespace Crowny
         BufferLayout::s_NextFreeId = std::max(BufferLayout::s_NextFreeId, layout.m_Id + 1);
     }
 
-    void Save(BinaryDataStreamOutputArchive& archive, const BufferLayout& layout)
-    {
-        archive(layout.m_Id, layout.m_Elements);
-    }
+    void Save(BinaryDataStreamOutputArchive& archive, const BufferLayout& layout) { archive(layout.m_Id, layout.m_Elements); }
 
     template <typename Archive> void Serialize(Archive& archive, BinaryShaderData& binaryShaderData)
     {
@@ -281,7 +371,7 @@ namespace Crowny
     {
         archive(cereal::binary_data(&stateDesc, sizeof(BlendStateDesc)));
     }
-    
+
     template <typename Archive> void Serialize(Archive& archive, RasterizerStateDesc& stateDesc)
     {
         archive(cereal::binary_data(&stateDesc, sizeof(RasterizerStateDesc)));
@@ -315,7 +405,7 @@ namespace Crowny
     }
 
     template <typename Archive> void Serialize(Archive& archive, ShaderVariation& shaderVariation) { archive(shaderVariation.m_Parameters); }
-    
+
     template <typename Archive> void Serialize(Archive& archive, ShaderRenderPass& renderPass) { archive(renderPass.m_ShaderDesc); }
 
     template <typename Archive> void Serialize(Archive& archive, ShaderTechnique& shaderTechnique)
@@ -325,61 +415,104 @@ namespace Crowny
 
     void Load(BinaryDataStreamInputArchive& archive, Shader& shader)
     {
+        AssetFileHeader header = ReadAssetHeader(archive);
         archive(cereal::base_class<Asset>(&shader));
         archive(shader.m_Techniques);
     }
 
     void Save(BinaryDataStreamOutputArchive& archive, const Shader& shader)
     {
+        WriteAssetHeader(archive, AssetType::Shader, SHADER_FORMAT_VERSION, shader.m_SourceTimestamp, shader.m_SourceContentHash);
         archive(cereal::base_class<Asset>(&shader));
         archive(shader.m_Techniques);
     }
 
     void Save(BinaryDataStreamOutputArchive& archive, const Material& material)
     {
+        WriteAssetHeader(archive, AssetType::Material, MATERIAL_FORMAT_VERSION);
         archive(cereal::base_class<Asset>(&material));
         // Shader reference
         UUID shaderUuid = material.m_Shader ? material.m_Shader.GetUUID() : UUID::EMPTY;
         archive(shaderUuid);
-        // Uniform block data
-        uint32_t blockCount = (uint32_t)material.m_UniformBlocks.size();
-        archive(blockCount);
-        for (const auto& [name, block] : material.m_UniformBlocks)
+        // Per-param serialization: save each binding by name, type, and value bytes.
+        // This makes .asset files resilient to uniform layout changes (reordering, additions, removals).
+        uint32_t paramCount = (uint32_t)material.m_Bindings.size();
+        archive(paramCount);
+        for (const auto& [paramName, member] : material.m_Bindings)
         {
-            archive(name, block->m_Size);
-            archive(cereal::binary_data(block->m_CachedData, block->m_Size));
+            uint32_t typeVal = (uint32_t)member.DataType;
+            uint32_t byteSize = ShaderDataTypeSize(member.DataType);
+            archive(paramName, typeVal, byteSize);
+            // Read the value from the first pass that contains the block
+            bool written = false;
+            for (const auto& pass : material.m_Passes)
+            {
+                auto blockIt = pass.UniformBlocks.find(member.BufferName);
+                if (blockIt != pass.UniformBlocks.end() && member.Offset + byteSize <= blockIt->second->m_Size)
+                {
+                    Vector<uint8_t> buf(byteSize, 0);
+                    blockIt->second->Read(member.Offset, buf.data(), byteSize);
+                    archive(cereal::binary_data(buf.data(), byteSize));
+                    written = true;
+                    break;
+                }
+            }
+            if (!written)
+            {
+                Vector<uint8_t> zeroBuf(byteSize, 0);
+                archive(cereal::binary_data(zeroBuf.data(), byteSize));
+            }
         }
     }
 
     void Load(BinaryDataStreamInputArchive& archive, Material& material)
     {
+        AssetFileHeader header = ReadAssetHeader(archive);
         archive(cereal::base_class<Asset>(&material));
         UUID shaderUuid;
         archive(shaderUuid);
         if (!shaderUuid.Empty())
         {
-            material.m_Shader = AssetManager::Get().LoadFromUUID<Shader>(shaderUuid);
+            material.m_Shader = static_asset_cast<Shader>(gAssetManager->LoadFromUUID(shaderUuid));
             if (material.m_Shader)
                 material.ReloadParams();
         }
-        // Restore uniform block data
-        uint32_t blockCount;
-        archive(blockCount);
-        for (uint32_t i = 0; i < blockCount; i++)
+        uint32_t paramCount;
+        archive(paramCount);
+        for (uint32_t i = 0; i < paramCount; i++)
         {
-            String name;
-            uint32_t size;
-            archive(name, size);
-            Vector<uint8_t> data(size);
-            archive(cereal::binary_data(data.data(), size));
-            auto it = material.m_UniformBlocks.find(name);
-            if (it != material.m_UniformBlocks.end() && it->second->m_Size == size)
-                it->second->Write(0, data.data(), size);
+            String paramName;
+            uint32_t typeVal, byteSize;
+            archive(paramName, typeVal, byteSize);
+            Vector<uint8_t> buf(byteSize);
+            archive(cereal::binary_data(buf.data(), byteSize));
+
+            auto bindingIt = material.m_Bindings.find(paramName);
+            if (bindingIt == material.m_Bindings.end())
+            {
+                CW_ENGINE_WARN("Material '{}': saved param '{}' not found in current shader. Discarded.", material.GetName(), paramName);
+                continue;
+            }
+            const Material::UniformMember& member = bindingIt->second;
+            uint32_t currentSize = ShaderDataTypeSize(member.DataType);
+            if ((uint32_t)member.DataType != typeVal || currentSize != byteSize)
+            {
+                CW_ENGINE_WARN("Material '{}': param '{}' type/size mismatch (saved type={} size={}, current type={} size={}). Discarded.",
+                               material.GetName(), paramName, typeVal, byteSize, (uint32_t)member.DataType, currentSize);
+                continue;
+            }
+            for (auto& pass : material.m_Passes)
+            {
+                auto blockIt = pass.UniformBlocks.find(member.BufferName);
+                if (blockIt != pass.UniformBlocks.end() && member.Offset + byteSize <= blockIt->second->m_Size)
+                    blockIt->second->Write(member.Offset, buf.data(), byteSize);
+            }
         }
     }
 
     AssetHandle<Asset> AssetManager::Load(const Path& filepath, bool keepInternalRef, bool keepSourceData)
     {
+        ZoneScopedN("AssetManager::Load");
         if (!fs::exists(filepath))
         {
             CW_ENGINE_WARN("Resource {0} does not exist.", filepath);
@@ -432,27 +565,27 @@ namespace Crowny
         return handle;
     }
 
-    void AssetManager::Save(const Ref<Asset>& resource, const Path& filepath)
+    void AssetManager::Save(const AssetHandle<Asset>& asset, const Path& filepath, bool overwrite)
+    {
+        if (!asset)
+            return;
+
+        if (fs::exists(filepath) && !overwrite)
+        {
+            CW_ENGINE_ERROR("File exists, not saving");
+            return;
+        }
+
+        Save(asset.GetInternalPtr(), filepath);
+    }
+
+    void AssetManager::Save(const Ref<Asset>& asset, const Path& filepath)
     {
         if (!fs::is_directory(filepath.parent_path()))
             fs::create_directories(filepath.parent_path());
-        // Ref<MemoryDataStream> memStream = CreateRef<MemoryDataStream>();
-        //      BinaryDataStreamOutputArchive archive(memStream);
-        //      archive(resource);
-        //// TODO: Check if a file is worth compressing, if not, just write the data to the file
-        //// No need to compress already compressed files (images, audio, ...).
-        //
-        // Vector<uint8_t> result;
-        //// This buffer might be too small.
-        //      result.resize(memStream->Size());; // Maybe if I do this in chunks I can avoid this big alloc, since
-        //      most of this allocate data won't be used.
-        // Compression::Compress(result.data(), memStream->Data(), memStream->Size(), CompressionMethod::FastLZ);
-        //      Ref<DataStream> stream = FileSystem::CreateAndOpenFile(filepath);
-        // stream->Write(result.data(), result.size());
-        //      stream->Close();
         Ref<DataStream> stream = FileSystem::CreateAndOpenFile(filepath);
         BinaryDataStreamOutputArchive archive(stream);
-        archive(resource);
+        archive(asset);
         stream->Close();
     }
 
@@ -472,6 +605,16 @@ namespace Crowny
             m_Manifests.erase(iterFind);
     }
 
+    bool AssetManager::GetAssetPath(const UUID& uuid, Path& outPath) const
+    {
+        for (const auto& manifest : m_Manifests)
+        {
+            if (manifest->UuidToFilepath(uuid, outPath))
+                return true;
+        }
+        return false;
+    }
+
     void AssetManager::GetFilepathFromUUID(const UUID& uuid, Path& outFilepath)
     {
         for (auto& manifest : m_Manifests)
@@ -483,12 +626,13 @@ namespace Crowny
 
     bool AssetManager::GetUUIDFromFilepath(const Path& filepath, UUID& outUUID)
     {
-        // broken
         for (auto& manifest : m_Manifests)
         {
             if (manifest->FilepathToUuid(filepath, outUUID))
                 return true;
         }
+        // No manifest has this filepath registered — caller will generate a new UUID.
+        // This happens for assets loaded directly by path that weren't imported through the ProjectLibrary.
         return false;
     }
 
@@ -501,31 +645,232 @@ namespace Crowny
     AssetHandle<Asset> AssetManager::CreateAssetHandle(const Ref<Asset>& asset, const UUID& uuid)
     {
         AssetHandle<Asset> newHandle(asset, uuid);
-
-        if (asset)
-        {
-            // LoadedResourceData& resData = m_LoadedResources[uuid];
-            // resData.resource = newHandle.GetWeak();
-        }
-
         m_Handles[uuid] = newHandle.GetWeak();
         return newHandle;
     }
 
     void AssetManager::Release(AssetHandleBase& handle)
     {
-        auto iterFind = m_LoadedAssets.find(handle.GetUUID());
-        if (iterFind != m_LoadedAssets.end())
+        const UUID& uuid = handle.GetUUID();
+        m_Handles.erase(uuid);
+    }
+
+    // ---- NodeGraph Serialization ----
+
+    static void SerializePinValue(BinaryDataStreamOutputArchive& archive, PinDataType type, const PinValue& value)
+    {
+        archive((uint32_t)type);
+        switch (type)
         {
-            // LoadedResourceData& resData = iterFind->second;
-
-            // assert(resData.numInternalRefs > 0);
-            // resData.numInternalRefs--;
-            // resource.removeInternalRef();
-
-            // std::uint32_t refCount = resource.getHandleData()->mRefCount.load(std::memory_order_relaxed);
-            // lostLastRef = refCount == 0;
+        case PinDataType::Float:
+            archive(std::get<float>(value));
+            break;
+        case PinDataType::Int:
+            archive(std::get<int32_t>(value));
+            break;
+        case PinDataType::Vec2: {
+            auto v = std::get<glm::vec2>(value);
+            archive(v.x, v.y);
+            break;
         }
+        case PinDataType::Vec3: {
+            auto v = std::get<glm::vec3>(value);
+            archive(v.x, v.y, v.z);
+            break;
+        }
+        case PinDataType::Vec4: {
+            auto v = std::get<glm::vec4>(value);
+            archive(v.x, v.y, v.z, v.w);
+            break;
+        }
+        case PinDataType::Bool:
+            archive(std::get<bool>(value));
+            break;
+        default:
+            break;
+        }
+    }
+
+    static PinValue DeserializePinValue(BinaryDataStreamInputArchive& archive)
+    {
+        uint32_t type;
+        archive(type);
+        switch ((PinDataType)type)
+        {
+        case PinDataType::Float: {
+            float v;
+            archive(v);
+            return v;
+        }
+        case PinDataType::Int: {
+            int32_t v;
+            archive(v);
+            return v;
+        }
+        case PinDataType::Vec2: {
+            float x, y;
+            archive(x, y);
+            return glm::vec2(x, y);
+        }
+        case PinDataType::Vec3: {
+            float x, y, z;
+            archive(x, y, z);
+            return glm::vec3(x, y, z);
+        }
+        case PinDataType::Vec4: {
+            float x, y, z, w;
+            archive(x, y, z, w);
+            return glm::vec4(x, y, z, w);
+        }
+        case PinDataType::Bool: {
+            bool v;
+            archive(v);
+            return v;
+        }
+        default:
+            return 0.0f;
+        }
+    }
+
+    void Save(BinaryDataStreamOutputArchive& archive, const NodeGraphAsset& asset)
+    {
+        WriteAssetHeader(archive, AssetType::NodeGraph, NODEGRAPH_FORMAT_VERSION);
+        archive(cereal::base_class<Asset>(&asset));
+        Ref<NodeGraph> graph = asset.m_Graph;
+        bool hasGraph = graph != nullptr;
+        archive(hasGraph);
+        if (!hasGraph)
+            return;
+
+        // Graph metadata
+        archive(graph->GetID(), graph->GetName(), graph->GetDomain());
+
+        // Nodes
+        const auto& nodes = graph->GetNodes();
+        archive((uint32_t)nodes.size());
+        for (const auto& [id, node] : nodes)
+        {
+            archive(node->GetTypeName(), node->GetID());
+            auto pos = node->GetEditorPosition();
+            archive(pos.x, pos.y);
+
+            // Pins (Input + Output)
+            const auto& inputs = node->GetInputPins();
+            const auto& outputs = node->GetOutputPins();
+            archive((uint32_t)inputs.size(), (uint32_t)outputs.size());
+            for (const auto& pin : inputs)
+            {
+                archive(pin->GetID(), pin->GetName());
+                SerializePinValue(archive, pin->GetDataType(), pin->GetDefaultValue());
+            }
+            for (const auto& pin : outputs)
+            {
+                archive(pin->GetID(), pin->GetName());
+            }
+        }
+
+        // Connections
+        const auto& connections = graph->GetConnections();
+        archive((uint32_t)connections.size());
+        for (const auto& conn : connections)
+            archive(conn.ID, conn.OutputNodeID, conn.OutputPinID, conn.InputNodeID, conn.InputPinID);
+    }
+
+    void Load(BinaryDataStreamInputArchive& archive, NodeGraphAsset& asset)
+    {
+        AssetFileHeader header = ReadAssetHeader(archive);
+        archive(cereal::base_class<Asset>(&asset));
+        bool hasGraph;
+        archive(hasGraph);
+        if (!hasGraph)
+            return;
+
+        UUID graphId;
+        String graphName;
+        uint32_t domain;
+        archive(graphId, graphName, domain);
+
+        auto graph = CreateRef<NodeGraph>(graphId);
+        graph->SetName(graphName);
+        graph->SetDomain((NodeGraph::Domain)domain);
+
+        // Nodes
+        uint32_t nodeCount;
+        archive(nodeCount);
+        for (uint32_t i = 0; i < nodeCount; i++)
+        {
+            String typeName;
+            UUID nodeId;
+            float posX, posY;
+            archive(typeName, nodeId);
+            archive(posX, posY);
+
+            auto node = NodeRegistry::Get().Create(typeName, nodeId);
+            if (node)
+            {
+                node->SetEditorPosition(glm::vec2(posX, posY));
+
+                uint32_t inputPinCount, outputPinCount;
+                archive(inputPinCount, outputPinCount);
+                for (uint32_t p = 0; p < inputPinCount; p++)
+                {
+                    UUID pinId;
+                    String pinName;
+                    archive(pinId, pinName);
+                    PinValue value = DeserializePinValue(archive);
+                    Pin* pin = node->FindInputPin(pinName);
+                    if (pin)
+                    {
+                        pin->SetID(pinId);
+                        pin->SetDefaultValue(value);
+                    }
+                }
+                for (uint32_t p = 0; p < outputPinCount; p++)
+                {
+                    UUID pinId;
+                    String pinName;
+                    archive(pinId, pinName);
+                    Pin* pin = node->FindOutputPin(pinName);
+                    if (pin)
+                        pin->SetID(pinId);
+                }
+
+                graph->AddNode(node);
+            }
+        }
+
+        // Connections
+        uint32_t connCount;
+        archive(connCount);
+        for (uint32_t i = 0; i < connCount; i++)
+        {
+            Connection conn;
+            archive(conn.ID, conn.OutputNodeID, conn.OutputPinID, conn.InputNodeID, conn.InputPinID);
+            graph->ConnectByPinID(conn.OutputPinID, conn.InputPinID);
+        }
+
+        asset.m_Graph = graph;
+    }
+
+    // ---- EnvironmentMap Serialization ----
+    // EnvironmentMap is regenerated from settings, not stored as raw textures
+
+    void Save(BinaryDataStreamOutputArchive& archive, const EnvironmentMap& envMap)
+    {
+        WriteAssetHeader(archive, AssetType::EnvironmentMap, ENVIRONMENT_FORMAT_VERSION);
+        archive(cereal::base_class<Asset>(&envMap));
+        const auto& settings = envMap.GetSettings();
+        archive(settings.CubemapResolution, settings.IrradianceResolution, settings.PrefilteredResolution, settings.PrefilterSamples);
+    }
+
+    void Load(BinaryDataStreamInputArchive& archive, EnvironmentMap& envMap)
+    {
+        AssetFileHeader header = ReadAssetHeader(archive);
+        archive(cereal::base_class<Asset>(&envMap));
+        EnvironmentMap::Settings settings;
+        archive(settings.CubemapResolution, settings.IrradianceResolution, settings.PrefilteredResolution, settings.PrefilterSamples);
+        // Note: IBL textures are regenerated when the source HDR is available, not stored in the asset file.
+        // The caller is responsible for triggering regeneration after load.
     }
 
 } // namespace Crowny
@@ -547,4 +892,8 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::ScriptCode)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::PhysicsMaterial2D)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Mesh)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::Material)
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::NodeGraphAsset, "NodeGraphAsset")
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::NodeGraphAsset)
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::EnvironmentMap, "EnvironmentMap")
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::Asset, Crowny::EnvironmentMap)
 CEREAL_REGISTER_DYNAMIC_INIT(AssetManager)

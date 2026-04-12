@@ -18,7 +18,7 @@ namespace Crowny
         template <class T> void CreateEntityWith(Entity parent, const String& entityName)
         {
             m_DeferredActions.push_back([parent, entityName, this]() mutable {
-                auto activeScene = SceneManager::GetActiveScene();
+                auto activeScene = gSceneManager->GetActiveScene();
                 Entity newEntity = activeScene->CreateEntity(entityName);
                 newEntity.AddComponent<T>();
                 parent.AddChild(newEntity);

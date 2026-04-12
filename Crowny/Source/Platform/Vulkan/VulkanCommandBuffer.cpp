@@ -267,20 +267,14 @@ namespace Crowny
 
     VulkanCommandBufferPool::VulkanCommandBufferPool(VulkanDevice& device) : m_Device(device)
     {
+        // Create initial pools for the main thread
+        std::thread::id mainThreadId = std::this_thread::get_id();
         for (uint32_t i = 0; i < QUEUE_COUNT; i++)
         {
             const uint32_t familyIdx = device.GetQueueFamily((GpuQueueType)i);
             if (familyIdx == (uint32_t)-1)
                 continue;
-            VkCommandPoolCreateInfo poolCreateInfo;
-            poolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-            poolCreateInfo.pNext = nullptr;
-            poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-            poolCreateInfo.queueFamilyIndex = familyIdx;
-            PoolInfo& poolInfo = m_Pools[familyIdx];
-            poolInfo.QueueFamily = familyIdx;
-            std::memset(poolInfo.Buffers, 0, sizeof(poolInfo.Buffers));
-            vkCreateCommandPool(device.GetLogicalDevice(), &poolCreateInfo, gVulkanAllocator, &poolInfo.Pool);
+            GetOrCreatePool(familyIdx, mainThreadId);
         }
     }
 
@@ -300,12 +294,33 @@ namespace Crowny
         }
     }
 
+    VulkanCommandBufferPool::PoolInfo& VulkanCommandBufferPool::GetOrCreatePool(uint32_t queueFamily, std::thread::id threadId)
+    {
+        PoolKey key{ queueFamily, threadId };
+
+        Lock lock(m_PoolMutex);
+        auto iter = m_Pools.find(key);
+        if (iter != m_Pools.end())
+            return iter->second;
+
+        VkCommandPoolCreateInfo poolCreateInfo;
+        poolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolCreateInfo.pNext = nullptr;
+        poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        poolCreateInfo.queueFamilyIndex = queueFamily;
+
+        PoolInfo& poolInfo = m_Pools[key];
+        poolInfo.QueueFamily = queueFamily;
+        std::memset(poolInfo.Buffers, 0, sizeof(poolInfo.Buffers));
+        const VkResult result = vkCreateCommandPool(m_Device.GetLogicalDevice(), &poolCreateInfo, gVulkanAllocator, &poolInfo.Pool);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS, "Failed to create VkCommandPool");
+        return poolInfo;
+    }
+
     VulkanCmdBuffer* VulkanCommandBufferPool::GetBuffer(uint32_t queueFamily, bool secondary)
     {
-        const auto iter = m_Pools.find(queueFamily);
-        if (iter == m_Pools.end())
-            return nullptr;
-        VulkanCmdBuffer** buffers = iter->second.Buffers;
+        PoolInfo& pool = GetOrCreatePool(queueFamily, std::this_thread::get_id());
+        VulkanCmdBuffer** buffers = pool.Buffers;
 
         uint32_t i = 0;
         for (; i < MAX_VULKAN_CB_PER_QUEUE_FAMILY; i++)
@@ -321,19 +336,16 @@ namespace Crowny
 
         CW_ENGINE_ASSERT(i < MAX_VULKAN_CB_PER_QUEUE_FAMILY, "Too many command buffers allocated.");
 
-        buffers[i] = CreateBuffer(queueFamily, secondary);
+        buffers[i] = CreateBuffer(queueFamily, pool.Pool);
         buffers[i]->Begin();
 
         return buffers[i];
     }
 
-    VulkanCmdBuffer* VulkanCommandBufferPool::CreateBuffer(uint32_t queueFamily, bool secondary)
+    VulkanCmdBuffer* VulkanCommandBufferPool::CreateBuffer(uint32_t queueFamily, VkCommandPool pool)
     {
-        const auto iter = m_Pools.find(queueFamily);
-        if (iter == m_Pools.end())
-            return nullptr;
-        const PoolInfo& poolInfo = iter->second;
-        return new VulkanCmdBuffer(m_Device, m_NextId++, poolInfo.Pool, poolInfo.QueueFamily, secondary);
+        uint32_t id = m_NextId.fetch_add(1, std::memory_order_relaxed);
+        return new VulkanCmdBuffer(m_Device, id, pool, queueFamily, false);
     }
 
     VulkanCmdBuffer::VulkanCmdBuffer(VulkanDevice& device, uint32_t id, VkCommandPool pool, uint32_t queueFamily, bool secondary)
@@ -814,8 +826,14 @@ namespace Crowny
         auto registerSubresourceInfo = [&](const VkImageSubresourceRange& subresourceRange) {
             m_SubresourceInfoStorage.push_back(ImageSubresourceInfo());
             ImageSubresourceInfo& subresourceInfo = m_SubresourceInfoStorage.back();
-            subresourceInfo.CurrentLayout = layout;
-            subresourceInfo.InitialLayout = layout;
+            // Read actual current layout from the per-subresource tracker rather than
+            // assuming the image is already in the desired layout. Without this, a fresh
+            // multi-layer texture would have CurrentLayout == RequiredLayout, causing
+            // ExecuteLayoutTransitions to skip the barrier, leaving later layers in
+            // VK_IMAGE_LAYOUT_UNDEFINED when Vulkan expects SHADER_READ_ONLY_OPTIMAL.
+            VkImageLayout actualLayout = image->GetSubresource(subresourceRange.baseArrayLayer, subresourceRange.baseMipLevel)->GetLayout();
+            subresourceInfo.CurrentLayout = actualLayout;
+            subresourceInfo.InitialLayout = actualLayout;
             subresourceInfo.InitialReadOnly = !accessFlags.IsSet(VulkanAccessFlagBits::Write);
             subresourceInfo.RequiredLayout = layout;
             subresourceInfo.RenderPassLayout = finalLayout;
@@ -2063,7 +2081,7 @@ namespace Crowny
         }
 
         m_DescriptorSetsBindState = DescriptorSetBindFlags(7);
-          // (DescriptorSetBindFlags(DescriptorSetBindFlagBits::Graphics | DescriptorSetBindFlagBits::Compute)) | DescriptorSetBindFlagBits::RayTracing;
+        // (DescriptorSetBindFlags(DescriptorSetBindFlagBits::Graphics | DescriptorSetBindFlagBits::Compute)) | DescriptorSetBindFlagBits::RayTracing;
     }
 
     void VulkanCmdBuffer::BindUniforms()

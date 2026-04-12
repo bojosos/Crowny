@@ -14,8 +14,8 @@ namespace Crowny
 
     AudioListener::AudioListener()
     {
-        gAudio().RegisterListener(this);
-        const float globalVolume = gAudio().GetVolume();
+        gAudioManager->RegisterListener(this);
+        const float globalVolume = gAudioManager->GetVolume();
         alListenerf(AL_GAIN, globalVolume);
         alListener3f(AL_POSITION, 0.0f, 0.0f, 0.0f);
         alListener3f(AL_VELOCITY, 0.0f, 0.0f, 0.0f);
@@ -23,7 +23,7 @@ namespace Crowny
         alListenerfv(AL_ORIENTATION, orientation.data());
     }
 
-    AudioListener::~AudioListener() { gAudio().UnregisterListener(this); }
+    AudioListener::~AudioListener() { gAudioManager->UnregisterListener(this); }
 
     void AudioListener::OnTransformChanged(const Transform& transform)
     {
