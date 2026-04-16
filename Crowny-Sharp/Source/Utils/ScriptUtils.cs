@@ -35,6 +35,7 @@ namespace Crowny
         public static void Compile(ScriptAssemblyType type, bool debug, string outputDirectory, string projectPath, string[] libDirs, string[] references)
         {
             string[] files = Directory.GetFiles(projectPath, "*.cs", SearchOption.AllDirectories);
+            Console.WriteLine("{0}, {1}, {2}", files.Length, outputDirectory, projectPath);
             ProcessStartInfo psi = new ProcessStartInfo();
             StringBuilder argBuilder = new StringBuilder();
 
@@ -51,7 +52,7 @@ namespace Crowny
             {
                 argBuilder.Append(" -lib:\"");
                 for (int i = 0; i < libDirs.Length - 1; i++)
-                    argBuilder.Append(libDirs[i] + ",");
+                    argBuilder.Append(libDirs[i] + ";");
                 argBuilder.Append(libDirs[libDirs.Length - 1] + "\"");
             }
 
@@ -61,7 +62,7 @@ namespace Crowny
                 for (int i = 0; i < references.Length - 1; i++)
                     argBuilder.Append(references[i] + ",");
                 argBuilder.Append(references[references.Length - 1]);
-                argBuilder.Append(",System");
+                argBuilder.Append(",System.dll");
             }
 
             foreach (string file in files)
@@ -73,7 +74,7 @@ namespace Crowny
                 Directory.CreateDirectory(outputDirectory);
 
             psi.Arguments = argBuilder.ToString();
-            Debug.Log(psi.Arguments);
+            Console.WriteLine("ARGS: {0}", psi.Arguments);
             psi.CreateNoWindow = true;
             psi.FileName = "C:\\Program Files\\Mono\\bin\\csc.bat";
             psi.RedirectStandardError = true;

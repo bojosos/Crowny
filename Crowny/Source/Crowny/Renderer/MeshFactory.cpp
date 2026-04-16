@@ -44,7 +44,7 @@ namespace Crowny
          data[3].Binormal = glm::rotate(glm::mat4(1.0f), 90.0f, glm::vec3(0, 1, 0)) * glm::vec4(normal, 1.0f);
          data[3].Tangent = glm::rotate(glm::mat4(1.0f), 90.0f, glm::vec3(0, 0, 1)) * glm::vec4(normal, 1.0f);
 
-         Ref<VertexBuffer> vbo = VertexBuffer::Create(4 * sizeof(Vertex));
+         Ref<VertexBuffer> vbo = VertexBuffer::Create({4 * sizeof(Vertex)});
          void* dest = vbo->Map(0, 4 * sizeof(Vertex), GpuLockOptions::WRITE_DISCARD);
          memcpy(dest, data, 4 * sizeof(Vertex));
          vbo->Unbind();
@@ -56,7 +56,7 @@ namespace Crowny
 
          uint32_t* indices = new uint32_t[6]{ 0, 1, 2, 2, 3, 0 };
 
-         Ref<IndexBuffer> ibo = IndexBuffer::Create(indices, 6);
+         Ref<IndexBuffer> ibo = IndexBuffer::Create({6, IndexType::Index_32, BufferUsage::BU_STATIC_DRAW, indices});
          return CreateRef<Mesh>(vbo, ibo, material);*/
     }
 
@@ -138,11 +138,11 @@ namespace Crowny
              }
          }
 
-         Ref<VertexBuffer> vbo = VertexBuffer::Create(data.size() * sizeof(float));
+         Ref<VertexBuffer> vbo = VertexBuffer::Create({(uint32_t)(data.size() * sizeof(float))});
          void* dest = vbo->Map(0, data.size() * sizeof(float), GpuLockOptions::WRITE_DISCARD);
          memcpy(dest, data.data(), data.size() * sizeof(float));
 
-         Ref<IndexBuffer> ibo = IndexBuffer::Create(indices.data(), indices.size());
+         Ref<IndexBuffer> ibo = IndexBuffer::Create({(uint32_t)indices.size(), IndexType::Index_32, BufferUsage::BU_STATIC_DRAW, indices.data()});
          vbo->SetLayout({ { ShaderDataType::Float3, "a_Position" },
                           { ShaderDataType::Float2, "a_Uv" },
                           { ShaderDataType::Float3, "a_Normal" },

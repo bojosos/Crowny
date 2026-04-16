@@ -26,7 +26,7 @@ namespace Crowny
     class VulkanUniformParams : public UniformParams
     {
     public:
-        VulkanUniformParams(const Ref<UniformParamInfo>& params);
+        friend class UniformParams;
         ~VulkanUniformParams();
 
         virtual void SetUniformBlockBuffer(uint32_t set, uint32_t slot, const Ref<UniformBufferBlock>& uniformBlock) override;
@@ -39,6 +39,9 @@ namespace Crowny
         uint32_t GetNumSets() const { return m_ParamInfo->GetNumSets(); };
 
         void Prepare(VulkanCmdBuffer& buffer, VkDescriptorSet* sets);
+
+    protected:
+        VulkanUniformParams(const Ref<UniformParamInfo>& params);
 
     private:
         struct AccelStructWriteInfo

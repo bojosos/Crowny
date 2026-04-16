@@ -21,9 +21,11 @@ namespace Crowny
     class VulkanSamplerState : public SamplerState
     {
     public:
-        VulkanSamplerState(const SamplerStateDesc& desc);
+        friend class SamplerState;
         ~VulkanSamplerState();
         VulkanSampler* GetSampler() const { return m_Sampler; }
+    protected:
+        VulkanSamplerState(const SamplerStateDesc& desc);
 
     private:
         VulkanSampler* m_Sampler;

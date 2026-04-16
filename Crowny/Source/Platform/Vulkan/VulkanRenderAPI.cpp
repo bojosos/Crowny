@@ -272,7 +272,7 @@ namespace Crowny
         VulkanTransferManager::StartUp();
         VulkanTextureManager::StartUp();
         VulkanBufferLayoutManager::StartUp();
-        m_CommandBuffer = std::static_pointer_cast<VulkanCommandBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
+        m_CommandBuffer = StaticRefCast<VulkanCommandBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
     }
 
     VulkanCommandBuffer* VulkanRenderAPI::GetCB(const Ref<CommandBuffer>& buffer)
@@ -333,7 +333,7 @@ namespace Crowny
         VulkanTransferManager::Get().FlushTransferBuffers();
         cmdBuffer->Submit(syncMask);
         if (cmdBuffer == m_CommandBuffer.get())
-            m_CommandBuffer = std::static_pointer_cast<VulkanCommandBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
+            m_CommandBuffer = StaticRefCast<VulkanCommandBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
     }
 
     void VulkanRenderAPI::SetDrawMode(DrawMode drawMode, const Ref<CommandBuffer>& commandBuffer)

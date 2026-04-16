@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Common/RefCounted.h"
+#include "Crowny/Common/StringID.h"
 #include "Crowny/Common/Uuid.h"
 #include "Crowny/NodeGraph/Connection.h"
 #include "Crowny/NodeGraph/Node.h"
@@ -12,12 +14,12 @@ namespace Crowny
     struct GraphInput
     {
         UUID ID;
-        String Name;
+        StringID Name;
         PinDataType DataType;
         PinValue DefaultValue;
     };
 
-    class NodeGraph
+    class NodeGraph : public RefCounted
     {
     public:
         enum class Domain : uint32_t
@@ -38,7 +40,7 @@ namespace Crowny
         const UnorderedMap<UUID, Ref<Node>>& GetNodes() const { return m_Nodes; }
 
         // Connection management
-        bool Connect(UUID outputNodeId, const String& outputPinName, UUID inputNodeId, const String& inputPinName);
+        bool Connect(UUID outputNodeId, StringID outputPinName, UUID inputNodeId, StringID inputPinName);
         bool ConnectByPinID(UUID outputPinId, UUID inputPinId);
         void Disconnect(UUID connectionId);
         void DisconnectPin(UUID pinId);
@@ -53,9 +55,9 @@ namespace Crowny
         Ref<MeshData> EvaluateGeometry(const UnorderedMap<UUID, PinValue>& inputValues);
 
         // Inputs
-        void AddInput(const String& name, PinDataType type, const PinValue& defaultValue = {});
+        void AddInput(StringID name, PinDataType type, const PinValue& defaultValue = {});
         void RemoveInput(UUID inputId);
-        void RenameInput(UUID inputId, const String& newName);
+        void RenameInput(UUID inputId, StringID newName);
         const Vector<GraphInput>& GetInputs() const { return m_Inputs; }
         const GraphInput* GetInput(UUID inputId) const;
 

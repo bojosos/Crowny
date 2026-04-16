@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Utils/SmallVector.h"
 #include "UI/UIUtils.h"
 
 #include "Editor/EditorAssets.h"
@@ -600,7 +601,7 @@ namespace Crowny
         template <typename TEnum, typename TUnderlying = int32_t>
         static bool PropertyDropdown(const char* label, std::initializer_list<const char*> optionsList, TEnum& selected)
         {
-            Vector<const char*> options(optionsList);
+            SmallVector<const char*, 8> options(optionsList);
             TUnderlying selectedIndex = (TUnderlying)selected;
 
             const char* current = options[selectedIndex];

@@ -10,7 +10,7 @@ namespace Crowny
 {
     struct MeshRendererComponent;
 
-    class Model
+    class Model : public RefCounted
     {
     public:
         Model(const Path& filepath);

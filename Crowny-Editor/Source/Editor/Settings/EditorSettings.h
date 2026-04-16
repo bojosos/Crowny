@@ -11,7 +11,7 @@ namespace Crowny
 
     class EditorSettingsSerializer;
 
-    struct EditorSettings
+    struct EditorSettings : public RefCounted
     {
         // Windows
         bool ShowPhysicsColliders2D = false;
@@ -25,6 +25,16 @@ namespace Crowny
         glm::vec3 GridMoveSnap = glm::vec3(0.1f);
         float GridRotateSnap = 15.0f;
         float GridScaleSnap = 0.1f;
+
+        // Viewport
+        bool WireframeMode = false;
+        bool ShowGrid = true;
+        bool ShowGridAxes = true;
+        float GridFineSize = 1.0f;
+        float GridCoarseSize = 10.0f;
+        float GridLineWidth = 0.02f;
+        float GridOpacity = 0.4f;
+        glm::vec4 ColliderColor = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
 
         // Project things
         Array<RecentProject, 5> RecentProjects;

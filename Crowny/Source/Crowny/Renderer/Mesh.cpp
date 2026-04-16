@@ -129,6 +129,18 @@ namespace Crowny
         SetVertexData(VertexAttribute::Tangent, tangents.data(), sizeof(glm::vec3) * (uint32_t)tangents.size());
     }
 
+    Vector<glm::vec3> MeshData::GetBitangents() const
+    {
+        Vector<glm::vec3> result(m_NumVertices);
+        const_cast<MeshData*>(this)->GetVertexData(VertexAttribute::Bitangent, result.data(), sizeof(glm::vec3) * m_NumVertices);
+        return result;
+    }
+
+    void MeshData::SetBitangents(const Vector<glm::vec3>& bitangents)
+    {
+        SetVertexData(VertexAttribute::Bitangent, bitangents.data(), sizeof(glm::vec3) * (uint32_t)bitangents.size());
+    }
+
     Vector<glm::vec2> MeshData::GetUVs(uint32_t channel) const
     {
         Vector<glm::vec2> result(m_NumVertices);
@@ -197,22 +209,23 @@ namespace Crowny
             uint32_t stride = m_Layout.GetStride();
             if (m_NumVertices > 0)
             {
-                glm::vec3 pos = *(glm::vec3*)data;
-                glm::vec3 acc = pos;
-                glm::vec3 minBounds = pos;
-                glm::vec3 maxBounds = pos;
-                float radiusSqrd = 0.0f;
+                glm::vec3 firstPos = *(glm::vec3*)data;
+                glm::vec3 acc = firstPos;
+                glm::vec3 minBounds = firstPos;
+                glm::vec3 maxBounds = firstPos;
 
-                for (uint32_t i = 0; i < m_NumVertices; i++)
+                for (uint32_t i = 1; i < m_NumVertices; i++)
                 {
-                    pos = *((glm::vec3*)(data + stride * i));
+                    glm::vec3 pos = *((glm::vec3*)(data + stride * i));
                     acc += pos;
                     minBounds = glm::min(minBounds, pos);
                     maxBounds = glm::max(maxBounds, pos);
                 }
                 const glm::vec3 center = acc / (float)m_NumVertices;
+                float radiusSqrd = 0.0f;
                 for (uint32_t i = 0; i < m_NumVertices; i++)
                 {
+                    glm::vec3 pos = *((glm::vec3*)(data + stride * i));
                     const float dist = glm::distance2(pos, center);
                     radiusSqrd = std::max(radiusSqrd, dist);
                 }
@@ -228,18 +241,18 @@ namespace Crowny
         return CreateRef<MeshData>(vertexCount, indexCount, bufferLayout, indexType);
     }
 
-    Mesh::Mesh(const Ref<MeshData>& meshData, const Vector<SubMesh>& subMeshes, MeshUsageFlags usage, DrawMode drawMode)
+    Mesh::Mesh(const Ref<MeshData>& meshData, const Vector<SubMesh>& subMeshes, MeshUsageFlags usage, DrawMode drawMode, const Ref<MeshMorph>& morphs)
       : m_SubMeshes(subMeshes), m_IndexType(meshData->GetIndexType()), m_NumVertices(meshData->GetVertexCount()),
         m_Layout(meshData->GetBufferLayout()), m_NumIndices(meshData->GetIndexCount()), m_CPUMeshData(meshData), m_DrawMode(drawMode), m_Usage(usage),
-        m_InitialData(meshData)
+        m_InitialData(meshData), m_MeshMorph(morphs)
     {
         Init();
     }
 
     Mesh::Mesh(const Vector<SubMesh>& subMeshes, uint32_t vertexCount, uint32_t indexCount, const BufferLayout& layout, MeshUsageFlags usage,
-               DrawMode drawMode, IndexType indexType)
+               DrawMode drawMode, IndexType indexType, const Ref<MeshMorph>& morphs)
       : m_SubMeshes(subMeshes), m_NumVertices(vertexCount), m_NumIndices(indexCount), m_Layout(layout), m_Usage(usage), m_DrawMode(drawMode),
-        m_IndexType(indexType), m_InitialData(nullptr)
+        m_IndexType(indexType), m_InitialData(nullptr), m_MeshMorph(morphs)
     {
         Init();
     }
@@ -370,25 +383,45 @@ namespace Crowny
         BufferLayout combinedVertexLayout = meshes[0]->GetBufferLayout();
         for (const auto& meshData : meshes)
         {
-            const Vector<BufferElement>& meshAttributes = meshData->GetBufferLayout().GetElements();
+            const auto& meshAttributes = meshData->GetBufferLayout().GetElements();
             for (const BufferElement& element : meshAttributes)
             {
                 // TODO: Make sure these match
                 // if ()
             }
         }
-        Ref<MeshData> combinedMeshData = MeshData::Create(totalVertexCount, totalIndexCount, meshes[0]->GetBufferLayout(), meshes[0]->GetIndexType());
+        IndexType combinedIndexType = IndexType::Index_16;
+        for (const auto& meshData : meshes)
+        {
+            if (meshData->GetIndexType() == IndexType::Index_32)
+            {
+                combinedIndexType = IndexType::Index_32;
+                break;
+            }
+        }
+        if (totalVertexCount > 65535)
+            combinedIndexType = IndexType::Index_32;
+
+        Ref<MeshData> combinedMeshData = MeshData::Create(totalVertexCount, totalIndexCount, meshes[0]->GetBufferLayout(), combinedIndexType);
         uint32_t vertexOffset = 0;
         uint32_t indexOffset = 0;
-        uint32_t* idxPtr = combinedMeshData->GetIndexData<uint32_t>();
         for (const auto& meshData : meshes)
         {
             uint32_t numIndices = meshData->GetIndexCount();
-            uint32_t* srcData = meshData->GetIndexData<uint32_t>();
-            for (uint32_t j = 0; j < numIndices; j++)
-                idxPtr[j] = srcData[j] + vertexOffset;
+            Vector<uint32_t> srcIndices = meshData->GetIndices();
+            if (combinedIndexType == IndexType::Index_32)
+            {
+                uint32_t* dst = combinedMeshData->GetIndexData<uint32_t>() + indexOffset;
+                for (uint32_t j = 0; j < numIndices; j++)
+                    dst[j] = srcIndices[j] + vertexOffset;
+            }
+            else
+            {
+                uint16_t* dst = combinedMeshData->GetIndexData<uint16_t>() + indexOffset;
+                for (uint32_t j = 0; j < numIndices; j++)
+                    dst[j] = static_cast<uint16_t>(srcIndices[j] + vertexOffset);
+            }
             indexOffset += numIndices;
-            idxPtr += numIndices;
             vertexOffset += meshData->GetVertexCount();
         }
 
@@ -479,8 +512,8 @@ namespace Crowny
         {
             const bool isDynamic = m_Usage.IsSet(MeshUsage::Dynamic);
             const BufferUsage bufferUsage = isDynamic ? BufferUsage::BU_DYNAMIC_DRAW : BufferUsage::BU_STATIC_DRAW;
-            m_IndexBuffer = IndexBuffer::Create(m_NumIndices, m_IndexType, bufferUsage);
-            m_VertexBuffer = VertexBuffer::Create(m_NumVertices * m_Layout.GetStride(), bufferUsage);
+            m_IndexBuffer = IndexBuffer::Create({m_NumIndices, m_IndexType, bufferUsage});
+            m_VertexBuffer = VertexBuffer::Create({m_NumVertices * m_Layout.GetStride(), bufferUsage});
             m_VertexBuffer->SetLayout(CreateRef<BufferLayout>(m_Layout));
             WriteData(m_CPUMeshData, isDynamic);
         }
@@ -535,6 +568,84 @@ namespace Crowny
         m_Dirty = true;
     }
 
+    void Mesh::RecalculateTangents()
+    {
+        CW_ENGINE_ASSERT(m_CPUMeshData != nullptr, "No CPU mesh data for tangent calculation");
+
+        const BufferLayout& layout = m_CPUMeshData->GetBufferLayout();
+        if (!layout.HasAttribute(VertexAttribute::Normal) || !layout.HasAttribute(VertexAttribute::TexCoord0))
+        {
+            CW_ENGINE_WARN("Cannot calculate tangents without normals and UVs");
+            return;
+        }
+
+        Vector<glm::vec3> positions = m_CPUMeshData->GetPositions();
+        Vector<glm::vec3> normals = m_CPUMeshData->GetNormals();
+        Vector<glm::vec2> uvs = m_CPUMeshData->GetUVs(0);
+        Vector<uint32_t> indices = m_CPUMeshData->GetIndices();
+        uint32_t vertexCount = m_CPUMeshData->GetVertexCount();
+
+        Vector<glm::vec3> tangents(vertexCount, glm::vec3(0.0f));
+        Vector<glm::vec3> bitangents(vertexCount, glm::vec3(0.0f));
+
+        // Accumulate per-face tangent/bitangent
+        for (uint32_t i = 0; i + 2 < (uint32_t)indices.size(); i += 3)
+        {
+            uint32_t i0 = indices[i];
+            uint32_t i1 = indices[i + 1];
+            uint32_t i2 = indices[i + 2];
+
+            if (i0 >= vertexCount || i1 >= vertexCount || i2 >= vertexCount)
+                continue;
+
+            glm::vec3 edge1 = positions[i1] - positions[i0];
+            glm::vec3 edge2 = positions[i2] - positions[i0];
+            glm::vec2 duv1 = uvs[i1] - uvs[i0];
+            glm::vec2 duv2 = uvs[i2] - uvs[i0];
+
+            float denom = duv1.x * duv2.y - duv2.x * duv1.y;
+            if (glm::abs(denom) < 1e-8f)
+                continue;
+
+            float r = 1.0f / denom;
+            glm::vec3 t = (duv2.y * edge1 - duv1.y * edge2) * r;
+            glm::vec3 b = (duv1.x * edge2 - duv2.x * edge1) * r;
+
+            tangents[i0] += t;
+            tangents[i1] += t;
+            tangents[i2] += t;
+            bitangents[i0] += b;
+            bitangents[i1] += b;
+            bitangents[i2] += b;
+        }
+
+        // Gram-Schmidt orthonormalize
+        for (uint32_t i = 0; i < vertexCount; i++)
+        {
+            const glm::vec3& n = normals[i];
+            glm::vec3& t = tangents[i];
+            glm::vec3& b = bitangents[i];
+
+            // Orthogonalize tangent against normal
+            t = t - glm::dot(n, t) * n;
+            float tLen2 = glm::dot(t, t);
+            if (tLen2 > 0.0f)
+                t = t / glm::sqrt(tLen2);
+
+            // Orthogonalize bitangent against normal and tangent
+            b = b - glm::dot(n, b) * n - glm::dot(t, b) * t;
+            float bLen2 = glm::dot(b, b);
+            if (bLen2 > 0.0f)
+                b = b / glm::sqrt(bLen2);
+        }
+
+        if (layout.HasAttribute(VertexAttribute::Tangent))
+            m_CPUMeshData->SetTangents(tangents);
+        if (layout.HasAttribute(VertexAttribute::Bitangent))
+            m_CPUMeshData->SetBitangents(bitangents);
+        m_Dirty = true;
+    }
+
     Mesh::~Mesh()
     {
         m_VertexBuffer = nullptr;
@@ -553,8 +664,8 @@ namespace Crowny
         const bool isDynamic = m_Usage == MeshUsage::Dynamic;
         const BufferUsage bufferUsage = isDynamic ? BufferUsage::BU_DYNAMIC_DRAW : BufferUsage::BU_STATIC_DRAW;
 
-        m_IndexBuffer = IndexBuffer::Create(m_NumIndices, m_IndexType, bufferUsage);
-        m_VertexBuffer = VertexBuffer::Create(m_NumVertices * m_Layout.GetStride(), bufferUsage);
+        m_IndexBuffer = IndexBuffer::Create({m_NumIndices, m_IndexType, bufferUsage});
+        m_VertexBuffer = VertexBuffer::Create({m_NumVertices * m_Layout.GetStride(), bufferUsage});
         m_VertexBuffer->SetLayout(CreateRef<BufferLayout>(m_Layout));
         if (!meshData)
             return;
@@ -573,16 +684,15 @@ namespace Crowny
         return meshData;
     }
 
-    Ref<Mesh> Mesh::Create(const Ref<MeshData>& meshData, const Vector<SubMesh>& subMeshes, MeshUsageFlags usage, DrawMode drawMode)
+    Ref<Mesh> Mesh::Create(const MeshDesc& desc)
     {
-        return CreateRef<Mesh>(meshData, subMeshes, usage, drawMode);
-    }
+        if (desc.Data)
+            return Ref<Mesh>(new Mesh(desc.Data, desc.SubMeshes, desc.Usage, desc.Topology, desc.Morph));
 
-    Ref<Mesh> Mesh::Create(uint32_t vertexCount, uint32_t indexCount, const BufferLayout& layout, MeshUsageFlags usage, DrawMode drawMode,
-                           IndexType indexType)
-    {
-        const Vector<SubMesh> subMeshes = { SubMesh(0, indexCount, drawMode) };
-        return CreateRef<Mesh>(subMeshes, vertexCount, indexCount, layout, usage, drawMode, indexType);
+        const Vector<SubMesh> subMeshes = desc.SubMeshes.empty()
+            ? Vector<SubMesh>{ SubMesh(0, desc.IndexCount, desc.Topology) }
+            : desc.SubMeshes;
+        return Ref<Mesh>(new Mesh(subMeshes, desc.VertexCount, desc.IndexCount, desc.Layout, desc.Usage, desc.Topology, desc.IdxType, desc.Morph));
     }
 
 } // namespace Crowny

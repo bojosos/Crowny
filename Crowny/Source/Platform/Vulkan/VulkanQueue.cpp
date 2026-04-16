@@ -160,21 +160,15 @@ namespace Crowny
         uint32_t totalNumWaitSemaphores = (uint32_t)m_QueuedSemaphores.size() + numCbs;
         uint32_t signalSemaphoresPerCB = MAX_VULKAN_CB_DEPENDENCIES + 1;
 
-        uint8_t* data = new uint8_t[(sizeof(VkSubmitInfo) + sizeof(VkCommandBuffer)) * numCbs + sizeof(VkSemaphore) * signalSemaphoresPerCB * numCbs +
-                                    sizeof(VkSemaphore) * totalNumWaitSemaphores];
-        uint8_t* dataPtr = data;
+        m_SubmitInfosScratch.resize(numCbs);
+        m_CmdBuffersScratch.resize(numCbs);
+        m_SignalSemaphoresScratch.resize(signalSemaphoresPerCB * numCbs);
+        m_WaitSemaphoresScratch.resize(totalNumWaitSemaphores);
 
-        VkSubmitInfo* submitInfos = (VkSubmitInfo*)dataPtr;
-        dataPtr += sizeof(VkSubmitInfo) * numCbs;
-
-        VkCommandBuffer* commandBuffers = (VkCommandBuffer*)dataPtr;
-        dataPtr += sizeof(VkCommandBuffer) * numCbs;
-
-        VkSemaphore* signalSemaphores = (VkSemaphore*)dataPtr;
-        dataPtr += sizeof(VkSemaphore) * signalSemaphoresPerCB * numCbs;
-
-        VkSemaphore* waitSemaphores = (VkSemaphore*)dataPtr;
-        dataPtr += sizeof(VkSemaphore) * totalNumWaitSemaphores;
+        VkSubmitInfo*    submitInfos     = m_SubmitInfosScratch.data();
+        VkCommandBuffer* commandBuffers  = m_CmdBuffersScratch.data();
+        VkSemaphore*     signalSemaphores = m_SignalSemaphoresScratch.data();
+        VkSemaphore*     waitSemaphores   = m_WaitSemaphoresScratch.data();
 
         uint32_t readSemaphoreIdx = 0;
         uint32_t writeSemaphoreIdx = 0;
@@ -207,7 +201,6 @@ namespace Crowny
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
         m_QueuedBuffers.clear();
         m_QueuedSemaphores.clear();
-        delete[] data;
     }
 
     void VulkanQueue::Refresh(bool wait, bool empty)
@@ -242,24 +235,24 @@ namespace Crowny
             if (empty)
                 lastFinished = m_NextSubmitIdx - 1;
 
-            iter = m_ActiveSubmissions.begin();
-            while (iter != m_ActiveSubmissions.end())
+            while (!m_ActiveSubmissions.empty())
             {
-                if (iter->SubmitIdx > lastFinished)
+                const SubmitInfo& front = m_ActiveSubmissions.front();
+                if (front.SubmitIdx > lastFinished)
                     break;
 
-                for (uint32_t i = 0; i < iter->NumSemaphores; i++)
+                for (uint32_t i = 0; i < front.NumSemaphores; i++)
                 {
                     semaphoresToNotify.push_back(m_ActiveSemaphores.front());
                     m_ActiveSemaphores.pop();
                 }
 
-                for (uint32_t i = 0; i < iter->NumCommandBuffers; i++)
+                for (uint32_t i = 0; i < front.NumCommandBuffers; i++)
                 {
                     buffersToReset.push_back(m_ActiveBuffers.front());
                     m_ActiveBuffers.pop();
                 }
-                iter = m_ActiveSubmissions.erase(iter);
+                m_ActiveSubmissions.pop_front();
             }
         }
 

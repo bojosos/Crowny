@@ -4,6 +4,8 @@
 
 #include "Crowny/Common/Types.h"
 
+#include "Crowny/Animation/MorphAnimation.h"
+
 #include "Crowny/Math/AABox.h"
 #include "Crowny/Math/SphereBounds.h"
 
@@ -34,7 +36,7 @@ namespace Crowny
         DrawMode MeshDrawMode = DrawMode::TRIANGLE_LIST;
     };
 
-    class MeshData
+    class MeshData : public RefCounted
     {
     public:
         MeshData() = default;
@@ -56,6 +58,8 @@ namespace Crowny
         void SetNormals(const Vector<glm::vec3>& normals);
         Vector<glm::vec3> GetTangents() const;
         void SetTangents(const Vector<glm::vec3>& tangents);
+        Vector<glm::vec3> GetBitangents() const;
+        void SetBitangents(const Vector<glm::vec3>& bitangents);
         Vector<glm::vec2> GetUVs(uint32_t channel = 0) const;
         void SetUVs(uint32_t channel, const Vector<glm::vec2>& uvs);
         Vector<glm::vec4> GetColors() const;
@@ -89,6 +93,20 @@ namespace Crowny
         BufferLayout m_Layout;
     };
 
+    struct MeshDesc
+    {
+        Ref<MeshData>   Data;                                // null = allocate empty GPU buffers (Path B)
+        MeshUsageFlags  Usage    = MeshUsage::Static;
+        DrawMode        Topology = DrawMode::TRIANGLE_LIST;
+        Ref<MeshMorph>  Morph    = nullptr;
+        Vector<SubMesh> SubMeshes;
+        // Path B only — ignored when Data is set:
+        uint32_t        VertexCount = 0;
+        uint32_t        IndexCount  = 0;
+        BufferLayout    Layout;
+        IndexType       IdxType     = IndexType::Index_32;
+    };
+
     class Mesh : public Asset
     {
     public:
@@ -117,21 +135,22 @@ namespace Crowny
         void UploadToGpu();
         void RecalculateBounds();
         void RecalculateNormals();
+        void RecalculateTangents();
         bool IsDirty() const { return m_Dirty; }
 
-        static Ref<Mesh> Create(const Ref<MeshData>& meshData, const Vector<SubMesh>& subMeshes = {}, MeshUsageFlags usage = MeshUsage::Static,
-                                DrawMode drawMode = DrawMode::TRIANGLE_LIST);
-        static Ref<Mesh> Create(uint32_t vertexCount, uint32_t indexCount, const BufferLayout& layout, MeshUsageFlags usage, DrawMode drawMode,
-                                IndexType indexType);
+        Ref<MeshMorph> GetMorph() const { return m_MeshMorph; }
 
-        // protected:
-        Mesh(const Ref<MeshData>& meshData, const Vector<SubMesh>& subMeshes, MeshUsageFlags usage, DrawMode drawMode);
+        static Ref<Mesh> Create(const MeshDesc& desc);
+
+    protected:
+        Mesh(const Ref<MeshData>& meshData, const Vector<SubMesh>& subMeshes, MeshUsageFlags usage, DrawMode drawMode, const Ref<MeshMorph>& morphs);
         Mesh(const Vector<SubMesh>& subMeshes, uint32_t vertexCount, uint32_t indexCount, const BufferLayout& layout, MeshUsageFlags usage,
-             DrawMode drawMode, IndexType indexType);
+             DrawMode drawMode, IndexType indexType, const Ref<MeshMorph>& morphs = nullptr);
 
         Mesh() = default; // For serialization
     private:
         CW_SERIALIZABLE(Mesh);
+
         mutable Ref<MeshData> m_CPUMeshData;
         Ref<MeshData> m_InitialData;
         MeshUsageFlags m_Usage;
@@ -146,5 +165,6 @@ namespace Crowny
         AABox m_AABox;
         SphereBounds m_SphereBounds;
         bool m_Dirty = false;
+        Ref<MeshMorph> m_MeshMorph;
     };
 } // namespace Crowny

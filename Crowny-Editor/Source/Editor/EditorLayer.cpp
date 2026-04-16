@@ -1,7 +1,5 @@
 #include "cwepch.h"
 
-#include <mono/metadata/object.h> // TODO: Implement array class
-
 #include "Editor/EditorLayer.h"
 
 #include "Crowny/Assets/AssetManager.h"
@@ -18,6 +16,7 @@
 #include "Crowny/Scene/Prefab.h"
 #include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Scene/ScriptRuntime.h"
+#include "Crowny/Scripting/Mono/MonoArray.h"
 #include "Crowny/Scripting/Mono/MonoAssembly.h"
 #include "Crowny/Scripting/Mono/MonoMethod.h"
 #include "Crowny/Scripting/Mono/MonoProperty.h"
@@ -117,15 +116,16 @@ namespace Crowny
         EditorAssets::Load();
 
         Editor::StartUp([this](const Path& path, FileWatch::Change changeType) {
+            if (changeType != FileWatch::FileModified && changeType != FileWatch::FileAdded && changeType != FileWatch::FileNewRenamed)
+                return;
             ProjectLibrary::Get().Refresh(path);
-            if (path.extension() == ".cs" && changeType == FileWatch::FileModified && changeType == FileWatch::FileAdded &&
-                changeType == FileWatch::FileNewRenamed)
+            if (path.extension() == ".cs")
             {
                 Lock lock(m_FileWatchMutex);
                 m_AssemblyReloadPending = true;
                 m_LastCsChangeTime = std::chrono::steady_clock::now();
             }
-        });  
+        });
 
         m_MenuBar = new ImGuiMenuBar();
 
@@ -193,24 +193,25 @@ namespace Crowny
             m_Temp = CreateRef<Scene>("Scene");
 
         m_SceneRenderer = new SceneRenderer(nullptr, m_RenderTarget);
+        m_SceneRenderer->Init();
     }
 
     void EditorLayer::CreateRenderTarget()
     {
-        TextureParameters colorParams;
+        TextureDesc colorParams;
         colorParams.Width = 1337;
         colorParams.Height = 509;
         colorParams.Usage = TextureUsage::TEXTURE_RENDERTARGET;
         colorParams.DebugName = "EditorLayer/ViewportColor";
 
-        TextureParameters objectId;
+        TextureDesc objectId;
         objectId.Width = 1337;
         objectId.Height = 509;
         objectId.Format = TextureFormat::R32I;
         objectId.Usage = TextureUsage(TextureUsage::TEXTURE_RENDERTARGET | TextureUsage::TEXTURE_DYNAMIC);
         objectId.DebugName = "EditorLayer/ViewportObjectId";
 
-        TextureParameters depthParams;
+        TextureDesc depthParams;
         depthParams.Width = 1337;
         depthParams.Height = 509;
         depthParams.Usage = TextureUsage::TEXTURE_DEPTHSTENCIL;
@@ -220,10 +221,10 @@ namespace Crowny
         Ref<Texture> color1 = Texture::Create(colorParams);
         Ref<Texture> color2 = Texture::Create(objectId);
         Ref<Texture> depth = Texture::Create(depthParams);
-        RenderTextureProperties rtProps;
-        rtProps.ColorSurfaces[0] = { color1 };
-        rtProps.ColorSurfaces[1] = { color2 };
-        rtProps.DepthSurface = { depth };
+        RenderTextureDesc rtProps;
+        rtProps.ColorSurfaces[0].Texture = color1;
+        rtProps.ColorSurfaces[1].Texture = color2;
+        rtProps.DepthSurface.Texture = depth;
         rtProps.Width = 1337;
         rtProps.Height = 509;
 
@@ -284,6 +285,15 @@ namespace Crowny
         m_ShowScriptDebugInfo = editorSettings->ShowScriptDebugInfo;
         m_ShowEntityDebugInfo = editorSettings->ShowEntityDebugInfo;
 
+        m_WireframeMode = editorSettings->WireframeMode;
+        m_ShowGrid = editorSettings->ShowGrid;
+        m_ShowGridAxes = editorSettings->ShowGridAxes;
+        m_GridFineSize = editorSettings->GridFineSize;
+        m_GridCoarseSize = editorSettings->GridCoarseSize;
+        m_GridLineWidth = editorSettings->GridLineWidth;
+        m_GridOpacity = editorSettings->GridOpacity;
+        m_ColliderColor = editorSettings->ColliderColor;
+
         m_ConsolePanel->SetMessageLevelEnabled(ConsoleBuffer::Message::Level::Info, editorSettings->EnableConsoleInfoMessages);
         m_ConsolePanel->SetMessageLevelEnabled(ConsoleBuffer::Message::Level::Warn, editorSettings->EnableConsoleWarningMessages);
         m_ConsolePanel->SetMessageLevelEnabled(ConsoleBuffer::Message::Level::Error, editorSettings->EnableConsoleErrorMessages);
@@ -314,19 +324,16 @@ namespace Crowny
         MonoClass* scriptCompiler = ScriptInfoManager::Get().GetBuiltinClasses().ScriptCompiler;
         uint32_t type = 0;
         bool debug = true;
-        Path engineAssemblyPath = gApplication->GetApplicationDesc().EngineAssemblyPath;
+        const Path engineAssemblyPath = gApplication->GetApplicationDesc().WorkingDirectory / gApplication->GetApplicationDesc().EngineAssemblyPath;
 
-        MonoArray* libDirs = mono_array_new(MonoManager::Get().GetDomain(), MonoUtils::GetStringClass(), 1);
-        mono_array_setref(libDirs, 0, MonoUtils::ToMonoString(engineAssemblyPath.parent_path().string().c_str()));
-        MonoArray* refs = mono_array_new(MonoManager::Get().GetDomain(), MonoUtils::GetStringClass(), 1);
-        mono_array_setref(refs, 0, MonoUtils::ToMonoString(engineAssemblyPath.filename().string().c_str()));
+        ScriptArray libDirs = ScriptArray::Create<String>(1);
+        libDirs.Set<String>(0, engineAssemblyPath.parent_path().string());
+        ScriptArray refs = ScriptArray::Create<String>(1);
+        refs.Set<String>(0, engineAssemblyPath.filename().string());
 
-        void* params[6] = { &type,
-                            &debug,
+        void* params[6] = { &type, &debug,
                             MonoUtils::ToMonoString((Editor::Get().GetProjectPath() / INTERNAL_ASSEMBLY_PATH).string()),
-                            MonoUtils::ToMonoString(ProjectLibrary::Get().GetAssetFolder().string()),
-                            libDirs,
-                            refs };
+                            MonoUtils::ToMonoString(ProjectLibrary::Get().GetAssetFolder().string()), libDirs.GetInternal(), refs.GetInternal() };
         scriptCompiler->GetMethod("Compile", 6)->Invoke(nullptr, params);
         Vector<AssemblyRefreshInfo> refreshInfos;
         Path gameAssemblyPath = Editor::Get().GetProjectPath() / INTERNAL_ASSEMBLY_PATH / "GameAssembly.dll";
@@ -499,6 +506,15 @@ namespace Crowny
         settings->ShowEntityDebugInfo = m_ShowEntityDebugInfo;
         settings->ShowAssetInfo = m_ShowAssetInfo;
         settings->ShowScriptDebugInfo = m_ShowScriptDebugInfo;
+
+        settings->WireframeMode = m_WireframeMode;
+        settings->ShowGrid = m_ShowGrid;
+        settings->ShowGridAxes = m_ShowGridAxes;
+        settings->GridFineSize = m_GridFineSize;
+        settings->GridCoarseSize = m_GridCoarseSize;
+        settings->GridLineWidth = m_GridLineWidth;
+        settings->GridOpacity = m_GridOpacity;
+        settings->ColliderColor = m_ColliderColor;
         settings->EnableConsoleInfoMessages = m_ConsolePanel->IsMessageLevelEnabled(ConsoleBuffer::Message::Level::Info);
         settings->EnableConsoleWarningMessages = m_ConsolePanel->IsMessageLevelEnabled(ConsoleBuffer::Message::Level::Warn);
         settings->EnableConsoleErrorMessages = m_ConsolePanel->IsMessageLevelEnabled(ConsoleBuffer::Message::Level::Error);
@@ -573,20 +589,20 @@ namespace Crowny
             (m_ViewportSize.x != m_ViewportPanel->GetViewportSize().x || m_ViewportSize.y != m_ViewportPanel->GetViewportSize().y)) // TODO: Move out
         {
             scene->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
-            TextureParameters colorParams;
+            TextureDesc colorParams;
             colorParams.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
             colorParams.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
             colorParams.Usage = TextureUsage::TEXTURE_RENDERTARGET;
             colorParams.DebugName = "EditorLayer/ViewportColor";
 
-            TextureParameters objectId;
+            TextureDesc objectId;
             objectId.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
             objectId.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
             objectId.Format = TextureFormat::R32I;
             objectId.Usage = TextureUsage(TextureUsage::TEXTURE_RENDERTARGET | TextureUsage::TEXTURE_DYNAMIC);
             objectId.DebugName = "EditorLayer/ViewportObjectId";
 
-            TextureParameters depthParams;
+            TextureDesc depthParams;
             depthParams.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
             depthParams.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
             depthParams.Usage = TextureUsage::TEXTURE_DEPTHSTENCIL;
@@ -596,10 +612,10 @@ namespace Crowny
             Ref<Texture> color1 = Texture::Create(colorParams);
             Ref<Texture> color2 = Texture::Create(objectId);
             Ref<Texture> depth = Texture::Create(depthParams);
-            RenderTextureProperties rtProps;
-            rtProps.ColorSurfaces[0] = { color1 };
-            rtProps.ColorSurfaces[1] = { color2 };
-            rtProps.DepthSurface = { depth };
+            RenderTextureDesc rtProps;
+            rtProps.ColorSurfaces[0].Texture = color1;
+            rtProps.ColorSurfaces[1].Texture = color2;
+            rtProps.DepthSurface.Texture = depth;
             rtProps.Width = (uint32_t)m_ViewportPanel->GetViewportSize().x;
             rtProps.Height = (uint32_t)m_ViewportPanel->GetViewportSize().y;
             m_RenderTarget = RenderTexture::Create(rtProps);
@@ -636,7 +652,9 @@ namespace Crowny
 
             gSceneManager->GetActiveScene()->OnUpdateEditor(ts);
             m_SceneRenderer->UpdateProceduralMeshes();
-            auto snapshot = m_SceneRenderer->ExtractSnapshot(s_EditorCamera, s_EditorCamera.GetViewMatrix());
+            auto snapshot = m_SceneRenderer->ExtractSnapshot(s_EditorCamera, s_EditorCamera.GetViewMatrix(), m_ShowGrid);
+            snapshot.OverridePolygonMode = m_WireframeMode ? PolygonMode::Wireframe : PolygonMode::Solid;
+            snapshot.Grid = { m_GridFineSize, m_GridCoarseSize, m_GridLineWidth, m_GridOpacity, m_ShowGridAxes };
             SubmitSnapshot(std::move(snapshot));
             break;
         }
@@ -654,7 +672,9 @@ namespace Crowny
             s_EditorCamera.OnUpdate(ts);
             gSceneManager->GetActiveScene()->OnSimulationUpdate(ts);
             m_SceneRenderer->UpdateProceduralMeshes();
-            auto snapshot = m_SceneRenderer->ExtractSnapshot(s_EditorCamera, s_EditorCamera.GetViewMatrix());
+            auto snapshot = m_SceneRenderer->ExtractSnapshot(s_EditorCamera, s_EditorCamera.GetViewMatrix(), m_ShowGrid);
+            snapshot.OverridePolygonMode = m_WireframeMode ? PolygonMode::Wireframe : PolygonMode::Solid;
+            snapshot.Grid = { m_GridFineSize, m_GridCoarseSize, m_GridLineWidth, m_GridOpacity, m_ShowGridAxes };
             SubmitSnapshot(std::move(snapshot));
             break;
         }
@@ -740,35 +760,33 @@ namespace Crowny
 
         if (m_ShowColliders)
         {
-            /*
-            float zOffset = s_EditorCamera.GetPosition().z > 0 ? 0.001f : -0.001f;
             {
                 auto view = scene->GetAllEntitiesWith<TransformComponent, BoxCollider2DComponent>();
-                for (auto entity : view)
+                for (auto e : view)
                 {
-                    auto [tc, bc2d] = view.get<TransformComponent, BoxCollider2DComponent>(entity);
-                    glm::vec3 translation = tc.Position + glm::vec3(bc2d.GetOffset(), zOffset);
-                    glm::vec3 scale = tc.Scale * glm::vec3(bc2d.GetSize() * 2.0f, 1.0f);
-                    glm::mat4 transform = glm::translate(glm::mat4(1.0f), translation) *
-                                          glm::rotate(glm::mat4(1.0f), tc.Rotation.z, glm::vec3(0.0f, 0.0f, 1.0f)) *
-                                          glm::scale(glm::mat4(1.0f), scale);
-                    Renderer2D::DrawRect(transform, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.01f);
+                    auto& bc2d = view.get<BoxCollider2DComponent>(e);
+                    Entity entity(e, scene.get());
+                    glm::mat4 world = entity.GetWorldMatrix();
+                    glm::mat4 colliderTransform = world
+                        * glm::translate(glm::mat4(1.0f), glm::vec3(bc2d.GetOffset(), 0.0f))
+                        * glm::scale(glm::mat4(1.0f), glm::vec3(bc2d.GetSize() * 2.0f, 1.0f));
+                    Renderer2D::DrawRect(colliderTransform, m_ColliderColor, 0.01f);
                 }
             }
 
             {
                 auto view = scene->GetAllEntitiesWith<TransformComponent, CircleCollider2DComponent>();
-                for (auto entity : view)
+                for (auto e : view)
                 {
-                    auto [tc, cc2d] = view.get<TransformComponent, CircleCollider2DComponent>(entity);
-                    glm::vec3 translation = tc.Position + glm::vec3(cc2d.GetOffset(), zOffset);
-                    glm::vec3 scale = tc.Scale * glm::vec3(cc2d.GetRadius() * 2.0f);
-                    glm::mat4 transform =
-                      glm::translate(glm::mat4(1.0f), translation) * glm::scale(glm::mat4(1.0f), scale);
-                    Renderer2D::DrawCircle(transform, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.01f);
+                    auto& cc2d = view.get<CircleCollider2DComponent>(e);
+                    Entity entity(e, scene.get());
+                    glm::mat4 world = entity.GetWorldMatrix();
+                    glm::mat4 colliderTransform = world
+                        * glm::translate(glm::mat4(1.0f), glm::vec3(cc2d.GetOffset(), 0.0f))
+                        * glm::scale(glm::mat4(1.0f), glm::vec3(cc2d.GetRadius() * 2.0f));
+                    Renderer2D::DrawCircle(colliderTransform, m_ColliderColor, 0.05f);
                 }
             }
-            */
         }
         Renderer2D::End();
     }
@@ -841,6 +859,7 @@ namespace Crowny
         UI_ProjectManager();
         UI_Header();
         UI_GizmoSettings();
+        UI_ViewportSettings();
         UI_Settings();
         UI_Physics2DSettings();
         UI_TimeSettings();
@@ -1282,7 +1301,7 @@ namespace Crowny
             std::function<void(const Ref<LibraryEntry>&)> traverse = [&](const Ref<LibraryEntry>& entry) {
                 if (entry->Type == LibraryEntryType::Directory)
                 {
-                    for (auto& child : std::static_pointer_cast<DirectoryEntry>(entry)->Children)
+                    for (auto& child : StaticRefCast<DirectoryEntry>(entry)->Children)
                         traverse(child);
                 }
                 else
@@ -1667,7 +1686,7 @@ namespace Crowny
         const float buttonSize = 18.0f + 5.0f;
         const float edgeOffset = 4.0f;
         const float windowHeight = 32.0f;
-        const float numberOfButtons = 5.0f;
+        const float numberOfButtons = 6.0f;
         const float backgroundWidth = edgeOffset * 6.0f + buttonSize * numberOfButtons + edgeOffset * (numberOfButtons - 1.0f) * 2.0f;
 
         float toolbarX = (m_ViewportPanel->GetViewportBounds().x + edgeOffset);
@@ -1725,12 +1744,91 @@ namespace Crowny
                     m_ViewportPanel->SetGizmoLocalMode(true);
             }
             UI::SetTooltip("Toggle global gizmo editing");
+
+            tint = m_ShowViewportSettings ? activeColor : c_ButtonTint;
+            if (drawButton(EditorAssets::Get().SettingsIcon, tint))
+                m_ShowViewportSettings = !m_ShowViewportSettings;
+            UI::SetTooltip("Viewport settings");
         }
         ImGui::Spring();
         ImGui::EndHorizontal();
         ImGui::Spring();
         ImGui::EndVertical();
 
+        ImGui::End();
+
+        UI::PopID();
+    }
+
+    void EditorLayer::UI_ViewportSettings()
+    {
+        if (!m_ShowViewportSettings)
+            return;
+
+        UI::PushID();
+        UI::ScopedStyle windowRounding(ImGuiStyleVar_WindowRounding, 6.0f);
+
+        const float settingsWidth = 240.0f;
+        const float edgeOffset = 4.0f;
+        const float toolbarHeight = 32.0f;
+        float settingsX = m_ViewportPanel->GetViewportBounds().x + edgeOffset;
+        float settingsY = m_ViewportPanel->GetViewportBounds().y + edgeOffset + toolbarHeight + 4.0f;
+
+        ImGui::SetNextWindowPos(ImVec2(settingsX, settingsY), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(settingsWidth, 0.0f)); // auto height
+        ImGui::SetNextWindowBgAlpha(0.85f);
+        ImGui::Begin("##viewport_settings_popup", nullptr,
+                     ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking |
+                     ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings |
+                     ImGuiWindowFlags_NoNav);
+
+        ImGui::Spacing();
+
+        // ── Rendering ──────────────────────────────────────────────────
+        ImGui::TextDisabled("Rendering");
+        ImGui::Separator();
+
+        bool solid = !m_WireframeMode;
+        if (ImGui::RadioButton("Solid", solid))
+            m_WireframeMode = false;
+        ImGui::SameLine();
+        if (ImGui::RadioButton("Wireframe", m_WireframeMode))
+            m_WireframeMode = true;
+
+        ImGui::Spacing();
+
+        // ── Grid ───────────────────────────────────────────────────────
+        ImGui::TextDisabled("Grid");
+        ImGui::Separator();
+
+        ImGui::Checkbox("Show Grid", &m_ShowGrid);
+        if (m_ShowGrid)
+        {
+            ImGui::Checkbox("Show Axes", &m_ShowGridAxes);
+
+            ImGui::PushItemWidth(settingsWidth * 0.55f);
+            ImGui::DragFloat("Fine Cell Size", &m_GridFineSize, 0.1f, 0.1f, 100.0f, "%.2f m");
+            ImGui::DragFloat("Coarse Cell Size", &m_GridCoarseSize, 1.0f, 1.0f, 1000.0f, "%.1f m");
+            ImGui::DragFloat("Line Width", &m_GridLineWidth, 0.001f, 0.005f, 0.49f, "%.3f");
+            ImGui::DragFloat("Opacity", &m_GridOpacity, 0.01f, 0.0f, 1.0f, "%.2f");
+            ImGui::PopItemWidth();
+        }
+
+        ImGui::Spacing();
+
+        // ── Physics Gizmos ─────────────────────────────────────────────
+        ImGui::TextDisabled("Physics Gizmos");
+        ImGui::Separator();
+
+        ImGui::Checkbox("Show Colliders", &m_ShowColliders);
+        if (m_ShowColliders)
+        {
+            ImGui::PushItemWidth(settingsWidth * 0.55f);
+            ImGui::ColorEdit4("Collider Color", glm::value_ptr(m_ColliderColor), ImGuiColorEditFlags_NoInputs);
+            ImGui::PopItemWidth();
+        }
+
+        ImGui::Spacing();
         ImGui::End();
 
         UI::PopID();
@@ -1811,11 +1909,13 @@ namespace Crowny
             break;
         }
         case Key::Z: {
-            UndoRedo::Get().Undo();
+            if (ctrl)
+                UndoRedo::Get().Undo();
             break;
         }
         case Key::Y: {
-            UndoRedo::Get().Redo();
+            if (ctrl)
+                UndoRedo::Get().Redo();
             break;
         }
         }

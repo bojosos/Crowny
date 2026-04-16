@@ -10,8 +10,10 @@ namespace Crowny
     class OpenGLShader : public ShaderStage
     {
     public:
-        OpenGLShader(const BinaryShaderData& data) {}
+        friend class ShaderStage;
         ~OpenGLShader();
+    protected:
+        OpenGLShader(const BinaryShaderData& data) {}
 
     private:
         uint32_t m_RendererID;

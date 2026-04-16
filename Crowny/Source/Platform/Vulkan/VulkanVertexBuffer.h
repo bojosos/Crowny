@@ -7,7 +7,7 @@
 namespace Crowny
 {
 
-    class VulkanBufferLayout
+    class VulkanBufferLayout : public RefCounted
     {
     public:
         VulkanBufferLayout(uint32_t id, const VkPipelineVertexInputStateCreateInfo& createInfo);
@@ -74,8 +74,7 @@ namespace Crowny
     class VulkanVertexBuffer : public VertexBuffer
     {
     public:
-        VulkanVertexBuffer(uint32_t size, BufferUsage usage);
-        VulkanVertexBuffer(void* vertices, uint32_t size, BufferUsage usage);
+        friend class VertexBuffer;
         ~VulkanVertexBuffer();
 
         virtual const Ref<BufferLayout>& GetLayout() const override { return m_Layout; };
@@ -95,6 +94,10 @@ namespace Crowny
 
         VkBuffer GetHandle() const { return m_Buffer->GetHandle(); }
         VulkanBuffer* GetBuffer() const { return m_Buffer->GetBuffer(); }
+
+    protected:
+        VulkanVertexBuffer(uint32_t size, BufferUsage usage);
+        VulkanVertexBuffer(void* vertices, uint32_t size, BufferUsage usage);
 
     private:
         VulkanGpuBuffer* m_Buffer; // TODO: Move this buffer and its usage into the base gpu buffer class. It's used heavily in all ancestors.

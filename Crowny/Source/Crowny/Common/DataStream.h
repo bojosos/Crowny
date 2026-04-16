@@ -6,7 +6,7 @@
 namespace Crowny
 {
 
-    class DataStream
+    class DataStream : public RefCounted
     {
     public:
         enum AccessMode
@@ -106,9 +106,9 @@ namespace Crowny
 
     private:
         fs::path m_Path;
-        Ref<std::istream> m_InStream;
-        Ref<std::ifstream> m_FStreamRO;
-        Ref<std::fstream> m_FStream;
+        std::istream* m_InStream = nullptr;
+        std::unique_ptr<std::ifstream> m_FStreamRO;
+        std::unique_ptr<std::fstream> m_FStream;
         bool m_FreeOnClose;
     };
 

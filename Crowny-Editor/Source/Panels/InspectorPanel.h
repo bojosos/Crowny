@@ -83,6 +83,10 @@ namespace Crowny
 
         ComponentEditor m_ComponentEditor; // Helper object for rendering components of entities
 
+        // Material inspector auto-save state
+        uint64_t m_MaterialLastSaveVersion = 0;
+        std::chrono::steady_clock::time_point m_MaterialLastSaveTime;
+
         std::function<void(AssetHandle<NodeGraphAsset>)> m_OpenNodeEditorCallback;
     };
 } // namespace Crowny

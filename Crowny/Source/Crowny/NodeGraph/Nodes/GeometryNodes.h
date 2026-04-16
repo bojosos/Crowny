@@ -9,8 +9,8 @@ namespace Crowny
     public:
         BoxNode(UUID id);
         void Evaluate(NodeGraphEvaluator& evaluator) override;
-        String GetDisplayName() const override { return "Box"; }
-        String GetCategory() const override { return "Geometry/Primitives"; }
+        StringID GetDisplayName() const override { return "Box"; }
+        StringID GetCategory() const override { return "Primitives"; }
     };
 
     class SphereNode : public Node
@@ -18,8 +18,8 @@ namespace Crowny
     public:
         SphereNode(UUID id);
         void Evaluate(NodeGraphEvaluator& evaluator) override;
-        String GetDisplayName() const override { return "Sphere"; }
-        String GetCategory() const override { return "Geometry/Primitives"; }
+        StringID GetDisplayName() const override { return "Sphere"; }
+        StringID GetCategory() const override { return "Primitives"; }
     };
 
     class PlaneNode : public Node
@@ -27,8 +27,8 @@ namespace Crowny
     public:
         PlaneNode(UUID id);
         void Evaluate(NodeGraphEvaluator& evaluator) override;
-        String GetDisplayName() const override { return "Plane"; }
-        String GetCategory() const override { return "Geometry/Primitives"; }
+        StringID GetDisplayName() const override { return "Plane"; }
+        StringID GetCategory() const override { return "Primitives"; }
     };
 
     class GridNode : public Node
@@ -36,8 +36,8 @@ namespace Crowny
     public:
         GridNode(UUID id);
         void Evaluate(NodeGraphEvaluator& evaluator) override;
-        String GetDisplayName() const override { return "Grid"; }
-        String GetCategory() const override { return "Geometry/Primitives"; }
+        StringID GetDisplayName() const override { return "Grid"; }
+        StringID GetCategory() const override { return "Primitives"; }
     };
 
 } // namespace Crowny

@@ -12,28 +12,22 @@ namespace Crowny
 
         static NodeRegistry& Get();
 
-        void Register(StringID typeName, const String& category, FactoryFunc factory);
+        void Register(StringID typeName, StringID category, FactoryFunc factory);
         Ref<Node> Create(StringID typeName, UUID id) const;
         Ref<Node> Create(StringID typeName) const;
 
-        const Map<String, Vector<String>>& GetCategorizedTypes() const { return m_CategorizedTypes; }
+        const Map<StringID, Vector<StringID>>& GetCategorizedTypes() const { return m_CategorizedTypes; }
         bool HasType(StringID typeName) const { return m_Registry.find(typeName) != m_Registry.end(); }
 
     private:
         struct Entry
         {
-            String Category;
+            StringID Category;
             FactoryFunc Factory;
         };
 
         UnorderedMap<StringID, Entry> m_Registry;
-        Map<String, Vector<String>> m_CategorizedTypes;
+        Map<StringID, Vector<StringID>> m_CategorizedTypes;
     };
-
-#define CW_REGISTER_NODE(TypeName, Category, ClassName)                                                                                              \
-    static bool s_##ClassName##_Registered = []() {                                                                                                  \
-        NodeRegistry::Get().Register(TypeName, Category, [](UUID id) -> Ref<Node> { return CreateRef<ClassName>(id); });                             \
-        return true;                                                                                                                                 \
-    }();
 
 } // namespace Crowny

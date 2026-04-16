@@ -7,8 +7,10 @@ namespace Crowny
     class OpenGLVertexArray : public VertexArray
     {
     public:
-        OpenGLVertexArray(DrawMode drawMode);
+        friend class VertexArray;
         virtual ~OpenGLVertexArray();
+    protected:
+        OpenGLVertexArray(DrawMode drawMode);
 
         virtual void Bind() const override;
         virtual void Unbind() const override;

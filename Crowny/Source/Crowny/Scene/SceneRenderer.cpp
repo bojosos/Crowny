@@ -78,8 +78,8 @@ namespace Crowny
         float vertices[] = { 1.0f, 1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, -1.0f, 0.0f };
         uint32_t indices[] = { 0, 1, 2 };
         const glm::mat3x4 transformMatrix(1.0f);
-        Ref<VertexBuffer> vertexBuffer = VertexBuffer::Create(vertices, sizeof(vertices));
-        Ref<IndexBuffer> indexBuffer = IndexBuffer::Create(indices, 3);
+        Ref<VertexBuffer> vertexBuffer = VertexBuffer::Create({sizeof(vertices), BufferUsage::BU_STATIC_DRAW, vertices});
+        Ref<IndexBuffer> indexBuffer = IndexBuffer::Create({3, IndexType::Index_32, BufferUsage::BU_STATIC_DRAW, indices});
 
         s_Data->RayPipeline = rayTraceShader->GetTechniques()[0]->GetRenderPasses()[0]->GetRayTracingPipeline();
         AccelerationGeometry geom;
@@ -122,13 +122,16 @@ namespace Crowny
                 -gridExtent, 0.0f, -gridExtent, gridExtent, 0.0f, -gridExtent, gridExtent, 0.0f, gridExtent, -gridExtent, 0.0f, gridExtent,
             };
             uint32_t gridIndices[] = { 0, 1, 2, 0, 2, 3 };
-            s_Data->GridVbo = VertexBuffer::Create(gridVertices, sizeof(gridVertices));
+            s_Data->GridVbo = VertexBuffer::Create({sizeof(gridVertices), BufferUsage::BU_STATIC_DRAW, gridVertices});
             s_Data->GridVbo->SetLayout(CreateRef<BufferLayout>(BufferLayout{ { ShaderDataType::Float3, "inPos" } }));
-            s_Data->GridIbo = IndexBuffer::Create(gridIndices, 6);
+            s_Data->GridIbo = IndexBuffer::Create({6, IndexType::Index_32, BufferUsage::BU_STATIC_DRAW, gridIndices});
         }
     }
 
-    void SceneRenderer::RenderEditor(const EditorCamera& camera) { Render(camera, camera.GetViewMatrix(), true); }
+    void SceneRenderer::RenderEditor(const EditorCamera& camera, bool drawGrid, const GridSettings& gridSettings)
+    {
+        Render(camera, camera.GetViewMatrix(), drawGrid, gridSettings);
+    }
 
     void SceneRenderer::Render()
     {
@@ -150,11 +153,16 @@ namespace Crowny
             Render(*mainCamera, glm::inverse(cameraTransform));
     }
 
-    void SceneRenderer::DrawGrid(const glm::mat4& viewProjection, const glm::vec3& cameraPos)
+    void SceneRenderer::DrawGrid(const glm::mat4& viewProjection, const glm::vec3& cameraPos, const GridSettings& settings)
     {
         RenderAPI& rapi = (*gRenderAPI);
         s_Data->GridMaterial->SetMatrix("viewProjection", viewProjection);
         s_Data->GridMaterial->SetVector3("cameraPos", cameraPos);
+        s_Data->GridMaterial->SetFloat("fineSize",   settings.FineSize);
+        s_Data->GridMaterial->SetFloat("coarseSize", settings.CoarseSize);
+        s_Data->GridMaterial->SetFloat("lineWidth",  settings.LineWidth);
+        s_Data->GridMaterial->SetFloat("opacity",    settings.Opacity);
+        s_Data->GridMaterial->SetInt("showAxes",     settings.ShowAxes ? 1 : 0);
         rapi.SetGraphicsPipeline(s_Data->GridMaterial->GetGraphicsPipeline());
         rapi.SetVertexBuffers(0, &s_Data->GridVbo, 1);
         rapi.SetVertexLayout(s_Data->GridVbo->GetLayout());
@@ -163,7 +171,7 @@ namespace Crowny
         rapi.DrawIndexed(0, s_Data->GridIbo->GetCount(), 0, 4);
     }
 
-    void SceneRenderer::Render(const Camera& camera, const glm::mat4& viewTransform, bool drawGrid)
+    void SceneRenderer::Render(const Camera& camera, const glm::mat4& viewTransform, bool drawGrid, const GridSettings& gridSettings)
     {
         FrameMarkStart("Editor update");
         RenderAPI& rapi = (*gRenderAPI);
@@ -220,7 +228,7 @@ namespace Crowny
         if (drawGrid)
         {
             ZoneScopedN("Editor grid");
-            DrawGrid(camera.GetProjection() * viewTransform, camera.GetPosition());
+            DrawGrid(camera.GetProjection() * viewTransform, camera.GetPosition(), gridSettings);
         }
 
         {
@@ -327,7 +335,7 @@ namespace Crowny
                     else
                     {
                         // First time: create GPU mesh with Dynamic usage for efficient updates
-                        *resultSlot = Mesh::Create(result, {}, MeshUsage::Dynamic | MeshUsage::CpuCached);
+                        *resultSlot = Mesh::Create({result, MeshUsage::Dynamic | MeshUsage::CpuCached});
                     }
                 });
             }
@@ -342,14 +350,14 @@ namespace Crowny
                 }
                 else
                 {
-                    proc.GpuMesh = Mesh::Create(result, {}, MeshUsage::Dynamic | MeshUsage::CpuCached);
+                    proc.GpuMesh = Mesh::Create({result, MeshUsage::Dynamic | MeshUsage::CpuCached});
                 }
                 proc.NeedsGpuUpload = false;
             }
         }
     }
 
-    RenderSnapshot SceneRenderer::ExtractSnapshot() const
+    RenderSnapshot SceneRenderer::ExtractSnapshot(bool drawGrid) const
     {
         Camera* mainCamera = nullptr;
         glm::mat4 cameraTransform;
@@ -365,16 +373,17 @@ namespace Crowny
         }
 
         if (mainCamera)
-            return ExtractSnapshot(*mainCamera, glm::inverse(cameraTransform));
+            return ExtractSnapshot(*mainCamera, glm::inverse(cameraTransform), drawGrid);
 
         // No camera in scene — return a snapshot that carries the render target so
         // RenderFromSnapshot can still clear/present the frame without crashing.
         RenderSnapshot empty;
         empty.Target = m_RenderTarget;
+        empty.DrawGrid = drawGrid;
         return empty;
     }
 
-    RenderSnapshot SceneRenderer::ExtractSnapshot(const Camera& camera, const glm::mat4& viewTransform) const
+    RenderSnapshot SceneRenderer::ExtractSnapshot(const Camera& camera, const glm::mat4& viewTransform, bool drawGrid) const
     {
         ZoneScopedN("ExtractSnapshot");
         RenderSnapshot snapshot;
@@ -383,6 +392,7 @@ namespace Crowny
         snapshot.ViewMatrix = viewTransform;
         snapshot.Target = m_RenderTarget;
         snapshot.Environment = m_Scene->GetEnvironment();
+        snapshot.DrawGrid = drawGrid;
 
         // 3D mesh objects
         {
@@ -456,6 +466,7 @@ namespace Crowny
 
         // Forward pass (3D)
         {
+            ForwardRenderer::SetPolygonMode(snapshot.OverridePolygonMode);
             ForwardRenderer::Begin();
             ForwardRenderer::BeginScene(snapshot.ProjectionMatrix, snapshot.ViewMatrix, snapshot.CameraPosition, snapshot.Environment);
             for (const auto& obj : snapshot.MeshObjects)
@@ -463,6 +474,13 @@ namespace Crowny
             ForwardRenderer::Flush();
             ForwardRenderer::EndScene();
             ForwardRenderer::End();
+            ForwardRenderer::SetPolygonMode(PolygonMode::Solid); // Reset after frame
+        }
+
+        if (snapshot.DrawGrid)
+        {
+            ZoneScopedN("Editor grid");
+            DrawGrid(snapshot.ProjectionMatrix * snapshot.ViewMatrix, snapshot.CameraPosition, snapshot.Grid);
         }
 
         // 2D pass

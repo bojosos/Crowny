@@ -153,7 +153,7 @@ GL_NONE;
         return GL_NONE;
     }
 
-    OpenGLTexture2D::OpenGLTexture2D(uint32_t width, uint32_t height, const TextureParameters& parameters) :
+    OpenGLTexture2D::OpenGLTexture2D(uint32_t width, uint32_t height, const TextureDesc& parameters) :
 m_Width(width), m_Height(height), m_Parameters(parameters)
     {
 #ifdef MC_WEB
@@ -206,7 +206,7 @@ TextureSwizzleColorToOpenGLSwizzleColor(m_Parameters.Swizzle.Swizzle[0]));
 #endif
     }
 
-    OpenGLTexture2D::OpenGLTexture2D(const Path& filepath, const TextureParameters& parameters, const
+    OpenGLTexture2D::OpenGLTexture2D(const Path& filepath, const TextureDesc& parameters, const
 String& name) : m_FilePath(filepath), m_Parameters(parameters), m_Name(name)
     {
         int width, height, channels;

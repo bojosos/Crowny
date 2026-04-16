@@ -15,9 +15,9 @@ namespace Crowny
         switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::OpenGL:
-            return CreateRef<OpenGLTimerQuery>();
+            return Ref<TimerQuery>(new OpenGLTimerQuery());
         case RenderAPI::API::Vulkan:
-            return CreateRef<VulkanTimerQuery>();
+            return Ref<TimerQuery>(new VulkanTimerQuery());
         default:
             CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
@@ -31,9 +31,9 @@ namespace Crowny
         switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::OpenGL:
-            return CreateRef<OpenGLPipelineQuery>();
+            return Ref<PipelineQuery>(new OpenGLPipelineQuery());
         case RenderAPI::API::Vulkan:
-            return CreateRef<VulkanPipelineQuery>();
+            return Ref<PipelineQuery>(new VulkanPipelineQuery());
         default:
             CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
@@ -47,9 +47,9 @@ namespace Crowny
         switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::OpenGL:
-            return CreateRef<OpenGLOcclusionQuery>(binary);
+            return Ref<OcclusionQuery>(new OpenGLOcclusionQuery(binary));
         case RenderAPI::API::Vulkan:
-            return CreateRef<VulkanOcclusionQuery>(binary);
+            return Ref<OcclusionQuery>(new VulkanOcclusionQuery(binary));
         default:
             CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;

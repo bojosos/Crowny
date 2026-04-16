@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Common/RefCounted.h"
+#include "Crowny/Common/StringID.h"
 #include "Crowny/Common/Uuid.h"
 #include "Crowny/NodeGraph/PinTypes.h"
 
@@ -7,7 +9,7 @@ namespace Crowny
 {
     class Node;
 
-    class Pin
+    class Pin : public RefCounted
     {
     public:
         enum class Direction
@@ -16,11 +18,11 @@ namespace Crowny
             Output
         };
 
-        Pin(UUID id, const String& name, Direction direction, PinDataType dataType);
+        Pin(UUID id, StringID name, Direction direction, PinDataType dataType);
 
         UUID GetID() const { return m_ID; }
         void SetID(UUID id) { m_ID = id; }
-        const String& GetName() const { return m_Name; }
+        StringID GetName() const { return m_Name; }
         Direction GetDirection() const { return m_Direction; }
         PinDataType GetDataType() const { return m_DataType; }
 
@@ -36,7 +38,7 @@ namespace Crowny
 
     private:
         UUID m_ID;
-        String m_Name;
+        StringID m_Name;
         Direction m_Direction = Direction::Input;
         PinDataType m_DataType = PinDataType::Float;
         PinValue m_DefaultValue;

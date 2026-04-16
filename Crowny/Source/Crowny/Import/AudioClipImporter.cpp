@@ -24,7 +24,7 @@ namespace Crowny
 
     Ref<Asset> AudioClipImporter::Import(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
-        Ref<const AudioClipImportOptions> audioImportOptions = std::static_pointer_cast<const AudioClipImportOptions>(importOptions);
+        Ref<const AudioClipImportOptions> audioImportOptions = StaticRefCast<const AudioClipImportOptions>(importOptions);
         AudioDataInfo info;
         uint32_t bytesPerSample;
         uint32_t bufferSize;
@@ -82,7 +82,7 @@ namespace Crowny
         clipDesc.Frequency = info.SampleRate;
         clipDesc.Is3D = audioImportOptions->Is3D;
         clipDesc.ReadMode = audioImportOptions->ReadMode;
-        Ref<AudioClip> clip = CreateRef<AudioClip>(sampleStream, bufferSize, info.NumSamples, clipDesc);
+        Ref<AudioClip> clip = AudioClip::Create(sampleStream, bufferSize, info.NumSamples, clipDesc);
         CW_ENGINE_INFO(filepath);
         CW_ENGINE_INFO(filepath.filename().string());
         clip->SetName(filepath.filename().string());

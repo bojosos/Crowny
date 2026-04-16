@@ -21,7 +21,7 @@ namespace Crowny
         switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::Vulkan:
-            return CreateRef<VulkanAccelerationStructure>(topLevelInstances, isTopLevel, maxTopLevelInstances, flags);
+            return Ref<AccelerationStructure>(new VulkanAccelerationStructure(topLevelInstances, isTopLevel, maxTopLevelInstances, flags));
         default:
             CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;

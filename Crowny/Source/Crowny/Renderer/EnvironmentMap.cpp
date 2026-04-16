@@ -55,8 +55,8 @@ namespace Crowny
     void EnvironmentMap::CreateCubeMesh()
     {
         Ref<BufferLayout> layout = CreateRef<BufferLayout>(BufferLayout{ { ShaderDataType::Float3, "inPos" } });
-        m_CubeVbo = VertexBuffer::Create((float*)s_CubeVertices, sizeof(s_CubeVertices));
-        m_CubeIbo = IndexBuffer::Create((uint32_t*)s_CubeIndices, 36);
+        m_CubeVbo = VertexBuffer::Create({sizeof(s_CubeVertices), BufferUsage::BU_STATIC_DRAW, s_CubeVertices});
+        m_CubeIbo = IndexBuffer::Create({36, IndexType::Index_32, BufferUsage::BU_STATIC_DRAW, s_CubeIndices});
         m_CubeVbo->SetLayout(layout);
     }
 
@@ -87,7 +87,7 @@ namespace Crowny
             return;
         }
 
-        TextureParameters equirectProps;
+        TextureDesc equirectProps;
         equirectProps.Width = width;
         equirectProps.Height = height;
         equirectProps.Usage = TextureUsage::TEXTURE_STATIC;
@@ -102,7 +102,7 @@ namespace Crowny
 
         // Create environment cubemap
         RenderAPI& rapi = (*gRenderAPI);
-        TextureParameters cubeProps;
+        TextureDesc cubeProps;
         cubeProps.Width = m_Settings.CubemapResolution;
         cubeProps.Height = m_Settings.CubemapResolution;
         cubeProps.Faces = 6;
@@ -123,14 +123,14 @@ namespace Crowny
 
         AssetHandle<Shader> shaderHandle = gAssetManager->Load<Shader>(EQUIRECTTOCUBE_SHADER_PATH);
         Ref<Material> equirectMaterial = Material::Create(shaderHandle);
-        equirectMaterial->SetTexture("equirectangularMap", equirectTexture);
+        equirectMaterial->SetTexture("cw_equirectangularMap", equirectTexture);
         equirectMaterial->SetMatrix("proj", captureProjection);
         rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
         rapi.SetGraphicsPipeline(equirectMaterial->GetGraphicsPipeline());
 
         for (uint32_t i = 0; i < 6; i++)
         {
-            RenderTextureProperties rtProps;
+            RenderTextureDesc rtProps;
             rtProps.ColorSurfaces[0].Texture = m_EnvironmentCubemap;
             rtProps.ColorSurfaces[0].Face = i;
             rtProps.ColorSurfaces[0].NumFaces = 1;
@@ -153,7 +153,7 @@ namespace Crowny
     {
         Timer timer;
         auto& rapi = (*gRenderAPI);
-        TextureParameters tProps;
+        TextureDesc tProps;
         tProps.Width = m_Settings.IrradianceResolution;
         tProps.Height = m_Settings.IrradianceResolution;
         tProps.Format = TextureFormat::RGBA32F;
@@ -167,14 +167,14 @@ namespace Crowny
         AssetHandle<Shader> shaderHandle = gAssetManager->Load<Shader>(PREFILTER_SHADER_PATH);
         Ref<Material> irradianceMaterial = Material::Create(shaderHandle);
 
-        irradianceMaterial->SetTexture("samplerEnv", m_EnvironmentCubemap);
+        irradianceMaterial->SetTexture("cw_samplerEnv", m_EnvironmentCubemap);
         for (uint32_t j = 0; j < 6; j++)
         {
             const float farPlane = (float)m_Settings.IrradianceResolution;
             const glm::mat4 viewProjection = glm::perspective((float)(M_PI * 0.5f), 1.0f, 0.1f, farPlane) * s_CubeFaceMatrices[j];
             irradianceMaterial->SetMatrix("mvp", viewProjection);
 
-            RenderTextureProperties rtProps;
+            RenderTextureDesc rtProps;
             rtProps.ColorSurfaces[0].Texture = m_IrradianceMap;
             rtProps.ColorSurfaces[0].Face = j;
             rtProps.ColorSurfaces[0].NumFaces = 1;
@@ -199,7 +199,7 @@ namespace Crowny
         auto& rapi = (*gRenderAPI);
         const uint32_t res = m_Settings.PrefilteredResolution;
         const uint32_t numMips = static_cast<uint32_t>(std::floor(std::log2(res)));
-        TextureParameters tProps;
+        TextureDesc tProps;
         tProps.Width = res;
         tProps.Height = res;
         tProps.Format = TextureFormat::RGBA32F;
@@ -214,7 +214,7 @@ namespace Crowny
         Ref<Material> prefilterMaterial = Material::Create(shaderHandle);
 
         prefilterMaterial->SetInt("samples", (int)m_Settings.PrefilterSamples);
-        prefilterMaterial->SetTexture("samplerEnv", m_EnvironmentCubemap);
+        prefilterMaterial->SetTexture("cw_samplerEnv", m_EnvironmentCubemap);
         for (uint32_t j = 0; j < 6; j++)
         {
             const float farPlane = (float)res;
@@ -224,7 +224,7 @@ namespace Crowny
             {
                 float roughness = (float)i / (float)(numMips);
                 prefilterMaterial->SetFloat("roughness", roughness);
-                RenderTextureProperties rtProps;
+                RenderTextureDesc rtProps;
                 rtProps.ColorSurfaces[0].Texture = m_PrefilteredMap;
                 rtProps.ColorSurfaces[0].Face = j;
                 rtProps.ColorSurfaces[0].NumFaces = 1;

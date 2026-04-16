@@ -1,7 +1,7 @@
 project "Crowny"
 	kind "StaticLib"
 	language "C++"
-	cppdialect "C++17"
+	cppdialect "C++20"
 	staticruntime "off"
 	characterset ("MBCS")
 

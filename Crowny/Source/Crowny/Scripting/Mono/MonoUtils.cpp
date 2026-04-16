@@ -73,6 +73,7 @@ namespace Crowny
                 const Vector<String> split = StringUtils::SplitString(trace, " ");
                 const String method = split[0] + split[1];
                 const Vector<String> fileInfo = StringUtils::SplitString(split[4], ":");
+                // TODO: csc
                 const String pathString = fileInfo[0] + ":" + fileInfo[1];
                 const Path filepath = pathString;
                 const uint32_t lineNum = StringUtils::ParseInt(fileInfo[2]);

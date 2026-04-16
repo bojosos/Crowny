@@ -26,7 +26,7 @@ namespace Crowny
         Directory
     };
 
-    struct LibraryEntry
+    struct LibraryEntry : public RefCounted
     {
         LibraryEntry() = default;
         LibraryEntry(const Path& path, const String& name, DirectoryEntry* parent, LibraryEntryType type);

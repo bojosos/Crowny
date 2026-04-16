@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/RefCounted.h"
 #include "Crowny/RenderAPI/Buffer.h"
 #include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/RenderAPI/UniformParamInfo.h"
@@ -10,7 +11,7 @@ namespace Crowny
     class ShaderStage;
     class VulkanRenderPass;
 
-    struct DepthStencilStateDesc
+    struct DepthStencilStateDesc : public RefCounted
     {
         bool EnableDepthRead = true;
         bool EnableDepthWrite = true;
@@ -35,7 +36,7 @@ namespace Crowny
 
     // TODO: This should not be reused in the PipelineStateDesc. There I should be using completely different structures
     // that cannot be changed.
-    struct BlendStateDesc
+    struct BlendStateDesc : public RefCounted
     {
         bool EnableBlending = false;
         bool AlphaToCoverage = false;
@@ -51,7 +52,7 @@ namespace Crowny
         static Ref<BlendStateDesc> GetDefault();
     };
 
-    struct RasterizerStateDesc
+    struct RasterizerStateDesc : public RefCounted
     {
         CullingMode CullMode = CullingMode::CULL_NONE;
         float DepthBias = 0.0f;
@@ -78,10 +79,9 @@ namespace Crowny
     };
 
     // TODO: Change the name of the file
-    class GraphicsPipeline
+    class GraphicsPipeline : public RefCounted
     {
     public:
-        GraphicsPipeline(const PipelineStateDesc& desc);
         virtual ~GraphicsPipeline() = default;
 
         const Ref<UniformParamInfo>& GetParamInfo() const { return m_ParamInfo; }
@@ -90,6 +90,7 @@ namespace Crowny
         static Ref<GraphicsPipeline> Create(const PipelineStateDesc& props);
 
     protected:
+        GraphicsPipeline(const PipelineStateDesc& desc);
         PipelineStateDesc m_Data;
         Ref<UniformParamInfo> m_ParamInfo;
     };
@@ -101,10 +102,9 @@ namespace Crowny
         Ref<ShaderStage> RaygenShader;
     };
 
-    class RayTracingPipeline
+    class RayTracingPipeline : public RefCounted
     {
     public:
-        RayTracingPipeline(const RayTracingPipelineDesc& desc);
         virtual ~RayTracingPipeline() = default;
 
         const Ref<UniformParamInfo> GetParamInfo() const { return m_ParamInfo; }
@@ -113,14 +113,14 @@ namespace Crowny
         static Ref<RayTracingPipeline> Create(const RayTracingPipelineDesc& desc);
 
     protected:
+        RayTracingPipeline(const RayTracingPipelineDesc& desc);
         RayTracingPipelineDesc m_Data;
         Ref<UniformParamInfo> m_ParamInfo;
     };
 
-    class ComputePipeline
+    class ComputePipeline : public RefCounted
     {
     public:
-        ComputePipeline(const Ref<ShaderStage>& computeShader);
         virtual ~ComputePipeline() = default;
 
         const Ref<UniformParamInfo>& GetParamInfo() const { return m_ParamInfo; }
@@ -129,6 +129,7 @@ namespace Crowny
         static Ref<ComputePipeline> Create(const Ref<ShaderStage>& computeShader);
 
     protected:
+        ComputePipeline(const Ref<ShaderStage>& computeShader);
         Ref<ShaderStage> m_Shader;
         Ref<UniformParamInfo> m_ParamInfo;
     };

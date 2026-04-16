@@ -1,6 +1,11 @@
 #pragma once
 
 #include <cstddef>
+#include <cstring>
+#include <functional>
+
+// Forward-declare cereal::access so CW_SERIALIZABLE can friend it
+namespace cereal { class access; }
 
 #ifdef CW_DEBUG
 #define CW_ENABLE_ASSERTS
@@ -45,6 +50,7 @@ namespace Crowny
 #define CW_SIMPLESERIALIZABLE(...) template <typename Archive> friend void Serialize(Archive& archive, __VA_ARGS__& type);
 
 #define CW_SERIALIZABLE(...)                                                                                                                         \
+    friend class ::cereal::access;                                                                                                                  \
     friend void Save(BinaryDataStreamOutputArchive& ar, const __VA_ARGS__& type);                                                                    \
     friend void Load(BinaryDataStreamInputArchive& ar, __VA_ARGS__& type);
 

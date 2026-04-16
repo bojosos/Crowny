@@ -70,7 +70,7 @@ namespace Crowny
         // CW_ENGINE_INFO("Here Match TypeInfoPrimitive");
         if (typeInfo->GetType() == SerializableType::Primitive)
         {
-            auto primitiveTypeInfo = std::static_pointer_cast<SerializableTypeInfoPrimitive>(typeInfo);
+            auto primitiveTypeInfo = StaticRefCast<SerializableTypeInfoPrimitive>(typeInfo);
             return primitiveTypeInfo->m_Type == m_Type;
         }
         return false;

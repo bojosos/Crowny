@@ -1,3 +1,4 @@
+#lang glsl
 #type vertex
 #version 450
 
@@ -6,7 +7,7 @@
 
 layout (location = 0) in vec3 inPos;
 
-layout (binding = 0) uniform MVP
+layout (binding = 0) uniform cw_MVP
 {
     mat4 mvp;
 } mvp;
@@ -27,13 +28,13 @@ layout (location = 0) in vec3 inUVW;
 layout (location = 0) out vec4 outColor;
 layout (location = 1) out int outEntity;
 
-layout (binding = 1) uniform Params
+layout (binding = 1) uniform cw_Params
 {
     float exposure;
     float gamma;
 } params;
 
-layout (binding = 2) uniform samplerCube samplerEnv;
+layout (binding = 2) uniform samplerCube cw_samplerEnv;
 
 vec3 Uncharted2Tonemap(vec3 color)
 {
@@ -51,7 +52,7 @@ vec3 Uncharted2Tonemap(vec3 color)
 void main()
 {
     outEntity = 0;
-    vec3 color = texture(samplerEnv, inUVW).rgb;
+    vec3 color = texture(cw_samplerEnv, inUVW).rgb;
 
     color = Uncharted2Tonemap(color * params.exposure);
     color = color * (1.0 / Uncharted2Tonemap(vec3(11.2)));

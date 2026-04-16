@@ -88,7 +88,7 @@ namespace Crowny
         }
 
     private:
-        Vector<std::pair<ComponentTypeID, ComponentInfo>> m_OrderedComponentInfos;
+        Vector<Pair<ComponentTypeID, ComponentInfo>> m_OrderedComponentInfos;
         Map<String, Map<ComponentTypeID, ComponentInfo>> m_ComponentInfos;
         String m_CurrentComponentGroup;
     };

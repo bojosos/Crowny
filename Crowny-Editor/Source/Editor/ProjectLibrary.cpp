@@ -5,9 +5,10 @@
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Import/Importer.h"
 #include "Crowny/Import/TextureImporter.h"
-#include "Crowny/Serialization/NodeGraphSerializer.h"
 #include "Crowny/Serialization/FileEncoder.h"
 #include "Crowny/Serialization/ImportOptionsSerializer.h"
+#include "Crowny/Serialization/MaterialSerializer.h"
+#include "Crowny/Serialization/NodeGraphSerializer.h"
 
 #include "Editor/Editor.h"
 #include "Editor/EditorUtils.h"
@@ -147,12 +148,12 @@ namespace Crowny
                 ReimportAssetInternal(resEntry);
             }
             else
-                DeleteAssetInternal(std::static_pointer_cast<FileEntry>(entry));
+                DeleteAssetInternal(StaticRefCast<FileEntry>(entry));
         }
         else if (entry->Type == LibraryEntryType::Directory)
         {
             if (!fs::is_directory(entry->Filepath))
-                DeleteDirectoryInternal(std::static_pointer_cast<DirectoryEntry>(entry));
+                DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(entry));
             else
             {
                 Stack<DirectoryEntry*> todos;
@@ -242,9 +243,9 @@ namespace Crowny
                     for (auto& child : toDelete)
                     {
                         if (child->Type == LibraryEntryType::Directory)
-                            DeleteDirectoryInternal(std::static_pointer_cast<DirectoryEntry>(child));
+                            DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(child));
                         else if (child->Type == LibraryEntryType::File)
-                            DeleteAssetInternal(std::static_pointer_cast<FileEntry>(child));
+                            DeleteAssetInternal(StaticRefCast<FileEntry>(child));
                     }
                     toDelete.clear();
 
@@ -325,12 +326,12 @@ namespace Crowny
                 tasks.push_back({ resEntry, nullptr, false });
             }
             else
-                DeleteAssetInternal(std::static_pointer_cast<FileEntry>(entry));
+                DeleteAssetInternal(StaticRefCast<FileEntry>(entry));
         }
         else if (entry->Type == LibraryEntryType::Directory)
         {
             if (!fs::is_directory(entry->Filepath))
-                DeleteDirectoryInternal(std::static_pointer_cast<DirectoryEntry>(entry));
+                DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(entry));
             else
             {
                 Stack<DirectoryEntry*> todos;
@@ -415,9 +416,9 @@ namespace Crowny
                     for (auto& child : toDelete)
                     {
                         if (child->Type == LibraryEntryType::Directory)
-                            DeleteDirectoryInternal(std::static_pointer_cast<DirectoryEntry>(child));
+                            DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(child));
                         else if (child->Type == LibraryEntryType::File)
-                            DeleteAssetInternal(std::static_pointer_cast<FileEntry>(child));
+                            DeleteAssetInternal(StaticRefCast<FileEntry>(child));
                     }
                     toDelete.clear();
 
@@ -751,9 +752,9 @@ namespace Crowny
         for (auto& child : childrenToDestroy)
         {
             if (child->Type == LibraryEntryType::Directory)
-                DeleteDirectoryInternal(std::static_pointer_cast<DirectoryEntry>(child));
+                DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(child));
             else
-                DeleteAssetInternal(std::static_pointer_cast<FileEntry>(child));
+                DeleteAssetInternal(StaticRefCast<FileEntry>(child));
         }
 
         DirectoryEntry* parent = directory->Parent;
@@ -987,16 +988,16 @@ namespace Crowny
             {
                 CW_ENGINE_INFO("Search");
                 if (oldEntry->Type == LibraryEntryType::File)
-                    DeleteAssetInternal(std::static_pointer_cast<FileEntry>(oldEntry));
+                    DeleteAssetInternal(StaticRefCast<FileEntry>(oldEntry));
                 else if (oldEntry->Type == LibraryEntryType::Directory)
-                    DeleteDirectoryInternal(std::static_pointer_cast<DirectoryEntry>(oldEntry));
+                    DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(oldEntry));
             }
             else
             {
                 Ref<FileEntry> fileEntry = nullptr;
                 if (oldEntry->Type == LibraryEntryType::File)
                 {
-                    fileEntry = std::static_pointer_cast<FileEntry>(oldEntry);
+                    fileEntry = StaticRefCast<FileEntry>(oldEntry);
                     if (fileEntry->Metadata != nullptr)
                         m_UuidToPath[fileEntry->Metadata->Uuid] = newFullPath;
                 }
@@ -1071,9 +1072,9 @@ namespace Crowny
         if (entry != nullptr)
         {
             if (entry->Type == LibraryEntryType::File)
-                DeleteAssetInternal(std::static_pointer_cast<FileEntry>(entry));
+                DeleteAssetInternal(StaticRefCast<FileEntry>(entry));
             else if (entry->Type == LibraryEntryType::Directory)
-                DeleteDirectoryInternal(std::static_pointer_cast<DirectoryEntry>(entry));
+                DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(entry));
         }
     }
 
@@ -1201,7 +1202,7 @@ namespace Crowny
                 {
                     FileEntry* assetEntry = static_cast<FileEntry*>(child.get());
                     if (assetEntry->Metadata != nullptr && assetEntry->Metadata->IncludeInBuild)
-                        output.push_back(std::static_pointer_cast<FileEntry>(child));
+                        output.push_back(StaticRefCast<FileEntry>(child));
                 }
                 else if (child->Type == LibraryEntryType::Directory)
                     todos.push(static_cast<DirectoryEntry*>(child.get()));
@@ -1262,8 +1263,8 @@ namespace Crowny
             DirectoryEntry* oldDirEntry = static_cast<DirectoryEntry*>(oldEntry);
 
             DirectoryEntry* newDirEntry = AddDirectoryInternal(newEntryParent, newFullPath).get();
-            Stack<std::pair<DirectoryEntry*, DirectoryEntry*>> todos;
-            todos.push(std::make_pair(oldDirEntry, newDirEntry));
+            Stack<Pair<DirectoryEntry*, DirectoryEntry*>> todos;
+            todos.push({ oldDirEntry, newDirEntry });
 
             while (!todos.empty())
             {
@@ -1351,7 +1352,14 @@ namespace Crowny
 
         if (asset->GetAssetType() == AssetType::NodeGraph)
         {
-            NodeGraphSerializer serializer(std::static_pointer_cast<NodeGraphAsset>(asset)->GetGraph());
+            auto graph = StaticRefCast<NodeGraphAsset>(asset)->GetGraph();
+            NodeGraphSerializer serializer(graph);
+            serializer.Serialize(absPath);
+        }
+        else if (asset->GetAssetType() == AssetType::Material)
+        {
+            auto material = StaticRefCast<Material>(asset);
+            MaterialSerializer serializer(material);
             serializer.Serialize(absPath);
         }
         else
@@ -1553,7 +1561,7 @@ namespace Crowny
             if (entry->Type == LibraryEntryType::Directory)
             {
                 tabs += "\t";
-                for (auto& child : std::static_pointer_cast<DirectoryEntry>(entry)->Children)
+                for (auto& child : StaticRefCast<DirectoryEntry>(entry)->Children)
                     traverse(child);
                 tabs = tabs.substr(0, tabs.size() - 2);
             }
@@ -1582,7 +1590,7 @@ namespace Crowny
             {
                 if (child->Type == LibraryEntryType::File)
                 {
-                    Ref<FileEntry> entry = std::static_pointer_cast<FileEntry>(child);
+                    Ref<FileEntry> entry = StaticRefCast<FileEntry>(child);
                     if (fs::is_regular_file(entry->Filepath))
                     {
                         if (entry->Metadata == nullptr)
@@ -1612,9 +1620,9 @@ namespace Crowny
         for (auto& deletedEntry : deletedEntries)
         {
             if (deletedEntry->Type == LibraryEntryType::File)
-                DeleteAssetInternal(std::static_pointer_cast<FileEntry>(deletedEntry));
+                DeleteAssetInternal(StaticRefCast<FileEntry>(deletedEntry));
             else
-                DeleteDirectoryInternal(std::static_pointer_cast<DirectoryEntry>(deletedEntry));
+                DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(deletedEntry));
         }
 
         Path internalAssetFolder = m_AssetFolder / INTERNAL_ASSET_DIR;
@@ -1666,7 +1674,7 @@ namespace Crowny
             if (entry->Type == LibraryEntryType::Directory)
             {
                 tabs += "\t";
-                for (auto& child : std::static_pointer_cast<DirectoryEntry>(entry)->Children)
+                for (auto& child : StaticRefCast<DirectoryEntry>(entry)->Children)
                     traverse(child);
                 tabs = tabs.substr(0, tabs.size() - 2);
             }

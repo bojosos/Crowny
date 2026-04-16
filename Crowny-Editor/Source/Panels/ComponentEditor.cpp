@@ -36,8 +36,8 @@ namespace Crowny
     // Helper: add a component or script to an entity, eliminating the five
     // duplicate AddScriptComponent call-sites that existed before.
     // ---------------------------------------------------------------------------
-    static void AddComponentToEntity(const Ref<Scene>& scene, const Entity& entity, ComponentEditor::ComponentTypeID tid, const ComponentEditor::ComponentInfo& ci,
-                                     const String& scriptName = "")
+    static void AddComponentToEntity(const Ref<Scene>& scene, const Entity& entity, ComponentEditor::ComponentTypeID tid,
+                                     const ComponentEditor::ComponentInfo& ci, const String& scriptName = "")
     {
         if (tid == entt::type_hash<MonoScriptComponent>::value())
             scene->AddScriptComponent(entity, scriptName.empty() ? "" : "Sandbox", scriptName, !scriptName.empty());
@@ -99,7 +99,7 @@ namespace Crowny
     // RenderComponents -- iterate all registered components and draw widgets.
     // ---------------------------------------------------------------------------
     static void RenderComponents(const Entity& entity, const entt::registry& registry,
-                                 const Vector<std::pair<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& orderedInfos)
+                                 const Vector<Pair<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& orderedInfos)
     {
         // Set up prefab override context if this entity is a prefab instance
         bool isPrefabInstance = entity.HasComponent<PrefabComponent>();

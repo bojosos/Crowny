@@ -3,7 +3,13 @@
 
 using namespace Crowny;
 
-TEST_CASE("StringID", "[Common]")
+struct StringIDFixture
+{
+    StringIDFixture() { StringIDTable::StartUp(); }
+    ~StringIDFixture() { StringIDTable::Shutdown(); }
+};
+
+TEST_CASE_METHOD(StringIDFixture, "StringID", "[Common]")
 {
 
     SECTION("Basic construction")
@@ -75,5 +81,23 @@ TEST_CASE("StringID", "[Common]")
         // Order is based on interning order, not lexicographical
         // But it should be consistent for map usage
         CHECK((id1 < id2 || id2 < id1 || id1 == id2));
+    }
+
+    SECTION("Container compatibility")
+    {
+        std::unordered_map<StringID, int> map;
+        StringID id1("One");
+        StringID id2("Two");
+        
+        map[id1] = 1;
+        map[id2] = 2;
+        
+        CHECK(map[StringID("One")] == 1);
+        CHECK(map.size() == 2);
+
+        std::map<StringID, int> sortedMap;
+        sortedMap[id1] = 1;
+        sortedMap[id2] = 2;
+        CHECK(sortedMap.size() == 2);
     }
 }

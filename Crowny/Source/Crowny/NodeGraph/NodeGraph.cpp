@@ -57,7 +57,7 @@ namespace Crowny
         return it != m_Nodes.end() ? it->second.get() : nullptr;
     }
 
-    bool NodeGraph::Connect(UUID outputNodeId, const String& outputPinName, UUID inputNodeId, const String& inputPinName)
+    bool NodeGraph::Connect(UUID outputNodeId, StringID outputPinName, UUID inputNodeId, StringID inputPinName)
     {
         Node* outputNode = GetNode(outputNodeId);
         Node* inputNode = GetNode(inputNodeId);
@@ -191,7 +191,7 @@ namespace Crowny
         return evaluator.EvaluateGeometry();
     }
 
-    void NodeGraph::AddInput(const String& name, PinDataType type, const PinValue& defaultValue)
+    void NodeGraph::AddInput(StringID name, PinDataType type, const PinValue& defaultValue)
     {
         GraphInput input;
         input.ID = UuidGenerator::Generate();
@@ -208,7 +208,7 @@ namespace Crowny
         NotifyChanged();
     }
 
-    void NodeGraph::RenameInput(UUID inputId, const String& newName)
+    void NodeGraph::RenameInput(UUID inputId, StringID newName)
     {
         for (auto& input : m_Inputs)
         {

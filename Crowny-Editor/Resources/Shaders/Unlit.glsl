@@ -8,7 +8,7 @@ layout (location = 3) in vec3 cw_Bitangent;
 layout (location = 4) in vec2 cw_TexCoord0;
 layout (location = 5) in vec4 cw_Color;
 
-layout (binding = 0) uniform MVP
+layout (binding = 0) uniform cw_MVP
 {
     mat4 viewProjection;
     mat4 model;
@@ -38,9 +38,11 @@ layout(location = 0) in DATA
 } fs_in;
 
 layout (binding = 1) uniform UnlitParams {
+    // @color @name("Tint") @default(1.0, 1.0, 1.0, 1.0)
     vec4 tint;
 } params;
 
+// @name("Albedo Map") @default(white)
 layout (binding = 2) uniform sampler2D albedoMap;
 
 layout (location = 0) out vec4 outColor;

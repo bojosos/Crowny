@@ -220,15 +220,15 @@ namespace Crowny
         if ((accessMode & WRITE) != 0)
         {
             mode |= std::ios::out;
-            m_FStream = CreateRef<std::fstream>();
+            m_FStream = std::make_unique<std::fstream>();
             m_FStream->open(path.string(), mode);
-            m_InStream = m_FStream;
+            m_InStream = m_FStream.get();
         }
         else
         {
-            m_FStreamRO = CreateRef<std::ifstream>();
+            m_FStreamRO = std::make_unique<std::ifstream>();
             m_FStreamRO->open(path.string(), mode);
-            m_InStream = m_FStreamRO;
+            m_InStream = m_FStreamRO.get();
         }
 
         if (m_InStream->fail())
@@ -276,7 +276,7 @@ namespace Crowny
             {
                 dataOffset = 4;
                 CW_ENGINE_WARN("UTF-32 big endian not supported");
-                return u8"";
+                return "";
             }
         }
 
@@ -293,7 +293,7 @@ namespace Crowny
             else if (IsUTF16BE(header))
             {
                 CW_ENGINE_WARN("UTF-16 big endian not supported");
-                return u8"";
+                return "";
             }
         }
 

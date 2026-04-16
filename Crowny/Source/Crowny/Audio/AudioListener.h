@@ -1,11 +1,13 @@
 #pragma once
 
+#include "Crowny/Common/RefCounted.h"
+
 namespace Crowny
 {
 
     class TransformComponent;
 
-    class AudioListener
+    class AudioListener : public RefCounted
     {
     public:
         AudioListener();

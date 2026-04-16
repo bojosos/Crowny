@@ -406,12 +406,14 @@ namespace Crowny
     class VulkanCommandBuffer : public CommandBuffer
     {
     public:
-        VulkanCommandBuffer(VulkanDevice& device, GpuQueueType queueType, uint32_t queueIdx, bool secondary);
+        friend class CommandBuffer;
         VulkanCmdBuffer* GetInternal() const { return m_Buffer; }
         void Submit(uint32_t snycMask);
         virtual CommandBufferState GetState() const override;
         virtual void Reset() override;
         void AcquireNewBuffer();
+    protected:
+        VulkanCommandBuffer(VulkanDevice& device, GpuQueueType queueType, uint32_t queueIdx, bool secondary);
 
     private:
         VulkanCmdBuffer* m_Buffer = nullptr;

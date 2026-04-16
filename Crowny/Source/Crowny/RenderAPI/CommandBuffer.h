@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Common/RefCounted.h"
+
 namespace Crowny
 {
 
@@ -11,10 +13,9 @@ namespace Crowny
         Done
     };
 
-    class CommandBuffer
+    class CommandBuffer : public RefCounted
     {
     public:
-        CommandBuffer(GpuQueueType queueType, uint32_t queueIdx, bool secondary);
         virtual ~CommandBuffer() = default;
 
         GpuQueueType GetType() const { return m_Type; }
@@ -26,6 +27,7 @@ namespace Crowny
         static Ref<CommandBuffer> Create(GpuQueueType type, uint32_t queueIdx = 0, bool secondary = false);
 
     protected:
+        CommandBuffer(GpuQueueType queueType, uint32_t queueIdx, bool secondary);
         bool m_IsSecondary;
         GpuQueueType m_Type;
         uint32_t m_QueueIdx;

@@ -2,6 +2,7 @@ project "Crowny-Sharp"
 	kind "SharedLib"
 	language "C#"
 	targetname "CrownySharp"
+	clr "Unsafe"
 
 	targetdir ("%{wks.location}/Crowny-Sharp")
 	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")

@@ -27,9 +27,14 @@ namespace Crowny
 
     void BoxNode::Evaluate(NodeGraphEvaluator& evaluator)
     {
-        float w = GetInputValue<float>("Width", evaluator) * 0.5f;
-        float h = GetInputValue<float>("Height", evaluator) * 0.5f;
-        float d = GetInputValue<float>("Depth", evaluator) * 0.5f;
+        static const StringID geometryPin("Geometry");
+        static const StringID widthPin("Width");
+        static const StringID heightPin("Height");
+        static const StringID depthPin("Depth");
+
+        float w = GetInputValue<float>(widthPin, evaluator) * 0.5f;
+        float h = GetInputValue<float>(heightPin, evaluator) * 0.5f;
+        float d = GetInputValue<float>(depthPin, evaluator) * 0.5f;
 
         // 24 vertices (4 per face), 36 indices
         auto meshData = MeshData::Create(24, 36, GetStandardLayout());
@@ -99,7 +104,7 @@ namespace Crowny
         meshData->SetUVs(0, uvs);
         meshData->SetIndices(indices);
 
-        SetOutputValue<Ref<MeshData>>("Geometry", meshData, evaluator);
+        SetOutputValue<Ref<MeshData>>(geometryPin, meshData, evaluator);
     }
 
     // ---- SphereNode ----
@@ -114,9 +119,14 @@ namespace Crowny
 
     void SphereNode::Evaluate(NodeGraphEvaluator& evaluator)
     {
-        float radius = GetInputValue<float>("Radius", evaluator);
-        int32_t segments = std::max(3, GetInputValue<int32_t>("Segments", evaluator));
-        int32_t rings = std::max(2, GetInputValue<int32_t>("Rings", evaluator));
+        static const StringID geometryPin("Geometry");
+        static const StringID radiusPin("Radius");
+        static const StringID segmentsPin("Segments");
+        static const StringID ringsPin("Rings");
+
+        float radius = GetInputValue<float>(radiusPin, evaluator);
+        int32_t segments = std::max(3, GetInputValue<int32_t>(segmentsPin, evaluator));
+        int32_t rings = std::max(2, GetInputValue<int32_t>(ringsPin, evaluator));
 
         uint32_t vertexCount = (segments + 1) * (rings + 1);
         uint32_t indexCount = segments * rings * 6;
@@ -179,7 +189,7 @@ namespace Crowny
         meshData->SetUVs(0, uvs);
         meshData->SetIndices(indices);
 
-        SetOutputValue<Ref<MeshData>>("Geometry", meshData, evaluator);
+        SetOutputValue<Ref<MeshData>>(geometryPin, meshData, evaluator);
     }
 
     // ---- PlaneNode ----
@@ -195,10 +205,16 @@ namespace Crowny
 
     void PlaneNode::Evaluate(NodeGraphEvaluator& evaluator)
     {
-        float width = GetInputValue<float>("Width", evaluator);
-        float height = GetInputValue<float>("Height", evaluator);
-        int32_t subsX = std::max(1, GetInputValue<int32_t>("SubdivisionsX", evaluator));
-        int32_t subsY = std::max(1, GetInputValue<int32_t>("SubdivisionsY", evaluator));
+        static const StringID geometryPin("Geometry");
+        static const StringID widthPin("Width");
+        static const StringID heightPin("Height");
+        static const StringID subdivisionsXPin("SubdivisionsX");
+        static const StringID subdivisionsYPin("SubdivisionsY");
+
+        float width = GetInputValue<float>(widthPin, evaluator);
+        float height = GetInputValue<float>(heightPin, evaluator);
+        int32_t subsX = std::max(1, GetInputValue<int32_t>(subdivisionsXPin, evaluator));
+        int32_t subsY = std::max(1, GetInputValue<int32_t>(subdivisionsYPin, evaluator));
 
         uint32_t vertexCount = (subsX + 1) * (subsY + 1);
         uint32_t indexCount = subsX * subsY * 6;
@@ -254,7 +270,7 @@ namespace Crowny
         meshData->SetUVs(0, uvs);
         meshData->SetIndices(indices);
 
-        SetOutputValue<Ref<MeshData>>("Geometry", meshData, evaluator);
+        SetOutputValue<Ref<MeshData>>(geometryPin, meshData, evaluator);
     }
 
     // ---- GridNode ----
@@ -268,8 +284,12 @@ namespace Crowny
 
     void GridNode::Evaluate(NodeGraphEvaluator& evaluator)
     {
-        float size = GetInputValue<float>("Size", evaluator);
-        int32_t resolution = std::max(1, GetInputValue<int32_t>("Resolution", evaluator));
+        static const StringID geometryPin("Geometry");
+        static const StringID sizePin("Size");
+        static const StringID resolutionPin("Resolution");
+
+        float size = GetInputValue<float>(sizePin, evaluator);
+        int32_t resolution = std::max(1, GetInputValue<int32_t>(resolutionPin, evaluator));
 
         uint32_t vertexCount = (resolution + 1) * (resolution + 1);
         uint32_t indexCount = resolution * resolution * 6;
@@ -326,7 +346,7 @@ namespace Crowny
         meshData->SetUVs(0, uvs);
         meshData->SetIndices(indices);
 
-        SetOutputValue<Ref<MeshData>>("Geometry", meshData, evaluator);
+        SetOutputValue<Ref<MeshData>>(geometryPin, meshData, evaluator);
     }
 
 } // namespace Crowny

@@ -96,7 +96,7 @@ namespace Crowny
             return *this;
         }
 
-        Flags<Enum, Storage>& operator&=(const Flags<Enum, Storage>& rhs) const
+        Flags<Enum, Storage>& operator&=(const Flags<Enum, Storage>& rhs)
         {
             m_Bits &= rhs.m_Bits;
             return *this;

@@ -42,6 +42,7 @@ namespace Crowny
     {
         Ref<Material> SkyboxMaterial;
         Ref<Material> PbrMaterial;
+        Ref<Material> WireframeMaterial;
         Ref<VertexBuffer> SkyboxVbo;
         Ref<IndexBuffer> SkyboxIbo;
 
@@ -61,6 +62,9 @@ namespace Crowny
         Ref<Texture> ActiveIrradiance;
         Ref<Texture> ActivePrefiltered;
         Ref<Texture> ActiveCubemap;
+
+        // Viewport polygon mode override (editor)
+        PolygonMode OverridePolygonMode = PolygonMode::Solid;
     };
 
     static ForwardRendererData* s_Data;
@@ -68,7 +72,7 @@ namespace Crowny
     static void GenerateBRDFLUT()
     {
         auto& rapi = (*gRenderAPI);
-        TextureParameters tProps;
+        TextureDesc tProps;
         tProps.Width = 512;
         tProps.Height = 512;
         tProps.Format = TextureFormat::RG32F;
@@ -76,10 +80,10 @@ namespace Crowny
         tProps.DebugName = "ForwardRenderer/BrdfLUT";
         s_Data->BrdfLUT = Texture::Create(tProps);
 
-        RenderTextureProperties rtProps;
+        RenderTextureDesc rtProps;
         rtProps.Width = tProps.Width;
         rtProps.Height = tProps.Height;
-        rtProps.ColorSurfaces[0] = { s_Data->BrdfLUT };
+        rtProps.ColorSurfaces[0].Texture = s_Data->BrdfLUT;
         Ref<RenderTexture> target = RenderTexture::Create(rtProps);
 
         AssetHandle<Shader> shaderHandle = gAssetManager->Load<Shader>(BRDF_SHADER_PATH);
@@ -109,13 +113,19 @@ namespace Crowny
         s_Data->DefaultEnvironment = CreateRef<EnvironmentMap>("Resources/Textures/envmap.hdr");
 
         // Skybox mesh (single copy)
-        s_Data->SkyboxVbo = VertexBuffer::Create((float*)s_SkyboxVertices, sizeof(s_SkyboxVertices));
+        s_Data->SkyboxVbo = VertexBuffer::Create({sizeof(s_SkyboxVertices), BufferUsage::BU_STATIC_DRAW, s_SkyboxVertices});
         s_Data->SkyboxVbo->SetLayout(CreateRef<BufferLayout>(BufferLayout{ { ShaderDataType::Float3, "inPos" } }));
-        s_Data->SkyboxIbo = IndexBuffer::Create((uint32_t*)s_SkyboxIndices, 36);
+        s_Data->SkyboxIbo = IndexBuffer::Create({36, IndexType::Index_32, BufferUsage::BU_STATIC_DRAW, s_SkyboxIndices});
 
         // Skybox material
         AssetHandle<Shader> skyboxHandle = gAssetManager->Load<Shader>(SKYBOX_SHADER_PATH);
         s_Data->SkyboxMaterial = Material::Create(skyboxHandle);
+
+        // Wireframe material (editor overlay)
+        {
+            AssetHandle<Shader> wireframeShader = AssetManager::Get().Load<Shader>("Resources/Shaders/Wireframe.asset");
+            s_Data->WireframeMaterial = Material::Create(wireframeShader);
+        }
     }
 
     void ForwardRenderer::Begin() {}
@@ -155,7 +165,7 @@ namespace Crowny
 
         // Bind cubemap to skybox material
         if (s_Data->ActiveCubemap)
-            s_Data->SkyboxMaterial->SetTexture("samplerEnv", s_Data->ActiveCubemap);
+            s_Data->SkyboxMaterial->SetTexture("cw_samplerEnv", s_Data->ActiveCubemap);
     }
 
     static void DrawSkybox(RenderAPI& rapi)
@@ -179,11 +189,11 @@ namespace Crowny
         material->SetFloat("exposure", s_Data->Exposure);
 
         // IBL textures
-        if (material->HasBinding("samplerIrradiance") && s_Data->ActiveIrradiance)
+        if (material->HasBinding("cw_samplerIrradiance") && s_Data->ActiveIrradiance)
         {
-            material->SetTexture("samplerIrradiance", s_Data->ActiveIrradiance);
-            material->SetTexture("samplerBRDFLUT", s_Data->BrdfLUT);
-            material->SetTexture("prefilteredMap", s_Data->ActivePrefiltered);
+            material->SetTexture("cw_samplerIrradiance", s_Data->ActiveIrradiance);
+            material->SetTexture("cw_samplerBRDFLUT", s_Data->BrdfLUT);
+            material->SetTexture("cw_prefilteredMap", s_Data->ActivePrefiltered);
         }
     }
 
@@ -207,6 +217,8 @@ namespace Crowny
         SetupSceneUniforms(projection, viewMatrix, cameraPosition);
         DrawSkybox(rapi);
     }
+
+    void ForwardRenderer::SetPolygonMode(PolygonMode mode) { s_Data->OverridePolygonMode = mode; }
 
     void ForwardRenderer::SubmitLightSetup() {}
 
@@ -236,17 +248,23 @@ namespace Crowny
             return s_Data->PbrMaterial;
         };
 
-        rapi.SetVertexLayout(mesh->GetVertexBuffer()->GetLayout());
-        rapi.SetVertexBuffers(0, &mesh->GetVertexBuffer(), 1);
+        Ref<VertexBuffer> vb = mesh->GetVertexBuffer();
+        rapi.SetVertexLayout(vb->GetLayout());
+        rapi.SetVertexBuffers(0, &vb, 1);
         rapi.SetIndexBuffer(mesh->GetIndexBuffer());
+
+        const bool wireframe = s_Data->OverridePolygonMode == PolygonMode::Wireframe;
 
         if (subMeshes.empty())
         {
-            Ref<Material> renderMaterial = getMaterial(0);
+            Ref<Material> renderMaterial = wireframe ? s_Data->WireframeMaterial : getMaterial(0);
             ApplySceneUniforms(renderMaterial, transform);
-            renderMaterial->SetColor("albedo", albedo);
-            renderMaterial->SetFloat("roughness", roughness);
-            renderMaterial->SetFloat("metalness", metalness);
+            if (!wireframe)
+            {
+                renderMaterial->SetColor("albedo", albedo);
+                renderMaterial->SetFloat("roughness", roughness);
+                renderMaterial->SetFloat("metalness", metalness);
+            }
             DrawMaterialPasses(rapi, renderMaterial, mesh->GetDrawMode(), 0, mesh->GetIndexCount(), mesh->GetVertexCount());
         }
         else
@@ -254,11 +272,14 @@ namespace Crowny
             for (uint32_t i = 0; i < (uint32_t)subMeshes.size(); i++)
             {
                 const SubMesh& sub = subMeshes[i];
-                Ref<Material> renderMaterial = getMaterial(i);
+                Ref<Material> renderMaterial = wireframe ? s_Data->WireframeMaterial : getMaterial(i);
                 ApplySceneUniforms(renderMaterial, transform);
-                renderMaterial->SetColor("albedo", albedo);
-                renderMaterial->SetFloat("roughness", roughness);
-                renderMaterial->SetFloat("metalness", metalness);
+                if (!wireframe)
+                {
+                    renderMaterial->SetColor("albedo", albedo);
+                    renderMaterial->SetFloat("roughness", roughness);
+                    renderMaterial->SetFloat("metalness", metalness);
+                }
                 DrawMaterialPasses(rapi, renderMaterial, sub.MeshDrawMode, sub.IndexOffset, sub.IndexCount, mesh->GetVertexCount());
             }
         }

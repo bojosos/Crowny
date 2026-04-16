@@ -110,7 +110,7 @@ namespace Crowny
 
         Renderer::Init();
 
-        TextureParameters params;
+        TextureDesc params;
         params.Type = TextureType::TEXTURE_DEFAULT;
         params.Shape = TextureShape::TEXTURE_2D;
         params.Usage = TextureUsage::TEXTURE_STATIC;

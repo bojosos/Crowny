@@ -6,14 +6,18 @@
 #include "Crowny/NodeGraph/NodeGraphEvaluator.h"
 #include "Crowny/NodeGraph/NodeRegistry.h"
 #include "Crowny/NodeGraph/Pin.h"
+
+#include "Crowny/Export/MeshExporter.h"
 #include "Crowny/Renderer/Mesh.h"
 #include "Crowny/Serialization/NodeGraphSerializer.h"
-#include "Panels/NodeEditor/NodeEditorAdapter.h"
-#include "Panels/NodeEditor/ImguiNodeEditorAdapter.h"
+
 #include "Panels/NodeEditor/ImNodeFlowAdapter.h"
+#include "Panels/NodeEditor/ImguiNodeEditorAdapter.h"
 #include "Panels/NodeEditor/NodeEditorActions.h"
+#include "Panels/NodeEditor/NodeEditorAdapter.h"
 #include "Panels/NodeEditor/NodeEditorContext.h"
 #include "Panels/NodeEditor/NodeEditorPanel.h"
+
 #include "UI/Properties.h"
 
 #include <imgui.h>
@@ -21,10 +25,9 @@
 namespace Crowny
 {
     // Toggle this to false to use the old ImNodeFlow backend
-    static constexpr bool s_UseImguiNodeEditor = true;
+    static constexpr bool s_UseImguiNodeEditor = false;
 
-    NodeEditorPanel::NodeEditorPanel(const String& name)
-      : ImGuiPanel(name), m_Context(CreateScope<NodeEditorContext>())
+    NodeEditorPanel::NodeEditorPanel(const String& name) : ImGuiPanel(name), m_Context(CreateScope<NodeEditorContext>())
     {
         if (s_UseImguiNodeEditor)
             m_Adapter = CreateScope<ImguiNodeEditorAdapter>();
@@ -161,6 +164,19 @@ namespace Crowny
             {
                 ImGui::Separator();
                 ImGui::Text("Verts: %u  Indices: %u", m_LastResult->GetVertexCount(), m_LastResult->GetIndexCount());
+            }
+
+            if (ImGui::Button("Bake"))
+            {
+                Ref<NodeGraph> graph = m_Context->GetGraph();
+                if (graph)
+                {
+                    const uint32_t graphVersion = graph->GetVersion();
+                    if (m_NeedsEvaluation || m_LastEvaluatedVersion != graphVersion)
+                        EvaluateGraph();
+                    MeshExporter exporter(m_LastResult);
+                    exporter.Export("C:\\dev\\test.obj");
+                }
             }
 
             ImGui::EndMenuBar();

@@ -24,8 +24,7 @@ namespace Crowny
     class VulkanAccelerationStructure : public AccelerationStructure
     {
     public:
-        VulkanAccelerationStructure(const Vector<AccelerationGeometry>& topLevelInstances, bool isTopLevel, uint32_t maxTopLevelInstances = 0,
-                                    AccelerationStructBuildFlags flags = AccelerationStructBuildBits::None);
+        friend class AccelerationStructure;
         ~VulkanAccelerationStructure();
 
         virtual void BuildBottomLevel(const Ref<CommandBuffer>& buffer, const AccelerationGeometry* geometry, size_t numGeoms,
@@ -36,6 +35,10 @@ namespace Crowny
         VulkanAccelStruct* GetAccelStruct() const { return m_AccelStruct; }
         VkDeviceAddress GetDeviceAddress() const { return m_AccelDeviceAddress; }
         VulkanGpuBuffer* GetBuffer() const { return m_Buffer; }
+
+    protected:
+        VulkanAccelerationStructure(const Vector<AccelerationGeometry>& topLevelInstances, bool isTopLevel, uint32_t maxTopLevelInstances = 0,
+                                    AccelerationStructBuildFlags flags = AccelerationStructBuildBits::None);
 
     private:
         static VkBuildAccelerationStructureFlagsKHR GetFlags(AccelerationStructBuildFlags buildFlags);

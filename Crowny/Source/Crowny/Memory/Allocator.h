@@ -42,8 +42,8 @@ namespace Crowny
 
     struct AllocatorData
     {
-        using MapAlloc = Mallocator<std::pair<const void* const, Allocation>>;
-        using StatsMapAlloc = Mallocator<std::pair<const char* const, AllocationStats>>;
+        using MapAlloc = Mallocator<Pair<const void* const, Allocation>>;
+        using StatsMapAlloc = Mallocator<Pair<const char* const, AllocationStats>>;
 
         using AllocationStatsMap = std::map<const char*, AllocationStats, std::less<const char*>, StatsMapAlloc>;
         std::map<const void*, Allocation, std::less<const void*>, MapAlloc> m_AllocationMap;

@@ -1,3 +1,4 @@
+#lang glsl
 #type vertex
 #version 450
 
@@ -10,7 +11,7 @@ layout (location = 3) in vec3 cw_Bitangent;
 layout (location = 4) in vec2 cw_TexCoord0;
 layout (location = 5) in vec4 cw_Color;
 
-layout (binding = 0) uniform MVP
+layout (binding = 0) uniform cw_MVP
 {
     mat4 viewProjection;
     mat4 model;
@@ -52,26 +53,34 @@ layout(location = 0) in DATA
 	vec4 color;
 } fs_in;
 
-layout (binding = 2) uniform UBOParams {
+layout (binding = 2) uniform cw_UBOParams {
 	vec4 lights[4];
 	float gamma;
 	float exposure;
 	vec3 camPos;
 } uboParams;
 
-layout (binding = 3) uniform samplerCube samplerIrradiance;
-layout (binding = 4) uniform sampler2D samplerBRDFLUT;
-layout (binding = 5) uniform samplerCube prefilteredMap;
+layout (binding = 3) uniform samplerCube cw_samplerIrradiance;
+layout (binding = 4) uniform sampler2D cw_samplerBRDFLUT;
+layout (binding = 5) uniform samplerCube cw_prefilteredMap;
 
+// @name("Albedo Map") @default(white)
 layout (binding = 6) uniform sampler2D albedoMap;
+// @name("Metallic Map") @default(white)
 layout (binding = 7) uniform sampler2D metallicMap;
+// @name("Roughness Map") @default(white)
 layout (binding = 8) uniform sampler2D roughnessMap;
+// @name("Normal Map") @default(white)
 layout (binding = 9) uniform sampler2D normalMap;
+// @name("AO Map") @default(white)
 layout (binding = 10) uniform sampler2D aoMap;
 
 layout (binding = 11) uniform Parameters {
+    // @color @name("Albedo") @default(1.0, 1.0, 1.0, 1.0)
     vec4 albedo;
+    // @range(0.0, 1.0) @name("Roughness") @default(0.5)
     float roughness;
+    // @range(0.0, 1.0) @name("Metalness") @default(0.0)
     float metalness;
 } parameters;
 
@@ -127,8 +136,8 @@ vec3 prefilteredReflection(vec3 R, float roughness)
 	float lod = roughness * MAX_REFLECTION_LOD;
 	float lodf = floor(lod);
 	float lodc = ceil(lod);
-	vec3 a = textureLod(prefilteredMap, R, lodf).rgb;
-	vec3 b = textureLod(prefilteredMap, R, lodc).rgb;
+	vec3 a = textureLod(cw_prefilteredMap, R, lodf).rgb;
+	vec3 b = textureLod(cw_prefilteredMap, R, lodc).rgb;
 	return mix(a, b, lod - lodf);
 }
 
@@ -192,9 +201,9 @@ void main()
 	}
 
 	// IBL
-	vec2 brdf = texture(samplerBRDFLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+	vec2 brdf = texture(cw_samplerBRDFLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
 	vec3 reflection = prefilteredReflection(R, roughness).rgb;
-	vec3 irradiance = texture(samplerIrradiance, N).rgb;
+	vec3 irradiance = texture(cw_samplerIrradiance, N).rgb;
 
 	// Diffuse based on irradiance
 	vec3 diffuse = irradiance * albedo;

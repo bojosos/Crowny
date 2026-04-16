@@ -116,7 +116,7 @@ namespace Crowny
 
         if (m_InProgressNodes.count(nodeId))
         {
-            SetError("Cycle detected at node: " + node->GetDisplayName());
+            SetError(String("Cycle detected at node: ") + node->GetDisplayName().c_str());
             return;
         }
 

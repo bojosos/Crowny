@@ -150,10 +150,7 @@ namespace Crowny
         TransformComponent& GetTransform();
         const String& GetName() const;
         operator bool() const { return IsValid(); }
-        bool operator==(const EnttEntity& other) const
-        {
-            return m_EntityHandle == other.m_EntityHandle && m_Scene == other.m_Scene;
-        }
+        bool operator==(const EnttEntity& other) const { return m_EntityHandle == other.m_EntityHandle && m_Scene == other.m_Scene; }
 
         bool operator!=(const EnttEntity& other) const { return !(*this == other); }
 
@@ -165,8 +162,7 @@ namespace Crowny
                 GetComponent<Component>().OnTransformChanged(transform);
         }
 
-        template <typename... Component>
-        void NotifyTransformChangedComponentWrapper(ComponentGroup<Component...> group, const Transform& transform)
+        template <typename... Component> void NotifyTransformChangedComponentWrapper(ComponentGroup<Component...> group, const Transform& transform)
         {
             ([&]() { NotifyTransformChangedComponent<Component>(transform); }(), ...);
         }

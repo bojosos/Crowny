@@ -29,7 +29,7 @@ namespace Crowny
     RelationshipComponent& RelationshipComponent::operator=(const RelationshipComponent& other)
     {
         Parent = other.Parent;
-        Children = other.Children;
+        // Children = other.Children;
         return *this;
     }
 

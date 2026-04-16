@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/RefCounted.h"
 #include "Crowny/Common/Types.h"
 #include "Crowny/Common/Uuid.h"
 
@@ -10,12 +11,12 @@ namespace Crowny
     class AssetManager;
     class UIUtils; // This is an Editor class
 
-    struct AssetHandleData
+    struct AssetHandleData : public RefCounted
     {
         Ref<Asset> m_Ptr;
         UUID m_UUID;
         bool m_IsCreated = false;
-        std::atomic<uint32_t> m_RefCount{ 0 };
+        std::atomic<uint32_t> m_RefCount{ 0 }; // Counts TAssetHandle<T,false> holders (not the IntrusiveRef count)
     };
 
     class AssetHandleBase
@@ -136,9 +137,9 @@ namespace Crowny
 
         operator int Bool_struct<T>::*() const { return ((this->m_Data != nullptr && !this->m_Data->m_UUID.Empty()) ? &Bool_struct<T>::_Member : 0); }
 
-        T* Get() const { return reinterpret_cast<T*>(this->m_Data->m_Ptr.get()); }
+        T* Get() const { return reinterpret_cast<T*>(this->m_Data->m_Ptr.Get()); }
 
-        Ref<T> GetInternalPtr() const { return std::static_pointer_cast<T>(this->m_Data->m_Ptr); }
+        Ref<T> GetInternalPtr() const { return StaticRefCast<T>(this->m_Data->m_Ptr); }
 
         TAssetHandle<T, true> GetWeak() const
         {

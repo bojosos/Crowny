@@ -13,7 +13,7 @@ namespace Crowny
     class VulkanGenericGpuBuffer : public GenericGpuBuffer
     {
     public:
-        VulkanGenericGpuBuffer(uint32_t elementCount, uint32_t elementSize, GpuBufferType type, GpuBufferFormat format, BufferUsage usage);
+        friend class GenericGpuBuffer;
         ~VulkanGenericGpuBuffer();
 
         virtual void WriteData(uint32_t offset, uint32_t length, const void* src, BufferWriteOptions writeOptions /* = BWT_NORMAL */) override;
@@ -28,6 +28,9 @@ namespace Crowny
         VulkanBuffer* GetBuffer() const { return m_Buffer->GetBuffer(); }
         VkBufferView GetView() const { return m_BufferView; }
         void UpdateViews();
+
+    protected:
+        VulkanGenericGpuBuffer(uint32_t elementCount, uint32_t elementSize, GpuBufferType type, GpuBufferFormat format, BufferUsage usage);
 
     private:
         VulkanGpuBuffer* m_Buffer;

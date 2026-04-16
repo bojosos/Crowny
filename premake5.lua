@@ -47,10 +47,7 @@ workspace "Crowny"
 		"Web"
 	}
 	
-	flags
-	{
-		"MultiProcessorCompile"
-	}
+	multiprocessorcompile "On"
 
 -- Sanitizer helper — call from project premake files
 function applySanitizer()
@@ -58,7 +55,7 @@ function applySanitizer()
 	filter "toolset:msc*"
 		buildoptions { "/fsanitize=address", "/Zi" }
 		defines { "_DISABLE_VECTOR_ANNOTATION", "_DISABLE_STRING_ANNOTATION" }
-		flags { "NoIncrementalLink" }
+		incrementallink "Off"
 	filter { "toolset:msc*", "kind:ConsoleApp or WindowedApp" }
 		postbuildcommands {
 			'{COPYFILE} "$(VCToolsInstallDir)bin\\Hostx64\\x64\\clang_rt.asan_dynamic-x86_64.dll" "%{cfg.buildtarget.directory}"'
@@ -126,7 +123,7 @@ if os.host() == "windows" then
 	if vulkanSDK then
 		IncludeDir["vulkan"] = vulkanSDK .. "/Include"
 	else
-		IncludeDir["vulkan"] = "C:/VulkanSDK/1.3.280.0/Include"
+		IncludeDir["vulkan"] = "C:/VulkanSDK/1.4.341.1/Include"
 	end
 end
 	

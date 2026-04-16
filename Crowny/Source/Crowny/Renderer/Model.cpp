@@ -69,7 +69,7 @@ namespace Crowny
             verts[i].Tangent = glm::vec3{ mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z };
         }
 
-        Ref<VertexBuffer> vbo = VertexBuffer::Create(sizeof(Vertex) * mesh->mNumVertices);
+        Ref<VertexBuffer> vbo = VertexBuffer::Create({sizeof(Vertex) * mesh->mNumVertices});
         void* dest = vbo->Map(0, sizeof(Vertex) * mesh->mNumVertices, GpuLockOptions::WRITE_DISCARD);
         memcpy(dest, verts, sizeof(Vertex) * mesh->mNumVertices);
         vbo->Unmap();
@@ -96,7 +96,7 @@ namespace Crowny
             }
         }
 
-        Ref<IndexBuffer> ibo = IndexBuffer::Create(indices.data(), indices.size());
+        Ref<IndexBuffer> ibo = IndexBuffer::Create({(uint32_t)indices.size(), IndexType::Index_32, BufferUsage::BU_STATIC_DRAW, indices.data()});
         /*
         Vector<Ref<Texture>> textures;
         if (mesh->mMaterialIndex >= 0)

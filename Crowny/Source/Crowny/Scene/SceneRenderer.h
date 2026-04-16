@@ -13,23 +13,23 @@ namespace Crowny
         SceneRenderer(const Ref<Scene>& scene, const Ref<RenderTarget>& renderTarget);
 
         void Init();
-        void RenderEditor(const EditorCamera& camera);
+        void RenderEditor(const EditorCamera& camera, bool drawGrid = true, const GridSettings& gridSettings = {});
         void Render();
         void SetRenderTarget(const Ref<RenderTarget>& renderTarget);
         void SetScene(const Ref<Scene>& scene);
 
         // Phase 0: Snapshot-based rendering (decouples scene traversal from GPU commands)
-        RenderSnapshot ExtractSnapshot(const Camera& camera, const glm::mat4& viewTransform) const;
-        RenderSnapshot ExtractSnapshot() const; // Uses scene's primary camera
+        RenderSnapshot ExtractSnapshot(const Camera& camera, const glm::mat4& viewTransform, bool drawGrid = false) const;
+        RenderSnapshot ExtractSnapshot(bool drawGrid = false) const; // Uses scene's primary camera
         static void RenderFromSnapshot(const RenderSnapshot& snapshot);
 
         // Evaluates all ProceduralMeshComponents that need rebuilding (call on sim thread before ExtractSnapshot)
         void UpdateProceduralMeshes();
 
-        static void DrawGrid(const glm::mat4& viewProjection, const glm::vec3& cameraPos);
+        static void DrawGrid(const glm::mat4& viewProjection, const glm::vec3& cameraPos, const GridSettings& settings = {});
 
     private:
-        void Render(const Camera& camera, const glm::mat4& viewTransform, bool drawGrid = false);
+        void Render(const Camera& camera, const glm::mat4& viewTransform, bool drawGrid = false, const GridSettings& gridSettings = {});
 
     private:
         Ref<RenderTarget> m_RenderTarget;

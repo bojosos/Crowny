@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/RefCounted.h"
 #include "Crowny/Common/Types.h"
 
 namespace Crowny
@@ -146,13 +147,9 @@ namespace Crowny
     typedef Flags<AccelerationStructBuildBits> AccelerationStructBuildFlags;
     CW_FLAGS_OPERATORS(AccelerationStructBuildBits);
 
-    class AccelerationStructure
+    class AccelerationStructure : public RefCounted
     {
     public:
-        AccelerationStructure(const Vector<AccelerationGeometry>& topLevelInstances, bool isTopLevel, uint32_t maxTopLevelInstances = 0,
-                              AccelerationStructBuildFlags flags = AccelerationStructBuildBits::None);
-        // TODO: Seperate constructors for top and bottom level
-        AccelerationStructure(const Vector<AccelerationGeometry>& bottomLevelGeometry, AccelerationStructBuildFlags flags) {}
         virtual ~AccelerationStructure() = default;
 
         virtual void BuildBottomLevel(const Ref<CommandBuffer>& buffer, const AccelerationGeometry* geometry, size_t numGeoms,
@@ -166,6 +163,10 @@ namespace Crowny
                                                  AccelerationStructBuildFlags flags = AccelerationStructBuildBits::None);
 
     protected:
+        AccelerationStructure(const Vector<AccelerationGeometry>& topLevelInstances, bool isTopLevel, uint32_t maxTopLevelInstances = 0,
+                              AccelerationStructBuildFlags flags = AccelerationStructBuildBits::None);
+        // TODO: Seperate constructors for top and bottom level
+        AccelerationStructure(const Vector<AccelerationGeometry>& bottomLevelGeometry, AccelerationStructBuildFlags flags) {}
         size_t m_TopLevelMaxInstances = 0;
         Vector<AccelerationGeometry> m_Geometries;
         AccelerationStructBuildBits m_BuildFlags;

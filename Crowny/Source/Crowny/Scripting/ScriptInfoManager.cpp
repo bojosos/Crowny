@@ -397,7 +397,7 @@ namespace Crowny
                 if (GetSerializableObjectInfo(base->GetNamespace(), base->GetName(), baseObjInfo))
                 {
                     klass.second->m_BaseClass = baseObjInfo;
-                    baseObjInfo->m_DerivedClasses.push_back(klass.second);
+                    baseObjInfo->m_DerivedClasses.push_back(klass.second.Get());
                     break;
                 }
                 base = base->GetBaseClass();

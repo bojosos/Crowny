@@ -5,7 +5,7 @@
 
 namespace Crowny
 {
-    Pin::Pin(UUID id, const String& name, Direction direction, PinDataType dataType)
+    Pin::Pin(UUID id, StringID name, Direction direction, PinDataType dataType)
       : m_ID(id), m_Name(name), m_Direction(direction), m_DataType(dataType), m_DefaultValue(DefaultPinValue(dataType))
     {
     }

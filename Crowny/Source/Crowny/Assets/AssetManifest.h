@@ -12,7 +12,7 @@ namespace Crowny
 
     class ProjectLibrary; // Editor class
 
-    class AssetManifest
+    class AssetManifest : public RefCounted
     {
     public:
         AssetManifest() = default;

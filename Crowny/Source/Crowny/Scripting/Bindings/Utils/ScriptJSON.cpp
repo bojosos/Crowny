@@ -101,7 +101,7 @@ namespace Crowny
 
     static void NumericFromJson(const rapidjson::Value& value, MonoObject* instance, const Ref<SerializableMemberInfo>& memberInfo)
     {
-        const Ref<SerializableTypeInfoPrimitive> primTypeInfo = std::static_pointer_cast<SerializableTypeInfoPrimitive>(memberInfo->m_TypeInfo);
+        const Ref<SerializableTypeInfoPrimitive> primTypeInfo = StaticRefCast<SerializableTypeInfoPrimitive>(memberInfo->m_TypeInfo);
         switch (primTypeInfo->m_Type)
         {
         case ScriptPrimitiveType::I8:
@@ -158,7 +158,7 @@ namespace Crowny
                 if (typeInfo->GetType() == SerializableType::Object)
                 {
                     Ref<SerializableObjectInfo> objInfo = nullptr;
-                    Ref<SerializableTypeInfoObject> objTypeInfo = std::static_pointer_cast<SerializableTypeInfoObject>(typeInfo);
+                    Ref<SerializableTypeInfoObject> objTypeInfo = StaticRefCast<SerializableTypeInfoObject>(typeInfo);
                     // Find object serialize info
                     if (ScriptInfoManager::Get().GetSerializableObjectInfo(objTypeInfo->m_TypeNamespace, objTypeInfo->m_TypeName, objInfo))
                         memberInfo->SetValue(newInstance, ObjectFromJson(iterFind->value, objInfo));
@@ -168,13 +168,13 @@ namespace Crowny
                 {
                     CW_ENGINE_ASSERT(iterFind->value.IsArray());
                     // Do I create these when loading?
-                    Ref<SerializableTypeInfoArray> arrayTypeInfo = std::static_pointer_cast<SerializableTypeInfoArray>(typeInfo);
+                    Ref<SerializableTypeInfoArray> arrayTypeInfo = StaticRefCast<SerializableTypeInfoArray>(typeInfo);
                     rapidjson::Value::ConstArray arr = iterFind->value.GetArray();
                     // This initialization doesn't seem very safe. The whole ScriptArray doesn't feel safe.
                     ScriptArray monoArray = ScriptArray(arrayTypeInfo->m_ElementType->GetMonoClass(), arr.Size());
                     int idx = 0;
                     Ref<SerializableObjectInfo> objInfo = nullptr;
-                    Ref<SerializableTypeInfoObject> objTypeInfo = std::static_pointer_cast<SerializableTypeInfoObject>(arrayTypeInfo->m_ElementType);
+                    Ref<SerializableTypeInfoObject> objTypeInfo = StaticRefCast<SerializableTypeInfoObject>(arrayTypeInfo->m_ElementType);
                     // Find object serialize info
                     if (ScriptInfoManager::Get().GetSerializableObjectInfo(objTypeInfo->m_TypeNamespace, objTypeInfo->m_TypeName, objInfo))
                         // TODO: This won't work for normals arrays that don't have objects inside
@@ -184,7 +184,7 @@ namespace Crowny
                 }
                 else if (typeInfo->GetType() == SerializableType::Primitive)
                 {
-                    Ref<SerializableTypeInfoPrimitive> primTypeInfo = std::static_pointer_cast<SerializableTypeInfoPrimitive>(typeInfo);
+                    Ref<SerializableTypeInfoPrimitive> primTypeInfo = StaticRefCast<SerializableTypeInfoPrimitive>(typeInfo);
                     if (iterFind->value.IsNumber())
                         NumericFromJson(iterFind->value, newInstance, memberInfo);
                     else if (iterFind->value.IsBool())
@@ -250,7 +250,7 @@ namespace Crowny
     {
         if (typeInfo->GetType() == SerializableType::Primitive)
         {
-            const ScriptPrimitiveType primitiveType = std::static_pointer_cast<SerializableTypeInfoPrimitive>(typeInfo)->m_Type;
+            const ScriptPrimitiveType primitiveType = StaticRefCast<SerializableTypeInfoPrimitive>(typeInfo)->m_Type;
             switch (primitiveType)
             {
             case ScriptPrimitiveType::Char:
@@ -343,7 +343,7 @@ namespace Crowny
         }
         else if (typeInfo->GetType() == SerializableType::Array)
         {
-            Ref<SerializableTypeInfoArray> serializableArrayTypeInfo = std::static_pointer_cast<SerializableTypeInfoArray>(typeInfo);
+            Ref<SerializableTypeInfoArray> serializableArrayTypeInfo = StaticRefCast<SerializableTypeInfoArray>(typeInfo);
             cur.SetArray();
             ScriptArray arr((MonoArray*)data);
             for (uint32_t i = 0; i < arr.Size(); i++)
@@ -357,7 +357,7 @@ namespace Crowny
         }
         else if (typeInfo->GetType() == SerializableType::Object)
         {
-            Ref<SerializableTypeInfoObject> serializableObjectInfo = std::static_pointer_cast<SerializableTypeInfoObject>(typeInfo);
+            Ref<SerializableTypeInfoObject> serializableObjectInfo = StaticRefCast<SerializableTypeInfoObject>(typeInfo);
             // TODO: Fix this
             Ref<SerializableObjectInfo> objectInfo;
             if (ScriptInfoManager::Get().GetSerializableObjectInfo(serializableObjectInfo->m_TypeNamespace, serializableObjectInfo->m_TypeName,

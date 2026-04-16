@@ -11,7 +11,7 @@ namespace Crowny
 
     class ProjectSettingsSerializer;
 
-    struct ProjectSettings
+    struct ProjectSettings : public RefCounted
     {
         // Asset browser
         Path LastAssetBrowserSelectedEntry;

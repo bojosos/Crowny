@@ -2,6 +2,7 @@
 
 #include "Crowny/Common/StringID.h"
 #include "Crowny/Common/Uuid.h"
+#include "Crowny/Utils/SmallVector.h"
 
 #include <cereal/cereal.hpp>
 
@@ -49,5 +50,21 @@ namespace Crowny
         String str;
         archive(str);
         id = StringID(str);
+    }
+
+    template <class Archive, typename Type, uint32_t N> void Save(Archive& archive, const SmallVector<Type, N>& vector)
+    {
+        archive(cereal::make_size_tag(static_cast<cereal::size_type>(vector.size())));
+        for (auto const& i : vector)
+            archive(i);
+    }
+
+    template <class Archive, typename Type, uint32_t N> void Load(Archive& archive, SmallVector<Type, N>& vector)
+    {
+        cereal::size_type size;
+        archive(cereal::make_size_tag(size));
+        vector.resize(static_cast<uint32_t>(size));
+        for (auto& i : vector)
+            archive(i);
     }
 } // namespace Crowny

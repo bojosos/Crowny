@@ -14,7 +14,7 @@ namespace Crowny
     class VulkanRenderWindow : public RenderWindow
     {
     public:
-        VulkanRenderWindow(const RenderWindowDesc& renderWindowDesc);
+        friend class RenderWindow;
         ~VulkanRenderWindow();
 
         virtual void SwapBuffers(uint32_t syncMask) override;
@@ -39,6 +39,9 @@ namespace Crowny
         VkFormat GetColorFormat() const { return m_ColorFormat; }
         VkFormat GetDepthFormat() const { return m_DepthFormat; }
         VulkanFramebuffer* GetFramebuffer() const;
+
+    protected:
+        VulkanRenderWindow(const RenderWindowDesc& renderWindowDesc);
 
     private:
         void RebuildSwapChain();

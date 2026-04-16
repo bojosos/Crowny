@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/RefCounted.h"
 #include "Crowny/RenderAPI/Texture.h"
 
 namespace Crowny
@@ -15,7 +16,7 @@ namespace Crowny
         uint32_t NumSlices = 0;
     };
 
-    class RenderTarget
+    class RenderTarget : public RefCounted
     {
     public:
         virtual ~RenderTarget() = default;

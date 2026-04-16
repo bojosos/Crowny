@@ -14,7 +14,7 @@ namespace Crowny
     class ContactListener;
 
     class TimeSettingsSerializer;
-    struct TimeSettings
+    struct TimeSettings : public RefCounted
     {
         float TimeScale = 1.0f;
         float MaxTimestep = 1.0f / 3.0f;
@@ -26,7 +26,7 @@ namespace Crowny
     class PhysicsSettingsSerializer;
     // These are the ones exposed from Box2D by default. It looks like it wouldn't be hard to expose some more of their
     // #define-s
-    struct Physics2DSettings
+    struct Physics2DSettings : public RefCounted
     {
         AssetHandle<PhysicsMaterial2D> DefaultMaterial;
         glm::vec2 Gravity = { 0.0f, -9.81f };

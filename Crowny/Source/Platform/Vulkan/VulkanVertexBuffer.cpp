@@ -58,8 +58,8 @@ namespace Crowny
     VulkanBufferLayoutManager::BufferLayoutMap::iterator VulkanBufferLayoutManager::AddNew(const Ref<BufferLayout>& meshLayout,
                                                                                            const Ref<BufferLayout>& shaderLayout)
     {
-        const Vector<BufferElement>& meshElements = meshLayout->GetElements();
-        const Vector<BufferElement>& shaderElements = shaderLayout->GetElements();
+        const auto& meshElements = meshLayout->GetElements();
+        const auto& shaderElements = shaderLayout->GetElements();
 
         uint32_t numAttrs = 0;
         uint32_t numBindings = 0;
@@ -107,8 +107,7 @@ namespace Crowny
                     (shaderElement.Name == meshElement.Name && shaderElement.Type == meshElement.Type))
                 {
                     semantic = true;
-                    attr.location = attrIdx;
-                    // attr.location = meshElement.Offset;
+                    attr.location = shaderElement.Location != UINT32_MAX ? shaderElement.Location : attrIdx;
                     break;
                 }
             }

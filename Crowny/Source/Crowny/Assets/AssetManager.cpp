@@ -102,7 +102,7 @@ namespace Crowny
         AssetFileHeader header;
 
         // Peek the magic number first — old-format files won't have our header
-        auto& stream = archive.GetStream();
+        auto stream = archive.GetStream();
         size_t startPos = stream->Tell();
 
         uint32_t magic = 0;
@@ -195,7 +195,7 @@ namespace Crowny
     {
         AssetFileHeader header = ReadAssetHeader(archive);
         archive(cereal::base_class<Asset>(&texture));
-        TextureParameters& params = texture.m_Params;
+        TextureDesc& params = texture.m_Desc;
         archive(params.Type, params.Shape, params.sRGB, params.ReadWrite, params.GenerateMipmaps, params.MipLevels, params.Samples, params.Faces,
                 params.Width, params.Height, params.Depth, params.Usage, params.Format);
         texture.Init();
@@ -218,7 +218,7 @@ namespace Crowny
         Texture& texture2 = const_cast<Texture&>(texture);
 
         archive(cereal::base_class<Asset>(&texture2));
-        const TextureParameters& params = texture2.GetProperties();
+        const TextureDesc& params = texture2.GetDesc();
         archive(params.Type, params.Shape, params.sRGB, params.ReadWrite, params.GenerateMipmaps, params.MipLevels, params.Samples, params.Faces,
                 params.Width, params.Height, params.Depth, params.Usage, params.Format);
         for (uint32_t mip = 0; mip < params.MipLevels + 1; mip++) // Save all texture data

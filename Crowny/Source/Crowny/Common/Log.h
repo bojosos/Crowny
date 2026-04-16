@@ -19,12 +19,12 @@ namespace Crowny
         static void Init(const String& clientLoggerName);
 
         static void RenameClientLogger(const StringView loggerName);
-        static Ref<spdlog::logger>& GetClientLogger() { return s_ClientLogger; }
-        static Ref<spdlog::logger>& GetEngineLogger() { return s_EngineLogger; }
+        static std::shared_ptr<spdlog::logger>& GetClientLogger() { return s_ClientLogger; }
+        static std::shared_ptr<spdlog::logger>& GetEngineLogger() { return s_EngineLogger; }
 
     private:
-        static Ref<spdlog::logger> s_ClientLogger;
-        static Ref<spdlog::logger> s_EngineLogger;
+        static std::shared_ptr<spdlog::logger> s_ClientLogger;
+        static std::shared_ptr<spdlog::logger> s_EngineLogger;
         static Vector<spdlog::sink_ptr> s_LogSinks;
     };
 } // namespace Crowny

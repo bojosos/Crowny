@@ -43,7 +43,7 @@ namespace Crowny
     {
     public:
         VulkanImage(VulkanResourceManager* owner, VkImage image, VmaAllocation allocation, VkImageLayout layout, VkFormat format,
-                    const TextureParameters& params, bool ownsImage = true);
+                    const TextureDesc& params, bool ownsImage = true);
         VulkanImage(VulkanResourceManager* owner, const VulkanImageDesc& desc, bool ownsImage = true);
         ~VulkanImage();
 
@@ -97,8 +97,7 @@ namespace Crowny
     class VulkanTexture : public Texture
     {
     public:
-        VulkanTexture(const TextureParameters& parameters);
-        VulkanTexture(const TextureParameters& parameters, bool deferred); // CPU-only, no GPU init
+        friend class Texture;
         ~VulkanTexture();
 
         virtual PixelData Lock(GpuLockOptions options, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) override;
@@ -108,6 +107,10 @@ namespace Crowny
         virtual void WriteData(const PixelData& src, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) override;
 
         VulkanImage* GetImage() const { return m_Image; }
+
+    protected:
+        VulkanTexture(const TextureDesc& parameters);
+        VulkanTexture(const TextureDesc& parameters, bool deferred); // CPU-only, no GPU init
 
     private:
         friend class cereal::access;

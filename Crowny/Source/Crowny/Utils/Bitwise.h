@@ -1,12 +1,14 @@
 #pragma once
 
+#include <bit>
+
 namespace Crowny
 {
 
     class Bitwise
     {
     public:
-        template <typename T> static bool IsPow2(T n) { return (n & (n - 1)) == 0; }
+        template <typename T> static bool IsPow2(T n) { return n > 0 && std::has_single_bit(static_cast<std::make_unsigned_t<T>>(n)); }
 
         static uint32_t UnormToUint(float value, uint32_t bits)
         {
@@ -34,7 +36,9 @@ namespace Crowny
                 ((uint16_t*)dst)[0] = (uint16_t)value;
                 break;
             case 3:
-                CW_ENGINE_ASSERT(false, "3-byte int write not implemented.");
+                ((uint8_t*)dst)[0] = (uint8_t)(value & 0xFF);
+                ((uint8_t*)dst)[1] = (uint8_t)((value >> 8) & 0xFF);
+                ((uint8_t*)dst)[2] = (uint8_t)((value >> 16) & 0xFF);
                 break;
             case 4:
                 ((uint32_t*)dst)[0] = (uint32_t)value;
@@ -51,8 +55,7 @@ namespace Crowny
             case 2:
                 return ((uint16_t*)src)[0];
             case 3:
-                CW_ENGINE_ASSERT(false, "3-byte int read not implemented.");
-                return 0;
+                return ((uint8_t*)src)[0] | (uint32_t(((uint8_t*)src)[1]) << 8) | (uint32_t(((uint8_t*)src)[2]) << 16);
             case 4:
                 return ((uint32_t*)src)[0];
             default:

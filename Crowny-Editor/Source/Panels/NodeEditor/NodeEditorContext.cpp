@@ -2,9 +2,9 @@
 
 #ifdef CW_WITH_NODES
 
-#include "Panels/NodeEditor/NodeEditorContext.h"
-#include "Editor/ProjectLibrary.h"
 #include "Crowny/Assets/AssetManager.h"
+#include "Editor/ProjectLibrary.h"
+#include "Panels/NodeEditor/NodeEditorContext.h"
 
 namespace Crowny
 {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/RefCounted.h"
 #include "Crowny/Common/Types.h"
 #include <glm/glm.hpp>
 
@@ -73,7 +74,7 @@ namespace Crowny
     };
 
     // TODO: Copy constructor, copy-assignment operator
-    class PixelData
+    class PixelData : public RefCounted
     {
     public:
         PixelData() = default;

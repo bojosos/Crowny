@@ -4,40 +4,14 @@
 
 namespace Crowny
 {
-    class FloatNode : public Node
-    {
-    public:
-        FloatNode(UUID id);
-        void Evaluate(NodeGraphEvaluator& evaluator) override;
-        String GetDisplayName() const override { return "Float"; }
-        String GetCategory() const override { return "Math"; }
-    };
-
-    class IntNode : public Node
-    {
-    public:
-        IntNode(UUID id);
-        void Evaluate(NodeGraphEvaluator& evaluator) override;
-        String GetDisplayName() const override { return "Int"; }
-        String GetCategory() const override { return "Math"; }
-    };
-
-    class Vec3Node : public Node
-    {
-    public:
-        Vec3Node(UUID id);
-        void Evaluate(NodeGraphEvaluator& evaluator) override;
-        String GetDisplayName() const override { return "Vec3"; }
-        String GetCategory() const override { return "Math"; }
-    };
 
     class AddNode : public Node
     {
     public:
         AddNode(UUID id);
         void Evaluate(NodeGraphEvaluator& evaluator) override;
-        String GetDisplayName() const override { return "Add"; }
-        String GetCategory() const override { return "Math"; }
+        StringID GetDisplayName() const override { return "Add"; }
+        StringID GetCategory() const override { return "Math"; }
     };
 
     class MultiplyNode : public Node
@@ -45,8 +19,8 @@ namespace Crowny
     public:
         MultiplyNode(UUID id);
         void Evaluate(NodeGraphEvaluator& evaluator) override;
-        String GetDisplayName() const override { return "Multiply"; }
-        String GetCategory() const override { return "Math"; }
+        StringID GetDisplayName() const override { return "Multiply"; }
+        StringID GetCategory() const override { return "Math"; }
     };
 
     class RemapNode : public Node
@@ -54,8 +28,8 @@ namespace Crowny
     public:
         RemapNode(UUID id);
         void Evaluate(NodeGraphEvaluator& evaluator) override;
-        String GetDisplayName() const override { return "Remap"; }
-        String GetCategory() const override { return "Math"; }
+        StringID GetDisplayName() const override { return "Remap"; }
+        StringID GetCategory() const override { return "Math"; }
     };
 
     class SplitVec3Node : public Node
@@ -63,8 +37,8 @@ namespace Crowny
     public:
         SplitVec3Node(UUID id);
         void Evaluate(NodeGraphEvaluator& evaluator) override;
-        String GetDisplayName() const override { return "Split Vec3"; }
-        String GetCategory() const override { return "Math"; }
+        StringID GetDisplayName() const override { return "Split Vec3"; }
+        StringID GetCategory() const override { return "Math"; }
     };
 
 } // namespace Crowny

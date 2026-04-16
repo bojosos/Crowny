@@ -4,7 +4,45 @@
 
 namespace Crowny
 {
-    // ShaderVariation::ShaderVariation(const Vector<ShaderVariation::Specifier>& parameters) : m_Parameters(parameters) {}
+    const ShaderVariation ShaderVariation::EMPTY;
+
+    ShaderVariation::ShaderVariation(const Vector<Specifier>& specifiers)
+    {
+        for (const auto& s : specifiers)
+            m_Parameters[s.Name] = s;
+    }
+
+    ShaderVariation::ShaderVariation(std::initializer_list<Specifier> specifiers)
+    {
+        for (const auto& s : specifiers)
+            m_Parameters[s.Name] = s;
+    }
+
+    void ShaderVariation::Set(const String& name, int32_t value) { m_Parameters[name] = Specifier(name, value); }
+
+    void ShaderVariation::Set(const String& name, float value) { m_Parameters[name] = Specifier(name, value); }
+
+    void ShaderVariation::Set(const String& name, bool value) { m_Parameters[name] = Specifier(name, value); }
+
+    int32_t ShaderVariation::GetInt(const String& name) const
+    {
+        auto it = m_Parameters.find(name);
+        return (it != m_Parameters.end()) ? it->second.I : 0;
+    }
+
+    float ShaderVariation::GetFloat(const String& name) const
+    {
+        auto it = m_Parameters.find(name);
+        return (it != m_Parameters.end()) ? it->second.F : 0.0f;
+    }
+
+    bool ShaderVariation::GetBool(const String& name) const
+    {
+        auto it = m_Parameters.find(name);
+        return (it != m_Parameters.end()) ? (it->second.I != 0) : false;
+    }
+
+    bool ShaderVariation::Has(const String& name) const { return m_Parameters.find(name) != m_Parameters.end(); }
 
     ShaderDefines ShaderVariation::GetDefines() const
     {
@@ -47,5 +85,15 @@ namespace Crowny
 
         return true;
     }
+
+    // --- ShaderDefines ---
+
+    void ShaderDefines::Set(const String& name, int value) { m_Defines[name] = std::to_string(value); }
+
+    void ShaderDefines::Set(const String& name, float value) { m_Defines[name] = std::to_string(value); }
+
+    void ShaderDefines::Set(const String& name, const String& value) { m_Defines[name] = value; }
+
+    const UnorderedMap<String, String>& ShaderDefines::Get() const { return m_Defines; }
 
 } // namespace Crowny

@@ -1,10 +1,11 @@
 #pragma once
 
+#include "Crowny/Common/RefCounted.h"
 #include "Crowny/RenderAPI/CommandBuffer.h"
 
 namespace Crowny
 {
-    class GpuBuffer
+    class GpuBuffer : public RefCounted
     {
     public:
         virtual ~GpuBuffer() = default;

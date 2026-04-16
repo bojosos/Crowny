@@ -17,7 +17,7 @@ namespace Crowny
         High = 2
     };
 
-    class Task
+    class Task : public RefCounted
     {
     public:
         static Ref<Task> Create(const String& name, std::function<void()> worker, TaskPriority priority = TaskPriority::Normal,
@@ -45,7 +45,7 @@ namespace Crowny
         Signal m_WaitCondition;
     };
 
-    class TaskGroup
+    class TaskGroup : public RefCounted
     {
     public:
         static Ref<TaskGroup> Create(const String& name, std::function<void(uint32_t)> worker, uint32_t count,

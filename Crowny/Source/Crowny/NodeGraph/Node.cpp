@@ -17,7 +17,7 @@ namespace Crowny
             m_ParentGraph->NotifyChanged();
     }
 
-    Pin* Node::FindInputPin(const String& name) const
+    Pin* Node::FindInputPin(StringID name) const
     {
         for (const auto& pin : m_Inputs)
         {
@@ -26,7 +26,7 @@ namespace Crowny
         }
         return nullptr;
     }
-    Pin* Node::FindOutputPin(const String& name) const
+    Pin* Node::FindOutputPin(StringID name) const
     {
         for (const auto& pin : m_Outputs)
         {
@@ -51,7 +51,7 @@ namespace Crowny
         return nullptr;
     }
 
-    Ref<Pin> Node::AddInput(const String& name, PinDataType type, const PinValue& defaultVal)
+    Ref<Pin> Node::AddInput(StringID name, PinDataType type, const PinValue& defaultVal)
     {
         auto pin = CreateRef<Pin>(UuidGenerator::Generate(), name, Pin::Direction::Input, type);
         pin->SetOwner(this);
@@ -63,7 +63,7 @@ namespace Crowny
         return pin;
     }
 
-    Ref<Pin> Node::AddOutput(const String& name, PinDataType type)
+    Ref<Pin> Node::AddOutput(StringID name, PinDataType type)
     {
         auto pin = CreateRef<Pin>(UuidGenerator::Generate(), name, Pin::Direction::Output, type);
         pin->SetOwner(this);
@@ -71,10 +71,10 @@ namespace Crowny
         return pin;
     }
 
-    template <typename T> T Node::GetInputValue(const String& pinName, NodeGraphEvaluator& evaluator) const
+    template <typename T> T Node::GetInputValue(StringID pinName, NodeGraphEvaluator& evaluator) const
     {
         Pin* pin = FindInputPin(pinName);
-        CW_ENGINE_ASSERT(pin, "Input pin not found: " + pinName);
+        CW_ENGINE_ASSERT(pin, String("Input pin not found: ") + pinName.c_str());
 
         PinValue value = evaluator.PullInput(pin);
         if (std::holds_alternative<T>(value))
@@ -105,28 +105,34 @@ namespace Crowny
         return T{};
     }
 
-    template <typename T> void Node::SetOutputValue(const String& pinName, const T& value, NodeGraphEvaluator& evaluator)
+    template <typename T> void Node::SetOutputValue(StringID pinName, const T& value, NodeGraphEvaluator& evaluator)
     {
         Pin* pin = FindOutputPin(pinName);
-        CW_ENGINE_ASSERT(pin, "Output pin not found: " + pinName);
+        CW_ENGINE_ASSERT(pin, String("Output pin not found: ") + pinName.c_str());
         evaluator.SetOutputValue(pin->GetID(), PinValue(value));
     }
 
     // Explicit template instantiations
-    template float Node::GetInputValue<float>(const String&, NodeGraphEvaluator&) const;
-    template int32_t Node::GetInputValue<int32_t>(const String&, NodeGraphEvaluator&) const;
-    template glm::vec2 Node::GetInputValue<glm::vec2>(const String&, NodeGraphEvaluator&) const;
-    template glm::vec3 Node::GetInputValue<glm::vec3>(const String&, NodeGraphEvaluator&) const;
-    template glm::vec4 Node::GetInputValue<glm::vec4>(const String&, NodeGraphEvaluator&) const;
-    template bool Node::GetInputValue<bool>(const String&, NodeGraphEvaluator&) const;
-    template Ref<MeshData> Node::GetInputValue<Ref<MeshData>>(const String&, NodeGraphEvaluator&) const;
+    template float Node::GetInputValue<float>(StringID, NodeGraphEvaluator&) const;
+    template int32_t Node::GetInputValue<int32_t>(StringID, NodeGraphEvaluator&) const;
+    template glm::vec2 Node::GetInputValue<glm::vec2>(StringID, NodeGraphEvaluator&) const;
+    template glm::vec3 Node::GetInputValue<glm::vec3>(StringID, NodeGraphEvaluator&) const;
+    template glm::vec4 Node::GetInputValue<glm::vec4>(StringID, NodeGraphEvaluator&) const;
+    template bool Node::GetInputValue<bool>(StringID, NodeGraphEvaluator&) const;
+    template Ref<MeshData> Node::GetInputValue<Ref<MeshData>>(StringID, NodeGraphEvaluator&) const;
 
-    template void Node::SetOutputValue<float>(const String&, const float&, NodeGraphEvaluator&);
-    template void Node::SetOutputValue<int32_t>(const String&, const int32_t&, NodeGraphEvaluator&);
-    template void Node::SetOutputValue<glm::vec2>(const String&, const glm::vec2&, NodeGraphEvaluator&);
-    template void Node::SetOutputValue<glm::vec3>(const String&, const glm::vec3&, NodeGraphEvaluator&);
-    template void Node::SetOutputValue<glm::vec4>(const String&, const glm::vec4&, NodeGraphEvaluator&);
-    template void Node::SetOutputValue<bool>(const String&, const bool&, NodeGraphEvaluator&);
-    template void Node::SetOutputValue<Ref<MeshData>>(const String&, const Ref<MeshData>&, NodeGraphEvaluator&);
+    template void Node::SetOutputValue<float>(StringID, const float&, NodeGraphEvaluator&);
+    template void Node::SetOutputValue<int32_t>(StringID, const int32_t&, NodeGraphEvaluator&);
+    template void Node::SetOutputValue<glm::vec2>(StringID, const glm::vec2&, NodeGraphEvaluator&);
+    template void Node::SetOutputValue<glm::vec3>(StringID, const glm::vec3&, NodeGraphEvaluator&);
+    template void Node::SetOutputValue<glm::vec4>(StringID, const glm::vec4&, NodeGraphEvaluator&);
+    template void Node::SetOutputValue<bool>(StringID, const bool&, NodeGraphEvaluator&);
+    template void Node::SetOutputValue<Ref<MeshData>>(StringID, const Ref<MeshData>&, NodeGraphEvaluator&);
+    template <> void Node::SetOutputValue<PinValue>(StringID pinName, const PinValue& pinValue, NodeGraphEvaluator& evaluator)
+    {
+        Pin* pin = FindOutputPin(pinName);
+        CW_ENGINE_ASSERT(pin, "Output pin not found: " + String(pinName.c_str()));
+        evaluator.SetOutputValue(pin->GetID(), pinValue);
+    }
 
 } // namespace Crowny

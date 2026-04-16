@@ -7,7 +7,7 @@ namespace Crowny
 
     struct AudioDataInfo;
 
-    class AudioDecoder
+    class AudioDecoder : public RefCounted
     {
     public:
         virtual ~AudioDecoder() = default;

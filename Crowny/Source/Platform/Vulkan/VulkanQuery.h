@@ -65,7 +65,7 @@ namespace Crowny
     class VulkanTimerQuery : public TimerQuery
     {
     public:
-        VulkanTimerQuery();
+        friend class TimerQuery;
         ~VulkanTimerQuery();
         virtual void Begin(const Ref<CommandBuffer>& cb) override;
         virtual void End(const Ref<CommandBuffer>& cb) override;
@@ -75,8 +75,11 @@ namespace Crowny
         bool IsInProgress() const;
         void Interrupt(VulkanCmdBuffer* cb);
 
+    protected:
+        VulkanTimerQuery();
+
     private:
-        Vector<std::pair<VulkanQuery*, VulkanQuery*>> m_Queries;
+        Vector<Pair<VulkanQuery*, VulkanQuery*>> m_Queries;
 
         float m_TimeDelta = 0.0f;
         bool m_QueryEndCalled : 1;
@@ -86,6 +89,7 @@ namespace Crowny
     class VulkanPipelineQuery : public PipelineQuery
     {
     public:
+        friend class PipelineQuery;
         // virtual void Begin(const Ref<CommandBuffer>& cb) override;
         bool IsInProgress() { return false; }
         void Interrupt(VulkanCmdBuffer* cb) {}
@@ -93,13 +97,17 @@ namespace Crowny
         virtual bool IsReady() const override { return false; }
         virtual void Begin(const Ref<CommandBuffer>& cb = nullptr) override {}
         virtual void End(const Ref<CommandBuffer>& cb = nullptr) override {};
+    protected:
+        VulkanPipelineQuery() = default;
     };
 
     class VulkanOcclusionQuery : public OcclusionQuery
     {
     public:
-        VulkanOcclusionQuery(bool binary) {}
+        friend class OcclusionQuery;
         bool IsInProgress() { return false; }
         void Interrupt(VulkanCmdBuffer* cb) {}
+    protected:
+        VulkanOcclusionQuery(bool binary) {}
     };
 } // namespace Crowny

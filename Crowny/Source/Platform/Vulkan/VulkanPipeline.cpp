@@ -61,7 +61,7 @@ namespace Crowny
     {
         m_DynamicStateCreateInfo = GetDynamicStateCreateInfo();
 
-        std::pair<VkShaderStageFlagBits, ShaderStage*> stages[] = {
+        Pair<VkShaderStageFlagBits, ShaderStage*> stages[] = {
             { VK_SHADER_STAGE_VERTEX_BIT, m_Data.VertexShader.get() },
             { VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, m_Data.HullShader.get() },
             { VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, m_Data.DomainShader.get() },
@@ -246,7 +246,7 @@ namespace Crowny
         auto iter = m_Pipelines.find(key);
         if (iter != m_Pipelines.end())
             return iter->second;
-        CW_ENGINE_INFO("Creating pipeline...");
+        // CW_ENGINE_INFO("Creating pipeline...");
         VulkanPipeline* result = CreatePipeline(renderPass, readOnlyFlags, drawMode, layout);
         m_Pipelines[key] = result;
         return result;
@@ -321,12 +321,71 @@ namespace Crowny
             depthReadOnly = true;
         }
 
+        std::array<VkPipelineColorBlendAttachmentState, MAX_FRAMEBUFFER_COLOR_ATTACHMENTS> localBlendStates;
         std::array<bool, MAX_FRAMEBUFFER_COLOR_ATTACHMENTS> colorReadOnly;
-        if (renderPass->GetNumColorAttachments() > 0)
+        uint32_t numColorAttachments = renderPass->GetNumColorAttachments();
+        if (numColorAttachments > 0)
         {
             m_PipelineInfo.pColorBlendState = &m_ColorBlendStateInfo;
             for (uint32_t i = 0; i < MAX_FRAMEBUFFER_COLOR_ATTACHMENTS; i++)
-                colorReadOnly[i] = m_BlendAttachmentStates[i].colorWriteMask == 0;
+            {
+                localBlendStates[i] = m_BlendAttachmentStates[i];
+                colorReadOnly[i] = localBlendStates[i].colorWriteMask == 0;
+                if (i < numColorAttachments && localBlendStates[i].blendEnable)
+                {
+                    VkFormat format = renderPass->GetColorDesc(i).format;
+                    bool isInteger = false;
+                    switch (format)
+                    {
+                    case VK_FORMAT_R8_SINT:
+                    case VK_FORMAT_R8_UINT:
+                    case VK_FORMAT_R8G8_SINT:
+                    case VK_FORMAT_R8G8_UINT:
+                    case VK_FORMAT_R8G8B8_SINT:
+                    case VK_FORMAT_R8G8B8_UINT:
+                    case VK_FORMAT_R8G8B8A8_SINT:
+                    case VK_FORMAT_R8G8B8A8_UINT:
+                    case VK_FORMAT_R16_SINT:
+                    case VK_FORMAT_R16_UINT:
+                    case VK_FORMAT_R16G16_SINT:
+                    case VK_FORMAT_R16G16_UINT:
+                    case VK_FORMAT_R16G16B16_SINT:
+                    case VK_FORMAT_R16G16B16_UINT:
+                    case VK_FORMAT_R16G16B16A16_SINT:
+                    case VK_FORMAT_R16G16B16A16_UINT:
+                    case VK_FORMAT_R32_SINT:
+                    case VK_FORMAT_R32_UINT:
+                    case VK_FORMAT_R32G32_SINT:
+                    case VK_FORMAT_R32G32_UINT:
+                    case VK_FORMAT_R32G32B32_SINT:
+                    case VK_FORMAT_R32G32B32_UINT:
+                    case VK_FORMAT_R32G32B32A32_SINT:
+                    case VK_FORMAT_R32G32B32A32_UINT:
+                    case VK_FORMAT_R64_SINT:
+                    case VK_FORMAT_R64_UINT:
+                    case VK_FORMAT_R64G64_SINT:
+                    case VK_FORMAT_R64G64_UINT:
+                    case VK_FORMAT_R64G64B64_SINT:
+                    case VK_FORMAT_R64G64B64_UINT:
+                    case VK_FORMAT_R64G64B64A64_SINT:
+                    case VK_FORMAT_R64G64B64A64_UINT:
+                        isInteger = true;
+                        break;
+                    default:
+                        break;
+                    }
+                    if (isInteger)
+                        localBlendStates[i].blendEnable = VK_FALSE;
+                    else
+                    {
+                        VkFormatProperties formatProps;
+                        vkGetPhysicalDeviceFormatProperties(device.GetPhysicalDevice(), format, &formatProps);
+                        if (!(formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT))
+                            localBlendStates[i].blendEnable = VK_FALSE;
+                    }
+                }
+            }
+            m_ColorBlendStateInfo.pAttachments = localBlendStates.data();
         }
         else
         {
@@ -335,11 +394,11 @@ namespace Crowny
                 colorReadOnly[i] = true;
         }
 
-        const std::pair<VkShaderStageFlagBits, ShaderStage*> stages[] = { { VK_SHADER_STAGE_VERTEX_BIT, m_Data.VertexShader.get() },
-                                                                          { VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, m_Data.HullShader.get() },
-                                                                          { VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, m_Data.DomainShader.get() },
-                                                                          { VK_SHADER_STAGE_GEOMETRY_BIT, m_Data.GeometryShader.get() },
-                                                                          { VK_SHADER_STAGE_FRAGMENT_BIT, m_Data.FragmentShader.get() } };
+        const Pair<VkShaderStageFlagBits, ShaderStage*> stages[] = { { VK_SHADER_STAGE_VERTEX_BIT, m_Data.VertexShader.get() },
+                                                                     { VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, m_Data.HullShader.get() },
+                                                                     { VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, m_Data.DomainShader.get() },
+                                                                     { VK_SHADER_STAGE_GEOMETRY_BIT, m_Data.GeometryShader.get() },
+                                                                     { VK_SHADER_STAGE_FRAGMENT_BIT, m_Data.FragmentShader.get() } };
         uint32_t outputIdx = 0;
         const uint32_t numStages = sizeof(stages) / sizeof(stages[0]);
         for (uint32_t i = 0; i < numStages; i++)
@@ -373,9 +432,9 @@ namespace Crowny
 
     VulkanRayTracingPipeline::VulkanRayTracingPipeline(const RayTracingPipelineDesc& desc) : RayTracingPipeline(desc)
     {
-        std::pair<VkShaderStageFlagBits, ShaderStage*> stages[] = { { VK_SHADER_STAGE_RAYGEN_BIT_KHR, m_Data.RaygenShader.get() },
-                                                                    { VK_SHADER_STAGE_MISS_BIT_KHR, m_Data.MissShader.get() },
-                                                                    { VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, m_Data.HitShader.get() } };
+        Pair<VkShaderStageFlagBits, ShaderStage*> stages[] = { { VK_SHADER_STAGE_RAYGEN_BIT_KHR, m_Data.RaygenShader.get() },
+                                                               { VK_SHADER_STAGE_MISS_BIT_KHR, m_Data.MissShader.get() },
+                                                               { VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, m_Data.HitShader.get() } };
 
         uint32_t outputIdx = 0;
         const uint32_t numStages = sizeof(stages) / sizeof(stages[0]);

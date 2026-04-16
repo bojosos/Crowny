@@ -35,7 +35,7 @@ namespace Crowny
         Scope<Impl> m_Impl;
         UUID m_SelectedNodeID = UUID::EMPTY;
         Vector<UUID> m_SelectedNodes;
-        
+
         bool m_NeedsSync = true;
         Ref<NodeGraph> m_CurrentGraph;
     };

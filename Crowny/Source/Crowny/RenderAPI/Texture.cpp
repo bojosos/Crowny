@@ -15,7 +15,7 @@ namespace Crowny
 
     Ref<TextureView> Texture::RequestView(uint32_t mip, uint32_t numMips, uint32_t firstFace, uint32_t numFaces, GpuViewUsage usage)
     {
-        const TextureParameters& props = GetProperties();
+        const TextureDesc& props = GetDesc();
         TextureViewDesc desc;
         desc.MostDetailedMip = mip;
         desc.NumMips = numMips == 0 ? (props.MipLevels + 1) : numMips;
@@ -36,16 +36,16 @@ namespace Crowny
     Ref<Texture> Texture::WHITE;
     Ref<Texture> Texture::BLACK;
 
-    Texture::Texture(const TextureParameters& params) : m_Params(params) {}
-    Texture::Texture(const TextureParameters& params, bool deferred) : m_Params(params) {}
+    Texture::Texture(const TextureDesc& params) : m_Desc(params) {}
+    Texture::Texture(const TextureDesc& params, bool deferred) : m_Desc(params) {}
 
-    Ref<Texture> Texture::Create(const TextureParameters& params)
+    Ref<Texture> Texture::Create(const TextureDesc& params)
     {
         switch (gRenderAPI->GetAPI())
         {
-        // case RenderAPI::API::OpenGL: return CreateRef<VulkanTexture>(m_Filepath);
+        // case RenderAPI::API::OpenGL: return Ref<Texture>(new VulkanTexture(m_Filepath));
         case RenderAPI::API::Vulkan:
-            return CreateRef<VulkanTexture>(params);
+            return Ref<Texture>(new VulkanTexture(params));
         default:
             CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
@@ -54,12 +54,12 @@ namespace Crowny
         return nullptr;
     }
 
-    Ref<Texture> Texture::CreateDeferred(const TextureParameters& params, const Ref<PixelData>& pixelData)
+    Ref<Texture> Texture::CreateDeferred(const TextureDesc& params, const Ref<PixelData>& pixelData)
     {
         switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::Vulkan: {
-            auto tex = CreateRef<VulkanTexture>(params, true);
+            auto tex = Ref<Texture>(new VulkanTexture(params, true));
             tex->m_PendingPixelData = pixelData;
             return tex;
         }

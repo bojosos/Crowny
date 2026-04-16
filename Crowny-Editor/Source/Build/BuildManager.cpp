@@ -56,7 +56,7 @@ namespace Crowny
         {
         case PlatformType::Windows:
         default:
-            return { u8"mscorlib", u8"System", u8"System.Core", "System.Collections", "System.IO", "System.Compression", "System.IO.Filesystem" };
+            return { "mscorlib", "System", "System.Core", "System.Collections", "System.IO", "System.Compression", "System.IO.Filesystem" };
         }
     }
 

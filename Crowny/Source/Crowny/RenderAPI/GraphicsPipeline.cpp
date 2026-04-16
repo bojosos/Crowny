@@ -49,9 +49,9 @@ namespace Crowny
         switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::OpenGL:
-            return CreateRef<OpenGLGraphicsPipeline>(desc);
+            return Ref<GraphicsPipeline>(new OpenGLGraphicsPipeline(desc));
         case RenderAPI::API::Vulkan:
-            return CreateRef<VulkanGraphicsPipeline>(desc);
+            return Ref<GraphicsPipeline>(new VulkanGraphicsPipeline(desc));
         default:
             CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
@@ -81,7 +81,7 @@ namespace Crowny
             CW_ENGINE_ERROR("OpenGL backend does not support ray tracing");
             return nullptr;
         case RenderAPI::API::Vulkan:
-            return CreateRef<VulkanRayTracingPipeline>(desc);
+            return Ref<RayTracingPipeline>(new VulkanRayTracingPipeline(desc));
         default:
             CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
@@ -101,9 +101,9 @@ namespace Crowny
         switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::OpenGL:
-            return CreateRef<OpenGLComputePipeline>(shader);
+            return Ref<ComputePipeline>(new OpenGLComputePipeline(shader));
         case RenderAPI::API::Vulkan:
-            return CreateRef<VulkanComputePipeline>(shader);
+            return Ref<ComputePipeline>(new VulkanComputePipeline(shader));
         default:
             CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;

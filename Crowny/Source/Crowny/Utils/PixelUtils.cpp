@@ -27,13 +27,13 @@ namespace Crowny
         { "RGBA8", 4, PFF_INTEGER | PFF_NORMALIZED | PFF_HASALPHA, PCT_BYTE, 4, 8, 8, 8, 8, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000, 0, 8, 16,
           24 },
         { "RGBA16F", 8, PFF_FLOAT | PFF_HASALPHA, PCT_FLOAT16, 4, 16, 16, 16, 16, 0x0000FFFF, 0xFFFF0000, 0x0000FFFF, 0xFFFF0000, 0, 16, 0, 16 },
-        { "RGB32F", 12, PFF_FLOAT, PCT_FLOAT32, 3, 32, 32, 32, 32, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0, 0, 0, 0, 0 },
-        { "RGBA32F", 16, PFF_FLOAT | PFF_HASALPHA, PCT_FLOAT32, 4, 32, 32, 32, 32, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0, 16, 0, 16 },
+        { "RGB32F", 12, PFF_FLOAT, PCT_FLOAT32, 3, 32, 32, 32, 0, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0, 0, 0, 0, 0 },
+        { "RGBA32F", 16, PFF_FLOAT | PFF_HASALPHA, PCT_FLOAT32, 4, 32, 32, 32, 32, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0, 0, 0, 0 },
         { "RG16F", 4, PFF_FLOAT, PCT_FLOAT16, 2, 16, 16, 0, 0, 0x0000FFFF, 0xFFFF0000, 0, 0, 0, 16, 0, 0 },
         { "RG32F", 8, PFF_FLOAT, PCT_FLOAT32, 2, 32, 32, 0, 0, 0xFFFFFFFF, 0xFFFFFFFF, 0, 0, 0, 0, 0, 0 },
         { "R32I", 4, PFF_INTEGER, PCT_INT, 1, 32, 0, 0, 0, 0xFFFFFFFF, 0, 0, 0, 0, 0, 0, 0 },
         { "D32", 4, PFF_DEPTH | PFF_FLOAT, PCT_FLOAT32, 1, 32, 0, 0, 0, 0xFFFFFFFF, 0, 0, 0, 0, 0, 0, 0 },
-        { "D24S8", 4, PFF_INTEGER | PFF_DEPTH | PFF_NORMALIZED, PCT_INT, 2, 24, 8, 0, 0, 0x00FFFFFF, 0x0FF0000, 0, 0, 0, 24, 0, 0 },
+        { "D24S8", 4, PFF_INTEGER | PFF_DEPTH | PFF_NORMALIZED, PCT_INT, 2, 24, 8, 0, 0, 0x00FFFFFF, 0xFF000000, 0, 0, 0, 24, 0, 0 },
         { "BC1", 0, PFF_COMPRESSED | PFF_HASALPHA, PCT_BYTE, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
         { "BC1a", 0, PFF_COMPRESSED | PFF_HASALPHA, PCT_BYTE, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
         { "BC2", 0, PFF_COMPRESSED | PFF_HASALPHA, PCT_BYTE, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
@@ -200,8 +200,8 @@ namespace Crowny
                 {
                     memcpy(dstPtr, srcPtr, rowSize);
 
-                    srcPtr += srcRowSkip;
-                    dstPtr += dstRowSkip;
+                    srcPtr += rowSize + srcRowSkip;
+                    dstPtr += rowSize + dstRowSkip;
                 }
 
                 srcPtr += srcSliceSkip;

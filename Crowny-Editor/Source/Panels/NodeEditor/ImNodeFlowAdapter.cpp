@@ -12,7 +12,7 @@
 #include <ImNodeFlow.h>
 #include <imgui.h>
 
-#include "Crowny/NodeGraph/Nodes/InputNode.h"
+#include "Crowny/NodeGraph/Nodes/InputNodes.h"
 
 namespace Crowny
 {
@@ -22,7 +22,7 @@ namespace Crowny
     public:
         VisualNode(Node* coreNode, NodeGraph* graph) : m_CoreNode(coreNode), m_Graph(graph)
         {
-            setTitle(coreNode->GetDisplayName());
+            setTitle(coreNode->GetDisplayName().c_str());
             setStyle(ImFlow::NodeStyle::cyan());
 
             // Create input pins
@@ -32,19 +32,19 @@ namespace Crowny
                 switch (pin->GetDataType())
                 {
                 case PinDataType::Float:
-                    addIN<float>(pin->GetName(), 0.0f, filter, ImFlow::PinStyle::cyan());
+                    addIN<float>(pin->GetName().c_str(), 0.0f, filter, ImFlow::PinStyle::cyan());
                     break;
                 case PinDataType::Int:
-                    addIN<int>(pin->GetName(), 0, filter, ImFlow::PinStyle::green());
+                    addIN<int>(pin->GetName().c_str(), 0, filter, ImFlow::PinStyle::green());
                     break;
                 case PinDataType::Vec3:
-                    addIN<float>(pin->GetName(), 0.0f, filter, ImFlow::PinStyle::blue());
+                    addIN<float>(pin->GetName().c_str(), 0.0f, filter, ImFlow::PinStyle::blue());
                     break;
                 case PinDataType::MeshData:
-                    addIN<float>(pin->GetName(), 0.0f, filter, ImFlow::PinStyle::brown());
+                    addIN<float>(pin->GetName().c_str(), 0.0f, filter, ImFlow::PinStyle::brown());
                     break;
                 default:
-                    addIN<float>(pin->GetName(), 0.0f, filter, ImFlow::PinStyle::white());
+                    addIN<float>(pin->GetName().c_str(), 0.0f, filter, ImFlow::PinStyle::white());
                     break;
                 }
             }
@@ -55,19 +55,19 @@ namespace Crowny
                 switch (pin->GetDataType())
                 {
                 case PinDataType::Float:
-                    addOUT<float>(pin->GetName(), ImFlow::PinStyle::cyan())->behaviour([]() { return 0.0f; });
+                    addOUT<float>(pin->GetName().c_str(), ImFlow::PinStyle::cyan())->behaviour([]() { return 0.0f; });
                     break;
                 case PinDataType::Int:
-                    addOUT<int>(pin->GetName(), ImFlow::PinStyle::green())->behaviour([]() { return 0; });
+                    addOUT<int>(pin->GetName().c_str(), ImFlow::PinStyle::green())->behaviour([]() { return 0; });
                     break;
                 case PinDataType::Vec3:
-                    addOUT<float>(pin->GetName(), ImFlow::PinStyle::blue())->behaviour([]() { return 0.0f; });
+                    addOUT<float>(pin->GetName().c_str(), ImFlow::PinStyle::blue())->behaviour([]() { return 0.0f; });
                     break;
                 case PinDataType::MeshData:
-                    addOUT<float>(pin->GetName(), ImFlow::PinStyle::brown())->behaviour([]() { return 0.0f; });
+                    addOUT<float>(pin->GetName().c_str(), ImFlow::PinStyle::brown())->behaviour([]() { return 0.0f; });
                     break;
                 default:
-                    addOUT<float>(pin->GetName(), ImFlow::PinStyle::white())->behaviour([]() { return 0.0f; });
+                    addOUT<float>(pin->GetName().c_str(), ImFlow::PinStyle::white())->behaviour([]() { return 0.0f; });
                     break;
                 }
             }
@@ -211,8 +211,8 @@ namespace Crowny
                     Pin* inPin = inCore->FindPinByID(conn.InputPinID);
                     if (outPin && inPin)
                     {
-                        ImFlow::Pin* visOutPin = outNodeIt->second->outPin(outPin->GetName());
-                        ImFlow::Pin* visInPin = inNodeIt->second->inPin(inPin->GetName());
+                        ImFlow::Pin* visOutPin = outNodeIt->second->outPin(outPin->GetName().c_str());
+                        ImFlow::Pin* visInPin = inNodeIt->second->inPin(inPin->GetName().c_str());
 
                         if (visOutPin && visInPin)
                         {

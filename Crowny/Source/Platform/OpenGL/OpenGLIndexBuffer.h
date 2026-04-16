@@ -7,10 +7,12 @@ namespace Crowny
     class OpenGLIndexBuffer : public IndexBuffer
     {
     public:
+        friend class IndexBuffer;
+        virtual ~OpenGLIndexBuffer();
+    protected:
         OpenGLIndexBuffer(uint32_t count, IndexType indexType, BufferUsage usage);
         OpenGLIndexBuffer(uint16_t* indices, uint32_t count, BufferUsage usage);
         OpenGLIndexBuffer(uint32_t* indices, uint32_t count, BufferUsage usage);
-        virtual ~OpenGLIndexBuffer();
 
         virtual void* Map(uint32_t offset, uint32_t size, GpuLockOptions options) override;
         virtual void Unmap() override;

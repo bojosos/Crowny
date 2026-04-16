@@ -10,8 +10,8 @@ namespace Crowny
         GeometryOutputNode(UUID id);
 
         void Evaluate(NodeGraphEvaluator& evaluator) override;
-        String GetDisplayName() const override { return "Geometry Output"; }
-        String GetCategory() const override { return "Output"; }
+        StringID GetDisplayName() const override { return "Geometry Output"; }
+        StringID GetCategory() const override { return "Output"; }
     };
 
 } // namespace Crowny

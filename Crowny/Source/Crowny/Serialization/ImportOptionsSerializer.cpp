@@ -17,7 +17,7 @@ namespace Crowny
         case ImportOptionsType::None:
             break;
         case ImportOptionsType::AudioClip: {
-            Ref<AudioClipImportOptions> audioImportOptions = std::static_pointer_cast<AudioClipImportOptions>(importOptions);
+            Ref<AudioClipImportOptions> audioImportOptions = StaticRefCast<AudioClipImportOptions>(importOptions);
             BeginYAMLMap(out, "AudioImporter");
 
             SerializeEnumYAML(out, "Format", audioImportOptions->Format);
@@ -30,14 +30,14 @@ namespace Crowny
             break;
         }
         case ImportOptionsType::Shader: {
-            Ref<ShaderImportOptions> shaderImportOptions = std::static_pointer_cast<ShaderImportOptions>(importOptions);
+            Ref<ShaderImportOptions> shaderImportOptions = StaticRefCast<ShaderImportOptions>(importOptions);
             BeginYAMLMap(out, "ShaderImporter");
 
             EndYAMLMap(out, "ShaderImporter");
             break;
         }
         case ImportOptionsType::Texture: {
-            Ref<TextureImportOptions> textureImportOptions = std::static_pointer_cast<TextureImportOptions>(importOptions);
+            Ref<TextureImportOptions> textureImportOptions = StaticRefCast<TextureImportOptions>(importOptions);
             BeginYAMLMap(out, "TextureImporter");
 
             SerializeEnumYAML(out, "Format", textureImportOptions->Format);
@@ -54,7 +54,7 @@ namespace Crowny
             break;
         }
         case ImportOptionsType::Script: {
-            Ref<CSharpScriptImportOptions> scriptImportOptions = std::static_pointer_cast<CSharpScriptImportOptions>(importOptions);
+            Ref<CSharpScriptImportOptions> scriptImportOptions = StaticRefCast<CSharpScriptImportOptions>(importOptions);
             BeginYAMLMap(out, "ScriptImporter");
 
             SerializeValueYAML(out, "IsEditorScript", scriptImportOptions->IsEditorScript);
@@ -63,7 +63,7 @@ namespace Crowny
             break;
         }
         case ImportOptionsType::Mesh: {
-            Ref<MeshImportOptions> meshImportOptions = std::static_pointer_cast<MeshImportOptions>(importOptions);
+            Ref<MeshImportOptions> meshImportOptions = StaticRefCast<MeshImportOptions>(importOptions);
             BeginYAMLMap(out, "MeshImporter");
 
             SerializeValueYAML(out, "Optimize", meshImportOptions->Optimize);
@@ -80,7 +80,7 @@ namespace Crowny
             break;
         }
         case ImportOptionsType::Font: {
-            Ref<FontImportOptions> fontImportOptions = std::static_pointer_cast<FontImportOptions>(importOptions);
+            Ref<FontImportOptions> fontImportOptions = StaticRefCast<FontImportOptions>(importOptions);
             BeginYAMLMap(out, "FontImporter");
 
             SerializeEnumYAML(out, "AtlasDimensionsConstraint", fontImportOptions->AtlasDimensionsConstraint);

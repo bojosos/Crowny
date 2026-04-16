@@ -9,15 +9,19 @@ namespace Crowny
     class OpenGLGraphicsPipeline : public GraphicsPipeline
     {
     public:
-        OpenGLGraphicsPipeline(const PipelineStateDesc& desc);
+        friend class GraphicsPipeline;
         ~OpenGLGraphicsPipeline();
+    protected:
+        OpenGLGraphicsPipeline(const PipelineStateDesc& desc);
     };
 
     class OpenGLComputePipeline : public ComputePipeline
     {
     public:
-        OpenGLComputePipeline(const Ref<ShaderStage>& shader);
+        friend class ComputePipeline;
         ~OpenGLComputePipeline();
+    protected:
+        OpenGLComputePipeline(const Ref<ShaderStage>& shader);
     };
 
 } // namespace Crowny

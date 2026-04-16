@@ -145,7 +145,12 @@ namespace Crowny
         {
             ImGuiIO& io = ImGui::GetIO();
             e.Handled |= e.IsInCategory(EventCategoryMouse) & io.WantCaptureMouse;
-            e.Handled |= e.IsInCategory(EventCategoryKeyboard) & io.WantCaptureKeyboard;
+            // Allow Ctrl+key shortcuts (Ctrl+Z, Ctrl+Y, Ctrl+S, …) to reach the
+            // EditorLayer even when an ImGui panel (e.g. the node editor) has keyboard
+            // focus. Without this, keyboard events are consumed here and undo/redo
+            // only works while hovering the viewport.
+            if (!io.KeyCtrl)
+                e.Handled |= e.IsInCategory(EventCategoryKeyboard) & io.WantCaptureKeyboard;
         }
     }
 
@@ -161,10 +166,7 @@ namespace Crowny
         ImGuizmo::BeginFrame();
     }
 
-    void ImGuiLayer::End()
-    {
-        ImGui::Render();
-    }
+    void ImGuiLayer::End() { ImGui::Render(); }
 
     String ImGuiLayer::SaveLayout()
     {

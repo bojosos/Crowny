@@ -12,7 +12,7 @@ namespace Crowny
         switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::OpenGL:
-            return CreateRef<OpenGLVertexArray>(drawMode);
+            return Ref<VertexArray>(new OpenGLVertexArray(drawMode));
         default:
             CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;

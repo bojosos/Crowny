@@ -32,16 +32,21 @@ namespace Crowny
 
     void TransformGeometryNode::Evaluate(NodeGraphEvaluator& evaluator)
     {
-        Ref<MeshData> input = GetInputValue<Ref<MeshData>>("Geometry", evaluator);
+        static const StringID geometryPin("Geometry");
+        static const StringID translationPin("Translation");
+        static const StringID rotationPin("Rotation");
+        static const StringID scalePin("Scale");
+
+        Ref<MeshData> input = GetInputValue<Ref<MeshData>>(geometryPin, evaluator);
         if (!input)
         {
-            SetOutputValue<Ref<MeshData>>("Geometry", nullptr, evaluator);
+            SetOutputValue<Ref<MeshData>>(geometryPin, nullptr, evaluator);
             return;
         }
 
-        glm::vec3 translation = GetInputValue<glm::vec3>("Translation", evaluator);
-        glm::vec3 rotation = GetInputValue<glm::vec3>("Rotation", evaluator);
-        glm::vec3 scale = GetInputValue<glm::vec3>("Scale", evaluator);
+        glm::vec3 translation = GetInputValue<glm::vec3>(translationPin, evaluator);
+        glm::vec3 rotation = GetInputValue<glm::vec3>(rotationPin, evaluator);
+        glm::vec3 scale = GetInputValue<glm::vec3>(scalePin, evaluator);
 
         glm::mat4 transform = glm::translate(glm::mat4(1.0f), translation);
         transform *= glm::eulerAngleYXZ(glm::radians(rotation.y), glm::radians(rotation.x), glm::radians(rotation.z));
@@ -69,7 +74,7 @@ namespace Crowny
         result->SetUVs(0, input->GetUVs(0));
         result->SetIndices(input->GetIndices());
 
-        SetOutputValue<Ref<MeshData>>("Geometry", result, evaluator);
+        SetOutputValue<Ref<MeshData>>(geometryPin, result, evaluator);
     }
 
     // ---- MergeGeometryNode ----
@@ -83,22 +88,24 @@ namespace Crowny
 
     void MergeGeometryNode::Evaluate(NodeGraphEvaluator& evaluator)
     {
+        static const StringID geometryPin("Geometry");
+
         Ref<MeshData> a = GetInputValue<Ref<MeshData>>("A", evaluator);
         Ref<MeshData> b = GetInputValue<Ref<MeshData>>("B", evaluator);
 
         if (!a && !b)
         {
-            SetOutputValue<Ref<MeshData>>("Geometry", nullptr, evaluator);
+            SetOutputValue<Ref<MeshData>>(geometryPin, nullptr, evaluator);
             return;
         }
         if (!a)
         {
-            SetOutputValue<Ref<MeshData>>("Geometry", b, evaluator);
+            SetOutputValue<Ref<MeshData>>(geometryPin, b, evaluator);
             return;
         }
         if (!b)
         {
-            SetOutputValue<Ref<MeshData>>("Geometry", a, evaluator);
+            SetOutputValue<Ref<MeshData>>(geometryPin, a, evaluator);
             return;
         }
 
@@ -136,7 +143,7 @@ namespace Crowny
         result->SetUVs(0, uvs);
         result->SetIndices(indices);
 
-        SetOutputValue<Ref<MeshData>>("Geometry", result, evaluator);
+        SetOutputValue<Ref<MeshData>>(geometryPin, result, evaluator);
     }
 
     // ---- NoiseDisplaceNode ----
@@ -153,17 +160,23 @@ namespace Crowny
 
     void NoiseDisplaceNode::Evaluate(NodeGraphEvaluator& evaluator)
     {
-        Ref<MeshData> input = GetInputValue<Ref<MeshData>>("Geometry", evaluator);
+        static const StringID geometryPin("Geometry");
+        static const StringID strengthPin("Strength");
+        static const StringID frequencyPin("Frequency");
+        static const StringID octavesPin("Octaves");
+        static const StringID seedPin("Seed");
+
+        Ref<MeshData> input = GetInputValue<Ref<MeshData>>(geometryPin, evaluator);
         if (!input)
         {
-            SetOutputValue<Ref<MeshData>>("Geometry", nullptr, evaluator);
+            SetOutputValue<Ref<MeshData>>(geometryPin, nullptr, evaluator);
             return;
         }
 
-        float strength = GetInputValue<float>("Strength", evaluator);
-        float frequency = GetInputValue<float>("Frequency", evaluator);
-        int32_t octaves = std::max(1, GetInputValue<int32_t>("Octaves", evaluator));
-        int32_t seed = GetInputValue<int32_t>("Seed", evaluator);
+        float strength = GetInputValue<float>(strengthPin, evaluator);
+        float frequency = GetInputValue<float>(frequencyPin, evaluator);
+        int32_t octaves = std::max(1, GetInputValue<int32_t>(octavesPin, evaluator));
+        int32_t seed = GetInputValue<int32_t>(seedPin, evaluator);
 
         NoiseOptions noiseOps;
         noiseOps.Octaves = octaves;
@@ -193,7 +206,7 @@ namespace Crowny
         result->SetUVs(0, input->GetUVs(0));
         result->SetIndices(input->GetIndices());
 
-        SetOutputValue<Ref<MeshData>>("Geometry", result, evaluator);
+        SetOutputValue<Ref<MeshData>>(geometryPin, result, evaluator);
     }
 
     // ---- RecalculateNormalsNode ----
@@ -206,10 +219,12 @@ namespace Crowny
 
     void RecalculateNormalsNode::Evaluate(NodeGraphEvaluator& evaluator)
     {
-        Ref<MeshData> input = GetInputValue<Ref<MeshData>>("Geometry", evaluator);
+        static const StringID geometryPin("Geometry");
+
+        Ref<MeshData> input = GetInputValue<Ref<MeshData>>(geometryPin, evaluator);
         if (!input)
         {
-            SetOutputValue<Ref<MeshData>>("Geometry", nullptr, evaluator);
+            SetOutputValue<Ref<MeshData>>(geometryPin, nullptr, evaluator);
             return;
         }
 
@@ -254,7 +269,7 @@ namespace Crowny
         result->SetUVs(0, input->GetUVs(0));
         result->SetIndices(indices);
 
-        SetOutputValue<Ref<MeshData>>("Geometry", result, evaluator);
+        SetOutputValue<Ref<MeshData>>(geometryPin, result, evaluator);
     }
 
     // ---- SubdivideNode ----
@@ -269,19 +284,23 @@ namespace Crowny
 
     void SubdivideNode::Evaluate(NodeGraphEvaluator& evaluator)
     {
-        Ref<MeshData> input = GetInputValue<Ref<MeshData>>("Geometry", evaluator);
+        static const StringID geometryPin("Geometry");
+        static const StringID iterationsPin("Iterations");
+        static const StringID smoothPin("Smooth");
+
+        Ref<MeshData> input = GetInputValue<Ref<MeshData>>(geometryPin, evaluator);
         if (!input)
         {
-            SetOutputValue<Ref<MeshData>>("Geometry", nullptr, evaluator);
+            SetOutputValue<Ref<MeshData>>(geometryPin, nullptr, evaluator);
             return;
         }
 
-        int iterations = GetInputValue<int>("Iterations", evaluator);
-        bool smooth = GetInputValue<bool>("Smooth", evaluator);
+        int iterations = GetInputValue<int>(iterationsPin, evaluator);
+        bool smooth = GetInputValue<bool>(smoothPin, evaluator);
 
         if (iterations <= 0)
         {
-            SetOutputValue<Ref<MeshData>>("Geometry", input, evaluator);
+            SetOutputValue<Ref<MeshData>>(geometryPin, input, evaluator);
             return;
         }
 
@@ -403,7 +422,7 @@ namespace Crowny
             current->SetIndices(newIndices);
         }
 
-        SetOutputValue<Ref<MeshData>>("Geometry", current, evaluator);
+        SetOutputValue<Ref<MeshData>>(geometryPin, current, evaluator);
     }
 
 } // namespace Crowny

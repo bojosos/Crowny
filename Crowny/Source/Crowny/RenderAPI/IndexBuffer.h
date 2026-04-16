@@ -6,6 +6,14 @@
 namespace Crowny
 {
 
+    struct IndexBufferDesc
+    {
+        uint32_t    Count = 0;
+        IndexType   Type  = IndexType::Index_32;
+        BufferUsage Usage = BufferUsage::BU_STATIC_DRAW;
+        const void* Data  = nullptr; // null = allocate empty buffer
+    };
+
     class IndexBuffer : public GpuBuffer
     {
     public:
@@ -19,9 +27,6 @@ namespace Crowny
         virtual IndexType GetIndexType() const = 0;
         virtual uint32_t GetBufferSize() const = 0;
 
-        // TODO: make this take size, not count
-        static Ref<IndexBuffer> Create(uint32_t count, IndexType indexType = IndexType::Index_32, BufferUsage usage = BufferUsage::BU_STATIC_DRAW);
-        static Ref<IndexBuffer> Create(uint16_t* indices, uint32_t count, BufferUsage usage = BufferUsage::BU_STATIC_DRAW);
-        static Ref<IndexBuffer> Create(uint32_t* indices, uint32_t count, BufferUsage usage = BufferUsage::BU_STATIC_DRAW);
+        static Ref<IndexBuffer> Create(const IndexBufferDesc& desc);
     };
 } // namespace Crowny

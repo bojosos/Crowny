@@ -8,16 +8,13 @@ namespace Crowny
     class VirtualFileSystem : public Module<VirtualFileSystem>
     {
     public:
-        /**
-         * @brief Mounts a directory. Virtual path must start with "/"
-         *
-         * @param virtualPath Virtual path
-         * @param physicalPath Physical path.
-         */
         void Mount(const String& virtualPath, const String& physicalPath);
         void Unmount(const String& path);
 
-        bool ResolvePhyiscalPath(const String& path, String& outPath);
+        bool Exists(const String& path);
+        uint64_t GetSize(const String& path);
+
+        bool ResolvePhyiscalPath(const String& path, String& outPath, bool forWrite = false);
         std::tuple<byte*, uint64_t> ReadFile(const String& path);
         String ReadTextFile(const String& path);
 

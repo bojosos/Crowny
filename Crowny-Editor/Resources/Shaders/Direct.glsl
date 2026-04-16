@@ -8,7 +8,7 @@ layout (location = 3) in vec3 cw_Bitangent;
 layout (location = 4) in vec2 cw_TexCoord0;
 layout (location = 5) in vec4 cw_Color;
 
-layout (binding = 0) uniform MVP
+layout (binding = 0) uniform cw_MVP
 {
     mat4 viewProjection;
     mat4 model;

@@ -10,22 +10,22 @@
 namespace Crowny
 {
 
-    Ref<spdlog::logger> Log::s_EngineLogger = nullptr;
-    Ref<spdlog::logger> Log::s_ClientLogger = nullptr;
+    std::shared_ptr<spdlog::logger> Log::s_EngineLogger = nullptr;
+    std::shared_ptr<spdlog::logger> Log::s_ClientLogger = nullptr;
     Vector<spdlog::sink_ptr> Log::s_LogSinks = {};
 
     void Log::Init(const String& clientLoggerName)
     {
         if (s_EngineLogger != nullptr)
             return;
-        s_LogSinks.emplace_back(CreateRef<spdlog::sinks::stdout_color_sink_mt>());
-        s_LogSinks.emplace_back(CreateRef<spdlog::sinks::basic_file_sink_mt>(clientLoggerName + ".log", true));
-        s_LogSinks.emplace_back(CreateRef<ImGuiConsoleSink_mt>(true));
+        s_LogSinks.emplace_back(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
+        s_LogSinks.emplace_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>(clientLoggerName + ".log", true));
+        s_LogSinks.emplace_back(std::make_shared<ImGuiConsoleSink_mt>(true));
 
         s_LogSinks[0]->set_pattern("%^[%T] %n: %v%$");
         s_LogSinks[1]->set_pattern("[%T] [%l] %n: %v");
         s_LogSinks[2]->set_pattern("%v");
-        s_EngineLogger = CreateRef<spdlog::logger>("CROWNY", std::begin(s_LogSinks), std::end(s_LogSinks));
+        s_EngineLogger = std::make_shared<spdlog::logger>("CROWNY", std::begin(s_LogSinks), std::end(s_LogSinks));
         try
         {
             spdlog::register_logger(s_EngineLogger);
@@ -37,7 +37,7 @@ namespace Crowny
         s_EngineLogger->set_level(spdlog::level::trace);
         s_EngineLogger->flush_on(spdlog::level::trace);
 
-        s_ClientLogger = CreateRef<spdlog::logger>("APP", std::begin(s_LogSinks), std::end(s_LogSinks));
+        s_ClientLogger = std::make_shared<spdlog::logger>("APP", std::begin(s_LogSinks), std::end(s_LogSinks));
         try
         {
             spdlog::register_logger(s_ClientLogger);
@@ -53,7 +53,7 @@ namespace Crowny
     void Log::RenameClientLogger(const StringView loggerName)
     {
         CW_ENGINE_ASSERT(s_ClientLogger != nullptr);
-        s_ClientLogger = CreateRef<spdlog::logger>("CLIENT", std::cbegin(s_LogSinks), std::cend(s_LogSinks));
+        s_ClientLogger = std::make_shared<spdlog::logger>("CLIENT", std::cbegin(s_LogSinks), std::cend(s_LogSinks));
         spdlog::drop(s_ClientLogger->name());
         spdlog::register_logger(s_ClientLogger);
         s_ClientLogger->set_level(spdlog::level::trace);

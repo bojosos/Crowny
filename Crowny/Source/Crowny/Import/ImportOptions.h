@@ -20,7 +20,7 @@ namespace Crowny
         Scene
     };
 
-    class ImportOptions
+    class ImportOptions : public RefCounted
     {
     public:
         ImportOptions() = default;
@@ -183,6 +183,13 @@ namespace Crowny
         Count
     };
 
+    struct ExtraAnimationClipInfo
+    {
+        String Name;
+        uint32_t StartFrame = 0;
+        uint32_t EndFrame = 0;
+    };
+
     class MeshImportOptions : public ImportOptions
     {
     public:
@@ -196,6 +203,11 @@ namespace Crowny
         NormalsImportMode NormalsMode = NormalsImportMode::Import;
         NormalsImportMode TangentsMode = NormalsImportMode::Import;
         MeshIndexFormat IndexFormat = MeshIndexFormat::Auto;
+        bool ImportAnimations = false;
+        bool ImportMorphMeshes = false;
+        bool ImportBones = false;
+        bool ImportRootMotion = false;
+        Vector<ExtraAnimationClipInfo> AnimationInfo;
 
         virtual ImportOptionsType GetImportOptionsType() const override { return ImportOptionsType::Mesh; }
 

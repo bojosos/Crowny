@@ -14,7 +14,7 @@ namespace Crowny
         Count
     };
 
-    struct PlatformInfo
+    struct PlatformInfo : public RefCounted
     {
         PlatformType Type;
         String Defines;

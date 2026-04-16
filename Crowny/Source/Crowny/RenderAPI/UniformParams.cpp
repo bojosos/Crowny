@@ -154,7 +154,7 @@ namespace Crowny
 
     Ref<UniformParams> UniformParams::Create(const Ref<GraphicsPipeline>& pipeline)
     {
-        return CreateRef<VulkanUniformParams>(pipeline->GetParamInfo());
+        return Ref<UniformParams>(new VulkanUniformParams(pipeline->GetParamInfo()));
     }
 
 } // namespace Crowny

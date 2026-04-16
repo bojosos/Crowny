@@ -29,9 +29,9 @@ namespace Crowny
 
     bool Importer::SupportsFileType(const String& ext) const
     {
-        for (auto iter = m_Importers.begin(); iter != m_Importers.end(); iter++)
+        for (auto* importer : m_Importers)
         {
-            if (*iter != nullptr && (*iter)->IsExtensionSupported(ext))
+            if (importer && importer->IsExtensionSupported(ext))
                 return true;
         }
 
@@ -40,9 +40,9 @@ namespace Crowny
 
     bool Importer::SupportsFileType(uint8_t* magic, uint32_t numSize) const
     {
-        for (auto iter = m_Importers.begin(); iter != m_Importers.end(); iter++)
+        for (auto* importer : m_Importers)
         {
-            if (*iter != nullptr && (*iter)->IsMagicNumSupported(magic, numSize))
+            if (importer && importer->IsMagicNumSupported(magic, numSize))
                 return true;
         }
 

@@ -1,7 +1,7 @@
 project "Crowny-Editor"
 	kind "ConsoleApp"
 	language "C++"
-	cppdialect "C++17"
+	cppdialect "C++20"
 	staticruntime "off"
 
 	targetdir ("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
@@ -29,7 +29,6 @@ project "Crowny-Editor"
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.entt}",
 		"%{IncludeDir.assimp}",
-		"%{IncludeDir.mono}",
 	   	"%{IncludeDir.vulkan}",
 		"%{IncludeDir.ImGuizmo}",
     	"%{IncludeDir.openal}",

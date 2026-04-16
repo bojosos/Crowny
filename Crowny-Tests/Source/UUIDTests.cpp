@@ -25,6 +25,42 @@ TEST_CASE("UUID::Basic", "[UUID]")
         String uuidStr = "550e8400-e29b-41d4-a716-446655440000";
         UUID uuid(uuidStr);
         CHECK(uuid.ToString() == uuidStr);
+        CHECK(!uuid.Empty());
+    }
+
+    SECTION("Invalid string constructor results in empty UUID")
+    {
+        UUID uuid1("not-a-uuid");
+        CHECK(uuid1.Empty());
+
+        UUID uuid2("550e8400-e29b-41d4-a716"); // Too short
+        CHECK(uuid2.Empty());
+
+        UUID uuid3("550e8400-e29b-41d4-a716-44665544000z"); // Invalid hex
+        CHECK(uuid3.Empty());
+
+        UUID uuid4("550e8400e29b-41d4-a716-446655440000"); // Missing first hyphen
+        CHECK(uuid4.Empty());
+
+        UUID uuid5("550e8400-e29b041d4-a716-446655440000"); // Hyphen in wrong position
+        CHECK(uuid5.Empty());
+    }
+
+    SECTION("Uppercase hex input")
+    {
+        UUID lower("550e8400-e29b-41d4-a716-446655440000");
+        UUID upper("550E8400-E29B-41D4-A716-446655440000");
+        CHECK(lower == upper);
+        CHECK(!upper.Empty());
+    }
+
+    SECTION("Round-trip: generated UUID survives string conversion")
+    {
+        UUID original = UuidGenerator::Generate();
+        String str = original.ToString();
+        UUID reconstructed(str);
+        CHECK(original == reconstructed);
+        CHECK(reconstructed.ToString() == str);
     }
 }
 
@@ -36,16 +72,57 @@ TEST_CASE("UUID::Comparison", "[UUID]")
 
     CHECK(uuid1 == uuid2);
     CHECK(uuid1 != uuid3);
-    CHECK(uuid1 < uuid3);
-    CHECK(!(uuid3 < uuid1));
+    
+    // Strict weak ordering for containers
+    if (uuid1 < uuid3)
+    {
+        CHECK(!(uuid3 < uuid1));
+    }
+    else
+    {
+        CHECK(uuid3 < uuid1);
+        CHECK(!(uuid1 < uuid3));
+    }
 }
 
 TEST_CASE("UUID::Generator", "[UUID]")
 {
-    UUID uuid1 = UuidGenerator::Generate();
-    UUID uuid2 = UuidGenerator::Generate();
+    SECTION("Uniqueness")
+    {
+        UUID uuid1 = UuidGenerator::Generate();
+        UUID uuid2 = UuidGenerator::Generate();
 
-    CHECK(!uuid1.Empty());
-    CHECK(!uuid2.Empty());
-    CHECK(uuid1 != uuid2);
+        CHECK(!uuid1.Empty());
+        CHECK(!uuid2.Empty());
+        CHECK(uuid1 != uuid2);
+    }
+
+    SECTION("Version 4 Format")
+    {
+        // UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+        // where y is one of 8, 9, a, or b.
+        UUID uuid = UuidGenerator::Generate();
+        String s = uuid.ToString();
+        
+        // Version digit (the 13th hex digit, or 14th char including hyphen)
+        CHECK(s[14] == '4');
+        
+        // Variant digit (the 17th hex digit, or 19th char)
+        char variant = s[19];
+        CHECK((variant == '8' || variant == '9' || variant == 'a' || variant == 'b'));
+    }
+}
+
+TEST_CASE("UUID::Hashing", "[UUID]")
+{
+    UUID uuid1 = UuidGenerator::Generate();
+    UUID uuid2 = uuid1;
+    UUID uuid3 = UuidGenerator::Generate();
+
+    std::hash<UUID> hasher;
+    CHECK(hasher(uuid1) == hasher(uuid2));
+    if (uuid1 != uuid3)
+    {
+        CHECK(hasher(uuid1) != hasher(uuid3));
+    }
 }

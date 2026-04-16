@@ -4,7 +4,7 @@
 
 layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
 layout(binding = 1, set = 0, rgba8) uniform image2D image;
-layout(binding = 2, set = 0) uniform CameraProperties 
+layout(binding = 2, set = 0) uniform cw_CameraProperties
 {
 	mat4 viewInverse;
 	mat4 projInverse;

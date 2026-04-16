@@ -227,7 +227,7 @@ namespace Crowny
         {
         // case RenderAPI::API::OpenGL: return CreateRef<OpenGLShader>(m_Filepath);
         case RenderAPI::API::Vulkan:
-            return CreateRef<VulkanUniformParamInfo>(desc);
+            return Ref<UniformParamInfo>(new VulkanUniformParamInfo(desc));
         default:
             CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;

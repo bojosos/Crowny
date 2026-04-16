@@ -11,7 +11,7 @@ layout (location = 3) in vec3 cw_Bitangent;
 layout (location = 4) in vec2 cw_TexCoord0;
 layout (location = 5) in vec4 cw_Color;
 
-layout (binding = 0) uniform MVP
+layout (binding = 0) uniform cw_MVP
 {
     mat4 viewProjection;
     mat4 model;
@@ -19,7 +19,9 @@ layout (binding = 0) uniform MVP
 
 layout (binding = 1) uniform OutlineParams
 {
+    // @color @name("Outline Color") @default(0.0, 0.0, 0.0, 1.0)
     vec4 outlineColor;
+    // @range(0.0, 5.0) @name("Thickness") @default(1.0)
     float thickness;
 } outline;
 
@@ -42,7 +44,9 @@ void main()
 
 layout (binding = 1) uniform OutlineParams
 {
+    // @color @name("Outline Color") @default(0.0, 0.0, 0.0, 1.0)
     vec4 outlineColor;
+    // @range(0.0, 5.0) @name("Thickness") @default(1.0)
     float thickness;
 } outline;
 
@@ -66,7 +70,7 @@ layout (location = 3) in vec3 cw_Bitangent;
 layout (location = 4) in vec2 cw_TexCoord0;
 layout (location = 5) in vec4 cw_Color;
 
-layout (binding = 0) uniform MVP
+layout (binding = 0) uniform cw_MVP
 {
     mat4 viewProjection;
     mat4 model;
@@ -101,7 +105,7 @@ layout(location = 0) in DATA
     vec4 color;
 } fs_in;
 
-layout (binding = 2) uniform SceneParams {
+layout (binding = 2) uniform cw_SceneParams {
     vec4 lightDir;
     vec3 camPos;
     float gamma;
@@ -109,15 +113,23 @@ layout (binding = 2) uniform SceneParams {
 } scene;
 
 layout (binding = 3) uniform ToonParams {
+    // @color @name("Tint") @default(1.0, 1.0, 1.0, 1.0)
     vec4 tint;
+    // @range(1.0, 10.0) @name("Bands") @default(4.0)
     float bands;
+    // @range(0.0, 1.0) @name("Specular Size") @default(0.5)
     float specularSize;
+    // @range(0.0, 2.0) @name("Specular Smoothness") @default(1.0)
     float specularSmoothness;
+    // @range(0.1, 10.0) @name("Rim Power") @default(4.0)
     float rimPower;
+    // @range(0.0, 1.0) @name("Rim Threshold") @default(0.1)
     float rimThreshold;
+    // @range(0.0, 1.0) @name("Shadow Brightness") @default(0.2)
     float shadowBrightness;
 } toon;
 
+// @name("Albedo Map") @default(white)
 layout (binding = 4) uniform sampler2D albedoMap;
 
 layout (location = 0) out vec4 outColor;

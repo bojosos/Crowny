@@ -188,7 +188,7 @@ namespace Crowny
             if (value != nullptr)
                 fieldData->Value = SerializableObject::CreateFromMonoObject(value);
             else if (!allowNull)
-                fieldData->Value = SerializableObject::CreateNew(std::static_pointer_cast<SerializableTypeInfoObject>(typeInfo));
+                fieldData->Value = SerializableObject::CreateNew(StaticRefCast<SerializableTypeInfoObject>(typeInfo));
             return fieldData;
         }
         else if (typeInfo->GetType() == SerializableType::Asset)

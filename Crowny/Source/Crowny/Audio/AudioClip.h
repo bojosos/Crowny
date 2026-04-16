@@ -66,6 +66,8 @@ namespace Crowny
         AudioClip(const Ref<DataStream>& stream, uint32_t streamSize, uint32_t numSamples, const AudioClipDesc& desc);
         ~AudioClip();
 
+        static Ref<AudioClip> Create(const Ref<DataStream>& stream, uint32_t streamSize, uint32_t numSamples, const AudioClipDesc& desc);
+
         virtual void Init() override;
 
         virtual AssetType GetAssetType() const override { return AssetType::AudioClip; }

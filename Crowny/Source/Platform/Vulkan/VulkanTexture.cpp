@@ -13,7 +13,7 @@
 namespace Crowny
 {
 
-    VulkanImageDesc CreateDesc(VkImage image, VmaAllocation allocation, VkImageLayout layout, VkFormat actualFormat, const TextureParameters& params)
+    VulkanImageDesc CreateDesc(VkImage image, VmaAllocation allocation, VkImageLayout layout, VkFormat actualFormat, const TextureDesc& params)
     {
         VulkanImageDesc desc;
         desc.Image = image;
@@ -29,7 +29,7 @@ namespace Crowny
     }
 
     VulkanImage::VulkanImage(VulkanResourceManager* owner, VkImage image, VmaAllocation allocation, VkImageLayout layout, VkFormat format,
-                             const TextureParameters& params, bool ownsImage)
+                             const TextureDesc& params, bool ownsImage)
       : VulkanImage(owner, CreateDesc(image, allocation, layout, format, params), ownsImage)
     {
     }
@@ -544,7 +544,7 @@ namespace Crowny
     {
     }
 
-    VulkanTexture::VulkanTexture(const TextureParameters& params)
+    VulkanTexture::VulkanTexture(const TextureDesc& params)
       : Texture(params), m_Image(nullptr), m_InternalFormat(), m_StagingBuffer(nullptr), m_MappedGlobalQueueIdx((uint32_t)-1), m_MappedMip(0),
         m_MappedFace(0), m_MappedRowPitch(0), m_MappedSlicePitch(0), m_MappedLockOptions(GpuLockOptions::WRITE_ONLY), m_DirectlyMappable(false),
         m_SupportsGpuWrites(false), m_IsMapped(false), m_ImageCreateInfo()
@@ -552,7 +552,7 @@ namespace Crowny
         Init();
     }
 
-    VulkanTexture::VulkanTexture(const TextureParameters& params, bool deferred)
+    VulkanTexture::VulkanTexture(const TextureDesc& params, bool deferred)
       : Texture(params, true), m_Image(nullptr), m_InternalFormat(), m_StagingBuffer(nullptr), m_MappedGlobalQueueIdx((uint32_t)-1), m_MappedMip(0),
         m_MappedFace(0), m_MappedRowPitch(0), m_MappedSlicePitch(0), m_MappedLockOptions(GpuLockOptions::WRITE_ONLY), m_DirectlyMappable(false),
         m_SupportsGpuWrites(false), m_IsMapped(false), m_ImageCreateInfo()
@@ -568,7 +568,7 @@ namespace Crowny
         m_ImageCreateInfo.pNext = nullptr;
         m_ImageCreateInfo.flags = 0;
 
-        switch (m_Params.Shape)
+        switch (m_Desc.Shape)
         {
         case TextureShape::TEXTURE_1D:
             m_ImageCreateInfo.imageType = VK_IMAGE_TYPE_1D;
@@ -586,7 +586,7 @@ namespace Crowny
         }
         m_ImageCreateInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-        int32_t usage = (int32_t)m_Params.Usage;
+        int32_t usage = (int32_t)m_Desc.Usage;
         if ((usage & TEXTURE_RENDERTARGET) != 0)
         {
             m_ImageCreateInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -609,7 +609,7 @@ namespace Crowny
 
         if ((usage & TEXTURE_DYNAMIC) != 0)
         {
-            if (m_Params.Shape == TextureShape::TEXTURE_2D && m_Params.Samples <= 1 && m_Params.MipLevels == 0 && m_Params.Faces == 1 &&
+            if (m_Desc.Shape == TextureShape::TEXTURE_2D && m_Desc.Samples <= 1 && m_Desc.MipLevels == 0 && m_Desc.Faces == 1 &&
                 (m_ImageCreateInfo.usage & VK_IMAGE_USAGE_SAMPLED_BIT) != 0)
             {
                 if (!m_SupportsGpuWrites)
@@ -621,14 +621,14 @@ namespace Crowny
             }
         }
 
-        const uint32_t width = std::max(m_Params.Width, 1U);
-        const uint32_t height = std::max(m_Params.Height, 1U);
-        const uint32_t depth = std::max(m_Params.Depth, 1U);
+        const uint32_t width = std::max(m_Desc.Width, 1U);
+        const uint32_t height = std::max(m_Desc.Height, 1U);
+        const uint32_t depth = std::max(m_Desc.Depth, 1U);
 
         m_ImageCreateInfo.extent = { width, height, depth };
-        m_ImageCreateInfo.mipLevels = m_Params.MipLevels + 1;
-        m_ImageCreateInfo.arrayLayers = m_Params.Faces;
-        m_ImageCreateInfo.samples = VulkanUtils::GetSampleFlags(m_Params.Samples);
+        m_ImageCreateInfo.mipLevels = m_Desc.MipLevels + 1;
+        m_ImageCreateInfo.arrayLayers = m_Desc.Faces;
+        m_ImageCreateInfo.samples = VulkanUtils::GetSampleFlags(m_Desc.Samples);
         m_ImageCreateInfo.tiling = tiling;
         m_ImageCreateInfo.initialLayout = layout;
         m_ImageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -638,7 +638,7 @@ namespace Crowny
         VulkanDevice& device = *gVulkanRenderAPI().GetPresentDevice().get();
 
         const bool optimalTiling = tiling == VK_IMAGE_TILING_OPTIMAL;
-        m_InternalFormat = VulkanUtils::GetClosestSupportedTextureFormat(device, m_Params.Format, m_Params.Shape, m_Params.Usage, optimalTiling);
+        m_InternalFormat = VulkanUtils::GetClosestSupportedTextureFormat(device, m_Desc.Format, m_Desc.Shape, m_Desc.Usage, optimalTiling);
         m_Image = CreateImage(device, m_InternalFormat);
 
         // Upload pending pixel data from deferred import
@@ -674,17 +674,16 @@ namespace Crowny
         nameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
         nameInfo.objectType = VK_OBJECT_TYPE_IMAGE;
         nameInfo.objectHandle = (uint64_t)image;
-        nameInfo.pObjectName = m_Params.DebugName.c_str();
+        nameInfo.pObjectName = m_Desc.DebugName.c_str();
         // vkSetDebugUtilsObjectNameEXT(device.GetLogicalDevice(), &nameInfo);
-        // CW_ENGINE_INFO("Image: {}, {}", (void*)image, m_Params.DebugName);
-        VmaAllocation allocation = device.AllocateMemory(image, memoryFlags, m_Params.DebugName.c_str());
+        // CW_ENGINE_INFO("Image: {}, {}", (void*)image, m_Desc.DebugName);
+        VmaAllocation allocation = device.AllocateMemory(image, memoryFlags, m_Desc.DebugName.c_str());
         return device.GetResourceManager().Create<VulkanImage>(image, allocation, m_ImageCreateInfo.initialLayout, m_ImageCreateInfo.format,
-                                                               m_Params);
+                                                               m_Desc);
     }
 
     VulkanBuffer* VulkanTexture::CreateStagingBuffer(VulkanDevice& device, const PixelData& data, bool readable)
     {
-        uint32_t blockSize = PixelUtils::GetBlockSize(data.GetFormat());
         VkBufferCreateInfo bufferCreateInfo;
         bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferCreateInfo.pNext = nullptr;
@@ -704,9 +703,26 @@ namespace Crowny
         VkMemoryPropertyFlags flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
         VmaAllocation allocation = device.AllocateMemory(buffer, flags, "Texture/Staging");
 
+        // bufferRowLength and bufferImageHeight are in texels (not bytes, not blocks).
+        // For uncompressed: blockDims=(1,1), so rowPitchInPixels = rowPitch/blockSize = width.
+        // For BC formats: blockDims=(4,4), blockSize=8 or 16. rowPitch is in bytes-of-blocks,
+        // so (rowPitch/blockSize) gives widthInBlocks; multiply by 4 to get widthInTexels.
+        // bufferImageHeight likewise must be heightInTexels = heightInBlocks * blockDims.y.
+        // TODO: CPU-side encode/decode of compressed formats in ConvertPixels.
+        const uint32_t blockSize = PixelUtils::GetBlockSize(data.GetFormat());
+
+        CW_ENGINE_ASSERT(data.GetRowPitch() % blockSize == 0);
+        CW_ENGINE_ASSERT(data.GetSlicePitch() % blockSize == 0);
+
         uint32_t rowPitchInPixels = data.GetRowPitch() / blockSize;
         uint32_t slicePitchInPixels = data.GetSlicePitch() / blockSize;
-        // TODO: Texture compression.
+
+        if (PixelUtils::IsCompressedFormat(data.GetFormat()))
+        {
+            const glm::ivec2 blockDim = PixelUtils::GetBlockDimensions(data.GetFormat());
+            rowPitchInPixels *= blockDim.x;
+            slicePitchInPixels *= blockDim.x * blockDim.y;
+        }
 
         return device.GetResourceManager().Create<VulkanBuffer>(buffer, allocation, rowPitchInPixels, slicePitchInPixels);
     }
@@ -714,12 +730,12 @@ namespace Crowny
     void VulkanTexture::CopyImage(VulkanTransferBuffer* cb, VulkanImage* srcImage, VulkanImage* dstImage, VkImageLayout srcFinalLayout,
                                   VkImageLayout dstFinalLayout)
     {
-        uint32_t numFaces = m_Params.Faces;
-        uint32_t numMips = m_Params.MipLevels;
+        uint32_t numFaces = m_Desc.Faces;
+        uint32_t numMips = m_Desc.MipLevels;
 
-        uint32_t mipWidth = m_Params.Width;
-        uint32_t mipHeight = m_Params.Height;
-        uint32_t mipDepth = m_Params.Depth;
+        uint32_t mipWidth = m_Desc.Width;
+        uint32_t mipHeight = m_Desc.Height;
+        uint32_t mipDepth = m_Desc.Depth;
 
         VkImageCopy* imageRegions = new VkImageCopy[numMips];
         for (uint32_t i = 0; i < numMips; i++)
@@ -784,15 +800,15 @@ namespace Crowny
     PixelData VulkanTexture::Lock(GpuLockOptions options, uint32_t mipLevel, uint32_t face, uint32_t queueIdx)
     {
 
-        if (m_Params.Samples > 1)
+        if (m_Desc.Samples > 1)
         {
             CW_ENGINE_ERROR("Multisampled textures cannot be accessed directly.");
             return PixelData();
         }
 
-        uint32_t mipWidth = std::max(1U, m_Params.Width >> mipLevel);
-        uint32_t mipHeight = std::max(1U, m_Params.Height >> mipLevel);
-        uint32_t mipDepth = std::max(1U, m_Params.Depth >> mipLevel);
+        uint32_t mipWidth = std::max(1U, m_Desc.Width >> mipLevel);
+        uint32_t mipHeight = std::max(1U, m_Desc.Height >> mipLevel);
+        uint32_t mipDepth = std::max(1U, m_Desc.Depth >> mipLevel);
 
         m_IsMapped = true;
         m_MappedGlobalQueueIdx = queueIdx;
@@ -902,7 +918,7 @@ namespace Crowny
             range.levelCount = 1;
 
             VkImageSubresourceLayers rangeLayers;
-            if ((m_Params.Usage & TEXTURE_DEPTHSTENCIL) != 0)
+            if ((m_Desc.Usage & TEXTURE_DEPTHSTENCIL) != 0)
                 rangeLayers.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
             else
                 rangeLayers.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -912,7 +928,7 @@ namespace Crowny
             rangeLayers.mipLevel = range.baseMipLevel;
 
             VkExtent3D extent;
-            PixelUtils::GetMipSizeForLevel(m_Params.Width, m_Params.Height, m_Params.Depth, m_MappedMip, extent.width, extent.height, extent.depth);
+            PixelUtils::GetMipSizeForLevel(m_Desc.Width, m_Desc.Height, m_Desc.Depth, m_MappedMip, extent.width, extent.height, extent.depth);
 
             VkAccessFlags currentAccessMask = m_Image->GetAccessFlags(subresource->GetLayout());
             transferCB->SetLayout(m_Image->GetHandle(), currentAccessMask, VK_ACCESS_TRANSFER_READ_BIT, subresource->GetLayout(),
@@ -995,7 +1011,7 @@ namespace Crowny
                     if (isBoundWithoutUse)
                     {
                         VulkanImage* newImage = CreateImage(device, m_InternalFormat);
-                        if (m_Params.MipLevels > 0 || m_Params.Faces > 1)
+                        if (m_Desc.MipLevels > 0 || m_Desc.Faces > 1)
                         {
                             VkImageLayout oldImageLayout = image->GetOptimalLayout();
                             curLayout = newImage->GetOptimalLayout();
@@ -1022,7 +1038,7 @@ namespace Crowny
                 rangeLayers.mipLevel = range.baseMipLevel;
 
                 VkExtent3D extent;
-                PixelUtils::GetMipSizeForLevel(m_Params.Width, m_Params.Height, m_Params.Depth, m_MappedMip, extent.width, extent.height,
+                PixelUtils::GetMipSizeForLevel(m_Desc.Width, m_Desc.Height, m_Desc.Depth, m_MappedMip, extent.width, extent.height,
                                                extent.depth);
 
                 VkImageLayout transferLayout;
@@ -1060,15 +1076,15 @@ namespace Crowny
     {
         if (src.GetSize() == 0)
             return;
-        if (m_Params.Samples > 1)
+        if (m_Desc.Samples > 1)
         {
             CW_ENGINE_ERROR("Multisampled texture cannot be written directly!");
             return;
         }
 
-        mipLevel = glm::clamp(mipLevel, (uint32_t)mipLevel, m_Params.MipLevels);
-        face = glm::clamp(face, (uint32_t)0, m_Params.Faces - 1);
-        if (face > 0 && m_Params.Shape == TextureShape::TEXTURE_3D)
+        mipLevel = glm::clamp(mipLevel, (uint32_t)mipLevel, m_Desc.MipLevels);
+        face = glm::clamp(face, (uint32_t)0, m_Desc.Faces - 1);
+        if (face > 0 && m_Desc.Shape == TextureShape::TEXTURE_3D)
         {
             CW_ENGINE_ERROR("3D array not supported.");
             return;

@@ -8,34 +8,24 @@
 namespace Crowny
 {
 
-    Ref<VertexBuffer> VertexBuffer::Create(uint32_t size, BufferUsage usage)
+    Ref<VertexBuffer> VertexBuffer::Create(const VertexBufferDesc& desc)
     {
         switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::OpenGL:
-            return CreateRef<OpenGLVertexBuffer>(size, usage);
+            if (desc.Data)
+                return Ref<VertexBuffer>(new OpenGLVertexBuffer(const_cast<void*>(desc.Data), desc.Size, desc.Usage));
+            else
+                return Ref<VertexBuffer>(new OpenGLVertexBuffer(desc.Size, desc.Usage));
         case RenderAPI::API::Vulkan:
-            return CreateRef<VulkanVertexBuffer>(size, usage);
+            if (desc.Data)
+                return Ref<VertexBuffer>(new VulkanVertexBuffer(const_cast<void*>(desc.Data), desc.Size, desc.Usage));
+            else
+                return Ref<VertexBuffer>(new VulkanVertexBuffer(desc.Size, desc.Usage));
         default:
             CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
         }
-        return nullptr;
-    }
-
-    Ref<VertexBuffer> VertexBuffer::Create(void* vertices, uint32_t size, BufferUsage usage)
-    {
-        switch (gRenderAPI->GetAPI())
-        {
-        case RenderAPI::API::OpenGL:
-            return CreateRef<OpenGLVertexBuffer>(vertices, size, usage);
-        case RenderAPI::API::Vulkan:
-            return CreateRef<VulkanVertexBuffer>(vertices, size, usage);
-        default:
-            CW_ENGINE_ASSERT(false, "Renderer API not supported");
-            return nullptr;
-        }
-        return nullptr;
     }
 
 } // namespace Crowny

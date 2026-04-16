@@ -30,7 +30,7 @@ namespace Crowny
         component.SetMaterial(0, m_MatHandle);
         component.MeshHandle = m_Mesh;
 
-        TextureParameters textureParams;
+        TextureDesc textureParams;
         textureParams.Width = width;
         textureParams.Height = height;
         textureParams.Format = TextureFormat::RGBA8;
@@ -38,8 +38,8 @@ namespace Crowny
         textureParams.DebugName = "Preview texture";
         Ref<Texture> texture = Texture::Create(textureParams);
 
-        RenderTextureProperties renderTextureParams;
-        renderTextureParams.ColorSurfaces[0] = { texture };
+        RenderTextureDesc renderTextureParams;
+        renderTextureParams.ColorSurfaces[0].Texture = texture;
         renderTextureParams.Width = width;
         renderTextureParams.Height = height;
         m_RenderTexture = RenderTexture::Create(renderTextureParams);
@@ -97,7 +97,7 @@ namespace Crowny
             component.MeshHandle = m_PreviewMesh;
         }
 
-        TextureParameters textureParams;
+        TextureDesc textureParams;
         textureParams.Width = width;
         textureParams.Height = height;
         textureParams.Format = TextureFormat::RGBA8;
@@ -105,8 +105,8 @@ namespace Crowny
         textureParams.DebugName = "Material preview texture";
         Ref<Texture> texture = Texture::Create(textureParams);
 
-        RenderTextureProperties renderTextureParams;
-        renderTextureParams.ColorSurfaces[0] = { texture };
+        RenderTextureDesc renderTextureParams;
+        renderTextureParams.ColorSurfaces[0].Texture = texture;
         renderTextureParams.Width = width;
         renderTextureParams.Height = height;
         m_RenderTexture = RenderTexture::Create(renderTextureParams);

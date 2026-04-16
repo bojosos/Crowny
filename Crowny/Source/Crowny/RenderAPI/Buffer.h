@@ -3,7 +3,9 @@
 #include "Crowny/Common/Assert.h"
 #include "Crowny/Common/Common.h"
 #include "Crowny/Common/Log.h"
+#include "Crowny/Common/RefCounted.h"
 #include "Crowny/Common/StdHeaders.h"
+#include "Crowny/Utils/SmallVector.h"
 
 namespace Crowny
 {
@@ -151,6 +153,7 @@ namespace Crowny
         uint32_t Offset;
         uint32_t StreamIdx;
         uint32_t InstanceRate;
+        uint32_t Location = UINT32_MAX; // SPIR-V location for shader inputs, UINT32_MAX if unset
         bool Normalized;
 
         BufferElement()
@@ -218,7 +221,7 @@ namespace Crowny
         CW_SIMPLESERIALIZABLE(BufferElement);
     };
 
-    class BufferLayout
+    class BufferLayout : public RefCounted
     {
     public:
         BufferLayout() : m_Id(s_NextFreeId++) {}
@@ -239,12 +242,12 @@ namespace Crowny
         }
 
         uint32_t GetStride() const { return m_Stride; }
-        const Vector<BufferElement>& GetElements() const { return m_Elements; }
+        const SmallVector<BufferElement, 8>& GetElements() const { return m_Elements; }
 
-        Vector<BufferElement>::iterator begin() { return m_Elements.begin(); }
-        Vector<BufferElement>::iterator end() { return m_Elements.end(); }
-        Vector<BufferElement>::const_iterator begin() const { return m_Elements.begin(); }
-        Vector<BufferElement>::const_iterator end() const { return m_Elements.end(); }
+        typename SmallVector<BufferElement, 8>::iterator begin() { return m_Elements.begin(); }
+        typename SmallVector<BufferElement, 8>::iterator end() { return m_Elements.end(); }
+        typename SmallVector<BufferElement, 8>::const_iterator begin() const { return m_Elements.begin(); }
+        typename SmallVector<BufferElement, 8>::const_iterator end() const { return m_Elements.end(); }
 
         uint32_t GetOffset(VertexAttribute attribute) const
         {
@@ -263,6 +266,53 @@ namespace Crowny
             }
             CW_ENGINE_ASSERT(false);
             return 0;
+        }
+
+        bool HasAttribute(VertexAttribute attribute) const
+        {
+            for (const auto& element : m_Elements)
+                if (element.Attribute == attribute)
+                    return true;
+            return false;
+        }
+
+        bool IsCompatible(const BufferLayout& shaderLayout) const
+        {
+            for (const auto& shaderElement : shaderLayout.m_Elements)
+            {
+                bool found = false;
+                for (const auto& meshElement : m_Elements)
+                {
+                    if (meshElement.Attribute == shaderElement.Attribute)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                    return false;
+            }
+            return true;
+        }
+
+        SmallVector<BufferElement, 8> GetMissingElements(const BufferLayout& shaderLayout) const
+        {
+            SmallVector<BufferElement, 8> missing;
+            for (const auto& shaderElement : shaderLayout.m_Elements)
+            {
+                bool found = false;
+                for (const auto& meshElement : m_Elements)
+                {
+                    if (meshElement.Attribute == shaderElement.Attribute)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                    missing.push_back(shaderElement);
+            }
+            return missing;
         }
 
         uint32_t GetId() const { return m_Id; }
@@ -284,7 +334,7 @@ namespace Crowny
     private:
         /* const */ uint32_t m_Id;
         static uint32_t s_NextFreeId; // TODO:
-        Vector<BufferElement> m_Elements;
+        SmallVector<BufferElement, 8> m_Elements;
         uint32_t m_Stride = 0;
     };
 

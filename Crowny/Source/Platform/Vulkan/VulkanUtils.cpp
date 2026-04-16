@@ -530,32 +530,34 @@ namespace Crowny
     void VulkanUtils::CutRange(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith,
                                std::array<VkImageSubresourceRange, 9>& output, uint32_t& numAreas)
     {
-        uint32_t horizontalNumAreas = 0;
-        VkImageSubresourceRange horizontalAreas[3];
-        CutHorizontal(toCut, cutWith, horizontalAreas, horizontalNumAreas);
-
         numAreas = 0;
-        for (uint32_t i = 0; i < horizontalNumAreas; i++)
-        {
-            VkImageSubresourceRange verticalAreas[3];
-            uint32_t verticalNumAreas = 0;
-            CutVertical(horizontalAreas[i], cutWith, verticalAreas, verticalNumAreas);
 
-            for (uint32_t j = 0; j < verticalNumAreas; j++)
+        // Cut horizontally
+        uint32_t numHorzCuts = 0;
+        VkImageSubresourceRange horzCuts[3];
+        CutHorizontal(toCut, cutWith, horzCuts, numHorzCuts);
+
+        // Cut vertically
+        for (uint32_t i = 0; i < numHorzCuts; i++)
+        {
+            VkImageSubresourceRange& range = horzCuts[i];
+
+            if (range.baseArrayLayer >= cutWith.baseArrayLayer &&
+                (range.baseArrayLayer + range.layerCount) <= (cutWith.baseArrayLayer + cutWith.layerCount))
             {
-                if (!RangeOverlaps(verticalAreas[j], cutWith))
-                {
-                    output[numAreas] = verticalAreas[j];
-                    numAreas++;
-                }
+                uint32_t numVertCuts = 0;
+                CutVertical(range, cutWith, output.data() + numAreas, numVertCuts);
+
+                numAreas += numVertCuts;
+            }
+            else
+            {
+                output[numAreas] = range;
+                numAreas++;
             }
         }
 
-        if (numAreas == 0 && !RangeOverlaps(toCut, cutWith))
-        {
-            output[numAreas] = toCut;
-            numAreas++;
-        }
+        CW_ENGINE_ASSERT(numAreas <= 5);
     }
 
     VkFormat VulkanUtils::GetDummyViewFormat(GpuBufferFormat format)

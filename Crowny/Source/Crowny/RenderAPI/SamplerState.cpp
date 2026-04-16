@@ -26,7 +26,7 @@ namespace Crowny
         // TODO: Add support for binary OpenGL shaders
         // case RenderAPI::API::OpenGL: return CreateRef<OpenGLShader>(m_Filepath);
         case RenderAPI::API::Vulkan:
-            return CreateRef<VulkanSamplerState>(desc);
+            return Ref<SamplerState>(new VulkanSamplerState(desc));
         default:
             CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;

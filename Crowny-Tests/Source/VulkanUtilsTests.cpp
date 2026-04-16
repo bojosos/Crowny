@@ -79,11 +79,23 @@ TEST_CASE("VulkanUtils::CutRange", "[VulkanUtils]")
     std::array<VkImageSubresourceRange, 9> output;
     uint32_t numAreas = 0;
 
-    SECTION("Center cut - now produces 8 fragments")
+    SECTION("Center cut - now produces 5 fragments")
     {
         VkImageSubresourceRange center = { VK_IMAGE_ASPECT_COLOR_BIT, 2, 4, 2, 4 };
         VulkanUtils::CutRange(toCut, center, output, numAreas);
-        REQUIRE(numAreas == 8);
+        REQUIRE(numAreas == 5);
+        
+        bool foundCenter = false;
+        for (uint32_t i = 0; i < numAreas; ++i)
+        {
+            if (output[i].baseMipLevel == 2 && output[i].levelCount == 4 &&
+                output[i].baseArrayLayer == 2 && output[i].layerCount == 4)
+            {
+                foundCenter = true;
+                break;
+            }
+        }
+        CHECK(foundCenter);
     }
 
     SECTION("No overlap")
@@ -102,6 +114,18 @@ TEST_CASE("VulkanUtils::CutRange", "[VulkanUtils]")
         VkImageSubresourceRange corner = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 5, 0, 5 };
         VulkanUtils::CutRange(toCut, corner, output, numAreas);
         REQUIRE(numAreas == 3);
+        
+        bool foundCorner = false;
+        for (uint32_t i = 0; i < numAreas; ++i)
+        {
+            if (output[i].baseMipLevel == 0 && output[i].levelCount == 5 &&
+                output[i].baseArrayLayer == 0 && output[i].layerCount == 5)
+            {
+                foundCorner = true;
+                break;
+            }
+        }
+        CHECK(foundCorner);
     }
 
     SECTION("Different aspects - should not cut")

@@ -2,14 +2,6 @@
 
 namespace Crowny
 {
-    class ShaderPass
-    {
-    };
-
-    class ShaderVariationDesc
-    {
-    };
-
     class ShaderDefines
     {
     public:
@@ -35,7 +27,7 @@ namespace Crowny
             };
             Specifier() : Type(SpecifierType::Int), I(0) {}
             Specifier(const String& name, int32_t value) : I(value), Name(name), Type(Int) {}
-            Specifier(const String& name, bool value) : I(value), Name(name), Type(Bool) {}
+            Specifier(const String& name, bool value) : I(value ? 1 : 0), Name(name), Type(Bool) {}
             Specifier(const String& name, float value) : F(value), Name(name), Type(Float) {}
             union {
                 int32_t I;
@@ -46,15 +38,26 @@ namespace Crowny
         };
 
         ShaderVariation() = default;
-        // ShaderVariation(const Vector<Specifier>& specifiers);
+        ShaderVariation(const Vector<Specifier>& specifiers);
+        ShaderVariation(std::initializer_list<Specifier> specifiers);
+
+        void Set(const String& name, int32_t value);
+        void Set(const String& name, float value);
+        void Set(const String& name, bool value);
+
+        int32_t GetInt(const String& name) const;
+        float GetFloat(const String& name) const;
+        bool GetBool(const String& name) const;
+        bool Has(const String& name) const;
 
         bool Matches(const ShaderVariation& other, bool exact = true) const;
         ShaderDefines GetDefines() const;
+        bool IsEmpty() const { return m_Parameters.empty(); }
+
+        static const ShaderVariation EMPTY;
 
     private:
         CW_SIMPLESERIALIZABLE(ShaderVariation);
-        // TODO: Replace with StringId
-        // Vector<ShaderVariation::Specifier> m_Parameters;
         UnorderedMap<String, Specifier> m_Parameters;
     };
 } // namespace Crowny

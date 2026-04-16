@@ -52,52 +52,6 @@ namespace Crowny
         return 0.0f;
     }
 
-    // ---- FloatNode ----
-
-    FloatNode::FloatNode(UUID id) : Node(id, "FloatNode")
-    {
-        AddInput("Value", PinDataType::Float, 0.0f);
-        AddOutput("Value", PinDataType::Float);
-    }
-
-    void FloatNode::Evaluate(NodeGraphEvaluator& evaluator)
-    {
-        float v = GetInputValue<float>("Value", evaluator);
-        SetOutputValue("Value", v, evaluator);
-    }
-
-    // ---- IntNode ----
-
-    IntNode::IntNode(UUID id) : Node(id, "IntNode")
-    {
-        AddInput("Value", PinDataType::Int, 0);
-        AddOutput("Value", PinDataType::Int);
-    }
-
-    void IntNode::Evaluate(NodeGraphEvaluator& evaluator)
-    {
-        int32_t v = GetInputValue<int32_t>("Value", evaluator);
-        SetOutputValue("Value", v, evaluator);
-    }
-
-    // ---- Vec3Node ----
-
-    Vec3Node::Vec3Node(UUID id) : Node(id, "Vec3Node")
-    {
-        AddInput("X", PinDataType::Float, 0.0f);
-        AddInput("Y", PinDataType::Float, 0.0f);
-        AddInput("Z", PinDataType::Float, 0.0f);
-        AddOutput("Vector", PinDataType::Vec3);
-    }
-
-    void Vec3Node::Evaluate(NodeGraphEvaluator& evaluator)
-    {
-        float x = GetInputValue<float>("X", evaluator);
-        float y = GetInputValue<float>("Y", evaluator);
-        float z = GetInputValue<float>("Z", evaluator);
-        SetOutputValue("Vector", glm::vec3(x, y, z), evaluator);
-    }
-
     // ---- AddNode ----
 
     AddNode::AddNode(UUID id) : Node(id, "AddNode")
@@ -109,10 +63,14 @@ namespace Crowny
 
     void AddNode::Evaluate(NodeGraphEvaluator& evaluator)
     {
-        PinValue a = evaluator.PullInput(FindInputPin("A"));
-        PinValue b = evaluator.PullInput(FindInputPin("B"));
+        static const StringID aPin("A");
+        static const StringID bPin("B");
+        static const StringID resultPin("Result");
+
+        PinValue a = evaluator.PullInput(FindInputPin(aPin));
+        PinValue b = evaluator.PullInput(FindInputPin(bPin));
         PinValue result = AddValues(a, b);
-        evaluator.SetOutputValue(FindOutputPin("Result")->GetID(), result);
+        evaluator.SetOutputValue(FindOutputPin(resultPin)->GetID(), result);
     }
 
     // ---- MultiplyNode ----
@@ -126,10 +84,14 @@ namespace Crowny
 
     void MultiplyNode::Evaluate(NodeGraphEvaluator& evaluator)
     {
-        PinValue a = evaluator.PullInput(FindInputPin("A"));
-        PinValue b = evaluator.PullInput(FindInputPin("B"));
+        static const StringID aPin("A");
+        static const StringID bPin("B");
+        static const StringID resultPin("Result");
+
+        PinValue a = evaluator.PullInput(FindInputPin(aPin));
+        PinValue b = evaluator.PullInput(FindInputPin(bPin));
         PinValue result = MultiplyValues(a, b);
-        evaluator.SetOutputValue(FindOutputPin("Result")->GetID(), result);
+        evaluator.SetOutputValue(FindOutputPin(resultPin)->GetID(), result);
     }
 
     // ---- RemapNode ----
@@ -146,16 +108,23 @@ namespace Crowny
 
     void RemapNode::Evaluate(NodeGraphEvaluator& evaluator)
     {
-        float value = GetInputValue<float>("Value", evaluator);
-        float fromMin = GetInputValue<float>("FromMin", evaluator);
-        float fromMax = GetInputValue<float>("FromMax", evaluator);
-        float toMin = GetInputValue<float>("ToMin", evaluator);
-        float toMax = GetInputValue<float>("ToMax", evaluator);
+        static const StringID valuePin("Value");
+        static const StringID fromMinPin("FromMin");
+        static const StringID fromMaxPin("FromMax");
+        static const StringID toMinPin("ToMin");
+        static const StringID toMaxPin("ToMax");
+        static const StringID resultPin("Result");
+
+        float value = GetInputValue<float>(valuePin, evaluator);
+        float fromMin = GetInputValue<float>(fromMinPin, evaluator);
+        float fromMax = GetInputValue<float>(fromMaxPin, evaluator);
+        float toMin = GetInputValue<float>(toMinPin, evaluator);
+        float toMax = GetInputValue<float>(toMaxPin, evaluator);
 
         float range = fromMax - fromMin;
         float t = (range != 0.0f) ? (value - fromMin) / range : 0.0f;
         float result = toMin + t * (toMax - toMin);
-        SetOutputValue("Result", result, evaluator);
+        SetOutputValue(resultPin, result, evaluator);
     }
 
     // ---- SplitVec3Node ----
@@ -170,10 +139,15 @@ namespace Crowny
 
     void SplitVec3Node::Evaluate(NodeGraphEvaluator& evaluator)
     {
-        glm::vec3 v = GetInputValue<glm::vec3>("Vector", evaluator);
-        SetOutputValue("X", v.x, evaluator);
-        SetOutputValue("Y", v.y, evaluator);
-        SetOutputValue("Z", v.z, evaluator);
+        static const StringID vectorPin("Vector");
+        static const StringID xPin("X");
+        static const StringID yPin("Y");
+        static const StringID zPin("Z");
+
+        glm::vec3 v = GetInputValue<glm::vec3>(vectorPin, evaluator);
+        SetOutputValue(xPin, v.x, evaluator);
+        SetOutputValue(yPin, v.y, evaluator);
+        SetOutputValue(zPin, v.z, evaluator);
     }
 
 } // namespace Crowny

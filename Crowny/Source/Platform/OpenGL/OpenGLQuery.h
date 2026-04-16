@@ -8,8 +8,10 @@ namespace Crowny
     class OpenGLTimerQuery : public TimerQuery
     {
     public:
-        OpenGLTimerQuery() = default;
+        friend class TimerQuery;
         ~OpenGLTimerQuery() = default;
+    protected:
+        OpenGLTimerQuery() = default;
         virtual void Begin(const Ref<CommandBuffer>& cb) override {}
         virtual void End(const Ref<CommandBuffer>& cb) override {}
 
@@ -20,8 +22,10 @@ namespace Crowny
     class OpenGLPipelineQuery : public PipelineQuery
     {
     public:
-        OpenGLPipelineQuery() = default;
+        friend class PipelineQuery;
         ~OpenGLPipelineQuery() = default;
+    protected:
+        OpenGLPipelineQuery() = default;
 
         virtual bool IsReady() const override { return false; }
         virtual void Begin(const Ref<CommandBuffer>& cb = nullptr) override {}
@@ -31,8 +35,10 @@ namespace Crowny
     class OpenGLOcclusionQuery : public OcclusionQuery
     {
     public:
-        OpenGLOcclusionQuery(bool binary){};
+        friend class OcclusionQuery;
         ~OpenGLOcclusionQuery() = default;
+    protected:
+        OpenGLOcclusionQuery(bool binary) {};
     };
 
 } // namespace Crowny

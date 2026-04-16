@@ -11,15 +11,15 @@ namespace Crowny
         uint32_t m_Width;
         uint32_t m_Height;
         uint32_t m_Bits;
-        TextureParameters m_Parameters;
+        TextureDesc m_Parameters;
         std::array<String, 6> m_Files;
         String m_Name;
 
     public:
-        OpenGLTextureCube(const Path& filepath, const TextureParameters& parameters);
-        OpenGLTextureCube(const std::array<String, 6>& files, const TextureParameters& parameters);
+        OpenGLTextureCube(const Path& filepath, const TextureDesc& parameters);
+        OpenGLTextureCube(const std::array<String, 6>& files, const TextureDesc& parameters);
         OpenGLTextureCube(const std::array<String, 6>& filepath, uint32_t mips, InputFormat format, const
-TextureParameters& parameters); ~OpenGLTextureCube();
+TextureDesc& parameters); ~OpenGLTextureCube();
 
         virtual void SetData(void* data, uint32_t size) override { CW_ENGINE_ASSERT(false); };
         virtual void SetData(void* data, TextureChannel channel) override { CW_ENGINE_ASSERT(false); };

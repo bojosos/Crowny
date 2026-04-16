@@ -29,8 +29,13 @@ namespace Crowny
 
     private:
         static void Reflect(const Vector<uint8_t>& binaryShaderData, Ref<BinaryShaderData>& outData);
+        static void ParseAnnotations(const String& source, Ref<UniformDesc>& uniformDesc);
         static void EvaluatePragmaDirectives(const String& source, ShaderRenderPassDesc& shaderPassDesc);
         static Vector<UnorderedMap<ShaderType, String>> Parse(const String& streamData);
+        static Vector<Ref<ShaderRenderPass>> CompilePasses(const Vector<UnorderedMap<ShaderType, String>>& parsedPasses,
+                                                           ShaderLanguage inputLanguage, ShaderLanguageFlags shaderLanguage,
+                                                           const UnorderedMap<String, String>& defines,
+                                                           const Ref<BlendStateDesc>& blendState);
     };
 
 } // namespace Crowny

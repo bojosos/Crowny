@@ -63,7 +63,7 @@ namespace Crowny
 
         glm::vec3 CalculatePosition() const;
 
-        std::pair<float, float> PanSpeed() const;
+        Pair<float, float> PanSpeed() const;
         float RotationSpeed() const;
         float ZoomSpeed() const;
 

@@ -13,10 +13,7 @@
 
 namespace Crowny
 {
-    Editor::Editor(FileWatch::FileWatchCallback&& fileWatchCallback) : m_FileWatchCallback(fileWatchCallback)
-    {
-
-    }
+    Editor::Editor(FileWatch::FileWatchCallback&& fileWatchCallback) : m_FileWatchCallback(fileWatchCallback) {}
 
     void Editor::OnStartUp()
     {

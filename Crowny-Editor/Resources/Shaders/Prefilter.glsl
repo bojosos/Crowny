@@ -1,9 +1,10 @@
+#lang glsl
 #type vertex
 #version 450
 
 layout (location = 0) in vec3 inPos;
 
-layout(binding = 0) uniform MVP {
+layout(binding = 0) uniform cw_MVP {
 	mat4 mvp;
 } mvp;
 
@@ -25,7 +26,7 @@ void main()
 layout (location = 0) in vec3 inPos;
 layout (location = 0) out vec4 outColor;
 
-layout (binding = 1) uniform samplerCube samplerEnv;
+layout (binding = 1) uniform samplerCube cw_samplerEnv;
 
 #define PI 3.1415926535897932384626433832795
 #define deltaPhi 0.03490658503
@@ -47,7 +48,7 @@ void main()
 		for (float theta = 0.0; theta < HALF_PI; theta += deltaTheta) {
 			vec3 tempVec = cos(phi) * right + sin(phi) * up;
 			vec3 sampleVector = cos(theta) * N + sin(theta) * tempVec;
-			color += texture(samplerEnv, sampleVector).rgb * cos(theta) * sin(theta);
+			color += texture(cw_samplerEnv, sampleVector).rgb * cos(theta) * sin(theta);
 			sampleCount++;
 		}
 	}

@@ -11,7 +11,7 @@ namespace Crowny
     class VulkanUniformParamInfo : public UniformParamInfo
     {
     public:
-        VulkanUniformParamInfo(const UniformParamDesc& desc);
+        friend class UniformParamInfo;
         ~VulkanUniformParamInfo() = default;
 
         uint32_t GetNumBindings(uint32_t layoutIdx) const { return m_LayoutInfos[layoutIdx].NumBindings; }
@@ -21,6 +21,9 @@ namespace Crowny
         uint32_t GetBindingIdx(uint32_t set, uint32_t slot) const { return m_SetExtraInfos[set].SlotIndices[slot]; }
 
         VulkanDescriptorLayout* GetLayout(uint32_t layoutIdx) const { return m_Layouts[layoutIdx]; }
+
+    protected:
+        VulkanUniformParamInfo(const UniformParamDesc& desc);
 
     private:
         struct LayoutInfo

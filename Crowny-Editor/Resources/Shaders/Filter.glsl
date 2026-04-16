@@ -1,9 +1,10 @@
+#lang glsl
 #type vertex
 #version 450
 
 layout (location = 0) in vec3 inPos;
 
-layout(binding = 0) uniform MVP {
+layout(binding = 0) uniform cw_MVP {
 	mat4 mvp;
 } mvp;
 
@@ -25,7 +26,7 @@ void main()
 layout (location = 0) in vec3 inPos;
 layout (location = 0) out vec4 outColor;
 
-layout (binding = 1) uniform samplerCube samplerEnv;
+layout (binding = 1) uniform samplerCube cw_samplerEnv;
 layout (binding = 2) uniform Params {
 	int samples;
 	float roughness;
@@ -90,7 +91,7 @@ vec3 prefilterEnvMap(vec3 R, float roughness)
 	vec3 V = R;
 	vec3 color = vec3(0.0);
 	float totalWeight = 0.0;
-	float envMapDim = float(textureSize(samplerEnv, 0).s);
+	float envMapDim = float(textureSize(cw_samplerEnv, 0).s);
 
 	for(int i = 0; i < params.samples; i++) {
 		vec2 Xi = hammersley2d(i, params.samples);
@@ -111,7 +112,7 @@ vec3 prefilterEnvMap(vec3 R, float roughness)
 			float omegaP = 4.0 * PI / (6.0 * envMapDim * envMapDim);
 			// Biased (+1.0) mip level for better result
 			float mipLevel = roughness == 0.0 ? 0.0 : max(0.5 * log2(omegaS / omegaP) + 1.0, 0.0f);
-			color += textureLod(samplerEnv, L, mipLevel).rgb * dotNL;
+			color += textureLod(cw_samplerEnv, L, mipLevel).rgb * dotNL;
 			totalWeight += dotNL;
 
 		}

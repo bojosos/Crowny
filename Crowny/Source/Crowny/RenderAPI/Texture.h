@@ -7,7 +7,7 @@
 namespace Crowny
 {
 
-    struct TextureParameters
+    struct TextureDesc
     {
         TextureType Type = TextureType::TEXTURE_DEFAULT;
         TextureShape Shape = TextureShape::TEXTURE_2D;
@@ -32,10 +32,10 @@ namespace Crowny
         virtual AssetType GetAssetType() const override { return AssetType::Texture; }
         static AssetType GetStaticType() { return AssetType::Texture; }
 
-        uint32_t GetWidth() const { return m_Params.Width; }
-        uint32_t GetHeight() const { return m_Params.Height; }
-        uint32_t GetDepth() const { return m_Params.Depth; }
-        TextureFormat GetFormat() const { return m_Params.Format; }
+        uint32_t GetWidth() const { return m_Desc.Width; }
+        uint32_t GetHeight() const { return m_Desc.Height; }
+        uint32_t GetDepth() const { return m_Desc.Depth; }
+        TextureFormat GetFormat() const { return m_Desc.Format; }
 
         virtual PixelData Lock(GpuLockOptions options, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) = 0;
         virtual void Unlock() = 0;
@@ -43,7 +43,7 @@ namespace Crowny
         virtual void ReadData(PixelData& dest, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) = 0;
         virtual void WriteData(const PixelData& src, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) = 0;
 
-        const TextureParameters& GetProperties() const { return m_Params; }
+        const TextureDesc& GetDesc() const { return m_Desc; }
         Ref<TextureView> CreateView(const TextureViewDesc& desc);
         Ref<TextureView> RequestView(uint32_t mip, uint32_t numMips, uint32_t firstFace, uint32_t numFaces, GpuViewUsage usage);
 
@@ -52,8 +52,8 @@ namespace Crowny
         CW_SERIALIZABLE(Texture);
 
     public:
-        static Ref<Texture> Create(const TextureParameters& params);
-        static Ref<Texture> CreateDeferred(const TextureParameters& params, const Ref<PixelData>& pixelData = nullptr);
+        static Ref<Texture> Create(const TextureDesc& params);
+        static Ref<Texture> CreateDeferred(const TextureDesc& params, const Ref<PixelData>& pixelData = nullptr);
 
     public:
         static Ref<Texture> WHITE;
@@ -61,11 +61,11 @@ namespace Crowny
 
     protected:
         UnorderedMap<TextureViewDesc, Ref<TextureView>, TextureView::HashFunction, TextureView::EqualFunction> m_TextureViews;
-        Texture(const TextureParameters& params);
-        Texture(const TextureParameters& params, bool deferred); // Deferred init — no GPU work
+        Texture(const TextureDesc& params);
+        Texture(const TextureDesc& params, bool deferred); // Deferred init — no GPU work
         Texture() = default;                                     // For serialization only
 
-        TextureParameters m_Params;
+        TextureDesc m_Desc;
         Ref<PixelData> m_PendingPixelData; // Stored during import, uploaded in Init()
     };
 

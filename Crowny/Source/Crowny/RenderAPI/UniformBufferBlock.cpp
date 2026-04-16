@@ -15,7 +15,7 @@ namespace Crowny
         {
             //			case RenderAPI::API::OpenGL: return CreateRef<OpenGLUniformBuffer>(size, usage);
         case RenderAPI::API::Vulkan:
-            return CreateRef<VulkanUniformBufferBlock>(size, usage);
+            return Ref<UniformBufferBlock>(new VulkanUniformBufferBlock(size, usage));
         default:
             CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;

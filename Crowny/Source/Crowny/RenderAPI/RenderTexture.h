@@ -29,7 +29,7 @@ namespace Crowny
         uint32_t MipLevel = 0;
     };
 
-    struct RenderTextureProperties : public RenderTargetProperties
+    struct RenderTextureDesc : public RenderTargetProperties
     {
         RenderTextureSurface ColorSurfaces[MAX_FRAMEBUFFER_COLOR_ATTACHMENTS];
         RenderTextureSurface DepthSurface;
@@ -38,20 +38,21 @@ namespace Crowny
     class RenderTexture : public RenderTarget
     {
     public:
-        RenderTexture(const RenderTextureProperties& props);
         virtual ~RenderTexture() = default;
 
-        Ref<Texture> GetColorTexture(uint32_t idx) const { return m_Props.ColorSurfaces[idx].Texture; }
-        Ref<Texture> GetDepthStencilTexture() const { return m_Props.DepthSurface.Texture; }
+        Ref<Texture> GetColorTexture(uint32_t idx) const { return m_Desc.ColorSurfaces[idx].Texture; }
+        Ref<Texture> GetDepthStencilTexture() const { return m_Desc.DepthSurface.Texture; }
 
     protected:
+        RenderTexture(const RenderTextureDesc& props);
+
         Ref<TextureView> m_ColorSurfaces[MAX_FRAMEBUFFER_COLOR_ATTACHMENTS];
         Ref<TextureView> m_DepthStencilSurface;
 
-        RenderTextureProperties m_Props;
+        RenderTextureDesc m_Desc;
 
     public:
-        static Ref<RenderTexture> Create(const RenderTextureProperties& props);
+        static Ref<RenderTexture> Create(const RenderTextureDesc& props);
     };
 
 } // namespace Crowny

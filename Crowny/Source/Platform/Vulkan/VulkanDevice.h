@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/RefCounted.h"
 #include "Platform/Vulkan/VulkanUtils.h"
 
 namespace Crowny
@@ -18,7 +19,7 @@ namespace Crowny
     class VulkanDescriptorManager;
     class VulkanResourceManager;
 
-    class VulkanDevice
+    class VulkanDevice : public RefCounted
     {
     public:
         VulkanDevice(VkPhysicalDevice device, uint32_t deviceIdx);

@@ -35,7 +35,7 @@ namespace Crowny
     class VulkanGraphicsPipeline : public GraphicsPipeline
     {
     public:
-        VulkanGraphicsPipeline(const PipelineStateDesc& desc);
+        friend class GraphicsPipeline;
         ~VulkanGraphicsPipeline();
 
         VulkanPipeline* GetPipeline(VulkanRenderPass* renderPass, uint32_t readOnlyFlags, DrawMode drawMode,
@@ -46,6 +46,9 @@ namespace Crowny
         const Ref<BufferLayout>& GetBufferLayout() const { return m_BufferLayout; }
         void RegisterPipelineResources(VulkanCmdBuffer* cmdBuffer);
         bool IsScissorsEnabled() const { return m_ScissorsEnabled; }
+
+    protected:
+        VulkanGraphicsPipeline(const PipelineStateDesc& desc);
 
     private:
         bool m_ScissorsEnabled = false;
@@ -91,12 +94,15 @@ namespace Crowny
     class VulkanRayTracingPipeline : public RayTracingPipeline
     {
     public:
-        VulkanRayTracingPipeline(const RayTracingPipelineDesc& desc);
+        friend class RayTracingPipeline;
         ~VulkanRayTracingPipeline();
 
         VulkanPipeline* GetPipeline() const { return m_Pipeline; }
         VkPipelineLayout GetLayout() const { return m_PipelineLayout; }
         void RegisterPipelineResources(VulkanCmdBuffer* buffer);
+
+    protected:
+        VulkanRayTracingPipeline(const RayTracingPipelineDesc& desc);
 
     private:
         std::array<VkPipelineShaderStageCreateInfo, RAYTRACING_SHADER_COUNT> m_ShaderStageInfos = {};
@@ -108,12 +114,15 @@ namespace Crowny
     class VulkanComputePipeline : public ComputePipeline
     {
     public:
-        VulkanComputePipeline(const Ref<ShaderStage>& shader);
+        friend class ComputePipeline;
         ~VulkanComputePipeline();
 
         VulkanPipeline* GetPipeline() const { return m_Pipeline; };
         VkPipelineLayout GetLayout() const { return m_PipelineLayout; }
         void RegisterPipelineResources(VulkanCmdBuffer* cmdBuffer);
+
+    protected:
+        VulkanComputePipeline(const Ref<ShaderStage>& shader);
 
     private:
         Ref<VulkanShader> m_Shader;

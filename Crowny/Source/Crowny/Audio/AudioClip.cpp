@@ -18,6 +18,11 @@ namespace Crowny
         Init();
     }
 
+    Ref<AudioClip> AudioClip::Create(const Ref<DataStream>& stream, uint32_t streamSize, uint32_t numSamples, const AudioClipDesc& desc)
+    {
+        return CreateRef<AudioClip>(stream, streamSize, numSamples, desc);
+    }
+
     AudioClip::~AudioClip()
     {
         if (m_BufferID != (uint32_t)-1)

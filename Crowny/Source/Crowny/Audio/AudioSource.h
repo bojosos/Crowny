@@ -2,10 +2,11 @@
 
 #include "Crowny/Assets/AssetHandle.h"
 #include "Crowny/Audio/AudioClip.h"
+#include "Crowny/Common/RefCounted.h"
 
 namespace Crowny
 {
-    class AudioSource
+    class AudioSource : public RefCounted
     {
     public:
         AudioSource();

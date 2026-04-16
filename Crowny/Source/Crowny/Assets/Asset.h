@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Common/Common.h"
+#include "Crowny/Common/RefCounted.h"
 #include "Crowny/Common/Uuid.h"
 
 #include <cereal/types/polymorphic.hpp>
@@ -54,7 +55,7 @@ namespace Crowny
     static constexpr uint32_t ENVIRONMENT_FORMAT_VERSION = 1;
     static constexpr uint32_t PREFAB_FORMAT_VERSION = 1;
 
-    class Asset
+    class Asset : public RefCounted
     {
     public:
         Asset() = default;
@@ -84,7 +85,7 @@ namespace Crowny
         Vector<Ref<Asset>> m_Dependencies;
     };
 
-    struct AssetMetadata
+    struct AssetMetadata : public RefCounted
     {
         // TODO: Preview icons, with different sizes (256....16)
         UUID Uuid;                        // Asset UUID

@@ -13,7 +13,7 @@ namespace Crowny
 
     ShaderRenderPass::ShaderRenderPass(const ShaderRenderPassDesc& passDesc) : m_ShaderDesc(passDesc) {}
 
-    Ref<ShaderRenderPass> ShaderRenderPass::Create(const ShaderRenderPassDesc& passDesc) { return CreateRef<ShaderRenderPass>(passDesc); }
+    Ref<ShaderRenderPass> ShaderRenderPass::Create(const ShaderRenderPassDesc& passDesc) { return Ref<ShaderRenderPass>(new ShaderRenderPass(passDesc)); }
 
     bool ShaderRenderPass::HasBlending() const
     {
@@ -78,7 +78,7 @@ namespace Crowny
     Ref<ShaderTechnique> ShaderTechnique::Create(const Vector<String>& tags, const ShaderVariation& variation,
                                                  const Vector<Ref<ShaderRenderPass>>& renderPasses)
     {
-        return CreateRef<ShaderTechnique>(tags, variation, renderPasses);
+        return Ref<ShaderTechnique>(new ShaderTechnique(tags, variation, renderPasses));
     }
 
     void ShaderTechnique::Compile()
@@ -125,10 +125,7 @@ namespace Crowny
 
     bool ShaderLibrary::Exists(const String& name) const { return m_Shaders.find(name) != m_Shaders.end(); }
 
-    void ShaderDefines::Set(const String& name, int value) { m_Defines[name] = std::to_string(value); }
-    void ShaderDefines::Set(const String& name, float value) { m_Defines[name] = std::to_string(value); }
-    void ShaderDefines::Set(const String& name, const String& value) { m_Defines[name] = value; }
-    const UnorderedMap<String, String>& ShaderDefines::Get() const { return m_Defines; }
+    // ShaderDefines methods are defined in ShaderVariation.cpp
 
     ShaderStage::ShaderStage(const Ref<BinaryShaderData>& shaderData) : m_ShaderData(shaderData) {}
 
@@ -141,7 +138,7 @@ namespace Crowny
         // TODO: Add support for binary OpenGL shaders
         // case RenderAPI::API::OpenGL: return CreateRef<OpenGLShader>(m_Filepath);
         case RenderAPI::API::Vulkan:
-            return CreateRef<VulkanShader>(data);
+            return Ref<ShaderStage>(new VulkanShader(data));
         default:
             CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;
@@ -152,6 +149,6 @@ namespace Crowny
 
     Shader::Shader(const ShaderDesc& shaderDesc) : m_Techniques(shaderDesc.Techniques) {}
 
-    Ref<Shader> Shader::Create(const ShaderDesc& shaderDesc) { return CreateRef<Shader>(shaderDesc); }
+    Ref<Shader> Shader::Create(const ShaderDesc& shaderDesc) { return Ref<Shader>(new Shader(shaderDesc)); }
 
 } // namespace Crowny

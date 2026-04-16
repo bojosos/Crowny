@@ -89,7 +89,7 @@ namespace Crowny
 
     glm::vec3 EditorCamera::CalculatePosition() const { return m_FocalPoint - GetForwardDirection() * m_Distance; }
 
-    std::pair<float, float> EditorCamera::PanSpeed() const
+    Pair<float, float> EditorCamera::PanSpeed() const
     {
         float x = std::min(m_ViewportWidth / 1000.0f, 2.4f);
         float xFactor = 0.0366f * x * x - 0.1778f * x + 0.3021f;

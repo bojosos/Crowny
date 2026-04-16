@@ -10,7 +10,7 @@ layout(location = 2) in vec2 a_Uvs;
 layout(location = 3) in float a_Tid;
 layout(location = 4) in int a_ObjectId;
 
-layout(binding = 0) uniform VP
+layout(binding = 0) uniform cw_VP
 {
   mat4 u_ViewProjection;
 } vp;

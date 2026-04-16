@@ -13,10 +13,7 @@ namespace Crowny
 
     void SceneManager::OnShutdown() { gSceneManager = nullptr; }
 
-    Ref<Scene> SceneManager::GetActiveScene() const
-    {
-        return m_ActiveScene;
-    }
+    Ref<Scene> SceneManager::GetActiveScene() const { return m_ActiveScene; }
 
     void SceneManager::SetActiveScene(const Ref<Scene>& scene)
     {

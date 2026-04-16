@@ -55,12 +55,16 @@ namespace Crowny
         VkPipelineStageFlags m_SubmitDstWaitMask[MAX_UNIQUE_QUEUES];
         Vector<SubmitInfo> m_QueuedBuffers;
         Vector<VulkanSemaphore*> m_QueuedSemaphores;
-        std::list<SubmitInfo> m_ActiveSubmissions;
+        std::deque<SubmitInfo> m_ActiveSubmissions;
         std::queue<VulkanCmdBuffer*> m_ActiveBuffers;
         std::queue<VulkanSemaphore*> m_ActiveSemaphores;
         VulkanCmdBuffer* m_LastCommandBuffer = nullptr;
         bool m_LastCBSemaphoreUsed = false;
         uint32_t m_NextSubmitIdx = 1;
-        Vector<VkSemaphore> m_SemaphoresTemp;
+        Vector<VkSemaphore>    m_SemaphoresTemp;
+        Vector<VkSubmitInfo>   m_SubmitInfosScratch;
+        Vector<VkCommandBuffer> m_CmdBuffersScratch;
+        Vector<VkSemaphore>    m_SignalSemaphoresScratch;
+        Vector<VkSemaphore>    m_WaitSemaphoresScratch;
     };
 } // namespace Crowny

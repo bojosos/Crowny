@@ -11,9 +11,7 @@ namespace Crowny
     class VulkanIndexBuffer : public IndexBuffer
     {
     public:
-        VulkanIndexBuffer(uint32_t count, IndexType indexType, BufferUsage usage);
-        VulkanIndexBuffer(uint16_t* indices, uint32_t count, BufferUsage usage);
-        VulkanIndexBuffer(uint32_t* indices, uint32_t count, BufferUsage usage);
+        friend class IndexBuffer;
         ~VulkanIndexBuffer();
 
         VkBuffer GetHandle() const { return m_Buffer->GetHandle(); }
@@ -37,6 +35,11 @@ namespace Crowny
         virtual void Unmap() override;
 
         VulkanBuffer* GetBuffer() const { return m_Buffer->GetBuffer(); }
+
+    protected:
+        VulkanIndexBuffer(uint32_t count, IndexType indexType, BufferUsage usage);
+        VulkanIndexBuffer(uint16_t* indices, uint32_t count, BufferUsage usage);
+        VulkanIndexBuffer(uint32_t* indices, uint32_t count, BufferUsage usage);
 
     private:
         VulkanGpuBuffer* m_Buffer;

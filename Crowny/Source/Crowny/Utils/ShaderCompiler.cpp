@@ -358,6 +358,118 @@ namespace Crowny
         return result;
     }
 
+    void ShaderCompiler::ParseAnnotations(const String& source, Ref<UniformDesc>& uniformDesc)
+    {
+        if (!uniformDesc)
+            return;
+
+        // Parse lines looking for annotation comments: // @keyword or // @keyword(args)
+        // Annotations on a line apply to the variable declared on the next non-empty, non-comment line.
+        std::istringstream stream(source);
+        String line;
+        Vector<String> pendingAnnotationLines;
+
+        while (std::getline(stream, line))
+        {
+            // Trim leading whitespace
+            size_t firstNonSpace = line.find_first_not_of(" \t");
+            if (firstNonSpace == String::npos)
+                continue;
+            String trimmed = line.substr(firstNonSpace);
+
+            // Check if this is an annotation comment line
+            if (trimmed.rfind("// @", 0) == 0)
+            {
+                pendingAnnotationLines.push_back(trimmed);
+                continue;
+            }
+
+            // If we have pending annotations and this is a non-empty line with a variable, extract the var name
+            if (!pendingAnnotationLines.empty())
+            {
+                // Skip pure comment lines or empty lines
+                if (trimmed.empty() || trimmed.rfind("//", 0) == 0)
+                    continue;
+
+                // Extract variable name: last identifier before ';' or '=' or ')'
+                // Handles patterns like: "vec4 albedo;" or "float roughness;" or "} params;"
+                String varName;
+                // Find the semicolon
+                size_t semiPos = trimmed.find(';');
+                if (semiPos != String::npos)
+                {
+                    // Work backwards from semicolon to find the identifier
+                    size_t end = semiPos;
+                    // Skip trailing whitespace before semicolon
+                    while (end > 0 && (trimmed[end - 1] == ' ' || trimmed[end - 1] == '\t'))
+                        end--;
+                    // Find the start of the identifier
+                    size_t start = end;
+                    while (start > 0 && (std::isalnum(trimmed[start - 1]) || trimmed[start - 1] == '_'))
+                        start--;
+                    if (start < end)
+                        varName = trimmed.substr(start, end - start);
+                }
+
+                if (!varName.empty())
+                {
+                    AnnotationSet annotations;
+                    // Parse all pending annotation lines
+                    static const std::regex annotationRegex(R"(@(\w+)(?:\(([^)]*)\))?)");
+                    for (const auto& annoLine : pendingAnnotationLines)
+                    {
+                        auto begin = std::sregex_iterator(annoLine.begin(), annoLine.end(), annotationRegex);
+                        auto end = std::sregex_iterator();
+                        for (auto it = begin; it != end; ++it)
+                        {
+                            String keyword = (*it)[1].str();
+                            String args = (*it)[2].matched ? (*it)[2].str() : "";
+
+                            if (keyword == "color")
+                                annotations.IsColor = true;
+                            else if (keyword == "hdr")
+                                annotations.IsHDR = true;
+                            else if (keyword == "hide")
+                                annotations.IsHidden = true;
+                            else if (keyword == "name" && !args.empty())
+                            {
+                                // Remove surrounding quotes if present
+                                if (args.size() >= 2 && args.front() == '"' && args.back() == '"')
+                                    args = args.substr(1, args.size() - 2);
+                                annotations.DisplayName = args;
+                            }
+                            else if (keyword == "range" && !args.empty())
+                            {
+                                // Parse "min, max"
+                                size_t commaPos = args.find(',');
+                                if (commaPos != String::npos)
+                                {
+                                    try
+                                    {
+                                        annotations.RangeMin = std::stof(args.substr(0, commaPos));
+                                        annotations.RangeMax = std::stof(args.substr(commaPos + 1));
+                                        annotations.HasRange = true;
+                                    }
+                                    catch (...)
+                                    {
+                                        CW_ENGINE_WARN("Failed to parse @range annotation: {}", args);
+                                    }
+                                }
+                            }
+                            else if (keyword == "default" && !args.empty())
+                            {
+                                annotations.DefaultValueStr = args;
+                                annotations.HasDefault = true;
+                            }
+                        }
+                    }
+                    uniformDesc->Annotations[varName] = annotations;
+                }
+                pendingAnnotationLines.clear();
+            }
+        }
+    }
+
     Ref<BinaryShaderData> ShaderCompiler::CompileStage(const String& source, ShaderType shaderType, ShaderLanguage inputLanguage,
                                                        ShaderLanguageFlags outputLanguages, const UnorderedMap<String, String>& defines)
     {
@@ -409,7 +521,133 @@ namespace Crowny
         // Initializes the VertexLayout and UniformDesc.
         Reflect(shaderBinaryData, dataResult);
 
+        // Parse annotations from GLSL source comments (before shaderc strips them)
+        ParseAnnotations(source, dataResult->Description);
+
+        // Convert @default annotation strings to raw byte defaults on members
+        if (dataResult->Description)
+        {
+            auto& desc = dataResult->Description;
+            for (auto& [blockName, block] : desc->Uniforms)
+            {
+                for (auto& member : block.Members)
+                {
+                    auto annoIt = desc->Annotations.find(member.Name);
+                    if (annoIt == desc->Annotations.end() || !annoIt->second.HasDefault)
+                        continue;
+
+                    const String& defStr = annoIt->second.DefaultValueStr;
+                    uint32_t byteSize = ShaderDataTypeSize(member.DataType);
+                    member.DefaultValue.resize(byteSize, 0);
+
+                    // Parse comma-separated floats/ints from the default string
+                    Vector<float> floats;
+                    std::istringstream ss(defStr);
+                    String token;
+                    while (std::getline(ss, token, ','))
+                    {
+                        try
+                        {
+                            // Trim whitespace
+                            size_t start = token.find_first_not_of(" \t");
+                            if (start != String::npos)
+                                token = token.substr(start);
+                            floats.push_back(std::stof(token));
+                        }
+                        catch (...)
+                        {
+                        }
+                    }
+
+                    switch (member.DataType)
+                    {
+                    case ShaderDataType::Float:
+                        if (floats.size() >= 1)
+                            std::memcpy(member.DefaultValue.data(), &floats[0], sizeof(float));
+                        break;
+                    case ShaderDataType::Float2:
+                    {
+                        glm::vec2 v(floats.size() >= 1 ? floats[0] : 0.0f, floats.size() >= 2 ? floats[1] : 0.0f);
+                        std::memcpy(member.DefaultValue.data(), &v, sizeof(v));
+                        break;
+                    }
+                    case ShaderDataType::Float3:
+                    {
+                        glm::vec3 v(floats.size() >= 1 ? floats[0] : 0.0f, floats.size() >= 2 ? floats[1] : 0.0f,
+                                    floats.size() >= 3 ? floats[2] : 0.0f);
+                        std::memcpy(member.DefaultValue.data(), &v, sizeof(v));
+                        break;
+                    }
+                    case ShaderDataType::Float4:
+                    {
+                        glm::vec4 v(floats.size() >= 1 ? floats[0] : 0.0f, floats.size() >= 2 ? floats[1] : 0.0f,
+                                    floats.size() >= 3 ? floats[2] : 0.0f, floats.size() >= 4 ? floats[3] : 0.0f);
+                        std::memcpy(member.DefaultValue.data(), &v, sizeof(v));
+                        break;
+                    }
+                    case ShaderDataType::Int:
+                    {
+                        int32_t iv = floats.size() >= 1 ? (int32_t)floats[0] : 0;
+                        std::memcpy(member.DefaultValue.data(), &iv, sizeof(iv));
+                        break;
+                    }
+                    case ShaderDataType::Bool:
+                    {
+                        int32_t bv = (floats.size() >= 1 && floats[0] != 0.0f) ? 1 : 0;
+                        std::memcpy(member.DefaultValue.data(), &bv, sizeof(bv));
+                        break;
+                    }
+                    default:
+                        member.DefaultValue.clear(); // Unsupported type, skip
+                        break;
+                    }
+                }
+            }
+        }
+
         return dataResult;
+    }
+
+    Vector<Ref<ShaderRenderPass>> ShaderCompiler::CompilePasses(const Vector<UnorderedMap<ShaderType, String>>& parsedPasses,
+                                                                ShaderLanguage inputLanguage, ShaderLanguageFlags shaderLanguage,
+                                                                const UnorderedMap<String, String>& defines,
+                                                                const Ref<BlendStateDesc>& blendState)
+    {
+        Vector<Ref<ShaderRenderPass>> renderPasses;
+        for (const auto& sourceShaders : parsedPasses)
+        {
+            ShaderRenderPassDesc passDesc;
+            String passSourceCombined;
+            for (const auto& [type, stageSource] : sourceShaders)
+            {
+                passSourceCombined += stageSource;
+                const Ref<BinaryShaderData> shaderData = CompileStage(stageSource, type, inputLanguage, shaderLanguage, defines);
+                if (type == VERTEX_SHADER)
+                    passDesc.VertexShader = shaderData;
+                else if (type == FRAGMENT_SHADER)
+                    passDesc.FragmentShader = shaderData;
+                else if (type == GEOMETRY_SHADER)
+                    passDesc.GeometryShader = shaderData;
+                else if (type == HULL_SHADER)
+                    passDesc.HullShader = shaderData;
+                else if (type == DOMAIN_SHADER)
+                    passDesc.DomainShader = shaderData;
+                else if (type == COMPUTE_SHADER)
+                    passDesc.ComputeShader = shaderData;
+                else if (type == RAYGEN_SHADER)
+                    passDesc.RaygenShader = shaderData;
+                else if (type == HIT_SHADER)
+                    passDesc.HitShader = shaderData;
+                else if (type == MISS_SHADER)
+                    passDesc.MissShader = shaderData;
+                else
+                    CW_ENGINE_ASSERT(false);
+            }
+            EvaluatePragmaDirectives(passSourceCombined, passDesc);
+            passDesc.BlendState = blendState;
+            renderPasses.push_back(ShaderRenderPass::Create(passDesc));
+        }
+        return renderPasses;
     }
 
     ShaderDesc ShaderCompiler::Compile(const Path& path, const String& rawSource, ShaderLanguageFlags shaderLanguage,
@@ -436,46 +674,107 @@ namespace Crowny
 
         String source = rawSource;
         auto blendState = PreparseBlendState(source);
-        const auto parsedPasses = Parse(source);
-        Vector<Ref<ShaderRenderPass>> renderPasses;
 
-        for (const auto& sourceShaders : parsedPasses)
+        // Parse variation directives before splitting into passes.
+        // Each group is a vector of keyword options. The cartesian product of all groups
+        // gives the full set of techniques to compile.
+        //
+        //   #pragma variation USE_NORMALMAP          → group {"", "USE_NORMALMAP"} (bool toggle)
+        //   #pragma variation_multi _ LOW MED HIGH   → group {"", "LOW", "MED", "HIGH"} (_ = none)
+        //
+        // Total combinations = product of group sizes.
+        Vector<Vector<String>> variationGroups;
         {
-            ShaderRenderPassDesc passDesc;
-            String passSourceCombined;
-            for (const auto& [type, stageSource] : sourceShaders)
+            // Boolean toggles: #pragma variation KEYWORD
+            std::regex toggleRegex(R"(#pragma\s+variation\s+(\w+)\s*$)");
+            auto begin = std::sregex_iterator(source.begin(), source.end(), toggleRegex);
+            auto end = std::sregex_iterator();
+            for (auto it = begin; it != end; ++it)
             {
-                passSourceCombined += stageSource;
-                const Ref<BinaryShaderData> shaderData = CompileStage(stageSource, type, inputLanguage, shaderLanguage, defines);
-                if (type == VERTEX_SHADER)
-                    passDesc.VertexShader = shaderData;
-                else if (type == FRAGMENT_SHADER)
-                    passDesc.FragmentShader = shaderData;
-                else if (type == GEOMETRY_SHADER)
-                    passDesc.GeometryShader = shaderData;
-                else if (type == HULL_SHADER)
-                    passDesc.DomainShader = shaderData;
-                else if (type == DOMAIN_SHADER)
-                    passDesc.DomainShader = shaderData;
-                else if (type == COMPUTE_SHADER)
-                    passDesc.ComputeShader = shaderData;
-                else if (type == RAYGEN_SHADER)
-                    passDesc.RaygenShader = shaderData;
-                else if (type == HIT_SHADER)
-                    passDesc.HitShader = shaderData;
-                else if (type == MISS_SHADER)
-                    passDesc.MissShader = shaderData;
-                else
-                    CW_ENGINE_ASSERT(false);
+                Vector<String> group;
+                group.push_back("");                   // off
+                group.push_back((*it)[1].str());       // on
+                variationGroups.push_back(std::move(group));
             }
-            EvaluatePragmaDirectives(passSourceCombined, passDesc);
-            passDesc.BlendState = blendState;
-            renderPasses.push_back(ShaderRenderPass::Create(passDesc));
+
+            // Multi-option groups: #pragma variation_multi KEYWORD1 KEYWORD2 ...
+            std::regex multiRegex(R"(#pragma\s+variation_multi\s+(.+)$)");
+            auto mBegin = std::sregex_iterator(source.begin(), source.end(), multiRegex);
+            for (auto it = mBegin; it != end; ++it)
+            {
+                String rest = (*it)[1].str();
+                Vector<String> group;
+                std::istringstream ss(rest);
+                String token;
+                while (ss >> token)
+                {
+                    if (token == "_")
+                        group.push_back("");    // _ means "none active"
+                    else
+                        group.push_back(token);
+                }
+                if (group.size() >= 2)
+                    variationGroups.push_back(std::move(group));
+            }
         }
 
-        Ref<ShaderTechnique> technique = ShaderTechnique::Create({}, ShaderVariation(), renderPasses);
+        const auto parsedPasses = Parse(source);
         ShaderDesc shaderDesc;
-        shaderDesc.Techniques = { technique };
+
+        if (variationGroups.empty())
+        {
+            // No variations — single technique (fast path)
+            auto renderPasses = CompilePasses(parsedPasses, inputLanguage, shaderLanguage, defines, blendState);
+            shaderDesc.Techniques.push_back(ShaderTechnique::Create({}, ShaderVariation(), renderPasses));
+        }
+        else
+        {
+            // Compute total combinations = product of group sizes
+            uint32_t totalCombinations = 1;
+            for (const auto& group : variationGroups)
+                totalCombinations *= (uint32_t)group.size();
+
+            CW_ENGINE_INFO("Shader '{}': compiling {} variation combinations from {} groups", path.string(), totalCombinations,
+                           variationGroups.size());
+
+            // Enumerate the cartesian product using mixed-radix counting
+            for (uint32_t combo = 0; combo < totalCombinations; combo++)
+            {
+                UnorderedMap<String, String> mergedDefines = defines;
+                ShaderVariation variation;
+
+                uint32_t idx = combo;
+                for (const auto& group : variationGroups)
+                {
+                    uint32_t groupSize = (uint32_t)group.size();
+                    uint32_t pick = idx % groupSize;
+                    idx /= groupSize;
+
+                    // For boolean toggle groups (size 2, first is ""), record on/off
+                    // For multi groups, record which keyword is active
+                    if (groupSize == 2 && group[0].empty())
+                    {
+                        // Boolean toggle: record the keyword as true/false
+                        variation.Set(group[1], pick == 1);
+                        if (pick == 1)
+                            mergedDefines[group[1]] = "1";
+                    }
+                    else
+                    {
+                        // Multi group: only the picked keyword is defined
+                        if (!group[pick].empty())
+                        {
+                            variation.Set(group[pick], true);
+                            mergedDefines[group[pick]] = "1";
+                        }
+                    }
+                }
+
+                auto renderPasses = CompilePasses(parsedPasses, inputLanguage, shaderLanguage, mergedDefines, blendState);
+                shaderDesc.Techniques.push_back(ShaderTechnique::Create({}, variation, renderPasses));
+            }
+        }
+
         return shaderDesc;
     }
 
@@ -588,6 +887,7 @@ namespace Crowny
                 const VertexAttribute attrSemantic = GetSpecialVertexAttribute(vertInput.name);
                 BufferElement element(SprivTypeToShaderType(bufferType), attrSemantic, false);
                 element.Name = vertInput.name;
+                element.Location = location;
                 layout.AddBufferElement(element);
             }
             outData->VertexLayout = std::move(layout);
@@ -629,6 +929,21 @@ namespace Crowny
                     shaderPassDesc.RasterizationState->CullMode = CullingMode::CULL_CLOCKWISE;
                 else
                     shaderPassDesc.RasterizationState->CullMode = CullingMode::CULL_COUNTERCLOCKWISE;
+            }
+            else if (name == "polygon_mode")
+            {
+                if (!shaderPassDesc.RasterizationState)
+                    shaderPassDesc.RasterizationState = CreateRef<RasterizerStateDesc>();
+                if (value == "wireframe")
+                    shaderPassDesc.RasterizationState->PolygonDrawMode = PolygonMode::Wireframe;
+                else if (value == "point")
+                    shaderPassDesc.RasterizationState->PolygonDrawMode = PolygonMode::Points;
+                else
+                    shaderPassDesc.RasterizationState->PolygonDrawMode = PolygonMode::Solid;
+            }
+            else if (name == "variation" || name == "variation_multi")
+            {
+                // Handled in Compile() during variation parsing — nothing to do here
             }
             else
                 CW_ENGINE_WARN("Unrecognized #pragma {}={}", name, value);

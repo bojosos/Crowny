@@ -6,6 +6,13 @@
 namespace Crowny
 {
 
+    struct VertexBufferDesc
+    {
+        uint32_t    Size  = 0;
+        BufferUsage Usage = BufferUsage::BU_STATIC_DRAW;
+        const void* Data  = nullptr; // null = allocate empty buffer
+    };
+
     class VertexBuffer : public GpuBuffer
     {
     public:
@@ -19,7 +26,6 @@ namespace Crowny
 
         virtual uint32_t GetBufferSize() const = 0;
 
-        static Ref<VertexBuffer> Create(uint32_t size, BufferUsage usage = BufferUsage::BU_STATIC_DRAW);
-        static Ref<VertexBuffer> Create(void* vertices, uint32_t size, BufferUsage usage = BufferUsage::BU_STATIC_DRAW);
+        static Ref<VertexBuffer> Create(const VertexBufferDesc& desc);
     };
 } // namespace Crowny

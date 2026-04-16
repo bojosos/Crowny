@@ -1,6 +1,8 @@
 #include "cwepch.h"
 
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Audio/AudioManager.h"
+#include "Crowny/Serialization/MaterialSerializer.h"
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Ecs/Components.h"
@@ -79,7 +81,7 @@ namespace Crowny
                     Ref<NodeGraphAsset> asset = CreateRef<NodeGraphAsset>(graph);
                     ProjectLibrary::Get().CreateEntry(asset, path);
                     ProjectLibrary::Get().Refresh(path);
-                    
+
                     auto libraryEntry = ProjectLibrary::Get().FindEntry(path);
                     if (libraryEntry && libraryEntry->Type == LibraryEntryType::File)
                     {
@@ -122,7 +124,7 @@ namespace Crowny
                             if (comp.InputValues.find(input.ID) == comp.InputValues.end())
                                 val = input.DefaultValue;
 
-                            String label = input.Name + "##" + input.ID.ToString();
+                            String label = String(input.Name.c_str()) + "##" + input.ID.ToString();
 
                             switch (input.DataType)
                             {
@@ -149,10 +151,10 @@ namespace Crowny
                                 break;
                             }
                             case PinDataType::Vec3: {
-                                glm::vec3 v =
-                                  std::holds_alternative<glm::vec3>(val)
-                                    ? std::get<glm::vec3>(val)
-                                    : (std::holds_alternative<glm::vec3>(input.DefaultValue) ? std::get<glm::vec3>(input.DefaultValue) : glm::vec3(0.0f));
+                                glm::vec3 v = std::holds_alternative<glm::vec3>(val)
+                                                ? std::get<glm::vec3>(val)
+                                                : (std::holds_alternative<glm::vec3>(input.DefaultValue) ? std::get<glm::vec3>(input.DefaultValue)
+                                                                                                         : glm::vec3(0.0f));
                                 if (ImGui::DragFloat3(label.c_str(), &v.x, 0.01f))
                                 {
                                     val = v;
@@ -369,55 +371,278 @@ namespace Crowny
         EndPanel();
     }
 
+    static String AutoDisplayName(const String& identifier)
+    {
+        // Convert camelCase/snake_case to "Title Case": "roughness" -> "Roughness", "albedoMap" -> "Albedo Map"
+        String result;
+        for (size_t i = 0; i < identifier.size(); i++)
+        {
+            char c = identifier[i];
+            if (i == 0)
+            {
+                result += (char)std::toupper(c);
+            }
+            else if (std::isupper(c))
+            {
+                result += ' ';
+                result += c;
+            }
+            else if (c == '_')
+            {
+                result += ' ';
+            }
+            else
+            {
+                result += c;
+            }
+        }
+        return result;
+    }
+
+    static ShaderParamType MapDataType(ShaderDataType dt, bool isColor)
+    {
+        switch (dt)
+        {
+        case ShaderDataType::Float: return ShaderParamType::Float;
+        case ShaderDataType::Float2: return ShaderParamType::Float2;
+        case ShaderDataType::Float3: return isColor ? ShaderParamType::Color3 : ShaderParamType::Float3;
+        case ShaderDataType::Float4: return isColor ? ShaderParamType::Color4 : ShaderParamType::Float4;
+        case ShaderDataType::Int: return ShaderParamType::Int;
+        case ShaderDataType::Int2: return ShaderParamType::Int2;
+        case ShaderDataType::Int3: return ShaderParamType::Int3;
+        case ShaderDataType::Int4: return ShaderParamType::Int4;
+        case ShaderDataType::Bool: return ShaderParamType::Bool;
+        case ShaderDataType::Mat3: return ShaderParamType::Mat3;
+        case ShaderDataType::Mat4: return ShaderParamType::Mat4;
+        default: return ShaderParamType::Float;
+        }
+    }
+
+    static ShaderParamType MapResourceType(UniformResourceType rt)
+    {
+        switch (rt)
+        {
+        case SAMPLER2D:
+        case TEXTURE2D: return ShaderParamType::Texture2D;
+        case SAMPLER3D:
+        case TEXTURE3D: return ShaderParamType::Texture3D;
+        case SAMPLERCUBE:
+        case TEXTURECUBE: return ShaderParamType::TextureCube;
+        default: return ShaderParamType::Texture2D;
+        }
+    }
+
+    static Vector<ShaderParameterDesc> BuildInspectorParameters(const Material& mat)
+    {
+        Vector<ShaderParameterDesc> result;
+
+        // Collect annotations from all shader stages
+        UnorderedMap<String, AnnotationSet> allAnnotations;
+        for (uint32_t i = 0; i < SHADER_COUNT; i++)
+        {
+            const auto& annotations = mat.GetAnnotations((ShaderType)i);
+            for (const auto& [name, anno] : annotations)
+                allAnnotations[name] = anno;
+        }
+
+        // Data parameters from uniform buffer members
+        const auto& bindings = mat.GetBindings();
+        for (const auto& [name, member] : bindings)
+        {
+            // Skip internal blocks (prefixed with cw_)
+            if (member.BufferName.rfind("cw_", 0) == 0)
+                continue;
+
+            ShaderParameterDesc desc;
+            desc.Identifier = name;
+            desc.BlockName = member.BufferName;
+            desc.Offset = member.Offset;
+
+            // Apply annotations if present
+            auto annoIt = allAnnotations.find(name);
+            bool isColor = false;
+            if (annoIt != allAnnotations.end())
+            {
+                const auto& anno = annoIt->second;
+                if (!anno.DisplayName.empty())
+                    desc.DisplayName = anno.DisplayName;
+                if (anno.IsHidden)
+                    continue; // Skip hidden params
+                isColor = anno.IsColor;
+                if (anno.IsHDR)
+                    desc.Flags.Set(ShaderParamFlag::HDR);
+                if (anno.HasRange)
+                {
+                    desc.RangeMin = anno.RangeMin;
+                    desc.RangeMax = anno.RangeMax;
+                    desc.HasRange = true;
+                }
+            }
+
+            desc.Type = MapDataType(member.DataType, isColor);
+
+            if (desc.DisplayName.empty())
+                desc.DisplayName = AutoDisplayName(name);
+
+            // Sort order: block binding slot * 1000 + member offset (gives declaration order)
+            desc.SortOrder = mat.GetBlockBindingSlot(member.BufferName) * 1000 + member.Offset;
+
+            result.push_back(desc);
+        }
+
+        // Texture parameters
+        const auto textures = mat.GetTextures();
+        for (const auto& [name, descInfo] : textures)
+        {
+            // Skip internal textures (prefixed with cw_)
+            if (name.rfind("cw_", 0) == 0)
+                continue;
+
+            ShaderParameterDesc desc;
+            desc.Identifier = name;
+            desc.Type = MapResourceType(descInfo.Type);
+            desc.Set = descInfo.Set;
+            desc.Slot = descInfo.Slot;
+
+            auto annoIt = allAnnotations.find(name);
+            if (annoIt != allAnnotations.end())
+            {
+                if (annoIt->second.IsHidden)
+                    continue;
+                if (!annoIt->second.DisplayName.empty())
+                    desc.DisplayName = annoIt->second.DisplayName;
+            }
+
+            if (desc.DisplayName.empty())
+                desc.DisplayName = AutoDisplayName(name);
+
+            // Textures sorted after data params
+            desc.SortOrder = 100000 + descInfo.Slot;
+
+            result.push_back(desc);
+        }
+
+        // Sort by SortOrder for deterministic, declaration-order display
+        std::sort(result.begin(), result.end(),
+                  [](const ShaderParameterDesc& a, const ShaderParameterDesc& b) { return a.SortOrder < b.SortOrder; });
+
+        return result;
+    }
+
     void InspectorPanel::RenderMaterialInspector()
     {
         AssetHandle<Material> mat = gAssetManager->Load<Material>(m_InspectedAssetPath);
+        if (!mat)
+            return;
+
         UI::BeginPropertyGrid();
-        UIUtils::AssetReference("shader", mat);
-        const auto& bindings = mat->GetBindings();
-        for (const auto& [name, member] : bindings)
+
+        // Shader selector — allows changing the shader (like Unity's material type)
+        AssetHandle<Shader> currentShader = mat->GetShader();
+        if (UIUtils::AssetSearch<Shader>("Shader", currentShader))
         {
-            if (member.DataType == ShaderDataType::Float)
-            {
-                float value = mat->GetDataParam<float>(name);
-                if (UI::Property(name.c_str(), value))
-                    mat->SetFloat(name, value);
-            }
-            else if (member.DataType == ShaderDataType::Int)
-            {
-                int value = mat->GetDataParam<int>(name);
-                if (UI::Property(name.c_str(), value))
-                    mat->SetInt(name, value);
-            }
-            else if (member.DataType == ShaderDataType::Float3)
-            {
-                glm::vec3 value = mat->GetDataParam<glm::vec3>(name);
-                if (UI::Property(name.c_str(), value))
-                    mat->SetVector3(name, value);
-            }
-            else if (member.DataType == ShaderDataType::Float4)
-            {
-                glm::vec4 value = mat->GetDataParam<glm::vec4>(name);
-                if (UI::Property(name.c_str(), value))
-                    mat->SetColor(name, value);
-            }
+            mat->SetShader(currentShader);
         }
 
-        for (const auto& [name, descInfo] : mat->GetTextures())
+        ImGui::Separator();
+
+        // Build sorted, filtered parameter list
+        Vector<ShaderParameterDesc> params = BuildInspectorParameters(*mat.GetInternalPtr());
+
+        for (const auto& param : params)
         {
-            Ref<Texture> texture = mat->GetTexture(descInfo.Set, descInfo.Slot);
-            // if (texture)
-            //     ImGui::Image(texture, ImVec2(100, 100));
-            // else
-            //     ImGui::Image(EditorAssets::Get().UnassignedTexture, ImVec2(100, 100));
+            switch (param.Type)
+            {
+            case ShaderParamType::Float:
+            {
+                float value = mat->GetDataParam<float>(param.Identifier);
+                bool modified = param.HasRange
+                    ? UI::PropertySlider(param.DisplayName.c_str(), value, param.RangeMin, param.RangeMax)
+                    : UI::Property(param.DisplayName.c_str(), value);
+                if (modified)
+                    mat->SetFloat(param.Identifier, value);
+                break;
+            }
+            case ShaderParamType::Float2:
+            {
+                glm::vec2 value = mat->GetDataParam<glm::vec2>(param.Identifier);
+                if (UI::Property(param.DisplayName.c_str(), value))
+                    mat->SetFloat2(param.Identifier, value);
+                break;
+            }
+            case ShaderParamType::Float3:
+            {
+                glm::vec3 value = mat->GetDataParam<glm::vec3>(param.Identifier);
+                if (UI::Property(param.DisplayName.c_str(), value))
+                    mat->SetVector3(param.Identifier, value);
+                break;
+            }
+            case ShaderParamType::Float4:
+            {
+                glm::vec4 value = mat->GetDataParam<glm::vec4>(param.Identifier);
+                if (UI::Property(param.DisplayName.c_str(), value))
+                    mat->SetColor(param.Identifier, value);
+                break;
+            }
+            case ShaderParamType::Color3:
+            {
+                // Read as vec3, display with color picker
+                glm::vec3 value = mat->GetDataParam<glm::vec3>(param.Identifier);
+                ImGuiColorEditFlags flags = param.Flags.IsSet(ShaderParamFlag::HDR) ? ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float : 0;
+                if (UI::PropertyColor(param.DisplayName.c_str(), value, flags))
+                    mat->SetVector3(param.Identifier, value);
+                break;
+            }
+            case ShaderParamType::Color4:
+            {
+                // Read as vec4, display with color picker
+                glm::vec4 value = mat->GetDataParam<glm::vec4>(param.Identifier);
+                ImGuiColorEditFlags flags = param.Flags.IsSet(ShaderParamFlag::HDR) ? ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float : 0;
+                if (UI::PropertyColor(param.DisplayName.c_str(), value, flags))
+                    mat->SetColor(param.Identifier, value);
+                break;
+            }
+            case ShaderParamType::Int:
+            {
+                int value = mat->GetDataParam<int>(param.Identifier);
+                if (UI::Property(param.DisplayName.c_str(), value))
+                    mat->SetInt(param.Identifier, value);
+                break;
+            }
+            case ShaderParamType::Bool:
+            {
+                bool value = mat->GetDataParam<bool>(param.Identifier);
+                if (UI::Property(param.DisplayName.c_str(), value))
+                    mat->SetBool(param.Identifier, value);
+                break;
+            }
+            case ShaderParamType::Texture2D:
+            case ShaderParamType::Texture3D:
+            case ShaderParamType::TextureCube:
+            {
+                AssetHandle<Texture> texHandle = mat->GetTextureHandle(param.Identifier);
+                if (UIUtils::AssetSearch<Texture>(param.DisplayName, texHandle))
+                    mat->SetTexture(param.Identifier, texHandle);
+                break;
+            }
+            default:
+                break;
+            }
         }
 
         UI::EndPropertyGrid();
-        // Ref<Texture> ao = s_SelectedMaterial->GetAoMap();
-        // if (ao)
-        //     ImGui::Image(ImGui_ImplVulkan_AddTexture(ao), ImVec2(100, 100));
-        // else
-        //     ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().UnassignedTexture), ImVec2(100, 100));
+
+        // Auto-save: if params changed, write .cwmat after a short debounce
+        using clock = std::chrono::steady_clock;
+        uint64_t currentVersion = mat->GetParamVersion();
+        auto now = clock::now();
+        if (m_MaterialLastSaveVersion != currentVersion && now - m_MaterialLastSaveTime >= std::chrono::seconds(2))
+        {
+            MaterialSerializer serializer(mat.GetInternalPtr());
+            serializer.Serialize(m_InspectedAssetPath);
+            m_MaterialLastSaveVersion = currentVersion;
+            m_MaterialLastSaveTime = now;
+        }
     }
 
     void InspectorPanel::RenderPhysicsMaterialInspector() {}
@@ -556,7 +781,7 @@ namespace Crowny
         if (iterFind == m_CachedScriptText.end())
         {
             Ref<TextureImportOptions> scriptCode =
-        std::static_pointer_cast<ScriptCode>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
+        StaticRefCast<ScriptCode>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
             CW_ENGINE_INFO(scriptCode->GetSource());
             m_CachedScriptText[m_InspectedAssetPath] = scriptCode->GetSource();
         }
@@ -582,7 +807,7 @@ namespace Crowny
 
     void InspectorPanel::RenderShaderImportInspector()
     {
-        Ref<ShaderImportOptions> shaderImport = std::static_pointer_cast<ShaderImportOptions>(m_ImportOptions);
+        Ref<ShaderImportOptions> shaderImport = StaticRefCast<ShaderImportOptions>(m_ImportOptions);
         ImGui::Columns(2);
         ImGui::Text("Defines");
         ImGui::NextColumn();

@@ -543,7 +543,7 @@ namespace Crowny
     {
         if (m_GraphicsPipeline == pipeline)
             return;
-        m_GraphicsPipeline = std::static_pointer_cast<VulkanGraphicsPipeline>(pipeline);
+        m_GraphicsPipeline = StaticRefCast<VulkanGraphicsPipeline>(pipeline);
         m_GraphicsPipelineRequiresBind = true;
     }
 
@@ -551,7 +551,7 @@ namespace Crowny
     {
         if (m_RayTracingPipeline == pipeline)
             return;
-        m_RayTracingPipeline = std::static_pointer_cast<VulkanRayTracingPipeline>(pipeline);
+        m_RayTracingPipeline = StaticRefCast<VulkanRayTracingPipeline>(pipeline);
         m_RayTracingPipelineRequiresBind = true;
     }
 
@@ -560,7 +560,7 @@ namespace Crowny
         if (m_ComputePipeline == pipeline)
             return;
 
-        m_ComputePipeline = std::static_pointer_cast<VulkanComputePipeline>(pipeline);
+        m_ComputePipeline = StaticRefCast<VulkanComputePipeline>(pipeline);
         m_ComputePipelineRequiresBind = true;
     }
 
@@ -2050,7 +2050,7 @@ namespace Crowny
             m_VertexBuffers.resize(endIdx);
         for (uint32_t i = idx; i < endIdx; i++)
         {
-            m_VertexBuffers[i] = std::static_pointer_cast<VulkanVertexBuffer>(buffers[i]);
+            m_VertexBuffers[i] = StaticRefCast<VulkanVertexBuffer>(buffers[i]);
         }
         m_VertexInputsRequiresBind = true;
     }
@@ -2065,13 +2065,13 @@ namespace Crowny
 
     void VulkanCmdBuffer::SetIndexBuffer(const Ref<IndexBuffer>& indexBuffer)
     {
-        m_IndexBuffer = std::static_pointer_cast<VulkanIndexBuffer>(indexBuffer);
+        m_IndexBuffer = StaticRefCast<VulkanIndexBuffer>(indexBuffer);
         m_VertexInputsRequiresBind = true;
     }
 
     void VulkanCmdBuffer::SetUniforms(const Ref<UniformParams>& uniforms)
     {
-        m_BoundUniforms = std::static_pointer_cast<VulkanUniformParams>(uniforms);
+        m_BoundUniforms = StaticRefCast<VulkanUniformParams>(uniforms);
         if (m_BoundUniforms != nullptr)
             m_BoundUniformsDirty = true;
         else

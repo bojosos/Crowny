@@ -20,6 +20,7 @@ namespace Crowny
 #define TOON_SHADER_PATH "Resources/Shaders/Toon.asset"
 #define UNLIT_SHADER_PATH "Resources/Shaders/Unlit.asset"
 #define GRID_SHADER_PATH "Resources/Shaders/Grid.asset"
+#define WIREFRAME_SHADER_PATH "Resources/Shaders/Wireframe.asset"
 
     // ------------- Batch Renderer -------------
 #define RENDERER_MAX_SPRITES 60000

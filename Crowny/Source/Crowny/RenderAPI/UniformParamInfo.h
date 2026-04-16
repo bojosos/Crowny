@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Common/RefCounted.h"
+
 namespace Crowny
 {
     struct UniformDesc;
@@ -26,7 +28,7 @@ namespace Crowny
         uint32_t Slot = (uint32_t)-1;
     };
 
-    class UniformParamInfo
+    class UniformParamInfo : public RefCounted
     {
     public:
         enum class ParamType
@@ -40,7 +42,6 @@ namespace Crowny
             Count
         };
 
-        UniformParamInfo(const UniformParamDesc& desc);
         virtual ~UniformParamInfo() = default;
 
         uint32_t GetNumSets() const { return m_NumSets; }
@@ -61,6 +62,7 @@ namespace Crowny
         static Ref<UniformParamInfo> Create(const UniformParamDesc& desc);
 
     protected:
+        UniformParamInfo(const UniformParamDesc& desc);
         struct SetInfo
         {
             uint32_t* SlotIndices;

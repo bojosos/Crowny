@@ -7,7 +7,7 @@
 #include "Crowny/NodeGraph/NodeGraph.h"
 #include "Crowny/NodeGraph/NodeGraphAsset.h"
 #include "Crowny/NodeGraph/NodeRegistry.h"
-#include "Crowny/NodeGraph/Nodes/InputNode.h"
+#include "Crowny/NodeGraph/Nodes/InputNodes.h"
 #include "Crowny/NodeGraph/Pin.h"
 
 namespace Crowny

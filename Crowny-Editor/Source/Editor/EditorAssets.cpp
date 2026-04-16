@@ -53,6 +53,7 @@ namespace Crowny
         s_Library.MaximizeIcon = Importer::Get().Import<Texture>(MaximizeIcon);
         s_Library.GlobeIcon = Importer::Get().Import<Texture>(GlobeIcon);
         s_Library.SearchIcon = Importer::Get().Import<Texture>(SearchIcon);
+        s_Library.SettingsIcon = s_Library.SearchIcon; // Placeholder until a dedicated icon is added
 
         s_Library.ConsoleInfo = Importer::Get().Import<Texture>(ConsoleInfo);
         s_Library.ConsoleWarn = Importer::Get().Import<Texture>(ConsoleWarn);
@@ -63,7 +64,7 @@ namespace Crowny
         s_Library.AlignRight = Importer::Get().Import<Texture>(AlignRight);
 
         // Ref<Asset> font = Importer::Get().Import("Resources/Fonts/Roboto/roboto-thin.ttf");
-        // s_Library.Test = std::static_pointer_cast<Font>(font)->GetAtlasTexture();
+        // s_Library.Test = StaticRefCast<Font>(font)->GetAtlasTexture();
     }
 
     void EditorAssets::Unload()
@@ -80,6 +81,7 @@ namespace Crowny
         s_Library.MaximizeIcon = nullptr;
         s_Library.GlobeIcon = nullptr;
         s_Library.SearchIcon = nullptr;
+        s_Library.SettingsIcon = nullptr;
         s_Library.ConsoleInfo = nullptr;
         s_Library.ConsoleWarn = nullptr;
         s_Library.ConsoleError = nullptr;

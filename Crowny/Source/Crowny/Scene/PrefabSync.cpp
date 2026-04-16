@@ -157,31 +157,32 @@ namespace Crowny
     template <typename... Component>
     static void SyncAllComponents(ComponentGroup<Component...>, Entity instance, Entity prefab, const PrefabComponent& pc)
     {
-        ([&]() {
-            using T = Component;
-            if constexpr (std::is_same_v<T, PrefabComponent> || std::is_same_v<T, RelationshipComponent> ||
-                          std::is_same_v<T, IDComponent> || std::is_same_v<T, TagComponent>)
-                return;
+        (
+          [&]() {
+              using T = Component;
+              if constexpr (std::is_same_v<T, PrefabComponent> || std::is_same_v<T, RelationshipComponent> || std::is_same_v<T, IDComponent> ||
+                            std::is_same_v<T, TagComponent>)
+                  return;
 
-            bool prefabHas = prefab.HasComponent<T>();
-            bool instanceHas = instance.HasComponent<T>();
+              bool prefabHas = prefab.HasComponent<T>();
+              bool instanceHas = instance.HasComponent<T>();
 
-            if (prefabHas && !instanceHas)
-            {
-                instance.AddComponent<T>(prefab.GetComponent<T>());
-            }
-            else if (!prefabHas && instanceHas)
-            {
-                // Component was removed from prefab. We should probably remove it from instance too
-                // if it's not overridden (but we don't have "Component Added" overrides yet).
-                // instance.RemoveComponent<T>();
-            }
-            else if (prefabHas && instanceHas)
-            {
-                PrefabSync::SyncComponent<T>(instance, prefab, pc);
-            }
-        }(),
-         ...);
+              if (prefabHas && !instanceHas)
+              {
+                  instance.AddComponent<T>(prefab.GetComponent<T>());
+              }
+              else if (!prefabHas && instanceHas)
+              {
+                  // Component was removed from prefab. We should probably remove it from instance too
+                  // if it's not overridden (but we don't have "Component Added" overrides yet).
+                  // instance.RemoveComponent<T>();
+              }
+              else if (prefabHas && instanceHas)
+              {
+                  PrefabSync::SyncComponent<T>(instance, prefab, pc);
+              }
+          }(),
+          ...);
     }
 
     void PrefabSync::SyncEntity(Entity instanceEntity, Entity prefabEntity, const PrefabComponent& pc)

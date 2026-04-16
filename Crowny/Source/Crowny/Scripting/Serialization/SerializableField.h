@@ -20,7 +20,7 @@ namespace Crowny
 
     class SerializableObject;
 
-    class SerializableFieldKey
+    class SerializableFieldKey : public RefCounted
     {
     public:
         SerializableFieldKey() = default;
@@ -30,7 +30,7 @@ namespace Crowny
         uint32_t m_FieldId;
     };
 
-    class SerializableFieldData
+    class SerializableFieldData : public RefCounted
     {
     public:
         SerializableFieldData() = default;

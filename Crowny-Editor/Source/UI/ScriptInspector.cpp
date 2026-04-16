@@ -157,7 +157,7 @@ namespace Crowny
     // Note: setter is needed for null lists, since they are created only if a new element is added
     bool ScriptInspector::DrawListInspector(MonoObject* listObject, const FieldContext& ctx)
     {
-        const Ref<SerializableTypeInfoList>& listInfo = std::static_pointer_cast<SerializableTypeInfoList>(ctx.MemberInfo->m_TypeInfo);
+        const Ref<SerializableTypeInfoList>& listInfo = StaticRefCast<SerializableTypeInfoList>(ctx.MemberInfo->m_TypeInfo);
         bool modified = false;
         MonoClass* listClass = MonoManager::Get().FindClass(listInfo->GetMonoClass());
         MonoProperty* countProp = listClass->GetProperty("Count");
@@ -198,7 +198,7 @@ namespace Crowny
             addRangeMethod->Invoke(listObject, params);
             if (listInfo->m_ElementType->GetType() == SerializableType::Object)
             {
-                auto objInfo = std::static_pointer_cast<SerializableTypeInfoObject>(listInfo->m_ElementType);
+                auto objInfo = StaticRefCast<SerializableTypeInfoObject>(listInfo->m_ElementType);
                 if (!objInfo->m_ValueType)
                 {
                     for (uint32_t i = length; i < newLength; i++) // Maybe worth calling the constructor if one exists?
@@ -235,7 +235,7 @@ namespace Crowny
     bool ScriptInspector::DrawDictionaryInspector(MonoObject* dictObject, const FieldContext& ctx)
     {
         ImGui::PushID(ctx.Depth);
-        const Ref<SerializableTypeInfoDictionary>& dictInfo = std::static_pointer_cast<SerializableTypeInfoDictionary>(ctx.MemberInfo->m_TypeInfo);
+        const Ref<SerializableTypeInfoDictionary>& dictInfo = StaticRefCast<SerializableTypeInfoDictionary>(ctx.MemberInfo->m_TypeInfo);
         bool modified = false;
         MonoClass* dictClass = MonoManager::Get().FindClass(dictInfo->GetMonoClass());
         MonoProperty* countProp = dictClass->GetProperty("Count");
@@ -375,7 +375,7 @@ namespace Crowny
     bool ScriptInspector::DrawPrimitiveInspector(const char* label, const FieldContext& ctx)
     {
         const Ref<SerializableTypeInfo>& typeInfo = ctx.GetTypeInfo();
-        const Ref<SerializableTypeInfoPrimitive>& primitive = std::static_pointer_cast<SerializableTypeInfoPrimitive>(typeInfo);
+        const Ref<SerializableTypeInfoPrimitive>& primitive = StaticRefCast<SerializableTypeInfoPrimitive>(typeInfo);
 
         if (primitive->m_Type == ScriptPrimitiveType::String)
             return DrawStringField(label, ctx);
@@ -523,7 +523,7 @@ namespace Crowny
     bool ScriptInspector::DrawEnumInspector(const FieldContext& ctx)
     {
         const Ref<SerializableTypeInfo>& typeInfo = ctx.GetTypeInfo();
-        const Ref<SerializableTypeInfoEnum>& enumInfo = std::static_pointer_cast<SerializableTypeInfoEnum>(typeInfo);
+        const Ref<SerializableTypeInfoEnum>& enumInfo = StaticRefCast<SerializableTypeInfoEnum>(typeInfo);
 
         int32_t value = *(int32_t*)MonoUtils::Unbox(ctx.Getter()); // maybe here I would have to check the underlying type.....
         if (value >= enumInfo->m_EnumNames.size())                 // Maybe clamp the value here?
@@ -584,7 +584,7 @@ namespace Crowny
             return DrawDictionaryInspector(ctx.Getter(), ctx);
         else if (typeInfo->GetType() == SerializableType::Asset)
         {
-            Ref<SerializableTypeInfoAsset> assetInfo = std::static_pointer_cast<SerializableTypeInfoAsset>(typeInfo);
+            Ref<SerializableTypeInfoAsset> assetInfo = StaticRefCast<SerializableTypeInfoAsset>(typeInfo);
             ScriptAsset* scriptAsset = ScriptAsset::ToNative(ctx.Getter());
             AssetHandle<Asset> handle;
             if (scriptAsset != nullptr)
@@ -620,7 +620,7 @@ namespace Crowny
         else if (typeInfo->GetType() == SerializableType::Object)
         {
             Ref<SerializableObjectInfo> objInfo = nullptr;
-            Ref<SerializableTypeInfoObject> objTypeInfo = std::static_pointer_cast<SerializableTypeInfoObject>(typeInfo);
+            Ref<SerializableTypeInfoObject> objTypeInfo = StaticRefCast<SerializableTypeInfoObject>(typeInfo);
             if (!ctx.OverrideTypeInfo)
                 UI::Property(ctx.MemberInfo->m_Name.c_str());
             bool modified = false;

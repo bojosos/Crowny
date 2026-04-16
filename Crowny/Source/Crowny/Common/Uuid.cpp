@@ -31,47 +31,31 @@ namespace Crowny
         m_Data[0] = m_Data[1] = m_Data[2] = m_Data[3] = 0;
         if (uuid.size() != 36)
             return;
+        if (uuid[8] != '-' || uuid[13] != '-' || uuid[18] != '-' || uuid[23] != '-')
+            return;
+
+        auto parseHex = [&](uint32_t& out, uint32_t& idx, int32_t from, int32_t to) -> bool {
+            for (int32_t i = from; i >= to; i--)
+            {
+                uint8_t hex = LITERAL_TO_HEX[(uint8_t)uuid[idx++]];
+                if (hex == 0xFF)
+                    return false;
+                out |= static_cast<uint32_t>(hex) << (i * 4);
+            }
+            return true;
+        };
+
         uint32_t idx = 0;
-
-        for (int32_t i = 7; i >= 0; i--)
-        {
-            uint8_t hex = LITERAL_TO_HEX[(int)uuid[idx++]];
-            m_Data[0] |= hex << (i * 4);
-        }
-
-        idx++;
-        for (int32_t i = 7; i >= 4; i--)
-        {
-            uint8_t hex = LITERAL_TO_HEX[(int)uuid[idx++]];
-            m_Data[1] |= hex << (i * 4);
-        }
-
-        idx++;
-        for (int32_t i = 3; i >= 0; i--)
-        {
-            uint8_t hex = LITERAL_TO_HEX[(int)uuid[idx++]];
-            m_Data[1] |= hex << (i * 4);
-        }
-
-        idx++;
-        for (int32_t i = 7; i >= 4; i--)
-        {
-            uint8_t hex = LITERAL_TO_HEX[(int)uuid[idx++]];
-            m_Data[2] |= hex << (i * 4);
-        }
-
-        idx++;
-        for (int32_t i = 3; i >= 0; i--)
-        {
-            uint8_t hex = LITERAL_TO_HEX[(int)uuid[idx++]];
-            m_Data[2] |= hex << (i * 4);
-        }
-
-        for (int32_t i = 7; i >= 0; i--)
-        {
-            uint8_t hex = LITERAL_TO_HEX[(int)uuid[idx++]];
-            m_Data[3] |= hex << (i * 4);
-        }
+        if (!parseHex(m_Data[0], idx, 7, 0)) { m_Data[0] = 0; return; }
+        idx++; // skip '-'
+        if (!parseHex(m_Data[1], idx, 7, 4)) { m_Data[0] = m_Data[1] = 0; return; }
+        idx++; // skip '-'
+        if (!parseHex(m_Data[1], idx, 3, 0)) { m_Data[0] = m_Data[1] = 0; return; }
+        idx++; // skip '-'
+        if (!parseHex(m_Data[2], idx, 7, 4)) { m_Data[0] = m_Data[1] = m_Data[2] = 0; return; }
+        idx++; // skip '-'
+        if (!parseHex(m_Data[2], idx, 3, 0)) { m_Data[0] = m_Data[1] = m_Data[2] = 0; return; }
+        if (!parseHex(m_Data[3], idx, 7, 0)) { m_Data[0] = m_Data[1] = m_Data[2] = m_Data[3] = 0; return; }
     }
 
     String UUID::ToString() const

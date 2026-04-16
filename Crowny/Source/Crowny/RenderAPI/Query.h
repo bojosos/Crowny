@@ -5,7 +5,7 @@
 namespace Crowny
 {
 
-    class TimerQuery
+    class TimerQuery : public RefCounted
     {
     public:
         virtual ~TimerQuery() = default;
@@ -25,7 +25,7 @@ namespace Crowny
         bool m_Active;
     };
 
-    class PipelineQuery
+    class PipelineQuery : public RefCounted
     {
     public:
         virtual void Begin(const Ref<CommandBuffer>& cb = nullptr) = 0;
@@ -42,7 +42,7 @@ namespace Crowny
         bool m_Active;
     };
 
-    class OcclusionQuery
+    class OcclusionQuery : public RefCounted
     {
     public:
         static Ref<OcclusionQuery> Create(bool binary);

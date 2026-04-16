@@ -8,9 +8,11 @@ namespace Crowny
     class OpenGLVertexBuffer : public VertexBuffer
     {
     public:
+        friend class VertexBuffer;
+        ~OpenGLVertexBuffer();
+    protected:
         OpenGLVertexBuffer(void* vertices, uint32_t size, BufferUsage usage);
         OpenGLVertexBuffer(uint32_t size, BufferUsage usage);
-        ~OpenGLVertexBuffer();
 
         virtual const Ref<BufferLayout>& GetLayout() const override { return m_Layout; };
         virtual void SetLayout(const Ref<BufferLayout>& layout) override { m_Layout = layout; }

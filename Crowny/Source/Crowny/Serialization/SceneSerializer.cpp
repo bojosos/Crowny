@@ -498,13 +498,12 @@ namespace Crowny
 
             const YAML::Node& rel = entity["RelationshipComponent"];
             if (rel)
-                serializedComponents[deserialized] = rel;
+                serializedComponents[deserialized] = rel["Children"];
         }
 
-        for (auto& [entity, node] : serializedComponents)
+        for (auto& [entity, children] : serializedComponents)
         {
             RelationshipComponent& rl = const_cast<Entity&>(entity).GetComponent<RelationshipComponent>();
-            const YAML::Node& children = node["Children"];
             for (const auto& child : children)
             {
                 Entity e = m_Scene->GetEntityFromUuid(child.as<UUID>());

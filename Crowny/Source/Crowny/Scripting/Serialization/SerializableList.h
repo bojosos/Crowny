@@ -3,7 +3,7 @@
 namespace Crowny
 {
 
-    class SerializableList
+    class SerializableList : public RefCounted
     {
     public:
         SerializableList(const Ref<SerializableTypeInfoList>& listInfo, MonoObject* instnace);

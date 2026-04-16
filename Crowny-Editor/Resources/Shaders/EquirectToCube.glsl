@@ -1,3 +1,4 @@
+#lang glsl
 #type vertex
 #version 460 core
 
@@ -5,7 +6,7 @@ layout (location = 0) in vec3 inPos;
 
 layout (location = 0) out vec3 WorldPos;
 
-layout (binding = 0) uniform VP
+layout (binding = 0) uniform cw_VP
 {
   mat4 proj;
   mat4 view;
@@ -23,7 +24,7 @@ void main()
 layout (location = 0) out vec4 FragColor;
 layout (location = 0) in vec3 WorldPos;
 
-layout (binding = 1) uniform sampler2D equirectangularMap;
+layout (binding = 1) uniform sampler2D cw_equirectangularMap;
 
 const vec2 invAtan = vec2(0.1591, 0.3183);
 
@@ -38,7 +39,7 @@ vec2 SampleSphericalMap(vec3 v)
 void main()
 {		
     vec2 uv = SampleSphericalMap(normalize(WorldPos));
-    vec3 color = texture(equirectangularMap, uv).rgb;
+    vec3 color = texture(cw_equirectangularMap, uv).rgb;
     
     FragColor = vec4(color, 1.0);
 }

@@ -2,6 +2,7 @@
 
 #include "Crowny/Assets/Asset.h"
 #include "Crowny/RenderAPI/GraphicsPipeline.h"
+#include "Crowny/Renderer/ShaderParameter.h"
 #include "Crowny/Renderer/ShaderVariation.h"
 
 #include <cereal/types/polymorphic.hpp>
@@ -45,7 +46,7 @@ namespace Crowny
         None,
     };
 
-    struct BinaryShaderData // TODO: Think of a better name
+    struct BinaryShaderData : public RefCounted // TODO: Think of a better name
     {
         Vector<uint8_t> Data;
         String EntryPoint;
@@ -88,11 +89,10 @@ namespace Crowny
         Vector<Ref<ShaderTechnique>> Techniques;
     };
 
-    class ShaderRenderPass
+    class ShaderRenderPass : public RefCounted
     {
     public:
         ShaderRenderPass() = default;
-        ShaderRenderPass(const ShaderRenderPassDesc& shaderDescription);
         static Ref<ShaderRenderPass> Create(const ShaderRenderPassDesc& shaderDesc);
 
         void Compile();
@@ -106,6 +106,9 @@ namespace Crowny
 
         const ShaderRenderPassDesc& GetPassDesc() const { return m_ShaderDesc; }
 
+    protected:
+        ShaderRenderPass(const ShaderRenderPassDesc& shaderDescription);
+
     private:
         CW_SIMPLESERIALIZABLE(ShaderRenderPass);
         ShaderRenderPassDesc m_ShaderDesc;
@@ -114,17 +117,19 @@ namespace Crowny
         Ref<ComputePipeline> m_ComputePipeline;
     };
 
-    class ShaderTechnique
+    class ShaderTechnique : public RefCounted
     {
     public:
         ShaderTechnique() = default;
-
-        ShaderTechnique(const Vector<String>& tags, const ShaderVariation& variation, const Vector<Ref<ShaderRenderPass>>& renderPasses);
 
         static Ref<ShaderTechnique> Create(const Vector<String>& tags, const ShaderVariation& variation,
                                            const Vector<Ref<ShaderRenderPass>>& renderPasses);
         void Compile();
         const Vector<Ref<ShaderRenderPass>>& GetRenderPasses() const { return m_Passes; }
+        const ShaderVariation& GetVariation() const { return m_Variation; }
+
+    protected:
+        ShaderTechnique(const Vector<String>& tags, const ShaderVariation& variation, const Vector<Ref<ShaderRenderPass>>& renderPasses);
 
     private:
         CW_SIMPLESERIALIZABLE(ShaderTechnique);
@@ -137,11 +142,12 @@ namespace Crowny
 
     struct UniformBufferBlockMember
     {
-        String Name; // Maybe remove the names? It's already a map with key name?
+        String Name;
         uint32_t Offset;
         ShaderDataType DataType;
+        Vector<uint8_t> DefaultValue; // Raw bytes parsed from @default annotation (empty = no default)
 
-        template <typename Archive> void Serialize(Archive& archive) { archive(Offset, DataType, Name); }
+        template <typename Archive> void Serialize(Archive& archive) { archive(Offset, DataType, Name, DefaultValue); }
     };
 
     struct UniformBufferBlockDesc
@@ -175,7 +181,7 @@ namespace Crowny
         template <typename Archive> void Serialize(Archive& archive) { archive(Name, Slot, Set); }
     };
 
-    struct UniformDesc
+    struct UniformDesc : public RefCounted
     {
         UnorderedMap<String, UniformBufferBlockDesc> Uniforms;
 
@@ -184,18 +190,21 @@ namespace Crowny
         UnorderedMap<String, UniformResourceDesc> Buffers;
         UnorderedMap<String, UniformResourceDesc> LoadStoreTextures;
         UnorderedMap<String, AccelerationStructDesc> AccelerationStructures;
+
+        // Per-parameter annotations parsed from GLSL comments (// @color, // @range, etc.)
+        UnorderedMap<String, AnnotationSet> Annotations;
     };
 
-    class ShaderStage
+    class ShaderStage : public RefCounted
     {
     public:
         ShaderStage() = default;
-        ShaderStage(const Ref<BinaryShaderData>& shaderData);
         const Ref<UniformDesc>& GetUniformDesc() const;
         static Ref<ShaderStage> Create(const Ref<BinaryShaderData>& shaderData);
         Ref<BufferLayout> GetBufferLayout() const { return m_BufferLayout; }
 
     protected:
+        ShaderStage(const Ref<BinaryShaderData>& shaderData);
         CW_SERIALIZABLE(ShaderStage);
         Ref<BufferLayout> m_BufferLayout;
         Ref<BinaryShaderData> m_ShaderData; // TODO: Don't store the binary data here.
@@ -205,12 +214,26 @@ namespace Crowny
     {
     public:
         Shader() = default;
-        Shader(const ShaderDesc& shaderDesc);
 
         static Ref<Shader> Create(const ShaderDesc& stateDesc);
         virtual AssetType GetAssetType() const override { return AssetType::Shader; }
         static AssetType GetStaticType() { return AssetType::Shader; }
-        Vector<Ref<ShaderTechnique>> GetTechniques() const { return m_Techniques; }
+        const Vector<Ref<ShaderTechnique>>& GetTechniques() const { return m_Techniques; }
+
+        // Find the technique whose variation matches. Falls back to the first technique.
+        const Ref<ShaderTechnique>& GetTechnique(const ShaderVariation& variation) const
+        {
+            CW_ENGINE_ASSERT(!m_Techniques.empty(), "Shader has no techniques");
+            for (const auto& tech : m_Techniques)
+            {
+                if (tech->GetVariation().Matches(variation))
+                    return tech;
+            }
+            return m_Techniques[0]; // Fallback to base variant
+        }
+
+    protected:
+        Shader(const ShaderDesc& shaderDesc);
 
     private:
         CW_SERIALIZABLE(Shader);

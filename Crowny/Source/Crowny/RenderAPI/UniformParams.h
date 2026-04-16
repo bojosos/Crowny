@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/RefCounted.h"
 #include "Crowny/Assets/AssetHandle.h"
 
 #include "Crowny/RenderAPI/AccelerationStructure.h"
@@ -14,10 +15,9 @@
 namespace Crowny
 {
 
-    class UniformParams
+    class UniformParams : public RefCounted
     {
     public:
-        UniformParams(const Ref<UniformParamInfo>& desc);
         virtual ~UniformParams();
 
         void SetUniformBlockBuffer(ShaderType type, const String& name, const Ref<UniformBufferBlock>& uniformBuffer);
@@ -41,6 +41,7 @@ namespace Crowny
         const static GpuDataParameterInfos ParameterInfo;
 
     protected:
+        UniformParams(const Ref<UniformParamInfo>& desc);
         struct TextureData
         {
             Ref<Crowny::Texture> Texture;

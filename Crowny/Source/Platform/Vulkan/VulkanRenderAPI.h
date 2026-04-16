@@ -47,7 +47,7 @@ namespace Crowny
         virtual void OnShutdown() override;
 
         VkInstance GetInstance() const { return m_Instance; }
-        VulkanCommandBuffer* GetMainCommandBuffer() const { return m_CommandBuffer.get(); }
+        VulkanCommandBuffer* GetMainCommandBuffer() const { return m_CommandBuffer.Get(); }
         const Vector<Ref<VulkanDevice>>& GetPrimaryDevices() const { return m_PrimaryDevices; }
         const Ref<VulkanDevice>& GetPresentDevice() const { return m_PrimaryDevices[0]; }
         uint32_t GetDeviceCount() const { return (uint32_t)m_Devices.size(); }

@@ -6,7 +6,7 @@
 namespace Crowny
 {
 
-    struct BuildData
+    struct BuildData : public RefCounted
     {
         BuildData();
 

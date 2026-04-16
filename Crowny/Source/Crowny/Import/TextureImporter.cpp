@@ -30,7 +30,7 @@ namespace Crowny
     // Going to switch to FreeImage soon
     Ref<Asset> TextureImporter::Import(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
-        Ref<const TextureImportOptions> textureImportOptions = std::static_pointer_cast<const TextureImportOptions>(importOptions);
+        Ref<const TextureImportOptions> textureImportOptions = StaticRefCast<const TextureImportOptions>(importOptions);
         int width, height, channels;
         stbi_set_flip_vertically_on_load(1);
 
@@ -63,7 +63,7 @@ namespace Crowny
         else
             CW_ENGINE_ASSERT("2-Channel textures are not supported");
 
-        TextureParameters params;
+        TextureDesc params;
         params.Width = width;
         params.Height = height;
         if (textureImportOptions->AutomaticFormat)

@@ -68,7 +68,7 @@ namespace Crowny
 
         if (field->m_TypeInfo->GetType() == SerializableType::Primitive)
         {
-            ScriptPrimitiveType primitiveType = std::static_pointer_cast<SerializableTypeInfoPrimitive>(field->m_TypeInfo)->m_Type;
+            ScriptPrimitiveType primitiveType = StaticRefCast<SerializableTypeInfoPrimitive>(field->m_TypeInfo)->m_Type;
 
             SerializeEnumYAML(out, "PrimitiveInfo", primitiveType);
         }
@@ -76,7 +76,7 @@ namespace Crowny
         {
             BeginYAMLMap(out, "EnumInfo");
 
-            auto enumInfo = std::static_pointer_cast<SerializableTypeInfoEnum>(field->m_TypeInfo);
+            auto enumInfo = StaticRefCast<SerializableTypeInfoEnum>(field->m_TypeInfo);
             SerializeValueYAML(out, "TypeName", enumInfo->m_TypeName);
             SerializeValueYAML(out, "TypeNamespace", enumInfo->m_TypeNamespace);
             SerializeEnumYAML(out, "UnderlyingType", enumInfo->m_UnderlyingType);
@@ -87,7 +87,7 @@ namespace Crowny
         {
             BeginYAMLMap(out, "ObjectInfo");
 
-            auto objTypeInfo = std::static_pointer_cast<SerializableTypeInfoObject>(field->m_TypeInfo);
+            auto objTypeInfo = StaticRefCast<SerializableTypeInfoObject>(field->m_TypeInfo);
             SerializeValueYAML(out, "TypeName", objTypeInfo->m_TypeName);
             SerializeValueYAML(out, "TypeNamespace", objTypeInfo->m_TypeNamespace);
             SerializeValueYAML(out, "ValueType", objTypeInfo->m_ValueType);
@@ -235,7 +235,7 @@ namespace Crowny
                 switch (typeInfo->GetType())
                 {
                 case (SerializableType::Primitive): {
-                    auto primitiveTypeInfo = std::static_pointer_cast<SerializableTypeInfoPrimitive>(typeInfo);
+                    auto primitiveTypeInfo = StaticRefCast<SerializableTypeInfoPrimitive>(typeInfo);
                     switch (primitiveTypeInfo->m_Type)
                     {
                     case (ScriptPrimitiveType::Bool):
@@ -296,17 +296,17 @@ namespace Crowny
                     break;
                 }
                 case (SerializableType::Object): {
-                    auto obj = std::static_pointer_cast<SerializableTypeInfoObject>(typeInfo);
+                    auto obj = StaticRefCast<SerializableTypeInfoObject>(typeInfo);
                     data = CreateRef<SerializableFieldObject>();
                     break;
                 }
                 case (SerializableType::Entity): {
-                    auto obj = std::static_pointer_cast<SerializableTypeInfoEntity>(typeInfo);
+                    auto obj = StaticRefCast<SerializableTypeInfoEntity>(typeInfo);
                     data = CreateRef<SerializableFieldEntity>();
                     break;
                 }
                 case (SerializableType::Enum): {
-                    auto enumInfo = std::static_pointer_cast<SerializableTypeInfoEnum>(typeInfo);
+                    auto enumInfo = StaticRefCast<SerializableTypeInfoEnum>(typeInfo);
                     switch (enumInfo->m_UnderlyingType)
                     {
                     case ScriptPrimitiveType::I8:
@@ -340,7 +340,7 @@ namespace Crowny
                     break;
                 }
                 case (SerializableType::Asset): {
-                    auto obj = std::static_pointer_cast<SerializableTypeInfoAsset>(typeInfo);
+                    auto obj = StaticRefCast<SerializableTypeInfoAsset>(typeInfo);
                     data = CreateRef<SerializableFieldAsset>();
                     break;
                 }

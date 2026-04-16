@@ -42,7 +42,7 @@ namespace Crowny
                 for (int j = 0; j < entry.Height; j++)
                     for (int k = 0; k < entry.Width; k++)
                         pixelData->SetColorAt(k, j, i, glm::vec4(1.0f));
-            TextureParameters params;
+            TextureDesc params;
             params.Shape = entry.Type;
             params.Width = entry.Width;
             params.Height = entry.Height;
@@ -51,10 +51,10 @@ namespace Crowny
             params.Format = TextureFormat::RGBA8;
             params.Usage = TextureUsage::TEXTURE_STATIC;
 
-            m_DummyReadTextures[idx] = std::static_pointer_cast<VulkanTexture>(Texture::Create(params));
+            m_DummyReadTextures[idx] = StaticRefCast<VulkanTexture>(Texture::Create(params));
             m_DummyReadTextures[idx]->WriteData(*pixelData);
             params.Usage = TextureUsage::TEXTURE_LOADSTORE;
-            m_DummyStorageTextures[idx] = std::static_pointer_cast<VulkanTexture>(Texture::Create(params));
+            m_DummyStorageTextures[idx] = StaticRefCast<VulkanTexture>(Texture::Create(params));
             idx++;
         }
     }
@@ -368,7 +368,7 @@ namespace Crowny
         PerSetData& data = m_PerSetData[set];
         if (image != nullptr)
         {
-            auto& texProps = texture->GetProperties();
+            auto& texProps = texture->GetDesc();
             TextureSurface copy = surface;
             if (surface.NumMipLevels == 0)
                 copy.NumMipLevels = texProps.MipLevels + 1;
@@ -763,7 +763,7 @@ namespace Crowny
                 VulkanTexture* texture = static_cast<VulkanTexture*>(m_SampledTextureData[i].Texture.get());
                 image = texture->GetImage();
 
-                const TextureParameters& params = texture->GetProperties();
+                const TextureDesc& params = texture->GetDesc();
                 if (params.Usage & TextureUsage::TEXTURE_DYNAMIC)
                     layout = VK_IMAGE_LAYOUT_GENERAL;
                 else

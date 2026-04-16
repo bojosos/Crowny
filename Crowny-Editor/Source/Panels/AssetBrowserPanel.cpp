@@ -47,7 +47,7 @@ namespace Crowny
         case AssetBrowserItem::Folder:
             return "New Folder";
         case AssetBrowserItem::Material:
-            return "New Material.mat";
+            return "New Material.cwmat";
         case AssetBrowserItem::Prefab:
             return "New Prefab.cwprefab";
         case AssetBrowserItem::Shader:
@@ -90,7 +90,7 @@ namespace Crowny
 #if AUDIO_PREVIEW
         else if (ext == ".ogg")
         {
-            TextureParameters soundWaveParams;
+            TextureDesc soundWaveParams;
             soundWaveParams.Width = 256;
             soundWaveParams.Height = 256;
             soundWaveParams.Usage = TextureUsage::TEXTURE_STATIC;

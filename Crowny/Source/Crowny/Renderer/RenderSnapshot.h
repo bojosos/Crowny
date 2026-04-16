@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Assets/AssetHandle.h"
+#include "Crowny/Common/Types.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/RenderAPI/RenderTarget.h"
 #include "Crowny/Renderer/EnvironmentMap.h"
@@ -11,6 +12,15 @@
 
 namespace Crowny
 {
+
+    struct GridSettings
+    {
+        float FineSize = 1.0f;
+        float CoarseSize = 10.0f;
+        float LineWidth = 0.02f;
+        float Opacity = 0.4f;
+        bool ShowAxes = true;
+    };
 
     struct RenderableObject
     {
@@ -56,6 +66,9 @@ namespace Crowny
 
         // Frame metadata
         uint64_t FrameNumber = 0;
+        bool DrawGrid = false;
+        GridSettings Grid;
+        PolygonMode OverridePolygonMode = PolygonMode::Solid;
 
         void Clear()
         {

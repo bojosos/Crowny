@@ -7,7 +7,7 @@ namespace Crowny
 {
     /**
      * @brief A string ID that is interned in a global table.
-     * 
+     *
      * StringID is a lightweight wrapper around an integer ID. Comparisons between
      * StringIDs are very fast (integer comparison). The actual string data is stored
      * only once in a global table.
@@ -59,9 +59,6 @@ namespace std
 {
     template <> struct hash<Crowny::StringID>
     {
-        size_t operator()(const Crowny::StringID& id) const
-        {
-            return id.GetHash();
-        }
+        size_t operator()(const Crowny::StringID& id) const { return id.GetHash(); }
     };
 } // namespace std

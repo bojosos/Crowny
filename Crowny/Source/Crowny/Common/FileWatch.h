@@ -22,9 +22,10 @@ namespace Crowny
         using FileWatchCallback = std::function<void(const Path& path, Change changeType)>;
         FileWatch(const Path& watchPath, FileWatchCallback callback);
         ~FileWatch();
+
     private:
         const Path m_WatchPath;
         FileWatchCallback m_FileWatchCallback;
         Scope<WatchType> m_Watch;
     };
-}
+} // namespace Crowny

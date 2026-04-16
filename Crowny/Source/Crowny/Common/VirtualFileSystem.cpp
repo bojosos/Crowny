@@ -7,63 +7,126 @@
 namespace Crowny
 {
 
-    static String FixPath(const String& badPath)
+    static String FixPath(const String& path)
     {
-        String res = badPath;
-        size_t startPos = 0;
-        while ((startPos = res.find("\\", startPos)) != String::npos)
+        String res = path;
+        std::replace(res.begin(), res.end(), '\\', '/');
+        
+        // Normalize: resolve /./ and /../
+        Vector<String> parts = StringUtils::SplitString(res, "/");
+        Vector<String> resultParts;
+        
+        for (const auto& part : parts)
         {
-            res.replace(startPos, 1, "/");
-            startPos++;
+            if (part == "." || part == "") continue;
+            if (part == "..")
+            {
+                if (!resultParts.empty()) resultParts.pop_back();
+            }
+            else
+            {
+                resultParts.push_back(part);
+            }
         }
-        return res;
+
+        String normalized = "/";
+        for (size_t i = 0; i < resultParts.size(); ++i)
+        {
+            normalized += resultParts[i];
+            if (i < resultParts.size() - 1) normalized += "/";
+        }
+        
+        return normalized;
     }
 
     void VirtualFileSystem::Mount(const String& virtualPath, const String& physicalPath)
     {
-        m_MountedDirectories[virtualPath].push_back(physicalPath);
+        String vPath = FixPath(virtualPath);
+        String pPath = physicalPath;
+        std::replace(pPath.begin(), pPath.end(), '\\', '/');
+        if (!pPath.empty() && pPath.back() != '/') pPath += "/";
+
+        m_MountedDirectories[vPath].push_back(pPath);
     }
 
-    void VirtualFileSystem::Unmount(const String& path) { m_MountedDirectories[path].clear(); }
+    void VirtualFileSystem::Unmount(const String& path)
+    {
+        m_MountedDirectories.erase(FixPath(path));
+    }
 
-    bool VirtualFileSystem::ResolvePhyiscalPath(const String& inPath, String& outPath)
+    bool VirtualFileSystem::Exists(const String& path)
+    {
+        String physPath;
+        return ResolvePhyiscalPath(path, physPath);
+    }
+
+    uint64_t VirtualFileSystem::GetSize(const String& path)
+    {
+        String physPath;
+        if (ResolvePhyiscalPath(path, physPath))
+            return FileSystem::GetFileSize(physPath);
+        return 0;
+    }
+
+    bool VirtualFileSystem::ResolvePhyiscalPath(const String& inPath, String& outPath, bool forWrite)
     {
         String virtualPath = FixPath(inPath);
-        if (virtualPath[0] != '/')
+        
+        // Find matching mount point
+        // Basic implementation: find longest matching prefix
+        String bestMatch;
+        for (auto const& [vPath, pPaths] : m_MountedDirectories)
         {
-            outPath = virtualPath;
+            if (virtualPath.find(vPath) == 0)
+            {
+                if (vPath.size() > bestMatch.size())
+                    bestMatch = vPath;
+            }
+        }
+
+        if (bestMatch.empty())
+        {
+            // If not found in VFS, check if it's a direct physical path (absolute)
+            // This is kept for compatibility with existing code
+            if (FileSystem::FileExists(inPath))
+            {
+                outPath = inPath;
+                return true;
+            }
+            return false;
+        }
+
+        String remaining = virtualPath.substr(bestMatch.size());
+        if (!remaining.empty() && remaining[0] == '/')
+            remaining = remaining.substr(1);
+
+        const auto& physicalPaths = m_MountedDirectories[bestMatch];
+        
+        if (forWrite)
+        {
+            // For writing, we use the first (highest priority) mount point
+            outPath = physicalPaths[0] + remaining;
             return true;
         }
 
-        Vector<String> dirs = StringUtils::SplitString(virtualPath, "/");
-        const String& virtualDir = dirs.front();
-
-        if (m_MountedDirectories.find(virtualDir) == m_MountedDirectories.end() || m_MountedDirectories[virtualDir].empty())
-        // return false;
+        // For reading, search through all overlays
+        for (const auto& physRoot : physicalPaths)
         {
-#ifdef CW_PLATFORM_LINUX // on linux full paths start with /
-            outPath = virtualPath;
-            return true; // ?
-#endif
-            CW_ENGINE_WARN("File {0} does not exist", virtualPath);
+            String candidate = physRoot + remaining;
+            if (FileSystem::FileExists(candidate))
+            {
+                outPath = candidate;
+                return true;
+            }
         }
 
-        String remaining = virtualPath.substr(virtualDir.size() + 1, virtualPath.size() - virtualDir.size());
-        for (const String& phPath : m_MountedDirectories[virtualDir])
-        {
-            String path = phPath + remaining;
-            outPath = path;
-            return true;
-        }
-
-        CW_ENGINE_WARN("File {0} does not exist", virtualPath);
         return false;
     }
 
     std::tuple<byte*, uint64_t> VirtualFileSystem::ReadFile(const String& path)
     {
         String phPath;
-        return ResolvePhyiscalPath(path, phPath) ? FileSystem::ReadFile(phPath) : std::make_tuple(nullptr, -1);
+        return ResolvePhyiscalPath(path, phPath) ? FileSystem::ReadFile(phPath) : std::make_tuple(nullptr, (uint64_t)-1);
     }
 
     String VirtualFileSystem::ReadTextFile(const String& path)
@@ -75,13 +138,13 @@ namespace Crowny
     bool VirtualFileSystem::WriteFile(const String& path, byte* buff, uint64_t size)
     {
         String phPath;
-        return ResolvePhyiscalPath(path, phPath) ? FileSystem::WriteFile(phPath, buff, size) : false;
+        return ResolvePhyiscalPath(path, phPath, true) ? FileSystem::WriteFile(phPath, buff, size) : false;
     }
 
     bool VirtualFileSystem::WriteTextFile(const String& path, const String& text)
     {
         String phPath;
-        return ResolvePhyiscalPath(path, phPath) ? FileSystem::WriteTextFile(phPath, text) : false;
+        return ResolvePhyiscalPath(path, phPath, true) ? FileSystem::WriteTextFile(phPath, text) : false;
     }
 
 } // namespace Crowny

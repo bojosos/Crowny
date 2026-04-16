@@ -77,7 +77,7 @@ namespace Crowny
         {
         // case RenderAPI::API::OpenGL: return CreateRef<OpenGLFramebuffer>(props);
         case RenderAPI::API::Vulkan:
-            return CreateRef<VulkanCommandBuffer>(*gVulkanRenderAPI().GetPresentDevice().get(), type, queueIdx, secondary);
+            return Ref<CommandBuffer>(new VulkanCommandBuffer(*gVulkanRenderAPI().GetPresentDevice().get(), type, queueIdx, secondary));
         default:
             CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;

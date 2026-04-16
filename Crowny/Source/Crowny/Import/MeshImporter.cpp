@@ -2,6 +2,7 @@
 
 #include "Crowny/Import/MeshImporter.h"
 
+#include "Crowny/Animation/AnimationClip.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common//FileSystem.h"
 #include "Crowny/Common/StringUtils.h"
@@ -24,6 +25,8 @@ static_assert(sizeof(ai_real) == sizeof(float));
 
 namespace Crowny
 {
+    static glm::vec3 toGlmVec(const aiVector3D& vec) { return glm::vec3(vec.x, vec.y, vec.z); }
+
     bool MeshImporter::IsExtensionSupported(const String& ext) const
     {
         String lower = ext;
@@ -82,9 +85,8 @@ namespace Crowny
                 bufferLayout.AddBufferElement(BufferElement(ShaderDataType::Float2, (VertexAttribute)((int)VertexAttribute::TexCoord0 + uv)));
             }
             const bool hasVertexColors = mesh->HasVertexColors(0);
-            // if (hasVertexColors)
-            // TODO: Should this really be float4?
-            bufferLayout.AddBufferElement(BufferElement(ShaderDataType::Float4, VertexAttribute::Color));
+            if (hasVertexColors)
+                bufferLayout.AddBufferElement(BufferElement(ShaderDataType::Float4, VertexAttribute::Color));
 
             IndexType indexType;
             if (meshImportOptions->IndexFormat == MeshIndexFormat::Auto)
@@ -135,16 +137,50 @@ namespace Crowny
             return nullptr;
         }
         CW_ENGINE_INFO("Mesh: {0} vertices, {1} indices", meshes[0]->GetVertexCount(), meshes[0]->GetIndexCount());
-        Vector<SubMesh> outSubMeshes;
         CW_ENGINE_INFO("Meshes: {0}", meshes.size());
+
         if (meshes.size() == 1)
         {
-            Ref<Mesh> mesh = Mesh::Create(meshes[0], {}, meshImportOptions->CpuCached ? MeshUsage::CpuCached : MeshUsage::Static);
+            Ref<MeshMorph> finalMorphs;
+            CW_ENGINE_ASSERT(scene->mNumMeshes == 1);
+            for (uint32_t i = 0; i < scene->mMeshes[0]->mNumAnimMeshes; i++)
+            {
+                // TODO: enum aiMorphingMethod...
+                const aiAnimMesh* animMesh = scene->mMeshes[0]->mAnimMeshes[i];
+                if (animMesh->mNumVertices != meshes[0]->GetVertexCount())
+                {
+                    CW_ENGINE_ERROR("Invalid blend morph mesh: source vertices {}, morph vertices {}", animMesh->mNumVertices,
+                                    meshes[0]->GetVertexCount());
+                    continue;
+                }
+
+                Vector<MorphData> vertexMorphs;
+                const bool hasNormals = scene->mMeshes[0]->HasNormals() && animMesh->HasNormals();
+                for (uint32_t j = 0; j < animMesh->mNumVertices; j++)
+                {
+                    const glm::vec3 vertexDelta = toGlmVec(scene->mMeshes[0]->mVertices[j] - animMesh->mVertices[j]);
+                    const glm::vec3 normalDelta = hasNormals ? toGlmVec(scene->mMeshes[0]->mNormals[j] - animMesh->mNormals[j]) : glm::vec3();
+                    if (glm::length2(vertexDelta) > 1e-5 || glm::length2(normalDelta) > 1e-5)
+                        vertexMorphs.push_back(MorphData{ vertexDelta, normalDelta, j });
+                }
+                SingleMorph morph(animMesh->mName.C_Str(), animMesh->mWeight, vertexMorphs);
+                FullMorph fullMorph(animMesh->mName.C_Str(), { std::move(morph) });
+                finalMorphs = CreateRef<MeshMorph>(Vector<FullMorph>{ std::move(fullMorph) }, 1);
+            }
+
+            Ref<Mesh> mesh = Mesh::Create({meshes[0], meshImportOptions->CpuCached ? MeshUsage::CpuCached : MeshUsage::Static,
+                                          DrawMode::TRIANGLE_LIST, finalMorphs});
             mesh->SetName(meshName);
             return mesh;
         }
+
+        Vector<SubMesh> outSubMeshes;
         const Ref<MeshData> combinedMeshData = MeshData::Combine(meshes, subMeshes, outSubMeshes);
-        Ref<Mesh> mesh = Mesh::Create(combinedMeshData, outSubMeshes, meshImportOptions->CpuCached ? MeshUsage::CpuCached : MeshUsage::Static);
+        MeshDesc meshDesc;
+        meshDesc.Data = combinedMeshData;
+        meshDesc.Usage = meshImportOptions->CpuCached ? MeshUsage::CpuCached : MeshUsage::Static;
+        meshDesc.SubMeshes = outSubMeshes;
+        Ref<Mesh> mesh = Mesh::Create(meshDesc);
         mesh->SetName(meshName);
         return mesh;
     }
@@ -200,10 +236,77 @@ namespace Crowny
         return scene;
     }
 
+    static Vector<Ref<AnimationClip>> ImportAnimationClips(const aiScene* scene)
+    {
+        Vector<Ref<AnimationClip>> clips;
+        for (uint32_t i = 0; i < scene->mNumAnimations; i++)
+        {
+            const aiAnimation* anim = scene->mAnimations[i];
+            for (uint32_t j = 0; j < anim->mNumMorphMeshChannels; j++)
+            {
+                const aiMeshMorphAnim* morphAnim = anim->mMorphMeshChannels[j];
+                if (morphAnim->mNumKeys < 2)
+                {
+                    CW_ENGINE_ERROR("Cannot import morph animation {}", morphAnim->mName.C_Str());
+                    continue;
+                }
+
+                const double keyTime = morphAnim->mKeys[1].mTime - morphAnim->mKeys[0].mTime;
+                bool simplify = true;
+                for (uint32_t k = 2; k < morphAnim->mNumKeys; k++)
+                {
+                    aiMeshMorphKey& key = morphAnim->mKeys[k];
+                    aiMeshMorphKey& lastKey = morphAnim->mKeys[k - 1];
+                    if (!glm::epsilonEqual(key.mTime - lastKey.mTime, keyTime, 1e-3))
+                    {
+                        simplify = false;
+                        break;
+                    }
+                }
+                Vector<KeyFrame<float>> morphKeys;
+                if (simplify)
+                {
+                    KeyFrame<float> start, end;
+                    start.Time = float(morphAnim->mKeys[0].mTime / anim->mTicksPerSecond);
+                    start.Value = float(morphAnim->mKeys[0].mWeights[0]);
+                    end.Time = float(morphAnim->mKeys[morphAnim->mNumKeys - 1].mTime / anim->mTicksPerSecond);
+                    end.Value = float(morphAnim->mKeys[morphAnim->mNumKeys - 1].mWeights[0]);
+                    morphKeys = { start, end };
+                }
+                else
+                {
+                    morphKeys.reserve(morphAnim->mNumKeys);
+                    for (uint32_t k = 2; k < morphAnim->mNumKeys; k++)
+                    {
+                        KeyFrame<float> morphKey;
+                        morphKey.Time = float(morphAnim->mKeys[k].mTime / anim->mTicksPerSecond);
+                        morphKey.Value = float(morphAnim->mKeys[k].mWeights[0]);
+                        morphKeys.push_back(morphKey);
+                    }
+                }
+                AnimationCurve<float> morphCurve(morphKeys);
+                Ref<AnimationClip> animationClip = AnimationClip::Create(morphCurve);
+                animationClip->SetName(anim->mName.C_Str());
+                clips.push_back(animationClip);
+            }
+            for (uint32_t j = 0; j < anim->mNumChannels; j++)
+            {
+                CW_ENGINE_ASSERT(false);
+            }
+
+            for (uint32_t j = 0; j < anim->mNumMeshChannels; j++)
+            {
+                CW_ENGINE_ASSERT(false);
+            }
+        }
+
+        return clips;
+    }
+
     static UnorderedMap<String, Ref<Texture>> textureCache;
 
-    static Ref<Texture> ImportTexture(const aiMaterial* meshMaterial, const Ref<Material>& material, Vector<Ref<Asset>>& assets,
-                                      aiTextureType textureType, const String& shaderParameter)
+    static Ref<Texture> ImportTexture(const aiMaterial* meshMaterial, const Ref<Material>& material, aiTextureType textureType,
+                                      const String& shaderParameter)
     {
         aiString texturePath;
         if (meshMaterial->GetTexture(textureType, 0, &texturePath) == aiReturn_SUCCESS)
@@ -215,7 +318,6 @@ namespace Crowny
                 Ref<Texture> texture = Importer::Get().Import<Texture>(texturePath.C_Str());
                 textureCache[texturePath.C_Str()] = texture;
                 material->SetTexture(shaderParameter, texture);
-                assets.push_back(texture);
                 return texture;
             }
         }
@@ -223,29 +325,11 @@ namespace Crowny
         return nullptr;
     }
 
-    Ref<Asset> MeshImporter::Import(const Path& path, Ref<const ImportOptions> importOptions)
+    static Vector<Ref<Asset>> ImportMaterials(const aiScene* scene)
     {
-        Vector<Ref<Asset>> assets = ImportAll(path, importOptions);
-        textureCache.clear();
-        if (assets.empty())
-            return nullptr;
-        return assets[0];
-    }
-
-    Vector<Ref<Asset>> MeshImporter::ImportAll(const Path& path, Ref<const ImportOptions> importOptions)
-    {
-        Ref<const MeshImportOptions> meshImportOptions = std::static_pointer_cast<const MeshImportOptions>(importOptions);
-
-        const aiScene* scene = ReadAssimpScene(path, meshImportOptions);
-        if (!scene)
-            return {};
-
         Vector<Ref<Asset>> assets;
-        Ref<Mesh> mesh = ReadMeshData(path.filename().string(), scene, meshImportOptions);
-        if (!mesh)
-            return {};
-        assets.push_back(mesh);
         AssetHandle<Shader> pbriblHandle = gAssetManager->Load<Shader>(PBRIBL_SHADER_PATH);
+
         // static Ref<Shader> pbriblShader = Importer::Get().Import<Shader>("Resources/Shaders/Pbribl.glsl");
         // static const AssetHandle<Shader> pbriblHandle = static_asset_cast<Shader>(gAssetManager->CreateAssetHandle(pbriblShader));
         for (uint32_t i = 0; i < scene->mNumMeshes; i++)
@@ -256,11 +340,11 @@ namespace Crowny
             Ref<Material> material = Material::Create(pbriblHandle);
             material->SetName(meshMaterial->GetName().C_Str());
 
-            ImportTexture(meshMaterial, material, assets, aiTextureType_DIFFUSE, "albedoMap");
-            ImportTexture(meshMaterial, material, assets, aiTextureType_METALNESS, "metallicMap");
-            ImportTexture(meshMaterial, material, assets, aiTextureType_DIFFUSE_ROUGHNESS, "roughnessMap");
-            ImportTexture(meshMaterial, material, assets, aiTextureType_NORMALS, "normalMap");
-            ImportTexture(meshMaterial, material, assets, aiTextureType_AMBIENT_OCCLUSION, "aoMap");
+            assets.push_back(ImportTexture(meshMaterial, material, aiTextureType_DIFFUSE, "albedoMap"));
+            assets.push_back(ImportTexture(meshMaterial, material, aiTextureType_METALNESS, "metallicMap"));
+            assets.push_back(ImportTexture(meshMaterial, material, aiTextureType_DIFFUSE_ROUGHNESS, "roughnessMap"));
+            assets.push_back(ImportTexture(meshMaterial, material, aiTextureType_NORMALS, "normalMap"));
+            assets.push_back(ImportTexture(meshMaterial, material, aiTextureType_AMBIENT_OCCLUSION, "aoMap"));
 
             // Read PBR parameters from assimp
             aiColor3D color(1.0f, 1.0f, 1.0f);
@@ -277,7 +361,40 @@ namespace Crowny
 
             assets.push_back(material);
         }
+
         textureCache.clear();
+        return assets;
+    }
+
+    Ref<Asset> MeshImporter::Import(const Path& path, Ref<const ImportOptions> importOptions)
+    {
+        Vector<Ref<Asset>> assets = ImportAll(path, importOptions);
+        textureCache.clear();
+        if (assets.empty())
+            return nullptr;
+        return assets[0];
+    }
+
+    Vector<Ref<Asset>> MeshImporter::ImportAll(const Path& path, Ref<const ImportOptions> importOptions)
+    {
+        Ref<const MeshImportOptions> meshImportOptions = StaticRefCast<const MeshImportOptions>(importOptions);
+
+        const aiScene* scene = ReadAssimpScene(path, meshImportOptions);
+        if (!scene)
+            return {};
+
+        Vector<Ref<Asset>> assets;
+        Ref<Mesh> mesh = ReadMeshData(path.filename().string(), scene, meshImportOptions);
+        if (!mesh)
+            return {};
+        assets.push_back(mesh);
+
+        const Vector<Ref<AnimationClip>> animations = ImportAnimationClips(scene);
+        assets.insert(assets.end(), animations.cbegin(), animations.cend());
+
+        const Vector<Ref<Asset>> materialAssets = ImportMaterials(scene);
+        assets.insert(assets.end(), materialAssets.cbegin(), materialAssets.cend());
+
         return assets;
     }
 

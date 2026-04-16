@@ -679,6 +679,12 @@ namespace Crowny
         void ClearOverride(const String& path) { Overrides.erase(path); }
     };
 
+    struct AnimationComponent : public ComponentBase
+    {
+        // AnimationController Controller;
+        // AnimationSkeleton Skeleton;
+    };
+
     using AllComponents =
       ComponentGroup<TransformComponent, CameraComponent, TextComponent, SpriteRendererComponent, MeshRendererComponent, ProceduralMeshComponent,
                      AudioSourceComponent, AudioListenerComponent, RelationshipComponent, MonoScriptComponent, Rigidbody2DComponent,

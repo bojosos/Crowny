@@ -11,7 +11,7 @@ namespace Crowny
     class SerializableTypeInfoObject;
     class SerializableObjectInfo;
 
-    class SerializableObject
+    class SerializableObject : public RefCounted
     {
     public:
         void SetFieldData(const Ref<SerializableMemberInfo>& fieldInfo, const Ref<SerializableFieldData>& val);

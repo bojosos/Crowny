@@ -29,7 +29,7 @@ namespace Crowny
     class ImGuiPanel;
     class Scene;
 
-    class UndoAction
+    class UndoAction : public RefCounted
     {
     public:
         virtual void Commit() {}
@@ -64,13 +64,19 @@ namespace Crowny
 
         void BeginComponentScope(std::function<Ref<UndoAction>()> factory)
         {
-            m_Factory = std::move(factory);
-            m_InInteraction = false;
+            // Only capture the snapshot at the start of an interaction. If a drag is
+            // already in progress we must keep the original pre-edit factory so that
+            // the undo action stores the value from *before* the user started dragging,
+            // not the already-modified value from the current frame.
+            if (!m_InInteraction)
+                m_Factory = std::move(factory);
         }
         void EndComponentScope()
         {
-            m_Factory = nullptr;
-            m_InInteraction = false;
+            // Don't tear down state mid-interaction; the factory and flag must survive
+            // until OnItemInteract sees IsItemDeactivatedAfterEdit().
+            if (!m_InInteraction)
+                m_Factory = nullptr;
         }
 
         void OnItemInteract()
@@ -266,6 +272,7 @@ namespace Crowny
         void UI_ProjectManager();
         void UI_Header();
         void UI_GizmoSettings();
+        void UI_ViewportSettings();
         void UI_Settings();
         void UI_Physics2DSettings();
         void UI_TimeSettings();
@@ -301,6 +308,17 @@ namespace Crowny
         bool m_ShowAssetInfo = false;
         bool m_ShowEmptyMetadataAssetInfo = false;
         bool m_ShowEntityDebugInfo = false;
+
+        // Viewport settings
+        bool m_WireframeMode = false;
+        bool m_ShowGrid = true;
+        bool m_ShowGridAxes = true;
+        float m_GridFineSize = 1.0f;
+        float m_GridCoarseSize = 10.0f;
+        float m_GridLineWidth = 0.02f;
+        float m_GridOpacity = 0.4f;
+        glm::vec4 m_ColliderColor = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
+        bool m_ShowViewportSettings = false;
 
         Vector<ImGuiPanel*> m_ImGuiWindows;
         static EditorCamera s_EditorCamera;

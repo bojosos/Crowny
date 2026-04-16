@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Assets/AssetHandle.h"
+#include "Crowny/Common/Types.h"
 #include "Crowny/Renderer/Mesh.h"
 
 namespace Crowny
@@ -22,5 +23,7 @@ namespace Crowny
         static void End();
         static void Flush();
         static void Shutdown();
+
+        static void SetPolygonMode(PolygonMode mode);
     };
 } // namespace Crowny

@@ -25,7 +25,7 @@ namespace Crowny
         ::MonoClass* GetManagedAssetClass(uint32_t id);
         void SetManagedInstance(MonoObject* instance);
         void FreeManagedInstance();
-        ;
+
         void Destroy();
 
     private:

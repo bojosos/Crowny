@@ -62,7 +62,7 @@ namespace Crowny
     typedef Flags<ScriptFieldFlagBits> ScriptFieldFlags;
     CW_FLAGS_OPERATORS(ScriptFieldFlagBits);
 
-    class SerializableTypeInfo
+    class SerializableTypeInfo : public RefCounted
     {
     public:
         virtual bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const = 0;
@@ -169,7 +169,7 @@ namespace Crowny
         String m_TypeName;
     };
 
-    class SerializableMemberInfo
+    class SerializableMemberInfo : public RefCounted
     {
     public:
         SerializableMemberInfo() = default;
@@ -220,7 +220,7 @@ namespace Crowny
         bool Collapsable;
     };
 
-    class SerializableObjectInfo
+    class SerializableObjectInfo : public RefCounted
     {
     public:
         SerializableObjectInfo() = default;
@@ -236,11 +236,11 @@ namespace Crowny
         UnorderedMap<uint32_t, Ref<SerializableMemberInfo>> m_Fields;
 
         Ref<SerializableObjectInfo> m_BaseClass;
-        Vector<std::weak_ptr<SerializableObjectInfo>> m_DerivedClasses;
+        Vector<SerializableObjectInfo*> m_DerivedClasses; // non-owning; SerializableAssemblyInfo owns all instances
         UnorderedMap<uint32_t, ScriptHeader> m_Headers;
     };
 
-    class SerializableAssemblyInfo
+    class SerializableAssemblyInfo : public RefCounted
     {
     public:
         String m_Name;

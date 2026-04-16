@@ -14,6 +14,19 @@ namespace Crowny
     template <typename Type, uint32_t N> class SmallVector
     {
     public:
+        using value_type = Type;
+        using size_type = uint32_t;
+        using difference_type = std::ptrdiff_t;
+        using pointer = Type*;
+        using const_pointer = const Type*;
+        using reference = Type&;
+        using const_reference = const Type&;
+
+        using iterator = Type*;
+        using const_iterator = const Type*;
+        using reverse_iterator = std::reverse_iterator<Type*>;
+        using const_reverse_iterator = std::reverse_iterator<const Type*>;
+
         using Iterator = Type*;
         using ConstIterator = const Type*;
         using ReverseIterator = std::reverse_iterator<Type*>;

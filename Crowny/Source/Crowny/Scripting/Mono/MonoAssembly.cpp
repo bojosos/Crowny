@@ -64,7 +64,7 @@ namespace Crowny
             Unload();
 
         Ref<DataStream> assemblyStream = FileSystem::OpenFile(m_Path);
-        if (assemblyStream == nullptr)
+        if (assemblyStream == nullptr || !assemblyStream->Size())
         {
             CW_ENGINE_ERROR("Could not load assembly from {0}. Path does not exist.", m_Path);
             return;
@@ -80,9 +80,11 @@ namespace Crowny
         MonoImage* image = mono_image_open_from_data_full(assemblyData, assemblySize, 1, &status, 0);
         delete[] assemblyData;
 
-        CheckImageOpenStatus(status);
-        if (image == nullptr)
+        if (!CheckImageOpenStatus(status) || !image)
+        {
             CW_ENGINE_ERROR("Could not open assembly image.");
+            return;
+        }
 
         // #ifdef CW_DEBUG
         Path pdbPath = Path(m_Path).replace_extension("pdb");

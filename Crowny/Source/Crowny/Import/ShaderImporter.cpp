@@ -21,7 +21,7 @@ namespace Crowny
 
     Ref<Asset> ShaderImporter::Import(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
-        const Ref<const ShaderImportOptions> shaderImportOptions = std::static_pointer_cast<const ShaderImportOptions>(importOptions);
+        const Ref<const ShaderImportOptions> shaderImportOptions = StaticRefCast<const ShaderImportOptions>(importOptions);
 
         const String ext = filepath.extension().string();
         const String source = FileSystem::OpenFile(filepath)->GetAsString();

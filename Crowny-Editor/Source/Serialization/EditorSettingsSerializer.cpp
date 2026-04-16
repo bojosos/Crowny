@@ -16,6 +16,14 @@ namespace Crowny
         out << YAML::Key << "AutoLoadLastProject" << YAML::Value << settings->AutoLoadLastProject;
         out << YAML::Key << "ShowImGuiDemo" << YAML::Value << settings->ShowImGuiDemoWindow; // TODO: Maybe move to project settings
         out << YAML::Key << "ShowPhysicsColliders2D" << YAML::Value << settings->ShowPhysicsColliders2D;
+        out << YAML::Key << "WireframeMode" << YAML::Value << settings->WireframeMode;
+        out << YAML::Key << "ShowGrid" << YAML::Value << settings->ShowGrid;
+        out << YAML::Key << "ShowGridAxes" << YAML::Value << settings->ShowGridAxes;
+        out << YAML::Key << "GridFineSize" << YAML::Value << settings->GridFineSize;
+        out << YAML::Key << "GridCoarseSize" << YAML::Value << settings->GridCoarseSize;
+        out << YAML::Key << "GridLineWidth" << YAML::Value << settings->GridLineWidth;
+        out << YAML::Key << "GridOpacity" << YAML::Value << settings->GridOpacity;
+        out << YAML::Key << "ColliderColor" << YAML::Value << settings->ColliderColor;
         out << YAML::Key << "ShowScriptDebugInfo" << YAML::Value << settings->ShowScriptDebugInfo;
         out << YAML::Key << "ShowAssetInfo" << YAML::Value << settings->ShowAssetInfo;
         out << YAML::Key << "ShowEmptyMetadataAssetInfo" << YAML::Value << settings->ShowEmptyMetadataAssetInfo;
@@ -72,6 +80,23 @@ namespace Crowny
             editorSettings->ScrollToBottom = infos.as<bool>(true);
         editorSettings->CodeEditorPath = node["CodeEditorPath"].as<String>(String());
         editorSettings->ShowPhysicsColliders2D = node["ShowPhysicsColliders2D"].as<bool>();
+
+        if (const YAML::Node& n = node["WireframeMode"])
+            editorSettings->WireframeMode = n.as<bool>(false);
+        if (const YAML::Node& n = node["ShowGrid"])
+            editorSettings->ShowGrid = n.as<bool>(true);
+        if (const YAML::Node& n = node["ShowGridAxes"])
+            editorSettings->ShowGridAxes = n.as<bool>(true);
+        if (const YAML::Node& n = node["GridFineSize"])
+            editorSettings->GridFineSize = n.as<float>(1.0f);
+        if (const YAML::Node& n = node["GridCoarseSize"])
+            editorSettings->GridCoarseSize = n.as<float>(10.0f);
+        if (const YAML::Node& n = node["GridLineWidth"])
+            editorSettings->GridLineWidth = n.as<float>(0.02f);
+        if (const YAML::Node& n = node["GridOpacity"])
+            editorSettings->GridOpacity = n.as<float>(0.4f);
+        if (const YAML::Node& n = node["ColliderColor"])
+            editorSettings->ColliderColor = n.as<glm::vec4>(glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
 
         uint32_t idx = 0;
         for (auto project : node["RecentProjects"])

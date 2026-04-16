@@ -16,6 +16,7 @@
 #include <sstream>
 #include <stack>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -70,6 +71,9 @@ namespace Crowny
 
     template <typename T> using Queue = std::queue<T>;
 
+    template <typename T1, typename T2> using Pair = std::pair<T1, T2>;
+    template <class... Types> using Tuple = std::tuple<Types...>;
+
     using String = std::string;
 
     using WString = std::wstring;
@@ -106,13 +110,12 @@ namespace Crowny
         return std::make_unique<T>(std::forward<Args>(args)...);
     }
 
-    template <typename T> using Ref = std::shared_ptr<T>;
+} // namespace Crowny
 
-    /**
-     * @brief Creates a shared pointer.
-     *
-     * @tparam Smart pointer type.
-     */
-    template <typename T, typename... Args> constexpr Ref<T> CreateRef(Args&&... args) { return std::make_shared<T>(std::forward<Args>(args)...); }
+#include "Crowny/Common/RefCounted.h"
 
+namespace Crowny
+{
+    template<typename T> using Ref = IntrusiveRef<T>;
+    // CreateRef<T> is provided by RefCounted.h
 } // namespace Crowny

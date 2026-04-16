@@ -10,12 +10,12 @@ namespace Crowny
         return instance;
     }
 
-    void NodeRegistry::Register(StringID typeName, const String& category, FactoryFunc factory)
+    void NodeRegistry::Register(StringID typeName, StringID category, FactoryFunc factory)
     {
         if (m_Registry.find(typeName) != m_Registry.end())
             return; // Already registered (guard against duplicate calls)
         m_Registry[typeName] = { category, std::move(factory) };
-        m_CategorizedTypes[category].push_back(typeName.c_str());
+        m_CategorizedTypes[category].push_back(typeName);
     }
 
     Ref<Node> NodeRegistry::Create(StringID typeName, UUID id) const

@@ -54,8 +54,7 @@ namespace Crowny
         uint32_t numQueues = gVulkanRenderAPI().GetPresentDevice()->GetNumQueues(GRAPHICS_QUEUE);
         init_info.Queue = gVulkanRenderAPI().GetPresentDevice()->GetQueue(GRAPHICS_QUEUE, numQueues - 1)->GetHandle();
         init_info.DescriptorPool = m_ImguiPool;
-        init_info.MinImageCount =
-          static_cast<VulkanRenderWindow*>(gApplication->GetRenderWindow().get())->GetSwapChain()->GetColorSurfacesCount();
+        init_info.MinImageCount = static_cast<VulkanRenderWindow*>(gApplication->GetRenderWindow().get())->GetSwapChain()->GetColorSurfacesCount();
         init_info.ImageCount = static_cast<VulkanRenderWindow*>(gApplication->GetRenderWindow().get())->GetSwapChain()->GetColorSurfacesCount();
         init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
         init_info.Allocator = gVulkanAllocator;
@@ -74,7 +73,7 @@ namespace Crowny
         m_RenderPass = VulkanRenderPasses::Get().GetRenderPass(passDesc);
         ImGui_ImplVulkan_Init(&init_info, m_RenderPass->GetVkRenderPass((RenderSurfaceMaskBits)0, (RenderSurfaceMaskBits)0, CLEAR_ALL));
 
-        Ref<VulkanCommandBuffer> cmdBuffer = std::static_pointer_cast<VulkanCommandBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
+        Ref<VulkanCommandBuffer> cmdBuffer = StaticRefCast<VulkanCommandBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
         ImGui_ImplVulkan_CreateFontsTexture(cmdBuffer->GetInternal()->GetHandle());
         gVulkanRenderAPI().SubmitCommandBuffer(cmdBuffer);
         cmdBuffer->GetInternal()->CheckFenceStatus(true);

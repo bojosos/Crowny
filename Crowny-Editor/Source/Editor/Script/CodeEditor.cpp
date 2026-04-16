@@ -95,7 +95,7 @@ namespace Crowny
             if (fileEntry->Metadata->Type == AssetType::ScriptCode)
             {
                 Ref<CSharpScriptImportOptions> scriptImportOptions =
-                  std::static_pointer_cast<CSharpScriptImportOptions>(fileEntry->Metadata->ImportOptions);
+                  StaticRefCast<CSharpScriptImportOptions>(fileEntry->Metadata->ImportOptions);
                 bool isEditorScript = false;
                 if (scriptImportOptions != nullptr)
                     isEditorScript = scriptImportOptions->IsEditorScript;

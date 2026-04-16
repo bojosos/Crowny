@@ -33,7 +33,7 @@ namespace Crowny
 
         msdfgen::BitmapConstRef<T, N> bitmap = (msdfgen::BitmapConstRef<T, N>)generator.atlasStorage();
 
-        TextureParameters params;
+        TextureDesc params;
         params.Width = width;
         params.Height = height;
         params.Format = TextureFormat::RGB8;
@@ -66,7 +66,7 @@ namespace Crowny
             return nullptr;
         }
 
-        Ref<const FontImportOptions> fontImportOptions = std::static_pointer_cast<const FontImportOptions>(importOptions);
+        Ref<const FontImportOptions> fontImportOptions = StaticRefCast<const FontImportOptions>(importOptions);
         std::vector<uint8_t> data;
         Ref<DataStream> dataStream = FileSystem::OpenFile(path);
         data.resize(dataStream->Size());

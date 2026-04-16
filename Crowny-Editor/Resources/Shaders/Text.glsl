@@ -1,3 +1,4 @@
+#lang glsl
 #type vertex
 #version 450 core
 
@@ -12,7 +13,7 @@ layout(location = 5) in vec4 a_OutlineColor;
 layout(location = 6) in float a_OutlineThickness;
 layout(location = 7) in int a_ObjectId;
 
-layout(std140, binding = 0) uniform Camera
+layout(std140, binding = 0) uniform cw_Camera
 {
 	mat4 u_ViewProjection;
 } camera;

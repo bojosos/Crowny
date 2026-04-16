@@ -7,15 +7,14 @@
 
 namespace Crowny
 {
-    Ref<GenericGpuBuffer> GenericGpuBuffer::Create(uint32_t elementCount, uint32_t elementSize, GpuBufferType type, GpuBufferFormat format,
-                                                   BufferUsage usage)
+    Ref<GenericGpuBuffer> GenericGpuBuffer::Create(const GenericGpuBufferDesc& desc)
     {
         switch (gRenderAPI->GetAPI())
         {
         case RenderAPI::API::OpenGL:
             return nullptr;
         case RenderAPI::API::Vulkan:
-            return CreateRef<VulkanGenericGpuBuffer>(elementCount, elementSize, type, format, usage);
+            return Ref<GenericGpuBuffer>(new VulkanGenericGpuBuffer(desc.ElementCount, desc.ElementSize, desc.Type, desc.Format, desc.Usage));
         default:
             CW_ENGINE_ASSERT(false, "Renderer API not supported");
             return nullptr;

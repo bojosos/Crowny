@@ -8,8 +8,8 @@ namespace Crowny
         class OpenGLTexture2D : public Texture2D
         {
         public:
-            OpenGLTexture2D(uint32_t width, uint32_t height, const TextureParameters& parameters);
-            OpenGLTexture2D(const Path& filepath, const TextureParameters& parameters, const String& name);
+            OpenGLTexture2D(uint32_t width, uint32_t height, const TextureDesc& parameters);
+            OpenGLTexture2D(const Path& filepath, const TextureDesc& parameters, const String& name);
             ~OpenGLTexture2D();
 
             virtual uint32_t GetWidth() const override { return m_Width; }
@@ -32,7 +32,7 @@ namespace Crowny
             }
 
         private:
-            TextureParameters m_Parameters;
+            TextureDesc m_Parameters;
             uint32_t m_RendererID;
             String m_FilePath;
             uint32_t m_Width, m_Height;

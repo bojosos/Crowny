@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Common/RefCounted.h"
+
 namespace Crowny
 {
 
@@ -22,7 +24,7 @@ namespace Crowny
         GpuViewUsage Usage;
     };
 
-    class TextureView
+    class TextureView : public RefCounted
     {
     public:
         virtual ~TextureView() = default;

@@ -10,10 +10,13 @@ namespace Crowny
     class VulkanUniformBufferBlock : public UniformBufferBlock
     {
     public:
-        VulkanUniformBufferBlock(uint32_t size, BufferUsage usage);
+        friend class UniformBufferBlock;
         ~VulkanUniformBufferBlock();
 
         VulkanBuffer* GetBuffer() const;
+
+    protected:
+        VulkanUniformBufferBlock(uint32_t size, BufferUsage usage);
     };
 
 } // namespace Crowny

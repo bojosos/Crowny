@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/RefCounted.h"
 #include <cfloat>
 
 namespace Crowny
@@ -23,10 +24,9 @@ namespace Crowny
         CompareFunction CompareFunc = CompareFunction::ALWAYS_PASS;
     };
 
-    class SamplerState
+    class SamplerState : public RefCounted
     {
     public:
-        SamplerState(const SamplerStateDesc& desc);
         virtual ~SamplerState() = default;
         const SamplerStateDesc& GetProperties() const { return m_Properties; }
 
@@ -35,6 +35,7 @@ namespace Crowny
         static const Ref<SamplerState>& GetDefault();
 
     protected:
+        SamplerState(const SamplerStateDesc& desc);
         SamplerStateDesc m_Properties;
 
     private:
