@@ -95,7 +95,7 @@ namespace Crowny
         uint32_t numFrames = numSamples / m_NumChannels;
         while (numFrames > 0)
         {
-            uint32_t numFramesToWrite = std::min(numFrames, WRITE_LENGTH);
+            const uint32_t numFramesToWrite = std::min(numFrames, WRITE_LENGTH);
             float** buffer = vorbis_analysis_buffer(&m_VorbisState, numFramesToWrite);
 
             if (m_BitDepth == 8)
@@ -104,8 +104,8 @@ namespace Crowny
                 {
                     for (uint32_t j = 0; j < m_NumChannels; j++)
                     {
-                        int8_t sample = *(int8_t*)samples;
-                        float encodedSample = sample / 127.0f;
+                        const int8_t sample = *(int8_t*)samples;
+                        const float encodedSample = sample / 127.0f;
                         buffer[j][i] = encodedSample;
 
                         samples++;
@@ -118,8 +118,8 @@ namespace Crowny
                 {
                     for (uint32_t j = 0; j < m_NumChannels; j++)
                     {
-                        int16_t sample = *(int16_t*)samples;
-                        float encodedSample = sample / 32767.0f;
+                        const int16_t sample = *(int16_t*)samples;
+                        const float encodedSample = sample / 32767.0f;
                         buffer[j][i] = encodedSample;
 
                         samples += 2;
@@ -132,8 +132,8 @@ namespace Crowny
                 {
                     for (uint32_t j = 0; j < m_NumChannels; j++)
                     {
-                        int32_t sample = AudioUtils::Convert24To32Bits(samples);
-                        float encodedSample = sample / 2147483647.0f;
+                        const int32_t sample = AudioUtils::Convert24To32Bits(samples);
+                        const float encodedSample = sample / 2147483647.0f;
                         buffer[j][i] = encodedSample;
 
                         samples += 3;
@@ -146,8 +146,8 @@ namespace Crowny
                 {
                     for (uint32_t j = 0; j < m_NumChannels; j++)
                     {
-                        int32_t sample = *(int32_t*)samples;
-                        float encodedSample = sample / 2147483647.0f;
+                        const int32_t sample = *(int32_t*)samples;
+                        const float encodedSample = sample / 2147483647.0f;
                         buffer[j][i] = encodedSample;
 
                         samples += 4;
@@ -244,9 +244,9 @@ namespace Crowny
         writer.Close();
         // CW_ENGINE_INFO("Total size: {0}", totalEncodedSize);
 
-        auto output = CreateRef<MemoryDataStream>(totalEncodedSize);
+        const auto output = CreateRef<MemoryDataStream>(totalEncodedSize);
         uint32_t offset = 0;
-        for (auto& block : blocks)
+        for (const auto& block : blocks)
         {
             memcpy(output->Data() + offset, block.data, block.size);
             offset += block.size;

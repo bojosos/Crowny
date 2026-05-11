@@ -41,7 +41,7 @@ namespace Crowny
 
     void ScriptAssetManager::DestroyScriptAsset(ScriptAssetBase* asset)
     {
-        AssetHandle<Asset> handle = asset->GetGenericHandle();
+        const AssetHandle<Asset> handle = asset->GetGenericHandle();
         const UUID& uuid = handle.GetUUID();
         delete asset;
         m_ScriptAssets.erase(uuid);

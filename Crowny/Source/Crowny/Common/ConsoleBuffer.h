@@ -57,7 +57,7 @@ namespace Crowny
         const Vector<Message>& GetBuffer();
         void Collapse();
         void Uncollapse();
-        bool HasNewMessages() { return m_HasNewMessages; }
+        bool HasNewMessages() const { return m_HasNewMessages; }
 
     private:
         bool m_HasNewMessages = false;

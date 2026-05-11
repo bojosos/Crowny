@@ -55,7 +55,7 @@ namespace Crowny
         void DrawFiles();
         void DrawTreeView();
         void CreateNew(AssetBrowserItem itemType);
-        String GetDefaultContents(AssetBrowserItem itemType);
+        String GetDefaultContents(AssetBrowserItem itemType) const;
         void HandleKeyboardNavigation();
         void RecalculateDirectoryEntries();
         void ClearSelection();

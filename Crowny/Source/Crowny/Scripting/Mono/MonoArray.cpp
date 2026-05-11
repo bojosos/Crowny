@@ -58,17 +58,17 @@ namespace Crowny
     {
         if (newLength == 0)
             return;
-        uint32_t length = Size();
+        const uint32_t length = Size();
         if (length == 0)
         {
             m_Array = mono_array_new(MonoManager::Get().GetDomain(), GetElementClass(), newLength);
             return;
         }
-        uint32_t lengthToCopy = newLength < length ? newLength : length;
+        const uint32_t lengthToCopy = newLength < length ? newLength : length;
         MonoArray* temp = mono_array_new(MonoManager::Get().GetDomain(), GetElementClass(), newLength);
         if (temp == nullptr)
             return;
-        uint32_t elementSize = ElementSize();
+        const uint32_t elementSize = ElementSize();
         char* src = mono_array_addr_with_size(m_Array, elementSize, 0);
         char* dst = mono_array_addr_with_size(temp, elementSize, 0);
 

@@ -157,7 +157,7 @@ namespace Crowny
         MonoCustomAttrInfo* info = mono_custom_attrs_from_class(m_Class);
         if (info == nullptr)
             return false;
-        bool hasAttr = mono_custom_attrs_has_attr(info, monoClass->GetInternalPtr()) != 0;
+        const bool hasAttr = mono_custom_attrs_has_attr(info, monoClass->GetInternalPtr()) != 0;
         mono_custom_attrs_free(info);
         return hasAttr;
     }
@@ -192,8 +192,8 @@ namespace Crowny
 
     MonoMethod* MonoClass::GetMethod(const String& name, const String& signature) const
     {
-        MethodId id(name + "(" + signature + ")", 0);
-        auto iterFind = m_Methods.find(id);
+        const MethodId id(name + "(" + signature + ")", 0);
+        const auto iterFind = m_Methods.find(id);
         if (iterFind != m_Methods.end())
             return iterFind->second;
 
@@ -221,8 +221,8 @@ namespace Crowny
 
     MonoMethod* MonoClass::GetMethod(const String& name, uint32_t argc) const
     {
-        MethodId id(name, argc);
-        auto iter = m_Methods.find(id);
+        const MethodId id(name, argc);
+        const auto iter = m_Methods.find(id);
         if (iter != m_Methods.end())
             return iter->second;
 
@@ -236,7 +236,7 @@ namespace Crowny
 
     MonoField* MonoClass::GetField(const String& name) const
     {
-        auto iter = m_Fields.find(name);
+        const auto iter = m_Fields.find(name);
         if (iter != m_Fields.end())
             return iter->second;
         MonoClassField* field = mono_class_get_field_from_name(m_Class, name.c_str());
@@ -250,7 +250,7 @@ namespace Crowny
 
     MonoProperty* MonoClass::GetProperty(const String& name) const
     {
-        auto iter = m_Properties.find(name);
+        const auto iter = m_Properties.find(name);
         if (iter != m_Properties.end())
             return iter->second;
 

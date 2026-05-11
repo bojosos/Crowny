@@ -50,7 +50,7 @@ namespace Crowny
         m_RootEntityUuid = rootEntity.GetUuid();
 
         // Recursively capture children
-        for (auto& child : rootEntity.GetChildren())
+        for (const auto& child : rootEntity.GetChildren())
             CaptureEntityRecursive(const_cast<Scene&>(sourceScene), child, *m_PrefabScene, &prefabRoot);
     }
 
@@ -69,7 +69,7 @@ namespace Crowny
         if (destParent)
             newNode.SetParent(*destParent);
 
-        for (auto& child : sourceEntity.GetChildren())
+        for (const auto& child : sourceEntity.GetChildren())
             CaptureEntityRecursive(source, child, dest, &newNode);
     }
 

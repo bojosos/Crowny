@@ -41,7 +41,7 @@ namespace Crowny
         String assimpFormatId;
         for (size_t i = 0; i < exporter.GetExportFormatCount(); i++)
         {
-            auto* exportFormat = exporter.GetExportFormatDescription(i);
+            const auto* exportFormat = exporter.GetExportFormatDescription(i);
             if (ext == exportFormat->fileExtension)
             {
                 assimpFormatId = exportFormat->id;
@@ -59,24 +59,24 @@ namespace Crowny
 
         static_assert(alignof(aiVector3D) == alignof(glm::vec3) && sizeof(aiVector3D) == sizeof(glm::vec3));
 
-        auto verts = m_MeshData->GetPositions();
+        const auto verts = m_MeshData->GetPositions();
         ScopedAssign assignVerts(mesh.mVertices, reinterpret_cast<aiVector3D*>(const_cast<glm::vec3*>(verts.data())));
         mesh.mNumVertices = verts.size();
 
-        auto normals = m_MeshData->GetNormals();
+        const auto normals = m_MeshData->GetNormals();
         ScopedAssign assignNormals(mesh.mNormals, reinterpret_cast<aiVector3D*>(const_cast<glm::vec3*>(normals.data())));
 
-        auto uvs0 = m_MeshData->GetUVs();
+        const auto uvs0 = m_MeshData->GetUVs();
         ScopedAssign assignUVs(mesh.mTextureCoords[0], reinterpret_cast<aiVector3D*>(const_cast<glm::vec2*>(uvs0.data())));
 
-        auto tangents = m_MeshData->GetTangents();
+        const auto tangents = m_MeshData->GetTangents();
         ScopedAssign assignTangents(mesh.mTangents, reinterpret_cast<aiVector3D*>(const_cast<glm::vec3*>(tangents.data())));
 
         aiString str("uvs0");
         aiString* uvsNames[AI_MAX_NUMBER_OF_TEXTURECOORDS] = { &str };
         ScopedAssign assignUVNames(mesh.mTextureCoordsNames, uvsNames);
 
-        auto indices = m_MeshData->GetIndices();
+        const auto indices = m_MeshData->GetIndices();
         Vector<aiFace> faces;
         faces.resize(indices.size() / 3);
 

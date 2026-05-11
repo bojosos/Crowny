@@ -248,7 +248,7 @@ namespace Crowny
 
         static bool InputUInt32(const char* label, uint32_t* v, uint32_t step = 1, uint32_t step_fast = 100, ImGuiInputTextFlags flags = 0)
         {
-            return ImGui::InputScalar(label, ImGuiDataType_U32, v, &step, &step_fast, "%d", flags);
+            return ImGui::InputScalar(label, ImGuiDataType_U32, v, &step, &step_fast, "%u", flags);
         }
 
         static bool DragFloat(const char* label, float* v, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f",
@@ -329,6 +329,22 @@ namespace Crowny
         static bool InputInt64(const char* label, int64_t* v, int64_t step = 1, int64_t step_fast = 1000, ImGuiInputTextFlags flags = 0)
         {
             return ImGui::InputScalar(label, ImGuiDataType_S64, v, &step, &step_fast, "%d", flags);
+        }
+
+        // Crowny editor skin tokens — match design handoff.
+        // Accent: amber #C47B30. Vec3 axis stripes: X #B8453A, Y #5E9F4B, Z #3A78B8.
+        namespace Colors
+        {
+            constexpr ImU32 Accent       = IM_COL32(196, 123,  48, 255);
+            constexpr ImU32 AccentHover  = IM_COL32(215, 138,  58, 255);
+            constexpr ImU32 AccentPress  = IM_COL32(176, 107,  40, 255);
+            constexpr ImU32 AxisX        = IM_COL32(184,  69,  58, 255);
+            constexpr ImU32 AxisY        = IM_COL32( 94, 159,  75, 255);
+            constexpr ImU32 AxisZ        = IM_COL32( 58, 120, 184, 255);
+            constexpr ImU32 AxisXHover   = IM_COL32(204,  89,  78, 255);
+            constexpr ImU32 AxisYHover   = IM_COL32(114, 179,  95, 255);
+            constexpr ImU32 AxisZHover   = IM_COL32( 78, 140, 204, 255);
+            constexpr ImU32 TextSecondary = IM_COL32(138, 125, 114, 255);
         }
     } // namespace UI
 
@@ -496,7 +512,7 @@ namespace Crowny
                         }
 
                         const auto& classes = ScriptInfoManager::Get().GetEntityBehaviours();
-                        for (auto [name, klass] : classes)
+                        for (const auto& [name, klass] : classes)
                         {
                             if (klass->GetFullName() == ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetFullName())
                                 continue;
@@ -542,14 +558,14 @@ namespace Crowny
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
             ImGui::PushItemWidth(-1);
 
-            ImVec2 originalButtonTextAlign = ImGui::GetStyle().ButtonTextAlign;
+            const ImVec2 originalButtonTextAlign = ImGui::GetStyle().ButtonTextAlign;
             {
                 ImGui::GetStyle().ButtonTextAlign = { 0.0f, 0.5f };
-                float width = ImGui::GetContentRegionAvail().x;
-                float itemHeight = 28.0f;
+                const float width = ImGui::GetContentRegionAvail().x;
+                const float itemHeight = 28.0f;
 
-                String buttonText = gPhysics2D->GetLayerName(selectedLayer);
-                String layerSearchPopupId = UI::GenerateLabelID("EntitySearch");
+                const String buttonText = gPhysics2D->GetLayerName(selectedLayer);
+                const String layerSearchPopupId = UI::GenerateLabelID("EntitySearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
                     ImGui::OpenPopup(layerSearchPopupId.c_str());
@@ -912,16 +928,16 @@ namespace Crowny
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
             ImGui::PushItemWidth(-1);
 
-            ImVec2 originalButtonTextAlign = ImGui::GetStyle().ButtonTextAlign;
+            const ImVec2 originalButtonTextAlign = ImGui::GetStyle().ButtonTextAlign;
             {
                 ImGui::GetStyle().ButtonTextAlign = { 0.0f, 0.5f };
-                float width = ImGui::GetContentRegionAvail().x;
-                float itemHeight = 28.0f;
+                const float width = ImGui::GetContentRegionAvail().x;
+                const float itemHeight = 28.0f;
 
                 String buttonText = "Null";
                 if (entity)
                     buttonText = entity.GetName();
-                String entitySearchPopupId = UI::GenerateLabelID("EntitySearch");
+                const String entitySearchPopupId = UI::GenerateLabelID("EntitySearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
                     ImGui::OpenPopup(entitySearchPopupId.c_str());
@@ -967,18 +983,18 @@ namespace Crowny
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
             ImGui::PushItemWidth(-1);
 
-            ImVec2 originalButtonTextAlign = ImGui::GetStyle().ButtonTextAlign;
+            const ImVec2 originalButtonTextAlign = ImGui::GetStyle().ButtonTextAlign;
             {
                 ImGui::GetStyle().ButtonTextAlign = { 0.0f, 0.5f };
-                float width = ImGui::GetContentRegionAvail().x;
-                float itemHeight = 28.0f;
+                const float width = ImGui::GetContentRegionAvail().x;
+                const float itemHeight = 28.0f;
 
                 String buttonText = "Null";
                 if (assetHandle.IsLoaded())
                     buttonText = assetHandle->GetName();
                 else if (assetHandle.HasUUID())
                     buttonText = ProjectLibrary::Get().GetAssetName(assetHandle.GetUUID());
-                String entitySearchPopupId = UI::GenerateLabelID("AssetSearch");
+                const String entitySearchPopupId = UI::GenerateLabelID("AssetSearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
                     ImGui::OpenPopup(entitySearchPopupId.c_str());
@@ -1038,18 +1054,18 @@ namespace Crowny
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
             ImGui::PushItemWidth(-1);
 
-            ImVec2 originalButtonTextAlign = ImGui::GetStyle().ButtonTextAlign;
+            const ImVec2 originalButtonTextAlign = ImGui::GetStyle().ButtonTextAlign;
             {
                 ImGui::GetStyle().ButtonTextAlign = { 0.0f, 0.5f };
-                float width = ImGui::GetContentRegionAvail().x;
-                float itemHeight = 28.0f;
+                const float width = ImGui::GetContentRegionAvail().x;
+                const float itemHeight = 28.0f;
 
                 String buttonText = "Null";
                 if (assetHandle.IsLoaded())
                     buttonText = assetHandle->GetName();
                 else if (assetHandle.HasUUID())
                     buttonText = ProjectLibrary::Get().GetAssetName(assetHandle.GetUUID());
-                String entitySearchPopupId = UI::GenerateLabelID("AssetSearch");
+                const String entitySearchPopupId = UI::GenerateLabelID("AssetSearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
                     ImGui::OpenPopup(entitySearchPopupId.c_str());
@@ -1096,16 +1112,16 @@ namespace Crowny
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
             ImGui::PushItemWidth(-1);
 
-            ImVec2 originalButtonTextAlign = ImGui::GetStyle().ButtonTextAlign;
+            const ImVec2 originalButtonTextAlign = ImGui::GetStyle().ButtonTextAlign;
             {
                 ImGui::GetStyle().ButtonTextAlign = { 0.0f, 0.5f };
-                float width = ImGui::GetContentRegionAvail().x;
-                float itemHeight = 28.0f;
+                const float width = ImGui::GetContentRegionAvail().x;
+                const float itemHeight = 28.0f;
 
                 String buttonText = "Null";
                 if (!name.empty())
                     buttonText = name;
-                String scriptSearchPopupId = UI::GenerateLabelID("ScriptSearch");
+                const String scriptSearchPopupId = UI::GenerateLabelID("ScriptSearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
                     ImGui::OpenPopup(scriptSearchPopupId.c_str());
@@ -1145,7 +1161,7 @@ namespace Crowny
         static Entity GetEntityFromPayload(const ImGuiPayload* payload)
         {
             CW_ENGINE_ASSERT(payload->DataSize == sizeof(uint32_t));
-            uint32_t id = *(const uint32_t*)payload->Data;
+            const uint32_t id = *(const uint32_t*)payload->Data;
             Entity result{ (entt::entity)id, gSceneManager->GetActiveScene().get() };
             return result;
         }

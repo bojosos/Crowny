@@ -79,7 +79,7 @@ namespace Crowny
             entity.AddComponent<PrefabComponent>(prefabAssetUuid, entity.GetUuid());
         }
 
-        for (auto& child : entity.GetChildren())
+        for (const auto& child : entity.GetChildren())
             AttachPrefabComponents(child, prefabAssetUuid);
     }
 
@@ -97,7 +97,7 @@ namespace Crowny
             return {};
 
         Ref<Scene> activeScene = gSceneManager->GetActiveScene();
-        UUID prefabAssetUuid = prefabHandle.GetUUID();
+        const UUID prefabAssetUuid = prefabHandle.GetUUID();
 
         Entity instanceRoot = InstantiateEntityRecursive(*prefab->GetInternalScene(), prefabRoot, *activeScene, &parent, prefabAssetUuid);
         return instanceRoot;
@@ -126,7 +126,7 @@ namespace Crowny
             newEntity.SetParent(*targetParent);
 
         // Recursively instantiate children
-        for (auto& child : prefabEntity.GetChildren())
+        for (const auto& child : prefabEntity.GetChildren())
             InstantiateEntityRecursive(prefabScene, child, targetScene, &newEntity, prefabAssetUuid);
 
         return newEntity;
@@ -145,7 +145,7 @@ namespace Crowny
         if (prefabEntity)
             PrefabSync::SyncEntity(instanceEntity, prefabEntity, pc);
 
-        for (auto& child : instanceEntity.GetChildren())
+        for (const auto& child : instanceEntity.GetChildren())
             SyncEntityRecursive(child, prefabScene, prefabAssetUuid);
     }
 
@@ -197,7 +197,7 @@ namespace Crowny
         if (!assetHandle.IsLoaded())
             return;
 
-        AssetHandle<Prefab> prefabHandle = static_asset_cast<Prefab>(assetHandle);
+        const AssetHandle<Prefab> prefabHandle = static_asset_cast<Prefab>(assetHandle);
         Prefab* prefab = prefabHandle.Get();
 
         // Re-capture the entity hierarchy into the prefab
@@ -205,7 +205,7 @@ namespace Crowny
         prefab->CaptureFromEntity(*activeScene, instanceRoot);
 
         // Re-serialize the prefab file
-        Path prefabPath = ProjectLibrary::Get().UuidToPath(prefabAssetUuid);
+        const Path prefabPath = ProjectLibrary::Get().UuidToPath(prefabAssetUuid);
         if (!prefabPath.empty())
         {
             PrefabSerializer serializer(prefabHandle.GetInternalPtr());
@@ -233,7 +233,7 @@ namespace Crowny
     void PrefabUtils::UnlinkPrefab(Entity entity)
     {
         entity.RemoveComponentIfExists<PrefabComponent>();
-        for (auto& child : entity.GetChildren())
+        for (const auto& child : entity.GetChildren())
             UnlinkPrefab(child);
     }
 

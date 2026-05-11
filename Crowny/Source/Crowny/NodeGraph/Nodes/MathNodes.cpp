@@ -67,9 +67,9 @@ namespace Crowny
         static const StringID bPin("B");
         static const StringID resultPin("Result");
 
-        PinValue a = evaluator.PullInput(FindInputPin(aPin));
-        PinValue b = evaluator.PullInput(FindInputPin(bPin));
-        PinValue result = AddValues(a, b);
+        const PinValue a = evaluator.PullInput(FindInputPin(aPin));
+        const PinValue b = evaluator.PullInput(FindInputPin(bPin));
+        const PinValue result = AddValues(a, b);
         evaluator.SetOutputValue(FindOutputPin(resultPin)->GetID(), result);
     }
 
@@ -88,9 +88,9 @@ namespace Crowny
         static const StringID bPin("B");
         static const StringID resultPin("Result");
 
-        PinValue a = evaluator.PullInput(FindInputPin(aPin));
-        PinValue b = evaluator.PullInput(FindInputPin(bPin));
-        PinValue result = MultiplyValues(a, b);
+        const PinValue a = evaluator.PullInput(FindInputPin(aPin));
+        const PinValue b = evaluator.PullInput(FindInputPin(bPin));
+        const PinValue result = MultiplyValues(a, b);
         evaluator.SetOutputValue(FindOutputPin(resultPin)->GetID(), result);
     }
 
@@ -115,15 +115,15 @@ namespace Crowny
         static const StringID toMaxPin("ToMax");
         static const StringID resultPin("Result");
 
-        float value = GetInputValue<float>(valuePin, evaluator);
-        float fromMin = GetInputValue<float>(fromMinPin, evaluator);
-        float fromMax = GetInputValue<float>(fromMaxPin, evaluator);
-        float toMin = GetInputValue<float>(toMinPin, evaluator);
-        float toMax = GetInputValue<float>(toMaxPin, evaluator);
+        const float value = GetInputValue<float>(valuePin, evaluator);
+        const float fromMin = GetInputValue<float>(fromMinPin, evaluator);
+        const float fromMax = GetInputValue<float>(fromMaxPin, evaluator);
+        const float toMin = GetInputValue<float>(toMinPin, evaluator);
+        const float toMax = GetInputValue<float>(toMaxPin, evaluator);
 
-        float range = fromMax - fromMin;
-        float t = (range != 0.0f) ? (value - fromMin) / range : 0.0f;
-        float result = toMin + t * (toMax - toMin);
+        const float range = fromMax - fromMin;
+        const float t = (range != 0.0f) ? (value - fromMin) / range : 0.0f;
+        const float result = toMin + t * (toMax - toMin);
         SetOutputValue(resultPin, result, evaluator);
     }
 
@@ -144,7 +144,7 @@ namespace Crowny
         static const StringID yPin("Y");
         static const StringID zPin("Z");
 
-        glm::vec3 v = GetInputValue<glm::vec3>(vectorPin, evaluator);
+        const glm::vec3 v = GetInputValue<glm::vec3>(vectorPin, evaluator);
         SetOutputValue(xPin, v.x, evaluator);
         SetOutputValue(yPin, v.y, evaluator);
         SetOutputValue(zPin, v.z, evaluator);

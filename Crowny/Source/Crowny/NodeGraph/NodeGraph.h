@@ -45,7 +45,7 @@ namespace Crowny
         void Disconnect(UUID connectionId);
         void DisconnectPin(UUID pinId);
         const Vector<Connection>& GetConnections() const { return m_Connections; }
-        bool CanConnect(Pin* output, Pin* input) const;
+        bool CanConnect(const Pin* output, const Pin* input) const;
 
         // Find the terminal output node
         Node* FindOutputNode() const;

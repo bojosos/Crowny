@@ -20,7 +20,7 @@ namespace Crowny
 
     Ref<Node> NodeRegistry::Create(StringID typeName, UUID id) const
     {
-        auto it = m_Registry.find(typeName);
+        const auto it = m_Registry.find(typeName);
         if (it == m_Registry.end())
         {
             CW_ENGINE_ERROR("NodeRegistry: Unknown node type '{0}'", typeName.c_str());

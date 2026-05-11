@@ -19,8 +19,8 @@ namespace Crowny
     {
         if (Input::IsKeyPressed(Key::LeftAlt) || Input::IsKeyPressed(Key::RightAlt)) // need right alt cuz keyboard not working
         {
-            glm::vec2 mouse = Input::GetMousePosition();
-            glm::vec2 delta = (mouse - m_InitialMousePosition) * 0.003f;
+            const glm::vec2 mouse = Input::GetMousePosition();
+            const glm::vec2 delta = (mouse - m_InitialMousePosition) * 0.003f;
             m_InitialMousePosition = mouse;
 
             if (Input::IsMouseButtonPressed(Mouse::ButtonMiddle))
@@ -72,7 +72,7 @@ namespace Crowny
 
     void EditorCamera::MouseRotate(const glm::vec2& delta)
     {
-        float yawSign = GetUpDirection().y < 0 ? -1.0f : 1.0f;
+        const float yawSign = GetUpDirection().y < 0 ? -1.0f : 1.0f;
         m_Yaw += yawSign * delta.x * RotationSpeed();
         m_Pitch += delta.y * RotationSpeed();
     }

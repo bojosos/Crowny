@@ -57,7 +57,7 @@ namespace Crowny
 
         for (auto& plane : m_Planes)
         {
-            float length = glm::length(plane.normal);
+            const float length = glm::length(plane.normal);
             plane.normal /= length;
             plane.distanceToOrigin /= length;
         }
@@ -65,7 +65,7 @@ namespace Crowny
 
     bool ViewFrustum::ChunkIsInFrustum(const glm::vec3& position) const
     {
-        for (auto& plane : m_Planes)
+        for (const auto& plane : m_Planes)
         {
             if (plane.DistanceToPoint(position) < 0)
             {

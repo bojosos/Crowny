@@ -438,7 +438,7 @@ namespace Crowny
                 // TODO: Is this really a path?
                 String clipboard = PlatformUtils::CopyFromClipboard();
                 Vector<String> paths = StringUtils::SplitString(clipboard, "\n");
-                for (auto& path : paths) // Maybe here I would need to remove the last char
+                for (const auto& path : paths) // Maybe here I would need to remove the last char
                     ProjectLibrary::Get().CopyEntry(path, EditorUtils::GetUniquePath(m_CurrentDirectoryEntry->Filepath / Path(path).filename()));
                 UpdateDisplayList();
             }
@@ -473,7 +473,7 @@ namespace Crowny
             {
                 if (displayList.size() > 0)
                 {
-                    size_t lastIdx = displayList.size() - 1;
+                    const size_t lastIdx = displayList.size() - 1;
                     m_SelectionSet.insert(displayList[lastIdx]->ElementNameHash); // Select the last entry
                     m_SelectionEndIndex = m_SelectionStartIndex = (uint32_t)lastIdx;
                 }
@@ -558,8 +558,8 @@ namespace Crowny
             if (shiftSelectionChanged)
             {
                 m_SelectionSet.clear();
-                uint32_t startIdx = std::min(m_SelectionStartIndex, m_SelectionEndIndex);
-                uint32_t endIdx = std::max(m_SelectionStartIndex, m_SelectionEndIndex);
+                const uint32_t startIdx = std::min(m_SelectionStartIndex, m_SelectionEndIndex);
+                const uint32_t endIdx = std::max(m_SelectionStartIndex, m_SelectionEndIndex);
                 for (uint32_t i = startIdx; i <= endIdx; i++)
                     m_SelectionSet.insert(displayList[i]->ElementNameHash);
             }
@@ -639,7 +639,7 @@ namespace Crowny
             SetCurrentDirectory(static_cast<DirectoryEntry*>(entry));
         else // Open the file
         {
-            FileEntry* fileEntry = static_cast<FileEntry*>(entry);
+            FileEntry* const fileEntry = static_cast<FileEntry*>(entry);
             const AssetType assetType = fileEntry->Metadata->Type;
             if (fileEntry->Metadata != nullptr && (assetType == AssetType::ScriptCode || assetType == AssetType::Shader))
                 CodeEditorManager::Get().OpenFile(fileEntry->Filepath);
@@ -650,8 +650,8 @@ namespace Crowny
 
     void AssetBrowserPanel::DrawFiles()
     {
-        float cellSize = m_ThumbnailSize + m_Padding;
-        float panelWidth = ImGui::GetContentRegionAvail().x;
+        const float cellSize = m_ThumbnailSize + m_Padding;
+        const float panelWidth = ImGui::GetContentRegionAvail().x;
         m_ColumnCount = (int)(panelWidth / cellSize);
         if (m_ColumnCount < 1)
             m_ColumnCount = 1;
@@ -751,6 +751,15 @@ namespace Crowny
             }
 
             ImGui::EndGroup();
+
+            // Selected card: 1px amber accent border around the card group.
+            if (selected)
+            {
+                const ImVec2 cardMin = ImGui::GetItemRectMin();
+                const ImVec2 cardMax = ImGui::GetItemRectMax();
+                ImGui::GetWindowDrawList()->AddRect(cardMin, cardMax, UI::Colors::Accent, 3.0f, 0, 1.0f);
+            }
+
             if (entryIdx == m_SelectionEndIndex)
                 ImGui::ScrollToItem(ImGuiScrollFlags_KeepVisibleEdgeY);
             hovered |= ImGui::IsItemHovered();
@@ -1024,8 +1033,8 @@ namespace Crowny
 
     void AssetBrowserPanel::CreateNew(AssetBrowserItem itemType)
     {
-        String filename = GetDefaultFileNameFromType(itemType);
-        Path newEntryPath = EditorUtils::GetUniquePath(m_CurrentDirectoryEntry->Filepath / filename);
+        const String filename = GetDefaultFileNameFromType(itemType);
+        const Path newEntryPath = EditorUtils::GetUniquePath(m_CurrentDirectoryEntry->Filepath / filename);
         switch (itemType)
         {
         case AssetBrowserItem::Folder:
@@ -1068,7 +1077,7 @@ namespace Crowny
         }
         }
         ProjectLibrary::Get().Refresh(newEntryPath);
-        Ref<LibraryEntry> newEntry = ProjectLibrary::Get().FindEntry(newEntryPath);
+        const Ref<LibraryEntry> newEntry = ProjectLibrary::Get().FindEntry(newEntryPath);
         if (newEntry)
         {
             m_RenamingPath = newEntry->Filepath;
@@ -1091,7 +1100,7 @@ namespace Crowny
         m_SearchString.clear(); // TODO: Don't do this here
     }
 
-    String AssetBrowserPanel::GetDefaultContents(AssetBrowserItem itemType)
+    String AssetBrowserPanel::GetDefaultContents(AssetBrowserItem itemType) const
     {
         switch (itemType)
         {

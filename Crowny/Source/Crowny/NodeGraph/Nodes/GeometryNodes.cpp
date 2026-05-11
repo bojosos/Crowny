@@ -32,12 +32,12 @@ namespace Crowny
         static const StringID heightPin("Height");
         static const StringID depthPin("Depth");
 
-        float w = GetInputValue<float>(widthPin, evaluator) * 0.5f;
-        float h = GetInputValue<float>(heightPin, evaluator) * 0.5f;
-        float d = GetInputValue<float>(depthPin, evaluator) * 0.5f;
+        const float w = GetInputValue<float>(widthPin, evaluator) * 0.5f;
+        const float h = GetInputValue<float>(heightPin, evaluator) * 0.5f;
+        const float d = GetInputValue<float>(depthPin, evaluator) * 0.5f;
 
         // 24 vertices (4 per face), 36 indices
-        auto meshData = MeshData::Create(24, 36, GetStandardLayout());
+        const auto meshData = MeshData::Create(24, 36, GetStandardLayout());
 
         Vector<glm::vec3> positions = { // Front (+Z)
                                         { -w, -h, d },
@@ -89,7 +89,7 @@ namespace Crowny
         indices.reserve(36);
         for (uint32_t face = 0; face < 6; face++)
         {
-            uint32_t base = face * 4;
+            const uint32_t base = face * 4;
             indices.push_back(base + 0);
             indices.push_back(base + 1);
             indices.push_back(base + 2);
@@ -124,14 +124,14 @@ namespace Crowny
         static const StringID segmentsPin("Segments");
         static const StringID ringsPin("Rings");
 
-        float radius = GetInputValue<float>(radiusPin, evaluator);
-        int32_t segments = std::max(3, GetInputValue<int32_t>(segmentsPin, evaluator));
-        int32_t rings = std::max(2, GetInputValue<int32_t>(ringsPin, evaluator));
+        const float radius = GetInputValue<float>(radiusPin, evaluator);
+        const int32_t segments = std::max(3, GetInputValue<int32_t>(segmentsPin, evaluator));
+        const int32_t rings = std::max(2, GetInputValue<int32_t>(ringsPin, evaluator));
 
-        uint32_t vertexCount = (segments + 1) * (rings + 1);
-        uint32_t indexCount = segments * rings * 6;
+        const uint32_t vertexCount = (segments + 1) * (rings + 1);
+        const uint32_t indexCount = segments * rings * 6;
 
-        auto meshData = MeshData::Create(vertexCount, indexCount, GetStandardLayout());
+        const auto meshData = MeshData::Create(vertexCount, indexCount, GetStandardLayout());
 
         Vector<glm::vec3> positions;
         Vector<glm::vec3> normals;
@@ -146,19 +146,19 @@ namespace Crowny
         {
             for (int32_t x = 0; x <= segments; x++)
             {
-                float xSeg = (float)x / (float)segments;
-                float ySeg = (float)y / (float)rings;
-                float xPos = std::cos(xSeg * 2.0f * (float)M_PI) * std::sin(ySeg * (float)M_PI);
-                float yPos = std::cos(ySeg * (float)M_PI);
-                float zPos = std::sin(xSeg * 2.0f * (float)M_PI) * std::sin(ySeg * (float)M_PI);
+                const float xSeg = (float)x / (float)segments;
+                const float ySeg = (float)y / (float)rings;
+                const float xPos = std::cos(xSeg * 2.0f * (float)M_PI) * std::sin(ySeg * (float)M_PI);
+                const float yPos = std::cos(ySeg * (float)M_PI);
+                const float zPos = std::sin(xSeg * 2.0f * (float)M_PI) * std::sin(ySeg * (float)M_PI);
 
-                glm::vec3 normal(xPos, yPos, zPos);
+                const glm::vec3 normal(xPos, yPos, zPos);
                 positions.push_back(normal * radius);
                 normals.push_back(normal);
                 uvs.push_back(glm::vec2(xSeg, ySeg));
 
                 // Tangent is the derivative with respect to the longitude angle
-                glm::vec3 tangent(-std::sin(xSeg * 2.0f * (float)M_PI), 0.0f, std::cos(xSeg * 2.0f * (float)M_PI));
+                const glm::vec3 tangent(-std::sin(xSeg * 2.0f * (float)M_PI), 0.0f, std::cos(xSeg * 2.0f * (float)M_PI));
                 tangents.push_back(glm::normalize(tangent));
             }
         }
@@ -170,8 +170,8 @@ namespace Crowny
         {
             for (int32_t x = 0; x < segments; x++)
             {
-                uint32_t current = y * (segments + 1) + x;
-                uint32_t next = current + segments + 1;
+                const uint32_t current = y * (segments + 1) + x;
+                const uint32_t next = current + segments + 1;
 
                 indices.push_back(current);
                 indices.push_back(next);
@@ -211,15 +211,15 @@ namespace Crowny
         static const StringID subdivisionsXPin("SubdivisionsX");
         static const StringID subdivisionsYPin("SubdivisionsY");
 
-        float width = GetInputValue<float>(widthPin, evaluator);
-        float height = GetInputValue<float>(heightPin, evaluator);
-        int32_t subsX = std::max(1, GetInputValue<int32_t>(subdivisionsXPin, evaluator));
-        int32_t subsY = std::max(1, GetInputValue<int32_t>(subdivisionsYPin, evaluator));
+        const float width = GetInputValue<float>(widthPin, evaluator);
+        const float height = GetInputValue<float>(heightPin, evaluator);
+        const int32_t subsX = std::max(1, GetInputValue<int32_t>(subdivisionsXPin, evaluator));
+        const int32_t subsY = std::max(1, GetInputValue<int32_t>(subdivisionsYPin, evaluator));
 
-        uint32_t vertexCount = (subsX + 1) * (subsY + 1);
-        uint32_t indexCount = subsX * subsY * 6;
+        const uint32_t vertexCount = (subsX + 1) * (subsY + 1);
+        const uint32_t indexCount = subsX * subsY * 6;
 
-        auto meshData = MeshData::Create(vertexCount, indexCount, GetStandardLayout());
+        const auto meshData = MeshData::Create(vertexCount, indexCount, GetStandardLayout());
 
         Vector<glm::vec3> positions;
         Vector<glm::vec3> normals;
@@ -234,8 +234,8 @@ namespace Crowny
         {
             for (int32_t x = 0; x <= subsX; x++)
             {
-                float u = (float)x / (float)subsX;
-                float v = (float)y / (float)subsY;
+                const float u = (float)x / (float)subsX;
+                const float v = (float)y / (float)subsY;
                 positions.push_back(glm::vec3((u - 0.5f) * width, 0.0f, (v - 0.5f) * height));
                 normals.push_back(glm::vec3(0.0f, 1.0f, 0.0f));
                 tangents.push_back(glm::vec3(1.0f, 0.0f, 0.0f));
@@ -250,10 +250,10 @@ namespace Crowny
         {
             for (int32_t x = 0; x < subsX; x++)
             {
-                uint32_t topLeft = y * (subsX + 1) + x;
-                uint32_t topRight = topLeft + 1;
-                uint32_t bottomLeft = topLeft + subsX + 1;
-                uint32_t bottomRight = bottomLeft + 1;
+                const uint32_t topLeft = y * (subsX + 1) + x;
+                const uint32_t topRight = topLeft + 1;
+                const uint32_t bottomLeft = topLeft + subsX + 1;
+                const uint32_t bottomRight = bottomLeft + 1;
 
                 indices.push_back(topLeft);
                 indices.push_back(bottomLeft);
@@ -288,13 +288,13 @@ namespace Crowny
         static const StringID sizePin("Size");
         static const StringID resolutionPin("Resolution");
 
-        float size = GetInputValue<float>(sizePin, evaluator);
-        int32_t resolution = std::max(1, GetInputValue<int32_t>(resolutionPin, evaluator));
+        const float size = GetInputValue<float>(sizePin, evaluator);
+        const int32_t resolution = std::max(1, GetInputValue<int32_t>(resolutionPin, evaluator));
 
-        uint32_t vertexCount = (resolution + 1) * (resolution + 1);
-        uint32_t indexCount = resolution * resolution * 6;
+        const uint32_t vertexCount = (resolution + 1) * (resolution + 1);
+        const uint32_t indexCount = resolution * resolution * 6;
 
-        auto meshData = MeshData::Create(vertexCount, indexCount, GetStandardLayout());
+        const auto meshData = MeshData::Create(vertexCount, indexCount, GetStandardLayout());
 
         Vector<glm::vec3> positions;
         Vector<glm::vec3> normals;
@@ -305,8 +305,8 @@ namespace Crowny
         tangents.reserve(vertexCount);
         uvs.reserve(vertexCount);
 
-        float halfSize = size * 0.5f;
-        float step = size / (float)resolution;
+        const float halfSize = size * 0.5f;
+        const float step = size / (float)resolution;
 
         for (int32_t z = 0; z <= resolution; z++)
         {
@@ -326,10 +326,10 @@ namespace Crowny
         {
             for (int32_t x = 0; x < resolution; x++)
             {
-                uint32_t topLeft = z * (resolution + 1) + x;
-                uint32_t topRight = topLeft + 1;
-                uint32_t bottomLeft = topLeft + resolution + 1;
-                uint32_t bottomRight = bottomLeft + 1;
+                const uint32_t topLeft = z * (resolution + 1) + x;
+                const uint32_t topRight = topLeft + 1;
+                const uint32_t bottomLeft = topLeft + resolution + 1;
+                const uint32_t bottomRight = bottomLeft + 1;
 
                 indices.push_back(topLeft);
                 indices.push_back(bottomLeft);

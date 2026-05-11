@@ -12,7 +12,7 @@ namespace Crowny
         ~ImGuiMenuItem() = default;
 
         void Render(uint32_t maxWidth);
-        uint32_t GetTotalWidth();
+        uint32_t GetTotalWidth() const;
 
     private:
         bool* m_Shown = nullptr;

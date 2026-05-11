@@ -30,7 +30,7 @@ namespace Crowny
         return { m_Keyframes[std::max(0, left - 1)], m_Keyframes[std::min(left, (int32_t)m_Keyframes.size() - 1)] };
     }
 
-    template <typename T> T AnimationCurve<T>::Evaluate(float time, bool loop) const
+    template <typename T> T AnimationCurve<T>::Evaluate(float time, const bool loop) const
     {
         if (loop && m_Length)
         {

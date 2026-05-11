@@ -13,7 +13,7 @@ namespace Crowny
 #ifdef CW_WINDOWS
         VisualStudioCodeEditorFactory* vsCodeEditorFactory = new VisualStudioCodeEditorFactory();
         Vector<CodeEditorInstallation> vsEditors = vsCodeEditorFactory->GetAvailableEditors();
-        for (CodeEditorInstallation& editor : vsEditors)
+        for (const CodeEditorInstallation& editor : vsEditors)
         {
             m_FactoryPerEditor[editor.ExecutablePath] = vsCodeEditorFactory;
             m_Editors.push_back(editor);
@@ -72,10 +72,10 @@ namespace Crowny
         CodeSolutionData solutionData;
         solutionData.Name = Editor::Get().GetProjectName();
 
-        Vector<AssetType> assetTypes = { AssetType::ScriptCode, AssetType::PlainText, AssetType::Shader };
-        Vector<Ref<LibraryEntry>> codeEntries = ProjectLibrary::Get().Search("*", assetTypes);
-        PlatformType activePlatform = BuildManager::Get().GetActivePlatform();
-        Vector<String> baseAssemblies = BuildManager::Get().GetBaseAssemblies(activePlatform);
+        const Vector<AssetType> assetTypes = { AssetType::ScriptCode, AssetType::PlainText, AssetType::Shader };
+        const Vector<Ref<LibraryEntry>> codeEntries = ProjectLibrary::Get().Search("*", assetTypes);
+        const PlatformType activePlatform = BuildManager::Get().GetActivePlatform();
+        const Vector<String> baseAssemblies = BuildManager::Get().GetBaseAssemblies(activePlatform);
 
         CodeProjectData& codeProjectData = solutionData.Projects.emplace_back();
         codeProjectData.Name = projectName;
@@ -94,7 +94,7 @@ namespace Crowny
             FileEntry* fileEntry = static_cast<FileEntry*>(entry.get());
             if (fileEntry->Metadata->Type == AssetType::ScriptCode)
             {
-                Ref<CSharpScriptImportOptions> scriptImportOptions =
+                const Ref<CSharpScriptImportOptions> scriptImportOptions =
                   StaticRefCast<CSharpScriptImportOptions>(fileEntry->Metadata->ImportOptions);
                 bool isEditorScript = false;
                 if (scriptImportOptions != nullptr)

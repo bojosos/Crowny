@@ -663,7 +663,7 @@ namespace Crowny
         EndImportInspector(0, ImGui::GetColumnWidth());
 
         // Footer
-        float yPos = ImGui::GetContentRegionAvail().y - ImGui::GetFrameHeightWithSpacing();
+        const float yPos = ImGui::GetContentRegionAvail().y - ImGui::GetFrameHeightWithSpacing();
         ImGui::SetCursorPosY(yPos);
         if (ImGui::Button("Play"))
         {
@@ -831,8 +831,8 @@ namespace Crowny
         ImGui::SameLine();
         if (ImGui::Button("-"))
             defines.erase(std::prev(defines.end()));
-        float x = ImGui::GetCursorPosX();
-        float width = ImGui::GetColumnWidth();
+        const float x = ImGui::GetCursorPosX();
+        const float width = ImGui::GetColumnWidth();
         // ImGui::NextColumn();
         ImGui::NextColumn();
         ImGui::Columns(1);
@@ -889,11 +889,11 @@ namespace Crowny
 
         // Helper: draws the asset import header with Reset and Open buttons
         auto drawAssetHeader = [&](const char* assetTypeName) {
-            float maxx = ImGui::GetContentRegionAvail().x;
+            const float maxx = ImGui::GetContentRegionAvail().x;
             ImGui::Text("%s", (m_InspectedAssetPath.filename().string() + " (" + assetTypeName + ") Import Settings").c_str());
-            float padding = ImGui::GetStyle().FramePadding.x;
-            float open = ImGui::CalcTextSize("Open").x;
-            float reset = ImGui::CalcTextSize("Reset").x;
+            const float padding = ImGui::GetStyle().FramePadding.x;
+            const float open = ImGui::CalcTextSize("Open").x;
+            const float reset = ImGui::CalcTextSize("Reset").x;
             ImGui::SameLine();
             ImGui::SetCursorPosX(maxx - open - reset - padding * 4);
             if (ImGui::Button("Reset"))
@@ -951,10 +951,10 @@ namespace Crowny
             break;
         default: {
             // Fallback for asset modes without a specific label (Prefab, TextImport, etc.)
-            float maxx = ImGui::GetContentRegionAvail().x;
+            const float maxx = ImGui::GetContentRegionAvail().x;
             ImGui::Text("%s", m_InspectedAssetPath.filename().string().c_str());
-            float padding = ImGui::GetStyle().FramePadding.x;
-            float open = ImGui::CalcTextSize("Open").x;
+            const float padding = ImGui::GetStyle().FramePadding.x;
+            const float open = ImGui::CalcTextSize("Open").x;
             ImGui::SameLine();
             ImGui::SetCursorPosX(maxx - open);
             if (ImGui::Button("Open"))
@@ -984,7 +984,7 @@ namespace Crowny
         ImGui::Separator();
         float padding = ImGui::GetStyle().FramePadding.x;
         ImGui::SetCursorPosX(xOffset);
-        bool changed = m_HasPropertyChanged;
+        const bool changed = m_HasPropertyChanged;
         if (!changed)
             ImGui::BeginDisabled();
         if (ImGui::Button("Apply", ImVec2(width * 0.5f - padding * 4, 0)))
@@ -1025,7 +1025,7 @@ namespace Crowny
             return;
         }
 
-        SpecificImporter* importer = Importer::Get().GetImporterForFile(filepath);
+        SpecificImporter* const importer = Importer::Get().GetImporterForFile(filepath);
         if (importer != nullptr)
         {
             if (dynamic_cast<AudioClipImporter*>(importer))
@@ -1050,7 +1050,7 @@ namespace Crowny
             m_InspectorMode = InspectorMode::Default;
         }
 
-        Ref<LibraryEntry> entry = ProjectLibrary::Get().FindEntry(filepath);
+        const Ref<LibraryEntry> entry = ProjectLibrary::Get().FindEntry(filepath);
         if (entry != nullptr)
         {
             if (entry->Type == LibraryEntryType::File)

@@ -78,7 +78,7 @@ namespace Crowny
             return false;
         }
 
-        vorbis_info* vorbisInfo = ov_info(&m_OggVorbisFile, -1);
+        const vorbis_info* vorbisInfo = ov_info(&m_OggVorbisFile, -1);
         info.NumChannels = vorbisInfo->channels;
         info.SampleRate = vorbisInfo->rate;
         info.NumSamples = (uint32_t)(ov_pcm_total(&m_OggVorbisFile, -1) * vorbisInfo->channels);
@@ -95,11 +95,11 @@ namespace Crowny
         uint32_t numSamples = 0;
         while (numSamples < count)
         {
-            int32_t toRead = (int32_t)(count - numSamples) * sizeof(int16_t);
-            uint32_t bytesRead = ov_read(&m_OggVorbisFile, (char*)samples, toRead, 0, 2, 1, nullptr);
+            const int32_t toRead = (int32_t)(count - numSamples) * sizeof(int16_t);
+            const uint32_t bytesRead = ov_read(&m_OggVorbisFile, (char*)samples, toRead, 0, 2, 1, nullptr);
             if (bytesRead > 0)
             {
-                uint32_t samplesRead = bytesRead / sizeof(int16_t);
+                const uint32_t samplesRead = bytesRead / sizeof(int16_t);
                 numSamples += samplesRead;
                 samples += samplesRead * sizeof(int16_t);
             }

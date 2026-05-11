@@ -20,7 +20,7 @@ namespace Crowny
         UpdateState();
         ImGui::Columns(3, "OpenGL Information");
         ImGui::Separator();
-        for (OpenGLDetail& det : OpenGLInfo::GetInformation())
+        for (const OpenGLDetail& det : OpenGLInfo::GetInformation())
         {
             ImGui::Text("%s", det.Name.c_str());
             ImGui::NextColumn();

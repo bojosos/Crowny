@@ -24,7 +24,7 @@ namespace Crowny
 
     int ScriptLayerMask::Internal_NameToLayer(MonoString* name)
     {
-        String nativeName = MonoUtils::FromMonoString(name);
+        const String nativeName = MonoUtils::FromMonoString(name);
         for (int i = 0; i < 32; i++)
         {
             if (gPhysics2D->GetLayerName(i) == nativeName)

@@ -125,13 +125,13 @@ namespace Crowny
 
         s_Data->QuadIndexBuffer = IndexBuffer::Create({RENDERER_INDICES_SIZE, IndexType::Index_16, BufferUsage::BU_STATIC_DRAW, indices});
         s_Data->QuadVertexBuffer = VertexBuffer::Create({RENDERER_BUFFER_SIZE, BufferUsage::BU_DYNAMIC_DRAW});
-        Ref<BufferLayout> layout =
+        const Ref<BufferLayout> layout =
           CreateRef<BufferLayout>(BufferLayout{ BufferElement(ShaderDataType::Float4, "a_Position"), BufferElement(ShaderDataType::Float4, "a_Color"),
                                                 BufferElement(ShaderDataType::Float2, "a_Uvs"), BufferElement(ShaderDataType::Float, "a_Tid"),
                                                 BufferElement(ShaderDataType::Int, "a_ObjectId") });
         s_Data->QuadVertexBuffer->SetLayout(layout);
 
-        AssetHandle<Shader> shaderHandle = gAssetManager->Load<Shader>(RENDERER2D_SHADER_PATH);
+        const AssetHandle<Shader> shaderHandle = gAssetManager->Load<Shader>(RENDERER2D_SHADER_PATH);
         s_Data->QuadMaterial = Material::Create(shaderHandle);
         s_Data->QuadBuffer = s_Data->QuadTmpBuffer = new VertexData[RENDERER_MAX_SPRITES * 4];
         delete[] indices;
@@ -161,7 +161,7 @@ namespace Crowny
         s_Data->TextBuffer = s_Data->TextTmpBuffer = new TextVertex[s_Data->MaxLineVertices];
         s_Data->TextVertexBuffer = VertexBuffer::Create({RENDERER_MAX_SPRITES * sizeof(TextVertex), BufferUsage::BU_DYNAMIC_DRAW});
 
-        Ref<BufferLayout> layout = CreateRef<BufferLayout>(BufferLayout{ { ShaderDataType::Float3, "a_Position" },
+        const Ref<BufferLayout> layout = CreateRef<BufferLayout>(BufferLayout{ { ShaderDataType::Float3, "a_Position" },
                                                                          { ShaderDataType::Float4, "a_Color" },
                                                                          { ShaderDataType::Float2, "a_TexCoords" },
                                                                          { ShaderDataType::Float4, "a_UnderlayColor" },
@@ -171,7 +171,7 @@ namespace Crowny
                                                                          { ShaderDataType::Int, "a_ObjectId" } });
         s_Data->TextVertexBuffer->SetLayout(layout);
 
-        AssetHandle<Shader> shaderHandle = gAssetManager->Load<Shader>("Resources/Shaders/Text.asset");
+        const AssetHandle<Shader> shaderHandle = gAssetManager->Load<Shader>("Resources/Shaders/Text.asset");
         // Ref<Shader> textShader = Importer::Get().Import<Shader>("Resources/Shaders/Text.glsl");
         // gAssetManager->Save(textShader, "Resources/Shaders/Text.asset");
         // const AssetHandle<Shader> shaderHandle = static_asset_cast<Shader>(gAssetManager->CreateAssetHandle(textShader));
@@ -263,7 +263,7 @@ namespace Crowny
 
     void Renderer2D::FillRect(const Rect2F& bounds, const Ref<Texture>& texture, const glm::vec4& color, uint32_t entityId)
     {
-        glm::mat4 transform =
+        const glm::mat4 transform =
           glm::translate(glm::mat4(1.0f), { bounds.X, bounds.Y, 1.0f }) * glm::scale(glm::mat4(1.0f), { bounds.Width, bounds.Height, 1.0f });
 
         FillRect(transform, texture, color, entityId);
@@ -287,7 +287,7 @@ namespace Crowny
 
     void Renderer2D::DrawLine(const glm::vec3& p1, const glm::vec3& p2, const glm::vec4& color, float thickness)
     {
-        float length = glm::length(p1 - p2);
+        const float length = glm::length(p1 - p2);
         const glm::vec3 center = (p1 + p2) * 0.5f;
         // TODO: This atan math is wrong for some angles.
         float angle = glm::atan(glm::abs(p1.y - p2.y) / glm::abs(p1.x - p2.x));
@@ -338,11 +338,11 @@ namespace Crowny
         const msdfgen::FontMetrics& fontMetrics = fontGeometry.getMetrics();
 
         // TODO: Make this use an array for font textures or reset when the texture is different.
-        Ref<Texture> fontAtlasTexture = font->GetAtlasTexture();
+        const Ref<Texture> fontAtlasTexture = font->GetAtlasTexture();
         s_Data->FontAtlasTexture = fontAtlasTexture;
 
         double x = 0.0;
-        double fsScale = 1.0 / (fontMetrics.ascenderY - fontMetrics.descenderY);
+        const double fsScale = 1.0 / (fontMetrics.ascenderY - fontMetrics.descenderY);
         double y = 0;
 
         const float spaceGlyphAdvance = (float)fontGeometry.getGlyph(' ')->getAdvance();
@@ -366,7 +366,7 @@ namespace Crowny
                 float advance = spaceGlyphAdvance;
                 if (i < text.size() - 1)
                 {
-                    char nextCharacter = text[i + 1];
+                    const char nextCharacter = text[i + 1];
                     double fontKerningAdvance = 0.0;
                     if (textComponent.UseKerning)
                         fontGeometry.getAdvance(fontKerningAdvance, character, nextCharacter);
@@ -401,8 +401,8 @@ namespace Crowny
             quadMin += glm::vec2(x, y);
             quadMax += glm::vec2(x, y);
 
-            float texelWidth = 1.0f / fontAtlasTexture->GetWidth();
-            float texelHeight = 1.0f / fontAtlasTexture->GetHeight();
+            const float texelWidth = 1.0f / fontAtlasTexture->GetWidth();
+            const float texelHeight = 1.0f / fontAtlasTexture->GetHeight();
             texCoordMin *= glm::vec2(texelWidth, texelHeight);
             texCoordMax *= glm::vec2(texelWidth, texelHeight);
 

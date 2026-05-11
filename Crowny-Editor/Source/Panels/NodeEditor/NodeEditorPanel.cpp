@@ -329,7 +329,7 @@ namespace Crowny
         if (!currentGraph)
             return;
 
-        Vector<UUID> selectedIds = m_Adapter->GetSelectedNodes();
+        const Vector<UUID> selectedIds = m_Adapter->GetSelectedNodes();
         if (selectedIds.empty())
             return;
 
@@ -426,7 +426,7 @@ namespace Crowny
                     pinIdMap[oldPin->GetID()] = newPin->GetID();
             }
 
-            auto action = CreateRef<NodeAddedAction>(currentGraph, newNode);
+            const auto action = CreateRef<NodeAddedAction>(currentGraph, newNode);
             UndoRedo::Get().RegisterAction(action);
             currentGraph->AddNode(newNode);
         }
@@ -435,9 +435,9 @@ namespace Crowny
         {
             if (pinIdMap.find(oldConn.OutputPinID) != pinIdMap.end() && pinIdMap.find(oldConn.InputPinID) != pinIdMap.end())
             {
-                UUID newOutPin = pinIdMap[oldConn.OutputPinID];
-                UUID newInPin = pinIdMap[oldConn.InputPinID];
-                auto action = CreateRef<NodesConnectedAction>(currentGraph, newOutPin, newInPin);
+                const UUID newOutPin = pinIdMap[oldConn.OutputPinID];
+                const UUID newInPin = pinIdMap[oldConn.InputPinID];
+                const auto action = CreateRef<NodesConnectedAction>(currentGraph, newOutPin, newInPin);
                 UndoRedo::Get().RegisterAction(action);
                 currentGraph->ConnectByPinID(newOutPin, newInPin);
             }

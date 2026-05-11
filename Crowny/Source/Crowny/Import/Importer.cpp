@@ -29,7 +29,7 @@ namespace Crowny
 
     bool Importer::SupportsFileType(const String& ext) const
     {
-        for (auto* importer : m_Importers)
+        for (const auto* importer : m_Importers)
         {
             if (importer && importer->IsExtensionSupported(ext))
                 return true;
@@ -40,7 +40,7 @@ namespace Crowny
 
     bool Importer::SupportsFileType(uint8_t* magic, uint32_t numSize) const
     {
-        for (auto* importer : m_Importers)
+        for (const auto* importer : m_Importers)
         {
             if (importer && importer->IsMagicNumSupported(magic, numSize))
                 return true;
@@ -79,7 +79,7 @@ namespace Crowny
             return nullptr;
         }
 
-        SpecificImporter* importer = GetImporterForFile(path);
+        SpecificImporter* const importer = GetImporterForFile(path);
         if (importer == nullptr)
             return nullptr;
         return importer->CreateImportOptions();
@@ -110,7 +110,7 @@ namespace Crowny
             return nullptr;
         }
 
-        SpecificImporter* importer = GetImporterForFile(filepath);
+        SpecificImporter* const importer = GetImporterForFile(filepath);
         if (importer == nullptr)
             return nullptr;
 
@@ -118,7 +118,7 @@ namespace Crowny
             importOptions = importer->GetDefaultImportOptions();
         else
         {
-            Ref<const ImportOptions> defaultImportOptions = importer->GetDefaultImportOptions();
+            const Ref<const ImportOptions> defaultImportOptions = importer->GetDefaultImportOptions();
             CW_ENGINE_ASSERT(importOptions->GetImportOptionsType() == defaultImportOptions->GetImportOptionsType(),
                              "Provided import options are of invalid type");
         }
@@ -130,11 +130,11 @@ namespace Crowny
     {
         ZoneScopedN("Importer::Import");
         CW_ENGINE_INFO("Importing asset: {0}", filepath);
-        SpecificImporter* importer = PrepareForImport(filepath, importOptions);
+        SpecificImporter* const importer = PrepareForImport(filepath, importOptions);
         if (importer == nullptr)
             return nullptr;
 
-        Ref<Asset> asset = importer->Import(filepath, importOptions);
+        const Ref<Asset> asset = importer->Import(filepath, importOptions);
         if (asset)
             asset->Init(); // Initialize GPU resources immediately for synchronous callers
         return asset;
@@ -142,12 +142,12 @@ namespace Crowny
 
     Vector<Ref<Asset>> Importer::ImportAll(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
-        SpecificImporter* importer = PrepareForImport(filepath, importOptions);
+        SpecificImporter* const importer = PrepareForImport(filepath, importOptions);
         if (importer == nullptr)
             return {};
 
         Vector<Ref<Asset>> assets = importer->ImportAll(filepath, importOptions);
-        for (auto& asset : assets)
+        for (const auto& asset : assets)
         {
             if (asset)
                 asset->Init();
@@ -157,7 +157,7 @@ namespace Crowny
 
     Ref<Asset> Importer::ImportDeferred(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
-        SpecificImporter* importer = PrepareForImport(filepath, importOptions);
+        SpecificImporter* const importer = PrepareForImport(filepath, importOptions);
         if (importer == nullptr)
             return nullptr;
 

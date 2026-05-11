@@ -13,7 +13,7 @@ namespace Crowny
 
     Node* NodeGraph::AddNode(Ref<Node> node)
     {
-        UUID id = node->GetID();
+        const UUID id = node->GetID();
         node->SetParentGraph(this);
         m_Nodes[id] = std::move(node);
         NotifyChanged();
@@ -31,13 +31,13 @@ namespace Crowny
         auto it = m_Nodes.find(nodeId);
         if (it != m_Nodes.end())
         {
-            Node* node = it->second.get();
+            const Node* node = it->second.get();
             for (const auto& pin : node->GetInputPins())
                 pin->SetConnectedPin(nullptr);
             for (const auto& pin : node->GetOutputPins())
             {
                 // Find all input pins connected to this output and disconnect them
-                for (auto& [id, otherNode] : m_Nodes)
+                for (const auto& [id, otherNode] : m_Nodes)
                 {
                     for (const auto& otherPin : otherNode->GetInputPins())
                     {
@@ -53,14 +53,14 @@ namespace Crowny
 
     Node* NodeGraph::GetNode(UUID nodeId) const
     {
-        auto it = m_Nodes.find(nodeId);
+        const auto it = m_Nodes.find(nodeId);
         return it != m_Nodes.end() ? it->second.get() : nullptr;
     }
 
     bool NodeGraph::Connect(UUID outputNodeId, StringID outputPinName, UUID inputNodeId, StringID inputPinName)
     {
-        Node* outputNode = GetNode(outputNodeId);
-        Node* inputNode = GetNode(inputNodeId);
+        const Node* outputNode = GetNode(outputNodeId);
+        const Node* inputNode = GetNode(inputNodeId);
         if (!outputNode || !inputNode)
             return false;
 
@@ -158,7 +158,7 @@ namespace Crowny
             NotifyChanged();
     }
 
-    bool NodeGraph::CanConnect(Pin* output, Pin* input) const
+    bool NodeGraph::CanConnect(const Pin* output, const Pin* input) const
     {
         if (!output || !input)
             return false;

@@ -42,7 +42,7 @@ namespace Crowny
             fs::create_directories(assembliesDir);
 
         // Create a default empty scene
-        Path defaultScenePath = assetDirectory / "DefaultScene.cwscene";
+        const Path defaultScenePath = assetDirectory / "DefaultScene.cwscene";
         if (!fs::exists(defaultScenePath))
         {
             Ref<Scene> defaultScene = CreateRef<Scene>("DefaultScene");
@@ -55,7 +55,7 @@ namespace Crowny
     {
         UnloadProject();
 
-        Path assetsPath = projectPath / "Assets";
+        const Path assetsPath = projectPath / "Assets";
         if (fs::exists(assetsPath))
             m_Watch = CreateScope<FileWatch>(assetsPath, m_FileWatchCallback);
 
@@ -71,7 +71,7 @@ namespace Crowny
     {
         if (IsProjectLoaded())
         {
-            Path settingsPath = m_ProjectPath / "ProjectSettings.yaml";
+            const Path settingsPath = m_ProjectPath / "ProjectSettings.yaml";
             if (fs::exists(settingsPath))
             {
                 FileDecoder<ProjectSettings, SerializerType::Yaml> decoder(settingsPath);
@@ -84,7 +84,7 @@ namespace Crowny
 
     void Editor::LoadEditorSettings()
     {
-        Path settingsPath = "Editor/Settings.yaml";
+        const Path settingsPath = "Editor/Settings.yaml";
         if (fs::exists(settingsPath))
         {
             FileDecoder<EditorSettings, SerializerType::Yaml> decoder(settingsPath);
@@ -111,7 +111,7 @@ namespace Crowny
         if (m_ProjectSettings == nullptr || !IsProjectLoaded())
             return;
 
-        Path absPath = GetProjectPath() / "ProjectSettings.yaml";
+        const Path absPath = GetProjectPath() / "ProjectSettings.yaml";
 
         if (!fs::is_directory(absPath.parent_path()))
             fs::create_directories(absPath.parent_path());
@@ -123,7 +123,7 @@ namespace Crowny
     {
         if (m_EditorSettings == nullptr)
             return;
-        Path settingsPath = "Editor/Settings.yaml";
+        const Path settingsPath = "Editor/Settings.yaml";
         FileEncoder<EditorSettings, SerializerType::Yaml> encoder(settingsPath);
         encoder.Encode(m_EditorSettings);
     }

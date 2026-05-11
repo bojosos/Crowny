@@ -35,14 +35,14 @@ namespace Crowny
         if (m_HasError)
             return nullptr;
 
-        Pin* geometryPin = outputNode->FindInputPin("Geometry");
+        const Pin* geometryPin = outputNode->FindInputPin("Geometry");
         if (!geometryPin)
         {
             SetError("Output node has no 'Geometry' input pin");
             return nullptr;
         }
 
-        PinValue result = PullInput(geometryPin);
+        const PinValue result = PullInput(geometryPin);
         if (std::holds_alternative<Ref<MeshData>>(result))
             return std::get<Ref<MeshData>>(result);
 
@@ -50,7 +50,7 @@ namespace Crowny
         return nullptr;
     }
 
-    PinValue NodeGraphEvaluator::PullInput(Pin* inputPin)
+    PinValue NodeGraphEvaluator::PullInput(const Pin* inputPin)
     {
         if (!inputPin || m_HasError)
             return DefaultPinValue(inputPin ? inputPin->GetDataType() : PinDataType::Float);
@@ -58,7 +58,7 @@ namespace Crowny
         if (!inputPin->IsConnected())
             return inputPin->GetDefaultValue();
 
-        Pin* connectedOutput = inputPin->GetConnectedPin();
+        const Pin* connectedOutput = inputPin->GetConnectedPin();
         if (!connectedOutput)
             return inputPin->GetDefaultValue();
 
@@ -84,7 +84,7 @@ namespace Crowny
 
     PinValue NodeGraphEvaluator::GetOutputValue(UUID pinId) const
     {
-        auto it = m_Cache.find(pinId);
+        const auto it = m_Cache.find(pinId);
         if (it != m_Cache.end())
             return it->second;
         return 0.0f;
@@ -92,7 +92,7 @@ namespace Crowny
 
     const PinValue& NodeGraphEvaluator::GetInputValue(UUID inputId) const
     {
-        auto it = m_InputValues.find(inputId);
+        const auto it = m_InputValues.find(inputId);
         if (it != m_InputValues.end())
             return it->second;
 
@@ -109,7 +109,7 @@ namespace Crowny
         if (!node || m_HasError)
             return;
 
-        UUID nodeId = node->GetID();
+        const UUID nodeId = node->GetID();
 
         if (m_EvaluatedNodes.count(nodeId))
             return;

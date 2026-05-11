@@ -292,11 +292,11 @@ namespace Crowny
             if (asset == nullptr || asset->GetGraph() == nullptr)
                 continue;
 
-            Ref<NodeGraph> graph = asset->GetGraph();
+            const Ref<NodeGraph> graph = asset->GetGraph();
 
             // Check if the graph has changed since the last evaluation.
             // NeedsEvaluation is a manual override flag that can also be used.
-            uint32_t currentVersion = graph->GetVersion();
+            const uint32_t currentVersion = graph->GetVersion();
             if (!proc.NeedsEvaluation && proc.LastEvaluatedVersion == currentVersion)
                 continue;
 

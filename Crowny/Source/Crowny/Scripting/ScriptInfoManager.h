@@ -98,7 +98,7 @@ namespace Crowny
         void InitializeTypes();
 
         bool IsBasicType(MonoClass* klass);
-        const BuiltinScriptClasses& GetBuiltinClasses() { return m_Builtin; }
+        const BuiltinScriptClasses& GetBuiltinClasses() const { return m_Builtin; }
 
         void LoadAssemblyInfo(const String& assemblyName);
         const UnorderedMap<String, MonoClass*> GetEntityBehaviours() const { return m_EntityBehaviourClasses; }

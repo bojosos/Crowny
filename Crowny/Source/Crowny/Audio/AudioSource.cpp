@@ -1,17 +1,23 @@
 #include "cwpch.h"
 
+#include "Crowny/Audio/AudioBus.h"
+#include "Crowny/Audio/AudioFilter.h"
 #include "Crowny/Audio/AudioManager.h"
+#include "Crowny/Audio/AudioMixer.h"
 #include "Crowny/Audio/AudioSource.h"
 #include "Crowny/Audio/AudioUtils.h"
+#include "Crowny/Common/Time.h"
 #include "Crowny/Ecs/Components.h"
 
 #include <AL/al.h>
+#include <AL/efx.h>
 
 namespace Crowny
 {
 
     AudioSource::AudioSource()
     {
+        m_Filter = CreateScope<AudioFilter>();
         alGenSources(1, &m_SourceID);
 
         m_Pitch = 1.0f;
@@ -57,11 +63,18 @@ namespace Crowny
         if (m_SavedState == AudioSourceState::Paused)
             Pause();
         gAudioManager->RegisterSource(this);
+
+        // Auto-route to the active mixer's master bus, if any. The user can override with SetBus().
+        if (const AssetHandle<AudioMixer>& activeMixer = gAudioManager->GetActiveMixer())
+            SetBus(activeMixer->GetMasterBus());
     }
 
     AudioSource::~AudioSource()
     {
         Stop();
+        if (m_Bus)
+            m_Bus->UnregisterSource(this);
+        m_Filter->Detach(m_SourceID);
         gAudioManager->UnregisterSource(this);
         alSourcei(m_SourceID, AL_BUFFER, 0);
         alDeleteSources(1, &m_SourceID);
@@ -69,16 +82,32 @@ namespace Crowny
 
     void AudioSource::OnTransformChanged(const Transform& transform)
     {
+        const glm::vec3 position = transform.GetPosition();
         if (Is3D())
-        {
-            const glm::vec3& position = transform.GetPosition();
             alSource3f(m_SourceID, AL_POSITION, position.x, position.y, position.z);
-        }
         else
-        {
             alSource3f(m_SourceID, AL_POSITION, 0.0f, 0.0f, 0.0f);
+
+        // Forward direction for cone math. Push always so a non-cone source flipping to a cone
+        // doesn't lag a frame; OpenAL ignores AL_DIRECTION when both cone angles are 360.
+        const glm::mat4& world = transform.GetMatrix();
+        const glm::vec3 forward = glm::normalize(-glm::vec3(world[2]));
+        alSource3f(m_SourceID, AL_DIRECTION, forward.x, forward.y, forward.z);
+
+        if (!m_HasPrevPosition)
+        {
+            m_PrevPosition = position;
+            m_HasPrevPosition = true;
+            return;
         }
-        // alSource3f(m_SourceID, AL_VELOCITY, m_Velocity.x, m_Velocity.y, m_Velocity.z);
+
+        const float dt = Time::GetDeltaTime();
+        if (dt > 1e-6f)
+        {
+            m_Velocity = (position - m_PrevPosition) / dt;
+            alSource3f(m_SourceID, AL_VELOCITY, m_Velocity.x, m_Velocity.y, m_Velocity.z);
+            m_PrevPosition = position;
+        }
     }
 
     void AudioSource::SetGlobalPause(bool paused)
@@ -102,7 +131,73 @@ namespace Crowny
     void AudioSource::SetVolume(float volume)
     {
         m_Volume = glm::clamp(volume, 0.0f, 1.0f);
-        alSourcef(m_SourceID, AL_GAIN, m_Volume);
+        RefreshEffectiveGain();
+    }
+
+    void AudioSource::RefreshEffectiveGain()
+    {
+        const float busGain = m_Bus ? m_Bus->GetEffectiveGain() : 1.0f;
+        alSourcef(m_SourceID, AL_GAIN, m_Volume * busGain);
+    }
+
+    void AudioSource::SetBus(const Ref<AudioBus>& bus)
+    {
+        if (m_Bus == bus)
+            return;
+        if (m_Bus)
+            m_Bus->UnregisterSource(this);
+
+        m_Bus = bus;
+
+        if (m_Bus)
+            m_Bus->RegisterSource(this);
+
+        // Re-route the source's aux send to the new bus's aux slot. When EFX is unavailable, or the
+        // bus has no aux slot allocated, this clears the send (AL_EFFECTSLOT_NULL).
+        if (gAudioManager && gAudioManager->IsEFXAvailable())
+        {
+            const ALuint slot = m_Bus ? m_Bus->GetAuxSlot() : 0;
+            alSource3i(m_SourceID, AL_AUXILIARY_SEND_FILTER, static_cast<ALint>(slot), 0, AL_FILTER_NULL);
+        }
+
+        RefreshEffectiveGain();
+    }
+
+    void AudioSource::SetLowPassGain(float gainHF)
+    {
+        m_LowPassGain = glm::clamp(gainHF, 0.0f, 1.0f);
+        m_Filter->Apply(m_SourceID, m_LowPassGain, m_HighPassGain);
+    }
+
+    void AudioSource::SetHighPassGain(float gainLF)
+    {
+        m_HighPassGain = glm::clamp(gainLF, 0.0f, 1.0f);
+        m_Filter->Apply(m_SourceID, m_LowPassGain, m_HighPassGain);
+    }
+
+    void AudioSource::SetConeInnerAngle(float degrees)
+    {
+        m_ConeInnerAngle = glm::clamp(degrees, 0.0f, 360.0f);
+        alSourcef(m_SourceID, AL_CONE_INNER_ANGLE, m_ConeInnerAngle);
+    }
+
+    void AudioSource::SetConeOuterAngle(float degrees)
+    {
+        m_ConeOuterAngle = glm::clamp(degrees, 0.0f, 360.0f);
+        alSourcef(m_SourceID, AL_CONE_OUTER_ANGLE, m_ConeOuterAngle);
+    }
+
+    void AudioSource::SetConeOuterGain(float gain)
+    {
+        m_ConeOuterGain = glm::clamp(gain, 0.0f, 1.0f);
+        alSourcef(m_SourceID, AL_CONE_OUTER_GAIN, m_ConeOuterGain);
+    }
+
+    void AudioSource::SetConeOuterGainHF(float gainHF)
+    {
+        m_ConeOuterGainHF = glm::clamp(gainHF, 0.0f, 1.0f);
+        if (gAudioManager && gAudioManager->IsEFXAvailable())
+            alSourcef(m_SourceID, AL_CONE_OUTER_GAINHF, m_ConeOuterGainHF);
     }
 
     void AudioSource::SetClip(const AssetHandle<AudioClip>& clip)
@@ -153,9 +248,9 @@ namespace Crowny
 
     void AudioSource::SetTime(float time)
     {
-        AudioSourceState state = GetState();
+        const AudioSourceState state = GetState();
         Stop();
-        bool requiresStream = RequiresStreaming();
+        const bool requiresStream = RequiresStreaming();
         float cTime;
         if (!requiresStream)
             cTime = time;
@@ -175,7 +270,7 @@ namespace Crowny
 
     float AudioSource::GetTime() const
     {
-        bool requiresStream = RequiresStreaming();
+        const bool requiresStream = RequiresStreaming();
         float time;
         if (!requiresStream)
         {
@@ -184,8 +279,7 @@ namespace Crowny
         }
         else
         {
-            float timeOffset = 0.0f;
-            timeOffset = (float)m_StreamProcessedPosition / m_AudioClip->GetFrequency() / m_AudioClip->GetNumChannels();
+            const float timeOffset = (float)m_StreamProcessedPosition / m_AudioClip->GetFrequency() / m_AudioClip->GetNumChannels();
             alGetSourcef(m_SourceID, AL_SEC_OFFSET, &time);
             return timeOffset + time;
         }
@@ -280,8 +374,8 @@ namespace Crowny
     {
         if (m_AudioClip == nullptr)
             return false;
-        AudioReadMode readMode = m_AudioClip->GetDesc().ReadMode;
-        bool isCompressed = readMode == AudioReadMode::LoadCompressed && m_AudioClip->GetDesc().Format != AudioFormat::PCM;
+        const AudioReadMode readMode = m_AudioClip->GetDesc().ReadMode;
+        const bool isCompressed = readMode == AudioReadMode::LoadCompressed && m_AudioClip->GetDesc().Format != AudioFormat::PCM;
         return (readMode == AudioReadMode::Stream) || isCompressed;
     }
 } // namespace Crowny

@@ -14,7 +14,7 @@ namespace Crowny
 
     Ref<Texture> TextureManager::Get(const String& name)
     {
-        for (auto& texture : m_Textures)
+        for (const auto& texture : m_Textures)
         {
             //			if (texture->GetName() == name)
             return texture;

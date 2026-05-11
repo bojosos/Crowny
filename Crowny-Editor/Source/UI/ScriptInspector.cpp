@@ -25,12 +25,12 @@ namespace Crowny
         T rangeMin = typeMin;
         T rangeMax = typeMax;
         bool displayAsSlider = false;
-        bool hasRange = ctx.MemberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range);
+        const bool hasRange = ctx.MemberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range);
 
         if (hasRange)
         {
-            MonoClass* rangeClass = ScriptInfoManager::Get().GetBuiltinClasses().RangeAttribute;
-            MonoObject* rangeAttr = ctx.MemberInfo->GetAttribute(rangeClass);
+            MonoClass* const rangeClass = ScriptInfoManager::Get().GetBuiltinClasses().RangeAttribute;
+            MonoObject* const rangeAttr = ctx.MemberInfo->GetAttribute(rangeClass);
             float minF = 0.0f, maxF = 0.0f;
             rangeClass->GetField("min")->Get(rangeAttr, &minF);
             rangeClass->GetField("max")->Get(rangeAttr, &maxF);
@@ -38,8 +38,8 @@ namespace Crowny
             displayAsSlider = false;
 
             // Clamp float range to the representable range of this integer type
-            int64_t minInt = (int64_t)minF;
-            int64_t maxInt = (int64_t)maxF;
+            const int64_t minInt = (int64_t)minF;
+            const int64_t maxInt = (int64_t)maxF;
             rangeMin = (T)glm::clamp((long long)minInt, (long long)typeMin, (long long)typeMax);
             rangeMax = (T)glm::clamp((long long)maxInt, (long long)typeMin, (long long)typeMax);
         }
@@ -73,8 +73,8 @@ namespace Crowny
         MonoString* value = (MonoString*)ctx.Getter();
         if (ctx.MemberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Filepath))
         {
-            MonoClass* filepathClass = ScriptInfoManager::Get().GetBuiltinClasses().FilepathAttribute;
-            MonoObject* filepathAttr = ctx.MemberInfo->GetAttribute(filepathClass);
+            MonoClass* const filepathClass = ScriptInfoManager::Get().GetBuiltinClasses().FilepathAttribute;
+            MonoObject* const filepathAttr = ctx.MemberInfo->GetAttribute(filepathClass);
             FileDialogType dialogType = FileDialogType::OpenFile;
             filepathClass->GetField("type")->Get(filepathAttr, &dialogType);
 
@@ -159,18 +159,18 @@ namespace Crowny
     {
         const Ref<SerializableTypeInfoList>& listInfo = StaticRefCast<SerializableTypeInfoList>(ctx.MemberInfo->m_TypeInfo);
         bool modified = false;
-        MonoClass* listClass = MonoManager::Get().FindClass(listInfo->GetMonoClass());
-        MonoProperty* countProp = listClass->GetProperty("Count");
+        MonoClass* const listClass = MonoManager::Get().FindClass(listInfo->GetMonoClass());
+        MonoProperty* const countProp = listClass->GetProperty("Count");
         uint32_t length = 0;
         if (listObject != nullptr)
         {
-            MonoObject* lengthObj = countProp->Get(listObject);
+            MonoObject* const lengthObj = countProp->Get(listObject);
             length = *(int32_t*)MonoUtils::Unbox(lengthObj);
         }
-        MonoProperty* itemProp = listClass->GetProperty("Item");
-        MonoMethod* copyToMethod = listClass->GetMethod("CopyTo", 4);
-        MonoMethod* addRangeMethod = listClass->GetMethod("AddRange", 1);
-        MonoMethod* clearMethod = listClass->GetMethod("Clear");
+        MonoProperty* const itemProp = listClass->GetProperty("Item");
+        MonoMethod* const copyToMethod = listClass->GetMethod("CopyTo", 4);
+        MonoMethod* const addRangeMethod = listClass->GetMethod("AddRange", 1);
+        MonoMethod* const clearMethod = listClass->GetMethod("Clear");
         uint32_t newLength = length;
         if (UI::PropertyInput(ctx.MemberInfo->m_Name.c_str(), newLength))
         {
@@ -182,7 +182,7 @@ namespace Crowny
                 ctx.Setter(listObject);
             }
             ScriptArray tempArray(itemProp->GetReturnType()->GetInternalPtr(), newLength);
-            uint32_t minSize = std::min(length, newLength);
+            const uint32_t minSize = std::min(length, newLength);
             uint32_t start = 0;
 
             void* params[4];
@@ -237,23 +237,23 @@ namespace Crowny
         ImGui::PushID(ctx.Depth);
         const Ref<SerializableTypeInfoDictionary>& dictInfo = StaticRefCast<SerializableTypeInfoDictionary>(ctx.MemberInfo->m_TypeInfo);
         bool modified = false;
-        MonoClass* dictClass = MonoManager::Get().FindClass(dictInfo->GetMonoClass());
-        MonoProperty* countProp = dictClass->GetProperty("Count");
-        MonoProperty* keysProp = dictClass->GetProperty("Keys");
-        MonoProperty* valuesProp = dictClass->GetProperty("Values");
+        MonoClass* const dictClass = MonoManager::Get().FindClass(dictInfo->GetMonoClass());
+        MonoProperty* const countProp = dictClass->GetProperty("Count");
+        MonoProperty* const keysProp = dictClass->GetProperty("Keys");
+        MonoProperty* const valuesProp = dictClass->GetProperty("Values");
         uint32_t length = 0;
         if (dictObject != nullptr)
         {
-            MonoObject* lengthObj = countProp->Get(dictObject);
+            MonoObject* const lengthObj = countProp->Get(dictObject);
             length = *(int32_t*)MonoUtils::Unbox(lengthObj);
         }
         ScriptArray keys(dictInfo->m_KeyType->GetMonoClass(), length);
         ScriptArray values(dictInfo->m_ValueType->GetMonoClass(), length);
-        MonoMethod* copyKeysToMethod = keysProp->GetReturnType()->GetMethod("CopyTo", 2);
-        MonoMethod* copyValuesToMethod = valuesProp->GetReturnType()->GetMethod("CopyTo", 2);
-        MonoMethod* containsKey = dictClass->GetMethod("ContainsKey", 1);
-        MonoMethod* addMethod = dictClass->GetMethod("Add", 2);
-        MonoMethod* removeMethod = dictClass->GetMethod("Remove", 1);
+        MonoMethod* const copyKeysToMethod = keysProp->GetReturnType()->GetMethod("CopyTo", 2);
+        MonoMethod* const copyValuesToMethod = valuesProp->GetReturnType()->GetMethod("CopyTo", 2);
+        MonoMethod* const containsKey = dictClass->GetMethod("ContainsKey", 1);
+        MonoMethod* const addMethod = dictClass->GetMethod("Add", 2);
+        MonoMethod* const removeMethod = dictClass->GetMethod("Remove", 1);
 
         uint32_t offset = 0;
         void* params[2];
@@ -265,8 +265,8 @@ namespace Crowny
         int32_t keyInt = 0;
         String keyString;
         ImGui::Columns(3);
-        bool isKeyString = dictInfo->m_KeyType->GetMonoClass() == MonoUtils::GetStringClass();
-        bool isKeyInt = dictInfo->m_KeyType->GetMonoClass() == MonoUtils::GetI32Class();
+        const bool isKeyString = dictInfo->m_KeyType->GetMonoClass() == MonoUtils::GetStringClass();
+        const bool isKeyInt = dictInfo->m_KeyType->GetMonoClass() == MonoUtils::GetI32Class();
         for (uint32_t i = 0; i < length; i++)
         {
             ImGui::SetCursorPosX(ImGui::GetCursorPos().x + (ctx.Depth + 1) * 25);
@@ -409,8 +409,8 @@ namespace Crowny
             bool displayAsSlider = false;
             if (ctx.MemberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
             {
-                MonoClass* rangeClass = ScriptInfoManager::Get().GetBuiltinClasses().RangeAttribute;
-                MonoObject* rangeAttr = ctx.MemberInfo->GetAttribute(rangeClass);
+                MonoClass* const rangeClass = ScriptInfoManager::Get().GetBuiltinClasses().RangeAttribute;
+                MonoObject* const rangeAttr = ctx.MemberInfo->GetAttribute(rangeClass);
                 rangeClass->GetField("min")->Get(rangeAttr, &minValue);
                 rangeClass->GetField("max")->Get(rangeAttr, &maxValue);
                 rangeClass->GetField("slider")->Get(rangeAttr, &displayAsSlider);
@@ -430,8 +430,8 @@ namespace Crowny
             bool displayAsSlider = false;
             if (ctx.MemberInfo->m_Flags.IsSet(ScriptFieldFlagBits::Range))
             {
-                MonoClass* rangeClass = ScriptInfoManager::Get().GetBuiltinClasses().RangeAttribute;
-                MonoObject* rangeAttr = ctx.MemberInfo->GetAttribute(rangeClass);
+                MonoClass* const rangeClass = ScriptInfoManager::Get().GetBuiltinClasses().RangeAttribute;
+                MonoObject* const rangeAttr = ctx.MemberInfo->GetAttribute(rangeClass);
                 rangeClass->GetField("min")->Get(rangeAttr, &minValue);
                 rangeClass->GetField("max")->Get(rangeAttr, &maxValue);
                 rangeClass->GetField("slider")->Get(rangeAttr, &displayAsSlider);
@@ -584,7 +584,7 @@ namespace Crowny
             return DrawDictionaryInspector(ctx.Getter(), ctx);
         else if (typeInfo->GetType() == SerializableType::Asset)
         {
-            Ref<SerializableTypeInfoAsset> assetInfo = StaticRefCast<SerializableTypeInfoAsset>(typeInfo);
+            const Ref<SerializableTypeInfoAsset> assetInfo = StaticRefCast<SerializableTypeInfoAsset>(typeInfo);
             ScriptAsset* scriptAsset = ScriptAsset::ToNative(ctx.Getter());
             AssetHandle<Asset> handle;
             if (scriptAsset != nullptr)
@@ -620,7 +620,7 @@ namespace Crowny
         else if (typeInfo->GetType() == SerializableType::Object)
         {
             Ref<SerializableObjectInfo> objInfo = nullptr;
-            Ref<SerializableTypeInfoObject> objTypeInfo = StaticRefCast<SerializableTypeInfoObject>(typeInfo);
+            const Ref<SerializableTypeInfoObject> objTypeInfo = StaticRefCast<SerializableTypeInfoObject>(typeInfo);
             if (!ctx.OverrideTypeInfo)
                 UI::Property(ctx.MemberInfo->m_Name.c_str());
             bool modified = false;
@@ -657,7 +657,7 @@ namespace Crowny
                 continue;
 
             UI::ShiftCursorX(depth * 25.0f);
-            auto iterFind = objectInfo->m_Headers.find(kv.first);
+            const auto iterFind = objectInfo->m_Headers.find(kv.first);
             if (iterFind != objectInfo->m_Headers.end())
             {
                 UI::ShiftCursor(10.0f, 9.0f);
@@ -692,7 +692,7 @@ namespace Crowny
                 ctx.Setter = [&](void* value) { memberInfo->SetValue(instance, value); };
                 ctx.Depth = depth;
 
-                bool modified = DrawFieldInspector(memberInfo->m_Name.c_str(), ctx);
+                const bool modified = DrawFieldInspector(memberInfo->m_Name.c_str(), ctx);
                 if (!memberInfo->m_Tooltip.empty())
                 {
                     ImGui::BeginTooltip();

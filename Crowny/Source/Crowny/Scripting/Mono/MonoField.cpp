@@ -27,7 +27,7 @@ namespace Crowny
 
     CrownyMonoVisibility MonoField::GetVisibility() const
     {
-        uint32_t flags = mono_field_get_flags(m_Field) & MONO_FIELD_ATTR_FIELD_ACCESS_MASK;
+        const uint32_t flags = mono_field_get_flags(m_Field) & MONO_FIELD_ATTR_FIELD_ACCESS_MASK;
         switch (flags)
         {
         case MONO_FIELD_ATTR_PRIVATE:
@@ -60,7 +60,7 @@ namespace Crowny
         if (attrInfo == nullptr || monoClass == nullptr)
             return false;
 
-        bool hasAttr = mono_custom_attrs_has_attr(attrInfo, monoClass->GetInternalPtr()) != 0;
+        const bool hasAttr = mono_custom_attrs_has_attr(attrInfo, monoClass->GetInternalPtr()) != 0;
         mono_custom_attrs_free(attrInfo);
 
         return hasAttr;

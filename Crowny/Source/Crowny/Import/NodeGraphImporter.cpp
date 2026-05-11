@@ -23,7 +23,7 @@ namespace Crowny
         serializer.Deserialize(path);
         if (!tempGraph)
             return nullptr;
-        Ref<NodeGraphAsset> asset = CreateRef<NodeGraphAsset>();
+        const Ref<NodeGraphAsset> asset = CreateRef<NodeGraphAsset>();
         asset->SetGraph(tempGraph);
         asset->SetName(tempGraph->GetName());
         return asset;

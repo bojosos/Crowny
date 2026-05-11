@@ -47,7 +47,7 @@ namespace Crowny
         MonoCustomAttrInfo* info = mono_custom_attrs_from_method(m_Method);
         if (info == nullptr)
             return false;
-        bool hasAttrs = mono_custom_attrs_has_attr(info, monoClass->GetInternalPtr()) != 0;
+        const bool hasAttrs = mono_custom_attrs_has_attr(info, monoClass->GetInternalPtr()) != 0;
         mono_custom_attrs_free(info);
         return hasAttrs;
     }
@@ -155,7 +155,7 @@ namespace Crowny
 
     CrownyMonoVisibility MonoMethod::GetVisibility() const
     {
-        uint32_t flags = mono_method_get_flags(m_Method, nullptr) & MONO_METHOD_ATTR_ACCESS_MASK;
+        const uint32_t flags = mono_method_get_flags(m_Method, nullptr) & MONO_METHOD_ATTR_ACCESS_MASK;
 
         switch (flags)
         {

@@ -13,6 +13,8 @@
 #include "Panels/ViewportPanel.h"
 #include "UI/UIUtils.h"
 
+#include "Crowny/Ecs/Components.h"
+
 #include <ImGuizmo.h>
 #include <backends/imgui_impl_vulkan.h>
 #include <glm/gtc/type_ptr.hpp>
@@ -86,7 +88,7 @@ namespace Crowny
 
         if (ImGui::BeginDragDropTarget())
         {
-            auto validationCallback = [](const FileEntry* fileEntry) {
+            const auto validationCallback = [](const FileEntry* fileEntry) {
                 if (fileEntry->Metadata == nullptr)
                     return false;
                 const AssetType assetType = fileEntry->Metadata->Type;
@@ -129,33 +131,68 @@ namespace Crowny
 
         if (selected && m_GizmoMode != GizmoEditMode::None)
         {
-
-            const float width = (float)ImGui::GetWindowWidth();
-            const float height = (float)ImGui::GetWindowHeight();
-            TransformComponent& tc = selected.GetComponent<TransformComponent>();
-            glm::mat4 transform = selected.GetWorldMatrix();
-
-            bool snap = Input::IsKeyPressed(Key::LeftControl);
-            float snapValue = 0.1f; // TODO: These snaps should be loaded from the editor settings
-            if (m_GizmoMode == GizmoEditMode::Rotate)
-                snapValue = 15.0f;
+            const bool snap = Input::IsKeyPressed(Key::LeftControl);
+            const float snapValue = (m_GizmoMode == GizmoEditMode::Rotate) ? 15.0f : 0.1f;
+            const float snapValues[3] = { snapValue, snapValue, snapValue };
             ImGuizmo::AllowAxisFlip(false);
-            float snapValues[3] = { snapValue, snapValue, snapValue };
-            if (ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj), GetImGuizmoMode(m_GizmoMode),
-                                     (!m_LocalMode && m_GizmoMode == GizmoEditMode::Translate) ? ImGuizmo::WORLD : ImGuizmo::LOCAL,
-                                     glm::value_ptr(transform), nullptr,
-                                     snap ? snapValues : nullptr)) // TODO: Bounds, does rotation work?
+
+            if (m_GizmoMode == GizmoEditMode::Bounds &&
+                selected.HasComponent<BoxCollider2DComponent>())
             {
-                glm::vec3 position, scale;
-                glm::quat rotation;
-                if (Math::DecomposeMatrix(transform, position, rotation, scale))
+                auto& bc2d = selected.GetComponent<BoxCollider2DComponent>();
+                glm::mat4 entityWorld = selected.GetWorldMatrix();
+                glm::mat4 colliderTransform = entityWorld
+                    * glm::translate(glm::mat4(1.0f), glm::vec3(bc2d.GetOffset(), 0.0f))
+                    * glm::scale(glm::mat4(1.0f), glm::vec3(bc2d.GetSize() * 2.0f, 1.0f));
+
+                float localBounds[6] = { -0.5f, -0.5f, 0.0f, 0.5f, 0.5f, 0.0f };
+
+                if (ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj),
+                                         ImGuizmo::BOUNDS, ImGuizmo::LOCAL,
+                                         glm::value_ptr(colliderTransform), nullptr,
+                                         snap ? snapValues : nullptr, localBounds))
                 {
-                    glm::vec3 rotationEuler = glm::eulerAngles(rotation);
-                    glm::vec3 transformRotation = glm::eulerAngles(selected.GetWorldRotation());
-                    const glm::vec3 deltaRot = rotationEuler - transformRotation;
-                    selected.SetWorldPosition(position);
-                    selected.SetWorldRotation(transformRotation + deltaRot);
-                    selected.SetWorldScale(scale);
+                    glm::vec3 newWorldCenter, newWorldScale;
+                    glm::quat newRot;
+                    Math::DecomposeMatrix(colliderTransform, newWorldCenter, newRot, newWorldScale);
+
+                    glm::vec3 localCenter = glm::inverse(entityWorld) * glm::vec4(newWorldCenter, 1.0f);
+                    glm::vec2 newOffset = { localCenter.x, localCenter.y };
+
+                    glm::vec3 entityPos, entityScale;
+                    glm::quat entityRot;
+                    Math::DecomposeMatrix(entityWorld, entityPos, entityRot, entityScale);
+                    glm::vec2 newSize = glm::vec2(newWorldScale.x, newWorldScale.y)
+                                       / glm::vec2(entityScale.x, entityScale.y) / 2.0f;
+
+                    if (newSize.x > 0.0f && newSize.y > 0.0f)
+                    {
+                        bc2d.SetOffset(newOffset, selected);
+                        bc2d.SetSize(newSize, selected);
+                    }
+                }
+            }
+            else
+            {
+                glm::mat4 transform = selected.GetWorldMatrix();
+                if (ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj),
+                                         GetImGuizmoMode(m_GizmoMode),
+                                         (!m_LocalMode && m_GizmoMode == GizmoEditMode::Translate)
+                                             ? ImGuizmo::WORLD : ImGuizmo::LOCAL,
+                                         glm::value_ptr(transform), nullptr,
+                                         snap ? snapValues : nullptr))
+                {
+                    glm::vec3 position, scale;
+                    glm::quat rotation;
+                    if (Math::DecomposeMatrix(transform, position, rotation, scale))
+                    {
+                        glm::vec3 rotationEuler = glm::eulerAngles(rotation);
+                        glm::vec3 transformRotation = glm::eulerAngles(selected.GetWorldRotation());
+                        const glm::vec3 deltaRot = rotationEuler - transformRotation;
+                        selected.SetWorldPosition(position);
+                        selected.SetWorldRotation(transformRotation + deltaRot);
+                        selected.SetWorldScale(scale);
+                    }
                 }
             }
         }

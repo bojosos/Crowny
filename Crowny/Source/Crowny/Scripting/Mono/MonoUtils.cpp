@@ -22,8 +22,8 @@ namespace Crowny
         if (str == nullptr)
             return L"";
 
-        int len = mono_string_length(str);
-        mono_unichar2* monoChars = mono_string_chars(str);
+        const int len = mono_string_length(str);
+        const mono_unichar2* monoChars = mono_string_chars(str);
 
         std::wstring ret(len, '0');
         for (int i = 0; i < len; i++)
@@ -34,7 +34,7 @@ namespace Crowny
 
     std::string MonoUtils::FromMonoString(MonoString* str)
     {
-        std::wstring wideString = WFromMonoString(str);
+        const std::wstring wideString = WFromMonoString(str);
 
         return UTF8::FromWide(wideString);
     }
@@ -200,7 +200,7 @@ namespace Crowny
     MonoPrimitiveType MonoUtils::GetPrimitiveType(::MonoClass* monoClass)
     {
         MonoType* type = mono_class_get_type(monoClass);
-        int primitiveType = mono_type_get_type(type);
+        const int primitiveType = mono_type_get_type(type);
         switch (primitiveType)
         {
         case (MONO_TYPE_BOOLEAN):

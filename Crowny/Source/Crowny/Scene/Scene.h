@@ -33,8 +33,8 @@ namespace Crowny
 
         Scene(bool createRootEntity = true);
         Scene(const String& name, bool createRootEntity = true);
-        Scene(Scene& other);
-        Scene& operator=(Scene& other);
+        Scene(const Scene& other);
+        Scene& operator=(const Scene& other);
         ~Scene();
 
         void CreateRootEntity();

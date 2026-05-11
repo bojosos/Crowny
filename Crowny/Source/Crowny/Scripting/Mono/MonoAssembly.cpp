@@ -63,17 +63,17 @@ namespace Crowny
         if (m_IsLoaded)
             Unload();
 
-        Ref<DataStream> assemblyStream = FileSystem::OpenFile(m_Path);
+        const Ref<DataStream> assemblyStream = FileSystem::OpenFile(m_Path);
         if (assemblyStream == nullptr || !assemblyStream->Size())
         {
             CW_ENGINE_ERROR("Could not load assembly from {0}. Path does not exist.", m_Path);
             return;
         }
 
-        uint32_t assemblySize = (uint32_t)assemblyStream->Size();
+        const uint32_t assemblySize = (uint32_t)assemblyStream->Size();
         char* assemblyData = new char[assemblySize];
         assemblyStream->Read(assemblyData, assemblySize);
-        String imageName = m_Path.filename().string();
+        const String imageName = m_Path.filename().string();
         MonoImageOpenStatus status = MONO_IMAGE_OK;
         // MonoImage* image =
         //   mono_image_open_from_data_with_name(assemblyData, assemblySize, true, &status, false, imageName.c_str());
@@ -87,20 +87,20 @@ namespace Crowny
         }
 
         // #ifdef CW_DEBUG
-        Path pdbPath = Path(m_Path).replace_extension("pdb");
+        const Path pdbPath = Path(m_Path).replace_extension("pdb");
         if (fs::exists(pdbPath))
         {
-            Ref<DataStream> pdbStream = FileSystem::OpenFile(pdbPath);
+            const Ref<DataStream> pdbStream = FileSystem::OpenFile(pdbPath);
             if (pdbStream != nullptr)
             {
-                uint32_t pdbSize = (uint32_t)pdbStream->Size();
+                const uint32_t pdbSize = (uint32_t)pdbStream->Size();
                 if (pdbSize >= 4)
                 {
                     m_DebugData = new uint8_t[pdbSize];
                     pdbStream->Read(m_DebugData, pdbSize);
 
                     // Check for portable PDB magic: "BSJB" at offset 0
-                    bool isPortablePdb = (m_DebugData[0] == 'B' && m_DebugData[1] == 'S' && m_DebugData[2] == 'J' && m_DebugData[3] == 'B');
+                    const bool isPortablePdb = (m_DebugData[0] == 'B' && m_DebugData[1] == 'S' && m_DebugData[2] == 'J' && m_DebugData[3] == 'B');
                     if (isPortablePdb)
                     {
                         mono_debug_open_image_from_memory(image, m_DebugData, pdbSize);
@@ -173,7 +173,7 @@ namespace Crowny
 
     MonoClass* MonoAssembly::GetClass(const String& fullName) const
     {
-        auto res = StringUtils::SplitString(fullName, ".");
+        const auto res = StringUtils::SplitString(fullName, ".");
         CW_ENGINE_ASSERT(res.size() == 2, "Name has to be in the format (Namespace.ClassName)");
         return GetClass(res[0], res[1]);
     }
@@ -209,7 +209,7 @@ namespace Crowny
         String typeName;
         MonoUtils::GetClassName(rawClass, ns, typeName);
 
-        MonoImage* classImage = mono_class_get_image(rawClass); // Is it from this assembly
+        const MonoImage* classImage = mono_class_get_image(rawClass); // Is it from this assembly
         if (classImage != m_Image)
             return nullptr;
 
@@ -229,10 +229,10 @@ namespace Crowny
         m_ClassList.clear();
         std::stack<MonoClass*> todo;
 
-        MonoAssembly* corlib = MonoManager::Get().GetAssembly("corlib");
+        const MonoAssembly* corlib = MonoManager::Get().GetAssembly("corlib");
         MonoClass* compilerGeneratedAttrib = corlib->GetClass("System.Runtime.CompilerServices", "CompilerGeneratedAttribute");
 
-        int numRows = mono_image_get_table_rows(m_Image, MONO_TABLE_TYPEDEF);
+        const int numRows = mono_image_get_table_rows(m_Image, MONO_TABLE_TYPEDEF);
 
         for (int i = 1; i < numRows; i++) // #0 module
         {

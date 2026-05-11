@@ -32,10 +32,10 @@ namespace Crowny
 
         {
             Lock lock(m_Mutex);
-            for (auto& scriptObject : m_ScriptObjects)
+            for (const auto& scriptObject : m_ScriptObjects)
                 backupData[scriptObject] = scriptObject->BeginRefresh();
 
-            for (auto& scriptObject : m_ScriptObjects)
+            for (const auto& scriptObject : m_ScriptObjects)
                 scriptObject->ClearManagedInstance();
         }
 
@@ -45,12 +45,12 @@ namespace Crowny
 
         {
             Lock lock(m_Mutex);
-            for (auto& scriptObject : m_ScriptObjects)
+            for (const auto& scriptObject : m_ScriptObjects)
                 CW_ENGINE_ASSERT(scriptObject->IsPersistent());
 
             ScriptInfoManager::Get().ClearAssemblyInfo();
 
-            for (auto& entry : assemblies)
+            for (const auto& entry : assemblies)
             {
                 MonoManager::Get().LoadAssembly(*entry.Filepath, entry.Name);
                 ScriptInfoManager::Get().LoadAssemblyInfo(entry.Name);
@@ -58,15 +58,15 @@ namespace Crowny
 
             Vector<ScriptObjectBase*> scriptObjCopy(m_ScriptObjects.size());
             uint32_t idx = 0;
-            for (auto& scriptObject : m_ScriptObjects)
+            for (const auto& scriptObject : m_ScriptObjects)
                 scriptObjCopy[idx++] = scriptObject;
 
             // OnRefreshDomainLoaded();
 
-            for (auto& scriptObject : scriptObjCopy)
+            for (const auto& scriptObject : scriptObjCopy)
                 scriptObject->RestoreManagedInstance();
 
-            for (auto& scriptObject : scriptObjCopy)
+            for (const auto& scriptObject : scriptObjCopy)
                 scriptObject->EndRefresh(backupData[scriptObject]);
         }
 
@@ -92,7 +92,7 @@ namespace Crowny
             m_FinalizedQueueIdx = (m_FinalizedQueueIdx + 1) % 2;
         }
 
-        for (auto& finalizedObj : m_FinalizedObjects[readQueueIdx])
+        for (const auto& finalizedObj : m_FinalizedObjects[readQueueIdx])
             finalizedObj->OnManagedInstanceDeleted(assemblyRefresh);
 
         m_FinalizedObjects[readQueueIdx].clear();

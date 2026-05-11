@@ -64,8 +64,8 @@ namespace Crowny
         if (!world)
             return;
 
-        b2Vec2 start(origin->x, origin->y);
-        glm::vec2 dir = glm::normalize(*direction);
+        const b2Vec2 start(origin->x, origin->y);
+        const glm::vec2 dir = glm::normalize(*direction);
         b2Vec2 end(origin->x + dir.x * distance, origin->y + dir.y * distance);
 
         RaycastCallback callback(layerMask);
@@ -77,9 +77,9 @@ namespace Crowny
         std::sort(callback.m_Hits.begin(), callback.m_Hits.end(),
                   [](const RaycastHit2DInterop& a, const RaycastHit2DInterop& b) { return a.Fraction < b.Fraction; });
 
-        MonoAssembly* assembly = MonoManager::Get().GetAssembly(CROWNY_ASSEMBLY);
-        MonoClass* hitClass = assembly ? assembly->GetClass("Crowny", "RaycastHit2D") : nullptr;
-        ::MonoClass* rawClass = hitClass ? hitClass->GetInternalPtr() : MonoUtils::GetI32Class();
+        MonoAssembly* const assembly = MonoManager::Get().GetAssembly(CROWNY_ASSEMBLY);
+        MonoClass* const hitClass = assembly ? assembly->GetClass("Crowny", "RaycastHit2D") : nullptr;
+        ::MonoClass* const rawClass = hitClass ? hitClass->GetInternalPtr() : MonoUtils::GetI32Class();
 
         *outResults = mono_array_new(MonoManager::Get().GetDomain(), rawClass, (uintptr_t)callback.m_Hits.size());
 

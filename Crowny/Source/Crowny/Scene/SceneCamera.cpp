@@ -39,10 +39,10 @@ namespace Crowny
             m_Projection = glm::perspective(m_PerspectiveFOV, m_AspectRatio, m_PerspectiveNear, m_PerspectiveFar);
         else
         {
-            float left = -m_OrthographicSize * m_AspectRatio * 0.5f;
-            float right = m_OrthographicSize * m_AspectRatio * 0.5f;
-            float bot = -m_OrthographicSize * 0.5f;
-            float top = m_OrthographicSize * 0.5f;
+            const float left = -m_OrthographicSize * m_AspectRatio * 0.5f;
+            const float right = m_OrthographicSize * m_AspectRatio * 0.5f;
+            const float bot = -m_OrthographicSize * 0.5f;
+            const float top = m_OrthographicSize * 0.5f;
             m_Projection = glm::ortho(left, right, bot, top, m_OrthographicNear, m_OrthographicFar);
         }
     }

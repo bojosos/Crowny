@@ -18,7 +18,7 @@ namespace Crowny
 
     Ref<Asset> PrefabImporter::Import(const Path& path, Ref<const ImportOptions> importOptions)
     {
-        Ref<Prefab> prefab = CreateRef<Prefab>();
+        const Ref<Prefab> prefab = CreateRef<Prefab>();
         PrefabSerializer serializer(prefab);
         serializer.Deserialize(path);
         return prefab;

@@ -33,11 +33,11 @@ namespace Crowny
         Ref<SerializableObjectInfo> type = m_ObjectInfo;
         while (type != nullptr)
         {
-            for (auto [id, memberInfo] : type->m_Fields)
+            for (const auto& [id, memberInfo] : type->m_Fields)
             {
                 if (memberInfo->IsSerializable())
                 {
-                    SerializableFieldKey key(memberInfo->m_ParentTypeId, memberInfo->m_FieldId);
+                    const SerializableFieldKey key(memberInfo->m_ParentTypeId, memberInfo->m_FieldId);
                     m_CachedData[key] = GetFieldData(memberInfo);
                 }
             }
@@ -57,7 +57,7 @@ namespace Crowny
         if (!ScriptInfoManager::Get().GetSerializableObjectInfo(m_ObjectInfo->m_TypeInfo->m_TypeNamespace, m_ObjectInfo->m_TypeInfo->m_TypeName,
                                                                 objInfo))
             return nullptr;
-        MonoObject* managedInstance = CreateManagedInstance(objInfo->m_TypeInfo);
+        MonoObject* const managedInstance = CreateManagedInstance(objInfo->m_TypeInfo);
         Deserialize(managedInstance, objInfo);
         return managedInstance;
     }
@@ -68,7 +68,7 @@ namespace Crowny
 
         if (field->m_TypeInfo->GetType() == SerializableType::Primitive)
         {
-            ScriptPrimitiveType primitiveType = StaticRefCast<SerializableTypeInfoPrimitive>(field->m_TypeInfo)->m_Type;
+            const ScriptPrimitiveType primitiveType = StaticRefCast<SerializableTypeInfoPrimitive>(field->m_TypeInfo)->m_Type;
 
             SerializeEnumYAML(out, "PrimitiveInfo", primitiveType);
         }
@@ -76,7 +76,7 @@ namespace Crowny
         {
             BeginYAMLMap(out, "EnumInfo");
 
-            auto enumInfo = StaticRefCast<SerializableTypeInfoEnum>(field->m_TypeInfo);
+            const auto enumInfo = StaticRefCast<SerializableTypeInfoEnum>(field->m_TypeInfo);
             SerializeValueYAML(out, "TypeName", enumInfo->m_TypeName);
             SerializeValueYAML(out, "TypeNamespace", enumInfo->m_TypeNamespace);
             SerializeEnumYAML(out, "UnderlyingType", enumInfo->m_UnderlyingType);
@@ -87,7 +87,7 @@ namespace Crowny
         {
             BeginYAMLMap(out, "ObjectInfo");
 
-            auto objTypeInfo = StaticRefCast<SerializableTypeInfoObject>(field->m_TypeInfo);
+            const auto objTypeInfo = StaticRefCast<SerializableTypeInfoObject>(field->m_TypeInfo);
             SerializeValueYAML(out, "TypeName", objTypeInfo->m_TypeName);
             SerializeValueYAML(out, "TypeNamespace", objTypeInfo->m_TypeNamespace);
             SerializeValueYAML(out, "ValueType", objTypeInfo->m_ValueType);
@@ -148,7 +148,7 @@ namespace Crowny
 
         while (curType != nullptr)
         {
-            auto& objTypeInfo = curType->m_TypeInfo;
+            const auto& objTypeInfo = curType->m_TypeInfo;
             out << YAML::BeginMap;
 
             BeginYAMLMap(out, "ObjectInfo");
@@ -164,10 +164,14 @@ namespace Crowny
 
             // out << YAML::BeginMap;
             SerializeValueYAML(out, "Fields", YAML::BeginSeq);
-            for (auto [id, field] : curType->m_Fields)
+            for (const auto& [id, field] : curType->m_Fields)
             {
                 if (field->IsSerializable())
                 {
+                    Ref<SerializableFieldData> fieldData = GetFieldData(field);
+                    if (fieldData == nullptr)
+                        continue;
+
                     out << YAML::BeginMap;
 
                     SerializeValueYAML(out, "ParentTypeId", field->m_ParentTypeId);
@@ -177,7 +181,6 @@ namespace Crowny
                     SerializeTypeInfo(field, out);
                     SerializeValueYAML(out, "Name", field->m_Name);
                     out << YAML::Key << "Value" << YAML::Value;
-                    Ref<SerializableFieldData> fieldData = GetFieldData(field);
                     fieldData->SerializeYAML(out);
 
                     out << YAML::EndMap;
@@ -229,13 +232,13 @@ namespace Crowny
                 deserializedObjectInfo->m_Fields[memberInfo->m_FieldId] = memberInfo;
                 deserializedObjectInfo->m_FieldNameToId[memberInfo->m_Name] = memberInfo->m_FieldId;
 
-                SerializableFieldKey key(memberInfo->m_ParentTypeId, memberInfo->m_FieldId);
+                const SerializableFieldKey key(memberInfo->m_ParentTypeId, memberInfo->m_FieldId);
                 Ref<SerializableFieldData> data;
 
                 switch (typeInfo->GetType())
                 {
                 case (SerializableType::Primitive): {
-                    auto primitiveTypeInfo = StaticRefCast<SerializableTypeInfoPrimitive>(typeInfo);
+                    const auto primitiveTypeInfo = StaticRefCast<SerializableTypeInfoPrimitive>(typeInfo);
                     switch (primitiveTypeInfo->m_Type)
                     {
                     case (ScriptPrimitiveType::Bool):
@@ -296,17 +299,17 @@ namespace Crowny
                     break;
                 }
                 case (SerializableType::Object): {
-                    auto obj = StaticRefCast<SerializableTypeInfoObject>(typeInfo);
+                    const auto obj = StaticRefCast<SerializableTypeInfoObject>(typeInfo);
                     data = CreateRef<SerializableFieldObject>();
                     break;
                 }
                 case (SerializableType::Entity): {
-                    auto obj = StaticRefCast<SerializableTypeInfoEntity>(typeInfo);
+                    const auto obj = StaticRefCast<SerializableTypeInfoEntity>(typeInfo);
                     data = CreateRef<SerializableFieldEntity>();
                     break;
                 }
                 case (SerializableType::Enum): {
-                    auto enumInfo = StaticRefCast<SerializableTypeInfoEnum>(typeInfo);
+                    const auto enumInfo = StaticRefCast<SerializableTypeInfoEnum>(typeInfo);
                     switch (enumInfo->m_UnderlyingType)
                     {
                     case ScriptPrimitiveType::I8:
@@ -340,7 +343,7 @@ namespace Crowny
                     break;
                 }
                 case (SerializableType::Asset): {
-                    auto obj = StaticRefCast<SerializableTypeInfoAsset>(typeInfo);
+                    const auto obj = StaticRefCast<SerializableTypeInfoAsset>(typeInfo);
                     data = CreateRef<SerializableFieldAsset>();
                     break;
                 }
@@ -367,17 +370,17 @@ namespace Crowny
         Ref<SerializableObjectInfo> type = m_ObjectInfo;
         while (type != nullptr)
         {
-            for (auto& field : type->m_Fields)
+            for (const auto& field : type->m_Fields)
             {
                 if (field.second->IsSerializable())
                 {
-                    uint32_t fieldId = field.second->m_FieldId;
-                    uint32_t typeId = field.second->m_ParentTypeId;
-                    SerializableFieldKey key(typeId, fieldId);
+                    const uint32_t fieldId = field.second->m_FieldId;
+                    const uint32_t typeId = field.second->m_ParentTypeId;
+                    const SerializableFieldKey key(typeId, fieldId);
                     Ref<SerializableMemberInfo> fieldInfo = objInfo->FindMatchingField(field.second, type->m_TypeInfo);
                     if (fieldInfo != nullptr)
                     {
-                        auto iterFind = m_CachedData.find(key);
+                        const auto iterFind = m_CachedData.find(key);
                         if (iterFind != m_CachedData.end())
                             fieldInfo->SetValue(instance, iterFind->second->GetValue());
                     }
@@ -397,8 +400,8 @@ namespace Crowny
         }
         else
         {
-            SerializableFieldKey key(fieldInfo->m_ParentTypeId, fieldInfo->m_FieldId);
-            auto iterFind = m_CachedData.find(key);
+            const SerializableFieldKey key(fieldInfo->m_ParentTypeId, fieldInfo->m_FieldId);
+            const auto iterFind = m_CachedData.find(key);
             if (iterFind != m_CachedData.end())
                 return iterFind->second;
             return nullptr;
@@ -416,7 +419,7 @@ namespace Crowny
         }
         else
         {
-            SerializableFieldKey key(fieldInfo->m_ParentTypeId, fieldInfo->m_FieldId);
+            const SerializableFieldKey key(fieldInfo->m_ParentTypeId, fieldInfo->m_FieldId);
             m_CachedData[key] = val;
         }
     }

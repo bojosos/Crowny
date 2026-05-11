@@ -18,7 +18,7 @@ namespace Crowny
     {
         ImGuiLayer::OnAttach();
         Application& app = (*gApplication);
-        GLFWwindow* window = static_cast<GLFWwindow*>(app.GetWindow().GetNativeWindow());
+        GLFWwindow* const window = static_cast<GLFWwindow*>(app.GetWindow().GetNativeWindow());
         ImGui_ImplGlfw_InitForOpenGL(window, true);
         ImGui_ImplOpenGL3_Init("#version 410");
     }
@@ -40,10 +40,10 @@ namespace Crowny
         ImGuiLayer::End();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-        ImGuiIO& io = ImGui::GetIO();
+        const ImGuiIO& io = ImGui::GetIO();
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
-            GLFWwindow* backup_current_context = glfwGetCurrentContext();
+            GLFWwindow* const backup_current_context = glfwGetCurrentContext();
             ImGui::UpdatePlatformWindows();
             ImGui::RenderPlatformWindowsDefault();
             glfwMakeContextCurrent(backup_current_context);

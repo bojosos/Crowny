@@ -79,7 +79,7 @@ namespace Crowny
     {
         for (uint32_t i = 0; i < numSamples; i++)
         {
-            int8_t val = input[i];
+            const int8_t val = input[i];
             output[i] = val << 24;
         }
     }
@@ -190,7 +190,7 @@ namespace Crowny
         {
             for (uint32_t i = 0; i < numSamples; i++)
             {
-                int8_t sample = *(int8_t*)samples;
+                const int8_t sample = *(int8_t*)samples;
                 output[i] = sample / 127.0f;
                 samples++;
             }
@@ -199,7 +199,7 @@ namespace Crowny
         {
             for (uint32_t i = 0; i < numSamples; i++)
             {
-                int16_t sample = *(int16_t*)samples;
+                const int16_t sample = *(int16_t*)samples;
                 output[i] = sample / 32767.0f;
                 samples += 2;
             }
@@ -208,7 +208,7 @@ namespace Crowny
         {
             for (uint32_t i = 0; i < numSamples; i++)
             {
-                int32_t sample = AudioUtils::Convert24To32Bits(samples);
+                const int32_t sample = AudioUtils::Convert24To32Bits(samples);
                 output[i] = sample / 2147483647.0f;
                 samples += 3;
             }
@@ -217,7 +217,7 @@ namespace Crowny
         {
             for (uint32_t i = 0; i < numSamples; i++)
             {
-                int32_t sample = *(int32_t*)samples;
+                const int32_t sample = *(int32_t*)samples;
                 output[i] = sample / 2147483647.0f;
                 samples += 4;
             }
@@ -310,7 +310,7 @@ namespace Crowny
 
     bool AudioUtils::CheckOpenALErrors(const String& filename, uint32_t line)
     {
-        ALenum error = alGetError();
+        const ALenum error = alGetError();
         if (error != AL_NO_ERROR)
         {
             CW_ENGINE_ERROR("***ERROR*** ({0}: {1})", filename, line);
@@ -341,7 +341,7 @@ namespace Crowny
 
     bool AudioUtils::CheckOpenALCErrors(const String& filename, uint32_t line, ALCdevice* device)
     {
-        ALCenum error = alcGetError(device);
+        const ALCenum error = alcGetError(device);
         if (error != ALC_NO_ERROR)
         {
             CW_ENGINE_ERROR("***ERROR*** ({0}: {1})", filename, line);

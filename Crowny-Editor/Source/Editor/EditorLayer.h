@@ -21,6 +21,7 @@ namespace Crowny
     class AssetBrowserPanel;
     class HierarchyPanel;
     class ConsolePanel;
+    class AudioMixerPanel;
 #ifdef CW_WITH_NODES
     class NodeEditorPanel;
 #endif
@@ -296,6 +297,7 @@ namespace Crowny
         TextureEditor* m_TextureEditor = nullptr;
         ConsolePanel* m_ConsolePanel = nullptr;
         AssetBrowserPanel* m_AssetBrowser = nullptr;
+        AudioMixerPanel* m_AudioMixerPanel = nullptr;
 #ifdef CW_WITH_NODES
         NodeEditorPanel* m_NodeEditorPanel = nullptr;
 #endif

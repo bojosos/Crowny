@@ -29,7 +29,8 @@ namespace Crowny
         Scene,
         NodeGraph,
         EnvironmentMap,
-        Prefab
+        Prefab,
+        AudioMixer
     };
 
     static constexpr uint32_t ASSET_FILE_MAGIC = 0x43574E59; // "CWNY"
@@ -51,6 +52,7 @@ namespace Crowny
     static constexpr uint32_t MESH_FORMAT_VERSION = 1;
     static constexpr uint32_t FONT_FORMAT_VERSION = 1;
     static constexpr uint32_t AUDIO_FORMAT_VERSION = 1;
+    static constexpr uint32_t AUDIO_MIXER_FORMAT_VERSION = 1;
     static constexpr uint32_t NODEGRAPH_FORMAT_VERSION = 1;
     static constexpr uint32_t ENVIRONMENT_FORMAT_VERSION = 1;
     static constexpr uint32_t PREFAB_FORMAT_VERSION = 1;

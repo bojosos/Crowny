@@ -386,6 +386,13 @@ namespace Crowny
         void SetLooping(bool loop);
         void SetIsMuted(bool muted);
         void SetTime(float time);
+        void SetBusName(const String& busName);
+        void SetLowPassGain(float gainHF);
+        void SetHighPassGain(float gainLF);
+        void SetConeInnerAngle(float degrees);
+        void SetConeOuterAngle(float degrees);
+        void SetConeOuterGain(float gain);
+        void SetConeOuterGainHF(float gainHF);
 
         float GetVolume() const { return m_Volume; }
         float GetPitch() const { return m_Pitch; }
@@ -396,6 +403,13 @@ namespace Crowny
         bool GetLooping() const { return m_Loop; }
         bool GetIsMuted() const { return m_IsMuted; }
         float GetTime() const { return m_Time; }
+        const String& GetBusName() const { return m_BusName; }
+        float GetLowPassGain() const { return m_LowPassGain; }
+        float GetHighPassGain() const { return m_HighPassGain; }
+        float GetConeInnerAngle() const { return m_ConeInnerAngle; }
+        float GetConeOuterAngle() const { return m_ConeOuterAngle; }
+        float GetConeOuterGain() const { return m_ConeOuterGain; }
+        float GetConeOuterGainHF() const { return m_ConeOuterGainHF; }
 
         void Play();
         void Pause();
@@ -413,6 +427,13 @@ namespace Crowny
         float m_MaxDistance = 500.0f;
         bool m_PlayOnAwake = true;
         float m_Time = 0.0f;
+        String m_BusName; // empty = master bus of active mixer (or no bus when no active mixer)
+        float m_LowPassGain = 1.0f;
+        float m_HighPassGain = 1.0f;
+        float m_ConeInnerAngle = 360.0f;
+        float m_ConeOuterAngle = 360.0f;
+        float m_ConeOuterGain = 0.0f;
+        float m_ConeOuterGainHF = 1.0f;
 
         Ref<AudioSource> m_Internal;
     };

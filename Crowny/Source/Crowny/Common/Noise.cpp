@@ -8,8 +8,8 @@ namespace Crowny
 {
     float Noise::Round(const glm::vec2& coords)
     {
-        auto bump = [](float t) { return glm::max(0.0f, 1.0f - std::pow(t, 6.0f)); };
-        float b = bump(coords.x) * bump(coords.y);
+        const auto bump = [](float t) { return glm::max(0.0f, 1.0f - std::pow(t, 6.0f)); };
+        const float b = bump(coords.x) * bump(coords.y);
         return b * 0.9f;
     }
 
@@ -19,11 +19,11 @@ namespace Crowny
         float accAmps = 0;
         for (int i = 0; i < ops.Octaves; i++)
         {
-            float freq = (float)glm::pow(2.0f, i);
-            float amp = (float)glm::pow(ops.Roughness, i);
+            const float freq = (float)glm::pow(2.0f, i);
+            const float amp = (float)glm::pow(ops.Roughness, i);
 
-            float x = xPos * freq / ops.Smoothness;
-            float y = yPos * freq / ops.Smoothness;
+            const float x = xPos * freq / ops.Smoothness;
+            const float y = yPos * freq / ops.Smoothness;
 
             float noise = 0.0f;
             if (ops.NoiseFunc == NoiseFunc::Perlin)
@@ -47,12 +47,12 @@ namespace Crowny
         float accAmps = 0;
         for (int i = 0; i < ops.Octaves; i++)
         {
-            float freq = (float)glm::pow(2.0f, i);
-            float amp = (float)glm::pow(ops.Roughness, i);
+            const float freq = (float)glm::pow(2.0f, i);
+            const float amp = (float)glm::pow(ops.Roughness, i);
 
-            float x = position.x * freq / ops.Smoothness;
-            float y = position.y * freq / ops.Smoothness;
-            float z = position.z * freq / ops.Smoothness;
+            const float x = position.x * freq / ops.Smoothness;
+            const float y = position.y * freq / ops.Smoothness;
+            const float z = position.z * freq / ops.Smoothness;
 
             float noise = 0.0f;
             if (ops.NoiseFunc == NoiseFunc::Perlin)

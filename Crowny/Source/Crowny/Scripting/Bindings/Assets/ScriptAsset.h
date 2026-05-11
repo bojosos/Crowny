@@ -77,8 +77,8 @@ namespace Crowny
         ScriptAsset(MonoObject* instance);
 
     private:
-        static MonoString* Internal_GetName(ScriptAssetBase* nativeInstance);
-        static void Internal_GetUUID(ScriptAssetBase* nativeInstance, UUID* uuid);
+        static MonoString* Internal_GetName(const ScriptAssetBase* nativeInstance);
+        static void Internal_GetUUID(const ScriptAssetBase* nativeInstance, UUID* uuid);
     };
 
 } // namespace Crowny

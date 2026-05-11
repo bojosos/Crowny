@@ -1,17 +1,34 @@
 #pragma once
 
-#include "Crowny/Common/Module.h"
-
+#include "Crowny/Assets/AssetHandle.h"
 #include "Crowny/Audio/AudioSource.h"
+#include "Crowny/Audio/EFXLoader.h"
+#include "Crowny/Common/Module.h"
 
 #include <AL/alc.h>
 
 namespace Crowny
 {
 
+    class AudioMixer;
+    class AudioBus;
+
     struct AudioDevice
     {
         String Name;
+    };
+
+    // Mirrors OpenAL's distance model enum but in a stable order we serialize. The clamped
+    // variants cap volume at the min/max distance, which is almost always what games want.
+    enum class AudioDistanceModel : uint8_t
+    {
+        None = 0,
+        Inverse = 1,
+        InverseClamped = 2, // OpenAL default
+        Linear = 3,
+        LinearClamped = 4,
+        Exponent = 5,
+        ExponentClamped = 6,
     };
 
     class AudioManager : public Module<AudioManager>
@@ -34,6 +51,24 @@ namespace Crowny
         Ref<AudioListener> CreateListener();
         Ref<AudioSource> CreateSource();
         Ref<AudioClip> CreateClip();
+
+        // EFX accessors. When EFX is unavailable, IsEFXAvailable() returns false and the buses/effects
+        // become no-ops at the OpenAL layer, while bus gain still propagates to sources.
+        const EFX& GetEFX() const { return m_EFX; }
+        bool IsEFXAvailable() const { return m_EFX.Available; }
+
+        // Sets the currently active audio mixer. Sources without an explicit bus will route to the
+        // master bus of this mixer. Passing a null handle reverts to direct-output (no bus routing).
+        void SetActiveMixer(const AssetHandle<AudioMixer>& mixer);
+        const AssetHandle<AudioMixer>& GetActiveMixer() const { return m_ActiveMixer; }
+        Ref<AudioBus> FindBus(const String& name) const;
+
+        void SetDopplerFactor(float factor);
+        float GetDopplerFactor() const { return m_DopplerFactor; }
+        void SetSpeedOfSound(float speed);
+        float GetSpeedOfSound() const { return m_SpeedOfSound; }
+        void SetDistanceModel(AudioDistanceModel model);
+        AudioDistanceModel GetDistanceModel() const { return m_DistanceModel; }
 
         float GetGlobalSourceProgress(const String& name) const;
 
@@ -69,6 +104,13 @@ namespace Crowny
 
         UnorderedMap<String, Ref<AudioSource>> m_ManualSources;
         UnorderedMap<String, Ref<AudioSource>> m_TempSources;
+
+        EFX m_EFX;
+        AssetHandle<AudioMixer> m_ActiveMixer;
+
+        float m_DopplerFactor = 1.0f;
+        float m_SpeedOfSound = 343.3f;
+        AudioDistanceModel m_DistanceModel = AudioDistanceModel::InverseClamped;
     };
 
     extern AudioManager* gAudioManager;

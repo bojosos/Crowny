@@ -7,7 +7,7 @@ namespace Crowny
     Path EditorUtils::GetUniquePath(const Path& path, FileNamingScheme scheme)
     {
         String cleanPath = Path(path).replace_extension("").string();
-        String ext = path.extension().string();
+        const String ext = path.extension().string();
 
         int idx = 1;
         size_t sepIdx;
@@ -26,7 +26,7 @@ namespace Crowny
 
         if (sepIdx != String::npos)
         {
-            String numStr = cleanPath.substr(sepIdx + 1, cleanPath.size() - sepIdx - (scheme == FileNamingScheme::BracesIdx ? 2 : 1));
+            const String numStr = cleanPath.substr(sepIdx + 1, cleanPath.size() - sepIdx - (scheme == FileNamingScheme::BracesIdx ? 2 : 1));
             uint32_t idx = StringUtils::ParseInt(numStr);
             cleanPath = cleanPath.substr(0, sepIdx);
             idx++;

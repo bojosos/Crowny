@@ -20,7 +20,7 @@ namespace Crowny
         // Don't fully deserialize the scene during import — script classes may not be loaded,
         // and the physics world may not exist. Just create a lightweight Scene asset that
         // records the file path. Full deserialization happens when the editor opens the scene.
-        Ref<Scene> scene = CreateRef<Scene>(path.stem().string(), false);
+        const Ref<Scene> scene = CreateRef<Scene>(path.stem().string(), false);
         return scene;
     }
 } // namespace Crowny

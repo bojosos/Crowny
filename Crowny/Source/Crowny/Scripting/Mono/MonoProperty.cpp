@@ -63,7 +63,7 @@ namespace Crowny
                 if (returnClass != nullptr)
                     m_ReturnType = MonoManager::Get().FindClass(returnClass);
             }
-            uint32_t numParams = mono_signature_get_param_count(signature);
+            const uint32_t numParams = mono_signature_get_param_count(signature);
             m_IsIndexed = numParams == 1;
         }
         else if (m_SetMethod != nullptr)
@@ -77,7 +77,7 @@ namespace Crowny
                     m_ReturnType = MonoManager::Get().FindClass(returnClass);
             }
 
-            uint32_t numParams = mono_signature_get_param_count(signature);
+            const uint32_t numParams = mono_signature_get_param_count(signature);
             m_IsIndexed = numParams == 2;
         }
 
@@ -106,7 +106,7 @@ namespace Crowny
         MonoCustomAttrInfo* attrInfo = mono_custom_attrs_from_property(parent, m_Property);
         if (attrInfo == nullptr || monoClass == nullptr)
             return false;
-        bool hasAttr = mono_custom_attrs_has_attr(attrInfo, monoClass->GetInternalPtr()) != 0;
+        const bool hasAttr = mono_custom_attrs_has_attr(attrInfo, monoClass->GetInternalPtr()) != 0;
         mono_custom_attrs_free(attrInfo);
 
         return hasAttr;
@@ -154,14 +154,14 @@ namespace Crowny
         CrownyMonoVisibility getterVisibility = CrownyMonoVisibility::Public;
         if (m_GetMethod)
         {
-            MonoMethod tmp(m_GetMethod);
+            const MonoMethod tmp(m_GetMethod);
             getterVisibility = tmp.GetVisibility();
         }
 
         CrownyMonoVisibility setterVisibility = CrownyMonoVisibility::Public;
         if (m_SetMethod)
         {
-            MonoMethod tmp(m_SetMethod);
+            const MonoMethod tmp(m_SetMethod);
             setterVisibility = tmp.GetVisibility();
         }
         if (getterVisibility < setterVisibility)

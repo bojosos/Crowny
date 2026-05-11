@@ -36,7 +36,7 @@ namespace Crowny
 
     static void DispatchMain(void* fp)
     {
-        auto* func = (std::function<void()>*)fp;
+        auto* const func = (std::function<void()>*)fp;
         (*func)();
     }
 
@@ -160,8 +160,8 @@ namespace Crowny
         while (m_Running)
         {
 #endif
-            float time = (float)glfwGetTime();
-            Timestep timestep = time - m_LastFrameTime;
+            const float time = (float)glfwGetTime();
+            const Timestep timestep = time - m_LastFrameTime;
             m_LastFrameTime = time;
 
             if (!m_Minimized)

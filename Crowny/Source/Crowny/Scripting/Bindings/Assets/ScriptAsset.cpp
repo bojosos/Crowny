@@ -32,7 +32,7 @@ namespace Crowny
 
     ::MonoClass* ScriptAssetBase::GetManagedAssetClass(uint32_t id)
     {
-        AssetInfo* info = ScriptInfoManager::Get().GetAssetInfo(id);
+        AssetInfo* const info = ScriptInfoManager::Get().GetAssetInfo(id);
         if (info == nullptr)
             return nullptr;
         return info->AssetClass->GetInternalPtr();
@@ -46,7 +46,7 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_GetUUID", (void*)&Internal_GetUUID);
     }
 
-    MonoString* ScriptAsset::Internal_GetName(ScriptAssetBase* thisPtr) { return MonoUtils::ToMonoString(thisPtr->GetGenericHandle()->GetName()); }
+    MonoString* ScriptAsset::Internal_GetName(const ScriptAssetBase* thisPtr) { return MonoUtils::ToMonoString(thisPtr->GetGenericHandle()->GetName()); }
 
-    void ScriptAsset::Internal_GetUUID(ScriptAssetBase* thisPtr, UUID* outUuid) { *outUuid = thisPtr->GetGenericHandle().GetUUID(); }
+    void ScriptAsset::Internal_GetUUID(const ScriptAssetBase* thisPtr, UUID* outUuid) { *outUuid = thisPtr->GetGenericHandle().GetUUID(); }
 } // namespace Crowny

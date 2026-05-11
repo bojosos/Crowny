@@ -56,7 +56,7 @@ namespace Crowny
         String pathCopy = entry.ElementName;
         StringUtils::ToLower(pathCopy);
         entry.ElementNameHash = Hash(pathCopy);
-        for (auto& child : entry.Children)
+        for (const auto& child : entry.Children)
             child->Parent = &entry;
     }
 
@@ -177,7 +177,7 @@ namespace Crowny
                     newFilesToAdd.clear();
                     newDirsToAdd.clear();
 
-                    for (auto& dirEntry : fs::directory_iterator(currentDir->Filepath))
+                    for (const auto& dirEntry : fs::directory_iterator(currentDir->Filepath))
                     {
                         if (dirEntry.is_regular_file())
                         {
@@ -240,7 +240,7 @@ namespace Crowny
                             toDelete.push_back(currentDir->Children[i]);
                     }
 
-                    for (auto& child : toDelete)
+                    for (const auto& child : toDelete)
                     {
                         if (child->Type == LibraryEntryType::Directory)
                             DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(child));
@@ -250,13 +250,13 @@ namespace Crowny
                     toDelete.clear();
 
                     // Pass 3: Add newly discovered entries (Children is now safe to mutate).
-                    for (auto& path : newFilesToAdd)
+                    for (const auto& path : newFilesToAdd)
                         AddAssetInternal(currentDir, path);
-                    for (auto& path : newDirsToAdd)
+                    for (const auto& path : newDirsToAdd)
                         AddDirectoryInternal(currentDir, path);
 
                     // Push surviving + newly added child directories for traversal.
-                    for (auto& child : currentDir->Children)
+                    for (const auto& child : currentDir->Children)
                     {
                         if (child->Type == LibraryEntryType::Directory)
                             todos.push(static_cast<DirectoryEntry*>(child.get()));
@@ -352,7 +352,7 @@ namespace Crowny
                     newFilesToAdd.clear();
                     newDirsToAdd.clear();
 
-                    for (auto& dirEntry : fs::directory_iterator(currentDir->Filepath))
+                    for (const auto& dirEntry : fs::directory_iterator(currentDir->Filepath))
                     {
                         if (dirEntry.is_regular_file())
                         {
@@ -413,7 +413,7 @@ namespace Crowny
                             toDelete.push_back(currentDir->Children[i]);
                     }
 
-                    for (auto& child : toDelete)
+                    for (const auto& child : toDelete)
                     {
                         if (child->Type == LibraryEntryType::Directory)
                             DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(child));
@@ -422,16 +422,16 @@ namespace Crowny
                     }
                     toDelete.clear();
 
-                    for (auto& filePath : newFilesToAdd)
+                    for (const auto& filePath : newFilesToAdd)
                     {
                         Ref<FileEntry> newAsset = CreateRef<FileEntry>(filePath, filePath.filename().string(), currentDir);
                         currentDir->Children.push_back(newAsset);
                         tasks.push_back({ newAsset.get(), nullptr, false });
                     }
-                    for (auto& dirPath : newDirsToAdd)
+                    for (const auto& dirPath : newDirsToAdd)
                         AddDirectoryInternal(currentDir, dirPath);
 
-                    for (auto& child : currentDir->Children)
+                    for (const auto& child : currentDir->Children)
                     {
                         if (child->Type == LibraryEntryType::Directory)
                             todos.push(static_cast<DirectoryEntry*>(child.get()));
@@ -448,7 +448,7 @@ namespace Crowny
         Vector<ImportTask> threadSafeTasks;
         Vector<ImportTask> mainThreadTasks;
 
-        for (auto& task : tasks)
+        for (const auto& task : tasks)
         {
             String ext = task.Entry->Filepath.extension().string();
             StringUtils::ToLower(ext);
@@ -465,7 +465,7 @@ namespace Crowny
         // Process main-thread tasks synchronously (one per ProcessCompletedImports call)
         {
             Lock lock(m_ImportMutex);
-            for (auto& task : mainThreadTasks)
+            for (const auto& task : mainThreadTasks)
                 m_CompletedImports.push_back({ task, nullptr }); // nullptr = needs sync import
         }
 
@@ -491,7 +491,7 @@ namespace Crowny
 
     void ProjectLibrary::ImportWorker(Vector<ImportTask> tasks)
     {
-        for (auto& task : tasks)
+        for (const auto& task : tasks)
         {
             Ref<Asset> asset = Importer::Get().ImportDeferred(task.Entry->Filepath, task.Options);
 
@@ -653,7 +653,7 @@ namespace Crowny
         if (asset->Metadata != nullptr)
             unregisterUuid(asset->Metadata->Uuid);
 
-        for (auto& dep : asset->DependentMetadata)
+        for (const auto& dep : asset->DependentMetadata)
             unregisterUuid(dep->Uuid);
 
         DirectoryEntry* parent = asset->Parent;
@@ -749,7 +749,7 @@ namespace Crowny
         if (directory == m_RootEntry)
             m_RootEntry = nullptr;
         Vector<Ref<LibraryEntry>> childrenToDestroy = directory->Children;
-        for (auto& child : childrenToDestroy)
+        for (const auto& child : childrenToDestroy)
         {
             if (child->Type == LibraryEntryType::Directory)
                 DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(child));
@@ -784,7 +784,7 @@ namespace Crowny
                     entry->Metadata = loadedMeta;
                     entry->DependentMetadata = dependents;
                     m_UuidToPath[loadedMeta->Uuid] = entry->Filepath;
-                    for (auto& dep : dependents)
+                    for (const auto& dep : dependents)
                         m_UuidToPath[dep->Uuid] = entry->Filepath;
                 }
             }
@@ -839,7 +839,7 @@ namespace Crowny
             saveAsset(primaryAsset, entry->Metadata->Uuid);
 
             // Clear old dependents
-            for (auto& depMeta : entry->DependentMetadata)
+            for (const auto& depMeta : entry->DependentMetadata)
             {
                 Path outPath;
                 if (m_AssetManifest->UuidToFilepath(depMeta->Uuid, outPath))
@@ -1122,7 +1122,7 @@ namespace Crowny
     Vector<UUID> ProjectLibrary::GetAllAssets(AssetType type) const
     {
         Vector<UUID> result;
-        for (auto [uuid, path] : m_UuidToPath)
+        for (const auto& [uuid, path] : m_UuidToPath)
         {
             if (m_AssetManifest->UuidExists(uuid) && GetAssetType(uuid) == type)
                 result.push_back(uuid);
@@ -1196,7 +1196,7 @@ namespace Crowny
             DirectoryEntry* current = todos.top();
             todos.pop();
 
-            for (auto& child : current->Children)
+            for (const auto& child : current->Children)
             {
                 if (child->Type == LibraryEntryType::File)
                 {
@@ -1274,7 +1274,7 @@ namespace Crowny
                 DirectoryEntry* sourceDir = current.first;
                 DirectoryEntry* dstDir = current.second;
 
-                for (auto& child : sourceDir->Children)
+                for (const auto& child : sourceDir->Children)
                 {
                     Path childDstPath = dstDir->Filepath;
                     childDstPath /= child->Filepath.filename();
@@ -1511,7 +1511,7 @@ namespace Crowny
             if (entry->Type == LibraryEntryType::Directory)
             {
                 DirectoryEntry* dirEntry = static_cast<DirectoryEntry*>(entry);
-                for (auto& child : dirEntry->Children)
+                for (const auto& child : dirEntry->Children)
                     makeRelative(child.get(), root);
             }
         };
@@ -1526,7 +1526,7 @@ namespace Crowny
             if (entry->Type == LibraryEntryType::Directory)
             {
                 DirectoryEntry* dirEntry = static_cast<DirectoryEntry*>(entry);
-                for (auto& child : dirEntry->Children)
+                for (const auto& child : dirEntry->Children)
                     makeAbsolute(child.get());
             }
         };
@@ -1561,7 +1561,7 @@ namespace Crowny
             if (entry->Type == LibraryEntryType::Directory)
             {
                 tabs += "\t";
-                for (auto& child : StaticRefCast<DirectoryEntry>(entry)->Children)
+                for (const auto& child : StaticRefCast<DirectoryEntry>(entry)->Children)
                     traverse(child);
                 tabs = tabs.substr(0, tabs.size() - 2);
             }
@@ -1586,7 +1586,7 @@ namespace Crowny
             DirectoryEntry* curDir = todos.top();
             todos.pop();
 
-            for (auto& child : curDir->Children)
+            for (const auto& child : curDir->Children)
             {
                 if (child->Type == LibraryEntryType::File)
                 {
@@ -1617,7 +1617,7 @@ namespace Crowny
             }
         }
 
-        for (auto& deletedEntry : deletedEntries)
+        for (const auto& deletedEntry : deletedEntries)
         {
             if (deletedEntry->Type == LibraryEntryType::File)
                 DeleteAssetInternal(StaticRefCast<FileEntry>(deletedEntry));
@@ -1638,13 +1638,13 @@ namespace Crowny
                 }
             };
 
-            for (auto fileIterator : fs::recursive_directory_iterator(internalAssetFolder))
+            for (const auto& fileIterator : fs::recursive_directory_iterator(internalAssetFolder))
             {
                 if (fileIterator.is_regular_file())
                     processFile(fileIterator.path());
             }
 
-            for (auto& entry : toDelete)
+            for (const auto& entry : toDelete)
                 fs::remove(entry);
         }
 
@@ -1674,7 +1674,7 @@ namespace Crowny
             if (entry->Type == LibraryEntryType::Directory)
             {
                 tabs += "\t";
-                for (auto& child : StaticRefCast<DirectoryEntry>(entry)->Children)
+                for (const auto& child : StaticRefCast<DirectoryEntry>(entry)->Children)
                     traverse(child);
                 tabs = tabs.substr(0, tabs.size() - 2);
             }

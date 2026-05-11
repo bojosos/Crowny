@@ -56,8 +56,8 @@ namespace Crowny
 
     private:
         AssetHandle<Asset> Load(const UUID& uuid, const Path& filepath, bool keepInternalRef, bool keepSourceData);
-        void GetFilepathFromUUID(const UUID& uuid, Path& outFilepath);
-        bool GetUUIDFromFilepath(const Path& filepath, UUID& outUUID);
+        void GetFilepathFromUUID(const UUID& uuid, Path& outFilepath) const;
+        bool GetUUIDFromFilepath(const Path& filepath, UUID& outUUID) const;
 
         const UnorderedMap<UUID, WeakAssetHandle<Asset>>& GetLoadedAssets() const { return m_Handles; }
         friend class UIUtils;

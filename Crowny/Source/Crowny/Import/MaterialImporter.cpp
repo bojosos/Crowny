@@ -29,15 +29,15 @@ namespace Crowny
         if (ext == "cwmat")
         {
             // Load from YAML source file
-            AssetHandle<Shader> fallbackShader = gAssetManager->Load<Shader>(UNLIT_SHADER_PATH);
-            Ref<Material> material = Material::Create(fallbackShader ? fallbackShader : AssetHandle<Shader>{});
+            const AssetHandle<Shader> fallbackShader = gAssetManager->Load<Shader>(UNLIT_SHADER_PATH);
+            const Ref<Material> material = Material::Create(fallbackShader ? fallbackShader : AssetHandle<Shader>{});
             MaterialSerializer serializer(material);
             serializer.Deserialize(path);
             return material;
         }
 
         // Legacy .mat: create a default Unlit material
-        AssetHandle<Shader> shader = gAssetManager->Load<Shader>(UNLIT_SHADER_PATH);
+        const AssetHandle<Shader> shader = gAssetManager->Load<Shader>(UNLIT_SHADER_PATH);
         if (shader)
             return Material::CreateUnlit(shader);
 

@@ -30,12 +30,12 @@ namespace Crowny
     // Going to switch to FreeImage soon
     Ref<Asset> TextureImporter::Import(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
-        Ref<const TextureImportOptions> textureImportOptions = StaticRefCast<const TextureImportOptions>(importOptions);
+        const Ref<const TextureImportOptions> textureImportOptions = StaticRefCast<const TextureImportOptions>(importOptions);
         int width, height, channels;
         stbi_set_flip_vertically_on_load(1);
 
         std::vector<uint8_t> data;
-        Ref<DataStream> stream = FileSystem::OpenFile(filepath);
+        const Ref<DataStream> stream = FileSystem::OpenFile(filepath);
         data.resize(stream->Size());
         stream->Read(data.data(), data.size());
         stream->Close();
@@ -72,13 +72,13 @@ namespace Crowny
             params.Format = textureImportOptions->Format;
 
         // Copy stbi pixel data into an owned buffer for deferred GPU upload.
-        uint32_t dataSize = width * height * channels * (is16 ? 2 : 1);
-        Ref<PixelData> pixelData = CreateRef<PixelData>(width, height, 1, format);
+        const uint32_t dataSize = width * height * channels * (is16 ? 2 : 1);
+        const Ref<PixelData> pixelData = CreateRef<PixelData>(width, height, 1, format);
         pixelData->AllocateInternalBuffer();
         std::memcpy(pixelData->GetData(), rawPixelData, dataSize);
         stbi_image_free(rawPixelData);
 
-        Ref<Texture> texture = Texture::CreateDeferred(params, pixelData);
+        const Ref<Texture> texture = Texture::CreateDeferred(params, pixelData);
         texture->SetName(filepath.filename().string());
         return texture;
     }

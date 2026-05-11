@@ -65,41 +65,41 @@ namespace Crowny
 
         for (int32_t i = 7; i >= 0; i--)
         {
-            uint32_t hex = (m_Data[0] >> (i * 4)) & 0xF;
+            const uint32_t hex = (m_Data[0] >> (i * 4)) & 0xF;
             out[idx++] = HEX_TO_LITERAL[hex];
         }
 
         out[idx++] = '-';
         for (int32_t i = 7; i >= 4; i--)
         {
-            uint32_t hex = (m_Data[1] >> (i * 4)) & 0xF;
+            const uint32_t hex = (m_Data[1] >> (i * 4)) & 0xF;
             out[idx++] = HEX_TO_LITERAL[hex];
         }
 
         out[idx++] = '-';
         for (int32_t i = 3; i >= 0; i--)
         {
-            uint32_t hex = (m_Data[1] >> (i * 4)) & 0xF;
+            const uint32_t hex = (m_Data[1] >> (i * 4)) & 0xF;
             out[idx++] = HEX_TO_LITERAL[hex];
         }
 
         out[idx++] = '-';
         for (int32_t i = 7; i >= 4; i--)
         {
-            uint32_t hex = (m_Data[2] >> (i * 4)) & 0xF;
+            const uint32_t hex = (m_Data[2] >> (i * 4)) & 0xF;
             out[idx++] = HEX_TO_LITERAL[hex];
         }
 
         out[idx++] = '-';
         for (int32_t i = 3; i >= 0; i--)
         {
-            uint32_t hex = (m_Data[2] >> (i * 4)) & 0xF;
+            const uint32_t hex = (m_Data[2] >> (i * 4)) & 0xF;
             out[idx++] = HEX_TO_LITERAL[hex];
         }
 
         for (int32_t i = 7; i >= 0; i--)
         {
-            uint32_t hex = (m_Data[3] >> (i * 4)) & 0xF;
+            const uint32_t hex = (m_Data[3] >> (i * 4)) & 0xF;
             out[idx++] = HEX_TO_LITERAL[hex];
         }
 

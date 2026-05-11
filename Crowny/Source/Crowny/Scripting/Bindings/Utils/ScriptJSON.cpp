@@ -147,9 +147,9 @@ namespace Crowny
         if (value.IsObject())
         {
             MonoObject* newInstance = objectInfo->m_MonoClass->CreateInstance();
-            for (auto [id, memberInfo] : objectInfo->m_Fields)
+            for (const auto& [id, memberInfo] : objectInfo->m_Fields)
             {
-                rapidjson::Value::ConstMemberIterator iterFind = value.FindMember(memberInfo->m_Name);
+                const rapidjson::Value::ConstMemberIterator iterFind = value.FindMember(memberInfo->m_Name);
                 // C# structure doesn't have this field.
                 if (iterFind == value.MemberEnd())
                     continue;
@@ -158,7 +158,7 @@ namespace Crowny
                 if (typeInfo->GetType() == SerializableType::Object)
                 {
                     Ref<SerializableObjectInfo> objInfo = nullptr;
-                    Ref<SerializableTypeInfoObject> objTypeInfo = StaticRefCast<SerializableTypeInfoObject>(typeInfo);
+                    const Ref<SerializableTypeInfoObject> objTypeInfo = StaticRefCast<SerializableTypeInfoObject>(typeInfo);
                     // Find object serialize info
                     if (ScriptInfoManager::Get().GetSerializableObjectInfo(objTypeInfo->m_TypeNamespace, objTypeInfo->m_TypeName, objInfo))
                         memberInfo->SetValue(newInstance, ObjectFromJson(iterFind->value, objInfo));
@@ -168,13 +168,13 @@ namespace Crowny
                 {
                     CW_ENGINE_ASSERT(iterFind->value.IsArray());
                     // Do I create these when loading?
-                    Ref<SerializableTypeInfoArray> arrayTypeInfo = StaticRefCast<SerializableTypeInfoArray>(typeInfo);
-                    rapidjson::Value::ConstArray arr = iterFind->value.GetArray();
+                    const Ref<SerializableTypeInfoArray> arrayTypeInfo = StaticRefCast<SerializableTypeInfoArray>(typeInfo);
+                    const rapidjson::Value::ConstArray arr = iterFind->value.GetArray();
                     // This initialization doesn't seem very safe. The whole ScriptArray doesn't feel safe.
                     ScriptArray monoArray = ScriptArray(arrayTypeInfo->m_ElementType->GetMonoClass(), arr.Size());
                     int idx = 0;
                     Ref<SerializableObjectInfo> objInfo = nullptr;
-                    Ref<SerializableTypeInfoObject> objTypeInfo = StaticRefCast<SerializableTypeInfoObject>(arrayTypeInfo->m_ElementType);
+                    const Ref<SerializableTypeInfoObject> objTypeInfo = StaticRefCast<SerializableTypeInfoObject>(arrayTypeInfo->m_ElementType);
                     // Find object serialize info
                     if (ScriptInfoManager::Get().GetSerializableObjectInfo(objTypeInfo->m_TypeNamespace, objTypeInfo->m_TypeName, objInfo))
                         // TODO: This won't work for normals arrays that don't have objects inside
@@ -184,7 +184,7 @@ namespace Crowny
                 }
                 else if (typeInfo->GetType() == SerializableType::Primitive)
                 {
-                    Ref<SerializableTypeInfoPrimitive> primTypeInfo = StaticRefCast<SerializableTypeInfoPrimitive>(typeInfo);
+                    const Ref<SerializableTypeInfoPrimitive> primTypeInfo = StaticRefCast<SerializableTypeInfoPrimitive>(typeInfo);
                     if (iterFind->value.IsNumber())
                         NumericFromJson(iterFind->value, newInstance, memberInfo);
                     else if (iterFind->value.IsBool())
@@ -211,7 +211,7 @@ namespace Crowny
                         }
                         else
                         {
-                            MonoString* monoString = MonoUtils::ToMonoString(String(iterFind->value.GetString(), iterFind->value.GetStringLength()));
+                            MonoString* const monoString = MonoUtils::ToMonoString(String(iterFind->value.GetString(), iterFind->value.GetStringLength()));
                             memberInfo->SetValue(newInstance, monoString);
                         }
                     }
@@ -239,7 +239,7 @@ namespace Crowny
         if (!document.IsObject() && !document.IsArray()) // Should probably throw some stuff here
             return nullptr;
 
-        MonoClass* klass = MonoManager::Get().FindClass(MonoUtils::GetClass(type));
+        MonoClass* const klass = MonoManager::Get().FindClass(MonoUtils::GetClass(type));
         Ref<SerializableObjectInfo> objectInfo;
         if (!ScriptInfoManager::Get().GetSerializableObjectInfo(klass->GetNamespace(), klass->GetName(), objectInfo))
             return nullptr;
@@ -301,14 +301,14 @@ namespace Crowny
                 break;
             case ScriptPrimitiveType::Vector2: {
                 rapidjson::Value& vec = cur.SetObject();
-                glm::vec2 value = *(glm::vec2*)MonoUtils::Unbox((MonoObject*)data);
+                const glm::vec2 value = *(glm::vec2*)MonoUtils::Unbox((MonoObject*)data);
                 vec.AddMember(rapidjson::Value("x"), rapidjson::Value(value.x), doc.GetAllocator());
                 vec.AddMember(rapidjson::Value("y"), rapidjson::Value(value.y), doc.GetAllocator());
                 break;
             }
             case ScriptPrimitiveType::Vector3: {
                 rapidjson::Value& vec = cur.SetObject();
-                glm::vec3 value = *(glm::vec3*)MonoUtils::Unbox((MonoObject*)data);
+                const glm::vec3 value = *(glm::vec3*)MonoUtils::Unbox((MonoObject*)data);
                 vec.AddMember(rapidjson::Value("x"), rapidjson::Value(value.x), doc.GetAllocator());
                 vec.AddMember(rapidjson::Value("y"), rapidjson::Value(value.y), doc.GetAllocator());
                 vec.AddMember(rapidjson::Value("z"), rapidjson::Value(value.z), doc.GetAllocator());
@@ -316,7 +316,7 @@ namespace Crowny
             }
             case ScriptPrimitiveType::Vector4: {
                 rapidjson::Value& vec = cur.SetObject();
-                glm::vec4 value = *(glm::vec4*)MonoUtils::Unbox((MonoObject*)data);
+                const glm::vec4 value = *(glm::vec4*)MonoUtils::Unbox((MonoObject*)data);
                 vec.AddMember(rapidjson::Value("x"), rapidjson::Value(value.x), doc.GetAllocator());
                 vec.AddMember(rapidjson::Value("y"), rapidjson::Value(value.y), doc.GetAllocator());
                 vec.AddMember(rapidjson::Value("z"), rapidjson::Value(value.z), doc.GetAllocator());
@@ -325,7 +325,7 @@ namespace Crowny
             }
             case ScriptPrimitiveType::Color: {
                 rapidjson::Value& color = cur.SetObject();
-                glm::vec4 value = *(glm::vec4*)MonoUtils::Unbox((MonoObject*)data);
+                const glm::vec4 value = *(glm::vec4*)MonoUtils::Unbox((MonoObject*)data);
                 color.AddMember(rapidjson::Value("r"), rapidjson::Value(value.r), doc.GetAllocator());
                 color.AddMember(rapidjson::Value("g"), rapidjson::Value(value.g), doc.GetAllocator());
                 color.AddMember(rapidjson::Value("b"), rapidjson::Value(value.b), doc.GetAllocator());
@@ -334,7 +334,7 @@ namespace Crowny
             }
             case ScriptPrimitiveType::Matrix4: {
                 rapidjson::Value& vec = cur.SetArray();
-                glm::mat4 value = *(glm::mat4*)MonoUtils::Unbox((MonoObject*)data);
+                const glm::mat4 value = *(glm::mat4*)MonoUtils::Unbox((MonoObject*)data);
                 for (uint32_t i = 0; i < 16; i++)
                     vec.PushBack(rapidjson::Value(value[i / 4][i % 4]), doc.GetAllocator());
                 break;
@@ -343,7 +343,7 @@ namespace Crowny
         }
         else if (typeInfo->GetType() == SerializableType::Array)
         {
-            Ref<SerializableTypeInfoArray> serializableArrayTypeInfo = StaticRefCast<SerializableTypeInfoArray>(typeInfo);
+            const Ref<SerializableTypeInfoArray> serializableArrayTypeInfo = StaticRefCast<SerializableTypeInfoArray>(typeInfo);
             cur.SetArray();
             ScriptArray arr((MonoArray*)data);
             for (uint32_t i = 0; i < arr.Size(); i++)
@@ -357,7 +357,7 @@ namespace Crowny
         }
         else if (typeInfo->GetType() == SerializableType::Object)
         {
-            Ref<SerializableTypeInfoObject> serializableObjectInfo = StaticRefCast<SerializableTypeInfoObject>(typeInfo);
+            const Ref<SerializableTypeInfoObject> serializableObjectInfo = StaticRefCast<SerializableTypeInfoObject>(typeInfo);
             // TODO: Fix this
             Ref<SerializableObjectInfo> objectInfo;
             if (ScriptInfoManager::Get().GetSerializableObjectInfo(serializableObjectInfo->m_TypeNamespace, serializableObjectInfo->m_TypeName,
@@ -369,7 +369,7 @@ namespace Crowny
     static void ObjectToJson(rapidjson::Value& cur, Ref<SerializableObjectInfo>& objectInfo, MonoObject* instance, rapidjson::Document& doc)
     {
         // This is wrong
-        for (auto [id, field] : objectInfo->m_Fields)
+        for (const auto& [id, field] : objectInfo->m_Fields)
         {
             rapidjson::Value key(field->m_Name.c_str(), (uint32_t)field->m_Name.size());
             rapidjson::Value jsonField;
@@ -384,7 +384,7 @@ namespace Crowny
 
         Document document;
 
-        MonoClass* klass = MonoManager::Get().FindClass(MonoUtils::GetClass(object));
+        MonoClass* const klass = MonoManager::Get().FindClass(MonoUtils::GetClass(object));
         Ref<SerializableObjectInfo> objectInfo;
         if (!ScriptInfoManager::Get().GetSerializableObjectInfo(klass->GetNamespace(), klass->GetName(), objectInfo))
             return nullptr;

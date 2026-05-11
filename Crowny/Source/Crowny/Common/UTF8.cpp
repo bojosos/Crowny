@@ -218,7 +218,7 @@ namespace Crowny
     {
         String output;
         output.reserve(input.size());
-        auto backInserter = std::back_inserter(output);
+        const auto backInserter = std::back_inserter(output);
         auto iter = input.begin();
         while (iter != input.end())
         {
@@ -233,7 +233,7 @@ namespace Crowny
     {
         String output;
         output.reserve(string.size());
-        auto back = std::back_inserter(output);
+        const auto back = std::back_inserter(output);
 
         auto iter = string.begin();
         while (iter != string.end())
@@ -250,7 +250,7 @@ namespace Crowny
         String output;
         output.reserve(string.size());
 
-        auto back = std::back_inserter(output);
+        const auto back = std::back_inserter(output);
 
         auto iter = string.begin();
         while (iter != string.end())
@@ -265,7 +265,7 @@ namespace Crowny
     std::wstring UTF8::ToWide(const String& string)
     {
         std::wstring output;
-        auto back = std::back_inserter(output);
+        const auto back = std::back_inserter(output);
         auto iter = string.begin();
         while (iter != string.end())
         {

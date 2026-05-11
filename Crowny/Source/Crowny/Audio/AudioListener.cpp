@@ -2,6 +2,7 @@
 
 #include "Crowny/Audio/AudioListener.h"
 #include "Crowny/Audio/AudioManager.h"
+#include "Crowny/Common/Time.h"
 #include "Crowny/Ecs/Components.h"
 
 #include <AL/al.h>
@@ -27,13 +28,29 @@ namespace Crowny
 
     void AudioListener::OnTransformChanged(const Transform& transform)
     {
-        const glm::vec3& position = transform.GetPosition();
+        const glm::vec3 position = transform.GetPosition();
         alListener3f(AL_POSITION, position.x, position.y, position.z);
-        const glm::mat4& worldTransform = transform.GetMatrix();
-        std::array<float, 6> orientation = {
-            -worldTransform[2].x, -worldTransform[2].y, -worldTransform[2].z, worldTransform[1].x, worldTransform[1].y, worldTransform[1].z
-        }; // TODO: is this math correct? It's wrong surprise surprise
+
+        const glm::mat4 worldTransform = transform.GetMatrix();
+        const glm::vec3 forward = glm::normalize(-glm::vec3(worldTransform[2]));
+        const glm::vec3 up = glm::normalize(glm::vec3(worldTransform[1]));
+        const std::array<float, 6> orientation = { forward.x, forward.y, forward.z, up.x, up.y, up.z };
         alListenerfv(AL_ORIENTATION, orientation.data());
+
+        if (!m_HasPrevPosition)
+        {
+            m_PrevPosition = position;
+            m_HasPrevPosition = true;
+            return;
+        }
+
+        const float dt = Time::GetDeltaTime();
+        if (dt > 1e-6f)
+        {
+            m_Velocity = (position - m_PrevPosition) / dt;
+            alListener3f(AL_VELOCITY, m_Velocity.x, m_Velocity.y, m_Velocity.z);
+            m_PrevPosition = position;
+        }
     }
 
     void AudioListener::SetVelocity(const glm::vec3& velocity) { alListener3f(AL_VELOCITY, velocity.x, velocity.y, velocity.z); }

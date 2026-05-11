@@ -136,13 +136,13 @@ namespace Crowny
             return nullptr;
 
         // For textures that are already small enough, return as-is
-        uint32_t srcW = source->GetWidth();
-        uint32_t srcH = source->GetHeight();
+        const uint32_t srcW = source->GetWidth();
+        const uint32_t srcH = source->GetHeight();
         if (srcW <= maxSize && srcH <= maxSize)
             return source;
 
         // Calculate downscaled dimensions maintaining aspect ratio
-        float aspect = (float)srcW / (float)srcH;
+        const float aspect = (float)srcW / (float)srcH;
         uint32_t dstW, dstH;
         if (srcW >= srcH)
         {

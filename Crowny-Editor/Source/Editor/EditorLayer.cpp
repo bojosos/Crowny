@@ -26,6 +26,7 @@
 
 #include "Panels/AssetBrowserPanel.h"
 #include "Panels/ComponentEditor.h"
+#include "Panels/AudioMixerPanel.h"
 #include "Panels/ConsolePanel.h"
 #include "Panels/HierarchyPanel.h"
 #include "Panels/InspectorPanel.h"
@@ -85,7 +86,7 @@ namespace Crowny
         {
             if (ImGui::BeginMenu(m_Title.c_str()))
             {
-                Ref<ProjectSettings> settings = Editor::Get().GetProjectSettings();
+                const Ref<ProjectSettings> settings = Editor::Get().GetProjectSettings();
                 if (settings->RecentScenes.empty())
                 {
                     ImGui::BeginDisabled();
@@ -151,6 +152,8 @@ namespace Crowny
         m_ViewportPanel->SetEventCallback(CW_BIND_EVENT_FN(OnViewportEvent));
         m_ConsolePanel = new ConsolePanel("Console");
         m_AssetBrowser = new AssetBrowserPanel("Asset browser", [&](const Path& path) { m_InspectorPanel->SetSelectedAssetPath(path); });
+        m_AudioMixerPanel = new AudioMixerPanel("Audio Mixer");
+        m_AudioMixerPanel->Hide();
 #ifdef CW_WITH_NODES
         m_NodeEditorPanel = new NodeEditorPanel("Node Editor");
         m_NodeEditorPanel->Hide();
@@ -166,6 +169,7 @@ namespace Crowny
         m_HierarchyPanel->RegisterInMenu(viewMenu);
         m_ConsolePanel->RegisterInMenu(viewMenu);
         m_AssetBrowser->RegisterInMenu(viewMenu);
+        m_AudioMixerPanel->RegisterInMenu(viewMenu);
 #ifdef CW_WITH_NODES
         m_NodeEditorPanel->RegisterInMenu(viewMenu);
 #endif
@@ -411,7 +415,7 @@ namespace Crowny
     {
         m_Temp = CreateRef<Scene>("Scene");
         m_Temp->SetEditorScene(true);
-        String title = "Crowny Editor - " + Editor::Get().GetProjectName() + " - " + m_Temp->GetName();
+        const String title = "Crowny Editor - " + Editor::Get().GetProjectName() + " - " + m_Temp->GetName();
         gApplication->GetWindow().SetTitle(title);
     }
 
@@ -444,7 +448,7 @@ namespace Crowny
             SceneSerializer serializer(scene);
             serializer.Serialize(path);
             AddRecentScene(path);
-            String title = "Crowny Editor - " + Editor::Get().GetProjectName() + " - " + gSceneManager->GetActiveScene()->GetName();
+            const String title = "Crowny Editor - " + Editor::Get().GetProjectName() + " - " + gSceneManager->GetActiveScene()->GetName();
             gApplication->GetWindow().SetTitle(title);
         }
     }
@@ -460,7 +464,7 @@ namespace Crowny
             SceneSerializer serializer(scene);
             serializer.Serialize(scene->GetFilepath());
             AddRecentScene(scene->GetFilepath());
-            String title = "Crowny Editor - " + Editor::Get().GetProjectName() + " - " + scene->GetName();
+            const String title = "Crowny Editor - " + Editor::Get().GetProjectName() + " - " + scene->GetName();
             gApplication->GetWindow().SetTitle(title);
         }
     }
@@ -537,6 +541,7 @@ namespace Crowny
         delete m_ViewportPanel;
         delete m_ConsolePanel;
         delete m_AssetBrowser;
+        delete m_AudioMixerPanel;
     }
 
     void EditorLayer::ExecuteProjectAssetRefresh()
@@ -556,7 +561,7 @@ namespace Crowny
     {
         const Ref<Scene> scene = gSceneManager->GetActiveScene();
         const glm::vec4& bounds = m_ViewportPanel->GetViewportBounds();
-        ImVec2 mouseCoords = ImGui::GetMousePos();
+        const ImVec2 mouseCoords = ImGui::GetMousePos();
         glm::vec2 coords = { mouseCoords.x - bounds.x, mouseCoords.y - bounds.y };
         coords.y = m_ViewportSize.y - coords.y - 1;
         return PickEntity(coords);
@@ -572,7 +577,7 @@ namespace Crowny
         if (outPixelData->GetWidth() > coords.x && outPixelData->GetHeight() > coords.y)
         {
             const glm::vec4 col = outPixelData->GetColorAt((uint32_t)coords.x, (uint32_t)coords.y);
-            Ref<Scene> scene = gSceneManager->GetActiveScene();
+            const Ref<Scene> scene = gSceneManager->GetActiveScene();
             if (col.x == 0.0f)
                 return Entity(entt::null, scene.get());
             else
@@ -698,7 +703,7 @@ namespace Crowny
             Editor::Get().GetProjectSettings()->LastOpenScenePath = m_Temp->GetFilepath().string();
             m_Temp = nullptr;
             // ScriptRuntime::Init();
-            String title = "Crowny Editor - " + Editor::Get().GetProjectName() + " - " + gSceneManager->GetActiveScene()->GetName();
+            const String title = "Crowny Editor - " + Editor::Get().GetProjectName() + " - " + gSceneManager->GetActiveScene()->GetName();
             gApplication->GetWindow().SetTitle(title);
         }
 
@@ -764,10 +769,10 @@ namespace Crowny
                 auto view = scene->GetAllEntitiesWith<TransformComponent, BoxCollider2DComponent>();
                 for (auto e : view)
                 {
-                    auto& bc2d = view.get<BoxCollider2DComponent>(e);
+                    const auto& bc2d = view.get<BoxCollider2DComponent>(e);
                     Entity entity(e, scene.get());
-                    glm::mat4 world = entity.GetWorldMatrix();
-                    glm::mat4 colliderTransform = world
+                    const glm::mat4 world = entity.GetWorldMatrix();
+                    const glm::mat4 colliderTransform = world
                         * glm::translate(glm::mat4(1.0f), glm::vec3(bc2d.GetOffset(), 0.0f))
                         * glm::scale(glm::mat4(1.0f), glm::vec3(bc2d.GetSize() * 2.0f, 1.0f));
                     Renderer2D::DrawRect(colliderTransform, m_ColliderColor, 0.01f);
@@ -778,16 +783,61 @@ namespace Crowny
                 auto view = scene->GetAllEntitiesWith<TransformComponent, CircleCollider2DComponent>();
                 for (auto e : view)
                 {
-                    auto& cc2d = view.get<CircleCollider2DComponent>(e);
+                    const auto& cc2d = view.get<CircleCollider2DComponent>(e);
                     Entity entity(e, scene.get());
-                    glm::mat4 world = entity.GetWorldMatrix();
-                    glm::mat4 colliderTransform = world
+                    const glm::mat4 world = entity.GetWorldMatrix();
+                    const glm::mat4 colliderTransform = world
                         * glm::translate(glm::mat4(1.0f), glm::vec3(cc2d.GetOffset(), 0.0f))
                         * glm::scale(glm::mat4(1.0f), glm::vec3(cc2d.GetRadius() * 2.0f));
                     Renderer2D::DrawCircle(colliderTransform, m_ColliderColor, 0.05f);
                 }
             }
         }
+
+        // Audio cone gizmo for the selected entity. Drawn only for the selection so the viewport
+        // isn't flooded when there are many AudioSources in the scene.
+        Entity selected = HierarchyPanel::GetSelectedEntity();
+        if (selected && selected.HasComponent<AudioSourceComponent>())
+        {
+            const AudioSourceComponent& asc = selected.GetComponent<AudioSourceComponent>();
+            // Skip the gizmo for omnidirectional sources — no useful cone to draw.
+            if (asc.GetConeOuterAngle() < 360.0f)
+            {
+                const glm::mat4 world = selected.GetWorldMatrix();
+                const glm::vec3 apex = glm::vec3(world[3]);
+                const glm::vec3 forward = glm::normalize(-glm::vec3(world[2]));
+                const glm::vec3 up = glm::normalize(glm::vec3(world[1]));
+                const glm::vec3 right = glm::normalize(glm::cross(forward, up));
+
+                // Apex-to-base distance matches min distance so the gizmo scales with the source's
+                // audible near-field. Half-angle drives base radius.
+                const float length = std::max(asc.GetMinDistance(), 0.1f);
+                const glm::vec3 baseCenter = apex + forward * length;
+
+                auto drawCone = [&](float fullAngleDegrees, const glm::vec4& color) {
+                    const float halfAngle = glm::radians(fullAngleDegrees) * 0.5f;
+                    const float baseRadius = length * std::tan(halfAngle);
+                    constexpr int Segments = 24;
+                    glm::vec3 prev;
+                    for (int i = 0; i <= Segments; i++)
+                    {
+                        const float t = (float)i / Segments * glm::two_pi<float>();
+                        const glm::vec3 offset = right * (std::cos(t) * baseRadius) + up * (std::sin(t) * baseRadius);
+                        const glm::vec3 p = baseCenter + offset;
+                        if (i > 0)
+                            Renderer2D::DrawLine(prev, p, color);
+                        // Spokes from apex to every 3rd circle point — keeps the gizmo readable.
+                        if (i % 3 == 0 && i < Segments)
+                            Renderer2D::DrawLine(apex, p, color);
+                        prev = p;
+                    }
+                };
+
+                drawCone(asc.GetConeInnerAngle(), { 0.2f, 0.9f, 0.3f, 1.0f });
+                drawCone(asc.GetConeOuterAngle(), { 0.9f, 0.5f, 0.1f, 0.7f });
+            }
+        }
+
         Renderer2D::End();
     }
 
@@ -796,7 +846,7 @@ namespace Crowny
 
         static bool dockspaceOpen = true;
         static bool opt_fullscreen_persistant = true;
-        bool opt_fullscreen = opt_fullscreen_persistant;
+        const bool opt_fullscreen = opt_fullscreen_persistant;
         static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 
         ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
@@ -877,6 +927,8 @@ namespace Crowny
         m_ViewportPanel->Render();
         m_ConsolePanel->Render();
         m_AssetBrowser->Render();
+        if (m_AudioMixerPanel->IsShown())
+            m_AudioMixerPanel->Render();
 #ifdef CW_WITH_NODES
         m_NodeEditorPanel->Render();
 #endif
@@ -1088,8 +1140,8 @@ namespace Crowny
 
                     ImGui::PushID(static_cast<int>(i));
 
-                    bool isSelected = (m_SelectedRecentIdx == static_cast<int>(i));
-                    float itemHeight = ImGui::GetTextLineHeight() * 2.0f + ImGui::GetStyle().ItemSpacing.y + 8.0f;
+                    const bool isSelected = (m_SelectedRecentIdx == static_cast<int>(i));
+                    const float itemHeight = ImGui::GetTextLineHeight() * 2.0f + ImGui::GetStyle().ItemSpacing.y + 8.0f;
 
                     if (ImGui::Selectable("##recentEntry", isSelected, ImGuiSelectableFlags_AllowDoubleClick, ImVec2(0, itemHeight)))
                     {
@@ -1104,7 +1156,7 @@ namespace Crowny
                     }
 
                     // Draw project info on top of the selectable
-                    ImVec2 itemMin = ImGui::GetItemRectMin();
+                    const ImVec2 itemMin = ImGui::GetItemRectMin();
                     ImGui::SetCursorScreenPos(ImVec2(itemMin.x + 8.0f, itemMin.y + 4.0f));
                     ImGui::TextUnformatted(projectName.c_str());
                     ImGui::SetCursorScreenPos(ImVec2(itemMin.x + 8.0f, itemMin.y + 4.0f + ImGui::GetTextLineHeightWithSpacing()));
@@ -1119,7 +1171,7 @@ namespace Crowny
                 ImGui::Separator();
                 ImGui::Spacing();
 
-                bool hasSelection = m_SelectedRecentIdx >= 0 && m_SelectedRecentIdx < static_cast<int>(settings->RecentProjects.size()) &&
+                const bool hasSelection = m_SelectedRecentIdx >= 0 && m_SelectedRecentIdx < static_cast<int>(settings->RecentProjects.size()) &&
                                     !settings->RecentProjects[m_SelectedRecentIdx].ProjectPath.empty();
 
                 if (!hasSelection)
@@ -1184,10 +1236,10 @@ namespace Crowny
                 ImGui::Spacing();
 
                 // Real-time validation
-                bool pathExists = fs::exists(m_NewProjectPath);
-                bool projectExists = pathExists && fs::exists(Path(m_NewProjectPath) / m_NewProjectName);
-                bool nameEmpty = m_NewProjectName.empty();
-                bool canCreate = pathExists && !projectExists && !nameEmpty;
+                const bool pathExists = fs::exists(m_NewProjectPath);
+                const bool projectExists = pathExists && fs::exists(Path(m_NewProjectPath) / m_NewProjectName);
+                const bool nameEmpty = m_NewProjectName.empty();
+                const bool canCreate = pathExists && !projectExists && !nameEmpty;
 
                 if (nameEmpty)
                 {
@@ -1415,7 +1467,7 @@ namespace Crowny
                 uint32_t ii = 0;
                 for (uint32_t i = 0; i < 32; i++) // rows
                 {
-                    uint32_t categoryMask = gPhysics2D->GetCategoryMask(i);
+                    const uint32_t categoryMask = gPhysics2D->GetCategoryMask(i);
                     if (gPhysics2D->GetLayerName(i).empty())
                         continue;
                     ii++;
@@ -1555,15 +1607,16 @@ namespace Crowny
         const float numberOfButtons = 3.0f;
         const float backgroundWidth = edgeOffset * 6.0f + buttonSize * numberOfButtons + edgeOffset * (numberOfButtons - 1.0f) * 2.0f;
 
-        float toolbarX = (m_ViewportPanel->GetViewportBounds().x + m_ViewportPanel->GetViewportBounds().z) / 2.0f;
+        const float toolbarX = (m_ViewportPanel->GetViewportBounds().x + m_ViewportPanel->GetViewportBounds().z) / 2.0f;
         ImGui::SetNextWindowPos(ImVec2(toolbarX - (backgroundWidth / 2.0f), m_ViewportPanel->GetViewportBounds().y + edgeOffset));
         ImGui::SetNextWindowSize(ImVec2(backgroundWidth, windowHeight));
         ImGui::SetNextWindowBgAlpha(0.0f);
         ImGui::Begin("##viewport_central_toolbar", 0, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking);
 
         const float desiredHeight = 26.0f + 5.0f;
-        ImRect background = UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), 0.0f, -(windowHeight - desiredHeight) * 0.5f);
-        ImGui::GetWindowDrawList()->AddRectFilled(background.Min, background.Max, IM_COL32(15, 15, 15, 127), 4.0f);
+        const ImRect background = UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), 0.0f, -(windowHeight - desiredHeight) * 0.5f);
+        // Floating HUD background: bg_elevated #221E1A at 70% alpha (matches design spec).
+        ImGui::GetWindowDrawList()->AddRectFilled(background.Min, background.Max, IM_COL32(34, 30, 26, 178), 3.0f);
 
         ImGui::BeginVertical("##viewport_central_toolbarV", { backgroundWidth, ImGui::GetContentRegionAvail().y });
         ImGui::Spring();
@@ -1571,8 +1624,8 @@ namespace Crowny
         ImGui::Spring();
         {
             UI::ScopedStyle enableSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(edgeOffset * 2.0f, 0));
-            const ImColor c_ButtonTint = IM_COL32(192, 192, 192, 255);
-            const ImColor c_SimulateButtonTint = m_SceneState == SceneState::Simulate ? ImColor(39, 185, 242, 255) : c_ButtonTint;
+            const ImColor c_ButtonTint = IM_COL32(138, 125, 114, 255); // text_secondary
+            const ImColor c_SimulateButtonTint = m_SceneState == SceneState::Simulate ? ImColor(UI::Colors::Accent) : c_ButtonTint;
 
             auto drawButton = [buttonSize](const Ref<Texture>& icon, const ImColor& tint, float paddingY = 0.0f) {
                 const float height = std::min((float)icon->GetHeight(), buttonSize) - paddingY * 2.0f;
@@ -1583,7 +1636,7 @@ namespace Crowny
                 return clicked;
             };
 
-            Ref<Texture> buttonTex = m_SceneState == SceneState::Play ? EditorAssets::Get().StopIcon : EditorAssets::Get().PlayIcon;
+            const Ref<Texture> buttonTex = m_SceneState == SceneState::Play ? EditorAssets::Get().StopIcon : EditorAssets::Get().PlayIcon;
             if (drawButton(buttonTex, c_ButtonTint))
             {
                 if (m_SceneState == SceneState::Edit)
@@ -1689,15 +1742,16 @@ namespace Crowny
         const float numberOfButtons = 6.0f;
         const float backgroundWidth = edgeOffset * 6.0f + buttonSize * numberOfButtons + edgeOffset * (numberOfButtons - 1.0f) * 2.0f;
 
-        float toolbarX = (m_ViewportPanel->GetViewportBounds().x + edgeOffset);
+        const float toolbarX = (m_ViewportPanel->GetViewportBounds().x + edgeOffset);
         ImGui::SetNextWindowPos(ImVec2(toolbarX, m_ViewportPanel->GetViewportBounds().y + edgeOffset));
         ImGui::SetNextWindowSize(ImVec2(backgroundWidth, windowHeight));
         ImGui::SetNextWindowBgAlpha(0.0f);
         ImGui::Begin("##viewport_central_toolbar2", 0, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking);
 
         const float desiredHeight = 26.0f + 5.0f;
-        ImRect background = UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), 0.0f, -(windowHeight - desiredHeight) * 0.5f);
-        ImGui::GetWindowDrawList()->AddRectFilled(background.Min, background.Max, IM_COL32(15, 15, 15, 127), 4.0f);
+        const ImRect background = UI::RectExpanded(ImGui::GetCurrentWindow()->Rect(), 0.0f, -(windowHeight - desiredHeight) * 0.5f);
+        // Floating HUD background: bg_elevated #221E1A at 70% alpha (matches design spec).
+        ImGui::GetWindowDrawList()->AddRectFilled(background.Min, background.Max, IM_COL32(34, 30, 26, 178), 3.0f);
 
         ImGui::BeginVertical("##viewport_central_toolbarV", { backgroundWidth, ImGui::GetContentRegionAvail().y });
         ImGui::Spring();
@@ -1705,8 +1759,8 @@ namespace Crowny
         ImGui::Spring();
         {
             UI::ScopedStyle enableSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(edgeOffset * 2.0f, 0));
-            const ImColor c_ButtonTint = IM_COL32(192, 192, 192, 255);
-            const ImColor c_SimulateButtonTint = m_SceneState == SceneState::Simulate ? ImColor(1.0f, 0.25f, 0.75f, 1.0f) : c_ButtonTint;
+            const ImColor c_ButtonTint = IM_COL32(138, 125, 114, 255); // text_secondary
+            const ImColor c_SimulateButtonTint = m_SceneState == SceneState::Simulate ? ImColor(UI::Colors::Accent) : c_ButtonTint;
 
             auto drawButton = [buttonSize](const Ref<Texture>& icon, const ImColor& tint, float paddingY = 0.0f) {
                 const float height = std::min((float)icon->GetHeight(), buttonSize) - paddingY * 2.0f;
@@ -1717,7 +1771,7 @@ namespace Crowny
                 return clicked;
             };
 
-            const ImColor activeColor = ImColor(39, 185, 242, 255);
+            const ImColor activeColor = ImColor(UI::Colors::Accent);
             ImColor tint = m_ViewportPanel->GetGizmoMode() == GizmoEditMode::None ? activeColor : c_ButtonTint;
             if (drawButton(EditorAssets::Get().ArrowPointerIcon, tint))
                 m_ViewportPanel->SetGizmoMode(GizmoEditMode::None);
@@ -1771,8 +1825,8 @@ namespace Crowny
         const float settingsWidth = 240.0f;
         const float edgeOffset = 4.0f;
         const float toolbarHeight = 32.0f;
-        float settingsX = m_ViewportPanel->GetViewportBounds().x + edgeOffset;
-        float settingsY = m_ViewportPanel->GetViewportBounds().y + edgeOffset + toolbarHeight + 4.0f;
+        const float settingsX = m_ViewportPanel->GetViewportBounds().x + edgeOffset;
+        const float settingsY = m_ViewportPanel->GetViewportBounds().y + edgeOffset + toolbarHeight + 4.0f;
 
         ImGui::SetNextWindowPos(ImVec2(settingsX, settingsY), ImGuiCond_Always);
         ImGui::SetNextWindowSize(ImVec2(settingsWidth, 0.0f)); // auto height
@@ -1870,8 +1924,8 @@ namespace Crowny
         if (e.GetRepeatCount() > 0)
             return false;
 
-        bool ctrl = Input::IsKeyPressed(Key::LeftControl);
-        bool shift = Input::IsKeyPressed(Key::LeftShift);
+        const bool ctrl = Input::IsKeyPressed(Key::LeftControl);
+        const bool shift = Input::IsKeyPressed(Key::LeftShift);
 
         switch (e.GetKeyCode())
         {

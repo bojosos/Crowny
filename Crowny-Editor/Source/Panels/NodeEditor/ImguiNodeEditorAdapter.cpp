@@ -102,7 +102,7 @@ namespace Crowny
             m_SelectedNodes.clear();
             m_SelectedNodeID = UUID::EMPTY;
 
-            int selectedNodeCount = ed::GetSelectedObjectCount();
+            const int selectedNodeCount = ed::GetSelectedObjectCount();
             if (selectedNodeCount > 0)
             {
                 Vector<ed::NodeId> selectedNodes(selectedNodeCount);
@@ -110,7 +110,7 @@ namespace Crowny
 
                 for (int i = 0; i < count; ++i)
                 {
-                    UUID uuid = m_Impl->GetUuid((uintptr_t)selectedNodes[i]);
+                    const UUID uuid = m_Impl->GetUuid((uintptr_t)selectedNodes[i]);
                     if (!uuid.Empty())
                     {
                         m_SelectedNodes.push_back(uuid);
@@ -126,8 +126,8 @@ namespace Crowny
         {
             for (const auto& [id, node] : m_CurrentGraph->GetNodes())
             {
-                ed::NodeId nodeId = m_Impl->GetOrCreateId(id);
-                ImVec2 pos = ed::GetNodePosition(nodeId);
+                const ed::NodeId nodeId = m_Impl->GetOrCreateId(id);
+                const ImVec2 pos = ed::GetNodePosition(nodeId);
                 // Use a small epsilon to avoid tiny precision-induced updates
                 if (std::abs(pos.x - node->GetEditorPosition().x) > 0.01f || std::abs(pos.y - node->GetEditorPosition().y) > 0.01f)
                 {
@@ -226,8 +226,8 @@ namespace Crowny
                     {
                         if (ed::AcceptNewItem())
                         {
-                            UUID startUuid = m_Impl->GetUuid((uintptr_t)startPinId);
-                            UUID endUuid = m_Impl->GetUuid((uintptr_t)endPinId);
+                            const UUID startUuid = m_Impl->GetUuid((uintptr_t)startPinId);
+                            const UUID endUuid = m_Impl->GetUuid((uintptr_t)endPinId);
 
                             Pin* startPin = nullptr;
                             Pin* endPin = nullptr;
@@ -249,7 +249,7 @@ namespace Crowny
 
                                 if (startPin->GetDirection() == Pin::Direction::Output && endPin->GetDirection() == Pin::Direction::Input)
                                 {
-                                    auto action = CreateRef<NodesConnectedAction>(m_CurrentGraph, startPin->GetID(), endPin->GetID());
+                                    const auto action = CreateRef<NodesConnectedAction>(m_CurrentGraph, startPin->GetID(), endPin->GetID());
                                     UndoRedo::Get().RegisterAction(action);
                                     m_CurrentGraph->ConnectByPinID(startPin->GetID(), endPin->GetID());
                                 }
@@ -268,14 +268,14 @@ namespace Crowny
                 {
                     if (ed::AcceptDeletedItem())
                     {
-                        UUID connId = m_Impl->GetUuid((uintptr_t)deletedLinkId);
+                        const UUID connId = m_Impl->GetUuid((uintptr_t)deletedLinkId);
                         if (!connId.Empty())
                         {
                             for (const auto& conn : m_CurrentGraph->GetConnections())
                             {
                                 if (conn.ID == connId)
                                 {
-                                    auto action = CreateRef<NodesDisconnectedAction>(m_CurrentGraph, conn.OutputPinID, conn.InputPinID);
+                                    const auto action = CreateRef<NodesDisconnectedAction>(m_CurrentGraph, conn.OutputPinID, conn.InputPinID);
                                     UndoRedo::Get().RegisterAction(action);
                                     m_CurrentGraph->Disconnect(connId);
                                     break;
@@ -290,13 +290,13 @@ namespace Crowny
                 {
                     if (ed::AcceptDeletedItem())
                     {
-                        UUID nodeId = m_Impl->GetUuid((uintptr_t)deletedNodeId);
+                        const UUID nodeId = m_Impl->GetUuid((uintptr_t)deletedNodeId);
                         if (!nodeId.Empty())
                         {
-                            auto it = m_CurrentGraph->GetNodes().find(nodeId);
+                            const auto it = m_CurrentGraph->GetNodes().find(nodeId);
                             if (it != m_CurrentGraph->GetNodes().end())
                             {
-                                auto action = CreateRef<NodeRemovedAction>(m_CurrentGraph, it->second);
+                                const auto action = CreateRef<NodeRemovedAction>(m_CurrentGraph, it->second);
                                 UndoRedo::Get().RegisterAction(action);
                                 m_CurrentGraph->RemoveNode(nodeId);
                             }
@@ -328,12 +328,12 @@ namespace Crowny
                         if (node)
                         {
                             ed::SetCurrentEditor(m_Impl->Context);
-                            auto mousePos = ImGui::GetMousePos();
-                            auto canvasPos = ed::ScreenToCanvas(mousePos);
+                            const auto mousePos = ImGui::GetMousePos();
+                            const auto canvasPos = ed::ScreenToCanvas(mousePos);
 
                             node->SetEditorPosition(glm::vec2(canvasPos.x, canvasPos.y));
 
-                            auto action = CreateRef<NodeAddedAction>(graph, node);
+                            const auto action = CreateRef<NodeAddedAction>(graph, node);
                             UndoRedo::Get().RegisterAction(action);
                             graph->AddNode(node);
                             m_NeedsSync = true;

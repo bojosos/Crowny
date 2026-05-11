@@ -43,7 +43,7 @@ namespace Crowny
         if (it != m_StringToID.end())
             return it->second;
 
-        uint32_t id = (uint32_t)m_IDToString.size();
+        const uint32_t id = (uint32_t)m_IDToString.size();
         m_IDToString.push_back(str);
         m_StringToID[str] = id;
         return id;

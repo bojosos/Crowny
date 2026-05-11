@@ -5,8 +5,10 @@
 #include "Crowny/Ecs/Components.h"
 
 #include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Audio/AudioBus.h"
 #include "Crowny/Audio/AudioListener.h"
 #include "Crowny/Audio/AudioManager.h"
+#include "Crowny/Audio/AudioMixer.h"
 #include "Crowny/Import/Importer.h"
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Renderer/Font.h"
@@ -52,6 +54,22 @@ namespace Crowny
         m_Internal->SetMinDistance(m_MinDistance);
         m_Internal->SetMaxDistance(m_MaxDistance);
         m_Internal->SetTime(m_Time);
+
+        // Resolve bus name against the active mixer. Empty name = leave the source on whatever bus
+        // CreateSource() defaulted to (the master bus of the active mixer, or nothing).
+        if (!m_BusName.empty())
+        {
+            if (Ref<AudioBus> bus = gAudioManager->FindBus(m_BusName))
+                m_Internal->SetBus(bus);
+        }
+
+        m_Internal->SetLowPassGain(m_LowPassGain);
+        m_Internal->SetHighPassGain(m_HighPassGain);
+        m_Internal->SetConeInnerAngle(m_ConeInnerAngle);
+        m_Internal->SetConeOuterAngle(m_ConeOuterAngle);
+        m_Internal->SetConeOuterGain(m_ConeOuterGain);
+        m_Internal->SetConeOuterGainHF(m_ConeOuterGainHF);
+
         if (m_PlayOnAwake)
             m_Internal->Play();
     }
@@ -135,6 +153,74 @@ namespace Crowny
     }
 
     void AudioSourceComponent::SetPlayOnAwake(bool playOnAwake) { m_PlayOnAwake = playOnAwake; }
+
+    void AudioSourceComponent::SetBusName(const String& busName)
+    {
+        if (m_BusName == busName)
+            return;
+        m_BusName = busName;
+        if (m_Internal != nullptr)
+        {
+            Ref<AudioBus> bus = m_BusName.empty() ? nullptr : gAudioManager->FindBus(m_BusName);
+            if (!bus && gAudioManager->GetActiveMixer())
+                bus = gAudioManager->GetActiveMixer()->GetMasterBus();
+            m_Internal->SetBus(bus);
+        }
+    }
+
+    void AudioSourceComponent::SetLowPassGain(float gainHF)
+    {
+        if (m_LowPassGain == gainHF)
+            return;
+        m_LowPassGain = gainHF;
+        if (m_Internal != nullptr)
+            m_Internal->SetLowPassGain(m_LowPassGain);
+    }
+
+    void AudioSourceComponent::SetHighPassGain(float gainLF)
+    {
+        if (m_HighPassGain == gainLF)
+            return;
+        m_HighPassGain = gainLF;
+        if (m_Internal != nullptr)
+            m_Internal->SetHighPassGain(m_HighPassGain);
+    }
+
+    void AudioSourceComponent::SetConeInnerAngle(float degrees)
+    {
+        if (m_ConeInnerAngle == degrees)
+            return;
+        m_ConeInnerAngle = degrees;
+        if (m_Internal != nullptr)
+            m_Internal->SetConeInnerAngle(m_ConeInnerAngle);
+    }
+
+    void AudioSourceComponent::SetConeOuterAngle(float degrees)
+    {
+        if (m_ConeOuterAngle == degrees)
+            return;
+        m_ConeOuterAngle = degrees;
+        if (m_Internal != nullptr)
+            m_Internal->SetConeOuterAngle(m_ConeOuterAngle);
+    }
+
+    void AudioSourceComponent::SetConeOuterGain(float gain)
+    {
+        if (m_ConeOuterGain == gain)
+            return;
+        m_ConeOuterGain = gain;
+        if (m_Internal != nullptr)
+            m_Internal->SetConeOuterGain(m_ConeOuterGain);
+    }
+
+    void AudioSourceComponent::SetConeOuterGainHF(float gainHF)
+    {
+        if (m_ConeOuterGainHF == gainHF)
+            return;
+        m_ConeOuterGainHF = gainHF;
+        if (m_Internal != nullptr)
+            m_Internal->SetConeOuterGainHF(m_ConeOuterGainHF);
+    }
 
     AudioSourceState AudioSourceComponent::GetState() const
     {
@@ -507,7 +593,7 @@ namespace Crowny
                 MonoClass* listClass = field->GetType();
                 MonoProperty* countProp = listClass->GetProperty("Count");
                 MonoObject* lengthObj = countProp->Get(components);
-                uint32_t length = *(int32_t*)MonoUtils::Unbox(lengthObj);
+                const uint32_t length = *(int32_t*)MonoUtils::Unbox(lengthObj);
                 MonoProperty* itemProp = listClass->GetProperty("Item");
                 for (uint32_t i = 0; i < length; i++)
                 {
@@ -699,7 +785,7 @@ namespace Crowny
     {
         if (m_OnCollisionEnterThunk != nullptr)
         {
-            CollisionDataInterop data = CollisionDataToManaged(collision);
+            const CollisionDataInterop data = CollisionDataToManaged(collision);
             MonoObject* managedCollision = MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
             MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
             MonoUtils::InvokeThunk(m_OnCollisionEnterThunk, instance, managedCollision);
@@ -710,7 +796,7 @@ namespace Crowny
     {
         if (m_OnCollisionStayThunk != nullptr)
         {
-            CollisionDataInterop data = CollisionDataToManaged(collision);
+            const CollisionDataInterop data = CollisionDataToManaged(collision);
             MonoObject* managedCollision = MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
             MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
             MonoUtils::InvokeThunk(m_OnCollisionStayThunk, instance, managedCollision);
@@ -721,7 +807,7 @@ namespace Crowny
     {
         if (m_OnCollisionExitThunk != nullptr)
         {
-            CollisionDataInterop data = CollisionDataToManaged(collision);
+            const CollisionDataInterop data = CollisionDataToManaged(collision);
             MonoObject* managedCollision = MonoUtils::Box(MonoManager::Get().FindClass("Crowny", "Collision2D")->GetInternalPtr(), (void*)&data);
             MonoObject* instance = m_ScriptEntityBehaviour->GetManagedInstance();
             MonoUtils::InvokeThunk(m_OnCollisionExitThunk, instance, managedCollision);

@@ -70,9 +70,9 @@ namespace Crowny
     {
         s_Instance = this;
 
-        uint32_t numCores = std::thread::hardware_concurrency();
+        const uint32_t numCores = std::thread::hardware_concurrency();
         // Reserve 2 cores: 1 for sim thread, 1 for render thread
-        uint32_t workerCount = numCores > 3 ? numCores - 2 : 1;
+        const uint32_t workerCount = numCores > 3 ? numCores - 2 : 1;
 
         m_Workers.reserve(workerCount);
         for (uint32_t i = 0; i < workerCount; i++)
@@ -141,10 +141,10 @@ namespace Crowny
 
     void TaskSystem::Submit(const Ref<TaskGroup>& taskGroup)
     {
+        const Ref<TaskGroup> captured = taskGroup;
         for (uint32_t i = 0; i < taskGroup->m_Count; i++)
         {
-            Ref<TaskGroup> captured = taskGroup;
-            uint32_t index = i;
+            const uint32_t index = i;
 
             Enqueue(
               [captured, index]() {

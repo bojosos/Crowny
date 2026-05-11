@@ -134,7 +134,7 @@ namespace Crowny
 
         if (debugPort != 0)
         {
-            String debuggerAgentOptions =
+            const String debuggerAgentOptions =
               "--debugger-agent=transport=dt_socket,address=127.0.0.1:" + std::to_string(debugPort) + ",embedding=1,server=y,suspend=n";
             const char* options[] = { "--soft-breakpoints", debuggerAgentOptions.c_str(), "--debug-domain-unload",
                                       "--gc-debug=check-remset-consistency,verify-before-collections,xdomain-checks" };
@@ -176,7 +176,7 @@ namespace Crowny
         MonoAssembly* assembly = nullptr;
         if (m_ScriptDomain == nullptr)
         {
-            String appDomainName = "ScriptDomain";
+            const String appDomainName = "ScriptDomain";
             m_ScriptDomain = mono_domain_create_appdomain(const_cast<char*>(appDomainName.c_str()), nullptr);
             if (m_ScriptDomain == nullptr)
                 CW_ENGINE_ERROR("Cannot create script domain");
@@ -247,7 +247,7 @@ namespace Crowny
     MonoClass* MonoManager::FindClass(const String& ns, const String& typeName)
     {
         MonoClass* monoClass = nullptr;
-        for (auto& assembly : m_Assemblies)
+        for (const auto& assembly : m_Assemblies)
         {
             monoClass = assembly.second->GetClass(ns, typeName);
             if (monoClass != nullptr)
@@ -259,7 +259,7 @@ namespace Crowny
     MonoClass* MonoManager::FindClass(::MonoClass* rawMonoClass)
     {
         MonoClass* monoClass = nullptr;
-        for (auto& assembly : m_Assemblies)
+        for (const auto& assembly : m_Assemblies)
         {
             monoClass = assembly.second->GetClass(rawMonoClass);
             if (monoClass != nullptr)

@@ -6,20 +6,20 @@ namespace Crowny
 {
     Color Color::FromRGBA(const glm::vec4& color)
     {
-        int r = int(color.r * 255.0f);
-        int g = int(color.g * 255.0f);
-        int b = int(color.b * 255.0f);
-        int a = int(color.a * 255.0f);
+        const int r = int(color.r * 255.0f);
+        const int g = int(color.g * 255.0f);
+        const int b = int(color.b * 255.0f);
+        const int a = int(color.a * 255.0f);
 
         return Color(a << 24 | r << 16 | g << 8 | b);
     }
 
     Color Color::FromRGB(const glm::vec3& color)
     {
-        int r = int(color.r * 255.0f);
-        int g = int(color.g * 255.0f);
-        int b = int(color.b * 255.0f);
-        int a = 255;
+        const int r = int(color.r * 255.0f);
+        const int g = int(color.g * 255.0f);
+        const int b = int(color.b * 255.0f);
+        const int a = 255;
 
         return Color(a << 24 | r << 16 | g << 8 | b);
     }

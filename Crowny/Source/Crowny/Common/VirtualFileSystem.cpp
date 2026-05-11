@@ -41,7 +41,7 @@ namespace Crowny
 
     void VirtualFileSystem::Mount(const String& virtualPath, const String& physicalPath)
     {
-        String vPath = FixPath(virtualPath);
+        const String vPath = FixPath(virtualPath);
         String pPath = physicalPath;
         std::replace(pPath.begin(), pPath.end(), '\\', '/');
         if (!pPath.empty() && pPath.back() != '/') pPath += "/";
@@ -70,7 +70,7 @@ namespace Crowny
 
     bool VirtualFileSystem::ResolvePhyiscalPath(const String& inPath, String& outPath, bool forWrite)
     {
-        String virtualPath = FixPath(inPath);
+        const String virtualPath = FixPath(inPath);
         
         // Find matching mount point
         // Basic implementation: find longest matching prefix
@@ -112,7 +112,7 @@ namespace Crowny
         // For reading, search through all overlays
         for (const auto& physRoot : physicalPaths)
         {
-            String candidate = physRoot + remaining;
+            const String candidate = physRoot + remaining;
             if (FileSystem::FileExists(candidate))
             {
                 outPath = candidate;

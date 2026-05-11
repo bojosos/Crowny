@@ -34,7 +34,7 @@ namespace Crowny
 
     void ScriptEntity::Internal_Destroy(ScriptEntity* thisPtr)
     {
-        Entity entity = thisPtr->GetNativeEntity();
+        const Entity entity = thisPtr->GetNativeEntity();
         gSceneManager->GetActiveScene()->DestroyEntity(entity);
     }
 
@@ -60,8 +60,8 @@ namespace Crowny
 
     MonoObject* ScriptEntity::Internal_GetParent(ScriptEntity* thisPtr)
     {
-        Entity parent = thisPtr->GetNativeEntity().GetParent();
-        ScriptEntity* scriptEntity = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(parent);
+        const Entity parent = thisPtr->GetNativeEntity().GetParent();
+        ScriptEntity* const scriptEntity = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(parent);
         if (scriptEntity != nullptr)
             return scriptEntity->GetManagedInstance();
         return nullptr;
@@ -76,8 +76,8 @@ namespace Crowny
 
     MonoObject* ScriptEntity::Internal_FindEntityByName(MonoString* name)
     {
-        Entity entity = gSceneManager->GetActiveScene()->FindEntityByName(MonoUtils::FromMonoString(name));
-        ScriptEntity* scriptEntity = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(entity);
+        const Entity entity = gSceneManager->GetActiveScene()->FindEntityByName(MonoUtils::FromMonoString(name));
+        ScriptEntity* const scriptEntity = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(entity);
         if (scriptEntity != nullptr)
             return scriptEntity->GetManagedInstance();
         return nullptr;
@@ -85,8 +85,8 @@ namespace Crowny
 
     MonoObject* ScriptEntity::Internal_GetComponent(ScriptEntity* thisPtr, MonoReflectionType* type)
     {
-        Entity entity = thisPtr->GetNativeEntity();
-        ::MonoClass* componentClass = MonoUtils::GetClass(type);
+        const Entity entity = thisPtr->GetNativeEntity();
+        ::MonoClass* const componentClass = MonoUtils::GetClass(type);
         if (MonoUtils::IsSubClassOf(
               componentClass,
               ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetInternalPtr())) // We are trying to retrieve a behavior, so
@@ -95,7 +95,7 @@ namespace Crowny
             if (!entity.HasComponent<MonoScriptComponent>())
                 return nullptr;
             const auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
-            for (auto& script : scripts)
+            for (const auto& script : scripts)
             {
                 if (MonoUtils::IsSubClassOf(script.GetManagedClass()->GetInternalPtr(), componentClass))
                     return script.GetManagedInstance();
@@ -113,8 +113,8 @@ namespace Crowny
 
     bool ScriptEntity::Internal_HasComponent(ScriptEntity* thisPtr, MonoReflectionType* type)
     {
-        Entity entity = thisPtr->GetNativeEntity();
-        ::MonoClass* componentClass = MonoUtils::GetClass(type);
+        const Entity entity = thisPtr->GetNativeEntity();
+        ::MonoClass* const componentClass = MonoUtils::GetClass(type);
         if (MonoUtils::IsSubClassOf(
               componentClass,
               ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetInternalPtr())) // We are trying to check for a behavior, so
@@ -125,7 +125,7 @@ namespace Crowny
             else
             {
                 const auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
-                for (auto& script : scripts)
+                for (const auto& script : scripts)
                 {
                     if (MonoUtils::IsSubClassOf(script.GetManagedClass()->GetInternalPtr(), componentClass))
                         return true;
@@ -142,8 +142,8 @@ namespace Crowny
 
     MonoObject* ScriptEntity::Internal_AddComponent(ScriptEntity* thisPtr, MonoReflectionType* type)
     {
-        Entity entity = thisPtr->GetNativeEntity();
-        ::MonoClass* componentClass = MonoUtils::GetClass(type);
+        const Entity entity = thisPtr->GetNativeEntity();
+        ::MonoClass* const componentClass = MonoUtils::GetClass(type);
         if (MonoUtils::IsSubClassOf(
               componentClass,
               ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetInternalPtr())) // We are trying to add a behavior, so loop
@@ -162,7 +162,7 @@ namespace Crowny
             {
                 auto& msc = entity.GetComponent<MonoScriptComponent>();
                 const auto& scripts = msc.Scripts;
-                for (auto& script : scripts)
+                for (const auto& script : scripts)
                 {
                     // TODO: Check if this works
                     if (script.GetManagedClass()->GetInternalPtr() == componentClass)
@@ -186,9 +186,9 @@ namespace Crowny
 
     void ScriptEntity::Internal_RemoveComponent(ScriptEntity* thisPtr, MonoReflectionType* type)
     {
-        Entity entity = thisPtr->GetNativeEntity();
+        const Entity entity = thisPtr->GetNativeEntity();
 
-        ::MonoClass* componentClass = MonoUtils::GetClass(type);
+        ::MonoClass* const componentClass = MonoUtils::GetClass(type);
         if (MonoUtils::IsSubClassOf(
               componentClass,
               ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetInternalPtr())) // We are trying to remove a behavior, so

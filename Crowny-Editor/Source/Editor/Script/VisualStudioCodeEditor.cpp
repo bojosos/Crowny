@@ -378,7 +378,7 @@ namespace Crowny
             String projectString = CSProject::GenerateProject(csProjectVersion, project);
             projectString = StringUtils::Replace(projectString, "\n", "\n\r");
 
-            Path projectPath = solutionPath / (project.Name + ".csproj");
+            const Path projectPath = solutionPath / (project.Name + ".csproj");
 
             Ref<DataStream> projectStream = FileSystem::CreateAndOpenFile(projectPath);
             projectStream->Write(projectString.c_str(), projectString.size() * sizeof(String::value_type));
@@ -414,14 +414,14 @@ namespace Crowny
         CW_ENGINE_ASSERT(document.IsArray());
         for (const Value& val : document.GetArray())
         {
-            bool isPrerelease = val.FindMember("isPrerelease")->value.GetBool();
-            Path productPath = val.FindMember("productPath")->value.GetString();
+            const bool isPrerelease = val.FindMember("isPrerelease")->value.GetBool();
+            const Path productPath = val.FindMember("productPath")->value.GetString();
             const String displayName = val.FindMember("displayName")->value.GetString();
             const auto& catalog = val.FindMember("catalog")->value;
             const String displayVersion = catalog.FindMember("productDisplayVersion")->value.GetString();
             const String name = displayName + " [" + displayVersion + "]";
             const String versionString = catalog.FindMember("productLineVersion")->value.GetString();
-            CodeEditorVersion version = vsVersions[versionString]; // TODO: get this
+            const CodeEditorVersion version = vsVersions[versionString]; // TODO: get this
             m_SupportedEditors.push_back({ productPath, isPrerelease, name, version });
         }
     }

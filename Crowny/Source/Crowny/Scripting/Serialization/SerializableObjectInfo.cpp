@@ -16,13 +16,13 @@ namespace Crowny
         {
             if (objInfo->m_TypeInfo->Matches(fieldTypeInfo))
             {
-                auto findIter = objInfo->m_FieldNameToId.find(fieldInfo->m_Name);
+                const auto findIter = objInfo->m_FieldNameToId.find(fieldInfo->m_Name);
                 if (findIter != objInfo->m_FieldNameToId.end())
                 {
-                    auto findIter2 = objInfo->m_Fields.find(findIter->second);
+                    const auto findIter2 = objInfo->m_Fields.find(findIter->second);
                     if (findIter2 != objInfo->m_Fields.end())
                     {
-                        Ref<SerializableMemberInfo> foundField = findIter2->second;
+                        const Ref<SerializableMemberInfo> foundField = findIter2->second;
                         if (foundField->IsSerializable())
                         {
                             if (fieldInfo->m_TypeInfo->Matches(foundField->m_TypeInfo))
@@ -70,7 +70,7 @@ namespace Crowny
         // CW_ENGINE_INFO("Here Match TypeInfoPrimitive");
         if (typeInfo->GetType() == SerializableType::Primitive)
         {
-            auto primitiveTypeInfo = StaticRefCast<SerializableTypeInfoPrimitive>(typeInfo);
+            const auto primitiveTypeInfo = StaticRefCast<SerializableTypeInfoPrimitive>(typeInfo);
             return primitiveTypeInfo->m_Type == m_Type;
         }
         return false;

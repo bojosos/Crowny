@@ -18,15 +18,15 @@ namespace Crowny
 {
 
     template <typename... Component>
-    static void CopyComponent(entt::registry& dst, entt::registry& src, const UnorderedMap<UUID, entt::entity>& entityMap)
+    static void CopyComponent(entt::registry& dst, const entt::registry& src, const UnorderedMap<UUID, entt::entity>& entityMap)
     {
         (
           [&]() {
-              auto view = src.view<Component>();
+              const auto view = src.view<Component>();
               for (auto srcEntity : view)
               {
-                  entt::entity dstEntity = entityMap.at(src.get<IDComponent>(srcEntity).Uuid);
-                  auto& srcComponent = src.get<Component>(srcEntity);
+                  const entt::entity dstEntity = entityMap.at(src.get<IDComponent>(srcEntity).Uuid);
+                  const auto& srcComponent = src.get<Component>(srcEntity);
                   dst.emplace_or_replace<Component>(dstEntity, srcComponent);
               }
           }(),
@@ -34,7 +34,7 @@ namespace Crowny
     }
 
     template <typename... Component>
-    static void CopyComponent(ComponentGroup<Component...>, entt::registry& dst, entt::registry& src,
+    static void CopyComponent(ComponentGroup<Component...>, entt::registry& dst, const entt::registry& src,
                               const UnorderedMap<UUID, entt::entity>& entityMap)
     {
         CopyComponent<Component...>(dst, src, entityMap);
@@ -55,7 +55,7 @@ namespace Crowny
         CopyComponentIfExists<Component...>(dst, src);
     }
 
-    static void CopyAllComponents(entt::registry& dstRegistry, entt::registry& srcRegistry, const UnorderedMap<UUID, entt::entity>& entityMap)
+    static void CopyAllComponents(entt::registry& dstRegistry, const entt::registry& srcRegistry, const UnorderedMap<UUID, entt::entity>& entityMap)
     {
         CopyComponent(AllComponents{}, dstRegistry, srcRegistry, entityMap);
     }
@@ -75,7 +75,7 @@ namespace Crowny
         RegisterEntityCallbacks();
     }
 
-    Scene::Scene(Scene& other)
+    Scene::Scene(const Scene& other)
     {
         m_ViewportWidth = other.m_ViewportWidth;
         m_ViewportHeight = other.m_ViewportHeight;
@@ -86,7 +86,7 @@ namespace Crowny
 
         UnorderedMap<UUID, entt::entity> copyEntityMap;
 
-        auto idView = other.m_Registry.view<IDComponent>();
+        const auto idView = other.m_Registry.view<IDComponent>();
         for (auto e : idView)
         {
             const UUID& uuid = other.m_Registry.get<IDComponent>(e).Uuid;
@@ -103,7 +103,7 @@ namespace Crowny
         RegisterEntityCallbacks();
     }
 
-    Scene& Scene::operator=(Scene& other)
+    Scene& Scene::operator=(const Scene& other)
     {
         if (this == &other)
             return *this;
@@ -120,7 +120,7 @@ namespace Crowny
 
         UnorderedMap<UUID, entt::entity> copyEntityMap;
 
-        auto idView = other.m_Registry.view<IDComponent>();
+        const auto idView = other.m_Registry.view<IDComponent>();
         for (auto e : idView)
         {
             const UUID& uuid = other.m_Registry.get<IDComponent>(e).Uuid;
@@ -439,7 +439,7 @@ namespace Crowny
 
     Entity Scene::FindEntityByName(const String& name) const
     {
-        auto view = m_Registry.view<TagComponent>();
+        const auto view = m_Registry.view<TagComponent>();
         for (auto entity : view)
         {
             auto [tag] = view.get(entity);

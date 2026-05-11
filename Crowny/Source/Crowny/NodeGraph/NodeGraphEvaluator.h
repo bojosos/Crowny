@@ -18,7 +18,7 @@ namespace Crowny
 
         Ref<MeshData> EvaluateGeometry();
 
-        PinValue PullInput(Pin* inputPin);
+        PinValue PullInput(const Pin* inputPin);
         void SetOutputValue(UUID pinId, const PinValue& value);
         PinValue GetOutputValue(UUID pinId) const;
 

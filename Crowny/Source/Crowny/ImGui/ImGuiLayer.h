@@ -22,6 +22,8 @@ namespace Crowny
         virtual String SaveLayout();
         virtual void LoadLayout(const String& layout);
 
+        static void ApplyCrownyDarkTheme();
+
     private:
         bool m_BlockEvents = true;
         float m_Time = 0.0f;

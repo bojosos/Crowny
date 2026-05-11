@@ -19,10 +19,10 @@ namespace Crowny
 
     Ref<Asset> TextFileImporter::Import(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
-        Ref<DataStream> stream = FileSystem::OpenFile(filepath);
-        Ref<const ShaderImportOptions> shaderImportOptions = StaticRefCast<const ShaderImportOptions>(importOptions);
-        String ext = filepath.extension().string();
-        String source = FileSystem::OpenFile(filepath)->GetAsString();
+        const Ref<DataStream> stream = FileSystem::OpenFile(filepath);
+        const Ref<const ShaderImportOptions> shaderImportOptions = StaticRefCast<const ShaderImportOptions>(importOptions);
+        const String ext = filepath.extension().string();
+        const String source = FileSystem::OpenFile(filepath)->GetAsString();
         // return Text::Create(ShaderCompiler::Compile(source, shaderImportOptions->Language));
         return nullptr;
     }

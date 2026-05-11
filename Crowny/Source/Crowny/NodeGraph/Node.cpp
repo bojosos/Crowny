@@ -73,7 +73,7 @@ namespace Crowny
 
     template <typename T> T Node::GetInputValue(StringID pinName, NodeGraphEvaluator& evaluator) const
     {
-        Pin* pin = FindInputPin(pinName);
+        const Pin* pin = FindInputPin(pinName);
         CW_ENGINE_ASSERT(pin, String("Input pin not found: ") + pinName.c_str());
 
         PinValue value = evaluator.PullInput(pin);
@@ -107,7 +107,7 @@ namespace Crowny
 
     template <typename T> void Node::SetOutputValue(StringID pinName, const T& value, NodeGraphEvaluator& evaluator)
     {
-        Pin* pin = FindOutputPin(pinName);
+        const Pin* pin = FindOutputPin(pinName);
         CW_ENGINE_ASSERT(pin, String("Output pin not found: ") + pinName.c_str());
         evaluator.SetOutputValue(pin->GetID(), PinValue(value));
     }
@@ -130,7 +130,7 @@ namespace Crowny
     template void Node::SetOutputValue<Ref<MeshData>>(StringID, const Ref<MeshData>&, NodeGraphEvaluator&);
     template <> void Node::SetOutputValue<PinValue>(StringID pinName, const PinValue& pinValue, NodeGraphEvaluator& evaluator)
     {
-        Pin* pin = FindOutputPin(pinName);
+        const Pin* pin = FindOutputPin(pinName);
         CW_ENGINE_ASSERT(pin, "Output pin not found: " + String(pinName.c_str()));
         evaluator.SetOutputValue(pin->GetID(), pinValue);
     }

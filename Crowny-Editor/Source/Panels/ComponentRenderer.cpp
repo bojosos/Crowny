@@ -1,5 +1,7 @@
 #include "cwepch.h"
 
+#include "Crowny/Audio/AudioManager.h"
+#include "Crowny/Audio/AudioMixer.h"
 #include "Crowny/Common/ConsoleBuffer.h"
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/StringUtils.h"
@@ -60,9 +62,9 @@ namespace Crowny
             const float inputItemWidth = (ImGui::GetContentRegionAvail().x - spacingX) / 3.0f - buttonSize.x;
 
             const ImGuiIO& io = ImGui::GetIO();
-            auto boldFont = io.Fonts->Fonts[1];
+            auto* const boldFont = io.Fonts->Fonts[1];
 
-            auto drawControl = [&](const std::string& label, float& value, const ImVec4& colorN, const ImVec4& colorH, const ImVec4& colorP) {
+            const auto drawControl = [&](const std::string& label, float& value, const ImVec4& colorN, const ImVec4& colorH, const ImVec4& colorP) {
                 {
                     UI::ScopedStyle buttonFrame(ImGuiStyleVar_FramePadding, ImVec2(framePadding, 0.0f));
                     UI::ScopedStyle buttonRounding(ImGuiStyleVar_FrameRounding, 1.0f);
@@ -100,19 +102,20 @@ namespace Crowny
                 // ImGui::PopItemFlag();
 
                 if (!UI::IsItemDisabled())
-                    UI::DrawItemActivityOutline(2.0f, true, IM_COL32(236, 158, 36, 255));
+                    UI::DrawItemActivityOutline(2.0f, true, UI::Colors::Accent);
 
                 /*if (wasTempInputActive)
                     manuallyEdited |= ImGui::IsItemDeactivatedAfterEdit();*/
             };
 
-            drawControl("X", values.x, ImVec4{ 0.8f, 0.1f, 0.15f, 1.0f }, ImVec4{ 0.9f, 0.2f, 0.2f, 1.0f }, ImVec4{ 0.8f, 0.1f, 0.15f, 1.0f });
+            // Vec3 axis colors from Crowny editor skin: X #B8453A, Y #5E9F4B, Z #3A78B8.
+            drawControl("X", values.x, ImVec4{ 0.722f, 0.271f, 0.227f, 1.0f }, ImVec4{ 0.800f, 0.349f, 0.306f, 1.0f }, ImVec4{ 0.643f, 0.224f, 0.180f, 1.0f });
 
             ImGui::SameLine(0.0f, outlineSpacing);
-            drawControl("Y", values.y, ImVec4{ 0.2f, 0.7f, 0.2f, 1.0f }, ImVec4{ 0.3f, 0.8f, 0.3f, 1.0f }, ImVec4{ 0.2f, 0.7f, 0.2f, 1.0f });
+            drawControl("Y", values.y, ImVec4{ 0.369f, 0.624f, 0.294f, 1.0f }, ImVec4{ 0.447f, 0.702f, 0.373f, 1.0f }, ImVec4{ 0.302f, 0.553f, 0.231f, 1.0f });
 
             ImGui::SameLine(0.0f, outlineSpacing);
-            drawControl("Z", values.z, ImVec4{ 0.1f, 0.25f, 0.8f, 1.0f }, ImVec4{ 0.2f, 0.35f, 0.9f, 1.0f }, ImVec4{ 0.1f, 0.25f, 0.8f, 1.0f });
+            drawControl("Z", values.z, ImVec4{ 0.227f, 0.471f, 0.722f, 1.0f }, ImVec4{ 0.306f, 0.549f, 0.800f, 1.0f }, ImVec4{ 0.180f, 0.388f, 0.643f, 1.0f });
 
             ImGui::EndChild();
         }
@@ -316,12 +319,12 @@ namespace Crowny
         UIUtils::AssetReference<Mesh>("Mesh", meshComp.MeshHandle);
 
         // Material slots — one per sub-mesh (or at least one default slot)
-        uint32_t subMeshCount = meshComp.MeshHandle ? (uint32_t)meshComp.MeshHandle->GetSubMeshes().size() : 0;
-        uint32_t slotCount = std::max(1u, std::max(subMeshCount, meshComp.GetMaterialCount()));
+        const uint32_t subMeshCount = meshComp.MeshHandle ? (uint32_t)meshComp.MeshHandle->GetSubMeshes().size() : 0;
+        const uint32_t slotCount = std::max(1u, std::max(subMeshCount, meshComp.GetMaterialCount()));
 
         for (uint32_t i = 0; i < slotCount; i++)
         {
-            String label = subMeshCount > 1 ? "Material " + std::to_string(i) : "Material";
+            const String label = subMeshCount > 1 ? "Material " + std::to_string(i) : "Material";
             AssetHandle<Material> mat = meshComp.GetMaterial(i);
             if (UIUtils::AssetReference<Material>(label.c_str(), mat))
                 meshComp.SetMaterial(i, mat);
@@ -511,6 +514,48 @@ namespace Crowny
         float maxDistance = sourceComponent.GetMaxDistance();
         if (UI::Property("Max Distance", maxDistance))
             sourceComponent.SetMaxDistance(maxDistance);
+
+        // Bus selection — enumerated from the active mixer. Falls back to a plain text input when
+        // no mixer is set so the user can still type a name that will resolve later.
+        Vector<String> busNames = { "(None)" };
+        int selectedIdx = 0;
+        const String& currentBus = sourceComponent.GetBusName();
+        if (const AssetHandle<AudioMixer>& mixer = gAudioManager->GetActiveMixer())
+        {
+            for (const AudioBusDesc& desc : mixer->GetBusDescs())
+            {
+                busNames.push_back(desc.Name);
+                if (desc.Name == currentBus)
+                    selectedIdx = (int)busNames.size() - 1;
+            }
+        }
+        int newIdx = selectedIdx;
+        if (UI::PropertyDropdown("Bus", busNames, newIdx) && newIdx != selectedIdx)
+            sourceComponent.SetBusName(newIdx == 0 ? String() : busNames[newIdx]);
+
+        float lowPass = sourceComponent.GetLowPassGain();
+        if (UI::PropertySlider("Low Pass Gain", lowPass, 0.0f, 1.0f))
+            sourceComponent.SetLowPassGain(lowPass);
+
+        float highPass = sourceComponent.GetHighPassGain();
+        if (UI::PropertySlider("High Pass Gain", highPass, 0.0f, 1.0f))
+            sourceComponent.SetHighPassGain(highPass);
+
+        float innerAngle = sourceComponent.GetConeInnerAngle();
+        if (UI::PropertySlider("Cone Inner Angle", innerAngle, 0.0f, 360.0f))
+            sourceComponent.SetConeInnerAngle(innerAngle);
+
+        float outerAngle = sourceComponent.GetConeOuterAngle();
+        if (UI::PropertySlider("Cone Outer Angle", outerAngle, 0.0f, 360.0f))
+            sourceComponent.SetConeOuterAngle(outerAngle);
+
+        float outerGain = sourceComponent.GetConeOuterGain();
+        if (UI::PropertySlider("Cone Outer Gain", outerGain, 0.0f, 1.0f))
+            sourceComponent.SetConeOuterGain(outerGain);
+
+        float outerGainHF = sourceComponent.GetConeOuterGainHF();
+        if (UI::PropertySlider("Cone Outer Gain HF", outerGainHF, 0.0f, 1.0f))
+            sourceComponent.SetConeOuterGainHF(outerGainHF);
     }
 
     template <> void ComponentEditorWidget<MonoScriptComponent>(Entity entity)

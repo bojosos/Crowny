@@ -31,7 +31,7 @@ namespace Crowny
         message.Hash = hash;
         message.LogLevel = logLevel;
 
-        auto findIter = m_HashToIndex.find(message.Hash);
+        const auto findIter = m_HashToIndex.find(message.Hash);
         if (findIter != m_HashToIndex.end())
             m_CollapsedMessageBuffer[findIter->second].RepeatCount++;
         else

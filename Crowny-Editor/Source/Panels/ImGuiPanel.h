@@ -20,11 +20,11 @@ namespace Crowny
         virtual void Render() = 0;
 
         virtual const String& GetName() const { return m_Name; }
-        virtual bool IsFocused() { return m_Focused; }
-        virtual bool IsHovered() { return m_Hovered; }
+        virtual bool IsFocused() const { return m_Focused; }
+        virtual bool IsHovered() const { return m_Hovered; }
 
         void RegisterInMenu(ImGuiMenu* menu);
-        bool IsShown() { return m_Shown; }
+        bool IsShown() const { return m_Shown; }
 
     protected:
         void UpdateState();

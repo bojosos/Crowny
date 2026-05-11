@@ -22,7 +22,7 @@ namespace Crowny
         if (IsChildOf(entity))
             return;
 
-        Transform oldWorldTransform = GetWorldTransform();
+        const Transform oldWorldTransform = GetWorldTransform();
 
         // Remove the child from the old parent.
         Entity oldParent = GetParent();
@@ -44,7 +44,7 @@ namespace Crowny
 
     Entity Entity::GetChild(uint32_t index) const { return GetComponent<RelationshipComponent>().Children[index]; }
 
-    bool Entity::IsChildOf(Entity parent, bool directOnly)
+    bool Entity::IsChildOf(Entity parent, bool directOnly) const
     {
         if (!parent)
             return false;

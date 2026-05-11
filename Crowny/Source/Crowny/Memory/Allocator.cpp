@@ -95,7 +95,7 @@ namespace Crowny
         bool found = false;
         {
             std::scoped_lock<std::mutex> lock(s_Data->m_Mutex);
-            auto iterFind = s_Data->m_AllocationMap.find(memory);
+            const auto iterFind = s_Data->m_AllocationMap.find(memory);
             found = iterFind != s_Data->m_AllocationMap.end();
             if (found)
             {

@@ -22,6 +22,7 @@
 #include "Crowny/Scripting/Bindings/Scene/ScriptText.h"
 
 #include "Crowny/Scripting/Bindings/Assets/ScriptAudioClip.h"
+#include "Crowny/Scripting/Bindings/Assets/ScriptAudioMixer.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptFont.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptMaterial.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptMesh.h"
@@ -54,10 +55,10 @@ namespace Crowny
 
     void ScriptInfoManager::InitializeTypes()
     {
-        MonoAssembly* corlib = MonoManager::Get().GetAssembly("corlib");
+        const MonoAssembly* corlib = MonoManager::Get().GetAssembly("corlib");
         if (corlib == nullptr)
             CW_ENGINE_ERROR("Corlib assembly not loaded.");
-        MonoAssembly* crownyAssembly = MonoManager::Get().GetAssembly(CROWNY_ASSEMBLY);
+        const MonoAssembly* crownyAssembly = MonoManager::Get().GetAssembly(CROWNY_ASSEMBLY);
         if (crownyAssembly == nullptr)
             CW_ENGINE_ERROR("Crowny assembly not loaded.");
 
@@ -124,7 +125,7 @@ namespace Crowny
         if (!m_BaseTypesInitialized && assemblyName == "CrownySharp")
             InitializeTypes();
 
-        MonoAssembly* curAssembly = MonoManager::Get().GetAssembly(assemblyName);
+        const MonoAssembly* curAssembly = MonoManager::Get().GetAssembly(assemblyName);
         if (curAssembly == nullptr)
             return;
 
@@ -204,7 +205,7 @@ namespace Crowny
                 fieldInfo->m_TypeInfo = typeInfo;
                 fieldInfo->m_ParentTypeId = objInfo->m_TypeInfo->m_TypeId;
 
-                CrownyMonoVisibility visibility = field->GetVisibility();
+                const CrownyMonoVisibility visibility = field->GetVisibility();
                 if (visibility == CrownyMonoVisibility::Public)
                 {
                     if (isSerializable && !field->HasAttribute(m_Builtin.DontSerializeFieldAttribute))
@@ -313,7 +314,7 @@ namespace Crowny
                 propertyInfo->m_TypeInfo = typeInfo;
                 propertyInfo->m_ParentTypeId = objInfo->m_TypeInfo->m_TypeId;
 
-                CrownyMonoVisibility visibility = property->GetVisibility();
+                const CrownyMonoVisibility visibility = property->GetVisibility();
                 if (visibility == CrownyMonoVisibility::Public)
                 {
                     if (isSerializable && !property->HasAttribute(m_Builtin.DontSerializeFieldAttribute))
@@ -408,6 +409,7 @@ namespace Crowny
     void ScriptInfoManager::RegisterAssets()
     {
         RegisterAsset<AudioClip, ScriptAudioClip>();
+        RegisterAsset<AudioMixer, ScriptAudioMixer>();
         RegisterAsset<Mesh, ScriptMesh>();
         RegisterAsset<Font, ScriptFont>();
         RegisterAsset<Material, ScriptMaterial>();
@@ -434,7 +436,7 @@ namespace Crowny
     {
         CW_ENGINE_ASSERT(m_BaseTypesInitialized);
         MonoPrimitiveType primitiveType = MonoUtils::GetPrimitiveType(monoClass->GetInternalPtr());
-        bool isEnum = MonoUtils::IsEnum(monoClass);
+        const bool isEnum = MonoUtils::IsEnum(monoClass);
         if (isEnum)
             primitiveType = MonoUtils::GetEnumPrimitiveType(monoClass->GetInternalPtr());
         ScriptPrimitiveType scriptPrimitiveType = ScriptPrimitiveType::U32;
@@ -656,7 +658,7 @@ namespace Crowny
     {
 
         String fullName = ns + "." + name;
-        for (auto& curAssembly : m_AssemblyInfos)
+        for (const auto& curAssembly : m_AssemblyInfos)
         {
             if (curAssembly.second == nullptr)
                 continue;

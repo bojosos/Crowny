@@ -134,8 +134,8 @@ namespace Crowny
         if (IsWritable())
         {
             written = count;
-            size_t numUsedBytes = (m_Cursor - m_Data);
-            size_t newSize = numUsedBytes + count;
+            const size_t numUsedBytes = (m_Cursor - m_Data);
+            const size_t newSize = numUsedBytes + count;
             if (newSize > m_Size)
             {
                 if (m_OwnsMemory)
@@ -266,7 +266,7 @@ namespace Crowny
     {
         Seek(0);
         uint8_t header[4];
-        size_t numHeaderBytes = Read(header, 4);
+        const size_t numHeaderBytes = Read(header, 4);
         size_t dataOffset = 0;
         if (numHeaderBytes >= 4)
         {
@@ -298,17 +298,17 @@ namespace Crowny
         }
 
         Seek(dataOffset);
-        size_t bufSize = (m_Size > 0 ? m_Size : 4096);
+        const size_t bufSize = (m_Size > 0 ? m_Size : 4096);
         auto tempBuffer = new std::stringstream::char_type[(uint32_t)bufSize];
         std::stringstream res;
         while (!Eof())
         {
-            size_t numReadBytes = Read(tempBuffer, bufSize);
+            const size_t numReadBytes = Read(tempBuffer, bufSize);
             res.write(tempBuffer, numReadBytes);
         }
 
         delete[] tempBuffer;
-        String string = res.str();
+        const String string = res.str();
 
         switch (dataOffset)
         {

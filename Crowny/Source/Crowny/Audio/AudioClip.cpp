@@ -47,7 +47,7 @@ namespace Crowny
             m_SourceStreamSize = m_StreamSize;
         }
 
-        bool loadDecompressed = m_Desc.ReadMode == AudioReadMode::LoadDecompressed ||
+        const bool loadDecompressed = m_Desc.ReadMode == AudioReadMode::LoadDecompressed ||
                                 (m_Desc.ReadMode == AudioReadMode::LoadCompressed && m_Desc.Format == AudioFormat::PCM);
         if (loadDecompressed)
         {
@@ -61,7 +61,7 @@ namespace Crowny
                 offset = m_StreamOffset;
             }
 
-            uint32_t bufferSize = info.NumSamples * info.BitDepth / 8;
+            const uint32_t bufferSize = info.NumSamples * info.BitDepth / 8;
             // CW_ENGINE_INFO("Buffer size: {0}", bufferSize);
             uint8_t* sampleBuffer = new uint8_t[bufferSize];
             if (m_Desc.Format == AudioFormat::VORBIS)
@@ -141,9 +141,9 @@ namespace Crowny
             }
             else
             {
-                uint32_t bytesPerSample = m_Desc.BitDepth / 8;
-                uint32_t size = count * bytesPerSample;
-                uint32_t streamOffset = m_StreamOffset + offset * bytesPerSample;
+                const uint32_t bytesPerSample = m_Desc.BitDepth / 8;
+                const uint32_t size = count * bytesPerSample;
+                const uint32_t streamOffset = m_StreamOffset + offset * bytesPerSample;
                 m_StreamData->Seek(streamOffset);
                 m_StreamData->Read(samples, size);
             }
@@ -153,9 +153,9 @@ namespace Crowny
         if (m_SourceStreamData != nullptr)
         {
             CW_ENGINE_ASSERT(!m_NeedsDecompression);
-            uint32_t bytesPerSample = m_Desc.BitDepth / 8;
-            uint32_t size = count * bytesPerSample;
-            uint32_t streamOffset = offset * bytesPerSample;
+            const uint32_t bytesPerSample = m_Desc.BitDepth / 8;
+            const uint32_t size = count * bytesPerSample;
+            const uint32_t streamOffset = offset * bytesPerSample;
             m_SourceStreamData->Seek(streamOffset);
             m_SourceStreamData->Read(samples, size);
             return;

@@ -59,21 +59,21 @@ namespace Crowny
 
     Ref<Asset> FontImporter::Import(const Path& path, Ref<const ImportOptions> importOptions)
     {
-        msdfgen::FreetypeHandle* freetypeHandle = msdfgen::initializeFreetype();
+        msdfgen::FreetypeHandle* const freetypeHandle = msdfgen::initializeFreetype();
         if (freetypeHandle == nullptr)
         {
             CW_ENGINE_ERROR("Couldn't initialize FreeType, font import failed");
             return nullptr;
         }
 
-        Ref<const FontImportOptions> fontImportOptions = StaticRefCast<const FontImportOptions>(importOptions);
+        const Ref<const FontImportOptions> fontImportOptions = StaticRefCast<const FontImportOptions>(importOptions);
         std::vector<uint8_t> data;
-        Ref<DataStream> dataStream = FileSystem::OpenFile(path);
+        const Ref<DataStream> dataStream = FileSystem::OpenFile(path);
         data.resize(dataStream->Size());
         dataStream->Read(data.data(), data.size());
         dataStream->Close();
 
-        msdfgen::FontHandle* fontHandle = msdfgen::loadFontData(freetypeHandle, data.data(), (int)data.size());
+        msdfgen::FontHandle* const fontHandle = msdfgen::loadFontData(freetypeHandle, data.data(), (int)data.size());
         msdfgen::FontImportInfo fontImportInfo;
         msdfgen::getImportInfo(fontImportInfo, fontHandle);
         CW_ENGINE_INFO("Font family: {}, font style: {}", fontImportInfo.fontFamilyName, fontImportInfo.fontStyleName);
@@ -144,15 +144,15 @@ namespace Crowny
             }
             else if (fontImportOptions->Range == CharsetRange::SymbolRange)
             {
-                for (char32_t c : fontImportOptions->CustomCharset)
+                for (const char32_t c : fontImportOptions->CustomCharset)
                     charset.add(c);
             }
 
-            MSDFData* fontData = new MSDFData();
+            MSDFData* const fontData = new MSDFData();
 
             const double fontScale = 1.0;
             fontData->FontGeometry = msdf_atlas::FontGeometry(&fontData->Glyphs);
-            int glyphsLoaded = fontData->FontGeometry.loadCharset(fontHandle, fontScale, charset);
+            const int glyphsLoaded = fontData->FontGeometry.loadCharset(fontHandle, fontScale, charset);
             if (glyphsLoaded < charset.size())
                 CW_ENGINE_INFO("Loaded {} glyphs from font out of {}", glyphsLoaded, charset.size());
             else
@@ -172,7 +172,7 @@ namespace Crowny
                 tightAtlasPacker.setScale(fontImportOptions->SamplingFontSize);
 
             Timer msdfTimer;
-            int remainigGlyphs = tightAtlasPacker.pack(fontData->Glyphs.data(), (int)fontData->Glyphs.size());
+            const int remainigGlyphs = tightAtlasPacker.pack(fontData->Glyphs.data(), (int)fontData->Glyphs.size());
             if (remainigGlyphs > 0)
                 CW_ENGINE_ERROR("Couldn't fit {} glyphs in font atlas for font: {}", remainigGlyphs, path);
             CW_ENGINE_INFO("Font packing time: {}s", msdfTimer.ElapsedSeconds());
@@ -180,12 +180,11 @@ namespace Crowny
             int width = 0, height = 0;
             tightAtlasPacker.getDimensions(width, height);
             CW_ENGINE_INFO("Final atlas width: {0}, height: {1}", width, height);
-            double scale = 0.0f;
-            scale = tightAtlasPacker.getScale();
+            const double scale = tightAtlasPacker.getScale();
             CW_ENGINE_INFO("Final atlas font scale: {}", scale);
 
-            uint64_t coloringSeed = 0;
-            bool expensiveColoring = false;
+            const uint64_t coloringSeed = 0;
+            const bool expensiveColoring = false;
             msdfTimer.Reset();
             if (expensiveColoring)
             {
@@ -211,15 +210,16 @@ namespace Crowny
             }
             CW_ENGINE_INFO("Font edge coloring took: {}s", msdfTimer.ElapsedSeconds());
             msdfTimer.Reset();
-            Ref<Texture> atlasTexture = CreateAndCacheAtlas<uint8_t, float, 3, msdf_atlas::msdfGenerator>(
-              path.filename().string(), (float)scale, fontData->Glyphs, fontData->FontGeometry, width, height);
+            const String fontFilename = path.filename().string();
+            const Ref<Texture> atlasTexture = CreateAndCacheAtlas<uint8_t, float, 3, msdf_atlas::msdfGenerator>(
+              fontFilename, (float)scale, fontData->Glyphs, fontData->FontGeometry, width, height);
             CW_ENGINE_INFO("Atlas generation took: {}s", msdfTimer.ElapsedSeconds());
 
             msdfgen::destroyFont(fontHandle);
             msdfgen::deinitializeFreetype(freetypeHandle);
 
-            Ref<Font> font = CreateRef<Font>(fontData, atlasTexture);
-            font->SetName(path.filename().string());
+            const Ref<Font> font = CreateRef<Font>(fontData, atlasTexture);
+            font->SetName(fontFilename);
             return font;
         }
         // TODO: Implement for non-dynamic fonts.

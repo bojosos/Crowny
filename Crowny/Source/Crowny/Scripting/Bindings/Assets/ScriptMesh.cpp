@@ -47,26 +47,26 @@ namespace Crowny
 
     void ScriptMesh::Internal_GetVertices(ScriptMesh* thisPtr, MonoArray** outArray)
     {
-        Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
+        const Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
         if (!data)
         {
             *outArray = nullptr;
             return;
         }
 
-        Vector<glm::vec3> positions = data->GetPositions();
-        ::MonoClass* vec3Class = ScriptInfoManager::Get().GetBuiltinClasses().Vector3->GetInternalPtr();
+        const Vector<glm::vec3> positions = data->GetPositions();
+        ::MonoClass* const vec3Class = ScriptInfoManager::Get().GetBuiltinClasses().Vector3->GetInternalPtr();
         *outArray = mono_array_new(MonoManager::Get().GetDomain(), vec3Class, (uintptr_t)positions.size());
         std::memcpy(mono_array_addr(*outArray, glm::vec3, 0), positions.data(), positions.size() * sizeof(glm::vec3));
     }
 
     void ScriptMesh::Internal_SetVertices(ScriptMesh* thisPtr, MonoArray* array)
     {
-        Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
+        const Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
         if (!data || !array)
             return;
 
-        uint32_t count = (uint32_t)mono_array_length(array);
+        const uint32_t count = (uint32_t)mono_array_length(array);
         Vector<glm::vec3> positions(count);
         std::memcpy(positions.data(), mono_array_addr(array, glm::vec3, 0), count * sizeof(glm::vec3));
         data->SetPositions(positions);
@@ -74,26 +74,26 @@ namespace Crowny
 
     void ScriptMesh::Internal_GetNormals(ScriptMesh* thisPtr, MonoArray** outArray)
     {
-        Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
+        const Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
         if (!data)
         {
             *outArray = nullptr;
             return;
         }
 
-        Vector<glm::vec3> normals = data->GetNormals();
-        ::MonoClass* vec3Class = ScriptInfoManager::Get().GetBuiltinClasses().Vector3->GetInternalPtr();
+        const Vector<glm::vec3> normals = data->GetNormals();
+        ::MonoClass* const vec3Class = ScriptInfoManager::Get().GetBuiltinClasses().Vector3->GetInternalPtr();
         *outArray = mono_array_new(MonoManager::Get().GetDomain(), vec3Class, (uintptr_t)normals.size());
         std::memcpy(mono_array_addr(*outArray, glm::vec3, 0), normals.data(), normals.size() * sizeof(glm::vec3));
     }
 
     void ScriptMesh::Internal_SetNormals(ScriptMesh* thisPtr, MonoArray* array)
     {
-        Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
+        const Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
         if (!data || !array)
             return;
 
-        uint32_t count = (uint32_t)mono_array_length(array);
+        const uint32_t count = (uint32_t)mono_array_length(array);
         Vector<glm::vec3> normals(count);
         std::memcpy(normals.data(), mono_array_addr(array, glm::vec3, 0), count * sizeof(glm::vec3));
         data->SetNormals(normals);
@@ -101,26 +101,26 @@ namespace Crowny
 
     void ScriptMesh::Internal_GetUVs(ScriptMesh* thisPtr, uint32_t channel, MonoArray** outArray)
     {
-        Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
+        const Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
         if (!data)
         {
             *outArray = nullptr;
             return;
         }
 
-        Vector<glm::vec2> uvs = data->GetUVs(channel);
-        ::MonoClass* vec2Class = ScriptInfoManager::Get().GetBuiltinClasses().Vector2->GetInternalPtr();
+        const Vector<glm::vec2> uvs = data->GetUVs(channel);
+        ::MonoClass* const vec2Class = ScriptInfoManager::Get().GetBuiltinClasses().Vector2->GetInternalPtr();
         *outArray = mono_array_new(MonoManager::Get().GetDomain(), vec2Class, (uintptr_t)uvs.size());
         std::memcpy(mono_array_addr(*outArray, glm::vec2, 0), uvs.data(), uvs.size() * sizeof(glm::vec2));
     }
 
     void ScriptMesh::Internal_SetUVs(ScriptMesh* thisPtr, uint32_t channel, MonoArray* array)
     {
-        Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
+        const Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
         if (!data || !array)
             return;
 
-        uint32_t count = (uint32_t)mono_array_length(array);
+        const uint32_t count = (uint32_t)mono_array_length(array);
         Vector<glm::vec2> uvs(count);
         std::memcpy(uvs.data(), mono_array_addr(array, glm::vec2, 0), count * sizeof(glm::vec2));
         data->SetUVs(channel, uvs);
@@ -128,26 +128,26 @@ namespace Crowny
 
     void ScriptMesh::Internal_GetColors(ScriptMesh* thisPtr, MonoArray** outArray)
     {
-        Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
+        const Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
         if (!data)
         {
             *outArray = nullptr;
             return;
         }
 
-        Vector<glm::vec4> colors = data->GetColors();
-        ::MonoClass* vec4Class = ScriptInfoManager::Get().GetBuiltinClasses().Vector4->GetInternalPtr();
+        const Vector<glm::vec4> colors = data->GetColors();
+        ::MonoClass* const vec4Class = ScriptInfoManager::Get().GetBuiltinClasses().Vector4->GetInternalPtr();
         *outArray = mono_array_new(MonoManager::Get().GetDomain(), vec4Class, (uintptr_t)colors.size());
         std::memcpy(mono_array_addr(*outArray, glm::vec4, 0), colors.data(), colors.size() * sizeof(glm::vec4));
     }
 
     void ScriptMesh::Internal_SetColors(ScriptMesh* thisPtr, MonoArray* array)
     {
-        Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
+        const Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
         if (!data || !array)
             return;
 
-        uint32_t count = (uint32_t)mono_array_length(array);
+        const uint32_t count = (uint32_t)mono_array_length(array);
         Vector<glm::vec4> colors(count);
         std::memcpy(colors.data(), mono_array_addr(array, glm::vec4, 0), count * sizeof(glm::vec4));
         data->SetColors(colors);
@@ -155,25 +155,25 @@ namespace Crowny
 
     void ScriptMesh::Internal_GetIndices(ScriptMesh* thisPtr, MonoArray** outArray)
     {
-        Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
+        const Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
         if (!data)
         {
             *outArray = nullptr;
             return;
         }
 
-        Vector<uint32_t> indices = data->GetIndices();
+        const Vector<uint32_t> indices = data->GetIndices();
         *outArray = mono_array_new(MonoManager::Get().GetDomain(), MonoUtils::GetI32Class(), (uintptr_t)indices.size());
         std::memcpy(mono_array_addr(*outArray, int32_t, 0), indices.data(), indices.size() * sizeof(int32_t));
     }
 
     void ScriptMesh::Internal_SetIndices(ScriptMesh* thisPtr, MonoArray* array)
     {
-        Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
+        const Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
         if (!data || !array)
             return;
 
-        uint32_t count = (uint32_t)mono_array_length(array);
+        const uint32_t count = (uint32_t)mono_array_length(array);
         Vector<uint32_t> indices(count);
         std::memcpy(indices.data(), mono_array_addr(array, int32_t, 0), count * sizeof(uint32_t));
         data->SetIndices(indices);
@@ -189,7 +189,7 @@ namespace Crowny
 
     void ScriptMesh::Internal_Clear(ScriptMesh* thisPtr)
     {
-        Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
+        const Ref<MeshData> data = thisPtr->GetHandle()->GetMeshData();
         if (data)
         {
             data->AllocateBuffer(); // Re-zero the buffer
@@ -276,7 +276,7 @@ namespace Crowny
         if (!layout)
             return;
 
-        uint32_t numDescs = (uint32_t)mono_array_length(layout);
+        const uint32_t numDescs = (uint32_t)mono_array_length(layout);
         BufferLayout bufferLayout;
         for (uint32_t i = 0; i < numDescs; i++)
         {
@@ -295,11 +295,11 @@ namespace Crowny
     {
         if (!data)
             return;
-        Ref<MeshData> meshData = thisPtr->GetHandle()->GetMeshData();
+        const Ref<MeshData> meshData = thisPtr->GetHandle()->GetMeshData();
         if (!meshData)
             return;
 
-        uint32_t meshStride = meshData->GetBufferLayout().GetStride();
+        const uint32_t meshStride = meshData->GetBufferLayout().GetStride();
         uint8_t* dst = meshData->GetVertexBufferData() + meshBufferStart * meshStride;
         if (stride == meshStride)
         {
@@ -307,7 +307,7 @@ namespace Crowny
         }
         else
         {
-            uint32_t copySize = std::min(stride, meshStride);
+            const uint32_t copySize = std::min(stride, meshStride);
             const uint8_t* src = static_cast<const uint8_t*>(data);
             for (uint32_t i = 0; i < count; i++)
             {
@@ -320,12 +320,12 @@ namespace Crowny
     {
         if (!outData)
             return;
-        Ref<MeshData> meshData = thisPtr->GetHandle()->GetMeshData();
+        const Ref<MeshData> meshData = thisPtr->GetHandle()->GetMeshData();
         if (!meshData)
             return;
 
-        uint32_t meshStride = meshData->GetBufferLayout().GetStride();
-        uint32_t copyCount = std::min(count, meshData->GetVertexCount());
+        const uint32_t meshStride = meshData->GetBufferLayout().GetStride();
+        const uint32_t copyCount = std::min(count, meshData->GetVertexCount());
         const uint8_t* src = meshData->GetVertexBufferData();
         if (stride == meshStride)
         {
@@ -333,7 +333,7 @@ namespace Crowny
         }
         else
         {
-            uint32_t copySize = std::min(stride, meshStride);
+            const uint32_t copySize = std::min(stride, meshStride);
             uint8_t* dst = static_cast<uint8_t*>(outData);
             for (uint32_t i = 0; i < copyCount; i++)
             {
@@ -344,7 +344,7 @@ namespace Crowny
 
     uint32_t ScriptMesh::Internal_GetVertexStride(ScriptMesh* thisPtr)
     {
-        Ref<MeshData> meshData = thisPtr->GetHandle()->GetMeshData();
+        const Ref<MeshData> meshData = thisPtr->GetHandle()->GetMeshData();
         if (!meshData)
             return 0;
         return meshData->GetBufferLayout().GetStride();
@@ -352,7 +352,7 @@ namespace Crowny
 
     uint32_t ScriptMesh::Internal_GetVertexAttributeCount(ScriptMesh* thisPtr)
     {
-        Ref<MeshData> meshData = thisPtr->GetHandle()->GetMeshData();
+        const Ref<MeshData> meshData = thisPtr->GetHandle()->GetMeshData();
         if (!meshData)
             return 0;
         return (uint32_t)meshData->GetBufferLayout().GetElements().size();
@@ -360,7 +360,7 @@ namespace Crowny
 
     bool ScriptMesh::Internal_HasVertexAttribute(ScriptMesh* thisPtr, VertexAttribute attr)
     {
-        Ref<MeshData> meshData = thisPtr->GetHandle()->GetMeshData();
+        const Ref<MeshData> meshData = thisPtr->GetHandle()->GetMeshData();
         if (!meshData)
             return false;
         return meshData->GetBufferLayout().HasAttribute(attr);
@@ -368,7 +368,7 @@ namespace Crowny
 
     void ScriptMesh::Internal_GetVertexAttribute(ScriptMesh* thisPtr, int32_t index, ScriptVertexAttributeDescriptor* outDesc)
     {
-        Ref<MeshData> meshData = thisPtr->GetHandle()->GetMeshData();
+        const Ref<MeshData> meshData = thisPtr->GetHandle()->GetMeshData();
         if (!meshData || !outDesc)
             return;
 

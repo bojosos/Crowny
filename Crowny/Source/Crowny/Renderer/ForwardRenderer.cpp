@@ -84,10 +84,10 @@ namespace Crowny
         rtProps.Width = tProps.Width;
         rtProps.Height = tProps.Height;
         rtProps.ColorSurfaces[0].Texture = s_Data->BrdfLUT;
-        Ref<RenderTexture> target = RenderTexture::Create(rtProps);
+        const Ref<RenderTexture> target = RenderTexture::Create(rtProps);
 
-        AssetHandle<Shader> shaderHandle = gAssetManager->Load<Shader>(BRDF_SHADER_PATH);
-        Ref<Material> brdfMaterial = Material::Create(shaderHandle);
+        const AssetHandle<Shader> shaderHandle = gAssetManager->Load<Shader>(BRDF_SHADER_PATH);
+        const Ref<Material> brdfMaterial = Material::Create(shaderHandle);
         rapi.SetRenderTarget(target);
         rapi.SetGraphicsPipeline(brdfMaterial->GetGraphicsPipeline());
         rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
@@ -106,7 +106,7 @@ namespace Crowny
         GenerateBRDFLUT();
 
         // Default PBR material
-        AssetHandle<Shader> pbriblHandle = gAssetManager->Load<Shader>(PBRIBL_SHADER_PATH);
+        const AssetHandle<Shader> pbriblHandle = gAssetManager->Load<Shader>(PBRIBL_SHADER_PATH);
         s_Data->PbrMaterial = Material::CreatePBR(pbriblHandle);
 
         // Default environment
@@ -118,12 +118,12 @@ namespace Crowny
         s_Data->SkyboxIbo = IndexBuffer::Create({36, IndexType::Index_32, BufferUsage::BU_STATIC_DRAW, s_SkyboxIndices});
 
         // Skybox material
-        AssetHandle<Shader> skyboxHandle = gAssetManager->Load<Shader>(SKYBOX_SHADER_PATH);
+        const AssetHandle<Shader> skyboxHandle = gAssetManager->Load<Shader>(SKYBOX_SHADER_PATH);
         s_Data->SkyboxMaterial = Material::Create(skyboxHandle);
 
         // Wireframe material (editor overlay)
         {
-            AssetHandle<Shader> wireframeShader = AssetManager::Get().Load<Shader>("Resources/Shaders/Wireframe.asset");
+            const AssetHandle<Shader> wireframeShader = AssetManager::Get().Load<Shader>("Resources/Shaders/Wireframe.asset");
             s_Data->WireframeMaterial = Material::Create(wireframeShader);
         }
     }
@@ -136,7 +136,7 @@ namespace Crowny
         s_Data->CamPos = cameraPosition;
 
         // Skybox
-        glm::mat4 inv = glm::mat4(glm::mat3(viewMatrix));
+        const glm::mat4 inv = glm::mat4(glm::mat3(viewMatrix));
         s_Data->SkyboxMaterial->SetMatrix("mvp", projection * inv);
         s_Data->SkyboxMaterial->SetFloat("gamma", s_Data->Gamma);
         s_Data->SkyboxMaterial->SetFloat("exposure", s_Data->Exposure);
@@ -257,7 +257,7 @@ namespace Crowny
 
         if (subMeshes.empty())
         {
-            Ref<Material> renderMaterial = wireframe ? s_Data->WireframeMaterial : getMaterial(0);
+            const Ref<Material> renderMaterial = wireframe ? s_Data->WireframeMaterial : getMaterial(0);
             ApplySceneUniforms(renderMaterial, transform);
             if (!wireframe)
             {
@@ -272,7 +272,7 @@ namespace Crowny
             for (uint32_t i = 0; i < (uint32_t)subMeshes.size(); i++)
             {
                 const SubMesh& sub = subMeshes[i];
-                Ref<Material> renderMaterial = wireframe ? s_Data->WireframeMaterial : getMaterial(i);
+                const Ref<Material> renderMaterial = wireframe ? s_Data->WireframeMaterial : getMaterial(i);
                 ApplySceneUniforms(renderMaterial, transform);
                 if (!wireframe)
                 {

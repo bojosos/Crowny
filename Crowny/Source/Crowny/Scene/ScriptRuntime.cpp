@@ -11,11 +11,11 @@
 namespace Crowny
 {
 
-    void ScriptRuntime::Init() { Ref<Scene> scene = gSceneManager->GetActiveScene(); }
+    void ScriptRuntime::Init() { const Ref<Scene> scene = gSceneManager->GetActiveScene(); }
 
     void ScriptRuntime::OnStart()
     {
-        Ref<Scene> activeScene = gSceneManager->GetActiveScene();
+        const Ref<Scene> activeScene = gSceneManager->GetActiveScene();
         activeScene->GetAllEntitiesWith<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent& sc) {
             for (auto& script : sc.Scripts)
                 script.OnStart();
@@ -24,7 +24,7 @@ namespace Crowny
 
     void ScriptRuntime::OnUpdate()
     {
-        Ref<Scene> activeScene = gSceneManager->GetActiveScene();
+        const Ref<Scene> activeScene = gSceneManager->GetActiveScene();
         activeScene->GetAllEntitiesWith<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent& sc) {
             for (auto& script : sc.Scripts)
                 script.OnUpdate();
@@ -33,7 +33,7 @@ namespace Crowny
 
     void ScriptRuntime::OnShutdown()
     {
-        Ref<Scene> activeScene = gSceneManager->GetActiveScene();
+        const Ref<Scene> activeScene = gSceneManager->GetActiveScene();
         activeScene->GetAllEntitiesWith<MonoScriptComponent>().each([&](entt::entity entity, MonoScriptComponent& sc) {
             for (auto& script : sc.Scripts)
                 script.OnDestroy();

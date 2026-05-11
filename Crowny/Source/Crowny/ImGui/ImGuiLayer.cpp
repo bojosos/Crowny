@@ -28,109 +28,119 @@ namespace Crowny
         io.MouseDoubleClickTime = 0.15f;
         io.MouseDoubleClickMaxDist = 6.0f;
 
-        ImGui::StyleColorsDark();
+        // Load fonts before applying style so font metrics are stable.
+        if (FileSystem::FileExists("Resources/Fonts/Roboto/Roboto-Regular.ttf"))
+        {
+            io.FontDefault =
+              io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto/Roboto-Regular.ttf", 17.0f, nullptr, io.Fonts->GetGlyphRangesCyrillic());
+        }
+        if (FileSystem::FileExists("Resources/Fonts/Roboto/Roboto-Bold.ttf"))
+        {
+            io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto/Roboto-Bold.ttf", 17.0f, nullptr, io.Fonts->GetGlyphRangesCyrillic());
+        }
+
+        ApplyCrownyDarkTheme();
+
         ImGuiStyle& style = ImGui::GetStyle();
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             style.WindowRounding = 0.0f;
             style.Colors[ImGuiCol_WindowBg].w = 1.0f;
         }
-        if (FileSystem::FileExists("Resources/Fonts/Roboto/Roboto-Regular.ttf"))
-        {
-            io.FontDefault =
-              io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto/Roboto-Regular.ttf", 17.0f, nullptr, io.Fonts->GetGlyphRangesCyrillic());
-        }
-        if (FileSystem::FileExists("Resources/Fonts/Roboto/Roboto-Regular.ttf"))
-        {
-            io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto/Roboto-Bold.ttf", 17.0f, nullptr, io.Fonts->GetGlyphRangesCyrillic());
-        }
-
-        // Key mapping handled by ImGui_ImplGlfw backend in ImGui 1.87+
-
         style.WindowMenuButtonPosition = ImGuiDir_None;
         style.ColorButtonPosition = ImGuiDir_Left;
+    }
 
-        style.FrameRounding = 2.5f;
-        style.FrameBorderSize = 1.0f;
-        style.IndentSpacing = 11.0f;
+    // Crowny editor skin — single-amber-accent dark theme.
+    // Tokens, paddings, and color slots correspond 1:1 to the design handoff spec.
+    void ImGuiLayer::ApplyCrownyDarkTheme()
+    {
+        ImGuiStyle& s = ImGui::GetStyle();
 
-        auto& colors = ImGui::GetStyle().Colors;
+        // spacing & sizing
+        s.WindowPadding     = ImVec2(10, 10);
+        s.FramePadding      = ImVec2(6,  4);
+        s.ItemSpacing       = ImVec2(6,  5);
+        s.ItemInnerSpacing  = ImVec2(4,  4);
+        s.IndentSpacing     = 14.0f;
+        s.ScrollbarSize     = 10.0f;
+        s.GrabMinSize       = 8.0f;
 
-        // Headers
-        colors[ImGuiCol_Header] = ImGui::ColorConvertU32ToFloat4(IM_COL32(47, 47, 47, 255));
-        colors[ImGuiCol_HeaderHovered] = ImGui::ColorConvertU32ToFloat4(IM_COL32(47, 47, 47, 255));
-        colors[ImGuiCol_HeaderActive] = ImGui::ColorConvertU32ToFloat4(IM_COL32(47, 47, 47, 255));
+        // border widths
+        s.WindowBorderSize        = 0.0f;
+        s.ChildBorderSize         = 0.0f;
+        s.FrameBorderSize         = 1.0f;
+        s.TabBorderSize           = 0.0f;
+        s.PopupBorderSize         = 1.0f;
+        s.SeparatorTextBorderSize = 1.0f;
 
-        // Buttons
-        colors[ImGuiCol_Button] = ImGui::ColorConvertU32ToFloat4(IM_COL32(56, 56, 56, 200));
-        colors[ImGuiCol_ButtonHovered] = ImGui::ColorConvertU32ToFloat4(IM_COL32(70, 70, 70, 255));
-        colors[ImGuiCol_ButtonActive] = ImGui::ColorConvertU32ToFloat4(IM_COL32(56, 56, 56, 150));
+        // corner radii
+        s.WindowRounding    = 0.0f;
+        s.ChildRounding     = 0.0f;
+        s.FrameRounding     = 3.0f;
+        s.ScrollbarRounding = 2.0f;
+        s.GrabRounding      = 2.0f;
+        s.TabRounding       = 3.0f;
+        s.PopupRounding     = 3.0f;
 
-        // Frame BG
-        colors[ImGuiCol_FrameBg] = ImGui::ColorConvertU32ToFloat4(IM_COL32(15, 15, 15, 255));
-        colors[ImGuiCol_FrameBgHovered] = ImGui::ColorConvertU32ToFloat4(IM_COL32(15, 15, 15, 255));
-        colors[ImGuiCol_FrameBgActive] = ImGui::ColorConvertU32ToFloat4(IM_COL32(15, 15, 15, 255));
+        // alignment
+        s.WindowTitleAlign    = ImVec2(0.00f, 0.50f);
+        s.ButtonTextAlign     = ImVec2(0.50f, 0.50f);
+        s.SelectableTextAlign = ImVec2(0.00f, 0.50f);
 
-        // Tabs
-        colors[ImGuiCol_Tab] = ImGui::ColorConvertU32ToFloat4(IM_COL32(21, 21, 21, 255));
-        colors[ImGuiCol_TabHovered] = ImGui::ColorConvertU32ToFloat4(IM_COL32(255, 225, 135, 30));
-        colors[ImGuiCol_TabActive] = ImGui::ColorConvertU32ToFloat4(IM_COL32(255, 225, 135, 60));
-        colors[ImGuiCol_TabUnfocused] = ImGui::ColorConvertU32ToFloat4(IM_COL32(21, 21, 21, 255));
-        colors[ImGuiCol_TabUnfocusedActive] = colors[ImGuiCol_TabHovered];
-
-        // Title
-        colors[ImGuiCol_TitleBg] = ImGui::ColorConvertU32ToFloat4(IM_COL32(21, 21, 21, 255));
-        colors[ImGuiCol_TitleBgActive] = ImGui::ColorConvertU32ToFloat4(IM_COL32(21, 21, 21, 255));
-        colors[ImGuiCol_TitleBgCollapsed] = ImVec4{ 0.15f, 0.1505f, 0.151f, 1.0f };
-
-        // Resize Grip
-        colors[ImGuiCol_ResizeGrip] = ImVec4(0.91f, 0.91f, 0.91f, 0.25f);
-        colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.81f, 0.81f, 0.81f, 0.67f);
-        colors[ImGuiCol_ResizeGripActive] = ImVec4(0.46f, 0.46f, 0.46f, 0.95f);
-
-        // Scrollbar
-        colors[ImGuiCol_ScrollbarBg] = ImVec4(0.02f, 0.02f, 0.02f, 0.53f);
-        colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.31f, 0.31f, 0.31f, 1.0f);
-        colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.41f, 0.41f, 0.41f, 1.0f);
-        colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.51f, 0.51f, 0.51f, 1.0f);
-
-        // Check Mark
-        colors[ImGuiCol_CheckMark] = ImGui::ColorConvertU32ToFloat4(IM_COL32(200, 200, 200, 255));
-
-        // Slider
-        colors[ImGuiCol_SliderGrab] = ImVec4(0.51f, 0.51f, 0.51f, 0.7f);
-        colors[ImGuiCol_SliderGrabActive] = ImVec4(0.66f, 0.66f, 0.66f, 1.0f);
-
-        // Text
-        colors[ImGuiCol_Text] = ImGui::ColorConvertU32ToFloat4(IM_COL32(192, 192, 192, 255));
-
-        // Checkbox
-        colors[ImGuiCol_CheckMark] = ImGui::ColorConvertU32ToFloat4(IM_COL32(192, 192, 192, 255));
-
-        // Separator
-        colors[ImGuiCol_Separator] = ImGui::ColorConvertU32ToFloat4(IM_COL32(26, 26, 26, 255));
-        colors[ImGuiCol_SeparatorActive] = ImGui::ColorConvertU32ToFloat4(IM_COL32(39, 185, 242, 255));
-        colors[ImGuiCol_SeparatorHovered] = ImGui::ColorConvertU32ToFloat4(IM_COL32(39, 185, 242, 150));
-
-        // Window Background
-        colors[ImGuiCol_WindowBg] = ImGui::ColorConvertU32ToFloat4(IM_COL32(21, 21, 21, 255));
-        colors[ImGuiCol_ChildBg] = ImGui::ColorConvertU32ToFloat4(IM_COL32(36, 36, 36, 255));
-        colors[ImGuiCol_PopupBg] = ImGui::ColorConvertU32ToFloat4(IM_COL32(63, 70, 77, 255));
-        colors[ImGuiCol_Border] = ImGui::ColorConvertU32ToFloat4(IM_COL32(26, 26, 26, 255));
-
-        // Tables
-        colors[ImGuiCol_TableHeaderBg] = ImGui::ColorConvertU32ToFloat4(IM_COL32(47, 47, 47, 255));
-        colors[ImGuiCol_TableBorderLight] = ImGui::ColorConvertU32ToFloat4(IM_COL32(26, 26, 26, 255));
-
-        // Menubar
-        colors[ImGuiCol_MenuBarBg] = ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f };
-        // colors[ImGuiCol_WindowBg] = ImVec4(0.15f, 0.15f, 0.15f, style.Colors[ImGuiCol_WindowBg].w);
-
-        //========================================================
-        /// Style
-        style.FrameRounding = 2.5f;
-        style.FrameBorderSize = 1.0f;
-        style.IndentSpacing = 11.0f;
+        ImVec4* const c = s.Colors;
+        c[ImGuiCol_Text]                  = ImVec4(0.910f, 0.867f, 0.816f, 1.00f);
+        c[ImGuiCol_TextDisabled]          = ImVec4(0.290f, 0.251f, 0.227f, 1.00f);
+        c[ImGuiCol_WindowBg]              = ImVec4(0.102f, 0.090f, 0.078f, 1.00f);
+        c[ImGuiCol_ChildBg]               = ImVec4(0.102f, 0.090f, 0.078f, 1.00f);
+        c[ImGuiCol_PopupBg]               = ImVec4(0.133f, 0.118f, 0.102f, 1.00f);
+        c[ImGuiCol_Border]                = ImVec4(0.173f, 0.149f, 0.133f, 1.00f);
+        c[ImGuiCol_BorderShadow]          = ImVec4(0.00f,  0.00f,  0.00f,  0.00f);
+        c[ImGuiCol_FrameBg]               = ImVec4(0.133f, 0.118f, 0.102f, 1.00f);
+        c[ImGuiCol_FrameBgHovered]        = ImVec4(0.180f, 0.157f, 0.125f, 1.00f);
+        c[ImGuiCol_FrameBgActive]         = ImVec4(0.227f, 0.196f, 0.157f, 1.00f);
+        c[ImGuiCol_TitleBg]               = ImVec4(0.133f, 0.118f, 0.102f, 1.00f);
+        c[ImGuiCol_TitleBgActive]         = ImVec4(0.133f, 0.118f, 0.102f, 1.00f);
+        c[ImGuiCol_TitleBgCollapsed]      = ImVec4(0.102f, 0.090f, 0.078f, 1.00f);
+        c[ImGuiCol_MenuBarBg]             = ImVec4(0.102f, 0.090f, 0.078f, 1.00f);
+        c[ImGuiCol_ScrollbarBg]           = ImVec4(0.102f, 0.090f, 0.078f, 1.00f);
+        c[ImGuiCol_ScrollbarGrab]         = ImVec4(0.180f, 0.157f, 0.125f, 1.00f);
+        c[ImGuiCol_ScrollbarGrabHovered]  = ImVec4(0.227f, 0.196f, 0.157f, 1.00f);
+        c[ImGuiCol_ScrollbarGrabActive]   = ImVec4(0.769f, 0.482f, 0.188f, 1.00f);
+        c[ImGuiCol_CheckMark]             = ImVec4(0.769f, 0.482f, 0.188f, 1.00f);
+        c[ImGuiCol_SliderGrab]            = ImVec4(0.769f, 0.482f, 0.188f, 1.00f);
+        c[ImGuiCol_SliderGrabActive]      = ImVec4(0.843f, 0.541f, 0.227f, 1.00f);
+        c[ImGuiCol_Button]                = ImVec4(0.769f, 0.482f, 0.188f, 1.00f);
+        c[ImGuiCol_ButtonHovered]         = ImVec4(0.843f, 0.541f, 0.227f, 1.00f);
+        c[ImGuiCol_ButtonActive]          = ImVec4(0.690f, 0.420f, 0.157f, 1.00f);
+        c[ImGuiCol_Header]                = ImVec4(0.133f, 0.118f, 0.102f, 1.00f);
+        c[ImGuiCol_HeaderHovered]         = ImVec4(0.180f, 0.157f, 0.125f, 1.00f);
+        c[ImGuiCol_HeaderActive]          = ImVec4(0.227f, 0.196f, 0.157f, 1.00f);
+        c[ImGuiCol_Separator]             = ImVec4(0.173f, 0.149f, 0.133f, 1.00f);
+        c[ImGuiCol_SeparatorHovered]      = ImVec4(0.769f, 0.482f, 0.188f, 0.78f);
+        c[ImGuiCol_SeparatorActive]       = ImVec4(0.769f, 0.482f, 0.188f, 1.00f);
+        c[ImGuiCol_ResizeGrip]            = ImVec4(0.00f,  0.00f,  0.00f,  0.00f);
+        c[ImGuiCol_ResizeGripHovered]     = ImVec4(0.769f, 0.482f, 0.188f, 0.50f);
+        c[ImGuiCol_ResizeGripActive]      = ImVec4(0.769f, 0.482f, 0.188f, 0.80f);
+        c[ImGuiCol_Tab]                   = ImVec4(0.133f, 0.118f, 0.102f, 1.00f);
+        c[ImGuiCol_TabHovered]            = ImVec4(0.180f, 0.157f, 0.125f, 1.00f);
+        c[ImGuiCol_TabSelected]           = ImVec4(0.102f, 0.090f, 0.078f, 1.00f);
+        // Engine has no SubmitWindowTab hook to draw a manual underline, so use
+        // ImGui's built-in overline slot for the active-tab accent indicator.
+        c[ImGuiCol_TabSelectedOverline]   = ImVec4(0.769f, 0.482f, 0.188f, 1.00f);
+        c[ImGuiCol_TabDimmed]             = ImVec4(0.133f, 0.118f, 0.102f, 1.00f);
+        c[ImGuiCol_TabDimmedSelected]     = ImVec4(0.102f, 0.090f, 0.078f, 1.00f);
+        c[ImGuiCol_DockingPreview]        = ImVec4(0.769f, 0.482f, 0.188f, 0.40f);
+        c[ImGuiCol_DockingEmptyBg]        = ImVec4(0.078f, 0.067f, 0.058f, 1.00f);
+        c[ImGuiCol_PlotLines]             = ImVec4(0.541f, 0.490f, 0.447f, 1.00f);
+        c[ImGuiCol_PlotLinesHovered]      = ImVec4(0.769f, 0.482f, 0.188f, 1.00f);
+        c[ImGuiCol_PlotHistogram]         = ImVec4(0.769f, 0.482f, 0.188f, 1.00f);
+        c[ImGuiCol_TableHeaderBg]         = ImVec4(0.133f, 0.118f, 0.102f, 1.00f);
+        c[ImGuiCol_TableBorderLight]      = ImVec4(0.173f, 0.149f, 0.133f, 1.00f);
+        c[ImGuiCol_TextSelectedBg]        = ImVec4(0.769f, 0.482f, 0.188f, 0.35f);
+        c[ImGuiCol_DragDropTarget]        = ImVec4(0.769f, 0.482f, 0.188f, 0.90f);
+        c[ImGuiCol_NavCursor]             = ImVec4(0.769f, 0.482f, 0.188f, 1.00f);
+        c[ImGuiCol_ModalWindowDimBg]      = ImVec4(0.00f,  0.00f,  0.00f,  0.55f);
     }
 
     void ImGuiLayer::OnDetach()
@@ -143,7 +153,7 @@ namespace Crowny
     {
         if (m_BlockEvents)
         {
-            ImGuiIO& io = ImGui::GetIO();
+            const ImGuiIO& io = ImGui::GetIO();
             e.Handled |= e.IsInCategory(EventCategoryMouse) & io.WantCaptureMouse;
             // Allow Ctrl+key shortcuts (Ctrl+Z, Ctrl+Y, Ctrl+S, …) to reach the
             // EditorLayer even when an ImGui panel (e.g. the node editor) has keyboard
@@ -171,10 +181,10 @@ namespace Crowny
     String ImGuiLayer::SaveLayout()
     {
         ImGuiIO& io = ImGui::GetIO();
-        const char* oldIni = io.IniFilename;
+        const char* const oldIni = io.IniFilename;
         io.IniFilename = nullptr;
         size_t size;
-        const char* data = ImGui::SaveIniSettingsToMemory(&size);
+        const char* const data = ImGui::SaveIniSettingsToMemory(&size);
         String layout(data, size);
         io.IniFilename = oldIni;
         return layout;

@@ -134,8 +134,8 @@ namespace Crowny
         {
             if (nodeMap.find(id) == nodeMap.end())
             {
-                auto pos = node->GetEditorPosition();
-                auto visualNode = flow.addNode<VisualNode>(ImVec2(pos.x, pos.y), node.get(), graph.get());
+                const auto pos = node->GetEditorPosition();
+                const auto visualNode = flow.addNode<VisualNode>(ImVec2(pos.x, pos.y), node.get(), graph.get());
                 nodeMap[id] = visualNode;
             }
         }
@@ -162,19 +162,19 @@ namespace Crowny
         {
             if (auto link = weakLink.lock())
             {
-                ImFlow::Pin* left = link->left();
-                ImFlow::Pin* right = link->right();
+                ImFlow::Pin* const left = link->left();
+                ImFlow::Pin* const right = link->right();
 
-                auto leftNode = static_cast<VisualNode*>(left->getParent());
-                auto rightNode = static_cast<VisualNode*>(right->getParent());
+                auto* const leftNode = static_cast<VisualNode*>(left->getParent());
+                auto* const rightNode = static_cast<VisualNode*>(right->getParent());
 
-                Node* outCore = leftNode ? leftNode->GetCoreNode() : nullptr;
-                Node* inCore = rightNode ? rightNode->GetCoreNode() : nullptr;
+                Node* const outCore = leftNode ? leftNode->GetCoreNode() : nullptr;
+                Node* const inCore = rightNode ? rightNode->GetCoreNode() : nullptr;
 
                 if (outCore && inCore)
                 {
-                    Pin* outPin = outCore->FindOutputPin(left->getName());
-                    Pin* inPin = inCore->FindInputPin(right->getName());
+                    Pin* const outPin = outCore->FindOutputPin(left->getName());
+                    Pin* const inPin = inCore->FindInputPin(right->getName());
 
                     if (outPin && inPin)
                     {
@@ -199,20 +199,20 @@ namespace Crowny
         // 2. Add visual links that exist in core but not in visual
         for (const auto& conn : graph->GetConnections())
         {
-            auto outNodeIt = nodeMap.find(conn.OutputNodeID);
-            auto inNodeIt = nodeMap.find(conn.InputNodeID);
+            const auto outNodeIt = nodeMap.find(conn.OutputNodeID);
+            const auto inNodeIt = nodeMap.find(conn.InputNodeID);
             if (outNodeIt != nodeMap.end() && inNodeIt != nodeMap.end())
             {
-                Node* outCore = graph->GetNode(conn.OutputNodeID);
-                Node* inCore = graph->GetNode(conn.InputNodeID);
+                Node* const outCore = graph->GetNode(conn.OutputNodeID);
+                Node* const inCore = graph->GetNode(conn.InputNodeID);
                 if (outCore && inCore)
                 {
-                    Pin* outPin = outCore->FindPinByID(conn.OutputPinID);
-                    Pin* inPin = inCore->FindPinByID(conn.InputPinID);
+                    Pin* const outPin = outCore->FindPinByID(conn.OutputPinID);
+                    Pin* const inPin = inCore->FindPinByID(conn.InputPinID);
                     if (outPin && inPin)
                     {
-                        ImFlow::Pin* visOutPin = outNodeIt->second->outPin(outPin->GetName().c_str());
-                        ImFlow::Pin* visInPin = inNodeIt->second->inPin(inPin->GetName().c_str());
+                        ImFlow::Pin* const visOutPin = outNodeIt->second->outPin(outPin->GetName().c_str());
+                        ImFlow::Pin* const visInPin = inNodeIt->second->inPin(inPin->GetName().c_str());
 
                         if (visOutPin && visInPin)
                         {
@@ -235,7 +235,7 @@ namespace Crowny
             Node* coreNode = graph->GetNode(id);
             if (coreNode)
             {
-                auto pos = visualNode->getPos();
+                const auto pos = visualNode->getPos();
                 coreNode->SetEditorPosition(glm::vec2(pos.x, pos.y));
             }
         }
@@ -259,19 +259,19 @@ namespace Crowny
         {
             if (auto link = weakLink.lock())
             {
-                ImFlow::Pin* left = link->left();
-                ImFlow::Pin* right = link->right();
+                ImFlow::Pin* const left = link->left();
+                ImFlow::Pin* const right = link->right();
 
-                auto leftNode = static_cast<VisualNode*>(left->getParent());
-                auto rightNode = static_cast<VisualNode*>(right->getParent());
+                auto* const leftNode = static_cast<VisualNode*>(left->getParent());
+                auto* const rightNode = static_cast<VisualNode*>(right->getParent());
 
-                Node* outCore = leftNode ? leftNode->GetCoreNode() : nullptr;
-                Node* inCore = rightNode ? rightNode->GetCoreNode() : nullptr;
+                Node* const outCore = leftNode ? leftNode->GetCoreNode() : nullptr;
+                Node* const inCore = rightNode ? rightNode->GetCoreNode() : nullptr;
 
                 if (outCore && inCore)
                 {
-                    Pin* outPin = outCore->FindOutputPin(left->getName());
-                    Pin* inPin = inCore->FindInputPin(right->getName());
+                    Pin* const outPin = outCore->FindOutputPin(left->getName());
+                    Pin* const inPin = inCore->FindInputPin(right->getName());
 
                     if (outPin && inPin)
                     {
@@ -287,7 +287,7 @@ namespace Crowny
 
                         if (!exists)
                         {
-                            auto action = CreateRef<NodesConnectedAction>(graph, outPin->GetID(), inPin->GetID());
+                            const auto action = CreateRef<NodesConnectedAction>(graph, outPin->GetID(), inPin->GetID());
                             UndoRedo::Get().RegisterAction(action);
                             graph->ConnectByPinID(outPin->GetID(), inPin->GetID());
                         }
@@ -305,17 +305,17 @@ namespace Crowny
             {
                 if (auto link = weakLink.lock())
                 {
-                    auto leftNode = static_cast<VisualNode*>(link->left()->getParent());
-                    auto rightNode = static_cast<VisualNode*>(link->right()->getParent());
+                    auto* const leftNode = static_cast<VisualNode*>(link->left()->getParent());
+                    auto* const rightNode = static_cast<VisualNode*>(link->right()->getParent());
 
                     if (leftNode && rightNode)
                     {
-                        Node* outCore = leftNode->GetCoreNode();
-                        Node* inCore = rightNode->GetCoreNode();
+                        Node* const outCore = leftNode->GetCoreNode();
+                        Node* const inCore = rightNode->GetCoreNode();
                         if (outCore && inCore)
                         {
-                            Pin* outPin = outCore->FindOutputPin(link->left()->getName());
-                            Pin* inPin = inCore->FindInputPin(link->right()->getName());
+                            Pin* const outPin = outCore->FindOutputPin(link->left()->getName());
+                            Pin* const inPin = inCore->FindInputPin(link->right()->getName());
 
                             if (outPin && inPin && outPin->GetID() == conn.OutputPinID && inPin->GetID() == conn.InputPinID)
                             {
@@ -338,7 +338,7 @@ namespace Crowny
             {
                 if (conn.ID == connId)
                 {
-                    auto action = CreateRef<NodesDisconnectedAction>(graph, conn.OutputPinID, conn.InputPinID);
+                    const auto action = CreateRef<NodesDisconnectedAction>(graph, conn.OutputPinID, conn.InputPinID);
                     UndoRedo::Get().RegisterAction(action);
                     graph->Disconnect(connId);
                     break;
@@ -375,11 +375,11 @@ namespace Crowny
                         if (node)
                         {
                             // Place node at the mouse position in grid space
-                            auto mousePos = ImGui::GetMousePos();
-                            auto gridPos = m_Impl->Flow.getPos();
+                            const auto mousePos = ImGui::GetMousePos();
+                            const auto gridPos = m_Impl->Flow.getPos();
                             node->SetEditorPosition(glm::vec2(mousePos.x - gridPos.x, mousePos.y - gridPos.y));
 
-                            auto action = CreateRef<NodeAddedAction>(graph, node);
+                            const auto action = CreateRef<NodeAddedAction>(graph, node);
                             UndoRedo::Get().RegisterAction(action);
                             graph->AddNode(node);
                             m_NeedsSync = true;

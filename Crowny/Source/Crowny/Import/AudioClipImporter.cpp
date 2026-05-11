@@ -24,12 +24,12 @@ namespace Crowny
 
     Ref<Asset> AudioClipImporter::Import(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
-        Ref<const AudioClipImportOptions> audioImportOptions = StaticRefCast<const AudioClipImportOptions>(importOptions);
+        const Ref<const AudioClipImportOptions> audioImportOptions = StaticRefCast<const AudioClipImportOptions>(importOptions);
         AudioDataInfo info;
         uint32_t bytesPerSample;
         uint32_t bufferSize;
         Ref<MemoryDataStream> sampleStream;
-        Ref<DataStream> stream = FileSystem::OpenFile(filepath);
+        const Ref<DataStream> stream = FileSystem::OpenFile(filepath);
         String ext = filepath.extension().string();
         ext = ext.substr(1, ext.size() - 1); // remove .
         Ref<AudioDecoder> reader;
@@ -51,9 +51,9 @@ namespace Crowny
         reader->Read(sampleStream->Data(), info.NumSamples);
         if (audioImportOptions->Is3D && info.NumChannels > 1) // Convert to mono
         {
-            uint32_t numSamplesPerChannel = info.NumSamples / info.NumChannels;
-            uint32_t monoBufferSize = numSamplesPerChannel * bytesPerSample;
-            Ref<MemoryDataStream> monoStream = CreateRef<MemoryDataStream>(monoBufferSize);
+            const uint32_t numSamplesPerChannel = info.NumSamples / info.NumChannels;
+            const uint32_t monoBufferSize = numSamplesPerChannel * bytesPerSample;
+            const Ref<MemoryDataStream> monoStream = CreateRef<MemoryDataStream>(monoBufferSize);
 
             AudioUtils::ConvertToMono(sampleStream->Data(), monoStream->Data(), info.BitDepth, numSamplesPerChannel, info.NumChannels);
 
@@ -65,8 +65,8 @@ namespace Crowny
 
         if (audioImportOptions->BitDepth != info.BitDepth)
         {
-            uint32_t outBufferSize = info.NumSamples * (audioImportOptions->BitDepth / 8);
-            auto outStream = CreateRef<MemoryDataStream>(outBufferSize);
+            const uint32_t outBufferSize = info.NumSamples * (audioImportOptions->BitDepth / 8);
+            const auto outStream = CreateRef<MemoryDataStream>(outBufferSize);
             AudioUtils::ConvertBitDepth(sampleStream->Data(), info.BitDepth, outStream->Data(), audioImportOptions->BitDepth, info.NumSamples);
             info.BitDepth = audioImportOptions->BitDepth;
             sampleStream = outStream;
@@ -82,10 +82,11 @@ namespace Crowny
         clipDesc.Frequency = info.SampleRate;
         clipDesc.Is3D = audioImportOptions->Is3D;
         clipDesc.ReadMode = audioImportOptions->ReadMode;
-        Ref<AudioClip> clip = AudioClip::Create(sampleStream, bufferSize, info.NumSamples, clipDesc);
+        const Ref<AudioClip> clip = AudioClip::Create(sampleStream, bufferSize, info.NumSamples, clipDesc);
         CW_ENGINE_INFO(filepath);
-        CW_ENGINE_INFO(filepath.filename().string());
-        clip->SetName(filepath.filename().string());
+        const String clipFilename = filepath.filename().string();
+        CW_ENGINE_INFO(clipFilename);
+        clip->SetName(clipFilename);
         return clip;
     }
 

@@ -131,7 +131,7 @@ namespace Crowny
 
         void AddChild(Entity entity);
         Entity GetChild(uint32_t index) const;
-        bool IsChildOf(Entity other, bool directOnly = false);
+        bool IsChildOf(Entity other, bool directOnly = false) const;
         const Vector<Entity>& GetChildren() const;
         Vector<Entity>& GetChildren();
         uint32_t GetChildCount() const;

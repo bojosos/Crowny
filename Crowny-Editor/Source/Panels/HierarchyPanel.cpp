@@ -133,9 +133,9 @@ namespace Crowny
 
     void HierarchyPanel::RenderEntityRow(Entity entity, bool hasChildren)
     {
-        auto& tc = entity.GetComponent<TagComponent>();
-        auto& rc = entity.GetComponent<RelationshipComponent>();
-        String name = tc.Tag.empty() ? "Entity" : tc.Tag.c_str();
+        const auto& tc = entity.GetComponent<TagComponent>();
+        const auto& rc = entity.GetComponent<RelationshipComponent>();
+        const String name = tc.Tag.empty() ? "Entity" : tc.Tag.c_str();
 
         ImGuiTreeNodeFlags selected = (m_SelectedItems.find(entity) != m_SelectedItems.end()) ? ImGuiTreeNodeFlags_Selected : 0;
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowOverlap;
@@ -181,6 +181,17 @@ namespace Crowny
 
         if (isPrefabInstance)
             ImGui::PopStyleColor();
+
+        // Selected-row accent indicator: 2px amber column on the left edge.
+        if (selected)
+        {
+            const ImVec2 rowMin = ImGui::GetItemRectMin();
+            const ImVec2 rowMax = ImGui::GetItemRectMax();
+            ImDrawList* drawList = ImGui::GetWindowDrawList();
+            // Anchor the stripe to the table column's left edge so nesting indent doesn't shift it.
+            float leftX = ImGui::GetCurrentTable() ? ImGui::GetCurrentTable()->WorkRect.Min.x : rowMin.x;
+            drawList->AddRectFilled(ImVec2(leftX, rowMin.y), ImVec2(leftX + 2.0f, rowMax.y), UI::Colors::Accent);
+        }
 
         // Drag source
         if (ImGui::BeginDragDropSource())
@@ -248,7 +259,7 @@ namespace Crowny
         if (!e.IsValid())
             return;
 
-        auto& rc = e.GetComponent<RelationshipComponent>();
+        const auto& rc = e.GetComponent<RelationshipComponent>();
 
         ImGui::AlignTextToFramePadding();
         ImGui::PushID((int32_t)e.GetHandle());
@@ -295,8 +306,8 @@ namespace Crowny
             return;
 
         // Skip the root entity itself from results, but search its children
-        auto& rc = e.GetComponent<RelationshipComponent>();
-        Entity root = gSceneManager->GetActiveScene()->GetRootEntity();
+        const auto& rc = e.GetComponent<RelationshipComponent>();
+        const Entity root = gSceneManager->GetActiveScene()->GetRootEntity();
         if (e != root && MatchesSearchFilter(e))
             results.push_back(e);
 
@@ -307,7 +318,7 @@ namespace Crowny
     String HierarchyPanel::BuildParentPath(Entity e) const
     {
         String path;
-        Entity root = gSceneManager->GetActiveScene()->GetRootEntity();
+        const Entity root = gSceneManager->GetActiveScene()->GetRootEntity();
         Entity parent = e.GetParent();
         while (parent && parent != root)
         {
@@ -330,8 +341,8 @@ namespace Crowny
             if (!entity.IsValid())
                 continue;
 
-            String name = entity.GetName().empty() ? "Entity" : entity.GetName();
-            String parentPath = BuildParentPath(entity);
+            const String name = entity.GetName().empty() ? "Entity" : entity.GetName();
+            const String parentPath = BuildParentPath(entity);
 
             ImGui::PushID((int32_t)entity.GetHandle());
 
@@ -425,7 +436,7 @@ namespace Crowny
 
         if (m_Focused && s_SelectedEntity && !ImGui::GetIO().WantCaptureKeyboard)
         {
-            bool ctrl = Input::IsKeyPressed(Key::LeftControl);
+            const bool ctrl = Input::IsKeyPressed(Key::LeftControl);
 
             if (ctrl && Input::IsKeyDown(Key::D)) // Duplicate all selected entities
             {

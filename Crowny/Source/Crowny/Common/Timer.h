@@ -10,18 +10,18 @@ namespace Crowny
     public:
         Timer() { m_StartTime = std::chrono::steady_clock::now(); }
 
-        uint64_t ElapsedMicros()
+        uint64_t ElapsedMicros() const
         {
 
-            auto endTime = std::chrono::steady_clock::now();
-            auto elapsed = std::chrono::time_point_cast<std::chrono::microseconds>(endTime).time_since_epoch() -
+            const auto endTime = std::chrono::steady_clock::now();
+            const auto elapsed = std::chrono::time_point_cast<std::chrono::microseconds>(endTime).time_since_epoch() -
                            std::chrono::time_point_cast<std::chrono::microseconds>(m_StartTime).time_since_epoch();
             return elapsed.count();
         }
 
-        float ElapsedMillis() { return ElapsedMicros() / 1000.0f; }
+        float ElapsedMillis() const { return ElapsedMicros() / 1000.0f; }
 
-        float ElapsedSeconds() { return ElapsedMicros() / 1000000.0f; }
+        float ElapsedSeconds() const { return ElapsedMicros() / 1000000.0f; }
 
         void Reset() { m_StartTime = std::chrono::steady_clock::now(); }
 

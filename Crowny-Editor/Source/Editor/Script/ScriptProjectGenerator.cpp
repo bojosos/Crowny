@@ -132,7 +132,7 @@ EndProject)";
         StringStream projectPlatformsStream;
         for (const CodeProjectData& project : data.Projects)
         {
-            String guid = GetProjectGUID(project.Name);
+            const String guid = GetProjectGUID(project.Name);
             projectEntriesStream << fmt::format(ProjectEntryTemplate, project.Name, project.Name + ".csproj", guid);
             projectPlatformsStream << fmt::format(ProjectPlatformTemplate, guid);
         }
@@ -165,7 +165,7 @@ EndProject)";
 
         for (const ScriptProjectReference& assemblyRef : projectData.AssemblyReferences)
         {
-            String refName = assemblyRef.Name;
+            const String refName = assemblyRef.Name;
             if (assemblyRef.Filepath.empty())
                 tempStream << fmt::format(ReferenceEntryTemplate, refName);
             else
@@ -178,8 +178,8 @@ EndProject)";
 
         for (const ScriptProjectReference& projectRef : projectData.ProjectReferences)
         {
-            String refName = projectRef.Name;
-            String projectGUID = GetProjectGUID(projectRef.Name);
+            const String refName = projectRef.Name;
+            const String projectGUID = GetProjectGUID(projectRef.Name);
             tempStream << fmt::format(ReferenceProjectEntryTemplate, refName, projectGUID);
         }
 
@@ -192,7 +192,7 @@ EndProject)";
         const String defines = tempStream.str();
         const String projectGUID = GetProjectGUID(projectData.Name);
 
-        String langVersion = "9.0";
+        const String langVersion = "9.0";
         return fmt::format(ProjectTemplate, versionData[projectVersion], langVersion, projectGUID, projectData.Name, defines, refEntries,
                            projectRefEntries, scriptEntries, nonScriptEntries);
     }

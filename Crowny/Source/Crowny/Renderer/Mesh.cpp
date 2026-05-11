@@ -26,7 +26,7 @@ namespace Crowny
         const uint32_t offset = m_Layout.GetOffset(attribute);
         const uint32_t elementSize = m_Layout.GetElementSize(attribute);
         const uint32_t stride = m_Layout.GetStride();
-        uint32_t indexBufferOffset = GetIndexBufferSize();
+        const uint32_t indexBufferOffset = GetIndexBufferSize();
 
         uint8_t* dst = m_Data + indexBufferOffset + offset;
         uint8_t* src = (uint8_t*)data;
@@ -50,7 +50,7 @@ namespace Crowny
         const uint32_t offset = m_Layout.GetOffset(attribute);
         const uint32_t elementSize = m_Layout.GetElementSize(attribute);
         const uint32_t stride = m_Layout.GetStride();
-        uint32_t indexBufferOffset = GetIndexBufferSize();
+        const uint32_t indexBufferOffset = GetIndexBufferSize();
 
         uint8_t* src = m_Data + indexBufferOffset + offset;
         uint8_t* dst = (uint8_t*)data;
@@ -144,14 +144,14 @@ namespace Crowny
     Vector<glm::vec2> MeshData::GetUVs(uint32_t channel) const
     {
         Vector<glm::vec2> result(m_NumVertices);
-        VertexAttribute attr = GetTexCoordAttribute(channel);
+        const VertexAttribute attr = GetTexCoordAttribute(channel);
         const_cast<MeshData*>(this)->GetVertexData(attr, result.data(), sizeof(glm::vec2) * m_NumVertices);
         return result;
     }
 
     void MeshData::SetUVs(uint32_t channel, const Vector<glm::vec2>& uvs)
     {
-        VertexAttribute attr = GetTexCoordAttribute(channel);
+        const VertexAttribute attr = GetTexCoordAttribute(channel);
         SetVertexData(attr, uvs.data(), sizeof(glm::vec2) * (uint32_t)uvs.size());
     }
 
@@ -206,7 +206,7 @@ namespace Crowny
             if (element.Attribute != VertexAttribute::Position)
                 continue;
             uint8_t* data = GetElementData(element);
-            uint32_t stride = m_Layout.GetStride();
+            const uint32_t stride = m_Layout.GetStride();
             if (m_NumVertices > 0)
             {
                 glm::vec3 firstPos = *(glm::vec3*)data;
@@ -311,10 +311,10 @@ namespace Crowny
                 return;
             }
 
-            uint32_t idxSize = m_IndexBuffer->GetIndexType() == IndexType::Index_16 ? sizeof(uint16_t) : sizeof(uint32_t);
+            const uint32_t idxSize = m_IndexBuffer->GetIndexType() == IndexType::Index_16 ? sizeof(uint16_t) : sizeof(uint32_t);
             uint8_t* indicies = data->GetIndexData<uint8_t>();
-            uint32_t indexCountToCopy = std::min(m_NumIndices, data->GetIndexCount());
-            uint32_t indiciesSize = indexCountToCopy * idxSize;
+            const uint32_t indexCountToCopy = std::min(m_NumIndices, data->GetIndexCount());
+            const uint32_t indiciesSize = indexCountToCopy * idxSize;
             if (indiciesSize > data->GetIndexBufferSize())
             {
                 CW_ENGINE_ERROR("Not enough memory for index buffer");
@@ -326,16 +326,16 @@ namespace Crowny
         if (m_VertexBuffer)
         {
             const BufferLayout& layout = m_Layout;
-            uint32_t vertexSize = layout.GetStride();
-            uint32_t dataVertexSize = data->GetBufferLayout().GetStride();
+            const uint32_t vertexSize = layout.GetStride();
+            const uint32_t dataVertexSize = data->GetBufferLayout().GetStride();
             if (vertexSize != dataVertexSize)
             {
                 CW_ENGINE_ERROR("Mismatched layouts");
                 return;
             }
 
-            uint32_t vertexCountToCopy = data->GetVertexCount();
-            uint32_t bufferSize = m_VertexBuffer->GetLayout()->GetStride() * vertexCountToCopy;
+            const uint32_t vertexCountToCopy = data->GetVertexCount();
+            const uint32_t bufferSize = m_VertexBuffer->GetLayout()->GetStride() * vertexCountToCopy;
             if (bufferSize > m_VertexBuffer->GetBufferSize()) // TODO: Remove the 0 check when buffers are good
             {
                 CW_ENGINE_ERROR("Not enough buffer");
@@ -380,7 +380,7 @@ namespace Crowny
             totalVertexCount += meshData->GetVertexCount();
             totalIndexCount += meshData->GetIndexCount();
         }
-        BufferLayout combinedVertexLayout = meshes[0]->GetBufferLayout();
+        const BufferLayout combinedVertexLayout = meshes[0]->GetBufferLayout();
         for (const auto& meshData : meshes)
         {
             const auto& meshAttributes = meshData->GetBufferLayout().GetElements();
@@ -402,13 +402,13 @@ namespace Crowny
         if (totalVertexCount > 65535)
             combinedIndexType = IndexType::Index_32;
 
-        Ref<MeshData> combinedMeshData = MeshData::Create(totalVertexCount, totalIndexCount, meshes[0]->GetBufferLayout(), combinedIndexType);
+        const Ref<MeshData> combinedMeshData = MeshData::Create(totalVertexCount, totalIndexCount, meshes[0]->GetBufferLayout(), combinedIndexType);
         uint32_t vertexOffset = 0;
         uint32_t indexOffset = 0;
         for (const auto& meshData : meshes)
         {
-            uint32_t numIndices = meshData->GetIndexCount();
-            Vector<uint32_t> srcIndices = meshData->GetIndices();
+            const uint32_t numIndices = meshData->GetIndexCount();
+            const Vector<uint32_t> srcIndices = meshData->GetIndices();
             if (combinedIndexType == IndexType::Index_32)
             {
                 uint32_t* dst = combinedMeshData->GetIndexData<uint32_t>() + indexOffset;
@@ -444,15 +444,15 @@ namespace Crowny
         {
             for (const BufferElement& element : combinedVertexLayout)
             {
-                uint32_t dstVertexStride = meshes[0]->GetBufferLayout().GetStride();
+                const uint32_t dstVertexStride = meshes[0]->GetBufferLayout().GetStride();
                 uint8_t* dstData = combinedMeshData->GetElementData(element);
                 dstData += vertexOffset * dstVertexStride;
-                uint32_t srcVertexCount = meshData->GetVertexCount();
-                uint32_t vertexSize = element.Size;
+                const uint32_t srcVertexCount = meshData->GetVertexCount();
+                const uint32_t vertexSize = element.Size;
                 // if (meshData->GetBufferLayout().HasElement(element.Attribute))
                 if (true)
                 {
-                    uint32_t srcVertexStride = meshData->GetBufferLayout().GetStride();
+                    const uint32_t srcVertexStride = meshData->GetBufferLayout().GetStride();
                     uint8_t* srcData = meshData->GetElementData(element);
 
                     for (uint32_t i = 0; i < srcVertexCount; i++)
@@ -531,9 +531,9 @@ namespace Crowny
     {
         CW_ENGINE_ASSERT(m_CPUMeshData != nullptr, "No CPU mesh data for normal calculation");
 
-        Vector<glm::vec3> positions = m_CPUMeshData->GetPositions();
-        Vector<uint32_t> indices = m_CPUMeshData->GetIndices();
-        uint32_t vertexCount = m_CPUMeshData->GetVertexCount();
+        const Vector<glm::vec3> positions = m_CPUMeshData->GetPositions();
+        const Vector<uint32_t> indices = m_CPUMeshData->GetIndices();
+        const uint32_t vertexCount = m_CPUMeshData->GetVertexCount();
 
         Vector<glm::vec3> normals(vertexCount, glm::vec3(0.0f));
 
@@ -579,11 +579,11 @@ namespace Crowny
             return;
         }
 
-        Vector<glm::vec3> positions = m_CPUMeshData->GetPositions();
-        Vector<glm::vec3> normals = m_CPUMeshData->GetNormals();
-        Vector<glm::vec2> uvs = m_CPUMeshData->GetUVs(0);
-        Vector<uint32_t> indices = m_CPUMeshData->GetIndices();
-        uint32_t vertexCount = m_CPUMeshData->GetVertexCount();
+        const Vector<glm::vec3> positions = m_CPUMeshData->GetPositions();
+        const Vector<glm::vec3> normals = m_CPUMeshData->GetNormals();
+        const Vector<glm::vec2> uvs = m_CPUMeshData->GetUVs(0);
+        const Vector<uint32_t> indices = m_CPUMeshData->GetIndices();
+        const uint32_t vertexCount = m_CPUMeshData->GetVertexCount();
 
         Vector<glm::vec3> tangents(vertexCount, glm::vec3(0.0f));
         Vector<glm::vec3> bitangents(vertexCount, glm::vec3(0.0f));
@@ -679,7 +679,7 @@ namespace Crowny
 
     Ref<MeshData> Mesh::AllocBuffer() const
     {
-        Ref<MeshData> meshData = CreateRef<MeshData>(m_NumVertices, m_NumIndices, m_Layout, m_IndexType);
+        const Ref<MeshData> meshData = CreateRef<MeshData>(m_NumVertices, m_NumIndices, m_Layout, m_IndexType);
 
         return meshData;
     }
@@ -689,9 +689,7 @@ namespace Crowny
         if (desc.Data)
             return Ref<Mesh>(new Mesh(desc.Data, desc.SubMeshes, desc.Usage, desc.Topology, desc.Morph));
 
-        const Vector<SubMesh> subMeshes = desc.SubMeshes.empty()
-            ? Vector<SubMesh>{ SubMesh(0, desc.IndexCount, desc.Topology) }
-            : desc.SubMeshes;
+        const Vector<SubMesh> subMeshes = desc.SubMeshes.empty() ? Vector<SubMesh>{ SubMesh(0, desc.IndexCount, desc.Topology) } : desc.SubMeshes;
         return Ref<Mesh>(new Mesh(subMeshes, desc.VertexCount, desc.IndexCount, desc.Layout, desc.Usage, desc.Topology, desc.IdxType, desc.Morph));
     }
 

@@ -93,7 +93,7 @@ namespace Crowny
                 indexType = (mesh->mNumFaces < (uint32_t)std::numeric_limits<short>::max()) ? IndexType::Index_16 : IndexType::Index_32;
             else
                 indexType = meshImportOptions->IndexFormat == MeshIndexFormat::Index16 ? IndexType::Index_16 : IndexType::Index_32;
-            Ref<MeshData> meshData = MeshData::Create(vertexCount, indexCount, bufferLayout, indexType);
+            const Ref<MeshData> meshData = MeshData::Create(vertexCount, indexCount, bufferLayout, indexType);
             meshData->SetVertexData(VertexAttribute::Position, mesh->mVertices, vertexCount * sizeof(glm::vec3));
             // For now only triangles are supported even though we don't always specify the Triangulate flag. In the
             // future the primitives should be sorted by their primitive type using the import flag and multiple
@@ -168,7 +168,7 @@ namespace Crowny
                 finalMorphs = CreateRef<MeshMorph>(Vector<FullMorph>{ std::move(fullMorph) }, 1);
             }
 
-            Ref<Mesh> mesh = Mesh::Create({meshes[0], meshImportOptions->CpuCached ? MeshUsage::CpuCached : MeshUsage::Static,
+            const Ref<Mesh> mesh = Mesh::Create({meshes[0], meshImportOptions->CpuCached ? MeshUsage::CpuCached : MeshUsage::Static,
                                           DrawMode::TRIANGLE_LIST, finalMorphs});
             mesh->SetName(meshName);
             return mesh;
@@ -180,7 +180,7 @@ namespace Crowny
         meshDesc.Data = combinedMeshData;
         meshDesc.Usage = meshImportOptions->CpuCached ? MeshUsage::CpuCached : MeshUsage::Static;
         meshDesc.SubMeshes = outSubMeshes;
-        Ref<Mesh> mesh = Mesh::Create(meshDesc);
+        const Ref<Mesh> mesh = Mesh::Create(meshDesc);
         mesh->SetName(meshName);
         return mesh;
     }
@@ -284,8 +284,8 @@ namespace Crowny
                         morphKeys.push_back(morphKey);
                     }
                 }
-                AnimationCurve<float> morphCurve(morphKeys);
-                Ref<AnimationClip> animationClip = AnimationClip::Create(morphCurve);
+                const AnimationCurve<float> morphCurve(morphKeys);
+                const Ref<AnimationClip> animationClip = AnimationClip::Create(morphCurve);
                 animationClip->SetName(anim->mName.C_Str());
                 clips.push_back(animationClip);
             }
@@ -328,7 +328,7 @@ namespace Crowny
     static Vector<Ref<Asset>> ImportMaterials(const aiScene* scene)
     {
         Vector<Ref<Asset>> assets;
-        AssetHandle<Shader> pbriblHandle = gAssetManager->Load<Shader>(PBRIBL_SHADER_PATH);
+        const AssetHandle<Shader> pbriblHandle = gAssetManager->Load<Shader>(PBRIBL_SHADER_PATH);
 
         // static Ref<Shader> pbriblShader = Importer::Get().Import<Shader>("Resources/Shaders/Pbribl.glsl");
         // static const AssetHandle<Shader> pbriblHandle = static_asset_cast<Shader>(gAssetManager->CreateAssetHandle(pbriblShader));
@@ -337,7 +337,7 @@ namespace Crowny
             const aiMesh* aiMesh = scene->mMeshes[i];
             const aiMaterial* meshMaterial = scene->mMaterials[aiMesh->mMaterialIndex];
 
-            Ref<Material> material = Material::Create(pbriblHandle);
+            const Ref<Material> material = Material::Create(pbriblHandle);
             material->SetName(meshMaterial->GetName().C_Str());
 
             assets.push_back(ImportTexture(meshMaterial, material, aiTextureType_DIFFUSE, "albedoMap"));
@@ -377,14 +377,14 @@ namespace Crowny
 
     Vector<Ref<Asset>> MeshImporter::ImportAll(const Path& path, Ref<const ImportOptions> importOptions)
     {
-        Ref<const MeshImportOptions> meshImportOptions = StaticRefCast<const MeshImportOptions>(importOptions);
+        const Ref<const MeshImportOptions> meshImportOptions = StaticRefCast<const MeshImportOptions>(importOptions);
 
         const aiScene* scene = ReadAssimpScene(path, meshImportOptions);
         if (!scene)
             return {};
 
         Vector<Ref<Asset>> assets;
-        Ref<Mesh> mesh = ReadMeshData(path.filename().string(), scene, meshImportOptions);
+        const Ref<Mesh> mesh = ReadMeshData(path.filename().string(), scene, meshImportOptions);
         if (!mesh)
             return {};
         assets.push_back(mesh);

@@ -10,7 +10,7 @@ namespace Crowny
     // Helper to check if any property of a component is overridden
     static bool HasAnyOverride(const PrefabComponent& pc, const String& componentName)
     {
-        String prefix = componentName + ".";
+        const String prefix = componentName + ".";
         for (const auto& ovr : pc.Overrides)
         {
             if (ovr.compare(0, prefix.length(), prefix) == 0)

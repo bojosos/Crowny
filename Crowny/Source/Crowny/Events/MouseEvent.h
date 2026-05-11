@@ -11,8 +11,8 @@ namespace Crowny
     public:
         MouseMovedEvent(const float x, const float y) : m_MouseX(x), m_MouseY(y) {}
 
-        float GetX() { return m_MouseX; }
-        float GetY() { return m_MouseY; }
+        float GetX() const { return m_MouseX; }
+        float GetY() const { return m_MouseY; }
 
         String ToString() const override
         {

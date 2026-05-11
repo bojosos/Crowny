@@ -69,8 +69,8 @@ namespace Crowny
             const String& name = entity.GetName();
             ImGui::Text("%s", name.c_str());
             const String uuid = entity.GetUuid().ToString();
-            float uuidLen = ImGui::CalcTextSize(uuid.c_str()).x;
-            float nameLen = ImGui::CalcTextSize(name.c_str()).x;
+            const float uuidLen = ImGui::CalcTextSize(uuid.c_str()).x;
+            const float nameLen = ImGui::CalcTextSize(name.c_str()).x;
             if (ImGui::GetContentRegionAvail().x > uuidLen + 10.0f + nameLen)
             {
                 ImGui::SameLine();
@@ -102,7 +102,7 @@ namespace Crowny
                                  const Vector<Pair<ComponentEditor::ComponentTypeID, ComponentEditor::ComponentInfo>>& orderedInfos)
     {
         // Set up prefab override context if this entity is a prefab instance
-        bool isPrefabInstance = entity.HasComponent<PrefabComponent>();
+        const bool isPrefabInstance = entity.HasComponent<PrefabComponent>();
         PrefabComponent* prefabComp = isPrefabInstance ? &const_cast<Entity&>(entity).GetComponent<PrefabComponent>() : nullptr;
 
         for (auto& [tid, ci] : orderedInfos)
@@ -129,7 +129,7 @@ namespace Crowny
             }
 
             ImGui::PushID(tid);
-            bool isTransform = (tid == entt::type_hash<TransformComponent>::value());
+            const bool isTransform = (tid == entt::type_hash<TransformComponent>::value());
             if (!isTransform)
             {
                 if (ImGui::Button("-"))
@@ -208,7 +208,7 @@ namespace Crowny
                 if (tid == entt::type_hash<MonoScriptComponent>::value())
                     continue;
 
-                bool alreadyAdded = HasComponentByID(registry, entity, tid);
+                const bool alreadyAdded = HasComponentByID(registry, entity, tid);
                 if (alreadyAdded)
                 {
                     ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
@@ -239,7 +239,7 @@ namespace Crowny
             if (!StringUtils::IsSearchMathing(name, s_SearchString))
                 continue;
 
-            bool exists = EntityHasScript(entity, name);
+            const bool exists = EntityHasScript(entity, name);
             if (exists)
             {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
@@ -296,7 +296,7 @@ namespace Crowny
                     if (tid == entt::type_hash<MonoScriptComponent>::value())
                         continue;
 
-                    bool alreadyAdded = HasComponentByID(registry, entity, tid);
+                    const bool alreadyAdded = HasComponentByID(registry, entity, tid);
                     ImGui::PushID(tid);
                     if (alreadyAdded)
                     {
@@ -326,7 +326,7 @@ namespace Crowny
                         if (tid == entt::type_hash<MonoScriptComponent>::value())
                             continue;
 
-                        bool alreadyAdded = HasComponentByID(registry, entity, tid);
+                        const bool alreadyAdded = HasComponentByID(registry, entity, tid);
                         ImGui::PushID(tid);
                         if (alreadyAdded)
                         {
@@ -370,7 +370,7 @@ namespace Crowny
                     if (klass->GetFullName() == ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetFullName())
                         continue;
 
-                    bool exists = EntityHasScript(entity, name);
+                    const bool exists = EntityHasScript(entity, name);
                     ImGui::PushID(name.c_str());
                     if (exists)
                     {

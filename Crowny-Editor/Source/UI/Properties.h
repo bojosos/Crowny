@@ -198,9 +198,8 @@ namespace Crowny
         static bool PropertyInput(const char* label, int8_t& value, int8_t step = 1, int8_t stepFast = 1)
         {
             Pre(label);
-            // ImGuiInputTextFlags flags = s_ReturnAfterDeactivation ? ImGuiInputTextFlags_EnterReturnsTrue : 0;
-            ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
-            bool modified = UI::InputInt8(GenerateID(), &value, step, stepFast, flags);
+            UI::InputInt8(GenerateID(), &value, step, stepFast);
+            bool modified = ImGui::IsItemDeactivatedAfterEdit();
             UndoRedo::Get().OnItemInteract();
             Post();
 
@@ -210,9 +209,8 @@ namespace Crowny
         static bool PropertyInput(const char* label, int32_t& value, int32_t step = 1, int32_t stepFast = 1)
         {
             Pre(label);
-            // ImGuiInputTextFlags flags = s_ReturnAfterDeactivation ? ImGuiInputTextFlags_EnterReturnsTrue : 0;
-            ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
-            bool modified = UI::InputInt32(GenerateID(), &value, step, stepFast, flags);
+            UI::InputInt32(GenerateID(), &value, step, stepFast);
+            bool modified = ImGui::IsItemDeactivatedAfterEdit();
             UndoRedo::Get().OnItemInteract();
             Post();
 
@@ -254,9 +252,8 @@ namespace Crowny
         static bool PropertyInput(const char* label, uint32_t& value, uint32_t step = 1, uint32_t stepFast = 1)
         {
             Pre(label);
-            // ImGuiInputTextFlags flags = s_ReturnAfterDeactivation ? ImGuiInputTextFlags_EnterReturnsTrue : 0;
-            ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
-            bool modified = UI::InputUInt32(GenerateID(), &value, step, stepFast, flags);
+            UI::InputUInt32(GenerateID(), &value, step, stepFast);
+            bool modified = ImGui::IsItemDeactivatedAfterEdit();
             UndoRedo::Get().OnItemInteract();
             Post();
 

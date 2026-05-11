@@ -31,7 +31,7 @@ namespace Crowny
         bool result = false;
         if (searchString.find(" ") != String::npos)
         {
-            Vector<String> searchTerms = SplitString(searchString, " ");
+            const Vector<String> searchTerms = SplitString(searchString, " ");
             for (const auto& searchTerm : searchTerms)
             {
                 if (!searchTerm.empty() && itemSanitized.find(searchTerm) != String::npos)
@@ -59,7 +59,7 @@ namespace Crowny
 
         while ((end <= String::npos))
         {
-            String tok = s.substr(start, end - start);
+            const String tok = s.substr(start, end - start);
             if (!tok.empty())
                 output.push_back(tok);
 
@@ -81,7 +81,7 @@ namespace Crowny
 
         while (end <= String::npos)
         {
-            std::wstring tok = s.substr(start, end - start);
+            const std::wstring tok = s.substr(start, end - start);
             if (!tok.empty())
                 output.push_back(tok);
 

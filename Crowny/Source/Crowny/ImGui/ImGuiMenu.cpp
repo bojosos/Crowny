@@ -45,7 +45,7 @@ namespace Crowny
         if (ImGui::BeginMenu(m_Title.c_str()))
         {
             uint32_t menuIndex = 0, itemIndex = 0;
-            for (auto i : m_Order)
+            for (const auto i : m_Order)
             {
                 if (i)
                     m_Menus[menuIndex++]->Render();
@@ -75,18 +75,18 @@ namespace Crowny
     {
     }
 
-    uint32_t ImGuiMenuItem::GetTotalWidth()
+    uint32_t ImGuiMenuItem::GetTotalWidth() const
     {
         return (uint32_t)(ImGui::CalcTextSize(m_Combination.c_str()).x + 5.0f + ImGui::CalcTextSize(m_Title.c_str()).x);
     }
 
     void ImGuiMenuItem::Render(uint32_t maxWidth)
     {
-        bool clicked = ImGui::MenuItem(m_Title.c_str(), nullptr, m_Shown);
+        const bool clicked = ImGui::MenuItem(m_Title.c_str(), nullptr, m_Shown);
 
         ImGui::SameLine();
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + maxWidth - ImGui::CalcTextSize(m_Combination.c_str()).x - 2 * ImGui::GetStyle().ItemSpacing.x);
-        ImGuiStyle& style = ImGui::GetStyle();
+        const ImGuiStyle& style = ImGui::GetStyle();
         ImGui::PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]);
         ImGui::Text("%s", m_Combination.c_str());
         ImGui::PopStyleColor();

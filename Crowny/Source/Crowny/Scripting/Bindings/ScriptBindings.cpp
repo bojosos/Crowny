@@ -5,6 +5,7 @@
 #include "Crowny/Scripting/Bindings/Assets/ScriptAsset.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptAssetDatabase.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptAudioClip.h"
+#include "Crowny/Scripting/Bindings/Assets/ScriptAudioMixer.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptFont.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptMaterial.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptMesh.h"
@@ -38,6 +39,7 @@ namespace Crowny
         ScriptAsset::InitMetaData();
         ScriptAssetDatabase::InitMetaData();
         ScriptAudioClip::InitMetaData();
+        ScriptAudioMixer::InitMetaData();
         ScriptFont::InitMetaData();
         ScriptMaterial::InitMetaData();
         ScriptMesh::InitMetaData();

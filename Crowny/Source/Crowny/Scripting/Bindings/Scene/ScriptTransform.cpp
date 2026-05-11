@@ -34,19 +34,19 @@ namespace Crowny
 
     void ScriptTransform::Internal_PositionGet(ScriptTransform* thisPtr, glm::vec3* value)
     {
-        Entity entity = thisPtr->GetNativeEntity();
+        const Entity entity = thisPtr->GetNativeEntity();
         *value = entity.GetWorldPosition();
     }
 
     void ScriptTransform::Internal_PositionSet(ScriptTransform* thisPtr, glm::vec3* value)
     {
-        Entity entity = thisPtr->GetNativeEntity();
+        const Entity entity = thisPtr->GetNativeEntity();
         entity.SetWorldPosition(*value);
     }
 
     void ScriptTransform::Internal_LocalPositionGet(ScriptTransform* thisPtr, glm::vec3* value)
     {
-        Entity entity = thisPtr->GetNativeEntity();
+        const Entity entity = thisPtr->GetNativeEntity();
         *value = entity.GetLocalPosition();
     }
 
@@ -58,73 +58,73 @@ namespace Crowny
 
     void ScriptTransform::Internal_LocalEulerRotationGet(ScriptTransform* thisPtr, glm::vec3* value)
     {
-        Entity entity = thisPtr->GetNativeEntity();
+        const Entity entity = thisPtr->GetNativeEntity();
         // *value = entity.GetLocalRotation();
     }
 
     void ScriptTransform::Internal_LocalEulerRotationSet(ScriptTransform* thisPtr, glm::vec3* value)
     {
-        Entity entity = thisPtr->GetNativeEntity();
+        const Entity entity = thisPtr->GetNativeEntity();
         // entity.SetRotation(*value);
     }
 
     void ScriptTransform::Internal_LocalRotationGet(ScriptTransform* thisPtr, glm::quat* value)
     {
-        Entity entity = thisPtr->GetNativeEntity();
+        const Entity entity = thisPtr->GetNativeEntity();
         *value = entity.GetLocalRotation();
     }
 
     void ScriptTransform::Internal_LocalRotationSet(ScriptTransform* thisPtr, glm::quat* value)
     {
-        Entity entity = thisPtr->GetNativeEntity();
+        const Entity entity = thisPtr->GetNativeEntity();
         entity.SetRotation(*value);
     }
 
     void ScriptTransform::Internal_RotationGet(ScriptTransform* thisPtr, glm::quat* value)
     {
-        Entity entity = thisPtr->GetNativeEntity();
+        const Entity entity = thisPtr->GetNativeEntity();
         *value = entity.GetWorldRotation();
     }
 
     void ScriptTransform::Internal_RotationSet(ScriptTransform* thisPtr, glm::quat* value)
     {
-        Entity entity = thisPtr->GetNativeEntity();
+        const Entity entity = thisPtr->GetNativeEntity();
         entity.SetWorldRotation(*value);
     }
 
     void ScriptTransform::Internal_ScaleGet(ScriptTransform* thisPtr, glm::vec3* value)
     {
-        Entity entity = thisPtr->GetNativeEntity();
+        const Entity entity = thisPtr->GetNativeEntity();
         *value = entity.GetWorldScale();
     }
 
     void ScriptTransform::Internal_ScaleSet(ScriptTransform* thisPtr, glm::vec3* value)
     {
-        Entity entity = thisPtr->GetNativeEntity();
+        const Entity entity = thisPtr->GetNativeEntity();
         entity.SetWorldScale(*value);
     }
 
     void ScriptTransform::Internal_LocalScaleGet(ScriptTransform* thisPtr, glm::vec3* value)
     {
-        Entity entity = thisPtr->GetNativeEntity();
+        const Entity entity = thisPtr->GetNativeEntity();
         *value = entity.GetLocalScale();
     }
 
     void ScriptTransform::Internal_LocalScaleSet(ScriptTransform* thisPtr, glm::vec3* value)
     {
-        Entity entity = thisPtr->GetNativeEntity();
+        const Entity entity = thisPtr->GetNativeEntity();
         entity.SetScale(*value);
     }
 
     void ScriptTransform::Internal_GetLocalToWorldMatrix(ScriptTransform* thisPtr, glm::mat4* value)
     {
-        Entity entity = thisPtr->GetNativeEntity();
+        const Entity entity = thisPtr->GetNativeEntity();
         *value = entity.GetWorldMatrix();
     }
 
     void ScriptTransform::Internal_GetWorldToLocalTransform(ScriptTransform* thisPtr, glm::mat4* value)
     {
-        Entity entity = thisPtr->GetNativeEntity();
+        const Entity entity = thisPtr->GetNativeEntity();
         *value = glm::inverse(entity.GetWorldMatrix());
     }
 

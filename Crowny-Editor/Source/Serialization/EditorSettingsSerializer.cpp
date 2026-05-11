@@ -36,7 +36,7 @@ namespace Crowny
         out << YAML::Key << "CodeEditorPath" << YAML::Value << settings->CodeEditorPath.string();
 
         out << YAML::Key << "RecentProjects" << YAML::Value << YAML::BeginSeq;
-        for (RecentProject& proj : settings->RecentProjects)
+        for (const RecentProject& proj : settings->RecentProjects)
         {
             if (proj.ProjectPath.empty())
                 continue;
@@ -99,7 +99,7 @@ namespace Crowny
             editorSettings->ColliderColor = n.as<glm::vec4>(glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
 
         uint32_t idx = 0;
-        for (auto project : node["RecentProjects"])
+        for (const auto& project : node["RecentProjects"])
         {
             editorSettings->RecentProjects[idx].ProjectPath = project["Path"].as<String>();
             editorSettings->RecentProjects[idx++].Timestamp = project["Timestamp"].as<std::time_t>();

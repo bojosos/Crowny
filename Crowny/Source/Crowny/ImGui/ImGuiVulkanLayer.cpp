@@ -27,10 +27,10 @@ namespace Crowny
     void ImGuiVulkanLayer::OnAttach()
     {
         ImGuiLayer::OnAttach();
-        VkDescriptorPoolSize pool_sizes[] = { { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-                                              { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-                                              { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-                                              { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 } };
+        const VkDescriptorPoolSize pool_sizes[] = { { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+                                                   { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+                                                   { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+                                                   { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 } };
 
         VkDescriptorPoolCreateInfo poolCreateInfo{};
         poolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -39,19 +39,19 @@ namespace Crowny
         poolCreateInfo.poolSizeCount = (uint32_t)std::size(pool_sizes);
         poolCreateInfo.pPoolSizes = pool_sizes;
 
-        VkResult result =
+        const VkResult result =
           vkCreateDescriptorPool(gVulkanRenderAPI().GetPresentDevice()->GetLogicalDevice(), &poolCreateInfo, gVulkanAllocator, &m_ImguiPool);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
         Application& app = (*gApplication);
-        GLFWwindow* window = static_cast<GLFWwindow*>(app.GetWindow().GetNativeWindow());
+        GLFWwindow* const window = static_cast<GLFWwindow*>(app.GetWindow().GetNativeWindow());
         ImGui_ImplGlfw_InitForVulkan(window, true);
 
         ImGui_ImplVulkan_InitInfo init_info{};
         init_info.Instance = gVulkanRenderAPI().GetInstance();
         init_info.PhysicalDevice = gVulkanRenderAPI().GetPresentDevice()->GetPhysicalDevice();
         init_info.Device = gVulkanRenderAPI().GetPresentDevice()->GetLogicalDevice();
-        uint32_t numQueues = gVulkanRenderAPI().GetPresentDevice()->GetNumQueues(GRAPHICS_QUEUE);
+        const uint32_t numQueues = gVulkanRenderAPI().GetPresentDevice()->GetNumQueues(GRAPHICS_QUEUE);
         init_info.Queue = gVulkanRenderAPI().GetPresentDevice()->GetQueue(GRAPHICS_QUEUE, numQueues - 1)->GetHandle();
         init_info.DescriptorPool = m_ImguiPool;
         init_info.MinImageCount = static_cast<VulkanRenderWindow*>(gApplication->GetRenderWindow().get())->GetSwapChain()->GetColorSurfacesCount();
@@ -73,7 +73,7 @@ namespace Crowny
         m_RenderPass = VulkanRenderPasses::Get().GetRenderPass(passDesc);
         ImGui_ImplVulkan_Init(&init_info, m_RenderPass->GetVkRenderPass((RenderSurfaceMaskBits)0, (RenderSurfaceMaskBits)0, CLEAR_ALL));
 
-        Ref<VulkanCommandBuffer> cmdBuffer = StaticRefCast<VulkanCommandBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
+        const Ref<VulkanCommandBuffer> cmdBuffer = StaticRefCast<VulkanCommandBuffer>(CommandBuffer::Create(GRAPHICS_QUEUE));
         ImGui_ImplVulkan_CreateFontsTexture(cmdBuffer->GetInternal()->GetHandle());
         gVulkanRenderAPI().SubmitCommandBuffer(cmdBuffer);
         cmdBuffer->GetInternal()->CheckFenceStatus(true);
@@ -112,7 +112,7 @@ namespace Crowny
         vkCmdBuffer->BeginRenderPass();
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkCmdBuffer->GetHandle());
 
-        ImGuiIO& io = ImGui::GetIO();
+        const ImGuiIO& io = ImGui::GetIO();
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             ImGui::UpdatePlatformWindows();

@@ -24,7 +24,7 @@ namespace Crowny
 
     void LayerStack::PopLayer(Layer* layer)
     {
-        auto it = std::find(m_Layers.begin(), m_Layers.begin() + m_LayerInsertIndex, layer);
+        const auto it = std::find(m_Layers.begin(), m_Layers.begin() + m_LayerInsertIndex, layer);
         if (it != m_Layers.begin() + m_LayerInsertIndex)
         {
             layer->OnDetach();
@@ -35,7 +35,7 @@ namespace Crowny
 
     void LayerStack::PopOverlay(Layer* layer)
     {
-        auto it = std::find(m_Layers.begin() + m_LayerInsertIndex, m_Layers.end(), layer);
+        const auto it = std::find(m_Layers.begin() + m_LayerInsertIndex, m_Layers.end(), layer);
         if (it != m_Layers.end())
         {
             layer->OnDetach();

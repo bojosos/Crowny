@@ -1,7 +1,9 @@
 #include "cwpch.h"
 
+#include "Crowny/Audio/AudioBus.h"
 #include "Crowny/Audio/AudioListener.h"
 #include "Crowny/Audio/AudioManager.h"
+#include "Crowny/Audio/AudioMixer.h"
 #include "Crowny/Audio/AudioUtils.h"
 #include "Crowny/Common/StringUtils.h"
 
@@ -19,8 +21,8 @@ namespace Crowny
 
     AudioManager::AudioManager()
     {
-        bool enumerated;
-        if (alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT") != ALC_FALSE)
+        const bool enumerated = (alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT") != ALC_FALSE);
+        if (enumerated)
         {
             const ALCchar* defaultDevice = alcGetString(nullptr, ALC_DEFAULT_ALL_DEVICES_SPECIFIER);
             m_DefaultDevice.Name = defaultDevice;
@@ -42,16 +44,14 @@ namespace Crowny
                 deviceName.push_back(*devices);
                 devices++;
             }
-            enumerated = true;
         }
         else
         {
             m_Devices.push_back({ "" });
-            enumerated = false;
         }
 
         m_ActiveDevice = m_DefaultDevice;
-        String defaultDeviceName = m_DefaultDevice.Name;
+        const String defaultDeviceName = m_DefaultDevice.Name;
         if (enumerated)
             m_Device = alcOpenDevice(defaultDeviceName.c_str());
         else
@@ -59,14 +59,52 @@ namespace Crowny
         if (m_Device == nullptr)
             CW_ENGINE_ERROR("OpenAL device creation failed. Device: {0}", defaultDeviceName);
 
-        m_Context = alcCreateContext(m_Device, nullptr);
+        // Request 4 aux sends per source (OpenAL Soft's typical maximum). If the device does not
+        // support EFX the attribute list is ignored.
+        const ALCint attrs[] = { ALC_MAX_AUXILIARY_SENDS, 4, 0 };
+        m_Context = alcCreateContext(m_Device, attrs);
         if (m_Context)
             alcMakeContextCurrent(m_Context);
+
+        alDopplerFactor(m_DopplerFactor);
+        alSpeedOfSound(m_SpeedOfSound);
+        SetDistanceModel(m_DistanceModel);
+
+        m_EFX.Load(m_Device);
+    }
+
+    void AudioManager::SetDopplerFactor(float factor)
+    {
+        m_DopplerFactor = factor;
+        alDopplerFactor(factor);
+    }
+
+    void AudioManager::SetSpeedOfSound(float speed)
+    {
+        m_SpeedOfSound = speed;
+        alSpeedOfSound(speed);
+    }
+
+    void AudioManager::SetDistanceModel(AudioDistanceModel model)
+    {
+        m_DistanceModel = model;
+        ALenum alModel = AL_INVERSE_DISTANCE_CLAMPED;
+        switch (model)
+        {
+        case AudioDistanceModel::None: alModel = AL_NONE; break;
+        case AudioDistanceModel::Inverse: alModel = AL_INVERSE_DISTANCE; break;
+        case AudioDistanceModel::InverseClamped: alModel = AL_INVERSE_DISTANCE_CLAMPED; break;
+        case AudioDistanceModel::Linear: alModel = AL_LINEAR_DISTANCE; break;
+        case AudioDistanceModel::LinearClamped: alModel = AL_LINEAR_DISTANCE_CLAMPED; break;
+        case AudioDistanceModel::Exponent: alModel = AL_EXPONENT_DISTANCE; break;
+        case AudioDistanceModel::ExponentClamped: alModel = AL_EXPONENT_DISTANCE_CLAMPED; break;
+        }
+        alDistanceModel(alModel);
     }
 
     float AudioManager::GetGlobalSourceProgress(const String& name) const
     {
-        auto iterFind = m_ManualSources.find(name);
+        const auto iterFind = m_ManualSources.find(name);
         if (iterFind != m_ManualSources.end())
         {
             CW_ENGINE_INFO("{0}, {1}", iterFind->second->GetTime(), iterFind->second->GetAudioClip()->GetLength());
@@ -97,7 +135,7 @@ namespace Crowny
     void AudioManager::OnUpdate()
     {
         // Clear sources that are finished playing
-        for (auto kv : m_ManualSources)
+        for (const auto& kv : m_ManualSources)
         {
             if (kv.second->GetState() != AudioSourceState::Stopped)
                 m_TempSources[kv.first] = kv.second;
@@ -174,6 +212,25 @@ namespace Crowny
         m_Device = alcOpenDevice(device.Name.c_str());
         if (m_Device == nullptr)
             CW_ENGINE_ERROR("OpenAL device creation failed. Device: {0}", device.Name);
+
+        const ALCint attrs[] = { ALC_MAX_AUXILIARY_SENDS, 4, 0 };
+        m_Context = alcCreateContext(m_Device, attrs);
+        if (m_Context)
+            alcMakeContextCurrent(m_Context);
+
+        m_EFX.Load(m_Device);
+    }
+
+    void AudioManager::SetActiveMixer(const AssetHandle<AudioMixer>& mixer)
+    {
+        m_ActiveMixer = mixer;
+    }
+
+    Ref<AudioBus> AudioManager::FindBus(const String& name) const
+    {
+        if (!m_ActiveMixer)
+            return nullptr;
+        return m_ActiveMixer->FindBus(name);
     }
 
     bool AudioManager::IsExtSupported(const String& ext) const
@@ -196,37 +253,37 @@ namespace Crowny
             {
                 if (IsExtSupported("AL_EXT_float32"))
                 {
-                    uint32_t bufferSize = info.NumSamples * sizeof(float);
+                    const uint32_t bufferSize = info.NumSamples * sizeof(float);
                     float* sampleBufferFloats = new float[bufferSize];
                     AudioUtils::ConvertToFloat(samples, info.BitDepth, sampleBufferFloats, info.NumSamples);
-                    ALenum format = AudioUtils::GetOpenALFormat(info.NumChannels, info.BitDepth);
+                    const ALenum format = AudioUtils::GetOpenALFormat(info.NumChannels, info.BitDepth);
                     alBufferData(bufferId, format, sampleBufferFloats, bufferSize, info.SampleRate);
                     delete[] sampleBufferFloats;
                 }
                 else
                 {
                     CW_ENGINE_WARN("Audio data will be truncated. OpenAL does not support floats.");
-                    uint32_t bufferSize = info.NumSamples * 2;
+                    const uint32_t bufferSize = info.NumSamples * 2;
                     uint8_t* samples16 = new uint8_t[bufferSize];
                     AudioUtils::ConvertBitDepth(samples, info.BitDepth, samples16, 16, info.NumSamples);
-                    ALenum format = AudioUtils::GetOpenALFormat(info.NumChannels, 16);
+                    const ALenum format = AudioUtils::GetOpenALFormat(info.NumChannels, 16);
                     alBufferData(bufferId, format, samples16, bufferSize, info.SampleRate);
                     delete[] samples16;
                 }
             }
             else if (info.BitDepth == 8)
             {
-                uint32_t bufferSize = info.NumSamples * 2;
+                const uint32_t bufferSize = info.NumSamples * 2;
                 uint8_t* sampleBuffer = new uint8_t[bufferSize];
                 for (uint32_t i = 0; i < info.NumSamples; i++)
                     sampleBuffer[i] = ((int8_t*)samples)[i] + 128;
-                ALenum format = AudioUtils::GetOpenALFormat(info.NumChannels, 16);
+                const ALenum format = AudioUtils::GetOpenALFormat(info.NumChannels, 16);
                 alBufferData(bufferId, format, sampleBuffer, bufferSize, info.SampleRate);
                 delete[] sampleBuffer;
             }
             else
             {
-                ALenum format = AudioUtils::GetOpenALFormat(info.NumChannels, info.BitDepth);
+                const ALenum format = AudioUtils::GetOpenALFormat(info.NumChannels, info.BitDepth);
 
                 std::ofstream out("Test.pcm", std::ios_base::binary);
                 out.write((const char*)samples, info.NumSamples * (info.BitDepth / 8));
@@ -239,26 +296,26 @@ namespace Crowny
         {
             if (info.BitDepth == 24)
             {
-                uint32_t bufferSize = info.NumSamples * sizeof(int32_t);
+                const uint32_t bufferSize = info.NumSamples * sizeof(int32_t);
                 uint8_t* samples32 = new uint8_t[bufferSize];
                 AudioUtils::ConvertBitDepth(samples, info.BitDepth, samples32, 32, info.NumSamples);
-                ALenum format = AudioUtils::GetOpenALFormat(info.NumChannels, 32);
+                const ALenum format = AudioUtils::GetOpenALFormat(info.NumChannels, 32);
                 alBufferData(bufferId, format, samples32, bufferSize, info.SampleRate);
                 delete[] samples32;
             }
             else if (info.BitDepth == 8)
             {
-                uint32_t bufferSize = info.NumSamples * (info.BitDepth / 8);
+                const uint32_t bufferSize = info.NumSamples * (info.BitDepth / 8);
                 uint8_t* sampleBuffer = new uint8_t[bufferSize];
                 for (uint32_t i = 0; i < info.NumSamples; i++)
                     sampleBuffer[i] = ((int8_t*)samples)[i] + 128;
-                ALenum format = AudioUtils::GetOpenALFormat(info.NumChannels, 16);
+                const ALenum format = AudioUtils::GetOpenALFormat(info.NumChannels, 16);
                 alBufferData(bufferId, format, sampleBuffer, bufferSize, info.SampleRate);
                 delete[] sampleBuffer;
             }
             else
             {
-                ALenum format = AudioUtils::GetOpenALFormat(info.NumChannels, info.BitDepth);
+                const ALenum format = AudioUtils::GetOpenALFormat(info.NumChannels, info.BitDepth);
                 alBufferData(bufferId, format, samples, info.NumChannels * (info.BitDepth / 8), info.SampleRate);
             }
         }

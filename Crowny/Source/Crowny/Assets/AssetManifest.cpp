@@ -14,7 +14,7 @@ namespace Crowny
 
     bool AssetManifest::UuidToFilepath(const UUID& uuid, Path& outPath) const
     {
-        auto findIter = m_UuidToFilepath.find(uuid);
+        const auto findIter = m_UuidToFilepath.find(uuid);
         if (findIter != m_UuidToFilepath.end())
         {
             outPath = findIter->second;
@@ -26,7 +26,7 @@ namespace Crowny
 
     bool AssetManifest::FilepathToUuid(const Path& path, UUID& outUuid) const
     {
-        auto findIter = m_FilepathToUuid.find(path);
+        const auto findIter = m_FilepathToUuid.find(path);
         if (findIter != m_FilepathToUuid.end())
         {
             outUuid = findIter->second;
@@ -38,19 +38,19 @@ namespace Crowny
 
     bool AssetManifest::FilepathExists(const Path& path) const
     {
-        auto findIter = m_FilepathToUuid.find(path);
+        const auto findIter = m_FilepathToUuid.find(path);
         return findIter == m_FilepathToUuid.end();
     }
 
     bool AssetManifest::UuidExists(const UUID& uuid) const
     {
-        auto findIter = m_UuidToFilepath.find(uuid);
+        const auto findIter = m_UuidToFilepath.find(uuid);
         return findIter != m_UuidToFilepath.end();
     }
 
     void AssetManifest::RegisterAsset(const UUID& uuid, const Path& path)
     {
-        auto findIter = m_UuidToFilepath.find(uuid);
+        const auto findIter = m_UuidToFilepath.find(uuid);
         if (findIter != m_UuidToFilepath.end())
         {
             if (findIter->second != path)
@@ -62,7 +62,7 @@ namespace Crowny
         }
         else
         {
-            auto findIter2 = m_FilepathToUuid.find(path);
+            const auto findIter2 = m_FilepathToUuid.find(path);
             if (findIter2 != m_FilepathToUuid.end())
                 m_UuidToFilepath.erase(findIter2->second);
 
@@ -74,7 +74,7 @@ namespace Crowny
     void AssetManifest::UnregisterAsset(const UUID& uuid)
     {
         CW_ENGINE_INFO("Unregister");
-        auto findIter = m_UuidToFilepath.find(uuid);
+        const auto findIter = m_UuidToFilepath.find(uuid);
         if (findIter != m_UuidToFilepath.end())
         {
             m_FilepathToUuid.erase(findIter->second);
@@ -88,15 +88,15 @@ namespace Crowny
         if (!relativeTo.empty())
         {
             copy = CreateRef<AssetManifest>(manifest->m_Name);
-            for (auto& entry : manifest->m_FilepathToUuid)
+            for (const auto& entry : manifest->m_FilepathToUuid)
             {
-                Path relativePath = fs::relative(entry.first, relativeTo);
+                const Path relativePath = fs::relative(entry.first, relativeTo);
                 copy->m_FilepathToUuid[relativePath] = entry.second;
             }
 
-            for (auto& entry : manifest->m_UuidToFilepath)
+            for (const auto& entry : manifest->m_UuidToFilepath)
             {
-                Path relativePath = fs::relative(entry.second, relativeTo);
+                const Path relativePath = fs::relative(entry.second, relativeTo);
                 copy->m_UuidToFilepath[entry.first] = relativePath;
             }
         }
@@ -113,15 +113,15 @@ namespace Crowny
             return result;
 
         Ref<AssetManifest> copy = CreateRef<AssetManifest>(result->m_Name);
-        for (auto& entry : result->m_FilepathToUuid)
+        for (const auto& entry : result->m_FilepathToUuid)
         {
-            Path absolutePath = relativeTo / entry.first;
+            const Path absolutePath = relativeTo / entry.first;
             copy->m_FilepathToUuid[absolutePath] = entry.second;
         }
 
-        for (auto& entry : result->m_UuidToFilepath)
+        for (const auto& entry : result->m_UuidToFilepath)
         {
-            Path absolutePath = relativeTo / entry.second;
+            const Path absolutePath = relativeTo / entry.second;
             copy->m_UuidToFilepath[entry.first] = absolutePath;
         }
         return copy;

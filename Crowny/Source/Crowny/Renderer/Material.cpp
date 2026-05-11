@@ -117,7 +117,7 @@ namespace Crowny
 
     void Material::FlushUniformBuffers()
     {
-        for (auto& pass : m_Passes)
+        for (const auto& pass : m_Passes)
             for (const auto& [_, block] : pass.UniformBlocks)
                 block->FlushToGpu();
     }
@@ -133,7 +133,7 @@ namespace Crowny
             return;
         }
         int intVal = value ? 1 : 0; // GLSL bools are 4 bytes
-        for (auto& pass : m_Passes)
+        for (const auto& pass : m_Passes)
         {
             const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
             if (blockIt != pass.UniformBlocks.end())
@@ -152,7 +152,7 @@ namespace Crowny
             CW_ENGINE_WARN("Trying to write the wrong data type {}, expected {}, got float", name, ShaderDataTypeToString(iterFind->second.DataType));
             return;
         }
-        for (auto& pass : m_Passes)
+        for (const auto& pass : m_Passes)
         {
             const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
             if (blockIt != pass.UniformBlocks.end())
@@ -172,7 +172,7 @@ namespace Crowny
                            ShaderDataTypeToString(iterFind->second.DataType));
             return;
         }
-        for (auto& pass : m_Passes)
+        for (const auto& pass : m_Passes)
         {
             const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
             if (blockIt != pass.UniformBlocks.end())
@@ -196,7 +196,7 @@ namespace Crowny
             CW_ENGINE_WARN("Trying to write the wrong data type {}, expected {}, got int", value, ShaderDataTypeToString(iterFind->second.DataType));
             return;
         }
-        for (auto& pass : m_Passes)
+        for (const auto& pass : m_Passes)
         {
             const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
             if (blockIt != pass.UniformBlocks.end())
@@ -215,7 +215,7 @@ namespace Crowny
             CW_ENGINE_WARN("Type mismatch for {}: expected {}, got Int2", name, ShaderDataTypeToString(iterFind->second.DataType));
             return;
         }
-        for (auto& pass : m_Passes)
+        for (const auto& pass : m_Passes)
         {
             const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
             if (blockIt != pass.UniformBlocks.end())
@@ -234,7 +234,7 @@ namespace Crowny
             CW_ENGINE_WARN("Type mismatch for {}: expected {}, got Int3", name, ShaderDataTypeToString(iterFind->second.DataType));
             return;
         }
-        for (auto& pass : m_Passes)
+        for (const auto& pass : m_Passes)
         {
             const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
             if (blockIt != pass.UniformBlocks.end())
@@ -253,7 +253,7 @@ namespace Crowny
             CW_ENGINE_WARN("Type mismatch for {}: expected {}, got Int4", name, ShaderDataTypeToString(iterFind->second.DataType));
             return;
         }
-        for (auto& pass : m_Passes)
+        for (const auto& pass : m_Passes)
         {
             const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
             if (blockIt != pass.UniformBlocks.end())
@@ -272,7 +272,7 @@ namespace Crowny
             CW_ENGINE_WARN("Trying to write the wrong data type {}, expected {}, got color", name, ShaderDataTypeToString(iterFind->second.DataType));
             return;
         }
-        for (auto& pass : m_Passes)
+        for (const auto& pass : m_Passes)
         {
             const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
             if (blockIt != pass.UniformBlocks.end())
@@ -292,7 +292,7 @@ namespace Crowny
                            ShaderDataTypeToString(iterFind->second.DataType));
             return;
         }
-        for (auto& pass : m_Passes)
+        for (const auto& pass : m_Passes)
         {
             const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
             if (blockIt != pass.UniformBlocks.end())
@@ -312,7 +312,7 @@ namespace Crowny
                            ShaderDataTypeToString(iterFind->second.DataType));
             return;
         }
-        for (auto& pass : m_Passes)
+        for (const auto& pass : m_Passes)
         {
             const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
             if (blockIt != pass.UniformBlocks.end())
@@ -331,7 +331,7 @@ namespace Crowny
             CW_ENGINE_WARN("Type mismatch for {}: expected {}, got Mat3", name, ShaderDataTypeToString(iterFind->second.DataType));
             return;
         }
-        for (auto& pass : m_Passes)
+        for (const auto& pass : m_Passes)
         {
             const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
             if (blockIt != pass.UniformBlocks.end())
@@ -343,14 +343,14 @@ namespace Crowny
     void Material::SetTexture(const String& name, const AssetHandle<Texture>& texture)
     {
         m_TextureHandles[name] = texture;
-        for (auto& pass : m_Passes)
+        for (const auto& pass : m_Passes)
             pass.Uniforms->SetTexture(FRAGMENT_SHADER, name, texture.GetInternalPtr());
         ++m_ParamVersion;
     }
 
     void Material::SetTexture(const String& name, const Ref<Texture>& texture)
     {
-        for (auto& pass : m_Passes)
+        for (const auto& pass : m_Passes)
             pass.Uniforms->SetTexture(FRAGMENT_SHADER, name, texture);
         ++m_ParamVersion;
     }
@@ -372,9 +372,9 @@ namespace Crowny
                 {
                     if (!member.DefaultValue.empty())
                     {
-                        for (auto& pass : m_Passes)
+                        for (const auto& pass : m_Passes)
                         {
-                            auto blockIt = pass.UniformBlocks.find(blockName);
+                            const auto blockIt = pass.UniformBlocks.find(blockName);
                             if (blockIt != pass.UniformBlocks.end())
                                 blockIt->second->Write(member.Offset, member.DefaultValue.data(),
                                                        (uint32_t)member.DefaultValue.size());
@@ -400,7 +400,7 @@ namespace Crowny
 
                 if (defaultTex)
                 {
-                    for (auto& pass : m_Passes)
+                    for (const auto& pass : m_Passes)
                         pass.Uniforms->SetTexture(FRAGMENT_SHADER, texName, defaultTex);
                 }
             }
@@ -411,7 +411,7 @@ namespace Crowny
 
     template <typename T> void MaterialParamHandle<T>::Set(const T& value)
     {
-        for (auto& pass : m_Material->m_Passes)
+        for (const auto& pass : m_Material->m_Passes)
         {
             auto blockIt = pass.UniformBlocks.find(m_BufferName);
             if (blockIt != pass.UniformBlocks.end())
@@ -452,14 +452,14 @@ namespace Crowny
     void MaterialTextureHandle::Set(const AssetHandle<Texture>& tex)
     {
         m_Material->m_TextureHandles[m_Name] = tex;
-        for (auto& pass : m_Material->m_Passes)
+        for (const auto& pass : m_Material->m_Passes)
             pass.Uniforms->SetTexture(FRAGMENT_SHADER, m_Name, tex.GetInternalPtr());
         ++m_Material->m_ParamVersion;
     }
 
     void MaterialTextureHandle::Set(const Ref<Texture>& tex)
     {
-        for (auto& pass : m_Material->m_Passes)
+        for (const auto& pass : m_Material->m_Passes)
             pass.Uniforms->SetTexture(FRAGMENT_SHADER, m_Name, tex);
         ++m_Material->m_ParamVersion;
     }

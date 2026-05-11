@@ -54,7 +54,7 @@ namespace Crowny
 
     void ScriptSceneObjectManager::DestroyScriptEntity(ScriptEntity* scriptEntity)
     {
-        uint32_t id = (uint32_t)scriptEntity->GetNativeEntity().GetHandle();
+        const uint32_t id = (uint32_t)scriptEntity->GetNativeEntity().GetHandle();
         m_ScriptEntities.erase(id);
         delete scriptEntity;
     }
@@ -85,7 +85,7 @@ namespace Crowny
             return nullptr;
         ScriptComponentBase* nativeInstance = info->CreateCallback(entity);
         nativeInstance->SetNativeEntity(entity);
-        uint64_t instanceId = component.InstanceId;
+        const uint64_t instanceId = component.InstanceId;
         m_ScriptComponents[instanceId] = nativeInstance;
 
         return nativeInstance;
