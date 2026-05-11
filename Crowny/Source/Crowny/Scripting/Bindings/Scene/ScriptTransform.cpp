@@ -40,7 +40,7 @@ namespace Crowny
 
     void ScriptTransform::Internal_PositionSet(ScriptTransform* thisPtr, glm::vec3* value)
     {
-        const Entity entity = thisPtr->GetNativeEntity();
+        Entity entity = thisPtr->GetNativeEntity();
         entity.SetWorldPosition(*value);
     }
 
@@ -76,7 +76,7 @@ namespace Crowny
 
     void ScriptTransform::Internal_LocalRotationSet(ScriptTransform* thisPtr, glm::quat* value)
     {
-        const Entity entity = thisPtr->GetNativeEntity();
+        Entity entity = thisPtr->GetNativeEntity();
         entity.SetRotation(*value);
     }
 
@@ -88,7 +88,7 @@ namespace Crowny
 
     void ScriptTransform::Internal_RotationSet(ScriptTransform* thisPtr, glm::quat* value)
     {
-        const Entity entity = thisPtr->GetNativeEntity();
+        Entity entity = thisPtr->GetNativeEntity();
         entity.SetWorldRotation(*value);
     }
 
@@ -100,7 +100,7 @@ namespace Crowny
 
     void ScriptTransform::Internal_ScaleSet(ScriptTransform* thisPtr, glm::vec3* value)
     {
-        const Entity entity = thisPtr->GetNativeEntity();
+        Entity entity = thisPtr->GetNativeEntity();
         entity.SetWorldScale(*value);
     }
 
@@ -112,7 +112,7 @@ namespace Crowny
 
     void ScriptTransform::Internal_LocalScaleSet(ScriptTransform* thisPtr, glm::vec3* value)
     {
-        const Entity entity = thisPtr->GetNativeEntity();
+        Entity entity = thisPtr->GetNativeEntity();
         entity.SetScale(*value);
     }
 

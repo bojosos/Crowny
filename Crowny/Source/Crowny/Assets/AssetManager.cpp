@@ -270,7 +270,7 @@ namespace Crowny
         archive(mesh.m_NumVertices);
         archive(mesh.m_DrawMode);
         archive((uint32_t)mesh.m_Usage);
-        const Ref<MeshData> meshData = mesh.AllocBuffer();
+        Ref<MeshData> meshData = mesh.AllocBuffer();
         mesh.ReadData(meshData);
         archive(meshData);
     }

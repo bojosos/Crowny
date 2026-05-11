@@ -422,7 +422,7 @@ namespace Crowny
                         auto end = std::sregex_iterator();
                         for (auto it = begin; it != end; ++it)
                         {
-                            String keyword = (*it)[1].str();
+                            const String keyword = (*it)[1].str();
                             String args = (*it)[2].matched ? (*it)[2].str() : "";
 
                             if (keyword == "color")
@@ -478,7 +478,7 @@ namespace Crowny
 
         shaderc::Compiler compiler;
         shaderc::CompileOptions options;
-        for (auto& kv : defines)
+        for (const auto& kv : defines)
             options.AddMacroDefinition(kv.first, kv.second);
         switch (inputLanguage)
         {
@@ -673,7 +673,7 @@ namespace Crowny
             CW_ENGINE_WARN("#lang directive not found in {0}, assuming shader is in GLSL.", path.string());
 
         String source = rawSource;
-        auto blendState = PreparseBlendState(source);
+        const auto blendState = PreparseBlendState(source);
 
         // Parse variation directives before splitting into passes.
         // Each group is a vector of keyword options. The cartesian product of all groups
@@ -746,8 +746,8 @@ namespace Crowny
                 uint32_t idx = combo;
                 for (const auto& group : variationGroups)
                 {
-                    uint32_t groupSize = (uint32_t)group.size();
-                    uint32_t pick = idx % groupSize;
+                    const uint32_t groupSize = (uint32_t)group.size();
+                    const uint32_t pick = idx % groupSize;
                     idx /= groupSize;
 
                     // For boolean toggle groups (size 2, first is ""), record on/off
@@ -783,7 +783,7 @@ namespace Crowny
         ZoneScopedN("ShaderCompiler::Reflect");
         const spirv_cross::Compiler compiler((uint32_t*)shaderBinaryData.data(), shaderBinaryData.size() / sizeof(uint32_t));
         const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
-        Ref<UniformDesc> uniformDesc = CreateRef<UniformDesc>();
+        const Ref<UniformDesc> uniformDesc = CreateRef<UniformDesc>();
         // Read all uniform buffers in the current stage.
         for (const spirv_cross::Resource& uniform : resources.uniform_buffers)
         {
@@ -994,8 +994,8 @@ namespace Crowny
             {
                 size_t eol = passSource.find_first_of("\r\n", pos);
                 CW_ENGINE_ASSERT(eol != String::npos, "Syntax error");
-                size_t begin = pos + typeTokenLength + 1;
-                String typeString = passSource.substr(begin, eol - begin);
+                const size_t begin = pos + typeTokenLength + 1;
+                const String typeString = passSource.substr(begin, eol - begin);
                 ShaderType shaderType;
                 if (!GetShaderTypeFromString(typeString, shaderType))
                 {

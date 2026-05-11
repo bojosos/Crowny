@@ -182,7 +182,7 @@ namespace Crowny
                 ctx.Setter(listObject);
             }
             ScriptArray tempArray(itemProp->GetReturnType()->GetInternalPtr(), newLength);
-            const uint32_t minSize = std::min(length, newLength);
+            uint32_t minSize = std::min(length, newLength);
             uint32_t start = 0;
 
             void* params[4];
