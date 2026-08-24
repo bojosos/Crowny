@@ -163,7 +163,8 @@ namespace Crowny
     static void SetupCircleBuffers()
     {
         s_Data->CircleBuffer = s_Data->CircleTmpBuffer = new CircleVertex[s_Data->MaxLineVertices];
-        s_Data->CircleVertexBuffer = VertexBuffer::Create({ s_Data->MaxLineVertices * sizeof(CircleVertex), BufferUsage::BU_DYNAMIC_DRAW });
+        s_Data->CircleVertexBuffer = VertexBuffer::Create(
+            { static_cast<uint32_t>(s_Data->MaxLineVertices * sizeof(CircleVertex)), BufferUsage::BU_DYNAMIC_DRAW });
         const Ref<BufferLayout> layout = CreateRef<BufferLayout>(BufferLayout{ { ShaderDataType::Float3, "a_WorldPosition" },
                                                                                { ShaderDataType::Float3, "a_LocalPosition" },
                                                                                { ShaderDataType::Float4, "a_Color" },
@@ -182,7 +183,8 @@ namespace Crowny
     static void SetupTextBuffers()
     {
         s_Data->TextBuffer = s_Data->TextTmpBuffer = new TextVertex[s_Data->MaxTextVertices];
-        s_Data->TextVertexBuffer = VertexBuffer::Create({ s_Data->MaxTextVertices * sizeof(TextVertex), BufferUsage::BU_DYNAMIC_DRAW });
+        s_Data->TextVertexBuffer = VertexBuffer::Create(
+            { static_cast<uint32_t>(s_Data->MaxTextVertices * sizeof(TextVertex)), BufferUsage::BU_DYNAMIC_DRAW });
 
         const Ref<BufferLayout> layout = CreateRef<BufferLayout>(BufferLayout{ { ShaderDataType::Float3, "a_Position" },
                                                                                { ShaderDataType::Float4, "a_Color" },
