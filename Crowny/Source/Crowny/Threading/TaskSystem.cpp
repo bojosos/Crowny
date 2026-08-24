@@ -9,8 +9,6 @@
 namespace Crowny
 {
 
-    static TaskSystem* s_Instance = nullptr;
-
     // --- Task ---
 
     Task::Task(const String& name, std::function<void()> worker, TaskPriority priority, Ref<Task> dependency)
@@ -68,12 +66,11 @@ namespace Crowny
 
     TaskSystem::TaskSystem()
     {
-        s_Instance = this;
-
         const uint32_t numCores = std::thread::hardware_concurrency();
         // Reserve 2 cores: 1 for sim thread, 1 for render thread
         const uint32_t workerCount = numCores > 3 ? numCores - 2 : 1;
 
+        m_TaskQueue.reserve(256);
         m_Workers.reserve(workerCount);
         for (uint32_t i = 0; i < workerCount; i++)
         {
@@ -94,14 +91,6 @@ namespace Crowny
             if (worker.joinable())
                 worker.join();
         }
-
-        s_Instance = nullptr;
-    }
-
-    TaskSystem& TaskSystem::Get()
-    {
-        CW_ENGINE_ASSERT(s_Instance != nullptr);
-        return *s_Instance;
     }
 
     void TaskSystem::Enqueue(std::function<void()> work, TaskPriority priority)

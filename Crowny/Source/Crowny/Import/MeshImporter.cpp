@@ -4,397 +4,971 @@
 
 #include "Crowny/Animation/AnimationClip.h"
 #include "Crowny/Assets/AssetManager.h"
-#include "Crowny/Common//FileSystem.h"
-#include "Crowny/Common/StringUtils.h"
-#include "Crowny/Common/VirtualFileSystem.h"
 #include "Crowny/Import/Importer.h"
 #include "Crowny/RenderAPI/Texture.h"
 #include "Crowny/Renderer/Material.h"
-#include "Crowny/Renderer/Mesh.h"
+#include "Crowny/Renderer/MeshProcessing.h"
 
 #include <assimp/Importer.hpp>
+#include <assimp/config.h>
+#include <assimp/material.h>
 #include <assimp/mesh.h>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 
-static_assert(sizeof(aiVector2D) == sizeof(glm::vec2));
-static_assert(sizeof(aiVector3D) == sizeof(glm::vec3));
-static_assert(sizeof(aiColor3D) == sizeof(glm::vec3));
-static_assert(sizeof(aiColor4D) == sizeof(glm::vec4));
-static_assert(sizeof(ai_real) == sizeof(float));
-
 namespace Crowny
 {
-    static glm::vec3 toGlmVec(const aiVector3D& vec) { return glm::vec3(vec.x, vec.y, vec.z); }
-
-    bool MeshImporter::IsExtensionSupported(const String& ext) const
+    namespace
     {
-        String lower = ext;
-        StringUtils::ToLower(lower);
-        Assimp::Importer importer;
-        return importer.IsExtensionSupported("." + lower);
-    }
-    bool MeshImporter::IsMagicNumSupported(uint8_t* num, uint32_t numSize) const { return false; }
+        constexpr uint32_t MAX_BONE_INFLUENCES = 4;
 
-    template <typename IndexType> static void SetIndexData(const aiMesh* mesh, const Ref<MeshData>& meshData)
-    {
-        Vector<IndexType> indices;
-        indices.reserve(mesh->mNumFaces);
-        for (uint32_t j = 0; j < mesh->mNumFaces; j++)
+        struct VertexBoneData
         {
-            const aiFace& face = mesh->mFaces[j];
-            // TODO: Add winding order control.
-            CW_ENGINE_ASSERT(face.mNumIndices == 3);
-            // CW_ENGINE_INFO("Face: {}, {}, {}", face.mIndices[0], face.mIndices[1], face.mIndices[2]);
-            // CW_ENGINE_INFO("First vertex: X: {}, Y: {}, Z: {}", mesh->mVertices[face.mIndices[0]].x, mesh->mVertices[face.mIndices[0]].y,
-            // mesh->mVertices[face.mIndices[0]].z);
-            indices.push_back((IndexType)face.mIndices[0]);
-            indices.push_back((IndexType)face.mIndices[1]);
-            indices.push_back((IndexType)face.mIndices[2]);
+            glm::vec4 Weights{ 0.0f };
+            glm::ivec4 Indices{ 0 };
+        };
+
+        glm::vec3 ToGlm(const aiVector3D& value) { return { value.x, value.y, value.z }; }
+
+        glm::quat ToGlm(const aiQuaternion& value) { return glm::normalize(glm::quat(value.w, value.x, value.y, value.z)); }
+
+        glm::mat4 ToGlm(const aiMatrix4x4& value)
+        {
+            return { value.a1, value.b1, value.c1, value.d1, value.a2, value.b2, value.c2, value.d2,
+                     value.a3, value.b3, value.c3, value.d3, value.a4, value.b4, value.c4, value.d4 };
         }
-        meshData->SetIndexData<IndexType>(indices.data(), mesh->mNumFaces * 3);
-    }
 
-    static Ref<Mesh> ReadMeshData(const String& meshName, const aiScene* scene, const Ref<const MeshImportOptions>& meshImportOptions)
-    {
-        Vector<Ref<MeshData>> meshes;
-        Vector<Vector<SubMesh>> subMeshes;
-        for (uint32_t i = 0; i < scene->mNumMeshes; i++)
+        Transform ToTransform(const aiMatrix4x4& value, float scaleFactor)
         {
-            const aiMesh* mesh = scene->mMeshes[i];
-            const uint32_t vertexCount = mesh->mNumVertices;
-            const uint32_t indexCount = mesh->mNumFaces * 3;
-            CW_ENGINE_ASSERT(mesh->HasPositions() && mesh->HasFaces());
-
-            BufferLayout bufferLayout = { BufferElement(ShaderDataType::Float3, VertexAttribute::Position) };
-            const bool hasNormals = mesh->HasNormals();
-            if (hasNormals)
-                bufferLayout.AddBufferElement(BufferElement(ShaderDataType::Float3, VertexAttribute::Normal));
-            const bool hasTangents = mesh->HasTangentsAndBitangents();
-            CW_ENGINE_INFO("Normals: {}, tangents: {}, uvs0: {}", hasNormals, hasTangents, mesh->HasTextureCoords(0));
-            if (hasTangents)
-            {
-                bufferLayout.AddBufferElement(BufferElement(ShaderDataType::Float3, VertexAttribute::Tangent));
-                bufferLayout.AddBufferElement(BufferElement(ShaderDataType::Float3, VertexAttribute::Bitangent));
-            }
-            static_assert(AI_MAX_NUMBER_OF_TEXTURECOORDS == 8);
-            for (uint32_t uv = 0; uv < AI_MAX_NUMBER_OF_TEXTURECOORDS; uv++)
-            {
-                if (!mesh->HasTextureCoords(uv))
-                    break;
-                bufferLayout.AddBufferElement(BufferElement(ShaderDataType::Float2, (VertexAttribute)((int)VertexAttribute::TexCoord0 + uv)));
-            }
-            const bool hasVertexColors = mesh->HasVertexColors(0);
-            if (hasVertexColors)
-                bufferLayout.AddBufferElement(BufferElement(ShaderDataType::Float4, VertexAttribute::Color));
-
-            IndexType indexType;
-            if (meshImportOptions->IndexFormat == MeshIndexFormat::Auto)
-                indexType = (mesh->mNumFaces < (uint32_t)std::numeric_limits<short>::max()) ? IndexType::Index_16 : IndexType::Index_32;
-            else
-                indexType = meshImportOptions->IndexFormat == MeshIndexFormat::Index16 ? IndexType::Index_16 : IndexType::Index_32;
-            const Ref<MeshData> meshData = MeshData::Create(vertexCount, indexCount, bufferLayout, indexType);
-            meshData->SetVertexData(VertexAttribute::Position, mesh->mVertices, vertexCount * sizeof(glm::vec3));
-            // For now only triangles are supported even though we don't always specify the Triangulate flag. In the
-            // future the primitives should be sorted by their primitive type using the import flag and multiple
-            // sub-meshes should be created with an index offset, count and draw mode. Also consider removing the
-            // KeepQuads option as assimp might not have a way of triangulating only polygons and keep quads.
-            CW_ENGINE_ASSERT((mesh->mPrimitiveTypes & aiPrimitiveType_TRIANGLE) == aiPrimitiveType_TRIANGLE);
-
-            if (indexType == IndexType::Index_16)
-                SetIndexData<uint16_t>(mesh, meshData);
-            else
-                SetIndexData<uint32_t>(mesh, meshData);
-            if (hasNormals)
-                meshData->SetVertexData(VertexAttribute::Normal, mesh->mNormals, vertexCount * sizeof(glm::vec3));
-            // for (uint32_t i = 0; i < vertexCount; i++)
-            //     CW_ENGINE_INFO("X: {0}, Y: {1}, Z: {2}", mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z);
-            // TODO: This is a color 4 in assimp!!!
-            if (hasVertexColors)
-                meshData->SetVertexData(VertexAttribute::Color, mesh->mColors[0], vertexCount * sizeof(glm::vec4));
-            if (hasTangents)
-            {
-                meshData->SetVertexData(VertexAttribute::Tangent, mesh->mTangents, vertexCount * sizeof(glm::vec3));
-                meshData->SetVertexData(VertexAttribute::Bitangent, mesh->mBitangents, vertexCount * sizeof(glm::vec3));
-            }
-
-            for (uint32_t uv = 0; uv < AI_MAX_NUMBER_OF_TEXTURECOORDS; uv++)
-            {
-                if (!mesh->HasTextureCoords(uv))
-                    break;
-                const VertexAttribute uvAttr = VertexAttribute((int)VertexAttribute::TexCoord0 + uv);
-                Vector<glm::vec2> uvList;
-                uvList.reserve(vertexCount);
-                for (uint32_t j = 0; j < vertexCount; j++)
-                    uvList.push_back(glm::vec2(mesh->mTextureCoords[uv][j].x, mesh->mTextureCoords[uv][j].y));
-                meshData->SetVertexData(uvAttr, uvList.data(), vertexCount * sizeof(glm::vec2));
-            }
-            meshes.push_back(meshData);
+            glm::mat4 matrix = ToGlm(value);
+            matrix[3] = glm::vec4(glm::vec3(matrix[3]) * scaleFactor, matrix[3].w);
+            glm::vec3 position(0.0f);
+            glm::quat rotation(1.0f, 0.0f, 0.0f, 0.0f);
+            glm::vec3 scale(1.0f);
+            if (!Math::DecomposeMatrix(matrix, position, rotation, scale))
+                return Transform();
+            return Transform(position, glm::normalize(rotation), scale);
         }
-        if (meshes.size() == 0)
-        {
-            CW_ENGINE_WARN("Mesh import produced no mesh data: {}", meshName);
-            return nullptr;
-        }
-        CW_ENGINE_INFO("Mesh: {0} vertices, {1} indices", meshes[0]->GetVertexCount(), meshes[0]->GetIndexCount());
-        CW_ENGINE_INFO("Meshes: {0}", meshes.size());
 
-        if (meshes.size() == 1)
+        DrawMode GetDrawMode(const aiMesh& mesh)
         {
-            Ref<MeshMorph> finalMorphs;
-            CW_ENGINE_ASSERT(scene->mNumMeshes == 1);
-            for (uint32_t i = 0; i < scene->mMeshes[0]->mNumAnimMeshes; i++)
+            switch (mesh.mPrimitiveTypes)
             {
-                // TODO: enum aiMorphingMethod...
-                const aiAnimMesh* animMesh = scene->mMeshes[0]->mAnimMeshes[i];
-                if (animMesh->mNumVertices != meshes[0]->GetVertexCount())
+            case aiPrimitiveType_POINT:
+                return DrawMode::POINT_LIST;
+            case aiPrimitiveType_LINE:
+                return DrawMode::LINE_LIST;
+            case aiPrimitiveType_TRIANGLE:
+                return DrawMode::TRIANGLE_LIST;
+            default:
+                return DrawMode::TRIANGLE_LIST;
+            }
+        }
+
+        uint32_t GetExpectedIndicesPerFace(DrawMode drawMode)
+        {
+            switch (drawMode)
+            {
+            case DrawMode::POINT_LIST:
+                return 1;
+            case DrawMode::LINE_LIST:
+                return 2;
+            case DrawMode::TRIANGLE_LIST:
+                return 3;
+            default:
+                return 0;
+            }
+        }
+
+        float GetScaleFactor(const MeshImportOptions& options)
+        {
+            if (std::isfinite(options.ScaleFactor) && glm::abs(options.ScaleFactor) > std::numeric_limits<float>::epsilon())
+                return options.ScaleFactor;
+            CW_ENGINE_WARN("Invalid mesh scale factor {}. Using 1.0.", options.ScaleFactor);
+            return 1.0f;
+        }
+
+        uint32_t ConfigureImporter(Assimp::Importer& importer, const MeshImportOptions& options)
+        {
+            uint32_t flags = aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_SortByPType | aiProcess_FindInvalidData;
+
+            importer.SetPropertyFloat(AI_CONFIG_PP_GSN_MAX_SMOOTHING_ANGLE, glm::clamp(options.SmoothingAngle, 0.0f, 175.0f));
+
+            if (options.Optimize)
+                flags |= aiProcess_OptimizeGraph | aiProcess_OptimizeMeshes | aiProcess_ImproveCacheLocality | aiProcess_RemoveRedundantMaterials;
+            if (options.FlipUVs)
+                flags |= aiProcess_FlipUVs;
+            if (options.FlipWindingOrder)
+                flags |= aiProcess_FlipWindingOrder;
+
+            uint32_t removeComponents = 0;
+            switch (options.NormalsMode)
+            {
+            case NormalsImportMode::Calculate:
+                flags |= aiProcess_DropNormals;
+                flags |= options.SmoothNormals ? aiProcess_GenSmoothNormals : aiProcess_GenNormals;
+                break;
+            case NormalsImportMode::None:
+                removeComponents |= aiComponent_NORMALS;
+                break;
+            default:
+                break;
+            }
+
+            switch (options.TangentsMode)
+            {
+            case NormalsImportMode::Calculate:
+                removeComponents |= aiComponent_TANGENTS_AND_BITANGENTS;
+                flags |= aiProcess_CalcTangentSpace;
+                break;
+            case NormalsImportMode::None:
+                removeComponents |= aiComponent_TANGENTS_AND_BITANGENTS;
+                break;
+            default:
+                break;
+            }
+
+            if (removeComponents != 0)
+            {
+                importer.SetPropertyInteger(AI_CONFIG_PP_RVC_FLAGS, static_cast<int>(removeComponents));
+                flags |= aiProcess_RemoveComponent;
+            }
+
+            if (options.KeepQuads)
+                CW_ENGINE_WARN("KeepQuads is ignored because Crowny has no quad draw topology. Polygons will be triangulated.");
+
+            return flags;
+        }
+
+        const aiScene* ReadScene(Assimp::Importer& importer, const Path& path, const MeshImportOptions& options)
+        {
+            const aiScene* scene = importer.ReadFile(path.string(), ConfigureImporter(importer, options));
+            if (!scene || (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) != 0 || !scene->mRootNode)
+            {
+                CW_ENGINE_WARN("Failed mesh asset loading: Mesh: {}, Error: {}", path, importer.GetErrorString());
+                return nullptr;
+            }
+            return scene;
+        }
+
+        UnorderedMap<String, uint32_t, StringHash, StringEqual> ReadBones(const aiScene& scene, const MeshImportOptions& options,
+                                                                          MeshImportResult& result)
+        {
+            UnorderedMap<String, glm::mat4, StringHash, StringEqual> inverseBindPoses;
+            UnorderedMap<String, const aiNode*, StringHash, StringEqual> nodes;
+            std::function<void(const aiNode*)> mapNodes = [&](const aiNode* node) {
+                nodes.insert_or_assign(node->mName.C_Str(), node);
+                for (uint32_t child = 0; child < node->mNumChildren; child++)
+                    mapNodes(node->mChildren[child]);
+            };
+            mapNodes(scene.mRootNode);
+
+            for (uint32_t meshIndex = 0; meshIndex < scene.mNumMeshes; meshIndex++)
+            {
+                const aiMesh& mesh = *scene.mMeshes[meshIndex];
+                for (uint32_t boneIndex = 0; boneIndex < mesh.mNumBones; boneIndex++)
                 {
-                    CW_ENGINE_ERROR("Invalid blend morph mesh: source vertices {}, morph vertices {}", animMesh->mNumVertices,
-                                    meshes[0]->GetVertexCount());
+                    const aiBone& bone = *mesh.mBones[boneIndex];
+                    const String name = bone.mName.C_Str();
+                    if (inverseBindPoses.find(name) != inverseBindPoses.end())
+                        continue;
+                    glm::mat4 inverseBindPose = ToGlm(bone.mOffsetMatrix);
+                    inverseBindPose[3] = glm::vec4(glm::vec3(inverseBindPose[3]) * GetScaleFactor(options), inverseBindPose[3].w);
+                    inverseBindPoses.emplace(name, inverseBindPose);
+                }
+            }
+
+            UnorderedSet<String, StringHash, StringEqual> requiredNodes;
+            for (const auto& [name, inverseBindPose] : inverseBindPoses)
+            {
+                const auto found = nodes.find(name);
+                if (found == nodes.end())
                     continue;
-                }
-
-                Vector<MorphData> vertexMorphs;
-                const bool hasNormals = scene->mMeshes[0]->HasNormals() && animMesh->HasNormals();
-                for (uint32_t j = 0; j < animMesh->mNumVertices; j++)
+                const aiNode* node = found->second;
+                while (node != nullptr)
                 {
-                    const glm::vec3 vertexDelta = toGlmVec(scene->mMeshes[0]->mVertices[j] - animMesh->mVertices[j]);
-                    const glm::vec3 normalDelta = hasNormals ? toGlmVec(scene->mMeshes[0]->mNormals[j] - animMesh->mNormals[j]) : glm::vec3();
-                    if (glm::length2(vertexDelta) > 1e-5 || glm::length2(normalDelta) > 1e-5)
-                        vertexMorphs.push_back(MorphData{ vertexDelta, normalDelta, j });
+                    requiredNodes.emplace(node->mName.C_Str());
+                    node = node->mParent;
                 }
-                SingleMorph morph(animMesh->mName.C_Str(), animMesh->mWeight, vertexMorphs);
-                FullMorph fullMorph(animMesh->mName.C_Str(), { std::move(morph) });
-                finalMorphs = CreateRef<MeshMorph>(Vector<FullMorph>{ std::move(fullMorph) }, 1);
             }
 
-            const Ref<Mesh> mesh = Mesh::Create({meshes[0], meshImportOptions->CpuCached ? MeshUsage::CpuCached : MeshUsage::Static,
-                                          DrawMode::TRIANGLE_LIST, finalMorphs});
-            mesh->SetName(meshName);
-            return mesh;
-        }
-
-        Vector<SubMesh> outSubMeshes;
-        const Ref<MeshData> combinedMeshData = MeshData::Combine(meshes, subMeshes, outSubMeshes);
-        MeshDesc meshDesc;
-        meshDesc.Data = combinedMeshData;
-        meshDesc.Usage = meshImportOptions->CpuCached ? MeshUsage::CpuCached : MeshUsage::Static;
-        meshDesc.SubMeshes = outSubMeshes;
-        const Ref<Mesh> mesh = Mesh::Create(meshDesc);
-        mesh->SetName(meshName);
-        return mesh;
-    }
-
-    static const aiScene* ReadAssimpScene(const Path& path, const Ref<const MeshImportOptions>& meshImportOptions)
-    {
-        int flags = 0;
-
-        flags |= aiProcess_JoinIdenticalVertices; // Always deduplicate vertices
-
-        if (meshImportOptions->Optimize)
-            flags |= aiProcess_OptimizeGraph | aiProcess_OptimizeMeshes | aiProcess_ImproveCacheLocality | aiProcess_RemoveRedundantMaterials;
-
-        if (meshImportOptions->NormalsMode == NormalsImportMode::Calculate)
-            flags |= meshImportOptions->SmoothNormals ? aiProcess_GenSmoothNormals : aiProcess_GenNormals;
-
-        int removeComponentFlags = 0;
-        if (meshImportOptions->NormalsMode == NormalsImportMode::None)
-            removeComponentFlags |= aiComponent_NORMALS;
-
-        if (meshImportOptions->TangentsMode != NormalsImportMode::None)
-            flags |= aiProcess_CalcTangentSpace;
-        else
-            removeComponentFlags |= aiComponent_TANGENTS_AND_BITANGENTS;
-
-        if (!meshImportOptions->KeepQuads)
-            flags |= aiProcess_Triangulate;
-
-#ifdef CW_DEBUG
-            // This option will do a bunch of optional validation for meshes but is very strict.
-            // flags |= aiProcess_ValidateDataStructure;
-#endif
-        static Assimp::Importer importer;
-        if (meshImportOptions->NormalsMode == NormalsImportMode::Calculate && meshImportOptions->SmoothNormals)
-        {
-            importer.SetPropertyFloat(AI_CONFIG_PP_GSN_MAX_SMOOTHING_ANGLE, meshImportOptions->SmoothingAngle);
-            importer.SetPropertyInteger(AI_CONFIG_PP_RVC_FLAGS, removeComponentFlags);
-        }
-
-        // std::vector<uint8_t> data;
-        // Ref<DataStream> stream = FileSystem::OpenFile(path);
-        // data.resize(stream->Size());
-        // stream->Read(data.data(), data.size());
-        // stream->Close();
-
-        // const aiScene* scene = importer.ReadFileFromMemory(data.data(), data.size(), flags);
-        const aiScene* scene = importer.ReadFile(path.string(), flags);
-        if (!scene || (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) != 0 || !scene->mRootNode)
-        {
-            CW_ENGINE_WARN("Failed mesh asset loading: Mesh: {0}, Error: {1}", path, importer.GetErrorString());
-            return nullptr;
-        }
-        return scene;
-    }
-
-    static Vector<Ref<AnimationClip>> ImportAnimationClips(const aiScene* scene)
-    {
-        Vector<Ref<AnimationClip>> clips;
-        for (uint32_t i = 0; i < scene->mNumAnimations; i++)
-        {
-            const aiAnimation* anim = scene->mAnimations[i];
-            for (uint32_t j = 0; j < anim->mNumMorphMeshChannels; j++)
-            {
-                const aiMeshMorphAnim* morphAnim = anim->mMorphMeshChannels[j];
-                if (morphAnim->mNumKeys < 2)
+            UnorderedMap<String, uint32_t, StringHash, StringEqual> boneIndices;
+            const float scaleFactor = GetScaleFactor(options);
+            std::function<void(const aiNode*, uint32_t)> addHierarchy = [&](const aiNode* node, uint32_t parentIndex) {
+                uint32_t nextParent = parentIndex;
+                const String name = node->mName.C_Str();
+                if (requiredNodes.find(name) != requiredNodes.end())
                 {
-                    CW_ENGINE_ERROR("Cannot import morph animation {}", morphAnim->mName.C_Str());
-                    continue;
+                    const auto inverse = inverseBindPoses.find(name);
+                    MeshImportedBone bone;
+                    bone.Name = name;
+                    bone.ParentIndex = parentIndex;
+                    bone.LocalBindPose = ToTransform(node->mTransformation, scaleFactor);
+                    bone.InverseBindPose = inverse != inverseBindPoses.end() ? inverse->second : glm::mat4(1.0f);
+                    nextParent = static_cast<uint32_t>(result.Bones.size());
+                    result.Bones.push_back(std::move(bone));
+                    boneIndices.emplace(name, nextParent);
                 }
+                for (uint32_t child = 0; child < node->mNumChildren; child++)
+                    addHierarchy(node->mChildren[child], nextParent);
+            };
+            addHierarchy(scene.mRootNode, INVALID_BONE_INDEX);
 
-                const double keyTime = morphAnim->mKeys[1].mTime - morphAnim->mKeys[0].mTime;
-                bool simplify = true;
-                for (uint32_t k = 2; k < morphAnim->mNumKeys; k++)
+            for (const auto& [name, inverseBindPose] : inverseBindPoses)
+            {
+                if (boneIndices.find(name) != boneIndices.end())
+                    continue;
+                const uint32_t index = static_cast<uint32_t>(result.Bones.size());
+                result.Bones.push_back({ name, INVALID_BONE_INDEX, Transform(), inverseBindPose });
+                boneIndices.emplace(name, index);
+                CW_ENGINE_WARN("Bone '{}' has no matching node in the imported hierarchy; treating it as a root bone.", name);
+            }
+
+            Vector<SkeletonBone> bones;
+            bones.reserve(result.Bones.size());
+            for (const MeshImportedBone& imported : result.Bones)
+                bones.push_back({ imported.Name, imported.ParentIndex, imported.LocalBindPose, imported.InverseBindPose });
+            if (!bones.empty())
+            {
+                result.MeshSkeleton = Skeleton::Create(std::move(bones));
+                if (!result.MeshSkeleton->IsValid())
+                    CW_ENGINE_WARN("Imported skeleton hierarchy is invalid.");
+            }
+            return boneIndices;
+        }
+
+        void InsertBoneInfluence(VertexBoneData& vertex, uint32_t boneIndex, float weight)
+        {
+            if (weight <= 0.0f)
+                return;
+
+            for (uint32_t influence = 0; influence < MAX_BONE_INFLUENCES; influence++)
+            {
+                if (weight <= vertex.Weights[influence])
+                    continue;
+
+                for (uint32_t move = MAX_BONE_INFLUENCES - 1; move > influence; move--)
                 {
-                    aiMeshMorphKey& key = morphAnim->mKeys[k];
-                    aiMeshMorphKey& lastKey = morphAnim->mKeys[k - 1];
-                    if (!glm::epsilonEqual(key.mTime - lastKey.mTime, keyTime, 1e-3))
+                    vertex.Weights[move] = vertex.Weights[move - 1];
+                    vertex.Indices[move] = vertex.Indices[move - 1];
+                }
+                vertex.Weights[influence] = weight;
+                vertex.Indices[influence] = static_cast<int32_t>(boneIndex);
+                break;
+            }
+        }
+
+        Vector<VertexBoneData> ReadBoneWeights(const aiMesh& mesh, const UnorderedMap<String, uint32_t, StringHash, StringEqual>& boneIndices)
+        {
+            Vector<VertexBoneData> vertices(mesh.mNumVertices);
+            for (uint32_t boneIndex = 0; boneIndex < mesh.mNumBones; boneIndex++)
+            {
+                const aiBone& bone = *mesh.mBones[boneIndex];
+                const auto globalBone = boneIndices.find(bone.mName.C_Str());
+                if (globalBone == boneIndices.end())
+                    continue;
+
+                for (uint32_t weightIndex = 0; weightIndex < bone.mNumWeights; weightIndex++)
+                {
+                    const aiVertexWeight& influence = bone.mWeights[weightIndex];
+                    if (influence.mVertexId >= mesh.mNumVertices)
                     {
-                        simplify = false;
-                        break;
+                        CW_ENGINE_WARN("Bone '{}' contains an invalid vertex index {}.", bone.mName.C_Str(), influence.mVertexId);
+                        continue;
+                    }
+                    InsertBoneInfluence(vertices[influence.mVertexId], globalBone->second, influence.mWeight);
+                }
+            }
+
+            for (VertexBoneData& vertex : vertices)
+            {
+                const float totalWeight = vertex.Weights.x + vertex.Weights.y + vertex.Weights.z + vertex.Weights.w;
+                if (totalWeight > 0.0f)
+                    vertex.Weights /= totalWeight;
+            }
+            return vertices;
+        }
+
+        bool ReadIndices(const aiMesh& mesh, DrawMode drawMode, Vector<uint32_t>& indices)
+        {
+            const uint32_t indicesPerFace = GetExpectedIndicesPerFace(drawMode);
+            if (indicesPerFace == 0)
+                return false;
+
+            indices.clear();
+            indices.reserve(static_cast<size_t>(mesh.mNumFaces) * indicesPerFace);
+            for (uint32_t faceIndex = 0; faceIndex < mesh.mNumFaces; faceIndex++)
+            {
+                const aiFace& face = mesh.mFaces[faceIndex];
+                if (face.mNumIndices != indicesPerFace)
+                {
+                    CW_ENGINE_WARN("Mesh '{}' has an unsupported face with {} indices after post-processing.", mesh.mName.C_Str(), face.mNumIndices);
+                    return false;
+                }
+                for (uint32_t index = 0; index < face.mNumIndices; index++)
+                {
+                    if (face.mIndices[index] >= mesh.mNumVertices)
+                    {
+                        CW_ENGINE_WARN("Mesh '{}' contains an out-of-range vertex index {}.", mesh.mName.C_Str(), face.mIndices[index]);
+                        return false;
+                    }
+                    indices.push_back(face.mIndices[index]);
+                }
+            }
+            return !indices.empty();
+        }
+
+        Ref<MeshData> ReadMesh(const aiMesh& mesh, const MeshImportOptions& options,
+                               const UnorderedMap<String, uint32_t, StringHash, StringEqual>& boneIndices, DrawMode& drawMode)
+        {
+            if (!mesh.HasPositions() || !mesh.HasFaces() || mesh.mNumVertices == 0)
+            {
+                CW_ENGINE_WARN("Skipping mesh '{}' because it has no readable geometry.", mesh.mName.C_Str());
+                return nullptr;
+            }
+
+            drawMode = GetDrawMode(mesh);
+            Vector<uint32_t> indices;
+            if (!ReadIndices(mesh, drawMode, indices))
+                return nullptr;
+
+            BufferLayout layout = { BufferElement(ShaderDataType::Float3, VertexAttribute::Position) };
+            if (mesh.HasNormals())
+                layout.AddBufferElement(BufferElement(ShaderDataType::Float3, VertexAttribute::Normal));
+            if (mesh.HasTangentsAndBitangents())
+            {
+                layout.AddBufferElement(BufferElement(ShaderDataType::Float3, VertexAttribute::Tangent));
+                layout.AddBufferElement(BufferElement(ShaderDataType::Float3, VertexAttribute::Bitangent));
+            }
+
+            static_assert(AI_MAX_NUMBER_OF_TEXTURECOORDS == 8);
+            for (uint32_t channel = 0; channel < AI_MAX_NUMBER_OF_TEXTURECOORDS; channel++)
+            {
+                if (mesh.HasTextureCoords(channel))
+                    layout.AddBufferElement(BufferElement(ShaderDataType::Float2,
+                                                          static_cast<VertexAttribute>(static_cast<int32_t>(VertexAttribute::TexCoord0) + channel)));
+            }
+
+            const bool hasVertexColors = options.ImportVertexColors && mesh.HasVertexColors(0);
+            if (hasVertexColors)
+                layout.AddBufferElement(BufferElement(ShaderDataType::Float4, VertexAttribute::Color));
+
+            const bool hasBones = options.ImportBones && mesh.HasBones();
+            if (hasBones)
+            {
+                layout.AddBufferElement(BufferElement(ShaderDataType::Float4, VertexAttribute::BlendWeights));
+                layout.AddBufferElement(BufferElement(ShaderDataType::Int4, VertexAttribute::BlendIndices));
+            }
+
+            const bool needs32BitIndices = mesh.mNumVertices > static_cast<uint32_t>(std::numeric_limits<uint16_t>::max()) + 1U;
+            IndexType indexType = IndexType::Index_32;
+            if (options.IndexFormat == MeshIndexFormat::Index16 || options.IndexFormat == MeshIndexFormat::Auto)
+                indexType = needs32BitIndices ? IndexType::Index_32 : IndexType::Index_16;
+            if (options.IndexFormat == MeshIndexFormat::Index16 && needs32BitIndices)
+                CW_ENGINE_WARN("Mesh '{}' exceeds the 16-bit index range. Using 32-bit indices.", mesh.mName.C_Str());
+
+            const Ref<MeshData> data = MeshData::Create(mesh.mNumVertices, static_cast<uint32_t>(indices.size()), layout, indexType);
+
+            Vector<glm::vec3> positions(mesh.mNumVertices);
+            const float scaleFactor = GetScaleFactor(options);
+            for (uint32_t vertex = 0; vertex < mesh.mNumVertices; vertex++)
+                positions[vertex] = ToGlm(mesh.mVertices[vertex]) * scaleFactor;
+            data->SetPositions(positions);
+            data->SetIndices(indices);
+
+            if (mesh.HasNormals())
+            {
+                Vector<glm::vec3> normals(mesh.mNumVertices);
+                for (uint32_t vertex = 0; vertex < mesh.mNumVertices; vertex++)
+                    normals[vertex] = ToGlm(mesh.mNormals[vertex]);
+                data->SetNormals(normals);
+            }
+            if (mesh.HasTangentsAndBitangents())
+            {
+                Vector<glm::vec3> tangents(mesh.mNumVertices);
+                Vector<glm::vec3> bitangents(mesh.mNumVertices);
+                for (uint32_t vertex = 0; vertex < mesh.mNumVertices; vertex++)
+                {
+                    tangents[vertex] = ToGlm(mesh.mTangents[vertex]);
+                    bitangents[vertex] = ToGlm(mesh.mBitangents[vertex]);
+                }
+                data->SetTangents(tangents);
+                data->SetBitangents(bitangents);
+            }
+
+            for (uint32_t channel = 0; channel < AI_MAX_NUMBER_OF_TEXTURECOORDS; channel++)
+            {
+                if (!mesh.HasTextureCoords(channel))
+                    continue;
+
+                Vector<glm::vec2> textureCoordinates(mesh.mNumVertices);
+                for (uint32_t vertex = 0; vertex < mesh.mNumVertices; vertex++)
+                    textureCoordinates[vertex] = { mesh.mTextureCoords[channel][vertex].x, mesh.mTextureCoords[channel][vertex].y };
+                data->SetUVs(channel, textureCoordinates);
+            }
+
+            if (hasVertexColors)
+            {
+                Vector<glm::vec4> colors(mesh.mNumVertices);
+                for (uint32_t vertex = 0; vertex < mesh.mNumVertices; vertex++)
+                {
+                    const aiColor4D& color = mesh.mColors[0][vertex];
+                    colors[vertex] = { color.r, color.g, color.b, color.a };
+                }
+                data->SetColors(colors);
+            }
+
+            if (hasBones)
+            {
+                const Vector<VertexBoneData> boneData = ReadBoneWeights(mesh, boneIndices);
+                Vector<glm::vec4> weights(mesh.mNumVertices);
+                Vector<glm::ivec4> boneIds(mesh.mNumVertices);
+                for (uint32_t vertex = 0; vertex < mesh.mNumVertices; vertex++)
+                {
+                    weights[vertex] = boneData[vertex].Weights;
+                    boneIds[vertex] = boneData[vertex].Indices;
+                }
+                data->SetVertexData(VertexAttribute::BlendWeights, weights.data(), static_cast<uint32_t>(weights.size() * sizeof(glm::vec4)));
+                data->SetVertexData(VertexAttribute::BlendIndices, boneIds.data(), static_cast<uint32_t>(boneIds.size() * sizeof(glm::ivec4)));
+            }
+
+            return data;
+        }
+
+        struct MorphChannelBuilder
+        {
+            String Name;
+            float ShapeWeight = 1.0f;
+            Vector<MorphData> Vertices;
+        };
+
+        void ReadMorphs(const aiMesh& source, uint32_t vertexOffset, float scaleFactor, Vector<MorphChannelBuilder>& morphs,
+                        UnorderedMap<String, uint32_t, StringHash, StringEqual>& morphIndices)
+        {
+            for (uint32_t morphIndex = 0; morphIndex < source.mNumAnimMeshes; morphIndex++)
+            {
+                const aiAnimMesh& target = *source.mAnimMeshes[morphIndex];
+                if (target.mNumVertices != source.mNumVertices || !target.HasPositions())
+                {
+                    CW_ENGINE_WARN("Skipping morph target '{}' because its vertex data does not match mesh '{}'.", target.mName.C_Str(),
+                                   source.mName.C_Str());
+                    continue;
+                }
+
+                Vector<MorphData> changes;
+                const bool hasNormals = source.HasNormals() && target.HasNormals();
+                for (uint32_t vertex = 0; vertex < target.mNumVertices; vertex++)
+                {
+                    const glm::vec3 vertexDelta = ToGlm(target.mVertices[vertex] - source.mVertices[vertex]) * scaleFactor;
+                    const glm::vec3 normalDelta = hasNormals ? ToGlm(target.mNormals[vertex] - source.mNormals[vertex]) : glm::vec3(0.0f);
+                    if (glm::length2(vertexDelta) > 1e-10f || glm::length2(normalDelta) > 1e-10f)
+                        changes.push_back({ vertexDelta, normalDelta, vertexOffset + vertex });
+                }
+
+                String name = target.mName.C_Str();
+                if (name.empty())
+                    name = String(source.mName.C_Str()) + "/Morph_" + std::to_string(morphIndex);
+
+                const auto existing = morphIndices.find(name);
+                if (existing != morphIndices.end())
+                {
+                    auto& vertices = morphs[existing->second].Vertices;
+                    vertices.insert(vertices.end(), std::make_move_iterator(changes.begin()), std::make_move_iterator(changes.end()));
+                    continue;
+                }
+
+                const float shapeWeight = std::isfinite(target.mWeight) && target.mWeight > 0.0f ? target.mWeight : 1.0f;
+                morphIndices.emplace(name, static_cast<uint32_t>(morphs.size()));
+                morphs.push_back({ std::move(name), shapeWeight, std::move(changes) });
+            }
+        }
+
+        MeshImportResult ParseScene(const aiScene& scene, const MeshImportOptions& options)
+        {
+            MeshImportResult result;
+            UnorderedMap<String, uint32_t, StringHash, StringEqual> boneIndices;
+            if (options.ImportBones)
+                boneIndices = ReadBones(scene, options, result);
+
+            Vector<Ref<MeshData>> meshes;
+            Vector<Vector<SubMesh>> meshSubMeshes;
+            Vector<MorphChannelBuilder> morphs;
+            UnorderedMap<String, uint32_t, StringHash, StringEqual> morphIndices;
+            uint32_t vertexOffset = 0;
+
+            meshes.reserve(scene.mNumMeshes);
+            meshSubMeshes.reserve(scene.mNumMeshes);
+            result.MaterialIndices.reserve(scene.mNumMeshes);
+            for (uint32_t meshIndex = 0; meshIndex < scene.mNumMeshes; meshIndex++)
+            {
+                const aiMesh& source = *scene.mMeshes[meshIndex];
+                DrawMode drawMode = DrawMode::TRIANGLE_LIST;
+                Ref<MeshData> mesh = ReadMesh(source, options, boneIndices, drawMode);
+                if (!mesh)
+                    continue;
+
+                if (options.ImportMorphMeshes)
+                    ReadMorphs(source, vertexOffset, GetScaleFactor(options), morphs, morphIndices);
+
+                meshSubMeshes.push_back({ SubMesh(0, mesh->GetIndexCount(), drawMode) });
+                result.MaterialIndices.push_back(source.mMaterialIndex);
+                vertexOffset += mesh->GetVertexCount();
+                meshes.push_back(std::move(mesh));
+            }
+
+            if (meshes.empty())
+                return result;
+
+            if (meshes.size() == 1)
+            {
+                result.Data = meshes.front();
+                result.SubMeshes = meshSubMeshes.front();
+            }
+            else
+            {
+                result.Data = MeshData::Combine(meshes, meshSubMeshes, result.SubMeshes);
+            }
+
+            if (!morphs.empty() && result.Data)
+            {
+                Vector<Ref<MorphChannel>> channels;
+                channels.reserve(morphs.size());
+                for (MorphChannelBuilder& morph : morphs)
+                {
+                    Ref<MorphShape> shape = MorphShape::Create(morph.Name, morph.ShapeWeight, std::move(morph.Vertices));
+                    channels.push_back(MorphChannel::Create(morph.Name, { std::move(shape) }));
+                }
+                result.Morph = MeshMorph::Create(std::move(channels), result.Data->GetVertexCount());
+            }
+
+            return result;
+        }
+
+        const aiMesh* FindAnimatedMesh(const aiScene& scene, StringView channelName)
+        {
+            for (uint32_t meshIndex = 0; meshIndex < scene.mNumMeshes; meshIndex++)
+            {
+                if (StringView(scene.mMeshes[meshIndex]->mName.C_Str()) == channelName)
+                    return scene.mMeshes[meshIndex];
+            }
+
+            std::function<const aiNode*(const aiNode*)> findNode = [&](const aiNode* node) -> const aiNode* {
+                if (StringView(node->mName.C_Str()) == channelName)
+                    return node;
+                for (uint32_t child = 0; child < node->mNumChildren; child++)
+                {
+                    if (const aiNode* found = findNode(node->mChildren[child]))
+                        return found;
+                }
+                return nullptr;
+            };
+            const aiNode* node = findNode(scene.mRootNode);
+            if (node != nullptr && node->mNumMeshes > 0 && node->mMeshes[0] < scene.mNumMeshes)
+                return scene.mMeshes[node->mMeshes[0]];
+            return nullptr;
+        }
+
+        String GetMorphTargetName(const aiScene& scene, StringView channelName, uint32_t targetIndex)
+        {
+            const aiMesh* mesh = FindAnimatedMesh(scene, channelName);
+            if (mesh != nullptr && targetIndex < mesh->mNumAnimMeshes)
+            {
+                String name = mesh->mAnimMeshes[targetIndex]->mName.C_Str();
+                if (!name.empty())
+                    return name;
+            }
+            for (uint32_t meshIndex = 0; meshIndex < scene.mNumMeshes; meshIndex++)
+            {
+                mesh = scene.mMeshes[meshIndex];
+                if (targetIndex >= mesh->mNumAnimMeshes)
+                    continue;
+                String name = mesh->mAnimMeshes[targetIndex]->mName.C_Str();
+                if (!name.empty())
+                    return name;
+            }
+            return String(channelName) + "/Morph_" + std::to_string(targetIndex);
+        }
+
+        template <typename T> AnimationCurve<T> SliceCurve(const AnimationCurve<T>& curve, float start, float end)
+        {
+            if (curve.IsEmpty() || end <= start)
+                return {};
+
+            Vector<KeyFrame<T>> keys;
+            keys.reserve(curve.GetKeyFrameCount() + 2);
+            KeyFrame<T> first;
+            first.Time = 0.0f;
+            first.Value = curve.Evaluate(start, AnimationWrapMode::Clamp);
+            keys.push_back(first);
+            for (const KeyFrame<T>& source : curve.GetKeyFrames())
+            {
+                if (source.Time <= start || source.Time >= end)
+                    continue;
+                KeyFrame<T> key = source;
+                key.Time -= start;
+                keys.push_back(std::move(key));
+            }
+            KeyFrame<T> last;
+            last.Time = end - start;
+            last.Value = curve.Evaluate(end, AnimationWrapMode::Clamp);
+            keys.push_back(last);
+            return AnimationCurve<T>(std::move(keys));
+        }
+
+        Ref<AnimationClip> SliceClip(const AnimationClip& source, const ExtraAnimationClipInfo& range)
+        {
+            const float sampleRate = source.GetSampleRate();
+            const float start = static_cast<float>(range.StartFrame) / sampleRate;
+            const float end = static_cast<float>(range.EndFrame) / sampleRate;
+            if (end <= start)
+                return nullptr;
+
+            Vector<AnimationTransformTrack> transformTracks;
+            transformTracks.reserve(source.GetTransformTracks().size());
+            for (const AnimationTransformTrack& sourceTrack : source.GetTransformTracks())
+            {
+                transformTracks.push_back({ sourceTrack.Name, SliceCurve(sourceTrack.Position, start, end),
+                                            SliceCurve(sourceTrack.Rotation, start, end), SliceCurve(sourceTrack.Scale, start, end) });
+            }
+            Vector<AnimationMorphTrack> morphTracks;
+            morphTracks.reserve(source.GetMorphTracks().size());
+            for (const AnimationMorphTrack& sourceTrack : source.GetMorphTracks())
+                morphTracks.push_back({ sourceTrack.Name, SliceCurve(sourceTrack.Weight, start, end) });
+            Vector<AnimationGenericTrack> genericTracks;
+            genericTracks.reserve(source.GetGenericTracks().size());
+            for (const AnimationGenericTrack& sourceTrack : source.GetGenericTracks())
+                genericTracks.push_back({ sourceTrack.Name, SliceCurve(sourceTrack.Curve, start, end) });
+
+            RootMotionCurves rootMotion{ SliceCurve(source.GetRootMotion().Position, start, end),
+                                         SliceCurve(source.GetRootMotion().Rotation, start, end) };
+            Ref<AnimationClip> clip = AnimationClip::Create(std::move(transformTracks), std::move(morphTracks), std::move(genericTracks),
+                                                            std::move(rootMotion), sampleRate, source.IsAdditive());
+            Vector<AnimationEvent> events;
+            for (const AnimationEvent& event : source.GetEvents())
+            {
+                if (event.Time >= start && event.Time <= end)
+                    events.push_back({ event.Name, event.Time - start, event.Payload });
+            }
+            clip->SetEvents(std::move(events));
+            return clip;
+        }
+
+        Vector<Ref<AnimationClip>> ImportAnimationClips(const aiScene& scene, const MeshImportOptions& options, const Ref<Skeleton>& skeleton)
+        {
+            Vector<Ref<AnimationClip>> clips;
+            for (uint32_t animationIndex = 0; animationIndex < scene.mNumAnimations; animationIndex++)
+            {
+                const aiAnimation& animation = *scene.mAnimations[animationIndex];
+                const double ticksPerSecond = animation.mTicksPerSecond > 0.0 ? animation.mTicksPerSecond : 30.0;
+                Vector<AnimationTransformTrack> transformTracks;
+                transformTracks.reserve(animation.mNumChannels);
+                for (uint32_t channelIndex = 0; channelIndex < animation.mNumChannels; channelIndex++)
+                {
+                    const aiNodeAnim& channel = *animation.mChannels[channelIndex];
+                    AnimationTransformTrack track;
+                    track.Name = channel.mNodeName.C_Str();
+
+                    Vector<KeyFrame<glm::vec3>> positions;
+                    positions.reserve(channel.mNumPositionKeys);
+                    for (uint32_t keyIndex = 0; keyIndex < channel.mNumPositionKeys; keyIndex++)
+                    {
+                        const aiVectorKey& key = channel.mPositionKeys[keyIndex];
+                        positions.push_back({ static_cast<float>(key.mTime / ticksPerSecond), ToGlm(key.mValue) * GetScaleFactor(options) });
+                    }
+                    track.Position = AnimationCurve<glm::vec3>(std::move(positions));
+
+                    Vector<KeyFrame<glm::quat>> rotations;
+                    rotations.reserve(channel.mNumRotationKeys);
+                    for (uint32_t keyIndex = 0; keyIndex < channel.mNumRotationKeys; keyIndex++)
+                    {
+                        const aiQuatKey& key = channel.mRotationKeys[keyIndex];
+                        rotations.push_back({ static_cast<float>(key.mTime / ticksPerSecond), ToGlm(key.mValue) });
+                    }
+                    track.Rotation = AnimationCurve<glm::quat>(std::move(rotations));
+
+                    Vector<KeyFrame<glm::vec3>> scales;
+                    scales.reserve(channel.mNumScalingKeys);
+                    for (uint32_t keyIndex = 0; keyIndex < channel.mNumScalingKeys; keyIndex++)
+                    {
+                        const aiVectorKey& key = channel.mScalingKeys[keyIndex];
+                        scales.push_back({ static_cast<float>(key.mTime / ticksPerSecond), ToGlm(key.mValue) });
+                    }
+                    track.Scale = AnimationCurve<glm::vec3>(std::move(scales));
+                    transformTracks.push_back(std::move(track));
+                }
+
+                UnorderedMap<String, Vector<KeyFrame<float>>, StringHash, StringEqual> morphKeys;
+                for (uint32_t channelIndex = 0; channelIndex < animation.mNumMorphMeshChannels; channelIndex++)
+                {
+                    const aiMeshMorphAnim& channel = *animation.mMorphMeshChannels[channelIndex];
+                    UnorderedSet<uint32_t> targets;
+                    for (uint32_t keyIndex = 0; keyIndex < channel.mNumKeys; keyIndex++)
+                    {
+                        const aiMeshMorphKey& sourceKey = channel.mKeys[keyIndex];
+                        for (uint32_t value = 0; value < sourceKey.mNumValuesAndWeights; value++)
+                            targets.emplace(sourceKey.mValues[value]);
+                    }
+
+                    for (uint32_t target : targets)
+                    {
+                        const String targetName = GetMorphTargetName(scene, channel.mName.C_Str(), target);
+                        Vector<KeyFrame<float>>& keys = morphKeys[targetName];
+                        keys.reserve(keys.size() + channel.mNumKeys);
+                        for (uint32_t keyIndex = 0; keyIndex < channel.mNumKeys; keyIndex++)
+                        {
+                            const aiMeshMorphKey& sourceKey = channel.mKeys[keyIndex];
+                            float weight = 0.0f;
+                            for (uint32_t value = 0; value < sourceKey.mNumValuesAndWeights; value++)
+                            {
+                                if (sourceKey.mValues[value] == target)
+                                {
+                                    weight = static_cast<float>(sourceKey.mWeights[value]);
+                                    break;
+                                }
+                            }
+                            keys.push_back({ static_cast<float>(sourceKey.mTime / ticksPerSecond), weight });
+                        }
                     }
                 }
-                Vector<KeyFrame<float>> morphKeys;
-                if (simplify)
+
+                Vector<AnimationMorphTrack> morphTracks;
+                morphTracks.reserve(morphKeys.size());
+                for (auto& [name, keys] : morphKeys)
+                    morphTracks.push_back({ name, AnimationCurve<float>(std::move(keys)) });
+                std::stable_sort(morphTracks.begin(), morphTracks.end(),
+                                 [](const AnimationMorphTrack& left, const AnimationMorphTrack& right) { return left.Name < right.Name; });
+
+                RootMotionCurves rootMotion;
+                if (options.ImportRootMotion && skeleton)
                 {
-                    KeyFrame<float> start, end;
-                    start.Time = float(morphAnim->mKeys[0].mTime / anim->mTicksPerSecond);
-                    start.Value = float(morphAnim->mKeys[0].mWeights[0]);
-                    end.Time = float(morphAnim->mKeys[morphAnim->mNumKeys - 1].mTime / anim->mTicksPerSecond);
-                    end.Value = float(morphAnim->mKeys[morphAnim->mNumKeys - 1].mWeights[0]);
-                    morphKeys = { start, end };
+                    const uint32_t rootIndex = skeleton->GetRootBoneIndex();
+                    if (rootIndex != INVALID_BONE_INDEX)
+                    {
+                        const String& rootName = skeleton->GetBone(rootIndex).Name;
+                        auto rootTrack = std::find_if(transformTracks.begin(), transformTracks.end(),
+                                                      [&](const AnimationTransformTrack& track) { return track.Name == rootName; });
+                        if (rootTrack == transformTracks.end())
+                        {
+                            rootTrack = std::find_if(transformTracks.begin(), transformTracks.end(), [&](const AnimationTransformTrack& track) {
+                                return skeleton->FindBone(track.Name) >= 0 && (!track.Position.IsEmpty() || !track.Rotation.IsEmpty());
+                            });
+                        }
+                        if (rootTrack != transformTracks.end())
+                        {
+                            rootMotion.Position = std::move(rootTrack->Position);
+                            rootMotion.Rotation = std::move(rootTrack->Rotation);
+                        }
+                    }
+                }
+
+                Ref<AnimationClip> sourceClip = AnimationClip::Create(std::move(transformTracks), std::move(morphTracks), {}, std::move(rootMotion),
+                                                                      static_cast<float>(ticksPerSecond));
+                String name = animation.mName.C_Str();
+                if (name.empty())
+                    name = "Animation_" + std::to_string(animationIndex);
+                sourceClip->SetName(name);
+
+                if (options.AnimationInfo.empty())
+                {
+                    clips.push_back(std::move(sourceClip));
                 }
                 else
                 {
-                    morphKeys.reserve(morphAnim->mNumKeys);
-                    for (uint32_t k = 2; k < morphAnim->mNumKeys; k++)
+                    for (const ExtraAnimationClipInfo& range : options.AnimationInfo)
                     {
-                        KeyFrame<float> morphKey;
-                        morphKey.Time = float(morphAnim->mKeys[k].mTime / anim->mTicksPerSecond);
-                        morphKey.Value = float(morphAnim->mKeys[k].mWeights[0]);
-                        morphKeys.push_back(morphKey);
+                        Ref<AnimationClip> split = SliceClip(*sourceClip, range);
+                        if (!split)
+                        {
+                            CW_ENGINE_WARN("Skipping invalid animation range '{}' ({}..{}).", range.Name, range.StartFrame, range.EndFrame);
+                            continue;
+                        }
+                        split->SetName(scene.mNumAnimations > 1 ? name + "/" + range.Name : range.Name);
+                        clips.push_back(std::move(split));
                     }
                 }
-                const AnimationCurve<float> morphCurve(morphKeys);
-                const Ref<AnimationClip> animationClip = AnimationClip::Create(morphCurve);
-                animationClip->SetName(anim->mName.C_Str());
-                clips.push_back(animationClip);
-            }
-            for (uint32_t j = 0; j < anim->mNumChannels; j++)
-            {
-                CW_ENGINE_ASSERT(false);
-            }
 
-            for (uint32_t j = 0; j < anim->mNumMeshChannels; j++)
-            {
-                CW_ENGINE_ASSERT(false);
+                if (animation.mNumMeshChannels != 0)
+                    CW_ENGINE_WARN("Animation '{}' contains legacy mesh-key channels, which Assimp does not expose as skeletal or morph curves.",
+                                   name);
             }
+            return clips;
         }
 
-        return clips;
+        using TextureCache = UnorderedMap<String, Ref<Texture>>;
+
+        Ref<Texture> ImportTexture(const aiScene& scene, const aiMaterial& sourceMaterial, const Path& meshPath, aiTextureType textureType,
+                                   const String& shaderParameter, const Ref<Material>& material, TextureCache& textureCache)
+        {
+            aiString importedPath;
+            if (sourceMaterial.GetTexture(textureType, 0, &importedPath) != aiReturn_SUCCESS)
+                return nullptr;
+
+            const String rawPath = importedPath.C_Str();
+            if (scene.GetEmbeddedTexture(rawPath.c_str()) != nullptr)
+            {
+                CW_ENGINE_WARN("Embedded texture '{}' cannot be imported until TextureImporter supports memory streams.", rawPath);
+                return nullptr;
+            }
+
+            Path texturePath(rawPath);
+            if (texturePath.is_relative())
+                texturePath = meshPath.parent_path() / texturePath;
+            texturePath = texturePath.lexically_normal();
+            const String cacheKey = texturePath.generic_string();
+
+            auto cached = textureCache.find(cacheKey);
+            if (cached != textureCache.end())
+            {
+                material->SetTexture(shaderParameter, cached->second);
+                return cached->second;
+            }
+
+            Ref<Texture> texture = Importer::Get().Import<Texture>(texturePath);
+            if (!texture)
+            {
+                CW_ENGINE_WARN("Failed to import texture '{}' referenced by '{}'.", texturePath, meshPath);
+                return nullptr;
+            }
+
+            textureCache.emplace(cacheKey, texture);
+            material->SetTexture(shaderParameter, texture);
+            return texture;
+        }
+
+        Ref<Texture> ImportFirstTexture(const aiScene& scene, const aiMaterial& sourceMaterial, const Path& meshPath,
+                                        std::initializer_list<aiTextureType> textureTypes, const String& shaderParameter,
+                                        const Ref<Material>& material, TextureCache& textureCache)
+        {
+            for (aiTextureType type : textureTypes)
+            {
+                Ref<Texture> texture = ImportTexture(scene, sourceMaterial, meshPath, type, shaderParameter, material, textureCache);
+                if (texture)
+                    return texture;
+            }
+            return nullptr;
+        }
+
+        Vector<Ref<Asset>> ImportMaterials(const aiScene& scene, const Path& meshPath)
+        {
+            Vector<Ref<Asset>> assets;
+            TextureCache textureCache;
+            const AssetHandle<Shader> pbrShader = AssetManager::TryGet()->Load<Shader>(PBRIBL_SHADER_PATH);
+
+            for (uint32_t meshIndex = 0; meshIndex < scene.mNumMeshes; meshIndex++)
+            {
+                const aiMesh& mesh = *scene.mMeshes[meshIndex];
+                if (mesh.mMaterialIndex >= scene.mNumMaterials)
+                {
+                    CW_ENGINE_WARN("Mesh '{}' references missing material {}.", mesh.mName.C_Str(), mesh.mMaterialIndex);
+                    continue;
+                }
+
+                const aiMaterial& sourceMaterial = *scene.mMaterials[mesh.mMaterialIndex];
+                const Ref<Material> material = Material::Create(pbrShader);
+                String materialName = sourceMaterial.GetName().C_Str();
+                if (materialName.empty())
+                    materialName = "Material_" + std::to_string(mesh.mMaterialIndex);
+                material->SetName(materialName);
+
+                const auto addTexture = [&assets](const Ref<Texture>& texture) {
+                    if (texture)
+                        assets.push_back(texture);
+                };
+                addTexture(ImportFirstTexture(scene, sourceMaterial, meshPath, { aiTextureType_BASE_COLOR, aiTextureType_DIFFUSE }, "albedoMap",
+                                              material, textureCache));
+                addTexture(ImportFirstTexture(scene, sourceMaterial, meshPath, { aiTextureType_METALNESS }, "metallicMap", material, textureCache));
+                addTexture(
+                  ImportFirstTexture(scene, sourceMaterial, meshPath, { aiTextureType_DIFFUSE_ROUGHNESS }, "roughnessMap", material, textureCache));
+                addTexture(ImportFirstTexture(scene, sourceMaterial, meshPath,
+                                              { aiTextureType_NORMALS, aiTextureType_NORMAL_CAMERA, aiTextureType_HEIGHT }, "normalMap", material,
+                                              textureCache));
+                addTexture(ImportFirstTexture(scene, sourceMaterial, meshPath, { aiTextureType_AMBIENT_OCCLUSION, aiTextureType_LIGHTMAP }, "aoMap",
+                                              material, textureCache));
+
+                aiColor4D color(1.0f, 1.0f, 1.0f, 1.0f);
+                if (sourceMaterial.Get(AI_MATKEY_BASE_COLOR, color) == aiReturn_SUCCESS ||
+                    sourceMaterial.Get(AI_MATKEY_COLOR_DIFFUSE, color) == aiReturn_SUCCESS)
+                    material->SetColor("albedo", { color.r, color.g, color.b, color.a });
+
+                float metalness = 0.0f;
+                if (sourceMaterial.Get(AI_MATKEY_METALLIC_FACTOR, metalness) == aiReturn_SUCCESS)
+                    material->SetFloat("metalness", metalness);
+
+                float roughness = 1.0f;
+                if (sourceMaterial.Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness) == aiReturn_SUCCESS)
+                    material->SetFloat("roughness", roughness);
+
+                assets.push_back(material);
+            }
+            return assets;
+        }
+    } // namespace
+
+    bool MeshImporter::IsExtensionSupported(const String& ext) const
+    {
+        Assimp::Importer importer;
+        return importer.IsExtensionSupported("." + ext);
     }
 
-    static UnorderedMap<String, Ref<Texture>> textureCache;
+    bool MeshImporter::IsMagicNumSupported(uint8_t* num, uint32_t numSize) const { return false; }
 
-    static Ref<Texture> ImportTexture(const aiMaterial* meshMaterial, const Ref<Material>& material, aiTextureType textureType,
-                                      const String& shaderParameter)
+    MeshImportResult MeshImporter::Parse(const Path& path, const MeshImportOptions& importOptions)
     {
-        aiString texturePath;
-        if (meshMaterial->GetTexture(textureType, 0, &texturePath) == aiReturn_SUCCESS)
-        {
-            if (textureCache.count(texturePath.C_Str()) != 0)
-                return textureCache[texturePath.C_Str()];
-            else
-            {
-                Ref<Texture> texture = Importer::Get().Import<Texture>(texturePath.C_Str());
-                textureCache[texturePath.C_Str()] = texture;
-                material->SetTexture(shaderParameter, texture);
-                return texture;
-            }
-        }
-
-        return nullptr;
-    }
-
-    static Vector<Ref<Asset>> ImportMaterials(const aiScene* scene)
-    {
-        Vector<Ref<Asset>> assets;
-        const AssetHandle<Shader> pbriblHandle = gAssetManager->Load<Shader>(PBRIBL_SHADER_PATH);
-
-        // static Ref<Shader> pbriblShader = Importer::Get().Import<Shader>("Resources/Shaders/Pbribl.glsl");
-        // static const AssetHandle<Shader> pbriblHandle = static_asset_cast<Shader>(gAssetManager->CreateAssetHandle(pbriblShader));
-        for (uint32_t i = 0; i < scene->mNumMeshes; i++)
-        {
-            const aiMesh* aiMesh = scene->mMeshes[i];
-            const aiMaterial* meshMaterial = scene->mMaterials[aiMesh->mMaterialIndex];
-
-            const Ref<Material> material = Material::Create(pbriblHandle);
-            material->SetName(meshMaterial->GetName().C_Str());
-
-            assets.push_back(ImportTexture(meshMaterial, material, aiTextureType_DIFFUSE, "albedoMap"));
-            assets.push_back(ImportTexture(meshMaterial, material, aiTextureType_METALNESS, "metallicMap"));
-            assets.push_back(ImportTexture(meshMaterial, material, aiTextureType_DIFFUSE_ROUGHNESS, "roughnessMap"));
-            assets.push_back(ImportTexture(meshMaterial, material, aiTextureType_NORMALS, "normalMap"));
-            assets.push_back(ImportTexture(meshMaterial, material, aiTextureType_AMBIENT_OCCLUSION, "aoMap"));
-
-            // Read PBR parameters from assimp
-            aiColor3D color(1.0f, 1.0f, 1.0f);
-            if (meshMaterial->Get(AI_MATKEY_BASE_COLOR, color) == aiReturn_SUCCESS)
-                material->SetColor("albedo", glm::vec4(color.r, color.g, color.b, 1.0f));
-
-            float metalness = 0.0f;
-            if (meshMaterial->Get(AI_MATKEY_METALLIC_FACTOR, metalness) == aiReturn_SUCCESS)
-                material->SetFloat("metalness", metalness);
-
-            float roughness = 1.0f;
-            if (meshMaterial->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness) == aiReturn_SUCCESS)
-                material->SetFloat("roughness", roughness);
-
-            assets.push_back(material);
-        }
-
-        textureCache.clear();
-        return assets;
+        Assimp::Importer importer;
+        const aiScene* scene = ReadScene(importer, path, importOptions);
+        return scene ? ParseScene(*scene, importOptions) : MeshImportResult{};
     }
 
     Ref<Asset> MeshImporter::Import(const Path& path, Ref<const ImportOptions> importOptions)
     {
         Vector<Ref<Asset>> assets = ImportAll(path, importOptions);
-        textureCache.clear();
-        if (assets.empty())
-            return nullptr;
-        return assets[0];
+        return assets.empty() ? nullptr : assets.front();
     }
 
     Vector<Ref<Asset>> MeshImporter::ImportAll(const Path& path, Ref<const ImportOptions> importOptions)
     {
-        const Ref<const MeshImportOptions> meshImportOptions = StaticRefCast<const MeshImportOptions>(importOptions);
-
-        const aiScene* scene = ReadAssimpScene(path, meshImportOptions);
+        const Ref<const MeshImportOptions> options = StaticRefCast<const MeshImportOptions>(importOptions);
+        Assimp::Importer importer;
+        const aiScene* scene = ReadScene(importer, path, *options);
         if (!scene)
             return {};
 
-        Vector<Ref<Asset>> assets;
-        const Ref<Mesh> mesh = ReadMeshData(path.filename().string(), scene, meshImportOptions);
-        if (!mesh)
+        MeshImportResult parsed = ParseScene(*scene, *options);
+        if (!parsed)
+        {
+            CW_ENGINE_WARN("Mesh import produced no mesh data: {}", path);
             return {};
-        assets.push_back(mesh);
+        }
 
-        const Vector<Ref<AnimationClip>> animations = ImportAnimationClips(scene);
-        assets.insert(assets.end(), animations.cbegin(), animations.cend());
+        MeshDesc desc;
+        desc.Data = parsed.Data;
+        desc.Usage = options->CpuCached || parsed.MeshSkeleton || parsed.Morph ? MeshUsage::CpuCached : MeshUsage::Static;
+        desc.Topology = parsed.SubMeshes.size() == 1 ? parsed.SubMeshes.front().MeshDrawMode : DrawMode::TRIANGLE_LIST;
+        desc.Morph = parsed.Morph;
+        desc.MeshSkeleton = parsed.MeshSkeleton;
+        desc.SubMeshes = parsed.SubMeshes;
+        if (options->GenerateMeshlets || options->GenerateLods)
+        {
+            MeshProcessingSettings processingSettings;
+            processingSettings.LodCount = options->GenerateLods ? options->LodCount : 1u;
+            processingSettings.GenerateMeshlets = options->GenerateMeshlets;
+            desc.GpuGeometry = MeshProcessing::BuildGpuGeometry(*parsed.Data, parsed.SubMeshes, processingSettings);
+        }
 
-        const Vector<Ref<Asset>> materialAssets = ImportMaterials(scene);
-        assets.insert(assets.end(), materialAssets.cbegin(), materialAssets.cend());
+        const Ref<Mesh> mesh = Mesh::Create(desc);
+        mesh->SetName(path.filename().string());
 
+        Vector<Ref<Asset>> assets{ mesh };
+        if (options->ImportAnimations)
+        {
+            const Vector<Ref<AnimationClip>> animations = ImportAnimationClips(*scene, *options, parsed.MeshSkeleton);
+            assets.insert(assets.end(), animations.begin(), animations.end());
+        }
+        if (options->ImportMaterials)
+        {
+            const Vector<Ref<Asset>> materialAssets = ImportMaterials(*scene, path);
+            assets.insert(assets.end(), materialAssets.begin(), materialAssets.end());
+        }
         return assets;
     }
 

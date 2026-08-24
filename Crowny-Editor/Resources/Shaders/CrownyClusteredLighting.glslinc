@@ -1,0 +1,25 @@
+#ifndef CROWNY_CLUSTERED_LIGHTING_GLSL
+#define CROWNY_CLUSTERED_LIGHTING_GLSL
+
+struct CwClusterCell
+{
+    uint offset;
+    uint count;
+};
+
+uint cwDepthSlice(float viewDepth, float nearPlane, float farPlane, uint sliceCount)
+{
+    float depth = clamp(viewDepth, nearPlane, farPlane);
+    float normalized = log(depth / nearPlane) / log(farPlane / nearPlane);
+    return min(uint(normalized * float(sliceCount)), sliceCount - 1u);
+}
+
+uint cwClusterIndex(uvec2 pixel, float viewDepth, uvec3 dimensions, uint tileSize,
+                    float nearPlane, float farPlane)
+{
+    uvec2 tile = min(pixel / tileSize, dimensions.xy - 1u);
+    uint slice = cwDepthSlice(viewDepth, nearPlane, farPlane, dimensions.z);
+    return tile.x + dimensions.x * (tile.y + dimensions.y * slice);
+}
+
+#endif

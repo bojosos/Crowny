@@ -14,6 +14,20 @@ namespace Crowny
     class CommandQueue
     {
     public:
+        struct Metrics
+        {
+            size_t WriteSize = 0;
+            size_t ReadSize = 0;
+            size_t WriteCapacity = 0;
+            size_t ReadCapacity = 0;
+        };
+
+        explicit CommandQueue(size_t initialCapacity = 64)
+        {
+            m_Queues[0].reserve(initialCapacity);
+            m_Queues[1].reserve(initialCapacity);
+        }
+
         void Enqueue(std::function<void()>&& cmd)
         {
             Lock lock(m_SwapMutex);
@@ -42,6 +56,14 @@ namespace Crowny
                 queue[i]();
             }
             queue.clear();
+        }
+
+        Metrics GetMetrics()
+        {
+            Lock lock(m_SwapMutex);
+            const uint32_t readIdx = m_WriteIdx ^ 1;
+            return { m_Queues[m_WriteIdx].size(), m_Queues[readIdx].size(), m_Queues[m_WriteIdx].capacity(),
+                     m_Queues[readIdx].capacity() };
         }
 
     private:

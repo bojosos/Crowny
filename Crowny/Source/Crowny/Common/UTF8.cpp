@@ -5,6 +5,77 @@
 namespace Crowny
 {
 
+    bool UTF8::NextCodePoint(StringView string, size_t& offset, char32_t& codePoint, char32_t replacement)
+    {
+        if (offset >= string.size())
+            return false;
+
+        const auto byte = [&string](size_t index) { return static_cast<uint8_t>(string[index]); };
+        const uint8_t first = byte(offset);
+        uint32_t length = 0;
+        char32_t value = 0;
+        char32_t minimum = 0;
+        if (first <= 0x7F)
+        {
+            length = 1;
+            value = first;
+        }
+        else if (first >= 0xC2 && first <= 0xDF)
+        {
+            length = 2;
+            value = first & 0x1F;
+            minimum = 0x80;
+        }
+        else if (first >= 0xE0 && first <= 0xEF)
+        {
+            length = 3;
+            value = first & 0x0F;
+            minimum = 0x800;
+        }
+        else if (first >= 0xF0 && first <= 0xF4)
+        {
+            length = 4;
+            value = first & 0x07;
+            minimum = 0x10000;
+        }
+        else
+        {
+            codePoint = replacement;
+            offset++;
+            return true;
+        }
+
+        if (length > string.size() - offset)
+        {
+            codePoint = replacement;
+            offset++;
+            return true;
+        }
+
+        for (uint32_t index = 1; index < length; index++)
+        {
+            const uint8_t continuation = byte(offset + index);
+            if ((continuation & 0xC0) != 0x80)
+            {
+                codePoint = replacement;
+                offset++;
+                return true;
+            }
+            value = static_cast<char32_t>((value << 6) | (continuation & 0x3F));
+        }
+
+        if (value < minimum || value > 0x10FFFF || (value >= 0xD800 && value <= 0xDFFF))
+        {
+            codePoint = replacement;
+            offset++;
+            return true;
+        }
+
+        codePoint = value;
+        offset += length;
+        return true;
+    }
+
     template <typename T> T UTF32ToUTF8(char32_t input, T output, uint32_t maxElements)
     {
         if ((input > 0x0010FFFF) || ((input >= 0xD800) && input <= 0xDBFF))
@@ -262,16 +333,26 @@ namespace Crowny
         return output;
     }
 
+    U32String UTF8::ToUTF32(StringView string)
+    {
+        U32String output;
+        output.reserve(string.size());
+        size_t offset = 0;
+        char32_t codePoint = 0;
+        while (NextCodePoint(string, offset, codePoint))
+            output.push_back(codePoint);
+        return output;
+    }
+
     std::wstring UTF8::ToWide(const String& string)
     {
         std::wstring output;
         const auto back = std::back_inserter(output);
-        auto iter = string.begin();
-        while (iter != string.end())
+        size_t offset = 0;
+        char32_t codePoint = 0;
+        while (NextCodePoint(string, offset, codePoint))
         {
-            char32_t u32char;
-            iter = UTF8To32(iter, string.end(), u32char);
-            UTF32ToWide(u32char, back, 2);
+            UTF32ToWide(codePoint, back, 2, 0xFFFD);
         }
         return output;
     }

@@ -3,92 +3,194 @@
 #include "Crowny/Common/ConsoleBuffer.h"
 #include "Crowny/Common/Time.h"
 
+#include <cctype>
+
 namespace Crowny
 {
+    namespace
+    {
+        void AppendSearchText(String& output, const String& value)
+        {
+            if (!output.empty())
+                output.push_back(' ');
 
-    void ConsoleBuffer::AddMessage(Message::Level logLevel, const String& messageText,
-                                   const Vector<Message::FunctionCall>& callstack) // Binary search here
+            output.reserve(output.size() + value.size());
+            for (const unsigned char character : value)
+                output.push_back(static_cast<char>(std::tolower(character)));
+        }
+
+        bool IsSameMessage(const ConsoleBuffer::Message& lhs, const ConsoleBuffer::Message& rhs)
+        {
+            if (lhs.LogLevel != rhs.LogLevel || lhs.MessageText != rhs.MessageText || lhs.Callstack.size() != rhs.Callstack.size())
+                return false;
+
+            for (size_t i = 0; i < lhs.Callstack.size(); ++i)
+            {
+                const ConsoleBuffer::Message::FunctionCall& lhsCall = lhs.Callstack[i];
+                const ConsoleBuffer::Message::FunctionCall& rhsCall = rhs.Callstack[i];
+                if (lhsCall.FunctionSignature != rhsCall.FunctionSignature || lhsCall.Line != rhsCall.Line ||
+                    lhsCall.SourceFilePath != rhsCall.SourceFilePath)
+                    return false;
+            }
+            return true;
+        }
+    } // namespace
+
+    void ConsoleBuffer::AddMessage(Message::Level logLevel, const String& messageText, const Vector<Message::FunctionCall>& callstack)
     {
         Message message;
         message.MessageText = messageText;
         message.Timestamp = std::time(nullptr);
-
-        char res[9];
-        tm timeinfo;
-#ifdef CW_PLATFORM_WIN32
-        localtime_s(&timeinfo, &message.Timestamp);
-#else
-        localtime_r(&message.Timestamp, &timeinfo);
-#endif
-        strftime(res, 9, "%T", &timeinfo);
-        message.TimestampText = res;
-
         message.Callstack = callstack;
+        message.LogLevel = logLevel;
+
+        AppendSearchText(message.SearchText, message.MessageText);
+        for (const Message::FunctionCall& call : message.Callstack)
+        {
+            AppendSearchText(message.SourceSearchText, call.FunctionSignature);
+            AppendSearchText(message.SourceSearchText, call.SourceFilePath.string());
+            AppendSearchText(message.SourceSearchText, std::to_string(call.Line));
+        }
+
         size_t hash = Hash(message.MessageText);
-        HashCombine(hash, message.Timestamp, (int32_t)message.LogLevel);
+        HashCombine(hash, static_cast<int32_t>(message.LogLevel));
         for (const Message::FunctionCall& call : message.Callstack)
             HashCombine(hash, call.FunctionSignature, call.Line, call.SourceFilePath);
         message.Hash = hash;
-        message.LogLevel = logLevel;
 
-        const auto findIter = m_HashToIndex.find(message.Hash);
-        if (findIter != m_HashToIndex.end())
-            m_CollapsedMessageBuffer[findIter->second].RepeatCount++;
+        ScopedLock lock(m_Mutex);
+        message.Sequence = m_NextSequence++;
+        if (m_CachedTimestamp != message.Timestamp)
+        {
+            char formattedTime[9] = {};
+            tm timeInfo = {};
+#ifdef CW_PLATFORM_WIN32
+            localtime_s(&timeInfo, &message.Timestamp);
+#else
+            localtime_r(&message.Timestamp, &timeInfo);
+#endif
+            strftime(formattedTime, sizeof(formattedTime), "%T", &timeInfo);
+            m_CachedTimestamp = message.Timestamp;
+            m_CachedTimestampText = formattedTime;
+        }
+        message.TimestampText = m_CachedTimestampText;
+
+        Vector<uint32_t>& candidates = m_HashToIndices[message.Hash];
+        const auto matchingCandidate = std::find_if(candidates.begin(), candidates.end(), [&](uint32_t index) {
+            return IsSameMessage(m_CollapsedMessageBuffer[index], message);
+        });
+        if (matchingCandidate != candidates.end())
+        {
+            Message& collapsedMessage = m_CollapsedMessageBuffer[*matchingCandidate];
+            collapsedMessage.RepeatCount++;
+            collapsedMessage.Timestamp = message.Timestamp;
+            collapsedMessage.TimestampText = message.TimestampText;
+            collapsedMessage.SearchText = message.SearchText;
+            collapsedMessage.SourceSearchText = message.SourceSearchText;
+        }
         else
         {
             m_CollapsedMessageBuffer.push_back(message);
-            m_HashToIndex[message.Hash] = (uint32_t)m_CollapsedMessageBuffer.size() - 1;
+            candidates.push_back(static_cast<uint32_t>(m_CollapsedMessageBuffer.size() - 1));
         }
         m_NormalMessageBuffer.push_back(std::move(message));
-        m_HasNewMessages = true;
+        m_SortDirty = m_HasSort;
+        m_HasNewMessages.store(true, std::memory_order_release);
+        m_Revision.fetch_add(1, std::memory_order_release);
     }
 
     void ConsoleBuffer::Clear()
     {
+        ScopedLock lock(m_Mutex);
         m_NormalMessageBuffer.clear();
-        m_HashToIndex.clear();
+        m_HashToIndices.clear();
         m_CollapsedMessageBuffer.clear();
+        m_SortDirty = false;
+        m_HasNewMessages.store(false, std::memory_order_release);
+        m_Revision.fetch_add(1, std::memory_order_release);
     }
 
     void ConsoleBuffer::Sort(uint32_t sortIdx, bool ascending)
     {
+        ScopedLock lock(m_Mutex);
+        m_SortIndex = sortIdx;
+        m_SortAscending = ascending;
+        m_HasSort = true;
+        m_SortDirty = true;
+        ApplySort();
+        m_Revision.fetch_add(1, std::memory_order_release);
+    }
+
+    void ConsoleBuffer::ApplySort()
+    {
+        if (!m_HasSort || !m_SortDirty)
+            return;
+
+        const uint32_t sortIdx = m_SortIndex;
+        const bool ascending = m_SortAscending;
         if (m_Collapsed)
         {
-            std::sort(m_CollapsedMessageBuffer.begin(), m_CollapsedMessageBuffer.end(),
-                      [ascending, sortIdx](const ConsoleBuffer::Message& a, const ConsoleBuffer::Message& b) {
-                          if (sortIdx == 1)
-                              return ascending ? a.MessageText < b.MessageText : a.MessageText > b.MessageText;
-                          else if (sortIdx == 0)
-                              return ascending ? a.RepeatCount < b.RepeatCount : a.RepeatCount > b.RepeatCount;
-                          return false;
-                      });
+            std::stable_sort(m_CollapsedMessageBuffer.begin(), m_CollapsedMessageBuffer.end(),
+                             [ascending, sortIdx](const Message& lhs, const Message& rhs) {
+                                 if (sortIdx == 1 && lhs.MessageText != rhs.MessageText)
+                                     return ascending ? lhs.MessageText < rhs.MessageText : lhs.MessageText > rhs.MessageText;
+                                 if (sortIdx == 0 && lhs.RepeatCount != rhs.RepeatCount)
+                                     return ascending ? lhs.RepeatCount < rhs.RepeatCount : lhs.RepeatCount > rhs.RepeatCount;
+                                 return ascending ? lhs.Sequence < rhs.Sequence : lhs.Sequence > rhs.Sequence;
+                             });
+            RebuildCollapsedIndices();
         }
         else
         {
-            std::sort(m_NormalMessageBuffer.begin(), m_NormalMessageBuffer.end(),
-                      [ascending, sortIdx](const ConsoleBuffer::Message& a, const ConsoleBuffer::Message& b) {
-                          if (sortIdx == 0)
-                              return ascending ? (a.Timestamp < b.Timestamp) : (a.Timestamp > b.Timestamp);
-                          else if (sortIdx == 1)
-                              return ascending ? (a.MessageText < b.MessageText) : (a.MessageText > b.MessageText);
-                          return false;
-                      });
+            std::stable_sort(m_NormalMessageBuffer.begin(), m_NormalMessageBuffer.end(),
+                             [ascending, sortIdx](const Message& lhs, const Message& rhs) {
+                                 if (sortIdx == 0 && lhs.Timestamp != rhs.Timestamp)
+                                     return ascending ? lhs.Timestamp < rhs.Timestamp : lhs.Timestamp > rhs.Timestamp;
+                                 if (sortIdx == 1 && lhs.MessageText != rhs.MessageText)
+                                     return ascending ? lhs.MessageText < rhs.MessageText : lhs.MessageText > rhs.MessageText;
+                                 return ascending ? lhs.Sequence < rhs.Sequence : lhs.Sequence > rhs.Sequence;
+                             });
         }
+        m_SortDirty = false;
+    }
+
+    void ConsoleBuffer::RebuildCollapsedIndices()
+    {
+        m_HashToIndices.clear();
+        for (uint32_t index = 0; index < static_cast<uint32_t>(m_CollapsedMessageBuffer.size()); index++)
+            m_HashToIndices[m_CollapsedMessageBuffer[index].Hash].push_back(index);
     }
 
     ConsoleBuffer::Message::Message(const String& message, Level level) : MessageText(message), LogLevel(level), Hash(0), Timestamp(0) {}
 
-    const Vector<ConsoleBuffer::Message>& ConsoleBuffer::GetBuffer()
+    uint64_t ConsoleBuffer::CopyBuffer(Vector<Message>& output)
     {
-        m_HasNewMessages = false;
-        if (m_Collapsed)
-            return m_CollapsedMessageBuffer;
-        return m_NormalMessageBuffer;
+        ScopedLock lock(m_Mutex);
+        ApplySort();
+        output = m_Collapsed ? m_CollapsedMessageBuffer : m_NormalMessageBuffer;
+        m_HasNewMessages.store(false, std::memory_order_release);
+        return m_Revision.load(std::memory_order_acquire);
     }
 
-    void ConsoleBuffer::Collapse() { m_Collapsed = true; }
+    void ConsoleBuffer::Collapse()
+    {
+        ScopedLock lock(m_Mutex);
+        if (m_Collapsed)
+            return;
+        m_Collapsed = true;
+        m_SortDirty = m_HasSort;
+        m_Revision.fetch_add(1, std::memory_order_release);
+    }
 
-    void ConsoleBuffer::Uncollapse() { m_Collapsed = false; }
+    void ConsoleBuffer::Uncollapse()
+    {
+        ScopedLock lock(m_Mutex);
+        if (!m_Collapsed)
+            return;
+        m_Collapsed = false;
+        m_SortDirty = m_HasSort;
+        m_Revision.fetch_add(1, std::memory_order_release);
+    }
 
     const char* ConsoleBuffer::Message::GetLevelName(Level level)
     {

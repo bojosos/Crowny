@@ -14,6 +14,14 @@ namespace Crowny
         Vector<Ref<PlatformInfo>> PlatformData;
     };
 
+    struct BuildValidation
+    {
+        Vector<String> Errors;
+        Vector<String> Warnings;
+
+        bool IsValid() const { return Errors.empty(); }
+    };
+
     class BuildManager : public Module<BuildManager>
     {
     public:
@@ -27,6 +35,8 @@ namespace Crowny
         Vector<String> GetBaseAssemblies(PlatformType type) const;
         const String& GetDefines(PlatformType platform) const;
         PlatformType GetActivePlatform() const;
+        const char* GetPlatformName(PlatformType type) const;
+        BuildValidation ValidateActiveBuild(uint32_t includedAssetCount) const;
 
     private:
         Ref<BuildData> m_BuildData;

@@ -5,10 +5,10 @@ project "Crowny"
 	staticruntime "off"
 	characterset ("MBCS")
 
-	targetdir ("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
-	objdir ("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
+	targetdir ("%{wks.location}/bin/" .. engineoutputdir .. "/%{prj.name}")
+	objdir ("%{wks.location}/bin-int/" .. engineoutputdir .. "/%{prj.name}")
 
-	applySanitizer()
+	applySanitizer(true)
 
 	pchheader "cwpch.h"
 	pchsource "Source/cwpch.cpp"
@@ -21,7 +21,8 @@ project "Crowny"
 		"Dependencies/stb_image/**.cpp",
 		"Dependencies/glm/glm/**.hpp",
 		"Dependencies/glm/glm/**.inl",
-  		"Dependencies/cereal/include/cereal/**.h"
+		"Dependencies/FastNoiseLite/Cpp/FastNoiseLite.h",
+		"Dependencies/cereal/include/cereal/**.h"
 	}
 
 	defines
@@ -30,6 +31,18 @@ project "Crowny"
 		"_CRT_NONSTDC_NO_DEPRECATE",
 		"_CRT_SECURE_NO_WARNINGS"
 	}
+
+	filter "platforms:not Web"
+		if PhysicsBox3D then
+			defines { "CW_PHYSICS_BOX3D" }
+		end
+		if PhysicsJolt then
+			defines { "CW_PHYSICS_JOLT" }
+		end
+		if PhysicsBullet then
+			defines { "CW_PHYSICS_BULLET" }
+		end
+	filter {}
 
 	includedirs
 	{
@@ -59,29 +72,11 @@ project "Crowny"
 		"%{IncludeDir.vulkanvma}",
 		"%{IncludeDir.tracy}",
 		"%{IncludeDir.basis_universal}",
+		"%{IncludeDir.meshoptimizer}",
+		"Dependencies/FastNoiseLite/Cpp",
 	}
 
-	links
-	{
-		"assimp",
-		"Box2D",
-		"imgui",
-		"ImGuizmo",
-
-		"msdf-atlas-gen",
-
-		"glfw",
-		"glad",
-
-		"yaml-cpp",
-		"mbedtls",
-		"freetype",
-		"msdfgen",
-		"libvorbis",
-		"libogg",
-		"tracy",
-		"basis_universal",
-	}
+	dependson(CrownyProjectDependencies)
 
 	filter "system:windows"
 		systemversion "latest"
@@ -93,23 +88,6 @@ project "Crowny"
 			"CW_WINDOWS",
 			"GLFW_INCLUDE_NONE",
 			"CW_PLATFORM_WIN32",
-		}
-
-		libdirs
-		{
-			(os.getenv("MONO_SDK") or "C:/Program Files/Mono") .. "/lib",
-			(os.getenv("VULKAN_SDK") or "C:/VulkanSDK/1.3.280.0") .. "/Lib",
-			(os.getenv("OPENAL_SDK") or "C:/Program Files (x86)/OpenAL 1.1 SDK") .. "/libs/Win64"
-		}
-
-		links
-		{
-			"OpenAL32.lib",
-			"mono-2.0-sgen.lib",
-			"vulkan-1.lib",
-
-			"Rpcrt4.lib",
-			"dbghelp.lib"
 		}
 
 	filter "action:vs*"
@@ -149,34 +127,32 @@ project "Crowny"
 		}
 
 	filter "configurations:Debug"
+		includedirs
+		{
+			path.join(PhysicsRoot, "Debug/include"),
+			path.join(PhysicsRoot, "Debug/include/bullet")
+		}
+		libdirs { path.join(PhysicsRoot, "Debug/lib") }
 		defines { "CW_DEBUG" }
 		runtime "Debug"
 		symbols "on"
-
-		links
-		{
-			"shaderc_sharedd",
-			"spirv-cross-cored",
-		}
-
 	filter "configurations:Release"
+		includedirs
+		{
+			path.join(PhysicsRoot, "Release/include"),
+			path.join(PhysicsRoot, "Release/include/bullet")
+		}
+		libdirs { path.join(PhysicsRoot, "Release/lib") }
 		defines "CW_RELEASE"
 		runtime "Release"
 		optimize "on"
-
-		links
-		{
-			"shaderc_shared",
-			"spirv-cross-core",
-		}
-
 	filter "configurations:Dist"
+		includedirs
+		{
+			path.join(PhysicsRoot, "Release/include"),
+			path.join(PhysicsRoot, "Release/include/bullet")
+		}
+		libdirs { path.join(PhysicsRoot, "Release/lib") }
 		defines "CW_DIST"
 		runtime "Release"
 		optimize "on"
-
-		links
-		{
-			"shaderc_shared",
-			"spirv-cross-core",
-		}

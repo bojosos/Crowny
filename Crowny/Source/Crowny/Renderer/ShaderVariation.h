@@ -8,7 +8,11 @@ namespace Crowny
         void Set(const String& name, int value);
         void Set(const String& name, float value);
         void Set(const String& name, const String& value);
+        void Remove(const String& name);
+        bool Has(const String& name) const;
         const UnorderedMap<String, String>& Get() const;
+        String GetCanonicalKey() const;
+        uint64_t GetHash() const;
 
     private:
         UnorderedMap<String, String> m_Defines;
@@ -52,6 +56,9 @@ namespace Crowny
 
         bool Matches(const ShaderVariation& other, bool exact = true) const;
         ShaderDefines GetDefines() const;
+        String GetCanonicalKey() const;
+        uint64_t GetHash() const;
+        size_t GetParameterCount() const { return m_Parameters.size(); }
         bool IsEmpty() const { return m_Parameters.empty(); }
 
         static const ShaderVariation EMPTY;

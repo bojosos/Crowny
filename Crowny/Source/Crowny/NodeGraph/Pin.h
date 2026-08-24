@@ -26,7 +26,7 @@ namespace Crowny
         Direction GetDirection() const { return m_Direction; }
         PinDataType GetDataType() const { return m_DataType; }
 
-        void SetDefaultValue(const PinValue& value);
+        bool SetDefaultValue(const PinValue& value);
         const PinValue& GetDefaultValue() const { return m_DefaultValue; }
 
         void SetConnectedPin(Pin* other) { m_ConnectedPin = other; }
@@ -37,6 +37,9 @@ namespace Crowny
         Node* GetOwner() const { return m_Owner; }
 
     private:
+        friend class NodeGraphSerializer;
+        friend class NodeEditorPanel;
+
         UUID m_ID;
         StringID m_Name;
         Direction m_Direction = Direction::Input;

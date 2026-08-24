@@ -66,6 +66,13 @@ namespace Crowny
         static uint32_t Internal_GetVertexAttributeCount(ScriptMesh* thisPtr);
         static bool Internal_HasVertexAttribute(ScriptMesh* thisPtr, VertexAttribute attr);
         static void Internal_GetVertexAttribute(ScriptMesh* thisPtr, int32_t index, ScriptVertexAttributeDescriptor* outDesc);
+        static MonoObject* Internal_CreatePlane(float width, float height, uint32_t subdivisionsX, uint32_t subdivisionsY);
+        static MonoObject* Internal_CreateBox(glm::vec3* dimensions);
+        static MonoObject* Internal_CreateCube(float size);
+        static MonoObject* Internal_CreateSphere(float radius, uint32_t segments, uint32_t rings);
+        static MonoObject* Internal_CreateCylinder(float radius, float height, uint32_t segments, bool capped);
+        static MonoObject* Internal_CreateCone(float radius, float height, uint32_t segments, bool capped);
+        static MonoObject* Internal_CreateCapsule(float radius, float height, uint32_t segments, uint32_t hemisphereRings);
     };
 
 } // namespace Crowny

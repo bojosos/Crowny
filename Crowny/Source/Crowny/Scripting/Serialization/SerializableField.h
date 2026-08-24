@@ -40,6 +40,7 @@ namespace Crowny
         virtual ~SerializableFieldData() = default;
 
         virtual void* GetValue() = 0;
+        virtual void* GetValue(const Ref<SerializableTypeInfo>& targetType) { return GetValue(); }
         virtual MonoObject* GetValueBoxed() = 0;
         virtual void Serialize() {}
         virtual void Deserialize() {}
@@ -320,7 +321,7 @@ namespace Crowny
             }
         }
 
-        virtual void DeserializeYAML(const YAML::Node& node) override { Value = gSceneManager->GetActiveScene()->GetEntityFromUuid(node.as<UUID>()); }
+        virtual void DeserializeYAML(const YAML::Node& node) override { Value = SceneManager::TryGet()->GetActiveScene()->GetEntityFromUuid(node.as<UUID>()); }
 
         Entity Value;
 
@@ -334,7 +335,7 @@ namespace Crowny
         virtual void* GetValue() override
         {
             if (Value.HasUUID() && !Value.IsLoaded())
-                Value = gAssetManager->LoadFromUUID(Value.GetUUID());
+                Value = AssetManager::TryGet()->LoadFromUUID(Value.GetUUID());
             ScriptAssetBase* scriptAsset = ScriptAssetManager::Get().GetScriptAsset(Value, true);
             m_ManagedInstance = scriptAsset == nullptr ? nullptr : scriptAsset->GetManagedInstance();
             return &m_ManagedInstance;
@@ -344,7 +345,7 @@ namespace Crowny
 
         virtual void SerializeYAML(YAML::Emitter& out) const override { out << (Value ? Value.GetUUID() : UUID::EMPTY); }
 
-        virtual void DeserializeYAML(const YAML::Node& node) override { Value = gAssetManager->GetAssetHandle(node.as<UUID>(UUID::EMPTY)); }
+        virtual void DeserializeYAML(const YAML::Node& node) override { Value = AssetManager::TryGet()->GetAssetHandle(node.as<UUID>(UUID::EMPTY)); }
 
         AssetHandle<Asset> Value;
 
@@ -356,6 +357,7 @@ namespace Crowny
     {
     public:
         virtual void* GetValue() override;
+        virtual void* GetValue(const Ref<SerializableTypeInfo>& targetType) override;
         virtual MonoObject* GetValueBoxed() override { return m_ManagedInstance; }
         virtual void Serialize() override;
         virtual void Deserialize() override;
@@ -365,6 +367,40 @@ namespace Crowny
 
         Ref<SerializableObject> Value;
         bool AllowNull;
+
+    private:
+        MonoObject* m_ManagedInstance = nullptr;
+    };
+
+    class SerializableFieldArray : public SerializableFieldData
+    {
+    public:
+        virtual void* GetValue() override { return GetValue(nullptr); }
+        virtual void* GetValue(const Ref<SerializableTypeInfo>& targetType) override;
+        virtual MonoObject* GetValueBoxed() override { return m_ManagedInstance; }
+        virtual void Serialize() override;
+        virtual void Deserialize() override;
+
+        Ref<SerializableTypeInfo> ElementType;
+        Vector<Ref<SerializableFieldData>> Values;
+        bool Null = true;
+
+    private:
+        MonoObject* m_ManagedInstance = nullptr;
+    };
+
+    class SerializableFieldList : public SerializableFieldData
+    {
+    public:
+        virtual void* GetValue() override { return GetValue(nullptr); }
+        virtual void* GetValue(const Ref<SerializableTypeInfo>& targetType) override;
+        virtual MonoObject* GetValueBoxed() override { return m_ManagedInstance; }
+        virtual void Serialize() override;
+        virtual void Deserialize() override;
+
+        Ref<SerializableTypeInfo> ElementType;
+        Vector<Ref<SerializableFieldData>> Values;
+        bool Null = true;
 
     private:
         MonoObject* m_ManagedInstance = nullptr;

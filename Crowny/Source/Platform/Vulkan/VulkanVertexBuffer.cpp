@@ -92,11 +92,11 @@ namespace Crowny
             VkVertexInputBindingDescription& binding = newEntry.Bindings[i];
             binding.binding = i;
             binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-            binding.stride = meshLayout->GetStride();
+            binding.stride = meshLayout->GetStride(i);
         }
 
         uint32_t attrIdx = 0;
-        bool isFirst = true;
+        Vector<bool> bindingRateInitialized(numBindings, false);
         for (const auto& meshElement : meshElements)
         {
             VkVertexInputAttributeDescription& attr = newEntry.Attributes[attrIdx];
@@ -120,10 +120,10 @@ namespace Crowny
 
             VkVertexInputBindingDescription& binding = newEntry.Bindings[attr.binding];
             const bool isPerVertex = meshElement.InstanceRate == 0;
-            if (isFirst)
+            if (!bindingRateInitialized[attr.binding])
             {
                 binding.inputRate = isPerVertex ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
-                isFirst = false;
+                bindingRateInitialized[attr.binding] = true;
             }
             else
             {

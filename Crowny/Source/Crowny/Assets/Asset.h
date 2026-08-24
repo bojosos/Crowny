@@ -30,14 +30,15 @@ namespace Crowny
         NodeGraph,
         EnvironmentMap,
         Prefab,
-        AudioMixer
+        AudioMixer,
+        AnimationClip
     };
 
     static constexpr uint32_t ASSET_FILE_MAGIC = 0x43574E59; // "CWNY"
 
     struct AssetFileHeader
     {
-        uint32_t Magic = ASSET_FILE_MAGIC;
+        uint32_t Magic = 0;
         uint32_t Version = 0;
         AssetType Type = AssetType::None;
         int64_t SourceTimestamp = 0;    // last_write_time of source file when compiled (epoch seconds)
@@ -46,15 +47,27 @@ namespace Crowny
     };
 
     // Per-asset-type format versions
-    static constexpr uint32_t TEXTURE_FORMAT_VERSION = 1;
-    static constexpr uint32_t SHADER_FORMAT_VERSION = 1;
+    // Version 2 stores Basis Universal KTX2 source payloads without a GPU readback.
+    // Version 1 raw subresource payloads remain readable.
+    static constexpr uint32_t TEXTURE_FORMAT_VERSION = 2;
+    // Version 4 switches SourceContentHash from FNV-1a to CityHash64.
+    // Version 5 targets SPIR-V 1.5 so fragment discard remains portable to OpenGL.
+    // Version 6 persists descriptor-array reflection for bindless material resources.
+    static constexpr uint32_t SHADER_FORMAT_VERSION = 6;
     static constexpr uint32_t MATERIAL_FORMAT_VERSION = 2;
-    static constexpr uint32_t MESH_FORMAT_VERSION = 1;
-    static constexpr uint32_t FONT_FORMAT_VERSION = 1;
+    // Version 3 adds conventional LOD and meshlet metadata. Version 2 remains
+    // readable and is represented as a single legacy LOD.
+    static constexpr uint32_t MESH_FORMAT_VERSION = 4;
+    static constexpr uint32_t ANIMATION_CLIP_FORMAT_VERSION = 1;
+    // Version 2 removes duplicate glyph storage and persists the tab width.
+    static constexpr uint32_t FONT_FORMAT_VERSION = 2;
     static constexpr uint32_t AUDIO_FORMAT_VERSION = 1;
     static constexpr uint32_t AUDIO_MIXER_FORMAT_VERSION = 1;
+    // Version 2 adds material combine modes and an asset header. Headerless
+    // PhysicsMaterial2D payloads remain readable as version 1.
+    static constexpr uint32_t PHYSICS_MATERIAL_FORMAT_VERSION = 2;
     static constexpr uint32_t NODEGRAPH_FORMAT_VERSION = 1;
-    static constexpr uint32_t ENVIRONMENT_FORMAT_VERSION = 1;
+    static constexpr uint32_t ENVIRONMENT_FORMAT_VERSION = 2;
     static constexpr uint32_t PREFAB_FORMAT_VERSION = 1;
 
     class Asset : public RefCounted
@@ -92,8 +105,8 @@ namespace Crowny
         // TODO: Preview icons, with different sizes (256....16)
         UUID Uuid;                        // Asset UUID
         Ref<ImportOptions> ImportOptions; // Asset import options
-        bool IncludeInBuild;
-        AssetType Type;
+        bool IncludeInBuild = false;
+        AssetType Type = AssetType::None;
     };
 
 } // namespace Crowny

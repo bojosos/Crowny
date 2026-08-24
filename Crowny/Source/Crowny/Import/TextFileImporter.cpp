@@ -4,16 +4,10 @@
 #include "Crowny/Import/TextFileImporter.h"
 
 #include "Crowny/Common/FileSystem.h"
-#include "Crowny/Common/StringUtils.h"
 
 namespace Crowny
 {
-    bool TextFileImporter::IsExtensionSupported(const String& ext) const
-    {
-        String lower = ext;
-        StringUtils::ToLower(lower);
-        return lower == "txt" || lower == "yaml" || lower == "json" || lower == "xml";
-    }
+    bool TextFileImporter::IsExtensionSupported(const String& ext) const { return ext == "txt" || ext == "yaml" || ext == "json" || ext == "xml"; }
 
     bool TextFileImporter::IsMagicNumSupported(uint8_t* num, uint32_t numSize) const { return true; }
 

@@ -1,5 +1,4 @@
 using System;
-using System.Threading;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -18,7 +17,18 @@ namespace Crowny
 
         public static int[] GetEnumValuesInt32(Type type)
         {
-            return Enum.GetValues(type) as int[];
+            Array values = Enum.GetValues(type);
+            int[] result = new int[values.Length];
+            Type underlyingType = Enum.GetUnderlyingType(type);
+            bool unsigned = underlyingType == typeof(byte) || underlyingType == typeof(ushort) ||
+                            underlyingType == typeof(uint) || underlyingType == typeof(ulong);
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                object value = values.GetValue(i);
+                result[i] = unsigned ? unchecked((int)Convert.ToUInt64(value)) : unchecked((int)Convert.ToInt64(value));
+            }
+            return result;
         }
     }
 
@@ -29,14 +39,22 @@ namespace Crowny
             Game, Editor
         }
 
-        private static Process process;
-        private static Thread readErrorsThread;
-
-        public static void Compile(ScriptAssemblyType type, bool debug, string outputDirectory, string projectPath, string[] libDirs, string[] references)
+        public static bool Compile(ScriptAssemblyType type, bool debug, string outputDirectory, string projectPath, string[] libDirs,
+                                   string[] references, string compilerPath)
         {
+            if (!Directory.Exists(projectPath))
+            {
+                Debug.Error("Script source directory does not exist: " + projectPath);
+                return false;
+            }
+            if (string.IsNullOrEmpty(compilerPath) || !File.Exists(compilerPath))
+            {
+                Debug.Error("Mono C# compiler does not exist: " + compilerPath);
+                return false;
+            }
+
             string[] files = Directory.GetFiles(projectPath, "*.cs", SearchOption.AllDirectories);
-            Console.WriteLine("{0}, {1}, {2}", files.Length, outputDirectory, projectPath);
-            ProcessStartInfo psi = new ProcessStartInfo();
+            Array.Sort(files, StringComparer.Ordinal);
             StringBuilder argBuilder = new StringBuilder();
 
             argBuilder.Append("-noconfig");
@@ -58,56 +76,78 @@ namespace Crowny
 
             if (references != null && references.Length > 0)
             {
-                argBuilder.Append(" -r:");
-                for (int i = 0; i < references.Length - 1; i++)
-                    argBuilder.Append(references[i] + ",");
-                argBuilder.Append(references[references.Length - 1]);
-                argBuilder.Append(",System.dll");
+                foreach (string reference in references)
+                    argBuilder.Append(" -r:\"").Append(reference).Append("\"");
             }
+            argBuilder.Append(" -r:System.dll");
 
             foreach (string file in files)
                 argBuilder.Append(" \"" + file + "\"");
 
-            if (File.Exists(outputDirectory))
-                File.Delete(outputDirectory);
             if (!Directory.Exists(outputDirectory))
                 Directory.CreateDirectory(outputDirectory);
 
-            psi.Arguments = argBuilder.ToString();
-            Console.WriteLine("ARGS: {0}", psi.Arguments);
+            ProcessStartInfo psi = new ProcessStartInfo();
+            string compilerExtension = Path.GetExtension(compilerPath);
+            bool isWindows = Path.DirectorySeparatorChar == '\\';
+            if (isWindows && (string.Equals(compilerExtension, ".bat", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(compilerExtension, ".cmd", StringComparison.OrdinalIgnoreCase))
+               )
+            {
+                psi.FileName = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe";
+                psi.Arguments = "/d /s /c \"\"" + compilerPath + "\" " + argBuilder + "\"";
+            }
+            else
+            {
+                psi.FileName = compilerPath;
+                psi.Arguments = argBuilder.ToString();
+            }
             psi.CreateNoWindow = true;
-            psi.FileName = "C:\\Program Files\\Mono\\bin\\csc.bat";
             psi.RedirectStandardError = true;
-            psi.RedirectStandardOutput = false;
+            psi.RedirectStandardOutput = true;
             psi.UseShellExecute = false;
             psi.WorkingDirectory = projectPath;
 
-            process = new Process();
-            process.StartInfo = psi;
-            process.Start();
+            try
+            {
+                using (Process process = new Process())
+                {
+                    process.StartInfo = psi;
+                    process.OutputDataReceived += (sender, args) => LogCompilerLine(args.Data, false);
+                    process.ErrorDataReceived += (sender, args) => LogCompilerLine(args.Data, true);
+                    if (!process.Start())
+                        return false;
+                    process.BeginOutputReadLine();
+                    process.BeginErrorReadLine();
+                    process.WaitForExit();
+                    process.WaitForExit();
 
-            readErrorsThread = new Thread(ReadErrors);
-            readErrorsThread.Start();
-            process.WaitForExit();
-            // Debug.Log("Compiled...");
+                    string outputAssembly = Path.Combine(outputDirectory, "GameAssembly.dll");
+                    if (process.ExitCode != 0 || !File.Exists(outputAssembly))
+                    {
+                        Debug.Error("C# compiler exited with code " + process.ExitCode + ".");
+                        return false;
+                    }
+                }
+            }
+            catch (Exception exception)
+            {
+                Debug.Error("Could not run the C# compiler: " + exception.Message);
+                return false;
+            }
+            return true;
         }
 
-        private static void ReadErrors()
+        private static void LogCompilerLine(string line, bool standardError)
         {
-            while (true)
-            {
-                if (process == null || process.HasExited)
-                    return;
-
-                string read = process.StandardError.ReadLine();
-                if (string.IsNullOrEmpty(read))
-                    continue;
-
-                if (read.Contains(": warning"))
-                    Debug.Warn(read);
-                else if (read.Contains(": error"))
-                    Debug.Error(read);
-            }
+            if (string.IsNullOrWhiteSpace(line))
+                return;
+            if (line.Contains(": error") || standardError)
+                Debug.Error(line);
+            else if (line.Contains(": warning"))
+                Debug.Warn(line);
+            else
+                Debug.Log(line);
         }
     }
 }

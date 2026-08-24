@@ -27,6 +27,8 @@ CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldVector4, "Vector4")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldColor, "Color")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldMatrix4, "Matrix4")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldObject, "Object")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldArray, "Array")
+CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldList, "List")
 
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldBool)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldChar)
@@ -49,6 +51,8 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::Seri
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldColor)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldMatrix4)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldObject)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldArray)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableFieldData, Crowny::SerializableFieldList)
 
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableTypeInfoPrimitive, "TypeInfoPrimitive")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableTypeInfoEnum, "TypeInfoEnum")
@@ -141,6 +145,10 @@ namespace Crowny
 
     template <typename Archive> void Serialize(Archive& archive, SerializableFieldObject& data) { archive(data.Value, data.AllowNull); }
 
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldArray& data) { archive(data.ElementType, data.Values, data.Null); }
+
+    template <typename Archive> void Serialize(Archive& archive, SerializableFieldList& data) { archive(data.ElementType, data.Values, data.Null); }
+
     template <typename Archive> void Save(Archive& archive, const SerializableFieldEntity& data)
     {
         UUID uuid = data.Value ? data.Value.GetComponent<IDComponent>().Uuid : UUID::EMPTY;
@@ -151,8 +159,8 @@ namespace Crowny
     {
         UUID uuid;
         archive(uuid);
-        if (uuid != UUID::EMPTY && gSceneManager->GetActiveScene())
-            data.Value = gSceneManager->GetActiveScene()->GetEntityFromUuid(uuid);
+        if (uuid != UUID::EMPTY && SceneManager::TryGet()->GetActiveScene())
+            data.Value = SceneManager::TryGet()->GetActiveScene()->GetEntityFromUuid(uuid);
     }
 
     template <typename Archive> void Save(Archive& archive, const SerializableFieldAsset& data)
@@ -166,7 +174,7 @@ namespace Crowny
         UUID uuid;
         archive(uuid);
         if (uuid != UUID::EMPTY)
-            data.Value = gAssetManager->GetAssetHandle(uuid);
+            data.Value = AssetManager::TryGet()->GetAssetHandle(uuid);
     }
 
     /*
@@ -207,11 +215,14 @@ namespace Crowny
 
     template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoEntity& entityInfo) {}
 
-    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoDictionary& entityInfo) {}
+    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoDictionary& dictionaryInfo)
+    {
+        archive(dictionaryInfo.m_KeyType, dictionaryInfo.m_ValueType);
+    }
 
-    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoList& entityInfo) {}
+    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoList& listInfo) { archive(listInfo.m_ElementType); }
 
-    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoAsset& entityInfo) {}
+    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoAsset& assetInfo) { archive(assetInfo.Type); }
 
     template <typename Archive> void Save(Archive& archive, const ScriptFieldFlags& flags) { archive((uint32_t)flags); }
 

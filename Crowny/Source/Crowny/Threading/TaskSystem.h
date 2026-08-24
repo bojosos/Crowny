@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/Module.h"
 #include "Crowny/Common/StdHeaders.h"
 
 #include <atomic>
@@ -71,18 +72,16 @@ namespace Crowny
         Signal m_WaitCondition;
     };
 
-    class TaskSystem
+    class TaskSystem : public Module<TaskSystem>
     {
     public:
         TaskSystem();
-        ~TaskSystem();
+        ~TaskSystem() override;
 
         void Submit(const Ref<Task>& task);
         void Submit(const Ref<TaskGroup>& taskGroup);
 
         uint32_t GetWorkerCount() const { return (uint32_t)m_Workers.size(); }
-
-        static TaskSystem& Get();
 
     private:
         struct QueueEntry

@@ -43,10 +43,27 @@ namespace Crowny
 
     bool VulkanQueue::IsExecuting() const
     {
-        Lock lock(const_cast<Mutex&>(m_SubmitMutex));
+        Lock lock(m_SubmitMutex);
         if (m_LastCommandBuffer == nullptr)
             return false;
         return m_LastCommandBuffer->IsSubmitted();
+    }
+
+    VulkanCmdBuffer* VulkanQueue::GetLastCommandBuffer() const
+    {
+        Lock lock(m_SubmitMutex);
+        return m_LastCommandBuffer;
+    }
+
+    bool VulkanQueue::RequestLastCommandBufferSemaphore(VulkanSemaphore*& semaphore) const
+    {
+        Lock lock(m_SubmitMutex);
+        semaphore = nullptr;
+        if (m_LastCommandBuffer == nullptr || !m_LastCommandBuffer->IsSubmitted())
+            return true;
+
+        semaphore = m_LastCommandBuffer->RequestInterQueueSemaphore();
+        return semaphore != nullptr;
     }
 
     void VulkanQueue::GetSubmitInfo(VkCommandBuffer* cmdBuffer, VkSemaphore* signalSemaphores, uint32_t numSignalSemaphores,
@@ -112,7 +129,7 @@ namespace Crowny
     {
         VkResult result;
         {
-            Lock lock(const_cast<Mutex&>(m_SubmitMutex));
+            Lock lock(m_SubmitMutex);
             result = vkQueueWaitIdle(m_Queue);
         }
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
@@ -144,6 +161,7 @@ namespace Crowny
 
     void VulkanQueue::QueueSubmit(VulkanCmdBuffer* cmdBuffer, VulkanSemaphore** waitSemaphores, uint32_t semaphoreCount)
     {
+        Lock lock(m_SubmitMutex);
         m_QueuedBuffers.push_back(SubmitInfo(cmdBuffer, 0, semaphoreCount, 1));
         for (uint32_t i = 0; i < semaphoreCount; i++)
             m_QueuedSemaphores.push_back(waitSemaphores[i]);
@@ -151,11 +169,11 @@ namespace Crowny
 
     void VulkanQueue::SubmitQueued()
     {
+        Lock lock(m_SubmitMutex);
+
         uint32_t numCbs = (uint32_t)m_QueuedBuffers.size();
         if (numCbs == 0)
             return;
-
-        Lock lock(m_SubmitMutex);
 
         uint32_t totalNumWaitSemaphores = (uint32_t)m_QueuedSemaphores.size() + numCbs;
         uint32_t signalSemaphoresPerCB = MAX_VULKAN_CB_DEPENDENCIES + 1;
@@ -165,10 +183,10 @@ namespace Crowny
         m_SignalSemaphoresScratch.resize(signalSemaphoresPerCB * numCbs);
         m_WaitSemaphoresScratch.resize(totalNumWaitSemaphores);
 
-        VkSubmitInfo*    submitInfos     = m_SubmitInfosScratch.data();
-        VkCommandBuffer* commandBuffers  = m_CmdBuffersScratch.data();
-        VkSemaphore*     signalSemaphores = m_SignalSemaphoresScratch.data();
-        VkSemaphore*     waitSemaphores   = m_WaitSemaphoresScratch.data();
+        VkSubmitInfo* submitInfos = m_SubmitInfosScratch.data();
+        VkCommandBuffer* commandBuffers = m_CmdBuffersScratch.data();
+        VkSemaphore* signalSemaphores = m_SignalSemaphoresScratch.data();
+        VkSemaphore* waitSemaphores = m_WaitSemaphoresScratch.data();
 
         uint32_t readSemaphoreIdx = 0;
         uint32_t writeSemaphoreIdx = 0;

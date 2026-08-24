@@ -52,18 +52,24 @@ namespace Crowny
         EVENT_CLASS_TYPE(KeyReleased)
     };
 
-    class KeyTypedEvent : public KeyEvent
+    class KeyTypedEvent : public Event
     {
     public:
-        KeyTypedEvent(const KeyCode keycode) : KeyEvent(keycode) {}
+        explicit KeyTypedEvent(uint32_t codepoint) : m_Codepoint(codepoint) {}
+
+        uint32_t GetCodepoint() const { return m_Codepoint; }
 
         String ToString() const override
         {
             StringStream ss;
-            ss << "KeyTypedEvent: " << m_KeyCode;
+            ss << "KeyTypedEvent: " << m_Codepoint;
             return ss.str();
         }
 
         EVENT_CLASS_TYPE(KeyTyped)
+        EVENT_CLASS_CATEGORY(EventCategoryKeyboard | EventCategoryInput)
+
+    private:
+        uint32_t m_Codepoint;
     };
 } // namespace Crowny

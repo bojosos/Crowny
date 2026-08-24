@@ -30,6 +30,12 @@ namespace Crowny
 
         void flush_() override
         {
+            if (!ConsoleBuffer::IsStartedUp())
+            {
+                m_MessagesBuffered = 0;
+                return;
+            }
+
             for (int i = 0; i < m_MessagesBuffered; i++)
                 ConsoleBuffer::Get().AddMessage(m_MessageBuffer[i].LogLevel, m_MessageBuffer[i].MessageText);
             m_MessagesBuffered = 0;

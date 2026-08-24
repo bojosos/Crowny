@@ -2,8 +2,8 @@
 
 #include "Crowny/Renderer/EnvironmentMap.h"
 
-#include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/Timer.h"
+#include "Crowny/Import/ImageLoader.h"
 
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/RenderAPI/RenderAPI.h"
@@ -14,8 +14,6 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <stb_image.h>
-
 namespace Crowny
 {
 
@@ -39,6 +37,8 @@ namespace Crowny
         glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // POSITIVE_Z
         glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f)), // NEGATIVE_Z
     };
+
+    EnvironmentMap::EnvironmentMap(const Path& hdrPath) : EnvironmentMap(hdrPath, Settings{}) {}
 
     EnvironmentMap::EnvironmentMap(const Path& hdrPath, const Settings& settings) : m_Settings(settings)
     {
@@ -64,51 +64,45 @@ namespace Crowny
     {
         Timer timer;
 
-        // Load HDR equirectangular image
-        stbi_set_flip_vertically_on_load(true);
-        Ref<DataStream> stream = FileSystem::OpenFile(hdrPath);
-        if (!stream)
+        ImageLoadOptions loadOptions;
+        loadOptions.FlipVertically = true;
+        ImageLoadResult image = ImageLoader::Decode(hdrPath, loadOptions);
+        if (!image || !image.Info.IsHDR || !image.Pixels)
         {
-            CW_ENGINE_ERROR("Failed to open HDR file: {}", hdrPath.string());
+            CW_ENGINE_ERROR("Failed to load HDR image '{}': {}", hdrPath.string(), image.Error);
             return;
         }
-        std::vector<uint8_t> buf;
-        buf.resize(stream->Size());
-        stream->Read(buf.data(), stream->Size());
-        stream->Close();
 
-        int width, height, channels;
-        // Force 4-channel (RGBA) output so the PixelData format matches the RGBA32F texture.
-        // stbi will pad RGB HDR images to RGBA, setting the alpha channel to 1.0.
-        float* data = stbi_loadf_from_memory(buf.data(), (int)buf.size(), &width, &height, &channels, STBI_rgb_alpha);
-        if (!data)
+        Ref<PixelData> rgbaPixels = image.Pixels;
+        if (rgbaPixels->GetFormat() != TextureFormat::RGBA32F)
         {
-            CW_ENGINE_ERROR("Failed to load HDR image: {}", hdrPath.string());
-            return;
+            rgbaPixels = PixelData::Create(image.Info.Width, image.Info.Height, 1, TextureFormat::RGBA32F);
+            if (!rgbaPixels || !PixelUtils::ConvertPixels(*image.Pixels, *rgbaPixels))
+            {
+                CW_ENGINE_ERROR("Failed to convert HDR image '{}' to RGBA32F.", hdrPath.string());
+                return;
+            }
         }
+        ComputeDiffuseSh(reinterpret_cast<const float*>(rgbaPixels->GetData()), image.Info.Width, image.Info.Height);
 
         TextureDesc equirectProps;
-        equirectProps.Width = width;
-        equirectProps.Height = height;
+        equirectProps.Width = image.Info.Width;
+        equirectProps.Height = image.Info.Height;
         equirectProps.Usage = TextureUsage::TEXTURE_STATIC;
         equirectProps.Format = TextureFormat::RGBA32F;
         equirectProps.DebugName = "EnvMap/Equirect";
         const Ref<Texture> equirectTexture = Texture::Create(equirectProps);
-        PixelData pixelData(width, height, 1, TextureFormat::RGBA32F);
-        pixelData.SetBuffer((uint8_t*)data);
-        equirectTexture->WriteData(pixelData);
-        pixelData.SetBuffer(nullptr);
-        stbi_image_free(data);
+        equirectTexture->WriteData(*rgbaPixels);
 
         // Create environment cubemap
-        RenderAPI& rapi = (*gRenderAPI);
+        RenderAPI& rapi = (*RenderAPI::TryGet());
         TextureDesc cubeProps;
         cubeProps.Width = m_Settings.CubemapResolution;
         cubeProps.Height = m_Settings.CubemapResolution;
         cubeProps.Faces = 6;
         cubeProps.Shape = TextureShape::TEXTURE_CUBE;
         cubeProps.Usage = TextureUsage::TEXTURE_RENDERTARGET;
-        cubeProps.Format = TextureFormat::RGBA32F;
+        cubeProps.Format = TextureFormat::RGBA16F;
         cubeProps.DebugName = "EnvMap/Cubemap";
         m_EnvironmentCubemap = Texture::Create(cubeProps);
 
@@ -121,7 +115,7 @@ namespace Crowny
                                            glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
                                            glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)) };
 
-        const AssetHandle<Shader> shaderHandle = gAssetManager->Load<Shader>(EQUIRECTTOCUBE_SHADER_PATH);
+        const AssetHandle<Shader> shaderHandle = AssetManager::TryGet()->Load<Shader>(EQUIRECTTOCUBE_SHADER_PATH);
         const Ref<Material> equirectMaterial = Material::Create(shaderHandle);
         equirectMaterial->SetTexture("cw_equirectangularMap", equirectTexture);
         equirectMaterial->SetMatrix("proj", captureProjection);
@@ -152,11 +146,11 @@ namespace Crowny
     void EnvironmentMap::GenerateIrradianceCube()
     {
         Timer timer;
-        auto& rapi = (*gRenderAPI);
+        auto& rapi = (*RenderAPI::TryGet());
         TextureDesc tProps;
         tProps.Width = m_Settings.IrradianceResolution;
         tProps.Height = m_Settings.IrradianceResolution;
-        tProps.Format = TextureFormat::RGBA32F;
+        tProps.Format = TextureFormat::RGBA16F;
         tProps.Usage = TextureUsage::TEXTURE_RENDERTARGET;
         tProps.MipLevels = 0;
         tProps.Faces = 6;
@@ -164,7 +158,7 @@ namespace Crowny
         tProps.DebugName = "EnvMap/Irradiance";
         m_IrradianceMap = Texture::Create(tProps);
 
-        const AssetHandle<Shader> shaderHandle = gAssetManager->Load<Shader>(PREFILTER_SHADER_PATH);
+        const AssetHandle<Shader> shaderHandle = AssetManager::TryGet()->Load<Shader>(PREFILTER_SHADER_PATH);
         const Ref<Material> irradianceMaterial = Material::Create(shaderHandle);
 
         irradianceMaterial->SetTexture("cw_samplerEnv", m_EnvironmentCubemap);
@@ -196,13 +190,13 @@ namespace Crowny
     void EnvironmentMap::GeneratePrefilteredCube()
     {
         Timer timer;
-        auto& rapi = (*gRenderAPI);
+        auto& rapi = (*RenderAPI::TryGet());
         const uint32_t res = m_Settings.PrefilteredResolution;
         const uint32_t numMips = static_cast<uint32_t>(std::floor(std::log2(res)));
         TextureDesc tProps;
         tProps.Width = res;
         tProps.Height = res;
-        tProps.Format = TextureFormat::RGBA32F;
+        tProps.Format = TextureFormat::RGBA16F;
         tProps.Usage = TextureUsage::TEXTURE_RENDERTARGET;
         tProps.MipLevels = numMips;
         tProps.Faces = 6;
@@ -210,7 +204,7 @@ namespace Crowny
         tProps.DebugName = "EnvMap/Prefiltered";
         m_PrefilteredMap = Texture::Create(tProps);
 
-        const AssetHandle<Shader> shaderHandle = gAssetManager->Load<Shader>(FILTER_SHADER_PATH);
+        const AssetHandle<Shader> shaderHandle = AssetManager::TryGet()->Load<Shader>(FILTER_SHADER_PATH);
         const Ref<Material> prefilterMaterial = Material::Create(shaderHandle);
 
         prefilterMaterial->SetInt("samples", (int)m_Settings.PrefilterSamples);
@@ -240,6 +234,58 @@ namespace Crowny
                 rapi.SetIndexBuffer(m_CubeIbo);
                 rapi.DrawIndexed(0, 36, 0, 72);
             }
+        }
+    }
+
+    void EnvironmentMap::ComputeDiffuseSh(const float* pixels, uint32_t width, uint32_t height)
+    {
+        m_DiffuseSh = {};
+        if (pixels == nullptr || width == 0 || height == 0)
+            return;
+
+        std::array<glm::vec3, 9> coefficients{};
+        const uint32_t step = std::max(std::max(width, height) / 1024u, 1u);
+        const float longitudeStep = glm::two_pi<float>() * static_cast<float>(step) / static_cast<float>(width);
+        const float latitudeStep = glm::pi<float>() * static_cast<float>(step) / static_cast<float>(height);
+        for (uint32_t y = 0; y < height; y += step)
+        {
+            const float v = (static_cast<float>(y) + 0.5f * static_cast<float>(step)) / static_cast<float>(height);
+            const float latitude = (v - 0.5f) * glm::pi<float>();
+            const float cosLatitude = std::cos(latitude);
+            const float sinLatitude = std::sin(latitude);
+            const float solidAngle = std::max(cosLatitude, 0.0f) * longitudeStep * latitudeStep;
+            for (uint32_t x = 0; x < width; x += step)
+            {
+                const float u = (static_cast<float>(x) + 0.5f * static_cast<float>(step)) / static_cast<float>(width);
+                const float longitude = (u - 0.5f) * glm::two_pi<float>();
+                const glm::vec3 direction(std::cos(longitude) * cosLatitude, sinLatitude,
+                                          std::sin(longitude) * cosLatitude);
+                const uint64_t pixel = (static_cast<uint64_t>(std::min(y, height - 1u)) * width +
+                                        std::min(x, width - 1u)) * 4u;
+                const glm::vec3 radiance = glm::max(glm::vec3(pixels[pixel], pixels[pixel + 1u], pixels[pixel + 2u]),
+                                                    glm::vec3(0.0f));
+                const std::array<float, 9> basis = {
+                    0.282095f,
+                    0.488603f * direction.y,
+                    0.488603f * direction.z,
+                    0.488603f * direction.x,
+                    1.092548f * direction.x * direction.y,
+                    1.092548f * direction.y * direction.z,
+                    0.315392f * (3.0f * direction.z * direction.z - 1.0f),
+                    1.092548f * direction.x * direction.z,
+                    0.546274f * (direction.x * direction.x - direction.y * direction.y),
+                };
+                for (uint32_t coefficient = 0; coefficient < coefficients.size(); coefficient++)
+                    coefficients[coefficient] += radiance * basis[coefficient] * solidAngle;
+            }
+        }
+
+        const std::array<float, 3> convolution = { glm::pi<float>(), 2.0f * glm::pi<float>() / 3.0f,
+                                                    glm::pi<float>() / 4.0f };
+        for (uint32_t coefficient = 0; coefficient < coefficients.size(); coefficient++)
+        {
+            const uint32_t band = coefficient == 0 ? 0u : coefficient < 4 ? 1u : 2u;
+            m_DiffuseSh[coefficient] = glm::vec4(coefficients[coefficient] * convolution[band], 0.0f);
         }
     }
 

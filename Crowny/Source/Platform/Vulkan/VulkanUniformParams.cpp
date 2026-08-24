@@ -85,6 +85,12 @@ namespace Crowny
         case SAMPLERCUBE:
         case TEXTURECUBE:
             return m_DummyReadTextures[5].get();
+        case RWTEXTURE1D:
+            return m_DummyStorageTextures[0].get();
+        case RWTEXTURE2D:
+            return m_DummyStorageTextures[2].get();
+        case RWTEXTURE3D:
+            return m_DummyStorageTextures[4].get();
         default:
             break;
         }
@@ -146,15 +152,17 @@ namespace Crowny
 
         for (uint32_t i = 0; i < numSets; i++)
         {
+            m_SetsDirty[i] = true;
             const uint32_t numBindingsPerSet = paramInfo.GetNumBindings(i);
             PerSetData& setData = m_PerSetData[i];
-            new (&setData.Sets) Vector<VulkanDescriptorSet*>();
 
             VkWriteDescriptorSet* writeSetInfos = new VkWriteDescriptorSet[numBindingsPerSet];
             WriteInfo* writeInfos = new WriteInfo[numBindingsPerSet];
+            VkDescriptorImageInfo** imageArrayInfos = new VkDescriptorImageInfo*[numBindingsPerSet]{};
 
             setData.WriteSetInfos = writeSetInfos;
             setData.WriteInfos = writeInfos;
+            setData.ImageArrayInfos = imageArrayInfos;
 
             VulkanDescriptorLayout* layout = paramInfo.GetLayout(i);
             setData.Count = numBindingsPerSet;
@@ -223,7 +231,14 @@ namespace Crowny
                             const uint32_t seqIdx = paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::Texture, i, slot);
                             m_SampledImages[seqIdx] = res->GetHandle();
                         }
-                        writeSetInfo.pImageInfo = &imageInfo;
+                        if (writeSetInfo.descriptorCount > 1)
+                        {
+                            setData.ImageArrayInfos[j] = new VkDescriptorImageInfo[writeSetInfo.descriptorCount];
+                            std::fill_n(setData.ImageArrayInfos[j], writeSetInfo.descriptorCount, imageInfo);
+                            writeSetInfo.pImageInfo = setData.ImageArrayInfos[j];
+                        }
+                        else
+                            writeSetInfo.pImageInfo = &imageInfo;
                         writeSetInfo.pBufferInfo = nullptr;
                         writeSetInfo.pTexelBufferView = nullptr;
                     }
@@ -302,13 +317,18 @@ namespace Crowny
         {
             for (auto& entry : m_PerSetData[i].Sets)
                 entry->Destroy();
-
-            m_PerSetData[i].Sets.~Vector<VulkanDescriptorSet*>();
+            for (uint32_t binding = 0; binding < m_PerSetData[i].Count; binding++)
+                delete[] m_PerSetData[i].ImageArrayInfos[binding];
+            delete[] m_PerSetData[i].ImageArrayInfos;
+            delete[] m_PerSetData[i].WriteSetInfos;
+            delete[] m_PerSetData[i].WriteInfos;
         }
         delete[] m_SampledImages;
         delete[] m_Samplers;
         delete[] m_PerSetData;
         delete[] m_StorageImages;
+        delete[] m_UniformBuffers;
+        delete[] m_Buffers;
         delete[] m_AccelerationStructs;
     }
 
@@ -348,8 +368,6 @@ namespace Crowny
 
     void VulkanUniformParams::SetTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture, const TextureSurface& surface)
     {
-        UniformParams::SetTexture(set, slot, texture, surface);
-
         VulkanUniformParamInfo& paramInfo = static_cast<VulkanUniformParamInfo&>(*m_ParamInfo);
         uint32_t bindingIdx = paramInfo.GetBindingIdx(set, slot);
         if (bindingIdx == (uint32_t)-1)
@@ -357,6 +375,12 @@ namespace Crowny
             CW_ENGINE_ERROR("Set/Slot is not used by the shader.");
             return;
         }
+        if (paramInfo.GetBindings(set)[bindingIdx].descriptorCount > 1)
+        {
+            SetTextureArray(set, slot, &texture, 1, &surface);
+            return;
+        }
+        UniformParams::SetTexture(set, slot, texture, surface);
 
         uint32_t seqIdx = paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::Texture, set, slot);
         VulkanTexture* vulkanTexture = static_cast<VulkanTexture*>(texture.get());
@@ -391,7 +415,63 @@ namespace Crowny
         m_SetsDirty[set] = true;
     }
 
-    void VulkanUniformParams::SetSamplerState(uint32_t slot, uint32_t set, const Ref<SamplerState>& sampler)
+    void VulkanUniformParams::SetTextureArray(uint32_t set, uint32_t slot, const Ref<Texture>* textures,
+                                              uint32_t count, const TextureSurface* surfaces)
+    {
+        UniformParams::SetTextureArray(set, slot, textures, count, surfaces);
+        VulkanUniformParamInfo& paramInfo = static_cast<VulkanUniformParamInfo&>(*m_ParamInfo);
+        const uint32_t bindingIdx = paramInfo.GetBindingIdx(set, slot);
+        if (bindingIdx == (uint32_t)-1)
+        {
+            CW_ENGINE_ERROR("Set/Slot is not used by the shader.");
+            return;
+        }
+        PerSetData& data = m_PerSetData[set];
+        VkDescriptorImageInfo* imageInfos = data.ImageArrayInfos[bindingIdx];
+        const uint32_t capacity = paramInfo.GetBindings(set)[bindingIdx].descriptorCount;
+        if (imageInfos == nullptr || capacity <= 1)
+        {
+            SetTexture(set, slot, count != 0 && textures != nullptr ? textures[0] : nullptr,
+                       surfaces != nullptr ? surfaces[0] : TextureSurface::COMPLETE);
+            return;
+        }
+
+        const UniformResourceType* types = paramInfo.GetLayoutTypes(set);
+        const GpuBufferFormat* elementTypes = paramInfo.GetLayoutElementTypes(set);
+        VulkanImage* dummy = VulkanTextureManager::Get().GetDummyTexture(types[bindingIdx])->GetImage();
+        const VkFormat dummyFormat = VulkanTextureManager::GetDummyViewFormat(elementTypes[bindingIdx]);
+        VulkanSamplerState* defaultSampler = static_cast<VulkanSamplerState*>(SamplerState::GetDefault().get());
+        const VkSampler sampler = data.WriteSetInfos[bindingIdx].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+                                    ? defaultSampler->GetSampler()->GetHandle()
+                                    : VK_NULL_HANDLE;
+        const VkDescriptorImageInfo dummyInfo{ sampler, dummy->GetView(dummyFormat, false),
+                                               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+        std::fill_n(imageInfos, capacity, dummyInfo);
+
+        const uint32_t sequentialIndex = paramInfo.GetSequentialSlot(UniformParamInfo::ParamType::Texture, set, slot);
+        const Vector<TextureData>& array = m_SampledTextureArrays[sequentialIndex];
+        const uint32_t storedCount = std::min<uint32_t>(capacity, static_cast<uint32_t>(array.size()));
+        for (uint32_t index = 0; index < storedCount; index++)
+        {
+            VulkanTexture* texture = static_cast<VulkanTexture*>(array[index].Texture.get());
+            VulkanImage* image = texture != nullptr ? texture->GetImage() : nullptr;
+            if (image == nullptr)
+                continue;
+            TextureSurface surface = array[index].Surface;
+            const TextureDesc& textureDesc = texture->GetDesc();
+            if (surface.NumMipLevels == 0)
+                surface.NumMipLevels = textureDesc.MipLevels + 1;
+            if (surface.NumFaces == 0)
+                surface.NumFaces = textureDesc.Faces;
+            imageInfos[index].imageView = image->GetView(surface, false);
+            imageInfos[index].imageLayout = (textureDesc.Usage & TextureUsage::TEXTURE_DYNAMIC)
+                                              ? VK_IMAGE_LAYOUT_GENERAL
+                                              : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        }
+        m_SetsDirty[set] = true;
+    }
+
+    void VulkanUniformParams::SetSamplerState(uint32_t set, uint32_t slot, const Ref<SamplerState>& sampler)
     {
         UniformParams::SetSamplerState(set, slot, sampler);
 
@@ -416,6 +496,12 @@ namespace Crowny
         {
             VkSampler vkSampler = resource->GetHandle();
             data.WriteInfos[bindingIdx].Image.sampler = vkSampler;
+            if (data.ImageArrayInfos[bindingIdx] != nullptr)
+            {
+                const uint32_t descriptorCount = paramInfo.GetBindings(set)[bindingIdx].descriptorCount;
+                for (uint32_t index = 0; index < descriptorCount; index++)
+                    data.ImageArrayInfos[bindingIdx][index].sampler = vkSampler;
+            }
             m_Samplers[seqIdx] = vkSampler;
         }
         else
@@ -423,6 +509,12 @@ namespace Crowny
             VulkanSamplerState* defaultSampler = static_cast<VulkanSamplerState*>(SamplerState::GetDefault().get());
             VkSampler vkSampler = defaultSampler->GetSampler()->GetHandle();
             data.WriteInfos[bindingIdx].Image.sampler = vkSampler;
+            if (data.ImageArrayInfos[bindingIdx] != nullptr)
+            {
+                const uint32_t descriptorCount = paramInfo.GetBindings(set)[bindingIdx].descriptorCount;
+                for (uint32_t index = 0; index < descriptorCount; index++)
+                    data.ImageArrayInfos[bindingIdx][index].sampler = vkSampler;
+            }
             m_Samplers[seqIdx] = 0;
         }
 
@@ -755,6 +847,35 @@ namespace Crowny
             uint32_t set, slot;
             m_ParamInfo->GetBinding(UniformParamInfo::ParamType::Texture, i, set, slot);
             uint32_t bindingIdx = paramInfo.GetBindingIdx(set, slot);
+            const VkDescriptorSetLayoutBinding* perSetBindings = paramInfo.GetBindings(set);
+            if (perSetBindings[bindingIdx].descriptorCount > 1)
+            {
+                VkDescriptorImageInfo* imageInfos = m_PerSetData[set].ImageArrayInfos[bindingIdx];
+                const Vector<TextureData>& array = m_SampledTextureArrays[i];
+                const uint32_t count = std::min<uint32_t>(perSetBindings[bindingIdx].descriptorCount,
+                                                          static_cast<uint32_t>(array.size()));
+                const VkPipelineStageFlags stages = VulkanUtils::ShaderToPipelineStage(perSetBindings[bindingIdx].stageFlags);
+                for (uint32_t element = 0; element < count; element++)
+                {
+                    VulkanTexture* texture = static_cast<VulkanTexture*>(array[element].Texture.get());
+                    VulkanImage* image = texture != nullptr ? texture->GetImage() : nullptr;
+                    if (image == nullptr)
+                        continue;
+                    const TextureSurface& surface = array[element].Surface;
+                    const VkImageSubresourceRange range = image->GetRange(surface);
+                    const VkImageLayout requestedLayout = (texture->GetDesc().Usage & TextureUsage::TEXTURE_DYNAMIC)
+                                                            ? VK_IMAGE_LAYOUT_GENERAL
+                                                            : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                    buffer.RegisterImageShader(image, range, requestedLayout, VulkanAccessFlagBits::Read, stages);
+                    const VkImageLayout layout = buffer.GetCurrentLayout(image, range, true);
+                    if (imageInfos[element].imageLayout != layout)
+                    {
+                        imageInfos[element].imageLayout = layout;
+                        m_SetsDirty[set] = true;
+                    }
+                }
+                continue;
+            }
 
             VulkanImage* image = nullptr;
             VkImageLayout layout;
@@ -781,7 +902,6 @@ namespace Crowny
 
             const TextureSurface& surface = m_SampledTextureData[i].Surface;
             const VkImageSubresourceRange range = image->GetRange(surface);
-            const VkDescriptorSetLayoutBinding* perSetBindings = paramInfo.GetBindings(set);
             const VkPipelineStageFlags stages = VulkanUtils::ShaderToPipelineStage(perSetBindings[bindingIdx].stageFlags);
             buffer.RegisterImageShader(image, range, layout, VulkanAccessFlagBits::Read, stages);
             layout = buffer.GetCurrentLayout(image, range, true);

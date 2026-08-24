@@ -68,8 +68,7 @@ namespace Crowny
 
     struct ScriptObjectBackupData
     {
-        uint8_t* Data = nullptr;
-        uint32_t Size = 0;
+        Ref<SerializableObject> SerializedObject;
     };
 
     using byte = uint8_t;
@@ -191,6 +190,7 @@ namespace Crowny
 
         ETC1S, // Lower quality
         UASTC, // Higher quality
+        Count
     };
 
     enum class TextureFormat
@@ -221,7 +221,14 @@ namespace Crowny
         BC7 = 20,
         BGRA8 = 21,
 
-        FormatCount = 22
+        ETC2_RGB = 22,
+        ETC2_RGBA = 23,
+        ETC2_R11 = 24,
+        ETC2_RG11 = 25,
+        ASTC4x4 = 26,
+        R32F = 27,
+
+        FormatCount = 28
     };
 
     enum class TextureChannel

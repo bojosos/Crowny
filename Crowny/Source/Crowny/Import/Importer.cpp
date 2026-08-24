@@ -4,6 +4,7 @@
 
 #include <tracy/Tracy.hpp>
 
+#include "Crowny/Common/FileSystem.h"
 #include "Crowny/Import/AudioClipImporter.h"
 #include "Crowny/Import/FontImporter.h"
 #include "Crowny/Import/MaterialImporter.h"
@@ -21,22 +22,15 @@ namespace Crowny
 
     Importer::~Importer()
     {
+        m_ExtensionImporters.clear();
+        m_FallbackImporters.clear();
         for (auto* importer : m_Importers)
             delete importer;
 
         m_Importers.clear();
     }
 
-    bool Importer::SupportsFileType(const String& ext) const
-    {
-        for (const auto* importer : m_Importers)
-        {
-            if (importer && importer->IsExtensionSupported(ext))
-                return true;
-        }
-
-        return false;
-    }
+    bool Importer::SupportsFileType(const String& ext) const { return FindImporterForExtension(NormalizeImportExtension(ext)) != nullptr; }
 
     bool Importer::SupportsFileType(uint8_t* magic, uint32_t numSize) const
     {
@@ -51,29 +45,23 @@ namespace Crowny
 
     SpecificImporter* Importer::GetImporterForFile(const Path& path) const
     {
-        String ext = path.extension().string();
+        const String ext = NormalizeImportExtension(path.extension().string());
         if (ext.empty())
             return nullptr;
-        ext = ext.substr(1, ext.size() - 1); // remove .
 
-        if (!SupportsFileType(ext))
+        SpecificImporter* const importer = FindImporterForExtension(ext);
+        if (importer == nullptr)
         {
             CW_ENGINE_WARN("There is no importer that supports {0} files. Aborting import for {1}.", ext, path);
             return nullptr;
         }
 
-        for (auto iter = m_Importers.begin(); iter != m_Importers.end(); iter++)
-        {
-            if (*iter != nullptr && (*iter)->IsExtensionSupported(ext))
-                return *iter;
-        }
-
-        return nullptr;
+        return importer;
     }
 
     Ref<ImportOptions> Importer::CreateImportOptions(const Path& path)
     {
-        if (!fs::is_regular_file(path))
+        if (!FileSystem::FileExists(path))
         {
             CW_ENGINE_WARN("Trying to import an asset that does not exist. {0}", path);
             return nullptr;
@@ -85,26 +73,70 @@ namespace Crowny
         return importer->CreateImportOptions();
     }
 
-    void Importer::RegisterImporter(SpecificImporter* importer) { m_Importers.push_back(importer); }
+    void Importer::RegisterImporter(SpecificImporter* importer) { RegisterImporter(importer, {}); }
+
+    void Importer::RegisterImporter(SpecificImporter* importer, std::initializer_list<StringView> extensions)
+    {
+        if (importer == nullptr)
+            return;
+        if (std::find(m_Importers.begin(), m_Importers.end(), importer) == m_Importers.end())
+            m_Importers.push_back(importer);
+
+        if (extensions.size() == 0)
+        {
+            if (std::find(m_FallbackImporters.begin(), m_FallbackImporters.end(), importer) == m_FallbackImporters.end())
+                m_FallbackImporters.push_back(importer);
+            return;
+        }
+
+        for (StringView extension : extensions)
+        {
+            const String normalized = NormalizeImportExtension(extension);
+            if (normalized.empty())
+                continue;
+
+            const auto [iter, inserted] = m_ExtensionImporters.emplace(normalized, importer);
+            if (!inserted && iter->second != importer)
+                CW_ENGINE_WARN("Importer extension '{}' is already registered; keeping the first importer.", normalized);
+        }
+    }
 
     void Importer::RegisterBuiltinImporters()
     {
-        Importer::Get().RegisterImporter(new AudioClipImporter());
-        Importer::Get().RegisterImporter(new FontImporter());
-        Importer::Get().RegisterImporter(new ScriptImporter());
-        Importer::Get().RegisterImporter(new ShaderImporter());
-        Importer::Get().RegisterImporter(new TextFileImporter());
-        Importer::Get().RegisterImporter(new TextureImporter());
-        Importer::Get().RegisterImporter(new MaterialImporter());
+        Importer::Get().RegisterImporter(new AudioClipImporter(), { "ogg", "wav" });
+        Importer::Get().RegisterImporter(new FontImporter(), { "ttf", "ttc", "otf", "otc", "fnt" });
+        Importer::Get().RegisterImporter(new ScriptImporter(), { "cs" });
+        Importer::Get().RegisterImporter(new ShaderImporter(), { "cwsl", "glsl" });
+        Importer::Get().RegisterImporter(new TextFileImporter(), { "txt", "yaml", "json", "xml" });
+        Importer::Get().RegisterImporter(new TextureImporter(),
+                                         { "png", "jpeg", "psd", "gif", "tga", "bmp", "hdr", "pic", "ppm", "pgm", "jpg", "ktx2" });
+        Importer::Get().RegisterImporter(new MaterialImporter(), { "cwmat", "mat" });
         Importer::Get().RegisterImporter(new MeshImporter());
-        Importer::Get().RegisterImporter(new SceneImporter());
-        Importer::Get().RegisterImporter(new PrefabImporter());
-        Importer::Get().RegisterImporter(new NodeGraphImporter());
+        Importer::Get().RegisterImporter(new SceneImporter(), { "cwscene" });
+        Importer::Get().RegisterImporter(new PrefabImporter(), { "cwprefab" });
+        Importer::Get().RegisterImporter(new NodeGraphImporter(), { "cwng" });
+    }
+
+    SpecificImporter* Importer::FindImporterForExtension(const String& normalizedExtension) const
+    {
+        if (normalizedExtension.empty())
+            return nullptr;
+
+        const auto indexed = m_ExtensionImporters.find(StringView(normalizedExtension));
+        if (indexed != m_ExtensionImporters.end())
+            return indexed->second;
+
+        for (SpecificImporter* importer : m_FallbackImporters)
+        {
+            if (importer != nullptr && importer->IsExtensionSupported(normalizedExtension))
+                return importer;
+        }
+        return nullptr;
     }
 
     SpecificImporter* Importer::PrepareForImport(const Path& filepath, Ref<const ImportOptions>& importOptions) const
     {
-        if (!fs::is_regular_file(filepath))
+        if (!FileSystem::FileExists(filepath))
         {
             CW_ENGINE_WARN("Trying to import an asset that does not exist. {0}", filepath);
             return nullptr;
@@ -119,8 +151,17 @@ namespace Crowny
         else
         {
             const Ref<const ImportOptions> defaultImportOptions = importer->GetDefaultImportOptions();
-            CW_ENGINE_ASSERT(importOptions->GetImportOptionsType() == defaultImportOptions->GetImportOptionsType(),
-                             "Provided import options are of invalid type");
+            if (defaultImportOptions == nullptr || importOptions->GetImportOptionsType() != defaultImportOptions->GetImportOptionsType())
+            {
+                CW_ENGINE_ERROR("Import options do not match the importer selected for '{}'.", filepath);
+                return nullptr;
+            }
+        }
+
+        if (importOptions == nullptr)
+        {
+            CW_ENGINE_ERROR("Importer selected for '{}' did not provide import options.", filepath);
+            return nullptr;
         }
 
         return importer;
@@ -134,10 +175,20 @@ namespace Crowny
         if (importer == nullptr)
             return nullptr;
 
-        const Ref<Asset> asset = importer->Import(filepath, importOptions);
-        if (asset)
-            asset->Init(); // Initialize GPU resources immediately for synchronous callers
-        return asset;
+        try
+        {
+            const Ref<Asset> asset = importer->Import(filepath, importOptions);
+            if (asset)
+                asset->Init();
+            else
+                CW_ENGINE_ERROR("Importer returned no asset for '{}'.", filepath);
+            return asset;
+        }
+        catch (const std::exception& error)
+        {
+            CW_ENGINE_ERROR("Import failed for '{}': {}", filepath, error.what());
+            return nullptr;
+        }
     }
 
     Vector<Ref<Asset>> Importer::ImportAll(const Path& filepath, Ref<const ImportOptions> importOptions)
@@ -146,13 +197,21 @@ namespace Crowny
         if (importer == nullptr)
             return {};
 
-        Vector<Ref<Asset>> assets = importer->ImportAll(filepath, importOptions);
-        for (const auto& asset : assets)
+        try
         {
-            if (asset)
+            Vector<Ref<Asset>> assets = importer->ImportAll(filepath, importOptions);
+            assets.erase(std::remove(assets.begin(), assets.end(), nullptr), assets.end());
+            for (const auto& asset : assets)
                 asset->Init();
+            if (assets.empty())
+                CW_ENGINE_ERROR("Importer returned no assets for '{}'.", filepath);
+            return assets;
         }
-        return assets;
+        catch (const std::exception& error)
+        {
+            CW_ENGINE_ERROR("Import failed for '{}': {}", filepath, error.what());
+            return {};
+        }
     }
 
     Ref<Asset> Importer::ImportDeferred(const Path& filepath, Ref<const ImportOptions> importOptions)
@@ -161,7 +220,18 @@ namespace Crowny
         if (importer == nullptr)
             return nullptr;
 
-        return importer->Import(filepath, importOptions); // No Init() — caller handles GPU init later
+        try
+        {
+            const Ref<Asset> asset = importer->Import(filepath, importOptions);
+            if (!asset)
+                CW_ENGINE_ERROR("Deferred importer returned no asset for '{}'.", filepath);
+            return asset;
+        }
+        catch (const std::exception& error)
+        {
+            CW_ENGINE_ERROR("Deferred import failed for '{}': {}", filepath, error.what());
+            return nullptr;
+        }
     }
 
 } // namespace Crowny

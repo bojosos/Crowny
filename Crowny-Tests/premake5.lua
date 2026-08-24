@@ -4,31 +4,37 @@ project "Crowny-Tests"
 	cppdialect "C++20"
 	staticruntime "off"
 
-	targetdir ("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
-	objdir ("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
+	targetdir ("%{wks.location}/bin/" .. engineoutputdir .. "/%{prj.name}")
+	objdir ("%{wks.location}/bin-int/" .. engineoutputdir .. "/%{prj.name}")
 	debugdir ("%{wks.location}/Crowny-Editor")
 
-	applySanitizer()
+	applySanitizer(true)
 
 	files
 	{
 		"Source/**.h",
 		"Source/**.cpp",
+		"%{wks.location}/Crowny-Editor/Source/Editor/UndoRedo.cpp",
 	}
 
 	includedirs
 	{
 		"Source",
 		"%{wks.location}/Crowny/Source",
+		"%{wks.location}/Crowny-Editor/Source",
 		"%{IncludeDir.catch2}",
 		"%{IncludeDir.glm}",
         "%{IncludeDir.vulkan}",
+		"%{IncludeDir.vulkanvma}",
 		"%{IncludeDir.spdlog}",
 		"%{IncludeDir.mono}",
 		"%{IncludeDir.imgui}",
 		"%{IncludeDir.stb_image}",
 		"%{IncludeDir.entt}",
 		"%{IncludeDir.cereal}",
+		"%{IncludeDir.yamlcpp}",
+		"%{IncludeDir.FastNoiseLite}",
+		"%{wks.location}/Crowny/Dependencies/openal-soft/include",
 		"%{wks.location}/Crowny/Dependencies/vorbis/include",
 		"%{wks.location}/Crowny/Dependencies/libogg/include"
 	}
@@ -38,6 +44,9 @@ project "Crowny-Tests"
 		"Crowny",
 		"catch2"
 	}
+
+	linkCrownyFinalDependencies()
+	deployCrownyRuntimeDependencies()
 
 	dependson
 	{
@@ -53,16 +62,6 @@ project "Crowny-Tests"
 			"CW",
 			"CW_WINDOWS",
 			"CW_PLATFORM_WIN32",
-		}
-
-		libdirs
-		{
-			(os.getenv("VULKAN_SDK") or "C:/VulkanSDK/1.3.280.0") .. "/Lib",
-		}
-
-		links
-		{
-			"vulkan-1.lib",
 		}
 
 	filter "configurations:Debug"

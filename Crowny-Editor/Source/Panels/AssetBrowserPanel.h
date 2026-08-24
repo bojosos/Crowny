@@ -2,6 +2,7 @@
 
 #include "Panels/ImGuiPanel.h"
 
+#include "Editor/AssetPreviewService.h"
 #include "Editor/EditorDefaults.h"
 #include "Editor/ProjectLibrary.h"
 
@@ -19,7 +20,8 @@ namespace Crowny
         RenderTexture,
         Shader,
         ComputeShader,
-        PhysicsMaterial,
+        PhysicsMaterial2D,
+        PhysicsMaterial3D,
         NodeGraph
     };
 
@@ -29,6 +31,24 @@ namespace Crowny
         SortBySize = 1,
         SortByDate = 2,
         SortCount = 3
+    };
+
+    enum class AssetBrowserFilter
+    {
+        All,
+        Scenes,
+        Images,
+        Materials,
+        Models,
+        Audio,
+        Code,
+        Count
+    };
+
+    enum class AssetBrowserView
+    {
+        Grid,
+        List
     };
 
     class AssetBrowserPanel : public ImGuiPanel
@@ -48,11 +68,11 @@ namespace Crowny
         using DisplayList = Vector<Ref<LibraryEntry>>;
 
         void SetCurrentDirectory(DirectoryEntry* entry);
-        void PreviewImage(const Ref<LibraryEntry>& child);
         void HandleOpen(LibraryEntry* entry);
         void ShowContextMenuContents(LibraryEntry* entry = nullptr, bool isTreeView = false);
         void DrawHeader();
         void DrawFiles();
+        void DrawStatusBar() const;
         void DrawTreeView();
         void CreateNew(AssetBrowserItem itemType);
         String GetDefaultContents(AssetBrowserItem itemType) const;
@@ -65,6 +85,7 @@ namespace Crowny
         void GoForward();
         void GoBackward();
         void SortDisplayList(DisplayList& displayList) const;
+        Vector<AssetType> GetActiveAssetTypes() const;
 
     private:
         Vector<DirectoryEntry*> m_DirectoryPathEntries;
@@ -74,7 +95,7 @@ namespace Crowny
         ImTextureID m_FolderIcon;
         ImTextureID m_FileIcon;
 
-        UnorderedMap<size_t, Ref<Texture>> m_Icons; // For showing the textures in the asset browser.
+        AssetPreviewService m_PreviewService;
 
         String m_CsDefaultText;
 
@@ -91,6 +112,8 @@ namespace Crowny
         bool m_RequiresSort = true;
 
         FileSortingMode m_FileSortingMode = FileSortingMode::SortByName;
+        AssetBrowserFilter m_AssetFilter = AssetBrowserFilter::All;
+        AssetBrowserView m_View = AssetBrowserView::Grid;
 
         float m_Padding = 12.0f;
         float m_ThumbnailSize = DEFAULT_ASSET_THUMBNAIL_SIZE;

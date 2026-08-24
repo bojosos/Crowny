@@ -38,26 +38,13 @@ namespace Crowny
 
     uint8_t* VulkanBuffer::Map(VkDeviceSize offset, VkDeviceSize length) const
     {
+        (void)length;
         VulkanDevice& device = m_Owner->GetDevice();
-        VkDeviceMemory memory;
-        VkDeviceSize memoryOffset;
-        device.GetAllocationInfo(m_Allocation, memory, memoryOffset);
-        uint8_t* data;
-        VkResult result = vkMapMemory(device.GetLogicalDevice(), memory, memoryOffset + offset, length, 0, (void**)&data);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS);
-
-        return data;
+        uint8_t* data = static_cast<uint8_t*>(device.MapMemory(m_Allocation));
+        return data != nullptr ? data + offset : nullptr;
     }
 
-    void VulkanBuffer::Unmap()
-    {
-        VulkanDevice& device = m_Owner->GetDevice();
-        VkDeviceMemory memory;
-        VkDeviceSize memoryOffset;
-        device.GetAllocationInfo(m_Allocation, memory, memoryOffset);
-
-        vkUnmapMemory(device.GetLogicalDevice(), memory);
-    }
+    void VulkanBuffer::Unmap() { m_Owner->GetDevice().UnmapMemory(m_Allocation); }
 
     void VulkanBuffer::Copy(VulkanCmdBuffer* cmdBuffer, VulkanBuffer* dest, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize length)
     {
@@ -159,7 +146,8 @@ namespace Crowny
     VulkanGpuBuffer::VulkanGpuBuffer(BufferType type, BufferUsage usage, uint32_t size)
       : GpuBuffer(size, usage), m_Buffer(nullptr), m_StagingBuffer(nullptr), m_StagingMemory(nullptr), m_MappedOffset(0), m_MappedSize(0),
         m_MappedLockOptions(GpuLockOptions::WRITE_ONLY), m_DirectlyMappable(usage == BufferUsage::BU_DYNAMIC_DRAW), m_IsMapped(false),
-        m_SupportsGpuWrites(type == BufferType::BUFFER_STRUCTURED || ((usage & BufferUsage::BU_LOADSTORE) == BufferUsage::BU_LOADSTORE))
+        m_SupportsGpuWrites(type == BufferType::BUFFER_STRUCTURED || type == BufferType::BUFFER_INDIRECT ||
+                            ((usage & BufferUsage::BU_LOADSTORE) == BufferUsage::BU_LOADSTORE))
     {
         const Ref<VulkanDevice>& device = gVulkanRenderAPI().GetPresentDevice();
 
@@ -188,6 +176,9 @@ namespace Crowny
             break;
         case BUFFER_STRUCTURED:
             usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+            break;
+        case BUFFER_INDIRECT:
+            usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
             break;
         case BUFFER_RAYTRACING:
             usageFlags = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
@@ -227,7 +218,7 @@ namespace Crowny
         m_BufferCreateInfo.size = size;
         VkMemoryPropertyFlags flags;
         if (m_DirectlyMappable || staging)
-            flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+            flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
         else
             flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
@@ -253,7 +244,8 @@ namespace Crowny
             else
                 tag = "GpuBuffer";
         }
-        VmaAllocation allocation = device.AllocateMemory(buffer, flags, tag);
+        VmaAllocation allocation = device.AllocateMemory(buffer, flags, tag,
+                                                         staging ? VulkanAllocationType::Staging : VulkanAllocationType::Default);
 
         m_BufferCreateInfo.usage = usage;
         return device.GetResourceManager().Create<VulkanBuffer>(buffer, allocation);
@@ -285,7 +277,7 @@ namespace Crowny
         VkAccessFlags accessFlags;
         if (options == GpuLockOptions::READ_ONLY)
             accessFlags = VK_ACCESS_HOST_READ_BIT;
-        if (options == GpuLockOptions::READ_WRITE)
+        else if (options == GpuLockOptions::READ_WRITE)
             accessFlags = VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT;
         else
             accessFlags = VK_ACCESS_HOST_WRITE_BIT;

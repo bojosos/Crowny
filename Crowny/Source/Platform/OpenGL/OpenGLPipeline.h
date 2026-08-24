@@ -1,27 +1,37 @@
 #pragma once
 
 #include "Crowny/RenderAPI/GraphicsPipeline.h"
-#include "Crowny/RenderAPI/Shader.h"
 
 namespace Crowny
 {
-
     class OpenGLGraphicsPipeline : public GraphicsPipeline
     {
     public:
         friend class GraphicsPipeline;
-        ~OpenGLGraphicsPipeline();
+        ~OpenGLGraphicsPipeline() override;
+
+        uint32_t GetProgram() const { return m_Program; }
+        const PipelineStateDesc& GetDesc() const { return m_Data; }
+
     protected:
-        OpenGLGraphicsPipeline(const PipelineStateDesc& desc);
+        explicit OpenGLGraphicsPipeline(const PipelineStateDesc& desc);
+
+    private:
+        uint32_t m_Program = 0;
     };
 
     class OpenGLComputePipeline : public ComputePipeline
     {
     public:
         friend class ComputePipeline;
-        ~OpenGLComputePipeline();
-    protected:
-        OpenGLComputePipeline(const Ref<ShaderStage>& shader);
-    };
+        ~OpenGLComputePipeline() override;
 
+        uint32_t GetProgram() const { return m_Program; }
+
+    protected:
+        explicit OpenGLComputePipeline(const Ref<ShaderStage>& shader);
+
+    private:
+        uint32_t m_Program = 0;
+    };
 } // namespace Crowny

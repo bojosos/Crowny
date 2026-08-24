@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Common/Hash.h"
+
 #include <cstddef>
 #include <cstring>
 #include <functional>
@@ -65,9 +67,9 @@ namespace Crowny
      * @param value First value to hash.
      * @param rest The rest of the values to hash.
      */
-    template <typename T, typename... Rest> constexpr void HashCombine(std::size_t& outSeed, const T& value, Rest... rest)
+    template <typename T, typename... Rest> constexpr void HashCombine(std::size_t& outSeed, const T& value, const Rest&... rest)
     {
-        std::hash<T> hasher;
+        Hashing::Hasher<T> hasher;
         outSeed ^= hasher(value) + 0x9e3779b9 + (outSeed << 6) + (outSeed >> 2);
         HashCombine(outSeed, rest...);
     }
@@ -81,7 +83,7 @@ namespace Crowny
      */
     template <typename T> constexpr size_t Hash(const T& value)
     {
-        std::hash<T> hasher;
+        Hashing::Hasher<T> hasher;
         return hasher(value);
     }
 

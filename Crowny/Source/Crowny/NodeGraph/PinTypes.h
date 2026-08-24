@@ -46,6 +46,8 @@ namespace Crowny
     }
 
     bool ArePinTypesCompatible(PinDataType output, PinDataType input);
+    bool IsPinDataTypeValid(PinDataType type);
+    bool ConvertPinValue(const PinValue& value, PinDataType targetType, PinValue& convertedValue);
 
     const char* PinDataTypeName(PinDataType type);
 

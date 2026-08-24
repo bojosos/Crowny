@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Common/Hash.h"
+
 #include <algorithm>
 #include <functional>
 #include <memory>
@@ -44,7 +46,7 @@ namespace Crowny
         std::size_t operator()(const Path& path) const { return std::hash<Path>()(path); }
     };
 
-    template <typename T> using HashType = std::hash<T>;
+    template <typename T> using HashType = Hashing::Hasher<T>;
 
     template <typename T> using Deque = std::deque<T>;
 

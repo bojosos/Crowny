@@ -26,21 +26,22 @@ namespace Crowny
     class AssetListenerManager : public Module<AssetListenerManager>
     {
     public:
-        void RegisterListener(AssetListener* assetListener) {};
-        void UnregisterListener(AssetListener* assetListener) {};
-        void MarkListenerDirty(AssetListener* assetListener) {};
-        void Update() {};
-        void NotifyListeners(const UUID& uuid) {};
+        void RegisterListener(AssetListener* assetListener);
+        void UnregisterListener(AssetListener* assetListener);
+        void MarkListenerDirty(AssetListener* assetListener);
+        void Update();
+        void NotifyListeners(const UUID& uuid);
 
     private:
-        void UpdateListeners() {};
-        void OnAssetLoaded(const AssetHandle<Asset>& asset) {};
-        void OnAssetChanged(const AssetHandle<Asset>& asset) {};
+        void UpdateListeners();
+        void OnAssetLoaded(const AssetHandle<Asset>& asset);
+        void OnAssetChanged(const AssetHandle<Asset>& asset);
 
         RecursiveMutex m_Mutex;
         Set<AssetListener*> m_DirtyListeners;
-        Map<uint64_t, Vector<AssetListener*>> m_AssetToListenerMap;
-        Map<AssetListener*, Vector<uint64_t>> m_ListenerToAssetMap;
+        Map<UUID, Vector<AssetListener*>> m_AssetToListenerMap;
+        Map<AssetListener*, Vector<UUID>> m_ListenerToAssetMap;
+        Set<UUID> m_KnownLoadedAssets;
         Map<UUID, AssetHandle<Asset>> m_LoadedAssets;
         Map<UUID, AssetHandle<Asset>> m_ChangedAssets;
 

@@ -12,9 +12,9 @@ namespace Crowny
 
     AudioFilter::~AudioFilter()
     {
-        if (m_FilterId != 0 && gAudioManager && gAudioManager->IsEFXAvailable())
+        if (m_FilterId != 0 && AudioManager::TryGet() && AudioManager::TryGet()->IsEFXAvailable())
         {
-            gAudioManager->GetEFX().DeleteFilters(1, &m_FilterId);
+            AudioManager::TryGet()->GetEFX().DeleteFilters(1, &m_FilterId);
             m_FilterId = 0;
         }
     }
@@ -33,10 +33,10 @@ namespace Crowny
             return;
         }
 
-        if (gAudioManager == nullptr || !gAudioManager->IsEFXAvailable())
+        if (AudioManager::TryGet() == nullptr || !AudioManager::TryGet()->IsEFXAvailable())
             return;
 
-        const EFX& efx = gAudioManager->GetEFX();
+        const EFX& efx = AudioManager::TryGet()->GetEFX();
 
         const ALint targetType = (needsLP && needsHP) ? AL_FILTER_BANDPASS : (needsLP ? AL_FILTER_LOWPASS : AL_FILTER_HIGHPASS);
 
@@ -84,9 +84,9 @@ namespace Crowny
     void AudioFilter::Detach(ALuint sourceId)
     {
         alSourcei(sourceId, AL_DIRECT_FILTER, AL_FILTER_NULL);
-        if (m_FilterId != 0 && gAudioManager && gAudioManager->IsEFXAvailable())
+        if (m_FilterId != 0 && AudioManager::TryGet() && AudioManager::TryGet()->IsEFXAvailable())
         {
-            gAudioManager->GetEFX().DeleteFilters(1, &m_FilterId);
+            AudioManager::TryGet()->GetEFX().DeleteFilters(1, &m_FilterId);
             m_FilterId = 0;
             m_FilterType = 0;
         }

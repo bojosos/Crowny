@@ -18,6 +18,7 @@ namespace Crowny
         Ref<SerializableFieldData> GetFieldData(const Ref<SerializableMemberInfo>& fieldInfo) const;
 
         static Ref<SerializableObject> CreateFromMonoObject(MonoObject* monoObject);
+        static Ref<SerializableObject> CreateFromMonoObject(MonoObject* monoObject, const Ref<SerializableObjectInfo>& objectInfo);
         static Ref<SerializableObject> CreateNew(const Ref<SerializableTypeInfoObject>& type);
         static MonoObject* CreateManagedInstance(const Ref<SerializableTypeInfoObject>& type);
 

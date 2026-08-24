@@ -76,8 +76,8 @@ namespace Crowny
         float GetLength() const { return m_Length; }
         uint32_t GetNumSamples() const { return m_NumSamples; }
         const AudioClipDesc& GetDesc() const { return m_Desc; }
-        void GetSamples(uint8_t* samples, uint32_t offset, uint32_t count) const;
-        void GetBuffer(uint8_t* samples, uint32_t offset, uint32_t count) const;
+        uint32_t GetSamples(uint8_t* samples, uint32_t offset, uint32_t count) const;
+        uint32_t GetBuffer(uint8_t* samples, uint32_t offset, uint32_t count) const;
         Ref<DataStream> GetSourceStream(uint32_t& size) const;
         uint32_t GetOpenALBuffer() const { return m_BufferID; }
         bool Is3D() const { return m_Desc.Is3D; }
@@ -93,8 +93,8 @@ namespace Crowny
         mutable OggVorbisDecoder m_VorbisReader;
         bool m_NeedsDecompression = false;
         uint32_t m_BufferID = (uint32_t)-1;
-        uint32_t m_NumSamples;
-        uint32_t m_StreamSize;
+        uint32_t m_NumSamples = 0;
+        uint32_t m_StreamSize = 0;
         uint32_t m_StreamOffset = 0;
 
         Ref<DataStream> m_StreamData;

@@ -11,21 +11,23 @@ namespace Crowny
 
     struct SwapChainSurface
     {
-        VulkanFramebuffer* Framebuffer;
-        VulkanImage* Image;
-        VulkanSemaphore* Sync;
+        VulkanFramebuffer* Framebuffer = nullptr;
+        VulkanImage* Image = nullptr;
+        VulkanSemaphore* Sync = nullptr;
         VkFence AcquireFence = VK_NULL_HANDLE;
-        bool Acquired;
-        bool NeedsWait;
+        bool Acquired = false;
+        bool NeedsWait = false;
     };
 
-    // TODO: Prevent copying
     class VulkanSwapChain : public VulkanResource
     {
     public:
         VulkanSwapChain(VulkanResourceManager* owner, VkSurfaceKHR surface, uint32_t width, uint32_t height, bool vsync, VkFormat colorFormat,
                         VkColorSpaceKHR colorSpace, bool createDepth, VkFormat depthFormat, VulkanSwapChain* oldChain = nullptr);
         ~VulkanSwapChain();
+
+        VulkanSwapChain(const VulkanSwapChain&) = delete;
+        VulkanSwapChain& operator=(const VulkanSwapChain&) = delete;
 
         bool PrepareForPresent(uint32_t& backBufferIdx);
         VkResult AcquireBackBuffer();
@@ -34,7 +36,7 @@ namespace Crowny
         uint32_t GetWidth() const { return m_Width; }
         uint32_t GetHeight() const { return m_Height; }
         const SwapChainSurface& GetBackBuffer() const { return m_Surfaces[m_CurrentBackBufferIdx]; }
-        uint32_t GetColorSurfacesCount() const { return (uint32_t)m_Surfaces.size(); }
+        uint32_t GetColorSurfacesCount() const { return m_Surfaces.empty() ? 0U : (uint32_t)m_Surfaces.size() - 1; }
         VkSwapchainKHR GetHandle() const { return m_SwapChain; }
 
     private:
@@ -44,7 +46,8 @@ namespace Crowny
         Vector<VkFramebuffer> m_Framebuffers;
         VkDevice m_Device = VK_NULL_HANDLE;
         VkSwapchainKHR m_SwapChain = VK_NULL_HANDLE;
-        uint32_t m_Width, m_Height;
+        uint32_t m_Width = 0;
+        uint32_t m_Height = 0;
         Vector<SwapChainSurface> m_Surfaces;
         VulkanImage* m_DepthStencilImage = nullptr;
 

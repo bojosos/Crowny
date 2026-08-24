@@ -9,6 +9,7 @@
 #include "Panels/NodeEditor/ImNodeFlowAdapter.h"
 
 #include "Panels/NodeEditor/NodeEditorActions.h"
+#include "Panels/NodeEditor/NodeEditorPalette.h"
 #include <ImNodeFlow.h>
 #include <imgui.h>
 
@@ -78,7 +79,7 @@ namespace Crowny
             if (m_CoreNode)
             {
                 ImGui::TextUnformatted(m_CoreNode->GetTypeName().c_str());
-                if (m_CoreNode->GetTypeName() == "GraphInputNode")
+                if (m_CoreNode->GetTypeName() == "GraphInputNode"_sid)
                 {
                     GraphInputNode* inputNode = static_cast<GraphInputNode*>(m_CoreNode);
                     const auto& inputs = m_Graph->GetInputs();
@@ -288,8 +289,8 @@ namespace Crowny
                         if (!exists)
                         {
                             const auto action = CreateRef<NodesConnectedAction>(graph, outPin->GetID(), inPin->GetID());
+                            action->Commit();
                             UndoRedo::Get().RegisterAction(action);
-                            graph->ConnectByPinID(outPin->GetID(), inPin->GetID());
                         }
                     }
                 }
@@ -338,9 +339,9 @@ namespace Crowny
             {
                 if (conn.ID == connId)
                 {
-                    const auto action = CreateRef<NodesDisconnectedAction>(graph, conn.OutputPinID, conn.InputPinID);
+                    const auto action = CreateRef<NodesDisconnectedAction>(graph, conn);
+                    action->Commit();
                     UndoRedo::Get().RegisterAction(action);
-                    graph->Disconnect(connId);
                     break;
                 }
             }
@@ -362,33 +363,25 @@ namespace Crowny
 
     void ImNodeFlowAdapter::RenderAddNodeMenu(const Ref<NodeGraph>& graph)
     {
-        const auto& categories = NodeRegistry::Get().GetCategorizedTypes();
-        for (const auto& [category, typeNames] : categories)
+        if (ImGui::IsWindowAppearing())
         {
-            if (ImGui::BeginMenu(category.c_str()))
-            {
-                for (const auto& typeName : typeNames)
-                {
-                    if (ImGui::MenuItem(typeName.c_str()))
-                    {
-                        auto node = NodeRegistry::Get().Create(typeName);
-                        if (node)
-                        {
-                            // Place node at the mouse position in grid space
-                            const auto mousePos = ImGui::GetMousePos();
-                            const auto gridPos = m_Impl->Flow.getPos();
-                            node->SetEditorPosition(glm::vec2(mousePos.x - gridPos.x, mousePos.y - gridPos.y));
-
-                            const auto action = CreateRef<NodeAddedAction>(graph, node);
-                            UndoRedo::Get().RegisterAction(action);
-                            graph->AddNode(node);
-                            m_NeedsSync = true;
-                        }
-                    }
-                }
-                ImGui::EndMenu();
-            }
+            const auto mousePos = ImGui::GetMousePos();
+            const auto gridPos = m_Impl->Flow.getPos();
+            m_AddNodePosition = glm::vec2(mousePos.x - gridPos.x, mousePos.y - gridPos.y);
         }
+
+        RenderNodePalette(m_AddNodeSearch, m_FocusAddNodeSearch, [this, &graph](StringID typeName) {
+            auto node = NodeRegistry::Get().Create(typeName);
+            if (node)
+            {
+                node->SetEditorPosition(m_AddNodePosition);
+
+                const auto action = CreateRef<NodeAddedAction>(graph, node);
+                action->Commit();
+                UndoRedo::Get().RegisterAction(action);
+                m_NeedsSync = true;
+            }
+        });
     }
 
 } // namespace Crowny

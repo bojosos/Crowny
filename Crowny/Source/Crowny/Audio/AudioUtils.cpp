@@ -17,7 +17,7 @@ namespace Crowny
             case 2:
                 return AL_FORMAT_STEREO8;
             case 4:
-                return alGetEnumValue("AL_FORMAT_QUEAD8");
+                return alGetEnumValue("AL_FORMAT_QUAD8");
             case 6:
                 return alGetEnumValue("AL_FORMAT_51CHN8");
             case 7:
@@ -37,7 +37,7 @@ namespace Crowny
             case 2:
                 return AL_FORMAT_STEREO16;
             case 4:
-                return alGetEnumValue("AL_FORMAT_QUEAD16");
+                return alGetEnumValue("AL_FORMAT_QUAD16");
             case 6:
                 return alGetEnumValue("AL_FORMAT_51CHN16");
             case 7:
@@ -75,22 +75,36 @@ namespace Crowny
         }
     }
 
+    uint32_t AudioUtils::GetBufferSize(uint32_t numSamples, uint32_t bitDepth)
+    {
+        if (bitDepth != 8 && bitDepth != 16 && bitDepth != 24 && bitDepth != 32)
+            return 0;
+        return numSamples * (bitDepth / 8);
+    }
+
+    void AudioUtils::ConvertSigned8ToUnsigned(const uint8_t* samples, uint8_t* output, uint32_t numSamples)
+    {
+        for (uint32_t i = 0; i < numSamples; i++)
+            output[i] = static_cast<uint8_t>(static_cast<int32_t>(static_cast<int8_t>(samples[i])) + 128);
+    }
+
     void Convert8To32Bits(const int8_t* input, int32_t* output, uint32_t numSamples)
     {
         for (uint32_t i = 0; i < numSamples; i++)
-        {
-            const int8_t val = input[i];
-            output[i] = val << 24;
-        }
+            output[i] = static_cast<int32_t>(input[i]) * 16777216;
     }
 
     void Convert16To32Bits(const int16_t* input, int32_t* output, uint32_t numSamples)
     {
         for (uint32_t i = 0; i < numSamples; i++)
-            output[i] = input[i] << 16;
+            output[i] = static_cast<int32_t>(input[i]) * 65536;
     }
 
-    int32_t AudioUtils::Convert24To32Bits(const uint8_t* in) { return (in[2] << 24) | (in[1] << 16) | (in[0] << 8); }
+    int32_t AudioUtils::Convert24To32Bits(const uint8_t* in)
+    {
+        const uint32_t value = (static_cast<uint32_t>(in[2]) << 24) | (static_cast<uint32_t>(in[1]) << 16) | (static_cast<uint32_t>(in[0]) << 8);
+        return static_cast<int32_t>(value);
+    }
 
     void Convert24To32Bits(const uint8_t* input, int32_t* output, uint32_t numSamples)
     {
@@ -115,7 +129,7 @@ namespace Crowny
 
     void Convert32To24Bits(const int32_t input, uint8_t* output)
     {
-        uint32_t val = *(uint32_t*)&input;
+        const uint32_t val = static_cast<uint32_t>(input);
         output[0] = (val >> 8) & 0x000000FF;
         output[1] = (val >> 16) & 0x000000FF;
         output[2] = (val >> 24) & 0x000000FF;
@@ -132,24 +146,28 @@ namespace Crowny
 
     void AudioUtils::ConvertBitDepth(const uint8_t* samples, uint32_t inBitDepth, uint8_t* output, uint32_t outBitDepth, uint32_t numSamples)
     {
-        int32_t* src = nullptr;
+        Vector<int32_t> temporary;
+        const int32_t* src = nullptr;
         const bool needNewBuffer = inBitDepth != 32;
         if (needNewBuffer)
-            src = new int32_t[numSamples * sizeof(int32_t)];
+        {
+            temporary.resize(numSamples);
+            src = temporary.data();
+        }
         else
-            src = (int32_t*)samples;
+            src = reinterpret_cast<const int32_t*>(samples);
 
         // convert to 32-bit, then to the desirerd format
         switch (inBitDepth)
         {
         case 8:
-            Convert8To32Bits((int8_t*)samples, src, numSamples);
+            Convert8To32Bits(reinterpret_cast<const int8_t*>(samples), temporary.data(), numSamples);
             break;
         case 16:
-            Convert16To32Bits((int16_t*)samples, src, numSamples);
+            Convert16To32Bits(reinterpret_cast<const int16_t*>(samples), temporary.data(), numSamples);
             break;
         case 24:
-            ::Crowny::Convert24To32Bits(samples, src, numSamples);
+            ::Crowny::Convert24To32Bits(samples, temporary.data(), numSamples);
             break;
         case 32:
             break;
@@ -176,12 +194,6 @@ namespace Crowny
             CW_ENGINE_ASSERT(false);
             break;
         }
-
-        if (needNewBuffer)
-        {
-            delete[] src;
-            src = nullptr;
-        }
     }
 
     void AudioUtils::ConvertToFloat(const uint8_t* samples, uint32_t inBitDepth, float* output, uint32_t numSamples)
@@ -190,8 +202,8 @@ namespace Crowny
         {
             for (uint32_t i = 0; i < numSamples; i++)
             {
-                const int8_t sample = *(int8_t*)samples;
-                output[i] = sample / 127.0f;
+                const int8_t sample = static_cast<int8_t>(*samples);
+                output[i] = sample < 0 ? sample / 128.0f : sample / 127.0f;
                 samples++;
             }
         }
@@ -199,8 +211,9 @@ namespace Crowny
         {
             for (uint32_t i = 0; i < numSamples; i++)
             {
-                const int16_t sample = *(int16_t*)samples;
-                output[i] = sample / 32767.0f;
+                int16_t sample;
+                std::memcpy(&sample, samples, sizeof(sample));
+                output[i] = sample < 0 ? sample / 32768.0f : sample / 32767.0f;
                 samples += 2;
             }
         }
@@ -209,7 +222,7 @@ namespace Crowny
             for (uint32_t i = 0; i < numSamples; i++)
             {
                 const int32_t sample = AudioUtils::Convert24To32Bits(samples);
-                output[i] = sample / 2147483647.0f;
+                output[i] = sample < 0 ? sample / 2147483648.0f : sample / 2147483647.0f;
                 samples += 3;
             }
         }
@@ -217,8 +230,9 @@ namespace Crowny
         {
             for (uint32_t i = 0; i < numSamples; i++)
             {
-                const int32_t sample = *(int32_t*)samples;
-                output[i] = sample / 2147483647.0f;
+                int32_t sample;
+                std::memcpy(&sample, samples, sizeof(sample));
+                output[i] = sample < 0 ? sample / 2147483648.0f : sample / 2147483647.0f;
                 samples += 4;
             }
         }
@@ -263,7 +277,7 @@ namespace Crowny
             int64_t sum = 0;
             for (uint32_t j = 0; j < numChannels; j++)
             {
-                sum += *input;
+                sum += AudioUtils::Convert24To32Bits(input);
                 input += 3;
             }
             Convert32To24Bits((int32_t)(sum / numChannels), output);
@@ -307,6 +321,8 @@ namespace Crowny
             break;
         }
     }
+
+    bool AudioUtils::ShouldResumeAfterGlobalPause(AudioSourceState state) { return state == AudioSourceState::Playing; }
 
     bool AudioUtils::CheckOpenALErrors(const String& filename, uint32_t line)
     {

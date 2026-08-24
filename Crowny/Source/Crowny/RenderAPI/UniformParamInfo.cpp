@@ -4,10 +4,27 @@
 
 #include "Crowny/Renderer/Renderer.h"
 
+#include "Platform/OpenGL/OpenGLUniformParams.h"
 #include "Platform/Vulkan/VulkanUniformParamInfo.h"
 
 namespace Crowny
 {
+
+    UniformParamInfo::~UniformParamInfo()
+    {
+        for (uint32_t set = 0; set < m_NumSets; ++set)
+        {
+            delete[] m_SetInfos[set].SlotIndices;
+            delete[] m_SetInfos[set].SlotTypes;
+            delete[] m_SetInfos[set].SlotSamplers;
+            delete[] m_SetInfos[set].SlotArraySizes;
+            delete[] m_SetInfos[set].SlotRuntimeArrays;
+        }
+        delete[] m_SetInfos;
+
+        for (ResourceInfo* resourceInfos : m_ResourceInfos)
+            delete[] resourceInfos;
+    }
 
     UniformParamInfo::UniformParamInfo(const UniformParamDesc& desc) : m_NumSets(0), m_NumElements(0), m_SetInfos(nullptr), m_ResourceInfos()
     {
@@ -19,10 +36,14 @@ namespace Crowny
         m_ParamDescs[DOMAIN_SHADER] = desc.DomainParams;
         m_ParamDescs[COMPUTE_SHADER] = desc.ComputeParams;
 
+        std::array<UnorderedSet<uint64_t>, static_cast<size_t>(ParamType::Count)> uniqueBindings;
         auto countElements = [&](auto& entry, ParamType type) {
             int typeIdx = (int)type;
             if ((entry.Set + 1) > m_NumSets)
                 m_NumSets = entry.Set + 1;
+            const uint64_t binding = (static_cast<uint64_t>(entry.Set) << 32u) | entry.Slot;
+            if (!uniqueBindings[typeIdx].insert(binding).second)
+                return;
             m_NumElementsPerType[typeIdx]++;
             m_NumElements++;
         };
@@ -42,11 +63,14 @@ namespace Crowny
             for (auto& texture : paramDesc->LoadStoreTextures)
                 countElements(texture.second, ParamType::LoadStoreTexture);
 
-            // for (auto& buffer : paramDesc->Buffers)
-            //     countElements(buffer.second, ParamType::Buffer);
+            for (auto& buffer : paramDesc->Buffers)
+                countElements(buffer.second, ParamType::Buffer);
 
             for (auto& sampler : paramDesc->Samplers)
                 countElements(sampler.second, ParamType::SamplerState);
+
+            for (auto& accelerationStructure : paramDesc->AccelerationStructures)
+                countElements(accelerationStructure.second, ParamType::AccelStruct);
         }
 
         uint32_t* numSlotsPerSet = new uint32_t[m_NumSets];
@@ -63,13 +87,19 @@ namespace Crowny
             for (auto& texture : paramDesc->Textures)
                 numSlotsPerSet[texture.second.Set] = std::max(numSlotsPerSet[texture.second.Set], texture.second.Slot + 1);
 
+            for (auto& texture : paramDesc->LoadStoreTextures)
+                numSlotsPerSet[texture.second.Set] = std::max(numSlotsPerSet[texture.second.Set], texture.second.Slot + 1);
+
+            for (auto& buffer : paramDesc->Buffers)
+                numSlotsPerSet[buffer.second.Set] = std::max(numSlotsPerSet[buffer.second.Set], buffer.second.Slot + 1);
+
             for (auto& sampler : paramDesc->Samplers)
                 numSlotsPerSet[sampler.second.Set] = std::max(numSlotsPerSet[sampler.second.Set], sampler.second.Slot + 1);
-        }
 
-        uint32_t totalNumSlots = 0;
-        for (uint32_t i = 0; i < m_NumSets; i++)
-            totalNumSlots += numSlotsPerSet[i];
+            for (auto& accelerationStructure : paramDesc->AccelerationStructures)
+                numSlotsPerSet[accelerationStructure.second.Set] =
+                  std::max(numSlotsPerSet[accelerationStructure.second.Set], accelerationStructure.second.Slot + 1);
+        }
 
         m_SetInfos = new SetInfo[m_NumSets];
         if (m_SetInfos != nullptr)
@@ -86,9 +116,16 @@ namespace Crowny
             std::memset(m_SetInfos[i].SlotIndices, -1, sizeof(uint32_t) * m_SetInfos[i].NumSlots);
 
             m_SetInfos[i].SlotTypes = new ParamType[m_SetInfos[i].NumSlots];
+            std::fill_n(m_SetInfos[i].SlotTypes, m_SetInfos[i].NumSlots, ParamType::Count);
 
             m_SetInfos[i].SlotSamplers = new uint32_t[m_SetInfos[i].NumSlots];
             std::memset(m_SetInfos[i].SlotSamplers, -1, sizeof(uint32_t) * m_SetInfos[i].NumSlots);
+
+            m_SetInfos[i].SlotArraySizes = new uint32_t[m_SetInfos[i].NumSlots];
+            std::fill_n(m_SetInfos[i].SlotArraySizes, m_SetInfos[i].NumSlots, 1u);
+
+            m_SetInfos[i].SlotRuntimeArrays = new bool[m_SetInfos[i].NumSlots];
+            std::fill_n(m_SetInfos[i].SlotRuntimeArrays, m_SetInfos[i].NumSlots, false);
         }
 
         for (uint32_t i = 0; i < (uint32_t)ParamType::Count; i++)
@@ -97,10 +134,14 @@ namespace Crowny
             m_NumElementsPerType[i] = 0;
         }
 
-        auto populateSetInfo = [&](auto& entry, ParamType type) {
+        auto populateSetInfo = [&](auto& entry, ParamType type, uint32_t arraySize = 1u, bool runtimeArray = false) {
             int typeIdx = (int)type;
-            uint32_t seqIdx = m_NumElementsPerType[typeIdx];
             SetInfo& setInfo = m_SetInfos[entry.Set];
+            setInfo.SlotArraySizes[entry.Slot] = std::max(setInfo.SlotArraySizes[entry.Slot], std::max(arraySize, 1u));
+            setInfo.SlotRuntimeArrays[entry.Slot] = setInfo.SlotRuntimeArrays[entry.Slot] || runtimeArray;
+            if (setInfo.SlotIndices[entry.Slot] != (uint32_t)-1 && setInfo.SlotTypes[entry.Slot] == type)
+                return;
+            uint32_t seqIdx = m_NumElementsPerType[typeIdx];
             setInfo.SlotIndices[entry.Slot] = seqIdx;
             setInfo.SlotTypes[entry.Slot] = type;
 
@@ -117,7 +158,13 @@ namespace Crowny
             for (auto& paramBlock : paramDesc->Uniforms)
                 populateSetInfo(paramBlock.second, ParamType::ParamBlock);
             for (auto& texture : paramDesc->Textures)
-                populateSetInfo(texture.second, ParamType::Texture);
+                populateSetInfo(texture.second, ParamType::Texture, texture.second.ArraySize, texture.second.RuntimeArray);
+            for (auto& texture : paramDesc->LoadStoreTextures)
+                populateSetInfo(texture.second, ParamType::LoadStoreTexture, texture.second.ArraySize, texture.second.RuntimeArray);
+            for (auto& buffer : paramDesc->Buffers)
+                populateSetInfo(buffer.second, ParamType::Buffer, buffer.second.ArraySize, buffer.second.RuntimeArray);
+            for (auto& accelerationStructure : paramDesc->AccelerationStructures)
+                populateSetInfo(accelerationStructure.second, ParamType::AccelStruct);
 
             int typeIdx = (int)ParamType::SamplerState;
             for (auto& entry : paramDesc->Samplers)
@@ -126,13 +173,20 @@ namespace Crowny
                 uint32_t seqIdx = m_NumElementsPerType[typeIdx];
 
                 SetInfo& setInfo = m_SetInfos[samplerDesc.Set];
+                setInfo.SlotArraySizes[samplerDesc.Slot] =
+                  std::max(setInfo.SlotArraySizes[samplerDesc.Slot], std::max(samplerDesc.ArraySize, 1u));
+                setInfo.SlotRuntimeArrays[samplerDesc.Slot] =
+                  setInfo.SlotRuntimeArrays[samplerDesc.Slot] || samplerDesc.RuntimeArray;
                 if (setInfo.SlotIndices[samplerDesc.Slot] == (uint32_t)-1)
                 {
                     setInfo.SlotIndices[samplerDesc.Slot] = seqIdx;
                     setInfo.SlotTypes[samplerDesc.Slot] = ParamType::SamplerState;
                 }
-                else
+                else if (setInfo.SlotTypes[samplerDesc.Slot] != ParamType::SamplerState &&
+                         setInfo.SlotSamplers[samplerDesc.Slot] == (uint32_t)-1)
                     setInfo.SlotSamplers[samplerDesc.Slot] = seqIdx;
+                else
+                    continue;
                 m_ResourceInfos[typeIdx][seqIdx].Set = samplerDesc.Set;
                 m_ResourceInfos[typeIdx][seqIdx].Slot = samplerDesc.Slot;
                 m_NumElementsPerType[typeIdx]++;
@@ -157,11 +211,8 @@ namespace Crowny
         ParamType type = m_SetInfos[set].SlotTypes[slot];
         if (type != paramType)
         {
-            if (type == ParamType::SamplerState)
-            {
-                if (m_SetInfos[set].SlotSamplers[set] != (uint32_t)-1)
-                    return m_SetInfos[set].SlotSamplers[slot];
-            }
+            if (paramType == ParamType::SamplerState && m_SetInfos[set].SlotSamplers[slot] != (uint32_t)-1)
+                return m_SetInfos[set].SlotSamplers[slot];
             CW_ENGINE_ERROR("Parameters are of the wrong type. Requested: {0}, actual: {1}", (uint32_t)paramType, (uint32_t)type);
             return -1;
         }
@@ -223,9 +274,10 @@ namespace Crowny
 
     Ref<UniformParamInfo> UniformParamInfo::Create(const UniformParamDesc& desc)
     {
-        switch (gRenderAPI->GetAPI())
+        switch (RenderAPI::TryGet()->GetAPI())
         {
-        // case RenderAPI::API::OpenGL: return CreateRef<OpenGLShader>(m_Filepath);
+        case RenderAPI::API::OpenGL:
+            return Ref<UniformParamInfo>(new OpenGLUniformParamInfo(desc));
         case RenderAPI::API::Vulkan:
             return Ref<UniformParamInfo>(new VulkanUniformParamInfo(desc));
         default:
@@ -233,7 +285,18 @@ namespace Crowny
             return nullptr;
         }
 
-        return nullptr;
+    }
+
+    uint32_t UniformParamInfo::GetArraySize(uint32_t set, uint32_t slot) const
+    {
+        if (set >= m_NumSets || slot >= m_SetInfos[set].NumSlots)
+            return 0;
+        return m_SetInfos[set].SlotArraySizes[slot];
+    }
+
+    bool UniformParamInfo::IsRuntimeArray(uint32_t set, uint32_t slot) const
+    {
+        return set < m_NumSets && slot < m_SetInfos[set].NumSlots && m_SetInfos[set].SlotRuntimeArrays[slot];
     }
 
 } // namespace Crowny

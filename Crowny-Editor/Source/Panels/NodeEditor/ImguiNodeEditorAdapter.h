@@ -4,6 +4,8 @@
 
 #include "Panels/NodeEditor/NodeEditorAdapter.h"
 
+#include <glm/glm.hpp>
+
 namespace ax::NodeEditor
 {
     struct EditorContext;
@@ -38,6 +40,9 @@ namespace Crowny
 
         bool m_NeedsSync = true;
         Ref<NodeGraph> m_CurrentGraph;
+        String m_AddNodeSearch;
+        bool m_FocusAddNodeSearch = false;
+        glm::vec2 m_AddNodePosition = glm::vec2(0.0f);
     };
 
 } // namespace Crowny

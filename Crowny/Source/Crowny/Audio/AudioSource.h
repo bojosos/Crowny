@@ -75,8 +75,11 @@ namespace Crowny
     private:
         bool RequiresStreaming() const;
         void Stream();
+        bool FillStreamBuffer(uint32_t bufferId, uint32_t bufferIndex);
+        void UpdateStreaming();
         void StartStreaming();
         void StopStreaming();
+        void ReleaseOpenALResources();
 
     private:
         AssetHandle<AudioClip> m_AudioClip;
@@ -84,27 +87,26 @@ namespace Crowny
         float m_Pitch = 1.0f;
         float m_MinDistace = 1.0f;
         float m_MaxDistance = 100.0f;
-        int32_t m_Priority;
+        int32_t m_Priority = 128;
         bool m_Loop = false;
-        float m_Attenuation;
+        float m_Attenuation = 1.0f;
         bool m_GloballyPaused = false;
-        bool m_Paused = true;
+        bool m_ResumeAfterGlobalPause = false;
+
+        bool m_IsStreaming = false;
+        bool m_PlaybackRequested = false;
+        static const uint32_t StreamBufferCount = 3;
+        static const uint32_t StreamBufferSamples = 16384;
+        uint32_t m_StreamBuffers[StreamBufferCount]{};
+        uint32_t m_StreamBufferSampleCounts[StreamBufferCount]{};
+        uint32_t m_StreamProcessedPosition = 0;
+        uint32_t m_StreamQueuePosition = 0;
+        uint32_t m_SourceID = 0;
 
         Ref<AudioBus> m_Bus;
         Scope<AudioFilter> m_Filter;
         float m_LowPassGain = 1.0f;
         float m_HighPassGain = 1.0f;
-
-        AudioSourceState m_SavedState = AudioSourceState::Stopped;
-        float m_SavedTime = 0.0f;
-
-        bool m_IsStreaming = false;
-        static const uint32_t StreamBufferCount = 3;
-        uint32_t m_StreamBuffers[StreamBufferCount];
-        uint32_t m_BusyBuffers[StreamBufferCount];
-        uint32_t m_StreamProcessedPosition = 0;
-        uint32_t m_StreamQueuePosition = 0;
-        uint32_t m_SourceID;
 
         glm::vec3 m_Velocity;
         glm::vec3 m_PrevPosition;
@@ -114,6 +116,8 @@ namespace Crowny
         float m_ConeOuterAngle = 360.0f;
         float m_ConeOuterGain = 0.0f;
         float m_ConeOuterGainHF = 1.0f;
+
+        friend class AudioManager;
     };
 
 } // namespace Crowny

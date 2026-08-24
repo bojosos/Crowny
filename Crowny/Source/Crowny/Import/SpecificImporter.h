@@ -6,12 +6,15 @@
 namespace Crowny
 {
 
+    String NormalizeImportExtension(StringView extension);
+
     class SpecificImporter
     {
     public:
         SpecificImporter() = default;
         virtual ~SpecificImporter() = default;
 
+        // Receives an extension without a leading dot, normalized to lowercase by Importer.
         virtual bool IsExtensionSupported(const String& ext) const = 0;
 
         virtual bool IsMagicNumSupported(uint8_t* num, uint32_t numSize) const = 0;

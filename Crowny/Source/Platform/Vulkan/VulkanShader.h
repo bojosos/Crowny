@@ -34,6 +34,6 @@ namespace Crowny
 
     private:
         VkPipelineShaderStageCreateInfo m_ShaderStage;
-        VulkanShaderModule* m_Module;
+        VulkanShaderModule* m_Module = nullptr;
     };
 } // namespace Crowny

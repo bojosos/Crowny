@@ -14,7 +14,7 @@ namespace Crowny
     public:
         ScriptComponentBase(MonoObject* instance);
         virtual ~ScriptComponentBase() = default;
-        virtual void NotifyDestroyed() {}
+        void NotifyDestroyed() override { FreeManagedInstance(); }
     };
     // The base class of all components
     // Components are stored as the entities they belong to as that better fits entt (Components will frequently change

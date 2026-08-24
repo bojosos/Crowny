@@ -1,6 +1,7 @@
 #include "cwpch.h"
 #ifdef CW_PLATFORM_LINUX
 #include "Crowny/Application/Application.h"
+#include "Crowny/Common/BuiltInResourcePack.h"
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Common/StringUtils.h"
@@ -10,21 +11,36 @@
 
 namespace Crowny
 {
+    static Ref<DataStream> OpenPackedFile(const Path& path)
+    {
+        return BuiltInResourcePack::IsStartedUp() ? BuiltInResourcePack::Get().Open(path) : nullptr;
+    }
 
     bool FileSystem::FileExists(const Path& path)
     {
+        if (BuiltInResourcePack::IsStartedUp() && BuiltInResourcePack::Get().Contains(path))
+            return true;
         std::ifstream f(path);
         return f.good();
     }
 
     uint64_t FileSystem::GetFileSize(const Path& path)
     {
+        uint64_t packedSize = 0;
+        if (BuiltInResourcePack::IsStartedUp() && BuiltInResourcePack::Get().TryGetSize(path, packedSize))
+            return packedSize;
         std::ifstream in(path, std::ifstream::ate | std::ifstream::binary);
-        return in.tellg();
+        return in ? static_cast<uint64_t>(in.tellg()) : 0;
     }
 
     std::tuple<uint8_t*, uint64_t> FileSystem::ReadFile(const Path& path)
     {
+        if (const Ref<DataStream> packed = OpenPackedFile(path))
+        {
+            uint8_t* data = new uint8_t[packed->Size()];
+            const uint64_t size = packed->Read(data, packed->Size());
+            return std::make_tuple(data, size);
+        }
         std::ifstream input(path, std::ios::binary);
 
         Vector<uint8_t>* uint8_ts = new Vector<uint8_t>((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
@@ -41,6 +57,8 @@ namespace Crowny
 
     String FileSystem::ReadTextFile(const Path& path)
     {
+        if (const Ref<DataStream> packed = OpenPackedFile(path))
+            return packed->GetAsString();
         std::ifstream input(path);
 
         String res((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
@@ -68,6 +86,11 @@ namespace Crowny
 
     Ref<DataStream> FileSystem::OpenFile(const Path& filepath, bool readOnly)
     {
+        if (readOnly)
+        {
+            if (Ref<DataStream> packed = OpenPackedFile(filepath))
+                return packed;
+        }
         DataStream::AccessMode accessMode = DataStream::READ;
         if (!readOnly)
             accessMode = (DataStream::AccessMode)(accessMode | DataStream::WRITE);

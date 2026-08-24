@@ -8,8 +8,11 @@ namespace Crowny
                                                    BufferUsage usage)
       : m_Usage(usage), m_BufferType(type), m_BufferFormat(format)
     {
-        const VulkanGpuBuffer::BufferType bufferType =
-          type == GpuBufferType::Structured ? VulkanGpuBuffer::BUFFER_STRUCTURED : VulkanGpuBuffer::BUFFER_GENERIC;
+        VulkanGpuBuffer::BufferType bufferType = VulkanGpuBuffer::BUFFER_GENERIC;
+        if (type == GpuBufferType::Structured)
+            bufferType = VulkanGpuBuffer::BUFFER_STRUCTURED;
+        else if (type == GpuBufferType::IndirectDraw)
+            bufferType = VulkanGpuBuffer::BUFFER_INDIRECT;
         m_Buffer = new VulkanGpuBuffer(bufferType, usage, elementSize * elementCount);
         UpdateViews();
     }

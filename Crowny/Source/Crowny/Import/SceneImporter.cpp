@@ -1,17 +1,11 @@
 #include "cwpch.h"
 
-#include "Crowny/Common/StringUtils.h"
 #include "Crowny/Import/SceneImporter.h"
 #include "Crowny/Scene/Scene.h"
 
 namespace Crowny
 {
-    bool SceneImporter::IsExtensionSupported(const String& ext) const
-    {
-        String lower = ext;
-        StringUtils::ToLower(lower);
-        return lower == "cwscene";
-    }
+    bool SceneImporter::IsExtensionSupported(const String& ext) const { return ext == "cwscene"; }
 
     bool SceneImporter::IsMagicNumSupported(uint8_t* num, uint32_t numSize) const { return false; }
 

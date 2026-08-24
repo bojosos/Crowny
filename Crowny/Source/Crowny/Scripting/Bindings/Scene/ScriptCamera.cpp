@@ -9,6 +9,8 @@ namespace Crowny
     {
         MetaData.ScriptClass->AddInternalCall("Internal_GetCameraFov", (void*)&Internal_GetCameraFov);
         MetaData.ScriptClass->AddInternalCall("Internal_SetCameraFov", (void*)&Internal_SetCameraFov);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetCameraProjection", (void*)&Internal_GetCameraProjection);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetCameraProjection", (void*)&Internal_SetCameraProjection);
         MetaData.ScriptClass->AddInternalCall("Internal_GetCameraNearPlane", (void*)&Internal_GetCameraNearPlane);
         MetaData.ScriptClass->AddInternalCall("Internal_SetCameraNearPlane", (void*)&Internal_SetCameraNearPlane);
         MetaData.ScriptClass->AddInternalCall("Internal_GetCameraFarPlane", (void*)&Internal_GetCameraFarPlane);
@@ -21,13 +23,38 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_SetCameraBackgroundColor", (void*)&Internal_SetCameraBackgroundColor);
         MetaData.ScriptClass->AddInternalCall("Internal_GetCameraViewportRectangle", (void*)&Internal_GetCameraViewportRectangle);
         MetaData.ScriptClass->AddInternalCall("Internal_SetCameraViewportRectangle", (void*)&Internal_SetCameraViewportRectangle);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetCameraHDR", (void*)&Internal_GetCameraHDR);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetCameraHDR", (void*)&Internal_SetCameraHDR);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetCameraMSAA", (void*)&Internal_GetCameraMSAA);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetCameraMSAA", (void*)&Internal_SetCameraMSAA);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetCameraOcclusionCulling", (void*)&Internal_GetCameraOcclusionCulling);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetCameraOcclusionCulling", (void*)&Internal_SetCameraOcclusionCulling);
     }
 
     ScriptCamera::ScriptCamera(MonoObject* instance, Entity entity) : TScriptComponent(instance, entity) {}
 
-    float ScriptCamera::Internal_GetCameraFov(ScriptCamera* thisPtr) { return thisPtr->GetComponent().Camera.GetPerspectiveVerticalFOV(); }
+    float ScriptCamera::Internal_GetCameraFov(ScriptCamera* thisPtr)
+    {
+        return glm::degrees(thisPtr->GetComponent().Camera.GetPerspectiveVerticalFOV());
+    }
 
-    void ScriptCamera::Internal_SetCameraFov(ScriptCamera* thisPtr, float value) { thisPtr->GetComponent().Camera.SetPerspectiveVerticalFOV(value); }
+    void ScriptCamera::Internal_SetCameraFov(ScriptCamera* thisPtr, float value)
+    {
+        thisPtr->GetComponent().Camera.SetPerspectiveVerticalFOV(glm::radians(value));
+    }
+
+    int32_t ScriptCamera::Internal_GetCameraProjection(ScriptCamera* thisPtr)
+    {
+        return static_cast<int32_t>(thisPtr->GetComponent().Camera.GetProjectionType());
+    }
+
+    void ScriptCamera::Internal_SetCameraProjection(ScriptCamera* thisPtr, int32_t value)
+    {
+        const SceneCamera::CameraProjection projection = value == static_cast<int32_t>(SceneCamera::CameraProjection::Perspective)
+                                                           ? SceneCamera::CameraProjection::Perspective
+                                                           : SceneCamera::CameraProjection::Orthographic;
+        thisPtr->GetComponent().Camera.SetProjectionType(projection);
+    }
 
     float ScriptCamera::Internal_GetCameraNearPlane(ScriptCamera* thisPtr)
     {
@@ -111,6 +138,24 @@ namespace Crowny
     {
         CameraComponent& component = thisPtr->GetComponent();
         component.Camera.SetViewportRect(*value);
+    }
+
+    bool ScriptCamera::Internal_GetCameraHDR(ScriptCamera* thisPtr) { return thisPtr->GetComponent().Camera.GetHDR(); }
+
+    void ScriptCamera::Internal_SetCameraHDR(ScriptCamera* thisPtr, bool value) { thisPtr->GetComponent().Camera.SetHDR(value); }
+
+    bool ScriptCamera::Internal_GetCameraMSAA(ScriptCamera* thisPtr) { return thisPtr->GetComponent().Camera.GetMSAA(); }
+
+    void ScriptCamera::Internal_SetCameraMSAA(ScriptCamera* thisPtr, bool value) { thisPtr->GetComponent().Camera.SetMSAA(value); }
+
+    bool ScriptCamera::Internal_GetCameraOcclusionCulling(ScriptCamera* thisPtr)
+    {
+        return thisPtr->GetComponent().Camera.GetOcclusionCulling();
+    }
+
+    void ScriptCamera::Internal_SetCameraOcclusionCulling(ScriptCamera* thisPtr, bool value)
+    {
+        thisPtr->GetComponent().Camera.SetOcclusionCulling(value);
     }
 
 } // namespace Crowny

@@ -22,13 +22,19 @@ namespace Crowny
         // Sync all instances of the given prefab asset in the active scene.
         static void SyncAllInstances(const UUID& prefabAssetUuid);
 
-        // Push instance values back into the prefab asset and save. Then syncs all other instances.
-        static void ApplyInstanceToPrefab(Entity instanceRoot);
+        // Resolve the nearest prefab root for a linked entity, including nested instances of the same asset.
+        static Entity GetInstanceRoot(Entity entity);
+
+        // Return true when every linked entity can be resolved in the prefab asset.
+        static bool CanApplyInstanceToPrefab(Entity instanceRoot);
+
+        // Replace mapped prefab component values from an instance and save. Structural hierarchy changes are not applied.
+        static bool ApplyInstanceToPrefab(Entity instanceRoot);
 
         // Discard all overrides on the instance and re-sync from prefab.
-        static void RevertInstance(Entity instanceRoot);
+        static bool RevertInstance(Entity instanceRoot);
 
-        // Remove PrefabComponent from entity and all children, unlinking from prefab.
+        // Unlink one prefab instance while preserving nested prefab instances.
         static void UnlinkPrefab(Entity entity);
 
     private:

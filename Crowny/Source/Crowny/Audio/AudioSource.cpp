@@ -18,70 +18,64 @@ namespace Crowny
     AudioSource::AudioSource()
     {
         m_Filter = CreateScope<AudioFilter>();
-        alGenSources(1, &m_SourceID);
+        if (AudioManager::TryGet() == nullptr || !AudioManager::TryGet()->IsAvailable())
+            return;
 
-        m_Pitch = 1.0f;
-        m_MinDistace = 1.0f;
-        m_Attenuation = 1.0f;
-        m_Loop = false;
+        alGenSources(1, &m_SourceID);
+        if (m_SourceID == 0)
+            return;
 
         alSourcef(m_SourceID, AL_PITCH, m_Pitch);
+        alSourcef(m_SourceID, AL_GAIN, m_Volume);
         alSourcef(m_SourceID, AL_REFERENCE_DISTANCE, m_MinDistace);
+        alSourcef(m_SourceID, AL_MAX_DISTANCE, m_MaxDistance);
         alSourcef(m_SourceID, AL_ROLLOFF_FACTOR, m_Attenuation);
-
-        if (RequiresStreaming())
-            alSourcei(m_SourceID, AL_LOOPING, false);
-        else
-            alSourcei(m_SourceID, AL_LOOPING, m_Loop);
-
-        if (Is3D())
-        {
-            alSourcei(m_SourceID, AL_SOURCE_RELATIVE, false);
-            alSource3f(m_SourceID, AL_POSITION, 0.0f, 0.0f, 0.0f);
-            alSource3f(m_SourceID, AL_VELOCITY, 0.0f, 0.0f, 0.0f);
-        }
-        else
-        {
-            alSourcei(m_SourceID, AL_SOURCE_RELATIVE, true);
-            alSource3f(m_SourceID, AL_POSITION, 0.0f, 0.0f, 0.0f);
-            alSource3f(m_SourceID, AL_VELOCITY, 0.0f, 0.0f, 0.0f);
-        }
-
-        if (m_IsStreaming)
-        {
-            uint32_t oaBuffer = 0;
-            // if (m_AudioClip->IsLoaded())
-            {
-                oaBuffer = m_AudioClip->GetOpenALBuffer();
-            }
-
-            alSourcei(m_SourceID, AL_BUFFER, oaBuffer);
-        }
-
-        if (m_SavedState != AudioSourceState::Stopped)
-            Play();
-        if (m_SavedState == AudioSourceState::Paused)
-            Pause();
-        gAudioManager->RegisterSource(this);
+        alSourcei(m_SourceID, AL_LOOPING, AL_FALSE);
+        alSourcei(m_SourceID, AL_SOURCE_RELATIVE, AL_FALSE);
+        alSource3f(m_SourceID, AL_POSITION, 0.0f, 0.0f, 0.0f);
+        alSource3f(m_SourceID, AL_VELOCITY, 0.0f, 0.0f, 0.0f);
+        AudioManager::TryGet()->RegisterSource(this);
 
         // Auto-route to the active mixer's master bus, if any. The user can override with SetBus().
-        if (const AssetHandle<AudioMixer>& activeMixer = gAudioManager->GetActiveMixer())
+        if (const AssetHandle<AudioMixer>& activeMixer = AudioManager::TryGet()->GetActiveMixer())
             SetBus(activeMixer->GetMasterBus());
     }
 
     AudioSource::~AudioSource()
     {
-        Stop();
         if (m_Bus)
             m_Bus->UnregisterSource(this);
-        m_Filter->Detach(m_SourceID);
-        gAudioManager->UnregisterSource(this);
-        alSourcei(m_SourceID, AL_BUFFER, 0);
-        alDeleteSources(1, &m_SourceID);
+        ReleaseOpenALResources();
+        if (AudioManager::TryGet())
+            AudioManager::TryGet()->UnregisterSource(this);
+    }
+
+    void AudioSource::ReleaseOpenALResources()
+    {
+        if (m_SourceID == 0)
+            return;
+
+        AudioManager* manager = AudioManager::TryGet();
+        if (manager != nullptr && manager->EnsureContextCurrent())
+        {
+            Stop();
+            m_Filter->Detach(m_SourceID);
+            alSourcei(m_SourceID, AL_BUFFER, 0);
+            alDeleteSources(1, &m_SourceID);
+        }
+
+        m_SourceID = 0;
+        m_IsStreaming = false;
+        m_PlaybackRequested = false;
+        m_ResumeAfterGlobalPause = false;
+        std::memset(m_StreamBuffers, 0, sizeof(m_StreamBuffers));
+        std::memset(m_StreamBufferSampleCounts, 0, sizeof(m_StreamBufferSampleCounts));
     }
 
     void AudioSource::OnTransformChanged(const Transform& transform)
     {
+        if (m_SourceID == 0)
+            return;
         const glm::vec3 position = transform.GetPosition();
         if (Is3D())
             alSource3f(m_SourceID, AL_POSITION, position.x, position.y, position.z);
@@ -114,16 +108,16 @@ namespace Crowny
     {
         if (m_GloballyPaused == paused)
             return;
-        m_GloballyPaused = paused;
-        if (GetState() == AudioSourceState::Playing)
+        if (paused)
         {
-            if (paused)
-            {
+            m_ResumeAfterGlobalPause = AudioUtils::ShouldResumeAfterGlobalPause(GetState());
+            if (m_ResumeAfterGlobalPause && m_SourceID != 0)
                 alSourcePause(m_SourceID);
-            }
         }
-        else
+        m_GloballyPaused = paused;
+        if (!paused && m_ResumeAfterGlobalPause)
         {
+            m_ResumeAfterGlobalPause = false;
             Play();
         }
     }
@@ -137,7 +131,8 @@ namespace Crowny
     void AudioSource::RefreshEffectiveGain()
     {
         const float busGain = m_Bus ? m_Bus->GetEffectiveGain() : 1.0f;
-        alSourcef(m_SourceID, AL_GAIN, m_Volume * busGain);
+        if (m_SourceID != 0)
+            alSourcef(m_SourceID, AL_GAIN, m_Volume * busGain);
     }
 
     void AudioSource::SetBus(const Ref<AudioBus>& bus)
@@ -154,7 +149,7 @@ namespace Crowny
 
         // Re-route the source's aux send to the new bus's aux slot. When EFX is unavailable, or the
         // bus has no aux slot allocated, this clears the send (AL_EFFECTSLOT_NULL).
-        if (gAudioManager && gAudioManager->IsEFXAvailable())
+        if (m_SourceID != 0 && AudioManager::TryGet() && AudioManager::TryGet()->IsEFXAvailable())
         {
             const ALuint slot = m_Bus ? m_Bus->GetAuxSlot() : 0;
             alSource3i(m_SourceID, AL_AUXILIARY_SEND_FILTER, static_cast<ALint>(slot), 0, AL_FILTER_NULL);
@@ -166,89 +161,129 @@ namespace Crowny
     void AudioSource::SetLowPassGain(float gainHF)
     {
         m_LowPassGain = glm::clamp(gainHF, 0.0f, 1.0f);
-        m_Filter->Apply(m_SourceID, m_LowPassGain, m_HighPassGain);
+        if (m_SourceID != 0)
+            m_Filter->Apply(m_SourceID, m_LowPassGain, m_HighPassGain);
     }
 
     void AudioSource::SetHighPassGain(float gainLF)
     {
         m_HighPassGain = glm::clamp(gainLF, 0.0f, 1.0f);
-        m_Filter->Apply(m_SourceID, m_LowPassGain, m_HighPassGain);
+        if (m_SourceID != 0)
+            m_Filter->Apply(m_SourceID, m_LowPassGain, m_HighPassGain);
     }
 
     void AudioSource::SetConeInnerAngle(float degrees)
     {
         m_ConeInnerAngle = glm::clamp(degrees, 0.0f, 360.0f);
-        alSourcef(m_SourceID, AL_CONE_INNER_ANGLE, m_ConeInnerAngle);
+        if (m_SourceID != 0)
+            alSourcef(m_SourceID, AL_CONE_INNER_ANGLE, m_ConeInnerAngle);
     }
 
     void AudioSource::SetConeOuterAngle(float degrees)
     {
         m_ConeOuterAngle = glm::clamp(degrees, 0.0f, 360.0f);
-        alSourcef(m_SourceID, AL_CONE_OUTER_ANGLE, m_ConeOuterAngle);
+        if (m_SourceID != 0)
+            alSourcef(m_SourceID, AL_CONE_OUTER_ANGLE, m_ConeOuterAngle);
     }
 
     void AudioSource::SetConeOuterGain(float gain)
     {
         m_ConeOuterGain = glm::clamp(gain, 0.0f, 1.0f);
-        alSourcef(m_SourceID, AL_CONE_OUTER_GAIN, m_ConeOuterGain);
+        if (m_SourceID != 0)
+            alSourcef(m_SourceID, AL_CONE_OUTER_GAIN, m_ConeOuterGain);
     }
 
     void AudioSource::SetConeOuterGainHF(float gainHF)
     {
         m_ConeOuterGainHF = glm::clamp(gainHF, 0.0f, 1.0f);
-        if (gAudioManager && gAudioManager->IsEFXAvailable())
+        if (m_SourceID != 0 && AudioManager::TryGet() && AudioManager::TryGet()->IsEFXAvailable())
             alSourcef(m_SourceID, AL_CONE_OUTER_GAINHF, m_ConeOuterGainHF);
     }
 
     void AudioSource::SetClip(const AssetHandle<AudioClip>& clip)
     {
+        if (m_AudioClip.GetHandleData() == clip.GetHandleData())
+            return;
+        const AudioSourceState previousState = GetState();
+        const bool resumeAfterGlobalPause = m_ResumeAfterGlobalPause;
         Stop();
         m_AudioClip = clip;
+        m_StreamProcessedPosition = 0;
+        m_StreamQueuePosition = 0;
 
-        alSourcei(m_SourceID, AL_SOURCE_RELATIVE, !Is3D());
+        if (m_SourceID == 0)
+            return;
+        alSourcei(m_SourceID, AL_SOURCE_RELATIVE, Is3D() ? AL_FALSE : AL_TRUE);
+        alSourcei(m_SourceID, AL_BUFFER, 0);
         if (!RequiresStreaming())
         {
-            uint32_t oaBuffer = 0;
-            if (m_AudioClip != nullptr)
-            {
-                oaBuffer = m_AudioClip->GetOpenALBuffer();
-            }
-
+            uint32_t oaBuffer = m_AudioClip ? m_AudioClip->GetOpenALBuffer() : 0;
+            if (oaBuffer == static_cast<uint32_t>(-1))
+                oaBuffer = 0;
             alSourcei(m_SourceID, AL_BUFFER, oaBuffer);
         }
         SetLooping(m_Loop);
-        Play();
+
+        if (previousState == AudioSourceState::Playing || resumeAfterGlobalPause)
+            Play();
+        else if (previousState == AudioSourceState::Paused)
+        {
+            Play();
+            Pause();
+        }
     }
 
     void AudioSource::Play()
     {
-        if (m_GloballyPaused)
+        if (!m_AudioClip || m_SourceID == 0)
             return;
+        m_PlaybackRequested = true;
+        if (m_GloballyPaused)
+        {
+            m_ResumeAfterGlobalPause = true;
+            return;
+        }
         if (RequiresStreaming())
         {
             if (!m_IsStreaming)
-            {
-                Stream();
-            }
+                StartStreaming();
+            Stream();
         }
         alSourcePlay(m_SourceID);
     }
 
-    void AudioSource::Pause() { alSourcePause(m_SourceID); }
+    void AudioSource::Pause()
+    {
+        m_PlaybackRequested = false;
+        m_ResumeAfterGlobalPause = false;
+        if (m_SourceID != 0)
+            alSourcePause(m_SourceID);
+    }
 
     void AudioSource::Stop()
     {
+        m_PlaybackRequested = false;
+        m_ResumeAfterGlobalPause = false;
+        if (m_SourceID == 0)
+            return;
         alSourceStop(m_SourceID);
-        alSourcef(m_SourceID, AL_SEC_OFFSET, 0.0f);
         if (m_IsStreaming)
             StopStreaming();
+        else
+            alSourcef(m_SourceID, AL_SEC_OFFSET, 0.0f);
+        m_StreamProcessedPosition = 0;
+        m_StreamQueuePosition = 0;
     }
 
-    void AudioSource::SetPriority(int32_t priority) { m_Priority = priority; }
+    void AudioSource::SetPriority(int32_t priority) { m_Priority = glm::clamp(priority, 0, 255); }
 
     void AudioSource::SetTime(float time)
     {
+        if (!m_AudioClip)
+            return;
         const AudioSourceState state = GetState();
+        const bool resumeAfterGlobalPause = m_ResumeAfterGlobalPause;
+        time = glm::clamp(time, 0.0f, m_AudioClip->GetLength());
         Stop();
         const bool requiresStream = RequiresStreaming();
         float cTime;
@@ -262,14 +297,19 @@ namespace Crowny
         }
 
         alSourcef(m_SourceID, AL_SEC_OFFSET, cTime);
-        if (state != AudioSourceState::Stopped)
+        if (state == AudioSourceState::Playing || resumeAfterGlobalPause)
             Play();
-        if (state == AudioSourceState::Paused)
+        else if (state == AudioSourceState::Paused)
+        {
+            Play();
             Pause();
+        }
     }
 
     float AudioSource::GetTime() const
     {
+        if (!m_AudioClip || m_SourceID == 0)
+            return 0.0f;
         const bool requiresStream = RequiresStreaming();
         float time;
         if (!requiresStream)
@@ -287,27 +327,35 @@ namespace Crowny
 
     void AudioSource::SetPitch(float pitch)
     {
-        m_Pitch = pitch;
-        alSourcef(m_SourceID, AL_PITCH, pitch);
+        m_Pitch = std::max(0.001f, pitch);
+        if (m_SourceID != 0)
+            alSourcef(m_SourceID, AL_PITCH, m_Pitch);
     }
 
     void AudioSource::SetMinDistance(float distance)
     {
-        m_MinDistace = distance;
-
-        alSourcef(m_SourceID, AL_REFERENCE_DISTANCE, distance);
+        m_MinDistace = std::max(0.0f, distance);
+        if (m_MaxDistance < m_MinDistace)
+            m_MaxDistance = m_MinDistace;
+        if (m_SourceID != 0)
+        {
+            alSourcef(m_SourceID, AL_REFERENCE_DISTANCE, m_MinDistace);
+            alSourcef(m_SourceID, AL_MAX_DISTANCE, m_MaxDistance);
+        }
     }
 
     void AudioSource::SetMaxDistance(float distance)
     {
-        m_MaxDistance = distance;
-        alSourcef(m_SourceID, AL_MAX_DISTANCE, distance);
+        m_MaxDistance = std::max(distance, m_MinDistace);
+        if (m_SourceID != 0)
+            alSourcef(m_SourceID, AL_MAX_DISTANCE, m_MaxDistance);
     }
 
     void AudioSource::SetAttenuation(float attenuation)
     {
-        m_Attenuation = attenuation;
-        alSourcef(m_SourceID, AL_ROLLOFF_FACTOR, attenuation);
+        m_Attenuation = std::max(0.0f, attenuation);
+        if (m_SourceID != 0)
+            alSourcef(m_SourceID, AL_ROLLOFF_FACTOR, m_Attenuation);
     }
 
     void AudioSource::SetLooping(bool loop)
@@ -316,11 +364,16 @@ namespace Crowny
         if (RequiresStreaming())
             loop = false;
 
-        alSourcei(m_SourceID, AL_LOOPING, loop);
+        if (m_SourceID != 0)
+            alSourcei(m_SourceID, AL_LOOPING, loop ? AL_TRUE : AL_FALSE);
     }
 
     AudioSourceState AudioSource::GetState() const
     {
+        if (m_GloballyPaused && m_ResumeAfterGlobalPause)
+            return AudioSourceState::Paused;
+        if (m_SourceID == 0)
+            return AudioSourceState::Stopped;
         ALint state;
         alGetSourcei(m_SourceID, AL_SOURCE_STATE, &state);
         switch (state)
@@ -340,8 +393,7 @@ namespace Crowny
     {
         CW_ENGINE_ASSERT(!m_IsStreaming);
         alGenBuffers(StreamBufferCount, m_StreamBuffers);
-        // gAudioManager->StartStreaming(this);
-        std::memset(&m_BusyBuffers, 0, sizeof(m_BusyBuffers));
+        std::memset(m_StreamBufferSampleCounts, 0, sizeof(m_StreamBufferSampleCounts));
         m_IsStreaming = true;
     }
 
@@ -349,22 +401,123 @@ namespace Crowny
     {
         CW_ENGINE_ASSERT(m_IsStreaming);
         m_IsStreaming = false;
-        // gAudioManager->StopStreaming(this);
 
-        int32_t numQueuedBuffers;
+        int32_t numQueuedBuffers = 0;
         alGetSourcei(m_SourceID, AL_BUFFERS_QUEUED, &numQueuedBuffers);
         uint32_t buff;
         for (int32_t j = 0; j < numQueuedBuffers; j++)
             alSourceUnqueueBuffers(m_SourceID, 1, &buff);
 
         alDeleteBuffers(StreamBufferCount, m_StreamBuffers);
+        std::memset(m_StreamBuffers, 0, sizeof(m_StreamBuffers));
+        std::memset(m_StreamBufferSampleCounts, 0, sizeof(m_StreamBufferSampleCounts));
     }
 
-    void AudioSource::Stream() {}
+    bool AudioSource::FillStreamBuffer(uint32_t bufferId, uint32_t bufferIndex)
+    {
+        if (!m_AudioClip || m_AudioClip->GetNumSamples() == 0)
+            return false;
+
+        const uint32_t targetSamples = std::min(StreamBufferSamples, m_AudioClip->GetNumSamples());
+        const uint32_t bytesPerSample = m_AudioClip->GetDesc().BitDepth / 8;
+        Vector<uint8_t> samples(targetSamples * bytesPerSample);
+        uint32_t samplesRead = 0;
+        if (m_StreamQueuePosition >= m_AudioClip->GetNumSamples())
+        {
+            if (!m_Loop)
+                return false;
+            m_StreamQueuePosition = 0;
+        }
+        while (samplesRead < targetSamples)
+        {
+            const uint32_t count = std::min(targetSamples - samplesRead, m_AudioClip->GetNumSamples() - m_StreamQueuePosition);
+            const uint32_t read = m_AudioClip->GetSamples(samples.data() + samplesRead * bytesPerSample, m_StreamQueuePosition, count);
+            samplesRead += read;
+            m_StreamQueuePosition += read;
+            if (read < count || m_StreamQueuePosition >= m_AudioClip->GetNumSamples())
+            {
+                if (!m_Loop)
+                    break;
+                m_StreamQueuePosition = 0;
+            }
+            if (read == 0)
+                break;
+        }
+
+        if (samplesRead == 0)
+            return false;
+
+        AudioDataInfo info = { samplesRead, m_AudioClip->GetFrequency(), m_AudioClip->GetNumChannels(), m_AudioClip->GetDesc().BitDepth };
+        if (!AudioManager::TryGet()->WriteToOpenALBuffer(bufferId, samples.data(), info))
+            return false;
+        m_StreamBufferSampleCounts[bufferIndex] = samplesRead;
+        return true;
+    }
+
+    void AudioSource::Stream()
+    {
+        if (!m_IsStreaming)
+            return;
+
+        ALint processed = 0;
+        alGetSourcei(m_SourceID, AL_BUFFERS_PROCESSED, &processed);
+        while (processed-- > 0)
+        {
+            uint32_t bufferId = 0;
+            alSourceUnqueueBuffers(m_SourceID, 1, &bufferId);
+            for (uint32_t i = 0; i < StreamBufferCount; i++)
+            {
+                if (m_StreamBuffers[i] != bufferId)
+                    continue;
+                m_StreamProcessedPosition += m_StreamBufferSampleCounts[i];
+                if (m_Loop && m_AudioClip->GetNumSamples() > 0)
+                    m_StreamProcessedPosition %= m_AudioClip->GetNumSamples();
+                m_StreamBufferSampleCounts[i] = 0;
+                if (FillStreamBuffer(bufferId, i))
+                    alSourceQueueBuffers(m_SourceID, 1, &bufferId);
+                break;
+            }
+        }
+
+        ALint queued = 0;
+        alGetSourcei(m_SourceID, AL_BUFFERS_QUEUED, &queued);
+        for (uint32_t i = 0; i < StreamBufferCount && queued < static_cast<ALint>(StreamBufferCount); i++)
+        {
+            if (m_StreamBufferSampleCounts[i] != 0)
+                continue;
+            if (!FillStreamBuffer(m_StreamBuffers[i], i))
+                break;
+            alSourceQueueBuffers(m_SourceID, 1, &m_StreamBuffers[i]);
+            queued++;
+        }
+    }
+
+    void AudioSource::UpdateStreaming()
+    {
+        if (!m_IsStreaming || m_GloballyPaused)
+            return;
+        Stream();
+        ALint queued = 0;
+        alGetSourcei(m_SourceID, AL_BUFFERS_QUEUED, &queued);
+        if (m_PlaybackRequested && queued == 0)
+        {
+            m_PlaybackRequested = false;
+            StopStreaming();
+            m_StreamProcessedPosition = 0;
+            m_StreamQueuePosition = 0;
+        }
+        else if (m_PlaybackRequested)
+        {
+            ALint alState = AL_STOPPED;
+            alGetSourcei(m_SourceID, AL_SOURCE_STATE, &alState);
+            if (alState != AL_PLAYING)
+                alSourcePlay(m_SourceID);
+        }
+    }
 
     bool AudioSource::Is3D() const
     {
-        if (m_AudioClip == nullptr)
+        if (!m_AudioClip)
             return true;
 
         return m_AudioClip->Is3D();
@@ -372,7 +525,7 @@ namespace Crowny
 
     bool AudioSource::RequiresStreaming() const
     {
-        if (m_AudioClip == nullptr)
+        if (!m_AudioClip)
             return false;
         const AudioReadMode readMode = m_AudioClip->GetDesc().ReadMode;
         const bool isCompressed = readMode == AudioReadMode::LoadCompressed && m_AudioClip->GetDesc().Format != AudioFormat::PCM;

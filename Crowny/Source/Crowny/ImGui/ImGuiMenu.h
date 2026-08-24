@@ -1,23 +1,24 @@
 #pragma once
 
-#include "Crowny/Events/ImGuiEvent.h"
+#include "Crowny/Common/Common.h"
 
 namespace Crowny
 {
-
     class ImGuiMenuItem
     {
     public:
-        ImGuiMenuItem(const String& title, const String& combination, const EventCallbackFn& onclicked, bool* shown = nullptr);
+        using Action = std::function<void()>;
+        using CheckedState = std::function<bool()>;
+
+        ImGuiMenuItem(String title, String shortcut, Action action, CheckedState checkedState = {});
         ~ImGuiMenuItem() = default;
 
-        void Render(uint32_t maxWidth);
-        uint32_t GetTotalWidth() const;
+        void Render();
 
     private:
-        bool* m_Shown = nullptr;
-        EventCallbackFn m_OnClicked;
-        String m_Combination;
+        Action m_Action;
+        CheckedState m_CheckedState;
+        String m_Shortcut;
         String m_Title;
     };
 
@@ -25,16 +26,22 @@ namespace Crowny
     {
     public:
         ImGuiMenu(const String& title);
-        virtual ~ImGuiMenu();
+        virtual ~ImGuiMenu() = default;
 
         virtual void Render();
-        void AddMenu(ImGuiMenu* menu);
-        void AddItem(ImGuiMenuItem* item);
+        ImGuiMenuItem& AddItem(String title, String shortcut, ImGuiMenuItem::Action action,
+                               ImGuiMenuItem::CheckedState checkedState = {});
+        ImGuiMenu& AddMenu(String title);
+        ImGuiMenu& AddMenu(Scope<ImGuiMenu> menu);
 
     protected:
-        Vector<ImGuiMenuItem*> m_Items;
-        Vector<ImGuiMenu*> m_Menus;
-        Vector<bool> m_Order;
+        struct Entry
+        {
+            Scope<ImGuiMenuItem> Item;
+            Scope<ImGuiMenu> Menu;
+        };
+
+        Vector<Entry> m_Entries;
 
         String m_Title;
     };
@@ -43,11 +50,13 @@ namespace Crowny
     {
     public:
         ImGuiMenuBar() = default;
-        ~ImGuiMenuBar();
-        void AddMenu(ImGuiMenu* menu);
+        ~ImGuiMenuBar() = default;
+
+        ImGuiMenu& AddMenu(String title);
+        ImGuiMenu& AddMenu(Scope<ImGuiMenu> menu);
         void Render();
 
     private:
-        Vector<ImGuiMenu*> m_Menus;
+        Vector<Scope<ImGuiMenu>> m_Menus;
     };
 } // namespace Crowny

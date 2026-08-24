@@ -15,8 +15,9 @@ namespace Crowny
         out << YAML::Key << "LastOpenProject" << YAML::Value << settings->LastOpenProject.string();
         out << YAML::Key << "AutoLoadLastProject" << YAML::Value << settings->AutoLoadLastProject;
         out << YAML::Key << "ShowImGuiDemo" << YAML::Value << settings->ShowImGuiDemoWindow; // TODO: Maybe move to project settings
-        out << YAML::Key << "ShowPhysicsColliders2D" << YAML::Value << settings->ShowPhysicsColliders2D;
+        out << YAML::Key << "ShowPhysicsColliders" << YAML::Value << settings->ShowPhysicsColliders;
         out << YAML::Key << "WireframeMode" << YAML::Value << settings->WireframeMode;
+        out << YAML::Key << "ShowRenderingStatistics" << YAML::Value << settings->ShowRenderingStatistics;
         out << YAML::Key << "ShowGrid" << YAML::Value << settings->ShowGrid;
         out << YAML::Key << "ShowGridAxes" << YAML::Value << settings->ShowGridAxes;
         out << YAML::Key << "GridFineSize" << YAML::Value << settings->GridFineSize;
@@ -79,10 +80,15 @@ namespace Crowny
         if (const YAML::Node& infos = node["ScrollToBottom"])
             editorSettings->ScrollToBottom = infos.as<bool>(true);
         editorSettings->CodeEditorPath = node["CodeEditorPath"].as<String>(String());
-        editorSettings->ShowPhysicsColliders2D = node["ShowPhysicsColliders2D"].as<bool>();
+        if (const YAML::Node& showColliders = node["ShowPhysicsColliders"])
+            editorSettings->ShowPhysicsColliders = showColliders.as<bool>(false);
+        else if (const YAML::Node& legacyShowColliders = node["ShowPhysicsColliders2D"])
+            editorSettings->ShowPhysicsColliders = legacyShowColliders.as<bool>(false);
 
         if (const YAML::Node& n = node["WireframeMode"])
             editorSettings->WireframeMode = n.as<bool>(false);
+        if (const YAML::Node& n = node["ShowRenderingStatistics"])
+            editorSettings->ShowRenderingStatistics = n.as<bool>(true);
         if (const YAML::Node& n = node["ShowGrid"])
             editorSettings->ShowGrid = n.as<bool>(true);
         if (const YAML::Node& n = node["ShowGridAxes"])

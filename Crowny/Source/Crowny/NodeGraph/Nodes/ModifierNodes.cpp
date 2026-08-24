@@ -9,6 +9,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
 
+#include <limits>
+
 namespace Crowny
 {
     static BufferLayout GetStandardLayout()
@@ -21,13 +23,13 @@ namespace Crowny
 
     // ---- TransformGeometryNode ----
 
-    TransformGeometryNode::TransformGeometryNode(UUID id) : Node(id, "TransformGeometryNode")
+    TransformGeometryNode::TransformGeometryNode(UUID id) : Node(id, "TransformGeometryNode"_sid)
     {
-        AddInput("Geometry", PinDataType::MeshData);
-        AddInput("Translation", PinDataType::Vec3, glm::vec3(0.0f));
-        AddInput("Rotation", PinDataType::Vec3, glm::vec3(0.0f));
-        AddInput("Scale", PinDataType::Vec3, glm::vec3(1.0f));
-        AddOutput("Geometry", PinDataType::MeshData);
+        AddInput("Geometry"_sid, PinDataType::MeshData);
+        AddInput("Translation"_sid, PinDataType::Vec3, glm::vec3(0.0f));
+        AddInput("Rotation"_sid, PinDataType::Vec3, glm::vec3(0.0f));
+        AddInput("Scale"_sid, PinDataType::Vec3, glm::vec3(1.0f));
+        AddOutput("Geometry"_sid, PinDataType::MeshData);
     }
 
     void TransformGeometryNode::Evaluate(NodeGraphEvaluator& evaluator)
@@ -51,7 +53,14 @@ namespace Crowny
         glm::mat4 transform = glm::translate(glm::mat4(1.0f), translation);
         transform *= glm::eulerAngleYXZ(glm::radians(rotation.y), glm::radians(rotation.x), glm::radians(rotation.z));
         transform = glm::scale(transform, scale);
-        const glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(transform)));
+        const glm::mat3 linearTransform(transform);
+        const float determinant = glm::determinant(linearTransform);
+        if (std::abs(determinant) <= std::numeric_limits<float>::epsilon())
+        {
+            evaluator.ReportError("Transform Geometry scale must not collapse an axis");
+            return;
+        }
+        const glm::mat3 normalMatrix = glm::transpose(glm::inverse(linearTransform));
 
         Vector<glm::vec3> positions = input->GetPositions();
         Vector<glm::vec3> normals = input->GetNormals();
@@ -59,10 +68,15 @@ namespace Crowny
 
         for (auto& pos : positions)
             pos = glm::vec3(transform * glm::vec4(pos, 1.0f));
+        const auto transformDirection = [&](glm::vec3 direction) {
+            direction = normalMatrix * direction;
+            const float lengthSquared = glm::dot(direction, direction);
+            return lengthSquared > std::numeric_limits<float>::epsilon() ? direction / std::sqrt(lengthSquared) : glm::vec3(0.0f);
+        };
         for (auto& n : normals)
-            n = glm::normalize(normalMatrix * n);
+            n = transformDirection(n);
         for (auto& t : tangents)
-            t = glm::normalize(normalMatrix * t);
+            t = transformDirection(t);
 
         const uint32_t vertCount = input->GetVertexCount();
         const uint32_t idxCount = input->GetIndexCount();
@@ -79,11 +93,11 @@ namespace Crowny
 
     // ---- MergeGeometryNode ----
 
-    MergeGeometryNode::MergeGeometryNode(UUID id) : Node(id, "MergeGeometryNode")
+    MergeGeometryNode::MergeGeometryNode(UUID id) : Node(id, "MergeGeometryNode"_sid)
     {
-        AddInput("A", PinDataType::MeshData);
-        AddInput("B", PinDataType::MeshData);
-        AddOutput("Geometry", PinDataType::MeshData);
+        AddInput("A"_sid, PinDataType::MeshData);
+        AddInput("B"_sid, PinDataType::MeshData);
+        AddOutput("Geometry"_sid, PinDataType::MeshData);
     }
 
     void MergeGeometryNode::Evaluate(NodeGraphEvaluator& evaluator)
@@ -148,14 +162,14 @@ namespace Crowny
 
     // ---- NoiseDisplaceNode ----
 
-    NoiseDisplaceNode::NoiseDisplaceNode(UUID id) : Node(id, "NoiseDisplaceNode")
+    NoiseDisplaceNode::NoiseDisplaceNode(UUID id) : Node(id, "NoiseDisplaceNode"_sid)
     {
-        AddInput("Geometry", PinDataType::MeshData);
-        AddInput("Strength", PinDataType::Float, 0.5f);
-        AddInput("Frequency", PinDataType::Float, 1.0f);
-        AddInput("Octaves", PinDataType::Int, 4);
-        AddInput("Seed", PinDataType::Int, 0);
-        AddOutput("Geometry", PinDataType::MeshData);
+        AddInput("Geometry"_sid, PinDataType::MeshData);
+        AddInput("Strength"_sid, PinDataType::Float, 0.5f);
+        AddInput("Frequency"_sid, PinDataType::Float, 1.0f);
+        AddInput("Octaves"_sid, PinDataType::Int, 4);
+        AddInput("Seed"_sid, PinDataType::Int, 0);
+        AddOutput("Geometry"_sid, PinDataType::MeshData);
     }
 
     void NoiseDisplaceNode::Evaluate(NodeGraphEvaluator& evaluator)
@@ -211,10 +225,10 @@ namespace Crowny
 
     // ---- RecalculateNormalsNode ----
 
-    RecalculateNormalsNode::RecalculateNormalsNode(UUID id) : Node(id, "RecalculateNormalsNode")
+    RecalculateNormalsNode::RecalculateNormalsNode(UUID id) : Node(id, "RecalculateNormalsNode"_sid)
     {
-        AddInput("Geometry", PinDataType::MeshData);
-        AddOutput("Geometry", PinDataType::MeshData);
+        AddInput("Geometry"_sid, PinDataType::MeshData);
+        AddOutput("Geometry"_sid, PinDataType::MeshData);
     }
 
     void RecalculateNormalsNode::Evaluate(NodeGraphEvaluator& evaluator)
@@ -274,12 +288,12 @@ namespace Crowny
 
     // ---- SubdivideNode ----
 
-    SubdivideNode::SubdivideNode(UUID id) : Node(id, "SubdivideNode")
+    SubdivideNode::SubdivideNode(UUID id) : Node(id, "SubdivideNode"_sid)
     {
-        AddInput("Geometry", PinDataType::MeshData);
-        AddInput("Iterations", PinDataType::Int, 1);
-        AddInput("Smooth", PinDataType::Bool, false);
-        AddOutput("Geometry", PinDataType::MeshData);
+        AddInput("Geometry"_sid, PinDataType::MeshData);
+        AddInput("Iterations"_sid, PinDataType::Int, 1);
+        AddInput("Smooth"_sid, PinDataType::Bool, false);
+        AddOutput("Geometry"_sid, PinDataType::MeshData);
     }
 
     void SubdivideNode::Evaluate(NodeGraphEvaluator& evaluator)
@@ -319,30 +333,46 @@ namespace Crowny
             auto tangents = current->GetTangents();
             auto uvs = current->GetUVs(0);
 
-            struct Edge
+            if (numIndices % 3 != 0 || indices.size() != numIndices || positions.size() != numVerts ||
+                (!normals.empty() && normals.size() != numVerts) || (!tangents.empty() && tangents.size() != numVerts) ||
+                (!uvs.empty() && uvs.size() != numVerts))
             {
-                uint32_t v1, v2;
-                bool operator<(const Edge& other) const { return v1 < other.v1 || (v1 == other.v1 && v2 < other.v2); }
-            };
+                evaluator.ReportError("Subdivide requires a valid triangle mesh with consistent vertex attributes");
+                return;
+            }
+            if (std::any_of(indices.begin(), indices.end(), [numVerts](uint32_t index) { return index >= numVerts; }))
+            {
+                evaluator.ReportError("Subdivide encountered an out-of-range mesh index");
+                return;
+            }
 
-            std::map<Edge, uint32_t> midpoints;
+            UnorderedMap<uint64_t, uint32_t> midpoints;
+            midpoints.reserve(numIndices);
             auto getMidpoint = [&](uint32_t v1, uint32_t v2) {
                 if (v1 > v2)
                     std::swap(v1, v2);
-                Edge e{ v1, v2 };
-                if (midpoints.find(e) != midpoints.end())
-                    return midpoints[e];
+                const uint64_t edge = (static_cast<uint64_t>(v1) << 32) | v2;
+                if (const auto it = midpoints.find(edge); it != midpoints.end())
+                    return it->second;
 
                 uint32_t newIdx = (uint32_t)positions.size();
                 positions.push_back((positions[v1] + positions[v2]) * 0.5f);
                 if (!normals.empty())
-                    normals.push_back(glm::normalize(normals[v1] + normals[v2]));
+                {
+                    const glm::vec3 normal = normals[v1] + normals[v2];
+                    const float lengthSquared = glm::dot(normal, normal);
+                    normals.push_back(lengthSquared > std::numeric_limits<float>::epsilon() ? normal / std::sqrt(lengthSquared) : glm::vec3(0.0f));
+                }
                 if (!tangents.empty())
-                    tangents.push_back(glm::normalize(tangents[v1] + tangents[v2]));
+                {
+                    const glm::vec3 tangent = tangents[v1] + tangents[v2];
+                    const float lengthSquared = glm::dot(tangent, tangent);
+                    tangents.push_back(lengthSquared > std::numeric_limits<float>::epsilon() ? tangent / std::sqrt(lengthSquared) : glm::vec3(0.0f));
+                }
                 if (!uvs.empty())
                     uvs.push_back((uvs[v1] + uvs[v2]) * 0.5f);
 
-                midpoints[e] = newIdx;
+                midpoints[edge] = newIdx;
                 return newIdx;
             };
 

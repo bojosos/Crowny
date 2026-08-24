@@ -1,29 +1,90 @@
 # Crowny Scene
-Version: 0
+Version: 5
 Scene: ComplexScene
 ImGuiLayout: ""
 Entities:
-  - Entity: 20d9a458-db9f-4280-a362-06b3d485a6e2
+  - Entity: 73098451-9ba2-4de8-9757-f56fc3bffc28
     TagComponent:
       Tag: GrandChild
+    TextComponent:
+      Text: Aligned text
+      Font: 00000000-0000-0000-0000-000000000000
+      Color: [1, 1, 1, 1]
+      Size: 42
+      AutoSize: true
+      AutoSizeMin: 12
+      AutoSizeMax: 60
+      LayoutSize: [8, 3]
+      Wrapping: true
+      WrapMode: 2
+      ClipToBounds: true
+      MaxLines: 4
+      OutlineColor: [0, 0, 0, 0]
+      Thickness: 0.800000012
+      CharacterSpacing: 0.0500000007
+      WordSpacing: 0.100000001
+      LineSpacing: 0.200000003
+      ParagraphSpacing: 0.349999994
+      UseCustomDecorationColor: true
+      DecorationColor: [0.200000003, 0.400000006, 0.600000024, 0.800000012]
+      DecorationThickness: 0.0299999993
+      UnderlineOffset: -0.0399999991
+      StrikethroughOffset: 0.0199999996
+      UseKerning: true
+      FontStyle: 12
+      Overflow: 1
+      HorizontalAlignment: 3
+      VerticalAlignment: 1
+      SortingLayer: -3
+      OrderInLayer: 17
     TransformComponent:
       Position: [0, 0, 5]
-      Rotation: [0, 0, 0, 1]
+      Rotation: [-0, -0, -0, 1]
       Scale: [1, 1, 1]
     RelationshipComponent:
       Children:
         []
-  - Entity: cced6fd0-03ec-4705-88f5-39f2b508ede6
+  - Entity: db0ad6fc-15f9-4608-94b4-75ea62bc7e23
     TagComponent:
       Tag: Child2
     TransformComponent:
       Position: [0, 10, 0]
-      Rotation: [0, 0, 0, 1]
+      Rotation: [-0, -0, -0, 1]
       Scale: [1, 1, 1]
+    Rigidbody3DComponent:
+      BodyType: 1
+      Mass: 3.5
+      AutoMass: false
+      GravityScale: 0.75
+      LinearDamping: 0
+      AngularDamping: 0.0500000007
+      CenterOfMass: [0, 0, 0]
+      AllowSleep: true
+      StartAwake: true
+      ContinuousCollision: true
+      LockRotationX: false
+      LockRotationY: false
+      LockRotationZ: false
+      Layer: 0
+      Mask: 4294967295
+      Group: 0
+      LinearVelocity: [0, 0, 0]
+      AngularVelocity: [0, 0, 0]
+    BoxCollider3DComponent:
+      Offset: [0.5, 0, -0.5]
+      Rotation: [0, 0, 0, 1]
+      IsTrigger: false
+      Density: 2
+      Friction: 0.25
+      Restitution: 0.600000024
+      Layer: 0
+      Mask: 4294967295
+      Group: 0
+      Size: [2, 3, 4]
     RelationshipComponent:
       Children:
-        - 20d9a458-db9f-4280-a362-06b3d485a6e2
-  - Entity: 6130b1fa-c3c8-4b64-a865-a8df0a1a509a
+        - 73098451-9ba2-4de8-9757-f56fc3bffc28
+  - Entity: bf07dcba-1ce0-409f-872e-d35e8d587574
     TagComponent:
       Tag: Child1
     AudioSourceComponent:
@@ -37,27 +98,69 @@ Entities:
       Muted: false
     TransformComponent:
       Position: [5, 0, 0]
-      Rotation: [0, 0, 0, 1]
+      Rotation: [-0, -0, -0, 1]
       Scale: [1, 1, 1]
+    SpriteRendererComponent:
+      Color: [0.25, 0.5, 0.75, 1]
+      Texture: 00000000-0000-0000-0000-000000000000
+      SortingLayer: 4
+      OrderInLayer: -9
+    Rigidbody2DComponent:
+      BodyType: 0
+      Mass: 1
+      GravityScale: 1
+      Constraints: 0
+      CollisionDetectionMode: 0
+      SleepMode: 1
+      LinearDrag: 0
+      AngularDrag: 0.0500000007
+      LayerMask: 15
+      AutoMass: false
+      Interpolation: 0
+      CenterOfMass: [0.25, -0.5]
+      Inertia: 2.75
     RelationshipComponent:
       Children:
         []
-  - Entity: e271e69d-12fa-4f4c-a46a-fd66cdb0f5ca
+  - Entity: 3a0d1579-b8aa-4603-9f06-d77f9b80e8ab
     TagComponent:
       Tag: Parent
     TransformComponent:
       Position: [10, 0, 0]
       Rotation: [0, 0, 0, 1]
       Scale: [1, 1, 1]
+    LightComponent:
+      Type: 2
+      Color: [0.400000006, 0.600000024, 0.800000012]
+      Intensity: 2400
+      Range: 31
+      SpotInnerAngle: 0.314159274
+      SpotOuterAngle: 0.645771801
+      SourceRadius: 0.150000006
+      UseColorTemperature: true
+      Temperature: 4200
+      VisibilityLayers: 16711935
+      Enabled: true
+      AffectDiffuse: true
+      AffectSpecular: false
+      Volumetric: true
+      ShadowMode: 2
+      ShadowBias: 0.00300000003
+      ShadowNormalBias: 0.0399999991
+      ShadowNearPlane: 0.200000003
+      ShadowImportance: 2.5
+      ShadowResolution: 2048
+      CacheStaticCasters: false
     RelationshipComponent:
       Children:
-        - 6130b1fa-c3c8-4b64-a865-a8df0a1a509a
-        - cced6fd0-03ec-4705-88f5-39f2b508ede6
+        - bf07dcba-1ce0-409f-872e-d35e8d587574
+        - db0ad6fc-15f9-4608-94b4-75ea62bc7e23
 TimeSettings:
   TimeScale: 1
   MaxTimestep: 0.333333343
   FixedTimestep: 0.0199999996  # Crowny Physics Settings
 PhysicsSettings:
+  Backend: 0
   LayerNames:
     - Default
     - ""
@@ -92,38 +195,46 @@ PhysicsSettings:
     - ""
     - ""
   Gravity2D: [0, -9.81000042]
+  DefaultMaterial: 0b01eec6-c2f2-4228-b9e1-a1053970f644
   VelocityIterations: 8
   PositionIterations: 3
   CollisionMatrix:
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+Physics3DSettings:
+  Backend: 0
+  Gravity: [0, -9.81000042, 0]
+  Substeps: 4
+  EnableSleeping: true
+  EnableContinuousCollision: true
+  Deterministic: false

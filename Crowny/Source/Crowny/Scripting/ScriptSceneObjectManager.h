@@ -20,7 +20,6 @@ namespace Crowny
         ScriptEntity* GetOrCreateScriptEntity(Entity entity);
         ScriptEntity* CreateScriptEntity(Entity entity);
         ScriptEntity* CreateScriptEntity(MonoObject* existingInstance, Entity entity);
-        ScriptEntity* GetScriptEntity(uint32_t id) const;
         ScriptEntity* GetScriptEntity(Entity entity) const;
 
         ScriptComponentBase* CreateScriptComponent(Entity entity, const ComponentBase& component, MonoReflectionType* reflType);
@@ -40,11 +39,32 @@ namespace Crowny
         void NotifyComponentDestroyed(const ComponentBase& component);
         void NotifyComponentDestroyed(uint64_t instanceId);
 
+        void DestroySceneObjects(const Scene* scene);
         void Del();
 
     private:
+        struct EntityKey
+        {
+            const Scene* ScenePtr = nullptr;
+            entt::entity Handle = entt::null;
+
+            bool operator==(const EntityKey&) const = default;
+        };
+
+        struct EntityKeyHash
+        {
+            size_t operator()(const EntityKey& key) const
+            {
+                size_t hash = 0;
+                HashCombine(hash, key.ScenePtr, static_cast<uint32_t>(key.Handle));
+                return hash;
+            }
+        };
+
+        static EntityKey GetEntityKey(Entity entity);
+
         UnorderedMap<uint64_t, ScriptComponentBase*> m_ScriptComponents;
-        UnorderedMap<uint32_t, ScriptEntity*> m_ScriptEntities;
+        UnorderedMap<EntityKey, ScriptEntity*, EntityKeyHash> m_ScriptEntities;
     };
 
 } // namespace Crowny

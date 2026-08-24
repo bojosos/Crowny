@@ -37,16 +37,16 @@ namespace Crowny
 
     uint32_t WaveDecoder::Read(uint8_t* samples, uint32_t numSamples)
     {
-        uint32_t numRead = (uint32_t)m_Stream->Read(samples, numSamples * m_BytesPerSample);
+        const uint32_t bytesRead = static_cast<uint32_t>(m_Stream->Read(samples, numSamples * m_BytesPerSample));
         if (m_BytesPerSample == 1)
         {
-            for (uint32_t i = 0; i < numRead; i++)
+            for (uint32_t i = 0; i < bytesRead; i++)
             {
                 int8_t value = samples[i] - 128;
                 samples[i] = *((uint8_t*)&value);
             }
         }
-        return numRead;
+        return bytesRead / m_BytesPerSample;
     }
 
     bool WaveDecoder::ParseHeader(AudioDataInfo& info)

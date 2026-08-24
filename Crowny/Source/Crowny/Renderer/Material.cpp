@@ -5,6 +5,12 @@
 
 namespace Crowny
 {
+    namespace
+    {
+        StringView GetNameView(const String& name) { return name; }
+        StringView GetNameView(HashedString name) { return name.GetView(); }
+        HashedString GetPropertyName(MaterialPropertyID name) { return HashedString(StringIDTable::GetString(name.Value)); }
+    } // namespace
 
     Material::Material(const AssetHandle<Shader>& shader) : m_Shader(shader)
     {
@@ -22,11 +28,12 @@ namespace Crowny
         material->SetTexture("albedoMap", Texture::WHITE);
         material->SetTexture("metallicMap", Texture::WHITE);
         material->SetTexture("roughnessMap", Texture::WHITE);
-        material->SetTexture("normalMap", Texture::WHITE);
+        material->SetTexture("normalMap", Texture::NORMAL);
         material->SetTexture("aoMap", Texture::WHITE);
         material->SetColor("albedo", glm::vec4(1.0f));
         material->SetFloat("roughness", 0.5f);
         material->SetFloat("metalness", 0.0f);
+        material->SetFloat("useIBL", 0.0f);
         return material;
     }
 
@@ -34,15 +41,38 @@ namespace Crowny
     {
         Ref<Material> material = Create(shader);
         material->SetTexture("albedoMap", Texture::WHITE);
+        material->SetTexture("toonPatternTexture", Texture::WHITE);
+        material->SetTexture("toonRampTexture", Texture::WHITE);
+        material->SetTexture("toonMatcapTexture", Texture::WHITE);
         material->SetColor("outlineColor", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
         material->SetFloat("thickness", 1.0f);
         material->SetColor("tint", glm::vec4(1.0f));
-        material->SetFloat("bands", 4.0f);
-        material->SetFloat("specularSize", 0.5f);
-        material->SetFloat("specularSmoothness", 1.0f);
-        material->SetFloat("rimPower", 4.0f);
-        material->SetFloat("rimThreshold", 0.1f);
-        material->SetFloat("shadowBrightness", 0.2f);
+        material->SetFloat("bands", 3.0f);
+        material->SetColor("toonShadowColor", glm::vec4(0.2f, 0.22f, 0.3f, 1.0f));
+        material->SetFloat("toonBandSmoothness", 0.08f);
+        material->SetColor("toonSpecularColor", glm::vec4(1.0f));
+        material->SetFloat("toonSpecularThreshold", 0.8f);
+        material->SetFloat("toonSpecularSmoothness", 0.05f);
+        material->SetFloat("toonSpecularStrength", 0.5f);
+        material->SetColor("toonRimColor", glm::vec4(1.0f));
+        material->SetFloat("rimPower", 3.0f);
+        material->SetFloat("rimThreshold", 0.5f);
+        material->SetFloat("toonRimSmoothness", 0.08f);
+        material->SetFloat("toonRimStrength", 0.5f);
+        material->SetFloat("toonRimShadowMask", 0.75f);
+        material->SetFloat("toonIndirectStrength", 0.5f);
+        material->SetFloat("toonPatternScale", 16.0f);
+        material->SetFloat("toonPatternStrength", 0.0f);
+        material->SetFloat("toonPatternSmoothness", 0.1f);
+        material->SetFloat("toonPatternDistanceFade", 50.0f);
+        material->SetInt("toonPatternMapping", 0);
+        material->SetFloat("toonRampStrength", 0.0f);
+        material->SetFloat("toonRampOffset", 0.0f);
+        material->SetFloat("toonMatcapStrength", 0.0f);
+        material->SetFloat("toonMatcapRotation", 0.0f);
+        material->SetFloat("toonOutlineDepthThreshold", 0.002f);
+        material->SetFloat("toonOutlineNormalThreshold", 0.2f);
+        material->SetFloat("toonOutlineDistanceFade", 100.0f);
         material->SetVector3("camPos", glm::vec3(0.0f));
         return material;
     }
@@ -104,13 +134,14 @@ namespace Crowny
             {
                 for (uint32_t j = 0; j < uniformBuffer.Members.size(); j++)
                 {
-                    // Unified bindings — if same name exists across passes, same meaning
+                    // Bindings with the same name have the same meaning across passes.
                     m_Bindings[uniformBuffer.Members[j].Name] =
-                      UniformMember{ uniformBuffer.Members[j].Offset, uniformBuffer.Members[j].DataType, name };
+                      UniformMember{ uniformBuffer.Members[j].Offset, uniformBuffer.Members[j].DataType, name, StringID(name) };
                 }
 
-                pass.UniformBlocks[name] = UniformBufferBlock::Create(uniformBuffer.BlockSize, BufferUsage::BU_DYNAMIC_DRAW);
-                pass.Uniforms->SetUniformBlockBuffer(name, pass.UniformBlocks[name]);
+                const StringID bufferID(name);
+                pass.UniformBlocks[bufferID] = UniformBufferBlock::Create(uniformBuffer.BlockSize, BufferUsage::BU_DYNAMIC_DRAW);
+                pass.Uniforms->SetUniformBlockBuffer(name, pass.UniformBlocks[bufferID]);
             }
         }
     }
@@ -120,6 +151,28 @@ namespace Crowny
         for (const auto& pass : m_Passes)
             for (const auto& [_, block] : pass.UniformBlocks)
                 block->FlushToGpu();
+    }
+
+    template <typename Name, typename Value>
+    void Material::SetDataParam(const Name& name, ShaderDataType expectedType, const Value& value, StringView valueType)
+    {
+        const auto iterFind = m_Bindings.find(name);
+        if (iterFind == m_Bindings.cend())
+            return;
+        if (iterFind->second.DataType != expectedType)
+        {
+            CW_ENGINE_WARN("Type mismatch for {}: expected {}, got {}", GetNameView(name),
+                           ShaderDataTypeToString(iterFind->second.DataType), valueType);
+            return;
+        }
+
+        for (const auto& pass : m_Passes)
+        {
+            const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferID);
+            if (blockIt != pass.UniformBlocks.end())
+                blockIt->second->Write(iterFind->second.Offset, &value, sizeof(value));
+        }
+        ++m_ParamVersion;
     }
 
     void Material::SetBool(const String& name, bool value)
@@ -135,7 +188,7 @@ namespace Crowny
         int intVal = value ? 1 : 0; // GLSL bools are 4 bytes
         for (const auto& pass : m_Passes)
         {
-            const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
+            const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferID);
             if (blockIt != pass.UniformBlocks.end())
                 blockIt->second->Write(iterFind->second.Offset, &intVal, sizeof(intVal));
         }
@@ -144,22 +197,12 @@ namespace Crowny
 
     void Material::SetFloat(const String& name, float value)
     {
-        const auto& iterFind = m_Bindings.find(name);
-        if (iterFind == m_Bindings.cend())
-            return;
-        if (iterFind->second.DataType != ShaderDataType::Float)
-        {
-            CW_ENGINE_WARN("Trying to write the wrong data type {}, expected {}, got float", name, ShaderDataTypeToString(iterFind->second.DataType));
-            return;
-        }
-        for (const auto& pass : m_Passes)
-        {
-            const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
-            if (blockIt != pass.UniformBlocks.end())
-                blockIt->second->Write(iterFind->second.Offset, &value, sizeof(value));
-        }
-        ++m_ParamVersion;
+        SetDataParam(name, ShaderDataType::Float, value, "Float");
     }
+
+    void Material::SetFloat(HashedString name, float value) { SetDataParam(name, ShaderDataType::Float, value, "Float"); }
+
+    void Material::SetFloat(MaterialPropertyID name, float value) { SetFloat(GetPropertyName(name), value); }
 
     void Material::SetFloat2(const String& name, const glm::vec2& value)
     {
@@ -174,7 +217,7 @@ namespace Crowny
         }
         for (const auto& pass : m_Passes)
         {
-            const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
+            const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferID);
             if (blockIt != pass.UniformBlocks.end())
                 blockIt->second->Write(iterFind->second.Offset, &value, sizeof(value));
         }
@@ -188,22 +231,12 @@ namespace Crowny
 
     void Material::SetInt(const String& name, int value)
     {
-        const auto& iterFind = m_Bindings.find(name);
-        if (iterFind == m_Bindings.cend())
-            return;
-        if (iterFind->second.DataType != ShaderDataType::Int)
-        {
-            CW_ENGINE_WARN("Trying to write the wrong data type {}, expected {}, got int", value, ShaderDataTypeToString(iterFind->second.DataType));
-            return;
-        }
-        for (const auto& pass : m_Passes)
-        {
-            const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
-            if (blockIt != pass.UniformBlocks.end())
-                blockIt->second->Write(iterFind->second.Offset, &value, sizeof(value));
-        }
-        ++m_ParamVersion;
+        SetDataParam(name, ShaderDataType::Int, value, "Int");
     }
+
+    void Material::SetInt(HashedString name, int value) { SetDataParam(name, ShaderDataType::Int, value, "Int"); }
+
+    void Material::SetInt(MaterialPropertyID name, int value) { SetInt(GetPropertyName(name), value); }
 
     void Material::SetInt2(const String& name, const glm::ivec2& value)
     {
@@ -217,7 +250,7 @@ namespace Crowny
         }
         for (const auto& pass : m_Passes)
         {
-            const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
+            const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferID);
             if (blockIt != pass.UniformBlocks.end())
                 blockIt->second->Write(iterFind->second.Offset, &value, sizeof(value));
         }
@@ -236,7 +269,7 @@ namespace Crowny
         }
         for (const auto& pass : m_Passes)
         {
-            const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
+            const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferID);
             if (blockIt != pass.UniformBlocks.end())
                 blockIt->second->Write(iterFind->second.Offset, &value, sizeof(value));
         }
@@ -255,7 +288,7 @@ namespace Crowny
         }
         for (const auto& pass : m_Passes)
         {
-            const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
+            const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferID);
             if (blockIt != pass.UniformBlocks.end())
                 blockIt->second->Write(iterFind->second.Offset, &value, sizeof(value));
         }
@@ -264,62 +297,74 @@ namespace Crowny
 
     void Material::SetColor(const String& name, const glm::vec4& value)
     {
-        const auto& iterFind = m_Bindings.find(name);
-        if (iterFind == m_Bindings.cend())
+        SetDataParam(name, ShaderDataType::Float4, value, "Color");
+    }
+
+
+    void Material::SetColor(HashedString name, const glm::vec4& value)
+    {
+        SetDataParam(name, ShaderDataType::Float4, value, "Color");
+    }
+
+    void Material::SetColor(MaterialPropertyID name, const glm::vec4& value) { SetColor(GetPropertyName(name), value); }
+
+    void Material::SetVector4Array(const String& name, const glm::vec4* values, uint32_t count)
+    {
+        if (values == nullptr || count == 0)
             return;
-        if (iterFind->second.DataType != ShaderDataType::Float4)
+        const auto binding = m_Bindings.find(name);
+        if (binding == m_Bindings.end() || binding->second.DataType != ShaderDataType::Float4)
+            return;
+        for (const PassData& pass : m_Passes)
         {
-            CW_ENGINE_WARN("Trying to write the wrong data type {}, expected {}, got color", name, ShaderDataTypeToString(iterFind->second.DataType));
-            return;
+            const auto block = pass.UniformBlocks.find(binding->second.BufferID);
+            if (block != pass.UniformBlocks.end())
+                block->second->Write(binding->second.Offset, values, count * sizeof(glm::vec4));
         }
-        for (const auto& pass : m_Passes)
+        ++m_ParamVersion;
+    }
+
+    void Material::SetInt4Array(const String& name, const glm::ivec4* values, uint32_t count)
+    {
+        if (values == nullptr || count == 0)
+            return;
+        const auto binding = m_Bindings.find(name);
+        if (binding == m_Bindings.end() || binding->second.DataType != ShaderDataType::Int4)
+            return;
+        for (const PassData& pass : m_Passes)
         {
-            const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
-            if (blockIt != pass.UniformBlocks.end())
-                blockIt->second->Write(iterFind->second.Offset, &value, sizeof(value));
+            const auto block = pass.UniformBlocks.find(binding->second.BufferID);
+            if (block != pass.UniformBlocks.end())
+                block->second->Write(binding->second.Offset, values, count * sizeof(glm::ivec4));
         }
         ++m_ParamVersion;
     }
 
     void Material::SetVector3(const String& name, const glm::vec3& value)
     {
-        const auto& iterFind = m_Bindings.find(name);
-        if (iterFind == m_Bindings.cend())
-            return;
-        if (iterFind->second.DataType != ShaderDataType::Float3)
-        {
-            CW_ENGINE_WARN("Trying to write the wrong data type {}, expected {}, got vector", name,
-                           ShaderDataTypeToString(iterFind->second.DataType));
-            return;
-        }
-        for (const auto& pass : m_Passes)
-        {
-            const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
-            if (blockIt != pass.UniformBlocks.end())
-                blockIt->second->Write(iterFind->second.Offset, &value, sizeof(value));
-        }
-        ++m_ParamVersion;
+        SetDataParam(name, ShaderDataType::Float3, value, "Vector3");
     }
+
+
+    void Material::SetVector3(HashedString name, const glm::vec3& value)
+    {
+        SetDataParam(name, ShaderDataType::Float3, value, "Vector3");
+    }
+
+    void Material::SetVector3(MaterialPropertyID name, const glm::vec3& value) { SetVector3(GetPropertyName(name), value); }
 
     void Material::SetMatrix(const String& name, const glm::mat4& value)
     {
-        const auto& iterFind = m_Bindings.find(name);
-        if (iterFind == m_Bindings.cend())
-            return;
-        if (iterFind->second.DataType != ShaderDataType::Mat4)
-        {
-            CW_ENGINE_WARN("Trying to write the wrong data type {}, expected {}, got matrix", name,
-                           ShaderDataTypeToString(iterFind->second.DataType));
-            return;
-        }
-        for (const auto& pass : m_Passes)
-        {
-            const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
-            if (blockIt != pass.UniformBlocks.end())
-                blockIt->second->Write(iterFind->second.Offset, &value, sizeof(value));
-        }
-        ++m_ParamVersion;
+        SetDataParam(name, ShaderDataType::Mat4, value, "Matrix4");
     }
+
+
+    void Material::SetMatrix(HashedString name, const glm::mat4& value)
+    {
+        SetDataParam(name, ShaderDataType::Mat4, value, "Matrix4");
+    }
+
+    void Material::SetMatrix(MaterialPropertyID name, const glm::mat4& value) { SetMatrix(GetPropertyName(name), value); }
 
     void Material::SetMat3(const String& name, const glm::mat3& value)
     {
@@ -333,7 +378,7 @@ namespace Crowny
         }
         for (const auto& pass : m_Passes)
         {
-            const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
+            const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferID);
             if (blockIt != pass.UniformBlocks.end())
                 blockIt->second->Write(iterFind->second.Offset, &value, sizeof(value));
         }
@@ -355,6 +400,15 @@ namespace Crowny
         ++m_ParamVersion;
     }
 
+    void Material::SetTexture(HashedString name, const Ref<Texture>& texture)
+    {
+        for (const auto& pass : m_Passes)
+            pass.Uniforms->SetTexture(FRAGMENT_SHADER, name, texture);
+        ++m_ParamVersion;
+    }
+
+    void Material::SetTexture(MaterialPropertyID name, const Ref<Texture>& texture) { SetTexture(GetPropertyName(name), texture); }
+
     void Material::ApplyDefaults()
     {
         // Collect annotations from all shader stages
@@ -368,13 +422,14 @@ namespace Crowny
             // Apply data param defaults from annotations
             for (const auto& [blockName, block] : desc->Uniforms)
             {
+                const StringID blockID(blockName);
                 for (const auto& member : block.Members)
                 {
                     if (!member.DefaultValue.empty())
                     {
                         for (const auto& pass : m_Passes)
                         {
-                            const auto blockIt = pass.UniformBlocks.find(blockName);
+                            const auto blockIt = pass.UniformBlocks.find(blockID);
                             if (blockIt != pass.UniformBlocks.end())
                                 blockIt->second->Write(member.Offset, member.DefaultValue.data(),
                                                        (uint32_t)member.DefaultValue.size());
@@ -413,7 +468,7 @@ namespace Crowny
     {
         for (const auto& pass : m_Material->m_Passes)
         {
-            auto blockIt = pass.UniformBlocks.find(m_BufferName);
+            auto blockIt = pass.UniformBlocks.find(m_BufferID);
             if (blockIt != pass.UniformBlocks.end())
                 blockIt->second->Write(m_Offset, &value, sizeof(T));
         }
@@ -425,7 +480,7 @@ namespace Crowny
         T value{};
         for (const auto& pass : m_Material->m_Passes)
         {
-            auto blockIt = pass.UniformBlocks.find(m_BufferName);
+            auto blockIt = pass.UniformBlocks.find(m_BufferID);
             if (blockIt != pass.UniformBlocks.end())
             {
                 blockIt->second->Read(m_Offset, &value, sizeof(value));

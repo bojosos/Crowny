@@ -6,7 +6,7 @@
 namespace Crowny
 {
 
-    class Initializer;
+    class EngineRuntime;
 
     struct SamplerStateDesc
     {
@@ -15,11 +15,11 @@ namespace Crowny
         TextureFilter MinFilter = TextureFilter::LINEAR;
         TextureFilter MagFilter = TextureFilter::LINEAR;
         TextureFilter MipFilter = TextureFilter::LINEAR;
-        uint32_t MaxAnsio = 0;
+        uint32_t MaxAnsio = 8;
         float MipmapBias = 0;
         float MipMin = -FLT_MAX;
         float MipMax = FLT_MAX;
-        TextureAddressingMode AddressMode;
+        TextureAddressingMode AddressMode = { TextureWrap::REPEAT, TextureWrap::REPEAT, TextureWrap::REPEAT };
         // TODO: border color
         CompareFunction CompareFunc = CompareFunction::ALWAYS_PASS;
     };
@@ -39,7 +39,8 @@ namespace Crowny
         SamplerStateDesc m_Properties;
 
     private:
-        friend class Initializer;
+        friend class EngineRuntime;
+        static void ClearCache();
         static Ref<SamplerState> s_DefaultSamplerState;
     };
 } // namespace Crowny

@@ -20,6 +20,8 @@ namespace Crowny
         static void Internal_SetTrigger(ScriptCollider2DBase* thisPtr, bool trigger);
         static void Internal_GetOffset(ScriptCollider2DBase* thisPtr, glm::vec2* offset);
         static void Internal_SetOffset(ScriptCollider2DBase* thisPtr, glm::vec2* offset);
+        static MonoObject* Internal_GetMaterial(ScriptCollider2DBase* thisPtr);
+        static void Internal_SetMaterial(ScriptCollider2DBase* thisPtr, MonoObject* material);
     };
 
     class ScriptCollider2D : public TScriptComponent<ScriptCollider2D, Collider2D, ScriptCollider2DBase>

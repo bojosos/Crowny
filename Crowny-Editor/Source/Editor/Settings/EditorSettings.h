@@ -14,7 +14,7 @@ namespace Crowny
     struct EditorSettings : public RefCounted
     {
         // Windows
-        bool ShowPhysicsColliders2D = false;
+        bool ShowPhysicsColliders = false;
         bool ShowImGuiDemoWindow = false;
         bool ShowScriptDebugInfo = false;
         bool ShowAssetInfo = false;
@@ -28,6 +28,7 @@ namespace Crowny
 
         // Viewport
         bool WireframeMode = false;
+        bool ShowRenderingStatistics = true;
         bool ShowGrid = true;
         bool ShowGridAxes = true;
         float GridFineSize = 1.0f;

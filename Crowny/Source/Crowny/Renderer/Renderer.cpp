@@ -2,6 +2,7 @@
 
 #include "Crowny/RenderAPI/RenderCommand.h"
 #include "Crowny/Renderer/Camera.h"
+#include "Crowny/Renderer/GpuScene.h"
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Renderer/Renderer2D.h"
 
@@ -11,6 +12,7 @@
 
 namespace Crowny
 {
+    static Scope<GpuScene> s_GpuScene;
     /*
         struct RendererData
         {
@@ -21,7 +23,8 @@ namespace Crowny
 
         static RendererData s_Data;
     */
-    void Renderer::Init() { /*
+    void Renderer::Init()
+    { /*
                                s_Data.Running = true;
                                s_Data.RenderThread = std::thread([]() {
                                    while (s_Data.Running)
@@ -36,7 +39,9 @@ namespace Crowny
 
                                s_Data.RenderThread.detach();
                                SubmitCommand([](){ RenderCommand::Init(); });*/
-                            RenderCommand::Init(); }
+        RenderCommand::Init();
+        s_GpuScene = CreateScope<GpuScene>();
+    }
 
     void Renderer::OnWindowResize(uint32_t width, uint32_t height) { RenderCommand::SetViewport(0, 0, width, height); }
     /*
@@ -48,6 +53,13 @@ namespace Crowny
     void Renderer::Shutdown()
     {
         // s_Data.Running = false;
+        s_GpuScene.reset();
+    }
+
+    GpuScene& Renderer::GetGpuScene()
+    {
+        CW_ENGINE_ASSERT(s_GpuScene != nullptr, "Renderer GPU scene is not initialized");
+        return *s_GpuScene;
     }
 
 } // namespace Crowny

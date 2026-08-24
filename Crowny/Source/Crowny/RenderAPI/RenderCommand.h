@@ -8,7 +8,7 @@ namespace Crowny
     class RenderCommand
     {
     public:
-        static void Init() { gRenderAPI->Init(); }
+        static void Init() { RenderAPI::TryGet()->Init(); }
 
         static void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height)
         {

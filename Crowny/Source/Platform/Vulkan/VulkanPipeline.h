@@ -125,9 +125,8 @@ namespace Crowny
         VulkanComputePipeline(const Ref<ShaderStage>& shader);
 
     private:
-        Ref<VulkanShader> m_Shader;
-        VulkanPipeline* m_Pipeline;
-        VkPipelineLayout m_PipelineLayout;
+        VulkanPipeline* m_Pipeline = nullptr;
+        VkPipelineLayout m_PipelineLayout = VK_NULL_HANDLE;
     };
 
 } // namespace Crowny

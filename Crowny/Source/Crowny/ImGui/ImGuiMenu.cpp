@@ -6,97 +6,76 @@
 
 namespace Crowny
 {
-
-    ImGuiMenuBar::~ImGuiMenuBar()
-    {
-        for (auto* menu : m_Menus)
-            delete menu;
-    }
-
     void ImGuiMenuBar::Render()
     {
-        ImGui::BeginMenuBar();
-        for (auto* menu : m_Menus)
+        if (ImGui::BeginMenuBar())
         {
-            menu->Render();
+            for (const Scope<ImGuiMenu>& menu : m_Menus)
+                menu->Render();
+            ImGui::EndMenuBar();
         }
-        ImGui::EndMenuBar();
     }
 
-    void ImGuiMenuBar::AddMenu(ImGuiMenu* menu) { m_Menus.push_back(menu); }
+    ImGuiMenu& ImGuiMenuBar::AddMenu(String title) { return AddMenu(CreateScope<ImGuiMenu>(std::move(title))); }
+
+    ImGuiMenu& ImGuiMenuBar::AddMenu(Scope<ImGuiMenu> menu)
+    {
+        CW_ENGINE_ASSERT(menu, "Cannot add a null menu");
+        ImGuiMenu& result = *menu;
+        m_Menus.push_back(std::move(menu));
+        return result;
+    }
 
     ImGuiMenu::ImGuiMenu(const String& title) : m_Title(title) {}
 
-    ImGuiMenu::~ImGuiMenu()
-    {
-        for (auto* menu : m_Menus)
-            delete menu;
-        for (auto* item : m_Items)
-            delete item;
-    }
-
     void ImGuiMenu::Render()
     {
-        uint32_t tmp = 0;
-        for (auto* item : m_Items)
-        {
-            tmp = std::max(tmp, item->GetTotalWidth());
-        }
         if (ImGui::BeginMenu(m_Title.c_str()))
         {
-            uint32_t menuIndex = 0, itemIndex = 0;
-            for (const auto i : m_Order)
+            for (const Entry& entry : m_Entries)
             {
-                if (i)
-                    m_Menus[menuIndex++]->Render();
+                if (entry.Menu)
+                    entry.Menu->Render();
                 else
-                {
-                    m_Items[itemIndex++]->Render(tmp);
-                }
+                    entry.Item->Render();
             }
             ImGui::EndMenu();
         }
     }
 
-    void ImGuiMenu::AddItem(ImGuiMenuItem* item)
+    ImGuiMenuItem& ImGuiMenu::AddItem(String title, String shortcut, ImGuiMenuItem::Action action,
+                                      ImGuiMenuItem::CheckedState checkedState)
     {
-        m_Order.push_back(false);
-        m_Items.push_back(item);
+        Entry entry;
+        entry.Item = CreateScope<ImGuiMenuItem>(std::move(title), std::move(shortcut), std::move(action), std::move(checkedState));
+        ImGuiMenuItem& result = *entry.Item;
+        m_Entries.push_back(std::move(entry));
+        return result;
     }
 
-    void ImGuiMenu::AddMenu(ImGuiMenu* menu)
+    ImGuiMenu& ImGuiMenu::AddMenu(String title) { return AddMenu(CreateScope<ImGuiMenu>(std::move(title))); }
+
+    ImGuiMenu& ImGuiMenu::AddMenu(Scope<ImGuiMenu> menu)
     {
-        m_Order.push_back(true);
-        m_Menus.push_back(menu);
+        CW_ENGINE_ASSERT(menu, "Cannot add a null menu");
+        Entry entry;
+        entry.Menu = std::move(menu);
+        ImGuiMenu& result = *entry.Menu;
+        m_Entries.push_back(std::move(entry));
+        return result;
     }
 
-    ImGuiMenuItem::ImGuiMenuItem(const String& title, const String& combination, const EventCallbackFn& onClicked, bool* shown)
-      : m_Title(title), m_Combination(combination), m_OnClicked(onClicked), m_Shown(shown)
+    ImGuiMenuItem::ImGuiMenuItem(String title, String shortcut, Action action, CheckedState checkedState)
+      : m_Action(std::move(action)), m_CheckedState(std::move(checkedState)), m_Shortcut(std::move(shortcut)), m_Title(std::move(title))
     {
     }
 
-    uint32_t ImGuiMenuItem::GetTotalWidth() const
+    void ImGuiMenuItem::Render()
     {
-        return (uint32_t)(ImGui::CalcTextSize(m_Combination.c_str()).x + 5.0f + ImGui::CalcTextSize(m_Title.c_str()).x);
+        const char* shortcut = m_Shortcut.empty() ? nullptr : m_Shortcut.c_str();
+        const bool clicked = m_CheckedState ? ImGui::MenuItem(m_Title.c_str(), shortcut, m_CheckedState())
+                                            : ImGui::MenuItem(m_Title.c_str(), shortcut);
+        if (clicked && m_Action)
+            m_Action();
     }
-
-    void ImGuiMenuItem::Render(uint32_t maxWidth)
-    {
-        const bool clicked = ImGui::MenuItem(m_Title.c_str(), nullptr, m_Shown);
-
-        ImGui::SameLine();
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + maxWidth - ImGui::CalcTextSize(m_Combination.c_str()).x - 2 * ImGui::GetStyle().ItemSpacing.x);
-        const ImGuiStyle& style = ImGui::GetStyle();
-        ImGui::PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]);
-        ImGui::Text("%s", m_Combination.c_str());
-        ImGui::PopStyleColor();
-
-        if (clicked)
-        {
-            auto e = ImGuiMenuItemClickedEvent(m_Title);
-            if (m_OnClicked)
-                m_OnClicked(e);
-        }
-    }
-
 } // namespace Crowny

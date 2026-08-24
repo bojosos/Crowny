@@ -1,0 +1,150 @@
+#include <catch2/catch_test_macros.hpp>
+
+#include "Crowny/Application/Application.h"
+#include "Crowny/NodeGraph/BuiltinNodeTypes.h"
+#include "Crowny/NodeGraph/NodeGraph.h"
+#include "Crowny/NodeGraph/NodeRegistry.h"
+#include "Crowny/NodeGraph/Nodes/GeometryNodes.h"
+#include "Crowny/NodeGraph/Nodes/InputNodes.h"
+#include "Crowny/NodeGraph/Nodes/MathNodes.h"
+#include "Crowny/NodeGraph/Nodes/OutputNodes.h"
+#include "Crowny/NodeGraph/Pin.h"
+#include "Crowny/NodeGraph/UnknownNode.h"
+#include "Crowny/Renderer/Mesh.h"
+#include "Crowny/Serialization/NodeGraphSerializer.h"
+
+using namespace Crowny;
+
+namespace
+{
+    void RegisterNodesOnce()
+    {
+        if (!Application::IsStartedUp())
+        {
+            ApplicationDesc description;
+            description.Name = "NodeGraphTests";
+            description.Headless = true;
+            description.WorkingDirectory = fs::current_path();
+            Application::StartUp(description);
+        }
+        static const bool registered = [] {
+            RegisterBuiltinNodeTypes();
+            return true;
+        }();
+        (void)registered;
+    }
+
+    Ref<NodeGraph> MakeBoxGraph(Ref<BoxNode>& box, Ref<GeometryOutputNode>& output, UUID connectionId)
+    {
+        auto graph = CreateRef<NodeGraph>();
+        box = CreateRef<BoxNode>(UuidGenerator::Generate());
+        output = CreateRef<GeometryOutputNode>(UuidGenerator::Generate());
+        REQUIRE(graph->AddNode(box));
+        REQUIRE(graph->AddNode(output));
+        REQUIRE(graph->ConnectByPinID(box->FindOutputPin("Geometry")->GetID(), output->FindInputPin("Geometry")->GetID(), connectionId));
+        return graph;
+    }
+} // namespace
+
+TEST_CASE("Node graph serialization preserves identity", "[NodeGraph]")
+{
+    RegisterNodesOnce();
+    Ref<BoxNode> box;
+    Ref<GeometryOutputNode> output;
+    const UUID connectionId = UuidGenerator::Generate();
+    Ref<NodeGraph> graph = MakeBoxGraph(box, output, connectionId);
+    const UUID boxId = box->GetID();
+    const UUID boxOutputId = box->FindOutputPin("Geometry")->GetID();
+    const UUID outputInputId = output->FindInputPin("Geometry")->GetID();
+
+    NodeGraphSerializer serializer(graph);
+    const String firstYaml = serializer.SerializeToString();
+    Ref<NodeGraph> loaded;
+    NodeGraphSerializer loader(loaded);
+    REQUIRE(loader.DeserializeFromString(firstYaml));
+    REQUIRE(loaded->GetNode(boxId));
+    REQUIRE(loaded->GetPin(boxOutputId));
+    REQUIRE(loaded->GetPin(outputInputId));
+    REQUIRE(loaded->GetConnection(connectionId));
+
+    NodeGraphSerializer loadedSerializer(loaded);
+    CHECK(loadedSerializer.SerializeToString() == firstYaml);
+}
+
+TEST_CASE("Node graphs reject invalid connections and cycles", "[NodeGraph]")
+{
+    RegisterNodesOnce();
+    auto graph = CreateRef<NodeGraph>();
+    auto first = CreateRef<AddNode>(UuidGenerator::Generate());
+    auto second = CreateRef<AddNode>(UuidGenerator::Generate());
+    auto boolean = CreateRef<BoolNode>(UuidGenerator::Generate());
+    auto scalar = CreateRef<FloatNode>(UuidGenerator::Generate());
+    REQUIRE(graph->AddNode(first));
+    REQUIRE(graph->AddNode(second));
+    REQUIRE(graph->AddNode(boolean));
+    REQUIRE(graph->AddNode(scalar));
+
+    REQUIRE(graph->ConnectByPinID(first->FindOutputPin("Result")->GetID(), second->FindInputPin("A")->GetID()));
+    CHECK_FALSE(graph->ConnectByPinID(second->FindOutputPin("Result")->GetID(), first->FindInputPin("A")->GetID()));
+    CHECK_FALSE(graph->ConnectByPinID(boolean->FindOutputPin("Value")->GetID(), scalar->FindInputPin("Value")->GetID()));
+}
+
+TEST_CASE("Geometry evaluation cache follows semantic changes", "[NodeGraph]")
+{
+    RegisterNodesOnce();
+    Ref<BoxNode> box;
+    Ref<GeometryOutputNode> output;
+    Ref<NodeGraph> graph = MakeBoxGraph(box, output, UuidGenerator::Generate());
+
+    const Ref<MeshData> first = graph->EvaluateGeometry();
+    REQUIRE(first);
+    CHECK(graph->EvaluateGeometry().get() == first.get());
+
+    box->SetEditorPosition({ 32.0f, 48.0f });
+    CHECK(graph->EvaluateGeometry().get() == first.get());
+
+    REQUIRE(box->FindInputPin("Width")->SetDefaultValue(2.0f));
+    const Ref<MeshData> changed = graph->EvaluateGeometry();
+    REQUIRE(changed);
+    CHECK(changed.get() != first.get());
+}
+
+TEST_CASE("Missing node types survive node graph round trips", "[NodeGraph]")
+{
+    RegisterNodesOnce();
+    auto graph = CreateRef<NodeGraph>();
+    auto missing = CreateRef<UnknownNode>(UuidGenerator::Generate(), "PluginExtrudeNode");
+    const UUID inputId = UuidGenerator::Generate();
+    const UUID outputId = UuidGenerator::Generate();
+    missing->AddSerializedPin(inputId, "Distance", Pin::Direction::Input, PinDataType::Float, 1.0f);
+    missing->AddSerializedPin(outputId, "Geometry", Pin::Direction::Output, PinDataType::MeshData, Ref<MeshData>());
+    REQUIRE(graph->AddNode(missing));
+
+    NodeGraphSerializer serializer(graph);
+    Ref<NodeGraph> loaded;
+    NodeGraphSerializer loader(loaded);
+    REQUIRE(loader.DeserializeFromString(serializer.SerializeToString()));
+    Node* loadedNode = loaded->GetNode(missing->GetID());
+    REQUIRE(loadedNode);
+    CHECK(loadedNode->GetTypeName() == "PluginExtrudeNode");
+    CHECK(loadedNode->GetCategory() == "Missing");
+    CHECK(loaded->GetPin(inputId));
+    CHECK(loaded->GetPin(outputId));
+}
+
+TEST_CASE("Cylinder node produces bounded topology", "[NodeGraph]")
+{
+    RegisterNodesOnce();
+    auto graph = CreateRef<NodeGraph>();
+    auto cylinder = CreateRef<CylinderNode>(UuidGenerator::Generate());
+    auto output = CreateRef<GeometryOutputNode>(UuidGenerator::Generate());
+    REQUIRE(cylinder->FindInputPin("Segments")->SetDefaultValue(8));
+    REQUIRE(graph->AddNode(cylinder));
+    REQUIRE(graph->AddNode(output));
+    REQUIRE(graph->ConnectByPinID(cylinder->FindOutputPin("Geometry")->GetID(), output->FindInputPin("Geometry")->GetID()));
+
+    const Ref<MeshData> mesh = graph->EvaluateGeometry();
+    REQUIRE(mesh);
+    CHECK(mesh->GetVertexCount() == 38);
+    CHECK(mesh->GetIndexCount() == 96);
+}

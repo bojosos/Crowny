@@ -34,12 +34,15 @@ namespace Crowny
         MonoClass* GetClass(::MonoClass* rawClass) const;
 
         const String& GetName() const { return m_Name; }
+        const Path& GetPath() const { return m_Path; }
+        bool IsLoaded() const { return m_IsLoaded; }
 
         const Vector<MonoClass*>& GetClasses() const;
 
         void Load();
         void LoadFromImage(MonoImage* image);
         void Unload();
+        void ClearCachedClasses();
 
     private:
         friend class MonoManager;

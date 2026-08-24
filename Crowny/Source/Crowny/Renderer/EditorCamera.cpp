@@ -17,10 +17,12 @@ namespace Crowny
 
     void EditorCamera::OnUpdate(Timestep ts)
     {
-        if (Input::IsKeyPressed(Key::LeftAlt) || Input::IsKeyPressed(Key::RightAlt)) // need right alt cuz keyboard not working
+        (void)ts;
+        const bool altPressed = Input::IsKeyPressed(Key::LeftAlt) || Input::IsKeyPressed(Key::RightAlt);
+        const glm::vec2 mouse = Input::GetMousePosition();
+        if (altPressed)
         {
-            const glm::vec2 mouse = Input::GetMousePosition();
-            const glm::vec2 delta = (mouse - m_InitialMousePosition) * 0.003f;
+            const glm::vec2 delta = m_AltWasPressed ? (mouse - m_InitialMousePosition) * 0.003f : glm::vec2(0.0f);
             m_InitialMousePosition = mouse;
 
             if (Input::IsMouseButtonPressed(Mouse::ButtonMiddle))
@@ -30,6 +32,9 @@ namespace Crowny
             else if (Input::IsMouseButtonPressed(Mouse::ButtonRight))
                 MouseZoom(delta.y);
         }
+        else
+            m_InitialMousePosition = mouse;
+        m_AltWasPressed = altPressed;
 
         UpdateView();
     }
@@ -42,8 +47,13 @@ namespace Crowny
 
     void EditorCamera::UpdateProjection()
     {
+        if (m_ViewportWidth <= 0.0f || m_ViewportHeight <= 0.0f)
+            return;
         m_AspectRatio = m_ViewportWidth / m_ViewportHeight;
-        m_Projection = glm::perspective(glm::radians(m_Fov), m_AspectRatio, m_NearClip, m_FarClip);
+        const float fov = glm::radians(glm::clamp(m_Fov, 1.0f, 179.0f));
+        const float nearClip = std::max(m_NearClip, 0.0001f);
+        const float farClip = std::max(m_FarClip, nearClip + 0.0001f);
+        m_Projection = glm::perspective(fov, m_AspectRatio, nearClip, farClip);
     }
 
     void EditorCamera::UpdateView()
@@ -94,7 +104,7 @@ namespace Crowny
         float x = std::min(m_ViewportWidth / 1000.0f, 2.4f);
         float xFactor = 0.0366f * x * x - 0.1778f * x + 0.3021f;
 
-        float y = std::min(m_ViewportWidth / 1000.0f, 2.4f);
+        float y = std::min(m_ViewportHeight / 1000.0f, 2.4f);
         float yFactor = 0.0366f * y * y - 0.1778f * y + 0.3021f;
 
         return std::make_pair(xFactor, yFactor);

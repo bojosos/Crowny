@@ -115,25 +115,45 @@ namespace Crowny
                 }
             }
         }
+        if (m_DebugData == nullptr)
+        {
+            const Path mdbPath = m_Path.string() + ".mdb";
+            if (fs::exists(mdbPath))
+            {
+                const Ref<DataStream> mdbStream = FileSystem::OpenFile(mdbPath);
+                if (mdbStream != nullptr && mdbStream->Size() > 0)
+                {
+                    const uint32_t mdbSize = static_cast<uint32_t>(mdbStream->Size());
+                    m_DebugData = new uint8_t[mdbSize];
+                    mdbStream->Read(m_DebugData, mdbSize);
+                    mono_debug_open_image_from_memory(image, m_DebugData, mdbSize);
+                    CW_ENGINE_INFO("Loaded Mono debug symbols: {0}", mdbPath.string());
+                }
+            }
+        }
         // #endif
 
         m_Assembly = mono_assembly_load_from_full(image, imageName.c_str(), &status, false);
-        CheckImageOpenStatus(status);
-        if (m_Assembly == nullptr)
+        if (!CheckImageOpenStatus(status) || m_Assembly == nullptr)
+        {
             CW_ENGINE_ERROR("Failed to load assembly {0}.", m_Path);
+            if (m_DebugData != nullptr)
+            {
+                mono_debug_close_image(image);
+                delete[] m_DebugData;
+                m_DebugData = nullptr;
+            }
+            mono_image_close(image);
+            return;
+        }
 
         m_Image = image;
-        if (m_Image == nullptr)
-            CW_ENGINE_ERROR("Failed to get assembly image: {0}", m_Path);
-
         m_IsLoaded = true;
         m_IsDependency = false;
     }
 
-    void MonoAssembly::Unload()
+    void MonoAssembly::ClearCachedClasses()
     {
-        if (!m_IsLoaded)
-            return;
         for (auto& entry : m_ClassesByRaw)
             delete entry.second;
 
@@ -141,6 +161,13 @@ namespace Crowny
         m_ClassesByRaw.clear();
         m_ClassList.clear();
         m_AllClassesCached = false;
+    }
+
+    void MonoAssembly::Unload()
+    {
+        ClearCachedClasses();
+        if (!m_IsLoaded)
+            return;
 
         if (!m_IsDependency)
         {

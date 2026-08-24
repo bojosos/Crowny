@@ -21,7 +21,7 @@ namespace Crowny
     MonoObject* ScriptAssetDatabase::Internal_Load(MonoString* path)
     {
         Path nativePath = MonoUtils::FromMonoString(path);
-        AssetHandle<Asset> handle = gAssetManager->Load(nativePath);
+        AssetHandle<Asset> handle = AssetManager::TryGet()->Load(nativePath);
         if (!handle.IsLoaded())
             return nullptr;
         ScriptAssetBase* scriptAsset = ScriptAssetManager::Get().GetScriptAsset(handle, true);
@@ -30,7 +30,7 @@ namespace Crowny
 
     MonoObject* ScriptAssetDatabase::Internal_LoadFromUUID(UUID* uuid)
     {
-        AssetHandle<Asset> handle = gAssetManager->LoadFromUUID(*uuid);
+        AssetHandle<Asset> handle = AssetManager::TryGet()->LoadFromUUID(*uuid);
         if (!handle.IsLoaded())
             return nullptr;
         ScriptAssetBase* scriptAsset = ScriptAssetManager::Get().GetScriptAsset(handle, true);
@@ -40,7 +40,7 @@ namespace Crowny
     MonoString* ScriptAssetDatabase::Internal_GetAssetPath(UUID* uuid)
     {
         Path outPath;
-        if (!gAssetManager->GetAssetPath(*uuid, outPath))
+        if (!AssetManager::TryGet()->GetAssetPath(*uuid, outPath))
             return nullptr;
         return MonoUtils::ToMonoString(outPath.string());
     }
@@ -50,7 +50,7 @@ namespace Crowny
         if (*uuid == UUID::EMPTY)
             return false;
         Path outPath;
-        return gAssetManager->GetAssetPath(*uuid, outPath);
+        return AssetManager::TryGet()->GetAssetPath(*uuid, outPath);
     }
 
 } // namespace Crowny

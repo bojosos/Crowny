@@ -6,19 +6,16 @@
 
 #include <cereal/cereal.hpp>
 #include <cereal/types/base_class.hpp>
-#include <cereal/types/intrusive_ref.hpp>
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/types/unordered_map.hpp>
 #include <cereal/types/vector.hpp>
 
-using namespace Crowny;
-using namespace cereal;
-
-class BinaryDataStreamOutputArchive : public OutputArchive<BinaryDataStreamOutputArchive, AllowEmptyClassElision>
+class BinaryDataStreamOutputArchive
+  : public cereal::OutputArchive<BinaryDataStreamOutputArchive, cereal::AllowEmptyClassElision>
 {
 public:
-    BinaryDataStreamOutputArchive(const Ref<DataStream>& stream)
-      : OutputArchive<BinaryDataStreamOutputArchive, AllowEmptyClassElision>(this), m_Stream(stream)
+    BinaryDataStreamOutputArchive(const Crowny::Ref<Crowny::DataStream>& stream)
+      : cereal::OutputArchive<BinaryDataStreamOutputArchive, cereal::AllowEmptyClassElision>(this), m_Stream(stream)
     {
     }
 
@@ -28,17 +25,18 @@ public:
         // CW_ENGINE_ASSERT(writtenSize == size);
     }
 
-    Ref<DataStream> GetStream() { return m_Stream; };
+    Crowny::Ref<Crowny::DataStream> GetStream() { return m_Stream; };
 
 private:
-    Ref<DataStream> m_Stream;
+    Crowny::Ref<Crowny::DataStream> m_Stream;
 };
 
-class BinaryDataStreamInputArchive : public InputArchive<BinaryDataStreamInputArchive, AllowEmptyClassElision>
+class BinaryDataStreamInputArchive
+  : public cereal::InputArchive<BinaryDataStreamInputArchive, cereal::AllowEmptyClassElision>
 {
 public:
-    BinaryDataStreamInputArchive(const Ref<DataStream>& stream)
-      : InputArchive<BinaryDataStreamInputArchive, AllowEmptyClassElision>(this), m_Stream(stream)
+    BinaryDataStreamInputArchive(const Crowny::Ref<Crowny::DataStream>& stream)
+      : cereal::InputArchive<BinaryDataStreamInputArchive, cereal::AllowEmptyClassElision>(this), m_Stream(stream)
     {
     }
 
@@ -48,10 +46,10 @@ public:
         // CW_ENGINE_ASSERT(readSize == size);
     }
 
-    Ref<DataStream> GetStream() { return m_Stream; };
+    Crowny::Ref<Crowny::DataStream> GetStream() { return m_Stream; };
 
 private:
-    Ref<DataStream> m_Stream;
+    Crowny::Ref<Crowny::DataStream> m_Stream;
 };
 
 template <class T>
@@ -70,29 +68,32 @@ inline typename std::enable_if<std::is_arithmetic<T>::value, void>::type CEREAL_
 //! Serializing NVP types to binary
 template <class Archive, class T>
 inline CEREAL_ARCHIVE_RESTRICT(BinaryDataStreamInputArchive, BinaryDataStreamOutputArchive)
-  CEREAL_SERIALIZE_FUNCTION_NAME(Archive& ar, NameValuePair<T>& t)
+  CEREAL_SERIALIZE_FUNCTION_NAME(Archive& ar, cereal::NameValuePair<T>& t)
 {
     ar(t.value);
 }
 
 //! Serializing SizeTags to binary
 template <class Archive, class T>
-inline CEREAL_ARCHIVE_RESTRICT(BinaryDataStreamInputArchive, BinaryDataStreamOutputArchive) CEREAL_SERIALIZE_FUNCTION_NAME(Archive& ar, SizeTag<T>& t)
+inline CEREAL_ARCHIVE_RESTRICT(BinaryDataStreamInputArchive, BinaryDataStreamOutputArchive)
+  CEREAL_SERIALIZE_FUNCTION_NAME(Archive& ar, cereal::SizeTag<T>& t)
 {
     ar(t.size);
 }
 
 //! Saving binary data
-template <class T> inline void CEREAL_SAVE_FUNCTION_NAME(BinaryDataStreamOutputArchive& ar, BinaryData<T> const& bd)
+template <class T> inline void CEREAL_SAVE_FUNCTION_NAME(BinaryDataStreamOutputArchive& ar, cereal::BinaryData<T> const& bd)
 {
     ar.saveBinary(bd.data, static_cast<std::streamsize>(bd.size));
 }
 
 //! Loading binary data
-template <class T> inline void CEREAL_LOAD_FUNCTION_NAME(BinaryDataStreamInputArchive& ar, BinaryData<T>& bd)
+template <class T> inline void CEREAL_LOAD_FUNCTION_NAME(BinaryDataStreamInputArchive& ar, cereal::BinaryData<T>& bd)
 {
     ar.loadBinary(bd.data, static_cast<std::streamsize>(bd.size));
 }
+
+#include "Crowny/Serialization/CerealIntrusiveRef.h"
 
 CEREAL_REGISTER_ARCHIVE(BinaryDataStreamOutputArchive)
 CEREAL_REGISTER_ARCHIVE(BinaryDataStreamInputArchive)

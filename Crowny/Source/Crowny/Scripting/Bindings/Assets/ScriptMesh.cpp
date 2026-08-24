@@ -1,14 +1,30 @@
 #include "cwpch.h"
 
+#include <mono/metadata/object.h>
+
+#include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Renderer/MeshFactory.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptMesh.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/Mono/MonoUtils.h"
+#include "Crowny/Scripting/ScriptAssetManager.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
-
-#include <mono/metadata/object.h>
 
 namespace Crowny
 {
+    namespace
+    {
+        MonoObject* CreateManagedMesh(const Ref<Mesh>& mesh)
+        {
+            if (!mesh || AssetManager::TryGet() == nullptr || !ScriptAssetManager::IsStartedUp())
+                return nullptr;
+
+            const AssetHandle<Mesh> handle = static_asset_cast<Mesh>(AssetManager::TryGet()->CreateAssetHandle(mesh));
+            ScriptAssetBase* scriptAsset = ScriptAssetManager::Get().GetScriptAsset(handle, true);
+            return scriptAsset != nullptr ? scriptAsset->GetManagedInstance() : nullptr;
+        }
+    } // namespace
+
     ScriptMesh::ScriptMesh(MonoObject* instance, const AssetHandle<Mesh>& mesh) : TScriptAsset(instance, mesh) {}
 
     void ScriptMesh::InitRuntimeData()
@@ -39,6 +55,13 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_GetVertexAttributeCount", (void*)&Internal_GetVertexAttributeCount);
         MetaData.ScriptClass->AddInternalCall("Internal_HasVertexAttribute", (void*)&Internal_HasVertexAttribute);
         MetaData.ScriptClass->AddInternalCall("Internal_GetVertexAttribute", (void*)&Internal_GetVertexAttribute);
+        MetaData.ScriptClass->AddInternalCall("Internal_CreatePlane", (void*)&Internal_CreatePlane);
+        MetaData.ScriptClass->AddInternalCall("Internal_CreateBox", (void*)&Internal_CreateBox);
+        MetaData.ScriptClass->AddInternalCall("Internal_CreateCube", (void*)&Internal_CreateCube);
+        MetaData.ScriptClass->AddInternalCall("Internal_CreateSphere", (void*)&Internal_CreateSphere);
+        MetaData.ScriptClass->AddInternalCall("Internal_CreateCylinder", (void*)&Internal_CreateCylinder);
+        MetaData.ScriptClass->AddInternalCall("Internal_CreateCone", (void*)&Internal_CreateCone);
+        MetaData.ScriptClass->AddInternalCall("Internal_CreateCapsule", (void*)&Internal_CreateCapsule);
     }
 
     uint32_t ScriptMesh::Internal_GetVertexCount(ScriptMesh* thisPtr) { return thisPtr->GetHandle()->GetVertexCount(); }
@@ -380,6 +403,42 @@ namespace Crowny
         outDesc->Attribute = elem.Attribute;
         outDesc->Stream = (int32_t)elem.StreamIdx;
         ShaderDataTypeToFormatAndDimension(elem.Type, outDesc->Format, outDesc->Dimension);
+    }
+
+    MonoObject* ScriptMesh::Internal_CreatePlane(float width, float height, uint32_t subdivisionsX, uint32_t subdivisionsY)
+    {
+        return CreateManagedMesh(MeshFactory::CreatePlane(width, height, glm::vec3(0.0f, 1.0f, 0.0f), subdivisionsX,
+                                                          subdivisionsY, MeshUsage::CpuCached));
+    }
+
+    MonoObject* ScriptMesh::Internal_CreateBox(glm::vec3* dimensions)
+    {
+        return dimensions != nullptr ? CreateManagedMesh(MeshFactory::CreateBox(*dimensions, MeshUsage::CpuCached)) : nullptr;
+    }
+
+    MonoObject* ScriptMesh::Internal_CreateCube(float size)
+    {
+        return CreateManagedMesh(MeshFactory::CreateCube(size, MeshUsage::CpuCached));
+    }
+
+    MonoObject* ScriptMesh::Internal_CreateSphere(float radius, uint32_t segments, uint32_t rings)
+    {
+        return CreateManagedMesh(MeshFactory::CreateSphere(radius, segments, rings, MeshUsage::CpuCached));
+    }
+
+    MonoObject* ScriptMesh::Internal_CreateCylinder(float radius, float height, uint32_t segments, bool capped)
+    {
+        return CreateManagedMesh(MeshFactory::CreateCylinder(radius, height, segments, capped, MeshUsage::CpuCached));
+    }
+
+    MonoObject* ScriptMesh::Internal_CreateCone(float radius, float height, uint32_t segments, bool capped)
+    {
+        return CreateManagedMesh(MeshFactory::CreateCone(radius, height, segments, capped, MeshUsage::CpuCached));
+    }
+
+    MonoObject* ScriptMesh::Internal_CreateCapsule(float radius, float height, uint32_t segments, uint32_t hemisphereRings)
+    {
+        return CreateManagedMesh(MeshFactory::CreateCapsule(radius, height, segments, hemisphereRings, MeshUsage::CpuCached));
     }
 
 } // namespace Crowny

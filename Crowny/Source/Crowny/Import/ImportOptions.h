@@ -3,6 +3,7 @@
 #include "Crowny/Audio/AudioClip.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
+#include "Crowny/Utils/PixelUtils.h"
 #include "Crowny/Utils/ShaderCompiler.h"
 
 namespace Crowny
@@ -36,8 +37,13 @@ namespace Crowny
         bool AutomaticFormat = true;
         TextureFormat Format = TextureFormat::RGBA8;
         TextureShape Shape = TextureShape::TEXTURE_2D;
-        bool GenerateMips = false;
+        bool GenerateMips = true;
         uint32_t MaxMip = 0;
+        TextureMipFilter MipFilter = TextureMipFilter::Kaiser;
+        TextureMipMode MipMode = TextureMipMode::Color;
+        bool MipWrap = false;
+        bool PreserveAlphaCoverage = false;
+        float AlphaCutoff = 0.5f;
         bool CpuCached = false;
         bool SRGB = false;
         TextureDiskFormat DiskFormat = TextureDiskFormat::UASTC; // TODO: Auto based on texture type.
@@ -151,7 +157,7 @@ namespace Crowny
         bool DynamicFontAtlas = false;
         float BoldWeight = 0.75f;
         float BoldSpacing = 7.0f;
-        uint32_t TabMultiple = 10;
+        uint32_t TabMultiple = 4;
         uint32_t ItalicStyle = 35;
 
         virtual ImportOptionsType GetImportOptionsType() const override { return ImportOptionsType::Font; }
@@ -207,6 +213,13 @@ namespace Crowny
         bool ImportMorphMeshes = false;
         bool ImportBones = false;
         bool ImportRootMotion = false;
+        bool ImportMaterials = true;
+        bool ImportVertexColors = true;
+        bool FlipUVs = false;
+        bool FlipWindingOrder = false;
+        bool GenerateMeshlets = true;
+        bool GenerateLods = true;
+        uint32_t LodCount = 4;
         Vector<ExtraAnimationClipInfo> AnimationInfo;
 
         virtual ImportOptionsType GetImportOptionsType() const override { return ImportOptionsType::Mesh; }

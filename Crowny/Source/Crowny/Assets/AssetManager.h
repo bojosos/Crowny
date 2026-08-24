@@ -25,7 +25,7 @@ namespace Crowny
         };
 
     public:
-        AssetHandle<Asset> Load(const Path& path, bool keepinternalRef = true, bool keepSourceData = false);
+        AssetHandle<Asset> Load(const Path& path, bool keepInternalRef = true, bool keepSourceData = false);
 
         template <class T> AssetHandle<T> Load(const Path& filepath, bool keepInternalRef = true, bool keepSourceData = false)
         {
@@ -68,8 +68,7 @@ namespace Crowny
 
     private:
         UnorderedMap<UUID, WeakAssetHandle<Asset>> m_Handles;
+        UnorderedMap<Path, UUID, HashPath> m_TransientAssetIds;
         Vector<Ref<AssetManifest>> m_Manifests;
     };
-
-    extern AssetManager* gAssetManager;
 } // namespace Crowny

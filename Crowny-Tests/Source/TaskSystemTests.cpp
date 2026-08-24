@@ -12,8 +12,12 @@ using namespace Crowny;
 
 TEST_CASE("TaskSystem", "[Threading]")
 {
-    // TaskSystem is a singleton that gets created in the constructor and stored in s_Instance
-    TaskSystem system;
+    TaskSystem::StartUp();
+    struct ShutdownTaskSystem
+    {
+        ~ShutdownTaskSystem() { TaskSystem::Shutdown(); }
+    } shutdownTaskSystem;
+    TaskSystem& system = TaskSystem::Get();
 
     SECTION("Basic Task Execution")
     {

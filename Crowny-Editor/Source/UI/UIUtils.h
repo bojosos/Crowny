@@ -12,7 +12,7 @@
 
 #include "Crowny/Physics/Physics2D.h"
 
-#include <backends/imgui_impl_vulkan.h>
+#include "Crowny/ImGui/ImGuiVulkanTexture.h"
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <spdlog/fmt/fmt.h>
@@ -202,11 +202,11 @@ namespace Crowny
         {
             auto* drawList = ImGui::GetWindowDrawList();
             if (ImGui::IsItemActive())
-                drawList->AddImage(ImGui_ImplVulkan_AddTexture(imagePressed), rectMin, rectMax, ImVec2(0, 1), ImVec2(1, 0), tintPressed);
+                drawList->AddImage(ImGuiVulkanTexture::Get(imagePressed), rectMin, rectMax, ImVec2(0, 1), ImVec2(1, 0), tintPressed);
             else if (ImGui::IsItemHovered())
-                drawList->AddImage(ImGui_ImplVulkan_AddTexture(imageHovered), rectMin, rectMax, ImVec2(0, 1), ImVec2(1, 0), tintHovered);
+                drawList->AddImage(ImGuiVulkanTexture::Get(imageHovered), rectMin, rectMax, ImVec2(0, 1), ImVec2(1, 0), tintHovered);
             else
-                drawList->AddImage(ImGui_ImplVulkan_AddTexture(imageNormal), rectMin, rectMax, ImVec2(0, 1), ImVec2(1, 0), tintNormal);
+                drawList->AddImage(ImGuiVulkanTexture::Get(imageNormal), rectMin, rectMax, ImVec2(0, 1), ImVec2(1, 0), tintNormal);
         }
 
         static void DrawButtonImage(const Ref<Texture>& image, ImU32 tintNormal, ImU32 tintHovered, ImU32 tintPressed, ImRect rectangle)
@@ -335,17 +335,17 @@ namespace Crowny
         // Accent: amber #C47B30. Vec3 axis stripes: X #B8453A, Y #5E9F4B, Z #3A78B8.
         namespace Colors
         {
-            constexpr ImU32 Accent       = IM_COL32(196, 123,  48, 255);
-            constexpr ImU32 AccentHover  = IM_COL32(215, 138,  58, 255);
-            constexpr ImU32 AccentPress  = IM_COL32(176, 107,  40, 255);
-            constexpr ImU32 AxisX        = IM_COL32(184,  69,  58, 255);
-            constexpr ImU32 AxisY        = IM_COL32( 94, 159,  75, 255);
-            constexpr ImU32 AxisZ        = IM_COL32( 58, 120, 184, 255);
-            constexpr ImU32 AxisXHover   = IM_COL32(204,  89,  78, 255);
-            constexpr ImU32 AxisYHover   = IM_COL32(114, 179,  95, 255);
-            constexpr ImU32 AxisZHover   = IM_COL32( 78, 140, 204, 255);
+            constexpr ImU32 Accent = IM_COL32(196, 123, 48, 255);
+            constexpr ImU32 AccentHover = IM_COL32(215, 138, 58, 255);
+            constexpr ImU32 AccentPress = IM_COL32(176, 107, 40, 255);
+            constexpr ImU32 AxisX = IM_COL32(184, 69, 58, 255);
+            constexpr ImU32 AxisY = IM_COL32(94, 159, 75, 255);
+            constexpr ImU32 AxisZ = IM_COL32(58, 120, 184, 255);
+            constexpr ImU32 AxisXHover = IM_COL32(204, 89, 78, 255);
+            constexpr ImU32 AxisYHover = IM_COL32(114, 179, 95, 255);
+            constexpr ImU32 AxisZHover = IM_COL32(78, 140, 204, 255);
             constexpr ImU32 TextSecondary = IM_COL32(138, 125, 114, 255);
-        }
+        } // namespace Colors
     } // namespace UI
 
     class UIUtils
@@ -440,7 +440,7 @@ namespace Crowny
             String preview;
             float itemHeight = size.y / 20.0f;
 
-            const auto view = gSceneManager->GetActiveScene()->GetAllEntitiesWith<TagComponent>();
+            const auto view = SceneManager::TryGet()->GetActiveScene()->GetAllEntitiesWith<TagComponent>();
             String current = selectedScript;
 
             if (ImGui::GetItemFlags() & ImGuiItemFlags_Disabled)
@@ -564,7 +564,7 @@ namespace Crowny
                 const float width = ImGui::GetContentRegionAvail().x;
                 const float itemHeight = 28.0f;
 
-                const String buttonText = gPhysics2D->GetLayerName(selectedLayer);
+                const String buttonText = Physics2D::TryGet()->GetLayerName(selectedLayer);
                 const String layerSearchPopupId = UI::GenerateLabelID("EntitySearch");
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(192, 192, 192, 255));
                 if (ImGui::Button(UI::GenerateLabelID(buttonText), { width, itemHeight }))
@@ -596,7 +596,7 @@ namespace Crowny
             String preview;
             float itemHeight = size.y / 20.0f;
 
-            const auto view = gSceneManager->GetActiveScene()->GetAllEntitiesWith<TagComponent>();
+            const auto view = SceneManager::TryGet()->GetActiveScene()->GetAllEntitiesWith<TagComponent>();
             uint32_t current = selectedLayerMask;
 
             if (ImGui::GetItemFlags() & ImGuiItemFlags_Disabled)
@@ -646,7 +646,7 @@ namespace Crowny
 
                         for (uint32_t i = 0; i < 32; i++)
                         {
-                            const String& layerName = gPhysics2D->GetLayerName(i);
+                            const String& layerName = Physics2D::TryGet()->GetLayerName(i);
                             if (layerName.empty() || !searchString.empty() && !StringUtils::IsSearchMathing(layerName, searchString))
                                 continue;
 
@@ -689,7 +689,7 @@ namespace Crowny
             // String preview;
             // float itemHeight = size.y / 20.0f;
 
-            const auto view = gSceneManager->GetActiveScene()->GetAllEntitiesWith<TagComponent>();
+            const auto view = SceneManager::TryGet()->GetActiveScene()->GetAllEntitiesWith<TagComponent>();
             Entity current = selectedEntity;
 
             if (ImGui::GetItemFlags() & ImGuiItemFlags_Disabled)
@@ -760,7 +760,7 @@ namespace Crowny
                             }
                         }
 
-                        Scene* scene = gSceneManager->GetActiveScene().get();
+                        Scene* scene = SceneManager::TryGet()->GetActiveScene().get();
                         for (auto e : view)
                         {
                             Entity entity = { e, scene };
@@ -809,7 +809,7 @@ namespace Crowny
             String preview;
             float itemHeight = size.y / 20.0f;
 
-            const auto view = gSceneManager->GetActiveScene()->GetAllEntitiesWith<TagComponent>();
+            const auto view = SceneManager::TryGet()->GetActiveScene()->GetAllEntitiesWith<TagComponent>();
             AssetHandle<Asset> current = assetHandle;
 
             if (ImGui::GetItemFlags() & ImGuiItemFlags_Disabled)
@@ -891,7 +891,7 @@ namespace Crowny
                             bool isSelected = current && current.GetUUID() == uuid;
                             if (ImGui::Selectable(assetName.c_str(), isSelected))
                             {
-                                assetHandle = gAssetManager->LoadFromUUID(uuid);
+                                assetHandle = AssetManager::TryGet()->LoadFromUUID(uuid);
                                 current = assetHandle;
                                 modified = true;
                             }
@@ -990,7 +990,9 @@ namespace Crowny
                 const float itemHeight = 28.0f;
 
                 String buttonText = "Null";
-                if (assetHandle.IsLoaded())
+                if ((GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0)
+                    buttonText = "Multiple values";
+                else if (assetHandle.IsLoaded())
                     buttonText = assetHandle->GetName();
                 else if (assetHandle.HasUUID())
                     buttonText = ProjectLibrary::Get().GetAssetName(assetHandle.GetUUID());
@@ -1061,7 +1063,9 @@ namespace Crowny
                 const float itemHeight = 28.0f;
 
                 String buttonText = "Null";
-                if (assetHandle.IsLoaded())
+                if ((GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0)
+                    buttonText = "Multiple values";
+                else if (assetHandle.IsLoaded())
                     buttonText = assetHandle->GetName();
                 else if (assetHandle.HasUUID())
                     buttonText = ProjectLibrary::Get().GetAssetName(assetHandle.GetUUID());
@@ -1160,10 +1164,12 @@ namespace Crowny
 
         static Entity GetEntityFromPayload(const ImGuiPayload* payload)
         {
-            CW_ENGINE_ASSERT(payload->DataSize == sizeof(uint32_t));
-            const uint32_t id = *(const uint32_t*)payload->Data;
-            Entity result{ (entt::entity)id, gSceneManager->GetActiveScene().get() };
-            return result;
+            CW_ENGINE_ASSERT(payload && payload->DataSize == sizeof(UUID));
+            const Ref<Scene> scene = SceneManager::TryGet()->GetActiveScene();
+            if (!payload || payload->DataSize != sizeof(UUID) || !scene)
+                return {};
+
+            return scene->TryGetEntityFromUuid(*static_cast<const UUID*>(payload->Data));
         }
 
         static const ImGuiPayload* AcceptEntityPayload()
@@ -1172,7 +1178,7 @@ namespace Crowny
             if (!payload->IsDataType("Entity_ID"))
             {
                 UI::ScopedColor scope(ImGuiCol_DragDropTarget, IM_COL32(250, 20, 35, 255));
-                // gApplication->GetWindow().SetCursor(Cursor::STOPSIGN);
+                // Application::TryGet()->GetWindow().SetCursor(Cursor::STOPSIGN);
                 ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
                 return ImGui::AcceptDragDropPayload("Entity_ID");
             }
@@ -1201,7 +1207,7 @@ namespace Crowny
             }
             // Draw red outline for invalid assets. Note that for the proper outline to appear has to be called.
             UI::ScopedColor scope(ImGuiCol_DragDropTarget, IM_COL32(250, 20, 35, 255));
-            // gApplication->GetWindow().SetCursor(Cursor::STOPSIGN);
+            // Application::TryGet()->GetWindow().SetCursor(Cursor::STOPSIGN);
             ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
             ImGui::AcceptDragDropPayload(ID_ASSET_ITEM_PAYLOAD);
             return nullptr;
@@ -1228,7 +1234,7 @@ namespace Crowny
             }
             // Draw red outline for invalid assets. Note that for the proper outline to appear has to be called.
             UI::ScopedColor scope(ImGuiCol_DragDropTarget, IM_COL32(250, 20, 35, 255));
-            // gApplication->GetWindow().SetCursor(Cursor::STOPSIGN);
+            // Application::TryGet()->GetWindow().SetCursor(Cursor::STOPSIGN);
             ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
             ImGui::AcceptDragDropPayload(ID_ASSET_ITEM_PAYLOAD);
             return nullptr;
@@ -1236,8 +1242,8 @@ namespace Crowny
 
         static void SetEntityPayload(Entity entity)
         {
-            uint32_t tmp = (uint32_t)entity.GetHandle();
-            ImGui::SetDragDropPayload("Entity_ID", &tmp, sizeof(uint32_t));
+            const UUID uuid = entity.GetUuid();
+            ImGui::SetDragDropPayload("Entity_ID", &uuid, sizeof(UUID));
         }
 
         static void SetAssetPayload(const LibraryEntry* entry) { ImGui::SetDragDropPayload(ID_ASSET_ITEM_PAYLOAD, &entry, sizeof(LibraryEntry*)); }

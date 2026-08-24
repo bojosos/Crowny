@@ -1,5 +1,9 @@
 name: Build
 
+env:
+  MONO_VERSION: "6.12.0.206"
+  VULKAN_SDK_VERSION: "1.4.357.0"
+
 on:
   push:
   pull_request:
@@ -9,9 +13,12 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Check runtime asset API boundaries
+        run: python Scripts/check_asset_api.py --self-test
 
       - name: Install dependencies
         run: |
@@ -21,13 +28,15 @@ jobs:
             libvorbis-dev libopenal-dev libgtk-3-dev libglib2.0-dev \
             libvulkan-dev vulkan-utility-libraries-dev spirv-tools \
             mono-devel clang
-          mkdir -p Crowny/Dependencies/vulkan/include/vma
-          wget -O Crowny/Dependencies/vulkan/include/vma/vk_mem_alloc.h https://raw.githubusercontent.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/master/include/vk_mem_alloc.h
+          mkdir -p .deps/VulkanSDK/Include/vma
+          wget -O .deps/VulkanSDK/Include/vma/vk_mem_alloc.h https://raw.githubusercontent.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/v3.4.0/include/vk_mem_alloc.h
 
       - name: Generate projects
         run: |
+          chmod +x Scripts/setup-physics.sh
+          ./Scripts/setup-physics.sh Release avx2
           chmod +x 3rdparty/premake/bin/premake5
-          ./3rdparty/premake/bin/premake5 gmake2 --simd=sse4.1
+          ./3rdparty/premake/bin/premake5 gmake2 --simd=avx2 --with-nodes
 
       - name: Build Crowny
         run: make Crowny -j$(nproc) config=release_linux64 CXX=clang++
@@ -54,17 +63,37 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
 
+      - name: Check runtime asset API boundaries
+        run: python Scripts/check_asset_api.py --self-test
+
       - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v1.1
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Install Mono
+        shell: powershell
+        run: |
+          choco install mono --version $env:MONO_VERSION --yes --no-progress
+          $chocoExitCode = $LASTEXITCODE
+          if ($chocoExitCode -notin @(0, 1641, 3010)) { exit $chocoExitCode }
+          $monoRoot = Join-Path $env:ProgramFiles "Mono"
+          $requiredMonoFiles = @(
+            (Join-Path $monoRoot "include\mono-2.0\mono\jit\jit.h"),
+            (Join-Path $monoRoot "lib\mono-2.0-sgen.lib"),
+            (Join-Path $monoRoot "bin\mono-2.0-sgen.dll")
+          )
+          foreach ($requiredFile in $requiredMonoFiles) {
+            if (-not (Test-Path -LiteralPath $requiredFile)) { throw "Mono installation is missing $requiredFile" }
+          }
+          "CROWNY_MONO_ROOT=$monoRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Install Vulkan SDK
         run: |
-          $ver = "1.3.280.0"
-          $installer = "VulkanSDK-$ver-Installer.exe"
+          $ver = $env:VULKAN_SDK_VERSION
+          $installer = "vulkansdk-windows-X64-$ver.exe"
           Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/$ver/windows/$installer" -OutFile $installer
           Start-Process -FilePath ".\$installer" -ArgumentList "--accept-licenses --default-answer --confirm-command install" -Wait
           $sdkPath = "C:\VulkanSDK\$ver"
@@ -74,22 +103,19 @@ jobs:
 
       - name: Setup CI Environment
         run: |
-          mkdir -p Crowny/Dependencies/vulkan/include/vma
-          Invoke-WebRequest -Uri https://raw.githubusercontent.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/master/include/vk_mem_alloc.h -OutFile Crowny/Dependencies/vulkan/include/vma/vk_mem_alloc.h
+          mkdir -p .deps/VulkanSDK/Include/vma
+          Invoke-WebRequest -Uri https://raw.githubusercontent.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/v3.4.0/include/vk_mem_alloc.h -OutFile .deps/VulkanSDK/Include/vma/vk_mem_alloc.h
         shell: powershell
 
-      - name: Install OpenAL SDK
-        run: python Scripts/setup_ci_windows.py
-        shell: bash
-
-      - name: Setup Environment Variables
-        shell: bash
-        run: |
-          echo "OPENAL_SDK=C:/OpenAL_SDK" >> $GITHUB_ENV
-
       - name: Generate projects
+        shell: powershell
         run: |
-          3rdparty/premake/bin/premake5.exe vs2022 --with-nodes with-nodes
+          $env:CROWNY_OPENAL_ROOT = Join-Path $PWD ".deps\openal"
+          "CROWNY_OPENAL_ROOT=$env:CROWNY_OPENAL_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          & Scripts/setup-openal.ps1 -Configuration Release -Simd AVX2
+          & Scripts/setup-physics.ps1 -Configuration Release -Simd AVX2
+          & Scripts/setup-spirv-cross.ps1 -Configuration Release -VulkanVersion $env:VULKAN_SDK_VERSION -Simd AVX2
+          & 3rdparty/premake/bin/premake5.exe vs2022 --with-nodes --simd=avx2
 
       - name: Build
         run: |
@@ -98,5 +124,5 @@ jobs:
       - name: Run Tests
         shell: bash
         run: |
-          export PATH=$PATH:/c/OpenAL_SDK/libs/Win64
+          export PATH=$PATH:$PWD/.deps/openal/bin
           ./bin/Release-windows-x86_64/Crowny-Tests/Crowny-Tests.exe

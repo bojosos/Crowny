@@ -2,8 +2,11 @@
 
 #include "Crowny/Utils/ShaderCompiler.h"
 
+#include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/VirtualFileSystem.h"
+#include "Crowny/Common/Hash.h"
 #include "Crowny/RenderAPI/Shader.h"
+#include "Crowny/Renderer/ShaderVariation.h"
 
 #include <spirv_cross/spirv_cross.hpp>
 #include <spirv_cross/spirv_glsl.hpp>
@@ -15,6 +18,140 @@
 
 namespace Crowny
 {
+    namespace
+    {
+        Mutex s_ShaderCacheMutex;
+        UnorderedMap<String, Ref<BinaryShaderData>> s_ShaderCache;
+        uint64_t s_ShaderCacheHits = 0;
+        uint64_t s_ShaderCacheMisses = 0;
+        constexpr size_t MAX_SHADER_CACHE_ENTRIES = 1024;
+
+        String BuildCacheKey(const String& source, ShaderType shaderType, ShaderLanguage language, ShaderLanguageFlags flags,
+                             const UnorderedMap<String, String>& defines)
+        {
+            ShaderDefines canonicalDefines;
+            for (const auto& [name, value] : defines)
+                canonicalDefines.Set(name, value);
+
+            String result;
+            result.reserve(source.size() + defines.size() * 24 + 32);
+            result += std::to_string(static_cast<uint32_t>(shaderType));
+            result.push_back('|');
+            result += std::to_string(static_cast<uint32_t>(language));
+            result.push_back('|');
+            result += std::to_string(static_cast<uint32_t>(flags));
+            result.push_back('|');
+            result += canonicalDefines.GetCanonicalKey();
+            result.push_back('|');
+            result += source;
+            return result;
+        }
+
+        void LogDiagnostic(const ShaderDiagnostic& diagnostic)
+        {
+            const String location = diagnostic.File.empty()
+                                      ? String()
+                                      : diagnostic.File.string() + (diagnostic.Line == 0 ? String() : ":" + std::to_string(diagnostic.Line));
+            const String message = location.empty() ? diagnostic.Message : location + ": " + diagnostic.Message;
+            if (diagnostic.Severity == ShaderDiagnosticSeverity::Error)
+                CW_ENGINE_ERROR("{}", message);
+            else
+                CW_ENGINE_WARN("{}", message);
+        }
+
+        bool ExpandShaderIncludes(const Path& path, StringView source, String& output,
+                                  Vector<ShaderDiagnostic>& diagnostics, Vector<Path>& includeStack, uint32_t depth)
+        {
+            constexpr uint32_t MAX_INCLUDE_DEPTH = 32;
+            if (depth > MAX_INCLUDE_DEPTH)
+            {
+                diagnostics.push_back({ ShaderDiagnosticSeverity::Error, path, 0, {},
+                                        "Shader include depth exceeds " + std::to_string(MAX_INCLUDE_DEPTH) + "." });
+                return false;
+            }
+
+            const Path normalizedPath = path.lexically_normal();
+            if (std::find(includeStack.begin(), includeStack.end(), normalizedPath) != includeStack.end())
+            {
+                diagnostics.push_back({ ShaderDiagnosticSeverity::Error, normalizedPath, 0, {},
+                                        "Shader include cycle detected at '" + normalizedPath.string() + "'." });
+                return false;
+            }
+            includeStack.push_back(normalizedPath);
+
+            static const std::regex INCLUDE_PATTERN(R"(^\s*#\s*include\s*\"([^\"]+)\"\s*(?://.*)?$)");
+            std::istringstream stream{ String(source) };
+            String line;
+            uint32_t lineNumber = 0;
+            bool succeeded = true;
+            while (std::getline(stream, line))
+            {
+                lineNumber++;
+                std::smatch match;
+                if (!std::regex_match(line, match, INCLUDE_PATTERN))
+                {
+                    output += line;
+                    output.push_back('\n');
+                    continue;
+                }
+
+                const Path includePath = (normalizedPath.parent_path() / Path(match[1].str())).lexically_normal();
+                const Ref<DataStream> includeStream = FileSystem::OpenFile(includePath);
+                if (includeStream == nullptr)
+                {
+                    diagnostics.push_back({ ShaderDiagnosticSeverity::Error, normalizedPath, lineNumber, {},
+                                            "Cannot open shader include '" + includePath.string() + "'." });
+                    succeeded = false;
+                    continue;
+                }
+
+                const String includeSource = includeStream->GetAsString();
+                includeStream->Close();
+                output += "#line 1\n";
+                succeeded &= ExpandShaderIncludes(includePath, includeSource, output, diagnostics, includeStack, depth + 1u);
+                output += "#line " + std::to_string(lineNumber + 1u) + "\n";
+            }
+
+            includeStack.pop_back();
+            return succeeded;
+        }
+    } // namespace
+
+    bool ShaderCompileResult::Succeeded() const
+    {
+        return !Description.Techniques.empty() &&
+               std::none_of(Diagnostics.begin(), Diagnostics.end(),
+                            [](const ShaderDiagnostic& diagnostic) { return diagnostic.Severity == ShaderDiagnosticSeverity::Error; });
+    }
+
+    uint64_t ShaderCompiler::HashSource(StringView source)
+    {
+        return Hashing::CityHash64(source);
+    }
+
+    bool ShaderCompiler::PreprocessIncludes(const Path& path, StringView source, String& output,
+                                            Vector<ShaderDiagnostic>& diagnostics)
+    {
+        output.clear();
+        output.reserve(source.size());
+        Vector<Path> includeStack;
+        includeStack.reserve(8);
+        return ExpandShaderIncludes(path, source, output, diagnostics, includeStack, 0);
+    }
+
+    void ShaderCompiler::ClearCache()
+    {
+        ScopedLock lock(s_ShaderCacheMutex);
+        s_ShaderCache.clear();
+        s_ShaderCacheHits = 0;
+        s_ShaderCacheMisses = 0;
+    }
+
+    ShaderCompilerCacheStats ShaderCompiler::GetCacheStats()
+    {
+        ScopedLock lock(s_ShaderCacheMutex);
+        return { s_ShaderCacheHits, s_ShaderCacheMisses, s_ShaderCache.size() };
+    }
     // TODO: Switch to pragma shader_stage!!!! Although given how I write the shader in a single file we
     // will still have to split the file in two.
     static shaderc_shader_kind ShaderTypeToShaderC(ShaderType shaderType)
@@ -110,6 +247,21 @@ namespace Crowny
         return TEXTURE_UNKNOWN;
     }
 
+    static UniformResourceType SPIRTypeToStorageTextureType(const spirv_cross::SPIRType& type)
+    {
+        switch (type.image.dim)
+        {
+        case spv::Dim::Dim1D:
+            return RWTEXTURE1D;
+        case spv::Dim::Dim2D:
+            return RWTEXTURE2D;
+        case spv::Dim::Dim3D:
+            return RWTEXTURE3D;
+        default:
+            return TEXTURE_UNKNOWN;
+        }
+    }
+
     static VertexAttribute GetSpecialVertexAttribute(const StringView& attributeName)
     {
         if (attributeName == "cw_Position")
@@ -142,6 +294,8 @@ namespace Crowny
             return VertexAttribute::BlendWeights;
         if (attributeName == "cw_BlendIndices")
             return VertexAttribute::BlendIndices;
+        if (attributeName == "cw_PreviousPosition")
+            return VertexAttribute::PreviousPosition;
         // CW_ENGINE_ASSERT(false);
         return VertexAttribute::None;
     }
@@ -189,171 +343,166 @@ namespace Crowny
         return ShaderDataType::None;
     }
 
-    static bool GetShaderTypeFromString(const String& type, ShaderType& outShaderType)
-    {
-        if (type == "vertex")
-            outShaderType = VERTEX_SHADER;
-        else if (type == "fragment" || type == "pixel")
-            outShaderType = FRAGMENT_SHADER;
-        else if (type == "geometry")
-            outShaderType = GEOMETRY_SHADER;
-        else if (type == "domain")
-            outShaderType = DOMAIN_SHADER;
-        else if (type == "hull")
-            outShaderType = HULL_SHADER;
-        else if (type == "compute")
-            outShaderType = COMPUTE_SHADER;
-        else if (type == "raygen")
-            outShaderType = RAYGEN_SHADER;
-        else if (type == "raymiss")
-            outShaderType = MISS_SHADER;
-        else if (type == "rayhit")
-            outShaderType = HIT_SHADER;
-        else
-            return false;
-        return true;
-    }
-
-    static bool GetShaderLanguage(const String& lang, ShaderLanguage& outShaderLanguage)
-    {
-        if (lang == "hlsl")
-            outShaderLanguage = ShaderLanguage::HLSL;
-        else if (lang == "glsl")
-            outShaderLanguage = ShaderLanguage::GLSL;
-        else
-            return false;
-        return true;
-    }
-
     Ref<BlendStateDesc> ShaderCompiler::PreparseBlendState(String& shader)
     {
-        Ref<BlendStateDesc> result;
-        auto strPosIter = shader.find("blend_state");
-        const auto strPos = strPosIter;
+        Vector<ShaderDiagnostic> diagnostics;
+        Ref<BlendStateDesc> result = ParseBlendState({}, shader, diagnostics);
+        for (const ShaderDiagnostic& diagnostic : diagnostics)
+            LogDiagnostic(diagnostic);
+        return result;
+    }
 
-        auto skipWhiteSpace = [&strPosIter, &shader]() {
-            while (strPosIter < shader.size() && std::isspace(shader[strPosIter]))
-                strPosIter++;
-        };
-        auto expect = [&strPosIter, &shader](char value) {
-            CW_ENGINE_ASSERT(shader[strPosIter] == value, "Bad programmer");
+    Ref<BlendStateDesc> ShaderCompiler::ParseBlendState(const Path& path, String& shader, Vector<ShaderDiagnostic>& diagnostics)
+    {
+        static const std::regex blockRegex(R"((^|[\r\n])[\t ]*blend_state\s*\{)", std::regex::icase);
+        std::smatch blockMatch;
+        if (!std::regex_search(shader, blockMatch, blockRegex))
+            return nullptr;
 
-            strPosIter++;
+        Ref<BlendStateDesc> result = CreateRef<BlendStateDesc>();
+        const size_t start = static_cast<size_t>(blockMatch.position());
+        const size_t openBrace = start + static_cast<size_t>(blockMatch.length()) - 1;
+        const uint32_t line = 1 + static_cast<uint32_t>(std::count(shader.begin(), shader.begin() + openBrace, '\n'));
+
+        size_t closeBrace = String::npos;
+        uint32_t braceDepth = 0;
+        bool inLineComment = false;
+        bool inBlockComment = false;
+        char quote = '\0';
+        bool escaped = false;
+        for (size_t index = openBrace; index < shader.size(); ++index)
+        {
+            const char current = shader[index];
+            const char next = index + 1 < shader.size() ? shader[index + 1] : '\0';
+            if (inLineComment)
+            {
+                if (current == '\n')
+                    inLineComment = false;
+                continue;
+            }
+            if (inBlockComment)
+            {
+                if (current == '*' && next == '/')
+                {
+                    inBlockComment = false;
+                    ++index;
+                }
+                continue;
+            }
+            if (quote != '\0')
+            {
+                if (escaped)
+                    escaped = false;
+                else if (current == '\\')
+                    escaped = true;
+                else if (current == quote)
+                    quote = '\0';
+                continue;
+            }
+            if (current == '/' && next == '/')
+            {
+                inLineComment = true;
+                ++index;
+                continue;
+            }
+            if (current == '/' && next == '*')
+            {
+                inBlockComment = true;
+                ++index;
+                continue;
+            }
+            if (current == '"' || current == '\'')
+            {
+                quote = current;
+                continue;
+            }
+            if (current == '{')
+                ++braceDepth;
+            else if (current == '}' && --braceDepth == 0)
+            {
+                closeBrace = index;
+                break;
+            }
+        }
+
+        if (closeBrace == String::npos)
+        {
+            diagnostics.push_back({ ShaderDiagnosticSeverity::Error, path, line, {}, "Unterminated blend_state block." });
+            return result;
+        }
+
+        size_t end = closeBrace + 1;
+        while (end < shader.size() && std::isspace(static_cast<unsigned char>(shader[end])))
+            ++end;
+        if (end >= shader.size() || shader[end] != ';')
+        {
+            diagnostics.push_back({ ShaderDiagnosticSeverity::Error, path, line, {}, "blend_state block must end with ';'." });
+        }
+        else
+        {
+            ++end;
+        }
+
+        const String body = shader.substr(openBrace + 1, closeBrace - openBrace - 1);
+
+        auto lower = [](String value) {
+            std::transform(value.begin(), value.end(), value.begin(),
+                           [](unsigned char character) { return static_cast<char>(std::tolower(character)); });
+            return value;
         };
-        auto isNext = [&strPosIter, &shader](const String& value) {
-            for (int i = 0; i < value.size(); i++)
-                if (std::tolower(shader[strPosIter + i]) != std::tolower(value[i]))
-                    return false;
-            strPosIter += value.size();
+        auto parseFactor = [&](const String& token, BlendFactor& output) {
+            const String value = lower(token);
+            static const UnorderedMap<String, BlendFactor> FACTORS = {
+                { "one", BlendFactor::One },           { "zero", BlendFactor::Zero },
+                { "dstrgb", BlendFactor::DestColor }, { "srcrgb", BlendFactor::SourceColor },
+                { "dstirgb", BlendFactor::InvDestColor }, { "srcirgb", BlendFactor::InvSourceColor },
+                { "dsta", BlendFactor::DestAlpha },   { "srca", BlendFactor::SourceAlpha },
+                { "dstia", BlendFactor::InvDestAlpha }, { "srcia", BlendFactor::InvSourceAlpha },
+            };
+            const auto iter = FACTORS.find(value);
+            if (iter == FACTORS.end())
+                return false;
+            output = iter->second;
             return true;
         };
-        auto parseBool = [&]() {
-            if (isNext("true"))
-                return true;
-            else if (isNext("false"))
+        auto parseOperation = [&](const String& token, BlendFunction& output) {
+            const String value = lower(token);
+            static const UnorderedMap<String, BlendFunction> OPERATIONS = {
+                { "add", BlendFunction::ADD }, { "sub", BlendFunction::SUBTRACT }, { "rsub", BlendFunction::REVERSE_SUBTRACT },
+                { "min", BlendFunction::MIN }, { "max", BlendFunction::MAX },
+            };
+            const auto iter = OPERATIONS.find(value);
+            if (iter == OPERATIONS.end())
                 return false;
-            else
-                CW_ENGINE_ERROR("Bad");
-            return false;
+            output = iter->second;
+            return true;
         };
-        auto parseBlendFactor = [&]() {
-            if (isNext("one"))
-                return BlendFactor::One;
-            else if (isNext("zero"))
-                return BlendFactor::Zero;
-            else if (isNext("dstrgb"))
-                return BlendFactor::DestColor;
-            else if (isNext("srcrgb"))
-                return BlendFactor::SourceColor;
-            else if (isNext("dstirgb"))
-                return BlendFactor::InvDestColor;
-            else if (isNext("srcirgb"))
-                return BlendFactor::InvSourceColor;
-            else if (isNext("dsta"))
-                return BlendFactor::DestAlpha;
-            else if (isNext("srca"))
-                return BlendFactor::SourceAlpha;
-            else if (isNext("dstia"))
-                return BlendFactor::InvDestAlpha;
-            else if (isNext("srcia"))
-                return BlendFactor::InvSourceAlpha;
-            CW_ENGINE_ASSERT(false);
-            return BlendFactor::One;
+
+        std::smatch match;
+        if (std::regex_search(body, match, std::regex(R"(\benabled\s*=\s*(true|false)\s*;)", std::regex::icase)))
+            result->EnableBlending = lower(match[1].str()) == "true";
+
+        auto parseEquation = [&](StringView name, BlendFactor& source, BlendFactor& destination, BlendFunction& operation) {
+            const std::regex assignmentRegex("\\b" + String(name) + R"(\s*=)", std::regex::icase);
+            if (!std::regex_search(body, assignmentRegex))
+                return;
+            const std::regex equationRegex("\\b" + String(name) +
+                                             R"(\s*=\s*\{\s*(\w+)\s*,\s*(\w+)\s*,\s*(\w+)\s*\}\s*;)",
+                                           std::regex::icase);
+            std::smatch equation;
+            if (!std::regex_search(body, equation, equationRegex) || !parseFactor(equation[1].str(), source) ||
+                !parseFactor(equation[2].str(), destination) ||
+                !parseOperation(equation[3].str(), operation))
+                diagnostics.push_back({ ShaderDiagnosticSeverity::Error, path, line, {},
+                                        "Invalid " + String(name) + " blend equation in blend_state." });
         };
-        auto parseBlendOp = [&]() {
-            if (isNext("add"))
-                return BlendFunction::ADD;
-            else if (isNext("sub"))
-                return BlendFunction::SUBTRACT;
-            else if (isNext("rsub"))
-                return BlendFunction::REVERSE_SUBTRACT;
-            else if (isNext("min"))
-                return BlendFunction::MIN;
-            else if (isNext("max"))
-                return BlendFunction::MAX;
-            CW_ENGINE_ASSERT(false);
-            return BlendFunction::ADD;
-        };
-        auto parseColorBlendOp = [&](BlendFactor& srcBlend, BlendFactor& dstBlend, BlendFunction& blendOp) {
-            skipWhiteSpace();
-            expect('{');
-            skipWhiteSpace();
-            srcBlend = parseBlendFactor();
-            skipWhiteSpace();
-            expect(',');
-            skipWhiteSpace();
-            dstBlend = parseBlendFactor();
-            skipWhiteSpace();
-            expect(',');
-            skipWhiteSpace();
-            blendOp = parseBlendOp();
-            skipWhiteSpace();
-            expect('}');
-            skipWhiteSpace();
-            expect(';');
-        };
-        if (strPosIter != String::npos)
+        parseEquation("color", result->SrcBlend, result->DstBlend, result->BlendOp);
+        parseEquation("alpha", result->SrcBlendAlpha, result->DstBlendAlpha, result->BlendOpAlpha);
+
+        for (size_t index = start; index < end; ++index)
         {
-            result = CreateRef<BlendStateDesc>();
-            strPosIter += strlen("blend_state");
-            skipWhiteSpace();
-            expect('{');
-            while (shader[strPosIter] != '}')
-            {
-                skipWhiteSpace();
-                if (isNext("enabled"))
-                {
-                    skipWhiteSpace();
-                    expect('=');
-                    skipWhiteSpace();
-                    result->EnableBlending = parseBool();
-                    skipWhiteSpace();
-                    expect(';');
-                }
-                else if (isNext("color"))
-                {
-                    skipWhiteSpace();
-                    expect('=');
-                    skipWhiteSpace();
-                    parseColorBlendOp(result->SrcBlend, result->DstBlend, result->BlendOp);
-                }
-                else if (isNext("alpha"))
-                {
-                    skipWhiteSpace();
-                    expect('=');
-                    skipWhiteSpace();
-                    parseColorBlendOp(result->SrcBlendAlpha, result->DstBlendAlpha, result->BlendOpAlpha);
-                }
-                else if (isNext("writemask"))
-                {
-                    CW_ENGINE_ASSERT(false);
-                }
-                skipWhiteSpace();
-            }
-            expect('}');
-            skipWhiteSpace();
-            expect(';');
-            shader = shader.substr(0, strPos) + shader.substr(strPosIter);
+            if (shader[index] != '\r' && shader[index] != '\n')
+                shader[index] = ' ';
         }
         return result;
     }
@@ -473,7 +622,31 @@ namespace Crowny
     Ref<BinaryShaderData> ShaderCompiler::CompileStage(const String& source, ShaderType shaderType, ShaderLanguage inputLanguage,
                                                        ShaderLanguageFlags outputLanguages, const UnorderedMap<String, String>& defines)
     {
+        Vector<ShaderDiagnostic> diagnostics;
+        Ref<BinaryShaderData> result = CompileStage({}, source, shaderType, inputLanguage, outputLanguages, defines, diagnostics);
+        for (const ShaderDiagnostic& diagnostic : diagnostics)
+            LogDiagnostic(diagnostic);
+        return result;
+    }
+
+    Ref<BinaryShaderData> ShaderCompiler::CompileStage(const Path& path, const String& source, ShaderType shaderType,
+                                                       ShaderLanguage inputLanguage, ShaderLanguageFlags outputLanguages,
+                                                       const UnorderedMap<String, String>& defines,
+                                                       Vector<ShaderDiagnostic>& diagnostics)
+    {
         ZoneScopedN("ShaderCompiler::CompileStage");
+        const String cacheKey = BuildCacheKey(source, shaderType, inputLanguage, outputLanguages, defines);
+        {
+            ScopedLock lock(s_ShaderCacheMutex);
+            const auto iter = s_ShaderCache.find(cacheKey);
+            if (iter != s_ShaderCache.end())
+            {
+                ++s_ShaderCacheHits;
+                return iter->second;
+            }
+            ++s_ShaderCacheMisses;
+        }
+
         Vector<uint8_t> shaderBinaryData;
 
         shaderc::Compiler compiler;
@@ -490,24 +663,32 @@ namespace Crowny
             break;
         }
 
-        options.SetSourceLanguage(shaderc_source_language_glsl);
         options.SetTargetEnvironment(shaderc_target_env_vulkan,
-                                     shaderc_env_version_vulkan_1_3); // TODO: Better versioning
+                                      shaderc_env_version_vulkan_1_3); // TODO: Better versioning
+        // SPIR-V 1.6 lowers GLSL discard to OpDemoteToHelperInvocation. That instruction
+        // cannot be translated to desktop OpenGL GLSL by SPIRV-Cross, while SPIR-V 1.5
+        // retains OpKill and remains valid for the Vulkan 1.3 backend.
+        options.SetTargetSpirv(shaderc_spirv_version_1_5);
         // options.SetOptimizationLevel(shaderc_optimization_level_performance); // TODO: if set, can't use uniform
         // names, so maybe compile twice?
 
-        const char* entryPoints[SHADER_COUNT] = { "vsmain", "fsmain", "gsmain", "dsmain", "hsmain", "csmain", "raygen", "hit", "miss" };
-        const char* entryPoint = entryPoints[shaderType];
+        const char* hlslEntryPoints[SHADER_COUNT] = { "vsmain", "fsmain", "gsmain", "dsmain", "hsmain", "csmain", "raygen", "hit", "miss" };
+        const char* entryPoint = inputLanguage == ShaderLanguage::HLSL ? hlslEntryPoints[shaderType] : "main";
+        const String sourceName = path.empty() ? ShaderTypeToString(shaderType) : path.generic_string();
         shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(source.c_str(), source.size(), ShaderTypeToShaderC(shaderType),
-                                                                         ShaderTypeToString(shaderType).c_str(), entryPoint, options);
+                                                                         sourceName.c_str(), entryPoint, options);
         if (module.GetCompilationStatus() != shaderc_compilation_status_success)
         {
-            String shaderTypeString = ShaderTypeToString(shaderType);
-            shaderTypeString[0] = std::toupper(shaderTypeString[0]);
-            CW_ENGINE_ERROR("{0} shader compilation error: {1}", shaderTypeString, module.GetErrorMessage());
+            diagnostics.push_back({ ShaderDiagnosticSeverity::Error, path, 0, ShaderTypeToString(shaderType), module.GetErrorMessage() });
         }
         else
-            shaderBinaryData = Vector<uint8_t>((uint8_t*)module.cbegin(), (uint8_t*)module.cend());
+        {
+            const Vector<uint32_t> words(module.cbegin(), module.cend());
+            shaderBinaryData.resize(words.size() * sizeof(uint32_t));
+            std::memcpy(shaderBinaryData.data(), words.data(), shaderBinaryData.size());
+            if (module.GetNumWarnings() > 0)
+                diagnostics.push_back({ ShaderDiagnosticSeverity::Warning, path, 0, ShaderTypeToString(shaderType), module.GetErrorMessage() });
+        }
 
         // Something went wrong, still thought we need to return a valid shader
         if (shaderBinaryData.empty())
@@ -605,23 +786,35 @@ namespace Crowny
             }
         }
 
+        {
+            ScopedLock lock(s_ShaderCacheMutex);
+            if (s_ShaderCache.size() >= MAX_SHADER_CACHE_ENTRIES)
+                s_ShaderCache.clear();
+            s_ShaderCache.try_emplace(cacheKey, dataResult);
+        }
         return dataResult;
     }
 
-    Vector<Ref<ShaderRenderPass>> ShaderCompiler::CompilePasses(const Vector<UnorderedMap<ShaderType, String>>& parsedPasses,
+    Vector<Ref<ShaderRenderPass>> ShaderCompiler::CompilePasses(const Path& path, const ParsedShaderSource& parsedSource,
                                                                 ShaderLanguage inputLanguage, ShaderLanguageFlags shaderLanguage,
                                                                 const UnorderedMap<String, String>& defines,
-                                                                const Ref<BlendStateDesc>& blendState)
+                                                                const Ref<BlendStateDesc>& blendState,
+                                                                Vector<ShaderDiagnostic>& diagnostics)
     {
         Vector<Ref<ShaderRenderPass>> renderPasses;
-        for (const auto& sourceShaders : parsedPasses)
+        renderPasses.reserve(parsedSource.Passes.size());
+        for (const ShaderSourcePass& sourcePass : parsedSource.Passes)
         {
             ShaderRenderPassDesc passDesc;
-            String passSourceCombined;
-            for (const auto& [type, stageSource] : sourceShaders)
+            bool passSucceeded = true;
+            for (uint32_t typeIndex = 0; typeIndex < SHADER_COUNT; ++typeIndex)
             {
-                passSourceCombined += stageSource;
-                const Ref<BinaryShaderData> shaderData = CompileStage(stageSource, type, inputLanguage, shaderLanguage, defines);
+                if (!sourcePass.HasStage[typeIndex])
+                    continue;
+                const ShaderType type = static_cast<ShaderType>(typeIndex);
+                const Ref<BinaryShaderData> shaderData =
+                  CompileStage(path, sourcePass.Stages[typeIndex], type, inputLanguage, shaderLanguage, defines, diagnostics);
+                passSucceeded &= shaderData != nullptr && !shaderData->Data.empty();
                 if (type == VERTEX_SHADER)
                     passDesc.VertexShader = shaderData;
                 else if (type == FRAGMENT_SHADER)
@@ -643,9 +836,10 @@ namespace Crowny
                 else
                     CW_ENGINE_ASSERT(false);
             }
-            EvaluatePragmaDirectives(passSourceCombined, passDesc);
+            EvaluatePragmaDirectives(parsedSource.GlobalPragmas, sourcePass.Pragmas, passDesc, diagnostics, path);
             passDesc.BlendState = blendState;
-            renderPasses.push_back(ShaderRenderPass::Create(passDesc));
+            if (passSucceeded)
+                renderPasses.push_back(ShaderRenderPass::Create(passDesc));
         }
         return renderPasses;
     }
@@ -653,137 +847,95 @@ namespace Crowny
     ShaderDesc ShaderCompiler::Compile(const Path& path, const String& rawSource, ShaderLanguageFlags shaderLanguage,
                                        const UnorderedMap<String, String>& defines)
     {
+        ShaderCompileResult result = CompileWithDiagnostics(path, rawSource, shaderLanguage, defines);
+        for (const ShaderDiagnostic& diagnostic : result.Diagnostics)
+            LogDiagnostic(diagnostic);
+        return std::move(result.Description);
+    }
+
+    ShaderCompileResult ShaderCompiler::CompileWithDiagnostics(const Path& path, const String& rawSource,
+                                                                ShaderLanguageFlags shaderLanguage,
+                                                                const UnorderedMap<String, String>& defines)
+    {
         ZoneScopedN("ShaderCompiler::Compile");
-        const char* langToken = "#lang";
-        const size_t langTokenLength = strlen(langToken);
-        const size_t pos = rawSource.find(langToken, 0);
-        ShaderLanguage inputLanguage = ShaderLanguage::GLSL;
-        if (pos != String::npos)
+        ShaderCompileResult result;
+        for (const auto& [name, _] : defines)
         {
-            const size_t eol = rawSource.find_first_of("\n\r", pos);
-            if (eol != String::npos)
-            {
-                const size_t begin = pos + langTokenLength + 1;
-                const String langString = rawSource.substr(begin, eol - begin);
-                if (!GetShaderLanguage(langString, inputLanguage))
-                    CW_ENGINE_ERROR("Shader language string {0} not recognized. Assuming shader is in GLSL.", langString);
-            }
+            if (!ShaderSourceParser::IsIdentifier(name))
+                result.Diagnostics.push_back(
+                  { ShaderDiagnosticSeverity::Error, path, 0, {}, "Invalid preprocessor define name '" + name + "'." });
         }
-        else
-            CW_ENGINE_WARN("#lang directive not found in {0}, assuming shader is in GLSL.", path.string());
 
-        String source = rawSource;
-        const auto blendState = PreparseBlendState(source);
+        String source;
+        if (!PreprocessIncludes(path, rawSource, source, result.Diagnostics))
+            return result;
+        const Ref<BlendStateDesc> blendState = ParseBlendState(path, source, result.Diagnostics);
+        ParsedShaderSource parsedSource = ShaderSourceParser::Parse(path, source);
+        result.Diagnostics.insert(result.Diagnostics.end(), parsedSource.Diagnostics.begin(), parsedSource.Diagnostics.end());
+        if (!parsedSource.Succeeded() ||
+            std::any_of(result.Diagnostics.begin(), result.Diagnostics.end(),
+                        [](const ShaderDiagnostic& diagnostic) { return diagnostic.Severity == ShaderDiagnosticSeverity::Error; }))
+            return result;
 
-        // Parse variation directives before splitting into passes.
-        // Each group is a vector of keyword options. The cartesian product of all groups
-        // gives the full set of techniques to compile.
-        //
-        //   #pragma variation USE_NORMALMAP          → group {"", "USE_NORMALMAP"} (bool toggle)
-        //   #pragma variation_multi _ LOW MED HIGH   → group {"", "LOW", "MED", "HIGH"} (_ = none)
-        //
-        // Total combinations = product of group sizes.
-        Vector<Vector<String>> variationGroups;
+        const ShaderLanguage inputLanguage = parsedSource.Language == "hlsl" ? ShaderLanguage::HLSL : ShaderLanguage::GLSL;
+
+        // Compile the cartesian product in declaration order, using mixed-radix indexing.
+        const uint32_t totalCombinations = parsedSource.VariationCount;
+        result.Description.Techniques.reserve(totalCombinations);
+        for (uint32_t combination = 0; combination < totalCombinations; ++combination)
         {
-            // Boolean toggles: #pragma variation KEYWORD
-            std::regex toggleRegex(R"(#pragma\s+variation\s+(\w+)\s*$)");
-            auto begin = std::sregex_iterator(source.begin(), source.end(), toggleRegex);
-            auto end = std::sregex_iterator();
-            for (auto it = begin; it != end; ++it)
-            {
-                Vector<String> group;
-                group.push_back("");                   // off
-                group.push_back((*it)[1].str());       // on
-                variationGroups.push_back(std::move(group));
-            }
+            UnorderedMap<String, String> mergedDefines = defines;
+            ShaderVariation variation;
+            uint32_t mixedRadixIndex = combination;
 
-            // Multi-option groups: #pragma variation_multi KEYWORD1 KEYWORD2 ...
-            std::regex multiRegex(R"(#pragma\s+variation_multi\s+(.+)$)");
-            auto mBegin = std::sregex_iterator(source.begin(), source.end(), multiRegex);
-            for (auto it = mBegin; it != end; ++it)
+            for (const ShaderVariationGroup& group : parsedSource.VariationGroups)
             {
-                String rest = (*it)[1].str();
-                Vector<String> group;
-                std::istringstream ss(rest);
-                String token;
-                while (ss >> token)
+                const uint32_t groupSize = static_cast<uint32_t>(group.Options.size());
+                const uint32_t selected = mixedRadixIndex % groupSize;
+                mixedRadixIndex /= groupSize;
+                for (const String& option : group.Options)
                 {
-                    if (token == "_")
-                        group.push_back("");    // _ means "none active"
-                    else
-                        group.push_back(token);
+                    if (option.empty())
+                        continue;
+                    mergedDefines.erase(option);
+                    variation.Set(option, false);
                 }
-                if (group.size() >= 2)
-                    variationGroups.push_back(std::move(group));
-            }
-        }
-
-        const auto parsedPasses = Parse(source);
-        ShaderDesc shaderDesc;
-
-        if (variationGroups.empty())
-        {
-            // No variations — single technique (fast path)
-            auto renderPasses = CompilePasses(parsedPasses, inputLanguage, shaderLanguage, defines, blendState);
-            shaderDesc.Techniques.push_back(ShaderTechnique::Create({}, ShaderVariation(), renderPasses));
-        }
-        else
-        {
-            // Compute total combinations = product of group sizes
-            uint32_t totalCombinations = 1;
-            for (const auto& group : variationGroups)
-                totalCombinations *= (uint32_t)group.size();
-
-            CW_ENGINE_INFO("Shader '{}': compiling {} variation combinations from {} groups", path.string(), totalCombinations,
-                           variationGroups.size());
-
-            // Enumerate the cartesian product using mixed-radix counting
-            for (uint32_t combo = 0; combo < totalCombinations; combo++)
-            {
-                UnorderedMap<String, String> mergedDefines = defines;
-                ShaderVariation variation;
-
-                uint32_t idx = combo;
-                for (const auto& group : variationGroups)
+                const String& selectedOption = group.Options[selected];
+                if (!selectedOption.empty())
                 {
-                    const uint32_t groupSize = (uint32_t)group.size();
-                    const uint32_t pick = idx % groupSize;
-                    idx /= groupSize;
-
-                    // For boolean toggle groups (size 2, first is ""), record on/off
-                    // For multi groups, record which keyword is active
-                    if (groupSize == 2 && group[0].empty())
-                    {
-                        // Boolean toggle: record the keyword as true/false
-                        variation.Set(group[1], pick == 1);
-                        if (pick == 1)
-                            mergedDefines[group[1]] = "1";
-                    }
-                    else
-                    {
-                        // Multi group: only the picked keyword is defined
-                        if (!group[pick].empty())
-                        {
-                            variation.Set(group[pick], true);
-                            mergedDefines[group[pick]] = "1";
-                        }
-                    }
+                    mergedDefines[selectedOption] = "1";
+                    variation.Set(selectedOption, true);
                 }
-
-                auto renderPasses = CompilePasses(parsedPasses, inputLanguage, shaderLanguage, mergedDefines, blendState);
-                shaderDesc.Techniques.push_back(ShaderTechnique::Create({}, variation, renderPasses));
             }
-        }
 
-        return shaderDesc;
+            Vector<Ref<ShaderRenderPass>> renderPasses = CompilePasses(path, parsedSource, inputLanguage, shaderLanguage, mergedDefines,
+                                                                       blendState, result.Diagnostics);
+            if (renderPasses.size() == parsedSource.Passes.size())
+                result.Description.Techniques.push_back(ShaderTechnique::Create({}, variation, renderPasses));
+        }
+        if (!result.Succeeded())
+            result.Description.Techniques.clear();
+        return result;
+
     }
 
     void ShaderCompiler::Reflect(const Vector<uint8_t>& shaderBinaryData, Ref<BinaryShaderData>& outData)
     {
         ZoneScopedN("ShaderCompiler::Reflect");
-        const spirv_cross::Compiler compiler((uint32_t*)shaderBinaryData.data(), shaderBinaryData.size() / sizeof(uint32_t));
+        if (shaderBinaryData.empty() || shaderBinaryData.size() % sizeof(uint32_t) != 0)
+            return;
+        Vector<uint32_t> words(shaderBinaryData.size() / sizeof(uint32_t));
+        std::memcpy(words.data(), shaderBinaryData.data(), shaderBinaryData.size());
+        const spirv_cross::Compiler compiler(words.data(), words.size());
         const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
         const Ref<UniformDesc> uniformDesc = CreateRef<UniformDesc>();
+        const auto reflectArray = [&](const spirv_cross::Resource& input, UniformResourceDesc& output) {
+            const spirv_cross::SPIRType& type = compiler.get_type(input.type_id);
+            if (type.array.empty())
+                return;
+            output.RuntimeArray = type.array[0] == 0;
+            output.ArraySize = output.RuntimeArray ? 1u : std::max(type.array[0], 1u);
+        };
         // Read all uniform buffers in the current stage.
         for (const spirv_cross::Resource& uniform : resources.uniform_buffers)
         {
@@ -823,6 +975,7 @@ namespace Crowny
             resource.Type = SPIRTypeToResourceType(bufferType);
             resource.Slot = binding;
             resource.Set = set;
+            reflectArray(sampler, resource);
 
             uniformDesc->Samplers[resource.Name] = resource;
             uniformDesc->Textures[resource.Name] = resource;
@@ -839,6 +992,7 @@ namespace Crowny
             resource.Type = SPIRTypeToResourceType(bufferType);
             resource.Slot = binding;
             resource.Set = set;
+            reflectArray(texture, resource);
 
             uniformDesc->Textures[resource.Name] = resource;
         }
@@ -854,12 +1008,38 @@ namespace Crowny
             resource.Type = SPIRTypeToResourceType(bufferType);
             resource.Slot = binding;
             resource.Set = set;
+            reflectArray(sampler, resource);
             // TODO: Fix this
             // resource.ElementType = MapSamplerBasicType(sampler);
 
             uniformDesc->Samplers[resource.Name] = resource;
         }
-        // TODO: Buffers and loadstore textures
+        for (const spirv_cross::Resource& storageBuffer : resources.storage_buffers)
+        {
+            UniformResourceDesc resource;
+            resource.Name = compiler.get_name(storageBuffer.id);
+            if (resource.Name.empty())
+                resource.Name = storageBuffer.name;
+            if (resource.Name.empty())
+                resource.Name = compiler.get_fallback_name(storageBuffer.id);
+            resource.Slot = compiler.get_decoration(storageBuffer.id, spv::DecorationBinding);
+            resource.Set = compiler.get_decoration(storageBuffer.id, spv::DecorationDescriptorSet);
+            resource.Type = compiler.has_decoration(storageBuffer.id, spv::DecorationNonWritable) ? STRUCTURED_BUFFER : RWSTRUCTURED_BUFFER;
+            reflectArray(storageBuffer, resource);
+            uniformDesc->Buffers[resource.Name] = resource;
+        }
+
+        for (const spirv_cross::Resource& storageImage : resources.storage_images)
+        {
+            const spirv_cross::SPIRType& imageType = compiler.get_type(storageImage.type_id);
+            UniformResourceDesc resource;
+            resource.Name = storageImage.name;
+            resource.Slot = compiler.get_decoration(storageImage.id, spv::DecorationBinding);
+            resource.Set = compiler.get_decoration(storageImage.id, spv::DecorationDescriptorSet);
+            resource.Type = SPIRTypeToStorageTextureType(imageType);
+            reflectArray(storageImage, resource);
+            uniformDesc->LoadStoreTextures[resource.Name] = resource;
+        }
 
         for (const spirv_cross::Resource& accelStruct : resources.acceleration_structures)
         {
@@ -879,56 +1059,92 @@ namespace Crowny
         // Retrieve the vertex shader input layout
         if (outData->Type == ShaderType::VERTEX_SHADER)
         {
-            BufferLayout layout;
-            for (const auto& vertInput : resources.stage_inputs)
+            struct VertexInput
             {
+                uint32_t Location;
+                const spirv_cross::Resource* Resource;
+            };
+            Vector<VertexInput> inputs;
+            inputs.reserve(resources.stage_inputs.size());
+            for (const auto& vertInput : resources.stage_inputs)
+                inputs.push_back({ compiler.get_decoration(vertInput.id, spv::DecorationLocation), &vertInput });
+            std::sort(inputs.begin(), inputs.end(), [](const VertexInput& lhs, const VertexInput& rhs) { return lhs.Location < rhs.Location; });
+
+            BufferLayout layout;
+            for (const VertexInput& input : inputs)
+            {
+                const spirv_cross::Resource& vertInput = *input.Resource;
                 const auto& bufferType = compiler.get_type(vertInput.base_type_id);
-                const uint32_t location = compiler.get_decoration(vertInput.id, spv::DecorationLocation);
                 const VertexAttribute attrSemantic = GetSpecialVertexAttribute(vertInput.name);
                 BufferElement element(SprivTypeToShaderType(bufferType), attrSemantic, false);
                 element.Name = vertInput.name;
-                element.Location = location;
+                element.Location = input.Location;
                 layout.AddBufferElement(element);
             }
             outData->VertexLayout = std::move(layout);
         }
     }
 
-    void ShaderCompiler::EvaluatePragmaDirectives(const String& source, ShaderRenderPassDesc& shaderPassDesc)
+    void ShaderCompiler::EvaluatePragmaDirectives(const Vector<ShaderPragma>& globalPragmas, const Vector<ShaderPragma>& passPragmas,
+                                                   ShaderRenderPassDesc& shaderPassDesc, Vector<ShaderDiagnostic>& diagnostics,
+                                                   const Path& path)
     {
-        std::regex pragma_regex(R"(#pragma\s+(\w+)\s+(\w+))");
-        std::vector<std::string> pragma_names;
-        std::vector<std::string> pragma_values;
-        std::sregex_iterator iter(source.begin(), source.end(), pragma_regex);
-        std::sregex_iterator end;
-        while (iter != end)
-        {
-            std::smatch match = *iter;
-            const String name = match[1].str();
-            const String value = match[2].str();
-            // CW_ENGINE_INFO("#pragma directive: {} = {}", name, value);
-            if (name == "depth_read")
+        auto addError = [&](const ShaderPragma& pragma, const String& message) {
+            diagnostics.push_back({ ShaderDiagnosticSeverity::Error, path, pragma.Line, {}, message });
+        };
+        auto apply = [&](const ShaderPragma& pragma) {
+            const String& name = pragma.Name;
+            const String& value = pragma.Value;
+            if (name == "depth_read" || name == "depth_write")
             {
+                if (value != "true" && value != "false")
+                {
+                    addError(pragma, "#pragma " + name + " expects 'true' or 'false'.");
+                    return;
+                }
                 if (!shaderPassDesc.DepthStencilState)
                     shaderPassDesc.DepthStencilState = CreateRef<DepthStencilStateDesc>();
-                shaderPassDesc.DepthStencilState->EnableDepthRead = (value == "false" ? false : true);
+                if (name == "depth_read")
+                    shaderPassDesc.DepthStencilState->EnableDepthRead = value == "true";
+                else
+                    shaderPassDesc.DepthStencilState->EnableDepthWrite = value == "true";
             }
-            else if (name == "depth_write")
+            else if (name == "depth_compare")
             {
                 if (!shaderPassDesc.DepthStencilState)
                     shaderPassDesc.DepthStencilState = CreateRef<DepthStencilStateDesc>();
-                shaderPassDesc.DepthStencilState->EnableDepthWrite = (value == "false" ? false : true);
+                if (value == "never" || value == "always_fail")
+                    shaderPassDesc.DepthStencilState->DepthCompareFunction = CompareFunction::ALWAYS_FAIL;
+                else if (value == "always" || value == "always_pass")
+                    shaderPassDesc.DepthStencilState->DepthCompareFunction = CompareFunction::ALWAYS_PASS;
+                else if (value == "less")
+                    shaderPassDesc.DepthStencilState->DepthCompareFunction = CompareFunction::LESS;
+                else if (value == "less_equal")
+                    shaderPassDesc.DepthStencilState->DepthCompareFunction = CompareFunction::LESS_EQUAL;
+                else if (value == "equal")
+                    shaderPassDesc.DepthStencilState->DepthCompareFunction = CompareFunction::EQUAL;
+                else if (value == "not_equal")
+                    shaderPassDesc.DepthStencilState->DepthCompareFunction = CompareFunction::NOT_EQUAL;
+                else if (value == "greater")
+                    shaderPassDesc.DepthStencilState->DepthCompareFunction = CompareFunction::GREATER;
+                else if (value == "greater_equal")
+                    shaderPassDesc.DepthStencilState->DepthCompareFunction = CompareFunction::GREATER_EQUAL;
+                else
+                    addError(pragma, "#pragma depth_compare expects 'never', 'always', 'less', 'less_equal', 'equal', "
+                                     "'not_equal', 'greater', or 'greater_equal'.");
             }
             else if (name == "cull")
             {
                 if (!shaderPassDesc.RasterizationState)
                     shaderPassDesc.RasterizationState = CreateRef<RasterizerStateDesc>();
-                if (value == "false")
+                if (value == "false" || value == "none")
                     shaderPassDesc.RasterizationState->CullMode = CullingMode::CULL_NONE;
                 else if (value == "front")
                     shaderPassDesc.RasterizationState->CullMode = CullingMode::CULL_CLOCKWISE;
-                else
+                else if (value == "back")
                     shaderPassDesc.RasterizationState->CullMode = CullingMode::CULL_COUNTERCLOCKWISE;
+                else
+                    addError(pragma, "#pragma cull expects 'none', 'false', 'front', or 'back'.");
             }
             else if (name == "polygon_mode")
             {
@@ -936,94 +1152,20 @@ namespace Crowny
                     shaderPassDesc.RasterizationState = CreateRef<RasterizerStateDesc>();
                 if (value == "wireframe")
                     shaderPassDesc.RasterizationState->PolygonDrawMode = PolygonMode::Wireframe;
-                else if (value == "point")
+                else if (value == "point" || value == "points")
                     shaderPassDesc.RasterizationState->PolygonDrawMode = PolygonMode::Points;
-                else
+                else if (value == "solid")
                     shaderPassDesc.RasterizationState->PolygonDrawMode = PolygonMode::Solid;
+                else
+                    addError(pragma, "#pragma polygon_mode expects 'solid', 'wireframe', or 'points'.");
             }
-            else if (name == "variation" || name == "variation_multi")
-            {
-                // Handled in Compile() during variation parsing — nothing to do here
-            }
-            else
-                CW_ENGINE_WARN("Unrecognized #pragma {}={}", name, value);
-            iter++;
-        }
+        };
+
+        for (const ShaderPragma& pragma : globalPragmas)
+            apply(pragma);
+        for (const ShaderPragma& pragma : passPragmas)
+            apply(pragma);
     }
 
-    Vector<UnorderedMap<ShaderType, String>> ShaderCompiler::Parse(const String& source)
-    {
-        Vector<UnorderedMap<ShaderType, String>> passes;
-
-        // Split source into passes by #pass directives
-        Vector<String> passSources;
-        const char* passToken = "#pass";
-        size_t passPos = source.find(passToken, 0);
-        if (passPos == String::npos)
-        {
-            // No #pass directive — single pass (backward compatible)
-            passSources.push_back(source);
-        }
-        else
-        {
-            while (passPos != String::npos)
-            {
-                // Skip past "#pass N" line
-                size_t eol = source.find_first_of("\r\n", passPos);
-                size_t contentStart = (eol != String::npos) ? source.find_first_not_of("\r\n", eol) : String::npos;
-                size_t nextPass = source.find(passToken, contentStart != String::npos ? contentStart : passPos + 1);
-                if (contentStart != String::npos)
-                {
-                    String passSource =
-                      (nextPass == String::npos) ? source.substr(contentStart) : source.substr(contentStart, nextPass - contentStart);
-                    passSources.push_back(passSource);
-                }
-                passPos = nextPass;
-            }
-        }
-
-        // Parse each pass for #type directives
-        const char* typeToken = "#type";
-        const size_t typeTokenLength = strlen(typeToken);
-
-        for (const String& passSource : passSources)
-        {
-            UnorderedMap<ShaderType, String> shaderSources;
-            size_t pos = passSource.find(typeToken, 0);
-            while (pos != String::npos)
-            {
-                size_t eol = passSource.find_first_of("\r\n", pos);
-                CW_ENGINE_ASSERT(eol != String::npos, "Syntax error");
-                const size_t begin = pos + typeTokenLength + 1;
-                const String typeString = passSource.substr(begin, eol - begin);
-                ShaderType shaderType;
-                if (!GetShaderTypeFromString(typeString, shaderType))
-                {
-                    CW_ENGINE_ERROR("Shader type string {0} not recognized.", typeString);
-                    break;
-                }
-
-                if (typeString == "compute")
-                {
-                    shaderSources[shaderType] = passSource.substr(begin + typeString.size());
-                    CW_ENGINE_ASSERT(shaderSources.size() == 1);
-                    passes.push_back(shaderSources);
-                    return passes;
-                }
-
-                size_t nextLinePos = passSource.find_first_not_of("\r\n", eol);
-                CW_ENGINE_ASSERT(nextLinePos != String::npos, "Syntax error");
-                pos = passSource.find(typeToken, nextLinePos);
-
-                shaderSources[shaderType] =
-                  (pos == String::npos) ? passSource.substr(nextLinePos) : passSource.substr(nextLinePos, pos - nextLinePos);
-            }
-            if (shaderSources.size() < 2)
-                CW_ENGINE_ERROR("You are required to provide at least a vertex and a fragment shader.");
-            passes.push_back(shaderSources);
-        }
-
-        return passes;
-    }
 
 } // namespace Crowny

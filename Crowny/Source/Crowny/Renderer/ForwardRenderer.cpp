@@ -1,6 +1,8 @@
 #include "cwpch.h"
 
+#include "Crowny/Application/Application.h"
 #include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Common/FileSystem.h"
 #include "Crowny/Import/Importer.h"
 #include "Crowny/RenderAPI/GraphicsPipeline.h"
 #include "Crowny/RenderAPI/RenderCommand.h"
@@ -24,6 +26,10 @@
 
 namespace Crowny
 {
+    using namespace Literals;
+
+    static constexpr const char* BRDF_TEXTURE_PATH = "Resources/Textures/Brdf.asset";
+
     float metalness = 0.0f;
     float roughness = 0.5f;
     glm::vec4 albedo = glm::vec4(1.0f);
@@ -57,6 +63,12 @@ namespace Crowny
         glm::vec3 CamPos;
         float Gamma = 2.2f;
         float Exposure = 4.5f;
+        std::array<glm::vec4, 4> LightPositionRange{};
+        std::array<glm::vec4, 4> LightDirectionOuter{};
+        std::array<glm::vec4, 4> LightColorIntensity{};
+        std::array<glm::vec4, 4> LightSpotSourceBias{};
+        std::array<glm::ivec4, 4> LightMetadata{};
+        uint32_t LightCount = 0;
 
         // Active environment for current frame
         Ref<Texture> ActiveIrradiance;
@@ -71,7 +83,7 @@ namespace Crowny
 
     static void GenerateBRDFLUT()
     {
-        auto& rapi = (*gRenderAPI);
+        auto& rapi = (*RenderAPI::TryGet());
         TextureDesc tProps;
         tProps.Width = 512;
         tProps.Height = 512;
@@ -86,13 +98,21 @@ namespace Crowny
         rtProps.ColorSurfaces[0].Texture = s_Data->BrdfLUT;
         const Ref<RenderTexture> target = RenderTexture::Create(rtProps);
 
-        const AssetHandle<Shader> shaderHandle = gAssetManager->Load<Shader>(BRDF_SHADER_PATH);
+        const AssetHandle<Shader> shaderHandle = AssetManager::TryGet()->Load<Shader>(BRDF_SHADER_PATH);
         const Ref<Material> brdfMaterial = Material::Create(shaderHandle);
         rapi.SetRenderTarget(target);
         rapi.SetGraphicsPipeline(brdfMaterial->GetGraphicsPipeline());
         rapi.SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
         rapi.SetUniforms(brdfMaterial->GetUniformParams());
         rapi.Draw(0, 3, 1);
+    }
+
+    static Path GetBuiltInOutputPath(const Path& logicalPath)
+    {
+        const Path workingDirectory = Application::TryGet()->GetWorkingDirectory();
+        if (fs::is_directory(workingDirectory / "Crowny-Editor/Resources"))
+            return workingDirectory / "Crowny-Editor" / logicalPath;
+        return workingDirectory / logicalPath;
     }
 
     void ForwardRenderer::Init()
@@ -102,15 +122,30 @@ namespace Crowny
 #endif
         s_Data = new ForwardRendererData();
 
-        // Generate scene-independent BRDF LUT
-        GenerateBRDFLUT();
+        if (FileSystem::FileExists(BRDF_TEXTURE_PATH))
+        {
+            const AssetHandle<Texture> brdfLut = AssetManager::TryGet()->Load<Texture>(BRDF_TEXTURE_PATH);
+            s_Data->BrdfLUT = brdfLut ? brdfLut.GetInternalPtr() : nullptr;
+        }
+        if (!s_Data->BrdfLUT)
+        {
+            GenerateBRDFLUT();
+#ifndef CW_DIST
+            // This is a one-time development cook. Normal startup loads the
+            // serialized texture from Builtin.cwpack without executing a pass.
+            RenderAPI::TryGet()->SubmitCommandBuffer(nullptr, 0);
+            AssetManager::TryGet()->Save(s_Data->BrdfLUT, GetBuiltInOutputPath(BRDF_TEXTURE_PATH));
+#endif
+        }
 
         // Default PBR material
-        const AssetHandle<Shader> pbriblHandle = gAssetManager->Load<Shader>(PBRIBL_SHADER_PATH);
+        const AssetHandle<Shader> pbriblHandle = AssetManager::TryGet()->Load<Shader>(PBRIBL_SHADER_PATH);
         s_Data->PbrMaterial = Material::CreatePBR(pbriblHandle);
 
-        // Default environment
-        s_Data->DefaultEnvironment = CreateRef<EnvironmentMap>("Resources/Textures/envmap.hdr");
+        // A scene environment is generated only when a scene assigns one. The
+        // previous fallback decoded a 3200x1600 HDR and generated all IBL faces
+        // and mips before an empty editor could present its first frame.
+        s_Data->DefaultEnvironment = nullptr;
 
         // Skybox mesh (single copy)
         s_Data->SkyboxVbo = VertexBuffer::Create({sizeof(s_SkyboxVertices), BufferUsage::BU_STATIC_DRAW, s_SkyboxVertices});
@@ -118,7 +153,7 @@ namespace Crowny
         s_Data->SkyboxIbo = IndexBuffer::Create({36, IndexType::Index_32, BufferUsage::BU_STATIC_DRAW, s_SkyboxIndices});
 
         // Skybox material
-        const AssetHandle<Shader> skyboxHandle = gAssetManager->Load<Shader>(SKYBOX_SHADER_PATH);
+        const AssetHandle<Shader> skyboxHandle = AssetManager::TryGet()->Load<Shader>(SKYBOX_SHADER_PATH);
         s_Data->SkyboxMaterial = Material::Create(skyboxHandle);
 
         // Wireframe material (editor overlay)
@@ -137,9 +172,9 @@ namespace Crowny
 
         // Skybox
         const glm::mat4 inv = glm::mat4(glm::mat3(viewMatrix));
-        s_Data->SkyboxMaterial->SetMatrix("mvp", projection * inv);
-        s_Data->SkyboxMaterial->SetFloat("gamma", s_Data->Gamma);
-        s_Data->SkyboxMaterial->SetFloat("exposure", s_Data->Exposure);
+        s_Data->SkyboxMaterial->SetMatrix("mvp"_hstr, projection * inv);
+        s_Data->SkyboxMaterial->SetFloat("gamma"_hstr, s_Data->Gamma);
+        s_Data->SkyboxMaterial->SetFloat("exposure"_hstr, s_Data->Exposure);
     }
 
     static void BindEnvironment(const Ref<EnvironmentMap>& env)
@@ -165,7 +200,7 @@ namespace Crowny
 
         // Bind cubemap to skybox material
         if (s_Data->ActiveCubemap)
-            s_Data->SkyboxMaterial->SetTexture("cw_samplerEnv", s_Data->ActiveCubemap);
+            s_Data->SkyboxMaterial->SetTexture("cw_samplerEnv"_hstr, s_Data->ActiveCubemap);
     }
 
     static void DrawSkybox(RenderAPI& rapi)
@@ -182,25 +217,33 @@ namespace Crowny
 
     static void ApplySceneUniforms(const Ref<Material>& material, const glm::mat4& model)
     {
-        material->SetMatrix("viewProjection", s_Data->ViewProjection);
-        material->SetMatrix("model", model);
-        material->SetVector3("camPos", s_Data->CamPos);
-        material->SetFloat("gamma", s_Data->Gamma);
-        material->SetFloat("exposure", s_Data->Exposure);
+        material->SetMatrix("viewProjection"_hstr, s_Data->ViewProjection);
+        material->SetMatrix("model"_hstr, model);
+        material->SetVector3("camPos"_hstr, s_Data->CamPos);
+        material->SetFloat("gamma"_hstr, s_Data->Gamma);
+        material->SetFloat("exposure"_hstr, s_Data->Exposure);
+        material->SetInt("lightCount"_hstr, static_cast<int32_t>(s_Data->LightCount));
+        material->SetVector4Array("lightPositionRange", s_Data->LightPositionRange.data(), s_Data->LightPositionRange.size());
+        material->SetVector4Array("lightDirectionOuter", s_Data->LightDirectionOuter.data(), s_Data->LightDirectionOuter.size());
+        material->SetVector4Array("lightColorIntensity", s_Data->LightColorIntensity.data(), s_Data->LightColorIntensity.size());
+        material->SetVector4Array("lightSpotSourceBias", s_Data->LightSpotSourceBias.data(), s_Data->LightSpotSourceBias.size());
+        material->SetInt4Array("lightMetadata", s_Data->LightMetadata.data(), s_Data->LightMetadata.size());
+        if (material->HasBinding("useIBL"_hstr))
+            material->SetFloat("useIBL"_hstr, s_Data->ActiveIrradiance && s_Data->ActivePrefiltered ? 1.0f : 0.0f);
 
         // IBL textures
-        if (material->HasBinding("cw_samplerIrradiance") && s_Data->ActiveIrradiance)
+        if (material->HasBinding("cw_samplerIrradiance"_hstr) && s_Data->ActiveIrradiance)
         {
-            material->SetTexture("cw_samplerIrradiance", s_Data->ActiveIrradiance);
-            material->SetTexture("cw_samplerBRDFLUT", s_Data->BrdfLUT);
-            material->SetTexture("cw_prefilteredMap", s_Data->ActivePrefiltered);
+            material->SetTexture("cw_samplerIrradiance"_hstr, s_Data->ActiveIrradiance);
+            material->SetTexture("cw_samplerBRDFLUT"_hstr, s_Data->BrdfLUT);
+            material->SetTexture("cw_prefilteredMap"_hstr, s_Data->ActivePrefiltered);
         }
     }
 
     void ForwardRenderer::BeginScene(const Camera& camera, const glm::mat4& viewMatrix, const Ref<EnvironmentMap>& environment)
     {
         ZoneScopedN("ForwardRenderer::BeginScene");
-        auto& rapi = (*gRenderAPI);
+        auto& rapi = (*RenderAPI::TryGet());
         rapi.ClearViewport(FBT_COLOR | FBT_DEPTH);
         BindEnvironment(environment);
         SetupSceneUniforms(camera.GetProjection(), viewMatrix, camera.GetPosition());
@@ -211,7 +254,7 @@ namespace Crowny
                                      const Ref<EnvironmentMap>& environment)
     {
         ZoneScopedN("ForwardRenderer::BeginScene");
-        auto& rapi = (*gRenderAPI);
+        auto& rapi = (*RenderAPI::TryGet());
         rapi.ClearViewport(FBT_COLOR | FBT_DEPTH);
         BindEnvironment(environment);
         SetupSceneUniforms(projection, viewMatrix, cameraPosition);
@@ -221,6 +264,54 @@ namespace Crowny
     void ForwardRenderer::SetPolygonMode(PolygonMode mode) { s_Data->OverridePolygonMode = mode; }
 
     void ForwardRenderer::SubmitLightSetup() {}
+
+    void ForwardRenderer::SetLights(const RenderLightData* lights, uint32_t lightCount)
+    {
+        std::array<const RenderLightData*, 4> selected{};
+        std::array<float, 4> scores{ -1.0f, -1.0f, -1.0f, -1.0f };
+        uint32_t selectedCount = 0;
+
+        for (uint32_t lightIndex = 0; lights != nullptr && lightIndex < lightCount; lightIndex++)
+        {
+            const RenderLightData& light = lights[lightIndex];
+            const RenderLightFlags flags = static_cast<RenderLightFlags>(light.Metadata.y);
+            if (!HasFlag(flags, RenderLightFlags::Enabled))
+                continue;
+
+            const LightType type = static_cast<LightType>(light.Metadata.x);
+            const float distanceSquared = glm::length2(glm::vec3(light.PositionRange) - s_Data->CamPos);
+            float score = type == LightType::Directional ? std::numeric_limits<float>::max()
+                                                         : light.ColorIntensity.w / std::max(distanceSquared, 0.01f);
+            if (HasFlag(flags, RenderLightFlags::CastShadows) && std::isfinite(score))
+                score *= 2.0f;
+
+            uint32_t insertAt = selectedCount;
+            while (insertAt > 0 && score > scores[insertAt - 1u])
+                insertAt--;
+            if (insertAt >= selected.size())
+                continue;
+            const uint32_t last = std::min<uint32_t>(selectedCount, selected.size() - 1u);
+            for (uint32_t move = last; move > insertAt; move--)
+            {
+                selected[move] = selected[move - 1u];
+                scores[move] = scores[move - 1u];
+            }
+            selected[insertAt] = &light;
+            scores[insertAt] = score;
+            selectedCount = std::min<uint32_t>(selectedCount + 1u, selected.size());
+        }
+
+        s_Data->LightCount = selectedCount;
+        for (uint32_t index = 0; index < s_Data->LightPositionRange.size(); index++)
+        {
+            const RenderLightData light = index < selectedCount ? *selected[index] : RenderLightData{};
+            s_Data->LightPositionRange[index] = light.PositionRange;
+            s_Data->LightDirectionOuter[index] = light.DirectionOuterCosine;
+            s_Data->LightColorIntensity[index] = light.ColorIntensity;
+            s_Data->LightSpotSourceBias[index] = light.SpotSourceAndBias;
+            s_Data->LightMetadata[index] = glm::ivec4(light.Metadata);
+        }
+    }
 
     static void DrawMaterialPasses(RenderAPI& rapi, const Ref<Material>& material, DrawMode drawMode, uint32_t indexOffset, uint32_t indexCount,
                                    uint32_t vertexCount)
@@ -237,7 +328,7 @@ namespace Crowny
     void ForwardRenderer::Submit(const AssetHandle<Mesh>& mesh, const Vector<AssetHandle<Material>>& materials, const glm::mat4& transform)
     {
         ZoneScopedN("ForwardRenderer::Submit");
-        RenderAPI& rapi = (*gRenderAPI);
+        RenderAPI& rapi = (*RenderAPI::TryGet());
         const Vector<SubMesh>& subMeshes = mesh->GetSubMeshes();
 
         auto getMaterial = [&](uint32_t index) -> Ref<Material> {
@@ -261,9 +352,9 @@ namespace Crowny
             ApplySceneUniforms(renderMaterial, transform);
             if (!wireframe)
             {
-                renderMaterial->SetColor("albedo", albedo);
-                renderMaterial->SetFloat("roughness", roughness);
-                renderMaterial->SetFloat("metalness", metalness);
+                renderMaterial->SetColor("albedo"_hstr, albedo);
+                renderMaterial->SetFloat("roughness"_hstr, roughness);
+                renderMaterial->SetFloat("metalness"_hstr, metalness);
             }
             DrawMaterialPasses(rapi, renderMaterial, mesh->GetDrawMode(), 0, mesh->GetIndexCount(), mesh->GetVertexCount());
         }
@@ -276,9 +367,9 @@ namespace Crowny
                 ApplySceneUniforms(renderMaterial, transform);
                 if (!wireframe)
                 {
-                    renderMaterial->SetColor("albedo", albedo);
-                    renderMaterial->SetFloat("roughness", roughness);
-                    renderMaterial->SetFloat("metalness", metalness);
+                    renderMaterial->SetColor("albedo"_hstr, albedo);
+                    renderMaterial->SetFloat("roughness"_hstr, roughness);
+                    renderMaterial->SetFloat("metalness"_hstr, metalness);
                 }
                 DrawMaterialPasses(rapi, renderMaterial, sub.MeshDrawMode, sub.IndexOffset, sub.IndexCount, mesh->GetVertexCount());
             }
@@ -293,6 +384,10 @@ namespace Crowny
 
     void ForwardRenderer::Flush() {}
 
-    void ForwardRenderer::Shutdown() { delete s_Data; }
+    void ForwardRenderer::Shutdown()
+    {
+        delete s_Data;
+        s_Data = nullptr;
+    }
 
 } // namespace Crowny

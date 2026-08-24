@@ -4,6 +4,7 @@
 #include "Crowny/Renderer/Renderer.h"
 #include "Crowny/Window/RenderWindow.h"
 
+#include "Platform/OpenGL/OpenGLRenderWindow.h"
 #include "Platform/Vulkan/VulkanRenderWindow.h"
 
 namespace Crowny
@@ -12,12 +13,17 @@ namespace Crowny
     {
         Width = renderWindowDesc.Width;
         Height = renderWindowDesc.Height;
+        Samples = renderWindowDesc.Samples;
         VSync = renderWindowDesc.VSync;
         Left = renderWindowDesc.Left;
         Top = renderWindowDesc.Top;
-        Fullscreen = renderWindowDesc.Fullscreen;
+        Mode = renderWindowDesc.Mode;
+        if (Mode == WindowMode::Windowed && renderWindowDesc.Fullscreen)
+            Mode = renderWindowDesc.ShowBorder ? WindowMode::Fullscreen : WindowMode::BorderlessFullscreen;
+        Fullscreen = Mode != WindowMode::Windowed;
         IsHidden = renderWindowDesc.Hidden;
         IsModal = renderWindowDesc.Modal;
+        IsMaximized = renderWindowDesc.StartMaximized;
         SwapChainTarget = true;
     }
 
@@ -25,9 +31,10 @@ namespace Crowny
 
     Ref<RenderWindow> RenderWindow::Create(const RenderWindowDesc& renderWindowDesc)
     {
-        switch (gRenderAPI->GetAPI())
+        switch (RenderAPI::TryGet()->GetAPI())
         {
-        // case RenderAPI::API::OpenGL: return CreateRef<OpenGLShader>(m_Filepath);
+        case RenderAPI::API::OpenGL:
+            return Ref<RenderWindow>(new OpenGLRenderWindow(renderWindowDesc));
         case RenderAPI::API::Vulkan:
             return Ref<RenderWindow>(new VulkanRenderWindow(renderWindowDesc));
         default:
@@ -35,7 +42,6 @@ namespace Crowny
             return nullptr;
         }
 
-        return nullptr;
     }
 
 } // namespace Crowny

@@ -2,6 +2,7 @@ project "Crowny-Sharp"
 	kind "SharedLib"
 	language "C#"
 	targetname "CrownySharp"
+	dotnetframework "4.7.2"
 	clr "Unsafe"
 
 	targetdir ("%{wks.location}/Crowny-Sharp")
@@ -9,7 +10,8 @@ project "Crowny-Sharp"
 
 	files
 	{
-		"Source/**.cs"
+		"Source/**.cs",
+		"../Crowny/Dependencies/FastNoiseLite/CSharp/FastNoiseLite.cs"
 	}
 
 	links

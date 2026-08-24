@@ -12,7 +12,10 @@ namespace Crowny
     class VulkanRenderAPI : public RenderAPI
     {
     public:
+        VulkanRenderAPI() : RenderAPI(API::Vulkan) {}
+
         virtual void Init() override;
+        virtual const RenderCapabilities& GetCapabilities(uint32_t deviceIndex = 0) const override;
         virtual void SetViewport(float x, float y, float width, float height, const Ref<CommandBuffer>& commandBuffer = nullptr) override;
         virtual void SetScissorRect(const Rect2I& rect, const Ref<CommandBuffer>& commandBuffer) override;
 
@@ -32,13 +35,22 @@ namespace Crowny
         virtual void SetVertexBuffers(uint32_t idx, Ref<VertexBuffer>* buffers, uint32_t bufferCount,
                                       const Ref<CommandBuffer>& commandBuffer = nullptr) override;
         virtual void SetVertexLayout(const Ref<BufferLayout>& vertexLayout, const Ref<CommandBuffer>& commandBuffer = nullptr) override;
-        virtual void Draw(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount = 0,
+        virtual void Draw(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount = 1,
                           const Ref<CommandBuffer>& commandBuffer = nullptr) override;
-        virtual void DrawIndexed(uint32_t startIndex, uint32_t indexCount, uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount = 0,
+        virtual void DrawIndexed(uint32_t startIndex, uint32_t indexCount, uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount = 1,
                                  const Ref<CommandBuffer>& commandBuffer = nullptr) override;
+        virtual void DrawIndexedIndirect(const Ref<GenericGpuBuffer>& argumentBuffer, uint32_t argumentOffset, uint32_t drawCount,
+                                         uint32_t stride = sizeof(DrawIndexedIndirectCommand),
+                                         const Ref<CommandBuffer>& commandBuffer = nullptr) override;
+        virtual void DrawIndexedIndirectCount(const Ref<GenericGpuBuffer>& argumentBuffer, uint32_t argumentOffset,
+                                              const Ref<GenericGpuBuffer>& countBuffer, uint32_t countOffset, uint32_t maxDrawCount,
+                                              uint32_t stride = sizeof(DrawIndexedIndirectCommand),
+                                              const Ref<CommandBuffer>& commandBuffer = nullptr) override;
         virtual void TraceRays(uint32_t width, uint32_t height, const Ref<CommandBuffer>& commandBuffer = nullptr) override;
         virtual void DispatchCompute(uint32_t groupsX, uint32_t groupsY = 1, uint32_t groupsZ = 1,
                                      const Ref<CommandBuffer>& commandBuffer = nullptr) override;
+        virtual void DispatchComputeIndirect(const Ref<GenericGpuBuffer>& argumentBuffer, uint32_t argumentOffset,
+                                             const Ref<CommandBuffer>& commandBuffer = nullptr) override;
         virtual void SetRenderTarget(const Ref<RenderTarget>& target, uint32_t readOnlyFlags = 0, RenderSurfaceMask loadMask = RT_NONE,
                                      const Ref<CommandBuffer>& commandBuffer = nullptr) override;
         virtual void SetDrawMode(DrawMode drawMode, const Ref<CommandBuffer>& commandBuffer = nullptr) override;
@@ -60,20 +72,21 @@ namespace Crowny
         void InitCaps();
 
     private:
-        VkDebugUtilsMessengerEXT m_DebugUtilsMessenger;
-        VkInstance m_Instance = nullptr;
+        VkDebugUtilsMessengerEXT m_DebugUtilsMessenger = VK_NULL_HANDLE;
+        VkInstance m_Instance = VK_NULL_HANDLE;
         Vector<Ref<VulkanDevice>> m_Devices;
         Vector<Ref<VulkanDevice>> m_PrimaryDevices;
-        RenderCapabilities* m_CurrentCapabilities;
+        RenderCapabilities* m_CurrentCapabilities = nullptr;
         Ref<VulkanCmdBuffer> m_CmdBuffer;
         Ref<VulkanCommandBuffer> m_CommandBuffer;
-        VulkanSwapChain* m_SwapChain;
+        VulkanSwapChain* m_SwapChain = nullptr;
         Ref<GraphicsPipeline> m_Pipeline;
+        DrawMode m_DrawMode = DrawMode::TRIANGLE_LIST;
 #ifdef CW_DEBUG
         VkDebugReportCallbackEXT m_DebugReportCallback;
 #endif
 
-        uint32_t m_NumDevices;
+        uint32_t m_NumDevices = 0;
     };
 
     VulkanRenderAPI& gVulkanRenderAPI();

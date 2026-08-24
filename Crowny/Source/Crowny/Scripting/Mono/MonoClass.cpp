@@ -12,19 +12,66 @@
 
 namespace Crowny
 {
+    namespace
+    {
+        void CombineHash(size_t& hash, size_t value)
+        {
+            hash ^= value + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        }
 
-    MonoClass::MethodId::MethodId(const String& name, uint32_t numParams) : Name(name), NumParams(numParams) {}
+        size_t HashMethod(HashedString name, HashedString signature, uint32_t numParams, bool usesSignature)
+        {
+            size_t hash = StringHash()(name);
+            CombineHash(hash, std::hash<bool>()(usesSignature));
+            CombineHash(hash, usesSignature ? StringHash()(signature) : std::hash<uint32_t>()(numParams));
+            return hash;
+        }
+    } // namespace
+
+    MonoClass::MethodLookupId::MethodLookupId(HashedString name, uint32_t paramCount)
+      : Name(name), NumParams(paramCount), UsesSignature(false)
+    {
+    }
+
+    MonoClass::MethodLookupId::MethodLookupId(HashedString name, HashedString signature)
+      : Name(name), Signature(signature), NumParams(0), UsesSignature(true)
+    {
+    }
+
+    MonoClass::MethodId::MethodId(StringView name, uint32_t numParams) : Name(name), NumParams(numParams), UsesSignature(false) {}
+
+    MonoClass::MethodId::MethodId(StringView name, StringView signature)
+      : Name(name), Signature(signature), NumParams(0), UsesSignature(true)
+    {
+    }
 
     size_t MonoClass::MethodId::Hash::operator()(const MonoClass::MethodId& value) const
     {
-        size_t result = 0;
-        HashCombine(result, value.Name, value.NumParams);
-        return result;
+        return HashMethod(HashedString(value.Name), HashedString(value.Signature), value.NumParams, value.UsesSignature);
+    }
+
+    size_t MonoClass::MethodId::Hash::operator()(const MonoClass::MethodLookupId& value) const
+    {
+        return HashMethod(value.Name, value.Signature, value.NumParams, value.UsesSignature);
     }
 
     bool MonoClass::MethodId::Equals::operator()(const MonoClass::MethodId& a, const MonoClass::MethodId& b) const
     {
-        return a.Name == b.Name && a.NumParams == b.NumParams;
+        return a.UsesSignature == b.UsesSignature && a.Name == b.Name &&
+               (a.UsesSignature ? a.Signature == b.Signature : a.NumParams == b.NumParams);
+    }
+
+    bool MonoClass::MethodId::Equals::operator()(const MonoClass::MethodId& a, const MonoClass::MethodLookupId& b) const
+    {
+        if (a.UsesSignature != b.UsesSignature || !StringEqual()(StringView(a.Name), b.Name))
+            return false;
+
+        return a.UsesSignature ? StringEqual()(StringView(a.Signature), b.Signature) : a.NumParams == b.NumParams;
+    }
+
+    bool MonoClass::MethodId::Equals::operator()(const MonoClass::MethodLookupId& a, const MonoClass::MethodId& b) const
+    {
+        return (*this)(b, a);
     }
 
     MonoClass::MonoClass(::MonoClass* monoClass)
@@ -174,11 +221,9 @@ namespace Crowny
         return attrs;
     }
 
-    bool MonoClass::HasField(const String& fieldName) const
-    {
-        MonoClassField* field = mono_class_get_field_from_name(m_Class, fieldName.c_str());
-        return field != nullptr;
-    }
+    bool MonoClass::HasField(StringView fieldName) const { return HasField(HashedString(fieldName)); }
+
+    bool MonoClass::HasField(HashedString fieldName) const { return GetField(fieldName) != nullptr; }
 
     bool MonoClass::IsSubClassOf(MonoClass* monoClass) const
     {
@@ -190,17 +235,28 @@ namespace Crowny
 
     bool MonoClass::IsValueType() const { return mono_class_is_valuetype(m_Class); }
 
-    MonoMethod* MonoClass::GetMethod(const String& name, const String& signature) const
+    MonoMethod* MonoClass::GetMethod(StringView name, StringView signature) const
     {
-        const MethodId id(name + "(" + signature + ")", 0);
-        const auto iterFind = m_Methods.find(id);
+        return GetMethodBySignature(HashedString(name), HashedString(signature));
+    }
+
+    MonoMethod* MonoClass::GetMethod(HashedString name, StringView signature) const
+    {
+        return GetMethodBySignature(name, HashedString(signature));
+    }
+
+    MonoMethod* MonoClass::GetMethodBySignature(HashedString name, HashedString signature) const
+    {
+        const MethodLookupId lookup(name, signature);
+        const auto iterFind = m_Methods.find(lookup);
         if (iterFind != m_Methods.end())
             return iterFind->second;
 
+        MethodId id(name.GetView(), signature.GetView());
         ::MonoMethod* method;
         void* iter = nullptr;
-        const char* namePtr = name.c_str();
-        const char* sigPtr = signature.c_str();
+        const char* namePtr = id.Name.c_str();
+        const char* sigPtr = id.Signature.c_str();
         while ((method = mono_class_get_methods(m_Class, &iter)))
         {
             if (strcmp(namePtr, mono_method_get_name(method)) == 0)
@@ -209,57 +265,77 @@ namespace Crowny
                 if (strcmp(sigPtr, cSig) == 0)
                 {
                     MonoMethod* result = new MonoMethod(method);
-                    m_Methods[id] = result;
+                    m_Methods.emplace(std::move(id), result);
 
                     return result;
                 }
             }
         }
 
+        m_Methods.emplace(std::move(id), nullptr);
         return nullptr;
     }
 
-    MonoMethod* MonoClass::GetMethod(const String& name, uint32_t argc) const
+    MonoMethod* MonoClass::GetMethod(StringView name, uint32_t argc) const { return GetMethod(HashedString(name), argc); }
+
+    MonoMethod* MonoClass::GetMethod(HashedString name, uint32_t argc) const
     {
-        const MethodId id(name, argc);
-        const auto iter = m_Methods.find(id);
+        const MethodLookupId lookup(name, argc);
+        const auto iter = m_Methods.find(lookup);
         if (iter != m_Methods.end())
             return iter->second;
 
-        ::MonoMethod* method = mono_class_get_method_from_name(m_Class, name.c_str(), (int)argc);
+        MethodId id(name.GetView(), argc);
+        ::MonoMethod* method = mono_class_get_method_from_name(m_Class, id.Name.c_str(), (int)argc);
         if (method == nullptr)
+        {
+            m_Methods.emplace(std::move(id), nullptr);
             return nullptr;
+        }
         MonoMethod* result = new MonoMethod(method);
-        m_Methods[id] = result;
+        m_Methods.emplace(std::move(id), result);
         return result;
     }
 
-    MonoField* MonoClass::GetField(const String& name) const
+    MonoField* MonoClass::GetField(StringView name) const { return GetField(HashedString(name)); }
+
+    MonoField* MonoClass::GetField(HashedString name) const
     {
         const auto iter = m_Fields.find(name);
         if (iter != m_Fields.end())
             return iter->second;
-        MonoClassField* field = mono_class_get_field_from_name(m_Class, name.c_str());
+
+        String ownedName(name.GetView());
+        MonoClassField* field = mono_class_get_field_from_name(m_Class, ownedName.c_str());
         if (field == nullptr)
+        {
+            m_Fields.emplace(std::move(ownedName), nullptr);
             return nullptr;
+        }
         MonoField* result = new MonoField(field);
-        m_Fields[name] = result;
+        m_Fields.emplace(std::move(ownedName), result);
 
         return result;
     }
 
-    MonoProperty* MonoClass::GetProperty(const String& name) const
+    MonoProperty* MonoClass::GetProperty(StringView name) const { return GetProperty(HashedString(name)); }
+
+    MonoProperty* MonoClass::GetProperty(HashedString name) const
     {
         const auto iter = m_Properties.find(name);
         if (iter != m_Properties.end())
             return iter->second;
 
-        ::MonoProperty* property = mono_class_get_property_from_name(m_Class, name.c_str());
+        String ownedName(name.GetView());
+        ::MonoProperty* property = mono_class_get_property_from_name(m_Class, ownedName.c_str());
         if (property == nullptr)
+        {
+            m_Properties.emplace(std::move(ownedName), nullptr);
             return nullptr;
+        }
 
         MonoProperty* result = new MonoProperty(property);
-        m_Properties[name] = result;
+        m_Properties.emplace(std::move(ownedName), result);
         return result;
     }
 

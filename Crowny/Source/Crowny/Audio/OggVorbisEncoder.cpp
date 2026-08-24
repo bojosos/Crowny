@@ -218,42 +218,26 @@ namespace Crowny
 
     Ref<MemoryDataStream> OggVorbisEncoder::PCMToOggVorbis(uint8_t* samples, const AudioDataInfo& info, uint32_t& size, float quality)
     {
-        struct EncodedBlock
-        {
-            uint8_t* data;
-            uint32_t size;
-        };
-
-        Vector<EncodedBlock> blocks;
-        uint32_t totalEncodedSize = 0;
-        auto writeCallback = [&](uint8_t* buffer, uint32_t size) {
-            EncodedBlock newBlock;
-            newBlock.data = new uint8_t[size];
-            newBlock.size = size;
-
-            memcpy(newBlock.data, buffer, size);
-            blocks.push_back(newBlock);
-            totalEncodedSize += size;
-        };
+        Vector<uint8_t> encoded;
+        auto writeCallback = [&](uint8_t* buffer, uint32_t chunkSize) { encoded.insert(encoded.end(), buffer, buffer + chunkSize); };
 
         OggVorbisEncoder writer;
-        writer.Open(writeCallback, info.SampleRate, info.BitDepth, info.NumChannels, quality);
-        // CW_ENGINE_INFO("Total size: {0}", totalEncodedSize);
-        writer.Write(samples, info.NumSamples);
-        // CW_ENGINE_INFO("Total size: {0}", totalEncodedSize);
-        writer.Close();
-        // CW_ENGINE_INFO("Total size: {0}", totalEncodedSize);
-
-        const auto output = CreateRef<MemoryDataStream>(totalEncodedSize);
-        uint32_t offset = 0;
-        for (const auto& block : blocks)
+        if (!writer.Open(writeCallback, info.SampleRate, info.BitDepth, info.NumChannels, quality))
         {
-            memcpy(output->Data() + offset, block.data, block.size);
-            offset += block.size;
+            size = 0;
+            return nullptr;
+        }
+        writer.Write(samples, info.NumSamples);
+        writer.Close();
+        if (encoded.empty() || encoded.size() > std::numeric_limits<uint32_t>::max())
+        {
+            size = 0;
+            return nullptr;
         }
 
-        size = totalEncodedSize;
-        // CW_ENGINE_INFO("Total size: {0}", totalEncodedSize);
+        size = static_cast<uint32_t>(encoded.size());
+        const auto output = CreateRef<MemoryDataStream>(size);
+        memcpy(output->Data(), encoded.data(), size);
         return output;
     }
 

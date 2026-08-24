@@ -2,6 +2,7 @@ project "Crowny-Sandbox"
 	kind "SharedLib"
 	language "C#"
 	targetname "GameAssembly"
+	dotnetframework "4.7.2"
 
 	targetdir ("%{wks.location}/Crowny-Sandbox")
 	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")

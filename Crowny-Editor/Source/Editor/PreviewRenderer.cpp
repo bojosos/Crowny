@@ -4,10 +4,11 @@
 #include "EditorLayer.h"
 
 #include "Crowny/Assets/AssetManager.h"
-#include "Crowny/Import/Importer.h"
+#include "Crowny/Common/Constants.h"
 #include "Crowny/RenderAPI/RenderAPI.h"
 #include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/RenderAPI/Shader.h"
+#include "Crowny/Renderer/MeshFactory.h"
 
 namespace Crowny
 {
@@ -19,10 +20,9 @@ namespace Crowny
 
     void PreviewObjectRenderer::Setup(uint32_t width, uint32_t height)
     {
-        static Ref<Shader> directShader = Importer::Get().Import<Shader>("Resources/Shaders/Direct.glsl");
-        static const AssetHandle<Shader> directHandle = static_asset_cast<Shader>(gAssetManager->CreateAssetHandle(directShader));
-        m_Material = Material::Create(directHandle);
-        static const AssetHandle<Material> materialHandle = static_asset_cast<Material>(gAssetManager->CreateAssetHandle(m_Material));
+        static const AssetHandle<Shader> unlitShader = AssetManager::TryGet()->Load<Shader>(UNLIT_SHADER_PATH);
+        m_Material = Material::CreateUnlit(unlitShader);
+        static const AssetHandle<Material> materialHandle = static_asset_cast<Material>(AssetManager::TryGet()->CreateAssetHandle(m_Material));
         m_MatHandle = materialHandle;
         m_Scene = CreateRef<Scene>("Object Preview");
 
@@ -56,8 +56,8 @@ namespace Crowny
         camera.SetDistance(5);
         camera.Focus(glm::vec3(0.0f));
         m_SceneRenderer->RenderEditor(camera);
-        gRenderAPI->SubmitCommandBuffer(nullptr);
-        gRenderAPI->SetRenderTarget(nullptr);
+        RenderAPI::TryGet()->SubmitCommandBuffer(nullptr);
+        RenderAPI::TryGet()->SetRenderTarget(nullptr);
         return m_RenderTexture->GetColorTexture(0);
     }
 
@@ -76,16 +76,15 @@ namespace Crowny
     {
         m_Scene = CreateRef<Scene>("Material Preview");
 
-        // If no preview mesh provided, import a sphere (fallback to a simple cube-like mesh)
+        // Generate the fallback locally so previews do not depend on a loose source mesh.
         if (!m_PreviewMesh)
         {
-            // Use a built-in sphere mesh for material previews if available
             static AssetHandle<Mesh> sphereMesh;
             if (!sphereMesh)
             {
-                Ref<Mesh> imported = Importer::Get().Import<Mesh>("Resources/Meshes/Sphere.fbx");
-                if (imported)
-                    sphereMesh = static_asset_cast<Mesh>(gAssetManager->CreateAssetHandle(imported));
+                const Ref<Mesh> generated = MeshFactory::CreateSphere(0.5f, 32, 16);
+                if (generated)
+                    sphereMesh = static_asset_cast<Mesh>(AssetManager::TryGet()->CreateAssetHandle(generated));
             }
             m_PreviewMesh = sphereMesh;
         }
@@ -121,8 +120,8 @@ namespace Crowny
         camera.SetDistance(3);
         camera.Focus(glm::vec3(0.0f));
         m_SceneRenderer->RenderEditor(camera);
-        gRenderAPI->SubmitCommandBuffer(nullptr);
-        gRenderAPI->SetRenderTarget(nullptr);
+        RenderAPI::TryGet()->SubmitCommandBuffer(nullptr);
+        RenderAPI::TryGet()->SetRenderTarget(nullptr);
         return m_RenderTexture->GetColorTexture(0);
     }
 

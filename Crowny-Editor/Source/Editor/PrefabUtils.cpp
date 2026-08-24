@@ -36,10 +36,135 @@ namespace Crowny
 
     static void CopyAllExisting(Entity dst, Entity src) { CopyCompIfExists(AllComponents{}, dst, src); }
 
+    static AssetHandle<Prefab> LoadPrefab(const UUID& prefabAssetUuid)
+    {
+        AssetHandle<Asset> assetHandle = AssetManager::TryGet()->LoadFromUUID(prefabAssetUuid);
+        if (!assetHandle.IsLoaded() || assetHandle->GetAssetType() != AssetType::Prefab)
+            return {};
+        return static_asset_cast<Prefab>(assetHandle);
+    }
+
+    Entity PrefabUtils::GetInstanceRoot(Entity entity)
+    {
+        if (!entity || !entity.HasComponent<PrefabComponent>())
+            return {};
+
+        const UUID prefabAssetUuid = entity.GetComponent<PrefabComponent>().PrefabAssetUuid;
+        const AssetHandle<Prefab> prefabHandle = LoadPrefab(prefabAssetUuid);
+        const Prefab* prefab = prefabHandle.Get();
+        if (!prefab)
+            return entity;
+
+        const UUID prefabRootUuid = prefab->GetRootEntityUuid();
+        for (Entity current = entity; current && current.HasComponent<PrefabComponent>(); current = current.GetParent())
+        {
+            const auto& prefabComponent = current.GetComponent<PrefabComponent>();
+            if (prefabComponent.PrefabAssetUuid != prefabAssetUuid)
+                break;
+            if (prefabComponent.PrefabEntityUuid == prefabRootUuid)
+                return current;
+        }
+
+        return entity;
+    }
+
+    static bool HasValidPrefabMapping(Entity instanceEntity, const Scene& prefabScene, const UUID& prefabAssetUuid, const UUID& prefabRootEntityUuid,
+                                      bool isInstanceRoot)
+    {
+        if (!instanceEntity.HasComponent<PrefabComponent>())
+            return true;
+
+        const auto& prefabComponent = instanceEntity.GetComponent<PrefabComponent>();
+        if (prefabComponent.PrefabAssetUuid != prefabAssetUuid)
+            return true;
+        if (!isInstanceRoot && prefabComponent.PrefabEntityUuid == prefabRootEntityUuid)
+            return true;
+        if (!prefabScene.TryGetEntityFromUuid(prefabComponent.PrefabEntityUuid))
+            return false;
+
+        for (const Entity child : instanceEntity.GetChildren())
+        {
+            if (!HasValidPrefabMapping(child, prefabScene, prefabAssetUuid, prefabRootEntityUuid, false))
+                return false;
+        }
+        return true;
+    }
+
+    template <typename Component> static void ApplyComponent(Entity prefabEntity, Entity instanceEntity)
+    {
+        if constexpr (std::is_same_v<Component, IDComponent> || std::is_same_v<Component, RelationshipComponent> ||
+                      std::is_same_v<Component, PrefabComponent>)
+        {
+            return;
+        }
+        else if (instanceEntity.HasComponent<Component>())
+        {
+            prefabEntity.AddOrReplaceComponent<Component>(instanceEntity.GetComponent<Component>());
+        }
+        else
+        {
+            prefabEntity.RemoveComponentIfExists<Component>();
+        }
+    }
+
+    template <typename... Component> static void ApplyComponents(ComponentGroup<Component...>, Entity prefabEntity, Entity instanceEntity)
+    {
+        (ApplyComponent<Component>(prefabEntity, instanceEntity), ...);
+    }
+
+    static void ApplyInstanceValues(Entity instanceEntity, Scene& prefabScene, const UUID& prefabAssetUuid, const UUID& prefabRootEntityUuid,
+                                    bool isInstanceRoot)
+    {
+        if (!instanceEntity.HasComponent<PrefabComponent>())
+            return;
+
+        const auto& prefabComponent = instanceEntity.GetComponent<PrefabComponent>();
+        if (prefabComponent.PrefabAssetUuid != prefabAssetUuid)
+            return;
+        if (!isInstanceRoot && prefabComponent.PrefabEntityUuid == prefabRootEntityUuid)
+            return;
+
+        Entity prefabEntity = prefabScene.GetEntityFromUuid(prefabComponent.PrefabEntityUuid);
+        ApplyComponents(AllComponents{}, prefabEntity, instanceEntity);
+
+        for (const Entity child : instanceEntity.GetChildren())
+            ApplyInstanceValues(child, prefabScene, prefabAssetUuid, prefabRootEntityUuid, false);
+    }
+
+    static void ClearInstanceOverrides(Entity entity, const UUID& prefabAssetUuid, const UUID& prefabRootEntityUuid, bool isInstanceRoot)
+    {
+        if (!entity.HasComponent<PrefabComponent>())
+            return;
+
+        auto& prefabComponent = entity.GetComponent<PrefabComponent>();
+        if (prefabComponent.PrefabAssetUuid != prefabAssetUuid)
+            return;
+        if (!isInstanceRoot && prefabComponent.PrefabEntityUuid == prefabRootEntityUuid)
+            return;
+
+        prefabComponent.Overrides.clear();
+        for (const Entity child : entity.GetChildren())
+            ClearInstanceOverrides(child, prefabAssetUuid, prefabRootEntityUuid, false);
+    }
+
+    static void UnlinkPrefabRecursive(Entity entity, const UUID& prefabAssetUuid, const UUID& prefabRootEntityUuid, bool isInstanceRoot)
+    {
+        if (entity.HasComponent<PrefabComponent>())
+        {
+            const auto& prefabComponent = entity.GetComponent<PrefabComponent>();
+            if (prefabComponent.PrefabAssetUuid != prefabAssetUuid || (!isInstanceRoot && prefabComponent.PrefabEntityUuid == prefabRootEntityUuid))
+                return;
+            entity.RemoveComponent<PrefabComponent>();
+        }
+
+        for (const Entity child : entity.GetChildren())
+            UnlinkPrefabRecursive(child, prefabAssetUuid, prefabRootEntityUuid, false);
+    }
+
     void PrefabUtils::CreatePrefabFromEntity(Entity entity)
     {
         Ref<Prefab> prefab = CreateRef<Prefab>();
-        Ref<Scene> activeScene = gSceneManager->GetActiveScene();
+        Ref<Scene> activeScene = SceneManager::TryGet()->GetActiveScene();
         prefab->CaptureFromEntity(*activeScene, entity);
 
         // Determine save path
@@ -96,7 +221,7 @@ namespace Crowny
         if (!prefabRoot)
             return {};
 
-        Ref<Scene> activeScene = gSceneManager->GetActiveScene();
+        Ref<Scene> activeScene = SceneManager::TryGet()->GetActiveScene();
         const UUID prefabAssetUuid = prefabHandle.GetUUID();
 
         Entity instanceRoot = InstantiateEntityRecursive(*prefab->GetInternalScene(), prefabRoot, *activeScene, &parent, prefabAssetUuid);
@@ -132,7 +257,8 @@ namespace Crowny
         return newEntity;
     }
 
-    static void SyncEntityRecursive(Entity instanceEntity, Scene& prefabScene, const UUID& prefabAssetUuid)
+    static void SyncEntityRecursive(Entity instanceEntity, Scene& prefabScene, const UUID& prefabAssetUuid, const UUID& prefabRootEntityUuid,
+                                    bool isInstanceRoot)
     {
         if (!instanceEntity.HasComponent<PrefabComponent>())
             return;
@@ -140,13 +266,15 @@ namespace Crowny
         const auto& pc = instanceEntity.GetComponent<PrefabComponent>();
         if (pc.PrefabAssetUuid != prefabAssetUuid)
             return;
+        if (!isInstanceRoot && pc.PrefabEntityUuid == prefabRootEntityUuid)
+            return;
 
         Entity prefabEntity = prefabScene.GetEntityFromUuid(pc.PrefabEntityUuid);
         if (prefabEntity)
             PrefabSync::SyncEntity(instanceEntity, prefabEntity, pc);
 
         for (const auto& child : instanceEntity.GetChildren())
-            SyncEntityRecursive(child, prefabScene, prefabAssetUuid);
+            SyncEntityRecursive(child, prefabScene, prefabAssetUuid, prefabRootEntityUuid, false);
     }
 
     void PrefabUtils::SyncInstance(Entity instanceRoot, const AssetHandle<Prefab>& prefab)
@@ -158,16 +286,20 @@ namespace Crowny
         if (!p || !p->GetInternalScene())
             return;
 
-        SyncEntityRecursive(instanceRoot, *p->GetInternalScene(), prefab.GetUUID());
+        instanceRoot = GetInstanceRoot(instanceRoot);
+        if (!instanceRoot)
+            return;
+
+        SyncEntityRecursive(instanceRoot, *p->GetInternalScene(), prefab.GetUUID(), p->GetRootEntityUuid(), true);
     }
 
     void PrefabUtils::SyncAllInstances(const UUID& prefabAssetUuid)
     {
-        Ref<Scene> activeScene = gSceneManager->GetActiveScene();
+        Ref<Scene> activeScene = SceneManager::TryGet()->GetActiveScene();
         if (!activeScene)
             return;
 
-        AssetHandle<Asset> assetHandle = gAssetManager->LoadFromUUID(prefabAssetUuid);
+        AssetHandle<Asset> assetHandle = AssetManager::TryGet()->LoadFromUUID(prefabAssetUuid);
         if (!assetHandle.IsLoaded())
             return;
         AssetHandle<Prefab> prefabHandle = static_asset_cast<Prefab>(assetHandle);
@@ -184,57 +316,70 @@ namespace Crowny
         }
     }
 
-    void PrefabUtils::ApplyInstanceToPrefab(Entity instanceRoot)
+    bool PrefabUtils::CanApplyInstanceToPrefab(Entity instanceRoot)
     {
-        if (!instanceRoot.HasComponent<PrefabComponent>())
-            return;
+        instanceRoot = GetInstanceRoot(instanceRoot);
+        if (!instanceRoot)
+            return false;
 
         const auto& pc = instanceRoot.GetComponent<PrefabComponent>();
-        const UUID& prefabAssetUuid = pc.PrefabAssetUuid;
-
-        // Load the prefab asset
-        AssetHandle<Asset> assetHandle = gAssetManager->LoadFromUUID(prefabAssetUuid);
-        if (!assetHandle.IsLoaded())
-            return;
-
-        const AssetHandle<Prefab> prefabHandle = static_asset_cast<Prefab>(assetHandle);
-        Prefab* prefab = prefabHandle.Get();
-
-        // Re-capture the entity hierarchy into the prefab
-        Ref<Scene> activeScene = gSceneManager->GetActiveScene();
-        prefab->CaptureFromEntity(*activeScene, instanceRoot);
-
-        // Re-serialize the prefab file
+        const UUID prefabAssetUuid = pc.PrefabAssetUuid;
         const Path prefabPath = ProjectLibrary::Get().UuidToPath(prefabAssetUuid);
-        if (!prefabPath.empty())
-        {
-            PrefabSerializer serializer(prefabHandle.GetInternalPtr());
-            serializer.Serialize(prefabPath);
-        }
+        if (prefabPath.empty())
+            return false;
 
-        // Sync all other instances
-        SyncAllInstances(prefabAssetUuid);
+        const AssetHandle<Prefab> prefabHandle = LoadPrefab(prefabAssetUuid);
+        Prefab* prefab = prefabHandle.Get();
+        return prefab && prefab->GetInternalScene() && pc.PrefabEntityUuid == prefab->GetRootEntityUuid() &&
+               HasValidPrefabMapping(instanceRoot, *prefab->GetInternalScene(), prefabAssetUuid, prefab->GetRootEntityUuid(), true);
     }
 
-    void PrefabUtils::RevertInstance(Entity instanceRoot)
+    bool PrefabUtils::ApplyInstanceToPrefab(Entity instanceRoot)
     {
-        if (!instanceRoot.HasComponent<PrefabComponent>())
-            return;
+        instanceRoot = GetInstanceRoot(instanceRoot);
+        if (!instanceRoot || !CanApplyInstanceToPrefab(instanceRoot))
+            return false;
 
-        auto& pc = instanceRoot.GetComponent<PrefabComponent>();
-        pc.Overrides.clear();
+        const UUID prefabAssetUuid = instanceRoot.GetComponent<PrefabComponent>().PrefabAssetUuid;
+        const AssetHandle<Prefab> prefabHandle = LoadPrefab(prefabAssetUuid);
+        Prefab* prefab = prefabHandle.Get();
 
-        // Load and sync from prefab
-        AssetHandle<Asset> assetHandle = gAssetManager->LoadFromUUID(pc.PrefabAssetUuid);
-        if (assetHandle.IsLoaded())
-            SyncInstance(instanceRoot, static_asset_cast<Prefab>(assetHandle));
+        // Update the existing prefab entities so their UUIDs remain stable for every linked instance.
+        ApplyInstanceValues(instanceRoot, *prefab->GetInternalScene(), prefabAssetUuid, prefab->GetRootEntityUuid(), true);
+
+        const Path prefabPath = ProjectLibrary::Get().UuidToPath(prefabAssetUuid);
+        PrefabSerializer serializer(prefabHandle.GetInternalPtr());
+        serializer.Serialize(prefabPath);
+
+        ClearInstanceOverrides(instanceRoot, prefabAssetUuid, prefab->GetRootEntityUuid(), true);
+        SyncAllInstances(prefabAssetUuid);
+        return true;
+    }
+
+    bool PrefabUtils::RevertInstance(Entity instanceRoot)
+    {
+        instanceRoot = GetInstanceRoot(instanceRoot);
+        if (!instanceRoot || !CanApplyInstanceToPrefab(instanceRoot))
+            return false;
+
+        const UUID prefabAssetUuid = instanceRoot.GetComponent<PrefabComponent>().PrefabAssetUuid;
+        const AssetHandle<Prefab> prefabHandle = LoadPrefab(prefabAssetUuid);
+        ClearInstanceOverrides(instanceRoot, prefabAssetUuid, prefabHandle->GetRootEntityUuid(), true);
+        SyncInstance(instanceRoot, prefabHandle);
+
+        return true;
     }
 
     void PrefabUtils::UnlinkPrefab(Entity entity)
     {
-        entity.RemoveComponentIfExists<PrefabComponent>();
-        for (const auto& child : entity.GetChildren())
-            UnlinkPrefab(child);
+        Entity instanceRoot = GetInstanceRoot(entity);
+        if (!instanceRoot)
+            return;
+
+        const auto& prefabComponent = instanceRoot.GetComponent<PrefabComponent>();
+        const UUID prefabAssetUuid = prefabComponent.PrefabAssetUuid;
+        const UUID prefabRootEntityUuid = prefabComponent.PrefabEntityUuid;
+        UnlinkPrefabRecursive(instanceRoot, prefabAssetUuid, prefabRootEntityUuid, true);
     }
 
 } // namespace Crowny

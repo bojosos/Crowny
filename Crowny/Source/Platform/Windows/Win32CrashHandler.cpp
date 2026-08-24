@@ -356,7 +356,8 @@ namespace Crowny
         CW_ENGINE_WARN(Win32GetExceptionMessage(exceptionData->ExceptionRecord));
         CW_ENGINE_WARN(GetStackTrace(exceptionData->ContextRecord));
         WriteMiniDump(GetCrashDirectory() / s_MiniDumpName, exceptionData);
-        PopupErrorMessageBox(s_FatalErrorMessage, GetCrashDirectory());
+        if (GetEnvironmentVariableW(L"CROWNY_DISABLE_CRASH_DIALOG", nullptr, 0) == 0)
+            PopupErrorMessageBox(s_FatalErrorMessage, GetCrashDirectory());
 
         // DebugBreak();
         return EXCEPTION_EXECUTE_HANDLER;

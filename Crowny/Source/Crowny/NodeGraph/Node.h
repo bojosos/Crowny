@@ -10,6 +10,8 @@
 
 namespace Crowny
 {
+    using namespace Literals;
+
     class NodeGraphEvaluator;
     class NodeGraph;
     class Pin;
@@ -24,7 +26,7 @@ namespace Crowny
         StringID GetTypeName() const { return m_TypeName; }
 
         glm::vec2 GetEditorPosition() const { return m_EditorPosition; }
-        void SetEditorPosition(const glm::vec2& pos) { m_EditorPosition = pos; }
+        void SetEditorPosition(const glm::vec2& pos);
 
         const SmallVector<Ref<Pin>, 4>& GetInputPins() const { return m_Inputs; }
         const SmallVector<Ref<Pin>, 4>& GetOutputPins() const { return m_Outputs; }
@@ -36,14 +38,18 @@ namespace Crowny
         virtual void Evaluate(NodeGraphEvaluator& evaluator) = 0;
 
         virtual StringID GetDisplayName() const { return m_TypeName; }
-        virtual StringID GetCategory() const { return "Uncategorized"; }
+        virtual StringID GetCategory() const { return "Uncategorized"_sid; }
 
         void SetParentGraph(NodeGraph* graph);
+        NodeGraph* GetParentGraph() const { return m_ParentGraph; }
         void NotifyChanged();
 
     protected:
-        Ref<Pin> AddInput(StringID name, PinDataType type, const PinValue& defaultVal = {});
+        Ref<Pin> AddInput(StringID name, PinDataType type);
+        Ref<Pin> AddInput(StringID name, PinDataType type, const PinValue& defaultVal);
         Ref<Pin> AddOutput(StringID name, PinDataType type);
+        Ref<Pin> AddInput(UUID id, StringID name, PinDataType type, const PinValue& defaultVal);
+        Ref<Pin> AddOutput(UUID id, StringID name, PinDataType type);
 
         template <typename T> T GetInputValue(StringID pinName, NodeGraphEvaluator& evaluator) const;
 

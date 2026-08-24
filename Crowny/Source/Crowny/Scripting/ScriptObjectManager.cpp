@@ -1,5 +1,6 @@
 #include "cwpch.h"
 
+#include "Crowny/Scripting/Mono/MonoAssembly.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptObjectManager.h"
 
@@ -20,8 +21,26 @@ namespace Crowny
         m_ScriptObjects.erase(instance);
     }
 
-    void ScriptObjectManager::RefreshAssemblies(const Vector<AssemblyRefreshInfo>& assemblies)
+    bool ScriptObjectManager::RefreshAssemblies(const Vector<AssemblyRefreshInfo>& assemblies)
     {
+        Vector<AssemblyRefreshInfo> previousAssemblies;
+        Vector<Path> validationPaths;
+        for (const AssemblyRefreshInfo& entry : assemblies)
+            validationPaths.push_back(entry.Filepath);
+
+        if (!MonoManager::Get().ValidateAssemblies(validationPaths))
+        {
+            CW_ENGINE_ERROR("Managed assembly refresh cancelled because validation failed. The current domain remains active.");
+            return false;
+        }
+
+        for (const AssemblyRefreshInfo& entry : assemblies)
+        {
+            MonoAssembly* loadedAssembly = MonoManager::Get().GetAssembly(entry.Name);
+            if (loadedAssembly != nullptr && loadedAssembly->IsLoaded())
+                previousAssemblies.emplace_back(entry.Name, loadedAssembly->GetPath());
+        }
+
         Map<ScriptObjectBase*, ScriptObjectBackupData> backupData;
         // OnRefreshStarted();
 
@@ -39,21 +58,43 @@ namespace Crowny
                 scriptObject->ClearManagedInstance();
         }
 
+        ScriptInfoManager::Get().ClearAssemblyInfo();
         MonoManager::Get().UnloadScriptDomain();
 
         ProcessFinalizedObjects(true);
 
+        bool loaded = true;
         {
             Lock lock(m_Mutex);
             for (const auto& scriptObject : m_ScriptObjects)
                 CW_ENGINE_ASSERT(scriptObject->IsPersistent());
 
-            ScriptInfoManager::Get().ClearAssemblyInfo();
-
             for (const auto& entry : assemblies)
             {
-                MonoManager::Get().LoadAssembly(*entry.Filepath, entry.Name);
+                MonoAssembly& assembly = MonoManager::Get().LoadAssembly(entry.Filepath, entry.Name);
+                if (!assembly.IsLoaded())
+                {
+                    loaded = false;
+                    break;
+                }
                 ScriptInfoManager::Get().LoadAssemblyInfo(entry.Name);
+            }
+
+            if (!loaded)
+            {
+                CW_ENGINE_ERROR("Managed assembly refresh failed after validation. Restoring the previous domain.");
+                ScriptInfoManager::Get().ClearAssemblyInfo();
+                MonoManager::Get().UnloadScriptDomain();
+                for (const AssemblyRefreshInfo& entry : previousAssemblies)
+                {
+                    MonoAssembly& assembly = MonoManager::Get().LoadAssembly(entry.Filepath, entry.Name);
+                    if (!assembly.IsLoaded())
+                    {
+                        CW_ENGINE_CRITICAL("Could not restore the last working managed assembly {0} from {1}.", entry.Name, entry.Filepath.string());
+                        continue;
+                    }
+                    ScriptInfoManager::Get().LoadAssemblyInfo(entry.Name);
+                }
             }
 
             Vector<ScriptObjectBase*> scriptObjCopy(m_ScriptObjects.size());
@@ -71,6 +112,7 @@ namespace Crowny
         }
 
         // OnRefreshComplete();
+        return loaded;
     }
 
     void ScriptObjectManager::NotifyObjectFinalized(ScriptObjectBase* instance)

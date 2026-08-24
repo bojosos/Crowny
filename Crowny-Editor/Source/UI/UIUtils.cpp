@@ -7,9 +7,8 @@
 
 #include "Crowny/Ecs/Components.h"
 
-#include <backends/imgui_impl_vulkan.h>
+#include "Crowny/ImGui/ImGuiVulkanTexture.h"
 #include <imgui.h>
-#include <imgui_stacklayout_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
 
 namespace Crowny
@@ -25,7 +24,7 @@ namespace Crowny
     {
         if (!s_ActivePrefabComponent)
             return false;
-        return s_ActivePrefabComponent->IsPropertyOverridden(s_ActiveComponentName + "." + propertyName);
+        return s_ActivePrefabComponent->IsPropertyOverridden(s_ActiveComponentName, propertyName);
     }
 
     UIUtils::DialogResult UIUtils::ShowYesNoMessageBox(const String& title, const String& message, MessageBoxButtons buttons)
@@ -110,7 +109,11 @@ namespace Crowny
     bool UIUtils::DrawFloatControl(const char* label, float& value, float minValue, float maxValue, bool asSlider)
     {
         if (asSlider)
-            return ImGui::SliderFloat(label, &value, minValue, maxValue);
+        {
+            const bool changed = ImGui::SliderFloat(label, &value, minValue, maxValue);
+            UndoRedo::Get().OnItemInteract(changed);
+            return changed;
+        }
         else
             return UI::Property(label, value, DRAG_SENSITIVITY, minValue, maxValue);
     }
@@ -118,31 +121,19 @@ namespace Crowny
     bool UIUtils::SearchWidget(String& searchString, const char* hint, bool* grabFocus)
     {
         UI::PushID();
-        const bool layoutSuspended = [] {
-            ImGuiWindow* window = ImGui::GetCurrentWindow();
-            ImGuiLayoutType lt = ImGuiInternal::GetCurrentLayoutType(window->ID);
-            if (lt == ImGuiLayoutType_Horizontal)
-            {
-                ImGui::SuspendLayout();
-                return true;
-            }
-            return false;
-        }();
-
         bool modified = false;
-        bool searching = false;
-
-        const float areaPosX = ImGui::GetCursorPosX();
         const float framePaddingY = ImGui::GetStyle().FramePadding.y;
 
         UI::ScopedStyle rounding(ImGuiStyleVar_FrameRounding, 3.0f);
         UI::ScopedStyle padding(ImGuiStyleVar_FramePadding, ImVec2(28.0f, framePaddingY));
 
-        if (ImGui::InputText("##input", &searchString))
+        if (ImGui::InputTextWithHint("##input", hint, &searchString))
             modified = true;
         else if (ImGui::IsItemDeactivatedAfterEdit())
             modified = true;
-        searching = searchString.size() != 0;
+
+        const ImVec2 inputMin = ImGui::GetItemRectMin();
+        const ImVec2 inputMax = ImGui::GetItemRectMax();
 
         if (grabFocus && *grabFocus)
         {
@@ -157,71 +148,34 @@ namespace Crowny
 
         UI::DrawItemActivityOutline(3.0f, true, IM_COL32(236, 158, 36, 255));
 
-        ImGui::SetNextItemAllowOverlap();
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        const float iconSize = ImGui::GetTextLineHeight() - 2.0f;
+        const ImVec2 iconMin(inputMin.x + 7.0f, inputMin.y + (inputMax.y - inputMin.y - iconSize) * 0.5f);
+        const ImVec2 iconMax = iconMin + ImVec2(iconSize, iconSize);
+        drawList->AddImage(ImGuiVulkanTexture::Get(EditorAssets::Get().SearchIcon), iconMin, iconMax, { 0.0f, 1.0f }, { 1.0f, 0.0f });
 
-        ImGui::SameLine(areaPosX + 5.0f);
-
-        if (layoutSuspended)
-            ImGui::ResumeLayout();
-
-        ImGui::BeginHorizontal("##Horizontal", ImGui::GetItemRectSize());
-        const ImVec2 iconSize(ImGui::GetTextLineHeight() - 2, ImGui::GetTextLineHeight() - 2);
-
-        // Search icon
+        if (!searchString.empty())
         {
-            const float iconYOffset = framePaddingY - 3.0f;
-            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + iconYOffset);
-            // ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-            // ImGui::Button(ICON_FA_MAGNIFYING_GLASS, iconSize);
-            ImGui::Image(ImGui_ImplVulkan_AddTexture(EditorAssets::Get().SearchIcon), iconSize, { 0.0f, 1.0f }, { 1.0f, 0.0f });
-            // ImGui::PopFont();
-            // UI::Image(s_SearchIcon, iconSize, ImVec2(0, 0), ImVec2(1, 1), ImVec4(1.0f, 1.0f, 1.0f, 0.2f));
-            ImGui::SetCursorPosY(ImGui::GetCursorPosY() - iconYOffset);
+            const float clearSize = inputMax.y - inputMin.y;
+            const ImVec2 clearMin(inputMax.x - clearSize, inputMin.y);
+            const ImVec2 clearMax(inputMax.x, inputMax.y);
+            const bool clearHovered = ImGui::IsMouseHoveringRect(clearMin, clearMax);
+            const ImU32 clearColor = ImGui::GetColorU32(clearHovered ? ImGuiCol_Text : ImGuiCol_TextDisabled);
+            const float inset = clearSize * 0.34f;
+            drawList->AddLine(clearMin + ImVec2(inset, inset), clearMax - ImVec2(inset, inset), clearColor, 1.5f);
+            drawList->AddLine(ImVec2(clearMin.x + inset, clearMax.y - inset), ImVec2(clearMax.x - inset, clearMin.y + inset), clearColor, 1.5f);
 
-            // Hint
-            if (!searching)
+            if (clearHovered)
             {
-                ImGui::SetCursorPosY(ImGui::GetCursorPosY() - framePaddingY + 1.0f);
-                // ScopedColor text(ImGuiCol_Text, Colours::Theme::textDarker);
-                UI::ScopedColor text(ImGuiCol_Text, IM_COL32(128, 128, 128, 255));
-                UI::ScopedStyle padding(ImGuiStyleVar_FramePadding, ImVec2(0.0f, framePaddingY));
-                ImGui::TextUnformatted(hint);
-                ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 1.0f);
+                ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+                if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+                {
+                    searchString.clear();
+                    modified = true;
+                }
             }
         }
 
-        ImGui::Spring();
-
-        // Clear icon
-        if (searching)
-        {
-            const float spacingX = 4.0f;
-            const float lineHeight = ImGui::GetItemRectSize().y - framePaddingY / 2.0f;
-
-            if (ImGui::InvisibleButton("##invisButton", ImVec2{ lineHeight, lineHeight }))
-            {
-                searchString.clear();
-                modified = true;
-            }
-
-            if (ImGui::IsMouseHoveringRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax()))
-                ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
-
-            UI::ScopedDisable disable;
-            ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-            // ImGui::Button(ICON_FA_XMARK, { lineHeight, lineHeight }); FIXME: Add clear button
-            ImGui::PopFont();
-
-            /*UI::DrawButtonImage(FONT_ICON_XMAR, IM_COL32(160, 160, 160, 200),
-                IM_COL32(170, 170, 170, 255),
-                IM_COL32(160, 160, 160, 150),
-                UI::RectExpanded(UI::GetItemRect(), -2.0f, -2.0f));*/
-
-            ImGui::Spring(-1.0f, spacingX * 2.0f);
-        }
-
-        ImGui::EndHorizontal();
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 1.0f);
         UI::PopID();
         return modified;
     }

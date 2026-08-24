@@ -141,7 +141,8 @@ namespace Crowny
         TexCoord6,
         TexCoord7,
         BlendWeights,
-        BlendIndices
+        BlendIndices,
+        PreviousPosition
     };
 
     struct BufferElement
@@ -241,7 +242,11 @@ namespace Crowny
             CalculateOffsetsAndStride();
         }
 
-        uint32_t GetStride() const { return m_Stride; }
+        uint32_t GetStride(uint32_t streamIdx = 0) const
+        {
+            return streamIdx < m_StreamStrides.size() ? m_StreamStrides[streamIdx] : 0;
+        }
+        uint32_t GetStreamCount() const { return m_StreamCount; }
         const SmallVector<BufferElement, 8>& GetElements() const { return m_Elements; }
 
         typename SmallVector<BufferElement, 8>::iterator begin() { return m_Elements.begin(); }
@@ -321,14 +326,19 @@ namespace Crowny
         CW_SERIALIZABLE(BufferLayout);
         void CalculateOffsetsAndStride()
         {
-            uint32_t offset = 0;
+            m_StreamStrides.fill(0);
+            m_StreamCount = 0;
             m_Stride = 0;
             for (auto& element : m_Elements)
             {
-                element.Offset = offset;
-                offset += element.Size;
-                m_Stride += element.Size;
+                CW_ENGINE_ASSERT(element.StreamIdx < m_StreamStrides.size(), "Vertex stream index exceeds the layout limit");
+                if (element.StreamIdx >= m_StreamStrides.size())
+                    element.StreamIdx = 0;
+                element.Offset = m_StreamStrides[element.StreamIdx];
+                m_StreamStrides[element.StreamIdx] += element.Size;
+                m_StreamCount = std::max(m_StreamCount, element.StreamIdx + 1u);
             }
+            m_Stride = m_StreamStrides[0];
         }
 
     private:
@@ -336,6 +346,8 @@ namespace Crowny
         static uint32_t s_NextFreeId; // TODO:
         SmallVector<BufferElement, 8> m_Elements;
         uint32_t m_Stride = 0;
+        std::array<uint32_t, 8> m_StreamStrides{};
+        uint32_t m_StreamCount = 0;
     };
 
 } // namespace Crowny

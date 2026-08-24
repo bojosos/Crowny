@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Crowny/Assets/Asset.h"
+#include "Crowny/Common/HashedString.h"
+#include "Crowny/Renderer/RenderTypes.h"
 #include "Crowny/RenderAPI/GraphicsPipeline.h"
 #include "Crowny/Renderer/ShaderParameter.h"
 #include "Crowny/Renderer/ShaderVariation.h"
@@ -84,8 +86,8 @@ namespace Crowny
 
     struct ShaderDesc
     {
-        int32_t ShaderQueuePriority;
-        QueueSortType QueueSort;
+        int32_t ShaderQueuePriority = static_cast<int32_t>(QueuePriority::Opaque);
+        QueueSortType QueueSort = QueueSortType::FrontToBack;
         Vector<Ref<ShaderTechnique>> Techniques;
     };
 
@@ -168,8 +170,13 @@ namespace Crowny
         uint32_t Slot;
         uint32_t Set;
         GpuBufferFormat ElementType = BF_UNKNOWN;
+        uint32_t ArraySize = 1;
+        bool RuntimeArray = false;
 
-        template <typename Archive> void Serialize(Archive& archive) { archive(Name, Type, Slot, Set, ElementType); }
+        template <typename Archive> void Serialize(Archive& archive)
+        {
+            archive(Name, Type, Slot, Set, ElementType, ArraySize, RuntimeArray);
+        }
     };
 
     struct AccelerationStructDesc
@@ -183,10 +190,12 @@ namespace Crowny
 
     struct UniformDesc : public RefCounted
     {
+        using TextureMap = UnorderedMap<String, UniformResourceDesc, StringHash, StringEqual>;
+
         UnorderedMap<String, UniformBufferBlockDesc> Uniforms;
 
         UnorderedMap<String, UniformResourceDesc> Samplers;
-        UnorderedMap<String, UniformResourceDesc> Textures;
+        TextureMap Textures;
         UnorderedMap<String, UniformResourceDesc> Buffers;
         UnorderedMap<String, UniformResourceDesc> LoadStoreTextures;
         UnorderedMap<String, AccelerationStructDesc> AccelerationStructures;
@@ -215,29 +224,24 @@ namespace Crowny
     public:
         Shader() = default;
 
+        static MaterialPropertyID PropertyToID(StringView name);
+
         static Ref<Shader> Create(const ShaderDesc& stateDesc);
         virtual AssetType GetAssetType() const override { return AssetType::Shader; }
         static AssetType GetStaticType() { return AssetType::Shader; }
         const Vector<Ref<ShaderTechnique>>& GetTechniques() const { return m_Techniques; }
 
-        // Find the technique whose variation matches. Falls back to the first technique.
-        const Ref<ShaderTechnique>& GetTechnique(const ShaderVariation& variation) const
-        {
-            CW_ENGINE_ASSERT(!m_Techniques.empty(), "Shader has no techniques");
-            for (const auto& tech : m_Techniques)
-            {
-                if (tech->GetVariation().Matches(variation))
-                    return tech;
-            }
-            return m_Techniques[0]; // Fallback to base variant
-        }
+        // Finds an exact variation. An unknown variation falls back to the first technique.
+        const Ref<ShaderTechnique>& GetTechnique(const ShaderVariation& variation) const;
 
     protected:
         Shader(const ShaderDesc& shaderDesc);
 
     private:
+        void RebuildTechniqueLookup();
         CW_SERIALIZABLE(Shader);
         Vector<Ref<ShaderTechnique>> m_Techniques;
+        UnorderedMap<String, size_t> m_TechniqueLookup;
     };
 
     class ShaderLibrary

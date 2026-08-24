@@ -3,17 +3,25 @@
 #if defined(CW_WINDOWS)
 #define VK_USE_PLATFORM_WIN32_KHR
 #define GLFW_EXPOSE_NATIVE_WIN32
-#elif defined(CW_LINUX)
+#elif defined(CW_PLATFORM_LINUX)
 #define VK_USE_PLATFORM_XLIB_KHR
 #define GLFW_EXPOSE_NATIVE_X11
 #elif defined(CW_ANDROID)
 #define VK_USE_PLATFORM_ANDROID_KHR
-#elif defined(CW_OSX)
-#define VK_USR_PLATFORM_MACOS_MVK
+#elif defined(CW_MACOSX)
+#define VK_USE_PLATFORM_MACOS_MVK
 #endif
 
 #include <vulkan/vulkan.h>
+#undef Above
+#undef Always
+#undef Below
+#undef Bool
+#undef False
 #undef None
+#undef Status
+#undef Success
+#undef True
 #undef Button1
 #undef Button2
 #undef Button3
@@ -97,6 +105,8 @@ namespace Crowny
         static bool RangeOverlaps(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b);
         static VkFormat GetDummyViewFormat(GpuBufferFormat format);
         static VkFormat GetBufferFormat(GpuBufferFormat format);
+        static VkPipelineStageFlags GetPipelineStageFlags(VkAccessFlags accessFlags);
+        static Rect2I GetViewportRect(const Rect2F& viewport, uint32_t framebufferWidth, uint32_t framebufferHeight);
 
         static void CutRange(const VkImageSubresourceRange& toCut, const VkImageSubresourceRange& cutWith,
                              std::array<VkImageSubresourceRange, 9>& output, uint32_t& numAreas);

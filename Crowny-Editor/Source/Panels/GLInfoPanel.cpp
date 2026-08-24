@@ -12,12 +12,16 @@ namespace Crowny
 
     void OpenGLInformationPanel::Render()
     {
+        if (!BeginPanel())
+        {
+            EndPanel();
+            return;
+        }
+
         if (OpenGLInfo::GetInformation().empty())
             OpenGLInfo::RetrieveInformation();
         CW_ENGINE_ASSERT(!OpenGLInfo::GetInformation().empty(), "OpenGL info error");
 
-        ImGui::Begin("OpenGL Information", &m_Shown);
-        UpdateState();
         ImGui::Columns(3, "OpenGL Information");
         ImGui::Separator();
         for (const OpenGLDetail& det : OpenGLInfo::GetInformation())
@@ -31,7 +35,7 @@ namespace Crowny
         }
         ImGui::Separator();
         ImGui::Columns(1);
-        ImGui::End();
+        EndPanel();
     }
 
 } // namespace Crowny

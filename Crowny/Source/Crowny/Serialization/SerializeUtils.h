@@ -6,6 +6,7 @@
 
 #include <cereal/cereal.hpp>
 
+#include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 namespace glm // cereal requires that these in the glm namespace(maybe)
@@ -13,6 +14,7 @@ namespace glm // cereal requires that these in the glm namespace(maybe)
     template <class Archive> void Serialize(Archive& archive, glm::vec2& vec) { archive(vec.x, vec.y); }
     template <class Archive> void Serialize(Archive& archive, glm::vec3& vec) { archive(vec.x, vec.y, vec.z); }
     template <class Archive> void Serialize(Archive& archive, glm::vec4& vec) { archive(vec.x, vec.y, vec.z, vec.w); }
+    template <class Archive> void Serialize(Archive& archive, glm::quat& quat) { archive(quat.x, quat.y, quat.z, quat.w); }
     template <class Archive> void Serialize(Archive& archive, glm::mat3& mat)
     {
         archive(cereal::binary_data(glm::value_ptr(mat), sizeof(glm::mat3)));

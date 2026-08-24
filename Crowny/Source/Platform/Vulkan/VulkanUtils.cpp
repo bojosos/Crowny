@@ -8,6 +8,43 @@
 namespace Crowny
 {
 
+    VkPipelineStageFlags VulkanUtils::GetPipelineStageFlags(VkAccessFlags accessFlags)
+    {
+        VkPipelineStageFlags flags = 0;
+
+        if ((accessFlags & VK_ACCESS_INDIRECT_COMMAND_READ_BIT) != 0)
+            flags |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+        if ((accessFlags & (VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)) != 0)
+            flags |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+        if ((accessFlags & (VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT)) != 0)
+            flags |= VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        if ((accessFlags & VK_ACCESS_INPUT_ATTACHMENT_READ_BIT) != 0)
+            flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        if ((accessFlags & (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)) != 0)
+            flags |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        if ((accessFlags & (VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)) != 0)
+            flags |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        if ((accessFlags & (VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT)) != 0)
+            flags |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+        if ((accessFlags & (VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT)) != 0)
+            flags |= VK_PIPELINE_STAGE_HOST_BIT;
+        if ((accessFlags & (VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR)) != 0)
+            flags |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+
+        return flags == 0 ? VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT : flags;
+    }
+
+    Rect2I VulkanUtils::GetViewportRect(const Rect2F& viewport, uint32_t framebufferWidth, uint32_t framebufferHeight)
+    {
+        const float width = (float)framebufferWidth;
+        const float height = (float)framebufferHeight;
+        const int32_t left = (int32_t)glm::clamp(viewport.X * width, 0.0f, width);
+        const int32_t top = (int32_t)glm::clamp(viewport.Y * height, 0.0f, height);
+        const int32_t right = (int32_t)glm::clamp((viewport.X + viewport.Width) * width, 0.0f, width);
+        const int32_t bottom = (int32_t)glm::clamp((viewport.Y + viewport.Height) * height, 0.0f, height);
+        return Rect2I(left, top, std::max(0, right - left), std::max(0, bottom - top));
+    }
+
     VkFilter VulkanUtils::GetFilter(TextureFilter filter)
     {
         switch (filter)
@@ -415,6 +452,10 @@ namespace Crowny
             if (sRGB)
                 return VK_FORMAT_R8G8B8A8_SRGB;
             return VK_FORMAT_R8G8B8A8_UNORM;
+        case TextureFormat::BGRA8:
+            if (sRGB)
+                return VK_FORMAT_B8G8R8A8_SRGB;
+            return VK_FORMAT_B8G8R8A8_UNORM;
         case TextureFormat::RGBA16F:
             return VK_FORMAT_R16G16B16A16_SFLOAT;
         case TextureFormat::RGB32F:
@@ -427,12 +468,40 @@ namespace Crowny
             return VK_FORMAT_R32G32_SFLOAT;
         case TextureFormat::R32I:
             return VK_FORMAT_R32_SINT;
+        case TextureFormat::R32F:
+            return VK_FORMAT_R32_SFLOAT;
         case TextureFormat::DEPTH32F:
             return VK_FORMAT_D32_SFLOAT;
         case TextureFormat::DEPTH24STENCIL8:
             return VK_FORMAT_D24_UNORM_S8_UINT;
+        case TextureFormat::BC1:
+            return sRGB ? VK_FORMAT_BC1_RGB_SRGB_BLOCK : VK_FORMAT_BC1_RGB_UNORM_BLOCK;
+        case TextureFormat::BC1a:
+            return sRGB ? VK_FORMAT_BC1_RGBA_SRGB_BLOCK : VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
+        case TextureFormat::BC2:
+            return sRGB ? VK_FORMAT_BC2_SRGB_BLOCK : VK_FORMAT_BC2_UNORM_BLOCK;
+        case TextureFormat::BC3:
+            return sRGB ? VK_FORMAT_BC3_SRGB_BLOCK : VK_FORMAT_BC3_UNORM_BLOCK;
+        case TextureFormat::BC4:
+            return VK_FORMAT_BC4_UNORM_BLOCK;
+        case TextureFormat::BC5:
+            return VK_FORMAT_BC5_UNORM_BLOCK;
+        case TextureFormat::BC6H:
+            return VK_FORMAT_BC6H_UFLOAT_BLOCK;
+        case TextureFormat::BC7:
+            return sRGB ? VK_FORMAT_BC7_SRGB_BLOCK : VK_FORMAT_BC7_UNORM_BLOCK;
+        case TextureFormat::ETC2_RGB:
+            return sRGB ? VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK : VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK;
+        case TextureFormat::ETC2_RGBA:
+            return sRGB ? VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK : VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK;
+        case TextureFormat::ETC2_R11:
+            return VK_FORMAT_EAC_R11_UNORM_BLOCK;
+        case TextureFormat::ETC2_RG11:
+            return VK_FORMAT_EAC_R11G11_UNORM_BLOCK;
+        case TextureFormat::ASTC4x4:
+            return sRGB ? VK_FORMAT_ASTC_4x4_SRGB_BLOCK : VK_FORMAT_ASTC_4x4_UNORM_BLOCK;
         default:
-            return VK_FORMAT_R8_UNORM;
+            return VK_FORMAT_UNDEFINED;
         }
     }
 

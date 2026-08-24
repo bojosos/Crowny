@@ -1,312 +1,329 @@
 #include "cwpch.h"
-/*
 
-#include "Crowny/Common/VirtualFileSystem.h"
 #include "Platform/OpenGL/OpenGLTexture.h"
 
 #include <glad/glad.h>
-#include <stb_image.h>
+
+#include <stdexcept>
 
 namespace Crowny
 {
-    GLenum OpenGLTexture2D::TextureChannelToOpenGLChannel(TextureChannel channel)
+    namespace
     {
-        switch (channel)
+        GLenum GetBindingQuery(GLenum target)
         {
-            case Crowny::TextureChannel::CHANNEL_RED:                return GL_RED;
-            case Crowny::TextureChannel::CHANNEL_RG:                 return GL_RG;
-            case Crowny::TextureChannel::CHANNEL_RGB:                return GL_RGB;
-            case Crowny::TextureChannel::CHANNEL_RGBA:               return GL_RGBA;
-            case Crowny::TextureChannel::CHANNEL_DEPTH_COMPONENT:    return GL_DEPTH_COMPONENT;
-#ifndef CW_WEB
-            case Crowny::TextureChannel::CHANNEL_BGR:                return GL_BGR;
-            case Crowny::TextureChannel::CHANNEL_BGRA:               return GL_BGRA;
-            case Crowny::TextureChannel::CHANNEL_STENCIL_INDEX:      return GL_STENCIL_INDEX;
-            default: 												 CW_ENGINE_ASSERT(false, "Unknown TextureChannel!");
-return GL_NONE; #endif
-        }
-
-        return GL_NONE;
-    }
-
-    GLenum OpenGLTexture2D::TextureFormatToOpenGLFormat(TextureFormat format)
-    {
-        switch (format)
-        {
-            case Crowny::TextureFormat::R8:					return GL_RED;
-            case Crowny::TextureFormat::R32I:     			return GL_RED_INTEGER;
-            case Crowny::TextureFormat::RG32F:				return GL_RG;
-            case Crowny::TextureFormat::RGB8:     			return GL_RGB;
-            case Crowny::TextureFormat::RGBA8:				return GL_RGBA;
-            case Crowny::TextureFormat::RGBA16F:  			return GL_RGBA;
-            case Crowny::TextureFormat::RGBA32F:  			return GL_RGBA;
-            case Crowny::TextureFormat::DEPTH32F:     		return GL_DEPTH_COMPONENT;
-            case Crowny::TextureFormat::DEPTH24STENCIL8:    return GL_DEPTH_STENCIL;
-            default:										CW_ENGINE_ASSERT(false, "Unknown TextureFormat!"); return
-GL_NONE;
-        }
-
-        return GL_NONE;
-    }
-
-    GLenum OpenGLTexture2D::TextureFormatToOpenGLInternalFormat(TextureFormat format)
-    {
-        switch (format)
-        {
-            case Crowny::TextureFormat::R8:					return GL_R8;
-            case Crowny::TextureFormat::R32I:     			return GL_R32I;
-            case Crowny::TextureFormat::RG32F:				return GL_RG32F;
-            case Crowny::TextureFormat::RGB8:     			return GL_RGB8;
-            case Crowny::TextureFormat::RGBA8:				return GL_RGBA8;
-            case Crowny::TextureFormat::RGBA16F:  			return GL_RGBA16F;
-            case Crowny::TextureFormat::RGBA32F:  			return GL_RGBA32F;
-            case Crowny::TextureFormat::DEPTH32F:     		return GL_DEPTH_COMPONENT32F;
-            case Crowny::TextureFormat::DEPTH24STENCIL8:    return GL_DEPTH24_STENCIL8;
-            default:		    							CW_ENGINE_ASSERT(false, "Unknown TextureFormat!"); return
-GL_NONE;
-        }
-
-        return GL_NONE;
-    }
-
-    GLenum OpenGLTexture2D::TextureFormatToOpenGLType(TextureFormat format)
-    {
-        switch (format)
-        {
-            case Crowny::TextureFormat::R8:					return GL_FLOAT;
-            case Crowny::TextureFormat::R32I:     			return GL_RED_INTEGER;
-            case Crowny::TextureFormat::RG32F:				return GL_FLOAT;
-            case Crowny::TextureFormat::RGB8:     			return GL_FLOAT;
-            case Crowny::TextureFormat::RGBA8:				return GL_FLOAT;
-            case Crowny::TextureFormat::RGBA16F:  			return GL_FLOAT;
-            case Crowny::TextureFormat::RGBA32F:  			return GL_FLOAT;
-            case Crowny::TextureFormat::DEPTH32F:     		return GL_FLOAT;
-            case Crowny::TextureFormat::DEPTH24STENCIL8:    return GL_FLOAT;
-            default:		    							CW_ENGINE_ASSERT(false, "Unknown TextureFormat!"); return
-GL_NONE;
-        }
-
-        return GL_NONE;
-    }
-
-    GLenum OpenGLTexture2D::TextureFilterToOpenGLFilter(TextureFilter filter)
-    {
-        switch (filter)
-        {
-            case Crowny::TextureFilter::LINEAR:  return GL_LINEAR;
-            case Crowny::TextureFilter::NEAREST: return GL_NEAREST;
-            default: 							 CW_ENGINE_ASSERT(false, "Unknown TextureFilter!"); return GL_NONE;
-        }
-
-        return GL_NONE;
-    }
-
-    GLenum OpenGLTexture2D::TextureWrapToOpenGLWrap(TextureWrap wrap)
-    {
-        switch (wrap)
-        {
-            case Crowny::TextureWrap::REPEAT:             return GL_REPEAT;
-            case Crowny::TextureWrap::MIRRORED_REPEAT:    return GL_MIRRORED_REPEAT;
-            case Crowny::TextureWrap::CLAMP_TO_EDGE:      return GL_CLAMP_TO_EDGE;
-#ifndef CW_WEB
-            case Crowny::TextureWrap::CLAMP_TO_BORDER:    return GL_CLAMP_TO_BORDER;
-#endif
-            default: 									  CW_ENGINE_ASSERT(false, "Unknown TextureWrap!"); return
-GL_NONE;
-        }
-
-        return GL_NONE;
-    }
-
-#ifndef CW_WEB
-    GLenum OpenGLTexture2D::TextureSwizzleToOpenGLSwizzle(SwizzleType swizzle)
-    {
-        switch (swizzle)
-        {
-            case Crowny::SwizzleType::SWIZZLE_RGBA:  return GL_TEXTURE_SWIZZLE_RGBA;
-            case Crowny::SwizzleType::SWIZZLE_R:     return GL_TEXTURE_SWIZZLE_R;
-            case Crowny::SwizzleType::SWIZZLE_G:     return GL_TEXTURE_SWIZZLE_G;
-            case Crowny::SwizzleType::SWIZZLE_B:     return GL_TEXTURE_SWIZZLE_B;
-            case Crowny::SwizzleType::SWIZZLE_A:     return GL_TEXTURE_SWIZZLE_A;
-            default: 									  CW_ENGINE_ASSERT(false, "Unknown TextureSwizzle!"); return
-GL_NONE;
-        }
-
-        return GL_NONE;
-    }
-#endif
-
-    GLint OpenGLTexture2D::TextureSwizzleColorToOpenGLSwizzleColor(SwizzleChannel color)
-    {
-        switch (color)
-        {
-            case Crowny::SwizzleChannel::RED:     return GL_RED;
-            case Crowny::SwizzleChannel::GREEN:   return GL_GREEN;
-            case Crowny::SwizzleChannel::BLUE:    return GL_BLUE;
-            case Crowny::SwizzleChannel::ALPHA:   return GL_ALPHA;
-            case Crowny::SwizzleChannel::ONE:     return GL_ONE;
-            case Crowny::SwizzleChannel::ZERO:    return GL_ZERO;
-            default: 							  CW_ENGINE_ASSERT(false, "Unknown TextureSwizzleColor!"); return
-GL_NONE;
-        }
-
-        return GL_NONE;
-    }
-
-    OpenGLTexture2D::OpenGLTexture2D(uint32_t width, uint32_t height, const TextureDesc& parameters) :
-m_Width(width), m_Height(height), m_Parameters(parameters)
-    {
-#ifdef MC_WEB
-        glGenTextures(1, &m_RendererID);
-        glBindTexture(GL_TEXTURE_2D, m_RendererID);
-        glTexStorage2D(GL_TEXTURE_2D, 1, TextureFormatToOpenGLInternalFormat(m_Parameters.Format), m_Width, m_Height);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter));
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter));
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, TextureWrapToOpenGLWrap(m_Parameters.Wrap));
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, TextureWrapToOpenGLWrap(m_Parameters.Wrap));
-
-        if (m_Parameters.GenerateMipmaps)
-            glGenerateMipmap(GL_TEXTURE_2D);
-#else
-        glCreateTextures(GL_TEXTURE_2D, 1, &m_RendererID);
-        glTextureStorage2D(m_RendererID, 1, TextureFormatToOpenGLInternalFormat(m_Parameters.Format), m_Width,
-m_Height); glBindTexture(GL_TEXTURE_2D, m_RendererID);
-        //glTexImage2D(GL_TEXTURE_2D, 0, TextureFormatToOpenGLInternalFormat(m_Parameters.Format), m_Width, m_Height, 0,
-TextureFormatToOpenGLFormat(m_Parameters.Format), GL_UNSIGNED_BYTE, nullptr); glTextureParameteri(m_RendererID,
-GL_TEXTURE_MIN_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter)); glTextureParameteri(m_RendererID,
-GL_TEXTURE_MAG_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter));
-
-        glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_S, TextureWrapToOpenGLWrap(m_Parameters.Wrap));
-        glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_T, TextureWrapToOpenGLWrap(m_Parameters.Wrap));
-
-        if (m_Parameters.Swizzle.Type != SwizzleType::NONE)
-        {
-            if (m_Parameters.Swizzle.Type == SwizzleType::SWIZZLE_RGBA)
+            switch (target)
             {
+            case GL_TEXTURE_1D: return GL_TEXTURE_BINDING_1D;
+            case GL_TEXTURE_2D: return GL_TEXTURE_BINDING_2D;
+            case GL_TEXTURE_2D_MULTISAMPLE: return GL_TEXTURE_BINDING_2D_MULTISAMPLE;
+            case GL_TEXTURE_3D: return GL_TEXTURE_BINDING_3D;
+            case GL_TEXTURE_CUBE_MAP: return GL_TEXTURE_BINDING_CUBE_MAP;
+            default: return GL_NONE;
+            }
+        }
 
-                GLint tmp[4];
-                for (int i = 0; i < 4; i++)
-                {
-                    tmp[i] = TextureSwizzleColorToOpenGLSwizzleColor(m_Parameters.Swizzle.Swizzle[i]);
-                }
+        class TextureBinding
+        {
+        public:
+            TextureBinding(GLenum target, GLuint texture) : m_Target(target)
+            {
+                GLint binding = 0;
+                glGetIntegerv(GetBindingQuery(target), &binding);
+                m_Previous = static_cast<GLuint>(binding);
+                glBindTexture(target, texture);
+            }
+            ~TextureBinding() { glBindTexture(m_Target, m_Previous); }
 
-                glTextureParameteriv(m_RendererID, TextureSwizzleToOpenGLSwizzle(m_Parameters.Swizzle.Type), tmp);
+        private:
+            GLenum m_Target;
+            GLuint m_Previous = 0;
+        };
+
+        class PixelStore
+        {
+        public:
+            PixelStore()
+            {
+                glGetIntegerv(GL_PACK_ALIGNMENT, &m_PackAlignment);
+                glGetIntegerv(GL_UNPACK_ALIGNMENT, &m_UnpackAlignment);
+                glGetIntegerv(GL_PACK_ROW_LENGTH, &m_PackRowLength);
+                glGetIntegerv(GL_UNPACK_ROW_LENGTH, &m_UnpackRowLength);
+                glPixelStorei(GL_PACK_ALIGNMENT, 1);
+                glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+                glPixelStorei(GL_PACK_ROW_LENGTH, 0);
+                glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+            }
+            ~PixelStore()
+            {
+                glPixelStorei(GL_PACK_ALIGNMENT, m_PackAlignment);
+                glPixelStorei(GL_UNPACK_ALIGNMENT, m_UnpackAlignment);
+                glPixelStorei(GL_PACK_ROW_LENGTH, m_PackRowLength);
+                glPixelStorei(GL_UNPACK_ROW_LENGTH, m_UnpackRowLength);
+            }
+
+        private:
+            GLint m_PackAlignment = 4;
+            GLint m_UnpackAlignment = 4;
+            GLint m_PackRowLength = 0;
+            GLint m_UnpackRowLength = 0;
+        };
+    } // namespace
+
+    OpenGLTexture::OpenGLTexture() : Texture() {}
+
+    OpenGLTexture::OpenGLTexture(const TextureDesc& parameters) : Texture(parameters) { Init(); }
+
+    OpenGLTexture::OpenGLTexture(const TextureDesc& parameters, bool deferred) : Texture(parameters, deferred) {}
+
+    OpenGLTexture::~OpenGLTexture()
+    {
+        if (m_ReadFramebuffer != 0)
+            glDeleteFramebuffers(1, &m_ReadFramebuffer);
+        if (m_RendererID != 0)
+            glDeleteTextures(1, &m_RendererID);
+    }
+
+    void OpenGLTexture::Init()
+    {
+        if (m_RendererID != 0)
+            return;
+        if (!PrepareForInit())
+            throw std::runtime_error("Could not prepare texture data for OpenGL");
+        if (!PixelUtils::IsValidFormat(m_Desc.Format))
+            throw std::invalid_argument("Cannot create an OpenGL texture with an invalid format");
+        if (m_Desc.Width == 0 || m_Desc.Height == 0 || m_Desc.Depth == 0 || m_Desc.Faces == 0)
+            throw std::invalid_argument("Cannot create an OpenGL texture with a zero-sized dimension");
+        if (m_Desc.Shape == TextureShape::TEXTURE_CUBE && m_Desc.Faces != 6)
+            throw std::invalid_argument("OpenGL cube textures require exactly six faces");
+        if (m_Desc.Samples > 1 && (m_Desc.Shape != TextureShape::TEXTURE_2D || m_Desc.MipLevels != 0))
+            throw std::invalid_argument("Multisampled OpenGL textures must be 2D and cannot have mip levels");
+
+        m_Target = OpenGLUtils::TextureTargetToOpenGL(m_Desc.Shape, m_Desc.Samples);
+        m_Format = OpenGLUtils::TextureFormatToOpenGL(m_Desc.Format, m_Desc.sRGB);
+        glGenTextures(1, &m_RendererID);
+        AllocateStorage();
+
+        UploadPendingSubresources();
+    }
+
+    void OpenGLTexture::AllocateStorage()
+    {
+        TextureBinding binding(m_Target, m_RendererID);
+        if (m_Target == GL_TEXTURE_2D_MULTISAMPLE)
+        {
+            glTexImage2DMultisample(m_Target, static_cast<GLsizei>(m_Desc.Samples), m_Format.InternalFormat,
+                                    static_cast<GLsizei>(m_Desc.Width), static_cast<GLsizei>(m_Desc.Height), GL_TRUE);
+            return;
+        }
+
+        glTexParameteri(m_Target, GL_TEXTURE_MIN_FILTER, m_Desc.MipLevels > 0 ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+        glTexParameteri(m_Target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(m_Target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        if (m_Target != GL_TEXTURE_1D)
+            glTexParameteri(m_Target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        if (m_Target == GL_TEXTURE_3D || m_Target == GL_TEXTURE_CUBE_MAP)
+            glTexParameteri(m_Target, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        glTexParameteri(m_Target, GL_TEXTURE_BASE_LEVEL, 0);
+        glTexParameteri(m_Target, GL_TEXTURE_MAX_LEVEL, static_cast<GLint>(m_Desc.MipLevels));
+
+        for (uint32_t mip = 0; mip <= m_Desc.MipLevels; ++mip)
+        {
+            uint32_t width = 0, height = 0, depth = 0;
+            PixelUtils::GetMipSizeForLevel(m_Desc.Width, m_Desc.Height, m_Desc.Depth, mip, width, height, depth);
+            const GLsizei dataSize = static_cast<GLsizei>(PixelUtils::GetMemorySize(width, height, depth, m_Desc.Format));
+            if (m_Target == GL_TEXTURE_1D)
+            {
+                if (m_Format.Compressed)
+                    glCompressedTexImage1D(m_Target, mip, m_Format.InternalFormat, width, 0, dataSize, nullptr);
+                else
+                    glTexImage1D(m_Target, mip, m_Format.InternalFormat, width, 0, m_Format.TransferFormat, m_Format.TransferType, nullptr);
+            }
+            else if (m_Target == GL_TEXTURE_3D)
+            {
+                if (m_Format.Compressed)
+                    glCompressedTexImage3D(m_Target, mip, m_Format.InternalFormat, width, height, depth, 0, dataSize, nullptr);
+                else
+                    glTexImage3D(m_Target, mip, m_Format.InternalFormat, width, height, depth, 0, m_Format.TransferFormat, m_Format.TransferType,
+                                 nullptr);
             }
             else
             {
-                glTextureParameteri(m_RendererID, TextureSwizzleToOpenGLSwizzle(m_Parameters.Swizzle.Type),
-TextureSwizzleColorToOpenGLSwizzleColor(m_Parameters.Swizzle.Swizzle[0]));
+                const uint32_t faceCount = m_Target == GL_TEXTURE_CUBE_MAP ? 6 : 1;
+                const GLsizei faceSize = static_cast<GLsizei>(PixelUtils::GetMemorySize(width, height, 1, m_Desc.Format));
+                for (uint32_t face = 0; face < faceCount; ++face)
+                {
+                    const GLenum target = GetTransferTarget(face);
+                    if (m_Format.Compressed)
+                        glCompressedTexImage2D(target, mip, m_Format.InternalFormat, width, height, 0, faceSize, nullptr);
+                    else
+                        glTexImage2D(target, mip, m_Format.InternalFormat, width, height, 0, m_Format.TransferFormat, m_Format.TransferType, nullptr);
+                }
             }
         }
-
-        if (m_Parameters.GenerateMipmaps)
-            glGenerateTextureMipmap(m_RendererID);
-#endif
     }
 
-    OpenGLTexture2D::OpenGLTexture2D(const Path& filepath, const TextureDesc& parameters, const
-String& name) : m_FilePath(filepath), m_Parameters(parameters), m_Name(name)
+    GLenum OpenGLTexture::GetTransferTarget(uint32_t face) const
     {
-        int width, height, channels;
-        stbi_set_flip_vertically_on_load(1);
+        return m_Target == GL_TEXTURE_CUBE_MAP ? GL_TEXTURE_CUBE_MAP_POSITIVE_X + face : m_Target;
+    }
 
-        auto [loaded, size] = VirtualFileSystem::Get()->ReadFile(filepath);
-        auto* data = stbi_load_from_memory(loaded, size, &width, &height, &channels, 0);
+    void OpenGLTexture::ValidateSurface(uint32_t mipLevel, uint32_t face) const
+    {
+        CW_ENGINE_ASSERT(mipLevel <= m_Desc.MipLevels, "OpenGL texture mip level is out of range");
+        CW_ENGINE_ASSERT(face < m_Desc.Faces, "OpenGL texture face is out of range");
+        CW_ENGINE_ASSERT(m_Target != GL_TEXTURE_2D_MULTISAMPLE, "Multisampled OpenGL textures cannot be read or written directly");
+    }
 
-        CW_ENGINE_ASSERT(data, "Failed to load texture!");
-        m_Width = width;
-        m_Height = height;
+    PixelData OpenGLTexture::Lock(GpuLockOptions options, uint32_t mipLevel, uint32_t face, uint32_t queueIdx)
+    {
+        (void)queueIdx;
+        CW_ENGINE_ASSERT(!m_IsMapped, "OpenGL texture is already locked");
+        ValidateSurface(mipLevel, face);
+        uint32_t width = 0, height = 0, depth = 0;
+        PixelUtils::GetMipSizeForLevel(m_Desc.Width, m_Desc.Height, m_Desc.Depth, mipLevel, width, height, depth);
+        PixelData data(width, height, depth, m_Desc.Format);
+        data.AllocateInternalBuffer();
+        if (options == GpuLockOptions::READ_ONLY || options == GpuLockOptions::READ_WRITE || options == GpuLockOptions::WRITE_ONLY_NO_OVERWRITE)
+            ReadData(data, mipLevel, face);
+        m_MappedData = data.GetData();
+        m_MappedMip = mipLevel;
+        m_MappedFace = face;
+        m_MappedOptions = options;
+        m_IsMapped = true;
+        return data;
+    }
 
-        if (channels == 4)
+    void OpenGLTexture::Unlock()
+    {
+        CW_ENGINE_ASSERT(m_IsMapped, "OpenGL texture is not locked");
+        if (m_MappedOptions != GpuLockOptions::READ_ONLY)
         {
-            m_Parameters.Format = TextureFormat::RGBA8;
+            const Ref<PixelData> view = AllocatePixelData(m_MappedFace, m_MappedMip);
+            view->Clear();
+            view->SetBuffer(m_MappedData);
+            WriteData(*view, m_MappedMip, m_MappedFace);
         }
-        else if (channels == 3)
+        m_MappedData = nullptr;
+        m_IsMapped = false;
+    }
+
+    void OpenGLTexture::ReadData(PixelData& dest, uint32_t mipLevel, uint32_t face, uint32_t queueIdx)
+    {
+        (void)queueIdx;
+        ValidateSurface(mipLevel, face);
+        CW_ENGINE_ASSERT(dest.GetFormat() == m_Desc.Format, "OpenGL texture read format does not match");
+        CW_ENGINE_ASSERT(dest.IsValid(), "OpenGL texture read destination is invalid");
+        TextureBinding binding(m_Target, m_RendererID);
+        PixelStore pixelStore;
+        if (m_Format.Compressed)
+            glGetCompressedTexImage(GetTransferTarget(face), mipLevel, dest.GetData());
+        else
+            glGetTexImage(GetTransferTarget(face), mipLevel, m_Format.TransferFormat, m_Format.TransferType, dest.GetData());
+    }
+
+    bool OpenGLTexture::ReadPixel(uint32_t x, uint32_t y, void* dest, size_t destSize, uint32_t mipLevel, uint32_t face,
+                                  uint32_t queueIdx)
+    {
+        (void)queueIdx;
+        if (dest == nullptr || m_Format.Compressed || m_Target == GL_TEXTURE_2D_MULTISAMPLE || mipLevel > m_Desc.MipLevels ||
+            face >= m_Desc.Faces)
+            return false;
+
+        uint32_t width = 0;
+        uint32_t height = 0;
+        uint32_t depth = 0;
+        PixelUtils::GetMipSizeForLevel(m_Desc.Width, m_Desc.Height, m_Desc.Depth, mipLevel, width, height, depth);
+        if (x >= width || y >= height)
+            return false;
+
+        const size_t pixelSize = PixelUtils::GetMemorySize(1, 1, 1, m_Desc.Format);
+        if (pixelSize == 0 || destSize < pixelSize)
+            return false;
+
+        PixelStore pixelStore;
+        if (glad_glGetTextureSubImage != nullptr)
         {
-            m_Parameters.Format = TextureFormat::RGB8;
+            const GLint zOffset = m_Desc.Shape == TextureShape::TEXTURE_CUBE ? static_cast<GLint>(face) : 0;
+            glGetTextureSubImage(m_RendererID, static_cast<GLint>(mipLevel), static_cast<GLint>(x), static_cast<GLint>(y), zOffset, 1, 1, 1,
+                                 m_Format.TransferFormat, m_Format.TransferType, static_cast<GLsizei>(destSize), dest);
+            return true;
         }
-        else if (channels == 1)
+
+        if (m_Target == GL_TEXTURE_2D || m_Target == GL_TEXTURE_CUBE_MAP)
         {
-            m_Parameters.Format = TextureFormat::R8;
+            GLint previousFramebuffer = 0;
+            glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &previousFramebuffer);
+            if (m_ReadFramebuffer == 0)
+                glGenFramebuffers(1, &m_ReadFramebuffer);
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, m_ReadFramebuffer);
+            glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GetTransferTarget(face), m_RendererID,
+                                   static_cast<GLint>(mipLevel));
+            glReadBuffer(GL_COLOR_ATTACHMENT0);
+            const bool complete = glCheckFramebufferStatus(GL_READ_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+            if (complete)
+                glReadPixels(static_cast<GLint>(x), static_cast<GLint>(y), 1, 1, m_Format.TransferFormat, m_Format.TransferType, dest);
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(previousFramebuffer));
+            return complete;
         }
 
-#ifdef MC_WEB
-        glGenTextures(1, &m_RendererID);
-        glBindTexture(GL_TEXTURE_2D, m_RendererID);
-        glTexStorage2D(GL_TEXTURE_2D, 1, TextureFormatToOpenGLInternalFormat(m_Parameters.Format), m_Width, m_Height);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter));
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter));
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, TextureWrapToOpenGLWrap(m_Parameters.Wrap));
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, TextureWrapToOpenGLWrap(m_Parameters.Wrap));
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_Width, m_Height, TextureFormatToOpenGLFormat(m_Parameters.Format),
-GL_UNSIGNED_BYTE, data); glGenerateMipmap(GL_TEXTURE_2D); #else glCreateTextures(GL_TEXTURE_2D, 1, &m_RendererID);
-        glTextureStorage2D(m_RendererID, 1, TextureFormatToOpenGLInternalFormat(m_Parameters.Format), m_Width,
-m_Height);
-
-        glTextureParameteri(m_RendererID, GL_TEXTURE_MIN_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter));
-        glTextureParameteri(m_RendererID, GL_TEXTURE_MAG_FILTER, TextureFilterToOpenGLFilter(m_Parameters.Filter));
-
-        glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_S, TextureWrapToOpenGLWrap(m_Parameters.Wrap));
-        glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_T, TextureWrapToOpenGLWrap(m_Parameters.Wrap));
-        glTextureSubImage2D(m_RendererID, 0, 0, 0, m_Width, m_Height, TextureFormatToOpenGLFormat(m_Parameters.Format),
-GL_UNSIGNED_BYTE, data);
-
-        if (m_Parameters.GenerateMipmaps)
-            glGenerateTextureMipmap(m_RendererID);
-#endif
-
-        CW_ENGINE_INFO("Loaded texture {0}, {1}x{2}x{3}.", m_FilePath, m_Width, m_Height, channels);
-        stbi_image_free(data);
-        delete loaded;
+        Ref<PixelData> surface = AllocatePixelData(face, mipLevel);
+        ReadData(*surface, mipLevel, face);
+        const size_t offset = static_cast<size_t>(y) * surface->GetRowPitch() + static_cast<size_t>(x) * pixelSize;
+        if (offset + pixelSize > surface->GetSize())
+            return false;
+        std::memcpy(dest, surface->GetData() + offset, pixelSize);
+        return true;
     }
 
-    OpenGLTexture2D::~OpenGLTexture2D()
+    void OpenGLTexture::WriteData(const PixelData& src, uint32_t mipLevel, uint32_t face, uint32_t queueIdx)
     {
-        glDeleteTextures(1, &m_RendererID);
+        (void)queueIdx;
+        ValidateSurface(mipLevel, face);
+        CW_ENGINE_ASSERT(src.GetFormat() == m_Desc.Format, "OpenGL texture write format does not match");
+        CW_ENGINE_ASSERT(src.IsValid(), "OpenGL texture write source is invalid");
+        uint32_t width = 0, height = 0, depth = 0;
+        PixelUtils::GetMipSizeForLevel(m_Desc.Width, m_Desc.Height, m_Desc.Depth, mipLevel, width, height, depth);
+        CW_ENGINE_ASSERT(src.GetWidth() == width && src.GetHeight() == height && src.GetDepth() == depth,
+                         "OpenGL texture write dimensions do not match the target mip");
+
+        TextureBinding binding(m_Target, m_RendererID);
+        PixelStore pixelStore;
+        const GLenum target = GetTransferTarget(face);
+        if (m_Target == GL_TEXTURE_1D)
+        {
+            if (m_Format.Compressed)
+                glCompressedTexSubImage1D(target, mipLevel, 0, width, m_Format.InternalFormat, static_cast<GLsizei>(src.GetSize()), src.GetData());
+            else
+                glTexSubImage1D(target, mipLevel, 0, width, m_Format.TransferFormat, m_Format.TransferType, src.GetData());
+        }
+        else if (m_Target == GL_TEXTURE_3D)
+        {
+            if (m_Format.Compressed)
+                glCompressedTexSubImage3D(target, mipLevel, 0, 0, 0, width, height, depth, m_Format.InternalFormat,
+                                          static_cast<GLsizei>(src.GetSize()), src.GetData());
+            else
+                glTexSubImage3D(target, mipLevel, 0, 0, 0, width, height, depth, m_Format.TransferFormat, m_Format.TransferType, src.GetData());
+        }
+        else if (m_Format.Compressed)
+            glCompressedTexSubImage2D(target, mipLevel, 0, 0, width, height, m_Format.InternalFormat, static_cast<GLsizei>(src.GetSize()),
+                                      src.GetData());
+        else
+            glTexSubImage2D(target, mipLevel, 0, 0, width, height, m_Format.TransferFormat, m_Format.TransferType, src.GetData());
+
+        if (m_Desc.GenerateMipmaps && mipLevel == 0 && m_Desc.MipLevels > 0)
+            glGenerateMipmap(m_Target);
     }
 
-    void OpenGLTexture2D::Clear(int32_t clearColor)
+    void OpenGLTexture::Bind(uint32_t slot) const
     {
-        glClearTexImage(m_RendererID, 0, TextureFormatToOpenGLType(m_Parameters.Format), GL_INT, &clearColor);
-    }
-
-    void OpenGLTexture2D::SetData(void* data, uint32_t size)
-    {
-        uint32_t bpp = m_Parameters.Format == TextureFormat::RGBA8 ? 4 : 3; // TODO: Fix this!
-        //CW_ENGINE_ASSERT(size == m_Width * m_Height * bpp, "Data must be an entire texture!");
-#ifdef MC_WEB
-        glBindTexture(GL_TEXTURE_2D, m_RendererID);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_Width, m_Height, TextureFormatToOpenGLFormat(m_Parameters.Format),
-GL_UNSIGNED_BYTE, data); #else glTextureSubImage2D(m_RendererID, 0, 0, 0, m_Width, m_Height,
-TextureFormatToOpenGLFormat(m_Parameters.Format), GL_UNSIGNED_BYTE, data); #endif
-    }
-
-    void OpenGLTexture2D::SetData(void* data, TextureChannel channel)
-    {
-#ifdef MC_WEB
-        glBindTexture(GL_TEXTURE_2D, m_RendererID);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_Width, m_Height, TextureChannelToOpenGLChannel(channel),
-GL_UNSIGNED_BYTE, data); #else glTextureSubImage2D(m_RendererID, 0, 0, 0, m_Width, m_Height,
-TextureChannelToOpenGLChannel(channel), GL_UNSIGNED_BYTE, data); #endif
-    }
-
-    void OpenGLTexture2D::Bind(uint32_t slot) const
-    {
-#ifdef MC_WEB
         glActiveTexture(GL_TEXTURE0 + slot);
-        glBindTexture(GL_TEXTURE_2D, m_RendererID);
-#else
-        glBindTextureUnit(slot, m_RendererID);
-#endif
+        glBindTexture(m_Target, m_RendererID);
     }
 
-    void OpenGLTexture2D::Unbind(uint32_t slot) const
+    void OpenGLTexture::Unbind(uint32_t slot) const
     {
-        glBindTextureUnit(slot, 0);
+        glActiveTexture(GL_TEXTURE0 + slot);
+        glBindTexture(m_Target, 0);
     }
-
-}*/
+} // namespace Crowny

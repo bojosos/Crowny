@@ -31,6 +31,8 @@ namespace Crowny
 
         virtual void SetUniformBlockBuffer(uint32_t set, uint32_t slot, const Ref<UniformBufferBlock>& uniformBlock) override;
         virtual void SetTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture, const TextureSurface& surface) override;
+        virtual void SetTextureArray(uint32_t set, uint32_t slot, const Ref<Texture>* textures, uint32_t count,
+                                     const TextureSurface* surfaces = nullptr) override;
         virtual void SetSamplerState(uint32_t set, uint32_t slot, const Ref<SamplerState>& sampler) override;
         virtual void SetLoadStoreTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture, const TextureSurface& surface) override;
         virtual void SetBuffer(uint32_t set, uint32_t slot, const Ref<GenericGpuBuffer>& buffer) override;
@@ -63,6 +65,7 @@ namespace Crowny
             Vector<VulkanDescriptorSet*> Sets;
             VkWriteDescriptorSet* WriteSetInfos = nullptr;
             WriteInfo* WriteInfos = nullptr;
+            VkDescriptorImageInfo** ImageArrayInfos = nullptr;
             uint32_t Count = 0;
         };
 

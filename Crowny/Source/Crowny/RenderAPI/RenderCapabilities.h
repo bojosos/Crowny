@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Common/StringUtils.h"
+#include "Crowny/Renderer/RenderTypes.h"
 
 namespace Crowny
 {
@@ -21,7 +22,22 @@ namespace Crowny
         CW_BYTECODE_CACHING = 9,
         CW_RENDER_TARGET_LAYERS = 10,
         CW_MULTITHREADED_CB = 11,
-        CAPS_CATEGORY_COUNT = 12
+        CW_MULTI_DRAW_INDIRECT = 12,
+        CW_DRAW_INDIRECT_COUNT = 13,
+        CW_SHADER_DRAW_PARAMETERS = 14,
+        CW_DESCRIPTOR_INDEXING = 15,
+        CW_NON_UNIFORM_TEXTURE_INDEXING = 16,
+        CW_UPDATE_AFTER_BIND = 17,
+        CW_BUFFER_DEVICE_ADDRESS = 18,
+        CW_TIMELINE_SEMAPHORE = 19,
+        CW_SYNCHRONIZATION_2 = 20,
+        CW_DYNAMIC_RENDERING = 21,
+        CW_MESH_SHADER = 22,
+        CW_RAY_TRACING = 23,
+        CW_DEDICATED_COMPUTE_QUEUE = 24,
+        CW_DEDICATED_TRANSFER_QUEUE = 25,
+        CW_TEXTURE_COMPRESSION_BPTC = 26,
+        CAPS_CATEGORY_COUNT = 27
     };
 
     struct Conventions
@@ -102,6 +118,10 @@ namespace Crowny
         uint16_t MaxBoundVertexBuffers = 0;
         uint16_t NumMultiRenderTargets = 0;
         uint16_t GeometryShaderNumOutputVertices = 0;
+        uint32_t MaxDrawIndirectCount = 0;
+        uint32_t MaxBindlessSampledImages = 0;
+        uint64_t MaxStorageBufferRange = 0;
+        bool IntegratedGpu = false;
 
         float horizontalTextelOffset = 0.0f;
         float verticalTexelOffset = 0.0f;
@@ -113,16 +133,26 @@ namespace Crowny
 
         void SetCapability(const Capabilities c)
         {
-            // uint64_t idx = (CAPS_CATEGORY_MASK & c) >> BS_CAPS_BITSHIFT;
-            // m_Capabilities[idx] |= (c & ~CAPS_CATEGORY_MASK);
+            const uint64_t index = static_cast<uint64_t>(c);
+            if (index < CAPS_CATEGORY_COUNT)
+                m_Capabilities[index] = true;
+        }
+
+        void UnsetCapability(const Capabilities c)
+        {
+            const uint64_t index = static_cast<uint64_t>(c);
+            if (index < CAPS_CATEGORY_COUNT)
+                m_Capabilities[index] = false;
         }
 
         bool HasCapability(const Capabilities c) const
         {
-            // uint64_t idx = (CAPS_CATEGORY_MASK & c) >> BS_CAPS_BITSHIFT;
-            // return (m_Capabilities[idx] & (c & ~CAPS_CATEGORY_MASK)) != 0;
-            return true;
+            const uint64_t index = static_cast<uint64_t>(c);
+            return index < CAPS_CATEGORY_COUNT && m_Capabilities[index];
         }
+
+        RenderFeatureTier GetFeatureTier() const;
+        RenderingPath ResolveRenderingPath(RenderingPath requested) const;
 
         void AddShaderProfile(const String& profile) { m_SupportedShaderProfiles.insert(profile); }
 
@@ -139,7 +169,7 @@ namespace Crowny
     private:
         static char const* const GPU_VENDOR_STRINGS[GPU_VENDOR_COUNT];
 
-        uint32_t m_Capabilities[CAPS_CATEGORY_COUNT]{ 0 };
+        Array<bool, CAPS_CATEGORY_COUNT> m_Capabilities{};
         Set<String> m_SupportedShaderProfiles;
     };
 

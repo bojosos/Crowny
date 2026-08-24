@@ -1,18 +1,12 @@
 #include "cwpch.h"
 
-#include "Crowny/Common/StringUtils.h"
 #include "Crowny/Import/NodeGraphImporter.h"
 #include "Crowny/NodeGraph/NodeGraphAsset.h"
 #include "Crowny/Serialization/NodeGraphSerializer.h"
 
 namespace Crowny
 {
-    bool NodeGraphImporter::IsExtensionSupported(const String& ext) const
-    {
-        String lower = ext;
-        StringUtils::ToLower(lower);
-        return lower == "cwng";
-    }
+    bool NodeGraphImporter::IsExtensionSupported(const String& ext) const { return ext == "cwng"; }
 
     bool NodeGraphImporter::IsMagicNumSupported(uint8_t* num, uint32_t numSize) const { return false; }
 
@@ -20,8 +14,7 @@ namespace Crowny
     {
         Ref<NodeGraph> tempGraph;
         NodeGraphSerializer serializer(tempGraph);
-        serializer.Deserialize(path);
-        if (!tempGraph)
+        if (!serializer.Deserialize(path) || !tempGraph)
             return nullptr;
         const Ref<NodeGraphAsset> asset = CreateRef<NodeGraphAsset>();
         asset->SetGraph(tempGraph);

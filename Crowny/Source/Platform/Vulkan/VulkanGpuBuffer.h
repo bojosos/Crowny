@@ -65,6 +65,7 @@ namespace Crowny
             BUFFER_UNIFORM,
             BUFFER_GENERIC,
             BUFFER_STRUCTURED,
+            BUFFER_INDIRECT,
             BUFFER_RAYTRACING, // Maybe move to usage?
             BUFFER_SHADER_TABLE
         };

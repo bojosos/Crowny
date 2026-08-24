@@ -11,10 +11,13 @@ namespace Crowny
     {
         AssemblyRefreshInfo() = default;
         AssemblyRefreshInfo(const char* name, const Path* path /*, const BuiltinTypeMappings* typeMappings*/)
-          : Name(name), Filepath(path) {} //, TypeMappings(typeMappings) { }
+          : Name(name != nullptr ? name : ""), Filepath(path != nullptr ? *path : Path())
+        {
+        } //, TypeMappings(typeMappings) { }
+        AssemblyRefreshInfo(String name, Path path) : Name(std::move(name)), Filepath(std::move(path)) {}
 
-        const char* Name = nullptr;
-        const Path* Filepath = nullptr;
+        String Name;
+        Path Filepath;
         // const BuiltinTypeMappings* TypeMappings = nullptr;
     };
 
@@ -27,7 +30,7 @@ namespace Crowny
         void RegisterScriptObject(ScriptObjectBase* instance);
         void UnregisterScriptObject(ScriptObjectBase* instance);
 
-        void RefreshAssemblies(const Vector<AssemblyRefreshInfo>& assemblies);
+        bool RefreshAssemblies(const Vector<AssemblyRefreshInfo>& assemblies);
         void Update();
         void NotifyObjectFinalized(ScriptObjectBase* instance);
         void ProcessFinalizedObjects(bool assemblyRefresh = false);

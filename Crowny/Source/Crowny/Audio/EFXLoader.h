@@ -4,8 +4,20 @@
 #include <AL/alc.h>
 #include <AL/efx.h>
 
+#include <cstdint>
+
 namespace Crowny
 {
+    enum class EFXLoadStatus : uint8_t
+    {
+        NotLoaded,
+        Available,
+        NoDevice,
+        NoCurrentContext,
+        ExtensionUnavailable,
+        MissingEntrypoint,
+        EffectCreationFailed,
+    };
 
     // Wrapper around the ALC_EXT_EFX extension entrypoints.
     // The struct holds function pointers loaded once at AudioManager startup.
@@ -49,8 +61,13 @@ namespace Crowny
         // Whether ALC_EAXREVERB is supported. Falls back to AL_REVERB otherwise.
         bool HasEAXReverb = false;
 
+        EFXLoadStatus Status = EFXLoadStatus::NotLoaded;
+        const char* MissingEntrypoint = nullptr;
+
         bool Load(ALCdevice* device);
         void Reset();
+        const char* GetMissingRequiredEntrypoint() const;
+        static const char* GetStatusName(EFXLoadStatus status);
     };
 
 } // namespace Crowny

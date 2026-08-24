@@ -24,6 +24,13 @@ namespace Crowny
         String DebugName;
     };
 
+    struct TextureSubresourceData
+    {
+        uint32_t MipLevel = 0;
+        uint32_t Face = 0;
+        Ref<PixelData> Pixels;
+    };
+
     class Texture : public Asset
     {
     public:
@@ -41,6 +48,8 @@ namespace Crowny
         virtual void Unlock() = 0;
         // virtual void Copy(const Ref<Texture>& target, )
         virtual void ReadData(PixelData& dest, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) = 0;
+        virtual bool ReadPixel(uint32_t x, uint32_t y, void* dest, size_t destSize, uint32_t mipLevel = 0, uint32_t face = 0,
+                               uint32_t queueIdx = 0) = 0;
         virtual void WriteData(const PixelData& src, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) = 0;
 
         const TextureDesc& GetDesc() const { return m_Desc; }
@@ -48,6 +57,16 @@ namespace Crowny
         Ref<TextureView> RequestView(uint32_t mip, uint32_t numMips, uint32_t firstFace, uint32_t numFaces, GpuViewUsage usage);
 
         Ref<PixelData> AllocatePixelData(uint32_t face, uint32_t mipLevel) const;
+
+        TextureDiskFormat GetDiskFormat() const { return m_DiskFormat; }
+        TextureFormat GetSourceFormat() const { return m_SourceFormat; }
+        bool HasEncodedSourceData() const { return !m_EncodedSourceData.empty(); }
+        const Vector<uint8_t>& GetEncodedSourceData() const { return m_EncodedSourceData; }
+        bool IsCpuCached() const { return m_KeepData; }
+        void SetCpuCached(bool cached) { m_KeepData = cached; }
+        void SetEncodedSourceData(TextureDiskFormat diskFormat, TextureFormat sourceFormat, Vector<uint8_t> data);
+        void SetPendingSubresources(Vector<TextureSubresourceData> subresources);
+        void ReleaseSourceData();
 
         CW_SERIALIZABLE(Texture);
 
@@ -58,6 +77,8 @@ namespace Crowny
     public:
         static Ref<Texture> WHITE;
         static Ref<Texture> BLACK;
+        static Ref<Texture> NORMAL;
+        static Ref<Texture> MISSING;
 
     protected:
         UnorderedMap<TextureViewDesc, Ref<TextureView>, TextureView::HashFunction, TextureView::EqualFunction> m_TextureViews;
@@ -65,8 +86,14 @@ namespace Crowny
         Texture(const TextureDesc& params, bool deferred); // Deferred init — no GPU work
         Texture() = default;                                     // For serialization only
 
+        bool PrepareForInit();
+        void UploadPendingSubresources();
+
         TextureDesc m_Desc;
-        Ref<PixelData> m_PendingPixelData; // Stored during import, uploaded in Init()
+        TextureDiskFormat m_DiskFormat = TextureDiskFormat::None;
+        TextureFormat m_SourceFormat = TextureFormat::NONE;
+        Vector<uint8_t> m_EncodedSourceData;
+        Vector<TextureSubresourceData> m_PendingSubresources;
     };
 
 } // namespace Crowny

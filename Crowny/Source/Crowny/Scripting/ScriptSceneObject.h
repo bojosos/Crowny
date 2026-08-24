@@ -17,6 +17,7 @@ namespace Crowny
         void SetNativeEntity(Entity entity) { m_Entity = entity; }
 
         MonoObject* GetManagedInstance() const;
+        virtual void NotifyDestroyed() { FreeManagedInstance(); }
 
     protected:
         void SetManagedInstance(MonoObject* instance);

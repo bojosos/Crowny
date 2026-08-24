@@ -1,0 +1,24 @@
+#ifndef CROWNY_SHADOW_TYPES_GLSL
+#define CROWNY_SHADOW_TYPES_GLSL
+
+const uint CW_SHADOW_VALID = 1u << 0u;
+const uint CW_SHADOW_CUBE = 1u << 1u;
+const uint CW_SHADOW_SOFT = 1u << 2u;
+
+struct CwShadowLightRecord
+{
+    uint viewOffset;
+    uint viewCount;
+    uint type;
+    uint flags;
+};
+
+struct CwShadowViewRecord
+{
+    mat4 viewProjection;
+    vec4 atlasScaleBias;
+    vec4 splitDepthBias;
+    uvec4 metadata;
+};
+
+#endif

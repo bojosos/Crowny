@@ -1,5 +1,7 @@
 #include "cwpch.h"
 
+#include <mono/metadata/class.h>
+
 #include "Crowny/Scripting/Mono/MonoProperty.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/Serialization/SerializableField.h"
@@ -140,13 +142,32 @@ namespace Crowny
 
     ::MonoClass* SerializableTypeInfoEntity::GetMonoClass() const { return ScriptEntity::GetMetaData()->ScriptClass->GetInternalPtr(); }
 
+    bool SerializableTypeInfoAsset::Matches(const Ref<SerializableTypeInfo>& typeInfo) const
+    {
+        return typeInfo->GetType() == SerializableType::Asset && StaticRefCast<SerializableTypeInfoAsset>(typeInfo)->Type == Type;
+    }
+
+    ::MonoClass* SerializableTypeInfoAsset::GetMonoClass() const
+    {
+        AssetInfo* assetInfo = ScriptInfoManager::Get().GetAssetInfo(Type);
+        return assetInfo != nullptr && assetInfo->AssetClass != nullptr ? assetInfo->AssetClass->GetInternalPtr() : nullptr;
+    }
+
+    bool SerializableTypeInfoList::Matches(const Ref<SerializableTypeInfo>& typeInfo) const
+    {
+        if (typeInfo->GetType() != SerializableType::List)
+            return false;
+        const Ref<SerializableTypeInfoList> listInfo = StaticRefCast<SerializableTypeInfoList>(typeInfo);
+        return m_ElementType != nullptr && listInfo->m_ElementType != nullptr && m_ElementType->Matches(listInfo->m_ElementType);
+    }
+
     bool SerializableTypeInfoObject::Matches(const Ref<SerializableTypeInfo>& typeInfo) const
     {
         if (typeInfo->GetType() == SerializableType::Object)
         {
             const auto* objTypeInfo = static_cast<SerializableTypeInfoObject*>(typeInfo.get());
             return objTypeInfo->m_TypeNamespace == m_TypeNamespace && objTypeInfo->m_TypeName == m_TypeName &&
-                   objTypeInfo->m_ValueType == m_ValueType && objTypeInfo->m_TypeId == m_TypeId;
+                   objTypeInfo->m_ValueType == m_ValueType;
         }
         return false;
     }
@@ -164,9 +185,24 @@ namespace Crowny
         if (typeInfo->GetType() == SerializableType::Array)
         {
             const auto* arrayTypeInfo = static_cast<SerializableTypeInfoArray*>(typeInfo.get());
-            return arrayTypeInfo->m_ElementType == m_ElementType;
+            return m_ElementType != nullptr && arrayTypeInfo->m_ElementType != nullptr && m_ElementType->Matches(arrayTypeInfo->m_ElementType);
         }
         return false;
+    }
+
+    ::MonoClass* SerializableTypeInfoArray::GetMonoClass() const
+    {
+        ::MonoClass* elementClass = m_ElementType != nullptr ? m_ElementType->GetMonoClass() : nullptr;
+        return elementClass != nullptr ? mono_array_class_get(elementClass, 1) : nullptr;
+    }
+
+    bool SerializableTypeInfoDictionary::Matches(const Ref<SerializableTypeInfo>& typeInfo) const
+    {
+        if (typeInfo->GetType() != SerializableType::Dictionary)
+            return false;
+        const Ref<SerializableTypeInfoDictionary> dictionaryInfo = StaticRefCast<SerializableTypeInfoDictionary>(typeInfo);
+        return m_KeyType != nullptr && m_ValueType != nullptr && dictionaryInfo->m_KeyType != nullptr && dictionaryInfo->m_ValueType != nullptr &&
+               m_KeyType->Matches(dictionaryInfo->m_KeyType) && m_ValueType->Matches(dictionaryInfo->m_ValueType);
     }
 
 } // namespace Crowny

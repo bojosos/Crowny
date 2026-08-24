@@ -6,7 +6,7 @@
 
 namespace Crowny
 {
-    GeometryOutputNode::GeometryOutputNode(UUID id) : Node(id, "GeometryOutputNode") { AddInput("Geometry", PinDataType::MeshData); }
+    GeometryOutputNode::GeometryOutputNode(UUID id) : Node(id, "GeometryOutputNode"_sid) { AddInput("Geometry"_sid, PinDataType::MeshData); }
 
     void GeometryOutputNode::Evaluate(NodeGraphEvaluator& evaluator)
     {

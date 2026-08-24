@@ -7,6 +7,19 @@
 
 namespace Crowny
 {
+    struct ManagedSerializationContext
+    {
+        UnorderedMap<MonoObject*, Ref<SerializableObject>> Objects;
+        Set<const SerializableObject*> Serialized;
+    };
+
+    struct ManagedDeserializationContext
+    {
+        UnorderedMap<const SerializableObject*, MonoObject*> Objects;
+    };
+
+    static thread_local ManagedSerializationContext* s_SerializationContext = nullptr;
+    static thread_local ManagedDeserializationContext* s_DeserializationContext = nullptr;
 
     SerializableObject::SerializableObject(Ref<SerializableObjectInfo> objInfo, MonoObject* managedInstance) : m_ObjectInfo(objInfo)
     {
@@ -28,6 +41,16 @@ namespace Crowny
     {
         if (m_GCHandle == 0)
             return;
+
+        ManagedSerializationContext localContext;
+        const bool ownsContext = s_SerializationContext == nullptr;
+        if (ownsContext)
+            s_SerializationContext = &localContext;
+        if (!s_SerializationContext->Serialized.insert(this).second)
+            return;
+
+        MonoObject* managedInstance = MonoUtils::GetObjectFromGCHandle(m_GCHandle);
+        s_SerializationContext->Objects[managedInstance] = Ref<SerializableObject>(this);
         m_CachedData.clear();
 
         Ref<SerializableObjectInfo> type = m_ObjectInfo;
@@ -49,16 +72,32 @@ namespace Crowny
 
         MonoUtils::FreeGCHandle(m_GCHandle);
         m_GCHandle = 0;
+        if (ownsContext)
+            s_SerializationContext = nullptr;
     }
 
     MonoObject* SerializableObject::Deserialize()
     {
+        ManagedDeserializationContext localContext;
+        const bool ownsContext = s_DeserializationContext == nullptr;
+        if (ownsContext)
+            s_DeserializationContext = &localContext;
+        const auto existing = s_DeserializationContext->Objects.find(this);
+        if (existing != s_DeserializationContext->Objects.end())
+            return existing->second;
+
         Ref<SerializableObjectInfo> objInfo = nullptr;
         if (!ScriptInfoManager::Get().GetSerializableObjectInfo(m_ObjectInfo->m_TypeInfo->m_TypeNamespace, m_ObjectInfo->m_TypeInfo->m_TypeName,
                                                                 objInfo))
+        {
+            if (ownsContext)
+                s_DeserializationContext = nullptr;
             return nullptr;
+        }
         MonoObject* const managedInstance = CreateManagedInstance(objInfo->m_TypeInfo);
         Deserialize(managedInstance, objInfo);
+        if (ownsContext)
+            s_DeserializationContext = nullptr;
         return managedInstance;
     }
 
@@ -364,8 +403,20 @@ namespace Crowny
     {
         if (instance == nullptr)
             return;
+
+        ManagedDeserializationContext localContext;
+        const bool ownsContext = s_DeserializationContext == nullptr;
+        if (ownsContext)
+            s_DeserializationContext = &localContext;
+        s_DeserializationContext->Objects[this] = instance;
+        if (m_GCHandle == 0)
+            m_GCHandle = MonoUtils::NewGCHandle(instance, false);
+
         for (auto& fieldEntry : m_CachedData)
-            fieldEntry.second->Deserialize();
+        {
+            if (fieldEntry.second != nullptr)
+                fieldEntry.second->Deserialize();
+        }
 
         Ref<SerializableObjectInfo> type = m_ObjectInfo;
         while (type != nullptr)
@@ -382,12 +433,14 @@ namespace Crowny
                     {
                         const auto iterFind = m_CachedData.find(key);
                         if (iterFind != m_CachedData.end())
-                            fieldInfo->SetValue(instance, iterFind->second->GetValue());
+                            fieldInfo->SetValue(instance, iterFind->second->GetValue(fieldInfo->m_TypeInfo));
                     }
                 }
             }
             type = type->m_BaseClass;
         }
+        if (ownsContext)
+            s_DeserializationContext = nullptr;
     }
 
     Ref<SerializableFieldData> SerializableObject::GetFieldData(const Ref<SerializableMemberInfo>& fieldInfo) const
@@ -415,7 +468,7 @@ namespace Crowny
         if (m_GCHandle != 0)
         {
             MonoObject* managedInstance = MonoUtils::GetObjectFromGCHandle(m_GCHandle);
-            fieldInfo->SetValue(managedInstance, val->GetValue(/*fieldInfo->m_TypeInfo*/));
+            fieldInfo->SetValue(managedInstance, val->GetValue(fieldInfo->m_TypeInfo));
         }
         else
         {
@@ -446,12 +499,38 @@ namespace Crowny
     {
         if (managedInstance == nullptr)
             return nullptr;
+        if (s_SerializationContext != nullptr)
+        {
+            const auto existing = s_SerializationContext->Objects.find(managedInstance);
+            if (existing != s_SerializationContext->Objects.end())
+                return existing->second;
+        }
         String ns, typeName;
         MonoUtils::GetClassName(managedInstance, ns, typeName);
         Ref<SerializableObjectInfo> objInfo;
         if (!ScriptInfoManager::Get().GetSerializableObjectInfo(ns, typeName, objInfo))
             return nullptr;
-        return CreateRef<SerializableObject>(objInfo, managedInstance);
+        Ref<SerializableObject> object = CreateRef<SerializableObject>(objInfo, managedInstance);
+        if (s_SerializationContext != nullptr)
+            s_SerializationContext->Objects[managedInstance] = object;
+        return object;
+    }
+
+    Ref<SerializableObject> SerializableObject::CreateFromMonoObject(MonoObject* managedInstance,
+                                                                     const Ref<SerializableObjectInfo>& objectInfo)
+    {
+        if (managedInstance == nullptr || objectInfo == nullptr)
+            return nullptr;
+        if (s_SerializationContext != nullptr)
+        {
+            const auto existing = s_SerializationContext->Objects.find(managedInstance);
+            if (existing != s_SerializationContext->Objects.end())
+                return existing->second;
+        }
+        Ref<SerializableObject> object = CreateRef<SerializableObject>(objectInfo, managedInstance);
+        if (s_SerializationContext != nullptr)
+            s_SerializationContext->Objects[managedInstance] = object;
+        return object;
     }
 
     MonoObject* SerializableObject::GetManagedInstance() const

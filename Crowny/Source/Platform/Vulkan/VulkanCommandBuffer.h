@@ -35,6 +35,7 @@ namespace Crowny
         Uniform = 1 << 3,
         Acceleration = 1 << 4,
         Transfer = 1 << 5,
+        Indirect = 1 << 6,
     };
     typedef Flags<BufferUseFlagBits> BufferUseFlags;
     CW_FLAGS_OPERATORS(BufferUseFlagBits);
@@ -290,8 +291,12 @@ namespace Crowny
         void SetIndexBuffer(const Ref<IndexBuffer>& buffer);
         void Draw(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount);
         void DrawIndexed(uint32_t startIdx, uint32_t idxCount, uint32_t vertexOffset, uint32_t instanceCount);
+        void DrawIndexedIndirect(VulkanBuffer* argumentBuffer, uint32_t argumentOffset, uint32_t drawCount, uint32_t stride);
+        void DrawIndexedIndirectCount(VulkanBuffer* argumentBuffer, uint32_t argumentOffset, VulkanBuffer* countBuffer,
+                                      uint32_t countOffset, uint32_t maxDrawCount, uint32_t stride);
         void TraceRays(uint32_t width, uint32_t height);
         void Dispatch(uint32_t groupsX, uint32_t groupsY, uint32_t groupsZ);
+        void DispatchIndirect(VulkanBuffer* argumentBuffer, uint32_t argumentOffset);
 
         void MemoryBarrier(VkBuffer buffer, VkAccessFlags srcAccessFlags, VkAccessFlags dstAccessFlags, VkPipelineStageFlags srcStage,
                            VkPipelineStageFlags dstStage);

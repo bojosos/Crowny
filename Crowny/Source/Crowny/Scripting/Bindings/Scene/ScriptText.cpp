@@ -23,10 +23,22 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_SetSize", (void*)&Internal_SetSize);
         MetaData.ScriptClass->AddInternalCall("Internal_GetAutoSize", (void*)&Internal_GetAutoSize);
         MetaData.ScriptClass->AddInternalCall("Internal_SetAutoSize", (void*)&Internal_SetAutoSize);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetAutoSizeMin", (void*)&Internal_GetAutoSizeMin);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetAutoSizeMin", (void*)&Internal_SetAutoSizeMin);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetAutoSizeMax", (void*)&Internal_GetAutoSizeMax);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetAutoSizeMax", (void*)&Internal_SetAutoSizeMax);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetLayoutSize", (void*)&Internal_GetLayoutSize);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetLayoutSize", (void*)&Internal_SetLayoutSize);
         MetaData.ScriptClass->AddInternalCall("Internal_GetWrapping", (void*)&Internal_GetWrapping);
         MetaData.ScriptClass->AddInternalCall("Internal_SetWrapping", (void*)&Internal_SetWrapping);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetWrapMode", (void*)&Internal_GetWrapMode);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetWrapMode", (void*)&Internal_SetWrapMode);
         MetaData.ScriptClass->AddInternalCall("Internal_GetOverflow", (void*)&Internal_GetOverflow);
         MetaData.ScriptClass->AddInternalCall("Internal_SetOverflow", (void*)&Internal_SetOverflow);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetClipToBounds", (void*)&Internal_GetClipToBounds);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetClipToBounds", (void*)&Internal_SetClipToBounds);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetMaxLines", (void*)&Internal_GetMaxLines);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetMaxLines", (void*)&Internal_SetMaxLines);
         MetaData.ScriptClass->AddInternalCall("Internal_GetHorizontalAlignment", (void*)&Internal_GetHorizontalAlignment);
         MetaData.ScriptClass->AddInternalCall("Internal_SetHorizontalAlignment", (void*)&Internal_SetHorizontalAlignment);
         MetaData.ScriptClass->AddInternalCall("Internal_GetVerticalAlignment", (void*)&Internal_GetVerticalAlignment);
@@ -41,8 +53,24 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_SetWordSpacing", (void*)&Internal_SetWordSpacing);
         MetaData.ScriptClass->AddInternalCall("Internal_GetLineSpacing", (void*)&Internal_GetLineSpacing);
         MetaData.ScriptClass->AddInternalCall("Internal_SetLineSpacing", (void*)&Internal_SetLineSpacing);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetParagraphSpacing", (void*)&Internal_GetParagraphSpacing);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetParagraphSpacing", (void*)&Internal_SetParagraphSpacing);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetUseCustomDecorationColor", (void*)&Internal_GetUseCustomDecorationColor);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetUseCustomDecorationColor", (void*)&Internal_SetUseCustomDecorationColor);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetDecorationColor", (void*)&Internal_GetDecorationColor);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetDecorationColor", (void*)&Internal_SetDecorationColor);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetDecorationThickness", (void*)&Internal_GetDecorationThickness);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetDecorationThickness", (void*)&Internal_SetDecorationThickness);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetUnderlineOffset", (void*)&Internal_GetUnderlineOffset);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetUnderlineOffset", (void*)&Internal_SetUnderlineOffset);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetStrikethroughOffset", (void*)&Internal_GetStrikethroughOffset);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetStrikethroughOffset", (void*)&Internal_SetStrikethroughOffset);
         MetaData.ScriptClass->AddInternalCall("Internal_GetUseKerning", (void*)&Internal_GetUseKerning);
         MetaData.ScriptClass->AddInternalCall("Internal_SetUseKerning", (void*)&Internal_SetUseKerning);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetSortingLayer", (void*)&Internal_GetSortingLayer);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetSortingLayer", (void*)&Internal_SetSortingLayer);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetOrderInLayer", (void*)&Internal_GetOrderInLayer);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetOrderInLayer", (void*)&Internal_SetOrderInLayer);
     }
 
     MonoString* ScriptText::Internal_GetText(ScriptText* thisPtr) { return MonoUtils::ToMonoString(thisPtr->GetComponent().Text); }
@@ -82,13 +110,47 @@ namespace Crowny
 
     void ScriptText::Internal_SetAutoSize(ScriptText* thisPtr, bool autoSize) { thisPtr->GetComponent().AutoSize = autoSize; }
 
+    float ScriptText::Internal_GetAutoSizeMin(ScriptText* thisPtr) { return thisPtr->GetComponent().AutoSizeMin; }
+
+    void ScriptText::Internal_SetAutoSizeMin(ScriptText* thisPtr, float size)
+    {
+        auto& component = thisPtr->GetComponent();
+        component.AutoSizeMin = std::max(0.0f, size);
+        component.AutoSizeMax = std::max(component.AutoSizeMin, component.AutoSizeMax);
+    }
+
+    float ScriptText::Internal_GetAutoSizeMax(ScriptText* thisPtr) { return thisPtr->GetComponent().AutoSizeMax; }
+
+    void ScriptText::Internal_SetAutoSizeMax(ScriptText* thisPtr, float size)
+    {
+        auto& component = thisPtr->GetComponent();
+        component.AutoSizeMax = std::max(0.0f, size);
+        component.AutoSizeMin = std::min(component.AutoSizeMin, component.AutoSizeMax);
+    }
+
+    void ScriptText::Internal_GetLayoutSize(ScriptText* thisPtr, glm::vec2* size) { *size = thisPtr->GetComponent().LayoutSize; }
+
+    void ScriptText::Internal_SetLayoutSize(ScriptText* thisPtr, glm::vec2* size) { thisPtr->GetComponent().LayoutSize = glm::max(*size, glm::vec2(0.0f)); }
+
     bool ScriptText::Internal_GetWrapping(ScriptText* thisPtr) { return thisPtr->GetComponent().Wrapping; }
 
     void ScriptText::Internal_SetWrapping(ScriptText* thisPtr, bool wrapping) { thisPtr->GetComponent().Wrapping = wrapping; }
 
+    TextWrapMode ScriptText::Internal_GetWrapMode(ScriptText* thisPtr) { return thisPtr->GetComponent().WrapMode; }
+
+    void ScriptText::Internal_SetWrapMode(ScriptText* thisPtr, TextWrapMode mode) { thisPtr->GetComponent().WrapMode = mode; }
+
     TextOverflow ScriptText::Internal_GetOverflow(ScriptText* thisPtr) { return thisPtr->GetComponent().Overflow; }
 
     void ScriptText::Internal_SetOverflow(ScriptText* thisPtr, TextOverflow overflow) { thisPtr->GetComponent().Overflow = overflow; }
+
+    bool ScriptText::Internal_GetClipToBounds(ScriptText* thisPtr) { return thisPtr->GetComponent().ClipToBounds; }
+
+    void ScriptText::Internal_SetClipToBounds(ScriptText* thisPtr, bool clip) { thisPtr->GetComponent().ClipToBounds = clip; }
+
+    uint32_t ScriptText::Internal_GetMaxLines(ScriptText* thisPtr) { return thisPtr->GetComponent().MaxLines; }
+
+    void ScriptText::Internal_SetMaxLines(ScriptText* thisPtr, uint32_t maxLines) { thisPtr->GetComponent().MaxLines = maxLines; }
 
     TextHorizontalAlignment ScriptText::Internal_GetHorizontalAlignment(ScriptText* thisPtr) { return thisPtr->GetComponent().HorizontalAlignment; }
 
@@ -124,8 +186,49 @@ namespace Crowny
 
     void ScriptText::Internal_SetLineSpacing(ScriptText* thisPtr, float spacing) { thisPtr->GetComponent().LineSpacing = spacing; }
 
+    float ScriptText::Internal_GetParagraphSpacing(ScriptText* thisPtr) { return thisPtr->GetComponent().ParagraphSpacing; }
+
+    void ScriptText::Internal_SetParagraphSpacing(ScriptText* thisPtr, float spacing) { thisPtr->GetComponent().ParagraphSpacing = spacing; }
+
+    bool ScriptText::Internal_GetUseCustomDecorationColor(ScriptText* thisPtr) { return thisPtr->GetComponent().UseCustomDecorationColor; }
+
+    void ScriptText::Internal_SetUseCustomDecorationColor(ScriptText* thisPtr, bool useCustomColor)
+    {
+        thisPtr->GetComponent().UseCustomDecorationColor = useCustomColor;
+    }
+
+    void ScriptText::Internal_GetDecorationColor(ScriptText* thisPtr, glm::vec4* color) { *color = thisPtr->GetComponent().DecorationColor; }
+
+    void ScriptText::Internal_SetDecorationColor(ScriptText* thisPtr, glm::vec4* color) { thisPtr->GetComponent().DecorationColor = *color; }
+
+    float ScriptText::Internal_GetDecorationThickness(ScriptText* thisPtr) { return thisPtr->GetComponent().DecorationThickness; }
+
+    void ScriptText::Internal_SetDecorationThickness(ScriptText* thisPtr, float thickness)
+    {
+        thisPtr->GetComponent().DecorationThickness = std::max(0.0f, thickness);
+    }
+
+    float ScriptText::Internal_GetUnderlineOffset(ScriptText* thisPtr) { return thisPtr->GetComponent().UnderlineOffset; }
+
+    void ScriptText::Internal_SetUnderlineOffset(ScriptText* thisPtr, float offset) { thisPtr->GetComponent().UnderlineOffset = offset; }
+
+    float ScriptText::Internal_GetStrikethroughOffset(ScriptText* thisPtr) { return thisPtr->GetComponent().StrikethroughOffset; }
+
+    void ScriptText::Internal_SetStrikethroughOffset(ScriptText* thisPtr, float offset)
+    {
+        thisPtr->GetComponent().StrikethroughOffset = offset;
+    }
+
     bool ScriptText::Internal_GetUseKerning(ScriptText* thisPtr) { return thisPtr->GetComponent().UseKerning; }
 
     void ScriptText::Internal_SetUseKerning(ScriptText* thisPtr, bool useKerning) { thisPtr->GetComponent().UseKerning = useKerning; }
+
+    int32_t ScriptText::Internal_GetSortingLayer(ScriptText* thisPtr) { return thisPtr->GetComponent().SortingLayer; }
+
+    void ScriptText::Internal_SetSortingLayer(ScriptText* thisPtr, int32_t value) { thisPtr->GetComponent().SortingLayer = value; }
+
+    int32_t ScriptText::Internal_GetOrderInLayer(ScriptText* thisPtr) { return thisPtr->GetComponent().OrderInLayer; }
+
+    void ScriptText::Internal_SetOrderInLayer(ScriptText* thisPtr, int32_t value) { thisPtr->GetComponent().OrderInLayer = value; }
 
 } // namespace Crowny

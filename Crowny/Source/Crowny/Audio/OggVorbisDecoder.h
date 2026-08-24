@@ -28,8 +28,8 @@ namespace Crowny
 
     private:
         OggDecoderData m_DecoderData;
-        OggVorbis_File m_OggVorbisFile;
-        uint32_t m_ChannelCount;
+        OggVorbis_File m_OggVorbisFile{};
+        uint32_t m_ChannelCount = 0;
     };
 
 } // namespace Crowny

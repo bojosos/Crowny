@@ -2,69 +2,83 @@
 
 #include "Editor/EditorAssets.h"
 
-#include "Crowny/Import/ImportOptions.h"
-#include "Crowny/Import/Importer.h"
+#include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Common/FileSystem.h"
 #include "Crowny/RenderAPI/Texture.h"
 
 namespace Crowny
 {
-    const String EditorAssets::UnassignedTexture = "Resources/Textures/Unassigned.png";
+    const String EditorAssets::UnassignedTexture = "Resources/Textures/Unassigned.asset";
 
-    const String EditorAssets::PlayIcon = "Resources/Icons/Play.png";
-    const String EditorAssets::PauseIcon = "Resources/Icons/Pause.png";
-    const String EditorAssets::StopIcon = "Resources/Icons/Stop.png";
+    const String EditorAssets::PlayIcon = "Resources/Icons/Play.asset";
+    const String EditorAssets::PauseIcon = "Resources/Icons/Pause.asset";
+    const String EditorAssets::StopIcon = "Resources/Icons/Stop.asset";
 
-    const String EditorAssets::FileIcon = "Resources/Icons/File.png";
-    const String EditorAssets::FolderIcon = "Resources/Icons/Folder.png";
+    const String EditorAssets::FileIcon = "Resources/Icons/File.asset";
+    const String EditorAssets::FolderIcon = "Resources/Icons/Folder.asset";
 
-    const String EditorAssets::ArrowPointerIcon = "Resources/Icons/ArrowPointerIcon.png";
-    const String EditorAssets::ArrowsIcon = "Resources/Icons/ArrowsIcon.png";
-    const String EditorAssets::RotateIcon = "Resources/Icons/RotateIcon.png";
-    const String EditorAssets::MaximizeIcon = "Resources/Icons/MaximizeIcon.png";
-    const String EditorAssets::GlobeIcon = "Resources/Icons/GlobeIcon.png";
-    const String EditorAssets::SearchIcon = "Resources/Icons/SearchIcon.png";
+    const String EditorAssets::ArrowPointerIcon = "Resources/Icons/ArrowPointerIcon.asset";
+    const String EditorAssets::ArrowsIcon = "Resources/Icons/ArrowsIcon.asset";
+    const String EditorAssets::RotateIcon = "Resources/Icons/RotateIcon.asset";
+    const String EditorAssets::MaximizeIcon = "Resources/Icons/MaximizeIcon.asset";
+    const String EditorAssets::GlobeIcon = "Resources/Icons/GlobeIcon.asset";
+    const String EditorAssets::SearchIcon = "Resources/Icons/SearchIcon.asset";
 
-    const String EditorAssets::ConsoleInfo = "Resources/Icons/ConsoleInfo.png";
-    const String EditorAssets::ConsoleWarn = "Resources/Icons/ConsoleWarn.png";
-    const String EditorAssets::ConsoleError = "Resources/Icons/ConsoleError.png";
+    const String EditorAssets::ConsoleInfo = "Resources/Icons/ConsoleInfo.asset";
+    const String EditorAssets::ConsoleWarn = "Resources/Icons/ConsoleWarn.asset";
+    const String EditorAssets::ConsoleError = "Resources/Icons/ConsoleError.asset";
 
-    const String EditorAssets::AlignLeft = "Resources/Icons/AlignLeft.png";
-    const String EditorAssets::AlignCenter = "Resources/Icons/AlignCenter.png";
-    const String EditorAssets::AlignRight = "Resources/Icons/AlignRight.png";
+    const String EditorAssets::AlignLeft = "Resources/Icons/AlignLeft.asset";
+    const String EditorAssets::AlignCenter = "Resources/Icons/AlignCenter.asset";
+    const String EditorAssets::AlignRight = "Resources/Icons/AlignRight.asset";
 
     const String EditorAssets::DefaultScriptPath = "Resources/Default/DefaultScript.cs";
 
     EditorAssetsLibrary EditorAssets::s_Library;
+    String EditorAssets::s_DefaultScriptTemplate;
+
+    static Ref<Texture> LoadTexture(const Path& path)
+    {
+        const AssetHandle<Texture> texture = AssetManager::TryGet()->Load<Texture>(path);
+        return texture ? texture.GetInternalPtr() : nullptr;
+    }
 
     void EditorAssets::Load()
     {
-        s_Library.UnassignedTexture = Importer::Get().Import<Texture>(UnassignedTexture);
+        s_Library.UnassignedTexture = Texture::MISSING;
 
-        s_Library.PlayIcon = Importer::Get().Import<Texture>(PlayIcon);
-        s_Library.StopIcon = Importer::Get().Import<Texture>(StopIcon);
-        s_Library.PauseIcon = Importer::Get().Import<Texture>(PauseIcon);
+        s_Library.PlayIcon = LoadTexture(PlayIcon);
+        s_Library.StopIcon = LoadTexture(StopIcon);
+        s_Library.PauseIcon = LoadTexture(PauseIcon);
 
-        s_Library.FolderIcon = Importer::Get().Import<Texture>(FolderIcon);
-        s_Library.FileIcon = Importer::Get().Import<Texture>(FileIcon);
+        s_Library.FolderIcon = LoadTexture(FolderIcon);
+        s_Library.FileIcon = LoadTexture(FileIcon);
 
-        s_Library.ArrowPointerIcon = Importer::Get().Import<Texture>(ArrowPointerIcon);
-        s_Library.ArrowsIcon = Importer::Get().Import<Texture>(ArrowsIcon);
-        s_Library.RotateIcon = Importer::Get().Import<Texture>(RotateIcon);
-        s_Library.MaximizeIcon = Importer::Get().Import<Texture>(MaximizeIcon);
-        s_Library.GlobeIcon = Importer::Get().Import<Texture>(GlobeIcon);
-        s_Library.SearchIcon = Importer::Get().Import<Texture>(SearchIcon);
+        s_Library.ArrowPointerIcon = LoadTexture(ArrowPointerIcon);
+        s_Library.ArrowsIcon = LoadTexture(ArrowsIcon);
+        s_Library.RotateIcon = LoadTexture(RotateIcon);
+        s_Library.MaximizeIcon = LoadTexture(MaximizeIcon);
+        s_Library.GlobeIcon = LoadTexture(GlobeIcon);
+        s_Library.SearchIcon = LoadTexture(SearchIcon);
         s_Library.SettingsIcon = s_Library.SearchIcon; // Placeholder until a dedicated icon is added
 
-        s_Library.ConsoleInfo = Importer::Get().Import<Texture>(ConsoleInfo);
-        s_Library.ConsoleWarn = Importer::Get().Import<Texture>(ConsoleWarn);
-        s_Library.ConsoleError = Importer::Get().Import<Texture>(ConsoleError);
+        s_Library.ConsoleInfo = LoadTexture(ConsoleInfo);
+        s_Library.ConsoleWarn = LoadTexture(ConsoleWarn);
+        s_Library.ConsoleError = LoadTexture(ConsoleError);
 
-        s_Library.AlignLeft = Importer::Get().Import<Texture>(AlignLeft);
-        s_Library.AlignCenter = Importer::Get().Import<Texture>(AlignCenter);
-        s_Library.AlignRight = Importer::Get().Import<Texture>(AlignRight);
+        s_Library.AlignLeft = LoadTexture(AlignLeft);
+        s_Library.AlignCenter = LoadTexture(AlignCenter);
+        s_Library.AlignRight = LoadTexture(AlignRight);
 
         // Ref<Asset> font = Importer::Get().Import("Resources/Fonts/Roboto/roboto-thin.ttf");
         // s_Library.Test = StaticRefCast<Font>(font)->GetAtlasTexture();
+    }
+
+    const String& EditorAssets::GetDefaultScriptTemplate()
+    {
+        if (s_DefaultScriptTemplate.empty())
+            s_DefaultScriptTemplate = FileSystem::ReadTextFile(DefaultScriptPath);
+        return s_DefaultScriptTemplate;
     }
 
     void EditorAssets::Unload()
@@ -88,5 +102,6 @@ namespace Crowny
         s_Library.AlignLeft = nullptr;
         s_Library.AlignCenter = nullptr;
         s_Library.AlignRight = nullptr;
+        s_DefaultScriptTemplate.clear();
     }
 } // namespace Crowny

@@ -1,11 +1,26 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/Scene/Scene.h"
-#include "Crowny/Ecs/Components.h"
 
 using namespace Crowny;
+using namespace Crowny::Literals;
+
+TEST_CASE("Prefab override paths support allocation-free lookup", "[Ecs][Prefab]")
+{
+    PrefabComponent prefab;
+    prefab.MarkOverridden("Transform.Position");
+    prefab.MarkOverridden("Audio Source.PlayOnAwake");
+
+    CHECK(prefab.IsPropertyOverridden("Transform.Position"_hstr));
+    CHECK(prefab.IsPropertyOverridden("Audio Source", "PlayOnAwake"));
+    CHECK_FALSE(prefab.IsPropertyOverridden("Audio Source", "Volume"));
+
+    prefab.ClearOverride("Transform.Position");
+    CHECK_FALSE(prefab.IsPropertyOverridden("Transform.Position"_hstr));
+}
 
 // Helper to compare matrices
 void ExpectMatrixEqual(const glm::mat4& actual, const glm::mat4& expected)
@@ -63,7 +78,7 @@ TEST_CASE("Entity Parenting and Transform Hierarchies", "[Ecs][Transform]")
 
         parent1.SetPosition({ 10.0f, 0.0f, 0.0f });
         parent2.SetPosition({ 0.0f, 20.0f, 0.0f });
-        
+
         child.SetParent(parent1);
         child.SetPosition({ 5.0f, 0.0f, 0.0f }); // World position 15, 0, 0
 
@@ -77,7 +92,7 @@ TEST_CASE("Entity Parenting and Transform Hierarchies", "[Ecs][Transform]")
         REQUIRE_THAT(child.GetWorldPosition().x, Catch::Matchers::WithinRel(15.0f, 0.001f));
         REQUIRE_THAT(child.GetWorldPosition().y, Catch::Matchers::WithinRel(0.0f, 0.001f));
         REQUIRE_THAT(child.GetWorldPosition().z, Catch::Matchers::WithinRel(0.0f, 0.001f));
-        
+
         REQUIRE(child.GetLocalPosition() == glm::vec3(15.0f, -20.0f, 0.0f));
     }
 
@@ -105,14 +120,13 @@ TEST_CASE("Entity Parenting and Transform Hierarchies", "[Ecs][Transform]")
     {
         Entity a = scene->CreateEntity("A");
         Entity b = scene->CreateEntity("B");
-        
-        b.SetParent(a);
-        
-        // This should fail/be ignored to prevent cycles
-        // a.SetParent(b);
 
-        // REQUIRE(a.GetParent() == Entity{});
-        // REQUIRE(b.GetParent() == a);
+        b.SetParent(a);
+
+        CHECK_FALSE(a.SetParent(a));
+        CHECK_FALSE(a.SetParent(b));
+        REQUIRE_FALSE(a.GetParent());
+        REQUIRE(b.GetParent() == a);
     }
 
     SECTION("Unparenting Preserves World Transform")
@@ -154,7 +168,7 @@ TEST_CASE("Entity Parenting and Transform Hierarchies", "[Ecs][Transform]")
 
         parent.SetScale({ 2.0f, 2.0f, 2.0f });
         child.SetParent(parent);
-        child.SetScale({ 1.0f, 1.0f, 1.0f }); // Local scale
+        child.SetScale({ 1.0f, 1.0f, 1.0f });    // Local scale
         child.SetPosition({ 1.0f, 0.0f, 0.0f }); // Local position
 
         // Child world position should be (2, 0, 0) because parent scale is 2
@@ -178,16 +192,16 @@ TEST_CASE("Entity Parenting and Transform Hierarchies", "[Ecs][Transform]")
         Entity parent = scene->CreateEntity("Parent");
         Entity child = scene->CreateEntity("Child");
         child.SetParent(parent);
-        
-        parent.SetPosition({10.0f, 0.0f, 0.0f});
-        child.SetPosition({5.0f, 0.0f, 0.0f});
+
+        parent.SetPosition({ 10.0f, 0.0f, 0.0f });
+        child.SetPosition({ 5.0f, 0.0f, 0.0f });
 
         SECTION("Duplicate with children")
         {
             Entity parentClone = scene->DuplicateEntity(parent, true);
             CHECK(parentClone.GetName() == "Parent");
             CHECK(parentClone.GetLocalPosition() == glm::vec3(10.0f, 0.0f, 0.0f));
-            
+
             REQUIRE(parentClone.GetChildCount() == 1);
             Entity childClone = parentClone.GetChild(0);
             CHECK(childClone.GetName() == "Child");
@@ -205,14 +219,66 @@ TEST_CASE("Entity Parenting and Transform Hierarchies", "[Ecs][Transform]")
     SECTION("Component Lifecycle")
     {
         Entity entity = scene->CreateEntity("Test");
-        
+
         REQUIRE(!entity.HasComponent<CameraComponent>());
-        
+
         entity.AddComponent<CameraComponent>();
         REQUIRE(entity.HasComponent<CameraComponent>());
-        
+
         entity.RemoveComponent<CameraComponent>();
         REQUIRE(!entity.HasComponent<CameraComponent>());
+    }
+
+    SECTION("Component pack queries")
+    {
+        Entity entity = scene->CreateEntity("Pack query");
+
+        CHECK(entity.HasComponents<IDComponent, TagComponent, TransformComponent>());
+        CHECK(entity.HasAnyComponents<CameraComponent, TransformComponent>());
+        CHECK_FALSE(entity.HasAnyComponents<CameraComponent, AudioListenerComponent>());
+    }
+
+    SECTION("Transform invalidation remains lazy")
+    {
+        Entity parent = scene->CreateEntity("Parent");
+        Entity child = scene->CreateEntity("Child");
+        Entity grandChild = scene->CreateEntity("Grand child");
+        child.SetParent(parent);
+        grandChild.SetParent(child);
+
+        grandChild.GetWorldMatrix();
+        REQUIRE(child.GetTransform().IsCachedWorldTransformValid());
+        REQUIRE(grandChild.GetTransform().IsCachedWorldTransformValid());
+
+        parent.SetPosition({ 2.0f, 3.0f, 4.0f });
+        CHECK_FALSE(child.GetTransform().IsCachedWorldTransformValid());
+        CHECK_FALSE(grandChild.GetTransform().IsCachedWorldTransformValid());
+
+        grandChild.GetWorldMatrix();
+        CHECK(child.GetTransform().IsCachedWorldTransformValid());
+        CHECK(grandChild.GetTransform().IsCachedWorldTransformValid());
+    }
+
+    SECTION("Scene copies own their hierarchy")
+    {
+        Entity parent = scene->CreateEntity("Parent");
+        Entity child = scene->CreateEntity("Child");
+        child.SetParent(parent);
+        parent.SetPosition({ 10.0f, 0.0f, 0.0f });
+        child.SetPosition({ 5.0f, 0.0f, 0.0f });
+        const UUID parentId = parent.GetUuid();
+        const UUID childId = child.GetUuid();
+
+        Scene copy(*scene);
+        Entity copiedParent = copy.GetEntityFromUuid(parentId);
+        Entity copiedChild = copy.GetEntityFromUuid(childId);
+
+        REQUIRE(copiedParent.GetScene() == &copy);
+        REQUIRE(copiedChild.GetScene() == &copy);
+        CHECK(copiedChild.GetParent() == copiedParent);
+        CHECK(copiedParent.GetChild(0) == copiedChild);
+        CHECK(copiedChild.GetLocalPosition() == glm::vec3(5.0f, 0.0f, 0.0f));
+        CHECK(copiedChild.GetWorldPosition() == glm::vec3(15.0f, 0.0f, 0.0f));
     }
 
     SECTION("Complex Destruction")
@@ -228,9 +294,63 @@ TEST_CASE("Entity Parenting and Transform Hierarchies", "[Ecs][Transform]")
         REQUIRE(child.GetChildCount() == 1);
 
         parent.Destroy(true); // Recursive destroy
+        CHECK_FALSE(parent.IsValid());
+        CHECK_FALSE(child.IsValid());
+        CHECK_FALSE(grandChild.IsValid());
+    }
 
-        // After registry destroy, handles are still technically there but invalid in the registry.
-        // Entt uses versioning. A null check on Entity wrapper works if we null it.
-        // Scene::DestroyEntity handles this.
+    SECTION("Non-recursive destruction reparents children in sibling order")
+    {
+        Entity parent = scene->CreateEntity("Parent");
+        Entity before = scene->CreateEntity("Before");
+        Entity removed = scene->CreateEntity("Removed");
+        Entity after = scene->CreateEntity("After");
+        Entity firstChild = scene->CreateEntity("First child");
+        Entity secondChild = scene->CreateEntity("Second child");
+        before.SetParent(parent);
+        removed.SetParent(parent);
+        after.SetParent(parent);
+        firstChild.SetParent(removed);
+        secondChild.SetParent(removed);
+        firstChild.SetPosition({ 1.0f, 2.0f, 3.0f });
+        secondChild.SetPosition({ 4.0f, 5.0f, 6.0f });
+        const glm::mat4 firstWorld = firstChild.GetWorldMatrix();
+        const glm::mat4 secondWorld = secondChild.GetWorldMatrix();
+
+        removed.Destroy(false);
+
+        REQUIRE(parent.GetChildCount() == 4);
+        CHECK(parent.GetChild(0) == before);
+        CHECK(parent.GetChild(1) == firstChild);
+        CHECK(parent.GetChild(2) == secondChild);
+        CHECK(parent.GetChild(3) == after);
+        ExpectMatrixEqual(firstChild.GetWorldMatrix(), firstWorld);
+        ExpectMatrixEqual(secondChild.GetWorldMatrix(), secondWorld);
+    }
+
+    SECTION("Duplicate is inserted beside the source and owns cloned children")
+    {
+        Entity parent = scene->CreateEntity("Parent");
+        Entity source = scene->CreateEntity("Source");
+        Entity sibling = scene->CreateEntity("Sibling");
+        Entity childA = scene->CreateEntity("A");
+        Entity childB = scene->CreateEntity("B");
+        source.SetParent(parent);
+        sibling.SetParent(parent);
+        childA.SetParent(source);
+        childB.SetParent(source);
+
+        Entity clone = scene->DuplicateEntity(source, true);
+
+        REQUIRE(clone);
+        CHECK(clone.GetParent() == parent);
+        CHECK(parent.GetChild(0) == source);
+        CHECK(parent.GetChild(1) == clone);
+        CHECK(parent.GetChild(2) == sibling);
+        REQUIRE(clone.GetChildCount() == 2);
+        CHECK(clone.GetChild(0).GetParent() == clone);
+        CHECK(clone.GetChild(1).GetParent() == clone);
+        CHECK(clone.GetChild(0).GetName() == "A");
+        CHECK(clone.GetChild(1).GetName() == "B");
     }
 }

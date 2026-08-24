@@ -62,13 +62,13 @@ namespace Crowny
 
         template <typename... T> bool HasAnyComponents() const
         {
-            static_assert(std::is_base_of<ComponentBase, T...>::value, "T must be a Component");
+            static_assert((std::is_base_of_v<ComponentBase, T> && ...), "T must be a Component");
             return m_Scene->m_Registry.template any_of<T...>(m_EntityHandle);
         }
 
         template <typename... T> bool HasComponents() const
         {
-            static_assert(std::is_base_of<ComponentBase, T...>::value, "T must be a Component");
+            static_assert((std::is_base_of_v<ComponentBase, T> && ...), "T must be a Component");
             return m_Scene->m_Registry.template all_of<T...>(m_EntityHandle);
         }
 
@@ -88,6 +88,7 @@ namespace Crowny
         bool HasAnyComponents() const { return !m_Scene->m_Registry.orphan(m_EntityHandle); }
 
         entt::entity GetHandle() const { return m_EntityHandle; }
+        Scene* GetScene() const { return m_Scene; }
 
         void Clear()
         {
@@ -117,6 +118,7 @@ namespace Crowny
         void SetWorldPosition(const glm::vec3& position);
         void SetWorldRotation(const glm::quat& rotation);
         void SetWorldScale(const glm::vec3& scale);
+        bool SetWorldTransform(const glm::mat4& worldTransform, bool updatePhysics = true);
 
         glm::vec3 GetWorldPosition() const;
         glm::quat GetWorldRotation() const;
@@ -137,10 +139,11 @@ namespace Crowny
         uint32_t GetChildCount() const;
         Entity GetParent() const;
 
-        // TODO: Set parent should take care of the transforms too.
-        void SetParent(Entity entity);
+        bool SetParent(Entity entity);
+        uint32_t GetSiblingIndex() const;
+        bool SetSiblingIndex(uint32_t index);
 
-        void NotifyTransformChanged();
+        void NotifyTransformChanged(bool updatePhysics = true);
 
         void Destroy(bool destroyChildren = true);
 
@@ -153,19 +156,6 @@ namespace Crowny
         bool operator==(const EnttEntity& other) const { return m_EntityHandle == other.m_EntityHandle && m_Scene == other.m_Scene; }
 
         bool operator!=(const EnttEntity& other) const { return !(*this == other); }
-
-    private:
-        template <typename Component> void NotifyTransformChangedComponent(const Transform& transform)
-        {
-            static_assert(std::is_base_of<ComponentBase, Component>::value, "T must be a Component");
-            if (HasComponent<Component>())
-                GetComponent<Component>().OnTransformChanged(transform);
-        }
-
-        template <typename... Component> void NotifyTransformChangedComponentWrapper(ComponentGroup<Component...> group, const Transform& transform)
-        {
-            ([&]() { NotifyTransformChangedComponent<Component>(transform); }(), ...);
-        }
 
     private:
         friend class ComponentEditor;

@@ -2,6 +2,8 @@
 
 #include "Crowny/Scripting/Bindings/Scene/ScriptCollider2D.h"
 
+#include "Crowny/Scripting/Bindings/Assets/ScriptPhysicsMaterial2D.h"
+#include "Crowny/Scripting/ScriptAssetManager.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptSceneObjectManager.h"
 
@@ -20,14 +22,35 @@ namespace Crowny
 
     void ScriptCollider2DBase::Internal_GetOffset(ScriptCollider2DBase* thisPtr, glm::vec2* offset)
     {
-        *offset = thisPtr->GetCollider2D().GetOffset();
+        if (offset)
+            *offset = thisPtr->GetCollider2D().GetOffset();
     }
 
     void ScriptCollider2DBase::Internal_SetOffset(ScriptCollider2DBase* thisPtr, glm::vec2* offset)
     {
-        // SetOffset is defined on the derived component types, not on Collider2D base.
-        // We store the offset directly on the base.
-        thisPtr->GetCollider2D().m_Offset = *offset;
+        if (!offset)
+            return;
+        const Entity entity = thisPtr->GetEntity();
+        Collider2D* const collider = &thisPtr->GetCollider2D();
+        if (entity.HasComponent<BoxCollider2DComponent>() && collider == &entity.GetComponent<BoxCollider2DComponent>())
+            static_cast<BoxCollider2DComponent*>(collider)->SetOffset(*offset, entity);
+        else if (entity.HasComponent<CircleCollider2DComponent>() && collider == &entity.GetComponent<CircleCollider2DComponent>())
+            static_cast<CircleCollider2DComponent*>(collider)->SetOffset(*offset, entity);
+    }
+
+    MonoObject* ScriptCollider2DBase::Internal_GetMaterial(ScriptCollider2DBase* thisPtr)
+    {
+        const AssetHandle<PhysicsMaterial2D>& material = thisPtr->GetCollider2D().GetMaterial();
+        if (!material || !ScriptAssetManager::IsStartedUp())
+            return nullptr;
+        ScriptAssetBase* const asset = ScriptAssetManager::Get().GetScriptAsset(material, true);
+        return asset ? asset->GetManagedInstance() : nullptr;
+    }
+
+    void ScriptCollider2DBase::Internal_SetMaterial(ScriptCollider2DBase* thisPtr, MonoObject* material)
+    {
+        ScriptPhysicsMaterial2D* const scriptMaterial = ScriptPhysicsMaterial2D::ToNative(material);
+        thisPtr->GetCollider2D().SetMaterial(scriptMaterial ? scriptMaterial->GetHandle() : AssetHandle<PhysicsMaterial2D>());
     }
 
     // --- Collider2D (base wrapper) ---
@@ -42,6 +65,8 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_SetTrigger", (void*)&ScriptCollider2DBase::Internal_SetTrigger);
         MetaData.ScriptClass->AddInternalCall("Internal_GetOffset", (void*)&ScriptCollider2DBase::Internal_GetOffset);
         MetaData.ScriptClass->AddInternalCall("Internal_SetOffset", (void*)&ScriptCollider2DBase::Internal_SetOffset);
+        MetaData.ScriptClass->AddInternalCall("Internal_GetMaterial", (void*)&ScriptCollider2DBase::Internal_GetMaterial);
+        MetaData.ScriptClass->AddInternalCall("Internal_SetMaterial", (void*)&ScriptCollider2DBase::Internal_SetMaterial);
     }
 
     // --- BoxCollider2D ---

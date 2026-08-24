@@ -1,7 +1,9 @@
 #include "Crowny/Common/Common.h"
 #include "Crowny/Common/Log.h"
 
+#include "Crowny/Application/CmdArgs.h"
 #include "Crowny/Application/CrashHandler.h"
+#include "Crowny/Common/MemoryDiagnostics.h"
 
 #if CW_WINDOWS
 #include <excpt.h>
@@ -10,17 +12,15 @@
 
 extern void Crowny::CreateApplication();
 
-int main(int argc, char** argv)
+static void RunCrownyApplication()
 {
-    Crowny::CrashHandler::StartUp();
-
-#if CW_WINDOWS
+#if CW_WINDOWS && !defined(CW_ADDRESS_SANITIZER)
     if (!IsDebuggerPresent())
     {
         __try
         {
             Crowny::CreateApplication();
-            Crowny::gApplication->Run();
+            Crowny::Application::TryGet()->Run();
             Crowny::Application::Shutdown();
         }
         __except (Crowny::CrashHandler::Get().ReportCrash(GetExceptionInformation()))
@@ -31,16 +31,26 @@ int main(int argc, char** argv)
     else
     {
         Crowny::CreateApplication();
-        Crowny::gApplication->Run();
+        Crowny::Application::TryGet()->Run();
         Crowny::Application::Shutdown();
     }
 #else
     Crowny::CreateApplication();
-    Crowny::gApplication->Run();
+    Crowny::Application::TryGet()->Run();
     Crowny::Application::Shutdown();
 #endif
+}
 
+int main(int argc, char** argv)
+{
+    Crowny::CommandLineArgs::Create(argc, argv);
+    Crowny::CrashHandler::StartUp();
+    Crowny::ScopedMemoryLeakCheck memoryLeakCheck;
+
+    RunCrownyApplication();
+
+    const bool leakedMemory = memoryLeakCheck.Finish();
     Crowny::CrashHandler::Shutdown();
 
-    return 0;
+    return leakedMemory ? 2 : 0;
 }

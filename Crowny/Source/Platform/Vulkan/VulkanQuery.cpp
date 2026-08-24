@@ -6,6 +6,40 @@
 
 namespace Crowny
 {
+    namespace
+    {
+        struct PipelineStatisticsConfig
+        {
+            VkQueryPipelineStatisticFlags Flags = 0;
+            uint32_t ValueCount = 0;
+        };
+
+        PipelineStatisticsConfig GetPipelineStatisticsConfig(const VkPhysicalDeviceFeatures& features)
+        {
+            PipelineStatisticsConfig config;
+            config.Flags = VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_VERTICES_BIT | VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_PRIMITIVES_BIT |
+                           VK_QUERY_PIPELINE_STATISTIC_VERTEX_SHADER_INVOCATIONS_BIT | VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT |
+                           VK_QUERY_PIPELINE_STATISTIC_CLIPPING_INVOCATIONS_BIT | VK_QUERY_PIPELINE_STATISTIC_CLIPPING_PRIMITIVES_BIT |
+                           VK_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT;
+            config.ValueCount = 7;
+
+            if (features.geometryShader)
+            {
+                config.Flags |=
+                  VK_QUERY_PIPELINE_STATISTIC_GEOMETRY_SHADER_INVOCATIONS_BIT | VK_QUERY_PIPELINE_STATISTIC_GEOMETRY_SHADER_PRIMITIVES_BIT;
+                config.ValueCount += 2;
+            }
+            if (features.tessellationShader)
+            {
+                config.Flags |= VK_QUERY_PIPELINE_STATISTIC_TESSELLATION_CONTROL_SHADER_PATCHES_BIT |
+                                VK_QUERY_PIPELINE_STATISTIC_TESSELLATION_EVALUATION_SHADER_INVOCATIONS_BIT;
+                config.ValueCount += 2;
+            }
+
+            return config;
+        }
+    } // namespace
+
     VulkanQuery::VulkanQuery(VulkanResourceManager* owner, VkQueryPool pool, uint32_t queryIdx)
       : VulkanResource(owner, false), m_Pool(pool), m_QueryIdx(queryIdx)
     {
@@ -14,13 +48,8 @@ namespace Crowny
     bool VulkanQuery::GetResultArray(Vector<uint64_t>& result)
     {
         VkDevice vkDevice = m_Owner->GetDevice().GetLogicalDevice();
-        uint32_t count = 7; // compute, vertex invokes, input assembly prims/verts, clip planes and frag
-        if (gVulkanRenderAPI().GetPresentDevice()->GetDeviceFeatures().geometryShader)
-            count += 2; // geometry invokes and primitives generated
-        if (gVulkanRenderAPI().GetPresentDevice()->GetDeviceFeatures().tessellationShader)
-            count += 2; // tessellation invokes and primitives generated
-
-        result.resize(count);
+        const PipelineStatisticsConfig config = GetPipelineStatisticsConfig(gVulkanRenderAPI().GetPresentDevice()->GetDeviceFeatures());
+        result.resize(config.ValueCount);
         VkResult vkResult = vkGetQueryPoolResults(vkDevice, m_Pool, m_QueryIdx, 1, result.size() * sizeof(uint64_t), result.data(), sizeof(uint64_t),
                                                   VK_QUERY_RESULT_64_BIT);
         CW_ENGINE_ASSERT(vkResult == VK_SUCCESS || vkResult == VK_NOT_READY);
@@ -63,49 +92,31 @@ namespace Crowny
 
     VulkanQueryPool::PoolInfo& VulkanQueryPool::AllocatePool(VkQueryType type)
     {
-        VkQueryPoolCreateInfo queryPoolCreateInfo;
+        VkQueryPoolCreateInfo queryPoolCreateInfo{};
         queryPoolCreateInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
         queryPoolCreateInfo.pNext = nullptr;
         queryPoolCreateInfo.flags = 0;
 
         VkQueryPipelineStatisticFlags flags = 0;
-        uint32_t queryCount = 1;
         if (type == VK_QUERY_TYPE_PIPELINE_STATISTICS)
-        {
-            flags = VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_VERTICES_BIT | VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_PRIMITIVES_BIT |
-                    VK_QUERY_PIPELINE_STATISTIC_VERTEX_SHADER_INVOCATIONS_BIT | VK_QUERY_PIPELINE_STATISTIC_CLIPPING_INVOCATIONS_BIT |
-                    VK_QUERY_PIPELINE_STATISTIC_CLIPPING_PRIMITIVES_BIT | VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_VERTICES_BIT |
-                    VK_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT;
-            queryCount = 7;
-            if (gVulkanRenderAPI().GetPresentDevice()->GetDeviceFeatures().geometryShader)
-            {
-                flags |= VK_QUERY_PIPELINE_STATISTIC_GEOMETRY_SHADER_INVOCATIONS_BIT | VK_QUERY_PIPELINE_STATISTIC_GEOMETRY_SHADER_PRIMITIVES_BIT;
-                queryCount += 2;
-            }
-            if (gVulkanRenderAPI().GetPresentDevice()->GetDeviceFeatures().tessellationShader)
-            {
-                queryCount += 2;
-                flags |= VK_QUERY_PIPELINE_STATISTIC_TESSELLATION_CONTROL_SHADER_PATCHES_BIT |
-                         VK_QUERY_PIPELINE_STATISTIC_TESSELLATION_EVALUATION_SHADER_INVOCATIONS_BIT;
-            }
-        }
+            flags = GetPipelineStatisticsConfig(gVulkanRenderAPI().GetPresentDevice()->GetDeviceFeatures()).Flags;
 
         queryPoolCreateInfo.pipelineStatistics = flags;
-        queryPoolCreateInfo.queryCount = queryCount;
+        queryPoolCreateInfo.queryCount = NUM_QUERIES_PER_POOL;
         queryPoolCreateInfo.queryType = type;
 
-        PoolInfo poolInfo;
-        VkResult result = vkCreateQueryPool(m_Device.GetLogicalDevice(), &queryPoolCreateInfo, nullptr, &poolInfo.Pool);
+        PoolInfo poolInfo{};
+        VkResult result = vkCreateQueryPool(m_Device.GetLogicalDevice(), &queryPoolCreateInfo, gVulkanAllocator, &poolInfo.Pool);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
         Vector<PoolInfo>& poolInfos =
           type == VK_QUERY_TYPE_TIMESTAMP ? m_TimerPools : (type == VK_QUERY_TYPE_PIPELINE_STATISTICS ? m_PipelinePools : m_OcclusionPools);
-        poolInfo.StartIdx = (uint32_t)poolInfos.size() * queryCount;
+        poolInfo.StartIdx = (uint32_t)poolInfos.size() * NUM_QUERIES_PER_POOL;
 
         poolInfos.push_back(poolInfo);
         Vector<VulkanQuery*>& queries =
           type == VK_QUERY_TYPE_TIMESTAMP ? m_TimerQueries : (type == VK_QUERY_TYPE_PIPELINE_STATISTICS ? m_PipelineQueries : m_OcclusionQueries);
-        for (uint32_t i = 0; i < queryCount; i++)
+        for (uint32_t i = 0; i < NUM_QUERIES_PER_POOL; i++)
             queries.push_back(nullptr);
         return poolInfos.back();
     }

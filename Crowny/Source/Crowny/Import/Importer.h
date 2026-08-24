@@ -1,10 +1,13 @@
 #pragma once
 
 #include "Crowny/Assets/Asset.h"
+#include "Crowny/Common/HashedString.h"
 #include "Crowny/Common/Module.h"
 #include "Crowny/Common/Uuid.h"
 #include "Crowny/Import/ImportOptions.h"
 #include "Crowny/Import/SpecificImporter.h"
+
+#include <initializer_list>
 
 namespace Crowny
 {
@@ -23,6 +26,7 @@ namespace Crowny
         }
 
         void RegisterImporter(SpecificImporter* importer);
+        void RegisterImporter(SpecificImporter* importer, std::initializer_list<StringView> extensions);
         static void RegisterBuiltinImporters();
 
         Ref<ImportOptions> CreateImportOptions(const Path& path);
@@ -36,9 +40,12 @@ namespace Crowny
 
     private:
         SpecificImporter* PrepareForImport(const Path& path, Ref<const ImportOptions>& impotyOptions) const;
+        SpecificImporter* FindImporterForExtension(const String& normalizedExtension) const;
 
     private:
         Vector<SpecificImporter*> m_Importers;
+        Vector<SpecificImporter*> m_FallbackImporters;
+        UnorderedMap<String, SpecificImporter*, StringHash, StringEqual> m_ExtensionImporters;
     };
 
 } // namespace Crowny

@@ -61,3 +61,9 @@
 [submodule "Crowny/Dependencies/imgui-node-editor"]
 	path = Crowny/Dependencies/imgui-node-editor
 	url = https://github.com/bojosos/imgui-node-editor
+[submodule "Crowny/Dependencies/meshoptimizer"]
+	path = Crowny/Dependencies/meshoptimizer
+	url = https://github.com/zeux/meshoptimizer.git
+[submodule "Crowny/Dependencies/FastNoiseLite"]
+	path = Crowny/Dependencies/FastNoiseLite
+	url = https://github.com/Auburn/FastNoiseLite.git

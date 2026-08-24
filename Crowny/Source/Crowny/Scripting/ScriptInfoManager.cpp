@@ -13,12 +13,16 @@
 
 #include "Crowny/Scripting/Bindings/Scene/ScriptCamera.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntityBehaviour.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptLight.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptTransform.h"
 
 #include "Crowny/Scripting/Bindings/Scene/ScriptAudioListener.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptAudioSource.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptCollider2D.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptCollider3D.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptRigidbody.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptRigidbody3D.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptSpriteRenderer.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptText.h"
 
 #include "Crowny/Scripting/Bindings/Assets/ScriptAudioClip.h"
@@ -26,6 +30,8 @@
 #include "Crowny/Scripting/Bindings/Assets/ScriptFont.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptMaterial.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptMesh.h"
+#include "Crowny/Scripting/Bindings/Assets/ScriptPhysicsMaterial2D.h"
+#include "Crowny/Scripting/Bindings/Assets/ScriptPhysicsMaterial3D.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptTexture.h"
 
 #include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
@@ -80,8 +86,10 @@ namespace Crowny
         LOAD_CW_CLASS(Component);
         LOAD_CW_CLASS(Entity);
         LOAD_CW_CLASS(EntityBehaviour);
+        LOAD_CW_CLASS(MissingEntityBehaviour);
 
         LOAD_CW_ATTR(SerializeField);
+        LOAD_CW_ATTR(FormerlySerializedAs);
         LOAD_CW_ATTR(Range);
         LOAD_CW_ATTR(NotNull);
         // LOAD_CW_ATTR(Step);
@@ -289,6 +297,14 @@ namespace Crowny
                 }
 
                 objInfo->m_FieldNameToId[fieldInfo->m_Name] = fieldInfo->m_FieldId;
+                if (field->HasAttribute(m_Builtin.FormerlySerializedAsAttribute))
+                {
+                    MonoObject* attribute = field->GetAttribute(m_Builtin.FormerlySerializedAsAttribute);
+                    MonoField* oldNameField = m_Builtin.FormerlySerializedAsAttribute->GetField("oldName");
+                    MonoString* oldName = oldNameField != nullptr ? reinterpret_cast<MonoString*>(oldNameField->GetBoxed(attribute)) : nullptr;
+                    if (oldName != nullptr)
+                        objInfo->m_FieldNameToId[MonoUtils::FromMonoString(oldName)] = fieldInfo->m_FieldId;
+                }
                 objInfo->m_Fields[fieldInfo->m_FieldId] = fieldInfo;
             }
 
@@ -385,6 +401,14 @@ namespace Crowny
                     propertyInfo->m_Tooltip = std::move(tooltip);
                 }
                 objInfo->m_FieldNameToId[propertyInfo->m_Name] = propertyInfo->m_FieldId;
+                if (property->HasAttribute(m_Builtin.FormerlySerializedAsAttribute))
+                {
+                    MonoObject* attribute = property->GetAttribute(m_Builtin.FormerlySerializedAsAttribute);
+                    MonoField* oldNameField = m_Builtin.FormerlySerializedAsAttribute->GetField("oldName");
+                    MonoString* oldName = oldNameField != nullptr ? reinterpret_cast<MonoString*>(oldNameField->GetBoxed(attribute)) : nullptr;
+                    if (oldName != nullptr)
+                        objInfo->m_FieldNameToId[MonoUtils::FromMonoString(oldName)] = propertyInfo->m_FieldId;
+                }
                 objInfo->m_Fields[propertyInfo->m_FieldId] = propertyInfo;
             }
         }
@@ -410,6 +434,8 @@ namespace Crowny
     {
         RegisterAsset<AudioClip, ScriptAudioClip>();
         RegisterAsset<AudioMixer, ScriptAudioMixer>();
+        RegisterAsset<PhysicsMaterial2D, ScriptPhysicsMaterial2D>();
+        RegisterAsset<PhysicsMaterial3D, ScriptPhysicsMaterial3D>();
         RegisterAsset<Mesh, ScriptMesh>();
         RegisterAsset<Font, ScriptFont>();
         RegisterAsset<Material, ScriptMaterial>();
@@ -420,15 +446,22 @@ namespace Crowny
     {
         RegisterComponent<TransformComponent, ScriptTransform>();
         RegisterComponent<CameraComponent, ScriptCamera>();
+        RegisterComponent<LightComponent, ScriptLight>();
         // RegisterComponent<MonoScriptComponent, ScriptEntityBehaviour>(); // This should not be needed with the new
         // component system
         RegisterComponent<AudioSourceComponent, ScriptAudioSource>();
         RegisterComponent<AudioListenerComponent, ScriptAudioListener>();
         RegisterComponent<Rigidbody2DComponent, ScriptRigidbody2D>();
+        RegisterComponent<Rigidbody3DComponent, ScriptRigidbody3D>();
 
         RegisterComponent<Collider2D, ScriptCollider2D>();
         RegisterComponent<CircleCollider2DComponent, ScriptCircleCollider2D>();
         RegisterComponent<BoxCollider2DComponent, ScriptBoxCollider2D>();
+        RegisterComponent<Collider3D, ScriptCollider3D>();
+        RegisterComponent<BoxCollider3DComponent, ScriptBoxCollider3D>();
+        RegisterComponent<SphereCollider3DComponent, ScriptSphereCollider3D>();
+        RegisterComponent<CapsuleCollider3DComponent, ScriptCapsuleCollider3D>();
+        RegisterComponent<SpriteRendererComponent, ScriptSpriteRenderer>();
         RegisterComponent<TextComponent, ScriptText>();
     }
 
@@ -509,17 +542,27 @@ namespace Crowny
                 typeInfo->m_TypeName = monoClass->GetName();
 
                 void* enumType = MonoUtils::GetType(monoClass->GetInternalPtr());
-                MonoArray* enumNames =
-                  (MonoArray*)ScriptInfoManager::Get().GetBuiltinClasses().ScriptUtils->GetMethod("GetEnumNames", 1)->Invoke(nullptr, &enumType);
+                MonoMethod* getNames = m_Builtin.ScriptUtils->GetMethod("GetEnumNames", 1);
+                MonoMethod* getValues = m_Builtin.ScriptUtils->GetMethod("GetEnumValuesInt32", 1);
+                if (enumType == nullptr || getNames == nullptr || getValues == nullptr)
+                {
+                    CW_ENGINE_WARN("Cannot inspect managed enum {}: reflection helpers are unavailable.", monoClass->GetFullName());
+                    return nullptr;
+                }
+
+                MonoArray* enumNames = reinterpret_cast<MonoArray*>(getNames->Invoke(nullptr, &enumType));
+                MonoArray* enumValues = reinterpret_cast<MonoArray*>(getValues->Invoke(nullptr, &enumType));
+                if (enumNames == nullptr || enumValues == nullptr)
+                {
+                    CW_ENGINE_WARN("Cannot inspect managed enum {}: reflection returned no values.", monoClass->GetFullName());
+                    return nullptr;
+                }
+
                 ScriptArray managedNamesArray(enumNames);
                 typeInfo->m_EnumNames.resize(managedNamesArray.Size());
                 for (uint32_t i = 0; i < managedNamesArray.Size(); i++)
                     typeInfo->m_EnumNames[i] = managedNamesArray.Get<String>(i);
 
-                MonoArray* enumValues = (MonoArray*)ScriptInfoManager::Get()
-                                          .GetBuiltinClasses()
-                                          .ScriptUtils->GetMethod("GetEnumValuesInt32", 1)
-                                          ->Invoke(nullptr, &enumType);
                 ScriptArray managedValuesArray(enumValues);
                 typeInfo->m_EnumValues.resize(managedValuesArray.Size());
                 for (uint32_t i = 0; i < managedValuesArray.Size(); i++)
@@ -654,10 +697,29 @@ namespace Crowny
         return nullptr;
     }
 
+    bool ScriptInfoManager::GetSerializableObjectInfo(const String& assemblyName, const String& ns, const String& name,
+                                                      Ref<SerializableObjectInfo>& outInfo)
+    {
+        const auto assembly = m_AssemblyInfos.find(assemblyName);
+        if (assembly == m_AssemblyInfos.end() || assembly->second == nullptr)
+            return false;
+
+        const String fullName = ns.empty() ? name : ns + "." + name;
+        const auto type = assembly->second->m_TypeNameToId.find(fullName);
+        if (type == assembly->second->m_TypeNameToId.end())
+            return false;
+
+        const auto objectInfo = assembly->second->m_ObjectInfos.find(type->second);
+        if (objectInfo == assembly->second->m_ObjectInfos.end() || objectInfo->second == nullptr)
+            return false;
+
+        outInfo = objectInfo->second;
+        return true;
+    }
+
     bool ScriptInfoManager::GetSerializableObjectInfo(const String& ns, const String& name, Ref<SerializableObjectInfo>& outInfo)
     {
-
-        String fullName = ns + "." + name;
+        const String fullName = ns.empty() ? name : ns + "." + name;
         for (const auto& curAssembly : m_AssemblyInfos)
         {
             if (curAssembly.second == nullptr)
@@ -683,6 +745,8 @@ namespace Crowny
         ClearScriptObjects();
         m_ComponentInfos.clear();
         m_AssetInfos.clear();
+        m_AssetInfosById.clear();
+        m_ScriptTypeInfos.clear();
         m_AssemblyInfos.clear();
         m_EntityBehaviourClasses.clear();
     }

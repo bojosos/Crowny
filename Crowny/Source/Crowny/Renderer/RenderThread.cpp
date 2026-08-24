@@ -8,7 +8,15 @@
 namespace Crowny
 {
 
-    RenderThread::RenderThread() = default;
+    RenderThread::RenderThread(uint32_t frameContextCount)
+    {
+        frameContextCount = std::max(2u, frameContextCount);
+        m_FrameContexts.reserve(frameContextCount);
+        m_ContextStates.resize(frameContextCount, ContextState::Available);
+        for (uint32_t index = 0; index < frameContextCount; index++)
+            m_FrameContexts.emplace_back(index);
+        m_PendingResourceCommands.reserve(64);
+    }
 
     RenderThread::~RenderThread() { Stop(); }
 
@@ -27,36 +35,81 @@ namespace Crowny
             return;
 
         m_Running.store(false, std::memory_order_release);
-        m_FrameSync.Shutdown();
+        m_ContextReady.notify_all();
+        m_ContextAvailable.notify_all();
 
         if (m_Thread.joinable())
             m_Thread.join();
     }
 
-    void RenderThread::SubmitFrame(RenderSnapshot&& snapshot)
+    RenderSnapshot& RenderThread::BeginFrame()
     {
-        ZoneScopedN("SubmitFrame");
-        // Wait for the render thread to finish the previous frame before we
-        // overwrite the write buffer (ensures we never write while render reads).
-        m_FrameSync.SimWaitForRenderDone();
+        ZoneScopedN("BeginFrame");
+        CW_ENGINE_ASSERT(!m_FrameOpen);
 
-        // Write snapshot to the write buffer
-        uint32_t writeIdx = m_WriteIdx.load(std::memory_order_acquire);
-        m_Snapshots[writeIdx] = std::move(snapshot);
+        Lock lock(m_ContextMutex);
+        const uint32_t contextIndex = m_NextWriteContext;
+        m_ContextAvailable.wait(lock, [&]() {
+            return !m_Running.load(std::memory_order_acquire) || m_ContextStates[contextIndex] == ContextState::Available;
+        });
+        CW_ENGINE_ASSERT(m_Running.load(std::memory_order_acquire), "Cannot begin a frame on a stopped render thread");
 
-        // Swap so the render thread reads from what we just wrote
-        m_WriteIdx.store(writeIdx ^ 1, std::memory_order_release);
-
-        // Also swap the resource command queue
-        m_ResourceCmdQueue.Swap();
-
-        // Signal render thread
-        m_FrameSync.SimSignalNewFrame();
+        FrameContext& context = m_FrameContexts[contextIndex];
+        context.BeginRecording(m_NextSubmissionValue);
+        m_ContextStates[contextIndex] = ContextState::Recording;
+        m_RecordingContext = contextIndex;
+        m_FrameOpen = true;
+        return context.Snapshot;
     }
 
-    void RenderThread::WaitForFrameDone() { m_FrameSync.SimWaitForRenderDone(); }
+    void RenderThread::SubmitFrame()
+    {
+        ZoneScopedN("SubmitFrame");
+        CW_ENGINE_ASSERT(m_FrameOpen);
 
-    void RenderThread::EnqueueResourceCommand(std::function<void()>&& cmd) { m_ResourceCmdQueue.Enqueue(std::move(cmd)); }
+        {
+            ScopedLock resourceLock(m_ResourceCommandMutex);
+            FrameContext& context = m_FrameContexts[m_RecordingContext];
+            context.ResourceCommands.insert(context.ResourceCommands.end(),
+                                            std::make_move_iterator(m_PendingResourceCommands.begin()),
+                                            std::make_move_iterator(m_PendingResourceCommands.end()));
+            m_PendingResourceCommands.clear();
+        }
+
+        {
+            ScopedLock lock(m_ContextMutex);
+            FrameContext& context = m_FrameContexts[m_RecordingContext];
+            context.SubmissionValue = m_NextSubmissionValue++;
+            m_ContextStates[m_RecordingContext] = ContextState::Ready;
+            m_ReadyContexts.push_back(m_RecordingContext);
+            m_NextWriteContext = (m_RecordingContext + 1u) % static_cast<uint32_t>(m_FrameContexts.size());
+            m_FrameOpen = false;
+        }
+        m_ContextReady.notify_one();
+    }
+
+    void RenderThread::SubmitFrame(RenderSnapshot&& snapshot)
+    {
+        RenderSnapshot& target = BeginFrame();
+        const uint64_t frameNumber = target.FrameNumber;
+        target = std::move(snapshot);
+        target.FrameNumber = frameNumber;
+        SubmitFrame();
+    }
+
+    void RenderThread::WaitForFrameDone()
+    {
+        Lock lock(m_ContextMutex);
+        m_ContextAvailable.wait(lock, [&]() {
+            return !m_Running.load(std::memory_order_acquire) || (m_ReadyContexts.empty() && m_RenderingContexts == 0);
+        });
+    }
+
+    void RenderThread::EnqueueResourceCommand(std::function<void()>&& cmd)
+    {
+        ScopedLock lock(m_ResourceCommandMutex);
+        m_PendingResourceCommands.push_back(std::move(cmd));
+    }
 
     void RenderThread::RenderLoop()
     {
@@ -64,27 +117,45 @@ namespace Crowny
 
         while (m_Running.load(std::memory_order_acquire))
         {
-            // Wait for sim thread to provide a new snapshot
-            if (!m_FrameSync.RenderWaitForNewFrame())
-                break;
+            uint32_t contextIndex;
+            {
+                Lock lock(m_ContextMutex);
+                m_ContextReady.wait(lock,
+                                    [&]() { return !m_Running.load(std::memory_order_acquire) || !m_ReadyContexts.empty(); });
+                if (!m_Running.load(std::memory_order_acquire) && m_ReadyContexts.empty())
+                    break;
+
+                contextIndex = m_ReadyContexts.front();
+                m_ReadyContexts.pop_front();
+                m_ContextStates[contextIndex] = ContextState::Rendering;
+                m_RenderingContexts++;
+            }
+
+            FrameContext& context = m_FrameContexts[contextIndex];
 
             FrameMarkStart("RenderThread");
 
             {
                 ZoneScopedN("DrainResourceCmds");
-                m_ResourceCmdQueue.DrainAndExecute();
+                for (std::function<void()>& command : context.ResourceCommands)
+                    command();
+                context.ResourceCommands.clear();
             }
 
             {
                 ZoneScopedN("RenderFromSnapshot");
-                uint32_t readIdx = m_WriteIdx.load(std::memory_order_acquire) ^ 1;
-                SceneRenderer::RenderFromSnapshot(m_Snapshots[readIdx]);
+                SceneRenderer::RenderFromSnapshot(context.Snapshot);
             }
 
             FrameMarkEnd("RenderThread");
 
-            // Signal sim thread that we are done
-            m_FrameSync.RenderSignalDone();
+            {
+                ScopedLock lock(m_ContextMutex);
+                context.CompletionValue = context.SubmissionValue;
+                m_ContextStates[contextIndex] = ContextState::Available;
+                m_RenderingContexts--;
+            }
+            m_ContextAvailable.notify_all();
         }
     }
 

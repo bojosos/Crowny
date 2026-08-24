@@ -22,6 +22,8 @@ namespace Crowny
 
         void SetViewportSize(float width, float height)
         {
+            if (!std::isfinite(width) || !std::isfinite(height) || width <= 0.0f || height <= 0.0f)
+                return;
             m_ViewportWidth = width;
             m_ViewportHeight = height;
             UpdateProjection();
@@ -41,7 +43,11 @@ namespace Crowny
         void SetYaw(float yaw) { m_Yaw = yaw; }
         void SetRoll(float roll) { m_Roll = roll; }
         void SetPitch(float pitch) { m_Pitch = pitch; }
-        void SetDistance(float dist) { m_Distance = dist; }
+        void SetDistance(float distance)
+        {
+            if (std::isfinite(distance))
+                m_Distance = std::max(distance, 0.1f);
+        }
 
         float GetPitch() const { return m_Pitch; }
         float GetYaw() const { return m_Yaw; }
@@ -79,6 +85,7 @@ namespace Crowny
         float m_Distance = 10.0f;
         float m_Pitch = 0.0f, m_Yaw = 0.0f;
         float m_Roll = 0.0f;
+        bool m_AltWasPressed = false;
 
         float m_ViewportWidth = 1280.0f, m_ViewportHeight = 720.0f;
     };

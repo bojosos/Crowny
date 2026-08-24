@@ -7,6 +7,7 @@
 
 namespace Crowny
 {
+    class GpuScene;
 
     class Renderer
     {
@@ -16,6 +17,7 @@ namespace Crowny
 
         static void OnWindowResize(uint32_t width, uint32_t height);
         static RenderAPI::API GetAPI() { return RenderAPI::GetAPI(); }
+        static GpuScene& GetGpuScene();
     };
 
 } // namespace Crowny

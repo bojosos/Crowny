@@ -12,13 +12,27 @@ namespace Crowny
     public class Camera : Component
     {
         /// <summary>
-        /// The vertical field of view of the camera.
+        /// The vertical field of view of the camera, in degrees.
         /// </summary>
         /// <value>Camera field of view.</value>
         public float fieldOfView
         {
             get { return Internal_GetCameraFov(m_InternalPtr); }
             set { Internal_SetCameraFov(m_InternalPtr, value); }
+        }
+
+        /// <summary>The projection used by this camera.</summary>
+        public CameraProjection projection
+        {
+            get { return Internal_GetCameraProjection(m_InternalPtr); }
+            set { Internal_SetCameraProjection(m_InternalPtr, value); }
+        }
+
+        /// <summary>Whether this camera uses an orthographic projection.</summary>
+        public bool orthographic
+        {
+            get { return projection == CameraProjection.Orthographic; }
+            set { projection = value ? CameraProjection.Orthographic : CameraProjection.Perspective; }
         }
 
         /// <summary>
@@ -79,7 +93,7 @@ namespace Crowny
         /// The size and position of the rectangle the camera is rendering to on the screen. 
         /// </summary>
         /// <value>All four values are in the range [0, 1].</value>
-		public Vector4 viewportRectangle
+        public Vector4 viewportRectangle
         {
             get
             {
@@ -89,10 +103,35 @@ namespace Crowny
             set { Internal_SetCameraViewportRectangle(m_InternalPtr, ref value); }
         }
 
+        /// <summary>Whether the camera renders into a high-dynamic-range target.</summary>
+        public bool hdr
+        {
+            get { return Internal_GetCameraHDR(m_InternalPtr); }
+            set { Internal_SetCameraHDR(m_InternalPtr, value); }
+        }
+
+        /// <summary>Whether multisample anti-aliasing is enabled for this camera.</summary>
+        public bool msaa
+        {
+            get { return Internal_GetCameraMSAA(m_InternalPtr); }
+            set { Internal_SetCameraMSAA(m_InternalPtr, value); }
+        }
+
+        /// <summary>Whether occlusion culling is enabled for this camera.</summary>
+        public bool occlusionCulling
+        {
+            get { return Internal_GetCameraOcclusionCulling(m_InternalPtr); }
+            set { Internal_SetCameraOcclusionCulling(m_InternalPtr, value); }
+        }
+
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern float Internal_GetCameraFov(IntPtr thisptr);
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern void Internal_SetCameraFov(IntPtr thisptr, float value);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern CameraProjection Internal_GetCameraProjection(IntPtr thisptr);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern void Internal_SetCameraProjection(IntPtr thisptr, CameraProjection value);
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern float Internal_GetCameraNearPlane(IntPtr thisptr);
         [MethodImpl(MethodImplOptions.InternalCall)]
@@ -117,5 +156,17 @@ namespace Crowny
         private static extern void Internal_GetCameraViewportRectangle(IntPtr thisptr, out Vector4 value);
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern void Internal_SetCameraViewportRectangle(IntPtr thisptr, ref Vector4 value);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern bool Internal_GetCameraHDR(IntPtr thisptr);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern void Internal_SetCameraHDR(IntPtr thisptr, bool value);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern bool Internal_GetCameraMSAA(IntPtr thisptr);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern void Internal_SetCameraMSAA(IntPtr thisptr, bool value);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern bool Internal_GetCameraOcclusionCulling(IntPtr thisptr);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern void Internal_SetCameraOcclusionCulling(IntPtr thisptr, bool value);
     }
 }

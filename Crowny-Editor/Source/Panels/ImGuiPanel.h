@@ -1,10 +1,9 @@
 #pragma once
 
-#include "Crowny/ImGui/ImGuiMenu.h"
+#include "Crowny/Common/Common.h"
 
 namespace Crowny
 {
-    class ImGuiMenuItem;
     typedef int ImGuiWindowFlags;
 
     class ImGuiPanel
@@ -13,26 +12,25 @@ namespace Crowny
         ImGuiPanel(const String& name);
         virtual ~ImGuiPanel() = default;
 
-        virtual void Show() { m_Shown = true; };
-        virtual void Hide() { m_Shown = false; };
+        void Show() { m_Shown = true; }
+        void Hide() { m_Shown = false; }
+        void Toggle() { m_Shown = !m_Shown; }
+        void SetShown(bool shown) { m_Shown = shown; }
 
-        // TODO: Fix this whole Render/manual begin calls
         virtual void Render() = 0;
 
-        virtual const String& GetName() const { return m_Name; }
-        virtual bool IsFocused() const { return m_Focused; }
-        virtual bool IsHovered() const { return m_Hovered; }
+        const String& GetName() const { return m_Name; }
+        bool IsFocused() const { return m_Focused; }
+        bool IsHovered() const { return m_Hovered; }
 
-        void RegisterInMenu(ImGuiMenu* menu);
         bool IsShown() const { return m_Shown; }
 
     protected:
         void UpdateState();
-        void BeginPanel(ImGuiWindowFlags flags = 0);
+        bool BeginPanel(ImGuiWindowFlags flags = 0);
         void EndPanel();
 
     protected:
-        friend class ImGuiMenuItem;
         bool m_Focused = false, m_Hovered = false;
         String m_Name;
         bool m_Shown = true;

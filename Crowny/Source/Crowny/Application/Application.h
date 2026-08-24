@@ -16,6 +16,7 @@ namespace Crowny
 {
 
     class Window;
+    class EngineRuntime;
     struct TimeSettings;
 
     struct ScriptConfig
@@ -29,9 +30,11 @@ namespace Crowny
         RenderWindowDesc Window;
         Path WorkingDirectory = ".";
         Path InternalDirectory = "Internal";
+        Path BuiltInResourcePackPath;
         String Name;
 
         bool Headless = false;
+        bool DeferRuntimeServices = false;
         bool EnableRayTracing = false;
         RenderAPI::API PreferredAPI = RenderAPI::API::Vulkan;
 
@@ -58,6 +61,8 @@ namespace Crowny
         void SetTimeSettings(const Ref<TimeSettings>& timeSettings);
         ImGuiLayer* GetImGuiLayer() const { return m_ImGuiLayer; }
         RenderThread* GetRenderThread() const { return m_RenderThread.get(); }
+        EngineRuntime& GetRuntime();
+        const EngineRuntime& GetRuntime() const;
         bool IsMultiThreaded() const { return m_RenderThread != nullptr; }
         void Exit();
         const ApplicationDesc& GetApplicationDesc() const { return m_ApplicationDesc; }
@@ -90,12 +95,8 @@ namespace Crowny
         ImGuiLayer* m_ImGuiLayer;
         Scope<RenderThread> m_RenderThread;
         ApplicationDesc m_ApplicationDesc;
-
-    public:
-        static uint8_t s_GLFWWindowCount;
+        Scope<EngineRuntime> m_Runtime;
     };
 
     void CreateApplication();
-
-    extern Application* gApplication;
 } // namespace Crowny

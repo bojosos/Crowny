@@ -2,52 +2,48 @@
 
 #include "Crowny/RenderAPI/Texture.h"
 
+#include "Platform/OpenGL/OpenGLUtils.h"
+
 namespace Crowny
 {
-    /*
-        class OpenGLTexture2D : public Texture2D
-        {
-        public:
-            OpenGLTexture2D(uint32_t width, uint32_t height, const TextureDesc& parameters);
-            OpenGLTexture2D(const Path& filepath, const TextureDesc& parameters, const String& name);
-            ~OpenGLTexture2D();
+    class OpenGLTexture : public Texture
+    {
+    public:
+        friend class Texture;
+        OpenGLTexture();
+        ~OpenGLTexture() override;
 
-            virtual uint32_t GetWidth() const override { return m_Width; }
-            virtual uint32_t GetHeight() const override { return m_Height; }
+        PixelData Lock(GpuLockOptions options, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) override;
+        void Unlock() override;
+        void ReadData(PixelData& dest, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) override;
+        bool ReadPixel(uint32_t x, uint32_t y, void* dest, size_t destSize, uint32_t mipLevel = 0, uint32_t face = 0,
+                       uint32_t queueIdx = 0) override;
+        void WriteData(const PixelData& src, uint32_t mipLevel = 0, uint32_t face = 0, uint32_t queueIdx = 0) override;
 
-            virtual const String& GetName() const override { return m_Name; }
-            virtual const String& GetFilepath() const override { return m_FilePath; }
+        uint32_t GetRendererID() const { return m_RendererID; }
+        uint32_t GetTarget() const { return m_Target; }
+        const OpenGLTextureFormat& GetOpenGLFormat() const { return m_Format; }
+        void Bind(uint32_t slot) const;
+        void Unbind(uint32_t slot) const;
 
-            virtual uint32_t GetRendererID() const override { return m_RendererID; };
+    protected:
+        explicit OpenGLTexture(const TextureDesc& parameters);
+        OpenGLTexture(const TextureDesc& parameters, bool deferred);
 
-            virtual void Bind(uint32_t slot) const override;
-            virtual void Unbind(uint32_t slot) const override;
-            virtual void Clear(int32_t clearColor) override;
-            virtual void SetData(void* data, uint32_t size) override;
-            virtual void SetData(void* data, TextureChannel channel = TextureChannel::CHANNEL_RGBA) override;
+    private:
+        void Init() override;
+        void AllocateStorage();
+        GLenum GetTransferTarget(uint32_t face) const;
+        void ValidateSurface(uint32_t mipLevel, uint32_t face) const;
 
-            virtual bool operator==(const Texture& other) const override
-            {
-                return (other.GetRendererID() == m_RendererID);
-            }
-
-        private:
-            TextureDesc m_Parameters;
-            uint32_t m_RendererID;
-            String m_FilePath;
-            uint32_t m_Width, m_Height;
-            String m_Name;
-
-        public:
-            static uint32_t TextureChannelToOpenGLChannel(TextureChannel channel);
-            static uint32_t TextureFormatToOpenGLFormat(TextureFormat format);
-            static uint32_t TextureFormatToOpenGLInternalFormat(TextureFormat format);
-            static uint32_t TextureFilterToOpenGLFilter(TextureFilter filter);
-            static uint32_t TextureFormatToOpenGLType(TextureFormat format);
-            static uint32_t TextureWrapToOpenGLWrap(TextureWrap wrap);
-            static uint32_t TextureSwizzleToOpenGLSwizzle(SwizzleType swizzle);
-            static int32_t  TextureSwizzleColorToOpenGLSwizzleColor(SwizzleChannel color);
-        };
-
-    */
-}
+        uint32_t m_RendererID = 0;
+        uint32_t m_ReadFramebuffer = 0;
+        GLenum m_Target = GL_NONE;
+        OpenGLTextureFormat m_Format;
+        uint8_t* m_MappedData = nullptr;
+        uint32_t m_MappedMip = 0;
+        uint32_t m_MappedFace = 0;
+        GpuLockOptions m_MappedOptions = GpuLockOptions::READ_ONLY;
+        bool m_IsMapped = false;
+    };
+} // namespace Crowny

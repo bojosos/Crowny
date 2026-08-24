@@ -9,11 +9,11 @@ namespace Crowny
     public:
         NodeGraphSerializer(Ref<NodeGraph>& graph);
 
-        void Serialize(const Path& filepath);
-        void Deserialize(const Path& filepath);
+        bool Serialize(const Path& filepath);
+        bool Deserialize(const Path& filepath);
 
         String SerializeToString();
-        void DeserializeFromString(const String& yamlString);
+        bool DeserializeFromString(const String& yamlString);
 
     private:
         Ref<NodeGraph>& m_Graph;

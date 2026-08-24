@@ -12,7 +12,7 @@ namespace Crowny
     {
     public:
         friend class UniformParamInfo;
-        ~VulkanUniformParamInfo() = default;
+        ~VulkanUniformParamInfo();
 
         uint32_t GetNumBindings(uint32_t layoutIdx) const { return m_LayoutInfos[layoutIdx].NumBindings; }
         VkDescriptorSetLayoutBinding* GetBindings(uint32_t layoutIdx) const { return m_LayoutInfos[layoutIdx].Bindings; }
@@ -31,6 +31,7 @@ namespace Crowny
             VkDescriptorSetLayoutBinding* Bindings;
             UniformResourceType* Types;
             GpuBufferFormat* ElementTypes;
+            VkDescriptorBindingFlags* BindingFlags;
             uint32_t NumBindings;
         };
 

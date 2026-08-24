@@ -4,8 +4,8 @@
 
 #include "Crowny/Renderer/Renderer.h"
 
+#include "Platform/OpenGL/OpenGLRenderTexture.h"
 #include "Platform/Vulkan/VulkanRenderTexture.h"
-// #include "Platform/OpenGL/OpenGLRenderTexture.h"
 
 namespace Crowny
 {
@@ -36,9 +36,10 @@ namespace Crowny
 
     Ref<RenderTexture> RenderTexture::Create(const RenderTextureDesc& props)
     {
-        switch (gRenderAPI->GetAPI())
+        switch (RenderAPI::TryGet()->GetAPI())
         {
-        // case RenderAPI::API::OpenGL: return CreateRef<OpenGLRenderTexture>(props);
+        case RenderAPI::API::OpenGL:
+            return Ref<RenderTexture>(new OpenGLRenderTexture(props));
         case RenderAPI::API::Vulkan:
             return Ref<RenderTexture>(new VulkanRenderTexture(props));
         default:
@@ -46,7 +47,6 @@ namespace Crowny
             return nullptr;
         }
 
-        return nullptr;
     }
 
 } // namespace Crowny

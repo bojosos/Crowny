@@ -138,7 +138,7 @@ namespace Crowny
         TUnderlying underlyingValue = (TUnderlying)value;
         if (errorMessageFormat && (underlyingValue < minValue || underlyingValue >= maxValue))
         {
-            CW_ENGINE_WARN(errorMessageFormat, (TUnderlying)value);
+            CW_ENGINE_WARN(fmt::runtime(errorMessageFormat), (TUnderlying)value);
             value = defaultValue;
         }
     }
@@ -178,7 +178,7 @@ namespace Crowny
 
         if (errorMessageFormat && (value < minValue || value > maxValue))
         {
-            CW_ENGINE_WARN(errorMessageFormat, (int32_t)value);
+            CW_ENGINE_WARN(fmt::runtime(errorMessageFormat), (int32_t)value);
             value = defaultValue;
         }
     }

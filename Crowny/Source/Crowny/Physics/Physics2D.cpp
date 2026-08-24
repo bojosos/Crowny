@@ -1,459 +1,465 @@
 #include "cwpch.h"
 
-#include "Crowny/Application/Application.h"
 #include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Common/Math.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Scene/SceneManager.h"
 
 #include <imgui.h>
 
-#include <box2d/box2d.h>
-#include <tracy/Tracy.hpp>
+#include <algorithm>
+#include <cmath>
 
 namespace Crowny
 {
-
-    Physics2D* gPhysics2D = nullptr;
-
-    void Physics2D::OnStartUp() { gPhysics2D = this; }
-
-    void Physics2D::OnShutdown() { gPhysics2D = nullptr; }
-
-    static b2BodyType GetBox2DType(RigidbodyBodyType type)
+    namespace
     {
-        switch (type)
+        bool DecomposeWorldTransform(Entity entity, glm::vec3& position, glm::quat& rotation, glm::vec3& scale)
         {
-        case RigidbodyBodyType::Static:
-            return b2_staticBody;
-        case RigidbodyBodyType::Dynamic:
-            return b2_dynamicBody;
-        case RigidbodyBodyType::Kinematic:
-            return b2_kinematicBody;
+            return entity && Math::DecomposeMatrix(entity.GetWorldMatrix(), position, rotation, scale);
         }
-        CW_ENGINE_ASSERT(false);
-        return b2_staticBody;
-    }
 
-    class ContactListener : public b2ContactListener
-    {
-    public:
-        ContactListener(Scene* scene);
-
-        virtual void BeginContact(b2Contact* contact);
-        virtual void EndContact(b2Contact* contact);
-
-    private:
-        Scene* m_Scene;
-    };
-
-    ContactListener::ContactListener(Scene* scene) : m_Scene(scene) {}
-
-    static void BuildCollision2D(b2Contact* contact, Entity e1, Entity e2, Collision2D& collision)
-    {
-        b2WorldManifold manifold;
-        contact->GetWorldManifold(&manifold);
-        const int32_t pointCount = contact->GetManifold()->pointCount;
-        for (int32_t i = 0; i < pointCount; i++)
-            collision.Points.push_back(glm::vec2(manifold.points[i].x, manifold.points[i].y));
-        collision.Colliders.push_back(e1);
-        collision.Colliders.push_back(e2);
-    }
-
-    void ContactListener::BeginContact(b2Contact* contact)
-    {
-        const Entity e1 = Entity((entt::entity)contact->GetFixtureA()->GetBody()->GetUserData().pointer, m_Scene);
-        const Entity e2 = Entity((entt::entity)contact->GetFixtureB()->GetBody()->GetUserData().pointer, m_Scene);
-
-        auto callbacks = [&](Entity e1, Entity e2) {
-            if (e1.HasComponent<MonoScriptComponent>())
-            {
-                auto& monoScript = e1.GetComponent<MonoScriptComponent>();
-                const bool sendTriggerCallback = contact->GetFixtureA()->IsSensor();
-                if (!sendTriggerCallback)
-                {
-                    Collision2D collision;
-                    BuildCollision2D(contact, e1, e2, collision);
-
-                    for (auto& script : monoScript.Scripts)
-                        script.OnCollisionEnter2D(collision);
-                }
-                else
-                {
-                    for (auto& script : monoScript.Scripts)
-                        script.OnTriggerEnter2D(e2);
-                }
-            }
-        };
-        callbacks(e1, e2);
-        callbacks(e2, e1);
-    }
-
-    void ContactListener::EndContact(b2Contact* contact)
-    {
-        const Entity e1 = Entity((entt::entity)contact->GetFixtureA()->GetBody()->GetUserData().pointer, m_Scene);
-        const Entity e2 = Entity((entt::entity)contact->GetFixtureB()->GetBody()->GetUserData().pointer, m_Scene);
-
-        auto callbacks = [&](Entity e1, Entity e2, bool sendTriggerCallback) {
-            if (e1.HasComponent<MonoScriptComponent>())
-            {
-                auto& monoScript = e1.GetComponent<MonoScriptComponent>();
-                if (!sendTriggerCallback)
-                {
-                    Collision2D collision;
-                    BuildCollision2D(contact, e1, e2, collision);
-
-                    for (auto& script : monoScript.Scripts)
-                        script.OnCollisionExit2D(collision);
-                }
-                else
-                {
-                    for (auto& script : monoScript.Scripts)
-                        script.OnTriggerExit2D(e2);
-                }
-            }
-        };
-        callbacks(e1, e2, contact->GetFixtureB()->IsSensor());
-        callbacks(e2, e1, contact->GetFixtureA()->IsSensor());
-    }
-
+        glm::vec2 GetWorldScale2D(Entity entity)
+        {
+            glm::vec3 position, scale;
+            glm::quat rotation;
+            return DecomposeWorldTransform(entity, position, rotation, scale) ? glm::abs(glm::vec2(scale))
+                                                                              : glm::abs(glm::vec2(entity.GetLocalScale()));
+        }
+    } // namespace
     Physics2D::Physics2D()
     {
         m_Settings = CreateRef<Physics2DSettings>();
-        m_Settings->DefaultMaterial = static_asset_cast<PhysicsMaterial2D>(gAssetManager->CreateAssetHandle(CreateRef<PhysicsMaterial2D>()));
-        for (uint32_t i = 0; i < m_Settings->MaskBits.size(); i++)
-            m_Settings->MaskBits[i] = 0xffffffff;
-        m_TemporaryWorld2D = new b2World({ m_Settings->Gravity.x, m_Settings->Gravity.y });
+        m_Settings->DefaultMaterial = static_asset_cast<PhysicsMaterial2D>(AssetManager::TryGet()->CreateAssetHandle(CreateRef<PhysicsMaterial2D>()));
+        m_Settings->MaskBits.fill(0xFFFFu);
+        CreateBackend(m_Settings->Backend);
     }
+
+    Physics2D::~Physics2D()
+    {
+        if (m_Backend && m_Backend->IsSimulating())
+            m_Backend->StopSimulation(m_Scene);
+    }
+
+    void Physics2D::CreateBackend(Physics2DBackendType backend)
+    {
+        switch (backend)
+        {
+        case Physics2DBackendType::Box2D:
+            m_Backend = CreateBox2DBackend();
+            break;
+        default:
+            CW_ENGINE_ERROR("Unknown 2D physics backend; falling back to Box2D");
+            m_Backend = CreateBox2DBackend();
+            backend = Physics2DBackendType::Box2D;
+            break;
+        }
+        m_Settings->Backend = backend;
+    }
+
+    void Physics2D::SetBackend(Physics2DBackendType backend)
+    {
+        if (m_Backend && backend == m_Backend->GetType())
+        {
+            m_Settings->Backend = backend;
+            return;
+        }
+
+        Scene* scene = m_Scene;
+        const bool restart = IsSimulating();
+        if (restart)
+            StopSimulation(scene);
+        CreateBackend(backend);
+        if (restart)
+            BeginSimulation(scene);
+    }
+
+    const char* Physics2D::GetBackendName() const { return m_Backend ? m_Backend->GetName() : "Unavailable"; }
 
     void Physics2D::UIStats()
     {
         ImGui::Begin("Physics2D Stats");
-        if (m_PhysicsWorld2D == nullptr)
-        {
-            ImGui::End();
-            return;
-        }
-        ImGui::Columns(2);
-        ImGui::Text("Body count");
-        ImGui::NextColumn();
-        ImGui::Text("%d", m_PhysicsWorld2D->GetBodyCount());
-        ImGui::NextColumn();
-        uint32_t i = 0;
-        for (b2Body* body = m_PhysicsWorld2D->GetBodyList(); body; body = body->GetNext())
-        {
-            ImGui::Text("%d", i);
-            ImGui::NextColumn();
-            ImGui::Text("%d%f%f", body->GetType(), body->GetPosition().x, body->GetPosition().y);
-            ImGui::NextColumn();
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 20.0f);
-            uint32_t idx = 0;
-            for (b2Fixture* f = body->GetFixtureList(); f != nullptr; f = f->GetNext())
-            {
-                ImGui::Text("%d", idx++);
-                ImGui::NextColumn();
-                ImGui::NextColumn();
-            }
-        }
-        ImGui::Columns(1);
+        ImGui::Text("Backend: %s", GetBackendName());
+        ImGui::Text("Bodies: %u", m_Backend ? m_Backend->GetBodyCount() : 0);
         ImGui::End();
     }
 
     void Physics2D::SetGravity(const glm::vec2& gravity)
     {
-        if (m_PhysicsWorld2D != nullptr)
-            m_PhysicsWorld2D->SetGravity({ gravity.x, gravity.y });
         m_Settings->Gravity = gravity;
+        if (m_Backend)
+            m_Backend->SetGravity(gravity);
     }
-    void Physics2D::SetVelocityIterations(uint32_t iterations) { m_Settings->VelocityIterations = iterations; }
 
-    void Physics2D::SetPositionIterations(uint32_t iterations) { m_Settings->PositionIterations = iterations; }
+    void Physics2D::SetDefaultMaterial(const AssetHandle<PhysicsMaterial2D>& material)
+    {
+        if (!material.HasUUID())
+            return;
+        const AssetHandle<PhysicsMaterial2D> previous = m_Settings->DefaultMaterial;
+        m_Settings->DefaultMaterial = material;
+        if (!SceneManager::TryGet() || !SceneManager::TryGet()->GetActiveScene())
+            return;
+
+        Scene* const scene = SceneManager::TryGet()->GetActiveScene().get();
+        const auto replaceDefault = [&](Collider2D& collider) {
+            if (!collider.GetMaterial().HasUUID() || collider.GetMaterial().GetUUID() == previous.GetUUID())
+                collider.SetMaterial(material);
+            else if (!collider.GetMaterial())
+                collider.RefreshMaterial();
+        };
+        for (const entt::entity handle : scene->GetAllEntitiesWith<BoxCollider2DComponent>())
+            replaceDefault(Entity(handle, scene).GetComponent<BoxCollider2DComponent>());
+        for (const entt::entity handle : scene->GetAllEntitiesWith<CircleCollider2DComponent>())
+            replaceDefault(Entity(handle, scene).GetComponent<CircleCollider2DComponent>());
+    }
+
+    void Physics2D::SetVelocityIterations(uint32_t iterations) { m_Settings->VelocityIterations = std::max(iterations, 1u); }
+
+    void Physics2D::SetPositionIterations(uint32_t iterations) { m_Settings->PositionIterations = std::max(iterations, 1u); }
+
+    uint32_t Physics2D::GetCategoryMask(uint32_t idx) const
+    {
+        CW_ENGINE_ASSERT(idx < Physics2DLayerCount);
+        return idx < Physics2DLayerCount ? m_Settings->MaskBits[idx] & 0xFFFFu : 0;
+    }
+
+    const String& Physics2D::GetLayerName(uint32_t idx) const
+    {
+        CW_ENGINE_ASSERT(idx < Physics2DLayerCount);
+        static const String empty;
+        return idx < Physics2DLayerCount ? m_Settings->LayerNames[idx] : empty;
+    }
+
+    void Physics2D::SetLayerName(uint32_t idx, const String& name)
+    {
+        CW_ENGINE_ASSERT(idx < Physics2DLayerCount);
+        if (idx < Physics2DLayerCount)
+            m_Settings->LayerNames[idx] = name;
+    }
 
     void Physics2D::SetCategoryMask(uint32_t idx, uint32_t mask)
     {
-        m_Settings->MaskBits[idx] = mask;
-        if (!gSceneManager->GetActiveScene())
+        CW_ENGINE_ASSERT(idx < Physics2DLayerCount);
+        if (idx >= Physics2DLayerCount)
             return;
-        Scene* const scene = gSceneManager->GetActiveScene().get();
-        const auto view = scene->GetAllEntitiesWith<Rigidbody2DComponent>();
-        for (auto e : view)
-        {
-            Entity entity{ e, scene };
-            auto& rb = entity.GetComponent<Rigidbody2DComponent>();
-            if (rb.GetLayerMask() == idx)
-                rb.SetLayerMask(idx, entity);
-        }
-    }
+        m_Settings->MaskBits[idx] = mask & 0xFFFFu;
 
-    Physics2D::~Physics2D()
-    {
-        delete m_TemporaryWorld2D;
-        delete m_PhysicsWorld2D;
-        delete m_ContactListener2D;
+        if (!IsSimulating() || SceneManager::TryGet() == nullptr || !SceneManager::TryGet()->GetActiveScene())
+            return;
+        Scene* scene = SceneManager::TryGet()->GetActiveScene().get();
+        for (auto handle : scene->GetAllEntitiesWith<Rigidbody2DComponent>())
+        {
+            Entity entity(handle, scene);
+            if (entity.GetComponent<Rigidbody2DComponent>().GetLayerMask() == idx)
+                UpdateLayer(entity);
+        }
     }
 
     void Physics2D::BeginSimulation(Scene* scene)
     {
-        ZoneScopedN("Physics2D::BeginSimulation");
-        if (m_ContactListener2D == nullptr)
-            m_ContactListener2D = new ContactListener(scene); // Perhaps don't do this every time simulation starts
-        m_PhysicsWorld2D = new b2World({ m_Settings->Gravity.x, m_Settings->Gravity.y });
-        m_PhysicsWorld2D->SetContactListener(m_ContactListener2D);
-
-        const auto bodies = scene->GetAllEntitiesWith<Rigidbody2DComponent>();
-        for (auto e : bodies)
-        {
-            Entity entity = { e, scene };
-            CreateRigidbody(entity);
-        }
-
-        const auto boxColliders = scene->GetAllEntitiesWith<BoxCollider2DComponent>();
-        for (auto e : boxColliders)
-        {
-            Entity entity = { e, scene };
-            CreateBoxCollider(entity);
-        }
-
-        const auto circleColliders = scene->GetAllEntitiesWith<CircleCollider2DComponent>();
-        for (auto e : circleColliders)
-        {
-            Entity entity = { e, scene };
-            CreateCircleCollider(entity);
-        }
+        if (!scene || !m_Backend)
+            return;
+        if (IsSimulating())
+            StopSimulation(m_Scene);
+        m_Scene = scene;
+        m_Backend->BeginSimulation(scene, *m_Settings);
     }
 
     void Physics2D::CreateRigidbody(Entity entity)
     {
-        auto& rigidBody2D = entity.GetComponent<Rigidbody2DComponent>();
-        const Transform& transform = entity.GetWorldTransform();
-        b2BodyDef bodyDef;
-        bodyDef.position.Set(transform.GetPosition().x, transform.GetPosition().y);
-        bodyDef.angle = transform.GetRotation().z;
-
-        bodyDef.type = GetBox2DType(rigidBody2D.GetBodyType());
-        bodyDef.allowSleep = rigidBody2D.GetSleepMode() != RigidbodySleepMode::NeverSleep;
-        bodyDef.awake = rigidBody2D.GetSleepMode() == RigidbodySleepMode::StartAwake || rigidBody2D.GetSleepMode() == RigidbodySleepMode::NeverSleep;
-        bodyDef.fixedRotation = rigidBody2D.GetConstraints().IsSet(Rigidbody2DConstraintsBits::FreezeRotation);
-        bodyDef.userData.pointer = (uintptr_t)entity.GetHandle();
-        bodyDef.bullet = rigidBody2D.GetCollisionDetectionMode() == CollisionDetectionMode2D::Continuous;
-        bodyDef.gravityScale = rigidBody2D.GetGravityScale();
-        bodyDef.linearDamping = rigidBody2D.GetLinearDrag();
-        bodyDef.angularDamping = rigidBody2D.GetAngularDrag();
-
-        b2Body* const body = m_PhysicsWorld2D->CreateBody(&bodyDef);
-        b2MassData massData;
-        massData.mass = rigidBody2D.GetMass();
-        body->SetMassData(&massData);
-        rigidBody2D.RuntimeBody = body;
+        if (!IsSimulating() || !entity || !entity.HasComponent<Rigidbody2DComponent>())
+            return;
+        m_Backend->CreateRigidbody(entity);
+        if (entity.HasComponent<BoxCollider2DComponent>())
+            m_Backend->CreateBoxCollider(entity);
+        if (entity.HasComponent<CircleCollider2DComponent>())
+            m_Backend->CreateCircleCollider(entity);
     }
 
     void Physics2D::CreateBoxCollider(Entity entity)
     {
-        const Transform& transform = entity.GetWorldTransform();
-        auto& b2d = entity.GetComponent<BoxCollider2DComponent>();
-
-        b2PolygonShape boxShape;
-        boxShape.SetAsBox(b2d.GetSize().x * transform.GetScale().x, b2d.GetSize().y * transform.GetScale().y,
-                          { b2d.GetOffset().x, b2d.GetOffset().y }, 0.0f);
-
-        b2FixtureDef fixtureDef;
-        fixtureDef.shape = &boxShape;
-
-        const uint32_t layerMask = entity.HasComponent<Rigidbody2DComponent>() ? entity.GetComponent<Rigidbody2DComponent>().GetLayerMask() : 0;
-        fixtureDef.filter.categoryBits = 1 << layerMask;
-        fixtureDef.filter.maskBits = gPhysics2D->GetCategoryMask(layerMask);
-
-        fixtureDef.isSensor = b2d.IsTrigger();
-
-        if (auto mat = b2d.GetMaterial())
-        {
-            fixtureDef.density = mat->m_Density;
-            fixtureDef.friction = mat->m_Friction;
-            fixtureDef.restitution = mat->m_Restitution;
-            fixtureDef.restitutionThreshold = mat->m_RestitutionThreshold;
-        }
-
-        if (entity.HasComponent<Rigidbody2DComponent>())
-            b2d.RuntimeFixture = entity.GetComponent<Rigidbody2DComponent>().RuntimeBody->CreateFixture(&fixtureDef);
+        if (IsSimulating() && entity && entity.HasComponent<Rigidbody2DComponent>() && entity.HasComponent<BoxCollider2DComponent>())
+            m_Backend->CreateBoxCollider(entity);
     }
 
     void Physics2D::CreateCircleCollider(Entity entity)
     {
-        const Transform& transform = entity.GetWorldTransform();
-        auto& cc2d = entity.GetComponent<CircleCollider2DComponent>();
-
-        b2CircleShape circleShape;
-        circleShape.m_p.Set(cc2d.GetOffset().x, cc2d.GetOffset().y);
-        circleShape.m_radius = (transform.GetScale().x + transform.GetScale().y) * 0.5f * cc2d.GetRadius();
-
-        b2FixtureDef fixtureDef;
-        fixtureDef.shape = &circleShape;
-
-        const uint32_t layerMask = entity.HasComponent<Rigidbody2DComponent>() ? entity.GetComponent<Rigidbody2DComponent>().GetLayerMask() : 0;
-        fixtureDef.filter.categoryBits = 1 << layerMask;
-        fixtureDef.filter.maskBits = gPhysics2D->GetCategoryMask(layerMask);
-
-        fixtureDef.isSensor = cc2d.IsTrigger();
-
-        if (auto mat = cc2d.GetMaterial())
-        {
-            fixtureDef.density = mat->m_Density;
-            fixtureDef.friction = mat->m_Friction;
-            fixtureDef.restitution = mat->m_Restitution;
-            fixtureDef.restitutionThreshold = mat->m_RestitutionThreshold;
-        }
-
-        if (entity.HasComponent<Rigidbody2DComponent>())
-            cc2d.RuntimeFixture = entity.GetComponent<Rigidbody2DComponent>().RuntimeBody->CreateFixture(&fixtureDef);
+        if (IsSimulating() && entity && entity.HasComponent<Rigidbody2DComponent>() && entity.HasComponent<CircleCollider2DComponent>())
+            m_Backend->CreateCircleCollider(entity);
     }
 
     void Physics2D::DestroyRigidbody(Entity entity)
     {
-        m_PhysicsWorld2D->DestroyBody(entity.GetComponent<Rigidbody2DComponent>().RuntimeBody);
-        entity.GetComponent<Rigidbody2DComponent>().RuntimeBody = nullptr;
+        if (IsSimulating() && entity && entity.HasComponent<Rigidbody2DComponent>())
+            m_Backend->DestroyRigidbody(entity);
     }
 
     void Physics2D::DestroyFixture(Entity entity, Collider2D& collider)
     {
-        entity.GetComponent<Rigidbody2DComponent>().RuntimeBody->DestroyFixture(collider.RuntimeFixture);
-        collider.RuntimeFixture = nullptr;
+        if (IsSimulating())
+            m_Backend->DestroyFixture(entity, collider);
     }
 
-    void Physics2D::Step(Timestep ts, Scene* scene)
+    void Physics2D::Step(Timestep timestep, Scene* scene)
     {
-        ZoneScopedN("Physics2D::Step");
-        const auto view1 = scene->GetAllEntitiesWith<Rigidbody2DComponent>();
-        for (auto e : view1)
-        {
-            Entity entity = { e, scene };
-            auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
-            auto& transform = entity.GetComponent<TransformComponent>();
-            const Rigidbody2DConstraints constraints = rb2d.GetConstraints();
-            b2Vec2 linVelocity = rb2d.RuntimeBody->GetLinearVelocity();
-            if (constraints.IsSet(Rigidbody2DConstraintsBits::FreezePositionX))
-                linVelocity.x = 0;
-            if (constraints.IsSet(Rigidbody2DConstraintsBits::FreezePositionY))
-                linVelocity.y = 0;
-            rb2d.RuntimeBody->SetLinearVelocity(linVelocity);
-        }
-
-        m_TimestepAcc += ts;
-
-        const float fixedTimestep = gApplication->GetTimeSettings()->FixedTimestep;
-        while (m_TimestepAcc >= fixedTimestep)
-        {
-            const auto view2 = scene->GetAllEntitiesWith<Rigidbody2DComponent>();
-            for (auto e : view2)
-            {
-                Entity entity = { e, scene };
-                const Rigidbody2DComponent& rb2d = entity.GetComponent<Rigidbody2DComponent>();
-                const TransformComponent& transform = entity.GetTransform();
-                const b2Vec2& position = rb2d.RuntimeBody->GetPosition();
-                const float angle = rb2d.RuntimeBody->GetAngle();
-                entity.SetWorldPosition(glm::vec3(position.x, position.y, entity.GetWorldPosition().z));
-                const glm::quat& zRotationQuat = glm::angleAxis(angle, glm::vec3(0.0f, 0.0f, 1.0f));
-                const glm::quat& result = zRotationQuat * entity.GetWorldRotation();
-                entity.SetWorldRotation(result);
-            }
-
-            m_PhysicsWorld2D->Step(fixedTimestep, m_Settings->VelocityIterations, m_Settings->PositionIterations);
-            m_TimestepAcc -= fixedTimestep;
-        }
-
-        const float alpha = m_TimestepAcc / fixedTimestep;
-
-        const auto view2 = scene->GetAllEntitiesWith<Rigidbody2DComponent>();
-        for (auto e : view2)
-        {
-            Entity entity = { e, scene };
-            TransformComponent& transform = entity.GetTransform();
-            const Rigidbody2DComponent& rb2d = entity.GetComponent<Rigidbody2DComponent>();
-            const b2Vec2& position = rb2d.RuntimeBody->GetPosition();
-            const float angle = rb2d.RuntimeBody->GetAngle();
-            const RigidbodyInterpolation interpolation = rb2d.GetInterpolationMode();
-            const glm::vec3& entityPosition = entity.GetWorldPosition();
-            if (interpolation == RigidbodyInterpolation::None)
-            {
-                entity.SetWorldPosition(glm::vec3(position.x, position.y, entityPosition.z));
-                const glm::quat& zRotationQuat = glm::angleAxis(angle, glm::vec3(0.0f, 0.0f, 1.0f));
-                const glm::quat& result = zRotationQuat * entity.GetWorldRotation();
-                entity.SetWorldRotation(result);
-            }
-            else if (interpolation == RigidbodyInterpolation::Interpolate)
-            {
-                const float oneMinusAlpha = 1.0f - alpha;
-                glm::vec3 newPosition;
-                newPosition.x = position.x * alpha + entityPosition.x * oneMinusAlpha;
-                newPosition.y = position.y * alpha + entityPosition.y * oneMinusAlpha;
-                newPosition.z = entityPosition.z;
-                const float currentAngle = glm::eulerAngles(entity.GetWorldRotation()).z;
-                const float newAngle = angle * alpha + currentAngle * oneMinusAlpha;
-                entity.SetWorldPosition(newPosition);
-                const glm::quat& zRotationQuat = glm::angleAxis(newAngle, glm::vec3(0.0f, 0.0f, 1.0f));
-                entity.SetWorldRotation(zRotationQuat);
-            }
-        }
+        if (IsSimulating())
+            m_Backend->Step(timestep, scene, *m_Settings);
     }
 
     void Physics2D::StopSimulation(Scene* scene)
     {
-        const auto rbView = scene->GetAllEntitiesWith<Rigidbody2DComponent>();
-        for (auto e : rbView)
-            Entity(e, scene).GetComponent<Rigidbody2DComponent>().RuntimeBody = nullptr;
-        const auto bcView = scene->GetAllEntitiesWith<BoxCollider2DComponent>();
-        for (auto e : bcView)
-            Entity(e, scene).GetComponent<BoxCollider2DComponent>().RuntimeFixture = nullptr;
-        const auto ccView = scene->GetAllEntitiesWith<CircleCollider2DComponent>();
-        for (auto e : ccView)
-            Entity(e, scene).GetComponent<CircleCollider2DComponent>().RuntimeFixture = nullptr;
-        delete m_PhysicsWorld2D; // This should clear everything box2d related.
-        m_PhysicsWorld2D = nullptr;
+        if (!IsSimulating())
+            return;
+        m_Backend->StopSimulation(scene ? scene : m_Scene);
+        m_Scene = nullptr;
     }
 
-    float Physics2D::CalculateMass(Entity entity)
+    bool Physics2D::IsSimulating() const { return m_Backend && m_Backend->IsSimulating(); }
+
+    bool Physics2D::IsBodyAwake(Entity entity) const { return IsSimulating() && m_Backend->IsBodyAwake(entity); }
+
+    float Physics2D::GetMass(Entity entity) const { return IsSimulating() ? m_Backend->GetMass(entity) : CalculateMass(entity); }
+
+    float Physics2D::GetInertia(Entity entity) const
     {
-        if (!entity.HasComponent<Rigidbody2DComponent>())
+        if (IsSimulating())
+            return m_Backend->GetInertia(entity);
+        return entity && entity.HasComponent<Rigidbody2DComponent>() ? entity.GetComponent<Rigidbody2DComponent>().GetConfiguredInertia() : 0.0f;
+    }
+
+    glm::vec2 Physics2D::GetCenterOfMass(Entity entity) const
+    {
+        return IsSimulating() ? m_Backend->GetCenterOfMass(entity) : CalculateCenterOfMass(entity);
+    }
+
+    glm::vec2 Physics2D::GetPosition(Entity entity) const
+    {
+        if (IsSimulating())
+            return m_Backend->GetPosition(entity);
+        return entity ? glm::vec2(entity.GetWorldMatrix()[3]) : glm::vec2(0.0f);
+    }
+
+    float Physics2D::GetRotation(Entity entity) const
+    {
+        if (IsSimulating())
+            return m_Backend->GetRotation(entity);
+        if (!entity)
             return 0.0f;
-        if (m_PhysicsWorld2D != nullptr)
-            return entity.GetComponent<Rigidbody2DComponent>().RuntimeBody->GetMass();
-        b2World* const tempWorld = m_PhysicsWorld2D;
-        m_PhysicsWorld2D = m_TemporaryWorld2D;
-
-        CreateRigidbody(entity);
-        if (entity.HasComponent<BoxCollider2DComponent>())
-            CreateBoxCollider(entity);
-        if (entity.HasComponent<CircleCollider2DComponent>())
-            CreateCircleCollider(entity);
-        const float mass = entity.GetComponent<Rigidbody2DComponent>().GetMass();
-        if (entity.HasComponent<BoxCollider2DComponent>())
-            DestroyFixture(entity, entity.GetComponent<BoxCollider2DComponent>());
-        if (entity.HasComponent<CircleCollider2DComponent>())
-            DestroyFixture(entity, entity.GetComponent<CircleCollider2DComponent>());
-        DestroyRigidbody(entity);
-        m_PhysicsWorld2D = tempWorld;
-        return mass;
+        glm::vec3 position, scale;
+        glm::quat rotation;
+        return DecomposeWorldTransform(entity, position, rotation, scale) ? glm::eulerAngles(rotation).z
+                                                                          : glm::eulerAngles(entity.GetLocalRotation()).z;
     }
 
-    glm::vec2 Physics2D::CalculateCenterOfMass(Entity entity)
+    glm::vec2 Physics2D::GetLinearVelocity(Entity entity) const
     {
-        if (!entity.HasComponent<Rigidbody2DComponent>())
-            return { 0.0f, 0.0f };
-        b2World* const tempWorld = m_PhysicsWorld2D;
-        m_PhysicsWorld2D = m_TemporaryWorld2D;
-
-        CreateRigidbody(entity);
-        if (entity.HasComponent<BoxCollider2DComponent>())
-            CreateBoxCollider(entity);
-        if (entity.HasComponent<CircleCollider2DComponent>())
-            CreateCircleCollider(entity);
-        const glm::vec2 center = entity.GetComponent<Rigidbody2DComponent>().GetCenterOfMass();
-        if (entity.HasComponent<BoxCollider2DComponent>())
-            DestroyFixture(entity, entity.GetComponent<BoxCollider2DComponent>());
-        if (entity.HasComponent<CircleCollider2DComponent>())
-            DestroyFixture(entity, entity.GetComponent<CircleCollider2DComponent>());
-        DestroyRigidbody(entity);
-        m_PhysicsWorld2D = tempWorld;
-        return center;
+        return IsSimulating() ? m_Backend->GetLinearVelocity(entity) : glm::vec2(0.0f);
     }
 
+    float Physics2D::GetAngularVelocity(Entity entity) const { return IsSimulating() ? m_Backend->GetAngularVelocity(entity) : 0.0f; }
+
+    void Physics2D::SetLinearVelocity(Entity entity, const glm::vec2& velocity)
+    {
+        if (IsSimulating())
+            m_Backend->SetLinearVelocity(entity, velocity);
+    }
+
+    void Physics2D::SetAngularVelocity(Entity entity, float velocity)
+    {
+        if (IsSimulating())
+            m_Backend->SetAngularVelocity(entity, velocity);
+    }
+
+    void Physics2D::SetBodyAwake(Entity entity, bool awake)
+    {
+        if (IsSimulating())
+            m_Backend->SetBodyAwake(entity, awake);
+    }
+
+    void Physics2D::UpdateLayer(Entity entity)
+    {
+        if (!IsSimulating() || !entity || !entity.HasComponent<Rigidbody2DComponent>())
+            return;
+        const uint32_t layer = std::min(entity.GetComponent<Rigidbody2DComponent>().GetLayerMask(), Physics2DLayerCount - 1);
+        m_Backend->SetLayer(entity.GetComponent<Rigidbody2DComponent>(), layer, 1u << layer, GetCategoryMask(layer));
+    }
+
+    void Physics2D::UpdateTransform(Entity entity)
+    {
+        if (IsSimulating() && entity && entity.HasComponent<Rigidbody2DComponent>())
+            m_Backend->SetTransform(entity);
+    }
+
+    void Physics2D::UpdateBodyType(Rigidbody2DComponent& rigidbody)
+    {
+        if (IsSimulating())
+            m_Backend->SetBodyType(rigidbody);
+    }
+
+    void Physics2D::UpdateMass(Rigidbody2DComponent& rigidbody, float mass)
+    {
+        if (IsSimulating())
+            m_Backend->SetMass(rigidbody, mass);
+    }
+
+    void Physics2D::UpdateInertia(Rigidbody2DComponent& rigidbody, float inertia)
+    {
+        if (IsSimulating())
+            m_Backend->SetInertia(rigidbody, inertia);
+    }
+
+    void Physics2D::ResetMass(Entity entity)
+    {
+        if (IsSimulating())
+            m_Backend->ResetMass(entity);
+    }
+
+    void Physics2D::UpdateGravityScale(Rigidbody2DComponent& rigidbody, float scale)
+    {
+        if (IsSimulating())
+            m_Backend->SetGravityScale(rigidbody, scale);
+    }
+
+    void Physics2D::UpdateConstraints(Rigidbody2DComponent& rigidbody)
+    {
+        if (IsSimulating())
+            m_Backend->SetConstraints(rigidbody);
+    }
+
+    void Physics2D::UpdateCollisionDetectionMode(Rigidbody2DComponent& rigidbody)
+    {
+        if (IsSimulating())
+            m_Backend->SetCollisionDetectionMode(rigidbody);
+    }
+
+    void Physics2D::UpdateSleepMode(Rigidbody2DComponent& rigidbody)
+    {
+        if (IsSimulating())
+            m_Backend->SetSleepMode(rigidbody);
+    }
+
+    void Physics2D::UpdateLinearDrag(Rigidbody2DComponent& rigidbody, float value)
+    {
+        if (IsSimulating())
+            m_Backend->SetLinearDrag(rigidbody, value);
+    }
+
+    void Physics2D::UpdateAngularDrag(Rigidbody2DComponent& rigidbody, float value)
+    {
+        if (IsSimulating())
+            m_Backend->SetAngularDrag(rigidbody, value);
+    }
+
+    void Physics2D::UpdateCenterOfMass(Rigidbody2DComponent& rigidbody, const glm::vec2& center)
+    {
+        if (IsSimulating())
+            m_Backend->SetCenterOfMass(rigidbody, center);
+    }
+
+    void Physics2D::UpdateTrigger(Collider2D& collider, bool trigger)
+    {
+        if (IsSimulating())
+            m_Backend->SetTrigger(collider, trigger);
+    }
+
+    void Physics2D::UpdateMaterial(Collider2D& collider)
+    {
+        if (IsSimulating())
+            m_Backend->SetMaterial(collider);
+    }
+
+    void Physics2D::AddForce(Entity entity, const glm::vec2& force, ForceMode mode)
+    {
+        if (IsSimulating())
+            m_Backend->AddForce(entity, force, mode == ForceMode::Impulse);
+    }
+
+    void Physics2D::AddForceAt(Entity entity, const glm::vec2& force, const glm::vec2& worldPosition, ForceMode mode)
+    {
+        if (IsSimulating())
+            m_Backend->AddForceAt(entity, force, worldPosition, mode == ForceMode::Impulse);
+    }
+
+    void Physics2D::AddTorque(Entity entity, float torque, ForceMode mode)
+    {
+        if (IsSimulating())
+            m_Backend->AddTorque(entity, torque, mode == ForceMode::Impulse);
+    }
+
+    Vector<PhysicsRaycastHit2D> Physics2D::Raycast(const glm::vec2& origin, const glm::vec2& direction, float distance, uint32_t layerMask) const
+    {
+        if (!IsSimulating() || distance <= 0.0f || glm::dot(direction, direction) <= 0.0f)
+            return {};
+        return m_Backend->Raycast(origin, direction, distance, layerMask);
+    }
+
+    void Physics2D::SetPhysicsSettings(const Ref<Physics2DSettings>& settings)
+    {
+        if (!settings)
+            return;
+        const Physics2DBackendType requestedBackend = settings->Backend;
+        const AssetHandle<PhysicsMaterial2D> previousDefaultMaterial = m_Settings ? m_Settings->DefaultMaterial : AssetHandle<PhysicsMaterial2D>();
+        const AssetHandle<PhysicsMaterial2D> requestedDefaultMaterial = settings->DefaultMaterial;
+        m_Settings = settings;
+        m_Settings->DefaultMaterial = previousDefaultMaterial;
+        if (requestedDefaultMaterial.HasUUID())
+            SetDefaultMaterial(requestedDefaultMaterial);
+        for (uint32_t layer = 0; layer < Physics2DLayerCount; ++layer)
+            m_Settings->MaskBits[layer] &= 0xFFFFu;
+        if (!m_Backend || m_Backend->GetType() != requestedBackend)
+            SetBackend(requestedBackend);
+        SetGravity(settings->Gravity);
+    }
+
+    float Physics2D::CalculateMass(Entity entity) const
+    {
+        if (!entity || !entity.HasComponent<Rigidbody2DComponent>())
+            return 0.0f;
+
+        float mass = 0.0f;
+        const glm::vec2 scale = GetWorldScale2D(entity);
+        if (entity.HasComponent<BoxCollider2DComponent>())
+        {
+            const auto& collider = entity.GetComponent<BoxCollider2DComponent>();
+            const float density = collider.GetMaterialData().Density;
+            mass += 4.0f * std::abs(collider.GetSize().x * scale.x * collider.GetSize().y * scale.y) * density;
+        }
+        if (entity.HasComponent<CircleCollider2DComponent>())
+        {
+            const auto& collider = entity.GetComponent<CircleCollider2DComponent>();
+            const float radius = std::abs(collider.GetRadius()) * 0.5f * (scale.x + scale.y);
+            const float density = collider.GetMaterialData().Density;
+            mass += 3.14159265358979323846f * radius * radius * density;
+        }
+        return mass > 0.0f ? mass : entity.GetComponent<Rigidbody2DComponent>().GetConfiguredMass();
+    }
+
+    glm::vec2 Physics2D::CalculateCenterOfMass(Entity entity) const
+    {
+        if (!entity || !entity.HasComponent<Rigidbody2DComponent>())
+            return glm::vec2(0.0f);
+
+        glm::vec2 weightedCenter(0.0f);
+        float totalMass = 0.0f;
+        const glm::vec2 scale = GetWorldScale2D(entity);
+        if (entity.HasComponent<BoxCollider2DComponent>())
+        {
+            const auto& collider = entity.GetComponent<BoxCollider2DComponent>();
+            const float density = collider.GetMaterialData().Density;
+            const float mass = 4.0f * std::abs(collider.GetSize().x * scale.x * collider.GetSize().y * scale.y) * density;
+            weightedCenter += collider.GetOffset() * mass;
+            totalMass += mass;
+        }
+        if (entity.HasComponent<CircleCollider2DComponent>())
+        {
+            const auto& collider = entity.GetComponent<CircleCollider2DComponent>();
+            const float radius = std::abs(collider.GetRadius()) * 0.5f * (scale.x + scale.y);
+            const float density = collider.GetMaterialData().Density;
+            const float mass = 3.14159265358979323846f * radius * radius * density;
+            weightedCenter += collider.GetOffset() * mass;
+            totalMass += mass;
+        }
+        return totalMass > 0.0f ? weightedCenter / totalMass : entity.GetComponent<Rigidbody2DComponent>().GetConfiguredCenterOfMass();
+    }
 } // namespace Crowny

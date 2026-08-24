@@ -6,6 +6,8 @@
 
 #include "Panels/NodeEditor/NodeEditorAdapter.h"
 
+#include <glm/glm.hpp>
+
 namespace Crowny
 {
     class NodeGraph;
@@ -32,6 +34,9 @@ namespace Crowny
         Scope<Impl> m_Impl;
         UUID m_SelectedNodeID;
         bool m_NeedsSync = true;
+        String m_AddNodeSearch;
+        bool m_FocusAddNodeSearch = false;
+        glm::vec2 m_AddNodePosition = glm::vec2(0.0f);
     };
 
 } // namespace Crowny

@@ -8,7 +8,11 @@
 namespace Crowny
 {
 
-    VulkanLayoutKey::VulkanLayoutKey(VkDescriptorSetLayoutBinding* bindings, uint32_t numBindings) : NumBindings(numBindings), Bindings(bindings) {}
+    VulkanLayoutKey::VulkanLayoutKey(VkDescriptorSetLayoutBinding* bindings, const VkDescriptorBindingFlags* bindingFlags,
+                                     uint32_t numBindings)
+      : NumBindings(numBindings), Bindings(bindings), BindingFlags(const_cast<VkDescriptorBindingFlags*>(bindingFlags))
+    {
+    }
 
     size_t VulkanLayoutKey::HashFunction::operator()(const VulkanLayoutKey& key) const
     {
@@ -17,6 +21,7 @@ namespace Crowny
         {
             size_t hashC = 0;
             HashCombine(hash, key.Bindings[i].binding, key.Bindings[i].descriptorCount, key.Bindings[i].descriptorType, key.Bindings[i].stageFlags);
+            HashCombine(hash, key.BindingFlags != nullptr ? key.BindingFlags[i] : 0u);
         }
 
         return hash;
@@ -37,6 +42,10 @@ namespace Crowny
             if (lhs.Bindings[i].descriptorCount != rhs.Bindings[i].descriptorCount)
                 return false;
             if (lhs.Bindings[i].stageFlags != rhs.Bindings[i].stageFlags)
+                return false;
+            const VkDescriptorBindingFlags lhsFlags = lhs.BindingFlags != nullptr ? lhs.BindingFlags[i] : 0u;
+            const VkDescriptorBindingFlags rhsFlags = rhs.BindingFlags != nullptr ? rhs.BindingFlags[i] : 0u;
+            if (lhsFlags != rhsFlags)
                 return false;
         }
 
@@ -75,6 +84,7 @@ namespace Crowny
         {
             delete entry.Layout;
             delete[] entry.Bindings;
+            delete[] entry.BindingFlags;
         }
 
         for (auto& entry : m_PipelineLayouts)
@@ -85,11 +95,14 @@ namespace Crowny
 
         for (auto& entry : m_Pools)
             delete entry;
+        for (auto& entry : m_UpdateAfterBindPools)
+            delete entry;
     }
 
-    VulkanDescriptorLayout* VulkanDescriptorManager::GetLayout(VkDescriptorSetLayoutBinding* bindings, uint32_t numBindings)
+    VulkanDescriptorLayout* VulkanDescriptorManager::GetLayout(VkDescriptorSetLayoutBinding* bindings, uint32_t numBindings,
+                                                                const VkDescriptorBindingFlags* bindingFlags)
     {
-        VulkanLayoutKey key(bindings, numBindings);
+        VulkanLayoutKey key(bindings, bindingFlags, numBindings);
 
         auto iter = m_Layouts.find(key);
         if (iter != m_Layouts.end())
@@ -97,7 +110,12 @@ namespace Crowny
 
         key.Bindings = new VkDescriptorSetLayoutBinding[numBindings];
         memcpy(key.Bindings, bindings, numBindings * sizeof(VkDescriptorSetLayoutBinding));
-        key.Layout = new VulkanDescriptorLayout(m_Device, key.Bindings, numBindings);
+        key.BindingFlags = new VkDescriptorBindingFlags[numBindings];
+        if (bindingFlags != nullptr)
+            memcpy(key.BindingFlags, bindingFlags, numBindings * sizeof(VkDescriptorBindingFlags));
+        else
+            std::fill_n(key.BindingFlags, numBindings, 0u);
+        key.Layout = new VulkanDescriptorLayout(m_Device, key.Bindings, key.BindingFlags, numBindings);
         m_Layouts.insert(key);
 
         return key.Layout;
@@ -106,22 +124,28 @@ namespace Crowny
     VulkanDescriptorSet* VulkanDescriptorManager::CreateSet(VulkanDescriptorLayout* layout)
     {
         VkDescriptorSetLayout setLayout = layout->GetHandle();
-        VkDescriptorSetAllocateInfo allocateInfo;
+        VkDescriptorSetAllocateInfo allocateInfo{};
         allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocateInfo.pNext = nullptr;
-        allocateInfo.descriptorPool = m_Pools.back()->GetHandle();
+        Vector<VulkanDescriptorPool*>& pools = layout->UsesUpdateAfterBind() ? m_UpdateAfterBindPools : m_Pools;
+        if (pools.empty())
+            pools.push_back(new VulkanDescriptorPool(m_Device, layout->UsesUpdateAfterBind()));
+        allocateInfo.descriptorPool = pools.back()->GetHandle();
         allocateInfo.descriptorSetCount = 1;
         allocateInfo.pSetLayouts = &setLayout;
 
-        VkDescriptorSet set;
+        VkDescriptorSet set = VK_NULL_HANDLE;
         VkResult result = vkAllocateDescriptorSets(m_Device.GetLogicalDevice(), &allocateInfo, &set);
-        if (result > 0)
+        if (result == VK_ERROR_OUT_OF_POOL_MEMORY || result == VK_ERROR_FRAGMENTED_POOL)
         {
-            m_Pools.push_back(new VulkanDescriptorPool(m_Device));
-            allocateInfo.descriptorPool = m_Pools.back()->GetHandle();
+            pools.push_back(new VulkanDescriptorPool(m_Device, layout->UsesUpdateAfterBind()));
+            allocateInfo.descriptorPool = pools.back()->GetHandle();
             result = vkAllocateDescriptorSets(m_Device.GetLogicalDevice(), &allocateInfo, &set);
-            CW_ENGINE_ASSERT(result == VK_SUCCESS);
         }
+
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        if (result != VK_SUCCESS)
+            return nullptr;
 
         return m_Device.GetResourceManager().Create<VulkanDescriptorSet>(set, allocateInfo.descriptorPool);
     }
@@ -156,17 +180,18 @@ namespace Crowny
         return layout;
     }
 
-    VulkanDescriptorPool::VulkanDescriptorPool(VulkanDevice& device) : m_Device(device)
+    VulkanDescriptorPool::VulkanDescriptorPool(VulkanDevice& device, bool updateAfterBind) : m_Device(device)
     {
+        const uint32_t sampledImageCapacity = updateAfterBind ? 8192u : s_MaxSampledImages;
         VkDescriptorPoolSize poolSizes[8];
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        poolSizes[0].descriptorCount = s_MaxSampledImages;
+        poolSizes[0].descriptorCount = sampledImageCapacity;
 
         poolSizes[1].type = VK_DESCRIPTOR_TYPE_SAMPLER;
-        poolSizes[1].descriptorCount = s_MaxSampledImages;
+        poolSizes[1].descriptorCount = sampledImageCapacity;
 
         poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        poolSizes[2].descriptorCount = s_MaxSampledImages;
+        poolSizes[2].descriptorCount = sampledImageCapacity;
 
         poolSizes[3].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[3].descriptorCount = s_MaxUniformBuffers;
@@ -189,7 +214,8 @@ namespace Crowny
         VkDescriptorPoolCreateInfo poolCreateInfo;
         poolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolCreateInfo.pNext = nullptr;
-        poolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+        poolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT |
+                               (updateAfterBind ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT : 0u);
         poolCreateInfo.maxSets = s_MaxSets;
         poolCreateInfo.poolSizeCount = sizeof(poolSizes) / sizeof(poolSizes[0]);
         poolCreateInfo.pPoolSizes = poolSizes;
@@ -203,7 +229,7 @@ namespace Crowny
     VulkanDescriptorSet::VulkanDescriptorSet(VulkanResourceManager* owner, VkDescriptorSet set, VkDescriptorPool pool)
       : VulkanResource(owner, true), m_Set(set), m_Pool(pool)
     {
-        m_Device = gVulkanRenderAPI().GetPresentDevice()->GetLogicalDevice();
+        m_Device = m_Owner->GetDevice().GetLogicalDevice();
     }
 
     VulkanDescriptorSet::~VulkanDescriptorSet()
@@ -219,17 +245,28 @@ namespace Crowny
         vkUpdateDescriptorSets(m_Device, count, entries, 0, nullptr);
     }
 
-    VulkanDescriptorLayout::VulkanDescriptorLayout(VulkanDevice& device, VkDescriptorSetLayoutBinding* bindings, uint32_t numBindings)
+    VulkanDescriptorLayout::VulkanDescriptorLayout(VulkanDevice& device, VkDescriptorSetLayoutBinding* bindings,
+                                                   const VkDescriptorBindingFlags* bindingFlags, uint32_t numBindings)
       : m_Device(device)
     {
         m_Hash = 0;
         for (uint32_t i = 0; i < numBindings; i++)
+        {
             HashCombine(m_Hash, bindings[i].binding, bindings[i].descriptorCount, bindings[i].descriptorType, bindings[i].stageFlags);
+            const VkDescriptorBindingFlags flags = bindingFlags != nullptr ? bindingFlags[i] : 0u;
+            HashCombine(m_Hash, flags);
+            m_UpdateAfterBind = m_UpdateAfterBind || (flags & VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT) != 0;
+        }
+
+        VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo{};
+        bindingFlagsInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+        bindingFlagsInfo.bindingCount = numBindings;
+        bindingFlagsInfo.pBindingFlags = bindingFlags;
 
         VkDescriptorSetLayoutCreateInfo layoutCI;
         layoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutCI.pNext = nullptr;
-        layoutCI.flags = 0;
+        layoutCI.pNext = bindingFlags != nullptr ? &bindingFlagsInfo : nullptr;
+        layoutCI.flags = m_UpdateAfterBind ? VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT : 0u;
         layoutCI.pBindings = bindings;
         layoutCI.bindingCount = numBindings;
 

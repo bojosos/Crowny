@@ -9,7 +9,7 @@ namespace Crowny
 {
     Ref<VertexArray> VertexArray::Create(DrawMode drawMode)
     {
-        switch (gRenderAPI->GetAPI())
+        switch (RenderAPI::TryGet()->GetAPI())
         {
         case RenderAPI::API::OpenGL:
             return Ref<VertexArray>(new OpenGLVertexArray(drawMode));

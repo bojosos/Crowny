@@ -40,6 +40,7 @@ namespace Crowny
         void SetInspectorMode(InspectorMode mode);
         void SetSelectedAssetPath(const Path& filepath);
         void SetSelectedEntity(Entity e);
+        void SetSelectedEntities(Entity primary, const Vector<Entity>& entities);
 
         // Called with the graph that should be opened in the node editor panel.
         // Set by EditorLayer so the inspector widget can open the panel without a hard dependency.
@@ -80,6 +81,7 @@ namespace Crowny
 
         // For normal Entity use
         Entity m_InspectedEntity;
+        Vector<Entity> m_InspectedEntities;
 
         ComponentEditor m_ComponentEditor; // Helper object for rendering components of entities
 

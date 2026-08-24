@@ -164,6 +164,11 @@ TEST_CASE("MeshData Functionality", "[Renderer][Mesh]")
         REQUIRE(combined != nullptr);
         CHECK(combined->GetVertexCount() == 6);
         CHECK(combined->GetIndexCount() == 6);
+        REQUIRE(outSubMeshes.size() == 2);
+        CHECK(outSubMeshes[0].IndexOffset == 0);
+        CHECK(outSubMeshes[0].IndexCount == 3);
+        CHECK(outSubMeshes[1].IndexOffset == 3);
+        CHECK(outSubMeshes[1].IndexCount == 3);
         
         Vector<uint32_t> indices = combined->GetIndices();
         CHECK(indices[0] == 0);
@@ -227,5 +232,32 @@ TEST_CASE("MeshData Functionality", "[Renderer][Mesh]")
         CHECK(indices[0] == 0);
         CHECK(indices[3] == 3);
         CHECK(indices[5] == 5);
+    }
+
+    SECTION("Combining MeshData merges layouts and zero-fills missing attributes")
+    {
+        BufferLayout positionLayout = { { ShaderDataType::Float3, VertexAttribute::Position } };
+        BufferLayout coloredLayout = { { ShaderDataType::Float3, VertexAttribute::Position },
+                                       { ShaderDataType::Float4, VertexAttribute::Color } };
+        Ref<MeshData> mesh1 = MeshData::Create(1, 1, positionLayout, IndexType::Index_16);
+        Ref<MeshData> mesh2 = MeshData::Create(1, 1, coloredLayout, IndexType::Index_16);
+        mesh1->SetPositions({ { 1.0f, 2.0f, 3.0f } });
+        mesh1->SetIndices({ 0 });
+        mesh2->SetPositions({ { 4.0f, 5.0f, 6.0f } });
+        mesh2->SetColors({ { 0.25f, 0.5f, 0.75f, 1.0f } });
+        mesh2->SetIndices({ 0 });
+
+        Vector<SubMesh> outSubMeshes;
+        Ref<MeshData> combined = MeshData::Combine({ mesh1, mesh2 },
+                                                   { { { 0, 1, DrawMode::POINT_LIST } }, { { 0, 1, DrawMode::POINT_LIST } } }, outSubMeshes);
+
+        REQUIRE(combined != nullptr);
+        CHECK(combined->GetBufferLayout().HasAttribute(VertexAttribute::Color));
+        const Vector<glm::vec4> colors = combined->GetColors();
+        CHECK(colors[0] == glm::vec4(0.0f));
+        CHECK(colors[1] == glm::vec4(0.25f, 0.5f, 0.75f, 1.0f));
+        REQUIRE(outSubMeshes.size() == 2);
+        CHECK(outSubMeshes[0].MeshDrawMode == DrawMode::POINT_LIST);
+        CHECK(outSubMeshes[1].IndexOffset == 1);
     }
 }

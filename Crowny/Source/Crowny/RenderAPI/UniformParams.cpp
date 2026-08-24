@@ -2,7 +2,9 @@
 
 #include "Crowny/RenderAPI/UniformParamInfo.h"
 #include "Crowny/RenderAPI/UniformParams.h"
+#include "Crowny/RenderAPI/RenderAPI.h"
 
+#include "Platform/OpenGL/OpenGLUniformParams.h"
 #include "Platform/Vulkan/VulkanUniformParams.h"
 
 namespace Crowny
@@ -21,6 +23,7 @@ namespace Crowny
 
         m_BufferBlocks = new Ref<UniformBufferBlock>[numParamBlocks];
         m_SampledTextureData = new TextureData[numTextures];
+        m_SampledTextureArrays.resize(numTextures);
         m_SamplerStates = new Ref<SamplerState>[numSamplers];
         m_LoadStoreTextures = new TextureData[numStorageTextures];
         m_Buffers = new Ref<GenericGpuBuffer>[numBuffers];
@@ -81,9 +84,9 @@ namespace Crowny
         }
     }
 
-    const Ref<UniformBufferBlock>& UniformParams::GetUniformBlockBuffer(uint32_t slot, uint32_t set) const
+    const Ref<UniformBufferBlock>& UniformParams::GetUniformBlockBuffer(uint32_t set, uint32_t slot) const
     {
-        const uint32_t globalSlot = m_ParamInfo->GetSequentialSlot(UniformParamInfo::ParamType::ParamBlock, slot, set);
+        const uint32_t globalSlot = m_ParamInfo->GetSequentialSlot(UniformParamInfo::ParamType::ParamBlock, set, slot);
 
         return m_BufferBlocks[globalSlot];
     }
@@ -96,12 +99,22 @@ namespace Crowny
 
     void UniformParams::SetTexture(ShaderType type, const String& name, const Ref<Texture>& texture, const TextureSurface& surface)
     {
-        const UnorderedMap<String, UniformResourceDesc>& textures = m_ParamInfo->GetUniformDesc(type)->Textures;
+        const auto& textures = m_ParamInfo->GetUniformDesc(type)->Textures;
         const auto iterFind = textures.find(name);
         if (iterFind != textures.cend())
             SetTexture(iterFind->second.Set, iterFind->second.Slot, texture, surface);
         else
             CW_ENGINE_WARN("Texture with name {} does not exist in the fragment shader", name);
+    }
+
+    void UniformParams::SetTexture(ShaderType type, HashedString name, const Ref<Texture>& texture, const TextureSurface& surface)
+    {
+        const auto& textures = m_ParamInfo->GetUniformDesc(type)->Textures;
+        const auto iterFind = textures.find(name);
+        if (iterFind != textures.cend())
+            SetTexture(iterFind->second.Set, iterFind->second.Slot, texture, surface);
+        else
+            CW_ENGINE_WARN("Texture with name {} does not exist in the fragment shader", name.GetView());
     }
 
     void UniformParams::SetTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture, const TextureSurface& surface)
@@ -112,6 +125,26 @@ namespace Crowny
 
         m_SampledTextureData[globalSlot].Texture = texture;
         m_SampledTextureData[globalSlot].Surface = surface;
+        m_SampledTextureArrays[globalSlot].clear();
+    }
+
+    void UniformParams::SetTextureArray(uint32_t set, uint32_t slot, const Ref<Texture>* textures, uint32_t count,
+                                        const TextureSurface* surfaces)
+    {
+        const uint32_t globalSlot = m_ParamInfo->GetSequentialSlot(UniformParamInfo::ParamType::Texture, set, slot);
+        if (globalSlot == (uint32_t)-1)
+            return;
+        const uint32_t reflectedSize = m_ParamInfo->GetArraySize(set, slot);
+        const uint32_t capacity = m_ParamInfo->IsRuntimeArray(set, slot) ? count : reflectedSize;
+        const uint32_t storedCount = std::min(count, capacity);
+        Vector<TextureData>& array = m_SampledTextureArrays[globalSlot];
+        array.resize(storedCount);
+        for (uint32_t index = 0; index < storedCount; index++)
+        {
+            array[index].Texture = textures != nullptr ? textures[index] : nullptr;
+            array[index].Surface = surfaces != nullptr ? surfaces[index] : TextureSurface::COMPLETE;
+        }
+        m_SampledTextureData[globalSlot] = {};
     }
 
     void UniformParams::SetBuffer(uint32_t set, uint32_t slot, const Ref<GenericGpuBuffer>& buffer)
@@ -154,7 +187,30 @@ namespace Crowny
 
     Ref<UniformParams> UniformParams::Create(const Ref<GraphicsPipeline>& pipeline)
     {
-        return Ref<UniformParams>(new VulkanUniformParams(pipeline->GetParamInfo()));
+        switch (RenderAPI::TryGet()->GetAPI())
+        {
+        case RenderAPI::API::OpenGL:
+            return Ref<UniformParams>(new OpenGLUniformParams(pipeline->GetParamInfo()));
+        case RenderAPI::API::Vulkan:
+            return Ref<UniformParams>(new VulkanUniformParams(pipeline->GetParamInfo()));
+        default:
+            CW_ENGINE_ASSERT(false, "Renderer API not supported");
+            return nullptr;
+        }
+    }
+
+    Ref<UniformParams> UniformParams::Create(const Ref<ComputePipeline>& pipeline)
+    {
+        switch (RenderAPI::TryGet()->GetAPI())
+        {
+        case RenderAPI::API::OpenGL:
+            return Ref<UniformParams>(new OpenGLUniformParams(pipeline->GetParamInfo()));
+        case RenderAPI::API::Vulkan:
+            return Ref<UniformParams>(new VulkanUniformParams(pipeline->GetParamInfo()));
+        default:
+            CW_ENGINE_ASSERT(false, "Renderer API not supported");
+            return nullptr;
+        }
     }
 
 } // namespace Crowny

@@ -2,16 +2,15 @@
 
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Audio/AudioManager.h"
-#include "Crowny/Serialization/MaterialSerializer.h"
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Import/Importer.h"
 #include "Crowny/Renderer/TextureManager.h"
 #include "Crowny/Scene/SceneManager.h"
+#include "Crowny/Serialization/MaterialSerializer.h"
 
 #include "Panels/ComponentEditor.h"
-#include "Panels/HierarchyPanel.h"
 #include "Panels/InspectorPanel.h"
 
 #include "Editor/EditorAssets.h"
@@ -54,7 +53,9 @@ namespace Crowny
         // Rendering
         m_ComponentEditor.PushComponentGroup("Rendering");
         m_ComponentEditor.RegisterComponent<CameraComponent>("Camera");
+        m_ComponentEditor.RegisterComponent<LightComponent>("Light");
         m_ComponentEditor.RegisterComponent<MeshRendererComponent>("Mesh Filter");
+        m_ComponentEditor.RegisterComponent<AnimationComponent>("Animation");
         m_ComponentEditor.RegisterComponent<TextComponent>("Text");
         m_ComponentEditor.RegisterComponent<SpriteRendererComponent>("Sprite Renderer");
         m_ComponentEditor.RegisterComponent<ProceduralMeshComponent>("Procedural Mesh", [this](Entity entity) {
@@ -75,7 +76,7 @@ namespace Crowny
                     Ref<NodeGraph> graph = CreateRef<NodeGraph>();
                     graph->SetDomain(NodeGraph::Domain::Geometry);
                     graph->SetName(entity.GetName() + " Graph");
-                    graph->AddNode(NodeRegistry::Get().Create("GeometryOutputNode"));
+                    graph->AddNode(NodeRegistry::Get().Create("GeometryOutputNode"_sid));
 
                     Path path = EditorUtils::GetUniquePath(ProjectLibrary::Get().GetAssetFolder() / (entity.GetName() + " Graph.cwng"));
                     Ref<NodeGraphAsset> asset = CreateRef<NodeGraphAsset>(graph);
@@ -88,7 +89,7 @@ namespace Crowny
                         FileEntry* fileEntry = (FileEntry*)libraryEntry.get();
                         if (fileEntry->Metadata)
                         {
-                            comp.Graph = static_asset_cast<NodeGraphAsset>(gAssetManager->LoadFromUUID(fileEntry->Metadata->Uuid));
+                            comp.Graph = static_asset_cast<NodeGraphAsset>(AssetManager::TryGet()->LoadFromUUID(fileEntry->Metadata->Uuid));
                             comp.NeedsEvaluation = true;
                         }
                     }
@@ -198,6 +199,10 @@ namespace Crowny
         m_ComponentEditor.RegisterComponent<Rigidbody2DComponent>("Rigidbody 2D");
         m_ComponentEditor.RegisterComponent<BoxCollider2DComponent>("Box Collider 2D");
         m_ComponentEditor.RegisterComponent<CircleCollider2DComponent>("Circle Collider 2D");
+        m_ComponentEditor.RegisterComponent<Rigidbody3DComponent>("Rigidbody 3D");
+        m_ComponentEditor.RegisterComponent<BoxCollider3DComponent>("Box Collider 3D");
+        m_ComponentEditor.RegisterComponent<SphereCollider3DComponent>("Sphere Collider 3D");
+        m_ComponentEditor.RegisterComponent<CapsuleCollider3DComponent>("Capsule Collider 3D");
         m_ComponentEditor.PopComponentGroup();
 
         // Audio
@@ -244,12 +249,13 @@ namespace Crowny
                             AudioSourceComponent& audioSource = selectedEntity.AddComponent<AudioSourceComponent>();
                             AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(fileEntry));
                             audioSource.SetClip(clip);
+                            UndoRedo::Get().RegisterAction(CreateRef<AddComponentAction<AudioSourceComponent>>(selectedEntity));
                         }
                         break;
                     }
                     case AssetType::ScriptCode: {
                         const String className = fileEntry->Filepath.filename().replace_extension("").string();
-                        Ref<Scene> activeScene = gSceneManager->GetActiveScene();
+                        Ref<Scene> activeScene = SceneManager::TryGet()->GetActiveScene();
                         bool exists = false;
                         if (selectedEntity.HasComponent<MonoScriptComponent>())
                         {
@@ -262,7 +268,11 @@ namespace Crowny
                         }
                         // TODO: Parse the namespace and class name
                         if (!exists)
+                        {
+                            ChangeScriptComponentAction::State snapshot = ChangeScriptComponentAction::Capture(selectedEntity);
                             activeScene->AddScriptComponent(selectedEntity, "Sandbox", className);
+                            UndoRedo::Get().RegisterAction(CreateRef<ChangeScriptComponentAction>(selectedEntity, std::move(snapshot), "Add script"));
+                        }
                         break;
                     }
                     case AssetType::Font:
@@ -271,6 +281,7 @@ namespace Crowny
                             TextComponent& textComponent = selectedEntity.AddComponent<TextComponent>();
                             AssetHandle<Font> font = static_asset_cast<Font>(ProjectLibrary::Get().Load(fileEntry));
                             textComponent.Font = font;
+                            UndoRedo::Get().RegisterAction(CreateRef<AddComponentAction<TextComponent>>(selectedEntity));
                         }
                         break;
                     case AssetType::Mesh:
@@ -279,6 +290,7 @@ namespace Crowny
                             MeshRendererComponent& meshComponent = selectedEntity.AddComponent<MeshRendererComponent>();
                             AssetHandle<Mesh> mesh = static_asset_cast<Mesh>(ProjectLibrary::Get().Load(fileEntry));
                             meshComponent.MeshHandle = mesh;
+                            UndoRedo::Get().RegisterAction(CreateRef<AddComponentAction<MeshRendererComponent>>(selectedEntity));
                         }
                         break;
                     case AssetType::Texture:
@@ -287,6 +299,7 @@ namespace Crowny
                             SpriteRendererComponent& spriteComponent = selectedEntity.AddComponent<SpriteRendererComponent>();
                             AssetHandle<Texture> texture = static_asset_cast<Texture>(ProjectLibrary::Get().Load(fileEntry));
                             spriteComponent.Texture = texture;
+                            UndoRedo::Get().RegisterAction(CreateRef<AddComponentAction<SpriteRendererComponent>>(selectedEntity));
                         }
                         break;
                     }
@@ -298,19 +311,25 @@ namespace Crowny
 
     void InspectorPanel::Render()
     {
-        BeginPanel();
-        if (!IsShown())
+        if (!BeginPanel())
         {
             EndPanel();
             return;
         }
 
-        auto activeScene = gSceneManager->GetActiveScene();
+        auto activeScene = SceneManager::TryGet()->GetActiveScene();
         if (!activeScene)
         {
             EndPanel();
             return;
         }
+
+        m_InspectedEntities.erase(std::remove_if(m_InspectedEntities.begin(), m_InspectedEntities.end(),
+                                                 [&](Entity entity) { return !entity.IsValid() || entity.GetScene() != activeScene.get(); }),
+                                  m_InspectedEntities.end());
+        if (!m_InspectedEntity.IsValid() || m_InspectedEntity.GetScene() != activeScene.get() ||
+            std::find(m_InspectedEntities.begin(), m_InspectedEntities.end(), m_InspectedEntity) == m_InspectedEntities.end())
+            m_InspectedEntity = m_InspectedEntities.empty() ? Entity{} : m_InspectedEntities.back();
 
         ImGui::BeginChild("InspectorChild");
         DrawHeader();
@@ -318,15 +337,14 @@ namespace Crowny
         switch (m_InspectorMode)
         {
         case InspectorMode::GameObject:
-            m_ComponentEditor.Render();
+            m_ComponentEditor.Render(m_InspectedEntity, m_InspectedEntities);
             break;
         case InspectorMode::Material:
             if (m_ImportOptions)
                 RenderMaterialInspector();
             break;
         case InspectorMode::PhysicsMaterial:
-            if (m_ImportOptions)
-                RenderPhysicsMaterialInspector();
+            RenderPhysicsMaterialInspector();
             break;
         case InspectorMode::AudioClipImport:
             if (m_ImportOptions)
@@ -361,13 +379,14 @@ namespace Crowny
                 RenderTextImportInspector();
             break;
         case InspectorMode::Default:
+            ImGui::Dummy(ImVec2(0.0f, 6.0f));
+            ImGui::TextDisabled("Select an entity or asset to inspect it.");
             break;
         }
 
         ImGui::EndChild();
-        Entity selectedEntity = HierarchyPanel::GetSelectedEntity();
-        if (m_InspectorMode == InspectorMode::GameObject && selectedEntity)
-            HandleInspectorDragDrop(selectedEntity);
+        if (m_InspectorMode == InspectorMode::GameObject && m_InspectedEntity)
+            HandleInspectorDragDrop(m_InspectedEntity);
         EndPanel();
     }
 
@@ -403,18 +422,30 @@ namespace Crowny
     {
         switch (dt)
         {
-        case ShaderDataType::Float: return ShaderParamType::Float;
-        case ShaderDataType::Float2: return ShaderParamType::Float2;
-        case ShaderDataType::Float3: return isColor ? ShaderParamType::Color3 : ShaderParamType::Float3;
-        case ShaderDataType::Float4: return isColor ? ShaderParamType::Color4 : ShaderParamType::Float4;
-        case ShaderDataType::Int: return ShaderParamType::Int;
-        case ShaderDataType::Int2: return ShaderParamType::Int2;
-        case ShaderDataType::Int3: return ShaderParamType::Int3;
-        case ShaderDataType::Int4: return ShaderParamType::Int4;
-        case ShaderDataType::Bool: return ShaderParamType::Bool;
-        case ShaderDataType::Mat3: return ShaderParamType::Mat3;
-        case ShaderDataType::Mat4: return ShaderParamType::Mat4;
-        default: return ShaderParamType::Float;
+        case ShaderDataType::Float:
+            return ShaderParamType::Float;
+        case ShaderDataType::Float2:
+            return ShaderParamType::Float2;
+        case ShaderDataType::Float3:
+            return isColor ? ShaderParamType::Color3 : ShaderParamType::Float3;
+        case ShaderDataType::Float4:
+            return isColor ? ShaderParamType::Color4 : ShaderParamType::Float4;
+        case ShaderDataType::Int:
+            return ShaderParamType::Int;
+        case ShaderDataType::Int2:
+            return ShaderParamType::Int2;
+        case ShaderDataType::Int3:
+            return ShaderParamType::Int3;
+        case ShaderDataType::Int4:
+            return ShaderParamType::Int4;
+        case ShaderDataType::Bool:
+            return ShaderParamType::Bool;
+        case ShaderDataType::Mat3:
+            return ShaderParamType::Mat3;
+        case ShaderDataType::Mat4:
+            return ShaderParamType::Mat4;
+        default:
+            return ShaderParamType::Float;
         }
     }
 
@@ -423,12 +454,16 @@ namespace Crowny
         switch (rt)
         {
         case SAMPLER2D:
-        case TEXTURE2D: return ShaderParamType::Texture2D;
+        case TEXTURE2D:
+            return ShaderParamType::Texture2D;
         case SAMPLER3D:
-        case TEXTURE3D: return ShaderParamType::Texture3D;
+        case TEXTURE3D:
+            return ShaderParamType::Texture3D;
         case SAMPLERCUBE:
-        case TEXTURECUBE: return ShaderParamType::TextureCube;
-        default: return ShaderParamType::Texture2D;
+        case TEXTURECUBE:
+            return ShaderParamType::TextureCube;
+        default:
+            return ShaderParamType::Texture2D;
         }
     }
 
@@ -523,15 +558,14 @@ namespace Crowny
         }
 
         // Sort by SortOrder for deterministic, declaration-order display
-        std::sort(result.begin(), result.end(),
-                  [](const ShaderParameterDesc& a, const ShaderParameterDesc& b) { return a.SortOrder < b.SortOrder; });
+        std::sort(result.begin(), result.end(), [](const ShaderParameterDesc& a, const ShaderParameterDesc& b) { return a.SortOrder < b.SortOrder; });
 
         return result;
     }
 
     void InspectorPanel::RenderMaterialInspector()
     {
-        AssetHandle<Material> mat = gAssetManager->Load<Material>(m_InspectedAssetPath);
+        AssetHandle<Material> mat = AssetManager::TryGet()->Load<Material>(m_InspectedAssetPath);
         if (!mat)
             return;
 
@@ -553,39 +587,33 @@ namespace Crowny
         {
             switch (param.Type)
             {
-            case ShaderParamType::Float:
-            {
+            case ShaderParamType::Float: {
                 float value = mat->GetDataParam<float>(param.Identifier);
-                bool modified = param.HasRange
-                    ? UI::PropertySlider(param.DisplayName.c_str(), value, param.RangeMin, param.RangeMax)
-                    : UI::Property(param.DisplayName.c_str(), value);
+                bool modified = param.HasRange ? UI::PropertySlider(param.DisplayName.c_str(), value, param.RangeMin, param.RangeMax)
+                                               : UI::Property(param.DisplayName.c_str(), value);
                 if (modified)
                     mat->SetFloat(param.Identifier, value);
                 break;
             }
-            case ShaderParamType::Float2:
-            {
+            case ShaderParamType::Float2: {
                 glm::vec2 value = mat->GetDataParam<glm::vec2>(param.Identifier);
                 if (UI::Property(param.DisplayName.c_str(), value))
                     mat->SetFloat2(param.Identifier, value);
                 break;
             }
-            case ShaderParamType::Float3:
-            {
+            case ShaderParamType::Float3: {
                 glm::vec3 value = mat->GetDataParam<glm::vec3>(param.Identifier);
                 if (UI::Property(param.DisplayName.c_str(), value))
                     mat->SetVector3(param.Identifier, value);
                 break;
             }
-            case ShaderParamType::Float4:
-            {
+            case ShaderParamType::Float4: {
                 glm::vec4 value = mat->GetDataParam<glm::vec4>(param.Identifier);
                 if (UI::Property(param.DisplayName.c_str(), value))
                     mat->SetColor(param.Identifier, value);
                 break;
             }
-            case ShaderParamType::Color3:
-            {
+            case ShaderParamType::Color3: {
                 // Read as vec3, display with color picker
                 glm::vec3 value = mat->GetDataParam<glm::vec3>(param.Identifier);
                 ImGuiColorEditFlags flags = param.Flags.IsSet(ShaderParamFlag::HDR) ? ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float : 0;
@@ -593,8 +621,7 @@ namespace Crowny
                     mat->SetVector3(param.Identifier, value);
                 break;
             }
-            case ShaderParamType::Color4:
-            {
+            case ShaderParamType::Color4: {
                 // Read as vec4, display with color picker
                 glm::vec4 value = mat->GetDataParam<glm::vec4>(param.Identifier);
                 ImGuiColorEditFlags flags = param.Flags.IsSet(ShaderParamFlag::HDR) ? ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float : 0;
@@ -602,15 +629,13 @@ namespace Crowny
                     mat->SetColor(param.Identifier, value);
                 break;
             }
-            case ShaderParamType::Int:
-            {
+            case ShaderParamType::Int: {
                 int value = mat->GetDataParam<int>(param.Identifier);
                 if (UI::Property(param.DisplayName.c_str(), value))
                     mat->SetInt(param.Identifier, value);
                 break;
             }
-            case ShaderParamType::Bool:
-            {
+            case ShaderParamType::Bool: {
                 bool value = mat->GetDataParam<bool>(param.Identifier);
                 if (UI::Property(param.DisplayName.c_str(), value))
                     mat->SetBool(param.Identifier, value);
@@ -618,8 +643,7 @@ namespace Crowny
             }
             case ShaderParamType::Texture2D:
             case ShaderParamType::Texture3D:
-            case ShaderParamType::TextureCube:
-            {
+            case ShaderParamType::TextureCube: {
                 AssetHandle<Texture> texHandle = mat->GetTextureHandle(param.Identifier);
                 if (UIUtils::AssetSearch<Texture>(param.DisplayName, texHandle))
                     mat->SetTexture(param.Identifier, texHandle);
@@ -645,7 +669,72 @@ namespace Crowny
         }
     }
 
-    void InspectorPanel::RenderPhysicsMaterialInspector() {}
+    void InspectorPanel::RenderPhysicsMaterialInspector()
+    {
+        AssetHandle<Asset> asset = ProjectLibrary::Get().Load(m_InspectedAssetPath);
+        if (!asset)
+        {
+            ImGui::TextDisabled("The physics material could not be loaded.");
+            return;
+        }
+
+        const auto drawMaterial = [&](auto material) {
+            if (!material)
+                return false;
+            bool changed = false;
+            float density = material->GetDensity();
+            float friction = material->GetFriction();
+            float restitution = material->GetRestitution();
+            float threshold = material->GetRestitutionThreshold();
+            PhysicsCombineMode frictionCombine = material->GetFrictionCombine();
+            PhysicsCombineMode restitutionCombine = material->GetRestitutionCombine();
+
+            UI::BeginPropertyGrid();
+            if (UI::Property("Density", density, 0.05f, 0.0f, 0.0f))
+            {
+                material->SetDensity(density);
+                changed = true;
+            }
+            if (UI::Property("Friction", friction, 0.05f, 0.0f, 0.0f))
+            {
+                material->SetFriction(friction);
+                changed = true;
+            }
+            if (UI::Property("Restitution", restitution, 0.05f, 0.0f, 1.0f))
+            {
+                material->SetRestitution(restitution);
+                changed = true;
+            }
+            if (UI::Property("Restitution Threshold", threshold, 0.05f, 0.0f, 0.0f))
+            {
+                material->SetRestitutionThreshold(threshold);
+                changed = true;
+            }
+            if (UI::PropertyDropdown("Friction Combine", { "Geometric Mean", "Average", "Minimum", "Multiply", "Maximum" }, frictionCombine))
+            {
+                material->SetFrictionCombine(frictionCombine);
+                changed = true;
+            }
+            if (UI::PropertyDropdown("Restitution Combine", { "Geometric Mean", "Average", "Minimum", "Multiply", "Maximum" }, restitutionCombine))
+            {
+                material->SetRestitutionCombine(restitutionCombine);
+                changed = true;
+            }
+            UI::EndPropertyGrid();
+            return changed;
+        };
+
+        bool changed = false;
+        if (asset->GetAssetType() == AssetType::PhysicsMaterial2D)
+            changed = drawMaterial(static_asset_cast<PhysicsMaterial2D>(asset));
+        else if (asset->GetAssetType() == AssetType::PhysicsMaterial)
+            changed = drawMaterial(static_asset_cast<PhysicsMaterial3D>(asset));
+        else
+            ImGui::TextDisabled("The selected asset is not a physics material.");
+
+        if (changed)
+            AssetManager::TryGet()->Save(asset.GetInternalPtr(), m_InspectedAssetPath);
+    }
 
     void InspectorPanel::RenderAudioClipImportInspector()
     {
@@ -670,14 +759,14 @@ namespace Crowny
             if (m_HasPropertyChanged) // Why did I do this?
                 ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions, true);
             AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
-            gAudioManager->StopManualSources();
-            gAudioManager->Play("Inspector", clip);
+            AudioManager::TryGet()->StopManualSources();
+            AudioManager::TryGet()->Play("Inspector", clip);
         }
         ImGui::SameLine();
         if (ImGui::Button("Stop"))
-            gAudioManager->StopManualSources();
+            AudioManager::TryGet()->StopManualSources();
         ImGui::SameLine();
-        const float progress = gAudioManager->GetGlobalSourceProgress("Inspector");
+        const float progress = AudioManager::TryGet()->GetGlobalSourceProgress("Inspector");
         ImGui::ProgressBar(progress);
     }
 
@@ -691,7 +780,7 @@ namespace Crowny
             m_HasPropertyChanged = true;
             opts->AutomaticFontSampling = dropdownIdx == 1 ? false : true;
         }
-        if (opts->AutomaticFontSampling)
+        if (!opts->AutomaticFontSampling || opts->AutoSizeAtlas)
             m_HasPropertyChanged |= UI::Property("Sampling Size", opts->SamplingFontSize);
 
         UI::SetTooltip("Static atlases use a predefined charset range. On the other hand Dynamic atlases are populated \
@@ -713,26 +802,22 @@ namespace Crowny
             if (opts->AutoSizeAtlas)
             {
                 m_HasPropertyChanged |= UI::PropertyDropdown(
-                  "Dimension Constraints", { "Power of Two Square", "Power of Two Rectangle", "Multiple of Four Square", "Even Square" },
+                  "Dimension Constraints", { "Power of Two Square", "Power of Two Rectangle", "Multiple of Four Square", "Even Square", "Square" },
                   opts->AtlasDimensionsConstraint);
             }
             else
             {
                 Vector<String> atlasSizeUIValues = { "4", "8", "16", "32", "64", "128", "256", "512", "1024", "2048", "4096", "8192" };
-                auto findSizeIdx = [](uint32_t size) -> uint32_t {
-                    uint32_t idx = 0;
-                    while (size > 0)
-                    {
-                        idx++;
-                        size /= 2;
-                    }
-                    return idx - 2;
+                auto findSizeIdx = [&atlasSizeUIValues](uint32_t size) -> uint32_t {
+                    const String value = std::to_string(size);
+                    const auto iter = std::find(atlasSizeUIValues.begin(), atlasSizeUIValues.end(), value);
+                    return iter == atlasSizeUIValues.end() ? 8U : static_cast<uint32_t>(std::distance(atlasSizeUIValues.begin(), iter));
                 };
 
                 uint32_t widthIdx = findSizeIdx(opts->AtlasWidth);
                 if (UI::PropertyDropdown("Atlas Width", atlasSizeUIValues, widthIdx))
                 {
-                    opts->AtlasWidth = (uint32_t)glm::pow(2, widthIdx);
+                    opts->AtlasWidth = StringUtils::ParseInt(atlasSizeUIValues[widthIdx]);
                     m_HasPropertyChanged = true;
                 }
 
@@ -752,6 +837,7 @@ namespace Crowny
         }
         m_HasPropertyChanged |= UI::Property("Padding", opts->Padding);
         m_HasPropertyChanged |= UI::Property("Get Kerning Data", opts->GetKerningData);
+        m_HasPropertyChanged |= UI::Property("Tab Width", opts->TabMultiple, 1U, 32U);
 
         EndImportInspector(0, ImGui::GetColumnWidth());
 
@@ -790,17 +876,51 @@ namespace Crowny
 
     void InspectorPanel::RenderTextureImportInspector()
     {
+        ImGui::TextDisabled("Preview");
+        AssetHandle<Texture> texture = static_asset_cast<Texture>(ProjectLibrary::Get().Load(m_InspectedAssetPath));
+        if (texture)
+        {
+            Ref<Texture> texturePtr = texture.GetInternalPtr();
+            const float sourceWidth = static_cast<float>(texturePtr->GetWidth());
+            const float sourceHeight = static_cast<float>(texturePtr->GetHeight());
+            const float previewWidth = std::max(1.0f, std::min(ImGui::GetContentRegionAvail().x, 220.0f));
+            const float previewHeight =
+              std::max(1.0f, sourceWidth > 0.0f ? std::min(180.0f, previewWidth * sourceHeight / sourceWidth) : previewWidth);
+            const float fittedWidth = std::max(1.0f, sourceHeight > 0.0f ? previewHeight * sourceWidth / sourceHeight : previewWidth);
+
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + std::max(0.0f, (ImGui::GetContentRegionAvail().x - fittedWidth) * 0.5f));
+            ImGui::Image(ImGuiVulkanTexture::Get(texturePtr), ImVec2(fittedWidth, previewHeight), { 0.0f, 1.0f }, { 1.0f, 0.0f });
+            ImGui::TextDisabled("%u x %u", texturePtr->GetWidth(), texturePtr->GetHeight());
+        }
+        else
+        {
+            ImGui::TextDisabled("Preview unavailable");
+        }
+
+        ImGui::Dummy(ImVec2(0.0f, 4.0f));
+        ImGui::Separator();
+        ImGui::TextDisabled("Import");
         auto* opts = BeginImportInspector<TextureImportOptions>();
 
-        m_HasPropertyChanged |= UI::Property("Auto Format", opts->AutomaticFormat);
-        m_HasPropertyChanged |= UI::PropertyDropdown("Texture Shape", { "1D", "2D", "3D", "Cubemap" }, opts->Shape);
+        m_HasPropertyChanged |= UI::Property("Detect format", opts->AutomaticFormat);
+        m_HasPropertyChanged |= UI::PropertyDropdown("Texture shape", { "1D", "2D", "3D", "Cubemap" }, opts->Shape);
         // m_HasPropertyChanged |= UI::PropertyDropdown("Texture Format", { "R" }, opts->Format);
-        m_HasPropertyChanged |= UI::Property("Generate Mipmaps", opts->GenerateMips);
-        m_HasPropertyChanged |= UI::Property("Max Mip Level", opts->MaxMip);
-        m_HasPropertyChanged |= UI::Property("CPU Cached", opts->CpuCached);
-        m_HasPropertyChanged |= UI::Property("sRGB", opts->SRGB);
-        m_HasPropertyChanged |=
-          UI::PropertyDropdown("Compression Format", { "None", "ETC1S (lower quality)", "UASTC (higher quality)" }, opts->DiskFormat);
+        m_HasPropertyChanged |= UI::Property("Generate mipmaps", opts->GenerateMips);
+        {
+            UI::ScopedDisable disabled(!opts->GenerateMips);
+            m_HasPropertyChanged |= UI::Property("Max mip level", opts->MaxMip);
+            m_HasPropertyChanged |= UI::PropertyDropdown("Mip filter", { "Box", "Triangle", "Mitchell", "Lanczos 4", "Kaiser" }, opts->MipFilter);
+            m_HasPropertyChanged |= UI::PropertyDropdown("Mip content", { "Color", "Normal map", "Data" }, opts->MipMode);
+            m_HasPropertyChanged |= UI::Property("Wrap while filtering", opts->MipWrap);
+            m_HasPropertyChanged |= UI::Property("Preserve alpha coverage", opts->PreserveAlphaCoverage);
+            {
+                UI::ScopedDisable coverageDisabled(!opts->PreserveAlphaCoverage);
+                m_HasPropertyChanged |= UI::Property("Alpha cutoff", opts->AlphaCutoff, 0.01f, 0.0f, 1.0f);
+            }
+        }
+        m_HasPropertyChanged |= UI::Property("Keep CPU copy", opts->CpuCached);
+        m_HasPropertyChanged |= UI::Property("sRGB color space", opts->SRGB);
+        m_HasPropertyChanged |= UI::PropertyDropdown("Compression", { "None", "ETC1S (smaller)", "UASTC (higher quality)" }, opts->DiskFormat);
 
         EndImportInspector(0, ImGui::GetColumnWidth());
     }
@@ -808,38 +928,110 @@ namespace Crowny
     void InspectorPanel::RenderShaderImportInspector()
     {
         Ref<ShaderImportOptions> shaderImport = StaticRefCast<ShaderImportOptions>(m_ImportOptions);
-        ImGui::Columns(2);
-        ImGui::Text("Defines");
-        ImGui::NextColumn();
-        ImGui::NextColumn();
-        UnorderedMap<String, String>& defines = shaderImport->GetDefines(); // this needs a bit more work, unordered map bad
-        uint32_t id = 0;
-        for (auto kv : defines)
+        UnorderedMap<String, String>& defines = shaderImport->GetDefines();
+        String removeKey;
+        String renameFrom;
+        String renameTo;
+        bool removeRequested = false;
+        bool renameRequested = false;
+        bool invalidRename = false;
+        Vector<String> defineNames;
+        defineNames.reserve(defines.size());
+        for (const auto& [name, value] : defines)
         {
-            ImGui::PushID(id++);
-            std::string key = kv.first;
-            if (ImGui::InputText("##defineKey", &key, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
-                defines[key] = kv.second;
-            ImGui::NextColumn();
-            ImGui::InputText("##defineValue", &kv.second, ImGuiInputTextFlags_AutoSelectAll);
-            ImGui::NextColumn();
-            ImGui::PopID();
+            (void)value;
+            defineNames.push_back(name);
         }
-        ImGui::NextColumn();
-        if (ImGui::Button("+"))
-            defines[""] = "";
-        ImGui::SameLine();
-        if (ImGui::Button("-"))
-            defines.erase(std::prev(defines.end()));
-        const float x = ImGui::GetCursorPosX();
-        const float width = ImGui::GetColumnWidth();
-        // ImGui::NextColumn();
-        ImGui::NextColumn();
-        ImGui::Columns(1);
-        DrawApplyRevert(x, width);
-        ImGui::NextColumn();
-        ImGui::NextColumn();
-        DrawApplyRevert(x, width);
+        std::sort(defineNames.begin(), defineNames.end());
+
+        ImGui::TextDisabled("Shader defines");
+        ImGui::TextWrapped("Define compile-time names and optional values. Press Enter to rename a define.");
+        ImGui::Dummy(ImVec2(0.0f, 3.0f));
+
+        const ImGuiTableFlags tableFlags = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
+                                           ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoSavedSettings;
+        if (ImGui::BeginTable("##ShaderDefines", 3, tableFlags))
+        {
+            ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch, 0.9f);
+            ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch, 1.1f);
+            ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed);
+            ImGui::TableHeadersRow();
+
+            for (const String& defineName : defineNames)
+            {
+                auto define = defines.find(defineName);
+                if (define == defines.end())
+                    continue;
+                const String& key = define->first;
+                String& value = define->second;
+                ImGui::PushID(key.c_str());
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+
+                String editedKey = key;
+                if (ImGui::InputText("##Name", &editedKey, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue) &&
+                    editedKey != key)
+                {
+                    if (!editedKey.empty() && defines.find(editedKey) == defines.end())
+                    {
+                        renameFrom = key;
+                        renameTo = editedKey;
+                        renameRequested = true;
+                    }
+                    else
+                    {
+                        invalidRename = true;
+                    }
+                }
+
+                ImGui::TableNextColumn();
+                m_HasPropertyChanged |= ImGui::InputText("##Value", &value, ImGuiInputTextFlags_AutoSelectAll);
+
+                ImGui::TableNextColumn();
+                if (ImGui::SmallButton("Remove"))
+                {
+                    removeKey = key;
+                    removeRequested = true;
+                }
+                ImGui::PopID();
+            }
+
+            ImGui::EndTable();
+        }
+
+        if (renameRequested)
+        {
+            const auto source = defines.find(renameFrom);
+            if (source != defines.end())
+            {
+                String value = source->second;
+                defines.erase(source);
+                defines[renameTo] = value;
+                m_HasPropertyChanged = true;
+            }
+        }
+        if (removeRequested)
+        {
+            defines.erase(removeKey);
+            m_HasPropertyChanged = true;
+        }
+
+        if (invalidRename)
+            ImGui::TextColored(ImVec4(0.95f, 0.55f, 0.32f, 1.0f), "Define names must be unique and cannot be empty.");
+        if (defines.empty())
+            ImGui::TextDisabled("No shader defines.");
+
+        if (ImGui::Button("Add define"))
+        {
+            String newName = "NEW_DEFINE";
+            uint32_t suffix = 2;
+            while (defines.find(newName) != defines.end())
+                newName = "NEW_DEFINE_" + std::to_string(suffix++);
+            defines[newName] = "";
+            m_HasPropertyChanged = true;
+        }
+
+        DrawApplyRevert(0.0f, ImGui::GetContentRegionAvail().x);
     }
 
     void InspectorPanel::RenderMeshImportInspector()
@@ -856,10 +1048,16 @@ namespace Crowny
             if (opts->SmoothNormals)
                 m_HasPropertyChanged |= UI::Property("Smoothing Angle", opts->SmoothingAngle, 0.1f, 0.0f, 175.0f);
         }
+        m_HasPropertyChanged |= UI::Property("CPU Cached", opts->CpuCached);
         m_HasPropertyChanged |= UI::Property("Optimize", opts->Optimize);
         m_HasPropertyChanged |= UI::Property("Compress", opts->Compress);
-        m_HasPropertyChanged |= UI::Property("Keep Quads", opts->KeepQuads);
-        // m_HasPropertyChanged |= UI::Property("Enable Read/Write", opts->EnableReadWrite);
+        m_HasPropertyChanged |= UI::Property("Import Materials", opts->ImportMaterials);
+        m_HasPropertyChanged |= UI::Property("Import Vertex Colors", opts->ImportVertexColors);
+        m_HasPropertyChanged |= UI::Property("Import Morph Targets", opts->ImportMorphMeshes);
+        m_HasPropertyChanged |= UI::Property("Import Bone Weights", opts->ImportBones);
+        m_HasPropertyChanged |= UI::Property("Import Animations", opts->ImportAnimations);
+        m_HasPropertyChanged |= UI::Property("Flip UVs", opts->FlipUVs);
+        m_HasPropertyChanged |= UI::Property("Flip Winding Order", opts->FlipWindingOrder);
 
         EndImportInspector(0, ImGui::GetColumnWidth());
     }
@@ -873,52 +1071,40 @@ namespace Crowny
 
     void InspectorPanel::DrawHeader()
     {
-        // Entity inspection header -- show the entity name
         if (m_InspectorMode == InspectorMode::GameObject)
-        {
-            if (m_InspectedEntity)
-            {
-                ImGui::Text("%s", m_InspectedEntity.GetName().c_str());
-                ImGui::Separator();
-            }
             return;
-        }
 
         if (m_InspectedAssetPath.empty())
             return;
 
-        // Helper: draws the asset import header with Reset and Open buttons
         auto drawAssetHeader = [&](const char* assetTypeName) {
-            const float maxx = ImGui::GetContentRegionAvail().x;
-            ImGui::Text("%s", (m_InspectedAssetPath.filename().string() + " (" + assetTypeName + ") Import Settings").c_str());
-            const float padding = ImGui::GetStyle().FramePadding.x;
-            const float open = ImGui::CalcTextSize("Open").x;
-            const float reset = ImGui::CalcTextSize("Reset").x;
-            ImGui::SameLine();
-            ImGui::SetCursorPosX(maxx - open - reset - padding * 4);
-            if (ImGui::Button("Reset"))
+            const ImGuiTableFlags flags =
+              ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_NoPadOuterX | ImGuiTableFlags_NoBordersInBody;
+            if (ImGui::BeginTable("##AssetInspectorHeader", 2, flags))
             {
-                m_ImportOptions = Importer::Get().CreateImportOptions(m_InspectedAssetPath);
-                m_HasPropertyChanged = true;
-            }
-            if (ImGui::IsItemHovered())
-            {
-                ImGui::BeginTooltip();
-                ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-                ImGui::TextUnformatted("Reset the import properties.");
-                ImGui::PopTextWrapPos();
-                ImGui::EndTooltip();
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Open"))
-                PlatformUtils::OpenExternally(m_InspectedAssetPath);
-            if (ImGui::IsItemHovered())
-            {
-                ImGui::BeginTooltip();
-                ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-                ImGui::TextUnformatted("Open in an external program.");
-                ImGui::PopTextWrapPos();
-                ImGui::EndTooltip();
+                ImGui::TableSetupColumn("Asset", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed);
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted(m_InspectedAssetPath.filename().string().c_str());
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+                    ImGui::SetTooltip("%s", m_InspectedAssetPath.string().c_str());
+                ImGui::TextDisabled("%s import settings", assetTypeName);
+
+                ImGui::TableNextColumn();
+                if (ImGui::Button("Reset"))
+                {
+                    m_ImportOptions = Importer::Get().CreateImportOptions(m_InspectedAssetPath);
+                    m_HasPropertyChanged = true;
+                }
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+                    ImGui::SetTooltip("Reset import settings");
+                ImGui::SameLine();
+                if (ImGui::Button("Open"))
+                    PlatformUtils::OpenExternally(m_InspectedAssetPath);
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+                    ImGui::SetTooltip("Open externally");
+                ImGui::EndTable();
             }
             ImGui::Separator();
         };
@@ -926,7 +1112,7 @@ namespace Crowny
         switch (m_InspectorMode)
         {
         case InspectorMode::AudioClipImport:
-            drawAssetHeader("Audio Clip");
+            drawAssetHeader("Audio clip");
             break;
         case InspectorMode::TextureImport:
             drawAssetHeader("Texture");
@@ -950,22 +1136,25 @@ namespace Crowny
             drawAssetHeader("Material");
             break;
         default: {
-            // Fallback for asset modes without a specific label (Prefab, TextImport, etc.)
-            const float maxx = ImGui::GetContentRegionAvail().x;
-            ImGui::Text("%s", m_InspectedAssetPath.filename().string().c_str());
-            const float padding = ImGui::GetStyle().FramePadding.x;
-            const float open = ImGui::CalcTextSize("Open").x;
-            ImGui::SameLine();
-            ImGui::SetCursorPosX(maxx - open);
-            if (ImGui::Button("Open"))
-                PlatformUtils::OpenExternally(m_InspectedAssetPath);
-            if (ImGui::IsItemHovered())
+            const ImGuiTableFlags flags =
+              ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_NoPadOuterX | ImGuiTableFlags_NoBordersInBody;
+            if (ImGui::BeginTable("##AssetInspectorHeader", 2, flags))
             {
-                ImGui::BeginTooltip();
-                ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-                ImGui::TextUnformatted("Open externally.");
-                ImGui::PopTextWrapPos();
-                ImGui::EndTooltip();
+                ImGui::TableSetupColumn("Asset", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed);
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted(m_InspectedAssetPath.filename().string().c_str());
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+                    ImGui::SetTooltip("%s", m_InspectedAssetPath.string().c_str());
+                ImGui::TextDisabled("Asset");
+
+                ImGui::TableNextColumn();
+                if (ImGui::Button("Open"))
+                    PlatformUtils::OpenExternally(m_InspectedAssetPath);
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+                    ImGui::SetTooltip("Open externally");
+                ImGui::EndTable();
             }
             ImGui::Separator();
             break;
@@ -981,21 +1170,28 @@ namespace Crowny
 
     void InspectorPanel::DrawApplyRevert(float xOffset, float width)
     {
+        (void)width;
+        ImGui::Dummy(ImVec2(0.0f, 5.0f));
         ImGui::Separator();
-        float padding = ImGui::GetStyle().FramePadding.x;
         ImGui::SetCursorPosX(xOffset);
         const bool changed = m_HasPropertyChanged;
+        ImGui::TextDisabled(changed ? "Import settings have unapplied changes." : "Import settings are up to date.");
+
         if (!changed)
             ImGui::BeginDisabled();
-        if (ImGui::Button("Apply", ImVec2(width * 0.5f - padding * 4, 0)))
+        const float availableWidth = ImGui::GetContentRegionAvail().x;
+        const float buttonWidth = std::max(1.0f, (availableWidth - ImGui::GetStyle().ItemSpacing.x) * 0.5f);
+        if (ImGui::Button("Apply", ImVec2(buttonWidth, 0.0f)))
         {
             ProjectLibrary::Get().Reimport(m_InspectedAssetPath, m_ImportOptions, true);
             m_HasPropertyChanged = false;
+            m_OldImportOptions = m_ImportOptions->Clone();
         }
-        ImGui::SameLine(xOffset + width * 0.5f);
-        if (ImGui::Button("Revert", ImVec2(width * 0.5f - padding * 4, 0)))
+        ImGui::SameLine();
+        if (ImGui::Button("Revert", ImVec2(buttonWidth, 0.0f)))
         {
-            m_ImportOptions = m_OldImportOptions;
+            if (m_OldImportOptions)
+                m_ImportOptions = m_OldImportOptions->Clone();
             m_HasPropertyChanged = false;
         }
         if (!changed)
@@ -1023,6 +1219,21 @@ namespace Crowny
         {
             m_InspectorMode = InspectorMode::Prefab;
             return;
+        }
+
+        const Ref<LibraryEntry> selectedEntry = ProjectLibrary::Get().FindEntry(filepath);
+        if (selectedEntry && selectedEntry->Type == LibraryEntryType::File)
+        {
+            FileEntry* fileEntry = static_cast<FileEntry*>(selectedEntry.get());
+            if (fileEntry->Metadata &&
+                (fileEntry->Metadata->Type == AssetType::PhysicsMaterial2D || fileEntry->Metadata->Type == AssetType::PhysicsMaterial))
+            {
+                m_InspectorMode = InspectorMode::PhysicsMaterial;
+                m_HasPropertyChanged = false;
+                m_ImportOptions = fileEntry->Metadata->ImportOptions;
+                m_OldImportOptions = m_ImportOptions ? m_ImportOptions->Clone() : nullptr;
+                return;
+            }
         }
 
         SpecificImporter* const importer = Importer::Get().GetImporterForFile(filepath);
@@ -1066,10 +1277,13 @@ namespace Crowny
         }
     }
 
-    void InspectorPanel::SetSelectedEntity(Entity e)
+    void InspectorPanel::SetSelectedEntity(Entity e) { SetSelectedEntities(e, e ? Vector<Entity>{ e } : Vector<Entity>{}); }
+
+    void InspectorPanel::SetSelectedEntities(Entity primary, const Vector<Entity>& entities)
     {
         m_InspectorMode = InspectorMode::GameObject;
-        m_InspectedEntity = e;
+        m_InspectedEntity = primary;
+        m_InspectedEntities = entities;
         m_HasPropertyChanged = false;
     }
 

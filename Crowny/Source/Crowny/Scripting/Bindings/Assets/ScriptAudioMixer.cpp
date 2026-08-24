@@ -19,7 +19,7 @@ namespace Crowny
         MetaData.ScriptClass->AddInternalCall("Internal_SetBusMuted", (void*)&Internal_SetBusMuted);
     }
 
-    void ScriptAudioMixer::Internal_SetActive(ScriptAudioMixer* thisPtr) { gAudioManager->SetActiveMixer(thisPtr->GetHandle()); }
+    void ScriptAudioMixer::Internal_SetActive(ScriptAudioMixer* thisPtr) { AudioManager::TryGet()->SetActiveMixer(thisPtr->GetHandle()); }
 
     float ScriptAudioMixer::Internal_GetBusVolume(ScriptAudioMixer* thisPtr, MonoString* name)
     {

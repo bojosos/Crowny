@@ -13,6 +13,8 @@
 
 namespace Crowny
 {
+    using namespace Literals;
+
     // -------------------------------------------------------------------------
     // Numeric field template: handles I8, U8, I16, U16, I32, U32, I64, U64
     // -------------------------------------------------------------------------
@@ -32,9 +34,9 @@ namespace Crowny
             MonoClass* const rangeClass = ScriptInfoManager::Get().GetBuiltinClasses().RangeAttribute;
             MonoObject* const rangeAttr = ctx.MemberInfo->GetAttribute(rangeClass);
             float minF = 0.0f, maxF = 0.0f;
-            rangeClass->GetField("min")->Get(rangeAttr, &minF);
-            rangeClass->GetField("max")->Get(rangeAttr, &maxF);
-            rangeClass->GetField("slider")->Get(rangeAttr, &displayAsSlider);
+            rangeClass->GetField("min"_hstr)->Get(rangeAttr, &minF);
+            rangeClass->GetField("max"_hstr)->Get(rangeAttr, &maxF);
+            rangeClass->GetField("slider"_hstr)->Get(rangeAttr, &displayAsSlider);
             displayAsSlider = false;
 
             // Clamp float range to the representable range of this integer type
@@ -76,7 +78,7 @@ namespace Crowny
             MonoClass* const filepathClass = ScriptInfoManager::Get().GetBuiltinClasses().FilepathAttribute;
             MonoObject* const filepathAttr = ctx.MemberInfo->GetAttribute(filepathClass);
             FileDialogType dialogType = FileDialogType::OpenFile;
-            filepathClass->GetField("type")->Get(filepathAttr, &dialogType);
+            filepathClass->GetField("type"_hstr)->Get(filepathAttr, &dialogType);
 
             if (value != nullptr && MonoUtils::GetClass((MonoObject*)value) != MonoUtils::GetStringClass() &&
                 (dialogType == FileDialogType::Multiselect))
@@ -160,17 +162,17 @@ namespace Crowny
         const Ref<SerializableTypeInfoList>& listInfo = StaticRefCast<SerializableTypeInfoList>(ctx.MemberInfo->m_TypeInfo);
         bool modified = false;
         MonoClass* const listClass = MonoManager::Get().FindClass(listInfo->GetMonoClass());
-        MonoProperty* const countProp = listClass->GetProperty("Count");
+        MonoProperty* const countProp = listClass->GetProperty("Count"_hstr);
         uint32_t length = 0;
         if (listObject != nullptr)
         {
             MonoObject* const lengthObj = countProp->Get(listObject);
             length = *(int32_t*)MonoUtils::Unbox(lengthObj);
         }
-        MonoProperty* const itemProp = listClass->GetProperty("Item");
-        MonoMethod* const copyToMethod = listClass->GetMethod("CopyTo", 4);
-        MonoMethod* const addRangeMethod = listClass->GetMethod("AddRange", 1);
-        MonoMethod* const clearMethod = listClass->GetMethod("Clear");
+        MonoProperty* const itemProp = listClass->GetProperty("Item"_hstr);
+        MonoMethod* const copyToMethod = listClass->GetMethod("CopyTo"_hstr, 4);
+        MonoMethod* const addRangeMethod = listClass->GetMethod("AddRange"_hstr, 1);
+        MonoMethod* const clearMethod = listClass->GetMethod("Clear"_hstr);
         uint32_t newLength = length;
         if (UI::PropertyInput(ctx.MemberInfo->m_Name.c_str(), newLength))
         {
@@ -238,9 +240,9 @@ namespace Crowny
         const Ref<SerializableTypeInfoDictionary>& dictInfo = StaticRefCast<SerializableTypeInfoDictionary>(ctx.MemberInfo->m_TypeInfo);
         bool modified = false;
         MonoClass* const dictClass = MonoManager::Get().FindClass(dictInfo->GetMonoClass());
-        MonoProperty* const countProp = dictClass->GetProperty("Count");
-        MonoProperty* const keysProp = dictClass->GetProperty("Keys");
-        MonoProperty* const valuesProp = dictClass->GetProperty("Values");
+        MonoProperty* const countProp = dictClass->GetProperty("Count"_hstr);
+        MonoProperty* const keysProp = dictClass->GetProperty("Keys"_hstr);
+        MonoProperty* const valuesProp = dictClass->GetProperty("Values"_hstr);
         uint32_t length = 0;
         if (dictObject != nullptr)
         {
@@ -249,11 +251,11 @@ namespace Crowny
         }
         ScriptArray keys(dictInfo->m_KeyType->GetMonoClass(), length);
         ScriptArray values(dictInfo->m_ValueType->GetMonoClass(), length);
-        MonoMethod* const copyKeysToMethod = keysProp->GetReturnType()->GetMethod("CopyTo", 2);
-        MonoMethod* const copyValuesToMethod = valuesProp->GetReturnType()->GetMethod("CopyTo", 2);
-        MonoMethod* const containsKey = dictClass->GetMethod("ContainsKey", 1);
-        MonoMethod* const addMethod = dictClass->GetMethod("Add", 2);
-        MonoMethod* const removeMethod = dictClass->GetMethod("Remove", 1);
+        MonoMethod* const copyKeysToMethod = keysProp->GetReturnType()->GetMethod("CopyTo"_hstr, 2);
+        MonoMethod* const copyValuesToMethod = valuesProp->GetReturnType()->GetMethod("CopyTo"_hstr, 2);
+        MonoMethod* const containsKey = dictClass->GetMethod("ContainsKey"_hstr, 1);
+        MonoMethod* const addMethod = dictClass->GetMethod("Add"_hstr, 2);
+        MonoMethod* const removeMethod = dictClass->GetMethod("Remove"_hstr, 1);
 
         uint32_t offset = 0;
         void* params[2];
@@ -411,9 +413,9 @@ namespace Crowny
             {
                 MonoClass* const rangeClass = ScriptInfoManager::Get().GetBuiltinClasses().RangeAttribute;
                 MonoObject* const rangeAttr = ctx.MemberInfo->GetAttribute(rangeClass);
-                rangeClass->GetField("min")->Get(rangeAttr, &minValue);
-                rangeClass->GetField("max")->Get(rangeAttr, &maxValue);
-                rangeClass->GetField("slider")->Get(rangeAttr, &displayAsSlider);
+                rangeClass->GetField("min"_hstr)->Get(rangeAttr, &minValue);
+                rangeClass->GetField("max"_hstr)->Get(rangeAttr, &maxValue);
+                rangeClass->GetField("slider"_hstr)->Get(rangeAttr, &displayAsSlider);
                 displayAsSlider = false;
             }
             float value = (float)*(double*)fieldValue;
@@ -432,9 +434,9 @@ namespace Crowny
             {
                 MonoClass* const rangeClass = ScriptInfoManager::Get().GetBuiltinClasses().RangeAttribute;
                 MonoObject* const rangeAttr = ctx.MemberInfo->GetAttribute(rangeClass);
-                rangeClass->GetField("min")->Get(rangeAttr, &minValue);
-                rangeClass->GetField("max")->Get(rangeAttr, &maxValue);
-                rangeClass->GetField("slider")->Get(rangeAttr, &displayAsSlider);
+                rangeClass->GetField("min"_hstr)->Get(rangeAttr, &minValue);
+                rangeClass->GetField("max"_hstr)->Get(rangeAttr, &maxValue);
+                rangeClass->GetField("slider"_hstr)->Get(rangeAttr, &displayAsSlider);
                 displayAsSlider = false;
             }
             float value = *(float*)fieldValue;
@@ -626,10 +628,10 @@ namespace Crowny
             bool modified = false;
             if (ScriptInfoManager::Get().GetSerializableObjectInfo(objTypeInfo->m_TypeNamespace, objTypeInfo->m_TypeName, objInfo))
             {
-                const Ref<Scene>& scene = gSceneManager->GetActiveScene();
+                const Ref<Scene>& scene = SceneManager::TryGet()->GetActiveScene();
                 if (ctx.Getter() == nullptr)
                 {
-                    bool construct = objInfo->m_MonoClass->GetMethod(".ctor", 0) != nullptr;
+                    bool construct = objInfo->m_MonoClass->GetMethod(".ctor"_hstr, 0) != nullptr;
                     ctx.Setter(objInfo->m_MonoClass->CreateInstance(construct));
                     modified = true;
                 }

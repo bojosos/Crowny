@@ -2,6 +2,7 @@
 
 #include "Panels/ImGuiPanel.h"
 
+#include "Crowny/Ecs/Entity.h"
 #include "Crowny/Events/Event.h"
 #include "Crowny/RenderAPI/RenderTarget.h"
 
@@ -41,7 +42,7 @@ namespace Crowny
     class ViewportPanel : public ImGuiPanel
     {
     public:
-        ViewportPanel(const String& name);
+        ViewportPanel(const String& name, std::function<Entity()> selectedEntity, std::function<Vector<Entity>()> selectedEntities);
         ~ViewportPanel() = default;
 
         virtual void Render() override;
@@ -49,6 +50,7 @@ namespace Crowny
         const glm::vec4& GetViewportBounds() const { return m_ViewportBounds; }
         void SetEventCallback(const EventCallbackFn& onclicked);
         void SetEditorRenderTarget(const Ref<RenderTarget>& rt);
+        void SetShowStatistics(bool show) { m_ShowStatistics = show; }
 
         void SetGizmoMode(GizmoEditMode gizmoMode) { m_GizmoMode = gizmoMode; }
         void SetGizmoLocalMode(bool local) { m_LocalMode = local; }
@@ -60,14 +62,37 @@ namespace Crowny
         void EnableGizmo() { m_GizmoMode = GizmoEditMode::Translate; }
 
         bool IsMouseOverGizmo() const { return ImGuizmo::IsOver(); }
+        bool IsMouseOverHud() const { return m_MouseOverHud; }
 
     private:
+        struct TransformSnapshot
+        {
+            Entity Target;
+            glm::mat4 WorldTransform{ 1.0f };
+        };
+
+        void DrawViewportHud(const ImVec2& imageMin, const ImVec2& imageMax, Entity primary, const Vector<Entity>& selectedEntities);
+        Vector<Entity> GetTopLevelSelection(const Vector<Entity>& selectedEntities) const;
+        glm::mat4 GetSelectionPivot(Entity primary, const Vector<Entity>& selectedEntities) const;
+        void BeginTransformInteraction(const Vector<Entity>& selectedEntities, const glm::mat4& pivot);
+        void ApplyTransformInteraction(const glm::mat4& pivot);
+        void EndTransformInteraction();
+
         bool m_LocalMode = true;
+        bool m_SnapEnabled = false;
+        bool m_ShowStatistics = true;
+        bool m_MouseOverHud = false;
         Ref<RenderTarget> m_RenderTarget;
         EventCallbackFn OnEvent;
         GizmoEditMode m_GizmoMode = GizmoEditMode::Translate;
         glm::vec2 m_ViewportSize = { 1.0f, 1.0f };
         glm::vec4 m_ViewportBounds;
+        std::function<Entity()> m_SelectedEntity;
+        std::function<Vector<Entity>()> m_SelectedEntities;
+        Vector<TransformSnapshot> m_TransformSnapshots;
+        glm::mat4 m_InitialGizmoTransform{ 1.0f };
+        glm::mat4 m_CurrentGizmoTransform{ 1.0f };
+        bool m_GizmoWasUsing = false;
     };
 
 } // namespace Crowny

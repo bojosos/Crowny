@@ -4,6 +4,9 @@
 #include "Crowny/Assets/AssetHandle.h"
 #include "Crowny/Assets/AssetListener.h"
 
+#include "Crowny/Common/HashedString.h"
+#include "Crowny/Common/StringID.h"
+
 #include "Crowny/RenderAPI/GpuBuffer.h"
 #include "Crowny/RenderAPI/SamplerState.h"
 #include "Crowny/RenderAPI/Shader.h"
@@ -32,14 +35,14 @@ namespace Crowny
 
     private:
         friend class Material;
-        MaterialParamHandle(Material* mat, uint32_t offset, const String& bufferName)
-          : m_Material(mat), m_Offset(offset), m_BufferName(bufferName)
+        MaterialParamHandle(Material* mat, uint32_t offset, StringID bufferID)
+          : m_Material(mat), m_Offset(offset), m_BufferID(bufferID)
         {
         }
 
         Material* m_Material = nullptr;
         uint32_t m_Offset = 0;
-        String m_BufferName;
+        StringID m_BufferID;
     };
 
     // Cached handle to a texture parameter in a Material.
@@ -70,13 +73,16 @@ namespace Crowny
             uint32_t Offset;
             ShaderDataType DataType;
             String BufferName;
+            StringID BufferID;
         };
+
+        using BindingMap = UnorderedMap<String, UniformMember, StringHash, StringEqual>;
 
         struct PassData
         {
             Ref<GraphicsPipeline> Pipeline;
             Ref<UniformParams> Uniforms;
-            UnorderedMap<String, Ref<UniformBufferBlock>> UniformBlocks;
+            UnorderedMap<StringID, Ref<UniformBufferBlock>> UniformBlocks;
         };
 
         Material(const AssetHandle<Shader>& shader);
@@ -108,7 +114,7 @@ namespace Crowny
                 return {};
             if (it->second.DataType != ShaderDataTypeTrait<T>::Type)
                 return {};
-            return MaterialParamHandle<T>(this, it->second.Offset, it->second.BufferName);
+            return MaterialParamHandle<T>(this, it->second.Offset, it->second.BufferID);
         }
 
         MaterialTextureHandle GetTextureParam(const String& name)
@@ -116,8 +122,9 @@ namespace Crowny
             return MaterialTextureHandle(this, name);
         }
 
-        const UnorderedMap<String, UniformMember>& GetBindings() const { return m_Bindings; }
+        const BindingMap& GetBindings() const { return m_Bindings; }
         bool HasBinding(const String& name) const { return m_Bindings.find(name) != m_Bindings.cend(); }
+        bool HasBinding(HashedString name) const { return m_Bindings.find(name) != m_Bindings.cend(); }
 
         template <typename T> T GetDataParam(const String& name) const
         {
@@ -139,7 +146,7 @@ namespace Crowny
             // Read from first pass that has it
             for (const auto& pass : m_Passes)
             {
-                const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferName);
+                const auto blockIt = pass.UniformBlocks.find(iterFind->second.BufferID);
                 if (blockIt != pass.UniformBlocks.end())
                 {
                     blockIt->second->Read(iterFind->second.Offset, &value, sizeof(value));
@@ -150,7 +157,7 @@ namespace Crowny
         }
 
         Ref<Texture> GetTexture(uint32_t set, uint32_t slot) const { return m_Passes[0].Uniforms->GetTexture(set, slot); }
-        UnorderedMap<String, UniformResourceDesc> GetTextures() const
+        UniformDesc::TextureMap GetTextures() const
         {
             return m_Passes[0].Pipeline->GetParamInfo()->GetUniformDesc(FRAGMENT_SHADER)->Textures;
         }
@@ -180,18 +187,32 @@ namespace Crowny
         void FlushUniformBuffers();
         void SetBool(const String& name, bool value);
         void SetFloat(const String& name, float value);
+        void SetFloat(HashedString name, float value);
+        void SetFloat(MaterialPropertyID name, float value);
         void SetFloat2(const String& name, const glm::vec2& value);
         void SetFloat3(const String& name, const glm::vec3& value);
         void SetInt(const String& name, int value);
+        void SetInt(HashedString name, int value);
+        void SetInt(MaterialPropertyID name, int value);
         void SetInt2(const String& name, const glm::ivec2& value);
         void SetInt3(const String& name, const glm::ivec3& value);
         void SetInt4(const String& name, const glm::ivec4& value);
         void SetColor(const String& name, const glm::vec4& color);
+        void SetColor(HashedString name, const glm::vec4& color);
+        void SetColor(MaterialPropertyID name, const glm::vec4& color);
+        void SetVector4Array(const String& name, const glm::vec4* values, uint32_t count);
+        void SetInt4Array(const String& name, const glm::ivec4* values, uint32_t count);
         void SetVector3(const String& name, const glm::vec3& value);
+        void SetVector3(HashedString name, const glm::vec3& value);
+        void SetVector3(MaterialPropertyID name, const glm::vec3& value);
         void SetMat3(const String& name, const glm::mat3& value);
         void SetMatrix(const String& name, const glm::mat4& matrix);
+        void SetMatrix(HashedString name, const glm::mat4& matrix);
+        void SetMatrix(MaterialPropertyID name, const glm::mat4& matrix);
         void SetTexture(const String& name, const AssetHandle<Texture>& texture);
         void SetTexture(const String& name, const Ref<Texture>& texture);
+        void SetTexture(HashedString name, const Ref<Texture>& texture);
+        void SetTexture(MaterialPropertyID name, const Ref<Texture>& texture);
 
         AssetHandle<Texture> GetTextureHandle(const String& name) const
         {
@@ -211,12 +232,14 @@ namespace Crowny
         Material() = default; // For serialization only
         void CreateAndAppendUniforms(uint32_t passIndex);
         void ApplyDefaults();
+        template <typename Name, typename Value>
+        void SetDataParam(const Name& name, ShaderDataType expectedType, const Value& value, StringView valueType);
 
     private:
         CW_SERIALIZABLE(Material);
 
         Vector<PassData> m_Passes;
-        UnorderedMap<String, UniformMember> m_Bindings;
+        BindingMap m_Bindings;
         UnorderedMap<String, AssetHandle<Texture>> m_TextureHandles;
         AssetHandle<Shader> m_Shader;
         ShaderVariation m_Variation;

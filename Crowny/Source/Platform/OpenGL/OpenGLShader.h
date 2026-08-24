@@ -2,21 +2,21 @@
 
 #include "Crowny/RenderAPI/Shader.h"
 
-#include <glm/glm.hpp>
-
 namespace Crowny
 {
-
     class OpenGLShader : public ShaderStage
     {
     public:
         friend class ShaderStage;
-        ~OpenGLShader();
+        ~OpenGLShader() override;
+
+        uint32_t GetRendererID() const { return m_RendererID; }
+        bool IsValid() const { return m_RendererID != 0; }
+
     protected:
-        OpenGLShader(const BinaryShaderData& data) {}
+        explicit OpenGLShader(const Ref<BinaryShaderData>& data);
 
     private:
-        uint32_t m_RendererID;
+        uint32_t m_RendererID = 0;
     };
-
 } // namespace Crowny

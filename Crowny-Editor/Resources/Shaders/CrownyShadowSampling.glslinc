@@ -1,0 +1,102 @@
+#ifndef CROWNY_SHADOW_SAMPLING_GLSL
+#define CROWNY_SHADOW_SAMPLING_GLSL
+
+float cwSampleShadowAtlasTap(CwShadowViewRecord shadowView, vec3 worldPosition, vec2 texelOffset)
+{
+    vec4 shadowClip = shadowView.viewProjection * vec4(worldPosition, 1.0);
+    if (shadowClip.w <= 0.0)
+        return 1.0;
+    vec3 shadowNdc = shadowClip.xyz / shadowClip.w;
+    vec2 localUv = shadowNdc.xy * 0.5 + 0.5;
+    if (any(lessThan(localUv, vec2(0.0))) || any(greaterThan(localUv, vec2(1.0))) ||
+        shadowNdc.z <= 0.0 || shadowNdc.z >= 1.0)
+        return 1.0;
+    vec2 atlasUv = localUv * shadowView.atlasScaleBias.xy + shadowView.atlasScaleBias.zw + texelOffset;
+    return texture(cwShadowAtlas, vec3(atlasUv, shadowNdc.z - shadowView.splitDepthBias.z));
+}
+
+float cwSampleShadowAtlas(CwShadowLightRecord shadow, float viewDepth, vec3 worldPosition, vec3 worldNormal)
+{
+    uint selectedView = shadow.viewOffset;
+    if (shadow.type == CW_LIGHT_DIRECTIONAL)
+    {
+        selectedView += shadow.viewCount - 1u;
+        for (uint cascade = 0u; cascade < shadow.viewCount; cascade++)
+        {
+            if (viewDepth <= shadowViews[shadow.viewOffset + cascade].splitDepthBias.y)
+            {
+                selectedView = shadow.viewOffset + cascade;
+                break;
+            }
+        }
+    }
+    CwShadowViewRecord shadowView = shadowViews[selectedView];
+    vec3 biasedPosition = worldPosition + worldNormal * shadowView.splitDepthBias.w;
+    if ((shadow.flags & CW_SHADOW_SOFT) == 0u)
+        return cwSampleShadowAtlasTap(shadowView, biasedPosition, vec2(0.0));
+
+    vec2 texel = 1.0 / vec2(textureSize(cwShadowAtlas, 0));
+    float visibility = 0.0;
+    for (int y = -1; y <= 1; y++)
+        for (int x = -1; x <= 1; x++)
+            visibility += cwSampleShadowAtlasTap(shadowView, biasedPosition, vec2(x, y) * texel);
+    return visibility / 9.0;
+}
+
+float cwSampleDirectionalTap(CwShadowViewRecord shadowView, vec3 worldPosition, vec2 texelOffset)
+{
+    vec4 shadowClip = shadowView.viewProjection * vec4(worldPosition, 1.0);
+    vec3 shadowNdc = shadowClip.xyz / max(abs(shadowClip.w), 1e-7) * sign(shadowClip.w);
+    vec2 uv = shadowNdc.xy * 0.5 + 0.5;
+    if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0))) ||
+        shadowNdc.z <= 0.0 || shadowNdc.z >= 1.0)
+        return 1.0;
+    return texture(cwDirectionalShadows,
+                   vec4(uv + texelOffset, float(shadowView.metadata.x), shadowNdc.z - shadowView.splitDepthBias.z));
+}
+
+float cwSampleDirectionalShadow(CwShadowLightRecord shadow, float viewDepth, vec3 worldPosition, vec3 worldNormal)
+{
+    uint selectedView = shadow.viewOffset + shadow.viewCount - 1u;
+    for (uint cascade = 0u; cascade < shadow.viewCount; cascade++)
+    {
+        if (viewDepth <= shadowViews[shadow.viewOffset + cascade].splitDepthBias.y)
+        {
+            selectedView = shadow.viewOffset + cascade;
+            break;
+        }
+    }
+    CwShadowViewRecord shadowView = shadowViews[selectedView];
+    vec3 biasedPosition = worldPosition + worldNormal * shadowView.splitDepthBias.w;
+    if ((shadow.flags & CW_SHADOW_SOFT) == 0u)
+        return cwSampleDirectionalTap(shadowView, biasedPosition, vec2(0.0));
+    vec2 texel = 1.0 / vec2(textureSize(cwDirectionalShadows, 0).xy);
+    float visibility = 0.0;
+    for (int y = -1; y <= 1; y++)
+        for (int x = -1; x <= 1; x++)
+            visibility += cwSampleDirectionalTap(shadowView, biasedPosition, vec2(x, y) * texel);
+    return visibility / 9.0;
+}
+
+float cwSamplePointShadow(CwShadowLightRecord shadow, CwLightRecord light, vec3 worldPosition)
+{
+    CwShadowViewRecord shadowView = shadowViews[shadow.viewOffset];
+    vec3 lightToSurface = worldPosition - light.positionRange.xyz;
+    float comparisonDepth = length(lightToSurface) / max(shadowView.splitDepthBias.y, 1e-6);
+    comparisonDepth -= shadowView.splitDepthBias.z;
+    return texture(cwPointShadows, vec4(lightToSurface, float(shadowView.metadata.x)), comparisonDepth);
+}
+
+float cwEvaluateShadow(uint lightIndex, CwLightRecord light, float viewDepth, vec3 worldPosition, vec3 worldNormal)
+{
+    CwShadowLightRecord shadow = shadowLights[lightIndex];
+    if ((shadow.flags & CW_SHADOW_VALID) == 0u || shadow.viewCount == 0u)
+        return 1.0;
+    if (shadow.type == CW_LIGHT_DIRECTIONAL)
+        return cwSampleDirectionalShadow(shadow, viewDepth, worldPosition, worldNormal);
+    if ((shadow.flags & CW_SHADOW_CUBE) != 0u)
+        return cwSamplePointShadow(shadow, light, worldPosition);
+    return cwSampleShadowAtlas(shadow, viewDepth, worldPosition, worldNormal);
+}
+
+#endif

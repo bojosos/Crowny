@@ -15,19 +15,27 @@ namespace Crowny
 
     AudioListener::AudioListener()
     {
-        gAudioManager->RegisterListener(this);
-        const float globalVolume = gAudioManager->GetVolume();
+        if (AudioManager::TryGet() == nullptr || !AudioManager::TryGet()->IsAvailable())
+            return;
+        AudioManager::TryGet()->RegisterListener(this);
+        const float globalVolume = AudioManager::TryGet()->GetVolume();
         alListenerf(AL_GAIN, globalVolume);
         alListener3f(AL_POSITION, 0.0f, 0.0f, 0.0f);
         alListener3f(AL_VELOCITY, 0.0f, 0.0f, 0.0f);
-        const std::array<float, 6> orientation = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+        const std::array<float, 6> orientation = { 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f };
         alListenerfv(AL_ORIENTATION, orientation.data());
     }
 
-    AudioListener::~AudioListener() { gAudioManager->UnregisterListener(this); }
+    AudioListener::~AudioListener()
+    {
+        if (AudioManager::TryGet())
+            AudioManager::TryGet()->UnregisterListener(this);
+    }
 
     void AudioListener::OnTransformChanged(const Transform& transform)
     {
+        if (AudioManager::TryGet() == nullptr || !AudioManager::TryGet()->IsAvailable())
+            return;
         const glm::vec3 position = transform.GetPosition();
         alListener3f(AL_POSITION, position.x, position.y, position.z);
 
@@ -53,8 +61,17 @@ namespace Crowny
         }
     }
 
-    void AudioListener::SetVelocity(const glm::vec3& velocity) { alListener3f(AL_VELOCITY, velocity.x, velocity.y, velocity.z); }
+    void AudioListener::SetVelocity(const glm::vec3& velocity)
+    {
+        m_Velocity = velocity;
+        if (AudioManager::TryGet() && AudioManager::TryGet()->IsAvailable())
+            alListener3f(AL_VELOCITY, velocity.x, velocity.y, velocity.z);
+    }
 
-    void AudioListener::SetVolume(float volume) { alListenerf(AL_GAIN, volume); }
+    void AudioListener::SetVolume(float volume)
+    {
+        if (AudioManager::TryGet() && AudioManager::TryGet()->IsAvailable())
+            alListenerf(AL_GAIN, glm::clamp(volume, 0.0f, 1.0f));
+    }
 
 } // namespace Crowny

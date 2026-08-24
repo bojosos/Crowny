@@ -14,7 +14,7 @@ namespace Crowny
         ScriptCompression();
 
     private:
-        static uint64_t Internal_Compress(MonoArray* dst, MonoArray* src, CompressionMethod method);
+        static uint64_t Internal_Compress(MonoArray* dst, MonoArray* src, CompressionMethod method, FastLZLevel level);
         static uint64_t Internal_Decompress(MonoArray* dst, int32_t maxDstSize, MonoArray* src, int32_t srcSize, CompressionMethod method);
     };
 } // namespace Crowny

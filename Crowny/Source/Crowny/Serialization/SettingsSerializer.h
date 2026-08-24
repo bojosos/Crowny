@@ -21,4 +21,13 @@ namespace Crowny
         static void Serialize(const Ref<Physics2DSettings>& settings, YAML::Emitter& out);
         static Ref<Physics2DSettings> Deserialize(const YAML::Node& node);
     };
+
+    struct Physics3DSettings;
+
+    class Physics3DSettingsSerializer
+    {
+    public:
+        static void Serialize(const Physics3DSettings& settings, YAML::Emitter& out);
+        static Physics3DSettings Deserialize(const YAML::Node& node);
+    };
 } // namespace Crowny

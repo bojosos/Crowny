@@ -26,7 +26,11 @@ namespace Crowny
 
         Ref<Texture> GetTexture(uint32_t set, uint32_t slot);
         virtual void SetTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture, const TextureSurface& surface = TextureSurface::COMPLETE);
+        virtual void SetTextureArray(uint32_t set, uint32_t slot, const Ref<Texture>* textures, uint32_t count,
+                                     const TextureSurface* surfaces = nullptr);
         void SetTexture(ShaderType type, const String& name, const Ref<Texture>& texture, const TextureSurface& surface = TextureSurface::COMPLETE);
+        void SetTexture(ShaderType type, HashedString name, const Ref<Texture>& texture,
+                        const TextureSurface& surface = TextureSurface::COMPLETE);
         virtual void SetSamplerState(uint32_t set, uint32_t slot, const Ref<SamplerState>& sampler);
 
         virtual void SetLoadStoreTexture(uint32_t set, uint32_t slot, const Ref<Texture>& texture,
@@ -34,9 +38,10 @@ namespace Crowny
         virtual void SetBuffer(uint32_t set, uint32_t slot, const Ref<GenericGpuBuffer>& buffer);
         virtual void SetAccelerationStructure(uint32_t set, uint32_t slot, const Ref<AccelerationStructure>& accelerationStructure);
 
-        const Ref<UniformBufferBlock>& GetUniformBlockBuffer(uint32_t slot, uint32_t set) const;
+        const Ref<UniformBufferBlock>& GetUniformBlockBuffer(uint32_t set, uint32_t slot) const;
         const Ref<UniformDesc>& GetUniformDesc(ShaderType shaderType) const { return m_ParamInfo->GetUniformDesc(shaderType); }
         static Ref<UniformParams> Create(const Ref<GraphicsPipeline>& pipeline);
+        static Ref<UniformParams> Create(const Ref<ComputePipeline>& pipeline);
 
         const static GpuDataParameterInfos ParameterInfo;
 
@@ -51,6 +56,7 @@ namespace Crowny
         Ref<UniformParamInfo> m_ParamInfo;
         Ref<UniformBufferBlock>* m_BufferBlocks = nullptr;
         TextureData* m_SampledTextureData = nullptr;
+        Vector<Vector<TextureData>> m_SampledTextureArrays;
         TextureData* m_LoadStoreTextures = nullptr;
         Ref<GenericGpuBuffer>* m_Buffers = nullptr;
         Ref<SamplerState>* m_SamplerStates = nullptr;

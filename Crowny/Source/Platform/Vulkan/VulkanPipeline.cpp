@@ -275,6 +275,29 @@ namespace Crowny
                                                            const Ref<VulkanBufferLayout>& bufferLayout)
     {
         VulkanDevice& device = *gVulkanRenderAPI().GetPresentDevice().get();
+        const Pair<VkShaderStageFlagBits, ShaderStage*> stages[] = { { VK_SHADER_STAGE_VERTEX_BIT, m_Data.VertexShader.get() },
+                                                                     { VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, m_Data.HullShader.get() },
+                                                                     { VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, m_Data.DomainShader.get() },
+                                                                     { VK_SHADER_STAGE_GEOMETRY_BIT, m_Data.GeometryShader.get() },
+                                                                     { VK_SHADER_STAGE_FRAGMENT_BIT, m_Data.FragmentShader.get() } };
+        uint32_t outputIdx = 0;
+        const uint32_t numStages = sizeof(stages) / sizeof(stages[0]);
+        for (uint32_t i = 0; i < numStages; i++)
+        {
+            const VulkanShader* shader = static_cast<const VulkanShader*>(stages[i].second);
+            if (shader == nullptr)
+                continue;
+            const VulkanShaderModule* module = shader->GetShaderModule();
+            if (module == nullptr || module->GetHandle() == VK_NULL_HANDLE)
+            {
+                CW_ENGINE_ERROR("Cannot create a Vulkan graphics pipeline because shader stage {} has no module.",
+                                static_cast<uint32_t>(stages[i].first));
+                return nullptr;
+            }
+            m_ShaderStageInfos[outputIdx].module = module->GetHandle();
+            outputIdx++;
+        }
+
         m_InputAssemblyInfo.topology = VulkanUtils::GetDrawFlags(drawMode);
         m_TessellationInfo.patchControlPoints = 3;
         m_MultiSampleInfo.rasterizationSamples = renderPass->GetSampleFlags();
@@ -394,31 +417,10 @@ namespace Crowny
                 colorReadOnly[i] = true;
         }
 
-        const Pair<VkShaderStageFlagBits, ShaderStage*> stages[] = { { VK_SHADER_STAGE_VERTEX_BIT, m_Data.VertexShader.get() },
-                                                                     { VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, m_Data.HullShader.get() },
-                                                                     { VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, m_Data.DomainShader.get() },
-                                                                     { VK_SHADER_STAGE_GEOMETRY_BIT, m_Data.GeometryShader.get() },
-                                                                     { VK_SHADER_STAGE_FRAGMENT_BIT, m_Data.FragmentShader.get() } };
-        uint32_t outputIdx = 0;
-        const uint32_t numStages = sizeof(stages) / sizeof(stages[0]);
-        for (uint32_t i = 0; i < numStages; i++)
-        {
-            const VulkanShader* shader = static_cast<const VulkanShader*>(stages[i].second);
-            if (shader == nullptr)
-                continue;
-            VulkanShaderModule* module = shader->GetShaderModule();
-            if (module != nullptr)
-                m_ShaderStageInfos[outputIdx].module = module->GetHandle();
-            else
-                m_ShaderStageInfos[outputIdx].module = VK_NULL_HANDLE;
-            outputIdx++;
-        }
-
         m_PipelineInfo.layout = m_PipelineLayout;
-        VkPipeline pipeline;
+        VkPipeline pipeline = VK_NULL_HANDLE;
         const VkResult result =
           vkCreateGraphicsPipelines(device.GetLogicalDevice(), device.GetPipelineCache(), 1, &m_PipelineInfo, gVulkanAllocator, &pipeline);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS);
         m_DepthStencilInfo.front.passOp = oldFrontPassOp;
         m_DepthStencilInfo.front.failOp = oldFrontFailOp;
         m_DepthStencilInfo.front.depthFailOp = oldFrontDepthFailOp;
@@ -426,6 +428,12 @@ namespace Crowny
         m_DepthStencilInfo.back.passOp = oldBackPassOp;
         m_DepthStencilInfo.back.failOp = oldBackFailOp;
         m_DepthStencilInfo.back.depthFailOp = oldBackDepthFailOp;
+
+        if (result != VK_SUCCESS)
+        {
+            CW_ENGINE_ERROR("Failed to create Vulkan graphics pipeline: {}", static_cast<int32_t>(result));
+            return nullptr;
+        }
 
         return device.GetResourceManager().Create<VulkanPipeline>(pipeline);
     }
@@ -520,7 +528,20 @@ namespace Crowny
 
     VulkanComputePipeline::VulkanComputePipeline(const Ref<ShaderStage>& shader) : ComputePipeline(shader)
     {
-        const VulkanShader* vulkanShader = static_cast<VulkanShader*>(m_Shader.get());
+        const VulkanShader* vulkanShader = dynamic_cast<VulkanShader*>(m_Shader.get());
+        if (vulkanShader == nullptr)
+        {
+            CW_ENGINE_ERROR("Cannot create a Vulkan compute pipeline from a non-Vulkan shader stage.");
+            return;
+        }
+
+        const VulkanShaderModule* module = vulkanShader->GetShaderModule();
+        if (module == nullptr)
+        {
+            CW_ENGINE_ERROR("Cannot create a Vulkan compute pipeline without a valid shader module.");
+            return;
+        }
+
         VkPipelineShaderStageCreateInfo stageCI;
         stageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         stageCI.pNext = nullptr;
@@ -544,18 +565,13 @@ namespace Crowny
         VulkanResourceManager& resourceManager = device.GetResourceManager();
         VulkanUniformParamInfo* vkParams = static_cast<VulkanUniformParamInfo*>(m_ParamInfo.get());
 
-        uint32_t numLayouts = vkParams->GetNumSets();
-        VulkanDescriptorLayout** layouts = new VulkanDescriptorLayout*[numLayouts];
+        const uint32_t numLayouts = vkParams->GetNumSets();
+        Vector<VulkanDescriptorLayout*> layouts(numLayouts);
         for (uint32_t i = 0; i < numLayouts; i++)
             layouts[i] = vkParams->GetLayout(i);
 
-        const VulkanShaderModule* module = vulkanShader->GetShaderModule();
-        if (module != nullptr)
-            pipelineCI.stage.module = module->GetHandle();
-        else
-            pipelineCI.stage.module = VK_NULL_HANDLE;
-        pipelineCI.layout = descriptorManager.GetPipelineLayout(layouts, numLayouts);
-        // delete[] layouts;
+        pipelineCI.stage.module = module->GetHandle();
+        pipelineCI.layout = descriptorManager.GetPipelineLayout(layouts.data(), numLayouts);
 
         VkPipeline pipeline = VK_NULL_HANDLE;
         const VkResult result =
@@ -565,7 +581,11 @@ namespace Crowny
         m_PipelineLayout = pipelineCI.layout;
     }
 
-    VulkanComputePipeline::~VulkanComputePipeline() { m_Pipeline->Destroy(); }
+    VulkanComputePipeline::~VulkanComputePipeline()
+    {
+        if (m_Pipeline != nullptr)
+            m_Pipeline->Destroy();
+    }
 
     void VulkanComputePipeline::RegisterPipelineResources(VulkanCmdBuffer* cmdBuffer)
     {

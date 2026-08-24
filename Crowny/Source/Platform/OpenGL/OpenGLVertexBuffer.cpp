@@ -7,54 +7,78 @@
 
 namespace Crowny
 {
-
-    OpenGLVertexBuffer::OpenGLVertexBuffer(uint32_t size, BufferUsage) : m_Size(size)
+    namespace
     {
-#ifndef MC_WEB
+        class ArrayBufferBinding
+        {
+        public:
+            ArrayBufferBinding()
+            {
+                GLint binding = 0;
+                glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &binding);
+                m_Binding = static_cast<GLuint>(binding);
+            }
+            ~ArrayBufferBinding() { glBindBuffer(GL_ARRAY_BUFFER, m_Binding); }
+
+        private:
+            GLuint m_Binding = 0;
+        };
+    } // namespace
+
+    OpenGLVertexBuffer::OpenGLVertexBuffer(uint32_t size, BufferUsage usage) : m_Size(size)
+    {
+        CW_ENGINE_ASSERT(size > 0, "Cannot create an empty OpenGL vertex buffer");
+        ArrayBufferBinding restoreBinding;
         glGenBuffers(1, &m_RendererID);
-#else
-        glCreateBuffers(1, &m_RendererID);
-#endif
+        glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);
+        glBufferData(GL_ARRAY_BUFFER, size, nullptr, OpenGLUtils::BufferUsageToOpenGLBufferUsage(usage));
     }
 
     OpenGLVertexBuffer::OpenGLVertexBuffer(void* data, uint32_t size, BufferUsage usage) : m_Size(size)
     {
-#ifndef MC_WEB
+        CW_ENGINE_ASSERT(size > 0, "Cannot create an empty OpenGL vertex buffer");
+        ArrayBufferBinding restoreBinding;
         glGenBuffers(1, &m_RendererID);
         glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);
         glBufferData(GL_ARRAY_BUFFER, size, data, OpenGLUtils::BufferUsageToOpenGLBufferUsage(usage));
-#else
-        glCreateBuffers(1, &m_RendererID);
-        glNamedBufferData(m_RendererID, size, data, OpenGLUtils::BufferUsageToOpenGLBufferUsage(usage));
-#endif
     }
 
-    OpenGLVertexBuffer::~OpenGLVertexBuffer() { glDeleteBuffers(1, &m_RendererID); }
+    OpenGLVertexBuffer::~OpenGLVertexBuffer()
+    {
+        if (m_RendererID != 0)
+            glDeleteBuffers(1, &m_RendererID);
+    }
 
     void* OpenGLVertexBuffer::Map(uint32_t offset, uint32_t size, GpuLockOptions options)
     {
+        CW_ENGINE_ASSERT(offset <= m_Size && size <= m_Size - offset, "OpenGL vertex buffer map range is out of bounds");
         glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);
-        switch (options)
-        {
-        case (GpuLockOptions::READ_ONLY):
-            return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_READ_BIT);
-        case (GpuLockOptions::WRITE_ONLY):
-            return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_WRITE_BIT);
-        case (GpuLockOptions::WRITE_DISCARD):
-            return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
-        case (GpuLockOptions::WRITE_DISCARD_RANGE):
-            return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT);
-        case (GpuLockOptions::READ_WRITE):
-            return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_WRITE_BIT | GL_MAP_READ_BIT);
-        case (GpuLockOptions::WRITE_ONLY_NO_OVERWRITE):
-            return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_WRITE_BIT);
-        }
-        return nullptr;
+        return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, OpenGLUtils::LockOptionsToMapFlags(options));
     }
 
     void OpenGLVertexBuffer::Unmap()
     {
-        glUnmapNamedBuffer(m_RendererID); // TODO: es2, might work with emscripten
+        glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);
+        CW_ENGINE_ASSERT(glUnmapBuffer(GL_ARRAY_BUFFER) == GL_TRUE, "OpenGL vertex buffer data became invalid while mapped");
     }
 
+    void OpenGLVertexBuffer::WriteData(uint32_t offset, uint32_t length, const void* src, BufferWriteOptions writeOptions)
+    {
+        CW_ENGINE_ASSERT(src != nullptr, "OpenGL vertex buffer write source is null");
+        CW_ENGINE_ASSERT(offset <= m_Size && length <= m_Size - offset, "OpenGL vertex buffer write range is out of bounds");
+        ArrayBufferBinding restoreBinding;
+        glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);
+        if (writeOptions == BWT_DISCARD)
+            glBufferData(GL_ARRAY_BUFFER, m_Size, nullptr, OpenGLUtils::BufferUsageToOpenGLBufferUsage(BufferUsage::BU_DYNAMIC_DRAW));
+        glBufferSubData(GL_ARRAY_BUFFER, offset, length, src);
+    }
+
+    void OpenGLVertexBuffer::ReadData(uint32_t offset, uint32_t length, void* dest)
+    {
+        CW_ENGINE_ASSERT(dest != nullptr, "OpenGL vertex buffer read destination is null");
+        CW_ENGINE_ASSERT(offset <= m_Size && length <= m_Size - offset, "OpenGL vertex buffer read range is out of bounds");
+        ArrayBufferBinding restoreBinding;
+        glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);
+        glGetBufferSubData(GL_ARRAY_BUFFER, offset, length, dest);
+    }
 } // namespace Crowny

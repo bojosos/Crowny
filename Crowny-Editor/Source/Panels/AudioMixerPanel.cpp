@@ -18,147 +18,372 @@ namespace Crowny
 
     void AudioMixerPanel::Render()
     {
-        BeginPanel();
-
-        // Allow setting an audio mixer asset as active.
-        AssetHandle<AudioMixer> handle = gAudioManager->GetActiveMixer();
-        if (UIUtils::AssetReference<AudioMixer>("Active Mixer", handle))
+        if (!BeginPanel())
         {
-            gAudioManager->SetActiveMixer(handle);
+            EndPanel();
+            return;
         }
+
+        AssetHandle<AudioMixer> handle = AudioManager::TryGet()->GetActiveMixer();
+        ImGui::Columns(2, "##activeMixerColumns", false);
+        ImGui::SetColumnWidth(0, 110.0f);
+        if (UIUtils::AssetReference<AudioMixer>("Active Mixer", handle))
+            AudioManager::TryGet()->SetActiveMixer(handle);
+        ImGui::Columns(1);
 
         if (!handle)
         {
-            ImGui::TextDisabled("No mixer set. Assign an AudioMixer asset above to begin.");
+            ImGui::Spacing();
+            ImGui::TextDisabled("Assign an Audio Mixer asset to edit its buses.");
+            m_SelectedBusIndex = 0;
+            m_PendingBusRemoval = std::numeric_limits<size_t>::max();
             EndPanel();
             return;
         }
 
         AudioMixer& mixer = *handle;
         Vector<AudioBusDesc>& descs = mixer.GetBusDescs();
+        if (descs.empty())
+        {
+            ImGui::Separator();
+            ImGui::TextDisabled("This mixer has no buses.");
+            if (ImGui::Button("Create master bus"))
+            {
+                AudioBusDesc master;
+                master.Name = "Master";
+                descs.push_back(master);
+                mixer.Init();
+                m_SelectedBusIndex = 0;
+            }
+            EndPanel();
+            return;
+        }
+
+        m_SelectedBusIndex = std::min(m_SelectedBusIndex, descs.size() - 1);
 
         ImGui::Separator();
-
-        // "Add Bus" — adds a new child of the master bus. We keep the parent-before-child ordering
-        // invariant by always appending to the end.
-        if (ImGui::Button("Add Bus") && !descs.empty())
+        if (ImGui::Button("+ Add bus"))
         {
+            uint32_t suffix = 1;
+            String busName;
+            do
+            {
+                busName = "Bus " + std::to_string(suffix++);
+            } while (std::any_of(descs.begin(), descs.end(), [&](const AudioBusDesc& desc) { return desc.Name == busName; }));
+
             AudioBusDesc desc;
-            desc.Name = "Bus" + std::to_string(descs.size());
+            desc.Name = busName;
             desc.Parent = descs.front().Name;
             descs.push_back(desc);
             mixer.Init();
+            m_SelectedBusIndex = descs.size() - 1;
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Add a child of the master bus");
+
+        size_t mutedCount = 0;
+        size_t effectCount = 0;
+        for (const AudioBusDesc& desc : descs)
+        {
+            mutedCount += desc.Muted ? 1 : 0;
+            effectCount += desc.FirstEffect != AudioEffectType::None ? 1 : 0;
+        }
+        ImGui::SameLine();
+        ImGui::TextDisabled("%zu buses  |  %zu muted  |  %zu effects", descs.size(), mutedCount, effectCount);
+
+        ImGui::Spacing();
+        const float availableWidth = ImGui::GetContentRegionAvail().x;
+        if (availableWidth >= 520.0f)
+        {
+            const ImGuiTableFlags flags = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp;
+            if (ImGui::BeginTable("##mixerLayout", 2, flags))
+            {
+                ImGui::TableSetupColumn("Buses", ImGuiTableColumnFlags_WidthFixed, 210.0f);
+                ImGui::TableSetupColumn("Bus settings", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::BeginChild("##busList", ImVec2(0.0f, 0.0f), false);
+                RenderBusList(mixer);
+                ImGui::EndChild();
+                ImGui::TableNextColumn();
+                ImGui::BeginChild("##busEditor", ImVec2(0.0f, 0.0f), false);
+                RenderBus(mixer, m_SelectedBusIndex);
+                ImGui::EndChild();
+                ImGui::EndTable();
+            }
+        }
+        else
+        {
+            ImGui::BeginChild("##busList", ImVec2(0.0f, std::min(180.0f, ImGui::GetContentRegionAvail().y * 0.35f)), true);
+            RenderBusList(mixer);
+            ImGui::EndChild();
+            ImGui::Spacing();
+            ImGui::BeginChild("##busEditor", ImVec2(0.0f, 0.0f), false);
+            RenderBus(mixer, m_SelectedBusIndex);
+            ImGui::EndChild();
         }
 
+        RenderRemovalDialog(mixer);
+        EndPanel();
+    }
+
+    void AudioMixerPanel::RenderBusList(AudioMixer& mixer)
+    {
+        const Vector<AudioBusDesc>& descs = mixer.GetBusDescs();
+        ImGui::TextDisabled("Buses");
         ImGui::Separator();
 
         for (size_t i = 0; i < descs.size(); i++)
-            RenderBus(mixer, i);
+        {
+            const AudioBusDesc& desc = descs[i];
+            uint32_t depth = 0;
+            String parent = desc.Parent;
+            while (!parent.empty() && depth < descs.size())
+            {
+                const auto parentIt =
+                  std::find_if(descs.begin(), descs.end(), [&](const AudioBusDesc& candidate) { return candidate.Name == parent; });
+                if (parentIt == descs.end())
+                    break;
+                parent = parentIt->Parent;
+                depth++;
+            }
 
-        EndPanel();
+            ImGui::PushID(static_cast<int>(i));
+            ImGui::Indent(depth * 12.0f);
+            String label = desc.Name;
+            if (i == 0)
+                label += "  [Master]";
+            else if (desc.Muted)
+                label += "  [Muted]";
+            if (ImGui::Selectable(label.c_str(), m_SelectedBusIndex == i, ImGuiSelectableFlags_None, ImVec2(-1.0f, 0.0f)))
+                m_SelectedBusIndex = i;
+            if (ImGui::IsItemHovered())
+            {
+                if (i == 0)
+                    ImGui::SetTooltip("Master output  |  Volume %.0f%%", desc.Volume * 100.0f);
+                else
+                    ImGui::SetTooltip("Routes to %s  |  Volume %.0f%%", desc.Parent.c_str(), desc.Volume * 100.0f);
+            }
+            ImGui::Unindent(depth * 12.0f);
+            ImGui::PopID();
+        }
     }
 
     void AudioMixerPanel::RenderBus(AudioMixer& mixer, size_t descIndex)
     {
         Vector<AudioBusDesc>& descs = mixer.GetBusDescs();
-        AudioBusDesc& desc = descs[descIndex];
-
-        ImGui::PushID((int)descIndex);
-
-        // Master gets a distinctive header; children are nested under their parent visually.
-        const bool isMaster = descIndex == 0;
-        const String header = isMaster ? ("[Master] " + desc.Name) : (desc.Parent + " / " + desc.Name);
-        if (ImGui::CollapsingHeader(header.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+        if (descIndex >= descs.size())
         {
-            if (!isMaster)
+            ImGui::TextDisabled("Select a bus to edit it.");
+            return;
+        }
+
+        AudioBusDesc& desc = descs[descIndex];
+        ImGui::PushID(static_cast<int>(descIndex));
+        const bool isMaster = descIndex == 0;
+        ImGui::Text("%s", desc.Name.c_str());
+        if (isMaster)
+            ImGui::TextDisabled("Master output");
+        else
+            ImGui::TextDisabled("Routes to %s", desc.Parent.c_str());
+        if (const Ref<AudioBus> runtimeBus = mixer.FindBus(desc.Name))
+        {
+            ImGui::SameLine();
+            ImGui::TextDisabled(" |  Effective gain %.0f%%", runtimeBus->GetEffectiveGain() * 100.0f);
+        }
+
+        ImGui::SeparatorText("Routing");
+        ImGui::Columns(2, "##routingColumns", false);
+        ImGui::SetColumnWidth(0, std::clamp(ImGui::GetContentRegionAvail().x * 0.32f, 105.0f, 150.0f));
+        if (!isMaster)
+        {
+            String name = desc.Name;
+            if (UI::Property("Name", name) && !name.empty())
             {
-                String name = desc.Name;
-                if (UI::Property("Name", name))
+                const bool duplicate =
+                  std::any_of(descs.begin(), descs.end(), [&](const AudioBusDesc& other) { return &other != &desc && other.Name == name; });
+                if (!duplicate)
                 {
-                    // Rename also fixes up any child's parent pointer.
                     const String oldName = desc.Name;
                     desc.Name = name;
                     for (AudioBusDesc& other : descs)
+                    {
                         if (other.Parent == oldName)
                             other.Parent = name;
+                    }
                     mixer.Init();
                 }
+            }
 
-                // Parent picker — every bus except the renamed-into-itself one.
-                Vector<String> parents;
-                for (size_t i = 0; i < descs.size(); i++)
-                    if (i != descIndex)
-                        parents.push_back(descs[i].Name);
-                int parentIdx = 0;
-                for (int i = 0; i < (int)parents.size(); i++)
-                    if (parents[i] == desc.Parent) { parentIdx = i; break; }
-                if (UI::PropertyDropdown("Parent", parents, parentIdx))
+            Vector<String> parents;
+            for (size_t i = 0; i < descIndex; i++)
+                parents.push_back(descs[i].Name);
+            int parentIdx = 0;
+            for (int i = 0; i < static_cast<int>(parents.size()); i++)
+            {
+                if (parents[i] == desc.Parent)
                 {
-                    desc.Parent = parents[parentIdx];
-                    mixer.Init();
+                    parentIdx = i;
+                    break;
                 }
             }
-
-            float volume = desc.Volume;
-            if (UI::PropertySlider("Volume", volume, 0.0f, 2.0f))
+            if (UI::PropertyDropdown("Parent", parents, parentIdx))
             {
-                desc.Volume = volume;
-                mixer.SyncRuntimeFromDescs();
-            }
-
-            bool muted = desc.Muted;
-            if (UI::Property("Muted", muted))
-            {
-                desc.Muted = muted;
-                mixer.SyncRuntimeFromDescs();
-            }
-
-            Vector<String> effectNames = {
-                "None", "Reverb", "Echo", "Distortion", "Chorus",
-                "Equalizer", "Pitch Shifter", "Flanger", "Compressor", "Ring Modulator"
-            };
-            int effectIdx = (int)desc.FirstEffect;
-            if (effectIdx >= (int)effectNames.size())
-                effectIdx = 0;
-            if (UI::PropertyDropdown("Effect", effectNames, effectIdx))
-            {
-                desc.FirstEffect = (AudioEffectType)effectIdx;
+                desc.Parent = parents[parentIdx];
                 mixer.Init();
             }
+        }
+        else
+        {
+            ImGui::TextDisabled("Name");
+            ImGui::NextColumn();
+            ImGui::TextDisabled("Master");
+            ImGui::NextColumn();
+        }
+        ImGui::Columns(1);
 
+        ImGui::SeparatorText("Level");
+        ImGui::Columns(2, "##levelColumns", false);
+        ImGui::SetColumnWidth(0, std::clamp(ImGui::GetContentRegionAvail().x * 0.32f, 105.0f, 150.0f));
+        float volume = desc.Volume;
+        if (UI::PropertySlider("Volume", volume, 0.0f, 2.0f))
+        {
+            desc.Volume = volume;
+            mixer.SyncRuntimeFromDescs();
+        }
+
+        bool muted = desc.Muted;
+        if (UI::Property("Muted", muted))
+        {
+            desc.Muted = muted;
+            mixer.SyncRuntimeFromDescs();
+        }
+        ImGui::Columns(1);
+
+        ImGui::SeparatorText("Effect");
+        ImGui::Columns(2, "##effectColumns", false);
+        ImGui::SetColumnWidth(0, std::clamp(ImGui::GetContentRegionAvail().x * 0.32f, 105.0f, 150.0f));
+        Vector<String> effectNames = { "None",      "Reverb",        "Echo",    "Distortion", "Chorus",
+                                       "Equalizer", "Pitch Shifter", "Flanger", "Compressor", "Ring Modulator" };
+        int effectIdx = static_cast<int>(desc.FirstEffect);
+        if (effectIdx >= static_cast<int>(effectNames.size()))
+            effectIdx = 0;
+        if (UI::PropertyDropdown("Type", effectNames, effectIdx))
+        {
+            desc.FirstEffect = static_cast<AudioEffectType>(effectIdx);
+            mixer.Init();
+        }
+
+        if (desc.FirstEffect != AudioEffectType::None)
             RenderEffectControls(desc);
+        ImGui::Columns(1);
 
-            if (!isMaster && ImGui::Button("Remove Bus"))
+        if (!isMaster)
+        {
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.45f, 0.12f, 0.12f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.62f, 0.16f, 0.16f, 1.0f));
+            if (ImGui::Button("Remove bus"))
             {
-                // Reparent children to the master if their parent disappears.
-                const String removedName = desc.Name;
-                descs.erase(descs.begin() + descIndex);
-                for (AudioBusDesc& other : descs)
-                    if (other.Parent == removedName)
-                        other.Parent = descs.front().Name;
-                mixer.Init();
-                ImGui::PopID();
-                return;
+                m_PendingBusRemoval = descIndex;
+                m_OpenRemovalPopup = true;
             }
+            ImGui::PopStyleColor(2);
         }
 
         ImGui::PopID();
+    }
+
+    void AudioMixerPanel::RenderRemovalDialog(AudioMixer& mixer)
+    {
+        Vector<AudioBusDesc>& descs = mixer.GetBusDescs();
+        if (m_PendingBusRemoval >= descs.size() || m_PendingBusRemoval == 0)
+        {
+            m_PendingBusRemoval = std::numeric_limits<size_t>::max();
+            m_OpenRemovalPopup = false;
+            return;
+        }
+
+        if (m_OpenRemovalPopup)
+        {
+            ImGui::OpenPopup("Remove bus?");
+            m_OpenRemovalPopup = false;
+        }
+
+        if (ImGui::BeginPopupModal("Remove bus?", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            const String removedName = descs[m_PendingBusRemoval].Name;
+            ImGui::Text("Remove \"%s\"?", removedName.c_str());
+            ImGui::TextDisabled("Its child buses will route to Master.");
+            ImGui::Spacing();
+            if (ImGui::Button("Cancel", ImVec2(100.0f, 0.0f)))
+            {
+                m_PendingBusRemoval = std::numeric_limits<size_t>::max();
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.52f, 0.12f, 0.12f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.68f, 0.17f, 0.17f, 1.0f));
+            if (ImGui::Button("Remove", ImVec2(100.0f, 0.0f)))
+            {
+                const size_t removedIndex = m_PendingBusRemoval;
+                descs.erase(descs.begin() + removedIndex);
+                for (AudioBusDesc& other : descs)
+                {
+                    if (other.Parent == removedName)
+                        other.Parent = descs.front().Name;
+                }
+                mixer.Init();
+                if (m_SelectedBusIndex == removedIndex)
+                    m_SelectedBusIndex = 0;
+                else if (m_SelectedBusIndex > removedIndex)
+                    m_SelectedBusIndex--;
+                m_PendingBusRemoval = std::numeric_limits<size_t>::max();
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::PopStyleColor(2);
+            ImGui::EndPopup();
+        }
+        else if (!ImGui::IsPopupOpen("Remove bus?"))
+        {
+            m_PendingBusRemoval = std::numeric_limits<size_t>::max();
+        }
     }
 
     void AudioMixerPanel::RenderEffectControls(AudioBusDesc& desc)
     {
         switch (desc.FirstEffect)
         {
-        case AudioEffectType::Reverb: RenderReverbControls(desc); break;
-        case AudioEffectType::Echo: RenderEchoControls(desc); break;
-        case AudioEffectType::Distortion: RenderDistortionControls(desc); break;
-        case AudioEffectType::Chorus: RenderChorusControls(desc); break;
-        case AudioEffectType::Equalizer: RenderEqualizerControls(desc); break;
-        case AudioEffectType::PitchShifter: RenderPitchShifterControls(desc); break;
-        case AudioEffectType::Flanger: RenderFlangerControls(desc); break;
-        case AudioEffectType::Compressor: RenderCompressorControls(desc); break;
-        case AudioEffectType::RingModulator: RenderRingModulatorControls(desc); break;
-        default: break;
+        case AudioEffectType::Reverb:
+            RenderReverbControls(desc);
+            break;
+        case AudioEffectType::Echo:
+            RenderEchoControls(desc);
+            break;
+        case AudioEffectType::Distortion:
+            RenderDistortionControls(desc);
+            break;
+        case AudioEffectType::Chorus:
+            RenderChorusControls(desc);
+            break;
+        case AudioEffectType::Equalizer:
+            RenderEqualizerControls(desc);
+            break;
+        case AudioEffectType::PitchShifter:
+            RenderPitchShifterControls(desc);
+            break;
+        case AudioEffectType::Flanger:
+            RenderFlangerControls(desc);
+            break;
+        case AudioEffectType::Compressor:
+            RenderCompressorControls(desc);
+            break;
+        case AudioEffectType::RingModulator:
+            RenderRingModulatorControls(desc);
+            break;
+        default:
+            break;
         }
     }
 
@@ -166,37 +391,42 @@ namespace Crowny
     // without rebuilding the bus tree.
     static void SyncActiveMixer()
     {
-        if (AssetHandle<AudioMixer> mixer = gAudioManager->GetActiveMixer())
+        if (AssetHandle<AudioMixer> mixer = AudioManager::TryGet()->GetActiveMixer())
             mixer->SyncRuntimeFromDescs();
     }
 
     void AudioMixerPanel::RenderReverbControls(AudioBusDesc& desc)
     {
-        // Preset buttons — applying a preset overwrites all reverb parameters.
-        for (uint8_t i = 0; i < (uint8_t)ReverbEffect::Preset::Count; i++)
+        ImGui::TextUnformatted("Preset");
+        ImGui::NextColumn();
+        ImGui::SetNextItemWidth(-1.0f);
+        if (ImGui::BeginCombo("##reverbPreset", "Choose preset"))
         {
-            ReverbEffect::Preset preset = (ReverbEffect::Preset)i;
-            if (i > 0)
-                ImGui::SameLine();
-            if (ImGui::Button(ReverbEffect::GetPresetName(preset)))
+            for (uint8_t i = 0; i < static_cast<uint8_t>(ReverbEffect::Preset::Count); i++)
             {
-                ReverbEffect tmp;
-                tmp.ApplyPreset(preset);
-                desc.Reverb.Density = tmp.Density;
-                desc.Reverb.Diffusion = tmp.Diffusion;
-                desc.Reverb.Gain = tmp.Gain;
-                desc.Reverb.GainHF = tmp.GainHF;
-                desc.Reverb.DecayTime = tmp.DecayTime;
-                desc.Reverb.DecayHFRatio = tmp.DecayHFRatio;
-                desc.Reverb.ReflectionsGain = tmp.ReflectionsGain;
-                desc.Reverb.ReflectionsDelay = tmp.ReflectionsDelay;
-                desc.Reverb.LateReverbGain = tmp.LateReverbGain;
-                desc.Reverb.LateReverbDelay = tmp.LateReverbDelay;
-                desc.Reverb.AirAbsorptionGainHF = tmp.AirAbsorptionGainHF;
-                desc.Reverb.RoomRolloffFactor = tmp.RoomRolloffFactor;
-                SyncActiveMixer();
+                const ReverbEffect::Preset preset = static_cast<ReverbEffect::Preset>(i);
+                if (ImGui::Selectable(ReverbEffect::GetPresetName(preset)))
+                {
+                    ReverbEffect effect;
+                    effect.ApplyPreset(preset);
+                    desc.Reverb.Density = effect.Density;
+                    desc.Reverb.Diffusion = effect.Diffusion;
+                    desc.Reverb.Gain = effect.Gain;
+                    desc.Reverb.GainHF = effect.GainHF;
+                    desc.Reverb.DecayTime = effect.DecayTime;
+                    desc.Reverb.DecayHFRatio = effect.DecayHFRatio;
+                    desc.Reverb.ReflectionsGain = effect.ReflectionsGain;
+                    desc.Reverb.ReflectionsDelay = effect.ReflectionsDelay;
+                    desc.Reverb.LateReverbGain = effect.LateReverbGain;
+                    desc.Reverb.LateReverbDelay = effect.LateReverbDelay;
+                    desc.Reverb.AirAbsorptionGainHF = effect.AirAbsorptionGainHF;
+                    desc.Reverb.RoomRolloffFactor = effect.RoomRolloffFactor;
+                    SyncActiveMixer();
+                }
             }
+            ImGui::EndCombo();
         }
+        ImGui::NextColumn();
 
         bool changed = false;
         changed |= UI::PropertySlider("Density", desc.Reverb.Density, 0.0f, 1.0f);

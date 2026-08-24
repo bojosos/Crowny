@@ -5,8 +5,6 @@
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Common/StringUtils.h"
-#include "Crowny/Import/Importer.h"
-#include "Crowny/Import/TextureImporter.h"
 
 #include "Crowny/NodeGraph/NodeGraphAsset.h"
 #include "Crowny/NodeGraph/NodeRegistry.h"
@@ -16,24 +14,21 @@
 #include "Editor/Editor.h"
 #include "Editor/EditorAssets.h"
 #include "Editor/EditorUtils.h"
-#include "Editor/PreviewRenderer.h"
 #include "Editor/ProjectLibrary.h"
 #include "Editor/Script/CodeEditor.h"
 
 #include "Crowny/Assets/AssetManager.h"
 
 #include "Crowny/Common/Constants.h"
-#include "Crowny/RenderAPI/RenderAPI.h"
-#include "Crowny/RenderAPI/RenderTexture.h"
 #include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/Renderer/Material.h"
 
 #include "UI/UIUtils.h"
 
-#include <backends/imgui_impl_vulkan.h>
+#include "Crowny/ImGui/ImGuiVulkanTexture.h"
 #include <imgui.h>
-#include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
+#include <spdlog/fmt/fmt.h>
 
 namespace Crowny
 {
@@ -54,8 +49,10 @@ namespace Crowny
             return "New Shader.shader";
         case AssetBrowserItem::ComputeShader:
             return "New ComputeShader.cshader";
-        case AssetBrowserItem::PhysicsMaterial:
-            return "New PhysicsMaterial.pmat";
+        case AssetBrowserItem::PhysicsMaterial2D:
+            return "New PhysicsMaterial2D.pmat";
+        case AssetBrowserItem::PhysicsMaterial3D:
+            return "New PhysicsMaterial3D.pmat3d";
         case AssetBrowserItem::RenderTexture:
             return "New RenderTexture.rt";
         case AssetBrowserItem::Scene:
@@ -67,73 +64,107 @@ namespace Crowny
         }
     }
 
+    static const char* GetAssetTypeName(AssetType type)
+    {
+        switch (type)
+        {
+        case AssetType::AudioClip:
+            return "Audio";
+        case AssetType::Texture:
+            return "Texture";
+        case AssetType::Shader:
+            return "Shader";
+        case AssetType::Material:
+            return "Material";
+        case AssetType::Mesh:
+        case AssetType::MeshSource:
+            return "Model";
+        case AssetType::ScriptCode:
+            return "Script";
+        case AssetType::PhysicsMaterial2D:
+        case AssetType::PhysicsMaterial:
+            return "Physics material";
+        case AssetType::PlainText:
+            return "Text";
+        case AssetType::Font:
+            return "Font";
+        case AssetType::Scene:
+            return "Scene";
+        case AssetType::NodeGraph:
+            return "Node graph";
+        case AssetType::EnvironmentMap:
+            return "Environment";
+        case AssetType::Prefab:
+            return "Prefab";
+        case AssetType::AudioMixer:
+            return "Audio mixer";
+        case AssetType::AnimationClip:
+            return "Animation";
+        default:
+            return "File";
+        }
+    }
+
+    static const char* GetEntryTypeName(const Ref<LibraryEntry>& entry)
+    {
+        if (entry->Type == LibraryEntryType::Directory)
+            return "Folder";
+        const FileEntry* fileEntry = static_cast<FileEntry*>(entry.get());
+        return fileEntry->Metadata ? GetAssetTypeName(fileEntry->Metadata->Type) : "File";
+    }
+
+    static String FormatFileSize(uint32_t bytes)
+    {
+        if (bytes >= 1024 * 1024)
+            return fmt::format("{:.1f} MB", static_cast<float>(bytes) / (1024.0f * 1024.0f));
+        if (bytes >= 1024)
+            return fmt::format("{:.1f} KB", static_cast<float>(bytes) / 1024.0f);
+        return fmt::format("{} B", bytes);
+    }
+
+    static String FormatEntryTime(std::time_t timestamp)
+    {
+        if (timestamp == 0)
+            return "Unknown";
+
+        tm timeInfo{};
+#ifdef CW_PLATFORM_WIN32
+        localtime_s(&timeInfo, &timestamp);
+#else
+        localtime_r(&timestamp, &timeInfo);
+#endif
+        char buffer[32]{};
+        strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M", &timeInfo);
+        return buffer;
+    }
+
+    static void DrawAssetTooltip(const Path& path, const AssetPreviewResult* preview)
+    {
+        if (!ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+            return;
+        ImGui::BeginTooltip();
+        const String pathText = path.string();
+        ImGui::TextUnformatted(pathText.c_str());
+        if (preview != nullptr)
+        {
+            // Worker threads populate preview metadata while the status remains Loading.
+            // Only read it after the main thread has observed completion and published Ready.
+            if (preview->Status == AssetPreviewStatus::Ready && !preview->Details.empty())
+                ImGui::TextDisabled("%s", preview->Details.c_str());
+            if (preview->Status == AssetPreviewStatus::Failed && !preview->Error.empty())
+                ImGui::TextColored(ImVec4(0.95f, 0.38f, 0.32f, 1.0f), "Preview unavailable: %s", preview->Error.c_str());
+            else if (preview->Status == AssetPreviewStatus::Queued || preview->Status == AssetPreviewStatus::Loading)
+                ImGui::TextDisabled("Generating preview...");
+        }
+        ImGui::EndTooltip();
+    }
+
     AssetBrowserPanel::AssetBrowserPanel(const String& name, std::function<void(const Path&)> selectedPathCallback)
       : ImGuiPanel(name), m_SetSelectedPathCallback(selectedPathCallback)
     {
-        m_CsDefaultText = FileSystem::ReadTextFile(EditorAssets::DefaultScriptPath);
-        m_FolderIcon = ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FolderIcon);
-        m_FileIcon = ImGui_ImplVulkan_AddTexture(EditorAssets::Get().FileIcon);
-    }
-
-    void AssetBrowserPanel::PreviewImage(const Ref<LibraryEntry>& child)
-    {
-        const Path& path = child->Filepath;
-        String ext = path.extension().string();
-        StringUtils::ToLower(ext);
-
-        // Texture thumbnails — downscale large textures for memory
-        if (ext.size() > 0 && TextureImporter::IsExtensionSupportedStatic(ext.substr(1)))
-        {
-            Ref<Texture> result = Importer::Get().Import<Texture>(path);
-            m_Icons[child->ElementNameHash] = PreviewTextureRenderer::CreateThumbnail(result, 128);
-        }
-#if AUDIO_PREVIEW
-        else if (ext == ".ogg")
-        {
-            TextureDesc soundWaveParams;
-            soundWaveParams.Width = 256;
-            soundWaveParams.Height = 256;
-            soundWaveParams.Usage = TextureUsage::TEXTURE_STATIC;
-            soundWaveParams.Format = TextureFormat::RGBA8;
-
-            Ref<Texture> soundWave = Texture::Create(soundWaveParams);
-            AssetHandle<AudioClip> clip = static_asset_cast<AudioClip>(ProjectLibrary::Get().Load(path));
-            Vector<uint8_t> samples;
-            samples.resize(clip->GetNumSamples() * 2);
-            clip->GetBuffer(samples.data(), 0, (uint32_t)samples.size());
-            struct icol
-            {
-                uint8_t r, g, b, a;
-            };
-            icol data[256][256];
-            std::memset(data, 0, 256 * 256 * 4);
-            for (uint32_t c = 0; c < clip->GetNumChannels(); c++)
-            {
-                float x = 0, xAdv = 256.0f / samples.size() * 2;
-                for (uint32_t i = 0; i < samples.size(); i += 2)
-                {
-                    int16_t sample = (((int(samples[i]))) | (int(samples[i + 1]) << 8));
-                    data[256 - int((float)sample / 65535 * 256) - 256 / 2][int(x) /* clip->GetNumChannels() * (c + 1))*/] = { 39, 185, 242, 255 };
-                    x += xAdv;
-                }
-            }
-            PixelData src(256, 256, 1, TextureFormat::RGBA8);
-            src.SetBuffer((uint8_t*)data);
-            soundWave->WriteData(src);
-            m_Icons[child->ElementNameHash] = soundWave;
-        }
-#endif
-        // Mesh/Material previews require render-to-texture which conflicts with
-        // the main render loop's command buffer state. Queue them for deferred rendering.
-        // TODO: Render previews in a separate frame or after the main render pass completes.
-        else if (ext == ".obj" || ext == ".gltf" || ext == ".fbx")
-        {
-            // Mesh preview deferred — uses file icon for now
-        }
-        else if (ext == ".mat")
-        {
-            // Material preview deferred — uses file icon for now
-        }
+        m_CsDefaultText = EditorAssets::GetDefaultScriptTemplate();
+        m_FolderIcon = ImGuiVulkanTexture::Get(EditorAssets::Get().FolderIcon);
+        m_FileIcon = ImGuiVulkanTexture::Get(EditorAssets::Get().FileIcon);
     }
 
     void AssetBrowserPanel::Initialize()
@@ -150,16 +181,6 @@ namespace Crowny
         }
         RecalculateDirectoryEntries();
 
-        std::function<void(const Ref<LibraryEntry>)> doPreview = [&](const Ref<LibraryEntry>& cur) {
-            if (cur->Type == LibraryEntryType::Directory)
-            {
-                for (const Ref<LibraryEntry>& entry : static_cast<DirectoryEntry*>(cur.get())->Children)
-                    doPreview(entry);
-            }
-            else
-                PreviewImage(cur);
-        };
-        doPreview(ProjectLibrary::Get().GetRoot());
         UpdateDisplayList();
     }
 
@@ -168,15 +189,16 @@ namespace Crowny
         m_CurrentDirectoryEntry = nullptr;
         m_DirectoryPathEntries.clear();
         m_DisplayList.clear();
+        m_PreviewService.Clear();
         m_BackwardHistory = Stack<DirectoryEntry*>();
         m_ForwardHistory = Stack<DirectoryEntry*>();
     }
 
     void AssetBrowserPanel::Render()
     {
+        m_PreviewService.Update();
         UI::ScopedStyle windowPadding(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, 2.0f));
-        BeginPanel(ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-        if (!IsShown())
+        if (!BeginPanel(ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
         {
             EndPanel();
             return;
@@ -185,7 +207,8 @@ namespace Crowny
         DrawHeader();
         ImGui::Separator();
 
-        ImGui::BeginChild("AssetBrowser", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoNav);
+        const float statusHeight = ImGui::GetFrameHeightWithSpacing();
+        ImGui::BeginChild("AssetBrowser", ImVec2(0, -statusHeight), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoNav);
 
         // Right click not on a file
         if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_NoOpenOverExistingPopup | ImGuiPopupFlags_MouseButtonRight))
@@ -198,24 +221,21 @@ namespace Crowny
         DrawFiles();
 
         ImGui::EndChild();
+        ImGui::Separator();
+        DrawStatusBar();
         EndPanel();
         DrawTreeView();
     }
 
     void AssetBrowserPanel::SetCurrentDirectory(DirectoryEntry* entry)
     {
+        m_PreviewService.CancelPending();
         m_ForwardHistory = {};
         m_BackwardHistory.push(m_CurrentDirectoryEntry);
         m_CurrentDirectoryEntry = entry;
 
-        for (auto& child : m_CurrentDirectoryEntry->Children)
-        {
-            if (child->Type != LibraryEntryType::Directory && m_Icons.count(child->ElementNameHash) == 0)
-                PreviewImage(child);
-        }
         RecalculateDirectoryEntries();
-        m_SelectionSet.clear();
-        m_SelectionStartIndex = (uint32_t)-1;
+        ClearSelection();
 
         m_RenamingPath.clear();
         m_RenamingText.clear();
@@ -228,10 +248,12 @@ namespace Crowny
         if (m_BackwardHistory.empty())
             return;
 
+        m_PreviewService.CancelPending();
         m_ForwardHistory.push(m_CurrentDirectoryEntry);
         m_CurrentDirectoryEntry = m_BackwardHistory.top();
         RecalculateDirectoryEntries();
         m_BackwardHistory.pop();
+        ClearSelection();
 
         m_RenamingPath.clear();
         m_RenamingText.clear();
@@ -244,10 +266,12 @@ namespace Crowny
         if (m_ForwardHistory.empty())
             return;
 
+        m_PreviewService.CancelPending();
         m_BackwardHistory.push(m_CurrentDirectoryEntry);
         m_CurrentDirectoryEntry = m_ForwardHistory.top();
         RecalculateDirectoryEntries();
         m_ForwardHistory.pop();
+        ClearSelection();
 
         m_RenamingPath.clear();
         m_RenamingText.clear();
@@ -257,114 +281,248 @@ namespace Crowny
 
     void AssetBrowserPanel::DrawHeader()
     {
-        // UI::ScopedStyle itemSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 3));
-        UI::ScopedStyle style2(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 8.0f));
-        UI::ScopedStyle style3(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 4.0f));
-        ImGui::BeginHorizontal("##assetBrowserH", { ImGui::GetContentRegionAvail().x, 0 }, 0.5f);
-        const Ref<DirectoryEntry>& entry = ProjectLibrary::Get().GetRoot();
+        if (m_CurrentDirectoryEntry == nullptr)
+            return;
+
+        UI::ScopedStyle itemSpacing(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 6.0f));
+        UI::ScopedStyle framePadding(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 4.0f));
+        const ImGuiTableFlags tableFlags =
+          ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_NoPadOuterX | ImGuiTableFlags_NoBordersInBody;
+
+        if (!ImGui::BeginTable("##assetBrowserNavigation", 2, tableFlags))
+            return;
+        ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthFixed, 132.0f);
+        ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+
         if (!m_BackwardHistory.empty())
         {
-            if (ImGui::ArrowButton("<-", ImGuiDir_Left))
+            if (ImGui::ArrowButton("##assetBack", ImGuiDir_Left))
                 GoBackward();
         }
         else
         {
             ImGui::BeginDisabled();
-            ImGui::ArrowButton("<-", ImGuiDir_Left);
+            ImGui::ArrowButton("##assetBack", ImGuiDir_Left);
             ImGui::EndDisabled();
         }
+        UI::SetTooltip("Back");
+        ImGui::SameLine();
 
         if (!m_ForwardHistory.empty())
         {
-            if (ImGui::ArrowButton("->", ImGuiDir_Right))
+            if (ImGui::ArrowButton("##assetForward", ImGuiDir_Right))
                 GoForward();
         }
         else
         {
             ImGui::BeginDisabled();
-            ImGui::ArrowButton("->", ImGuiDir_Right);
+            ImGui::ArrowButton("##assetForward", ImGuiDir_Right);
             ImGui::EndDisabled();
         }
+        UI::SetTooltip("Forward");
+        ImGui::SameLine();
 
         if (m_CurrentDirectoryEntry == ProjectLibrary::Get().GetRoot().get())
         {
             ImGui::BeginDisabled();
-            ImGui::ArrowButton("^", ImGuiDir_Up);
+            ImGui::ArrowButton("##assetUp", ImGuiDir_Up);
             ImGui::EndDisabled();
         }
         else
         {
-            if (ImGui::ArrowButton("^", ImGuiDir_Up))
+            if (ImGui::ArrowButton("##assetUp", ImGuiDir_Up))
                 SetCurrentDirectory(m_CurrentDirectoryEntry->Parent);
         }
+        UI::SetTooltip("Parent folder");
+        ImGui::SameLine();
 
         const bool importing = ProjectLibrary::Get().IsImporting();
         if (importing)
             ImGui::BeginDisabled();
-        if (ImGui::Button("Refresh"))
-        {
+        if (ImGui::Button("Reload##assets"))
             ProjectLibrary::Get().RefreshAsync(m_CurrentDirectoryEntry->Filepath);
-        }
         if (importing)
             ImGui::EndDisabled();
+        UI::SetTooltip(importing ? "An import is already running" : "Rescan this folder");
 
         if (importing)
             UpdateDisplayList(); // Show newly imported assets as they complete
 
-        for (DirectoryEntry* dirEntry : m_DirectoryPathEntries)
+        ImGui::TableSetColumnIndex(1);
+        ImGui::BeginChild("##assetBreadcrumbs", ImVec2(0.0f, ImGui::GetFrameHeight()), false, ImGuiWindowFlags_HorizontalScrollbar);
+        for (size_t i = 0; i < m_DirectoryPathEntries.size(); i++)
         {
-            if (ImGui::Selectable(dirEntry->ElementName.c_str(), false, 0, ImVec2(ImGui::CalcTextSize(dirEntry->ElementName.c_str()).x, 0.0f)))
+            DirectoryEntry* dirEntry = m_DirectoryPathEntries[i];
+            ImGui::PushID(static_cast<int>(i));
+            if (i > 0)
+            {
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextDisabled(">");
+                ImGui::SameLine();
+            }
+
+            const bool current = i + 1 == m_DirectoryPathEntries.size();
+            if (current)
+            {
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextUnformatted(dirEntry->ElementName.c_str());
+            }
+            else if (ImGui::SmallButton(dirEntry->ElementName.c_str()))
             {
                 SetCurrentDirectory(dirEntry);
+                ImGui::PopID();
                 break;
             }
-            if (dirEntry != m_DirectoryPathEntries.back())
-                ImGui::Text("/");
+            UI::SetTooltip(dirEntry->Filepath.string());
+            if (!current)
+                ImGui::SameLine();
+            ImGui::PopID();
         }
+        ImGui::EndChild();
+        ImGui::EndTable();
 
-        ImGui::Spring();
-        ImGui::SetNextItemWidth(150.0f);
-        if (UIUtils::SearchWidget(m_SearchString))
-        {
-            if (!m_SearchString.empty())
-                m_DisplayList = ProjectLibrary::Get().Search(m_SearchString);
-            UpdateDisplayList();
-        }
-        const float maxWidth = 150.0f * 1.1f;
-        const float spacing = ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(" ").x;
-        const float checkboxSize = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2;
-
-        ImGui::SetNextItemWidth(150.0f);
-        float thumbnailChange = m_ThumbnailSize;
-        if (ImGui::SliderFloat("##iconsize", &thumbnailChange, MIN_ASSET_THUMBNAIL_SIZE, MAX_ASSET_THUMBNAIL_SIZE))
-        {
-            // m_Padding *= thumbnailChange / m_ThumbnailSize;
-            m_ThumbnailSize = thumbnailChange;
-            float cellSize = m_ThumbnailSize + m_Padding;
-            float panelWidth = ImGui::GetContentRegionAvail().x;
-            m_ColumnCount = (int)(panelWidth / cellSize);
-            if (m_ColumnCount < 1)
-                m_ColumnCount = 1;
-        }
-
-        ImGui::SetNextItemWidth(150.0f);
-        static const char* sortingStr[3] = { "Sort By Name", "Sort By Size", "Sort By Date" };
-        uint32_t currentMode = (uint32_t)m_FileSortingMode;
-        if (ImGui::BeginCombo("##sort", sortingStr[currentMode]))
-        {
-            for (uint32_t i = 0; i < (uint32_t)FileSortingMode::SortCount; i++)
+        static const char* filterLabels[] = { "All assets", "Scenes", "Images", "Materials", "Models", "Audio", "Code" };
+        static const char* sortingLabels[] = { "Name", "Size", "Date" };
+        const auto drawSearch = [&]() {
+            ImGui::SetNextItemWidth(-1.0f);
+            if (UIUtils::SearchWidget(m_SearchString, "Search this folder..."))
+                UpdateDisplayList();
+        };
+        const auto drawFilter = [&]() {
+            ImGui::SetNextItemWidth(-1.0f);
+            const uint32_t currentFilter = static_cast<uint32_t>(m_AssetFilter);
+            if (ImGui::BeginCombo("##assetTypeFilter", filterLabels[currentFilter]))
             {
-                FileSortingMode mode = (FileSortingMode)i;
-                if (ImGui::Selectable(sortingStr[i], i == currentMode))
+                for (uint32_t i = 0; i < static_cast<uint32_t>(AssetBrowserFilter::Count); i++)
                 {
-                    m_FileSortingMode = mode;
-                    m_RequiresSort = true;
+                    if (ImGui::Selectable(filterLabels[i], i == currentFilter))
+                    {
+                        m_AssetFilter = static_cast<AssetBrowserFilter>(i);
+                        ClearSelection();
+                        UpdateDisplayList();
+                    }
                 }
+                ImGui::EndCombo();
             }
-            ImGui::EndCombo();
-        }
+            UI::SetTooltip("Filter by asset type");
+        };
+        const auto drawSort = [&]() {
+            ImGui::SetNextItemWidth(-1.0f);
+            const uint32_t currentMode = static_cast<uint32_t>(m_FileSortingMode);
+            if (ImGui::BeginCombo("##assetSort", sortingLabels[currentMode]))
+            {
+                for (uint32_t i = 0; i < static_cast<uint32_t>(FileSortingMode::SortCount); i++)
+                {
+                    if (ImGui::Selectable(sortingLabels[i], i == currentMode))
+                    {
+                        m_FileSortingMode = static_cast<FileSortingMode>(i);
+                        m_RequiresSort = true;
+                    }
+                }
+                ImGui::EndCombo();
+            }
+            UI::SetTooltip("Sort assets");
+        };
+        const auto drawView = [&]() {
+            const bool gridView = m_View == AssetBrowserView::Grid;
+            if (gridView)
+                ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+            if (ImGui::Button("Grid"))
+                m_View = AssetBrowserView::Grid;
+            if (gridView)
+                ImGui::PopStyleColor();
+            UI::SetTooltip("Thumbnail grid");
+            ImGui::SameLine();
+            if (!gridView)
+                ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+            if (ImGui::Button("List"))
+                m_View = AssetBrowserView::List;
+            if (!gridView)
+                ImGui::PopStyleColor();
+            UI::SetTooltip("Detailed list");
+        };
+        const auto drawThumbnailSize = [&]() {
+            ImGui::SetNextItemWidth(-1.0f);
+            float thumbnailChange = m_ThumbnailSize;
+            if (ImGui::SliderFloat("##assetIconSize", &thumbnailChange, MIN_ASSET_THUMBNAIL_SIZE, MAX_ASSET_THUMBNAIL_SIZE, "%.0f px"))
+                m_ThumbnailSize = thumbnailChange;
+            UI::SetTooltip("Thumbnail size");
+        };
 
-        ImGui::EndHorizontal();
+        const float availableWidth = ImGui::GetContentRegionAvail().x;
+        const bool compact = availableWidth < 680.0f;
+        const int controlColumns = m_View == AssetBrowserView::Grid ? 4 : 3;
+        if (!compact)
+        {
+            if (ImGui::BeginTable("##assetBrowserToolbar", controlColumns + 1, tableFlags))
+            {
+                ImGui::TableSetupColumn("Search", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 120.0f);
+                ImGui::TableSetupColumn("Sort", ImGuiTableColumnFlags_WidthFixed, 108.0f);
+                ImGui::TableSetupColumn("View", ImGuiTableColumnFlags_WidthFixed, 92.0f);
+                if (m_View == AssetBrowserView::Grid)
+                    ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, 125.0f);
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                drawSearch();
+                ImGui::TableSetColumnIndex(1);
+                drawFilter();
+                ImGui::TableSetColumnIndex(2);
+                drawSort();
+                ImGui::TableSetColumnIndex(3);
+                drawView();
+                if (m_View == AssetBrowserView::Grid)
+                {
+                    ImGui::TableSetColumnIndex(4);
+                    drawThumbnailSize();
+                }
+                ImGui::EndTable();
+            }
+        }
+        else
+        {
+            drawSearch();
+            if (ImGui::BeginTable("##assetBrowserCompactToolbar", availableWidth < 430.0f ? 2 : controlColumns, tableFlags))
+            {
+                ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Sort", ImGuiTableColumnFlags_WidthStretch);
+                if (availableWidth >= 430.0f)
+                {
+                    ImGui::TableSetupColumn("View", ImGuiTableColumnFlags_WidthFixed, 92.0f);
+                    if (m_View == AssetBrowserView::Grid)
+                        ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, 120.0f);
+                }
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                drawFilter();
+                ImGui::TableSetColumnIndex(1);
+                drawSort();
+                if (availableWidth < 430.0f)
+                {
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    drawView();
+                    if (m_View == AssetBrowserView::Grid)
+                    {
+                        ImGui::TableSetColumnIndex(1);
+                        drawThumbnailSize();
+                    }
+                }
+                else
+                {
+                    ImGui::TableSetColumnIndex(2);
+                    drawView();
+                    if (m_View == AssetBrowserView::Grid)
+                    {
+                        ImGui::TableSetColumnIndex(3);
+                        drawThumbnailSize();
+                    }
+                }
+                ImGui::EndTable();
+            }
+        }
     }
 
     void AssetBrowserPanel::HandleKeyboardNavigation()
@@ -570,6 +728,7 @@ namespace Crowny
     {
         m_SelectionSet.clear();
         m_SelectionStartIndex = (uint32_t)-1;
+        m_SelectionEndIndex = 0;
 
         m_SetSelectedPathCallback({});
     }
@@ -593,6 +752,27 @@ namespace Crowny
             }
             return false;
         });
+    }
+
+    Vector<AssetType> AssetBrowserPanel::GetActiveAssetTypes() const
+    {
+        switch (m_AssetFilter)
+        {
+        case AssetBrowserFilter::Scenes:
+            return { AssetType::Scene, AssetType::Prefab };
+        case AssetBrowserFilter::Images:
+            return { AssetType::Texture, AssetType::EnvironmentMap };
+        case AssetBrowserFilter::Materials:
+            return { AssetType::Material, AssetType::PhysicsMaterial, AssetType::PhysicsMaterial2D };
+        case AssetBrowserFilter::Models:
+            return { AssetType::Mesh, AssetType::MeshSource, AssetType::AnimationClip };
+        case AssetBrowserFilter::Audio:
+            return { AssetType::AudioClip, AssetType::AudioMixer };
+        case AssetBrowserFilter::Code:
+            return { AssetType::ScriptCode, AssetType::Shader, AssetType::NodeGraph, AssetType::PlainText };
+        default:
+            return {};
+        }
     }
 
     const AssetBrowserPanel::DisplayList& AssetBrowserPanel::GetDisplayList()
@@ -621,14 +801,33 @@ namespace Crowny
     // Currently the search is performed again. Since we kinda know the changes this might not be necessary.
     void AssetBrowserPanel::UpdateDisplayList()
     {
+        if (m_CurrentDirectoryEntry == nullptr)
+            return;
+
+        const Vector<AssetType> assetTypes = GetActiveAssetTypes();
         if (!m_SearchString.empty())
-            m_DisplayList = ProjectLibrary::Get().Search(m_SearchString);
+        {
+            const String wildcardSearch = "*" + m_SearchString + "*";
+            m_DisplayList = ProjectLibrary::Get().Search(wildcardSearch, assetTypes, Ref<DirectoryEntry>(m_CurrentDirectoryEntry));
+        }
         else
         {
             m_DisplayList.clear();
             m_DisplayList.reserve(m_CurrentDirectoryEntry->Children.size());
             for (const Ref<LibraryEntry>& entry : m_CurrentDirectoryEntry->Children)
-                m_DisplayList.push_back(entry);
+            {
+                if (assetTypes.empty())
+                {
+                    m_DisplayList.push_back(entry);
+                    continue;
+                }
+
+                if (entry->Type != LibraryEntryType::File)
+                    continue;
+                const FileEntry* fileEntry = static_cast<FileEntry*>(entry.get());
+                if (fileEntry->Metadata && std::find(assetTypes.begin(), assetTypes.end(), fileEntry->Metadata->Type) != assetTypes.end())
+                    m_DisplayList.push_back(entry);
+            }
         }
         m_RequiresSort = true;
     }
@@ -640,8 +839,8 @@ namespace Crowny
         else // Open the file
         {
             FileEntry* const fileEntry = static_cast<FileEntry*>(entry);
-            const AssetType assetType = fileEntry->Metadata->Type;
-            if (fileEntry->Metadata != nullptr && (assetType == AssetType::ScriptCode || assetType == AssetType::Shader))
+            const AssetType assetType = fileEntry->Metadata ? fileEntry->Metadata->Type : AssetType::None;
+            if (assetType == AssetType::ScriptCode || assetType == AssetType::Shader)
                 CodeEditorManager::Get().OpenFile(fileEntry->Filepath);
             else
                 PlatformUtils::OpenExternally(entry->Filepath);
@@ -655,24 +854,220 @@ namespace Crowny
         m_ColumnCount = (int)(panelWidth / cellSize);
         if (m_ColumnCount < 1)
             m_ColumnCount = 1;
-        ImGui::Columns(m_ColumnCount, 0, false);
 
         bool dropping = false;
         bool hovered = false;
 
         if (m_CurrentDirectoryEntry == nullptr)
+            return;
+
+        const DisplayList& displayList = GetDisplayList();
+        if (displayList.empty())
         {
-            ImGui::Columns(1);
+            const bool constrained = !m_SearchString.empty() || m_AssetFilter != AssetBrowserFilter::All;
+            const char* message = constrained ? "No assets match these filters." : "This folder is empty.";
+            const float messageWidth = ImGui::CalcTextSize(message).x;
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + std::max(0.0f, (panelWidth - messageWidth) * 0.5f));
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 24.0f);
+            ImGui::TextDisabled("%s", message);
+            if (constrained)
+            {
+                const char* clearLabel = "Clear search and filter";
+                const float clearWidth = ImGui::CalcTextSize(clearLabel).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + std::max(0.0f, (panelWidth - clearWidth) * 0.5f));
+                if (ImGui::Button(clearLabel))
+                {
+                    m_SearchString.clear();
+                    m_AssetFilter = AssetBrowserFilter::All;
+                    UpdateDisplayList();
+                }
+            }
+            else
+            {
+                const char* hint = "Right-click here to create an asset.";
+                const float hintWidth = ImGui::CalcTextSize(hint).x;
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + std::max(0.0f, (panelWidth - hintWidth) * 0.5f));
+                ImGui::TextDisabled("%s", hint);
+            }
             return;
         }
 
         if (ImGui::IsWindowFocused() && (m_RenamingPath.empty() || m_RenamingPath != m_CurrentDirectoryEntry->Filepath))
             HandleKeyboardNavigation();
 
+        if (m_View == AssetBrowserView::List)
+        {
+            const ImGuiTableFlags listFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_Resizable |
+                                              ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoSavedSettings;
+            if (!ImGui::BeginTable("##assetList", 4, listFlags))
+                return;
+
+            ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch, 0.52f);
+            ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthStretch, 0.18f);
+            ImGui::TableSetupColumn("Modified", ImGuiTableColumnFlags_WidthStretch, 0.20f);
+            ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthStretch, 0.10f);
+            ImGui::TableHeadersRow();
+
+            const float iconSize = ImGui::GetTextLineHeight();
+            const float rowHeight = ImGui::GetFrameHeight() + 4.0f;
+            for (uint32_t entryIdx = 0; entryIdx < displayList.size(); entryIdx++)
+            {
+                const Ref<LibraryEntry>& entry = displayList[entryIdx];
+                const Path& path = entry->Filepath;
+                const uint32_t upperBits = static_cast<uint32_t>(entry->ElementNameHash >> 32);
+                const uint32_t lowerBits = static_cast<uint32_t>(entry->ElementNameHash & 0xffffffff);
+                ImGui::PushID(upperBits ^ lowerBits);
+
+                const bool selected = m_SelectionSet.find(entry->ElementNameHash) != m_SelectionSet.end();
+                ImTextureID texture = entry->Type == LibraryEntryType::Directory ? m_FolderIcon : m_FileIcon;
+                const AssetPreviewResult* preview = nullptr;
+                if (entry->Type == LibraryEntryType::File)
+                {
+                    preview = m_PreviewService.Request(*static_cast<FileEntry*>(entry.get()), 128);
+                    if (preview != nullptr && preview->Status == AssetPreviewStatus::Ready && preview->Image)
+                        texture = ImGuiVulkanTexture::Get(preview->Image);
+                }
+
+                ImGui::TableNextRow(ImGuiTableRowFlags_None, rowHeight);
+                ImGui::TableSetColumnIndex(0);
+                const bool clicked = ImGui::Selectable(
+                  "##assetRow", selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick, ImVec2(0.0f, rowHeight));
+                const bool shouldOpen = clicked && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
+                const bool rowHovered = ImGui::IsItemHovered();
+                const ImVec2 rowMin = ImGui::GetItemRectMin();
+                DrawAssetTooltip(path, preview);
+
+                if (clicked)
+                {
+                    if (Input::IsKeyPressed(Key::LeftControl))
+                    {
+                        if (selected)
+                            m_SelectionSet.erase(entry->ElementNameHash);
+                        else
+                        {
+                            if (m_SelectionSet.empty())
+                                m_SelectionStartIndex = entryIdx;
+                            m_SelectionSet.insert(entry->ElementNameHash);
+                            m_SelectionEndIndex = entryIdx;
+                        }
+                    }
+                    else if (Input::IsKeyPressed(Key::LeftShift) && m_SelectionStartIndex != static_cast<uint32_t>(-1))
+                    {
+                        m_SelectionSet.clear();
+                        const uint32_t first = std::min(entryIdx, m_SelectionStartIndex);
+                        const uint32_t last = std::max(entryIdx, m_SelectionStartIndex);
+                        for (uint32_t i = first; i <= last; i++)
+                            m_SelectionSet.insert(displayList[i]->ElementNameHash);
+                        m_SelectionEndIndex = entryIdx;
+                    }
+                    else
+                    {
+                        m_SelectionSet.clear();
+                        m_SelectionSet.insert(entry->ElementNameHash);
+                        m_SelectionStartIndex = m_SelectionEndIndex = entryIdx;
+                        m_SetSelectedPathCallback(entry->Type == LibraryEntryType::File ? path : Path{});
+                    }
+                }
+
+                if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+                {
+                    UIUtils::SetAssetPayload(entry.get());
+                    ImGui::Image(texture, ImVec2(32.0f, 32.0f), { 0, 1 }, { 1, 0 });
+                    ImGui::SameLine();
+                    ImGui::TextUnformatted(entry->ElementName.c_str());
+                    ImGui::EndDragDropSource();
+                }
+
+                if (entry->Type == LibraryEntryType::Directory && ImGui::BeginDragDropTarget())
+                {
+                    dropping = true;
+                    if (const FileEntry* fileEntry = UIUtils::AcceptAssetPayload())
+                    {
+                        ProjectLibrary::Get().MoveEntry(fileEntry->Filepath, path / fileEntry->Filepath.filename());
+                        UpdateDisplayList();
+                    }
+                    ImGui::EndDragDropTarget();
+                }
+
+                if (ImGui::IsItemClicked(ImGuiMouseButton_Right) && !selected)
+                {
+                    m_SelectionSet.clear();
+                    m_SelectionSet.insert(entry->ElementNameHash);
+                    m_SelectionStartIndex = m_SelectionEndIndex = entryIdx;
+                    m_SetSelectedPathCallback(entry->Type == LibraryEntryType::File ? path : Path{});
+                }
+                if (!dropping && ImGui::BeginPopupContextItem("##assetListContext"))
+                {
+                    ShowContextMenuContents(entry.get());
+                    ImGui::EndPopup();
+                }
+
+                if (entryIdx == m_SelectionEndIndex)
+                    ImGui::ScrollToItem(ImGuiScrollFlags_KeepVisibleEdgeY);
+                hovered |= rowHovered;
+
+                ImGui::SetCursorScreenPos(ImVec2(rowMin.x + 6.0f, rowMin.y + (rowHeight - iconSize) * 0.5f));
+                ImGui::Image(texture, ImVec2(iconSize, iconSize), { 0, 1 }, { 1, 0 });
+                ImGui::SameLine();
+                if (m_RenamingPath == path)
+                {
+                    const auto completeRename = [&]() {
+                        if (m_RenamingPath.filename() != m_RenamingText)
+                        {
+                            const Path newPath = EditorUtils::GetUniquePath(m_RenamingPath.parent_path() / m_RenamingText);
+                            ProjectLibrary::Get().MoveEntry(m_RenamingPath, newPath);
+                            UpdateDisplayList();
+                        }
+                        m_RenamingPath.clear();
+                        m_RenamingText.clear();
+                    };
+                    ImGui::SetNextItemWidth(std::max(80.0f, ImGui::GetColumnWidth() - iconSize - 24.0f));
+                    ImGui::SetKeyboardFocusHere();
+                    if (ImGui::InputText("##RenameAssetList", &m_RenamingText,
+                                         ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
+                        completeRename();
+                    else if (ImGui::IsItemDeactivatedAfterEdit())
+                        completeRename();
+                    if (Input::IsKeyPressed(Key::Escape))
+                        completeRename();
+                }
+                else
+                    ImGui::TextUnformatted(entry->ElementName.c_str());
+
+                ImGui::TableSetColumnIndex(1);
+                ImGui::TextDisabled("%s", GetEntryTypeName(entry));
+                ImGui::TableSetColumnIndex(2);
+                ImGui::TextDisabled("%s", FormatEntryTime(entry->LastUpdateTime).c_str());
+                ImGui::TableSetColumnIndex(3);
+                if (entry->Type == LibraryEntryType::File)
+                    ImGui::TextDisabled("%s", FormatFileSize(static_cast<FileEntry*>(entry.get())->Filesize).c_str());
+                else
+                    ImGui::TextDisabled("-");
+
+                ImGui::PopID();
+                if (shouldOpen)
+                {
+                    ImGui::EndTable();
+                    HandleOpen(entry.get());
+                    return;
+                }
+            }
+
+            ImGui::EndTable();
+            if (Input::IsMouseButtonDown(Mouse::ButtonLeft) && !hovered && ImGui::IsWindowHovered())
+                ClearSelection();
+            return;
+        }
+
+        const ImGuiTableFlags tableFlags =
+          ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_NoPadOuterX | ImGuiTableFlags_NoBordersInBody;
+        if (!ImGui::BeginTable("##assetGrid", m_ColumnCount, tableFlags))
+            return;
+
         // Files
-        const DisplayList& displayList = GetDisplayList();
         for (uint32_t entryIdx = 0; entryIdx < displayList.size(); entryIdx++)
         {
+            ImGui::TableNextColumn();
             const auto entry = displayList[entryIdx];
             const auto& path = entry->Filepath;
 
@@ -687,15 +1082,15 @@ namespace Crowny
             if (!selected)
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
             ImTextureID tid;
+            const AssetPreviewResult* preview = nullptr;
             if (entry->Type == LibraryEntryType::Directory)
                 tid = m_FolderIcon;
             else
             {
-                auto iter = m_Icons.find(entry->ElementNameHash);
-                if (iter != m_Icons.end())
-                    tid = ImGui_ImplVulkan_AddTexture(iter->second);
-                else
-                    tid = m_FileIcon;
+                preview = m_PreviewService.Request(*static_cast<FileEntry*>(entry.get()), 128);
+                tid = preview != nullptr && preview->Status == AssetPreviewStatus::Ready && preview->Image
+                        ? ImGuiVulkanTexture::Get(preview->Image)
+                        : m_FileIcon;
             }
 
             // Thumbnail
@@ -763,7 +1158,7 @@ namespace Crowny
             if (entryIdx == m_SelectionEndIndex)
                 ImGui::ScrollToItem(ImGuiScrollFlags_KeepVisibleEdgeY);
             hovered |= ImGui::IsItemHovered();
-            UI::SetTooltip(path.string().c_str());
+            DrawAssetTooltip(path, preview);
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) // Allow dragging
             {
                 UIUtils::SetAssetPayload(entry.get());
@@ -801,11 +1196,7 @@ namespace Crowny
                 ImGui::PopStyleColor();
             ImGui::PopStyleColor();
 
-            // Only enter the directory if we click on the image/text but not if we double click in the InputText for
-            // renaming
-            if (ImGui::IsItemHovered() && m_RenamingText.empty() &&
-                ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) // Enter directory or open file
-                HandleOpen(entry.get());
+            const bool shouldOpen = ImGui::IsItemHovered() && m_RenamingText.empty() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
 
             if (Input::IsMouseButtonUp(Mouse::ButtonLeft) || Input::IsMouseButtonUp(Mouse::ButtonRight))
             {
@@ -845,6 +1236,8 @@ namespace Crowny
                         m_SelectionEndIndex = m_SelectionStartIndex = entryIdx;
                         if (entry->Type != LibraryEntryType::Directory)
                             m_SetSelectedPathCallback(path);
+                        else
+                            m_SetSelectedPathCallback({});
                     }
                 }
             }
@@ -855,13 +1248,48 @@ namespace Crowny
                 ImGui::EndPopup();
             }
             ImGui::PopID();
-            ImGui::NextColumn();
+            if (shouldOpen)
+            {
+                ImGui::EndTable();
+                HandleOpen(entry.get());
+                return;
+            }
         }
 
         if (Input::IsMouseButtonDown(Mouse::ButtonLeft) && !hovered && !ImGui::IsItemHovered() && ImGui::IsWindowHovered())
             ClearSelection();
 
-        ImGui::Columns(1);
+        ImGui::EndTable();
+    }
+
+    void AssetBrowserPanel::DrawStatusBar() const
+    {
+        const size_t itemCount = m_DisplayList.size();
+        if (!m_SearchString.empty())
+            ImGui::TextDisabled("%zu search result%s", itemCount, itemCount == 1 ? "" : "s");
+        else
+            ImGui::TextDisabled("%zu item%s", itemCount, itemCount == 1 ? "" : "s");
+
+        if (!m_SelectionSet.empty())
+        {
+            ImGui::SameLine();
+            ImGui::TextDisabled("  %zu selected", m_SelectionSet.size());
+        }
+
+        if (m_AssetFilter != AssetBrowserFilter::All)
+        {
+            ImGui::SameLine();
+            ImGui::TextDisabled("  Filtered");
+        }
+
+        if (ProjectLibrary::Get().IsImporting())
+        {
+            const ImportProgress& progress = ProjectLibrary::Get().GetImportProgress();
+            const String status = fmt::format("Importing {} of {}", progress.CompletedFiles.load(), progress.TotalFiles.load());
+            const float statusWidth = ImGui::CalcTextSize(status.c_str()).x;
+            ImGui::SameLine(std::max(ImGui::GetCursorPosX() + ImGui::GetStyle().ItemSpacing.x, ImGui::GetWindowContentRegionMax().x - statusWidth));
+            ImGui::TextDisabled("%s", status.c_str());
+        }
     }
 
     void AssetBrowserPanel::DrawTreeView()
@@ -945,7 +1373,6 @@ namespace Crowny
     {
         if (ImGui::BeginMenu("Create"))
         {
-            m_SearchString.clear(); // Clear the search so we can go back to the original directory and finish creation there
             if (ImGui::MenuItem("Folder"))
             {
                 if (isTreeView)
@@ -974,8 +1401,10 @@ namespace Crowny
                 CreateNew(AssetBrowserItem::ComputeShader);
             if (ImGui::MenuItem("Render Texture"))
                 CreateNew(AssetBrowserItem::RenderTexture);
-            if (ImGui::MenuItem("Physics Material"))
-                CreateNew(AssetBrowserItem::PhysicsMaterial);
+            if (ImGui::MenuItem("Physics Material 2D"))
+                CreateNew(AssetBrowserItem::PhysicsMaterial2D);
+            if (ImGui::MenuItem("Physics Material 3D"))
+                CreateNew(AssetBrowserItem::PhysicsMaterial3D);
 
             ImGui::EndMenu();
         }
@@ -1033,6 +1462,9 @@ namespace Crowny
 
     void AssetBrowserPanel::CreateNew(AssetBrowserItem itemType)
     {
+        // New assets must remain visible so rename can finish in place.
+        m_SearchString.clear();
+        m_AssetFilter = AssetBrowserFilter::All;
         const String filename = GetDefaultFileNameFromType(itemType);
         const Path newEntryPath = EditorUtils::GetUniquePath(m_CurrentDirectoryEntry->Filepath / filename);
         switch (itemType)
@@ -1051,12 +1483,16 @@ namespace Crowny
             FileSystem::WriteTextFile(newEntryPath, script);
             break;
         }
-        case AssetBrowserItem::PhysicsMaterial: {
+        case AssetBrowserItem::PhysicsMaterial2D: {
             ProjectLibrary::Get().CreateEntry(CreateRef<PhysicsMaterial2D>(), newEntryPath);
             break;
         }
+        case AssetBrowserItem::PhysicsMaterial3D: {
+            ProjectLibrary::Get().CreateEntry(CreateRef<PhysicsMaterial3D>(), newEntryPath);
+            break;
+        }
         case AssetBrowserItem::Material: {
-            AssetHandle<Shader> shader = gAssetManager->Load<Shader>(UNLIT_SHADER_PATH);
+            AssetHandle<Shader> shader = AssetManager::TryGet()->Load<Shader>(UNLIT_SHADER_PATH);
             Ref<Material> material = Material::CreateUnlit(shader);
             ProjectLibrary::Get().CreateEntry(material, newEntryPath);
             break;
@@ -1065,7 +1501,7 @@ namespace Crowny
             Ref<NodeGraph> graph = CreateRef<NodeGraph>();
             graph->SetDomain(NodeGraph::Domain::Geometry);
             graph->SetName(newEntryPath.filename().replace_extension("").string());
-            graph->AddNode(NodeRegistry::Get().Create("GeometryOutputNode"));
+            graph->AddNode(NodeRegistry::Get().Create("GeometryOutputNode"_sid));
             auto nodeGraphAsset = CreateRef<NodeGraphAsset>(graph);
             nodeGraphAsset->SetName(graph->GetName());
             ProjectLibrary::Get().CreateEntry(nodeGraphAsset, newEntryPath);
@@ -1097,7 +1533,6 @@ namespace Crowny
             tmp = tmp->Parent;
         }
         std::reverse(m_DirectoryPathEntries.begin(), m_DirectoryPathEntries.end());
-        m_SearchString.clear(); // TODO: Don't do this here
     }
 
     String AssetBrowserPanel::GetDefaultContents(AssetBrowserItem itemType) const
@@ -1111,7 +1546,8 @@ namespace Crowny
         case AssetBrowserItem::Shader:
         case AssetBrowserItem::ComputeShader:
             return "# Crowny Shader"; // Need to decide on shader format
-        case AssetBrowserItem::PhysicsMaterial:
+        case AssetBrowserItem::PhysicsMaterial2D:
+        case AssetBrowserItem::PhysicsMaterial3D:
             return "# Crowny Physics Material\\n"; // Replace with uuid
         case AssetBrowserItem::Scene:
             return "# Crowny Scene\\nScene: Crowny scene\\nEntities:";

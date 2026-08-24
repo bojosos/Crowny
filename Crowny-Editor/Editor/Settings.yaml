@@ -6,6 +6,14 @@ LastOpenProject: C:\dev\Projects\Project1
 AutoLoadLastProject: true
 ShowImGuiDemo: false
 ShowPhysicsColliders2D: false
+WireframeMode: false
+ShowGrid: true
+ShowGridAxes: true
+GridFineSize: 1
+GridCoarseSize: 10
+GridLineWidth: 0.0199999996
+GridOpacity: 0.400000006
+ColliderColor: [0, 1, 0, 1]
 ShowScriptDebugInfo: true
 ShowAssetInfo: false
 ShowEmptyMetadataAssetInfo: false
@@ -15,10 +23,10 @@ EnableConsoleWarningMessages: true
 EnableConsoleErrorMessages: true
 CollapseConsole: false
 ScrollToBottom: true
-CodeEditorPath: C:\Program Files\Microsoft Visual Studio\2022\Preview\Common7\IDE\devenv.exe
+CodeEditorPath: ""
 RecentProjects:
   - Path: C:\dev\Projects\Project1
-    Timestamp: 1776092748
+    Timestamp: 1787485871
   - Path: C:\dev\Projects\New Project
     Timestamp: 1648668832
   - Path: C:/dev/Projects\Project4

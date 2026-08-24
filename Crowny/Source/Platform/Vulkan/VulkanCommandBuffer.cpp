@@ -29,7 +29,10 @@ namespace Crowny
         {
             queueType = GRAPHICS_QUEUE;
             numQueues = device.GetNumQueues(GRAPHICS_QUEUE);
+            m_Type = queueType;
         }
+
+        CW_ENGINE_ASSERT(numQueues > 0, "Vulkan device has no usable command queue");
 
         m_Queue = device.GetQueue(queueType, m_QueueIdx % numQueues);
         m_IdMask = device.GetQueueMask(queueType, m_QueueIdx);
@@ -172,8 +175,19 @@ namespace Crowny
             entry.newLayout = newLayout;
         }
 
-        vkCmdPipelineBarrier(m_CommandBuffer->GetHandle(), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0,
-                             nullptr, (uint32_t)m_BarriersTemp.size(), m_BarriersTemp.data());
+        if (m_BarriersTemp.empty())
+            return;
+
+        VkPipelineStageFlags srcStages = 0;
+        VkPipelineStageFlags dstStages = 0;
+        for (const VkImageMemoryBarrier& barrier : m_BarriersTemp)
+        {
+            srcStages |= VulkanUtils::GetPipelineStageFlags(barrier.srcAccessMask);
+            dstStages |= VulkanUtils::GetPipelineStageFlags(barrier.dstAccessMask);
+        }
+
+        vkCmdPipelineBarrier(m_CommandBuffer->GetHandle(), srcStages, dstStages, 0, 0, nullptr, 0, nullptr, (uint32_t)m_BarriersTemp.size(),
+                             m_BarriersTemp.data());
 
         m_BarriersTemp.clear();
     }
@@ -192,6 +206,7 @@ namespace Crowny
         if (m_CommandBuffer == nullptr)
             return;
         const uint32_t syncMask = m_SyncMask & ~m_QueueMask;
+        m_SyncMask = 0;
 
         m_CommandBuffer->End();
         m_CommandBuffer->Submit(m_Queue, m_QueueIdx, syncMask);
@@ -226,19 +241,18 @@ namespace Crowny
             const uint32_t numQueues = device->GetNumQueues(queueType);
             for (uint32_t j = 0; j < numQueues; j++)
             {
-                const VulkanQueue* queue = device->GetQueue(queueType, j);
-                const VulkanCmdBuffer* lastCb = queue->GetLastCommandBuffer();
-                if (lastCb == nullptr || !lastCb->IsSubmitted())
-                    continue;
                 const uint32_t queueMask = device->GetQueueMask(queueType, j);
                 if ((syncMask & queueMask) == 0)
                     continue;
-                VulkanSemaphore* semaphore = lastCb->RequestInterQueueSemaphore();
-                if (semaphore == nullptr)
+                const VulkanQueue* queue = device->GetQueue(queueType, j);
+                VulkanSemaphore* semaphore = nullptr;
+                if (!queue->RequestLastCommandBufferSemaphore(semaphore))
                 {
                     failed = true;
                     continue;
                 }
+                if (semaphore == nullptr)
+                    continue;
 
                 semaphores[semaphoreIdx++] = semaphore;
             }
@@ -383,12 +397,8 @@ namespace Crowny
 
         if (m_State == State::Submitted)
         {
-            uint64_t wait = 1000 * 1000 * 1000;
-            VkResult result = vkWaitForFences(device, 1, &m_Fence, true, wait);
-            CW_ENGINE_ASSERT(result == VK_SUCCESS || result == VK_TIMEOUT);
-
-            if (result == VK_TIMEOUT)
-                CW_ENGINE_WARN("Command buffer freed, fence wait expired!");
+            VkResult result = vkWaitForFences(device, 1, &m_Fence, true, UINT64_MAX);
+            CW_ENGINE_ASSERT(result == VK_SUCCESS);
             Reset();
         }
         else if (m_State != State::Ready)
@@ -529,10 +539,11 @@ namespace Crowny
             }
             else
             {
-                vkScissors.offset.x = (int32_t)m_Viewport.X;
-                vkScissors.offset.y = (int32_t)m_Viewport.Y;
-                vkScissors.extent.width = m_Framebuffer->GetWidth();
-                vkScissors.extent.height = m_Framebuffer->GetHeight();
+                const Rect2I viewportRect = VulkanUtils::GetViewportRect(m_Viewport, m_Framebuffer->GetWidth(), m_Framebuffer->GetHeight());
+                vkScissors.offset.x = viewportRect.X;
+                vkScissors.offset.y = viewportRect.Y;
+                vkScissors.extent.width = (uint32_t)viewportRect.Width;
+                vkScissors.extent.height = (uint32_t)viewportRect.Height;
             }
             vkCmdSetScissor(m_CmdBuffer, 0, 1, &vkScissors);
             m_ScissorRequiresBind = false;
@@ -564,57 +575,12 @@ namespace Crowny
         m_ComputePipelineRequiresBind = true;
     }
 
-    VkPipelineStageFlags GetPipelineStageFlags(VkAccessFlags accessFlags)
-    {
-        VkPipelineStageFlags flags = 0;
-
-        if ((accessFlags & VK_ACCESS_INDIRECT_COMMAND_READ_BIT) != 0)
-            flags |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
-
-        if ((accessFlags & (VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)) != 0)
-            flags |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-
-        if ((accessFlags & (VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT)) != 0)
-        {
-            flags |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
-            flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            flags |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-
-            flags |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
-            flags |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT;
-            flags |= VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
-        }
-
-        if ((accessFlags & VK_ACCESS_INPUT_ATTACHMENT_READ_BIT) != 0)
-            flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-
-        if ((accessFlags & (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)) != 0)
-            flags |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-        if ((accessFlags & (VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)) != 0)
-            flags |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-
-        if ((accessFlags & (VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT)) != 0)
-            flags |= VK_PIPELINE_STAGE_TRANSFER_BIT;
-
-        if ((accessFlags & (VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT)) != 0)
-            flags |= VK_PIPELINE_STAGE_HOST_BIT;
-
-        if ((accessFlags & (VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR)) != 0)
-            flags |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
-
-        if (flags == 0)
-            flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-
-        return flags;
-    }
-
     template <class T> void GetPipelineStageFlags(const Vector<T>& barriers, VkPipelineStageFlags& src, VkPipelineStageFlags& dst)
     {
         for (const T& entry : barriers)
         {
-            src |= GetPipelineStageFlags(entry.srcAccessMask);
-            dst |= GetPipelineStageFlags(entry.dstAccessMask);
+            src |= VulkanUtils::GetPipelineStageFlags(entry.srcAccessMask);
+            dst |= VulkanUtils::GetPipelineStageFlags(entry.dstAccessMask);
         }
         if (src == 0)
             src = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
@@ -683,6 +649,9 @@ namespace Crowny
                                 m_MemoryBarrierDstAccess |= VK_ACCESS_TRANSFER_READ_BIT;
                             if (accessFlags == VulkanAccessFlagBits::Write)
                                 m_MemoryBarrierDstAccess |= VK_ACCESS_TRANSFER_WRITE_BIT;
+                            break;
+                        case (BufferUseFlagBits::Indirect):
+                            m_MemoryBarrierDstAccess |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
                             break;
                         }
                         resetRenderPass = true;
@@ -1276,7 +1245,8 @@ namespace Crowny
                     uint32_t count = idx - lastValidIdx;
                     if (count > 0)
                     {
-                        vkCmdBindVertexBuffers(m_CmdBuffer, lastValidIdx, count, m_VertexBuffersTemp, m_VertexBufferOffsets);
+                        vkCmdBindVertexBuffers(m_CmdBuffer, lastValidIdx, count, m_VertexBuffersTemp + lastValidIdx,
+                                               m_VertexBufferOffsets + lastValidIdx);
                         lastValidIdx = (uint32_t)-1;
                     }
                 }
@@ -1288,7 +1258,8 @@ namespace Crowny
                 uint32_t count = idx - lastValidIdx;
                 if (count > 0)
                 {
-                    vkCmdBindVertexBuffers(m_CmdBuffer, lastValidIdx, count, m_VertexBuffersTemp, m_VertexBufferOffsets);
+                    vkCmdBindVertexBuffers(m_CmdBuffer, lastValidIdx, count, m_VertexBuffersTemp + lastValidIdx,
+                                           m_VertexBufferOffsets + lastValidIdx);
                 }
             }
         }
@@ -1531,29 +1502,33 @@ namespace Crowny
 
     void VulkanCmdBuffer::ClearRenderTarget(uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil, uint8_t targetMask)
     {
+        if (m_Framebuffer == nullptr)
+            return;
+
         Rect2I area(0, 0, m_Framebuffer->GetWidth(), m_Framebuffer->GetHeight());
         ClearViewport(area, buffers, color, depth, stencil, targetMask);
     }
 
     void VulkanCmdBuffer::ClearViewport(uint32_t buffers, const glm::vec4& color, float depth, uint16_t stencil, uint8_t targetMask)
     {
-        Rect2I area;
-        area.X = (uint32_t)(m_Viewport.X);
-        area.Y = (uint32_t)(m_Viewport.Y);
-        area.Width = (uint32_t)(m_Viewport.Width);
-        area.Height = (uint32_t)(m_Viewport.Height);
+        if (m_Framebuffer == nullptr)
+            return;
 
+        const Rect2I area = VulkanUtils::GetViewportRect(m_Viewport, m_Framebuffer->GetWidth(), m_Framebuffer->GetHeight());
         ClearViewport(area, buffers, color, depth, stencil, targetMask);
     }
 
     void VulkanCmdBuffer::ExecuteClearPass()
     {
-        // TODO:
-        // if (!m_Framebuffer)
-        //     return;
         CW_ENGINE_ASSERT(m_State == State::Recording);
+        if (m_Framebuffer == nullptr || m_ClearMask == CLEAR_NONE)
+            return;
+
+        ExecuteWriteHazardBarrier();
+        ExecuteLayoutTransitions();
+
         VulkanRenderPass* renderPass = m_Framebuffer->GetRenderPass();
-        VkRenderPassBeginInfo renderPassBeginInfo;
+        VkRenderPassBeginInfo renderPassBeginInfo{};
         renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassBeginInfo.pNext = nullptr;
         renderPassBeginInfo.framebuffer = m_Framebuffer->GetHandle();
@@ -1567,6 +1542,8 @@ namespace Crowny
 
         vkCmdBeginRenderPass(m_CmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
         vkCmdEndRenderPass(m_CmdBuffer);
+        UpdateFinalLayouts();
+        m_ClearMask = CLEAR_NONE;
     }
 
     void VulkanCmdBuffer::Reset()
@@ -1948,7 +1925,7 @@ namespace Crowny
         if (!loadMask.IsSet(RT_DEPTH) && loadMask.IsSet(RT_STENCIL))
         {
             CW_ENGINE_WARN("SetRenderTarget() with invalid load mask. Stencil enabled but depth disabled.");
-            loadMask.Set(RT_STENCIL);
+            loadMask.Set(RT_DEPTH);
         }
 
         if (m_Framebuffer == newBuffer && m_RenderTargetReadOnlyFlags == readOnlyFlags && m_RenderTargetLoadMask == loadMask)
@@ -2019,7 +1996,7 @@ namespace Crowny
 
     bool VulkanCmdBuffer::CheckFenceStatus(bool blocking) const
     {
-        VkResult result = vkWaitForFences(m_Device.GetLogicalDevice(), 1, &m_Fence, true, blocking ? 1000000000 : 0);
+        VkResult result = vkWaitForFences(m_Device.GetLogicalDevice(), 1, &m_Fence, true, blocking ? UINT64_MAX : 0);
         CW_ENGINE_ASSERT(result == VK_SUCCESS || result == VK_TIMEOUT);
 
         return result == VK_SUCCESS;
@@ -2045,12 +2022,16 @@ namespace Crowny
     {
         if (bufferCount == 0)
             return;
+        CW_ENGINE_ASSERT(buffers != nullptr && idx + bufferCount <= MAX_BOUND_VERTEX_BUFFERS,
+                         "Vulkan vertex buffer binding range is invalid");
+        if (buffers == nullptr || idx + bufferCount > MAX_BOUND_VERTEX_BUFFERS)
+            return;
         uint32_t endIdx = idx + bufferCount;
         if (m_VertexBuffers.size() < endIdx)
             m_VertexBuffers.resize(endIdx);
         for (uint32_t i = idx; i < endIdx; i++)
         {
-            m_VertexBuffers[i] = StaticRefCast<VulkanVertexBuffer>(buffers[i]);
+            m_VertexBuffers[i] = StaticRefCast<VulkanVertexBuffer>(buffers[i - idx]);
         }
         m_VertexInputsRequiresBind = true;
     }
@@ -2178,6 +2159,89 @@ namespace Crowny
         vkCmdDrawIndexed(m_CmdBuffer, idxCount, instanceCount, startIdx, vertexOffset, 0);
     }
 
+    void VulkanCmdBuffer::DrawIndexedIndirect(VulkanBuffer* argumentBuffer, uint32_t argumentOffset, uint32_t drawCount, uint32_t stride)
+    {
+        if (!IsReadyForRender() || argumentBuffer == nullptr || drawCount == 0)
+            return;
+
+        BindUniforms();
+        RegisterBuffer(argumentBuffer, BufferUseFlagBits::Indirect, VulkanAccessFlagBits::Read, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
+        if (!IsInRenderPass())
+            BeginRenderPass();
+
+        if (m_VertexInputsRequiresBind)
+        {
+            BindVertexInputs();
+            m_VertexInputsRequiresBind = false;
+        }
+        if (m_GraphicsPipelineRequiresBind)
+        {
+            if (!BindGraphicsPipeline())
+                return;
+        }
+        else
+            BindDynamicStates(false);
+
+        if (m_DescriptorSetsBindState.IsSet(DescriptorSetBindFlagBits::Graphics))
+        {
+            if (m_NumBoundDescriptorSets > 0)
+            {
+                vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline->GetLayout(), 0,
+                                        m_NumBoundDescriptorSets, m_DescriptorSetsTemp, 0, nullptr);
+            }
+            m_DescriptorSetsBindState.Unset(DescriptorSetBindFlagBits::Graphics);
+        }
+
+        vkCmdDrawIndexedIndirect(m_CmdBuffer, argumentBuffer->GetHandle(), argumentOffset, drawCount, stride);
+    }
+
+    void VulkanCmdBuffer::DrawIndexedIndirectCount(VulkanBuffer* argumentBuffer, uint32_t argumentOffset, VulkanBuffer* countBuffer,
+                                                   uint32_t countOffset, uint32_t maxDrawCount, uint32_t stride)
+    {
+        if (argumentBuffer == nullptr || countBuffer == nullptr || maxDrawCount == 0)
+            return;
+
+        if (!m_Device.GetOptionalFeatures().DrawIndirectCount)
+        {
+            DrawIndexedIndirect(argumentBuffer, argumentOffset, maxDrawCount, stride);
+            return;
+        }
+
+        if (!IsReadyForRender())
+            return;
+        BindUniforms();
+        RegisterBuffer(argumentBuffer, BufferUseFlagBits::Indirect, VulkanAccessFlagBits::Read, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
+        RegisterBuffer(countBuffer, BufferUseFlagBits::Indirect, VulkanAccessFlagBits::Read, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
+        if (!IsInRenderPass())
+            BeginRenderPass();
+
+        if (m_VertexInputsRequiresBind)
+        {
+            BindVertexInputs();
+            m_VertexInputsRequiresBind = false;
+        }
+        if (m_GraphicsPipelineRequiresBind)
+        {
+            if (!BindGraphicsPipeline())
+                return;
+        }
+        else
+            BindDynamicStates(false);
+
+        if (m_DescriptorSetsBindState.IsSet(DescriptorSetBindFlagBits::Graphics))
+        {
+            if (m_NumBoundDescriptorSets > 0)
+            {
+                vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline->GetLayout(), 0,
+                                        m_NumBoundDescriptorSets, m_DescriptorSetsTemp, 0, nullptr);
+            }
+            m_DescriptorSetsBindState.Unset(DescriptorSetBindFlagBits::Graphics);
+        }
+
+        vkCmdDrawIndexedIndirectCount(m_CmdBuffer, argumentBuffer->GetHandle(), argumentOffset, countBuffer->GetHandle(), countOffset,
+                                      maxDrawCount, stride);
+    }
+
     static uint32_t vkAlignedSize(uint32_t value, uint32_t alignment) { return (value + alignment - 1) & ~(alignment - 1); }
 
     void VulkanCmdBuffer::TraceRays(uint32_t width, uint32_t height)
@@ -2283,6 +2347,52 @@ namespace Crowny
         m_ShaderBoundSubresourceInfos.clear();
     }
 
+    void VulkanCmdBuffer::DispatchIndirect(VulkanBuffer* argumentBuffer, uint32_t argumentOffset)
+    {
+        if (m_ComputePipeline == nullptr || argumentBuffer == nullptr)
+        {
+            CW_ENGINE_ASSERT(false, "Vulkan indirect dispatch requires a compute pipeline and argument buffer");
+            return;
+        }
+        if (IsInRenderPass())
+            EndRenderPass();
+        SetRenderTarget(nullptr, 0, RT_ALL);
+
+        BindUniforms();
+        RegisterBuffer(argumentBuffer, BufferUseFlagBits::Indirect, VulkanAccessFlagBits::Read, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
+        ExecuteWriteHazardBarrier();
+        ExecuteLayoutTransitions();
+
+        if (m_ComputePipelineRequiresBind)
+        {
+            VulkanPipeline* pipeline = m_ComputePipeline->GetPipeline();
+            RegisterResource(pipeline, VulkanAccessFlagBits::Read);
+            m_ComputePipeline->RegisterPipelineResources(this);
+            vkCmdBindPipeline(m_CmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->GetHandle());
+            m_ComputePipelineRequiresBind = false;
+        }
+
+        if (m_DescriptorSetsBindState.IsSet(DescriptorSetBindFlagBits::Compute))
+        {
+            if (m_NumBoundDescriptorSets > 0)
+            {
+                vkCmdBindDescriptorSets(m_CmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipeline->GetLayout(), 0,
+                                        m_NumBoundDescriptorSets, m_DescriptorSetsTemp, 0, nullptr);
+            }
+            m_DescriptorSetsBindState.Unset(DescriptorSetBindFlagBits::Compute);
+        }
+
+        vkCmdDispatchIndirect(m_CmdBuffer, argumentBuffer->GetHandle(), argumentOffset);
+        for (uint32_t entryIdx : m_ShaderBoundSubresourceInfos)
+        {
+            ImageSubresourceInfo& info = m_SubresourceInfoStorage[entryIdx];
+            info.UseFlags.Unset(ImageUseFlagBits::Shader);
+            info.ShaderUse.AccessFlags = VulkanAccessFlagBits::None;
+            info.ShaderUse.Stages = 0;
+        }
+        m_ShaderBoundSubresourceInfos.clear();
+    }
+
     void VulkanCmdBuffer::AllocateSemaphores(VkSemaphore* semaphores)
     {
         if (m_IntraQueueSemaphore != nullptr)
@@ -2323,8 +2433,8 @@ namespace Crowny
         barrier.newLayout = newLayout;
         barrier.image = image;
         barrier.subresourceRange = range;
-        const VkPipelineStageFlags srcStage = GetPipelineStageFlags(srcAccessFlags);
-        const VkPipelineStageFlags dstStage = GetPipelineStageFlags(dstAccessFlags);
+        const VkPipelineStageFlags srcStage = VulkanUtils::GetPipelineStageFlags(srcAccessFlags);
+        const VkPipelineStageFlags dstStage = VulkanUtils::GetPipelineStageFlags(dstAccessFlags);
         vkCmdPipelineBarrier(m_CmdBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
     }
 
@@ -2446,20 +2556,14 @@ namespace Crowny
                     RenderSurfaceMask readMask = GetFBReadMask();
                     if (renderPass->HasDepthAttachment() && m_Framebuffer->GetDepthStencilAttachment().Image == image)
                     {
-                        if (readMask.IsSet(RT_DEPTH))
-                        {
-                            if (readMask.IsSet(RT_STENCIL))
-                                return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-                            else
-                                return VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR;
-                        }
-                        else
-                        {
-                            if (readMask.IsSet(RT_STENCIL))
-                                return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR;
-                            else
-                                return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-                        }
+                        const bool depthReadOnly = readMask.IsSet(RT_DEPTH);
+                        const bool stencilReadOnly = readMask.IsSet(RT_STENCIL);
+                        if (depthReadOnly && stencilReadOnly)
+                            return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+                        if (depthReadOnly || stencilReadOnly)
+                            return VK_IMAGE_LAYOUT_GENERAL;
+
+                        return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
                     }
                     else
                     {

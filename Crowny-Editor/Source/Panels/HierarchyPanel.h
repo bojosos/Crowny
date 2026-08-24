@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Crowny/Ecs/Entity.h"
+#include "Editor/EntitySelection.h"
+#include "Editor/UndoRedo.h"
 #include "Panels/ImGuiPanel.h"
 
 namespace Crowny
@@ -9,7 +11,9 @@ namespace Crowny
     class HierarchyPanel : public ImGuiPanel
     {
     public:
-        HierarchyPanel(const String& name, std::function<void(Entity)> callback);
+        using SelectionChangedCallback = std::function<void(Entity, const Vector<Entity>&)>;
+
+        HierarchyPanel(const String& name, SelectionChangedCallback callback);
         ~HierarchyPanel() = default;
 
         virtual void Render() override;
@@ -18,14 +22,13 @@ namespace Crowny
         template <class T> void CreateEntityWith(Entity parent, const String& entityName)
         {
             m_DeferredActions.push_back([parent, entityName, this]() mutable {
-                auto activeScene = gSceneManager->GetActiveScene();
+                auto activeScene = SceneManager::TryGet()->GetActiveScene();
                 Entity newEntity = activeScene->CreateEntity(entityName);
                 newEntity.AddComponent<T>();
                 parent.AddChild(newEntity);
+                UndoRedo::Get().RegisterAction(CreateRef<EntityCreatedAction>(newEntity, activeScene));
                 m_NewOpenEntity = parent;
-                m_SelectedItems.clear();
-                m_SelectedItems.insert(newEntity);
-                m_SelectionChanged(newEntity);
+                SetSelectedEntity(newEntity);
             });
         }
         void CreateEmptyEntity(Entity parent);
@@ -35,14 +38,16 @@ namespace Crowny
     public:
         void SetSelectedEntity(Entity entity)
         {
-            s_SelectedEntity = entity;
-            m_SelectedItems.clear();
-            m_SelectedItems.insert(entity);
+            m_Selection.Select(entity, EntitySelectionMode::Replace);
+            NotifySelectionChanged();
         }
-        static Entity GetSelectedEntity() { return s_SelectedEntity; }
-
-    private:
-        static Entity s_SelectedEntity;
+        void SelectEntity(Entity entity, EntitySelectionMode mode)
+        {
+            if (m_Selection.Select(entity, mode, m_VisibleEntities))
+                NotifySelectionChanged();
+        }
+        Entity GetSelectedEntity() const { return m_Selection.GetPrimary(); }
+        const Vector<Entity>& GetSelectedEntities() const { return m_Selection.GetAll(); }
 
     private:
         void DisplayTree(Entity e);
@@ -54,6 +59,10 @@ namespace Crowny
         bool MatchesSearchFilter(Entity e) const;
         void CollectMatchingEntities(Entity e, Vector<Entity>& results) const;
         String BuildParentPath(Entity e) const;
+        Vector<Entity> GetTopLevelSelection() const;
+        void NotifySelectionChanged();
+        void QueueReparent(const Vector<Entity>& entities, Entity newParent);
+        void ApplyPendingSelection();
 
 #ifdef CW_DEBUG
         void PrintDebugHierarchy();
@@ -63,11 +72,14 @@ namespace Crowny
         bool m_PreserveHierarchy = true;
         Entity m_NewOpenEntity;
         Vector<std::function<void()>> m_DeferredActions;
-        std::function<void(Entity)> m_SelectionChanged;
+        SelectionChangedCallback m_SelectionChanged;
         Entity m_Renaming = {};
         String m_RenamingString;
         String m_SearchFilter;
-        UnorderedSet<Entity> m_SelectedItems;
+        EntitySelection m_Selection;
+        Vector<Entity> m_VisibleEntities;
+        Entity m_PendingSelection;
+        EntitySelectionMode m_PendingSelectionMode = EntitySelectionMode::Replace;
         UnorderedSet<UUID> m_Hierarchy;
     };
 } // namespace Crowny

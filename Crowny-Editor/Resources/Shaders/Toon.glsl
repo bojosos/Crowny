@@ -23,6 +23,12 @@ layout (binding = 1) uniform OutlineParams
     vec4 outlineColor;
     // @range(0.0, 5.0) @name("Thickness") @default(1.0)
     float thickness;
+    // @range(0.0, 0.1) @name("Depth Threshold") @default(0.002)
+    float toonOutlineDepthThreshold;
+    // @range(0.0, 1.0) @name("Normal Threshold") @default(0.2)
+    float toonOutlineNormalThreshold;
+    // @range(0.0, 1000.0) @name("Distance Fade") @default(100.0)
+    float toonOutlineDistanceFade;
 } outline;
 
 void main()
@@ -48,6 +54,9 @@ layout (binding = 1) uniform OutlineParams
     vec4 outlineColor;
     // @range(0.0, 5.0) @name("Thickness") @default(1.0)
     float thickness;
+    float toonOutlineDepthThreshold;
+    float toonOutlineNormalThreshold;
+    float toonOutlineDistanceFade;
 } outline;
 
 layout (location = 0) out vec4 outColor;
@@ -129,8 +138,57 @@ layout (binding = 3) uniform ToonParams {
     float shadowBrightness;
 } toon;
 
+layout (binding = 5) uniform ToonStyleParams {
+    // @color @name("Shadow Tint") @default(0.2, 0.22, 0.3, 1.0)
+    vec4 toonShadowColor;
+    // @color @name("Specular Color") @default(1.0, 1.0, 1.0, 1.0)
+    vec4 toonSpecularColor;
+    // @color @name("Rim Color") @default(1.0, 1.0, 1.0, 1.0)
+    vec4 toonRimColor;
+    // @range(0.0, 0.5) @name("Band Smoothness") @default(0.08)
+    float toonBandSmoothness;
+    // @range(0.0, 1.0) @name("Specular Threshold") @default(0.8)
+    float toonSpecularThreshold;
+    // @range(0.0, 0.5) @name("Specular Edge") @default(0.05)
+    float toonSpecularSmoothness;
+    // @range(0.0, 4.0) @name("Specular Strength") @default(0.5)
+    float toonSpecularStrength;
+    // @range(0.0, 0.5) @name("Rim Edge") @default(0.08)
+    float toonRimSmoothness;
+    // @range(0.0, 4.0) @name("Rim Strength") @default(0.5)
+    float toonRimStrength;
+    // @range(0.0, 1.0) @name("Rim Shadow Mask") @default(0.75)
+    float toonRimShadowMask;
+    // @range(0.0, 4.0) @name("Indirect Strength") @default(0.5)
+    float toonIndirectStrength;
+    // @range(0.001, 128.0) @name("Pattern Scale") @default(16.0)
+    float toonPatternScale;
+    // @range(0.0, 1.0) @name("Pattern Strength") @default(0.0)
+    float toonPatternStrength;
+    // @range(0.0, 0.5) @name("Pattern Edge") @default(0.1)
+    float toonPatternSmoothness;
+    // @range(0.0, 1000.0) @name("Pattern Distance Fade") @default(50.0)
+    float toonPatternDistanceFade;
+    // @name("Pattern Mapping") @default(0)
+    int toonPatternMapping;
+    // @range(0.0, 1.0) @name("Ramp Strength") @default(0.0)
+    float toonRampStrength;
+    // @range(-1.0, 1.0) @name("Ramp Offset") @default(0.0)
+    float toonRampOffset;
+    // @range(0.0, 1.0) @name("Matcap Strength") @default(0.0)
+    float toonMatcapStrength;
+    // @range(-3.14159, 3.14159) @name("Matcap Rotation") @default(0.0)
+    float toonMatcapRotation;
+} toonStyle;
+
 // @name("Albedo Map") @default(white)
 layout (binding = 4) uniform sampler2D albedoMap;
+// @name("Hatching / Scratch Pattern") @default(white)
+layout (binding = 6) uniform sampler2D toonPatternTexture;
+// @name("Diffuse Ramp") @default(white)
+layout (binding = 7) uniform sampler2D toonRampTexture;
+// @name("Matcap") @default(white)
+layout (binding = 8) uniform sampler2D toonMatcapTexture;
 
 layout (location = 0) out vec4 outColor;
 layout (location = 1) out int outEntity;

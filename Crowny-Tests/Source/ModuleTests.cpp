@@ -63,10 +63,12 @@ TEST_CASE_METHOD(ModuleFixture, "Module::DoubleShutdownIsIdempotent", "[Module]"
 
     TestModule::Shutdown();
     CHECK_FALSE(TestModule::IsStartedUp());
+    CHECK(TestModule::TryGet() == nullptr);
 
     // Second shutdown should return early without crashing
     TestModule::Shutdown();
     CHECK_FALSE(TestModule::IsStartedUp());
+    CHECK(TestModule::TryGet() == nullptr);
 }
 
 TEST_CASE_METHOD(ModuleFixture, "Module::RestartAfterShutdown", "[Module]")
@@ -94,9 +96,10 @@ TEST_CASE_METHOD(ModuleFixture, "Module::IsStartedUpReturnsCorrectValues", "[Mod
 
 TEST_CASE_METHOD(ModuleFixture, "Module::StartUpWithExternalInstance", "[Module]")
 {
-    TestModule* external = new TestModule(99);
-    TestModule::StartUp(external);
+    auto external = std::make_unique<TestModule>(99);
+    TestModule::StartUp(std::move(external));
 
+    CHECK(external == nullptr);
     CHECK(TestModule::IsStartedUp());
     CHECK(TestModule::Get().value == 99);
     CHECK(TestModule::Get().startedUp);

@@ -54,7 +54,12 @@ layout(location = 0) in DATA
 } fs_in;
 
 layout (binding = 2) uniform cw_UBOParams {
-	vec4 lights[4];
+	vec4 lightPositionRange[4];
+	vec4 lightDirectionOuter[4];
+	vec4 lightColorIntensity[4];
+	vec4 lightSpotSourceBias[4];
+	ivec4 lightMetadata[4];
+	int lightCount;
 	float gamma;
 	float exposure;
 	vec3 camPos;
@@ -82,6 +87,7 @@ layout (binding = 11) uniform Parameters {
     float roughness;
     // @range(0.0, 1.0) @name("Metalness") @default(0.0)
     float metalness;
+    float useIBL;
 } parameters;
 
 layout (location = 0) out vec4 outColor;
@@ -193,30 +199,57 @@ void main()
 	vec3 F0 = vec3(0.04);
 	F0 = mix(F0, albedo, metallic);
 
-	// Direct lighting
+	// Direct lighting. This compatibility shader supports four selected lights;
+	// Forward+ and Deferred+ consume the complete persistent light table.
 	vec3 Lo = vec3(0.0);
-	for(int i = 0; i < 4; i++) {
-		vec3 L = normalize(uboParams.lights[i].xyz - fs_in.worldPos);
-		Lo += specularContribution(L, V, N, F0, metallic, roughness, albedo);
+	for(int i = 0; i < uboParams.lightCount; i++) {
+		int lightType = uboParams.lightMetadata[i].x;
+		int lightFlags = uboParams.lightMetadata[i].y;
+		if ((lightFlags & 1) == 0)
+			continue;
+
+		vec3 L;
+		float attenuation = 1.0;
+		if (lightType == 0) {
+			L = normalize(-uboParams.lightDirectionOuter[i].xyz);
+		} else {
+			vec3 toLight = uboParams.lightPositionRange[i].xyz - fs_in.worldPos;
+			float distanceSquared = max(dot(toLight, toLight), 0.0001);
+			float distanceToLight = sqrt(distanceSquared);
+			L = toLight / distanceToLight;
+			float sourceRadius = uboParams.lightSpotSourceBias[i].y;
+			attenuation = 1.0 / max(distanceSquared, sourceRadius * sourceRadius);
+			float normalizedDistance = distanceToLight / max(uboParams.lightPositionRange[i].w, 0.0001);
+			float rangeWindow = max(1.0 - pow(normalizedDistance, 4.0), 0.0);
+			attenuation *= rangeWindow * rangeWindow;
+
+			if (lightType == 2) {
+				vec3 lightToSurface = -L;
+				float coneCosine = dot(lightToSurface, normalize(uboParams.lightDirectionOuter[i].xyz));
+				float outerCosine = uboParams.lightDirectionOuter[i].w;
+				float innerCosine = uboParams.lightSpotSourceBias[i].x;
+				attenuation *= smoothstep(outerCosine, innerCosine, coneCosine);
+			}
+		}
+
+		vec3 incidentLight = uboParams.lightColorIntensity[i].rgb * uboParams.lightColorIntensity[i].w * attenuation;
+		// Temporary exposure bridge for the old in-material tonemapper. The new
+		// pipeline applies pre-exposure and camera exposure after HDR lighting.
+		incidentLight *= 0.001;
+		Lo += specularContribution(L, V, N, F0, metallic, roughness, albedo) * incidentLight;
 	}
 
-	// IBL
-	vec2 brdf = texture(cw_samplerBRDFLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
-	vec3 reflection = prefilteredReflection(R, roughness).rgb;
-	vec3 irradiance = texture(cw_samplerIrradiance, N).rgb;
-
-	// Diffuse based on irradiance
-	vec3 diffuse = irradiance * albedo;
-
-	vec3 F = F_SchlickR(max(dot(N, V), 0.0), F0, roughness);
-
-	// Specular reflectance
-	vec3 specular = reflection * (F * brdf.x + brdf.y);
-
-	// Ambient part
-	vec3 kD = 1.0 - F;
-	kD *= 1.0 - metallic;
-	vec3 ambient = (kD * diffuse + specular) * texture(aoMap, fs_in.uv).rrr;
+	vec3 ambient = vec3(0.0);
+	if (parameters.useIBL > 0.5) {
+		vec2 brdf = texture(cw_samplerBRDFLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+		vec3 reflection = prefilteredReflection(R, roughness).rgb;
+		vec3 irradiance = texture(cw_samplerIrradiance, N).rgb;
+		vec3 diffuse = irradiance * albedo;
+		vec3 F = F_SchlickR(max(dot(N, V), 0.0), F0, roughness);
+		vec3 specular = reflection * (F * brdf.x + brdf.y);
+		vec3 kD = (1.0 - F) * (1.0 - metallic);
+		ambient = (kD * diffuse + specular) * texture(aoMap, fs_in.uv).rrr;
+	}
 
 	vec3 color = ambient + Lo;
 

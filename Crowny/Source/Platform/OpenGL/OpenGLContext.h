@@ -13,8 +13,12 @@ namespace Crowny
         virtual void Init() override;
         virtual void SwapBuffers() override;
 
+        void MakeCurrent() const;
+        void SetSwapInterval(int interval) const;
+        void* GetWindow() const { return m_Window; }
+
     private:
-        void* m_Window;
+        void* m_Window = nullptr;
     };
 
 } // namespace Crowny

@@ -4,6 +4,8 @@
 #include "Crowny/Audio/AudioMixer.h"
 #include "Panels/ImGuiPanel.h"
 
+#include <limits>
+
 namespace Crowny
 {
 
@@ -19,7 +21,9 @@ namespace Crowny
         void Render() override;
 
     private:
+        void RenderBusList(AudioMixer& mixer);
         void RenderBus(AudioMixer& mixer, size_t descIndex);
+        void RenderRemovalDialog(AudioMixer& mixer);
         void RenderEffectControls(AudioBusDesc& desc);
         void RenderReverbControls(AudioBusDesc& desc);
         void RenderEchoControls(AudioBusDesc& desc);
@@ -30,6 +34,10 @@ namespace Crowny
         void RenderFlangerControls(AudioBusDesc& desc);
         void RenderCompressorControls(AudioBusDesc& desc);
         void RenderRingModulatorControls(AudioBusDesc& desc);
+
+        size_t m_SelectedBusIndex = 0;
+        size_t m_PendingBusRemoval = std::numeric_limits<size_t>::max();
+        bool m_OpenRemovalPopup = false;
     };
 
 } // namespace Crowny

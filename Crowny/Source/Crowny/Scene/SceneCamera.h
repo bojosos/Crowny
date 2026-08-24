@@ -19,55 +19,31 @@ namespace Crowny
         SceneCamera(const glm::mat4& projection);
         ~SceneCamera() = default;
 
-        void SetPerspective(float verticalFov, float near, float far);
-        void SetOrthographic(float size, float near, float far);
+        void SetPerspective(float verticalFov, float nearPlane, float farPlane);
+        void SetOrthographic(float size, float nearPlane, float farPlane);
 
         void SetViewportSize(uint32_t width, uint32_t height);
 
         float GetPerspectiveVerticalFOV() const { return m_PerspectiveFOV; }
-        void SetPerspectiveVerticalFOV(float fov)
-        {
-            m_PerspectiveFOV = fov;
-            RecalculateProjection();
-        }
+        void SetPerspectiveVerticalFOV(float fov);
         float GetPerspectiveNearClip() const { return m_PerspectiveNear; }
-        void SetPerspectiveNearClip(float nearPlane)
-        {
-            m_PerspectiveNear = nearPlane;
-            RecalculateProjection();
-        }
+        void SetPerspectiveNearClip(float nearPlane);
         float GetPerspectiveFarClip() const { return m_PerspectiveFar; }
-        void SetPerspectiveFarClip(float farPlane)
-        {
-            m_PerspectiveFar = farPlane;
-            RecalculateProjection();
-        }
+        void SetPerspectiveFarClip(float farPlane);
 
         float GetOrthographicSize() const { return m_OrthographicSize; }
-        void SetOrthographicSize(float size)
-        {
-            m_OrthographicSize = size;
-            RecalculateProjection();
-        }
+        void SetOrthographicSize(float size);
         float GetOrthographicNearClip() const { return m_OrthographicNear; }
-        void SetOrthographicNearClip(float nearPlane)
-        {
-            m_OrthographicNear = nearPlane;
-            RecalculateProjection();
-        }
+        void SetOrthographicNearClip(float nearPlane);
         float GetOrthographicFarClip() const { return m_OrthographicFar; }
-        void SetOrthographicFarClip(float farPlane)
-        {
-            m_OrthographicFar = farPlane;
-            RecalculateProjection();
-        }
+        void SetOrthographicFarClip(float farPlane);
 
         float GetAspectRatio() const { return m_AspectRatio; }
-        void SetAspectRatio(float value) { m_AspectRatio = value; }
+        void SetAspectRatio(float value);
 
         // TODO: Should use glViewport to render
         const glm::vec4& GetViewportRect() const { return m_ViewportRectangle; }
-        void SetViewportRect(const glm::vec4& rect) { m_ViewportRectangle = rect; }
+        void SetViewportRect(const glm::vec4& rect);
 
         const glm::vec3& GetBackgroundColor() const { return m_BackgroundColor; }
         void SetBackgroundColor(const glm::vec3& color) { m_BackgroundColor = color; }
@@ -75,7 +51,7 @@ namespace Crowny
         CameraProjection GetProjectionType() const { return m_ProjectionType; }
         void SetProjectionType(CameraProjection type)
         {
-            m_ProjectionType = type;
+            m_ProjectionType = type == CameraProjection::Perspective ? CameraProjection::Perspective : CameraProjection::Orthographic;
             RecalculateProjection();
         }
 
@@ -98,7 +74,7 @@ namespace Crowny
 
         float m_OrthographicSize = 10.0f;
         float m_OrthographicNear = -1.0f, m_OrthographicFar = 1.0f;
-        float m_AspectRatio = 0.0f;
+        float m_AspectRatio = 1.0f;
 
         glm::vec3 m_BackgroundColor = { 0.0f, 0.3f, 0.3f };
         glm::vec4 m_ViewportRectangle = { 0.0f, 0.0f, 1.0f, 1.0f };

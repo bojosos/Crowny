@@ -106,8 +106,8 @@ namespace Crowny
     class SerializableTypeInfoAsset : public SerializableTypeInfo
     {
     public:
-        bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override { return false; }
-        ::MonoClass* GetMonoClass() const override { return nullptr; }
+        bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override;
+        ::MonoClass* GetMonoClass() const override;
         virtual SerializableType GetType() override { return SerializableType::Asset; }
 
         AssetType Type;
@@ -116,7 +116,7 @@ namespace Crowny
     class SerializableTypeInfoList : public SerializableTypeInfo
     {
     public:
-        virtual bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override { return false; }
+        virtual bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override;
         virtual ::MonoClass* GetMonoClass() const override { return m_Class; }
         /*{
             ::MonoClass* monoClass = m_ElementType->GetMonoClass();
@@ -137,7 +137,7 @@ namespace Crowny
     {
     public:
         virtual bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override;
-        virtual ::MonoClass* GetMonoClass() const override { return nullptr; } // Need to do some fancy shit here (and build mono)
+        virtual ::MonoClass* GetMonoClass() const override;
         virtual SerializableType GetType() override { return SerializableType::Array; }
 
         Ref<SerializableTypeInfo> m_ElementType;
@@ -146,7 +146,7 @@ namespace Crowny
     class SerializableTypeInfoDictionary : public SerializableTypeInfo
     {
     public:
-        virtual bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override { return false; }
+        virtual bool Matches(const Ref<SerializableTypeInfo>& typeInfo) const override;
         virtual ::MonoClass* GetMonoClass() const override { return m_Class; }
         virtual SerializableType GetType() override { return SerializableType::Dictionary; }
         Ref<SerializableTypeInfo> m_KeyType;

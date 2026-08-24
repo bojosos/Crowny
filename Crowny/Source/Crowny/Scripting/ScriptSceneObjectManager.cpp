@@ -7,6 +7,10 @@
 
 namespace Crowny
 {
+    ScriptSceneObjectManager::EntityKey ScriptSceneObjectManager::GetEntityKey(Entity entity)
+    {
+        return { entity.GetScene(), entity.GetHandle() };
+    }
 
     ScriptEntity* ScriptSceneObjectManager::GetOrCreateScriptEntity(Entity entity)
     {
@@ -29,24 +33,19 @@ namespace Crowny
     {
         ScriptEntity* scriptEntity = GetScriptEntity(entity);
         if (scriptEntity != nullptr)
+        {
             CW_ENGINE_ERROR("This object already exists");
+            return scriptEntity;
+        }
 
         ScriptEntity* nativeInstance = new ScriptEntity(existingInstance, entity);
-        m_ScriptEntities[(uint32_t)entity.GetHandle()] = nativeInstance;
+        m_ScriptEntities[GetEntityKey(entity)] = nativeInstance;
         return nativeInstance;
-    }
-
-    ScriptEntity* ScriptSceneObjectManager::GetScriptEntity(uint32_t id) const
-    {
-        auto findIter = m_ScriptEntities.find(id);
-        if (findIter != m_ScriptEntities.end())
-            return findIter->second;
-        return nullptr;
     }
 
     ScriptEntity* ScriptSceneObjectManager::GetScriptEntity(Entity entity) const
     {
-        auto findIter = m_ScriptEntities.find((uint32_t)entity.GetHandle());
+        auto findIter = m_ScriptEntities.find(GetEntityKey(entity));
         if (findIter != m_ScriptEntities.end())
             return findIter->second;
         return nullptr;
@@ -54,8 +53,8 @@ namespace Crowny
 
     void ScriptSceneObjectManager::DestroyScriptEntity(ScriptEntity* scriptEntity)
     {
-        const uint32_t id = (uint32_t)scriptEntity->GetNativeEntity().GetHandle();
-        m_ScriptEntities.erase(id);
+        m_ScriptEntities.erase(GetEntityKey(scriptEntity->GetNativeEntity()));
+        scriptEntity->NotifyDestroyed();
         delete scriptEntity;
     }
 
@@ -93,7 +92,7 @@ namespace Crowny
 
     ScriptEntityBehaviour* ScriptSceneObjectManager::CreateManagedScriptComponent(MonoObject* instance, Entity entity, MonoScript& script)
     {
-        ScriptEntityBehaviour* nativeInstance = new ScriptEntityBehaviour(instance, entity);
+        ScriptEntityBehaviour* nativeInstance = new ScriptEntityBehaviour(instance, entity, script);
         m_ScriptComponents[script.InstanceId] = nativeInstance;
         return nativeInstance;
     }
@@ -101,14 +100,27 @@ namespace Crowny
     void ScriptSceneObjectManager::DestroyScriptComponent(ScriptComponentBase* scriptComponent, uint64_t instanceId)
     {
         m_ScriptComponents.erase(instanceId);
+        scriptComponent->NotifyDestroyed();
         delete scriptComponent;
+    }
+
+    void ScriptSceneObjectManager::DestroyManagedScriptComponent(Entity entity, MonoScript* script)
+    {
+        if (!entity || script == nullptr)
+            return;
+        const auto iter = m_ScriptComponents.find(script->InstanceId);
+        if (iter == m_ScriptComponents.end() || iter->second->GetNativeEntity() != entity)
+            return;
+        DestroyScriptComponent(iter->second, script->InstanceId);
+        script->ClearRuntimeInstance();
     }
 
     void ScriptSceneObjectManager::NotifyEntityDestroyed(Entity entity)
     {
-        auto findIter = m_ScriptEntities.find((uint32_t)entity.GetHandle());
+        auto findIter = m_ScriptEntities.find(GetEntityKey(entity));
         if (findIter != m_ScriptEntities.end())
         {
+            findIter->second->NotifyDestroyed();
             delete findIter->second;
             m_ScriptEntities.erase(findIter);
         }
@@ -121,8 +133,41 @@ namespace Crowny
         auto iterFind = m_ScriptComponents.find(instanceId);
         if (iterFind != m_ScriptComponents.end())
         {
+            iterFind->second->NotifyDestroyed();
             delete iterFind->second;
             m_ScriptComponents.erase(iterFind);
+        }
+    }
+
+    void ScriptSceneObjectManager::DestroySceneObjects(const Scene* scene)
+    {
+        if (scene == nullptr)
+            return;
+
+        for (auto iter = m_ScriptComponents.begin(); iter != m_ScriptComponents.end();)
+        {
+            ScriptComponentBase* component = iter->second;
+            if (component->GetNativeEntity().GetScene() != scene)
+            {
+                ++iter;
+                continue;
+            }
+            component->NotifyDestroyed();
+            delete component;
+            iter = m_ScriptComponents.erase(iter);
+        }
+
+        for (auto iter = m_ScriptEntities.begin(); iter != m_ScriptEntities.end();)
+        {
+            ScriptEntity* entity = iter->second;
+            if (entity->GetNativeEntity().GetScene() != scene)
+            {
+                ++iter;
+                continue;
+            }
+            entity->NotifyDestroyed();
+            delete entity;
+            iter = m_ScriptEntities.erase(iter);
         }
     }
 
@@ -131,12 +176,14 @@ namespace Crowny
         CW_ENGINE_INFO("Entities: {0}, components: {1}", m_ScriptEntities.size(), m_ScriptComponents.size());
         for (auto [id, base] : m_ScriptComponents)
         {
+            base->NotifyDestroyed();
             delete base;
         }
         m_ScriptComponents.clear();
 
         for (auto [id, base] : m_ScriptEntities)
         {
+            base->NotifyDestroyed();
             delete base;
         }
         m_ScriptEntities.clear();

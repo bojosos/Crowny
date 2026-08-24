@@ -57,7 +57,7 @@ namespace Crowny
 
         EVENT_CLASS_CATEGORY(EventCategoryMouse | EventCategoryInput)
     protected:
-        MouseButtonEvent(const MouseCode button) : m_Button(button) {}
+        MouseButtonEvent(const MouseCode button, const glm::vec2& position = glm::vec2(0.0f)) : m_Button(button), m_Position(position) {}
 
         MouseCode m_Button;
         glm::vec2 m_Position;
@@ -66,7 +66,7 @@ namespace Crowny
     class MouseButtonPressedEvent : public MouseButtonEvent
     {
     public:
-        MouseButtonPressedEvent(const MouseCode button) : MouseButtonEvent(button) {}
+        MouseButtonPressedEvent(const MouseCode button, const glm::vec2& position = glm::vec2(0.0f)) : MouseButtonEvent(button, position) {}
 
         String ToString() const override
         {
@@ -81,7 +81,7 @@ namespace Crowny
     class MouseButtonReleasedEvent : public MouseButtonEvent
     {
     public:
-        MouseButtonReleasedEvent(const MouseCode button) : MouseButtonEvent(button) {}
+        MouseButtonReleasedEvent(const MouseCode button, const glm::vec2& position = glm::vec2(0.0f)) : MouseButtonEvent(button, position) {}
 
         String ToString() const override
         {

@@ -11,7 +11,7 @@ namespace Crowny
 
     Ref<IndexBuffer> IndexBuffer::Create(const IndexBufferDesc& desc)
     {
-        switch (gRenderAPI->GetAPI())
+        switch (RenderAPI::TryGet()->GetAPI())
         {
         case RenderAPI::API::OpenGL:
             if (desc.Data)

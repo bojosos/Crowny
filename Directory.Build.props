@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+    <_CrownyMonoRoot Condition="'$(CROWNY_MONO_ROOT)' != ''">$(CROWNY_MONO_ROOT)</_CrownyMonoRoot>
+    <_CrownyMonoRoot Condition="'$(_CrownyMonoRoot)' == '' and Exists('$(ProgramW6432)\Mono')">$(ProgramW6432)\Mono</_CrownyMonoRoot>
+    <_CrownyMonoRoot Condition="'$(_CrownyMonoRoot)' == ''">$(ProgramFiles)\Mono</_CrownyMonoRoot>
+    <FrameworkPathOverride Condition="Exists('$(_CrownyMonoRoot)\lib\mono\4.7.2-api\mscorlib.dll')">$(_CrownyMonoRoot)\lib\mono\4.7.2-api</FrameworkPathOverride>
+  </PropertyGroup>
+</Project>

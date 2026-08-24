@@ -1,13 +1,12 @@
 #pragma once
 
+#include "Crowny/Assets/Asset.h"
 #include "Crowny/Common/RefCounted.h"
 #include "Crowny/Common/Types.h"
 #include "Crowny/Common/Uuid.h"
 
 namespace Crowny
 {
-    class Asset;
-
     class AssetManager;
     class UIUtils; // This is an Editor class
 
@@ -17,6 +16,7 @@ namespace Crowny
         UUID m_UUID;
         bool m_IsCreated = false;
         std::atomic<uint32_t> m_RefCount{ 0 }; // Counts TAssetHandle<T,false> holders (not the IntrusiveRef count)
+        std::atomic<bool> m_HasInternalRef{ false };
     };
 
     class AssetHandleBase
@@ -117,6 +117,8 @@ namespace Crowny
 
         TAssetHandle<T, Weak>& operator=(const TAssetHandle<T, Weak>& rhs)
         {
+            if (this == &rhs)
+                return *this;
             SetHandleData(rhs.GetHandleData());
             return *this;
         }
@@ -130,16 +132,17 @@ namespace Crowny
             return *this;
         }
 
-        template <class _Ty> struct Bool_struct
+        explicit operator bool() const { return this->IsLoaded(); }
+
+        T* Get() const { return this->m_Data != nullptr ? static_cast<T*>(this->m_Data->m_Ptr.Get()) : nullptr; }
+
+        Ref<T> GetInternalPtr() const { return this->m_Data != nullptr ? StaticRefCast<T>(this->m_Data->m_Ptr) : nullptr; }
+
+        bool IsExpired() const
         {
-            int _Member;
-        };
-
-        operator int Bool_struct<T>::*() const { return ((this->m_Data != nullptr && !this->m_Data->m_UUID.Empty()) ? &Bool_struct<T>::_Member : 0); }
-
-        T* Get() const { return reinterpret_cast<T*>(this->m_Data->m_Ptr.Get()); }
-
-        Ref<T> GetInternalPtr() const { return StaticRefCast<T>(this->m_Data->m_Ptr); }
+            return this->m_Data == nullptr ||
+                   (this->m_Data->m_RefCount.load(std::memory_order_acquire) == 0 && !this->m_Data->m_HasInternalRef.load(std::memory_order_acquire));
+        }
 
         TAssetHandle<T, true> GetWeak() const
         {
@@ -161,7 +164,7 @@ namespace Crowny
             this->m_Data = CreateRef<AssetHandleData>();
             this->AddRef();
             this->SetHandleData(Ref<Asset>(ptr), uuid);
-            this->m_IsCreated = true;
+            this->m_Data->m_IsCreated = true;
         }
 
         TAssetHandle(const UUID& uuid)
@@ -188,7 +191,7 @@ namespace Crowny
 
         TAssetHandle<T, false> Lock() const
         {
-            TAssetHandle<Asset, false> handle;
+            TAssetHandle<T, false> handle;
             handle.SetHandleData(this->GetHandleData());
 
             return handle;

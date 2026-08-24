@@ -14,8 +14,6 @@ Compile ogg, vorbis and OpenAL myself.
 For OpenAL I could just install it, but need to change the premake include directory to point to the install directory.
 Add support(in the asset browser) for the special mouse buttons I can use to go back and forward in a browser.
 
-Look at the FastLZ examples for compressing a file and do something similar with my stream API, since I cannot obtain a raw pointer.
-Implement Decompression.
 Change ScriptRuntime ->m_Registry to GetAllEntitiesWith<> and remove it from scene friends.
 Scene pause button should not pause rendering, it should only pause the simulations.
 Better error checking when serializing/deserializing (consider some automatic system?).

@@ -1,0 +1,64 @@
+#pragma once
+
+#include "Crowny/Common/StdHeaders.h"
+#include "Crowny/Common/Uuid.h"
+#include "Crowny/RenderAPI/Texture.h"
+#include "Crowny/Threading/TaskSystem.h"
+
+#include "Editor/ProjectLibrary.h"
+
+namespace Crowny
+{
+
+    enum class AssetPreviewStatus
+    {
+        Queued,
+        Loading,
+        Ready,
+        Failed
+    };
+
+    struct AssetPreviewResult
+    {
+        AssetPreviewStatus Status = AssetPreviewStatus::Queued;
+        Ref<Texture> Image;
+        String Details;
+        String Error;
+        float Duration = 0.0f;
+        uint32_t Channels = 0;
+        uint32_t SampleRate = 0;
+    };
+
+    class AssetPreviewService
+    {
+    public:
+        struct WorkItem;
+
+        AssetPreviewService() = default;
+        ~AssetPreviewService();
+
+        const AssetPreviewResult* Request(const FileEntry& entry, uint32_t size);
+        void Update();
+        void CancelPending();
+        void Invalidate(const UUID& uuid);
+        void Clear();
+
+        static bool Supports(AssetType type);
+
+    private:
+        void StartPendingWork();
+        void FinalizeCompletedWork();
+        void EvictOldEntries();
+
+        static constexpr size_t MAX_PENDING = 128;
+        static constexpr size_t MAX_CACHE_ENTRIES = 256;
+        static constexpr size_t MAX_CONCURRENT = 2;
+
+        UnorderedMap<UUID, Ref<WorkItem>> m_Cache;
+        Deque<Ref<WorkItem>> m_Pending;
+        Vector<Ref<WorkItem>> m_Running;
+        uint64_t m_AccessTick = 0;
+        AssetPreviewResult m_QueueFullResult{ AssetPreviewStatus::Queued, nullptr, {}, "Preview queue is busy" };
+    };
+
+} // namespace Crowny

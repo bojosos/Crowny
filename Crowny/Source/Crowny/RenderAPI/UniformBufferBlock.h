@@ -17,7 +17,7 @@ namespace Crowny
         void Write(uint32_t offset, const void* data, uint32_t size);
         void Read(uint32_t offset, void* data, uint32_t size) const;
         void ZeroOut(uint32_t offset, uint32_t size);
-        void FlushToGpu();
+        virtual void FlushToGpu();
 
     public:
         static Ref<UniformBufferBlock> Create(uint32_t size, BufferUsage usage = BufferUsage::BU_STATIC_DRAW);

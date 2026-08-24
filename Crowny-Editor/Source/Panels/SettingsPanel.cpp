@@ -8,7 +8,11 @@ namespace Crowny
 
     void SettingsPanel::Render()
     {
-        BeginPanel();
+        if (!BeginPanel())
+        {
+            EndPanel();
+            return;
+        }
         // ImGui::Checkbox("Show colliders", &m_ShowColliders);
         // ImGui::Checkbox("Show demo window", &m_ShowDemoWindow);
         EndPanel();

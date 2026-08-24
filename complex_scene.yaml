@@ -1,30 +1,104 @@
 # Crowny Scene
-Version: 0
+Version: 6
 Scene: ComplexScene
+ImGuiLayout: ""
 Entities:
-  - Entity: e3b4d9e9-4115-6558-55b8-4115c05ac470
+  - Entity: 9e87125f-881c-45c9-9b0c-04f586c87a0b
     TagComponent:
       Tag: GrandChild
     TransformComponent:
       Position: [0, 0, 5]
-      Rotation: [0, 0, 0, 1]
+      Rotation: [-0, -0, -0, 1]
       Scale: [1, 1, 1]
+    TextComponent:
+      Text: Aligned text
+      Font: 00000000-0000-0000-0000-000000000000
+      Color: [1, 1, 1, 1]
+      Size: 42
+      AutoSize: true
+      AutoSizeMin: 12
+      AutoSizeMax: 60
+      LayoutSize: [8, 3]
+      Wrapping: true
+      WrapMode: 2
+      ClipToBounds: true
+      MaxLines: 4
+      OutlineColor: [0, 0, 0, 0]
+      Thickness: 0.800000012
+      CharacterSpacing: 0.0500000007
+      WordSpacing: 0.100000001
+      LineSpacing: 0.200000003
+      ParagraphSpacing: 0.349999994
+      UseCustomDecorationColor: true
+      DecorationColor: [0.200000003, 0.400000006, 0.600000024, 0.800000012]
+      DecorationThickness: 0.0299999993
+      UnderlineOffset: -0.0399999991
+      StrikethroughOffset: 0.0199999996
+      UseKerning: true
+      FontStyle: 12
+      Overflow: 1
+      HorizontalAlignment: 3
+      VerticalAlignment: 1
+      SortingLayer: -3
+      OrderInLayer: 17
     RelationshipComponent:
       Children:
         []
-  - Entity: e313f52c-4f45-8876-67b9-4f45dfbf58f5
+  - Entity: d437ea22-b788-4c63-8b4d-325474cc41df
     TagComponent:
       Tag: Child2
     TransformComponent:
       Position: [0, 10, 0]
-      Rotation: [0, 0, 0, 1]
+      Rotation: [-0, -0, -0, 1]
       Scale: [1, 1, 1]
     RelationshipComponent:
       Children:
-        - e3b4d9e9-4115-6558-55b8-4115c05ac470
-  - Entity: 517228d7-4a43-bf43-eda4-4a438d0215db
+        - 9e87125f-881c-45c9-9b0c-04f586c87a0b
+    Rigidbody3DComponent:
+      BodyType: 1
+      Mass: 3.5
+      AutoMass: false
+      GravityScale: 0.75
+      LinearDamping: 0
+      AngularDamping: 0.0500000007
+      CenterOfMass: [0, 0, 0]
+      AllowSleep: true
+      StartAwake: true
+      ContinuousCollision: true
+      LockRotationX: false
+      LockRotationY: false
+      LockRotationZ: false
+      Layer: 0
+      Mask: 4294967295
+      Group: 0
+      LinearVelocity: [0, 0, 0]
+      AngularVelocity: [0, 0, 0]
+    BoxCollider3DComponent:
+      Offset: [0.5, 0, -0.5]
+      Rotation: [0, 0, 0, 1]
+      IsTrigger: false
+      Density: 2
+      Friction: 0.25
+      Restitution: 0.600000024
+      RestitutionThreshold: 0.5
+      FrictionCombine: 2
+      RestitutionCombine: 4
+      Layer: 0
+      Mask: 4294967295
+      Group: 0
+      Size: [2, 3, 4]
+  - Entity: d8e26036-d87d-4e64-80c2-0bab97fbac34
     TagComponent:
       Tag: Child1
+    TransformComponent:
+      Position: [5, 0, 0]
+      Rotation: [-0, -0, -0, 1]
+      Scale: [1, 1, 1]
+    SpriteRendererComponent:
+      Color: [0.25, 0.5, 0.75, 1]
+      Texture: 00000000-0000-0000-0000-000000000000
+      SortingLayer: 4
+      OrderInLayer: -9
     AudioSourceComponent:
       AudioClip: 00000000-0000-0000-0000-000000000000
       Volume: 0.5
@@ -34,14 +108,24 @@ Entities:
       MaxDistance: 500
       PlayOnAwake: true
       Muted: false
-    TransformComponent:
-      Position: [5, 0, 0]
-      Rotation: [0, 0, 0, 1]
-      Scale: [1, 1, 1]
+    Rigidbody2DComponent:
+      BodyType: 0
+      Mass: 1
+      GravityScale: 1
+      Constraints: 0
+      CollisionDetectionMode: 0
+      SleepMode: 1
+      LinearDrag: 0
+      AngularDrag: 0.0500000007
+      LayerMask: 15
+      AutoMass: false
+      Interpolation: 0
+      CenterOfMass: [0.25, -0.5]
+      Inertia: 2.75
     RelationshipComponent:
       Children:
         []
-  - Entity: b2e29224-422b-7645-2387-422befb0ec98
+  - Entity: 4c7b0382-1c6f-4088-afac-ce3cddced316
     TagComponent:
       Tag: Parent
     TransformComponent:
@@ -50,13 +134,36 @@ Entities:
       Scale: [1, 1, 1]
     RelationshipComponent:
       Children:
-        - 517228d7-4a43-bf43-eda4-4a438d0215db
-        - e313f52c-4f45-8876-67b9-4f45dfbf58f5
+        - d8e26036-d87d-4e64-80c2-0bab97fbac34
+        - d437ea22-b788-4c63-8b4d-325474cc41df
+    LightComponent:
+      Type: 2
+      Color: [0.400000006, 0.600000024, 0.800000012]
+      Intensity: 2400
+      Range: 31
+      SpotInnerAngle: 0.314159274
+      SpotOuterAngle: 0.645771801
+      SourceRadius: 0.150000006
+      UseColorTemperature: true
+      Temperature: 4200
+      VisibilityLayers: 16711935
+      Enabled: true
+      AffectDiffuse: true
+      AffectSpecular: false
+      Volumetric: true
+      ShadowMode: 2
+      ShadowBias: 0.00300000003
+      ShadowNormalBias: 0.0399999991
+      ShadowNearPlane: 0.200000003
+      ShadowImportance: 2.5
+      ShadowResolution: 2048
+      CacheStaticCasters: false
 TimeSettings:
   TimeScale: 1
   MaxTimestep: 0.333333343
   FixedTimestep: 0.0199999996  # Crowny Physics Settings
 PhysicsSettings:
+  Backend: 0
   LayerNames:
     - Default
     - ""
@@ -91,38 +198,47 @@ PhysicsSettings:
     - ""
     - ""
   Gravity2D: [0, -9.81000042]
+  DefaultMaterial: 00000000-0000-0000-0000-000000000000
   VelocityIterations: 8
   PositionIterations: 3
   CollisionMatrix:
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
-    - 4294967295
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+    - 65535
+Physics3DSettings:
+  Backend: 0
+  Gravity: [0, -9.81000042, 0]
+  DefaultMaterial: 00000000-0000-0000-0000-000000000000
+  Substeps: 4
+  EnableSleeping: true
+  EnableContinuousCollision: true
+  Deterministic: false

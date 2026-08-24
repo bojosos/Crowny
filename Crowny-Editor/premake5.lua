@@ -4,10 +4,10 @@ project "Crowny-Editor"
 	cppdialect "C++20"
 	staticruntime "off"
 
-	targetdir ("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
-	objdir ("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
+	targetdir ("%{wks.location}/bin/" .. engineoutputdir .. "/%{prj.name}")
+	objdir ("%{wks.location}/bin-int/" .. engineoutputdir .. "/%{prj.name}")
 
-	applySanitizer()
+	applySanitizer(true)
 
 	pchheader "cwepch.h"
 	pchsource "Source/cwepch.cpp"
@@ -42,29 +42,44 @@ project "Crowny-Editor"
 	if _OPTIONS["with-nodes"] then
 		includedirs { "%{IncludeDir.ImNodeFlow}" }
 		includedirs { "%{IncludeDir.ImguiNodeEditor}" }
-		defines { "CW_WITH_NODES" }
+		defines { "CW_WITH_NODES", "IMGUI_DEFINE_MATH_OPERATORS" }
 	end
 
 	links
 	{
-		"assimp",
-		"Box2D",
-		"imgui",
-		"ImGuizmo",
-
-		"glfw",
-		"glad",
-
-		"yaml-cpp",
-		"tracy",
 		"Crowny",
 		"Crowny-Sharp"
 	}
+
+	linkCrownyFinalDependencies()
+	deployCrownyRuntimeDependencies()
 
 	dependson
 	{
 		"Crowny",
 		"Crowny-Sharp"
+	}
+
+	filter "system:windows"
+		prebuildcommands {
+			'powershell -NoProfile -ExecutionPolicy Bypass -File "%{prj.location}/../Scripts/pack-builtins.ps1" -RepositoryRoot "%{prj.location}/.." -Configuration "%{cfg.buildcfg}"'
+		}
+
+	filter "system:linux"
+		prebuildcommands {
+			'python3 "%{prj.location}/../Scripts/pack-builtins.py" --repo-root "%{prj.location}/.." --configuration "%{cfg.buildcfg}"'
+		}
+
+	filter "system:macosx"
+		prebuildcommands {
+			'python3 "%{prj.location}/../Scripts/pack-builtins.py" --repo-root "%{prj.location}/.." --configuration "%{cfg.buildcfg}"'
+		}
+
+	filter {}
+
+	postbuildcommands {
+		'{MKDIR} "%{cfg.targetdir}/Resources"',
+		'{COPYFILE} "%{prj.location}/Resources/Builtin.cwpack" "%{cfg.targetdir}/Resources/Builtin.cwpack"'
 	}
 
 	if _OPTIONS["with-nodes"] then
@@ -86,57 +101,8 @@ project "Crowny-Editor"
 			"CW_PLATFORM_WIN32",
 		}
 
-		libdirs
-		{
-			(os.getenv("MONO_SDK") or "C:/Program Files/Mono") .. "/lib",
-			(os.getenv("VULKAN_SDK") or "C:/VulkanSDK/1.3.280.0") .. "/Lib",
-			(os.getenv("OPENAL_SDK") or "C:/Program Files (x86)/OpenAL 1.1 SDK") .. "/libs/Win64"
-		}
-
-		links
-		{
-			"OpenAL32.lib",
-
-			"libvorbis",
-			"libogg",
-
-			"mono-2.0-sgen.lib",
-			"mbedtls",
-			"msdf-atlas-gen",
-
-			"vulkan-1.lib",
-
-			"Rpcrt4.lib",
-			"dbghelp.lib",
-		}
-
 	filter "system:linux"
 		systemversion "latest"
-
-		links
-		{
-			"GL",
-			"Xxf86vm",
-			"Xrandr",
-			"pthread",
-			"Xi",
-			"dl",
-			"uuid",
-			"vulkan",
-			"mono-2.0",
-			"openal",
-			"mbedtls",
-			"msdf-atlas-gen",
-			"msdfgen",
-			"freetype",
-			"libvorbis",
-			"libogg",
-		}
-
-		libdirs
-		{
-			"/usr/local/lib"
-		}
 
 		defines
 		{
@@ -151,30 +117,12 @@ project "Crowny-Editor"
 		runtime "Debug"
 		symbols "on"
 
-		links
-		{
-			"shaderc_sharedd",
-			"spirv-cross-cored",
-		}
-
 	filter "configurations:Release"
 		defines "CW_RELEASE"
 		runtime "Release"
 		optimize "on"
 
-		links
-		{
-			"shaderc_shared",
-			"spirv-cross-core",
-		}
-
 	filter "configurations:Dist"
 		defines "CW_DIST"
 		runtime "Release"
 		optimize "on"
-
-		links
-		{
-			"shaderc_shared",
-			"spirv-cross-core",
-		}

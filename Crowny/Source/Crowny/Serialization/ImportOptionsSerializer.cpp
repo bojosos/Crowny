@@ -33,6 +33,13 @@ namespace Crowny
             Ref<ShaderImportOptions> shaderImportOptions = StaticRefCast<ShaderImportOptions>(importOptions);
             BeginYAMLMap(out, "ShaderImporter");
 
+            SerializeEnumYAML(out, "Language", shaderImportOptions->Language);
+            BeginYAMLMap(out, "Defines");
+            Map<String, String> sortedDefines(shaderImportOptions->GetDefines().begin(), shaderImportOptions->GetDefines().end());
+            for (const auto& [name, value] : sortedDefines)
+                SerializeValueYAML(out, name.c_str(), value);
+            EndYAMLMap(out, "Defines");
+
             EndYAMLMap(out, "ShaderImporter");
             break;
         }
@@ -48,6 +55,11 @@ namespace Crowny
             SerializeValueYAML(out, "CpuCached", textureImportOptions->CpuCached);
             SerializeValueYAML(out, "GenerateMips", textureImportOptions->GenerateMips);
             SerializeValueYAML(out, "MaxMip", textureImportOptions->MaxMip);
+            SerializeEnumYAML(out, "MipFilter", textureImportOptions->MipFilter);
+            SerializeEnumYAML(out, "MipMode", textureImportOptions->MipMode);
+            SerializeValueYAML(out, "MipWrap", textureImportOptions->MipWrap);
+            SerializeValueYAML(out, "PreserveAlphaCoverage", textureImportOptions->PreserveAlphaCoverage);
+            SerializeValueYAML(out, "AlphaCutoff", textureImportOptions->AlphaCutoff);
             SerializeValueYAML(out, "sRGB", textureImportOptions->SRGB);
 
             EndYAMLMap(out, "TextureImporter");
@@ -70,11 +82,34 @@ namespace Crowny
             SerializeValueYAML(out, "Compress", meshImportOptions->Compress);
             SerializeValueYAML(out, "KeepQuads", meshImportOptions->KeepQuads);
             SerializeValueYAML(out, "ScaleFactor", meshImportOptions->ScaleFactor);
+            SerializeValueYAML(out, "CpuCached", meshImportOptions->CpuCached);
             SerializeValueYAML(out, "SmoothNormals", meshImportOptions->SmoothNormals);
             SerializeValueYAML(out, "SmoothingAngle", meshImportOptions->SmoothingAngle);
             SerializeEnumYAML(out, "Normals", meshImportOptions->NormalsMode);
             SerializeEnumYAML(out, "Tangents", meshImportOptions->TangentsMode);
             SerializeEnumYAML(out, "IndexFormat", meshImportOptions->IndexFormat);
+            SerializeValueYAML(out, "ImportAnimations", meshImportOptions->ImportAnimations);
+            SerializeValueYAML(out, "ImportMorphMeshes", meshImportOptions->ImportMorphMeshes);
+            SerializeValueYAML(out, "ImportBones", meshImportOptions->ImportBones);
+            SerializeValueYAML(out, "ImportRootMotion", meshImportOptions->ImportRootMotion);
+            SerializeValueYAML(out, "ImportMaterials", meshImportOptions->ImportMaterials);
+            SerializeValueYAML(out, "ImportVertexColors", meshImportOptions->ImportVertexColors);
+            SerializeValueYAML(out, "FlipUVs", meshImportOptions->FlipUVs);
+            SerializeValueYAML(out, "FlipWindingOrder", meshImportOptions->FlipWindingOrder);
+            SerializeValueYAML(out, "GenerateMeshlets", meshImportOptions->GenerateMeshlets);
+            SerializeValueYAML(out, "GenerateLods", meshImportOptions->GenerateLods);
+            SerializeValueYAML(out, "LodCount", meshImportOptions->LodCount);
+
+            out << YAML::Key << "AnimationClips" << YAML::Value << YAML::BeginSeq;
+            for (const ExtraAnimationClipInfo& clip : meshImportOptions->AnimationInfo)
+            {
+                out << YAML::BeginMap;
+                SerializeValueYAML(out, "Name", clip.Name);
+                SerializeValueYAML(out, "StartFrame", clip.StartFrame);
+                SerializeValueYAML(out, "EndFrame", clip.EndFrame);
+                out << YAML::EndMap;
+            }
+            out << YAML::EndSeq;
 
             EndYAMLMap(out, "MeshImporter");
             break;
@@ -111,7 +146,7 @@ namespace Crowny
         {
             Ref<AudioClipImportOptions> audioImportOptions = CreateRef<AudioClipImportOptions>();
 
-            DeserializeEnumYAML(audioImportOptionsNode, "ReadMode", audioImportOptions->Format, AudioFormat::VORBIS,
+            DeserializeEnumYAML(audioImportOptionsNode, "Format", audioImportOptions->Format, AudioFormat::VORBIS,
                                 "Audio format \'{0}\' in metadata file is invalid.", 0, 2);
             DeserializeEnumYAML(audioImportOptionsNode, "ReadMode", audioImportOptions->ReadMode, AudioReadMode::LoadCompressed,
                                 "Audio read mode \'{0}\' in metadata file is invalid.", 0, 3);
@@ -135,19 +170,56 @@ namespace Crowny
             DeserializeEnumYAML(textureImportOptionsNode, "Shape", textureImportOptions->Shape, TextureShape::TEXTURE_2D,
                                 "Texture shape \'{}\' in metadata file is invalid.", 0, 4);
             DeserializeEnumYAML(textureImportOptionsNode, "DiskFormat", textureImportOptions->DiskFormat, TextureDiskFormat::UASTC,
-                                "Texture shape \'{}\' in metadata file is invalid.", 0, 4);
+                                "Texture disk format \'{}\' in metadata file is invalid.", 0,
+                                static_cast<int32_t>(TextureDiskFormat::Count));
             DeserializeValueYAML(textureImportOptionsNode, "AutoFormat", textureImportOptions->AutomaticFormat, true);
-            DeserializeValueYAML(textureImportOptionsNode, "GenerateMips", textureImportOptions->GenerateMips, false);
+            DeserializeValueYAML(textureImportOptionsNode, "GenerateMips", textureImportOptions->GenerateMips, true);
             DeserializeValueYAML(textureImportOptionsNode, "CpuCached", textureImportOptions->CpuCached, false);
             DeserializeValueYAML(textureImportOptionsNode, "sRGB", textureImportOptions->SRGB, false);
             DeserializeValueYAML(textureImportOptionsNode, "MaxMip", textureImportOptions->MaxMip, 0U);
+            DeserializeEnumYAML(textureImportOptionsNode, "MipFilter", textureImportOptions->MipFilter, TextureMipFilter::Kaiser,
+                                "Texture mip filter '{}' in metadata file is invalid.", 0,
+                                static_cast<int32_t>(TextureMipFilter::Count));
+            DeserializeEnumYAML(textureImportOptionsNode, "MipMode", textureImportOptions->MipMode, TextureMipMode::Color,
+                                "Texture mip mode '{}' in metadata file is invalid.", 0,
+                                static_cast<int32_t>(TextureMipMode::Count));
+            DeserializeValueYAML(textureImportOptionsNode, "MipWrap", textureImportOptions->MipWrap, false);
+            DeserializeValueYAML(textureImportOptionsNode, "PreserveAlphaCoverage", textureImportOptions->PreserveAlphaCoverage, false);
+            DeserializeValueYAML(textureImportOptionsNode, "AlphaCutoff", textureImportOptions->AlphaCutoff, 0.5f);
 
             return textureImportOptions;
         }
         else if (const auto& shaderImportOptionsNode = data["ShaderImporter"])
         {
             Ref<ShaderImportOptions> importOptions = CreateRef<ShaderImportOptions>();
-            // TODO: Deserialize defines
+            const uint32_t language = shaderImportOptionsNode["Language"].as<uint32_t>(static_cast<uint32_t>(ShaderLanguage::VKSL));
+            switch (static_cast<ShaderLanguage>(language))
+            {
+            case ShaderLanguage::VKSL:
+            case ShaderLanguage::GLSL:
+            case ShaderLanguage::HLSL:
+            case ShaderLanguage::MSL:
+                importOptions->Language = static_cast<ShaderLanguage>(language);
+                break;
+            default:
+                CW_ENGINE_WARN("Shader language '{}' in metadata is invalid. Using VKSL.", language);
+                break;
+            }
+
+            const YAML::Node defines = shaderImportOptionsNode["Defines"];
+            if (defines && defines.IsMap())
+            {
+                for (const auto& define : defines)
+                {
+                    const String name = define.first.as<String>();
+                    if (!ShaderSourceParser::IsIdentifier(name) || !define.second.IsScalar())
+                    {
+                        CW_ENGINE_WARN("Ignoring invalid shader define '{}' in metadata.", name);
+                        continue;
+                    }
+                    importOptions->SetDefine(name, define.second.as<String>());
+                }
+            }
             return importOptions;
         }
         else if (const auto& scriptImportOptionsNode = data["ScriptImporter"])
@@ -176,7 +248,7 @@ namespace Crowny
             DeserializeValueYAML(fontImportOptionsNode, "DynamicFontAtlas", fontImportOptions->DynamicFontAtlas, false);
             DeserializeValueYAML(fontImportOptionsNode, "BoldWeight", fontImportOptions->BoldWeight, 0.75f);
             DeserializeValueYAML(fontImportOptionsNode, "BoldSpacing", fontImportOptions->BoldSpacing, 7.0f);
-            DeserializeValueYAML(fontImportOptionsNode, "TabMultiple", fontImportOptions->TabMultiple, 10U);
+            DeserializeValueYAML(fontImportOptionsNode, "TabMultiple", fontImportOptions->TabMultiple, 4U);
             DeserializeValueYAML(fontImportOptionsNode, "ItalicStyle", fontImportOptions->ItalicStyle, 35U);
 
             return fontImportOptions;
@@ -195,8 +267,37 @@ namespace Crowny
             DeserializeValueYAML(meshImportOptionsNode, "Optimize", meshImportOptions->Optimize, false);
             DeserializeValueYAML(meshImportOptionsNode, "KeepQuads", meshImportOptions->KeepQuads, false);
             DeserializeValueYAML(meshImportOptionsNode, "ScaleFactor", meshImportOptions->ScaleFactor, 1.0f);
-            DeserializeValueYAML(meshImportOptionsNode, "SmoothNormals", meshImportOptions->SmoothNormals, true);
-            DeserializeValueYAML(meshImportOptionsNode, "SmoothingAngle", meshImportOptions->SmoothingAngle, 60.0f);
+            DeserializeValueYAML(meshImportOptionsNode, "CpuCached", meshImportOptions->CpuCached, false);
+            DeserializeValueYAML(meshImportOptionsNode, "SmoothNormals", meshImportOptions->SmoothNormals, false);
+            DeserializeValueYAML(meshImportOptionsNode, "SmoothingAngle", meshImportOptions->SmoothingAngle, 175.0f);
+            DeserializeValueYAML(meshImportOptionsNode, "ImportAnimations", meshImportOptions->ImportAnimations, false);
+            DeserializeValueYAML(meshImportOptionsNode, "ImportMorphMeshes", meshImportOptions->ImportMorphMeshes, false);
+            DeserializeValueYAML(meshImportOptionsNode, "ImportBones", meshImportOptions->ImportBones, false);
+            DeserializeValueYAML(meshImportOptionsNode, "ImportRootMotion", meshImportOptions->ImportRootMotion, false);
+            DeserializeValueYAML(meshImportOptionsNode, "ImportMaterials", meshImportOptions->ImportMaterials, true);
+            DeserializeValueYAML(meshImportOptionsNode, "ImportVertexColors", meshImportOptions->ImportVertexColors, true);
+            DeserializeValueYAML(meshImportOptionsNode, "FlipUVs", meshImportOptions->FlipUVs, false);
+            DeserializeValueYAML(meshImportOptionsNode, "FlipWindingOrder", meshImportOptions->FlipWindingOrder, false);
+            DeserializeValueYAML(meshImportOptionsNode, "GenerateMeshlets", meshImportOptions->GenerateMeshlets, true);
+            DeserializeValueYAML(meshImportOptionsNode, "GenerateLods", meshImportOptions->GenerateLods, true);
+            DeserializeValueYAML(meshImportOptionsNode, "LodCount", meshImportOptions->LodCount, 4u);
+            meshImportOptions->LodCount = std::clamp(meshImportOptions->LodCount, 1u, 16u);
+
+            const YAML::Node animationClips = meshImportOptionsNode["AnimationClips"];
+            if (animationClips && animationClips.IsSequence())
+            {
+                for (const YAML::Node& clipNode : animationClips)
+                {
+                    ExtraAnimationClipInfo clip;
+                    DeserializeValueYAML(clipNode, "Name", clip.Name, String());
+                    DeserializeValueYAML(clipNode, "StartFrame", clip.StartFrame, 0U);
+                    DeserializeValueYAML(clipNode, "EndFrame", clip.EndFrame, 0U);
+                    if (!clip.Name.empty() && clip.EndFrame >= clip.StartFrame)
+                        meshImportOptions->AnimationInfo.push_back(std::move(clip));
+                    else
+                        CW_ENGINE_WARN("Ignoring invalid mesh animation clip metadata.");
+                }
+            }
 
             return meshImportOptions;
         }

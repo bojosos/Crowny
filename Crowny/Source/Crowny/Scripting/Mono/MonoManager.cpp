@@ -6,6 +6,7 @@
 #include "Crowny/Scripting/Mono/MonoMethod.h"
 
 #include "Crowny/Common/FileSystem.h"
+#include "Crowny/Scripting/ManagedReload.h"
 
 #include <mono/jit/jit.h>
 #include <mono/metadata/assembly.h>
@@ -111,10 +112,10 @@ namespace Crowny
     static MonoProfiler profiler;
     */
     MonoManager::MonoManager(const Path& libDir, const Path& etcDir, uint32_t debugPort)
-      : m_ScriptDomain(nullptr), m_RootDomain(nullptr), m_CorlibAssembly(nullptr)
+      : m_ScriptDomain(nullptr), m_RootDomain(nullptr), m_CorlibAssembly(nullptr), m_LibDir(libDir), m_EtcDir(etcDir)
     {
         /*
-        if (gApplication->GetApplicationDesc().Script.EnableProfiling)
+        if (Application::TryGet()->GetApplicationDesc().Script.EnableProfiling)
         {
             MonoProfilerHandle profilerHandle = mono_profiler_create(&profiler);
             mono_profiler_set_method_enter_callback(profilerHandle, MethodEnterCallback);
@@ -140,11 +141,6 @@ namespace Crowny
                                       "--gc-debug=check-remset-consistency,verify-before-collections,xdomain-checks" };
             mono_jit_parse_options(4, (char**)options);
         }
-        else
-        {
-            const char* options[] = { "--debug-domain-unload", "--gc-debug=check-remset-consistency,verify-before-collections,xdomain-checks" };
-            mono_jit_parse_options(2, (char**)options);
-        }
         mono_trace_set_level_string("warning"); // maybe do debug
         // #else
         // mono_trace_set_level_string("debug");
@@ -162,7 +158,8 @@ namespace Crowny
             return;
         }
 
-        mono_debug_domain_create(m_RootDomain);
+        if (debugPort != 0)
+            mono_debug_domain_create(m_RootDomain);
         mono_thread_set_main(mono_thread_current());
         m_CorlibAssembly = new MonoAssembly("", "corlib");
         m_CorlibAssembly->LoadFromImage(mono_get_corlib());
@@ -202,6 +199,65 @@ namespace Crowny
         return *assembly;
     }
 
+    bool MonoManager::ValidateAssemblies(const Vector<Path>& paths) const
+    {
+        if (m_RootDomain == nullptr || paths.empty())
+            return false;
+
+        MonoDomain* const previousDomain = mono_domain_get();
+        MonoDomain* validationDomain = mono_domain_create_appdomain(const_cast<char*>("AssemblyValidationDomain"), nullptr);
+        if (validationDomain == nullptr || !mono_domain_set(validationDomain, true))
+        {
+            CW_ENGINE_ERROR("Could not create Mono assembly validation domain.");
+            return false;
+        }
+
+        bool valid = true;
+        Vector<MonoImage*> images;
+        for (const Path& path : paths)
+        {
+            const Ref<DataStream> stream = FileSystem::OpenFile(path);
+            if (stream == nullptr || stream->Size() == 0)
+            {
+                CW_ENGINE_ERROR("Managed assembly validation failed. File not found: {0}", path.string());
+                valid = false;
+                break;
+            }
+
+            Vector<char> data(stream->Size());
+            stream->Read(data.data(), data.size());
+            MonoImageOpenStatus status = MONO_IMAGE_OK;
+            MonoImage* image = mono_image_open_from_data_full(data.data(), static_cast<uint32_t>(data.size()), true, &status, false);
+            if (status != MONO_IMAGE_OK || image == nullptr)
+            {
+                CW_ENGINE_ERROR("Managed assembly validation failed for {0}: {1}", path.string(), mono_image_strerror(status));
+                valid = false;
+                break;
+            }
+
+            images.push_back(image);
+            ::MonoAssembly* assembly = mono_assembly_load_from_full(image, path.filename().string().c_str(), &status, false);
+            if (status != MONO_IMAGE_OK || assembly == nullptr)
+            {
+                CW_ENGINE_ERROR("Managed assembly load validation failed for {0}: {1}", path.string(), mono_image_strerror(status));
+                valid = false;
+                break;
+            }
+        }
+
+        mono_domain_set(previousDomain != nullptr ? previousDomain : m_RootDomain, true);
+        MonoObject* exception = nullptr;
+        mono_domain_try_unload(validationDomain, &exception);
+        if (exception != nullptr)
+        {
+            MonoUtils::CheckException(exception);
+            valid = false;
+        }
+        for (MonoImage* image : images)
+            mono_image_close(image);
+        return valid;
+    }
+
     void MonoManager::InitializeScriptTypes(MonoAssembly& assembly)
     {
         Vector<ScriptMetaInfo>& typeMetas = GetScriptMetaData()[assembly.m_Name];
@@ -210,7 +266,13 @@ namespace Crowny
             ScriptMeta* meta = entry.MetaData;
             *meta = entry.LocalMetaData;
             meta->ScriptClass = assembly.GetClass(meta->Namespace, meta->Name);
-            CW_ENGINE_ASSERT(meta->ScriptClass != nullptr);
+            if (meta->ScriptClass == nullptr)
+            {
+                meta->CachedPtrField = nullptr;
+                CW_ENGINE_ERROR("Managed type {}.{} required by native scripting bindings was not found in assembly '{}'.", meta->Namespace,
+                                meta->Name, assembly.m_Name);
+                continue;
+            }
             if (meta->ScriptClass->HasField("m_InternalPtr"))
                 meta->CachedPtrField = meta->ScriptClass->GetField("m_InternalPtr");
             else
@@ -244,6 +306,12 @@ namespace Crowny
         return nullptr;
     }
 
+    MonoClass* MonoManager::FindClass(const String& assemblyName, const String& ns, const String& typeName)
+    {
+        MonoAssembly* assembly = GetAssembly(assemblyName);
+        return assembly != nullptr ? assembly->GetClass(ns, typeName) : nullptr;
+    }
+
     MonoClass* MonoManager::FindClass(const String& ns, const String& typeName)
     {
         MonoClass* monoClass = nullptr;
@@ -268,6 +336,18 @@ namespace Crowny
         return nullptr;
     }
 
+    MonoAssembly* MonoManager::FindAssembly(::MonoClass* rawMonoClass) const
+    {
+        if (rawMonoClass == nullptr)
+            return nullptr;
+        for (const auto& [name, assembly] : m_Assemblies)
+        {
+            if (assembly != nullptr && assembly->GetClass(rawMonoClass) != nullptr)
+                return assembly;
+        }
+        return nullptr;
+    }
+
     void MonoManager::RegisterScriptType(ScriptMeta* metaData, const ScriptMeta& localMetaData)
     {
         // Dont write code like this.
@@ -276,6 +356,17 @@ namespace Crowny
 
     void MonoManager::UnloadScriptDomain()
     {
+        for (auto& assemblyEntry : m_Assemblies)
+        {
+            assemblyEntry.second->ClearCachedClasses();
+            Vector<ScriptMetaInfo>& typeMetas = GetScriptMetaData()[assemblyEntry.first];
+            for (auto& entry : typeMetas)
+            {
+                entry.MetaData->ScriptClass = nullptr;
+                entry.MetaData->CachedPtrField = nullptr;
+            }
+        }
+
         if (m_ScriptDomain != nullptr)
         {
             mono_domain_set(mono_get_root_domain(), true);
@@ -291,22 +382,29 @@ namespace Crowny
             assemblyEntry.second->Unload();
             if (assemblyEntry.first != "corlib")
                 delete assemblyEntry.second;
-            Vector<ScriptMetaInfo>& typeMetas = GetScriptMetaData()[assemblyEntry.first];
-            for (auto& entry : typeMetas)
-            {
-                entry.MetaData->ScriptClass = nullptr;
-                entry.MetaData->CachedPtrField = nullptr;
-            }
         }
 
         m_Assemblies.clear();
         m_Assemblies["corlib"] = m_CorlibAssembly;
     }
 
-    Path MonoManager::GetFrameworkAssembliesFolder() const { return MONO_VERSION_DATA[(int)MONO_VERSION].Path; }
+    Path MonoManager::GetFrameworkAssembliesFolder() const { return m_LibDir / "mono/4.5"; }
 
-    Path MonoManager::GetMonoEtcFolder() const { return MONO_ETC_DIR; }
+    Path MonoManager::GetMonoEtcFolder() const { return m_EtcDir; }
 
-    Path MonoManager::GetCompilerPath() const { return Path(MONO_COMPILER_DIR) / "mcs"; }
+    Path MonoManager::GetCompilerPath() const
+    {
+        const MonoRuntimePaths paths = ResolveMonoRuntimePaths(Vector<Path>{ m_LibDir.parent_path() });
+        return paths.Compiler;
+    }
+
+    Path MonoManager::GetMonoExecPath() const
+    {
+#ifdef CW_PLATFORM_WIN32
+        return m_LibDir.parent_path() / "bin/mono.exe";
+#else
+        return m_LibDir.parent_path() / "bin/mono";
+#endif
+    }
 
 } // namespace Crowny

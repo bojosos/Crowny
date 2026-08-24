@@ -1,0 +1,202 @@
+#ifndef CROWNY_PBR_LIGHTING_GLSL
+#define CROWNY_PBR_LIGHTING_GLSL
+
+const float CW_PI = 3.14159265358979323846;
+const uint CW_LIGHT_DIRECTIONAL = 0u;
+const uint CW_LIGHT_POINT = 1u;
+const uint CW_LIGHT_SPOT = 2u;
+const uint CW_LIGHT_ENABLED = 1u << 0u;
+const uint CW_LIGHT_AFFECT_DIFFUSE = 1u << 2u;
+const uint CW_LIGHT_AFFECT_SPECULAR = 1u << 3u;
+
+struct CwLightRecord
+{
+    vec4 positionRange;
+    vec4 directionOuterCosine;
+    vec4 colorIntensity;
+    vec4 spotSourceAndBias;
+    uvec4 metadata;
+};
+
+struct CwPbrSurface
+{
+    vec3 position;
+    vec3 normal;
+    vec3 view;
+    vec3 baseColor;
+    float roughness;
+    float metallic;
+    float ambientOcclusion;
+};
+
+vec3 cwSafeNormalize(vec3 value)
+{
+    return value * inversesqrt(max(dot(value, value), 1e-12));
+}
+
+float cwDistributionGgx(float normalHalf, float roughness)
+{
+    float alpha = max(roughness * roughness, 0.0025);
+    float alphaSquared = alpha * alpha;
+    float denominator = normalHalf * normalHalf * (alphaSquared - 1.0) + 1.0;
+    return alphaSquared / max(CW_PI * denominator * denominator, 1e-7);
+}
+
+float cwSmithVisibilityCorrelated(float normalView, float normalLight, float roughness)
+{
+    float alpha = max(roughness * roughness, 0.0025);
+    float viewTerm = normalLight * sqrt(max(normalView * (normalView - normalView * alpha) + alpha, 1e-7));
+    float lightTerm = normalView * sqrt(max(normalLight * (normalLight - normalLight * alpha) + alpha, 1e-7));
+    return 0.5 / max(viewTerm + lightTerm, 1e-6);
+}
+
+vec3 cwFresnelSchlick(float viewHalf, vec3 reflectance)
+{
+    float factor = pow(clamp(1.0 - viewHalf, 0.0, 1.0), 5.0);
+    return reflectance + (1.0 - reflectance) * factor;
+}
+
+float cwRangeAttenuation(float distanceSquared, float range)
+{
+    float normalizedSquared = distanceSquared / max(range * range, 1e-6);
+    float window = clamp(1.0 - normalizedSquared * normalizedSquared, 0.0, 1.0);
+    return window * window;
+}
+
+vec3 cwEvaluateDirectLight(CwPbrSurface surface, CwLightRecord light, float shadowVisibility, float preExposure)
+{
+    if ((light.metadata.y & CW_LIGHT_ENABLED) == 0u)
+        return vec3(0.0);
+
+    vec3 lightDirection;
+    float attenuation = 1.0;
+    if (light.metadata.x == CW_LIGHT_DIRECTIONAL)
+    {
+        lightDirection = cwSafeNormalize(-light.directionOuterCosine.xyz);
+    }
+    else
+    {
+        vec3 toLight = light.positionRange.xyz - surface.position;
+        float distanceSquared = max(dot(toLight, toLight), 1e-6);
+        lightDirection = toLight * inversesqrt(distanceSquared);
+        float sourceRadiusSquared = light.spotSourceAndBias.y * light.spotSourceAndBias.y;
+        attenuation = cwRangeAttenuation(distanceSquared, light.positionRange.w) /
+                      max(distanceSquared, max(sourceRadiusSquared, 1e-6));
+        if (light.metadata.x == CW_LIGHT_SPOT)
+        {
+            float coneCosine = dot(-lightDirection, cwSafeNormalize(light.directionOuterCosine.xyz));
+            attenuation *= smoothstep(light.directionOuterCosine.w, light.spotSourceAndBias.x, coneCosine);
+        }
+    }
+
+    vec3 halfVector = cwSafeNormalize(surface.view + lightDirection);
+    float normalLight = clamp(dot(surface.normal, lightDirection), 0.0, 1.0);
+    float normalView = clamp(dot(surface.normal, surface.view), 1e-4, 1.0);
+    float normalHalf = clamp(dot(surface.normal, halfVector), 0.0, 1.0);
+    float viewHalf = clamp(dot(surface.view, halfVector), 0.0, 1.0);
+    if (normalLight <= 0.0)
+        return vec3(0.0);
+
+    vec3 reflectance = mix(vec3(0.04), surface.baseColor, surface.metallic);
+    vec3 fresnel = cwFresnelSchlick(viewHalf, reflectance);
+    float distribution = cwDistributionGgx(normalHalf, surface.roughness);
+    float visibility = cwSmithVisibilityCorrelated(normalView, normalLight, surface.roughness);
+    vec3 specular = distribution * visibility * fresnel;
+    vec3 diffuse = (1.0 - fresnel) * (1.0 - surface.metallic) * surface.baseColor / CW_PI;
+    if ((light.metadata.y & CW_LIGHT_AFFECT_DIFFUSE) == 0u)
+        diffuse = vec3(0.0);
+    if ((light.metadata.y & CW_LIGHT_AFFECT_SPECULAR) == 0u)
+        specular = vec3(0.0);
+
+    vec3 incident = light.colorIntensity.rgb * light.colorIntensity.w * attenuation;
+    return (diffuse + specular) * incident * normalLight * clamp(shadowVisibility, 0.0, 1.0) * preExposure;
+}
+
+float cwToonRampCoordinate(CwPbrSurface surface, CwLightRecord light)
+{
+    vec3 lightDirection;
+    if (light.metadata.x == CW_LIGHT_DIRECTIONAL)
+        lightDirection = cwSafeNormalize(-light.directionOuterCosine.xyz);
+    else
+        lightDirection = cwSafeNormalize(light.positionRange.xyz - surface.position);
+    return clamp(dot(surface.normal, lightDirection), 0.0, 1.0);
+}
+
+vec3 cwEvaluateToonDirectLight(CwPbrSurface surface, CwLightRecord light, float shadowVisibility,
+    float preExposure, vec4 shadowBands, vec4 toonSpecular, vec4 toonRim, vec4 toonControls,
+    vec4 toonArtistic, vec4 toonPattern, float patternSignal, vec3 rampSample, float rampStrength)
+{
+    if ((light.metadata.y & CW_LIGHT_ENABLED) == 0u)
+        return vec3(0.0);
+
+    vec3 lightDirection;
+    float attenuation = 1.0;
+    if (light.metadata.x == CW_LIGHT_DIRECTIONAL)
+        lightDirection = cwSafeNormalize(-light.directionOuterCosine.xyz);
+    else
+    {
+        vec3 toLight = light.positionRange.xyz - surface.position;
+        float distanceSquared = max(dot(toLight, toLight), 1e-6);
+        lightDirection = toLight * inversesqrt(distanceSquared);
+        float sourceRadiusSquared = light.spotSourceAndBias.y * light.spotSourceAndBias.y;
+        attenuation = cwRangeAttenuation(distanceSquared, light.positionRange.w) /
+                      max(distanceSquared, max(sourceRadiusSquared, 1e-6));
+        if (light.metadata.x == CW_LIGHT_SPOT)
+        {
+            float coneCosine = dot(-lightDirection, cwSafeNormalize(light.directionOuterCosine.xyz));
+            attenuation *= smoothstep(light.directionOuterCosine.w, light.spotSourceAndBias.x, coneCosine);
+        }
+    }
+    if (attenuation <= 0.0)
+        return vec3(0.0);
+
+    float normalLight = clamp(dot(surface.normal, lightDirection), 0.0, 1.0);
+    float visibility = clamp(shadowVisibility, 0.0, 1.0);
+    float bandCount = max(shadowBands.w, 1.0);
+    float bandInput = clamp(normalLight * visibility * min(attenuation, 1.0) +
+                            (patternSignal - 0.5) * toonPattern.y, 0.0, 1.0);
+    float scaledBand = min(bandInput * bandCount, bandCount - 1e-5);
+    float bandBase = floor(scaledBand);
+    float smoothness = max(toonControls.x, toonPattern.z);
+    float bandBlend = smoothstep(0.5 - smoothness, 0.5 + smoothness, fract(scaledBand));
+    float diffuseBand = (bandBase + bandBlend) / max(bandCount - 1.0, 1.0);
+    vec3 diffuse = mix(surface.baseColor * shadowBands.rgb, surface.baseColor, clamp(diffuseBand, 0.0, 1.0));
+    diffuse = mix(diffuse, surface.baseColor * max(rampSample, vec3(0.0)), clamp(rampStrength, 0.0, 1.0));
+    if ((light.metadata.y & CW_LIGHT_AFFECT_DIFFUSE) == 0u)
+        diffuse = vec3(0.0);
+
+    vec3 halfVector = cwSafeNormalize(surface.view + lightDirection);
+    float normalHalf = clamp(dot(surface.normal, halfVector), 0.0, 1.0);
+    float specularBand = smoothstep(toonSpecular.w - toonControls.y,
+                                    toonSpecular.w + toonControls.y, normalHalf);
+    vec3 specular = toonSpecular.rgb * toonControls.z * specularBand * normalLight * visibility;
+    if ((light.metadata.y & CW_LIGHT_AFFECT_SPECULAR) == 0u)
+        specular = vec3(0.0);
+
+    float normalView = clamp(dot(surface.normal, surface.view), 0.0, 1.0);
+    float rimSignal = pow(1.0 - normalView, toonArtistic.x);
+    float rimBand = smoothstep(toonRim.w - toonControls.w, toonRim.w + toonControls.w, rimSignal);
+    float rimLightMask = mix(1.0, normalLight * visibility, toonArtistic.z);
+    vec3 rim = toonRim.rgb * toonArtistic.y * rimBand * rimLightMask;
+
+    vec3 incident = light.colorIntensity.rgb * light.colorIntensity.w * attenuation * preExposure;
+    return (diffuse + specular + rim) * incident;
+}
+
+vec3 cwEvaluateDiffuseSh(vec3 normal, vec4 coefficients[9])
+{
+    float x = normal.x;
+    float y = normal.y;
+    float z = normal.z;
+    return max(coefficients[0].rgb * 0.282095 +
+               coefficients[1].rgb * (0.488603 * y) +
+               coefficients[2].rgb * (0.488603 * z) +
+               coefficients[3].rgb * (0.488603 * x) +
+               coefficients[4].rgb * (1.092548 * x * y) +
+               coefficients[5].rgb * (1.092548 * y * z) +
+               coefficients[6].rgb * (0.315392 * (3.0 * z * z - 1.0)) +
+               coefficients[7].rgb * (1.092548 * x * z) +
+               coefficients[8].rgb * (0.546274 * (x * x - y * y)), vec3(0.0));
+}
+
+#endif

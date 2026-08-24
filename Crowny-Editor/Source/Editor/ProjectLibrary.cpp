@@ -4,62 +4,14 @@
 
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Import/Importer.h"
-#include "Crowny/Import/TextureImporter.h"
-#include "Crowny/Serialization/FileEncoder.h"
-#include "Crowny/Serialization/ImportOptionsSerializer.h"
 #include "Crowny/Serialization/MaterialSerializer.h"
 #include "Crowny/Serialization/NodeGraphSerializer.h"
 
 #include "Editor/Editor.h"
 #include "Editor/EditorUtils.h"
 
-#include "Crowny/Common/Yaml.h"
-
-#include <regex>
-
-CEREAL_REGISTER_TYPE(DirectoryEntry);
-CEREAL_REGISTER_TYPE(FileEntry);
-CEREAL_REGISTER_POLYMORPHIC_RELATION(LibraryEntry, DirectoryEntry)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(LibraryEntry, FileEntry)
-
 namespace Crowny
 {
-    template <class Archive> void Save(Archive& archive, const LibraryEntry& entry)
-    {
-        archive(entry.Type, entry.Filepath, entry.ElementName, entry.LastUpdateTime);
-    }
-
-    template <class Archive> void Load(Archive& archive, LibraryEntry& entry)
-    {
-        archive(entry.Type, entry.Filepath, entry.ElementName, entry.LastUpdateTime);
-    }
-
-    void Load(BinaryDataStreamInputArchive& archive, FileEntry& entry)
-    {
-        archive(cereal::base_class<LibraryEntry>(&entry));
-        String pathCopy = entry.ElementName;
-        StringUtils::ToLower(pathCopy);
-        entry.ElementNameHash = Hash(pathCopy);
-        archive(entry.Filesize);
-    }
-
-    void Save(BinaryDataStreamOutputArchive& archive, const FileEntry& entry) { archive(cereal::base_class<LibraryEntry>(&entry), entry.Filesize); }
-
-    void Save(BinaryDataStreamOutputArchive& archive, const DirectoryEntry& entry)
-    {
-        archive(cereal::base_class<LibraryEntry>(&entry), entry.Children);
-    }
-
-    void Load(BinaryDataStreamInputArchive& archive, DirectoryEntry& entry)
-    {
-        archive(cereal::base_class<LibraryEntry>(&entry), entry.Children);
-        String pathCopy = entry.ElementName;
-        StringUtils::ToLower(pathCopy);
-        entry.ElementNameHash = Hash(pathCopy);
-        for (const auto& child : entry.Children)
-            child->Parent = &entry;
-    }
-
     const Path TEMP_DIR = "Temp";
     const Path INTERNAL_TEMP_DIR = PROJECT_INTERNAL_DIR / TEMP_DIR;
 
@@ -86,490 +38,140 @@ namespace Crowny
     {
     }
 
-    ProjectLibrary::ProjectLibrary() : m_RootEntry(nullptr), m_IsLoaded(false) {}
+    ProjectLibrary::ProjectLibrary() : m_IsLoaded(false) {}
 
     ProjectLibrary::~ProjectLibrary()
     {
-        if (m_ImportThread.joinable())
-            m_ImportThread.join();
+        m_ImportScheduler.Shutdown();
         ClearEntries();
     }
 
     void ProjectLibrary::Refresh(const Path& path)
     {
+        if (m_AssetIndex.GetRoot() == nullptr)
+            m_AssetIndex.SetRoot(CreateRef<DirectoryEntry>(m_AssetFolder, m_AssetFolder.filename().string(), nullptr));
 
-        if (std::search(path.begin(), path.end(), m_AssetFolder.begin(), m_AssetFolder.end()) == path.end())
-            return;
-
-        if (m_RootEntry == nullptr)
-            m_RootEntry = CreateRef<DirectoryEntry>(m_AssetFolder, m_AssetFolder.filename().string(), nullptr);
-
-        Path pathToSearch = path;
-        Ref<LibraryEntry> entry = FindEntry(pathToSearch);
-        if (entry == nullptr)
-        {
-            if (fs::exists(pathToSearch))
-            {
-                if (IsMetadata(pathToSearch))
-                {
-                    Path sourceFilePath = pathToSearch;
-                    sourceFilePath = sourceFilePath.replace_extension("");
-
-                    if (!fs::is_regular_file(sourceFilePath))
-                    {
-                        CW_ENGINE_WARN("Found a dangling metadata file. Deleting.");
-                        fs::remove(pathToSearch);
-                    }
-                }
-                else
-                {
-                    Path parentDirPath = pathToSearch.parent_path();
-                    entry = FindEntry(parentDirPath);
-
-                    DirectoryEntry* entryParent = nullptr;
-                    DirectoryEntry* newHierarchyParent = nullptr;
-                    if (entry == nullptr)
-                        CreateInternalParentHierarchy(pathToSearch, &newHierarchyParent, &entryParent);
-                    else
-                        entryParent = static_cast<DirectoryEntry*>(entry.get());
-
-                    if (fs::is_regular_file(pathToSearch))
-                        AddAssetInternal(entryParent, pathToSearch);
-                    else if (fs::is_directory(pathToSearch))
-                        AddDirectoryInternal(entryParent, pathToSearch);
-                }
-            }
-        }
-        else if (entry->Type == LibraryEntryType::File)
-        {
-            if (fs::is_regular_file(entry->Filepath))
-            {
-                FileEntry* resEntry = static_cast<FileEntry*>(entry.get());
-                ReimportAssetInternal(resEntry);
-            }
-            else
-                DeleteAssetInternal(StaticRefCast<FileEntry>(entry));
-        }
-        else if (entry->Type == LibraryEntryType::Directory)
-        {
-            if (!fs::is_directory(entry->Filepath))
-                DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(entry));
-            else
-            {
-                Stack<DirectoryEntry*> todos;
-                todos.push(static_cast<DirectoryEntry*>(entry.get()));
-
-                Vector<bool> existingEntries;
-                Vector<Ref<LibraryEntry>> toDelete;
-                Vector<Path> newFilesToAdd;
-                Vector<Path> newDirsToAdd;
-
-                while (!todos.empty())
-                {
-                    DirectoryEntry* currentDir = todos.top();
-                    todos.pop();
-
-                    const uint32_t originalChildCount = (uint32_t)currentDir->Children.size();
-                    existingEntries.assign(originalChildCount, false);
-
-                    // Pass 1: Scan filesystem, mark existing entries, collect new paths.
-                    // Do NOT mutate Children here.
-                    newFilesToAdd.clear();
-                    newDirsToAdd.clear();
-
-                    for (const auto& dirEntry : fs::directory_iterator(currentDir->Filepath))
-                    {
-                        if (dirEntry.is_regular_file())
-                        {
-                            Path filepath = dirEntry.path();
-                            if (IsMetadata(filepath))
-                            {
-                                Path sourceFilepath = filepath;
-                                sourceFilepath = sourceFilepath.replace_extension("");
-                                if (!fs::is_regular_file(sourceFilepath))
-                                {
-                                    CW_ENGINE_ERROR("Found a dangling metadata file. Deleting.");
-                                    fs::remove(filepath);
-                                }
-                            }
-                            else
-                            {
-                                FileEntry* existingEntry = nullptr;
-                                for (uint32_t idx = 0; idx < originalChildCount; idx++)
-                                {
-                                    auto& child = currentDir->Children[idx];
-                                    if (child->Type == LibraryEntryType::File && child->Filepath == filepath)
-                                    {
-                                        existingEntries[idx] = true;
-                                        existingEntry = static_cast<FileEntry*>(child.get());
-                                        break;
-                                    }
-                                }
-
-                                if (existingEntry != nullptr)
-                                    ReimportAssetInternal(existingEntry);
-                                else
-                                    newFilesToAdd.push_back(filepath);
-                            }
-                        }
-                        else if (dirEntry.is_directory())
-                        {
-                            Path dirPath = dirEntry.path();
-                            bool found = false;
-                            for (uint32_t idx = 0; idx < originalChildCount; idx++)
-                            {
-                                auto& child = currentDir->Children[idx];
-                                if (child->Type == LibraryEntryType::Directory && child->Filepath == dirPath)
-                                {
-                                    existingEntries[idx] = true;
-                                    found = true;
-                                    break;
-                                }
-                            }
-
-                            if (!found)
-                                newDirsToAdd.push_back(dirPath);
-                        }
-                    }
-
-                    // Pass 2: Delete stale entries (iterate by index over the original range).
-                    toDelete.clear();
-                    for (uint32_t i = 0; i < originalChildCount; i++)
-                    {
-                        if (!existingEntries[i])
-                            toDelete.push_back(currentDir->Children[i]);
-                    }
-
-                    for (const auto& child : toDelete)
-                    {
-                        if (child->Type == LibraryEntryType::Directory)
-                            DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(child));
-                        else if (child->Type == LibraryEntryType::File)
-                            DeleteAssetInternal(StaticRefCast<FileEntry>(child));
-                    }
-                    toDelete.clear();
-
-                    // Pass 3: Add newly discovered entries (Children is now safe to mutate).
-                    for (const auto& path : newFilesToAdd)
-                        AddAssetInternal(currentDir, path);
-                    for (const auto& path : newDirsToAdd)
-                        AddDirectoryInternal(currentDir, path);
-
-                    // Push surviving + newly added child directories for traversal.
-                    for (const auto& child : currentDir->Children)
-                    {
-                        if (child->Type == LibraryEntryType::Directory)
-                            todos.push(static_cast<DirectoryEntry*>(child.get()));
-                    }
-                }
-            }
-        }
+        const AssetFileSystemDiff diff = m_Scanner.Scan(m_AssetFolder, path, m_AssetIndex);
+        ApplyFilesystemDiff(diff, true);
     }
 
-    void ProjectLibrary::RefreshScan(const Path& path)
+    Vector<ImportTask> ProjectLibrary::ApplyFilesystemDiff(const AssetFileSystemDiff& diff, bool importSynchronously)
     {
-        // Same as Refresh, but collects ImportTasks instead of running ReimportAssetInternal inline.
-        // Returns via m_ImportQueue (populated by this method, consumed by worker thread).
-        Vector<ImportTask> tasks;
-
-        if (std::search(path.begin(), path.end(), m_AssetFolder.begin(), m_AssetFolder.end()) == path.end())
-            return;
-
-        if (m_RootEntry == nullptr)
-            m_RootEntry = CreateRef<DirectoryEntry>(m_AssetFolder, m_AssetFolder.filename().string(), nullptr);
-
-        Path pathToSearch = path;
-        Ref<LibraryEntry> entry = FindEntry(pathToSearch);
-        if (entry == nullptr)
+        for (const Path& metadataPath : diff.DanglingMetadata)
         {
-            if (fs::exists(pathToSearch))
-            {
-                if (IsMetadata(pathToSearch))
-                {
-                    Path sourceFilePath = pathToSearch;
-                    sourceFilePath = sourceFilePath.replace_extension("");
-                    if (!fs::is_regular_file(sourceFilePath))
-                    {
-                        CW_ENGINE_WARN("Found a dangling metadata file. Deleting.");
-                        fs::remove(pathToSearch);
-                    }
-                }
-                else
-                {
-                    Path parentDirPath = pathToSearch.parent_path();
-                    entry = FindEntry(parentDirPath);
-
-                    DirectoryEntry* entryParent = nullptr;
-                    DirectoryEntry* newHierarchyParent = nullptr;
-                    if (entry == nullptr)
-                        CreateInternalParentHierarchy(pathToSearch, &newHierarchyParent, &entryParent);
-                    else
-                        entryParent = static_cast<DirectoryEntry*>(entry.get());
-
-                    if (fs::is_regular_file(pathToSearch))
-                    {
-                        // Create the FileEntry on main thread, queue reimport for worker
-                        Ref<FileEntry> newAsset = CreateRef<FileEntry>(pathToSearch, pathToSearch.filename().string(), entryParent);
-                        entryParent->Children.push_back(newAsset);
-                        tasks.push_back({ newAsset.get(), nullptr, false });
-                    }
-                    else if (fs::is_directory(pathToSearch))
-                        AddDirectoryInternal(entryParent, pathToSearch);
-                }
-            }
+            CW_ENGINE_WARN("Removing dangling metadata '{}'.", metadataPath);
+            m_Filesystem.Remove(metadataPath);
         }
-        else if (entry->Type == LibraryEntryType::File)
+
+        for (const Ref<LibraryEntry>& entry : diff.RemovedEntries)
         {
-            if (fs::is_regular_file(entry->Filepath))
-            {
-                FileEntry* resEntry = static_cast<FileEntry*>(entry.get());
-                tasks.push_back({ resEntry, nullptr, false });
-            }
+            if (entry->Type == LibraryEntryType::Directory)
+                DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(entry));
             else
                 DeleteAssetInternal(StaticRefCast<FileEntry>(entry));
         }
-        else if (entry->Type == LibraryEntryType::Directory)
+
+        for (const Path& directoryPath : diff.AddedDirectories)
         {
-            if (!fs::is_directory(entry->Filepath))
-                DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(entry));
-            else
-            {
-                Stack<DirectoryEntry*> todos;
-                todos.push(static_cast<DirectoryEntry*>(entry.get()));
+            Ref<LibraryEntry> parentEntry = FindEntry(directoryPath.parent_path());
+            DirectoryEntry* parent = nullptr;
+            if (parentEntry == nullptr)
+                CreateInternalParentHierarchy(directoryPath, nullptr, &parent);
+            else if (parentEntry->Type == LibraryEntryType::Directory)
+                parent = static_cast<DirectoryEntry*>(parentEntry.get());
 
-                Vector<bool> existingEntries;
-                Vector<Ref<LibraryEntry>> toDelete;
-                Vector<Path> newFilesToAdd;
-                Vector<Path> newDirsToAdd;
-
-                while (!todos.empty())
-                {
-                    DirectoryEntry* currentDir = todos.top();
-                    todos.pop();
-
-                    const uint32_t originalChildCount = (uint32_t)currentDir->Children.size();
-                    existingEntries.assign(originalChildCount, false);
-                    newFilesToAdd.clear();
-                    newDirsToAdd.clear();
-
-                    for (const auto& dirEntry : fs::directory_iterator(currentDir->Filepath))
-                    {
-                        if (dirEntry.is_regular_file())
-                        {
-                            Path filepath = dirEntry.path();
-                            if (IsMetadata(filepath))
-                            {
-                                Path sourceFilepath = filepath;
-                                sourceFilepath = sourceFilepath.replace_extension("");
-                                if (!fs::is_regular_file(sourceFilepath))
-                                {
-                                    CW_ENGINE_ERROR("Found a dangling metadata file. Deleting.");
-                                    fs::remove(filepath);
-                                }
-                            }
-                            else
-                            {
-                                FileEntry* existingEntry = nullptr;
-                                for (uint32_t idx = 0; idx < originalChildCount; idx++)
-                                {
-                                    auto& child = currentDir->Children[idx];
-                                    if (child->Type == LibraryEntryType::File && child->Filepath == filepath)
-                                    {
-                                        existingEntries[idx] = true;
-                                        existingEntry = static_cast<FileEntry*>(child.get());
-                                        break;
-                                    }
-                                }
-
-                                if (existingEntry != nullptr)
-                                    tasks.push_back({ existingEntry, nullptr, false });
-                                else
-                                    newFilesToAdd.push_back(filepath);
-                            }
-                        }
-                        else if (dirEntry.is_directory())
-                        {
-                            Path dirPath = dirEntry.path();
-                            bool found = false;
-                            for (uint32_t idx = 0; idx < originalChildCount; idx++)
-                            {
-                                auto& child = currentDir->Children[idx];
-                                if (child->Type == LibraryEntryType::Directory && child->Filepath == dirPath)
-                                {
-                                    existingEntries[idx] = true;
-                                    found = true;
-                                    break;
-                                }
-                            }
-                            if (!found)
-                                newDirsToAdd.push_back(dirPath);
-                        }
-                    }
-
-                    toDelete.clear();
-                    for (uint32_t i = 0; i < originalChildCount; i++)
-                    {
-                        if (!existingEntries[i])
-                            toDelete.push_back(currentDir->Children[i]);
-                    }
-
-                    for (const auto& child : toDelete)
-                    {
-                        if (child->Type == LibraryEntryType::Directory)
-                            DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(child));
-                        else if (child->Type == LibraryEntryType::File)
-                            DeleteAssetInternal(StaticRefCast<FileEntry>(child));
-                    }
-                    toDelete.clear();
-
-                    for (const auto& filePath : newFilesToAdd)
-                    {
-                        Ref<FileEntry> newAsset = CreateRef<FileEntry>(filePath, filePath.filename().string(), currentDir);
-                        currentDir->Children.push_back(newAsset);
-                        tasks.push_back({ newAsset.get(), nullptr, false });
-                    }
-                    for (const auto& dirPath : newDirsToAdd)
-                        AddDirectoryInternal(currentDir, dirPath);
-
-                    for (const auto& child : currentDir->Children)
-                    {
-                        if (child->Type == LibraryEntryType::Directory)
-                            todos.push(static_cast<DirectoryEntry*>(child.get()));
-                    }
-                }
-            }
+            if (parent != nullptr && FindEntry(directoryPath) == nullptr)
+                AddDirectoryInternal(parent, directoryPath);
         }
 
-        if (tasks.empty())
-            return;
+        Vector<ImportTask> tasks;
+        tasks.reserve(diff.FilesToImport.size() + diff.AddedFiles.size());
+        for (const Ref<FileEntry>& entry : diff.FilesToImport)
+            tasks.push_back({ entry, nullptr, false, false });
 
-        // Split tasks: texture/script/text imports are thread-safe (CPU-only).
-        // Everything else (mesh, shader, font, etc.) needs GPU and runs on main thread.
-        Vector<ImportTask> threadSafeTasks;
-        Vector<ImportTask> mainThreadTasks;
-
-        for (const auto& task : tasks)
+        for (const Path& filePath : diff.AddedFiles)
         {
-            String ext = task.Entry->Filepath.extension().string();
-            StringUtils::ToLower(ext);
-            if (ext.size() > 1 && TextureImporter::IsExtensionSupportedStatic(ext.substr(1)))
-                threadSafeTasks.push_back(task);
-            else
-                mainThreadTasks.push_back(task);
+            Ref<LibraryEntry> parentEntry = FindEntry(filePath.parent_path());
+            DirectoryEntry* parent = nullptr;
+            if (parentEntry == nullptr)
+                CreateInternalParentHierarchy(filePath, nullptr, &parent);
+            else if (parentEntry->Type == LibraryEntryType::Directory)
+                parent = static_cast<DirectoryEntry*>(parentEntry.get());
+
+            if (parent == nullptr)
+                continue;
+            tasks.push_back({ m_AssetIndex.AddFile(parent, filePath), nullptr, false, false });
         }
 
-        m_ImportProgress.TotalFiles.store((uint32_t)tasks.size());
-        m_ImportProgress.CompletedFiles.store(0);
-        m_ImportProgress.Active.store(true);
-
-        // Process main-thread tasks synchronously (one per ProcessCompletedImports call)
+        if (importSynchronously)
         {
-            Lock lock(m_ImportMutex);
-            for (const auto& task : mainThreadTasks)
-                m_CompletedImports.push_back({ task, nullptr }); // nullptr = needs sync import
+            for (const ImportTask& task : tasks)
+                ReimportAssetInternal(task.Entry.get(), task.Options, task.ForceReimport);
+            tasks.clear();
         }
-
-        if (m_ImportThread.joinable())
-            m_ImportThread.join();
-
-        if (!threadSafeTasks.empty())
-            m_ImportThread = std::thread(&ProjectLibrary::ImportWorker, this, std::move(threadSafeTasks));
-        else if (m_CompletedImports.empty())
-            m_ImportProgress.Active.store(false);
+        return tasks;
     }
 
     void ProjectLibrary::RefreshAsync(const Path& path)
     {
-        if (m_ImportProgress.Active.load())
+        if (m_ImportScheduler.IsActive())
         {
             m_RefreshPending = true;
             m_PendingRefreshPath = path;
             return;
         }
-        RefreshScan(path);
-    }
 
-    void ProjectLibrary::ImportWorker(Vector<ImportTask> tasks)
-    {
-        for (const auto& task : tasks)
-        {
-            Ref<Asset> asset = Importer::Get().ImportDeferred(task.Entry->Filepath, task.Options);
+        if (m_AssetIndex.GetRoot() == nullptr)
+            m_AssetIndex.SetRoot(CreateRef<DirectoryEntry>(m_AssetFolder, m_AssetFolder.filename().string(), nullptr));
 
-            {
-                Lock lock(m_ImportMutex);
-                m_CompletedImports.push_back({ task, asset });
-            }
-            m_ImportProgress.CompletedFiles.fetch_add(1);
-        }
+        const AssetFileSystemDiff diff = m_Scanner.Scan(m_AssetFolder, path, m_AssetIndex);
+        Vector<ImportTask> tasks = ApplyFilesystemDiff(diff, false);
+        if (tasks.empty())
+            SaveLibrary();
+        else
+            m_ImportScheduler.Schedule(std::move(tasks));
     }
 
     void ProjectLibrary::ProcessCompletedImports()
     {
-        Vector<ImportResult> completed;
-        {
-            Lock lock(m_ImportMutex);
-            completed.swap(m_CompletedImports);
-        }
+        if (!m_ImportScheduler.IsActive())
+            return;
 
-        // Process up to a few per frame to keep editor responsive
-        const uint32_t MAX_PER_FRAME = 4;
-        uint32_t processed = 0;
-        Vector<ImportResult> deferred;
-
-        for (auto& result : completed)
-        {
-            if (processed >= MAX_PER_FRAME)
+        const bool completed = m_ImportScheduler.ProcessCompleted([this](const ImportResult& result) {
+            try
             {
-                deferred.push_back(result);
-                continue;
+                FinalizeImport(result);
             }
-
-            // nullptr asset = main-thread task, needs synchronous import
-            if (!result.Asset)
+            catch (const std::exception& error)
             {
-                result.Asset = Importer::Get().Import(result.Task.Entry->Filepath, result.Task.Options);
-                m_ImportProgress.CompletedFiles.fetch_add(1);
+                CW_ENGINE_ERROR("Failed to finalize import '{}': {}", result.Task.Entry != nullptr ? result.Task.Entry->Filepath : Path(),
+                                error.what());
             }
+        });
 
-            FinalizeImport(result);
-            processed++;
-        }
+        if (!completed)
+            return;
 
-        // Re-queue unprocessed items
-        if (!deferred.empty())
+        SaveLibrary();
+        if (m_RefreshPending)
         {
-            Lock lock(m_ImportMutex);
-            m_CompletedImports.insert(m_CompletedImports.end(), deferred.begin(), deferred.end());
-            return; // Still have work to do
-        }
-
-        // Check if all work is done (worker thread finished + no pending main-thread items)
-        bool workerDone = !m_ImportThread.joinable() || m_ImportProgress.CompletedFiles.load() >= m_ImportProgress.TotalFiles.load();
-        bool queueEmpty;
-        {
-            Lock lock(m_ImportMutex);
-            queueEmpty = m_CompletedImports.empty();
-        }
-
-        if (workerDone && queueEmpty)
-        {
-            if (m_ImportThread.joinable())
-                m_ImportThread.join();
-            m_ImportProgress.Active.store(false);
-            SaveLibrary();
-
-            if (m_RefreshPending)
-            {
-                m_RefreshPending = false;
-                RefreshAsync(m_PendingRefreshPath);
-            }
+            m_RefreshPending = false;
+            const Path pendingPath = m_PendingRefreshPath;
+            m_PendingRefreshPath.clear();
+            RefreshAsync(pendingPath);
         }
     }
 
     void ProjectLibrary::FinalizeImport(const ImportResult& result)
     {
-        FileEntry* entry = result.Task.Entry;
+        const Ref<FileEntry>& entryRef = result.Task.Entry;
+        FileEntry* entry = entryRef.get();
         Ref<Asset> asset = result.Asset;
+
+        if (entry == nullptr || FindEntry(entry->Filepath) != entryRef)
+            return;
+
+        entry->Revision++;
 
         if (!asset)
         {
@@ -577,15 +179,13 @@ namespace Crowny
             return;
         }
 
-        // Initialize GPU resources on main thread
-        asset->Init();
+        if (!result.Task.RunOnMainThread)
+            asset->Init();
 
         entry->Filesize = fs::exists(entry->Filepath) ? (uint32_t)fs::file_size(entry->Filepath) : 0;
         if (entry->Metadata == nullptr)
-        {
             entry->Metadata = CreateRef<AssetMetadata>();
-            entry->Metadata->Type = asset->GetAssetType();
-        }
+        entry->Metadata->Type = asset->GetAssetType();
         if (result.Task.Options)
             entry->Metadata->ImportOptions = result.Task.Options;
         if (!entry->Metadata->ImportOptions)
@@ -596,45 +196,33 @@ namespace Crowny
         if (uuid.Empty())
             uuid = UuidGenerator::Generate();
 
-        Path metaPath = GetMetadataPath(entry->Filepath);
-        SerializeMetadata(metaPath, entry->Metadata, entry->DependentMetadata);
+        const Path metaPath = AssetFileSystemScanner::GetMetadataPath(entry->Filepath);
+        m_MetadataStore.Save(metaPath, entry->Metadata, entry->DependentMetadata);
 
         Path outputPath = m_UuidDirectory.GetPath(uuid);
         outputPath.replace_filename(outputPath.filename().string() + ".asset");
         m_AssetManifest->RegisterAsset(uuid, outputPath);
-        m_UuidToPath[uuid] = entry->Filepath;
+        m_AssetIndex.Register(uuid, entry->Filepath);
 
         if (asset->GetAssetType() == AssetType::Scene || asset->GetAssetType() == AssetType::Prefab)
-            fs::copy_file(entry->Filepath, outputPath, fs::copy_options::overwrite_existing);
+            m_Filesystem.CopyFile(entry->Filepath, outputPath, true);
         else
-            gAssetManager->Save(asset, outputPath);
+            AssetManager::TryGet()->Save(asset, outputPath);
     }
 
-    void ProjectLibrary::ClearEntries() {}
-
-    bool ProjectLibrary::IsMetadata(const Path& path) const { return path.extension() == ".meta"; }
-
-    Path ProjectLibrary::GetMetadataPath(const Path& path) const
-    {
-        Path metaPath = path;
-        metaPath = metaPath.replace_extension(metaPath.extension().string() + ".meta");
-        return metaPath;
-    }
+    void ProjectLibrary::ClearEntries() { m_AssetIndex.Clear(); }
 
     Ref<FileEntry> ProjectLibrary::AddAssetInternal(DirectoryEntry* parent, const Path& filepath, const Ref<ImportOptions>& importOptions,
                                                     bool forceReimport)
     {
-        Ref<FileEntry> newAsset = CreateRef<FileEntry>(filepath, filepath.filename().string(), parent);
-        parent->Children.push_back(newAsset);
+        Ref<FileEntry> newAsset = m_AssetIndex.AddFile(parent, filepath);
         ReimportAssetInternal(newAsset.get(), importOptions, forceReimport);
         return newAsset;
     }
 
     Ref<DirectoryEntry> ProjectLibrary::AddDirectoryInternal(DirectoryEntry* parent, const Path& dirPath)
     {
-        Ref<DirectoryEntry> newDir = CreateRef<DirectoryEntry>(dirPath, dirPath.filename().string(), parent);
-        parent->Children.push_back(newDir);
-        return newDir;
+        return m_AssetIndex.AddDirectory(parent, dirPath);
     }
 
     void ProjectLibrary::DeleteAssetInternal(Ref<FileEntry> asset)
@@ -644,10 +232,10 @@ namespace Crowny
             if (m_AssetManifest->UuidToFilepath(uuid, outPath))
             {
                 if (fs::is_regular_file(outPath))
-                    fs::remove(outPath);
+                    m_Filesystem.Remove(outPath);
                 m_AssetManifest->UnregisterAsset(uuid);
             }
-            m_UuidToPath.erase(uuid);
+            m_AssetIndex.Unregister(uuid);
         };
 
         if (asset->Metadata != nullptr)
@@ -656,98 +244,11 @@ namespace Crowny
         for (const auto& dep : asset->DependentMetadata)
             unregisterUuid(dep->Uuid);
 
-        DirectoryEntry* parent = asset->Parent;
-        auto iterFind =
-          std::find_if(parent->Children.begin(), parent->Children.end(), [&](const Ref<LibraryEntry>& entry) { return entry == asset; });
-        if (iterFind != parent->Children.end())
-            parent->Children.erase(iterFind);
-    }
-
-    void ProjectLibrary::SerializeMetadata(const Path& path, const Ref<AssetMetadata>& metadata, const Vector<Ref<AssetMetadata>>& dependents)
-    {
-        YAML::Emitter out;
-        out << YAML::BeginMap;
-        out << YAML::Key << "Uuid" << YAML::Value << metadata->Uuid;
-        out << YAML::Key << "IncludeInBuild" << YAML::Value << metadata->IncludeInBuild;
-        out << YAML::Key << "TypeId" << YAML::Value << (uint32_t)metadata->Type;
-        ImportOptionsSerializer::Serialize(out, metadata->ImportOptions);
-
-        if (!dependents.empty())
-        {
-            out << YAML::Key << "Dependents" << YAML::Value << YAML::BeginSeq;
-            for (const auto& dep : dependents)
-            {
-                out << YAML::BeginMap;
-                out << YAML::Key << "Uuid" << YAML::Value << dep->Uuid;
-                out << YAML::Key << "TypeId" << YAML::Value << (uint32_t)dep->Type;
-                out << YAML::EndMap;
-            }
-            out << YAML::EndSeq;
-        }
-
-        out << YAML::EndMap;
-        if (!fs::is_directory(path.parent_path()))
-            fs::create_directories(path.parent_path());
-        FileSystem::WriteTextFile(path, out.c_str());
-    }
-
-    Ref<AssetMetadata> ProjectLibrary::DeserializeMetadata(const Path& path, Vector<Ref<AssetMetadata>>* outDependents)
-    {
-        Ref<AssetMetadata> metadata = CreateRef<AssetMetadata>();
-        String metadataText = FileSystem::OpenFile(path)->GetAsString();
-        YAML::Node data = YAML::Load(metadataText);
-        if (const auto& uuid = data["Uuid"])
-            metadata->Uuid = uuid.as<UUID>();
-        else
-        {
-            CW_ENGINE_WARN("Metadata {0} does not have a uuid. Generating a random one. Corresponding asset may be broken.", path);
-            metadata->Uuid = UuidGenerator::Generate();
-        }
-
-        if (const auto& includeInBuild = data["IncludeInBuild"])
-            metadata->IncludeInBuild = includeInBuild.as<bool>();
-        if (const auto& typeId = data["TypeId"])
-            metadata->Type = (AssetType)typeId.as<uint32_t>();
-
-        metadata->ImportOptions = ImportOptionsSerializer::Deserialize(data);
-
-        if (outDependents)
-        {
-            const auto& dependentsNode = data["Dependents"];
-            if (dependentsNode && dependentsNode.IsSequence())
-            {
-                for (const auto& depNode : dependentsNode)
-                {
-                    Ref<AssetMetadata> dep = CreateRef<AssetMetadata>();
-                    dep->Uuid = depNode["Uuid"].as<UUID>();
-                    dep->Type = (AssetType)depNode["TypeId"].as<uint32_t>();
-                    dep->IncludeInBuild = true;
-                    outDependents->push_back(dep);
-                }
-            }
-        }
-
-        return metadata;
-    }
-
-    void ProjectLibrary::SerializeLibraryEntries(const Path& libEntriesPath)
-    {
-        if (!fs::is_directory(libEntriesPath.parent_path()))
-            fs::create_directories(libEntriesPath.parent_path());
-        FileEncoder<DirectoryEntry, SerializerType::Binary> encoder(libEntriesPath);
-        encoder.Encode(m_RootEntry);
-    }
-
-    Ref<DirectoryEntry> ProjectLibrary::DeserializeLibraryEntries(const Path& libEntriesPath)
-    {
-        FileDecoder<DirectoryEntry, SerializerType::Binary> decoder(libEntriesPath);
-        return decoder.Decode();
+        m_AssetIndex.Remove(asset);
     }
 
     void ProjectLibrary::DeleteDirectoryInternal(Ref<DirectoryEntry> directory)
     {
-        if (directory == m_RootEntry)
-            m_RootEntry = nullptr;
         Vector<Ref<LibraryEntry>> childrenToDestroy = directory->Children;
         for (const auto& child : childrenToDestroy)
         {
@@ -757,15 +258,7 @@ namespace Crowny
                 DeleteAssetInternal(StaticRefCast<FileEntry>(child));
         }
 
-        DirectoryEntry* parent = directory->Parent;
-        if (parent != nullptr)
-        {
-            auto iterFind =
-              std::find_if(parent->Children.begin(), parent->Children.end(), [&](const Ref<LibraryEntry>& entry) { return entry == directory; });
-            if (iterFind != parent->Children.end())
-                parent->Children.erase(iterFind);
-        }
-        directory->Parent = nullptr;
+        m_AssetIndex.Remove(directory);
         directory->Children.clear();
     }
 
@@ -778,20 +271,21 @@ namespace Crowny
             if (fs::is_regular_file(metaPath))
             {
                 Vector<Ref<AssetMetadata>> dependents;
-                Ref<AssetMetadata> loadedMeta = DeserializeMetadata(metaPath, &dependents);
+                Ref<AssetMetadata> loadedMeta = m_MetadataStore.Load(metaPath, &dependents);
                 if (loadedMeta != nullptr)
                 {
                     entry->Metadata = loadedMeta;
                     entry->DependentMetadata = dependents;
-                    m_UuidToPath[loadedMeta->Uuid] = entry->Filepath;
+                    m_AssetIndex.Register(loadedMeta->Uuid, entry->Filepath);
                     for (const auto& dep : dependents)
-                        m_UuidToPath[dep->Uuid] = entry->Filepath;
+                        m_AssetIndex.Register(dep->Uuid, entry->Filepath);
                 }
             }
         }
 
         if (!IsUpToDate(entry) || forceReimport)
         {
+            entry->Revision++;
             Ref<ImportOptions> curImportOptions = nullptr;
             if (importOptions == nullptr)
             {
@@ -813,10 +307,8 @@ namespace Crowny
             if (!primaryAsset)
                 return false;
             if (entry->Metadata == nullptr)
-            {
                 entry->Metadata = CreateRef<AssetMetadata>();
-                entry->Metadata->Type = primaryAsset->GetAssetType();
-            }
+            entry->Metadata->Type = primaryAsset->GetAssetType();
 
             entry->Metadata->ImportOptions = curImportOptions;
             entry->LastUpdateTime = std::time(nullptr);
@@ -828,12 +320,12 @@ namespace Crowny
                 Path outputPath = m_UuidDirectory.GetPath(uuid);
                 outputPath.replace_filename(outputPath.filename().string() + ".asset");
                 m_AssetManifest->RegisterAsset(uuid, outputPath);
-                m_UuidToPath[uuid] = entry->Filepath;
+                m_AssetIndex.Register(uuid, entry->Filepath);
 
                 if (asset->GetAssetType() == AssetType::Scene || asset->GetAssetType() == AssetType::Prefab)
-                    fs::copy_file(entry->Filepath, outputPath, fs::copy_options::overwrite_existing);
+                    m_Filesystem.CopyFile(entry->Filepath, outputPath, true);
                 else
-                    gAssetManager->Save(asset, outputPath);
+                    AssetManager::TryGet()->Save(asset, outputPath);
             };
 
             saveAsset(primaryAsset, entry->Metadata->Uuid);
@@ -845,10 +337,10 @@ namespace Crowny
                 if (m_AssetManifest->UuidToFilepath(depMeta->Uuid, outPath))
                 {
                     if (fs::is_regular_file(outPath))
-                        fs::remove(outPath);
+                        m_Filesystem.Remove(outPath);
                     m_AssetManifest->UnregisterAsset(depMeta->Uuid);
                 }
-                m_UuidToPath.erase(depMeta->Uuid);
+                m_AssetIndex.Unregister(depMeta->Uuid);
             }
             entry->DependentMetadata.clear();
 
@@ -868,8 +360,8 @@ namespace Crowny
                 entry->DependentMetadata.push_back(depMeta);
             }
 
-            Path metaPath = GetMetadataPath(entry->Filepath);
-            SerializeMetadata(metaPath, entry->Metadata, entry->DependentMetadata);
+            const Path metaPath = AssetFileSystemScanner::GetMetadataPath(entry->Filepath);
+            m_MetadataStore.Save(metaPath, entry->Metadata, entry->DependentMetadata);
             return true;
         }
         return false;
@@ -877,198 +369,141 @@ namespace Crowny
 
     Vector<Ref<LibraryEntry>> ProjectLibrary::Search(const String& pattern, const Vector<AssetType>& assetTypes, const Ref<DirectoryEntry>& rootEntry)
     {
-        Vector<Ref<LibraryEntry>> entries;
-        const std::regex escape("[.^$|()\\[\\]{}*+?\\\\]");
-        const String replace("\\\\&");
-        const String escapedPattern =
-          std::regex_replace(pattern, escape, replace, std::regex_constants::match_default | std::regex_constants::format_sed);
-
-#ifdef WIN32
-        const std::regex wildcard("\\\\\\*");
-#else
-        const std::regex wildcard("\\\\\\\\\\*");
-#endif
-        const String wildcardReplace(".*");
-        const String searchPattern = std::regex_replace(escapedPattern, wildcard, ".*");
-
-        const std::regex searchRegex(searchPattern, std::regex_constants::ECMAScript | std::regex_constants::icase);
-
-        Stack<DirectoryEntry*> todos;
-        if (rootEntry == nullptr)
-            todos.push(m_RootEntry.get());
-        else
-            todos.push(rootEntry.get());
-        while (!todos.empty())
-        {
-            DirectoryEntry* dirEntry = todos.top();
-            todos.pop();
-
-            for (const Ref<LibraryEntry>& child : dirEntry->Children)
-            {
-                if (std::regex_match(child->ElementName, searchRegex))
-                {
-                    if (assetTypes.empty())
-                        entries.push_back(child);
-                    else
-                    {
-                        if (child->Type == LibraryEntryType::File)
-                        {
-                            FileEntry* fileEntry = static_cast<FileEntry*>(child.get());
-                            if (fileEntry->Metadata != nullptr)
-                            {
-                                const bool found = std::find(assetTypes.begin(), assetTypes.end(), fileEntry->Metadata->Type) != assetTypes.end();
-                                if (found)
-                                    entries.push_back(child);
-                            }
-                        }
-                    }
-                }
-                if (child->Type == LibraryEntryType::Directory)
-                {
-                    DirectoryEntry* directoryEntry = static_cast<DirectoryEntry*>(child.get());
-                    todos.push(directoryEntry);
-                }
-            }
-        }
-
-        return entries;
+        return m_AssetIndex.Search(pattern, assetTypes, rootEntry);
     }
 
     void ProjectLibrary::MoveEntry(const Path& oldPath, const Path& newPath, bool overwrite)
     {
-        Path oldFullPath = oldPath; // These don't work
-        if (!oldFullPath.is_absolute())
-            oldFullPath = fs::absolute(oldFullPath);
+        const Path oldFullPath = AssetFileSystemScanner::ResolvePath(m_AssetFolder, oldPath);
+        const Path newFullPath = AssetFileSystemScanner::ResolvePath(m_AssetFolder, newPath);
+        if (!AssetFileSystemScanner::IsPathWithin(m_AssetFolder, oldFullPath) || oldFullPath == m_AssetFolder || !fs::exists(oldFullPath))
+            return;
 
-        Path newFullPath = newPath;
-        if (!newFullPath.is_absolute())
-            newFullPath = fs::absolute(newFullPath);
-
-        Path parentPath = newFullPath.parent_path();
+        const Path parentPath = newFullPath.parent_path();
         if (!fs::is_directory(parentPath))
         {
-            CW_ENGINE_WARN("File move failed. Destination {0} does not exist.", parentPath);
+            CW_ENGINE_WARN("File move failed. Destination '{}' does not exist.", parentPath);
             return;
         }
 
-        if (fs::is_regular_file(oldFullPath) || fs::is_directory(oldFullPath))
+        Ref<LibraryEntry> oldEntry = FindEntry(oldFullPath);
+        if (fs::exists(newFullPath))
         {
             if (!overwrite)
             {
-                // CW_ENGINE_INFO("Here: {0}, {1}", oldFullPath, newFullPath);
-                if (!fs::exists(newFullPath))
+                CW_ENGINE_WARN("File move failed. Destination '{}' already exists.", newFullPath);
+                return;
+            }
+            if (AssetFileSystemScanner::IsPathWithin(m_AssetFolder, newFullPath))
+            {
+                Ref<LibraryEntry> destinationEntry = FindEntry(newFullPath);
+                if (destinationEntry != nullptr)
                 {
-                    // CW_ENGINE_INFO("Here2");
-                    fs::rename(oldFullPath, newFullPath);
+                    if (destinationEntry->Type == LibraryEntryType::File)
+                        DeleteAssetInternal(StaticRefCast<FileEntry>(destinationEntry));
+                    else
+                        DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(destinationEntry));
                 }
             }
-            else
-            {
-                fs::rename(oldFullPath, newFullPath);
-                // CW_ENGINE_INFO("Here2");
-            }
-            /*if (fs::exists(newFullPath))
-            {
-                if (overwrite)
-                    fs::remove(newFullPath);
-                else
-                    CW_ENGINE_WARN("File {0} already exists.", newFullPath);
-            }
-            fs::rename(oldFullPath, newFullPath);*/
+            m_Filesystem.Remove(newFullPath);
         }
 
-        Path oldMetaPath = GetMetadataPath(oldFullPath);
-        Path newMetaPath = GetMetadataPath(newFullPath);
+        if (!m_Filesystem.Move(oldFullPath, newFullPath, false))
+            return;
 
-        Ref<LibraryEntry> oldEntry = FindEntry(oldFullPath);
-        if (oldEntry != nullptr)
+        const Path oldMetaPath = AssetFileSystemScanner::GetMetadataPath(oldFullPath);
+        const Path newMetaPath = AssetFileSystemScanner::GetMetadataPath(newFullPath);
+        if (fs::is_regular_file(oldMetaPath))
         {
-            CW_ENGINE_INFO("We have old entry");
-            if (std::search(newFullPath.begin(), newFullPath.end(), m_AssetFolder.begin(), m_AssetFolder.end()) == newFullPath.end())
-            {
-                CW_ENGINE_INFO("Search");
-                if (oldEntry->Type == LibraryEntryType::File)
-                    DeleteAssetInternal(StaticRefCast<FileEntry>(oldEntry));
-                else if (oldEntry->Type == LibraryEntryType::Directory)
-                    DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(oldEntry));
-            }
+            if (overwrite && fs::exists(newMetaPath))
+                m_Filesystem.Remove(newMetaPath);
+            m_Filesystem.Move(oldMetaPath, newMetaPath, false);
+        }
+
+        if (oldEntry == nullptr)
+        {
+            if (AssetFileSystemScanner::IsPathWithin(m_AssetFolder, newFullPath))
+                Refresh(newFullPath);
+            return;
+        }
+
+        if (!AssetFileSystemScanner::IsPathWithin(m_AssetFolder, newFullPath))
+        {
+            if (oldEntry->Type == LibraryEntryType::File)
+                DeleteAssetInternal(StaticRefCast<FileEntry>(oldEntry));
             else
+                DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(oldEntry));
+            return;
+        }
+
+        DirectoryEntry* oldParent = oldEntry->Parent;
+        if (oldParent != nullptr)
+        {
+            const auto iter = std::find(oldParent->Children.begin(), oldParent->Children.end(), oldEntry);
+            if (iter != oldParent->Children.end())
+                oldParent->Children.erase(iter);
+        }
+
+        DirectoryEntry* newEntryParent = nullptr;
+        Ref<LibraryEntry> newEntryParentLibrary = FindEntry(parentPath);
+        if (newEntryParentLibrary != nullptr && newEntryParentLibrary->Type == LibraryEntryType::Directory)
+            newEntryParent = static_cast<DirectoryEntry*>(newEntryParentLibrary.get());
+        if (newEntryParent == nullptr)
+            CreateInternalParentHierarchy(newFullPath, nullptr, &newEntryParent);
+
+        newEntryParent->Children.push_back(oldEntry);
+        oldEntry->Parent = newEntryParent;
+        oldEntry->Filepath = newFullPath;
+        oldEntry->ElementName = newFullPath.filename().string();
+        String lower = oldEntry->ElementName;
+        StringUtils::ToLower(lower);
+        oldEntry->ElementNameHash = Hash(lower);
+
+        Stack<LibraryEntry*> entries;
+        entries.push(oldEntry.get());
+        while (!entries.empty())
+        {
+            LibraryEntry* current = entries.top();
+            entries.pop();
+            if (current->Type == LibraryEntryType::File)
             {
-                Ref<FileEntry> fileEntry = nullptr;
-                if (oldEntry->Type == LibraryEntryType::File)
-                {
-                    fileEntry = StaticRefCast<FileEntry>(oldEntry);
-                    if (fileEntry->Metadata != nullptr)
-                        m_UuidToPath[fileEntry->Metadata->Uuid] = newFullPath;
-                }
-                // CW_ENGINE_INFO("Old meta path");
-                if (fs::is_regular_file(oldMetaPath))
-                {
-                    // CW_ENGINE_INFO("Rename");
-                    fs::rename(oldMetaPath, newMetaPath);
-                }
+                FileEntry* file = static_cast<FileEntry*>(current);
+                if (file->Metadata != nullptr)
+                    m_AssetIndex.Register(file->Metadata->Uuid, file->Filepath);
+                for (const Ref<AssetMetadata>& dependent : file->DependentMetadata)
+                    m_AssetIndex.Register(dependent->Uuid, file->Filepath);
+                continue;
+            }
 
-                DirectoryEntry* parent = oldEntry->Parent;
-                auto iterFind = std::find(parent->Children.begin(), parent->Children.end(), oldEntry);
-                if (iterFind != parent->Children.end())
-                    parent->Children.erase(iterFind);
-
-                Path parentPath = newFullPath.parent_path();
-                DirectoryEntry* newEntryParent = nullptr;
-                Ref<LibraryEntry> newEntryParentLib = FindEntry(parentPath);
-                if (newEntryParentLib != nullptr)
-                {
-                    CW_ENGINE_ASSERT(newEntryParentLib->Type == LibraryEntryType::Directory);
-                    newEntryParent = static_cast<DirectoryEntry*>(newEntryParentLib.get());
-                }
-
-                DirectoryEntry* newHierarchyParent = nullptr;
-                if (newEntryParent == nullptr)
-                    CreateInternalParentHierarchy(newFullPath, &newHierarchyParent, &newEntryParent);
-
-                newEntryParent->Children.push_back(oldEntry);
-                oldEntry->Parent = newEntryParent;
-                oldEntry->Filepath = newFullPath;
-                oldEntry->ElementName = newFullPath.filename().string();
-                String lower = oldEntry->ElementName;
-                StringUtils::ToLower(lower);
-                oldEntry->ElementNameHash = Hash(lower);
-
-                if (oldEntry->Type == LibraryEntryType::Directory)
-                {
-                    Stack<LibraryEntry*> todos;
-                    todos.push(oldEntry.get());
-
-                    while (!todos.empty())
-                    {
-                        LibraryEntry* curEntry = todos.top();
-                        todos.pop();
-
-                        DirectoryEntry* curDirEntry = static_cast<DirectoryEntry*>(curEntry);
-                        for (auto& child : curDirEntry->Children)
-                        {
-                            child->Filepath = child->Parent->Filepath / child->ElementName;
-                            if (child->Type == LibraryEntryType::Directory)
-                                todos.push(child.get());
-                        }
-                    }
-                }
+            DirectoryEntry* directory = static_cast<DirectoryEntry*>(current);
+            for (const Ref<LibraryEntry>& child : directory->Children)
+            {
+                child->Filepath = (directory->Filepath / child->ElementName).lexically_normal();
+                entries.push(child.get());
             }
         }
-        else
-            Refresh(newFullPath);
     }
 
     void ProjectLibrary::DeleteEntry(const Path& path)
     {
-        Path fullPath = path;
-        if (!fullPath.is_absolute())
-            fullPath = fs::absolute(fullPath);
-
-        if (fs::exists(fullPath))
-            fs::remove_all(fullPath);
+        const Path fullPath = AssetFileSystemScanner::ResolvePath(m_AssetFolder, path);
+        if (!AssetFileSystemScanner::IsPathWithin(m_AssetFolder, fullPath) || fullPath == m_AssetFolder)
+        {
+            CW_ENGINE_WARN("Refusing to delete project-library path '{}'.", fullPath);
+            return;
+        }
 
         Ref<LibraryEntry> entry = FindEntry(fullPath);
+
+        if (fs::exists(fullPath))
+            m_Filesystem.Remove(fullPath);
+        if (entry != nullptr && entry->Type == LibraryEntryType::File)
+        {
+            const Path metadataPath = AssetFileSystemScanner::GetMetadataPath(fullPath);
+            if (fs::is_regular_file(metadataPath))
+                m_Filesystem.Remove(metadataPath);
+        }
+
         if (entry != nullptr)
         {
             if (entry->Type == LibraryEntryType::File)
@@ -1080,32 +515,12 @@ namespace Crowny
 
     void ProjectLibrary::SetIncludeInBuild(const Path& path, bool include)
     {
-        LibraryEntry* entry = FindEntry(path).get();
-        if (entry == nullptr || entry->Type == LibraryEntryType::Directory)
-            return;
-
-        FileEntry* fileEntry = static_cast<FileEntry*>(entry);
-        if (fileEntry->Metadata == nullptr)
-            return;
-
-        bool save = fileEntry->Metadata->IncludeInBuild != include;
-        fileEntry->Metadata->IncludeInBuild = include;
-
-        if (save)
-        {
-            Path metaPath = fileEntry->Filepath;
-            metaPath = metaPath.replace_filename(metaPath.filename().string() + ".meta");
-            SerializeMetadata(metaPath, fileEntry->Metadata);
-        }
+        const Ref<LibraryEntry> entry = FindEntry(path);
+        if (entry != nullptr && entry->Type == LibraryEntryType::File)
+            m_BuildSelection.SetIncluded(StaticRefCast<FileEntry>(entry), include, m_MetadataStore);
     }
 
-    Path ProjectLibrary::UuidToPath(const UUID& uuid) const
-    {
-        const auto& iter = m_UuidToPath.find(uuid);
-        if (iter != m_UuidToPath.end())
-            return iter->second;
-        return {};
-    }
+    Path ProjectLibrary::UuidToPath(const UUID& uuid) const { return m_AssetIndex.UuidToPath(uuid); }
 
     Ref<AssetMetadata> ProjectLibrary::FindAssetMetadata(const Path& path) const
     {
@@ -1122,48 +537,19 @@ namespace Crowny
     Vector<UUID> ProjectLibrary::GetAllAssets(AssetType type) const
     {
         Vector<UUID> result;
-        for (const auto& [uuid, path] : m_UuidToPath)
+        for (const auto& [uuid, path] : m_AssetIndex.GetUuidPaths())
         {
-            if (m_AssetManifest->UuidExists(uuid) && GetAssetType(uuid) == type)
+            if (m_AssetManifest->UuidExists(uuid) && m_AssetIndex.GetAssetType(path) == type)
                 result.push_back(uuid);
         }
         return result;
     }
 
-    String ProjectLibrary::GetAssetName(const UUID& uuid) const
-    {
-        auto it = m_UuidToPath.find(uuid);
-        if (it == m_UuidToPath.end())
-            return {};
-        // Use the library entry's ElementName (filename stem, same as shown in the asset browser)
-        Ref<LibraryEntry> entry = FindEntry(it->second);
-        if (entry)
-            return entry->ElementName;
-        return it->second.stem().string();
-    }
+    String ProjectLibrary::GetAssetName(const UUID& uuid) const { return m_AssetIndex.GetAssetName(uuid); }
 
-    AssetType ProjectLibrary::GetAssetType(const Path& path) const
-    {
-        // yikes... called a lot
-        LibraryEntry* entry = FindEntry(path).get();
-        if (!entry)
-            return AssetType::None;
-        if (entry->Type == LibraryEntryType::File)
-        {
-            FileEntry* fileEntry = static_cast<FileEntry*>(entry);
-            if (fileEntry->Metadata != nullptr)
-                return fileEntry->Metadata->Type;
-        }
-        return AssetType::None;
-    }
+    AssetType ProjectLibrary::GetAssetType(const Path& path) const { return m_AssetIndex.GetAssetType(path); }
 
-    AssetType ProjectLibrary::GetAssetType(const UUID& uuid) const
-    {
-        const auto& iter = m_UuidToPath.find(uuid);
-        if (iter != m_UuidToPath.end())
-            return GetAssetType(iter->second);
-        return AssetType::None;
-    }
+    AssetType ProjectLibrary::GetAssetType(const UUID& uuid) const { return m_AssetIndex.GetAssetType(uuid); }
 
     AssetHandle<Asset> ProjectLibrary::Load(const Path& path)
     {
@@ -1172,7 +558,7 @@ namespace Crowny
             return AssetHandle<Asset>();
 
         const UUID& uuid = meta->Uuid;
-        return gAssetManager->LoadFromUUID(uuid, true, true);
+        return AssetManager::TryGet()->LoadFromUUID(uuid, true, true);
     }
 
     AssetHandle<Asset> ProjectLibrary::Load(const FileEntry* entry)
@@ -1182,62 +568,48 @@ namespace Crowny
             return AssetHandle<Asset>();
 
         const UUID& uuid = meta->Uuid;
-        return gAssetManager->LoadFromUUID(uuid, true, true);
+        return AssetManager::TryGet()->LoadFromUUID(uuid, true, true);
     }
 
-    Vector<Ref<FileEntry>> ProjectLibrary::GetAssetsForBuild() const
-    {
-        Vector<Ref<FileEntry>> output;
-        Stack<DirectoryEntry*> todos;
-        todos.push(m_RootEntry.get());
-
-        while (!todos.empty())
-        {
-            DirectoryEntry* current = todos.top();
-            todos.pop();
-
-            for (const auto& child : current->Children)
-            {
-                if (child->Type == LibraryEntryType::File)
-                {
-                    FileEntry* assetEntry = static_cast<FileEntry*>(child.get());
-                    if (assetEntry->Metadata != nullptr && assetEntry->Metadata->IncludeInBuild)
-                        output.push_back(StaticRefCast<FileEntry>(child));
-                }
-                else if (child->Type == LibraryEntryType::Directory)
-                    todos.push(static_cast<DirectoryEntry*>(child.get()));
-            }
-        }
-
-        return output;
-    }
+    Vector<Ref<FileEntry>> ProjectLibrary::GetAssetsForBuild() const { return m_BuildSelection.Collect(m_AssetIndex.GetRoot()); }
 
     void ProjectLibrary::CopyEntry(const Path& oldPath, const Path& newPath, bool overwrite)
     {
-        Path oldFullPath = oldPath;
-        if (!oldFullPath.is_absolute())
-            oldFullPath = fs::absolute(oldFullPath);
-
-        Path newFullPath = oldPath;
-        if (!newFullPath.is_absolute())
-            newFullPath = fs::absolute(newFullPath);
-
-        if (!fs::exists(oldFullPath))
+        const Path oldFullPath = AssetFileSystemScanner::ResolvePath(m_AssetFolder, oldPath);
+        const Path newFullPath = AssetFileSystemScanner::ResolvePath(m_AssetFolder, newPath);
+        if (!AssetFileSystemScanner::IsPathWithin(m_AssetFolder, oldFullPath) || !fs::exists(oldFullPath) || oldFullPath == newFullPath)
             return;
 
-        fs::copy(oldPath, newPath, overwrite ? fs::copy_options::overwrite_existing : fs::copy_options::none);
+        if (fs::exists(newFullPath))
+        {
+            if (!overwrite)
+            {
+                CW_ENGINE_WARN("File copy failed. Destination '{}' already exists.", newFullPath);
+                return;
+            }
+            if (AssetFileSystemScanner::IsPathWithin(m_AssetFolder, newFullPath))
+                DeleteEntry(newFullPath);
+            else
+                m_Filesystem.Remove(newFullPath);
+        }
 
-        if (std::search(newFullPath.begin(), newFullPath.end(), m_AssetFolder.begin(), m_AssetFolder.end()) == newFullPath.end())
+        const bool copied = fs::is_directory(oldFullPath) ? m_Filesystem.CopyDirectory(oldFullPath, newFullPath, false)
+                                                          : m_Filesystem.CopyFile(oldFullPath, newFullPath, false);
+        if (!copied)
+            return;
+
+        if (!AssetFileSystemScanner::IsPathWithin(m_AssetFolder, newFullPath))
             return;
 
         Path parentPath = newFullPath.parent_path();
         DirectoryEntry* newEntryParent = nullptr;
         LibraryEntry* newEntryParentLib = FindEntry(parentPath).get();
-        if (newEntryParentLib != nullptr)
+        if (newEntryParentLib != nullptr && newEntryParentLib->Type == LibraryEntryType::Directory)
         {
-            CW_ENGINE_ASSERT(newEntryParentLib->Type == LibraryEntryType::Directory);
             newEntryParent = static_cast<DirectoryEntry*>(newEntryParentLib);
         }
+        if (newEntryParent == nullptr)
+            CreateInternalParentHierarchy(newFullPath, nullptr, &newEntryParent);
 
         LibraryEntry* oldEntry = FindEntry(oldFullPath).get();
         if (oldEntry == nullptr)
@@ -1259,7 +631,7 @@ namespace Crowny
         }
         else
         {
-            CW_ENGINE_ASSERT(oldEntry->Type == LibraryEntryType::File);
+            CW_ENGINE_ASSERT(oldEntry->Type == LibraryEntryType::Directory);
             DirectoryEntry* oldDirEntry = static_cast<DirectoryEntry*>(oldEntry);
 
             DirectoryEntry* newDirEntry = AddDirectoryInternal(newEntryParent, newFullPath).get();
@@ -1302,19 +674,15 @@ namespace Crowny
 
     void ProjectLibrary::CreateFolderEntry(const Path& path)
     {
-        Path fullPath = path;
-        if (fullPath.is_absolute())
-        {
-            if (std::search(path.begin(), path.end(), m_AssetFolder.begin(), m_AssetFolder.end()) == path.end())
-                return;
-        }
-        else
-            fullPath = fs::absolute(fullPath);
+        const Path fullPath = AssetFileSystemScanner::ResolvePath(m_AssetFolder, path);
+        if (!AssetFileSystemScanner::IsPathWithin(m_AssetFolder, fullPath))
+            return;
 
         if (fs::is_directory(fullPath))
             return;
 
-        fs::create_directory(fullPath);
+        if (!m_Filesystem.CreateDirectory(fullPath))
+            return;
         Path parentPath = fullPath.parent_path();
 
         DirectoryEntry* newEntryParent = nullptr;
@@ -1337,11 +705,9 @@ namespace Crowny
         if (asset == nullptr)
             return;
 
-        Path absPath = path;
-        if (!absPath.is_absolute())
-            absPath = fs::absolute(m_AssetFolder / path);
+        const Path absPath = AssetFileSystemScanner::ResolvePath(m_AssetFolder, path);
 
-        if (std::search(absPath.begin(), absPath.end(), m_AssetFolder.begin(), m_AssetFolder.end()) == absPath.end())
+        if (!AssetFileSystemScanner::IsPathWithin(m_AssetFolder, absPath))
         {
             CW_ENGINE_WARN("Attempted to create entry outside of asset folder: {0}", absPath);
             return;
@@ -1364,7 +730,7 @@ namespace Crowny
         }
         else
         {
-            gAssetManager->Save(asset, absPath);
+            AssetManager::TryGet()->Save(asset, absPath);
         }
 
         Path parentDirPath = absPath.parent_path();
@@ -1391,65 +757,7 @@ namespace Crowny
         }
     }
 
-    Ref<LibraryEntry> ProjectLibrary::FindEntry(const Path& inPath) const
-    {
-        Path path = inPath.lexically_normal();
-        Path relPath;
-        const Path* searchPath;
-        if (path.is_absolute())
-        {
-            relPath = fs::relative(path, m_RootEntry->Filepath);
-            searchPath = &relPath;
-        }
-        else
-            searchPath = &path;
-        Path tmpPath = *searchPath;
-        std::vector<Path> paths;
-        while (tmpPath != "." && tmpPath.parent_path() != tmpPath)
-        {
-            paths.push_back(tmpPath.filename());
-            tmpPath = tmpPath.parent_path();
-        }
-        std::reverse(paths.begin(), paths.end());
-        uint32_t idx = 0;
-        Ref<LibraryEntry> rootLibEntry = m_RootEntry;
-        Ref<LibraryEntry>* current = &rootLibEntry;
-        while (current != nullptr)
-        {
-            if (idx == paths.size())
-                return *current;
-
-            String cur = (fs::is_regular_file(*searchPath) && idx == (paths.size() - 1)) ? searchPath->filename().string() : paths[idx].string();
-            if ((*current)->Type == LibraryEntryType::Directory)
-            {
-                DirectoryEntry* dirEntry = static_cast<DirectoryEntry*>(current->get());
-                String copy = cur;
-                StringUtils::ToLower(copy);
-                size_t curElemHash = Hash(copy);
-                current = nullptr;
-                for (auto& child : dirEntry->Children)
-                {
-                    if (curElemHash != child->ElementNameHash)
-                        continue;
-                    if (cur == child->ElementName)
-                    {
-                        idx++;
-                        current = &child;
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                if (idx == (paths.size() - 1))
-                    return *current;
-                else
-                    break;
-            }
-        }
-
-        return nullptr;
-    }
+    Ref<LibraryEntry> ProjectLibrary::FindEntry(const Path& path) const { return m_AssetIndex.FindEntry(path); }
 
     void ProjectLibrary::CreateInternalParentHierarchy(const Path& path, DirectoryEntry** newHierarchyRoot, DirectoryEntry** newHierarchyLeaf)
     {
@@ -1516,7 +824,8 @@ namespace Crowny
             }
         };
 
-        makeRelative(m_RootEntry.get(), m_AssetFolder);
+        if (m_AssetIndex.GetRoot() != nullptr)
+            makeRelative(m_AssetIndex.GetRoot().get(), m_AssetFolder);
     }
 
     void ProjectLibrary::MakeEntriesAbsolute()
@@ -1531,7 +840,8 @@ namespace Crowny
             }
         };
 
-        makeAbsolute(m_RootEntry.get());
+        if (m_AssetIndex.GetRoot() != nullptr)
+            makeAbsolute(m_AssetIndex.GetRoot().get());
     }
 
     void ProjectLibrary::LoadLibrary()
@@ -1541,18 +851,22 @@ namespace Crowny
         m_ProjectFolder = Editor::Get().GetProjectPath();
         m_AssetFolder = m_ProjectFolder / ASSET_DIR;
 
-        m_RootEntry = CreateRef<DirectoryEntry>(m_AssetFolder, m_AssetFolder.filename().string(), nullptr);
+        m_AssetIndex.SetRoot(CreateRef<DirectoryEntry>(m_AssetFolder, m_AssetFolder.filename().string(), nullptr));
         const Path internalAssetPath = m_ProjectFolder / INTERNAL_ASSET_DIR;
         m_UuidDirectory = UUIDDirectory(internalAssetPath);
 
-        gApplication->SetInternalDirectory(internalAssetPath);
+        Application::TryGet()->SetInternalDirectory(internalAssetPath);
 
         Path libEntriesPath = m_ProjectFolder / PROJECT_INTERNAL_DIR / LIBRARY_ENTRIES_FILENAME;
 
         if (fs::exists(libEntriesPath))
         {
-            m_RootEntry = DeserializeLibraryEntries(libEntriesPath);
-            m_RootEntry->Parent = nullptr;
+            const Ref<DirectoryEntry> loadedRoot = m_MetadataStore.LoadIndex(libEntriesPath);
+            if (loadedRoot != nullptr)
+            {
+                m_AssetIndex.SetRoot(loadedRoot);
+                m_AssetIndex.GetRoot()->Parent = nullptr;
+            }
         }
 
         String tabs;
@@ -1573,13 +887,13 @@ namespace Crowny
         Path assetManifestPath = m_ProjectFolder / PROJECT_INTERNAL_DIR / ASSET_MANIFEST_FILENAME;
         if (fs::exists(assetManifestPath))
             m_AssetManifest = AssetManifest::Deserialize(assetManifestPath, m_ProjectFolder);
-        else
+        if (m_AssetManifest == nullptr)
             m_AssetManifest = CreateRef<AssetManifest>("ProjectLibrary");
 
-        gAssetManager->RegisterAssetManifest(m_AssetManifest);
+        AssetManager::TryGet()->RegisterAssetManifest(m_AssetManifest);
 
         Stack<DirectoryEntry*> todos; // Load meta files
-        todos.push(m_RootEntry.get());
+        todos.push(m_AssetIndex.GetRoot().get());
         Vector<Ref<LibraryEntry>> deletedEntries;
         while (!todos.empty())
         {
@@ -1598,11 +912,15 @@ namespace Crowny
                             Path metaPath = entry->Filepath;
                             metaPath = metaPath.replace_filename(metaPath.filename().string() + ".meta");
                             if (fs::is_regular_file(metaPath))
-                                entry->Metadata = DeserializeMetadata(metaPath);
+                                entry->Metadata = m_MetadataStore.Load(metaPath, &entry->DependentMetadata);
                         }
 
-                        if (entry->Metadata != nullptr) // if we loaded metadata
-                            m_UuidToPath[entry->Metadata->Uuid] = entry->Filepath;
+                        if (entry->Metadata != nullptr)
+                        {
+                            m_AssetIndex.Register(entry->Metadata->Uuid, entry->Filepath);
+                            for (const Ref<AssetMetadata>& dependent : entry->DependentMetadata)
+                                m_AssetIndex.Register(dependent->Uuid, entry->Filepath);
+                        }
                     }
                     else
                         deletedEntries.push_back(entry);
@@ -1625,13 +943,13 @@ namespace Crowny
                 DeleteDirectoryInternal(StaticRefCast<DirectoryEntry>(deletedEntry));
         }
 
-        Path internalAssetFolder = m_AssetFolder / INTERNAL_ASSET_DIR;
+        Path internalAssetFolder = m_ProjectFolder / INTERNAL_ASSET_DIR;
         if (fs::exists(internalAssetFolder))
         {
             Vector<Path> toDelete;
             auto processFile = [&](const Path& path) {
                 UUID uuid = UUID(path.filename().replace_extension("").string());
-                if (m_UuidToPath.find(uuid) != m_UuidToPath.end())
+                if (!uuid.Empty() && m_AssetIndex.GetUuidPaths().find(uuid) == m_AssetIndex.GetUuidPaths().end())
                 {
                     m_AssetManifest->UnregisterAsset(uuid);
                     toDelete.push_back(path);
@@ -1645,7 +963,7 @@ namespace Crowny
             }
 
             for (const auto& entry : toDelete)
-                fs::remove(entry);
+                m_Filesystem.Remove(entry);
         }
 
         m_IsLoaded = true;
@@ -1655,11 +973,14 @@ namespace Crowny
     {
         if (!m_IsLoaded)
             return;
+        m_ImportScheduler.Shutdown();
+        m_RefreshPending = false;
+        m_PendingRefreshPath.clear();
         m_AssetFolder = Path();
         m_ProjectFolder = Path();
         ClearEntries();
-        m_RootEntry = CreateRef<DirectoryEntry>(m_AssetFolder, m_AssetFolder.filename().string(), nullptr);
-        gAssetManager->UnregisterAssetManifest(m_AssetManifest);
+        m_AssetIndex.SetRoot(CreateRef<DirectoryEntry>(m_AssetFolder, m_AssetFolder.filename().string(), nullptr));
+        AssetManager::TryGet()->UnregisterAssetManifest(m_AssetManifest);
         m_AssetManifest = nullptr;
         m_IsLoaded = false;
     }
@@ -1683,13 +1004,16 @@ namespace Crowny
         // traverse(m_RootEntry);
 
         MakeEntriesRelative();
-        // CW_ENGINE_INFO("Relative entries");
-        // traverse(m_RootEntry);
         Path libEntriesPath = m_ProjectFolder / PROJECT_INTERNAL_DIR / LIBRARY_ENTRIES_FILENAME;
-        SerializeLibraryEntries(libEntriesPath);
+        try
+        {
+            m_MetadataStore.SaveIndex(libEntriesPath, m_AssetIndex.GetRoot());
+        }
+        catch (const std::exception& error)
+        {
+            CW_ENGINE_ERROR("Failed to save project-library entries '{}': {}", libEntriesPath, error.what());
+        }
         MakeEntriesAbsolute();
-        // CW_ENGINE_INFO("Absolute entries");
-        // traverse(m_RootEntry);
         Path assetManifestPath = m_ProjectFolder / PROJECT_INTERNAL_DIR / ASSET_MANIFEST_FILENAME;
         AssetManifest::Serialize(m_AssetManifest, assetManifestPath, m_ProjectFolder);
     }

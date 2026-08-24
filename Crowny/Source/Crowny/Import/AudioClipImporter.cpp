@@ -8,30 +8,29 @@
 #include "Crowny/Audio/OggVorbisEncoder.h"
 #include "Crowny/Audio/WaveDecoder.h"
 #include "Crowny/Common/FileSystem.h"
-#include "Crowny/Common/StringUtils.h"
 
 namespace Crowny
 {
 
-    bool AudioClipImporter::IsExtensionSupported(const String& ext) const
-    {
-        String lower = ext;
-        StringUtils::ToLower(lower);
-        return lower == "ogg" || lower == "wav";
-    }
+    bool AudioClipImporter::IsExtensionSupported(const String& ext) const { return ext == "ogg" || ext == "wav"; }
 
     bool AudioClipImporter::IsMagicNumSupported(uint8_t* num, uint32_t numSize) const { return true; }
 
     Ref<Asset> AudioClipImporter::Import(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
         const Ref<const AudioClipImportOptions> audioImportOptions = StaticRefCast<const AudioClipImportOptions>(importOptions);
+        if (audioImportOptions == nullptr)
+            return nullptr;
+
         AudioDataInfo info;
         uint32_t bytesPerSample;
         uint32_t bufferSize;
         Ref<MemoryDataStream> sampleStream;
         const Ref<DataStream> stream = FileSystem::OpenFile(filepath);
-        String ext = filepath.extension().string();
-        ext = ext.substr(1, ext.size() - 1); // remove .
+        if (stream == nullptr)
+            return nullptr;
+
+        const String ext = NormalizeImportExtension(filepath.extension().string());
         Ref<AudioDecoder> reader;
         if (ext == "ogg")
             reader = CreateRef<OggVorbisDecoder>();
@@ -73,7 +72,15 @@ namespace Crowny
             bufferSize = outBufferSize;
         }
         if (audioImportOptions->Format == AudioFormat::VORBIS)
+        {
             sampleStream = OggVorbisEncoder::PCMToOggVorbis(sampleStream->Data(), info, bufferSize, audioImportOptions->Quality);
+            if (sampleStream == nullptr || sampleStream->Size() == 0 || sampleStream->Size() > std::numeric_limits<uint32_t>::max())
+            {
+                CW_ENGINE_ERROR("Failed to encode '{}' as Ogg Vorbis.", filepath);
+                return nullptr;
+            }
+            bufferSize = static_cast<uint32_t>(sampleStream->Size());
+        }
 
         AudioClipDesc clipDesc;
         clipDesc.BitDepth = info.BitDepth;
@@ -83,9 +90,7 @@ namespace Crowny
         clipDesc.Is3D = audioImportOptions->Is3D;
         clipDesc.ReadMode = audioImportOptions->ReadMode;
         const Ref<AudioClip> clip = AudioClip::Create(sampleStream, bufferSize, info.NumSamples, clipDesc);
-        CW_ENGINE_INFO(filepath);
         const String clipFilename = filepath.filename().string();
-        CW_ENGINE_INFO(clipFilename);
         clip->SetName(clipFilename);
         return clip;
     }

@@ -3,6 +3,8 @@
 #include "Crowny/Common/ConsoleBuffer.h"
 #include "Panels/ImGuiPanel.h"
 
+#include <limits>
+
 namespace Crowny
 {
     class ConsolePanel : public ImGuiPanel
@@ -17,43 +19,66 @@ namespace Crowny
         void RenderSettings();
         void RenderMessage(const ConsoleBuffer::Message& message);
         void RenderFooter();
+        bool MatchesSearch(const ConsoleBuffer::Message& message) const;
+        void CopySelectedMessage() const;
+        void RefreshMessages();
+        void RebuildSearchTerms();
+        void RebuildFilteredIndices();
 
         static glm::vec4 GetRenderColor(ConsoleBuffer::Message::Level level)
         {
             switch (level)
             {
             case ConsoleBuffer::Message::Level::Info:
-                return { 0.00f, 0.50f, 0.00f, 1.00f }; // Green
+                return { 0.68f, 0.78f, 0.88f, 1.00f };
             case ConsoleBuffer::Message::Level::Warn:
-                return { 1.00f, 1.00f, 0.00f, 1.00f }; // Yellow
+                return { 0.95f, 0.68f, 0.20f, 1.00f };
             case ConsoleBuffer::Message::Level::Error:
-                return { 1.00f, 0.00f, 0.00f, 1.00f }; // Red
+                return { 0.95f, 0.35f, 0.30f, 1.00f };
             case ConsoleBuffer::Message::Level::Critical:
-                return { 1.00f, 0.00f, 0.00f, 1.00f }; // Red - critical
+                return { 1.00f, 0.20f, 0.45f, 1.00f };
             default:
-                return { 0.00f, 0.00f, 0.00f, 1.00f }; // Black - default
+                return { 1.00f, 1.00f, 1.00f, 1.00f };
             }
-            return { 1.0f, 1.0f, 1.0f, 1.0f };
         }
 
-        void SetMessageLevelEnabled(ConsoleBuffer::Message::Level level, bool enabled) { m_EnabledLevels[(uint32_t)level] = enabled; }
+        void SetMessageLevelEnabled(ConsoleBuffer::Message::Level level, bool enabled);
         bool IsMessageLevelEnabled(ConsoleBuffer::Message::Level level) const { return m_EnabledLevels[(uint32_t)level]; }
 
-        void SetCollapseEnabled(bool collapse) { m_Collapse = collapse; }
+        void SetCollapseEnabled(bool collapse);
         void SetScrollToBottomEnabled(bool scroll) { m_AllowScrollingToBottom = scroll; }
 
         bool IsCollapseEnabled() const { return m_Collapse; }
         bool IsScrollToBottomEnabled() const { return m_AllowScrollingToBottom; }
 
     private:
+        enum class SearchField : uint8_t
+        {
+            Any,
+            Text,
+            Source,
+            Level
+        };
+
+        struct SearchTerm
+        {
+            SearchField Field = SearchField::Any;
+            String Value;
+        };
+
         Vector<uint32_t> m_MessageIndices;
-        size_t m_SelectedMessageHash;
+        Vector<ConsoleBuffer::Message> m_MessageSnapshot;
+        Vector<SearchTerm> m_SearchTerms;
+        uint64_t m_MessageRevision = std::numeric_limits<uint64_t>::max();
+        uint64_t m_SelectedMessageId = 0;
+        String m_SearchString;
         float m_DisplayScale = 1.0f;
 
-        bool m_EnabledLevels[5] = { true, true, true, true, true };
+        bool m_EnabledLevels[4] = { true, true, true, true };
         bool m_Collapse = false;
         bool m_AllowScrollingToBottom = true;
         bool m_RequestScrollToBottom = false;
+        bool m_FilterDirty = true;
         float m_MessageHeight = 0.0f;
         ConsoleBuffer::Message m_SelectedMessage;
     };

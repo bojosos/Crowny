@@ -5,6 +5,8 @@
 #include "Crowny/NodeGraph/Nodes/GeometryNodes.h"
 #include "Crowny/Renderer/Mesh.h"
 
+#include <glm/gtc/constants.hpp>
+
 namespace Crowny
 {
     static BufferLayout GetStandardLayout()
@@ -17,12 +19,12 @@ namespace Crowny
 
     // ---- BoxNode ----
 
-    BoxNode::BoxNode(UUID id) : Node(id, "BoxNode")
+    BoxNode::BoxNode(UUID id) : Node(id, "BoxNode"_sid)
     {
-        AddInput("Width", PinDataType::Float, 1.0f);
-        AddInput("Height", PinDataType::Float, 1.0f);
-        AddInput("Depth", PinDataType::Float, 1.0f);
-        AddOutput("Geometry", PinDataType::MeshData);
+        AddInput("Width"_sid, PinDataType::Float, 1.0f);
+        AddInput("Height"_sid, PinDataType::Float, 1.0f);
+        AddInput("Depth"_sid, PinDataType::Float, 1.0f);
+        AddOutput("Geometry"_sid, PinDataType::MeshData);
     }
 
     void BoxNode::Evaluate(NodeGraphEvaluator& evaluator)
@@ -107,14 +109,115 @@ namespace Crowny
         SetOutputValue<Ref<MeshData>>(geometryPin, meshData, evaluator);
     }
 
+    // ---- CylinderNode ----
+
+    CylinderNode::CylinderNode(UUID id) : Node(id, "CylinderNode"_sid)
+    {
+        AddInput("Radius"_sid, PinDataType::Float, 0.5f);
+        AddInput("Depth"_sid, PinDataType::Float, 1.0f);
+        AddInput("Segments"_sid, PinDataType::Int, 32);
+        AddInput("Capped"_sid, PinDataType::Bool, true);
+        AddOutput("Geometry"_sid, PinDataType::MeshData);
+    }
+
+    void CylinderNode::Evaluate(NodeGraphEvaluator& evaluator)
+    {
+        const float radius = GetInputValue<float>("Radius", evaluator);
+        const float depth = GetInputValue<float>("Depth", evaluator);
+        const int32_t segments = GetInputValue<int32_t>("Segments", evaluator);
+        const bool capped = GetInputValue<bool>("Capped", evaluator);
+        if (radius <= 0.0f || depth <= 0.0f || segments < 3 || segments > 512)
+        {
+            evaluator.ReportError("Cylinder requires positive dimensions and 3 to 512 segments");
+            return;
+        }
+
+        Vector<glm::vec3> positions;
+        Vector<glm::vec3> normals;
+        Vector<glm::vec3> tangents;
+        Vector<glm::vec2> uvs;
+        Vector<uint32_t> indices;
+        const uint32_t ringCount = static_cast<uint32_t>(segments + 1);
+        const float halfDepth = depth * 0.5f;
+        positions.reserve(ringCount * (capped ? 4 : 2) + (capped ? 2 : 0));
+        normals.reserve(positions.capacity());
+        tangents.reserve(positions.capacity());
+        uvs.reserve(positions.capacity());
+        indices.reserve(static_cast<size_t>(segments) * (capped ? 12 : 6));
+
+        for (int32_t i = 0; i <= segments; ++i)
+        {
+            const float u = static_cast<float>(i) / static_cast<float>(segments);
+            const float angle = u * glm::two_pi<float>();
+            const float sine = std::sin(angle);
+            const float cosine = std::cos(angle);
+            const glm::vec3 normal(cosine, 0.0f, sine);
+            const glm::vec3 tangent(-sine, 0.0f, cosine);
+            positions.emplace_back(radius * cosine, -halfDepth, radius * sine);
+            positions.emplace_back(radius * cosine, halfDepth, radius * sine);
+            normals.push_back(normal);
+            normals.push_back(normal);
+            tangents.push_back(tangent);
+            tangents.push_back(tangent);
+            uvs.emplace_back(u, 0.0f);
+            uvs.emplace_back(u, 1.0f);
+        }
+        for (uint32_t i = 0; i < static_cast<uint32_t>(segments); ++i)
+        {
+            const uint32_t bottom = i * 2;
+            const uint32_t top = bottom + 1;
+            indices.insert(indices.end(), { bottom, bottom + 2, top + 2, bottom, top + 2, top });
+        }
+
+        if (capped)
+        {
+            const auto addCap = [&](float y, float normalY, bool reverse) {
+                const uint32_t center = static_cast<uint32_t>(positions.size());
+                positions.emplace_back(0.0f, y, 0.0f);
+                normals.emplace_back(0.0f, normalY, 0.0f);
+                tangents.emplace_back(1.0f, 0.0f, 0.0f);
+                uvs.emplace_back(0.5f, 0.5f);
+                const uint32_t ringStart = static_cast<uint32_t>(positions.size());
+                for (int32_t i = 0; i <= segments; ++i)
+                {
+                    const float angle = static_cast<float>(i) / static_cast<float>(segments) * glm::two_pi<float>();
+                    const float sine = std::sin(angle);
+                    const float cosine = std::cos(angle);
+                    positions.emplace_back(radius * cosine, y, radius * sine);
+                    normals.emplace_back(0.0f, normalY, 0.0f);
+                    tangents.emplace_back(1.0f, 0.0f, 0.0f);
+                    uvs.emplace_back(cosine * 0.5f + 0.5f, sine * 0.5f + 0.5f);
+                }
+                for (uint32_t i = 0; i < static_cast<uint32_t>(segments); ++i)
+                {
+                    if (reverse)
+                        indices.insert(indices.end(), { center, ringStart + i + 1, ringStart + i });
+                    else
+                        indices.insert(indices.end(), { center, ringStart + i, ringStart + i + 1 });
+                }
+            };
+            addCap(halfDepth, 1.0f, false);
+            addCap(-halfDepth, -1.0f, true);
+        }
+
+        const Ref<MeshData> mesh =
+          MeshData::Create(static_cast<uint32_t>(positions.size()), static_cast<uint32_t>(indices.size()), GetStandardLayout());
+        mesh->SetPositions(positions);
+        mesh->SetNormals(normals);
+        mesh->SetTangents(tangents);
+        mesh->SetUVs(0, uvs);
+        mesh->SetIndices(indices);
+        SetOutputValue("Geometry", mesh, evaluator);
+    }
+
     // ---- SphereNode ----
 
-    SphereNode::SphereNode(UUID id) : Node(id, "SphereNode")
+    SphereNode::SphereNode(UUID id) : Node(id, "SphereNode"_sid)
     {
-        AddInput("Radius", PinDataType::Float, 1.0f);
-        AddInput("Segments", PinDataType::Int, 32);
-        AddInput("Rings", PinDataType::Int, 16);
-        AddOutput("Geometry", PinDataType::MeshData);
+        AddInput("Radius"_sid, PinDataType::Float, 1.0f);
+        AddInput("Segments"_sid, PinDataType::Int, 32);
+        AddInput("Rings"_sid, PinDataType::Int, 16);
+        AddOutput("Geometry"_sid, PinDataType::MeshData);
     }
 
     void SphereNode::Evaluate(NodeGraphEvaluator& evaluator)
@@ -194,13 +297,13 @@ namespace Crowny
 
     // ---- PlaneNode ----
 
-    PlaneNode::PlaneNode(UUID id) : Node(id, "PlaneNode")
+    PlaneNode::PlaneNode(UUID id) : Node(id, "PlaneNode"_sid)
     {
-        AddInput("Width", PinDataType::Float, 1.0f);
-        AddInput("Height", PinDataType::Float, 1.0f);
-        AddInput("SubdivisionsX", PinDataType::Int, 1);
-        AddInput("SubdivisionsY", PinDataType::Int, 1);
-        AddOutput("Geometry", PinDataType::MeshData);
+        AddInput("Width"_sid, PinDataType::Float, 1.0f);
+        AddInput("Height"_sid, PinDataType::Float, 1.0f);
+        AddInput("SubdivisionsX"_sid, PinDataType::Int, 1);
+        AddInput("SubdivisionsY"_sid, PinDataType::Int, 1);
+        AddOutput("Geometry"_sid, PinDataType::MeshData);
     }
 
     void PlaneNode::Evaluate(NodeGraphEvaluator& evaluator)
@@ -275,11 +378,11 @@ namespace Crowny
 
     // ---- GridNode ----
 
-    GridNode::GridNode(UUID id) : Node(id, "GridNode")
+    GridNode::GridNode(UUID id) : Node(id, "GridNode"_sid)
     {
-        AddInput("Size", PinDataType::Float, 10.0f);
-        AddInput("Resolution", PinDataType::Int, 10);
-        AddOutput("Geometry", PinDataType::MeshData);
+        AddInput("Size"_sid, PinDataType::Float, 10.0f);
+        AddInput("Resolution"_sid, PinDataType::Int, 10);
+        AddOutput("Geometry"_sid, PinDataType::MeshData);
     }
 
     void GridNode::Evaluate(NodeGraphEvaluator& evaluator)

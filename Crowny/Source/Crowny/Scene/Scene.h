@@ -4,6 +4,7 @@
 #include "Crowny/Assets/AssetHandle.h"
 #include "Crowny/Common/Timestep.h"
 #include "Crowny/Common/Uuid.h"
+#include "Crowny/Physics/Physics3DTypes.h"
 
 #include <entt/entt.hpp>
 
@@ -18,11 +19,19 @@ namespace Crowny
     class SceneRenderer;
     class ScriptRuntime;
     struct CameraComponent;
+    struct PersistedScriptState;
+    struct ScriptTypeIdentity;
 
     struct Collision2D
     {
-        Vector<glm::vec2> Points;
+        SmallVector<glm::vec2, 2> Points;
         Vector<Entity> Colliders;
+    };
+
+    struct Collision3D
+    {
+        Vector<Entity> Colliders;
+        SmallVector<PhysicsContactPoint3D, 4> Points;
     };
 
     class Scene : public Asset
@@ -47,6 +56,7 @@ namespace Crowny
         void DestroyEntity(Entity entity);
         Entity FindEntityByName(const String& name) const;
         Entity GetRootEntity() const;
+        Entity TryGetEntityFromUuid(const UUID& uuid) const;
         Entity GetEntityFromUuid(const UUID& uuid) const;
 
         const String& GetName() const { return m_Name; }
@@ -58,6 +68,8 @@ namespace Crowny
 
         bool IsEditorScene() const { return m_IsEditorScene; }
         void SetEditorScene(bool isEditor) { m_IsEditorScene = isEditor; }
+        bool IsRuntimeActive() const { return m_RuntimeActive; }
+        bool IsSimulating() const { return m_SimulationActive; }
 
         const String& GetImGuiLayout() const { return m_ImGuiLayout; }
         void SetImGuiLayout(const String& layout) { m_ImGuiLayout = layout; }
@@ -76,10 +88,18 @@ namespace Crowny
         void OnUpdateRuntime(Timestep ts);
         void OnUpdateEditor(Timestep ts);
 
+        void RecreatePhysics3DBody(Entity entity);
+        void RecreatePhysics3DShapes(Entity entity);
+        void UpdatePhysics3DTransform(Entity entity);
+
         Entity GetPrimaryCameraEntity();
 
+        bool HasScriptComponent(Entity entity, const ScriptTypeIdentity& identity) const;
         bool HasScriptComponent(Entity entity, const String& namespaceName, const String& typeName) const;
-        void AddScriptComponent(Entity entity, const String& namespaceName, const String& typeName, bool initialize = true);
+        bool AddScriptComponent(Entity entity, const ScriptTypeIdentity& identity, bool initialize = true);
+        bool AddScriptComponent(Entity entity, const PersistedScriptState& state, bool initialize = true);
+        bool AddScriptComponent(Entity entity, const String& namespaceName, const String& typeName, bool initialize = true);
+        void RemoveScriptComponent(Entity entity, const ScriptTypeIdentity& identity);
         void RemoveScriptComponent(Entity entity, const String& namespaceName, const String& typeName);
 
         template <typename... Components> auto GetAllEntitiesWith() { return m_Registry.view<Components...>(); }
@@ -87,6 +107,7 @@ namespace Crowny
 
     private:
         void RegisterEntityCallbacks();
+        void RebuildCopiedRelationships(const Scene& source, const UnorderedMap<UUID, entt::entity>& entityMap);
 
         void OnRigidbody2DComponentConstruct(entt::registry& registry, entt::entity entity);
         void OnRigidbody2DComponentDestroy(entt::registry& registry, entt::entity entity);
@@ -94,6 +115,25 @@ namespace Crowny
         void OnBoxCollider2DComponentDestroy(entt::registry& registry, entt::entity entity);
         void OnCircleCollider2DComponentConstruct(entt::registry& registry, entt::entity entity);
         void OnCircleCollider2DComponentDestroy(entt::registry& registry, entt::entity entity);
+
+        void OnRigidbody3DComponentConstruct(entt::registry& registry, entt::entity entity);
+        void OnRigidbody3DComponentDestroy(entt::registry& registry, entt::entity entity);
+        void OnBoxCollider3DComponentConstruct(entt::registry& registry, entt::entity entity);
+        void OnBoxCollider3DComponentDestroy(entt::registry& registry, entt::entity entity);
+        void OnSphereCollider3DComponentConstruct(entt::registry& registry, entt::entity entity);
+        void OnSphereCollider3DComponentDestroy(entt::registry& registry, entt::entity entity);
+        void OnCapsuleCollider3DComponentConstruct(entt::registry& registry, entt::entity entity);
+        void OnCapsuleCollider3DComponentDestroy(entt::registry& registry, entt::entity entity);
+
+        bool BeginPhysics3D();
+        void EndPhysics3D();
+        void StepPhysics3D(Timestep ts);
+        PhysicsBody3DHandle CreatePhysics3DBody(Entity entity);
+        void DestroyPhysics3DBody(entt::entity entity);
+        void QueuePhysics3DRebuild(entt::entity entity);
+        void CreatePhysics3DShapes(Entity entity, PhysicsBody3DHandle body);
+        void DestroyPhysics3DShapes(Entity entity, PhysicsBody3DHandle body);
+        void HandlePhysics3DContact(const PhysicsContactEvent3D& event);
 
         void OnAudioSourceComponentConstruct(entt::registry& registry, entt::entity entity);
         void OnAudioSourceComponentDestroy(entt::registry& registry, entt::entity entity);
@@ -119,5 +159,15 @@ namespace Crowny
         Entity* m_RootEntity = nullptr;
         UnorderedMap<UUID, entt::entity> m_EntityMap;
         Ref<EnvironmentMap> m_Environment;
+        UnorderedMap<entt::entity, PhysicsBody3DHandle> m_Physics3DBodies;
+        UnorderedMap<PhysicsBody3DHandle, entt::entity> m_Physics3DEntities;
+        UnorderedMap<entt::entity, glm::vec3> m_Physics3DScales;
+        Vector<entt::entity> m_PendingPhysics3DRebuilds;
+        Vector<PhysicsContactEvent3D> m_PendingPhysics3DContacts;
+        Vector<PhysicsContactEvent3D> m_DispatchPhysics3DContacts;
+        bool m_Physics3DActive = false;
+        bool m_Physics2DActive = false;
+        bool m_RuntimeActive = false;
+        bool m_SimulationActive = false;
     };
 } // namespace Crowny

@@ -2,6 +2,7 @@
 
 #include "Crowny/Application/Application.h"
 #include "Crowny/ImGui/ImGuiOpenGLLayer.h"
+#include "Crowny/ImGui/ImGuiVulkanTexture.h"
 #include "Crowny/Window/Window.h"
 
 #include <GLFW/glfw3.h>
@@ -17,7 +18,7 @@ namespace Crowny
     void ImGuiOpenGLLayer::OnAttach()
     {
         ImGuiLayer::OnAttach();
-        Application& app = (*gApplication);
+        Application& app = (*Application::TryGet());
         GLFWwindow* const window = static_cast<GLFWwindow*>(app.GetWindow().GetNativeWindow());
         ImGui_ImplGlfw_InitForOpenGL(window, true);
         ImGui_ImplOpenGL3_Init("#version 410");
@@ -32,7 +33,9 @@ namespace Crowny
     void ImGuiOpenGLLayer::Begin()
     {
         ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
         ImGuiLayer::Begin();
+        RenderAPI::TryGet()->SetRenderTarget(Application::TryGet()->GetRenderWindow());
     }
 
     void ImGuiOpenGLLayer::End()
@@ -48,6 +51,7 @@ namespace Crowny
             ImGui::RenderPlatformWindowsDefault();
             glfwMakeContextCurrent(backup_current_context);
         }
+        ImGuiVulkanTexture::FinishOpenGLFrame();
     }
 
 } // namespace Crowny

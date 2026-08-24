@@ -19,10 +19,11 @@ namespace Crowny
 
         String m_Namespace;
         String m_TypeName;
+        uint64_t m_ScriptInstanceId = 0;
         bool m_TypeMissing = false;
         // Entity m_Entity;
 
     public:
-        ScriptEntityBehaviour(MonoObject* instance, Entity entity);
+        ScriptEntityBehaviour(MonoObject* instance, Entity entity, MonoScript& script);
     };
 } // namespace Crowny

@@ -161,12 +161,14 @@ namespace Crowny
             m_Surfaces[i].Acquired = false;
             m_Surfaces[i].Sync = owner->Create<VulkanSemaphore>();
             m_Surfaces[i].Image = owner->Create<VulkanImage>(imageDesc, false);
-            vkCreateFence(m_Device, &fenceCI, nullptr, &m_Surfaces[i].AcquireFence);
+            result = vkCreateFence(m_Device, &fenceCI, nullptr, &m_Surfaces[i].AcquireFence);
+            CW_ENGINE_ASSERT(result == VK_SUCCESS);
         }
         m_Surfaces.back().Sync = owner->Create<VulkanSemaphore>();
         m_Surfaces.back().NeedsWait = false;
         m_Surfaces.back().Acquired = false;
-        vkCreateFence(m_Device, &fenceCI, nullptr, &m_Surfaces.back().AcquireFence);
+        result = vkCreateFence(m_Device, &fenceCI, nullptr, &m_Surfaces.back().AcquireFence);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
         delete[] images;
         if (createDepth)
@@ -281,13 +283,24 @@ namespace Crowny
         uint32_t imageIndex;
 
         VkFence fence = m_Surfaces[m_CurrentSemaphoreIdx].AcquireFence;
-        vkWaitForFences(m_Device, 1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-        vkResetFences(m_Device, 1, &fence);
+        VkResult result = vkWaitForFences(m_Device, 1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        result = vkResetFences(m_Device, 1, &fence);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
-        VkResult result = vkAcquireNextImageKHR(m_Device, m_SwapChain, std::numeric_limits<uint64_t>::max(),
-                                                m_Surfaces[m_CurrentSemaphoreIdx].Sync->GetHandle(), fence, &imageIndex);
-        if (result != VK_SUCCESS)
+        result = vkAcquireNextImageKHR(m_Device, m_SwapChain, std::numeric_limits<uint64_t>::max(),
+                                       m_Surfaces[m_CurrentSemaphoreIdx].Sync->GetHandle(), fence, &imageIndex);
+        if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+        {
+            vkDestroyFence(m_Device, fence, nullptr);
+            m_Surfaces[m_CurrentSemaphoreIdx].AcquireFence = VK_NULL_HANDLE;
+            VkFenceCreateInfo fenceCI{};
+            fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+            fenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+            const VkResult fenceResult = vkCreateFence(m_Device, &fenceCI, nullptr, &m_Surfaces[m_CurrentSemaphoreIdx].AcquireFence);
+            CW_ENGINE_ASSERT(fenceResult == VK_SUCCESS);
             return result;
+        }
 
         if (imageIndex != m_CurrentSemaphoreIdx)
             std::swap(m_Surfaces[m_CurrentSemaphoreIdx].Sync, m_Surfaces[imageIndex].Sync);
@@ -298,7 +311,7 @@ namespace Crowny
         m_Surfaces[imageIndex].Acquired = true;
         m_Surfaces[imageIndex].NeedsWait = true;
         m_CurrentBackBufferIdx = imageIndex;
-        return VK_SUCCESS;
+        return result;
     }
 
     bool VulkanSwapChain::PrepareForPresent(uint32_t& backBufferIdx)

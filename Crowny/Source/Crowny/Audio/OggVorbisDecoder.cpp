@@ -10,27 +10,34 @@ namespace Crowny
 
     size_t OggRead(void* ptr, size_t size, size_t nmemb, void* data)
     {
+        if (size == 0)
+            return 0;
         OggDecoderData* decoderData = static_cast<OggDecoderData*>(data);
-        return static_cast<std::size_t>(decoderData->Stream->Read(ptr, size * nmemb));
+        return static_cast<std::size_t>(decoderData->Stream->Read(ptr, size * nmemb)) / size;
     }
 
     int OggSeek(void* data, ogg_int64_t offset, int whence)
     {
         OggDecoderData* decoderData = static_cast<OggDecoderData*>(data);
+        int64_t target = 0;
         switch (whence)
         {
         case SEEK_SET:
-            offset += decoderData->Offset;
+            target = static_cast<int64_t>(decoderData->Offset) + offset;
             break;
         case SEEK_CUR:
-            offset += decoderData->Stream->Tell();
+            target = static_cast<int64_t>(decoderData->Stream->Tell()) + offset;
             break;
         case SEEK_END:
-            offset = std::max(0, (int32_t)decoderData->Stream->Size() - 1);
+            target = static_cast<int64_t>(decoderData->Stream->Size()) + offset;
             break;
+        default:
+            return -1;
         }
-        decoderData->Stream->Seek((uint32_t)offset);
-        return (int)(decoderData->Stream->Tell() - decoderData->Offset);
+        if (target < decoderData->Offset || target > static_cast<int64_t>(decoderData->Stream->Size()))
+            return -1;
+        decoderData->Stream->Seek(static_cast<size_t>(target));
+        return 0;
     }
 
     long OggTell(void* data)
@@ -68,6 +75,12 @@ namespace Crowny
         if (stream == nullptr)
             return false;
 
+        if (m_OggVorbisFile.datasource != nullptr)
+        {
+            ov_clear(&m_OggVorbisFile);
+            m_OggVorbisFile = {};
+        }
+
         stream->Seek(offset);
         m_DecoderData.Stream = stream;
         m_DecoderData.Offset = offset;
@@ -88,7 +101,11 @@ namespace Crowny
         return true;
     }
 
-    void OggVorbisDecoder::Seek(uint32_t offset) { ov_pcm_seek(&m_OggVorbisFile, offset / m_ChannelCount); }
+    void OggVorbisDecoder::Seek(uint32_t offset)
+    {
+        if (m_OggVorbisFile.datasource != nullptr && m_ChannelCount != 0)
+            ov_pcm_seek(&m_OggVorbisFile, offset / m_ChannelCount);
+    }
 
     uint32_t OggVorbisDecoder::Read(uint8_t* samples, uint32_t count)
     {
@@ -96,13 +113,15 @@ namespace Crowny
         while (numSamples < count)
         {
             const int32_t toRead = (int32_t)(count - numSamples) * sizeof(int16_t);
-            const uint32_t bytesRead = ov_read(&m_OggVorbisFile, (char*)samples, toRead, 0, 2, 1, nullptr);
+            const long bytesRead = ov_read(&m_OggVorbisFile, reinterpret_cast<char*>(samples), toRead, 0, 2, 1, nullptr);
             if (bytesRead > 0)
             {
                 const uint32_t samplesRead = bytesRead / sizeof(int16_t);
                 numSamples += samplesRead;
                 samples += samplesRead * sizeof(int16_t);
             }
+            else if (bytesRead == OV_HOLE)
+                continue;
             else
                 break;
         }

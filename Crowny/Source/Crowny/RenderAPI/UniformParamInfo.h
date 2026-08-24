@@ -42,7 +42,7 @@ namespace Crowny
             Count
         };
 
-        virtual ~UniformParamInfo() = default;
+        virtual ~UniformParamInfo();
 
         uint32_t GetNumSets() const { return m_NumSets; }
 
@@ -53,6 +53,8 @@ namespace Crowny
         uint32_t GetSequentialSlot(ParamType type, uint32_t set, uint32_t slot) const;
 
         void GetBinding(ParamType type, uint32_t seqSlot, uint32_t& set, uint32_t& slot) const;
+        uint32_t GetArraySize(uint32_t set, uint32_t slot) const;
+        bool IsRuntimeArray(uint32_t set, uint32_t slot) const;
 
         void GetBinding(ShaderType shaderType, ParamType type, const String& name, UniformBinding& binding);
 
@@ -68,6 +70,8 @@ namespace Crowny
             uint32_t* SlotIndices;
             ParamType* SlotTypes;
             uint32_t* SlotSamplers;
+            uint32_t* SlotArraySizes;
+            bool* SlotRuntimeArrays;
             uint32_t NumSlots;
         };
 

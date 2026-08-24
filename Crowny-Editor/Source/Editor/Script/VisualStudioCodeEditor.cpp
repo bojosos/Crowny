@@ -10,7 +10,7 @@
 
 // Keep at top because of ambiguous UUID
 #include <Windows.h>
-#include <atlbase.h>
+#include <wrl/client.h>
 #undef UUID
 
 #include "Editor/Script/CodeEditor.h"
@@ -25,10 +25,87 @@
 
 namespace Crowny
 {
+    using Microsoft::WRL::ComPtr;
+
     constexpr uint32_t RETRY_INTERVAL_MS = 100; // Wait 100ms between retry
     constexpr uint32_t TIMEOUT_MS = 10000;      // Wait for 10s
 
     inline static WString QuoteString(const WString& str) { return L"\"" + str + L"\""; }
+
+    static Path FindToolInAncestors(Path directory, const Path& relativePath)
+    {
+        std::error_code error;
+        directory = fs::absolute(directory, error);
+        if (error)
+            return {};
+
+        while (!directory.empty())
+        {
+            const Path candidate = directory / relativePath;
+            if (fs::is_regular_file(candidate, error))
+                return candidate;
+            error.clear();
+
+            const Path parent = directory.parent_path();
+            if (parent == directory)
+                break;
+            directory = parent;
+        }
+        return {};
+    }
+
+    static Path FindVsWhere()
+    {
+        const Path relativePath = Path("3rdparty") / "vswhere" / "vswhere.exe";
+
+        std::error_code error;
+        Path result = FindToolInAncestors(fs::current_path(error), relativePath);
+        if (!result.empty())
+            return result;
+
+        std::array<wchar_t, 32768> executablePath{};
+        const DWORD executablePathLength = GetModuleFileNameW(nullptr, executablePath.data(), static_cast<DWORD>(executablePath.size()));
+        if (executablePathLength > 0 && executablePathLength < executablePath.size())
+        {
+            result = FindToolInAncestors(Path(WString(executablePath.data(), executablePathLength)).parent_path(), relativePath);
+            if (!result.empty())
+                return result;
+        }
+
+        std::array<wchar_t, MAX_PATH> programFiles{};
+        const DWORD programFilesLength = GetEnvironmentVariableW(L"ProgramFiles(x86)", programFiles.data(), static_cast<DWORD>(programFiles.size()));
+        if (programFilesLength > 0 && programFilesLength < programFiles.size())
+        {
+            const Path installedPath =
+              Path(WString(programFiles.data(), programFilesLength)) / "Microsoft Visual Studio" / "Installer" / "vswhere.exe";
+            if (fs::is_regular_file(installedPath, error))
+                return installedPath;
+        }
+
+        return {};
+    }
+
+    class ScopedBstr
+    {
+    public:
+        ScopedBstr() = default;
+        explicit ScopedBstr(const wchar_t* value) : m_Value(SysAllocString(value)) {}
+        ~ScopedBstr() { SysFreeString(m_Value); }
+
+        ScopedBstr(const ScopedBstr&) = delete;
+        ScopedBstr& operator=(const ScopedBstr&) = delete;
+
+        BSTR Get() const { return m_Value; }
+        BSTR* Put()
+        {
+            SysFreeString(m_Value);
+            m_Value = nullptr;
+            return &m_Value;
+        }
+
+    private:
+        BSTR m_Value = nullptr;
+    };
 
     struct VSProjectInfo
     {
@@ -72,7 +149,7 @@ namespace Crowny
 
         HRESULT __stdcall QueryInterface(REFIID riid, void** ppvObject) override
         {
-            if (riid == IID_IDropTarget || riid == IID_IUnknown)
+            if (riid == IID_IMessageFilter || riid == IID_IUnknown)
             {
                 AddRef();
                 *ppvObject = this;
@@ -100,53 +177,51 @@ namespace Crowny
         }
 
     private:
-        LONG m_RefCount;
+        LONG m_RefCount = 1;
     };
 
     class VisualStudio
     {
     public:
-        static CComPtr<EnvDTE::_DTE> FindRunningInstance(const Path& solutionPath, const Path& vsExePath)
+        static ComPtr<EnvDTE::_DTE> FindRunningInstance(const Path& solutionPath, const Path& vsExePath)
         {
-            CComPtr<IRunningObjectTable> runningObjectTable = nullptr;
-            if (FAILED(GetRunningObjectTable(0, &runningObjectTable)))
+            ComPtr<IRunningObjectTable> runningObjectTable;
+            if (FAILED(GetRunningObjectTable(0, runningObjectTable.ReleaseAndGetAddressOf())))
                 return nullptr;
 
-            CComPtr<IEnumMoniker> enumMoniker = nullptr;
-            if (FAILED(runningObjectTable->EnumRunning(&enumMoniker)))
+            ComPtr<IEnumMoniker> enumMoniker;
+            if (FAILED(runningObjectTable->EnumRunning(enumMoniker.ReleaseAndGetAddressOf())))
                 return nullptr;
 
-            WString widePath = solutionPath.wstring();
-            CComBSTR bstrSolution(widePath.c_str());
-            CComPtr<IMoniker> moniker = nullptr;
+            ComPtr<IMoniker> moniker;
             ULONG count = 0;
-            while (enumMoniker->Next(1, &moniker, &count) == S_OK && count)
+            while (enumMoniker->Next(1, moniker.ReleaseAndGetAddressOf(), &count) == S_OK && count)
             {
-                CComPtr<IUnknown> curObject = nullptr;
-                HRESULT result = runningObjectTable->GetObject(moniker, &curObject);
-                moniker = nullptr; // Reset moniker object so that it doesn't trigger the assert in Next from &CComPtr
+                ComPtr<IUnknown> curObject;
+                HRESULT result = runningObjectTable->GetObject(moniker.Get(), curObject.ReleaseAndGetAddressOf());
+                moniker.Reset();
 
                 if (result != S_OK)
                     continue;
 
-                CComPtr<EnvDTE::_DTE> dte;
-                curObject->QueryInterface(__uuidof(EnvDTE::_DTE), (void**)&dte);
+                ComPtr<EnvDTE::_DTE> dte;
+                curObject.As(&dte);
 
                 if (dte == nullptr)
                     continue;
 
-                CComPtr<EnvDTE::_Solution> solution;
-                if (FAILED(dte->get_Solution(&solution)))
+                ComPtr<EnvDTE::_Solution> solution;
+                if (FAILED(dte->get_Solution(solution.ReleaseAndGetAddressOf())))
                     continue;
 
-                CComBSTR vsFullName;
-                if (FAILED(dte->get_FullName(&vsFullName)))
+                ScopedBstr vsFullName;
+                if (FAILED(dte->get_FullName(vsFullName.Put())))
                     continue;
-                Path curPath = WString(vsFullName);
-                CComBSTR solutionName;
-                if (FAILED(solution->get_FullName(&solutionName)))
+                Path curPath = WString(vsFullName.Get());
+                ScopedBstr solutionName;
+                if (FAILED(solution->get_FullName(solutionName.Put())))
                     continue;
-                Path curSolPath = WString(solutionName);
+                Path curSolPath = WString(solutionName.Get());
                 if (curSolPath.empty())
                     continue;
 
@@ -167,33 +242,29 @@ namespace Crowny
             return nullptr;
         }
 
-        static CComPtr<EnvDTE::_DTE> CreateInstance(const CLSID& clsID, const Path& solutionPath)
+        static ComPtr<EnvDTE::_DTE> CreateInstance(const CLSID& clsID, const Path& solutionPath)
         {
-            CComPtr<IUnknown> newInstance = nullptr;
-            if (FAILED(::CoCreateInstance(clsID, nullptr, CLSCTX_LOCAL_SERVER, EnvDTE::IID__DTE, (LPVOID*)&newInstance)))
-                return nullptr;
-            CComPtr<EnvDTE::_DTE> dte;
-            newInstance->QueryInterface(__uuidof(EnvDTE::_DTE), (void**)&dte);
-
-            if (dte == nullptr)
+            ComPtr<EnvDTE::_DTE> dte;
+            if (FAILED(
+                  ::CoCreateInstance(clsID, nullptr, CLSCTX_LOCAL_SERVER, EnvDTE::IID__DTE, reinterpret_cast<void**>(dte.ReleaseAndGetAddressOf()))))
                 return nullptr;
 
             dte->put_UserControl(VARIANT_TRUE);
 
-            CComPtr<EnvDTE::_Solution> solution;
-            if (FAILED(dte->get_Solution(&solution)))
+            ComPtr<EnvDTE::_Solution> solution;
+            if (FAILED(dte->get_Solution(solution.ReleaseAndGetAddressOf())))
                 return nullptr;
 
             WString widePath = solutionPath.wstring();
-            CComBSTR bstrSolution(widePath.c_str());
-            if (FAILED(solution->Open(bstrSolution)))
+            ScopedBstr bstrSolution(widePath.c_str());
+            if (FAILED(solution->Open(bstrSolution.Get())))
                 return nullptr;
 
             uint32_t elapsed = 0;
             while (elapsed < TIMEOUT_MS)
             {
-                EnvDTE::Window* window = nullptr;
-                if (SUCCEEDED(dte->get_MainWindow(&window)))
+                ComPtr<EnvDTE::Window> window;
+                if (SUCCEEDED(dte->get_MainWindow(window.ReleaseAndGetAddressOf())))
                     return dte;
                 Sleep(RETRY_INTERVAL_MS);
                 elapsed += RETRY_INTERVAL_MS;
@@ -202,27 +273,27 @@ namespace Crowny
             return nullptr;
         }
 
-        static bool OpenFile(CComPtr<EnvDTE::_DTE> dte, const Path& filePath, uint32_t line)
+        static bool OpenFile(const ComPtr<EnvDTE::_DTE>& dte, const Path& filePath, uint32_t line)
         {
-            CComPtr<EnvDTE::ItemOperations> itemOperations;
-            if (FAILED(dte->get_ItemOperations(&itemOperations)))
+            ComPtr<EnvDTE::ItemOperations> itemOperations;
+            if (FAILED(dte->get_ItemOperations(itemOperations.ReleaseAndGetAddressOf())))
                 return false;
 
             WString widePath = filePath.wstring();
 
-            CComBSTR bstrFilePath(widePath.c_str());
-            CComBSTR bstrKind(EnvDTE::vsViewKindPrimary);
-            CComPtr<EnvDTE::Window> window = nullptr;
-            if (FAILED(itemOperations->OpenFile(bstrFilePath, bstrKind, &window)))
+            ScopedBstr bstrFilePath(widePath.c_str());
+            ScopedBstr bstrKind(L"{00000000-0000-0000-0000-000000000000}");
+            ComPtr<EnvDTE::Window> window;
+            if (FAILED(itemOperations->OpenFile(bstrFilePath.Get(), bstrKind.Get(), window.ReleaseAndGetAddressOf())))
                 return false;
-            CComPtr<EnvDTE::Document> activeDocument;
-            if (line > 0 && SUCCEEDED(dte->get_ActiveDocument(&activeDocument)))
+            ComPtr<EnvDTE::Document> activeDocument;
+            if (line > 0 && SUCCEEDED(dte->get_ActiveDocument(activeDocument.ReleaseAndGetAddressOf())))
             {
-                CComPtr<IDispatch> selection;
-                if (SUCCEEDED(activeDocument->get_Selection(&selection)))
+                ComPtr<IDispatch> selection;
+                if (SUCCEEDED(activeDocument->get_Selection(selection.ReleaseAndGetAddressOf())))
                 {
-                    CComPtr<EnvDTE::TextSelection> textSelection;
-                    if (selection != nullptr && SUCCEEDED(selection->QueryInterface(&textSelection)))
+                    ComPtr<EnvDTE::TextSelection> textSelection;
+                    if (selection != nullptr && SUCCEEDED(selection.As(&textSelection)))
                     {
                         textSelection->GotoLine(line, VARIANT_TRUE);
                         textSelection->EndOfLine(false);
@@ -230,8 +301,8 @@ namespace Crowny
                 }
             }
 
-            window = nullptr;
-            if (SUCCEEDED(dte->get_MainWindow(&window)))
+            window.Reset();
+            if (SUCCEEDED(dte->get_MainWindow(window.ReleaseAndGetAddressOf())))
             {
                 window->Activate();
 
@@ -272,19 +343,20 @@ namespace Crowny
 
         static void ReloadSolution(const Path& solutionPath, const Path& editorPath)
         {
-            CComPtr<EnvDTE::_DTE> dte = VisualStudio::FindRunningInstance(solutionPath, editorPath);
+            ComPtr<EnvDTE::_DTE> dte = VisualStudio::FindRunningInstance(solutionPath, editorPath);
             // Only try and reload the solution if we have a running visual studio instance.
             if (dte == nullptr)
             {
                 return;
             }
-            CComPtr<EnvDTE::_Solution> solution = nullptr;
-            if (FAILED(dte->get_Solution(&solution)))
+            ComPtr<EnvDTE::_Solution> solution;
+            if (FAILED(dte->get_Solution(solution.ReleaseAndGetAddressOf())))
                 return;
 
             if (!SUCCEEDED(solution->Close(false)))
                 return;
-            if (!SUCCEEDED(solution->Open(CComBSTR(solutionPath.c_str()))))
+            ScopedBstr bstrSolution(solutionPath.c_str());
+            if (!SUCCEEDED(solution->Open(bstrSolution.Get())))
                 CW_ENGINE_WARN("Couldn't reopen solution.");
         }
     };
@@ -299,7 +371,7 @@ namespace Crowny
             return;
         }
 
-        CComPtr<EnvDTE::_DTE> dte = VisualStudio::FindRunningInstance(solutionPath, m_ExecPath);
+        ComPtr<EnvDTE::_DTE> dte = VisualStudio::FindRunningInstance(solutionPath, m_ExecPath);
         if (dte == nullptr)
         {
             DWORD processId = 0;
@@ -327,13 +399,15 @@ namespace Crowny
         IMessageFilter* oldFilter;
 
         CoRegisterMessageFilter(newFilter, &oldFilter);
-        EnvDTE::Window* window = nullptr;
-        if (SUCCEEDED(dte->get_MainWindow(&window)))
+        ComPtr<EnvDTE::Window> window;
+        if (SUCCEEDED(dte->get_MainWindow(window.ReleaseAndGetAddressOf())))
             window->Activate();
 
         VisualStudio::OpenFile(dte, filePath, line);
         CoRegisterMessageFilter(oldFilter, nullptr);
 
+        window.Reset();
+        dte.Reset();
         CoUninitialize();
     }
 
@@ -408,10 +482,22 @@ namespace Crowny
         };
         using namespace rapidjson;
 
-        String jsonResult = PlatformUtils::Exec("C:\\dev\\Crowny\\3rdparty\\vswhere\\vswhere.exe -prerelease -format json -utf8");
+        const Path vswherePath = FindVsWhere();
+        if (vswherePath.empty())
+        {
+            CW_ENGINE_WARN("Could not find vswhere.exe; Visual Studio integration is unavailable.");
+            return;
+        }
+
+        const String vswhereCommand = "\"" + vswherePath.string() + "\" -prerelease -format json -utf8";
+        String jsonResult = PlatformUtils::Exec(vswhereCommand);
         Document document;
         document.Parse(jsonResult);
-        CW_ENGINE_ASSERT(document.IsArray());
+        if (document.HasParseError() || !document.IsArray())
+        {
+            CW_ENGINE_WARN("vswhere.exe returned invalid installation data.");
+            return;
+        }
         for (const Value& val : document.GetArray())
         {
             const bool isPrerelease = val.FindMember("isPrerelease")->value.GetBool();

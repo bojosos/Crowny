@@ -40,10 +40,13 @@ namespace Crowny
         float GetVolume() const;
         void SetPaused(bool paused);
         bool IsPaused() const { return m_IsPaused; }
-        void SetActiveDevice(const AudioDevice& device);
+        bool SetActiveDevice(const AudioDevice& device);
         const AudioDevice& GetDefaultDevice() const { return m_DefaultDevice; }
+        const AudioDevice& GetActiveDevice() const { return m_ActiveDevice; }
         const Vector<AudioDevice>& GetAllDevices() const { return m_Devices; }
-        void WriteToOpenALBuffer(uint32_t bufferId, uint8_t* samples, const AudioDataInfo& info);
+        bool WriteToOpenALBuffer(uint32_t bufferId, const uint8_t* samples, const AudioDataInfo& info);
+        bool IsAvailable() const { return m_Device != nullptr && m_Context != nullptr; }
+        bool IsContextCurrent() const;
 
         ALCdevice* GetDevice() const { return m_Device; }
         void SetContext(ALCcontext* context) { m_Context = context; }
@@ -56,6 +59,7 @@ namespace Crowny
         // become no-ops at the OpenAL layer, while bus gain still propagates to sources.
         const EFX& GetEFX() const { return m_EFX; }
         bool IsEFXAvailable() const { return m_EFX.Available; }
+        EFXLoadStatus GetEFXStatus() const { return m_EFX.Status; }
 
         // Sets the currently active audio mixer. Sources without an explicit bus will route to the
         // master bus of this mixer. Passing a null handle reverts to direct-output (no bus routing).
@@ -82,12 +86,14 @@ namespace Crowny
         void StopManualSources();
 
     protected:
-        void OnStartUp() override;
         void OnShutdown() override;
 
     private:
         bool IsExtSupported(const String& ext) const;
         ALCcontext* GetContext() const;
+        void ApplyGlobalSettings();
+        bool EnsureContextCurrent();
+        void RefreshEFXCapability();
 
     private:
         float m_Volume = 1.0f;
@@ -103,16 +109,16 @@ namespace Crowny
         Set<AudioSource*> m_Sources;
 
         UnorderedMap<String, Ref<AudioSource>> m_ManualSources;
-        UnorderedMap<String, Ref<AudioSource>> m_TempSources;
 
         EFX m_EFX;
+        bool m_EFXFallbackReported = false;
+        bool m_EFXAvailableReported = false;
         AssetHandle<AudioMixer> m_ActiveMixer;
 
         float m_DopplerFactor = 1.0f;
         float m_SpeedOfSound = 343.3f;
         AudioDistanceModel m_DistanceModel = AudioDistanceModel::InverseClamped;
+
+        friend class AudioSource;
     };
-
-    extern AudioManager* gAudioManager;
-
 } // namespace Crowny

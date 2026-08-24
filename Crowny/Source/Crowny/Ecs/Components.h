@@ -3,30 +3,32 @@
 #include "Crowny/Common/Color.h"
 #include "Crowny/Scene/SceneCamera.h"
 
+#include "Crowny/Animation/AnimationPlayer.h"
 #include "Crowny/Audio/AudioSource.h"
+#include "Crowny/Common/HashedString.h"
 #include "Crowny/Common/Math.h"
 #include "Crowny/Ecs/Entity.h"
 #include "Crowny/NodeGraph/NodeGraphAsset.h"
+#include "Crowny/Physics/Physics3DTypes.h"
 #include "Crowny/Renderer/Material.h"
+#include "Crowny/Renderer/RenderLight.h"
 
 #include <glm/gtx/quaternion.hpp>
 
-class b2Body;
-class b2Fixture;
+#include <atomic>
+#include <limits>
 
 namespace Crowny
 {
 
-    static uint64_t s_NextAvailableId = 1;
+    inline std::atomic<uint64_t> s_NextAvailableId{ 1 };
 
     template <class Component> void ComponentEditorWidget(Entity entity);
     struct ComponentBase
     {
-        ComponentBase()
-        {
-            InstanceId = s_NextAvailableId;
-            s_NextAvailableId++;
-        }
+        ComponentBase() : InstanceId(s_NextAvailableId.fetch_add(1, std::memory_order_relaxed)) {}
+        ComponentBase(const ComponentBase&) : ComponentBase() {}
+        ComponentBase& operator=(const ComponentBase&) { return *this; }
 
         uint64_t InstanceId;
     };
@@ -35,7 +37,7 @@ namespace Crowny
     {
         UUID Uuid;
 
-        IDComponent() : ComponentBase(){};
+        IDComponent() : ComponentBase() {};
         IDComponent(const IDComponent&) = default;
         IDComponent(const UUID& uuid) : Uuid(uuid) {}
     };
@@ -74,7 +76,16 @@ namespace Crowny
 
     public:
         TransformComponent() : ComponentBase() {}
-        TransformComponent(const TransformComponent&) = default;
+        TransformComponent(const TransformComponent& other) : ComponentBase(other), LocalTransform(other.GetLocalTransform()) {}
+        TransformComponent& operator=(const TransformComponent& other)
+        {
+            if (this == &other)
+                return *this;
+            ComponentBase::operator=(other);
+            LocalTransform = other.GetLocalTransform();
+            TransformDirtyFlags = DIRTY_LOCAL | DIRTY_WORLD;
+            return *this;
+        }
 
         bool IsCachedWorldTransformValid() const { return (TransformDirtyFlags & DIRTY_WORLD) == 0; }
         bool IsCachedLocalTransformValid() const { return (TransformDirtyFlags & DIRTY_LOCAL) == 0; }
@@ -136,6 +147,27 @@ namespace Crowny
                 LocalTransform = worldTransform;
             }
             TransformDirtyFlags |= DIRTY_LOCAL | DIRTY_WORLD;
+        }
+
+        bool SetWorldMatrix(const glm::mat4& worldMatrix, const Entity& parent)
+        {
+            glm::mat4 localMatrix = worldMatrix;
+            if (parent)
+            {
+                const glm::mat4& parentWorld = parent.GetWorldMatrix();
+                if (std::abs(glm::determinant(glm::mat3(parentWorld))) <= std::numeric_limits<float>::epsilon())
+                    return false;
+                localMatrix = glm::inverse(parentWorld) * worldMatrix;
+            }
+
+            glm::vec3 position;
+            glm::quat rotation;
+            glm::vec3 scale;
+            if (!Math::DecomposeMatrix(localMatrix, position, rotation, scale))
+                return false;
+            LocalTransform = Transform(position, glm::normalize(rotation), scale);
+            TransformDirtyFlags |= DIRTY_LOCAL | DIRTY_WORLD;
+            return true;
         }
 
         void InvalidateWorld() { TransformDirtyFlags |= DIRTY_WORLD; }
@@ -206,11 +238,44 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<CameraComponent>(Entity e);
 
+    struct LightComponent : public ComponentBase
+    {
+        LightType Type = LightType::Point;
+        glm::vec3 Color = glm::vec3(1.0f);
+        // Lux for directional lights and lumens for point and spot lights.
+        float Intensity = 1000.0f;
+        float Range = 10.0f;
+        float SpotInnerAngle = glm::radians(25.0f);
+        float SpotOuterAngle = glm::radians(35.0f);
+        float SourceRadius = 0.0f;
+        bool UseColorTemperature = false;
+        float Temperature = 6500.0f;
+        RenderLayerMask VisibilityLayers = RenderLayerMask::All();
+        bool Enabled = true;
+        bool AffectDiffuse = true;
+        bool AffectSpecular = true;
+        bool Volumetric = false;
+        LightShadowSettings Shadows;
+
+        LightComponent() : ComponentBase() {}
+        LightComponent(const LightComponent&) = default;
+    };
+
+    template <> void ComponentEditorWidget<LightComponent>(Entity e);
+
     enum class TextOverflow
     {
         Overflow,
         Ellipses,
+        Ellipsis = Ellipses,
         Truncate
+    };
+
+    enum class TextWrapMode
+    {
+        Word,
+        Character,
+        WordThenCharacter
     };
 
     enum class TextHorizontalAlignment
@@ -250,9 +315,16 @@ namespace Crowny
 
         float Size = 36.0f;
         bool AutoSize = false;
+        float AutoSizeMin = 8.0f;
+        float AutoSizeMax = 72.0f;
 
+        // Extends right and down from the entity origin. A zero axis is unbounded.
+        glm::vec2 LayoutSize{ 0.0f };
         bool Wrapping = true;
+        TextWrapMode WrapMode = TextWrapMode::WordThenCharacter;
         TextOverflow Overflow = TextOverflow::Overflow;
+        bool ClipToBounds = false;
+        uint32_t MaxLines = 0;
 
         TextHorizontalAlignment HorizontalAlignment = TextHorizontalAlignment::Left;
         TextVerticalAlignment VerticalAlignment = TextVerticalAlignment::Top;
@@ -264,8 +336,18 @@ namespace Crowny
         float CharacterSpacing = 0.0f;
         float WordSpacing = 0.0f;
         float LineSpacing = 0.0f;
+        float ParagraphSpacing = 0.0f;
+
+        bool UseCustomDecorationColor = false;
+        glm::vec4 DecorationColor{ 1.0f };
+        // Zero uses the font metric. Offsets are added to the font-derived position.
+        float DecorationThickness = 0.0f;
+        float UnderlineOffset = 0.0f;
+        float StrikethroughOffset = 0.0f;
 
         bool UseKerning = true;
+        int32_t SortingLayer = 0;
+        int32_t OrderInLayer = 0;
 
         TextComponent();
         TextComponent(const TextComponent&) = default;
@@ -278,6 +360,8 @@ namespace Crowny
     {
         AssetHandle<Crowny::Texture> Texture;
         glm::vec4 Color{ 1.0f };
+        int32_t SortingLayer = 0;
+        int32_t OrderInLayer = 0;
 
         SpriteRendererComponent() : ComponentBase() {}
         SpriteRendererComponent(const SpriteRendererComponent&) = default;
@@ -289,6 +373,13 @@ namespace Crowny
     {
         AssetHandle<Mesh> MeshHandle;
         Vector<AssetHandle<Material>> Materials; // One per sub-mesh; index 0 is default/fallback
+        RenderLayerMask VisibilityLayers = RenderLayerMask::All();
+        float LodBias = 0.0f;
+        int32_t RenderLayerOrder = 0;
+        bool Visible = true;
+        bool CastShadows = true;
+        bool ReceiveShadows = true;
+        bool MotionVectors = true;
 
         AssetHandle<Material> GetMaterial(uint32_t index = 0) const
         {
@@ -323,6 +414,7 @@ namespace Crowny
         // Internal state managed by the procedural mesh system
         Ref<MeshData> CpuMeshData;                  // Latest evaluation result (CPU side, sim thread)
         Ref<Mesh> GpuMesh;                          // GPU-uploaded mesh (created on render thread)
+        AssetHandle<Mesh> RuntimeMeshHandle;        // Stable handle reused by render extraction
         bool NeedsEvaluation = true;                // Graph inputs changed, re-evaluate on sim thread
         bool NeedsGpuUpload = false;                // New CpuMeshData ready, upload on render thread
         uint32_t LastEvaluatedVersion = 0xFFFFFFFF; // Version of the graph when last evaluated
@@ -333,7 +425,31 @@ namespace Crowny
         std::shared_ptr<Ref<Mesh>> PendingGpuResult;
 
         ProceduralMeshComponent() : ComponentBase() {}
-        ProceduralMeshComponent(const ProceduralMeshComponent&) = default;
+        ProceduralMeshComponent(const ProceduralMeshComponent& other) : ComponentBase(other) { CopySettings(other); }
+        ProceduralMeshComponent& operator=(const ProceduralMeshComponent& other)
+        {
+            if (this != &other)
+            {
+                ComponentBase::operator=(other);
+                CopySettings(other);
+            }
+            return *this;
+        }
+
+    private:
+        void CopySettings(const ProceduralMeshComponent& other)
+        {
+            Graph = other.Graph;
+            Materials = other.Materials;
+            InputValues = other.InputValues;
+            CpuMeshData = nullptr;
+            GpuMesh = nullptr;
+            RuntimeMeshHandle = nullptr;
+            NeedsEvaluation = true;
+            NeedsGpuUpload = false;
+            LastEvaluatedVersion = 0xFFFFFFFF;
+            PendingGpuResult = nullptr;
+        }
     };
 
     template <> void ComponentEditorWidget<ProceduralMeshComponent>(Entity e);
@@ -344,7 +460,7 @@ namespace Crowny
         Entity Parent;
 
         RelationshipComponent() : ComponentBase() {}
-        RelationshipComponent(const RelationshipComponent& other) = default;
+        RelationshipComponent(const RelationshipComponent& other) : ComponentBase(other) {}
         RelationshipComponent(const Entity& parent) : Parent(parent) {}
 
         RelationshipComponent& operator=(const RelationshipComponent& other);
@@ -354,7 +470,16 @@ namespace Crowny
     {
     public:
         AudioListenerComponent() = default;
-        AudioListenerComponent(const AudioListenerComponent&) = default;
+        AudioListenerComponent(const AudioListenerComponent& other) : ComponentBase(other) {}
+        AudioListenerComponent& operator=(const AudioListenerComponent& other)
+        {
+            if (this != &other)
+            {
+                ComponentBase::operator=(other);
+                m_Internal = nullptr;
+            }
+            return *this;
+        }
 
         void Initialize();
         void OnTransformChanged(const Transform& transform);
@@ -369,7 +494,8 @@ namespace Crowny
     {
     public:
         AudioSourceComponent() : ComponentBase() {}
-        AudioSourceComponent(const AudioSourceComponent&) = default;
+        AudioSourceComponent(const AudioSourceComponent& other);
+        AudioSourceComponent& operator=(const AudioSourceComponent& other);
 
         void OnInitialize();
         void OnEnabled();
@@ -440,12 +566,43 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<AudioSourceComponent>(Entity e);
 
+    struct ScriptTypeIdentity
+    {
+        String Assembly;
+        String Namespace;
+        String TypeName;
+
+        bool IsValid() const { return !Assembly.empty() && !TypeName.empty(); }
+        String GetFullName() const { return Namespace.empty() ? TypeName : Namespace + "." + TypeName; }
+        bool operator==(const ScriptTypeIdentity&) const = default;
+    };
+
+    struct PersistedScriptState
+    {
+        ScriptTypeIdentity Identity;
+        Ref<SerializableObject> Fields;
+    };
+
     class MonoScript
     {
     public:
+        using LifecycleThunk = void(CW_THUNKCALL*)(MonoObject*, MonoException**);
+
+        struct RuntimeCallback
+        {
+            MonoObject* Instance = nullptr;
+            LifecycleThunk Thunk = nullptr;
+
+            void Invoke() const;
+            explicit operator bool() const { return Instance != nullptr && Thunk != nullptr; }
+        };
+
         MonoScript();
+        explicit MonoScript(ScriptTypeIdentity identity);
         MonoScript(MonoReflectionType* runtimeType);
-        MonoScript(const MonoScript&) = default;
+        MonoScript(const String& assemblyName, MonoReflectionType* runtimeType);
+        MonoScript(const MonoScript& other);
+        MonoScript& operator=(const MonoScript& other);
 
         void SetClassName(const String& className);
         MonoClass* GetManagedClass() const;
@@ -453,19 +610,27 @@ namespace Crowny
         MonoObject* GetManagedInstance() const;
 
         Ref<SerializableObjectInfo> GetObjectInfo() const { return m_ObjectInfo; }
-        Ref<SerializableObject> GetSerializableObject() const { return m_SerializedObjectData; }
+
+        PersistedScriptState CapturePersistedState() const;
+        bool ApplyPersistedState(const PersistedScriptState& state);
 
         ScriptObjectBackupData BeginRefresh();
         void EndRefresh(const ScriptObjectBackupData& data);
 
-        const String& GetTypeName() const { return m_TypeName; }
-        const String& GetNamespace() const { return m_Namespace; }
+        const ScriptTypeIdentity& GetTypeIdentity() const { return m_Identity; }
+        const String& GetAssemblyName() const { return m_Identity.Assembly; }
+        const String& GetTypeName() const { return m_Identity.TypeName; }
+        const String& GetNamespace() const { return m_Identity.Namespace; }
 
         void OnInitialize(ScriptEntityBehaviour* entityBehaviour);
         void Create(Entity entity);
+        void ClearRuntimeInstance();
         void OnStart();
         void OnUpdate();
         void OnDestroy();
+        RuntimeCallback GetStartCallback() const;
+        RuntimeCallback GetUpdateCallback() const;
+        RuntimeCallback GetDestroyCallback() const;
 
         void OnCollisionEnter2D(const Collision2D& collision);
         void OnCollisionStay2D(const Collision2D& collision);
@@ -475,15 +640,22 @@ namespace Crowny
         void OnTriggerStay2D(Entity other);
         void OnTriggerExit2D(Entity other);
 
+        void OnCollisionEnter3D(const Collision3D& collision);
+        void OnCollisionStay3D(const Collision3D& collision);
+        void OnCollisionExit3D(const Collision3D& collision);
+
+        void OnTriggerEnter3D(Entity other);
+        void OnTriggerStay3D(Entity other);
+        void OnTriggerExit3D(Entity other);
+
         uint64_t InstanceId; // These also require one for scripting
 
         ScriptObjectBackupData Backup();
-        void Restore(const ScriptObjectBackupData& backupData, bool missingType);
+        void Restore(const ScriptObjectBackupData& backupData);
 
     private:
-        typedef void(CW_THUNKCALL* OnStartThunkDef)(MonoObject*, MonoException**);
-        typedef void(CW_THUNKCALL* OnUpdateThunkDef)(MonoObject*, MonoException**);
-        typedef void(CW_THUNKCALL* OnDestroyThunkDef)(MonoObject*, MonoException**);
+        bool ResolveObjectInfo();
+        void ResetRuntimeCallbacks();
 
         typedef void(CW_THUNKCALL* OnCollisionEnterThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
         typedef void(CW_THUNKCALL* OnCollisionStayThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
@@ -492,9 +664,9 @@ namespace Crowny
         typedef void(CW_THUNKCALL* OnTriggerStayThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
         typedef void(CW_THUNKCALL* OnTriggerExitThunkDef)(MonoObject* object, MonoObject* data, MonoException** ex);
 
-        OnStartThunkDef m_OnStartThunk = nullptr;
-        OnUpdateThunkDef m_OnUpdateThunk = nullptr;
-        OnDestroyThunkDef m_OnDestroyThunk = nullptr;
+        LifecycleThunk m_OnStartThunk = nullptr;
+        LifecycleThunk m_OnUpdateThunk = nullptr;
+        LifecycleThunk m_OnDestroyThunk = nullptr;
 
         OnCollisionEnterThunkDef m_OnCollisionEnterThunk = nullptr;
         OnCollisionStayThunkDef m_OnCollisionStayThunk = nullptr;
@@ -502,18 +674,19 @@ namespace Crowny
         OnTriggerEnterThunkDef m_OnTriggerEnterThunk = nullptr;
         OnTriggerStayThunkDef m_OnTriggerStayThunk = nullptr;
         OnTriggerExitThunkDef m_OnTriggerExitThunk = nullptr;
+        OnCollisionEnterThunkDef m_OnCollisionEnter3DThunk = nullptr;
+        OnCollisionStayThunkDef m_OnCollisionStay3DThunk = nullptr;
+        OnCollisionExitThunkDef m_OnCollisionExit3DThunk = nullptr;
+        OnTriggerEnterThunkDef m_OnTriggerEnter3DThunk = nullptr;
+        OnTriggerStayThunkDef m_OnTriggerStay3DThunk = nullptr;
+        OnTriggerExitThunkDef m_OnTriggerExit3DThunk = nullptr;
 
-        String m_Namespace;
-        String m_TypeName;
-        String m_FullTypeName;
+        ScriptTypeIdentity m_Identity;
         bool m_MissingType = false;
 
-    public: // TODO: Do something about this
         Ref<SerializableObject> m_SerializedObjectData;
-
-    private:
         Ref<SerializableObjectInfo> m_ObjectInfo;
-        MonoReflectionType* m_RuntimeType;
+        MonoReflectionType* m_RuntimeType = nullptr;
         MonoClass* m_Class = nullptr;
         ScriptEntityBehaviour* m_ScriptEntityBehaviour = nullptr;
     };
@@ -525,7 +698,7 @@ namespace Crowny
         MonoScriptComponent(const MonoScriptComponent&) = default;
 
         ScriptObjectBackupData Backup(bool clearExisting = true);
-        void Restore(const ScriptObjectBackupData& data, bool missingType);
+        void Restore(const ScriptObjectBackupData& data);
 
         Vector<MonoScript> Scripts;
     };
@@ -580,7 +753,16 @@ namespace Crowny
     struct Rigidbody2DComponent : public ComponentBase
     {
         Rigidbody2DComponent() : ComponentBase() {}
-        Rigidbody2DComponent(const Rigidbody2DComponent& rb) = default;
+        Rigidbody2DComponent(const Rigidbody2DComponent& other) : ComponentBase(other) { CopySettings(other); }
+        Rigidbody2DComponent& operator=(const Rigidbody2DComponent& other)
+        {
+            if (this != &other)
+            {
+                ComponentBase::operator=(other);
+                CopySettings(other);
+            }
+            return *this;
+        }
 
         void SetLayerMask(uint32_t layerMask, Entity e);
         uint32_t GetLayerMask() const { return m_LayerMask; }
@@ -599,6 +781,7 @@ namespace Crowny
         void SetInertia(float inertia);
 
         float GetMass() const;
+        float GetConfiguredMass() const { return m_Mass; }
         float GetGravityScale() const { return m_GravityScale; }
         Rigidbody2DConstraints GetConstraints() const { return m_Constraints; }
         RigidbodyBodyType GetBodyType() const { return m_Type; }
@@ -608,12 +791,38 @@ namespace Crowny
         float GetLinearDrag() const { return m_LinearDrag; }
         bool GetAutoMass() const { return m_AutoMass; }
         glm::vec2 GetCenterOfMass() const;
+        const glm::vec2& GetConfiguredCenterOfMass() const { return m_CenterOfMass; }
         RigidbodyInterpolation GetInterpolationMode() const { return m_InterpolationMode; }
         float GetInertia() const;
+        float GetConfiguredInertia() const { return m_Inertia; }
 
-        b2Body* RuntimeBody = nullptr;
+        void* RuntimeBody = nullptr;
+        glm::vec2 RuntimePreviousPosition{ 0.0f };
+        float RuntimePreviousRotation = 0.0f;
+        bool RuntimeHasPreviousState = false;
 
     private:
+        void CopySettings(const Rigidbody2DComponent& other)
+        {
+            RuntimeBody = nullptr;
+            RuntimePreviousPosition = glm::vec2(0.0f);
+            RuntimePreviousRotation = 0.0f;
+            RuntimeHasPreviousState = false;
+            m_Type = other.m_Type;
+            m_SleepMode = other.m_SleepMode;
+            m_Constraints = other.m_Constraints;
+            m_LayerMask = other.m_LayerMask;
+            m_Mass = other.m_Mass;
+            m_GravityScale = other.m_GravityScale;
+            m_LinearDrag = other.m_LinearDrag;
+            m_AngularDrag = other.m_AngularDrag;
+            m_AutoMass = other.m_AutoMass;
+            m_Inertia = other.m_Inertia;
+            m_CenterOfMass = other.m_CenterOfMass;
+            m_ContinuousCollisionDetection = other.m_ContinuousCollisionDetection;
+            m_InterpolationMode = other.m_InterpolationMode;
+        }
+
         RigidbodyBodyType m_Type = RigidbodyBodyType::Static;
         RigidbodySleepMode m_SleepMode = RigidbodySleepMode::StartAwake;
         Rigidbody2DConstraints m_Constraints = Rigidbody2DConstraintsBits::None;
@@ -634,16 +843,33 @@ namespace Crowny
     struct Collider2D : ComponentBase
     {
         Collider2D() : ComponentBase() {}
-        Collider2D(const Collider2D& collider) = default;
+        Collider2D(const Collider2D& other)
+          : ComponentBase(other), m_Offset(other.m_Offset), m_Material(other.m_Material), m_IsTrigger(other.m_IsTrigger)
+        {
+        }
+        Collider2D& operator=(const Collider2D& other)
+        {
+            if (this != &other)
+            {
+                ComponentBase::operator=(other);
+                RuntimeFixture = nullptr;
+                m_Offset = other.m_Offset;
+                m_Material = other.m_Material;
+                m_IsTrigger = other.m_IsTrigger;
+            }
+            return *this;
+        }
 
         const glm::vec2& GetOffset() const { return m_Offset; }
         bool IsTrigger() const { return m_IsTrigger; }
         const AssetHandle<PhysicsMaterial2D>& GetMaterial() const { return m_Material; }
+        const PhysicsMaterialData& GetMaterialData() const;
 
         void SetIsTrigger(bool trigger);
         void SetMaterial(const AssetHandle<PhysicsMaterial2D>& material);
+        void RefreshMaterial();
 
-        b2Fixture* RuntimeFixture = nullptr;
+        void* RuntimeFixture = nullptr;
 
         glm::vec2 m_Offset = { 0.0f, 0.0f };
         AssetHandle<PhysicsMaterial2D> m_Material;
@@ -682,11 +908,161 @@ namespace Crowny
 
     template <> void ComponentEditorWidget<CircleCollider2DComponent>(Entity e);
 
+    struct Rigidbody3DComponent : public ComponentBase
+    {
+        Rigidbody3DComponent() : ComponentBase() {}
+        Rigidbody3DComponent(const Rigidbody3DComponent& other);
+        Rigidbody3DComponent& operator=(const Rigidbody3DComponent& other);
+
+        PhysicsBodyType3D GetBodyType() const { return m_Type; }
+        float GetMass() const { return m_Mass; }
+        bool GetAutoMass() const { return m_AutoMass; }
+        float GetGravityScale() const { return m_GravityScale; }
+        float GetLinearDamping() const { return m_LinearDamping; }
+        float GetAngularDamping() const { return m_AngularDamping; }
+        const glm::vec3& GetCenterOfMass() const { return m_CenterOfMass; }
+        bool GetAllowSleep() const { return m_AllowSleep; }
+        bool GetStartAwake() const { return m_StartAwake; }
+        bool GetContinuousCollision() const { return m_ContinuousCollision; }
+        bool GetLockRotationX() const { return m_LockRotationX; }
+        bool GetLockRotationY() const { return m_LockRotationY; }
+        bool GetLockRotationZ() const { return m_LockRotationZ; }
+        const PhysicsFilter3D& GetFilter() const { return m_Filter; }
+
+        void SetBodyType(PhysicsBodyType3D type, Entity entity);
+        void SetMass(float mass, Entity entity);
+        void SetAutoMass(bool autoMass, Entity entity);
+        void SetGravityScale(float scale);
+        void SetDamping(float linear, float angular);
+        void SetCenterOfMass(const glm::vec3& center, Entity entity);
+        void SetAllowSleep(bool allowSleep, Entity entity);
+        void SetStartAwake(bool startAwake, Entity entity);
+        void SetContinuousCollision(bool continuous, Entity entity);
+        void SetRotationLocks(bool x, bool y, bool z, Entity entity);
+        void SetFilter(const PhysicsFilter3D& filter);
+
+        glm::vec3 GetLinearVelocity() const;
+        glm::vec3 GetAngularVelocity() const;
+        void SetLinearVelocity(const glm::vec3& velocity);
+        void SetAngularVelocity(const glm::vec3& velocity);
+        void AddForce(const glm::vec3& force, PhysicsForceMode3D mode = PhysicsForceMode3D::Force);
+        void AddForceAt(const glm::vec3& force, const glm::vec3& point, PhysicsForceMode3D mode = PhysicsForceMode3D::Force);
+        void AddTorque(const glm::vec3& torque, PhysicsForceMode3D mode = PhysicsForceMode3D::Force);
+        void SetAwake(bool awake);
+        bool IsAwake() const;
+
+        PhysicsBody3DHandle RuntimeBody;
+
+    private:
+        void CopySettings(const Rigidbody3DComponent& other);
+
+        PhysicsBodyType3D m_Type = PhysicsBodyType3D::Static;
+        float m_Mass = 1.0f;
+        bool m_AutoMass = true;
+        float m_GravityScale = 1.0f;
+        float m_LinearDamping = 0.0f;
+        float m_AngularDamping = 0.05f;
+        glm::vec3 m_CenterOfMass{ 0.0f };
+        bool m_AllowSleep = true;
+        bool m_StartAwake = true;
+        bool m_ContinuousCollision = false;
+        bool m_LockRotationX = false;
+        bool m_LockRotationY = false;
+        bool m_LockRotationZ = false;
+        PhysicsFilter3D m_Filter;
+        glm::vec3 m_LinearVelocity{ 0.0f };
+        glm::vec3 m_AngularVelocity{ 0.0f };
+    };
+
+    template <> void ComponentEditorWidget<Rigidbody3DComponent>(Entity e);
+
+    struct Collider3D : public ComponentBase
+    {
+        Collider3D();
+        Collider3D(const Collider3D& other);
+        Collider3D& operator=(const Collider3D& other);
+
+        const glm::vec3& GetOffset() const { return m_Offset; }
+        const glm::quat& GetRotation() const { return m_Rotation; }
+        bool IsTrigger() const { return m_IsTrigger; }
+        const AssetHandle<PhysicsMaterial3D>& GetMaterial() const { return m_Material; }
+        const PhysicsMaterialData& GetMaterialData() const;
+        const PhysicsFilter3D& GetFilter() const { return m_Filter; }
+
+        void SetOffset(const glm::vec3& offset, Entity entity);
+        void SetRotation(const glm::quat& rotation, Entity entity);
+        void SetIsTrigger(bool trigger);
+        void SetMaterial(const AssetHandle<PhysicsMaterial3D>& material);
+        void RefreshMaterial();
+        void SetFilter(const PhysicsFilter3D& filter, Entity entity);
+
+        PhysicsShape3DHandle RuntimeShape;
+
+    protected:
+        void CopySettings(const Collider3D& other);
+
+        glm::vec3 m_Offset{ 0.0f };
+        glm::quat m_Rotation{ 1.0f, 0.0f, 0.0f, 0.0f };
+        bool m_IsTrigger = false;
+        AssetHandle<PhysicsMaterial3D> m_Material;
+        PhysicsFilter3D m_Filter;
+    };
+
+    struct BoxCollider3DComponent : public Collider3D
+    {
+        BoxCollider3DComponent() = default;
+        BoxCollider3DComponent(const BoxCollider3DComponent& other);
+        BoxCollider3DComponent& operator=(const BoxCollider3DComponent& other);
+
+        const glm::vec3& GetSize() const { return m_Size; }
+        void SetSize(const glm::vec3& size, Entity entity);
+
+    private:
+        glm::vec3 m_Size{ 1.0f };
+    };
+
+    template <> void ComponentEditorWidget<BoxCollider3DComponent>(Entity e);
+
+    struct SphereCollider3DComponent : public Collider3D
+    {
+        SphereCollider3DComponent() = default;
+        SphereCollider3DComponent(const SphereCollider3DComponent& other);
+        SphereCollider3DComponent& operator=(const SphereCollider3DComponent& other);
+
+        float GetRadius() const { return m_Radius; }
+        void SetRadius(float radius, Entity entity);
+
+    private:
+        float m_Radius = 0.5f;
+    };
+
+    template <> void ComponentEditorWidget<SphereCollider3DComponent>(Entity e);
+
+    struct CapsuleCollider3DComponent : public Collider3D
+    {
+        CapsuleCollider3DComponent() = default;
+        CapsuleCollider3DComponent(const CapsuleCollider3DComponent& other);
+        CapsuleCollider3DComponent& operator=(const CapsuleCollider3DComponent& other);
+
+        float GetRadius() const { return m_Radius; }
+        float GetHeight() const { return m_Height; }
+        void SetRadius(float radius, Entity entity);
+        void SetHeight(float height, Entity entity);
+
+    private:
+        float m_Radius = 0.5f;
+        float m_Height = 2.0f;
+    };
+
+    template <> void ComponentEditorWidget<CapsuleCollider3DComponent>(Entity e);
+
     struct PrefabComponent : public ComponentBase
     {
         UUID PrefabAssetUuid;
         UUID PrefabEntityUuid;
-        UnorderedSet<String> Overrides;
+        // Keep serialized override paths as text, but allow allocation-free lookups
+        // from string views and compile-time hashed literals.
+        UnorderedSet<String, StringHash, StringEqual> Overrides;
 
         PrefabComponent() : ComponentBase() {}
         PrefabComponent(const PrefabComponent&) = default;
@@ -695,21 +1071,96 @@ namespace Crowny
         {
         }
 
-        bool IsPropertyOverridden(const String& path) const { return Overrides.find(path) != Overrides.end(); }
-        void MarkOverridden(const String& path) { Overrides.insert(path); }
-        void ClearOverride(const String& path) { Overrides.erase(path); }
+        bool IsPropertyOverridden(StringView path) const { return Overrides.find(path) != Overrides.end(); }
+        bool IsPropertyOverridden(HashedString path) const { return Overrides.find(path) != Overrides.end(); }
+
+        bool IsPropertyOverridden(StringView componentName, StringView propertyName) const
+        {
+            const size_t expectedSize = componentName.size() + 1 + propertyName.size();
+            for (const String& path : Overrides)
+            {
+                if (path.size() != expectedSize || path.compare(0, componentName.size(), componentName) != 0 || path[componentName.size()] != '.' ||
+                    path.compare(componentName.size() + 1, propertyName.size(), propertyName) != 0)
+                    continue;
+
+                return true;
+            }
+            return false;
+        }
+
+        void MarkOverridden(String path) { Overrides.insert(std::move(path)); }
+        void ClearOverride(StringView path)
+        {
+            const auto iter = Overrides.find(path);
+            if (iter != Overrides.end())
+                Overrides.erase(iter);
+        }
+    };
+
+    struct AnimationGpuUploadResult
+    {
+        Ref<Mesh> MeshResource;
+        std::atomic<bool> Complete{ false };
     };
 
     struct AnimationComponent : public ComponentBase
     {
-        // AnimationController Controller;
-        // AnimationSkeleton Skeleton;
+        AssetHandle<AnimationClip> Clip;
+        float Speed = 1.0f;
+        AnimationWrapMode WrapMode = AnimationWrapMode::Loop;
+        bool PlayOnAwake = true;
+        bool ApplyRootMotion = false;
+
+        Ref<AnimationPlayer> Player;
+        Ref<MeshDeformer> Deformer;
+        Ref<Mesh> RuntimeMesh;
+        AssetHandle<Mesh> RuntimeMeshHandle;
+        std::shared_ptr<AnimationGpuUploadResult> PendingGpuResult;
+        bool GpuUploadPending = false;
+        UUID RuntimeSourceMesh = UUID::EMPTY;
+        UUID RuntimeClip = UUID::EMPTY;
+
+        AnimationComponent() = default;
+        AnimationComponent(const AnimationComponent& other)
+          : ComponentBase(other), Clip(other.Clip), Speed(other.Speed), WrapMode(other.WrapMode), PlayOnAwake(other.PlayOnAwake),
+            ApplyRootMotion(other.ApplyRootMotion)
+        {
+        }
+        AnimationComponent& operator=(const AnimationComponent& other)
+        {
+            if (this != &other)
+            {
+                ComponentBase::operator=(other);
+                Clip = other.Clip;
+                Speed = other.Speed;
+                WrapMode = other.WrapMode;
+                PlayOnAwake = other.PlayOnAwake;
+                ApplyRootMotion = other.ApplyRootMotion;
+                ResetRuntime();
+            }
+            return *this;
+        }
+
+        void ResetRuntime()
+        {
+            Player = nullptr;
+            Deformer = nullptr;
+            RuntimeMesh = nullptr;
+            RuntimeMeshHandle = nullptr;
+            PendingGpuResult = nullptr;
+            GpuUploadPending = false;
+            RuntimeSourceMesh = UUID::EMPTY;
+            RuntimeClip = UUID::EMPTY;
+        }
     };
 
+    template <> void ComponentEditorWidget<AnimationComponent>(Entity e);
+
     using AllComponents =
-      ComponentGroup<TransformComponent, CameraComponent, TextComponent, SpriteRendererComponent, MeshRendererComponent, ProceduralMeshComponent,
-                     AudioSourceComponent, AudioListenerComponent, RelationshipComponent, MonoScriptComponent, Rigidbody2DComponent,
-                     BoxCollider2DComponent, CircleCollider2DComponent, PrefabComponent>;
+      ComponentGroup<TransformComponent, CameraComponent, LightComponent, TextComponent, SpriteRendererComponent, MeshRendererComponent,
+                     ProceduralMeshComponent, AudioSourceComponent, AudioListenerComponent, RelationshipComponent, MonoScriptComponent, Rigidbody2DComponent,
+                     BoxCollider2DComponent, CircleCollider2DComponent, Rigidbody3DComponent, BoxCollider3DComponent, SphereCollider3DComponent,
+                     CapsuleCollider3DComponent, AnimationComponent, PrefabComponent>;
 
     using TransformChangedNotifyComponents = ComponentGroup<AudioListenerComponent, AudioSourceComponent>;
 } // namespace Crowny

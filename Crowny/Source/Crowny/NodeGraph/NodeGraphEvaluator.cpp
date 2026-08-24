@@ -26,19 +26,14 @@ namespace Crowny
         Node* outputNode = m_Graph.FindOutputNode();
         if (!outputNode)
         {
-            SetError("No output node found in graph");
+            ReportError("No output node found in graph");
             return nullptr;
         }
-
-        EvaluateNode(outputNode);
-
-        if (m_HasError)
-            return nullptr;
 
         const Pin* geometryPin = outputNode->FindInputPin("Geometry");
         if (!geometryPin)
         {
-            SetError("Output node has no 'Geometry' input pin");
+            ReportError("Output node has no 'Geometry' input pin");
             return nullptr;
         }
 
@@ -46,7 +41,8 @@ namespace Crowny
         if (std::holds_alternative<Ref<MeshData>>(result))
             return std::get<Ref<MeshData>>(result);
 
-        SetError("Output node did not produce MeshData");
+        if (!m_HasError)
+            ReportError("Output node did not produce MeshData");
         return nullptr;
     }
 
@@ -62,25 +58,54 @@ namespace Crowny
         if (!connectedOutput)
             return inputPin->GetDefaultValue();
 
-        // Check cache first
+        const auto convertForInput = [&](const PinValue& value) {
+            PinValue converted;
+            if (ConvertPinValue(value, inputPin->GetDataType(), converted))
+                return converted;
+            ReportError(String("Pin '") + inputPin->GetName().c_str() + "' received an incompatible value");
+            return DefaultPinValue(inputPin->GetDataType());
+        };
+
         auto cacheIt = m_Cache.find(connectedOutput->GetID());
         if (cacheIt != m_Cache.end())
-            return cacheIt->second;
+            return convertForInput(cacheIt->second);
 
         // Evaluate the upstream node
         Node* upstreamNode = connectedOutput->GetOwner();
-        if (upstreamNode)
-            EvaluateNode(upstreamNode);
+        if (!upstreamNode)
+        {
+            ReportError("Connected output pin has no owning node");
+            return DefaultPinValue(inputPin->GetDataType());
+        }
+        EvaluateNode(upstreamNode);
 
         // Retrieve from cache after evaluation
         cacheIt = m_Cache.find(connectedOutput->GetID());
         if (cacheIt != m_Cache.end())
-            return cacheIt->second;
+            return convertForInput(cacheIt->second);
 
-        return inputPin->GetDefaultValue();
+        if (!m_HasError)
+            ReportError(String("Node '") + upstreamNode->GetDisplayName().c_str() + "' did not set output '" + connectedOutput->GetName().c_str() +
+                        "'");
+        return DefaultPinValue(inputPin->GetDataType());
     }
 
-    void NodeGraphEvaluator::SetOutputValue(UUID pinId, const PinValue& value) { m_Cache[pinId] = value; }
+    void NodeGraphEvaluator::SetOutputValue(UUID pinId, const PinValue& value)
+    {
+        const Pin* outputPin = m_Graph.GetPin(pinId);
+        if (!outputPin || outputPin->GetDirection() != Pin::Direction::Output)
+        {
+            ReportError("A node attempted to write to an unknown or non-output pin");
+            return;
+        }
+        PinValue converted;
+        if (!ConvertPinValue(value, outputPin->GetDataType(), converted))
+        {
+            ReportError(String("Node '") + outputPin->GetOwner()->GetDisplayName().c_str() + "' produced an incompatible value");
+            return;
+        }
+        m_Cache[pinId] = std::move(converted);
+    }
 
     PinValue NodeGraphEvaluator::GetOutputValue(UUID pinId) const
     {
@@ -90,18 +115,25 @@ namespace Crowny
         return 0.0f;
     }
 
-    const PinValue& NodeGraphEvaluator::GetInputValue(UUID inputId) const
+    PinValue NodeGraphEvaluator::GetInputValue(UUID inputId)
     {
+        const GraphInput* input = m_Graph.GetInput(inputId);
+        if (!input)
+        {
+            ReportError("A Graph Input node references a missing graph input");
+            return 0.0f;
+        }
         const auto it = m_InputValues.find(inputId);
         if (it != m_InputValues.end())
-            return it->second;
+        {
+            PinValue converted;
+            if (ConvertPinValue(it->second, input->DataType, converted))
+                return converted;
+            ReportError(String("Graph input '") + input->Name.c_str() + "' received an incompatible value");
+            return DefaultPinValue(input->DataType);
+        }
 
-        const auto* input = m_Graph.GetInput(inputId);
-        if (input)
-            return input->DefaultValue;
-
-        static PinValue empty = 0.0f;
-        return empty;
+        return input->DefaultValue;
     }
 
     void NodeGraphEvaluator::EvaluateNode(Node* node)
@@ -116,17 +148,29 @@ namespace Crowny
 
         if (m_InProgressNodes.count(nodeId))
         {
-            SetError(String("Cycle detected at node: ") + node->GetDisplayName().c_str());
+            ReportError(String("Cycle detected at node: ") + node->GetDisplayName().c_str());
             return;
         }
 
         m_InProgressNodes.insert(nodeId);
-        node->Evaluate(*this);
+        try
+        {
+            node->Evaluate(*this);
+        }
+        catch (const std::exception& exception)
+        {
+            ReportError(String("Node '") + node->GetDisplayName().c_str() + "' failed: " + exception.what());
+        }
+        catch (...)
+        {
+            ReportError(String("Node '") + node->GetDisplayName().c_str() + "' failed with an unknown error");
+        }
         m_InProgressNodes.erase(nodeId);
-        m_EvaluatedNodes.insert(nodeId);
+        if (!m_HasError)
+            m_EvaluatedNodes.insert(nodeId);
     }
 
-    void NodeGraphEvaluator::SetError(const String& error)
+    void NodeGraphEvaluator::ReportError(const String& error)
     {
         if (!m_HasError)
         {

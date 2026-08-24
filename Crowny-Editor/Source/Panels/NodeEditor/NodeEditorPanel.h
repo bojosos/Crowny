@@ -31,6 +31,10 @@ namespace Crowny
         void RenderNodeCanvas();
         void RenderContextMenu();
         void RenderProperties();
+        void RenderStatus();
+
+        bool SaveGraph();
+        void ExportGraph();
 
         void CopySelectedNodes();
         void PasteNodes();
@@ -43,6 +47,9 @@ namespace Crowny
         uint32_t m_LastEvaluatedVersion = 0xFFFFFFFF;
         uint32_t m_LastSaveVersion = 0xFFFFFFFF;
         bool m_ShowProperties = true;
+        String m_SaveError;
+        String m_NewInputName = "New input";
+        PinDataType m_NewInputType = PinDataType::Float;
 
         using clock = std::chrono::steady_clock;
         clock::time_point m_LastSaveTime = clock::now();

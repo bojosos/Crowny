@@ -3,6 +3,7 @@
 #include "Crowny/RenderAPI/CommandBuffer.h"
 #include "Crowny/Renderer/Renderer.h"
 
+#include "Platform/OpenGL/OpenGLCommandBuffer.h"
 #include "Platform/Vulkan/VulkanCommandBuffer.h"
 #include "Platform/Vulkan/VulkanRenderAPI.h"
 
@@ -73,9 +74,10 @@ namespace Crowny
 
     Ref<CommandBuffer> CommandBuffer::Create(GpuQueueType type, uint32_t queueIdx, bool secondary)
     {
-        switch (gRenderAPI->GetAPI())
+        switch (RenderAPI::TryGet()->GetAPI())
         {
-        // case RenderAPI::API::OpenGL: return CreateRef<OpenGLFramebuffer>(props);
+        case RenderAPI::API::OpenGL:
+            return Ref<CommandBuffer>(new OpenGLCommandBuffer(type, queueIdx, secondary));
         case RenderAPI::API::Vulkan:
             return Ref<CommandBuffer>(new VulkanCommandBuffer(*gVulkanRenderAPI().GetPresentDevice().get(), type, queueIdx, secondary));
         default:
@@ -83,7 +85,6 @@ namespace Crowny
             return nullptr;
         }
 
-        return nullptr;
     }
 
 } // namespace Crowny

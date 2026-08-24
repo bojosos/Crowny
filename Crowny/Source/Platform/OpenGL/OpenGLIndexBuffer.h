@@ -9,6 +9,7 @@ namespace Crowny
     public:
         friend class IndexBuffer;
         virtual ~OpenGLIndexBuffer();
+        uint32_t GetRendererID() const { return m_RendererID; }
     protected:
         OpenGLIndexBuffer(uint32_t count, IndexType indexType, BufferUsage usage);
         OpenGLIndexBuffer(uint16_t* indices, uint32_t count, BufferUsage usage);
@@ -16,15 +17,9 @@ namespace Crowny
 
         virtual void* Map(uint32_t offset, uint32_t size, GpuLockOptions options) override;
         virtual void Unmap() override;
-        virtual void WriteData(uint32_t offset, uint32_t length, const void* src, BufferWriteOptions writeOptions /* = BWT_NORMAL */) override
-        {
-            // m_Buffer->WriteData(offset, length, src, writeOptions);
-        }
+        virtual void WriteData(uint32_t offset, uint32_t length, const void* src, BufferWriteOptions writeOptions = BWT_NORMAL) override;
 
-        virtual void ReadData(uint32_t offset, uint32_t length, void* dest) override
-        {
-            // m_Buffer->ReadData(offset, length, dest);
-        }
+        virtual void ReadData(uint32_t offset, uint32_t length, void* dest) override;
 
         virtual uint32_t GetCount() const override { return m_Count; }
         virtual IndexType GetIndexType() const override { return m_IndexType; }
@@ -34,7 +29,7 @@ namespace Crowny
         }
 
     private:
-        uint32_t m_RendererID, m_Count;
+        uint32_t m_RendererID = 0, m_Count = 0;
         IndexType m_IndexType;
     };
 } // namespace Crowny

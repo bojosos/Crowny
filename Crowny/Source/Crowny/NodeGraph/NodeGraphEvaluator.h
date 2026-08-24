@@ -22,14 +22,14 @@ namespace Crowny
         void SetOutputValue(UUID pinId, const PinValue& value);
         PinValue GetOutputValue(UUID pinId) const;
 
-        const PinValue& GetInputValue(UUID inputId) const;
+        PinValue GetInputValue(UUID inputId);
 
         bool HasError() const { return m_HasError; }
         const String& GetError() const { return m_Error; }
+        void ReportError(const String& error);
 
     private:
         void EvaluateNode(Node* node);
-        void SetError(const String& error);
 
         NodeGraph& m_Graph;
         UnorderedMap<UUID, PinValue> m_Cache;

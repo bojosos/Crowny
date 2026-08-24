@@ -25,20 +25,40 @@ namespace Crowny
 
     AudioClip::~AudioClip()
     {
-        if (m_BufferID != (uint32_t)-1)
+        if (m_BufferID != static_cast<uint32_t>(-1) && AudioManager::TryGet() && AudioManager::TryGet()->IsAvailable())
             alDeleteBuffers(1, &m_BufferID);
     }
 
     void AudioClip::Init()
     {
+        if (m_BufferID != static_cast<uint32_t>(-1) && AudioManager::TryGet() && AudioManager::TryGet()->IsAvailable())
+        {
+            alDeleteBuffers(1, &m_BufferID);
+            m_BufferID = static_cast<uint32_t>(-1);
+        }
+
+        if (m_Desc.NumChannels == 0 || m_Desc.Frequency == 0)
+        {
+            CW_ENGINE_ERROR("Cannot initialize an audio clip with zero channels or sample rate.");
+            m_Length = 0.0f;
+            return;
+        }
+
         AudioDataInfo info;
         info.BitDepth = m_Desc.BitDepth;
         info.NumChannels = m_Desc.NumChannels;
         info.NumSamples = m_NumSamples;
         info.SampleRate = m_Desc.Frequency;
 
-        m_Length = m_NumSamples / m_Desc.NumChannels / (float)m_Desc.Frequency;
-        if (m_KeepData)
+        m_Length = static_cast<float>(m_NumSamples) / static_cast<float>(m_Desc.NumChannels) / static_cast<float>(m_Desc.Frequency);
+        if (m_StreamData == nullptr)
+        {
+            if (m_NumSamples != 0)
+                CW_ENGINE_ERROR("Cannot initialize an audio clip without sample data.");
+            return;
+        }
+
+        if (m_KeepData && m_SourceStreamData == nullptr)
         {
             m_StreamData->Seek(m_StreamOffset);
             auto memStream = CreateRef<MemoryDataStream>(m_StreamSize);
@@ -48,7 +68,7 @@ namespace Crowny
         }
 
         const bool loadDecompressed = m_Desc.ReadMode == AudioReadMode::LoadDecompressed ||
-                                (m_Desc.ReadMode == AudioReadMode::LoadCompressed && m_Desc.Format == AudioFormat::PCM);
+                                      (m_Desc.ReadMode == AudioReadMode::LoadCompressed && m_Desc.Format == AudioFormat::PCM);
         if (loadDecompressed)
         {
             Ref<DataStream> stream;
@@ -61,28 +81,37 @@ namespace Crowny
                 offset = m_StreamOffset;
             }
 
-            const uint32_t bufferSize = info.NumSamples * info.BitDepth / 8;
-            // CW_ENGINE_INFO("Buffer size: {0}", bufferSize);
-            uint8_t* sampleBuffer = new uint8_t[bufferSize];
+            const uint32_t bufferSize = AudioUtils::GetBufferSize(info.NumSamples, info.BitDepth);
+            Vector<uint8_t> sampleBuffer(bufferSize, 0);
             if (m_Desc.Format == AudioFormat::VORBIS)
             {
                 OggVorbisDecoder reader;
                 if (reader.Open(stream, info, offset))
-                    reader.Read(sampleBuffer, info.NumSamples);
+                    reader.Read(sampleBuffer.data(), info.NumSamples);
                 else
                     CW_ENGINE_ERROR("Audio file decompression failed.");
             }
             else
             {
                 stream->Seek(offset);
-                stream->Read(sampleBuffer, bufferSize);
+                stream->Read(sampleBuffer.data(), bufferSize);
             }
-            alGenBuffers(1, &m_BufferID);
-            gAudioManager->WriteToOpenALBuffer(m_BufferID, sampleBuffer, info);
-            // TODO: Uncomment this m_StreamData = nullptr;
-            // m_StreamOffset = 0;
-            m_StreamSize = 0;
-            delete[] sampleBuffer;
+            if (AudioManager::TryGet() && AudioManager::TryGet()->IsAvailable())
+            {
+                alGenBuffers(1, &m_BufferID);
+                if (!AudioManager::TryGet()->WriteToOpenALBuffer(m_BufferID, sampleBuffer.data(), info))
+                {
+                    alDeleteBuffers(1, &m_BufferID);
+                    m_BufferID = static_cast<uint32_t>(-1);
+                }
+            }
+
+            if (!m_KeepData)
+            {
+                m_StreamData = nullptr;
+                m_StreamOffset = 0;
+                m_StreamSize = 0;
+            }
         }
         else if (m_Desc.ReadMode == AudioReadMode::LoadCompressed)
         {
@@ -112,8 +141,12 @@ namespace Crowny
         }
     }
 
-    void AudioClip::GetBuffer(uint8_t* samples, uint32_t offset, uint32_t count) const
+    uint32_t AudioClip::GetBuffer(uint8_t* samples, uint32_t offset, uint32_t count) const
     {
+        if (samples == nullptr || count == 0 || offset >= m_NumSamples || m_SourceStreamData == nullptr)
+            return 0;
+
+        count = std::min(count, m_NumSamples - offset);
         if (m_Desc.Format == AudioFormat::VORBIS)
         {
             AudioDataInfo info;
@@ -123,21 +156,35 @@ namespace Crowny
             info.SampleRate = m_Desc.Frequency;
 
             OggVorbisDecoder reader;
-            if (reader.Open(m_SourceStreamData, info, offset))
-                reader.Read(samples, info.NumSamples);
+            if (reader.Open(m_SourceStreamData, info))
+            {
+                reader.Seek(offset);
+                return reader.Read(samples, count);
+            }
             else
                 CW_ENGINE_ERROR("Audio file decompression failed.");
         }
+        else
+        {
+            const uint32_t bytesPerSample = m_Desc.BitDepth / 8;
+            m_SourceStreamData->Seek(offset * bytesPerSample);
+            return static_cast<uint32_t>(m_SourceStreamData->Read(samples, count * bytesPerSample) / bytesPerSample);
+        }
+        return 0;
     }
 
-    void AudioClip::GetSamples(uint8_t* samples, uint32_t offset, uint32_t count) const
+    uint32_t AudioClip::GetSamples(uint8_t* samples, uint32_t offset, uint32_t count) const
     {
+        if (samples == nullptr || count == 0 || offset >= m_NumSamples)
+            return 0;
+        count = std::min(count, m_NumSamples - offset);
+
         if (m_StreamData != nullptr)
         {
             if (m_NeedsDecompression)
             {
                 m_VorbisReader.Seek(offset);
-                m_VorbisReader.Read(samples, count);
+                return m_VorbisReader.Read(samples, count);
             }
             else
             {
@@ -145,9 +192,8 @@ namespace Crowny
                 const uint32_t size = count * bytesPerSample;
                 const uint32_t streamOffset = m_StreamOffset + offset * bytesPerSample;
                 m_StreamData->Seek(streamOffset);
-                m_StreamData->Read(samples, size);
+                return static_cast<uint32_t>(m_StreamData->Read(samples, size) / bytesPerSample);
             }
-            return;
         }
 
         if (m_SourceStreamData != nullptr)
@@ -157,15 +203,16 @@ namespace Crowny
             const uint32_t size = count * bytesPerSample;
             const uint32_t streamOffset = offset * bytesPerSample;
             m_SourceStreamData->Seek(streamOffset);
-            m_SourceStreamData->Read(samples, size);
-            return;
+            return static_cast<uint32_t>(m_SourceStreamData->Read(samples, size) / bytesPerSample);
         }
+        return 0;
     }
 
     Ref<DataStream> AudioClip::GetSourceStream(uint32_t& size) const
     {
         size = m_SourceStreamSize;
-        m_SourceStreamData->Seek(0);
+        if (m_SourceStreamData != nullptr)
+            m_SourceStreamData->Seek(0);
         return m_SourceStreamData;
     }
 

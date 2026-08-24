@@ -22,17 +22,18 @@ namespace Crowny
             Message() = default;
             Message(const String& message, Level level);
 
-            Vector<Level> s_Levels;
-
             static const char* GetLevelName(Level level);
             static constexpr Array<Level, 4> Levels = { Level::Info, Level::Warn, Level::Error, Level::Critical };
 
         public:
             String MessageText;
             String TimestampText;
-            Level LogLevel;
-            size_t Hash; // for collapse
-            std::time_t Timestamp;
+            String SearchText;
+            String SourceSearchText;
+            Level LogLevel = Level::Info;
+            size_t Hash = 0; // for collapse
+            std::time_t Timestamp = 0;
+            uint64_t Sequence = 0;
             uint32_t RepeatCount = 1;
 
             struct FunctionCall
@@ -54,17 +55,30 @@ namespace Crowny
 
         void Sort(uint32_t sortIdx, bool ascending);
         void Clear();
-        const Vector<Message>& GetBuffer();
+        uint64_t CopyBuffer(Vector<Message>& output);
+        uint64_t GetRevision() const { return m_Revision.load(std::memory_order_acquire); }
         void Collapse();
         void Uncollapse();
-        bool HasNewMessages() const { return m_HasNewMessages; }
+        bool HasNewMessages() const { return m_HasNewMessages.load(std::memory_order_acquire); }
 
     private:
-        bool m_HasNewMessages = false;
+        void ApplySort();
+        void RebuildCollapsedIndices();
+
+        mutable Mutex m_Mutex;
+        std::atomic<bool> m_HasNewMessages{ false };
+        std::atomic<uint64_t> m_Revision{ 0 };
         bool m_Collapsed = false;
+        bool m_HasSort = false;
+        bool m_SortDirty = false;
+        uint32_t m_SortIndex = 0;
+        bool m_SortAscending = true;
+        uint64_t m_NextSequence = 1;
+        std::time_t m_CachedTimestamp = 0;
+        String m_CachedTimestampText;
 
         Vector<Message> m_NormalMessageBuffer;
         Vector<Message> m_CollapsedMessageBuffer;
-        UnorderedMap<size_t, uint32_t> m_HashToIndex;
+        UnorderedMap<size_t, Vector<uint32_t>> m_HashToIndices;
     };
 } // namespace Crowny

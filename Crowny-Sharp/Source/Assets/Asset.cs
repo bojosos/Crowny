@@ -4,6 +4,15 @@ using System.Runtime.InteropServices;
 
 namespace Crowny
 {
+    public enum PhysicsCombineMode : byte
+    {
+        GeometricMean = 0,
+        Average = 1,
+        Minimum = 2,
+        Multiply = 3,
+        Maximum = 4
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     public struct UUID
     {
@@ -113,5 +122,111 @@ namespace Crowny
         private static extern string Internal_GetName(IntPtr asset);
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern void Internal_GetUUID(IntPtr asset, out UUID uuid);
+    }
+
+    /// <summary>Reusable material assigned to a 2D collider.</summary>
+    public sealed class PhysicsMaterial2D : Asset
+    {
+        public float Density
+        {
+            get { return Internal_GetDensity(m_InternalPtr); }
+            set { Internal_SetDensity(m_InternalPtr, value); }
+        }
+
+        public float Friction
+        {
+            get { return Internal_GetFriction(m_InternalPtr); }
+            set { Internal_SetFriction(m_InternalPtr, value); }
+        }
+
+        public float Restitution
+        {
+            get { return Internal_GetRestitution(m_InternalPtr); }
+            set { Internal_SetRestitution(m_InternalPtr, value); }
+        }
+
+        public float RestitutionThreshold
+        {
+            get { return Internal_GetRestitutionThreshold(m_InternalPtr); }
+            set { Internal_SetRestitutionThreshold(m_InternalPtr, value); }
+        }
+
+        public PhysicsCombineMode FrictionCombine
+        {
+            get { return Internal_GetFrictionCombine(m_InternalPtr); }
+            set { Internal_SetFrictionCombine(m_InternalPtr, value); }
+        }
+
+        public PhysicsCombineMode RestitutionCombine
+        {
+            get { return Internal_GetRestitutionCombine(m_InternalPtr); }
+            set { Internal_SetRestitutionCombine(m_InternalPtr, value); }
+        }
+
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetDensity(IntPtr material);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetDensity(IntPtr material, float value);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetFriction(IntPtr material);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetFriction(IntPtr material, float value);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetRestitution(IntPtr material);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetRestitution(IntPtr material, float value);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetRestitutionThreshold(IntPtr material);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetRestitutionThreshold(IntPtr material, float value);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern PhysicsCombineMode Internal_GetFrictionCombine(IntPtr material);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetFrictionCombine(IntPtr material, PhysicsCombineMode value);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern PhysicsCombineMode Internal_GetRestitutionCombine(IntPtr material);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetRestitutionCombine(IntPtr material, PhysicsCombineMode value);
+    }
+
+    /// <summary>Reusable material assigned to a 3D collider.</summary>
+    public sealed class PhysicsMaterial3D : Asset
+    {
+        public float Density
+        {
+            get { return Internal_GetDensity(m_InternalPtr); }
+            set { Internal_SetDensity(m_InternalPtr, value); }
+        }
+
+        public float Friction
+        {
+            get { return Internal_GetFriction(m_InternalPtr); }
+            set { Internal_SetFriction(m_InternalPtr, value); }
+        }
+
+        public float Restitution
+        {
+            get { return Internal_GetRestitution(m_InternalPtr); }
+            set { Internal_SetRestitution(m_InternalPtr, value); }
+        }
+
+        public float RestitutionThreshold
+        {
+            get { return Internal_GetRestitutionThreshold(m_InternalPtr); }
+            set { Internal_SetRestitutionThreshold(m_InternalPtr, value); }
+        }
+
+        public PhysicsCombineMode FrictionCombine
+        {
+            get { return Internal_GetFrictionCombine(m_InternalPtr); }
+            set { Internal_SetFrictionCombine(m_InternalPtr, value); }
+        }
+
+        public PhysicsCombineMode RestitutionCombine
+        {
+            get { return Internal_GetRestitutionCombine(m_InternalPtr); }
+            set { Internal_SetRestitutionCombine(m_InternalPtr, value); }
+        }
+
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetDensity(IntPtr material);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetDensity(IntPtr material, float value);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetFriction(IntPtr material);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetFriction(IntPtr material, float value);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetRestitution(IntPtr material);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetRestitution(IntPtr material, float value);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern float Internal_GetRestitutionThreshold(IntPtr material);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetRestitutionThreshold(IntPtr material, float value);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern PhysicsCombineMode Internal_GetFrictionCombine(IntPtr material);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetFrictionCombine(IntPtr material, PhysicsCombineMode value);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern PhysicsCombineMode Internal_GetRestitutionCombine(IntPtr material);
+        [MethodImpl(MethodImplOptions.InternalCall)] private static extern void Internal_SetRestitutionCombine(IntPtr material, PhysicsCombineMode value);
     }
 }

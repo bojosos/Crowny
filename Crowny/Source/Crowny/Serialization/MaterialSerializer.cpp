@@ -173,7 +173,7 @@ namespace Crowny
         DeserializeValueYAML(data, "Shader", shaderUuid, UUID::EMPTY);
         if (!shaderUuid.Empty())
         {
-            AssetHandle<Shader> shader = static_asset_cast<Shader>(gAssetManager->LoadFromUUID(shaderUuid));
+            AssetHandle<Shader> shader = static_asset_cast<Shader>(AssetManager::TryGet()->LoadFromUUID(shaderUuid));
             if (shader)
             {
                 m_Material->SetShader(shader);
@@ -209,7 +209,7 @@ namespace Crowny
                 UUID texUuid = texNode["UUID"].as<UUID>();
                 if (!texUuid.Empty())
                 {
-                    AssetHandle<Texture> tex = static_asset_cast<Texture>(gAssetManager->LoadFromUUID(texUuid));
+                    AssetHandle<Texture> tex = static_asset_cast<Texture>(AssetManager::TryGet()->LoadFromUUID(texUuid));
                     if (tex)
                         m_Material->SetTexture(name, tex);
                 }

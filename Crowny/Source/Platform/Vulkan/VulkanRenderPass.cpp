@@ -199,13 +199,14 @@ namespace Crowny
                 attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             }
 
-            if (readMask.IsSet(RT_DEPTH))
-            {
-                if (readMask.IsSet(RT_STENCIL))
-                    attachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR;
-                else
-                    attachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            }
+            const bool depthReadOnly = readMask.IsSet(RT_DEPTH);
+            const bool stencilReadOnly = readMask.IsSet(RT_STENCIL);
+            if (depthReadOnly && stencilReadOnly)
+                attachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+            else if (depthReadOnly || stencilReadOnly)
+                attachmentRef.layout = VK_IMAGE_LAYOUT_GENERAL;
+            else
+                attachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         }
 
         VkRenderPass output;

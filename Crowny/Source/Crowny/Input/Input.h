@@ -20,7 +20,6 @@ namespace Crowny
 
     class Application;
     class LinuxWindow;
-    class WindowsWindow;
 
     // TODO: Make this a module!
     class Input
@@ -55,7 +54,9 @@ namespace Crowny
 
     private:
         friend class LinuxWindow;
-        friend class WindowsWindow;
+        static void OnKeyState(int32_t key, bool pressed);
+        static void OnMouseButtonState(int32_t button, bool pressed);
+        static void ResetState();
 
         static float m_FrameScrollX, m_FrameScrollY;
         static bool s_Grabbed;

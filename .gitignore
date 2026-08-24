@@ -2,6 +2,7 @@ bin/
 !3rdparty/
 !3rdparty/premake/bin/
 bin-int/
+.deps/
 
 .vs/
 **.sln
@@ -12,6 +13,7 @@ bin-int/
 **.csproj.filters
 **.csproj.user
 **/Makefile
+*.make
 Crowny/Dependencies/mono/
 Crowny/Dependencies/vulkan/
 
@@ -30,3 +32,12 @@ report.tasks
 strace_out
 
 *.log
+artifacts/
+
+__pycache__/
+*.py[cod]
+
+Internal/
+light_scene.cwb
+text_layout_scene.cwb
+imgui.ini

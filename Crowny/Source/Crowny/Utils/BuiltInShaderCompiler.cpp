@@ -5,6 +5,7 @@
 
 #include "Crowny/Assets/Asset.h"
 #include "Crowny/Assets/AssetManager.h"
+#include "Crowny/Application/Application.h"
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/Timer.h"
 #include "Crowny/RenderAPI/Shader.h"
@@ -22,11 +23,35 @@ namespace Crowny
         return std::chrono::duration_cast<std::chrono::seconds>(duration).count();
     }
 
-    static uint64_t HashFileContent(const String& str) { return std::hash<String>{}(str); }
+    static uint64_t HashFileContent(const String& str) { return ShaderCompiler::HashSource(str); }
+
+    static bool HasCurrentShaderFormat(const Path& assetPath)
+    {
+        std::ifstream stream(assetPath, std::ios::binary);
+        if (!stream)
+            return false;
+
+        Array<uint8_t, 512> prefix{};
+        stream.read(reinterpret_cast<char*>(prefix.data()), static_cast<std::streamsize>(prefix.size()));
+        const size_t bytesRead = static_cast<size_t>(stream.gcount());
+        for (size_t index = 0; index + sizeof(uint32_t) * 2 <= bytesRead; ++index)
+        {
+            uint32_t magic;
+            std::memcpy(&magic, prefix.data() + index, sizeof(magic));
+            if (magic != ASSET_FILE_MAGIC)
+                continue;
+            uint32_t version;
+            std::memcpy(&version, prefix.data() + index + sizeof(magic), sizeof(version));
+            return version == SHADER_FORMAT_VERSION;
+        }
+        return false;
+    }
 
     bool BuiltInShaderCompiler::NeedsRecompile(const Path& glslPath, const Path& assetPath)
     {
         if (!fs::exists(assetPath))
+            return true;
+        if (!HasCurrentShaderFormat(assetPath))
             return true;
 
         // The .asset header is embedded inside cereal's polymorphic serialization framing,
@@ -63,7 +88,18 @@ namespace Crowny
         const String source = stream->GetAsString();
         stream->Close();
 
-        ShaderDesc desc = ShaderCompiler::Compile(glslPath, source);
+        ShaderCompileResult compileResult = ShaderCompiler::CompileWithDiagnostics(glslPath, source);
+        for (const ShaderDiagnostic& diagnostic : compileResult.Diagnostics)
+        {
+            const String location = diagnostic.Line == 0 ? glslPath.string() : glslPath.string() + ":" + std::to_string(diagnostic.Line);
+            if (diagnostic.Severity == ShaderDiagnosticSeverity::Error)
+                CW_ENGINE_ERROR("{}: {}", location, diagnostic.Message);
+            else
+                CW_ENGINE_WARN("{}: {}", location, diagnostic.Message);
+        }
+        if (!compileResult.Succeeded())
+            return false;
+        ShaderDesc& desc = compileResult.Description;
 
         // Shader::Create never returns null — validate SPIRV before saving
         bool hasValidPass = false;
@@ -95,14 +131,20 @@ namespace Crowny
         shader->SetSourceTimestamp(GetSourceTimestamp(glslPath));
         shader->SetSourceContentHash(HashFileContent(source));
 
-        gAssetManager->Save(shader, assetPath);
+        AssetManager::TryGet()->Save(shader, assetPath);
         return true;
     }
 
     void BuiltInShaderCompiler::CompileAll()
     {
         Timer timer;
-        const Path sourceDir(SHADER_SOURCE_DIR);
+        Path sourceDir(SHADER_SOURCE_DIR);
+        if (!fs::is_directory(sourceDir) && Application::TryGet() != nullptr)
+        {
+            const Path editorSourceDir = Application::TryGet()->GetWorkingDirectory() / "Crowny-Editor" / SHADER_SOURCE_DIR;
+            if (fs::is_directory(editorSourceDir))
+                sourceDir = editorSourceDir;
+        }
 
         if (!fs::exists(sourceDir) || !fs::is_directory(sourceDir))
         {
@@ -114,17 +156,28 @@ namespace Crowny
         uint32_t skipped = 0;
         uint32_t failed = 0;
 
+        Vector<Path> shaderPaths;
         for (const auto& entry : fs::directory_iterator(sourceDir))
         {
             if (!entry.is_regular_file())
                 continue;
+            if (entry.path().extension() == ".glsl")
+                shaderPaths.push_back(entry.path());
+        }
+        std::sort(shaderPaths.begin(), shaderPaths.end());
 
-            const Path& glslPath = entry.path();
-            if (glslPath.extension() != ".glsl")
-                continue;
-
+        for (const Path& glslPath : shaderPaths)
+        {
             Path assetPath = glslPath;
             assetPath.replace_extension(".asset");
+
+            // The common path only needs metadata checks. Avoid opening every
+            // source file when all compiled assets are already current.
+            if (!NeedsRecompile(glslPath, assetPath))
+            {
+                skipped++;
+                continue;
+            }
 
             // Skip legacy OpenGL shaders — they lack the #lang directive and
             // cannot be compiled to SPIR-V without manual porting.
@@ -139,12 +192,6 @@ namespace Crowny
                     skipped++;
                     continue;
                 }
-            }
-
-            if (!NeedsRecompile(glslPath, assetPath))
-            {
-                skipped++;
-                continue;
             }
 
             CW_ENGINE_INFO("Compiling built-in shader: {}", glslPath.filename().string());

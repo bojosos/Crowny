@@ -13,10 +13,15 @@ namespace Crowny
 
     void OpenGLInfo::RetrieveInformation()
     {
-        s_Information.push_back({ "Vendor", "GL_VENDOR", String((char*)glGetString(GL_VENDOR)) });
-        s_Information.push_back({ "Renderer", "GL_RENDERER", String((char*)glGetString(GL_RENDERER)) });
-        s_Information.push_back({ "Version", "GL_VERSION", String((char*)glGetString(GL_VERSION)) });
-        s_Information.push_back({ "GLSL Version", "GL_SHADING_LANGUAGE_VERSION", String((char*)glGetString(GL_SHADING_LANGUAGE_VERSION)) });
+        s_Information.clear();
+        const auto getString = [](GLenum name) {
+            const GLubyte* value = glGetString(name);
+            return value != nullptr ? String(reinterpret_cast<const char*>(value)) : String("Unavailable");
+        };
+        s_Information.push_back({ "Vendor", "GL_VENDOR", getString(GL_VENDOR) });
+        s_Information.push_back({ "Renderer", "GL_RENDERER", getString(GL_RENDERER) });
+        s_Information.push_back({ "Version", "GL_VERSION", getString(GL_VERSION) });
+        s_Information.push_back({ "GLSL Version", "GL_SHADING_LANGUAGE_VERSION", getString(GL_SHADING_LANGUAGE_VERSION) });
 
         int maxTexture2DSize;
         glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexture2DSize);

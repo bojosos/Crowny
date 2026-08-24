@@ -13,6 +13,25 @@
 
 namespace Crowny
 {
+    namespace
+    {
+        ImFont* LoadBuiltInImGuiFont(ImFontAtlas& atlas, const Path& path, float size, const ImWchar* glyphRanges)
+        {
+            const Ref<DataStream> stream = FileSystem::OpenFile(path);
+            if (!stream)
+                return nullptr;
+
+            const Vector<uint8_t> bytes = stream->ReadAll();
+            if (bytes.empty() || bytes.size() > static_cast<size_t>(std::numeric_limits<int>::max()))
+                return nullptr;
+
+            void* fontData = IM_ALLOC(bytes.size());
+            if (fontData == nullptr)
+                return nullptr;
+            std::memcpy(fontData, bytes.data(), bytes.size());
+            return atlas.AddFontFromMemoryTTF(fontData, static_cast<int>(bytes.size()), size, nullptr, glyphRanges);
+        }
+    } // namespace
 
     ImGuiLayer::ImGuiLayer() : Layer("ImGuiLayer") {}
 
@@ -29,15 +48,9 @@ namespace Crowny
         io.MouseDoubleClickMaxDist = 6.0f;
 
         // Load fonts before applying style so font metrics are stable.
-        if (FileSystem::FileExists("Resources/Fonts/Roboto/Roboto-Regular.ttf"))
-        {
-            io.FontDefault =
-              io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto/Roboto-Regular.ttf", 17.0f, nullptr, io.Fonts->GetGlyphRangesCyrillic());
-        }
-        if (FileSystem::FileExists("Resources/Fonts/Roboto/Roboto-Bold.ttf"))
-        {
-            io.Fonts->AddFontFromFileTTF("Resources/Fonts/Roboto/Roboto-Bold.ttf", 17.0f, nullptr, io.Fonts->GetGlyphRangesCyrillic());
-        }
+        io.FontDefault = LoadBuiltInImGuiFont(*io.Fonts, "Resources/Fonts/Roboto/Roboto-Regular.ttf", 17.0f,
+                                              io.Fonts->GetGlyphRangesCyrillic());
+        LoadBuiltInImGuiFont(*io.Fonts, "Resources/Fonts/Roboto/Roboto-Bold.ttf", 17.0f, io.Fonts->GetGlyphRangesCyrillic());
 
         ApplyCrownyDarkTheme();
 
@@ -167,7 +180,7 @@ namespace Crowny
     void ImGuiLayer::Begin()
     {
         ImGuiIO& io = ImGui::GetIO();
-        Application& app = (*gApplication);
+        Application& app = (*Application::TryGet());
         io.DisplaySize = ImVec2((float)app.GetWindow().GetWidth(), (float)app.GetWindow().GetHeight());
 
         ImGui_ImplGlfw_NewFrame();

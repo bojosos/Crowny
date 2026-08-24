@@ -13,10 +13,12 @@ namespace Crowny
 
     VulkanSamplerState::VulkanSamplerState(const SamplerStateDesc& desc) : SamplerState(desc)
     {
-        bool anisotropyEnable = desc.MinFilter == TextureFilter::ANISOTROPIC || desc.MagFilter == TextureFilter::ANISOTROPIC ||
-                                desc.MipFilter == TextureFilter::ANISOTROPIC;
+        VulkanDevice& device = *gVulkanRenderAPI().GetPresentDevice();
+        const bool anisotropyRequested = desc.MaxAnsio > 1 || desc.MinFilter == TextureFilter::ANISOTROPIC || desc.MagFilter == TextureFilter::ANISOTROPIC ||
+                                         desc.MipFilter == TextureFilter::ANISOTROPIC;
+        const bool anisotropyEnabled = anisotropyRequested && device.GetDeviceFeatures().samplerAnisotropy == VK_TRUE;
 
-        VkSamplerCreateInfo samplerCreateInfo;
+        VkSamplerCreateInfo samplerCreateInfo{};
         samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         samplerCreateInfo.flags = 0;
         samplerCreateInfo.pNext = nullptr;
@@ -26,15 +28,17 @@ namespace Crowny
         samplerCreateInfo.addressModeU = VulkanUtils::GetAddressingMode(desc.AddressMode.U);
         samplerCreateInfo.addressModeV = VulkanUtils::GetAddressingMode(desc.AddressMode.V);
         samplerCreateInfo.addressModeW = VulkanUtils::GetAddressingMode(desc.AddressMode.W);
-        samplerCreateInfo.anisotropyEnable = anisotropyEnable;
-        samplerCreateInfo.maxAnisotropy = (float)desc.MaxAnsio;
+        samplerCreateInfo.mipLodBias = desc.MipmapBias;
+        samplerCreateInfo.anisotropyEnable = anisotropyEnabled;
+        samplerCreateInfo.maxAnisotropy =
+          anisotropyEnabled ? glm::clamp((float)std::max(desc.MaxAnsio, 1U), 1.0f, device.GetDeviceProperties().limits.maxSamplerAnisotropy) : 1.0f;
         samplerCreateInfo.compareEnable = desc.CompareFunc != CompareFunction::ALWAYS_PASS;
         samplerCreateInfo.compareOp = VulkanUtils::GetCompareOp(desc.CompareFunc);
-        samplerCreateInfo.minLod = desc.MipMin;
-        samplerCreateInfo.maxLod = desc.MipMax;
+        samplerCreateInfo.minLod = desc.MipFilter == TextureFilter::NONE ? 0.0f : desc.MipMin;
+        samplerCreateInfo.maxLod = desc.MipFilter == TextureFilter::NONE ? 0.0f : desc.MipMax;
+        samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
         samplerCreateInfo.unnormalizedCoordinates = false;
 
-        VulkanDevice& device = *gVulkanRenderAPI().GetPresentDevice().get();
         VkSampler sampler;
         VkResult result = vkCreateSampler(device.GetLogicalDevice(), &samplerCreateInfo, gVulkanAllocator, &sampler);
         CW_ENGINE_ASSERT(result == VK_SUCCESS);

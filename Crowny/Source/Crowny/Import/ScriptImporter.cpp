@@ -4,17 +4,11 @@
 #include "Crowny/Import/ScriptImporter.h"
 
 #include "Crowny/Common/FileSystem.h"
-#include "Crowny/Common/StringUtils.h"
 
 namespace Crowny
 {
 
-    bool ScriptImporter::IsExtensionSupported(const String& ext) const
-    {
-        String lower = ext;
-        StringUtils::ToLower(lower);
-        return lower == "cs";
-    }
+    bool ScriptImporter::IsExtensionSupported(const String& ext) const { return ext == "cs"; }
 
     bool ScriptImporter::IsMagicNumSupported(uint8_t* num, uint32_t numSize) const { return true; }
 

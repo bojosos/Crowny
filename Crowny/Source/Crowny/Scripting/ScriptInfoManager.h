@@ -31,6 +31,7 @@ namespace Crowny
         MonoClass* AssetClass = nullptr;
 
         MonoClass* SerializeFieldAttribute = nullptr;
+        MonoClass* FormerlySerializedAsAttribute = nullptr;
         MonoClass* RangeAttribute = nullptr;
         MonoClass* StepAttribute = nullptr;
         MonoClass* ShowInInspectorAttribute = nullptr;
@@ -101,10 +102,12 @@ namespace Crowny
         const BuiltinScriptClasses& GetBuiltinClasses() const { return m_Builtin; }
 
         void LoadAssemblyInfo(const String& assemblyName);
-        const UnorderedMap<String, MonoClass*> GetEntityBehaviours() const { return m_EntityBehaviourClasses; }
+        const UnorderedMap<String, MonoClass*>& GetEntityBehaviours() const { return m_EntityBehaviourClasses; }
 
         ScriptTypeInfo* GetSerializableTypeInfo(MonoReflectionType* reflType);
 
+        bool GetSerializableObjectInfo(const String& assemblyName, const String& ns, const String& name,
+                                       Ref<SerializableObjectInfo>& outInfo);
         bool GetSerializableObjectInfo(const String& ns, const String& name, Ref<SerializableObjectInfo>& outInfo);
 
     private:

@@ -2,37 +2,28 @@
 
 #include "Crowny/Application/Application.h"
 
-#include "Crowny/Application/Initializer.h"
-#include "Crowny/Window/RenderWindow.h"
-
+#include "Crowny/Application/EngineRuntime.h"
+#include "Crowny/Assets/AssetListener.h"
+#include "Crowny/Audio/AudioManager.h"
 #include "Crowny/Common/Common.h"
 #include "Crowny/Common/Log.h"
 #include "Crowny/Common/Random.h"
 #include "Crowny/Common/Timestep.h"
-
 #include "Crowny/ImGui/ImGuiOpenGLLayer.h"
 #include "Crowny/ImGui/ImGuiVulkanLayer.h"
 #include "Crowny/Input/Input.h"
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/Renderer.h"
+#include "Crowny/Window/RenderWindow.h"
 
 #include <tracy/Tracy.hpp>
 
-/*
-#ifdef MC_WEB
-#include <emscripten/emscripten.h>
-#endif
-*/
-
-// NONONONONONO
 #include <GLFW/glfw3.h>
+#include <stdexcept>
 
 namespace Crowny
 {
-
-    uint8_t Application::s_GLFWWindowCount = 0;
-    Application* gApplication = nullptr;
 
     static void DispatchMain(void* fp)
     {
@@ -46,24 +37,24 @@ namespace Crowny
 
     void Application::OnStartUp()
     {
-        gApplication = this;
+        m_Runtime = CreateScope<EngineRuntime>(m_ApplicationDesc);
         if (m_ApplicationDesc.Headless)
         {
-            Initializer::Init(m_ApplicationDesc);
+            m_Runtime->Start();
             return;
         }
 
-        if (s_GLFWWindowCount == 0)
-        {
-            int success = glfwInit();
-            CW_ENGINE_ASSERT(success, "Could not initialize GLFW!");
-        }
-        Initializer::Init(m_ApplicationDesc);
+        if (!Window::Initialize())
+            throw std::runtime_error("Could not initialize the desktop window system");
+        m_Runtime->Start();
 
         Ref<RenderWindow> mainWindow = RenderWindow::Create(m_ApplicationDesc.Window);
+        if (!mainWindow || !mainWindow->GetWindow())
+            throw std::runtime_error("Could not create the main render window");
         mainWindow->GetWindow()->SetEventCallback(CW_BIND_EVENT_FN(Application::OnEvent));
         m_Windows.push_back(mainWindow);
-        switch (gRenderAPI->GetAPI())
+        m_Runtime->StartRenderer();
+        switch (RenderAPI::TryGet()->GetAPI())
         {
         case RenderAPI::API::OpenGL:
             m_ImGuiLayer = new ImGuiOpenGLLayer();
@@ -78,12 +69,19 @@ namespace Crowny
         if (m_ImGuiLayer)
             PushOverlay(m_ImGuiLayer);
 
-        // Create and start the render thread
-        m_RenderThread = CreateScope<RenderThread>();
-        m_RenderThread->Start();
+        if (RenderAPI::TryGet()->GetAPI() == RenderAPI::API::Vulkan)
+        {
+            m_RenderThread = CreateScope<RenderThread>();
+            m_RenderThread->Start();
+        }
+        else
+        {
+            CW_ENGINE_INFO("OpenGL rendering is using the main thread because its context is thread-affine");
+        }
     }
     void Application::OnShutdown()
     {
+        const RenderAPI::API activeRenderAPI = RenderAPI::GetAPI();
         if (m_RenderThread)
         {
             m_RenderThread->Stop();
@@ -92,7 +90,7 @@ namespace Crowny
 
         if (!m_ApplicationDesc.Headless)
         {
-            Renderer::Shutdown();
+            m_Runtime->StopRenderer();
 
             // Destroy all layers (ImGui, EditorLayer, etc.) BEFORE shutting down the
             // rendering subsystems. Layers hold GPU resources (render targets, materials,
@@ -103,10 +101,29 @@ namespace Crowny
             delete m_LayerStack;
             m_LayerStack = nullptr;
 
-            m_Windows.clear();
+            m_Runtime->ShutdownRendererResources();
         }
-        Initializer::Shutdown();
-        gApplication = nullptr;
+        m_Runtime->ShutdownServices();
+        m_Runtime->ShutdownCoreServices();
+        if (!m_ApplicationDesc.Headless)
+        {
+            if (activeRenderAPI == RenderAPI::API::OpenGL)
+            {
+                m_Runtime->ShutdownRenderAPI();
+                m_Windows.clear();
+            }
+            else
+            {
+                m_Windows.clear();
+                m_Runtime->ShutdownRenderAPI();
+            }
+            Window::Shutdown();
+        }
+        else
+        {
+            m_Runtime->ShutdownRenderAPI();
+        }
+        m_Runtime.reset();
     }
 
     void Application::PushLayer(Layer* layer)
@@ -126,7 +143,6 @@ namespace Crowny
     void Application::OnEvent(Event& e)
     {
         EventDispatcher dispatcher(e);
-        dispatcher.Dispatch<WindowCloseEvent>(CW_BIND_EVENT_FN(Application::OnWindowClose));
         dispatcher.Dispatch<WindowMinimizeEvent>(CW_BIND_EVENT_FN(Application::OnWindowMinimized));
         dispatcher.Dispatch<WindowResizeEvent>(CW_BIND_EVENT_FN(Application::OnWindowResize));
         dispatcher.Dispatch<MouseScrolledEvent>(CW_BIND_EVENT_FN(Application::OnMouseScroll));
@@ -137,6 +153,9 @@ namespace Crowny
             if (e.Handled)
                 break;
         }
+
+        if (e.GetEventType() == EventType::WindowClose)
+            OnWindowClose(static_cast<WindowCloseEvent&>(e));
     }
 
     Ref<TimeSettings> Application::GetTimeSettings() const
@@ -150,10 +169,23 @@ namespace Crowny
     }
     void Application::SetTimeSettings(const Ref<TimeSettings>& timeSettings) { m_TimeSettings = timeSettings; }
 
+    EngineRuntime& Application::GetRuntime()
+    {
+        CW_ENGINE_ASSERT(m_Runtime != nullptr);
+        return *m_Runtime;
+    }
+
+    const EngineRuntime& Application::GetRuntime() const
+    {
+        CW_ENGINE_ASSERT(m_Runtime != nullptr);
+        return *m_Runtime;
+    }
+
     Window& Application::GetWindow() const { return *m_Windows[0]->GetWindow(); }
 
     void Application::Run()
     {
+        m_LastFrameTime = static_cast<float>(glfwGetTime());
 #ifdef MC_WEB
         std::function<void()> loop = [&]() {
 #else
@@ -163,6 +195,17 @@ namespace Crowny
             const float time = (float)glfwGetTime();
             const Timestep timestep = time - m_LastFrameTime;
             m_LastFrameTime = time;
+            auto& rapi = *RenderAPI::TryGet();
+            rapi.BeginFrameStatistics(timestep.GetSeconds());
+
+            Input::OnUpdate();
+            Window::PollEvents();
+            if (!m_Running)
+                break;
+
+            AssetListenerManager::Get().Update();
+            if (AudioManager::IsStartedUp())
+                AudioManager::Get().OnUpdate();
 
             if (!m_Minimized)
             {
@@ -184,8 +227,6 @@ namespace Crowny
                 }
             }
 
-            Input::OnUpdate();
-            auto& rapi = (*gRenderAPI);
             for (const Ref<RenderWindow>& window : m_Windows)
             {
                 window->GetWindow()->OnUpdate();
@@ -208,26 +249,28 @@ namespace Crowny
 
     bool Application::OnWindowClose(WindowCloseEvent& e)
     {
+        if (e.IsCancelled())
+            return false;
         m_Running = false;
         return true;
     }
 
     bool Application::OnWindowResize(WindowResizeEvent& e)
     {
-        if (e.GetWidth() == 0 || e.GetHeight() == 0)
+        if (e.GetFramebufferWidth() == 0 || e.GetFramebufferHeight() == 0)
         {
             m_Minimized = true;
             return false;
         }
 
         m_Minimized = false;
-        Renderer::OnWindowResize(e.GetWidth(), e.GetHeight());
+        Renderer::OnWindowResize(e.GetFramebufferWidth(), e.GetFramebufferHeight());
         return false;
     }
 
     bool Application::OnWindowMinimized(WindowMinimizeEvent& e)
     {
-        m_Minimized = true;
+        m_Minimized = e.IsMinimized();
         return true;
     }
 } // namespace Crowny

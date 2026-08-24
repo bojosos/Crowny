@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Crowny/Common/HashedString.h"
 #include "Crowny/Common/Module.h"
 #include "Crowny/Common/StdHeaders.h"
 
@@ -44,14 +45,51 @@ namespace Crowny
         StringIDTable();
         ~StringIDTable() = default;
 
-        uint32_t Intern(const char* str);
-        const char* GetString(uint32_t id);
+        static uint32_t Intern(const char* str);
+        static uint32_t Intern(StringView str);
+        static const char* GetString(uint32_t id);
+        static size_t GetEntryCount() noexcept;
 
     private:
-        UnorderedMap<String, uint32_t> m_StringToID;
-        Vector<String> m_IDToString;
-        Mutex m_Mutex;
+        static constexpr uint32_t ENTRIES_PER_CHUNK = 256;
+        static constexpr uint32_t MAX_CHUNKS = 4096;
+        static constexpr uint32_t MAX_ENTRIES = ENTRIES_PER_CHUNK * MAX_CHUNKS;
+
+        struct EntryChunk
+        {
+            Array<String, ENTRIES_PER_CHUNK> Entries;
+        };
+
+        struct Storage;
+
+        static Storage& GetStorage();
+        static String& GetEntry(Storage& storage, uint32_t id);
+        static const String& GetEntry(const Storage& storage, uint32_t id);
     };
+
+    namespace Detail
+    {
+        template <size_t N> struct StringIDLiteral
+        {
+            char Value[N]{};
+
+            constexpr StringIDLiteral(const char (&value)[N]) noexcept
+            {
+                for (size_t i = 0; i < N; i++)
+                    Value[i] = value[i];
+            }
+        };
+    } // namespace Detail
+
+    namespace Literals
+    {
+        /** Returns a cached StringID for a compile-time string literal. */
+        template <Detail::StringIDLiteral Literal> StringID operator""_sid()
+        {
+            static const StringID id(Literal.Value);
+            return id;
+        }
+    } // namespace Literals
 
 } // namespace Crowny
 

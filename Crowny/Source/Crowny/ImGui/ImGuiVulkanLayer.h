@@ -21,7 +21,7 @@ namespace Crowny
         virtual void End() override;
 
     private:
-        VulkanRenderPass* m_RenderPass;
-        VkDescriptorPool m_ImguiPool;
+        VulkanRenderPass* m_RenderPass = nullptr;
+        VkDescriptorPool m_ImguiPool{};
     };
 } // namespace Crowny

@@ -26,7 +26,7 @@ namespace Crowny
         struct PoolInfo
         {
             VkQueryPool Pool = VK_NULL_HANDLE;
-            uint32_t StartIdx;
+            uint32_t StartIdx = 0;
         };
 
         VulkanQuery* GetQuery(VkQueryType type);
@@ -97,6 +97,7 @@ namespace Crowny
         virtual bool IsReady() const override { return false; }
         virtual void Begin(const Ref<CommandBuffer>& cb = nullptr) override {}
         virtual void End(const Ref<CommandBuffer>& cb = nullptr) override {};
+
     protected:
         VulkanPipelineQuery() = default;
     };
@@ -107,6 +108,7 @@ namespace Crowny
         friend class OcclusionQuery;
         bool IsInProgress() { return false; }
         void Interrupt(VulkanCmdBuffer* cb) {}
+
     protected:
         VulkanOcclusionQuery(bool binary) {}
     };

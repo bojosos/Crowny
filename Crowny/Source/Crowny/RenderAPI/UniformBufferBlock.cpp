@@ -3,7 +3,7 @@
 #include "Crowny/RenderAPI/UniformBufferBlock.h"
 #include "Crowny/Renderer/Renderer.h"
 
-// #include "Platform/OpenGL/OpenGLUniformBuffer.h"
+#include "Platform/OpenGL/OpenGLUniformBufferBlock.h"
 #include "Platform/Vulkan/VulkanUniformBufferBlock.h"
 
 namespace Crowny
@@ -11,9 +11,10 @@ namespace Crowny
 
     Ref<UniformBufferBlock> UniformBufferBlock::Create(uint32_t size, BufferUsage usage)
     {
-        switch (gRenderAPI->GetAPI())
+        switch (RenderAPI::TryGet()->GetAPI())
         {
-            //			case RenderAPI::API::OpenGL: return CreateRef<OpenGLUniformBuffer>(size, usage);
+        case RenderAPI::API::OpenGL:
+            return Ref<UniformBufferBlock>(new OpenGLUniformBufferBlock(size, usage));
         case RenderAPI::API::Vulkan:
             return Ref<UniformBufferBlock>(new VulkanUniformBufferBlock(size, usage));
         default:
@@ -21,7 +22,6 @@ namespace Crowny
             return nullptr;
         }
 
-        return nullptr;
     }
 
     UniformBufferBlock::~UniformBufferBlock()
@@ -56,7 +56,7 @@ namespace Crowny
     void UniformBufferBlock::ZeroOut(uint32_t offset, uint32_t size)
     {
         CW_ENGINE_ASSERT(offset + size <= m_Size);
-        std::memset(m_CachedData, offset, size);
+        std::memset(m_CachedData + offset, 0, size);
         m_BufferDirty = true;
     }
 

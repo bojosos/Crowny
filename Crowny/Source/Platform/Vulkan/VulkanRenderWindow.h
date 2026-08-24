@@ -6,9 +6,6 @@
 #include "Platform/Vulkan/VulkanRenderAPI.h"
 #include "Platform/Vulkan/VulkanUtils.h"
 
-#include "Crowny/Window/RenderWindow.h"
-#include "Crowny/Window/Window.h"
-
 namespace Crowny
 {
     class VulkanRenderWindow : public RenderWindow
@@ -20,20 +17,20 @@ namespace Crowny
         virtual void SwapBuffers(uint32_t syncMask) override;
         void AcquireBackBuffer();
 
-        virtual glm::vec2 ScreenToWindowPosition(const glm::vec2& screenPos) override { return glm::vec2(); };
-        virtual glm::vec2 WindowToScreenPos(const glm::vec2& windowPos) override { return glm::vec2(); };
+        virtual glm::vec2 ScreenToWindowPosition(const glm::vec2& screenPos) override;
+        virtual glm::vec2 WindowToScreenPosition(const glm::vec2& windowPos) override;
         virtual void Resize(uint32_t width, uint32_t height) override;
         virtual void Move(int32_t left, int32_t top) override;
         virtual void Minimize() override;
         virtual void Maximize() override;
         virtual void Restore() override;
-        virtual void SetFullScreen(uint32_t width, uint32_t height, float refreshRate = 60.0f, uint32_t monitorIdx = 0) override {};
-        virtual void SetWindowed(uint32_t width, uint32_t height) override {};
-        // Wat?
-        virtual Window* GetWindow() const override { return m_Window; }
+        virtual void SetFullscreen(uint32_t width, uint32_t height, float refreshRate = 60.0f, uint32_t monitorIdx = 0) override;
+        virtual void SetBorderlessFullscreen(uint32_t monitorIdx = 0) override;
+        virtual void SetWindowed(uint32_t width, uint32_t height) override;
+        virtual Window* GetWindow() const override { return m_Window.get(); }
         virtual void SetHidden(bool hidden) override;
         virtual void SetVSync(bool enabled) override;
-        virtual const RenderTargetProperties& GetProperties() const override { return m_Properties; }
+        virtual const RenderTargetProperties& GetProperties() const override;
 
         VulkanSwapChain* GetSwapChain() const { return m_SwapChain; }
         VkFormat GetColorFormat() const { return m_ColorFormat; }
@@ -44,19 +41,21 @@ namespace Crowny
         VulkanRenderWindow(const RenderWindowDesc& renderWindowDesc);
 
     private:
-        void RebuildSwapChain();
+        bool RebuildSwapChain();
+        void SyncWindowProperties() const;
 
     private:
-        Window* m_Window;
-        VkSurfaceKHR m_Surface;
-        VkColorSpaceKHR m_ColorSpace;
-        VkFormat m_ColorFormat;
-        VkFormat m_DepthFormat;
-        uint32_t m_PresentQueueFamily;
+        Scope<Window> m_Window;
+        VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
+        VkColorSpaceKHR m_ColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+        VkFormat m_ColorFormat = VK_FORMAT_UNDEFINED;
+        VkFormat m_DepthFormat = VK_FORMAT_UNDEFINED;
+        uint32_t m_PresentQueueFamily = 0;
         VulkanSwapChain* m_SwapChain = nullptr;
         VulkanSemaphore* m_SemaphoresTemp[MAX_UNIQUE_QUEUES + 1] = {};
         bool m_RequiresNewBackBuffer;
         bool m_ShowOnSwap;
-        RenderWindowProperties m_Properties;
+        bool m_SwapChainDirty = false;
+        mutable RenderWindowProperties m_Properties;
     };
 } // namespace Crowny

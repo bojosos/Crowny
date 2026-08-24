@@ -12,7 +12,7 @@ namespace Crowny
 
     Ref<TimerQuery> TimerQuery::Create()
     {
-        switch (gRenderAPI->GetAPI())
+        switch (RenderAPI::TryGet()->GetAPI())
         {
         case RenderAPI::API::OpenGL:
             return Ref<TimerQuery>(new OpenGLTimerQuery());
@@ -28,7 +28,7 @@ namespace Crowny
 
     Ref<PipelineQuery> PipelineQuery::Create()
     {
-        switch (gRenderAPI->GetAPI())
+        switch (RenderAPI::TryGet()->GetAPI())
         {
         case RenderAPI::API::OpenGL:
             return Ref<PipelineQuery>(new OpenGLPipelineQuery());
@@ -44,7 +44,7 @@ namespace Crowny
 
     Ref<OcclusionQuery> OcclusionQuery::Create(bool binary)
     {
-        switch (gRenderAPI->GetAPI())
+        switch (RenderAPI::TryGet()->GetAPI())
         {
         case RenderAPI::API::OpenGL:
             return Ref<OcclusionQuery>(new OpenGLOcclusionQuery(binary));

@@ -26,7 +26,9 @@ namespace Crowny
         MouseScrolled,
         ImGuiMenuItemClicked,
         ImGuiViewportSceneDragged,
-        ImGuiViewportMeshDragged
+        ImGuiViewportMeshDragged,
+        WindowFileDrop,
+        WindowContentScale
     };
 
     enum EventCategory

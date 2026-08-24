@@ -10,7 +10,7 @@ namespace Crowny
 
     Ref<VertexBuffer> VertexBuffer::Create(const VertexBufferDesc& desc)
     {
-        switch (gRenderAPI->GetAPI())
+        switch (RenderAPI::TryGet()->GetAPI())
         {
         case RenderAPI::API::OpenGL:
             if (desc.Data)

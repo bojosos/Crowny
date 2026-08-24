@@ -16,10 +16,12 @@ namespace Crowny
 
     struct PlatformInfo : public RefCounted
     {
-        PlatformType Type;
+        PlatformType Type = PlatformType::Windows;
         String Defines;
         UUID MainScene;
-        bool Debug;
+        Path OutputDirectory;
+        bool Debug = false;
+        bool ExportSupported = false;
         AssetHandle<Texture> Icon;
     };
 } // namespace Crowny

@@ -20,9 +20,12 @@ namespace Crowny
         ~MonoManager();
 
         MonoAssembly& LoadAssembly(const Path& path, const String& name);
+        bool ValidateAssemblies(const Vector<Path>& paths) const;
         void UnloadAll();
+        MonoClass* FindClass(const String& assemblyName, const String& ns, const String& typeName);
         MonoClass* FindClass(const String& ns, const String& typeName);
         MonoClass* FindClass(::MonoClass* rawClass);
+        MonoAssembly* FindAssembly(::MonoClass* rawClass) const;
         MonoDomain* GetDomain() const { return m_ScriptDomain ? m_ScriptDomain : m_RootDomain; }
         MonoAssembly* GetAssembly(const String& name) const;
 
@@ -56,5 +59,7 @@ namespace Crowny
         MonoDomain* m_RootDomain;
         MonoDomain* m_ScriptDomain;
         MonoAssembly* m_CorlibAssembly;
+        Path m_LibDir;
+        Path m_EtcDir;
     };
 } // namespace Crowny

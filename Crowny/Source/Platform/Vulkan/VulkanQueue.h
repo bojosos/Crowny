@@ -16,7 +16,8 @@ namespace Crowny
         GpuQueueType GetType() const { return m_Type; }
         bool IsExecuting() const;
 
-        VulkanCmdBuffer* GetLastCommandBuffer() const { return m_LastCommandBuffer; }
+        VulkanCmdBuffer* GetLastCommandBuffer() const;
+        bool RequestLastCommandBufferSemaphore(VulkanSemaphore*& semaphore) const;
 
         void Submit(VulkanCmdBuffer* buffer, VulkanSemaphore** waitSemaphores, uint32_t semaphoreLength);
         void SubmitQueued();
@@ -50,7 +51,7 @@ namespace Crowny
         VulkanDevice& m_Device;
         GpuQueueType m_Type;
         uint32_t m_Index;
-        Mutex m_SubmitMutex; // Protects vkQueueSubmit/vkQueuePresentKHR (not thread-safe for same queue)
+        mutable Mutex m_SubmitMutex; // Protects queue submission state and external Vulkan queue synchronization.
 
         VkPipelineStageFlags m_SubmitDstWaitMask[MAX_UNIQUE_QUEUES];
         Vector<SubmitInfo> m_QueuedBuffers;
@@ -61,10 +62,10 @@ namespace Crowny
         VulkanCmdBuffer* m_LastCommandBuffer = nullptr;
         bool m_LastCBSemaphoreUsed = false;
         uint32_t m_NextSubmitIdx = 1;
-        Vector<VkSemaphore>    m_SemaphoresTemp;
-        Vector<VkSubmitInfo>   m_SubmitInfosScratch;
+        Vector<VkSemaphore> m_SemaphoresTemp;
+        Vector<VkSubmitInfo> m_SubmitInfosScratch;
         Vector<VkCommandBuffer> m_CmdBuffersScratch;
-        Vector<VkSemaphore>    m_SignalSemaphoresScratch;
-        Vector<VkSemaphore>    m_WaitSemaphoresScratch;
+        Vector<VkSemaphore> m_SignalSemaphoresScratch;
+        Vector<VkSemaphore> m_WaitSemaphoresScratch;
     };
 } // namespace Crowny

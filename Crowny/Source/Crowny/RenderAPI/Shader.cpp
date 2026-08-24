@@ -1,5 +1,6 @@
 #include "cwpch.h"
 
+#include "Crowny/Common/StringID.h"
 #include "Crowny/RenderAPI/Shader.h"
 #include "Crowny/Renderer/Renderer.h"
 
@@ -10,6 +11,8 @@ namespace Crowny
 {
 
     uint32_t BufferLayout::s_NextFreeId = 0;
+
+    MaterialPropertyID Shader::PropertyToID(StringView name) { return { StringIDTable::Intern(name) }; }
 
     ShaderRenderPass::ShaderRenderPass(const ShaderRenderPassDesc& passDesc) : m_ShaderDesc(passDesc) {}
 
@@ -133,10 +136,10 @@ namespace Crowny
 
     Ref<ShaderStage> ShaderStage::Create(const Ref<BinaryShaderData>& data)
     {
-        switch (gRenderAPI->GetAPI())
+        switch (RenderAPI::TryGet()->GetAPI())
         {
-        // TODO: Add support for binary OpenGL shaders
-        // case RenderAPI::API::OpenGL: return CreateRef<OpenGLShader>(m_Filepath);
+        case RenderAPI::API::OpenGL:
+            return Ref<ShaderStage>(new OpenGLShader(data));
         case RenderAPI::API::Vulkan:
             return Ref<ShaderStage>(new VulkanShader(data));
         default:
@@ -147,8 +150,23 @@ namespace Crowny
         return nullptr;
     }
 
-    Shader::Shader(const ShaderDesc& shaderDesc) : m_Techniques(shaderDesc.Techniques) {}
+    Shader::Shader(const ShaderDesc& shaderDesc) : m_Techniques(shaderDesc.Techniques) { RebuildTechniqueLookup(); }
 
     Ref<Shader> Shader::Create(const ShaderDesc& shaderDesc) { return Ref<Shader>(new Shader(shaderDesc)); }
+
+    const Ref<ShaderTechnique>& Shader::GetTechnique(const ShaderVariation& variation) const
+    {
+        CW_ENGINE_ASSERT(!m_Techniques.empty(), "Shader has no techniques");
+        const auto iter = m_TechniqueLookup.find(variation.GetCanonicalKey());
+        return iter == m_TechniqueLookup.end() ? m_Techniques.front() : m_Techniques[iter->second];
+    }
+
+    void Shader::RebuildTechniqueLookup()
+    {
+        m_TechniqueLookup.clear();
+        m_TechniqueLookup.reserve(m_Techniques.size());
+        for (size_t index = 0; index < m_Techniques.size(); ++index)
+            m_TechniqueLookup.try_emplace(m_Techniques[index]->GetVariation().GetCanonicalKey(), index);
+    }
 
 } // namespace Crowny

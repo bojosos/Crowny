@@ -13,6 +13,7 @@ namespace Crowny
 
     private:
         static bool Internal_IsAwake(ScriptRigidbody2D* thisPtr);
+        static void Internal_SetAwake(ScriptRigidbody2D* thisPtr, bool awake);
 
         static RigidbodyBodyType Internal_GetBodyType(ScriptRigidbody2D* thisPtr);
         static float Internal_GetRotation(ScriptRigidbody2D* thisPtr);
@@ -23,7 +24,10 @@ namespace Crowny
         static CollisionDetectionMode2D Internal_GetCollisionDetectionMode(ScriptRigidbody2D* thisPtr);
         static int Internal_GetLayer(ScriptRigidbody2D* thisPtr);
         static RigidbodySleepMode Internal_GetSleepMode(ScriptRigidbody2D* thisPtr);
-        static Rigidbody2DConstraints Internal_GetConstraints(ScriptRigidbody2D* thisPtr, ScriptRigidbody2D* thisPtr2);
+        static Rigidbody2DConstraints Internal_GetConstraints(ScriptRigidbody2D* thisPtr);
+        static RigidbodyInterpolation Internal_GetInterpolationMode(ScriptRigidbody2D* thisPtr);
+        static void Internal_GetLinearVelocity(ScriptRigidbody2D* thisPtr, glm::vec2* outVelocity);
+        static float Internal_GetAngularVelocity(ScriptRigidbody2D* thisPtr);
         static float Internal_GetMass(ScriptRigidbody2D* thisPtr);
         static bool Internal_GetAutoMass(ScriptRigidbody2D* thisPtr);
         static void Internal_GetCenterOfMass(ScriptRigidbody2D* thisPtr, glm::vec2* outCenterOfMass);
@@ -35,13 +39,16 @@ namespace Crowny
         static void Internal_SetLayer(ScriptRigidbody2D* thisPtr, int layer);
         static void Internal_SetSleepMode(ScriptRigidbody2D* thisPtr, RigidbodySleepMode sleepMode);
         static void Internal_SetConstraints(ScriptRigidbody2D* thisPtr, Rigidbody2DConstraints constraints);
+        static void Internal_SetInterpolationMode(ScriptRigidbody2D* thisPtr, RigidbodyInterpolation interpolation);
+        static void Internal_SetLinearVelocity(ScriptRigidbody2D* thisPtr, glm::vec2* velocity);
+        static void Internal_SetAngularVelocity(ScriptRigidbody2D* thisPtr, float velocity);
         static void Internal_SetBodyType(ScriptRigidbody2D* thisPtr, RigidbodyBodyType bodyType);
         static void Internal_SetMass(ScriptRigidbody2D* thisPtr, float mass);
         static void Internal_SetAutoMass(ScriptRigidbody2D* thisPtr, bool autoMass);
         static void Internal_SetCenterOfMass(ScriptRigidbody2D* thisPtr, glm::vec2* centerOfMass);
 
         static void Internal_AddForce(ScriptRigidbody2D* thisPtr, glm::vec2* force, ForceMode forceType);
-        static void Internal_AddForceAt(ScriptRigidbody2D* thisPtr, glm::vec2* position, glm::vec2* force, ForceMode forceType);
+        static void Internal_AddForceAt(ScriptRigidbody2D* thisPtr, glm::vec2* force, glm::vec2* worldPosition, ForceMode forceType);
         static void Internal_AddTorque(ScriptRigidbody2D* thisPtr, float torque, ForceMode forceMode);
         static float Internal_GetInertia(ScriptRigidbody2D* thisPtr);
         static void Internal_SetInertia(ScriptRigidbody2D* thisPtr, float inertia);

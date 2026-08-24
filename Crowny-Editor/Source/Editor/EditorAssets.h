@@ -35,8 +35,7 @@ namespace Crowny
         static void Load();
         static void Unload();
         static EditorAssetsLibrary Get() { return s_Library; }
-
-        static const String DefaultScriptPath;
+        static const String& GetDefaultScriptTemplate();
 
     private:
         static const String UnassignedTexture;
@@ -61,8 +60,10 @@ namespace Crowny
         static const String AlignLeft;
         static const String AlignCenter;
         static const String AlignRight;
+        static const String DefaultScriptPath;
 
         static EditorAssetsLibrary s_Library;
+        static String s_DefaultScriptTemplate;
     };
 
 } // namespace Crowny

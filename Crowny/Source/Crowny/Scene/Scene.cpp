@@ -1,18 +1,21 @@
 #include "cwpch.h"
 
 #include "Crowny/Scene/Scene.h"
+#include "Crowny/Scene/SceneManager.h"
 
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
 
 #include "Crowny/Audio/AudioManager.h"
 #include "Crowny/Physics/Physics2D.h"
+#include "Crowny/Physics/Physics3D.h"
 
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptSceneObjectManager.h"
 
-#include <box2d/box2d.h>
 #include <entt/entt.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 namespace Crowny
 {
@@ -64,15 +67,16 @@ namespace Crowny
 
     Scene::Scene(bool createRoot) : m_RootEntity(nullptr)
     {
+        RegisterEntityCallbacks();
         if (createRoot)
             CreateRootEntity();
     }
 
     Scene::Scene(const String& name, bool createRoot) : m_Name(name), m_RootEntity(nullptr)
     {
+        RegisterEntityCallbacks();
         if (createRoot)
             CreateRootEntity();
-        RegisterEntityCallbacks();
     }
 
     Scene::Scene(const Scene& other)
@@ -82,6 +86,8 @@ namespace Crowny
         m_Filepath = other.m_Filepath;
         m_Name = other.m_Name;
         m_ImGuiLayout = other.m_ImGuiLayout;
+        m_Environment = other.m_Environment;
+        m_IsEditorScene = other.m_IsEditorScene;
         m_RootEntity = nullptr;
 
         UnorderedMap<UUID, entt::entity> copyEntityMap;
@@ -99,6 +105,7 @@ namespace Crowny
 
         if (other.m_RootEntity)
             m_RootEntity = new Entity(m_EntityMap.at(other.m_RootEntity->GetUuid()), this);
+        RebuildCopiedRelationships(other, copyEntityMap);
 
         RegisterEntityCallbacks();
     }
@@ -117,6 +124,9 @@ namespace Crowny
         m_ViewportHeight = other.m_ViewportHeight;
         m_Filepath = other.m_Filepath;
         m_Name = other.m_Name;
+        m_ImGuiLayout = other.m_ImGuiLayout;
+        m_Environment = other.m_Environment;
+        m_IsEditorScene = other.m_IsEditorScene;
 
         UnorderedMap<UUID, entt::entity> copyEntityMap;
 
@@ -133,23 +143,43 @@ namespace Crowny
 
         if (other.m_RootEntity)
             m_RootEntity = new Entity(m_EntityMap.at(other.m_RootEntity->GetUuid()), this);
+        RebuildCopiedRelationships(other, copyEntityMap);
 
         return *this;
     }
 
     Scene::~Scene()
     {
+        if (m_RuntimeActive)
+            OnRuntimeStop();
+        else if (m_SimulationActive)
+            OnSimulationEnd();
+        else
+        {
+            EndPhysics3D();
+            if (m_Physics2DActive && Physics2D::TryGet() != nullptr)
+                Physics2D::TryGet()->StopSimulation(this);
+            m_Physics2DActive = false;
+        }
         if (m_RootEntity)
-            m_RootEntity->Destroy(true);
-        delete m_RootEntity;
+        {
+            Entity root = *m_RootEntity;
+            delete m_RootEntity;
+            m_RootEntity = nullptr;
+            root.Destroy(true);
+        }
     }
 
     void Scene::CreateRootEntity()
     {
+        if (m_RootEntity)
+            return;
         m_RootEntity = new Entity(m_Registry.create(), this);
 
         m_RootEntity->AddComponent<TransformComponent>();
-        m_RootEntity->AddComponent<IDComponent>(UuidGenerator::Generate());
+        const UUID uuid = UuidGenerator::Generate();
+        m_RootEntity->AddComponent<IDComponent>(uuid);
+        m_EntityMap[uuid] = m_RootEntity->GetHandle();
         m_RootEntity->AddComponent<TagComponent>(m_Name);
         m_RootEntity->AddComponent<RelationshipComponent>();
     }
@@ -163,6 +193,15 @@ namespace Crowny
         m_Registry.on_construct<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentConstruct>(this);
         m_Registry.on_destroy<CircleCollider2DComponent>().connect<&Scene::OnCircleCollider2DComponentDestroy>(this);
 
+        m_Registry.on_construct<Rigidbody3DComponent>().connect<&Scene::OnRigidbody3DComponentConstruct>(this);
+        m_Registry.on_destroy<Rigidbody3DComponent>().connect<&Scene::OnRigidbody3DComponentDestroy>(this);
+        m_Registry.on_construct<BoxCollider3DComponent>().connect<&Scene::OnBoxCollider3DComponentConstruct>(this);
+        m_Registry.on_destroy<BoxCollider3DComponent>().connect<&Scene::OnBoxCollider3DComponentDestroy>(this);
+        m_Registry.on_construct<SphereCollider3DComponent>().connect<&Scene::OnSphereCollider3DComponentConstruct>(this);
+        m_Registry.on_destroy<SphereCollider3DComponent>().connect<&Scene::OnSphereCollider3DComponentDestroy>(this);
+        m_Registry.on_construct<CapsuleCollider3DComponent>().connect<&Scene::OnCapsuleCollider3DComponentConstruct>(this);
+        m_Registry.on_destroy<CapsuleCollider3DComponent>().connect<&Scene::OnCapsuleCollider3DComponentDestroy>(this);
+
         m_Registry.on_construct<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentConstruct>(this);
         m_Registry.on_destroy<AudioSourceComponent>().connect<&Scene::OnAudioSourceComponentDestroy>(this);
 
@@ -170,23 +209,73 @@ namespace Crowny
         m_Registry.on_destroy<MonoScriptComponent>().connect<&Scene::OnMonoScriptComponentDestroy>(this);
     }
 
+    void Scene::RebuildCopiedRelationships(const Scene& source, const UnorderedMap<UUID, entt::entity>& entityMap)
+    {
+        const auto relationshipView = source.m_Registry.view<IDComponent, RelationshipComponent>();
+        for (const entt::entity sourceHandle : relationshipView)
+        {
+            const IDComponent& sourceId = source.m_Registry.get<IDComponent>(sourceHandle);
+            const RelationshipComponent& sourceRelationship = source.m_Registry.get<RelationshipComponent>(sourceHandle);
+            const auto destination = entityMap.find(sourceId.Uuid);
+            if (destination == entityMap.end())
+                continue;
+
+            Entity destinationParent{ destination->second, this };
+            auto& destinationRelationship = m_Registry.get<RelationshipComponent>(destination->second);
+            destinationRelationship.Parent = {};
+            destinationRelationship.Children.clear();
+            destinationRelationship.Children.reserve(sourceRelationship.Children.size());
+
+            for (const Entity sourceChild : sourceRelationship.Children)
+            {
+                if (!sourceChild || sourceChild.GetScene() != &source)
+                    continue;
+                const auto child = entityMap.find(sourceChild.GetUuid());
+                if (child == entityMap.end())
+                    continue;
+                Entity destinationChild{ child->second, this };
+                destinationRelationship.Children.push_back(destinationChild);
+                m_Registry.get<RelationshipComponent>(child->second).Parent = destinationParent;
+            }
+        }
+    }
+
     Entity Scene::DuplicateEntity(Entity entity, bool includeChildren)
     {
+        if (!entity || entity.GetScene() != this || (m_RootEntity && entity == *m_RootEntity))
+            return {};
+
+        const Entity sourceParent = entity.GetParent();
+        const uint32_t sourceSiblingIndex = entity.GetSiblingIndex();
         Entity newEntity = CreateEntity(entity.GetName());
+        const Entity creationParent = newEntity.GetParent();
         CopyAllExistingComponents(newEntity, entity);
 
-        // CopyAllExistingComponents copies RelationshipComponent including children references
-        // from the original. Clear them — we'll re-add duplicated children below if requested.
         auto& newRc = newEntity.GetComponent<RelationshipComponent>();
         newRc.Children.clear();
+        newRc.Parent = creationParent;
+        if (sourceParent != creationParent)
+            newEntity.SetParent(sourceParent);
+        if (sourceParent)
+            newEntity.SetSiblingIndex(sourceSiblingIndex + 1);
 
         if (includeChildren)
         {
-            const auto& children = entity.GetChildren();
-            for (auto child : children)
+            const Vector<Entity> children = entity.GetChildren();
+            uint32_t childIndex = 0;
+            for (Entity child : children)
             {
-                Entity e = DuplicateEntity(child, true);
-                e.SetParent(newEntity);
+                Entity childClone = DuplicateEntity(child, true);
+                if (childClone && childClone.SetParent(newEntity))
+                {
+                    const Transform& sourceLocal = child.GetLocalTransform();
+                    TransformComponent& cloneTransform = childClone.GetTransform();
+                    cloneTransform.SetPosition(sourceLocal.GetPosition());
+                    cloneTransform.SetRotation(sourceLocal.GetRotation());
+                    cloneTransform.SetScale(sourceLocal.GetScale());
+                    childClone.NotifyTransformChanged();
+                    childClone.SetSiblingIndex(childIndex++);
+                }
             }
         }
         return newEntity;
@@ -205,58 +294,504 @@ namespace Crowny
 
     void Scene::OnRigidbody2DComponentConstruct(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !gPhysics2D->GetPhysicsWorld())
+        if (!m_Physics2DActive || !Physics2D::IsStartedUp() || !Physics2D::TryGet()->IsSimulating())
             return;
         Entity e = { entity, this };
-        gPhysics2D->CreateRigidbody(e);
+        Physics2D::TryGet()->CreateRigidbody(e);
     }
 
     void Scene::OnRigidbody2DComponentDestroy(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !gPhysics2D->GetPhysicsWorld())
+        if (!m_Physics2DActive || !Physics2D::IsStartedUp() || !Physics2D::TryGet()->IsSimulating())
             return;
         Entity e = { entity, this };
-        gPhysics2D->DestroyRigidbody(e);
+        Physics2D::TryGet()->DestroyRigidbody(e);
     }
 
     void Scene::OnBoxCollider2DComponentConstruct(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !gPhysics2D->GetPhysicsWorld())
+        if (!m_Physics2DActive || !Physics2D::IsStartedUp() || !Physics2D::TryGet()->IsSimulating())
             return;
         Entity e = { entity, this };
-        gPhysics2D->CreateBoxCollider(e);
+        Physics2D::TryGet()->CreateBoxCollider(e);
     }
 
     void Scene::OnBoxCollider2DComponentDestroy(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !gPhysics2D->GetPhysicsWorld())
+        if (!m_Physics2DActive || !Physics2D::IsStartedUp() || !Physics2D::TryGet()->IsSimulating())
             return;
         Entity e = { entity, this };
-        gPhysics2D->DestroyFixture(e, e.GetComponent<BoxCollider2DComponent>());
+        Physics2D::TryGet()->DestroyFixture(e, e.GetComponent<BoxCollider2DComponent>());
     }
 
     void Scene::OnCircleCollider2DComponentConstruct(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !gPhysics2D->GetPhysicsWorld())
+        if (!m_Physics2DActive || !Physics2D::IsStartedUp() || !Physics2D::TryGet()->IsSimulating())
             return;
         Entity e = { entity, this };
-        gPhysics2D->CreateCircleCollider(e);
+        Physics2D::TryGet()->CreateCircleCollider(e);
     }
 
     void Scene::OnCircleCollider2DComponentDestroy(entt::registry& registry, entt::entity entity)
     {
-        if (m_IsEditorScene || !Physics2D::IsStartedUp() || !gPhysics2D->GetPhysicsWorld())
+        if (!m_Physics2DActive || !Physics2D::IsStartedUp() || !Physics2D::TryGet()->IsSimulating())
             return;
         Entity e = { entity, this };
-        gPhysics2D->DestroyFixture(e, e.GetComponent<CircleCollider2DComponent>());
+        Physics2D::TryGet()->DestroyFixture(e, e.GetComponent<CircleCollider2DComponent>());
+    }
+
+    static bool HasPhysics3DComponents(Entity entity)
+    {
+        return entity.HasComponent<Rigidbody3DComponent>() || entity.HasComponent<BoxCollider3DComponent>() ||
+               entity.HasComponent<SphereCollider3DComponent>() || entity.HasComponent<CapsuleCollider3DComponent>();
+    }
+
+    bool Scene::BeginPhysics3D()
+    {
+        EndPhysics3D();
+        if (!Physics3D::IsStartedUp())
+            return false;
+
+        m_PendingPhysics3DRebuilds.clear();
+        m_PendingPhysics3DContacts.clear();
+        m_DispatchPhysics3DContacts.clear();
+        m_Physics3DActive = Physics3D::Get().StartSimulation([this](const PhysicsContactEvent3D& event) {
+            if (m_Physics3DActive)
+                m_PendingPhysics3DContacts.push_back(event);
+        });
+        if (!m_Physics3DActive)
+            return false;
+
+        m_Registry.each([&](entt::entity handle) {
+            Entity entity{ handle, this };
+            if (HasPhysics3DComponents(entity))
+                CreatePhysics3DBody(entity);
+        });
+        return true;
+    }
+
+    void Scene::EndPhysics3D()
+    {
+        if (!m_Physics3DActive)
+            return;
+
+        for (auto& [handle, body] : m_Physics3DBodies)
+        {
+            if (!m_Registry.valid(handle))
+                continue;
+            Entity entity{ handle, this };
+            if (entity.HasComponent<Rigidbody3DComponent>())
+                entity.GetComponent<Rigidbody3DComponent>().RuntimeBody = {};
+            if (entity.HasComponent<BoxCollider3DComponent>())
+                entity.GetComponent<BoxCollider3DComponent>().RuntimeShape = {};
+            if (entity.HasComponent<SphereCollider3DComponent>())
+                entity.GetComponent<SphereCollider3DComponent>().RuntimeShape = {};
+            if (entity.HasComponent<CapsuleCollider3DComponent>())
+                entity.GetComponent<CapsuleCollider3DComponent>().RuntimeShape = {};
+        }
+        m_Physics3DBodies.clear();
+        m_Physics3DEntities.clear();
+        m_Physics3DScales.clear();
+        m_PendingPhysics3DRebuilds.clear();
+        m_PendingPhysics3DContacts.clear();
+        m_DispatchPhysics3DContacts.clear();
+        m_Physics3DActive = false;
+        if (Physics3D::IsStartedUp())
+            Physics3D::Get().StopSimulation();
+    }
+
+    PhysicsBody3DHandle Scene::CreatePhysics3DBody(Entity entity)
+    {
+        if (!m_Physics3DActive || !entity || !HasPhysics3DComponents(entity))
+            return {};
+        const auto existing = m_Physics3DBodies.find(entity.GetHandle());
+        if (existing != m_Physics3DBodies.end())
+            return existing->second;
+
+        const Transform& world = entity.GetWorldTransform();
+        PhysicsBody3DDesc desc;
+        desc.Position = world.GetPosition();
+        desc.Rotation = world.GetRotation();
+        desc.UserData = static_cast<uint32_t>(entity.GetHandle());
+
+        if (entity.HasComponent<Rigidbody3DComponent>())
+        {
+            const auto& rigidbody = entity.GetComponent<Rigidbody3DComponent>();
+            desc.Type = rigidbody.GetBodyType();
+            desc.Mass = rigidbody.GetMass();
+            desc.AutoMass = rigidbody.GetAutoMass();
+            desc.GravityScale = rigidbody.GetGravityScale();
+            desc.LinearDamping = rigidbody.GetLinearDamping();
+            desc.AngularDamping = rigidbody.GetAngularDamping();
+            desc.CenterOfMass = rigidbody.GetCenterOfMass();
+            desc.AllowSleep = rigidbody.GetAllowSleep();
+            desc.StartAwake = rigidbody.GetStartAwake();
+            desc.Continuous = rigidbody.GetContinuousCollision();
+            desc.LockRotationX = rigidbody.GetLockRotationX();
+            desc.LockRotationY = rigidbody.GetLockRotationY();
+            desc.LockRotationZ = rigidbody.GetLockRotationZ();
+            desc.Filter = rigidbody.GetFilter();
+            desc.LinearVelocity = rigidbody.GetLinearVelocity();
+            desc.AngularVelocity = rigidbody.GetAngularVelocity();
+        }
+
+        const PhysicsBody3DHandle body = Physics3D::Get().CreateBody(desc);
+        if (!body)
+        {
+            CW_ENGINE_ERROR("Failed to create a 3D physics body for entity {0}", entity.GetName());
+            return {};
+        }
+
+        m_Physics3DBodies[entity.GetHandle()] = body;
+        m_Physics3DEntities[body] = entity.GetHandle();
+        m_Physics3DScales[entity.GetHandle()] = world.GetScale();
+        if (entity.HasComponent<Rigidbody3DComponent>())
+            entity.GetComponent<Rigidbody3DComponent>().RuntimeBody = body;
+        CreatePhysics3DShapes(entity, body);
+        return body;
+    }
+
+    void Scene::CreatePhysics3DShapes(Entity entity, PhysicsBody3DHandle body)
+    {
+        if (!m_Physics3DActive || !entity || !body)
+            return;
+
+        const glm::vec3 worldScale = entity.GetWorldScale();
+        const glm::vec3 absoluteScale = glm::max(glm::abs(worldScale), glm::vec3(0.001f));
+        const auto makeDesc = [&](const Collider3D& collider, PhysicsShapeType3D type) {
+            PhysicsShape3DDesc desc;
+            desc.Type = type;
+            desc.LocalPosition = collider.GetOffset() * worldScale;
+            desc.LocalRotation = collider.GetRotation();
+            desc.IsTrigger = collider.IsTrigger();
+            desc.Material = collider.GetMaterialData();
+            desc.Filter = collider.GetFilter();
+            desc.UserData = static_cast<uint32_t>(entity.GetHandle());
+            return desc;
+        };
+
+        if (entity.HasComponent<BoxCollider3DComponent>())
+        {
+            auto& collider = entity.GetComponent<BoxCollider3DComponent>();
+            PhysicsShape3DDesc desc = makeDesc(collider, PhysicsShapeType3D::Box);
+            desc.HalfExtents = glm::max(glm::abs(collider.GetSize()) * absoluteScale * 0.5f, glm::vec3(0.0005f));
+            collider.RuntimeShape = Physics3D::Get().AddShape(body, desc);
+        }
+        if (entity.HasComponent<SphereCollider3DComponent>())
+        {
+            auto& collider = entity.GetComponent<SphereCollider3DComponent>();
+            PhysicsShape3DDesc desc = makeDesc(collider, PhysicsShapeType3D::Sphere);
+            desc.Radius = collider.GetRadius() * std::max({ absoluteScale.x, absoluteScale.y, absoluteScale.z });
+            collider.RuntimeShape = Physics3D::Get().AddShape(body, desc);
+        }
+        if (entity.HasComponent<CapsuleCollider3DComponent>())
+        {
+            auto& collider = entity.GetComponent<CapsuleCollider3DComponent>();
+            PhysicsShape3DDesc desc = makeDesc(collider, PhysicsShapeType3D::Capsule);
+            desc.Radius = collider.GetRadius() * std::max(absoluteScale.x, absoluteScale.z);
+            desc.Height = std::max(collider.GetHeight() * absoluteScale.y, desc.Radius * 2.0f);
+            collider.RuntimeShape = Physics3D::Get().AddShape(body, desc);
+        }
+    }
+
+    void Scene::DestroyPhysics3DShapes(Entity entity, PhysicsBody3DHandle body)
+    {
+        if (!entity || !body || !Physics3D::IsStartedUp())
+            return;
+        const auto removeShape = [&](Collider3D& collider) {
+            if (collider.RuntimeShape)
+                Physics3D::Get().RemoveShape(body, collider.RuntimeShape);
+            collider.RuntimeShape = {};
+        };
+        if (entity.HasComponent<BoxCollider3DComponent>())
+            removeShape(entity.GetComponent<BoxCollider3DComponent>());
+        if (entity.HasComponent<SphereCollider3DComponent>())
+            removeShape(entity.GetComponent<SphereCollider3DComponent>());
+        if (entity.HasComponent<CapsuleCollider3DComponent>())
+            removeShape(entity.GetComponent<CapsuleCollider3DComponent>());
+    }
+
+    void Scene::DestroyPhysics3DBody(entt::entity handle)
+    {
+        const auto found = m_Physics3DBodies.find(handle);
+        if (found == m_Physics3DBodies.end())
+            return;
+        const PhysicsBody3DHandle body = found->second;
+        if (m_Registry.valid(handle))
+        {
+            Entity entity{ handle, this };
+            if (entity.HasComponent<Rigidbody3DComponent>())
+                entity.GetComponent<Rigidbody3DComponent>().RuntimeBody = {};
+            if (entity.HasComponent<BoxCollider3DComponent>())
+                entity.GetComponent<BoxCollider3DComponent>().RuntimeShape = {};
+            if (entity.HasComponent<SphereCollider3DComponent>())
+                entity.GetComponent<SphereCollider3DComponent>().RuntimeShape = {};
+            if (entity.HasComponent<CapsuleCollider3DComponent>())
+                entity.GetComponent<CapsuleCollider3DComponent>().RuntimeShape = {};
+        }
+        m_Physics3DEntities.erase(body);
+        m_Physics3DScales.erase(handle);
+        m_Physics3DBodies.erase(found);
+        if (Physics3D::IsStartedUp())
+            Physics3D::Get().DestroyBody(body);
+    }
+
+    void Scene::QueuePhysics3DRebuild(entt::entity handle)
+    {
+        if (std::find(m_PendingPhysics3DRebuilds.begin(), m_PendingPhysics3DRebuilds.end(), handle) == m_PendingPhysics3DRebuilds.end())
+            m_PendingPhysics3DRebuilds.push_back(handle);
+    }
+
+    void Scene::RecreatePhysics3DBody(Entity entity)
+    {
+        if (!m_Physics3DActive || !entity)
+            return;
+        glm::vec3 linearVelocity{ 0.0f };
+        glm::vec3 angularVelocity{ 0.0f };
+        const bool hasRigidbody = entity.HasComponent<Rigidbody3DComponent>();
+        if (hasRigidbody)
+        {
+            auto& rigidbody = entity.GetComponent<Rigidbody3DComponent>();
+            linearVelocity = rigidbody.GetLinearVelocity();
+            angularVelocity = rigidbody.GetAngularVelocity();
+        }
+        DestroyPhysics3DBody(entity.GetHandle());
+        CreatePhysics3DBody(entity);
+        if (hasRigidbody && entity.HasComponent<Rigidbody3DComponent>())
+        {
+            auto& rigidbody = entity.GetComponent<Rigidbody3DComponent>();
+            rigidbody.SetLinearVelocity(linearVelocity);
+            rigidbody.SetAngularVelocity(angularVelocity);
+        }
+    }
+
+    void Scene::RecreatePhysics3DShapes(Entity entity)
+    {
+        if (!m_Physics3DActive || !entity)
+            return;
+        const auto found = m_Physics3DBodies.find(entity.GetHandle());
+        if (found == m_Physics3DBodies.end())
+        {
+            CreatePhysics3DBody(entity);
+            return;
+        }
+        const PhysicsBody3DHandle body = found->second;
+        if (!body)
+            return;
+        DestroyPhysics3DShapes(entity, body);
+        CreatePhysics3DShapes(entity, body);
+    }
+
+    void Scene::UpdatePhysics3DTransform(Entity entity)
+    {
+        if (!m_Physics3DActive || !entity)
+            return;
+        const auto found = m_Physics3DBodies.find(entity.GetHandle());
+        if (found == m_Physics3DBodies.end())
+            return;
+        const Transform& world = entity.GetWorldTransform();
+        Physics3D::Get().SetBodyTransform(found->second, world.GetPosition(), world.GetRotation(), true);
+        const auto scale = m_Physics3DScales.find(entity.GetHandle());
+        if (scale == m_Physics3DScales.end() || glm::any(glm::greaterThan(glm::abs(scale->second - world.GetScale()), glm::vec3(0.0001f))))
+        {
+            m_Physics3DScales[entity.GetHandle()] = world.GetScale();
+            RecreatePhysics3DShapes(entity);
+        }
+    }
+
+    void Scene::OnRigidbody3DComponentConstruct(entt::registry&, entt::entity entity)
+    {
+        if (m_Physics3DActive)
+            RecreatePhysics3DBody({ entity, this });
+    }
+
+    void Scene::OnRigidbody3DComponentDestroy(entt::registry& registry, entt::entity entity)
+    {
+        if (m_Physics3DActive)
+        {
+            DestroyPhysics3DBody(entity);
+            if (registry.any_of<BoxCollider3DComponent, SphereCollider3DComponent, CapsuleCollider3DComponent>(entity))
+                QueuePhysics3DRebuild(entity);
+        }
+    }
+
+    void Scene::OnBoxCollider3DComponentConstruct(entt::registry&, entt::entity entity)
+    {
+        if (m_Physics3DActive)
+            RecreatePhysics3DShapes({ entity, this });
+    }
+
+    void Scene::OnBoxCollider3DComponentDestroy(entt::registry& registry, entt::entity entity)
+    {
+        const auto body = m_Physics3DBodies.find(entity);
+        auto& collider = registry.get<BoxCollider3DComponent>(entity);
+        if (m_Physics3DActive && body != m_Physics3DBodies.end() && collider.RuntimeShape)
+            Physics3D::Get().RemoveShape(body->second, collider.RuntimeShape);
+        collider.RuntimeShape = {};
+        if (m_Physics3DActive && !registry.any_of<Rigidbody3DComponent, SphereCollider3DComponent, CapsuleCollider3DComponent>(entity))
+            DestroyPhysics3DBody(entity);
+    }
+
+    void Scene::OnSphereCollider3DComponentConstruct(entt::registry&, entt::entity entity)
+    {
+        if (m_Physics3DActive)
+            RecreatePhysics3DShapes({ entity, this });
+    }
+
+    void Scene::OnSphereCollider3DComponentDestroy(entt::registry& registry, entt::entity entity)
+    {
+        const auto body = m_Physics3DBodies.find(entity);
+        auto& collider = registry.get<SphereCollider3DComponent>(entity);
+        if (m_Physics3DActive && body != m_Physics3DBodies.end() && collider.RuntimeShape)
+            Physics3D::Get().RemoveShape(body->second, collider.RuntimeShape);
+        collider.RuntimeShape = {};
+        if (m_Physics3DActive && !registry.any_of<Rigidbody3DComponent, BoxCollider3DComponent, CapsuleCollider3DComponent>(entity))
+            DestroyPhysics3DBody(entity);
+    }
+
+    void Scene::OnCapsuleCollider3DComponentConstruct(entt::registry&, entt::entity entity)
+    {
+        if (m_Physics3DActive)
+            RecreatePhysics3DShapes({ entity, this });
+    }
+
+    void Scene::OnCapsuleCollider3DComponentDestroy(entt::registry& registry, entt::entity entity)
+    {
+        const auto body = m_Physics3DBodies.find(entity);
+        auto& collider = registry.get<CapsuleCollider3DComponent>(entity);
+        if (m_Physics3DActive && body != m_Physics3DBodies.end() && collider.RuntimeShape)
+            Physics3D::Get().RemoveShape(body->second, collider.RuntimeShape);
+        collider.RuntimeShape = {};
+        if (m_Physics3DActive && !registry.any_of<Rigidbody3DComponent, BoxCollider3DComponent, SphereCollider3DComponent>(entity))
+            DestroyPhysics3DBody(entity);
+    }
+
+    void Scene::StepPhysics3D(Timestep ts)
+    {
+        if (!m_Physics3DActive || !Physics3D::IsStartedUp())
+            return;
+
+        for (const entt::entity handle : m_PendingPhysics3DRebuilds)
+        {
+            if (!m_Registry.valid(handle))
+                continue;
+            Entity entity{ handle, this };
+            if (HasPhysics3DComponents(entity) && m_Physics3DBodies.find(handle) == m_Physics3DBodies.end())
+                CreatePhysics3DBody(entity);
+        }
+        m_PendingPhysics3DRebuilds.clear();
+
+        const float timestep = std::max(ts.GetSeconds(), 0.0f);
+        auto rigidbodyView = m_Registry.view<Rigidbody3DComponent>();
+        rigidbodyView.each([&](entt::entity handle, Rigidbody3DComponent& rigidbody) {
+            const PhysicsBody3DHandle body = rigidbody.RuntimeBody;
+            if (!body || rigidbody.GetBodyType() != PhysicsBodyType3D::Kinematic)
+                return;
+            Entity entity{ handle, this };
+            const Transform& world = entity.GetWorldTransform();
+            if (timestep > 0.0f)
+                Physics3D::Get().MoveKinematic(body, world.GetPosition(), world.GetRotation(), timestep);
+            else
+                Physics3D::Get().SetBodyTransform(body, world.GetPosition(), world.GetRotation(), true);
+        });
+
+        Physics3D::Get().Step(ts);
+
+        rigidbodyView.each([&](entt::entity handle, Rigidbody3DComponent& rigidbody) {
+            const PhysicsBody3DHandle body = rigidbody.RuntimeBody;
+            if (!body || rigidbody.GetBodyType() != PhysicsBodyType3D::Dynamic)
+                return;
+
+            Entity entity{ handle, this };
+            glm::vec3 position;
+            glm::quat rotation;
+            Physics3D::Get().GetBodyTransform(body, position, rotation);
+            const glm::mat4 worldMatrix =
+              glm::translate(glm::mat4(1.0f), position) * glm::mat4_cast(rotation) * glm::scale(glm::mat4(1.0f), entity.GetWorldScale());
+            entity.SetWorldTransform(worldMatrix, false);
+        });
+
+        m_DispatchPhysics3DContacts.clear();
+        m_DispatchPhysics3DContacts.swap(m_PendingPhysics3DContacts);
+        for (const PhysicsContactEvent3D& event : m_DispatchPhysics3DContacts)
+            HandlePhysics3DContact(event);
+        m_DispatchPhysics3DContacts.clear();
+    }
+
+    void Scene::HandlePhysics3DContact(const PhysicsContactEvent3D& event)
+    {
+        const auto firstFound = m_Physics3DEntities.find(event.BodyA);
+        const auto secondFound = m_Physics3DEntities.find(event.BodyB);
+        if (firstFound == m_Physics3DEntities.end() || secondFound == m_Physics3DEntities.end())
+            return;
+        const entt::entity firstHandle = firstFound->second;
+        const entt::entity secondHandle = secondFound->second;
+        if (!m_Registry.valid(firstHandle) || !m_Registry.valid(secondHandle))
+            return;
+
+        const auto dispatch = [&](entt::entity selfHandle, entt::entity otherHandle, bool reverseNormal) {
+            if (!m_Registry.valid(selfHandle) || !m_Registry.valid(otherHandle))
+                return;
+            Entity self{ selfHandle, this };
+            Entity other{ otherHandle, this };
+            if (!self.HasComponent<MonoScriptComponent>())
+                return;
+
+            auto& scripts = self.GetComponent<MonoScriptComponent>().Scripts;
+            if (event.IsTrigger)
+            {
+                for (auto& script : scripts)
+                {
+                    switch (event.Type)
+                    {
+                    case PhysicsContactEventType3D::Enter:
+                        script.OnTriggerEnter3D(other);
+                        break;
+                    case PhysicsContactEventType3D::Stay:
+                        script.OnTriggerStay3D(other);
+                        break;
+                    case PhysicsContactEventType3D::Exit:
+                        script.OnTriggerExit3D(other);
+                        break;
+                    }
+                }
+                return;
+            }
+
+            Collision3D collision;
+            collision.Colliders = { self, other };
+            collision.Points = event.Points;
+            if (reverseNormal)
+                for (auto& point : collision.Points)
+                    point.Normal = -point.Normal;
+            for (auto& script : scripts)
+            {
+                switch (event.Type)
+                {
+                case PhysicsContactEventType3D::Enter:
+                    script.OnCollisionEnter3D(collision);
+                    break;
+                case PhysicsContactEventType3D::Stay:
+                    script.OnCollisionStay3D(collision);
+                    break;
+                case PhysicsContactEventType3D::Exit:
+                    script.OnCollisionExit3D(collision);
+                    break;
+                }
+            }
+        };
+
+        dispatch(firstHandle, secondHandle, false);
+        dispatch(secondHandle, firstHandle, true);
     }
 
     void Scene::OnAudioSourceComponentConstruct(entt::registry& registry, entt::entity entity)
     {
-        if (!AudioManager::IsStartedUp())
+        if (!AudioManager::IsStartedUp() || !m_RuntimeActive)
             return;
         Entity e = { entity, this };
         AudioSourceComponent& source = e.GetComponent<AudioSourceComponent>();
+        source.OnInitialize();
         if (source.GetPlayOnAwake())
             source.Play();
     }
@@ -271,128 +806,223 @@ namespace Crowny
             source.Stop();
     }
 
-    bool Scene::HasScriptComponent(Entity entity, const String& namespaceName, const String& typeName) const
+    bool Scene::HasScriptComponent(Entity entity, const ScriptTypeIdentity& identity) const
     {
         if (entity.HasComponent<MonoScriptComponent>())
         {
             const MonoScriptComponent& monoScriptComponent = entity.GetComponent<MonoScriptComponent>();
             for (const MonoScript& script : monoScriptComponent.Scripts)
             {
-                if (script.GetNamespace() == namespaceName && script.GetTypeName() == typeName)
+                if (script.GetTypeIdentity() == identity)
                     return true;
             }
         }
         return false;
     }
 
-    void Scene::AddScriptComponent(Entity entity, const String& namespaceName, const String& typeName, bool initialize)
+    bool Scene::HasScriptComponent(Entity entity, const String& namespaceName, const String& typeName) const
     {
-        MonoClass* monoClass = MonoManager::Get().FindClass(namespaceName, typeName);
-        if (!monoClass)
-            return;
-        ::MonoClass* rawClass = monoClass->GetInternalPtr();
-        MonoReflectionType* runtimeType = MonoUtils::GetType(rawClass);
+        return HasScriptComponent(entity, { GAME_ASSEMBLY, namespaceName, typeName });
+    }
+
+    bool Scene::AddScriptComponent(Entity entity, const ScriptTypeIdentity& identity, bool initialize)
+    {
+        return AddScriptComponent(entity, PersistedScriptState{ identity, nullptr }, initialize);
+    }
+
+    bool Scene::AddScriptComponent(Entity entity, const PersistedScriptState& state, bool initialize)
+    {
+        if (!entity || entity.GetScene() != this || !state.Identity.IsValid())
+        {
+            CW_ENGINE_WARN("Cannot attach managed script with invalid identity '{}:{}'.", state.Identity.Assembly,
+                           state.Identity.GetFullName());
+            return false;
+        }
 
         MonoScriptComponent* monoScriptComponent = nullptr;
         if (entity.HasComponent<MonoScriptComponent>())
             monoScriptComponent = &entity.GetComponent<MonoScriptComponent>();
+        if (monoScriptComponent != nullptr)
+        {
+            for (const MonoScript& script : monoScriptComponent->Scripts)
+            {
+                if (script.GetTypeIdentity() == state.Identity)
+                {
+                    CW_ENGINE_WARN("Entity '{}' already has managed script '{}:{}'. The duplicate was ignored.", entity.GetName(),
+                                   state.Identity.Assembly, state.Identity.GetFullName());
+                    return false;
+                }
+            }
+        }
         else
             monoScriptComponent = &entity.AddComponent<MonoScriptComponent>();
 
-#ifdef CW_DEBUG
-        for (const MonoScript& script : monoScriptComponent->Scripts)
-        {
-            if (script.GetNamespace() == namespaceName && script.GetTypeName() == typeName)
-            {
-                CW_ENGINE_ASSERT(false, "Entity already has that managed component");
-                return;
-            }
-        }
-#endif
-        monoScriptComponent->Scripts.push_back(MonoScript(runtimeType));
+        monoScriptComponent->Scripts.emplace_back(state.Identity);
+        MonoScript& script = monoScriptComponent->Scripts.back();
+        script.ApplyPersistedState(state);
         if (initialize)
         {
-            monoScriptComponent->Scripts.back().Create(entity);
-            MonoClass* runInEditor = ScriptInfoManager::Get().GetBuiltinClasses().RunInEditorAttribute;
-            if (!m_IsEditorScene || monoClass->HasAttribute(runInEditor))
-                monoScriptComponent->Scripts.back().OnStart();
+            script.Create(entity);
+            MonoClass* monoClass = script.GetManagedClass();
+            MonoClass* runInEditor = ScriptInfoManager::IsStartedUp()
+                                       ? ScriptInfoManager::Get().GetBuiltinClasses().RunInEditorAttribute
+                                       : nullptr;
+            if (m_RuntimeActive || (m_IsEditorScene && monoClass != nullptr && runInEditor != nullptr && monoClass->HasAttribute(runInEditor)))
+                script.OnStart();
         }
+        return true;
     }
 
-    void Scene::RemoveScriptComponent(Entity entity, const String& namespaceName, const String& typeName)
+    bool Scene::AddScriptComponent(Entity entity, const String& namespaceName, const String& typeName, bool initialize)
+    {
+        return AddScriptComponent(entity, { GAME_ASSEMBLY, namespaceName, typeName }, initialize);
+    }
+
+    void Scene::RemoveScriptComponent(Entity entity, const ScriptTypeIdentity& identity)
     {
         if (!entity.HasComponent<MonoScriptComponent>())
             return;
         auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
         scripts.erase(std::remove_if(scripts.begin(), scripts.end(),
-                                     [&](const MonoScript& s) { return s.GetNamespace() == namespaceName && s.GetTypeName() == typeName; }),
+                                     [&](const MonoScript& script) { return script.GetTypeIdentity() == identity; }),
                       scripts.end());
         if (scripts.empty())
             entity.RemoveComponent<MonoScriptComponent>();
     }
 
-    void Scene::OnRuntimeStart()
+    void Scene::RemoveScriptComponent(Entity entity, const String& namespaceName, const String& typeName)
     {
-        gPhysics2D->BeginSimulation(this);
-        auto listenerView = m_Registry.view<AudioListenerComponent>();
-        if (listenerView.size() == 0)
-            CW_ENGINE_WARN("No audio listener in scene");
-        else if (listenerView.size() > 1)
-        {
-            for (auto e : listenerView)
-            {
-                Entity entity = { e, this };
-                entity.GetComponent<AudioListenerComponent>().Initialize();
-                break; // Maybe not necessary
-            }
-        }
-        m_Registry.view<AudioSourceComponent>().each([&](entt::entity entity, AudioSourceComponent& sc) { sc.OnInitialize(); });
+        RemoveScriptComponent(entity, { GAME_ASSEMBLY, namespaceName, typeName });
     }
 
-    void Scene::OnSimulationStart() { gPhysics2D->BeginSimulation(this); }
+    void Scene::OnRuntimeStart()
+    {
+        m_RuntimeActive = true;
+        if (Physics2D::TryGet() != nullptr)
+        {
+            Physics2D::TryGet()->BeginSimulation(this);
+            m_Physics2DActive = true;
+        }
+        BeginPhysics3D();
+        if (AudioManager::TryGet() != nullptr)
+        {
+            auto listenerView = m_Registry.view<AudioListenerComponent>();
+            if (listenerView.size() == 0)
+                CW_ENGINE_WARN("No audio listener in scene");
+            else
+            {
+                if (listenerView.size() > 1)
+                    CW_ENGINE_WARN("Multiple audio listeners in scene; using the first enabled listener");
+                for (auto e : listenerView)
+                {
+                    Entity entity = { e, this };
+                    entity.GetComponent<AudioListenerComponent>().Initialize();
+                    break;
+                }
+            }
+            m_Registry.view<AudioSourceComponent>().each([&](entt::entity entity, AudioSourceComponent& source) {
+                source.OnInitialize();
+                if (source.GetPlayOnAwake())
+                    source.Play();
+            });
+        }
+        m_Registry.view<AnimationComponent>().each([](AnimationComponent& animation) { animation.ResetRuntime(); });
+    }
 
-    void Scene::OnSimulationUpdate(Timestep ts) { gPhysics2D->Step(ts, this); }
+    void Scene::OnSimulationStart()
+    {
+        m_SimulationActive = true;
+        if (Physics2D::TryGet() != nullptr)
+        {
+            Physics2D::TryGet()->BeginSimulation(this);
+            m_Physics2DActive = true;
+        }
+        BeginPhysics3D();
+    }
 
-    void Scene::OnSimulationEnd() { gPhysics2D->StopSimulation(this); }
+    void Scene::OnSimulationUpdate(Timestep ts)
+    {
+        SceneManager::CallbackScope callbackScope = SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->DeferSceneChanges() : SceneManager::CallbackScope();
+        if (m_Physics2DActive && Physics2D::TryGet() != nullptr)
+            Physics2D::TryGet()->Step(ts, this);
+        StepPhysics3D(ts);
+    }
+
+    void Scene::OnSimulationEnd()
+    {
+        EndPhysics3D();
+        if (Physics2D::TryGet() != nullptr)
+            Physics2D::TryGet()->StopSimulation(this);
+        m_Physics2DActive = false;
+        m_SimulationActive = false;
+    }
 
     void Scene::OnRuntimePause()
     {
-        auto audioSourceView = m_Registry.view<AudioSourceComponent>();
-        for (auto e : audioSourceView)
+        if (AudioManager::TryGet() != nullptr)
         {
-            Entity entity = { e, this };
-            entity.GetComponent<AudioSourceComponent>().Pause();
+            auto audioSourceView = m_Registry.view<AudioSourceComponent>();
+            for (auto e : audioSourceView)
+            {
+                Entity entity = { e, this };
+                entity.GetComponent<AudioSourceComponent>().Pause();
+            }
         }
+        m_Registry.view<AnimationComponent>().each([](AnimationComponent& animation) {
+            if (animation.Player)
+                animation.Player->Pause();
+        });
     }
 
     void Scene::OnRuntimeResume()
     {
-        auto audioSourceView = m_Registry.view<AudioSourceComponent>();
-        for (auto e : audioSourceView)
+        if (AudioManager::TryGet() != nullptr)
         {
-            Entity entity = { e, this };
-            auto& source = entity.GetComponent<AudioSourceComponent>();
-            if (source.GetState() == AudioSourceState::Paused)
-                source.Play();
+            auto audioSourceView = m_Registry.view<AudioSourceComponent>();
+            for (auto e : audioSourceView)
+            {
+                Entity entity = { e, this };
+                auto& source = entity.GetComponent<AudioSourceComponent>();
+                if (source.GetState() == AudioSourceState::Paused)
+                    source.Play();
+            }
         }
+        m_Registry.view<AnimationComponent>().each([](AnimationComponent& animation) {
+            if (animation.Player)
+                animation.Player->Resume();
+        });
     }
 
     void Scene::OnRuntimeStop()
     {
-        gPhysics2D->StopSimulation(this);
-        auto audioSourceView = m_Registry.view<AudioSourceComponent>();
-        for (auto e : audioSourceView)
+        EndPhysics3D();
+        if (Physics2D::TryGet() != nullptr)
+            Physics2D::TryGet()->StopSimulation(this);
+        m_Physics2DActive = false;
+        if (AudioManager::TryGet() != nullptr)
         {
-            Entity entity = { e, this };
-            entity.GetComponent<AudioSourceComponent>().Stop();
+            auto audioSourceView = m_Registry.view<AudioSourceComponent>();
+            for (auto e : audioSourceView)
+            {
+                Entity entity = { e, this };
+                entity.GetComponent<AudioSourceComponent>().Stop();
+            }
         }
+        m_Registry.view<AnimationComponent>().each([](AnimationComponent& animation) { animation.ResetRuntime(); });
+        m_RuntimeActive = false;
     }
 
     void Scene::OnUpdateEditor(Timestep ts) {}
 
     void Scene::OnUpdateRuntime(Timestep ts) {}
 
-    void Scene::OnFixedUpdate(Timestep ts) { gPhysics2D->Step(ts, this); }
+    void Scene::OnFixedUpdate(Timestep ts)
+    {
+        SceneManager::CallbackScope callbackScope = SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->DeferSceneChanges() : SceneManager::CallbackScope();
+        if (m_Physics2DActive && Physics2D::TryGet() != nullptr)
+            Physics2D::TryGet()->Step(ts, this);
+        StepPhysics3D(ts);
+    }
 
     Entity Scene::CreateEntity(const String& name)
     {
@@ -426,16 +1056,26 @@ namespace Crowny
 
     void Scene::DestroyEntity(Entity entity) { entity.Destroy(); }
 
+    Entity Scene::TryGetEntityFromUuid(const UUID& uuid) const
+    {
+        const auto entity = m_EntityMap.find(uuid);
+        if (entity != m_EntityMap.end() && m_Registry.valid(entity->second))
+            return { entity->second, const_cast<Scene*>(this) };
+
+        return {};
+    }
+
     Entity Scene::GetEntityFromUuid(const UUID& uuid) const
     {
-        if (m_EntityMap.find(uuid) != m_EntityMap.end())
-            return { m_EntityMap.at(uuid), const_cast<Scene*>(this) };
+        Entity entity = TryGetEntityFromUuid(uuid);
+        if (entity)
+            return entity;
 
         CW_ENGINE_ERROR("Entity with uuid {0} not found.", uuid);
         return {};
     }
 
-    Entity Scene::GetRootEntity() const { return *m_RootEntity; }
+    Entity Scene::GetRootEntity() const { return m_RootEntity ? *m_RootEntity : Entity{}; }
 
     Entity Scene::FindEntityByName(const String& name) const
     {

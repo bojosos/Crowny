@@ -9,6 +9,8 @@
 #include "Crowny/Scripting/Bindings/Assets/ScriptFont.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptMaterial.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptMesh.h"
+#include "Crowny/Scripting/Bindings/Assets/ScriptPhysicsMaterial2D.h"
+#include "Crowny/Scripting/Bindings/Assets/ScriptPhysicsMaterial3D.h"
 #include "Crowny/Scripting/Bindings/Assets/ScriptTexture.h"
 #include "Crowny/Scripting/Bindings/Logging/ScriptDebug.h"
 #include "Crowny/Scripting/Bindings/Math/ScriptMath.h"
@@ -17,11 +19,17 @@
 #include "Crowny/Scripting/Bindings/Scene/ScriptAudioSource.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptCamera.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptCollider2D.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptCollider3D.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntity.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntityBehaviour.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptLight.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptMeshComponent.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptPhysics2D.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptPhysics3D.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptRigidbody.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptRigidbody3D.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptSceneManager.h"
+#include "Crowny/Scripting/Bindings/Scene/ScriptSpriteRenderer.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptText.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptTime.h"
 #include "Crowny/Scripting/Bindings/Scene/ScriptTransform.h"
@@ -43,6 +51,8 @@ namespace Crowny
         ScriptFont::InitMetaData();
         ScriptMaterial::InitMetaData();
         ScriptMesh::InitMetaData();
+        ScriptPhysicsMaterial2D::InitMetaData();
+        ScriptPhysicsMaterial3D::InitMetaData();
         ScriptTexture::InitMetaData();
         ScriptDebug::InitMetaData();
         ScriptMath::InitMetaData();
@@ -53,11 +63,20 @@ namespace Crowny
         ScriptCollider2D::InitMetaData();
         ScriptBoxCollider2D::InitMetaData();
         ScriptCircleCollider2D::InitMetaData();
+        ScriptCollider3D::InitMetaData();
+        ScriptBoxCollider3D::InitMetaData();
+        ScriptSphereCollider3D::InitMetaData();
+        ScriptCapsuleCollider3D::InitMetaData();
         ScriptEntity::InitMetaData();
         ScriptEntityBehaviour::InitMetaData();
+        ScriptLight::InitMetaData();
         ScriptMeshComponent::InitMetaData();
         ScriptPhysics2D::InitMetaData();
+        ScriptPhysics3D::InitMetaData();
         ScriptRigidbody2D::InitMetaData();
+        ScriptRigidbody3D::InitMetaData();
+        ScriptSceneManager::InitMetaData();
+        ScriptSpriteRenderer::InitMetaData();
         ScriptText::InitMetaData();
         ScriptTime::InitMetaData();
         ScriptTransform::InitMetaData();

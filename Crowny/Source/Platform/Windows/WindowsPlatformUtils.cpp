@@ -65,10 +65,10 @@ namespace Crowny
 
     void PlatformUtils::CopyToClipboard(const String& string)
     {
-        glfwSetClipboardString((GLFWwindow*)gApplication->GetWindow().GetNativeWindow(), string.c_str());
+        glfwSetClipboardString((GLFWwindow*)Application::TryGet()->GetWindow().GetNativeWindow(), string.c_str());
     }
 
-    String PlatformUtils::CopyFromClipboard() { return glfwGetClipboardString((GLFWwindow*)gApplication->GetWindow().GetNativeWindow()); }
+    String PlatformUtils::CopyFromClipboard() { return glfwGetClipboardString((GLFWwindow*)Application::TryGet()->GetWindow().GetNativeWindow()); }
 
     String PlatformUtils::Exec(const String& command)
     {

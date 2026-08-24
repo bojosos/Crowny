@@ -146,6 +146,48 @@ namespace Crowny
             return desc;
         }
 
+        /// <summary>Creates an XZ plane centered at the origin.</summary>
+        public static Mesh CreatePlane(float width = 1.0f, float height = 1.0f, uint subdivisionsX = 1, uint subdivisionsY = 1)
+        {
+            return Internal_CreatePlane(width, height, subdivisionsX, subdivisionsY);
+        }
+
+        /// <summary>Creates a box centered at the origin.</summary>
+        public static Mesh CreateBox(Vector3 dimensions)
+        {
+            return Internal_CreateBox(ref dimensions);
+        }
+
+        /// <summary>Creates a cube centered at the origin.</summary>
+        public static Mesh CreateCube(float size = 1.0f)
+        {
+            return Internal_CreateCube(size);
+        }
+
+        /// <summary>Creates a UV sphere centered at the origin.</summary>
+        public static Mesh CreateSphere(float radius = 0.5f, uint segments = 32, uint rings = 16)
+        {
+            return Internal_CreateSphere(radius, segments, rings);
+        }
+
+        /// <summary>Creates a Y-axis cylinder centered at the origin.</summary>
+        public static Mesh CreateCylinder(float radius = 0.5f, float height = 1.0f, uint segments = 32, bool capped = true)
+        {
+            return Internal_CreateCylinder(radius, height, segments, capped);
+        }
+
+        /// <summary>Creates a Y-axis cone centered at the origin.</summary>
+        public static Mesh CreateCone(float radius = 0.5f, float height = 1.0f, uint segments = 32, bool capped = true)
+        {
+            return Internal_CreateCone(radius, height, segments, capped);
+        }
+
+        /// <summary>Creates a Y-axis capsule. Height includes both hemispheres.</summary>
+        public static Mesh CreateCapsule(float radius = 0.5f, float height = 2.0f, uint segments = 32, uint hemisphereRings = 8)
+        {
+            return Internal_CreateCapsule(radius, height, segments, hemisphereRings);
+        }
+
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern uint Internal_GetVertexCount(IntPtr thisPtr);
         [MethodImpl(MethodImplOptions.InternalCall)]
@@ -198,5 +240,19 @@ namespace Crowny
         private static extern bool Internal_HasVertexAttribute(IntPtr thisPtr, VertexAttribute attr);
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern void Internal_GetVertexAttribute(IntPtr thisPtr, int index, out VertexAttributeDescriptor desc);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern Mesh Internal_CreatePlane(float width, float height, uint subdivisionsX, uint subdivisionsY);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern Mesh Internal_CreateBox(ref Vector3 dimensions);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern Mesh Internal_CreateCube(float size);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern Mesh Internal_CreateSphere(float radius, uint segments, uint rings);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern Mesh Internal_CreateCylinder(float radius, float height, uint segments, bool capped);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern Mesh Internal_CreateCone(float radius, float height, uint segments, bool capped);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern Mesh Internal_CreateCapsule(float radius, float height, uint segments, uint hemisphereRings);
     }
 }

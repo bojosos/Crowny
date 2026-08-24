@@ -35,7 +35,7 @@ namespace Crowny
     void ScriptEntity::Internal_Destroy(ScriptEntity* thisPtr)
     {
         const Entity entity = thisPtr->GetNativeEntity();
-        gSceneManager->GetActiveScene()->DestroyEntity(entity);
+        SceneManager::TryGet()->GetActiveScene()->DestroyEntity(entity);
     }
 
     MonoString* ScriptEntity::Internal_GetName(ScriptEntity* thisPtr)
@@ -76,7 +76,7 @@ namespace Crowny
 
     MonoObject* ScriptEntity::Internal_FindEntityByName(MonoString* name)
     {
-        const Entity entity = gSceneManager->GetActiveScene()->FindEntityByName(MonoUtils::FromMonoString(name));
+        const Entity entity = SceneManager::TryGet()->GetActiveScene()->FindEntityByName(MonoUtils::FromMonoString(name));
         ScriptEntity* const scriptEntity = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(entity);
         if (scriptEntity != nullptr)
             return scriptEntity->GetManagedInstance();

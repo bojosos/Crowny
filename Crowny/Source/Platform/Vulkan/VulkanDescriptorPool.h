@@ -8,7 +8,8 @@ namespace Crowny
 
     struct VulkanLayoutKey
     {
-        VulkanLayoutKey(VkDescriptorSetLayoutBinding* bindings, uint32_t numBindings);
+        VulkanLayoutKey(VkDescriptorSetLayoutBinding* bindings, const VkDescriptorBindingFlags* bindingFlags,
+                        uint32_t numBindings);
 
         struct EqualsFunction
         {
@@ -22,6 +23,7 @@ namespace Crowny
 
         uint32_t NumBindings;
         VkDescriptorSetLayoutBinding* Bindings;
+        VkDescriptorBindingFlags* BindingFlags;
         VulkanDescriptorLayout* Layout = nullptr;
     };
 
@@ -61,23 +63,26 @@ namespace Crowny
     class VulkanDescriptorLayout
     {
     public:
-        VulkanDescriptorLayout(VulkanDevice& device, VkDescriptorSetLayoutBinding* bindings, uint32_t numBindings);
+        VulkanDescriptorLayout(VulkanDevice& device, VkDescriptorSetLayoutBinding* bindings,
+                               const VkDescriptorBindingFlags* bindingFlags, uint32_t numBindings);
         ~VulkanDescriptorLayout();
 
         VkDescriptorSetLayout GetHandle() const { return m_Layout; }
 
         size_t Hash() const { return m_Hash; }
+        bool UsesUpdateAfterBind() const { return m_UpdateAfterBind; }
 
     private:
         VulkanDevice& m_Device;
         VkDescriptorSetLayout m_Layout;
         size_t m_Hash;
+        bool m_UpdateAfterBind = false;
     };
 
     class VulkanDescriptorPool
     {
     public:
-        VulkanDescriptorPool(VulkanDevice& device);
+        VulkanDescriptorPool(VulkanDevice& device, bool updateAfterBind = false);
         ~VulkanDescriptorPool();
 
         VkDescriptorPool GetHandle() const { return m_Pool; }
@@ -102,7 +107,8 @@ namespace Crowny
         ~VulkanDescriptorManager();
 
         VulkanDescriptorSet* CreateSet(VulkanDescriptorLayout* layout);
-        VulkanDescriptorLayout* GetLayout(VkDescriptorSetLayoutBinding* bindings, uint32_t numBindings);
+        VulkanDescriptorLayout* GetLayout(VkDescriptorSetLayoutBinding* bindings, uint32_t numBindings,
+                                          const VkDescriptorBindingFlags* bindingFlags = nullptr);
 
         VkPipelineLayout GetPipelineLayout(VulkanDescriptorLayout** layouts, uint32_t numLayouts);
 
@@ -112,6 +118,7 @@ namespace Crowny
         UnorderedMap<VulkanPipelineLayoutKey, VkPipelineLayout, VulkanPipelineLayoutKey::HashFunction, VulkanPipelineLayoutKey::EqualsFunction>
           m_PipelineLayouts;
         Vector<VulkanDescriptorPool*> m_Pools;
+        Vector<VulkanDescriptorPool*> m_UpdateAfterBindPools;
     };
 
 } // namespace Crowny

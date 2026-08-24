@@ -4,6 +4,7 @@
 
 #include "Platform/Vulkan/VulkanCommandBuffer.h"
 #include "Platform/Vulkan/VulkanDevice.h"
+#include "Platform/Vulkan/VulkanGenericGpuBuffer.h"
 #include "Platform/Vulkan/VulkanGpuBufferManager.h"
 #include "Platform/Vulkan/VulkanRenderPass.h"
 
@@ -30,9 +31,6 @@
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
-
-#define CW_DEBUG 1
-// #undef CW_DEBUG
 
 namespace Crowny
 {
@@ -91,123 +89,178 @@ namespace Crowny
 
     void VulkanRenderAPI::Init()
     {
-        VkApplicationInfo appInfo;
+        VkApplicationInfo appInfo{};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         appInfo.pNext = nullptr;
         appInfo.pEngineName = "Crowny";
         appInfo.pApplicationName = "Crowny Game"; // Note that this is the game of the name and should not hard coded.
         const uint32_t version = VK_MAKE_VERSION(CROWNY_VERSION_MAJOR, CROWNY_VERSION_MINOR, CROWNY_VERSION_MINEST);
         appInfo.engineVersion = version;
-        appInfo.applicationVersion = version;    // Note that this is game version, not engine
-        appInfo.apiVersion = VK_API_VERSION_1_3; // Note that this is the highest version I want to use.
+        appInfo.applicationVersion = version; // Note that this is game version, not engine
+        uint32_t loaderVersion = VK_API_VERSION_1_0;
+        const auto enumerateInstanceVersion =
+          reinterpret_cast<PFN_vkEnumerateInstanceVersion>(vkGetInstanceProcAddr(VK_NULL_HANDLE, "vkEnumerateInstanceVersion"));
+        if (enumerateInstanceVersion != nullptr)
+            enumerateInstanceVersion(&loaderVersion);
+        if (loaderVersion < VK_API_VERSION_1_1)
+        {
+            CW_ENGINE_ERROR("Crowny requires a Vulkan 1.1 loader or newer");
+            return;
+        }
+        appInfo.apiVersion = std::min(loaderVersion, VK_API_VERSION_1_3);
 
         uint32_t availableExtensionsCount = 0;
-        vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionsCount, nullptr);
+        VkResult result = vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionsCount, nullptr);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
         Vector<VkExtensionProperties> availableExtensions(availableExtensionsCount);
-        vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionsCount, availableExtensions.data());
-#ifdef CW_DEBUG
-        Vector<const char*> layers = { "VK_LAYER_KHRONOS_validation" };
-        uint32_t numGLFWExtensions = 0;
-        const char** glfwExts = glfwGetRequiredInstanceExtensions(&numGLFWExtensions);
-        Vector<const char*> extensions(glfwExts, glfwExts + numGLFWExtensions);
+        result = vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionsCount, availableExtensions.data());
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
-        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-        uint32_t numLayers = (uint32_t)layers.size();
-#else
+        auto hasExtension = [&availableExtensions](const char* name) {
+            return std::any_of(availableExtensions.begin(), availableExtensions.end(),
+                               [name](const VkExtensionProperties& extension) { return std::strcmp(name, extension.extensionName) == 0; });
+        };
+
         Vector<const char*> layers;
         uint32_t numGLFWExtensions = 0;
         const char** glfwExts = glfwGetRequiredInstanceExtensions(&numGLFWExtensions);
+        CW_ENGINE_ASSERT(glfwExts != nullptr && numGLFWExtensions > 0, "GLFW did not provide Vulkan instance extensions");
         Vector<const char*> extensions(glfwExts, glfwExts + numGLFWExtensions);
-        uint32_t numLayers = (uint32_t)layers.size();
+        auto hasRequestedExtension = [&extensions](const char* name) {
+            return std::any_of(extensions.begin(), extensions.end(), [name](const char* extension) { return std::strcmp(name, extension) == 0; });
+        };
+
+#ifdef VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
+        const bool portabilityEnumeration = hasExtension(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+        if (portabilityEnumeration && !hasRequestedExtension(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME))
+            extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+#else
+        const bool portabilityEnumeration = false;
 #endif
 
         uint32_t layerCount = 0;
-        vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+        result = vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
         Vector<VkLayerProperties> availableLayers(layerCount);
-        vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-        for (uint32_t i = 0; i < numLayers; i++) // 1 validation layer
-        {
-            const char* layerName = layers[i];
-            bool layerFound = false;
-            for (const auto& layerProps : availableLayers)
-            {
-#if LOG_EXTENSIONS
-                CW_ENGINE_INFO("Validation layer: {}, {}", layerProps.layerName, layerProps.description);
-#endif
-                if (std::strcmp(layerName, layerProps.layerName) == 0)
-                {
-                    layerFound = true;
-                    break;
-                }
-            }
-            if (!layerFound)
-                CW_ENGINE_ASSERT(false, String("Validation layer not found: ") + layerName);
-        }
+        result = vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
-        VkInstanceCreateInfo instanceInfo;
+#ifdef CW_DEBUG
+        const char* validationLayer = "VK_LAYER_KHRONOS_validation";
+        const bool hasValidationLayer =
+          std::any_of(availableLayers.begin(), availableLayers.end(),
+                      [validationLayer](const VkLayerProperties& layer) { return std::strcmp(validationLayer, layer.layerName) == 0; });
+        if (hasValidationLayer)
+            layers.push_back(validationLayer);
+        else
+            CW_ENGINE_WARN("Vulkan validation layer is unavailable; continuing without validation");
+
+        const bool hasDebugUtils = hasExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        if (hasDebugUtils && !hasRequestedExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME))
+            extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        if (!hasDebugUtils)
+            CW_ENGINE_WARN("VK_EXT_debug_utils is unavailable; Vulkan validation messages will not be captured");
+#else
+        const bool hasDebugUtils = false;
+#endif
+
+        for (const char* extension : extensions)
+            CW_ENGINE_ASSERT(hasExtension(extension), String("Required Vulkan instance extension not found: ") + extension);
+
+        VkInstanceCreateInfo instanceInfo{};
         instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         instanceInfo.pNext = nullptr;
-        instanceInfo.flags = 0;
+#ifdef VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
+        if (portabilityEnumeration)
+            instanceInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+#endif
         instanceInfo.pApplicationInfo = &appInfo;
-        instanceInfo.enabledLayerCount = numLayers;
+        instanceInfo.enabledLayerCount = (uint32_t)layers.size();
         instanceInfo.ppEnabledLayerNames = layers.data();
         instanceInfo.enabledExtensionCount = (uint32_t)extensions.size();
         instanceInfo.ppEnabledExtensionNames = extensions.data();
 
-        VkResult result = vkCreateInstance(&instanceInfo, gVulkanAllocator, &m_Instance);
-        if (!m_Instance)
+        result = vkCreateInstance(&instanceInfo, gVulkanAllocator, &m_Instance);
+        if (result != VK_SUCCESS || m_Instance == VK_NULL_HANDLE)
         {
-
-            CW_ENGINE_ERROR("Could not create vulkan instance.");
+            CW_ENGINE_ERROR("Could not create Vulkan instance: {}", (int32_t)result);
             return;
         }
-        CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
 #if CW_DEBUG
-        VkDebugReportFlagsEXT debugFlags =
-          VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
-        GET_INSTANCE_PROC_ADDR(m_Instance, CreateDebugUtilsMessengerEXT);
-        GET_INSTANCE_PROC_ADDR(m_Instance, DestroyDebugUtilsMessengerEXT);
+        if (hasDebugUtils)
+        {
+            GET_INSTANCE_PROC_ADDR(m_Instance, CreateDebugUtilsMessengerEXT);
+            GET_INSTANCE_PROC_ADDR(m_Instance, DestroyDebugUtilsMessengerEXT);
 
-        VkDebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCI{};
-        debugUtilsMessengerCI.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-        debugUtilsMessengerCI.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-        debugUtilsMessengerCI.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-                                            VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-        debugUtilsMessengerCI.pfnUserCallback = &DebugCallback;
+            VkDebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCI{};
+            debugUtilsMessengerCI.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+            debugUtilsMessengerCI.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+            debugUtilsMessengerCI.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                                                VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+            debugUtilsMessengerCI.pfnUserCallback = &DebugCallback;
 
-        result = vkCreateDebugUtilsMessengerEXT(m_Instance, &debugUtilsMessengerCI, gVulkanAllocator, &m_DebugUtilsMessenger);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS);
-
-        GET_INSTANCE_PROC_ADDR(m_Instance, SetDebugUtilsObjectNameEXT);
+            result = vkCreateDebugUtilsMessengerEXT(m_Instance, &debugUtilsMessengerCI, gVulkanAllocator, &m_DebugUtilsMessenger);
+            CW_ENGINE_ASSERT(result == VK_SUCCESS);
+            GET_INSTANCE_PROC_ADDR(m_Instance, SetDebugUtilsObjectNameEXT);
+        }
 #endif
 
         // need molten vk
         result = vkEnumeratePhysicalDevices(m_Instance, &m_NumDevices, nullptr);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS && m_NumDevices > 0, "No Vulkan-capable physical device was found");
+        if (result != VK_SUCCESS || m_NumDevices == 0)
+            return;
         Vector<VkPhysicalDevice> physicalDevices(m_NumDevices);
         result = vkEnumeratePhysicalDevices(m_Instance, &m_NumDevices, physicalDevices.data());
         CW_ENGINE_ASSERT(result == VK_SUCCESS);
-        int discreteIdx = -1;
+        uint32_t selectedDeviceIdx = UINT32_MAX;
+        int32_t selectedDeviceScore = -1;
         for (uint32_t i = 0; i < m_NumDevices; i++)
         {
-            VkPhysicalDeviceProperties props;
+            VkPhysicalDeviceProperties props{};
             vkGetPhysicalDeviceProperties(physicalDevices[i], &props);
+
+            uint32_t extensionCount = 0;
+            result = vkEnumerateDeviceExtensionProperties(physicalDevices[i], nullptr, &extensionCount, nullptr);
+            if (result != VK_SUCCESS)
+                continue;
+            Vector<VkExtensionProperties> deviceExtensions(extensionCount);
+            result = vkEnumerateDeviceExtensionProperties(physicalDevices[i], nullptr, &extensionCount, deviceExtensions.data());
+            if (result != VK_SUCCESS)
+                continue;
+            const bool supportsSwapChain = std::any_of(deviceExtensions.begin(), deviceExtensions.end(), [](const VkExtensionProperties& extension) {
+                return std::strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0;
+            });
+
+            uint32_t queueFamilyCount = 0;
+            vkGetPhysicalDeviceQueueFamilyProperties(physicalDevices[i], &queueFamilyCount, nullptr);
+            Vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+            vkGetPhysicalDeviceQueueFamilyProperties(physicalDevices[i], &queueFamilyCount, queueFamilies.data());
+            const bool supportsGraphics = std::any_of(queueFamilies.begin(), queueFamilies.end(), [](const VkQueueFamilyProperties& family) {
+                return family.queueCount > 0 && (family.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0;
+            });
+            if (!supportsSwapChain || !supportsGraphics)
+                continue;
+
+            int32_t score = 0;
             if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+                score = 2;
+            else if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
+                score = 1;
+
+            if (score > selectedDeviceScore)
             {
-                discreteIdx = i;
-                break;
+                selectedDeviceIdx = i;
+                selectedDeviceScore = score;
             }
         }
 
-        if (discreteIdx != -1)
-        {
-            m_Devices.push_back(CreateRef<VulkanDevice>(physicalDevices[discreteIdx], discreteIdx));
-        }
-        else
-        {
-            m_Devices.push_back(CreateRef<VulkanDevice>(physicalDevices[0], -1));
-        }
+        CW_ENGINE_ASSERT(selectedDeviceIdx != UINT32_MAX, "No Vulkan device supports graphics and swap chains");
+        if (selectedDeviceIdx == UINT32_MAX)
+            return;
+
+        m_Devices.push_back(CreateRef<VulkanDevice>(physicalDevices[selectedDeviceIdx], selectedDeviceIdx, appInfo.apiVersion));
         m_PrimaryDevices.push_back(m_Devices[0]);
         /*
         for (uint32_t i = 0; i < m_NumDevices; i++)
@@ -228,12 +281,6 @@ namespace Crowny
                 break;
             }
         }*/
-
-        if (m_PrimaryDevices.size() == 0)
-        {
-            // m_Devices[0]->SetPrimary();
-            m_PrimaryDevices.push_back(m_Devices[0]);
-        }
 
         VulkanGpuBufferManager::StartUp();
 
@@ -338,6 +385,7 @@ namespace Crowny
 
     void VulkanRenderAPI::SetDrawMode(DrawMode drawMode, const Ref<CommandBuffer>& commandBuffer)
     {
+        m_DrawMode = drawMode;
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
         vkCB->SetDrawMode(drawMode);
     }
@@ -360,29 +408,87 @@ namespace Crowny
     {
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
         vkCB->Draw(vertexOffset, vertexCount, instanceCount);
-        // TODO: Render stats: draw call, verts, prims
+        RecordDraw(m_DrawMode, vertexCount, instanceCount);
     }
 
     void VulkanRenderAPI::DrawIndexed(uint32_t startIndex, uint32_t indexCount, uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount,
                                       const Ref<CommandBuffer>& commandBuffer)
     {
-        uint32_t primCount = 0;
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
         vkCB->DrawIndexed(startIndex, indexCount, vertexOffset, instanceCount);
-        // TODO: Render stats: draw call, verts, prims
+        RecordDraw(m_DrawMode, indexCount, instanceCount);
+    }
+
+    void VulkanRenderAPI::DrawIndexedIndirect(const Ref<GenericGpuBuffer>& argumentBuffer, uint32_t argumentOffset, uint32_t drawCount,
+                                              uint32_t stride, const Ref<CommandBuffer>& commandBuffer)
+    {
+        CW_ENGINE_ASSERT(argumentBuffer != nullptr, "Vulkan indirect draw requires an argument buffer");
+        CW_ENGINE_ASSERT(stride >= sizeof(DrawIndexedIndirectCommand) && (stride & 3u) == 0,
+                         "Vulkan indirect draw stride is invalid");
+        if (argumentBuffer == nullptr || drawCount == 0)
+            return;
+
+        const uint64_t requiredSize = static_cast<uint64_t>(argumentOffset) + static_cast<uint64_t>(drawCount - 1u) * stride +
+                                      sizeof(DrawIndexedIndirectCommand);
+        CW_ENGINE_ASSERT(requiredSize <= argumentBuffer->GetBufferSize(), "Vulkan indirect draw range exceeds its argument buffer");
+        if (requiredSize > argumentBuffer->GetBufferSize())
+            return;
+
+        VulkanGenericGpuBuffer* arguments = static_cast<VulkanGenericGpuBuffer*>(argumentBuffer.get());
+        GetCB(commandBuffer)->GetInternal()->DrawIndexedIndirect(arguments->GetBuffer(), argumentOffset, drawCount, stride);
+        RecordIndirectDraw(drawCount);
+    }
+
+    void VulkanRenderAPI::DrawIndexedIndirectCount(const Ref<GenericGpuBuffer>& argumentBuffer, uint32_t argumentOffset,
+                                                   const Ref<GenericGpuBuffer>& countBuffer, uint32_t countOffset, uint32_t maxDrawCount,
+                                                   uint32_t stride, const Ref<CommandBuffer>& commandBuffer)
+    {
+        CW_ENGINE_ASSERT(argumentBuffer != nullptr && countBuffer != nullptr, "Vulkan indirect count draw requires two buffers");
+        if (argumentBuffer == nullptr || countBuffer == nullptr || maxDrawCount == 0)
+            return;
+        CW_ENGINE_ASSERT(countOffset + sizeof(uint32_t) <= countBuffer->GetBufferSize(),
+                         "Vulkan indirect draw count range exceeds its buffer");
+        if (countOffset + sizeof(uint32_t) > countBuffer->GetBufferSize())
+            return;
+
+        const uint64_t requiredSize = static_cast<uint64_t>(argumentOffset) + static_cast<uint64_t>(maxDrawCount - 1u) * stride +
+                                      sizeof(DrawIndexedIndirectCommand);
+        CW_ENGINE_ASSERT(requiredSize <= argumentBuffer->GetBufferSize(), "Vulkan indirect draw range exceeds its argument buffer");
+        if (requiredSize > argumentBuffer->GetBufferSize())
+            return;
+
+        VulkanGenericGpuBuffer* arguments = static_cast<VulkanGenericGpuBuffer*>(argumentBuffer.get());
+        VulkanGenericGpuBuffer* count = static_cast<VulkanGenericGpuBuffer*>(countBuffer.get());
+        GetCB(commandBuffer)->GetInternal()->DrawIndexedIndirectCount(arguments->GetBuffer(), argumentOffset, count->GetBuffer(), countOffset,
+                                                                      maxDrawCount, stride);
+        RecordIndirectDraw(0); // The GPU count buffer is deliberately not read back for statistics.
     }
 
     void VulkanRenderAPI::TraceRays(uint32_t width, uint32_t height, const Ref<CommandBuffer>& commandBuffer)
     {
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
         vkCB->TraceRays(width, height);
-        // TODO: Render stats: draw call, verts, prims
+        RecordRayTracingDispatch();
     }
 
     void VulkanRenderAPI::DispatchCompute(uint32_t x, uint32_t y, uint32_t z, const Ref<CommandBuffer>& commandBuffer)
     {
         VulkanCmdBuffer* vkCB = GetCB(commandBuffer)->GetInternal();
         vkCB->Dispatch(x, y, z);
+        RecordComputeDispatch();
+    }
+
+    void VulkanRenderAPI::DispatchComputeIndirect(const Ref<GenericGpuBuffer>& argumentBuffer, uint32_t argumentOffset,
+                                                  const Ref<CommandBuffer>& commandBuffer)
+    {
+        CW_ENGINE_ASSERT(argumentBuffer != nullptr && argumentOffset + sizeof(DispatchIndirectCommand) <= argumentBuffer->GetBufferSize(),
+                         "Vulkan indirect dispatch range exceeds its argument buffer");
+        if (argumentBuffer == nullptr || argumentOffset + sizeof(DispatchIndirectCommand) > argumentBuffer->GetBufferSize())
+            return;
+
+        VulkanGenericGpuBuffer* arguments = static_cast<VulkanGenericGpuBuffer*>(argumentBuffer.get());
+        GetCB(commandBuffer)->GetInternal()->DispatchIndirect(arguments->GetBuffer(), argumentOffset);
+        RecordComputeDispatch();
     }
 
     void VulkanRenderAPI::SetUniforms(const Ref<UniformParams>& params, const Ref<CommandBuffer>& commandBuffer)
@@ -424,21 +530,29 @@ namespace Crowny
 
     void VulkanRenderAPI::OnShutdown()
     {
-        VulkanTransferManager::Shutdown();
-        VulkanRenderPasses::Shutdown();
-        VulkanTextureManager::Shutdown();
-        VulkanGpuBufferManager::Shutdown();
-        VulkanBufferLayoutManager::Shutdown();
-        m_CommandBuffer = nullptr;
         for (uint32_t i = 0; i < (uint32_t)m_Devices.size(); i++)
             m_Devices[i]->WaitIdle();
+
+        m_CommandBuffer = nullptr;
+        VulkanBufferLayoutManager::Shutdown();
+        VulkanTextureManager::Shutdown();
+        VulkanTransferManager::Shutdown();
+        VulkanRenderPasses::Shutdown();
+        VulkanGpuBufferManager::Shutdown();
+
+        delete[] m_CurrentCapabilities;
+        m_CurrentCapabilities = nullptr;
         m_Devices.clear();
         m_PrimaryDevices.clear();
 #ifdef CW_DEBUG
-        vkDestroyDebugUtilsMessengerEXT(m_Instance, m_DebugUtilsMessenger, gVulkanAllocator);
+        if (vkDestroyDebugUtilsMessengerEXT != nullptr && m_DebugUtilsMessenger != VK_NULL_HANDLE)
+            vkDestroyDebugUtilsMessengerEXT(m_Instance, m_DebugUtilsMessenger, gVulkanAllocator);
+        m_DebugUtilsMessenger = VK_NULL_HANDLE;
 #endif
 
-        vkDestroyInstance(m_Instance, gVulkanAllocator);
+        if (m_Instance != VK_NULL_HANDLE)
+            vkDestroyInstance(m_Instance, gVulkanAllocator);
+        m_Instance = VK_NULL_HANDLE;
         RenderAPI::OnShutdown();
     }
 
@@ -453,6 +567,7 @@ namespace Crowny
             RenderCapabilities& caps = m_CurrentCapabilities[deviceIdx];
             const VkPhysicalDeviceProperties& devProps = device->GetDeviceProperties();
             const VkPhysicalDeviceFeatures& devFeatures = device->GetDeviceFeatures();
+            const VulkanOptionalFeatures& optionalFeatures = device->GetOptionalFeatures();
             const VkPhysicalDeviceLimits& devLimits = devProps.limits;
 
             DriverVersion driverVersion;
@@ -463,6 +578,7 @@ namespace Crowny
 
             caps.DriverVersion = driverVersion;
             caps.DeviceName = devProps.deviceName;
+            caps.IntegratedGpu = devProps.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
 
             switch (devProps.vendorID)
             {
@@ -484,17 +600,16 @@ namespace Crowny
             caps.RenderAPIName = "Vulkan";
 
             if (devFeatures.textureCompressionBC)
+            {
                 caps.SetCapability(CW_TEXTURE_COMPRESSION_BC);
+                caps.SetCapability(CW_TEXTURE_COMPRESSION_BPTC);
+            }
 
             if (devFeatures.textureCompressionETC2)
                 caps.SetCapability(CW_TEXTURE_COMPRESSION_ETC2);
 
             if (devFeatures.textureCompressionASTC_LDR)
                 caps.SetCapability(CW_TEXTURE_COMPRESSION_ASTC);
-
-            caps.SetCapability(CW_COMPUTE_SHADER);
-            caps.SetCapability(CW_LOAD_STORE);
-            caps.SetCapability(CW_LOAD_STORE_MSAA);
 
             caps.SetCapability(CW_COMPUTE_SHADER);
             caps.SetCapability(CW_LOAD_STORE);
@@ -506,6 +621,34 @@ namespace Crowny
             caps.Conventions.MatrixOrder = Conventions::MatrixOrder::ColumnMajor;
             caps.MaxBoundVertexBuffers = devLimits.maxVertexInputBindings;
             caps.NumMultiRenderTargets = devLimits.maxColorAttachments;
+            caps.MaxDrawIndirectCount = devLimits.maxDrawIndirectCount;
+            caps.MaxStorageBufferRange = devLimits.maxStorageBufferRange;
+            caps.MaxBindlessSampledImages = devLimits.maxDescriptorSetSampledImages;
+
+            if (optionalFeatures.MultiDrawIndirect)
+                caps.SetCapability(CW_MULTI_DRAW_INDIRECT);
+            if (optionalFeatures.DrawIndirectCount)
+                caps.SetCapability(CW_DRAW_INDIRECT_COUNT);
+            if (optionalFeatures.ShaderDrawParameters)
+                caps.SetCapability(CW_SHADER_DRAW_PARAMETERS);
+            if (optionalFeatures.DescriptorIndexing)
+                caps.SetCapability(CW_DESCRIPTOR_INDEXING);
+            if (optionalFeatures.NonUniformTextureIndexing)
+                caps.SetCapability(CW_NON_UNIFORM_TEXTURE_INDEXING);
+            if (optionalFeatures.UpdateAfterBind)
+                caps.SetCapability(CW_UPDATE_AFTER_BIND);
+            if (optionalFeatures.BufferDeviceAddress)
+                caps.SetCapability(CW_BUFFER_DEVICE_ADDRESS);
+            if (optionalFeatures.TimelineSemaphore)
+                caps.SetCapability(CW_TIMELINE_SEMAPHORE);
+            if (optionalFeatures.Synchronization2)
+                caps.SetCapability(CW_SYNCHRONIZATION_2);
+            if (optionalFeatures.DynamicRendering)
+                caps.SetCapability(CW_DYNAMIC_RENDERING);
+            if (optionalFeatures.DedicatedComputeQueue)
+                caps.SetCapability(CW_DEDICATED_COMPUTE_QUEUE);
+            if (optionalFeatures.DedicatedTransferQueue)
+                caps.SetCapability(CW_DEDICATED_TRANSFER_QUEUE);
 
             caps.NumTextureUnitsPerStage[FRAGMENT_SHADER] = devLimits.maxPerStageDescriptorSampledImages;
             caps.NumTextureUnitsPerStage[VERTEX_SHADER] = devLimits.maxPerStageDescriptorSampledImages;
@@ -552,5 +695,11 @@ namespace Crowny
         }
     }
 
-    VulkanRenderAPI& gVulkanRenderAPI() { return static_cast<VulkanRenderAPI&>((*gRenderAPI)); }
+    const RenderCapabilities& VulkanRenderAPI::GetCapabilities(uint32_t deviceIndex) const
+    {
+        CW_ENGINE_ASSERT(m_CurrentCapabilities != nullptr && deviceIndex < m_NumDevices, "Invalid Vulkan capability device index");
+        return m_CurrentCapabilities[deviceIndex];
+    }
+
+    VulkanRenderAPI& gVulkanRenderAPI() { return static_cast<VulkanRenderAPI&>((*RenderAPI::TryGet())); }
 } // namespace Crowny

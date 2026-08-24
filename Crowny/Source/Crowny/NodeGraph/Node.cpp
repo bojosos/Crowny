@@ -11,6 +11,15 @@ namespace Crowny
 
     void Node::SetParentGraph(NodeGraph* graph) { m_ParentGraph = graph; }
 
+    void Node::SetEditorPosition(const glm::vec2& pos)
+    {
+        if (m_EditorPosition == pos)
+            return;
+        m_EditorPosition = pos;
+        if (m_ParentGraph)
+            m_ParentGraph->NotifyEditorChanged();
+    }
+
     void Node::NotifyChanged()
     {
         if (m_ParentGraph)
@@ -51,21 +60,28 @@ namespace Crowny
         return nullptr;
     }
 
+    Ref<Pin> Node::AddInput(StringID name, PinDataType type) { return AddInput(UuidGenerator::Generate(), name, type, DefaultPinValue(type)); }
+
     Ref<Pin> Node::AddInput(StringID name, PinDataType type, const PinValue& defaultVal)
     {
-        auto pin = CreateRef<Pin>(UuidGenerator::Generate(), name, Pin::Direction::Input, type);
+        return AddInput(UuidGenerator::Generate(), name, type, defaultVal);
+    }
+
+    Ref<Pin> Node::AddInput(UUID id, StringID name, PinDataType type, const PinValue& defaultVal)
+    {
+        auto pin = CreateRef<Pin>(id, name, Pin::Direction::Input, type);
         pin->SetOwner(this);
-        if (!std::holds_alternative<float>(defaultVal) || std::get<float>(defaultVal) != 0.0f || type != PinDataType::Float)
-            pin->SetDefaultValue(defaultVal);
-        else
+        if (!pin->SetDefaultValue(defaultVal))
             pin->SetDefaultValue(DefaultPinValue(type));
         m_Inputs.push_back(pin);
         return pin;
     }
 
-    Ref<Pin> Node::AddOutput(StringID name, PinDataType type)
+    Ref<Pin> Node::AddOutput(StringID name, PinDataType type) { return AddOutput(UuidGenerator::Generate(), name, type); }
+
+    Ref<Pin> Node::AddOutput(UUID id, StringID name, PinDataType type)
     {
-        auto pin = CreateRef<Pin>(UuidGenerator::Generate(), name, Pin::Direction::Output, type);
+        auto pin = CreateRef<Pin>(id, name, Pin::Direction::Output, type);
         pin->SetOwner(this);
         m_Outputs.push_back(pin);
         return pin;
@@ -102,6 +118,7 @@ namespace Crowny
                 return glm::vec4(std::get<float>(value));
         }
 
+        evaluator.ReportError(String("Node '") + GetDisplayName().c_str() + "' input '" + pinName.c_str() + "' received an incompatible value");
         return T{};
     }
 

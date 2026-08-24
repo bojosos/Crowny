@@ -55,3 +55,40 @@ TEST_CASE("UTF8::ConversionDetailed", "[UTF8]")
         CHECK(back == input);
     }
 }
+
+TEST_CASE("UTF8 decodes Unicode code points without allocations", "[UTF8]")
+{
+    const String input = String("A") + "\xE4\xB8\x96" + "\xF0\x9F\x8C\x8D";
+    size_t offset = 0;
+    char32_t codePoint = 0;
+
+    REQUIRE(UTF8::NextCodePoint(input, offset, codePoint));
+    CHECK(codePoint == U'A');
+    REQUIRE(UTF8::NextCodePoint(input, offset, codePoint));
+    CHECK(codePoint == 0x4E16);
+    REQUIRE(UTF8::NextCodePoint(input, offset, codePoint));
+    CHECK(codePoint == 0x1F30D);
+    CHECK_FALSE(UTF8::NextCodePoint(input, offset, codePoint));
+
+    const U32String decoded = UTF8::ToUTF32(input);
+    REQUIRE(decoded.size() == 3);
+    CHECK(decoded[0] == U'A');
+    CHECK(decoded[1] == 0x4E16);
+    CHECK(decoded[2] == 0x1F30D);
+}
+
+TEST_CASE("UTF8 replaces malformed sequences and keeps decoding", "[UTF8]")
+{
+    const String malformed = "\xF0\x28\x8C\x28";
+    const U32String decoded = UTF8::ToUTF32(malformed);
+
+    REQUIRE(decoded.size() == 4);
+    CHECK(decoded[0] == 0xFFFD);
+    CHECK(decoded[1] == U'(');
+    CHECK(decoded[2] == 0xFFFD);
+    CHECK(decoded[3] == U'(');
+
+    CHECK((UTF8::ToUTF32("\xC0\xAF") == U32String{ 0xFFFD, 0xFFFD }));
+    CHECK((UTF8::ToUTF32("\xED\xA0\x80") == U32String{ 0xFFFD, 0xFFFD, 0xFFFD }));
+    CHECK((UTF8::ToUTF32("\xF4\x90\x80\x80") == U32String{ 0xFFFD, 0xFFFD, 0xFFFD, 0xFFFD }));
+}

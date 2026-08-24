@@ -19,7 +19,8 @@ namespace Crowny
         TexCoord6 = 12,
         TexCoord7 = 13,
         BlendWeights = 14,
-        BlendIndices = 15
+        BlendIndices = 15,
+        PreviousPosition = 16
     }
 
     public enum VertexAttributeFormat

@@ -18,11 +18,35 @@
 
 namespace Crowny
 {
-    static const char* PIPELINE_CACHE_FILE = "vk_pipeline_cache.blob";
+    static Path GetPipelinePath(const VkPhysicalDeviceProperties& properties)
+    {
+        constexpr char HEX[] = "0123456789abcdef";
+        String cacheUuid;
+        cacheUuid.reserve(VK_UUID_SIZE * 2);
+        for (uint8_t byte : properties.pipelineCacheUUID)
+        {
+            cacheUuid.push_back(HEX[byte >> 4]);
+            cacheUuid.push_back(HEX[byte & 0x0f]);
+        }
 
-    static Path GetPipelinePath() { return gApplication->GetInternalDirectory() / "pcache" / CROWNY_VERSION_STRING / PIPELINE_CACHE_FILE; }
+        const String filename = "vk-" + std::to_string(properties.vendorID) + "-" + std::to_string(properties.deviceID) + "-" +
+                                std::to_string(properties.driverVersion) + "-" + cacheUuid + ".blob";
+        return Application::TryGet()->GetInternalDirectory() / "pcache" / CROWNY_VERSION_STRING / filename;
+    }
 
-    VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, uint32_t deviceIdx) : m_PhysicalDevice(physicalDevice)
+    static bool IsPipelineCacheCompatible(const Vector<uint8_t>& data, const VkPhysicalDeviceProperties& properties)
+    {
+        if (data.size() < sizeof(VkPipelineCacheHeaderVersionOne))
+            return false;
+        VkPipelineCacheHeaderVersionOne header{};
+        std::memcpy(&header, data.data(), sizeof(header));
+        return header.headerSize >= sizeof(header) && header.headerVersion == VK_PIPELINE_CACHE_HEADER_VERSION_ONE &&
+               header.vendorID == properties.vendorID && header.deviceID == properties.deviceID &&
+               std::memcmp(header.pipelineCacheUUID, properties.pipelineCacheUUID, VK_UUID_SIZE) == 0;
+    }
+
+    VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, uint32_t deviceIdx, uint32_t instanceApiVersion)
+      : m_PhysicalDevice(physicalDevice), m_Index(deviceIdx == UINT32_MAX ? 0 : deviceIdx)
     {
         // Always populate device properties (needed for the discrete GPU check below)
         vkGetPhysicalDeviceProperties(physicalDevice, &m_DeviceProperties);
@@ -61,30 +85,30 @@ namespace Crowny
             // Update m_DeviceProperties from the Properties2 query (same data, just also fills the pNext chain)
             m_DeviceProperties = deviceProperties2.properties;
 
-            VkPhysicalDeviceDescriptorIndexingFeatures descriptionIndexingFeatures{};
-            descriptionIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
-
-            VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures{};
-            bufferDeviceAddressFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
-            bufferDeviceAddressFeatures.pNext = &descriptionIndexingFeatures;
+            enabledBufferDeviceAddressFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+            enabledBufferDeviceAddressFeatures.pNext = nullptr;
 
             enabledRayTracingPipelineFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
-            enabledRayTracingPipelineFeatures.pNext = &bufferDeviceAddressFeatures;
+            enabledRayTracingPipelineFeatures.pNext = &enabledBufferDeviceAddressFeatures;
 
             rayTracingAccelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
             rayTracingAccelerationStructureFeatures.pNext = &enabledRayTracingPipelineFeatures;
             m_DeviceFeatures.pNext = &rayTracingAccelerationStructureFeatures;
-
-            if (!bufferDeviceAddressFeatures.bufferDeviceAddress)
-                CW_ENGINE_ERROR("Missing Vulkan device address feature");
-
-            if (!enabledRayTracingPipelineFeatures.rayTracingPipeline)
-                CW_ENGINE_ERROR("Missing Vulkan device ray tracing pipeline feature");
-
-            if (!rayTracingAccelerationStructureFeatures.accelerationStructure)
-                CW_ENGINE_ERROR("Missing Vulkan device ray tracing acceleration structure feature");
         }
         vkGetPhysicalDeviceFeatures2(physicalDevice, &m_DeviceFeatures);
+
+        bool rayTracingFeaturesSupported = true;
+        if (raytracing)
+        {
+            rayTracingFeaturesSupported = enabledBufferDeviceAddressFeatures.bufferDeviceAddress &&
+                                          enabledRayTracingPipelineFeatures.rayTracingPipeline &&
+                                          rayTracingAccelerationStructureFeatures.accelerationStructure;
+            if (!rayTracingFeaturesSupported)
+                CW_ENGINE_WARN("Crowny ray tracing was requested but the selected GPU lacks required features");
+
+            m_DeviceFeatures.pNext = nullptr;
+            m_RayTracingPipelineProperties.pNext = nullptr;
+        }
 
         vkGetPhysicalDeviceMemoryProperties(physicalDevice, &m_MemoryProperties);
 
@@ -93,7 +117,8 @@ namespace Crowny
         Vector<VkQueueFamilyProperties> queueFamilyProperties(numQueueFamilies);
         vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &numQueueFamilies, queueFamilyProperties.data());
 
-        const float defaultQueuePrios[MAX_QUEUES_PER_TYPE] = { 0.0f };
+        float defaultQueuePrios[MAX_QUEUES_PER_TYPE];
+        std::fill(std::begin(defaultQueuePrios), std::end(defaultQueuePrios), 1.0f);
         Vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 
         auto populateQueueInfo = [&](GpuQueueType type, uint32_t familyIdx) {
@@ -148,37 +173,180 @@ namespace Crowny
         }
 
         uint32_t availableExtensionsCount = 0;
-        vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &availableExtensionsCount, nullptr);
+        VkResult result = vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &availableExtensionsCount, nullptr);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
         Vector<VkExtensionProperties> availableExtensions(availableExtensionsCount);
-        vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &availableExtensionsCount, availableExtensions.data());
+        result = vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &availableExtensionsCount, availableExtensions.data());
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
 
 #if LOG_EXTENSIONS
         for (const VkExtensionProperties& ext : availableExtensions)
             CW_ENGINE_INFO("Extension: {}, version: {}", ext.extensionName, ext.specVersion);
 #endif
 
-        const void* pNext = nullptr;
+        void* pNext = nullptr;
         Vector<const char*> extensions;
-        uint32_t numExts = 0;
+        bool supportsSwapChain = false;
+        bool supportsPortabilitySubset = false;
+        bool supportsDemoteExtension = false;
+        for (const VkExtensionProperties& extension : availableExtensions)
+        {
+            m_SupportedExtensions.emplace_back(extension.extensionName);
+            if (std::strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
+                supportsSwapChain = true;
+            if (std::strcmp(extension.extensionName, VK_EXT_SHADER_DEMOTE_TO_HELPER_INVOCATION_EXTENSION_NAME) == 0)
+                supportsDemoteExtension = true;
+#ifdef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
+            if (std::strcmp(extension.extensionName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME) == 0)
+                supportsPortabilitySubset = true;
+#endif
+        }
+
+        CW_ENGINE_ASSERT(supportsSwapChain, "Selected Vulkan device does not support swap chains");
         extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+#ifdef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
+        if (supportsPortabilitySubset)
+            extensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+#endif
+
+        const bool useVulkan11Features = instanceApiVersion >= VK_API_VERSION_1_1 && m_DeviceProperties.apiVersion >= VK_API_VERSION_1_1;
+        const bool useVulkan12Features = instanceApiVersion >= VK_API_VERSION_1_2 && m_DeviceProperties.apiVersion >= VK_API_VERSION_1_2;
+        const bool useVulkan13Features = instanceApiVersion >= VK_API_VERSION_1_3 && m_DeviceProperties.apiVersion >= VK_API_VERSION_1_3;
+        VkPhysicalDeviceVulkan11Features supportedVulkan11Features{};
+        VkPhysicalDeviceVulkan12Features supportedVulkan12Features{};
+        VkPhysicalDeviceVulkan13Features supportedVulkan13Features{};
+        VkPhysicalDeviceShaderDemoteToHelperInvocationFeaturesEXT supportedDemoteFeatures{};
+        VkPhysicalDeviceFeatures2 extendedFeatureQuery{};
+        extendedFeatureQuery.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+        void* featureQueryChain = nullptr;
+        if (supportsDemoteExtension && !useVulkan13Features)
+        {
+            supportedDemoteFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DEMOTE_TO_HELPER_INVOCATION_FEATURES_EXT;
+            supportedDemoteFeatures.pNext = featureQueryChain;
+            featureQueryChain = &supportedDemoteFeatures;
+        }
+        if (useVulkan13Features)
+        {
+            supportedVulkan13Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+            supportedVulkan13Features.pNext = featureQueryChain;
+            featureQueryChain = &supportedVulkan13Features;
+        }
+        if (useVulkan12Features)
+        {
+            supportedVulkan12Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+            supportedVulkan12Features.pNext = featureQueryChain;
+            featureQueryChain = &supportedVulkan12Features;
+        }
+        if (useVulkan11Features)
+        {
+            supportedVulkan11Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+            supportedVulkan11Features.pNext = featureQueryChain;
+            featureQueryChain = &supportedVulkan11Features;
+        }
+        extendedFeatureQuery.pNext = featureQueryChain;
+
+        if (extendedFeatureQuery.pNext != nullptr)
+            vkGetPhysicalDeviceFeatures2(physicalDevice, &extendedFeatureQuery);
+
+        const bool demoteToHelperInvocationSupported =
+          useVulkan13Features ? supportedVulkan13Features.shaderDemoteToHelperInvocation == VK_TRUE
+                              : supportsDemoteExtension && supportedDemoteFeatures.shaderDemoteToHelperInvocation == VK_TRUE;
+
+        VkPhysicalDeviceVulkan11Features enabledVulkan11Features{};
+        VkPhysicalDeviceVulkan12Features enabledVulkan12Features{};
+        VkPhysicalDeviceVulkan13Features enabledVulkan13Features{};
+        VkPhysicalDeviceShaderDemoteToHelperInvocationFeaturesEXT enabledDemoteFeatures{};
+        if (useVulkan13Features)
+        {
+            enabledVulkan13Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+            enabledVulkan13Features.shaderDemoteToHelperInvocation = supportedVulkan13Features.shaderDemoteToHelperInvocation;
+            enabledVulkan13Features.synchronization2 = supportedVulkan13Features.synchronization2;
+            enabledVulkan13Features.dynamicRendering = supportedVulkan13Features.dynamicRendering;
+            enabledVulkan13Features.pNext = pNext;
+            pNext = &enabledVulkan13Features;
+        }
+        else if (demoteToHelperInvocationSupported)
+        {
+            enabledDemoteFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DEMOTE_TO_HELPER_INVOCATION_FEATURES_EXT;
+            enabledDemoteFeatures.shaderDemoteToHelperInvocation = VK_TRUE;
+            enabledDemoteFeatures.pNext = pNext;
+            pNext = &enabledDemoteFeatures;
+            extensions.push_back(VK_EXT_SHADER_DEMOTE_TO_HELPER_INVOCATION_EXTENSION_NAME);
+        }
+
+        if (useVulkan12Features)
+        {
+            enabledVulkan12Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+            enabledVulkan12Features.drawIndirectCount = supportedVulkan12Features.drawIndirectCount;
+            enabledVulkan12Features.descriptorIndexing = supportedVulkan12Features.descriptorIndexing;
+            enabledVulkan12Features.shaderSampledImageArrayNonUniformIndexing =
+              supportedVulkan12Features.shaderSampledImageArrayNonUniformIndexing;
+            enabledVulkan12Features.shaderStorageBufferArrayNonUniformIndexing =
+              supportedVulkan12Features.shaderStorageBufferArrayNonUniformIndexing;
+            enabledVulkan12Features.shaderStorageImageArrayNonUniformIndexing =
+              supportedVulkan12Features.shaderStorageImageArrayNonUniformIndexing;
+            enabledVulkan12Features.descriptorBindingSampledImageUpdateAfterBind =
+              supportedVulkan12Features.descriptorBindingSampledImageUpdateAfterBind;
+            enabledVulkan12Features.descriptorBindingStorageImageUpdateAfterBind =
+              supportedVulkan12Features.descriptorBindingStorageImageUpdateAfterBind;
+            enabledVulkan12Features.descriptorBindingStorageBufferUpdateAfterBind =
+              supportedVulkan12Features.descriptorBindingStorageBufferUpdateAfterBind;
+            enabledVulkan12Features.descriptorBindingPartiallyBound = supportedVulkan12Features.descriptorBindingPartiallyBound;
+            enabledVulkan12Features.descriptorBindingVariableDescriptorCount =
+              supportedVulkan12Features.descriptorBindingVariableDescriptorCount;
+            enabledVulkan12Features.runtimeDescriptorArray = supportedVulkan12Features.runtimeDescriptorArray;
+            enabledVulkan12Features.timelineSemaphore = supportedVulkan12Features.timelineSemaphore;
+            enabledVulkan12Features.bufferDeviceAddress = supportedVulkan12Features.bufferDeviceAddress;
+            enabledVulkan12Features.pNext = pNext;
+            pNext = &enabledVulkan12Features;
+        }
+
+        if (useVulkan11Features)
+        {
+            enabledVulkan11Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+            enabledVulkan11Features.shaderDrawParameters = supportedVulkan11Features.shaderDrawParameters;
+            enabledVulkan11Features.pNext = pNext;
+            pNext = &enabledVulkan11Features;
+        }
+
+        if (!demoteToHelperInvocationSupported)
+        {
+            CW_ENGINE_WARN("Selected Vulkan device does not support shader demote-to-helper invocation");
+        }
+
+        m_OptionalFeatures.MultiDrawIndirect = m_DeviceFeatures.features.multiDrawIndirect == VK_TRUE;
+        m_OptionalFeatures.DrawIndirectCount = enabledVulkan12Features.drawIndirectCount == VK_TRUE;
+        m_OptionalFeatures.ShaderDrawParameters = enabledVulkan11Features.shaderDrawParameters == VK_TRUE;
+        m_OptionalFeatures.NonUniformTextureIndexing = enabledVulkan12Features.shaderSampledImageArrayNonUniformIndexing == VK_TRUE;
+        m_OptionalFeatures.UpdateAfterBind = enabledVulkan12Features.descriptorBindingSampledImageUpdateAfterBind == VK_TRUE;
+        m_OptionalFeatures.DescriptorIndexing = enabledVulkan12Features.descriptorIndexing == VK_TRUE &&
+                                                enabledVulkan12Features.runtimeDescriptorArray == VK_TRUE &&
+                                                enabledVulkan12Features.descriptorBindingPartiallyBound == VK_TRUE &&
+                                                enabledVulkan12Features.descriptorBindingVariableDescriptorCount == VK_TRUE;
+        m_OptionalFeatures.BufferDeviceAddress = enabledVulkan12Features.bufferDeviceAddress == VK_TRUE;
+        m_OptionalFeatures.TimelineSemaphore = enabledVulkan12Features.timelineSemaphore == VK_TRUE;
+        m_OptionalFeatures.Synchronization2 = enabledVulkan13Features.synchronization2 == VK_TRUE;
+        m_OptionalFeatures.DynamicRendering = enabledVulkan13Features.dynamicRendering == VK_TRUE;
+        m_OptionalFeatures.DedicatedComputeQueue = GetNumQueues(COMPUTE_QUEUE) > 0;
+        m_OptionalFeatures.DedicatedTransferQueue = GetNumQueues(UPLOAD_QUEUE) > 0;
+
+        bool rayTracingEnabled = false;
         if (raytracing)
         {
-            VkPhysicalDeviceBufferDeviceAddressFeatures enabledBufferDeviceAddressFeatures{};
+            enabledBufferDeviceAddressFeatures = {};
             enabledBufferDeviceAddressFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
             enabledBufferDeviceAddressFeatures.bufferDeviceAddress = VK_TRUE;
-            enabledBufferDeviceAddressFeatures.pNext = nullptr;
+            enabledBufferDeviceAddressFeatures.pNext = pNext;
 
-            VkPhysicalDeviceRayTracingPipelineFeaturesKHR enabledRayTracingPipelineFeatures{};
+            enabledRayTracingPipelineFeatures = {};
             enabledRayTracingPipelineFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
             enabledRayTracingPipelineFeatures.rayTracingPipeline = VK_TRUE;
             enabledRayTracingPipelineFeatures.pNext = &enabledBufferDeviceAddressFeatures;
 
-            VkPhysicalDeviceAccelerationStructureFeaturesKHR enabledAccelerationStructureFeatures{};
-            enabledAccelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
-            enabledAccelerationStructureFeatures.accelerationStructure = VK_TRUE;
-            enabledAccelerationStructureFeatures.pNext = &enabledRayTracingPipelineFeatures;
-
-            pNext = &enabledAccelerationStructureFeatures;
+            enabledAccelerationPipelineFeatures = {};
+            enabledAccelerationPipelineFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+            enabledAccelerationPipelineFeatures.accelerationStructure = VK_TRUE;
+            enabledAccelerationPipelineFeatures.pNext = &enabledRayTracingPipelineFeatures;
 
             Vector<const char*> rayTracingExts;
             rayTracingExts.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
@@ -203,10 +371,14 @@ namespace Crowny
                     rtSupported = false;
                 }
             }
-            if (rtSupported)
+            if (rtSupported && rayTracingFeaturesSupported)
+            {
                 extensions.insert(extensions.end(), rayTracingExts.begin(), rayTracingExts.end());
+                pNext = &enabledAccelerationPipelineFeatures;
+                rayTracingEnabled = true;
+            }
             else
-                CW_ENGINE_WARN("Crowny RT is requested but disabled, buy better GPU");
+                CW_ENGINE_WARN("Crowny ray tracing is disabled for the selected GPU");
         }
 
         VkDeviceCreateInfo deviceInfo;
@@ -221,39 +393,36 @@ namespace Crowny
         deviceInfo.ppEnabledLayerNames = nullptr;
         deviceInfo.pEnabledFeatures = &m_DeviceFeatures.features; // TODO: More fine control
 
-        if (m_DeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU || deviceIdx == -1)
+        result = vkCreateDevice(m_PhysicalDevice, &deviceInfo, gVulkanAllocator, &m_LogicalDevice);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        for (uint32_t i = 0; i < QUEUE_COUNT; i++)
         {
-            const VkResult result = vkCreateDevice(m_PhysicalDevice, &deviceInfo, gVulkanAllocator, &m_LogicalDevice);
-            CW_ENGINE_ASSERT(result == VK_SUCCESS);
-            for (uint32_t i = 0; i < QUEUE_COUNT; i++)
+            const uint32_t numQueues = (uint32_t)m_QueueInfos[i].Queues.size();
+            for (uint32_t j = 0; j < numQueues; j++)
             {
-                const uint32_t numQueues = (uint32_t)m_QueueInfos[i].Queues.size();
-                for (uint32_t j = 0; j < numQueues; j++)
-                {
-                    VkQueue queue;
-                    vkGetDeviceQueue(m_LogicalDevice, m_QueueInfos[i].FamilyIdx, j, &queue);
-                    m_QueueInfos[i].Queues[j] = new VulkanQueue(*this, queue, (GpuQueueType)i, j);
-                }
+                VkQueue queue;
+                vkGetDeviceQueue(m_LogicalDevice, m_QueueInfos[i].FamilyIdx, j, &queue);
+                m_QueueInfos[i].Queues[j] = new VulkanQueue(*this, queue, (GpuQueueType)i, j);
             }
-
-            VmaAllocatorCreateInfo allocatorCI = {};
-            allocatorCI.physicalDevice = m_PhysicalDevice;
-            allocatorCI.device = m_LogicalDevice;
-            allocatorCI.pAllocationCallbacks = gVulkanAllocator;
-            if (raytracing)
-                allocatorCI.flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT | VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
-            else
-                allocatorCI.flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
-            allocatorCI.instance = gVulkanRenderAPI().GetInstance();
-            allocatorCI.vulkanApiVersion = VK_API_VERSION_1_2; // maybe change to 1.3
-
-            vmaCreateAllocator(&allocatorCI, &m_Allocator);
-
-            m_CommandBufferPool = new VulkanCommandBufferPool(*this);
-            m_QueryPool = new VulkanQueryPool(*this);
-            m_DescriptorManager = new VulkanDescriptorManager(*this);
-            m_ResourceManager = new VulkanResourceManager(*this);
         }
+
+        VmaAllocatorCreateInfo allocatorCI = {};
+        allocatorCI.physicalDevice = m_PhysicalDevice;
+        allocatorCI.device = m_LogicalDevice;
+        allocatorCI.pAllocationCallbacks = gVulkanAllocator;
+        allocatorCI.flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
+        if (rayTracingEnabled || m_OptionalFeatures.BufferDeviceAddress)
+            allocatorCI.flags |= VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+        allocatorCI.instance = gVulkanRenderAPI().GetInstance();
+        allocatorCI.vulkanApiVersion = std::min(m_DeviceProperties.apiVersion, VK_API_VERSION_1_2);
+
+        result = vmaCreateAllocator(&allocatorCI, &m_Allocator);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+
+        m_CommandBufferPool = new VulkanCommandBufferPool(*this);
+        m_QueryPool = new VulkanQueryPool(*this);
+        m_DescriptorManager = new VulkanDescriptorManager(*this);
+        m_ResourceManager = new VulkanResourceManager(*this);
 
         VkPipelineCacheCreateInfo pipelineCacheCI;
         pipelineCacheCI.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
@@ -262,16 +431,35 @@ namespace Crowny
         pipelineCacheCI.initialDataSize = 0;
         pipelineCacheCI.pInitialData = nullptr;
 
-        const Path pipelinePath = GetPipelinePath();
-        if (fs::exists(pipelinePath))
+        // Project loading changes Application::InternalDirectory. Capture one
+        // absolute path so load and save always address the same cache file.
+        m_PipelineCachePath = fs::absolute(GetPipelinePath(m_DeviceProperties)).lexically_normal();
+        Vector<uint8_t> pipelineCacheData;
+        if (fs::exists(m_PipelineCachePath))
         {
-            Ref<DataStream> dataStream = FileSystem::OpenFile(pipelinePath);
-            const auto& data = dataStream->ReadAll();
-            pipelineCacheCI.initialDataSize = data.size();
-            pipelineCacheCI.pInitialData = data.data();
+            Ref<DataStream> dataStream = FileSystem::OpenFile(m_PipelineCachePath);
+            if (dataStream)
+                pipelineCacheData = dataStream->ReadAll();
+            if (IsPipelineCacheCompatible(pipelineCacheData, m_DeviceProperties))
+            {
+                pipelineCacheCI.initialDataSize = pipelineCacheData.size();
+                pipelineCacheCI.pInitialData = pipelineCacheData.data();
+            }
+            else
+            {
+                CW_ENGINE_WARN("Ignoring incompatible Vulkan pipeline cache at {}", m_PipelineCachePath.string());
+                pipelineCacheData.clear();
+            }
         }
-        const VkResult result = vkCreatePipelineCache(m_LogicalDevice, &pipelineCacheCI, gVulkanAllocator, &m_PipelineCache);
-        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        result = vkCreatePipelineCache(m_LogicalDevice, &pipelineCacheCI, gVulkanAllocator, &m_PipelineCache);
+        if (result != VK_SUCCESS && pipelineCacheCI.initialDataSize != 0)
+        {
+            CW_ENGINE_WARN("Vulkan rejected the pipeline cache ({}); retrying empty.", static_cast<int32_t>(result));
+            pipelineCacheCI.initialDataSize = 0;
+            pipelineCacheCI.pInitialData = nullptr;
+            result = vkCreatePipelineCache(m_LogicalDevice, &pipelineCacheCI, gVulkanAllocator, &m_PipelineCache);
+        }
+        CW_ENGINE_ASSERT(result == VK_SUCCESS, "Unable to create Vulkan pipeline cache");
     }
 
     VulkanDevice::~VulkanDevice()
@@ -296,6 +484,15 @@ namespace Crowny
         delete m_CommandBufferPool;
         delete m_ResourceManager;
 
+        for (uint32_t i = 0; i < m_MemoryProperties.memoryTypeCount; i++)
+        {
+            if (m_StagingPools[i] != VK_NULL_HANDLE)
+            {
+                vmaDestroyPool(m_Allocator, m_StagingPools[i]);
+                m_StagingPools[i] = VK_NULL_HANDLE;
+            }
+        }
+
         // Store the pipeline data in a file.
         size_t dataSize = 0;
         if (m_PipelineCache != VK_NULL_HANDLE)
@@ -309,10 +506,9 @@ namespace Crowny
                 data.resize(dataSize);
                 result = vkGetPipelineCacheData(m_LogicalDevice, m_PipelineCache, &dataSize, data.data());
                 CW_ENGINE_ASSERT(result == VK_SUCCESS);
-                const Path pipelinePath = GetPipelinePath();
-                if (!fs::exists(pipelinePath))
-                    fs::create_directories(pipelinePath.parent_path());
-                FileSystem::WriteFile(pipelinePath, data.data(), dataSize);
+                if (!fs::exists(m_PipelineCachePath.parent_path()))
+                    fs::create_directories(m_PipelineCachePath.parent_path());
+                FileSystem::WriteFile(m_PipelineCachePath, data.data(), dataSize);
             }
             vkDestroyPipelineCache(m_LogicalDevice, m_PipelineCache, gVulkanAllocator);
         }
@@ -413,7 +609,7 @@ namespace Crowny
                 break;
             }
         }
-        CW_ENGINE_ASSERT(resultFormat.DepthFormat);
+        CW_ENGINE_ASSERT(validDepthFormat, "Selected Vulkan device has no supported depth attachment format");
         return resultFormat;
     }
 
@@ -428,6 +624,7 @@ namespace Crowny
 
     VmaAllocation VulkanDevice::AllocateMemory(VkImage image, VkMemoryPropertyFlags flags, const char* tag)
     {
+        Lock lock(m_AllocationMutex);
         VmaAllocationCreateInfo allocCreateInfo{};
         allocCreateInfo.requiredFlags = flags;
 
@@ -445,10 +642,41 @@ namespace Crowny
         return memory;
     }
 
-    VmaAllocation VulkanDevice::AllocateMemory(VkBuffer buffer, VkMemoryPropertyFlags flags, const char* tag)
+    VmaAllocation VulkanDevice::AllocateMemory(VkBuffer buffer, VkMemoryPropertyFlags flags, const char* tag, VulkanAllocationType type)
     {
+        Lock lock(m_AllocationMutex);
         VmaAllocationCreateInfo allocCreateInfo{};
         allocCreateInfo.requiredFlags = flags;
+
+        if (type == VulkanAllocationType::Staging)
+        {
+            VkMemoryRequirements requirements{};
+            vkGetBufferMemoryRequirements(m_LogicalDevice, buffer, &requirements);
+
+            // Keep normal-size upload allocations in a retained block. In addition to
+            // reducing allocation churn, this avoids Intel drivers entering
+            // vkFreeMemory while a completed upload is being retired.
+            if (requirements.size <= STAGING_POOL_BLOCK_SIZE)
+            {
+                uint32_t memoryTypeIndex = 0;
+                VkResult result = vmaFindMemoryTypeIndex(m_Allocator, requirements.memoryTypeBits, &allocCreateInfo, &memoryTypeIndex);
+                CW_ENGINE_ASSERT(result == VK_SUCCESS);
+
+                if (result == VK_SUCCESS && m_StagingPools[memoryTypeIndex] == VK_NULL_HANDLE)
+                {
+                    VmaPoolCreateInfo poolCreateInfo{};
+                    poolCreateInfo.memoryTypeIndex = memoryTypeIndex;
+                    poolCreateInfo.blockSize = STAGING_POOL_BLOCK_SIZE;
+                    poolCreateInfo.minBlockCount = 1;
+
+                    result = vmaCreatePool(m_Allocator, &poolCreateInfo, &m_StagingPools[memoryTypeIndex]);
+                    CW_ENGINE_ASSERT(result == VK_SUCCESS);
+                }
+
+                if (result == VK_SUCCESS)
+                    allocCreateInfo.pool = m_StagingPools[memoryTypeIndex];
+            }
+        }
 
         VmaAllocationInfo allocInfo;
         VmaAllocation memory;
@@ -468,6 +696,7 @@ namespace Crowny
 
     void VulkanDevice::SetAllocationName(VmaAllocation allocation, const char* name)
     {
+        Lock lock(m_AllocationMutex);
         auto it = m_AllocationRecords.find(allocation);
         if (it != m_AllocationRecords.end())
             it->second.name = name;
@@ -481,8 +710,19 @@ namespace Crowny
         offset = allocInfo.offset;
     }
 
+    void* VulkanDevice::MapMemory(VmaAllocation allocation)
+    {
+        void* data = nullptr;
+        const VkResult result = vmaMapMemory(m_Allocator, allocation, &data);
+        CW_ENGINE_ASSERT(result == VK_SUCCESS);
+        return result == VK_SUCCESS ? data : nullptr;
+    }
+
+    void VulkanDevice::UnmapMemory(VmaAllocation allocation) { vmaUnmapMemory(m_Allocator, allocation); }
+
     void VulkanDevice::FreeMemory(VmaAllocation allocation)
     {
+        Lock lock(m_AllocationMutex);
         m_AllocationRecords.erase(allocation);
         vmaFreeMemory(m_Allocator, allocation);
     }
