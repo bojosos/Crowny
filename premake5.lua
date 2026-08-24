@@ -235,10 +235,10 @@ function linkCrownyFinalDependencies()
 		}
 
 	filter { "platforms:not Web", "system:not windows", "configurations:Debug" }
-		links { "shaderc_shared", "spirv-cross-core", "spirv-cross-glsl" }
+		links { "shaderc", "spirv-cross-core", "spirv-cross-glsl" }
 
 	filter { "platforms:not Web", "system:not windows", "configurations:Release or Dist" }
-		links { "shaderc_shared", "spirv-cross-core", "spirv-cross-glsl" }
+		links { "shaderc", "spirv-cross-core", "spirv-cross-glsl" }
 
 	filter {}
 end
