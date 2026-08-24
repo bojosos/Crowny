@@ -27,6 +27,7 @@ jobs:
             xorg-dev libgl1-mesa-dev libx11-dev libxcursor-dev uuid-dev \
             libvorbis-dev libopenal-dev libgtk-3-dev libglib2.0-dev \
             libvulkan-dev vulkan-utility-libraries-dev spirv-tools \
+            libspirv-cross-c-shared-dev \
             mono-devel clang
           mkdir -p .deps/VulkanSDK/Include/vma
           wget -O .deps/VulkanSDK/Include/vma/vk_mem_alloc.h https://raw.githubusercontent.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/v3.4.0/include/vk_mem_alloc.h

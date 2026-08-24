@@ -298,7 +298,7 @@ if os.host() == "linux" then
 	IncludeDir["vulkan"] = "/usr/include/vulkan"
 	IncludeDir["vulkanvma"] = VmaInclude
 	IncludeDir["mono"] = "/usr/include/mono-2.0"
-	IncludeDir["spriv"] = "/usr/local/include"
+	IncludeDir["spirv"] = "/usr/include"
 end
 if os.host() == "windows" then
 	IncludeDir["mono"] = MonoRoot .. "/include/mono-2.0"
