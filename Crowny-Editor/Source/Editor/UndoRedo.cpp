@@ -2,7 +2,9 @@
 
 #include "Editor/UndoRedo.h"
 
+#include "Crowny/Serialization/CerealDataStreamArchive.h"
 #include "Crowny/Serialization/SceneSerializer.h"
+#include "Crowny/Serialization/ScriptSerializer.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -13,6 +15,24 @@ namespace Crowny
     namespace
     {
         const String EmptyActionName;
+
+        PersistedScriptState CloneScriptState(const PersistedScriptState& state, Scene* scene)
+        {
+            PersistedScriptState clone{ state.Identity, nullptr };
+            if (state.Fields == nullptr)
+                return clone;
+
+            Ref<MemoryDataStream> output = CreateRef<MemoryDataStream>();
+            BinaryDataStreamOutputArchive outputArchive(output);
+            Ref<SerializableObject> fields = state.Fields;
+            outputArchive(fields);
+
+            ScriptSerializationSceneScope sceneScope(scene);
+            Ref<MemoryDataStream> input = CreateRef<MemoryDataStream>(output->Data(), output->Size());
+            BinaryDataStreamInputArchive inputArchive(input);
+            inputArchive(clone.Fields);
+            return clone;
+        }
 
         void SerializeSubtree(SceneSerializer& serializer, YAML::Emitter& output, Entity entity)
         {
@@ -156,20 +176,7 @@ namespace Crowny
         const MonoScriptComponent& component = entity.GetComponent<MonoScriptComponent>();
         state.reserve(component.Scripts.size());
         for (const MonoScript& script : component.Scripts)
-        {
-            Ref<SerializableObject> data;
-            if (MonoObject* instance = script.GetManagedInstance())
-            {
-                data = SerializableObject::CreateFromMonoObject(instance);
-                if (data)
-                    data->Serialize();
-            }
-            else
-            {
-                data = script.GetSerializableObject();
-            }
-            state.push_back({ script.GetNamespace(), script.GetTypeName(), data });
-        }
+            state.push_back(CloneScriptState(script.CapturePersistedState(), entity.GetScene()));
         return state;
     }
 
@@ -183,39 +190,34 @@ namespace Crowny
         if (!entity)
             return;
 
-        Vector<Pair<String, String>> currentTypes;
+        Vector<ScriptTypeIdentity> currentTypes;
         if (entity.HasComponent<MonoScriptComponent>())
         {
             for (const MonoScript& script : entity.GetComponent<MonoScriptComponent>().Scripts)
-                currentTypes.emplace_back(script.GetNamespace(), script.GetTypeName());
+                currentTypes.push_back(script.GetTypeIdentity());
         }
-        Vector<Pair<String, String>> desiredTypes;
+        Vector<ScriptTypeIdentity> desiredTypes;
         desiredTypes.reserve(state.size());
-        for (const ScriptState& script : state)
-            desiredTypes.emplace_back(script.Namespace, script.TypeName);
+        for (const PersistedScriptState& script : state)
+            desiredTypes.push_back(script.Identity);
 
         if (currentTypes != desiredTypes)
         {
-            for (const auto& [namespaceName, typeName] : currentTypes)
-                m_Scene->RemoveScriptComponent(entity, namespaceName, typeName);
-            for (const ScriptState& script : state)
-                m_Scene->AddScriptComponent(entity, script.Namespace, script.TypeName);
+            for (const ScriptTypeIdentity& identity : currentTypes)
+                m_Scene->RemoveScriptComponent(entity, identity);
+            for (const PersistedScriptState& script : state)
+                m_Scene->AddScriptComponent(entity, script);
         }
 
         if (!entity.HasComponent<MonoScriptComponent>())
             return;
         MonoScriptComponent& component = entity.GetComponent<MonoScriptComponent>();
-        for (const ScriptState& snapshot : state)
+        for (const PersistedScriptState& snapshot : state)
         {
-            const auto found = std::find_if(component.Scripts.begin(), component.Scripts.end(), [&](const MonoScript& script) {
-                return script.GetNamespace() == snapshot.Namespace && script.GetTypeName() == snapshot.TypeName;
-            });
-            if (found == component.Scripts.end() || !snapshot.Data)
-                continue;
-            if (MonoObject* instance = found->GetManagedInstance(); instance && found->GetObjectInfo())
-                snapshot.Data->Deserialize(instance, found->GetObjectInfo());
-            else
-                found->m_SerializedObjectData = snapshot.Data;
+            const auto found = std::find_if(component.Scripts.begin(), component.Scripts.end(),
+                                            [&](const MonoScript& script) { return script.GetTypeIdentity() == snapshot.Identity; });
+            if (found != component.Scripts.end())
+                found->ApplyPersistedState(snapshot);
         }
     }
 
@@ -294,9 +296,8 @@ namespace Crowny
     void EntityDeletedAction::Revert() { m_Focus = m_Snapshot.Restore(); }
 
     EntityReparentAction::EntityReparentAction(Entity entity, Entity oldParent, Entity newParent)
-      : UndoAction("Reparent entity"), m_Scene(entity.GetScene()), m_Entity(entity.GetUuid()),
-        m_OldParent(oldParent.GetUuid()), m_NewParent(newParent.GetUuid()), m_OldSibling(entity.GetSiblingIndex()),
-        m_NewSibling(newParent.GetChildCount())
+      : UndoAction("Reparent entity"), m_Scene(entity.GetScene()), m_Entity(entity.GetUuid()), m_OldParent(oldParent.GetUuid()),
+        m_NewParent(newParent.GetUuid()), m_OldSibling(entity.GetSiblingIndex()), m_NewSibling(newParent.GetChildCount())
     {
     }
 

@@ -432,8 +432,10 @@ namespace Crowny
                     if (fieldInfo != nullptr)
                     {
                         const auto iterFind = m_CachedData.find(key);
-                        if (iterFind != m_CachedData.end())
+                        if (iterFind != m_CachedData.end() && iterFind->second != nullptr)
                             fieldInfo->SetValue(instance, iterFind->second->GetValue(fieldInfo->m_TypeInfo));
+                        else if (iterFind != m_CachedData.end())
+                            CW_ENGINE_WARN("Skipping managed field '{}' because its persisted value is malformed.", fieldInfo->m_Name);
                     }
                 }
             }
@@ -464,7 +466,10 @@ namespace Crowny
     void SerializableObject::SetFieldData(const Ref<SerializableMemberInfo>& fieldInfo, const Ref<SerializableFieldData>& val)
     {
         if (val == nullptr)
-            CW_ENGINE_INFO("Here SetFieldData");
+        {
+            CW_ENGINE_WARN("Cannot set managed field '{}' to an invalid persisted value.", fieldInfo->m_Name);
+            return;
+        }
         if (m_GCHandle != 0)
         {
             MonoObject* managedInstance = MonoUtils::GetObjectFromGCHandle(m_GCHandle);
@@ -516,8 +521,7 @@ namespace Crowny
         return object;
     }
 
-    Ref<SerializableObject> SerializableObject::CreateFromMonoObject(MonoObject* managedInstance,
-                                                                     const Ref<SerializableObjectInfo>& objectInfo)
+    Ref<SerializableObject> SerializableObject::CreateFromMonoObject(MonoObject* managedInstance, const Ref<SerializableObjectInfo>& objectInfo)
     {
         if (managedInstance == nullptr || objectInfo == nullptr)
             return nullptr;

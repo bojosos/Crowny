@@ -340,8 +340,9 @@ namespace Crowny
     {
         if (rawMonoClass == nullptr)
             return nullptr;
-        for (const auto& [name, assembly] : m_Assemblies)
+        for (const auto& entry : m_Assemblies)
         {
+            MonoAssembly* assembly = entry.second;
             if (assembly != nullptr && assembly->GetClass(rawMonoClass) != nullptr)
                 return assembly;
         }

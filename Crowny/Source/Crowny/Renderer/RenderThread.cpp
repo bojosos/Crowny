@@ -115,7 +115,7 @@ namespace Crowny
     {
         tracy::SetThreadName("RenderThread");
 
-        while (m_Running.load(std::memory_order_acquire))
+        for (;;)
         {
             uint32_t contextIndex;
             {
@@ -157,6 +157,17 @@ namespace Crowny
             }
             m_ContextAvailable.notify_all();
         }
+
+        Vector<std::function<void()>> pendingResourceCommands;
+        {
+            ScopedLock lock(m_ResourceCommandMutex);
+            pendingResourceCommands = std::move(m_PendingResourceCommands);
+            m_PendingResourceCommands.clear();
+        }
+        for (std::function<void()>& command : pendingResourceCommands)
+            command();
+
+        SceneRenderer::ShutdownRenderThreadResources();
     }
 
 } // namespace Crowny

@@ -13,7 +13,7 @@ namespace Crowny
             bufferType = VulkanGpuBuffer::BUFFER_STRUCTURED;
         else if (type == GpuBufferType::IndirectDraw)
             bufferType = VulkanGpuBuffer::BUFFER_INDIRECT;
-        m_Buffer = new VulkanGpuBuffer(bufferType, usage, elementSize * elementCount);
+        m_Buffer = CreateScope<VulkanGpuBuffer>(bufferType, usage, elementSize * elementCount);
         UpdateViews();
     }
 
@@ -24,6 +24,7 @@ namespace Crowny
             VulkanBuffer* buffer = m_Buffer->GetBuffer();
             buffer->FreeView(m_BufferView);
         }
+        m_Buffer.reset();
     }
 
     void VulkanGenericGpuBuffer::WriteData(uint32_t offset, uint32_t length, const void* src, BufferWriteOptions writeOptions /* = BWT_NORMAL */)
@@ -61,10 +62,10 @@ namespace Crowny
             newBufferHandle = buffer->GetHandle();
         if (m_CacheBuffer != newBufferHandle)
         {
-            if (newBufferHandle == VK_NULL_HANDLE)
-                m_BufferView = buffer->GetView(VulkanUtils::GetBufferFormat(m_BufferFormat));
-            else
-                m_BufferView = VK_NULL_HANDLE;
+            // A changed handle means VulkanGpuBuffer replaced (and destroyed) its
+            // previous VulkanBuffer. Its destructor owns any views created for that
+            // old handle, so only acquire a view for the current backing buffer.
+            m_BufferView = buffer != nullptr ? buffer->GetView(VulkanUtils::GetBufferFormat(m_BufferFormat)) : VK_NULL_HANDLE;
             m_CacheBuffer = newBufferHandle;
         }
     }

@@ -45,6 +45,9 @@ namespace Crowny
         void ExtractSnapshot(RenderSnapshot& snapshot, const Camera& camera, const glm::mat4& viewTransform, bool drawGrid = false) const;
         void ExtractSnapshot(RenderSnapshot& snapshot, bool drawGrid = false) const;
         static void RenderFromSnapshot(const RenderSnapshot& snapshot);
+        // Releases GPU resources cached by RenderFromSnapshot on the calling thread.
+        // Call this on the render thread before shutting down the renderer or graphics device.
+        static void ShutdownRenderThreadResources();
         static SceneRenderStatistics GetStatistics();
 
         // Evaluates all ProceduralMeshComponents that need rebuilding (call on sim thread before ExtractSnapshot)

@@ -1173,6 +1173,36 @@ namespace Crowny
             bool m_SkyAttempted = false;
             bool m_BrdfAttempted = false;
         };
+
+        struct SceneRendererThreadResources
+        {
+            SceneRendererThreadResources()
+              : GraphResources(2, &GraphAllocator), SpotShadowAtlas(2048, 128), PointShadowLayers(16)
+            {
+            }
+
+            RenderGraph Graph;
+            RenderGraphGpuResourceAllocator GraphAllocator;
+            RenderGraphResourceRegistry GraphResources;
+            RenderPipelineAsset Pipeline;
+            RenderBlackboard Blackboard;
+            GpuDrivenPassExecutor GpuDrivenExecutor;
+            UnorderedSet<uint32_t> PendingShadowUpdates;
+            UnorderedSet<uint32_t> RenderedShadowLights;
+            Vector<ShadowRenderView> ShadowRenderViews;
+            ShadowAtlasAllocator SpotShadowAtlas;
+            PointShadowLayerAllocator PointShadowLayers;
+            UnorderedSet<uint32_t> PreviousSpotLights;
+        };
+
+        thread_local Scope<SceneRendererThreadResources> s_RenderThreadResources;
+
+        SceneRendererThreadResources& GetSceneRendererThreadResources()
+        {
+            if (!s_RenderThreadResources)
+                s_RenderThreadResources = CreateScope<SceneRendererThreadResources>();
+            return *s_RenderThreadResources;
+        }
     } // namespace
 
     struct SceneRendererData
@@ -2299,15 +2329,17 @@ namespace Crowny
         }
     }
 
+    void SceneRenderer::ShutdownRenderThreadResources() { s_RenderThreadResources.reset(); }
+
     void SceneRenderer::RenderFromSnapshot(const RenderSnapshot& snapshot)
     {
         ZoneScopedN("RenderGraphFrame");
         if (!snapshot.Target)
             return;
 
-        thread_local RenderGraph renderGraph;
-        thread_local RenderGraphGpuResourceAllocator graphAllocator;
-        thread_local RenderGraphResourceRegistry graphResources(2, &graphAllocator);
+        SceneRendererThreadResources& threadResources = GetSceneRendererThreadResources();
+        RenderGraph& renderGraph = threadResources.Graph;
+        RenderGraphResourceRegistry& graphResources = threadResources.GraphResources;
         renderGraph.Reset();
         GpuScene& gpuScene = Renderer::GetGpuScene();
         gpuScene.BeginFrame(snapshot.FrameNumber);
@@ -2393,8 +2425,8 @@ namespace Crowny
                                                      RenderGraphResourceState::ShaderRead);
         }
 
-        thread_local RenderPipelineAsset pipeline;
-        thread_local RenderBlackboard blackboard;
+        RenderPipelineAsset& pipeline = threadResources.Pipeline;
+        RenderBlackboard& blackboard = threadResources.Blackboard;
         RenderView view;
         view.View = snapshot.ViewMatrix;
         view.Projection = snapshot.ProjectionMatrix;
@@ -2447,7 +2479,7 @@ namespace Crowny
         graphDesc.EnableMotionVectors = true;
         graphDesc.EnableObjectID = true;
         graphDesc.EnablePostProcessing = true;
-        thread_local GpuDrivenPassExecutor gpuDrivenExecutor;
+        GpuDrivenPassExecutor& gpuDrivenExecutor = threadResources.GpuDrivenExecutor;
         if (featureTier == RenderFeatureTier::VulkanBaseline || featureTier == RenderFeatureTier::GPUDriven ||
             featureTier == RenderFeatureTier::Future)
         {
@@ -2459,8 +2491,8 @@ namespace Crowny
         uint64_t scheduledShadowPixels = 0;
         graphDesc.ScheduledShadowRenderer = [&](RenderGraphContext& context) {
             const ShadowUpdateBudget mediumBudget;
-            thread_local UnorderedSet<uint32_t> pendingShadowUpdates;
-            thread_local UnorderedSet<uint32_t> renderedShadowLights;
+            UnorderedSet<uint32_t>& pendingShadowUpdates = threadResources.PendingShadowUpdates;
+            UnorderedSet<uint32_t>& renderedShadowLights = threadResources.RenderedShadowLights;
             Vector<ShadowUpdateRequest> budgetRequests;
             budgetRequests.reserve(snapshot.ShadowUpdateRequests.Size());
             for (const ShadowUpdateRequest& request : snapshot.ShadowUpdateRequests)
@@ -2478,7 +2510,7 @@ namespace Crowny
             for (RenderLightHandle light : scheduledShadows)
                 scheduledSet.insert(light.GetValue());
 
-            thread_local Vector<ShadowRenderView> shadowRenderViews;
+            Vector<ShadowRenderView>& shadowRenderViews = threadResources.ShadowRenderViews;
             uint32_t shadowRenderViewCount = 0;
             auto addShadowRenderView = [&](const glm::mat4& shadowView, const glm::mat4& shadowProjection,
                                            ShadowRenderTarget target, uint32_t layer, const glm::vec4& viewport,
@@ -2498,9 +2530,9 @@ namespace Crowny
                 gpuScene.BuildCpuDrawList(cullingView, output.DrawList, &output.DrawBuffers, true);
             };
 
-            thread_local ShadowAtlasAllocator spotShadowAtlas(2048, 128);
-            thread_local PointShadowLayerAllocator pointShadowLayers(16);
-            thread_local UnorderedSet<uint32_t> previousSpotLights;
+            ShadowAtlasAllocator& spotShadowAtlas = threadResources.SpotShadowAtlas;
+            PointShadowLayerAllocator& pointShadowLayers = threadResources.PointShadowLayers;
+            UnorderedSet<uint32_t>& previousSpotLights = threadResources.PreviousSpotLights;
             UnorderedSet<uint32_t> activeSpotLights;
             UnorderedSet<uint32_t> activePointLights;
             activeSpotLights.reserve(snapshot.ShadowUpdateRequests.Size());

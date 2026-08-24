@@ -17,6 +17,7 @@ namespace Crowny
         virtual void OnManagedInstanceDeleted(bool assemblyRefresh) override;
         virtual void NotifyDestroyed() override;
 
+        String m_Assembly;
         String m_Namespace;
         String m_TypeName;
         uint64_t m_ScriptInstanceId = 0;

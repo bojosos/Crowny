@@ -465,6 +465,8 @@ namespace Crowny
     MonoScript::MonoScript(const String& assemblyName, MonoReflectionType* runtimeType)
       : m_Identity{ assemblyName, {}, {} }, m_RuntimeType(runtimeType), InstanceId(s_NextAvailableId++)
     {
+        if (runtimeType == nullptr)
+            return;
         MonoUtils::GetClassName(runtimeType, m_Identity.Namespace, m_Identity.TypeName);
         if (MonoManager::IsStartedUp())
         {
@@ -475,8 +477,8 @@ namespace Crowny
     }
 
     MonoScript::MonoScript(const MonoScript& other)
-      : InstanceId(s_NextAvailableId.fetch_add(1, std::memory_order_relaxed)), m_Identity(other.m_Identity),
-        m_MissingType(other.m_MissingType), m_SerializedObjectData(other.CapturePersistedState().Fields)
+      : InstanceId(s_NextAvailableId.fetch_add(1, std::memory_order_relaxed)), m_Identity(other.m_Identity), m_MissingType(other.m_MissingType),
+        m_SerializedObjectData(other.CapturePersistedState().Fields)
     {
     }
 
@@ -519,8 +521,8 @@ namespace Crowny
     {
         if (state.Identity != m_Identity)
         {
-            CW_ENGINE_WARN("Cannot apply persisted state for '{}:{}' to script '{}:{}'.", state.Identity.Assembly,
-                           state.Identity.GetFullName(), m_Identity.Assembly, m_Identity.GetFullName());
+            CW_ENGINE_WARN("Cannot apply persisted state for '{}:{}' to script '{}:{}'.", state.Identity.Assembly, state.Identity.GetFullName(),
+                           m_Identity.Assembly, m_Identity.GetFullName());
             return false;
         }
 
@@ -546,8 +548,8 @@ namespace Crowny
             return false;
 
         m_Class = MonoManager::Get().FindClass(m_Identity.Assembly, m_Identity.Namespace, m_Identity.TypeName);
-        if (m_Class == nullptr || !ScriptInfoManager::Get().GetSerializableObjectInfo(
-                                  m_Identity.Assembly, m_Identity.Namespace, m_Identity.TypeName, m_ObjectInfo))
+        if (m_Class == nullptr ||
+            !ScriptInfoManager::Get().GetSerializableObjectInfo(m_Identity.Assembly, m_Identity.Namespace, m_Identity.TypeName, m_ObjectInfo))
         {
             m_ObjectInfo = nullptr;
             m_Class = nullptr;
@@ -923,8 +925,7 @@ namespace Crowny
     {
         if (!entity || !m_Identity.IsValid())
         {
-            CW_ENGINE_WARN("Cannot create managed script with invalid persisted identity '{}:{}'.", m_Identity.Assembly,
-                           m_Identity.GetFullName());
+            CW_ENGINE_WARN("Cannot create managed script with invalid persisted identity '{}:{}'.", m_Identity.Assembly, m_Identity.GetFullName());
             return;
         }
         if (!MonoManager::IsStartedUp() || !ScriptInfoManager::IsStartedUp() || !ScriptSceneObjectManager::IsStartedUp())
@@ -1127,19 +1128,6 @@ namespace Crowny
         }
     }
 
-    ScriptObjectBackupData MonoScript::Backup()
-    {
-        ScriptObjectBackupData data{ CapturePersistedState().Fields };
-        ResetRuntimeCallbacks();
-        return data;
-    }
-
-    void MonoScript::Restore(const ScriptObjectBackupData& data)
-    {
-        OnInitialize(m_ScriptEntityBehaviour);
-        ApplyPersistedState({ m_Identity, data.SerializedObject });
-    }
-
     void MonoScript::SetClassName(const String& className)
     {
         const size_t namespaceSeparator = className.find_last_of('.');
@@ -1163,20 +1151,11 @@ namespace Crowny
         ResetRuntimeCallbacks();
     }
 
-    void MonoScript::OnStart()
-    {
-        GetStartCallback().Invoke();
-    }
+    void MonoScript::OnStart() { GetStartCallback().Invoke(); }
 
-    void MonoScript::OnUpdate()
-    {
-        GetUpdateCallback().Invoke();
-    }
+    void MonoScript::OnUpdate() { GetUpdateCallback().Invoke(); }
 
-    void MonoScript::OnDestroy()
-    {
-        GetDestroyCallback().Invoke();
-    }
+    void MonoScript::OnDestroy() { GetDestroyCallback().Invoke(); }
 
     void MonoScript::RuntimeCallback::Invoke() const
     {
@@ -1184,33 +1163,11 @@ namespace Crowny
             MonoUtils::InvokeThunk(Thunk, Instance);
     }
 
-    MonoScript::RuntimeCallback MonoScript::GetStartCallback() const
-    {
-        return { GetManagedInstance(), m_OnStartThunk };
-    }
+    MonoScript::RuntimeCallback MonoScript::GetStartCallback() const { return { GetManagedInstance(), m_OnStartThunk }; }
 
-    MonoScript::RuntimeCallback MonoScript::GetUpdateCallback() const
-    {
-        return { GetManagedInstance(), m_OnUpdateThunk };
-    }
+    MonoScript::RuntimeCallback MonoScript::GetUpdateCallback() const { return { GetManagedInstance(), m_OnUpdateThunk }; }
 
-    MonoScript::RuntimeCallback MonoScript::GetDestroyCallback() const
-    {
-        return { GetManagedInstance(), m_OnDestroyThunk };
-    }
-
-    ScriptObjectBackupData MonoScriptComponent::Backup(bool clearExisting)
-    {
-        for (auto& script : Scripts)
-            return script.Backup();
-        return {};
-    }
-
-    void MonoScriptComponent::Restore(const ScriptObjectBackupData& data)
-    {
-        for (auto& script : Scripts)
-            script.Restore(data);
-    }
+    MonoScript::RuntimeCallback MonoScript::GetDestroyCallback() const { return { GetManagedInstance(), m_OnDestroyThunk }; }
 
     struct CollisionDataInterop
     {

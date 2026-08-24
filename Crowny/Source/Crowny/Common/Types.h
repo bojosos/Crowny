@@ -68,7 +68,7 @@ namespace Crowny
 
     struct ScriptObjectBackupData
     {
-        Ref<SerializableObject> SerializedObject;
+        Vector<uint8_t> Data;
     };
 
     using byte = uint8_t;

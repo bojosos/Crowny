@@ -33,11 +33,11 @@ namespace Crowny
         VulkanGenericGpuBuffer(uint32_t elementCount, uint32_t elementSize, GpuBufferType type, GpuBufferFormat format, BufferUsage usage);
 
     private:
-        VulkanGpuBuffer* m_Buffer;
+        Scope<VulkanGpuBuffer> m_Buffer;
         BufferUsage m_Usage;
 
-        VkBufferView m_BufferView;
-        VkBuffer m_CacheBuffer;
+        VkBufferView m_BufferView = VK_NULL_HANDLE;
+        VkBuffer m_CacheBuffer = VK_NULL_HANDLE;
         GpuBufferType m_BufferType;
         GpuBufferFormat m_BufferFormat;
     };

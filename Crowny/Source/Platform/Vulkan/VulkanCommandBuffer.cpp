@@ -1128,7 +1128,6 @@ namespace Crowny
             barrier.pNext = nullptr;
             barrier.srcAccessMask = m_MemoryBarrierSrcAccess;
             barrier.dstAccessMask = m_MemoryBarrierDstAccess;
-            CW_ENGINE_INFO("Big slow barrier");
             vkCmdPipelineBarrier(m_CmdBuffer, m_MemoryBarrierSrcStages, m_MemoryBarrierDstStages, 0, 1, &barrier, 0, nullptr, 0, nullptr);
         }
         else

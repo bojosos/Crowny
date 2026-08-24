@@ -1,10 +1,12 @@
 #include "cwpch.h"
 
 #include "Crowny/Ecs/Components.h"
+#include "Crowny/Scene/Scene.h"
+#include "Crowny/Scene/SceneManager.h"
 #include "Crowny/Scripting/Serialization/SerializableField.h"
-#include "Crowny/Serialization/ScriptSerializer.h"
-
+#include "Crowny/Scripting/Serialization/SerializableObject.h"
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
+#include "Crowny/Serialization/ScriptSerializer.h"
 
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldBool, "Bool")
 CEREAL_REGISTER_TYPE_WITH_NAME(Crowny::SerializableFieldChar, "Char")
@@ -82,6 +84,27 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(Crowny::SerializableMemberInfo, Crowny::Ser
 
 namespace Crowny
 {
+    namespace
+    {
+        thread_local Scene* s_ScriptSerializationScene = nullptr;
+    }
+
+    ScriptSerializationSceneScope::ScriptSerializationSceneScope(Scene* scene) : m_PreviousScene(s_ScriptSerializationScene)
+    {
+        s_ScriptSerializationScene = scene;
+    }
+
+    ScriptSerializationSceneScope::~ScriptSerializationSceneScope() { s_ScriptSerializationScene = m_PreviousScene; }
+
+    Scene* GetScriptSerializationScene()
+    {
+        if (s_ScriptSerializationScene != nullptr)
+            return s_ScriptSerializationScene;
+        if (SceneManager::TryGet() == nullptr)
+            return nullptr;
+        const Ref<Scene>& activeScene = SceneManager::TryGet()->GetActiveScene();
+        return activeScene.get();
+    }
 
     struct FieldEntry
     {
@@ -159,8 +182,9 @@ namespace Crowny
     {
         UUID uuid;
         archive(uuid);
-        if (uuid != UUID::EMPTY && SceneManager::TryGet()->GetActiveScene())
-            data.Value = SceneManager::TryGet()->GetActiveScene()->GetEntityFromUuid(uuid);
+        Scene* scene = GetScriptSerializationScene();
+        if (uuid != UUID::EMPTY && scene != nullptr)
+            data.Value = scene->TryGetEntityFromUuid(uuid);
     }
 
     template <typename Archive> void Save(Archive& archive, const SerializableFieldAsset& data)
@@ -238,24 +262,6 @@ namespace Crowny
         archive(memberInfo.m_Name, memberInfo.m_TypeInfo, memberInfo.m_FieldId, memberInfo.m_Flags, memberInfo.m_ParentTypeId);
     }
 
-    void ScriptSerializer::Serialize(SerializableObject* object)
-    {
-        /*
-        YAML::Emitter out;
-        out << YAML::Comment("Crowny Scene");
-
-        out << YAML::BeginMap;
-        for (auto& field : object->m_ObjectInfo)
-        {
-            Ref<SerializableFieldData> data = object->GetFieldData(field.second);
-            out << YAML::Key << field.first->m_Field->GetName() << YAML::Value;
-            field.second->Serialize(out);
-        }
-
-        out << YAML::EndSeq << YAML::EndMap;
-        m_Scene->m_Filepath = filepath;*/
-    }
-
     void Save(BinaryDataStreamOutputArchive& archive, const SerializableObject& object)
     {
         archive(object.m_ObjectInfo);
@@ -270,6 +276,11 @@ namespace Crowny
                 {
                     Ref<SerializableFieldKey> key = CreateRef<SerializableFieldKey>(field->m_ParentTypeId, field->m_FieldId);
                     Ref<SerializableFieldData> data = object.GetFieldData(field);
+                    if (data == nullptr)
+                    {
+                        CW_ENGINE_WARN("Skipping managed field '{}' because it has no persisted value.", field->m_Name);
+                        continue;
+                    }
                     FieldEntry& entry = entries.emplace_back();
                     entry.Key = key;
                     entry.Data = data;
@@ -286,12 +297,14 @@ namespace Crowny
         Vector<FieldEntry> entries;
         archive(entries);
         for (const auto& fieldEntry : entries)
+        {
+            if (fieldEntry.Key == nullptr || fieldEntry.Data == nullptr)
+            {
+                CW_ENGINE_WARN("Skipping malformed managed field entry in persisted state.");
+                continue;
+            }
             object.m_CachedData[*fieldEntry.Key] = fieldEntry.Data;
+        }
     }
-
-    // Ref<SerializableScriptObject> ScriptSerializer::Deserialize(Ref<MemoryDataStream>& stream)
-    // {
-    // for (auto& field : )
-    // }
 
 } // namespace Crowny

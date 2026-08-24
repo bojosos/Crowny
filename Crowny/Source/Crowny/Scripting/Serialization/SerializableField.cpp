@@ -5,6 +5,7 @@
 #include "Crowny/Scripting/Bindings/Assets/ScriptAsset.h"
 #include "Crowny/Scripting/Serialization/SerializableField.h"
 #include "Crowny/Scripting/Serialization/SerializableObject.h"
+#include "Crowny/Serialization/ScriptSerializer.h"
 
 #include "Crowny/Scripting/Mono/MonoArray.h"
 #include "Crowny/Scripting/Mono/MonoClass.h"
@@ -15,6 +16,13 @@
 
 namespace Crowny
 {
+
+    void SerializableFieldEntity::DeserializeYAML(const YAML::Node& node)
+    {
+        Scene* scene = GetScriptSerializationScene();
+        const UUID uuid = node.as<UUID>();
+        Value = scene != nullptr && uuid != UUID::EMPTY ? scene->TryGetEntityFromUuid(uuid) : Entity{};
+    }
 
     Ref<SerializableFieldData> SerializableFieldData::Create(const Ref<SerializableTypeInfo>& typeInfo, MonoObject* value, bool allowNull)
     {
@@ -149,7 +157,8 @@ namespace Crowny
             if (value != nullptr)
             {
                 ScriptEntity* scriptEntity = ScriptEntity::ToNative(value);
-                fieldData->Value = scriptEntity->GetNativeEntity();
+                if (scriptEntity != nullptr)
+                    fieldData->Value = scriptEntity->GetNativeEntity();
             }
             return fieldData;
         }

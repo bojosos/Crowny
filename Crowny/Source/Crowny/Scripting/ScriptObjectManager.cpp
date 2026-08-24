@@ -49,14 +49,17 @@ namespace Crowny
 
         ProcessFinalizedObjects(false);
 
+        Vector<ScriptObjectBase*> persistentObjects;
         {
             Lock lock(m_Mutex);
-            for (const auto& scriptObject : m_ScriptObjects)
-                backupData[scriptObject] = scriptObject->BeginRefresh();
-
-            for (const auto& scriptObject : m_ScriptObjects)
-                scriptObject->ClearManagedInstance();
+            persistentObjects.assign(m_ScriptObjects.begin(), m_ScriptObjects.end());
         }
+        // Managed getters and wrapper cleanup may register or unregister native
+        // script objects. Never run them while holding the manager mutex.
+        for (ScriptObjectBase* scriptObject : persistentObjects)
+            backupData[scriptObject] = scriptObject->BeginRefresh();
+        for (ScriptObjectBase* scriptObject : persistentObjects)
+            scriptObject->ClearManagedInstance();
 
         ScriptInfoManager::Get().ClearAssemblyInfo();
         MonoManager::Get().UnloadScriptDomain();
@@ -64,51 +67,51 @@ namespace Crowny
         ProcessFinalizedObjects(true);
 
         bool loaded = true;
+        Vector<ScriptObjectBase*> scriptObjCopy;
         {
             Lock lock(m_Mutex);
             for (const auto& scriptObject : m_ScriptObjects)
                 CW_ENGINE_ASSERT(scriptObject->IsPersistent());
+            scriptObjCopy.assign(m_ScriptObjects.begin(), m_ScriptObjects.end());
+        }
 
-            for (const auto& entry : assemblies)
+        for (const auto& entry : assemblies)
+        {
+            MonoAssembly& assembly = MonoManager::Get().LoadAssembly(entry.Filepath, entry.Name);
+            if (!assembly.IsLoaded())
+            {
+                loaded = false;
+                break;
+            }
+            ScriptInfoManager::Get().LoadAssemblyInfo(entry.Name);
+        }
+
+        if (!loaded)
+        {
+            CW_ENGINE_ERROR("Managed assembly refresh failed after validation. Restoring the previous domain.");
+            ScriptInfoManager::Get().ClearAssemblyInfo();
+            MonoManager::Get().UnloadScriptDomain();
+            for (const AssemblyRefreshInfo& entry : previousAssemblies)
             {
                 MonoAssembly& assembly = MonoManager::Get().LoadAssembly(entry.Filepath, entry.Name);
                 if (!assembly.IsLoaded())
                 {
-                    loaded = false;
-                    break;
+                    CW_ENGINE_CRITICAL("Could not restore the last working managed assembly {0} from {1}.", entry.Name, entry.Filepath.string());
+                    continue;
                 }
                 ScriptInfoManager::Get().LoadAssemblyInfo(entry.Name);
             }
+        }
 
-            if (!loaded)
-            {
-                CW_ENGINE_ERROR("Managed assembly refresh failed after validation. Restoring the previous domain.");
-                ScriptInfoManager::Get().ClearAssemblyInfo();
-                MonoManager::Get().UnloadScriptDomain();
-                for (const AssemblyRefreshInfo& entry : previousAssemblies)
-                {
-                    MonoAssembly& assembly = MonoManager::Get().LoadAssembly(entry.Filepath, entry.Name);
-                    if (!assembly.IsLoaded())
-                    {
-                        CW_ENGINE_CRITICAL("Could not restore the last working managed assembly {0} from {1}.", entry.Name, entry.Filepath.string());
-                        continue;
-                    }
-                    ScriptInfoManager::Get().LoadAssemblyInfo(entry.Name);
-                }
-            }
+        // OnRefreshDomainLoaded();
 
-            Vector<ScriptObjectBase*> scriptObjCopy(m_ScriptObjects.size());
-            uint32_t idx = 0;
-            for (const auto& scriptObject : m_ScriptObjects)
-                scriptObjCopy[idx++] = scriptObject;
+        for (ScriptObjectBase* scriptObject : scriptObjCopy)
+            scriptObject->RestoreManagedInstance();
 
-            // OnRefreshDomainLoaded();
-
-            for (const auto& scriptObject : scriptObjCopy)
-                scriptObject->RestoreManagedInstance();
-
-            for (const auto& scriptObject : scriptObjCopy)
-                scriptObject->EndRefresh(backupData[scriptObject]);
+        for (ScriptObjectBase* scriptObject : scriptObjCopy)
+        {
+            const auto backup = backupData.find(scriptObject);
+            scriptObject->EndRefresh(backup != backupData.end() ? backup->second : ScriptObjectBackupData{});
         }
 
         // OnRefreshComplete();

@@ -2,6 +2,9 @@
 
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntityBehaviour.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
+#include "Crowny/Scripting/Serialization/SerializableObject.h"
+#include "Crowny/Serialization/CerealDataStreamArchive.h"
+#include "Crowny/Serialization/ScriptSerializer.h"
 
 namespace Crowny
 {
@@ -9,6 +12,7 @@ namespace Crowny
       : ScriptObject(instance), m_TypeMissing(false)
     {
         m_Entity = entity;
+        m_Assembly = script.GetAssemblyName();
         m_Namespace = script.GetNamespace();
         m_TypeName = script.GetTypeName();
         m_ScriptInstanceId = script.InstanceId;
@@ -22,8 +26,20 @@ namespace Crowny
         MonoScriptComponent& msc = m_Entity.GetComponent<MonoScriptComponent>();
         for (auto& script : msc.Scripts)
         {
-            if (script.GetNamespace() == m_Namespace && script.GetTypeName() == m_TypeName)
-                return script.Backup();
+            if (script.GetTypeIdentity() == ScriptTypeIdentity{ m_Assembly, m_Namespace, m_TypeName })
+            {
+                const PersistedScriptState state = script.CapturePersistedState();
+                ScriptObjectBackupData data;
+                if (state.Fields == nullptr)
+                    return data;
+                Ref<MemoryDataStream> stream = CreateRef<MemoryDataStream>();
+                BinaryDataStreamOutputArchive archive(stream);
+                archive(state.Fields);
+                data.Data.resize(stream->Size());
+                if (!data.Data.empty())
+                    std::memcpy(data.Data.data(), stream->Data(), data.Data.size());
+                return data;
+            }
         }
         return {};
     }
@@ -34,9 +50,18 @@ namespace Crowny
         MonoScriptComponent& msc = m_Entity.GetComponent<MonoScriptComponent>();
         for (auto& script : msc.Scripts)
         {
-            if (script.GetNamespace() == m_Namespace && script.GetTypeName() == m_TypeName)
+            if (script.GetTypeIdentity() == ScriptTypeIdentity{ m_Assembly, m_Namespace, m_TypeName })
             {
-                script.Restore(data, m_TypeMissing);
+                script.OnInitialize(this);
+                Ref<SerializableObject> fields;
+                if (!data.Data.empty())
+                {
+                    ScriptSerializationSceneScope sceneScope(m_Entity.GetScene());
+                    Ref<MemoryDataStream> stream = CreateRef<MemoryDataStream>(const_cast<uint8_t*>(data.Data.data()), data.Data.size());
+                    BinaryDataStreamInputArchive archive(stream);
+                    archive(fields);
+                }
+                script.ApplyPersistedState({ script.GetTypeIdentity(), fields });
                 return;
             }
         }
@@ -47,7 +72,7 @@ namespace Crowny
         Ref<SerializableObjectInfo> currentObjInfo = nullptr;
 
         MonoObject* instance;
-        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(m_Namespace, m_TypeName, currentObjInfo))
+        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(m_Assembly, m_Namespace, m_TypeName, currentObjInfo))
         {
             m_TypeMissing = true;
             instance = ScriptInfoManager::Get().GetBuiltinClasses().MissingEntityBehaviour->CreateInstance(true);
@@ -72,7 +97,16 @@ namespace Crowny
             ScriptSceneObjectManager::Get().DestroyScriptComponent(this, m_ScriptInstanceId);
     }
 
-    void ScriptEntityBehaviour::NotifyDestroyed() { FreeManagedInstance(); }
+    void ScriptEntityBehaviour::NotifyDestroyed()
+    {
+        MonoObject* instance = GetManagedInstance();
+        if (instance != nullptr && MetaData.CachedPtrField != nullptr)
+        {
+            ScriptEntityBehaviour* cleared = nullptr;
+            MetaData.CachedPtrField->Set(instance, &cleared);
+        }
+        FreeManagedInstance();
+    }
 
     void ScriptEntityBehaviour::InitRuntimeData() {}
 } // namespace Crowny

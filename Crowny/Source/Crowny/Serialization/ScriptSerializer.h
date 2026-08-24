@@ -1,21 +1,24 @@
 #pragma once
 
-#include "Crowny/Common/DataStream.h"
-#include "Crowny/Scripting/Serialization/SerializableObject.h"
-// #include "Crowny/Scripting/Serialization/"
-
 namespace Crowny
 {
+    class Scene;
 
-    class ScriptSerializer
+    Scene* GetScriptSerializationScene();
+
+    // Selects the scene used to resolve entity UUIDs while managed field data
+    // is being materialized. Scopes nest, which keeps editor/play-scene reloads
+    // independent from SceneManager's globally active scene.
+    class ScriptSerializationSceneScope
     {
     public:
-        ScriptSerializer() = default;
+        explicit ScriptSerializationSceneScope(Scene* scene);
+        ~ScriptSerializationSceneScope();
 
-        void Serialize(SerializableObject* object);
-        // Ref<SerializableScriptObject> Deserialize(Ref<MemoryDataStream>& stream);
+        ScriptSerializationSceneScope(const ScriptSerializationSceneScope&) = delete;
+        ScriptSerializationSceneScope& operator=(const ScriptSerializationSceneScope&) = delete;
+
     private:
-        Scene* m_Scene;
+        Scene* m_PreviousScene = nullptr;
     };
-
 } // namespace Crowny

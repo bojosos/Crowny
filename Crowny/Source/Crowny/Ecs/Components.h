@@ -603,6 +603,8 @@ namespace Crowny
         MonoScript(const String& assemblyName, MonoReflectionType* runtimeType);
         MonoScript(const MonoScript& other);
         MonoScript& operator=(const MonoScript& other);
+        MonoScript(MonoScript&& other) noexcept = default;
+        MonoScript& operator=(MonoScript&& other) noexcept = default;
 
         void SetClassName(const String& className);
         MonoClass* GetManagedClass() const;
@@ -613,9 +615,6 @@ namespace Crowny
 
         PersistedScriptState CapturePersistedState() const;
         bool ApplyPersistedState(const PersistedScriptState& state);
-
-        ScriptObjectBackupData BeginRefresh();
-        void EndRefresh(const ScriptObjectBackupData& data);
 
         const ScriptTypeIdentity& GetTypeIdentity() const { return m_Identity; }
         const String& GetAssemblyName() const { return m_Identity.Assembly; }
@@ -649,9 +648,6 @@ namespace Crowny
         void OnTriggerExit3D(Entity other);
 
         uint64_t InstanceId; // These also require one for scripting
-
-        ScriptObjectBackupData Backup();
-        void Restore(const ScriptObjectBackupData& backupData);
 
     private:
         bool ResolveObjectInfo();
@@ -696,9 +692,6 @@ namespace Crowny
     public:
         MonoScriptComponent() : ComponentBase() {}
         MonoScriptComponent(const MonoScriptComponent&) = default;
-
-        ScriptObjectBackupData Backup(bool clearExisting = true);
-        void Restore(const ScriptObjectBackupData& data);
 
         Vector<MonoScript> Scripts;
     };
@@ -1158,9 +1151,9 @@ namespace Crowny
 
     using AllComponents =
       ComponentGroup<TransformComponent, CameraComponent, LightComponent, TextComponent, SpriteRendererComponent, MeshRendererComponent,
-                     ProceduralMeshComponent, AudioSourceComponent, AudioListenerComponent, RelationshipComponent, MonoScriptComponent, Rigidbody2DComponent,
-                     BoxCollider2DComponent, CircleCollider2DComponent, Rigidbody3DComponent, BoxCollider3DComponent, SphereCollider3DComponent,
-                     CapsuleCollider3DComponent, AnimationComponent, PrefabComponent>;
+                     ProceduralMeshComponent, AudioSourceComponent, AudioListenerComponent, RelationshipComponent, MonoScriptComponent,
+                     Rigidbody2DComponent, BoxCollider2DComponent, CircleCollider2DComponent, Rigidbody3DComponent, BoxCollider3DComponent,
+                     SphereCollider3DComponent, CapsuleCollider3DComponent, AnimationComponent, PrefabComponent>;
 
     using TransformChangedNotifyComponents = ComponentGroup<AudioListenerComponent, AudioSourceComponent>;
 } // namespace Crowny

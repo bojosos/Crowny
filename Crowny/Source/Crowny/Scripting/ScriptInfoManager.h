@@ -106,8 +106,7 @@ namespace Crowny
 
         ScriptTypeInfo* GetSerializableTypeInfo(MonoReflectionType* reflType);
 
-        bool GetSerializableObjectInfo(const String& assemblyName, const String& ns, const String& name,
-                                       Ref<SerializableObjectInfo>& outInfo);
+        bool GetSerializableObjectInfo(const String& assemblyName, const String& ns, const String& name, Ref<SerializableObjectInfo>& outInfo);
         bool GetSerializableObjectInfo(const String& ns, const String& name, Ref<SerializableObjectInfo>& outInfo);
 
     private:

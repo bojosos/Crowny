@@ -1,3 +1,4 @@
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
@@ -13,10 +14,20 @@
 #include "Crowny/Physics/Physics3D.h"
 #include "Crowny/Renderer/TextLayout.h"
 #include "Crowny/Scene/Scene.h"
+#include "Crowny/Scripting/Mono/MonoManager.h"
+#include "Crowny/Scripting/ScriptInfoManager.h"
+#include "Crowny/Scripting/ScriptObjectManager.h"
+#include "Crowny/Scripting/Serialization/SerializableField.h"
+#include "Crowny/Scripting/Serialization/SerializableObject.h"
+#include "Crowny/Scripting/Serialization/SerializableObjectInfo.h"
+#include "Crowny/Serialization/CerealDataStreamArchive.h"
 #include "Crowny/Serialization/SceneComponentCodec.h"
 #include "Crowny/Serialization/SceneSerializer.h"
 
 using namespace Crowny;
+
+static_assert(std::is_nothrow_move_constructible_v<MonoScript>);
+static_assert(std::is_nothrow_move_assignable_v<MonoScript>);
 
 namespace
 {
@@ -42,6 +53,102 @@ namespace
         component.VerticalAlignment = TextVerticalAlignment::Baseline;
         return component;
     }
+
+    struct RetainedScriptFields
+    {
+        Ref<SerializableObject> Object;
+        Ref<SerializableMemberInfo> Field;
+    };
+
+    RetainedScriptFields MakeRetainedScriptFields(const ScriptTypeIdentity& identity, int32_t value)
+    {
+        Ref<SerializableTypeInfoObject> objectType = CreateRef<SerializableTypeInfoObject>();
+        objectType->m_TypeNamespace = identity.Namespace;
+        objectType->m_TypeName = identity.TypeName;
+        objectType->m_TypeId = 1;
+        objectType->m_ValueType = false;
+        objectType->m_Flags = ScriptFieldFlagBits::Serializable;
+
+        Ref<SerializableObjectInfo> objectInfo = CreateRef<SerializableObjectInfo>();
+        objectInfo->m_TypeInfo = objectType;
+
+        Ref<SerializableTypeInfoPrimitive> fieldType = CreateRef<SerializableTypeInfoPrimitive>();
+        fieldType->m_Type = ScriptPrimitiveType::I32;
+        Ref<SerializableFieldInfo> field = CreateRef<SerializableFieldInfo>();
+        field->m_Name = "Value";
+        field->m_FieldId = 1;
+        field->m_ParentTypeId = objectType->m_TypeId;
+        field->m_TypeInfo = fieldType;
+        field->m_Flags = ScriptFieldFlagBits::Serializable;
+        objectInfo->m_Fields[field->m_FieldId] = field;
+        objectInfo->m_FieldNameToId[field->m_Name] = field->m_FieldId;
+
+        Ref<SerializableObject> object = CreateRef<SerializableObject>(objectInfo);
+        Ref<SerializableFieldI32> fieldData = CreateRef<SerializableFieldI32>();
+        fieldData->Value = value;
+        object->SetFieldData(field, fieldData);
+        return { object, field };
+    }
+
+    int32_t ReadRetainedScriptValue(const PersistedScriptState& state, const Ref<SerializableMemberInfo>& field)
+    {
+        if (state.Fields == nullptr)
+            throw std::runtime_error("Persisted script fields are missing");
+        Ref<SerializableFieldData> data = state.Fields->GetFieldData(field);
+        if (data == nullptr)
+            throw std::runtime_error("Persisted script field is missing");
+        return StaticRefCast<SerializableFieldI32>(data)->Value;
+    }
+
+    float ReadRetainedScriptFloat(const PersistedScriptState& state, const Ref<SerializableMemberInfo>& field)
+    {
+        if (state.Fields == nullptr)
+            throw std::runtime_error("Persisted script fields are missing");
+        Ref<SerializableFieldData> data = state.Fields->GetFieldData(field);
+        if (data == nullptr)
+            throw std::runtime_error("Persisted script field is missing");
+        return StaticRefCast<SerializableFieldFloat>(data)->Value;
+    }
+
+    Ref<SerializableObject> DetachScriptFields(const Ref<SerializableObject>& fields)
+    {
+        Ref<MemoryDataStream> stream = CreateRef<MemoryDataStream>();
+        BinaryDataStreamOutputArchive output(stream);
+        output(fields);
+        stream->Seek(0);
+        Ref<SerializableObject> detached;
+        BinaryDataStreamInputArchive input(stream);
+        input(detached);
+        return detached;
+    }
+
+    void WriteLegacyBinaryScriptScene(const Path& path, const ScriptTypeIdentity& identity, const Ref<SerializableObject>& fields)
+    {
+        Ref<DataStream> stream = FileSystem::CreateAndOpenFile(path);
+        BinaryDataStreamOutputArchive archive(stream);
+        archive(uint32_t{ 6 }, String("Legacy scripts"), String());
+        archive(uint32_t{ 1 });
+        archive(UuidGenerator::Generate(), String("Script host"), uint32_t{ 1 });
+        archive(static_cast<uint32_t>(SceneComponentId::MonoScript));
+        archive(uint32_t{ 1 }, identity.TypeName);
+        Save(archive, *fields);
+
+        TimeSettings timeSettings;
+        archive(timeSettings.TimeScale, timeSettings.MaxTimestep, timeSettings.FixedTimestep);
+        Physics2DSettings physics2D;
+        archive(physics2D.Gravity.x, physics2D.Gravity.y, physics2D.VelocityIterations, physics2D.PositionIterations);
+        for (const String& layerName : physics2D.LayerNames)
+            archive(layerName);
+        for (uint32_t mask : physics2D.MaskBits)
+            archive(mask);
+        archive(UUID::EMPTY);
+        Physics3DSettings physics3D;
+        archive(static_cast<uint32_t>(physics3D.Backend));
+        archive(physics3D.Gravity.x, physics3D.Gravity.y, physics3D.Gravity.z);
+        archive(physics3D.Substeps, physics3D.EnableSleeping, physics3D.EnableContinuousCollision, physics3D.Deterministic);
+        archive(UUID::EMPTY);
+        stream->Close();
+    }
 } // namespace
 
 // Minimal fixture for scene serialization tests.
@@ -62,6 +169,215 @@ public:
 
     ~SerializationTestFixture() {}
 };
+
+TEST_CASE("MonoScript vector moves preserve runtime identity", "[Scene][Scripting][Lifetime]")
+{
+    Vector<MonoScript> scripts;
+    scripts.reserve(1);
+    scripts.emplace_back(ScriptTypeIdentity{ GAME_ASSEMBLY, "Sandbox", "First" });
+    const uint64_t firstId = scripts.front().InstanceId;
+
+    scripts.emplace_back(ScriptTypeIdentity{ GAME_ASSEMBLY, "Sandbox", "Second" });
+    const uint64_t secondId = scripts.back().InstanceId;
+    CHECK(scripts.front().InstanceId == firstId);
+
+    scripts.erase(scripts.begin());
+    REQUIRE(scripts.size() == 1);
+    CHECK(scripts.front().InstanceId == secondId);
+}
+
+TEST_CASE("MonoScript retains persisted state without a managed instance", "[Serialization][Scripting][PersistedState]")
+{
+    const ScriptTypeIdentity identity{ "Missing.Assembly", "Missing.Namespace", "MissingType" };
+    const RetainedScriptFields retained = MakeRetainedScriptFields(identity, 37);
+    const PersistedScriptState input{ identity, retained.Object };
+
+    MonoScript script(identity);
+    REQUIRE(script.ApplyPersistedState(input));
+    const PersistedScriptState captured = script.CapturePersistedState();
+    CHECK(captured.Identity == identity);
+    CHECK(ReadRetainedScriptValue(captured, retained.Field) == 37);
+    CHECK(script.GetManagedInstance() == nullptr);
+
+    MonoScript copied(script);
+    CHECK(copied.GetTypeIdentity() == identity);
+    CHECK(ReadRetainedScriptValue(copied.CapturePersistedState(), retained.Field) == 37);
+    MonoScript assigned;
+    assigned = script;
+    CHECK(assigned.GetTypeIdentity() == identity);
+    CHECK(ReadRetainedScriptValue(assigned.CapturePersistedState(), retained.Field) == 37);
+}
+
+TEST_CASE("Missing managed scripts round-trip with exact identity and fields", "[Serialization][Scripting][PersistedState]")
+{
+    SerializationTestFixture fixture;
+    const ScriptTypeIdentity identity{ "Unavailable.Assembly", "Preserved.Namespace", "GhostBehaviour" };
+    const RetainedScriptFields retained = MakeRetainedScriptFields(identity, 91);
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    scene->SetName("Missing scripts");
+    Entity entity = scene->CreateEntity("Script host");
+    REQUIRE(scene->AddScriptComponent(entity, PersistedScriptState{ identity, retained.Object }, false));
+
+    const auto verify = [&](const Ref<Scene>& loaded) {
+        const auto view = loaded->GetAllEntitiesWith<MonoScriptComponent>();
+        REQUIRE(view.size() == 1);
+        const MonoScriptComponent& component = view.get<MonoScriptComponent>(*view.begin());
+        REQUIRE(component.Scripts.size() == 1);
+        const PersistedScriptState state = component.Scripts.front().CapturePersistedState();
+        CHECK(state.Identity == identity);
+        CHECK(ReadRetainedScriptValue(state, retained.Field) == 91);
+    };
+
+    SECTION("YAML")
+    {
+        const Path path = fs::temp_directory_path() / "crowny-missing-script-state.yaml";
+        SceneSerializer(scene).Serialize(path);
+        const String yaml = FileSystem::OpenFile(path)->GetAsString();
+        CHECK(yaml.find("Assembly: Unavailable.Assembly") != String::npos);
+        CHECK(yaml.find("Namespace: Preserved.Namespace") != String::npos);
+        CHECK(yaml.find("TypeName: GhostBehaviour") != String::npos);
+        Ref<Scene> loaded = CreateRef<Scene>(false);
+        REQUIRE(SceneSerializer(loaded).Deserialize(path));
+        verify(loaded);
+        fs::remove(path);
+    }
+
+    SECTION("Binary")
+    {
+        const Path path = fs::temp_directory_path() / "crowny-missing-script-state.cwb";
+        SceneSerializer(scene).SerializeBinary(path);
+        Ref<Scene> loaded = CreateRef<Scene>(false);
+        REQUIRE(SceneSerializer(loaded).DeserializeBinary(path));
+        verify(loaded);
+        fs::remove(path);
+    }
+}
+
+TEST_CASE("Retained script state applies when its managed type becomes available", "[Serialization][Scripting][PersistedState][Reload]")
+{
+    SerializationTestFixture fixture;
+    const Path engineAssemblyPath = fs::absolute("Crowny-Sharp/CrownySharp.dll");
+    const Path gameAssemblyPath = fs::absolute("Crowny-Sandbox/GameAssembly.dll");
+    REQUIRE(fs::is_regular_file(engineAssemblyPath));
+    REQUIRE(fs::is_regular_file(gameAssemblyPath));
+
+    MonoManager::Get().LoadAssembly(engineAssemblyPath, CROWNY_ASSEMBLY);
+    ScriptInfoManager::Get().InitializeTypes();
+    ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
+    MonoManager::Get().LoadAssembly(gameAssemblyPath, GAME_ASSEMBLY);
+    ScriptInfoManager::Get().LoadAssemblyInfo(GAME_ASSEMBLY);
+    const ScriptTypeIdentity identity{ GAME_ASSEMBLY, "Sandbox", "CameraFollow" };
+    Ref<SerializableObjectInfo> initialInfo;
+    REQUIRE(ScriptInfoManager::Get().GetSerializableObjectInfo(identity.Assembly, identity.Namespace, identity.TypeName, initialInfo));
+    const auto initialFieldId = initialInfo->m_FieldNameToId.find("smoothSpeed");
+    REQUIRE(initialFieldId != initialInfo->m_FieldNameToId.end());
+    Ref<SerializableMemberInfo> initialField = initialInfo->m_Fields.at(initialFieldId->second);
+    Ref<Scene> sourceScene = CreateRef<Scene>(false);
+    Entity sourceEntity = sourceScene->CreateEntity("Source");
+    REQUIRE(sourceScene->AddScriptComponent(sourceEntity, identity));
+    MonoScript& sourceScript = sourceEntity.GetComponent<MonoScriptComponent>().Scripts.front();
+    Ref<SerializableObject> fields = sourceScript.CapturePersistedState().Fields;
+    REQUIRE(fields != nullptr);
+    Ref<SerializableFieldFloat> value = CreateRef<SerializableFieldFloat>();
+    value->Value = 7.25f;
+    fields->SetFieldData(initialField, value);
+    fields = DetachScriptFields(fields);
+    sourceScene->RemoveScriptComponent(sourceEntity, identity);
+    sourceScene = nullptr;
+
+    Vector<AssemblyRefreshInfo> engineOnly;
+    engineOnly.emplace_back(CROWNY_ASSEMBLY, &engineAssemblyPath);
+    REQUIRE(ScriptObjectManager::Get().RefreshAssemblies(engineOnly));
+    CHECK(MonoManager::Get().FindClass(identity.Assembly, identity.Namespace, identity.TypeName) == nullptr);
+
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity entity = scene->CreateEntity("Reload host");
+    REQUIRE(scene->AddScriptComponent(entity, PersistedScriptState{ identity, fields }));
+    MonoScript& script = entity.GetComponent<MonoScriptComponent>().Scripts.front();
+    CHECK(script.GetManagedClass() == nullptr);
+    CHECK(script.CapturePersistedState().Fields != nullptr);
+
+    Vector<AssemblyRefreshInfo> withGame;
+    withGame.emplace_back(CROWNY_ASSEMBLY, &engineAssemblyPath);
+    withGame.emplace_back(GAME_ASSEMBLY, &gameAssemblyPath);
+    REQUIRE(ScriptObjectManager::Get().RefreshAssemblies(withGame));
+    REQUIRE(script.GetManagedClass() != nullptr);
+    REQUIRE(script.GetManagedInstance() != nullptr);
+
+    Ref<SerializableObjectInfo> reloadedInfo;
+    REQUIRE(ScriptInfoManager::Get().GetSerializableObjectInfo(identity.Assembly, identity.Namespace, identity.TypeName, reloadedInfo));
+    const auto reloadedFieldId = reloadedInfo->m_FieldNameToId.find("smoothSpeed");
+    REQUIRE(reloadedFieldId != reloadedInfo->m_FieldNameToId.end());
+    Ref<SerializableMemberInfo> reloadedField = reloadedInfo->m_Fields.at(reloadedFieldId->second);
+    CHECK(ReadRetainedScriptFloat(script.CapturePersistedState(), reloadedField) == Catch::Approx(7.25f));
+}
+
+TEST_CASE("Legacy managed script entries still load", "[Serialization][Scripting][PersistedState][Legacy]")
+{
+    SerializationTestFixture fixture;
+    const ScriptTypeIdentity legacyIdentity{ GAME_ASSEMBLY, "Sandbox", "LegacyBehaviour" };
+    const RetainedScriptFields retained = MakeRetainedScriptFields(legacyIdentity, 123);
+
+    const auto verify = [&](const Ref<Scene>& loaded) {
+        const auto view = loaded->GetAllEntitiesWith<MonoScriptComponent>();
+        REQUIRE(view.size() == 1);
+        const MonoScriptComponent& component = view.get<MonoScriptComponent>(*view.begin());
+        REQUIRE(component.Scripts.size() == 1);
+        const PersistedScriptState state = component.Scripts.front().CapturePersistedState();
+        CHECK(state.Identity == legacyIdentity);
+        CHECK(ReadRetainedScriptValue(state, retained.Field) == 123);
+    };
+
+    SECTION("YAML mapping")
+    {
+        YAML::Emitter out;
+        out << YAML::BeginMap;
+        SerializeValueYAML(out, "Version", uint32_t{ 6 });
+        SerializeValueYAML(out, "Scene", "Legacy scripts");
+        SerializeValueYAML(out, "Entities", YAML::BeginSeq);
+        out << YAML::BeginMap;
+        SerializeValueYAML(out, "Entity", UuidGenerator::Generate());
+        BeginYAMLMap(out, "MonoScriptComponent");
+        SerializeValueYAML(out, legacyIdentity.TypeName.c_str(), YAML::BeginSeq);
+        retained.Object->SerializeYAML(out);
+        EndYAMLSeq(out);
+        EndYAMLMap(out, "MonoScriptComponent");
+        out << YAML::EndMap;
+        EndYAMLSeq(out);
+        out << YAML::EndMap;
+
+        const Path path = fs::temp_directory_path() / "crowny-legacy-script-state.yaml";
+        Ref<DataStream> stream = FileSystem::CreateAndOpenFile(path);
+        stream->Write(out.c_str(), out.size());
+        stream->Close();
+        Ref<Scene> loaded = CreateRef<Scene>(false);
+        REQUIRE(SceneSerializer(loaded).Deserialize(path));
+        verify(loaded);
+        fs::remove(path);
+    }
+
+    SECTION("Binary type name")
+    {
+        const Path path = fs::temp_directory_path() / "crowny-legacy-script-state.cwb";
+        WriteLegacyBinaryScriptScene(path, legacyIdentity, retained.Object);
+        Ref<Scene> loaded = CreateRef<Scene>(false);
+        REQUIRE(SceneSerializer(loaded).DeserializeBinary(path));
+        verify(loaded);
+        fs::remove(path);
+    }
+}
+
+TEST_CASE("Duplicate managed script identities are rejected", "[Scene][Scripting][PersistedState]")
+{
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Entity entity = scene->CreateEntity("Script host");
+    const ScriptTypeIdentity identity{ "Assembly", "Namespace", "Behaviour" };
+    REQUIRE(scene->AddScriptComponent(entity, identity, false));
+    CHECK_FALSE(scene->AddScriptComponent(entity, identity, false));
+    REQUIRE(entity.HasComponent<MonoScriptComponent>());
+    CHECK(entity.GetComponent<MonoScriptComponent>().Scripts.size() == 1);
+    CHECK_FALSE(scene->AddScriptComponent(entity, ScriptTypeIdentity{ "", "Namespace", "Malformed" }, false));
+}
 
 TEST_CASE("Complex Scene Serialization", "[Serialization]")
 {
@@ -380,12 +696,11 @@ TEST_CASE("Failed YAML scene loads discard partial entities", "[Serialization]")
     scene->CreateEntity("Existing");
 
     YAML::Emitter emitter;
-    emitter << YAML::BeginMap << YAML::Key << "Scene" << YAML::Value << "Broken" << YAML::Key << "Entities" << YAML::Value
-            << YAML::BeginSeq << YAML::BeginMap << YAML::Key << "Entity" << YAML::Value << UuidGenerator::Generate() << YAML::Key
-            << "TagComponent" << YAML::Value << YAML::BeginMap << YAML::Key << "Tag" << YAML::Value << "Partial" << YAML::EndMap
-            << YAML::Key << "BoxCollider2DComponent" << YAML::Value << YAML::BeginMap << YAML::Key << "Offset" << YAML::Value
-            << "invalid" << YAML::Key << "Size" << YAML::Value << glm::vec2(1.0f) << YAML::Key << "IsTrigger" << YAML::Value
-            << false << YAML::EndMap << YAML::EndMap << YAML::EndSeq << YAML::EndMap;
+    emitter << YAML::BeginMap << YAML::Key << "Scene" << YAML::Value << "Broken" << YAML::Key << "Entities" << YAML::Value << YAML::BeginSeq
+            << YAML::BeginMap << YAML::Key << "Entity" << YAML::Value << UuidGenerator::Generate() << YAML::Key << "TagComponent" << YAML::Value
+            << YAML::BeginMap << YAML::Key << "Tag" << YAML::Value << "Partial" << YAML::EndMap << YAML::Key << "BoxCollider2DComponent"
+            << YAML::Value << YAML::BeginMap << YAML::Key << "Offset" << YAML::Value << "invalid" << YAML::Key << "Size" << YAML::Value
+            << glm::vec2(1.0f) << YAML::Key << "IsTrigger" << YAML::Value << false << YAML::EndMap << YAML::EndMap << YAML::EndSeq << YAML::EndMap;
 
     const Path path = fs::temp_directory_path() / "crowny-broken-scene.yaml";
     const Ref<DataStream> stream = FileSystem::CreateAndOpenFile(path);

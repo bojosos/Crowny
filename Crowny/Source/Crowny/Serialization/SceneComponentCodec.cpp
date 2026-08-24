@@ -1,13 +1,13 @@
 #include "cwpch.h"
 
 #include "Crowny/Serialization/SceneComponentCodec.h"
+#include "Crowny/Serialization/ScriptSerializer.h"
 
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/Yaml.h"
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/NodeGraph/NodeGraphAsset.h"
 #include "Crowny/Renderer/Font.h"
-#include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/Serialization/SerializableObject.h"
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
 
@@ -61,8 +61,8 @@ namespace Crowny
 
         bool HasPhysicsMaterialYaml(const YAML::Node& node)
         {
-            return node["Material"] || node["Density"] || node["Friction"] || node["Restitution"] ||
-                   node["RestitutionThreshold"] || node["FrictionCombine"] || node["RestitutionCombine"];
+            return node["Material"] || node["Density"] || node["Friction"] || node["Restitution"] || node["RestitutionThreshold"] ||
+                   node["FrictionCombine"] || node["RestitutionCombine"];
         }
 
         template <typename T> AssetHandle<T> CreateTransientMaterial(const PhysicsMaterialData& data)
@@ -82,8 +82,7 @@ namespace Crowny
         }
 
         template <typename T>
-        void WritePhysicsMaterialBinary(BinaryDataStreamOutputArchive& archive, const AssetHandle<T>& material,
-                                        const PhysicsMaterialData& data)
+        void WritePhysicsMaterialBinary(BinaryDataStreamOutputArchive& archive, const AssetHandle<T>& material, const PhysicsMaterialData& data)
         {
             const bool storeReference = ShouldSerializeMaterialReference(material);
             archive(storeReference);
@@ -92,8 +91,8 @@ namespace Crowny
                 archive(material.GetUUID());
                 return;
             }
-            archive(data.Density, data.Friction, data.Restitution, data.RestitutionThreshold,
-                    static_cast<uint8_t>(data.FrictionCombine), static_cast<uint8_t>(data.RestitutionCombine));
+            archive(data.Density, data.Friction, data.Restitution, data.RestitutionThreshold, static_cast<uint8_t>(data.FrictionCombine),
+                    static_cast<uint8_t>(data.RestitutionCombine));
         }
 
         template <typename T> AssetHandle<T> ReadPhysicsMaterialBinary(BinaryDataStreamInputArchive& archive)
@@ -148,10 +147,7 @@ namespace Crowny
         template <typename T> bool HasComponent(Entity entity) { return entity.HasComponent<T>(); }
         template <typename T> bool AlwaysSerialize(Entity) { return true; }
 
-        bool ShouldSerializeMonoScript(Entity entity)
-        {
-            return !entity.GetComponent<MonoScriptComponent>().Scripts.empty();
-        }
+        bool ShouldSerializeMonoScript(Entity entity) { return !entity.GetComponent<MonoScriptComponent>().Scripts.empty(); }
 
         void NoMigration(Entity, uint32_t, uint32_t) {}
 
@@ -394,8 +390,8 @@ namespace Crowny
             {
                 const auto& mesh = entity.GetComponent<MeshRendererComponent>();
                 archive(mesh.MeshHandle.GetUUID());
-                archive(mesh.VisibilityLayers.Value, mesh.LodBias, mesh.RenderLayerOrder, mesh.Visible, mesh.CastShadows,
-                        mesh.ReceiveShadows, mesh.MotionVectors);
+                archive(mesh.VisibilityLayers.Value, mesh.LodBias, mesh.RenderLayerOrder, mesh.Visible, mesh.CastShadows, mesh.ReceiveShadows,
+                        mesh.MotionVectors);
                 archive(static_cast<uint32_t>(mesh.Materials.size()));
                 for (const auto& material : mesh.Materials)
                     archive(material.GetUUID());
@@ -409,8 +405,8 @@ namespace Crowny
                 mesh.MeshHandle = LoadAssetReference<Mesh>(meshUuid);
                 if (context.SceneVersion < 4)
                     return;
-                archive(mesh.VisibilityLayers.Value, mesh.LodBias, mesh.RenderLayerOrder, mesh.Visible, mesh.CastShadows,
-                        mesh.ReceiveShadows, mesh.MotionVectors);
+                archive(mesh.VisibilityLayers.Value, mesh.LodBias, mesh.RenderLayerOrder, mesh.Visible, mesh.CastShadows, mesh.ReceiveShadows,
+                        mesh.MotionVectors);
                 uint32_t materialCount = 0;
                 archive(materialCount);
                 mesh.Materials.reserve(materialCount);
@@ -506,8 +502,8 @@ namespace Crowny
                 archive(text.Size, text.AutoSize, text.Wrapping);
                 archive(text.OutlineColor.x, text.OutlineColor.y, text.OutlineColor.z, text.OutlineColor.w);
                 archive(text.Thickness, text.CharacterSpacing, text.WordSpacing, text.LineSpacing, text.UseKerning);
-                archive(static_cast<uint32_t>(text.FontStyle), static_cast<uint32_t>(text.Overflow),
-                        static_cast<uint32_t>(text.HorizontalAlignment), static_cast<uint32_t>(text.VerticalAlignment));
+                archive(static_cast<uint32_t>(text.FontStyle), static_cast<uint32_t>(text.Overflow), static_cast<uint32_t>(text.HorizontalAlignment),
+                        static_cast<uint32_t>(text.VerticalAlignment));
                 archive(text.AutoSizeMin, text.AutoSizeMax, text.LayoutSize.x, text.LayoutSize.y);
                 archive(static_cast<uint32_t>(text.WrapMode), text.ClipToBounds, text.MaxLines, text.ParagraphSpacing);
                 archive(text.UseCustomDecorationColor, text.DecorationColor.x, text.DecorationColor.y, text.DecorationColor.z,
@@ -564,10 +560,7 @@ namespace Crowny
         template <> struct ComponentIO<AudioListenerComponent>
         {
             static void WriteYaml(YAML::Emitter&, Entity) {}
-            static void ReadYaml(const YAML::Node&, Entity entity, SceneComponentReadContext&)
-            {
-                entity.AddComponent<AudioListenerComponent>();
-            }
+            static void ReadYaml(const YAML::Node&, Entity entity, SceneComponentReadContext&) { entity.AddComponent<AudioListenerComponent>(); }
             static void WriteBinary(BinaryDataStreamOutputArchive&, Entity) {}
             static void ReadBinary(BinaryDataStreamInputArchive&, Entity entity, SceneComponentReadContext&)
             {
@@ -654,6 +647,7 @@ namespace Crowny
 
             static void ReadYaml(const YAML::Node& node, Entity entity, SceneComponentReadContext& context)
             {
+                ScriptSerializationSceneScope sceneScope(context.TargetScene);
                 const YAML::Node entries = node["Scripts"];
                 if (context.SceneVersion >= 7 && entries)
                 {
@@ -733,6 +727,7 @@ namespace Crowny
 
             static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext& context)
             {
+                ScriptSerializationSceneScope sceneScope(context.TargetScene);
                 uint32_t scriptCount;
                 archive(scriptCount);
                 for (uint32_t index = 0; index < scriptCount; index++)
@@ -787,8 +782,7 @@ namespace Crowny
                 rigidbody.SetMass(node["Mass"].as<float>());
                 rigidbody.SetGravityScale(node["GravityScale"].as<float>());
                 rigidbody.SetLayerMask(node["LayerMask"].as<uint32_t>(0), entity);
-                rigidbody.SetCollisionDetectionMode(
-                  static_cast<CollisionDetectionMode2D>(node["CollisionDetectionMode"].as<uint32_t>(0)));
+                rigidbody.SetCollisionDetectionMode(static_cast<CollisionDetectionMode2D>(node["CollisionDetectionMode"].as<uint32_t>(0)));
                 rigidbody.SetSleepMode(static_cast<RigidbodySleepMode>(node["SleepMode"].as<uint32_t>(1)));
                 rigidbody.SetLinearDrag(node["LinearDrag"].as<float>(0.0f));
                 rigidbody.SetAngularDrag(node["AngularDrag"].as<float>(0.05f));
@@ -804,12 +798,10 @@ namespace Crowny
                 const auto& rigidbody = entity.GetComponent<Rigidbody2DComponent>();
                 archive(static_cast<uint32_t>(rigidbody.GetBodyType()));
                 archive(rigidbody.GetMass(), rigidbody.GetGravityScale(), static_cast<uint32_t>(rigidbody.GetConstraints()));
-                archive(static_cast<uint32_t>(rigidbody.GetCollisionDetectionMode()),
-                        static_cast<uint32_t>(rigidbody.GetSleepMode()));
+                archive(static_cast<uint32_t>(rigidbody.GetCollisionDetectionMode()), static_cast<uint32_t>(rigidbody.GetSleepMode()));
                 archive(rigidbody.GetLinearDrag(), rigidbody.GetAngularDrag(), rigidbody.GetLayerMask());
                 archive(rigidbody.GetAutoMass(), static_cast<uint32_t>(rigidbody.GetInterpolationMode()));
-                archive(rigidbody.GetConfiguredCenterOfMass().x, rigidbody.GetConfiguredCenterOfMass().y,
-                        rigidbody.GetConfiguredInertia());
+                archive(rigidbody.GetConfiguredCenterOfMass().x, rigidbody.GetConfiguredCenterOfMass().y, rigidbody.GetConfiguredInertia());
             }
 
             static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext& context)
@@ -819,8 +811,8 @@ namespace Crowny
                 float mass, gravityScale, linearDrag, angularDrag;
                 uint32_t layerMask;
                 bool autoMass;
-                archive(bodyType, mass, gravityScale, constraints, collisionMode, sleepMode, linearDrag, angularDrag, layerMask,
-                        autoMass, interpolation);
+                archive(bodyType, mass, gravityScale, constraints, collisionMode, sleepMode, linearDrag, angularDrag, layerMask, autoMass,
+                        interpolation);
                 rigidbody.SetBodyType(static_cast<RigidbodyBodyType>(bodyType));
                 rigidbody.SetMass(mass);
                 rigidbody.SetGravityScale(gravityScale);
@@ -1502,8 +1494,8 @@ namespace Crowny
             static void WriteBinary(BinaryDataStreamOutputArchive& archive, Entity entity)
             {
                 const auto& animation = entity.GetComponent<AnimationComponent>();
-                archive(animation.Clip.GetUUID(), animation.Speed, static_cast<uint8_t>(animation.WrapMode),
-                        animation.PlayOnAwake, animation.ApplyRootMotion);
+                archive(animation.Clip.GetUUID(), animation.Speed, static_cast<uint8_t>(animation.WrapMode), animation.PlayOnAwake,
+                        animation.ApplyRootMotion);
             }
 
             static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext&)
@@ -1553,8 +1545,7 @@ namespace Crowny
                 light.Intensity = std::max(node["Intensity"].as<float>(1000.0f), 0.0f);
                 light.Range = std::max(node["Range"].as<float>(10.0f), 0.001f);
                 light.SpotInnerAngle = std::clamp(node["SpotInnerAngle"].as<float>(glm::radians(25.0f)), 0.0f, glm::pi<float>());
-                light.SpotOuterAngle = std::clamp(node["SpotOuterAngle"].as<float>(glm::radians(35.0f)),
-                                                  light.SpotInnerAngle, glm::pi<float>());
+                light.SpotOuterAngle = std::clamp(node["SpotOuterAngle"].as<float>(glm::radians(35.0f)), light.SpotInnerAngle, glm::pi<float>());
                 light.SourceRadius = std::max(node["SourceRadius"].as<float>(0.0f), 0.0f);
                 light.UseColorTemperature = node["UseColorTemperature"].as<bool>(false);
                 light.Temperature = std::clamp(node["Temperature"].as<float>(6500.0f), 1000.0f, 40000.0f);
@@ -1575,34 +1566,32 @@ namespace Crowny
             static void WriteBinary(BinaryDataStreamOutputArchive& archive, Entity entity)
             {
                 const auto& light = entity.GetComponent<LightComponent>();
-                archive(static_cast<uint8_t>(light.Type), light.Color.x, light.Color.y, light.Color.z, light.Intensity,
-                        light.Range, light.SpotInnerAngle, light.SpotOuterAngle, light.SourceRadius, light.UseColorTemperature,
-                        light.Temperature, light.VisibilityLayers.Value, light.Enabled, light.AffectDiffuse, light.AffectSpecular,
-                        light.Volumetric, static_cast<uint8_t>(light.Shadows.Mode), light.Shadows.Bias, light.Shadows.NormalBias,
-                        light.Shadows.NearPlane, light.Shadows.Importance, light.Shadows.Resolution,
-                        light.Shadows.CacheStaticCasters);
+                archive(static_cast<uint8_t>(light.Type), light.Color.x, light.Color.y, light.Color.z, light.Intensity, light.Range,
+                        light.SpotInnerAngle, light.SpotOuterAngle, light.SourceRadius, light.UseColorTemperature, light.Temperature,
+                        light.VisibilityLayers.Value, light.Enabled, light.AffectDiffuse, light.AffectSpecular, light.Volumetric,
+                        static_cast<uint8_t>(light.Shadows.Mode), light.Shadows.Bias, light.Shadows.NormalBias, light.Shadows.NearPlane,
+                        light.Shadows.Importance, light.Shadows.Resolution, light.Shadows.CacheStaticCasters);
             }
 
             static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext&)
             {
                 auto& light = entity.AddComponent<LightComponent>();
                 uint8_t type, shadowMode;
-                archive(type, light.Color.x, light.Color.y, light.Color.z, light.Intensity, light.Range, light.SpotInnerAngle,
-                        light.SpotOuterAngle, light.SourceRadius, light.UseColorTemperature, light.Temperature,
-                        light.VisibilityLayers.Value, light.Enabled, light.AffectDiffuse, light.AffectSpecular, light.Volumetric,
-                        shadowMode, light.Shadows.Bias, light.Shadows.NormalBias, light.Shadows.NearPlane,
-                        light.Shadows.Importance, light.Shadows.Resolution, light.Shadows.CacheStaticCasters);
+                archive(type, light.Color.x, light.Color.y, light.Color.z, light.Intensity, light.Range, light.SpotInnerAngle, light.SpotOuterAngle,
+                        light.SourceRadius, light.UseColorTemperature, light.Temperature, light.VisibilityLayers.Value, light.Enabled,
+                        light.AffectDiffuse, light.AffectSpecular, light.Volumetric, shadowMode, light.Shadows.Bias, light.Shadows.NormalBias,
+                        light.Shadows.NearPlane, light.Shadows.Importance, light.Shadows.Resolution, light.Shadows.CacheStaticCasters);
                 light.Type = static_cast<LightType>(type);
                 light.Shadows.Mode = static_cast<LightShadowMode>(shadowMode);
             }
         };
 
         template <typename T>
-        constexpr SceneComponentCodec MakeCodec(SceneComponentId id, uint32_t version, const char* yamlName,
-                                                 std::array<const char*, 2> yamlAliases, const char* prefabPath,
-                                                 const char* editorName, SceneComponentYamlType yamlType = SceneComponentYamlType::Map,
-                                                 SceneComponentCodec::HasComponentFunction shouldSerialize = &AlwaysSerialize<T>,
-                                                 SceneComponentCodec::MigrationFunction migrate = &NoMigration)
+        constexpr SceneComponentCodec MakeCodec(SceneComponentId id, uint32_t version, const char* yamlName, std::array<const char*, 2> yamlAliases,
+                                                const char* prefabPath, const char* editorName,
+                                                SceneComponentYamlType yamlType = SceneComponentYamlType::Map,
+                                                SceneComponentCodec::HasComponentFunction shouldSerialize = &AlwaysSerialize<T>,
+                                                SceneComponentCodec::MigrationFunction migrate = &NoMigration)
         {
             return { id,
                      version,
@@ -1624,36 +1613,32 @@ namespace Crowny
             MakeCodec<TagComponent>(SceneComponentId::Tag, 1, "TagComponent", {}, nullptr, "Tag"),
             MakeCodec<TransformComponent>(SceneComponentId::Transform, 1, "TransformComponent", {}, "Transform", "Transform"),
             MakeCodec<CameraComponent>(SceneComponentId::Camera, 1, "CameraComponent", {}, "Camera", "Camera"),
-            MakeCodec<SpriteRendererComponent>(SceneComponentId::SpriteRenderer, 5, "SpriteRendererComponent", {},
-                                               "Sprite Renderer", "Sprite Renderer"),
-            MakeCodec<MeshRendererComponent>(SceneComponentId::MeshRenderer, 4, "MeshRendererComponent", {}, "Mesh Filter",
-                                             "Mesh Renderer"),
+            MakeCodec<SpriteRendererComponent>(SceneComponentId::SpriteRenderer, 5, "SpriteRendererComponent", {}, "Sprite Renderer",
+                                               "Sprite Renderer"),
+            MakeCodec<MeshRendererComponent>(SceneComponentId::MeshRenderer, 4, "MeshRendererComponent", {}, "Mesh Filter", "Mesh Renderer"),
             MakeCodec<TextComponent>(SceneComponentId::Text, 5, "TextComponent", {}, "Text", "Text", SceneComponentYamlType::Map,
                                      &AlwaysSerialize<TextComponent>, &MigrateText),
-            MakeCodec<AudioListenerComponent>(SceneComponentId::AudioListener, 1, "AudioListenerComponent", {}, nullptr,
-                                              "Audio Listener", SceneComponentYamlType::Null),
-            MakeCodec<AudioSourceComponent>(SceneComponentId::AudioSource, 1, "AudioSourceComponent", {}, "Audio Source",
-                                            "Audio Source"),
-            MakeCodec<MonoScriptComponent>(SceneComponentId::MonoScript, 1, "MonoScriptComponent", {}, nullptr, "Script",
-                                           SceneComponentYamlType::Map, &ShouldSerializeMonoScript),
-            MakeCodec<Rigidbody2DComponent>(SceneComponentId::Rigidbody2D, 2, "Rigidbody2DComponent", { "Rigidbody2D", nullptr },
-                                            "Rigidbody 2D", "Rigidbody 2D"),
-            MakeCodec<BoxCollider2DComponent>(SceneComponentId::BoxCollider2D, 6, "BoxCollider2DComponent",
-                                              { "BoxCollider2D", nullptr }, "Box Collider 2D", "Box Collider 2D"),
-            MakeCodec<CircleCollider2DComponent>(SceneComponentId::CircleCollider2D, 6, "CircleCollider2DComponent",
-                                                 { "CircleCollider2D", nullptr }, "Circle Collider 2D", "Circle Collider 2D"),
+            MakeCodec<AudioListenerComponent>(SceneComponentId::AudioListener, 1, "AudioListenerComponent", {}, nullptr, "Audio Listener",
+                                              SceneComponentYamlType::Null),
+            MakeCodec<AudioSourceComponent>(SceneComponentId::AudioSource, 1, "AudioSourceComponent", {}, "Audio Source", "Audio Source"),
+            MakeCodec<MonoScriptComponent>(SceneComponentId::MonoScript, 1, "MonoScriptComponent", {}, nullptr, "Script", SceneComponentYamlType::Map,
+                                           &ShouldSerializeMonoScript),
+            MakeCodec<Rigidbody2DComponent>(SceneComponentId::Rigidbody2D, 2, "Rigidbody2DComponent", { "Rigidbody2D", nullptr }, "Rigidbody 2D",
+                                            "Rigidbody 2D"),
+            MakeCodec<BoxCollider2DComponent>(SceneComponentId::BoxCollider2D, 6, "BoxCollider2DComponent", { "BoxCollider2D", nullptr },
+                                              "Box Collider 2D", "Box Collider 2D"),
+            MakeCodec<CircleCollider2DComponent>(SceneComponentId::CircleCollider2D, 6, "CircleCollider2DComponent", { "CircleCollider2D", nullptr },
+                                                 "Circle Collider 2D", "Circle Collider 2D"),
             MakeCodec<RelationshipComponent>(SceneComponentId::Relationship, 1, "RelationshipComponent", {}, nullptr, nullptr),
             MakeCodec<PrefabComponent>(SceneComponentId::Prefab, 1, "PrefabComponent", {}, nullptr, nullptr),
-            MakeCodec<ProceduralMeshComponent>(SceneComponentId::ProceduralMesh, 1, "ProceduralMeshComponent", {},
-                                               "Procedural Mesh", "Procedural Mesh"),
-            MakeCodec<Rigidbody3DComponent>(SceneComponentId::Rigidbody3D, 1, "Rigidbody3DComponent", {}, "Rigidbody 3D",
-                                            "Rigidbody 3D"),
-            MakeCodec<BoxCollider3DComponent>(SceneComponentId::BoxCollider3D, 6, "BoxCollider3DComponent", {},
-                                              "Box Collider 3D", "Box Collider 3D"),
-            MakeCodec<SphereCollider3DComponent>(SceneComponentId::SphereCollider3D, 6, "SphereCollider3DComponent", {},
-                                                 "Sphere Collider 3D", "Sphere Collider 3D"),
-            MakeCodec<CapsuleCollider3DComponent>(SceneComponentId::CapsuleCollider3D, 6, "CapsuleCollider3DComponent", {},
-                                                  "Capsule Collider 3D", "Capsule Collider 3D"),
+            MakeCodec<ProceduralMeshComponent>(SceneComponentId::ProceduralMesh, 1, "ProceduralMeshComponent", {}, "Procedural Mesh",
+                                               "Procedural Mesh"),
+            MakeCodec<Rigidbody3DComponent>(SceneComponentId::Rigidbody3D, 1, "Rigidbody3DComponent", {}, "Rigidbody 3D", "Rigidbody 3D"),
+            MakeCodec<BoxCollider3DComponent>(SceneComponentId::BoxCollider3D, 6, "BoxCollider3DComponent", {}, "Box Collider 3D", "Box Collider 3D"),
+            MakeCodec<SphereCollider3DComponent>(SceneComponentId::SphereCollider3D, 6, "SphereCollider3DComponent", {}, "Sphere Collider 3D",
+                                                 "Sphere Collider 3D"),
+            MakeCodec<CapsuleCollider3DComponent>(SceneComponentId::CapsuleCollider3D, 6, "CapsuleCollider3DComponent", {}, "Capsule Collider 3D",
+                                                  "Capsule Collider 3D"),
             MakeCodec<AnimationComponent>(SceneComponentId::Animation, 1, "AnimationComponent", {}, "Animation", "Animation"),
             MakeCodec<LightComponent>(SceneComponentId::Light, 1, "LightComponent", {}, "Light", "Light")
         };
@@ -1673,10 +1658,7 @@ namespace Crowny
 
     std::span<const SceneComponentCodec> GetSceneComponentCodecs() { return COMPONENT_CODECS; }
 
-    const SceneComponentCodec* FindSceneComponentCodec(SceneComponentId id)
-    {
-        return FindSceneComponentCodec(static_cast<uint32_t>(id));
-    }
+    const SceneComponentCodec* FindSceneComponentCodec(SceneComponentId id) { return FindSceneComponentCodec(static_cast<uint32_t>(id)); }
 
     const SceneComponentCodec* FindSceneComponentCodec(uint32_t stableId)
     {

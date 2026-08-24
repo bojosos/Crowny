@@ -834,8 +834,7 @@ namespace Crowny
     {
         if (!entity || entity.GetScene() != this || !state.Identity.IsValid())
         {
-            CW_ENGINE_WARN("Cannot attach managed script with invalid identity '{}:{}'.", state.Identity.Assembly,
-                           state.Identity.GetFullName());
+            CW_ENGINE_WARN("Cannot attach managed script with invalid identity '{}:{}'.", state.Identity.Assembly, state.Identity.GetFullName());
             return false;
         }
 
@@ -864,9 +863,7 @@ namespace Crowny
         {
             script.Create(entity);
             MonoClass* monoClass = script.GetManagedClass();
-            MonoClass* runInEditor = ScriptInfoManager::IsStartedUp()
-                                       ? ScriptInfoManager::Get().GetBuiltinClasses().RunInEditorAttribute
-                                       : nullptr;
+            MonoClass* runInEditor = ScriptInfoManager::IsStartedUp() ? ScriptInfoManager::Get().GetBuiltinClasses().RunInEditorAttribute : nullptr;
             if (m_RuntimeActive || (m_IsEditorScene && monoClass != nullptr && runInEditor != nullptr && monoClass->HasAttribute(runInEditor)))
                 script.OnStart();
         }
@@ -875,7 +872,7 @@ namespace Crowny
 
     bool Scene::AddScriptComponent(Entity entity, const String& namespaceName, const String& typeName, bool initialize)
     {
-        return AddScriptComponent(entity, { GAME_ASSEMBLY, namespaceName, typeName }, initialize);
+        return AddScriptComponent(entity, ScriptTypeIdentity{ GAME_ASSEMBLY, namespaceName, typeName }, initialize);
     }
 
     void Scene::RemoveScriptComponent(Entity entity, const ScriptTypeIdentity& identity)
@@ -883,9 +880,13 @@ namespace Crowny
         if (!entity.HasComponent<MonoScriptComponent>())
             return;
         auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
-        scripts.erase(std::remove_if(scripts.begin(), scripts.end(),
-                                     [&](const MonoScript& script) { return script.GetTypeIdentity() == identity; }),
-                      scripts.end());
+        const auto script = std::find_if(scripts.begin(), scripts.end(),
+                                         [&](const MonoScript& candidate) { return candidate.GetTypeIdentity() == identity; });
+        if (script == scripts.end())
+            return;
+        if (ScriptSceneObjectManager::IsStartedUp())
+            ScriptSceneObjectManager::Get().DestroyManagedScriptComponent(entity, &*script);
+        scripts.erase(script);
         if (scripts.empty())
             entity.RemoveComponent<MonoScriptComponent>();
     }
@@ -942,7 +943,8 @@ namespace Crowny
 
     void Scene::OnSimulationUpdate(Timestep ts)
     {
-        SceneManager::CallbackScope callbackScope = SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->DeferSceneChanges() : SceneManager::CallbackScope();
+        SceneManager::CallbackScope callbackScope =
+          SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->DeferSceneChanges() : SceneManager::CallbackScope();
         if (m_Physics2DActive && Physics2D::TryGet() != nullptr)
             Physics2D::TryGet()->Step(ts, this);
         StepPhysics3D(ts);
@@ -1018,7 +1020,8 @@ namespace Crowny
 
     void Scene::OnFixedUpdate(Timestep ts)
     {
-        SceneManager::CallbackScope callbackScope = SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->DeferSceneChanges() : SceneManager::CallbackScope();
+        SceneManager::CallbackScope callbackScope =
+          SceneManager::TryGet() != nullptr ? SceneManager::TryGet()->DeferSceneChanges() : SceneManager::CallbackScope();
         if (m_Physics2DActive && Physics2D::TryGet() != nullptr)
             Physics2D::TryGet()->Step(ts, this);
         StepPhysics3D(ts);

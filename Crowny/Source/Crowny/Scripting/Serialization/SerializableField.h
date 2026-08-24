@@ -321,7 +321,7 @@ namespace Crowny
             }
         }
 
-        virtual void DeserializeYAML(const YAML::Node& node) override { Value = SceneManager::TryGet()->GetActiveScene()->GetEntityFromUuid(node.as<UUID>()); }
+        virtual void DeserializeYAML(const YAML::Node& node) override;
 
         Entity Value;
 

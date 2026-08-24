@@ -101,8 +101,7 @@ namespace Crowny
     {
     public:
         explicit AddComponentAction(Entity entity)
-          : UndoAction("Add component"), m_Scene(entity.GetScene()), m_Entity(entity.GetUuid()),
-            m_Component(entity.GetComponent<T>())
+          : UndoAction("Add component"), m_Scene(entity.GetScene()), m_Entity(entity.GetUuid()), m_Component(entity.GetComponent<T>())
         {
         }
 
@@ -162,13 +161,14 @@ namespace Crowny
     {
     public:
         ChangeComponentAction(Entity entity, const T& oldComponent, const T& newComponent)
-          : UndoAction("Edit component"), m_Scene(entity.GetScene()), m_Entity(entity.GetUuid()),
-            m_OldComponent(oldComponent), m_NewComponent(newComponent)
+          : UndoAction("Edit component"), m_Scene(entity.GetScene()), m_Entity(entity.GetUuid()), m_OldComponent(oldComponent),
+            m_NewComponent(newComponent)
         {
         }
 
         void Commit() override { Apply(m_NewComponent); }
         void Revert() override { Apply(m_OldComponent); }
+
     private:
         Entity Resolve() const { return m_Scene ? m_Scene->TryGetEntityFromUuid(m_Entity) : Entity{}; }
 
@@ -231,20 +231,14 @@ namespace Crowny
     class ChangeScriptComponentAction : public UndoAction
     {
     public:
-        struct ScriptState
-        {
-            String Namespace;
-            String TypeName;
-            Ref<SerializableObject> Data;
-        };
-
-        using State = Vector<ScriptState>;
+        using State = Vector<PersistedScriptState>;
 
         ChangeScriptComponentAction(Entity entity, State oldState, String name = "Edit script");
 
         static State Capture(Entity entity);
         void Commit() override;
         void Revert() override;
+
     private:
         void Apply(const State& state);
 
@@ -311,6 +305,7 @@ namespace Crowny
 
         void Commit() override;
         void Revert() override;
+
     private:
         void Reparent(UUID targetUuid, uint32_t siblingIndex);
 

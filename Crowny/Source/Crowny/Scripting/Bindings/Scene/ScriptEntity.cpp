@@ -1,6 +1,7 @@
 #include "cwpch.h"
 
 #include "Crowny/Scripting/Bindings/Scene/ScriptEntity.h"
+#include "Crowny/Scripting/Mono/MonoAssembly.h"
 #include "Crowny/Scripting/ScriptComponent.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/ScriptSceneObjectManager.h"
@@ -97,7 +98,8 @@ namespace Crowny
             const auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
             for (const auto& script : scripts)
             {
-                if (MonoUtils::IsSubClassOf(script.GetManagedClass()->GetInternalPtr(), componentClass))
+                MonoClass* managedClass = script.GetManagedClass();
+                if (managedClass != nullptr && MonoUtils::IsSubClassOf(managedClass->GetInternalPtr(), componentClass))
                     return script.GetManagedInstance();
             }
             return nullptr;
@@ -127,7 +129,8 @@ namespace Crowny
                 const auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
                 for (const auto& script : scripts)
                 {
-                    if (MonoUtils::IsSubClassOf(script.GetManagedClass()->GetInternalPtr(), componentClass))
+                    MonoClass* managedClass = script.GetManagedClass();
+                    if (managedClass != nullptr && MonoUtils::IsSubClassOf(managedClass->GetInternalPtr(), componentClass))
                         return true;
                 }
                 return false;
@@ -149,32 +152,25 @@ namespace Crowny
               ScriptInfoManager::Get().GetBuiltinClasses().EntityBehaviour->GetInternalPtr())) // We are trying to add a behavior, so loop
                                                                                                // the MonoScriptBehaviour.Scripts
         {
-            // TODO: Replace these with the scene API
-            if (!entity.HasComponent<MonoScriptComponent>())
+            MonoAssembly* assembly = MonoManager::Get().FindAssembly(componentClass);
+            if (assembly == nullptr)
             {
-                auto& msc = entity.AddComponent<MonoScriptComponent>();
-                msc.Scripts.push_back(MonoScript(type));
-                msc.Scripts.back().Create(entity);
-                // FIXME msc.Scripts.back().OnInitialize(entity);
-                return msc.Scripts.back().GetManagedInstance();
+                CW_ERROR("Could not identify the assembly for managed component");
+                return nullptr;
             }
-            else
+            String namespaceName;
+            String typeName;
+            MonoUtils::GetClassName(componentClass, namespaceName, typeName);
+            const ScriptTypeIdentity identity{ assembly->GetName(), namespaceName, typeName };
+            if (!entity.GetScene()->AddScriptComponent(entity, identity))
+                return nullptr;
+            MonoScriptComponent& scripts = entity.GetComponent<MonoScriptComponent>();
+            for (MonoScript& script : scripts.Scripts)
             {
-                auto& msc = entity.GetComponent<MonoScriptComponent>();
-                const auto& scripts = msc.Scripts;
-                for (const auto& script : scripts)
-                {
-                    // TODO: Check if this works
-                    if (script.GetManagedClass()->GetInternalPtr() == componentClass)
-                    {
-                        CW_ERROR("Entity already has that component!");
-                        return nullptr;
-                    }
-                }
-                msc.Scripts.push_back(MonoScript(type));
-                // FIXME msc.Scripts.back().OnInitialize(entity);
-                return msc.Scripts.back().GetManagedInstance();
+                if (script.GetTypeIdentity() == identity)
+                    return script.GetManagedInstance();
             }
+            return nullptr;
         }
         ComponentInfo* info = ScriptInfoManager::Get().GetComponentInfo(type);
         if (info == nullptr)
@@ -198,19 +194,17 @@ namespace Crowny
                 CW_ERROR("Entity doesn't have that component");
             else
             {
-                String ns, ts;
-                MonoUtils::GetClassName(componentClass, ns, ts);
-                MonoScriptComponent& scriptComponent = entity.GetComponent<MonoScriptComponent>();
-                auto findIter = std::find_if(scriptComponent.Scripts.begin(), scriptComponent.Scripts.end(), [&](const MonoScript& script) {
-                    MonoReflectionType* runtimeType = script.GetRuntimeType();
-                    ::MonoClass* monoClass = MonoUtils::GetClass(runtimeType);
-                    return MonoUtils::IsSubClassOf(monoClass, componentClass);
-                });
-                if (findIter == scriptComponent.Scripts.end())
+                MonoAssembly* assembly = MonoManager::Get().FindAssembly(componentClass);
+                String namespaceName;
+                String typeName;
+                MonoUtils::GetClassName(componentClass, namespaceName, typeName);
+                const ScriptTypeIdentity identity{ assembly != nullptr ? assembly->GetName() : String(), namespaceName, typeName };
+                if (assembly == nullptr || !entity.GetScene()->HasScriptComponent(entity, identity))
                     CW_ERROR("Entity doesn't have that component");
                 else
-                    scriptComponent.Scripts.erase(findIter);
+                    entity.GetScene()->RemoveScriptComponent(entity, identity);
             }
+            return;
         }
 
         ComponentInfo* info = ScriptInfoManager::Get().GetComponentInfo(type);

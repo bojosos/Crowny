@@ -19,9 +19,8 @@ namespace Crowny
             ImGui::PushID(i);
             if (ImGui::Button("-"))
             {
-                const String namespaceName = scriptComponent.Scripts[i].GetNamespace();
-                const String typeName = scriptComponent.Scripts[i].GetTypeName();
-                entity.GetScene()->RemoveScriptComponent(entity, namespaceName, typeName);
+                const ScriptTypeIdentity identity = scriptComponent.Scripts[i].GetTypeIdentity();
+                entity.GetScene()->RemoveScriptComponent(entity, identity);
                 UndoRedo::Get().OnItemInteract(true);
                 ImGui::PopID();
                 if (!entity.HasComponent<MonoScriptComponent>())

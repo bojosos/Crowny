@@ -15,6 +15,7 @@
 #include "Crowny/Physics/Physics2D.h"
 #include "Crowny/Renderer/Font.h"
 #include "Crowny/Renderer/Renderer.h"
+#include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Window/RenderWindow.h"
 
 #include <tracy/Tracy.hpp>
@@ -87,6 +88,10 @@ namespace Crowny
             m_RenderThread->Stop();
             m_RenderThread.reset();
         }
+        // OpenGL and renderer fallback paths build the same thread-local scene
+        // caches on the main thread. Release them while the active RenderAPI and
+        // device are still valid; this is a no-op when that thread has no cache.
+        SceneRenderer::ShutdownRenderThreadResources();
 
         if (!m_ApplicationDesc.Headless)
         {
@@ -200,6 +205,8 @@ namespace Crowny
 
             Input::OnUpdate();
             Window::PollEvents();
+            if (!m_Windows.empty() && m_Windows.front()->GetWindow()->ShouldClose())
+                m_Running = false;
             if (!m_Running)
                 break;
 
