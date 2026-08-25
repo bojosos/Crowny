@@ -115,6 +115,9 @@ namespace Crowny
             BuildManifest Manifest;
             bool CancelAfterResolve = false;
             bool CancelDuringCompile = false;
+            bool CancelDuringPack = false;
+            bool CancelDuringStage = false;
+            bool CancelAfterPublishMove = false;
             bool Cancelled = false;
             bool FailPack = false;
             bool ThrowPack = false;
@@ -155,9 +158,16 @@ namespace Crowny
                     result.ExitCode = 0;
                     return result;
                 };
-                operations.PackContent = [&](const Path& path, const ContentPackDescriptor&, const Vector<ContentPackInput>& inputs) {
+                operations.PackContentCancellable = [&](const Path& path, const ContentPackDescriptor&, const Vector<ContentPackInput>& inputs,
+                                                        const BuildCancellationCheck& cancellation) {
                     Calls.push_back("Pack");
                     PackedInputs = inputs;
+                    if (CancelDuringPack)
+                    {
+                        Cancelled = true;
+                        (void)cancellation();
+                        return String("cancelled");
+                    }
                     if (ThrowPack)
                         throw std::runtime_error("pack callback threw");
                     if (FailPack)
@@ -168,6 +178,12 @@ namespace Crowny
                 operations.StageTemplate = [&](const BuildTemplateStageRequest& request) {
                     Calls.push_back("Stage Template");
                     BuildValidation validation;
+                    if (CancelDuringStage)
+                    {
+                        Cancelled = true;
+                        (void)request.Cancellation();
+                        return validation;
+                    }
                     fs::create_directories(request.StageDirectory);
                     for (const BuildPipelineArtifact& artifact : request.Artifacts)
                     {
@@ -197,10 +213,12 @@ namespace Crowny
                         return String("injected publish failure");
                     if (ThrowPublishMove && move == 2)
                         throw std::runtime_error("publish callback threw");
-                    if (FailQuarantineMove && move == 3)
+                    if (FailQuarantineMove && destination.filename().string().find(".failed-") != String::npos)
                         return String("injected quarantine failure");
                     std::error_code error;
                     fs::rename(source, destination, error);
+                    if (!error && CancelAfterPublishMove && move == 1)
+                        Cancelled = true;
                     if (!error && BackupReportsFailureAfterMove && move == 1)
                         return String("backup callback reported failure after moving");
                     if (!error && ThrowAfterPublishMove && move == 2)
@@ -390,6 +408,7 @@ namespace Crowny
         request.Managed.Sources.clear();
         request.Managed.References.clear();
         BuildPipelineOperations operations = CreateDefaultBuildPipelineOperations();
+        operations.PackContentCancellable = {};
         operations.PackContent = [](const Path& path, const ContentPackDescriptor& descriptor, const Vector<ContentPackInput>& inputs) {
             Vector<ContentPackInput> changed = inputs;
             changed.front().LogicalPath = "Assets/Tampered.asset";
@@ -536,6 +555,61 @@ namespace Crowny
         CHECK(report.Find(BuildPipelineStage::PackContent)->Status == BuildPipelineStageStatus::Skipped);
         CHECK(tools.Calls == Vector<String>{ "Validate", "Resolve Content", "Compile Managed" });
         CHECK(CountTemporaryBuildDirectories(request.OutputDirectory.parent_path(), request.OutputDirectory) == 0);
+    }
+
+    TEST_CASE("Build pipeline forwards cancellation into packing and template staging", "[Build][Pipeline]")
+    {
+        TemporaryDirectory temporary;
+
+        BuildPipelineRequest packRequest = CreateRequest(temporary, temporary.Root / "Builds/PackCancelled");
+        FakeBuildTools packTools;
+        packTools.CancelDuringPack = true;
+        const BuildPipelineReport packReport =
+          BuildPipelineTestAccess::Create(packTools.Operations()).Run(packRequest, [&]() { return packTools.Cancelled; });
+        CHECK(packReport.Cancelled);
+        CHECK(packReport.Find(BuildPipelineStage::PackContent)->Status == BuildPipelineStageStatus::Cancelled);
+        CHECK(packReport.Find(BuildPipelineStage::StageTemplate)->Status == BuildPipelineStageStatus::Skipped);
+
+        BuildPipelineRequest stageRequest = CreateRequest(temporary, temporary.Root / "Builds/StageCancelled");
+        FakeBuildTools stageTools;
+        stageTools.CancelDuringStage = true;
+        const BuildPipelineReport stageReport =
+          BuildPipelineTestAccess::Create(stageTools.Operations()).Run(stageRequest, [&]() { return stageTools.Cancelled; });
+        CHECK(stageReport.Cancelled);
+        CHECK(stageReport.Find(BuildPipelineStage::PackContent)->Status == BuildPipelineStageStatus::Succeeded);
+        CHECK(stageReport.Find(BuildPipelineStage::StageTemplate)->Status == BuildPipelineStageStatus::Cancelled);
+        CHECK(stageReport.Find(BuildPipelineStage::WriteManifest)->Status == BuildPipelineStageStatus::Skipped);
+    }
+
+    TEST_CASE("Build pipeline rolls publication back when cancellation arrives before commit", "[Build][Pipeline]")
+    {
+        TemporaryDirectory temporary;
+        BuildPipelineRequest request = CreateRequest(temporary, temporary.Root / "Builds/PublishCancelled");
+        FakeBuildTools tools;
+        tools.CancelAfterPublishMove = true;
+
+        const BuildPipelineReport report = BuildPipelineTestAccess::Create(tools.Operations()).Run(request, [&]() { return tools.Cancelled; });
+
+        CHECK(report.Cancelled);
+        CHECK(report.Find(BuildPipelineStage::Publish)->Status == BuildPipelineStageStatus::Cancelled);
+        CHECK(report.Find(BuildPipelineStage::Publish)->Diagnostics.ContainsCode("pipeline.publish.cancelled"));
+        CHECK_FALSE(fs::exists(request.OutputDirectory));
+    }
+
+    TEST_CASE("Build pipeline reports failed cancellation rollback when invalid output remains", "[Build][Pipeline]")
+    {
+        TemporaryDirectory temporary;
+        BuildPipelineRequest request = CreateRequest(temporary, temporary.Root / "Builds/PublishCancellationBlocked");
+        FakeBuildTools tools;
+        tools.CancelAfterPublishMove = true;
+        tools.FailQuarantineMove = true;
+
+        const BuildPipelineReport report = BuildPipelineTestAccess::Create(tools.Operations()).Run(request, [&]() { return tools.Cancelled; });
+
+        CHECK_FALSE(report.Cancelled);
+        CHECK(report.Find(BuildPipelineStage::Publish)->Status == BuildPipelineStageStatus::Failed);
+        CHECK(report.Find(BuildPipelineStage::Publish)->Diagnostics.ContainsCode("pipeline.publish.rollback_failed"));
+        CHECK(fs::is_directory(request.OutputDirectory));
     }
 
     TEST_CASE("Build pipeline attributes stage failure and preserves the last good build", "[Build][Pipeline]")

@@ -47,6 +47,8 @@ namespace Crowny
                                      PlayerTemplateManifest& output);
     };
 
-    BuildValidation ValidatePlayerTemplate(const Path& root, const PlayerTemplateManifest& manifest, const PlayerTemplateRequest& request);
-    String StagePlayerTemplate(const Path& root, const PlayerTemplateManifest& manifest, const Path& stageDirectory);
+    BuildValidation ValidatePlayerTemplate(const Path& root, const PlayerTemplateManifest& manifest, const PlayerTemplateRequest& request,
+                                           BuildCancellationCheck cancellation = {});
+    String StagePlayerTemplate(const Path& root, const PlayerTemplateManifest& manifest, const Path& stageDirectory,
+                               BuildCancellationCheck cancellation = {});
 } // namespace Crowny

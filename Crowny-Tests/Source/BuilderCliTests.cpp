@@ -18,8 +18,8 @@ namespace
     {
         BuilderFixture()
         {
-            Root = fs::temp_directory_path() /
-                   ("crowny-builder-cli-tests-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+            Root =
+              fs::temp_directory_path() / ("crowny-builder-cli-tests-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
             Project = Root / "Project";
             Output = Root / "Output";
             Template = Root / "Template";
@@ -141,6 +141,25 @@ TEST_CASE("Crowny Builder reports a missing format value without throwing", "[Bu
     CHECK(error.str().find("builder.command.value_missing") != String::npos);
 }
 
+TEST_CASE("Crowny Builder writes parsed report paths for command-line errors", "[Build][BuilderCli]")
+{
+    BuilderFixture fixture;
+    std::ostringstream output;
+    std::ostringstream error;
+
+    const int exitCode = RunCrownyBuilder({ "build", "--unknown", "--report", fixture.Report.string(), "--format", "json" }, output, error);
+
+    CHECK(exitCode == static_cast<int>(BuilderExitCode::InvalidCommandLine));
+    REQUIRE(fs::is_regular_file(fixture.Report));
+    rapidjson::Document response;
+    response.Parse(fixture.ReadText(fixture.Report).c_str());
+    REQUIRE_FALSE(response.HasParseError());
+    CHECK(response["kind"] == "error");
+    CHECK(response["exitCode"] == static_cast<int>(BuilderExitCode::InvalidCommandLine));
+    CHECK(response["error"]["code"] == "builder.command.option_unknown");
+    CHECK(fixture.ReadText(fixture.Report) == output.str());
+}
+
 TEST_CASE("Crowny Builder rejects incomplete request files as structured input errors", "[Build][BuilderCli]")
 {
     BuilderFixture fixture;
@@ -148,8 +167,8 @@ TEST_CASE("Crowny Builder rejects incomplete request files as structured input e
     std::ostringstream output;
     std::ostringstream error;
 
-    const int exitCode = RunCrownyBuilder(
-      { "build", "--request", fixture.Request.string(), "--report", fixture.Report.string(), "--format", "json" }, output, error);
+    const int exitCode =
+      RunCrownyBuilder({ "build", "--request", fixture.Request.string(), "--report", fixture.Report.string(), "--format", "json" }, output, error);
 
     CHECK(exitCode == static_cast<int>(BuilderExitCode::InputError));
     CHECK(error.str().empty());
@@ -174,8 +193,7 @@ TEST_CASE("Crowny Builder rejects requests for a different engine binary", "[Bui
     std::ostringstream output;
     std::ostringstream error;
 
-    const int exitCode = RunCrownyBuilder(
-      { "build", "--request", fixture.Request.string(), "--format", "json" }, output, error);
+    const int exitCode = RunCrownyBuilder({ "build", "--request", fixture.Request.string(), "--format", "json" }, output, error);
 
     CHECK(exitCode == static_cast<int>(BuilderExitCode::InputError));
     CHECK(error.str().empty());
@@ -197,8 +215,7 @@ TEST_CASE("Crowny Builder validates managed timeout using the compiler limit", "
     std::ostringstream output;
     std::ostringstream error;
 
-    const int exitCode = RunCrownyBuilder(
-      { "build", "--request", fixture.Request.string(), "--format", "json" }, output, error);
+    const int exitCode = RunCrownyBuilder({ "build", "--request", fixture.Request.string(), "--format", "json" }, output, error);
 
     CHECK(exitCode == static_cast<int>(BuilderExitCode::InputError));
     rapidjson::Document response;
@@ -215,8 +232,8 @@ TEST_CASE("Crowny Builder publishes a player build through BuildPipeline", "[Bui
     std::ostringstream output;
     std::ostringstream error;
 
-    const int exitCode = RunCrownyBuilder(
-      { "build", "--request=" + fixture.Request.string(), "--report", fixture.Report.string(), "--format=json" }, output, error);
+    const int exitCode =
+      RunCrownyBuilder({ "build", "--request=" + fixture.Request.string(), "--report", fixture.Report.string(), "--format=json" }, output, error);
 
     CHECK(exitCode == static_cast<int>(BuilderExitCode::Success));
     CHECK(error.str().empty());
@@ -244,8 +261,7 @@ TEST_CASE("Crowny Builder maps cancellation to a stable exit code", "[Build][Bui
     std::ostringstream output;
     std::ostringstream error;
 
-    const int exitCode = RunCrownyBuilder({ "build", "--request", fixture.Request.string(), "--format", "json" }, output, error,
-                                          [] { return true; });
+    const int exitCode = RunCrownyBuilder({ "build", "--request", fixture.Request.string(), "--format", "json" }, output, error, [] { return true; });
 
     CHECK(exitCode == static_cast<int>(BuilderExitCode::Cancelled));
     CHECK(error.str().empty());

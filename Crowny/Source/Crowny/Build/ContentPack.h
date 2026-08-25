@@ -35,13 +35,14 @@ namespace Crowny
         String Sha256;
     };
 
-    String ComputeFileSha256(const Path& path);
+    String ComputeFileSha256(const Path& path, BuildCancellationCheck cancellation = {});
     String ComputeBytesSha256(const uint8_t* data, size_t size);
 
     class ContentPackWriter
     {
     public:
-        static String Write(const Path& path, const ContentPackDescriptor& descriptor, const Vector<ContentPackInput>& inputs);
+        static String Write(const Path& path, const ContentPackDescriptor& descriptor, const Vector<ContentPackInput>& inputs,
+                            BuildCancellationCheck cancellation = {});
     };
 
     class ContentPackReader

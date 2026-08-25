@@ -96,9 +96,31 @@ namespace Crowny
             return false;
         }
 
+        Path FindReportFile(const Vector<String>& arguments)
+        {
+            for (size_t index = 0; index < arguments.size(); index++)
+            {
+                if (!IsOption(arguments[index], "--report"))
+                    continue;
+                String value;
+                if (arguments[index] == "--report")
+                {
+                    if (index + 1 >= arguments.size())
+                        return {};
+                    value = arguments[index + 1];
+                }
+                else
+                    value = arguments[index].substr(String("--report=").size());
+                const Path path = value;
+                return !path.empty() && !path.filename().empty() ? path : Path();
+            }
+            return {};
+        }
+
         bool ParseCommandLine(const Vector<String>& arguments, BuilderCommandLine& command, BuilderError& error)
         {
             command.Format = WantsJson(arguments) ? BuilderOutputFormat::Json : BuilderOutputFormat::Text;
+            command.ReportFile = FindReportFile(arguments);
             if (arguments.size() == 1 && (arguments[0] == "--help" || arguments[0] == "-h"))
             {
                 command.ShowHelp = true;
@@ -292,16 +314,16 @@ namespace Crowny
                 const Path absoluteRequest = AbsolutePath(fs::current_path(), requestFile);
                 const YAML::Node root = YAML::LoadFile(absoluteRequest.string());
                 if (!CheckKeys(root,
-                               { "Schema", "ProjectRoot", "OutputDirectory", "GameSettings", "BuildProfile", "BuildTarget",
-                                 "ContentDatabase", "Managed", "TemplateRoot", "TemplateManifest", "EngineVersion", "MonoVersion" },
+                               { "Schema", "ProjectRoot", "OutputDirectory", "GameSettings", "BuildProfile", "BuildTarget", "ContentDatabase",
+                                 "Managed", "TemplateRoot", "TemplateManifest", "EngineVersion", "MonoVersion" },
                                "request", result.Error))
                     return result;
 
                 const uint32_t schema = root["Schema"].as<uint32_t>(0);
                 if (schema != BUILDER_REQUEST_SCHEMA)
                 {
-                    result.Error = { "builder.request.schema_unsupported",
-                                     "Builder request schema " + std::to_string(schema) + " is not supported.", std::to_string(schema) };
+                    result.Error = { "builder.request.schema_unsupported", "Builder request schema " + std::to_string(schema) + " is not supported.",
+                                     std::to_string(schema) };
                     return result;
                 }
 
@@ -381,10 +403,10 @@ namespace Crowny
                 request.Managed.ProjectRoot = request.ProjectRoot;
                 if (const YAML::Node managed = root["Managed"])
                 {
-                    if (!CheckKeys(managed,
-                                   { "ToolchainRoot", "Sources", "References", "Symbols", "LanguageVersion", "TimeoutMilliseconds",
-                                     "MaxCapturedOutputBytes" },
-                                   "Managed", result.Error))
+                    if (!CheckKeys(
+                          managed,
+                          { "ToolchainRoot", "Sources", "References", "Symbols", "LanguageVersion", "TimeoutMilliseconds", "MaxCapturedOutputBytes" },
+                          "Managed", result.Error))
                         return result;
                     if (!ReadPathSequence(managed, "Sources", request.Managed.Sources, result.Error) ||
                         !ReadPathSequence(managed, "References", request.Managed.References, result.Error) ||
@@ -402,8 +424,8 @@ namespace Crowny
                         const uint64_t milliseconds = timeout.as<uint64_t>();
                         if (milliseconds == 0 || milliseconds > 30ULL * 60ULL * 1000ULL)
                         {
-                            result.Error = { "builder.request.timeout_invalid",
-                                             "Managed TimeoutMilliseconds must be between 1 and 1800000.", std::to_string(milliseconds) };
+                            result.Error = { "builder.request.timeout_invalid", "Managed TimeoutMilliseconds must be between 1 and 1800000.",
+                                             std::to_string(milliseconds) };
                             return result;
                         }
                         request.Managed.Timeout = std::chrono::milliseconds(milliseconds);
@@ -458,8 +480,7 @@ namespace Crowny
                     if (requestedVersion != request.EngineVersion)
                     {
                         result.Error = { "builder.request.engine_version_mismatch",
-                                         "EngineVersion must match this Crowny Builder binary (" + request.EngineVersion + ").",
-                                         requestedVersion };
+                                         "EngineVersion must match this Crowny Builder binary (" + request.EngineVersion + ").", requestedVersion };
                         return result;
                     }
                 }
@@ -469,8 +490,8 @@ namespace Crowny
                     request.MonoVersion = request.Toolchain.Version;
                 if (request.MonoVersion.empty())
                 {
-                    result.Error = { "builder.request.mono_version_missing",
-                                     "MonoVersion is required when the managed toolchain cannot provide it.", "MonoVersion" };
+                    result.Error = { "builder.request.mono_version_missing", "MonoVersion is required when the managed toolchain cannot provide it.",
+                                     "MonoVersion" };
                     return result;
                 }
                 return result;
@@ -583,8 +604,7 @@ namespace Crowny
             if (error)
                 return "Cannot inspect report path '" + absolute.string() + "': " + error.message();
 
-            const Path temporary = absolute.parent_path() /
-                                   ("." + absolute.filename().string() + ".tmp-" + UuidGenerator::Generate().ToString());
+            const Path temporary = absolute.parent_path() / ("." + absolute.filename().string() + ".tmp-" + UuidGenerator::Generate().ToString());
             {
                 std::ofstream stream(temporary, std::ios::binary | std::ios::trunc);
                 if (!stream)
@@ -625,8 +645,8 @@ namespace Crowny
                 output << '[' << ToString(stage.Status) << "] " << ToString(stage.Stage) << '\n';
                 for (const BuildIssue& issue : stage.Diagnostics.Issues)
                 {
-                    output << "  " << (issue.Severity == BuildIssueSeverity::Warning ? "warning" : "error") << " [" << issue.Code
-                           << "] " << issue.Message;
+                    output << "  " << (issue.Severity == BuildIssueSeverity::Warning ? "warning" : "error") << " [" << issue.Code << "] "
+                           << issue.Message;
                     if (!issue.Subject.empty())
                         output << " (" << issue.Subject << ')';
                     output << '\n';
@@ -664,13 +684,22 @@ namespace Crowny
         }
     } // namespace
 
-    int RunCrownyBuilder(const Vector<String>& arguments, std::ostream& output, std::ostream& error,
-                         BuildCancellationCheck cancellation)
+    int RunCrownyBuilder(const Vector<String>& arguments, std::ostream& output, std::ostream& error, BuildCancellationCheck cancellation)
     {
         BuilderCommandLine command;
         BuilderError commandError;
         if (!ParseCommandLine(arguments, command, commandError))
         {
+            if (!command.ReportFile.empty() && !command.ReportFile.filename().empty())
+            {
+                const String json = SerializeError(BuilderExitCode::InvalidCommandLine, commandError);
+                if (const String writeError = WriteReportAtomically(command.ReportFile, json); !writeError.empty())
+                {
+                    const BuilderError reportError{ "builder.report.write_failed", writeError, command.ReportFile.string() };
+                    PrintError(output, error, command.Format, BuilderExitCode::InternalError, reportError);
+                    return static_cast<int>(BuilderExitCode::InternalError);
+                }
+            }
             PrintError(output, error, command.Format, BuilderExitCode::InvalidCommandLine, commandError);
             if (command.Format == BuilderOutputFormat::Text)
                 error << '\n' << Usage();

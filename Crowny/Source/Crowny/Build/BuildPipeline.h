@@ -63,6 +63,7 @@ namespace Crowny
         PlayerTemplateRequest Validation;
         Path StageDirectory;
         Vector<BuildPipelineArtifact> Artifacts;
+        BuildCancellationCheck Cancellation;
     };
 
     struct BuildPipelineStageReport
@@ -83,14 +84,14 @@ namespace Crowny
         const BuildPipelineStageReport* Find(BuildPipelineStage stage) const;
     };
 
-    using BuildCancellationCheck = std::function<bool()>;
-
     struct BuildPipelineOperations
     {
         std::function<BuildValidation(const BuildPipelineRequest&)> Validate;
         std::function<ContentResolveResult(const ContentDatabase&, const ContentResolveRequest&)> ResolveContent;
         std::function<ManagedCompileResult(const ManagedBuildRequest&, const ManagedToolchain&)> CompileManaged;
         std::function<String(const Path&, const ContentPackDescriptor&, const Vector<ContentPackInput>&)> PackContent;
+        std::function<String(const Path&, const ContentPackDescriptor&, const Vector<ContentPackInput>&, BuildCancellationCheck)>
+          PackContentCancellable;
         std::function<BuildValidation(const BuildTemplateStageRequest&)> StageTemplate;
         std::function<String(const Path&, const BuildManifest&)> WriteManifest;
         std::function<String(const Path&, const Path&)> MoveDirectory;

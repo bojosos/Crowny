@@ -5,6 +5,8 @@
 
 namespace Crowny
 {
+    using BuildCancellationCheck = std::function<bool()>;
+
     enum class BuildPlatform
     {
         WindowsX64,

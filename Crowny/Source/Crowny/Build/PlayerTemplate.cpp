@@ -89,6 +89,27 @@ namespace Crowny
             return parent / (base + String(suffix) + UuidGenerator::Generate().ToString());
         }
 
+        String CopyFileWithCancellation(const Path& source, const Path& destination, const BuildCancellationCheck& cancellation)
+        {
+            std::ifstream input(source, std::ios::binary);
+            std::ofstream output(destination, std::ios::binary | std::ios::trunc);
+            if (!input || !output)
+                return "Cannot open the source or destination file.";
+
+            Array<char, 64 * 1024> buffer{};
+            while (input)
+            {
+                if (cancellation && cancellation())
+                    return "Player template staging was cancelled.";
+                input.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+                const std::streamsize count = input.gcount();
+                if (count > 0)
+                    output.write(buffer.data(), count);
+            }
+            output.flush();
+            return input.eof() && output ? String() : "Copying the file failed.";
+        }
+
         String PublishStagedDirectory(const Path& temporary, const Path& destination)
         {
             std::error_code error;
@@ -270,9 +291,15 @@ namespace Crowny
         return {};
     }
 
-    BuildValidation ValidatePlayerTemplate(const Path& root, const PlayerTemplateManifest& manifest, const PlayerTemplateRequest& request)
+    BuildValidation ValidatePlayerTemplate(const Path& root, const PlayerTemplateManifest& manifest, const PlayerTemplateRequest& request,
+                                           BuildCancellationCheck cancellation)
     {
         BuildValidation validation;
+        if (cancellation && cancellation())
+        {
+            validation.Error("template.validation.cancelled", "Player template validation was cancelled.", root.string());
+            return validation;
+        }
         if (!fs::is_directory(root))
         {
             validation.Error("template.root.missing", "Player template directory does not exist.", root.string());
@@ -310,6 +337,11 @@ namespace Crowny
         Set<String> foldedPaths;
         for (const PlayerTemplateFile& file : manifest.Files)
         {
+            if (cancellation && cancellation())
+            {
+                validation.Error("template.validation.cancelled", "Player template validation was cancelled.", root.string());
+                return validation;
+            }
             const String relative = NormalizePortableBuildPath(file.RelativePath);
             if (!IsSafeRelativeBuildPath(file.RelativePath))
             {
@@ -339,7 +371,12 @@ namespace Crowny
                 validation.Error("template.file.missing", "Template file is missing or resolves outside the template.", relative);
                 continue;
             }
-            const String actualHash = ComputeFileSha256(absolute);
+            const String actualHash = ComputeFileSha256(absolute, cancellation);
+            if (cancellation && cancellation())
+            {
+                validation.Error("template.validation.cancelled", "Player template validation was cancelled.", root.string());
+                return validation;
+            }
             if (actualHash.empty())
                 validation.Error("template.file.hash_unreadable", "Template file cannot be read or hashed.", relative);
             else if (hashValid && !HashesMatch(actualHash, file.Sha256))
@@ -350,8 +387,12 @@ namespace Crowny
         return validation;
     }
 
-    String StagePlayerTemplate(const Path& root, const PlayerTemplateManifest& manifest, const Path& stageDirectory)
+    String StagePlayerTemplate(const Path& root, const PlayerTemplateManifest& manifest, const Path& stageDirectory,
+                               BuildCancellationCheck cancellation)
     {
+        const auto cancelled = [&]() { return cancellation && cancellation(); };
+        if (cancelled())
+            return "Player template staging was cancelled.";
         if (stageDirectory.empty() || stageDirectory.filename().empty())
             return "Player template staging directory must name a directory.";
         if (manifest.Files.empty())
@@ -371,6 +412,8 @@ namespace Crowny
         Set<String> foldedPaths;
         for (const PlayerTemplateFile& file : manifest.Files)
         {
+            if (cancelled())
+                return "Player template staging was cancelled.";
             if (!IsSafeRelativeBuildPath(file.RelativePath))
                 return "Template manifest contains unsafe path '" + file.RelativePath.string() + "'.";
             const String relative = NormalizePortableBuildPath(file.RelativePath);
@@ -401,8 +444,12 @@ namespace Crowny
 
         for (const PreparedFile& prepared : preparedFiles)
         {
+            if (cancelled())
+                return "Player template staging was cancelled.";
             const PlayerTemplateFile& file = *prepared.ManifestFile;
-            const String sourceHash = ComputeFileSha256(prepared.Source);
+            const String sourceHash = ComputeFileSha256(prepared.Source, cancellation);
+            if (cancelled())
+                return "Player template staging was cancelled.";
             if (sourceHash.empty())
                 return "Cannot read or hash template file '" + prepared.Relative + "'.";
             if (!HashesMatch(sourceHash, file.Sha256))
@@ -412,10 +459,13 @@ namespace Crowny
             fs::create_directories(destination.parent_path(), error);
             if (error)
                 return "Cannot create staging subdirectory: " + error.message();
-            fs::copy_file(prepared.Source, destination, fs::copy_options::none, error);
-            if (error)
-                return "Cannot stage template file '" + prepared.Relative + "': " + error.message();
-            const String stagedHash = ComputeFileSha256(destination);
+            const String copyError = CopyFileWithCancellation(prepared.Source, destination, cancellation);
+            if (!copyError.empty())
+                return cancelled() ? "Player template staging was cancelled."
+                                   : "Cannot stage template file '" + prepared.Relative + "': " + copyError;
+            const String stagedHash = ComputeFileSha256(destination, cancellation);
+            if (cancelled())
+                return "Player template staging was cancelled.";
             if (stagedHash.empty() || !HashesMatch(stagedHash, file.Sha256))
                 return "Staged template file hash does not match its manifest: '" + prepared.Relative + "'.";
 #ifndef CW_PLATFORM_WIN32
@@ -428,6 +478,8 @@ namespace Crowny
 #endif
         }
 
+        if (cancelled())
+            return "Player template staging was cancelled.";
         const String publishError = PublishStagedDirectory(temporary, stageDirectory);
         if (publishError.empty())
             temporaryCleanup.Enabled = false;

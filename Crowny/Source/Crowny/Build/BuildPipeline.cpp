@@ -580,7 +580,8 @@ namespace Crowny
             return manifest;
         }
 
-        BuildValidation ValidateContentPackOutput(const Path& path, const ContentPackDescriptor& expected, const Vector<ContentPackInput>& inputs)
+        BuildValidation ValidateContentPackOutput(const Path& path, const ContentPackDescriptor& expected, const Vector<ContentPackInput>& inputs,
+                                                  const BuildCancellationCheck& cancellation)
         {
             BuildValidation validation;
             ContentPackReader reader;
@@ -598,6 +599,8 @@ namespace Crowny
                 validation.Error("pipeline.pack.entry_count", "The produced content pack has an unexpected entry count.", path.string());
             for (const ContentPackInput& input : inputs)
             {
+                if (cancellation && cancellation())
+                    return validation;
                 const std::optional<ContentPackEntry> byId = reader.Find(input.Id);
                 const std::optional<ContentPackEntry> byPath = reader.Find(input.LogicalPath);
                 if (!byId || NormalizePortableBuildPath(byId->LogicalPath) != NormalizePortableBuildPath(input.LogicalPath))
@@ -611,7 +614,9 @@ namespace Crowny
                     validation.Error("pipeline.pack.entry_read_failed", error, input.LogicalPath.generic_string());
                     continue;
                 }
-                const String sourceHash = ComputeFileSha256(input.SourcePath);
+                const String sourceHash = ComputeFileSha256(input.SourcePath, cancellation);
+                if (cancellation && cancellation())
+                    return validation;
                 const String packedHash = ComputeBytesSha256(bytes.data(), bytes.size());
                 if (sourceHash.empty() || packedHash.empty() || sourceHash != packedHash)
                     validation.Error("pipeline.pack.entry_mismatch", "A packed entry does not match its cooked source.",
@@ -652,11 +657,13 @@ namespace Crowny
             return validation;
         }
 
-        BuildValidation ValidateTemplateFilesAt(const Path& root, const PlayerTemplateManifest& manifest)
+        BuildValidation ValidateTemplateFilesAt(const Path& root, const PlayerTemplateManifest& manifest, const BuildCancellationCheck& cancellation)
         {
             BuildValidation validation;
             for (const PlayerTemplateFile& file : manifest.Files)
             {
+                if (cancellation && cancellation())
+                    return validation;
                 const Path staged = root / file.RelativePath;
                 if (!IsSafeRelativeBuildPath(file.RelativePath) || !IsWithin(root, staged) || TraversesLinkOrReparsePoint(root, staged) ||
                     !fs::is_regular_file(staged))
@@ -666,7 +673,9 @@ namespace Crowny
                                      file.RelativePath.generic_string());
                     continue;
                 }
-                const String hash = ComputeFileSha256(staged);
+                const String hash = ComputeFileSha256(staged, cancellation);
+                if (cancellation && cancellation())
+                    return validation;
                 if (!HashesMatch(hash, file.Sha256))
                     validation.Error("pipeline.template.output_mismatch", "A staged template file does not match its manifest.",
                                      file.RelativePath.generic_string());
@@ -674,11 +683,14 @@ namespace Crowny
             return validation;
         }
 
-        BuildValidation ValidateGeneratedArtifactsAt(const Path& root, const Vector<BuildPipelineArtifact>& artifacts)
+        BuildValidation ValidateGeneratedArtifactsAt(const Path& root, const Vector<BuildPipelineArtifact>& artifacts,
+                                                     const BuildCancellationCheck& cancellation)
         {
             BuildValidation validation;
             for (const BuildPipelineArtifact& artifact : artifacts)
             {
+                if (cancellation && cancellation())
+                    return validation;
                 const Path destination = root / artifact.RelativeDestination;
                 if (!IsSafeRelativeBuildPath(artifact.RelativeDestination) || !IsWithin(root, destination) ||
                     TraversesLinkOrReparsePoint(root, destination) || !fs::is_regular_file(destination))
@@ -688,8 +700,10 @@ namespace Crowny
                                      artifact.RelativeDestination.generic_string());
                     continue;
                 }
-                const String sourceHash = ComputeFileSha256(artifact.Source);
-                const String destinationHash = ComputeFileSha256(destination);
+                const String sourceHash = ComputeFileSha256(artifact.Source, cancellation);
+                const String destinationHash = ComputeFileSha256(destination, cancellation);
+                if (cancellation && cancellation())
+                    return validation;
                 if (sourceHash.empty() || destinationHash.empty() || sourceHash != destinationHash)
                     validation.Error("pipeline.artifact.output_mismatch", "A published artifact does not match its generated source.",
                                      artifact.RelativeDestination.generic_string());
@@ -697,7 +711,7 @@ namespace Crowny
             return validation;
         }
 
-        BuildValidation ValidateDirectoryTree(const Path& root, StringView code)
+        BuildValidation ValidateDirectoryTree(const Path& root, StringView code, const BuildCancellationCheck& cancellation)
         {
             BuildValidation validation;
             std::error_code error;
@@ -709,6 +723,8 @@ namespace Crowny
             for (fs::recursive_directory_iterator iterator(root, fs::directory_options::none, error), end; !error && iterator != end;
                  iterator.increment(error))
             {
+                if (cancellation && cancellation())
+                    return validation;
                 if (IsLinkOrReparsePoint(iterator->path()) || !IsWithin(root, iterator->path()))
                 {
                     validation.Error(String(code), "The directory tree contains an escaping symbolic link or reparse point.",
@@ -721,13 +737,40 @@ namespace Crowny
             return validation;
         }
 
+        String CopyFileWithCancellation(const Path& source, const Path& destination, const BuildCancellationCheck& cancellation)
+        {
+            std::ifstream input(source, std::ios::binary);
+            std::ofstream output(destination, std::ios::binary | std::ios::trunc);
+            if (!input || !output)
+                return "Cannot open the source or destination file.";
+
+            Array<char, 64 * 1024> buffer{};
+            while (input)
+            {
+                if (cancellation && cancellation())
+                    return "The build was cancelled.";
+                input.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+                const std::streamsize count = input.gcount();
+                if (count > 0)
+                    output.write(buffer.data(), count);
+            }
+            output.flush();
+            return input.eof() && output ? String() : "Copying the file failed.";
+        }
+
         BuildValidation CopyArtifacts(const BuildTemplateStageRequest& request)
         {
-            BuildValidation validation = ValidatePlayerTemplate(request.TemplateRoot, request.Template, request.Validation);
+            const auto cancelled = [&]() { return request.Cancellation && request.Cancellation(); };
+            BuildValidation validation = ValidatePlayerTemplate(request.TemplateRoot, request.Template, request.Validation, request.Cancellation);
             if (!validation.IsValid())
                 return validation;
-            if (const String error = StagePlayerTemplate(request.TemplateRoot, request.Template, request.StageDirectory); !error.empty())
+            if (cancelled())
+                return validation;
+            if (const String error = StagePlayerTemplate(request.TemplateRoot, request.Template, request.StageDirectory, request.Cancellation);
+                !error.empty())
             {
+                if (cancelled())
+                    return validation;
                 validation.Error("pipeline.template.stage_failed", error, request.StageDirectory.string());
                 return validation;
             }
@@ -745,6 +788,8 @@ namespace Crowny
             Set<String> foldedDestinations;
             for (const BuildPipelineArtifact& artifact : artifacts)
             {
+                if (cancelled())
+                    return validation;
                 const String relative = NormalizePathText(artifact.RelativeDestination);
                 String folded = relative;
                 std::transform(folded.begin(), folded.end(), folded.begin(),
@@ -771,14 +816,25 @@ namespace Crowny
                 std::error_code error;
                 fs::create_directories(destination.parent_path(), error);
                 if (!error)
-                    fs::copy_file(artifact.Source, destination, fs::copy_options::none, error);
+                {
+                    const String copyError = CopyFileWithCancellation(artifact.Source, destination, request.Cancellation);
+                    if (!copyError.empty() && !cancelled())
+                    {
+                        validation.Error("pipeline.artifact.copy_failed", "Cannot stage generated artifact: " + copyError, relative);
+                        continue;
+                    }
+                }
+                if (cancelled())
+                    return validation;
                 if (error)
                 {
                     validation.Error("pipeline.artifact.copy_failed", "Cannot stage generated artifact: " + error.message(), relative);
                     continue;
                 }
-                const String sourceHash = ComputeFileSha256(artifact.Source);
-                const String destinationHash = ComputeFileSha256(destination);
+                const String sourceHash = ComputeFileSha256(artifact.Source, request.Cancellation);
+                const String destinationHash = ComputeFileSha256(destination, request.Cancellation);
+                if (cancelled())
+                    return validation;
                 if (sourceHash.empty() || destinationHash.empty() || sourceHash != destinationHash)
                     validation.Error("pipeline.artifact.hash_mismatch", "A staged artifact does not match its source.", relative);
             }
@@ -1048,11 +1104,17 @@ namespace Crowny
         }
 
         BuildValidation PublishDirectory(const Path& candidate, const Path& output, const BuildPipelineOperations& operations,
-                                         const std::function<BuildValidation(const Path&)>& validateOutput)
+                                         const std::function<BuildValidation(const Path&)>& validateOutput,
+                                         const BuildCancellationCheck& cancellation)
         {
             BuildValidation validation = ReconcilePublication(output);
             if (!validation.IsValid())
                 return validation;
+            if (cancellation && cancellation())
+            {
+                validation.Error("pipeline.publish.cancelled", "The build was cancelled before publication.", output.string());
+                return validation;
+            }
             if (!fs::is_directory(candidate))
             {
                 validation.Error("pipeline.publish.candidate_missing", "The staged player directory does not exist.", candidate.string());
@@ -1159,6 +1221,8 @@ namespace Crowny
                                            output.string());
                 }
             }
+            if (cancellation && cancellation() && !outputValidation.ContainsCode("pipeline.publish.cancelled"))
+                outputValidation.Error("pipeline.publish.cancelled", "The build was cancelled during publication.", output.string());
             if (!publishMove.Error.empty() || !DirectoryExists(output) || PathExists(candidate) || IsLinkOrReparsePoint(output) ||
                 !outputValidation.IsValid())
             {
@@ -1215,6 +1279,9 @@ namespace Crowny
                         validation.Warn("pipeline.publish.failed_output_cleanup",
                                         "The failed output was quarantined but could not be removed: " + error.message(), failedOutput.string());
                 }
+                else if (PathExists(output))
+                    validation.Error("pipeline.publish.rollback_failed", "Publishing failed and the invalid output could not be removed.",
+                                     output.string());
                 validation.Error("pipeline.publish.failed", "Cannot publish the staged player: " + message, output.string());
                 return validation;
             }
@@ -1320,8 +1387,9 @@ namespace Crowny
         operations.CompileManaged = [](const ManagedBuildRequest& request, const ManagedToolchain& toolchain) {
             return CompileManagedAssembly(request, toolchain);
         };
-        operations.PackContent = [](const Path& path, const ContentPackDescriptor& descriptor, const Vector<ContentPackInput>& inputs) {
-            return ContentPackWriter::Write(path, descriptor, inputs);
+        operations.PackContentCancellable = [](const Path& path, const ContentPackDescriptor& descriptor, const Vector<ContentPackInput>& inputs,
+                                               BuildCancellationCheck cancellation) {
+            return ContentPackWriter::Write(path, descriptor, inputs, std::move(cancellation));
         };
         operations.StageTemplate = CopyArtifacts;
         operations.WriteManifest = [](const Path& path, const BuildManifest& manifest) { return BuildManifestStore::Save(path, manifest); };
@@ -1525,15 +1593,30 @@ namespace Crowny
             }
             if (packValidation.IsValid())
             {
-                if (!m_Operations.PackContent)
+                if (!m_Operations.PackContentCancellable && !m_Operations.PackContent)
                     packValidation.Error("pipeline.operation.missing", "The content pack operation is missing.", "Pack");
-                else if (const String error = m_Operations.PackContent(contentPack, descriptor, packInputs); !error.empty())
+                else if (const String error = m_Operations.PackContent
+                                                ? m_Operations.PackContent(contentPack, descriptor, packInputs)
+                                                : m_Operations.PackContentCancellable(contentPack, descriptor, packInputs, cancelled);
+                         !error.empty())
+                {
+                    if (cancelled())
+                    {
+                        cancelAt(BuildPipelineStage::PackContent);
+                        return report;
+                    }
                     packValidation.Error("pipeline.pack.failed", error, contentPack.string());
+                }
                 else if (!fs::is_regular_file(contentPack))
                     packValidation.Error("pipeline.pack.output_missing", "Content packing did not produce its declared output.",
                                          contentPack.string());
                 else if (m_Operations.ValidateProducedArtifacts)
-                    packValidation.Append(ValidateContentPackOutput(contentPack, descriptor, packInputs));
+                    packValidation.Append(ValidateContentPackOutput(contentPack, descriptor, packInputs, cancelled));
+            }
+            if (cancelled())
+            {
+                cancelAt(BuildPipelineStage::PackContent);
+                return report;
             }
             if (!finishStage(BuildPipelineStage::PackContent, std::move(packValidation)))
                 return report;
@@ -1559,7 +1642,12 @@ namespace Crowny
                 stageValidation.Error("pipeline.operation.missing", "The player template staging operation is missing.", "Stage Template");
             else
                 stageValidation =
-                  m_Operations.StageTemplate({ snapshot.TemplateRoot, snapshot.Template, templateValidation, playerCandidate, artifacts });
+                  m_Operations.StageTemplate({ snapshot.TemplateRoot, snapshot.Template, templateValidation, playerCandidate, artifacts, cancelled });
+            if (cancelled())
+            {
+                cancelAt(BuildPipelineStage::StageTemplate);
+                return report;
+            }
             if (stageValidation.IsValid())
             {
                 if (!fs::is_directory(playerCandidate))
@@ -1573,8 +1661,13 @@ namespace Crowny
                                               artifact.RelativeDestination.generic_string());
                     else
                     {
-                        const String stagedHash = ComputeFileSha256(staged);
-                        const String sourceHash = ComputeFileSha256(artifact.Source);
+                        const String stagedHash = ComputeFileSha256(staged, cancelled);
+                        const String sourceHash = ComputeFileSha256(artifact.Source, cancelled);
+                        if (cancelled())
+                        {
+                            cancelAt(BuildPipelineStage::StageTemplate);
+                            return report;
+                        }
                         if (stagedHash.empty() || sourceHash.empty() || stagedHash != sourceHash)
                             stageValidation.Error("pipeline.artifact.hash_mismatch", "A staged artifact does not match its source.",
                                                   artifact.RelativeDestination.generic_string());
@@ -1583,9 +1676,14 @@ namespace Crowny
                 if (TraversesLinkOrReparsePoint(workingRoot, playerCandidate))
                     stageValidation.Error("pipeline.template.output_unsafe", "The staged player traverses a symbolic link or reparse point.",
                                           playerCandidate.string());
-                stageValidation.Append(ValidateDirectoryTree(playerCandidate, "pipeline.template.output_unsafe"));
+                stageValidation.Append(ValidateDirectoryTree(playerCandidate, "pipeline.template.output_unsafe", cancelled));
                 if (m_Operations.ValidateProducedArtifacts)
-                    stageValidation.Append(ValidateTemplateFilesAt(playerCandidate, snapshot.Template));
+                    stageValidation.Append(ValidateTemplateFilesAt(playerCandidate, snapshot.Template, cancelled));
+            }
+            if (cancelled())
+            {
+                cancelAt(BuildPipelineStage::StageTemplate);
+                return report;
             }
             if (!finishStage(BuildPipelineStage::StageTemplate, std::move(stageValidation)))
                 return report;
@@ -1619,17 +1717,46 @@ namespace Crowny
                 cancelAt(BuildPipelineStage::Publish);
                 return report;
             }
-            BuildValidation publishValidation = PublishDirectory(playerCandidate, report.OutputDirectory, m_Operations, [&](const Path& output) {
-                BuildValidation result = ValidateDirectoryTree(output, "pipeline.publish.output_unsafe");
-                result.Append(ValidateGeneratedArtifactsAt(output, artifacts));
-                if (m_Operations.ValidateProducedArtifacts)
+            BuildValidation publishValidation = PublishDirectory(
+              playerCandidate, report.OutputDirectory, m_Operations,
+              [&](const Path& output) {
+                  const auto recordCancellation = [&](BuildValidation& validation) {
+                      if (!cancelled())
+                          return false;
+                      if (!validation.ContainsCode("pipeline.publish.cancelled"))
+                          validation.Error("pipeline.publish.cancelled", "The build was cancelled during publication.", output.string());
+                      return true;
+                  };
+                  BuildValidation result = ValidateDirectoryTree(output, "pipeline.publish.output_unsafe", cancelled);
+                  if (recordCancellation(result))
+                      return result;
+                  result.Append(ValidateGeneratedArtifactsAt(output, artifacts, cancelled));
+                  if (recordCancellation(result))
+                      return result;
+                  if (m_Operations.ValidateProducedArtifacts)
+                  {
+                      result.Append(ValidateTemplateFilesAt(output, snapshot.Template, cancelled));
+                      if (recordCancellation(result))
+                          return result;
+                      result.Append(ValidateContentPackOutput(output / "Content/main.cwpack", descriptor, packInputs, cancelled));
+                      if (recordCancellation(result))
+                          return result;
+                      result.Append(ValidateManifestOutput(output / "BuildManifest.yaml", manifest));
+                  }
+                  return result;
+              },
+              cancelled);
+            if (publishValidation.ContainsCode("pipeline.publish.cancelled"))
+            {
+                if (publishValidation.ContainsCode("pipeline.publish.rollback_failed"))
+                    finishStage(BuildPipelineStage::Publish, std::move(publishValidation));
+                else
                 {
-                    result.Append(ValidateTemplateFilesAt(output, snapshot.Template));
-                    result.Append(ValidateContentPackOutput(output / "Content/main.cwpack", descriptor, packInputs));
-                    result.Append(ValidateManifestOutput(output / "BuildManifest.yaml", manifest));
+                    cancelAt(BuildPipelineStage::Publish);
+                    StageReport(report, BuildPipelineStage::Publish).Diagnostics.Append(publishValidation);
                 }
-                return result;
-            });
+                return report;
+            }
             finishStage(BuildPipelineStage::Publish, std::move(publishValidation));
             return report;
         }

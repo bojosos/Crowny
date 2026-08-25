@@ -122,6 +122,18 @@ namespace Crowny
         CHECK(validation.ContainsCode("template.file.hash_mismatch"));
     }
 
+    TEST_CASE("Player template validation reports cancellation explicitly", "[Build][Security]")
+    {
+        TemplateTestDirectory temporary;
+        WriteTemplateFile(temporary.Root / "Player.bin", "player");
+        const PlayerTemplateManifest manifest = MakeTemplateManifest(temporary.Root, { "Player.bin" });
+
+        const BuildValidation validation = ValidatePlayerTemplate(temporary.Root, manifest, MakeTemplateRequest(), [] { return true; });
+
+        CHECK_FALSE(validation.IsValid());
+        CHECK(validation.ContainsCode("template.validation.cancelled"));
+    }
+
 #ifdef CW_PLATFORM_WIN32
     TEST_CASE("Player template creation rejects a file it cannot hash", "[Build][Security]")
     {

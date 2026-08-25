@@ -83,7 +83,8 @@ namespace Crowny
             return true;
         }
 
-        bool CopyFileToStreamAndHash(const Path& source, std::ostream& output, uint64_t expectedSize, String& sha256)
+        bool CopyFileToStreamAndHash(const Path& source, std::ostream& output, uint64_t expectedSize, String& sha256,
+                                     const BuildCancellationCheck& cancellation)
         {
             std::ifstream input(source, std::ios::binary);
             if (!input)
@@ -99,6 +100,11 @@ namespace Crowny
             uint64_t copied = 0;
             while (input)
             {
+                if (cancellation && cancellation())
+                {
+                    mbedtls_sha256_free(&context);
+                    return false;
+                }
                 input.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
                 const std::streamsize count = input.gcount();
                 if (count <= 0)
@@ -160,7 +166,7 @@ namespace Crowny
         return Hex(digest, sizeof(digest));
     }
 
-    String ComputeFileSha256(const Path& path)
+    String ComputeFileSha256(const Path& path, BuildCancellationCheck cancellation)
     {
         std::ifstream stream(path, std::ios::binary);
         if (!stream)
@@ -175,6 +181,11 @@ namespace Crowny
         Array<uint8_t, 64 * 1024> buffer{};
         while (stream)
         {
+            if (cancellation && cancellation())
+            {
+                mbedtls_sha256_free(&context);
+                return {};
+            }
             stream.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(buffer.size()));
             const std::streamsize count = stream.gcount();
             if (count > 0 && mbedtls_sha256_update(&context, buffer.data(), static_cast<size_t>(count)) != 0)
@@ -189,8 +200,12 @@ namespace Crowny
         return status == 0 ? Hex(digest, sizeof(digest)) : String();
     }
 
-    String ContentPackWriter::Write(const Path& path, const ContentPackDescriptor& descriptor, const Vector<ContentPackInput>& inputs)
+    String ContentPackWriter::Write(const Path& path, const ContentPackDescriptor& descriptor, const Vector<ContentPackInput>& inputs,
+                                    BuildCancellationCheck cancellation)
     {
+        const auto cancelled = [&]() { return cancellation && cancellation(); };
+        if (cancelled())
+            return "Content pack creation was cancelled.";
         if (descriptor.PackId.empty() || descriptor.PackId.size() > MAX_DESCRIPTOR_STRING || descriptor.EngineVersion.empty() ||
             descriptor.EngineVersion.size() > MAX_DESCRIPTOR_STRING)
             return "Content pack descriptor has an invalid pack ID or engine version.";
@@ -206,6 +221,8 @@ namespace Crowny
         Set<String> lowercasePaths;
         for (ContentPackInput& input : sorted)
         {
+            if (cancelled())
+                return "Content pack creation was cancelled.";
             if (!IsSafeRelativeBuildPath(input.LogicalPath))
                 return "Content pack entry path is unsafe: '" + input.LogicalPath.string() + "'.";
             input.LogicalPath = NormalizeRuntimePath(input.LogicalPath);
@@ -268,6 +285,12 @@ namespace Crowny
         entries.reserve(sorted.size());
         for (const ContentPackInput& input : sorted)
         {
+            if (cancelled())
+            {
+                output.close();
+                fs::remove(temporary);
+                return "Content pack creation was cancelled.";
+            }
             ContentPackEntry entry;
             entry.Id = input.Id;
             entry.LogicalPath = input.LogicalPath;
@@ -285,10 +308,12 @@ namespace Crowny
                 return "Cannot read cooked asset size for '" + input.SourcePath.string() + "': " + error.message();
             }
             entry.UncompressedSize = entry.StoredSize;
-            if (!CopyFileToStreamAndHash(input.SourcePath, output, entry.StoredSize, entry.Sha256))
+            if (!CopyFileToStreamAndHash(input.SourcePath, output, entry.StoredSize, entry.Sha256, cancellation))
             {
                 output.close();
                 fs::remove(temporary);
+                if (cancelled())
+                    return "Content pack creation was cancelled.";
                 return "Cannot read cooked asset '" + input.SourcePath.string() + "'.";
             }
             if (!GetOutputPosition(output, position))
@@ -314,6 +339,12 @@ namespace Crowny
         }
         for (const ContentPackEntry& entry : entries)
         {
+            if (cancelled())
+            {
+                output.close();
+                fs::remove(temporary);
+                return "Content pack creation was cancelled.";
+            }
             const String logicalPath = entry.LogicalPath.generic_string();
             const String uuid = entry.Id.ToString();
             const uint16_t pathLength = static_cast<uint16_t>(logicalPath.size());
@@ -351,6 +382,11 @@ namespace Crowny
             return "Writing content pack failed for '" + path.string() + "'.";
         }
         output.close();
+        if (cancelled())
+        {
+            fs::remove(temporary);
+            return "Content pack creation was cancelled.";
+        }
         return ReplaceAtomically(temporary, path);
     }
 
