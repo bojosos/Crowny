@@ -19,10 +19,22 @@ namespace Crowny
     typedef Flags<ShaderLanguage> ShaderLanguageFlags;
     CW_FLAGS_OPERATORS(ShaderLanguageFlags);
 
+    struct ShaderPreprocessResult
+    {
+        String Source;
+        Vector<Path> Dependencies;
+        Vector<ShaderDiagnostic> Diagnostics;
+        uint64_t ContentHash = 0;
+
+        bool Succeeded() const;
+    };
+
     struct ShaderCompileResult
     {
         ShaderDesc Description;
+        Vector<Path> Dependencies;
         Vector<ShaderDiagnostic> Diagnostics;
+        uint64_t SourceContentHash = 0;
 
         bool Succeeded() const;
     };
@@ -42,8 +54,7 @@ namespace Crowny
         static ShaderCompileResult CompileWithDiagnostics(const Path& path, const String& source,
                                                           ShaderLanguageFlags language = ShaderLanguage::VKSL,
                                                           const UnorderedMap<String, String>& defines = {});
-        static bool PreprocessIncludes(const Path& path, StringView source, String& output,
-                                       Vector<ShaderDiagnostic>& diagnostics);
+        static ShaderPreprocessResult PreprocessIncludes(const Path& path, StringView source);
         static Ref<BlendStateDesc> PreparseBlendState(String& inOutShader);
         static Ref<BinaryShaderData> CompileStage(const String& source, ShaderType shaderType, ShaderLanguage language, ShaderLanguageFlags flags,
                                                   const UnorderedMap<String, String>& defines);

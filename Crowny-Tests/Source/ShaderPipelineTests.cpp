@@ -1,10 +1,14 @@
+#include "Crowny/Assets/AssetCodecs.h"
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Import/ImportOptions.h"
 #include "Crowny/Renderer/ShaderVariation.h"
 #include "Crowny/Serialization/ImportOptionsSerializer.h"
+#include "Crowny/Utils/BuiltInShaderCompiler.h"
 #include "Crowny/Utils/ShaderCompiler.h"
 #include "Crowny/Utils/ShaderSourceParser.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <chrono>
 #include <fstream>
 #include <yaml-cpp/yaml.h>
 
@@ -12,6 +16,28 @@ using namespace Crowny;
 
 namespace
 {
+    class ScopedAssetManagerModule
+    {
+    public:
+        ScopedAssetManagerModule()
+        {
+            if (AssetManager::TryGet() == nullptr)
+            {
+                AssetManager::StartUp();
+                m_OwnsModule = true;
+            }
+        }
+
+        ~ScopedAssetManagerModule()
+        {
+            if (m_OwnsModule)
+                AssetManager::Shutdown();
+        }
+
+    private:
+        bool m_OwnsModule = false;
+    };
+
     bool HasErrorContaining(const ParsedShaderSource& source, StringView text)
     {
         return std::any_of(source.Diagnostics.begin(), source.Diagnostics.end(), [&](const ShaderDiagnostic& diagnostic) {
@@ -180,22 +206,173 @@ TEST_CASE("Shader includes expand relative files and reject cycles", "[Shader]")
         stream << "#include \"common.glslinc\"\n";
     }
 
-    String output;
-    Vector<ShaderDiagnostic> diagnostics;
-    CHECK(ShaderCompiler::PreprocessIncludes(shader, "#include \"nested.glslinc\"\nvoid main() {}\n", output, diagnostics));
-    CHECK(diagnostics.empty());
-    CHECK(output.find("SharedLighting") != String::npos);
+    const ShaderPreprocessResult initial =
+      ShaderCompiler::PreprocessIncludes(shader, "#include \"nested.glslinc\"\n#include \"common.glslinc\"\nvoid main() {}\n");
+    REQUIRE(initial.Succeeded());
+    CHECK(initial.Diagnostics.empty());
+    CHECK(initial.Source.find("SharedLighting") != String::npos);
+    REQUIRE(initial.Dependencies.size() == 2);
+    CHECK(initial.Dependencies[0] == std::filesystem::weakly_canonical(nested));
+    CHECK(initial.Dependencies[1] == std::filesystem::weakly_canonical(common));
+    CHECK(initial.ContentHash != 0);
+
+    const auto originalWriteTime = std::filesystem::last_write_time(common, error);
+    REQUIRE_FALSE(error);
+    std::filesystem::last_write_time(common, originalWriteTime + std::chrono::hours(1), error);
+    REQUIRE_FALSE(error);
+    const ShaderPreprocessResult touched =
+      ShaderCompiler::PreprocessIncludes(shader, "#include \"nested.glslinc\"\n#include \"common.glslinc\"\nvoid main() {}\n");
+    REQUIRE(touched.Succeeded());
+    CHECK(touched.ContentHash == initial.ContentHash);
+
+    {
+        std::ofstream stream(common, std::ios::binary | std::ios::trunc);
+        stream << "vec3 SharedLighting() { return vec3(0.5); }\n";
+    }
+    const ShaderPreprocessResult changed =
+      ShaderCompiler::PreprocessIncludes(shader, "#include \"nested.glslinc\"\n#include \"common.glslinc\"\nvoid main() {}\n");
+    REQUIRE(changed.Succeeded());
+    CHECK(changed.ContentHash != initial.ContentHash);
 
     {
         std::ofstream stream(common, std::ios::binary | std::ios::trunc);
         stream << "#include \"nested.glslinc\"\n";
     }
-    output.clear();
-    diagnostics.clear();
-    CHECK_FALSE(ShaderCompiler::PreprocessIncludes(shader, "#include \"nested.glslinc\"\n", output, diagnostics));
-    CHECK(std::any_of(diagnostics.begin(), diagnostics.end(), [](const ShaderDiagnostic& diagnostic) {
+    const ShaderPreprocessResult cyclic = ShaderCompiler::PreprocessIncludes(shader, "#include \"nested.glslinc\"\n");
+    CHECK_FALSE(cyclic.Succeeded());
+    CHECK(cyclic.ContentHash == 0);
+    CHECK(std::any_of(cyclic.Diagnostics.begin(), cyclic.Diagnostics.end(), [](const ShaderDiagnostic& diagnostic) {
         return diagnostic.Message.find("cycle") != String::npos;
     }));
+
+    std::filesystem::remove_all(directory, error);
+}
+
+TEST_CASE("Shader compiler cache invalidates stages that consume a changed include", "[Shader]")
+{
+    const Path directory = std::filesystem::temp_directory_path() / "crowny_shader_include_cache_tests";
+    std::error_code error;
+    std::filesystem::remove_all(directory, error);
+    std::filesystem::create_directories(directory, error);
+    const Path include = directory / "color.glslinc";
+    const Path shader = directory / "shader.glsl";
+    {
+        std::ofstream stream(include, std::ios::binary);
+        stream << "vec4 SharedColor() { return vec4(1.0); }\n";
+    }
+    const String source = R"(#lang glsl
+#type vertex
+#version 450
+void main() { gl_Position = vec4(0.0); }
+#type fragment
+#version 450
+#include "color.glslinc"
+layout(location = 0) out vec4 outColor;
+void main() { outColor = SharedColor(); }
+)";
+
+    ShaderCompiler::ClearCache();
+    const ShaderCompileResult first = ShaderCompiler::CompileWithDiagnostics(shader, source);
+    REQUIRE(first.Succeeded());
+    const ShaderCompilerCacheStats afterFirst = ShaderCompiler::GetCacheStats();
+    CHECK(afterFirst.Misses == 2);
+
+    const ShaderCompileResult unchanged = ShaderCompiler::CompileWithDiagnostics(shader, source);
+    REQUIRE(unchanged.Succeeded());
+    CHECK(unchanged.SourceContentHash == first.SourceContentHash);
+    const ShaderCompilerCacheStats afterUnchanged = ShaderCompiler::GetCacheStats();
+    CHECK(afterUnchanged.Hits == afterFirst.Hits + 2);
+
+    {
+        std::ofstream stream(include, std::ios::binary | std::ios::trunc);
+        stream << "vec4 SharedColor() { return vec4(0.5); }\n";
+    }
+    const ShaderCompileResult changed = ShaderCompiler::CompileWithDiagnostics(shader, source);
+    REQUIRE(changed.Succeeded());
+    CHECK(changed.SourceContentHash != first.SourceContentHash);
+    const ShaderCompilerCacheStats afterChanged = ShaderCompiler::GetCacheStats();
+    CHECK(afterChanged.Misses == afterUnchanged.Misses + 1);
+    CHECK(afterChanged.Hits == afterUnchanged.Hits + 1);
+
+    std::filesystem::remove_all(directory, error);
+}
+
+TEST_CASE("Built-in shader freshness follows transitive include content", "[Shader][Assets]")
+{
+    const auto unique = std::chrono::steady_clock::now().time_since_epoch().count();
+    const Path directory = std::filesystem::temp_directory_path() / ("crowny_builtin_shader_" + std::to_string(unique));
+    std::error_code error;
+    std::filesystem::create_directories(directory, error);
+    REQUIRE_FALSE(error);
+    const Path include = directory / "color.glslinc";
+    const Path nestedInclude = directory / "lighting.glslinc";
+    const Path shader = directory / "freshness.glsl";
+    Path asset = shader;
+    asset.replace_extension(".asset");
+
+    {
+        std::ofstream stream(include, std::ios::binary);
+        stream << "vec4 SharedColor() { return vec4(1.0); }\n";
+    }
+    {
+        std::ofstream stream(nestedInclude, std::ios::binary);
+        stream << "#include \"color.glslinc\"\n";
+    }
+    {
+        std::ofstream stream(shader, std::ios::binary);
+        stream << R"(#lang glsl
+#type vertex
+#version 450
+void main() { gl_Position = vec4(0.0); }
+#type fragment
+#version 450
+#include "lighting.glslinc"
+layout(location = 0) out vec4 outColor;
+void main() { outColor = SharedColor(); }
+)";
+    }
+
+    ScopedAssetManagerModule assetManager;
+    const BuiltInShaderCompileStats first = BuiltInShaderCompiler::CompileAll(directory);
+    CHECK(first.Compiled == 1);
+    CHECK(first.Skipped == 0);
+    CHECK(first.Failed == 0);
+    AssetFileHeader firstHeader;
+    REQUIRE(PeekAssetHeader(asset, firstHeader));
+    const uint64_t firstHash = firstHeader.SourceContentHash;
+    std::ifstream shaderStream(shader, std::ios::binary);
+    const String shaderSource((std::istreambuf_iterator<char>(shaderStream)), std::istreambuf_iterator<char>());
+    CHECK(firstHash == ShaderCompiler::PreprocessIncludes(shader, shaderSource).ContentHash);
+
+    const auto originalWriteTime = std::filesystem::last_write_time(include, error);
+    REQUIRE_FALSE(error);
+    std::filesystem::last_write_time(include, originalWriteTime + std::chrono::hours(1), error);
+    REQUIRE_FALSE(error);
+    const BuiltInShaderCompileStats touched = BuiltInShaderCompiler::CompileAll(directory);
+    CHECK(touched.Compiled == 0);
+    CHECK(touched.Skipped == 1);
+    CHECK(touched.Failed == 0);
+
+    {
+        std::ofstream stream(include, std::ios::binary | std::ios::trunc);
+        stream << "vec4 SharedColor() { return vec4(0.25); }\n";
+    }
+    const BuiltInShaderCompileStats changed = BuiltInShaderCompiler::CompileAll(directory);
+    CHECK(changed.Compiled == 1);
+    CHECK(changed.Skipped == 0);
+    CHECK(changed.Failed == 0);
+    AssetFileHeader changedHeader;
+    REQUIRE(PeekAssetHeader(asset, changedHeader));
+    CHECK(changedHeader.SourceContentHash != firstHash);
+
+    std::filesystem::remove(include, error);
+    const BuiltInShaderCompileStats missing = BuiltInShaderCompiler::CompileAll(directory);
+    CHECK(missing.Compiled == 0);
+    CHECK(missing.Skipped == 0);
+    CHECK(missing.Failed == 1);
+    AssetFileHeader preservedHeader;
+    REQUIRE(PeekAssetHeader(asset, preservedHeader));
+    CHECK(preservedHeader.SourceContentHash == changedHeader.SourceContentHash);
 
     std::filesystem::remove_all(directory, error);
 }

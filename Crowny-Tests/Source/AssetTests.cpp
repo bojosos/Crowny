@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "Crowny/Assets/AssetCodecs.h"
 #include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Assets/AssetManifest.h"
 #include "Crowny/Physics/PhysicsMaterial.h"
@@ -217,7 +218,16 @@ TEST_CASE("Shader state descriptors survive asset round trips", "[Assets][Shader
     ShaderDesc shaderDesc;
     shaderDesc.Techniques = { technique };
     Ref<Shader> shader = Shader::Create(shaderDesc);
+    shader->SetSourceTimestamp(123456789);
+    shader->SetSourceContentHash(0x123456789abcdef0ull);
     manager.Save(shader, assetPath);
+
+    AssetFileHeader header;
+    REQUIRE(PeekAssetHeader(assetPath, header));
+    CHECK(header.Type == AssetType::Shader);
+    CHECK(header.Version == SHADER_FORMAT_VERSION);
+    CHECK(header.SourceTimestamp == 123456789);
+    CHECK(header.SourceContentHash == 0x123456789abcdef0ull);
 
     passDesc = {};
     pass = nullptr;

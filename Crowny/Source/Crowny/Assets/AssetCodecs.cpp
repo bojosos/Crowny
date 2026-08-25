@@ -200,17 +200,40 @@ namespace Crowny
             throw cereal::Exception("Asset format version is not supported. Reimport the source asset.");
     }
 
-    // Reads only the header from an asset file without deserializing the full asset.
-    // Useful for staleness checks without loading the entire asset.
-    static bool PeekAssetHeader(const Path& assetPath, AssetFileHeader& outHeader)
+    bool PeekAssetHeader(const Path& assetPath, AssetFileHeader& outHeader)
     {
+        outHeader = {};
         const Ref<DataStream> stream = FileSystem::OpenFile(assetPath);
         if (!stream)
             return false;
-        BinaryDataStreamInputArchive archive(stream);
-        outHeader = ReadAssetHeader(archive);
+
+        Array<uint8_t, 4096> prefix{};
+        const size_t bytesRead = stream->Read(prefix.data(), prefix.size());
         stream->Close();
-        return outHeader.Magic == ASSET_FILE_MAGIC;
+
+        constexpr size_t SERIALIZED_HEADER_SIZE = sizeof(uint32_t) * 2u + sizeof(AssetType) + sizeof(int64_t) * 2u + sizeof(uint64_t);
+        for (size_t index = 0; index + SERIALIZED_HEADER_SIZE <= bytesRead; ++index)
+        {
+            AssetFileHeader candidate;
+            size_t cursor = index;
+            std::memcpy(&candidate.Magic, prefix.data() + cursor, sizeof(candidate.Magic));
+            if (candidate.Magic != ASSET_FILE_MAGIC)
+                continue;
+
+            cursor += sizeof(candidate.Magic);
+            std::memcpy(&candidate.Version, prefix.data() + cursor, sizeof(candidate.Version));
+            cursor += sizeof(candidate.Version);
+            std::memcpy(&candidate.Type, prefix.data() + cursor, sizeof(candidate.Type));
+            cursor += sizeof(candidate.Type);
+            std::memcpy(&candidate.SourceTimestamp, prefix.data() + cursor, sizeof(candidate.SourceTimestamp));
+            cursor += sizeof(candidate.SourceTimestamp);
+            std::memcpy(&candidate.CompileTimestamp, prefix.data() + cursor, sizeof(candidate.CompileTimestamp));
+            cursor += sizeof(candidate.CompileTimestamp);
+            std::memcpy(&candidate.SourceContentHash, prefix.data() + cursor, sizeof(candidate.SourceContentHash));
+            outHeader = candidate;
+            return true;
+        }
+        return false;
     }
 
     void Save(BinaryDataStreamOutputArchive& archive, const Asset& asset) { archive(asset.m_KeepData, asset.m_Name); }

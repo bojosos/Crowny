@@ -26,6 +26,49 @@ namespace Crowny
         uint64_t s_ShaderCacheMisses = 0;
         constexpr size_t MAX_SHADER_CACHE_ENTRIES = 1024;
 
+        Path NormalizeShaderPath(const Path& path)
+        {
+            std::error_code error;
+            const Path absolute = fs::absolute(path, error);
+            const Path normalized = error ? path.lexically_normal() : absolute.lexically_normal();
+            error.clear();
+            const Path canonical = fs::weakly_canonical(normalized, error);
+            return error ? normalized : canonical;
+        }
+
+        String ComparableShaderPath(const Path& path)
+        {
+            String result = NormalizeShaderPath(path).generic_string();
+#ifdef CW_PLATFORM_WIN32
+            std::transform(result.begin(), result.end(), result.begin(),
+                           [](unsigned char character) { return static_cast<char>(std::tolower(character)); });
+#endif
+            return result;
+        }
+
+        void AppendFingerprintValue(String& output, StringView value)
+        {
+            output += std::to_string(value.size());
+            output.push_back(':');
+            output.append(value.data(), value.size());
+        }
+
+        uint64_t BuildSourceContentHash(const Path& rootPath, StringView expandedSource, const Vector<Path>& dependencies)
+        {
+            String fingerprint;
+            fingerprint.reserve(expandedSource.size() + dependencies.size() * 48u);
+            AppendFingerprintValue(fingerprint, expandedSource);
+
+            const Path rootDirectory = NormalizeShaderPath(rootPath).parent_path();
+            for (const Path& dependency : dependencies)
+            {
+                const Path relative = dependency.lexically_relative(rootDirectory);
+                String dependencyName = (relative.empty() ? dependency : relative).generic_string();
+                AppendFingerprintValue(fingerprint, dependencyName);
+            }
+            return Hashing::CityHash64(fingerprint);
+        }
+
         String BuildCacheKey(const String& source, ShaderType shaderType, ShaderLanguage language, ShaderLanguageFlags flags,
                              const UnorderedMap<String, String>& defines)
         {
@@ -60,7 +103,8 @@ namespace Crowny
         }
 
         bool ExpandShaderIncludes(const Path& path, StringView source, String& output,
-                                  Vector<ShaderDiagnostic>& diagnostics, Vector<Path>& includeStack, uint32_t depth)
+                                  Vector<ShaderDiagnostic>& diagnostics, Vector<Path>& dependencies,
+                                  UnorderedSet<String>& dependencyKeys, Vector<String>& includeStack, uint32_t depth)
         {
             constexpr uint32_t MAX_INCLUDE_DEPTH = 32;
             if (depth > MAX_INCLUDE_DEPTH)
@@ -70,14 +114,15 @@ namespace Crowny
                 return false;
             }
 
-            const Path normalizedPath = path.lexically_normal();
-            if (std::find(includeStack.begin(), includeStack.end(), normalizedPath) != includeStack.end())
+            const Path normalizedPath = NormalizeShaderPath(path);
+            const String pathKey = ComparableShaderPath(normalizedPath);
+            if (std::find(includeStack.begin(), includeStack.end(), pathKey) != includeStack.end())
             {
                 diagnostics.push_back({ ShaderDiagnosticSeverity::Error, normalizedPath, 0, {},
                                         "Shader include cycle detected at '" + normalizedPath.string() + "'." });
                 return false;
             }
-            includeStack.push_back(normalizedPath);
+            includeStack.push_back(pathKey);
 
             static const std::regex INCLUDE_PATTERN(R"(^\s*#\s*include\s*\"([^\"]+)\"\s*(?://.*)?$)");
             std::istringstream stream{ String(source) };
@@ -95,7 +140,7 @@ namespace Crowny
                     continue;
                 }
 
-                const Path includePath = (normalizedPath.parent_path() / Path(match[1].str())).lexically_normal();
+                const Path includePath = NormalizeShaderPath(normalizedPath.parent_path() / Path(match[1].str()));
                 const Ref<DataStream> includeStream = FileSystem::OpenFile(includePath);
                 if (includeStream == nullptr)
                 {
@@ -107,8 +152,12 @@ namespace Crowny
 
                 const String includeSource = includeStream->GetAsString();
                 includeStream->Close();
+                const String dependencyKey = ComparableShaderPath(includePath);
+                if (dependencyKeys.insert(dependencyKey).second)
+                    dependencies.push_back(includePath);
                 output += "#line 1\n";
-                succeeded &= ExpandShaderIncludes(includePath, includeSource, output, diagnostics, includeStack, depth + 1u);
+                succeeded &= ExpandShaderIncludes(includePath, includeSource, output, diagnostics, dependencies, dependencyKeys,
+                                                  includeStack, depth + 1u);
                 output += "#line " + std::to_string(lineNumber + 1u) + "\n";
             }
 
@@ -116,6 +165,12 @@ namespace Crowny
             return succeeded;
         }
     } // namespace
+
+    bool ShaderPreprocessResult::Succeeded() const
+    {
+        return std::none_of(Diagnostics.begin(), Diagnostics.end(),
+                            [](const ShaderDiagnostic& diagnostic) { return diagnostic.Severity == ShaderDiagnosticSeverity::Error; });
+    }
 
     bool ShaderCompileResult::Succeeded() const
     {
@@ -129,14 +184,16 @@ namespace Crowny
         return Hashing::CityHash64(source);
     }
 
-    bool ShaderCompiler::PreprocessIncludes(const Path& path, StringView source, String& output,
-                                            Vector<ShaderDiagnostic>& diagnostics)
+    ShaderPreprocessResult ShaderCompiler::PreprocessIncludes(const Path& path, StringView source)
     {
-        output.clear();
-        output.reserve(source.size());
-        Vector<Path> includeStack;
+        ShaderPreprocessResult result;
+        result.Source.reserve(source.size());
+        UnorderedSet<String> dependencyKeys;
+        Vector<String> includeStack;
         includeStack.reserve(8);
-        return ExpandShaderIncludes(path, source, output, diagnostics, includeStack, 0);
+        if (ExpandShaderIncludes(path, source, result.Source, result.Diagnostics, result.Dependencies, dependencyKeys, includeStack, 0))
+            result.ContentHash = BuildSourceContentHash(path, result.Source, result.Dependencies);
+        return result;
     }
 
     void ShaderCompiler::ClearCache()
@@ -866,9 +923,15 @@ namespace Crowny
                   { ShaderDiagnosticSeverity::Error, path, 0, {}, "Invalid preprocessor define name '" + name + "'." });
         }
 
-        String source;
-        if (!PreprocessIncludes(path, rawSource, source, result.Diagnostics))
+        ShaderPreprocessResult preprocessed = PreprocessIncludes(path, rawSource);
+        const bool preprocessSucceeded = preprocessed.Succeeded();
+        result.Dependencies = std::move(preprocessed.Dependencies);
+        result.SourceContentHash = preprocessed.ContentHash;
+        result.Diagnostics.insert(result.Diagnostics.end(), std::make_move_iterator(preprocessed.Diagnostics.begin()),
+                                  std::make_move_iterator(preprocessed.Diagnostics.end()));
+        if (!preprocessSucceeded)
             return result;
+        String source = std::move(preprocessed.Source);
         const Ref<BlendStateDesc> blendState = ParseBlendState(path, source, result.Diagnostics);
         ParsedShaderSource parsedSource = ShaderSourceParser::Parse(path, source);
         result.Diagnostics.insert(result.Diagnostics.end(), parsedSource.Diagnostics.begin(), parsedSource.Diagnostics.end());

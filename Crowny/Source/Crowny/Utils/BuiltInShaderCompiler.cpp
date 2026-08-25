@@ -3,114 +3,81 @@
 #include "Crowny/Utils/BuiltInShaderCompiler.h"
 #include "Crowny/Utils/ShaderCompiler.h"
 
-#include "Crowny/Assets/Asset.h"
-#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Application/Application.h"
+#include "Crowny/Assets/Asset.h"
+#include "Crowny/Assets/AssetCodecs.h"
+#include "Crowny/Assets/AssetManager.h"
 #include "Crowny/Common/FileSystem.h"
-#include "Crowny/Common/Timer.h"
 #include "Crowny/RenderAPI/Shader.h"
 
 namespace Crowny
 {
-
-    // Get file modification time as epoch seconds
-    static int64_t GetSourceTimestamp(const Path& path)
+    namespace
     {
-        if (!fs::exists(path))
-            return 0;
-        auto ftime = fs::last_write_time(path);
-        auto duration = ftime.time_since_epoch();
-        return std::chrono::duration_cast<std::chrono::seconds>(duration).count();
-    }
-
-    static uint64_t HashFileContent(const String& str) { return ShaderCompiler::HashSource(str); }
-
-    static bool HasCurrentShaderFormat(const Path& assetPath)
-    {
-        std::ifstream stream(assetPath, std::ios::binary);
-        if (!stream)
-            return false;
-
-        Array<uint8_t, 512> prefix{};
-        stream.read(reinterpret_cast<char*>(prefix.data()), static_cast<std::streamsize>(prefix.size()));
-        const size_t bytesRead = static_cast<size_t>(stream.gcount());
-        for (size_t index = 0; index + sizeof(uint32_t) * 2 <= bytesRead; ++index)
+        int64_t GetSourceTimestamp(const Path& path)
         {
-            uint32_t magic;
-            std::memcpy(&magic, prefix.data() + index, sizeof(magic));
-            if (magic != ASSET_FILE_MAGIC)
-                continue;
-            uint32_t version;
-            std::memcpy(&version, prefix.data() + index + sizeof(magic), sizeof(version));
-            return version == SHADER_FORMAT_VERSION;
-        }
-        return false;
-    }
-
-    bool BuiltInShaderCompiler::NeedsRecompile(const Path& glslPath, const Path& assetPath)
-    {
-        if (!fs::exists(assetPath))
-            return true;
-        if (!HasCurrentShaderFormat(assetPath))
-            return true;
-
-        // The .asset header is embedded inside cereal's polymorphic serialization framing,
-        // so it cannot be read by peeking at byte 0 of the file. Use modification time instead.
-        std::error_code ec;
-        auto glslTime = fs::last_write_time(glslPath, ec);
-        if (ec)
-            return true;
-        auto assetTime = fs::last_write_time(assetPath, ec);
-        if (ec)
-            return true;
-        if (glslTime > assetTime)
-            return true;
-
-        // Guard against broken .asset files written by a previous failed compilation.
-        // A valid compiled shader (vertex+fragment SPIRV) is always well over 1 KB.
-        // An asset written with empty SPIRV data (Shader::Create never returns null) is ~200–400 bytes.
-        auto fileSize = fs::file_size(assetPath, ec);
-        if (ec || fileSize < 1024)
-            return true;
-
-        return false;
-    }
-
-    bool BuiltInShaderCompiler::CompileAndSave(const Path& glslPath, const Path& assetPath)
-    {
-        Ref<DataStream> stream = FileSystem::OpenFile(glslPath);
-        if (!stream)
-        {
-            CW_ENGINE_ERROR("BuiltInShaderCompiler: Failed to open {}", glslPath.string());
-            return false;
+            std::error_code error;
+            const auto writeTime = fs::last_write_time(path, error);
+            if (error)
+                return 0;
+            return std::chrono::duration_cast<std::chrono::seconds>(writeTime.time_since_epoch()).count();
         }
 
-        const String source = stream->GetAsString();
-        stream->Close();
+        int64_t GetLatestSourceTimestamp(const Path& root, const Vector<Path>& dependencies)
+        {
+            int64_t latest = GetSourceTimestamp(root);
+            for (const Path& dependency : dependencies)
+                latest = std::max(latest, GetSourceTimestamp(dependency));
+            return latest;
+        }
 
+        void LogDiagnostics(const Path& root, const Vector<ShaderDiagnostic>& diagnostics)
+        {
+            for (const ShaderDiagnostic& diagnostic : diagnostics)
+            {
+                const Path& file = diagnostic.File.empty() ? root : diagnostic.File;
+                const String location = diagnostic.Line == 0 ? file.string() : file.string() + ":" + std::to_string(diagnostic.Line);
+                if (diagnostic.Severity == ShaderDiagnosticSeverity::Error)
+                    CW_ENGINE_ERROR("{}: {}", location, diagnostic.Message);
+                else
+                    CW_ENGINE_WARN("{}: {}", location, diagnostic.Message);
+            }
+        }
+    } // namespace
+
+    bool BuiltInShaderCompiler::NeedsRecompile(const Path& assetPath, uint64_t sourceContentHash)
+    {
+        AssetFileHeader header;
+        if (!PeekAssetHeader(assetPath, header) || header.Type != AssetType::Shader || header.Version != SHADER_FORMAT_VERSION ||
+            header.SourceContentHash != sourceContentHash)
+            return true;
+
+        // An asset containing valid vertex and fragment SPIR-V is well over 1 KB.
+        // Keep the size guard for files left behind by an interrupted save.
+        std::error_code error;
+        const uintmax_t fileSize = fs::file_size(assetPath, error);
+        return error || fileSize < 1024;
+    }
+
+    bool BuiltInShaderCompiler::CompileAndSave(const Path& glslPath, const Path& assetPath, const String& source)
+    {
         ShaderCompileResult compileResult = ShaderCompiler::CompileWithDiagnostics(glslPath, source);
-        for (const ShaderDiagnostic& diagnostic : compileResult.Diagnostics)
-        {
-            const String location = diagnostic.Line == 0 ? glslPath.string() : glslPath.string() + ":" + std::to_string(diagnostic.Line);
-            if (diagnostic.Severity == ShaderDiagnosticSeverity::Error)
-                CW_ENGINE_ERROR("{}: {}", location, diagnostic.Message);
-            else
-                CW_ENGINE_WARN("{}: {}", location, diagnostic.Message);
-        }
+        LogDiagnostics(glslPath, compileResult.Diagnostics);
         if (!compileResult.Succeeded())
             return false;
         ShaderDesc& desc = compileResult.Description;
 
-        // Shader::Create never returns null — validate SPIRV before saving
+        // Shader::Create does not reject empty binary data, so validate before saving.
         bool hasValidPass = false;
         for (const auto& technique : desc.Techniques)
         {
             for (const auto& pass : technique->GetRenderPasses())
             {
-                const ShaderRenderPassDesc& pd = pass->GetPassDesc();
-                bool graphicsOk = pd.VertexShader && !pd.VertexShader->Data.empty() && pd.FragmentShader && !pd.FragmentShader->Data.empty();
-                bool computeOk = pd.ComputeShader && !pd.ComputeShader->Data.empty();
-                if (graphicsOk || computeOk)
+                const ShaderRenderPassDesc& passDesc = pass->GetPassDesc();
+                const bool graphicsValid = passDesc.VertexShader && !passDesc.VertexShader->Data.empty() && passDesc.FragmentShader &&
+                                           !passDesc.FragmentShader->Data.empty();
+                const bool computeValid = passDesc.ComputeShader && !passDesc.ComputeShader->Data.empty();
+                if (graphicsValid || computeValid)
                 {
                     hasValidPass = true;
                     break;
@@ -121,47 +88,59 @@ namespace Crowny
         }
         if (!hasValidPass)
         {
-            CW_ENGINE_ERROR("BuiltInShaderCompiler: {} produced no valid SPIRV — not saved", glslPath.filename().string());
+            CW_ENGINE_ERROR("BuiltInShaderCompiler: {} produced no valid SPIR-V and was not saved", glslPath.filename().string());
+            return false;
+        }
+
+        AssetManager* assetManager = AssetManager::TryGet();
+        if (assetManager == nullptr)
+        {
+            CW_ENGINE_ERROR("BuiltInShaderCompiler: AssetManager is not available");
             return false;
         }
 
         Ref<Shader> shader = Shader::Create(desc);
+        shader->SetSourceTimestamp(GetLatestSourceTimestamp(glslPath, compileResult.Dependencies));
+        shader->SetSourceContentHash(compileResult.SourceContentHash);
+        assetManager->Save(shader, assetPath);
 
-        // Store source tracking on the asset so the header includes it when saved
-        shader->SetSourceTimestamp(GetSourceTimestamp(glslPath));
-        shader->SetSourceContentHash(HashFileContent(source));
-
-        AssetManager::TryGet()->Save(shader, assetPath);
-        return true;
+        AssetFileHeader savedHeader;
+        const bool saved = PeekAssetHeader(assetPath, savedHeader) && savedHeader.Type == AssetType::Shader &&
+                           savedHeader.Version == SHADER_FORMAT_VERSION &&
+                           savedHeader.SourceContentHash == compileResult.SourceContentHash;
+        if (!saved)
+            CW_ENGINE_ERROR("BuiltInShaderCompiler: Failed to verify saved shader asset '{}'", assetPath.string());
+        return saved;
     }
 
     void BuiltInShaderCompiler::CompileAll()
     {
-        Timer timer;
-        Path sourceDir(SHADER_SOURCE_DIR);
-        if (!fs::is_directory(sourceDir) && Application::TryGet() != nullptr)
+        Path sourceDirectory(SHADER_SOURCE_DIR);
+        if (!fs::is_directory(sourceDirectory) && Application::TryGet() != nullptr)
         {
-            const Path editorSourceDir = Application::TryGet()->GetWorkingDirectory() / "Crowny-Editor" / SHADER_SOURCE_DIR;
-            if (fs::is_directory(editorSourceDir))
-                sourceDir = editorSourceDir;
+            const Path editorSourceDirectory = Application::TryGet()->GetWorkingDirectory() / "Crowny-Editor" / SHADER_SOURCE_DIR;
+            if (fs::is_directory(editorSourceDirectory))
+                sourceDirectory = editorSourceDirectory;
         }
 
-        if (!fs::exists(sourceDir) || !fs::is_directory(sourceDir))
-        {
-            CW_ENGINE_WARN("BuiltInShaderCompiler: Shader source directory '{}' not found.", sourceDir.string());
-            return;
-        }
+        const BuiltInShaderCompileStats stats = CompileAll(sourceDirectory);
+        if (stats.Compiled > 0 || stats.Failed > 0)
+            CW_ENGINE_INFO("Built-in shaders: {} compiled, {} up-to-date, {} failed.", stats.Compiled, stats.Skipped, stats.Failed);
+    }
 
-        uint32_t compiled = 0;
-        uint32_t skipped = 0;
-        uint32_t failed = 0;
+    BuiltInShaderCompileStats BuiltInShaderCompiler::CompileAll(const Path& sourceDirectory)
+    {
+        BuiltInShaderCompileStats stats;
+        if (!fs::exists(sourceDirectory) || !fs::is_directory(sourceDirectory))
+        {
+            CW_ENGINE_WARN("BuiltInShaderCompiler: Shader source directory '{}' not found.", sourceDirectory.string());
+            return stats;
+        }
 
         Vector<Path> shaderPaths;
-        for (const auto& entry : fs::directory_iterator(sourceDir))
+        for (const auto& entry : fs::directory_iterator(sourceDirectory))
         {
-            if (!entry.is_regular_file())
-                continue;
-            if (entry.path().extension() == ".glsl")
+            if (entry.is_regular_file() && entry.path().extension() == ".glsl")
                 shaderPaths.push_back(entry.path());
         }
         std::sort(shaderPaths.begin(), shaderPaths.end());
@@ -171,38 +150,43 @@ namespace Crowny
             Path assetPath = glslPath;
             assetPath.replace_extension(".asset");
 
-            // The common path only needs metadata checks. Avoid opening every
-            // source file when all compiled assets are already current.
-            if (!NeedsRecompile(glslPath, assetPath))
+            const Ref<DataStream> stream = FileSystem::OpenFile(glslPath);
+            if (!stream)
             {
-                skipped++;
+                CW_ENGINE_ERROR("BuiltInShaderCompiler: Failed to open {}", glslPath.string());
+                stats.Failed++;
+                continue;
+            }
+            const String source = stream->GetAsString();
+            stream->Close();
+
+            // Legacy OpenGL shaders do not declare an input language and cannot
+            // be compiled to SPIR-V without manual porting.
+            if (source.find("#lang") == String::npos)
+            {
+                stats.Skipped++;
                 continue;
             }
 
-            // Skip legacy OpenGL shaders — they lack the #lang directive and
-            // cannot be compiled to SPIR-V without manual porting.
+            const ShaderPreprocessResult preprocessed = ShaderCompiler::PreprocessIncludes(glslPath, source);
+            if (!preprocessed.Succeeded())
             {
-                Ref<DataStream> peek = FileSystem::OpenFile(glslPath);
-                if (!peek)
-                    continue;
-                const String src = peek->GetAsString();
-                peek->Close();
-                if (src.find("#lang") == String::npos)
-                {
-                    skipped++;
-                    continue;
-                }
+                LogDiagnostics(glslPath, preprocessed.Diagnostics);
+                stats.Failed++;
+                continue;
+            }
+            if (!NeedsRecompile(assetPath, preprocessed.ContentHash))
+            {
+                stats.Skipped++;
+                continue;
             }
 
             CW_ENGINE_INFO("Compiling built-in shader: {}", glslPath.filename().string());
-            if (CompileAndSave(glslPath, assetPath))
-                compiled++;
+            if (CompileAndSave(glslPath, assetPath, source))
+                stats.Compiled++;
             else
-                failed++;
+                stats.Failed++;
         }
-
-        if (compiled > 0 || failed > 0)
-            CW_ENGINE_INFO("Built-in shaders: {} compiled, {} up-to-date, {} failed.", compiled, skipped, failed);
+        return stats;
     }
-
 } // namespace Crowny
