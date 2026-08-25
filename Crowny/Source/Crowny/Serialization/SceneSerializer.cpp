@@ -58,16 +58,26 @@ namespace Crowny
 
         void ResolveRelationships(Scene& scene, UnorderedMap<Entity, Vector<UUID>>& relationships)
         {
+            for (auto& [entity, childUuids] : relationships)
+            {
+                auto& relationship = entity.GetComponent<RelationshipComponent>();
+                relationship.Parent = {};
+                relationship.Children.clear();
+                relationship.SiblingIndex = 0;
+                relationship.Children.reserve(childUuids.size());
+            }
+
             for (auto& [parent, childUuids] : relationships)
             {
-                auto& relationship = const_cast<Entity&>(parent).GetComponent<RelationshipComponent>();
-                relationship.Children.clear();
+                auto& relationship = parent.GetComponent<RelationshipComponent>();
                 for (const UUID& childUuid : childUuids)
                 {
                     Entity child = scene.GetEntityFromUuid(childUuid);
                     if (!child)
                         continue;
-                    child.GetComponent<RelationshipComponent>().Parent = parent;
+                    auto& childRelationship = child.GetComponent<RelationshipComponent>();
+                    childRelationship.Parent = parent;
+                    childRelationship.SiblingIndex = static_cast<uint32_t>(relationship.Children.size());
                     relationship.Children.push_back(child);
                 }
             }
@@ -200,18 +210,14 @@ namespace Crowny
             archive(physics2DSettings->LayerNames[index]);
         for (uint32_t index = 0; index < 32; index++)
             archive(physics2DSettings->MaskBits[index]);
-        archive(ShouldSerializeMaterialReference(physics2DSettings->DefaultMaterial)
-                  ? physics2DSettings->DefaultMaterial.GetUUID()
-                  : UUID::EMPTY);
+        archive(ShouldSerializeMaterialReference(physics2DSettings->DefaultMaterial) ? physics2DSettings->DefaultMaterial.GetUUID() : UUID::EMPTY);
 
-        const Physics3DSettings physics3DSettings =
-          Physics3D::IsStartedUp() ? Physics3D::Get().GetSettings() : Physics3DSettings{};
+        const Physics3DSettings physics3DSettings = Physics3D::IsStartedUp() ? Physics3D::Get().GetSettings() : Physics3DSettings{};
         archive(static_cast<uint32_t>(physics3DSettings.Backend));
         archive(physics3DSettings.Gravity.x, physics3DSettings.Gravity.y, physics3DSettings.Gravity.z);
         archive(physics3DSettings.Substeps, physics3DSettings.EnableSleeping, physics3DSettings.EnableContinuousCollision,
                 physics3DSettings.Deterministic);
-        archive(ShouldSerializeMaterialReference(physics3DSettings.DefaultMaterial) ? physics3DSettings.DefaultMaterial.GetUUID()
-                                                                                   : UUID::EMPTY);
+        archive(ShouldSerializeMaterialReference(physics3DSettings.DefaultMaterial) ? physics3DSettings.DefaultMaterial.GetUUID() : UUID::EMPTY);
 
         m_Scene->m_Filepath = filepath;
         stream->Close();
@@ -396,8 +402,8 @@ namespace Crowny
                 uint32_t backend;
                 archive(backend);
                 archive(physics3DSettings.Gravity.x, physics3DSettings.Gravity.y, physics3DSettings.Gravity.z);
-                archive(physics3DSettings.Substeps, physics3DSettings.EnableSleeping,
-                        physics3DSettings.EnableContinuousCollision, physics3DSettings.Deterministic);
+                archive(physics3DSettings.Substeps, physics3DSettings.EnableSleeping, physics3DSettings.EnableContinuousCollision,
+                        physics3DSettings.Deterministic);
                 if (version >= 6)
                 {
                     UUID defaultMaterial;

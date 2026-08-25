@@ -7,6 +7,59 @@
 
 namespace Crowny
 {
+    namespace
+    {
+        void RefreshSiblingIndices(Vector<Entity>& siblings, uint32_t firstIndex = 0)
+        {
+            for (uint32_t index = firstIndex; index < siblings.size(); index++)
+            {
+                if (siblings[index])
+                    siblings[index].GetComponent<RelationshipComponent>().SiblingIndex = index;
+            }
+        }
+
+        uint32_t ResolveSiblingIndex(const Vector<Entity>& siblings, Entity child, uint32_t cachedIndex)
+        {
+            if (cachedIndex < siblings.size() && siblings[cachedIndex] == child)
+                return cachedIndex;
+
+            const auto iter = std::find(siblings.begin(), siblings.end(), child);
+            return iter == siblings.end() ? static_cast<uint32_t>(siblings.size()) : static_cast<uint32_t>(std::distance(siblings.begin(), iter));
+        }
+
+        bool RemoveChildReference(Entity parent, Entity child, uint32_t& removedIndex)
+        {
+            auto& siblings = parent.GetComponent<RelationshipComponent>().Children;
+            auto& childRelationship = child.GetComponent<RelationshipComponent>();
+            removedIndex = ResolveSiblingIndex(siblings, child, childRelationship.SiblingIndex);
+            if (removedIndex >= siblings.size())
+                return false;
+
+            siblings.erase(siblings.begin() + removedIndex);
+            childRelationship.SiblingIndex = 0;
+            RefreshSiblingIndices(siblings, removedIndex);
+            return true;
+        }
+
+        void InsertChildReference(Entity parent, Entity child, uint32_t index)
+        {
+            auto& siblings = parent.GetComponent<RelationshipComponent>().Children;
+            auto& childRelationship = child.GetComponent<RelationshipComponent>();
+
+            const uint32_t existingIndex = ResolveSiblingIndex(siblings, child, childRelationship.SiblingIndex);
+            if (existingIndex < siblings.size())
+            {
+                siblings.erase(siblings.begin() + existingIndex);
+                RefreshSiblingIndices(siblings, existingIndex);
+            }
+
+            index = std::min<uint32_t>(index, static_cast<uint32_t>(siblings.size()));
+            siblings.insert(siblings.begin() + index, child);
+            childRelationship.Parent = parent;
+            RefreshSiblingIndices(siblings, index);
+        }
+    } // namespace
+
     EnttEntity::EnttEntity(entt::entity entity, Scene* scene) : m_EntityHandle(entity), m_Scene(scene) {}
 
     Entity::Entity(entt::entity entity, Scene* scene) : EnttEntity(entity, scene) {}
@@ -30,38 +83,25 @@ namespace Crowny
         uint32_t oldSiblingIndex = 0;
 
         if (oldParent)
-        {
-            auto& children = oldParent.GetChildren();
-            auto iterFind = std::find(children.begin(), children.end(), *this);
-            if (iterFind != children.end())
-            {
-                oldSiblingIndex = static_cast<uint32_t>(std::distance(children.begin(), iterFind));
-                children.erase(iterFind);
-            }
-        }
+            RemoveChildReference(oldParent, *this, oldSiblingIndex);
 
-        GetComponent<RelationshipComponent>().Parent = entity;
+        auto& relationship = GetComponent<RelationshipComponent>();
+        relationship.Parent = entity;
+        relationship.SiblingIndex = 0;
         if (entity)
-        {
-            auto& children = entity.GetChildren();
-            if (std::find(children.begin(), children.end(), *this) == children.end())
-                children.push_back(*this);
-        }
+            InsertChildReference(entity, *this, entity.GetChildCount());
 
         if (!GetTransform().SetWorldMatrix(oldWorldTransform, entity))
         {
             if (entity)
             {
-                auto& children = entity.GetChildren();
-                children.erase(std::remove(children.begin(), children.end(), *this), children.end());
+                uint32_t ignoredIndex = 0;
+                RemoveChildReference(entity, *this, ignoredIndex);
             }
-            GetComponent<RelationshipComponent>().Parent = oldParent;
+            relationship.Parent = oldParent;
+            relationship.SiblingIndex = 0;
             if (oldParent)
-            {
-                auto& children = oldParent.GetChildren();
-                const auto insertAt = children.begin() + std::min<size_t>(oldSiblingIndex, children.size());
-                children.insert(insertAt, *this);
-            }
+                InsertChildReference(oldParent, *this, oldSiblingIndex);
             return false;
         }
 
@@ -75,8 +115,7 @@ namespace Crowny
         if (!parent)
             return 0;
         const auto& siblings = parent.GetChildren();
-        const auto it = std::find(siblings.begin(), siblings.end(), *this);
-        return it == siblings.end() ? static_cast<uint32_t>(siblings.size()) : static_cast<uint32_t>(std::distance(siblings.begin(), it));
+        return ResolveSiblingIndex(siblings, *this, GetComponent<RelationshipComponent>().SiblingIndex);
     }
 
     bool Entity::SetSiblingIndex(uint32_t index)
@@ -84,14 +123,18 @@ namespace Crowny
         Entity parent = GetParent();
         if (!parent)
             return false;
-        auto& siblings = parent.GetChildren();
-        const auto current = std::find(siblings.begin(), siblings.end(), *this);
-        if (current == siblings.end())
+        auto& siblings = parent.GetComponent<RelationshipComponent>().Children;
+        const uint32_t currentIndex = ResolveSiblingIndex(siblings, *this, GetComponent<RelationshipComponent>().SiblingIndex);
+        if (currentIndex >= siblings.size())
             return false;
-        Entity value = *current;
-        siblings.erase(current);
-        index = std::min<uint32_t>(index, static_cast<uint32_t>(siblings.size()));
+        index = std::min<uint32_t>(index, static_cast<uint32_t>(siblings.size() - 1));
+        if (index == currentIndex)
+            return true;
+
+        Entity value = siblings[currentIndex];
+        siblings.erase(siblings.begin() + currentIndex);
         siblings.insert(siblings.begin() + index, value);
+        RefreshSiblingIndices(siblings, std::min(index, currentIndex));
         return true;
     }
 
@@ -128,8 +171,6 @@ namespace Crowny
     }
 
     const Vector<Entity>& Entity::GetChildren() const { return GetComponent<RelationshipComponent>().Children; }
-
-    Vector<Entity>& Entity::GetChildren() { return GetComponent<RelationshipComponent>().Children; }
 
     uint32_t Entity::GetChildCount() const { return (uint32_t)GetComponent<RelationshipComponent>().Children.size(); }
 
@@ -173,10 +214,8 @@ namespace Crowny
         Entity parent = GetParent();
         if (parent)
         {
-            Vector<Entity>& parentChildren = parent.GetChildren();
-            auto iterFind = std::find(parentChildren.begin(), parentChildren.end(), *this);
-            if (iterFind != parentChildren.end())
-                parentChildren.erase(iterFind);
+            uint32_t ignoredIndex = 0;
+            RemoveChildReference(parent, *this, ignoredIndex);
         }
 
         m_Scene->m_Registry.destroy(m_EntityHandle);
@@ -204,7 +243,7 @@ namespace Crowny
         if (updatePhysics)
             m_Scene->UpdatePhysics3DTransform(*this);
         for (Entity child : GetChildren())
-            child.NotifyTransformChanged();
+            child.NotifyTransformChanged(updatePhysics);
     }
 
     void Entity::SetPosition(const glm::vec3& position)

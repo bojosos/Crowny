@@ -458,12 +458,15 @@ namespace Crowny
     {
         Vector<Entity> Children;
         Entity Parent;
+        uint32_t SiblingIndex = 0;
 
         RelationshipComponent() : ComponentBase() {}
-        RelationshipComponent(const RelationshipComponent& other) : ComponentBase(other) {}
+        RelationshipComponent(const RelationshipComponent& other);
+        RelationshipComponent(RelationshipComponent&& other) noexcept;
         RelationshipComponent(const Entity& parent) : Parent(parent) {}
 
         RelationshipComponent& operator=(const RelationshipComponent& other);
+        RelationshipComponent& operator=(RelationshipComponent&& other) noexcept;
     };
 
     class AudioListenerComponent : public ComponentBase

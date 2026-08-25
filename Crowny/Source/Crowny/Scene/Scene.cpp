@@ -25,6 +25,9 @@ namespace Crowny
     {
         (
           [&]() {
+              if constexpr (std::is_same_v<Component, RelationshipComponent>)
+                  return;
+
               const auto view = src.view<Component>();
               for (auto srcEntity : view)
               {
@@ -47,6 +50,9 @@ namespace Crowny
     {
         (
           [&]() {
+              if constexpr (std::is_same_v<Component, RelationshipComponent>)
+                  return;
+
               if (src.HasComponent<Component>())
                   dst.AddOrReplaceComponent<Component>(src.GetComponent<Component>());
           }(),
@@ -220,11 +226,23 @@ namespace Crowny
             if (destination == entityMap.end())
                 continue;
 
-            Entity destinationParent{ destination->second, this };
             auto& destinationRelationship = m_Registry.get<RelationshipComponent>(destination->second);
             destinationRelationship.Parent = {};
             destinationRelationship.Children.clear();
+            destinationRelationship.SiblingIndex = 0;
             destinationRelationship.Children.reserve(sourceRelationship.Children.size());
+        }
+
+        for (const entt::entity sourceHandle : relationshipView)
+        {
+            const IDComponent& sourceId = source.m_Registry.get<IDComponent>(sourceHandle);
+            const RelationshipComponent& sourceRelationship = source.m_Registry.get<RelationshipComponent>(sourceHandle);
+            const auto destination = entityMap.find(sourceId.Uuid);
+            if (destination == entityMap.end())
+                continue;
+
+            Entity destinationParent{ destination->second, this };
+            auto& destinationRelationship = m_Registry.get<RelationshipComponent>(destination->second);
 
             for (const Entity sourceChild : sourceRelationship.Children)
             {
@@ -234,8 +252,10 @@ namespace Crowny
                 if (child == entityMap.end())
                     continue;
                 Entity destinationChild{ child->second, this };
+                auto& childRelationship = m_Registry.get<RelationshipComponent>(child->second);
+                childRelationship.Parent = destinationParent;
+                childRelationship.SiblingIndex = static_cast<uint32_t>(destinationRelationship.Children.size());
                 destinationRelationship.Children.push_back(destinationChild);
-                m_Registry.get<RelationshipComponent>(child->second).Parent = destinationParent;
             }
         }
     }
@@ -251,9 +271,6 @@ namespace Crowny
         const Entity creationParent = newEntity.GetParent();
         CopyAllExistingComponents(newEntity, entity);
 
-        auto& newRc = newEntity.GetComponent<RelationshipComponent>();
-        newRc.Children.clear();
-        newRc.Parent = creationParent;
         if (sourceParent != creationParent)
             newEntity.SetParent(sourceParent);
         if (sourceParent)
@@ -880,8 +897,8 @@ namespace Crowny
         if (!entity.HasComponent<MonoScriptComponent>())
             return;
         auto& scripts = entity.GetComponent<MonoScriptComponent>().Scripts;
-        const auto script = std::find_if(scripts.begin(), scripts.end(),
-                                         [&](const MonoScript& candidate) { return candidate.GetTypeIdentity() == identity; });
+        const auto script =
+          std::find_if(scripts.begin(), scripts.end(), [&](const MonoScript& candidate) { return candidate.GetTypeIdentity() == identity; });
         if (script == scripts.end())
             return;
         if (ScriptSceneObjectManager::IsStartedUp())

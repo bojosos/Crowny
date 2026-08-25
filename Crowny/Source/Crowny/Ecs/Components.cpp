@@ -24,13 +24,40 @@
 
 namespace Crowny
 {
+    RelationshipComponent::RelationshipComponent(const RelationshipComponent& other)
+      : ComponentBase(other), Children(other.Children), Parent(other.Parent), SiblingIndex(other.SiblingIndex)
+    {
+    }
+
+    RelationshipComponent::RelationshipComponent(RelationshipComponent&& other) noexcept
+      : Children(std::move(other.Children)), Parent(other.Parent), SiblingIndex(other.SiblingIndex)
+    {
+        InstanceId = other.InstanceId;
+        other.Parent = {};
+        other.SiblingIndex = 0;
+    }
+
     RelationshipComponent& RelationshipComponent::operator=(const RelationshipComponent& other)
     {
         if (this == &other)
             return *this;
         ComponentBase::operator=(other);
-        Parent = {};
-        Children.clear();
+        Children = other.Children;
+        Parent = other.Parent;
+        SiblingIndex = other.SiblingIndex;
+        return *this;
+    }
+
+    RelationshipComponent& RelationshipComponent::operator=(RelationshipComponent&& other) noexcept
+    {
+        if (this == &other)
+            return *this;
+        InstanceId = other.InstanceId;
+        Children = std::move(other.Children);
+        Parent = other.Parent;
+        SiblingIndex = other.SiblingIndex;
+        other.Parent = {};
+        other.SiblingIndex = 0;
         return *this;
     }
 

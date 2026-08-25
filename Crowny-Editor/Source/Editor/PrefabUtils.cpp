@@ -23,6 +23,9 @@ namespace Crowny
     {
         (
           [&]() {
+              if constexpr (std::is_same_v<Component, RelationshipComponent>)
+                  return;
+
               if (src.HasComponent<Component>())
                   dst.AddOrReplaceComponent<Component>(src.GetComponent<Component>());
           }(),
@@ -236,10 +239,6 @@ namespace Crowny
 
         // Copy all components from the prefab entity
         CopyAllExisting(newEntity, prefabEntity);
-
-        // Clear children (we'll rebuild hierarchy)
-        auto& rc = newEntity.GetComponent<RelationshipComponent>();
-        rc.Children.clear();
 
         // Add PrefabComponent linking back to the prefab
         if (newEntity.HasComponent<PrefabComponent>())

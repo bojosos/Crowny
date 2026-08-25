@@ -15,6 +15,9 @@ namespace Crowny
     {
         (
           [&]() {
+              if constexpr (std::is_same_v<Component, RelationshipComponent>)
+                  return;
+
               if (src.HasComponent<Component>())
                   dst.AddOrReplaceComponent<Component>(src.GetComponent<Component>());
           }(),
@@ -40,10 +43,6 @@ namespace Crowny
         Entity prefabRoot = m_PrefabScene->CreateEntityWithUuid(rootEntity.GetUuid(), rootEntity.GetName());
         CopyAllExistingComponentsPrefab(prefabRoot, const_cast<Entity&>(rootEntity));
 
-        // Clear children on the copy since we'll rebuild the hierarchy
-        auto& rc = prefabRoot.GetComponent<RelationshipComponent>();
-        rc.Children.clear();
-
         // Strip PrefabComponent from the prefab definition
         prefabRoot.RemoveComponentIfExists<PrefabComponent>();
 
@@ -58,10 +57,6 @@ namespace Crowny
     {
         Entity newNode = dest.CreateEntityWithUuid(sourceEntity.GetUuid(), sourceEntity.GetName());
         CopyAllExistingComponentsPrefab(newNode, sourceEntity);
-
-        // Clear children on the copy
-        auto& rc = newNode.GetComponent<RelationshipComponent>();
-        rc.Children.clear();
 
         // Strip PrefabComponent
         newNode.RemoveComponentIfExists<PrefabComponent>();

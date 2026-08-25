@@ -3,6 +3,7 @@
 
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Ecs/Entity.h"
+#include "Crowny/Scene/Prefab.h"
 #include "Crowny/Scene/Scene.h"
 
 using namespace Crowny;
@@ -20,6 +21,28 @@ TEST_CASE("Prefab override paths support allocation-free lookup", "[Ecs][Prefab]
 
     prefab.ClearOverride("Transform.Position");
     CHECK_FALSE(prefab.IsPropertyOverridden("Transform.Position"_hstr));
+}
+
+TEST_CASE("Prefab capture preserves its internal hierarchy", "[Ecs][Prefab]")
+{
+    Ref<Scene> source = CreateRef<Scene>(false);
+    Entity sourceRoot = source->CreateEntity("Prefab root");
+    Entity sourceChild = source->CreateEntity("Prefab child");
+    sourceChild.SetParent(sourceRoot);
+
+    Prefab prefab;
+    prefab.CaptureFromEntity(*source, sourceRoot);
+
+    Entity prefabRoot = prefab.GetRootEntity();
+    Entity internalRoot = prefab.GetInternalScene()->GetRootEntity();
+    REQUIRE(prefabRoot);
+    REQUIRE(internalRoot);
+    CHECK(prefabRoot.GetParent() == internalRoot);
+    CHECK(internalRoot.GetChildCount() == 1);
+    CHECK(internalRoot.GetChild(0) == prefabRoot);
+    REQUIRE(prefabRoot.GetChildCount() == 1);
+    CHECK(prefabRoot.GetChild(0).GetName() == "Prefab child");
+    CHECK(prefabRoot.GetChild(0).GetSiblingIndex() == 0);
 }
 
 // Helper to compare matrices
@@ -263,20 +286,27 @@ TEST_CASE("Entity Parenting and Transform Hierarchies", "[Ecs][Transform]")
     {
         Entity parent = scene->CreateEntity("Parent");
         Entity child = scene->CreateEntity("Child");
+        Entity sibling = scene->CreateEntity("Sibling");
         child.SetParent(parent);
+        sibling.SetParent(parent);
         parent.SetPosition({ 10.0f, 0.0f, 0.0f });
         child.SetPosition({ 5.0f, 0.0f, 0.0f });
         const UUID parentId = parent.GetUuid();
         const UUID childId = child.GetUuid();
+        const UUID siblingId = sibling.GetUuid();
 
         Scene copy(*scene);
         Entity copiedParent = copy.GetEntityFromUuid(parentId);
         Entity copiedChild = copy.GetEntityFromUuid(childId);
+        Entity copiedSibling = copy.GetEntityFromUuid(siblingId);
 
         REQUIRE(copiedParent.GetScene() == &copy);
         REQUIRE(copiedChild.GetScene() == &copy);
         CHECK(copiedChild.GetParent() == copiedParent);
         CHECK(copiedParent.GetChild(0) == copiedChild);
+        CHECK(copiedParent.GetChild(1) == copiedSibling);
+        CHECK(copiedChild.GetSiblingIndex() == 0);
+        CHECK(copiedSibling.GetSiblingIndex() == 1);
         CHECK(copiedChild.GetLocalPosition() == glm::vec3(5.0f, 0.0f, 0.0f));
         CHECK(copiedChild.GetWorldPosition() == glm::vec3(15.0f, 0.0f, 0.0f));
     }
@@ -324,8 +354,41 @@ TEST_CASE("Entity Parenting and Transform Hierarchies", "[Ecs][Transform]")
         CHECK(parent.GetChild(1) == firstChild);
         CHECK(parent.GetChild(2) == secondChild);
         CHECK(parent.GetChild(3) == after);
+        CHECK(before.GetSiblingIndex() == 0);
+        CHECK(firstChild.GetSiblingIndex() == 1);
+        CHECK(secondChild.GetSiblingIndex() == 2);
+        CHECK(after.GetSiblingIndex() == 3);
         ExpectMatrixEqual(firstChild.GetWorldMatrix(), firstWorld);
         ExpectMatrixEqual(secondChild.GetWorldMatrix(), secondWorld);
+    }
+
+    SECTION("Sibling indices stay coherent across reorder and reparent")
+    {
+        Entity firstParent = scene->CreateEntity("First parent");
+        Entity secondParent = scene->CreateEntity("Second parent");
+        Entity first = scene->CreateEntity("First");
+        Entity second = scene->CreateEntity("Second");
+        Entity third = scene->CreateEntity("Third");
+        first.SetParent(firstParent);
+        second.SetParent(firstParent);
+        third.SetParent(firstParent);
+
+        REQUIRE(third.SetSiblingIndex(0));
+        CHECK(firstParent.GetChild(0) == third);
+        CHECK(firstParent.GetChild(1) == first);
+        CHECK(firstParent.GetChild(2) == second);
+        CHECK(third.GetSiblingIndex() == 0);
+        CHECK(first.GetSiblingIndex() == 1);
+        CHECK(second.GetSiblingIndex() == 2);
+
+        REQUIRE(first.SetParent(secondParent));
+        CHECK(third.GetSiblingIndex() == 0);
+        CHECK(second.GetSiblingIndex() == 1);
+        CHECK(first.GetSiblingIndex() == 0);
+
+        REQUIRE(first.SetParent(firstParent));
+        CHECK(first.GetSiblingIndex() == 2);
+        CHECK(firstParent.GetChild(2) == first);
     }
 
     SECTION("Duplicate is inserted beside the source and owns cloned children")
