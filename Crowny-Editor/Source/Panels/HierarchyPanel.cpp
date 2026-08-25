@@ -18,7 +18,9 @@
 
 namespace Crowny
 {
-    HierarchyPanel::HierarchyPanel(const String& name, SelectionChangedCallback callback) : ImGuiPanel(name), m_SelectionChanged(std::move(callback)) {}
+    HierarchyPanel::HierarchyPanel(const String& name, SelectionChangedCallback callback) : ImGuiPanel(name), m_SelectionChanged(std::move(callback))
+    {
+    }
 
     static void DrawSelectedRowAccent(bool selected)
     {
@@ -31,6 +33,8 @@ namespace Crowny
         const float leftX = ImGui::GetCurrentTable() ? ImGui::GetCurrentTable()->WorkRect.Min.x : rowMin.x;
         drawList->AddRectFilled(ImVec2(leftX, rowMin.y), ImVec2(leftX + 2.0f, rowMax.y), UI::Colors::Accent);
     }
+
+    static char FoldSearchCharacter(char character) { return static_cast<char>(std::tolower(static_cast<unsigned char>(character))); }
 
     void HierarchyPanel::NotifySelectionChanged()
     {
@@ -70,8 +74,7 @@ namespace Crowny
         entityUuids.reserve(entities.size());
         for (Entity entity : entities)
         {
-            if (entity && entity.GetParent() && entity != newParent && entity.GetScene() == newParent.GetScene() &&
-                entity.GetParent() != newParent)
+            if (entity && entity.GetParent() && entity != newParent && entity.GetScene() == newParent.GetScene() && entity.GetParent() != newParent)
                 entityUuids.push_back(entity.GetUuid());
         }
         if (entityUuids.empty())
@@ -176,8 +179,8 @@ namespace Crowny
         const ImGuiIO& io = ImGui::GetIO();
         m_PendingSelection = e;
         m_PendingSelectionMode = io.KeyShift && io.KeyCtrl ? EntitySelectionMode::AddRange
-                               : io.KeyShift               ? EntitySelectionMode::Range
-                               : io.KeyCtrl                ? EntitySelectionMode::Toggle
+                                 : io.KeyShift             ? EntitySelectionMode::Range
+                                 : io.KeyCtrl              ? EntitySelectionMode::Toggle
                                                            : EntitySelectionMode::Replace;
     }
 
@@ -398,71 +401,78 @@ namespace Crowny
             return true;
 
         const String& entityName = e.GetName();
-        // Case-insensitive substring match
-        String lowerName = entityName;
-        String lowerFilter = m_SearchFilter;
-        const auto lower = [](char character) { return static_cast<char>(std::tolower(static_cast<unsigned char>(character))); };
-        std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), lower);
-        std::transform(lowerFilter.begin(), lowerFilter.end(), lowerFilter.begin(), lower);
-        return lowerName.find(lowerFilter) != String::npos;
+        return std::search(entityName.begin(), entityName.end(), m_FoldedSearchFilter.begin(), m_FoldedSearchFilter.end(),
+                           [](char character, char foldedFilterCharacter) { return FoldSearchCharacter(character) == foldedFilterCharacter; }) !=
+               entityName.end();
     }
 
-    void HierarchyPanel::CollectMatchingEntities(Entity e, Vector<Entity>& results) const
+    void HierarchyPanel::CollectMatchingEntities(Entity e, Entity root, Vector<Entity>& results) const
     {
         if (!e.IsValid())
             return;
 
         // Skip the root entity itself from results, but search its children
         const auto& rc = e.GetComponent<RelationshipComponent>();
-        const Entity root = SceneManager::TryGet()->GetActiveScene()->GetRootEntity();
         if (e != root && MatchesSearchFilter(e))
             results.push_back(e);
 
         for (auto child : rc.Children)
-            CollectMatchingEntities(child, results);
+            CollectMatchingEntities(child, root, results);
     }
 
-    String HierarchyPanel::BuildParentPath(Entity e) const
+    const String& HierarchyPanel::BuildParentPath(Entity e, Entity root)
     {
-        String path;
-        const Entity root = SceneManager::TryGet()->GetActiveScene()->GetRootEntity();
-        Entity parent = e.GetParent();
-        while (parent && parent != root)
+        m_ParentPathSegments.clear();
+        for (Entity parent = e.GetParent(); parent && parent != root; parent = parent.GetParent())
+            m_ParentPathSegments.emplace_back(parent.GetName());
+
+        m_ParentPathScratch.clear();
+        const auto firstNamed =
+          std::find_if(m_ParentPathSegments.begin(), m_ParentPathSegments.end(), [](StringView segment) { return !segment.empty(); });
+        if (firstNamed == m_ParentPathSegments.end())
+            return m_ParentPathScratch;
+
+        const size_t firstIndex = static_cast<size_t>(std::distance(m_ParentPathSegments.begin(), firstNamed));
+        size_t requiredCapacity = (m_ParentPathSegments.size() - firstIndex - 1) * 3;
+        for (size_t index = firstIndex; index < m_ParentPathSegments.size(); index++)
+            requiredCapacity += m_ParentPathSegments[index].size();
+        m_ParentPathScratch.reserve(requiredCapacity);
+
+        for (size_t index = m_ParentPathSegments.size(); index-- > firstIndex;)
         {
-            if (path.empty())
-                path = parent.GetName();
-            else
-                path = parent.GetName() + " / " + path;
-            parent = parent.GetParent();
+            m_ParentPathScratch.append(m_ParentPathSegments[index]);
+            if (index != firstIndex)
+                m_ParentPathScratch.append(" / ");
         }
-        return path;
+        return m_ParentPathScratch;
     }
 
-    void HierarchyPanel::RenderSearchResults()
+    void HierarchyPanel::RenderSearchResults(Entity root)
     {
-        Vector<Entity> matches;
-        CollectMatchingEntities(SceneManager::TryGet()->GetActiveScene()->GetRootEntity(), matches);
+        m_SearchMatches.clear();
+        CollectMatchingEntities(root, root, m_SearchMatches);
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        if (matches.empty())
+        if (m_SearchMatches.empty())
         {
             ImGui::Dummy(ImVec2(0.0f, 8.0f));
             ImGui::TextDisabled("No entities match \"%s\".", m_SearchFilter.c_str());
             return;
         }
 
-        ImGui::TextDisabled("%zu %s", matches.size(), matches.size() == 1 ? "result" : "results");
+        ImGui::TextDisabled("%zu %s", m_SearchMatches.size(), m_SearchMatches.size() == 1 ? "result" : "results");
 
-        for (auto& entity : matches)
+        for (Entity entity : m_SearchMatches)
         {
             if (!entity.IsValid())
                 continue;
 
             m_VisibleEntities.push_back(entity);
 
-            const String name = entity.GetName().empty() ? "Entity" : entity.GetName();
-            const String parentPath = BuildParentPath(entity);
+            const String& entityName = entity.GetName();
+            const char* name = entityName.empty() ? "Entity" : entityName.c_str();
+            const String& parentPath = BuildParentPath(entity, root);
 
             ImGui::PushID((int32_t)entity.GetHandle());
 
@@ -483,7 +493,7 @@ namespace Crowny
                 if (isPrefabInstance)
                     ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(100, 160, 255, 255));
 
-                ImGui::TreeNodeEx(name.c_str(), flags | (selected ? ImGuiTreeNodeFlags_Selected : 0));
+                ImGui::TreeNodeEx(name, flags | (selected ? ImGuiTreeNodeFlags_Selected : 0));
 
                 if (isPrefabInstance)
                     ImGui::PopStyleColor();
@@ -495,7 +505,7 @@ namespace Crowny
 
                 if (!parentPath.empty())
                 {
-                    const float pathX = rowMin.x + ImGui::GetTreeNodeToLabelSpacing() + ImGui::CalcTextSize(name.c_str()).x + 10.0f;
+                    const float pathX = rowMin.x + ImGui::GetTreeNodeToLabelSpacing() + ImGui::CalcTextSize(name).x + 10.0f;
                     const float textY = rowMin.y + ImGui::GetStyle().FramePadding.y;
                     ImDrawList* drawList = ImGui::GetWindowDrawList();
                     drawList->PushClipRect(ImVec2(pathX, rowMin.y), rowMax, true);
@@ -520,7 +530,7 @@ namespace Crowny
                     UIUtils::SetEntityPayload(entity);
                     const size_t dragCount = m_Selection.Contains(entity) ? m_Selection.GetAll().size() : 1u;
                     if (dragCount == 1u)
-                        ImGui::TextUnformatted(name.c_str());
+                        ImGui::TextUnformatted(name);
                     else
                         ImGui::Text("%zu entities", dragCount);
                     ImGui::EndDragDropSource();
@@ -579,10 +589,27 @@ namespace Crowny
 
     void HierarchyPanel::Update()
     {
-        Vector<std::function<void()>> deferredActions;
-        deferredActions.swap(m_DeferredActions);
-        for (auto& action : deferredActions)
-            action();
+        if (!m_DeferredActions.empty())
+        {
+            m_DeferredActionScratch.clear();
+            m_DeferredActionScratch.swap(m_DeferredActions);
+            const auto recycleScratch = [&]() {
+                m_DeferredActionScratch.clear();
+                if (m_DeferredActions.empty() && m_DeferredActionScratch.capacity() > m_DeferredActions.capacity())
+                    m_DeferredActionScratch.swap(m_DeferredActions);
+            };
+            try
+            {
+                for (auto& action : m_DeferredActionScratch)
+                    action();
+            }
+            catch (...)
+            {
+                recycleScratch();
+                throw;
+            }
+            recycleScratch();
+        }
 
         const Ref<Scene> activeScene = SceneManager::TryGet()->GetActiveScene();
         if (!activeScene)
@@ -706,7 +733,11 @@ namespace Crowny
             const float searchWidth =
               std::max(1.0f, ImGui::GetContentRegionAvail().x - createButtonSize - ImGui::GetStyle().ItemSpacing.x - toolbarPadding);
             ImGui::SetNextItemWidth(searchWidth);
-            UIUtils::SearchWidget(m_SearchFilter, "Search entities...");
+            if (UIUtils::SearchWidget(m_SearchFilter, "Search entities..."))
+            {
+                m_FoldedSearchFilter.resize(m_SearchFilter.size());
+                std::transform(m_SearchFilter.begin(), m_SearchFilter.end(), m_FoldedSearchFilter.begin(), FoldSearchCharacter);
+            }
             ImGui::SameLine();
             if (ImGui::Button("+##CreateEntity", ImVec2(createButtonSize, createButtonSize)))
                 ImGui::OpenPopup("##CreateEntityMenu");
@@ -739,7 +770,7 @@ namespace Crowny
                 if (m_SearchFilter.empty())
                     DisplayTree(activeScene->GetRootEntity());
                 else
-                    RenderSearchResults();
+                    RenderSearchResults(activeScene->GetRootEntity());
 
                 // Fill remaining table space with an invisible selectable so right-click works on empty area
                 ImGui::TableNextRow();
@@ -787,7 +818,8 @@ namespace Crowny
                                 Entity instance = PrefabUtils::InstantiatePrefab(prefab, root);
                                 if (instance)
                                 {
-                                    UndoRedo::Get().RegisterAction(CreateRef<EntityCreatedAction>(instance, SceneManager::TryGet()->GetActiveScene()));
+                                    UndoRedo::Get().RegisterAction(
+                                      CreateRef<EntityCreatedAction>(instance, SceneManager::TryGet()->GetActiveScene()));
                                     SetSelectedEntity(instance);
                                 }
                             });
