@@ -345,6 +345,7 @@ group "Dependencies"
 group ""
 
 include "Crowny"
+include "Crowny-Builder"
 include "Crowny-Editor"
 include "Crowny-Sandbox"
 include "Crowny-Sharp"
