@@ -1,9 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include "Crowny/Common/ConsoleBuffer.h"
 #include "Crowny/Common/Log.h"
+#include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/Mono/MonoUtils.h"
 #include <filesystem>
+#include <stdexcept>
 
 #include <mono/metadata/threads.h>
 
@@ -16,26 +18,17 @@ struct MonoGlobalFixture {
         Log::Init("CrownyTests");
         if (!MonoManager::IsStartedUp())
         {
-            // Mono expects absolute paths usually
-            String libDir = "C:\\\\Program Files\\\\Mono\\\\lib";
-            String etcDir = "C:\\\\Program Files\\\\Mono\\\\etc";
-            
-            // Check if these paths exist
-            if (!std::filesystem::exists(libDir)) {
-                libDir = "C:/Program Files/Mono/lib";
-            }
-            if (!std::filesystem::exists(etcDir)) {
-                etcDir = "C:/Program Files/Mono/etc";
-            }
+            const MonoRuntimePaths monoPaths = ResolveMonoRuntimePaths(fs::current_path());
+            if (!monoPaths.HasRuntime())
+                throw std::runtime_error(
+                  "Unable to resolve a Mono runtime for Crowny tests. Set CROWNY_MONO_ROOT to a valid Mono installation.");
 
-            printf("Initializing Mono with Lib: %s, Etc: %s\\n", libDir.c_str(), etcDir.c_str());
-            MonoManager::StartUp(libDir, etcDir, 0);
-            
-            if (MonoManager::IsStartedUp()) {
-                printf("Mono started up successfully\\n");
-            } else {
-                printf("Mono FAILED to start up\\n");
-            }
+            printf("Initializing Mono with Lib: %s, Etc: %s\\n", monoPaths.LibraryDirectory.string().c_str(),
+                   monoPaths.EtcDirectory.string().c_str());
+            MonoManager::StartUp(monoPaths.LibraryDirectory, monoPaths.EtcDirectory, 0);
+
+            if (!MonoManager::IsStartedUp())
+                throw std::runtime_error("Mono failed to start for Crowny tests using the resolved runtime directories.");
         }
     }
 
