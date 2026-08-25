@@ -55,7 +55,7 @@ jobs:
       - name: Build Crowny-Sharp
         run: |
           cd Crowny-Sharp
-          find ./Source -type f -name "*.cs" -print0 | xargs -0 csc -debug:portable -optimize- -target:library -out:CrownySharp.dll
+          find ./Source -type f -name "*.cs" -print0 | xargs -0 csc -unsafe -debug:portable -optimize- -target:library -out:CrownySharp.dll
 
       - name: Build Crowny-Sandbox
         run: |
