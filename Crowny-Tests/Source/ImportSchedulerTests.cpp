@@ -497,6 +497,9 @@ TEST_CASE_METHOD(SchedulerFixture, "Rejected worker-lane submission publishes fa
 
 TEST_CASE_METHOD(SchedulerFixture, "Partially accepted worker lanes roll the batch back to failed imports", "[Editor][ImportScheduler]")
 {
+    if (TaskSystem::Get().GetWorkerCount() < 3)
+        SKIP("Partial lane-submission rollback requires at least three task-system workers to expose two import lanes.");
+
     RegisterImporter("partial", ImporterThreadingPolicy::ParallelWorker, [](const Path&) { return CreateRef<TestAsset>(); });
 
     std::atomic<uint32_t> submitAttempts{ 0 };
