@@ -116,9 +116,17 @@ TEST_CASE("Thread allocation snapshots cover standard allocation families", "[Me
     void* alignedScalar = ::operator new(64, std::align_val_t(64));
     void* alignedArray = ::operator new[](128, std::align_val_t(64), std::nothrow);
 
+#if defined(__cpp_sized_deallocation)
     ::operator delete(scalar, size_t{ 16 });
+#else
+    ::operator delete(scalar);
+#endif
     ::operator delete[](array, std::nothrow);
+#if defined(__cpp_sized_deallocation)
     ::operator delete(alignedScalar, size_t{ 64 }, std::align_val_t(64));
+#else
+    ::operator delete(alignedScalar, std::align_val_t(64));
+#endif
     ::operator delete[](alignedArray, std::align_val_t(64), std::nothrow);
 
     const Memory::ThreadAllocationSnapshot after = Memory::GetThreadAllocationSnapshot();
