@@ -33,6 +33,7 @@ strace_out
 
 *.log
 artifacts/
+.scratch/
 
 __pycache__/
 *.py[cod]

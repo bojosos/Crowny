@@ -67,6 +67,7 @@ ALLOWLIST = (
     Allow("Crowny/Source/Crowny/Common/DataStream.*", frozenset({"physical-stream"}), "platform stream implementation"),
     Allow("Crowny/Source/Crowny/Common/BuiltInResourcePack.cpp", frozenset({"physical-stream", "physical-metadata"}), "built-in pack implementation"),
     Allow("Crowny/Source/Crowny/Common/VirtualFileSystem.cpp", frozenset({"raw-read"}), "virtual filesystem implementation"),
+    Allow("Crowny/Source/Crowny/Build/**", frozenset({"physical-stream", "physical-metadata"}), "player build staging and content-pack I/O boundary"),
     Allow("Crowny/Source/Crowny/Utils/BuiltInShaderCompiler.cpp", frozenset({"raw-read", "physical-stream", "physical-metadata", "raw-builtin-source"}), "build-time shader compiler"),
     Allow("Crowny/Source/Crowny/Utils/ShaderCompiler.cpp", frozenset({"raw-read"}), "shader include compiler boundary"),
     Allow("Crowny/Source/Crowny/Serialization/SceneSerializer.cpp", frozenset({"raw-read"}), "scene serialization boundary"),
@@ -166,6 +167,7 @@ def self_test() -> None:
     assert not is_allowed("Crowny/Source/Crowny/Import/ImageLoader.cpp", "physical-metadata", "std::filesystem::file_size(path)")
     assert is_allowed("Crowny/Source/Crowny/Import/ImageLoader.cpp", "raw-read", "FileSystem::OpenFile(path)")
     assert is_allowed("Crowny-Editor/Source/Editor/ProjectLibrary.cpp", "physical-metadata", "fs::file_size(path)")
+    assert is_allowed("Crowny/Source/Crowny/Build/ContentPack.cpp", "physical-stream", "std::ifstream stream(path)")
     assert is_allowed("Crowny/Source/Crowny/Scene/SceneRenderer.cpp", "direct-import", "Importer::Get().Import(\"RayTrace.glsl\")")
     assert not is_allowed("Crowny/Source/Crowny/Scene/SceneRenderer.cpp", "direct-import", "Importer::Get().Import(path)")
     assert is_allowed("Crowny-Editor/Source/Editor/ImportScheduler.cpp", "direct-import", "Importer::Get().ImportDeferred(path)")
