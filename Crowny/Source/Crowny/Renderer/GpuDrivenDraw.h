@@ -58,6 +58,83 @@ namespace Crowny
         uint32_t CommandCount = 0;
     };
 
+    struct GpuDrawBinLayoutDesc
+    {
+        uint32_t MaximumCommands = 0;
+        uint32_t MaximumBins = 0;
+        uint32_t MaximumDrawsPerCall = 0;
+
+        bool operator==(const GpuDrawBinLayoutDesc&) const = default;
+    };
+
+    struct GpuDrawBin
+    {
+        GpuDrawBinKey Key;
+        uint32_t FirstCommand = 0;
+        uint32_t CommandCapacity = 0;
+        uint32_t CountIndex = 0;
+
+        bool operator==(const GpuDrawBin&) const = default;
+    };
+
+    // Open-addressed hash entry consumed directly by the compaction shader.
+    // BinIndex == InvalidBin marks an unused lookup slot.
+    struct alignas(16) GpuDrawBinLookupEntry
+    {
+        static constexpr uint32_t InvalidBin = 0xffffffffu;
+
+        uint32_t Phase = 0;
+        uint32_t Alpha = 0;
+        uint32_t Pipeline = 0;
+        uint32_t GeometryHeap = 0;
+        uint32_t MaterialTemplate = 0;
+        uint32_t BinIndex = InvalidBin;
+        uint32_t FirstCommand = 0;
+        uint32_t CommandCapacity = 0;
+
+        bool operator==(const GpuDrawBinLookupEntry&) const = default;
+    };
+
+    static_assert(sizeof(GpuDrawBinLookupEntry) == 32);
+
+    struct GpuDrawBinLayoutStats
+    {
+        uint32_t SourceBinCount = 0;
+        uint32_t ActiveBinCount = 0;
+        uint32_t RejectedBinCount = 0;
+        uint32_t CommandCapacity = 0;
+        uint32_t LookupCapacity = 0;
+        uint64_t Version = 0;
+    };
+
+    // Persistent CPU-known submission layout. Compute writes each visible draw
+    // into a fixed bin segment, allowing the CPU to bind a heap/pipeline and use
+    // DrawIndexedIndirectCount without reading visibility or run counts back.
+    class GpuDrawBinLayout
+    {
+    public:
+        bool Build(const GpuDrawBinKey* keys, uint32_t keyCount, const GpuDrawBinLayoutDesc& desc);
+        void Reset();
+
+        uint32_t FindBin(const GpuDrawBinKey& key) const;
+        bool Contains(const GpuDrawBinKey& key) const { return FindBin(key) != GpuDrawBinLookupEntry::InvalidBin; }
+        bool Matches(const GpuDrawBinLayoutDesc& desc) const { return m_Desc == desc; }
+
+        const Vector<GpuDrawBin>& GetBins() const { return m_Bins; }
+        const Vector<GpuDrawBinLookupEntry>& GetLookupEntries() const { return m_LookupEntries; }
+        const GpuDrawBinLayoutStats& GetStats() const { return m_Stats; }
+        uint32_t GetLookupMask() const { return m_LookupEntries.empty() ? 0u : static_cast<uint32_t>(m_LookupEntries.size() - 1u); }
+
+    private:
+        static bool BinLess(const GpuDrawBinKey& first, const GpuDrawBinKey& second);
+        static uint32_t Hash(const GpuDrawBinKey& key);
+
+        GpuDrawBinLayoutDesc m_Desc;
+        Vector<GpuDrawBin> m_Bins;
+        Vector<GpuDrawBinLookupEntry> m_LookupEntries;
+        GpuDrawBinLayoutStats m_Stats;
+    };
+
     struct GpuDrawList
     {
         Vector<GpuVisibleDrawInstance> Instances;

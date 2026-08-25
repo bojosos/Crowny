@@ -20,6 +20,12 @@ namespace Crowny
             return std::max(std::bit_ceil(std::max(required, 1u)), minimum);
         }
 
+        template <typename T> void HashValue(uint32_t& hash, T value)
+        {
+            hash ^= static_cast<uint32_t>(value);
+            hash *= 16777619u;
+        }
+
         Ref<GenericGpuBuffer> CreateBuffer(uint32_t elementCount, uint32_t elementSize, GpuBufferType type)
         {
             GenericGpuBufferDesc desc;
@@ -30,6 +36,175 @@ namespace Crowny
             return GenericGpuBuffer::Create(desc);
         }
     } // namespace
+
+    bool GpuDrawBinLayout::BinLess(const GpuDrawBinKey& first, const GpuDrawBinKey& second)
+    {
+        if (first.Phase != second.Phase)
+            return CompareValue(first.Phase, second.Phase);
+        if (first.Alpha != second.Alpha)
+            return CompareValue(first.Alpha, second.Alpha);
+        if (first.Pipeline != second.Pipeline)
+            return first.Pipeline < second.Pipeline;
+        if (first.GeometryHeap != second.GeometryHeap)
+            return first.GeometryHeap < second.GeometryHeap;
+        return first.MaterialTemplate < second.MaterialTemplate;
+    }
+
+    uint32_t GpuDrawBinLayout::Hash(const GpuDrawBinKey& key)
+    {
+        uint32_t hash = 2166136261u;
+        HashValue(hash, key.Phase);
+        HashValue(hash, key.Alpha);
+        HashValue(hash, key.Pipeline);
+        HashValue(hash, key.GeometryHeap);
+        HashValue(hash, key.MaterialTemplate);
+        hash ^= hash >> 16u;
+        return hash;
+    }
+
+    bool GpuDrawBinLayout::Build(const GpuDrawBinKey* keys, uint32_t keyCount, const GpuDrawBinLayoutDesc& desc)
+    {
+        Vector<GpuDrawBinKey> sourceKeys;
+        sourceKeys.reserve(keyCount);
+        for (uint32_t index = 0; keys != nullptr && index < keyCount; index++)
+            sourceKeys.push_back(keys[index]);
+        std::sort(sourceKeys.begin(), sourceKeys.end(), BinLess);
+        Vector<GpuDrawBinKey> uniqueKeys;
+        Vector<uint32_t> binDemand;
+        uniqueKeys.reserve(sourceKeys.size());
+        binDemand.reserve(sourceKeys.size());
+        for (const GpuDrawBinKey& key : sourceKeys)
+        {
+            if (uniqueKeys.empty() || !(uniqueKeys.back() == key))
+            {
+                uniqueKeys.push_back(key);
+                binDemand.push_back(1u);
+            }
+            else
+                binDemand.back()++;
+        }
+
+        const uint32_t sourceBinCount = static_cast<uint32_t>(uniqueKeys.size());
+        const uint32_t activeBinCount = std::min({ sourceBinCount, desc.MaximumBins, desc.MaximumCommands });
+        Vector<GpuDrawBin> bins;
+        Vector<GpuDrawBinLookupEntry> lookupEntries;
+        uint32_t commandCapacity = 0;
+        if (activeBinCount != 0 && desc.MaximumDrawsPerCall != 0)
+        {
+            const uint64_t maximumCapacity64 = std::min<uint64_t>(
+              desc.MaximumCommands, static_cast<uint64_t>(activeBinCount) * desc.MaximumDrawsPerCall);
+            commandCapacity = static_cast<uint32_t>(maximumCapacity64);
+            Vector<uint32_t> capacities(activeBinCount, 1u);
+            Vector<uint32_t> remainingDemand(activeBinCount, 0u);
+            uint64_t totalDemand = 0;
+            for (uint32_t index = 0; index < activeBinCount; index++)
+            {
+                const uint32_t desired = std::min(binDemand[index], desc.MaximumDrawsPerCall);
+                remainingDemand[index] = desired - 1u;
+                totalDemand += desired;
+            }
+            if (totalDemand <= commandCapacity)
+            {
+                for (uint32_t index = 0; index < activeBinCount; index++)
+                    capacities[index] += remainingDemand[index];
+                commandCapacity = static_cast<uint32_t>(totalDemand);
+            }
+            else
+            {
+                uint32_t remainingCapacity = commandCapacity - activeBinCount;
+                const uint64_t extraDemand = totalDemand - activeBinCount;
+                uint32_t assignedCapacity = 0;
+                for (uint32_t index = 0; index < activeBinCount; index++)
+                {
+                    const uint32_t share = static_cast<uint32_t>(static_cast<uint64_t>(remainingCapacity) * remainingDemand[index] /
+                                                                  std::max<uint64_t>(extraDemand, 1u));
+                    capacities[index] += std::min(share, remainingDemand[index]);
+                    assignedCapacity += std::min(share, remainingDemand[index]);
+                }
+                uint32_t leftover = remainingCapacity - assignedCapacity;
+                while (leftover != 0)
+                {
+                    bool assigned = false;
+                    for (uint32_t index = 0; index < activeBinCount && leftover != 0; index++)
+                    {
+                        if (capacities[index] >= std::min(binDemand[index], desc.MaximumDrawsPerCall))
+                            continue;
+                        capacities[index]++;
+                        leftover--;
+                        assigned = true;
+                    }
+                    if (!assigned)
+                        break;
+                }
+            }
+            bins.reserve(activeBinCount);
+            uint32_t firstCommand = 0;
+            for (uint32_t index = 0; index < activeBinCount; index++)
+            {
+                const uint32_t capacity = capacities[index];
+                bins.push_back({ uniqueKeys[index], firstCommand, capacity, index });
+                firstCommand += capacity;
+            }
+
+            const uint32_t lookupCapacity = std::bit_ceil(std::max(activeBinCount * 2u, 2u));
+            lookupEntries.resize(lookupCapacity);
+            const uint32_t lookupMask = lookupCapacity - 1u;
+            for (uint32_t binIndex = 0; binIndex < bins.size(); binIndex++)
+            {
+                const GpuDrawBin& bin = bins[binIndex];
+                uint32_t lookupIndex = Hash(bin.Key) & lookupMask;
+                while (lookupEntries[lookupIndex].BinIndex != GpuDrawBinLookupEntry::InvalidBin)
+                    lookupIndex = (lookupIndex + 1u) & lookupMask;
+                lookupEntries[lookupIndex] = { static_cast<uint32_t>(bin.Key.Phase), static_cast<uint32_t>(bin.Key.Alpha),
+                                               bin.Key.Pipeline, bin.Key.GeometryHeap, bin.Key.MaterialTemplate, binIndex,
+                                               bin.FirstCommand, bin.CommandCapacity };
+            }
+        }
+
+        const bool changed = !(m_Desc == desc) || m_Bins != bins || m_LookupEntries != lookupEntries;
+        if (!changed)
+            return false;
+
+        const uint64_t version = m_Stats.Version + 1u;
+        m_Desc = desc;
+        m_Bins = std::move(bins);
+        m_LookupEntries = std::move(lookupEntries);
+        m_Stats = {};
+        m_Stats.SourceBinCount = sourceBinCount;
+        m_Stats.ActiveBinCount = static_cast<uint32_t>(m_Bins.size());
+        m_Stats.RejectedBinCount = sourceBinCount - m_Stats.ActiveBinCount;
+        m_Stats.CommandCapacity = commandCapacity;
+        m_Stats.LookupCapacity = static_cast<uint32_t>(m_LookupEntries.size());
+        m_Stats.Version = version;
+        return true;
+    }
+
+    void GpuDrawBinLayout::Reset()
+    {
+        m_Desc = {};
+        m_Bins.clear();
+        m_LookupEntries.clear();
+        m_Stats = {};
+    }
+
+    uint32_t GpuDrawBinLayout::FindBin(const GpuDrawBinKey& key) const
+    {
+        if (m_LookupEntries.empty())
+            return GpuDrawBinLookupEntry::InvalidBin;
+        const uint32_t lookupMask = static_cast<uint32_t>(m_LookupEntries.size() - 1u);
+        uint32_t lookupIndex = Hash(key) & lookupMask;
+        for (uint32_t probe = 0; probe < m_LookupEntries.size(); probe++)
+        {
+            const GpuDrawBinLookupEntry& entry = m_LookupEntries[lookupIndex];
+            if (entry.BinIndex == GpuDrawBinLookupEntry::InvalidBin)
+                return GpuDrawBinLookupEntry::InvalidBin;
+            if (entry.Phase == static_cast<uint32_t>(key.Phase) && entry.Alpha == static_cast<uint32_t>(key.Alpha) &&
+                entry.Pipeline == key.Pipeline && entry.GeometryHeap == key.GeometryHeap && entry.MaterialTemplate == key.MaterialTemplate)
+                return entry.BinIndex;
+            lookupIndex = (lookupIndex + 1u) & lookupMask;
+        }
+        return GpuDrawBinLookupEntry::InvalidBin;
+    }
 
     void GpuDrawListBuilder::Reserve(uint32_t candidateCount, uint32_t commandCount)
     {

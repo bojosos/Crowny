@@ -97,7 +97,8 @@ Status: reusable object pools, caches, a static geometry suballocator, and persi
 - [x] Test frame-delayed reuse and object identity after the safe retirement window.
 - [x] Add fixed-capacity vertex/index geometry heaps with aligned best-fit suballocation, generational handles, frames-in-flight deferred frees, range coalescing, uploads, and allocation/high-water/fragmentation telemetry.
 - [x] Back immutable Vulkan meshes with persistent vertex/index heap pages grouped by structural vertex layout, index width, and topology. Use stable heap binding IDs, GPU-to-GPU buffer copies, meshlet-index uploads, delayed allocation reuse, per-mesh fallbacks for dynamic/skinned/morphed/OpenGL geometry, and capacity/live/high-water telemetry.
-- [ ] Finish GPU-only draw-run compaction so the main shading path consumes compute-generated run/count buffers without CPU draw-list generation.
+- [x] Add GPU-only draw-run compaction for heap-resident opaque and masked main shading. Persistent CPU-known bins own deterministic command segments and count offsets; compute compacts visible meshlets into those segments and Vulkan submits them with indirect counts without visibility readback or per-object CPU draws.
+- [ ] Extend GPU draw generation beyond this bounded path. Vulkan baseline, OpenGL, early depth, shadow views, dynamic/skinned/morphed/per-mesh geometry, rejected bins, and strict transparency intentionally retain CPU submission until their ordering and fallback contracts are proven. Transparent GPU radix sorting and toon inverted-hull submission remain separate work.
 - [ ] Add pooled transient images where render-graph lifetime aliasing cannot reuse an allocation.
 
 ## Validation
@@ -108,4 +109,6 @@ Status: reusable object pools, caches, a static geometry suballocator, and persi
 - [x] Full Release validation after the integration repair: 295 Catch2 cases and 25,025 assertions passed with clean process exit.
 - [x] Vulkan and OpenGL renderer regression captures passed 4/4 each, with all 4 cross-backend comparisons matching.
 - [x] Normal Vulkan editor shutdown completed with exit code 0, zero assertions, and zero VMA leak lines; the former 15 leaked storage allocations (~27.01 MB) are fixed.
+- [x] Isolated GPU draw-bin validation: focused layout/graph/shader coverage passed 136 assertions in 11 cases; focused GPU-scene coverage passed 94 assertions in 13 cases; full Release Catch2 passed 25,405 assertions in 351 cases.
+- [x] Updated 54-resource built-in pack loaded successfully; Release render harness passed Vulkan 4/4 and OpenGL 4/4 on Intel Iris Xe, with all 4 cross-backend captures matching.
 - [ ] Linux CI has progressed past SPIRV-Cross header discovery; keep the current Actions run as the authoritative Linux compile result.

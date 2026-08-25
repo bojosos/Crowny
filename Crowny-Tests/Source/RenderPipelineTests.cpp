@@ -80,6 +80,9 @@ TEST_CASE("Forward Plus frame graph contains the GPU-driven shared pass sequence
     desc.Height = 1080;
     desc.Path = RenderingPath::ForwardPlus;
     desc.OutputTarget = ImportOutput(graph);
+    desc.DrawBinCount = 3;
+    desc.DrawBinLookupCapacity = 8;
+    desc.EnableGpuDrawBins = true;
 
     const RenderPipelineGraphOutput output = pipeline.BuildFrameGraph(graph, view, desc, blackboard);
     const RenderGraphCompileResult& compiled = graph.Compile();
@@ -96,6 +99,10 @@ TEST_CASE("Forward Plus frame graph contains the GPU-driven shared pass sequence
     CHECK(blackboard.Contains("MeshLodTable"));
     CHECK(blackboard.Contains("MeshletTable"));
     CHECK(blackboard.Contains("MeshletCandidates"));
+    CHECK(blackboard.Contains("CulledDrawInstances"));
+    CHECK(blackboard.Contains("CulledIndirectCommands"));
+    CHECK(blackboard.Contains("DrawBinTable"));
+    CHECK(blackboard.Contains("IndirectDrawCounts"));
     CHECK(blackboard.Contains("DirectionalLightIndices"));
     CHECK(blackboard.Contains("ClusterLightCounters"));
     CHECK(blackboard.Contains("ShadowAtlas"));
@@ -113,6 +120,7 @@ TEST_CASE("Forward Plus frame graph contains the GPU-driven shared pass sequence
     CHECK(std::find(passNames.begin(), passNames.end(), "CullInstancesAndSelectLod") != passNames.end());
     CHECK(std::find(passNames.begin(), passNames.end(), "ExpandVisibleMeshlets") != passNames.end());
     CHECK(std::find(passNames.begin(), passNames.end(), "LateOcclusionAndMeshletCulling") != passNames.end());
+    CHECK(std::find(passNames.begin(), passNames.end(), "ClearIndirectDrawCounts") != passNames.end());
     CHECK(std::find(passNames.begin(), passNames.end(), "BinAndCompactIndirectDraws") != passNames.end());
     CHECK(std::find(passNames.begin(), passNames.end(), "ClearClusterLightCounters") != passNames.end());
     CHECK(std::find(passNames.begin(), passNames.end(), "BuildClusteredLightLists") != passNames.end());
@@ -123,6 +131,21 @@ TEST_CASE("Forward Plus frame graph contains the GPU-driven shared pass sequence
     CHECK(std::find(passNames.begin(), passNames.end(), "Bloom") != passNames.end());
     CHECK(std::find(passNames.begin(), passNames.end(), "DeferredGBuffer") == passNames.end());
     CHECK(passNames.back() == "FinalUIComposition");
+
+    const RenderGraphResourceHandle commands = blackboard.Get("IndirectCommands");
+    const RenderGraphResourceHandle counts = blackboard.Get("IndirectDrawCounts");
+    REQUIRE(commands.IsValid());
+    REQUIRE(counts.IsValid());
+    CHECK(compiled.Resources[commands.Index].Desc.Buffer.Type == GpuBufferType::IndirectDraw);
+    CHECK(compiled.Resources[counts.Index].Desc.Buffer.Type == GpuBufferType::IndirectDraw);
+    const auto transitionsToIndirect = [&](RenderGraphResourceHandle resource) {
+        return std::any_of(compiled.Barriers.begin(), compiled.Barriers.end(), [&](const RenderGraphBarrier& barrier) {
+            return barrier.Resource == resource && barrier.DestinationState == RenderGraphResourceState::IndirectArgument &&
+                   graph.GetPassName(barrier.BeforePass) == "ForwardPlusOpaque";
+        });
+    };
+    CHECK(transitionsToIndirect(commands));
+    CHECK(transitionsToIndirect(counts));
 }
 
 TEST_CASE("Deferred Plus frame graph reuses visibility and forward transparency", "[Renderer][Pipeline]")

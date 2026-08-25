@@ -42,6 +42,10 @@ namespace Crowny
         uint32_t VisibleInstances = 0;
         uint32_t IndirectCommands = 0;
         uint32_t IndirectRuns = 0;
+        uint32_t DrawBinCount = 0;
+        uint32_t RejectedDrawBins = 0;
+        uint32_t DrawBinCommandCapacity = 0;
+        uint32_t DrawBinLookupCapacity = 0;
         uint32_t GeometryHeapPages = 0;
         uint64_t GeometryHeapCapacityBytes = 0;
         uint64_t GeometryHeapLiveBytes = 0;
@@ -86,6 +90,7 @@ namespace Crowny
         const Ref<GenericGpuBuffer>& GetMeshLodBuffer() const { return m_MeshLodBuffer; }
         const Ref<GenericGpuBuffer>& GetMeshletBuffer() const { return m_MeshletBuffer; }
         const Ref<GenericGpuBuffer>& GetMaterialBuffer() const { return m_MaterialBuffer; }
+        uint32_t GetMaterialCount() const { return static_cast<uint32_t>(m_Materials.size()); }
         Ref<VertexBuffer> GetGeometryVertexBuffer(uint32_t geometryBinding) const;
         Ref<IndexBuffer> GetGeometryIndexBuffer(uint32_t geometryBinding) const;
         DrawMode GetGeometryDrawMode(uint32_t geometryBinding) const;
@@ -94,8 +99,12 @@ namespace Crowny
         const Vector<Ref<Texture>>& GetBindlessTextures() const { return m_BindlessTextureResources; }
         uint64_t GetBindlessTextureVersion() const { return m_BindlessTextureVersion; }
         void DrainBindlessTextureUpdates(Vector<BindlessResourceUpdate>& output);
+        void PrepareGpuDrawBins(const GpuDrawBinLayoutDesc& desc);
         void BuildCpuDrawList(const RenderView& view, GpuDrawList& output, GpuDrawBuffers* outputBuffers = nullptr, bool shadowCastersOnly = false);
         const GpuDrawBuffers& GetCpuDrawBuffers() const { return m_DrawBuffers; }
+        const GpuDrawBinLayout& GetGpuDrawBinLayout() const { return m_DrawBinLayout; }
+        const Ref<GenericGpuBuffer>& GetGpuDrawBinBuffer() const { return m_DrawBinBuffer; }
+        bool HasGpuDrawBins() const { return m_DrawBinBuffer != nullptr && !m_DrawBinLayout.GetBins().empty(); }
         const GpuSceneUploadStats& GetStats() const { return m_Stats; }
         bool HasGpuBuffers() const { return m_InstanceBuffer != nullptr && m_LightBuffer != nullptr; }
 
@@ -165,6 +174,7 @@ namespace Crowny
         GeometryHeapPage* GetGeometryHeapPage(uint32_t geometryBinding);
         const GeometryHeapPage* GetGeometryHeapPage(uint32_t geometryBinding) const;
         void UpdateGeometryHeapStats();
+        void CollectGpuDrawBinKeys(Vector<GpuDrawBinKey>& output) const;
         bool CanCreateGpuBuffers() const;
         bool CanUseStaticGeometryHeaps() const;
 
@@ -195,6 +205,10 @@ namespace Crowny
         Vector<GpuDrawCandidate> m_DrawCandidates;
         GpuDrawListBuilder m_DrawListBuilder;
         GpuDrawBuffers m_DrawBuffers;
+        GpuDrawBinLayout m_DrawBinLayout;
+        Vector<GpuDrawBinKey> m_DrawBinKeys;
+        Ref<GenericGpuBuffer> m_DrawBinBuffer;
+        bool m_DrawBinsDirty = true;
         Vector<uint32_t> m_DirtyInstanceIndices;
         Vector<uint32_t> m_DirtyLightIndices;
         Vector<uint32_t> m_DirtyMeshIndices;

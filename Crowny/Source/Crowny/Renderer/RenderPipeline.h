@@ -20,6 +20,7 @@ namespace Crowny
         RenderGraphResourceHandle MeshLodTable;
         RenderGraphResourceHandle MeshletTable;
         RenderGraphResourceHandle MaterialTable;
+        RenderGraphResourceHandle DrawBinTable;
         RenderGraphResourceHandle DepthInstanceIds;
         RenderGraphResourceHandle DepthIndirectCommands;
         RenderGraphPassHandle Prerequisite;
@@ -29,6 +30,9 @@ namespace Crowny
         RenderGraph::ExecuteCallback ScheduledShadowRenderer;
         RenderGraph::ExecuteCallback FinalComposition;
         std::function<void(StringView, RenderGraphContext&)> PassExecutor;
+        uint32_t DrawBinCount = 0;
+        uint32_t DrawBinLookupCapacity = 0;
+        bool EnableGpuDrawBins = false;
         bool EnableMotionVectors = true;
         bool EnableObjectID = false;
         bool EnableTransparency = true;

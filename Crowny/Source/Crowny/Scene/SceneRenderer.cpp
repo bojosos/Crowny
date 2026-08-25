@@ -142,13 +142,18 @@ namespace Crowny
         {
         public:
             void BeginFrame(const RenderView& view, const RenderBlackboard& blackboard, GpuScene& scene, const GpuDrawList& depthDrawList,
-                            const Ref<EnvironmentMap>& environment)
+                            const GpuDrawBinLayout* drawBinLayout, const Ref<EnvironmentMap>& environment)
             {
                 m_View = view;
                 m_Blackboard = &blackboard;
                 m_Scene = &scene;
                 m_DepthDrawList = &depthDrawList;
+                m_DrawBinLayout = drawBinLayout;
                 m_Environment = environment;
+                m_GpuInstanceCullingReady = false;
+                m_GpuMeshletExpansionReady = false;
+                m_GpuMeshletCullingReady = false;
+                m_GpuDrawCompactionReady = false;
             }
 
             void Execute(StringView name, RenderGraphContext& context)
@@ -161,6 +166,8 @@ namespace Crowny
                     Clear(context, "MeshletCandidateCounters", 4);
                 else if (name == "ClearDrawCounters")
                     Clear(context, "DrawCounters", 8);
+                else if (name == "ClearIndirectDrawCounts")
+                    ClearDrawBinCounts(context);
                 else if (name == "ClearClusterLightCounters")
                     Clear(context, "ClusterLightCounters", 4);
                 else if (name == "CullInstancesAndSelectLod")
@@ -169,6 +176,8 @@ namespace Crowny
                     ExpandMeshlets(context);
                 else if (name == "LateOcclusionAndMeshletCulling")
                     CullMeshlets(context);
+                else if (name == "BinAndCompactIndirectDraws")
+                    BinAndCompactDraws(context);
                 else if (name == "BuildClusteredLightLists")
                     BuildClusters(context);
                 else if (name == "GTAO")
@@ -238,7 +247,7 @@ namespace Crowny
                     RenderAPI::TryGet()->SetRenderTarget(target);
                     RenderAPI::TryGet()->SetViewport(view.Viewport.x, view.Viewport.y, view.Viewport.z, view.Viewport.w);
                     RenderAPI::TryGet()->ClearViewport(FBT_DEPTH, glm::vec4(0.0f), 0.0f);
-                    DrawOpaqueRuns(m_ShadowDepth, commands, view.DrawList);
+                    DrawCpuOpaqueRuns(m_ShadowDepth, commands, view.DrawList, false);
                 }
             }
 
@@ -282,6 +291,18 @@ namespace Crowny
                 uint32_t CameraCut = 1;
                 uint32_t Padding0 = 0;
                 uint32_t Padding1 = 0;
+            };
+
+            struct alignas(16) DrawBinCompactionConstants
+            {
+                uint32_t MaximumInputCommandCount = 0;
+                uint32_t LookupMask = 0;
+                uint32_t LookupCapacity = 0;
+                uint32_t BinCount = 0;
+                uint32_t MaterialCount = 0;
+                uint32_t Padding0 = 0;
+                uint32_t Padding1 = 0;
+                uint32_t Padding2 = 0;
             };
 
             struct alignas(16) ClusterConstants
@@ -449,6 +470,20 @@ namespace Crowny
                 buffer->WriteData(0, std::min<uint32_t>(wordCount * sizeof(uint32_t), buffer->GetSize()), zero.data(), BWT_NORMAL);
             }
 
+            void ClearDrawBinCounts(RenderGraphContext& context)
+            {
+                const Ref<GenericGpuBuffer> counts = Buffer(context, "IndirectDrawCounts");
+                if (!counts || m_DrawBinLayout == nullptr)
+                    return;
+                const uint32_t wordCount = static_cast<uint32_t>(m_DrawBinLayout->GetBins().size()) * 2u;
+                if (wordCount == 0)
+                    return;
+                m_ZeroDrawBinCounts.resize(wordCount, 0u);
+                std::fill(m_ZeroDrawBinCounts.begin(), m_ZeroDrawBinCounts.end(), 0u);
+                counts->WriteData(0, std::min<uint32_t>(wordCount * sizeof(uint32_t), counts->GetSize()),
+                                  m_ZeroDrawBinCounts.data(), BWT_NORMAL);
+            }
+
             void CullInstances(RenderGraphContext& context)
             {
                 if (!Ensure(m_CullInstances, m_CullInstancesAttempted, "Resources/Shaders/GpuCullInstances.asset"))
@@ -482,12 +517,13 @@ namespace Crowny
                 m_CullInstances.SetTexture(0, 4, TextureResource(context, "PreviousHiZ"));
                 m_CullInstances.SetBuffer(0, 5, meshes);
                 m_CullInstances.SetBuffer(0, 6, lods);
-                m_CullInstances.Dispatch((constants.InstanceCapacity + 63u) / 64u);
+                m_GpuInstanceCullingReady = m_CullInstances.Dispatch((constants.InstanceCapacity + 63u) / 64u);
             }
 
             void ExpandMeshlets(RenderGraphContext& context)
             {
-                if (!Ensure(m_ExpandMeshlets, m_ExpandMeshletsAttempted, "Resources/Shaders/ExpandVisibleMeshlets.asset"))
+                if (!m_GpuInstanceCullingReady ||
+                    !Ensure(m_ExpandMeshlets, m_ExpandMeshletsAttempted, "Resources/Shaders/ExpandVisibleMeshlets.asset"))
                     return;
                 const Ref<GenericGpuBuffer> visible = Buffer(context, "VisibleInstances");
                 const Ref<GenericGpuBuffer> candidates = Buffer(context, "MeshletCandidates");
@@ -504,15 +540,16 @@ namespace Crowny
                 m_ExpandMeshlets.SetBuffer(0, 5, candidates);
                 m_ExpandMeshlets.SetBuffer(0, 6, Buffer(context, "MeshletCandidateCounters"));
                 m_ExpandMeshlets.SetBuffer(0, 7, Buffer(context, "VisibilityCounters"));
-                m_ExpandMeshlets.Dispatch((constants.MaximumVisibleInstances + 63u) / 64u);
+                m_GpuMeshletExpansionReady = m_ExpandMeshlets.Dispatch((constants.MaximumVisibleInstances + 63u) / 64u);
             }
 
             void CullMeshlets(RenderGraphContext& context)
             {
-                if (!Ensure(m_CullMeshlets, m_CullMeshletsAttempted, "Resources/Shaders/CullMeshletsAndBuildDraws.asset"))
+                if (!m_GpuMeshletExpansionReady ||
+                    !Ensure(m_CullMeshlets, m_CullMeshletsAttempted, "Resources/Shaders/CullMeshletsAndBuildDraws.asset"))
                     return;
                 const Ref<GenericGpuBuffer> candidates = Buffer(context, "MeshletCandidates");
-                const Ref<GenericGpuBuffer> commands = Buffer(context, "IndirectCommands");
+                const Ref<GenericGpuBuffer> commands = Buffer(context, "CulledIndirectCommands");
                 if (!candidates || !commands)
                     return;
                 MeshletCullingConstants constants;
@@ -534,12 +571,47 @@ namespace Crowny
                 m_CullMeshlets.SetBuffer(0, 2, Buffer(context, "MeshletTable"));
                 m_CullMeshlets.SetBuffer(0, 3, candidates);
                 m_CullMeshlets.SetTexture(0, 4, TextureResource(context, "CurrentHiZ"));
-                m_CullMeshlets.SetBuffer(0, 5, Buffer(context, "VisibleDrawInstances"));
+                m_CullMeshlets.SetBuffer(0, 5, Buffer(context, "CulledDrawInstances"));
                 m_CullMeshlets.SetBuffer(0, 6, commands);
                 m_CullMeshlets.SetBuffer(0, 7, Buffer(context, "DrawSortKeys"));
                 m_CullMeshlets.SetBuffer(0, 8, Buffer(context, "DrawCounters"));
                 m_CullMeshlets.SetBuffer(0, 9, Buffer(context, "MeshletCandidateCounters"));
-                m_CullMeshlets.Dispatch((constants.MaximumCandidates + 63u) / 64u);
+                m_GpuMeshletCullingReady = m_CullMeshlets.Dispatch((constants.MaximumCandidates + 63u) / 64u);
+            }
+
+            void BinAndCompactDraws(RenderGraphContext& context)
+            {
+                if (!m_GpuMeshletCullingReady || m_DrawBinLayout == nullptr || m_DrawBinLayout->GetBins().empty() ||
+                    !Ensure(m_BinAndCompactDraws, m_BinAndCompactDrawsAttempted,
+                            "Resources/Shaders/BinAndCompactIndirectDraws.asset"))
+                    return;
+                const Ref<GenericGpuBuffer> culledCommands = Buffer(context, "CulledIndirectCommands");
+                const Ref<GenericGpuBuffer> culledInstances = Buffer(context, "CulledDrawInstances");
+                const Ref<GenericGpuBuffer> materials = Buffer(context, "MaterialTable");
+                const Ref<GenericGpuBuffer> drawBins = Buffer(context, "DrawBinTable");
+                const Ref<GenericGpuBuffer> commands = Buffer(context, "IndirectCommands");
+                const Ref<GenericGpuBuffer> visibleInstances = Buffer(context, "VisibleDrawInstances");
+                const Ref<GenericGpuBuffer> counts = Buffer(context, "IndirectDrawCounts");
+                if (!culledCommands || !culledInstances || !materials || !drawBins || !commands || !visibleInstances || !counts)
+                    return;
+
+                DrawBinCompactionConstants constants;
+                constants.MaximumInputCommandCount = culledCommands->GetSize() / sizeof(DrawIndexedIndirectCommand);
+                constants.LookupMask = m_DrawBinLayout->GetLookupMask();
+                constants.LookupCapacity = static_cast<uint32_t>(m_DrawBinLayout->GetLookupEntries().size());
+                constants.BinCount = static_cast<uint32_t>(m_DrawBinLayout->GetBins().size());
+                constants.MaterialCount = m_Scene->GetMaterialCount();
+                m_BinAndCompactDraws.WriteUniformBlock(0, 0, &constants, sizeof(constants));
+                m_BinAndCompactDraws.SetBuffer(0, 1, culledInstances);
+                m_BinAndCompactDraws.SetBuffer(0, 2, culledCommands);
+                m_BinAndCompactDraws.SetBuffer(0, 3, Buffer(context, "DrawSortKeys"));
+                m_BinAndCompactDraws.SetBuffer(0, 4, Buffer(context, "DrawCounters"));
+                m_BinAndCompactDraws.SetBuffer(0, 5, materials);
+                m_BinAndCompactDraws.SetBuffer(0, 6, drawBins);
+                m_BinAndCompactDraws.SetBuffer(0, 7, visibleInstances);
+                m_BinAndCompactDraws.SetBuffer(0, 8, commands);
+                m_BinAndCompactDraws.SetBuffer(0, 9, counts);
+                m_GpuDrawCompactionReady = m_BinAndCompactDraws.Dispatch((constants.MaximumInputCommandCount + 63u) / 64u);
             }
 
             void BuildClusters(RenderGraphContext& context)
@@ -773,7 +845,8 @@ namespace Crowny
                 textureVersion = m_Scene->GetBindlessTextureVersion();
             }
 
-            void DrawOpaqueRuns(GraphicsMaterial& material, const Ref<GenericGpuBuffer>& commands, const GpuDrawList& drawList)
+            void DrawCpuOpaqueRuns(GraphicsMaterial& material, const Ref<GenericGpuBuffer>& commands, const GpuDrawList& drawList,
+                                   bool skipGpuBins)
             {
                 if (commands == nullptr || !material.Bind())
                     return;
@@ -781,6 +854,8 @@ namespace Crowny
                 {
                     if (run.Bin.Phase != RenderDrawPhase::Opaque || (run.Bin.Alpha != AlphaMode::Opaque && run.Bin.Alpha != AlphaMode::Mask) ||
                         run.CommandCount == 0)
+                        continue;
+                    if (skipGpuBins && m_DrawBinLayout != nullptr && m_DrawBinLayout->Contains(run.Bin))
                         continue;
                     const Ref<VertexBuffer> vertexBuffer = m_Scene->GetGeometryVertexBuffer(run.Bin.GeometryHeap);
                     const Ref<IndexBuffer> indexBuffer = m_Scene->GetGeometryIndexBuffer(run.Bin.GeometryHeap);
@@ -793,6 +868,42 @@ namespace Crowny
                     RenderAPI::TryGet()->SetDrawMode(m_Scene->GetGeometryDrawMode(run.Bin.GeometryHeap));
                     RenderAPI::TryGet()->DrawIndexedIndirect(commands, run.FirstCommand * sizeof(DrawIndexedIndirectCommand), run.CommandCount);
                 }
+            }
+
+            bool DrawGpuOpaqueBins(GraphicsMaterial& material, const Ref<GenericGpuBuffer>& commands,
+                                   const Ref<GenericGpuBuffer>& counts)
+            {
+                if (!m_GpuDrawCompactionReady || m_DrawBinLayout == nullptr || commands == nullptr || counts == nullptr ||
+                    m_DrawBinLayout->GetBins().empty() ||
+                    !RenderAPI::TryGet()->GetCapabilities().HasCapability(CW_DRAW_INDIRECT_COUNT))
+                    return false;
+                for (const GpuDrawBin& bin : m_DrawBinLayout->GetBins())
+                {
+                    if (bin.Key.Phase != RenderDrawPhase::Opaque ||
+                        (bin.Key.Alpha != AlphaMode::Opaque && bin.Key.Alpha != AlphaMode::Mask) || bin.CommandCapacity == 0)
+                        continue;
+                    if (!m_Scene->GetGeometryVertexBuffer(bin.Key.GeometryHeap) || !m_Scene->GetGeometryIndexBuffer(bin.Key.GeometryHeap))
+                        return false;
+                }
+                if (!material.Bind())
+                    return false;
+
+                for (const GpuDrawBin& bin : m_DrawBinLayout->GetBins())
+                {
+                    if (bin.Key.Phase != RenderDrawPhase::Opaque ||
+                        (bin.Key.Alpha != AlphaMode::Opaque && bin.Key.Alpha != AlphaMode::Mask) || bin.CommandCapacity == 0)
+                        continue;
+                    const Ref<VertexBuffer> vertexBuffer = m_Scene->GetGeometryVertexBuffer(bin.Key.GeometryHeap);
+                    const Ref<IndexBuffer> indexBuffer = m_Scene->GetGeometryIndexBuffer(bin.Key.GeometryHeap);
+                    RenderAPI::TryGet()->SetVertexLayout(vertexBuffer->GetLayout());
+                    Ref<VertexBuffer> boundVertexBuffer = vertexBuffer;
+                    RenderAPI::TryGet()->SetVertexBuffers(0, &boundVertexBuffer, 1);
+                    RenderAPI::TryGet()->SetIndexBuffer(indexBuffer);
+                    RenderAPI::TryGet()->SetDrawMode(m_Scene->GetGeometryDrawMode(bin.Key.GeometryHeap));
+                    RenderAPI::TryGet()->DrawIndexedIndirectCount(commands, bin.FirstCommand * sizeof(DrawIndexedIndirectCommand), counts,
+                                                                  bin.CountIndex * sizeof(uint32_t), bin.CommandCapacity);
+                }
+                return true;
             }
 
             void RenderForwardPlus(RenderGraphContext& context)
@@ -821,7 +932,6 @@ namespace Crowny
                     return;
 
                 m_ForwardPlus.SetBuffer(0, 1, instances);
-                m_ForwardPlus.SetBuffer(0, 2, instanceIds);
                 BindSharedLighting(m_ForwardPlus, context);
                 m_ForwardPlus.SetTexture(
                   0, 16, TextureResource(context, "AmbientOcclusion") ? TextureResource(context, "AmbientOcclusion") : Texture::WHITE);
@@ -829,7 +939,13 @@ namespace Crowny
                 RenderAPI::TryGet()->SetRenderTarget(target, 0, RT_DEPTH_STENCIL);
                 RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
                 RenderAPI::TryGet()->ClearViewport(FBT_COLOR, glm::vec4(0.0f), 0.0f);
-                DrawOpaqueRuns(m_ForwardPlus, commands, *m_DepthDrawList);
+                const Ref<GenericGpuBuffer> gpuInstanceIds = Buffer(context, "VisibleDrawInstances");
+                const Ref<GenericGpuBuffer> gpuCommands = Buffer(context, "IndirectCommands");
+                const Ref<GenericGpuBuffer> gpuCounts = Buffer(context, "IndirectDrawCounts");
+                m_ForwardPlus.SetBuffer(0, 2, gpuInstanceIds);
+                const bool gpuSubmitted = DrawGpuOpaqueBins(m_ForwardPlus, gpuCommands, gpuCounts);
+                m_ForwardPlus.SetBuffer(0, 2, instanceIds);
+                DrawCpuOpaqueRuns(m_ForwardPlus, commands, *m_DepthDrawList, gpuSubmitted);
             }
 
             void RenderDeferredGBuffer(RenderGraphContext& context)
@@ -862,12 +978,17 @@ namespace Crowny
                 const LightingViewConstants view = BuildLightingViewConstants();
                 m_DeferredGBuffer.WriteUniformBlock(0, 0, &view, sizeof(view));
                 m_DeferredGBuffer.SetBuffer(0, 1, instances);
-                m_DeferredGBuffer.SetBuffer(0, 2, instanceIds);
                 BindMaterialTable(m_DeferredGBuffer, m_DeferredTextureVersion, context);
                 RenderAPI::TryGet()->SetRenderTarget(target, 0, RT_DEPTH_STENCIL);
                 RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
                 RenderAPI::TryGet()->ClearViewport(FBT_COLOR, glm::vec4(0.0f), 0.0f);
-                DrawOpaqueRuns(m_DeferredGBuffer, commands, *m_DepthDrawList);
+                const Ref<GenericGpuBuffer> gpuInstanceIds = Buffer(context, "VisibleDrawInstances");
+                const Ref<GenericGpuBuffer> gpuCommands = Buffer(context, "IndirectCommands");
+                const Ref<GenericGpuBuffer> gpuCounts = Buffer(context, "IndirectDrawCounts");
+                m_DeferredGBuffer.SetBuffer(0, 2, gpuInstanceIds);
+                const bool gpuSubmitted = DrawGpuOpaqueBins(m_DeferredGBuffer, gpuCommands, gpuCounts);
+                m_DeferredGBuffer.SetBuffer(0, 2, instanceIds);
+                DrawCpuOpaqueRuns(m_DeferredGBuffer, commands, *m_DepthDrawList, gpuSubmitted);
             }
 
             void RenderDeferredLighting(RenderGraphContext& context)
@@ -1084,10 +1205,12 @@ namespace Crowny
             const RenderBlackboard* m_Blackboard = nullptr;
             GpuScene* m_Scene = nullptr;
             const GpuDrawList* m_DepthDrawList = nullptr;
+            const GpuDrawBinLayout* m_DrawBinLayout = nullptr;
             Ref<EnvironmentMap> m_Environment;
             ComputeMaterial m_CullInstances;
             ComputeMaterial m_ExpandMeshlets;
             ComputeMaterial m_CullMeshlets;
+            ComputeMaterial m_BinAndCompactDraws;
             ComputeMaterial m_BuildClusters;
             ComputeMaterial m_BuildHiZ;
             ComputeMaterial m_Gtao;
@@ -1106,6 +1229,7 @@ namespace Crowny
             GraphicsMaterial m_Sky;
             Ref<Texture> m_BrdfLut;
             Ref<SamplerState> m_ShadowSampler;
+            Vector<uint32_t> m_ZeroDrawBinCounts;
             uint64_t m_ForwardTextureVersion = 0;
             uint64_t m_PremultipliedTextureVersion = 0;
             uint64_t m_AdditiveTextureVersion = 0;
@@ -1115,6 +1239,11 @@ namespace Crowny
             bool m_CullInstancesAttempted = false;
             bool m_ExpandMeshletsAttempted = false;
             bool m_CullMeshletsAttempted = false;
+            bool m_BinAndCompactDrawsAttempted = false;
+            bool m_GpuInstanceCullingReady = false;
+            bool m_GpuMeshletExpansionReady = false;
+            bool m_GpuMeshletCullingReady = false;
+            bool m_GpuDrawCompactionReady = false;
             bool m_BuildClustersAttempted = false;
             bool m_BuildHiZAttempted = false;
             bool m_GtaoAttempted = false;
@@ -2288,7 +2417,8 @@ namespace Crowny
         gpuScene.BeginFrame(snapshot.FrameNumber);
         gpuScene.Apply(snapshot.RenderWorldChanges, snapshot.RenderLightChanges);
         gpuScene.ApplyResources(snapshot.MeshResourceChanges, snapshot.MaterialResourceChanges);
-        const RenderFeatureTier featureTier = RenderAPI::TryGet()->GetCapabilities().GetFeatureTier();
+        const RenderCapabilities& capabilities = RenderAPI::TryGet()->GetCapabilities();
+        const RenderFeatureTier featureTier = capabilities.GetFeatureTier();
         if (featureTier == RenderFeatureTier::Compatibility)
         {
             RenderLegacySnapshot(snapshot);
@@ -2359,7 +2489,26 @@ namespace Crowny
         view.EnableObjectID = true;
         view.EnableMotionVectors = true;
         view.CameraCut = snapshot.CameraCut || snapshot.FrameNumber <= 1;
-        view.Path = pipeline.ResolvePath(RenderAPI::TryGet()->GetCapabilities());
+        view.Path = pipeline.ResolvePath(capabilities);
+
+        const bool gpuDrawTier = featureTier == RenderFeatureTier::GPUDriven || featureTier == RenderFeatureTier::Future;
+        GpuDrawBinLayoutDesc drawBinDesc;
+        if (gpuDrawTier && capabilities.MaxDrawIndirectCount != 0)
+        {
+            drawBinDesc.MaximumCommands = pipeline.GetSettings().MaxIndirectCommands;
+            drawBinDesc.MaximumBins = std::min(drawBinDesc.MaximumCommands, 4096u);
+            drawBinDesc.MaximumDrawsPerCall = capabilities.MaxDrawIndirectCount;
+        }
+        gpuScene.PrepareGpuDrawBins(drawBinDesc);
+        const bool gpuDrawBinsEnabled = gpuDrawTier && gpuScene.HasGpuDrawBins() && materialTable.IsValid();
+        RenderGraphResourceHandle drawBinTable;
+        if (gpuDrawBinsEnabled)
+        {
+            const Ref<GenericGpuBuffer>& buffer = gpuScene.GetGpuDrawBinBuffer();
+            drawBinTable = renderGraph.ImportBuffer(
+              "PersistentDrawBins", { buffer->GetSize(), sizeof(GpuDrawBinLookupEntry), GpuBufferType::Structured },
+              reinterpret_cast<uint64_t>(buffer.get()), RenderGraphResourceState::ShaderRead, RenderGraphResourceState::ShaderRead);
+        }
 
         GpuDrawList depthDrawList;
         RenderGraphResourceHandle depthInstanceIds;
@@ -2395,9 +2544,14 @@ namespace Crowny
         graphDesc.MeshLodTable = meshLodTable;
         graphDesc.MeshletTable = meshletTable;
         graphDesc.MaterialTable = materialTable;
+        graphDesc.DrawBinTable = drawBinTable;
         graphDesc.DepthInstanceIds = depthInstanceIds;
         graphDesc.DepthIndirectCommands = depthCommands;
         graphDesc.Prerequisite = applyChanges;
+        graphDesc.DrawBinCount = gpuDrawBinsEnabled ? static_cast<uint32_t>(gpuScene.GetGpuDrawBinLayout().GetBins().size()) : 0u;
+        graphDesc.DrawBinLookupCapacity =
+          gpuDrawBinsEnabled ? static_cast<uint32_t>(gpuScene.GetGpuDrawBinLayout().GetLookupEntries().size()) : 0u;
+        graphDesc.EnableGpuDrawBins = gpuDrawBinsEnabled;
         graphDesc.EnableMotionVectors = true;
         graphDesc.EnableObjectID = true;
         graphDesc.EnablePostProcessing = true;
@@ -2573,7 +2727,8 @@ namespace Crowny
             graphDesc.FinalComposition = [&](RenderGraphContext&) { RenderLegacyOverlays(snapshot); };
         }
         pipeline.BuildFrameGraph(renderGraph, view, graphDesc, blackboard);
-        gpuDrivenExecutor.BeginFrame(view, blackboard, gpuScene, depthDrawList, snapshot.Environment);
+        gpuDrivenExecutor.BeginFrame(view, blackboard, gpuScene, depthDrawList,
+                                     gpuDrawBinsEnabled ? &gpuScene.GetGpuDrawBinLayout() : nullptr, snapshot.Environment);
 
         const RenderGraphCompileResult& compiledGraph = renderGraph.Compile();
         const bool resourceFrameBegun = graphResources.BeginFrame(compiledGraph, snapshot.FrameNumber, snapshot.HistoryNamespace, view.CameraCut);
@@ -2591,6 +2746,7 @@ namespace Crowny
             bindBuffer(meshLodTable, gpuScene.GetMeshLodBuffer());
             bindBuffer(meshletTable, gpuScene.GetMeshletBuffer());
             bindBuffer(materialTable, gpuScene.GetMaterialBuffer());
+            bindBuffer(drawBinTable, gpuScene.GetGpuDrawBinBuffer());
             bindBuffer(depthInstanceIds, gpuScene.GetCpuDrawBuffers().GetInstanceIDBuffer());
             bindBuffer(depthCommands, gpuScene.GetCpuDrawBuffers().GetCommandBuffer());
         }

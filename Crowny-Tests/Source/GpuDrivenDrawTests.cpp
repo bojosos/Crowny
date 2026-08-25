@@ -21,6 +21,113 @@ namespace
         candidate.ViewDepth = depth;
         return candidate;
     }
+
+    GpuDrawBinKey Bin(RenderDrawPhase phase, AlphaMode alpha, uint32_t pipeline, uint32_t heap, uint32_t materialTemplate)
+    {
+        return { phase, alpha, pipeline, heap, materialTemplate };
+    }
+}
+
+TEST_CASE("GPU draw-bin layout is deterministic and respects indirect device limits", "[Renderer][GpuDriven][DrawBins]")
+{
+    const Vector<GpuDrawBinKey> keys = {
+        Bin(RenderDrawPhase::Opaque, AlphaMode::Mask, 4, 8, 12),
+        Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 4, 2, 12),
+        Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 4, 2, 12),
+        Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 1, 7, 3),
+    };
+    const GpuDrawBinLayoutDesc desc{ 17, 8, 6 };
+    GpuDrawBinLayout layout;
+    REQUIRE(layout.Build(keys.data(), static_cast<uint32_t>(keys.size()), desc));
+
+    const Vector<GpuDrawBin>& bins = layout.GetBins();
+    REQUIRE(bins.size() == 3);
+    CHECK(bins[0].Key.Pipeline == 1);
+    CHECK(bins[1].Key.GeometryHeap == 2);
+    CHECK(bins[2].Key.Alpha == AlphaMode::Mask);
+    CHECK(bins[0].FirstCommand == 0);
+    CHECK(bins[0].CommandCapacity == 1);
+    CHECK(bins[1].FirstCommand == 1);
+    CHECK(bins[1].CommandCapacity == 2);
+    CHECK(bins[2].FirstCommand == 3);
+    CHECK(bins[2].CommandCapacity == 1);
+    CHECK(layout.GetStats().CommandCapacity == 4);
+    CHECK(layout.GetStats().LookupCapacity == 8);
+    CHECK_FALSE(layout.Build(keys.data(), static_cast<uint32_t>(keys.size()), desc));
+}
+
+TEST_CASE("GPU draw-bin lookup includes every submission compatibility field", "[Renderer][GpuDriven][DrawBins]")
+{
+    const GpuDrawBinKey base = Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 2, 3, 5);
+    const Vector<GpuDrawBinKey> keys = {
+        base,
+        Bin(RenderDrawPhase::ForwardOpaque, AlphaMode::Opaque, 2, 3, 5),
+        Bin(RenderDrawPhase::Opaque, AlphaMode::Mask, 2, 3, 5),
+        Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 7, 3, 5),
+        Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 2, 9, 5),
+        Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 2, 3, 11),
+    };
+    GpuDrawBinLayout layout;
+    REQUIRE(layout.Build(keys.data(), static_cast<uint32_t>(keys.size()), { 64, 64, 64 }));
+
+    for (const GpuDrawBinKey& key : keys)
+        CHECK(layout.FindBin(key) != GpuDrawBinLookupEntry::InvalidBin);
+    CHECK(layout.FindBin(Bin(RenderDrawPhase::Transparent, AlphaMode::Opaque, 2, 3, 5)) ==
+          GpuDrawBinLookupEntry::InvalidBin);
+}
+
+TEST_CASE("GPU draw-bin layout invalidates only when keys or limits change", "[Renderer][GpuDriven][DrawBins]")
+{
+    Vector<GpuDrawBinKey> keys = { Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 0, 1, 0) };
+    GpuDrawBinLayout layout;
+    REQUIRE(layout.Build(keys.data(), static_cast<uint32_t>(keys.size()), { 8, 8, 8 }));
+    const uint64_t firstVersion = layout.GetStats().Version;
+    CHECK_FALSE(layout.Build(keys.data(), static_cast<uint32_t>(keys.size()), { 8, 8, 8 }));
+    CHECK(layout.GetStats().Version == firstVersion);
+
+    keys.push_back(Bin(RenderDrawPhase::Opaque, AlphaMode::Mask, 0, 1, 0));
+    CHECK(layout.Build(keys.data(), static_cast<uint32_t>(keys.size()), { 8, 8, 8 }));
+    CHECK(layout.GetStats().Version == firstVersion + 1u);
+    CHECK(layout.Build(keys.data(), static_cast<uint32_t>(keys.size()), { 8, 8, 3 }));
+    CHECK(layout.GetStats().Version == firstVersion + 2u);
+}
+
+TEST_CASE("GPU draw-bin capacity rejects excess bins and preserves zero-count slots", "[Renderer][GpuDriven][DrawBins]")
+{
+    const Vector<GpuDrawBinKey> keys = {
+        Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 0, 1, 0),
+        Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 0, 2, 0),
+        Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 0, 3, 0),
+    };
+    GpuDrawBinLayout layout;
+    REQUIRE(layout.Build(keys.data(), static_cast<uint32_t>(keys.size()), { 2, 2, 32 }));
+    REQUIRE(layout.GetBins().size() == 2);
+    CHECK(layout.GetStats().RejectedBinCount == 1);
+    CHECK(layout.GetStats().CommandCapacity == 2);
+    CHECK(layout.FindBin(keys[2]) == GpuDrawBinLookupEntry::InvalidBin);
+
+    Vector<uint32_t> counts(layout.GetBins().size() * 2u, 0u);
+    CHECK(counts[layout.GetBins()[0].CountIndex] == 0);
+    CHECK(counts[layout.GetBins()[1].CountIndex] == 0);
+    const uint32_t overflowIndex = static_cast<uint32_t>(layout.GetBins().size()) + layout.GetBins()[0].CountIndex;
+    counts[layout.GetBins()[0].CountIndex] = layout.GetBins()[0].CommandCapacity + 3u;
+    counts[overflowIndex] = 3u;
+    CHECK(std::min(counts[layout.GetBins()[0].CountIndex], layout.GetBins()[0].CommandCapacity) ==
+          layout.GetBins()[0].CommandCapacity);
+    CHECK(counts[overflowIndex] == 3);
+}
+
+TEST_CASE("GPU draw-bin capacity favors persistent hot bins when the command budget is clamped", "[Renderer][GpuDriven][DrawBins]")
+{
+    const GpuDrawBinKey hot = Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 0, 1, 0);
+    const GpuDrawBinKey cold = Bin(RenderDrawPhase::Opaque, AlphaMode::Opaque, 0, 2, 0);
+    const Vector<GpuDrawBinKey> keys = { hot, hot, hot, hot, hot, hot, cold, cold };
+    GpuDrawBinLayout layout;
+    REQUIRE(layout.Build(keys.data(), static_cast<uint32_t>(keys.size()), { 4, 8, 3 }));
+    REQUIRE(layout.GetBins().size() == 2);
+    CHECK(layout.GetBins()[0].CommandCapacity == 3);
+    CHECK(layout.GetBins()[1].CommandCapacity == 1);
+    CHECK(layout.GetStats().CommandCapacity == 4);
 }
 
 TEST_CASE("GPU draw generation batches material records sharing a template", "[Renderer][GpuDriven]")

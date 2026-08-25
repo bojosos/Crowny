@@ -60,6 +60,23 @@ namespace Crowny
             }
             return nullptr;
         }
+
+        AlphaMode GetMaterialAlpha(const Vector<GpuMaterialData>& materials, uint32_t materialIndex)
+        {
+            if (materialIndex >= materials.size())
+                return AlphaMode::Opaque;
+            const uint32_t packedAlpha = (materials[materialIndex].TextureIndices1.w >> 8u) & 0xffu;
+            return packedAlpha <= static_cast<uint32_t>(AlphaMode::WeightedOIT) ? static_cast<AlphaMode>(packedAlpha) : AlphaMode::Opaque;
+        }
+
+        GpuDrawBinKey StandardDrawBin(AlphaMode alpha, uint32_t geometryHeap)
+        {
+            GpuDrawBinKey key;
+            key.Phase = alpha == AlphaMode::Opaque || alpha == AlphaMode::Mask ? RenderDrawPhase::Opaque : RenderDrawPhase::Transparent;
+            key.Alpha = alpha;
+            key.GeometryHeap = geometryHeap;
+            return key;
+        }
     } // namespace
 
     GpuScene::GpuScene(bool enableGpuBuffers) : m_EnableGpuBuffers(enableGpuBuffers), m_DrawBuffers(enableGpuBuffers)
@@ -113,6 +130,7 @@ namespace Crowny
             {
                 if (state.Alive && state.Generation == change.Handle.GetGeneration())
                 {
+                    m_DrawBinsDirty = true;
                     state.Alive = false;
                     m_Instances[slotIndex] = {};
                     m_Stats.ActiveInstances--;
@@ -124,6 +142,9 @@ namespace Crowny
                 continue;
             if (!state.Alive)
                 m_Stats.ActiveInstances++;
+            if (change.Type != RenderWorldChangeType::Update ||
+                (static_cast<uint8_t>(change.DirtyFlags) & static_cast<uint8_t>(RenderWorldDirtyFlags::Draw)) != 0)
+                m_DrawBinsDirty = true;
             state.Alive = true;
             state.Generation = change.Handle.GetGeneration();
             m_Instances[slotIndex] = change.Data;
@@ -194,6 +215,7 @@ namespace Crowny
                                   const RenderMaterialResourceChange* materialChanges, uint32_t materialChangeCount)
     {
         bool materialsDirty = false;
+        bool meshesDirty = false;
         m_DirtyMeshIndices.clear();
         m_MeshRanges.clear();
         m_MeshLodRanges.clear();
@@ -223,6 +245,7 @@ namespace Crowny
                 state.Version = change.Version;
                 UpdateGeometryResource(change.Index);
             }
+            meshesDirty = true;
         }
 
         for (uint32_t changeIndex = 0; materialChanges != nullptr && changeIndex < materialChangeCount; changeIndex++)
@@ -253,6 +276,8 @@ namespace Crowny
         UpdateGeometryHeapStats();
         if (materialsDirty)
             RebuildMaterialTable();
+        if (meshesDirty || materialsDirty)
+            m_DrawBinsDirty = true;
     }
 
     void GpuScene::Reset()
@@ -274,6 +299,10 @@ namespace Crowny
         m_BindlessTextures.reset();
         m_DrawCandidates.clear();
         m_DrawBuffers.Reset();
+        m_DrawBinLayout.Reset();
+        m_DrawBinKeys.clear();
+        m_DrawBinBuffer = nullptr;
+        m_DrawBinsDirty = true;
         m_InstanceStates.clear();
         m_LightStates.clear();
         m_InstanceBuffer = nullptr;
@@ -413,6 +442,75 @@ namespace Crowny
             output.clear();
     }
 
+    void GpuScene::PrepareGpuDrawBins(const GpuDrawBinLayoutDesc& desc)
+    {
+        bool layoutChanged = false;
+        if (m_DrawBinsDirty || !m_DrawBinLayout.Matches(desc))
+        {
+            CollectGpuDrawBinKeys(m_DrawBinKeys);
+            layoutChanged = m_DrawBinLayout.Build(m_DrawBinKeys.data(), static_cast<uint32_t>(m_DrawBinKeys.size()), desc);
+            m_DrawBinsDirty = false;
+        }
+
+        const Vector<GpuDrawBinLookupEntry>& lookupEntries = m_DrawBinLayout.GetLookupEntries();
+        if (lookupEntries.empty() || !CanCreateGpuBuffers())
+            m_DrawBinBuffer = nullptr;
+        else if (layoutChanged || !m_DrawBinBuffer)
+        {
+            const uint32_t requiredSize = static_cast<uint32_t>(lookupEntries.size() * sizeof(GpuDrawBinLookupEntry));
+            if (!m_DrawBinBuffer || m_DrawBinBuffer->GetSize() != requiredSize)
+            {
+                GenericGpuBufferDesc bufferDesc;
+                bufferDesc.ElementCount = static_cast<uint32_t>(lookupEntries.size());
+                bufferDesc.ElementSize = sizeof(GpuDrawBinLookupEntry);
+                bufferDesc.Type = GpuBufferType::Structured;
+                bufferDesc.Usage = BufferUsage::BU_LOADSTORE;
+                m_DrawBinBuffer = GenericGpuBuffer::Create(bufferDesc);
+            }
+            if (m_DrawBinBuffer)
+            {
+                m_DrawBinBuffer->WriteData(0, requiredSize, lookupEntries.data(), BWT_DISCARD);
+                m_Stats.UploadedBytes += requiredSize;
+            }
+        }
+
+        const GpuDrawBinLayoutStats& layoutStats = m_DrawBinLayout.GetStats();
+        m_Stats.DrawBinCount = layoutStats.ActiveBinCount;
+        m_Stats.RejectedDrawBins = layoutStats.RejectedBinCount;
+        m_Stats.DrawBinCommandCapacity = layoutStats.CommandCapacity;
+        m_Stats.DrawBinLookupCapacity = layoutStats.LookupCapacity;
+    }
+
+    void GpuScene::CollectGpuDrawBinKeys(Vector<GpuDrawBinKey>& output) const
+    {
+        output.clear();
+        for (uint32_t instanceIndex = 0; instanceIndex < m_InstanceStates.size(); instanceIndex++)
+        {
+            if (!m_InstanceStates[instanceIndex].Alive)
+                continue;
+            const RenderInstanceData& instance = m_Instances[instanceIndex];
+            if (!HasFlag(RenderWorld::GetFlags(instance.Draw), RenderInstanceFlags::Visible))
+                continue;
+            const uint32_t meshIndex = RenderWorld::GetMeshHandle(instance.Draw);
+            if (meshIndex == 0 || meshIndex >= m_MeshResources.size())
+                continue;
+            const MeshResourceState& mesh = m_MeshResources[meshIndex];
+            if (!mesh.Resource || !mesh.Meshlets || IsPerMeshGeometryBinding(mesh.GeometryBinding))
+                continue;
+            for (uint32_t meshletOffset = 0; meshletOffset < mesh.Meshlets.Count; meshletOffset++)
+            {
+                const GpuMeshletData& meshlet = m_Geometry.Meshlets[mesh.Meshlets.First + meshletOffset];
+                if (meshlet.Draw.y == 0)
+                    continue;
+                const uint32_t materialIndex = RenderWorld::GetMaterialHandle(instance.Draw) + meshlet.Draw.z;
+                const AlphaMode alpha = GetMaterialAlpha(m_Materials, materialIndex);
+                if (alpha != AlphaMode::Opaque && alpha != AlphaMode::Mask)
+                    continue;
+                output.push_back(StandardDrawBin(alpha, meshlet.Geometry.z));
+            }
+        }
+    }
+
     void GpuScene::BuildCpuDrawList(const RenderView& view, GpuDrawList& output, GpuDrawBuffers* outputBuffers, bool shadowCastersOnly)
     {
         const VisibilityCullingStats previousCulling = m_Stats.Culling;
@@ -474,25 +572,9 @@ namespace Crowny
                 if (meshlet.Draw.y == 0)
                     continue;
                 const uint32_t materialIndex = RenderWorld::GetMaterialHandle(instance.Draw) + meshlet.Draw.z;
-                AlphaMode alpha = AlphaMode::Opaque;
-                if (materialIndex < m_Materials.size())
-                {
-                    const uint32_t packedAlpha = (m_Materials[materialIndex].TextureIndices1.w >> 8u) & 0xffu;
-                    if (packedAlpha <= static_cast<uint32_t>(AlphaMode::WeightedOIT))
-                        alpha = static_cast<AlphaMode>(packedAlpha);
-                }
-                uint32_t materialTemplate = 0;
-                if (materialIndex < m_MaterialResources.size() && m_MaterialResources[materialIndex].Resource)
-                {
-                    const AssetHandle<Shader> shader = m_MaterialResources[materialIndex].Resource->GetShader();
-                    materialTemplate = static_cast<uint32_t>(std::hash<const AssetHandleData*>{}(shader.GetHandleData().get()));
-                }
+                const AlphaMode alpha = GetMaterialAlpha(m_Materials, materialIndex);
                 GpuDrawCandidate candidate;
-                candidate.Bin.Phase = alpha == AlphaMode::Opaque || alpha == AlphaMode::Mask ? RenderDrawPhase::Opaque : RenderDrawPhase::Transparent;
-                candidate.Bin.Alpha = alpha;
-                candidate.Bin.Pipeline = materialTemplate;
-                candidate.Bin.GeometryHeap = meshlet.Geometry.z;
-                candidate.Bin.MaterialTemplate = materialTemplate;
+                candidate.Bin = StandardDrawBin(alpha, meshlet.Geometry.z);
                 candidate.InstanceID = instanceIndex;
                 candidate.MaterialIndex = materialIndex;
                 candidate.IndexCount = meshlet.Draw.y;

@@ -48,6 +48,11 @@ namespace Crowny
         {
             return { std::max<uint64_t>(size, stride), stride, GpuBufferType::Structured };
         }
+
+        RenderGraphBufferDesc IndirectBuffer(uint64_t size, uint32_t stride)
+        {
+            return { std::max<uint64_t>(size, stride), stride, GpuBufferType::IndirectDraw };
+        }
     } // namespace
 
     RenderGraphResourceHandle RenderBlackboard::Get(const String& name) const
@@ -136,12 +141,25 @@ namespace Crowny
                                                      ? desc.MaterialTable
                                                      : graph.CreateBuffer("PersistentMaterials", StructuredBuffer(sizeof(GpuMaterialData), sizeof(GpuMaterialData)),
                                                                           RenderGraphResourceLifetime::History);
+        const RenderGraphResourceHandle drawBinTable = desc.DrawBinTable.IsValid()
+                                                        ? desc.DrawBinTable
+                                                        : graph.CreateBuffer("PersistentDrawBins",
+                                                                             StructuredBuffer(
+                                                                               sizeof(GpuDrawBinLookupEntry) * static_cast<uint64_t>(
+                                                                                 std::max(desc.DrawBinLookupCapacity, 1u)),
+                                                                                              sizeof(GpuDrawBinLookupEntry)),
+                                                                             RenderGraphResourceLifetime::History);
         const RenderGraphHistoryPair hiZHistory =
           graph.CreateHistoryTexture("HiZ", Texture2D(width, height, TextureFormat::R32F, HiZMipCount(width, height)));
         const RenderGraphResourceHandle previousHiZ = hiZHistory.Read;
         const RenderGraphResourceHandle currentHiZ = hiZHistory.Write;
         const RenderGraphResourceHandle visibleInstances =
           graph.CreateBuffer("VisibleInstances", StructuredBuffer(8ull * RenderInstanceHandle::MaxInstances, 8));
+        const RenderGraphResourceHandle culledDrawInstances =
+          graph.CreateBuffer("CulledDrawInstances",
+                             StructuredBuffer(sizeof(GpuVisibleDrawInstance) *
+                                                static_cast<uint64_t>(std::max(m_Settings.MaxIndirectCommands, 1u)),
+                                              sizeof(GpuVisibleDrawInstance)));
         const RenderGraphResourceHandle visibleDrawInstances =
           graph.CreateBuffer("VisibleDrawInstances",
                              StructuredBuffer(sizeof(GpuVisibleDrawInstance) *
@@ -160,10 +178,15 @@ namespace Crowny
           graph.CreateBuffer("DrawSortKeys",
                              StructuredBuffer(16ull * std::max(m_Settings.MaxIndirectCommands, 1u), 16));
         const RenderGraphResourceHandle earlyCommands =
-          graph.CreateBuffer("EarlyIndirectCommands", StructuredBuffer(20ull * std::max(m_Settings.MaxIndirectCommands, 1u), 20));
+          graph.CreateBuffer("EarlyIndirectCommands", IndirectBuffer(20ull * std::max(m_Settings.MaxIndirectCommands, 1u), 20));
+        const RenderGraphResourceHandle culledCommands =
+          graph.CreateBuffer("CulledIndirectCommands", StructuredBuffer(20ull * std::max(m_Settings.MaxIndirectCommands, 1u), 20));
         const RenderGraphResourceHandle finalCommands =
-          graph.CreateBuffer("FinalIndirectCommands", StructuredBuffer(20ull * std::max(m_Settings.MaxIndirectCommands, 1u), 20));
-        const RenderGraphResourceHandle drawCounts = graph.CreateBuffer("IndirectDrawCounts", StructuredBuffer(4ull * 4096ull, 4));
+          graph.CreateBuffer("FinalIndirectCommands", IndirectBuffer(20ull * std::max(m_Settings.MaxIndirectCommands, 1u), 20));
+        const uint32_t drawBinCount = desc.EnableGpuDrawBins ? desc.DrawBinCount : 0u;
+        const uint32_t drawBinCounterCount = std::max(drawBinCount * 2u, 2u);
+        const RenderGraphResourceHandle drawCounts =
+          graph.CreateBuffer("IndirectDrawCounts", IndirectBuffer(4ull * drawBinCounterCount, 4));
         const RenderGraphResourceHandle depthInstanceIds =
           desc.DepthInstanceIds.IsValid() ? desc.DepthInstanceIds : visibleInstances;
         const RenderGraphResourceHandle depthCommands =
@@ -219,12 +242,14 @@ namespace Crowny
         blackboard.Set("MeshLodTable", meshLods);
         blackboard.Set("MeshletTable", meshlets);
         blackboard.Set("MaterialTable", materials);
+        blackboard.Set("DrawBinTable", drawBinTable);
         blackboard.Set("SceneDepth", output.SceneDepth);
         blackboard.Set("PreviousHiZ", previousHiZ);
         blackboard.Set("CurrentHiZ", currentHiZ);
         blackboard.Set("HdrColor", output.HdrColor);
         blackboard.Set("SceneColor", output.HdrColor);
         blackboard.Set("VisibleInstances", visibleInstances);
+        blackboard.Set("CulledDrawInstances", culledDrawInstances);
         blackboard.Set("VisibleDrawInstances", visibleDrawInstances);
         blackboard.Set("MeshletCandidates", meshletCandidates);
         blackboard.Set("MeshletCandidateCounters", meshletCandidateCounters);
@@ -232,6 +257,7 @@ namespace Crowny
         blackboard.Set("DrawCounters", drawCounters);
         blackboard.Set("IndirectDrawCounts", drawCounts);
         blackboard.Set("DrawSortKeys", drawSortKeys);
+        blackboard.Set("CulledIndirectCommands", culledCommands);
         blackboard.Set("IndirectCommands", finalCommands);
         blackboard.Set("DepthInstanceIds", depthInstanceIds);
         blackboard.Set("DepthIndirectCommands", depthCommands);
@@ -343,6 +369,10 @@ namespace Crowny
           "ClearDrawCounters", RenderGraphQueue::Transfer,
           [&](RenderGraphPassBuilder& builder) { builder.Write(drawCounters, RenderGraphResourceState::TransferWrite); },
           executePass("ClearDrawCounters"));
+        const RenderGraphPassHandle clearDrawBinCounts = graph.AddPass(
+          "ClearIndirectDrawCounts", RenderGraphQueue::Transfer,
+          [&](RenderGraphPassBuilder& builder) { builder.Write(drawCounts, RenderGraphResourceState::TransferWrite); },
+          executePass("ClearIndirectDrawCounts"));
         graph.AddPass(
           "LateOcclusionAndMeshletCulling", RenderGraphQueue::Compute,
           [&](RenderGraphPassBuilder& builder) {
@@ -352,8 +382,8 @@ namespace Crowny
               builder.Read(currentHiZ);
               builder.Read(meshletCandidates);
               builder.Read(meshletCandidateCounters);
-              builder.Write(finalCommands);
-              builder.Write(visibleDrawInstances);
+              builder.Write(culledCommands);
+              builder.Write(culledDrawInstances);
               builder.Write(drawSortKeys);
               builder.Write(drawCounters);
           },
@@ -361,12 +391,16 @@ namespace Crowny
         graph.AddPass(
           "BinAndCompactIndirectDraws", RenderGraphQueue::Compute,
           [&](RenderGraphPassBuilder& builder) {
-              builder.Read(meshlets);
-              builder.ReadWrite(finalCommands);
-              builder.ReadWrite(visibleDrawInstances);
-              builder.ReadWrite(drawSortKeys);
+              builder.DependsOn(clearDrawBinCounts);
+              builder.Read(culledCommands);
+              builder.Read(culledDrawInstances);
+              builder.Read(drawSortKeys);
               builder.Read(drawCounters);
-              builder.Write(drawCounts);
+              builder.Read(materials);
+              builder.Read(drawBinTable);
+              builder.Write(finalCommands);
+              builder.Write(visibleDrawInstances);
+              builder.ReadWrite(drawCounts);
           },
           executePass("BinAndCompactIndirectDraws"));
         graph.AddPass(
@@ -405,6 +439,9 @@ namespace Crowny
             builder.Read(lights);
             builder.Read(depthCommands, RenderGraphResourceState::IndirectArgument);
             builder.Read(depthInstanceIds);
+            builder.Read(finalCommands, RenderGraphResourceState::IndirectArgument);
+            builder.Read(drawCounts, RenderGraphResourceState::IndirectArgument);
+            builder.Read(visibleDrawInstances);
             builder.ReadWrite(output.SceneDepth, RenderGraphResourceState::DepthWrite);
             builder.Read(clusterCells);
             builder.Read(clusterLightIndices);
@@ -442,6 +479,9 @@ namespace Crowny
                   builder.Read(materials);
                   builder.Read(depthCommands, RenderGraphResourceState::IndirectArgument);
                   builder.Read(depthInstanceIds);
+                  builder.Read(finalCommands, RenderGraphResourceState::IndirectArgument);
+                  builder.Read(drawCounts, RenderGraphResourceState::IndirectArgument);
+                  builder.Read(visibleDrawInstances);
                   builder.ReadWrite(output.SceneDepth, RenderGraphResourceState::DepthWrite);
                   builder.Write(gbufferBaseColor, RenderGraphResourceState::ColorAttachment);
                   builder.Write(gbufferNormal, RenderGraphResourceState::ColorAttachment);
