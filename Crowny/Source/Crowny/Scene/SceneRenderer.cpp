@@ -2002,19 +2002,24 @@ namespace Crowny
     {
         if (index == 0)
             return;
-        m_SeenMeshResources.insert(index);
         const uint64_t version = mesh ? mesh->GetGpuVersion() : 0;
         const auto resident = m_ResidentMeshResources.find(index);
-        if (resident != m_ResidentMeshResources.end() && resident->second.Resource.GetHandleData().get() == mesh.GetHandleData().get() &&
-            resident->second.Version == version)
-            return;
+        if (resident != m_ResidentMeshResources.end())
+        {
+            resident->second.LastSeenEpoch = m_RenderSyncEpoch;
+            if (resident->second.Resource.GetHandleData().get() == mesh.GetHandleData().get() && resident->second.Version == version)
+                return;
+            resident->second.Resource = mesh;
+            resident->second.Version = version;
+        }
+        else
+            m_ResidentMeshResources.emplace(index, TrackedMeshResource{ mesh, version, m_RenderSyncEpoch });
 
         RenderMeshResourceChange& change = snapshot.MeshResourceChanges.Acquire();
         change.Index = index;
         change.Version = version;
         change.Type = RenderResourceChangeType::CreateOrUpdate;
         change.Resource = mesh;
-        m_ResidentMeshResources.insert_or_assign(index, TrackedMeshResource{ mesh, version });
     }
 
     void SceneRenderer::TrackMaterialResources(uint32_t baseIndex, const Vector<AssetHandle<Material>>& materials, RenderSnapshot& snapshot) const
@@ -2025,19 +2030,24 @@ namespace Crowny
         {
             const uint32_t index = baseIndex + slot;
             const AssetHandle<Material>& material = materials[slot];
-            m_SeenMaterialResources.insert(index);
             const uint64_t version = material ? material->GetParamVersion() : 0;
             const auto resident = m_ResidentMaterialResources.find(index);
-            if (resident != m_ResidentMaterialResources.end() && resident->second.Resource.GetHandleData().get() == material.GetHandleData().get() &&
-                resident->second.Version == version)
-                continue;
+            if (resident != m_ResidentMaterialResources.end())
+            {
+                resident->second.LastSeenEpoch = m_RenderSyncEpoch;
+                if (resident->second.Resource.GetHandleData().get() == material.GetHandleData().get() && resident->second.Version == version)
+                    continue;
+                resident->second.Resource = material;
+                resident->second.Version = version;
+            }
+            else
+                m_ResidentMaterialResources.emplace(index, TrackedMaterialResource{ material, version, m_RenderSyncEpoch });
 
             RenderMaterialResourceChange& change = snapshot.MaterialResourceChanges.Acquire();
             change.Index = index;
             change.Version = version;
             change.Type = RenderResourceChangeType::CreateOrUpdate;
             change.Resource = material;
-            m_ResidentMaterialResources.insert_or_assign(index, TrackedMaterialResource{ material, version });
         }
     }
 
@@ -2045,7 +2055,7 @@ namespace Crowny
     {
         for (auto resident = m_ResidentMeshResources.begin(); resident != m_ResidentMeshResources.end();)
         {
-            if (m_SeenMeshResources.find(resident->first) != m_SeenMeshResources.end())
+            if (resident->second.LastSeenEpoch == m_RenderSyncEpoch)
             {
                 ++resident;
                 continue;
@@ -2059,7 +2069,7 @@ namespace Crowny
         }
         for (auto resident = m_ResidentMaterialResources.begin(); resident != m_ResidentMaterialResources.end();)
         {
-            if (m_SeenMaterialResources.find(resident->first) != m_SeenMaterialResources.end())
+            if (resident->second.LastSeenEpoch == m_RenderSyncEpoch)
             {
                 ++resident;
                 continue;
@@ -2076,10 +2086,19 @@ namespace Crowny
     void SceneRenderer::SyncRenderWorld(RenderSnapshot& snapshot) const
     {
         ZoneScopedN("SyncRenderWorld");
-        m_SeenRenderInstances.clear();
-        m_SeenRenderLights.clear();
-        m_SeenMeshResources.clear();
-        m_SeenMaterialResources.clear();
+        m_RenderSyncEpoch++;
+        if (m_RenderSyncEpoch == 0)
+        {
+            for (auto& [_, instance] : m_TrackedRenderInstances)
+                instance.LastSeenEpoch = 0;
+            for (auto& [_, light] : m_TrackedRenderLights)
+                light.LastSeenEpoch = 0;
+            for (auto& [_, mesh] : m_ResidentMeshResources)
+                mesh.LastSeenEpoch = 0;
+            for (auto& [_, material] : m_ResidentMaterialResources)
+                material.LastSeenEpoch = 0;
+            m_RenderSyncEpoch = 1;
+        }
 
         auto syncInstance = [&](uint64_t sourceID, entt::entity entity, const AssetHandle<Mesh>& mesh, const Vector<AssetHandle<Material>>& materials,
                                 const glm::mat4& transform, RenderInstanceFlags flags, RenderLayerMask visibilityLayers, float lodBias,
@@ -2087,7 +2106,6 @@ namespace Crowny
             if (!mesh)
                 return;
 
-            m_SeenRenderInstances.insert(sourceID);
             const AssetHandleData* meshIdentity = mesh.GetHandleData().get();
             const uint32_t objectID = static_cast<uint32_t>(entt::to_integral(entity)) + 1u;
 
@@ -2122,11 +2140,13 @@ namespace Crowny
                 instance.Flags = flags;
                 instance.VisibilityLayers = visibilityLayers;
                 instance.LodBias = lodBias;
+                instance.LastSeenEpoch = m_RenderSyncEpoch;
                 m_TrackedRenderInstances.emplace(sourceID, std::move(instance));
                 return;
             }
 
             TrackedRenderInstance& instance = tracked->second;
+            instance.LastSeenEpoch = m_RenderSyncEpoch;
             const bool transformChanged = instance.Transform != transform || instance.BoundingSphere != worldBounds;
             const bool drawChanged = instance.MeshResourceIndex != desc.MeshHandle || instance.MaterialResourceIndex != desc.MaterialHandle ||
                                      instance.ObjectID != objectID || instance.Flags != flags || instance.VisibilityLayers != visibilityLayers ||
@@ -2182,7 +2202,7 @@ namespace Crowny
 
         for (auto tracked = m_TrackedRenderInstances.begin(); tracked != m_TrackedRenderInstances.end();)
         {
-            if (m_SeenRenderInstances.find(tracked->first) != m_SeenRenderInstances.end())
+            if (tracked->second.LastSeenEpoch == m_RenderSyncEpoch)
             {
                 ++tracked;
                 continue;
@@ -2196,7 +2216,6 @@ namespace Crowny
         for (const entt::entity entity : lightView)
         {
             const auto [component, transform, relationship] = lightView.get<LightComponent, TransformComponent, RelationshipComponent>(entity);
-            m_SeenRenderLights.insert(component.InstanceId);
 
             const glm::mat4 worldTransform = transform.GetWorldMatrix(relationship.Parent);
             RenderLightDesc desc;
@@ -2236,12 +2255,14 @@ namespace Crowny
                 light.Handle = m_RenderLightWorld.CreateLight(desc);
                 light.Data = data;
                 light.Shadows = component.Shadows;
+                light.LastSeenEpoch = m_RenderSyncEpoch;
                 lightHandle = light.Handle;
                 requiresShadowRedraw = true;
                 m_TrackedRenderLights.emplace(component.InstanceId, light);
             }
             else
             {
+                tracked->second.LastSeenEpoch = m_RenderSyncEpoch;
                 lightHandle = tracked->second.Handle;
                 const bool dataChanged = std::memcmp(&tracked->second.Data, &data, sizeof(RenderLightData)) != 0;
                 const bool shadowSettingsChanged = !(tracked->second.Shadows == component.Shadows);
@@ -2291,7 +2312,7 @@ namespace Crowny
 
         for (auto tracked = m_TrackedRenderLights.begin(); tracked != m_TrackedRenderLights.end();)
         {
-            if (m_SeenRenderLights.find(tracked->first) != m_SeenRenderLights.end())
+            if (tracked->second.LastSeenEpoch == m_RenderSyncEpoch)
             {
                 ++tracked;
                 continue;
@@ -2318,11 +2339,9 @@ namespace Crowny
         for (const auto& [_, instance] : m_TrackedRenderInstances)
             m_RenderWorld.DestroyInstance(instance.Handle);
         m_TrackedRenderInstances.clear();
-        m_SeenRenderInstances.clear();
         for (const auto& [_, light] : m_TrackedRenderLights)
             m_RenderLightWorld.DestroyLight(light.Handle);
         m_TrackedRenderLights.clear();
-        m_SeenRenderLights.clear();
     }
 
     void SceneRenderer::RenderLegacySnapshot(const RenderSnapshot& snapshot)

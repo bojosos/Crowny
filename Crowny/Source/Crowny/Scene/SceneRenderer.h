@@ -74,6 +74,7 @@ namespace Crowny
             RenderInstanceFlags Flags = RenderInstanceFlags::None;
             RenderLayerMask VisibilityLayers = RenderLayerMask::All();
             float LodBias = 0.0f;
+            uint64_t LastSeenEpoch = 0;
         };
 
         struct TrackedRenderLight
@@ -81,6 +82,7 @@ namespace Crowny
             RenderLightHandle Handle;
             RenderLightData Data;
             LightShadowSettings Shadows;
+            uint64_t LastSeenEpoch = 0;
         };
 
         struct CameraHistoryState
@@ -150,20 +152,21 @@ namespace Crowny
         {
             AssetHandle<Mesh> Resource;
             uint64_t Version = 0;
+            uint64_t LastSeenEpoch = 0;
         };
 
         struct TrackedMaterialResource
         {
             AssetHandle<Material> Resource;
             uint64_t Version = 0;
+            uint64_t LastSeenEpoch = 0;
         };
 
         uint32_t GetResourceIndex(const AssetHandleData* identity, UnorderedMap<const AssetHandleData*, uint32_t>& resources,
                                   uint32_t& nextIndex) const;
         uint32_t GetMaterialSetIndex(const Vector<AssetHandle<Material>>& materials) const;
         void TrackMeshResource(uint32_t index, const AssetHandle<Mesh>& mesh, RenderSnapshot& snapshot) const;
-        void TrackMaterialResources(uint32_t baseIndex, const Vector<AssetHandle<Material>>& materials,
-                                    RenderSnapshot& snapshot) const;
+        void TrackMaterialResources(uint32_t baseIndex, const Vector<AssetHandle<Material>>& materials, RenderSnapshot& snapshot) const;
         void FinalizeResourceChanges(RenderSnapshot& snapshot) const;
 
     private:
@@ -173,18 +176,15 @@ namespace Crowny
         mutable RenderWorld m_RenderWorld;
         mutable RenderLightWorld m_RenderLightWorld;
         mutable UnorderedMap<uint64_t, TrackedRenderInstance> m_TrackedRenderInstances;
-        mutable UnorderedSet<uint64_t> m_SeenRenderInstances;
         mutable Vector<RenderWorldChange> m_RenderWorldChangeScratch;
         mutable UnorderedMap<uint64_t, TrackedRenderLight> m_TrackedRenderLights;
-        mutable UnorderedSet<uint64_t> m_SeenRenderLights;
         mutable Vector<RenderLightChange> m_RenderLightChangeScratch;
         mutable UnorderedMap<const AssetHandleData*, uint32_t> m_MeshResourceIndices;
         mutable UnorderedMap<MaterialSetKey, uint32_t, MaterialSetKeyHash, MaterialSetKeyEqual> m_MaterialSetIndices;
         mutable UnorderedMap<uint32_t, TrackedMeshResource> m_ResidentMeshResources;
         mutable UnorderedMap<uint32_t, TrackedMaterialResource> m_ResidentMaterialResources;
-        mutable UnorderedSet<uint32_t> m_SeenMeshResources;
-        mutable UnorderedSet<uint32_t> m_SeenMaterialResources;
         mutable Vector<DirectionalShadowCascade> m_DirectionalCascadeScratch;
+        mutable uint64_t m_RenderSyncEpoch = 0;
         mutable uint32_t m_NextMeshResourceIndex = 1;
         mutable uint32_t m_NextMaterialResourceIndex = 1;
         mutable UnorderedMap<uint64_t, CameraHistoryState> m_CameraHistory;

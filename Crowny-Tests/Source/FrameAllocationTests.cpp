@@ -2,6 +2,7 @@
 
 #include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Memory/FrameVector.h"
+#include "Crowny/Scene/SceneRenderer.h"
 #include "Crowny/Threading/CommandQueue.h"
 #include "cwpch.h"
 
@@ -157,4 +158,54 @@ TEST_CASE("Thread allocation snapshots isolate worker allocations", "[Memory][Fr
 
     CHECK(Memory::GetThreadAllocationDelta(before, after).AllocationCount == 0);
     CHECK(workerAllocationCount.load(std::memory_order_acquire) == 1);
+}
+
+TEST_CASE("Scene light synchronization allocates nothing after warm-up", "[Memory][Frame][Renderer][SceneSync]")
+{
+    constexpr uint32_t lightCount = 1000;
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    Vector<Entity> lights;
+    lights.reserve(lightCount);
+    for (uint32_t index = 0; index < lightCount; index++)
+    {
+        Entity entity = scene->CreateEntity("Light");
+        LightComponent& light = entity.AddComponent<LightComponent>();
+        light.Type = LightType::Point;
+        light.Shadows.Mode = LightShadowMode::Disabled;
+        lights.push_back(entity);
+    }
+
+    SceneRenderer renderer(scene, nullptr);
+    RenderSnapshot snapshot;
+    for (uint32_t warmup = 0; warmup < 4; warmup++)
+        renderer.ExtractSnapshot(snapshot, false);
+
+    const Memory::ThreadAllocationSnapshot beforeStable = Memory::GetThreadAllocationSnapshot();
+    for (uint32_t frame = 0; frame < 120; frame++)
+        renderer.ExtractSnapshot(snapshot, false);
+    const Memory::ThreadAllocationSnapshot afterStable = Memory::GetThreadAllocationSnapshot();
+    const Memory::ThreadAllocationSnapshot stableDelta = Memory::GetThreadAllocationDelta(beforeStable, afterStable);
+
+    CHECK(snapshot.LegacyLights.Size() == lightCount);
+    CHECK(stableDelta.AllocationCount == 0);
+    CHECK(stableDelta.RequestedBytes == 0);
+
+    constexpr uint32_t removedLightCount = lightCount / 2u;
+    for (uint32_t index = 0; index < removedLightCount; index++)
+        scene->DestroyEntity(lights[index]);
+    renderer.ExtractSnapshot(snapshot, false);
+    const size_t destroyChanges =
+      static_cast<size_t>(std::count_if(snapshot.RenderLightChanges.begin(), snapshot.RenderLightChanges.end(),
+                                        [](const RenderLightChange& change) { return change.Type == RenderLightChangeType::Destroy; }));
+    CHECK(destroyChanges == removedLightCount);
+
+    const Memory::ThreadAllocationSnapshot beforeReduced = Memory::GetThreadAllocationSnapshot();
+    for (uint32_t frame = 0; frame < 120; frame++)
+        renderer.ExtractSnapshot(snapshot, false);
+    const Memory::ThreadAllocationSnapshot afterReduced = Memory::GetThreadAllocationSnapshot();
+    const Memory::ThreadAllocationSnapshot reducedDelta = Memory::GetThreadAllocationDelta(beforeReduced, afterReduced);
+
+    CHECK(snapshot.LegacyLights.Size() == lightCount - removedLightCount);
+    CHECK(reducedDelta.AllocationCount == 0);
+    CHECK(reducedDelta.RequestedBytes == 0);
 }

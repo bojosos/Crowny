@@ -39,6 +39,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [x] Re-cooked 32 shader assets for the transitive fingerprint migration and repacked 54 built-in resources; a repeat ASan cook-only launch found no stale assets and exited cleanly in 3.64 seconds. Vulkan, OpenGL, and cross-backend reference checks passed 4/4 each.
 - [x] Thread-local allocation telemetry covers standard, aligned, sized, array, and nothrow allocation families without the heavy leak tracker's map/mutex. Render-graph construction and compilation retain graph/result/compiler scratch and perform zero calling-thread allocations across 120 identical frames after warm-up.
 - [x] CPU draw-list and 2D ordering are measured allocation-free after warm-up at 10,000 items. Main-view draw lists and indirect run-count uploads now retain renderer-owned scratch instead of rebuilding temporary vectors every frame.
+- [x] Per-record synchronization epochs replace the four node-based seen sets for instances, lights, meshes, and materials. The stable and post-removal 1,000-light extraction paths are specifically measured allocation-free after warm-up.
 
 ## Physics and ECS
 
