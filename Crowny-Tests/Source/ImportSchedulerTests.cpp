@@ -327,20 +327,33 @@ TEST_CASE_METHOD(SchedulerFixture, "Import results publish once in input order i
         tasks.push_back(CreateTask(CreateFile("asset" + std::to_string(index) + ".ordered")));
     scheduler.Schedule(std::move(tasks));
 
-    REQUIRE(firstCallGate.WaitForEntered(1));
-    {
-        std::unique_lock lock(laterMutex);
-        REQUIRE(laterChanged.wait_for(lock, 5s, [&]() { return laterCompleted == 2; }));
-    }
-
-    const ImportProgress partialProgress = scheduler.GetProgress();
-    CHECK(partialProgress.Active);
-    CHECK(partialProgress.TotalFiles == 3);
-    CHECK(partialProgress.CompletedFiles == 2);
     Vector<uint64_t> sequences;
     Vector<ImportResultStatus> statuses;
-    CHECK_FALSE(scheduler.ProcessCompleted([&](const ImportResult& result) { sequences.push_back(result.Task.Sequence); }));
-    CHECK(sequences.empty());
+    const uint32_t laneLimit = scheduler.GetWorkerLaneLimit();
+    REQUIRE(laneLimit > 0);
+    const bool firstCallEntered = firstCallGate.WaitForEntered(1);
+    if (!firstCallEntered)
+        firstCallGate.Open();
+    REQUIRE(firstCallEntered);
+
+    if (laneLimit > 1)
+    {
+        bool laterCallsCompleted = false;
+        {
+            std::unique_lock lock(laterMutex);
+            laterCallsCompleted = laterChanged.wait_for(lock, 5s, [&]() { return laterCompleted == 2; });
+        }
+        if (!laterCallsCompleted)
+            firstCallGate.Open();
+        REQUIRE(laterCallsCompleted);
+
+        const ImportProgress partialProgress = scheduler.GetProgress();
+        CHECK(partialProgress.Active);
+        CHECK(partialProgress.TotalFiles == 3);
+        CHECK(partialProgress.CompletedFiles == 2);
+        CHECK_FALSE(scheduler.ProcessCompleted([&](const ImportResult& result) { sequences.push_back(result.Task.Sequence); }));
+        CHECK(sequences.empty());
+    }
 
     firstCallGate.Open();
     Drain(scheduler, [&](const ImportResult& result) {
