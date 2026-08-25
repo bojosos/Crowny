@@ -728,6 +728,7 @@ namespace Crowny
             static void ReadBinary(BinaryDataStreamInputArchive& archive, Entity entity, SceneComponentReadContext& context)
             {
                 ScriptSerializationSceneScope sceneScope(context.TargetScene);
+                ScriptTypeMetadataSerializationScope metadataScope(context.SceneVersion >= 8);
                 uint32_t scriptCount;
                 archive(scriptCount);
                 for (uint32_t index = 0; index < scriptCount; index++)
@@ -1621,7 +1622,7 @@ namespace Crowny
             MakeCodec<AudioListenerComponent>(SceneComponentId::AudioListener, 1, "AudioListenerComponent", {}, nullptr, "Audio Listener",
                                               SceneComponentYamlType::Null),
             MakeCodec<AudioSourceComponent>(SceneComponentId::AudioSource, 1, "AudioSourceComponent", {}, "Audio Source", "Audio Source"),
-            MakeCodec<MonoScriptComponent>(SceneComponentId::MonoScript, 1, "MonoScriptComponent", {}, nullptr, "Script", SceneComponentYamlType::Map,
+            MakeCodec<MonoScriptComponent>(SceneComponentId::MonoScript, 8, "MonoScriptComponent", {}, nullptr, "Script", SceneComponentYamlType::Map,
                                            &ShouldSerializeMonoScript),
             MakeCodec<Rigidbody2DComponent>(SceneComponentId::Rigidbody2D, 2, "Rigidbody2DComponent", { "Rigidbody2D", nullptr }, "Rigidbody 2D",
                                             "Rigidbody 2D"),

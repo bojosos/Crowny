@@ -160,7 +160,7 @@ namespace Crowny
                     Ref<SerializableObjectInfo> objInfo = nullptr;
                     const Ref<SerializableTypeInfoObject> objTypeInfo = StaticRefCast<SerializableTypeInfoObject>(typeInfo);
                     // Find object serialize info
-                    if (ScriptInfoManager::Get().GetSerializableObjectInfo(objTypeInfo->m_TypeNamespace, objTypeInfo->m_TypeName, objInfo))
+                    if (ScriptInfoManager::Get().GetSerializableObjectInfo(*objTypeInfo, objInfo))
                         memberInfo->SetValue(newInstance, ObjectFromJson(iterFind->value, objInfo));
                     return newInstance;
                 }
@@ -176,7 +176,7 @@ namespace Crowny
                     Ref<SerializableObjectInfo> objInfo = nullptr;
                     const Ref<SerializableTypeInfoObject> objTypeInfo = StaticRefCast<SerializableTypeInfoObject>(arrayTypeInfo->m_ElementType);
                     // Find object serialize info
-                    if (ScriptInfoManager::Get().GetSerializableObjectInfo(objTypeInfo->m_TypeNamespace, objTypeInfo->m_TypeName, objInfo))
+                    if (ScriptInfoManager::Get().GetSerializableObjectInfo(*objTypeInfo, objInfo))
                         // TODO: This won't work for normals arrays that don't have objects inside
                         for (const auto& val : arr)
                             monoArray.Set(idx++, ObjectFromJson(val, objInfo));
@@ -211,7 +211,8 @@ namespace Crowny
                         }
                         else
                         {
-                            MonoString* const monoString = MonoUtils::ToMonoString(String(iterFind->value.GetString(), iterFind->value.GetStringLength()));
+                            MonoString* const monoString =
+                              MonoUtils::ToMonoString(String(iterFind->value.GetString(), iterFind->value.GetStringLength()));
                             memberInfo->SetValue(newInstance, monoString);
                         }
                     }
@@ -241,7 +242,7 @@ namespace Crowny
 
         MonoClass* const klass = MonoManager::Get().FindClass(MonoUtils::GetClass(type));
         Ref<SerializableObjectInfo> objectInfo;
-        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(klass->GetNamespace(), klass->GetName(), objectInfo))
+        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(klass, objectInfo))
             return nullptr;
         return ObjectFromJson(document, objectInfo);
     }
@@ -360,8 +361,7 @@ namespace Crowny
             const Ref<SerializableTypeInfoObject> serializableObjectInfo = StaticRefCast<SerializableTypeInfoObject>(typeInfo);
             // TODO: Fix this
             Ref<SerializableObjectInfo> objectInfo;
-            if (ScriptInfoManager::Get().GetSerializableObjectInfo(serializableObjectInfo->m_TypeNamespace, serializableObjectInfo->m_TypeName,
-                                                                   objectInfo))
+            if (ScriptInfoManager::Get().GetSerializableObjectInfo(*serializableObjectInfo, objectInfo))
                 ObjectToJson(cur.SetObject(), objectInfo, (MonoObject*)data, doc);
         }
     }
@@ -386,7 +386,7 @@ namespace Crowny
 
         MonoClass* const klass = MonoManager::Get().FindClass(MonoUtils::GetClass(object));
         Ref<SerializableObjectInfo> objectInfo;
-        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(klass->GetNamespace(), klass->GetName(), objectInfo))
+        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(klass, objectInfo))
             return nullptr;
         document.SetObject();
         ObjectToJson(document, objectInfo, object, document);

@@ -9,6 +9,28 @@
 
 namespace Crowny
 {
+    namespace
+    {
+        bool AssembliesMatch(const String& lhs, const String& rhs)
+        {
+            // An empty assembly is legacy metadata. Preserve the old namespace/name
+            // matching behavior only when one side predates assembly qualification.
+            return lhs.empty() || rhs.empty() || lhs == rhs;
+        }
+
+        StringView LeafTypeName(const String& typeName)
+        {
+            const size_t separator = typeName.find_last_of('+');
+            return separator == String::npos ? StringView(typeName) : StringView(typeName).substr(separator + 1);
+        }
+
+        bool TypeNamesMatch(const String& lhs, const String& rhs, bool allowLegacyLeafName)
+        {
+            if (lhs == rhs)
+                return true;
+            return allowLegacyLeafName && LeafTypeName(lhs) == LeafTypeName(rhs);
+        }
+    } // namespace
 
     Ref<SerializableMemberInfo> SerializableObjectInfo::FindMatchingField(const Ref<SerializableMemberInfo>& fieldInfo,
                                                                           const Ref<SerializableTypeInfo>& fieldTypeInfo) const
@@ -45,7 +67,7 @@ namespace Crowny
     MonoObject* SerializableTypeInfoObject::GetAttribute(MonoClass* monoClass)
     {
         Ref<SerializableObjectInfo> objInfo;
-        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(m_TypeNamespace, m_TypeName, objInfo))
+        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(*this, objInfo))
             return nullptr;
         return objInfo->m_MonoClass->GetAttribute(monoClass);
     }
@@ -121,15 +143,17 @@ namespace Crowny
             // Maybe worth saving the enum names, so that if I add another in the middle of the enum, I know to change
             // the saved value
             const auto* enumTypeInfo = static_cast<SerializableTypeInfoEnum*>(typeInfo.get());
-            return enumTypeInfo->m_TypeNamespace == m_TypeNamespace && enumTypeInfo->m_TypeName == m_TypeName &&
-                   enumTypeInfo->m_UnderlyingType == m_UnderlyingType;
+            const bool legacyIdentity = enumTypeInfo->m_AssemblyName.empty() || m_AssemblyName.empty();
+            return AssembliesMatch(enumTypeInfo->m_AssemblyName, m_AssemblyName) && enumTypeInfo->m_TypeNamespace == m_TypeNamespace &&
+                   TypeNamesMatch(enumTypeInfo->m_TypeName, m_TypeName, legacyIdentity) && enumTypeInfo->m_UnderlyingType == m_UnderlyingType;
         }
         return false;
     }
 
     ::MonoClass* SerializableTypeInfoEnum::GetMonoClass() const
     {
-        MonoClass* monoClass = MonoManager::Get().FindClass(m_TypeNamespace, m_TypeName);
+        MonoClass* monoClass = m_AssemblyName.empty() ? MonoManager::Get().FindClass(m_TypeNamespace, m_TypeName)
+                                                      : MonoManager::Get().FindClass(m_AssemblyName, m_TypeNamespace, m_TypeName);
         if (monoClass)
             return monoClass->GetInternalPtr();
         return nullptr;
@@ -166,8 +190,9 @@ namespace Crowny
         if (typeInfo->GetType() == SerializableType::Object)
         {
             const auto* objTypeInfo = static_cast<SerializableTypeInfoObject*>(typeInfo.get());
-            return objTypeInfo->m_TypeNamespace == m_TypeNamespace && objTypeInfo->m_TypeName == m_TypeName &&
-                   objTypeInfo->m_ValueType == m_ValueType;
+            const bool legacyIdentity = objTypeInfo->m_AssemblyName.empty() || m_AssemblyName.empty();
+            return AssembliesMatch(objTypeInfo->m_AssemblyName, m_AssemblyName) && objTypeInfo->m_TypeNamespace == m_TypeNamespace &&
+                   TypeNamesMatch(objTypeInfo->m_TypeName, m_TypeName, legacyIdentity) && objTypeInfo->m_ValueType == m_ValueType;
         }
         return false;
     }
@@ -175,7 +200,7 @@ namespace Crowny
     ::MonoClass* SerializableTypeInfoObject::GetMonoClass() const
     {
         Ref<SerializableObjectInfo> objInfo;
-        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(m_TypeNamespace, m_TypeName, objInfo))
+        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(*this, objInfo))
             return nullptr;
         return objInfo->m_MonoClass->GetInternalPtr();
     }

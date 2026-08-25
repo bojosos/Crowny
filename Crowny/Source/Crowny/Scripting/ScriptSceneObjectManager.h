@@ -21,6 +21,7 @@ namespace Crowny
         ScriptEntity* CreateScriptEntity(Entity entity);
         ScriptEntity* CreateScriptEntity(MonoObject* existingInstance, Entity entity);
         ScriptEntity* GetScriptEntity(Entity entity) const;
+        bool TryGetNativeEntity(const ScriptEntity* scriptEntity, Entity& entity) const;
 
         ScriptComponentBase* CreateScriptComponent(Entity entity, const ComponentBase& component, MonoReflectionType* reflType);
 

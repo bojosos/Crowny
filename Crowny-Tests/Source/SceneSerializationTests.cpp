@@ -23,6 +23,7 @@
 #include "Crowny/Serialization/CerealDataStreamArchive.h"
 #include "Crowny/Serialization/SceneComponentCodec.h"
 #include "Crowny/Serialization/SceneSerializer.h"
+#include "Crowny/Serialization/ScriptSerializer.h"
 
 using namespace Crowny;
 
@@ -63,6 +64,7 @@ namespace
     RetainedScriptFields MakeRetainedScriptFields(const ScriptTypeIdentity& identity, int32_t value)
     {
         Ref<SerializableTypeInfoObject> objectType = CreateRef<SerializableTypeInfoObject>();
+        objectType->m_AssemblyName = identity.Assembly;
         objectType->m_TypeNamespace = identity.Namespace;
         objectType->m_TypeName = identity.TypeName;
         objectType->m_TypeId = 1;
@@ -88,6 +90,67 @@ namespace
         fieldData->Value = value;
         object->SetFieldData(field, fieldData);
         return { object, field };
+    }
+
+    struct NestedTypeFields
+    {
+        Ref<SerializableObject> Object;
+        Ref<SerializableMemberInfo> EnumField;
+        Ref<SerializableMemberInfo> ObjectField;
+    };
+
+    NestedTypeFields MakeNestedTypeFields()
+    {
+        Ref<SerializableTypeInfoObject> rootType = CreateRef<SerializableTypeInfoObject>();
+        rootType->m_AssemblyName = "Root.Managed";
+        rootType->m_TypeNamespace = "Persisted";
+        rootType->m_TypeName = "Container+Host";
+        rootType->m_TypeId = 1;
+        rootType->m_ValueType = false;
+        rootType->m_Flags = ScriptFieldFlagBits::Serializable;
+
+        Ref<SerializableObjectInfo> rootInfo = CreateRef<SerializableObjectInfo>();
+        rootInfo->m_TypeInfo = rootType;
+
+        Ref<SerializableTypeInfoEnum> enumType = CreateRef<SerializableTypeInfoEnum>();
+        enumType->m_AssemblyName = "Enum.Managed";
+        enumType->m_TypeNamespace = "Persisted";
+        enumType->m_TypeName = "Container+Mode";
+        enumType->m_UnderlyingType = ScriptPrimitiveType::I32;
+        Ref<SerializableFieldInfo> enumField = CreateRef<SerializableFieldInfo>();
+        enumField->m_Name = "Mode";
+        enumField->m_FieldId = 1;
+        enumField->m_ParentTypeId = rootType->m_TypeId;
+        enumField->m_TypeInfo = enumType;
+        enumField->m_Flags = ScriptFieldFlagBits::Serializable;
+
+        Ref<SerializableTypeInfoObject> objectType = CreateRef<SerializableTypeInfoObject>();
+        objectType->m_AssemblyName = "Object.Managed";
+        objectType->m_TypeNamespace = "Persisted";
+        objectType->m_TypeName = "Container+Payload";
+        objectType->m_TypeId = 2;
+        objectType->m_ValueType = false;
+        objectType->m_Flags = ScriptFieldFlagBits::Serializable;
+        Ref<SerializableFieldInfo> objectField = CreateRef<SerializableFieldInfo>();
+        objectField->m_Name = "Payload";
+        objectField->m_FieldId = 2;
+        objectField->m_ParentTypeId = rootType->m_TypeId;
+        objectField->m_TypeInfo = objectType;
+        objectField->m_Flags = ScriptFieldFlagBits::Serializable;
+
+        rootInfo->m_Fields.emplace(enumField->m_FieldId, enumField);
+        rootInfo->m_Fields.emplace(objectField->m_FieldId, objectField);
+        rootInfo->m_FieldNameToId.emplace(enumField->m_Name, enumField->m_FieldId);
+        rootInfo->m_FieldNameToId.emplace(objectField->m_Name, objectField->m_FieldId);
+
+        Ref<SerializableObject> object = CreateRef<SerializableObject>(rootInfo);
+        Ref<SerializableFieldI32> enumData = CreateRef<SerializableFieldI32>();
+        enumData->Value = 2;
+        object->SetFieldData(enumField, enumData);
+        Ref<SerializableFieldObject> objectData = CreateRef<SerializableFieldObject>();
+        objectData->AllowNull = true;
+        object->SetFieldData(objectField, objectData);
+        return { object, enumField, objectField };
     }
 
     int32_t ReadRetainedScriptValue(const PersistedScriptState& state, const Ref<SerializableMemberInfo>& field)
@@ -131,7 +194,41 @@ namespace
         archive(UuidGenerator::Generate(), String("Script host"), uint32_t{ 1 });
         archive(static_cast<uint32_t>(SceneComponentId::MonoScript));
         archive(uint32_t{ 1 }, identity.TypeName);
-        Save(archive, *fields);
+        {
+            ScriptTypeMetadataSerializationScope legacyMetadata(false);
+            Save(archive, *fields);
+        }
+
+        TimeSettings timeSettings;
+        archive(timeSettings.TimeScale, timeSettings.MaxTimestep, timeSettings.FixedTimestep);
+        Physics2DSettings physics2D;
+        archive(physics2D.Gravity.x, physics2D.Gravity.y, physics2D.VelocityIterations, physics2D.PositionIterations);
+        for (const String& layerName : physics2D.LayerNames)
+            archive(layerName);
+        for (uint32_t mask : physics2D.MaskBits)
+            archive(mask);
+        archive(UUID::EMPTY);
+        Physics3DSettings physics3D;
+        archive(static_cast<uint32_t>(physics3D.Backend));
+        archive(physics3D.Gravity.x, physics3D.Gravity.y, physics3D.Gravity.z);
+        archive(physics3D.Substeps, physics3D.EnableSleeping, physics3D.EnableContinuousCollision, physics3D.Deterministic);
+        archive(UUID::EMPTY);
+        stream->Close();
+    }
+
+    void WriteVersion7BinaryScriptScene(const Path& path, const ScriptTypeIdentity& identity, const Ref<SerializableObject>& fields)
+    {
+        Ref<DataStream> stream = FileSystem::CreateAndOpenFile(path);
+        BinaryDataStreamOutputArchive archive(stream);
+        archive(uint32_t{ 7 }, String("Legacy nested metadata"), String());
+        archive(uint32_t{ 1 });
+        archive(UuidGenerator::Generate(), String("Script host"), uint32_t{ 1 });
+        archive(static_cast<uint32_t>(SceneComponentId::MonoScript));
+        archive(uint32_t{ 1 }, identity.Assembly, identity.Namespace, identity.TypeName, true);
+        {
+            ScriptTypeMetadataSerializationScope legacyMetadata(false);
+            Save(archive, *fields);
+        }
 
         TimeSettings timeSettings;
         archive(timeSettings.TimeScale, timeSettings.MaxTimestep, timeSettings.FixedTimestep);
@@ -266,6 +363,33 @@ TEST_CASE("Retained script state applies when its managed type becomes available
     ScriptInfoManager::Get().LoadAssemblyInfo(CROWNY_ASSEMBLY);
     MonoManager::Get().LoadAssembly(gameAssemblyPath, GAME_ASSEMBLY);
     ScriptInfoManager::Get().LoadAssemblyInfo(GAME_ASSEMBLY);
+
+    Ref<SerializableObjectInfo> nestedHostInfo;
+    REQUIRE(ScriptInfoManager::Get().GetSerializableObjectInfo(GAME_ASSEMBLY, "Sandbox", "Test", nestedHostInfo));
+    const auto enumFieldId = nestedHostInfo->m_FieldNameToId.find("dummyEnumInspector");
+    REQUIRE(enumFieldId != nestedHostInfo->m_FieldNameToId.end());
+    const Ref<SerializableTypeInfoEnum> nestedEnum =
+      DynamicRefCast<SerializableTypeInfoEnum>(nestedHostInfo->m_Fields.at(enumFieldId->second)->m_TypeInfo);
+    REQUIRE(nestedEnum != nullptr);
+    CHECK(nestedEnum->m_AssemblyName == GAME_ASSEMBLY);
+    CHECK(nestedEnum->m_TypeNamespace == "Sandbox");
+    CHECK(nestedEnum->m_TypeName == "Test+DrawMode");
+
+    const auto objectFieldId = nestedHostInfo->m_FieldNameToId.find("Struct");
+    REQUIRE(objectFieldId != nestedHostInfo->m_FieldNameToId.end());
+    const Ref<SerializableTypeInfoObject> nestedObject =
+      DynamicRefCast<SerializableTypeInfoObject>(nestedHostInfo->m_Fields.at(objectFieldId->second)->m_TypeInfo);
+    REQUIRE(nestedObject != nullptr);
+    CHECK(nestedObject->m_AssemblyName == GAME_ASSEMBLY);
+    CHECK(nestedObject->m_TypeNamespace == "Sandbox");
+    CHECK(nestedObject->m_TypeName == "Test+TestStruct");
+
+    Ref<SerializableObjectInfo> legacyNestedObject;
+    REQUIRE(ScriptInfoManager::Get().GetSerializableObjectInfo("Sandbox", "TestStruct", legacyNestedObject));
+    CHECK(legacyNestedObject->m_TypeInfo.get() == nestedObject.get());
+    CHECK(legacyNestedObject->m_TypeInfo->m_AssemblyName == GAME_ASSEMBLY);
+    CHECK(legacyNestedObject->m_TypeInfo->m_TypeName == "Test+TestStruct");
+
     const ScriptTypeIdentity identity{ GAME_ASSEMBLY, "Sandbox", "CameraFollow" };
     Ref<SerializableObjectInfo> initialInfo;
     REQUIRE(ScriptInfoManager::Get().GetSerializableObjectInfo(identity.Assembly, identity.Namespace, identity.TypeName, initialInfo));
@@ -309,14 +433,22 @@ TEST_CASE("Retained script state applies when its managed type becomes available
     const auto reloadedFieldId = reloadedInfo->m_FieldNameToId.find("smoothSpeed");
     REQUIRE(reloadedFieldId != reloadedInfo->m_FieldNameToId.end());
     Ref<SerializableMemberInfo> reloadedField = reloadedInfo->m_Fields.at(reloadedFieldId->second);
-    CHECK(ReadRetainedScriptFloat(script.CapturePersistedState(), reloadedField) == Catch::Approx(7.25f));
+    const PersistedScriptState reloadedState = script.CapturePersistedState();
+    CHECK(ReadRetainedScriptFloat(reloadedState, reloadedField) == Catch::Approx(7.25f));
+
+    const auto targetFieldId = reloadedInfo->m_FieldNameToId.find("target");
+    REQUIRE(targetFieldId != reloadedInfo->m_FieldNameToId.end());
+    const Ref<SerializableMemberInfo> targetField = reloadedInfo->m_Fields.at(targetFieldId->second);
+    const Ref<SerializableFieldEntity> target = StaticRefCast<SerializableFieldEntity>(reloadedState.Fields->GetFieldData(targetField));
+    REQUIRE(target != nullptr);
+    CHECK_FALSE(target->Value);
 }
 
 TEST_CASE("Legacy managed script entries still load", "[Serialization][Scripting][PersistedState][Legacy]")
 {
     SerializationTestFixture fixture;
     const ScriptTypeIdentity legacyIdentity{ GAME_ASSEMBLY, "Sandbox", "LegacyBehaviour" };
-    const RetainedScriptFields retained = MakeRetainedScriptFields(legacyIdentity, 123);
+    const RetainedScriptFields retained = MakeRetainedScriptFields({ "", legacyIdentity.Namespace, legacyIdentity.TypeName }, 123);
 
     const auto verify = [&](const Ref<Scene>& loaded) {
         const auto view = loaded->GetAllEntitiesWith<MonoScriptComponent>();
@@ -347,8 +479,10 @@ TEST_CASE("Legacy managed script entries still load", "[Serialization][Scripting
         out << YAML::EndMap;
 
         const Path path = fs::temp_directory_path() / "crowny-legacy-script-state.yaml";
+        const String legacyYaml(out.c_str(), out.size());
+        CHECK(legacyYaml.find("Assembly:") == String::npos);
         Ref<DataStream> stream = FileSystem::CreateAndOpenFile(path);
-        stream->Write(out.c_str(), out.size());
+        stream->Write(legacyYaml.data(), legacyYaml.size());
         stream->Close();
         Ref<Scene> loaded = CreateRef<Scene>(false);
         REQUIRE(SceneSerializer(loaded).Deserialize(path));
@@ -365,6 +499,112 @@ TEST_CASE("Legacy managed script entries still load", "[Serialization][Scripting
         verify(loaded);
         fs::remove(path);
     }
+}
+
+TEST_CASE("Nested managed type identities distinguish assemblies and accept legacy metadata", "[Serialization][Scripting][TypeIdentity]")
+{
+    Ref<SerializableTypeInfoObject> objectA = CreateRef<SerializableTypeInfoObject>();
+    objectA->m_AssemblyName = "Assembly.A";
+    objectA->m_TypeNamespace = "Shared";
+    objectA->m_TypeName = "Container+Payload";
+    Ref<SerializableTypeInfoObject> objectB = CreateRef<SerializableTypeInfoObject>();
+    objectB->m_AssemblyName = "Assembly.B";
+    objectB->m_TypeNamespace = objectA->m_TypeNamespace;
+    objectB->m_TypeName = objectA->m_TypeName;
+    Ref<SerializableTypeInfoObject> legacyObject = CreateRef<SerializableTypeInfoObject>();
+    legacyObject->m_TypeNamespace = objectA->m_TypeNamespace;
+    legacyObject->m_TypeName = "Payload";
+
+    CHECK_FALSE(objectA->Matches(objectB));
+    CHECK(objectA->Matches(legacyObject));
+
+    Ref<SerializableTypeInfoEnum> enumA = CreateRef<SerializableTypeInfoEnum>();
+    enumA->m_AssemblyName = "Assembly.A";
+    enumA->m_TypeNamespace = "Shared";
+    enumA->m_TypeName = "Container+Mode";
+    enumA->m_UnderlyingType = ScriptPrimitiveType::I32;
+    Ref<SerializableTypeInfoEnum> enumB = CreateRef<SerializableTypeInfoEnum>();
+    enumB->m_AssemblyName = "Assembly.B";
+    enumB->m_TypeNamespace = enumA->m_TypeNamespace;
+    enumB->m_TypeName = enumA->m_TypeName;
+    enumB->m_UnderlyingType = enumA->m_UnderlyingType;
+    Ref<SerializableTypeInfoEnum> legacyEnum = CreateRef<SerializableTypeInfoEnum>();
+    legacyEnum->m_TypeNamespace = enumA->m_TypeNamespace;
+    legacyEnum->m_TypeName = "Mode";
+    legacyEnum->m_UnderlyingType = enumA->m_UnderlyingType;
+
+    CHECK_FALSE(enumA->Matches(enumB));
+    CHECK(enumA->Matches(legacyEnum));
+}
+
+TEST_CASE("Nested managed type identities round-trip through scene formats", "[Serialization][Scripting][TypeIdentity]")
+{
+    SerializationTestFixture fixture;
+    const ScriptTypeIdentity identity{ "Host.Managed", "Persisted", "MissingBehaviour" };
+    const NestedTypeFields nested = MakeNestedTypeFields();
+    Ref<Scene> scene = CreateRef<Scene>(false);
+    scene->SetName("Nested managed metadata");
+    Entity entity = scene->CreateEntity("Script host");
+    REQUIRE(scene->AddScriptComponent(entity, PersistedScriptState{ identity, nested.Object }, false));
+
+    const auto checkYamlIdentities = [](const String& yaml) {
+        CHECK(yaml.find("Assembly: Root.Managed") != String::npos);
+        CHECK(yaml.find("Assembly: Enum.Managed") != String::npos);
+        CHECK(yaml.find("Assembly: Object.Managed") != String::npos);
+    };
+
+    SECTION("YAML")
+    {
+        const Path path = fs::temp_directory_path() / ("crowny-nested-type-" + UuidGenerator::Generate().ToString() + ".yaml");
+        SceneSerializer(scene).Serialize(path);
+        checkYamlIdentities(FileSystem::OpenFile(path)->GetAsString());
+
+        Ref<Scene> loaded = CreateRef<Scene>(false);
+        REQUIRE(SceneSerializer(loaded).Deserialize(path));
+        const Path roundTripPath = path.string() + ".roundtrip";
+        SceneSerializer(loaded).Serialize(roundTripPath);
+        checkYamlIdentities(FileSystem::OpenFile(roundTripPath)->GetAsString());
+        fs::remove(path);
+        fs::remove(roundTripPath);
+    }
+
+    SECTION("Binary")
+    {
+        const Path path = fs::temp_directory_path() / ("crowny-nested-type-" + UuidGenerator::Generate().ToString() + ".cwb");
+        SceneSerializer(scene).SerializeBinary(path);
+        Ref<Scene> loaded = CreateRef<Scene>(false);
+        REQUIRE(SceneSerializer(loaded).DeserializeBinary(path));
+
+        const Path yamlPath = path.string() + ".yaml";
+        SceneSerializer(loaded).Serialize(yamlPath);
+        checkYamlIdentities(FileSystem::OpenFile(yamlPath)->GetAsString());
+        fs::remove(path);
+        fs::remove(yamlPath);
+    }
+}
+
+TEST_CASE("Version 7 binary scenes load nested managed metadata", "[Serialization][Scripting][TypeIdentity][Legacy]")
+{
+    SerializationTestFixture fixture;
+    const ScriptTypeIdentity identity{ "Host.Managed", "Persisted", "MissingBehaviour" };
+    const NestedTypeFields nested = MakeNestedTypeFields();
+    const Path path = fs::temp_directory_path() / ("crowny-v7-nested-type-" + UuidGenerator::Generate().ToString() + ".cwb");
+    WriteVersion7BinaryScriptScene(path, identity, nested.Object);
+
+    Ref<Scene> loaded = CreateRef<Scene>(false);
+    REQUIRE(SceneSerializer(loaded).DeserializeBinary(path));
+    const auto view = loaded->GetAllEntitiesWith<MonoScriptComponent>();
+    REQUIRE(view.size() == 1);
+    const MonoScriptComponent& component = view.get<MonoScriptComponent>(*view.begin());
+    REQUIRE(component.Scripts.size() == 1);
+    const PersistedScriptState state = component.Scripts.front().CapturePersistedState();
+    REQUIRE(state.Identity == identity);
+    REQUIRE(state.Fields != nullptr);
+    const Ref<SerializableFieldData> enumData = state.Fields->GetFieldData(nested.EnumField);
+    REQUIRE(enumData != nullptr);
+    CHECK(StaticRefCast<SerializableFieldI32>(enumData)->Value == 2);
+    CHECK(state.Fields->GetFieldData(nested.ObjectField) != nullptr);
+    fs::remove(path);
 }
 
 TEST_CASE("Duplicate managed script identities are rejected", "[Scene][Scripting][PersistedState]")

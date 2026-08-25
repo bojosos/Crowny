@@ -39,6 +39,7 @@ namespace Crowny
         SerializableFieldData(const Ref<SerializableTypeInfo>& typeInfo);
         virtual ~SerializableFieldData() = default;
 
+        // Mono expects value types by address and reference types as the managed object pointer itself.
         virtual void* GetValue() = 0;
         virtual void* GetValue(const Ref<SerializableTypeInfo>& targetType) { return GetValue(); }
         virtual MonoObject* GetValueBoxed() = 0;
@@ -277,7 +278,7 @@ namespace Crowny
         virtual void* GetValue() override
         {
             m_ManagedString = Null ? nullptr : MonoUtils::ToMonoString(Value);
-            return &m_ManagedString;
+            return m_ManagedString;
         }
         virtual MonoObject* GetValueBoxed() override { return (MonoObject*)m_ManagedString; }
 
@@ -304,7 +305,7 @@ namespace Crowny
         {
             ScriptEntity* scriptEntity = ScriptSceneObjectManager::Get().GetOrCreateScriptEntity(Value);
             m_ManagedInstance = scriptEntity == nullptr ? nullptr : scriptEntity->GetManagedInstance();
-            return &m_ManagedInstance;
+            return m_ManagedInstance;
         }
 
         virtual MonoObject* GetValueBoxed() override { return m_ManagedInstance; }
@@ -338,7 +339,7 @@ namespace Crowny
                 Value = AssetManager::TryGet()->LoadFromUUID(Value.GetUUID());
             ScriptAssetBase* scriptAsset = ScriptAssetManager::Get().GetScriptAsset(Value, true);
             m_ManagedInstance = scriptAsset == nullptr ? nullptr : scriptAsset->GetManagedInstance();
-            return &m_ManagedInstance;
+            return m_ManagedInstance;
         }
 
         virtual MonoObject* GetValueBoxed() override { return m_ManagedInstance; }

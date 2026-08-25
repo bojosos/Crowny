@@ -156,9 +156,20 @@ namespace Crowny
             auto fieldData = CreateRef<SerializableFieldEntity>();
             if (value != nullptr)
             {
+                MonoClass* valueClass = MonoManager::Get().FindClass(MonoUtils::GetClass(value));
+                MonoClass* entityClass = ScriptEntity::GetMetaData()->ScriptClass;
+                if (valueClass == nullptr || entityClass == nullptr || (valueClass != entityClass && !valueClass->IsSubClassOf(entityClass)))
+                {
+                    CW_ENGINE_WARN("Skipping a managed entity field whose runtime value is not a Crowny.Entity instance.");
+                    return fieldData;
+                }
+
                 ScriptEntity* scriptEntity = ScriptEntity::ToNative(value);
-                if (scriptEntity != nullptr)
-                    fieldData->Value = scriptEntity->GetNativeEntity();
+                Entity nativeEntity;
+                if (ScriptSceneObjectManager::Get().TryGetNativeEntity(scriptEntity, nativeEntity))
+                    fieldData->Value = nativeEntity;
+                else if (scriptEntity != nullptr)
+                    CW_ENGINE_WARN("Skipping a managed entity field whose native wrapper is no longer live.");
             }
             return fieldData;
         }
@@ -245,7 +256,7 @@ namespace Crowny
     void* SerializableFieldObject::GetValue()
     {
         m_ManagedInstance = Value != nullptr ? Value->GetManagedInstance() : nullptr;
-        return &m_ManagedInstance;
+        return m_ManagedInstance;
     }
 
     void* SerializableFieldObject::GetValue(const Ref<SerializableTypeInfo>& targetType)
@@ -254,7 +265,7 @@ namespace Crowny
         if (m_ManagedInstance != nullptr && targetType != nullptr && targetType->GetType() == SerializableType::Object &&
             StaticRefCast<SerializableTypeInfoObject>(targetType)->m_ValueType)
             return MonoUtils::Unbox(m_ManagedInstance);
-        return &m_ManagedInstance;
+        return m_ManagedInstance;
     }
 
     void SerializableFieldObject::Serialize()
@@ -312,7 +323,7 @@ namespace Crowny
         if (Null)
         {
             m_ManagedInstance = nullptr;
-            return &m_ManagedInstance;
+            return nullptr;
         }
 
         Ref<SerializableTypeInfo> targetElementType = ElementType;
@@ -322,7 +333,7 @@ namespace Crowny
         if (elementClass == nullptr)
         {
             m_ManagedInstance = nullptr;
-            return &m_ManagedInstance;
+            return nullptr;
         }
 
         MonoArray* array = mono_array_new(MonoManager::Get().GetDomain(), elementClass, Values.size());
@@ -335,10 +346,10 @@ namespace Crowny
             if (valueType)
                 mono_value_copy_array(array, i, value, 1);
             else
-                mono_array_setref(array, i, value != nullptr ? *static_cast<MonoObject**>(value) : nullptr);
+                mono_array_setref(array, i, static_cast<MonoObject*>(value));
         }
         m_ManagedInstance = reinterpret_cast<MonoObject*>(array);
-        return &m_ManagedInstance;
+        return m_ManagedInstance;
     }
 
     void SerializableFieldList::Serialize() { SerializeCollection(Values); }
@@ -350,7 +361,7 @@ namespace Crowny
         if (Null || targetType == nullptr || targetType->GetType() != SerializableType::List)
         {
             m_ManagedInstance = nullptr;
-            return &m_ManagedInstance;
+            return nullptr;
         }
 
         const Ref<SerializableTypeInfoList> listInfo = StaticRefCast<SerializableTypeInfoList>(targetType);
@@ -358,21 +369,20 @@ namespace Crowny
         if (listClass == nullptr)
         {
             m_ManagedInstance = nullptr;
-            return &m_ManagedInstance;
+            return nullptr;
         }
 
         m_ManagedInstance = listClass->CreateInstance(true);
         MonoMethod* addMethod = listClass->GetMethod("Add", 1);
         if (addMethod == nullptr)
-            return &m_ManagedInstance;
+            return m_ManagedInstance;
         for (const Ref<SerializableFieldData>& value : Values)
         {
-            MonoObject* nullObject = nullptr;
-            void* argument = value != nullptr ? value->GetValue(listInfo->m_ElementType) : &nullObject;
+            void* argument = value != nullptr ? value->GetValue(listInfo->m_ElementType) : nullptr;
             void* parameters[1] = { argument };
             addMethod->Invoke(m_ManagedInstance, parameters);
         }
-        return &m_ManagedInstance;
+        return m_ManagedInstance;
     }
 
 } // namespace Crowny

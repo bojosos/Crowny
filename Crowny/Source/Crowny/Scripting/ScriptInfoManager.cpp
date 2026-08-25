@@ -157,8 +157,12 @@ namespace Crowny
             if ((isSerializable || isInspectable) && klass != m_Builtin.Component && klass != assetClass)
             {
                 Ref<SerializableTypeInfoObject> typeInfo = CreateRef<SerializableTypeInfoObject>();
-                typeInfo->m_TypeNamespace = klass->GetNamespace();
-                typeInfo->m_TypeName = klass->GetName();
+                typeInfo->m_AssemblyName = assemblyName;
+                MonoUtils::GetClassName(klass->GetInternalPtr(), typeInfo->m_TypeNamespace, typeInfo->m_TypeName);
+                const String fullTypeName =
+                  typeInfo->m_TypeNamespace.empty() ? typeInfo->m_TypeName : typeInfo->m_TypeNamespace + "." + typeInfo->m_TypeName;
+                if (assemblyInfo->m_TypeNameToId.find(fullTypeName) != assemblyInfo->m_TypeNameToId.end())
+                    continue;
                 typeInfo->m_TypeId = m_UniqueTypeId++;
 
                 if (isSerializable)
@@ -179,7 +183,16 @@ namespace Crowny
                 Ref<SerializableObjectInfo> objInfo = CreateRef<SerializableObjectInfo>();
                 objInfo->m_TypeInfo = typeInfo;
                 objInfo->m_MonoClass = klass;
-                assemblyInfo->m_TypeNameToId[objInfo->GetFullTypeName()] = typeInfo->m_TypeId;
+                assemblyInfo->m_TypeNameToId[fullTypeName] = typeInfo->m_TypeId;
+                const size_t nestingSeparator = typeInfo->m_TypeName.find_last_of('+');
+                if (nestingSeparator != String::npos)
+                {
+                    const String legacyName = typeInfo->m_TypeName.substr(nestingSeparator + 1);
+                    const String legacyFullName = typeInfo->m_TypeNamespace.empty() ? legacyName : typeInfo->m_TypeNamespace + "." + legacyName;
+                    auto [legacyType, inserted] = assemblyInfo->m_LegacyTypeNameToId.emplace(legacyFullName, typeInfo->m_TypeId);
+                    if (!inserted && legacyType->second != typeInfo->m_TypeId)
+                        legacyType->second = 0;
+                }
                 assemblyInfo->m_ObjectInfos[typeInfo->m_TypeId] = objInfo;
             }
         }
@@ -419,7 +432,7 @@ namespace Crowny
             while (base != nullptr)
             {
                 Ref<SerializableObjectInfo> baseObjInfo;
-                if (GetSerializableObjectInfo(base->GetNamespace(), base->GetName(), baseObjInfo))
+                if (GetSerializableObjectInfo(base, baseObjInfo))
                 {
                     klass.second->m_BaseClass = baseObjInfo;
                     baseObjInfo->m_DerivedClasses.push_back(klass.second.Get());
@@ -538,8 +551,14 @@ namespace Crowny
             {
                 Ref<SerializableTypeInfoEnum> typeInfo = CreateRef<SerializableTypeInfoEnum>(); // TODO: Retrieve enum names using the C# helper
                 typeInfo->m_UnderlyingType = scriptPrimitiveType;
-                typeInfo->m_TypeNamespace = monoClass->GetNamespace();
-                typeInfo->m_TypeName = monoClass->GetName();
+                MonoAssembly* assembly = MonoManager::Get().FindAssembly(monoClass->GetInternalPtr());
+                if (assembly == nullptr)
+                {
+                    CW_ENGINE_WARN("Cannot inspect managed enum {}: its assembly is unavailable.", monoClass->GetFullName());
+                    return nullptr;
+                }
+                typeInfo->m_AssemblyName = assembly->GetName();
+                MonoUtils::GetClassName(monoClass->GetInternalPtr(), typeInfo->m_TypeNamespace, typeInfo->m_TypeName);
 
                 void* enumType = MonoUtils::GetType(monoClass->GetInternalPtr());
                 MonoMethod* getNames = m_Builtin.ScriptUtils->GetMethod("GetEnumNames", 1);
@@ -628,14 +647,14 @@ namespace Crowny
             else
             {
                 Ref<SerializableObjectInfo> objInfo;
-                if (GetSerializableObjectInfo(monoClass->GetNamespace(), monoClass->GetName(), objInfo))
+                if (GetSerializableObjectInfo(monoClass, objInfo))
                     return objInfo->m_TypeInfo;
             }
             break;
         }
         case MonoPrimitiveType::ValueType: {
             Ref<SerializableObjectInfo> objInfo;
-            if (GetSerializableObjectInfo(monoClass->GetNamespace(), monoClass->GetName(), objInfo))
+            if (GetSerializableObjectInfo(monoClass, objInfo))
                 return objInfo->m_TypeInfo;
             return nullptr;
         }
@@ -717,6 +736,26 @@ namespace Crowny
         return true;
     }
 
+    bool ScriptInfoManager::GetSerializableObjectInfo(const SerializableTypeInfoObject& typeInfo, Ref<SerializableObjectInfo>& outInfo)
+    {
+        if (!typeInfo.m_AssemblyName.empty())
+            return GetSerializableObjectInfo(typeInfo.m_AssemblyName, typeInfo.m_TypeNamespace, typeInfo.m_TypeName, outInfo);
+        return GetSerializableObjectInfo(typeInfo.m_TypeNamespace, typeInfo.m_TypeName, outInfo);
+    }
+
+    bool ScriptInfoManager::GetSerializableObjectInfo(MonoClass* monoClass, Ref<SerializableObjectInfo>& outInfo)
+    {
+        if (monoClass == nullptr)
+            return false;
+        MonoAssembly* assembly = MonoManager::Get().FindAssembly(monoClass->GetInternalPtr());
+        if (assembly == nullptr)
+            return false;
+        String typeNamespace;
+        String typeName;
+        MonoUtils::GetClassName(monoClass->GetInternalPtr(), typeNamespace, typeName);
+        return GetSerializableObjectInfo(assembly->GetName(), typeNamespace, typeName, outInfo);
+    }
+
     bool ScriptInfoManager::GetSerializableObjectInfo(const String& ns, const String& name, Ref<SerializableObjectInfo>& outInfo)
     {
         const String fullName = ns.empty() ? name : ns + "." + name;
@@ -724,11 +763,29 @@ namespace Crowny
         {
             if (curAssembly.second == nullptr)
                 continue;
-            auto findIter = curAssembly.second->m_TypeNameToId.find(fullName);
-            if (findIter != curAssembly.second->m_TypeNameToId.end())
+            const auto exactType = curAssembly.second->m_TypeNameToId.find(fullName);
+            if (exactType == curAssembly.second->m_TypeNameToId.end())
+                continue;
+            const auto objectInfo = curAssembly.second->m_ObjectInfos.find(exactType->second);
+            if (objectInfo != curAssembly.second->m_ObjectInfos.end() && objectInfo->second != nullptr)
             {
-                outInfo = curAssembly.second->m_ObjectInfos[findIter->second];
+                outInfo = objectInfo->second;
                 return true;
+            }
+        }
+        for (const auto& curAssembly : m_AssemblyInfos)
+        {
+            if (curAssembly.second == nullptr)
+                continue;
+            const auto legacyType = curAssembly.second->m_LegacyTypeNameToId.find(fullName);
+            if (legacyType != curAssembly.second->m_LegacyTypeNameToId.end() && legacyType->second != 0)
+            {
+                const auto objectInfo = curAssembly.second->m_ObjectInfos.find(legacyType->second);
+                if (objectInfo != curAssembly.second->m_ObjectInfos.end() && objectInfo->second != nullptr)
+                {
+                    outInfo = objectInfo->second;
+                    return true;
+                }
             }
         }
         return false;

@@ -7,10 +7,7 @@
 
 namespace Crowny
 {
-    ScriptSceneObjectManager::EntityKey ScriptSceneObjectManager::GetEntityKey(Entity entity)
-    {
-        return { entity.GetScene(), entity.GetHandle() };
-    }
+    ScriptSceneObjectManager::EntityKey ScriptSceneObjectManager::GetEntityKey(Entity entity) { return { entity.GetScene(), entity.GetHandle() }; }
 
     ScriptEntity* ScriptSceneObjectManager::GetOrCreateScriptEntity(Entity entity)
     {
@@ -49,6 +46,22 @@ namespace Crowny
         if (findIter != m_ScriptEntities.end())
             return findIter->second;
         return nullptr;
+    }
+
+    bool ScriptSceneObjectManager::TryGetNativeEntity(const ScriptEntity* scriptEntity, Entity& entity) const
+    {
+        if (scriptEntity == nullptr)
+            return false;
+
+        for (const auto& [key, candidate] : m_ScriptEntities)
+        {
+            if (candidate == scriptEntity)
+            {
+                entity = candidate->GetNativeEntity();
+                return static_cast<bool>(entity);
+            }
+        }
+        return false;
     }
 
     void ScriptSceneObjectManager::DestroyScriptEntity(ScriptEntity* scriptEntity)

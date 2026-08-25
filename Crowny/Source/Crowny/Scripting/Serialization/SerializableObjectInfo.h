@@ -89,6 +89,7 @@ namespace Crowny
         virtual SerializableType GetType() override { return SerializableType::Enum; }
 
         ScriptPrimitiveType m_UnderlyingType;
+        String m_AssemblyName;
         String m_TypeNamespace;
         String m_TypeName;
         Vector<String> m_EnumNames;
@@ -165,6 +166,7 @@ namespace Crowny
         bool m_ValueType;
         uint32_t m_TypeId;
         ScriptFieldFlags m_Flags;
+        String m_AssemblyName;
         String m_TypeNamespace;
         String m_TypeName;
     };
@@ -246,6 +248,7 @@ namespace Crowny
         String m_Name;
 
         UnorderedMap<String, uint32_t> m_TypeNameToId;
+        UnorderedMap<String, uint32_t> m_LegacyTypeNameToId;
         UnorderedMap<uint32_t, Ref<SerializableObjectInfo>> m_ObjectInfos;
     };
 

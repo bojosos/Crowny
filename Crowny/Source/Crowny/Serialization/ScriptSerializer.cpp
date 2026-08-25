@@ -87,7 +87,16 @@ namespace Crowny
     namespace
     {
         thread_local Scene* s_ScriptSerializationScene = nullptr;
+        thread_local bool s_AssemblyQualifiedTypeMetadata = true;
+    } // namespace
+
+    ScriptTypeMetadataSerializationScope::ScriptTypeMetadataSerializationScope(bool assemblyQualified)
+      : m_PreviousAssemblyQualified(s_AssemblyQualifiedTypeMetadata)
+    {
+        s_AssemblyQualifiedTypeMetadata = assemblyQualified;
     }
+
+    ScriptTypeMetadataSerializationScope::~ScriptTypeMetadataSerializationScope() { s_AssemblyQualifiedTypeMetadata = m_PreviousAssemblyQualified; }
 
     ScriptSerializationSceneScope::ScriptSerializationSceneScope(Scene* scene) : m_PreviousScene(s_ScriptSerializationScene)
     {
@@ -225,16 +234,38 @@ namespace Crowny
 
     template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoPrimitive& primitiveInfo) { archive(primitiveInfo.m_Type); }
 
-    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoEnum& enumInfo)
+    template <typename Archive> void Save(Archive& archive, const SerializableTypeInfoEnum& enumInfo)
     {
         archive(enumInfo.m_UnderlyingType, enumInfo.m_TypeNamespace, enumInfo.m_TypeName);
+        if (s_AssemblyQualifiedTypeMetadata)
+            archive(enumInfo.m_AssemblyName);
+    }
+
+    template <typename Archive> void Load(Archive& archive, SerializableTypeInfoEnum& enumInfo)
+    {
+        archive(enumInfo.m_UnderlyingType, enumInfo.m_TypeNamespace, enumInfo.m_TypeName);
+        if (s_AssemblyQualifiedTypeMetadata)
+            archive(enumInfo.m_AssemblyName);
+        else
+            enumInfo.m_AssemblyName.clear();
     }
 
     template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoArray& arrayInfo) { archive(arrayInfo.m_ElementType); }
 
-    template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoObject& objectInfo)
+    template <typename Archive> void Save(Archive& archive, const SerializableTypeInfoObject& objectInfo)
     {
         archive(objectInfo.m_TypeName, objectInfo.m_TypeNamespace, objectInfo.m_ValueType, objectInfo.m_TypeId, objectInfo.m_Flags);
+        if (s_AssemblyQualifiedTypeMetadata)
+            archive(objectInfo.m_AssemblyName);
+    }
+
+    template <typename Archive> void Load(Archive& archive, SerializableTypeInfoObject& objectInfo)
+    {
+        archive(objectInfo.m_TypeName, objectInfo.m_TypeNamespace, objectInfo.m_ValueType, objectInfo.m_TypeId, objectInfo.m_Flags);
+        if (s_AssemblyQualifiedTypeMetadata)
+            archive(objectInfo.m_AssemblyName);
+        else
+            objectInfo.m_AssemblyName.clear();
     }
 
     template <typename Archive> void Serialize(Archive& archive, SerializableTypeInfoEntity& entityInfo) {}

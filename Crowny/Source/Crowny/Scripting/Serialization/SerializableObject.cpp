@@ -1,5 +1,6 @@
 #include "cwpch.h"
 
+#include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/Mono/MonoUtils.h"
 #include "Crowny/Scripting/ScriptInfoManager.h"
 #include "Crowny/Scripting/Serialization/SerializableField.h"
@@ -61,14 +62,21 @@ namespace Crowny
                 if (memberInfo->IsSerializable())
                 {
                     const SerializableFieldKey key(memberInfo->m_ParentTypeId, memberInfo->m_FieldId);
-                    m_CachedData[key] = GetFieldData(memberInfo);
+                    Ref<SerializableFieldData> fieldData = GetFieldData(memberInfo);
+                    if (fieldData != nullptr)
+                        m_CachedData[key] = fieldData;
+                    else
+                        CW_ENGINE_WARN("Skipping managed field '{}' because its runtime value could not be serialized.", memberInfo->m_Name);
                 }
             }
             type = type->m_BaseClass;
         }
 
         for (auto [key, field] : m_CachedData)
-            field->Serialize();
+        {
+            if (field != nullptr)
+                field->Serialize();
+        }
 
         MonoUtils::FreeGCHandle(m_GCHandle);
         m_GCHandle = 0;
@@ -87,8 +95,7 @@ namespace Crowny
             return existing->second;
 
         Ref<SerializableObjectInfo> objInfo = nullptr;
-        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(m_ObjectInfo->m_TypeInfo->m_TypeNamespace, m_ObjectInfo->m_TypeInfo->m_TypeName,
-                                                                objInfo))
+        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(*m_ObjectInfo->m_TypeInfo, objInfo))
         {
             if (ownsContext)
                 s_DeserializationContext = nullptr;
@@ -116,6 +123,8 @@ namespace Crowny
             BeginYAMLMap(out, "EnumInfo");
 
             const auto enumInfo = StaticRefCast<SerializableTypeInfoEnum>(field->m_TypeInfo);
+            if (!enumInfo->m_AssemblyName.empty())
+                SerializeValueYAML(out, "Assembly", enumInfo->m_AssemblyName);
             SerializeValueYAML(out, "TypeName", enumInfo->m_TypeName);
             SerializeValueYAML(out, "TypeNamespace", enumInfo->m_TypeNamespace);
             SerializeEnumYAML(out, "UnderlyingType", enumInfo->m_UnderlyingType);
@@ -127,6 +136,8 @@ namespace Crowny
             BeginYAMLMap(out, "ObjectInfo");
 
             const auto objTypeInfo = StaticRefCast<SerializableTypeInfoObject>(field->m_TypeInfo);
+            if (!objTypeInfo->m_AssemblyName.empty())
+                SerializeValueYAML(out, "Assembly", objTypeInfo->m_AssemblyName);
             SerializeValueYAML(out, "TypeName", objTypeInfo->m_TypeName);
             SerializeValueYAML(out, "TypeNamespace", objTypeInfo->m_TypeNamespace);
             SerializeValueYAML(out, "ValueType", objTypeInfo->m_ValueType);
@@ -159,6 +170,7 @@ namespace Crowny
         {
             Ref<SerializableTypeInfoEnum> enumInfo = CreateRef<SerializableTypeInfoEnum>();
             DeserializeEnumYAML(enumInfoNode, "UnderlyingType", enumInfo->m_UnderlyingType, ScriptPrimitiveType::I32);
+            DeserializeValueYAML(enumInfoNode, "Assembly", enumInfo->m_AssemblyName, String());
             DeserializeValueYAML(enumInfoNode, "TypeNamespace", enumInfo->m_TypeNamespace, String());
             DeserializeValueYAML(enumInfoNode, "TypeName", enumInfo->m_TypeName, String());
             return enumInfo;
@@ -166,6 +178,7 @@ namespace Crowny
         else if (const YAML::Node& objectInfoNode = node["ObjectInfo"])
         {
             Ref<SerializableTypeInfoObject> objectInfo = CreateRef<SerializableTypeInfoObject>();
+            DeserializeValueYAML(objectInfoNode, "Assembly", objectInfo->m_AssemblyName, String());
             DeserializeValueYAML(objectInfoNode, "TypeName", objectInfo->m_TypeName, String());
             DeserializeValueYAML(objectInfoNode, "TypeNamespace", objectInfo->m_TypeNamespace, String());
             DeserializeValueYAML(objectInfoNode, "ValueType", objectInfo->m_ValueType, false);
@@ -192,6 +205,8 @@ namespace Crowny
 
             BeginYAMLMap(out, "ObjectInfo");
 
+            if (!objTypeInfo->m_AssemblyName.empty())
+                SerializeValueYAML(out, "Assembly", objTypeInfo->m_AssemblyName);
             SerializeValueYAML(out, "TypeName", objTypeInfo->m_TypeName);
             SerializeValueYAML(out, "TypeNamespace", objTypeInfo->m_TypeNamespace);
             SerializeValueYAML(out, "ValueType", objTypeInfo->m_ValueType);
@@ -243,6 +258,7 @@ namespace Crowny
             const YAML::Node& fields = objectInfoParentNode["Fields"];
 
             Ref<SerializableTypeInfoObject> typeInfo = CreateRef<SerializableTypeInfoObject>();
+            DeserializeValueYAML(objectInfoNode, "Assembly", typeInfo->m_AssemblyName, String());
             typeInfo->m_TypeName = objectInfoNode["TypeName"].as<String>();
             typeInfo->m_TypeNamespace = objectInfoNode["TypeNamespace"].as<String>();
             typeInfo->m_Flags = (ScriptFieldFlags)objectInfoNode["Flags"].as<uint32_t>();
@@ -485,7 +501,7 @@ namespace Crowny
     Ref<SerializableObject> SerializableObject::CreateNew(const Ref<SerializableTypeInfoObject>& type)
     {
         Ref<SerializableObjectInfo> objInfo = nullptr;
-        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(type->m_TypeNamespace, type->m_TypeName, objInfo))
+        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(*type, objInfo))
             return nullptr;
         return CreateRef<SerializableObject>(objInfo, CreateManagedInstance(type));
     }
@@ -493,7 +509,7 @@ namespace Crowny
     MonoObject* SerializableObject::CreateManagedInstance(const Ref<SerializableTypeInfoObject>& type)
     {
         Ref<SerializableObjectInfo> objInfo = nullptr;
-        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(type->m_TypeNamespace, type->m_TypeName, objInfo))
+        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(*type, objInfo))
             return nullptr;
 
         const bool hasCtor = objInfo->m_MonoClass->GetMethod(".ctor", 0) != nullptr;
@@ -510,10 +526,9 @@ namespace Crowny
             if (existing != s_SerializationContext->Objects.end())
                 return existing->second;
         }
-        String ns, typeName;
-        MonoUtils::GetClassName(managedInstance, ns, typeName);
+        MonoClass* monoClass = MonoManager::Get().FindClass(MonoUtils::GetClass(managedInstance));
         Ref<SerializableObjectInfo> objInfo;
-        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(ns, typeName, objInfo))
+        if (!ScriptInfoManager::Get().GetSerializableObjectInfo(monoClass, objInfo))
             return nullptr;
         Ref<SerializableObject> object = CreateRef<SerializableObject>(objInfo, managedInstance);
         if (s_SerializationContext != nullptr)
