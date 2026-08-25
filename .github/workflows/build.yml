@@ -29,6 +29,9 @@ jobs:
             libvulkan-dev vulkan-utility-libraries-dev spirv-tools \
             libspirv-cross-c-shared-dev libshaderc-dev \
             mono-devel clang
+          if ! command -v csc >/dev/null 2>&1; then
+            sudo ln -s "$(command -v mono-csc)" /usr/local/bin/csc
+          fi
           mkdir -p .deps/VulkanSDK/Include/vma
           wget -O .deps/VulkanSDK/Include/vma/vk_mem_alloc.h https://raw.githubusercontent.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/v3.4.0/include/vk_mem_alloc.h
 
