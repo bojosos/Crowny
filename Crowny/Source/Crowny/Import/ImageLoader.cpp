@@ -15,6 +15,14 @@ namespace Crowny
         constexpr uint8_t KTX2_IDENTIFIER[] = { 0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A };
         constexpr size_t MAX_RASTER_PROBE_BYTES = 1024u * 1024u;
 
+        Mutex& GetStbMutex()
+        {
+            // This stb_image version stores its failure reason in a process-global
+            // variable. Keep each probe or decode call together with its diagnostic.
+            static Mutex mutex;
+            return mutex;
+        }
+
         struct Pnm16Info
         {
             uint32_t Width = 0;
@@ -34,8 +42,63 @@ namespace Crowny
 
         bool IsKTX2(const uint8_t* data, size_t size)
         {
-            return data != nullptr && size >= sizeof(KTX2_IDENTIFIER) &&
-                   std::memcmp(data, KTX2_IDENTIFIER, sizeof(KTX2_IDENTIFIER)) == 0;
+            return data != nullptr && size >= sizeof(KTX2_IDENTIFIER) && std::memcmp(data, KTX2_IDENTIFIER, sizeof(KTX2_IDENTIFIER)) == 0;
+        }
+
+        ImageFileFormat DetectFileFormat(const uint8_t* data, size_t size)
+        {
+            if (data == nullptr || size == 0)
+                return ImageFileFormat::Unknown;
+            if (IsKTX2(data, size))
+                return ImageFileFormat::KTX2;
+            if (size >= 8 && std::memcmp(data, "\x89PNG\r\n\x1A\n", 8) == 0)
+                return ImageFileFormat::PNG;
+            if (size >= 3 && data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF)
+                return ImageFileFormat::JPEG;
+            if (size >= 2 && data[0] == 'B' && data[1] == 'M')
+                return ImageFileFormat::BMP;
+            if (size >= 6 && (std::memcmp(data, "GIF87a", 6) == 0 || std::memcmp(data, "GIF89a", 6) == 0))
+                return ImageFileFormat::GIF;
+            if (size >= 4 && std::memcmp(data, "8BPS", 4) == 0)
+                return ImageFileFormat::PSD;
+            if (size >= 2 && data[0] == 'P' && data[1] >= '1' && data[1] <= '6')
+                return ImageFileFormat::PNM;
+            if (size >= 6 && (std::memcmp(data, "#?RGBE", 6) == 0 || std::memcmp(data, "#?RADI", 6) == 0))
+                return ImageFileFormat::HDR;
+            if (size >= 4 && data[0] == 0x53 && data[1] == 0x80 && data[2] == 0xF6 && data[3] == 0x34)
+                return ImageFileFormat::PIC;
+            if (size >= 18 && std::memcmp(data + size - 18, "TRUEVISION-XFILE.", 17) == 0)
+                return ImageFileFormat::TGA;
+            return ImageFileFormat::Unknown;
+        }
+
+        ImageFileFormat FormatFromExtension(StringView extension)
+        {
+            if (!extension.empty() && extension.front() == '.')
+                extension.remove_prefix(1);
+            String normalized(extension);
+            StringUtils::ToLower(normalized);
+            if (normalized == "png")
+                return ImageFileFormat::PNG;
+            if (normalized == "jpeg" || normalized == "jpg")
+                return ImageFileFormat::JPEG;
+            if (normalized == "psd")
+                return ImageFileFormat::PSD;
+            if (normalized == "gif")
+                return ImageFileFormat::GIF;
+            if (normalized == "tga")
+                return ImageFileFormat::TGA;
+            if (normalized == "bmp")
+                return ImageFileFormat::BMP;
+            if (normalized == "hdr")
+                return ImageFileFormat::HDR;
+            if (normalized == "pic")
+                return ImageFileFormat::PIC;
+            if (normalized == "ppm" || normalized == "pgm")
+                return ImageFileFormat::PNM;
+            if (normalized == "ktx2")
+                return ImageFileFormat::KTX2;
+            return ImageFileFormat::Unknown;
         }
 
         bool IsPnmWhitespace(uint8_t value)
@@ -74,8 +137,7 @@ namespace Crowny
             return true;
         }
 
-        Pnm16ParseStatus ParsePnm16(const uint8_t* data, size_t size, Pnm16Info& info, String* error = nullptr,
-                                    bool requireCompleteRaster = false)
+        Pnm16ParseStatus ParsePnm16(const uint8_t* data, size_t size, Pnm16Info& info, String* error = nullptr, bool requireCompleteRaster = false)
         {
             if (data == nullptr || size < 3 || data[0] != 'P' || (data[1] != '5' && data[1] != '6'))
                 return Pnm16ParseStatus::NotPnm;
@@ -134,11 +196,16 @@ namespace Crowny
         {
             switch (channels)
             {
-            case 1: return TextureFormat::R8;
-            case 2: return TextureFormat::RG8;
-            case 3: return TextureFormat::RGB8;
-            case 4: return TextureFormat::RGBA8;
-            default: return TextureFormat::NONE;
+            case 1:
+                return TextureFormat::R8;
+            case 2:
+                return TextureFormat::RG8;
+            case 3:
+                return TextureFormat::RGB8;
+            case 4:
+                return TextureFormat::RGBA8;
+            default:
+                return TextureFormat::NONE;
             }
         }
 
@@ -146,11 +213,16 @@ namespace Crowny
         {
             switch (channels)
             {
-            case 1: return TextureFormat::R32F;
-            case 2: return TextureFormat::RG32F;
-            case 3: return TextureFormat::RGB32F;
-            case 4: return TextureFormat::RGBA32F;
-            default: return TextureFormat::NONE;
+            case 1:
+                return TextureFormat::R32F;
+            case 2:
+                return TextureFormat::RG32F;
+            case 3:
+                return TextureFormat::RGB32F;
+            case 4:
+                return TextureFormat::RGBA32F;
+            default:
+                return TextureFormat::NONE;
             }
         }
 
@@ -160,17 +232,28 @@ namespace Crowny
             return PixelUtils::IsValidFormat(format) ? format : (info.HasAlpha ? TextureFormat::RGBA8 : TextureFormat::RGB8);
         }
 
-        ImageLoadResult CanceledResult()
+        ImageLoadResult SuccessResult()
         {
             ImageLoadResult result;
-            result.Canceled = true;
+            result.Status = ImageLoadStatus::Succeeded;
             return result;
         }
 
-        ImageLoadResult ErrorResult(String error)
+        ImageLoadResult CanceledResult(ImageLoadStage stage)
         {
             ImageLoadResult result;
+            result.Status = ImageLoadStatus::Canceled;
+            result.Canceled = true;
+            result.Diagnostics.push_back({ ImageDiagnosticCode::Canceled, stage, "Image load was canceled" });
+            return result;
+        }
+
+        ImageLoadResult ErrorResult(ImageDiagnosticCode code, ImageLoadStage stage, String error)
+        {
+            ImageLoadResult result;
+            result.Status = ImageLoadStatus::Failed;
             result.Error = std::move(error);
+            result.Diagnostics.push_back({ code, stage, result.Error });
             return result;
         }
 
@@ -190,6 +273,7 @@ namespace Crowny
         void FillBasisInfo(const BasisTextureInfo& basis, ImageInfo& info)
         {
             info.Container = ImageContainerFormat::KTX2;
+            info.FileFormat = ImageFileFormat::KTX2;
             info.Width = basis.Width;
             info.Height = basis.Height;
             info.Depth = 1;
@@ -207,20 +291,22 @@ namespace Crowny
         ImageLoadResult ProbeBytes(const uint8_t* data, size_t size, const ImageLoadOptions& options)
         {
             if (options.IsCancellationRequested())
-                return CanceledResult();
+                return CanceledResult(ImageLoadStage::Probe);
             if (data == nullptr || size == 0)
-                return ErrorResult("Image source is empty");
+                return ErrorResult(ImageDiagnosticCode::EmptySource, ImageLoadStage::Source, "Image source is empty");
             if (size > static_cast<size_t>(std::numeric_limits<int>::max()))
-                return ErrorResult("Image source is too large for the raster decoder");
+                return ErrorResult(ImageDiagnosticCode::SourceTooLarge, ImageLoadStage::Source, "Image source is too large for the raster decoder");
 
             if (IsKTX2(data, size))
             {
                 BasisTextureInfo basis;
                 String error;
                 if (!BasisTextureCodec::Inspect(data, size, basis, &error))
-                    return ErrorResult("KTX2 probe failed: " + error);
+                    return ErrorResult(ImageDiagnosticCode::InvalidData, ImageLoadStage::Probe, "KTX2 probe failed: " + error);
+                if (options.IsCancellationRequested())
+                    return CanceledResult(ImageLoadStage::Probe);
 
-                ImageLoadResult result;
+                ImageLoadResult result = SuccessResult();
                 FillBasisInfo(basis, result.Info);
                 return result;
             }
@@ -229,11 +315,12 @@ namespace Crowny
             String pnmError;
             const Pnm16ParseStatus pnmStatus = ParsePnm16(data, size, pnm, &pnmError);
             if (pnmStatus == Pnm16ParseStatus::Invalid)
-                return ErrorResult("16-bit PNM probe failed: " + pnmError);
+                return ErrorResult(ImageDiagnosticCode::InvalidData, ImageLoadStage::Probe, "16-bit PNM probe failed: " + pnmError);
             if (pnmStatus == Pnm16ParseStatus::Valid)
             {
-                ImageLoadResult result;
+                ImageLoadResult result = SuccessResult();
                 result.Info.Container = ImageContainerFormat::Raster;
+                result.Info.FileFormat = ImageFileFormat::PNM;
                 result.Info.Width = pnm.Width;
                 result.Info.Height = pnm.Height;
                 result.Info.Channels = pnm.Channels;
@@ -246,14 +333,21 @@ namespace Crowny
             int width = 0;
             int height = 0;
             int channels = 0;
+            Lock stbLock(GetStbMutex());
             if (stbi_info_from_memory(data, static_cast<int>(size), &width, &height, &channels) == 0 || width <= 0 || height <= 0)
             {
                 const char* reason = stbi_failure_reason();
-                return ErrorResult(String("Raster image probe failed: ") + (reason != nullptr ? reason : "unsupported or corrupt data"));
+                return ErrorResult(ImageDiagnosticCode::UnsupportedFormat, ImageLoadStage::Probe,
+                                   String("Raster image probe failed: ") + (reason != nullptr ? reason : "unsupported or corrupt data"));
             }
+            if (options.IsCancellationRequested())
+                return CanceledResult(ImageLoadStage::Probe);
 
-            ImageLoadResult result;
+            ImageLoadResult result = SuccessResult();
             result.Info.Container = ImageContainerFormat::Raster;
+            result.Info.FileFormat = DetectFileFormat(data, size);
+            if (result.Info.FileFormat == ImageFileFormat::Unknown)
+                result.Info.FileFormat = ImageFileFormat::OtherRaster;
             result.Info.Width = static_cast<uint32_t>(width);
             result.Info.Height = static_cast<uint32_t>(height);
             result.Info.Channels = static_cast<uint32_t>(channels);
@@ -264,12 +358,12 @@ namespace Crowny
             result.Info.IsFloat = result.Info.IsHDR || is16Bit && options.Preserve16Bit;
             result.Info.PixelFormat = result.Info.IsFloat ? GetFloatFormat(result.Info.Channels) : GetByteFormat(result.Info.Channels);
             if (!PixelUtils::IsValidFormat(result.Info.PixelFormat))
-                return ErrorResult("Raster image has an unsupported channel layout");
+                return ErrorResult(ImageDiagnosticCode::UnsupportedFormat, ImageLoadStage::Probe, "Raster image has an unsupported channel layout");
             return result;
         }
 
         template <typename T, typename Convert>
-        Ref<PixelData> CopyPixels(const T* source, const ImageInfo& info, bool flipVertically, Convert&& convert)
+        Ref<PixelData> CopyPixels(const T* source, const ImageInfo& info, bool flipVertically, const ImageLoadOptions& options, Convert&& convert)
         {
             Ref<PixelData> pixels = PixelData::Create(info.Width, info.Height, 1, info.PixelFormat);
             if (!pixels || !pixels->IsValid())
@@ -279,6 +373,8 @@ namespace Crowny
             const uint32_t pixelBytes = PixelUtils::GetNumBytes(info.PixelFormat);
             for (uint32_t y = 0; y < info.Height; y++)
             {
+                if (options.IsCancellationRequested())
+                    return nullptr;
                 const uint32_t sourceY = flipVertically ? info.Height - y - 1u : y;
                 const T* sourceRow = source + static_cast<size_t>(sourceY) * info.Width * componentCount;
                 uint8_t* destination = pixels->GetData() + static_cast<size_t>(y) * pixels->GetRowPitch();
@@ -294,7 +390,8 @@ namespace Crowny
             return pixels;
         }
 
-        Ref<PixelData> DecodePnm16(const uint8_t* data, const Pnm16Info& pnm, const ImageInfo& info, bool flipVertically)
+        Ref<PixelData> DecodePnm16(const uint8_t* data, const Pnm16Info& pnm, const ImageInfo& info, bool flipVertically,
+                                   const ImageLoadOptions& options)
         {
             Ref<PixelData> pixels = PixelData::Create(info.Width, info.Height, 1, info.PixelFormat);
             if (!pixels || !pixels->IsValid())
@@ -304,6 +401,8 @@ namespace Crowny
             const uint32_t pixelBytes = PixelUtils::GetNumBytes(info.PixelFormat);
             for (uint32_t y = 0; y < info.Height; y++)
             {
+                if (options.IsCancellationRequested())
+                    return nullptr;
                 const uint32_t sourceY = flipVertically ? info.Height - y - 1u : y;
                 uint8_t* destination = pixels->GetData() + static_cast<size_t>(y) * pixels->GetRowPitch();
                 for (uint32_t x = 0; x < info.Width; x++)
@@ -313,8 +412,8 @@ namespace Crowny
                     for (uint32_t channel = 0; channel < pnm.Channels; channel++)
                     {
                         const size_t offset = pnm.DataOffset + static_cast<size_t>(firstSample + channel) * sizeof(uint16_t);
-                        const uint16_t sample = static_cast<uint16_t>((static_cast<uint16_t>(data[offset]) << 8u) |
-                                                                      static_cast<uint16_t>(data[offset + 1u]));
+                        const uint16_t sample =
+                          static_cast<uint16_t>((static_cast<uint16_t>(data[offset]) << 8u) | static_cast<uint16_t>(data[offset + 1u]));
                         color[channel] = static_cast<float>(sample) * inverseMaxValue;
                     }
                     PixelUtils::PackPixel(color.r, color.g, color.b, color.a, info.PixelFormat, destination);
@@ -340,175 +439,223 @@ namespace Crowny
     {
         if (data == nullptr || size == 0)
             return false;
-        if (IsKTX2(data, size))
-            return true;
-        if (size >= 8 && std::memcmp(data, "\x89PNG\r\n\x1A\n", 8) == 0)
-            return true;
-        if (size >= 3 && data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF)
-            return true;
-        if (size >= 2 && data[0] == 'B' && data[1] == 'M')
-            return true;
-        if (size >= 6 && (std::memcmp(data, "GIF87a", 6) == 0 || std::memcmp(data, "GIF89a", 6) == 0))
-            return true;
-        if (size >= 4 && std::memcmp(data, "8BPS", 4) == 0)
-            return true;
-        if (size >= 2 && data[0] == 'P' && data[1] >= '1' && data[1] <= '6')
-            return true;
-        if (size >= 6 && (std::memcmp(data, "#?RGBE", 6) == 0 || std::memcmp(data, "#?RADI", 6) == 0))
-            return true;
-        if (size >= 4 && data[0] == 0x53 && data[1] == 0x80 && data[2] == 0xF6 && data[3] == 0x34)
+        if (DetectFileFormat(data, size) != ImageFileFormat::Unknown)
             return true;
         if (size > static_cast<size_t>(std::numeric_limits<int>::max()))
             return false;
         int width = 0;
         int height = 0;
         int channels = 0;
+        Lock stbLock(GetStbMutex());
         return stbi_info_from_memory(data, static_cast<int>(size), &width, &height, &channels) != 0;
     }
 
-    ImageLoadResult ImageLoader::Probe(const Path& path, const ImageLoadOptions& options)
+    namespace
     {
-        if (options.IsCancellationRequested())
-            return CanceledResult();
-
-        Vector<uint8_t> data;
-        if (!ReadFile(path, data, MAX_RASTER_PROBE_BYTES))
-            return ErrorResult("Could not read image source '" + path.string() + "'");
-
-        if (IsKTX2(data.data(), data.size()))
+        ImageLoadResult DecodeBytes(const uint8_t* data, size_t size, const ImageLoadOptions& options)
         {
-            const uint64_t fileSize = FileSystem::GetFileSize(path);
-            if (fileSize > data.size() && !ReadFile(path, data))
-                return ErrorResult("Could not read KTX2 source '" + path.string() + "'");
-        }
-        return ProbeBytes(data.data(), data.size(), options);
-    }
+            ImageLoadResult result = ProbeBytes(data, size, options);
+            if (!result || options.MetadataOnly || !options.DecodePixels)
+                return result;
+            if (options.IsCancellationRequested())
+                return CanceledResult(ImageLoadStage::Decode);
 
-    ImageLoadResult ImageLoader::Decode(const Path& path, const ImageLoadOptions& options)
+            if (result.Info.Container == ImageContainerFormat::KTX2)
+            {
+                BasisTextureTranscodeResult transcode;
+                String error;
+                const bool decoded = BasisTextureCodec::Transcode(data, size, result.Info.PixelFormat, TextureFormat::RGBA8, 1, transcode, &error);
+                if (options.IsCancellationRequested())
+                    return CanceledResult(ImageLoadStage::Decode);
+                if (!decoded || transcode.Subresources.empty())
+                    return ErrorResult(ImageDiagnosticCode::DecodeFailed, ImageLoadStage::Decode, "KTX2 decode failed: " + error);
+                result.Pixels = transcode.Subresources.front();
+                result.Info.PixelFormat = TextureFormat::RGBA8;
+                result.Info.Channels = 4;
+                result.Info.BitDepth = 8;
+                result.Info.IsFloat = false;
+                result.Info.Orientation = options.FlipVertically ? ImageOrientation::BottomLeft : ImageOrientation::TopLeft;
+                if (options.FlipVertically)
+                {
+                    ImageInfo copyInfo = result.Info;
+                    Ref<PixelData> flipped =
+                      CopyPixels(result.Pixels->GetData(), copyInfo, true, options, [](uint8_t value) { return static_cast<float>(value) / 255.0f; });
+                    if (!flipped)
+                    {
+                        if (options.IsCancellationRequested())
+                            return CanceledResult(ImageLoadStage::Decode);
+                        return ErrorResult(ImageDiagnosticCode::AllocationFailed, ImageLoadStage::Decode,
+                                           "Decoded KTX2 image could not be stored in PixelData");
+                    }
+                    result.Pixels = std::move(flipped);
+                }
+                return result;
+            }
+
+            Pnm16Info pnm;
+            String pnmError;
+            const Pnm16ParseStatus pnmStatus = ParsePnm16(data, size, pnm, &pnmError, true);
+            if (pnmStatus == Pnm16ParseStatus::Invalid)
+                return ErrorResult(ImageDiagnosticCode::InvalidData, ImageLoadStage::Decode, "16-bit PNM decode failed: " + pnmError);
+            if (pnmStatus == Pnm16ParseStatus::Valid)
+            {
+                result.Pixels = DecodePnm16(data, pnm, result.Info, options.FlipVertically, options);
+                if (!result.Pixels)
+                {
+                    if (options.IsCancellationRequested())
+                        return CanceledResult(ImageLoadStage::Decode);
+                    return ErrorResult(ImageDiagnosticCode::AllocationFailed, ImageLoadStage::Decode,
+                                       "Decoded 16-bit PNM image could not be stored in PixelData");
+                }
+                result.Info.Orientation = options.FlipVertically ? ImageOrientation::BottomLeft : ImageOrientation::TopLeft;
+                return result;
+            }
+
+            const int channels = static_cast<int>(result.Info.Channels);
+            Lock stbLock(GetStbMutex());
+            if (result.Info.IsHDR)
+            {
+                int width = 0;
+                int height = 0;
+                int sourceChannels = 0;
+                float* raw = stbi_loadf_from_memory(data, static_cast<int>(size), &width, &height, &sourceChannels, channels);
+                if (options.IsCancellationRequested())
+                {
+                    stbi_image_free(raw);
+                    return CanceledResult(ImageLoadStage::Decode);
+                }
+                if (raw == nullptr)
+                {
+                    const char* reason = stbi_failure_reason();
+                    return ErrorResult(ImageDiagnosticCode::DecodeFailed, ImageLoadStage::Decode,
+                                       String("HDR decode failed: ") + (reason != nullptr ? reason : "unknown stb error"));
+                }
+                result.Pixels = CopyPixels(raw, result.Info, options.FlipVertically, options, [](float value) { return value; });
+                stbi_image_free(raw);
+            }
+            else if (result.Info.BitDepth == 16 && options.Preserve16Bit)
+            {
+                int width = 0;
+                int height = 0;
+                int sourceChannels = 0;
+                uint16_t* raw = stbi_load_16_from_memory(data, static_cast<int>(size), &width, &height, &sourceChannels, channels);
+                if (options.IsCancellationRequested())
+                {
+                    stbi_image_free(raw);
+                    return CanceledResult(ImageLoadStage::Decode);
+                }
+                if (raw == nullptr)
+                {
+                    const char* reason = stbi_failure_reason();
+                    return ErrorResult(ImageDiagnosticCode::DecodeFailed, ImageLoadStage::Decode,
+                                       String("16-bit raster decode failed: ") + (reason != nullptr ? reason : "unknown stb error"));
+                }
+                result.Pixels =
+                  CopyPixels(raw, result.Info, options.FlipVertically, options, [](uint16_t value) { return static_cast<float>(value) / 65535.0f; });
+                stbi_image_free(raw);
+            }
+            else
+            {
+                result.Info.IsFloat = false;
+                result.Info.PixelFormat = GetByteFormat(result.Info.Channels);
+                int width = 0;
+                int height = 0;
+                int sourceChannels = 0;
+                uint8_t* raw = stbi_load_from_memory(data, static_cast<int>(size), &width, &height, &sourceChannels, channels);
+                if (options.IsCancellationRequested())
+                {
+                    stbi_image_free(raw);
+                    return CanceledResult(ImageLoadStage::Decode);
+                }
+                if (raw == nullptr)
+                {
+                    const char* reason = stbi_failure_reason();
+                    return ErrorResult(ImageDiagnosticCode::DecodeFailed, ImageLoadStage::Decode,
+                                       String("Raster decode failed: ") + (reason != nullptr ? reason : "unknown stb error"));
+                }
+                result.Pixels =
+                  CopyPixels(raw, result.Info, options.FlipVertically, options, [](uint8_t value) { return static_cast<float>(value) / 255.0f; });
+                stbi_image_free(raw);
+            }
+
+            if (!result.Pixels)
+            {
+                if (options.IsCancellationRequested())
+                    return CanceledResult(ImageLoadStage::Decode);
+                return ErrorResult(ImageDiagnosticCode::AllocationFailed, ImageLoadStage::Decode, "Decoded image could not be stored in PixelData");
+            }
+            result.Info.Orientation = options.FlipVertically ? ImageOrientation::BottomLeft : ImageOrientation::TopLeft;
+            return result;
+        }
+    } // namespace
+
+    ImageLoadResult ImageLoader::Load(const ImageLoadRequest& request)
     {
-        if (options.MetadataOnly)
-            return Probe(path, options);
+        const ImageLoadOptions& options = request.Options;
         if (options.IsCancellationRequested())
-            return CanceledResult();
+            return CanceledResult(ImageLoadStage::Source);
+
+        if (request.Source == ImageLoadSource::Memory)
+        {
+            if (request.SourceData == nullptr || request.SourceSize == 0)
+                return ErrorResult(ImageDiagnosticCode::EmptySource, ImageLoadStage::Source, "Image source is empty");
+            return options.MetadataOnly || !options.DecodePixels ? ProbeBytes(request.SourceData, request.SourceSize, options)
+                                                                 : DecodeBytes(request.SourceData, request.SourceSize, options);
+        }
+
+        if (request.Source != ImageLoadSource::File || request.SourcePath.empty())
+            return ErrorResult(ImageDiagnosticCode::InvalidRequest, ImageLoadStage::Source,
+                               "Image load request does not contain a file or memory source");
 
         Vector<uint8_t> data;
-        if (!ReadFile(path, data))
-            return ErrorResult("Could not read image source '" + path.string() + "'");
+        const size_t maximumBytes = options.MetadataOnly ? MAX_RASTER_PROBE_BYTES : std::numeric_limits<size_t>::max();
+        if (!ReadFile(request.SourcePath, data, maximumBytes))
+            return ErrorResult(ImageDiagnosticCode::ReadFailed, ImageLoadStage::Source,
+                               "Could not read image source '" + request.SourcePath.string() + "'");
         if (options.IsCancellationRequested())
-            return CanceledResult();
+            return CanceledResult(ImageLoadStage::Source);
 
-        ImageLoadResult result = options.DecodePixels ? DecodeMemory(data.data(), data.size(), options)
-                                                      : ProbeMemory(data.data(), data.size(), options);
-        if (result && result.Info.Container == ImageContainerFormat::KTX2)
+        if (options.MetadataOnly && IsKTX2(data.data(), data.size()))
+        {
+            const uint64_t fileSize = FileSystem::GetFileSize(request.SourcePath);
+            if (fileSize > data.size() && !ReadFile(request.SourcePath, data))
+                return ErrorResult(ImageDiagnosticCode::ReadFailed, ImageLoadStage::Source,
+                                   "Could not read KTX2 source '" + request.SourcePath.string() + "'");
+            if (options.IsCancellationRequested())
+                return CanceledResult(ImageLoadStage::Source);
+        }
+
+        ImageLoadResult result = options.MetadataOnly || !options.DecodePixels ? ProbeBytes(data.data(), data.size(), options)
+                                                                               : DecodeBytes(data.data(), data.size(), options);
+        if (result && result.Info.FileFormat == ImageFileFormat::OtherRaster &&
+            FormatFromExtension(request.SourcePath.extension().string()) == ImageFileFormat::TGA)
+            result.Info.FileFormat = ImageFileFormat::TGA;
+        if (result && !options.MetadataOnly && result.Info.Container == ImageContainerFormat::KTX2)
             result.SourceData = std::move(data);
         return result;
     }
 
+    ImageLoadResult ImageLoader::Probe(const Path& path, const ImageLoadOptions& options)
+    {
+        ImageLoadOptions probeOptions = options;
+        probeOptions.MetadataOnly = true;
+        probeOptions.DecodePixels = false;
+        return Load(ImageLoadRequest::FromFile(path, probeOptions));
+    }
+
+    ImageLoadResult ImageLoader::Decode(const Path& path, const ImageLoadOptions& options) { return Load(ImageLoadRequest::FromFile(path, options)); }
+
     ImageLoadResult ImageLoader::ProbeMemory(const uint8_t* data, size_t size, const ImageLoadOptions& options)
     {
-        return ProbeBytes(data, size, options);
+        ImageLoadOptions probeOptions = options;
+        probeOptions.MetadataOnly = true;
+        probeOptions.DecodePixels = false;
+        return Load(ImageLoadRequest::FromMemory(data, size, probeOptions));
     }
 
     ImageLoadResult ImageLoader::DecodeMemory(const uint8_t* data, size_t size, const ImageLoadOptions& options)
     {
-        ImageLoadResult result = ProbeBytes(data, size, options);
-        if (!result || options.MetadataOnly || !options.DecodePixels)
-            return result;
-        if (options.IsCancellationRequested())
-            return CanceledResult();
-
-        if (result.Info.Container == ImageContainerFormat::KTX2)
-        {
-            BasisTextureTranscodeResult transcode;
-            String error;
-            if (!BasisTextureCodec::Transcode(data, size, result.Info.PixelFormat, TextureFormat::RGBA8, 1, transcode, &error) ||
-                transcode.Subresources.empty())
-                return ErrorResult("KTX2 decode failed: " + error);
-            result.Pixels = transcode.Subresources.front();
-            result.Info.PixelFormat = TextureFormat::RGBA8;
-            result.Info.Channels = 4;
-            result.Info.BitDepth = 8;
-            result.Info.IsFloat = false;
-            result.Info.Orientation = options.FlipVertically ? ImageOrientation::BottomLeft : ImageOrientation::TopLeft;
-            if (options.FlipVertically)
-            {
-                ImageInfo copyInfo = result.Info;
-                Ref<PixelData> flipped = CopyPixels(result.Pixels->GetData(), copyInfo, true, [](uint8_t value) {
-                    return static_cast<float>(value) / 255.0f;
-                });
-                result.Pixels = std::move(flipped);
-            }
-            return result;
-        }
-
-        Pnm16Info pnm;
-        String pnmError;
-        const Pnm16ParseStatus pnmStatus = ParsePnm16(data, size, pnm, &pnmError, true);
-        if (pnmStatus == Pnm16ParseStatus::Invalid)
-            return ErrorResult("16-bit PNM decode failed: " + pnmError);
-        if (pnmStatus == Pnm16ParseStatus::Valid)
-        {
-            result.Pixels = DecodePnm16(data, pnm, result.Info, options.FlipVertically);
-            if (!result.Pixels)
-                return ErrorResult("Decoded 16-bit PNM image could not be stored in PixelData");
-            result.Info.Orientation = options.FlipVertically ? ImageOrientation::BottomLeft : ImageOrientation::TopLeft;
-            return result;
-        }
-
-        const int channels = static_cast<int>(result.Info.Channels);
-        if (result.Info.IsHDR)
-        {
-            int width = 0;
-            int height = 0;
-            int sourceChannels = 0;
-            float* raw = stbi_loadf_from_memory(data, static_cast<int>(size), &width, &height, &sourceChannels, channels);
-            if (raw == nullptr)
-            {
-                const char* reason = stbi_failure_reason();
-                return ErrorResult(String("HDR decode failed: ") + (reason != nullptr ? reason : "unknown stb error"));
-            }
-            result.Pixels = CopyPixels(raw, result.Info, options.FlipVertically, [](float value) { return value; });
-            stbi_image_free(raw);
-        }
-        else if (result.Info.BitDepth == 16 && options.Preserve16Bit)
-        {
-            int width = 0;
-            int height = 0;
-            int sourceChannels = 0;
-            uint16_t* raw = stbi_load_16_from_memory(data, static_cast<int>(size), &width, &height, &sourceChannels, channels);
-            if (raw == nullptr)
-            {
-                const char* reason = stbi_failure_reason();
-                return ErrorResult(String("16-bit raster decode failed: ") + (reason != nullptr ? reason : "unknown stb error"));
-            }
-            result.Pixels = CopyPixels(raw, result.Info, options.FlipVertically, [](uint16_t value) {
-                return static_cast<float>(value) / 65535.0f;
-            });
-            stbi_image_free(raw);
-        }
-        else
-        {
-            result.Info.IsFloat = false;
-            result.Info.PixelFormat = GetByteFormat(result.Info.Channels);
-            int width = 0;
-            int height = 0;
-            int sourceChannels = 0;
-            uint8_t* raw = stbi_load_from_memory(data, static_cast<int>(size), &width, &height, &sourceChannels, channels);
-            if (raw == nullptr)
-            {
-                const char* reason = stbi_failure_reason();
-                return ErrorResult(String("Raster decode failed: ") + (reason != nullptr ? reason : "unknown stb error"));
-            }
-            result.Pixels = CopyPixels(raw, result.Info, options.FlipVertically, [](uint8_t value) {
-                return static_cast<float>(value) / 255.0f;
-            });
-            stbi_image_free(raw);
-        }
-
-        if (!result.Pixels)
-            return ErrorResult("Decoded image could not be stored in PixelData");
-        result.Info.Orientation = options.FlipVertically ? ImageOrientation::BottomLeft : ImageOrientation::TopLeft;
-        return result;
+        return Load(ImageLoadRequest::FromMemory(data, size, options));
     }
 
 } // namespace Crowny

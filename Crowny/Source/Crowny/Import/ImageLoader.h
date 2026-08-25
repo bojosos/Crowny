@@ -15,6 +15,22 @@ namespace Crowny
         KTX2
     };
 
+    enum class ImageFileFormat
+    {
+        Unknown,
+        OtherRaster,
+        PNG,
+        JPEG,
+        PSD,
+        GIF,
+        TGA,
+        BMP,
+        HDR,
+        PIC,
+        PNM,
+        KTX2
+    };
+
     enum class ImageOrientation
     {
         TopLeft,
@@ -24,6 +40,7 @@ namespace Crowny
     struct ImageInfo
     {
         ImageContainerFormat Container = ImageContainerFormat::Unknown;
+        ImageFileFormat FileFormat = ImageFileFormat::Unknown;
         ImageOrientation Orientation = ImageOrientation::TopLeft;
         uint32_t Width = 0;
         uint32_t Height = 0;
@@ -49,10 +66,77 @@ namespace Crowny
         bool Preserve16Bit = true;
         const std::atomic<bool>* Cancellation = nullptr;
 
-        bool IsCancellationRequested() const
+        bool IsCancellationRequested() const { return Cancellation != nullptr && Cancellation->load(std::memory_order_acquire); }
+    };
+
+    enum class ImageLoadSource
+    {
+        Invalid,
+        File,
+        Memory
+    };
+
+    struct ImageLoadRequest
+    {
+        static ImageLoadRequest FromFile(Path path, ImageLoadOptions options = {})
         {
-            return Cancellation != nullptr && Cancellation->load(std::memory_order_acquire);
+            ImageLoadRequest request;
+            request.Source = ImageLoadSource::File;
+            request.SourcePath = std::move(path);
+            request.Options = options;
+            return request;
         }
+
+        // Memory remains owned by the caller and must stay valid until Load returns.
+        static ImageLoadRequest FromMemory(const uint8_t* data, size_t size, ImageLoadOptions options = {})
+        {
+            ImageLoadRequest request;
+            request.Source = ImageLoadSource::Memory;
+            request.SourceData = data;
+            request.SourceSize = size;
+            request.Options = options;
+            return request;
+        }
+
+        ImageLoadSource Source = ImageLoadSource::Invalid;
+        Path SourcePath;
+        const uint8_t* SourceData = nullptr;
+        size_t SourceSize = 0;
+        ImageLoadOptions Options;
+    };
+
+    enum class ImageLoadStatus
+    {
+        Failed,
+        Succeeded,
+        Canceled
+    };
+
+    enum class ImageLoadStage
+    {
+        Source,
+        Probe,
+        Decode
+    };
+
+    enum class ImageDiagnosticCode
+    {
+        InvalidRequest,
+        Canceled,
+        ReadFailed,
+        EmptySource,
+        SourceTooLarge,
+        UnsupportedFormat,
+        InvalidData,
+        DecodeFailed,
+        AllocationFailed
+    };
+
+    struct ImageLoadDiagnostic
+    {
+        ImageDiagnosticCode Code = ImageDiagnosticCode::InvalidData;
+        ImageLoadStage Stage = ImageLoadStage::Probe;
+        String Message;
     };
 
     struct ImageLoadResult
@@ -60,10 +144,17 @@ namespace Crowny
         ImageInfo Info;
         Ref<PixelData> Pixels;
         Vector<uint8_t> SourceData;
+        ImageLoadStatus Status = ImageLoadStatus::Failed;
+        Vector<ImageLoadDiagnostic> Diagnostics;
+
+        // Kept for existing callers. New code should inspect Status and Diagnostics.
         String Error;
         bool Canceled = false;
 
-        explicit operator bool() const { return Error.empty() && !Canceled && Info.Width != 0 && Info.Height != 0; }
+        explicit operator bool() const
+        {
+            return Status == ImageLoadStatus::Succeeded && Error.empty() && !Canceled && Info.Width != 0 && Info.Height != 0;
+        }
     };
 
     class ImageLoader
@@ -72,6 +163,9 @@ namespace Crowny
         static bool SupportsExtension(StringView extension);
         static bool SupportsSignature(const uint8_t* data, size_t size);
 
+        static ImageLoadResult Load(const ImageLoadRequest& request);
+
+        // Compatibility wrappers. Prefer Load for new callers.
         static ImageLoadResult Probe(const Path& path, const ImageLoadOptions& options = {});
         static ImageLoadResult Decode(const Path& path, const ImageLoadOptions& options = {});
         static ImageLoadResult ProbeMemory(const uint8_t* data, size_t size, const ImageLoadOptions& options = {});

@@ -10,8 +10,7 @@ namespace Crowny
 {
     namespace
     {
-        uint32_t ResolveLevelCount(uint32_t width, uint32_t height, bool generateMips, uint32_t maxMip,
-                                   uint32_t availableLevels = 0)
+        uint32_t ResolveLevelCount(uint32_t width, uint32_t height, bool generateMips, uint32_t maxMip, uint32_t availableLevels = 0)
         {
             uint32_t levels = generateMips ? PixelUtils::GetMaxMipCount(width, height) : 1u;
             if (availableLevels != 0)
@@ -22,17 +21,11 @@ namespace Crowny
         }
     } // namespace
 
-    bool TextureImporter::IsExtensionSupportedStatic(const String& ext)
-    {
-        return ImageLoader::SupportsExtension(ext);
-    }
+    bool TextureImporter::IsExtensionSupportedStatic(const String& ext) { return ImageLoader::SupportsExtension(ext); }
 
     bool TextureImporter::IsExtensionSupported(const String& ext) const { return IsExtensionSupportedStatic(ext); }
 
-    bool TextureImporter::IsMagicNumSupported(uint8_t* num, uint32_t numSize) const
-    {
-        return ImageLoader::SupportsSignature(num, numSize);
-    }
+    bool TextureImporter::IsMagicNumSupported(uint8_t* num, uint32_t numSize) const { return ImageLoader::SupportsSignature(num, numSize); }
 
     Ref<Asset> TextureImporter::Import(const Path& filepath, Ref<const ImportOptions> importOptions)
     {
@@ -44,7 +37,7 @@ namespace Crowny
         loadOptions.DecodePixels = NormalizeImportExtension(filepath.extension().string()) != "ktx2";
         loadOptions.FlipVertically = true;
         loadOptions.Preserve16Bit = true;
-        ImageLoadResult image = ImageLoader::Decode(filepath, loadOptions);
+        ImageLoadResult image = ImageLoader::Load(ImageLoadRequest::FromFile(filepath, loadOptions));
         if (!image)
         {
             CW_ENGINE_ERROR("Could not import texture '{}': {}", filepath, image.Error);
@@ -73,8 +66,7 @@ namespace Crowny
         Ref<PixelData> source = image.Pixels;
 
         TextureFormat sourceFormat = source->GetFormat();
-        if (!options->AutomaticFormat && !PixelUtils::IsCompressedFormat(options->Format) &&
-            PixelUtils::IsValidFormat(options->Format))
+        if (!options->AutomaticFormat && !PixelUtils::IsCompressedFormat(options->Format) && PixelUtils::IsValidFormat(options->Format))
         {
             Ref<PixelData> converted = PixelData::Create(source->GetWidth(), source->GetHeight(), source->GetDepth(), options->Format);
             if (!PixelUtils::ConvertPixels(*source, *converted))
