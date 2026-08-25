@@ -7,10 +7,7 @@
 #include "Crowny/Common/PlatformUtils.h"
 #include "Crowny/Input/Input.h"
 
-#include <cctype>
 #include <imgui.h>
-
-// TODO: Consider sorting case insensitive
 
 namespace Crowny
 {
@@ -73,7 +70,7 @@ namespace Crowny
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
             ImGui::SetNextItemWidth(-1.0f);
-            if (UIUtils::SearchWidget(m_SearchString, "Search (text:, source:, level:)"))
+            if (UIUtils::SearchWidget(m_SearchString, "Search (text:, source:, level:, time:, \"phrase\", -exclude)"))
             {
                 m_RequestScrollToBottom = false;
                 RebuildSearchTerms();
@@ -310,29 +307,7 @@ namespace Crowny
 
     bool ConsolePanel::MatchesSearch(const ConsoleBuffer::Message& message) const
     {
-        const StringView level = [&message]() -> StringView {
-            switch (message.LogLevel)
-            {
-            case ConsoleBuffer::Message::Level::Info: return "info";
-            case ConsoleBuffer::Message::Level::Warn: return "warn warning";
-            case ConsoleBuffer::Message::Level::Error: return "error";
-            case ConsoleBuffer::Message::Level::Critical: return "critical";
-            }
-            return {};
-        }();
-
-        return std::all_of(m_SearchTerms.begin(), m_SearchTerms.end(), [&](const SearchTerm& term) {
-            switch (term.Field)
-            {
-            case SearchField::Text: return message.SearchText.find(term.Value) != String::npos;
-            case SearchField::Source: return message.SourceSearchText.find(term.Value) != String::npos;
-            case SearchField::Level: return level.find(term.Value) != StringView::npos;
-            case SearchField::Any:
-                return message.SearchText.find(term.Value) != String::npos || message.SourceSearchText.find(term.Value) != String::npos ||
-                       message.TimestampText.find(term.Value) != String::npos || level.find(term.Value) != StringView::npos;
-            }
-            return false;
-        });
+        return m_SearchQuery.Matches(message);
     }
 
     void ConsolePanel::RefreshMessages()
@@ -347,10 +322,19 @@ namespace Crowny
         if (m_SelectedMessageId == 0)
             return;
 
-        const auto selected = std::find_if(m_MessageSnapshot.begin(), m_MessageSnapshot.end(),
-                                           [this](const ConsoleBuffer::Message& message) { return message.Sequence == m_SelectedMessageId; });
+        auto selected = std::find_if(m_MessageSnapshot.begin(), m_MessageSnapshot.end(),
+                                     [this](const ConsoleBuffer::Message& message) { return message.Sequence == m_SelectedMessageId; });
+        if (selected == m_MessageSnapshot.end() && m_SelectedMessage.GroupSequence != 0)
+        {
+            selected = std::find_if(m_MessageSnapshot.begin(), m_MessageSnapshot.end(), [this](const ConsoleBuffer::Message& message) {
+                return message.GroupSequence == m_SelectedMessage.GroupSequence;
+            });
+        }
         if (selected != m_MessageSnapshot.end())
+        {
+            m_SelectedMessageId = selected->Sequence;
             m_SelectedMessage = *selected;
+        }
         else
         {
             m_SelectedMessageId = 0;
@@ -360,40 +344,7 @@ namespace Crowny
 
     void ConsolePanel::RebuildSearchTerms()
     {
-        m_SearchTerms.clear();
-        String term;
-        const auto commitTerm = [this](String&& value) {
-            if (value.empty())
-                return;
-
-            SearchField field = SearchField::Any;
-            const auto stripPrefix = [&value, &field](StringView prefix, SearchField candidate) {
-                if (!value.starts_with(prefix))
-                    return false;
-                value.erase(0, prefix.size());
-                field = candidate;
-                return true;
-            };
-            if (!stripPrefix("text:", SearchField::Text) && !stripPrefix("source:", SearchField::Source))
-                stripPrefix("level:", SearchField::Level);
-            if (!value.empty())
-                m_SearchTerms.push_back({ field, std::move(value) });
-        };
-        for (const unsigned char character : m_SearchString)
-        {
-            if (std::isspace(character))
-            {
-                if (!term.empty())
-                {
-                    commitTerm(std::move(term));
-                    term.clear();
-                }
-            }
-            else
-                term.push_back(static_cast<char>(std::tolower(character)));
-        }
-        if (!term.empty())
-            commitTerm(std::move(term));
+        m_SearchQuery.Set(m_SearchString);
         m_FilterDirty = true;
     }
 

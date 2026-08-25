@@ -34,6 +34,7 @@ namespace Crowny
             size_t Hash = 0; // for collapse
             std::time_t Timestamp = 0;
             uint64_t Sequence = 0;
+            uint64_t GroupSequence = 0;
             uint32_t RepeatCount = 1;
 
             struct FunctionCall
@@ -47,6 +48,33 @@ namespace Crowny
         };
 
         using CallstackBuffer = Vector<Message::FunctionCall>;
+
+        class SearchQuery
+        {
+        public:
+            void Set(StringView query);
+            bool Matches(const Message& message) const;
+            bool Empty() const { return m_Terms.empty(); }
+
+        private:
+            enum class Field : uint8_t
+            {
+                Any,
+                Text,
+                Source,
+                Level,
+                Time
+            };
+
+            struct Term
+            {
+                Field SearchField = Field::Any;
+                String Value;
+                bool Exclude = false;
+            };
+
+            Vector<Term> m_Terms;
+        };
 
     public:
         ConsoleBuffer() = default;

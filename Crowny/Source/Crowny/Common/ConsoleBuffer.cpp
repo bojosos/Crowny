@@ -9,6 +9,17 @@ namespace Crowny
 {
     namespace
     {
+        char FoldSearchCharacter(unsigned char character) { return static_cast<char>(std::tolower(character)); }
+
+        bool EqualsSearchToken(StringView value, StringView expected)
+        {
+            return value.size() == expected.size() &&
+                   std::equal(value.begin(), value.end(), expected.begin(),
+                              [](unsigned char lhs, unsigned char rhs) {
+                                  return FoldSearchCharacter(lhs) == FoldSearchCharacter(rhs);
+                              });
+        }
+
         void AppendSearchText(String& output, const String& value)
         {
             if (!output.empty())
@@ -16,7 +27,7 @@ namespace Crowny
 
             output.reserve(output.size() + value.size());
             for (const unsigned char character : value)
-                output.push_back(static_cast<char>(std::tolower(character)));
+                output.push_back(FoldSearchCharacter(character));
         }
 
         bool IsSameMessage(const ConsoleBuffer::Message& lhs, const ConsoleBuffer::Message& rhs)
@@ -35,6 +46,122 @@ namespace Crowny
             return true;
         }
     } // namespace
+
+    void ConsoleBuffer::SearchQuery::Set(StringView query)
+    {
+        m_Terms.clear();
+
+        size_t cursor = 0;
+        while (cursor < query.size())
+        {
+            while (cursor < query.size() && std::isspace(static_cast<unsigned char>(query[cursor])))
+                cursor++;
+            if (cursor == query.size())
+                break;
+
+            bool exclude = false;
+            if (query[cursor] == '-' && cursor + 1 < query.size() &&
+                !std::isspace(static_cast<unsigned char>(query[cursor + 1])))
+            {
+                exclude = true;
+                cursor++;
+            }
+
+            const size_t tokenStart = cursor;
+            Field field = Field::Any;
+            size_t prefixEnd = cursor;
+            while (prefixEnd < query.size() && query[prefixEnd] != ':' && query[prefixEnd] != '"' &&
+                   !std::isspace(static_cast<unsigned char>(query[prefixEnd])))
+            {
+                prefixEnd++;
+            }
+
+            bool recognizedPrefix = false;
+            if (prefixEnd < query.size() && query[prefixEnd] == ':')
+            {
+                const StringView prefix = query.substr(tokenStart, prefixEnd - tokenStart);
+                if (EqualsSearchToken(prefix, "text"))
+                    field = Field::Text;
+                else if (EqualsSearchToken(prefix, "source"))
+                    field = Field::Source;
+                else if (EqualsSearchToken(prefix, "level"))
+                    field = Field::Level;
+                else if (EqualsSearchToken(prefix, "time"))
+                    field = Field::Time;
+                else
+                    field = Field::Any;
+
+                recognizedPrefix = field != Field::Any;
+                if (recognizedPrefix)
+                    cursor = prefixEnd + 1;
+            }
+            if (!recognizedPrefix)
+                cursor = tokenStart;
+
+            String value;
+            bool quoted = false;
+            while (cursor < query.size())
+            {
+                const unsigned char character = static_cast<unsigned char>(query[cursor]);
+                if (character == '\\' && cursor + 1 < query.size() &&
+                    (query[cursor + 1] == '\\' || query[cursor + 1] == '"'))
+                {
+                    value.push_back(FoldSearchCharacter(static_cast<unsigned char>(query[cursor + 1])));
+                    cursor += 2;
+                    continue;
+                }
+                if (character == '"')
+                {
+                    quoted = !quoted;
+                    cursor++;
+                    continue;
+                }
+                if (!quoted && std::isspace(character))
+                    break;
+
+                value.push_back(FoldSearchCharacter(character));
+                cursor++;
+            }
+
+            if (!value.empty())
+                m_Terms.push_back({ field, std::move(value), exclude });
+        }
+    }
+
+    bool ConsoleBuffer::SearchQuery::Matches(const Message& message) const
+    {
+        const StringView level = [&message]() -> StringView {
+            switch (message.LogLevel)
+            {
+            case Message::Level::Info: return "info";
+            case Message::Level::Warn: return "warn warning";
+            case Message::Level::Error: return "error";
+            case Message::Level::Critical: return "critical";
+            }
+            return {};
+        }();
+
+        for (const Term& term : m_Terms)
+        {
+            bool matches = false;
+            switch (term.SearchField)
+            {
+            case Field::Text: matches = message.SearchText.find(term.Value) != String::npos; break;
+            case Field::Source: matches = message.SourceSearchText.find(term.Value) != String::npos; break;
+            case Field::Level: matches = level.find(term.Value) != StringView::npos; break;
+            case Field::Time: matches = message.TimestampText.find(term.Value) != String::npos; break;
+            case Field::Any:
+                matches = message.SearchText.find(term.Value) != String::npos ||
+                          message.SourceSearchText.find(term.Value) != String::npos ||
+                          message.TimestampText.find(term.Value) != String::npos || level.find(term.Value) != StringView::npos;
+                break;
+            }
+
+            if (matches == term.Exclude)
+                return false;
+        }
+        return true;
+    }
 
     void ConsoleBuffer::AddMessage(Message::Level logLevel, const String& messageText, const Vector<Message::FunctionCall>& callstack)
     {
@@ -60,6 +187,7 @@ namespace Crowny
 
         ScopedLock lock(m_Mutex);
         message.Sequence = m_NextSequence++;
+        message.GroupSequence = message.Sequence;
         if (m_CachedTimestamp != message.Timestamp)
         {
             char formattedTime[9] = {};
@@ -82,6 +210,7 @@ namespace Crowny
         if (matchingCandidate != candidates.end())
         {
             Message& collapsedMessage = m_CollapsedMessageBuffer[*matchingCandidate];
+            message.GroupSequence = collapsedMessage.GroupSequence;
             collapsedMessage.RepeatCount++;
             collapsedMessage.Timestamp = message.Timestamp;
             collapsedMessage.TimestampText = message.TimestampText;

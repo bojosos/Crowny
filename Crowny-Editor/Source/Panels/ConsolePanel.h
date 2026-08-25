@@ -55,23 +55,9 @@ namespace Crowny
         bool IsScrollToBottomEnabled() const { return m_AllowScrollingToBottom; }
 
     private:
-        enum class SearchField : uint8_t
-        {
-            Any,
-            Text,
-            Source,
-            Level
-        };
-
-        struct SearchTerm
-        {
-            SearchField Field = SearchField::Any;
-            String Value;
-        };
-
         Vector<uint32_t> m_MessageIndices;
         Vector<ConsoleBuffer::Message> m_MessageSnapshot;
-        Vector<SearchTerm> m_SearchTerms;
+        ConsoleBuffer::SearchQuery m_SearchQuery;
         uint64_t m_MessageRevision = std::numeric_limits<uint64_t>::max();
         uint64_t m_SelectedMessageId = 0;
         String m_SearchString;
