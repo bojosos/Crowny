@@ -263,7 +263,11 @@ internal static class ManagedStateCodec
             Type[] arguments = type.GetGenericArguments();
             var dictionary = (IDictionary)(Activator.CreateInstance(type) ?? throw new InvalidOperationException($"Cannot create {type}."));
             foreach (JsonElement entry in value.EnumerateArray())
-                dictionary.Add(ReadValue(entry.GetProperty("Key"), arguments[0]), ReadValue(entry.GetProperty("Value"), arguments[1]));
+            {
+                object key = ReadValue(entry.GetProperty("Key"), arguments[0]) ??
+                             throw new InvalidOperationException($"Dictionary key for {type} cannot be null.");
+                dictionary.Add(key, ReadValue(entry.GetProperty("Value"), arguments[1]));
+            }
             return dictionary;
         }
 

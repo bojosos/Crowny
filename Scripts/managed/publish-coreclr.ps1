@@ -3,11 +3,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string] $RuntimeIdentifier,
 
-    [Parameter(Mandatory = $true)]
-    [string] $RuntimeVersion,
+    [string] $RuntimeVersion = "",
 
-    [Parameter(Mandatory = $true)]
-    [string] $RuntimeRoot,
+    [string] $RuntimeRoot = "",
 
     [Parameter(Mandatory = $true)]
     [string] $GameProject,
@@ -21,13 +19,45 @@ param(
     [ValidateSet("Debug", "Release")]
     [string] $Configuration = "Release",
 
-    [string] $DotNetExecutable = "dotnet"
+    [string] $DotNetExecutable = ""
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
+$repositoryDotNetRoot = Join-Path $repositoryRoot ".deps\dotnet"
+$repositoryDotNetName = if ($env:OS -eq "Windows_NT") { "dotnet.exe" } else { "dotnet" }
+$repositoryDotNet = Join-Path $repositoryDotNetRoot $repositoryDotNetName
+$runtimeRootWasDefaulted = [string]::IsNullOrWhiteSpace($RuntimeRoot)
+if ([string]::IsNullOrWhiteSpace($DotNetExecutable)) {
+    if (-not (Test-Path -LiteralPath $repositoryDotNet -PathType Leaf)) {
+        & (Join-Path $repositoryRoot "Scripts\setup-dotnet.ps1")
+    }
+    $DotNetExecutable = $repositoryDotNet
+}
+if ([string]::IsNullOrWhiteSpace($RuntimeRoot)) {
+    $RuntimeRoot = $repositoryDotNetRoot
+}
+
+function Get-HostRuntimeIdentifier {
+    $platform = if ([Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([Runtime.InteropServices.OSPlatform]::Windows)) {
+        "win"
+    } elseif ([Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([Runtime.InteropServices.OSPlatform]::Linux)) {
+        "linux"
+    } elseif ([Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([Runtime.InteropServices.OSPlatform]::OSX)) {
+        "osx"
+    } else {
+        throw "CoreCLR packaging is not supported on this host operating system."
+    }
+    $architecture = [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant()
+    return "$platform-$architecture"
+}
+
+$hostRuntimeIdentifier = Get-HostRuntimeIdentifier
+if ($runtimeRootWasDefaulted -and $RuntimeIdentifier -ne $hostRuntimeIdentifier) {
+    throw "RuntimeIdentifier '$RuntimeIdentifier' does not match this host ($hostRuntimeIdentifier). Supply a matching -RuntimeRoot for cross-architecture packaging."
+}
 $runtimeRootPath = [IO.Path]::GetFullPath($RuntimeRoot)
 $gameProjectPath = [IO.Path]::GetFullPath($GameProject)
 $outputPath = [IO.Path]::GetFullPath($OutputDirectory)
@@ -41,6 +71,20 @@ if (-not (Test-Path -LiteralPath $gameProjectPath -PathType Leaf)) {
 }
 if (-not (Test-Path -LiteralPath $runtimeRootPath -PathType Container)) {
     throw "Private runtime root is missing: $runtimeRootPath"
+}
+if ([string]::IsNullOrWhiteSpace($RuntimeVersion)) {
+    $runtimeDirectory = Join-Path $runtimeRootPath "shared\Microsoft.NETCore.App"
+    $fxrDirectory = Join-Path $runtimeRootPath "host\fxr"
+    $candidates = if (Test-Path -LiteralPath $runtimeDirectory) {
+        Get-ChildItem -LiteralPath $runtimeDirectory -Directory | Where-Object {
+            Test-Path -LiteralPath (Join-Path $fxrDirectory $_.Name) -PathType Container
+        }
+    } else { @() }
+    $selectedRuntime = $candidates | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
+    if ($null -eq $selectedRuntime) {
+        throw "Private runtime root has no matching host/fxr and Microsoft.NETCore.App versions: $runtimeRootPath"
+    }
+    $RuntimeVersion = $selectedRuntime.Name
 }
 if (Test-Path -LiteralPath $outputPath) {
     $existingOutput = Get-ChildItem -LiteralPath $outputPath -Force | Select-Object -First 1
@@ -79,6 +123,43 @@ New-Item -ItemType Directory -Path $hostOutput, $gameOutput, $privateRuntimeOutp
 if ($LASTEXITCODE -ne 0) {
     throw "Managed host publish failed with exit code $LASTEXITCODE."
 }
+
+$dotnetCommand = Get-Command $DotNetExecutable -ErrorAction Stop
+$dotnetRoot = Split-Path -Parent $dotnetCommand.Source
+$repositoryNuGetRoot = Join-Path $repositoryRoot ".deps\nuget-packages"
+$hostPackId = "Microsoft.NETCore.App.Host.$RuntimeIdentifier"
+$hostPackRoot = Join-Path $repositoryNuGetRoot "$($hostPackId.ToLowerInvariant())\$RuntimeVersion"
+$hostPackProjectRoot = Join-Path $repositoryRoot ".deps\managed-host-pack"
+$hostPackProject = Join-Path $hostPackProjectRoot "restore.csproj"
+$netHostCandidates = @(
+    (Join-Path $dotnetRoot "packs\Microsoft.NETCore.App.Host.$RuntimeIdentifier\$RuntimeVersion\runtimes\$RuntimeIdentifier\native\$netHostName"),
+    (Join-Path $hostPackRoot "runtimes\$RuntimeIdentifier\native\$netHostName")
+)
+$netHostSource = $netHostCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+if ($null -eq $netHostSource) {
+    New-Item -ItemType Directory -Force -Path $hostPackProjectRoot, $repositoryNuGetRoot | Out-Null
+    $restoreProjectXml = @"
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifier>$RuntimeIdentifier</RuntimeIdentifier>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageDownload Include="$hostPackId" Version="[$RuntimeVersion]" />
+  </ItemGroup>
+</Project>
+"@
+    [IO.File]::WriteAllText($hostPackProject, $restoreProjectXml, [Text.UTF8Encoding]::new($false))
+    & $DotNetExecutable restore $hostPackProject --packages $repositoryNuGetRoot
+    if ($LASTEXITCODE -ne 0) {
+        throw "Restoring $hostPackId $RuntimeVersion failed with exit code $LASTEXITCODE."
+    }
+    $netHostSource = $netHostCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+    if ($null -eq $netHostSource) {
+        throw "Matching $netHostName was not found after restoring $hostPackId $RuntimeVersion."
+    }
+}
+Copy-Item -LiteralPath $netHostSource -Destination $hostOutput
 
 & $DotNetExecutable publish $gameProjectPath --configuration $Configuration --framework net10.0 --runtime $RuntimeIdentifier `
     --self-contained false --output $gameOutput -p:UseAppHost=false

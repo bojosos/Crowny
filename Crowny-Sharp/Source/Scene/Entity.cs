@@ -88,10 +88,10 @@ namespace Crowny
 
         /// <summary>
         /// Retrieves a component. It can also be used to retrieve script components.
-        /// For example lets say you have an entity behavior called "PlayerController".
-        /// You can do GetComponent<PlayerController>() on its entity and it will just work.
+        /// For example, an entity behavior named <c>PlayerController</c> can be retrieved with
+        /// <c>GetComponent&lt;PlayerController&gt;()</c> from its entity.
         /// </summary>
-        /// <typeparam name="T">Type of the compoenent.</typeparam>
+        /// <typeparam name="T">Type of the component.</typeparam>
         /// <returns>Returns the component if the operation was successful, otherwise null.</returns>
         public T GetComponent<T>() where T : Component
         {

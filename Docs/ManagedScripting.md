@@ -10,25 +10,30 @@ CoreCLR uses a process-lifetime `Crowny.ManagedHost` bootstrap and a collectible
 bundle contains a complete private .NET installation; the managed host itself remains a framework-dependent component.
 The package does not depend on a machine-wide .NET installation.
 
-Publish one runtime identifier and runtime patch at a time:
+Bootstrap the SDK pinned by `global.json` into the ignored `.deps/dotnet` directory, then publish one runtime identifier at
+a time. The publish script also runs this bootstrap automatically when the local SDK is missing:
 
 ```powershell
+Scripts\setup-dotnet.ps1
+
 Scripts\managed\publish-coreclr.ps1 `
     -RuntimeIdentifier win-x64 `
-    -RuntimeVersion 10.0.0 `
-    -RuntimeRoot C:\dotnet-private\win-x64 `
     -GameProject Crowny-Sandbox\GameAssembly.Managed.csproj `
     -GameAssemblyName GameAssembly `
     -OutputDirectory C:\packages\CrownyGame\managed
 ```
+
+`Scripts\setup-windows.ps1 -CoreCLR` performs the same bootstrap during normal Windows setup. Pass `RuntimeRoot`,
+`RuntimeVersion`, or `DotNetExecutable` to `publish-coreclr.ps1` only when packaging a separately serviced runtime.
 
 The output directory must be empty. `managed-program.json` records the ABI version, private runtime root, and the six
 required host and game artifacts. All paths are package-relative. The native loader canonicalizes every path and rejects
 absolute paths, parent traversal, symlink escapes, missing artifacts, a mismatched ABI, and an incomplete private runtime.
 
 `RuntimeVersion` must name a directory present under both `host/fxr` and `shared/Microsoft.NETCore.App` in the supplied
-runtime root. The same version selects the `Microsoft.NETCore.DotNetAppHost` package that supplies `nethost`. Service the
-runtime, package reference, and build input together.
+runtime root. The same version selects the exact `Microsoft.NETCore.App.Host.<RID>` package that supplies `nethost`; the
+script restores it into `.deps/nuget-packages` when the SDK does not contain the matching pack. Cross-architecture
+packaging requires an explicit matching `RuntimeRoot`. Service the runtime, host pack, and build input together.
 
 ## Reload and serialized data
 

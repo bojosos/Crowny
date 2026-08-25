@@ -6,10 +6,42 @@
 #include "Crowny/Scripting/Managed/ManagedProgramPackage.h"
 #include "Crowny/Scripting/Managed/ManagedScripting.h"
 
+#include <cstdlib>
+
 using namespace Crowny;
 
 namespace
 {
+    String GetCoreClrTestPackage()
+    {
+#ifdef CW_PLATFORM_WIN32
+        char* value = nullptr;
+        size_t length = 0;
+        if (_dupenv_s(&value, &length, "CROWNY_CORECLR_TEST_PACKAGE") != 0 || value == nullptr)
+            return {};
+        const String result(value);
+        std::free(value);
+        return result;
+#else
+        const char* value = std::getenv("CROWNY_CORECLR_TEST_PACKAGE");
+        return value == nullptr ? String() : String(value);
+#endif
+    }
+
+    String DescribeDiagnostics(const ManagedOperationResult& result)
+    {
+        String description;
+        for (const ManagedDiagnostic& diagnostic : result.Diagnostics)
+        {
+            if (!description.empty())
+                description += '\n';
+            description += diagnostic.Code + ": " + diagnostic.Message;
+            if (!diagnostic.ManagedStack.empty())
+                description += '\n' + diagnostic.ManagedStack;
+        }
+        return description;
+    }
+
     ScriptCatalog MakeCatalog()
     {
         ScriptFieldSchema speed;
@@ -145,6 +177,59 @@ TEST_CASE("CoreCLR adapter validates its private runtime before activation", "[S
     CHECK_FALSE(result.Succeeded);
     CHECK(result.HasDiagnosticCode("managed.coreclr.runtime_root_missing"));
     CHECK_FALSE(result.HasDiagnosticCode("managed.backend.unavailable"));
+}
+
+TEST_CASE("CoreCLR adapter loads a published private package", "[Scripting][Managed][CoreCLR][Integration]")
+{
+    const String manifestPath = GetCoreClrTestPackage();
+    if (manifestPath.empty())
+        SKIP("Set CROWNY_CORECLR_TEST_PACKAGE to a published managed-program.json to run the CoreCLR integration test.");
+
+    const ManagedProgramPackageResult loaded = LoadManagedProgramPackage(Path(manifestPath), 1);
+    const String packageDiagnostic = DescribeDiagnostics(loaded.Result);
+    INFO(packageDiagnostic);
+    REQUIRE(loaded.Result.Succeeded);
+
+    ManagedScripting scripting;
+    const ManagedOperationResult started = scripting.Start(loaded.Package.Runtime);
+    const String startupDiagnostic = DescribeDiagnostics(started);
+    INFO(startupDiagnostic);
+    REQUIRE(started.Succeeded);
+
+    const ManagedOperationResult programLoaded = scripting.LoadProgram(loaded.Package.Program);
+    const String loadDiagnostic = DescribeDiagnostics(programLoaded);
+    INFO(loadDiagnostic);
+    REQUIRE(programLoaded.Succeeded);
+    ManagedOperationResult updateResult;
+    updateResult.Diagnostics = scripting.Update();
+    const String runtimeDiagnostics = DescribeDiagnostics(updateResult);
+    INFO(runtimeDiagnostics);
+    REQUIRE_FALSE(scripting.GetScriptCatalog().Types.empty());
+
+    ScriptCreateRequest request;
+    request.Identity = scripting.GetScriptCatalog().Types.front().Identity;
+    request.Entity = UUID("11111111-2222-3333-4444-555555555555");
+    request.InitialState.Identity = request.Identity;
+    request.InitialState.Root = ScriptValue::Object({}, request.Identity);
+    const ScriptCreateResult created = scripting.CreateScript(request);
+    INFO(DescribeDiagnostics(created.Result));
+    REQUIRE(created.Result.Succeeded);
+
+    const ScriptStateResult beforeReload = scripting.CaptureState(created.Handle);
+    INFO(DescribeDiagnostics(beforeReload.Result));
+    REQUIRE(beforeReload.Result.Succeeded);
+    ManagedProgramDefinition replacement = loaded.Package.Program;
+    replacement.Generation = 2;
+    const ManagedOperationResult reloaded = scripting.ReloadProgram(replacement);
+    INFO(DescribeDiagnostics(reloaded));
+    REQUIRE(reloaded.Succeeded);
+
+    const ScriptStateResult afterReload = scripting.CaptureState(created.Handle);
+    INFO(DescribeDiagnostics(afterReload.Result));
+    REQUIRE(afterReload.Result.Succeeded);
+    CHECK(afterReload.State == beforeReload.State);
+    REQUIRE(scripting.DestroyScript(created.Handle).Succeeded);
+    scripting.Shutdown();
 }
 
 TEST_CASE("Managed JSON uses catalog kinds to preserve ambiguous values", "[Scripting][Managed][Contract]")

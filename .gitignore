@@ -2,6 +2,7 @@ bin/
 !3rdparty/
 !3rdparty/premake/bin/
 bin-int/
+obj/
 .deps/
 
 .vs/

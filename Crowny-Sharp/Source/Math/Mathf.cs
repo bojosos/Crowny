@@ -312,7 +312,7 @@ namespace Crowny
         /// Clamps a value between 0 and 1
         /// </summary>
         /// <param name="v">Paramter.</param>
-        /// <returns><paramref name="v"> if it is in range [0, 1], otherwise returns value clamped to the range.</returns>
+        /// <returns><paramref name="v"/> if it is in range [0, 1], otherwise the value clamped to the range.</returns>
         public static float Clamp01(float v)
         {
             if (v < 0.0f)

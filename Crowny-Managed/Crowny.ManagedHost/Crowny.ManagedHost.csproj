@@ -11,20 +11,9 @@
     <RollForward>LatestPatch</RollForward>
     <Deterministic>true</Deterministic>
     <DotNetRuntimeVersion Condition="'$(DotNetRuntimeVersion)' == ''">10.0.0</DotNetRuntimeVersion>
-    <NetHostFileName Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win-'))">nethost.dll</NetHostFileName>
-    <NetHostFileName Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux-'))">libnethost.so</NetHostFileName>
-    <NetHostFileName Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx-'))">libnethost.dylib</NetHostFileName>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../Crowny-Sharp/CrownySharp.csproj" />
-    <PackageReference Include="Microsoft.NETCore.DotNetAppHost" Version="$(DotNetRuntimeVersion)" GeneratePathProperty="true" PrivateAssets="all" />
     <TrimmerRootDescriptor Include="Generated/ILLink.Descriptors.xml" />
   </ItemGroup>
-  <Target Name="CopyNetHostToPublishDirectory" AfterTargets="Publish" Condition="'$(NetHostFileName)' != ''">
-    <PropertyGroup>
-      <NetHostSource>$(PkgMicrosoft_NETCore_DotNetAppHost)/runtimes/$(RuntimeIdentifier)/native/$(NetHostFileName)</NetHostSource>
-    </PropertyGroup>
-    <Error Condition="!Exists('$(NetHostSource)')" Text="Matching nethost library was not found at $(NetHostSource)." />
-    <Copy SourceFiles="$(NetHostSource)" DestinationFolder="$(PublishDir)" />
-  </Target>
 </Project>

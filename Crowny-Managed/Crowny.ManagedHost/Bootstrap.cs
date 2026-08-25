@@ -293,8 +293,8 @@ public static unsafe class Bootstrap
 
     private static Guid Decode(NativeUuid value)
     {
-        fixed (byte* bytes = value.Bytes)
-            return new Guid(new ReadOnlySpan<byte>(bytes, 16), bigEndian: true);
+        byte* bytes = value.Bytes;
+        return new Guid(new ReadOnlySpan<byte>(bytes, 16), bigEndian: true);
     }
 
     private static ReadOnlySpan<byte> AsSpan(NativeBlob value) =>
@@ -387,25 +387,23 @@ public static unsafe class Bootstrap
     private static NativeUuid Encode(UUID value)
     {
         NativeUuid result = default;
-        fixed (byte* bytes = result.Bytes)
+        byte* bytes = result.Bytes;
+        for (int wordIndex = 0; wordIndex < 4; ++wordIndex)
         {
-            for (int wordIndex = 0; wordIndex < 4; ++wordIndex)
-            {
-                uint word = wordIndex switch { 0 => value.d0, 1 => value.d1, 2 => value.d2, _ => value.d3 };
-                int offset = wordIndex * 4;
-                bytes[offset] = (byte)(word >> 24);
-                bytes[offset + 1] = (byte)(word >> 16);
-                bytes[offset + 2] = (byte)(word >> 8);
-                bytes[offset + 3] = (byte)word;
-            }
+            uint word = wordIndex switch { 0 => value.d0, 1 => value.d1, 2 => value.d2, _ => value.d3 };
+            int offset = wordIndex * 4;
+            bytes[offset] = (byte)(word >> 24);
+            bytes[offset + 1] = (byte)(word >> 16);
+            bytes[offset + 2] = (byte)(word >> 8);
+            bytes[offset + 3] = (byte)word;
         }
         return result;
     }
 
     private static UUID DecodeCrownyUuid(NativeUuid value)
     {
-        fixed (byte* bytes = value.Bytes)
-            return new UUID(ReadUuidWord(bytes, 0), ReadUuidWord(bytes, 4), ReadUuidWord(bytes, 8), ReadUuidWord(bytes, 12));
+        byte* bytes = value.Bytes;
+        return new UUID(ReadUuidWord(bytes, 0), ReadUuidWord(bytes, 4), ReadUuidWord(bytes, 8), ReadUuidWord(bytes, 12));
     }
 
     private static uint ReadUuidWord(byte* value, int offset) =>

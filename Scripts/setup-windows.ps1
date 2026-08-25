@@ -2,6 +2,7 @@
 param(
     [switch]$Build,
     [switch]$Test,
+    [switch]$CoreCLR,
     [ValidateSet("Debug", "Release", "Dist")]
     [string]$Configuration = "Release",
     [ValidateSet("None", "Address")]
@@ -179,6 +180,10 @@ try {
     Write-Host "Initializing Git submodules..."
     Invoke-Checked -FilePath "git" -ArgumentList @("submodule", "sync", "--recursive")
     Invoke-Checked -FilePath "git" -ArgumentList @("submodule", "update", "--init", "--recursive")
+
+    if ($CoreCLR) {
+        & (Join-Path $PSScriptRoot "setup-dotnet.ps1")
+    }
 
     Install-WinGetPackage -Id "Mono.Mono"
     Install-WinGetPackage -Id "7zip.7zip"

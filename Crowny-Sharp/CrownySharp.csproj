@@ -6,6 +6,7 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Deterministic>true</Deterministic>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
@@ -14,5 +15,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Source/**/*.cs" />
+    <Compile Include="../Crowny/Dependencies/FastNoiseLite/CSharp/FastNoiseLite.cs" Link="Dependencies/FastNoiseLite.cs" />
   </ItemGroup>
 </Project>
