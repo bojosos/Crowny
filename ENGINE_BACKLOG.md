@@ -32,6 +32,11 @@ This is the durable record of the requested engine work. A checked item is merge
 - [x] Two randomized Windows ASan full-suite passes completed with 25,685 assertions in 394 cases; focused TaskSystem, import-scheduler, and editor-build suites passed 157/58/42 assertions respectively.
 - [x] Scene extraction uses allocation-free heterogeneous material-set lookup on stable entries and retains directional-cascade plus render-thread shadow scheduling/upload scratch across frames (`eb0ded9`).
 - [x] Post-Linux-link integration passed 25,742 Windows ASan assertions in 399 cases; focused shadow, GPU-driven, and render-pipeline suites passed 101/69/63 assertions respectively.
+- [x] Built-in shader freshness now hashes canonical transitive include content, invalidates the live stage cache on include edits, and preserves the last good compiled asset after include failures (`5452ab4`).
+- [x] Console filtering parses fielded, quoted, and negative terms once per query; collapsed groups keep stable selection identity and deterministic sort ties.
+- [x] Render-graph transient physical-ID lookup retains its hash scratch after warm-up and reports capacity growth instead of allocating a fresh map each frame.
+- [x] Combined Windows ASan verification passed 25,832 assertions in 403 cases; focused console, render-graph, and shader suites passed 51/91/177 assertions respectively.
+- [x] Re-cooked 32 shader assets for the transitive fingerprint migration and repacked 54 built-in resources; a repeat ASan cook-only launch found no stale assets and exited cleanly in 3.64 seconds. Vulkan, OpenGL, and cross-backend reference checks passed 4/4 each.
 
 ## Physics and ECS
 
