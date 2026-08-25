@@ -203,8 +203,8 @@ namespace Crowny
             m_Snapshots.reserve(oldValues.size());
             for (const auto& [entity, oldValue] : oldValues)
             {
-                if (entity && entity.HasComponent<T>())
-                    m_Snapshots.push_back({ entity.GetScene(), entity.GetUuid(), oldValue, entity.GetComponent<T>() });
+                if (entity && entity.template HasComponent<T>())
+                    m_Snapshots.push_back({ entity.GetScene(), entity.GetUuid(), oldValue, entity.template GetComponent<T>() });
             }
         }
 
