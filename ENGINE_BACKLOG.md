@@ -30,6 +30,8 @@ This is the durable record of the requested engine work. A checked item is merge
 - [x] The editor build manager maps platform settings and exact content/managed/template inputs into the recoverable player pipeline with actionable preflight and cancellation reports (`16b7f06`). Final Build button input gathering and progress UI remain open.
 - [x] Hierarchy search reuses match/path/action scratch storage and avoids per-entity lowercase/name copies (`b48d089`).
 - [x] Two randomized Windows ASan full-suite passes completed with 25,685 assertions in 394 cases; focused TaskSystem, import-scheduler, and editor-build suites passed 157/58/42 assertions respectively.
+- [x] Scene extraction uses allocation-free heterogeneous material-set lookup on stable entries and retains directional-cascade plus render-thread shadow scheduling/upload scratch across frames (`eb0ded9`).
+- [x] Post-Linux-link integration passed 25,742 Windows ASan assertions in 399 cases; focused shadow, GPU-driven, and render-pipeline suites passed 101/69/63 assertions respectively.
 
 ## Physics and ECS
 
