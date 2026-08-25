@@ -100,6 +100,8 @@ namespace Crowny
 
         struct MaterialSetKeyHash
         {
+            using is_transparent = void;
+
             size_t operator()(const MaterialSetKey& key) const
             {
                 size_t hash = key.Materials.size();
@@ -110,6 +112,38 @@ namespace Crowny
                 }
                 return hash;
             }
+
+            size_t operator()(const Vector<AssetHandle<Material>>& materials) const
+            {
+                size_t hash = materials.size();
+                for (const AssetHandle<Material>& material : materials)
+                {
+                    const size_t value = std::hash<const AssetHandleData*>{}(material.GetHandleData().get());
+                    hash ^= value + 0x9e3779b9u + (hash << 6u) + (hash >> 2u);
+                }
+                return hash;
+            }
+        };
+
+        struct MaterialSetKeyEqual
+        {
+            using is_transparent = void;
+
+            bool operator()(const MaterialSetKey& left, const MaterialSetKey& right) const { return left == right; }
+
+            bool operator()(const MaterialSetKey& left, const Vector<AssetHandle<Material>>& right) const
+            {
+                if (left.Materials.size() != right.size())
+                    return false;
+                for (size_t index = 0; index < right.size(); index++)
+                {
+                    if (left.Materials[index] != right[index].GetHandleData().get())
+                        return false;
+                }
+                return true;
+            }
+
+            bool operator()(const Vector<AssetHandle<Material>>& left, const MaterialSetKey& right) const { return (*this)(right, left); }
         };
 
         struct TrackedMeshResource
@@ -145,11 +179,12 @@ namespace Crowny
         mutable UnorderedSet<uint64_t> m_SeenRenderLights;
         mutable Vector<RenderLightChange> m_RenderLightChangeScratch;
         mutable UnorderedMap<const AssetHandleData*, uint32_t> m_MeshResourceIndices;
-        mutable UnorderedMap<MaterialSetKey, uint32_t, MaterialSetKeyHash> m_MaterialSetIndices;
+        mutable UnorderedMap<MaterialSetKey, uint32_t, MaterialSetKeyHash, MaterialSetKeyEqual> m_MaterialSetIndices;
         mutable UnorderedMap<uint32_t, TrackedMeshResource> m_ResidentMeshResources;
         mutable UnorderedMap<uint32_t, TrackedMaterialResource> m_ResidentMaterialResources;
         mutable UnorderedSet<uint32_t> m_SeenMeshResources;
         mutable UnorderedSet<uint32_t> m_SeenMaterialResources;
+        mutable Vector<DirectionalShadowCascade> m_DirectionalCascadeScratch;
         mutable uint32_t m_NextMeshResourceIndex = 1;
         mutable uint32_t m_NextMaterialResourceIndex = 1;
         mutable UnorderedMap<uint64_t, CameraHistoryState> m_CameraHistory;

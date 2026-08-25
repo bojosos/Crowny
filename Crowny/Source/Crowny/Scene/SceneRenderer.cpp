@@ -1275,6 +1275,13 @@ namespace Crowny
             GpuDrivenPassExecutor GpuDrivenExecutor;
             UnorderedSet<uint32_t> PendingShadowUpdates;
             UnorderedSet<uint32_t> RenderedShadowLights;
+            Vector<RenderLightHandle> ScheduledShadows;
+            Vector<ShadowUpdateRequest> ShadowBudgetRequests;
+            UnorderedSet<uint32_t> ScheduledShadowSet;
+            UnorderedSet<uint32_t> ActiveSpotLights;
+            UnorderedSet<uint32_t> ActivePointLights;
+            Vector<GpuShadowLightData> ShadowLights;
+            Vector<GpuShadowViewData> ShadowViews;
             Vector<ShadowRenderView> ShadowRenderViews;
             ShadowAtlasAllocator SpotShadowAtlas;
             PointShadowLayerAllocator PointShadowLayers;
@@ -1974,12 +1981,7 @@ namespace Crowny
         if (materials.empty())
             return 0;
 
-        MaterialSetKey key;
-        key.Materials.reserve(materials.size());
-        for (const AssetHandle<Material>& material : materials)
-            key.Materials.push_back(material.GetHandleData().get());
-
-        const auto existing = m_MaterialSetIndices.find(key);
+        const auto existing = m_MaterialSetIndices.find(materials);
         if (existing != m_MaterialSetIndices.end())
             return existing->second;
 
@@ -1992,6 +1994,10 @@ namespace Crowny
 
         const uint32_t baseIndex = m_NextMaterialResourceIndex;
         m_NextMaterialResourceIndex += count;
+        MaterialSetKey key;
+        key.Materials.reserve(materials.size());
+        for (const AssetHandle<Material>& material : materials)
+            key.Materials.push_back(material.GetHandleData().get());
         m_MaterialSetIndices.emplace(std::move(key), baseIndex);
         return baseIndex;
     }
@@ -2277,12 +2283,12 @@ namespace Crowny
                 const float aspect = std::abs(snapshot.ProjectionMatrix[1][1] / std::max(std::abs(snapshot.ProjectionMatrix[0][0]), 0.0001f));
                 const float cameraNear =
                   std::max(std::abs(snapshot.ProjectionMatrix[3][2] / std::max(std::abs(snapshot.ProjectionMatrix[2][2]), 0.0001f)), 0.001f);
-                Vector<DirectionalShadowCascade> cascades;
+                m_DirectionalCascadeScratch.clear();
                 DirectionalShadowCascadeBuilder::Build(cameraWorld, verticalFov, aspect, cameraNear, desc.Direction, shadow.CascadeSettings,
-                                                       cascades);
-                shadow.CascadeCount = static_cast<uint32_t>(std::min<size_t>(cascades.size(), shadow.Cascades.size()));
+                                                       m_DirectionalCascadeScratch);
+                shadow.CascadeCount = static_cast<uint32_t>(std::min<size_t>(m_DirectionalCascadeScratch.size(), shadow.Cascades.size()));
                 for (uint32_t cascade = 0; cascade < shadow.CascadeCount; cascade++)
-                    shadow.Cascades[cascade] = cascades[cascade];
+                    shadow.Cascades[cascade] = m_DirectionalCascadeScratch[cascade];
                 shadow.RequiresRedraw = true;
             }
         }
@@ -2561,13 +2567,14 @@ namespace Crowny
         {
             graphDesc.PassExecutor = [&](StringView name, RenderGraphContext& context) { gpuDrivenExecutor.Execute(name, context); };
         }
-        Vector<RenderLightHandle> scheduledShadows;
+        Vector<RenderLightHandle>& scheduledShadows = threadResources.ScheduledShadows;
         uint64_t scheduledShadowPixels = 0;
         graphDesc.ScheduledShadowRenderer = [&](RenderGraphContext& context) {
             const ShadowUpdateBudget mediumBudget;
             UnorderedSet<uint32_t>& pendingShadowUpdates = threadResources.PendingShadowUpdates;
             UnorderedSet<uint32_t>& renderedShadowLights = threadResources.RenderedShadowLights;
-            Vector<ShadowUpdateRequest> budgetRequests;
+            Vector<ShadowUpdateRequest>& budgetRequests = threadResources.ShadowBudgetRequests;
+            budgetRequests.clear();
             budgetRequests.reserve(snapshot.ShadowUpdateRequests.Size());
             for (const ShadowUpdateRequest& request : snapshot.ShadowUpdateRequests)
             {
@@ -2579,7 +2586,8 @@ namespace Crowny
             }
             ShadowUpdateScheduler::Schedule(budgetRequests.data(), static_cast<uint32_t>(budgetRequests.size()), mediumBudget, scheduledShadows,
                                             scheduledShadowPixels);
-            UnorderedSet<uint32_t> scheduledSet;
+            UnorderedSet<uint32_t>& scheduledSet = threadResources.ScheduledShadowSet;
+            scheduledSet.clear();
             scheduledSet.reserve(scheduledShadows.size());
             for (RenderLightHandle light : scheduledShadows)
                 scheduledSet.insert(light.GetValue());
@@ -2606,8 +2614,10 @@ namespace Crowny
             ShadowAtlasAllocator& spotShadowAtlas = threadResources.SpotShadowAtlas;
             PointShadowLayerAllocator& pointShadowLayers = threadResources.PointShadowLayers;
             UnorderedSet<uint32_t>& previousSpotLights = threadResources.PreviousSpotLights;
-            UnorderedSet<uint32_t> activeSpotLights;
-            UnorderedSet<uint32_t> activePointLights;
+            UnorderedSet<uint32_t>& activeSpotLights = threadResources.ActiveSpotLights;
+            UnorderedSet<uint32_t>& activePointLights = threadResources.ActivePointLights;
+            activeSpotLights.clear();
+            activePointLights.clear();
             activeSpotLights.reserve(snapshot.ShadowUpdateRequests.Size());
             activePointLights.reserve(snapshot.ShadowUpdateRequests.Size());
             for (const ShadowUpdateRequest& request : snapshot.ShadowUpdateRequests)
@@ -2636,7 +2646,7 @@ namespace Crowny
                   RenderLightHandle::FromParts(previousLight & RenderLightHandle::IndexMask, previousLight >> RenderLightHandle::IndexBits),
                   snapshot.FrameNumber);
             }
-            previousSpotLights = activeSpotLights;
+            previousSpotLights.swap(activeSpotLights);
             pointShadowLayers.ReleaseMissing(activePointLights, snapshot.FrameNumber);
             const uint64_t completedFrame = snapshot.FrameNumber > 2 ? snapshot.FrameNumber - 2u : 0u;
             spotShadowAtlas.Collect(completedFrame);
@@ -2645,8 +2655,11 @@ namespace Crowny
             uint32_t shadowLightCount = snapshot.DirectionalShadow.IsValid() ? snapshot.DirectionalShadow.Light.GetIndex() + 1u : 0u;
             for (const ShadowUpdateRequest& request : snapshot.ShadowUpdateRequests)
                 shadowLightCount = std::max(shadowLightCount, request.Light.GetIndex() + 1u);
-            Vector<GpuShadowLightData> shadowLights(shadowLightCount);
-            Vector<GpuShadowViewData> shadowViews;
+            Vector<GpuShadowLightData>& shadowLights = threadResources.ShadowLights;
+            Vector<GpuShadowViewData>& shadowViews = threadResources.ShadowViews;
+            shadowLights.clear();
+            shadowLights.resize(shadowLightCount);
+            shadowViews.clear();
             shadowViews.reserve(4u + snapshot.ShadowUpdateRequests.Size() * 6u);
             if (snapshot.DirectionalShadow.IsValid())
             {
