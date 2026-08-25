@@ -43,6 +43,7 @@ namespace Crowny
     ManagedBackendAvailability GetManagedBackendAvailability(ManagedBackendPreset preset, BuildPlatform platform,
                                                               BuildConfiguration configuration, bool editor)
     {
+        (void)platform;
         if (editor)
         {
             if (preset == ManagedBackendPreset::Mono || preset == ManagedBackendPreset::CoreCLR)
@@ -51,14 +52,8 @@ namespace Crowny
         }
 
         const bool webBackend = preset == ManagedBackendPreset::DotNetWasmInterpreter || preset == ManagedBackendPreset::DotNetWasmAOT;
-        if (platform == BuildPlatform::Web)
-        {
-            if (!webBackend)
-                return { false, "Web players require a .NET WebAssembly backend." };
-            return { true, {} };
-        }
         if (webBackend)
-            return { false, ".NET WebAssembly backends are available only for Web players." };
+            return { false, ".NET WebAssembly backends require a Web build target, which is not available yet." };
         if (preset == ManagedBackendPreset::NativeAOT && configuration != BuildConfiguration::Shipping)
             return { false, "Native AOT is a closed-world shipping backend and is unavailable for development players." };
         return { true, {} };

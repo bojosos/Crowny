@@ -162,10 +162,56 @@ TEST_CASE("Crowny Builder rejects incomplete request files as structured input e
     CHECK(fixture.ReadText(fixture.Report) == output.str());
 }
 
+TEST_CASE("Crowny Builder rejects requests for a different engine binary", "[Build][BuilderCli]")
+{
+    BuilderFixture fixture;
+    fixture.CreateValidRequest();
+    String request = fixture.ReadText(fixture.Request);
+    const size_t version = request.find("EngineVersion: " CROWNY_VERSION_STRING);
+    REQUIRE(version != String::npos);
+    request.replace(version, String("EngineVersion: " CROWNY_VERSION_STRING).size(), "EngineVersion: incompatible-version");
+    fixture.WriteText(fixture.Request, request);
+    std::ostringstream output;
+    std::ostringstream error;
+
+    const int exitCode = RunCrownyBuilder(
+      { "build", "--request", fixture.Request.string(), "--format", "json" }, output, error);
+
+    CHECK(exitCode == static_cast<int>(BuilderExitCode::InputError));
+    CHECK(error.str().empty());
+    rapidjson::Document response;
+    response.Parse(output.str().c_str());
+    REQUIRE_FALSE(response.HasParseError());
+    CHECK(response["error"]["code"] == "builder.request.engine_version_mismatch");
+}
+
+TEST_CASE("Crowny Builder validates managed timeout using the compiler limit", "[Build][BuilderCli]")
+{
+    BuilderFixture fixture;
+    fixture.CreateValidRequest();
+    String request = fixture.ReadText(fixture.Request);
+    const size_t managed = request.find("TemplateRoot:");
+    REQUIRE(managed != String::npos);
+    request.insert(managed, "Managed:\n  TimeoutMilliseconds: 1800001\n");
+    fixture.WriteText(fixture.Request, request);
+    std::ostringstream output;
+    std::ostringstream error;
+
+    const int exitCode = RunCrownyBuilder(
+      { "build", "--request", fixture.Request.string(), "--format", "json" }, output, error);
+
+    CHECK(exitCode == static_cast<int>(BuilderExitCode::InputError));
+    rapidjson::Document response;
+    response.Parse(output.str().c_str());
+    REQUIRE_FALSE(response.HasParseError());
+    CHECK(response["error"]["code"] == "builder.request.timeout_invalid");
+}
+
 TEST_CASE("Crowny Builder publishes a player build through BuildPipeline", "[Build][BuilderCli]")
 {
     BuilderFixture fixture;
     fixture.CreateValidRequest();
+    fixture.WriteText(fixture.Report, "last-report");
     std::ostringstream output;
     std::ostringstream error;
 
@@ -185,6 +231,10 @@ TEST_CASE("Crowny Builder publishes a player build through BuildPipeline", "[Bui
     REQUIRE(response["stages"].IsArray());
     CHECK(response["stages"].Size() == 7);
     CHECK(fixture.ReadText(fixture.Report) == output.str());
+    size_t staleReports = 0;
+    for (const fs::directory_entry& entry : fs::directory_iterator(fixture.Root))
+        staleReports += entry.path().filename().string().starts_with(".report.json.") ? 1 : 0;
+    CHECK(staleReports == 0);
 }
 
 TEST_CASE("Crowny Builder maps cancellation to a stable exit code", "[Build][BuilderCli]")

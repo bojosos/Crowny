@@ -4,6 +4,7 @@ project "Crowny-Sharp"
 	targetname "CrownySharp"
 	dotnetframework "4.7.2"
 	clr "Unsafe"
+	defines "CROWNY_MONO"
 
 	targetdir ("%{wks.location}/Crowny-Sharp")
 	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")

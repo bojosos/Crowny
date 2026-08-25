@@ -8,6 +8,8 @@ Crowny-Builder build --request <file> [--report <file>] [--format text|json]
 
 Relative paths in the request use `ProjectRoot` as their base, except `ProjectRoot` itself, which uses the request file's directory. Installed player-template and managed-toolchain paths may be absolute. The editor and CI should write request files. Project users should not need to edit them.
 
+`EngineVersion` must match the builder binary. Managed compiler timeouts are limited to 30 minutes. `Ctrl+C` cancels an active managed compiler process and returns exit code `5` after cleaning its staging output.
+
 ```yaml
 Schema: 1
 ProjectRoot: ../MyProject

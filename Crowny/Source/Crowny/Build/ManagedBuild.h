@@ -84,6 +84,7 @@ namespace Crowny
         String LanguageVersion = "9.0";
         std::chrono::milliseconds Timeout = std::chrono::minutes(2);
         size_t MaxCapturedOutputBytes = 1024 * 1024;
+        std::function<bool()> Cancellation;
     };
 
     struct ManagedBuildPlan
@@ -105,8 +106,9 @@ namespace Crowny
         String StandardError;
         int ExitCode = -1;
         bool ProcessStarted = false;
+        bool Cancelled = false;
 
-        bool Succeeded() const { return ProcessStarted && ExitCode == 0 && Diagnostics.empty(); }
+        bool Succeeded() const { return ProcessStarted && !Cancelled && ExitCode == 0 && Diagnostics.empty(); }
     };
 
     ManagedCompileResult CompileManagedAssembly(const ManagedBuildRequest& request, const ManagedToolchain& toolchain);

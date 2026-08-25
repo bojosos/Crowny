@@ -34,6 +34,7 @@ project "Crowny-Tests"
 		"%{IncludeDir.stb_image}",
 		"%{IncludeDir.entt}",
 		"%{IncludeDir.cereal}",
+		"%{wks.location}/Crowny/Dependencies/rapidjson/include",
 		"%{IncludeDir.yamlcpp}",
 		"%{IncludeDir.tracy}",
 		"%{IncludeDir.FastNoiseLite}",

@@ -5,6 +5,15 @@
 
 namespace Crowny
 {
+    enum class ManagedBackendPreset
+    {
+        Mono,
+        CoreCLR,
+        DotNetWasmInterpreter,
+        DotNetWasmAOT,
+        NativeAOT
+    };
+
     struct ManagedBackendSelection
     {
         ManagedScriptingConfig Runtime;

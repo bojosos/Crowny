@@ -160,6 +160,20 @@ if (-not (Get-Command "winget" -ErrorAction SilentlyContinue)) {
     throw "Windows Package Manager (winget) is required to bootstrap Mono, 7-Zip, and CMake."
 }
 
+function Get-MonoCompatibleFastNoiseSource {
+    $source = Join-Path $repositoryRoot "Crowny\Dependencies\FastNoiseLite\CSharp\FastNoiseLite.cs"
+    $contents = [IO.File]::ReadAllText($source)
+    $unsupported = "private const short OPTIMISE = 512;"
+    if (-not $contents.Contains($unsupported)) { return $source }
+
+    $generatedRoot = Join-Path $dependencyRoot "generated"
+    $generated = Join-Path $generatedRoot "FastNoiseLite.Mono.cs"
+    New-Item -ItemType Directory -Force -Path $generatedRoot | Out-Null
+    [IO.File]::WriteAllText($generated, $contents.Replace($unsupported, "private const short OPTIMISE = 0;"),
+        [Text.UTF8Encoding]::new($false))
+    return $generated
+}
+
 Push-Location $repositoryRoot
 try {
     Write-Host "Initializing Git submodules..."
@@ -231,9 +245,10 @@ try {
         $engineAssembly = Join-Path $repositoryRoot "Crowny-Sharp\CrownySharp.dll"
         $engineSources = Get-ChildItem -LiteralPath (Join-Path $repositoryRoot "Crowny-Sharp\Source") -Filter "*.cs" -File -Recurse |
             ForEach-Object { $_.FullName }
+        $engineSources += Get-MonoCompatibleFastNoiseSource
         Write-Host "Building CrownySharp.dll..."
         Invoke-Checked -FilePath $mcs -ArgumentList (@(
-            "-debug+", "-o-", "-target:library", "-out:$engineAssembly"
+            "-debug+", "-o-", "-unsafe", "-define:CROWNY_MONO", "-target:library", "-out:$engineAssembly"
         ) + $engineSources)
         Copy-Item -LiteralPath $engineAssembly, "$engineAssembly.mdb" -Destination $assemblyRoot -Force
 

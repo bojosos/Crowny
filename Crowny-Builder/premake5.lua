@@ -40,6 +40,7 @@ project "Crowny-Builder"
 
     links { "Crowny" }
     linkCrownyFinalDependencies()
+    deployCrownyRuntimeDependencies()
 
     dependson { "Crowny" }
 

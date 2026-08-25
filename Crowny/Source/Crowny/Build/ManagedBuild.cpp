@@ -8,6 +8,7 @@
 #include <cctype>
 #include <cerrno>
 #include <cstdlib>
+#include <exception>
 #include <initializer_list>
 #include <limits>
 #include <optional>
@@ -47,9 +48,25 @@ namespace Crowny
             int ExitCode = -1;
             bool Started = false;
             bool TimedOut = false;
+            bool Cancelled = false;
             bool OutputTruncated = false;
             String Error;
         };
+
+        bool CancellationRequested(const std::function<bool()>& cancellation, std::exception_ptr& failure)
+        {
+            if (!cancellation)
+                return false;
+            try
+            {
+                return cancellation();
+            }
+            catch (...)
+            {
+                failure = std::current_exception();
+                return true;
+            }
+        }
 
         void AppendCaptured(String& destination, const char* data, size_t size, size_t limit, bool& truncated)
         {
@@ -272,7 +289,7 @@ namespace Crowny
         }
 
         ProcessResult RunProcess(const Path& executable, const Vector<String>& arguments, std::chrono::milliseconds timeout,
-                                 size_t maxCapturedOutputBytes)
+                                 size_t maxCapturedOutputBytes, const std::function<bool()>& cancellation = {})
         {
             ProcessResult result;
             SECURITY_ATTRIBUTES security{ sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE };
@@ -343,6 +360,7 @@ namespace Crowny
             bool processExited = false;
             bool stdoutClosed = false;
             bool stderrClosed = false;
+            std::exception_ptr cancellationFailure;
             while (!processExited || !stdoutClosed || !stderrClosed)
             {
                 DrainHandle(stdoutRead, result.StandardOutput, maxCapturedOutputBytes, result.OutputTruncated, stdoutClosed);
@@ -353,7 +371,18 @@ namespace Crowny
                     drainDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
                 }
                 const auto now = std::chrono::steady_clock::now();
-                if (!processExited && now >= deadline)
+                if (!processExited && CancellationRequested(cancellation, cancellationFailure))
+                {
+                    result.Cancelled = true;
+                    if (job != nullptr)
+                        TerminateJobObject(job, ERROR_CANCELLED);
+                    else
+                        TerminateProcess(process.hProcess, ERROR_CANCELLED);
+                    WaitForSingleObject(process.hProcess, 5000);
+                    processExited = true;
+                    drainDeadline = now + std::chrono::seconds(1);
+                }
+                else if (!processExited && now >= deadline)
                 {
                     result.TimedOut = true;
                     if (job != nullptr)
@@ -385,6 +414,8 @@ namespace Crowny
             CloseHandle(process.hProcess);
             if (job != nullptr)
                 CloseHandle(job);
+            if (cancellationFailure)
+                std::rethrow_exception(cancellationFailure);
             return result;
         }
 #else
@@ -406,7 +437,7 @@ namespace Crowny
         }
 
         ProcessResult RunProcess(const Path& executable, const Vector<String>& arguments, std::chrono::milliseconds timeout,
-                                 size_t maxCapturedOutputBytes)
+                                 size_t maxCapturedOutputBytes, const std::function<bool()>& cancellation = {})
         {
             ProcessResult result;
             int stdoutPipe[2]{ -1, -1 };
@@ -499,6 +530,7 @@ namespace Crowny
             bool stdoutClosed = false;
             bool stderrClosed = false;
             int status = 0;
+            std::exception_ptr cancellationFailure;
             while (!processExited || !stdoutClosed || !stderrClosed)
             {
                 pollfd descriptors[2] = { { stdoutPipe[0], POLLIN | POLLHUP, 0 }, { stderrPipe[0], POLLIN | POLLHUP, 0 } };
@@ -511,7 +543,31 @@ namespace Crowny
                     drainDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
                 }
                 const auto now = std::chrono::steady_clock::now();
-                if (!processExited && now >= deadline)
+                if (!processExited && CancellationRequested(cancellation, cancellationFailure))
+                {
+                    result.Cancelled = true;
+                    kill(-child, SIGTERM);
+                    const auto terminateDeadline = now + std::chrono::milliseconds(250);
+                    do
+                    {
+                        if (waitpid(child, &status, WNOHANG) == child)
+                        {
+                            processExited = true;
+                            break;
+                        }
+                        poll(nullptr, 0, 10);
+                    } while (std::chrono::steady_clock::now() < terminateDeadline);
+                    if (!processExited)
+                    {
+                        kill(-child, SIGKILL);
+                        while (waitpid(child, &status, 0) < 0 && errno == EINTR)
+                        {
+                        }
+                        processExited = true;
+                    }
+                    drainDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+                }
+                else if (!processExited && now >= deadline)
                 {
                     result.TimedOut = true;
                     kill(-child, SIGTERM);
@@ -546,6 +602,8 @@ namespace Crowny
                 result.ExitCode = 128 + WTERMSIG(status);
             close(stdoutPipe[0]);
             close(stderrPipe[0]);
+            if (cancellationFailure)
+                std::rethrow_exception(cancellationFailure);
             return result;
         }
 #endif
@@ -1617,11 +1675,13 @@ namespace Crowny
         Path stagingPdb = stagingAssembly;
         stagingPdb.replace_extension(".pdb");
         arguments.push_back("/pdb:" + PathArgument(stagingPdb));
-        const ProcessResult process = RunProcess(executable, arguments, request.Timeout, request.MaxCapturedOutputBytes);
+        const ProcessResult process =
+          RunProcess(executable, arguments, request.Timeout, request.MaxCapturedOutputBytes, request.Cancellation);
         result.StandardOutput = process.StandardOutput;
         result.StandardError = process.StandardError;
         result.ExitCode = process.ExitCode;
         result.ProcessStarted = process.Started;
+        result.Cancelled = process.Cancelled;
         if (!process.Error.empty())
             AddDiagnostic(result.Diagnostics, "MB501", process.Error, executable);
         if (process.TimedOut)
@@ -1629,10 +1689,10 @@ namespace Crowny
                           toolchain.CompilerAssembly);
         if (process.OutputTruncated)
             AddDiagnostic(result.Diagnostics, "MB505", "Managed compiler output exceeded the configured capture limit.", toolchain.CompilerAssembly);
-        if (process.Error.empty() && !process.TimedOut && process.ExitCode != 0)
+        if (process.Error.empty() && !process.TimedOut && !process.Cancelled && process.ExitCode != 0)
             AddDiagnostic(result.Diagnostics, "MB502", "Managed compiler exited with code " + std::to_string(process.ExitCode) + ".",
                           toolchain.CompilerAssembly);
-        if (!result.Diagnostics.empty())
+        if (process.Cancelled || !result.Diagnostics.empty())
         {
             RemoveStagingOutput(stagingAssembly);
             return result;

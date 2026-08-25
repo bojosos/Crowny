@@ -114,6 +114,7 @@ namespace Crowny
             Vector<ContentPackInput> PackedInputs;
             BuildManifest Manifest;
             bool CancelAfterResolve = false;
+            bool CancelDuringCompile = false;
             bool Cancelled = false;
             bool FailPack = false;
             bool ThrowPack = false;
@@ -142,9 +143,15 @@ namespace Crowny
                 };
                 operations.CompileManaged = [&](const ManagedBuildRequest& request, const ManagedToolchain&) {
                     Calls.push_back("Compile Managed");
-                    WriteText(request.OutputAssembly, "managed");
                     ManagedCompileResult result;
                     result.ProcessStarted = true;
+                    if (CancelDuringCompile)
+                    {
+                        Cancelled = true;
+                        result.Cancelled = request.Cancellation && request.Cancellation();
+                        return result;
+                    }
+                    WriteText(request.OutputAssembly, "managed");
                     result.ExitCode = 0;
                     return result;
                 };
@@ -511,6 +518,23 @@ namespace Crowny
         CHECK(report.Find(BuildPipelineStage::CompileManaged)->Status == BuildPipelineStageStatus::Cancelled);
         CHECK(report.Find(BuildPipelineStage::PackContent)->Status == BuildPipelineStageStatus::Skipped);
         CHECK(tools.Calls == Vector<String>{ "Validate", "Resolve Content" });
+        CHECK(CountTemporaryBuildDirectories(request.OutputDirectory.parent_path(), request.OutputDirectory) == 0);
+    }
+
+    TEST_CASE("Build pipeline forwards cancellation into managed compilation", "[Build][Pipeline]")
+    {
+        TemporaryDirectory temporary;
+        BuildPipelineRequest request = CreateRequest(temporary, temporary.Root / "Builds/Crownfall");
+        FakeBuildTools tools;
+        tools.CancelDuringCompile = true;
+
+        const BuildPipelineReport report = BuildPipelineTestAccess::Create(tools.Operations()).Run(request, [&]() { return tools.Cancelled; });
+
+        CHECK(report.Cancelled);
+        CHECK_FALSE(report.Succeeded());
+        CHECK(report.Find(BuildPipelineStage::CompileManaged)->Status == BuildPipelineStageStatus::Cancelled);
+        CHECK(report.Find(BuildPipelineStage::PackContent)->Status == BuildPipelineStageStatus::Skipped);
+        CHECK(tools.Calls == Vector<String>{ "Validate", "Resolve Content", "Compile Managed" });
         CHECK(CountTemporaryBuildDirectories(request.OutputDirectory.parent_path(), request.OutputDirectory) == 0);
     }
 

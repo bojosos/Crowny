@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Crowny/Scripting/ScriptTypeIdentity.h"
+
 #include "Crowny/Common/Color.h"
 #include "Crowny/Scene/SceneCamera.h"
 
@@ -568,17 +570,6 @@ namespace Crowny
     };
 
     template <> void ComponentEditorWidget<AudioSourceComponent>(Entity e);
-
-    struct ScriptTypeIdentity
-    {
-        String Assembly;
-        String Namespace;
-        String TypeName;
-
-        bool IsValid() const { return !Assembly.empty() && !TypeName.empty(); }
-        String GetFullName() const { return Namespace.empty() ? TypeName : Namespace + "." + TypeName; }
-        bool operator==(const ScriptTypeIdentity&) const = default;
-    };
 
     struct PersistedScriptState
     {

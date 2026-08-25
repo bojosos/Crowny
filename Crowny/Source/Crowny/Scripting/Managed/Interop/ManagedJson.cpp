@@ -144,8 +144,8 @@ namespace Crowny
                 return result;
             }
             ScriptValue result = ScriptValue::Object({});
-            for (const auto& member : value.GetObject())
-                result.Members.emplace(String(member.name.GetString(), member.name.GetStringLength()), ReadValue(member.value));
+            for (auto member = value.MemberBegin(); member != value.MemberEnd(); ++member)
+                result.Members.emplace(String(member->name.GetString(), member->name.GetStringLength()), ReadValue(member->value));
             return result;
         }
 
@@ -358,9 +358,10 @@ namespace Crowny
             !document.HasMember("Fields") || !document["Fields"].IsObject())
             return ManagedOperationResult::Failure("managed.state.json_invalid", "The managed host returned invalid script state.", backend);
         parsed.Root = ScriptValue::Object({});
-        for (const auto& member : document["Fields"].GetObject())
+        const rapidjson::Value& fields = document["Fields"];
+        for (auto member = fields.MemberBegin(); member != fields.MemberEnd(); ++member)
         {
-            const String name(member.name.GetString(), member.name.GetStringLength());
+            const String name(member->name.GetString(), member->name.GetStringLength());
             ScriptValueKind expectedKind = ScriptValueKind::Null;
             if (schema != nullptr)
             {
@@ -371,7 +372,7 @@ namespace Crowny
                 if (field != schema->Fields.end())
                     expectedKind = field->ValueKind;
             }
-            parsed.Root.Members.emplace(name, ReadValue(member.value, expectedKind));
+            parsed.Root.Members.emplace(name, ReadValue(member->value, expectedKind));
         }
         parsed.Root.DeclaredType = parsed.Identity;
         state = std::move(parsed);

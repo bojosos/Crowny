@@ -1455,6 +1455,7 @@ namespace Crowny
                 managedCleanup.TakeOwnership(managedScratch);
                 managed.OutputAssembly = managedScratch / "Game.dll";
                 managed.Configuration = snapshot.Target.Configuration;
+                managed.Cancellation = cancelled;
                 managed.Symbols.insert(managed.Symbols.end(), snapshot.Profile.Symbols.begin(), snapshot.Profile.Symbols.end());
                 managed.Symbols.insert(managed.Symbols.end(), snapshot.Target.Symbols.begin(), snapshot.Target.Symbols.end());
                 std::sort(managed.Symbols.begin(), managed.Symbols.end());
@@ -1464,6 +1465,11 @@ namespace Crowny
                     compiled.Diagnostics.push_back({ "pipeline.operation.missing", "The managed compiler operation is missing.", {} });
                 else
                     compiled = m_Operations.CompileManaged(managed, snapshot.Toolchain);
+                if (compiled.Cancelled || cancelled())
+                {
+                    cancelAt(BuildPipelineStage::CompileManaged);
+                    return report;
+                }
                 BuildValidation compileValidation;
                 for (const ManagedBuildDiagnostic& diagnostic : compiled.Diagnostics)
                     compileValidation.Error(diagnostic.Code, diagnostic.Message, diagnostic.Subject.string());

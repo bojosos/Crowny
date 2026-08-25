@@ -1,11 +1,10 @@
 #include "cwpch.h"
 
+#include "Crowny/Common/DataStream.h"
 #include "Crowny/Scripting/Managed/ManagedProgramPackage.h"
 #include "Crowny/Scripting/Managed/Interop/CrownyManagedAbi.h"
 
 #include <rapidjson/document.h>
-
-#include <iterator>
 
 namespace Crowny
 {
@@ -68,8 +67,8 @@ namespace Crowny
                                                      ManagedBackendId::CoreCLR),
                      {} };
 
-        std::ifstream stream(manifestPath, std::ios::binary);
-        const String json((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+        FileDataStream stream(manifestPath, DataStream::READ);
+        const String json = stream.GetAsString();
         rapidjson::Document document;
         document.Parse(json.data(), json.size());
         if (document.HasParseError() || !document.IsObject() || !document.HasMember("schemaVersion") ||

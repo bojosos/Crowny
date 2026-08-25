@@ -57,8 +57,7 @@ namespace Crowny
             }
             set
             {
-                if (value != null)
-                    ManagedRuntimeContext.SetEntityParent(m_ManagedUuid, value.m_ManagedUuid);
+                ManagedRuntimeContext.SetEntityParent(m_ManagedUuid, value != null ? value.m_ManagedUuid : UUID.Empty);
             }
 #endif
 		}

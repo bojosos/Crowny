@@ -10,6 +10,10 @@
 #include <iostream>
 #include <limits>
 
+#ifdef CW_PLATFORM_WIN32
+#include <Windows.h>
+#endif
+
 namespace Crowny
 {
     namespace
@@ -396,10 +400,10 @@ namespace Crowny
                     if (const YAML::Node timeout = managed["TimeoutMilliseconds"])
                     {
                         const uint64_t milliseconds = timeout.as<uint64_t>();
-                        if (milliseconds == 0 || milliseconds > 60ULL * 60ULL * 1000ULL)
+                        if (milliseconds == 0 || milliseconds > 30ULL * 60ULL * 1000ULL)
                         {
                             result.Error = { "builder.request.timeout_invalid",
-                                             "Managed TimeoutMilliseconds must be between 1 and 3600000.", std::to_string(milliseconds) };
+                                             "Managed TimeoutMilliseconds must be between 1 and 1800000.", std::to_string(milliseconds) };
                             return result;
                         }
                         request.Managed.Timeout = std::chrono::milliseconds(milliseconds);
@@ -449,11 +453,15 @@ namespace Crowny
 
                 request.EngineVersion = CROWNY_VERSION_STRING;
                 if (const YAML::Node engineVersion = root["EngineVersion"])
-                    request.EngineVersion = engineVersion.as<String>();
-                if (request.EngineVersion.empty())
                 {
-                    result.Error = { "builder.request.engine_version_empty", "EngineVersion cannot be empty.", "EngineVersion" };
-                    return result;
+                    const String requestedVersion = engineVersion.as<String>();
+                    if (requestedVersion != request.EngineVersion)
+                    {
+                        result.Error = { "builder.request.engine_version_mismatch",
+                                         "EngineVersion must match this Crowny Builder binary (" + request.EngineVersion + ").",
+                                         requestedVersion };
+                        return result;
+                    }
                 }
                 if (const YAML::Node monoVersion = root["MonoVersion"])
                     request.MonoVersion = monoVersion.as<String>();
@@ -567,7 +575,10 @@ namespace Crowny
                 fs::create_directories(absolute.parent_path(), error);
             if (error)
                 return "Cannot create report directory '" + absolute.parent_path().string() + "': " + error.message();
-            if (fs::is_directory(absolute, error))
+            const bool reportExists = fs::exists(absolute, error);
+            if (error)
+                return "Cannot inspect report path '" + absolute.string() + "': " + error.message();
+            if (reportExists && fs::is_directory(absolute, error))
                 return "The report path names a directory: '" + absolute.string() + "'.";
             if (error)
                 return "Cannot inspect report path '" + absolute.string() + "': " + error.message();
@@ -589,40 +600,21 @@ namespace Crowny
                 }
             }
 
-            const bool destinationExists = fs::exists(absolute, error);
-            if (error)
+#ifdef CW_PLATFORM_WIN32
+            if (!MoveFileExW(temporary.wstring().c_str(), absolute.wstring().c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
             {
+                const DWORD replaceError = GetLastError();
                 fs::remove(temporary, error);
-                return "Cannot inspect existing report '" + absolute.string() + "'.";
+                return "Cannot publish report '" + absolute.string() + "': Windows error " + std::to_string(replaceError) + ".";
             }
-            const Path backup = absolute.parent_path() /
-                                ("." + absolute.filename().string() + ".previous-" + UuidGenerator::Generate().ToString());
-            if (destinationExists)
-            {
-                fs::rename(absolute, backup, error);
-                if (error)
-                {
-                    fs::remove(temporary, error);
-                    return "Cannot preserve existing report '" + absolute.string() + "': " + error.message();
-                }
-            }
-
+#else
             fs::rename(temporary, absolute, error);
             if (error)
             {
-                String message = "Cannot publish report '" + absolute.string() + "': " + error.message();
-                if (destinationExists)
-                {
-                    std::error_code restoreError;
-                    fs::rename(backup, absolute, restoreError);
-                    if (restoreError)
-                        message += "; restoring the previous report also failed: " + restoreError.message();
-                }
                 fs::remove(temporary, error);
-                return message;
+                return "Cannot publish report '" + absolute.string() + "': " + error.message();
             }
-            if (destinationExists)
-                fs::remove(backup, error);
+#endif
             return {};
         }
 
