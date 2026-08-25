@@ -365,7 +365,7 @@ namespace Crowny
             ImGui::EndChild();
         }
 
-        BuildValidation validation = buildManager.ValidateActiveBuild((uint32_t)includedAssets.size());
+        EditorBuildValidation validation = buildManager.ValidateActiveBuild((uint32_t)includedAssets.size());
         if (platformInfo && !platformInfo->MainScene.Empty() &&
             std::find(sceneIds.begin(), sceneIds.end(), platformInfo->MainScene) == sceneIds.end())
             validation.Errors.push_back("The selected main scene no longer exists.");

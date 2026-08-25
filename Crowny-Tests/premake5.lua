@@ -14,6 +14,7 @@ project "Crowny-Tests"
 	{
 		"Source/**.h",
 		"Source/**.cpp",
+		"%{wks.location}/Crowny-Editor/Source/Build/BuildManager.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/ImportScheduler.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/UndoRedo.cpp",
 	}
