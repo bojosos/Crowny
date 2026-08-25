@@ -75,3 +75,28 @@ TEST_CASE("Static geometry heaps coalesce free ranges and report failures", "[Re
     CHECK(stats.LiveAllocations == 0);
     CHECK(stats.FailedAllocations == 1);
 }
+
+TEST_CASE("Geometry heap layout matching is structural", "[Renderer][Resources][GeometryHeap]")
+{
+    BufferElement position(ShaderDataType::Float3, VertexAttribute::Position);
+    position.Name = "positionA";
+    position.Location = 0;
+    BufferElement uv(ShaderDataType::Float2, VertexAttribute::TexCoord0);
+    uv.Name = "uvA";
+    uv.Location = 1;
+    BufferLayout first{ position, uv };
+
+    position.Name = "positionB";
+    uv.Name = "uvB";
+    BufferLayout equivalent{ position, uv };
+    CHECK(GeometryLayoutsMatch(first, equivalent));
+
+    uv.Normalized = true;
+    BufferLayout normalized{ position, uv };
+    CHECK_FALSE(GeometryLayoutsMatch(first, normalized));
+
+    uv.Normalized = false;
+    uv.Location = 2;
+    BufferLayout differentLocation{ position, uv };
+    CHECK_FALSE(GeometryLayoutsMatch(first, differentLocation));
+}

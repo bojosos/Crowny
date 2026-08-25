@@ -178,6 +178,8 @@ namespace Crowny
         void WriteData(const Ref<MeshData>& meshData, bool discard, bool updateBounds = true, int32_t queue = 0);
         void ReadData(Ref<MeshData>& data, uint32_t queueIdx = 0);
         DrawMode GetDrawMode() const { return m_DrawMode; }
+        IndexType GetIndexType() const { return m_IndexType; }
+        const BufferLayout& GetVertexLayout() const { return m_Layout; }
         const Vector<SubMesh>& GetSubMeshes() const { return m_SubMeshes; }
         const AABox& GetBounds() const { return m_AABox; }
         const SphereBounds& GetSphereBounds() const { return m_SphereBounds; }
@@ -192,6 +194,7 @@ namespace Crowny
         void RecalculateNormals();
         void RecalculateTangents();
         bool IsDirty() const { return m_Dirty; }
+        bool IsDynamic() const { return m_Usage.IsSet(MeshUsage::Dynamic); }
         bool IsCpuCached() const { return m_Usage.IsSet(MeshUsage::CpuCached); }
 
         Ref<MeshMorph> GetMorph() const { return m_MeshMorph; }

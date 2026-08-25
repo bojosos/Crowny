@@ -50,6 +50,9 @@ TEST_CASE("Stable GPU scenes produce no upload work", "[Renderer][GpuScene]")
     CHECK(scene.GetStats().UploadedBytes == 0);
     CHECK(scene.GetStats().InstanceRanges == 0);
     CHECK(scene.GetStats().LightRanges == 0);
+    CHECK(scene.GetStats().GeometryHeapPages == 0);
+    CHECK(scene.GetStats().GeometryHeapCapacityBytes == 0);
+    CHECK(scene.GetStats().GeometryUploadBytes == 0);
 }
 
 TEST_CASE("GPU scene rejects stale and invalid sparse updates", "[Renderer][GpuScene]")
@@ -78,8 +81,7 @@ TEST_CASE("GPU scene rejects stale and invalid sparse updates", "[Renderer][GpuS
 TEST_CASE("GPU scene retains packed shadow tables without a graphics device", "[Renderer][GpuScene][Shadows]")
 {
     GpuScene scene(false);
-    const GpuShadowLightData light{ 0, 1, static_cast<uint32_t>(LightType::Spot),
-                                    static_cast<uint32_t>(GpuShadowFlags::Valid) };
+    const GpuShadowLightData light{ 0, 1, static_cast<uint32_t>(LightType::Spot), static_cast<uint32_t>(GpuShadowFlags::Valid) };
     GpuShadowViewData view;
     view.AtlasScaleBias = { 0.5f, 0.5f, 0.25f, 0.25f };
     scene.UploadShadowData(&light, 1, &view, 1);

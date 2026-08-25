@@ -12,10 +12,23 @@ namespace Crowny
 {
     namespace
     {
+        constexpr uint32_t MinimumGeometryVertexCapacity = 8u * 1024u * 1024u;
+        constexpr uint32_t MaximumGeometryVertexCapacity = 64u * 1024u * 1024u;
+        constexpr uint32_t MinimumGeometryIndexCapacity = 2u * 1024u * 1024u;
+        constexpr uint32_t MaximumGeometryIndexCapacity = 16u * 1024u * 1024u;
+
         uint32_t NextCapacity(uint32_t required, uint32_t minimum) { return std::max(std::bit_ceil(std::max(required, 1u)), minimum); }
 
-        template <typename T>
-        bool ReadMaterialValue(const Material& material, std::initializer_list<StringView> names, T& output)
+        uint32_t GeometryPageCapacity(uint32_t required, uint32_t minimum, uint32_t maximum)
+        {
+            if (required == 0 || required > maximum)
+                return 0;
+            const uint64_t preferred = std::max<uint64_t>(minimum, static_cast<uint64_t>(required) * 4u);
+            const uint32_t clamped = static_cast<uint32_t>(std::min<uint64_t>(preferred, maximum));
+            return std::bit_ceil(clamped);
+        }
+
+        template <typename T> bool ReadMaterialValue(const Material& material, std::initializer_list<StringView> names, T& output)
         {
             for (StringView name : names)
             {
@@ -65,6 +78,9 @@ namespace Crowny
     {
         m_LodTableAllocator.BeginFrame(frameNumber);
         m_MeshletTableAllocator.BeginFrame(frameNumber);
+        for (GeometryHeapPage& page : m_GeometryHeapPages)
+            page.Heap->BeginFrame(frameNumber);
+        UpdateGeometryHeapStats();
     }
 
     void GpuScene::Apply(const RenderWorldChange* instanceChanges, uint32_t instanceChangeCount, const RenderLightChange* lightChanges,
@@ -76,6 +92,7 @@ namespace Crowny
         m_Stats.ShadowRanges = 0;
         m_Stats.MeshRanges = 0;
         m_Stats.MaterialRanges = 0;
+        m_Stats.GeometryUploadBytes = 0;
         m_DirtyInstanceIndices.clear();
         m_DirtyLightIndices.clear();
 
@@ -199,8 +216,7 @@ namespace Crowny
             }
             else
             {
-                if (state.Resource.GetHandleData().get() == change.Resource.GetHandleData().get() &&
-                    state.Version == change.Version)
+                if (state.Resource.GetHandleData().get() == change.Resource.GetHandleData().get() && state.Version == change.Version)
                     continue;
                 ReleaseGeometryResource(change.Index);
                 state.Resource = change.Resource;
@@ -225,8 +241,7 @@ namespace Crowny
             }
             else
             {
-                if (state.Resource.GetHandleData().get() == change.Resource.GetHandleData().get() &&
-                    state.Version == change.Version)
+                if (state.Resource.GetHandleData().get() == change.Resource.GetHandleData().get() && state.Version == change.Version)
                     continue;
                 state.Resource = change.Resource;
                 state.Version = change.Version;
@@ -235,6 +250,7 @@ namespace Crowny
         }
 
         FlushGeometryTables();
+        UpdateGeometryHeapStats();
         if (materialsDirty)
             RebuildMaterialTable();
     }
@@ -247,6 +263,8 @@ namespace Crowny
         m_ShadowViews.clear();
         m_MeshResources.clear();
         m_MaterialResources.clear();
+        m_GeometryHeapPages.clear();
+        m_GeometryResidencyFailures = 0;
         m_Geometry = {};
         m_LodTableAllocator.Reset();
         m_MeshletTableAllocator.Reset();
@@ -337,18 +355,42 @@ namespace Crowny
         return true;
     }
 
-    Ref<VertexBuffer> GpuScene::GetMeshVertexBuffer(uint32_t meshIndex) const
+    Ref<VertexBuffer> GpuScene::GetGeometryVertexBuffer(uint32_t geometryBinding) const
     {
+        if (!IsPerMeshGeometryBinding(geometryBinding))
+        {
+            const GeometryHeapPage* page = GetGeometryHeapPage(geometryBinding);
+            return page != nullptr && page->Heap ? page->Heap->GetVertexBuffer() : nullptr;
+        }
+        const uint32_t meshIndex = GetPerMeshGeometryIndex(geometryBinding);
         if (meshIndex >= m_MeshResources.size() || !m_MeshResources[meshIndex].Resource)
             return nullptr;
         return m_MeshResources[meshIndex].Resource->GetVertexBuffer();
     }
 
-    Ref<IndexBuffer> GpuScene::GetMeshIndexBuffer(uint32_t meshIndex) const
+    Ref<IndexBuffer> GpuScene::GetGeometryIndexBuffer(uint32_t geometryBinding) const
     {
+        if (!IsPerMeshGeometryBinding(geometryBinding))
+        {
+            const GeometryHeapPage* page = GetGeometryHeapPage(geometryBinding);
+            return page != nullptr && page->Heap ? page->Heap->GetIndexBuffer() : nullptr;
+        }
+        const uint32_t meshIndex = GetPerMeshGeometryIndex(geometryBinding);
         if (meshIndex >= m_MeshIndexBuffers.size())
             return nullptr;
         return m_MeshIndexBuffers[meshIndex];
+    }
+
+    DrawMode GpuScene::GetGeometryDrawMode(uint32_t geometryBinding) const
+    {
+        if (!IsPerMeshGeometryBinding(geometryBinding))
+        {
+            const GeometryHeapPage* page = GetGeometryHeapPage(geometryBinding);
+            return page != nullptr ? page->Topology : DrawMode::TRIANGLE_LIST;
+        }
+        const uint32_t meshIndex = GetPerMeshGeometryIndex(geometryBinding);
+        return meshIndex < m_MeshResources.size() && m_MeshResources[meshIndex].Resource ? m_MeshResources[meshIndex].Resource->GetDrawMode()
+                                                                                         : DrawMode::TRIANGLE_LIST;
     }
 
     const AssetHandle<Mesh>& GpuScene::GetMeshResource(uint32_t meshIndex) const
@@ -371,14 +413,13 @@ namespace Crowny
             output.clear();
     }
 
-    void GpuScene::BuildCpuDrawList(const RenderView& view, GpuDrawList& output,
-                                    GpuDrawBuffers* outputBuffers, bool shadowCastersOnly)
+    void GpuScene::BuildCpuDrawList(const RenderView& view, GpuDrawList& output, GpuDrawBuffers* outputBuffers, bool shadowCastersOnly)
     {
         const VisibilityCullingStats previousCulling = m_Stats.Culling;
         m_DrawCandidates.clear();
         m_Stats.Culling = {};
-        const VisibilityFrustum frustum = VisibilityFrustum::FromViewProjection(view.Projection * view.View,
-                                                                                RenderAPI::GetAPI() == RenderAPI::API::Vulkan);
+        const VisibilityFrustum frustum =
+          VisibilityFrustum::FromViewProjection(view.Projection * view.View, RenderAPI::GetAPI() == RenderAPI::API::Vulkan);
         const float viewportHeight = std::max(view.ViewportSize.y, 1.0f);
         const float projectionYScale = std::abs(view.Projection[1][1]);
         for (uint32_t instanceIndex = 0; instanceIndex < m_InstanceStates.size(); instanceIndex++)
@@ -411,8 +452,8 @@ namespace Crowny
             }
 
             const uint32_t meshIndex = RenderWorld::GetMeshHandle(instance.Draw);
-            if (meshIndex == 0 || meshIndex >= m_Geometry.Meshes.size() ||
-                meshIndex >= m_MeshResources.size() || !m_MeshResources[meshIndex].Resource)
+            if (meshIndex == 0 || meshIndex >= m_Geometry.Meshes.size() || meshIndex >= m_MeshResources.size() ||
+                !m_MeshResources[meshIndex].Resource)
             {
                 m_Stats.Culling.Add(VisibilityCullReason::Hidden);
                 continue;
@@ -420,8 +461,8 @@ namespace Crowny
             const AssetHandle<Mesh>& mesh = m_MeshResources[meshIndex].Resource;
             const glm::vec3 viewCenter = glm::vec3(view.View * glm::vec4(center, 1.0f));
             const float viewDepth = std::max(-viewCenter.z, 0.0001f);
-            const uint32_t lod = VisibilityCulling::SelectLod(mesh->GetGpuGeometry(), viewDepth, projectionYScale,
-                                                              viewportHeight, 1.0f, RenderWorld::GetLodBias(instance.Draw));
+            const uint32_t lod = VisibilityCulling::SelectLod(mesh->GetGpuGeometry(), viewDepth, projectionYScale, viewportHeight, 1.0f,
+                                                              RenderWorld::GetLodBias(instance.Draw));
             const GpuMeshRecord& meshRecord = m_Geometry.Meshes[meshIndex];
             if (meshRecord.LodRangeAndHeaps.y == 0)
                 continue;
@@ -444,16 +485,13 @@ namespace Crowny
                 if (materialIndex < m_MaterialResources.size() && m_MaterialResources[materialIndex].Resource)
                 {
                     const AssetHandle<Shader> shader = m_MaterialResources[materialIndex].Resource->GetShader();
-                    materialTemplate = static_cast<uint32_t>(
-                      std::hash<const AssetHandleData*>{}(shader.GetHandleData().get()));
+                    materialTemplate = static_cast<uint32_t>(std::hash<const AssetHandleData*>{}(shader.GetHandleData().get()));
                 }
                 GpuDrawCandidate candidate;
-                candidate.Bin.Phase = alpha == AlphaMode::Opaque || alpha == AlphaMode::Mask
-                                        ? RenderDrawPhase::Opaque
-                                        : RenderDrawPhase::Transparent;
+                candidate.Bin.Phase = alpha == AlphaMode::Opaque || alpha == AlphaMode::Mask ? RenderDrawPhase::Opaque : RenderDrawPhase::Transparent;
                 candidate.Bin.Alpha = alpha;
                 candidate.Bin.Pipeline = materialTemplate;
-                candidate.Bin.GeometryHeap = meshIndex;
+                candidate.Bin.GeometryHeap = meshlet.Geometry.z;
                 candidate.Bin.MaterialTemplate = materialTemplate;
                 candidate.InstanceID = instanceIndex;
                 candidate.MaterialIndex = materialIndex;
@@ -566,8 +604,16 @@ namespace Crowny
             m_LodTableAllocator.Release(state.Lods);
         if (state.Meshlets)
             m_MeshletTableAllocator.Release(state.Meshlets);
+        if (state.GeometryAllocation)
+        {
+            GeometryHeapPage* page = GetGeometryHeapPage(state.GeometryBinding);
+            if (page != nullptr && page->Heap)
+                page->Heap->Release(state.GeometryAllocation);
+        }
         state.Lods = {};
         state.Meshlets = {};
+        state.GeometryAllocation = {};
+        state.GeometryBinding = 0;
 
         m_Geometry.Meshes.resize(std::max<size_t>(m_MeshResources.size(), 1u));
         m_MeshIndexBuffers.resize(m_Geometry.Meshes.size());
@@ -585,9 +631,8 @@ namespace Crowny
         const MeshGpuGeometry& geometry = mesh.GetGpuGeometry();
         const bool hasMeshlets = !geometry.IsEmpty() && !geometry.Meshlets.empty();
         const uint32_t lodCount = hasMeshlets ? static_cast<uint32_t>(geometry.Lods.size()) : 1u;
-        const uint32_t meshletCount = hasMeshlets
-                                        ? static_cast<uint32_t>(geometry.Meshlets.size())
-                                        : static_cast<uint32_t>(std::max<size_t>(mesh.GetSubMeshes().size(), 1u));
+        const uint32_t meshletCount =
+          hasMeshlets ? static_cast<uint32_t>(geometry.Meshlets.size()) : static_cast<uint32_t>(std::max<size_t>(mesh.GetSubMeshes().size(), 1u));
         state.Lods = m_LodTableAllocator.Allocate(lodCount);
         state.Meshlets = m_MeshletTableAllocator.Allocate(meshletCount);
         if (!state.Lods || !state.Meshlets)
@@ -603,8 +648,15 @@ namespace Crowny
 
         m_Geometry.Lods.resize(std::max<size_t>(m_Geometry.Lods.size(), state.Lods.First + state.Lods.Count));
         m_Geometry.Meshlets.resize(std::max<size_t>(m_Geometry.Meshlets.size(), state.Meshlets.First + state.Meshlets.Count));
+        m_MeshIndexBuffers.resize(m_Geometry.Meshes.size());
+
+        state.GeometryBinding = MakePerMeshGeometryBinding(meshIndex);
+        GeometryAllocation allocation;
+        const bool heapResident = TryMakeGeometryResident(mesh, geometry, hasMeshlets, state, allocation);
+        const uint32_t vertexOffset = heapResident ? allocation.VertexOffset : 0u;
+        const uint32_t firstIndex = heapResident ? allocation.FirstIndex : 0u;
         GpuMeshRecord& record = m_Geometry.Meshes[meshIndex];
-        record.LodRangeAndHeaps = { state.Lods.First, lodCount, meshIndex, meshIndex };
+        record.LodRangeAndHeaps = { state.Lods.First, lodCount, state.GeometryBinding, state.GeometryBinding };
         record.GeometryOffsets = { 0u, 0u, state.Meshlets.First, meshletCount };
 
         if (hasMeshlets)
@@ -612,9 +664,7 @@ namespace Crowny
             for (uint32_t lodIndex = 0; lodIndex < lodCount; lodIndex++)
             {
                 const MeshLod& source = geometry.Lods[lodIndex];
-                m_Geometry.Lods[state.Lods.First + lodIndex] = {
-                    state.Meshlets.First + source.FirstMeshlet, source.MeshletCount, source.Error, 0u
-                };
+                m_Geometry.Lods[state.Lods.First + lodIndex] = { state.Meshlets.First + source.FirstMeshlet, source.MeshletCount, source.Error, 0u };
             }
             uint32_t lodIndex = 0;
             for (uint32_t sourceIndex = 0; sourceIndex < meshletCount; sourceIndex++)
@@ -626,10 +676,10 @@ namespace Crowny
                 GpuMeshletData& meshlet = m_Geometry.Meshlets[state.Meshlets.First + sourceIndex];
                 meshlet.BoundingSphere = source.BoundingSphere;
                 meshlet.NormalCone = source.NormalCone;
-                meshlet.Draw = { source.TriangleOffset, source.TriangleCount * 3u, source.MaterialSlot, lodIndex };
-                meshlet.Geometry = { 0u, meshIndex, meshIndex, 0u };
+                meshlet.Draw = { firstIndex + source.TriangleOffset, source.TriangleCount * 3u, source.MaterialSlot, lodIndex };
+                meshlet.Geometry = { vertexOffset, state.GeometryBinding, state.GeometryBinding, 0u };
             }
-            if (CanCreateGpuBuffers() && !geometry.MeshletIndices.empty())
+            if (!heapResident && CanCreateGpuBuffers() && !geometry.MeshletIndices.empty())
             {
                 IndexBufferDesc desc;
                 desc.Count = static_cast<uint32_t>(geometry.MeshletIndices.size());
@@ -639,7 +689,7 @@ namespace Crowny
                 m_MeshIndexBuffers[meshIndex] = IndexBuffer::Create(desc);
             }
             else
-                m_MeshIndexBuffers[meshIndex] = mesh.GetIndexBuffer();
+                m_MeshIndexBuffers[meshIndex] = heapResident ? nullptr : mesh.GetIndexBuffer();
         }
         else
         {
@@ -652,15 +702,15 @@ namespace Crowny
                 meshlet.BoundingSphere = glm::vec4(bounds.GetCenter(), bounds.GetRadius());
                 meshlet.NormalCone = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
                 if (subMeshes.empty())
-                    meshlet.Draw = { 0u, mesh.GetIndexCount(), 0u, 0u };
+                    meshlet.Draw = { firstIndex, mesh.GetIndexCount(), 0u, 0u };
                 else
                 {
                     const SubMesh& source = subMeshes[subMeshIndex];
-                    meshlet.Draw = { source.IndexOffset, source.IndexCount, subMeshIndex, 0u };
+                    meshlet.Draw = { firstIndex + source.IndexOffset, source.IndexCount, subMeshIndex, 0u };
                 }
-                meshlet.Geometry = { 0u, meshIndex, meshIndex, 0u };
+                meshlet.Geometry = { vertexOffset, state.GeometryBinding, state.GeometryBinding, 0u };
             }
-            m_MeshIndexBuffers[meshIndex] = mesh.GetIndexBuffer();
+            m_MeshIndexBuffers[meshIndex] = heapResident ? nullptr : mesh.GetIndexBuffer();
         }
 
         m_MeshLodRanges.push_back({ state.Lods.First, state.Lods.Count });
@@ -676,12 +726,12 @@ namespace Crowny
         uint32_t meshCapacity = m_Stats.MeshCapacity;
         uint32_t lodCapacity = m_Stats.MeshLodCapacity;
         uint32_t meshletCapacity = m_Stats.MeshletCapacity;
-        UploadTableRanges(m_MeshBuffer, m_Geometry.Meshes.data(), static_cast<uint32_t>(m_Geometry.Meshes.size()),
-                          sizeof(GpuMeshRecord), 64u, meshCapacity, m_MeshRanges, m_Stats.MeshRanges);
-        UploadTableRanges(m_MeshLodBuffer, m_Geometry.Lods.data(), static_cast<uint32_t>(m_Geometry.Lods.size()),
-                          sizeof(GpuMeshLodData), 128u, lodCapacity, m_MeshLodRanges, m_Stats.MeshRanges);
-        UploadTableRanges(m_MeshletBuffer, m_Geometry.Meshlets.data(), static_cast<uint32_t>(m_Geometry.Meshlets.size()),
-                          sizeof(GpuMeshletData), 1024u, meshletCapacity, m_MeshletRanges, m_Stats.MeshRanges);
+        UploadTableRanges(m_MeshBuffer, m_Geometry.Meshes.data(), static_cast<uint32_t>(m_Geometry.Meshes.size()), sizeof(GpuMeshRecord), 64u,
+                          meshCapacity, m_MeshRanges, m_Stats.MeshRanges);
+        UploadTableRanges(m_MeshLodBuffer, m_Geometry.Lods.data(), static_cast<uint32_t>(m_Geometry.Lods.size()), sizeof(GpuMeshLodData), 128u,
+                          lodCapacity, m_MeshLodRanges, m_Stats.MeshRanges);
+        UploadTableRanges(m_MeshletBuffer, m_Geometry.Meshlets.data(), static_cast<uint32_t>(m_Geometry.Meshlets.size()), sizeof(GpuMeshletData),
+                          1024u, meshletCapacity, m_MeshletRanges, m_Stats.MeshRanges);
         m_Stats.MeshCapacity = CanCreateGpuBuffers() ? meshCapacity : static_cast<uint32_t>(m_Geometry.Meshes.size());
         m_Stats.MeshLodCapacity = CanCreateGpuBuffers() ? lodCapacity : static_cast<uint32_t>(m_Geometry.Lods.size());
         m_Stats.MeshletCapacity = CanCreateGpuBuffers() ? meshletCapacity : static_cast<uint32_t>(m_Geometry.Meshlets.size());
@@ -691,6 +741,132 @@ namespace Crowny
         m_Stats.LiveMeshlets = meshletStats.LiveElements;
         m_Stats.RetiredMeshMetadata = lodStats.RetiredElements + meshletStats.RetiredElements;
     }
+
+    bool GpuScene::TryMakeGeometryResident(const Mesh& mesh, const MeshGpuGeometry& geometry, bool hasMeshlets, MeshResourceState& state,
+                                           GeometryAllocation& allocation)
+    {
+        if (!CanUseStaticGeometryHeaps() || mesh.IsDynamic() || mesh.GetMorph() || mesh.GetSkeleton() || !mesh.GetVertexBuffer() ||
+            !mesh.GetIndexBuffer() || !mesh.GetVertexBuffer()->GetLayout() || mesh.GetVertexLayout().GetStreamCount() != 1u)
+            return false;
+
+        const IndexType indexType = hasMeshlets ? IndexType::Index_32 : mesh.GetIndexType();
+        const uint32_t indexCount = hasMeshlets ? static_cast<uint32_t>(geometry.MeshletIndices.size()) : mesh.GetIndexCount();
+        const uint64_t vertexSize64 = static_cast<uint64_t>(mesh.GetVertexCount()) * mesh.GetVertexLayout().GetStride();
+        if (indexCount == 0 || vertexSize64 == 0 || vertexSize64 > std::numeric_limits<uint32_t>::max())
+            return false;
+        const uint32_t vertexSize = static_cast<uint32_t>(vertexSize64);
+        GeometryHeapPage* page = AllocateGeometryHeapPage(mesh, indexType, vertexSize, indexCount, allocation);
+        if (page == nullptr)
+        {
+            m_GeometryResidencyFailures++;
+            return false;
+        }
+        if (!page->Heap->CopyVertices(allocation.Handle, *mesh.GetVertexBuffer()))
+        {
+            page->Heap->Release(allocation.Handle);
+            allocation = {};
+            m_GeometryResidencyFailures++;
+            return false;
+        }
+        const bool indicesUploaded = hasMeshlets ? page->Heap->UploadIndices(allocation.Handle, geometry.MeshletIndices.data())
+                                                 : page->Heap->CopyIndices(allocation.Handle, *mesh.GetIndexBuffer());
+        if (!indicesUploaded)
+        {
+            page->Heap->Release(allocation.Handle);
+            allocation = {};
+            m_GeometryResidencyFailures++;
+            return false;
+        }
+
+        state.GeometryAllocation = allocation.Handle;
+        state.GeometryBinding = page->Binding;
+        const uint64_t indexBytes = static_cast<uint64_t>(indexCount) * (indexType == IndexType::Index_16 ? sizeof(uint16_t) : sizeof(uint32_t));
+        const uint64_t uploadBytes = vertexSize + indexBytes;
+        m_Stats.GeometryUploadBytes += uploadBytes;
+        m_Stats.UploadedBytes += uploadBytes;
+        return true;
+    }
+
+    GpuScene::GeometryHeapPage* GpuScene::AllocateGeometryHeapPage(const Mesh& mesh, IndexType indexType, uint32_t vertexSizeBytes,
+                                                                   uint32_t indexCount, GeometryAllocation& allocation)
+    {
+        const Ref<BufferLayout>& layout = mesh.GetVertexBuffer()->GetLayout();
+        const uint32_t indexSize = indexType == IndexType::Index_16 ? sizeof(uint16_t) : sizeof(uint32_t);
+        for (GeometryHeapPage& page : m_GeometryHeapPages)
+        {
+            if (page.Indices != indexType || page.Topology != mesh.GetDrawMode() || !GeometryLayoutsMatch(*page.Layout, *layout))
+                continue;
+            const GeometryHeapStats stats = page.Heap->GetStats();
+            if (stats.LargestFreeVertexRange < vertexSizeBytes || stats.LargestFreeIndexRange < static_cast<uint64_t>(indexCount) * indexSize)
+                continue;
+            if (page.Heap->Allocate(vertexSizeBytes, indexCount, allocation))
+                return &page;
+        }
+
+        const uint32_t vertexCapacity = GeometryPageCapacity(vertexSizeBytes, MinimumGeometryVertexCapacity, MaximumGeometryVertexCapacity);
+        const uint32_t indexCapacity = GeometryPageCapacity(indexCount, MinimumGeometryIndexCapacity, MaximumGeometryIndexCapacity);
+        if (vertexCapacity == 0 || indexCapacity == 0 || m_GeometryHeapPages.size() + 1u >= PerMeshGeometryBindingBit)
+            return nullptr;
+
+        GeometryHeapDesc desc;
+        desc.VertexCapacityBytes = vertexCapacity;
+        desc.IndexCapacity = indexCapacity;
+        desc.VertexStride = layout->GetStride();
+        desc.Indices = indexType;
+        desc.FramesInFlight = 2;
+        GeometryHeapPage page;
+        page.Binding = static_cast<uint32_t>(m_GeometryHeapPages.size()) + 1u;
+        page.Topology = mesh.GetDrawMode();
+        page.Indices = indexType;
+        page.Layout = layout;
+        page.Heap = CreateScope<StaticGeometryHeap>(desc);
+        if (!page.Heap->InitializeGpuBuffers(layout) || !page.Heap->Allocate(vertexSizeBytes, indexCount, allocation))
+            return nullptr;
+        m_GeometryHeapPages.push_back(std::move(page));
+        return &m_GeometryHeapPages.back();
+    }
+
+    GpuScene::GeometryHeapPage* GpuScene::GetGeometryHeapPage(uint32_t geometryBinding)
+    {
+        if (geometryBinding == 0 || IsPerMeshGeometryBinding(geometryBinding) || geometryBinding > m_GeometryHeapPages.size())
+            return nullptr;
+        return &m_GeometryHeapPages[geometryBinding - 1u];
+    }
+
+    const GpuScene::GeometryHeapPage* GpuScene::GetGeometryHeapPage(uint32_t geometryBinding) const
+    {
+        if (geometryBinding == 0 || IsPerMeshGeometryBinding(geometryBinding) || geometryBinding > m_GeometryHeapPages.size())
+            return nullptr;
+        return &m_GeometryHeapPages[geometryBinding - 1u];
+    }
+
+    void GpuScene::UpdateGeometryHeapStats()
+    {
+        m_Stats.GeometryHeapPages = static_cast<uint32_t>(m_GeometryHeapPages.size());
+        m_Stats.GeometryHeapCapacityBytes = 0;
+        m_Stats.GeometryHeapLiveBytes = 0;
+        m_Stats.GeometryHeapHighWaterBytes = 0;
+        m_Stats.GeometryHeapRetiredAllocations = 0;
+        m_Stats.GeometryHeapFailedAllocations = m_GeometryResidencyFailures;
+        for (const GeometryHeapPage& page : m_GeometryHeapPages)
+        {
+            const GeometryHeapStats stats = page.Heap->GetStats();
+            m_Stats.GeometryHeapCapacityBytes += stats.VertexCapacityBytes + stats.IndexCapacityBytes;
+            m_Stats.GeometryHeapLiveBytes += stats.LiveBytes;
+            m_Stats.GeometryHeapHighWaterBytes += stats.HighWaterBytes;
+            m_Stats.GeometryHeapRetiredAllocations += stats.RetiredAllocations;
+            m_Stats.GeometryHeapFailedAllocations += stats.FailedAllocations;
+        }
+    }
+
+    uint32_t GpuScene::MakePerMeshGeometryBinding(uint32_t meshIndex)
+    {
+        return meshIndex < PerMeshGeometryBindingBit ? PerMeshGeometryBindingBit | meshIndex : 0u;
+    }
+
+    bool GpuScene::IsPerMeshGeometryBinding(uint32_t geometryBinding) { return (geometryBinding & PerMeshGeometryBindingBit) != 0; }
+
+    uint32_t GpuScene::GetPerMeshGeometryIndex(uint32_t geometryBinding) { return geometryBinding & ~PerMeshGeometryBindingBit; }
 
     void GpuScene::RebuildMaterialTable()
     {
@@ -760,15 +936,15 @@ namespace Crowny
             if (material.GetVariation().Has("ALPHA_MASK") && material.GetVariation().GetBool("ALPHA_MASK"))
                 desc.Alpha = AlphaMode::Mask;
 
-            desc.BaseColorTexture = registerTexture(
-              FindMaterialTexture(material, { "baseColorTexture", "baseColorMap", "albedoMap", "mainTexture" }), Texture::WHITE);
+            desc.BaseColorTexture =
+              registerTexture(FindMaterialTexture(material, { "baseColorTexture", "baseColorMap", "albedoMap", "mainTexture" }), Texture::WHITE);
             desc.NormalTexture = registerTexture(FindMaterialTexture(material, { "normalTexture", "normalMap" }), Texture::NORMAL);
-            desc.MetallicRoughnessTexture = registerTexture(
-              FindMaterialTexture(material, { "metallicRoughnessTexture", "metallicRoughnessMap", "metallicMap" }), Texture::WHITE);
-            desc.AmbientOcclusionTexture = registerTexture(
-              FindMaterialTexture(material, { "ambientOcclusionTexture", "ambientOcclusionMap", "aoMap" }), Texture::WHITE);
-            desc.EmissiveTexture = registerTexture(
-              FindMaterialTexture(material, { "emissiveTexture", "emissiveMap", "emissionMap" }), Texture::BLACK);
+            desc.MetallicRoughnessTexture =
+              registerTexture(FindMaterialTexture(material, { "metallicRoughnessTexture", "metallicRoughnessMap", "metallicMap" }), Texture::WHITE);
+            desc.AmbientOcclusionTexture =
+              registerTexture(FindMaterialTexture(material, { "ambientOcclusionTexture", "ambientOcclusionMap", "aoMap" }), Texture::WHITE);
+            desc.EmissiveTexture =
+              registerTexture(FindMaterialTexture(material, { "emissiveTexture", "emissiveMap", "emissionMap" }), Texture::BLACK);
             if (desc.Model == MaterialModel::Toon)
             {
                 glm::vec4 color(desc.ToonShadowColor, 1.0f);
@@ -811,17 +987,17 @@ namespace Crowny
                 ReadMaterialValue(material, { "toonOutlineDistanceFade", "outlineDistanceFade" }, desc.ToonOutlineDistanceFade);
                 desc.ToonPatternTexture = registerTexture(
                   FindMaterialTexture(material, { "toonPatternTexture", "patternTexture", "hatchingTexture", "scratchTexture" }), Texture::WHITE);
-                desc.ToonRampTexture = registerTexture(
-                  FindMaterialTexture(material, { "toonRampTexture", "rampTexture", "diffuseRamp" }), Texture::WHITE);
-                desc.ToonMatcapTexture = registerTexture(
-                  FindMaterialTexture(material, { "toonMatcapTexture", "matcapTexture", "matcap" }), Texture::WHITE);
+                desc.ToonRampTexture =
+                  registerTexture(FindMaterialTexture(material, { "toonRampTexture", "rampTexture", "diffuseRamp" }), Texture::WHITE);
+                desc.ToonMatcapTexture =
+                  registerTexture(FindMaterialTexture(material, { "toonMatcapTexture", "matcapTexture", "matcap" }), Texture::WHITE);
             }
             m_Materials[materialIndex] = GpuMaterialPacker::Pack(desc);
         }
 
         uint32_t materialCapacity = m_Stats.MaterialCapacity;
-        UploadTable(m_MaterialBuffer, m_Materials.data(), static_cast<uint32_t>(m_Materials.size()),
-                    sizeof(GpuMaterialData), 256u, materialCapacity, m_Stats.MaterialRanges);
+        UploadTable(m_MaterialBuffer, m_Materials.data(), static_cast<uint32_t>(m_Materials.size()), sizeof(GpuMaterialData), 256u, materialCapacity,
+                    m_Stats.MaterialRanges);
         m_Stats.MaterialCapacity = CanCreateGpuBuffers() ? materialCapacity : static_cast<uint32_t>(m_Materials.size());
         m_Stats.BindlessTextureCount = static_cast<uint32_t>(m_BindlessTextureResources.size());
         m_BindlessTextureVersion++;
@@ -829,9 +1005,8 @@ namespace Crowny
             m_BindlessTextureVersion = 1;
     }
 
-    void GpuScene::UploadTable(Ref<GenericGpuBuffer>& buffer, const void* data, uint32_t elementCount,
-                               uint32_t elementSize, uint32_t minimumCapacity, uint32_t& capacity,
-                               uint32_t& rangeCount)
+    void GpuScene::UploadTable(Ref<GenericGpuBuffer>& buffer, const void* data, uint32_t elementCount, uint32_t elementSize, uint32_t minimumCapacity,
+                               uint32_t& capacity, uint32_t& rangeCount)
     {
         if (!CanCreateGpuBuffers())
             return;
@@ -856,9 +1031,8 @@ namespace Crowny
         rangeCount++;
     }
 
-    void GpuScene::UploadTableRanges(Ref<GenericGpuBuffer>& buffer, const void* data, uint32_t elementCount,
-                                     uint32_t elementSize, uint32_t minimumCapacity, uint32_t& capacity,
-                                     Vector<DirtyRange>& ranges, uint32_t& rangeCount)
+    void GpuScene::UploadTableRanges(Ref<GenericGpuBuffer>& buffer, const void* data, uint32_t elementCount, uint32_t elementSize,
+                                     uint32_t minimumCapacity, uint32_t& capacity, Vector<DirtyRange>& ranges, uint32_t& rangeCount)
     {
         if (!CanCreateGpuBuffers() || elementCount == 0 || data == nullptr)
             return;
@@ -921,14 +1095,10 @@ namespace Crowny
 
     void GpuScene::MergeDirtyRanges(Vector<DirtyRange>& ranges)
     {
-        ranges.erase(std::remove_if(ranges.begin(), ranges.end(), [](const DirtyRange& range) {
-                         return range.Count == 0;
-                     }), ranges.end());
+        ranges.erase(std::remove_if(ranges.begin(), ranges.end(), [](const DirtyRange& range) { return range.Count == 0; }), ranges.end());
         if (ranges.empty())
             return;
-        std::sort(ranges.begin(), ranges.end(), [](const DirtyRange& first, const DirtyRange& second) {
-            return first.First < second.First;
-        });
+        std::sort(ranges.begin(), ranges.end(), [](const DirtyRange& first, const DirtyRange& second) { return first.First < second.First; });
         size_t output = 0;
         for (size_t index = 1; index < ranges.size(); index++)
         {
@@ -976,4 +1146,6 @@ namespace Crowny
     {
         return m_EnableGpuBuffers && RenderAPI::TryGet() != nullptr && RenderAPI::TryGet()->GetCapabilities().HasCapability(CW_LOAD_STORE);
     }
+
+    bool GpuScene::CanUseStaticGeometryHeaps() const { return CanCreateGpuBuffers() && RenderAPI::GetAPI() == RenderAPI::API::Vulkan; }
 } // namespace Crowny

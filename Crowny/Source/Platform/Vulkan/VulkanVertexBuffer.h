@@ -86,6 +86,8 @@ namespace Crowny
         }
 
         virtual void ReadData(uint32_t offset, uint32_t length, void* dest) override { m_Buffer->ReadData(offset, length, dest); }
+        virtual void CopyData(GpuBuffer& src, uint32_t srcOffset, uint32_t dstOffset, uint32_t length, bool discard = false,
+                              const Ref<CommandBuffer>& commandBuffer = nullptr) override;
 
         virtual void* Map(uint32_t offset, uint32_t size, GpuLockOptions options) override;
         virtual void Unmap() override;

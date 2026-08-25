@@ -64,6 +64,10 @@ namespace Crowny
         bool InitializeGpuBuffers(const Ref<BufferLayout>& layout);
         bool Allocate(uint32_t vertexSizeBytes, uint32_t indexCount, GeometryAllocation& output);
         bool Upload(GeometryAllocationHandle handle, const void* vertexData, const void* indexData);
+        bool UploadVertices(GeometryAllocationHandle handle, const void* vertexData);
+        bool UploadIndices(GeometryAllocationHandle handle, const void* indexData);
+        bool CopyVertices(GeometryAllocationHandle handle, VertexBuffer& source, uint32_t sourceOffsetBytes = 0);
+        bool CopyIndices(GeometryAllocationHandle handle, IndexBuffer& source, uint32_t sourceFirstIndex = 0);
         bool Release(GeometryAllocationHandle handle);
         void BeginFrame(uint64_t frameNumber);
 
@@ -118,4 +122,6 @@ namespace Crowny
         uint64_t m_FailedAllocations = 0;
         uint32_t m_LiveAllocations = 0;
     };
+
+    bool GeometryLayoutsMatch(const BufferLayout& first, const BufferLayout& second);
 } // namespace Crowny

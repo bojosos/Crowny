@@ -244,8 +244,7 @@ namespace Crowny
             else
                 tag = "GpuBuffer";
         }
-        VmaAllocation allocation = device.AllocateMemory(buffer, flags, tag,
-                                                         staging ? VulkanAllocationType::Staging : VulkanAllocationType::Default);
+        VmaAllocation allocation = device.AllocateMemory(buffer, flags, tag, staging ? VulkanAllocationType::Staging : VulkanAllocationType::Default);
 
         m_BufferCreateInfo.usage = usage;
         return device.GetResourceManager().Create<VulkanBuffer>(buffer, allocation);
@@ -503,7 +502,18 @@ namespace Crowny
         if (vkCmdBuffer->IsInRenderPass())
             vkCmdBuffer->EndRenderPass();
 
+        // Transfer registrations are intentionally excluded from the command
+        // buffer's shader hazard tracker. Make buffer copies self-synchronizing
+        // so a copied geometry page can be consumed later in this command buffer.
+        vkCmdBuffer->MemoryBarrier(src->GetHandle(), VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                                   VK_PIPELINE_STAGE_TRANSFER_BIT);
+        vkCmdBuffer->MemoryBarrier(dst->GetHandle(), VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+                                   VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
         src->Copy(vkCmdBuffer, dst, srcOffset, dstOffset, length);
+        vkCmdBuffer->MemoryBarrier(src->GetHandle(), VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_MEMORY_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                   VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+        vkCmdBuffer->MemoryBarrier(dst->GetHandle(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
+                                   VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
         vkCmdBuffer->RegisterBuffer(src, BufferUseFlagBits::Transfer, VulkanAccessFlagBits::Read);
         vkCmdBuffer->RegisterBuffer(dst, BufferUseFlagBits::Transfer, VulkanAccessFlagBits::Write);

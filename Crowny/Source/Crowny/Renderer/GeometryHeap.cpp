@@ -37,8 +37,7 @@ namespace Crowny
     bool StaticGeometryHeap::Allocate(uint32_t vertexSizeBytes, uint32_t indexCount, GeometryAllocation& output)
     {
         output = {};
-        if (vertexSizeBytes == 0 || indexCount == 0 || m_Desc.VertexStride == 0 ||
-            vertexSizeBytes % m_Desc.VertexStride != 0)
+        if (vertexSizeBytes == 0 || indexCount == 0 || m_Desc.VertexStride == 0 || vertexSizeBytes % m_Desc.VertexStride != 0)
         {
             ++m_FailedAllocations;
             return false;
@@ -89,12 +88,49 @@ namespace Crowny
 
     bool StaticGeometryHeap::Upload(GeometryAllocationHandle handle, const void* vertexData, const void* indexData)
     {
+        if (!vertexData || !indexData)
+            return false;
+        return UploadVertices(handle, vertexData) && UploadIndices(handle, indexData);
+    }
+
+    bool StaticGeometryHeap::UploadVertices(GeometryAllocationHandle handle, const void* vertexData)
+    {
         GeometryAllocation allocation;
-        if (!vertexData || !indexData || !m_VertexBuffer || !m_IndexBuffer || !TryGet(handle, allocation))
+        if (!vertexData || !m_VertexBuffer || !TryGet(handle, allocation))
             return false;
         m_VertexBuffer->WriteData(allocation.VertexOffsetBytes, allocation.VertexSizeBytes, vertexData);
+        return true;
+    }
+
+    bool StaticGeometryHeap::UploadIndices(GeometryAllocationHandle handle, const void* indexData)
+    {
+        GeometryAllocation allocation;
+        if (!indexData || !m_IndexBuffer || !TryGet(handle, allocation))
+            return false;
         const uint32_t indexSize = IndexElementSize(m_Desc.Indices);
         m_IndexBuffer->WriteData(allocation.FirstIndex * indexSize, allocation.IndexCount * indexSize, indexData);
+        return true;
+    }
+
+    bool StaticGeometryHeap::CopyVertices(GeometryAllocationHandle handle, VertexBuffer& source, uint32_t sourceOffsetBytes)
+    {
+        GeometryAllocation allocation;
+        if (!m_VertexBuffer || !m_VertexBuffer->GetLayout() || !source.GetLayout() ||
+            !GeometryLayoutsMatch(*m_VertexBuffer->GetLayout(), *source.GetLayout()) || !TryGet(handle, allocation) ||
+            sourceOffsetBytes > source.GetBufferSize() || allocation.VertexSizeBytes > source.GetBufferSize() - sourceOffsetBytes)
+            return false;
+        m_VertexBuffer->CopyData(source, sourceOffsetBytes, allocation.VertexOffsetBytes, allocation.VertexSizeBytes);
+        return true;
+    }
+
+    bool StaticGeometryHeap::CopyIndices(GeometryAllocationHandle handle, IndexBuffer& source, uint32_t sourceFirstIndex)
+    {
+        GeometryAllocation allocation;
+        if (!m_IndexBuffer || source.GetIndexType() != m_Desc.Indices || !TryGet(handle, allocation) || sourceFirstIndex > source.GetCount() ||
+            allocation.IndexCount > source.GetCount() - sourceFirstIndex)
+            return false;
+        const uint32_t indexSize = IndexElementSize(m_Desc.Indices);
+        m_IndexBuffer->CopyData(source, sourceFirstIndex * indexSize, allocation.FirstIndex * indexSize, allocation.IndexCount * indexSize);
         return true;
     }
 
@@ -108,7 +144,8 @@ namespace Crowny
         slot.Alive = false;
         m_Retired.push_back({ handle.Index,
                               { slot.Allocation.VertexOffsetBytes, slot.Allocation.VertexSizeBytes },
-                              { slot.Allocation.FirstIndex, slot.Allocation.IndexCount }, m_CurrentFrame });
+                              { slot.Allocation.FirstIndex, slot.Allocation.IndexCount },
+                              m_CurrentFrame });
         const uint64_t indexBytes = static_cast<uint64_t>(slot.Allocation.IndexCount) * IndexElementSize(m_Desc.Indices);
         m_LiveBytes -= slot.Allocation.VertexSizeBytes + indexBytes;
         --m_LiveAllocations;
@@ -175,8 +212,7 @@ namespace Crowny
         {
             const Range& range = ranges[index];
             const uint32_t alignedOffset = AlignUp(range.Offset, alignment);
-            if (alignedOffset < range.Offset || alignedOffset - range.Offset > range.Size ||
-                size > range.Size - (alignedOffset - range.Offset))
+            if (alignedOffset < range.Offset || alignedOffset - range.Offset > range.Size || size > range.Size - (alignedOffset - range.Offset))
                 continue;
             const uint64_t waste = static_cast<uint64_t>(range.Size) - size;
             if (waste < bestWaste)
@@ -234,15 +270,10 @@ namespace Crowny
         if (remainder == 0u)
             return value;
         const uint32_t padding = alignment - remainder;
-        return value > std::numeric_limits<uint32_t>::max() - padding
-                 ? std::numeric_limits<uint32_t>::max()
-                 : value + padding;
+        return value > std::numeric_limits<uint32_t>::max() - padding ? std::numeric_limits<uint32_t>::max() : value + padding;
     }
 
-    uint32_t StaticGeometryHeap::IndexElementSize(IndexType type)
-    {
-        return type == IndexType::Index_16 ? sizeof(uint16_t) : sizeof(uint32_t);
-    }
+    uint32_t StaticGeometryHeap::IndexElementSize(IndexType type) { return type == IndexType::Index_16 ? sizeof(uint16_t) : sizeof(uint32_t); }
 
     uint32_t StaticGeometryHeap::NextGeneration(uint32_t generation)
     {
@@ -264,5 +295,27 @@ namespace Crowny
         for (const Range& range : ranges)
             largest = std::max<uint64_t>(largest, range.Size);
         return largest;
+    }
+
+    bool GeometryLayoutsMatch(const BufferLayout& first, const BufferLayout& second)
+    {
+        if (first.GetStreamCount() != second.GetStreamCount())
+            return false;
+        for (uint32_t stream = 0; stream < first.GetStreamCount(); stream++)
+            if (first.GetStride(stream) != second.GetStride(stream))
+                return false;
+        const auto& firstElements = first.GetElements();
+        const auto& secondElements = second.GetElements();
+        if (firstElements.size() != secondElements.size())
+            return false;
+        for (size_t index = 0; index < firstElements.size(); index++)
+        {
+            const BufferElement& a = firstElements[index];
+            const BufferElement& b = secondElements[index];
+            if (a.Attribute != b.Attribute || a.Type != b.Type || a.Size != b.Size || a.Offset != b.Offset || a.StreamIdx != b.StreamIdx ||
+                a.InstanceRate != b.InstanceRate || a.Location != b.Location || a.Normalized != b.Normalized)
+                return false;
+        }
+        return true;
     }
 } // namespace Crowny

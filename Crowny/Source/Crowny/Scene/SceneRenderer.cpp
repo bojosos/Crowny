@@ -11,9 +11,9 @@
 #include "Crowny/RenderAPI/RenderCommand.h"
 #include "Crowny/RenderAPI/SamplerState.h"
 #include "Crowny/RenderAPI/VertexBuffer.h"
+#include "Crowny/Renderer/ComputeMaterial.h"
 #include "Crowny/Renderer/EnvironmentMap.h"
 #include "Crowny/Renderer/ForwardRenderer.h"
-#include "Crowny/Renderer/ComputeMaterial.h"
 #include "Crowny/Renderer/GpuScene.h"
 #include "Crowny/Renderer/RenderGraph.h"
 #include "Crowny/Renderer/RenderGraphResources.h"
@@ -141,8 +141,8 @@ namespace Crowny
         class GpuDrivenPassExecutor
         {
         public:
-            void BeginFrame(const RenderView& view, const RenderBlackboard& blackboard, GpuScene& scene,
-                            const GpuDrawList& depthDrawList, const Ref<EnvironmentMap>& environment)
+            void BeginFrame(const RenderView& view, const RenderBlackboard& blackboard, GpuScene& scene, const GpuDrawList& depthDrawList,
+                            const Ref<EnvironmentMap>& environment)
             {
                 m_View = view;
                 m_Blackboard = &blackboard;
@@ -200,8 +200,7 @@ namespace Crowny
             void RenderShadows(RenderGraphContext& context, const Vector<ShadowRenderView>& views, uint32_t viewCount)
             {
                 viewCount = std::min<uint32_t>(viewCount, static_cast<uint32_t>(views.size()));
-                if (viewCount == 0 || !Ensure(m_ShadowDepth, m_ShadowDepthAttempted,
-                                             "Resources/Shaders/GpuShadowDepth.asset"))
+                if (viewCount == 0 || !Ensure(m_ShadowDepth, m_ShadowDepthAttempted, "Resources/Shaders/GpuShadowDepth.asset"))
                     return;
                 const Ref<GenericGpuBuffer> instances = Buffer(context, "InstanceTable");
                 if (!instances)
@@ -424,8 +423,7 @@ namespace Crowny
                 if (attempted || AssetManager::TryGet() == nullptr)
                     return false;
                 attempted = true;
-                const AssetHandle<Shader> shader =
-                  AssetManager::TryGet()->Load<Shader>("Resources/Shaders/ForwardPlusStandard.asset");
+                const AssetHandle<Shader> shader = AssetManager::TryGet()->Load<Shader>("Resources/Shaders/ForwardPlusStandard.asset");
                 Ref<BlendStateDesc> blend = CreateRef<BlendStateDesc>();
                 blend->EnableBlending = true;
                 blend->SrcBlend = BlendFactor::One;
@@ -437,8 +435,8 @@ namespace Crowny
                 depth->EnableDepthWrite = false;
                 depth->DepthCompareFunction = CompareFunction::GREATER_EQUAL;
                 if (!material.Initialize(shader, blend, depth))
-                    CW_ENGINE_ERROR("Failed to initialize Forward+ {} transparency: {}",
-                                    additive ? "additive" : "premultiplied", material.GetError());
+                    CW_ENGINE_ERROR("Failed to initialize Forward+ {} transparency: {}", additive ? "additive" : "premultiplied",
+                                    material.GetError());
                 return material.IsValid();
             }
 
@@ -464,8 +462,8 @@ namespace Crowny
                     return;
 
                 CullingConstants constants;
-                constants.FrustumPlanes = VisibilityFrustum::FromViewProjection(m_View.Projection * m_View.View,
-                    RenderAPI::GetAPI() == RenderAPI::API::Vulkan).Planes;
+                constants.FrustumPlanes =
+                  VisibilityFrustum::FromViewProjection(m_View.Projection * m_View.View, RenderAPI::GetAPI() == RenderAPI::API::Vulkan).Planes;
                 constants.View = m_View.View;
                 constants.Projection = m_View.Projection;
                 constants.ViewportAndNearPlane = { m_View.ViewportSize, NearPlane(), 0.0f };
@@ -518,8 +516,8 @@ namespace Crowny
                 if (!candidates || !commands)
                     return;
                 MeshletCullingConstants constants;
-                constants.FrustumPlanes = VisibilityFrustum::FromViewProjection(m_View.Projection * m_View.View,
-                    RenderAPI::GetAPI() == RenderAPI::API::Vulkan).Planes;
+                constants.FrustumPlanes =
+                  VisibilityFrustum::FromViewProjection(m_View.Projection * m_View.View, RenderAPI::GetAPI() == RenderAPI::API::Vulkan).Planes;
                 constants.View = m_View.View;
                 constants.Projection = m_View.Projection;
                 const glm::mat4 inverseView = glm::inverse(m_View.View);
@@ -627,25 +625,21 @@ namespace Crowny
                     return;
                 RenderAPI::TryGet()->SetRenderTarget(target);
                 RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
-                RenderAPI::TryGet()->ClearViewport(FBT_DEPTH | (attachments.ColorCount != 0 ? FBT_COLOR : 0),
-                                          glm::vec4(0.0f), 0.0f);
+                RenderAPI::TryGet()->ClearViewport(FBT_DEPTH | (attachments.ColorCount != 0 ? FBT_COLOR : 0), glm::vec4(0.0f), 0.0f);
 
                 GraphicsMaterial* boundMaterial = nullptr;
                 for (const GpuDrawRun& run : m_DepthDrawList->Runs)
                 {
-                    if (run.Bin.Phase != RenderDrawPhase::Opaque || run.Bin.Alpha != AlphaMode::Opaque ||
-                        run.CommandCount == 0)
+                    if (run.Bin.Phase != RenderDrawPhase::Opaque || run.Bin.Alpha != AlphaMode::Opaque || run.CommandCount == 0)
                         continue;
-                    const Ref<VertexBuffer> vertexBuffer = m_Scene->GetMeshVertexBuffer(run.Bin.GeometryHeap);
-                    const Ref<IndexBuffer> indexBuffer = m_Scene->GetMeshIndexBuffer(run.Bin.GeometryHeap);
-                    const AssetHandle<Mesh>& mesh = m_Scene->GetMeshResource(run.Bin.GeometryHeap);
-                    if (!vertexBuffer || !indexBuffer || !mesh)
+                    const Ref<VertexBuffer> vertexBuffer = m_Scene->GetGeometryVertexBuffer(run.Bin.GeometryHeap);
+                    const Ref<IndexBuffer> indexBuffer = m_Scene->GetGeometryIndexBuffer(run.Bin.GeometryHeap);
+                    if (!vertexBuffer || !indexBuffer)
                         continue;
                     GraphicsMaterial* depthMaterial = &m_Depth;
                     if (vertexBuffer->GetLayout()->HasAttribute(VertexAttribute::PreviousPosition))
                     {
-                        if (!Ensure(m_AnimatedDepth, m_AnimatedDepthAttempted,
-                                    "Resources/Shaders/GpuAnimatedDepthOnly.asset"))
+                        if (!Ensure(m_AnimatedDepth, m_AnimatedDepthAttempted, "Resources/Shaders/GpuAnimatedDepthOnly.asset"))
                             continue;
                         m_AnimatedDepth.WriteUniformBlock(0, 0, &view, sizeof(view));
                         m_AnimatedDepth.SetBuffer(0, 1, instances);
@@ -662,10 +656,8 @@ namespace Crowny
                     Ref<VertexBuffer> boundVertexBuffer = vertexBuffer;
                     RenderAPI::TryGet()->SetVertexBuffers(0, &boundVertexBuffer, 1);
                     RenderAPI::TryGet()->SetIndexBuffer(indexBuffer);
-                    RenderAPI::TryGet()->SetDrawMode(mesh->GetDrawMode());
-                    RenderAPI::TryGet()->DrawIndexedIndirect(commands,
-                                                    run.FirstCommand * sizeof(DrawIndexedIndirectCommand),
-                                                    run.CommandCount);
+                    RenderAPI::TryGet()->SetDrawMode(m_Scene->GetGeometryDrawMode(run.Bin.GeometryHeap));
+                    RenderAPI::TryGet()->DrawIndexedIndirect(commands, run.FirstCommand * sizeof(DrawIndexedIndirectCommand), run.CommandCount);
                 }
             }
 
@@ -686,20 +678,17 @@ namespace Crowny
                 m_BuildHiZ.WriteUniformBlock(0, 0, &constants, sizeof(constants));
                 m_BuildHiZ.SetTexture(0, 1, sceneDepth);
                 m_BuildHiZ.SetLoadStoreTexture(0, 2, hiZ, TextureSurface(0, 1, 0, 1));
-                m_BuildHiZ.Dispatch((constants.DestinationSize.x + 7u) / 8u,
-                                     (constants.DestinationSize.y + 7u) / 8u);
+                m_BuildHiZ.Dispatch((constants.DestinationSize.x + 7u) / 8u, (constants.DestinationSize.y + 7u) / 8u);
 
                 constants.CopySource = 0;
                 m_BuildHiZ.SetTexture(0, 1, hiZ);
                 for (uint32_t mip = 1; mip < mipCount; mip++)
                 {
-                    constants.DestinationSize = { std::max(hiZ->GetWidth() >> mip, 1u),
-                                                  std::max(hiZ->GetHeight() >> mip, 1u) };
+                    constants.DestinationSize = { std::max(hiZ->GetWidth() >> mip, 1u), std::max(hiZ->GetHeight() >> mip, 1u) };
                     constants.SourceMip = mip - 1u;
                     m_BuildHiZ.WriteUniformBlock(0, 0, &constants, sizeof(constants));
                     m_BuildHiZ.SetLoadStoreTexture(0, 2, hiZ, TextureSurface(mip, 1, 0, 1));
-                    m_BuildHiZ.Dispatch((constants.DestinationSize.x + 7u) / 8u,
-                                         (constants.DestinationSize.y + 7u) / 8u);
+                    m_BuildHiZ.Dispatch((constants.DestinationSize.x + 7u) / 8u, (constants.DestinationSize.y + 7u) / 8u);
                 }
             }
 
@@ -715,11 +704,9 @@ namespace Crowny
                 constants.InverseViewProjection = glm::inverse(constants.ViewProjection);
                 constants.CameraPositionPreExposure = glm::inverse(m_View.View)[3];
                 constants.CameraPositionPreExposure.w = 1.0f;
-                constants.ClusterDimensionsAndTileSize = { (width + tileSize - 1u) / tileSize,
-                                                           (height + tileSize - 1u) / tileSize,
-                                                           depthSlices, tileSize };
-                constants.ClusterDepthAndViewport = { NearPlane(), 1000.0f, static_cast<float>(width),
-                                                      static_cast<float>(height) };
+                constants.ClusterDimensionsAndTileSize = { (width + tileSize - 1u) / tileSize, (height + tileSize - 1u) / tileSize, depthSlices,
+                                                           tileSize };
+                constants.ClusterDepthAndViewport = { NearPlane(), 1000.0f, static_cast<float>(width), static_cast<float>(height) };
                 return constants;
             }
 
@@ -729,8 +716,7 @@ namespace Crowny
                 if (m_Environment && m_Environment->GetPrefilteredMap())
                 {
                     constants.DiffuseSh = m_Environment->GetDiffuseSh();
-                    constants.SpecularMipCount =
-                      static_cast<float>(m_Environment->GetPrefilteredMap()->GetDesc().MipLevels);
+                    constants.SpecularMipCount = static_cast<float>(m_Environment->GetPrefilteredMap()->GetDesc().MipLevels);
                     constants.Intensity = 1.0f;
                 }
                 return constants;
@@ -747,8 +733,7 @@ namespace Crowny
                 if (!m_ShadowSampler)
                 {
                     SamplerStateDesc desc;
-                    desc.AddressMode = { TextureWrap::CLAMP_TO_EDGE, TextureWrap::CLAMP_TO_EDGE,
-                                         TextureWrap::CLAMP_TO_EDGE };
+                    desc.AddressMode = { TextureWrap::CLAMP_TO_EDGE, TextureWrap::CLAMP_TO_EDGE, TextureWrap::CLAMP_TO_EDGE };
                     desc.CompareFunc = CompareFunction::GREATER_EQUAL;
                     m_ShadowSampler = SamplerState::Create(desc);
                 }
@@ -778,42 +763,35 @@ namespace Crowny
                 material.SetSamplerState(0, 15, m_ShadowSampler);
             }
 
-            template <typename T>
-            void BindMaterialTable(T& material, uint64_t& textureVersion, RenderGraphContext& context)
+            template <typename T> void BindMaterialTable(T& material, uint64_t& textureVersion, RenderGraphContext& context)
             {
                 material.SetBuffer(1, 0, Buffer(context, "MaterialTable"));
                 if (textureVersion == m_Scene->GetBindlessTextureVersion())
                     return;
                 const Vector<Ref<Texture>>& textures = m_Scene->GetBindlessTextures();
-                material.SetTextureArray(1, 1, textures.empty() ? nullptr : textures.data(),
-                                         static_cast<uint32_t>(textures.size()));
+                material.SetTextureArray(1, 1, textures.empty() ? nullptr : textures.data(), static_cast<uint32_t>(textures.size()));
                 textureVersion = m_Scene->GetBindlessTextureVersion();
             }
 
-            void DrawOpaqueRuns(GraphicsMaterial& material, const Ref<GenericGpuBuffer>& commands,
-                                const GpuDrawList& drawList)
+            void DrawOpaqueRuns(GraphicsMaterial& material, const Ref<GenericGpuBuffer>& commands, const GpuDrawList& drawList)
             {
                 if (commands == nullptr || !material.Bind())
                     return;
                 for (const GpuDrawRun& run : drawList.Runs)
                 {
-                    if (run.Bin.Phase != RenderDrawPhase::Opaque ||
-                        (run.Bin.Alpha != AlphaMode::Opaque && run.Bin.Alpha != AlphaMode::Mask) ||
+                    if (run.Bin.Phase != RenderDrawPhase::Opaque || (run.Bin.Alpha != AlphaMode::Opaque && run.Bin.Alpha != AlphaMode::Mask) ||
                         run.CommandCount == 0)
                         continue;
-                    const Ref<VertexBuffer> vertexBuffer = m_Scene->GetMeshVertexBuffer(run.Bin.GeometryHeap);
-                    const Ref<IndexBuffer> indexBuffer = m_Scene->GetMeshIndexBuffer(run.Bin.GeometryHeap);
-                    const AssetHandle<Mesh>& mesh = m_Scene->GetMeshResource(run.Bin.GeometryHeap);
-                    if (!vertexBuffer || !indexBuffer || !mesh)
+                    const Ref<VertexBuffer> vertexBuffer = m_Scene->GetGeometryVertexBuffer(run.Bin.GeometryHeap);
+                    const Ref<IndexBuffer> indexBuffer = m_Scene->GetGeometryIndexBuffer(run.Bin.GeometryHeap);
+                    if (!vertexBuffer || !indexBuffer)
                         continue;
                     RenderAPI::TryGet()->SetVertexLayout(vertexBuffer->GetLayout());
                     Ref<VertexBuffer> boundVertexBuffer = vertexBuffer;
                     RenderAPI::TryGet()->SetVertexBuffers(0, &boundVertexBuffer, 1);
                     RenderAPI::TryGet()->SetIndexBuffer(indexBuffer);
-                    RenderAPI::TryGet()->SetDrawMode(mesh->GetDrawMode());
-                    RenderAPI::TryGet()->DrawIndexedIndirect(commands,
-                                                    run.FirstCommand * sizeof(DrawIndexedIndirectCommand),
-                                                    run.CommandCount);
+                    RenderAPI::TryGet()->SetDrawMode(m_Scene->GetGeometryDrawMode(run.Bin.GeometryHeap));
+                    RenderAPI::TryGet()->DrawIndexedIndirect(commands, run.FirstCommand * sizeof(DrawIndexedIndirectCommand), run.CommandCount);
                 }
             }
 
@@ -845,9 +823,8 @@ namespace Crowny
                 m_ForwardPlus.SetBuffer(0, 1, instances);
                 m_ForwardPlus.SetBuffer(0, 2, instanceIds);
                 BindSharedLighting(m_ForwardPlus, context);
-                m_ForwardPlus.SetTexture(0, 16, TextureResource(context, "AmbientOcclusion")
-                                                   ? TextureResource(context, "AmbientOcclusion")
-                                                   : Texture::WHITE);
+                m_ForwardPlus.SetTexture(
+                  0, 16, TextureResource(context, "AmbientOcclusion") ? TextureResource(context, "AmbientOcclusion") : Texture::WHITE);
                 BindMaterialTable(m_ForwardPlus, m_ForwardTextureVersion, context);
                 RenderAPI::TryGet()->SetRenderTarget(target, 0, RT_DEPTH_STENCIL);
                 RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
@@ -858,8 +835,7 @@ namespace Crowny
             void RenderDeferredGBuffer(RenderGraphContext& context)
             {
                 if (m_DepthDrawList == nullptr || m_DepthDrawList->Commands.empty() ||
-                    !Ensure(m_DeferredGBuffer, m_DeferredGBufferAttempted,
-                            "Resources/Shaders/DeferredPlusStandard.asset"))
+                    !Ensure(m_DeferredGBuffer, m_DeferredGBufferAttempted, "Resources/Shaders/DeferredPlusStandard.asset"))
                     return;
                 const Ref<GenericGpuBuffer> instances = Buffer(context, "InstanceTable");
                 const Ref<GenericGpuBuffer> instanceIds = Buffer(context, "DepthInstanceIds");
@@ -896,8 +872,7 @@ namespace Crowny
 
             void RenderDeferredLighting(RenderGraphContext& context)
             {
-                if (!Ensure(m_DeferredLighting, m_DeferredLightingAttempted,
-                            "Resources/Shaders/DeferredPlusLighting.asset"))
+                if (!Ensure(m_DeferredLighting, m_DeferredLightingAttempted, "Resources/Shaders/DeferredPlusLighting.asset"))
                     return;
                 BindSharedLighting(m_DeferredLighting, context);
                 m_DeferredLighting.SetTexture(0, 16, TextureResource(context, "GBufferBaseColorAO"));
@@ -906,9 +881,8 @@ namespace Crowny
                 m_DeferredLighting.SetTexture(0, 19, TextureResource(context, "GBufferMaterialFlags"));
                 m_DeferredLighting.SetTexture(0, 20, TextureResource(context, "SceneDepth"));
                 m_DeferredLighting.SetLoadStoreTexture(0, 21, TextureResource(context, "HdrColor"));
-                m_DeferredLighting.SetTexture(0, 22, TextureResource(context, "AmbientOcclusion")
-                                                         ? TextureResource(context, "AmbientOcclusion")
-                                                         : Texture::WHITE);
+                m_DeferredLighting.SetTexture(
+                  0, 22, TextureResource(context, "AmbientOcclusion") ? TextureResource(context, "AmbientOcclusion") : Texture::WHITE);
                 BindMaterialTable(m_DeferredLighting, m_DeferredLightingTextureVersion, context);
                 const uint32_t width = std::max(static_cast<uint32_t>(m_View.ViewportSize.x), 1u);
                 const uint32_t height = std::max(static_cast<uint32_t>(m_View.ViewportSize.y), 1u);
@@ -935,9 +909,8 @@ namespace Crowny
                 m_ToonOutlines.WriteUniformBlock(0, 0, &constants, sizeof(constants));
                 m_ToonOutlines.SetTexture(0, 1, depth);
                 m_ToonOutlines.SetTexture(0, 2, materialId);
-                m_ToonOutlines.SetTexture(0, 3, TextureResource(context, "GBufferNormalRoughMetal")
-                                                    ? TextureResource(context, "GBufferNormalRoughMetal")
-                                                    : Texture::NORMAL);
+                m_ToonOutlines.SetTexture(
+                  0, 3, TextureResource(context, "GBufferNormalRoughMetal") ? TextureResource(context, "GBufferNormalRoughMetal") : Texture::NORMAL);
                 m_ToonOutlines.SetBuffer(0, 4, materials);
                 m_ToonOutlines.SetLoadStoreTexture(0, 5, hdrColor);
                 m_ToonOutlines.Dispatch((width + 7u) / 8u, (height + 7u) / 8u);
@@ -960,11 +933,9 @@ namespace Crowny
                     if (run.Bin.Phase != RenderDrawPhase::Transparent || run.CommandCount == 0)
                         continue;
                     needsAdditive |= run.Bin.Alpha == AlphaMode::Additive;
-                    needsPremultiplied |= run.Bin.Alpha == AlphaMode::Premultiplied ||
-                                          run.Bin.Alpha == AlphaMode::WeightedOIT;
+                    needsPremultiplied |= run.Bin.Alpha == AlphaMode::Premultiplied || run.Bin.Alpha == AlphaMode::WeightedOIT;
                 }
-                if (needsPremultiplied &&
-                    !EnsureTransparent(m_ForwardPremultiplied, m_ForwardPremultipliedAttempted, false))
+                if (needsPremultiplied && !EnsureTransparent(m_ForwardPremultiplied, m_ForwardPremultipliedAttempted, false))
                     return;
                 if (needsAdditive && !EnsureTransparent(m_ForwardAdditive, m_ForwardAdditiveAttempted, true))
                     return;
@@ -973,9 +944,8 @@ namespace Crowny
                     material.SetBuffer(0, 1, instances);
                     material.SetBuffer(0, 2, instanceIds);
                     BindSharedLighting(material, context);
-                    material.SetTexture(0, 16, TextureResource(context, "AmbientOcclusion")
-                                                 ? TextureResource(context, "AmbientOcclusion")
-                                                 : Texture::WHITE);
+                    material.SetTexture(0, 16,
+                                        TextureResource(context, "AmbientOcclusion") ? TextureResource(context, "AmbientOcclusion") : Texture::WHITE);
                     BindMaterialTable(material, textureVersion, context);
                 };
                 if (needsPremultiplied)
@@ -998,35 +968,29 @@ namespace Crowny
                 {
                     if (run.Bin.Phase != RenderDrawPhase::Transparent || run.CommandCount == 0)
                         continue;
-                    GraphicsMaterial* material = run.Bin.Alpha == AlphaMode::Additive
-                                                   ? &m_ForwardAdditive
-                                                   : &m_ForwardPremultiplied;
+                    GraphicsMaterial* material = run.Bin.Alpha == AlphaMode::Additive ? &m_ForwardAdditive : &m_ForwardPremultiplied;
                     if (material != boundMaterial)
                     {
                         if (!material->Bind())
                             continue;
                         boundMaterial = material;
                     }
-                    const Ref<VertexBuffer> vertexBuffer = m_Scene->GetMeshVertexBuffer(run.Bin.GeometryHeap);
-                    const Ref<IndexBuffer> indexBuffer = m_Scene->GetMeshIndexBuffer(run.Bin.GeometryHeap);
-                    const AssetHandle<Mesh>& mesh = m_Scene->GetMeshResource(run.Bin.GeometryHeap);
-                    if (!vertexBuffer || !indexBuffer || !mesh)
+                    const Ref<VertexBuffer> vertexBuffer = m_Scene->GetGeometryVertexBuffer(run.Bin.GeometryHeap);
+                    const Ref<IndexBuffer> indexBuffer = m_Scene->GetGeometryIndexBuffer(run.Bin.GeometryHeap);
+                    if (!vertexBuffer || !indexBuffer)
                         continue;
                     RenderAPI::TryGet()->SetVertexLayout(vertexBuffer->GetLayout());
                     Ref<VertexBuffer> boundVertexBuffer = vertexBuffer;
                     RenderAPI::TryGet()->SetVertexBuffers(0, &boundVertexBuffer, 1);
                     RenderAPI::TryGet()->SetIndexBuffer(indexBuffer);
-                    RenderAPI::TryGet()->SetDrawMode(mesh->GetDrawMode());
-                    RenderAPI::TryGet()->DrawIndexedIndirect(commands,
-                                                    run.FirstCommand * sizeof(DrawIndexedIndirectCommand),
-                                                    run.CommandCount);
+                    RenderAPI::TryGet()->SetDrawMode(m_Scene->GetGeometryDrawMode(run.Bin.GeometryHeap));
+                    RenderAPI::TryGet()->DrawIndexedIndirect(commands, run.FirstCommand * sizeof(DrawIndexedIndirectCommand), run.CommandCount);
                 }
             }
 
             void RenderTemporalResolve(RenderGraphContext& context)
             {
-                if (!Ensure(m_TemporalResolve, m_TemporalResolveAttempted,
-                            "Resources/Shaders/TemporalResolve.asset"))
+                if (!Ensure(m_TemporalResolve, m_TemporalResolveAttempted, "Resources/Shaders/TemporalResolve.asset"))
                     return;
                 const Ref<Texture> current = TextureResource(context, "HdrColor");
                 const Ref<Texture> depth = TextureResource(context, "SceneDepth");
@@ -1046,8 +1010,7 @@ namespace Crowny
                 m_TemporalResolve.SetTexture(0, 4, history);
                 m_TemporalResolve.SetLoadStoreTexture(0, 5, resolved);
                 m_TemporalResolve.SetLoadStoreTexture(0, 6, historyOutput);
-                m_TemporalResolve.Dispatch((constants.Resolution.x + 7u) / 8u,
-                                           (constants.Resolution.y + 7u) / 8u);
+                m_TemporalResolve.Dispatch((constants.Resolution.x + 7u) / 8u, (constants.Resolution.y + 7u) / 8u);
             }
 
             void RenderBloom(RenderGraphContext& context)
@@ -1080,9 +1043,7 @@ namespace Crowny
                 m_ToneMap.WriteUniformBlock(0, 1, &constants, sizeof(constants));
                 m_ToneMap.SetTexture(0, 2, TextureResource(context, "ObjectID"));
                 m_ToneMap.SetTexture(0, 3, TextureResource(context, "SceneDepth"));
-                m_ToneMap.SetTexture(0, 4, TextureResource(context, "Bloom")
-                                              ? TextureResource(context, "Bloom")
-                                              : Texture::BLACK);
+                m_ToneMap.SetTexture(0, 4, TextureResource(context, "Bloom") ? TextureResource(context, "Bloom") : Texture::BLACK);
                 RenderAPI::TryGet()->SetRenderTarget(target, 0, RT_ALL);
                 RenderAPI::TryGet()->SetViewport(0.0f, 0.0f, 1.0f, 1.0f);
                 RenderAPI::TryGet()->ClearViewport(FBT_COLOR, glm::vec4(0.0f), 0.0f, 0, 1u);
@@ -1104,8 +1065,7 @@ namespace Crowny
                 SkyConstants constants;
                 constants.InverseViewProjection = glm::inverse(m_View.Projection * m_View.View);
                 constants.CameraPositionIntensity = glm::inverse(m_View.View)[3];
-                constants.CameraPositionIntensity.w =
-                  m_Environment && m_Environment->GetEnvironmentCubemap() ? 1.0f : 0.0f;
+                constants.CameraPositionIntensity.w = m_Environment && m_Environment->GetEnvironmentCubemap() ? 1.0f : 0.0f;
                 m_Sky.WriteUniformBlock(0, 0, &constants, sizeof(constants));
                 m_Sky.SetTexture(0, 1, m_Environment ? m_Environment->GetEnvironmentCubemap() : nullptr);
                 RenderAPI::TryGet()->SetRenderTarget(target, FBT_DEPTH, RT_ALL);
@@ -1176,10 +1136,7 @@ namespace Crowny
 
         struct SceneRendererThreadResources
         {
-            SceneRendererThreadResources()
-              : GraphResources(2, &GraphAllocator), SpotShadowAtlas(2048, 128), PointShadowLayers(16)
-            {
-            }
+            SceneRendererThreadResources() : GraphResources(2, &GraphAllocator), SpotShadowAtlas(2048, 128), PointShadowLayers(16) {}
 
             RenderGraph Graph;
             RenderGraphGpuResourceAllocator GraphAllocator;
@@ -1257,8 +1214,8 @@ namespace Crowny
             {
                 if (!object.MeshHandle)
                     continue;
-                const uint64_t elementCount = object.MeshHandle->GetIndexCount() != 0 ? object.MeshHandle->GetIndexCount()
-                                                                                     : object.MeshHandle->GetVertexCount();
+                const uint64_t elementCount =
+                  object.MeshHandle->GetIndexCount() != 0 ? object.MeshHandle->GetIndexCount() : object.MeshHandle->GetVertexCount();
                 statistics.VisibleVertices += elementCount;
                 const DrawMode drawMode = object.MeshHandle->GetDrawMode();
                 if (drawMode == DrawMode::TRIANGLE_LIST || drawMode == DrawMode::TRIANGLE_STRIP || drawMode == DrawMode::TRIANGLE_FAN)
@@ -1620,8 +1577,7 @@ namespace Crowny
             }
 
             RenderThread* renderThread = Application::TryGet()->GetRenderThread();
-            if (animation.PendingGpuResult && animation.GpuUploadPending &&
-                animation.PendingGpuResult->Complete.load(std::memory_order_acquire))
+            if (animation.PendingGpuResult && animation.GpuUploadPending && animation.PendingGpuResult->Complete.load(std::memory_order_acquire))
             {
                 animation.RuntimeMesh = animation.PendingGpuResult->MeshResource;
                 animation.PendingGpuResult->MeshResource = nullptr;
@@ -1777,8 +1733,7 @@ namespace Crowny
             snapshot.PreviousViewProjection = snapshot.ProjectionMatrix * snapshot.ViewMatrix;
         }
         m_CameraHistory.insert_or_assign(snapshot.HistoryNamespace,
-                                         CameraHistoryState{ snapshot.ViewMatrix, snapshot.ProjectionMatrix,
-                                                             cameraPosition, cameraForward });
+                                         CameraHistoryState{ snapshot.ViewMatrix, snapshot.ProjectionMatrix, cameraPosition, cameraForward });
         snapshot.Target = m_RenderTarget;
         snapshot.Environment = m_Scene->GetEnvironment();
         snapshot.DrawGrid = drawGrid;
@@ -1867,8 +1822,8 @@ namespace Crowny
         std::stable_sort(snapshot.Ordered2D.begin(), snapshot.Ordered2D.end(), Renderable2DOrderLess);
     }
 
-    uint32_t SceneRenderer::GetResourceIndex(const AssetHandleData* identity,
-                                             UnorderedMap<const AssetHandleData*, uint32_t>& resources, uint32_t& nextIndex) const
+    uint32_t SceneRenderer::GetResourceIndex(const AssetHandleData* identity, UnorderedMap<const AssetHandleData*, uint32_t>& resources,
+                                             uint32_t& nextIndex) const
     {
         if (identity == nullptr)
             return 0;
@@ -1919,8 +1874,7 @@ namespace Crowny
         m_SeenMeshResources.insert(index);
         const uint64_t version = mesh ? mesh->GetGpuVersion() : 0;
         const auto resident = m_ResidentMeshResources.find(index);
-        if (resident != m_ResidentMeshResources.end() &&
-            resident->second.Resource.GetHandleData().get() == mesh.GetHandleData().get() &&
+        if (resident != m_ResidentMeshResources.end() && resident->second.Resource.GetHandleData().get() == mesh.GetHandleData().get() &&
             resident->second.Version == version)
             return;
 
@@ -1932,8 +1886,7 @@ namespace Crowny
         m_ResidentMeshResources.insert_or_assign(index, TrackedMeshResource{ mesh, version });
     }
 
-    void SceneRenderer::TrackMaterialResources(uint32_t baseIndex, const Vector<AssetHandle<Material>>& materials,
-                                               RenderSnapshot& snapshot) const
+    void SceneRenderer::TrackMaterialResources(uint32_t baseIndex, const Vector<AssetHandle<Material>>& materials, RenderSnapshot& snapshot) const
     {
         if (baseIndex == 0)
             return;
@@ -1944,8 +1897,7 @@ namespace Crowny
             m_SeenMaterialResources.insert(index);
             const uint64_t version = material ? material->GetParamVersion() : 0;
             const auto resident = m_ResidentMaterialResources.find(index);
-            if (resident != m_ResidentMaterialResources.end() &&
-                resident->second.Resource.GetHandleData().get() == material.GetHandleData().get() &&
+            if (resident != m_ResidentMaterialResources.end() && resident->second.Resource.GetHandleData().get() == material.GetHandleData().get() &&
                 resident->second.Version == version)
                 continue;
 
@@ -1998,9 +1950,8 @@ namespace Crowny
         m_SeenMeshResources.clear();
         m_SeenMaterialResources.clear();
 
-        auto syncInstance = [&](uint64_t sourceID, entt::entity entity, const AssetHandle<Mesh>& mesh,
-                                const Vector<AssetHandle<Material>>& materials, const glm::mat4& transform,
-                                RenderInstanceFlags flags, RenderLayerMask visibilityLayers, float lodBias,
+        auto syncInstance = [&](uint64_t sourceID, entt::entity entity, const AssetHandle<Mesh>& mesh, const Vector<AssetHandle<Material>>& materials,
+                                const glm::mat4& transform, RenderInstanceFlags flags, RenderLayerMask visibilityLayers, float lodBias,
                                 const SphereBounds* overrideBounds = nullptr) {
             if (!mesh)
                 return;
@@ -2011,8 +1962,8 @@ namespace Crowny
 
             const SphereBounds& localBounds = overrideBounds != nullptr ? *overrideBounds : mesh->GetSphereBounds();
             const glm::vec3 worldCenter = glm::vec3(transform * glm::vec4(localBounds.GetCenter(), 1.0f));
-            const float maximumScale = std::max({ glm::length(glm::vec3(transform[0])), glm::length(glm::vec3(transform[1])),
-                                                  glm::length(glm::vec3(transform[2])) });
+            const float maximumScale =
+              std::max({ glm::length(glm::vec3(transform[0])), glm::length(glm::vec3(transform[1])), glm::length(glm::vec3(transform[2])) });
             const glm::vec4 worldBounds(worldCenter, localBounds.GetRadius() * maximumScale);
 
             RenderInstanceDesc desc;
@@ -2046,10 +1997,9 @@ namespace Crowny
 
             TrackedRenderInstance& instance = tracked->second;
             const bool transformChanged = instance.Transform != transform || instance.BoundingSphere != worldBounds;
-            const bool drawChanged = instance.MeshResourceIndex != desc.MeshHandle ||
-                                     instance.MaterialResourceIndex != desc.MaterialHandle ||
-                                     instance.ObjectID != objectID || instance.Flags != flags ||
-                                     instance.VisibilityLayers != visibilityLayers || instance.LodBias != lodBias;
+            const bool drawChanged = instance.MeshResourceIndex != desc.MeshHandle || instance.MaterialResourceIndex != desc.MaterialHandle ||
+                                     instance.ObjectID != objectID || instance.Flags != flags || instance.VisibilityLayers != visibilityLayers ||
+                                     instance.LodBias != lodBias;
             if (!transformChanged && !drawChanged)
                 return;
 
@@ -2070,11 +2020,10 @@ namespace Crowny
             const auto [meshRenderer, transform, relationship] =
               meshView.get<MeshRendererComponent, TransformComponent, RelationshipComponent>(entity);
             const AnimationComponent* animation = m_Scene->m_Registry.try_get<AnimationComponent>(entity);
-            const AssetHandle<Mesh> mesh = animation != nullptr && animation->RuntimeMeshHandle ? animation->RuntimeMeshHandle
-                                                                                                : meshRenderer.MeshHandle;
-            const SphereBounds* animatedBounds = animation != nullptr && animation->RuntimeMeshHandle && animation->Deformer
-                                                   ? &animation->Deformer->GetSphereBounds()
-                                                   : nullptr;
+            const AssetHandle<Mesh> mesh =
+              animation != nullptr && animation->RuntimeMeshHandle ? animation->RuntimeMeshHandle : meshRenderer.MeshHandle;
+            const SphereBounds* animatedBounds =
+              animation != nullptr && animation->RuntimeMeshHandle && animation->Deformer ? &animation->Deformer->GetSphereBounds() : nullptr;
             RenderInstanceFlags flags = RenderInstanceFlags::None;
             if (meshRenderer.Visible)
                 flags = flags | RenderInstanceFlags::Visible;
@@ -2084,8 +2033,8 @@ namespace Crowny
                 flags = flags | RenderInstanceFlags::ReceiveShadows;
             if (meshRenderer.MotionVectors)
                 flags = flags | RenderInstanceFlags::MotionVectors;
-            syncInstance(meshRenderer.InstanceId, entity, mesh, meshRenderer.Materials, transform.GetWorldMatrix(relationship.Parent),
-                         flags, meshRenderer.VisibilityLayers, meshRenderer.LodBias, animatedBounds);
+            syncInstance(meshRenderer.InstanceId, entity, mesh, meshRenderer.Materials, transform.GetWorldMatrix(relationship.Parent), flags,
+                         meshRenderer.VisibilityLayers, meshRenderer.LodBias, animatedBounds);
         }
 
         const auto proceduralView = m_Scene->m_Registry.view<ProceduralMeshComponent, TransformComponent, RelationshipComponent>();
@@ -2115,8 +2064,7 @@ namespace Crowny
         snapshot.LegacyLights.Reserve(lightView.size_hint());
         for (const entt::entity entity : lightView)
         {
-            const auto [component, transform, relationship] =
-              lightView.get<LightComponent, TransformComponent, RelationshipComponent>(entity);
+            const auto [component, transform, relationship] = lightView.get<LightComponent, TransformComponent, RelationshipComponent>(entity);
             m_SeenRenderLights.insert(component.InstanceId);
 
             const glm::mat4 worldTransform = transform.GetWorldMatrix(relationship.Parent);
@@ -2175,8 +2123,8 @@ namespace Crowny
                 }
             }
 
-            if (component.Enabled && component.Type != LightType::Directional &&
-                component.Shadows.Mode != LightShadowMode::Disabled && lightHandle.IsValid())
+            if (component.Enabled && component.Type != LightType::Directional && component.Shadows.Mode != LightShadowMode::Disabled &&
+                lightHandle.IsValid())
             {
                 ShadowUpdateRequest& request = snapshot.ShadowUpdateRequests.Acquire();
                 request.Light = lightHandle;
@@ -2186,9 +2134,8 @@ namespace Crowny
                 request.RequiresRedraw = requiresShadowRedraw;
                 request.Settings = component.Shadows;
             }
-            else if (component.Enabled && component.Type == LightType::Directional &&
-                     component.Shadows.Mode != LightShadowMode::Disabled && lightHandle.IsValid() &&
-                     !snapshot.DirectionalShadow.IsValid() && snapshot.HistoryNamespace != 0 &&
+            else if (component.Enabled && component.Type == LightType::Directional && component.Shadows.Mode != LightShadowMode::Disabled &&
+                     lightHandle.IsValid() && !snapshot.DirectionalShadow.IsValid() && snapshot.HistoryNamespace != 0 &&
                      std::abs(snapshot.ProjectionMatrix[2][3] + 1.0f) < 0.01f)
             {
                 DirectionalShadowRenderData& shadow = snapshot.DirectionalShadow;
@@ -2198,14 +2145,12 @@ namespace Crowny
                 shadow.CascadeSettings.Resolution = std::max<uint32_t>(component.Shadows.Resolution, 1024u);
                 const glm::mat4 cameraWorld = glm::inverse(snapshot.ViewMatrix);
                 const float verticalFov = 2.0f * std::atan(1.0f / std::max(std::abs(snapshot.ProjectionMatrix[1][1]), 0.0001f));
-                const float aspect = std::abs(snapshot.ProjectionMatrix[1][1] /
-                                              std::max(std::abs(snapshot.ProjectionMatrix[0][0]), 0.0001f));
-                const float cameraNear = std::max(std::abs(snapshot.ProjectionMatrix[3][2] /
-                                                           std::max(std::abs(snapshot.ProjectionMatrix[2][2]), 0.0001f)),
-                                                  0.001f);
+                const float aspect = std::abs(snapshot.ProjectionMatrix[1][1] / std::max(std::abs(snapshot.ProjectionMatrix[0][0]), 0.0001f));
+                const float cameraNear =
+                  std::max(std::abs(snapshot.ProjectionMatrix[3][2] / std::max(std::abs(snapshot.ProjectionMatrix[2][2]), 0.0001f)), 0.001f);
                 Vector<DirectionalShadowCascade> cascades;
-                DirectionalShadowCascadeBuilder::Build(cameraWorld, verticalFov, aspect, cameraNear,
-                                                       desc.Direction, shadow.CascadeSettings, cascades);
+                DirectionalShadowCascadeBuilder::Build(cameraWorld, verticalFov, aspect, cameraNear, desc.Direction, shadow.CascadeSettings,
+                                                       cascades);
                 shadow.CascadeCount = static_cast<uint32_t>(std::min<size_t>(cascades.size(), shadow.Cascades.size()));
                 for (uint32_t cascade = 0; cascade < shadow.CascadeCount; cascade++)
                     shadow.Cascades[cascade] = cascades[cascade];
@@ -2298,9 +2243,7 @@ namespace Crowny
             const auto drawSprite = [&](const RenderableSprite& sprite) {
                 Renderer2D::FillRect(sprite.WorldMatrix, sprite.Texture, sprite.Color, sprite.EntityId);
             };
-            const auto drawText = [&](const RenderableText& text) {
-                Renderer2D::DrawString(text.TextData, text.WorldMatrix, text.EntityId);
-            };
+            const auto drawText = [&](const RenderableText& text) { Renderer2D::DrawString(text.TextData, text.WorldMatrix, text.EntityId); };
 
             if (snapshot.Ordered2D.Empty())
             {
@@ -2360,69 +2303,50 @@ namespace Crowny
           renderGraph.ImportTexture("CameraTarget", targetDesc, reinterpret_cast<uint64_t>(snapshot.Target.get()),
                                     RenderGraphResourceState::ColorAttachment, RenderGraphResourceState::ColorAttachment);
 
-        const RenderGraphPassHandle applyChanges = renderGraph.AddPass(
-          "ApplyRenderWorldChanges", RenderGraphQueue::Transfer,
-          [](RenderGraphPassBuilder& builder) { builder.SetSideEffect(); });
+        const RenderGraphPassHandle applyChanges = renderGraph.AddPass("ApplyRenderWorldChanges", RenderGraphQueue::Transfer,
+                                                                       [](RenderGraphPassBuilder& builder) { builder.SetSideEffect(); });
 
         RenderGraphResourceHandle instanceTable;
         if (gpuScene.GetInstanceBuffer())
         {
-            const RenderGraphBufferDesc desc{ gpuScene.GetInstanceBuffer()->GetSize(), sizeof(RenderInstanceData),
-                                              GpuBufferType::Structured };
-            instanceTable = renderGraph.ImportBuffer("PersistentInstances", desc,
-                                                     reinterpret_cast<uint64_t>(gpuScene.GetInstanceBuffer().get()),
-                                                     RenderGraphResourceState::ShaderRead,
-                                                     RenderGraphResourceState::ShaderRead);
+            const RenderGraphBufferDesc desc{ gpuScene.GetInstanceBuffer()->GetSize(), sizeof(RenderInstanceData), GpuBufferType::Structured };
+            instanceTable = renderGraph.ImportBuffer("PersistentInstances", desc, reinterpret_cast<uint64_t>(gpuScene.GetInstanceBuffer().get()),
+                                                     RenderGraphResourceState::ShaderRead, RenderGraphResourceState::ShaderRead);
         }
         RenderGraphResourceHandle lightTable;
         if (gpuScene.GetLightBuffer())
         {
-            const RenderGraphBufferDesc desc{ gpuScene.GetLightBuffer()->GetSize(), sizeof(RenderLightData),
-                                              GpuBufferType::Structured };
-            lightTable = renderGraph.ImportBuffer("PersistentLights", desc,
-                                                  reinterpret_cast<uint64_t>(gpuScene.GetLightBuffer().get()),
-                                                  RenderGraphResourceState::ShaderRead,
-                                                  RenderGraphResourceState::ShaderRead);
+            const RenderGraphBufferDesc desc{ gpuScene.GetLightBuffer()->GetSize(), sizeof(RenderLightData), GpuBufferType::Structured };
+            lightTable = renderGraph.ImportBuffer("PersistentLights", desc, reinterpret_cast<uint64_t>(gpuScene.GetLightBuffer().get()),
+                                                  RenderGraphResourceState::ShaderRead, RenderGraphResourceState::ShaderRead);
         }
         RenderGraphResourceHandle meshTable;
         if (gpuScene.GetMeshBuffer())
         {
-            const RenderGraphBufferDesc desc{ gpuScene.GetMeshBuffer()->GetSize(), sizeof(GpuMeshRecord),
-                                              GpuBufferType::Structured };
-            meshTable = renderGraph.ImportBuffer("PersistentMeshes", desc,
-                                                 reinterpret_cast<uint64_t>(gpuScene.GetMeshBuffer().get()),
-                                                 RenderGraphResourceState::ShaderRead,
-                                                 RenderGraphResourceState::ShaderRead);
+            const RenderGraphBufferDesc desc{ gpuScene.GetMeshBuffer()->GetSize(), sizeof(GpuMeshRecord), GpuBufferType::Structured };
+            meshTable = renderGraph.ImportBuffer("PersistentMeshes", desc, reinterpret_cast<uint64_t>(gpuScene.GetMeshBuffer().get()),
+                                                 RenderGraphResourceState::ShaderRead, RenderGraphResourceState::ShaderRead);
         }
         RenderGraphResourceHandle meshLodTable;
         if (gpuScene.GetMeshLodBuffer())
         {
-            const RenderGraphBufferDesc desc{ gpuScene.GetMeshLodBuffer()->GetSize(), sizeof(GpuMeshLodData),
-                                              GpuBufferType::Structured };
-            meshLodTable = renderGraph.ImportBuffer("PersistentMeshLods", desc,
-                                                    reinterpret_cast<uint64_t>(gpuScene.GetMeshLodBuffer().get()),
-                                                    RenderGraphResourceState::ShaderRead,
-                                                    RenderGraphResourceState::ShaderRead);
+            const RenderGraphBufferDesc desc{ gpuScene.GetMeshLodBuffer()->GetSize(), sizeof(GpuMeshLodData), GpuBufferType::Structured };
+            meshLodTable = renderGraph.ImportBuffer("PersistentMeshLods", desc, reinterpret_cast<uint64_t>(gpuScene.GetMeshLodBuffer().get()),
+                                                    RenderGraphResourceState::ShaderRead, RenderGraphResourceState::ShaderRead);
         }
         RenderGraphResourceHandle meshletTable;
         if (gpuScene.GetMeshletBuffer())
         {
-            const RenderGraphBufferDesc desc{ gpuScene.GetMeshletBuffer()->GetSize(), sizeof(GpuMeshletData),
-                                              GpuBufferType::Structured };
-            meshletTable = renderGraph.ImportBuffer("PersistentMeshlets", desc,
-                                                    reinterpret_cast<uint64_t>(gpuScene.GetMeshletBuffer().get()),
-                                                    RenderGraphResourceState::ShaderRead,
-                                                    RenderGraphResourceState::ShaderRead);
+            const RenderGraphBufferDesc desc{ gpuScene.GetMeshletBuffer()->GetSize(), sizeof(GpuMeshletData), GpuBufferType::Structured };
+            meshletTable = renderGraph.ImportBuffer("PersistentMeshlets", desc, reinterpret_cast<uint64_t>(gpuScene.GetMeshletBuffer().get()),
+                                                    RenderGraphResourceState::ShaderRead, RenderGraphResourceState::ShaderRead);
         }
         RenderGraphResourceHandle materialTable;
         if (gpuScene.GetMaterialBuffer())
         {
-            const RenderGraphBufferDesc desc{ gpuScene.GetMaterialBuffer()->GetSize(), sizeof(GpuMaterialData),
-                                              GpuBufferType::Structured };
-            materialTable = renderGraph.ImportBuffer("PersistentMaterials", desc,
-                                                     reinterpret_cast<uint64_t>(gpuScene.GetMaterialBuffer().get()),
-                                                     RenderGraphResourceState::ShaderRead,
-                                                     RenderGraphResourceState::ShaderRead);
+            const RenderGraphBufferDesc desc{ gpuScene.GetMaterialBuffer()->GetSize(), sizeof(GpuMaterialData), GpuBufferType::Structured };
+            materialTable = renderGraph.ImportBuffer("PersistentMaterials", desc, reinterpret_cast<uint64_t>(gpuScene.GetMaterialBuffer().get()),
+                                                     RenderGraphResourceState::ShaderRead, RenderGraphResourceState::ShaderRead);
         }
 
         RenderPipelineAsset& pipeline = threadResources.Pipeline;
@@ -2449,16 +2373,14 @@ namespace Crowny
                 const Ref<GenericGpuBuffer>& buffer = drawBuffers.GetInstanceIDBuffer();
                 depthInstanceIds = renderGraph.ImportBuffer(
                   "DepthInstanceIds", { buffer->GetSize(), sizeof(GpuVisibleDrawInstance), GpuBufferType::Structured },
-                  reinterpret_cast<uint64_t>(buffer.get()), RenderGraphResourceState::ShaderRead,
-                  RenderGraphResourceState::ShaderRead);
+                  reinterpret_cast<uint64_t>(buffer.get()), RenderGraphResourceState::ShaderRead, RenderGraphResourceState::ShaderRead);
             }
             if (drawBuffers.GetCommandBuffer())
             {
                 const Ref<GenericGpuBuffer>& buffer = drawBuffers.GetCommandBuffer();
                 depthCommands = renderGraph.ImportBuffer(
                   "DepthIndirectCommands", { buffer->GetSize(), sizeof(DrawIndexedIndirectCommand), GpuBufferType::IndirectDraw },
-                  reinterpret_cast<uint64_t>(buffer.get()), RenderGraphResourceState::IndirectArgument,
-                  RenderGraphResourceState::IndirectArgument);
+                  reinterpret_cast<uint64_t>(buffer.get()), RenderGraphResourceState::IndirectArgument, RenderGraphResourceState::IndirectArgument);
             }
         }
 
@@ -2483,9 +2405,7 @@ namespace Crowny
         if (featureTier == RenderFeatureTier::VulkanBaseline || featureTier == RenderFeatureTier::GPUDriven ||
             featureTier == RenderFeatureTier::Future)
         {
-            graphDesc.PassExecutor = [&](StringView name, RenderGraphContext& context) {
-                gpuDrivenExecutor.Execute(name, context);
-            };
+            graphDesc.PassExecutor = [&](StringView name, RenderGraphContext& context) { gpuDrivenExecutor.Execute(name, context); };
         }
         Vector<RenderLightHandle> scheduledShadows;
         uint64_t scheduledShadowPixels = 0;
@@ -2503,8 +2423,8 @@ namespace Crowny
                 copy.RequiresRedraw = copy.RequiresRedraw || pendingShadowUpdates.contains(copy.Light.GetValue());
                 budgetRequests.push_back(copy);
             }
-            ShadowUpdateScheduler::Schedule(budgetRequests.data(), static_cast<uint32_t>(budgetRequests.size()), mediumBudget,
-                                            scheduledShadows, scheduledShadowPixels);
+            ShadowUpdateScheduler::Schedule(budgetRequests.data(), static_cast<uint32_t>(budgetRequests.size()), mediumBudget, scheduledShadows,
+                                            scheduledShadowPixels);
             UnorderedSet<uint32_t> scheduledSet;
             scheduledSet.reserve(scheduledShadows.size());
             for (RenderLightHandle light : scheduledShadows)
@@ -2512,9 +2432,8 @@ namespace Crowny
 
             Vector<ShadowRenderView>& shadowRenderViews = threadResources.ShadowRenderViews;
             uint32_t shadowRenderViewCount = 0;
-            auto addShadowRenderView = [&](const glm::mat4& shadowView, const glm::mat4& shadowProjection,
-                                           ShadowRenderTarget target, uint32_t layer, const glm::vec4& viewport,
-                                           uint32_t resolution) {
+            auto addShadowRenderView = [&](const glm::mat4& shadowView, const glm::mat4& shadowProjection, ShadowRenderTarget target, uint32_t layer,
+                                           const glm::vec4& viewport, uint32_t resolution) {
                 if (shadowRenderViewCount >= shadowRenderViews.size())
                     shadowRenderViews.emplace_back();
                 ShadowRenderView& output = shadowRenderViews[shadowRenderViewCount++];
@@ -2559,9 +2478,9 @@ namespace Crowny
             {
                 if (activeSpotLights.find(previousLight) != activeSpotLights.end())
                     continue;
-                spotShadowAtlas.Release(RenderLightHandle::FromParts(previousLight & RenderLightHandle::IndexMask,
-                                                                     previousLight >> RenderLightHandle::IndexBits),
-                                        snapshot.FrameNumber);
+                spotShadowAtlas.Release(
+                  RenderLightHandle::FromParts(previousLight & RenderLightHandle::IndexMask, previousLight >> RenderLightHandle::IndexBits),
+                  snapshot.FrameNumber);
             }
             previousSpotLights = activeSpotLights;
             pointShadowLayers.ReleaseMissing(activePointLights, snapshot.FrameNumber);
@@ -2569,9 +2488,7 @@ namespace Crowny
             spotShadowAtlas.Collect(completedFrame);
             pointShadowLayers.Collect(completedFrame);
 
-            uint32_t shadowLightCount = snapshot.DirectionalShadow.IsValid()
-                                          ? snapshot.DirectionalShadow.Light.GetIndex() + 1u
-                                          : 0u;
+            uint32_t shadowLightCount = snapshot.DirectionalShadow.IsValid() ? snapshot.DirectionalShadow.Light.GetIndex() + 1u : 0u;
             for (const ShadowUpdateRequest& request : snapshot.ShadowUpdateRequests)
                 shadowLightCount = std::max(shadowLightCount, request.Light.GetIndex() + 1u);
             Vector<GpuShadowLightData> shadowLights(shadowLightCount);
@@ -2580,20 +2497,17 @@ namespace Crowny
             if (snapshot.DirectionalShadow.IsValid())
             {
                 const uint32_t viewOffset = static_cast<uint32_t>(shadowViews.size());
-                ShadowGpuDataBuilder::BuildDirectionalArray(snapshot.DirectionalShadow.Cascades.data(),
-                                                            snapshot.DirectionalShadow.CascadeCount,
+                ShadowGpuDataBuilder::BuildDirectionalArray(snapshot.DirectionalShadow.Cascades.data(), snapshot.DirectionalShadow.CascadeCount,
                                                             snapshot.DirectionalShadow.Settings, shadowViews);
-                shadowLights[snapshot.DirectionalShadow.Light.GetIndex()] =
-                  ShadowGpuDataBuilder::BuildLightRecord(viewOffset, snapshot.DirectionalShadow.CascadeCount,
-                                                         LightType::Directional, snapshot.DirectionalShadow.Settings);
+                shadowLights[snapshot.DirectionalShadow.Light.GetIndex()] = ShadowGpuDataBuilder::BuildLightRecord(
+                  viewOffset, snapshot.DirectionalShadow.CascadeCount, LightType::Directional, snapshot.DirectionalShadow.Settings);
                 if (snapshot.DirectionalShadow.RequiresRedraw)
                 {
                     for (uint32_t cascade = 0; cascade < snapshot.DirectionalShadow.CascadeCount; cascade++)
                     {
                         const DirectionalShadowCascade& shadow = snapshot.DirectionalShadow.Cascades[cascade];
-                        addShadowRenderView(shadow.View, shadow.Projection, ShadowRenderTarget::DirectionalArray,
-                                            cascade, glm::vec4(0.0f, 0.0f, 1.0f, 1.0f),
-                                            snapshot.DirectionalShadow.CascadeSettings.Resolution);
+                        addShadowRenderView(shadow.View, shadow.Projection, ShadowRenderTarget::DirectionalArray, cascade,
+                                            glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), snapshot.DirectionalShadow.CascadeSettings.Resolution);
                     }
                 }
             }
@@ -2610,8 +2524,7 @@ namespace Crowny
                     if (!allocation.IsValid())
                         continue;
                     const LocalShadowView view = LocalShadowViewBuilder::BuildSpot(light, request.Settings);
-                    shadowViews.push_back(ShadowGpuDataBuilder::BuildSpot(view, allocation, spotShadowAtlas.GetAtlasSize(),
-                                                                         request.Settings));
+                    shadowViews.push_back(ShadowGpuDataBuilder::BuildSpot(view, allocation, spotShadowAtlas.GetAtlasSize(), request.Settings));
                     const bool scheduled = scheduledSet.contains(request.Light.GetValue());
                     if (scheduled || renderedShadowLights.contains(request.Light.GetValue()))
                         shadowLights[request.Light.GetIndex()] =
@@ -2620,8 +2533,8 @@ namespace Crowny
                     {
                         const float inverseAtlasSize = 1.0f / static_cast<float>(spotShadowAtlas.GetAtlasSize());
                         addShadowRenderView(view.View, view.Projection, ShadowRenderTarget::Atlas, 0,
-                                            { allocation.X * inverseAtlasSize, allocation.Y * inverseAtlasSize,
-                                              allocation.Size * inverseAtlasSize, allocation.Size * inverseAtlasSize },
+                                            { allocation.X * inverseAtlasSize, allocation.Y * inverseAtlasSize, allocation.Size * inverseAtlasSize,
+                                              allocation.Size * inverseAtlasSize },
                                             allocation.Size);
                         pendingShadowUpdates.erase(request.Light.GetValue());
                         renderedShadowLights.insert(request.Light.GetValue());
@@ -2642,16 +2555,15 @@ namespace Crowny
                     if (scheduled)
                     {
                         for (uint32_t face = 0; face < faceViews.size(); face++)
-                            addShadowRenderView(faceViews[face].View, faceViews[face].Projection,
-                                                ShadowRenderTarget::PointArray, layer * 6u + face,
+                            addShadowRenderView(faceViews[face].View, faceViews[face].Projection, ShadowRenderTarget::PointArray, layer * 6u + face,
                                                 glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), request.Resolution);
                         pendingShadowUpdates.erase(request.Light.GetValue());
                         renderedShadowLights.insert(request.Light.GetValue());
                     }
                 }
             }
-            gpuScene.UploadShadowData(shadowLights.data(), static_cast<uint32_t>(shadowLights.size()),
-                                      shadowViews.data(), static_cast<uint32_t>(shadowViews.size()));
+            gpuScene.UploadShadowData(shadowLights.data(), static_cast<uint32_t>(shadowLights.size()), shadowViews.data(),
+                                      static_cast<uint32_t>(shadowViews.size()));
             gpuDrivenExecutor.RenderShadows(context, shadowRenderViews, shadowRenderViewCount);
         };
         if (featureTier == RenderFeatureTier::Compatibility)
@@ -2664,8 +2576,7 @@ namespace Crowny
         gpuDrivenExecutor.BeginFrame(view, blackboard, gpuScene, depthDrawList, snapshot.Environment);
 
         const RenderGraphCompileResult& compiledGraph = renderGraph.Compile();
-        const bool resourceFrameBegun = graphResources.BeginFrame(compiledGraph, snapshot.FrameNumber,
-                                                                  snapshot.HistoryNamespace, view.CameraCut);
+        const bool resourceFrameBegun = graphResources.BeginFrame(compiledGraph, snapshot.FrameNumber, snapshot.HistoryNamespace, view.CameraCut);
         bool resourcesReady = resourceFrameBegun;
         if (resourcesReady)
         {
@@ -2705,8 +2616,7 @@ namespace Crowny
             {
                 if (run.FirstCommand >= depthDrawList.Commands.size())
                     continue;
-                const AssetHandle<Mesh>& mesh = gpuScene.GetMeshResource(run.Bin.GeometryHeap);
-                const DrawMode drawMode = mesh ? mesh->GetDrawMode() : DrawMode::TRIANGLE_LIST;
+                const DrawMode drawMode = gpuScene.GetGeometryDrawMode(run.Bin.GeometryHeap);
                 const uint32_t availableCommands = static_cast<uint32_t>(depthDrawList.Commands.size()) - run.FirstCommand;
                 const uint32_t endCommand = run.FirstCommand + std::min(run.CommandCount, availableCommands);
                 for (uint32_t commandIndex = run.FirstCommand; commandIndex < endCommand; commandIndex++)

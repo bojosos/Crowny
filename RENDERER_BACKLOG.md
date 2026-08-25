@@ -87,7 +87,7 @@ Status: core model, screen-space outlines, ramps, and matcaps delivered; GPU-dri
 
 ## 3. GPU resource allocation and caches
 
-Status: reusable object pools, caches, and a static geometry suballocator delivered; persistent mesh residency remains
+Status: reusable object pools, caches, a static geometry suballocator, and persistent immutable-mesh residency delivered
 
 - [x] Inventory the existing VMA-backed Vulkan allocation, frame upload rings, render-graph reuse/aliasing, descriptor pools, render-target cache, pipeline variants, and persistent Vulkan pipeline cache.
 - [x] Compare Crowny with B3DFramework's frame-delayed transient buffer recycling and suballocation design.
@@ -96,7 +96,8 @@ Status: reusable object pools, caches, and a static geometry suballocator delive
 - [x] Add a complete-descriptor immutable sampler cache and clear it during renderer shutdown.
 - [x] Test frame-delayed reuse and object identity after the safe retirement window.
 - [x] Add fixed-capacity vertex/index geometry heaps with aligned best-fit suballocation, generational handles, frames-in-flight deferred frees, range coalescing, uploads, and allocation/high-water/fragmentation telemetry.
-- [ ] Replace `GpuScene`'s rebuilt per-mesh geometry tables with persistent incremental mesh residency backed by those heaps. This needs a stable imported upload representation so static meshes are not fully reuploaded when one mesh changes.
+- [x] Back immutable Vulkan meshes with persistent vertex/index heap pages grouped by structural vertex layout, index width, and topology. Use stable heap binding IDs, GPU-to-GPU buffer copies, meshlet-index uploads, delayed allocation reuse, per-mesh fallbacks for dynamic/skinned/morphed/OpenGL geometry, and capacity/live/high-water telemetry.
+- [ ] Finish GPU-only draw-run compaction so the main shading path consumes compute-generated run/count buffers without CPU draw-list generation.
 - [ ] Add pooled transient images where render-graph lifetime aliasing cannot reuse an allocation.
 
 ## Validation
@@ -104,6 +105,7 @@ Status: reusable object pools, caches, and a static geometry suballocator delive
 - [x] Focused `[Mips],[Materials],[Resources],[Shader],[Animation]` tests: 28 cases and 277 assertions passed; all 14 GPU-driven and legacy toon shader assets compiled together.
 - [x] `Scripts\run-render-tests.ps1 -Configuration Release -Backend All -NoBuild`: Vulkan and OpenGL each passed 4 captures on Intel Iris Xe, including explicit mip selection; all 4 backend comparisons passed.
 - [x] `python Scripts/check_headers.py`: passed.
-- [ ] `Crowny-Tests` still exits with Windows access violation `0xC0000005` during process teardown after Catch2 reports success. An unrelated shader-import-only run reproduces it, so it is not caused by the new renderer cases.
-- [ ] The complete `Crowny-Tests` run currently stops on two pre-existing unrelated failures: 16-bit grayscale image loading and a cylinder-node topology crash. Renderer-focused tests are clean.
-- [ ] Linux Vulkan/OpenGL build and render validation remain to be run on a Linux host.
+- [x] Full Release validation after the integration repair: 295 Catch2 cases and 25,025 assertions passed with clean process exit.
+- [x] Vulkan and OpenGL renderer regression captures passed 4/4 each, with all 4 cross-backend comparisons matching.
+- [x] Normal Vulkan editor shutdown completed with exit code 0, zero assertions, and zero VMA leak lines; the former 15 leaked storage allocations (~27.01 MB) are fixed.
+- [ ] Linux CI has progressed past SPIRV-Cross header discovery; keep the current Actions run as the authoritative Linux compile result.

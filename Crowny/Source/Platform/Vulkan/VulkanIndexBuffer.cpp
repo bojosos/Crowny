@@ -29,6 +29,13 @@ namespace Crowny
 
     VulkanIndexBuffer::~VulkanIndexBuffer() { delete m_Buffer; }
 
+    void VulkanIndexBuffer::CopyData(GpuBuffer& src, uint32_t srcOffset, uint32_t dstOffset, uint32_t length, bool discard,
+                                     const Ref<CommandBuffer>& commandBuffer)
+    {
+        VulkanIndexBuffer& source = static_cast<VulkanIndexBuffer&>(src);
+        m_Buffer->CopyData(*source.m_Buffer, srcOffset, dstOffset, length, discard, commandBuffer);
+    }
+
     void* VulkanIndexBuffer::Map(uint32_t offset, uint32_t size, GpuLockOptions options) { return m_Buffer->Map(offset, size, options); }
 
     void VulkanIndexBuffer::Unmap() { m_Buffer->Unmap(); }
