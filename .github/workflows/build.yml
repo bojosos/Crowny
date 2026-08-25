@@ -66,7 +66,13 @@ jobs:
         run: make Crowny-Tests -j$(nproc) config=release_linux64 CXX=clang++
 
       - name: Run Tests
-        run: ./bin/Release-linux-x86_64/Crowny-Tests/Crowny-Tests
+        timeout-minutes: 15
+        run: |
+          test_binary=./bin/Release-linux-x86_64/Crowny-Tests/Crowny-Tests
+          echo "Running focused Mono tests with a 90-second deadline"
+          stdbuf -oL -eL timeout --signal=TERM --kill-after=15s 90s "$test_binary" "[Mono]" --reporter console --durations yes
+          echo "Running the full native suite with a 10-minute deadline"
+          stdbuf -oL -eL timeout --signal=TERM --kill-after=15s 10m "$test_binary" --reporter console --durations yes
 
   build-windows:
     runs-on: windows-latest

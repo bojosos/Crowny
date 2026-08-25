@@ -74,7 +74,7 @@ namespace Crowny
             destroyEntity(entity);
         }
 
-        internal readonly struct CallbackScope : IDisposable
+        internal struct CallbackScope : IDisposable
         {
             private readonly float previous;
 

@@ -4,6 +4,7 @@
 #include "Crowny/Scripting/ManagedReload.h"
 #include "Crowny/Scripting/Mono/MonoManager.h"
 #include "Crowny/Scripting/Mono/MonoUtils.h"
+#include <cstdio>
 #include <filesystem>
 #include <stdexcept>
 
@@ -11,39 +12,45 @@
 
 using namespace Crowny;
 
-struct MonoGlobalFixture {
-    MonoGlobalFixture() {
+namespace
+{
+    void PrintMonoStartupPhase(const char* phase)
+    {
+        std::fprintf(stderr, "[Crowny-Tests][Mono] %s\n", phase);
+        std::fflush(stderr);
+    }
+
+    void EnsureMonoStarted()
+    {
+        if (MonoManager::IsStartedUp())
+            return;
+
+        PrintMonoStartupPhase("initializing test logging");
         if (!ConsoleBuffer::IsStartedUp())
             ConsoleBuffer::StartUp();
         Log::Init("CrownyTests");
-        if (!MonoManager::IsStartedUp())
-        {
-            const MonoRuntimePaths monoPaths = ResolveMonoRuntimePaths(fs::current_path());
-            if (!monoPaths.HasRuntime())
-                throw std::runtime_error(
-                  "Unable to resolve a Mono runtime for Crowny tests. Set CROWNY_MONO_ROOT to a valid Mono installation.");
 
-            printf("Initializing Mono with Lib: %s, Etc: %s\\n", monoPaths.LibraryDirectory.string().c_str(),
-                   monoPaths.EtcDirectory.string().c_str());
-            MonoManager::StartUp(monoPaths.LibraryDirectory, monoPaths.EtcDirectory, 0);
+        PrintMonoStartupPhase("resolving runtime paths");
+        const MonoRuntimePaths monoPaths = ResolveMonoRuntimePaths(fs::current_path());
+        if (!monoPaths.HasRuntime())
+            throw std::runtime_error(
+              "Unable to resolve a Mono runtime for Crowny tests. Set CROWNY_MONO_ROOT to a valid Mono installation.");
 
-            if (!MonoManager::IsStartedUp())
-                throw std::runtime_error("Mono failed to start for Crowny tests using the resolved runtime directories.");
-        }
+        std::fprintf(stderr, "[Crowny-Tests][Mono] starting runtime (lib=%s, etc=%s)\n",
+                     monoPaths.LibraryDirectory.string().c_str(), monoPaths.EtcDirectory.string().c_str());
+        std::fflush(stderr);
+        MonoManager::StartUp(monoPaths.LibraryDirectory, monoPaths.EtcDirectory, 0);
+
+        if (!MonoManager::IsStartedUp() || MonoManager::Get().GetDomain() == nullptr)
+            throw std::runtime_error("Mono failed to start for Crowny tests using the resolved runtime directories.");
+        PrintMonoStartupPhase("runtime ready");
     }
-
-    ~MonoGlobalFixture() {
-        // MonoManager::ShutDown(); // Usually we don't shut down in unit tests to avoid crashes
-    }
-};
-
-// Global fixture for all tests in this file
-static MonoGlobalFixture g_MonoFixture;
+} // namespace
 
 void AttachThread()
 {
-    if (MonoManager::IsStartedUp())
-        mono_thread_attach(MonoManager::Get().GetDomain());
+    EnsureMonoStarted();
+    mono_thread_attach(MonoManager::Get().GetDomain());
 }
 
 TEST_CASE("Mono::Utils::StringConversion", "[Mono]")
