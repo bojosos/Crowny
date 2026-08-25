@@ -2,6 +2,7 @@
 
 #include "Crowny/Assets/AssetHandle.h"
 #include "Crowny/Audio/AudioMixer.h"
+#include "Panels/EditorPanelRegistration.h"
 #include "Panels/ImGuiPanel.h"
 
 #include <limits>
@@ -15,6 +16,8 @@ namespace Crowny
     class AudioMixerPanel : public ImGuiPanel
     {
     public:
+        inline static constexpr EditorPanelRegistration<AudioMixerPanel> Registration{ "Audio Mixer", "View/Audio Mixer", "", false };
+
         AudioMixerPanel(const String& name);
         ~AudioMixerPanel() = default;
 

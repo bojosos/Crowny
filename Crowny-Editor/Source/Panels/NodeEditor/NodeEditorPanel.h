@@ -3,6 +3,7 @@
 #ifdef CW_WITH_NODES
 
 #include "Crowny/NodeGraph/NodeGraph.h"
+#include "Panels/EditorPanelRegistration.h"
 #include "Panels/ImGuiPanel.h"
 
 namespace Crowny
@@ -14,6 +15,8 @@ namespace Crowny
     class NodeEditorPanel : public ImGuiPanel
     {
     public:
+        inline static constexpr EditorPanelRegistration<NodeEditorPanel> Registration{ "Node Editor", "View/Node Editor", "", false };
+
         NodeEditorPanel(const String& name);
         ~NodeEditorPanel();
 

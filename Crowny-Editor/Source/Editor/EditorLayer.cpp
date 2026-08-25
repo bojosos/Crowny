@@ -181,18 +181,19 @@ namespace Crowny
 
         // Has to be done before hierarchy and asset browser panels
         m_Panels = CreateScope<EditorPanelRegistry>();
-        m_InspectorPanel = &m_Panels->Add<InspectorPanel>({ "Inspector" });
-        m_HierarchyPanel = &m_Panels->Add<HierarchyPanel>(
-          { "Hierarchy" }, [this](Entity primary, const Vector<Entity>& entities) { m_InspectorPanel->SetSelectedEntities(primary, entities); });
-        m_ViewportPanel = &m_Panels->Add<ViewportPanel>(
-          { "Viewport" }, [this]() { return m_HierarchyPanel->GetSelectedEntity(); }, [this]() { return m_HierarchyPanel->GetSelectedEntities(); });
+        m_InspectorPanel = &m_Panels->Add(InspectorPanel::Registration);
+        m_HierarchyPanel = &m_Panels->Add(HierarchyPanel::Registration, [this](Entity primary, const Vector<Entity>& entities) {
+            m_InspectorPanel->SetSelectedEntities(primary, entities);
+        });
+        m_ViewportPanel = &m_Panels->Add(
+          ViewportPanel::Registration, [this]() { return m_HierarchyPanel->GetSelectedEntity(); },
+          [this]() { return m_HierarchyPanel->GetSelectedEntities(); });
         m_ViewportPanel->SetEventCallback(CW_BIND_EVENT_FN(OnViewportEvent));
-        m_ConsolePanel = &m_Panels->Add<ConsolePanel>({ "Console" });
-        m_AssetBrowser =
-          &m_Panels->Add<AssetBrowserPanel>({ "Asset Browser" }, [this](const Path& path) { m_InspectorPanel->SetSelectedAssetPath(path); });
-        m_AudioMixerPanel = &m_Panels->Add<AudioMixerPanel>({ "Audio Mixer", false });
+        m_ConsolePanel = &m_Panels->Add(ConsolePanel::Registration);
+        m_AssetBrowser = &m_Panels->Add(AssetBrowserPanel::Registration, [this](const Path& path) { m_InspectorPanel->SetSelectedAssetPath(path); });
+        m_AudioMixerPanel = &m_Panels->Add(AudioMixerPanel::Registration);
 #ifdef CW_WITH_NODES
-        m_NodeEditorPanel = &m_Panels->Add<NodeEditorPanel>({ "Node Editor", false });
+        m_NodeEditorPanel = &m_Panels->Add(NodeEditorPanel::Registration);
 
         m_InspectorPanel->SetOpenNodeEditorCallback([this](AssetHandle<NodeGraphAsset> graphAsset) {
             m_NodeEditorPanel->SetGraph(graphAsset);
@@ -208,8 +209,7 @@ namespace Crowny
         });
         buildMenu.AddItem("Build game", "Ctrl+B", [this]() { BuildGame(); });
 
-        ImGuiMenu& viewMenu = m_MenuBar->AddMenu("View");
-        m_Panels->AddViewMenuItems(viewMenu);
+        ImGuiMenu& viewMenu = m_MenuBar->AddMenu(m_Panels->CreateMenu("View"));
         viewMenu.AddItem("Viewport settings", {}, [this]() { m_ShowViewportSettings = true; });
 
         ImGuiMenu& workspaceMenu = m_MenuBar->AddMenu("Workspace");

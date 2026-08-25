@@ -3,6 +3,7 @@
 #include "Crowny/Ecs/Entity.h"
 #include "Editor/EntitySelection.h"
 #include "Editor/UndoRedo.h"
+#include "Panels/EditorPanelRegistration.h"
 #include "Panels/ImGuiPanel.h"
 
 namespace Crowny
@@ -11,6 +12,8 @@ namespace Crowny
     class HierarchyPanel : public ImGuiPanel
     {
     public:
+        inline static constexpr EditorPanelRegistration<HierarchyPanel> Registration{ "Hierarchy", "View/Hierarchy" };
+
         using SelectionChangedCallback = std::function<void(Entity, const Vector<Entity>&)>;
 
         HierarchyPanel(const String& name, SelectionChangedCallback callback);

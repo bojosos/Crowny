@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ComponentEditor.h"
+#include "EditorPanelRegistration.h"
 #include "ImGuiPanel.h"
 
 #include "Crowny/Import/ImportOptions.h"
@@ -32,6 +33,8 @@ namespace Crowny
     class InspectorPanel : public ImGuiPanel
     {
     public:
+        inline static constexpr EditorPanelRegistration<InspectorPanel> Registration{ "Inspector", "View/Inspector" };
+
         InspectorPanel(const String& name);
         ~InspectorPanel() = default;
 

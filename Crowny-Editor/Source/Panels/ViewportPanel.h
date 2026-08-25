@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Panels/EditorPanelRegistration.h"
 #include "Panels/ImGuiPanel.h"
 
 #include "Crowny/Ecs/Entity.h"
@@ -42,6 +43,8 @@ namespace Crowny
     class ViewportPanel : public ImGuiPanel
     {
     public:
+        inline static constexpr EditorPanelRegistration<ViewportPanel> Registration{ "Viewport", "View/Viewport" };
+
         ViewportPanel(const String& name, std::function<Entity()> selectedEntity, std::function<Vector<Entity>()> selectedEntities);
         ~ViewportPanel() = default;
 

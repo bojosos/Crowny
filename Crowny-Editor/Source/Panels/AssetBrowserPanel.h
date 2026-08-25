@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Panels/EditorPanelRegistration.h"
 #include "Panels/ImGuiPanel.h"
 
 #include "Editor/AssetPreviewService.h"
@@ -54,6 +55,8 @@ namespace Crowny
     class AssetBrowserPanel : public ImGuiPanel
     {
     public:
+        inline static constexpr EditorPanelRegistration<AssetBrowserPanel> Registration{ "Asset Browser", "View/Asset Browser" };
+
         AssetBrowserPanel(const String& name, std::function<void(const Path&)> selectedPathCallback);
         ~AssetBrowserPanel() = default;
 

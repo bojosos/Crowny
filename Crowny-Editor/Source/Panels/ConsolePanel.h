@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Common/ConsoleBuffer.h"
+#include "Panels/EditorPanelRegistration.h"
 #include "Panels/ImGuiPanel.h"
 
 #include <limits>
@@ -10,6 +11,8 @@ namespace Crowny
     class ConsolePanel : public ImGuiPanel
     {
     public:
+        inline static constexpr EditorPanelRegistration<ConsolePanel> Registration{ "Console", "View/Console" };
+
         ConsolePanel(const String& name);
         ~ConsolePanel() = default;
 
