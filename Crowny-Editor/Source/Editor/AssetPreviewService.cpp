@@ -8,12 +8,14 @@
 #include "Crowny/Audio/WaveDecoder.h"
 #include "Crowny/Common/FileSystem.h"
 #include "Crowny/Common/StringUtils.h"
+#include "Crowny/ImGui/ImGuiVulkanTexture.h"
 #include "Crowny/Import/ImageLoader.h"
 #include "Crowny/Import/MeshImporter.h"
-#include "Crowny/ImGui/ImGuiVulkanTexture.h"
 
-#include <spdlog/fmt/fmt.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <spdlog/fmt/fmt.h>
+
+#include <stdexcept>
 
 namespace Crowny
 {
@@ -57,8 +59,7 @@ namespace Crowny
                 return nullptr;
 
             Ref<PixelData> output = CreateCanvas(size);
-            const float scale = std::min(static_cast<float>(size) / image.Pixels->GetWidth(),
-                                         static_cast<float>(size) / image.Pixels->GetHeight());
+            const float scale = std::min(static_cast<float>(size) / image.Pixels->GetWidth(), static_cast<float>(size) / image.Pixels->GetHeight());
             const uint32_t width = std::max(1u, static_cast<uint32_t>(std::round(image.Pixels->GetWidth() * scale)));
             const uint32_t height = std::max(1u, static_cast<uint32_t>(std::round(image.Pixels->GetHeight() * scale)));
             const uint32_t offsetX = (size - width) / 2u;
@@ -68,12 +69,12 @@ namespace Crowny
             {
                 if (cancellation.load(std::memory_order_acquire))
                     return nullptr;
-                const uint32_t sourceY = std::min(static_cast<uint32_t>((static_cast<uint64_t>(y) * image.Pixels->GetHeight()) / height),
-                                                  image.Pixels->GetHeight() - 1u);
+                const uint32_t sourceY =
+                  std::min(static_cast<uint32_t>((static_cast<uint64_t>(y) * image.Pixels->GetHeight()) / height), image.Pixels->GetHeight() - 1u);
                 for (uint32_t x = 0; x < width; x++)
                 {
-                    const uint32_t sourceX = std::min(static_cast<uint32_t>((static_cast<uint64_t>(x) * image.Pixels->GetWidth()) / width),
-                                                      image.Pixels->GetWidth() - 1u);
+                    const uint32_t sourceX =
+                      std::min(static_cast<uint32_t>((static_cast<uint64_t>(x) * image.Pixels->GetWidth()) / width), image.Pixels->GetWidth() - 1u);
                     glm::vec4 color;
                     if (!image.Pixels->TryGetColorAt(sourceX, sourceY, 0, color))
                         continue;
@@ -100,15 +101,15 @@ namespace Crowny
         {
             switch (bitDepth)
             {
-            case 8: return static_cast<float>(static_cast<int8_t>(*sample)) / 128.0f;
+            case 8:
+                return static_cast<float>(static_cast<int8_t>(*sample)) / 128.0f;
             case 16: {
                 int16_t value = 0;
                 std::memcpy(&value, sample, sizeof(value));
                 return static_cast<float>(value) / 32768.0f;
             }
             case 24: {
-                int32_t value = static_cast<int32_t>(sample[0]) | static_cast<int32_t>(sample[1]) << 8 |
-                                static_cast<int32_t>(sample[2]) << 16;
+                int32_t value = static_cast<int32_t>(sample[0]) | static_cast<int32_t>(sample[1]) << 8 | static_cast<int32_t>(sample[2]) << 16;
                 if ((value & 0x00800000) != 0)
                     value |= static_cast<int32_t>(0xFF000000);
                 return static_cast<float>(value) / 8388608.0f;
@@ -118,7 +119,8 @@ namespace Crowny
                 std::memcpy(&value, sample, sizeof(value));
                 return static_cast<float>(value) / 2147483648.0f;
             }
-            default: return 0.0f;
+            default:
+                return 0.0f;
             }
         }
 
@@ -131,8 +133,8 @@ namespace Crowny
             return nullptr;
         }
 
-        Ref<PixelData> MakeAudioPreview(const Path& path, uint32_t size, AssetPreviewResult& result,
-                                        const std::atomic<bool>& cancellation, String& error)
+        Ref<PixelData> MakeAudioPreview(const Path& path, uint32_t size, AssetPreviewResult& result, const std::atomic<bool>& cancellation,
+                                        String& error)
         {
             String extension = path.extension().string();
             StringUtils::ToLower(extension);
@@ -153,8 +155,7 @@ namespace Crowny
 
             result.Channels = info.NumChannels;
             result.SampleRate = info.SampleRate;
-            result.Duration = static_cast<float>(info.NumSamples) / static_cast<float>(info.NumChannels) /
-                              static_cast<float>(info.SampleRate);
+            result.Duration = static_cast<float>(info.NumSamples) / static_cast<float>(info.NumChannels) / static_cast<float>(info.SampleRate);
             result.Details = fmt::format("{:.2f} s, {} ch, {} Hz", result.Duration, result.Channels, result.SampleRate);
 
             Ref<PixelData> output = PixelData::Create(size, size, 1, TextureFormat::RGBA8);
@@ -217,8 +218,8 @@ namespace Crowny
             }
         }
 
-        Ref<PixelData> MakeMeshPreview(const Path& path, uint32_t size, AssetPreviewResult& result,
-                                       const std::atomic<bool>& cancellation, String& error)
+        Ref<PixelData> MakeMeshPreview(const Path& path, uint32_t size, AssetPreviewResult& result, const std::atomic<bool>& cancellation,
+                                       String& error)
         {
             MeshImportOptions options;
             options.CpuCached = true;
@@ -309,14 +310,10 @@ namespace Crowny
                     const float area = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
                     if (std::abs(area) < 1e-8f)
                         continue;
-                    const int32_t minX = glm::clamp(static_cast<int32_t>(std::floor(std::min({ a.x, b.x, c.x }))), 0,
-                                                    static_cast<int32_t>(size) - 1);
-                    const int32_t maxX = glm::clamp(static_cast<int32_t>(std::ceil(std::max({ a.x, b.x, c.x }))), 0,
-                                                    static_cast<int32_t>(size) - 1);
-                    const int32_t minY = glm::clamp(static_cast<int32_t>(std::floor(std::min({ a.y, b.y, c.y }))), 0,
-                                                    static_cast<int32_t>(size) - 1);
-                    const int32_t maxY = glm::clamp(static_cast<int32_t>(std::ceil(std::max({ a.y, b.y, c.y }))), 0,
-                                                    static_cast<int32_t>(size) - 1);
+                    const int32_t minX = glm::clamp(static_cast<int32_t>(std::floor(std::min({ a.x, b.x, c.x }))), 0, static_cast<int32_t>(size) - 1);
+                    const int32_t maxX = glm::clamp(static_cast<int32_t>(std::ceil(std::max({ a.x, b.x, c.x }))), 0, static_cast<int32_t>(size) - 1);
+                    const int32_t minY = glm::clamp(static_cast<int32_t>(std::floor(std::min({ a.y, b.y, c.y }))), 0, static_cast<int32_t>(size) - 1);
+                    const int32_t maxY = glm::clamp(static_cast<int32_t>(std::ceil(std::max({ a.y, b.y, c.y }))), 0, static_cast<int32_t>(size) - 1);
                     const glm::vec3 normal = glm::normalize(glm::cross(b - a, c - a));
                     const float light = 0.25f + 0.65f * std::abs(glm::dot(normal, glm::normalize(glm::vec3(0.4f, 0.7f, 0.6f))));
                     const glm::vec4 color(0.24f * light, 0.55f * light, 0.78f * light, 1.0f);
@@ -339,12 +336,12 @@ namespace Crowny
                             }
                         }
                     }
-                    DrawLine(*output, static_cast<int32_t>(a.x), static_cast<int32_t>(a.y), static_cast<int32_t>(b.x),
-                             static_cast<int32_t>(b.y), glm::vec4(0.08f, 0.12f, 0.16f, 1.0f));
-                    DrawLine(*output, static_cast<int32_t>(b.x), static_cast<int32_t>(b.y), static_cast<int32_t>(c.x),
-                             static_cast<int32_t>(c.y), glm::vec4(0.08f, 0.12f, 0.16f, 1.0f));
-                    DrawLine(*output, static_cast<int32_t>(c.x), static_cast<int32_t>(c.y), static_cast<int32_t>(a.x),
-                             static_cast<int32_t>(a.y), glm::vec4(0.08f, 0.12f, 0.16f, 1.0f));
+                    DrawLine(*output, static_cast<int32_t>(a.x), static_cast<int32_t>(a.y), static_cast<int32_t>(b.x), static_cast<int32_t>(b.y),
+                             glm::vec4(0.08f, 0.12f, 0.16f, 1.0f));
+                    DrawLine(*output, static_cast<int32_t>(b.x), static_cast<int32_t>(b.y), static_cast<int32_t>(c.x), static_cast<int32_t>(c.y),
+                             glm::vec4(0.08f, 0.12f, 0.16f, 1.0f));
+                    DrawLine(*output, static_cast<int32_t>(c.x), static_cast<int32_t>(c.y), static_cast<int32_t>(a.x), static_cast<int32_t>(a.y),
+                             glm::vec4(0.08f, 0.12f, 0.16f, 1.0f));
                     renderedTriangles++;
                 }
             }
@@ -383,8 +380,8 @@ namespace Crowny
                     {
                         work->Pixels = MakeImagePreview(image, work->PreviewSize, work->Cancellation);
                         work->Result.Details = fmt::format("{} x {}, {} channel{}, {}-bit{}{}", image.Info.Width, image.Info.Height,
-                                                          image.Info.Channels, image.Info.Channels == 1 ? "" : "s", image.Info.BitDepth,
-                                                          image.Info.IsHDR ? ", HDR" : "", image.Info.Faces == 6 ? ", cubemap" : "");
+                                                           image.Info.Channels, image.Info.Channels == 1 ? "" : "s", image.Info.BitDepth,
+                                                           image.Info.IsHDR ? ", HDR" : "", image.Info.Faces == 6 ? ", cubemap" : "");
                     }
                 }
                 else if (work->Type == AssetType::AudioClip)
@@ -404,15 +401,12 @@ namespace Crowny
         }
     } // namespace
 
-    AssetPreviewService::~AssetPreviewService()
-    {
-        Clear();
-    }
+    AssetPreviewService::~AssetPreviewService() { Clear(); }
 
     bool AssetPreviewService::Supports(AssetType type)
     {
-        return type == AssetType::Texture || type == AssetType::EnvironmentMap || type == AssetType::Mesh ||
-               type == AssetType::MeshSource || type == AssetType::AudioClip;
+        return type == AssetType::Texture || type == AssetType::EnvironmentMap || type == AssetType::Mesh || type == AssetType::MeshSource ||
+               type == AssetType::AudioClip;
     }
 
     const AssetPreviewResult* AssetPreviewService::Request(const FileEntry& entry, uint32_t size)
@@ -472,7 +466,27 @@ namespace Crowny
             work->Result.Status = AssetPreviewStatus::Loading;
             work->TaskHandle = Task::Create("Asset preview", [work]() { ExecutePreviewWork(work); }, TaskPriority::Low);
             m_Running.push_back(work);
-            TaskSystem::Get().Submit(work->TaskHandle);
+            try
+            {
+                TaskSystem* taskSystem = TaskSystem::TryGet();
+                if (taskSystem == nullptr)
+                    throw std::logic_error("Task system is unavailable");
+                taskSystem->Submit(work->TaskHandle);
+            }
+            catch (const std::exception& exception)
+            {
+                m_Running.pop_back();
+                work->TaskHandle = nullptr;
+                work->Result.Status = AssetPreviewStatus::Failed;
+                work->Result.Error = exception.what();
+            }
+            catch (...)
+            {
+                m_Running.pop_back();
+                work->TaskHandle = nullptr;
+                work->Result.Status = AssetPreviewStatus::Failed;
+                work->Result.Error = "Preview task submission failed";
+            }
         }
     }
 

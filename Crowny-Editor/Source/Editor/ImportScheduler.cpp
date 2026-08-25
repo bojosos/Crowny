@@ -68,6 +68,7 @@ namespace Crowny
         TaskSystem* const taskSystem = TaskSystem::TryGet();
         UnorderedMap<SpecificImporter*, std::shared_ptr<Mutex>> serializedImporterMutexes;
         const auto queuedAt = std::chrono::steady_clock::now();
+        Vector<Ref<Task>> laneTasksToSubmit;
 
         for (uint32_t sequence = 0; sequence < static_cast<uint32_t>(tasks.size()); sequence++)
         {
@@ -83,8 +84,8 @@ namespace Crowny
 
             if (item.Importer != nullptr)
             {
-                item.Result.Task.Options = item.Result.Task.Options != nullptr ? item.Result.Task.Options->Clone()
-                                                                                : item.Importer->CreateImportOptions();
+                item.Result.Task.Options =
+                  item.Result.Task.Options != nullptr ? item.Result.Task.Options->Clone() : item.Importer->CreateImportOptions();
                 item.Policy = taskSystem != nullptr ? item.Importer->GetThreadingPolicy() : ImporterThreadingPolicy::MainThreadOnly;
             }
 
@@ -112,18 +113,18 @@ namespace Crowny
             batch->Items.push_back(std::move(item));
         }
 
-        if (!batch->WorkerItemIndices.empty())
+        if (!batch->WorkerItemIndices.empty() && taskSystem != nullptr)
         {
             const uint32_t taskSystemWorkers = taskSystem->GetWorkerCount();
             const uint32_t availableWorkers = taskSystemWorkers > 1 ? taskSystemWorkers - 1 : taskSystemWorkers;
-            batch->WorkerLaneLimit = std::min({ m_MaxWorkerLanes, std::max(availableWorkers, 1u),
-                                                static_cast<uint32_t>(batch->WorkerItemIndices.size()) });
-            batch->LaneTasks.reserve(batch->WorkerLaneLimit);
+            batch->WorkerLaneLimit =
+              std::min({ m_MaxWorkerLanes, std::max(availableWorkers, 1u), static_cast<uint32_t>(batch->WorkerItemIndices.size()) });
+            laneTasksToSubmit.reserve(batch->WorkerLaneLimit);
             const std::weak_ptr<BatchState> weakBatch = batch;
             for (uint32_t lane = 0; lane < batch->WorkerLaneLimit; lane++)
             {
                 const String taskName = "Editor asset import lane " + std::to_string(lane);
-                batch->LaneTasks.push_back(Task::Create(
+                laneTasksToSubmit.push_back(Task::Create(
                   taskName,
                   [weakBatch, lane]() {
                       const std::shared_ptr<BatchState> state = weakBatch.lock();
@@ -134,15 +135,58 @@ namespace Crowny
             }
         }
 
+        batch->LaneTasks.reserve(laneTasksToSubmit.size());
+        bool submissionFailed = false;
+        if (taskSystem != nullptr)
+        {
+            for (const Ref<Task>& laneTask : laneTasksToSubmit)
+            {
+                try
+                {
+                    taskSystem->Submit(laneTask);
+                    batch->LaneTasks.push_back(laneTask);
+                }
+                catch (...)
+                {
+                    submissionFailed = true;
+                    break;
+                }
+            }
+        }
+
+        if (submissionFailed)
+        {
+            batch->CancelRequested.store(true, std::memory_order_release);
+            for (const Ref<Task>& laneTask : batch->LaneTasks)
+                laneTask->Cancel();
+            for (const Ref<Task>& laneTask : batch->LaneTasks)
+            {
+                try
+                {
+                    laneTask->Wait();
+                }
+                catch (...)
+                {
+                }
+            }
+
+            Lock lock(batch->Mutex);
+            for (uint32_t sequence : batch->WorkerItemIndices)
+            {
+                BatchState::Item& item = batch->Items[sequence];
+                if (item.State != ScheduledImportState::Ready)
+                    batch->Progress.CompletedFiles++;
+                item.Result.Asset = nullptr;
+                item.Result.Status = ImportResultStatus::Failed;
+                item.State = ScheduledImportState::Ready;
+            }
+            batch->WorkerLaneLimit = 0;
+        }
+
         TracyPlot("Editor import queued files", static_cast<int64_t>(batch->WorkerItemIndices.size()));
         {
             Lock lock(m_Mutex);
             m_Batch = batch;
-            if (taskSystem != nullptr)
-            {
-                for (const Ref<Task>& laneTask : batch->LaneTasks)
-                    taskSystem->Submit(laneTask);
-            }
         }
     }
 
@@ -169,25 +213,31 @@ namespace Crowny
             }
 
             Ref<Asset> asset;
+            bool importFailed = false;
             const String sourcePath = item.Result.Task.SourcePath.string();
             const auto queueTime = std::chrono::steady_clock::now() - item.QueuedAt;
-            TracyPlot("Editor import queue time us",
-                      static_cast<int64_t>(std::chrono::duration_cast<std::chrono::microseconds>(queueTime).count()));
+            TracyPlot("Editor import queue time us", static_cast<int64_t>(std::chrono::duration_cast<std::chrono::microseconds>(queueTime).count()));
             TracyPlot("Editor import queued files",
-                      static_cast<int64_t>(batch.WorkerItemIndices.size() -
-                                           std::min(workerItem + 1, (uint32_t)batch.WorkerItemIndices.size())));
+                      static_cast<int64_t>(batch.WorkerItemIndices.size() - std::min(workerItem + 1, (uint32_t)batch.WorkerItemIndices.size())));
 
+            try
             {
-                ZoneScopedN("ImportScheduler::ImportFile");
-                ZoneText(sourcePath.c_str(), sourcePath.size());
-                if (item.SerializedImporterMutex != nullptr)
                 {
-                    Lock importerLock(*item.SerializedImporterMutex);
-                    if (!batch.CancelRequested.load(std::memory_order_acquire))
+                    ZoneScopedN("ImportScheduler::ImportFile");
+                    ZoneText(sourcePath.c_str(), sourcePath.size());
+                    if (item.SerializedImporterMutex != nullptr)
+                    {
+                        Lock importerLock(*item.SerializedImporterMutex);
+                        if (!batch.CancelRequested.load(std::memory_order_acquire))
+                            asset = Importer::Get().ImportDeferred(item.Result.Task.SourcePath, item.Result.Task.Options);
+                    }
+                    else
                         asset = Importer::Get().ImportDeferred(item.Result.Task.SourcePath, item.Result.Task.Options);
                 }
-                else
-                    asset = Importer::Get().ImportDeferred(item.Result.Task.SourcePath, item.Result.Task.Options);
+            }
+            catch (...)
+            {
+                importFailed = true;
             }
 
             Lock lock(batch.Mutex);
@@ -196,6 +246,8 @@ namespace Crowny
             item.Result.Asset = std::move(asset);
             if (batch.CancelRequested.load(std::memory_order_acquire))
                 item.Result.Status = ImportResultStatus::Canceled;
+            else if (importFailed)
+                item.Result.Status = ImportResultStatus::Failed;
             else
                 item.Result.Status = item.Result.Asset != nullptr ? ImportResultStatus::Succeeded : ImportResultStatus::Failed;
             item.State = ScheduledImportState::Ready;
@@ -255,10 +307,18 @@ namespace Crowny
                           static_cast<int64_t>(std::chrono::duration_cast<std::chrono::microseconds>(queueTime).count()));
 
                 Ref<Asset> asset;
+                bool importFailed = false;
                 {
                     ZoneScopedN("ImportScheduler::ImportFile");
                     ZoneText(sourcePath.c_str(), sourcePath.size());
-                    asset = Importer::Get().Import(mainThreadTask.SourcePath, mainThreadTask.Options);
+                    try
+                    {
+                        asset = Importer::Get().Import(mainThreadTask.SourcePath, mainThreadTask.Options);
+                    }
+                    catch (...)
+                    {
+                        importFailed = true;
+                    }
                 }
 
                 Lock lock(batch->Mutex);
@@ -266,7 +326,7 @@ namespace Crowny
                 if (item.State == ScheduledImportState::RunningMainThread)
                 {
                     item.Result.Asset = std::move(asset);
-                    item.Result.Status = item.Result.Asset != nullptr ? ImportResultStatus::Succeeded : ImportResultStatus::Failed;
+                    item.Result.Status = !importFailed && item.Result.Asset != nullptr ? ImportResultStatus::Succeeded : ImportResultStatus::Failed;
                     item.State = ScheduledImportState::Ready;
                     batch->Progress.CompletedFiles++;
                 }
@@ -289,6 +349,34 @@ namespace Crowny
         }
 
         const bool lanesComplete = std::all_of(laneTasks.begin(), laneTasks.end(), [](const Ref<Task>& task) { return task->IsComplete(); });
+        bool laneFailed = false;
+        if (lanesComplete)
+        {
+            for (const Ref<Task>& laneTask : laneTasks)
+            {
+                try
+                {
+                    laneTask->Wait();
+                }
+                catch (...)
+                {
+                    laneFailed = true;
+                }
+            }
+        }
+        if (laneFailed)
+        {
+            Lock lock(batch->Mutex);
+            for (BatchState::Item& item : batch->Items)
+            {
+                if (item.State != ScheduledImportState::PendingWorker && item.State != ScheduledImportState::RunningWorker)
+                    continue;
+                item.Result.Asset = nullptr;
+                item.Result.Status = ImportResultStatus::Failed;
+                item.State = ScheduledImportState::Ready;
+                batch->Progress.CompletedFiles++;
+            }
+        }
         if (!allPublished || !lanesComplete)
             return false;
 
@@ -322,7 +410,15 @@ namespace Crowny
             laneTasks = batch->LaneTasks;
         }
         for (const Ref<Task>& laneTask : laneTasks)
-            laneTask->Wait();
+        {
+            try
+            {
+                laneTask->Wait();
+            }
+            catch (...)
+            {
+            }
+        }
 
         {
             Lock lock(batch->Mutex);
