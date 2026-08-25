@@ -32,6 +32,10 @@ jobs:
           if ! command -v csc >/dev/null 2>&1; then
             sudo ln -s "$(command -v mono-csc)" /usr/local/bin/csc
           fi
+          # mono-csc 6.x rejects MethodImplOptions.AggressiveOptimization.
+          fastnoise_path="Crowny/Dependencies/FastNoiseLite/CSharp/FastNoiseLite.cs"
+          sed -i 's|private const short OPTIMISE = 512; // MethodImplOptions.AggressiveOptimization;|private const short OPTIMISE = 0; // Unsupported by legacy Mono compilers.|' "$fastnoise_path"
+          grep -Fq 'private const short OPTIMISE = 0; // Unsupported by legacy Mono compilers.' "$fastnoise_path"
           mkdir -p .deps/VulkanSDK/Include/vma
           wget -O .deps/VulkanSDK/Include/vma/vk_mem_alloc.h https://raw.githubusercontent.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/v3.4.0/include/vk_mem_alloc.h
 
