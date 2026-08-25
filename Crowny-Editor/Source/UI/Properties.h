@@ -109,24 +109,30 @@ namespace Crowny
             Underline();
         }
 
-        template <typename TUnderlying = int32_t>
-        static bool QuickTabs(const char* label, std::initializer_list<const char*> buttonNameList, const Vector<TUnderlying>& enumValues,
-                              TUnderlying& value)
+        template <typename TUnderlying, typename TValueAt>
+        static bool QuickTabsImpl(const char* label, std::initializer_list<const char*> buttonNameList, const TValueAt& valueAt, TUnderlying& value)
         {
             Pre(label);
+
+            if (buttonNameList.size() == 0u)
+            {
+                Post();
+                return false;
+            }
 
             bool buttonClicked = false;
             const bool mixed = (GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0;
             {
-                Vector<const char*> buttons(buttonNameList);
                 UI::ScopedStyle noSpacingStyle(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
                 float columnWidth = ImGui::GetContentRegionAvail().x;
-                float minButtonSize = columnWidth / buttons.size();
-                for (uint32_t i = 0; i < (uint32_t)buttons.size(); i++)
+                float minButtonSize = columnWidth / static_cast<float>(buttonNameList.size());
+                uint32_t index = 0u;
+                ImGui::PushID(label);
+                for (const char* buttonName : buttonNameList)
                 {
-                    const String id = String(buttons[i]) + "##" + std::string(label) + std::to_string(i);
+                    const TUnderlying optionValue = valueAt(index);
 
-                    if (!mixed && (value & enumValues[i]))
+                    if (!mixed && (value & optionValue))
                     {
                         ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetColorU32(ImGuiCol_ButtonHovered));
                         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::ColorConvertU32ToFloat4(IM_COL32(84, 84, 84, 255)));
@@ -137,19 +143,30 @@ namespace Crowny
                         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetColorU32(ImGuiCol_ButtonActive));
                     }
 
-                    if (ImGui::Button(id.c_str(), ImVec2(std::max(minButtonSize, ImGui::CalcTextSize(buttons[i]).x), 0.0f)))
+                    ImGui::PushID(static_cast<int>(index));
+                    if (ImGui::Button(buttonName, ImVec2(std::max(minButtonSize, ImGui::CalcTextSize(buttonName).x), 0.0f)))
                     {
-                        value ^= enumValues[i];
+                        value ^= optionValue;
                         buttonClicked = true;
                     }
-                    ImGui::SameLine();
+                    ImGui::PopID();
+                    if (++index < buttonNameList.size())
+                        ImGui::SameLine();
 
                     ImGui::PopStyleColor(2);
                 }
+                ImGui::PopID();
             }
             UndoRedo::Get().OnItemInteract(buttonClicked);
             Post();
             return buttonClicked;
+        }
+
+        template <typename TUnderlying = int32_t>
+        static bool QuickTabs(const char* label, std::initializer_list<const char*> buttonNameList, const Vector<TUnderlying>& enumValues,
+                              TUnderlying& value)
+        {
+            return QuickTabsImpl(label, buttonNameList, [&enumValues](uint32_t index) { return enumValues[index]; }, value);
         }
 
         static void DrawPropertyIconGlyph(const PropertyIconTab& tab, const ImRect& bounds, ImU32 color)
@@ -235,11 +252,13 @@ namespace Crowny
             const float buttonWidth = std::max(1.0f, ImGui::GetContentRegionAvail().x / static_cast<float>(tabList.size()));
             const float buttonHeight = ImGui::GetFrameHeight();
             uint32_t index = 0u;
+            ImGui::PushID(label);
             for (const PropertyIconTab& tab : tabList)
             {
                 const bool selected = !mixed && static_cast<int32_t>(value) == tab.Value;
-                const String id = "##" + String(label) + std::to_string(index);
-                const bool clicked = ImGui::InvisibleButton(id.c_str(), ImVec2(buttonWidth, buttonHeight));
+                ImGui::PushID(static_cast<int>(index));
+                const bool clicked = ImGui::InvisibleButton("##PropertyIconTab", ImVec2(buttonWidth, buttonHeight));
+                ImGui::PopID();
                 const ImRect bounds = UI::GetItemRect();
                 const ImGuiCol backgroundColor = selected ? ImGuiCol_ButtonActive : ImGui::IsItemHovered() ? ImGuiCol_ButtonHovered : ImGuiCol_Button;
                 ImGui::GetWindowDrawList()->AddRectFilled(bounds.Min, bounds.Max, ImGui::GetColorU32(backgroundColor), 2.0f);
@@ -254,6 +273,7 @@ namespace Crowny
                 if (++index < tabList.size())
                     ImGui::SameLine(0.0f, 0.0f);
             }
+            ImGui::PopID();
             Post();
             return modified;
         }
@@ -263,30 +283,39 @@ namespace Crowny
         {
             Pre(label);
 
+            if (buttons.empty())
+            {
+                Post();
+                return false;
+            }
+
             bool buttonClicked = false;
             const bool mixed = (GImGui->CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0;
             {
                 UI::ScopedStyle noSpacingStyle(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
                 float columnWidth = ImGui::GetContentRegionAvail().x;
                 float minButtonSize = columnWidth / buttons.size();
+                ImGui::PushID(label);
                 for (uint32_t i = 0; i < (uint32_t)buttons.size(); i++)
                 {
-                    const String id = buttons[i] + "##" + std::string(label) + std::to_string(i);
-
                     if (!mixed && (value & enumValues[i]))
                         ImGui::PushStyleColor(ImGuiCol_Button, ImGuiCol_ButtonActive);
                     else
                         ImGui::PushStyleColor(ImGuiCol_Button, ImGuiCol_Button);
 
-                    if (ImGui::Button(id.c_str(), ImVec2(std::max(minButtonSize, ImGui::CalcTextSize(buttons[i].c_str()).x), 0.0f)))
+                    ImGui::PushID(static_cast<int>(i));
+                    if (ImGui::Button(buttons[i].c_str(), ImVec2(std::max(minButtonSize, ImGui::CalcTextSize(buttons[i].c_str()).x), 0.0f)))
                     {
                         value ^= enumValues[i];
                         buttonClicked = true;
                     }
-                    ImGui::SameLine();
+                    ImGui::PopID();
+                    if (i + 1u < buttons.size())
+                        ImGui::SameLine();
 
                     ImGui::PopStyleColor();
                 }
+                ImGui::PopID();
             }
             UndoRedo::Get().OnItemInteract(buttonClicked);
             Post();
@@ -297,16 +326,14 @@ namespace Crowny
         template <typename TEnum, typename TUnderlying = int32_t>
         static bool QuickTabsP(const char* label, std::initializer_list<const char*> buttonNameList, Flags<TEnum, TUnderlying>& value)
         {
-            Vector<TUnderlying> values;
-            values.resize(buttonNameList.size());
             uint32_t pow = 1;
-            for (uint32_t i = 0; i < (uint32_t)buttonNameList.size(); i++)
-            {
-                values[i] = pow;
+            const auto valueAt = [&pow](uint32_t) {
+                const TUnderlying result = static_cast<TUnderlying>(pow);
                 pow *= 2;
-            }
+                return result;
+            };
             TUnderlying underlying = (TUnderlying)value;
-            bool modified = QuickTabs(label, buttonNameList, values, underlying);
+            bool modified = QuickTabsImpl(label, buttonNameList, valueAt, underlying);
             value = Flags<TEnum, TUnderlying>(underlying);
             return modified;
         }
@@ -314,15 +341,13 @@ namespace Crowny
         template <typename TUnderlying = int32_t>
         static bool QuickTabsP(const char* label, std::initializer_list<const char*> buttonNameList, TUnderlying& value)
         {
-            Vector<TUnderlying> values;
-            values.resize(buttonNameList.size());
             uint32_t pow = 1;
-            for (uint32_t i = 0; i < (uint32_t)buttonNameList.size(); i++)
-            {
-                values[i] = pow;
+            const auto valueAt = [&pow](uint32_t) {
+                const TUnderlying result = static_cast<TUnderlying>(pow);
                 pow *= 2;
-            }
-            return QuickTabs(label, buttonNameList, values, value);
+                return result;
+            };
+            return QuickTabsImpl(label, buttonNameList, valueAt, value);
         }
 
         static bool PropertyInput(const char* label, int8_t& value, int8_t step = 1, int8_t stepFast = 1)

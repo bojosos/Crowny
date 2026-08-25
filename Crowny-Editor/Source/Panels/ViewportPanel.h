@@ -45,7 +45,7 @@ namespace Crowny
     public:
         inline static constexpr EditorPanelRegistration<ViewportPanel> Registration{ "Viewport", "View/Viewport" };
 
-        ViewportPanel(const String& name, std::function<Entity()> selectedEntity, std::function<Vector<Entity>()> selectedEntities);
+        ViewportPanel(const String& name, std::function<Entity()> selectedEntity, std::function<const Vector<Entity>&()> selectedEntities);
         ~ViewportPanel() = default;
 
         virtual void Render() override;
@@ -75,7 +75,8 @@ namespace Crowny
         };
 
         void DrawViewportHud(const ImVec2& imageMin, const ImVec2& imageMax, Entity primary, const Vector<Entity>& selectedEntities);
-        Vector<Entity> GetTopLevelSelection(const Vector<Entity>& selectedEntities) const;
+        const Vector<Entity>& RefreshSelectionScratch(Entity primary);
+        const Vector<Entity>& GetTopLevelSelection(const Vector<Entity>& selectedEntities);
         glm::mat4 GetSelectionPivot(Entity primary, const Vector<Entity>& selectedEntities) const;
         void BeginTransformInteraction(const Vector<Entity>& selectedEntities, const glm::mat4& pivot);
         void ApplyTransformInteraction(const glm::mat4& pivot);
@@ -91,7 +92,9 @@ namespace Crowny
         glm::vec2 m_ViewportSize = { 1.0f, 1.0f };
         glm::vec4 m_ViewportBounds;
         std::function<Entity()> m_SelectedEntity;
-        std::function<Vector<Entity>()> m_SelectedEntities;
+        std::function<const Vector<Entity>&()> m_SelectedEntities;
+        Vector<Entity> m_SelectedEntitiesScratch;
+        Vector<Entity> m_TopLevelSelectionScratch;
         Vector<TransformSnapshot> m_TransformSnapshots;
         glm::mat4 m_InitialGizmoTransform{ 1.0f };
         glm::mat4 m_CurrentGizmoTransform{ 1.0f };

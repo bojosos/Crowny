@@ -165,6 +165,7 @@ namespace Crowny
         Vector<Pair<ComponentTypeID, ComponentInfo>> m_OrderedComponentInfos;
         Map<String, Map<ComponentTypeID, ComponentInfo>> m_ComponentInfos;
         String m_CurrentComponentGroup;
+        Vector<Entity> m_SelectionScratch;
     };
 
     template <> void ComponentEditorWidget<MonoScriptComponent>(Entity entity);

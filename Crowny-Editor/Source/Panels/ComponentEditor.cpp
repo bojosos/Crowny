@@ -733,33 +733,33 @@ namespace Crowny
             ImGui::TextDisabled("Select an entity to inspect its components.");
             return;
         }
-        Vector<Entity> entities;
-        entities.reserve(selectedEntities.size());
+        m_SelectionScratch.clear();
+        m_SelectionScratch.reserve(selectedEntities.size() + 1u);
         for (Entity entity : selectedEntities)
         {
             if (entity && entity.GetScene() == scene.get())
-                entities.push_back(entity);
+                m_SelectionScratch.push_back(entity);
         }
-        if (entities.empty())
-            entities.push_back(primary);
-        const auto primaryEntry = std::find(entities.begin(), entities.end(), primary);
-        if (primaryEntry == entities.end())
-            entities.insert(entities.begin(), primary);
-        else if (primaryEntry != entities.begin())
-            std::iter_swap(entities.begin(), primaryEntry);
+        if (m_SelectionScratch.empty())
+            m_SelectionScratch.push_back(primary);
+        const auto primaryEntry = std::find(m_SelectionScratch.begin(), m_SelectionScratch.end(), primary);
+        if (primaryEntry == m_SelectionScratch.end())
+            m_SelectionScratch.insert(m_SelectionScratch.begin(), primary);
+        else if (primaryEntry != m_SelectionScratch.begin())
+            std::iter_swap(m_SelectionScratch.begin(), primaryEntry);
         const entt::registry& registry = scene->m_Registry;
 
         ImGui::PushID(primary);
         ImGui::Separator();
-        RenderEntityHeader(primary, entities);
+        RenderEntityHeader(primary, m_SelectionScratch);
         ImGui::Separator();
 
-        RenderComponents(primary, entities, registry, m_OrderedComponentInfos);
+        RenderComponents(primary, m_SelectionScratch, registry, m_OrderedComponentInfos);
 
         if (ImGui::Button("+  Add component", ImVec2(ImGui::GetContentRegionAvail().x, 0.0f)))
             ImGui::OpenPopup("Add Component");
 
-        RenderAddComponentPopup(scene, primary, entities, registry, m_ComponentInfos);
+        RenderAddComponentPopup(scene, primary, m_SelectionScratch, registry, m_ComponentInfos);
         ImGui::PopID();
     }
 

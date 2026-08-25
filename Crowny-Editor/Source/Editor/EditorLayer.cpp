@@ -187,7 +187,7 @@ namespace Crowny
         });
         m_ViewportPanel = &m_Panels->Add(
           ViewportPanel::Registration, [this]() { return m_HierarchyPanel->GetSelectedEntity(); },
-          [this]() { return m_HierarchyPanel->GetSelectedEntities(); });
+          [this]() -> const Vector<Entity>& { return m_HierarchyPanel->GetSelectedEntities(); });
         m_ViewportPanel->SetEventCallback(CW_BIND_EVENT_FN(OnViewportEvent));
         m_ConsolePanel = &m_Panels->Add(ConsolePanel::Registration);
         m_AssetBrowser = &m_Panels->Add(AssetBrowserPanel::Registration, [this](const Path& path) { m_InspectorPanel->SetSelectedAssetPath(path); });

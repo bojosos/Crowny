@@ -117,8 +117,8 @@ namespace Crowny
         {
         public:
             WorldTransformAction(Entity target, const glm::mat4& oldTransform, const glm::mat4& newTransform)
-              : UndoAction("Transform entity"), m_Scene(target.GetScene()), m_Target(target.GetUuid()),
-                m_OldTransform(oldTransform), m_NewTransform(newTransform)
+              : UndoAction("Transform entity"), m_Scene(target.GetScene()), m_Target(target.GetUuid()), m_OldTransform(oldTransform),
+                m_NewTransform(newTransform)
             {
             }
 
@@ -132,6 +132,7 @@ namespace Crowny
                 if (Entity target = Resolve())
                     target.SetWorldTransform(m_OldTransform);
             }
+
         private:
             Entity Resolve() const { return m_Scene ? m_Scene->TryGetEntityFromUuid(m_Target) : Entity{}; }
 
@@ -168,7 +169,7 @@ namespace Crowny
         return ImGuizmo::TRANSLATE;
     }
 
-    ViewportPanel::ViewportPanel(const String& name, std::function<Entity()> selectedEntity, std::function<Vector<Entity>()> selectedEntities)
+    ViewportPanel::ViewportPanel(const String& name, std::function<Entity()> selectedEntity, std::function<const Vector<Entity>&()> selectedEntities)
       : ImGuiPanel(name), m_ViewportBounds(0.0f), m_SelectedEntity(std::move(selectedEntity)), m_SelectedEntities(std::move(selectedEntities))
     {
         Ref<ProjectSettings> projSettings = Editor::Get().GetProjectSettings();
@@ -176,9 +177,30 @@ namespace Crowny
         m_LocalMode = projSettings->GizmoLocalMode;
     }
 
-    Vector<Entity> ViewportPanel::GetTopLevelSelection(const Vector<Entity>& selectedEntities) const
+    const Vector<Entity>& ViewportPanel::RefreshSelectionScratch(Entity primary)
     {
-        Vector<Entity> result;
+        m_SelectedEntitiesScratch.clear();
+        if (m_SelectedEntities)
+        {
+            const Vector<Entity>& selectedEntities = m_SelectedEntities();
+            m_SelectedEntitiesScratch.reserve(selectedEntities.size() + (primary ? 1u : 0u));
+            for (Entity entity : selectedEntities)
+            {
+                if (entity.IsValid())
+                    m_SelectedEntitiesScratch.push_back(entity);
+            }
+        }
+
+        if (primary && std::find(m_SelectedEntitiesScratch.begin(), m_SelectedEntitiesScratch.end(), primary) == m_SelectedEntitiesScratch.end())
+            m_SelectedEntitiesScratch.push_back(primary);
+
+        return m_SelectedEntitiesScratch;
+    }
+
+    const Vector<Entity>& ViewportPanel::GetTopLevelSelection(const Vector<Entity>& selectedEntities)
+    {
+        m_TopLevelSelectionScratch.clear();
+        m_TopLevelSelectionScratch.reserve(selectedEntities.size());
         for (Entity entity : selectedEntities)
         {
             if (!entity)
@@ -193,9 +215,9 @@ namespace Crowny
                 }
             }
             if (!selectedAncestor)
-                result.push_back(entity);
+                m_TopLevelSelectionScratch.push_back(entity);
         }
-        return result;
+        return m_TopLevelSelectionScratch;
     }
 
     glm::mat4 ViewportPanel::GetSelectionPivot(Entity primary, const Vector<Entity>& selectedEntities) const
@@ -220,7 +242,9 @@ namespace Crowny
     void ViewportPanel::BeginTransformInteraction(const Vector<Entity>& selectedEntities, const glm::mat4& pivot)
     {
         m_TransformSnapshots.clear();
-        for (Entity entity : GetTopLevelSelection(selectedEntities))
+        const Vector<Entity>& topLevelSelection = GetTopLevelSelection(selectedEntities);
+        m_TransformSnapshots.reserve(topLevelSelection.size());
+        for (Entity entity : topLevelSelection)
             m_TransformSnapshots.push_back({ entity, entity.GetWorldMatrix() });
         m_InitialGizmoTransform = pivot;
         m_CurrentGizmoTransform = pivot;
@@ -239,8 +263,7 @@ namespace Crowny
 
     void ViewportPanel::EndTransformInteraction()
     {
-        Ref<UndoActionGroup> actions =
-          CreateRef<UndoActionGroup>(m_TransformSnapshots.size() == 1u ? "Transform entity" : "Transform entities");
+        Ref<UndoActionGroup> actions = CreateRef<UndoActionGroup>(m_TransformSnapshots.size() == 1u ? "Transform entity" : "Transform entities");
         for (const TransformSnapshot& snapshot : m_TransformSnapshots)
         {
             if (!snapshot.Target)
@@ -254,8 +277,7 @@ namespace Crowny
         m_TransformSnapshots.clear();
     }
 
-    void ViewportPanel::DrawViewportHud(const ImVec2& imageMin, const ImVec2& imageMax, Entity selectedEntity,
-                                        const Vector<Entity>& selectedEntities)
+    void ViewportPanel::DrawViewportHud(const ImVec2& imageMin, const ImVec2& imageMax, Entity selectedEntity, const Vector<Entity>& selectedEntities)
     {
         const float viewportWidth = imageMax.x - imageMin.x;
         const float viewportHeight = imageMax.y - imageMin.y;
@@ -397,7 +419,8 @@ namespace Crowny
         if (viewportWidth >= 670.0f)
         {
             String entityName = selectedEntities.size() > 1u ? fmt::format("{} entities", selectedEntities.size())
-                                                              : selectedEntity ? selectedEntity.GetName() : "No selection";
+                                : selectedEntity             ? selectedEntity.GetName()
+                                                             : "No selection";
             if (entityName.size() > 28)
                 entityName = entityName.substr(0, 25) + "...";
             const EditorCamera& camera = EditorLayer::GetEditorCamera();
@@ -428,10 +451,9 @@ namespace Crowny
 
             char lines[4][112];
             snprintf(lines[0], sizeof(lines[0]), "%.0f FPS   %.2f ms", frame.FramesPerSecond, frame.FrameTimeMs);
-            snprintf(lines[1], sizeof(lines[1]), "Draws %llu   Verts %s   Tris %s",
-                     static_cast<unsigned long long>(frame.DrawCalls), vertexCount, triangleCount);
-            snprintf(lines[2], sizeof(lines[2]), "Visible %u / %u   Lights %u", scene.VisibleInstances,
-                     scene.ActiveInstances, scene.ActiveLights);
+            snprintf(lines[1], sizeof(lines[1]), "Draws %llu   Verts %s   Tris %s", static_cast<unsigned long long>(frame.DrawCalls), vertexCount,
+                     triangleCount);
+            snprintf(lines[2], sizeof(lines[2]), "Visible %u / %u   Lights %u", scene.VisibleInstances, scene.ActiveInstances, scene.ActiveLights);
             snprintf(lines[3], sizeof(lines[3]), "Passes %u   RG CPU %.2f ms", scene.RenderPasses, scene.RenderGraphCpuTimeMs);
 
             const uint32_t lineCount = viewportWidth >= 430.0f ? 4u : 3u;
@@ -461,8 +483,7 @@ namespace Crowny
                 ImGui::Text("Known indirect commands: %llu", static_cast<unsigned long long>(frame.IndirectCommands));
                 ImGui::Text("Compute dispatches: %llu", static_cast<unsigned long long>(frame.ComputeDispatches));
                 ImGui::Separator();
-                ImGui::Text("Graph: %u graphics, %u compute, %u transfer", scene.GraphicsPasses, scene.ComputePasses,
-                            scene.TransferPasses);
+                ImGui::Text("Graph: %u graphics, %u compute, %u transfer", scene.GraphicsPasses, scene.ComputePasses, scene.TransferPasses);
                 ImGui::Text("Scheduled barriers: %u", scene.Barriers);
                 ImGui::Text("Scene upload: %.2f KiB", static_cast<double>(scene.UploadedBytes) / 1024.0);
                 ImGui::EndTooltip();
@@ -501,9 +522,7 @@ namespace Crowny
                 if (Input::IsKeyDown(Key::F))
                 {
                     const Entity selectedEntity = m_SelectedEntity ? m_SelectedEntity() : Entity{};
-                    Vector<Entity> selectedEntities = m_SelectedEntities ? m_SelectedEntities() : Vector<Entity>{};
-                    if (selectedEntities.empty() && selectedEntity)
-                        selectedEntities.push_back(selectedEntity);
+                    const Vector<Entity>& selectedEntities = RefreshSelectionScratch(selectedEntity);
                     if (!selectedEntities.empty())
                     {
                         const glm::mat4 pivot = GetSelectionPivot(selectedEntity, selectedEntities);
@@ -559,11 +578,7 @@ namespace Crowny
         }
 
         Entity selected = m_SelectedEntity ? m_SelectedEntity() : Entity{};
-        Vector<Entity> selectedEntities = m_SelectedEntities ? m_SelectedEntities() : Vector<Entity>{};
-        selectedEntities.erase(std::remove_if(selectedEntities.begin(), selectedEntities.end(), [](Entity entity) { return !entity.IsValid(); }),
-                               selectedEntities.end());
-        if (selected && std::find(selectedEntities.begin(), selectedEntities.end(), selected) == selectedEntities.end())
-            selectedEntities.push_back(selected);
+        const Vector<Entity>& selectedEntities = RefreshSelectionScratch(selected);
 
         DrawViewportHud(imageMin, imageMax, selected, selectedEntities);
 
@@ -630,16 +645,15 @@ namespace Crowny
             }
             else
             {
-                glm::mat4 transform = m_GizmoWasUsing
-                                        ? m_CurrentGizmoTransform
-                                        : selectedEntities.size() > 1u ? GetSelectionPivot(selected, selectedEntities) : selected.GetWorldMatrix();
+                glm::mat4 transform = m_GizmoWasUsing                ? m_CurrentGizmoTransform
+                                      : selectedEntities.size() > 1u ? GetSelectionPivot(selected, selectedEntities)
+                                                                     : selected.GetWorldMatrix();
                 const glm::mat4 originalTransform = transform;
                 const bool supportsWorldSpace = m_GizmoMode == GizmoEditMode::Translate || m_GizmoMode == GizmoEditMode::Rotate;
                 const ImGuizmo::OPERATION operation = m_GizmoMode == GizmoEditMode::Bounds ? ImGuizmo::SCALE : GetImGuizmoMode(m_GizmoMode);
-                const bool manipulated = ImGuizmo::Manipulate(
-                  glm::value_ptr(view), glm::value_ptr(proj), operation,
-                  !m_LocalMode && supportsWorldSpace ? ImGuizmo::WORLD : ImGuizmo::LOCAL, glm::value_ptr(transform), nullptr,
-                  snap ? snapValues : nullptr);
+                const bool manipulated = ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj), operation,
+                                                              !m_LocalMode && supportsWorldSpace ? ImGuizmo::WORLD : ImGuizmo::LOCAL,
+                                                              glm::value_ptr(transform), nullptr, snap ? snapValues : nullptr);
                 if (manipulated)
                 {
                     if (!m_GizmoWasUsing)
