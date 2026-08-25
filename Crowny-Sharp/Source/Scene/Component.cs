@@ -11,7 +11,21 @@ namespace Crowny
 		/// </summary>
 		/// <returns>The entity.</returns>
 		[DontSerializeField]
-		public Entity entity { get { return Internal_GetEntity(m_InternalPtr); } }
+		public Entity entity
+        {
+            get
+            {
+#if CROWNY_MONO
+                return Internal_GetEntity(m_InternalPtr);
+#else
+                return m_ManagedEntity ?? throw new InvalidOperationException("The component is not attached to an entity.");
+#endif
+            }
+        }
+
+#if !CROWNY_MONO
+        internal Entity m_ManagedEntity;
+#endif
 
 		/// <value>The transform of the object</value>
 		[DontSerializeField]
@@ -57,8 +71,10 @@ namespace Crowny
             entity.RemoveComponent<T>();
         }
 
+#if CROWNY_MONO
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern Entity Internal_GetEntity(IntPtr internalPtr);
+#endif
 	}
 
 }

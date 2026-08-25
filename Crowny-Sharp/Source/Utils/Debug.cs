@@ -83,13 +83,16 @@ namespace Crowny
             Internal_LogException(GetString(message));
         }
 
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private extern static void Internal_Log(string message);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private extern static void Internal_LogWarning(string message);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private extern static void Internal_LogError(string message);
-        [MethodImpl(MethodImplOptions.InternalCall)]
-        private extern static void Internal_LogException(string message);
+#if CROWNY_MONO
+        [MethodImpl(MethodImplOptions.InternalCall)] private extern static void Internal_Log(string message);
+        [MethodImpl(MethodImplOptions.InternalCall)] private extern static void Internal_LogWarning(string message);
+        [MethodImpl(MethodImplOptions.InternalCall)] private extern static void Internal_LogError(string message);
+        [MethodImpl(MethodImplOptions.InternalCall)] private extern static void Internal_LogException(string message);
+#else
+        private static void Internal_Log(string message) { ManagedRuntimeContext.WriteLog((int)LogType.Info, message); }
+        private static void Internal_LogWarning(string message) { ManagedRuntimeContext.WriteLog((int)LogType.Warning, message); }
+        private static void Internal_LogError(string message) { ManagedRuntimeContext.WriteLog((int)LogType.Error, message); }
+        private static void Internal_LogException(string message) { ManagedRuntimeContext.WriteLog((int)LogType.Exception, message); }
+#endif
     }
 }

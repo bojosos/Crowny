@@ -1,0 +1,49 @@
+{
+  "abiVersion": 1,
+  "managedEntryPoint": "Crowny.ManagedHost.Bootstrap, Crowny.ManagedHost::GetApi",
+  "statusCodes": {
+    "Ok": 0,
+    "InvalidArgument": 1,
+    "AbiMismatch": 2,
+    "NotInitialized": 3,
+    "ProgramLoadFailed": 4,
+    "ScriptTypeMissing": 5,
+    "StaleHandle": 6,
+    "ManagedException": 7,
+    "BufferWriteFailed": 8,
+    "ReloadLeak": 9
+  },
+  "eventKinds": {
+    "Start": 0,
+    "Update": 1,
+    "Destroy": 2,
+    "CollisionEnter2D": 3,
+    "CollisionStay2D": 4,
+    "CollisionExit2D": 5,
+    "TriggerEnter2D": 6,
+    "TriggerStay2D": 7,
+    "TriggerExit2D": 8,
+    "CollisionEnter3D": 9,
+    "CollisionStay3D": 10,
+    "CollisionExit3D": 11,
+    "TriggerEnter3D": 12,
+    "TriggerStay3D": 13,
+    "TriggerExit3D": 14
+  },
+  "aotRoots": [
+    "Crowny.UUID",
+    "Crowny.Asset",
+    "Crowny.Entity",
+    "Crowny.Component",
+    "Crowny.EntityBehaviour",
+    "Crowny.Collision2D",
+    "Crowny.Collision3D",
+    "Crowny.ContactPoint3D",
+    "Crowny.Vector2",
+    "Crowny.Vector3",
+    "Crowny.Vector4",
+    "Crowny.Quaternion",
+    "Crowny.Matrix4",
+    "Crowny.ManagedRuntimeContext"
+  ]
+}

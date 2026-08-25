@@ -116,12 +116,29 @@ namespace Crowny
     public class Asset : ScriptObject
     {
         public string name => Internal_GetName(m_InternalPtr);
-        public UUID uuid { get { Internal_GetUUID(m_InternalPtr, out UUID uuid); return uuid; } }
+        public UUID uuid
+        {
+            get
+            {
+#if CROWNY_MONO
+                Internal_GetUUID(m_InternalPtr, out UUID value);
+                return value;
+#else
+                return m_ManagedUuid;
+#endif
+            }
+        }
+
+#if !CROWNY_MONO
+        internal UUID m_ManagedUuid;
+#endif
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern string Internal_GetName(IntPtr asset);
+#if CROWNY_MONO
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern void Internal_GetUUID(IntPtr asset, out UUID uuid);
+#endif
     }
 
     /// <summary>Reusable material assigned to a 2D collider.</summary>

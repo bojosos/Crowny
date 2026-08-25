@@ -10,7 +10,11 @@ namespace Crowny
         /// The time that has passed since the last frame.
         /// </summary>
         /// <returns>Time since last frame in milliseconds.</returns>
+#if CROWNY_MONO
         public extern static float deltaTime { [MethodImpl(MethodImplOptions.InternalCall)] get; }
+#else
+        public static float deltaTime => ManagedRuntimeContext.DeltaTime;
+#endif
         
         /// <summary>
         /// The time that has passed since the beginning.

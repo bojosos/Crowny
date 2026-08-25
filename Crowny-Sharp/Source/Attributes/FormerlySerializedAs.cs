@@ -16,5 +16,7 @@ namespace Crowny
         {
             this.oldName = oldName;
         }
+
+        public string OldName => oldName;
     }
 }

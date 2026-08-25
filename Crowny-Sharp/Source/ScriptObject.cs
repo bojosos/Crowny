@@ -7,6 +7,7 @@ namespace Crowny
 	{
 		internal IntPtr m_InternalPtr;
 
+#if CROWNY_MONO
 		~ScriptObject()
 		{
 			if (m_InternalPtr == IntPtr.Zero)
@@ -16,5 +17,6 @@ namespace Crowny
 
 		[MethodImpl(MethodImplOptions.InternalCall)]
 		private static extern void Internal_ManagedInstanceDeleted(IntPtr instance);
+#endif
 	}
 }
