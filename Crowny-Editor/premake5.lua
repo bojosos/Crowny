@@ -34,6 +34,7 @@ project "Crowny-Editor"
     	"%{IncludeDir.openal}",
 		"%{IncludeDir.cereal}",
 		"%{IncludeDir.yamlcpp}",
+		"%{IncludeDir.tracy}",
 		"%{IncludeDir.libvorbis}",
 		"%{IncludeDir.libogg}",
 		"%{IncludeDir.Box2D}"

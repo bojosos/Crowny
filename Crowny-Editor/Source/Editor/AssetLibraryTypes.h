@@ -4,7 +4,6 @@
 #include "Crowny/Common/StringUtils.h"
 #include "Crowny/Import/ImportOptions.h"
 
-#include <atomic>
 #include <ctime>
 
 namespace Crowny
@@ -58,25 +57,34 @@ namespace Crowny
         Ref<ImportOptions> Options;
         bool ForceReimport = false;
         bool RunOnMainThread = false;
+        uint64_t Sequence = 0;
+        Path SourcePath;
+    };
+
+    enum class ImportResultStatus
+    {
+        Succeeded,
+        Failed,
+        Canceled
     };
 
     struct ImportResult
     {
         ImportTask Task;
         Ref<Asset> Asset;
+        ImportResultStatus Status = ImportResultStatus::Failed;
     };
 
     struct ImportProgress
     {
-        std::atomic<bool> Active{ false };
-        std::atomic<uint32_t> TotalFiles{ 0 };
-        std::atomic<uint32_t> CompletedFiles{ 0 };
+        bool Active = false;
+        uint32_t TotalFiles = 0;
+        uint32_t CompletedFiles = 0;
         String CurrentAssetName;
 
         float GetFraction() const
         {
-            const uint32_t total = TotalFiles.load();
-            return total > 0 ? (float)CompletedFiles.load() / (float)total : 0.0f;
+            return TotalFiles > 0 ? (float)CompletedFiles / (float)TotalFiles : 0.0f;
         }
     };
 } // namespace Crowny

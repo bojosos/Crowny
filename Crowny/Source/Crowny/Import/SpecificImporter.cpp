@@ -21,8 +21,7 @@ namespace Crowny
 
     Ref<const ImportOptions> SpecificImporter::GetDefaultImportOptions() const
     {
-        if (m_DefaultImportOptions == nullptr)
-            m_DefaultImportOptions = CreateImportOptions();
+        std::call_once(m_DefaultImportOptionsOnce, [this]() { m_DefaultImportOptions = CreateImportOptions(); });
         return m_DefaultImportOptions;
     }
 

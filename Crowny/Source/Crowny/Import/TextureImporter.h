@@ -17,6 +17,11 @@ namespace Crowny
         virtual Ref<Asset> Import(const Path& path, Ref<const ImportOptions> importOptions) override;
 
         virtual Ref<ImportOptions> CreateImportOptions() const override;
+
+        // Import creates a deferred texture from per-file CPU data. ImageLoader
+        // serializes stb_image's global diagnostic state; mip and Basis work remain
+        // independent across files, and Asset::Init performs GPU publication later.
+        virtual ImporterThreadingPolicy GetThreadingPolicy() const override { return ImporterThreadingPolicy::ParallelWorker; }
     };
 
 } // namespace Crowny

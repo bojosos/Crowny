@@ -81,6 +81,7 @@ ALLOWLIST = (
     Allow("Crowny/Source/Crowny/Scene/SceneRenderer.cpp", frozenset({"direct-import", "raw-builtin-source"}), "compile-time-disabled legacy ray tracing prototype", "RayTrace.glsl"),
     Allow("Crowny-Editor/Source/Editor/ProjectLibrary.cpp", frozenset({"direct-import", "raw-read", "physical-metadata"}), "project asset catalog and import boundary"),
     Allow("Crowny-Editor/Source/Editor/AssetLibraryServices.cpp", frozenset({"direct-import", "raw-read"}), "project metadata and import scheduling boundary"),
+    Allow("Crowny-Editor/Source/Editor/ImportScheduler.cpp", frozenset({"direct-import"}), "project source-ingestion scheduler boundary"),
     Allow("Crowny-Editor/Source/Editor/EditorBuiltInAssetCompiler.cpp", frozenset({"direct-import", "raw-read", "physical-stream", "physical-metadata", "raw-builtin-source"}), "editor build tooling"),
     Allow("Crowny-Editor/Source/Editor/EditorAssets.cpp", frozenset({"raw-read", "raw-builtin-source"}), "central built-in resource catalog using pack-aware FileSystem"),
     Allow("Crowny-Editor/Source/Editor/AssetPreviewService.cpp", frozenset({"raw-read"}), "source preview decode boundary"),
@@ -167,6 +168,7 @@ def self_test() -> None:
     assert is_allowed("Crowny-Editor/Source/Editor/ProjectLibrary.cpp", "physical-metadata", "fs::file_size(path)")
     assert is_allowed("Crowny/Source/Crowny/Scene/SceneRenderer.cpp", "direct-import", "Importer::Get().Import(\"RayTrace.glsl\")")
     assert not is_allowed("Crowny/Source/Crowny/Scene/SceneRenderer.cpp", "direct-import", "Importer::Get().Import(path)")
+    assert is_allowed("Crowny-Editor/Source/Editor/ImportScheduler.cpp", "direct-import", "Importer::Get().ImportDeferred(path)")
 
 
 def main() -> int:

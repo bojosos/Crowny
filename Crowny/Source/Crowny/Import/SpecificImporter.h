@@ -3,10 +3,19 @@
 #include "Crowny/Assets/Asset.h"
 #include "Crowny/Import/ImportOptions.h"
 
+#include <mutex>
+
 namespace Crowny
 {
 
     String NormalizeImportExtension(StringView extension);
+
+    enum class ImporterThreadingPolicy
+    {
+        MainThreadOnly,
+        SerializedWorker,
+        ParallelWorker
+    };
 
     class SpecificImporter
     {
@@ -23,9 +32,14 @@ namespace Crowny
         virtual Vector<Ref<Asset>> ImportAll(const Path& path, Ref<const ImportOptions> importOptions);
         virtual Ref<ImportOptions> CreateImportOptions() const;
 
+        // Worker policies are opt-in. Importers with multiple outputs must remain on the
+        // main thread until the deferred result can represent every asset from ImportAll.
+        virtual ImporterThreadingPolicy GetThreadingPolicy() const { return ImporterThreadingPolicy::MainThreadOnly; }
+
         Ref<const ImportOptions> GetDefaultImportOptions() const;
 
     private:
+        mutable std::once_flag m_DefaultImportOptionsOnce;
         mutable Ref<const ImportOptions> m_DefaultImportOptions;
     };
 

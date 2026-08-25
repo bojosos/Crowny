@@ -21,7 +21,7 @@ namespace Crowny
         void RefreshAsync(const Path& path);
         void ProcessCompletedImports();
         bool IsImporting() const { return m_ImportScheduler.IsActive(); }
-        const ImportProgress& GetImportProgress() const { return m_ImportScheduler.GetProgress(); }
+        ImportProgress GetImportProgress() const { return m_ImportScheduler.GetProgress(); }
         const Ref<DirectoryEntry>& GetRoot() const { return m_AssetIndex.GetRoot(); }
         Ref<LibraryEntry> FindEntry(const Path& path) const;
 

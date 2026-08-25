@@ -78,6 +78,12 @@ TEST_CASE_METHOD(ImporterFixture, "Importer indexes normalized exact extensions"
     CHECK(fallback->ExtensionChecks == 0);
 }
 
+TEST_CASE("Importer threading policy defaults to main-thread-only", "[Assets][Importer][Threading]")
+{
+    const TestImporter importer("default");
+    CHECK(importer.GetThreadingPolicy() == ImporterThreadingPolicy::MainThreadOnly);
+}
+
 TEST_CASE_METHOD(ImporterFixture, "Importer falls back for dynamic extensions", "[Assets][Importer]")
 {
     auto* exact = new TestImporter("png");

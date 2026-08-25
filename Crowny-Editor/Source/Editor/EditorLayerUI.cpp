@@ -139,9 +139,9 @@ namespace Crowny
                            ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoFocusOnAppearing |
                            ImGuiWindowFlags_NoNav);
 
-            const auto& progress = ProjectLibrary::Get().GetImportProgress();
+            const ImportProgress progress = ProjectLibrary::Get().GetImportProgress();
             char text[128];
-            snprintf(text, sizeof(text), "Importing assets... %u / %u", progress.CompletedFiles.load(), progress.TotalFiles.load());
+            snprintf(text, sizeof(text), "Importing assets... %u / %u", progress.CompletedFiles, progress.TotalFiles);
             ImGui::Text("%s", text);
             ImGui::SameLine();
             ImGui::ProgressBar(progress.GetFraction(), ImVec2(200, ImGui::GetFrameHeight() - 4));

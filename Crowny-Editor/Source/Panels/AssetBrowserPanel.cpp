@@ -1284,8 +1284,8 @@ namespace Crowny
 
         if (ProjectLibrary::Get().IsImporting())
         {
-            const ImportProgress& progress = ProjectLibrary::Get().GetImportProgress();
-            const String status = fmt::format("Importing {} of {}", progress.CompletedFiles.load(), progress.TotalFiles.load());
+            const ImportProgress progress = ProjectLibrary::Get().GetImportProgress();
+            const String status = fmt::format("Importing {} of {}", progress.CompletedFiles, progress.TotalFiles);
             const float statusWidth = ImGui::CalcTextSize(status.c_str()).x;
             ImGui::SameLine(std::max(ImGui::GetCursorPosX() + ImGui::GetStyle().ItemSpacing.x, ImGui::GetWindowContentRegionMax().x - statusWidth));
             ImGui::TextDisabled("%s", status.c_str());

@@ -14,6 +14,7 @@ project "Crowny-Tests"
 	{
 		"Source/**.h",
 		"Source/**.cpp",
+		"%{wks.location}/Crowny-Editor/Source/Editor/ImportScheduler.cpp",
 		"%{wks.location}/Crowny-Editor/Source/Editor/UndoRedo.cpp",
 	}
 
@@ -33,6 +34,7 @@ project "Crowny-Tests"
 		"%{IncludeDir.entt}",
 		"%{IncludeDir.cereal}",
 		"%{IncludeDir.yamlcpp}",
+		"%{IncludeDir.tracy}",
 		"%{IncludeDir.FastNoiseLite}",
 		"%{wks.location}/Crowny/Dependencies/openal-soft/include",
 		"%{wks.location}/Crowny/Dependencies/vorbis/include",

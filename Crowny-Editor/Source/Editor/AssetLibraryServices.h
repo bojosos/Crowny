@@ -3,11 +3,13 @@
 #include "Editor/AssetLibraryTypes.h"
 
 #include <functional>
-#include <thread>
+#include <memory>
 
 namespace Crowny
 {
     class AssetManifest;
+    class SpecificImporter;
+    class Task;
 
     class AssetIndex
     {
@@ -93,22 +95,26 @@ namespace Crowny
     {
     public:
         using CompletionHandler = std::function<void(const ImportResult&)>;
+        static constexpr uint32_t DEFAULT_MAX_WORKER_LANES = 2;
 
+        explicit ImportScheduler(uint32_t maxWorkerLanes = DEFAULT_MAX_WORKER_LANES);
         ~ImportScheduler();
 
         void Schedule(Vector<ImportTask> tasks);
         bool ProcessCompleted(const CompletionHandler& completionHandler, uint32_t maxPerFrame = 4);
         void Shutdown();
 
-        bool IsActive() const { return m_Progress.Active.load(); }
-        const ImportProgress& GetProgress() const { return m_Progress; }
+        bool IsActive() const;
+        ImportProgress GetProgress() const;
+        uint32_t GetWorkerLaneLimit() const;
 
     private:
-        void ImportWorker(Vector<ImportTask> tasks);
+        struct BatchState;
 
-        std::thread m_Worker;
-        Mutex m_Mutex;
-        Vector<ImportResult> m_Completed;
-        ImportProgress m_Progress;
+        static void RunWorkerLane(BatchState& batch, uint32_t laneIndex);
+
+        mutable Mutex m_Mutex;
+        std::shared_ptr<BatchState> m_Batch;
+        uint32_t m_MaxWorkerLanes;
     };
 } // namespace Crowny
