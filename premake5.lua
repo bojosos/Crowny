@@ -208,6 +208,8 @@ function linkCrownyFinalDependencies()
 			"vulkan",
 			"mono-2.0",
 			"openal",
+			"msdfgen",
+			"freetype",
 		}
 
 	filter { "platforms:not Web", "configurations:Debug" }
@@ -310,6 +312,9 @@ end
 group "Dependencies"
 	include "3rdparty/premake"
 	include "Crowny/Dependencies/glfw"
+	filter "system:linux"
+		files { "Crowny/Dependencies/glfw/src/posix_poll.c" }
+	filter {}
 	include "Crowny/Dependencies/glad"
 	include "Scripts/premake-imgui.lua"
 	include "Scripts/premake-assimp.lua"
