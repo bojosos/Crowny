@@ -115,7 +115,8 @@ EndProject)";
     {
         static const String guidTemplate = "{0}-{1}-{2}-{3}-{4}";
         String hash = Cryptography::MD5(projectName);
-        String result = fmt::format(guidTemplate, hash.substr(0, 8), hash.substr(8, 4), hash.substr(12, 4), hash.substr(16, 4), hash.substr(20, 12));
+        String result = fmt::format(fmt::runtime(guidTemplate), hash.substr(0, 8), hash.substr(8, 4), hash.substr(12, 4), hash.substr(16, 4),
+                                    hash.substr(20, 12));
         StringUtils::ToUpper(result);
         return result;
     }
@@ -133,11 +134,11 @@ EndProject)";
         for (const CodeProjectData& project : data.Projects)
         {
             const String guid = GetProjectGUID(project.Name);
-            projectEntriesStream << fmt::format(ProjectEntryTemplate, project.Name, project.Name + ".csproj", guid);
-            projectPlatformsStream << fmt::format(ProjectPlatformTemplate, guid);
+            projectEntriesStream << fmt::format(fmt::runtime(ProjectEntryTemplate), project.Name, project.Name + ".csproj", guid);
+            projectPlatformsStream << fmt::format(fmt::runtime(ProjectPlatformTemplate), guid);
         }
 
-        return fmt::format(SolutionTemplate, fileFormatData[version], projectEntriesStream.str(), projectPlatformsStream.str());
+        return fmt::format(fmt::runtime(SolutionTemplate), fileFormatData[version], projectEntriesStream.str(), projectPlatformsStream.str());
     }
 
     String CSProject::GenerateProject(CSProjectVersion projectVersion, const CodeProjectData& projectData)
@@ -150,14 +151,14 @@ EndProject)";
 
         StringStream tempStream;
         for (const auto& scriptEntry : projectData.ScriptFiles)
-            tempStream << fmt::format(ScriptEntryTemplate, scriptEntry.string());
+            tempStream << fmt::format(fmt::runtime(ScriptEntryTemplate), scriptEntry.string());
 
         const String scriptEntries = tempStream.str();
         tempStream.str("");
         tempStream.clear();
 
         for (const auto& nonScriptEntry : projectData.NonScriptFiles)
-            tempStream << fmt::format(NonScriptEntryTemplate, nonScriptEntry.string());
+            tempStream << fmt::format(fmt::runtime(NonScriptEntryTemplate), nonScriptEntry.string());
 
         const String nonScriptEntries = tempStream.str();
         tempStream.str("");
@@ -167,9 +168,9 @@ EndProject)";
         {
             const String refName = assemblyRef.Name;
             if (assemblyRef.Filepath.empty())
-                tempStream << fmt::format(ReferenceEntryTemplate, refName);
+                tempStream << fmt::format(fmt::runtime(ReferenceEntryTemplate), refName);
             else
-                tempStream << fmt::format(ReferencePathEntryTemplate, refName, assemblyRef.Filepath.string());
+                tempStream << fmt::format(fmt::runtime(ReferencePathEntryTemplate), refName, assemblyRef.Filepath.string());
         }
 
         const String refEntries = tempStream.str();
@@ -180,7 +181,7 @@ EndProject)";
         {
             const String refName = projectRef.Name;
             const String projectGUID = GetProjectGUID(projectRef.Name);
-            tempStream << fmt::format(ReferenceProjectEntryTemplate, refName, projectGUID);
+            tempStream << fmt::format(fmt::runtime(ReferenceProjectEntryTemplate), refName, projectGUID);
         }
 
         const String projectRefEntries = tempStream.str();
@@ -193,7 +194,7 @@ EndProject)";
         const String projectGUID = GetProjectGUID(projectData.Name);
 
         const String langVersion = "9.0";
-        return fmt::format(ProjectTemplate, versionData[projectVersion], langVersion, projectGUID, projectData.Name, defines, refEntries,
-                           projectRefEntries, scriptEntries, nonScriptEntries);
+        return fmt::format(fmt::runtime(ProjectTemplate), versionData[projectVersion], langVersion, projectGUID, projectData.Name, defines,
+                           refEntries, projectRefEntries, scriptEntries, nonScriptEntries);
     }
 } // namespace Crowny
