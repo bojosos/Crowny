@@ -1,10 +1,13 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Memory/FrameVector.h"
 #include "Crowny/Threading/CommandQueue.h"
 #include "cwpch.h"
 
 #include <atomic>
+#include <new>
+#include <thread>
 
 using namespace Crowny;
 
@@ -101,4 +104,57 @@ TEST_CASE("CommandQueue reuses both frame buffers", "[Memory][Frame][Threading]"
     CHECK(metrics.ReadCapacity == CommandsPerFrame);
     CHECK(metrics.WriteSize == 0);
     CHECK(metrics.ReadSize == 0);
+}
+
+TEST_CASE("Thread allocation snapshots cover standard allocation families", "[Memory][Frame]")
+{
+    const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+
+    void* scalar = ::operator new(16);
+    void* array = ::operator new[](32, std::nothrow);
+    void* alignedScalar = ::operator new(64, std::align_val_t(64));
+    void* alignedArray = ::operator new[](128, std::align_val_t(64), std::nothrow);
+
+    ::operator delete(scalar, size_t{ 16 });
+    ::operator delete[](array, std::nothrow);
+    ::operator delete(alignedScalar, size_t{ 64 }, std::align_val_t(64));
+    ::operator delete[](alignedArray, std::align_val_t(64), std::nothrow);
+
+    const Memory::ThreadAllocationSnapshot after = Memory::GetThreadAllocationSnapshot();
+    const Memory::ThreadAllocationSnapshot delta = Memory::GetThreadAllocationDelta(before, after);
+    CHECK(delta.AllocationCount == 4);
+    CHECK(delta.RequestedBytes == 240);
+}
+
+TEST_CASE("Thread allocation snapshots isolate worker allocations", "[Memory][Frame][Threading]")
+{
+    std::atomic<bool> workerReady{ false };
+    std::atomic<bool> startWorker{ false };
+    std::atomic<bool> workerDone{ false };
+    std::atomic<uint64_t> workerAllocationCount{ 0 };
+
+    std::thread worker([&]() {
+        const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+        workerReady.store(true, std::memory_order_release);
+        while (!startWorker.load(std::memory_order_acquire))
+            std::this_thread::yield();
+
+        void* memory = ::operator new(96);
+        ::operator delete(memory);
+        const Memory::ThreadAllocationSnapshot after = Memory::GetThreadAllocationSnapshot();
+        workerAllocationCount.store(Memory::GetThreadAllocationDelta(before, after).AllocationCount, std::memory_order_release);
+        workerDone.store(true, std::memory_order_release);
+    });
+
+    while (!workerReady.load(std::memory_order_acquire))
+        std::this_thread::yield();
+    const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+    startWorker.store(true, std::memory_order_release);
+    while (!workerDone.load(std::memory_order_acquire))
+        std::this_thread::yield();
+    const Memory::ThreadAllocationSnapshot after = Memory::GetThreadAllocationSnapshot();
+    worker.join();
+
+    CHECK(Memory::GetThreadAllocationDelta(before, after).AllocationCount == 0);
+    CHECK(workerAllocationCount.load(std::memory_order_acquire) == 1);
 }

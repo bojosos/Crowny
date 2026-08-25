@@ -2,6 +2,7 @@
 
 #include "Crowny/Common/StdHeaders.h"
 #include "Crowny/Common/Types.h"
+#include "Crowny/Memory/FrameVector.h"
 
 #include <cstdint>
 #include <functional>
@@ -203,8 +204,7 @@ namespace Crowny
 
     private:
         friend class RenderGraph;
-        RenderGraphContext(RenderGraphPassHandle pass, const RenderGraphCompileResult& compiledGraph,
-                           RenderGraphResourceRegistry* resources)
+        RenderGraphContext(RenderGraphPassHandle pass, const RenderGraphCompileResult& compiledGraph, RenderGraphResourceRegistry* resources)
           : m_Pass(pass), m_CompiledGraph(compiledGraph), m_Resources(resources)
         {
         }
@@ -237,19 +237,18 @@ namespace Crowny
         using SetupCallback = std::function<void(RenderGraphPassBuilder&)>;
         using ExecuteCallback = std::function<void(RenderGraphContext&)>;
 
-        RenderGraphResourceHandle CreateTexture(const String& name, const RenderGraphTextureDesc& desc,
+        RenderGraphResourceHandle CreateTexture(StringView name, const RenderGraphTextureDesc& desc,
                                                 RenderGraphResourceLifetime lifetime = RenderGraphResourceLifetime::Transient);
-        RenderGraphResourceHandle CreateBuffer(const String& name, const RenderGraphBufferDesc& desc,
+        RenderGraphResourceHandle CreateBuffer(StringView name, const RenderGraphBufferDesc& desc,
                                                RenderGraphResourceLifetime lifetime = RenderGraphResourceLifetime::Transient);
-        RenderGraphHistoryPair CreateHistoryTexture(const String& name, const RenderGraphTextureDesc& desc);
-        RenderGraphHistoryPair CreateHistoryBuffer(const String& name, const RenderGraphBufferDesc& desc);
-        RenderGraphResourceHandle ImportTexture(const String& name, const RenderGraphTextureDesc& desc, uint64_t externalId,
+        RenderGraphHistoryPair CreateHistoryTexture(StringView name, const RenderGraphTextureDesc& desc);
+        RenderGraphHistoryPair CreateHistoryBuffer(StringView name, const RenderGraphBufferDesc& desc);
+        RenderGraphResourceHandle ImportTexture(StringView name, const RenderGraphTextureDesc& desc, uint64_t externalId,
                                                 RenderGraphResourceState initialState, RenderGraphResourceState finalState);
-        RenderGraphResourceHandle ImportBuffer(const String& name, const RenderGraphBufferDesc& desc, uint64_t externalId,
+        RenderGraphResourceHandle ImportBuffer(StringView name, const RenderGraphBufferDesc& desc, uint64_t externalId,
                                                RenderGraphResourceState initialState, RenderGraphResourceState finalState);
 
-        RenderGraphPassHandle AddPass(const String& name, RenderGraphQueue queue, const SetupCallback& setup,
-                                      ExecuteCallback execute = {});
+        RenderGraphPassHandle AddPass(StringView name, RenderGraphQueue queue, const SetupCallback& setup, ExecuteCallback execute = {});
         void AddDependency(RenderGraphPassHandle pass, RenderGraphPassHandle dependency);
 
         const RenderGraphCompileResult& Compile();
@@ -293,17 +292,56 @@ namespace Crowny
             bool SideEffect = false;
         };
 
+        struct HazardState
+        {
+            uint32_t LastWriter = RenderGraphPassHandle::InvalidIndex;
+            Vector<uint32_t> Readers;
+            bool Initialized = false;
+        };
+
+        struct PhysicalAllocation
+        {
+            RenderGraphResourceDesc Desc;
+            uint32_t LastUse = 0;
+            uint32_t Index = 0;
+        };
+
+        struct LastUseState
+        {
+            bool Valid = false;
+            RenderGraphResourceState State = RenderGraphResourceState::Undefined;
+            RenderGraphQueue Queue = RenderGraphQueue::Graphics;
+            Access ResourceAccess = Access::Read;
+        };
+
+        struct CompileScratch
+        {
+            FrameVector<Vector<uint32_t>> Dependencies;
+            FrameVector<Vector<uint32_t>> Dependents;
+            FrameVector<HazardState> Hazards;
+            Vector<uint32_t> Indegree;
+            Vector<uint32_t> Ready;
+            Vector<uint32_t> OrderPosition;
+            Vector<PhysicalAllocation> TextureAllocations;
+            Vector<PhysicalAllocation> BufferAllocations;
+            Vector<uint32_t> ResourcesByFirstUse;
+            Vector<LastUseState> LastStates;
+            FrameVector<RenderGraphResourceInfo> ResourceRecycle;
+        };
+
         void AddUse(RenderGraphPassHandle pass, RenderGraphResourceHandle resource, RenderGraphResourceState state, Access access);
         void SetSideEffect(RenderGraphPassHandle pass, bool sideEffect);
+        void ResetCompileResult();
         bool ValidateHandle(RenderGraphResourceHandle resource) const;
         bool ValidateHandle(RenderGraphPassHandle pass) const;
         static bool IsWrite(Access access);
         static bool IsRead(Access access);
         static uint64_t BuildHistoryId(StringView name, RenderGraphResourceType type);
 
-        Vector<ResourceNode> m_Resources;
-        Vector<PassNode> m_Passes;
+        FrameVector<ResourceNode> m_Resources;
+        FrameVector<PassNode> m_Passes;
         RenderGraphCompileResult m_CompileResult;
+        CompileScratch m_CompileScratch;
         RenderGraphExecutionStats m_ExecutionStats;
         uint32_t m_Generation = 1;
         bool m_Dirty = true;

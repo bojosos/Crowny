@@ -483,6 +483,8 @@ namespace Crowny
                 ImGui::Text("Known indirect commands: %llu", static_cast<unsigned long long>(frame.IndirectCommands));
                 ImGui::Text("Compute dispatches: %llu", static_cast<unsigned long long>(frame.ComputeDispatches));
                 ImGui::Separator();
+                ImGui::Text("Main-thread allocations: %llu (%.2f KiB)", static_cast<unsigned long long>(frame.MainThreadAllocations),
+                            static_cast<double>(frame.MainThreadAllocatedBytes) / 1024.0);
                 ImGui::Text("Graph: %u graphics, %u compute, %u transfer", scene.GraphicsPasses, scene.ComputePasses, scene.TransferPasses);
                 ImGui::Text("Scheduled barriers: %u", scene.Barriers);
                 ImGui::Text("Scene upload: %.2f KiB", static_cast<double>(scene.UploadedBytes) / 1024.0);

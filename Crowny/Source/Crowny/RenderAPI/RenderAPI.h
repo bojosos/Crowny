@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crowny/Common/Module.h"
+#include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/RenderAPI/Buffer.h"
 
 #include <glm/glm.hpp>
@@ -43,6 +44,8 @@ namespace Crowny
         uint64_t Instances = 0;
         uint64_t ComputeDispatches = 0;
         uint64_t RayTracingDispatches = 0;
+        uint64_t MainThreadAllocations = 0;
+        uint64_t MainThreadAllocatedBytes = 0;
     };
 
     class RenderAPI : public Module<RenderAPI>
@@ -83,8 +86,7 @@ namespace Crowny
         virtual void DrawIndexed(uint32_t startIndex, uint32_t indexCount, uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount = 1,
                                  const Ref<CommandBuffer>& commandBuffer = nullptr) = 0;
         virtual void DrawIndexedIndirect(const Ref<GenericGpuBuffer>& argumentBuffer, uint32_t argumentOffset, uint32_t drawCount,
-                                         uint32_t stride = sizeof(DrawIndexedIndirectCommand),
-                                         const Ref<CommandBuffer>& commandBuffer = nullptr) = 0;
+                                         uint32_t stride = sizeof(DrawIndexedIndirectCommand), const Ref<CommandBuffer>& commandBuffer = nullptr) = 0;
         virtual void DrawIndexedIndirectCount(const Ref<GenericGpuBuffer>& argumentBuffer, uint32_t argumentOffset,
                                               const Ref<GenericGpuBuffer>& countBuffer, uint32_t countOffset, uint32_t maxDrawCount,
                                               uint32_t stride = sizeof(DrawIndexedIndirectCommand),
@@ -140,6 +142,7 @@ namespace Crowny
         StatisticsAccumulator m_Statistics;
         mutable std::mutex m_CompletedStatisticsMutex;
         RenderFrameStatistics m_CompletedStatistics;
+        Memory::ThreadAllocationSnapshot m_FrameAllocationBaseline;
         float m_SmoothedFrameTimeMs = 0.0f;
         static API s_API;
     };

@@ -1,8 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "Crowny/Memory/AllocationCounter.h"
+#include "Crowny/Renderer/GpuBufferPool.h"
 #include "Crowny/Renderer/RenderGraph.h"
 #include "Crowny/Renderer/RenderGraphResources.h"
-#include "Crowny/Renderer/GpuBufferPool.h"
 
 using namespace Crowny;
 
@@ -20,10 +21,7 @@ namespace
     class RecordingGraphListener final : public IRenderGraphExecutionListener
     {
     public:
-        void ApplyBarrier(const RenderGraphBarrier& barrier) override
-        {
-            Events.push_back(barrier.AfterPass ? "BarrierAfter" : "BarrierBefore");
-        }
+        void ApplyBarrier(const RenderGraphBarrier& barrier) override { Events.push_back(barrier.AfterPass ? "BarrierAfter" : "BarrierBefore"); }
         void BeginPass(RenderGraphPassHandle, StringView, RenderGraphQueue) override { Events.push_back("BeginPass"); }
         void EndPass(RenderGraphPassHandle, StringView, RenderGraphQueue) override { Events.push_back("EndPass"); }
 
@@ -77,6 +75,83 @@ namespace
     private:
         RenderTargetProperties m_Properties;
     };
+} // namespace
+
+TEST_CASE("RenderGraph rebuild and compile reuse warm scratch storage", "[Memory][Frame][Renderer][RenderGraph]")
+{
+    RenderGraph graph;
+    bool compiledSuccessfully = true;
+    auto rebuild = [&](bool fullTopology) {
+        graph.Reset();
+        const RenderGraphResourceHandle uploadBuffer =
+          graph.CreateBuffer("RenderGraphAllocationUploadBuffer", { 4096, 16, GpuBufferType::Structured });
+        const RenderGraphResourceHandle color = graph.CreateTexture("RenderGraphAllocationColorTexture", ColorTexture());
+
+        graph.AddPass("RenderGraphAllocationUploadPass", RenderGraphQueue::Transfer,
+                      [uploadBuffer](RenderGraphPassBuilder& builder) { builder.Write(uploadBuffer, RenderGraphResourceState::TransferWrite); });
+        graph.AddPass("RenderGraphAllocationCullPass", RenderGraphQueue::Compute,
+                      [uploadBuffer](RenderGraphPassBuilder& builder) { builder.Read(uploadBuffer, RenderGraphResourceState::ShaderRead); });
+        graph.AddPass("RenderGraphAllocationColorPass", RenderGraphQueue::Graphics,
+                      [color](RenderGraphPassBuilder& builder) { builder.Write(color, RenderGraphResourceState::ColorAttachment); });
+        graph.AddPass("RenderGraphAllocationPresentPass", RenderGraphQueue::Graphics,
+                      [color](RenderGraphPassBuilder& builder) { builder.Read(color, RenderGraphResourceState::ShaderRead); });
+
+        if (fullTopology)
+        {
+            const RenderGraphResourceHandle visibleBuffer =
+              graph.CreateBuffer("RenderGraphAllocationVisibleBuffer", { 4096, 16, GpuBufferType::Structured });
+            const RenderGraphHistoryPair history = graph.CreateHistoryTexture("RenderGraphAllocationHistoryTexture", ColorTexture());
+            graph.AddPass("RenderGraphAllocationVisibilityPass", RenderGraphQueue::Compute,
+                          [visibleBuffer](RenderGraphPassBuilder& builder) { builder.Write(visibleBuffer, RenderGraphResourceState::ShaderWrite); });
+            graph.AddPass("RenderGraphAllocationHistoryReadPass", RenderGraphQueue::Compute,
+                          [history](RenderGraphPassBuilder& builder) { builder.Read(history.Read, RenderGraphResourceState::ShaderRead); });
+            graph.AddPass("RenderGraphAllocationHistoryWritePass", RenderGraphQueue::Compute,
+                          [history](RenderGraphPassBuilder& builder) { builder.Write(history.Write, RenderGraphResourceState::ShaderWrite); });
+        }
+
+        const RenderGraphCompileResult& compiled = graph.Compile();
+        const size_t expectedPasses = fullTopology ? 7 : 4;
+        const size_t expectedResources = fullTopology ? 5 : 2;
+        compiledSuccessfully &= compiled.Succeeded && compiled.PassOrder.size() == expectedPasses && compiled.Resources.size() == expectedResources;
+    };
+
+    rebuild(true);
+    const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+    for (uint32_t frame = 0; frame < 120; frame++)
+        rebuild((frame & 1u) == 0);
+    const Memory::ThreadAllocationSnapshot after = Memory::GetThreadAllocationSnapshot();
+
+    CHECK(compiledSuccessfully);
+    CHECK(Memory::GetThreadAllocationDelta(before, after).AllocationCount == 0);
+    CHECK(Memory::GetThreadAllocationDelta(before, after).RequestedBytes == 0);
+}
+
+TEST_CASE("RenderGraph clears retained callbacks and compiler state after failures", "[Renderer][RenderGraph]")
+{
+    RenderGraph graph;
+    std::shared_ptr<int> callbackOwner = std::make_shared<int>(42);
+    const std::weak_ptr<int> callbackLifetime = callbackOwner;
+    graph.AddPass("RetainedCallback", RenderGraphQueue::Graphics, {}, [callbackOwner](RenderGraphContext&) {});
+    callbackOwner.reset();
+    REQUIRE(graph.Compile().Succeeded);
+    CHECK_FALSE(callbackLifetime.expired());
+
+    graph.Reset();
+    CHECK(callbackLifetime.expired());
+    const RenderGraphResourceHandle invalidRead = graph.CreateTexture("FailureResource", ColorTexture());
+    graph.AddPass("InvalidRead", RenderGraphQueue::Graphics,
+                  [invalidRead](RenderGraphPassBuilder& builder) { builder.Read(invalidRead, RenderGraphResourceState::ShaderRead); });
+    REQUIRE_FALSE(graph.Compile().Succeeded);
+
+    graph.Reset();
+    const RenderGraphResourceHandle validWrite = graph.CreateTexture("RecoveredResource", ColorTexture());
+    graph.AddPass("ValidWrite", RenderGraphQueue::Graphics,
+                  [validWrite](RenderGraphPassBuilder& builder) { builder.Write(validWrite, RenderGraphResourceState::ColorAttachment); });
+    const RenderGraphCompileResult& recovered = graph.Compile();
+    REQUIRE(recovered.Succeeded);
+    CHECK(recovered.Error.empty());
+    CHECK(recovered.PassOrder.size() == 1);
+    CHECK(recovered.Resources.size() == 1);
 }
 
 TEST_CASE("RenderGraph orders resource hazards", "[Renderer][RenderGraph]")
@@ -87,12 +162,10 @@ TEST_CASE("RenderGraph orders resource hazards", "[Renderer][RenderGraph]")
     const RenderGraphPassHandle produce = graph.AddPass("Produce", RenderGraphQueue::Graphics, [&](RenderGraphPassBuilder& builder) {
         builder.Write(color, RenderGraphResourceState::ColorAttachment);
     });
-    const RenderGraphPassHandle consume = graph.AddPass("Consume", RenderGraphQueue::Compute, [&](RenderGraphPassBuilder& builder) {
-        builder.Read(color, RenderGraphResourceState::ShaderRead);
-    });
-    const RenderGraphPassHandle overwrite = graph.AddPass("Overwrite", RenderGraphQueue::Compute, [&](RenderGraphPassBuilder& builder) {
-        builder.Write(color, RenderGraphResourceState::ShaderWrite);
-    });
+    const RenderGraphPassHandle consume = graph.AddPass(
+      "Consume", RenderGraphQueue::Compute, [&](RenderGraphPassBuilder& builder) { builder.Read(color, RenderGraphResourceState::ShaderRead); });
+    const RenderGraphPassHandle overwrite = graph.AddPass(
+      "Overwrite", RenderGraphQueue::Compute, [&](RenderGraphPassBuilder& builder) { builder.Write(color, RenderGraphResourceState::ShaderWrite); });
 
     const RenderGraphCompileResult& result = graph.Compile();
     REQUIRE(result.Succeeded);
@@ -137,9 +210,8 @@ TEST_CASE("RenderGraph aliases compatible non-overlapping transients", "[Rendere
     const RenderGraphPassHandle firstWrite = graph.AddPass("FirstWrite", RenderGraphQueue::Graphics, [&](RenderGraphPassBuilder& builder) {
         builder.Write(first, RenderGraphResourceState::ColorAttachment);
     });
-    const RenderGraphPassHandle firstRead = graph.AddPass("FirstRead", RenderGraphQueue::Graphics, [&](RenderGraphPassBuilder& builder) {
-        builder.Read(first, RenderGraphResourceState::ShaderRead);
-    });
+    const RenderGraphPassHandle firstRead = graph.AddPass(
+      "FirstRead", RenderGraphQueue::Graphics, [&](RenderGraphPassBuilder& builder) { builder.Read(first, RenderGraphResourceState::ShaderRead); });
     const RenderGraphPassHandle secondWrite = graph.AddPass("SecondWrite", RenderGraphQueue::Graphics, [&](RenderGraphPassBuilder& builder) {
         builder.DependsOn(firstRead);
         builder.Write(second, RenderGraphResourceState::ColorAttachment);
@@ -182,12 +254,12 @@ TEST_CASE("RenderGraph executes callbacks in compiled order", "[Renderer][Render
     const RenderGraphResourceHandle buffer = graph.CreateBuffer("Buffer", { 256, 16, GpuBufferType::Structured });
     Vector<String> executionOrder;
 
-    graph.AddPass("Upload", RenderGraphQueue::Transfer,
-                  [&](RenderGraphPassBuilder& builder) { builder.Write(buffer, RenderGraphResourceState::TransferWrite); },
-                  [&](RenderGraphContext&) { executionOrder.push_back("Upload"); });
-    graph.AddPass("Consume", RenderGraphQueue::Compute,
-                  [&](RenderGraphPassBuilder& builder) { builder.Read(buffer, RenderGraphResourceState::ShaderRead); },
-                  [&](RenderGraphContext&) { executionOrder.push_back("Consume"); });
+    graph.AddPass(
+      "Upload", RenderGraphQueue::Transfer, [&](RenderGraphPassBuilder& builder) { builder.Write(buffer, RenderGraphResourceState::TransferWrite); },
+      [&](RenderGraphContext&) { executionOrder.push_back("Upload"); });
+    graph.AddPass(
+      "Consume", RenderGraphQueue::Compute, [&](RenderGraphPassBuilder& builder) { builder.Read(buffer, RenderGraphResourceState::ShaderRead); },
+      [&](RenderGraphContext&) { executionOrder.push_back("Consume"); });
 
     REQUIRE(graph.Execute());
     REQUIRE(executionOrder.size() == 2);
@@ -204,10 +276,8 @@ TEST_CASE("RenderGraph history pairs share a stable identity", "[Renderer][Rende
 {
     RenderGraph graph;
     const RenderGraphHistoryPair history = graph.CreateHistoryTexture("CameraHiZ", ColorTexture());
-    graph.AddPass("ReadHistory", RenderGraphQueue::Compute,
-                  [&](RenderGraphPassBuilder& builder) { builder.Read(history.Read); });
-    graph.AddPass("WriteHistory", RenderGraphQueue::Compute,
-                  [&](RenderGraphPassBuilder& builder) { builder.Write(history.Write); });
+    graph.AddPass("ReadHistory", RenderGraphQueue::Compute, [&](RenderGraphPassBuilder& builder) { builder.Read(history.Read); });
+    graph.AddPass("WriteHistory", RenderGraphQueue::Compute, [&](RenderGraphPassBuilder& builder) { builder.Write(history.Write); });
 
     const RenderGraphCompileResult& result = graph.Compile();
     REQUIRE(result.Succeeded);
@@ -223,8 +293,7 @@ TEST_CASE("RenderGraph execution emits final transitions after the last pass", "
 {
     RenderGraph graph;
     const RenderGraphResourceHandle output =
-      graph.ImportTexture("Output", ColorTexture(), 7, RenderGraphResourceState::ShaderRead,
-                          RenderGraphResourceState::Present);
+      graph.ImportTexture("Output", ColorTexture(), 7, RenderGraphResourceState::ShaderRead, RenderGraphResourceState::Present);
     graph.AddPass("Draw", RenderGraphQueue::Graphics,
                   [&](RenderGraphPassBuilder& builder) { builder.Write(output, RenderGraphResourceState::ColorAttachment); });
 
@@ -278,9 +347,9 @@ TEST_CASE("RenderGraph registry preserves transient aliasing within a frame", "[
     RenderGraph graph;
     const RenderGraphResourceHandle first = graph.CreateTexture("First", ColorTexture());
     const RenderGraphResourceHandle second = graph.CreateTexture("Second", ColorTexture());
-    const RenderGraphPassHandle firstRead = graph.AddPass(
-      "FirstWrite", RenderGraphQueue::Graphics,
-      [&](RenderGraphPassBuilder& builder) { builder.Write(first, RenderGraphResourceState::ColorAttachment); });
+    const RenderGraphPassHandle firstRead = graph.AddPass("FirstWrite", RenderGraphQueue::Graphics, [&](RenderGraphPassBuilder& builder) {
+        builder.Write(first, RenderGraphResourceState::ColorAttachment);
+    });
     graph.AddPass("SecondWrite", RenderGraphQueue::Graphics, [&](RenderGraphPassBuilder& builder) {
         builder.DependsOn(firstRead);
         builder.Write(second, RenderGraphResourceState::ColorAttachment);
@@ -312,8 +381,7 @@ TEST_CASE("RenderGraph resources allocate lazily and preserve physical aliasing"
     const RenderGraphResourceHandle first = graph.CreateTexture("First", textureDesc);
     const RenderGraphResourceHandle second = graph.CreateTexture("Second", textureDesc);
     const RenderGraphPassHandle firstPass = graph.AddPass(
-      "FirstPass", RenderGraphQueue::Compute,
-      [&](RenderGraphPassBuilder& builder) { builder.Write(first); },
+      "FirstPass", RenderGraphQueue::Compute, [&](RenderGraphPassBuilder& builder) { builder.Write(first); },
       [&](RenderGraphContext& context) { CHECK_FALSE(context.GetTexture(first)); });
     graph.AddPass(
       "SecondPass", RenderGraphQueue::Compute,
@@ -354,8 +422,7 @@ TEST_CASE("RenderGraph context resolves typed buffer resources", "[Renderer][Ren
     const RenderGraphBufferDesc bufferDesc{ 1024, 16, GpuBufferType::Structured };
     const RenderGraphResourceHandle buffer = graph.CreateBuffer("Commands", bufferDesc);
     graph.AddPass(
-      "WriteCommands", RenderGraphQueue::Compute,
-      [&](RenderGraphPassBuilder& builder) { builder.Write(buffer); },
+      "WriteCommands", RenderGraphQueue::Compute, [&](RenderGraphPassBuilder& builder) { builder.Write(buffer); },
       [&](RenderGraphContext& context) { CHECK_FALSE(context.GetBuffer(buffer)); });
 
     const RenderGraphCompileResult& compiled = graph.Compile();
@@ -375,12 +442,12 @@ TEST_CASE("RenderGraph binds imported resources to typed runtime objects", "[Ren
     RenderGraph graph;
     const Ref<TestGpuBuffer> bufferResource = CreateRef<TestGpuBuffer>();
     const Ref<TestRenderTarget> targetResource = CreateRef<TestRenderTarget>();
-    const RenderGraphResourceHandle buffer = graph.ImportBuffer(
-      "Instances", { 64, 16, GpuBufferType::Structured }, reinterpret_cast<uint64_t>(bufferResource.get()),
-      RenderGraphResourceState::ShaderRead, RenderGraphResourceState::ShaderRead);
-    const RenderGraphResourceHandle target = graph.ImportTexture(
-      "Output", ColorTexture(), reinterpret_cast<uint64_t>(targetResource.get()),
-      RenderGraphResourceState::ColorAttachment, RenderGraphResourceState::ColorAttachment);
+    const RenderGraphResourceHandle buffer =
+      graph.ImportBuffer("Instances", { 64, 16, GpuBufferType::Structured }, reinterpret_cast<uint64_t>(bufferResource.get()),
+                         RenderGraphResourceState::ShaderRead, RenderGraphResourceState::ShaderRead);
+    const RenderGraphResourceHandle target =
+      graph.ImportTexture("Output", ColorTexture(), reinterpret_cast<uint64_t>(targetResource.get()), RenderGraphResourceState::ColorAttachment,
+                          RenderGraphResourceState::ColorAttachment);
     graph.AddPass(
       "UseImportedResources", RenderGraphQueue::Graphics,
       [&](RenderGraphPassBuilder& builder) {

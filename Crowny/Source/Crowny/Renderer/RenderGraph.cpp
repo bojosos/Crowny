@@ -6,7 +6,6 @@
 
 #include <algorithm>
 #include <chrono>
-#include <queue>
 
 namespace Crowny
 {
@@ -139,45 +138,61 @@ namespace Crowny
 
     void RenderGraphPassBuilder::SetSideEffect(bool sideEffect) { m_Graph.SetSideEffect(m_Pass, sideEffect); }
 
-    RenderGraphResourceHandle RenderGraph::CreateTexture(const String& name, const RenderGraphTextureDesc& desc,
-                                                         RenderGraphResourceLifetime lifetime)
+    RenderGraphResourceHandle RenderGraph::CreateTexture(StringView name, const RenderGraphTextureDesc& desc, RenderGraphResourceLifetime lifetime)
     {
-        RenderGraphResourceHandle handle{ static_cast<uint32_t>(m_Resources.size()), m_Generation, RenderGraphResourceType::Texture };
-        ResourceNode node;
+        RenderGraphResourceHandle handle{ static_cast<uint32_t>(m_Resources.Size()), m_Generation, RenderGraphResourceType::Texture };
+        ResourceNode& node = m_Resources.Acquire();
         node.Info.Handle = handle;
-        node.Info.Name = name;
+        node.Info.Name.assign(name.data(), name.size());
         node.Info.Desc.Type = RenderGraphResourceType::Texture;
         node.Info.Desc.Lifetime = lifetime;
         node.Info.Desc.Texture = desc;
+        node.Info.Desc.Buffer = {};
+        node.Info.Desc.InitialState = RenderGraphResourceState::Undefined;
+        node.Info.Desc.FinalState = RenderGraphResourceState::Undefined;
+        node.Info.Desc.ExternalId = 0;
+        node.Info.Desc.HistoryId = 0;
+        node.Info.Desc.HistoryRole = RenderGraphHistoryRole::Single;
+        node.Info.FirstUse = RenderGraphPassHandle::InvalidIndex;
+        node.Info.LastUse = RenderGraphPassHandle::InvalidIndex;
+        node.Info.PhysicalIndex = RenderGraphResourceHandle::InvalidIndex;
         if (lifetime == RenderGraphResourceLifetime::History)
             node.Info.Desc.HistoryId = BuildHistoryId(name, RenderGraphResourceType::Texture);
-        m_Resources.push_back(std::move(node));
         m_Dirty = true;
         return handle;
     }
 
-    RenderGraphResourceHandle RenderGraph::CreateBuffer(const String& name, const RenderGraphBufferDesc& desc,
-                                                        RenderGraphResourceLifetime lifetime)
+    RenderGraphResourceHandle RenderGraph::CreateBuffer(StringView name, const RenderGraphBufferDesc& desc, RenderGraphResourceLifetime lifetime)
     {
-        RenderGraphResourceHandle handle{ static_cast<uint32_t>(m_Resources.size()), m_Generation, RenderGraphResourceType::Buffer };
-        ResourceNode node;
+        RenderGraphResourceHandle handle{ static_cast<uint32_t>(m_Resources.Size()), m_Generation, RenderGraphResourceType::Buffer };
+        ResourceNode& node = m_Resources.Acquire();
         node.Info.Handle = handle;
-        node.Info.Name = name;
+        node.Info.Name.assign(name.data(), name.size());
         node.Info.Desc.Type = RenderGraphResourceType::Buffer;
         node.Info.Desc.Lifetime = lifetime;
         node.Info.Desc.Buffer = desc;
+        node.Info.Desc.Texture = {};
+        node.Info.Desc.InitialState = RenderGraphResourceState::Undefined;
+        node.Info.Desc.FinalState = RenderGraphResourceState::Undefined;
+        node.Info.Desc.ExternalId = 0;
+        node.Info.Desc.HistoryId = 0;
+        node.Info.Desc.HistoryRole = RenderGraphHistoryRole::Single;
+        node.Info.FirstUse = RenderGraphPassHandle::InvalidIndex;
+        node.Info.LastUse = RenderGraphPassHandle::InvalidIndex;
+        node.Info.PhysicalIndex = RenderGraphResourceHandle::InvalidIndex;
         if (lifetime == RenderGraphResourceLifetime::History)
             node.Info.Desc.HistoryId = BuildHistoryId(name, RenderGraphResourceType::Buffer);
-        m_Resources.push_back(std::move(node));
         m_Dirty = true;
         return handle;
     }
 
-    RenderGraphHistoryPair RenderGraph::CreateHistoryTexture(const String& name, const RenderGraphTextureDesc& desc)
+    RenderGraphHistoryPair RenderGraph::CreateHistoryTexture(StringView name, const RenderGraphTextureDesc& desc)
     {
         RenderGraphHistoryPair pair;
-        pair.Read = CreateTexture(name + "Read", desc, RenderGraphResourceLifetime::History);
-        pair.Write = CreateTexture(name + "Write", desc, RenderGraphResourceLifetime::History);
+        pair.Read = CreateTexture(name, desc, RenderGraphResourceLifetime::History);
+        m_Resources[pair.Read.Index].Info.Name += "Read";
+        pair.Write = CreateTexture(name, desc, RenderGraphResourceLifetime::History);
+        m_Resources[pair.Write.Index].Info.Name += "Write";
         const uint64_t historyId = BuildHistoryId(name, RenderGraphResourceType::Texture);
         m_Resources[pair.Read.Index].Info.Desc.HistoryId = historyId;
         m_Resources[pair.Read.Index].Info.Desc.HistoryRole = RenderGraphHistoryRole::Read;
@@ -186,11 +201,13 @@ namespace Crowny
         return pair;
     }
 
-    RenderGraphHistoryPair RenderGraph::CreateHistoryBuffer(const String& name, const RenderGraphBufferDesc& desc)
+    RenderGraphHistoryPair RenderGraph::CreateHistoryBuffer(StringView name, const RenderGraphBufferDesc& desc)
     {
         RenderGraphHistoryPair pair;
-        pair.Read = CreateBuffer(name + "Read", desc, RenderGraphResourceLifetime::History);
-        pair.Write = CreateBuffer(name + "Write", desc, RenderGraphResourceLifetime::History);
+        pair.Read = CreateBuffer(name, desc, RenderGraphResourceLifetime::History);
+        m_Resources[pair.Read.Index].Info.Name += "Read";
+        pair.Write = CreateBuffer(name, desc, RenderGraphResourceLifetime::History);
+        m_Resources[pair.Write.Index].Info.Name += "Write";
         const uint64_t historyId = BuildHistoryId(name, RenderGraphResourceType::Buffer);
         m_Resources[pair.Read.Index].Info.Desc.HistoryId = historyId;
         m_Resources[pair.Read.Index].Info.Desc.HistoryRole = RenderGraphHistoryRole::Read;
@@ -199,7 +216,7 @@ namespace Crowny
         return pair;
     }
 
-    RenderGraphResourceHandle RenderGraph::ImportTexture(const String& name, const RenderGraphTextureDesc& desc, uint64_t externalId,
+    RenderGraphResourceHandle RenderGraph::ImportTexture(StringView name, const RenderGraphTextureDesc& desc, uint64_t externalId,
                                                          RenderGraphResourceState initialState, RenderGraphResourceState finalState)
     {
         RenderGraphResourceHandle handle = CreateTexture(name, desc, RenderGraphResourceLifetime::External);
@@ -210,7 +227,7 @@ namespace Crowny
         return handle;
     }
 
-    RenderGraphResourceHandle RenderGraph::ImportBuffer(const String& name, const RenderGraphBufferDesc& desc, uint64_t externalId,
+    RenderGraphResourceHandle RenderGraph::ImportBuffer(StringView name, const RenderGraphBufferDesc& desc, uint64_t externalId,
                                                         RenderGraphResourceState initialState, RenderGraphResourceState finalState)
     {
         RenderGraphResourceHandle handle = CreateBuffer(name, desc, RenderGraphResourceLifetime::External);
@@ -221,15 +238,17 @@ namespace Crowny
         return handle;
     }
 
-    RenderGraphPassHandle RenderGraph::AddPass(const String& name, RenderGraphQueue queue, const SetupCallback& setup, ExecuteCallback execute)
+    RenderGraphPassHandle RenderGraph::AddPass(StringView name, RenderGraphQueue queue, const SetupCallback& setup, ExecuteCallback execute)
     {
-        RenderGraphPassHandle handle{ static_cast<uint32_t>(m_Passes.size()), m_Generation };
-        PassNode node;
+        RenderGraphPassHandle handle{ static_cast<uint32_t>(m_Passes.Size()), m_Generation };
+        PassNode& node = m_Passes.Acquire();
         node.Handle = handle;
-        node.Name = name;
+        node.Name.assign(name.data(), name.size());
         node.Queue = queue;
+        node.Uses.clear();
+        node.Dependencies.clear();
         node.Execute = std::move(execute);
-        m_Passes.push_back(std::move(node));
+        node.SideEffect = false;
 
         if (setup)
         {
@@ -286,13 +305,13 @@ namespace Crowny
 
     bool RenderGraph::ValidateHandle(RenderGraphResourceHandle resource) const
     {
-        return resource.IsValid() && resource.Generation == m_Generation && resource.Index < m_Resources.size() &&
+        return resource.IsValid() && resource.Generation == m_Generation && resource.Index < m_Resources.Size() &&
                m_Resources[resource.Index].Info.Handle.Type == resource.Type;
     }
 
     bool RenderGraph::ValidateHandle(RenderGraphPassHandle pass) const
     {
-        return pass.IsValid() && pass.Generation == m_Generation && pass.Index < m_Passes.size();
+        return pass.IsValid() && pass.Generation == m_Generation && pass.Index < m_Passes.Size();
     }
 
     bool RenderGraph::IsWrite(Access access) { return access == Access::Write || access == Access::ReadWrite; }
@@ -313,19 +332,52 @@ namespace Crowny
         return hash == 0 ? 1 : hash;
     }
 
+    void RenderGraph::ResetCompileResult()
+    {
+        m_CompileScratch.ResourceRecycle.Reset();
+        for (RenderGraphResourceInfo& resource : m_CompileResult.Resources)
+            m_CompileScratch.ResourceRecycle.Acquire() = std::move(resource);
+
+        m_CompileResult.Succeeded = false;
+        m_CompileResult.Error.clear();
+        m_CompileResult.PassOrder.clear();
+        m_CompileResult.Barriers.clear();
+        m_CompileResult.Resources.clear();
+        m_CompileScratch.ResourceRecycle.Reset();
+        m_CompileResult.PhysicalTextureCount = 0;
+        m_CompileResult.PhysicalBufferCount = 0;
+        m_CompileResult.TransientTextureBytes = 0;
+        m_CompileResult.TransientBufferBytes = 0;
+    }
+
     const RenderGraphCompileResult& RenderGraph::Compile()
     {
         if (!m_Dirty)
             return m_CompileResult;
 
-        m_CompileResult = {};
-        m_CompileResult.Resources.reserve(m_Resources.size());
+        ResetCompileResult();
         for (const ResourceNode& resource : m_Resources)
-            m_CompileResult.Resources.push_back(resource.Info);
+        {
+            RenderGraphResourceInfo& compiled = m_CompileScratch.ResourceRecycle.Acquire();
+            compiled.Handle = resource.Info.Handle;
+            compiled.Name = resource.Info.Name;
+            compiled.Desc = resource.Info.Desc;
+            compiled.FirstUse = RenderGraphPassHandle::InvalidIndex;
+            compiled.LastUse = RenderGraphPassHandle::InvalidIndex;
+            compiled.PhysicalIndex = RenderGraphResourceHandle::InvalidIndex;
+            m_CompileResult.Resources.push_back(std::move(compiled));
+        }
 
-        const uint32_t passCount = static_cast<uint32_t>(m_Passes.size());
-        Vector<Vector<uint32_t>> dependencies(passCount);
-        Vector<Vector<uint32_t>> dependents(passCount);
+        const uint32_t passCount = static_cast<uint32_t>(m_Passes.Size());
+        m_CompileScratch.Dependencies.Reset();
+        m_CompileScratch.Dependents.Reset();
+        for (uint32_t pass = 0; pass < passCount; pass++)
+        {
+            m_CompileScratch.Dependencies.Acquire().clear();
+            m_CompileScratch.Dependents.Acquire().clear();
+        }
+        FrameVector<Vector<uint32_t>>& dependencies = m_CompileScratch.Dependencies;
+        FrameVector<Vector<uint32_t>>& dependents = m_CompileScratch.Dependents;
 
         auto addDependency = [&](uint32_t pass, uint32_t dependency) {
             if (pass == dependency)
@@ -352,13 +404,15 @@ namespace Crowny
             }
         }
 
-        struct HazardState
+        m_CompileScratch.Hazards.Reset();
+        for (uint32_t resource = 0; resource < m_Resources.Size(); resource++)
         {
-            uint32_t LastWriter = RenderGraphPassHandle::InvalidIndex;
-            Vector<uint32_t> Readers;
-            bool Initialized = false;
-        };
-        Vector<HazardState> hazards(m_Resources.size());
+            HazardState& hazard = m_CompileScratch.Hazards.Acquire();
+            hazard.LastWriter = RenderGraphPassHandle::InvalidIndex;
+            hazard.Readers.clear();
+            hazard.Initialized = false;
+        }
+        FrameVector<HazardState>& hazards = m_CompileScratch.Hazards;
 
         for (const PassNode& pass : m_Passes)
         {
@@ -395,24 +449,34 @@ namespace Crowny
             }
         }
 
-        Vector<uint32_t> indegree(passCount);
-        std::priority_queue<uint32_t, Vector<uint32_t>, std::greater<uint32_t>> ready;
+        Vector<uint32_t>& indegree = m_CompileScratch.Indegree;
+        indegree.assign(passCount, 0);
+        Vector<uint32_t>& ready = m_CompileScratch.Ready;
+        ready.clear();
+        const std::greater<uint32_t> readyOrder;
         for (uint32_t pass = 0; pass < passCount; pass++)
         {
             indegree[pass] = static_cast<uint32_t>(dependencies[pass].size());
             if (indegree[pass] == 0)
-                ready.push(pass);
+            {
+                ready.push_back(pass);
+                std::push_heap(ready.begin(), ready.end(), readyOrder);
+            }
         }
 
         while (!ready.empty())
         {
-            const uint32_t pass = ready.top();
-            ready.pop();
+            std::pop_heap(ready.begin(), ready.end(), readyOrder);
+            const uint32_t pass = ready.back();
+            ready.pop_back();
             m_CompileResult.PassOrder.push_back(m_Passes[pass].Handle);
             for (uint32_t dependent : dependents[pass])
             {
                 if (--indegree[dependent] == 0)
-                    ready.push(dependent);
+                {
+                    ready.push_back(dependent);
+                    std::push_heap(ready.begin(), ready.end(), readyOrder);
+                }
             }
         }
 
@@ -424,7 +488,8 @@ namespace Crowny
             return m_CompileResult;
         }
 
-        Vector<uint32_t> orderPosition(passCount);
+        Vector<uint32_t>& orderPosition = m_CompileScratch.OrderPosition;
+        orderPosition.resize(passCount);
         for (uint32_t position = 0; position < m_CompileResult.PassOrder.size(); position++)
             orderPosition[m_CompileResult.PassOrder[position].Index] = position;
 
@@ -432,8 +497,8 @@ namespace Crowny
         {
             for (const PassNode& pass : m_Passes)
             {
-                const bool used = std::any_of(pass.Uses.begin(), pass.Uses.end(),
-                                              [&](const ResourceUse& use) { return use.Resource == resource.Handle; });
+                const bool used =
+                  std::any_of(pass.Uses.begin(), pass.Uses.end(), [&](const ResourceUse& use) { return use.Resource == resource.Handle; });
                 if (!used)
                     continue;
                 const uint32_t position = orderPosition[pass.Handle.Index];
@@ -442,20 +507,19 @@ namespace Crowny
             }
         }
 
-        struct PhysicalAllocation
-        {
-            RenderGraphResourceDesc Desc;
-            uint32_t LastUse = 0;
-            uint32_t Index = 0;
-        };
-        Vector<PhysicalAllocation> textureAllocations;
-        Vector<PhysicalAllocation> bufferAllocations;
+        Vector<PhysicalAllocation>& textureAllocations = m_CompileScratch.TextureAllocations;
+        Vector<PhysicalAllocation>& bufferAllocations = m_CompileScratch.BufferAllocations;
+        textureAllocations.clear();
+        bufferAllocations.clear();
 
-        Vector<uint32_t> resourcesByFirstUse(m_CompileResult.Resources.size());
+        Vector<uint32_t>& resourcesByFirstUse = m_CompileScratch.ResourcesByFirstUse;
+        resourcesByFirstUse.resize(m_CompileResult.Resources.size());
         for (uint32_t index = 0; index < resourcesByFirstUse.size(); index++)
             resourcesByFirstUse[index] = index;
-        std::stable_sort(resourcesByFirstUse.begin(), resourcesByFirstUse.end(), [&](uint32_t first, uint32_t second) {
-            return m_CompileResult.Resources[first].FirstUse < m_CompileResult.Resources[second].FirstUse;
+        std::sort(resourcesByFirstUse.begin(), resourcesByFirstUse.end(), [&](uint32_t first, uint32_t second) {
+            const uint32_t firstUse = m_CompileResult.Resources[first].FirstUse;
+            const uint32_t secondUse = m_CompileResult.Resources[second].FirstUse;
+            return firstUse != secondUse ? firstUse < secondUse : first < second;
         });
 
         for (uint32_t resourceIndex : resourcesByFirstUse)
@@ -491,15 +555,9 @@ namespace Crowny
             if (allocation.Desc.Lifetime == RenderGraphResourceLifetime::Transient)
                 m_CompileResult.TransientBufferBytes += allocation.Desc.Buffer.Size;
 
-        struct LastUseState
-        {
-            bool Valid = false;
-            RenderGraphResourceState State = RenderGraphResourceState::Undefined;
-            RenderGraphQueue Queue = RenderGraphQueue::Graphics;
-            Access ResourceAccess = Access::Read;
-        };
-        Vector<LastUseState> lastStates(m_Resources.size());
-        for (uint32_t resourceIndex = 0; resourceIndex < m_Resources.size(); resourceIndex++)
+        Vector<LastUseState>& lastStates = m_CompileScratch.LastStates;
+        lastStates.assign(m_Resources.Size(), {});
+        for (uint32_t resourceIndex = 0; resourceIndex < m_Resources.Size(); resourceIndex++)
         {
             const RenderGraphResourceDesc& desc = m_Resources[resourceIndex].Info.Desc;
             if (desc.Lifetime != RenderGraphResourceLifetime::Transient && desc.InitialState != RenderGraphResourceState::Undefined)
@@ -516,19 +574,18 @@ namespace Crowny
                 const bool memoryHazard = last.Valid && (IsWrite(last.ResourceAccess) || IsWrite(use.ResourceAccess));
                 if (stateChange || memoryHazard)
                 {
-                    m_CompileResult.Barriers.push_back({ use.Resource, pass.Handle,
-                                                        last.Valid ? last.State : RenderGraphResourceState::Undefined, use.State,
-                                                        last.Valid ? last.Queue : pass.Queue, pass.Queue });
+                    m_CompileResult.Barriers.push_back({ use.Resource, pass.Handle, last.Valid ? last.State : RenderGraphResourceState::Undefined,
+                                                         use.State, last.Valid ? last.Queue : pass.Queue, pass.Queue });
                 }
                 last = { true, use.State, pass.Queue, use.ResourceAccess };
             }
         }
 
-        for (uint32_t resourceIndex = 0; resourceIndex < m_Resources.size(); resourceIndex++)
+        for (uint32_t resourceIndex = 0; resourceIndex < m_Resources.Size(); resourceIndex++)
         {
             const RenderGraphResourceInfo& resource = m_Resources[resourceIndex].Info;
-            if (resource.Desc.Lifetime == RenderGraphResourceLifetime::Transient ||
-                resource.Desc.FinalState == RenderGraphResourceState::Undefined || !lastStates[resourceIndex].Valid)
+            if (resource.Desc.Lifetime == RenderGraphResourceLifetime::Transient || resource.Desc.FinalState == RenderGraphResourceState::Undefined ||
+                !lastStates[resourceIndex].Valid)
                 continue;
 
             const LastUseState& last = lastStates[resourceIndex];
@@ -579,9 +636,15 @@ namespace Crowny
             m_ExecutionStats.ExecutedPasses++;
             switch (pass.Queue)
             {
-            case RenderGraphQueue::Graphics: m_ExecutionStats.GraphicsPasses++; break;
-            case RenderGraphQueue::Compute: m_ExecutionStats.ComputePasses++; break;
-            case RenderGraphQueue::Transfer: m_ExecutionStats.TransferPasses++; break;
+            case RenderGraphQueue::Graphics:
+                m_ExecutionStats.GraphicsPasses++;
+                break;
+            case RenderGraphQueue::Compute:
+                m_ExecutionStats.ComputePasses++;
+                break;
+            case RenderGraphQueue::Transfer:
+                m_ExecutionStats.TransferPasses++;
+                break;
             }
             if (listener != nullptr)
             {
@@ -597,24 +660,24 @@ namespace Crowny
             {
                 if (listener != nullptr)
                     listener->EndGraph(compiled);
-                m_ExecutionStats.CpuTimeMs =
-                  std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - executionStart).count();
+                m_ExecutionStats.CpuTimeMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - executionStart).count();
                 return false;
             }
         }
         if (listener != nullptr)
             listener->EndGraph(compiled);
-        m_ExecutionStats.CpuTimeMs =
-          std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - executionStart).count();
+        m_ExecutionStats.CpuTimeMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - executionStart).count();
         m_ExecutionStats.Succeeded = true;
         return true;
     }
 
     void RenderGraph::Reset()
     {
-        m_Resources.clear();
-        m_Passes.clear();
-        m_CompileResult = {};
+        for (PassNode& pass : m_Passes)
+            pass.Execute = {};
+        m_Resources.Reset();
+        m_Passes.Reset();
+        ResetCompileResult();
         m_ExecutionStats = {};
         m_Generation++;
         if (m_Generation == 0)

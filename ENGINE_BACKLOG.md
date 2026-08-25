@@ -37,6 +37,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [x] Render-graph transient physical-ID lookup retains its hash scratch after warm-up and reports capacity growth instead of allocating a fresh map each frame.
 - [x] Combined Windows ASan verification passed 25,832 assertions in 403 cases; focused console, render-graph, and shader suites passed 51/91/177 assertions respectively.
 - [x] Re-cooked 32 shader assets for the transitive fingerprint migration and repacked 54 built-in resources; a repeat ASan cook-only launch found no stale assets and exited cleanly in 3.64 seconds. Vulkan, OpenGL, and cross-backend reference checks passed 4/4 each.
+- [x] Thread-local allocation telemetry covers standard, aligned, sized, array, and nothrow allocation families without the heavy leak tracker's map/mutex. Render-graph construction and compilation retain graph/result/compiler scratch and perform zero calling-thread allocations across 120 identical frames after warm-up.
 
 ## Physics and ECS
 
@@ -111,7 +112,7 @@ This is the durable record of the requested engine work. A checked item is merge
 
 ## Performance, quality, and platform support
 
-- [ ] Add an allocation-count-only profiler that does not use the heavy `CW_TRACK_MEMORY` map/mutex. Establish zero-allocation steady-state targets for scene sync, render graph compile, draw preparation, editor selection/UI, text, and console.
+- [ ] Extend the allocation-count-only profiler's zero-allocation steady-state targets beyond the completed render-graph compile path to scene sync, draw preparation, editor selection/UI, text, and console.
 - [ ] Use retained scratch, inline containers, frame-context-owned arenas, pools, and stable handles where lifetime proves safe. Never use one global frame arena for data crossing simulation/render threads.
 - [ ] Bootstrap pinned Mono, OpenAL, Vulkan, and physics dependencies through repository scripts and caches. Support override environment variables, verify versions and hashes, avoid committing SDK binaries, and document offline/CI behavior.
 - [ ] Keep Windows and Linux builds first-class. Add sanitizer options, leak checks, ThreadSanitizer-friendly CPU tests on Linux, Vulkan validation, OpenGL parity, and clear capability fallbacks.

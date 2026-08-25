@@ -1,5 +1,6 @@
 #include <catch2/catch_session.hpp>
 
+#include "Crowny/Common/Log.h"
 #include "Crowny/Common/MemoryDiagnostics.h"
 
 #if defined(_WIN32)
@@ -15,6 +16,7 @@ int main(int argc, char* argv[])
     WerSetFlags(WER_FAULT_REPORTING_NO_UI);
 #endif
 
+    Crowny::Log::Init("CrownyTests");
     Crowny::ScopedMemoryLeakCheck memoryLeakCheck;
     int result = 0;
     {

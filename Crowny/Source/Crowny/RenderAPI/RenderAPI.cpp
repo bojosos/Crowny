@@ -11,12 +11,10 @@ namespace Crowny
     void RenderAPI::OnStartUp()
     {
         s_API = m_API;
+        m_FrameAllocationBaseline = Memory::GetThreadAllocationSnapshot();
     }
 
-    void RenderAPI::OnShutdown()
-    {
-        s_API = API::None;
-    }
+    void RenderAPI::OnShutdown() { s_API = API::None; }
 
     uint64_t RenderAPI::GetPrimitiveCount(DrawMode drawMode, uint64_t elementCount)
     {
@@ -41,6 +39,10 @@ namespace Crowny
 
     void RenderAPI::BeginFrameStatistics(float frameTimeSeconds)
     {
+        const Memory::ThreadAllocationSnapshot allocationSnapshot = Memory::GetThreadAllocationSnapshot();
+        const Memory::ThreadAllocationSnapshot frameAllocations = Memory::GetThreadAllocationDelta(m_FrameAllocationBaseline, allocationSnapshot);
+        m_FrameAllocationBaseline = allocationSnapshot;
+
         const float frameTimeMs = std::max(frameTimeSeconds * 1000.0f, 0.0f);
         if (frameTimeMs > 0.0f)
             m_SmoothedFrameTimeMs = m_SmoothedFrameTimeMs > 0.0f ? glm::mix(m_SmoothedFrameTimeMs, frameTimeMs, 0.1f) : frameTimeMs;
@@ -57,6 +59,8 @@ namespace Crowny
         completed.Instances = m_Statistics.Instances.exchange(0, std::memory_order_relaxed);
         completed.ComputeDispatches = m_Statistics.ComputeDispatches.exchange(0, std::memory_order_relaxed);
         completed.RayTracingDispatches = m_Statistics.RayTracingDispatches.exchange(0, std::memory_order_relaxed);
+        completed.MainThreadAllocations = frameAllocations.AllocationCount;
+        completed.MainThreadAllocatedBytes = frameAllocations.RequestedBytes;
 
         std::scoped_lock lock(m_CompletedStatisticsMutex);
         completed.FrameNumber = m_CompletedStatistics.FrameNumber + 1;
