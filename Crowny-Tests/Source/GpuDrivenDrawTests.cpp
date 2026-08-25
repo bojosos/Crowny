@@ -1,18 +1,18 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "Crowny/Memory/AllocationCounter.h"
 #include "Crowny/Renderer/GpuDrivenDraw.h"
 
 using namespace Crowny;
 
 namespace
 {
-    GpuDrawCandidate Candidate(uint32_t instance, uint32_t pipeline, uint32_t heap, uint32_t materialTemplate,
-                               uint32_t firstIndex, float depth, AlphaMode alpha = AlphaMode::Opaque, int32_t layer = 0)
+    GpuDrawCandidate Candidate(uint32_t instance, uint32_t pipeline, uint32_t heap, uint32_t materialTemplate, uint32_t firstIndex, float depth,
+                               AlphaMode alpha = AlphaMode::Opaque, int32_t layer = 0)
     {
         GpuDrawCandidate candidate;
-        candidate.Bin = { alpha == AlphaMode::Opaque || alpha == AlphaMode::Mask ? RenderDrawPhase::Opaque
-                                                                                : RenderDrawPhase::Transparent,
-                          alpha, pipeline, heap, materialTemplate };
+        candidate.Bin = { alpha == AlphaMode::Opaque || alpha == AlphaMode::Mask ? RenderDrawPhase::Opaque : RenderDrawPhase::Transparent, alpha,
+                          pipeline, heap, materialTemplate };
         candidate.InstanceID = instance;
         candidate.MaterialIndex = materialTemplate;
         candidate.IndexCount = 36;
@@ -26,7 +26,7 @@ namespace
     {
         return { phase, alpha, pipeline, heap, materialTemplate };
     }
-}
+} // namespace
 
 TEST_CASE("GPU draw-bin layout is deterministic and respects indirect device limits", "[Renderer][GpuDriven][DrawBins]")
 {
@@ -72,8 +72,7 @@ TEST_CASE("GPU draw-bin lookup includes every submission compatibility field", "
 
     for (const GpuDrawBinKey& key : keys)
         CHECK(layout.FindBin(key) != GpuDrawBinLookupEntry::InvalidBin);
-    CHECK(layout.FindBin(Bin(RenderDrawPhase::Transparent, AlphaMode::Opaque, 2, 3, 5)) ==
-          GpuDrawBinLookupEntry::InvalidBin);
+    CHECK(layout.FindBin(Bin(RenderDrawPhase::Transparent, AlphaMode::Opaque, 2, 3, 5)) == GpuDrawBinLookupEntry::InvalidBin);
 }
 
 TEST_CASE("GPU draw-bin layout invalidates only when keys or limits change", "[Renderer][GpuDriven][DrawBins]")
@@ -112,8 +111,7 @@ TEST_CASE("GPU draw-bin capacity rejects excess bins and preserves zero-count sl
     const uint32_t overflowIndex = static_cast<uint32_t>(layout.GetBins().size()) + layout.GetBins()[0].CountIndex;
     counts[layout.GetBins()[0].CountIndex] = layout.GetBins()[0].CommandCapacity + 3u;
     counts[overflowIndex] = 3u;
-    CHECK(std::min(counts[layout.GetBins()[0].CountIndex], layout.GetBins()[0].CommandCapacity) ==
-          layout.GetBins()[0].CommandCapacity);
+    CHECK(std::min(counts[layout.GetBins()[0].CountIndex], layout.GetBins()[0].CommandCapacity) == layout.GetBins()[0].CommandCapacity);
     CHECK(counts[overflowIndex] == 3);
 }
 
@@ -193,6 +191,43 @@ TEST_CASE("Weighted OIT draws are binned and instanced", "[Renderer][GpuDriven]"
     REQUIRE(output.Commands.size() == 1);
     CHECK(output.Commands[0].InstanceCount == 2);
     CHECK(output.StrictTransparentCommandCount == 0);
+}
+
+TEST_CASE("GPU draw-list preparation allocates nothing after warm-up", "[Renderer][GpuDriven][Memory][Frame]")
+{
+    constexpr uint32_t candidateCount = 10000;
+    Vector<GpuDrawCandidate> candidates;
+    candidates.reserve(candidateCount);
+    for (uint32_t index = 0; index < candidateCount; index++)
+    {
+        const AlphaMode alpha = index % 5u == 0u ? AlphaMode::Premultiplied : (index % 3u == 0u ? AlphaMode::Mask : AlphaMode::Opaque);
+        candidates.push_back(Candidate(index, index % 7u, index % 11u + 1u, index % 13u, (index % 64u) * 36u,
+                                       static_cast<float>(candidateCount - index), alpha, static_cast<int32_t>(index % 4u)));
+    }
+    Vector<GpuDrawCandidate> transparentCandidates = candidates;
+    for (GpuDrawCandidate& candidate : transparentCandidates)
+    {
+        candidate.Bin.Phase = RenderDrawPhase::Transparent;
+        candidate.Bin.Alpha = AlphaMode::Premultiplied;
+    }
+
+    GpuDrawListBuilder builder;
+    GpuDrawList output;
+    builder.Build(candidates.data(), static_cast<uint32_t>(candidates.size()), output);
+
+    const Memory::ThreadAllocationSnapshot before = Memory::GetThreadAllocationSnapshot();
+    for (uint32_t frame = 0; frame < 120; frame++)
+    {
+        const Vector<GpuDrawCandidate>& frameCandidates = frame % 2u == 0u ? candidates : transparentCandidates;
+        builder.Build(frameCandidates.data(), static_cast<uint32_t>(frameCandidates.size()), output);
+    }
+    const Memory::ThreadAllocationSnapshot after = Memory::GetThreadAllocationSnapshot();
+    const Memory::ThreadAllocationSnapshot delta = Memory::GetThreadAllocationDelta(before, after);
+
+    CHECK(output.Instances.size() == candidateCount);
+    CHECK(output.Commands.size() == candidateCount);
+    CHECK(delta.AllocationCount == 0);
+    CHECK(delta.RequestedBytes == 0);
 }
 
 TEST_CASE("GPU draw buffers have a headless compatibility mode", "[Renderer][GpuDriven]")

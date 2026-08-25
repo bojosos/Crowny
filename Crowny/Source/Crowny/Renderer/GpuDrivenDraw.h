@@ -207,6 +207,7 @@ namespace Crowny
         Ref<GenericGpuBuffer> m_InstanceIDs;
         Ref<GenericGpuBuffer> m_Commands;
         Ref<GenericGpuBuffer> m_Counts;
+        Vector<uint32_t> m_RunCounts;
         GpuDrawBufferStats m_Stats;
     };
 } // namespace Crowny

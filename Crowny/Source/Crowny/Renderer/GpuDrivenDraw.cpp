@@ -10,15 +10,9 @@ namespace Crowny
 {
     namespace
     {
-        template <typename T> bool CompareValue(const T& first, const T& second)
-        {
-            return first < second;
-        }
+        template <typename T> bool CompareValue(const T& first, const T& second) { return first < second; }
 
-        uint32_t NextCapacity(uint32_t required, uint32_t minimum)
-        {
-            return std::max(std::bit_ceil(std::max(required, 1u)), minimum);
-        }
+        uint32_t NextCapacity(uint32_t required, uint32_t minimum) { return std::max(std::bit_ceil(std::max(required, 1u)), minimum); }
 
         template <typename T> void HashValue(uint32_t& hash, T value)
         {
@@ -91,8 +85,8 @@ namespace Crowny
         uint32_t commandCapacity = 0;
         if (activeBinCount != 0 && desc.MaximumDrawsPerCall != 0)
         {
-            const uint64_t maximumCapacity64 = std::min<uint64_t>(
-              desc.MaximumCommands, static_cast<uint64_t>(activeBinCount) * desc.MaximumDrawsPerCall);
+            const uint64_t maximumCapacity64 =
+              std::min<uint64_t>(desc.MaximumCommands, static_cast<uint64_t>(activeBinCount) * desc.MaximumDrawsPerCall);
             commandCapacity = static_cast<uint32_t>(maximumCapacity64);
             Vector<uint32_t> capacities(activeBinCount, 1u);
             Vector<uint32_t> remainingDemand(activeBinCount, 0u);
@@ -116,8 +110,8 @@ namespace Crowny
                 uint32_t assignedCapacity = 0;
                 for (uint32_t index = 0; index < activeBinCount; index++)
                 {
-                    const uint32_t share = static_cast<uint32_t>(static_cast<uint64_t>(remainingCapacity) * remainingDemand[index] /
-                                                                  std::max<uint64_t>(extraDemand, 1u));
+                    const uint32_t share =
+                      static_cast<uint32_t>(static_cast<uint64_t>(remainingCapacity) * remainingDemand[index] / std::max<uint64_t>(extraDemand, 1u));
                     capacities[index] += std::min(share, remainingDemand[index]);
                     assignedCapacity += std::min(share, remainingDemand[index]);
                 }
@@ -155,9 +149,14 @@ namespace Crowny
                 uint32_t lookupIndex = Hash(bin.Key) & lookupMask;
                 while (lookupEntries[lookupIndex].BinIndex != GpuDrawBinLookupEntry::InvalidBin)
                     lookupIndex = (lookupIndex + 1u) & lookupMask;
-                lookupEntries[lookupIndex] = { static_cast<uint32_t>(bin.Key.Phase), static_cast<uint32_t>(bin.Key.Alpha),
-                                               bin.Key.Pipeline, bin.Key.GeometryHeap, bin.Key.MaterialTemplate, binIndex,
-                                               bin.FirstCommand, bin.CommandCapacity };
+                lookupEntries[lookupIndex] = { static_cast<uint32_t>(bin.Key.Phase),
+                                               static_cast<uint32_t>(bin.Key.Alpha),
+                                               bin.Key.Pipeline,
+                                               bin.Key.GeometryHeap,
+                                               bin.Key.MaterialTemplate,
+                                               binIndex,
+                                               bin.FirstCommand,
+                                               bin.CommandCapacity };
             }
         }
 
@@ -213,10 +212,7 @@ namespace Crowny
         static_cast<void>(commandCount);
     }
 
-    bool GpuDrawListBuilder::IsStrictTransparent(AlphaMode alpha)
-    {
-        return alpha == AlphaMode::Premultiplied || alpha == AlphaMode::Additive;
-    }
+    bool GpuDrawListBuilder::IsStrictTransparent(AlphaMode alpha) { return alpha == AlphaMode::Premultiplied || alpha == AlphaMode::Additive; }
 
     bool GpuDrawListBuilder::IsOrderIndependent(AlphaMode alpha)
     {
@@ -225,8 +221,7 @@ namespace Crowny
 
     bool GpuDrawListBuilder::SameGeometry(const GpuDrawCandidate& first, const GpuDrawCandidate& second)
     {
-        return first.IndexCount == second.IndexCount && first.FirstIndex == second.FirstIndex &&
-               first.VertexOffset == second.VertexOffset;
+        return first.IndexCount == second.IndexCount && first.FirstIndex == second.FirstIndex && first.VertexOffset == second.VertexOffset;
     }
 
     bool GpuDrawListBuilder::BinLess(const GpuDrawBinKey& first, const GpuDrawBinKey& second)
@@ -248,6 +243,7 @@ namespace Crowny
         m_OrderIndependent.clear();
         m_StrictTransparent.clear();
         m_OrderIndependent.reserve(std::max<size_t>(m_OrderIndependent.capacity(), candidateCount));
+        m_StrictTransparent.reserve(std::max<size_t>(m_StrictTransparent.capacity(), candidateCount));
 
         for (uint32_t index = 0; candidates != nullptr && index < candidateCount; index++)
         {
@@ -260,7 +256,7 @@ namespace Crowny
                 m_OrderIndependent.push_back(entry);
         }
 
-        std::stable_sort(m_OrderIndependent.begin(), m_OrderIndependent.end(), [](const SortEntry& first, const SortEntry& second) {
+        std::sort(m_OrderIndependent.begin(), m_OrderIndependent.end(), [](const SortEntry& first, const SortEntry& second) {
             if (first.Candidate.RenderLayer != second.Candidate.RenderLayer)
                 return first.Candidate.RenderLayer < second.Candidate.RenderLayer;
             if (!(first.Candidate.Bin == second.Candidate.Bin))
@@ -273,16 +269,20 @@ namespace Crowny
                     return first.Candidate.IndexCount < second.Candidate.IndexCount;
                 return first.Candidate.VertexOffset < second.Candidate.VertexOffset;
             }
-            if (first.Candidate.ViewDepth != second.Candidate.ViewDepth)
-                return first.Candidate.ViewDepth < second.Candidate.ViewDepth;
+            if (first.Candidate.ViewDepth < second.Candidate.ViewDepth)
+                return true;
+            if (second.Candidate.ViewDepth < first.Candidate.ViewDepth)
+                return false;
             return first.StableIndex < second.StableIndex;
         });
 
-        std::stable_sort(m_StrictTransparent.begin(), m_StrictTransparent.end(), [](const SortEntry& first, const SortEntry& second) {
+        std::sort(m_StrictTransparent.begin(), m_StrictTransparent.end(), [](const SortEntry& first, const SortEntry& second) {
             if (first.Candidate.RenderLayer != second.Candidate.RenderLayer)
                 return first.Candidate.RenderLayer < second.Candidate.RenderLayer;
-            if (first.Candidate.ViewDepth != second.Candidate.ViewDepth)
-                return first.Candidate.ViewDepth > second.Candidate.ViewDepth;
+            if (first.Candidate.ViewDepth > second.Candidate.ViewDepth)
+                return true;
+            if (second.Candidate.ViewDepth > first.Candidate.ViewDepth)
+                return false;
             return first.StableIndex < second.StableIndex;
         });
 
@@ -351,12 +351,12 @@ namespace Crowny
         }
         if (!list.Runs.empty())
         {
-            Vector<uint32_t> counts;
-            counts.reserve(list.Runs.size());
+            m_RunCounts.clear();
+            m_RunCounts.reserve(list.Runs.size());
             for (const GpuDrawRun& run : list.Runs)
-                counts.push_back(run.CommandCount);
-            const uint32_t size = static_cast<uint32_t>(counts.size() * sizeof(uint32_t));
-            m_Counts->WriteData(0, size, counts.data(), BWT_NORMAL);
+                m_RunCounts.push_back(run.CommandCount);
+            const uint32_t size = static_cast<uint32_t>(m_RunCounts.size() * sizeof(uint32_t));
+            m_Counts->WriteData(0, size, m_RunCounts.data(), BWT_NORMAL);
             m_Stats.UploadedBytes += size;
         }
     }
@@ -366,6 +366,7 @@ namespace Crowny
         m_InstanceIDs = nullptr;
         m_Commands = nullptr;
         m_Counts = nullptr;
+        Vector<uint32_t>().swap(m_RunCounts);
         m_Stats = {};
     }
 

@@ -5,8 +5,8 @@
 #include "Crowny/Ecs/Components.h"
 #include "Crowny/Memory/FrameVector.h"
 #include "Crowny/RenderAPI/RenderTarget.h"
-#include "Crowny/Renderer/EnvironmentMap.h"
 #include "Crowny/Renderer/DirectionalShadowCascades.h"
+#include "Crowny/Renderer/EnvironmentMap.h"
 #include "Crowny/Renderer/Material.h"
 #include "Crowny/Renderer/Mesh.h"
 #include "Crowny/Renderer/RenderResourceChanges.h"
@@ -70,7 +70,11 @@ namespace Crowny
             return first.SortingLayer < second.SortingLayer;
         if (first.OrderInLayer != second.OrderInLayer)
             return first.OrderInLayer < second.OrderInLayer;
-        return first.StableOrder < second.StableOrder;
+        if (first.StableOrder != second.StableOrder)
+            return first.StableOrder < second.StableOrder;
+        if (first.Type != second.Type)
+            return first.Type < second.Type;
+        return first.Index < second.Index;
     }
 
     struct DirectionalShadowRenderData
