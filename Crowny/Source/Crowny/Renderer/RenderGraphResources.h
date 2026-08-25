@@ -66,6 +66,8 @@ namespace Crowny
         uint32_t RenderTargetAllocations = 0;
         uint32_t RenderTargetCacheHits = 0;
         uint32_t AllocationFailures = 0;
+        uint32_t FramePhysicalScratchGrowths = 0;
+        size_t FramePhysicalScratchCapacity = 0;
     };
 
     struct RenderGraphRenderTargetDesc
@@ -162,11 +164,13 @@ namespace Crowny
         UnorderedMap<uint64_t, UnorderedMap<uint64_t, HistoryEntry>> m_History;
         UnorderedMap<uint64_t, PhysicalResource> m_PhysicalResources;
         UnorderedMap<RenderTargetKey, Ref<RenderTarget>, RenderTargetKeyHash> m_RenderTargets;
+        UnorderedMap<uint64_t, uint64_t> m_FramePhysicalIds;
         Vector<RenderGraphResourceBinding> m_Bindings;
         const RenderGraphCompileResult* m_CurrentGraph = nullptr;
         uint64_t m_CurrentFrame = 0;
         uint64_t m_CurrentHistoryNamespace = 0;
         uint64_t m_NextPhysicalId = 1;
+        size_t m_FramePhysicalScratchCapacity = 0;
         bool m_FrameAllocationFailed = false;
         String m_AllocationError;
         RenderGraphResourceRegistryStats m_Stats;

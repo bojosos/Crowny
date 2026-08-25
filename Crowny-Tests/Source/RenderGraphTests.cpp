@@ -292,6 +292,15 @@ TEST_CASE("RenderGraph registry preserves transient aliasing within a frame", "[
     RenderGraphResourceRegistry resources;
     REQUIRE(resources.BeginFrame(compiled, 1, 1));
     CHECK(resources.Get(first).PhysicalId == resources.Get(second).PhysicalId);
+    const RenderGraphResourceRegistryStats firstFrameStats = resources.GetStats();
+    CHECK(firstFrameStats.FramePhysicalScratchCapacity >= 1);
+    CHECK(firstFrameStats.FramePhysicalScratchGrowths == 1);
+    resources.EndFrame();
+
+    REQUIRE(resources.BeginFrame(compiled, 3, 1));
+    CHECK(resources.Get(first).PhysicalId == resources.Get(second).PhysicalId);
+    CHECK(resources.GetStats().FramePhysicalScratchCapacity == firstFrameStats.FramePhysicalScratchCapacity);
+    CHECK(resources.GetStats().FramePhysicalScratchGrowths == firstFrameStats.FramePhysicalScratchGrowths);
     resources.EndFrame();
 }
 

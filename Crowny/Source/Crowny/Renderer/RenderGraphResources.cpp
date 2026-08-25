@@ -105,11 +105,18 @@ namespace Crowny
         if (m_Allocator != nullptr)
             m_Allocator->BeginFrame(frameNumber);
         Vector<TransientSlot>& transientSlots = m_TransientFrames[frameNumber % m_FramesInFlight];
-        for (size_t slotIndex = graph.PhysicalTextureCount + graph.PhysicalBufferCount;
-             slotIndex < transientSlots.size(); slotIndex++)
+        const size_t transientSlotCount = static_cast<size_t>(graph.PhysicalTextureCount) + graph.PhysicalBufferCount;
+        for (size_t slotIndex = transientSlotCount; slotIndex < transientSlots.size(); slotIndex++)
             ReleasePhysicalResource(transientSlots[slotIndex].PhysicalId);
-        transientSlots.resize(graph.PhysicalTextureCount + graph.PhysicalBufferCount);
-        UnorderedMap<uint64_t, uint64_t> framePhysicalIds;
+        transientSlots.resize(transientSlotCount);
+        m_FramePhysicalIds.clear();
+        if (transientSlotCount > m_FramePhysicalScratchCapacity)
+        {
+            m_FramePhysicalIds.reserve(transientSlotCount);
+            m_FramePhysicalScratchCapacity = transientSlotCount;
+            m_Stats.FramePhysicalScratchGrowths++;
+            m_Stats.FramePhysicalScratchCapacity = m_FramePhysicalScratchCapacity;
+        }
 
         for (const RenderGraphResourceInfo& resource : graph.Resources)
         {
@@ -127,16 +134,16 @@ namespace Crowny
             if (resource.Desc.Lifetime == RenderGraphResourceLifetime::Transient)
             {
                 const uint64_t frameKey = (static_cast<uint64_t>(resource.Desc.Type) << 32u) | resource.PhysicalIndex;
-                const auto existing = framePhysicalIds.find(frameKey);
-                if (existing != framePhysicalIds.end())
+                const auto existing = m_FramePhysicalIds.find(frameKey);
+                if (existing != m_FramePhysicalIds.end())
                 {
                     binding.PhysicalId = existing->second;
                     continue;
                 }
 
-                const uint32_t slotIndex = resource.Desc.Type == RenderGraphResourceType::Texture
-                                             ? resource.PhysicalIndex
-                                             : graph.PhysicalTextureCount + resource.PhysicalIndex;
+                const size_t slotIndex = resource.Desc.Type == RenderGraphResourceType::Texture
+                                           ? resource.PhysicalIndex
+                                           : static_cast<size_t>(graph.PhysicalTextureCount) + resource.PhysicalIndex;
                 CW_ENGINE_ASSERT(slotIndex < transientSlots.size(), "Invalid transient physical index");
                 TransientSlot& slot = transientSlots[slotIndex];
                 if (!slot.Initialized || !DescriptorsMatch(slot.Desc, resource.Desc))
@@ -149,7 +156,7 @@ namespace Crowny
                 }
                 binding.PhysicalId = slot.PhysicalId;
                 RegisterPhysicalResource(binding.PhysicalId, resource);
-                framePhysicalIds.emplace(frameKey, binding.PhysicalId);
+                m_FramePhysicalIds.emplace(frameKey, binding.PhysicalId);
                 continue;
             }
 
@@ -219,11 +226,13 @@ namespace Crowny
         m_History.clear();
         m_PhysicalResources.clear();
         m_RenderTargets.clear();
+        m_FramePhysicalIds = {};
         m_Bindings.clear();
         m_CurrentGraph = nullptr;
         m_CurrentFrame = 0;
         m_CurrentHistoryNamespace = 0;
         m_NextPhysicalId = 1;
+        m_FramePhysicalScratchCapacity = 0;
         m_FrameAllocationFailed = false;
         m_AllocationError.clear();
         m_Stats = {};
