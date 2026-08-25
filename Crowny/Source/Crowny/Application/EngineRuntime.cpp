@@ -136,6 +136,16 @@ namespace Crowny
             ServiceShutdownActions.reserve(10);
         }
 
+        void DrainTaskSystem()
+        {
+            if (TaskSystemDrained)
+                return;
+
+            TaskSystemDrained = true;
+            if (OwnsTaskSystem && TaskSystem::IsStartedUp())
+                TaskSystem::Get().Drain();
+        }
+
         ApplicationDesc Description;
         Vector<ShutdownAction> FinalShutdownActions;
         Vector<ShutdownAction> RenderAPIShutdownActions;
@@ -144,7 +154,9 @@ namespace Crowny
         bool Started = false;
         bool RendererStarted = false;
         bool RendererResourcesStarted = false;
+        bool OwnsTaskSystem = false;
         bool OwnsSceneManager = false;
+        bool TaskSystemDrained = false;
     };
 
     EngineRuntime::EngineRuntime(const ApplicationDesc& applicationDesc) : m_State(CreateScope<State>(applicationDesc)) {}
@@ -182,7 +194,7 @@ namespace Crowny
         }
 
         StartOwnedModule<StringIDTable>(m_State->CoreShutdownActions);
-        StartOwnedModule<TaskSystem>(m_State->CoreShutdownActions);
+        m_State->OwnsTaskSystem = StartOwnedModule<TaskSystem>(m_State->CoreShutdownActions);
         StartOwnedModule<Importer>(m_State->CoreShutdownActions);
         Importer::RegisterBuiltinImporters();
         StartOwnedModule<AssetListenerManager>(m_State->CoreShutdownActions);
@@ -370,11 +382,16 @@ namespace Crowny
     {
         if (m_State->OwnsSceneManager && SceneManager::IsStartedUp())
             SceneManager::Get().Stop();
+        m_State->DrainTaskSystem();
         RunShutdownActions(m_State->ServiceShutdownActions);
         m_State->OwnsSceneManager = false;
     }
 
-    void EngineRuntime::ShutdownCoreServices() { RunShutdownActions(m_State->CoreShutdownActions); }
+    void EngineRuntime::ShutdownCoreServices()
+    {
+        m_State->DrainTaskSystem();
+        RunShutdownActions(m_State->CoreShutdownActions);
+    }
 
     void EngineRuntime::ShutdownRenderAPI()
     {

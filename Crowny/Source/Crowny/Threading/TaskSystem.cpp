@@ -319,6 +319,15 @@ namespace Crowny
         if (!task)
             throw std::invalid_argument("Cannot submit a null task");
 
+        std::function<void()> submitHook;
+        if (m_HasBeforeSubmitForTests.load(std::memory_order_acquire))
+        {
+            Lock lock(m_TestHookMutex);
+            submitHook = m_BeforeSubmitForTests;
+        }
+        if (submitHook)
+            submitHook();
+
         TaskStatus dependencyStatus = TaskStatus::Succeeded;
         std::exception_ptr dependencyFailure;
         bool ready = false;
@@ -501,6 +510,7 @@ namespace Crowny
                 for (uint32_t index = 1; index < runnerCount; index++)
                 {
                     std::function<void()> submitHook;
+                    if (m_HasBeforeParallelRunnerSubmitForTests.load(std::memory_order_acquire))
                     {
                         Lock lock(m_TestHookMutex);
                         submitHook = m_BeforeParallelRunnerSubmitForTests;
@@ -847,9 +857,18 @@ namespace Crowny
         s_CurrentWorkerSystem = nullptr;
     }
 
+    void TaskSystemTestAccess::SetBeforeSubmit(TaskSystem& taskSystem, std::function<void()> hook)
+    {
+        Lock lock(taskSystem.m_TestHookMutex);
+        taskSystem.m_BeforeSubmitForTests = std::move(hook);
+        taskSystem.m_HasBeforeSubmitForTests.store(static_cast<bool>(taskSystem.m_BeforeSubmitForTests), std::memory_order_release);
+    }
+
     void TaskSystemTestAccess::SetBeforeParallelRunnerSubmit(TaskSystem& taskSystem, std::function<void()> hook)
     {
         Lock lock(taskSystem.m_TestHookMutex);
         taskSystem.m_BeforeParallelRunnerSubmitForTests = std::move(hook);
+        taskSystem.m_HasBeforeParallelRunnerSubmitForTests.store(static_cast<bool>(taskSystem.m_BeforeParallelRunnerSubmitForTests),
+                                                                 std::memory_order_release);
     }
 } // namespace Crowny

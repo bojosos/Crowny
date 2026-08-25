@@ -195,6 +195,9 @@ namespace Crowny
         Mutex m_WaitGraphMutex;
         UnorderedMap<Task*, Task*> m_WaitEdges;
         Mutex m_TestHookMutex;
+        std::atomic<bool> m_HasBeforeSubmitForTests{ false };
+        std::atomic<bool> m_HasBeforeParallelRunnerSubmitForTests{ false };
+        std::function<void()> m_BeforeSubmitForTests;
         std::function<void()> m_BeforeParallelRunnerSubmitForTests;
         std::shared_ptr<TaskSchedulerControl> m_Control;
         std::atomic<Lifecycle> m_Lifecycle{ Lifecycle::Accepting };
@@ -206,6 +209,7 @@ namespace Crowny
     class TaskSystemTestAccess
     {
     public:
+        static void SetBeforeSubmit(TaskSystem& taskSystem, std::function<void()> hook);
         static void SetBeforeParallelRunnerSubmit(TaskSystem& taskSystem, std::function<void()> hook);
     };
 } // namespace Crowny

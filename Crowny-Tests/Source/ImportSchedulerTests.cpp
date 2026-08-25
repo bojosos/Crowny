@@ -12,6 +12,7 @@
 #include <fstream>
 #include <future>
 #include <mutex>
+#include <stdexcept>
 #include <thread>
 
 using namespace Crowny;
@@ -49,6 +50,26 @@ namespace
         std::condition_variable m_Changed;
         uint32_t m_Entered = 0;
         bool m_Open = false;
+    };
+
+    class SubmitHookGuard
+    {
+    public:
+        explicit SubmitHookGuard(std::function<void()> hook) { TaskSystemTestAccess::SetBeforeSubmit(TaskSystem::Get(), std::move(hook)); }
+
+        ~SubmitHookGuard() { Reset(); }
+
+        void Reset()
+        {
+            if (!m_Active)
+                return;
+            m_Active = false;
+            if (TaskSystem::IsStartedUp())
+                TaskSystemTestAccess::SetBeforeSubmit(TaskSystem::Get(), {});
+        }
+
+    private:
+        bool m_Active = true;
     };
 
     class TestAsset final : public Asset
@@ -155,7 +176,7 @@ namespace
             Log::Init("CrownyTests");
             if (!TaskSystem::IsStartedUp())
             {
-                TaskSystem::StartUp();
+                TaskSystem::StartUp(3);
                 m_OwnsTaskSystem = true;
             }
             if (!Importer::IsStartedUp())
@@ -171,6 +192,8 @@ namespace
 
         ~SchedulerFixture()
         {
+            if (m_OwnsTaskSystem && TaskSystem::IsStartedUp())
+                TaskSystem::Get().Drain();
             if (m_OwnsImporter)
                 Importer::Shutdown();
             if (m_OwnsTaskSystem)
@@ -227,8 +250,8 @@ TEST_CASE_METHOD(SchedulerFixture, "Main-thread-only imports use main-thread imp
     const std::thread::id mainThread = std::this_thread::get_id();
     std::atomic<uint32_t> initCount{ 0 };
     std::thread::id initThread;
-    ControlledImporter* importer = RegisterImporter("main", ImporterThreadingPolicy::MainThreadOnly,
-                                                     [&](const Path&) { return CreateRef<TestAsset>(&initCount, &initThread); });
+    ControlledImporter* importer =
+      RegisterImporter("main", ImporterThreadingPolicy::MainThreadOnly, [&](const Path&) { return CreateRef<TestAsset>(&initCount, &initThread); });
 
     ImportScheduler scheduler;
     scheduler.Schedule({ CreateTask(CreateFile("asset.main")) });
@@ -362,8 +385,7 @@ TEST_CASE_METHOD(SchedulerFixture, "Import results publish once in input order i
     });
 
     CHECK(sequences == Vector<uint64_t>{ 0, 1, 2 });
-    CHECK(statuses == Vector<ImportResultStatus>{ ImportResultStatus::Succeeded, ImportResultStatus::Failed,
-                                                 ImportResultStatus::Succeeded });
+    CHECK(statuses == Vector<ImportResultStatus>{ ImportResultStatus::Succeeded, ImportResultStatus::Failed, ImportResultStatus::Succeeded });
     CHECK(importer->GetCallCount("asset0.ordered") == 1);
     CHECK(importer->GetCallCount("asset1.ordered") == 1);
     CHECK(importer->GetCallCount("asset2.ordered") == 1);
@@ -399,8 +421,8 @@ TEST_CASE_METHOD(SchedulerFixture, "Shutdown waits for active import lanes and d
 
 TEST_CASE_METHOD(SchedulerFixture, "Empty, single-file, and repeated import batches complete", "[Editor][ImportScheduler]")
 {
-    ControlledImporter* importer = RegisterImporter("repeat", ImporterThreadingPolicy::ParallelWorker,
-                                                     [](const Path&) { return CreateRef<TestAsset>(); });
+    ControlledImporter* importer =
+      RegisterImporter("repeat", ImporterThreadingPolicy::ParallelWorker, [](const Path&) { return CreateRef<TestAsset>(); });
     ImportScheduler scheduler(2);
 
     scheduler.Schedule({});
@@ -448,4 +470,70 @@ TEST_CASE_METHOD(SchedulerFixture, "Progress snapshots remain consistent during 
     reader.join();
     CHECK(snapshotsValid.load(std::memory_order_acquire));
     CHECK(scheduler.GetProgress().CompletedFiles == 2);
+}
+
+TEST_CASE_METHOD(SchedulerFixture, "Rejected worker-lane submission publishes failed imports", "[Editor][ImportScheduler]")
+{
+    ControlledImporter* importer =
+      RegisterImporter("rejected", ImporterThreadingPolicy::ParallelWorker, [](const Path&) { return CreateRef<TestAsset>(); });
+    std::atomic<uint32_t> submitAttempts{ 0 };
+    SubmitHookGuard submitHook([&]() {
+        submitAttempts.fetch_add(1, std::memory_order_acq_rel);
+        throw std::runtime_error("forced lane rejection");
+    });
+
+    ImportScheduler scheduler(2);
+    scheduler.Schedule({ CreateTask(CreateFile("first.rejected")), CreateTask(CreateFile("second.rejected")) });
+    submitHook.Reset();
+
+    Vector<ImportResultStatus> statuses;
+    Drain(scheduler, [&](const ImportResult& result) { statuses.push_back(result.Status); });
+
+    CHECK(submitAttempts.load(std::memory_order_acquire) == 1);
+    CHECK(statuses == Vector<ImportResultStatus>{ ImportResultStatus::Failed, ImportResultStatus::Failed });
+    CHECK(importer->GetCallCount() == 0);
+    CHECK(scheduler.GetWorkerLaneLimit() == 0);
+}
+
+TEST_CASE_METHOD(SchedulerFixture, "Partially accepted worker lanes roll the batch back to failed imports", "[Editor][ImportScheduler]")
+{
+    RegisterImporter("partial", ImporterThreadingPolicy::ParallelWorker, [](const Path&) { return CreateRef<TestAsset>(); });
+
+    std::atomic<uint32_t> submitAttempts{ 0 };
+    SubmitHookGuard submitHook([&]() {
+        if (submitAttempts.fetch_add(1, std::memory_order_acq_rel) + 1 == 2)
+            throw std::runtime_error("forced second-lane rejection");
+    });
+
+    ImportScheduler scheduler(2);
+    Vector<ImportTask> tasks;
+    for (uint32_t index = 0; index < 4; index++)
+        tasks.push_back(CreateTask(CreateFile("asset" + std::to_string(index) + ".partial")));
+    scheduler.Schedule(std::move(tasks));
+    submitHook.Reset();
+
+    Vector<ImportResultStatus> statuses;
+    Drain(scheduler, [&](const ImportResult& result) { statuses.push_back(result.Status); });
+
+    CHECK(submitAttempts.load(std::memory_order_acquire) == 2);
+    CHECK(statuses == Vector<ImportResultStatus>(4, ImportResultStatus::Failed));
+    CHECK(scheduler.GetWorkerLaneLimit() == 0);
+}
+
+TEST_CASE_METHOD(SchedulerFixture, "Throwing importers publish failed results without escaping", "[Editor][ImportScheduler]")
+{
+    ControlledImporter* mainThreadImporter =
+      RegisterImporter("throwmain", ImporterThreadingPolicy::MainThreadOnly, [](const Path&) -> Ref<Asset> { throw std::runtime_error("main"); });
+    ControlledImporter* workerImporter =
+      RegisterImporter("throwworker", ImporterThreadingPolicy::ParallelWorker, [](const Path&) -> Ref<Asset> { throw std::runtime_error("worker"); });
+
+    ImportScheduler scheduler(2);
+    scheduler.Schedule({ CreateTask(CreateFile("first.throwmain")), CreateTask(CreateFile("second.throwworker")) });
+
+    Vector<ImportResultStatus> statuses;
+    Drain(scheduler, [&](const ImportResult& result) { statuses.push_back(result.Status); });
+
+    CHECK(statuses == Vector<ImportResultStatus>{ ImportResultStatus::Failed, ImportResultStatus::Failed });
+    CHECK(mainThreadImporter->GetCallCount() == 1);
+    CHECK(workerImporter->GetCallCount() == 1);
 }
