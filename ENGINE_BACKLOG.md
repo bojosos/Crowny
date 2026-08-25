@@ -5,7 +5,7 @@ This is the durable record of the requested engine work. A checked item is merge
 ## Current priorities
 
 - [ ] Eliminate steady-state per-frame allocations after warm-up. Start with scene extraction generation stamps, render-graph scratch reuse, draw/shadow preparation, editor selection copies, material lookup copies, and animation upload closures. Measure 1, 1,000, and 10,000 entities.
-- [ ] Harden `TaskSystem`: continuation-based dependencies, exception propagation, cancellation, shutdown sealing/drain, scheduler generations, fair priority queues, bounded `ParallelFor`, and one shared CPU budget with Jolt.
+- [x] Harden `TaskSystem`: continuation-based dependencies, exception propagation, cancellation, shutdown sealing/drain, scheduler generations, fair priority queues, and bounded `ParallelFor`. A shared CPU budget with Jolt remains part of the 3D physics integration.
 - [ ] Finish the shippable-game pipeline around the committed build primitives: orchestrate validate, resolve, compile, pack, template stage, manifest, atomic publish, editor UI, CLI, progress, cancellation, incremental cache, and build-and-run.
 - [ ] Keep startup and shutdown clean under ASan, Vulkan validation, and VMA leak reporting. The editor should open almost immediately in Release.
 
@@ -21,6 +21,15 @@ This is the durable record of the requested engine work. A checked item is merge
 - [x] Ranked multithreading audit and sequencing guidance (`67e60c3`).
 - [x] Windows ASan full suite: 25,349 assertions in 346 cases. Build tests: 174 assertions in 37 cases. Real Mono/Roslyn compile, PE inspection, and dependency closure pass.
 - [x] Vulkan and OpenGL reference-image harness passed 4/4 for each backend; Vulkan shutdown completed without the previously reported 15 VMA allocations.
+- [x] Task scheduling now has continuation dependencies, exception propagation, cooperative cancellation, generation checks, strict timed waits, wait-cycle rejection, fair 8:4:1 priorities, bounded/fail-fast `ParallelFor`, and sealed drain/cancel shutdown (`8745408`). Import scheduling and asset previews handle scheduler rejection without stranding work.
+- [x] Editor viewport/component inspection reuses retained selection and transform scratch storage and avoids temporary quick-tab label containers in steady-state UI paths (`537e2e6`).
+- [x] Player-build orchestration validates, fingerprints, resolves, compiles, packs, stages, writes, and recoverably publishes a build with complete artifact readback and journal-based last-good restoration (`da625cb`). Editor UI, CLI, incremental cache, and build-and-run remain open.
+- [x] Post-rebase Windows ASan verification passed 25,634 assertions in 386 cases; focused TaskSystem, build-pipeline, and import-scheduler suites passed 157/136/48 assertions respectively.
+- [x] GPU draw-bin compaction registers stable command/count segments and feeds GPU-driven indirect submission without readback, while preserving baseline/OpenGL fallbacks (`2420a66`).
+- [x] Engine shutdown drains owned task work before scene, scripting, importer, and asset consumers are destroyed; import rejection and exception paths are deterministic and do not poison the shared scheduler (`c2971ad`).
+- [x] The editor build manager maps platform settings and exact content/managed/template inputs into the recoverable player pipeline with actionable preflight and cancellation reports (`16b7f06`). Final Build button input gathering and progress UI remain open.
+- [x] Hierarchy search reuses match/path/action scratch storage and avoids per-entity lowercase/name copies (`b48d089`).
+- [x] Two randomized Windows ASan full-suite passes completed with 25,685 assertions in 394 cases; focused TaskSystem, import-scheduler, and editor-build suites passed 157/58/42 assertions respectively.
 
 ## Physics and ECS
 
@@ -39,6 +48,7 @@ This is the durable record of the requested engine work. A checked item is merge
 - [ ] Finish Vulkan correctness, shutdown ordering, Intel-driver hang diagnosis, synchronization, descriptor/resource lifetimes, and performance. Prefer bug fixes and optimization over new Vulkan features.
 - [ ] Finish the OpenGL backend to behavioral parity for supported features, including clean startup/shutdown and renderer harness coverage.
 - [ ] Complete shader parsing, GLSL preprocessing, includes, stages, passes, variations, cache keys, reflection, diagnostics, hot reload, and backend parity. Parallelize independent variants only after TaskSystem hardening.
+- [ ] Persist canonical transitive shader-include dependencies and a combined content fingerprint. Built-in shader freshness currently checks the root source only, so shared PBR, clustered-lighting, or shadow include edits can remain stale after restart.
 - [ ] Package built-in shaders, textures, fonts, icons, and fallback assets into a versioned built-in resource pack. Keep source development and hot reload convenient.
 - [ ] Expand rendering statistics: FPS, CPU/GPU frame time, vertices, triangles, draw/dispatch calls, culled instances, shadow work, upload bytes, descriptor use, geometry-heap occupancy, and frame-allocation counts.
 - [ ] Unify entity picking without adding an entity ID output to every material shader. Make readback asynchronous, bounds-safe, generation-checked, and fast for large scenes.
