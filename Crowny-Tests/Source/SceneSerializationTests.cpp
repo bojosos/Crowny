@@ -350,7 +350,8 @@ TEST_CASE("Missing managed scripts round-trip with exact identity and fields", "
     }
 }
 
-TEST_CASE("Retained script state applies when its managed type becomes available", "[Serialization][Scripting][PersistedState][Reload]")
+TEST_CASE("Retained script state applies when its managed type becomes available",
+          "[Serialization][Scripting][PersistedState][Reload][.ProcessIsolated]")
 {
     SerializationTestFixture fixture;
     const Path engineAssemblyPath = fs::absolute("Crowny-Sharp/CrownySharp.dll");

@@ -71,6 +71,10 @@ jobs:
           test_binary=./bin/Release-linux-x86_64/Crowny-Tests/Crowny-Tests
           echo "Running focused Mono tests with a 90-second deadline"
           stdbuf -oL -eL timeout --signal=TERM --kill-after=15s 90s "$test_binary" "[Mono]" --reporter console --durations yes
+          echo "Running the process-isolated managed reload test with a 90-second deadline"
+          stdbuf -oL -eL timeout --signal=TERM --kill-after=15s 90s "$test_binary" \
+            "[.ProcessIsolated]" \
+            --reporter console --durations yes
           echo "Running the full native suite with a 10-minute deadline"
           stdbuf -oL -eL timeout --signal=TERM --kill-after=15s 10m "$test_binary" --reporter console --durations yes
 
@@ -137,6 +141,13 @@ jobs:
 
       - name: Run Tests
         shell: bash
+        timeout-minutes: 15
         run: |
           export PATH=$PATH:$PWD/.deps/openal/bin
-          ./bin/Release-windows-x86_64/Crowny-Tests/Crowny-Tests.exe
+          test_binary=./bin/Release-windows-x86_64/Crowny-Tests/Crowny-Tests.exe
+          echo "Running the process-isolated managed reload test with a 90-second deadline"
+          timeout --signal=TERM --kill-after=15s 90s "$test_binary" \
+            "[.ProcessIsolated]" \
+            --reporter console --durations yes
+          echo "Running the full native suite"
+          "$test_binary"
