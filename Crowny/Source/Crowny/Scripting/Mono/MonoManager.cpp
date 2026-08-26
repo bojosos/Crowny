@@ -17,6 +17,8 @@
 #include <mono/metadata/threads.h>
 #include <mono/utils/mono-logger.h>
 
+#include <cstdlib>
+
 namespace Crowny
 {
 
@@ -114,6 +116,15 @@ namespace Crowny
     MonoManager::MonoManager(const Path& libDir, const Path& etcDir, uint32_t debugPort)
       : m_ScriptDomain(nullptr), m_RootDomain(nullptr), m_CorlibAssembly(nullptr), m_LibDir(libDir), m_EtcDir(etcDir)
     {
+#if defined(CW_PLATFORM_LINUX)
+        // Mono 6.x hybrid suspension can enter an invalid cooperative state while
+        // an embedded runtime creates its assembly/debugger support threads. The
+        // documented preemptive mode avoids requiring GC-transition annotations
+        // in the native host. Preserve an explicit environment override.
+        if (std::getenv("MONO_THREADS_SUSPEND") == nullptr)
+            ::setenv("MONO_THREADS_SUSPEND", "preemptive", 0);
+#endif
+
         /*
         if (Application::TryGet()->GetApplicationDesc().Script.EnableProfiling)
         {
