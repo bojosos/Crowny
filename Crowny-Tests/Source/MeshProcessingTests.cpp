@@ -2,6 +2,8 @@
 
 #include "Crowny/Renderer/MeshProcessing.h"
 
+#include <limits>
+
 using namespace Crowny;
 
 namespace
@@ -84,5 +86,58 @@ TEST_CASE("Mesh processing output is deterministic", "[Renderer][MeshProcessing]
         CHECK(first.Meshlets[index].TriangleOffset == second.Meshlets[index].TriangleOffset);
         CHECK(first.Meshlets[index].BoundingSphere == second.Meshlets[index].BoundingSphere);
         CHECK(first.Meshlets[index].NormalCone == second.Meshlets[index].NormalCone);
+    }
+}
+
+TEST_CASE("Mesh processing rejects malformed geometry without reading out of bounds", "[Renderer][MeshProcessing]")
+{
+    MeshProcessingSettings settings;
+    settings.LodCount = 1;
+
+    SECTION("overflowing submesh ranges are skipped while valid material slots survive")
+    {
+        const Ref<MeshData> grid = CreateGrid(1);
+        const Vector<SubMesh> subMeshes{ SubMesh(std::numeric_limits<uint32_t>::max() - 2u, 6, DrawMode::TRIANGLE_LIST),
+                                         SubMesh(0, grid->GetIndexCount(), DrawMode::TRIANGLE_LIST) };
+        const MeshGpuGeometry geometry = MeshProcessing::BuildGpuGeometry(*grid, subMeshes, settings);
+
+        REQUIRE(geometry.Lods.size() == 1);
+        REQUIRE(geometry.LodSubMeshes.size() == 1);
+        CHECK(geometry.LodSubMeshes[0].MaterialSlot == 1);
+        REQUIRE_FALSE(geometry.Meshlets.empty());
+        for (const Meshlet& meshlet : geometry.Meshlets)
+            CHECK(meshlet.MaterialSlot == 1);
+    }
+
+    SECTION("out-of-range vertex indices reject the affected submesh")
+    {
+        const Ref<MeshData> grid = CreateGrid(1);
+        Vector<uint32_t> indices = grid->GetIndices();
+        indices[2] = grid->GetVertexCount();
+        grid->SetIndices(indices);
+
+        const MeshGpuGeometry geometry =
+          MeshProcessing::BuildGpuGeometry(*grid, { SubMesh(0, grid->GetIndexCount(), DrawMode::TRIANGLE_LIST) }, settings);
+        CHECK(geometry.IsEmpty());
+        CHECK(geometry.LodIndices.empty());
+        CHECK(geometry.Meshlets.empty());
+    }
+
+    SECTION("partial triangles are rejected")
+    {
+        const Ref<MeshData> grid = CreateGrid(1);
+        const MeshGpuGeometry geometry = MeshProcessing::BuildGpuGeometry(*grid, { SubMesh(0, 4, DrawMode::TRIANGLE_LIST) }, settings);
+        CHECK(geometry.IsEmpty());
+    }
+
+    SECTION("non-finite positions are rejected before meshoptimizer sees them")
+    {
+        const Ref<MeshData> grid = CreateGrid(1);
+        Vector<glm::vec3> positions = grid->GetPositions();
+        positions[0].x = std::numeric_limits<float>::quiet_NaN();
+        grid->SetPositions(positions);
+
+        const MeshGpuGeometry geometry = MeshProcessing::BuildGpuGeometry(*grid, {}, settings);
+        CHECK(geometry.IsEmpty());
     }
 }

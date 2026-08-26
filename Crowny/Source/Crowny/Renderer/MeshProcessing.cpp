@@ -8,6 +8,56 @@ namespace Crowny
 {
     namespace
     {
+        struct ValidatedSubMesh
+        {
+            SubMesh Geometry;
+            uint32_t MaterialSlot = 0;
+        };
+
+        bool HasFinitePositions(const Vector<glm::vec3>& positions)
+        {
+            for (const glm::vec3& position : positions)
+            {
+                if (!std::isfinite(position.x) || !std::isfinite(position.y) || !std::isfinite(position.z))
+                    return false;
+            }
+            return true;
+        }
+
+        bool ValidateSubMesh(const SubMesh& subMesh, uint32_t materialSlot, const Vector<uint32_t>& indices, uint32_t vertexCount)
+        {
+            if (subMesh.MeshDrawMode != DrawMode::TRIANGLE_LIST)
+                return false;
+
+            if (subMesh.IndexCount < 3 || subMesh.IndexCount % 3 != 0)
+            {
+                CW_ENGINE_WARN("Skipping mesh-processing submesh {} because its index count {} does not describe complete triangles.",
+                               materialSlot, subMesh.IndexCount);
+                return false;
+            }
+
+            const size_t indexOffset = subMesh.IndexOffset;
+            const size_t indexCount = subMesh.IndexCount;
+            if (indexOffset > indices.size() || indexCount > indices.size() - indexOffset)
+            {
+                const uint64_t indexEnd = static_cast<uint64_t>(subMesh.IndexOffset) + subMesh.IndexCount;
+                CW_ENGINE_WARN("Skipping mesh-processing submesh {} because index range [{}, {}) exceeds the {} available indices.",
+                               materialSlot, indexOffset, indexEnd, indices.size());
+                return false;
+            }
+
+            for (size_t index = indexOffset; index < indexOffset + indexCount; index++)
+            {
+                if (indices[index] >= vertexCount)
+                {
+                    CW_ENGINE_WARN("Skipping mesh-processing submesh {} because index {} references vertex {}, but the mesh has {} vertices.",
+                                   materialSlot, index - indexOffset, indices[index], vertexCount);
+                    return false;
+                }
+            }
+            return true;
+        }
+
         void BuildMeshlets(MeshGpuGeometry& result, MeshLod& lod, const Vector<uint32_t>& indices, uint32_t materialSlot,
                            float lodError, const Vector<glm::vec3>& positions, const MeshProcessingSettings& settings)
         {
@@ -77,8 +127,32 @@ namespace Crowny
 
         const Vector<glm::vec3> positions = meshData.GetPositions();
         const Vector<uint32_t> sourceIndices = meshData.GetIndices();
-        const Vector<SubMesh> subMeshes =
-          sourceSubMeshes.empty() ? Vector<SubMesh>{ SubMesh(0, meshData.GetIndexCount(), DrawMode::TRIANGLE_LIST) } : sourceSubMeshes;
+        if (positions.size() != meshData.GetVertexCount() || sourceIndices.size() != meshData.GetIndexCount() || !HasFinitePositions(positions))
+        {
+            CW_ENGINE_WARN("Skipping mesh processing because the CPU mesh data is incomplete or contains non-finite positions.");
+            return result;
+        }
+
+        Vector<ValidatedSubMesh> subMeshes;
+        if (sourceSubMeshes.empty())
+        {
+            const SubMesh fallback(0, meshData.GetIndexCount(), DrawMode::TRIANGLE_LIST);
+            if (ValidateSubMesh(fallback, 0, sourceIndices, meshData.GetVertexCount()))
+                subMeshes.push_back({ fallback, 0 });
+        }
+        else
+        {
+            subMeshes.reserve(sourceSubMeshes.size());
+            for (uint32_t materialSlot = 0; materialSlot < sourceSubMeshes.size(); materialSlot++)
+            {
+                const SubMesh& subMesh = sourceSubMeshes[materialSlot];
+                if (ValidateSubMesh(subMesh, materialSlot, sourceIndices, meshData.GetVertexCount()))
+                    subMeshes.push_back({ subMesh, materialSlot });
+            }
+        }
+        if (subMeshes.empty())
+            return result;
+
         const float simplifyScale = meshopt_simplifyScale(&positions[0].x, positions.size(), sizeof(glm::vec3));
 
         uint32_t previousIndexCount = std::numeric_limits<uint32_t>::max();
@@ -93,12 +167,10 @@ namespace Crowny
             const size_t meshletIndexStart = result.MeshletIndices.size();
             uint32_t lodIndexCount = 0;
 
-            for (uint32_t materialSlot = 0; materialSlot < subMeshes.size(); materialSlot++)
+            for (const ValidatedSubMesh& validated : subMeshes)
             {
-                const SubMesh& subMesh = subMeshes[materialSlot];
-                if (subMesh.MeshDrawMode != DrawMode::TRIANGLE_LIST || subMesh.IndexCount < 3 ||
-                    subMesh.IndexOffset + subMesh.IndexCount > sourceIndices.size())
-                    continue;
+                const SubMesh& subMesh = validated.Geometry;
+                const uint32_t materialSlot = validated.MaterialSlot;
 
                 Vector<uint32_t> indices(sourceIndices.begin() + subMesh.IndexOffset,
                                          sourceIndices.begin() + subMesh.IndexOffset + subMesh.IndexCount);
